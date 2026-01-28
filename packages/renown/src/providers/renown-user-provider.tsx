@@ -1,11 +1,10 @@
 "use client";
 
 import { createContext, useCallback, useEffect, useState } from "react";
-import type { IConnectCrypto } from "../crypto/index.js";
-import { BrowserKeyStorage, ConnectCrypto } from "../crypto/index.js";
-import { initRenown } from "../init.browser.js";
+import type { IRenownCrypto } from "../crypto/index.js";
+import { BrowserKeyStorage, RenownCryptoBuilder } from "../crypto/index.js";
+import { RenownBuilder } from "../init.browser.js";
 import type { LoginStatus, User } from "../lib/renown/index.js";
-import type { IRenown } from "../types.js";
 import {
   fetchProfileDataForUser,
   handleRenownReturn,
@@ -14,6 +13,7 @@ import {
   logout as renownLogout,
 } from "../lib/renown/index.js";
 import { SessionStorageManager } from "../lib/session-storage.js";
+import type { IRenown } from "../types.js";
 
 // Renown User Context
 export interface RenownUserContextValue {
@@ -25,14 +25,14 @@ export interface RenownUserContextValue {
   isLoading: boolean;
   /** Whether the user system has been initialized */
   isInitialized: boolean;
-  /** Login with optional DID (defaults to connectCrypto DID) */
+  /** Login with optional DID (defaults to renownCrypto DID) */
   login: (userDid?: string) => Promise<void>;
   /** Logout the current user */
   logout: () => Promise<void>;
   /** Open Renown portal for authentication */
   openRenown: () => void;
-  /** ConnectCrypto instance for cryptographic operations */
-  connectCrypto: IConnectCrypto | null;
+  /** RenownCrypto instance for cryptographic operations */
+  renownCrypto: IRenownCrypto | null;
   /** Renown SDK instance */
   renown: IRenown | null;
 }
@@ -43,6 +43,10 @@ export const RenownUserContext = createContext<RenownUserContextValue | null>(
 
 interface RenownUserProviderProps {
   children: React.ReactNode;
+  /**
+   * Name of the application. Will be part of the credential.
+   */
+  appName?: string;
   /**
    * Renown service URL
    * @default 'https://www.renown.id'
@@ -89,6 +93,7 @@ interface RenownUserProviderProps {
  */
 export function RenownUserProvider({
   children,
+  appName = "",
   renownUrl = "https://www.renown.id",
   networkId = "eip155",
   chainId = "1",
@@ -100,9 +105,7 @@ export function RenownUserProvider({
   const [isLoading, setIsLoading] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
   const [initError, setInitError] = useState<Error | null>(null);
-  const [connectCrypto, setConnectCrypto] = useState<IConnectCrypto | null>(
-    null,
-  );
+  const [renownCrypto, setRenownCrypto] = useState<IRenownCrypto | null>(null);
   const [renown, setRenown] = useState<IRenown | null>(null);
 
   // Initialize auth system
@@ -115,28 +118,27 @@ export function RenownUserProvider({
         }
 
         // Initialize SDK if not already initialized
-        if (!window.renown || !window.connectCrypto) {
-          // Initialize ConnectCrypto with browser key storage
-          const cryptoInstance = new ConnectCrypto(new BrowserKeyStorage());
-
-          // Initialize Renown SDK
-          const renownInstance = initRenown(
-            await cryptoInstance.did(),
-            networkId,
-            renownUrl,
-          );
+        if (!window.renown || !window.renownCrypto) {
+          // Initialize RenownCrypto with browser key storage
+          const keyStorage = await BrowserKeyStorage.create();
+          const cryptoInstance = await new RenownCryptoBuilder()
+            .withKeyPairStorage(keyStorage)
+            .build();
+          const renownInstance = await new RenownBuilder(appName)
+            .withCrypto(cryptoInstance)
+            .build();
 
           // Attach to window for global access
           window.renown = renownInstance;
-          window.connectCrypto = cryptoInstance;
+          window.renownCrypto = cryptoInstance;
 
           // Save to state
-          setConnectCrypto(cryptoInstance);
+          setRenownCrypto(cryptoInstance);
           setRenown(renownInstance);
         } else {
           // Use existing instances from window
-          setConnectCrypto(window.connectCrypto as IConnectCrypto);
           setRenown(window.renown);
+          setRenownCrypto(window.renownCrypto);
         }
 
         // Check for stored session first
@@ -193,10 +195,10 @@ export function RenownUserProvider({
     if (typeof window === "undefined") return;
 
     const renown = window.renown;
-    const connectCrypto = window.connectCrypto as IConnectCrypto | undefined;
+    const renownCrypto = window.renownCrypto;
 
-    if (!renown || !connectCrypto) {
-      console.error("Renown or ConnectCrypto not available");
+    if (!renown || !renownCrypto) {
+      console.error("Renown or RenownCrypto not available");
       setLoginStatus("not-authorized");
       return;
     }
@@ -204,10 +206,11 @@ export function RenownUserProvider({
     try {
       setIsLoading(true);
       setLoginStatus("checking");
-      const did = userDid || (await connectCrypto.did());
+
+      const did = userDid ?? renownCrypto.did;
 
       // Perform login
-      const loggedInUser = await renownLogin(did, renown, connectCrypto);
+      const loggedInUser = await renownLogin(did, renown, renownCrypto);
       if (loggedInUser) {
         // Fetch profile data and update state
         const userWithProfile = await fetchProfileDataForUser(loggedInUser);
@@ -258,7 +261,7 @@ export function RenownUserProvider({
     login,
     logout,
     openRenown,
-    connectCrypto,
+    renownCrypto,
     renown,
   };
 

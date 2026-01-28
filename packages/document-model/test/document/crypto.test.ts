@@ -5,8 +5,8 @@ import type {
   PHDocument,
   Reducer,
   ReducerOptions,
-  Signature,
   SignalDispatch,
+  Signature,
   SigningParameters,
 } from "document-model";
 import {
@@ -42,12 +42,8 @@ async function createTestSigner(): Promise<ISigner> {
     "verify",
   ]);
 
-  const publicKeyJwk = await crypto.subtle.exportKey("jwk", keyPair.publicKey);
-
   return {
-    async publicKey(): Promise<JsonWebKey> {
-      return publicKeyJwk;
-    },
+    publicKey: keyPair.publicKey,
 
     async sign(data: Uint8Array): Promise<Uint8Array> {
       const signature = await crypto.subtle.sign(

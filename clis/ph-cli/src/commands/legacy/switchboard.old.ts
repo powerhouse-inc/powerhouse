@@ -96,13 +96,12 @@ export function switchboardCommand(program: Command) {
         return;
       }
 
-      const { defaultDriveUrl, connectCrypto } = await runStartLocalSwitchboard(
+      const { defaultDriveUrl, renown } = await runStartLocalSwitchboard(
         ...args,
       );
       console.log("   ➜  Switchboard:", defaultDriveUrl);
-      if (connectCrypto) {
-        const did = await connectCrypto.did();
-        console.log("   ➜  Identity:", did);
+      if (renown) {
+        console.log("   ➜  Identity:", renown.did);
       }
     });
 

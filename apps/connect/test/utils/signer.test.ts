@@ -1,11 +1,12 @@
 import {
-  ConnectCrypto,
-  ConnectCryptoSigner,
+  MemoryKeyStorage,
+  RenownBuilder,
+  RenownCryptoBuilder,
   createSignatureVerifier,
-  type JsonWebKeyPairStorage,
-  type JwkKeyPair,
-} from "@renown/sdk";
-import type { Action, Operation, Signature } from "document-model";
+  type IRenown,
+  type IRenownCrypto,
+} from "@renown/sdk/node";
+import type { Action, ISigner, Operation, Signature } from "document-model";
 import { deriveOperationId } from "document-model/core";
 import { beforeEach, describe, expect, it } from "vitest";
 
@@ -13,31 +14,23 @@ const TEST_DOC_ID = "test-doc-id";
 const TEST_BRANCH = "main";
 const TEST_SCOPE = "global";
 
-class InMemoryKeyStorage implements JsonWebKeyPairStorage {
-  private keyPair: JwkKeyPair | undefined;
-
-  loadKeyPair(): Promise<JwkKeyPair | undefined> {
-    return Promise.resolve(this.keyPair);
-  }
-
-  saveKeyPair(keyPair: JwkKeyPair): Promise<void> {
-    this.keyPair = keyPair;
-    return Promise.resolve();
-  }
-}
-
-describe("ConnectCryptoSigner and Verifier Integration", () => {
-  let keyStorage: InMemoryKeyStorage;
-  let connectCrypto: ConnectCrypto;
-  let signer: ConnectCryptoSigner;
+describe("RenownCryptoSigner and Verifier Integration", () => {
+  let keyStorage: MemoryKeyStorage;
+  let renownCrypto: IRenownCrypto;
+  let renown: IRenown;
+  let signer: ISigner;
   let verifier: ReturnType<typeof createSignatureVerifier>;
 
   beforeEach(async () => {
-    keyStorage = new InMemoryKeyStorage();
-    connectCrypto = new ConnectCrypto(keyStorage);
-    signer = new ConnectCryptoSigner(connectCrypto);
+    keyStorage = new MemoryKeyStorage();
+    renownCrypto = await new RenownCryptoBuilder()
+      .withKeyPairStorage(keyStorage)
+      .build();
+    renown = await new RenownBuilder("test-app")
+      .withCrypto(renownCrypto)
+      .build();
+    signer = renown.signer;
     verifier = createSignatureVerifier();
-    await connectCrypto.did();
   });
 
   it("signs an action and produces a valid signature format", async () => {
@@ -62,8 +55,8 @@ describe("ConnectCryptoSigner and Verifier Integration", () => {
     expect(signatureHex.length).toBeGreaterThan(2);
   });
 
-  it("verifies a signature created by ConnectCryptoSigner", async () => {
-    const did = await connectCrypto.did();
+  it("verifies a signature created by RenownCryptoSigner", async () => {
+    const did = renownCrypto.did;
 
     const action: Action = {
       id: "action-1",
@@ -105,7 +98,7 @@ describe("ConnectCryptoSigner and Verifier Integration", () => {
   });
 
   it("rejects a tampered signature", async () => {
-    const did = await connectCrypto.did();
+    const did = renownCrypto.did;
 
     const action: Action = {
       id: "action-1",
@@ -155,7 +148,7 @@ describe("ConnectCryptoSigner and Verifier Integration", () => {
   });
 
   it("rejects verification when public key does not match", async () => {
-    const did = await connectCrypto.did();
+    const did = renownCrypto.did;
 
     const action: Action = {
       id: "action-1",
@@ -221,7 +214,7 @@ describe("ConnectCryptoSigner and Verifier Integration", () => {
   });
 
   it("returns false for operations with signer but no signatures", async () => {
-    const did = await connectCrypto.did();
+    const did = renownCrypto.did;
 
     const action: Action = {
       id: "action-1",
@@ -252,7 +245,7 @@ describe("ConnectCryptoSigner and Verifier Integration", () => {
   });
 
   it("handles actions with prevOpHash in context", async () => {
-    const did = await connectCrypto.did();
+    const did = renownCrypto.did;
 
     const action: Action = {
       id: "action-1",
@@ -300,7 +293,7 @@ describe("ConnectCryptoSigner and Verifier Integration", () => {
   });
 
   it("handles complex action inputs", async () => {
-    const did = await connectCrypto.did();
+    const did = renownCrypto.did;
 
     const action: Action = {
       id: "action-1",
@@ -376,7 +369,7 @@ describe("ConnectCryptoSigner and Verifier Integration", () => {
   });
 
   it("signatures from different keys fail verification", async () => {
-    const did1 = await connectCrypto.did();
+    const did1 = renownCrypto.did;
 
     const action: Action = {
       id: "action-1",
@@ -388,9 +381,11 @@ describe("ConnectCryptoSigner and Verifier Integration", () => {
 
     const signature = await signer.signAction(action);
 
-    const newKeyStorage = new InMemoryKeyStorage();
-    const newConnectCrypto = new ConnectCrypto(newKeyStorage);
-    const did2 = await newConnectCrypto.did();
+    const newKeyStorage = new MemoryKeyStorage();
+    const newRenownCrypto = await new RenownCryptoBuilder()
+      .withKeyPairStorage(newKeyStorage)
+      .build();
+    const did2 = newRenownCrypto.did;
 
     expect(did1).not.toBe(did2);
 

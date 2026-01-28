@@ -208,13 +208,13 @@ export const signAction = async (
       ...action.context,
       signer: {
         user: {
-          address: signature[0],
-          networkId: "",
-          chainId: 0,
+          address: signer.user?.address || "",
+          networkId: signer.user?.networkId || "",
+          chainId: signer.user?.chainId || 0,
         },
         app: {
-          name: "",
-          key: signature[1],
+          name: signer.app?.name || "",
+          key: signer.app?.key || "",
         },
         signatures: [signature],
       },

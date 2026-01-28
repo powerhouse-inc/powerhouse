@@ -13,10 +13,7 @@ import {
   useSelectedDrive,
   validateDocument,
 } from "@powerhousedao/reactor-browser";
-import {
-  useConnectCrypto,
-  useUser,
-} from "@powerhousedao/reactor-browser/connect";
+import { useRenown, useUser } from "@powerhousedao/reactor-browser/connect";
 import { useCallback, useMemo } from "react";
 
 export function DocumentEditorContainer() {
@@ -25,7 +22,7 @@ export function DocumentEditorContainer() {
   const parentFolder = useNodeParentFolderById(selectedDocument.header.id);
   const isRemoteDrive = getDriveIsRemote(selectedDrive);
   const remoteUrl = getDriveRemoteUrl(selectedDrive);
-  const connectCrypto = useConnectCrypto();
+  const renown = useRenown();
   const user = useUser();
 
   const onExport = useCallback(() => {
@@ -64,12 +61,10 @@ export function DocumentEditorContainer() {
 
           // @todo: add environment variable for token expiration
           const token = user?.address
-            ? await connectCrypto?.getBearerToken(
-                remoteUrl,
-                user.address,
-                false,
-                { expiresIn: 600 },
-              )
+            ? await renown?.getBearerToken({
+                expiresIn: 600,
+                aud: remoteUrl,
+              })
             : undefined;
 
           const url = buildDocumentSubgraphUrl(

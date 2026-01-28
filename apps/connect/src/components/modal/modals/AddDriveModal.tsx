@@ -13,10 +13,7 @@ import {
   useDriveEditorModules,
   usePHModal,
 } from "@powerhousedao/reactor-browser";
-import {
-  useConnectCrypto,
-  useUser,
-} from "@powerhousedao/reactor-browser/connect";
+import { useRenown, useUser } from "@powerhousedao/reactor-browser/connect";
 import {
   requestPublicDrive,
   requestPublicDriveFromReactor,
@@ -27,7 +24,7 @@ export function AddDriveModal() {
   const phModal = usePHModal();
   const open = phModal?.type === "addDrive";
   const user = useUser();
-  const connectCrypto = useConnectCrypto();
+  const renown = useRenown();
   const driveEditorModules = useDriveEditorModules();
   const onAddLocalDrive = async (data: AddLocalDriveInput) => {
     try {
@@ -133,23 +130,19 @@ export function AddDriveModal() {
           : requestPublicDriveFromReactor;
 
         try {
-          const authToken = await connectCrypto?.getBearerToken?.(
-            url,
-            user?.address,
-            true,
-            { expiresIn: 10 },
-          );
+          const authToken = await renown?.getBearerToken?.({
+            expiresIn: 10,
+            aud: url,
+          });
           return requestFn(url, {
             Authorization: `Bearer ${authToken}`,
           });
         } catch (error) {
           console.error(error);
-          const authToken = await connectCrypto?.getBearerToken?.(
-            url,
-            user?.address,
-            true,
-            { expiresIn: 10 },
-          );
+          const authToken = await renown?.getBearerToken?.({
+            expiresIn: 10,
+            aud: url,
+          });
           return requestFn(url, {
             Authorization: `Bearer ${authToken}`,
           });

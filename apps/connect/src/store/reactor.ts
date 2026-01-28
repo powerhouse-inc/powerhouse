@@ -16,7 +16,6 @@ import {
   extractDriveSlugFromPath,
   extractNodeSlugFromPath,
   getDrives,
-  initConnectCrypto,
   initLegacyReactor,
   login,
   refreshReactorData,
@@ -45,15 +44,19 @@ import {
   setRenown,
   setSync,
 } from "@powerhousedao/reactor-browser/connect";
-import { initRenown } from "@renown/sdk";
+import {
+  BrowserKeyStorage,
+  RenownBuilder,
+  RenownCryptoBuilder,
+} from "@renown/sdk";
 import type {
   DocumentDriveDocument,
   DocumentDriveServerOptions,
   IDocumentAdminStorage,
   IDocumentDriveServer,
 } from "document-drive";
-import type { DocumentModelModule } from "document-model";
 import { ProcessorManager, logger } from "document-drive";
+import type { DocumentModelModule } from "document-model";
 import { generateId } from "document-model/core";
 import { loadCommonPackage } from "./document-model.js";
 import {
@@ -178,14 +181,19 @@ export async function createReactor() {
     `Features: ${JSON.stringify(Object.fromEntries(features), null, 2)}`,
   );
 
-  // initialize connect crypto
-  const connectCrypto = await initConnectCrypto();
+  // initialize renown crypto
+  const keyPairStorage = await BrowserKeyStorage.create();
+  const renownCrypto = await new RenownCryptoBuilder()
+    .withKeyPairStorage(keyPairStorage)
+    .build();
 
-  // initialize did
-  const did = await connectCrypto.did();
-
-  // initialize renown
-  const renown = initRenown(did, phGlobalConfigFromEnv.routerBasename);
+  // initialize Renown
+  const renown = await new RenownBuilder("connect", {
+    basename: phGlobalConfigFromEnv.routerBasename,
+    baseUrl: phGlobalConfigFromEnv.renownUrl,
+  })
+    .withCrypto(renownCrypto)
+    .build();
 
   // initialize storage
   const storage = createBrowserStorage(phGlobalConfigFromEnv.routerBasename!);
@@ -240,7 +248,7 @@ export async function createReactor() {
     documentModelModules as unknown as DocumentModelModule[],
     upgradeManifests,
     storage,
-    connectCrypto,
+    renown,
   );
 
   // Add default drives for new reactor if not using legacy read
@@ -256,7 +264,7 @@ export async function createReactor() {
   }
 
   // initialize the reactor
-  await initLegacyReactor(legacyReactor, renown, connectCrypto);
+  await initLegacyReactor(legacyReactor, renown);
 
   // create the processor manager
   const processorManager = new ProcessorManager(
@@ -287,7 +295,7 @@ export async function createReactor() {
 
   // initialize user
   const didFromUrl = getDidFromUrl();
-  await login(didFromUrl, legacyReactor, renown, connectCrypto);
+  await login(didFromUrl, legacyReactor, renown);
 
   // initialize the document cache based on feature flags
   const documentCache = useLegacyRead
@@ -303,8 +311,8 @@ export async function createReactor() {
   setDatabase(reactorClientModule.reactorModule?.database);
   setPGlite(reactorClientModule.pg);
   setDocumentCache(documentCache);
-  setConnectCrypto(connectCrypto);
-  setDid(did);
+  setConnectCrypto(renownCrypto);
+  setDid(renown.did);
   setRenown(renown);
   setProcessorManager(processorManager);
   setDrives(drives);

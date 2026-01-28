@@ -25,5 +25,5 @@ playwright-report/
 test-results/
 
 # Identity/auth credential files
-.auth.json
+.renown.json
 .keypair.json
