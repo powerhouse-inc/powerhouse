@@ -1,9 +1,9 @@
 import type { IEventBus } from "../events/interfaces.js";
 import {
-  OperationEventTypes,
+  ReactorEventTypes,
   type JobFailedEvent,
-  type OperationsReadyEvent,
-  type OperationWrittenEvent,
+  type JobReadReadyEvent,
+  type JobWriteReadyEvent,
   type Unsubscribe,
 } from "../events/types.js";
 import { JobStatus, type JobInfo } from "./types.js";
@@ -32,11 +32,11 @@ type JobWaiter = {
 
 /**
  * Checks if a job status is terminal (job has finished).
- * WRITE_COMPLETED is not terminal - it's an intermediate state.
- * Only READ_MODELS_READY and FAILED are truly terminal.
+ * WRITE_READY is not terminal - it's an intermediate state.
+ * Only READ_READY and FAILED are truly terminal.
  */
 function isTerminalStatus(status: JobStatus): boolean {
-  return status === JobStatus.READ_MODELS_READY || status === JobStatus.FAILED;
+  return status === JobStatus.READ_READY || status === JobStatus.FAILED;
 }
 
 /**
@@ -60,25 +60,25 @@ export class JobAwaiter implements IJobAwaiter {
   private subscribeToEvents(): void {
     this.unsubscribers.push(
       this.eventBus.subscribe(
-        OperationEventTypes.OPERATION_WRITTEN,
-        async (_type, event: OperationWrittenEvent) => {
-          await this.handleOperationWritten(event);
+        ReactorEventTypes.JOB_WRITE_READY,
+        async (_type, event: JobWriteReadyEvent) => {
+          await this.handleWriteReady(event);
         },
       ),
     );
 
     this.unsubscribers.push(
       this.eventBus.subscribe(
-        OperationEventTypes.OPERATIONS_READY,
-        async (_type, event: OperationsReadyEvent) => {
-          await this.handleOperationsReady(event);
+        ReactorEventTypes.JOB_READ_READY,
+        async (_type, event: JobReadReadyEvent) => {
+          await this.handleReadReady(event);
         },
       ),
     );
 
     this.unsubscribers.push(
       this.eventBus.subscribe(
-        OperationEventTypes.JOB_FAILED,
+        ReactorEventTypes.JOB_FAILED,
         async (_type, event: JobFailedEvent) => {
           await this.handleJobFailed(event);
         },
@@ -139,16 +139,12 @@ export class JobAwaiter implements IJobAwaiter {
     return promise;
   }
 
-  private async handleOperationWritten(
-    event: OperationWrittenEvent,
-  ): Promise<void> {
+  private async handleWriteReady(event: JobWriteReadyEvent): Promise<void> {
     const jobId = event.jobId;
     await this.checkAndResolveWaiters(jobId);
   }
 
-  private async handleOperationsReady(
-    event: OperationsReadyEvent,
-  ): Promise<void> {
+  private async handleReadReady(event: JobReadReadyEvent): Promise<void> {
     const jobId = event.jobId;
     await this.checkAndResolveWaiters(jobId);
   }

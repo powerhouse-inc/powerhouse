@@ -10,7 +10,7 @@ import type { ReactorSubscriptionManager } from "./react-subscription-manager.js
  * A read model that notifies the subscription manager when operations are processed.
  * This bridges the gap between operation processing and subscription callbacks.
  *
- * Must be processed AFTER other read models have completed and AFTER OPERATIONS_READY
+ * Must be processed AFTER other read models have completed and AFTER READ_READY
  * is emitted, so that reactor.get() returns fresh data when callbacks fire.
  */
 export class SubscriptionNotificationReadModel implements IReadModel {

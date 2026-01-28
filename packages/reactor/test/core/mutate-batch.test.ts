@@ -48,6 +48,7 @@ describe("mutateBatch validation", () => {
       createMockDocumentView(),
       createMockDocumentIndexer(),
       createMockOperationStore(),
+      eventBus,
     );
   };
 

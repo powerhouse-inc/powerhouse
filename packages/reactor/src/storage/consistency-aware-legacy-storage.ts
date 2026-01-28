@@ -1,8 +1,7 @@
 import type { IDocumentStorage } from "document-drive";
 import type { PHDocument } from "document-model";
 import type { IEventBus } from "../events/interfaces.js";
-import { OperationEventTypes } from "../events/types.js";
-import type { OperationWrittenEvent } from "../events/types.js";
+import { ReactorEventTypes, type JobWriteReadyEvent } from "../events/types.js";
 import type { IConsistencyTracker } from "../shared/consistency-tracker.js";
 import type { ConsistencyToken } from "../shared/types.js";
 import type { IConsistencyAwareStorage } from "./interfaces.js";
@@ -22,8 +21,8 @@ export class ConsistencyAwareLegacyStorage implements IConsistencyAwareStorage {
     private consistencyTracker: IConsistencyTracker,
     eventBus: IEventBus,
   ) {
-    eventBus.subscribe<OperationWrittenEvent>(
-      OperationEventTypes.OPERATION_WRITTEN,
+    eventBus.subscribe<JobWriteReadyEvent>(
+      ReactorEventTypes.JOB_WRITE_READY,
       (_type, event) => {
         const coordinates = event.operations.map((op) => ({
           documentId: op.context.documentId,

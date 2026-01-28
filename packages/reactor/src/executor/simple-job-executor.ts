@@ -24,10 +24,7 @@ import type {
 import { driveCollectionId } from "../cache/operation-index-types.js";
 import type { IWriteCache } from "../cache/write/interfaces.js";
 import type { IEventBus } from "../events/interfaces.js";
-import {
-  OperationEventTypes,
-  type OperationWrittenEvent,
-} from "../events/types.js";
+import { ReactorEventTypes, type JobWriteReadyEvent } from "../events/types.js";
 import type { ILogger } from "../logging/types.js";
 import type { Job } from "../queue/types.js";
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";
@@ -116,13 +113,13 @@ export class SimpleJobExecutor implements IJobExecutor {
           result.operationsWithContext[i].context.ordinal = ordinals[i];
         }
         if (result.operationsWithContext.length > 0) {
-          const event: OperationWrittenEvent = {
+          const event: JobWriteReadyEvent = {
             jobId: job.id,
             operations: result.operationsWithContext,
             jobMeta: job.meta,
           };
           this.eventBus
-            .emit(OperationEventTypes.OPERATION_WRITTEN, event)
+            .emit(ReactorEventTypes.JOB_WRITE_READY, event)
             .catch(() => {
               // TODO: Log error
             });
@@ -153,16 +150,14 @@ export class SimpleJobExecutor implements IJobExecutor {
       for (let i = 0; i < result.operationsWithContext.length; i++) {
         result.operationsWithContext[i].context.ordinal = ordinals[i];
       }
-      const event: OperationWrittenEvent = {
+      const event: JobWriteReadyEvent = {
         jobId: job.id,
         operations: result.operationsWithContext,
         jobMeta: job.meta,
       };
-      this.eventBus
-        .emit(OperationEventTypes.OPERATION_WRITTEN, event)
-        .catch(() => {
-          // TODO: Log error
-        });
+      this.eventBus.emit(ReactorEventTypes.JOB_WRITE_READY, event).catch(() => {
+        // TODO: Log error
+      });
     }
 
     return {

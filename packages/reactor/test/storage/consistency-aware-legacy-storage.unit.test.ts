@@ -438,10 +438,10 @@ describe("ConsistencyAwareLegacyStorage", () => {
   });
 
   describe("event bus subscription", () => {
-    it("should update consistency tracker on OPERATION_WRITTEN event", async () => {
-      const { OperationEventTypes } = await import("../../src/events/types.js");
+    it("should update consistency tracker on WRITE_READY event", async () => {
+      const { ReactorEventTypes } = await import("../../src/events/types.js");
 
-      await eventBus.emit(OperationEventTypes.OPERATION_WRITTEN, {
+      await eventBus.emit(ReactorEventTypes.JOB_WRITE_READY, {
         operations: [
           {
             context: {
@@ -467,9 +467,9 @@ describe("ConsistencyAwareLegacyStorage", () => {
     });
 
     it("should handle multiple operations in a single event", async () => {
-      const { OperationEventTypes } = await import("../../src/events/types.js");
+      const { ReactorEventTypes } = await import("../../src/events/types.js");
 
-      await eventBus.emit(OperationEventTypes.OPERATION_WRITTEN, {
+      await eventBus.emit(ReactorEventTypes.JOB_WRITE_READY, {
         operations: [
           {
             context: {

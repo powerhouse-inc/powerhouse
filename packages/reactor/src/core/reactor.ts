@@ -17,6 +17,8 @@ import type {
   PHDocument,
 } from "document-model";
 import { v4 as uuidv4 } from "uuid";
+import type { IEventBus } from "../events/interfaces.js";
+import { ReactorEventTypes, type JobPendingEvent } from "../events/types.js";
 import type { IJobTracker } from "../job-tracker/interfaces.js";
 import type { IQueue } from "../queue/interfaces.js";
 import type { Job } from "../queue/types.js";
@@ -75,6 +77,7 @@ export class Reactor implements IReactor {
   private documentView: IDocumentView;
   private _documentIndexer: IDocumentIndexer;
   private operationStore: IOperationStore;
+  private eventBus: IEventBus;
 
   constructor(
     logger: ILogger,
@@ -87,6 +90,7 @@ export class Reactor implements IReactor {
     documentView: IDocumentView,
     documentIndexer: IDocumentIndexer,
     operationStore: IOperationStore,
+    eventBus: IEventBus,
   ) {
     this.logger = logger;
     this.documentModelRegistry = documentModelRegistry;
@@ -98,6 +102,7 @@ export class Reactor implements IReactor {
     this.documentView = documentView;
     this._documentIndexer = documentIndexer;
     this.operationStore = operationStore;
+    this.eventBus = eventBus;
 
     const [status, setter] = createMutableShutdownStatus(false);
     this.shutdownStatus = status;
@@ -690,6 +695,7 @@ export class Reactor implements IReactor {
       meta,
     };
     this.jobTracker.registerJob(jobInfo);
+    this.emitJobPending(jobInfo.id, meta);
 
     // Enqueue the job
     await this.queue.enqueue(job);
@@ -747,6 +753,7 @@ export class Reactor implements IReactor {
       meta,
     };
     this.jobTracker.registerJob(jobInfo);
+    this.emitJobPending(jobInfo.id, meta);
 
     await this.queue.enqueue(job);
 
@@ -808,6 +815,7 @@ export class Reactor implements IReactor {
       meta,
     };
     this.jobTracker.registerJob(jobInfo);
+    this.emitJobPending(jobInfo.id, meta);
 
     // Enqueue the job
     await this.queue.enqueue(job);
@@ -885,6 +893,7 @@ export class Reactor implements IReactor {
       meta,
     };
     this.jobTracker.registerJob(jobInfo);
+    this.emitJobPending(jobInfo.id, meta);
 
     await this.queue.enqueue(job);
 
@@ -932,6 +941,7 @@ export class Reactor implements IReactor {
         meta,
       };
       this.jobTracker.registerJob(jobInfo);
+      this.emitJobPending(jobInfo.id, meta);
       jobInfos.set(jobPlan.key, jobInfo);
     }
     const sortedKeys = topologicalSort(request.jobs);
@@ -1593,5 +1603,15 @@ export class Reactor implements IReactor {
           : undefined,
       };
     }
+  }
+
+  private emitJobPending(jobId: string, meta?: Record<string, unknown>): void {
+    const event: JobPendingEvent = {
+      jobId,
+      jobMeta: meta,
+    };
+    this.eventBus.emit(ReactorEventTypes.JOB_PENDING, event).catch(() => {
+      // Ignore event emission errors
+    });
   }
 }

@@ -200,6 +200,7 @@ async function createReactorSetup(): Promise<ReactorTestSetup> {
     documentView,
     documentIndexer,
     operationStore,
+    eventBus,
   );
 
   const cleanup = async () => {
@@ -274,7 +275,7 @@ describe("Atlas Recorded Operations Reactor Test", () => {
         );
 
         const allCompleted = statuses.every(
-          (status) => status.status === JobStatus.READ_MODELS_READY,
+          (status) => status.status === JobStatus.READ_READY,
         );
         const anyFailed = statuses.some(
           (status) => status.status === JobStatus.FAILED,
@@ -406,7 +407,7 @@ describe("Atlas Recorded Operations State Comparison Test", () => {
         );
 
         const allCompleted = statuses.every(
-          (status) => status.status === JobStatus.READ_MODELS_READY,
+          (status) => status.status === JobStatus.READ_READY,
         );
         const anyFailed = statuses.some(
           (status) => status.status === JobStatus.FAILED,

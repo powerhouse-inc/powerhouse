@@ -789,7 +789,7 @@ describe("ReactorClient Integration Tests", () => {
 
         const result = await client.waitForJob(jobInfo.id);
 
-        expect(result.status).toBe(JobStatus.READ_MODELS_READY);
+        expect(result.status).toBe(JobStatus.READ_READY);
       });
 
       it("should wait for job completion with JobInfo object", async () => {
@@ -806,7 +806,7 @@ describe("ReactorClient Integration Tests", () => {
 
         const result = await client.waitForJob(jobInfo);
 
-        expect(result.status).toBe(JobStatus.READ_MODELS_READY);
+        expect(result.status).toBe(JobStatus.READ_READY);
       });
     });
   });

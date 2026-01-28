@@ -1,8 +1,8 @@
 import type { IEventBus } from "../events/interfaces.js";
 import {
-  OperationEventTypes,
-  type OperationsReadyEvent,
-  type OperationWrittenEvent,
+  ReactorEventTypes,
+  type JobReadReadyEvent,
+  type JobWriteReadyEvent,
   type Unsubscribe,
 } from "../events/types.js";
 import type { IReadModel, IReadModelCoordinator } from "./interfaces.js";
@@ -41,11 +41,11 @@ export class ReadModelCoordinator implements IReadModelCoordinator {
       return;
     }
 
-    // Subscribe to OPERATION_WRITTEN events
+    // Subscribe to WRITE_READY events
     this.unsubscribe = this.eventBus.subscribe(
-      OperationEventTypes.OPERATION_WRITTEN,
-      async (type, event: OperationWrittenEvent) => {
-        await this.handleOperationWritten(event);
+      ReactorEventTypes.JOB_WRITE_READY,
+      async (type, event: JobWriteReadyEvent) => {
+        await this.handleWriteReady(event);
       },
     );
 
@@ -70,12 +70,10 @@ export class ReadModelCoordinator implements IReadModelCoordinator {
   }
 
   /**
-   * Handle operation written events by updating all read models in parallel.
+   * Handle write ready events by updating all read models in parallel.
    * Errors from individual read models are collected and re-thrown as an aggregate.
    */
-  private async handleOperationWritten(
-    event: OperationWrittenEvent,
-  ): Promise<void> {
+  private async handleWriteReady(event: JobWriteReadyEvent): Promise<void> {
     // Index into pre-ready read models in parallel
     await Promise.all(
       this.preReady.map((readModel) =>
@@ -83,12 +81,12 @@ export class ReadModelCoordinator implements IReadModelCoordinator {
       ),
     );
 
-    // Emit OPERATIONS_READY event after all pre-ready read models have completed
-    const readyEvent: OperationsReadyEvent = {
+    // Emit READ_READY event after all pre-ready read models have completed
+    const readyEvent: JobReadReadyEvent = {
       jobId: event.jobId,
       operations: event.operations,
     };
-    await this.eventBus.emit(OperationEventTypes.OPERATIONS_READY, readyEvent);
+    await this.eventBus.emit(ReactorEventTypes.JOB_READ_READY, readyEvent);
 
     // Process post-ready read models (e.g., subscription notifications)
     await Promise.all(

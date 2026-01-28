@@ -1,8 +1,8 @@
 import type { IEventBus } from "../../src/events/interfaces.js";
 import {
-  OperationEventTypes,
-  type OperationsReadyEvent,
-  type OperationWrittenEvent,
+  ReactorEventTypes,
+  type JobReadReadyEvent,
+  type JobWriteReadyEvent,
   type Unsubscribe,
 } from "../../src/events/types.js";
 import type {
@@ -14,7 +14,7 @@ export class TestReadModelCoordinator implements IReadModelCoordinator {
   private unsubscribe?: Unsubscribe;
   private isRunning = false;
   private isPaused = false;
-  private operationQueue: OperationWrittenEvent[] = [];
+  private operationQueue: JobWriteReadyEvent[] = [];
 
   public readModels: IReadModel[] = [];
 
@@ -26,9 +26,9 @@ export class TestReadModelCoordinator implements IReadModelCoordinator {
     }
 
     this.unsubscribe = this.eventBus.subscribe(
-      OperationEventTypes.OPERATION_WRITTEN,
-      async (type, event: OperationWrittenEvent) => {
-        await this.handleOperationWritten(event);
+      ReactorEventTypes.JOB_WRITE_READY,
+      async (type, event: JobWriteReadyEvent) => {
+        await this.handleWriteReady(event);
       },
     );
 
@@ -67,12 +67,12 @@ export class TestReadModelCoordinator implements IReadModelCoordinator {
         ),
       );
 
-      const readyEvent: OperationsReadyEvent = {
+      const readyEvent: JobReadReadyEvent = {
         jobId: event.jobId,
         operations: event.operations,
       };
       this.eventBus
-        .emit(OperationEventTypes.OPERATIONS_READY, readyEvent)
+        .emit(ReactorEventTypes.JOB_READ_READY, readyEvent)
         .catch(() => {
           // No-op: Event emission is fire-and-forget
         });
@@ -83,9 +83,7 @@ export class TestReadModelCoordinator implements IReadModelCoordinator {
     return this.operationQueue.length;
   }
 
-  private async handleOperationWritten(
-    event: OperationWrittenEvent,
-  ): Promise<void> {
+  private async handleWriteReady(event: JobWriteReadyEvent): Promise<void> {
     if (this.isPaused) {
       this.operationQueue.push(event);
       return;
@@ -97,12 +95,12 @@ export class TestReadModelCoordinator implements IReadModelCoordinator {
       ),
     );
 
-    const readyEvent: OperationsReadyEvent = {
+    const readyEvent: JobReadReadyEvent = {
       jobId: event.jobId,
       operations: event.operations,
     };
     this.eventBus
-      .emit(OperationEventTypes.OPERATIONS_READY, readyEvent)
+      .emit(ReactorEventTypes.JOB_READ_READY, readyEvent)
       .catch(() => {
         // No-op: Event emission is fire-and-forget
       });

@@ -52,7 +52,7 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
           const errorMessage = jobStatus.error?.message ?? "unknown error";
           throw new Error(`Job failed: ${errorMessage}`);
         }
-        return jobStatus.status === JobStatus.READ_MODELS_READY;
+        return jobStatus.status === JobStatus.READ_READY;
       },
       { timeout: 5000 },
     );
@@ -66,7 +66,7 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
           const errorMessage = jobStatus.error?.message ?? "unknown error";
           throw new Error(`Job failed: ${errorMessage}`);
         }
-        return jobStatus.status === JobStatus.READ_MODELS_READY;
+        return jobStatus.status === JobStatus.READ_READY;
       },
       { timeout: 5000 },
     );
@@ -416,8 +416,8 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
             );
           }
           return (
-            addFileStatus.status === JobStatus.READ_MODELS_READY &&
-            linkChildStatus.status === JobStatus.READ_MODELS_READY
+            addFileStatus.status === JobStatus.READ_READY &&
+            linkChildStatus.status === JobStatus.READ_READY
           );
         },
         { timeout: 10000 },
@@ -1658,7 +1658,7 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
         await vi.waitUntil(
           async () => {
             const jobStatus = await reactor.getJobStatus(createJobInfo.id);
-            return jobStatus.status === JobStatus.READ_MODELS_READY;
+            return jobStatus.status === JobStatus.READ_READY;
           },
           { timeout: 5000 },
         );

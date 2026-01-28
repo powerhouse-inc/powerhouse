@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { EventBus } from "../../src/events/event-bus.js";
-import { OperationEventTypes } from "../../src/events/types.js";
+import { ReactorEventTypes } from "../../src/events/types.js";
 import { InMemoryJobTracker } from "../../src/job-tracker/in-memory-job-tracker.js";
 import type { IJobTracker } from "../../src/job-tracker/interfaces.js";
 import { JobAwaiter } from "../../src/shared/awaiter.js";
@@ -43,7 +43,7 @@ describe("JobAwaiter Integration Tests", () => {
 
       const promise = jobAwaiter.waitForJob("job-1");
 
-      await eventBus.emit(OperationEventTypes.OPERATION_WRITTEN, {
+      await eventBus.emit(ReactorEventTypes.JOB_WRITE_READY, {
         jobId: "job-1",
         operations: [
           {
@@ -59,10 +59,10 @@ describe("JobAwaiter Integration Tests", () => {
       });
 
       expect(jobTracker.getJobStatus("job-1")?.status).toBe(
-        JobStatus.WRITE_COMPLETED,
+        JobStatus.WRITE_READY,
       );
 
-      await eventBus.emit(OperationEventTypes.OPERATIONS_READY, {
+      await eventBus.emit(ReactorEventTypes.JOB_READ_READY, {
         jobId: "job-1",
         operations: [
           {
@@ -78,7 +78,7 @@ describe("JobAwaiter Integration Tests", () => {
       });
 
       const result = await promise;
-      expect(result.status).toBe(JobStatus.READ_MODELS_READY);
+      expect(result.status).toBe(JobStatus.READ_READY);
     });
 
     it("should handle job with WRITE_COMPLETED status via OPERATION_WRITTEN event", async () => {
@@ -92,7 +92,7 @@ describe("JobAwaiter Integration Tests", () => {
       jobTracker.registerJob(jobInfo);
       jobTracker.markRunning("job-write");
 
-      await eventBus.emit(OperationEventTypes.OPERATION_WRITTEN, {
+      await eventBus.emit(ReactorEventTypes.JOB_WRITE_READY, {
         jobId: "job-write",
         operations: [
           {
@@ -108,7 +108,7 @@ describe("JobAwaiter Integration Tests", () => {
       });
 
       const status = jobTracker.getJobStatus("job-write");
-      expect(status?.status).toBe(JobStatus.WRITE_COMPLETED);
+      expect(status?.status).toBe(JobStatus.WRITE_READY);
     });
 
     it("should handle job with READ_MODELS_READY status via OPERATIONS_READY event", async () => {
@@ -122,7 +122,7 @@ describe("JobAwaiter Integration Tests", () => {
       jobTracker.registerJob(jobInfo);
       jobTracker.markRunning("job-read");
 
-      await eventBus.emit(OperationEventTypes.OPERATION_WRITTEN, {
+      await eventBus.emit(ReactorEventTypes.JOB_WRITE_READY, {
         jobId: "job-read",
         operations: [
           {
@@ -138,10 +138,10 @@ describe("JobAwaiter Integration Tests", () => {
       });
 
       expect(jobTracker.getJobStatus("job-read")?.status).toBe(
-        JobStatus.WRITE_COMPLETED,
+        JobStatus.WRITE_READY,
       );
 
-      await eventBus.emit(OperationEventTypes.OPERATIONS_READY, {
+      await eventBus.emit(ReactorEventTypes.JOB_READ_READY, {
         jobId: "job-read",
         operations: [
           {
@@ -157,7 +157,7 @@ describe("JobAwaiter Integration Tests", () => {
       });
 
       expect(jobTracker.getJobStatus("job-read")?.status).toBe(
-        JobStatus.READ_MODELS_READY,
+        JobStatus.READ_READY,
       );
     });
 
@@ -175,7 +175,7 @@ describe("JobAwaiter Integration Tests", () => {
 
       jobTracker.markRunning("job-2");
 
-      await eventBus.emit(OperationEventTypes.JOB_FAILED, {
+      await eventBus.emit(ReactorEventTypes.JOB_FAILED, {
         jobId: "job-2",
         error: new Error("Job execution failed"),
       });
@@ -202,7 +202,7 @@ describe("JobAwaiter Integration Tests", () => {
       jobTracker.markRunning("job-3");
       expect(jobTracker.getJobStatus("job-3")?.status).toBe(JobStatus.RUNNING);
 
-      await eventBus.emit(OperationEventTypes.OPERATION_WRITTEN, {
+      await eventBus.emit(ReactorEventTypes.JOB_WRITE_READY, {
         jobId: "job-3",
         operations: [
           {
@@ -218,10 +218,10 @@ describe("JobAwaiter Integration Tests", () => {
       });
 
       expect(jobTracker.getJobStatus("job-3")?.status).toBe(
-        JobStatus.WRITE_COMPLETED,
+        JobStatus.WRITE_READY,
       );
 
-      await eventBus.emit(OperationEventTypes.OPERATIONS_READY, {
+      await eventBus.emit(ReactorEventTypes.JOB_READ_READY, {
         jobId: "job-3",
         operations: [
           {
@@ -237,10 +237,10 @@ describe("JobAwaiter Integration Tests", () => {
       });
 
       const result = await promise;
-      expect(result.status).toBe(JobStatus.READ_MODELS_READY);
+      expect(result.status).toBe(JobStatus.READ_READY);
 
       expect(jobTracker.getJobStatus("job-3")?.status).toBe(
-        JobStatus.READ_MODELS_READY,
+        JobStatus.READ_READY,
       );
     });
 
@@ -274,7 +274,7 @@ describe("JobAwaiter Integration Tests", () => {
 
       jobTracker.markRunning("job-concurrent-1");
 
-      await eventBus.emit(OperationEventTypes.OPERATION_WRITTEN, {
+      await eventBus.emit(ReactorEventTypes.JOB_WRITE_READY, {
         jobId: "job-concurrent-1",
         operations: [
           {
@@ -289,7 +289,7 @@ describe("JobAwaiter Integration Tests", () => {
         ],
       });
 
-      await eventBus.emit(OperationEventTypes.OPERATIONS_READY, {
+      await eventBus.emit(ReactorEventTypes.JOB_READ_READY, {
         jobId: "job-concurrent-1",
         operations: [
           {
@@ -305,18 +305,18 @@ describe("JobAwaiter Integration Tests", () => {
       });
 
       const result1 = await promise1;
-      expect(result1.status).toBe(JobStatus.READ_MODELS_READY);
+      expect(result1.status).toBe(JobStatus.READ_READY);
 
       jobTracker.markRunning("job-concurrent-2");
 
-      await eventBus.emit(OperationEventTypes.JOB_FAILED, {
+      await eventBus.emit(ReactorEventTypes.JOB_FAILED, {
         jobId: "job-concurrent-2",
         error: new Error("Job 2 failed"),
       });
 
       jobTracker.markRunning("job-concurrent-3");
 
-      await eventBus.emit(OperationEventTypes.OPERATION_WRITTEN, {
+      await eventBus.emit(ReactorEventTypes.JOB_WRITE_READY, {
         jobId: "job-concurrent-3",
         operations: [
           {
@@ -331,7 +331,7 @@ describe("JobAwaiter Integration Tests", () => {
         ],
       });
 
-      await eventBus.emit(OperationEventTypes.OPERATIONS_READY, {
+      await eventBus.emit(ReactorEventTypes.JOB_READ_READY, {
         jobId: "job-concurrent-3",
         operations: [
           {
@@ -348,7 +348,7 @@ describe("JobAwaiter Integration Tests", () => {
 
       const [result2, result3] = await Promise.all([promise2, promise3]);
       expect(result2.status).toBe(JobStatus.FAILED);
-      expect(result3.status).toBe(JobStatus.READ_MODELS_READY);
+      expect(result3.status).toBe(JobStatus.READ_READY);
     });
 
     it("should reject when job is not found in tracker", async () => {
@@ -372,7 +372,7 @@ describe("JobAwaiter Integration Tests", () => {
 
       jobTracker.markRunning("job-duplicate");
 
-      await eventBus.emit(OperationEventTypes.OPERATION_WRITTEN, {
+      await eventBus.emit(ReactorEventTypes.JOB_WRITE_READY, {
         jobId: "job-duplicate",
         operations: [
           {
@@ -387,7 +387,7 @@ describe("JobAwaiter Integration Tests", () => {
         ],
       });
 
-      await eventBus.emit(OperationEventTypes.OPERATIONS_READY, {
+      await eventBus.emit(ReactorEventTypes.JOB_READ_READY, {
         jobId: "job-duplicate",
         operations: [
           {
@@ -404,7 +404,7 @@ describe("JobAwaiter Integration Tests", () => {
 
       const [result1, result2] = await Promise.all([promise1, promise2]);
       expect(result1).toEqual(result2);
-      expect(result1.status).toBe(JobStatus.READ_MODELS_READY);
+      expect(result1.status).toBe(JobStatus.READ_READY);
     });
 
     it("should handle abort signals with real job tracker", async () => {
@@ -438,7 +438,7 @@ describe("JobAwaiter Integration Tests", () => {
     it("should handle immediate job completion", async () => {
       const jobInfo: JobInfo = {
         id: "job-immediate",
-        status: JobStatus.READ_MODELS_READY,
+        status: JobStatus.READ_READY,
         createdAtUtcIso: new Date().toISOString(),
         completedAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
@@ -449,7 +449,7 @@ describe("JobAwaiter Integration Tests", () => {
       const promise = jobAwaiter.waitForJob("job-immediate");
 
       const result = await promise;
-      expect(result.status).toBe(JobStatus.READ_MODELS_READY);
+      expect(result.status).toBe(JobStatus.READ_READY);
     });
 
     it("should handle job completion with result data", async () => {
@@ -466,7 +466,7 @@ describe("JobAwaiter Integration Tests", () => {
 
       jobTracker.markRunning("job-with-result");
 
-      await eventBus.emit(OperationEventTypes.OPERATION_WRITTEN, {
+      await eventBus.emit(ReactorEventTypes.JOB_WRITE_READY, {
         jobId: "job-with-result",
         operations: [
           {
@@ -481,7 +481,7 @@ describe("JobAwaiter Integration Tests", () => {
         ],
       });
 
-      await eventBus.emit(OperationEventTypes.OPERATIONS_READY, {
+      await eventBus.emit(ReactorEventTypes.JOB_READ_READY, {
         jobId: "job-with-result",
         operations: [
           {
@@ -497,7 +497,7 @@ describe("JobAwaiter Integration Tests", () => {
       });
 
       const result = await promise;
-      expect(result.status).toBe(JobStatus.READ_MODELS_READY);
+      expect(result.status).toBe(JobStatus.READ_READY);
     });
   });
 
@@ -544,7 +544,7 @@ describe("JobAwaiter Integration Tests", () => {
       jobTracker.markRunning("job-cycle-1");
       const promise1 = jobAwaiter.waitForJob("job-cycle-1");
 
-      await eventBus.emit(OperationEventTypes.OPERATION_WRITTEN, {
+      await eventBus.emit(ReactorEventTypes.JOB_WRITE_READY, {
         jobId: "job-cycle-1",
         operations: [
           {
@@ -559,7 +559,7 @@ describe("JobAwaiter Integration Tests", () => {
         ],
       });
 
-      await eventBus.emit(OperationEventTypes.OPERATIONS_READY, {
+      await eventBus.emit(ReactorEventTypes.JOB_READ_READY, {
         jobId: "job-cycle-1",
         operations: [
           {
@@ -586,7 +586,7 @@ describe("JobAwaiter Integration Tests", () => {
       jobTracker.registerJob(jobInfo);
       jobTracker.markRunning("job-cycle-2");
 
-      await eventBus.emit(OperationEventTypes.OPERATION_WRITTEN, {
+      await eventBus.emit(ReactorEventTypes.JOB_WRITE_READY, {
         jobId: "job-cycle-2",
         operations: [
           {
@@ -602,7 +602,7 @@ describe("JobAwaiter Integration Tests", () => {
       });
 
       expect(jobTracker.getJobStatus("job-cycle-2")?.status).toBe(
-        JobStatus.WRITE_COMPLETED,
+        JobStatus.WRITE_READY,
       );
     });
   });

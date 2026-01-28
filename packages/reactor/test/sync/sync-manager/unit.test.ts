@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { IOperationIndex } from "../../../src/cache/operation-index-types.js";
 import type { IReactor } from "../../../src/core/types.js";
 import type { IEventBus } from "../../../src/events/interfaces.js";
-import { OperationEventTypes } from "../../../src/events/types.js";
+import { ReactorEventTypes } from "../../../src/events/types.js";
 import { ConsoleLogger } from "../../../src/logging/console.js";
 import type {
   ISyncCursorStorage,
@@ -150,7 +150,7 @@ describe("SyncManager - Unit Tests", () => {
         mockOperationIndex,
       );
       expect(mockEventBus.subscribe).toHaveBeenCalledWith(
-        OperationEventTypes.OPERATION_WRITTEN,
+        ReactorEventTypes.JOB_WRITE_READY,
         expect.any(Function),
       );
     });
@@ -440,11 +440,11 @@ describe("SyncManager - Unit Tests", () => {
       ];
 
       const subscriber = eventSubscribers.get(
-        OperationEventTypes.OPERATION_WRITTEN,
+        ReactorEventTypes.JOB_WRITE_READY,
       );
       expect(subscriber).toBeDefined();
 
-      subscriber!(OperationEventTypes.OPERATION_WRITTEN, { operations });
+      subscriber!(ReactorEventTypes.JOB_WRITE_READY, { operations });
 
       expect(mockChannel.outbox.add).toHaveBeenCalled();
     });
@@ -484,9 +484,9 @@ describe("SyncManager - Unit Tests", () => {
       ];
 
       const subscriber = eventSubscribers.get(
-        OperationEventTypes.OPERATION_WRITTEN,
+        ReactorEventTypes.JOB_WRITE_READY,
       );
-      subscriber!(OperationEventTypes.OPERATION_WRITTEN, { operations });
+      subscriber!(ReactorEventTypes.JOB_WRITE_READY, { operations });
 
       expect(mockChannel.outbox.add).not.toHaveBeenCalled();
     });
@@ -524,10 +524,10 @@ describe("SyncManager - Unit Tests", () => {
       ];
 
       const subscriber = eventSubscribers.get(
-        OperationEventTypes.OPERATION_WRITTEN,
+        ReactorEventTypes.JOB_WRITE_READY,
       );
       if (subscriber) {
-        subscriber(OperationEventTypes.OPERATION_WRITTEN, { operations });
+        subscriber(ReactorEventTypes.JOB_WRITE_READY, { operations });
       }
 
       expect(mockChannel.outbox.add).not.toHaveBeenCalled();

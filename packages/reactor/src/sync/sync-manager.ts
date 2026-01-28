@@ -2,10 +2,7 @@ import type { Operation } from "document-model";
 import type { IOperationIndex } from "../cache/operation-index-types.js";
 import type { IReactor } from "../core/types.js";
 import type { IEventBus } from "../events/interfaces.js";
-import {
-  OperationEventTypes,
-  type OperationWrittenEvent,
-} from "../events/types.js";
+import { ReactorEventTypes, type JobWriteReadyEvent } from "../events/types.js";
 import type { ILogger } from "../logging/types.js";
 import { JobAwaiter } from "../shared/awaiter.js";
 import {
@@ -112,9 +109,9 @@ export class SyncManager implements ISyncManager {
       this.wireChannelCallbacks(remote);
     }
 
-    this.eventUnsubscribe = this.eventBus.subscribe<OperationWrittenEvent>(
-      OperationEventTypes.OPERATION_WRITTEN,
-      (_type, event) => this.handleOperationWritten(event),
+    this.eventUnsubscribe = this.eventBus.subscribe<JobWriteReadyEvent>(
+      ReactorEventTypes.JOB_WRITE_READY,
+      (_type, event) => this.handleWriteReady(event),
     );
   }
 
@@ -327,7 +324,7 @@ export class SyncManager implements ISyncManager {
     });
   }
 
-  private handleOperationWritten(event: OperationWrittenEvent): void {
+  private handleWriteReady(event: JobWriteReadyEvent): void {
     if (this.isShutdown) {
       return;
     }
