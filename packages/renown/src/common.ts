@@ -13,6 +13,7 @@ import type {
   User,
 } from "./types.js";
 import { parsePkhDid, verifyAuthBearerToken } from "./utils.js";
+export * from "./constants.js";
 
 export class RenownMemoryStorage extends MemoryStorage<RenownStorageMap> {}
 

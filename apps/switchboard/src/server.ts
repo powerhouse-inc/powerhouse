@@ -17,7 +17,7 @@ import {
   initializeAndStartAPI,
   startViteServer,
 } from "@powerhousedao/reactor-api";
-import { RenownCryptoSigner, type IConnectCrypto } from "@renown/sdk";
+import { type IRenown } from "@renown/sdk";
 import * as Sentry from "@sentry/node";
 import type { ICache, IDocumentDriveServer } from "document-drive";
 import {
@@ -40,9 +40,9 @@ import path from "path";
 import { Pool } from "pg";
 import type { RedisClientType } from "redis";
 import { initRedis } from "./clients/redis.js";
-import { initConnectCrypto } from "./connect-crypto.js";
 import { initFeatureFlags } from "./feature-flags.js";
 import { initProfilerFromEnv } from "./profiler.js";
+import { initRenown } from "./renown.js";
 import type { StartServerOptions, SwitchboardReactor } from "./types.js";
 import { addDefaultDrive, addRemoteDrive, isPostgresUrl } from "./utils.js";
 
@@ -124,7 +124,7 @@ async function initReactorStorage(
 async function initServer(
   serverPort: number,
   options: StartServerOptions,
-  connectCrypto: IConnectCrypto | null,
+  renown: IRenown | null,
 ) {
   const { dev, packages = [], remoteDrives = [] } = options;
 
@@ -223,8 +223,8 @@ async function initServer(
       builder,
     );
 
-    if (connectCrypto) {
-      clientBuilder.withSigner(new RenownCryptoSigner(connectCrypto));
+    if (renown) {
+      clientBuilder.withSigner(renown.signer);
     }
 
     const module = await clientBuilder.buildModule();
@@ -276,10 +276,8 @@ async function initServer(
 
   // Create default drive if provided
   if (options.drive) {
-    if (!connectCrypto) {
-      throw new Error(
-        "Cannot create default drive without ConnectCrypto identity",
-      );
+    if (!renown) {
+      throw new Error("Cannot create default drive without Renown identity");
     }
 
     defaultDriveUrl = await addDefaultDrive(
@@ -345,7 +343,7 @@ async function initServer(
     defaultDriveUrl,
     api,
     reactor: driveServer,
-    connectCrypto,
+    renown,
   };
 }
 
@@ -396,10 +394,10 @@ export const startSwitchboard = async (
     }
   }
 
-  // Initialize ConnectCrypto if identity options are provided or keypair exists
-  let connectCrypto: IConnectCrypto | null = null;
+  // Initialize Renown if identity options are provided or keypair exists
+  let renown: IRenown | null = null;
   try {
-    connectCrypto = await initConnectCrypto(options.identity);
+    renown = await initRenown(options.identity);
   } catch (e) {
     logger.warn("Failed to initialize ConnectCrypto:", e);
     if (options.identity?.requireExisting) {
@@ -410,7 +408,7 @@ export const startSwitchboard = async (
   }
 
   try {
-    return await initServer(serverPort, options, connectCrypto);
+    return await initServer(serverPort, options, renown);
   } catch (e) {
     Sentry.captureException(e);
     logger.error("App crashed", e);
@@ -418,9 +416,4 @@ export const startSwitchboard = async (
   }
 };
 
-export {
-  getBearerToken,
-  getConnectCrypto,
-  getConnectDid,
-} from "./connect-crypto.js";
 export * from "./types.js";

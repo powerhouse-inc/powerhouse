@@ -27,7 +27,7 @@ export type RenownEventEmitter = IEventEmitter<RenownEvents>;
 
 export interface IRenown extends Pick<RenownEventEmitter, "on"> {
   user: User | undefined | (() => Promise<User | undefined>);
-  login: (did: string) => Promise<User | undefined>;
+  login: (did: string) => Promise<User>;
   logout: () => Promise<void>;
   signer: ISigner;
   did: string;
