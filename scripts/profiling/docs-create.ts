@@ -154,7 +154,6 @@ interface OperationTiming {
 }
 
 interface OperationsResult {
-  timings: OperationTiming[];
   minOp: OperationTiming | null;
   maxOp: OperationTiming | null;
 }
@@ -167,7 +166,6 @@ async function performOperations(
   totalDocs: number,
   onProgress: (opNum: number, action: object, durationMs: number) => void,
 ): Promise<OperationsResult> {
-  const timings: OperationTiming[] = [];
   let minOp: OperationTiming | null = null;
   let maxOp: OperationTiming | null = null;
 
@@ -181,7 +179,6 @@ async function performOperations(
     const durationMs = Date.now() - opStart;
 
     const timing: OperationTiming = { opIndex: i + 1, durationMs, action };
-    timings.push(timing);
 
     if (minOp === null || durationMs < minOp.durationMs) {
       minOp = timing;
@@ -193,7 +190,7 @@ async function performOperations(
     onProgress(i + 1, action, durationMs);
   }
 
-  return { timings, minOp, maxOp };
+  return { minOp, maxOp };
 }
 
 function parseArgs(args: string[]): {
