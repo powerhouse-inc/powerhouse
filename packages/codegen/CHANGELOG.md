@@ -1,3 +1,17 @@
+## 6.0.0-dev.25 (2026-01-28)
+
+This was a version bump only for @powerhousedao/codegen to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.24 (2026-01-27)
+
+### 🚀 Features
+
+- **monorepo:** ensure the same typescript version is used everywhere ([#2258](https://github.com/powerhouse-inc/powerhouse/pull/2258))
+
+### ❤️ Thank You
+
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.0.0-dev.23 (2026-01-27)
 
 ### 🚀 Features

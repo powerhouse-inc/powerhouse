@@ -4,13 +4,13 @@ on:
   workflow_call:
     inputs:
       tag:
-        description: 'Docker image tag to deploy'
+        description: "Docker image tag to deploy"
         required: true
         type: string
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Docker image tag to deploy'
+        description: "Docker image tag to deploy"
         required: true
         type: string
 
@@ -233,11 +233,11 @@ jobs:
 
             resources:
               requests:
-                cpu: 1
-                memory: 2Gi
+                cpu: 50m
+                memory: 64Mi
               limits:
-                cpu: 2
-                memory: 4Gi
+                cpu: 500m
+                memory: 256Mi
 
             livenessProbe:
               enabled: true

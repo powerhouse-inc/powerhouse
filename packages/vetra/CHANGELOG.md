@@ -1,3 +1,25 @@
+## 6.0.0-dev.25 (2026-01-28)
+
+This was a version bump only for @powerhousedao/vetra to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.24 (2026-01-27)
+
+### 🚀 Features
+
+- **vetra:** add permission checks to all subgraph resolvers ([e8f2f8ea5](https://github.com/powerhouse-inc/powerhouse/commit/e8f2f8ea5))
+- **vetra:** add permission-utils for subgraph permission checks ([4563bae19](https://github.com/powerhouse-inc/powerhouse/commit/4563bae19))
+- **monorepo:** ensure the same typescript version is used everywhere ([#2258](https://github.com/powerhouse-inc/powerhouse/pull/2258))
+
+### 🩹 Fixes
+
+- **vetra,switchboard:** fix TypeScript errors in permission tests and profiler ([7726f95a3](https://github.com/powerhouse-inc/powerhouse/commit/7726f95a3))
+- **vetra,reactor-api:** add eslint-disable for permission test files ([9cab4e2b3](https://github.com/powerhouse-inc/powerhouse/commit/9cab4e2b3))
+
+### ❤️ Thank You
+
+- Frank
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.0.0-dev.23 (2026-01-27)
 
 ### 🚀 Features

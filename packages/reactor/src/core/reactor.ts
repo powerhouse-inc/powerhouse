@@ -6,7 +6,6 @@ import {
   upgradeDocumentAction,
 } from "#actions/index.js";
 import type { ILogger } from "#logging/types.js";
-import type { BaseDocumentDriveServer } from "document-drive";
 import { AbortError } from "document-drive";
 import type {
   Action,
@@ -22,6 +21,7 @@ import type { IJobTracker } from "../job-tracker/interfaces.js";
 import type { IQueue } from "../queue/interfaces.js";
 import type { Job } from "../queue/types.js";
 import type { IReadModelCoordinator } from "../read-models/interfaces.js";
+import type { IDocumentModelRegistry } from "../registry/interfaces.js";
 import { createMutableShutdownStatus } from "../shared/factories.js";
 import type {
   ConsistencyToken,
@@ -64,7 +64,7 @@ import {
  */
 export class Reactor implements IReactor {
   private logger: ILogger;
-  private driveServer: BaseDocumentDriveServer;
+  private documentModelRegistry: IDocumentModelRegistry;
   private documentStorage: IConsistencyAwareStorage;
   private shutdownStatus: ShutdownStatus;
   private setShutdown: (value: boolean) => void;
@@ -78,7 +78,7 @@ export class Reactor implements IReactor {
 
   constructor(
     logger: ILogger,
-    driveServer: BaseDocumentDriveServer,
+    documentModelRegistry: IDocumentModelRegistry,
     documentStorage: IConsistencyAwareStorage,
     queue: IQueue,
     jobTracker: IJobTracker,
@@ -88,9 +88,8 @@ export class Reactor implements IReactor {
     documentIndexer: IDocumentIndexer,
     operationStore: IOperationStore,
   ) {
-    // Store required dependencies
     this.logger = logger;
-    this.driveServer = driveServer;
+    this.documentModelRegistry = documentModelRegistry;
     this.documentStorage = documentStorage;
     this.queue = queue;
     this.jobTracker = jobTracker;
@@ -100,7 +99,6 @@ export class Reactor implements IReactor {
     this._documentIndexer = documentIndexer;
     this.operationStore = operationStore;
 
-    // Create mutable shutdown status using factory method
     const [status, setter] = createMutableShutdownStatus(false);
     this.shutdownStatus = status;
     this.setShutdown = setter;
@@ -145,11 +143,11 @@ export class Reactor implements IReactor {
       paging,
     );
 
-    // Get document model modules from the drive server + filter
-    const modules = this.driveServer.getDocumentModelModules();
+    // Get document model modules from the registry + filter
+    const modules = this.documentModelRegistry.getAllModules();
 
     const filteredModels = modules.filter(
-      (module) =>
+      (module: DocumentModelModule) =>
         !namespace || module.documentModel.global.id.startsWith(namespace),
     );
 

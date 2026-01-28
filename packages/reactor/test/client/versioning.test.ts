@@ -425,11 +425,11 @@ describe("ReactorClient Versioning Integration Tests", () => {
         v1Actions.addItem({ id: "1", name: "Test Item" }),
       ]);
 
-      const { document: retrieved } = await client.get(doc.header.id, {
-        includeOperations: true,
-      });
+      const { document: retrieved } = await client.get(doc.header.id);
       expect(retrieved.header.id).toBe(doc.header.id);
-      expect(retrieved.operations.global.length).toBeGreaterThan(0);
+
+      const operations = await client.getOperations(doc.header.id);
+      expect(operations.results.length).toBeGreaterThan(0);
     });
 
     it("should find documents by type regardless of version", async () => {

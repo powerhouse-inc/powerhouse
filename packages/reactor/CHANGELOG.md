@@ -1,3 +1,30 @@
+## 6.0.0-dev.25 (2026-01-28)
+
+### 🩹 Fixes
+
+- ci pipeline does not like my build command ([03c70d15e](https://github.com/powerhouse-inc/powerhouse/commit/03c70d15e))
+- resolve reshuffle race issues when timestamps match ([bb66eeb90](https://github.com/powerhouse-inc/powerhouse/commit/bb66eeb90))
+- fixing some bad tests ([cf8b8649a](https://github.com/powerhouse-inc/powerhouse/commit/cf8b8649a))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
+## 6.0.0-dev.24 (2026-01-27)
+
+### 🚀 Features
+
+- **monorepo:** ensure the same typescript version is used everywhere ([#2258](https://github.com/powerhouse-inc/powerhouse/pull/2258))
+
+### 🩹 Fixes
+
+- added many missing tests ([0afe3277f](https://github.com/powerhouse-inc/powerhouse/commit/0afe3277f))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.0.0-dev.23 (2026-01-27)
 
 ### 🚀 Features

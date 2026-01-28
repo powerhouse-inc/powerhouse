@@ -165,7 +165,7 @@ describe("SimpleJobExecutor signature verification", () => {
       mockWriteCache,
       mockOperationIndex,
       mockDocumentMetaCache,
-      { legacyStorageEnabled: true },
+      {},
       verificationHandler,
     );
   });

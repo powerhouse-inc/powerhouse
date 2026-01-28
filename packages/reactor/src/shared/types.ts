@@ -44,6 +44,8 @@ export enum RelationshipChangeType {
   Removed = "removed",
 }
 
+import type { Job } from "../queue/types.js";
+
 /**
  * Describes the current state of a job.
  */
@@ -65,6 +67,11 @@ export type JobInfo = {
    * Optional metadata that flows through the job lifecycle.
    */
   meta?: Record<string, unknown>;
+
+  /**
+   * The full job object, populated on failure for debugging purposes.
+   */
+  job?: Job;
 };
 
 /**
@@ -91,7 +98,6 @@ export type ViewFilter = {
   branch?: string;
   scopes?: string[];
   revision?: number;
-  includeOperations?: boolean;
 };
 
 /**

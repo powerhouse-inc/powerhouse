@@ -208,7 +208,7 @@ export const operationFromAction = (
       context.branch,
       action.id,
     ),
-    timestampUtcMs: new Date().toISOString(),
+    timestampUtcMs: action.timestampUtcMs,
     hash: "",
     error: undefined,
 

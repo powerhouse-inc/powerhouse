@@ -1,3 +1,4 @@
+import type { Job } from "../queue/types.js";
 import type { ErrorInfo, JobInfo } from "../shared/types.js";
 
 /**
@@ -24,8 +25,9 @@ export interface IJobTracker {
    *
    * @param jobId - The job ID to mark as failed
    * @param error - Error information including message and stack trace
+   * @param job - Optional full job object for debugging purposes
    */
-  markFailed(jobId: string, error: ErrorInfo): void;
+  markFailed(jobId: string, error: ErrorInfo, job?: Job): void;
 
   /**
    * Retrieve the current status of a job.

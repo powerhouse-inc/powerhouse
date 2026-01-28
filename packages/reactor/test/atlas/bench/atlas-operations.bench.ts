@@ -77,68 +77,31 @@ async function main() {
 
   const bench = new Bench({ time: 60000 });
 
-  let reactorLegacyStorage: IReactor | null;
-  let reactorNoLegacyStorage: IReactor | null;
+  let reactorInstance: IReactor | null;
   let reactorBatchSubmission: IReactor | null;
   let legacyReactor: BaseDocumentDriveServer | null;
 
   bench
     .add(
-      "Reactor (Legacy Storage) - Process all operations",
-      async () => {
-        // sequentially process all operations
-        for (const mutation of mutations) {
-          await processReactorMutation(mutation, reactorLegacyStorage!);
-        }
-      },
-      {
-        beforeEach: async () => {
-          const prismaClient = new PrismaClient({
-            datasources: {
-              db: {
-                url: DATABASE_URL,
-              },
-            },
-          });
-
-          await truncateAllTables(prismaClient);
-
-          const documentModels = getDocumentModels();
-          reactorLegacyStorage = await new ReactorBuilder()
-            .withDocumentModels(documentModels)
-            .withFeatures({
-              legacyStorageEnabled: true,
-            })
-            .withLegacyStorage(new PrismaStorage(prismaClient as any, cache))
-            .build();
-        },
-        afterEach: () => {
-          reactorLegacyStorage?.kill();
-        },
-      },
-    )
-    .add(
       "Reactor - Process all operations",
       async () => {
         // sequentially process all operations
         for (const mutation of mutations) {
-          await processReactorMutation(mutation, reactorNoLegacyStorage!);
+          await processReactorMutation(mutation, reactorInstance!);
         }
       },
       {
         beforeEach: async () => {
           const documentModels = getDocumentModels();
-          reactorNoLegacyStorage = await new ReactorBuilder()
+          reactorInstance = await new ReactorBuilder()
             .withDocumentModels(documentModels)
-            .withFeatures({
-              legacyStorageEnabled: false,
-            })
+            .withFeatures({})
             // not used
             .withLegacyStorage(new MemoryStorage())
             .build();
         },
         afterEach: () => {
-          reactorNoLegacyStorage?.kill();
+          reactorInstance?.kill();
         },
       },
     )
@@ -204,9 +167,7 @@ async function main() {
           const documentModels = getDocumentModels();
           reactorBatchSubmission = await new ReactorBuilder()
             .withDocumentModels(documentModels)
-            .withFeatures({
-              legacyStorageEnabled: false,
-            })
+            .withFeatures({})
             // not used
             .withLegacyStorage(new MemoryStorage())
             .build();

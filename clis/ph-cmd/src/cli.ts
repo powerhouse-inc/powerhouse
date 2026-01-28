@@ -12,11 +12,10 @@ async function executePhCliCommand(command: string) {
   const forwardedArgs = process.argv.slice(3);
   const detectResult = await detect();
   const agent = detectResult?.agent ?? "npm";
-  // Use full package name so npx/pnpx knows which package provides the ph-cli binary
   const resolveExecuteLocalCommandResult = resolveCommand(
     agent,
     "execute-local",
-    ["@powerhousedao/ph-cli", command, ...forwardedArgs],
+    ["ph-cli", command, ...forwardedArgs],
   );
   if (!resolveExecuteLocalCommandResult) {
     throw new Error(

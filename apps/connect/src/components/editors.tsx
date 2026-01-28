@@ -188,6 +188,9 @@ export const DocumentEditor: React.FC<Props> = (props) => {
           onCopyState={() => {
             toast("Copied document state to clipboard", { type: "success" });
           }}
+          onCopyDocId={() => {
+            toast("Copied document ID to clipboard", { type: "success" });
+          }}
         />
       ) : (
         <Suspense

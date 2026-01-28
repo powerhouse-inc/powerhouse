@@ -201,7 +201,7 @@ describe("SimpleJobExecutor Integration (Modern Storage)", () => {
             id: "action-1",
             type: "ADD_FOLDER",
             scope: "global",
-            timestampUtcMs: Date.now().toString(),
+            timestampUtcMs: new Date().toISOString(),
             input: {
               id: "folder-1",
               name: "Test Folder",
@@ -210,7 +210,7 @@ describe("SimpleJobExecutor Integration (Modern Storage)", () => {
           },
         ],
         operations: [],
-        createdAt: Date.now().toString(),
+        createdAt: new Date().toISOString(),
         queueHint: [],
         errorHistory: [],
       };
@@ -275,7 +275,7 @@ describe("SimpleJobExecutor Integration (Modern Storage)", () => {
             id: "action-1",
             type: "ADD_FOLDER",
             scope: "global",
-            timestampUtcMs: Date.now().toString(),
+            timestampUtcMs: new Date().toISOString(),
             input: {
               id: "folder-1",
               name: "Parent Folder",
@@ -284,7 +284,7 @@ describe("SimpleJobExecutor Integration (Modern Storage)", () => {
           },
         ],
         operations: [],
-        createdAt: Date.now().toString(),
+        createdAt: new Date().toISOString(),
         queueHint: [],
         errorHistory: [],
       };
@@ -303,7 +303,7 @@ describe("SimpleJobExecutor Integration (Modern Storage)", () => {
             id: "action-2",
             type: "ADD_FOLDER",
             scope: "global",
-            timestampUtcMs: (Date.now() + 1).toString(),
+            timestampUtcMs: new Date(Date.now() + 1).toISOString(),
             input: {
               id: "folder-2",
               name: "Child Folder",
@@ -312,7 +312,7 @@ describe("SimpleJobExecutor Integration (Modern Storage)", () => {
           },
         ],
         operations: [],
-        createdAt: (Date.now() + 1).toString(),
+        createdAt: new Date(Date.now() + 1).toISOString(),
         queueHint: [],
         errorHistory: [],
       };
@@ -376,7 +376,7 @@ describe("SimpleJobExecutor Integration (Modern Storage)", () => {
             id: "action-folder",
             type: "ADD_FOLDER",
             scope: "global",
-            timestampUtcMs: Date.now().toString(),
+            timestampUtcMs: new Date().toISOString(),
             input: {
               id: "folder-1",
               name: "Documents",
@@ -385,7 +385,7 @@ describe("SimpleJobExecutor Integration (Modern Storage)", () => {
           },
         ],
         operations: [],
-        createdAt: Date.now().toString(),
+        createdAt: new Date().toISOString(),
         queueHint: [],
         errorHistory: [],
       };
@@ -403,7 +403,7 @@ describe("SimpleJobExecutor Integration (Modern Storage)", () => {
             id: "action-file",
             type: "ADD_FILE",
             scope: "global",
-            timestampUtcMs: (Date.now() + 1).toString(),
+            timestampUtcMs: new Date(Date.now() + 1).toISOString(),
             input: {
               id: "file-1",
               name: "test.txt",
@@ -413,7 +413,7 @@ describe("SimpleJobExecutor Integration (Modern Storage)", () => {
           },
         ],
         operations: [],
-        createdAt: (Date.now() + 1).toString(),
+        createdAt: new Date(Date.now() + 1).toISOString(),
         queueHint: [],
         errorHistory: [],
       };
@@ -470,7 +470,7 @@ describe("SimpleJobExecutor Integration (Modern Storage)", () => {
             id: "action-1",
             type: "ADD_FOLDER",
             scope: "global",
-            timestampUtcMs: Date.now().toString(),
+            timestampUtcMs: new Date().toISOString(),
             input: {
               id: "folder-1",
               name: "Test Folder",
@@ -513,7 +513,7 @@ describe("SimpleJobExecutor Integration (Modern Storage)", () => {
             id: "global-action-1",
             type: "ADD_FOLDER",
             scope: "global",
-            timestampUtcMs: Date.now().toString(),
+            timestampUtcMs: new Date().toISOString(),
             input: {
               id: "folder-1",
               name: "Folder 1",
@@ -522,7 +522,7 @@ describe("SimpleJobExecutor Integration (Modern Storage)", () => {
           },
         ],
         operations: [],
-        createdAt: Date.now().toString(),
+        createdAt: new Date().toISOString(),
         queueHint: [],
         errorHistory: [],
       };
@@ -579,7 +579,7 @@ describe("SimpleJobExecutor Integration (Modern Storage)", () => {
             id: "post-delete-action",
             type: "ADD_FOLDER",
             scope: "global",
-            timestampUtcMs: (Date.now() + 100).toString(),
+            timestampUtcMs: new Date(Date.now() + 100).toISOString(),
             input: {
               id: "folder-after-delete",
               name: "Should Not Be Created",
@@ -588,7 +588,7 @@ describe("SimpleJobExecutor Integration (Modern Storage)", () => {
           },
         ],
         operations: [],
-        createdAt: (Date.now() + 100).toString(),
+        createdAt: new Date(Date.now() + 100).toISOString(),
         queueHint: [],
         errorHistory: [],
       };
@@ -646,7 +646,7 @@ describe("SimpleJobExecutor Integration (Modern Storage)", () => {
             id: "action-1",
             type: "ADD_FOLDER",
             scope: "global",
-            timestampUtcMs: Date.now().toString(),
+            timestampUtcMs: new Date().toISOString(),
             input: {
               id: "folder-1",
               name: "Test Folder",
@@ -655,7 +655,7 @@ describe("SimpleJobExecutor Integration (Modern Storage)", () => {
           },
         ],
         operations: [],
-        createdAt: Date.now().toString(),
+        createdAt: new Date().toISOString(),
         queueHint: [],
         errorHistory: [],
       };

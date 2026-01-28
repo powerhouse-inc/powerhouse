@@ -163,7 +163,7 @@ describe("SimpleJobExecutor mutation signature verification", () => {
       mockWriteCache,
       mockOperationIndex,
       mockDocumentMetaCache,
-      { legacyStorageEnabled: true },
+      {},
       verificationHandler,
     );
   });

@@ -1,3 +1,23 @@
+## 6.0.0-dev.25 (2026-01-28)
+
+### 🩹 Fixes
+
+- resolve reshuffle race issues when timestamps match ([bb66eeb90](https://github.com/powerhouse-inc/powerhouse/commit/bb66eeb90))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
+## 6.0.0-dev.24 (2026-01-27)
+
+### 🚀 Features
+
+- **monorepo:** ensure the same typescript version is used everywhere ([#2258](https://github.com/powerhouse-inc/powerhouse/pull/2258))
+
+### ❤️ Thank You
+
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.0.0-dev.23 (2026-01-27)
 
 ### 🚀 Features

@@ -551,3 +551,24 @@ html[data-theme="dark"] .DocSearch-Hits > *:empty {
   background-color: var(--ifm-color-emphasis-700);
 }
 
+/* Release Notes sidebar styling - softer grey */
+.release-notes-sidebar-item .menu__link {
+  color: #888 !important;
+  opacity: 0.8;
+}
+
+.release-notes-sidebar-item .menu__link:hover {
+  color: #666 !important;
+  opacity: 1;
+}
+
+/* Dark mode release notes styling */
+[data-theme="dark"] .release-notes-sidebar-item .menu__link {
+  color: #999 !important;
+  opacity: 0.7;
+}
+
+[data-theme="dark"] .release-notes-sidebar-item .menu__link:hover {
+  color: #bbb !important;
+  opacity: 1;
+}

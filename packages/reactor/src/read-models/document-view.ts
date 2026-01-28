@@ -1,5 +1,4 @@
-import type { Operation, PHDocument, PHDocumentHeader } from "document-model";
-import { deriveOperationId } from "document-model/core";
+import type { PHDocument, PHDocumentHeader } from "document-model";
 import type { Kysely, Transaction } from "kysely";
 import { v4 as uuidv4 } from "uuid";
 import type { IOperationIndex } from "../cache/operation-index-types.js";
@@ -311,44 +310,11 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
       state[snapshot.scope] = snapshot.content;
     }
 
-    const operations: Record<string, Operation[]> = {};
-
-    if (view?.includeOperations) {
-      const allOps = await this.operationStore.getSinceId(0, undefined, signal);
-      const docOps = allOps.items.filter(
-        (op) =>
-          op.context.documentId === documentId && op.context.branch === branch,
-      );
-
-      for (const { operation, context } of docOps) {
-        operations[context.scope] ??= [];
-
-        const normalizedOp: Operation = {
-          id: deriveOperationId(
-            context.documentId,
-            context.scope,
-            context.branch,
-            operation.action.id,
-          ),
-          action: operation.action,
-          index: operation.index,
-          timestampUtcMs: operation.timestampUtcMs,
-          hash: operation.hash,
-          skip: operation.skip,
-          ...(operation.action as Record<string, unknown>),
-          error: operation.error,
-          resultingState: operation.resultingState,
-        };
-
-        operations[context.scope].push(normalizedOp);
-      }
-    }
-
     const document: PHDocument = {
       header,
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       state: state as any,
-      operations,
+      operations: {},
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       initialState: state as any,
       clipboard: [],

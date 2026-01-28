@@ -1,3 +1,44 @@
+## 6.0.0-dev.25 (2026-01-28)
+
+### 🩹 Fixes
+
+- fixing some bad tests ([cf8b8649a](https://github.com/powerhouse-inc/powerhouse/commit/cf8b8649a))
+- resolve reshuffle race issues when timestamps match ([bb66eeb90](https://github.com/powerhouse-inc/powerhouse/commit/bb66eeb90))
+- ci pipeline does not like my build command ([03c70d15e](https://github.com/powerhouse-inc/powerhouse/commit/03c70d15e))
+- **design-system:** make package manager list fill available modal he… ([#2260](https://github.com/powerhouse-inc/powerhouse/pull/2260))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Guillermo Puente Sandoval @gpuente
+
+## 6.0.0-dev.24 (2026-01-27)
+
+### 🚀 Features
+
+- add toast and padding to revision history ([#2259](https://github.com/powerhouse-inc/powerhouse/pull/2259))
+- **monorepo:** ensure the same typescript version is used everywhere ([#2258](https://github.com/powerhouse-inc/powerhouse/pull/2258))
+- **profiling:** add runtime comparison script for switchboard ([8d9467278](https://github.com/powerhouse-inc/powerhouse/commit/8d9467278))
+- **reactor-api:** add permission checks to DocumentModelSubgraphLegacy ([2ce8d2036](https://github.com/powerhouse-inc/powerhouse/commit/2ce8d2036))
+- **switchboard:** enhance pyroscope profiler with wall and heap support ([254c0cea9](https://github.com/powerhouse-inc/powerhouse/commit/254c0cea9))
+- **vetra:** add permission-utils for subgraph permission checks ([4563bae19](https://github.com/powerhouse-inc/powerhouse/commit/4563bae19))
+- **vetra:** add permission checks to all subgraph resolvers ([e8f2f8ea5](https://github.com/powerhouse-inc/powerhouse/commit/e8f2f8ea5))
+
+### 🩹 Fixes
+
+- added many missing tests ([0afe3277f](https://github.com/powerhouse-inc/powerhouse/commit/0afe3277f))
+- **ph-cmd:** use binary name instead of package name for pnpm exec ([94985a74a](https://github.com/powerhouse-inc/powerhouse/commit/94985a74a))
+- **vetra,reactor-api:** add eslint-disable for permission test files ([9cab4e2b3](https://github.com/powerhouse-inc/powerhouse/commit/9cab4e2b3))
+- **vetra,switchboard:** fix TypeScript errors in permission tests and profiler ([7726f95a3](https://github.com/powerhouse-inc/powerhouse/commit/7726f95a3))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Frank
+- Guillermo Puente Sandoval @gpuente
+- Ryan Wolhuter @ryanwolhuter
+- Samuel Hawksby-Robinson @Samyoul
+
 ## 6.0.0-dev.23 (2026-01-27)
 
 ### 🚀 Features

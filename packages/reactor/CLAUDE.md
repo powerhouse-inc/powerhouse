@@ -1,12 +1,10 @@
-- Before you start on a task, read the specs in the `docs/planning` folder.
 - Before writing tests, run `pnpm vitest list` to understand test coverage.
 
 - Always use pnpm, never use npm or yarn.
 - Never add comments inside of function, only on function and class declarations.
 - Do not add comments to interface implementations, only on interface declarations.
 - When making changes to a package, but running tests in a different package, always run `pnpm tsc --build` in the package you are working on first.
-- Always use `pnpm claude` to build, test, and lint this package.
-- Your task is not accomplished until you have run `pnpm claude` and all tests pass and linting errors are fixed.
+- After making changes, make sure to run `pnpm build && pnpm lint` to build and lint your changes.
 
 - Never use `any` or `unknown` types. Always use named types instead.
 - Prefer named types and classical OOP over Pick, Omit, etc.

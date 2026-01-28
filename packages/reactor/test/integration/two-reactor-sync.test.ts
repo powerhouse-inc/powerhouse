@@ -677,17 +677,19 @@ describe("Two-Reactor Sync", () => {
     const readyOnB = waitForOperationsReady(eventBusB, doc.header.id);
     const createJob = await reactorA.create(doc);
     await waitForJobCompletion(reactorA, createJob.id);
-
-    // Wait for document to sync to ReactorB
     await readyOnB;
 
-    // Fire many mutations rapidly from both reactors using void (fire-and-forget)
-    void reactorA.execute(doc.header.id, "main", [
-      driveDocumentModelModule.actions.setDriveName({ name: `Name A` }),
-    ]);
-    void reactorB.execute(doc.header.id, "main", [
-      driveDocumentModelModule.actions.setDriveName({ name: `Name B` }),
-    ]);
+    const actionA = driveDocumentModelModule.actions.setDriveName({
+      name: `Name A`,
+    });
+    const actionB = driveDocumentModelModule.actions.setDriveName({
+      name: `Name B`,
+    });
+    actionA.timestampUtcMs = "2026-01-27T19:20:04.470Z";
+    actionB.timestampUtcMs = "2026-01-27T19:20:04.470Z";
+
+    void reactorA.execute(doc.header.id, "main", [actionA]);
+    void reactorB.execute(doc.header.id, "main", [actionB]);
 
     // Give time for operations to process and sync
     await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -708,9 +710,11 @@ describe("Two-Reactor Sync", () => {
     }).global;
     expect(garbageCollectedOpsA.length).toBe(garbageCollectedOpsB.length);
 
-    // Validate the document state matches on both reactors
-    // Note: We compare state rather than full document because each reactor
-    // generates its own operation IDs during reshuffle
+    // the gc'd operations should match, in order
+    for (let i = 0; i < garbageCollectedOpsA.length; i++) {
+      expect(garbageCollectedOpsA[i].id).toEqual(garbageCollectedOpsB[i].id);
+    }
+
     const docFromA = await reactorA.get(doc.header.id, { branch: "main" });
     const docFromB = await reactorB.get(doc.header.id, { branch: "main" });
 

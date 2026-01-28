@@ -609,11 +609,15 @@ export function reshuffleByTimestamp<TOp extends OperationIndex>(
   opsB: TOp[],
 ): TOp[] {
   return [...opsA, ...opsB]
-    .sort(
-      (a, b) =>
+    .sort((a, b) => {
+      const timestampDiff =
         new Date(a.timestampUtcMs || "").getTime() -
-        new Date(b.timestampUtcMs || "").getTime(),
-    )
+        new Date(b.timestampUtcMs || "").getTime();
+      if (timestampDiff !== 0) {
+        return timestampDiff;
+      }
+      return (a.id || "").localeCompare(b.id || "");
+    })
     .map((op, i) => ({
       ...op,
       index: startIndex.index + i,
@@ -627,12 +631,19 @@ export function reshuffleByTimestampAndIndex<TOp extends OperationIndex>(
   opsB: TOp[],
 ): TOp[] {
   return [...opsA, ...opsB]
-    .sort(
-      (a, b) =>
+    .sort((a, b) => {
+      const indexDiff = a.index - b.index;
+      if (indexDiff !== 0) {
+        return indexDiff;
+      }
+      const timestampDiff =
         new Date(a.timestampUtcMs || "").getTime() -
-        new Date(b.timestampUtcMs || "").getTime(),
-    )
-    .sort((a, b) => a.index - b.index)
+        new Date(b.timestampUtcMs || "").getTime();
+      if (timestampDiff !== 0) {
+        return timestampDiff;
+      }
+      return (a.id || "").localeCompare(b.id || "");
+    })
     .map((op, i) => ({
       ...op,
       index: startIndex.index + i,

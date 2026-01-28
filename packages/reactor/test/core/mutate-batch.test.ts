@@ -1,4 +1,4 @@
-import type { BaseDocumentDriveServer, IDocumentStorage } from "document-drive";
+import type { IDocumentStorage } from "document-drive";
 import type { Action } from "document-model";
 import { v4 as uuidv4 } from "uuid";
 import { describe, expect, it } from "vitest";
@@ -16,21 +16,16 @@ import {
   createMockLogger,
   createMockOperationStore,
   createMockReactorFeatures,
+  createTestRegistry,
 } from "../factories.js";
 
 describe("mutateBatch validation", () => {
-  const createMockDriveServer = (): BaseDocumentDriveServer => {
-    return {
-      getDocumentModelModules: () => [],
-    } as unknown as BaseDocumentDriveServer;
-  };
-
   const createMockStorage = (): IDocumentStorage => {
     return {} as IDocumentStorage;
   };
 
   const createReactor = (): Reactor => {
-    const driveServer = createMockDriveServer();
+    const registry = createTestRegistry();
     const storage = createMockStorage();
     const eventBus = new EventBus();
     const queue = new InMemoryQueue(eventBus);
@@ -44,7 +39,7 @@ describe("mutateBatch validation", () => {
     );
     return new Reactor(
       createMockLogger(),
-      driveServer,
+      registry,
       consistencyAwareStorage,
       queue,
       jobTracker,
