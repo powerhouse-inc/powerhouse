@@ -12,9 +12,9 @@ import type { IRelationalDb } from "document-drive";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getResolvers } from "../vetra-read-model/resolvers.js";
 
-// Mock the VetraReadModelProcessorLegacy
-vi.mock("../../processors/vetra-read-model/index.legacy.js", () => ({
-  VetraReadModelProcessorLegacy: {
+// Mock the VetraReadModelProcessor
+vi.mock("../../processors/vetra-read-model/index.js", () => ({
+  VetraReadModelProcessor: {
     query: vi.fn(() => ({
       selectFrom: vi.fn(() => ({
         selectAll: vi.fn(() => ({
@@ -29,7 +29,7 @@ vi.mock("../../processors/vetra-read-model/index.legacy.js", () => ({
   },
 }));
 
-import { VetraReadModelProcessorLegacy } from "../../processors/vetra-read-model/index.legacy.js";
+import { VetraReadModelProcessor } from "../../processors/vetra-read-model/index.js";
 
 describe("VetraReadModel Subgraph Permission Checks", () => {
   let mockSubgraph: Partial<BaseSubgraph>;
@@ -109,7 +109,7 @@ describe("VetraReadModel Subgraph Permission Checks", () => {
       .fn()
       .mockReturnValue({ selectAll: mockSelectAll });
 
-    vi.mocked(VetraReadModelProcessorLegacy.query).mockReturnValue({
+    vi.mocked(VetraReadModelProcessor.query).mockReturnValue({
       selectFrom: mockSelectFrom,
     } as any);
 
