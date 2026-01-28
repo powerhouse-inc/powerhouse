@@ -13,7 +13,6 @@ describe("Renown on script", () => {
     const userDid = `did:pkh:eip155:1:0x9addcbbaa28f7eb5f75e023f7c1fcb13c9dfd8f7`;
     const scriptDid = `did:key:zDnaemYykA84zrhGcX2Tosec5nhabbxg652ARGkmjFJUfiy4J`;
 
-    // Setup renown with RenownBuilder - much simpler!
     const keyPath = `${import.meta.dirname}/tmp/.keypair.json`;
     const renown = await new RenownBuilder("script", { keyPath }).build();
 
