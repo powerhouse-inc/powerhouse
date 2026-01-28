@@ -11,6 +11,9 @@
   "publishConfig": {
     "access": "public"
   },
+  "engines": {
+    "node": ">=24.0.0"
+  },
   "bin": {
     "ph": "./build/cli.js",
     "ph-legacy": "./build/cli.old.js"

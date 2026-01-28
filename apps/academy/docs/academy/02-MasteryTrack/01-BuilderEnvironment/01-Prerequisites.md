@@ -3,7 +3,7 @@
 Let's set up your machine to start building your first Document Model. Don't worry if this is your first time setting up a development environment - we'll guide you through each step!
 
 :::info
-If you've already set up **Git, Node.js 22, and a package manager (pnpm or npm)**, your most important step is to install the **Powerhouse CLI** with the command: `pnpm install -g ph-cmd` or `npm install -g ph-cmd`. A global install is recommended if you want to use the command from any directory as a power user. The Powerhouse CLI is used to create, build, and run your Document Models and gives you direct access to a series of Powerhouse Builder Tools. Move to the end of this page to [verify your installation.](#verify-installation)
+If you've already set up **Git, Node.js 24, and a package manager (pnpm or npm)**, your most important step is to install the **Powerhouse CLI** with the command: `pnpm install -g ph-cmd` or `npm install -g ph-cmd`. A global install is recommended if you want to use the command from any directory as a power user. The Powerhouse CLI is used to create, build, and run your Document Models and gives you direct access to a series of Powerhouse Builder Tools. Move to the end of this page to [verify your installation.](#verify-installation)
 :::
 
 ---
@@ -12,7 +12,7 @@ If you've already set up **Git, Node.js 22, and a package manager (pnpm or npm)*
 
 Before we begin building our Document Model, we need to install some software on your machine. We'll need three main tools:
 
-- Node.js 22, which helps us run our code.
+- Node.js 24, which helps us run our code.
 - Visual Studio Code (VS Code), which is where we'll write our code
 - Git, which helps us manage our code.
 
@@ -44,9 +44,9 @@ For more details, see the official [WSL installation guide](https://learn.micros
 
 ---
 
-### Installing Node.js 22
+### Installing Node.js 24
 
-Node.js 22 is a tool that lets us run our application. Let's install it step by step.
+Node.js 24 is a tool that lets us run our application. Let's install it step by step.
 
 #### For Windows:
 
@@ -63,7 +63,7 @@ Node.js 22 is a tool that lets us run our application. Let's install it step by 
    - Type 'A' when prompted to confirm
    - You can now close this window and open PowerShell normally for the remaining steps
 
-2. **Install Node.js 22:**
+2. **Install Node.js 24:**
    - Visit the [Node.js official website](https://nodejs.org/)
    - Click the big green button that says "LTS" (this means Long Term Support - it's the most stable version)
    - Once the installer downloads, double-click it to start installation
@@ -89,7 +89,7 @@ Node.js 22 is a tool that lets us run our application. Let's install it step by 
    npm --version
    ```
 
-   - You should see version numbers appear after each command (e.g., v22.x.x for Node.js). If you do, congratulations - Node.js and your package manager are installed!
+   - You should see version numbers appear after each command (e.g., v24.x.x for Node.js). If you do, congratulations - Node.js and your package manager are installed!
 
 > **Note**: If Node.js commands don't work in VS Code, restart VS Code to refresh environment variables.
 
@@ -105,11 +105,11 @@ Node.js 22 is a tool that lets us run our application. Let's install it step by 
 
    - Follow any additional instructions that appear
 
-2. **Install Node.js 22:**
+2. **Install Node.js 24:**
    - In the same Terminal window, type this command and press Enter:
 
    ```bash
-   brew install node@22
+   brew install node@24
    ```
 
    - Then, optionally install pnpm (npm comes with Node.js):
@@ -141,7 +141,7 @@ Node.js 22 is a tool that lets us run our application. Let's install it step by 
    sudo apt update
    ```
 
-3. **Install Node.js 22 and optionally pnpm:**
+3. **Install Node.js 24 and optionally pnpm:**
 
    ```bash
    sudo apt install nodejs
@@ -322,7 +322,7 @@ You're now ready to start building your first Document Model!
 
 ```bash
 % node --version
-v22.16.0
+v24.13.0
 % pnpm --version
 10.10.0
 % git --version

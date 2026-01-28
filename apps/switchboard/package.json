@@ -13,6 +13,9 @@
       "types": "./dist/src/server.d.ts"
     }
   },
+  "engines": {
+    "node": ">=24.0.0"
+  },
   "bin": {
     "switchboard": "dist/src/index.js"
   },

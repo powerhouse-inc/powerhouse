@@ -1,9 +1,9 @@
 import { describe, expect, test } from "vitest";
-import { syncAndPublishWorkflowTemplate } from "../../templates/boilerplate/github/sync-and-publish.yml.js";
+import { connectEntrypointTemplate } from "../../templates/boilerplate/docker/connect-entrypoint.sh.js";
 import { dockerfileTemplate } from "../../templates/boilerplate/docker/Dockerfile.js";
 import { nginxConfTemplate } from "../../templates/boilerplate/docker/nginx.conf.js";
-import { connectEntrypointTemplate } from "../../templates/boilerplate/docker/connect-entrypoint.sh.js";
 import { switchboardEntrypointTemplate } from "../../templates/boilerplate/docker/switchboard-entrypoint.sh.js";
+import { syncAndPublishWorkflowTemplate } from "../../templates/boilerplate/github/sync-and-publish.yml.js";
 
 describe("CI/CD Templates", () => {
   describe("sync-and-publish.yml", () => {
@@ -52,7 +52,7 @@ describe("CI/CD Templates", () => {
     });
 
     test("should contain base stage", () => {
-      expect(dockerfileTemplate).toContain("FROM node:22-alpine AS base");
+      expect(dockerfileTemplate).toContain("FROM node:24-alpine AS base");
     });
 
     test("should contain connect-builder stage", () => {
@@ -65,7 +65,7 @@ describe("CI/CD Templates", () => {
 
     test("should contain switchboard final stage", () => {
       expect(dockerfileTemplate).toContain(
-        "FROM node:22-alpine AS switchboard",
+        "FROM node:24-alpine AS switchboard",
       );
     });
 
