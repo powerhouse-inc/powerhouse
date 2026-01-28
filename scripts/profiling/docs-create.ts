@@ -147,22 +147,53 @@ async function createDocument(
   return createEmptyDocument.id;
 }
 
+interface OperationTiming {
+  opIndex: number;
+  durationMs: number;
+  action: object;
+}
+
+interface OperationsResult {
+  timings: OperationTiming[];
+  minOp: OperationTiming | null;
+  maxOp: OperationTiming | null;
+}
+
 async function performOperations(
   client: GraphQLClient,
   documentId: string,
   docIndex: number,
   operationCount: number,
   totalDocs: number,
-  onProgress: (opNum: number, action: object) => void,
-): Promise<void> {
+  onProgress: (opNum: number, action: object, durationMs: number) => void,
+): Promise<OperationsResult> {
+  const timings: OperationTiming[] = [];
+  let minOp: OperationTiming | null = null;
+  let maxOp: OperationTiming | null = null;
+
   for (let i = 0; i < operationCount; i++) {
     const action = createOperation(docIndex, i + 1);
+    const opStart = Date.now();
     await client.request(MUTATE_DOCUMENT, {
       documentIdentifier: documentId,
       actions: [action],
     });
-    onProgress(i + 1, action);
+    const durationMs = Date.now() - opStart;
+
+    const timing: OperationTiming = { opIndex: i + 1, durationMs, action };
+    timings.push(timing);
+
+    if (minOp === null || durationMs < minOp.durationMs) {
+      minOp = timing;
+    }
+    if (maxOp === null || durationMs > maxOp.durationMs) {
+      maxOp = timing;
+    }
+
+    onProgress(i + 1, action, durationMs);
   }
+
+  return { timings, minOp, maxOp };
 }
 
 function parseArgs(args: string[]): {
@@ -277,6 +308,18 @@ async function main() {
     const opsStartTime = Date.now();
     const totalOps = count * operations;
 
+    // Track overall min/max across all documents
+    let overallMinOp: {
+      docId: string;
+      docNum: number;
+      timing: OperationTiming;
+    } | null = null;
+    let overallMaxOp: {
+      docId: string;
+      docNum: number;
+      timing: OperationTiming;
+    } | null = null;
+
     for (let i = 0; i < documentIds.length; i++) {
       const docNum = i + 1;
       const docId = documentIds[i];
@@ -286,16 +329,16 @@ async function main() {
         console.log(`  [${docNum}/${count}] ${docId}:`);
       }
 
-      await performOperations(
+      const result = await performOperations(
         client,
         docId,
         docNum,
         operations,
         count,
-        (opNum, action) => {
+        (opNum, action, durationMs) => {
           if (verbose) {
             console.log(
-              `    op ${opNum}/${operations}: ${JSON.stringify(action)}`,
+              `    op ${opNum}/${operations}: ${durationMs}ms ${JSON.stringify(action)}`,
             );
           } else {
             process.stdout.write(
@@ -304,14 +347,36 @@ async function main() {
           }
         },
       );
+
+      // Update overall min/max
+      if (
+        result.minOp &&
+        (overallMinOp === null ||
+          result.minOp.durationMs < overallMinOp.timing.durationMs)
+      ) {
+        overallMinOp = { docId, docNum, timing: result.minOp };
+      }
+      if (
+        result.maxOp &&
+        (overallMaxOp === null ||
+          result.maxOp.durationMs > overallMaxOp.timing.durationMs)
+      ) {
+        overallMaxOp = { docId, docNum, timing: result.maxOp };
+      }
+
       const docDurationMs = Date.now() - docStartTime;
       const docDuration = (docDurationMs / 1000).toFixed(2);
       const msPerOp = (docDurationMs / operations).toFixed(0);
 
+      const minMax =
+        result.minOp && result.maxOp
+          ? `, min: ${result.minOp.durationMs}ms, max: ${result.maxOp.durationMs}ms`
+          : "";
+
       if (verbose) {
-        console.log(`    Done: ${docDuration}s, ${msPerOp}ms/op`);
+        console.log(`    Done: ${docDuration}s, ${msPerOp}ms/op${minMax}`);
       } else {
-        process.stdout.write(` (${docDuration}s, ${msPerOp}ms/op)\n`);
+        process.stdout.write(` (${docDuration}s, ${msPerOp}ms/op${minMax})\n`);
       }
     }
 
@@ -319,8 +384,12 @@ async function main() {
     const opsDuration = (opsDurationMs / 1000).toFixed(2);
     const avgMsPerOp = (opsDurationMs / totalOps).toFixed(0);
     const phase2Memory = getMemoryStats();
+    const overallMinMax =
+      overallMinOp && overallMaxOp
+        ? `, min: ${overallMinOp.timing.durationMs}ms, max: ${overallMaxOp.timing.durationMs}ms`
+        : "";
     console.log(
-      `  Completed ${totalOps} operations in ${opsDuration}s (avg: ${avgMsPerOp}ms/op)`,
+      `  Completed ${totalOps} operations in ${opsDuration}s (avg: ${avgMsPerOp}ms/op${overallMinMax})`,
     );
     console.log(`  Memory: ${formatMemory(phase2Memory)}`);
   }
