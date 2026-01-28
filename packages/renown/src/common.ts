@@ -44,6 +44,10 @@ export class Renown implements IRenown {
     });
   }
 
+  get baseUrl() {
+    return this.#baseUrl;
+  }
+
   get user() {
     return this.#store.get("user");
   }
@@ -65,10 +69,9 @@ export class Renown implements IRenown {
     this.#eventEmitter.emit("user", user);
   }
 
-  async login(did: string): Promise<User> {
+  async login(userDid: string): Promise<User> {
     try {
-      const result = parsePkhDid(did);
-      console.log(result, this.#crypto.did);
+      const result = parsePkhDid(userDid);
       const credential = await this.#getCredential(
         result.address,
         result.chainId,
@@ -82,7 +85,7 @@ export class Renown implements IRenown {
       const user: User = {
         ...result,
         address: credential.issuer.ethereumAddress,
-        did,
+        did: userDid,
         credential,
       };
 

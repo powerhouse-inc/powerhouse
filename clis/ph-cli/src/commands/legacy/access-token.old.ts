@@ -1,4 +1,3 @@
-import type { IRenown } from "@renown/sdk";
 import type { Command } from "commander";
 import { accessTokenHelp } from "../../help.js";
 import type { CommandActionType } from "../../types.js";
@@ -58,39 +57,17 @@ function parseExpiry(expiry: string): number {
 export const accessToken: CommandActionType<[AccessTokenOptions]> = async (
   options,
 ) => {
-  const { getRenown, isAuthenticated, loadCredentials } = await import(
-    "../../services/auth.js"
-  );
-
+  const { getRenown } = await import("../../services/auth.js");
+  const renown = await getRenown();
+  const user = renown.user;
   // Require Renown authentication - user must have done 'ph login'
-  if (!isAuthenticated()) {
-    console.error(
-      "Not authenticated. Run 'ph login' first to authenticate with Renown.",
+  if (!user || !user.credential) {
+    throw new Error(
+      "Not authenticated. Run 'ph login' first to authenticate with Renown. A Renown credential is required to generate valid bearer tokens.",
     );
-    console.error(
-      "A Renown credential is required to generate valid bearer tokens.",
-    );
-    process.exit(1);
   }
 
-  const creds = loadCredentials();
-  if (!creds) {
-    console.error("Failed to load credentials.");
-    process.exit(1);
-  }
-
-  // Get the CLI's DID
-  let renown: IRenown;
-  try {
-    renown = await getRenown();
-  } catch (e) {
-    console.error(
-      "Failed to get CLI identity. Run 'ph login' to reinitialize.",
-    );
-    process.exit(1);
-  }
-
-  const address = creds.address;
+  const address = user.address;
 
   // Parse expiry
   let expiresIn = DEFAULT_EXPIRY_SECONDS;

@@ -13,7 +13,6 @@ export class RenownCrypto implements IRenownCrypto {
   #subtleCrypto: SubtleCrypto;
   #keyPair: CryptoKeyPair;
   #keyPairStorage: JsonWebKeyPairStorage;
-  #bearerToken: string | undefined;
 
   readonly did: DID;
 

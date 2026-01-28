@@ -10,7 +10,7 @@ import {
 const logger = new ConsoleLogger(["switchboard", "renown"]);
 
 export interface RenownOptions {
-  /** Path to the keypair file. Defaults to .keypair.json in cwd */
+  /** Path to the keypair file. Defaults to .ph/.keypair.json in cwd */
   keypairPath?: string;
   /** If true, won't generate a new keypair if none exists */
   requireExisting?: boolean;

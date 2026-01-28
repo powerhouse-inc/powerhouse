@@ -1,4 +1,5 @@
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname } from "node:path";
 import { BaseStorage } from "./common.js";
 
 export class NodeStorage<
@@ -9,6 +10,9 @@ export class NodeStorage<
   constructor(filePath: string) {
     super();
     this.filePath = filePath;
+
+    const parentFolder = dirname(this.filePath);
+    mkdirSync(parentFolder, { recursive: true });
 
     if (!existsSync(this.filePath)) {
       writeFileSync(this.filePath, JSON.stringify({}));

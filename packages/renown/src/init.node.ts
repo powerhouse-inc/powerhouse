@@ -7,10 +7,12 @@ import type { RenownEvents, RenownStorageMap } from "./types.js";
 export class NodeRenownEventEmitter extends NodeEventEmitter<RenownEvents> {}
 export class NodeRenownStorage extends NodeStorage<RenownStorageMap> {}
 
+export const DEFAULT_RENOWN_STORAGE_PATH = "./.ph/.renown.json";
+
 export interface NodeRenownBuilderOptions {
-  /** File path for user storage. Defaults to "./.renown.json" */
+  /** File path for user storage. Defaults to ".ph/.renown.json" in cwd */
   storagePath?: string;
-  /** File path for keypair storage. Defaults to "./.keypair.json" */
+  /** File path for keypair storage. Defaults to ".ph/.keypair.json" in cwd */
   keyPath?: string;
   /** Renown server URL. Defaults to https://www.renown.id */
   baseUrl?: string;
@@ -28,7 +30,11 @@ export class RenownBuilder extends BaseRenownBuilder {
   constructor(appName: string, options: NodeRenownBuilderOptions = {}) {
     super(appName);
 
-    const { storagePath = "./.renown.json", keyPath, baseUrl } = options;
+    const {
+      storagePath = DEFAULT_RENOWN_STORAGE_PATH,
+      keyPath,
+      baseUrl,
+    } = options;
 
     this.withKeyPairStorage(new NodeKeyStorage(keyPath));
     this.withStorage(new NodeRenownStorage(storagePath));

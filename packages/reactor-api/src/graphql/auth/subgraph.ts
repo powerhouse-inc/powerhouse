@@ -513,7 +513,7 @@ export class AuthSubgraph extends BaseSubgraph {
   };
 
   onSetup(): Promise<void> {
-    this.logger.info("Setting up AuthSubgraph");
+    this.logger.debug("Setting up AuthSubgraph");
     return Promise.resolve();
   }
 }

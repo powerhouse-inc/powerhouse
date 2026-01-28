@@ -1,4 +1,8 @@
-import { verifyAuthBearerToken } from "@renown/sdk";
+import {
+  verifyAuthBearerToken,
+  type AuthVerifiedCredential,
+  type PowerhouseVerifiableCredential,
+} from "@renown/sdk";
 import type { NextFunction, Request, Response } from "express";
 
 export interface AuthConfig {
@@ -67,16 +71,7 @@ export class AuthService {
     }
 
     try {
-      const verified = (await this.verifyToken(token)) as {
-        issuer: string;
-        verifiableCredential?: {
-          credentialSubject?: {
-            address: string;
-            chainId: number;
-            networkId: string;
-          };
-        };
-      };
+      const verified = await this.verifyToken(token);
 
       if (!verified) {
         res.status(401).json({ error: "Verification failed" });
@@ -135,21 +130,11 @@ export class AuthService {
       throw new Error("Invalid authorization format");
     }
 
-    const verified = (await this.verifyToken(token)) as {
-      issuer: string;
-      verifiableCredential?: {
-        credentialSubject?: {
-          address: string;
-          chainId: number;
-          networkId: string;
-        };
-      };
-    };
-
+    const verified = await this.verifyToken(token);
     if (!verified) {
       throw new Error("Token verification failed");
     }
-
+    verified.verifiableCredential["@context"];
     const user = this.extractUserFromVerification(verified);
     if (!user) {
       throw new Error("Invalid credentials");
@@ -177,24 +162,17 @@ export class AuthService {
   /**
    * Verify the auth bearer token
    */
-  private async verifyToken(token: string): Promise<any> {
+  private async verifyToken(token: string) {
     return await verifyAuthBearerToken(token);
   }
 
   /**
    * Extract user information from verification result
    */
-  private extractUserFromVerification(verified: {
-    verifiableCredential?: {
-      credentialSubject?: {
-        address: string;
-        chainId: number;
-        networkId: string;
-      };
-    };
-  }): User | null {
+  private extractUserFromVerification(
+    verified: AuthVerifiedCredential,
+  ): User | null {
     if (!verified) return null;
-
     try {
       const { address, chainId, networkId } =
         verified.verifiableCredential?.credentialSubject || {};
@@ -275,20 +253,14 @@ export class AuthService {
     connectId: string,
   ): Promise<boolean> {
     const url = `https://www.renown.id/api/auth/credential?address=${address}&chainId=${chainId}&connectId=${connectId}`;
-    console.log("url", url);
     try {
       const response = await fetch(url, {
         method: "GET",
       });
-      const body = (await response.json()) as unknown;
-      const credential = (
-        body as {
-          credential: {
-            credentialSubject: { id: string };
-            issuer: { id: string };
-          };
-        }
-      ).credential;
+      const body = (await response.json()) as {
+        credential: PowerhouseVerifiableCredential;
+      };
+      const credential = body.credential;
 
       const connectIdVerfied = credential.credentialSubject.id;
       const addressVerfied = credential.issuer.id.split(":")[4];
@@ -297,13 +269,6 @@ export class AuthService {
       if (response.status !== 200) {
         return false;
       }
-
-      console.log("connectIdVerfied", connectIdVerfied);
-      console.log("connectId", connectId);
-      console.log("addressVerfied", addressVerfied);
-      console.log("address", address);
-      console.log("chainIdVerfied", chainIdVerfied);
-      console.log("chainId", chainId);
 
       return (
         connectIdVerfied === connectId &&

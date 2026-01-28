@@ -4,11 +4,11 @@ import { PostgresAnalyticsStore } from "@powerhousedao/analytics-engine-pg";
 import { getConfig } from "@powerhousedao/config/node";
 import type {
   IDocumentModelRegistry,
-  IProcessorManager as IReactorProcessorManager,
   IReactorClient,
+  IProcessorManager as IReactorProcessorManager,
   ISyncManager,
-  ProcessorRecord as ReactorProcessorRecord,
   ReactorClientModule,
+  ProcessorRecord as ReactorProcessorRecord,
 } from "@powerhousedao/reactor";
 import { setupMcpServer } from "@powerhousedao/reactor-mcp";
 import devcert from "devcert";
@@ -37,7 +37,6 @@ import type { TlsOptions } from "node:tls";
 import type { Pool } from "pg";
 import { WebSocketServer } from "ws";
 // Import tracing - initializes OpenTelemetry and provides stub functions for backwards compatibility
-import { initTracing, isTracingEnabled, trace } from "./tracing.js";
 import { config, DefaultCoreSubgraphs } from "./config.js";
 import { AuthSubgraph } from "./graphql/auth/subgraph.js";
 import { GraphQLManager } from "./graphql/graphql-manager.js";
@@ -53,6 +52,7 @@ import {
 import type { AuthenticatedRequest } from "./services/auth.service.js";
 import { AuthService } from "./services/auth.service.js";
 import { DocumentPermissionService } from "./services/document-permission.service.js";
+import { initTracing, isTracingEnabled, trace } from "./tracing.js";
 import type { API, IPackageLoader, Processor } from "./types.js";
 import {
   getDbClient,
@@ -386,15 +386,6 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     skipCredentialVerification = SKIP_CREDENTIAL_VERIFICATION === "true";
   }
 
-  const authService = new AuthService({
-    enabled: authEnabled,
-    guests,
-    users,
-    admins,
-    freeEntry,
-    skipCredentialVerification,
-  });
-
   // Health check endpoint (before auth middleware)
   app.get("/health", (_req, res) => {
     res.status(200).send("OK");
@@ -403,6 +394,14 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   // add auth middleware if auth is enabled
   if (authEnabled) {
     logger.info("Setting up Auth middleware");
+    const authService = new AuthService({
+      enabled: authEnabled,
+      guests,
+      users,
+      admins,
+      freeEntry,
+      skipCredentialVerification,
+    });
 
     // Apply auth middleware to all routes including GraphQL
     app.use((req, res, next) => {
