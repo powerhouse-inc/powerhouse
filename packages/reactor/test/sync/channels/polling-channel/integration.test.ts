@@ -30,7 +30,7 @@ describe("PollingChannel Integration", () => {
     remoteName: string,
     ordinal: number,
   ): SyncOperation => {
-    return new SyncOperation(id, remoteName, "doc-1", ["public"], "main", [
+    return new SyncOperation(id, "", remoteName, "doc-1", ["public"], "main", [
       {
         operation: {
           index: 0,

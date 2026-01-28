@@ -207,6 +207,7 @@ export {
   PollingChannel,
   PollingChannelError,
   SyncBuilder,
+  SyncEventTypes,
   SyncOperation,
   SyncOperationAggregateError,
   SyncOperationStatus,
@@ -225,7 +226,10 @@ export {
   type RemoteStatus,
   type SyncEnvelope,
   type SyncEnvelopeType,
+  type SyncFailedEvent,
   type SyncOperationErrorType,
+  type SyncPendingEvent,
+  type SyncSucceededEvent,
 } from "./sync/index.js";
 
 // Processors

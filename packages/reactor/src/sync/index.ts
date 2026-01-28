@@ -19,9 +19,16 @@ export type {
   SyncEnvelope,
   SyncEnvelopeType,
   ChannelMeta,
+  SyncPendingEvent,
+  SyncSucceededEvent,
+  SyncFailedEvent,
 } from "./types.js";
 
-export { ChannelErrorSource, SyncOperationStatus } from "./types.js";
+export {
+  ChannelErrorSource,
+  SyncEventTypes,
+  SyncOperationStatus,
+} from "./types.js";
 
 export {
   SyncOperation,

@@ -30,7 +30,7 @@ const createMockSyncOperation = (
   remoteName: string,
   ordinal: number = 0,
 ): SyncOperation => {
-  return new SyncOperation(id, remoteName, "doc-1", ["public"], "main", [
+  return new SyncOperation(id, "", remoteName, "doc-1", ["public"], "main", [
     {
       operation: {
         index: 0,

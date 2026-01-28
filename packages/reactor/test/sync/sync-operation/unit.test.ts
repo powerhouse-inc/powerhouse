@@ -44,6 +44,7 @@ describe("SyncOperation", () => {
     it("should initialize with correct properties", () => {
       const operations = createTestOperations();
       const handle = new SyncOperation(
+        "syncop1",
         "job1",
         "remote1",
         "doc1",
@@ -52,7 +53,8 @@ describe("SyncOperation", () => {
         operations,
       );
 
-      expect(handle.id).toBe("job1");
+      expect(handle.id).toBe("syncop1");
+      expect(handle.jobId).toBe("job1");
       expect(handle.remoteName).toBe("remote1");
       expect(handle.documentId).toBe("doc1");
       expect(handle.scopes).toEqual(["global"]);
@@ -66,6 +68,7 @@ describe("SyncOperation", () => {
   describe("state transitions", () => {
     it("should transition from Unknown to TransportPending", () => {
       const handle = new SyncOperation(
+        "syncop1",
         "job1",
         "remote1",
         "doc1",
@@ -90,6 +93,7 @@ describe("SyncOperation", () => {
 
     it("should transition from TransportPending to ExecutionPending", () => {
       const handle = new SyncOperation(
+        "syncop1",
         "job1",
         "remote1",
         "doc1",
@@ -116,6 +120,7 @@ describe("SyncOperation", () => {
 
     it("should transition from ExecutionPending to Applied", () => {
       const handle = new SyncOperation(
+        "syncop1",
         "job1",
         "remote1",
         "doc1",
@@ -143,6 +148,7 @@ describe("SyncOperation", () => {
 
     it("should transition to Error from any state", () => {
       const handle = new SyncOperation(
+        "syncop1",
         "job1",
         "remote1",
         "doc1",
@@ -174,6 +180,7 @@ describe("SyncOperation", () => {
 
     it("should complete full lifecycle: Unknown -> TransportPending -> ExecutionPending -> Applied", () => {
       const handle = new SyncOperation(
+        "syncop1",
         "job1",
         "remote1",
         "doc1",
@@ -203,6 +210,7 @@ describe("SyncOperation", () => {
   describe("event subscription", () => {
     it("should notify all registered callbacks on state change", () => {
       const handle = new SyncOperation(
+        "syncop1",
         "job1",
         "remote1",
         "doc1",
@@ -234,6 +242,7 @@ describe("SyncOperation", () => {
 
     it("should call callbacks in registration order", () => {
       const handle = new SyncOperation(
+        "syncop1",
         "job1",
         "remote1",
         "doc1",
@@ -255,6 +264,7 @@ describe("SyncOperation", () => {
 
     it("should include previous and next status in callback", () => {
       const handle = new SyncOperation(
+        "syncop1",
         "job1",
         "remote1",
         "doc1",
@@ -294,6 +304,7 @@ describe("SyncOperation", () => {
 
     it("should handle callbacks registered after state changes", () => {
       const handle = new SyncOperation(
+        "syncop1",
         "job1",
         "remote1",
         "doc1",
@@ -322,6 +333,7 @@ describe("SyncOperation", () => {
 
     it("should guarantee delivery even if callbacks throw errors", () => {
       const handle = new SyncOperation(
+        "syncop1",
         "job1",
         "remote1",
         "doc1",
@@ -385,6 +397,7 @@ describe("SyncOperation", () => {
   describe("error handling", () => {
     it("should store error when failed", () => {
       const handle = new SyncOperation(
+        "syncop1",
         "job1",
         "remote1",
         "doc1",
@@ -406,6 +419,7 @@ describe("SyncOperation", () => {
 
     it("should notify callbacks when error occurs", () => {
       const handle = new SyncOperation(
+        "syncop1",
         "job1",
         "remote1",
         "doc1",
@@ -433,6 +447,7 @@ describe("SyncOperation", () => {
 
     it("should transition to error from TransportPending", () => {
       const handle = new SyncOperation(
+        "syncop1",
         "job1",
         "remote1",
         "doc1",
@@ -456,6 +471,7 @@ describe("SyncOperation", () => {
 
     it("should transition to error from ExecutionPending", () => {
       const handle = new SyncOperation(
+        "syncop1",
         "job1",
         "remote1",
         "doc1",
@@ -483,6 +499,7 @@ describe("SyncOperation", () => {
     it("should have readonly properties", () => {
       const operations = createTestOperations();
       const handle = new SyncOperation(
+        "syncop1",
         "job1",
         "remote1",
         "doc1",
@@ -491,7 +508,8 @@ describe("SyncOperation", () => {
         operations,
       );
 
-      expect(handle.id).toBe("job1");
+      expect(handle.id).toBe("syncop1");
+      expect(handle.jobId).toBe("job1");
       expect(handle.remoteName).toBe("remote1");
       expect(handle.documentId).toBe("doc1");
       expect(handle.operations).toBe(operations);
@@ -501,6 +519,7 @@ describe("SyncOperation", () => {
   describe("multiple scopes", () => {
     it("should handle multiple scopes", () => {
       const handle = new SyncOperation(
+        "syncop1",
         "job1",
         "remote1",
         "doc1",
@@ -514,6 +533,7 @@ describe("SyncOperation", () => {
 
     it("should handle empty scopes array", () => {
       const handle = new SyncOperation(
+        "syncop1",
         "job1",
         "remote1",
         "doc1",
