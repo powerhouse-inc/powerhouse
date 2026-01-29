@@ -1,5 +1,9 @@
-import { logVersionUpdate } from "@powerhousedao/codegen/utils";
-import { debugArgs } from "@powerhousedao/common/clis";
+import {
+  debugArgs,
+  directoryExists,
+  logVersionUpdate,
+  runCmd,
+} from "@powerhousedao/common/clis";
 import chalk from "chalk";
 import {
   boolean,
@@ -19,8 +23,6 @@ import {
   APPS_DEPENDENCIES,
   CLIS_DEPENDENCIES,
 } from "../utils/constants.js";
-import { dirExists } from "../utils/file-system.js";
-import { runCmd } from "../utils/run-cmd.js";
 
 export const useLocal = command({
   name: "use-local",
@@ -62,7 +64,7 @@ export const useLocal = command({
       );
     }
 
-    const monorepoDirExists = await dirExists(monorepoPath);
+    const monorepoDirExists = await directoryExists(monorepoPath);
 
     if (!monorepoDirExists) {
       throw new Error(

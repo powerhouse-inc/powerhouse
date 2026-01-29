@@ -55,11 +55,15 @@
     "@powerhousedao/design-system": "workspace:*",
     "@tanstack/react-virtual": "^3.8.1",
     "@types/luxon": "^3.7.1",
+    "chalk": "^5.6.2",
     "document-drive": "workspace:*",
     "document-model": "workspace:*",
     "graphql-request": "^7.2.0",
     "luxon": "^3.7.1",
-    "react-i18next": "^13.5.0"
+    "npm-package-arg": "^13.0.2",
+    "package-directory": "^8.1.0",
+    "react-i18next": "^13.5.0",
+    "resolve-global": "^2.0.0"
   },
   "devDependencies": {
     "@powerhousedao/config": "workspace:*",
@@ -81,6 +85,7 @@
     "@tailwindcss/cli": "^4.1.14",
     "@tailwindcss/vite": "^4.1.14",
     "@types/node": "^24.6.1",
+    "@types/npm-package-arg": "^6.1.4",
     "@types/react": "^19.2.0",
     "@types/wicg-file-system-access": "^2020.9.6",
     "autoprefixer": "^10.4.20",

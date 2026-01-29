@@ -1,12 +1,13 @@
 import { cloneRepository } from "@powerhousedao/codegen";
 import {
+  debugArgs,
   handleMutuallyExclusiveOptions,
+  packageManagerArgs,
   parsePackageManager,
-} from "@powerhousedao/codegen/utils";
-import { debugArgs, packageManagerArgs } from "@powerhousedao/common/clis";
+  runCmd,
+} from "@powerhousedao/common/clis";
 import { command, option, optional, positional, string } from "cmd-ts";
 import { getPackageManagerFromLockfile } from "../utils/package-manager.js";
-import { runCmd } from "../utils/run-cmd.js";
 import { getPackageDocument } from "../utils/validate-remote-drive-checkout.js";
 
 export const checkout = command({

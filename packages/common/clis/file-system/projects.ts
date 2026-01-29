@@ -1,28 +1,42 @@
+import path from "node:path";
+import npa from "npm-package-arg";
+import { packageDirectory } from "package-directory";
+import type { Agent } from "package-manager-detector";
+import { detect, resolveCommand } from "package-manager-detector";
+import { POWERHOUSE_CONFIG_FILE, POWERHOUSE_GLOBAL_DIR } from "../constants.js";
+import type { PackageManagerArgs } from "../types.js";
 import {
   fetchPackageVersionFromNpmRegistry,
   parsePackageManager,
-} from "@powerhousedao/codegen/utils";
-import npa from "npm-package-arg";
-import { detect, resolveCommand, type Agent } from "package-manager-detector";
-import type { PackageManagerArgs } from "../index.js";
-import {
-  findNodeProjectRoot,
-  isPowerhouseProject,
-  POWERHOUSE_GLOBAL_DIR,
-} from "../utils.js";
-import { directoryExists } from "./file-system.js";
+} from "./dependencies.js";
+import { directoryExists } from "./directory-exists.js";
+import { fileExists } from "./file-exists.js";
+
+export async function isPowerhouseProject(dir: string) {
+  const powerhouseConfigPath = path.join(dir, POWERHOUSE_CONFIG_FILE);
+
+  return await fileExists(powerhouseConfigPath);
+}
 
 export async function getLocalPowerhouseProjectDirPath() {
-  const projectPath = findNodeProjectRoot(process.cwd(), isPowerhouseProject);
-  if (!projectPath) return undefined;
-  const projectPathExists = await directoryExists(projectPath);
-  if (!projectPathExists) return undefined;
-  return projectPath;
+  const projectDirPath = await packageDirectory();
+  if (!projectDirPath) return undefined;
+
+  const dirIsPowerhouseProject = await isPowerhouseProject(projectDirPath);
+  if (!dirIsPowerhouseProject) return undefined;
+
+  return projectDirPath;
 }
 
 export async function getGlobalPowerhouseProjectDirPath() {
   const hasPowerhouseGlobalDir = await directoryExists(POWERHOUSE_GLOBAL_DIR);
   if (!hasPowerhouseGlobalDir) return undefined;
+
+  const globalDirIsPowerhouseProject = await isPowerhouseProject(
+    POWERHOUSE_GLOBAL_DIR,
+  );
+  if (!globalDirIsPowerhouseProject) return undefined;
+
   return POWERHOUSE_GLOBAL_DIR;
 }
 

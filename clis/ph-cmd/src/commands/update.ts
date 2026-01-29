@@ -1,16 +1,16 @@
 import {
-  getPackageVersion,
+  debugArgs,
   getTagFromVersion,
   logVersionUpdate,
-} from "@powerhousedao/codegen/utils";
-import { debugArgs } from "@powerhousedao/common/clis";
+  parsePackageVersion,
+  runCmd,
+} from "@powerhousedao/common/clis";
 import chalk from "chalk";
 import { boolean, command, flag, optional } from "cmd-ts";
 import { detect } from "package-manager-detector/detect";
 import { readPackage } from "read-pkg";
 import { writePackage } from "write-package";
 import { ALL_POWERHOUSE_DEPENDENCIES } from "../utils/constants.js";
-import { runCmd } from "../utils/run-cmd.js";
 
 export const update = command({
   name: "update",
@@ -37,7 +37,7 @@ export const update = command({
       for (const [name, version] of Object.entries(packageJson.dependencies)) {
         if (version && ALL_POWERHOUSE_DEPENDENCIES.includes(name)) {
           const tag = getTagFromVersion(version);
-          const newVersion = await getPackageVersion({ name, tag });
+          const newVersion = await parsePackageVersion({ name, tag });
           packageJson.dependencies[name] = newVersion;
           logVersionUpdate({
             name,
@@ -54,7 +54,7 @@ export const update = command({
       )) {
         if (version && ALL_POWERHOUSE_DEPENDENCIES.includes(name)) {
           const tag = getTagFromVersion(version);
-          const newVersion = await getPackageVersion({ name, tag });
+          const newVersion = await parsePackageVersion({ name, tag });
           packageJson.devDependencies[name] = newVersion;
           logVersionUpdate({
             name,
@@ -71,7 +71,7 @@ export const update = command({
       )) {
         if (version && ALL_POWERHOUSE_DEPENDENCIES.includes(name)) {
           const tag = getTagFromVersion(version);
-          const newVersion = await getPackageVersion({ name, tag });
+          const newVersion = await parsePackageVersion({ name, tag });
           packageJson.optionalDependencies[name] = newVersion;
           logVersionUpdate({
             name,
@@ -88,7 +88,7 @@ export const update = command({
       )) {
         if (version && ALL_POWERHOUSE_DEPENDENCIES.includes(name)) {
           const tag = getTagFromVersion(version);
-          const newVersion = await getPackageVersion({ name, tag });
+          const newVersion = await parsePackageVersion({ name, tag });
           packageJson.peerDependencies[name] = newVersion;
           logVersionUpdate({
             name,

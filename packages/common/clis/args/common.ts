@@ -2,6 +2,7 @@ import { getConfig } from "@powerhousedao/config/node";
 import {
   array,
   boolean,
+  command,
   flag,
   multioption,
   number,
@@ -54,7 +55,11 @@ export const packageManagerArgs = {
     description: "Use 'bun' as package manager",
   }),
 };
-
+export const getPackageManagerCommand = command({
+  name: "get-package-manager",
+  args: packageManagerArgs,
+  handler: (args) => args,
+});
 export const packages = option({
   type: optional(string),
   long: "packages",

@@ -1,5 +1,5 @@
+import { parsePackageVersion } from "@powerhousedao/common/clis";
 import { json } from "@tmpl/core";
-import { getPackageVersion } from "@powerhousedao/codegen/utils";
 
 const vetraPackageTemplate = (packageVersion: string) =>
   json`
@@ -27,7 +27,7 @@ export async function buildPowerhouseConfigTemplate(args: {
   version?: string;
   remoteDrive?: string;
 }) {
-  const vetraPackageVersion = await getPackageVersion({
+  const vetraPackageVersion = await parsePackageVersion({
     name: "@powerhousedao/vetra",
     ...args,
   });

@@ -64,6 +64,10 @@ Use the `dev` release tag.<br><br>
 Use the `staging` release tag.<br><br>
 **usage:** `--staging, -s`<br>
 
+#### Debug <br>
+Log arguments passed to this command<br><br>
+**usage:** `--debug`<br>
+
 #### Help <br>
 show help<br><br>
 **usage:** `--help, -h`<br>
@@ -92,6 +96,10 @@ Specify the exact semver release version to use for your project.<br><br>
 Skip running `install` with your package manager<br><br>
 **usage:** `--skip-install, -s`<br>
 
+#### Debug <br>
+Log arguments passed to this command<br><br>
+**usage:** `--debug`<br>
+
 #### Help <br>
 show help<br><br>
 **usage:** `--help, -h`<br>
@@ -103,6 +111,10 @@ Update your powerhouse dependencies to their latest tagged version
 #### Skip Install <br>
 Skip running `install` with your package manager<br><br>
 **usage:** `--skip-install, -s`<br>
+
+#### Debug <br>
+Log arguments passed to this command<br><br>
+**usage:** `--debug`<br>
 
 #### Help <br>
 show help<br><br>
@@ -164,6 +176,10 @@ Use the `dev` release tag.<br><br>
 Use the `staging` release tag.<br><br>
 **usage:** `--staging, -s`<br>
 
+#### Debug <br>
+Log arguments passed to this command<br><br>
+**usage:** `--debug`<br>
+
 #### Help <br>
 show help<br><br>
 **usage:** `--help, -h`<br>
@@ -187,6 +203,10 @@ Path to your local powerhouse monorepo relative to this project<br><br>
 #### Skip Install <br>
 Skip running `install` with `pnpm`<br><br>
 **usage:** `--skip-install, -s`<br>
+
+#### Debug <br>
+Log arguments passed to this command<br><br>
+**usage:** `--debug`<br>
 
 #### Help <br>
 show help<br><br>
