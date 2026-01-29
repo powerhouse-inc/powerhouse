@@ -28,6 +28,8 @@ This document permission system allows you to implement fine-grained access cont
 
 :::info Prerequisites: Global Authorization First
 Before using document permissions, you must configure [global role-based authorization](./04-Authorization.md). Users need a global role (GUEST, USER, or ADMIN) to access the Reactor API before document-level permissions are checked.
+
+**Reminder:** You can also enable `FREE_ENTRY=true` to allow any authenticated user with a valid Renown credential to access the Reactor, bypassing the need for explicit role assignments.
 :::
 
 ## Overview
@@ -159,7 +161,7 @@ The system defines three permission levels for documents:
 
 When a user attempts to access a document, the Reactor API checks permissions in this order:
 
-1. **[Global role check](./04-Authorization.md)**: First, verify the user has a global role (ADMIN/USER/GUEST). If `AUTH_ENABLED=false`, access is granted to everyone
+1. **[Global role check](./04-Authorization.md)**: First, verify the user has a global role (ADMIN/USER/GUEST). If `AUTH_ENABLED=false`, access is granted to everyone. If `FREE_ENTRY=true`, any authenticated user with a valid Renown credential can access the Reactor
 2. **Direct user permission**: Check if the user has explicit permission on the document
 3. **Group permission**: Check if the user belongs to a group with permission on the document
 4. **Parent inheritance**: Recursively check parent documents (folder → drive)
@@ -272,98 +274,6 @@ query CanExecute($documentId: String!, $operation: String!) {
 }
 ```
 
-### Mutations
-
-Mutations allow you to modify permissions. **Note**: You must have ADMIN permission on a document to grant or revoke permissions on it.
-
-#### Grant user permission
-
-```graphql
-mutation GrantPermission(
-  $documentId: String!
-  $user: String!
-  $level: DocumentPermissionLevel!
-) {
-  grantDocumentPermission(
-    documentId: $documentId
-    userAddress: $user
-    permission: $level
-  ) {
-    documentId
-    userAddress
-    permission
-  }
-}
-```
-
-#### Revoke user permission
-
-```graphql
-mutation RevokePermission($documentId: String!, $user: String!) {
-  revokeDocumentPermission(documentId: $documentId, userAddress: $user)
-}
-```
-
-#### Create a group
-
-```graphql
-mutation CreateGroup($name: String!, $description: String) {
-  createGroup(name: $name, description: $description) {
-    id
-    name
-    description
-  }
-}
-```
-
-#### Add user to group
-
-```graphql
-mutation AddToGroup($user: String!, $groupId: Int!) {
-  addUserToGroup(userAddress: $user, groupId: $groupId)
-}
-```
-
-#### Grant group permission on document
-
-```graphql
-mutation GrantGroupAccess(
-  $documentId: String!
-  $groupId: Int!
-  $level: DocumentPermissionLevel!
-) {
-  grantGroupPermission(
-    documentId: $documentId
-    groupId: $groupId
-    permission: $level
-  ) {
-    documentId
-    groupId
-    permission
-  }
-}
-```
-
-#### Grant operation permission
-
-```graphql
-mutation GrantOperation(
-  $documentId: String!
-  $operation: String!
-  $user: String!
-) {
-  grantOperationPermission(
-    documentId: $documentId
-    operationType: $operation
-    userAddress: $user
-  ) {
-    documentId
-    operationType
-    userAddress
-  }
-}
-```
-
 ## Configuration
 
 You can configure the Reactor API using either environment variables or a `powerhouse.config.json` file. Environment variables take precedence over the config file.
@@ -415,6 +325,8 @@ Alternatively, configure authorization in your `powerhouse.config.json` file:
 - **Document permissions** (this guide): Control who can access specific documents within the Reactor
 
 Both layers work together. A user must pass the [global role check](./04-Authorization.md) before document permissions are evaluated.
+
+**Reminder:** When `FREE_ENTRY=true` is enabled, the global role check allows any authenticated user to access the Reactor, simplifying the authorization flow for open environments.
 :::
 
 ## Usage Examples: Setting up a 'Secret Society' group
