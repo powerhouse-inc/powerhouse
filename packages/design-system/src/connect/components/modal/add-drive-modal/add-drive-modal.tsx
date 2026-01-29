@@ -43,6 +43,9 @@ export function AddDriveModal(props: AddDriveModalProps) {
   return (
     <Modal
       {...modalProps}
+      overlayProps={{
+        className: "items-start pt-[15vh]",
+      }}
       contentProps={{
         className: "rounded-2xl",
       }}
