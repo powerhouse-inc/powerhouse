@@ -15,7 +15,7 @@ async function main() {
   const [command, ...restArgs] = args;
   if (
     command === "connect" &&
-    !args.some((arg) => !["studio", "build", "preview"].includes(arg)) &&
+    !["studio", "build", "preview"].includes(args[1]) &&
     !isHelp
   ) {
     const argsWithDefaultConnectSubCommand = ["connect", "studio", ...restArgs];
@@ -23,7 +23,6 @@ async function main() {
   } else {
     await run(cli, args);
   }
-  process.exit(0);
 }
 
 await main();
