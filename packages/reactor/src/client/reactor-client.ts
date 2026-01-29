@@ -320,14 +320,12 @@ export class ReactorClient implements IReactorClient {
       await this.addChildren(parentIdentifier, [documentId], undefined, signal);
     }
 
-    const result = await this.reactor.get<TDocument>(
+    return await this.reactor.get<TDocument>(
       documentId,
       undefined,
       completedJob.consistencyToken,
       signal,
     );
-
-    return result.document;
   }
 
   /**
@@ -485,8 +483,7 @@ export class ReactorClient implements IReactorClient {
     }
 
     // since we waited for the job to complete we don't need the consistency token
-    const resultingDocument = await this.reactor.get<TDocument>(documentId);
-    return resultingDocument.document;
+    return await this.reactor.get<TDocument>(documentId);
   }
 
   /**
@@ -852,9 +849,7 @@ export class ReactorClient implements IReactorClient {
           try {
             const documents = await Promise.all(
               result.results.map((id) =>
-                this.reactor
-                  .get(id, view, undefined, undefined)
-                  .then((res) => res.document),
+                this.reactor.get(id, view, undefined, undefined),
               ),
             );
 

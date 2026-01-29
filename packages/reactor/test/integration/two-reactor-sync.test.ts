@@ -244,7 +244,7 @@ describe("Two-Reactor Sync", () => {
     const docAA = await reactorA.get(documentId, { branch: "main" });
     const docAB = await reactorB.get(documentId, { branch: "main" });
 
-    expect(docAA.document.state).toEqual(docAB.document.state);
+    expect(docAA.state).toEqual(docAB.state);
   };
 
   beforeEach(async () => {
@@ -296,7 +296,7 @@ describe("Two-Reactor Sync", () => {
     const docA = await reactorA.get(document.header.id, { branch: "main" });
     const docB = await reactorB.get(document.header.id, { branch: "main" });
 
-    expect(docA.document).toEqual(docB.document);
+    expect(docA.state).toEqual(docB.state);
   });
 
   it("should sync multiple documents with concurrent operations from both reactors", async () => {
@@ -728,7 +728,7 @@ describe("Two-Reactor Sync", () => {
     const docFromA = await reactorA.get(doc.header.id, { branch: "main" });
     const docFromB = await reactorB.get(doc.header.id, { branch: "main" });
 
-    expect(docFromA.document.state).toEqual(docFromB.document.state);
+    expect(docFromA.state).toEqual(docFromB.state);
   }, 10000);
 
   it("minimal: fire-and-forget mutations should not cause revision mismatch errors", async () => {
@@ -800,8 +800,8 @@ describe("Two-Reactor Sync", () => {
     // Verify document state is accessible (no revision mismatch errors)
     const docAonA = await reactorA.get(docA.header.id, { branch: "main" });
     const docAonB = await reactorB.get(docA.header.id, { branch: "main" });
-    expect(docAonA.document.state).toBeDefined();
-    expect(docAonB.document.state).toBeDefined();
+    expect(docAonA.state).toBeDefined();
+    expect(docAonB.state).toBeDefined();
   }, 10000);
 
   it("minimal: concurrent operations after sync should reshuffle", async () => {
@@ -867,7 +867,7 @@ describe("Two-Reactor Sync", () => {
     // Validate the document state matches on both reactors
     const docFromA = await reactorA.get(doc.header.id, { branch: "main" });
     const docFromB = await reactorB.get(doc.header.id, { branch: "main" });
-    expect(docFromA.document.state).toEqual(docFromB.document.state);
+    expect(docFromA.state).toEqual(docFromB.state);
   });
 
   it("should converge when large reshuffle (10+ operations) is forced by loading operations with interleaved timestamps", async () => {
@@ -1033,7 +1033,7 @@ describe("Two-Reactor Sync", () => {
     const docResult = await testReactor.get(doc.header.id, {
       branch: "main",
     });
-    const state = docResult.document.state as unknown as {
+    const state = docResult.state as unknown as {
       global: { nodes: Array<{ id: string; kind: string }> };
     };
     const nodes = state.global.nodes;
@@ -1174,6 +1174,6 @@ describe("Two-Reactor Sync", () => {
     // Most importantly: the document state should be identical
     const docFromA = await reactorA.get(doc.header.id, { branch: "main" });
     const docFromB = await reactorB.get(doc.header.id, { branch: "main" });
-    expect(docFromA.document.state).toEqual(docFromB.document.state);
+    expect(docFromA.state).toEqual(docFromB.state);
   }, 30000);
 });

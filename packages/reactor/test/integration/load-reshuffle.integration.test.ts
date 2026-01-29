@@ -149,7 +149,7 @@ describe("Load Reshuffles", () => {
         branch: "main",
       },
     );
-    expect(result.document.state.global.name).toBe("B1");
+    expect(result.state.global.name).toBe("B1");
   });
 
   /**
@@ -277,8 +277,8 @@ describe("Load Reshuffles", () => {
       { branch: "main" },
     );
 
-    expect(resultA.document.state.global.name).toBe("B1");
-    expect(resultB.document.state.global.name).toBe("B1");
+    expect(resultA.state.global.name).toBe("B1");
+    expect(resultB.state.global.name).toBe("B1");
   });
 });
 

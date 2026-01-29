@@ -72,7 +72,7 @@ export class Reactor implements IReactor {
   private readModelCoordinator: IReadModelCoordinator;
   private features: ReactorFeatures;
   private documentView: IDocumentView;
-  private _documentIndexer: IDocumentIndexer;
+  private documentIndexer: IDocumentIndexer;
   private operationStore: IOperationStore;
   private eventBus: IEventBus;
 
@@ -95,18 +95,13 @@ export class Reactor implements IReactor {
     this.readModelCoordinator = readModelCoordinator;
     this.features = features;
     this.documentView = documentView;
-    this._documentIndexer = documentIndexer;
+    this.documentIndexer = documentIndexer;
     this.operationStore = operationStore;
     this.eventBus = eventBus;
 
     const [status, setter] = createMutableShutdownStatus(false);
     this.shutdownStatus = status;
     this.setShutdown = setter;
-
-    this.logger.verbose(
-      "Reactor({ legacyStorage: @legacy })",
-      features.legacyStorageEnabled,
-    );
 
     this.readModelCoordinator.start();
   }
@@ -188,40 +183,15 @@ export class Reactor implements IReactor {
     view?: ViewFilter,
     consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
-  ): Promise<{
-    document: TDocument;
-    childIds: string[];
-  }> {
+  ): Promise<TDocument> {
     this.logger.verbose("get(@id, @view)", id, view);
 
-    const document = await this.documentView.get<TDocument>(
+    return await this.documentView.get<TDocument>(
       id,
       view,
       consistencyToken,
       signal,
     );
-
-    if (signal?.aborted) {
-      throw new AbortError();
-    }
-
-    const relationships = await this._documentIndexer.getOutgoing(
-      id,
-      ["child"],
-      consistencyToken,
-      signal,
-    );
-
-    if (signal?.aborted) {
-      throw new AbortError();
-    }
-
-    const childIds = relationships.map((rel) => rel.targetId);
-
-    return {
-      document,
-      childIds,
-    };
   }
 
   /**
@@ -249,12 +219,21 @@ export class Reactor implements IReactor {
       throw new Error(`Document not found with slug: ${slug}`);
     }
 
-    return await this.get<TDocument>(
+    const childIds = await this.getChildren(
       documentId,
-      view,
       consistencyToken,
       signal,
     );
+
+    return {
+      document: await this.get<TDocument>(
+        documentId,
+        view,
+        consistencyToken,
+        signal,
+      ),
+      childIds,
+    };
   }
 
   /**
@@ -282,7 +261,7 @@ export class Reactor implements IReactor {
       throw new AbortError();
     }
 
-    const relationships = await this._documentIndexer.getOutgoing(
+    const relationships = await this.documentIndexer.getOutgoing(
       document.header.id,
       ["child"],
       consistencyToken,
@@ -299,6 +278,25 @@ export class Reactor implements IReactor {
       document,
       childIds,
     };
+  }
+
+  async getChildren(
+    documentId: string,
+    consistencyToken?: ConsistencyToken,
+    signal?: AbortSignal,
+  ): Promise<string[]> {
+    const relationships = await this.documentIndexer.getOutgoing(
+      documentId,
+      ["child"],
+      consistencyToken,
+      signal,
+    );
+
+    if (signal?.aborted) {
+      throw new AbortError();
+    }
+
+    return relationships.map((rel) => rel.targetId);
   }
 
   /**
@@ -1116,7 +1114,7 @@ export class Reactor implements IReactor {
     this.logger.verbose("findByParentId(@parentId)", parentId);
 
     // Get child relationships from indexer
-    const relationships = await this._documentIndexer.getOutgoing(
+    const relationships = await this.documentIndexer.getOutgoing(
       parentId,
       ["child"],
       undefined,

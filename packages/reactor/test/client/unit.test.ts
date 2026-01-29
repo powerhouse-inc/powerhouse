@@ -235,10 +235,7 @@ describe("ReactorClient Unit Tests", () => {
 
       vi.mocked(mockReactor.create).mockResolvedValue(jobInfo);
       vi.mocked(mockJobAwaiter.waitForJob).mockResolvedValue(completedJobInfo);
-      vi.mocked(mockReactor.get).mockResolvedValue({
-        document,
-        childIds: [],
-      });
+      vi.mocked(mockReactor.get).mockResolvedValue(document);
 
       const result = await client.create(document);
 
@@ -274,10 +271,7 @@ describe("ReactorClient Unit Tests", () => {
       };
 
       vi.mocked(mockReactor.create).mockResolvedValue(jobInfo);
-      vi.mocked(mockReactor.get).mockResolvedValue({
-        document,
-        childIds: [],
-      });
+      vi.mocked(mockReactor.get).mockResolvedValue(document);
 
       await client.create(document, undefined, signal);
 
@@ -327,10 +321,7 @@ describe("ReactorClient Unit Tests", () => {
 
       vi.mocked(mockReactor.create).mockResolvedValue(jobInfo);
       vi.mocked(mockJobAwaiter.waitForJob).mockResolvedValue(completedJobInfo);
-      vi.mocked(mockReactor.get).mockResolvedValue({
-        document,
-        childIds: [],
-      });
+      vi.mocked(mockReactor.get).mockResolvedValue(document);
       vi.mocked(mockReactor.addChildren).mockResolvedValue(addChildrenJobInfo);
       vi.mocked(mockReactor.getByIdOrSlug).mockResolvedValue({
         document: parentDocument,

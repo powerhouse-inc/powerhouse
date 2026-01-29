@@ -2,8 +2,8 @@ import {
   CompositeChannelFactory,
   ConsoleLogger,
   JobStatus,
-  ReactorEventTypes,
   ReactorBuilder,
+  ReactorEventTypes,
   SyncBuilder,
   type IEventBus,
   type IReactor,
@@ -220,7 +220,7 @@ describe("Two-Reactor Sync with GqlChannel", () => {
     const docA = await reactorA.get(document.header.id, { branch: "main" });
     const docB = await reactorB.get(document.header.id, { branch: "main" });
 
-    expect(docA.document).toEqual(docB.document);
+    expect(docA).toEqual(docB);
   });
 
   it("should sync operation from ReactorB to ReactorA via GqlChannel", async () => {
@@ -252,7 +252,7 @@ describe("Two-Reactor Sync with GqlChannel", () => {
     const docA = await reactorA.get(document.header.id, { branch: "main" });
     const docB = await reactorB.get(document.header.id, { branch: "main" });
 
-    expect(docA.document).toEqual(docB.document);
+    expect(docA).toEqual(docB);
   });
 
   it("should sync multiple documents with concurrent operations from both reactors", async () => {
@@ -398,7 +398,7 @@ describe("Two-Reactor Sync with GqlChannel", () => {
       const docFromA = await reactorA.get(docId, { branch: "main" });
       const docFromB = await reactorB.get(docId, { branch: "main" });
 
-      expect(docFromA.document).toEqual(docFromB.document);
+      expect(docFromA).toEqual(docFromB);
     }
   }, 30000);
 
@@ -412,7 +412,7 @@ describe("Two-Reactor Sync with GqlChannel", () => {
     await readyPromise;
 
     const docOnB = await reactorB.get(doc.header.id, { branch: "main" });
-    expect(docOnB.document).toBeDefined();
+    expect(docOnB).toBeDefined();
 
     void reactorA.execute(doc.header.id, "main", [
       driveDocumentModelModule.actions.setDriveName({ name: "Name from A" }),
@@ -483,6 +483,6 @@ describe("Two-Reactor Sync with GqlChannel", () => {
     const docFromA = await reactorA.get(doc.header.id, { branch: "main" });
     const docFromB = await reactorB.get(doc.header.id, { branch: "main" });
 
-    expect(docFromA.document).toEqual(docFromB.document);
+    expect(docFromA).toEqual(docFromB);
   }, 20000);
 });
