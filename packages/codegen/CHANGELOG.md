@@ -1,3 +1,13 @@
+## 5.3.0-staging.16 (2026-01-29)
+
+### 🩹 Fixes
+
+- **codegen:** update index.html template used on ph init ([41035ae06](https://github.com/powerhouse-inc/powerhouse/commit/41035ae06))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 5.3.0-staging.15 (2026-01-29)
 
 ### 🩹 Fixes
