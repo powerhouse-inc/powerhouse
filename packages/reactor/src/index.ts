@@ -70,9 +70,12 @@ export { EventBus } from "./events/event-bus.js";
 export { type IEventBus } from "./events/interfaces.js";
 export {
   EventBusAggregateError,
-  OperationEventTypes,
-  type OperationsReadyEvent,
-  type OperationWrittenEvent,
+  ReactorEventTypes,
+  type JobPendingEvent,
+  type JobRunningEvent,
+  type JobWriteReadyEvent,
+  type JobReadReadyEvent,
+  type JobFailedEvent as ReactorJobFailedEvent,
   type Unsubscribe,
 } from "./events/types.js";
 
@@ -204,6 +207,7 @@ export {
   PollingChannel,
   PollingChannelError,
   SyncBuilder,
+  SyncEventTypes,
   SyncOperation,
   SyncOperationAggregateError,
   SyncOperationStatus,
@@ -222,7 +226,10 @@ export {
   type RemoteStatus,
   type SyncEnvelope,
   type SyncEnvelopeType,
+  type SyncFailedEvent,
   type SyncOperationErrorType,
+  type SyncPendingEvent,
+  type SyncSucceededEvent,
 } from "./sync/index.js";
 
 // Processors

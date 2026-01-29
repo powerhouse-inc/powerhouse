@@ -1,3 +1,22 @@
+## 6.0.0-dev.26 (2026-01-29)
+
+### 🚀 Features
+
+- update minimum node version to 24 ([7a71107c5](https://github.com/powerhouse-inc/powerhouse/commit/7a71107c5))
+
+### 🩹 Fixes
+
+- nailed down the two-reactor sync tests with fake timers ([d6d5335da](https://github.com/powerhouse-inc/powerhouse/commit/d6d5335da))
+- broken test expectation ([03a5014d9](https://github.com/powerhouse-inc/powerhouse/commit/03a5014d9))
+- undo my changes to the tsc script ([0a36d0a49](https://github.com/powerhouse-inc/powerhouse/commit/0a36d0a49))
+- **monorepo:** typescript versions ([#2265](https://github.com/powerhouse-inc/powerhouse/pull/2265))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.0.0-dev.25 (2026-01-28)
 
 ### 🩹 Fixes

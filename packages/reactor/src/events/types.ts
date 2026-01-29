@@ -42,19 +42,37 @@ export class EventBusAggregateError extends Error {
 }
 
 /**
- * Event types for operation-related events.
+ * Event types for reactor lifecycle events.
  */
-export const OperationEventTypes = {
-  OPERATION_WRITTEN: 10001,
-  OPERATIONS_READY: 10002,
-  JOB_FAILED: 10003,
+export const ReactorEventTypes = {
+  JOB_PENDING: 10001,
+  JOB_RUNNING: 10002,
+  JOB_WRITE_READY: 10003,
+  JOB_READ_READY: 10004,
+  JOB_FAILED: 10005,
 } as const;
+
+/**
+ * Event emitted when a job is registered and waiting to be executed.
+ */
+export type JobPendingEvent = {
+  jobId: string;
+  jobMeta?: Record<string, unknown>;
+};
+
+/**
+ * Event emitted when a job starts executing.
+ */
+export type JobRunningEvent = {
+  jobId: string;
+  jobMeta?: Record<string, unknown>;
+};
 
 /**
  * Event emitted when operations are written to IOperationStore.
  * Contains the operations directly to avoid round-trip queries.
  */
-export type OperationWrittenEvent = {
+export type JobWriteReadyEvent = {
   jobId: string;
   operations: OperationWithContext[];
   jobMeta?: Record<string, unknown>;
@@ -62,7 +80,7 @@ export type OperationWrittenEvent = {
 
 /**
  * Event emitted after all read models have finished processing operations.
- * This event fires after OPERATION_WRITTEN and guarantees that:
+ * This event fires after JOB_WRITE_READY and guarantees that:
  * - All read models (DocumentView, DocumentIndexer, etc.) have indexed the operations
  * - All consistency trackers have been updated with the new operation indices
  * - Queries without consistency tokens will now see the updated data
@@ -72,7 +90,7 @@ export type OperationWrittenEvent = {
  * - Observability (measuring read model latency)
  * - Event-driven workflows (triggering downstream processes)
  */
-export type OperationsReadyEvent = {
+export type JobReadReadyEvent = {
   jobId: string;
   operations: OperationWithContext[];
 };

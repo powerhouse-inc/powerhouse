@@ -40,6 +40,9 @@ export const nodeReducer: DocumentDriveNodeOperations = {
     };
     state.nodes.push(fileNode);
 
+    // deterministically sort nodes by id
+    state.nodes.sort((a, b) => a.id.localeCompare(b.id));
+
     dispatch?.({
       type: "CREATE_CHILD_DOCUMENT",
       input: {
@@ -71,6 +74,9 @@ export const nodeReducer: DocumentDriveNodeOperations = {
       kind: "folder",
       parentFolder: action.input.parentFolder ?? null,
     });
+
+    // deterministically sort nodes by id
+    state.nodes.sort((a, b) => a.id.localeCompare(b.id));
   },
   deleteNodeOperation(state, action, dispatch) {
     const node = state.nodes.find((node) => node.id === action.input.id);
@@ -118,6 +124,9 @@ export const nodeReducer: DocumentDriveNodeOperations = {
           }
         : node,
     );
+
+    // deterministically sort nodes by id
+    state.nodes.sort((a, b) => a.id.localeCompare(b.id));
   },
   updateNodeOperation(state, action) {
     if (action.input.name && !isValidName(action.input.name)) {
@@ -142,6 +151,9 @@ export const nodeReducer: DocumentDriveNodeOperations = {
           }
         : node,
     );
+
+    // deterministically sort nodes by id
+    state.nodes.sort((a, b) => a.id.localeCompare(b.id));
   },
   copyNodeOperation(state, action, dispatch) {
     const node = state.nodes.find((node) => node.id === action.input.srcId);
@@ -173,6 +185,9 @@ export const nodeReducer: DocumentDriveNodeOperations = {
     };
 
     state.nodes.push(newNode);
+
+    // deterministically sort nodes by id
+    state.nodes.sort((a, b) => a.id.localeCompare(b.id));
 
     const isFile = isFileNode(newNode);
     if (isFile) {
@@ -229,5 +244,8 @@ export const nodeReducer: DocumentDriveNodeOperations = {
 
       return node;
     });
+
+    // deterministically sort nodes by id
+    state.nodes.sort((a, b) => a.id.localeCompare(b.id));
   },
 };

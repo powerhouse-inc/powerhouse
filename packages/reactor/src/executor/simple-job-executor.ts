@@ -24,10 +24,7 @@ import type {
 import { driveCollectionId } from "../cache/operation-index-types.js";
 import type { IWriteCache } from "../cache/write/interfaces.js";
 import type { IEventBus } from "../events/interfaces.js";
-import {
-  OperationEventTypes,
-  type OperationWrittenEvent,
-} from "../events/types.js";
+import { ReactorEventTypes, type JobWriteReadyEvent } from "../events/types.js";
 import type { ILogger } from "../logging/types.js";
 import type { Job } from "../queue/types.js";
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";
@@ -116,13 +113,13 @@ export class SimpleJobExecutor implements IJobExecutor {
           result.operationsWithContext[i].context.ordinal = ordinals[i];
         }
         if (result.operationsWithContext.length > 0) {
-          const event: OperationWrittenEvent = {
+          const event: JobWriteReadyEvent = {
             jobId: job.id,
             operations: result.operationsWithContext,
             jobMeta: job.meta,
           };
           this.eventBus
-            .emit(OperationEventTypes.OPERATION_WRITTEN, event)
+            .emit(ReactorEventTypes.JOB_WRITE_READY, event)
             .catch(() => {
               // TODO: Log error
             });
@@ -153,16 +150,14 @@ export class SimpleJobExecutor implements IJobExecutor {
       for (let i = 0; i < result.operationsWithContext.length; i++) {
         result.operationsWithContext[i].context.ordinal = ordinals[i];
       }
-      const event: OperationWrittenEvent = {
+      const event: JobWriteReadyEvent = {
         jobId: job.id,
         operations: result.operationsWithContext,
         jobMeta: job.meta,
       };
-      this.eventBus
-        .emit(OperationEventTypes.OPERATION_WRITTEN, event)
-        .catch(() => {
-          // TODO: Log error
-        });
+      this.eventBus.emit(ReactorEventTypes.JOB_WRITE_READY, event).catch(() => {
+        // TODO: Log error
+      });
     }
 
     return {
@@ -1347,11 +1342,37 @@ export class SimpleJobExecutor implements IJobExecutor {
       conflictingOps = [];
     }
 
+    // To properly detect superseded operations, we need to look at ALL operations
+    // from the minimum conflicting index onwards, not just the conflicting ones.
+    // An operation with an earlier timestamp (not in conflictingOps) might have
+    // a skip value that supersedes operations in conflictingOps.
+    let allOpsFromMinConflictingIndex: Operation[] = conflictingOps;
+    if (conflictingOps.length > 0) {
+      const minConflictingIndex = Math.min(
+        ...conflictingOps.map((op) => op.index),
+      );
+      try {
+        const allOpsResult = await this.operationStore.getSince(
+          job.documentId,
+          scope,
+          job.branch,
+          minConflictingIndex - 1,
+          undefined,
+          { limit: this.config.maxSkipThreshold * 2 },
+        );
+        allOpsFromMinConflictingIndex = allOpsResult.items;
+      } catch {
+        allOpsFromMinConflictingIndex = conflictingOps;
+      }
+    }
+
     // Filter out operations that have been superseded by later operations with skip values.
     // An operation at index N is superseded if there exists an operation at index M > N
     // where (M - skip_M) <= N, meaning the later operation's logical index covers N.
+    // We check against ALL operations (not just conflicting) to catch superseding ops
+    // that have earlier timestamps.
     const nonSupersededOps = conflictingOps.filter((op) => {
-      for (const laterOp of conflictingOps) {
+      for (const laterOp of allOpsFromMinConflictingIndex) {
         if (laterOp.index > op.index && laterOp.skip > 0) {
           const logicalIndex = laterOp.index - laterOp.skip;
           if (logicalIndex <= op.index) {

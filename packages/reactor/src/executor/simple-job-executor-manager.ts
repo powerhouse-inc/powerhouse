@@ -1,5 +1,5 @@
 import type { IEventBus } from "../events/interfaces.js";
-import { OperationEventTypes } from "../events/types.js";
+import { ReactorEventTypes, type JobRunningEvent } from "../events/types.js";
 import type { IJobTracker } from "../job-tracker/interfaces.js";
 import type { ILogger } from "../logging/types.js";
 import type { IQueue } from "../queue/interfaces.js";
@@ -116,6 +116,17 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
     this.activeJobs++;
     this.jobTracker.markRunning(handle.job.id);
 
+    // Emit JOB_RUNNING event
+    const runningEvent: JobRunningEvent = {
+      jobId: handle.job.id,
+      jobMeta: handle.job.meta,
+    };
+    this.eventBus
+      .emit(ReactorEventTypes.JOB_RUNNING, runningEvent)
+      .catch(() => {
+        // Ignore event emission errors
+      });
+
     // Find an available executor (simple round-robin)
     const executorIndex = this.totalJobsProcessed % this.executors.length;
     const executor = this.executors[executorIndex];
@@ -140,7 +151,7 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
       this.jobTracker.markFailed(handle.job.id, errorInfo, handle.job);
 
       this.eventBus
-        .emit(OperationEventTypes.JOB_FAILED, {
+        .emit(ReactorEventTypes.JOB_FAILED, {
           jobId: handle.job.id,
           error: new Error(errorInfo.message),
           job: handle.job,
@@ -180,7 +191,7 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
           this.jobTracker.markFailed(handle.job.id, retryErrorInfo, handle.job);
 
           this.eventBus
-            .emit(OperationEventTypes.JOB_FAILED, {
+            .emit(ReactorEventTypes.JOB_FAILED, {
               jobId: handle.job.id,
               error: new Error(retryErrorInfo.message),
               job: handle.job,
@@ -211,7 +222,7 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
         this.jobTracker.markFailed(handle.job.id, fullErrorInfo, handle.job);
 
         this.eventBus
-          .emit(OperationEventTypes.JOB_FAILED, {
+          .emit(ReactorEventTypes.JOB_FAILED, {
             jobId: handle.job.id,
             error: new Error(fullErrorInfo.message),
             job: handle.job,

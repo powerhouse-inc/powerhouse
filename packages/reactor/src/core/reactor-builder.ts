@@ -339,6 +339,7 @@ export class ReactorBuilder {
       documentView,
       documentIndexer,
       operationStore,
+      eventBus,
     );
 
     let syncModule: SyncModule | undefined = undefined;

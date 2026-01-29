@@ -30,8 +30,8 @@ describe("Consistency Tokens with Document View", () => {
         }
 
         return (
-          status.status === JobStatus.READ_MODELS_READY ||
-          status.status === JobStatus.WRITE_COMPLETED
+          status.status === JobStatus.READ_READY ||
+          status.status === JobStatus.WRITE_READY
         );
       },
       { timeout: 5000 },

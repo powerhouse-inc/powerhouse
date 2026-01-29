@@ -291,7 +291,7 @@ async function waitForJobCompletion(
     if (status.status === JobStatus.FAILED) {
       throw new Error(status.error?.message || "Job failed");
     }
-    return status.status === JobStatus.READ_MODELS_READY;
+    return status.status === JobStatus.READ_READY;
   });
 
   const status = await reactor.getJobStatus(jobId);

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { EventBus } from "../../src/events/event-bus.js";
-import { OperationEventTypes } from "../../src/events/types.js";
+import { ReactorEventTypes } from "../../src/events/types.js";
 import { JobAwaiter } from "../../src/shared/awaiter.js";
 import { JobStatus, type JobInfo } from "../../src/shared/types.js";
 import { createEmptyConsistencyToken } from "../factories.js";
@@ -26,7 +26,7 @@ describe("JobAwaiter", () => {
       const jobId = "job-already-completed";
       const completedJob: JobInfo = {
         id: jobId,
-        status: JobStatus.READ_MODELS_READY,
+        status: JobStatus.READ_READY,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
       };
@@ -42,7 +42,7 @@ describe("JobAwaiter", () => {
       const jobId = "job-read-models-ready";
       const readModelsReadyJob: JobInfo = {
         id: jobId,
-        status: JobStatus.READ_MODELS_READY,
+        status: JobStatus.READ_READY,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
       };
@@ -81,7 +81,7 @@ describe("JobAwaiter", () => {
       };
       const completedJob: JobInfo = {
         id: jobId,
-        status: JobStatus.READ_MODELS_READY,
+        status: JobStatus.READ_READY,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
       };
@@ -94,7 +94,7 @@ describe("JobAwaiter", () => {
 
       getJobStatusMock.mockResolvedValue(completedJob);
 
-      await eventBus.emit(OperationEventTypes.OPERATION_WRITTEN, {
+      await eventBus.emit(ReactorEventTypes.JOB_WRITE_READY, {
         jobId,
         operations: [
           {
@@ -109,7 +109,7 @@ describe("JobAwaiter", () => {
         ],
       });
 
-      await eventBus.emit(OperationEventTypes.OPERATIONS_READY, {
+      await eventBus.emit(ReactorEventTypes.JOB_READ_READY, {
         jobId,
         operations: [
           {
@@ -138,7 +138,7 @@ describe("JobAwaiter", () => {
       };
       const completedJob: JobInfo = {
         id: jobId,
-        status: JobStatus.READ_MODELS_READY,
+        status: JobStatus.READ_READY,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
       };
@@ -151,7 +151,7 @@ describe("JobAwaiter", () => {
 
       getJobStatusMock.mockResolvedValue(completedJob);
 
-      await eventBus.emit(OperationEventTypes.OPERATIONS_READY, {
+      await eventBus.emit(ReactorEventTypes.JOB_READ_READY, {
         jobId,
         operations: [
           {
@@ -194,7 +194,7 @@ describe("JobAwaiter", () => {
 
       getJobStatusMock.mockResolvedValue(failedJob);
 
-      await eventBus.emit(OperationEventTypes.JOB_FAILED, {
+      await eventBus.emit(ReactorEventTypes.JOB_FAILED, {
         jobId,
         error: new Error("Job failed"),
       });
@@ -207,13 +207,13 @@ describe("JobAwaiter", () => {
     it("should handle multiple jobs concurrently", async () => {
       const job1: JobInfo = {
         id: "job-1",
-        status: JobStatus.READ_MODELS_READY,
+        status: JobStatus.READ_READY,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
       };
       const job2: JobInfo = {
         id: "job-2",
-        status: JobStatus.READ_MODELS_READY,
+        status: JobStatus.READ_READY,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
       };
@@ -301,7 +301,7 @@ describe("JobAwaiter", () => {
       };
       const completedJob: JobInfo = {
         id: jobId,
-        status: JobStatus.READ_MODELS_READY,
+        status: JobStatus.READ_READY,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
       };
@@ -315,7 +315,7 @@ describe("JobAwaiter", () => {
 
       getJobStatusMock.mockResolvedValue(completedJob);
 
-      await eventBus.emit(OperationEventTypes.OPERATION_WRITTEN, {
+      await eventBus.emit(ReactorEventTypes.JOB_WRITE_READY, {
         jobId,
         operations: [
           {
@@ -330,7 +330,7 @@ describe("JobAwaiter", () => {
         ],
       });
 
-      await eventBus.emit(OperationEventTypes.OPERATIONS_READY, {
+      await eventBus.emit(ReactorEventTypes.JOB_READ_READY, {
         jobId,
         operations: [
           {
@@ -365,7 +365,7 @@ describe("JobAwaiter", () => {
 
       jobAwaiter.waitForJob(jobId).catch(() => {});
 
-      await eventBus.emit(OperationEventTypes.OPERATION_WRITTEN, {
+      await eventBus.emit(ReactorEventTypes.JOB_WRITE_READY, {
         jobId: otherJobId,
         operations: [
           {
@@ -424,7 +424,7 @@ describe("JobAwaiter", () => {
       jobAwaiter.shutdown();
       getJobStatusMock.mockClear();
 
-      await eventBus.emit(OperationEventTypes.OPERATION_WRITTEN, {
+      await eventBus.emit(ReactorEventTypes.JOB_WRITE_READY, {
         jobId,
         operations: [
           {

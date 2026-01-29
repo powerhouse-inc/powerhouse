@@ -228,7 +228,7 @@ describe("ReactorClient Unit Tests", () => {
 
       const completedJobInfo: JobInfo = {
         id: "job-1",
-        status: JobStatus.READ_MODELS_READY,
+        status: JobStatus.READ_READY,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
       };
@@ -320,7 +320,7 @@ describe("ReactorClient Unit Tests", () => {
 
       const completedJobInfo: JobInfo = {
         id: "job-1",
-        status: JobStatus.READ_MODELS_READY,
+        status: JobStatus.READ_READY,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
       };
@@ -377,7 +377,7 @@ describe("ReactorClient Unit Tests", () => {
 
       const completedJobInfo: JobInfo = {
         id: "job-1",
-        status: JobStatus.READ_MODELS_READY,
+        status: JobStatus.READ_READY,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
       };
@@ -630,7 +630,7 @@ describe("ReactorClient Unit Tests", () => {
 
       const completedJobInfo: JobInfo = {
         id: "job-1",
-        status: JobStatus.READ_MODELS_READY,
+        status: JobStatus.READ_READY,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
       };
@@ -683,7 +683,7 @@ describe("ReactorClient Unit Tests", () => {
 
       const completedJobInfo: JobInfo = {
         id: "job-1",
-        status: JobStatus.READ_MODELS_READY,
+        status: JobStatus.READ_READY,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
       };
@@ -850,7 +850,7 @@ describe("ReactorClient Unit Tests", () => {
 
       vi.mocked(mockReactor.getJobStatus).mockResolvedValue({
         id: "job-1",
-        status: JobStatus.READ_MODELS_READY,
+        status: JobStatus.READ_READY,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
       });
@@ -865,7 +865,7 @@ describe("ReactorClient Unit Tests", () => {
     it("should call jobAwaiter.waitForJob with job ID string", async () => {
       const completedJobInfo: JobInfo = {
         id: "job-1",
-        status: JobStatus.READ_MODELS_READY,
+        status: JobStatus.READ_READY,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
       };
@@ -891,7 +891,7 @@ describe("ReactorClient Unit Tests", () => {
 
       const completedJobInfo: JobInfo = {
         ...jobInfo,
-        status: JobStatus.READ_MODELS_READY,
+        status: JobStatus.READ_READY,
       };
 
       vi.mocked(mockJobAwaiter.waitForJob).mockResolvedValue(completedJobInfo);
@@ -910,7 +910,7 @@ describe("ReactorClient Unit Tests", () => {
 
       vi.mocked(mockJobAwaiter.waitForJob).mockResolvedValue({
         id: "job-1",
-        status: JobStatus.READ_MODELS_READY,
+        status: JobStatus.READ_READY,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
       });
@@ -1105,7 +1105,7 @@ describe("ReactorClient Unit Tests", () => {
 
       const completedRemoveJobInfo: JobInfo = {
         id: "job-remove",
-        status: JobStatus.READ_MODELS_READY,
+        status: JobStatus.READ_READY,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
       };
@@ -1189,7 +1189,7 @@ describe("ReactorClient Unit Tests", () => {
 
       const completedParentJobInfo: JobInfo = {
         id: "job-parent",
-        status: JobStatus.READ_MODELS_READY,
+        status: JobStatus.READ_READY,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
       };

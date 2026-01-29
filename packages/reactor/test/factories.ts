@@ -643,6 +643,7 @@ export async function createTestReactorSetup(
     documentView,
     documentIndexer,
     operationStore,
+    eventBus,
   );
 
   return {
@@ -916,7 +917,7 @@ export function createMockJobAwaiter(
   return {
     waitForJob: vi.fn().mockResolvedValue({
       id: "job-1",
-      status: JobStatus.READ_MODELS_READY,
+      status: JobStatus.READ_READY,
       createdAtUtcIso: new Date().toISOString(),
       consistencyToken: createEmptyConsistencyToken(),
     }),

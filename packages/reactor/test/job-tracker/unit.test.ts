@@ -38,7 +38,7 @@ describe("InMemoryJobTracker", () => {
       tracker.registerJob(jobInfo);
 
       // Modify original
-      jobInfo.status = JobStatus.READ_MODELS_READY;
+      jobInfo.status = JobStatus.READ_READY;
 
       // Should not affect stored version
       const retrieved = tracker.getJobStatus("job-1");
@@ -124,7 +124,7 @@ describe("InMemoryJobTracker", () => {
       const retrieved = tracker.getJobStatus("job-1");
 
       // Modify retrieved
-      retrieved!.status = JobStatus.READ_MODELS_READY;
+      retrieved!.status = JobStatus.READ_READY;
 
       // Should not affect stored version
       const retrievedAgain = tracker.getJobStatus("job-1");

@@ -159,12 +159,12 @@ This prevents issues with `package.json` imports in vitest.config.ts being copie
 
 Authorization & Permissions:
 
-- [Reactor API Authorization](https://staging.powerhouse.academy/academy/MasteryTrack/BuildingUserExperiences/Authorization/Authorization) - Role-based access control configuration
-- [Document Permission System](https://staging.powerhouse.academy/academy/MasteryTrack/BuildingUserExperiences/Authorization/DocumentPermissions) - Fine-grained document-level permissions
+- [Reactor API Authorization](https://academy.vetra.io/academy/MasteryTrack/BuildingUserExperiences/Authorization/Authorization) - Role-based access control configuration
+- [Document Permission System](https://academy.vetra.io/academy/MasteryTrack/BuildingUserExperiences/Authorization/DocumentPermissions) - Fine-grained document-level permissions
 
 Connect Tools:
 
-- [Inspector Modal](https://staging.powerhouse.academy/academy/MasteryTrack/ConnectTools/InspectorModal) - Database & reactor explorer
+- [Inspector Modal](https://academy.vetra.io/academy/MasteryTrack/ConnectTools/InspectorModal) - Database & reactor explorer
 
 Other Updates:
 
@@ -196,7 +196,7 @@ New debugging components inside Connect to help developers understand what's hap
 - Remotes Inspector - View configured sync remotes and their status
 - Channel Inspector - Debug sync channels of the reactor (inbox, outbox, dead letter queues)
 
-These tools can be enabled via feature flags. See the [Inspector Modal documentation](https://staging.powerhouse.academy/academy/MasteryTrack/ConnectTools/InspectorModal) for details.
+These tools can be enabled via feature flags. See the [Inspector Modal documentation](https://academy.vetra.io/academy/MasteryTrack/ConnectTools/InspectorModal) for details.
 
 #### Renown Login Component
 
@@ -388,7 +388,7 @@ Impact on Editors:
 - Document and Drive editors need to adopt the new hook patterns from `@powerhousedao/reactor-browser`
 - Navigation and selection state is now managed through hooks instead of props
 
-Learn More: Complete hooks documentation and examples are available at https://staging.powerhouse.academy/academy/APIReferences/ReactHooks
+Learn More: Complete hooks documentation and examples are available at https://academy.vetra.io/academy/APIReferences/ReactHooks
 
 Migration Required: Existing editors will need to be refactored to use the new hooks API. See Migration Guide below.
 
@@ -751,8 +751,8 @@ Dspot Team: [Effective-Octo-Adventure](https://github.com/powerhouse-inc/effecti
 
 ### **Significant `PHDocument` refactor**
 
-- Consolidating header information into the `header` field of the document. See the [PHDocument spec](./packages/reactor/docs/planning/PHDocument/index.md#header).
-- Introducing signed and unsigned documents with Ed25519 keys . See the [PHDocument signing spec](./packages/reactor/docs/planning/PHDocument/signing.md).
+- Consolidating header information into the `header` field of the document. See the PHDocument spec for more details.
+- Introducing signed and unsigned documents with Ed25519 keys. See the PHDocument signing spec for more details.
 
 ### **Processor generator updates**
 
@@ -802,18 +802,18 @@ Introducing the **Relational Database & Operational Processor System**, a new ar
 - Create or modify documents in Connect and watch how the changes are immediately reflected in your Connect application's display, demonstrating the live query feature.
 - Explore building more complex analytical queries that span multiple documents, taking advantage of the relational store's capabilities.
 
-### Updates for [www.staging.academy.powerhouse](https://staging.powerhouse.academy/)
+### Updates for [academy.vetra.io](https://academy.vetra.io/)
 
 #### Documentation & Guides:
 
 - **New:** PHDocument Migration Guide - Comprehensive guide to navigate the breaking changes in v4.0.0, including step-by-step migration instructions for the document header restructuring and property access patterns.
-- 🔗 https://staging.powerhouse.academy/academy/APIReferences/PHDocumentMigrationGuide
+- 🔗 https://academy.vetra.io/academy/APIReferences/PHDocumentMigrationGuide
 - **New:** Drive Analytics Documentation and Examples - Complete documentation for the new analytics system with practical examples showing how to implement and use drive and document analytics processors.
-- 🔗 https://staging.powerhouse.academy/academy/MasteryTrack/WorkWithData/drive-analytics
+- 🔗 https://academy.vetra.io/academy/MasteryTrack/WorkWithData/drive-analytics
 - **New:** Relational Database & Operational Processor System - Educational content explaining the new architecture for data handling, querying, and synchronization
-- 🔗 https://staging.powerhouse.academy/academy/APIReferences/RelationalDatabase
+- 🔗 https://academy.vetra.io/academy/APIReferences/RelationalDatabase
 - **New:** Todo-List Processor Tutorial - Try to add a processor to your todo-list demo project
-- 🔗 https://staging.powerhouse.academy/academy/MasteryTrack/WorkWithData/RelationalDbProcessor
+- 🔗 https://academy.vetra.io/academy/MasteryTrack/WorkWithData/RelationalDbProcessor
 
 #### Enhanced Learning Content:
 
@@ -821,7 +821,7 @@ Introducing the **Relational Database & Operational Processor System**, a new ar
 - **Updated:** Document Model Creation guides - Updated to reflect the new PHDocument structure and processor generation changes.
 - **Updated:** API References - Updated CLI command documentation (automatically generated) reflecting the new ph generate schema command and other v4.0.0 changes.
 
-🔍 See [CHANGELOG.md](./CHANGELOG.md) for the complete technical changelog with all commits and detailed changes.
+🔍 See the CHANGELOG.md in the repository root for the complete technical changelog with all commits and detailed changes.
 Thank you 💙 Core-dev Team
 
 ---
@@ -871,7 +871,7 @@ export default function Editor(props: IProps) {
 - Added safer validation for document properties to prevent runtime errors
 - Reimplemented the Switchboard button to open the document model subgraph
 
-### Updates for [www.staging.academy.powerhouse](https://staging.powerhouse.academy/)
+### Updates for [academy.vetra.io](https://academy.vetra.io/)
 
 - **New:** Comprehensive Drive Analytics documentation and tutorial with practical examples
 - Update of the Get Started chapter
@@ -891,7 +891,7 @@ This release brings improvements to the **Cloud Environment Setup Flow,** a Conn
 
 ✅ **What to try:** Try to run the `ph service setup` flow on a cloud instance on AWS or digital ocean and install a @powerhousedao/todo-demo-package.
 
-[https://staging.powerhouse.academy/academy/MasteryTrack/Launch/SetupEnvironment](https://staging.powerhouse.academy/academy/MasteryTrack/Launch/SetupEnvironment)
+[https://academy.vetra.io/academy/MasteryTrack/Launch/SetupEnvironment](https://academy.vetra.io/academy/MasteryTrack/Launch/SetupEnvironment)
 
 ### `ph connect build` command
 
@@ -902,29 +902,29 @@ This release brings improvements to the **Cloud Environment Setup Flow,** a Conn
 ### Configure an Allowlist and add Authorization for Switchboard
 
 - Read how to add Authorization to your drive
-  - [https://staging.powerhouse.academy/academy/MasteryTrack/BuildingUserExperiences/Authorization/Authorization](https://staging.powerhouse.academy/academy/MasteryTrack/BuildingUserExperiences/Authorization/Authorization)
+  - [https://academy.vetra.io/academy/MasteryTrack/BuildingUserExperiences/Authorization/Authorization](https://academy.vetra.io/academy/MasteryTrack/BuildingUserExperiences/Authorization/Authorization)
 - Or try to configure your environment
-  - [https://staging.powerhouse.academy/academy/MasteryTrack/Launch/ConfigureEnvironment](https://staging.powerhouse.academy/academy/MasteryTrack/Launch/ConfigureEnvironment)
+  - [https://academy.vetra.io/academy/MasteryTrack/Launch/ConfigureEnvironment](https://academy.vetra.io/academy/MasteryTrack/Launch/ConfigureEnvironment)
   ### It's now possible to disable the Create New Drive button in Connect.
   - We have introduced PH_CONNECT_DISABLE_ADD_DRIVE=true/false env var in connect.
-    configure your environment [https://staging.powerhouse.academy/academy/MasteryTrack/Launch/ConfigureEnvironment](https://staging.powerhouse.academy/academy/MasteryTrack/Launch/ConfigureEnvironment)
+    configure your environment [https://academy.vetra.io/academy/MasteryTrack/Launch/ConfigureEnvironment](https://academy.vetra.io/academy/MasteryTrack/Launch/ConfigureEnvironment)
   ***
   ### Find your document scalars in the stand-alone Document-Engineering
-  - [https://staging.powerhouse.academy/academy/ComponentLibrary/DocumentEngineering](https://staging.powerhouse.academy/academy/ComponentLibrary/DocumentEngineering)
+  - [https://academy.vetra.io/academy/ComponentLibrary/DocumentEngineering](https://academy.vetra.io/academy/ComponentLibrary/DocumentEngineering)
     ✅ **What to try: Visit the updated** [https://storybook.powerhouse.academy](https://storybook.powerhouse.academy/?path=/docs/getting-started--readme) to see the latest scalar implementations by Dspot.
   ***
   ### Performance improvements in Connect
   - We've optimised the way components render & avoid rerenders which results in a faster, snappier app.
   - Optimized the initial loading of Connect for an improved UX
   ***
-  ### Updates on [www.staging.academy.powerhouse](https://staging.powerhouse.academy/)
+  ### Updates on [academy.vetra.io](https://academy.vetra.io/)
   - Academy moved to the monorepo! So you have more access to code context when writing documentation. 👌
   - We've updated the landing page getting you directly to the 'Get started' section & Tutorial
   - Still confused how to create a drive via mutations?
-    'Configure a drive' is now available to help you out. [https://staging.powerhouse.academy/academy/MasteryTrack/BuildingUserExperiences/ConfiguringDrives](https://staging.powerhouse.academy/academy/MasteryTrack/BuildingUserExperiences/ConfiguringDrives)
-  - New educational content is present inside the 'Mastery track' guiding you through the advanced ToDoList Demo. [https://staging.powerhouse.academy/academy/MasteryTrack/DocumentModelCreation/WhatIsADocumentModel](https://staging.powerhouse.academy/academy/MasteryTrack/DocumentModelCreation/WhatIsADocumentModel)
+    'Configure a drive' is now available to help you out. [https://academy.vetra.io/academy/MasteryTrack/BuildingUserExperiences/ConfiguringDrives](https://academy.vetra.io/academy/MasteryTrack/BuildingUserExperiences/ConfiguringDrives)
+  - New educational content is present inside the 'Mastery track' guiding you through the advanced ToDoList Demo. [https://academy.vetra.io/academy/MasteryTrack/DocumentModelCreation/WhatIsADocumentModel](https://academy.vetra.io/academy/MasteryTrack/DocumentModelCreation/WhatIsADocumentModel)
   - The first page inside our API references chapter is now automatically updated with all the latest available commands for the Powerhouse CLI
-    [https://staging.powerhouse.academy/academy/APIReferences/PowerhouseCLI](https://staging.powerhouse.academy/academy/APIReferences/PowerhouseCLI)
+    [https://academy.vetra.io/academy/APIReferences/PowerhouseCLI](https://academy.vetra.io/academy/APIReferences/PowerhouseCLI)
 
 ---
 
@@ -941,7 +941,7 @@ This release brings improvements that make it easier to **work with the Powerhou
 - You'll notice clearer help messages when you run `ph help` or `ph {command} --help` (e.g. `ph init --help`). We've redesigned the help output to be **more readable and useful right from your terminal.**
 - Running `ph --version` now shows **additional context about your CLI installation** to help debug or verify your setup.
 
-👉 **View the latest commands documentation here: [COMMANDS.md on GitHub](./clis/ph-cli/COMMANDS.md)
+👉 **View the latest commands documentation in the CLI repository on GitHub
 (Soon on academy too)**
 
 ✅ **What to try:** Run `ph help` or `ph init --help` and see the improved help output. Check out the online docs if you prefer reading in markdown!
@@ -986,7 +986,7 @@ This release brings improvements that make it easier to **work with the Powerhou
 
 ---
 
-**Several updates for:** [https://staging.academy.powerhouse/](https://staging.academy.powerhouse/) 📖
+**Several updates for:** [https://academy.vetra.io/](https://academy.vetra.io/) 📖
 
 - Added page: Setup environment & deployment guide
 - Added page: Working with the Supergraph
