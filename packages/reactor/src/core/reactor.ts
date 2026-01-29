@@ -629,16 +629,6 @@ export class Reactor implements IReactor {
     }
 
     const scope = getSharedOperationScope(operations);
-
-    // TODO: is this necessary?
-    operations.forEach((operation, index) => {
-      if (!operation.timestampUtcMs) {
-        throw new Error(
-          `Operation at position ${index} is missing timestampUtcMs`,
-        );
-      }
-    });
-
     const createdAtUtcIso = new Date().toISOString();
     const job: Job = {
       id: uuidv4(),
