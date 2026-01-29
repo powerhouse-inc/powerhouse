@@ -9,7 +9,7 @@ import {
   configureVetraGithubUrl,
   sleep,
 } from "../utils/configure-vetra-github-url.js";
-import { runConnectStudio } from "./connect.js";
+import { runConnectStudio } from "./connect-studio.js";
 import { startSwitchboard } from "./switchboard.js";
 
 const VETRA_DRIVE_NAME = "vetra";

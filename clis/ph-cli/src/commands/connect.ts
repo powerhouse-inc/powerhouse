@@ -1,11 +1,5 @@
 import { buildArgs, previewArgs, studioArgs } from "@powerhousedao/common/clis";
 import { command, subcommands } from "cmd-ts";
-import {
-  runConnectBuild,
-  runConnectPreview,
-  runConnectStudio,
-} from "../services/connect.js";
-
 export const studio = command({
   name: "studio",
   description: `The studio command starts the Connect Studio, a development environment for building
@@ -23,6 +17,7 @@ This command:
     if (args.debug) {
       console.log(args);
     }
+    const { runConnectStudio } = await import("../services/connect-studio.js");
     await runConnectStudio(args);
   },
 });
@@ -37,6 +32,8 @@ external packages included
     if (args.debug) {
       console.log(args);
     }
+
+    const { runConnectBuild } = await import("../services/connect-build.js");
     await runConnectBuild(args);
     process.exit(0);
   },
@@ -52,6 +49,9 @@ NOTE: You must run \`ph connect build\` first
     if (args.debug) {
       console.log(args);
     }
+    const { runConnectPreview } = await import(
+      "../services/connect-preview.js"
+    );
     await runConnectPreview(args);
   },
 });

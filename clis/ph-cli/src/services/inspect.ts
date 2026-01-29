@@ -1,6 +1,7 @@
-import { getProjectInfo, type InspectArgs } from "@powerhousedao/ph-cli";
 import type { Manifest } from "document-model";
 import fs from "node:fs";
+import type { InspectArgs } from "../types.js";
+import { getProjectInfo } from "../utils.js";
 export function startInspect(args: InspectArgs) {
   if (args.debug) {
     console.log(">>> command arguments", args);

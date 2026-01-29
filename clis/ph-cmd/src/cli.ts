@@ -42,16 +42,17 @@ async function main() {
     !args.some((arg) => ["--help", "-h"].includes(arg))
   ) {
     await executePhCliCommand("connect");
-    return;
+    process.exit(0);
   }
 
   // forward command to the local ph-cli installation if it exists
   if (phCliCommandNames.includes(command)) {
     await executePhCliCommand(command);
-    return;
+    process.exit(0);
   }
 
   await run(ph, args);
+  process.exit(0);
 }
 
 await main();

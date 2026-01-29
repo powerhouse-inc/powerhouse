@@ -10,16 +10,8 @@ import { update } from "./update.js";
 import { useLocal } from "./use-local.js";
 import { use } from "./use.js";
 
-async function getVersionFromPackageJson() {
-  const result = await readPackageUp();
-  if (!result) {
-    throw new Error("Failed to get version from package.json");
-  }
-  const version = result.packageJson.version;
-  return version;
-}
-const cliVersion = await getVersionFromPackageJson();
-const phCmdVersionInfo = await getPhCmdVersionInfo(cliVersion);
+declare const CLI_VERSION: string;
+const phCmdVersionInfo = await getPhCmdVersionInfo(CLI_VERSION);
 export const ph = subcommands({
   name: "ph",
   version: phCmdVersionInfo,

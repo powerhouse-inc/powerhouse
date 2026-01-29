@@ -4,12 +4,6 @@ import {
   SECONDS_IN_DAY,
 } from "@powerhousedao/common/clis";
 import { command } from "cmd-ts";
-import {
-  getConnectCrypto,
-  getConnectDid,
-  isAuthenticated,
-  loadCredentials,
-} from "../services/auth.js";
 export const accessToken = command({
   name: "access-token",
   description: `
@@ -64,6 +58,12 @@ Notes:
     if (args.debug) {
       console.log(args);
     }
+    const {
+      getConnectCrypto,
+      getConnectDid,
+      isAuthenticated,
+      loadCredentials,
+    } = await import("../services/auth.js");
     // Require Renown authentication - user must have done 'ph login'
     if (!isAuthenticated()) {
       throw new Error(

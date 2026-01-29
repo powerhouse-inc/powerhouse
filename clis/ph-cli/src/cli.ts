@@ -23,6 +23,7 @@ async function main() {
   } else {
     await run(cli, args);
   }
+  process.exit(0);
 }
 
 await main();

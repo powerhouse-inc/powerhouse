@@ -115,9 +115,6 @@ export async function getPowerhouseProjectInfo(
     );
   }
   const isGlobal = !localProjectPath && !!globalProjectPath;
-  if (isGlobal) {
-    console.log("Using global Powerhouse project...");
-  }
   const packageManagerFromArgs = parsePackageManager(args);
   const packageManagerFromProject =
     await getPackageManagerAtPowerhouseProjectDirPath(projectPath);

@@ -1,6 +1,5 @@
 import { generateArgs } from "@powerhousedao/common/clis";
 import { command } from "cmd-ts";
-import { startGenerate } from "../services/generate.js";
 
 export const generate = command({
   name: "generate",
@@ -19,6 +18,7 @@ This command:
     if (args.debug) {
       console.log(args);
     }
+    const { startGenerate } = await import("../services/generate.js");
     await startGenerate(args);
     process.exit(0);
   },

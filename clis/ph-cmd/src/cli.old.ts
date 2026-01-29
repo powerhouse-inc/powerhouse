@@ -1,5 +1,8 @@
 #!/usr/bin/env node
-import { assertNodeVersion } from "@powerhousedao/common/clis";
+import {
+  assertNodeVersion,
+  MINIMUM_NODE_VERSION,
+} from "@powerhousedao/common/clis";
 import { run } from "cmd-ts";
 import { Command } from "commander";
 import { forwardCommand } from "./commands/forward.js";
@@ -12,7 +15,7 @@ import type { CommandActionType } from "./types.js";
 import { generateMergedHelp } from "./utils/index.js";
 
 // Ensure minimum Node.js version
-assertNodeVersion("24");
+assertNodeVersion(MINIMUM_NODE_VERSION);
 
 const program = new Command();
 

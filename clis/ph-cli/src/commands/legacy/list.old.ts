@@ -1,8 +1,8 @@
 import { getConfig } from "@powerhousedao/config/node";
 import type { Command } from "commander";
-import { listHelp } from "../help.js";
-import type { CommandActionType } from "../types.js";
-import { getProjectInfo, setCustomHelp } from "../utils.js";
+import { listHelp } from "../../help.js";
+import type { CommandActionType } from "../../types.js";
+import { getProjectInfo, setCustomHelp } from "../../utils.js";
 
 export const list: CommandActionType<
   [
