@@ -115,12 +115,11 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
       const retrievedDocument = await reactor.get<DocumentDriveDocument>(
         document.header.id,
       );
-      expect(retrievedDocument).toBeDefined();
-      expect(retrievedDocument?.header.id).toBe(document.header.id);
-      expect(retrievedDocument?.header.documentType).toBe(
+      expect(retrievedDocument.header.id).toBe(document.header.id);
+      expect(retrievedDocument.header.documentType).toBe(
         document.header.documentType,
       );
-      expect(retrievedDocument?.state.global.nodes).toHaveLength(0);
+      expect(retrievedDocument.state.global.nodes).toHaveLength(0);
     });
 
     it("should set default protocol versions when creating a document", async () => {
