@@ -3,51 +3,6 @@ import { readPackage } from "read-pkg";
 import { fileExists } from "./file-exists.js";
 import { getPowerhouseProjectInfo } from "./projects.js";
 
-import { execFileSync } from "node:child_process";
-import fs from "node:fs";
-
-function which(bin: string): string | undefined {
-  const cmd = process.platform === "win32" ? "where" : "which";
-  try {
-    const out = execFileSync(cmd, [bin], { encoding: "utf8" }).trim();
-    return out.split(/\r?\n/)[0]?.trim() || undefined;
-  } catch {
-    return undefined;
-  }
-}
-
-function findUpPackageJson(start: string): string | undefined {
-  console.log({ start });
-  let dir =
-    fs.existsSync(start) && fs.statSync(start).isDirectory()
-      ? start
-      : path.dirname(start);
-
-  console.log({ dir });
-
-  while (true) {
-    const candidate = path.join(dir, "package.json");
-    if (fs.existsSync(candidate)) return candidate;
-    const parent = path.dirname(dir);
-    if (parent === dir) return undefined;
-    dir = parent;
-  }
-}
-
-export function getPackageJsonForBin(binName: string) {
-  const binPath = which(binName);
-  console.log({ binPath });
-  if (!binPath) return undefined;
-
-  const realBin = fs.realpathSync.native?.(binPath) ?? fs.realpathSync(binPath);
-
-  const pkgJsonPath = findUpPackageJson(realBin);
-  if (!pkgJsonPath) return undefined;
-
-  const result = path.dirname(pkgJsonPath);
-  return result;
-}
-
 export async function getPhCmdVersionInfo(phCmdVersion: string) {
   const phCliVersionInfo = await getPhCliVersionInfo();
 
