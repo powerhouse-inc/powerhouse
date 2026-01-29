@@ -4,6 +4,7 @@ import type { ISyncCursorStorage } from "../../storage/interfaces.js";
 import type { IChannel, IChannelFactory } from "../interfaces.js";
 import type { ChannelConfig, RemoteFilter } from "../types.js";
 import { GqlChannel, type GqlChannelConfig } from "./gql-channel.js";
+import { IntervalPollTimer } from "./interval-poll-timer.js";
 import { PollingChannel } from "./polling-channel.js";
 
 /**
@@ -91,11 +92,12 @@ export class CompositeChannelFactory implements IChannelFactory {
       gqlConfig.authToken = config.parameters.authToken;
     }
 
+    let pollIntervalMs = 2000;
     if (config.parameters.pollIntervalMs !== undefined) {
       if (typeof config.parameters.pollIntervalMs !== "number") {
         throw new Error('"pollIntervalMs" parameter must be a number');
       }
-      gqlConfig.pollIntervalMs = config.parameters.pollIntervalMs;
+      pollIntervalMs = config.parameters.pollIntervalMs;
     }
 
     if (config.parameters.retryBaseDelayMs !== undefined) {
@@ -126,6 +128,8 @@ export class CompositeChannelFactory implements IChannelFactory {
       gqlConfig.fetchFn = config.parameters.fetchFn as typeof fetch;
     }
 
+    const pollTimer = new IntervalPollTimer(pollIntervalMs);
+
     return new GqlChannel(
       this.logger,
       remoteId,
@@ -133,6 +137,7 @@ export class CompositeChannelFactory implements IChannelFactory {
       cursorStorage,
       gqlConfig,
       operationIndex,
+      pollTimer,
     );
   }
 
