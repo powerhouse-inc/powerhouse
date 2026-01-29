@@ -153,9 +153,38 @@ interface OperationTiming {
   action: object;
 }
 
+interface Percentiles {
+  p50: number;
+  p90: number;
+  p95: number;
+  p99: number;
+}
+
+function calculatePercentiles(durations: number[]): Percentiles | null {
+  if (durations.length === 0) return null;
+
+  const sorted = [...durations].sort((a, b) => a - b);
+  const percentile = (p: number): number => {
+    const index = Math.ceil((p / 100) * sorted.length) - 1;
+    return sorted[Math.max(0, index)];
+  };
+
+  return {
+    p50: percentile(50),
+    p90: percentile(90),
+    p95: percentile(95),
+    p99: percentile(99),
+  };
+}
+
+function formatPercentiles(p: Percentiles): string {
+  return `p50: ${p.p50}ms, p90: ${p.p90}ms, p95: ${p.p95}ms, p99: ${p.p99}ms`;
+}
+
 interface OperationsResult {
   minOp: OperationTiming | null;
   maxOp: OperationTiming | null;
+  durations: number[];
 }
 
 async function performOperations(
@@ -168,6 +197,7 @@ async function performOperations(
 ): Promise<OperationsResult> {
   let minOp: OperationTiming | null = null;
   let maxOp: OperationTiming | null = null;
+  const durations: number[] = [];
 
   for (let i = 0; i < operationCount; i++) {
     const action = createOperation(docIndex, i + 1);
@@ -177,6 +207,7 @@ async function performOperations(
       actions: [action],
     });
     const durationMs = Date.now() - opStart;
+    durations.push(durationMs);
 
     const timing: OperationTiming = { opIndex: i + 1, durationMs, action };
 
@@ -190,7 +221,7 @@ async function performOperations(
     onProgress(i + 1, action, durationMs);
   }
 
-  return { minOp, maxOp };
+  return { minOp, maxOp, durations };
 }
 
 function parseArgs(args: string[]): {
@@ -201,6 +232,7 @@ function parseArgs(args: string[]): {
   documentType?: string;
   docIds: string[];
   verbose: boolean;
+  percentiles: boolean;
 } {
   let count = 10;
   let operations = 0;
@@ -209,6 +241,7 @@ function parseArgs(args: string[]): {
   let documentType: string | undefined;
   const docIds: string[] = [];
   let verbose = false;
+  let percentiles = false;
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
@@ -224,6 +257,8 @@ function parseArgs(args: string[]): {
       docIds.push(args[++i]);
     } else if (arg === "--verbose" || arg === "-v") {
       verbose = true;
+    } else if (arg === "--percentiles" || arg === "-p") {
+      percentiles = true;
     } else if (arg === "--help" || arg === "-h") {
       console.log(`
 Usage: tsx docs-create.ts [N] [options]
@@ -239,6 +274,7 @@ Options:
   --endpoint <url>          GraphQL endpoint (default: ${DEFAULT_ENDPOINT})
   --documentType <type>     Document type for new documents (default: first available)
   --verbose, -v             Show detailed operation payloads
+  --percentiles, -p         Show percentile statistics (p50, p90, p95, p99) per line
   --help, -h                Show this help message
 
 Process flow:
@@ -299,6 +335,7 @@ Examples:
     documentType,
     docIds,
     verbose,
+    percentiles,
   };
 }
 
@@ -311,6 +348,7 @@ async function main() {
     documentType: docTypeArg,
     docIds,
     verbose,
+    percentiles: showPercentiles,
   } = parseArgs(process.argv.slice(2));
 
   const client = new GraphQLClient(endpoint);
@@ -373,7 +411,7 @@ async function main() {
     const opsStartTime = Date.now();
     const totalOps = docCount * operations * opLoops;
 
-    // Track overall min/max across all documents and loops
+    // Track overall min/max and all durations across all documents and loops
     let overallMinOp: {
       docId: string;
       docNum: number;
@@ -386,6 +424,7 @@ async function main() {
       loop: number;
       timing: OperationTiming;
     } | null = null;
+    const allDurations: number[] = [];
 
     for (let i = 0; i < documentIds.length; i++) {
       const docNum = i + 1;
@@ -418,7 +457,7 @@ async function main() {
           },
         );
 
-        // Update overall min/max
+        // Update overall min/max and accumulate durations
         if (
           result.minOp &&
           (overallMinOp === null ||
@@ -433,6 +472,9 @@ async function main() {
         ) {
           overallMaxOp = { docId, docNum, loop, timing: result.maxOp };
         }
+        if (showPercentiles) {
+          allDurations.push(...result.durations);
+        }
 
         const loopDurationMs = Date.now() - loopStartTime;
         const loopDuration = (loopDurationMs / 1000).toFixed(2);
@@ -443,11 +485,20 @@ async function main() {
             ? `, min: ${result.minOp.durationMs}ms, max: ${result.maxOp.durationMs}ms`
             : "";
 
+        const loopPercentiles = showPercentiles
+          ? calculatePercentiles(result.durations)
+          : null;
+        const percentilesStr = loopPercentiles
+          ? `\n      ${formatPercentiles(loopPercentiles)}`
+          : "";
+
         if (verbose) {
-          console.log(`    Done: ${loopDuration}s, ${msPerOp}ms/op${minMax}`);
+          console.log(
+            `    Done: ${loopDuration}s, ${msPerOp}ms/op${minMax}${percentilesStr}`,
+          );
         } else {
           process.stdout.write(
-            ` (${loopDuration}s, ${msPerOp}ms/op${minMax})\n`,
+            ` (${loopDuration}s, ${msPerOp}ms/op${minMax})${percentilesStr}\n`,
           );
         }
       }
@@ -464,6 +515,12 @@ async function main() {
     console.log(
       `  Completed ${totalOps} operations in ${opsDuration}s (avg: ${avgMsPerOp}ms/op${overallMinMax})`,
     );
+    if (showPercentiles) {
+      const percentiles = calculatePercentiles(allDurations);
+      if (percentiles) {
+        console.log(`  Overall percentiles: ${formatPercentiles(percentiles)}`);
+      }
+    }
     console.log(`  Memory: ${formatMemory(phase2Memory)}`);
   }
 
