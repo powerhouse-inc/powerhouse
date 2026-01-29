@@ -66,7 +66,6 @@ const devDependenciesTemplate = (versionedDevDependencies: string[]) => json`
   "@electric-sql/pglite": "^0.2.12",
   "@eslint/js": "^9.38.0",
   "@powerhousedao/analytics-engine-core": "^0.5.0",
-  "@powerhousedao/scalars": "^2.0.1",
   "@tailwindcss/cli": "^4.1.4",
   "@testing-library/react": "^16.3.0",
   "@types/node": "^24.9.2",
