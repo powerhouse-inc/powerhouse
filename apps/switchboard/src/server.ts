@@ -60,6 +60,9 @@ const REACTOR_STORAGE_V2_DEFAULT = true;
 const ENABLE_DUAL_ACTION_CREATE = "ENABLE_DUAL_ACTION_CREATE";
 const ENABLE_DUAL_ACTION_CREATE_DEFAULT = true;
 
+const USE_NEW_DOCUMENT_MODEL_SUBGRAPH = "USE_NEW_DOCUMENT_MODEL_SUBGRAPH";
+const USE_NEW_DOCUMENT_MODEL_SUBGRAPH_DEFAULT = false;
+
 // Create a monolith express app for all subgraphs
 const app = express();
 
@@ -268,6 +271,7 @@ async function initServer(
         path.join(process.cwd(), "powerhouse.config.json"),
       mcp: options.mcp ?? true,
       enableDocumentModelSubgraphs: options.enableDocumentModelSubgraphs,
+      useNewDocumentModelSubgraph: options.useNewDocumentModelSubgraph,
       legacyReactor,
     },
   );
@@ -374,6 +378,14 @@ export const startSwitchboard = async (
       ENABLE_DUAL_ACTION_CREATE_DEFAULT,
   );
 
+  const useNewDocumentModelSubgraph = await featureFlags.getBooleanValue(
+    USE_NEW_DOCUMENT_MODEL_SUBGRAPH,
+    options.useNewDocumentModelSubgraph ??
+      USE_NEW_DOCUMENT_MODEL_SUBGRAPH_DEFAULT,
+  );
+
+  options.useNewDocumentModelSubgraph = useNewDocumentModelSubgraph;
+
   options.reactorOptions = {
     enableDualActionCreate,
     storageV2,
@@ -383,6 +395,7 @@ export const startSwitchboard = async (
     DOCUMENT_MODEL_SUBGRAPHS_ENABLED: enableDocumentModelSubgraphs,
     REACTOR_STORAGE_V2: storageV2,
     ENABLE_DUAL_ACTION_CREATE: enableDualActionCreate,
+    USE_NEW_DOCUMENT_MODEL_SUBGRAPH: useNewDocumentModelSubgraph,
   });
 
   if (process.env.PYROSCOPE_SERVER_ADDRESS) {

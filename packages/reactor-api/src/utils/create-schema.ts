@@ -335,9 +335,33 @@ function applyGraphQLTypePrefixes(
   return processedSchema;
 }
 
-export function generateDocumentModelSchemaLegacy(
+/**
+ * Options for generating document model GraphQL schemas.
+ */
+export interface DocumentModelSchemaOptions {
+  /**
+   * When true, generates new API patterns:
+   * - Mutations return full document objects (MutationResult type)
+   * - Adds createEmptyDocument mutation
+   * - Makes docId and input parameters required
+   * @default false
+   */
+  useNewApi?: boolean;
+}
+
+/**
+ * Generate a GraphQL schema for a document model.
+ *
+ * @param documentModel - The document model global state
+ * @param options - Schema generation options
+ * @returns GraphQL DocumentNode
+ */
+export function generateDocumentModelSchema(
   documentModel: DocumentModelGlobalState,
+  options: DocumentModelSchemaOptions = {},
 ): DocumentNode {
+  const { useNewApi = false } = options;
+
   const specification = documentModel.specifications.at(-1);
   const documentName = getDocumentModelSchemaName(documentModel);
   const stateSchema = specification?.state.global.schema;
@@ -367,7 +391,83 @@ export function generateDocumentModelSchemaLegacy(
     allTypeNames,
   );
 
+  // Helper to check if schema has actual GraphQL type definitions
+  const hasValidSchema = (schema: string | null | undefined) =>
+    schema && /\b(input|type|enum|union|interface)\s+\w+/.test(schema);
+
+  // Conditional parts based on useNewApi flag
+  const scalarDeclarations = useNewApi
+    ? `scalar DateTime
+    scalar JSONObject`
+    : "";
+
+  const mutationResultType = useNewApi
+    ? `"""
+    Mutation result type for ${documentName} operations
+    """
+    type ${documentName}MutationResult {
+      id: String!
+      name: String!
+      documentType: String!
+      revision: Int!
+      state: JSONObject!
+      createdAtUtcIso: DateTime!
+      lastModifiedAtUtcIso: DateTime!
+    }`
+    : "";
+
+  const createDocumentMutation = useNewApi
+    ? `${documentName}_createDocument(name: String!, driveId: String): ${documentName}MutationResult!`
+    : `${documentName}_createDocument(name:String!, driveId:String): String`;
+
+  const createEmptyDocumentMutation = useNewApi
+    ? `${documentName}_createEmptyDocument(driveId: String): ${documentName}MutationResult!`
+    : "";
+
+  const operationMutations =
+    specification?.modules
+      .flatMap((module) =>
+        module.operations
+          .filter((op) => op.name && hasValidSchema(op.schema))
+          .map((op) => {
+            if (useNewApi) {
+              return `${documentName}_${camelCase(op.name!)}(docId: PHID!, input: ${documentName}_${pascalCase(op.name!)}Input!): ${documentName}MutationResult!`;
+            } else {
+              return `${documentName}_${camelCase(op.name!)}(
+            driveId: String, docId: PHID, input: ${documentName}_${pascalCase(op.name!)}Input): Int`;
+            }
+          }),
+      )
+      .join("\n        ") ?? "";
+
+  const moduleSchemas =
+    specification?.modules
+      .filter((module) =>
+        module.operations.some((op) => hasValidSchema(op.schema)),
+      )
+      .map(
+        (module) =>
+          `"""
+       Module: ${pascalCase(module.name)}
+       """
+       ${module.operations
+         .filter((op) => hasValidSchema(op.schema))
+         .map((op) =>
+           applyGraphQLTypePrefixes(
+             op.schema ?? "",
+             documentName,
+             allTypeNames,
+           ),
+         )
+         .join("\n  ")}`,
+      )
+      .join("\n") ?? "";
+
   return gql`
+    ${scalarDeclarations}
+
+    ${mutationResultType}
+
     """
     Queries: ${documentName} Document
     """
@@ -385,26 +485,10 @@ export function generateDocumentModelSchemaLegacy(
     Mutations: ${documentName}
     """
     type Mutation {
-        ${documentName}_createDocument(name:String!, driveId:String): String
+        ${createDocumentMutation}
+        ${createEmptyDocumentMutation}
 
-        ${
-          specification?.modules
-            .flatMap((module) =>
-              module.operations
-                .filter(
-                  (op) =>
-                    op.name &&
-                    op.schema &&
-                    /\b(input|type|enum|union|interface)\s+\w+/.test(op.schema),
-                )
-                .map(
-                  (op) =>
-                    `${documentName}_${camelCase(op.name!)}(
-            driveId: String, docId: PHID, input: ${documentName}_${pascalCase(op.name!)}Input): Int`,
-                ),
-            )
-            .join("\n        ") ?? ""
-        }
+        ${operationMutations}
     }
 
     ${
@@ -416,32 +500,5 @@ export function generateDocumentModelSchemaLegacy(
         : ""
     }
 
-    ${(() => {
-      // Helper to check if schema has actual GraphQL type definitions
-      const hasValidSchema = (schema: string | null | undefined) =>
-        schema && /\b(input|type|enum|union|interface)\s+\w+/.test(schema);
-      return (
-        specification?.modules
-          .filter((module) =>
-            module.operations.some((op) => hasValidSchema(op.schema)),
-          )
-          .map(
-            (module) =>
-              `"""
-       Module: ${pascalCase(module.name)}
-       """
-       ${module.operations
-         .filter((op) => hasValidSchema(op.schema))
-         .map((op) =>
-           applyGraphQLTypePrefixes(
-             op.schema ?? "",
-             documentName,
-             allTypeNames,
-           ),
-         )
-         .join("\n  ")}`,
-          )
-          .join("\n") ?? ""
-      );
-    })()}`;
+    ${moduleSchemas}`;
 }
