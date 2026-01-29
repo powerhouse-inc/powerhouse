@@ -1,10 +1,10 @@
 import { writeCliDocsMarkdownFile } from "@powerhousedao/codegen/file-builders";
-import { init } from "../src/commands/init.js";
-import { ph } from "../src/commands/ph.js";
-import { setupGlobals } from "../src/commands/setup-globals.js";
-import { update } from "../src/commands/update.js";
-import { useLocal } from "../src/commands/use-local.js";
-import { use } from "../src/commands/use.js";
+import { init } from "./commands/init.js";
+import { ph } from "./commands/ph.js";
+import { setupGlobals } from "./commands/setup-globals.js";
+import { update } from "./commands/update.js";
+import { useLocal } from "./commands/use-local.js";
+import { use } from "./commands/use.js";
 
 const commands = [
   { name: "init", command: init },

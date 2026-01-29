@@ -1,23 +1,13 @@
-import { createProject } from "@powerhousedao/codegen";
-import { parsePackageManager, parseTag } from "@powerhousedao/codegen/utils";
-import { execSync } from "node:child_process";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import path, { dirname } from "node:path";
 import {
-  HOME_DIR,
-  PH_BIN_PATH,
-  PH_GLOBAL_DIR_NAME,
-  PH_GLOBAL_PACKAGE_NAME,
   POWERHOUSE_CONFIG_FILE,
   POWERHOUSE_GLOBAL_DIR,
-  packageManagers,
-} from "./constants.js";
-import type {
-  GlobalProjectOptions,
-  PackageManager,
-  PathValidation,
-  ProjectInfo,
-} from "./types.js";
+} from "@powerhousedao/common/clis";
+import { execSync } from "node:child_process";
+import { existsSync } from "node:fs";
+import path, { dirname } from "node:path";
+import { packageManagers } from "./constants.js";
+import { createGlobalProject } from "./create-global-project.js";
+import type { PackageManager, PathValidation, ProjectInfo } from "./types.js";
 
 export function defaultPathValidation() {
   return true;
@@ -185,60 +175,4 @@ export const findContainerDirectory = (
   }
 
   return findContainerDirectory(parentDir, targetFile);
-};
-
-export const createGlobalProject = async (
-  projectName?: string,
-  options: GlobalProjectOptions = {},
-) => {
-  // check if the global project already exists
-  const globalProjectExists = existsSync(POWERHOUSE_GLOBAL_DIR);
-
-  if (globalProjectExists) {
-    // Fix existing installations with invalid ".ph" package name
-    const packageJsonPath = path.join(POWERHOUSE_GLOBAL_DIR, "package.json");
-    if (existsSync(packageJsonPath)) {
-      try {
-        const packageJson = JSON.parse(
-          readFileSync(packageJsonPath, "utf-8"),
-        ) as { name?: string };
-        if (packageJson.name?.startsWith(".")) {
-          console.log("📦 Fixing invalid package name in global project...");
-          packageJson.name = PH_GLOBAL_PACKAGE_NAME;
-          writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2));
-        }
-      } catch {
-        // Ignore errors reading/writing package.json
-      }
-    }
-    console.log(`📦 Using global project: ${POWERHOUSE_GLOBAL_DIR}`);
-    return;
-  }
-
-  console.log("📦 Initializing global project...");
-  process.chdir(HOME_DIR);
-
-  try {
-    await createProject({
-      name: PH_GLOBAL_DIR_NAME,
-      tag: parseTag(options),
-      packageManager:
-        parsePackageManager(options) ?? getPackageManagerFromPath(PH_BIN_PATH),
-    });
-
-    // Fix the package.json name - ".ph" is invalid for npm/vite
-    // The directory name can be ".ph" but the package name must be valid
-    const packageJsonPath = path.join(POWERHOUSE_GLOBAL_DIR, "package.json");
-    const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf-8")) as {
-      name?: string;
-    };
-    packageJson.name = PH_GLOBAL_PACKAGE_NAME;
-    writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2));
-
-    console.log(
-      `🚀 Global project initialized successfully: ${POWERHOUSE_GLOBAL_DIR}`,
-    );
-  } catch (error) {
-    console.error("❌ Failed to initialize the global project", error);
-  }
 };

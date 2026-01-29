@@ -1,4 +1,4 @@
-import { parsePackageManager } from "@powerhousedao/codegen/utils";
+import { parsePackageManager } from "@powerhousedao/common/clis";
 import type { Command } from "commander";
 import { execSync } from "node:child_process";
 import fs from "node:fs";

@@ -81,6 +81,8 @@ Initialize a new project
 
 **Staging** - Use the `staging` release tag. - Usage: `--staging, -s`
 
+**Debug** - Log arguments passed to this command - Usage: `--debug`
+
 **Help** - show help - Usage: `--help, -h`
 
 
@@ -110,6 +112,8 @@ Specify the release version of Powerhouse dependencies to use.
 ### Flags
 **Skip Install** - Skip running `install` with your package manager - Usage: `--skip-install, -s`
 
+**Debug** - Log arguments passed to this command - Usage: `--debug`
+
 **Help** - show help - Usage: `--help, -h`
 
 
@@ -120,6 +124,8 @@ Update your powerhouse dependencies to their latest tagged version
 
 ### Flags
 **Skip Install** - Skip running `install` with your package manager - Usage: `--skip-install, -s`
+
+**Debug** - Log arguments passed to this command - Usage: `--debug`
 
 **Help** - show help - Usage: `--help, -h`
 
@@ -166,6 +172,8 @@ Initialize a new global project
 
 **Staging** - Use the `staging` release tag. - Usage: `--staging, -s`
 
+**Debug** - Log arguments passed to this command - Usage: `--debug`
+
 **Help** - show help - Usage: `--help, -h`
 
 
@@ -192,6 +200,8 @@ Use your local `powerhouse` monorepo dependencies the current project.
 
 ### Flags
 **Skip Install** - Skip running `install` with `pnpm` - Usage: `--skip-install, -s`
+
+**Debug** - Log arguments passed to this command - Usage: `--debug`
 
 **Help** - show help - Usage: `--help, -h`
 

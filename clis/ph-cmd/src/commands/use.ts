@@ -1,9 +1,10 @@
 import {
-  getPackageVersion,
+  debugArgs,
   handleMutuallyExclusiveOptions,
   logVersionUpdate,
-} from "@powerhousedao/codegen/utils";
-import { debugArgs } from "@powerhousedao/common/clis";
+  parsePackageVersion,
+  runCmd,
+} from "@powerhousedao/common/clis";
 import chalk from "chalk";
 import {
   boolean,
@@ -21,7 +22,6 @@ import { readPackage } from "read-pkg";
 import { clean, valid } from "semver";
 import { writePackage } from "write-package";
 import { ALL_POWERHOUSE_DEPENDENCIES } from "../utils/constants.js";
-import { runCmd } from "../utils/run-cmd.js";
 
 export const use = command({
   name: "use",
@@ -82,7 +82,7 @@ export const use = command({
         packageJson.dependencies,
       )) {
         if (existingVersion && ALL_POWERHOUSE_DEPENDENCIES.includes(name)) {
-          const newVersion = await getPackageVersion({ name, tag, version });
+          const newVersion = await parsePackageVersion({ name, tag, version });
           packageJson.dependencies[name] = newVersion;
           logVersionUpdate({
             name,
@@ -98,7 +98,7 @@ export const use = command({
         packageJson.devDependencies,
       )) {
         if (existingVersion && ALL_POWERHOUSE_DEPENDENCIES.includes(name)) {
-          const newVersion = await getPackageVersion({ name, tag, version });
+          const newVersion = await parsePackageVersion({ name, tag, version });
           packageJson.devDependencies[name] = newVersion;
           logVersionUpdate({
             name,
@@ -114,7 +114,7 @@ export const use = command({
         packageJson.optionalDependencies,
       )) {
         if (existingVersion && ALL_POWERHOUSE_DEPENDENCIES.includes(name)) {
-          const newVersion = await getPackageVersion({ name, tag, version });
+          const newVersion = await parsePackageVersion({ name, tag, version });
           packageJson.optionalDependencies[name] = newVersion;
           logVersionUpdate({
             name,
@@ -130,7 +130,7 @@ export const use = command({
         packageJson.peerDependencies,
       )) {
         if (existingVersion && ALL_POWERHOUSE_DEPENDENCIES.includes(name)) {
-          const newVersion = await getPackageVersion({ name, tag, version });
+          const newVersion = await parsePackageVersion({ name, tag, version });
           packageJson.peerDependencies[name] = newVersion;
           logVersionUpdate({
             name,

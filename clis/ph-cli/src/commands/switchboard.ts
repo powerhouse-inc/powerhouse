@@ -1,8 +1,5 @@
 import { switchboardArgs } from "@powerhousedao/common/clis";
 import { command } from "cmd-ts";
-import { runSwitchboardMigrations } from "../services/switchboard-migrate.js";
-import { startSwitchboard } from "../services/switchboard.js";
-
 export const switchboard = command({
   name: "switchboard",
   aliases: ["reactor"],
@@ -28,12 +25,17 @@ This command:
     }
 
     if (migrate || migrateStatus) {
+      const { runSwitchboardMigrations } = await import(
+        "../services/switchboard-migrate.js"
+      );
       await runSwitchboardMigrations({
         dbPath,
         statusOnly: migrateStatus,
       });
       process.exit(0);
     }
+
+    const { startSwitchboard } = await import("../services/switchboard.js");
 
     const { defaultDriveUrl, connectCrypto } = await startSwitchboard(args);
     console.log("   ➜  Switchboard:", defaultDriveUrl);

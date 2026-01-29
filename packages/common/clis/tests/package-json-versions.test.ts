@@ -2,8 +2,8 @@ import { describe, expect, test } from "vitest";
 import {
   VERSIONED_DEPENDENCIES,
   VERSIONED_DEV_DEPENDENCIES,
-} from "../../utils/constants.js";
-import { fetchNpmVersionFromRegistryForTag } from "../../utils/dependencies.js";
+} from "../constants.js";
+import { fetchNpmVersionFromRegistryForTag } from "../file-system/dependencies.js";
 
 const powerhousePackages = [
   ...VERSIONED_DEPENDENCIES,

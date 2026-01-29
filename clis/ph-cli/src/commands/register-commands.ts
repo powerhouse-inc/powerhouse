@@ -11,7 +11,7 @@ import { serviceCommand } from "./legacy/service.old.js";
 import { switchboardCommand } from "./legacy/switchboard.old.js";
 import { uninstallCommand } from "./legacy/uninstall.old.js";
 import { vetraCommand } from "./legacy/vetra.old.js";
-import { listCommand } from "./list.old.js";
+import { listCommand } from "./legacy/list.old.js";
 
 export const commands = [
   accessTokenCommand,

@@ -1,14 +1,6 @@
 import { loginArgs } from "@powerhousedao/common/clis";
 import { command } from "cmd-ts";
-import {
-  clearCredentials,
-  generateSessionId,
-  getConnectDid,
-  isAuthenticated,
-  loadCredentials,
-  saveCredentials,
-  type StoredCredentials,
-} from "../services/auth.js";
+import type { StoredCredentials } from "../services/auth.js";
 
 export const login = command({
   name: "login",
@@ -26,6 +18,77 @@ This command:
   handler: async (args) => {
     if (args.debug) {
       console.log(args);
+    }
+
+    const {
+      clearCredentials,
+      generateSessionId,
+      getConnectDid,
+      isAuthenticated,
+      loadCredentials,
+      saveCredentials,
+    } = await import("../services/auth.js");
+
+    /**
+     * Show just the CLI DID
+     */
+    async function showDid(): Promise<void> {
+      try {
+        const connectDid = await getConnectDid();
+        console.log(connectDid);
+      } catch (e) {
+        console.error("Failed to get DID:");
+        throw e;
+      }
+    }
+
+    /**
+     * Logout and clear credentials
+     */
+    function handleLogout(): void {
+      if (!isAuthenticated()) {
+        console.log("Not currently authenticated.");
+        return;
+      }
+
+      const success = clearCredentials();
+      if (success) {
+        console.log("Successfully logged out.");
+      } else {
+        console.error("Failed to clear credentials.");
+      }
+    }
+
+    /**
+     * Show current authentication status
+     */
+    async function showStatus(): Promise<void> {
+      const creds = loadCredentials();
+
+      // Always show the CLI's DID
+      try {
+        const connectDid = await getConnectDid();
+        console.log(`CLI DID: ${connectDid}`);
+        console.log();
+      } catch (e) {
+        console.log("CLI DID: (not yet initialized)");
+        console.log();
+      }
+
+      if (!creds || !creds.credentialId) {
+        console.log("Not authenticated with an Ethereum address.");
+        console.log('Run "ph login" to authenticate.');
+        return;
+      }
+
+      console.log("Authenticated");
+      console.log(`  ETH Address: ${creds.address}`);
+      console.log(`  User DID: ${creds.did}`);
+      console.log(`  Chain ID: ${creds.chainId}`);
+      console.log(`  Authenticated at: ${creds.authenticatedAt}`);
+      console.log(`  Renown URL: ${creds.renownUrl}`);
+
+      process.exit(0);
     }
 
     if (args.showDid) {
@@ -200,66 +263,4 @@ async function pollSession(
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-/**
- * Show current authentication status
- */
-async function showStatus(): Promise<void> {
-  const creds = loadCredentials();
-
-  // Always show the CLI's DID
-  try {
-    const connectDid = await getConnectDid();
-    console.log(`CLI DID: ${connectDid}`);
-    console.log();
-  } catch (e) {
-    console.log("CLI DID: (not yet initialized)");
-    console.log();
-  }
-
-  if (!creds || !creds.credentialId) {
-    console.log("Not authenticated with an Ethereum address.");
-    console.log('Run "ph login" to authenticate.');
-    return;
-  }
-
-  console.log("Authenticated");
-  console.log(`  ETH Address: ${creds.address}`);
-  console.log(`  User DID: ${creds.did}`);
-  console.log(`  Chain ID: ${creds.chainId}`);
-  console.log(`  Authenticated at: ${creds.authenticatedAt}`);
-  console.log(`  Renown URL: ${creds.renownUrl}`);
-
-  process.exit(0);
-}
-
-/**
- * Show just the CLI DID
- */
-async function showDid(): Promise<void> {
-  try {
-    const connectDid = await getConnectDid();
-    console.log(connectDid);
-  } catch (e) {
-    console.error("Failed to get DID:");
-    throw e;
-  }
-}
-
-/**
- * Logout and clear credentials
- */
-function handleLogout(): void {
-  if (!isAuthenticated()) {
-    console.log("Not currently authenticated.");
-    return;
-  }
-
-  const success = clearCredentials();
-  if (success) {
-    console.log("Successfully logged out.");
-  } else {
-    console.error("Failed to clear credentials.");
-  }
 }

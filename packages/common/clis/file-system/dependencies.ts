@@ -1,5 +1,6 @@
 import chalk from "chalk";
 import type { Agent } from "package-manager-detector";
+import { readPackage } from "read-pkg";
 import { clean, valid } from "semver";
 import { spawnAsync } from "./spawn-async.js";
 
@@ -39,7 +40,7 @@ export async function fetchPackageVersionFromNpmRegistry(
   }
 }
 
-export async function getPackageVersion(args: {
+export async function parsePackageVersion(args: {
   name: string;
   version?: string;
   tag?: string;
@@ -78,7 +79,7 @@ async function makeVersionedDependency(args: {
   version?: string;
   tag?: string;
 }) {
-  const version = await getPackageVersion(args);
+  const version = await parsePackageVersion(args);
   return `"${args.name}": "${version}"`;
 }
 
@@ -143,4 +144,12 @@ export function logVersionUpdate(args: {
   console.log(
     `⚙️ Updating ${chalk.bold(name)}: ${chalk.blue(version)} -> ${chalk.green(newVersion)}`,
   );
+}
+
+export async function getPackageVersionFromPackageJson(
+  packageJsonPath: string,
+) {
+  const packageJson = await readPackage({ cwd: packageJsonPath });
+  const version = packageJson.version;
+  return version;
 }
