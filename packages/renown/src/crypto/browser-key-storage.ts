@@ -11,7 +11,9 @@ export class BrowserKeyStorage implements JsonWebKeyPairStorage {
     this.#db = db;
   }
 
-  static async create(dbName: string = DEFAULT_DB_NAME): Promise<BrowserKeyStorage> {
+  static async create(
+    dbName: string = DEFAULT_DB_NAME,
+  ): Promise<BrowserKeyStorage> {
     const db = await BrowserKeyStorage.#openDatabase(dbName);
     return new BrowserKeyStorage(db);
   }

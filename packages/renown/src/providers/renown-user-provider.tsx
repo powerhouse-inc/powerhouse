@@ -160,13 +160,7 @@ export function RenownUserProvider({
         // Handle return from Renown authentication
         await handleRenownReturn();
 
-        // Check if user is already logged in
-        let currentUser =
-          window.renown.user instanceof Function
-            ? window.renown.user()
-            : window.renown.user;
-        currentUser =
-          currentUser instanceof Promise ? await currentUser : currentUser;
+        const currentUser = window.renown.user;
 
         if (currentUser) {
           // Fetch profile data for the logged-in user
@@ -187,7 +181,7 @@ export function RenownUserProvider({
       }
     };
 
-    init();
+    init().catch(console.error);
   }, [renownUrl, networkId, chainId]);
 
   // Login handler
@@ -238,11 +232,6 @@ export function RenownUserProvider({
     }
   }, []);
 
-  // Open Renown portal
-  const openRenown = useCallback(() => {
-    openRenownPortal();
-  }, []);
-
   // Show loading state while initializing
   if (!isInitialized && loadingComponent) {
     return <>{loadingComponent}</>;
@@ -260,7 +249,7 @@ export function RenownUserProvider({
     isInitialized,
     login,
     logout,
-    openRenown,
+    openRenown: openRenownPortal,
     renownCrypto,
     renown,
   };

@@ -417,3 +417,7 @@ export const startSwitchboard = async (
 };
 
 export * from "./types.js";
+
+if (import.meta.main) {
+  await startSwitchboard();
+}

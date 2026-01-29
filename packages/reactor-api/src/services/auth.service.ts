@@ -29,11 +29,6 @@ export interface AuthenticatedRequest extends Request {
   freeEntry: boolean;
 }
 
-interface CacheEntry {
-  timestamp: number;
-  user: User;
-}
-
 export class AuthService {
   private readonly config: AuthConfig;
 
@@ -134,7 +129,7 @@ export class AuthService {
     if (!verified) {
       throw new Error("Token verification failed");
     }
-    verified.verifiableCredential["@context"];
+
     const user = this.extractUserFromVerification(verified);
     if (!user) {
       throw new Error("Invalid credentials");
@@ -172,10 +167,9 @@ export class AuthService {
   private extractUserFromVerification(
     verified: AuthVerifiedCredential,
   ): User | null {
-    if (!verified) return null;
     try {
       const { address, chainId, networkId } =
-        verified.verifiableCredential?.credentialSubject || {};
+        verified.verifiableCredential.credentialSubject;
 
       if (!address || !chainId || !networkId) {
         return null;
@@ -209,9 +203,9 @@ export class AuthService {
   getAdditionalContextFields() {
     if (!this.config.enabled) {
       return {
-        isGuest: (address: string) => true,
-        isUser: (address: string) => true,
-        isAdmin: (address: string) => true,
+        isGuest: () => true,
+        isUser: () => true,
+        isAdmin: () => true,
       };
     }
 
@@ -250,9 +244,9 @@ export class AuthService {
   private async verifyCredentialExists(
     address: string,
     chainId: number,
-    connectId: string,
+    appId: string,
   ): Promise<boolean> {
-    const url = `https://www.renown.id/api/auth/credential?address=${address}&chainId=${chainId}&connectId=${connectId}`;
+    const url = `https://www.renown.id/api/auth/credential?address=${address}&chainId=${chainId}&connectId=${appId}&appId=${appId}`;
     try {
       const response = await fetch(url, {
         method: "GET",
@@ -262,7 +256,7 @@ export class AuthService {
       };
       const credential = body.credential;
 
-      const connectIdVerfied = credential.credentialSubject.id;
+      const appIdVerfied = credential.credentialSubject.id;
       const addressVerfied = credential.issuer.id.split(":")[4];
       const chainIdVerfied = credential.issuer.id.split(":")[3];
 
@@ -271,7 +265,7 @@ export class AuthService {
       }
 
       return (
-        connectIdVerfied === connectId &&
+        appIdVerfied === appId &&
         addressVerfied.toLocaleLowerCase() === address.toLocaleLowerCase() &&
         chainIdVerfied === chainId.toString()
       );
