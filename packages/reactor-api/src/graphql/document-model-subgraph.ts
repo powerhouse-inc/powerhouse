@@ -214,8 +214,7 @@ export class DocumentModelSubgraph extends BaseSubgraph {
                 }
               }
 
-              const result = await this.reactorClient.get(docId);
-              const doc = result.document;
+              const doc = await this.reactorClient.get(docId);
 
               if (doc.header.documentType !== documentType) {
                 throw new GraphQLError(
@@ -327,8 +326,8 @@ export class DocumentModelSubgraph extends BaseSubgraph {
 
               await this.assertCanExecuteOperation(docId, op.name!, ctx);
 
-              const result = await this.reactorClient.get(docId);
-              if (result.document.header.documentType !== documentType) {
+              const doc = await this.reactorClient.get(docId);
+              if (doc.header.documentType !== documentType) {
                 throw new GraphQLError(
                   `Document with id ${docId} is not of type ${documentType}`,
                 );

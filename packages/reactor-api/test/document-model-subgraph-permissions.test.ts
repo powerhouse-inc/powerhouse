@@ -123,10 +123,7 @@ describe("DocumentModelSubgraph Permission Checks", () => {
         results: [],
         options: { limit: 10, cursor: "" },
       } as PagedResults<PHDocument>),
-      get: vi.fn().mockResolvedValue({
-        document: mockDocument,
-        childIds: [],
-      }),
+      get: vi.fn().mockResolvedValue(mockDocument),
       find: vi.fn().mockResolvedValue({
         results: [mockDocument],
         options: { limit: 10, cursor: "" },
@@ -270,10 +267,7 @@ describe("DocumentModelSubgraph Permission Checks", () => {
           ...mockDocument,
           header: { ...mockDocument.header, documentType: "other/type" },
         };
-        mockReactorClient.get = vi.fn().mockResolvedValue({
-          document: wrongTypeDoc,
-          childIds: [],
-        });
+        mockReactorClient.get = vi.fn().mockResolvedValue(wrongTypeDoc);
         const ctx = createContext({ isAdmin: true, userAddress: "0xadmin" });
 
         await expect(callGetDocument(ctx, "doc-123")).rejects.toThrow(
@@ -729,10 +723,7 @@ describe("DocumentModelSubgraph Permission Checks", () => {
           ...mockDocument,
           header: { ...mockDocument.header, documentType: "other/type" },
         };
-        mockReactorClient.get = vi.fn().mockResolvedValue({
-          document: wrongTypeDoc,
-          childIds: [],
-        });
+        mockReactorClient.get = vi.fn().mockResolvedValue(wrongTypeDoc);
         const ctx = createContext({ userAddress: "0xpermitted" });
 
         await expect(
