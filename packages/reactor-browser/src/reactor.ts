@@ -198,10 +198,7 @@ async function initJwtHandler(
   legacyReactor: IDocumentDriveServer,
   renown: IRenown | undefined,
 ) {
-  let user = renown?.user;
-  if (user instanceof Function) {
-    user = await user();
-  }
+  const user = renown?.user;
   if (!renown || !user) {
     return;
   }

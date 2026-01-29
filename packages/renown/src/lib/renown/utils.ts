@@ -128,7 +128,7 @@ declare global {
   }
 }
 
-export async function openRenown(documentId?: string) {
+export function openRenown(documentId?: string) {
   // If documentId is provided, open the profile page directly
   if (documentId) {
     const profileUrl = `${RENOWN_URL}/profile/${documentId}`;
@@ -197,8 +197,7 @@ export async function login(
   }
 
   try {
-    let user = renown.user instanceof Function ? renown.user() : renown.user;
-    user = user instanceof Promise ? await user : user;
+    const user = renown.user;
 
     if (user?.did && (user.did === userDid || !userDid)) {
       // Fetch profile data for the user
@@ -221,23 +220,22 @@ export async function login(
       return;
     }
 
-    const newUser = await renown.login(userDid ?? "");
-    if (newUser) {
-      // Fetch profile data for the user
-      const userWithProfile = await fetchProfileDataForUser(newUser);
+    const newUser = await renown.login(userDid);
 
-      // Set up JWT handler if reactor is available
+    // Fetch profile data for the user
+    const userWithProfile = await fetchProfileDataForUser(newUser);
 
-      // Store user data in sessionStorage for persistence
-      SessionStorageManager.setUserData({
-        user: userWithProfile,
-        userDid: userWithProfile.did,
-        loginStatus: "authorized",
-        timestamp: Date.now(),
-      });
+    // Set up JWT handler if reactor is available
 
-      return userWithProfile;
-    }
+    // Store user data in sessionStorage for persistence
+    SessionStorageManager.setUserData({
+      user: userWithProfile,
+      userDid: userWithProfile.did,
+      loginStatus: "authorized",
+      timestamp: Date.now(),
+    });
+
+    return userWithProfile;
   } catch (error) {
     console.error("Renown login error:", error);
     throw error;
@@ -270,15 +268,11 @@ export async function reauthenticateFromSession(): Promise<User | null> {
   }
 
   try {
-    await login(storedUserDid, window.renown, window.renownCrypto);
-
-    // Get the current user after login
-    let currentUser =
-      window.renown.user instanceof Function
-        ? window.renown.user()
-        : window.renown.user;
-    currentUser =
-      currentUser instanceof Promise ? await currentUser : currentUser;
+    const currentUser = await login(
+      storedUserDid,
+      window.renown,
+      window.renownCrypto,
+    );
 
     if (currentUser) {
       // Fetch profile data for the restored user

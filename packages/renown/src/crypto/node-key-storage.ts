@@ -41,24 +41,17 @@ export class NodeKeyStorage implements JsonWebKeyPairStorage {
     }
   }
 
-  async loadKeyPair(): Promise<JwkKeyPair | undefined> {
+  loadKeyPair(): Promise<JwkKeyPair | undefined> {
     // First check environment variable
     const envKey = process.env[this.#envKeyName];
     if (envKey) {
       try {
-        let keyPairJson = JSON.parse(envKey);
-        let keyPair: JwkKeyPair =
-          "keyPair" in keyPairJson ? keyPairJson.keyPair : keyPairJson;
+        const keyPairJson = JSON.parse(envKey) as unknown;
+        const keyPair: JwkKeyPair = this.#parseKeyPair(keyPairJson);
 
         // Validate it has the required structure
-        if (keyPair.publicKey && keyPair.privateKey) {
-          this.#logger?.debug("Loaded keypair from environment variable");
-          return keyPair;
-        } else {
-          throw new Error(
-            `${this.#envKeyName} is set but doesn't contain valid publicKey and privateKey`,
-          );
-        }
+        this.#logger?.debug("Loaded keypair from environment variable");
+        return Promise.resolve(keyPair);
       } catch (e) {
         throw new Error(
           `Failed to parse ${this.#envKeyName}: ${e instanceof Error ? e.message : String(e)}`,
@@ -70,7 +63,7 @@ export class NodeKeyStorage implements JsonWebKeyPairStorage {
     }
 
     // Fall back to file storage
-    return this.#loadFromFile();
+    return Promise.resolve(this.#loadFromFile());
   }
 
   async saveKeyPair(keyPair: JwkKeyPair): Promise<void> {
@@ -81,6 +74,7 @@ export class NodeKeyStorage implements JsonWebKeyPairStorage {
 
     // Save to file
     this.#saveToFile(keyPair);
+    return Promise.resolve();
   }
 
   removeKeyPair(): Promise<void> {
@@ -99,18 +93,10 @@ export class NodeKeyStorage implements JsonWebKeyPairStorage {
         return undefined;
       }
       const data = readFileSync(this.#filePath, "utf-8");
-      const parsed = JSON.parse(data);
-      const keyPair =
-        "keyPair" in parsed ? (parsed.keyPair as JwkKeyPair) : parsed;
-
-      if (keyPair.publicKey && keyPair.privateKey) {
-        this.#logger?.debug(`Loaded keypair from ${this.#filePath}`);
-        return keyPair;
-      } else {
-        throw new Error(
-          `${this.#filePath} doesn't contain valid publicKey and privateKey`,
-        );
-      }
+      const parsed = JSON.parse(data) as unknown;
+      const keyPair: JwkKeyPair = this.#parseKeyPair(parsed);
+      this.#logger?.debug(`Loaded keypair from ${this.#filePath}`);
+      return keyPair;
     } catch (e) {
       throw new Error(
         `Failed to parse ${this.#filePath}: ${e instanceof Error ? e.message : String(e)}`,
@@ -125,5 +111,25 @@ export class NodeKeyStorage implements JsonWebKeyPairStorage {
     const data = { keyPair };
     writeFileSync(this.#filePath, JSON.stringify(data, null, 2), "utf-8");
     this.#logger?.debug(`Saved keypair to ${this.#filePath}`);
+  }
+
+  #parseKeyPair(json: unknown): JwkKeyPair {
+    if (typeof json !== "object") {
+      throw new Error("Invalid keyPair format:" + JSON.stringify(json));
+    }
+
+    const object = json as JwkKeyPair | { keyPair: JwkKeyPair };
+    let keyPair: JwkKeyPair;
+    if ("keyPair" in object) {
+      keyPair = object.keyPair;
+    } else {
+      keyPair = object;
+    }
+
+    if ("publicKey" in keyPair && "privateKey" in keyPair) {
+      return keyPair;
+    } else {
+      throw new Error("Invalid keyPair format:" + JSON.stringify(json));
+    }
   }
 }

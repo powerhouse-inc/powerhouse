@@ -24,8 +24,7 @@ export async function login(
   }
   try {
     setLoginStatus("checking");
-    let user = renown.user instanceof Function ? renown.user() : renown.user;
-    user = user instanceof Promise ? await user : user;
+    const user = renown.user;
 
     if (user?.did && (user.did === userDid || !userDid)) {
       setLoginStatus("authorized");
@@ -37,19 +36,16 @@ export async function login(
     }
 
     if (!userDid) {
+      setLoginStatus("not-authorized");
       return;
     }
 
-    const newUser = await renown.login(userDid ?? "");
-    if (newUser) {
-      setLoginStatus("authorized");
-      setUser(newUser);
-      reactor.setGenerateJwtHandler(async (driveUrl) =>
-        renown.getBearerToken({ aud: driveUrl, expiresIn: 10 }),
-      );
-    } else {
-      setLoginStatus("not-authorized");
-    }
+    const newUser = await renown.login(userDid);
+    setLoginStatus("authorized");
+    setUser(newUser);
+    reactor.setGenerateJwtHandler(async (driveUrl) =>
+      renown.getBearerToken({ aud: driveUrl, expiresIn: 10 }),
+    );
   } catch (error) {
     setLoginStatus("not-authorized");
     logger.error(error);
