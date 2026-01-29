@@ -8,6 +8,7 @@ import {
   showPHModal,
   useDocumentById,
   useDocumentModelModuleById,
+  useDocumentOperations,
   useEditorModuleById,
   useFallbackEditorModule,
   useRevisionHistoryVisible,
@@ -51,8 +52,8 @@ export const DocumentEditor: React.FC<Props> = (props) => {
   const documentName = document?.header.name ?? undefined;
   const documentType = document?.header.documentType ?? undefined;
   const preferredEditor = document?.header.meta?.preferredEditor ?? undefined;
-  const globalOperations = document?.operations.global ?? [];
-  const localOperations = document?.operations.local ?? [];
+  const { globalOperations, localOperations } =
+    useDocumentOperations(documentId);
   const globalRevisionNumber = document?.header.revision.global ?? 0;
   const localRevisionNumber = document?.header.revision.local ?? 0;
   const documentModelModule = useDocumentModelModuleById(documentType);

@@ -33,6 +33,7 @@ export {
   useDocumentModelModuleById,
   useDocumentModelModules,
 } from "./document-model-modules.js";
+export { useDocumentOperations } from "./document-operations.js";
 export { useDocumentOfType } from "./document-of-type.js";
 export { useDocumentTypes } from "./document-types.js";
 export { useDriveById } from "./drive-by-id.js";
