@@ -171,7 +171,10 @@ export type {
 
 // Cache
 export { KyselyWriteCache } from "./cache/kysely-write-cache.js";
-export { driveCollectionId } from "./cache/operation-index-types.js";
+export {
+  driveCollectionId,
+  type IOperationIndex,
+} from "./cache/operation-index-types.js";
 export type {
   CachedSnapshot,
   DocumentStreamKey,
@@ -202,6 +205,7 @@ export {
   ChannelError,
   ChannelErrorSource,
   CompositeChannelFactory,
+  GqlChannel,
   GqlChannelFactory,
   Mailbox,
   PollingChannel,
@@ -214,8 +218,10 @@ export {
   type ChannelConfig,
   type ChannelHealth,
   type ChannelMeta,
+  type GqlChannelConfig,
   type IChannel,
   type IChannelFactory,
+  type IPollTimer,
   type ISyncManager,
   type MailboxItem,
   type Remote,
