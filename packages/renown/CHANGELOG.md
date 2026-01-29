@@ -1,3 +1,7 @@
+## 5.3.0-staging.15 (2026-01-29)
+
+This was a version bump only for @renown/sdk to align it with other projects, there were no code changes.
+
 ## 5.3.0-staging.14 (2026-01-28)
 
 This was a version bump only for @renown/sdk to align it with other projects, there were no code changes.

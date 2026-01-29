@@ -1,3 +1,13 @@
+## 5.3.0-staging.15 (2026-01-29)
+
+### 🩹 Fixes
+
+- **codegen:** remove scalars dependency ([259801d81](https://github.com/powerhouse-inc/powerhouse/commit/259801d81))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 5.3.0-staging.14 (2026-01-28)
 
 This was a version bump only for @powerhousedao/codegen to align it with other projects, there were no code changes.
