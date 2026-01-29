@@ -49,7 +49,6 @@ import { PGliteDialect } from "kysely-pglite-dialect";
 import type { IEventBus } from "../events/interfaces.js";
 import { ProcessorManager } from "../processors/processor-manager.js";
 import type { SignatureVerificationHandler } from "../signer/types.js";
-import { ConsistencyAwareLegacyStorage } from "../storage/consistency-aware-legacy-storage.js";
 import {
   REACTOR_SCHEMA,
   runMigrations,
@@ -64,7 +63,7 @@ export class ReactorBuilder {
   private documentModels: DocumentModelModule<any>[] = [];
   private upgradeManifests: UpgradeManifest<readonly number[]>[] = [];
   private storage?: IDocumentStorage & IDocumentOperationStorage;
-  private features: ReactorFeatures = { legacyStorageEnabled: true };
+  private features: ReactorFeatures = { legacyStorageEnabled: false };
   private readModels: IReadModel[] = [];
   private executorManager: IJobExecutorManager | undefined;
   private executorConfig: ExecutorConfig = { count: 1 };
@@ -205,13 +204,6 @@ export class ReactorBuilder {
     const queue = new InMemoryQueue(eventBus);
     const jobTracker = new InMemoryJobTracker(eventBus);
 
-    const legacyStorageConsistencyTracker = new ConsistencyTracker();
-    const consistencyAwareStorage = new ConsistencyAwareLegacyStorage(
-      storage,
-      legacyStorageConsistencyTracker,
-      eventBus,
-    );
-
     const cacheConfig: WriteCacheConfig = {
       maxDocuments: this.writeCacheConfig?.maxDocuments ?? 100,
       ringBufferSize: this.writeCacheConfig?.ringBufferSize ?? 10,
@@ -331,7 +323,6 @@ export class ReactorBuilder {
     const reactor = new Reactor(
       this.logger,
       documentModelRegistry,
-      consistencyAwareStorage,
       queue,
       jobTracker,
       readModelCoordinator,

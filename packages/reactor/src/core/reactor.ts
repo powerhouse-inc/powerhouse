@@ -13,7 +13,6 @@ import type {
   DocumentModelModule,
   ISigner,
   Operation,
-  PHBaseState,
   PHDocument,
 } from "document-model";
 import { v4 as uuidv4 } from "uuid";
@@ -37,7 +36,6 @@ import type {
 import { JobStatus } from "../shared/types.js";
 import { matchesScope } from "../shared/utils.js";
 import type {
-  IConsistencyAwareStorage,
   IDocumentIndexer,
   IDocumentView,
   IOperationStore,
@@ -67,7 +65,6 @@ import {
 export class Reactor implements IReactor {
   private logger: ILogger;
   private documentModelRegistry: IDocumentModelRegistry;
-  private documentStorage: IConsistencyAwareStorage;
   private shutdownStatus: ShutdownStatus;
   private setShutdown: (value: boolean) => void;
   private queue: IQueue;
@@ -82,7 +79,6 @@ export class Reactor implements IReactor {
   constructor(
     logger: ILogger,
     documentModelRegistry: IDocumentModelRegistry,
-    documentStorage: IConsistencyAwareStorage,
     queue: IQueue,
     jobTracker: IJobTracker,
     readModelCoordinator: IReadModelCoordinator,
@@ -94,7 +90,6 @@ export class Reactor implements IReactor {
   ) {
     this.logger = logger;
     this.documentModelRegistry = documentModelRegistry;
-    this.documentStorage = documentStorage;
     this.queue = queue;
     this.jobTracker = jobTracker;
     this.readModelCoordinator = readModelCoordinator;
@@ -199,67 +194,34 @@ export class Reactor implements IReactor {
   }> {
     this.logger.verbose("get(@id, @view)", id, view);
 
-    if (this.features.legacyStorageEnabled) {
-      const document = await this.documentStorage.get<TDocument>(
-        id,
-        consistencyToken,
-        signal,
-      );
+    const document = await this.documentView.get<TDocument>(
+      id,
+      view,
+      consistencyToken,
+      signal,
+    );
 
-      if (signal?.aborted) {
-        throw new AbortError();
-      }
-
-      const childIds = await this.documentStorage.getChildren(
-        id,
-        consistencyToken,
-        signal,
-      );
-
-      if (signal?.aborted) {
-        throw new AbortError();
-      }
-
-      for (const scope in document.state) {
-        if (!matchesScope(view, scope)) {
-          delete document.state[scope as keyof PHBaseState];
-        }
-      }
-
-      return {
-        document,
-        childIds,
-      };
-    } else {
-      const document = await this.documentView.get<TDocument>(
-        id,
-        view,
-        consistencyToken,
-        signal,
-      );
-
-      if (signal?.aborted) {
-        throw new AbortError();
-      }
-
-      const relationships = await this._documentIndexer.getOutgoing(
-        id,
-        ["child"],
-        consistencyToken,
-        signal,
-      );
-
-      if (signal?.aborted) {
-        throw new AbortError();
-      }
-
-      const childIds = relationships.map((rel) => rel.targetId);
-
-      return {
-        document,
-        childIds,
-      };
+    if (signal?.aborted) {
+      throw new AbortError();
     }
+
+    const relationships = await this._documentIndexer.getOutgoing(
+      id,
+      ["child"],
+      consistencyToken,
+      signal,
+    );
+
+    if (signal?.aborted) {
+      throw new AbortError();
+    }
+
+    const childIds = relationships.map((rel) => rel.targetId);
+
+    return {
+      document,
+      childIds,
+    };
   }
 
   /**
@@ -276,46 +238,23 @@ export class Reactor implements IReactor {
   }> {
     this.logger.verbose("getBySlug(@slug, @view)", slug, view);
 
-    if (this.features.legacyStorageEnabled) {
-      let ids: string[];
-      try {
-        ids = await this.documentStorage.resolveIds(
-          [slug],
-          consistencyToken,
-          signal,
-        );
-      } catch (error) {
-        if (error instanceof Error && error.message.includes("not found")) {
-          throw new Error(`Document not found with slug: ${slug}`);
-        }
+    const documentId = await this.documentView.resolveSlug(
+      slug,
+      view,
+      consistencyToken,
+      signal,
+    );
 
-        throw error;
-      }
-
-      if (ids.length === 0 || !ids[0]) {
-        throw new Error(`Document not found with slug: ${slug}`);
-      }
-
-      return await this.get<TDocument>(ids[0], view, consistencyToken, signal);
-    } else {
-      const documentId = await this.documentView.resolveSlug(
-        slug,
-        view,
-        consistencyToken,
-        signal,
-      );
-
-      if (!documentId) {
-        throw new Error(`Document not found with slug: ${slug}`);
-      }
-
-      return await this.get<TDocument>(
-        documentId,
-        view,
-        consistencyToken,
-        signal,
-      );
+    if (!documentId) {
+      throw new Error(`Document not found with slug: ${slug}`);
     }
+
+    return await this.get<TDocument>(
+      documentId,
+      view,
+      consistencyToken,
+      signal,
+    );
   }
 
   /**
@@ -332,66 +271,34 @@ export class Reactor implements IReactor {
   }> {
     this.logger.verbose("getByIdOrSlug(@identifier, @view)", identifier, view);
 
-    if (this.features.legacyStorageEnabled) {
-      try {
-        return await this.get<TDocument>(
-          identifier,
-          view,
-          consistencyToken,
-          signal,
-        );
-      } catch {
-        try {
-          const ids = await this.documentStorage.resolveIds(
-            [identifier],
-            consistencyToken,
-            signal,
-          );
+    const document = await this.documentView.getByIdOrSlug<TDocument>(
+      identifier,
+      view,
+      consistencyToken,
+      signal,
+    );
 
-          if (ids.length === 0 || !ids[0]) {
-            throw new Error(`Document not found: ${identifier}`);
-          }
-
-          return await this.get<TDocument>(
-            ids[0],
-            view,
-            consistencyToken,
-            signal,
-          );
-        } catch {
-          throw new Error(`Document not found: ${identifier}`);
-        }
-      }
-    } else {
-      const document = await this.documentView.getByIdOrSlug<TDocument>(
-        identifier,
-        view,
-        consistencyToken,
-        signal,
-      );
-
-      if (signal?.aborted) {
-        throw new AbortError();
-      }
-
-      const relationships = await this._documentIndexer.getOutgoing(
-        document.header.id,
-        ["child"],
-        consistencyToken,
-        signal,
-      );
-
-      if (signal?.aborted) {
-        throw new AbortError();
-      }
-
-      const childIds = relationships.map((rel) => rel.targetId);
-
-      return {
-        document,
-        childIds,
-      };
+    if (signal?.aborted) {
+      throw new AbortError();
     }
+
+    const relationships = await this._documentIndexer.getOutgoing(
+      document.header.id,
+      ["child"],
+      consistencyToken,
+      signal,
+    );
+
+    if (signal?.aborted) {
+      throw new AbortError();
+    }
+
+    const childIds = relationships.map((rel) => rel.targetId);
+
+    return {
+      document,
+      childIds,
+    };
   }
 
   /**
@@ -413,130 +320,70 @@ export class Reactor implements IReactor {
       paging,
     );
 
-    if (this.features.legacyStorageEnabled) {
-      const document = await this.documentStorage.get(
-        documentId,
-        consistencyToken,
-        signal,
-      );
+    const branch = view?.branch || "main";
 
-      if (signal?.aborted) {
-        throw new AbortError();
-      }
+    const revisions = await this.operationStore.getRevisions(
+      documentId,
+      branch,
+      signal,
+    );
 
-      const operations = document.operations;
-      const result: Record<string, PagedResults<Operation>> = {};
-
-      for (const scope in operations) {
-        if (matchesScope(view, scope)) {
-          let scopeOperations = operations[scope];
-
-          if (filter) {
-            if (filter.actionTypes && filter.actionTypes.length > 0) {
-              scopeOperations = scopeOperations.filter((op) =>
-                filter.actionTypes!.includes(op.action.type),
-              );
-            }
-            if (filter.sinceRevision !== undefined) {
-              scopeOperations = scopeOperations.filter(
-                (op) => op.index >= filter.sinceRevision!,
-              );
-            }
-            if (filter.timestampFrom) {
-              const fromMs = new Date(filter.timestampFrom).getTime();
-              scopeOperations = scopeOperations.filter(
-                (op) => new Date(op.timestampUtcMs).getTime() >= fromMs,
-              );
-            }
-            if (filter.timestampTo) {
-              const toMs = new Date(filter.timestampTo).getTime();
-              scopeOperations = scopeOperations.filter(
-                (op) => new Date(op.timestampUtcMs).getTime() <= toMs,
-              );
-            }
-          }
-
-          const startIndex = paging ? parseInt(paging.cursor) || 0 : 0;
-          const limit = paging?.limit || scopeOperations.length;
-          const pagedOperations = scopeOperations.slice(
-            startIndex,
-            startIndex + limit,
-          );
-
-          result[scope] = {
-            results: pagedOperations,
-            options: { cursor: String(startIndex + limit), limit },
-          };
-        }
-      }
-
-      return Promise.resolve(result);
-    } else {
-      const branch = view?.branch || "main";
-
-      const revisions = await this.operationStore.getRevisions(
-        documentId,
-        branch,
-        signal,
-      );
-
-      if (signal?.aborted) {
-        throw new AbortError();
-      }
-
-      const allScopes = Object.keys(revisions.revision);
-      const result: Record<string, PagedResults<Operation>> = {};
-
-      for (const scope of allScopes) {
-        if (!matchesScope(view, scope)) {
-          continue;
-        }
-
-        if (signal?.aborted) {
-          throw new AbortError();
-        }
-
-        const scopeResult = await this.operationStore.getSince(
-          documentId,
-          scope,
-          branch,
-          -1,
-          filter,
-          paging,
-          signal,
-        );
-
-        const currentCursor = paging?.cursor ? parseInt(paging.cursor) : 0;
-        const currentLimit = paging?.limit || 100;
-
-        result[scope] = {
-          results: scopeResult.items,
-          options: {
-            cursor: scopeResult.nextCursor || String(currentCursor),
-            limit: currentLimit,
-          },
-          nextCursor: scopeResult.nextCursor,
-          next: scopeResult.hasMore
-            ? async () => {
-                const nextPage = await this.getOperations(
-                  documentId,
-                  view,
-                  filter,
-                  {
-                    cursor: scopeResult.nextCursor!,
-                    limit: currentLimit,
-                  },
-                  consistencyToken,
-                  signal,
-                );
-                return nextPage[scope];
-              }
-            : undefined,
-        };
-      }
-
-      return result;
+    if (signal?.aborted) {
+      throw new AbortError();
     }
+
+    const allScopes = Object.keys(revisions.revision);
+    const result: Record<string, PagedResults<Operation>> = {};
+
+    for (const scope of allScopes) {
+      if (!matchesScope(view, scope)) {
+        continue;
+      }
+
+      if (signal?.aborted) {
+        throw new AbortError();
+      }
+
+      const scopeResult = await this.operationStore.getSince(
+        documentId,
+        scope,
+        branch,
+        -1,
+        filter,
+        paging,
+        signal,
+      );
+
+      const currentCursor = paging?.cursor ? parseInt(paging.cursor) : 0;
+      const currentLimit = paging?.limit || 100;
+
+      result[scope] = {
+        results: scopeResult.items,
+        options: {
+          cursor: scopeResult.nextCursor || String(currentCursor),
+          limit: currentLimit,
+        },
+        nextCursor: scopeResult.nextCursor,
+        next: scopeResult.hasMore
+          ? async () => {
+              const nextPage = await this.getOperations(
+                documentId,
+                view,
+                filter,
+                {
+                  cursor: scopeResult.nextCursor!,
+                  limit: currentLimit,
+                },
+                consistencyToken,
+                signal,
+              );
+              return nextPage[scope];
+            }
+          : undefined,
+      };
+    }
+
+    return result;
   }
 
   /**
@@ -1113,119 +960,57 @@ export class Reactor implements IReactor {
         signal,
       );
     }
-    if (this.features.legacyStorageEnabled) {
-      const documents: PHDocument[] = [];
 
-      // Fetch each document by ID using storage directly
-      for (const id of ids) {
-        if (signal?.aborted) {
-          throw new AbortError();
-        }
+    const documents: PHDocument[] = [];
 
-        let document: PHDocument;
-        try {
-          document = await this.documentStorage.get<PHDocument>(
-            id,
-            consistencyToken,
-            signal,
-          );
-        } catch {
-          // Skip documents that don't exist or can't be accessed
-          // This matches the behavior expected from a search operation
-          continue;
-        }
+    // Fetch each document by ID using documentView
+    for (const id of ids) {
+      if (signal?.aborted) {
+        throw new AbortError();
+      }
 
-        // Apply view filter - This will be removed when we pass the viewfilter along
-        // to the underlying store, but is here now for the interface.
-        for (const scope in document.state) {
-          if (!matchesScope(view, scope)) {
-            delete document.state[scope as keyof PHBaseState];
-          }
-        }
-
+      try {
+        const document = await this.documentView.get<PHDocument>(
+          id,
+          view,
+          undefined,
+          signal,
+        );
         documents.push(document);
+      } catch {
+        // Skip documents that don't exist or can't be accessed
+        continue;
       }
-
-      if (signal?.aborted) {
-        throw new AbortError();
-      }
-
-      // Apply paging
-      const startIndex = paging ? parseInt(paging.cursor) || 0 : 0;
-      const limit = paging?.limit || documents.length;
-      const pagedDocuments = documents.slice(startIndex, startIndex + limit);
-
-      // Create paged results
-      const hasMore = startIndex + limit < documents.length;
-      const nextCursor = hasMore ? String(startIndex + limit) : undefined;
-
-      return {
-        results: pagedDocuments,
-        options: paging || { cursor: "0", limit: documents.length },
-        nextCursor,
-        next: hasMore
-          ? () =>
-              this.findByIds(
-                ids,
-                view,
-                { cursor: nextCursor!, limit },
-                consistencyToken,
-                signal,
-              )
-          : undefined,
-      };
-    } else {
-      const documents: PHDocument[] = [];
-
-      // Fetch each document by ID using documentView
-      for (const id of ids) {
-        if (signal?.aborted) {
-          throw new AbortError();
-        }
-
-        try {
-          const document = await this.documentView.get<PHDocument>(
-            id,
-            view,
-            undefined,
-            signal,
-          );
-          documents.push(document);
-        } catch {
-          // Skip documents that don't exist or can't be accessed
-          continue;
-        }
-      }
-
-      if (signal?.aborted) {
-        throw new AbortError();
-      }
-
-      // Apply paging
-      const startIndex = paging ? parseInt(paging.cursor) || 0 : 0;
-      const limit = paging?.limit || documents.length;
-      const pagedDocuments = documents.slice(startIndex, startIndex + limit);
-
-      // Create paged results
-      const hasMore = startIndex + limit < documents.length;
-      const nextCursor = hasMore ? String(startIndex + limit) : undefined;
-
-      return {
-        results: pagedDocuments,
-        options: paging || { cursor: "0", limit: documents.length },
-        nextCursor,
-        next: hasMore
-          ? () =>
-              this.findByIds(
-                ids,
-                view,
-                { cursor: nextCursor!, limit },
-                consistencyToken,
-                signal,
-              )
-          : undefined,
-      };
     }
+
+    if (signal?.aborted) {
+      throw new AbortError();
+    }
+
+    // Apply paging
+    const startIndex = paging ? parseInt(paging.cursor) || 0 : 0;
+    const limit = paging?.limit || documents.length;
+    const pagedDocuments = documents.slice(startIndex, startIndex + limit);
+
+    // Create paged results
+    const hasMore = startIndex + limit < documents.length;
+    const nextCursor = hasMore ? String(startIndex + limit) : undefined;
+
+    return {
+      results: pagedDocuments,
+      options: paging || { cursor: "0", limit: documents.length },
+      nextCursor,
+      next: hasMore
+        ? () =>
+            this.findByIds(
+              ids,
+              view,
+              { cursor: nextCursor!, limit },
+              consistencyToken,
+              signal,
+            )
+        : undefined,
+    };
   }
 
   /**
@@ -1247,152 +1032,76 @@ export class Reactor implements IReactor {
         signal,
       );
     }
-    if (this.features.legacyStorageEnabled) {
-      const documents: PHDocument[] = [];
 
-      // Use storage to resolve slugs to IDs
-      let ids: string[];
-      try {
-        ids = await this.documentStorage.resolveIds(
-          slugs,
-          consistencyToken,
-          signal,
-        );
-      } catch {
-        // If slug resolution fails, return empty results
-        // This matches the behavior expected from a search operation
-        ids = [];
-      }
+    const documents: PHDocument[] = [];
 
-      // Fetch each document by resolved ID
-      for (const id of ids) {
-        if (signal?.aborted) {
-          throw new AbortError();
-        }
-
-        let document: PHDocument;
-        try {
-          document = await this.documentStorage.get<PHDocument>(
-            id,
-            consistencyToken,
-            signal,
-          );
-        } catch {
-          // Skip documents that don't exist or can't be accessed
-          continue;
-        }
-
-        // Apply view filter - This will be removed when we pass the viewfilter along
-        // to the underlying store, but is here now for the interface.
-        for (const scope in document.state) {
-          if (!matchesScope(view, scope)) {
-            delete document.state[scope as keyof PHBaseState];
-          }
-        }
-
-        documents.push(document);
-      }
-
+    // Resolve each slug to a document ID
+    const documentIds: string[] = [];
+    for (const slug of slugs) {
       if (signal?.aborted) {
         throw new AbortError();
       }
 
-      // Apply paging - this will be removed when we pass the paging along
-      // to the underlying store, but is here now for the interface.
-      const startIndex = paging ? parseInt(paging.cursor) || 0 : 0;
-      const limit = paging?.limit || documents.length;
-      const pagedDocuments = documents.slice(startIndex, startIndex + limit);
+      const documentId = await this.documentView.resolveSlug(
+        slug,
+        view,
+        undefined,
+        signal,
+      );
 
-      // Create paged results
-      const hasMore = startIndex + limit < documents.length;
-      const nextCursor = hasMore ? String(startIndex + limit) : undefined;
+      if (documentId) {
+        documentIds.push(documentId);
+      }
+    }
 
-      return {
-        results: pagedDocuments,
-        options: paging || { cursor: "0", limit: documents.length },
-        nextCursor,
-        next: hasMore
-          ? () =>
-              this.findBySlugs(
-                slugs,
-                view,
-                { cursor: nextCursor!, limit },
-                consistencyToken,
-                signal,
-              )
-          : undefined,
-      };
-    } else {
-      const documents: PHDocument[] = [];
+    // Fetch each document
+    for (const documentId of documentIds) {
+      if (signal?.aborted) {
+        throw new AbortError();
+      }
 
-      // Resolve each slug to a document ID
-      const documentIds: string[] = [];
-      for (const slug of slugs) {
-        if (signal?.aborted) {
-          throw new AbortError();
-        }
-
-        const documentId = await this.documentView.resolveSlug(
-          slug,
+      try {
+        const document = await this.documentView.get<PHDocument>(
+          documentId,
           view,
           undefined,
           signal,
         );
-
-        if (documentId) {
-          documentIds.push(documentId);
-        }
+        documents.push(document);
+      } catch {
+        // Skip documents that don't exist or can't be accessed
+        continue;
       }
-
-      // Fetch each document
-      for (const documentId of documentIds) {
-        if (signal?.aborted) {
-          throw new AbortError();
-        }
-
-        try {
-          const document = await this.documentView.get<PHDocument>(
-            documentId,
-            view,
-            undefined,
-            signal,
-          );
-          documents.push(document);
-        } catch {
-          // Skip documents that don't exist or can't be accessed
-          continue;
-        }
-      }
-
-      if (signal?.aborted) {
-        throw new AbortError();
-      }
-
-      // Apply paging
-      const startIndex = paging ? parseInt(paging.cursor) || 0 : 0;
-      const limit = paging?.limit || documents.length;
-      const pagedDocuments = documents.slice(startIndex, startIndex + limit);
-
-      // Create paged results
-      const hasMore = startIndex + limit < documents.length;
-      const nextCursor = hasMore ? String(startIndex + limit) : undefined;
-
-      return {
-        results: pagedDocuments,
-        options: paging || { cursor: "0", limit: documents.length },
-        nextCursor,
-        next: hasMore
-          ? () =>
-              this.findBySlugs(
-                slugs,
-                view,
-                { cursor: nextCursor!, limit },
-                consistencyToken,
-                signal,
-              )
-          : undefined,
-      };
     }
+
+    if (signal?.aborted) {
+      throw new AbortError();
+    }
+
+    // Apply paging
+    const startIndex = paging ? parseInt(paging.cursor) || 0 : 0;
+    const limit = paging?.limit || documents.length;
+    const pagedDocuments = documents.slice(startIndex, startIndex + limit);
+
+    // Create paged results
+    const hasMore = startIndex + limit < documents.length;
+    const nextCursor = hasMore ? String(startIndex + limit) : undefined;
+
+    return {
+      results: pagedDocuments,
+      options: paging || { cursor: "0", limit: documents.length },
+      nextCursor,
+      next: hasMore
+        ? () =>
+            this.findBySlugs(
+              slugs,
+              view,
+              { cursor: nextCursor!, limit },
+              consistencyToken,
+              signal,
+            )
+        : undefined,
+    };
   }
 
   /**
@@ -1427,26 +1136,13 @@ export class Reactor implements IReactor {
       }
 
       try {
-        let document: PHDocument;
-        if (this.features.legacyStorageEnabled) {
-          document = await this.documentStorage.get<PHDocument>(
-            relationship.targetId,
-          );
+        const document = await this.documentView.get<PHDocument>(
+          relationship.targetId,
+          view,
+          undefined,
+          signal,
+        );
 
-          // Apply view filter for legacy storage
-          for (const scope in document.state) {
-            if (!matchesScope(view, scope)) {
-              delete document.state[scope as keyof PHBaseState];
-            }
-          }
-        } else {
-          document = await this.documentView.get<PHDocument>(
-            relationship.targetId,
-            view,
-            undefined,
-            signal,
-          );
-        }
         documents.push(document);
       } catch {
         // Skip documents that don't exist or can't be accessed
@@ -1502,107 +1198,37 @@ export class Reactor implements IReactor {
         signal,
       );
     }
-    if (this.features.legacyStorageEnabled) {
-      const documents: PHDocument[] = [];
 
-      // Use storage's findByType method directly
-      const cursor = paging?.cursor;
-      const limit = paging?.limit || 100;
+    const result = await this.documentView.findByType(
+      type,
+      view,
+      paging,
+      consistencyToken,
+      signal,
+    );
 
-      // Get document IDs of the specified type
-      const { documents: documentIds, nextCursor } =
-        await this.documentStorage.findByType(
-          type,
-          limit,
-          cursor,
-          consistencyToken,
-          signal,
-        );
-
-      if (signal?.aborted) {
-        throw new AbortError();
-      }
-
-      // Fetch each document by its ID
-      for (const documentId of documentIds) {
-        if (signal?.aborted) {
-          throw new AbortError();
-        }
-
-        let document: PHDocument;
-        try {
-          document = await this.documentStorage.get<PHDocument>(
-            documentId,
-            consistencyToken,
-            signal,
-          );
-        } catch {
-          // Skip documents that can't be retrieved
-          continue;
-        }
-
-        // Apply view filter
-        for (const scope in document.state) {
-          if (!matchesScope(view, scope)) {
-            delete document.state[scope as keyof PHBaseState];
-          }
-        }
-
-        documents.push(document);
-      }
-
-      if (signal?.aborted) {
-        throw new AbortError();
-      }
-
-      // Results are already paged from the storage layer
-      return {
-        results: documents,
-        options: paging || { cursor: cursor || "0", limit },
-        nextCursor,
-        next: nextCursor
-          ? async () =>
-              this.findByType(
-                type,
-                view,
-                { cursor: nextCursor, limit },
-                consistencyToken,
-                signal,
-              )
-          : undefined,
-      };
-    } else {
-      const result = await this.documentView.findByType(
-        type,
-        view,
-        paging,
-        consistencyToken,
-        signal,
-      );
-
-      if (signal?.aborted) {
-        throw new AbortError();
-      }
-
-      const cursor = paging?.cursor;
-      const limit = paging?.limit || 100;
-
-      return {
-        results: result.items,
-        options: paging || { cursor: cursor || "0", limit },
-        nextCursor: result.nextCursor,
-        next: result.nextCursor
-          ? async () =>
-              this.findByType(
-                type,
-                view,
-                { cursor: result.nextCursor!, limit },
-                consistencyToken,
-                signal,
-              )
-          : undefined,
-      };
+    if (signal?.aborted) {
+      throw new AbortError();
     }
+
+    const cursor = paging?.cursor;
+    const limit = paging?.limit || 100;
+
+    return {
+      results: result.items,
+      options: paging || { cursor: cursor || "0", limit },
+      nextCursor: result.nextCursor,
+      next: result.nextCursor
+        ? async () =>
+            this.findByType(
+              type,
+              view,
+              { cursor: result.nextCursor!, limit },
+              consistencyToken,
+              signal,
+            )
+        : undefined,
+    };
   }
 
   private emitJobPending(jobId: string, meta?: Record<string, unknown>): void {
