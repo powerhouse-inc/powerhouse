@@ -147,9 +147,9 @@ describe("KyselyDocumentView", () => {
 
       // Mock getSinceOrdinal to return operations with resultingState
       vi.spyOn(operationIndex, "getSinceOrdinal").mockResolvedValue({
-        items: operations,
+        results: operations,
+        options: { cursor: "0", limit: 100 },
         nextCursor: undefined,
-        hasMore: false,
       });
 
       // Initialize the view - it should process all operations
@@ -1035,10 +1035,10 @@ describe("KyselyDocumentView", () => {
 
       const result = await view.findByType(documentType);
 
-      expect(result.items).toHaveLength(1);
-      expect(result.items[0]?.header.id).toBe(documentId);
-      expect(result.items[0]?.header.documentType).toBe(documentType);
-      expect(result.hasMore).toBe(false);
+      expect(result.results).toHaveLength(1);
+      expect(result.results[0]?.header.id).toBe(documentId);
+      expect(result.results[0]?.header.documentType).toBe(documentType);
+      expect(result.nextCursor).toBeUndefined();
     });
 
     it("should respect consistency token for read-after-write consistency", async () => {
@@ -1119,8 +1119,8 @@ describe("KyselyDocumentView", () => {
 
       const result = await resultPromise;
 
-      expect(result.items).toHaveLength(1);
-      expect(result.items[0]?.header.id).toBe(documentId);
+      expect(result.results).toHaveLength(1);
+      expect(result.results[0]?.header.id).toBe(documentId);
     });
 
     it("should paginate through large result sets", async () => {
@@ -1184,17 +1184,17 @@ describe("KyselyDocumentView", () => {
         limit: 2,
       });
 
-      expect(firstPage.items).toHaveLength(2);
-      expect(firstPage.hasMore).toBe(true);
+      expect(firstPage.results).toHaveLength(2);
+      expect(firstPage.nextCursor).toBeDefined();
       expect(firstPage.nextCursor).toBe("2");
 
       const secondPage = await view.findByType(documentType, undefined, {
-        cursor: firstPage.nextCursor,
+        cursor: firstPage.nextCursor!,
         limit: 2,
       });
 
-      expect(secondPage.items).toHaveLength(2);
-      expect(secondPage.hasMore).toBe(true);
+      expect(secondPage.results).toHaveLength(2);
+      expect(secondPage.nextCursor).toBeDefined();
     });
 
     it("should filter by branch correctly when multiple branches exist", async () => {
@@ -1259,8 +1259,8 @@ describe("KyselyDocumentView", () => {
         branch: "feature",
       });
 
-      expect(mainResult.items).toHaveLength(1);
-      expect(featureResult.items).toHaveLength(1);
+      expect(mainResult.results).toHaveLength(1);
+      expect(featureResult.results).toHaveLength(1);
     });
 
     it("should exclude deleted documents from results", async () => {
@@ -1325,7 +1325,7 @@ describe("KyselyDocumentView", () => {
 
       const result = await view.findByType(documentType);
 
-      expect(result.items).toHaveLength(0);
+      expect(result.results).toHaveLength(0);
     });
   });
 

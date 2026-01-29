@@ -446,7 +446,7 @@ describe("Write Cache vs No-Cache Baseline", () => {
         undefined,
       );
 
-      for (const storedOp of result.items) {
+      for (const storedOp of result.results) {
         if (document === undefined) {
           document = module.utils.createDocument();
         }
@@ -518,8 +518,9 @@ describe("Write Cache vs No-Cache Baseline", () => {
       const module = registry.getModule(DOCUMENT_TYPE);
       let document: PHDocument | undefined = undefined;
 
-      let cursor: string | undefined;
-      do {
+      let cursor: string = "0";
+      let hasMore = true;
+      while (hasMore) {
         const result = await store.getSince(
           DOCUMENT_ID,
           SCOPE,
@@ -530,15 +531,19 @@ describe("Write Cache vs No-Cache Baseline", () => {
           undefined,
         );
 
-        for (const storedOp of result.items) {
+        for (const storedOp of result.results) {
           if (document === undefined) {
             document = module.utils.createDocument();
           }
           document = module.reducer(document, storedOp.action);
         }
 
-        cursor = result.nextCursor;
-      } while (cursor);
+        if (result.nextCursor) {
+          cursor = result.nextCursor;
+        } else {
+          hasMore = false;
+        }
+      }
     },
     { time: 5000 },
   );

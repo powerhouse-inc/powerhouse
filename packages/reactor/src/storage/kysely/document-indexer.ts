@@ -44,8 +44,8 @@ export class KyselyDocumentIndexer implements IDocumentIndexer {
         this.lastOperationId,
       );
 
-      if (missedOperations.items.length > 0) {
-        await this.indexOperations(missedOperations.items);
+      if (missedOperations.results.length > 0) {
+        await this.indexOperations(missedOperations.results);
       }
     } else {
       await this.db
@@ -56,8 +56,8 @@ export class KyselyDocumentIndexer implements IDocumentIndexer {
         .execute();
 
       const allOperations = await this.operationStore.getSinceId(0);
-      if (allOperations.items.length > 0) {
-        await this.indexOperations(allOperations.items);
+      if (allOperations.results.length > 0) {
+        await this.indexOperations(allOperations.results);
       }
     }
   }

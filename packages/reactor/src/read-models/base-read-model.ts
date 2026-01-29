@@ -38,9 +38,9 @@ export class BaseReadModel implements IReadModel {
         this.lastOrdinal,
       );
 
-      if (missedOperations.items.length > 0) {
+      if (missedOperations.results.length > 0) {
         const opsWithState = await this.rebuildStateForOperations(
-          missedOperations.items,
+          missedOperations.results,
         );
         await this.indexOperations(opsWithState);
       }
@@ -48,9 +48,9 @@ export class BaseReadModel implements IReadModel {
       await this.initializeState();
       const allOperations = await this.operationIndex.getSinceOrdinal(0);
 
-      if (allOperations.items.length > 0) {
+      if (allOperations.results.length > 0) {
         const opsWithState = await this.rebuildStateForOperations(
-          allOperations.items,
+          allOperations.results,
         );
         await this.indexOperations(opsWithState);
       }

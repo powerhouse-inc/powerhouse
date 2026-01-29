@@ -307,17 +307,11 @@ export class Reactor implements IReactor {
         signal,
       );
 
-      const currentCursor = paging?.cursor ? parseInt(paging.cursor) : 0;
-      const currentLimit = paging?.limit || 100;
-
       result[scope] = {
-        results: scopeResult.items,
-        options: {
-          cursor: scopeResult.nextCursor || String(currentCursor),
-          limit: currentLimit,
-        },
+        results: scopeResult.results,
+        options: scopeResult.options,
         nextCursor: scopeResult.nextCursor,
-        next: scopeResult.hasMore
+        next: scopeResult.next
           ? async () => {
               const nextPage = await this.getOperations(
                 documentId,
@@ -325,7 +319,7 @@ export class Reactor implements IReactor {
                 filter,
                 {
                   cursor: scopeResult.nextCursor!,
-                  limit: currentLimit,
+                  limit: scopeResult.options.limit,
                 },
                 consistencyToken,
                 signal,
@@ -1067,44 +1061,13 @@ export class Reactor implements IReactor {
   ): Promise<PagedResults<PHDocument>> {
     this.logger.verbose("findByType(@type)", type);
 
-    if (consistencyToken) {
-      await this.documentView.waitForConsistency(
-        consistencyToken,
-        undefined,
-        signal,
-      );
-    }
-
-    const result = await this.documentView.findByType(
+    return await this.documentView.findByType(
       type,
       view,
       paging,
       consistencyToken,
       signal,
     );
-
-    if (signal?.aborted) {
-      throw new AbortError();
-    }
-
-    const cursor = paging?.cursor;
-    const limit = paging?.limit || 100;
-
-    return {
-      results: result.items,
-      options: paging || { cursor: cursor || "0", limit },
-      nextCursor: result.nextCursor,
-      next: result.nextCursor
-        ? async () =>
-            this.findByType(
-              type,
-              view,
-              { cursor: result.nextCursor!, limit },
-              consistencyToken,
-              signal,
-            )
-        : undefined,
-    };
   }
 
   private emitJobPending(jobId: string, meta?: Record<string, unknown>): void {

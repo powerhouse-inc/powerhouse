@@ -7,10 +7,7 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { DocumentMetaCacheConfig } from "../../src/cache/document-meta-cache-types.js";
 import { DocumentMetaCache } from "../../src/cache/document-meta-cache.js";
-import type {
-  IOperationStore,
-  PagedResults,
-} from "../../src/storage/interfaces.js";
+import type { IOperationStore } from "../../src/storage/interfaces.js";
 
 function createMockOperationStore(): IOperationStore {
   return {
@@ -156,10 +153,10 @@ describe("DocumentMetaCache", () => {
       ];
 
       vi.mocked(operationStore.getSince).mockResolvedValue({
-        items: operations,
+        results: operations,
+        options: { cursor: "0", limit: 100 },
         nextCursor: undefined,
-        hasMore: false,
-      } as PagedResults<Operation>);
+      });
 
       const result = await cache.getDocumentMeta(docId, branch);
 
@@ -182,10 +179,10 @@ describe("DocumentMetaCache", () => {
       const branch = "main";
 
       vi.mocked(operationStore.getSince).mockResolvedValue({
-        items: [],
+        results: [],
+        options: { cursor: "0", limit: 100 },
         nextCursor: undefined,
-        hasMore: false,
-      } as PagedResults<Operation>);
+      });
 
       await expect(cache.getDocumentMeta(docId, branch)).rejects.toThrow(
         `Document ${docId} not found`,
@@ -197,10 +194,10 @@ describe("DocumentMetaCache", () => {
       const branch = "main";
 
       vi.mocked(operationStore.getSince).mockResolvedValue({
-        items: [createUpgradeDocumentOperation(docId, 0, 1)],
+        results: [createUpgradeDocumentOperation(docId, 0, 1)],
+        options: { cursor: "0", limit: 100 },
         nextCursor: undefined,
-        hasMore: false,
-      } as PagedResults<Operation>);
+      });
 
       await expect(cache.getDocumentMeta(docId, branch)).rejects.toThrow(
         "Invalid document: first operation must be CREATE_DOCUMENT",
@@ -219,10 +216,10 @@ describe("DocumentMetaCache", () => {
       ];
 
       vi.mocked(operationStore.getSince).mockResolvedValue({
-        items: operations,
+        results: operations,
+        options: { cursor: "0", limit: 100 },
         nextCursor: undefined,
-        hasMore: false,
-      } as PagedResults<Operation>);
+      });
 
       const result = await cache.getDocumentMeta(docId, branch);
 
@@ -255,10 +252,10 @@ describe("DocumentMetaCache", () => {
       ];
 
       vi.mocked(operationStore.getSince).mockResolvedValue({
-        items: operations,
+        results: operations,
+        options: { cursor: "0", limit: 100 },
         nextCursor: undefined,
-        hasMore: false,
-      } as PagedResults<Operation>);
+      });
 
       const resultAtRev1 = await cache.rebuildAtRevision(docId, branch, 1);
       expect(resultAtRev1.state.version).toBe(1);
@@ -280,10 +277,10 @@ describe("DocumentMetaCache", () => {
       ];
 
       vi.mocked(operationStore.getSince).mockResolvedValue({
-        items: operations,
+        results: operations,
+        options: { cursor: "0", limit: 100 },
         nextCursor: undefined,
-        hasMore: false,
-      } as PagedResults<Operation>);
+      });
 
       await cache.rebuildAtRevision(docId, branch, 1);
 
@@ -444,13 +441,13 @@ describe("DocumentMetaCache", () => {
       const docType = "powerhouse/test";
 
       vi.mocked(operationStore.getSince).mockResolvedValue({
-        items: [
+        results: [
           createCreateDocumentOperation("doc1", docType),
           createUpgradeDocumentOperation("doc1", 1, 1),
         ],
+        options: { cursor: "0", limit: 100 },
         nextCursor: undefined,
-        hasMore: false,
-      } as PagedResults<Operation>);
+      });
 
       cache.putDocumentMeta("doc1", "main", {
         state: {

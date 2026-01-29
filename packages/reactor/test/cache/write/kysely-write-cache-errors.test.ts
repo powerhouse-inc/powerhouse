@@ -21,9 +21,21 @@ import {
 function createMockOperationStore(): IOperationStore {
   return {
     apply: vi.fn(),
-    getSince: vi.fn(),
-    getSinceId: vi.fn(),
-    getConflicting: vi.fn(),
+    getSince: vi.fn().mockResolvedValue({
+      results: [],
+      options: { cursor: "0", limit: 100 },
+      nextCursor: undefined,
+    }),
+    getSinceId: vi.fn().mockResolvedValue({
+      results: [],
+      options: { cursor: "0", limit: 100 },
+      nextCursor: undefined,
+    }),
+    getConflicting: vi.fn().mockResolvedValue({
+      results: [],
+      options: { cursor: "0", limit: 100 },
+      nextCursor: undefined,
+    }),
     getRevisions: vi.fn().mockResolvedValue({
       revision: {},
       latestTimestamp: new Date().toISOString(),
@@ -100,12 +112,14 @@ describe("KyselyWriteCache - Error Handling", () => {
       const mockGetSince = vi.fn().mockImplementation((docId, scope) => {
         if (scope === "document") {
           return Promise.resolve({
-            items: [createOp],
+            results: [createOp],
+            options: { cursor: "0", limit: 100 },
             nextCursor: undefined,
           });
         }
         return Promise.resolve({
-          items: [createTestOperation("doc1", { index: 1, skip: 0 })],
+          results: [createTestOperation("doc1", { index: 1, skip: 0 })],
+          options: { cursor: "0", limit: 100 },
           nextCursor: undefined,
         });
       });
@@ -199,12 +213,14 @@ describe("KyselyWriteCache - Error Handling", () => {
       const mockGetSince = vi.fn().mockImplementation((docId, scope) => {
         if (scope === "document") {
           return Promise.resolve({
-            items: [createOp],
+            results: [createOp],
+            options: { cursor: "0", limit: 100 },
             nextCursor: undefined,
           });
         }
         return Promise.resolve({
-          items: [createTestOperation("doc1", { index: 1, skip: 0 })],
+          results: [createTestOperation("doc1", { index: 1, skip: 0 })],
+          options: { cursor: "0", limit: 100 },
           nextCursor: undefined,
         });
       });
@@ -253,12 +269,14 @@ describe("KyselyWriteCache - Error Handling", () => {
       const mockGetSince = vi.fn().mockImplementation((docId, scope) => {
         if (scope === "document") {
           return Promise.resolve({
-            items: [createOp],
+            results: [createOp],
+            options: { cursor: "0", limit: 100 },
             nextCursor: undefined,
           });
         }
         return Promise.resolve({
-          items: [createTestOperation("doc1", { index: 1, skip: 0 })],
+          results: [createTestOperation("doc1", { index: 1, skip: 0 })],
+          options: { cursor: "0", limit: 100 },
           nextCursor: undefined,
         });
       });
@@ -295,7 +313,8 @@ describe("KyselyWriteCache - Error Handling", () => {
       const doc = documentModelDocumentModelModule.utils.createDocument();
 
       const mockGetSince = vi.fn().mockResolvedValue({
-        items: [createTestOperation("doc1", { index: 2, skip: 0 })],
+        results: [createTestOperation("doc1", { index: 2, skip: 0 })],
+        options: { cursor: "0", limit: 100 },
         nextCursor: undefined,
       });
 
@@ -334,7 +353,8 @@ describe("KyselyWriteCache - Error Handling", () => {
       cache.putState("doc1", "global", "main", 1, doc);
 
       const mockGetSince = vi.fn().mockResolvedValue({
-        items: [createTestOperation("doc1", { index: 2, skip: 0 })],
+        results: [createTestOperation("doc1", { index: 2, skip: 0 })],
+        options: { cursor: "0", limit: 100 },
         nextCursor: undefined,
       });
 
@@ -395,12 +415,14 @@ describe("KyselyWriteCache - Error Handling", () => {
       const mockGetSince = vi.fn().mockImplementation((docId, scope) => {
         if (scope === "document") {
           return Promise.resolve({
-            items: [createOp],
+            results: [createOp],
+            options: { cursor: "0", limit: 100 },
             nextCursor: undefined,
           });
         }
         return Promise.resolve({
-          items: [createTestOperation("doc1", { index: 1, skip: 0 })],
+          results: [createTestOperation("doc1", { index: 1, skip: 0 })],
+          options: { cursor: "0", limit: 100 },
           nextCursor: undefined,
         });
       });
@@ -525,13 +547,14 @@ describe("KyselyWriteCache - Error Handling", () => {
         callCount++;
         if (scope === "document") {
           return Promise.resolve({
-            items: [createOp],
+            results: [createOp],
+            options: { cursor: "0", limit: 100 },
             nextCursor: undefined,
           });
         }
         if (callCount === 2) {
           return Promise.resolve({
-            items: Array.from({ length: 100 }, (_, i) =>
+            results: Array.from({ length: 100 }, (_, i) =>
               createTestOperation("doc1", { index: i + 1, skip: 0 }),
             ),
             nextCursor: "cursor1",
@@ -699,7 +722,8 @@ describe("KyselyWriteCache - Error Handling", () => {
         .mockRejectedValue(keyframeError);
 
       const mockGetSince = vi.fn().mockResolvedValue({
-        items: [createTestOperation("doc1", { index: 1, skip: 0 })],
+        results: [createTestOperation("doc1", { index: 1, skip: 0 })],
+        options: { cursor: "0", limit: 100 },
         nextCursor: undefined,
       });
 
@@ -786,7 +810,8 @@ describe("KyselyWriteCache - Error Handling", () => {
   describe("No operations error", () => {
     it("should throw descriptive error when no operations found", async () => {
       const mockGetSince = vi.fn().mockResolvedValue({
-        items: [],
+        results: [],
+        options: { cursor: "0", limit: 100 },
         nextCursor: undefined,
       });
 
@@ -817,7 +842,8 @@ describe("KyselyWriteCache - Error Handling", () => {
 
     it("should not create cache entry when no operations exist", async () => {
       const mockGetSince = vi.fn().mockResolvedValue({
-        items: [],
+        results: [],
+        options: { cursor: "0", limit: 100 },
         nextCursor: undefined,
       });
 
@@ -859,7 +885,7 @@ describe("KyselyWriteCache - Error Handling", () => {
         callCount++;
         if (callCount === 1) {
           return Promise.resolve({
-            items: Array.from({ length: 100 }, (_, i) =>
+            results: Array.from({ length: 100 }, (_, i) =>
               createTestOperation("doc1", { index: i + 1, skip: 0 }),
             ),
             nextCursor: "cursor1",
@@ -1074,18 +1100,19 @@ describe("KyselyWriteCache - Error Handling", () => {
         }
         if (scope === "document") {
           return Promise.resolve({
-            items: [createOp],
+            results: [createOp],
+            options: { cursor: "0", limit: 100 },
             nextCursor: undefined,
           });
         }
         if (scope === "global") {
           return Promise.resolve({
-            items: [createTestOperation("doc1", { index: 1, skip: 0 })],
+            results: [createTestOperation("doc1", { index: 1, skip: 0 })],
             nextCursor: undefined,
           });
         }
         return Promise.resolve({
-          items: [],
+          results: [],
           nextCursor: undefined,
         });
       });
@@ -1146,18 +1173,19 @@ describe("KyselyWriteCache - Error Handling", () => {
         }
         if (scope === "document") {
           return Promise.resolve({
-            items: [createOp],
+            results: [createOp],
+            options: { cursor: "0", limit: 100 },
             nextCursor: undefined,
           });
         }
         if (scope === "global") {
           return Promise.resolve({
-            items: [createTestOperation("doc1", { index: 1, skip: 0 })],
+            results: [createTestOperation("doc1", { index: 1, skip: 0 })],
             nextCursor: undefined,
           });
         }
         return Promise.resolve({
-          items: [],
+          results: [],
           nextCursor: undefined,
         });
       });

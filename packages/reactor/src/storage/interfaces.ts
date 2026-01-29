@@ -1,6 +1,12 @@
 import type { Operation, PHDocument } from "document-model";
-import type { ConsistencyToken } from "../shared/types.js";
+import type {
+  ConsistencyToken,
+  PagedResults,
+  PagingOptions,
+} from "../shared/types.js";
 import type { RemoteCursor, RemoteRecord } from "../sync/types.js";
+
+export type { PagedResults, PagingOptions } from "../shared/types.js";
 
 export type OperationContext = {
   documentId: string;
@@ -153,11 +159,6 @@ export interface SearchFilter {
   includeDeleted?: boolean;
 }
 
-export interface PagingOptions {
-  cursor?: string;
-  limit?: number;
-}
-
 /**
  * Filter options for querying operations. When multiple filters are provided,
  * they are combined with AND logic.
@@ -171,12 +172,6 @@ export interface OperationFilter {
   timestampTo?: string;
   /** Filter operations with index >= this value */
   sinceRevision?: number;
-}
-
-export interface PagedResults<T> {
-  items: T[];
-  nextCursor?: string;
-  hasMore: boolean;
 }
 
 export interface DocumentSnapshot {

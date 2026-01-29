@@ -28,11 +28,14 @@ describe("KyselyDocumentView Unit Tests", () => {
     mockOperationIndex = {
       start: vi.fn(),
       commit: vi.fn().mockResolvedValue([]),
-      find: vi.fn().mockResolvedValue({ items: [], total: 0 }),
+      find: vi.fn().mockResolvedValue({
+        results: [],
+        options: { cursor: "0", limit: 100 },
+      }),
       getSinceOrdinal: vi.fn().mockResolvedValue({
-        items: [],
+        results: [],
+        options: { cursor: "0", limit: 100 },
         nextCursor: undefined,
-        hasMore: false,
       }),
       getLatestTimestampForCollection: vi.fn().mockResolvedValue(null),
     };
@@ -265,7 +268,10 @@ describe("KyselyDocumentView Unit Tests", () => {
         revision: {},
         latestTimestamp: new Date().toISOString(),
       });
-      mockOperationStore.getSinceId = vi.fn().mockResolvedValue({ items: [] });
+      mockOperationStore.getSinceId = vi.fn().mockResolvedValue({
+        results: [],
+        options: { cursor: "0", limit: 100 },
+      });
     });
 
     it("should query by type and return empty results for no matches", async () => {
@@ -282,8 +288,7 @@ describe("KyselyDocumentView Unit Tests", () => {
       expect(mockDb.where).toHaveBeenCalledWith("branch", "=", "main");
       expect(mockDb.where).toHaveBeenCalledWith("isDeleted", "=", false);
       expect(mockDb.orderBy).toHaveBeenCalledWith("lastUpdatedAt", "desc");
-      expect(result.items).toEqual([]);
-      expect(result.hasMore).toBe(false);
+      expect(result.results).toEqual([]);
       expect(result.nextCursor).toBeUndefined();
     });
 
@@ -320,9 +325,8 @@ describe("KyselyDocumentView Unit Tests", () => {
         limit: 1,
       });
 
-      expect(result.items).toHaveLength(1);
+      expect(result.results).toHaveLength(1);
       expect(result.nextCursor).toBe("2");
-      expect(result.hasMore).toBe(true);
     });
 
     it("should handle consistencyToken by calling waitForConsistency", async () => {
@@ -387,7 +391,6 @@ describe("KyselyDocumentView Unit Tests", () => {
         limit: 10,
       });
 
-      expect(result.hasMore).toBe(false);
       expect(result.nextCursor).toBeUndefined();
     });
 
@@ -436,7 +439,7 @@ describe("KyselyDocumentView Unit Tests", () => {
 
       const result = await view.findByType("test-type");
 
-      expect(result.items).toHaveLength(2);
+      expect(result.results).toHaveLength(2);
     });
 
     it("should skip documents that fail to retrieve", async () => {
@@ -458,7 +461,7 @@ describe("KyselyDocumentView Unit Tests", () => {
 
       const result = await view.findByType("test-type");
 
-      expect(result.items).toHaveLength(0);
+      expect(result.results).toHaveLength(0);
     });
 
     it("should handle default limit of 100", async () => {
@@ -471,7 +474,6 @@ describe("KyselyDocumentView Unit Tests", () => {
 
       const result = await view.findByType("test-type");
 
-      expect(result.hasMore).toBe(true);
       expect(result.nextCursor).toBe("100");
     });
 

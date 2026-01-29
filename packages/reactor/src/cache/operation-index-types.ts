@@ -1,9 +1,8 @@
 import type { Operation } from "document-model";
 import type { Generated, Insertable, Selectable, Updateable } from "kysely";
+import type { PagedResults, PagingOptions } from "../shared/types.js";
 import type {
   OperationWithContext,
-  PagedResults,
-  PagingOptions,
   ViewFilter,
 } from "../storage/interfaces.js";
 

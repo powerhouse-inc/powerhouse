@@ -17,10 +17,25 @@ import {
 function createMockOperationStore(): IOperationStore {
   return {
     apply: vi.fn(),
-    getSince: vi.fn(),
-    getSinceId: vi.fn(),
-    getConflicting: vi.fn(),
-    getRevisions: vi.fn(),
+    getSince: vi.fn().mockResolvedValue({
+      results: [],
+      options: { cursor: "0", limit: 100 },
+      nextCursor: undefined,
+    }),
+    getSinceId: vi.fn().mockResolvedValue({
+      results: [],
+      options: { cursor: "0", limit: 100 },
+      nextCursor: undefined,
+    }),
+    getConflicting: vi.fn().mockResolvedValue({
+      results: [],
+      options: { cursor: "0", limit: 100 },
+      nextCursor: undefined,
+    }),
+    getRevisions: vi.fn().mockResolvedValue({
+      revision: {},
+      latestTimestamp: new Date().toISOString(),
+    }),
   };
 }
 
@@ -469,7 +484,8 @@ describe("KyselyWriteCache (Partial Integration) - Cold Miss Rebuild", () => {
 
   it("should throw on rebuild failure", async () => {
     const mockGetSince = vi.fn().mockResolvedValue({
-      items: [],
+      results: [],
+      options: { cursor: "0", limit: 100 },
       nextCursor: undefined,
     });
     const mockOperationStore = {

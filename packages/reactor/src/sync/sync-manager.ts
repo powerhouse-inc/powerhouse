@@ -275,11 +275,11 @@ export class SyncManager implements ISyncManager {
       return;
     }
 
-    if (historicalOps.items.length === 0) {
+    if (historicalOps.results.length === 0) {
       return;
     }
 
-    const opsWithContext = historicalOps.items.map((entry) => ({
+    const opsWithContext = historicalOps.results.map((entry) => ({
       operation: {
         id: entry.id,
         index: entry.index,

@@ -4,13 +4,15 @@ import { v4 as uuidv4 } from "uuid";
 import type { IOperationIndex } from "../cache/operation-index-types.js";
 import type { IWriteCache } from "../cache/write/interfaces.js";
 import type { IConsistencyTracker } from "../shared/consistency-tracker.js";
-import type { ConsistencyToken } from "../shared/types.js";
+import type {
+  ConsistencyToken,
+  PagedResults,
+  PagingOptions,
+} from "../shared/types.js";
 import type {
   IDocumentView,
   IOperationStore,
   OperationWithContext,
-  PagedResults,
-  PagingOptions,
   ViewFilter,
 } from "../storage/interfaces.js";
 import type { Database as StorageDatabase } from "../storage/kysely/types.js";
@@ -408,9 +410,19 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
     const nextCursor = hasMore ? String(startIndex + limit) : undefined;
 
     return {
-      items: documents,
+      results: documents,
+      options: paging || { cursor: "0", limit: 100 },
       nextCursor,
-      hasMore,
+      next: hasMore
+        ? () =>
+            this.findByType(
+              type,
+              view,
+              { cursor: nextCursor!, limit },
+              consistencyToken,
+              signal,
+            )
+        : undefined,
     };
   }
 

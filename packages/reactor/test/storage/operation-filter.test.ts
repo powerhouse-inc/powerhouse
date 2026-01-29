@@ -81,8 +81,8 @@ describe("KyselyOperationStore.getSince with OperationFilter", () => {
         filter,
       );
 
-      expect(result.items).toHaveLength(2);
-      expect(result.items.every((op) => op.action.type === "SET_NAME")).toBe(
+      expect(result.results).toHaveLength(2);
+      expect(result.results.every((op) => op.action.type === "SET_NAME")).toBe(
         true,
       );
     });
@@ -107,9 +107,9 @@ describe("KyselyOperationStore.getSince with OperationFilter", () => {
         filter,
       );
 
-      expect(result.items).toHaveLength(3);
+      expect(result.results).toHaveLength(3);
       expect(
-        result.items.every(
+        result.results.every(
           (op) => op.action.type === "SET_NAME" || op.action.type === "DELETE",
         ),
       ).toBe(true);
@@ -139,9 +139,9 @@ describe("KyselyOperationStore.getSince with OperationFilter", () => {
         filter,
       );
 
-      expect(result.items).toHaveLength(2);
-      expect(result.items[0].action.type).toBe("OP3");
-      expect(result.items[1].action.type).toBe("OP4");
+      expect(result.results).toHaveLength(2);
+      expect(result.results[0].action.type).toBe("OP3");
+      expect(result.results[1].action.type).toBe("OP4");
     });
 
     it("filters by timestampTo (inclusive)", async () => {
@@ -166,9 +166,9 @@ describe("KyselyOperationStore.getSince with OperationFilter", () => {
         filter,
       );
 
-      expect(result.items).toHaveLength(2);
-      expect(result.items[0].action.type).toBe("OP1");
-      expect(result.items[1].action.type).toBe("OP2");
+      expect(result.results).toHaveLength(2);
+      expect(result.results[0].action.type).toBe("OP1");
+      expect(result.results[1].action.type).toBe("OP2");
     });
 
     it("filters by timestamp range", async () => {
@@ -194,9 +194,9 @@ describe("KyselyOperationStore.getSince with OperationFilter", () => {
         filter,
       );
 
-      expect(result.items).toHaveLength(2);
-      expect(result.items[0].action.type).toBe("OP2");
-      expect(result.items[1].action.type).toBe("OP3");
+      expect(result.results).toHaveLength(2);
+      expect(result.results[0].action.type).toBe("OP2");
+      expect(result.results[1].action.type).toBe("OP3");
     });
   });
 
@@ -221,9 +221,9 @@ describe("KyselyOperationStore.getSince with OperationFilter", () => {
         filter,
       );
 
-      expect(result.items).toHaveLength(2);
-      expect(result.items[0].index).toBe(2);
-      expect(result.items[1].index).toBe(3);
+      expect(result.results).toHaveLength(2);
+      expect(result.results[0].index).toBe(2);
+      expect(result.results[1].index).toBe(3);
     });
   });
 
@@ -251,9 +251,9 @@ describe("KyselyOperationStore.getSince with OperationFilter", () => {
         filter,
       );
 
-      expect(result.items).toHaveLength(1);
-      expect(result.items[0].action.type).toBe("SET_NAME");
-      expect(result.items[0].index).toBe(2);
+      expect(result.results).toHaveLength(1);
+      expect(result.results[0].action.type).toBe("SET_NAME");
+      expect(result.results[0].index).toBe(2);
     });
   });
 
@@ -278,11 +278,10 @@ describe("KyselyOperationStore.getSince with OperationFilter", () => {
         branch,
         -1,
         filter,
-        { limit: 2 },
+        { cursor: "0", limit: 2 },
       );
 
-      expect(result.items).toHaveLength(2);
-      expect(result.hasMore).toBe(true);
+      expect(result.results).toHaveLength(2);
       expect(result.nextCursor).toBeDefined();
     });
 
@@ -306,11 +305,11 @@ describe("KyselyOperationStore.getSince with OperationFilter", () => {
         branch,
         -1,
         filter,
-        { limit: 2 },
+        { cursor: "0", limit: 2 },
       );
 
-      expect(page1.items).toHaveLength(2);
-      expect(page1.hasMore).toBe(true);
+      expect(page1.results).toHaveLength(2);
+      expect(page1.nextCursor).toBeDefined();
 
       const page2 = await store.getSince(
         documentId,
@@ -318,11 +317,11 @@ describe("KyselyOperationStore.getSince with OperationFilter", () => {
         branch,
         -1,
         filter,
-        { cursor: page1.nextCursor, limit: 2 },
+        { cursor: page1.nextCursor!, limit: 2 },
       );
 
-      expect(page2.items).toHaveLength(2);
-      expect(page2.hasMore).toBe(false);
+      expect(page2.results).toHaveLength(2);
+      expect(page2.nextCursor).toBeUndefined();
     });
   });
 
@@ -345,7 +344,7 @@ describe("KyselyOperationStore.getSince with OperationFilter", () => {
         filter,
       );
 
-      expect(result.items).toHaveLength(0);
+      expect(result.results).toHaveLength(0);
     });
 
     it("returns all operations when filter is undefined", async () => {
@@ -357,7 +356,7 @@ describe("KyselyOperationStore.getSince with OperationFilter", () => {
 
       const result = await store.getSince(documentId, scope, branch, -1);
 
-      expect(result.items).toHaveLength(3);
+      expect(result.results).toHaveLength(3);
     });
 
     it("handles empty actionTypes array", async () => {
@@ -378,7 +377,7 @@ describe("KyselyOperationStore.getSince with OperationFilter", () => {
         filter,
       );
 
-      expect(result.items).toHaveLength(2);
+      expect(result.results).toHaveLength(2);
     });
   });
 });

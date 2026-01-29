@@ -45,10 +45,25 @@ describe("KyselyDocumentIndexer Unit Tests", () => {
 
     mockOperationStore = {
       apply: vi.fn(),
-      getSince: vi.fn(),
-      getSinceId: vi.fn().mockResolvedValue({ items: [], hasMore: false }),
-      getConflicting: vi.fn(),
-      getRevisions: vi.fn(),
+      getSince: vi.fn().mockResolvedValue({
+        results: [],
+        options: { cursor: "0", limit: 100 },
+        nextCursor: undefined,
+      }),
+      getSinceId: vi.fn().mockResolvedValue({
+        results: [],
+        options: { cursor: "0", limit: 100 },
+        nextCursor: undefined,
+      }),
+      getConflicting: vi.fn().mockResolvedValue({
+        results: [],
+        options: { cursor: "0", limit: 100 },
+        nextCursor: undefined,
+      }),
+      getRevisions: vi.fn().mockResolvedValue({
+        revision: {},
+        latestTimestamp: new Date().toISOString(),
+      }),
     };
 
     mockConsistencyTracker = {
@@ -124,9 +139,11 @@ describe("KyselyDocumentIndexer Unit Tests", () => {
         },
       ];
 
-      mockOperationStore.getSinceId = vi
-        .fn()
-        .mockResolvedValue({ items: operations, hasMore: false });
+      mockOperationStore.getSinceId = vi.fn().mockResolvedValue({
+        results: operations,
+        options: { cursor: "0", limit: 100 },
+        nextCursor: undefined,
+      });
 
       const newIndexer = new KyselyDocumentIndexer(
         db,

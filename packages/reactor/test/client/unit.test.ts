@@ -294,6 +294,56 @@ describe("ReactorClient Unit Tests", () => {
         signal,
       );
     });
+
+    it("should return empty results when no children exist", async () => {
+      vi.mocked(mockDocumentView.resolveIdOrSlug).mockResolvedValue("parent-1");
+      vi.mocked(mockDocumentIndexer.getOutgoing).mockResolvedValue([]);
+
+      const result = await client.getChildren("parent-1");
+
+      expect(result.results).toEqual([]);
+      expect(mockReactor.find).not.toHaveBeenCalled();
+    });
+
+    it("should return child documents when children exist", async () => {
+      const childDocs = [
+        { header: { id: "child-1" } },
+        { header: { id: "child-2" } },
+      ] as PHDocument[];
+
+      vi.mocked(mockDocumentView.resolveIdOrSlug).mockResolvedValue("parent-1");
+      vi.mocked(mockDocumentIndexer.getOutgoing).mockResolvedValue([
+        {
+          sourceId: "parent-1",
+          targetId: "child-1",
+          relationshipType: "child",
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        {
+          sourceId: "parent-1",
+          targetId: "child-2",
+          relationshipType: "child",
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ]);
+      vi.mocked(mockReactor.find).mockResolvedValue({
+        results: childDocs,
+        options: { cursor: "", limit: 10 },
+      });
+
+      const result = await client.getChildren("parent-1");
+
+      expect(mockReactor.find).toHaveBeenCalledWith(
+        { ids: ["child-1", "child-2"] },
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+      );
+      expect(result.results).toEqual(childDocs);
+    });
   });
 
   describe("getParents", () => {
@@ -334,6 +384,46 @@ describe("ReactorClient Unit Tests", () => {
         undefined,
         signal,
       );
+    });
+
+    it("should return empty results when no parents exist", async () => {
+      vi.mocked(mockDocumentView.resolveIdOrSlug).mockResolvedValue("child-1");
+      vi.mocked(mockDocumentIndexer.getIncoming).mockResolvedValue([]);
+
+      const result = await client.getParents("child-1");
+
+      expect(result.results).toEqual([]);
+      expect(mockReactor.find).not.toHaveBeenCalled();
+    });
+
+    it("should return parent documents when parents exist", async () => {
+      const parentDocs = [{ header: { id: "parent-1" } }] as PHDocument[];
+
+      vi.mocked(mockDocumentView.resolveIdOrSlug).mockResolvedValue("child-1");
+      vi.mocked(mockDocumentIndexer.getIncoming).mockResolvedValue([
+        {
+          sourceId: "parent-1",
+          targetId: "child-1",
+          relationshipType: "parent",
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ]);
+      vi.mocked(mockReactor.find).mockResolvedValue({
+        results: parentDocs,
+        options: { cursor: "", limit: 10 },
+      });
+
+      const result = await client.getParents("child-1");
+
+      expect(mockReactor.find).toHaveBeenCalledWith(
+        { ids: ["parent-1"] },
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+      );
+      expect(result.results).toEqual(parentDocs);
     });
   });
 

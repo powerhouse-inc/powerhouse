@@ -145,7 +145,7 @@ describe("KyselyOperationIndex Integration", () => {
 
       const result = await operationIndex.find(collectionId);
 
-      const childOps = result.items.filter(
+      const childOps = result.results.filter(
         (op) => op.documentId === childDocId,
       );
       expect(childOps.length).toBeGreaterThanOrEqual(2);
@@ -301,7 +301,7 @@ describe("KyselyOperationIndex Integration", () => {
 
       const result = await operationIndex.find(collectionId);
 
-      const childOps = result.items.filter(
+      const childOps = result.results.filter(
         (op) => op.documentId === childDocId,
       );
 
