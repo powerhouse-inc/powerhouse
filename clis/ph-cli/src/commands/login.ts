@@ -1,6 +1,5 @@
 import { loginArgs } from "@powerhousedao/common/clis";
 import { command } from "cmd-ts";
-import { generateSessionId, getRenown } from "../services/auth.js";
 
 export const login = command({
   name: "login",
@@ -41,12 +40,16 @@ This command:
     const timeoutMs = args.timeout ? args.timeout * 1000 : DEFAULT_TIMEOUT_MS;
 
     console.debug("Initializing cryptographic identity...");
+
+    const { generateSessionId, getRenown } = await import(
+      "../services/auth.js"
+    );
     const renown = await getRenown();
 
     // Check if already authenticated
     if (renown.user) {
       console.error(
-        `Already authenticated as ${renown.user.address}\nUse "ph login --logout" to sign out first.`,
+        `Already authenticated as ${renown.user.address}\nUse "ph logout" to sign out first.`,
       );
       process.exit(1);
     }
@@ -195,6 +198,7 @@ function sleep(ms: number): Promise<void> {
  * Show current authentication status
  */
 async function showStatus(): Promise<void> {
+  const { getRenown } = await import("../services/auth.js");
   const renown = await getRenown();
   const user = renown.user;
   if (!user || !user.credential) {
@@ -220,6 +224,9 @@ async function showStatus(): Promise<void> {
  */
 async function showDid(): Promise<void> {
   try {
+    const { generateSessionId, getRenown } = await import(
+      "../services/auth.js"
+    );
     const renown = await getRenown();
     console.log(renown.did);
   } catch (e) {
@@ -231,7 +238,8 @@ async function showDid(): Promise<void> {
 /**
  * Logout and clear credentials
  */
-async function handleLogout() {
+export async function handleLogout() {
+  const { getRenown } = await import("../services/auth.js");
   const renown = await getRenown();
   if (!renown.user) {
     console.log("Not currently authenticated.");

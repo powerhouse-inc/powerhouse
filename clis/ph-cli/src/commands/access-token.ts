@@ -4,6 +4,7 @@ import {
   SECONDS_IN_DAY,
 } from "@powerhousedao/common/clis";
 import { command } from "cmd-ts";
+
 export const accessToken = command({
   name: "access-token",
   description: `

@@ -608,7 +608,7 @@ Now let's test our permission setup by switching between different user accounts
 First, logout and login as Member 2:
 
 ```bash
-ph login --logout
+ph logout
 ph login  # Login with Member 2's wallet (0xefgh...5678)
 ph access-token --expiry 7d
 ```
@@ -646,7 +646,7 @@ mutation TodoList_createDocument($name: String!) {
 Logout and login as Member 1:
 
 ```bash
-ph login --logout
+ph logout
 ph login  # Login with Member 1's wallet (0xabcd...1234)
 ph access-token --expiry 7d
 ```
@@ -682,7 +682,7 @@ mutation TodoList_createDocument($name: String!) {
 Switch back to Member 2:
 
 ```bash
-ph login --logout
+ph logout
 ph login  # Login with Member 2's wallet
 ph access-token --expiry 7d
 ```
