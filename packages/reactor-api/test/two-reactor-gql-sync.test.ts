@@ -14,7 +14,7 @@ import {
 import { driveDocumentModelModule } from "document-drive";
 import {
   documentModelDocumentModelModule,
-  type DocumentModelModule
+  type DocumentModelModule,
 } from "document-model";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createResolverBridge } from "./utils/gql-resolver-bridge.js";
