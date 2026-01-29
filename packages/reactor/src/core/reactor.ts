@@ -49,7 +49,8 @@ import type {
 } from "./types.js";
 import {
   filterByType,
-  getSharedScope,
+  getSharedActionScope,
+  getSharedOperationScope,
   signAction,
   signActions,
   toErrorInfo,
@@ -106,27 +107,16 @@ export class Reactor implements IReactor {
     this.readModelCoordinator.start();
   }
 
-  /**
-   * Signals that the reactor should shutdown.
-   */
   kill(): ShutdownStatus {
     this.logger.verbose("kill()");
 
-    // Mark the reactor as shutdown
     this.setShutdown(true);
-
-    // Stop the read model coordinator
     this.readModelCoordinator.stop();
-
-    // Stop the job tracker
     this.jobTracker.shutdown();
 
     return this.shutdownStatus;
   }
 
-  /**
-   * Retrieves a list of document model specifications
-   */
   getDocumentModels(
     namespace?: string,
     paging?: PagingOptions,
@@ -138,27 +128,22 @@ export class Reactor implements IReactor {
       paging,
     );
 
-    // Get document model modules from the registry + filter
-    const modules = this.documentModelRegistry.getAllModules();
+    if (signal?.aborted) {
+      throw new AbortError();
+    }
 
+    const modules = this.documentModelRegistry.getAllModules();
     const filteredModels = modules.filter(
       (module: DocumentModelModule) =>
         !namespace || module.documentModel.global.id.startsWith(namespace),
     );
 
-    // Apply paging
     const startIndex = paging ? parseInt(paging.cursor) || 0 : 0;
     const limit = paging?.limit || filteredModels.length;
     const pagedModels = filteredModels.slice(startIndex, startIndex + limit);
 
-    // Create paged results
     const hasMore = startIndex + limit < filteredModels.length;
     const nextCursor = hasMore ? String(startIndex + limit) : undefined;
-
-    // even thought this is currently synchronous, they could have passed in an already-aborted signal
-    if (signal?.aborted) {
-      throw new AbortError();
-    }
 
     return Promise.resolve({
       results: pagedModels,
@@ -175,9 +160,6 @@ export class Reactor implements IReactor {
     });
   }
 
-  /**
-   * Retrieves a specific PHDocument by id
-   */
   async get<TDocument extends PHDocument>(
     id: string,
     view?: ViewFilter,
@@ -194,18 +176,12 @@ export class Reactor implements IReactor {
     );
   }
 
-  /**
-   * Retrieves a specific PHDocument by slug
-   */
   async getBySlug<TDocument extends PHDocument>(
     slug: string,
     view?: ViewFilter,
     consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
-  ): Promise<{
-    document: TDocument;
-    childIds: string[];
-  }> {
+  ): Promise<TDocument> {
     this.logger.verbose("getBySlug(@slug, @view)", slug, view);
 
     const documentId = await this.documentView.resolveSlug(
@@ -219,65 +195,28 @@ export class Reactor implements IReactor {
       throw new Error(`Document not found with slug: ${slug}`);
     }
 
-    const childIds = await this.getChildren(
+    return await this.get<TDocument>(
       documentId,
+      view,
       consistencyToken,
       signal,
     );
-
-    return {
-      document: await this.get<TDocument>(
-        documentId,
-        view,
-        consistencyToken,
-        signal,
-      ),
-      childIds,
-    };
   }
 
-  /**
-   * Retrieves a specific PHDocument by identifier (either id or slug)
-   */
   async getByIdOrSlug<TDocument extends PHDocument>(
     identifier: string,
     view?: ViewFilter,
     consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
-  ): Promise<{
-    document: TDocument;
-    childIds: string[];
-  }> {
+  ): Promise<TDocument> {
     this.logger.verbose("getByIdOrSlug(@identifier, @view)", identifier, view);
 
-    const document = await this.documentView.getByIdOrSlug<TDocument>(
+    return await this.documentView.getByIdOrSlug<TDocument>(
       identifier,
       view,
       consistencyToken,
       signal,
     );
-
-    if (signal?.aborted) {
-      throw new AbortError();
-    }
-
-    const relationships = await this.documentIndexer.getOutgoing(
-      document.header.id,
-      ["child"],
-      consistencyToken,
-      signal,
-    );
-
-    if (signal?.aborted) {
-      throw new AbortError();
-    }
-
-    const childIds = relationships.map((rel) => rel.targetId);
-
-    return {
-      document,
-      childIds,
-    };
   }
 
   async getChildren(
@@ -299,9 +238,25 @@ export class Reactor implements IReactor {
     return relationships.map((rel) => rel.targetId);
   }
 
-  /**
-   * Retrieves the operations for a document
-   */
+  async getParents(
+    childId: string,
+    consistencyToken?: ConsistencyToken,
+    signal?: AbortSignal,
+  ): Promise<string[]> {
+    const relationships = await this.documentIndexer.getIncoming(
+      childId,
+      ["parent"],
+      consistencyToken,
+      signal,
+    );
+
+    if (signal?.aborted) {
+      throw new AbortError();
+    }
+
+    return relationships.map((rel) => rel.sourceId);
+  }
+
   async getOperations(
     documentId: string,
     view?: ViewFilter,
@@ -384,9 +339,6 @@ export class Reactor implements IReactor {
     return result;
   }
 
-  /**
-   * Filters documents by criteria and returns a list of them
-   */
   async find(
     search: SearchFilter,
     view?: ViewFilter,
@@ -455,9 +407,6 @@ export class Reactor implements IReactor {
     return results;
   }
 
-  /**
-   * Creates a document
-   */
   async create(
     document: PHDocument,
     signer?: ISigner,
@@ -505,13 +454,11 @@ export class Reactor implements IReactor {
       initialState: document.state,
     });
 
-    // Sign actions if signer is provided
     let actions: Action[] = [createAction, upgradeAction];
     if (signer) {
       actions = await signActions(actions, signer, signal);
     }
 
-    // Create a single job with both CREATE_DOCUMENT and UPGRADE_DOCUMENT actions
     const job: Job = {
       id: uuidv4(),
       kind: "mutation",
@@ -527,7 +474,6 @@ export class Reactor implements IReactor {
       meta,
     };
 
-    // Create job info and register with tracker
     const jobInfo: JobInfo = {
       id: job.id,
       status: JobStatus.PENDING,
@@ -542,15 +488,11 @@ export class Reactor implements IReactor {
     this.jobTracker.registerJob(jobInfo);
     this.emitJobPending(jobInfo.id, meta);
 
-    // Enqueue the job
     await this.queue.enqueue(job);
 
     return jobInfo;
   }
 
-  /**
-   * Deletes a document
-   */
   async deleteDocument(
     id: string,
     signer?: ISigner,
@@ -566,7 +508,6 @@ export class Reactor implements IReactor {
 
     let action = deleteDocumentAction(id);
 
-    // Sign action if signer is provided
     if (signer) {
       action = await signAction(action, signer, signal);
     }
@@ -605,9 +546,6 @@ export class Reactor implements IReactor {
     return jobInfo;
   }
 
-  /**
-   * Applies a list of actions to a document
-   */
   async execute(
     docId: string,
     branch: string,
@@ -627,11 +565,8 @@ export class Reactor implements IReactor {
     }
 
     const createdAtUtcIso = new Date().toISOString();
+    const scope = getSharedActionScope(actions);
 
-    // Determine scope from first action (all actions should have the same scope)
-    const scope = actions.length > 0 ? actions[0].scope || "global" : "global";
-
-    // Create a single job with all actions
     const job: Job = {
       id: uuidv4(),
       kind: "mutation",
@@ -647,7 +582,6 @@ export class Reactor implements IReactor {
       meta,
     };
 
-    // Create job info and register with tracker
     const jobInfo: JobInfo = {
       id: job.id,
       status: JobStatus.PENDING,
@@ -662,7 +596,6 @@ export class Reactor implements IReactor {
     this.jobTracker.registerJob(jobInfo);
     this.emitJobPending(jobInfo.id, meta);
 
-    // Enqueue the job
     await this.queue.enqueue(job);
 
     if (signal?.aborted) {
@@ -672,11 +605,6 @@ export class Reactor implements IReactor {
     return jobInfo;
   }
 
-  /**
-   * Imports pre-existing operations that were produced by another reactor.
-   * This function may cause a reshuffle, which will generate additional
-   * operations.
-   */
   async load(
     docId: string,
     branch: string,
@@ -700,8 +628,9 @@ export class Reactor implements IReactor {
       throw new Error("load requires at least one operation");
     }
 
-    // validate the operations
-    const scope = getSharedScope(operations);
+    const scope = getSharedOperationScope(operations);
+
+    // TODO: is this necessary?
     operations.forEach((operation, index) => {
       if (!operation.timestampUtcMs) {
         throw new Error(
@@ -749,9 +678,6 @@ export class Reactor implements IReactor {
     return jobInfo;
   }
 
-  /**
-   * Applies multiple mutations across documents with dependency management
-   */
   async executeBatch(
     request: BatchExecutionRequest,
     signal?: AbortSignal,
@@ -841,9 +767,6 @@ export class Reactor implements IReactor {
     return result;
   }
 
-  /**
-   * Adds multiple documents as children to another
-   */
   async addChildren(
     parentId: string,
     documentIds: string[],
@@ -866,7 +789,6 @@ export class Reactor implements IReactor {
       addRelationshipAction(parentId, childId, "child"),
     );
 
-    // Sign actions if signer is provided
     if (signer) {
       actions = await signActions(actions, signer, signal);
     }
@@ -874,9 +796,6 @@ export class Reactor implements IReactor {
     return await this.execute(parentId, branch, actions, signal);
   }
 
-  /**
-   * Removes multiple documents as children from another
-   */
   async removeChildren(
     parentId: string,
     documentIds: string[],
@@ -899,7 +818,6 @@ export class Reactor implements IReactor {
       removeRelationshipAction(parentId, childId, "child"),
     );
 
-    // Sign actions if signer is provided
     if (signer) {
       actions = await signActions(actions, signer, signal);
     }
@@ -907,9 +825,6 @@ export class Reactor implements IReactor {
     return await this.execute(parentId, branch, actions, signal);
   }
 
-  /**
-   * Retrieves the status of a job
-   */
   getJobStatus(jobId: string, signal?: AbortSignal): Promise<JobInfo> {
     this.logger.verbose("getJobStatus(@jobId)", jobId);
 
@@ -920,7 +835,6 @@ export class Reactor implements IReactor {
     const jobInfo = this.jobTracker.getJobStatus(jobId);
 
     if (!jobInfo) {
-      // Job not found - return FAILED status with appropriate error
       const now = new Date().toISOString();
       return Promise.resolve({
         id: jobId,
@@ -939,9 +853,6 @@ export class Reactor implements IReactor {
     return Promise.resolve(jobInfo);
   }
 
-  /**
-   * Finds documents by their IDs
-   */
   private async findByIds(
     ids: string[],
     view?: ViewFilter,
@@ -961,7 +872,6 @@ export class Reactor implements IReactor {
 
     const documents: PHDocument[] = [];
 
-    // Fetch each document by ID using documentView
     for (const id of ids) {
       if (signal?.aborted) {
         throw new AbortError();
@@ -976,7 +886,6 @@ export class Reactor implements IReactor {
         );
         documents.push(document);
       } catch {
-        // Skip documents that don't exist or can't be accessed
         continue;
       }
     }
@@ -985,12 +894,10 @@ export class Reactor implements IReactor {
       throw new AbortError();
     }
 
-    // Apply paging
     const startIndex = paging ? parseInt(paging.cursor) || 0 : 0;
     const limit = paging?.limit || documents.length;
     const pagedDocuments = documents.slice(startIndex, startIndex + limit);
 
-    // Create paged results
     const hasMore = startIndex + limit < documents.length;
     const nextCursor = hasMore ? String(startIndex + limit) : undefined;
 
@@ -1011,9 +918,6 @@ export class Reactor implements IReactor {
     };
   }
 
-  /**
-   * Finds documents by their slugs
-   */
   private async findBySlugs(
     slugs: string[],
     view?: ViewFilter,
@@ -1033,7 +937,6 @@ export class Reactor implements IReactor {
 
     const documents: PHDocument[] = [];
 
-    // Resolve each slug to a document ID
     const documentIds: string[] = [];
     for (const slug of slugs) {
       if (signal?.aborted) {
@@ -1052,7 +955,6 @@ export class Reactor implements IReactor {
       }
     }
 
-    // Fetch each document
     for (const documentId of documentIds) {
       if (signal?.aborted) {
         throw new AbortError();
@@ -1067,7 +969,6 @@ export class Reactor implements IReactor {
         );
         documents.push(document);
       } catch {
-        // Skip documents that don't exist or can't be accessed
         continue;
       }
     }
@@ -1076,12 +977,10 @@ export class Reactor implements IReactor {
       throw new AbortError();
     }
 
-    // Apply paging
     const startIndex = paging ? parseInt(paging.cursor) || 0 : 0;
     const limit = paging?.limit || documents.length;
     const pagedDocuments = documents.slice(startIndex, startIndex + limit);
 
-    // Create paged results
     const hasMore = startIndex + limit < documents.length;
     const nextCursor = hasMore ? String(startIndex + limit) : undefined;
 
@@ -1102,9 +1001,6 @@ export class Reactor implements IReactor {
     };
   }
 
-  /**
-   * Finds documents by parent ID
-   */
   private async findByParentId(
     parentId: string,
     view?: ViewFilter,
@@ -1113,7 +1009,6 @@ export class Reactor implements IReactor {
   ): Promise<PagedResults<PHDocument>> {
     this.logger.verbose("findByParentId(@parentId)", parentId);
 
-    // Get child relationships from indexer
     const relationships = await this.documentIndexer.getOutgoing(
       parentId,
       ["child"],
@@ -1127,7 +1022,6 @@ export class Reactor implements IReactor {
 
     const documents: PHDocument[] = [];
 
-    // Fetch each child document using the appropriate storage method
     for (const relationship of relationships) {
       if (signal?.aborted) {
         throw new AbortError();
@@ -1143,7 +1037,6 @@ export class Reactor implements IReactor {
 
         documents.push(document);
       } catch {
-        // Skip documents that don't exist or can't be accessed
         continue;
       }
     }
@@ -1152,12 +1045,10 @@ export class Reactor implements IReactor {
       throw new AbortError();
     }
 
-    // Apply paging
     const startIndex = paging ? parseInt(paging.cursor) || 0 : 0;
     const limit = paging?.limit || documents.length;
     const pagedDocuments = documents.slice(startIndex, startIndex + limit);
 
-    // Create paged results
     const hasMore = startIndex + limit < documents.length;
     const nextCursor = hasMore ? String(startIndex + limit) : undefined;
 
@@ -1177,9 +1068,6 @@ export class Reactor implements IReactor {
     };
   }
 
-  /**
-   * Finds documents by type
-   */
   private async findByType(
     type: string,
     view?: ViewFilter,

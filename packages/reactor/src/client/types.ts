@@ -97,10 +97,7 @@ export interface IReactorClient {
     identifier: string,
     view?: ViewFilter,
     signal?: AbortSignal,
-  ): Promise<{
-    document: TDocument;
-    childIds: string[];
-  }>;
+  ): Promise<TDocument>;
 
   /**
    * Retrieves operations for a document.

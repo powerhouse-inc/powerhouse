@@ -121,10 +121,7 @@ export class ReactorClient implements IReactorClient {
     identifier: string,
     view?: ViewFilter,
     signal?: AbortSignal,
-  ): Promise<{
-    document: TDocument;
-    childIds: string[];
-  }> {
+  ): Promise<TDocument> {
     this.logger.verbose("get(@identifier, @view)", identifier, view);
     return await this.reactor.getByIdOrSlug<TDocument>(
       identifier,
@@ -152,13 +149,16 @@ export class ReactorClient implements IReactorClient {
       paging,
     );
 
+    // TODO: Use document-view to resolve the slug, rather than getting the entire document
+
     const doc = await this.reactor.getByIdOrSlug(
       documentIdentifier,
       view,
       undefined,
       signal,
     );
-    const documentId = doc.document.header.id;
+
+    const documentId = doc.header.id;
 
     const operationsByScope = await this.reactor.getOperations(
       documentId,
@@ -199,13 +199,16 @@ export class ReactorClient implements IReactorClient {
       view,
       paging,
     );
+
+    // TODO: Use document-view to resolve the slug, rather than getting the entire document
+
     const parentDoc = await this.reactor.getByIdOrSlug(
       parentIdentifier,
       view,
       undefined,
       signal,
     );
-    const parentId = parentDoc.document.header.id;
+    const parentId = parentDoc.header.id;
 
     const relationships = await this.documentIndexer.getOutgoing(
       parentId,
@@ -247,13 +250,16 @@ export class ReactorClient implements IReactorClient {
       view,
       paging,
     );
+
+    // TODO: Use document-view to resolve the slug, rather than getting the entire document
+
     const childDoc = await this.reactor.getByIdOrSlug(
       childIdentifier,
       view,
       undefined,
       signal,
     );
-    const childId = childDoc.document.header.id;
+    const childId = childDoc.header.id;
 
     const relationships = await this.documentIndexer.getIncoming(
       childId,
@@ -523,7 +529,7 @@ export class ReactorClient implements IReactorClient {
       completedJob.consistencyToken,
       signal,
     );
-    return result.document;
+    return result;
   }
 
   /**
@@ -609,7 +615,7 @@ export class ReactorClient implements IReactorClient {
       completedJob.consistencyToken,
       signal,
     );
-    return result.document;
+    return result;
   }
 
   /**
@@ -647,7 +653,7 @@ export class ReactorClient implements IReactorClient {
       completedJob.consistencyToken,
       signal,
     );
-    return result.document;
+    return result;
   }
 
   /**
@@ -713,8 +719,8 @@ export class ReactorClient implements IReactorClient {
     );
 
     return {
-      source: sourceResult.document,
-      target: targetResult.document,
+      source: sourceResult,
+      target: targetResult,
     };
   }
 

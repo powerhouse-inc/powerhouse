@@ -132,10 +132,7 @@ export interface IReactor {
     view?: ViewFilter,
     consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
-  ): Promise<{
-    document: TDocument;
-    childIds: string[];
-  }>;
+  ): Promise<TDocument>;
 
   /**
    * Retrieves a specific PHDocument by identifier (either id or slug).
@@ -153,10 +150,7 @@ export interface IReactor {
     view?: ViewFilter,
     consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
-  ): Promise<{
-    document: TDocument;
-    childIds: string[];
-  }>;
+  ): Promise<TDocument>;
 
   /**
    * Retrieves the children of a document
@@ -168,6 +162,20 @@ export interface IReactor {
    */
   getChildren(
     parentId: string,
+    consistencyToken?: ConsistencyToken,
+    signal?: AbortSignal,
+  ): Promise<string[]>;
+
+  /**
+   * Retrieves the parents of a document
+   *
+   * @param childId - The child document id
+   * @param consistencyToken - Optional token for read-after-write consistency
+   * @param signal - Optional abort signal to cancel the request
+   * @returns The list of parent document ids
+   */
+  getParents(
+    childId: string,
     consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
   ): Promise<string[]>;
