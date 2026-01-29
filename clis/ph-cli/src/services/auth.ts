@@ -17,49 +17,6 @@ export interface StoredCredentials {
   authenticatedAt: string;
   renownUrl: string;
 }
-// /**
-//  * Load stored credentials from disk
-//  */
-// export function loadCredentials(): StoredCredentials | null {
-//   try {
-//     if (!existsSync(AUTH_PATH)) {
-//       return null;
-//     }
-//     const content = readFileSync(AUTH_PATH, "utf-8");
-//     return JSON.parse(content) as StoredCredentials;
-//   } catch {
-//     return null;
-//   }
-// }
-
-// /**
-//  * Save credentials to disk (in current working directory)
-//  */
-// export function saveCredentials(credentials: StoredCredentials): void {
-//   writeFileSync(AUTH_PATH, JSON.stringify(credentials, null, 2), "utf-8");
-// }
-
-// /**
-//  * Clear stored credentials
-//  */
-// export function clearCredentials(): boolean {
-//   try {
-//     if (existsSync(AUTH_PATH)) {
-//       writeFileSync(AUTH_PATH, "{}", "utf-8");
-//     }
-//     return true;
-//   } catch {
-//     return false;
-//   }
-// }
-
-// /**
-//  * Check if user is currently authenticated
-//  */
-// export function isAuthenticated(): boolean {
-//   const creds = loadCredentials();
-//   return creds !== null && !!creds.credentialId;
-// }
 
 /**
  * Generate a UUID v4 for session IDs
