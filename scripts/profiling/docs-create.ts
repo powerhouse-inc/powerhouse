@@ -197,7 +197,6 @@ async function performOperations(
   documentId: string,
   docIndex: number,
   operationCount: number,
-  totalDocs: number,
   onProgress: (opNum: number, action: object, durationMs: number) => void,
 ): Promise<OperationsResult> {
   let minOp: OperationTiming | null = null;
@@ -448,7 +447,6 @@ async function main() {
           docId,
           docNum,
           operations,
-          docCount,
           (opNum, action, durationMs) => {
             if (verbose) {
               console.log(
