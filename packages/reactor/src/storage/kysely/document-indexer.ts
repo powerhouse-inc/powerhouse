@@ -1,6 +1,7 @@
 import type { Operation } from "document-model";
 import type { Kysely } from "kysely";
 import { v4 as uuidv4 } from "uuid";
+import { collectAllPages } from "../../shared/collect-all-pages.js";
 import type { IConsistencyTracker } from "../../shared/consistency-tracker.js";
 import type {
   ConsistencyCoordinate,
@@ -448,15 +449,16 @@ export class KyselyDocumentIndexer implements IDocumentIndexer {
 
       visited.add(current.id);
 
-      const outgoing = await this.getOutgoing(
+      const outgoingPage = await this.getOutgoing(
         current.id,
         types,
         undefined,
         consistencyToken,
         signal,
       );
+      const outgoingRelationships = await collectAllPages(outgoingPage, signal);
 
-      for (const rel of outgoing.results) {
+      for (const rel of outgoingRelationships) {
         if (!visited.has(rel.targetId)) {
           queue.push({
             id: rel.targetId,
@@ -497,16 +499,16 @@ export class KyselyDocumentIndexer implements IDocumentIndexer {
 
       visited.add(currentId);
 
-      const incoming = await this.getIncoming(
+      const incomingPage = await this.getIncoming(
         currentId,
         types,
-        // todo: this should page and loop
-        { cursor: "0", limit: 10000 },
+        undefined,
         consistencyToken,
         signal,
       );
+      const incomingRelationships = await collectAllPages(incomingPage, signal);
 
-      for (const rel of incoming.results) {
+      for (const rel of incomingRelationships) {
         nodes.add(rel.sourceId);
         edges.push({
           from: rel.sourceId,
