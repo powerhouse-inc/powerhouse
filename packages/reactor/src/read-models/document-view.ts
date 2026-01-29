@@ -329,57 +329,13 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
     consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
   ): Promise<TDocument> {
-    if (consistencyToken) {
-      await this.waitForConsistency(consistencyToken, undefined, signal);
-    }
-
-    if (signal?.aborted) {
-      throw new Error("Operation aborted");
-    }
-
-    const branch = view?.branch || "main";
-
-    const idCheckPromise = this._db
-      .selectFrom("DocumentSnapshot")
-      .select("documentId")
-      .where("documentId", "=", identifier)
-      .where("branch", "=", branch)
-      .where("isDeleted", "=", false)
-      .executeTakeFirst();
-
-    const slugCheckPromise = this._db
-      .selectFrom("SlugMapping")
-      .select("documentId")
-      .where("slug", "=", identifier)
-      .where("branch", "=", branch)
-      .executeTakeFirst();
-
-    const [idMatch, slugMatch] = await Promise.all([
-      idCheckPromise,
-      slugCheckPromise,
-    ]);
-
-    if (signal?.aborted) {
-      throw new Error("Operation aborted");
-    }
-
-    const idMatchDocId = idMatch?.documentId;
-    const slugMatchDocId = slugMatch?.documentId;
-
-    if (idMatchDocId && slugMatchDocId && idMatchDocId !== slugMatchDocId) {
-      throw new Error(
-        `Ambiguous identifier "${identifier}": matches both document ID "${idMatchDocId}" and slug for document ID "${slugMatchDocId}". ` +
-          `Please use get() for ID or resolveSlug() + get() for slug to be explicit.`,
-      );
-    }
-
-    const resolvedDocumentId = idMatchDocId || slugMatchDocId;
-
-    if (!resolvedDocumentId) {
-      throw new Error(`Document not found: ${identifier}`);
-    }
-
-    return this.get<TDocument>(resolvedDocumentId, view, undefined, signal);
+    const documentId = await this.resolveIdOrSlug(
+      identifier,
+      view,
+      consistencyToken,
+      signal,
+    );
+    return this.get<TDocument>(documentId, view, undefined, signal);
   }
 
   async findByType(
@@ -505,5 +461,64 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
     }
 
     return mapping.documentId;
+  }
+
+  async resolveIdOrSlug(
+    identifier: string,
+    view?: ViewFilter,
+    consistencyToken?: ConsistencyToken,
+    signal?: AbortSignal,
+  ): Promise<string> {
+    if (consistencyToken) {
+      await this.waitForConsistency(consistencyToken, undefined, signal);
+    }
+
+    if (signal?.aborted) {
+      throw new Error("Operation aborted");
+    }
+
+    const branch = view?.branch || "main";
+
+    const idCheckPromise = this._db
+      .selectFrom("DocumentSnapshot")
+      .select("documentId")
+      .where("documentId", "=", identifier)
+      .where("branch", "=", branch)
+      .where("isDeleted", "=", false)
+      .executeTakeFirst();
+
+    const slugCheckPromise = this._db
+      .selectFrom("SlugMapping")
+      .select("documentId")
+      .where("slug", "=", identifier)
+      .where("branch", "=", branch)
+      .executeTakeFirst();
+
+    const [idMatch, slugMatch] = await Promise.all([
+      idCheckPromise,
+      slugCheckPromise,
+    ]);
+
+    if (signal?.aborted) {
+      throw new Error("Operation aborted");
+    }
+
+    const idMatchDocId = idMatch?.documentId;
+    const slugMatchDocId = slugMatch?.documentId;
+
+    if (idMatchDocId && slugMatchDocId && idMatchDocId !== slugMatchDocId) {
+      throw new Error(
+        `Ambiguous identifier "${identifier}": matches both document ID "${idMatchDocId}" and slug for document ID "${slugMatchDocId}". ` +
+          `Please use get() for ID or resolveSlug() + get() for slug to be explicit.`,
+      );
+    }
+
+    const resolvedDocumentId = idMatchDocId || slugMatchDocId;
+
+    if (!resolvedDocumentId) {
+      throw new Error(`Document not found: ${identifier}`);
+    }
+
+    return resolvedDocumentId;
   }
 }

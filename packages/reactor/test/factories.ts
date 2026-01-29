@@ -812,6 +812,9 @@ export function createMockDocumentView(): IDocumentView {
       hasMore: false,
     }),
     resolveSlug: vi.fn().mockResolvedValue(undefined),
+    resolveIdOrSlug: vi.fn().mockImplementation((identifier: string) => {
+      return Promise.resolve(identifier);
+    }),
   };
 }
 

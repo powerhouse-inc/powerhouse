@@ -304,6 +304,25 @@ export interface IDocumentView {
     consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
   ): Promise<string | undefined>;
+
+  /**
+   * Resolves an identifier (either id or slug) to a document ID.
+   * This is a lightweight alternative to getByIdOrSlug that returns just the ID
+   * without fetching the full document.
+   *
+   * @param identifier - The id or slug to resolve
+   * @param view - Optional filter containing branch and scopes information
+   * @param consistencyToken - Optional token for read-after-write consistency
+   * @param signal - Optional abort signal to cancel the request
+   * @returns The document ID
+   * @throws {Error} If document not found or identifier matches both an ID and slug referring to different documents
+   */
+  resolveIdOrSlug(
+    identifier: string,
+    view?: ViewFilter,
+    consistencyToken?: ConsistencyToken,
+    signal?: AbortSignal,
+  ): Promise<string>;
 }
 
 export type DocumentRelationship = {

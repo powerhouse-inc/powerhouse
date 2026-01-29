@@ -15,11 +15,15 @@ import {
   type JobInfo,
   type PagedResults,
 } from "../../src/shared/types.js";
-import type { IDocumentIndexer } from "../../src/storage/interfaces.js";
+import type {
+  IDocumentIndexer,
+  IDocumentView,
+} from "../../src/storage/interfaces.js";
 import type { IReactorSubscriptionManager } from "../../src/subs/types.js";
 import {
   createEmptyConsistencyToken,
   createMockDocumentIndexer,
+  createMockDocumentView,
   createMockJobAwaiter,
   createMockLogger,
   createMockSigner,
@@ -33,9 +37,11 @@ describe("ReactorClient Unit Tests", () => {
   let mockSubscriptionManager: IReactorSubscriptionManager;
   let mockJobAwaiter: IJobAwaiter;
   let mockDocumentIndexer: IDocumentIndexer;
+  let mockDocumentView: IDocumentView;
 
   beforeEach(() => {
     mockDocumentIndexer = createMockDocumentIndexer();
+    mockDocumentView = createMockDocumentView();
 
     mockReactor = {
       documentIndexer: mockDocumentIndexer,
@@ -46,6 +52,7 @@ describe("ReactorClient Unit Tests", () => {
       get: vi.fn(),
       getBySlug: vi.fn(),
       getByIdOrSlug: vi.fn(),
+      getOperations: vi.fn().mockResolvedValue({}),
       find: vi.fn().mockResolvedValue({
         results: [],
         options: { cursor: "", limit: 10 },
@@ -71,6 +78,7 @@ describe("ReactorClient Unit Tests", () => {
       mockSubscriptionManager,
       mockJobAwaiter,
       mockDocumentIndexer,
+      mockDocumentView,
     );
   });
 
@@ -198,6 +206,131 @@ describe("ReactorClient Unit Tests", () => {
         search,
         view,
         paging,
+        undefined,
+        signal,
+      );
+    });
+  });
+
+  describe("getOperations", () => {
+    it("should use documentView.resolveIdOrSlug to resolve the identifier", async () => {
+      vi.mocked(mockDocumentView.resolveIdOrSlug).mockResolvedValue(
+        "resolved-doc-id",
+      );
+      vi.mocked(mockReactor.getOperations).mockResolvedValue({});
+
+      await client.getOperations("my-slug");
+
+      expect(mockDocumentView.resolveIdOrSlug).toHaveBeenCalledWith(
+        "my-slug",
+        undefined,
+        undefined,
+        undefined,
+      );
+      expect(mockReactor.getOperations).toHaveBeenCalledWith(
+        "resolved-doc-id",
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+      );
+    });
+
+    it("should pass view and signal to resolveIdOrSlug", async () => {
+      const view = { branch: "feature" };
+      const signal = new AbortController().signal;
+
+      vi.mocked(mockDocumentView.resolveIdOrSlug).mockResolvedValue("doc-1");
+      vi.mocked(mockReactor.getOperations).mockResolvedValue({});
+
+      await client.getOperations("doc-1", view, undefined, undefined, signal);
+
+      expect(mockDocumentView.resolveIdOrSlug).toHaveBeenCalledWith(
+        "doc-1",
+        view,
+        undefined,
+        signal,
+      );
+    });
+  });
+
+  describe("getChildren", () => {
+    it("should use documentView.resolveIdOrSlug to resolve the parent identifier", async () => {
+      vi.mocked(mockDocumentView.resolveIdOrSlug).mockResolvedValue(
+        "resolved-parent-id",
+      );
+      vi.mocked(mockDocumentIndexer.getOutgoing).mockResolvedValue([]);
+
+      await client.getChildren("parent-slug");
+
+      expect(mockDocumentView.resolveIdOrSlug).toHaveBeenCalledWith(
+        "parent-slug",
+        undefined,
+        undefined,
+        undefined,
+      );
+      expect(mockDocumentIndexer.getOutgoing).toHaveBeenCalledWith(
+        "resolved-parent-id",
+        undefined,
+        undefined,
+        undefined,
+      );
+    });
+
+    it("should pass view and signal to resolveIdOrSlug", async () => {
+      const view = { branch: "feature" };
+      const signal = new AbortController().signal;
+
+      vi.mocked(mockDocumentView.resolveIdOrSlug).mockResolvedValue("parent-1");
+      vi.mocked(mockDocumentIndexer.getOutgoing).mockResolvedValue([]);
+
+      await client.getChildren("parent-1", view, undefined, signal);
+
+      expect(mockDocumentView.resolveIdOrSlug).toHaveBeenCalledWith(
+        "parent-1",
+        view,
+        undefined,
+        signal,
+      );
+    });
+  });
+
+  describe("getParents", () => {
+    it("should use documentView.resolveIdOrSlug to resolve the child identifier", async () => {
+      vi.mocked(mockDocumentView.resolveIdOrSlug).mockResolvedValue(
+        "resolved-child-id",
+      );
+      vi.mocked(mockDocumentIndexer.getIncoming).mockResolvedValue([]);
+
+      await client.getParents("child-slug");
+
+      expect(mockDocumentView.resolveIdOrSlug).toHaveBeenCalledWith(
+        "child-slug",
+        undefined,
+        undefined,
+        undefined,
+      );
+      expect(mockDocumentIndexer.getIncoming).toHaveBeenCalledWith(
+        "resolved-child-id",
+        undefined,
+        undefined,
+        undefined,
+      );
+    });
+
+    it("should pass view and signal to resolveIdOrSlug", async () => {
+      const view = { branch: "feature" };
+      const signal = new AbortController().signal;
+
+      vi.mocked(mockDocumentView.resolveIdOrSlug).mockResolvedValue("child-1");
+      vi.mocked(mockDocumentIndexer.getIncoming).mockResolvedValue([]);
+
+      await client.getParents("child-1", view, undefined, signal);
+
+      expect(mockDocumentView.resolveIdOrSlug).toHaveBeenCalledWith(
+        "child-1",
+        view,
         undefined,
         signal,
       );

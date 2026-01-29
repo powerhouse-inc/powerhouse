@@ -411,6 +411,7 @@ export interface ReactorClientModule {
   reactor: IReactor;
   eventBus: IEventBus;
   documentIndexer: IDocumentIndexer;
+  documentView: IDocumentView;
   signer: ISigner;
   subscriptionManager: IReactorSubscriptionManager;
   jobAwaiter: IJobAwaiter;

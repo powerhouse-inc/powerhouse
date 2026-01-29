@@ -30,6 +30,7 @@ import {
 } from "../shared/types.js";
 import type {
   IDocumentIndexer,
+  IDocumentView,
   OperationFilter,
 } from "../storage/interfaces.js";
 import type { IReactorSubscriptionManager } from "../subs/types.js";
@@ -57,6 +58,7 @@ export class ReactorClient implements IReactorClient {
   private subscriptionManager: IReactorSubscriptionManager;
   private jobAwaiter: IJobAwaiter;
   private documentIndexer: IDocumentIndexer;
+  private documentView: IDocumentView;
 
   constructor(
     logger: ILogger,
@@ -65,6 +67,7 @@ export class ReactorClient implements IReactorClient {
     subscriptionManager: IReactorSubscriptionManager,
     jobAwaiter: IJobAwaiter,
     documentIndexer: IDocumentIndexer,
+    documentView: IDocumentView,
   ) {
     this.logger = logger;
     this.reactor = reactor;
@@ -72,6 +75,7 @@ export class ReactorClient implements IReactorClient {
     this.subscriptionManager = subscriptionManager;
     this.jobAwaiter = jobAwaiter;
     this.documentIndexer = documentIndexer;
+    this.documentView = documentView;
     this.logger.verbose("ReactorClient initialized");
   }
 
@@ -149,16 +153,12 @@ export class ReactorClient implements IReactorClient {
       paging,
     );
 
-    // TODO: Use document-view to resolve the slug, rather than getting the entire document
-
-    const doc = await this.reactor.getByIdOrSlug(
+    const documentId = await this.documentView.resolveIdOrSlug(
       documentIdentifier,
       view,
       undefined,
       signal,
     );
-
-    const documentId = doc.header.id;
 
     const operationsByScope = await this.reactor.getOperations(
       documentId,
@@ -200,15 +200,12 @@ export class ReactorClient implements IReactorClient {
       paging,
     );
 
-    // TODO: Use document-view to resolve the slug, rather than getting the entire document
-
-    const parentDoc = await this.reactor.getByIdOrSlug(
+    const parentId = await this.documentView.resolveIdOrSlug(
       parentIdentifier,
       view,
       undefined,
       signal,
     );
-    const parentId = parentDoc.header.id;
 
     const relationships = await this.documentIndexer.getOutgoing(
       parentId,
@@ -251,15 +248,12 @@ export class ReactorClient implements IReactorClient {
       paging,
     );
 
-    // TODO: Use document-view to resolve the slug, rather than getting the entire document
-
-    const childDoc = await this.reactor.getByIdOrSlug(
+    const childId = await this.documentView.resolveIdOrSlug(
       childIdentifier,
       view,
       undefined,
       signal,
     );
-    const childId = childDoc.header.id;
 
     const relationships = await this.documentIndexer.getIncoming(
       childId,
