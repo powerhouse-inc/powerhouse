@@ -206,7 +206,7 @@ The Reactor API exposes a GraphQL interface for all operations. When `DOCUMENT_P
 All GraphQL operations below require:
 
 1. A valid bearer token from `ph access-token`
-2. The token included in the `Authorization` header followed by 'Bearer <token>'
+2. The token included in the `Authorization` header followed by 'Bearer &lt;token&gt;'
 3. The Reactor API running with both `AUTH_ENABLED=true` and `DOCUMENT_PERMISSIONS_ENABLED=true` as variables
    :::
 
