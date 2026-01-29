@@ -127,7 +127,6 @@ export {
 
 // Storage
 export type { Database } from "./core/types.js";
-export { ConsistencyAwareLegacyStorage } from "./storage/consistency-aware-legacy-storage.js";
 export {
   DuplicateOperationError,
   OptimisticLockError,
@@ -137,7 +136,6 @@ export {
   type DocumentRelationship,
   type DocumentRevisions,
   type DocumentSnapshot,
-  type IConsistencyAwareStorage,
   type IDocumentGraph,
   type IDocumentIndexer,
   type IDocumentView,

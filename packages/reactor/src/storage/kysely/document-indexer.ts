@@ -5,6 +5,8 @@ import type { IConsistencyTracker } from "../../shared/consistency-tracker.js";
 import type {
   ConsistencyCoordinate,
   ConsistencyToken,
+  PagedResults,
+  PagingOptions,
 } from "../../shared/types.js";
 import type {
   DocumentGraphEdge,
@@ -15,9 +17,9 @@ import type {
   OperationWithContext,
 } from "../interfaces.js";
 import type {
-  Database as StorageDatabase,
   DocumentIndexerDatabase,
   InsertableDocumentRelationship,
+  Database as StorageDatabase,
 } from "./types.js";
 
 type Database = StorageDatabase & DocumentIndexerDatabase;
@@ -117,15 +119,19 @@ export class KyselyDocumentIndexer implements IDocumentIndexer {
   async getOutgoing(
     documentId: string,
     types?: string[],
+    paging?: PagingOptions,
     consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
-  ): Promise<DocumentRelationship[]> {
+  ): Promise<PagedResults<DocumentRelationship>> {
     if (consistencyToken) {
       await this.waitForConsistency(consistencyToken, undefined, signal);
     }
     if (signal?.aborted) {
       throw new Error("Operation aborted");
     }
+
+    const startIndex = paging?.cursor ? parseInt(paging.cursor) : 0;
+    const limit = paging?.limit || 100;
 
     let query = this.db
       .selectFrom("DocumentRelationship")
@@ -136,26 +142,50 @@ export class KyselyDocumentIndexer implements IDocumentIndexer {
       query = query.where("relationshipType", "in", types);
     }
 
-    const rows = await query.execute();
+    const rows = await query
+      .orderBy("createdAt", "asc")
+      .orderBy("id", "asc")
+      .offset(startIndex)
+      .limit(limit + 1)
+      .execute();
 
-    return rows.map((row) => ({
-      sourceId: row.sourceId,
-      targetId: row.targetId,
-      relationshipType: row.relationshipType,
-      metadata: row.metadata
-        ? (row.metadata as Record<string, unknown>)
+    const hasMore = rows.length > limit;
+    const results = hasMore ? rows.slice(0, limit) : rows;
+    const nextCursor = hasMore ? String(startIndex + limit) : undefined;
+
+    return {
+      results: results.map((row) => ({
+        sourceId: row.sourceId,
+        targetId: row.targetId,
+        relationshipType: row.relationshipType,
+        metadata: row.metadata
+          ? (row.metadata as Record<string, unknown>)
+          : undefined,
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt,
+      })),
+      options: paging || { cursor: "0", limit: 100 },
+      nextCursor,
+      next: hasMore
+        ? () =>
+            this.getOutgoing(
+              documentId,
+              types,
+              { cursor: nextCursor!, limit },
+              consistencyToken,
+              signal,
+            )
         : undefined,
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
-    }));
+    };
   }
 
   async getIncoming(
     documentId: string,
     types?: string[],
+    paging?: PagingOptions,
     consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
-  ): Promise<DocumentRelationship[]> {
+  ): Promise<PagedResults<DocumentRelationship>> {
     if (consistencyToken) {
       await this.waitForConsistency(consistencyToken, undefined, signal);
     }
@@ -163,6 +193,9 @@ export class KyselyDocumentIndexer implements IDocumentIndexer {
     if (signal?.aborted) {
       throw new Error("Operation aborted");
     }
+
+    const startIndex = paging?.cursor ? parseInt(paging.cursor) : 0;
+    const limit = paging?.limit || 100;
 
     let query = this.db
       .selectFrom("DocumentRelationship")
@@ -173,18 +206,41 @@ export class KyselyDocumentIndexer implements IDocumentIndexer {
       query = query.where("relationshipType", "in", types);
     }
 
-    const rows = await query.execute();
+    const rows = await query
+      .orderBy("createdAt", "asc")
+      .orderBy("id", "asc")
+      .offset(startIndex)
+      .limit(limit + 1)
+      .execute();
 
-    return rows.map((row) => ({
-      sourceId: row.sourceId,
-      targetId: row.targetId,
-      relationshipType: row.relationshipType,
-      metadata: row.metadata
-        ? (row.metadata as Record<string, unknown>)
+    const hasMore = rows.length > limit;
+    const results = hasMore ? rows.slice(0, limit) : rows;
+    const nextCursor = hasMore ? String(startIndex + limit) : undefined;
+
+    return {
+      results: results.map((row) => ({
+        sourceId: row.sourceId,
+        targetId: row.targetId,
+        relationshipType: row.relationshipType,
+        metadata: row.metadata
+          ? (row.metadata as Record<string, unknown>)
+          : undefined,
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt,
+      })),
+      options: paging || { cursor: "0", limit: 100 },
+      nextCursor,
+      next: hasMore
+        ? () =>
+            this.getIncoming(
+              documentId,
+              types,
+              { cursor: nextCursor!, limit },
+              consistencyToken,
+              signal,
+            )
         : undefined,
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
-    }));
+    };
   }
 
   async hasRelationship(
@@ -221,9 +277,10 @@ export class KyselyDocumentIndexer implements IDocumentIndexer {
     a: string,
     b: string,
     types?: string[],
+    paging?: PagingOptions,
     consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
-  ): Promise<DocumentRelationship[]> {
+  ): Promise<PagedResults<DocumentRelationship>> {
     if (consistencyToken) {
       await this.waitForConsistency(consistencyToken, undefined, signal);
     }
@@ -231,6 +288,9 @@ export class KyselyDocumentIndexer implements IDocumentIndexer {
     if (signal?.aborted) {
       throw new Error("Operation aborted");
     }
+
+    const startIndex = paging?.cursor ? parseInt(paging.cursor) : 0;
+    const limit = paging?.limit || 100;
 
     let query = this.db
       .selectFrom("DocumentRelationship")
@@ -246,27 +306,52 @@ export class KyselyDocumentIndexer implements IDocumentIndexer {
       query = query.where("relationshipType", "in", types);
     }
 
-    const rows = await query.execute();
+    const rows = await query
+      .orderBy("createdAt", "asc")
+      .orderBy("id", "asc")
+      .offset(startIndex)
+      .limit(limit + 1)
+      .execute();
 
-    return rows.map((row) => ({
-      sourceId: row.sourceId,
-      targetId: row.targetId,
-      relationshipType: row.relationshipType,
-      metadata: row.metadata
-        ? (row.metadata as Record<string, unknown>)
+    const hasMore = rows.length > limit;
+    const results = hasMore ? rows.slice(0, limit) : rows;
+    const nextCursor = hasMore ? String(startIndex + limit) : undefined;
+
+    return {
+      results: results.map((row) => ({
+        sourceId: row.sourceId,
+        targetId: row.targetId,
+        relationshipType: row.relationshipType,
+        metadata: row.metadata
+          ? (row.metadata as Record<string, unknown>)
+          : undefined,
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt,
+      })),
+      options: paging || { cursor: "0", limit: 100 },
+      nextCursor,
+      next: hasMore
+        ? () =>
+            this.getUndirectedRelationships(
+              a,
+              b,
+              types,
+              { cursor: nextCursor!, limit },
+              consistencyToken,
+              signal,
+            )
         : undefined,
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
-    }));
+    };
   }
 
   async getDirectedRelationships(
     sourceId: string,
     targetId: string,
     types?: string[],
+    paging?: PagingOptions,
     consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
-  ): Promise<DocumentRelationship[]> {
+  ): Promise<PagedResults<DocumentRelationship>> {
     if (consistencyToken) {
       await this.waitForConsistency(consistencyToken, undefined, signal);
     }
@@ -274,6 +359,9 @@ export class KyselyDocumentIndexer implements IDocumentIndexer {
     if (signal?.aborted) {
       throw new Error("Operation aborted");
     }
+
+    const startIndex = paging?.cursor ? parseInt(paging.cursor) : 0;
+    const limit = paging?.limit || 100;
 
     let query = this.db
       .selectFrom("DocumentRelationship")
@@ -285,18 +373,42 @@ export class KyselyDocumentIndexer implements IDocumentIndexer {
       query = query.where("relationshipType", "in", types);
     }
 
-    const rows = await query.execute();
+    const rows = await query
+      .orderBy("createdAt", "asc")
+      .orderBy("id", "asc")
+      .offset(startIndex)
+      .limit(limit + 1)
+      .execute();
 
-    return rows.map((row) => ({
-      sourceId: row.sourceId,
-      targetId: row.targetId,
-      relationshipType: row.relationshipType,
-      metadata: row.metadata
-        ? (row.metadata as Record<string, unknown>)
+    const hasMore = rows.length > limit;
+    const results = hasMore ? rows.slice(0, limit) : rows;
+    const nextCursor = hasMore ? String(startIndex + limit) : undefined;
+
+    return {
+      results: results.map((row) => ({
+        sourceId: row.sourceId,
+        targetId: row.targetId,
+        relationshipType: row.relationshipType,
+        metadata: row.metadata
+          ? (row.metadata as Record<string, unknown>)
+          : undefined,
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt,
+      })),
+      options: paging || { cursor: "0", limit: 100 },
+      nextCursor,
+      next: hasMore
+        ? () =>
+            this.getDirectedRelationships(
+              sourceId,
+              targetId,
+              types,
+              { cursor: nextCursor!, limit },
+              consistencyToken,
+              signal,
+            )
         : undefined,
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
-    }));
+    };
   }
 
   async findPath(
@@ -340,10 +452,11 @@ export class KyselyDocumentIndexer implements IDocumentIndexer {
         current.id,
         types,
         undefined,
+        consistencyToken,
         signal,
       );
 
-      for (const rel of outgoing) {
+      for (const rel of outgoing.results) {
         if (!visited.has(rel.targetId)) {
           queue.push({
             id: rel.targetId,
@@ -387,11 +500,13 @@ export class KyselyDocumentIndexer implements IDocumentIndexer {
       const incoming = await this.getIncoming(
         currentId,
         types,
-        undefined,
+        // todo: this should page and loop
+        { cursor: "0", limit: 10000 },
+        consistencyToken,
         signal,
       );
 
-      for (const rel of incoming) {
+      for (const rel of incoming.results) {
         nodes.add(rel.sourceId);
         edges.push({
           from: rel.sourceId,

@@ -227,6 +227,7 @@ export class Reactor implements IReactor {
     const relationships = await this.documentIndexer.getOutgoing(
       documentId,
       ["child"],
+      undefined,
       consistencyToken,
       signal,
     );
@@ -235,7 +236,7 @@ export class Reactor implements IReactor {
       throw new AbortError();
     }
 
-    return relationships.map((rel) => rel.targetId);
+    return relationships.results.map((rel) => rel.targetId);
   }
 
   async getParents(
@@ -246,6 +247,7 @@ export class Reactor implements IReactor {
     const relationships = await this.documentIndexer.getIncoming(
       childId,
       ["parent"],
+      undefined,
       consistencyToken,
       signal,
     );
@@ -254,7 +256,7 @@ export class Reactor implements IReactor {
       throw new AbortError();
     }
 
-    return relationships.map((rel) => rel.sourceId);
+    return relationships.results.map((rel) => rel.sourceId);
   }
 
   async getOperations(
@@ -376,6 +378,7 @@ export class Reactor implements IReactor {
         search.parentId,
         view,
         paging,
+        consistencyToken,
         signal,
       );
 
@@ -846,59 +849,24 @@ export class Reactor implements IReactor {
   ): Promise<PagedResults<PHDocument>> {
     this.logger.verbose("findByIds(@count ids)", ids.length);
 
-    if (consistencyToken) {
-      await this.documentView.waitForConsistency(
-        consistencyToken,
-        undefined,
-        signal,
-      );
-    }
+    const startIndex = paging?.cursor ? parseInt(paging.cursor) || 0 : 0;
+    const limit = paging?.limit || ids.length;
+    const pagedIds = ids.slice(startIndex, startIndex + limit);
 
-    const documents: PHDocument[] = [];
+    const results = await this.documentView.getMany<PHDocument>(
+      pagedIds,
+      view,
+      consistencyToken,
+      signal,
+    );
 
-    for (const id of ids) {
-      if (signal?.aborted) {
-        throw new AbortError();
-      }
-
-      try {
-        const document = await this.documentView.get<PHDocument>(
-          id,
-          view,
-          undefined,
-          signal,
-        );
-        documents.push(document);
-      } catch {
-        continue;
-      }
-    }
-
-    if (signal?.aborted) {
-      throw new AbortError();
-    }
-
-    const startIndex = paging ? parseInt(paging.cursor) || 0 : 0;
-    const limit = paging?.limit || documents.length;
-    const pagedDocuments = documents.slice(startIndex, startIndex + limit);
-
-    const hasMore = startIndex + limit < documents.length;
+    const hasMore = startIndex + limit < ids.length;
     const nextCursor = hasMore ? String(startIndex + limit) : undefined;
 
     return {
-      results: pagedDocuments,
-      options: paging || { cursor: "0", limit: documents.length },
+      results,
+      options: paging || { cursor: "0", limit: ids.length },
       nextCursor,
-      next: hasMore
-        ? () =>
-            this.findByIds(
-              ids,
-              view,
-              { cursor: nextCursor!, limit },
-              consistencyToken,
-              signal,
-            )
-        : undefined,
     };
   }
 
@@ -911,84 +879,21 @@ export class Reactor implements IReactor {
   ): Promise<PagedResults<PHDocument>> {
     this.logger.verbose("findBySlugs(@count slugs)", slugs.length);
 
-    if (consistencyToken) {
-      await this.documentView.waitForConsistency(
-        consistencyToken,
-        undefined,
-        signal,
-      );
-    }
+    const ids = await this.documentView.resolveSlugs(
+      slugs,
+      view,
+      consistencyToken,
+      signal,
+    );
 
-    const documents: PHDocument[] = [];
-
-    const documentIds: string[] = [];
-    for (const slug of slugs) {
-      if (signal?.aborted) {
-        throw new AbortError();
-      }
-
-      const documentId = await this.documentView.resolveSlug(
-        slug,
-        view,
-        undefined,
-        signal,
-      );
-
-      if (documentId) {
-        documentIds.push(documentId);
-      }
-    }
-
-    for (const documentId of documentIds) {
-      if (signal?.aborted) {
-        throw new AbortError();
-      }
-
-      try {
-        const document = await this.documentView.get<PHDocument>(
-          documentId,
-          view,
-          undefined,
-          signal,
-        );
-        documents.push(document);
-      } catch {
-        continue;
-      }
-    }
-
-    if (signal?.aborted) {
-      throw new AbortError();
-    }
-
-    const startIndex = paging ? parseInt(paging.cursor) || 0 : 0;
-    const limit = paging?.limit || documents.length;
-    const pagedDocuments = documents.slice(startIndex, startIndex + limit);
-
-    const hasMore = startIndex + limit < documents.length;
-    const nextCursor = hasMore ? String(startIndex + limit) : undefined;
-
-    return {
-      results: pagedDocuments,
-      options: paging || { cursor: "0", limit: documents.length },
-      nextCursor,
-      next: hasMore
-        ? () =>
-            this.findBySlugs(
-              slugs,
-              view,
-              { cursor: nextCursor!, limit },
-              consistencyToken,
-              signal,
-            )
-        : undefined,
-    };
+    return await this.findByIds(ids, view, paging, consistencyToken, signal);
   }
 
   private async findByParentId(
     parentId: string,
     view?: ViewFilter,
     paging?: PagingOptions,
+    consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
   ): Promise<PagedResults<PHDocument>> {
     this.logger.verbose("findByParentId(@parentId)", parentId);
@@ -996,60 +901,13 @@ export class Reactor implements IReactor {
     const relationships = await this.documentIndexer.getOutgoing(
       parentId,
       ["child"],
-      undefined,
+      paging,
+      consistencyToken,
       signal,
     );
 
-    if (signal?.aborted) {
-      throw new AbortError();
-    }
-
-    const documents: PHDocument[] = [];
-
-    for (const relationship of relationships) {
-      if (signal?.aborted) {
-        throw new AbortError();
-      }
-
-      try {
-        const document = await this.documentView.get<PHDocument>(
-          relationship.targetId,
-          view,
-          undefined,
-          signal,
-        );
-
-        documents.push(document);
-      } catch {
-        continue;
-      }
-    }
-
-    if (signal?.aborted) {
-      throw new AbortError();
-    }
-
-    const startIndex = paging ? parseInt(paging.cursor) || 0 : 0;
-    const limit = paging?.limit || documents.length;
-    const pagedDocuments = documents.slice(startIndex, startIndex + limit);
-
-    const hasMore = startIndex + limit < documents.length;
-    const nextCursor = hasMore ? String(startIndex + limit) : undefined;
-
-    return {
-      results: pagedDocuments,
-      options: paging || { cursor: "0", limit: documents.length },
-      nextCursor,
-      next: hasMore
-        ? () =>
-            this.findByParentId(
-              parentId,
-              view,
-              { cursor: nextCursor!, limit },
-              signal,
-            )
-        : undefined,
-    };
+    const ids = relationships.results.map((rel) => rel.targetId);
+    return await this.findByIds(ids, view, paging, undefined, signal);
   }
 
   private async findByType(

@@ -260,7 +260,10 @@ describe("ReactorClient Unit Tests", () => {
       vi.mocked(mockDocumentView.resolveIdOrSlug).mockResolvedValue(
         "resolved-parent-id",
       );
-      vi.mocked(mockDocumentIndexer.getOutgoing).mockResolvedValue([]);
+      vi.mocked(mockDocumentIndexer.getOutgoing).mockResolvedValue({
+        results: [],
+        options: { cursor: "0", limit: 100 },
+      });
 
       await client.getChildren("parent-slug");
 
@@ -275,6 +278,7 @@ describe("ReactorClient Unit Tests", () => {
         undefined,
         undefined,
         undefined,
+        undefined,
       );
     });
 
@@ -283,7 +287,10 @@ describe("ReactorClient Unit Tests", () => {
       const signal = new AbortController().signal;
 
       vi.mocked(mockDocumentView.resolveIdOrSlug).mockResolvedValue("parent-1");
-      vi.mocked(mockDocumentIndexer.getOutgoing).mockResolvedValue([]);
+      vi.mocked(mockDocumentIndexer.getOutgoing).mockResolvedValue({
+        results: [],
+        options: { cursor: "0", limit: 100 },
+      });
 
       await client.getChildren("parent-1", view, undefined, signal);
 
@@ -297,7 +304,10 @@ describe("ReactorClient Unit Tests", () => {
 
     it("should return empty results when no children exist", async () => {
       vi.mocked(mockDocumentView.resolveIdOrSlug).mockResolvedValue("parent-1");
-      vi.mocked(mockDocumentIndexer.getOutgoing).mockResolvedValue([]);
+      vi.mocked(mockDocumentIndexer.getOutgoing).mockResolvedValue({
+        results: [],
+        options: { cursor: "0", limit: 100 },
+      });
 
       const result = await client.getChildren("parent-1");
 
@@ -312,22 +322,25 @@ describe("ReactorClient Unit Tests", () => {
       ] as PHDocument[];
 
       vi.mocked(mockDocumentView.resolveIdOrSlug).mockResolvedValue("parent-1");
-      vi.mocked(mockDocumentIndexer.getOutgoing).mockResolvedValue([
-        {
-          sourceId: "parent-1",
-          targetId: "child-1",
-          relationshipType: "child",
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        {
-          sourceId: "parent-1",
-          targetId: "child-2",
-          relationshipType: "child",
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-      ]);
+      vi.mocked(mockDocumentIndexer.getOutgoing).mockResolvedValue({
+        results: [
+          {
+            sourceId: "parent-1",
+            targetId: "child-1",
+            relationshipType: "child",
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+          {
+            sourceId: "parent-1",
+            targetId: "child-2",
+            relationshipType: "child",
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+        ],
+        options: { cursor: "0", limit: 100 },
+      });
       vi.mocked(mockReactor.find).mockResolvedValue({
         results: childDocs,
         options: { cursor: "", limit: 10 },
@@ -351,7 +364,10 @@ describe("ReactorClient Unit Tests", () => {
       vi.mocked(mockDocumentView.resolveIdOrSlug).mockResolvedValue(
         "resolved-child-id",
       );
-      vi.mocked(mockDocumentIndexer.getIncoming).mockResolvedValue([]);
+      vi.mocked(mockDocumentIndexer.getIncoming).mockResolvedValue({
+        results: [],
+        options: { cursor: "0", limit: 100 },
+      });
 
       await client.getParents("child-slug");
 
@@ -366,6 +382,7 @@ describe("ReactorClient Unit Tests", () => {
         undefined,
         undefined,
         undefined,
+        undefined,
       );
     });
 
@@ -374,7 +391,10 @@ describe("ReactorClient Unit Tests", () => {
       const signal = new AbortController().signal;
 
       vi.mocked(mockDocumentView.resolveIdOrSlug).mockResolvedValue("child-1");
-      vi.mocked(mockDocumentIndexer.getIncoming).mockResolvedValue([]);
+      vi.mocked(mockDocumentIndexer.getIncoming).mockResolvedValue({
+        results: [],
+        options: { cursor: "0", limit: 100 },
+      });
 
       await client.getParents("child-1", view, undefined, signal);
 
@@ -388,7 +408,10 @@ describe("ReactorClient Unit Tests", () => {
 
     it("should return empty results when no parents exist", async () => {
       vi.mocked(mockDocumentView.resolveIdOrSlug).mockResolvedValue("child-1");
-      vi.mocked(mockDocumentIndexer.getIncoming).mockResolvedValue([]);
+      vi.mocked(mockDocumentIndexer.getIncoming).mockResolvedValue({
+        results: [],
+        options: { cursor: "0", limit: 100 },
+      });
 
       const result = await client.getParents("child-1");
 
@@ -400,15 +423,18 @@ describe("ReactorClient Unit Tests", () => {
       const parentDocs = [{ header: { id: "parent-1" } }] as PHDocument[];
 
       vi.mocked(mockDocumentView.resolveIdOrSlug).mockResolvedValue("child-1");
-      vi.mocked(mockDocumentIndexer.getIncoming).mockResolvedValue([
-        {
-          sourceId: "parent-1",
-          targetId: "child-1",
-          relationshipType: "parent",
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-      ]);
+      vi.mocked(mockDocumentIndexer.getIncoming).mockResolvedValue({
+        results: [
+          {
+            sourceId: "parent-1",
+            targetId: "child-1",
+            relationshipType: "parent",
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+        ],
+        options: { cursor: "0", limit: 100 },
+      });
       vi.mocked(mockReactor.find).mockResolvedValue({
         results: parentDocs,
         options: { cursor: "", limit: 10 },
@@ -974,15 +1000,18 @@ describe("ReactorClient Unit Tests", () => {
         consistencyToken: createEmptyConsistencyToken(),
       };
 
-      vi.mocked(mockDocumentIndexer.getOutgoing).mockResolvedValue([
-        {
-          sourceId: parentId,
-          targetId: childId,
-          relationshipType: "child",
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-      ]);
+      vi.mocked(mockDocumentIndexer.getOutgoing).mockResolvedValue({
+        results: [
+          {
+            sourceId: parentId,
+            targetId: childId,
+            relationshipType: "child",
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+        ],
+        options: { cursor: "0", limit: 100 },
+      });
 
       vi.mocked(mockReactor.deleteDocument).mockResolvedValue(childJobInfo);
       vi.mocked(mockReactor.deleteDocument).mockResolvedValueOnce(childJobInfo);
@@ -995,6 +1024,7 @@ describe("ReactorClient Unit Tests", () => {
       expect(mockDocumentIndexer.getOutgoing).toHaveBeenCalledWith(
         parentId,
         ["child"],
+        undefined,
         undefined,
         signal,
       );
@@ -1378,15 +1408,18 @@ describe("ReactorClient Unit Tests", () => {
         consistencyToken: createEmptyConsistencyToken(),
       };
 
-      vi.mocked(mockDocumentIndexer.getOutgoing).mockResolvedValue([
-        {
-          sourceId: parentId,
-          targetId: childId,
-          relationshipType: "child",
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-      ]);
+      vi.mocked(mockDocumentIndexer.getOutgoing).mockResolvedValue({
+        results: [
+          {
+            sourceId: parentId,
+            targetId: childId,
+            relationshipType: "child",
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+        ],
+        options: { cursor: "0", limit: 100 },
+      });
 
       vi.mocked(mockReactor.deleteDocument)
         .mockResolvedValueOnce(childJobInfo)

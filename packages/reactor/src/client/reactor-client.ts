@@ -211,10 +211,11 @@ export class ReactorClient implements IReactorClient {
       parentId,
       undefined,
       undefined,
+      undefined,
       signal,
     );
 
-    const childIds = relationships.map((rel) => rel.targetId);
+    const childIds = relationships.results.map((rel) => rel.targetId);
 
     if (childIds.length === 0) {
       return {
@@ -259,10 +260,11 @@ export class ReactorClient implements IReactorClient {
       childId,
       undefined,
       undefined,
+      undefined,
       signal,
     );
 
-    const parentIds = relationships.map((rel) => rel.sourceId);
+    const parentIds = relationships.results.map((rel) => rel.sourceId);
 
     if (parentIds.length === 0) {
       return {
@@ -755,10 +757,11 @@ export class ReactorClient implements IReactorClient {
           currentId,
           ["child"],
           undefined,
+          undefined,
           signal,
         );
 
-        for (const rel of relationships) {
+        for (const rel of relationships.results) {
           if (!visited.has(rel.targetId)) {
             descendants.push(rel.targetId);
             queue.push(rel.targetId);

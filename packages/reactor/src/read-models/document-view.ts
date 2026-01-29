@@ -539,6 +539,7 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
 
   async resolveSlug(
     slug: string,
+    // TODO: this should only be branch
     view?: ViewFilter,
     consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
@@ -586,8 +587,25 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
     return mapping.documentId;
   }
 
+  // TODO: fix
+  async resolveSlugs(
+    slugs: string[],
+    // TODO: this should only be branch
+    view?: ViewFilter,
+    consistencyToken?: ConsistencyToken,
+    signal?: AbortSignal,
+  ): Promise<string[]> {
+    const ids = await Promise.all(
+      slugs.map((slug) =>
+        this.resolveSlug(slug, view, consistencyToken, signal),
+      ),
+    );
+    return ids.filter((id) => id !== undefined) as string[];
+  }
+
   async resolveIdOrSlug(
     identifier: string,
+    // TODO: this should only be branch
     view?: ViewFilter,
     consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,

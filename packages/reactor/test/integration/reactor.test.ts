@@ -458,7 +458,7 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
             parentDrive.header.id,
             ["child"],
           );
-          return relationships.length === 1;
+          return relationships.results.length === 1;
         },
         { timeout: 5000 },
       );
@@ -467,8 +467,8 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
         parentDrive.header.id,
         ["child"],
       );
-      expect(relationships).toHaveLength(1);
-      expect(relationships[0]).toMatchObject({
+      expect(relationships.results).toHaveLength(1);
+      expect(relationships.results[0]).toMatchObject({
         sourceId: parentDrive.header.id,
         targetId: childDocument.header.id,
         relationshipType: "child",
@@ -1801,7 +1801,7 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
               parentDrive.header.id,
               ["child"],
             );
-            return relationships.length === 2;
+            return relationships.results.length === 2;
           },
           { timeout: 5000 },
         );
@@ -1872,7 +1872,7 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
               parentDrive.header.id,
               ["child"],
             );
-            return relationships.length === 1;
+            return relationships.results.length === 1;
           },
           { timeout: 5000 },
         );
@@ -2021,7 +2021,7 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
               parentDrive.header.id,
               ["child"],
             );
-            return relationships.length === 2;
+            return relationships.results.length === 2;
           },
           { timeout: 5000 },
         );

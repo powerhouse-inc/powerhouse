@@ -153,7 +153,7 @@ describe("KyselyDocumentIndexer Unit Tests", () => {
       await newIndexer.init();
 
       const relationships = await newIndexer.getOutgoing("doc1");
-      expect(relationships).toHaveLength(1);
+      expect(relationships.results).toHaveLength(1);
     });
   });
 
@@ -195,10 +195,10 @@ describe("KyselyDocumentIndexer Unit Tests", () => {
       await indexer.indexOperations(operations);
 
       const relationships = await indexer.getOutgoing("parent", ["child"]);
-      expect(relationships).toHaveLength(1);
-      expect(relationships[0].sourceId).toBe("parent");
-      expect(relationships[0].targetId).toBe("child");
-      expect(relationships[0].relationshipType).toBe("child");
+      expect(relationships.results).toHaveLength(1);
+      expect(relationships.results[0].sourceId).toBe("parent");
+      expect(relationships.results[0].targetId).toBe("child");
+      expect(relationships.results[0].relationshipType).toBe("child");
     });
 
     it("should index REMOVE_RELATIONSHIP operation", async () => {
@@ -266,7 +266,7 @@ describe("KyselyDocumentIndexer Unit Tests", () => {
       await indexer.indexOperations(removeOperations);
 
       const relationships = await indexer.getOutgoing("parent", ["child"]);
-      expect(relationships).toHaveLength(0);
+      expect(relationships.results).toHaveLength(0);
     });
 
     it("should handle empty operations array", async () => {
@@ -342,7 +342,7 @@ describe("KyselyDocumentIndexer Unit Tests", () => {
       await indexer.indexOperations(operations);
 
       const relationships = await indexer.getOutgoing("parent");
-      expect(relationships[0].metadata).toEqual(metadata);
+      expect(relationships.results[0].metadata).toEqual(metadata);
     });
 
     it("should be idempotent for ADD_RELATIONSHIP", async () => {
@@ -383,7 +383,7 @@ describe("KyselyDocumentIndexer Unit Tests", () => {
       await indexer.indexOperations(operations);
 
       const relationships = await indexer.getOutgoing("parent");
-      expect(relationships).toHaveLength(1);
+      expect(relationships.results).toHaveLength(1);
     });
   });
 
@@ -473,20 +473,20 @@ describe("KyselyDocumentIndexer Unit Tests", () => {
 
     it("should return all outgoing relationships", async () => {
       const relationships = await indexer.getOutgoing("parent");
-      expect(relationships).toHaveLength(3);
+      expect(relationships.results).toHaveLength(3);
     });
 
     it("should filter by relationship type", async () => {
       const relationships = await indexer.getOutgoing("parent", ["child"]);
-      expect(relationships).toHaveLength(2);
-      expect(relationships.every((r) => r.relationshipType === "child")).toBe(
-        true,
-      );
+      expect(relationships.results).toHaveLength(2);
+      expect(
+        relationships.results.every((r) => r.relationshipType === "child"),
+      ).toBe(true);
     });
 
     it("should return empty array for non-existent document", async () => {
       const relationships = await indexer.getOutgoing("non-existent");
-      expect(relationships).toHaveLength(0);
+      expect(relationships.results).toHaveLength(0);
     });
 
     it("should throw when signal is aborted", async () => {
@@ -494,7 +494,13 @@ describe("KyselyDocumentIndexer Unit Tests", () => {
       controller.abort();
 
       await expect(
-        indexer.getOutgoing("parent", undefined, undefined, controller.signal),
+        indexer.getOutgoing(
+          "parent",
+          undefined,
+          undefined,
+          undefined,
+          controller.signal,
+        ),
       ).rejects.toThrow("Operation aborted");
     });
   });
@@ -569,8 +575,8 @@ describe("KyselyDocumentIndexer Unit Tests", () => {
 
     it("should return all incoming relationships", async () => {
       const relationships = await indexer.getIncoming("child");
-      expect(relationships).toHaveLength(2);
-      expect(relationships.map((r) => r.sourceId).sort()).toEqual([
+      expect(relationships.results).toHaveLength(2);
+      expect(relationships.results.map((r) => r.sourceId).sort()).toEqual([
         "parent1",
         "parent2",
       ]);
@@ -613,7 +619,7 @@ describe("KyselyDocumentIndexer Unit Tests", () => {
       await indexer.indexOperations(operations);
 
       const childRels = await indexer.getIncoming("child", ["child"]);
-      expect(childRels).toHaveLength(2);
+      expect(childRels.results).toHaveLength(2);
     });
 
     it("should throw when signal is aborted", async () => {
@@ -621,7 +627,13 @@ describe("KyselyDocumentIndexer Unit Tests", () => {
       controller.abort();
 
       await expect(
-        indexer.getIncoming("child", undefined, undefined, controller.signal),
+        indexer.getIncoming(
+          "child",
+          undefined,
+          undefined,
+          undefined,
+          controller.signal,
+        ),
       ).rejects.toThrow("Operation aborted");
     });
   });
@@ -745,9 +757,9 @@ describe("KyselyDocumentIndexer Unit Tests", () => {
         "child",
         ["child"],
       );
-      expect(relationships).toHaveLength(1);
-      expect(relationships[0].sourceId).toBe("parent");
-      expect(relationships[0].targetId).toBe("child");
+      expect(relationships.results).toHaveLength(1);
+      expect(relationships.results[0].sourceId).toBe("parent");
+      expect(relationships.results[0].targetId).toBe("child");
     });
 
     it("should return empty array for opposite direction", async () => {
@@ -755,7 +767,7 @@ describe("KyselyDocumentIndexer Unit Tests", () => {
         "child",
         "parent",
       );
-      expect(relationships).toHaveLength(0);
+      expect(relationships.results).toHaveLength(0);
     });
 
     it("should throw when signal is aborted", async () => {
@@ -766,6 +778,7 @@ describe("KyselyDocumentIndexer Unit Tests", () => {
         indexer.getDirectedRelationships(
           "parent",
           "child",
+          undefined,
           undefined,
           undefined,
           controller.signal,

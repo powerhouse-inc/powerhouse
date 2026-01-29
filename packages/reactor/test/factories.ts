@@ -816,11 +816,11 @@ export function createMockDocumentView(): IDocumentView {
     getMany: vi.fn().mockResolvedValue([]),
     getByIdOrSlug: vi.fn().mockRejectedValue(new Error("Not implemented")),
     findByType: vi.fn().mockResolvedValue({
-      items: [],
-      nextCursor: undefined,
-      hasMore: false,
+      results: [],
+      options: { cursor: "0", limit: 100 },
     }),
     resolveSlug: vi.fn().mockResolvedValue(undefined),
+    resolveSlugs: vi.fn().mockResolvedValue([]),
     resolveIdOrSlug: vi.fn().mockImplementation((identifier: string) => {
       return Promise.resolve(identifier);
     }),
