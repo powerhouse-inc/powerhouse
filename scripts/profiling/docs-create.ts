@@ -165,8 +165,13 @@ function calculatePercentiles(durations: number[]): Percentiles | null {
 
   const sorted = [...durations].sort((a, b) => a - b);
   const percentile = (p: number): number => {
-    const index = Math.ceil((p / 100) * sorted.length) - 1;
-    return sorted[Math.max(0, index)];
+    const pos = (p / 100) * (sorted.length - 1);
+    const lower = Math.floor(pos);
+    const upper = Math.ceil(pos);
+    const weight = pos - lower;
+
+    if (lower === upper) return sorted[lower];
+    return Math.round(sorted[lower] * (1 - weight) + sorted[upper] * weight);
   };
 
   return {
