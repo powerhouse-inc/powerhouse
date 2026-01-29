@@ -10,6 +10,7 @@ import type {
   PagingOptions,
 } from "../shared/types.js";
 import type {
+  DocumentRevisions,
   IDocumentView,
   IOperationStore,
   OperationWithContext,
@@ -323,6 +324,116 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
     };
 
     return document as TDocument;
+  }
+
+  async getMany<TDocument extends PHDocument>(
+    documentIds: string[],
+    view?: ViewFilter,
+    consistencyToken?: ConsistencyToken,
+    signal?: AbortSignal,
+  ): Promise<TDocument[]> {
+    if (documentIds.length === 0) {
+      return [];
+    }
+
+    if (consistencyToken) {
+      await this.waitForConsistency(consistencyToken, undefined, signal);
+    }
+
+    if (signal?.aborted) {
+      throw new Error("Operation aborted");
+    }
+
+    const branch = view?.branch || "main";
+
+    let scopesToQuery: string[];
+    if (view?.scopes && view.scopes.length > 0) {
+      scopesToQuery = [...new Set(["header", "document", ...view.scopes])];
+    } else {
+      scopesToQuery = [];
+    }
+
+    let query = this._db
+      .selectFrom("DocumentSnapshot")
+      .selectAll()
+      .where("documentId", "in", documentIds)
+      .where("branch", "=", branch)
+      .where("isDeleted", "=", false);
+
+    if (scopesToQuery.length > 0) {
+      query = query.where("scope", "in", scopesToQuery);
+    }
+
+    const allSnapshots = await query.execute();
+
+    if (signal?.aborted) {
+      throw new Error("Operation aborted");
+    }
+
+    const snapshotsByDocId = new Map<string, typeof allSnapshots>();
+    for (const snapshot of allSnapshots) {
+      const existing = snapshotsByDocId.get(snapshot.documentId) || [];
+      existing.push(snapshot);
+      snapshotsByDocId.set(snapshot.documentId, existing);
+    }
+
+    const foundDocumentIds = [...snapshotsByDocId.keys()];
+    const revisionResults = await Promise.all(
+      foundDocumentIds.map((docId) =>
+        this.operationStore.getRevisions(docId, branch, signal),
+      ),
+    );
+
+    const revisionsByDocId = new Map<string, DocumentRevisions>();
+    for (let i = 0; i < foundDocumentIds.length; i++) {
+      revisionsByDocId.set(foundDocumentIds[i], revisionResults[i]);
+    }
+
+    if (signal?.aborted) {
+      throw new Error("Operation aborted");
+    }
+
+    const documents: TDocument[] = [];
+    for (const documentId of documentIds) {
+      const snapshots = snapshotsByDocId.get(documentId);
+      if (!snapshots || snapshots.length === 0) {
+        continue;
+      }
+
+      const headerSnapshot = snapshots.find((s) => s.scope === "header");
+      if (!headerSnapshot) {
+        continue;
+      }
+
+      const header = headerSnapshot.content as PHDocumentHeader;
+      const revisions = revisionsByDocId.get(documentId);
+      if (revisions) {
+        header.revision = revisions.revision;
+        header.lastModifiedAtUtcIso = revisions.latestTimestamp;
+      }
+
+      const state: Record<string, unknown> = {};
+      for (const snapshot of snapshots) {
+        if (snapshot.scope === "header") {
+          continue;
+        }
+        state[snapshot.scope] = snapshot.content;
+      }
+
+      const document: PHDocument = {
+        header,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        state: state as any,
+        operations: {},
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        initialState: state as any,
+        clipboard: [],
+      };
+
+      documents.push(document as TDocument);
+    }
+
+    return documents;
   }
 
   async getByIdOrSlug<TDocument extends PHDocument>(

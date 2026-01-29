@@ -251,6 +251,21 @@ export interface IDocumentView {
   ): Promise<TDocument>;
 
   /**
+   * Returns the documents with the given ids.
+   *
+   * @param documentIds - The list of document ids to get.
+   * @param view - Optional filter containing branch and scopes information
+   * @param consistencyToken - Optional token for read-after-write consistency
+   * @param signal - Optional abort signal to cancel the request
+   */
+  getMany<TDocument extends PHDocument>(
+    documentIds: string[],
+    view?: ViewFilter,
+    consistencyToken?: ConsistencyToken,
+    signal?: AbortSignal,
+  ): Promise<TDocument[]>;
+
+  /**
    * Returns the document with the given identifier (either id or slug).
    * Throws an error if the identifier matches both an id and a slug that refer to different documents.
    *
