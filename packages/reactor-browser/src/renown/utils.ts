@@ -1,6 +1,6 @@
-import { setLoginStatus, setUser } from "../connect.js";
-import type { IConnectCrypto, IRenown, User } from "@renown/sdk";
+import type { IRenown, User } from "@renown/sdk";
 import { logger, type IDocumentDriveServer } from "document-drive";
+import { setLoginStatus, setUser } from "../connect.js";
 import { RENOWN_CHAIN_ID, RENOWN_NETWORK_ID, RENOWN_URL } from "./constants.js";
 
 export function openRenown() {
@@ -18,43 +18,34 @@ export async function login(
   userDid: string | undefined,
   reactor: IDocumentDriveServer | undefined,
   renown: IRenown | undefined,
-  connectCrypto: IConnectCrypto | undefined,
 ): Promise<User | undefined> {
-  if (!renown || !connectCrypto || !reactor) {
+  if (!renown || !reactor) {
     return;
   }
   try {
     setLoginStatus("checking");
-    let user = renown.user instanceof Function ? renown.user() : renown.user;
-    user = user instanceof Promise ? await user : user;
+    const user = renown.user;
 
     if (user?.did && (user.did === userDid || !userDid)) {
       setLoginStatus("authorized");
       setUser(user);
       reactor.setGenerateJwtHandler(async (driveUrl) =>
-        connectCrypto.getBearerToken(driveUrl, user.address, true, {
-          expiresIn: 10,
-        }),
+        renown.getBearerToken({ expiresIn: 10, aud: driveUrl }),
       );
       return user;
     }
 
     if (!userDid) {
+      setLoginStatus("not-authorized");
       return;
     }
 
-    const newUser = await renown.login(userDid ?? "");
-    if (newUser) {
-      setLoginStatus("authorized");
-      setUser(newUser);
-      reactor.setGenerateJwtHandler(async (driveUrl) =>
-        connectCrypto.getBearerToken(driveUrl, newUser.address, true, {
-          expiresIn: 10,
-        }),
-      );
-    } else {
-      setLoginStatus("not-authorized");
-    }
+    const newUser = await renown.login(userDid);
+    setLoginStatus("authorized");
+    setUser(newUser);
+    reactor.setGenerateJwtHandler(async (driveUrl) =>
+      renown.getBearerToken({ aud: driveUrl, expiresIn: 10 }),
+    );
   } catch (error) {
     setLoginStatus("not-authorized");
     logger.error(error);

@@ -1,5 +1,6 @@
 import { switchboardArgs } from "@powerhousedao/common/clis";
 import { command } from "cmd-ts";
+
 export const switchboard = command({
   name: "switchboard",
   aliases: ["reactor"],
@@ -36,12 +37,10 @@ This command:
     }
 
     const { startSwitchboard } = await import("../services/switchboard.js");
-
-    const { defaultDriveUrl, connectCrypto } = await startSwitchboard(args);
+    const { defaultDriveUrl, renown } = await startSwitchboard(args);
     console.log("   ➜  Switchboard:", defaultDriveUrl);
-    if (connectCrypto) {
-      const did = await connectCrypto.did();
-      console.log("   ➜  Identity:", did);
+    if (renown) {
+      console.log("   ➜  Identity:", renown.did);
     }
   },
 });

@@ -5,6 +5,7 @@ import { inspect } from "./inspect.js";
 import { install } from "./install.js";
 import { list } from "./list.js";
 import { login } from "./login.js";
+import { logout } from "./logout.js";
 import { migrate } from "./migrate.js";
 import { switchboard } from "./switchboard.js";
 import { uninstall } from "./uninstall.js";
@@ -20,6 +21,7 @@ export const phCliCommands = {
   migrate,
   switchboard,
   login,
+  logout,
   install,
   uninstall,
 } as const;

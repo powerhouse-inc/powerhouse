@@ -1,5 +1,5 @@
-import { writeFileSync, readFileSync, existsSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname } from "node:path";
 import { BaseStorage } from "./common.js";
 
 export class NodeStorage<
@@ -7,9 +7,12 @@ export class NodeStorage<
 > extends BaseStorage<T> {
   private readonly filePath: string;
 
-  constructor(filePath: string, namespace: string) {
-    super(namespace);
+  constructor(filePath: string) {
+    super();
     this.filePath = filePath;
+
+    const parentFolder = dirname(this.filePath);
+    mkdirSync(parentFolder, { recursive: true });
 
     if (!existsSync(this.filePath)) {
       writeFileSync(this.filePath, JSON.stringify({}));
@@ -22,10 +25,7 @@ export class NodeStorage<
   }
 
   private writeData(data: T): void {
-    writeFileSync(
-      join(this.filePath, `$this.namespace}.json`),
-      JSON.stringify(data, null, 2),
-    );
+    writeFileSync(this.filePath, JSON.stringify(data, null, 2));
   }
 
   get<Key extends keyof T>(key: Key): T[Key] | undefined {

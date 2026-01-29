@@ -29,6 +29,8 @@ const normalIgnoredFiles = [
   "**/flaky/",
   "apps/connect/lib/",
   "clis/ph-cli/src/commands/migrations/templates",
+  "**/coverage/",
+  "**/playwright-report/",
 ];
 
 /** These files need to be ignored for builds to pass, but they do not have clear reasons to be ignored.

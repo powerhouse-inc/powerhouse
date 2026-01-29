@@ -1,48 +1,46 @@
 import type {
   Action,
+  AppActionSigner,
   ISigner,
   Operation,
   Signature,
   SignatureVerificationHandler,
+  UserActionSigner,
 } from "document-model";
-import type { IConnectCrypto } from "./index.js";
+import type { IRenownCrypto } from "./index.js";
 
-export class ConnectCryptoSigner implements ISigner {
-  private cachedPublicKey: JsonWebKey | undefined;
+export class InvalidSignatureError extends Error {
+  constructor() {
+    super("Invalid signature");
+  }
+}
 
-  constructor(private readonly connectCrypto: IConnectCrypto) {}
+export class RenownCryptoSigner implements ISigner {
+  readonly app: AppActionSigner;
 
-  async publicKey(): Promise<JsonWebKey> {
-    if (!this.cachedPublicKey) {
-      const did = await this.connectCrypto.did();
-      const keyData = extractKeyFromDid(did);
-      const cryptoKey = await crypto.subtle.importKey(
-        "raw",
-        keyData.buffer as ArrayBuffer,
-        { name: "ECDSA", namedCurve: "P-256" },
-        true,
-        ["verify"],
-      );
-      this.cachedPublicKey = await crypto.subtle.exportKey("jwk", cryptoKey);
-    }
-    return this.cachedPublicKey;
+  constructor(
+    private readonly crypto: IRenownCrypto,
+    private readonly appName: string,
+    public user?: UserActionSigner,
+  ) {
+    this.app = {
+      key: this.crypto.did,
+      name: this.appName,
+    };
+  }
+
+  get publicKey() {
+    return this.crypto.publicKey;
   }
 
   async sign(data: Uint8Array): Promise<Uint8Array> {
-    return this.connectCrypto.sign(data);
+    return this.crypto.sign(data);
   }
 
   async verify(data: Uint8Array, signature: Uint8Array): Promise<void> {
-    const did = await this.connectCrypto.did();
-    const cryptoKey = await importPublicKey(did);
-    const isValid = await crypto.subtle.verify(
-      { name: "ECDSA", hash: "SHA-256" },
-      cryptoKey,
-      signature.buffer as ArrayBuffer,
-      data.buffer as ArrayBuffer,
-    );
+    const isValid = await this.crypto.verify(data, signature);
     if (!isValid) {
-      throw new Error("invalid signature");
+      throw new InvalidSignatureError();
     }
   }
 
@@ -55,11 +53,6 @@ export class ConnectCryptoSigner implements ISigner {
     }
 
     const timestamp = (new Date().getTime() / 1000).toFixed(0);
-    const did = await this.connectCrypto.did();
-
-    if (abortSignal?.aborted) {
-      throw new Error("Signing aborted");
-    }
 
     const hash = await this.hashAction(action);
 
@@ -71,12 +64,12 @@ export class ConnectCryptoSigner implements ISigner {
 
     const params: [string, string, string, string] = [
       timestamp,
-      did,
+      this.crypto.did,
       hash,
       prevStateHash,
     ];
     const message = this.buildSignatureMessage(params);
-    const signatureBytes = await this.connectCrypto.sign(message);
+    const signatureBytes = await this.crypto.sign(message);
     const signatureHex = `0x${this.arrayBufferToHex(signatureBytes)}`;
 
     if (abortSignal?.aborted) {
@@ -127,7 +120,7 @@ export class ConnectCryptoSigner implements ISigner {
 
 /**
  * Creates a signature verification handler that verifies signatures using the Web Crypto API.
- * The verification uses ECDSA with P-256 curve and SHA-256 hash, matching the ConnectCrypto signing algorithm.
+ * The verification uses ECDSA with P-256 curve and SHA-256 hash, matching the RenownCrypto signing algorithm.
  */
 export function createSignatureVerifier(): SignatureVerificationHandler {
   return async (operation: Operation, publicKey: string): Promise<boolean> => {

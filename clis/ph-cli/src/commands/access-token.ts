@@ -4,6 +4,7 @@ import {
   SECONDS_IN_DAY,
 } from "@powerhousedao/common/clis";
 import { command } from "cmd-ts";
+
 export const accessToken = command({
   name: "access-token",
   description: `
@@ -17,8 +18,8 @@ This command:
 
 Prerequisites:
   You must have a cryptographic identity. Run 'ph login' first to:
-  - Generate a keypair (stored in .keypair.json)
-  - Optionally link your Ethereum address (stored in .auth.json)
+  - Generate a keypair (stored in .ph/.keypair.json)
+  - Optionally link your Ethereum address (stored in .ph/.renown.json)
 
 Token Details:
   The generated token is a JWT (JSON Web Token) containing:
@@ -58,50 +59,32 @@ Notes:
     if (args.debug) {
       console.log(args);
     }
-    const {
-      getConnectCrypto,
-      getConnectDid,
-      isAuthenticated,
-      loadCredentials,
-    } = await import("../services/auth.js");
+
+    const { getRenown } = await import("../services/auth.js");
+    const renown = await getRenown();
+    const did = renown.did;
+    const user = renown.user;
+
     // Require Renown authentication - user must have done 'ph login'
-    if (!isAuthenticated()) {
+    if (!user || !user.credential) {
       throw new Error(
         "Not authenticated. Run 'ph login' first to authenticate with Renown. A Renown credential is required to generate valid bearer tokens.",
       );
     }
 
-    const creds = loadCredentials();
-    if (!creds) {
-      throw new Error("Failed to load credentials.");
-    }
-
-    // Get the CLI's DID
-    let did: string;
-    try {
-      did = await getConnectDid();
-    } catch (e) {
-      throw new Error(
-        "Failed to get CLI identity. Run 'ph login' to reinitialize.",
-      );
-    }
-
-    const address = creds.address;
+    const address = user.address;
 
     // Parse expiry
     let expiresIn = DEFAULT_EXPIRY_SECONDS;
     if (args.expiry) expiresIn = parseExpiry(args.expiry);
 
-    // Generate the bearer token
-    const crypto = await getConnectCrypto();
-    const token = await crypto.getBearerToken(
-      args.audience ?? "",
-      address,
-      true, // Force refresh to ensure we get a new token with the specified expiry
+    // Generate the bearer token;
+    const token = await renown.getBearerToken(
       {
         expiresIn,
         aud: args.audience,
       },
+      true,
     );
 
     // Calculate human-readable expiry

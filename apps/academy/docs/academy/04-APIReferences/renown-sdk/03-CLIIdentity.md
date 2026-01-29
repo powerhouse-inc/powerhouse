@@ -38,7 +38,7 @@ ph login --status
 ph login --show-did
 
 # Logout and clear credentials
-ph login --logout
+ph logout
 ```
 
 ### How It Works
@@ -104,6 +104,7 @@ your-project/
 ```
 
 This means each project can have its own identity and credentials, which is useful for:
+
 - Different projects requiring different identities
 - Team members using the same machine
 - Separating development and production identities
@@ -136,11 +137,11 @@ ph switchboard --use-identity
 
 ### Identity Options
 
-| Option | Description |
-|--------|-------------|
-| `--use-identity` | Enable identity using `.keypair.json` |
-| `--keypair-path <path>` | Use a custom keypair file |
-| `--require-identity` | Fail if no keypair exists |
+| Option                  | Description                           |
+| ----------------------- | ------------------------------------- |
+| `--use-identity`        | Enable identity using `.keypair.json` |
+| `--keypair-path <path>` | Use a custom keypair file             |
+| `--require-identity`    | Fail if no keypair exists             |
 
 ### Requiring Identity
 
@@ -233,6 +234,7 @@ jobs:
 ### Authorization Scope
 
 When you authorize the CLI's DID:
+
 - It can act on behalf of your Ethereum address
 - It can authenticate with services that trust Renown
 - It **cannot** sign Ethereum transactions or access your wallet
@@ -259,6 +261,7 @@ ph switchboard --require-identity
 The browser authentication didn't complete in time.
 
 **Solutions**:
+
 - Increase timeout: `ph login --timeout 600`
 - Check browser opened correctly
 - Ensure you completed the wallet connection
@@ -268,11 +271,13 @@ The browser authentication didn't complete in time.
 Each project directory has its own `.keypair.json`.
 
 **Check current DID**:
+
 ```bash
 ph login --show-did
 ```
 
 **Use specific keypair**:
+
 ```bash
 ph switchboard --use-identity --keypair-path ~/.shared-keypair.json
 ```
@@ -281,21 +286,21 @@ ph switchboard --use-identity --keypair-path ~/.shared-keypair.json
 
 ### Login Options
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `--renown-url` | string | `https://renown.powerhouse.io` | Renown server URL |
-| `--timeout` | number | `300` | Auth timeout (seconds) |
-| `--logout` | boolean | `false` | Clear credentials |
-| `--status` | boolean | `false` | Show auth status |
-| `--show-did` | boolean | `false` | Print DID only |
+| Option         | Type    | Default                        | Description            |
+| -------------- | ------- | ------------------------------ | ---------------------- |
+| `--renown-url` | string  | `https://renown.powerhouse.io` | Renown server URL      |
+| `--timeout`    | number  | `300`                          | Auth timeout (seconds) |
+| `--logout`     | boolean | `false`                        | Clear credentials      |
+| `--status`     | boolean | `false`                        | Show auth status       |
+| `--show-did`   | boolean | `false`                        | Print DID only         |
 
 ### Switchboard Identity Options
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `--use-identity` | boolean | `false` | Enable identity |
-| `--keypair-path` | string | `.keypair.json` | Keypair file path |
-| `--require-identity` | boolean | `false` | Fail without keypair |
+| Option               | Type    | Default         | Description          |
+| -------------------- | ------- | --------------- | -------------------- |
+| `--use-identity`     | boolean | `false`         | Enable identity      |
+| `--keypair-path`     | string  | `.keypair.json` | Keypair file path    |
+| `--require-identity` | boolean | `false`         | Fail without keypair |
 
 ### Exported Functions (Switchboard)
 
@@ -310,7 +315,7 @@ async function getConnectDid(): Promise<string | null>;
 async function getBearerToken(
   driveUrl: string,
   address?: string,
-  refresh?: boolean
+  refresh?: boolean,
 ): Promise<string | null>;
 ```
 

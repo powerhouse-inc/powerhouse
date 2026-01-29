@@ -19,6 +19,7 @@ export const PH_CLI_COMMANDS = [
   "inspect",
   "version",
   "login",
+  "logout",
 ];
 export const PH_GLOBAL_PACKAGE_NAME = "ph-global";
 
