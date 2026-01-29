@@ -503,6 +503,66 @@ describe("KyselyDocumentIndexer Unit Tests", () => {
         ),
       ).rejects.toThrow("Operation aborted");
     });
+
+    it("should respect limit parameter", async () => {
+      const relationships = await indexer.getOutgoing("parent", undefined, {
+        cursor: "0",
+        limit: 2,
+      });
+      expect(relationships.results).toHaveLength(2);
+    });
+
+    it("should respect cursor parameter", async () => {
+      const firstPage = await indexer.getOutgoing("parent", undefined, {
+        cursor: "0",
+        limit: 2,
+      });
+      const secondPage = await indexer.getOutgoing("parent", undefined, {
+        cursor: "2",
+        limit: 2,
+      });
+
+      expect(firstPage.results).toHaveLength(2);
+      expect(secondPage.results).toHaveLength(1);
+
+      const allIds = [
+        ...firstPage.results.map((r) => r.targetId),
+        ...secondPage.results.map((r) => r.targetId),
+      ];
+      expect(allIds).toHaveLength(3);
+      expect(new Set(allIds).size).toBe(3);
+    });
+
+    it("should set nextCursor when more results exist", async () => {
+      const relationships = await indexer.getOutgoing("parent", undefined, {
+        cursor: "0",
+        limit: 2,
+      });
+
+      expect(relationships.nextCursor).toBe("2");
+    });
+
+    it("should not set nextCursor when no more results", async () => {
+      const relationships = await indexer.getOutgoing("parent", undefined, {
+        cursor: "0",
+        limit: 10,
+      });
+
+      expect(relationships.nextCursor).toBeUndefined();
+    });
+
+    it("should provide next function for pagination", async () => {
+      const firstPage = await indexer.getOutgoing("parent", undefined, {
+        cursor: "0",
+        limit: 2,
+      });
+
+      expect(firstPage.next).toBeDefined();
+
+      const secondPage = await firstPage.next!();
+      expect(secondPage.results).toHaveLength(1);
+      expect(secondPage.next).toBeUndefined();
+    });
   });
 
   describe("getIncoming", () => {
@@ -635,6 +695,65 @@ describe("KyselyDocumentIndexer Unit Tests", () => {
           controller.signal,
         ),
       ).rejects.toThrow("Operation aborted");
+    });
+
+    it("should respect limit parameter", async () => {
+      const relationships = await indexer.getIncoming("child", undefined, {
+        cursor: "0",
+        limit: 1,
+      });
+      expect(relationships.results).toHaveLength(1);
+    });
+
+    it("should respect cursor parameter", async () => {
+      const firstPage = await indexer.getIncoming("child", undefined, {
+        cursor: "0",
+        limit: 1,
+      });
+      const secondPage = await indexer.getIncoming("child", undefined, {
+        cursor: "1",
+        limit: 1,
+      });
+
+      expect(firstPage.results).toHaveLength(1);
+      expect(secondPage.results).toHaveLength(1);
+
+      const allIds = [
+        firstPage.results[0].sourceId,
+        secondPage.results[0].sourceId,
+      ];
+      expect(new Set(allIds).size).toBe(2);
+    });
+
+    it("should set nextCursor when more results exist", async () => {
+      const relationships = await indexer.getIncoming("child", undefined, {
+        cursor: "0",
+        limit: 1,
+      });
+
+      expect(relationships.nextCursor).toBe("1");
+    });
+
+    it("should not set nextCursor when no more results", async () => {
+      const relationships = await indexer.getIncoming("child", undefined, {
+        cursor: "0",
+        limit: 10,
+      });
+
+      expect(relationships.nextCursor).toBeUndefined();
+    });
+
+    it("should provide next function for pagination", async () => {
+      const firstPage = await indexer.getIncoming("child", undefined, {
+        cursor: "0",
+        limit: 1,
+      });
+
+      expect(firstPage.next).toBeDefined();
+
+      const secondPage = await firstPage.next!();
+      expect(secondPage.results).toHaveLength(1);
+      expect(secondPage.next).toBeUndefined();
     });
   });
 
@@ -784,6 +903,328 @@ describe("KyselyDocumentIndexer Unit Tests", () => {
           controller.signal,
         ),
       ).rejects.toThrow("Operation aborted");
+    });
+
+    describe("paging", () => {
+      beforeEach(async () => {
+        const types = ["child", "reference", "link"];
+        const operations: OperationWithContext[] = [];
+
+        for (let i = 0; i < types.length; i++) {
+          const action: AddRelationshipAction = {
+            id: uuidv4(),
+            timestampUtcMs: new Date().toISOString(),
+            type: "ADD_RELATIONSHIP",
+            scope: "document",
+            input: {
+              sourceId: "parent",
+              targetId: "child",
+              relationshipType: types[i],
+            },
+          };
+          const operation: Operation = {
+            id: uuidv4(),
+            index: i + 1,
+            timestampUtcMs: new Date().toISOString(),
+            hash: `hash${i + 2}`,
+            skip: 0,
+            action,
+          };
+          const context: OperationContext = {
+            documentId: "parent",
+            documentType: "test",
+            scope: "document",
+            branch: "main",
+            ordinal: i + 2,
+          };
+          operations.push({ operation, context });
+        }
+
+        await indexer.indexOperations(operations);
+      });
+
+      it("should respect limit parameter", async () => {
+        const relationships = await indexer.getDirectedRelationships(
+          "parent",
+          "child",
+          undefined,
+          { cursor: "0", limit: 2 },
+        );
+        expect(relationships.results).toHaveLength(2);
+      });
+
+      it("should respect cursor parameter", async () => {
+        const firstPage = await indexer.getDirectedRelationships(
+          "parent",
+          "child",
+          undefined,
+          { cursor: "0", limit: 2 },
+        );
+        const secondPage = await indexer.getDirectedRelationships(
+          "parent",
+          "child",
+          undefined,
+          { cursor: "2", limit: 2 },
+        );
+
+        expect(firstPage.results).toHaveLength(2);
+        expect(secondPage.results).toHaveLength(1);
+
+        const allTypes = [
+          ...firstPage.results.map((r) => r.relationshipType),
+          ...secondPage.results.map((r) => r.relationshipType),
+        ];
+        expect(new Set(allTypes).size).toBe(3);
+      });
+
+      it("should set nextCursor when more results exist", async () => {
+        const relationships = await indexer.getDirectedRelationships(
+          "parent",
+          "child",
+          undefined,
+          { cursor: "0", limit: 2 },
+        );
+
+        expect(relationships.nextCursor).toBe("2");
+      });
+
+      it("should not set nextCursor when no more results", async () => {
+        const relationships = await indexer.getDirectedRelationships(
+          "parent",
+          "child",
+          undefined,
+          { cursor: "0", limit: 10 },
+        );
+
+        expect(relationships.nextCursor).toBeUndefined();
+      });
+
+      it("should provide next function for pagination", async () => {
+        const firstPage = await indexer.getDirectedRelationships(
+          "parent",
+          "child",
+          undefined,
+          { cursor: "0", limit: 2 },
+        );
+
+        expect(firstPage.next).toBeDefined();
+
+        const secondPage = await firstPage.next!();
+        expect(secondPage.results).toHaveLength(1);
+        expect(secondPage.next).toBeUndefined();
+      });
+    });
+  });
+
+  describe("getUndirectedRelationships", () => {
+    beforeEach(async () => {
+      const action1: AddRelationshipAction = {
+        id: uuidv4(),
+        timestampUtcMs: new Date().toISOString(),
+        type: "ADD_RELATIONSHIP",
+        scope: "document",
+        input: {
+          sourceId: "docA",
+          targetId: "docB",
+          relationshipType: "child",
+        },
+      };
+      const operation1: Operation = {
+        id: uuidv4(),
+        index: 0,
+        timestampUtcMs: new Date().toISOString(),
+        hash: "hash1",
+        skip: 0,
+        action: action1,
+      };
+      const context1: OperationContext = {
+        documentId: "docA",
+        documentType: "test",
+        scope: "document",
+        branch: "main",
+        ordinal: 1,
+      };
+      const action2: AddRelationshipAction = {
+        id: uuidv4(),
+        timestampUtcMs: new Date().toISOString(),
+        type: "ADD_RELATIONSHIP",
+        scope: "document",
+        input: {
+          sourceId: "docB",
+          targetId: "docA",
+          relationshipType: "reference",
+        },
+      };
+      const operation2: Operation = {
+        id: uuidv4(),
+        index: 1,
+        timestampUtcMs: new Date().toISOString(),
+        hash: "hash2",
+        skip: 0,
+        action: action2,
+      };
+      const context2: OperationContext = {
+        documentId: "docB",
+        documentType: "test",
+        scope: "document",
+        branch: "main",
+        ordinal: 1,
+      };
+      const action3: AddRelationshipAction = {
+        id: uuidv4(),
+        timestampUtcMs: new Date().toISOString(),
+        type: "ADD_RELATIONSHIP",
+        scope: "document",
+        input: {
+          sourceId: "docA",
+          targetId: "docB",
+          relationshipType: "link",
+        },
+      };
+      const operation3: Operation = {
+        id: uuidv4(),
+        index: 2,
+        timestampUtcMs: new Date().toISOString(),
+        hash: "hash3",
+        skip: 0,
+        action: action3,
+      };
+      const context3: OperationContext = {
+        documentId: "docA",
+        documentType: "test",
+        scope: "document",
+        branch: "main",
+        ordinal: 2,
+      };
+      const operations: OperationWithContext[] = [
+        { operation: operation1, context: context1 },
+        { operation: operation2, context: context2 },
+        { operation: operation3, context: context3 },
+      ];
+
+      await indexer.indexOperations(operations);
+    });
+
+    it("should return relationships in both directions", async () => {
+      const relationships = await indexer.getUndirectedRelationships(
+        "docA",
+        "docB",
+      );
+      expect(relationships.results).toHaveLength(3);
+    });
+
+    it("should return same results regardless of argument order", async () => {
+      const relAB = await indexer.getUndirectedRelationships("docA", "docB");
+      const relBA = await indexer.getUndirectedRelationships("docB", "docA");
+
+      expect(relAB.results).toHaveLength(3);
+      expect(relBA.results).toHaveLength(3);
+    });
+
+    it("should filter by relationship type", async () => {
+      const relationships = await indexer.getUndirectedRelationships(
+        "docA",
+        "docB",
+        ["child"],
+      );
+      expect(relationships.results).toHaveLength(1);
+      expect(relationships.results[0].relationshipType).toBe("child");
+    });
+
+    it("should return empty array for non-existent relationship", async () => {
+      const relationships = await indexer.getUndirectedRelationships(
+        "docA",
+        "nonexistent",
+      );
+      expect(relationships.results).toHaveLength(0);
+    });
+
+    it("should throw when signal is aborted", async () => {
+      const controller = new AbortController();
+      controller.abort();
+
+      await expect(
+        indexer.getUndirectedRelationships(
+          "docA",
+          "docB",
+          undefined,
+          undefined,
+          undefined,
+          controller.signal,
+        ),
+      ).rejects.toThrow("Operation aborted");
+    });
+
+    it("should respect limit parameter", async () => {
+      const relationships = await indexer.getUndirectedRelationships(
+        "docA",
+        "docB",
+        undefined,
+        { cursor: "0", limit: 2 },
+      );
+      expect(relationships.results).toHaveLength(2);
+    });
+
+    it("should respect cursor parameter", async () => {
+      const firstPage = await indexer.getUndirectedRelationships(
+        "docA",
+        "docB",
+        undefined,
+        { cursor: "0", limit: 2 },
+      );
+      const secondPage = await indexer.getUndirectedRelationships(
+        "docA",
+        "docB",
+        undefined,
+        { cursor: "2", limit: 2 },
+      );
+
+      expect(firstPage.results).toHaveLength(2);
+      expect(secondPage.results).toHaveLength(1);
+
+      const allTypes = [
+        ...firstPage.results.map((r) => r.relationshipType),
+        ...secondPage.results.map((r) => r.relationshipType),
+      ];
+      expect(allTypes).toHaveLength(3);
+      expect(new Set(allTypes).size).toBe(3);
+    });
+
+    it("should set nextCursor when more results exist", async () => {
+      const relationships = await indexer.getUndirectedRelationships(
+        "docA",
+        "docB",
+        undefined,
+        { cursor: "0", limit: 2 },
+      );
+
+      expect(relationships.nextCursor).toBe("2");
+    });
+
+    it("should not set nextCursor when no more results", async () => {
+      const relationships = await indexer.getUndirectedRelationships(
+        "docA",
+        "docB",
+        undefined,
+        { cursor: "0", limit: 10 },
+      );
+
+      expect(relationships.nextCursor).toBeUndefined();
+    });
+
+    it("should provide next function for pagination", async () => {
+      const firstPage = await indexer.getUndirectedRelationships(
+        "docA",
+        "docB",
+        undefined,
+        { cursor: "0", limit: 2 },
+      );
+
+      expect(firstPage.next).toBeDefined();
+
+      const secondPage = await firstPage.next!();
+      expect(secondPage.results).toHaveLength(1);
+      expect(secondPage.next).toBeUndefined();
     });
   });
 
