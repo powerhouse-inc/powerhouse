@@ -1,8 +1,6 @@
-import { releaseVersion } from "nx/release";
-
-const { workspaceVersion, projectsVersionData } = await releaseVersion({
-  preid: "dev",
-  // dryRun: true,
-});
-
-console.log({ workspaceVersion, projectsVersionData });
+export function runWorkspaceCommand(command: string) {
+  Bun.spawnSync({
+    cmd: ["pnpm", command],
+    stdio: ["inherit", "inherit", "inherit"],
+  });
+}

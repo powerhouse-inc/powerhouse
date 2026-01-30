@@ -15,22 +15,18 @@ const commands = [
 ];
 
 const cliDescription = ph.description ?? "";
+declare const CLI_VERSION: string;
 
 async function main() {
   await writeCliDocsMarkdownFile({
     filePath: "COMMANDS.md",
-    docsTitle: "PH-CMD CLI Commands",
+    docsTitle: `PH-CMD CLI Commands (${CLI_VERSION})`,
     docsIntroduction:
       "This document provides detailed information about the available commands in the PH-CMD CLI. The CLI is published as `ph-cmd` and is invoked with the `ph` command.",
     cliDescription,
     entries: commands,
   });
-  return;
+  process.exit(0);
 }
 
-main()
-  .then(() => process.exit(0))
-  .catch((e) => {
-    console.error(e);
-    process.exit(1);
-  });
+await main();

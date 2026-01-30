@@ -1,0 +1,41 @@
+name: Release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  packages: write
+  id-token: write
+
+jobs:
+  setup:
+   name: Setup monorepo for release
+   runs-on: ubuntu-latest
+   steps:
+     - name: General setup
+       uses: ./github/actions/setup
+    
+     - name: Install dependencies for release tools
+       run: bun install
+       working-directory: releases
+
+     - name: Set git config
+       run: |
+         git config user.name "Github Actions Bot"
+         git config user.email "-"
+
+  configure-git:
+   name: Set git configurations
+   needs: setup
+   runs-on: ubuntu-latest
+   steps:
+    - name: Set git config
+      run: |
+        git config user.name "Github Actions Bot"
+        git config user.email "-"
+
+  before-release:
+   name: Update versions and generate changelog
+   needs: configure-git
+   runs-on: ubuntu-latest
