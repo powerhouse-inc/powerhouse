@@ -1,3 +1,13 @@
+## 5.3.0-staging.17 (2026-01-30)
+
+### 🩹 Fixes
+
+- **switchboard:** close pglite connection on sigint ([5e771280a](https://github.com/powerhouse-inc/powerhouse/commit/5e771280a))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 5.3.0-staging.16 (2026-01-29)
 
 This was a version bump only for @powerhousedao/switchboard to align it with other projects, there were no code changes.

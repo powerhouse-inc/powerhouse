@@ -1,3 +1,14 @@
+## 5.3.0-staging.17 (2026-01-30)
+
+### 🩹 Fixes
+
+- **codegen:** do not assume prettier is globally installed ([b408bd650](https://github.com/powerhouse-inc/powerhouse/commit/b408bd650))
+- **codegen:** fix type import on custom subgraph template ([9e5fab214](https://github.com/powerhouse-inc/powerhouse/commit/9e5fab214))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 5.3.0-staging.16 (2026-01-29)
 
 ### 🩹 Fixes

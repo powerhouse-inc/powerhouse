@@ -1,3 +1,20 @@
+## 5.3.0-staging.17 (2026-01-30)
+
+### 🚀 Features
+
+- add toast and padding to revision history ([#2259](https://github.com/powerhouse-inc/powerhouse/pull/2259))
+
+### 🩹 Fixes
+
+- **design-system:** prevent file/folder from opening during rename ([bdd430a22](https://github.com/powerhouse-inc/powerhouse/commit/bdd430a22))
+- **design-system:** update dropdown icons size and add drive modal position ([54fa6566d](https://github.com/powerhouse-inc/powerhouse/commit/54fa6566d))
+- **design-system:** make package manager list fill available modal he… ([#2260](https://github.com/powerhouse-inc/powerhouse/pull/2260))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+- Guillermo Puente Sandoval @gpuente
+
 ## 5.3.0-staging.16 (2026-01-29)
 
 This was a version bump only for @powerhousedao/design-system to align it with other projects, there were no code changes.

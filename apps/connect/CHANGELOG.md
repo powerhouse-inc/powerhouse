@@ -1,3 +1,13 @@
+## 5.3.0-staging.17 (2026-01-30)
+
+### 🚀 Features
+
+- add toast and padding to revision history ([#2259](https://github.com/powerhouse-inc/powerhouse/pull/2259))
+
+### ❤️ Thank You
+
+- Guillermo Puente Sandoval @gpuente
+
 ## 5.3.0-staging.16 (2026-01-29)
 
 This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.

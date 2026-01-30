@@ -1,3 +1,13 @@
+## 5.3.0-staging.17 (2026-01-30)
+
+### 🩹 Fixes
+
+- **reactor-browser:** fix document rename for legacy reactor ([485ec9d75](https://github.com/powerhouse-inc/powerhouse/commit/485ec9d75))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 5.3.0-staging.16 (2026-01-29)
 
 This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.

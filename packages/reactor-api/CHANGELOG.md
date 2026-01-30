@@ -1,3 +1,13 @@
+## 5.3.0-staging.17 (2026-01-30)
+
+### 🚀 Features
+
+- **reactor-api:** remove new reactor subgraph from supergraph ([2c7281603](https://github.com/powerhouse-inc/powerhouse/commit/2c7281603))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 5.3.0-staging.16 (2026-01-29)
 
 This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
