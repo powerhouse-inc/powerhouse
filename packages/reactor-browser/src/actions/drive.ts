@@ -8,16 +8,12 @@ import type {
   Trigger,
 } from "document-drive";
 import {
-  addTrigger as baseAddTrigger,
-  removeTrigger as baseRemoveTrigger,
   driveCreateDocument,
   setAvailableOffline,
   setSharingType,
 } from "document-drive";
 import type { PHDocument } from "document-model";
-import { isChannelSyncEnabledSync } from "../hooks/use-feature-flags.js";
 import { getUserPermissions } from "../utils/user.js";
-import { queueActions } from "./queue.js";
 
 export async function addDrive(input: DriveInput, preferredEditor?: string) {
   const { isAllowedToCreateDocuments } = getUserPermissions();
@@ -139,33 +135,13 @@ export async function setDriveSharingType(
   ]);
 }
 
+// @deprecated
 export async function removeTrigger(driveId: string, triggerId: string) {
-  const useChannelSync = isChannelSyncEnabledSync();
-  if (useChannelSync) {
-    // Channel sync replaces triggers - no-op
-    return;
-  }
-
-  const reactor = window.ph?.reactorClient;
-  if (!reactor) {
-    throw new Error("ReactorClient not initialized");
-  }
-
-  const drive = await reactor.get<DocumentDriveDocument>(driveId);
-  const unsafeCastAsDrive = (await queueActions(
-    drive,
-    baseRemoveTrigger({ triggerId }),
-  )) as DocumentDriveDocument;
-
-  const trigger = unsafeCastAsDrive.state.local.triggers.find(
-    (trigger) => trigger.id === triggerId,
-  );
-
-  if (trigger) {
-    throw new Error(`There was an error removing trigger ${triggerId}`);
-  }
+  // Legacy -- to be removed.
+  return;
 }
 
+// @deprecated
 export async function registerNewPullResponderTrigger(
   driveId: string,
   url: string,
@@ -175,28 +151,8 @@ export async function registerNewPullResponderTrigger(
   return undefined;
 }
 
+// @deprecated
 export async function addTrigger(driveId: string, trigger: Trigger) {
-  const useChannelSync = isChannelSyncEnabledSync();
-  if (useChannelSync) {
-    // Channel sync replaces triggers - no-op
-    return;
-  }
-
-  const reactor = window.ph?.reactorClient;
-  if (!reactor) {
-    throw new Error("ReactorClient not initialized");
-  }
-  const drive = await reactor.get<DocumentDriveDocument>(driveId);
-  const unsafeCastAsDrive = (await queueActions(
-    drive,
-    baseAddTrigger({ trigger }),
-  )) as DocumentDriveDocument;
-
-  const newTrigger = unsafeCastAsDrive.state.local.triggers.find(
-    (t) => t.id === trigger.id,
-  );
-
-  if (!newTrigger) {
-    throw new Error(`There was an error adding the trigger ${trigger.id}`);
-  }
+  // Legacy -- to be removed.
+  return;
 }

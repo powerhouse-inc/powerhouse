@@ -6,7 +6,6 @@ import {
   removeTrigger,
   renameDrive,
   setDriveSharingType,
-  useChannelSyncEnabled,
   useDrives,
 } from "@powerhousedao/reactor-browser";
 import type { PullResponderTrigger, Trigger } from "document-drive";
@@ -38,8 +37,6 @@ export const useClientErrorHandler = (): ClientErrorHandler => {
     Map<string, PullResponderTrigger>
   >(new Map());
   const drives = useDrives();
-  const channelSyncEnabled = useChannelSyncEnabled();
-
   const pullResponderRegisterDelay = useRef<Map<string, number>>(new Map());
 
   const handleStrands400 = useCallback(
@@ -148,54 +145,9 @@ export const useClientErrorHandler = (): ClientErrorHandler => {
   const strandsErrorHandler: ClientErrorHandler["strandsErrorHandler"] =
     useCallback(
       async (driveId, trigger, status, errorMessage) => {
-        // When channel sync is enabled, strands error handling is not needed
-        // as the channel sync system replaces the legacy trigger-based sync
-        if (channelSyncEnabled) {
-          return;
-        }
-
-        switch (status) {
-          case 400: {
-            if (isListenerIdNotFound(errorMessage, trigger.data?.listenerId)) {
-              const autoRegisterPullResponder =
-                localStorage.getItem("AUTO_REGISTER_PULL_RESPONDER") !==
-                "false";
-
-              if (!autoRegisterPullResponder) return;
-              const handlerCode = `strands:${driveId}:${status}`;
-
-              if (handlingInProgress.includes(handlerCode)) return;
-              if (!trigger.data) return;
-
-              const delay =
-                pullResponderRegisterDelay.current.get(handlerCode) || 0;
-
-              setTimeout(
-                () => handleStrands400(driveId, trigger, handlerCode),
-                delay,
-              );
-            }
-
-            break;
-          }
-
-          case 404: {
-            const handlerCode = `strands:${driveId}:${status}`;
-            if (handlingInProgress.includes(handlerCode)) return;
-            setTimeout(
-              () => handleDriveNotFound(driveId, trigger, handlerCode),
-              0,
-            );
-            break;
-          }
-        }
+        // Legacy -- to be removed.
       },
-      [
-        channelSyncEnabled,
-        handleDriveNotFound,
-        handleStrands400,
-        handlingInProgress,
-      ],
+      [handleDriveNotFound, handleStrands400, handlingInProgress],
     );
 
   return useMemo(() => ({ strandsErrorHandler }), [strandsErrorHandler]);

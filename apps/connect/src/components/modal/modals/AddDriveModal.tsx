@@ -8,16 +8,12 @@ import {
   addDrive,
   addRemoteDrive,
   closePHModal,
-  isLegacyWriteEnabledSync,
   setSelectedDrive,
   useDriveEditorModules,
   usePHModal,
 } from "@powerhousedao/reactor-browser";
 import { useRenown, useUser } from "@powerhousedao/reactor-browser/connect";
-import {
-  requestPublicDrive,
-  requestPublicDriveFromReactor,
-} from "document-drive";
+import { requestPublicDriveFromReactor } from "document-drive";
 import { t } from "i18next";
 
 export function AddDriveModal() {
@@ -92,17 +88,12 @@ export function AddDriveModal() {
       onAddLocalDrive={onAddLocalDriveSubmit}
       onAddRemoteDrive={onAddRemoteDriveSubmit}
       requestPublicDrive={async (url: string) => {
-        const useLegacy = isLegacyWriteEnabledSync();
-        const requestFn = useLegacy
-          ? requestPublicDrive
-          : requestPublicDriveFromReactor;
-
         try {
           const authToken = await renown?.getBearerToken?.({
             expiresIn: 10,
             aud: url,
           });
-          return requestFn(url, {
+          return requestPublicDriveFromReactor(url, {
             Authorization: `Bearer ${authToken}`,
           });
         } catch (error) {
@@ -111,7 +102,7 @@ export function AddDriveModal() {
             expiresIn: 10,
             aud: url,
           });
-          return requestFn(url, {
+          return requestPublicDriveFromReactor(url, {
             Authorization: `Bearer ${authToken}`,
           });
         }
