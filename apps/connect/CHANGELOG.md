@@ -1,3 +1,21 @@
+## 6.0.0-dev.27 (2026-01-30)
+
+### 🚀 Features
+
+- renown sdk improvements ([bc1099d94](https://github.com/powerhouse-inc/powerhouse/commit/bc1099d94))
+- **ph-cmd:** fix forwarding and versioning bug ([#2272](https://github.com/powerhouse-inc/powerhouse/pull/2272))
+
+### 🩹 Fixes
+
+- fixes for the new way operation history works ([ebe0e5b76](https://github.com/powerhouse-inc/powerhouse/commit/ebe0e5b76))
+- added a useDocumentOperations hook ([b2a98413f](https://github.com/powerhouse-inc/powerhouse/commit/b2a98413f))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan (@thegoldenmule)
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.0.0-dev.26 (2026-01-29)
 
 ### 🚀 Features
