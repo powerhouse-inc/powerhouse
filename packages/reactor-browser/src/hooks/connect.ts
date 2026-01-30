@@ -83,7 +83,7 @@ export {
   useStudioMode,
   useVersion,
   useVersionCheckInterval,
-  useWarnOutdatedApp
+  useWarnOutdatedApp,
 } from "./config/connect.js";
 export { setPHGlobalConfigByKey } from "./config/set-config-by-key.js";
 export {
@@ -91,7 +91,7 @@ export {
   setPHGlobalConfig,
   useResetPHGlobalConfig,
   useSetDefaultPHGlobalConfig,
-  useSetPHGlobalConfig
+  useSetPHGlobalConfig,
 } from "./config/set-config-by-object.js";
 export { usePHGlobalConfigByKey } from "./config/use-value-by-key.js";
 export { setConnectCrypto, useConnectCrypto, useSign } from "./crypto.js";
@@ -102,7 +102,7 @@ export { setLoading, useLoading } from "./loading.js";
 export { setLoginStatus, useLoginStatus } from "./login-status.js";
 export {
   setProcessorManager,
-  useProcessorManager
+  useProcessorManager,
 } from "./processor-manager.js";
 export {
   setDatabase,
@@ -117,8 +117,7 @@ export {
   usePGlite,
   useReactorClient,
   useReactorClientModule,
-  useSync
+  useSync,
 } from "./reactor.js";
 export { setRenown, useRenown } from "./renown.js";
 export { setUser, useUser } from "./user.js";
-
