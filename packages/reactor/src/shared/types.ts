@@ -26,6 +26,14 @@ export type ShutdownStatus = {
    * In the case of a server process, a graceful shutdown period should be allowed for the system to finish its work.
    */
   get isShutdown(): boolean;
+
+  /**
+   * A promise that resolves when the shutdown process is complete.
+   *
+   * For server environments, await this promise to ensure all active jobs finish
+   * before exiting the process.
+   */
+  completed: Promise<void>;
 };
 
 /**

@@ -192,6 +192,7 @@ async function createReactorSetup(): Promise<ReactorTestSetup> {
     documentIndexer,
     operationStore,
     eventBus,
+    executorManager,
   );
 
   const cleanup = async () => {

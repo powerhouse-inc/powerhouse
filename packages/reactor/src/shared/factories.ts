@@ -13,6 +13,7 @@ export function createShutdownStatus(isShutdown: boolean): ShutdownStatus {
     get isShutdown() {
       return shutdownState;
     },
+    completed: Promise.resolve(),
   };
 }
 
@@ -20,16 +21,24 @@ export function createShutdownStatus(isShutdown: boolean): ShutdownStatus {
  * Factory method to create a ShutdownStatus that can be updated
  *
  * @param initialState - Initial shutdown state (default: false)
- * @returns A tuple of [ShutdownStatus, setter function]
+ * @returns A tuple of [ShutdownStatus, setShutdown function, setCompleted function]
  */
 export function createMutableShutdownStatus(
   initialState = false,
-): [ShutdownStatus, (value: boolean) => void] {
+): [
+  ShutdownStatus,
+  (value: boolean) => void,
+  (completed: Promise<void>) => void,
+] {
   let shutdownState = initialState;
+  let completedPromise: Promise<void> = Promise.resolve();
 
   const status: ShutdownStatus = {
     get isShutdown() {
       return shutdownState;
+    },
+    get completed() {
+      return completedPromise;
     },
   };
 
@@ -37,5 +46,9 @@ export function createMutableShutdownStatus(
     shutdownState = value;
   };
 
-  return [status, setShutdown];
+  const setCompleted = (promise: Promise<void>) => {
+    completedPromise = promise;
+  };
+
+  return [status, setShutdown, setCompleted];
 }

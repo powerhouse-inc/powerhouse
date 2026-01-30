@@ -163,6 +163,7 @@ export class SyncManager implements ISyncManager {
 
     return {
       isShutdown: true,
+      completed: Promise.resolve(),
     };
   }
 

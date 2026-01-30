@@ -74,6 +74,7 @@ export class ReactorBuilder {
   private readModelCoordinator?: IReadModelCoordinator;
   private signatureVerifier?: SignatureVerificationHandler;
   private kyselyInstance?: Kysely<Database>;
+  private signalHandlersEnabled = false;
 
   withLogger(logger: ILogger): this {
     this.logger = logger;
@@ -149,6 +150,11 @@ export class ReactorBuilder {
 
   withKysely(kysely: Kysely<Database>): this {
     this.kyselyInstance = kysely;
+    return this;
+  }
+
+  withSignalHandlers(): this {
+    this.signalHandlersEnabled = true;
     return this;
   }
 
@@ -331,6 +337,7 @@ export class ReactorBuilder {
       documentIndexer,
       operationStore,
       eventBus,
+      executorManager,
     );
 
     let syncModule: SyncModule | undefined = undefined;
@@ -345,7 +352,7 @@ export class ReactorBuilder {
       await syncModule.syncManager.startup();
     }
 
-    return {
+    const module: ReactorModule = {
       driveServer,
       storage,
       eventBus,
@@ -369,5 +376,40 @@ export class ReactorBuilder {
       syncModule,
       reactor,
     };
+
+    if (this.signalHandlersEnabled) {
+      this.attachSignalHandlers(module);
+    }
+
+    return module;
+  }
+
+  private attachSignalHandlers(module: ReactorModule): void {
+    let shutdownInProgress = false;
+
+    const handler = async (signal: string) => {
+      if (shutdownInProgress) {
+        this.logger!.warn(`Received ${signal} again, forcing exit`);
+        process.exit(1);
+      }
+
+      shutdownInProgress = true;
+      this.logger!.info(`Received ${signal}, starting graceful shutdown...`);
+
+      const status = module.reactor.kill();
+
+      try {
+        await status.completed;
+        await module.database.destroy();
+        this.logger!.info("Shutdown complete");
+        process.exit(0);
+      } catch (error) {
+        this.logger!.error("Shutdown failed:", error);
+        process.exit(1);
+      }
+    };
+
+    process.on("SIGINT", () => void handler("SIGINT"));
+    process.on("SIGTERM", () => void handler("SIGTERM"));
   }
 }
