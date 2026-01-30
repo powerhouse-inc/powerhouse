@@ -1,6 +1,6 @@
 import { boolean, command, flag, oneOf, option, run } from "cmd-ts";
 import console from "console";
-import { ReleaseClient, releasePublish } from "nx/release";
+import { ReleaseClient } from "nx/release";
 import type { ReleaseType } from "semver";
 
 const channels = ["dev", "staging", "production"] as const;
@@ -91,11 +91,23 @@ const app = command({
       defaultValue: () => false,
       defaultValueIsSerializable: true,
     }),
+    skipPublish: flag({
+      long: "skip-publish",
+      description: "Do not run the publish step",
+      defaultValue: () => true,
+      defaultValueIsSerializable: true,
+    }),
+    skipChangelog: flag({
+      long: "skip-changelog",
+      description: "Do not run the changelog step",
+      defaultValue: () => true,
+      defaultValueIsSerializable: true,
+    }),
   },
   handler: async (args) => {
     console.log(">>> args", { args });
 
-    const { mode, dryRun, verbose } = args;
+    const { mode, dryRun, verbose, skipPublish, skipChangelog } = args;
     const branchName = getBranchName();
     const channel = getReleaseChannelFromBranchName(branchName);
     const specifier = getSpecifier(channel, mode);
@@ -125,7 +137,7 @@ const app = command({
       true,
     );
 
-    const { releaseVersion, releaseChangelog } = releaseClient;
+    const { releaseVersion, releaseChangelog, releasePublish } = releaseClient;
 
     const { workspaceVersion, projectsVersionData, releaseGraph } =
       await releaseVersion({
@@ -133,6 +145,9 @@ const app = command({
         preid,
         dryRun,
         verbose,
+        stageChanges: false,
+        gitCommit: false,
+        gitPush: false,
       });
 
     if (!workspaceVersion) {
@@ -141,31 +156,42 @@ const app = command({
     }
 
     Bun.spawnSync({
-      cmd: ["pnpm", "build:misc"],
-      stdio: ["pipe", "pipe", "pipe"],
+      cmd: ["pnpm", "build-misc"],
+      stdio: ["inherit", "inherit", "inherit"],
+      env: {
+        ...process.env,
+        WORKSPACE_VERSION: workspaceVersion,
+      },
     });
 
-    await releaseChangelog({
-      version: workspaceVersion,
-      versionData: projectsVersionData,
-      releaseGraph,
-      dryRun,
-      verbose,
-    });
+    if (!skipChangelog) {
+      await releaseChangelog({
+        version: workspaceVersion,
+        versionData: projectsVersionData,
+        dryRun,
+        releaseGraph,
+        verbose,
+        gitCommit: false,
+        stageChanges: false,
+        gitPush: false,
+      });
+    }
 
-    const publishResult = await releasePublish({
-      tag: preid,
-      versionData: projectsVersionData,
-      dryRun: true,
-      verbose,
-      releaseGraph,
-    });
+    if (!skipPublish) {
+      const publishResult = await releasePublish({
+        tag: preid,
+        versionData: projectsVersionData,
+        dryRun,
+        verbose,
+        releaseGraph,
+      });
 
-    const failed = Object.values(publishResult).some((r) => r.code !== 0);
-    if (failed) {
-      console.error(">>> PUBLISH FAILED");
-      console.error(publishResult);
-      process.exit(1);
+      const failed = Object.values(publishResult).some((r) => r.code !== 0);
+      if (failed) {
+        console.error(">>> PUBLISH FAILED");
+        console.error(publishResult);
+        process.exit(1);
+      }
     }
 
     console.log(">>> Release successfully completed 🚀");
