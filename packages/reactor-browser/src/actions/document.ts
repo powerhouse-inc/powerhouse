@@ -27,7 +27,7 @@ import type {
   DocumentOperations,
   PHDocument,
 } from "document-model";
-import { documentModelDocumentType } from "document-model";
+import { documentModelDocumentType, setName } from "document-model";
 import {
   baseLoadFromInput,
   baseSaveToFileHandle,
@@ -843,6 +843,11 @@ export async function renameNode(
     if (!reactor) {
       throw new Error("Legacy reactor not initialized");
     }
+
+    // Update the document's own header.name
+    await reactor.queueActions(nodeId, [setName(name)]);
+
+    // Update the drive's node list
     const drive = await reactor.getDrive(driveId);
     const unsafeCastAsDrive = (await queueActions(
       drive,

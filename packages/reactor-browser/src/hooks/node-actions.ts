@@ -133,9 +133,12 @@ export function useNodeActions() {
   ): Promise<void> {
     if (!drives) return;
 
-    // Find all drives that contain this node
-    const drivesWithNode = drives.filter((drive) =>
-      drive.state.global.nodes.some((n) => n.id === nodeId),
+    // Find all drives that contain this node, excluding the selected drive
+    // (renameNode already handles the selected drive)
+    const drivesWithNode = drives.filter(
+      (drive) =>
+        drive.state.global.nodes.some((n) => n.id === nodeId) &&
+        drive.header.id !== selectedDriveId,
     );
 
     // Update node name in all parent drives
