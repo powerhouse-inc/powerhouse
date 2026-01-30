@@ -524,6 +524,7 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
       results: documents,
       options: paging || { cursor: "0", limit: 100 },
       nextCursor,
+      totalCount: allDocumentIds.length,
       next: hasMore
         ? () =>
             this.findByType(
