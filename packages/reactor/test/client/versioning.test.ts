@@ -257,9 +257,7 @@ describe("ReactorClient Versioning Integration Tests", () => {
       .withDocumentModels([driveDocumentModelModule as any, v1Module, v2Module])
       .withUpgradeManifests([
         upgradeManifest as unknown as UpgradeManifest<readonly number[]>,
-      ])
-      .withFeatures({ legacyStorageEnabled: false });
-
+      ]);
     module = await new ReactorClientBuilder()
       .withReactorBuilder(reactorBuilder)
       .buildModule();

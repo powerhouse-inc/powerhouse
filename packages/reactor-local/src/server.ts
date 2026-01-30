@@ -129,10 +129,7 @@ const startServer = async (
     .withEventBus(eventBus)
     .withLegacyStorage(
       storageImpl as unknown as IDocumentStorage & IDocumentOperationStorage,
-    )
-    .withFeatures({
-      legacyStorageEnabled: true,
-    });
+    );
 
   const clientModule = await new ReactorClientBuilder()
     .withReactorBuilder(builder)

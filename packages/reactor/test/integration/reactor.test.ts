@@ -92,9 +92,7 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
     const builder = new ReactorBuilder()
       .withDocumentModels([driveDocumentModelModule as any])
       .withLegacyStorage(storage)
-      .withReadModel(documentIndexer)
-      .withFeatures({});
-
+      .withReadModel(documentIndexer);
     // Build returns IReactor
     reactor = await builder.build();
   });

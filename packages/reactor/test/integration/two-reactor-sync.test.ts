@@ -103,14 +103,12 @@ async function setupTwoReactors(): Promise<TwoReactorSetup> {
   const moduleA = await new ReactorBuilder()
     .withEventBus(eventBusA)
     .withDocumentModels([driveDocumentModelModule as any])
-    .withFeatures({ legacyStorageEnabled: false })
     .withSync(new SyncBuilder().withChannelFactory(createChannelFactory()))
     .buildModule();
 
   const moduleB = await new ReactorBuilder()
     .withEventBus(eventBusB)
     .withDocumentModels([driveDocumentModelModule as any])
-    .withFeatures({ legacyStorageEnabled: false })
     .withSync(new SyncBuilder().withChannelFactory(createChannelFactory()))
     .buildModule();
 
@@ -588,7 +586,6 @@ describe("Two-Reactor Sync", () => {
   it("should trigger excessive reshuffle error when loading operation with index far in the past", async () => {
     const testReactor = await new ReactorBuilder()
       .withDocumentModels([driveDocumentModelModule as any])
-      .withFeatures({ legacyStorageEnabled: false })
       .build();
 
     const document = driveDocumentModelModule.utils.createDocument();

@@ -20,13 +20,10 @@ describe("ReactorSubgraph Query Resolvers", () => {
   let module: ReactorClientModule;
 
   beforeEach(async () => {
-    const reactorBuilder = new ReactorBuilder()
-      .withDocumentModels([
-        driveDocumentModelModule as unknown as DocumentModelModule,
-        documentModelDocumentModelModule as unknown as DocumentModelModule,
-      ])
-      .withFeatures({ legacyStorageEnabled: false });
-
+    const reactorBuilder = new ReactorBuilder().withDocumentModels([
+      driveDocumentModelModule as unknown as DocumentModelModule,
+      documentModelDocumentModelModule as unknown as DocumentModelModule,
+    ]);
     module = await new ReactorClientBuilder()
       .withReactorBuilder(reactorBuilder)
       .buildModule();
@@ -150,13 +147,10 @@ describe("ReactorSubgraph Mutation Resolvers", () => {
   let module: ReactorClientModule;
 
   beforeEach(async () => {
-    const reactorBuilder = new ReactorBuilder()
-      .withDocumentModels([
-        driveDocumentModelModule as unknown as DocumentModelModule,
-        documentModelDocumentModelModule as unknown as DocumentModelModule,
-      ])
-      .withFeatures({ legacyStorageEnabled: false });
-
+    const reactorBuilder = new ReactorBuilder().withDocumentModels([
+      driveDocumentModelModule as unknown as DocumentModelModule,
+      documentModelDocumentModelModule as unknown as DocumentModelModule,
+    ]);
     module = await new ReactorClientBuilder()
       .withReactorBuilder(reactorBuilder)
       .buildModule();

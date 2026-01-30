@@ -36,9 +36,7 @@ describe("dropAllTables", () => {
         driveDocumentModelModule,
         documentModelDocumentModelModule,
       ])
-      .withKysely(db as Kysely<Database>)
-      .withFeatures({ legacyStorageEnabled: false });
-
+      .withKysely(db as Kysely<Database>);
     module = await new ReactorClientBuilder()
       .withReactorBuilder(reactorBuilder)
       .buildModule();
@@ -62,9 +60,7 @@ describe("dropAllTables", () => {
   it("should handle empty database without errors", async () => {
     const reactorBuilder = new ReactorBuilder()
       .withDocumentModels([documentModelDocumentModelModule])
-      .withKysely(db as Kysely<Database>)
-      .withFeatures({ legacyStorageEnabled: false });
-
+      .withKysely(db as Kysely<Database>);
     module = await new ReactorClientBuilder()
       .withReactorBuilder(reactorBuilder)
       .buildModule();
@@ -78,9 +74,7 @@ describe("dropAllTables", () => {
         driveDocumentModelModule,
         documentModelDocumentModelModule,
       ])
-      .withKysely(db as Kysely<Database>)
-      .withFeatures({ legacyStorageEnabled: false });
-
+      .withKysely(db as Kysely<Database>);
     module = await new ReactorClientBuilder()
       .withReactorBuilder(reactorBuilder)
       .buildModule();

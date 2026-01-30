@@ -45,9 +45,7 @@ describe("ReactorClient Integration Tests", () => {
         documentModelDocumentModelModule,
       ])
       .withReadModel(documentIndexer)
-      .withEventBus(eventBus)
-      .withFeatures({ legacyStorageEnabled: false });
-
+      .withEventBus(eventBus);
     client = await new ReactorClientBuilder()
       .withReactorBuilder(reactorBuilder)
       .build();
@@ -325,9 +323,7 @@ describe("ReactorClient Integration Tests", () => {
             documentModelDocumentModelModule,
           ])
           .withReadModel(testDocumentIndexer)
-          .withEventBus(eventBus)
-          .withFeatures({ legacyStorageEnabled: false });
-
+          .withEventBus(eventBus);
         const signingClient = await new ReactorClientBuilder()
           .withReactorBuilder(reactorBuilder)
           .withSigner(mockSigner)

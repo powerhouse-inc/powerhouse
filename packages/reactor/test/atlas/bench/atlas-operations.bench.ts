@@ -95,7 +95,6 @@ async function main() {
           const documentModels = getDocumentModels();
           reactorInstance = await new ReactorBuilder()
             .withDocumentModels(documentModels)
-            .withFeatures({})
             // not used
             .withLegacyStorage(new MemoryStorage())
             .build();
@@ -167,7 +166,6 @@ async function main() {
           const documentModels = getDocumentModels();
           reactorBatchSubmission = await new ReactorBuilder()
             .withDocumentModels(documentModels)
-            .withFeatures({})
             // not used
             .withLegacyStorage(new MemoryStorage())
             .build();
