@@ -361,7 +361,7 @@ describe("ReactorClient Versioning Integration Tests", () => {
         v1Actions.addItem({ id: "3", name: "Item 3" }),
       ]);
 
-      const { document: retrieved } = await client.get(doc.header.id);
+      const retrieved = await client.get(doc.header.id);
       const state = retrieved.state as unknown as StateV1;
       expect(state.global.items.length).toBeGreaterThanOrEqual(3);
     });
@@ -376,7 +376,7 @@ describe("ReactorClient Versioning Integration Tests", () => {
         v2Actions.setTitle({ title: "My Items List" }),
       ]);
 
-      const { document: retrieved } = await client.get(doc.header.id);
+      const retrieved = await client.get(doc.header.id);
       const state = retrieved.state as unknown as StateV2;
       expect(state.global.title).toBe("My Items List");
       expect(state.global.items.length).toBe(1);
@@ -391,7 +391,7 @@ describe("ReactorClient Versioning Integration Tests", () => {
         v2Actions.addItem({ id: "1", name: "Test Item" }),
       ]);
 
-      const { document: retrieved } = await client.get(doc.header.id);
+      const retrieved = await client.get(doc.header.id);
       const state = retrieved.state as unknown as StateV2;
 
       expect(state.global.items[0]).toHaveProperty("addedAt");
@@ -408,7 +408,7 @@ describe("ReactorClient Versioning Integration Tests", () => {
         v1Actions.addItem({ id: "1", name: "Test Item" }),
       ]);
 
-      const { document: retrieved } = await client.get(doc.header.id);
+      const retrieved = await client.get(doc.header.id);
       const state = retrieved.state as unknown as StateV1;
 
       expect(state.global.items[0]).not.toHaveProperty("addedAt");
@@ -425,7 +425,7 @@ describe("ReactorClient Versioning Integration Tests", () => {
         v1Actions.addItem({ id: "1", name: "Test Item" }),
       ]);
 
-      const { document: retrieved } = await client.get(doc.header.id);
+      const retrieved = await client.get(doc.header.id);
       expect(retrieved.header.id).toBe(doc.header.id);
 
       const operations = await client.getOperations(doc.header.id);
@@ -484,7 +484,7 @@ describe("ReactorClient Versioning Integration Tests", () => {
 
       await client.deleteDocument(doc.header.id);
 
-      const { document: retrieved } = await client.get(doc.header.id);
+      const retrieved = await client.get(doc.header.id);
       expect(
         (retrieved.state as { document?: { isDeleted?: boolean } }).document
           ?.isDeleted,
@@ -498,7 +498,7 @@ describe("ReactorClient Versioning Integration Tests", () => {
 
       await client.deleteDocument(doc.header.id);
 
-      const { document: retrieved } = await client.get(doc.header.id);
+      const retrieved = await client.get(doc.header.id);
       expect(
         (retrieved.state as { document?: { isDeleted?: boolean } }).document
           ?.isDeleted,

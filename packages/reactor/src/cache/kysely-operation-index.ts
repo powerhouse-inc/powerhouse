@@ -1,9 +1,8 @@
 import type { Kysely } from "kysely";
 import { sql } from "kysely";
+import type { PagedResults, PagingOptions } from "../shared/types.js";
 import type {
   OperationWithContext,
-  PagedResults,
-  PagingOptions,
   ViewFilter,
 } from "../storage/interfaces.js";
 import type { Database } from "../storage/kysely/types.js";
@@ -253,10 +252,24 @@ export class KyselyOperationIndex implements IOperationIndex {
         ? items[items.length - 1].ordinal.toString()
         : undefined;
 
+    const cursorValue = paging?.cursor || "0";
+    const limit = paging?.limit || 100;
+    const entries = items.map((row) => this.rowToOperationIndexEntry(row));
+
     return {
-      items: items.map((row) => this.rowToOperationIndexEntry(row)),
+      results: entries,
+      options: { cursor: cursorValue, limit },
       nextCursor,
-      hasMore,
+      next: hasMore
+        ? () =>
+            this.find(
+              collectionId,
+              cursor,
+              view,
+              { cursor: nextCursor!, limit },
+              signal,
+            )
+        : undefined,
     };
   }
 
@@ -299,10 +312,22 @@ export class KyselyOperationIndex implements IOperationIndex {
         ? items[items.length - 1].ordinal.toString()
         : undefined;
 
+    const cursorValue = paging?.cursor || "0";
+    const limit = paging?.limit || 100;
+    const operations = items.map((row) => this.rowToOperationWithContext(row));
+
     return {
-      items: items.map((row) => this.rowToOperationWithContext(row)),
+      results: operations,
+      options: { cursor: cursorValue, limit },
       nextCursor,
-      hasMore,
+      next: hasMore
+        ? () =>
+            this.getSinceOrdinal(
+              ordinal,
+              { cursor: nextCursor!, limit },
+              signal,
+            )
+        : undefined,
     };
   }
 

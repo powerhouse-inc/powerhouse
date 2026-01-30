@@ -1,6 +1,5 @@
 import { vetraArgs } from "@powerhousedao/common/clis";
 import { command } from "cmd-ts";
-import { startVetra } from "../services/vetra.js";
 
 export const vetra = command({
   name: "vetra",
@@ -19,6 +18,7 @@ This command:
     if (args.debug) {
       console.log(args);
     }
+    const { startVetra } = await import("../services/vetra.js");
     await startVetra(args);
   },
 });

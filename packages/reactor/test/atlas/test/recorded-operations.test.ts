@@ -30,7 +30,6 @@ import type { DocumentViewDatabase } from "../../../src/read-models/types.js";
 import { DocumentModelRegistry } from "../../../src/registry/implementation.js";
 import { ConsistencyTracker } from "../../../src/shared/consistency-tracker.js";
 import { JobStatus } from "../../../src/shared/types.js";
-import { ConsistencyAwareLegacyStorage } from "../../../src/storage/consistency-aware-legacy-storage.js";
 import { KyselyDocumentIndexer } from "../../../src/storage/kysely/document-indexer.js";
 import { KyselyKeyframeStore } from "../../../src/storage/kysely/keyframe-store.js";
 import { KyselyOperationStore } from "../../../src/storage/kysely/store.js";
@@ -182,17 +181,9 @@ async function createReactorSetup(): Promise<ReactorTestSetup> {
     [],
   );
 
-  const legacyStorageConsistencyTracker = new ConsistencyTracker();
-  const consistencyAwareStorage = new ConsistencyAwareLegacyStorage(
-    storage,
-    legacyStorageConsistencyTracker,
-    eventBus,
-  );
-
   const reactor = new Reactor(
     createMockLogger(),
     registry,
-    consistencyAwareStorage,
     queue,
     jobTracker,
     readModelCoordinator,
@@ -200,6 +191,7 @@ async function createReactorSetup(): Promise<ReactorTestSetup> {
     documentView,
     documentIndexer,
     operationStore,
+    eventBus,
   );
 
   const cleanup = async () => {
@@ -274,7 +266,7 @@ describe("Atlas Recorded Operations Reactor Test", () => {
         );
 
         const allCompleted = statuses.every(
-          (status) => status.status === JobStatus.READ_MODELS_READY,
+          (status) => status.status === JobStatus.READ_READY,
         );
         const anyFailed = statuses.some(
           (status) => status.status === JobStatus.FAILED,
@@ -406,7 +398,7 @@ describe("Atlas Recorded Operations State Comparison Test", () => {
         );
 
         const allCompleted = statuses.every(
-          (status) => status.status === JobStatus.READ_MODELS_READY,
+          (status) => status.status === JobStatus.READ_READY,
         );
         const anyFailed = statuses.some(
           (status) => status.status === JobStatus.FAILED,

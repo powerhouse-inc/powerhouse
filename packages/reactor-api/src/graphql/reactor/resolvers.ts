@@ -99,10 +99,7 @@ export async function document(
     };
   }
 
-  let result: {
-    document: PHDocument;
-    childIds: string[];
-  };
+  let result: PHDocument;
   try {
     result = await reactorClient.get(args.identifier, view);
   } catch (error) {
@@ -111,10 +108,19 @@ export async function document(
     );
   }
 
+  let children: PagedResults<PHDocument>;
+  try {
+    children = await reactorClient.getChildren(args.identifier, view);
+  } catch (error) {
+    throw new GraphQLError(
+      `Failed to fetch children: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+  }
+
   try {
     return {
-      document: toGqlPhDocument(result.document),
-      childIds: result.childIds,
+      document: toGqlPhDocument(result),
+      childIds: children.results.map((child) => child.header.id),
     };
   } catch (error) {
     throw new GraphQLError(
@@ -886,6 +892,7 @@ export function pushSyncEnvelope(
 
   const firstOp = args.envelope.operations[0];
   const syncOpId = `syncop-${args.envelope.channelMeta.id}-${Date.now()}-${crypto.randomUUID()}`;
+  const jobId = `job-${args.envelope.channelMeta.id}-${Date.now()}-${crypto.randomUUID()}`;
   const scopes = [
     ...new Set(args.envelope.operations.map((op) => op.context.scope)),
   ];
@@ -903,6 +910,7 @@ export function pushSyncEnvelope(
 
   const syncOp = new SyncOperation(
     syncOpId,
+    jobId,
     remote.name,
     firstOp.context.documentId,
     scopes,

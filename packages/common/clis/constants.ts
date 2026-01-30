@@ -1,3 +1,6 @@
+import { homedir } from "node:os";
+import { join } from "node:path";
+
 export const SERVICE_ACTIONS = [
   "start",
   "stop",
@@ -33,4 +36,33 @@ export const DEFAULT_SWITCHBOARD_PORT = 4001 as const;
 
 export const DEFAULT_VETRA_DRIVE_ID = "vetra" as const;
 
-export const MINIMUM_NODE_VERSION = "22.0.0" as const;
+export const MINIMUM_NODE_VERSION = "24.0.0" as const;
+export const PH_BIN = "ph-cli-legacy" as const;
+export const POWERHOUSE_CONFIG_FILE = "powerhouse.config.json" as const;
+export const PH_GLOBAL_DIR_NAME = ".ph" as const;
+// Keep PH_GLOBAL_PROJECT_NAME for backwards compatibility
+export const PH_GLOBAL_PROJECT_NAME = PH_GLOBAL_DIR_NAME;
+
+export const HOME_DIR = homedir();
+
+export const POWERHOUSE_GLOBAL_DIR = join(HOME_DIR, PH_GLOBAL_DIR_NAME);
+
+export const VERSIONED_DEPENDENCIES = [
+  "@powerhousedao/common",
+  "@powerhousedao/design-system",
+  "@powerhousedao/vetra",
+  "@powerhousedao/builder-tools",
+  "document-model",
+];
+
+export const VERSIONED_DEV_DEPENDENCIES = [
+  "@powerhousedao/codegen",
+  "@powerhousedao/config",
+  "@powerhousedao/ph-cli",
+  "@powerhousedao/reactor-api",
+  "@powerhousedao/reactor-browser",
+  "@powerhousedao/reactor-local",
+  "@powerhousedao/switchboard",
+  "@powerhousedao/connect",
+  "document-drive",
+];

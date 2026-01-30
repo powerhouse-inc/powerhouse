@@ -1,3 +1,36 @@
+## 6.0.0-dev.27 (2026-01-30)
+
+### 🚀 Features
+
+- renown sdk improvements ([bc1099d94](https://github.com/powerhouse-inc/powerhouse/commit/bc1099d94))
+- **ph-cmd:** fix forwarding and versioning bug ([#2272](https://github.com/powerhouse-inc/powerhouse/pull/2272))
+
+### 🩹 Fixes
+
+- compatibility fixes ([0cd3e430c](https://github.com/powerhouse-inc/powerhouse/commit/0cd3e430c))
+- removing unnecessary test ([616819a59](https://github.com/powerhouse-inc/powerhouse/commit/616819a59))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan (@thegoldenmule)
+- Ryan Wolhuter @ryanwolhuter
+
+## 6.0.0-dev.26 (2026-01-29)
+
+### 🚀 Features
+
+- update minimum node version to 24 ([7a71107c5](https://github.com/powerhouse-inc/powerhouse/commit/7a71107c5))
+
+### 🩹 Fixes
+
+- undo my changes to the tsc script ([0a36d0a49](https://github.com/powerhouse-inc/powerhouse/commit/0a36d0a49))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+
 ## 6.0.0-dev.25 (2026-01-28)
 
 This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.

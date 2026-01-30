@@ -1,14 +1,5 @@
 import { loginArgs } from "@powerhousedao/common/clis";
 import { command } from "cmd-ts";
-import {
-  clearCredentials,
-  generateSessionId,
-  getConnectDid,
-  isAuthenticated,
-  loadCredentials,
-  saveCredentials,
-  type StoredCredentials,
-} from "../services/auth.js";
 
 export const login = command({
   name: "login",
@@ -20,7 +11,7 @@ This command:
 1. Generates or loads a cryptographic identity (DID) for the CLI
 2. Opens your browser to the Renown authentication page
 3. You authorize the CLI's DID to act on behalf of your Ethereum address
-4. Stores the credentials locally in ~/.ph/auth.json
+4. Stores the credentials locally in .ph/.renown.json
   `,
   args: loginArgs,
   handler: async (args) => {
@@ -30,37 +21,41 @@ This command:
 
     if (args.showDid) {
       await showDid();
-      return;
+      process.exit(0);
     }
 
     // Handle status check
     if (args.status) {
       await showStatus();
-      return;
+      process.exit(0);
     }
 
     // Handle logout
     if (args.logout) {
-      handleLogout();
-      return;
+      await handleLogout();
+      process.exit(0);
     }
 
     const renownUrl = args.renownUrl;
     const timeoutMs = args.timeout ? args.timeout * 1000 : DEFAULT_TIMEOUT_MS;
 
+    console.debug("Initializing cryptographic identity...");
+
+    const { generateSessionId, getRenown } = await import(
+      "../services/auth.js"
+    );
+    const renown = await getRenown();
+
     // Check if already authenticated
-    if (isAuthenticated()) {
-      const creds = loadCredentials();
-      console.log(`Already authenticated as ${creds?.address}`);
-      console.log('Use "ph login --logout" to sign out first.');
-      return;
+    if (renown.user) {
+      console.error(
+        `Already authenticated as ${renown.user.address}\nUse "ph logout" to sign out first.`,
+      );
+      process.exit(1);
     }
 
-    // Get the CLI's DID from ConnectCrypto
-    console.log("Initializing cryptographic identity...");
-    const connectDid = await getConnectDid();
-    console.log(`CLI DID: ${connectDid}`);
-    console.log();
+    // Get the CLI's DID from Renown
+    console.log(`CLI DID: ${renown.did}`);
 
     // Generate session ID
     const sessionId = generateSessionId();
@@ -68,7 +63,8 @@ This command:
     // Build the login URL with connect DID
     const loginUrl = new URL(`${renownUrl}/console`);
     loginUrl.searchParams.set("session", sessionId);
-    loginUrl.searchParams.set("connect", connectDid);
+    loginUrl.searchParams.set("connect", renown.did);
+    loginUrl.searchParams.set("app", renown.did);
 
     console.log("Opening browser for authentication...");
     console.log(`Session ID: ${sessionId.slice(0, 8)}...`);
@@ -97,39 +93,35 @@ This command:
       );
     }
 
-    // Save credentials
-    const credentials: StoredCredentials = {
-      address: result.address!,
-      chainId: result.chainId!,
-      did: result.did!,
-      connectDid: connectDid,
-      credentialId: result.credentialId!,
-      userDocumentId: result.userDocumentId,
-      authenticatedAt: new Date().toISOString(),
-      renownUrl,
-    };
-
-    saveCredentials(credentials);
+    const user = await renown.login(result.did);
 
     console.log();
     console.log("Successfully authenticated!");
-    console.log(`  ETH Address: ${credentials.address}`);
-    console.log(`  User DID: ${credentials.did}`);
-    console.log(`  CLI DID: ${credentials.connectDid}`);
+    console.log(`  ETH Address: ${user.address}`);
+    console.log(`  User DID: ${user.did}`);
+    console.log(`  CLI DID: ${renown.did}`);
     console.log();
     console.log("The CLI can now act on behalf of your Ethereum identity.");
+    process.exit(0);
   },
 });
 
-interface SessionResponse {
+interface PendingSessionResponse {
   sessionId: string;
-  status: "pending" | "ready";
-  address?: string;
-  chainId?: number;
-  did?: string;
-  credentialId?: string;
-  userDocumentId?: string;
+  status: "pending";
 }
+
+interface ReadySessionResponse {
+  sessionId: string;
+  status: "ready";
+  address: string;
+  chainId: number;
+  did: string;
+  credentialId: string;
+  userDocumentId: string;
+}
+
+type SessionResponse = PendingSessionResponse | ReadySessionResponse;
 
 const DEFAULT_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
 const POLL_INTERVAL_MS = 2000; // 2 seconds
@@ -166,7 +158,7 @@ async function pollSession(
   renownUrl: string,
   sessionId: string,
   timeoutMs: number,
-): Promise<SessionResponse | null> {
+): Promise<ReadySessionResponse | null> {
   const startTime = Date.now();
   const sessionUrl = `${renownUrl}/api/console/session/${sessionId}`;
 
@@ -206,30 +198,23 @@ function sleep(ms: number): Promise<void> {
  * Show current authentication status
  */
 async function showStatus(): Promise<void> {
-  const creds = loadCredentials();
-
-  // Always show the CLI's DID
-  try {
-    const connectDid = await getConnectDid();
-    console.log(`CLI DID: ${connectDid}`);
-    console.log();
-  } catch (e) {
-    console.log("CLI DID: (not yet initialized)");
-    console.log();
-  }
-
-  if (!creds || !creds.credentialId) {
+  const { getRenown } = await import("../services/auth.js");
+  const renown = await getRenown();
+  const user = renown.user;
+  if (!user || !user.credential) {
     console.log("Not authenticated with an Ethereum address.");
     console.log('Run "ph login" to authenticate.');
     return;
   }
 
+  const issuanceDate = new Date(user.credential.issuanceDate);
   console.log("Authenticated");
-  console.log(`  ETH Address: ${creds.address}`);
-  console.log(`  User DID: ${creds.did}`);
-  console.log(`  Chain ID: ${creds.chainId}`);
-  console.log(`  Authenticated at: ${creds.authenticatedAt}`);
-  console.log(`  Renown URL: ${creds.renownUrl}`);
+  console.log(`  ETH Address: ${user.address}`);
+  console.log(`  User DID: ${user.did}`);
+  console.log(`  Chain ID: ${user.chainId}`);
+  console.log(`  CLI DID: ${renown.did}`);
+  console.log(`  Authenticated at: ${issuanceDate.toLocaleString()}`);
+  console.log(`  Renown URL: ${renown.baseUrl}`);
 
   process.exit(0);
 }
@@ -239,8 +224,11 @@ async function showStatus(): Promise<void> {
  */
 async function showDid(): Promise<void> {
   try {
-    const connectDid = await getConnectDid();
-    console.log(connectDid);
+    const { generateSessionId, getRenown } = await import(
+      "../services/auth.js"
+    );
+    const renown = await getRenown();
+    console.log(renown.did);
   } catch (e) {
     console.error("Failed to get DID:");
     throw e;
@@ -250,16 +238,19 @@ async function showDid(): Promise<void> {
 /**
  * Logout and clear credentials
  */
-function handleLogout(): void {
-  if (!isAuthenticated()) {
+export async function handleLogout() {
+  const { getRenown } = await import("../services/auth.js");
+  const renown = await getRenown();
+  if (!renown.user) {
     console.log("Not currently authenticated.");
     return;
   }
 
-  const success = clearCredentials();
-  if (success) {
+  try {
+    await renown.logout();
     console.log("Successfully logged out.");
-  } else {
+  } catch (error) {
     console.error("Failed to clear credentials.");
+    console.debug(error);
   }
 }

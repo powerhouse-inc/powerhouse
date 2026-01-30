@@ -8,6 +8,7 @@ import {
   showPHModal,
   useDocumentById,
   useDocumentModelModuleById,
+  useDocumentOperations,
   useEditorModuleById,
   useFallbackEditorModule,
   useRevisionHistoryVisible,
@@ -51,8 +52,20 @@ export const DocumentEditor: React.FC<Props> = (props) => {
   const documentName = document?.header.name ?? undefined;
   const documentType = document?.header.documentType ?? undefined;
   const preferredEditor = document?.header.meta?.preferredEditor ?? undefined;
-  const globalOperations = document?.operations.global ?? [];
-  const localOperations = document?.operations.local ?? [];
+  const {
+    globalOperations,
+    localOperations,
+    isLoading: isLoadingOperations,
+    refetch: refetchOperations,
+  } = useDocumentOperations(documentId);
+
+  // Refetch operations when revision history panel opens
+  useEffect(() => {
+    if (revisionHistoryVisible) {
+      void refetchOperations();
+    }
+  }, [revisionHistoryVisible, refetchOperations]);
+
   const globalRevisionNumber = document?.header.revision.global ?? 0;
   const localRevisionNumber = document?.header.revision.local ?? 0;
   const documentModelModule = useDocumentModelModuleById(documentType);
@@ -177,21 +190,25 @@ export const DocumentEditor: React.FC<Props> = (props) => {
       data-document-type={documentType}
     >
       {revisionHistoryVisible ? (
-        <RevisionHistory
-          key={documentId}
-          documentTitle={documentName ?? ""}
-          documentId={documentId ?? ""}
-          globalOperations={globalOperations}
-          localOperations={localOperations}
-          onClose={() => setRevisionHistoryVisible(false)}
-          documentState={document.state}
-          onCopyState={() => {
-            toast("Copied document state to clipboard", { type: "success" });
-          }}
-          onCopyDocId={() => {
-            toast("Copied document ID to clipboard", { type: "success" });
-          }}
-        />
+        isLoadingOperations ? (
+          <EditorLoader message="Loading operations" />
+        ) : (
+          <RevisionHistory
+            key={documentId}
+            documentTitle={documentName ?? ""}
+            documentId={documentId ?? ""}
+            globalOperations={globalOperations}
+            localOperations={localOperations}
+            onClose={() => setRevisionHistoryVisible(false)}
+            documentState={document.state}
+            onCopyState={() => {
+              toast("Copied document state to clipboard", { type: "success" });
+            }}
+            onCopyDocId={() => {
+              toast("Copied document ID to clipboard", { type: "success" });
+            }}
+          />
+        )
       ) : (
         <Suspense
           fallback={<EditorLoader message="Loading editor" />}

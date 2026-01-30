@@ -6,7 +6,7 @@ import type { IOperationIndex } from "../../../src/cache/operation-index-types.j
 import type { IReactor } from "../../../src/core/types.js";
 import { EventBus } from "../../../src/events/event-bus.js";
 import type { IEventBus } from "../../../src/events/interfaces.js";
-import { OperationEventTypes } from "../../../src/events/types.js";
+import { ReactorEventTypes } from "../../../src/events/types.js";
 import { ConsoleLogger } from "../../../src/logging/console.js";
 import type {
   ISyncCursorStorage,
@@ -236,7 +236,7 @@ describe("SyncManager Integration", () => {
         },
       ];
 
-      await eventBus.emit(OperationEventTypes.OPERATION_WRITTEN, {
+      await eventBus.emit(ReactorEventTypes.JOB_WRITE_READY, {
         operations,
       });
 
@@ -287,7 +287,7 @@ describe("SyncManager Integration", () => {
         },
       ];
 
-      await eventBus.emit(OperationEventTypes.OPERATION_WRITTEN, {
+      await eventBus.emit(ReactorEventTypes.JOB_WRITE_READY, {
         operations,
       });
 
@@ -348,7 +348,7 @@ describe("SyncManager Integration", () => {
         },
       ];
 
-      await eventBus.emit(OperationEventTypes.OPERATION_WRITTEN, {
+      await eventBus.emit(ReactorEventTypes.JOB_WRITE_READY, {
         operations,
       });
 
@@ -521,7 +521,7 @@ describe("SyncManager Integration", () => {
         },
       ];
 
-      await eventBus.emit(OperationEventTypes.OPERATION_WRITTEN, {
+      await eventBus.emit(ReactorEventTypes.JOB_WRITE_READY, {
         operations,
       });
 

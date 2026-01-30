@@ -97,7 +97,7 @@ async function waitForBatchCompletion(
     }
 
     const allDone = statuses.every(
-      (status) => status.status === JobStatus.READ_MODELS_READY,
+      (status) => status.status === JobStatus.READ_READY,
     );
     if (allDone) {
       return;

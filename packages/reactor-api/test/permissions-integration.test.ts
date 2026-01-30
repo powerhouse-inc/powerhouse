@@ -79,12 +79,10 @@ describe("Permissions Integration Tests", () => {
     // Create mock ReactorClient with parent hierarchy
     mockReactorClient = {
       get: vi.fn().mockImplementation(async (id: string) => {
-        if (id === "doc-123") return { document: mockDocument, childIds: [] };
-        if (id === "child-doc")
-          return { document: mockChildDocument, childIds: [] };
-        if (id === "parent-doc")
-          return { document: mockParentDocument, childIds: ["child-doc"] };
-        return { document: null, childIds: [] };
+        if (id === "doc-123") return mockDocument;
+        if (id === "child-doc") return mockChildDocument;
+        if (id === "parent-doc") return mockParentDocument;
+        return null;
       }),
       getChildren: vi.fn().mockResolvedValue({
         results: [],

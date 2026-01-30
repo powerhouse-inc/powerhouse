@@ -27,7 +27,7 @@ describe("ReactorClient Subscription Integration Tests", () => {
         if (status.status === JobStatus.FAILED) {
           throw new Error(`Job failed: ${status.error?.message ?? "unknown"}`);
         }
-        return status.status === JobStatus.READ_MODELS_READY;
+        return status.status === JobStatus.READ_READY;
       },
       { timeout: 5000 },
     );

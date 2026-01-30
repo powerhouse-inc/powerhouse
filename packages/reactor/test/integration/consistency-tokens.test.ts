@@ -30,8 +30,8 @@ describe("Consistency Tokens with Document View", () => {
         }
 
         return (
-          status.status === JobStatus.READ_MODELS_READY ||
-          status.status === JobStatus.WRITE_COMPLETED
+          status.status === JobStatus.READ_READY ||
+          status.status === JobStatus.WRITE_READY
         );
       },
       { timeout: 5000 },
@@ -90,7 +90,7 @@ describe("Consistency Tokens with Document View", () => {
 
       // now we await the query promise, which should wait for the read model to index the operation
       const result = await queryPromise;
-      expect(result.document.header.id).toBe("doc-1");
+      expect(result.header.id).toBe("doc-1");
     });
 
     it("should return immediately if read model is already up to date", async () => {
@@ -104,7 +104,7 @@ describe("Consistency Tokens with Document View", () => {
 
       const result = await reactor.get("doc-3", undefined, consistencyToken);
 
-      expect(result.document.header.id).toBe("doc-3");
+      expect(result.header.id).toBe("doc-3");
     });
   });
 
@@ -247,7 +247,7 @@ describe("Consistency Tokens with Document View", () => {
       flushCompleted = true;
 
       const result = await queryPromise;
-      expect(result.document.header.id).toBe("doc-race");
+      expect(result.header.id).toBe("doc-race");
       expect(queryCompleted).toBe(true);
     });
 

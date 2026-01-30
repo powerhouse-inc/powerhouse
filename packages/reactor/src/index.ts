@@ -70,9 +70,12 @@ export { EventBus } from "./events/event-bus.js";
 export { type IEventBus } from "./events/interfaces.js";
 export {
   EventBusAggregateError,
-  OperationEventTypes,
-  type OperationsReadyEvent,
-  type OperationWrittenEvent,
+  ReactorEventTypes,
+  type JobPendingEvent,
+  type JobRunningEvent,
+  type JobWriteReadyEvent,
+  type JobReadReadyEvent,
+  type JobFailedEvent as ReactorJobFailedEvent,
   type Unsubscribe,
 } from "./events/types.js";
 
@@ -124,7 +127,6 @@ export {
 
 // Storage
 export type { Database } from "./core/types.js";
-export { ConsistencyAwareLegacyStorage } from "./storage/consistency-aware-legacy-storage.js";
 export {
   DuplicateOperationError,
   OptimisticLockError,
@@ -134,7 +136,6 @@ export {
   type DocumentRelationship,
   type DocumentRevisions,
   type DocumentSnapshot,
-  type IConsistencyAwareStorage,
   type IDocumentGraph,
   type IDocumentIndexer,
   type IDocumentView,
@@ -168,7 +169,10 @@ export type {
 
 // Cache
 export { KyselyWriteCache } from "./cache/kysely-write-cache.js";
-export { driveCollectionId } from "./cache/operation-index-types.js";
+export {
+  driveCollectionId,
+  type IOperationIndex,
+} from "./cache/operation-index-types.js";
 export type {
   CachedSnapshot,
   DocumentStreamKey,
@@ -199,19 +203,23 @@ export {
   ChannelError,
   ChannelErrorSource,
   CompositeChannelFactory,
+  GqlChannel,
   GqlChannelFactory,
   Mailbox,
   PollingChannel,
   PollingChannelError,
   SyncBuilder,
+  SyncEventTypes,
   SyncOperation,
   SyncOperationAggregateError,
   SyncOperationStatus,
   type ChannelConfig,
   type ChannelHealth,
   type ChannelMeta,
+  type GqlChannelConfig,
   type IChannel,
   type IChannelFactory,
+  type IPollTimer,
   type ISyncManager,
   type MailboxItem,
   type Remote,
@@ -222,7 +230,10 @@ export {
   type RemoteStatus,
   type SyncEnvelope,
   type SyncEnvelopeType,
+  type SyncFailedEvent,
   type SyncOperationErrorType,
+  type SyncPendingEvent,
+  type SyncSucceededEvent,
 } from "./sync/index.js";
 
 // Processors

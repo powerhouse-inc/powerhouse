@@ -95,7 +95,7 @@ describe("ReactorClient Integration Tests", () => {
 
         const result = await client.get("test-doc-1");
 
-        expect(result.document.header.id).toBe("test-doc-1");
+        expect(result.header.id).toBe("test-doc-1");
       });
 
       it("should retrieve a document by slug", async () => {
@@ -107,8 +107,8 @@ describe("ReactorClient Integration Tests", () => {
 
         const result = await client.get("my-test-doc");
 
-        expect(result.document.header.slug).toBe("my-test-doc");
-        expect(result.document.header.id).toBe("test-doc-2");
+        expect(result.header.slug).toBe("my-test-doc");
+        expect(result.header.id).toBe("test-doc-2");
       });
 
       it("should support view filters", async () => {
@@ -117,7 +117,7 @@ describe("ReactorClient Integration Tests", () => {
 
         const result = await client.get("test-doc-3", { branch: "main" });
 
-        expect(result.document.header.id).toBe("test-doc-3");
+        expect(result.header.id).toBe("test-doc-3");
       });
 
       it("should throw error for non-existent document", async () => {
@@ -301,7 +301,7 @@ describe("ReactorClient Integration Tests", () => {
 
         expect(result.header.id).toBe("create-wait-test");
         const retrieved = await client.get("create-wait-test");
-        expect(retrieved.document.header.id).toBe("create-wait-test");
+        expect(retrieved.header.id).toBe("create-wait-test");
       });
 
       it("should sign CREATE_DOCUMENT and UPGRADE_DOCUMENT actions", async () => {
@@ -452,8 +452,8 @@ describe("ReactorClient Integration Tests", () => {
         await client.waitForJob(jobInfo);
 
         const result = await client.get("mutate-async-1");
-        expect(result.document.header.id).toBe("mutate-async-1");
-        expect(result.document.header.name).toBe("Async Update");
+        expect(result.header.id).toBe("mutate-async-1");
+        expect(result.header.name).toBe("Async Update");
       });
     });
 
@@ -600,7 +600,7 @@ describe("ReactorClient Integration Tests", () => {
         await client.deleteDocument("delete-test-1");
 
         const result = await client.get("delete-test-1");
-        expect(result.document.initialState.document.isDeleted).toBe(true);
+        expect(result.initialState.document.isDeleted).toBe(true);
       });
 
       it("should delete with propagation mode", async () => {
@@ -631,39 +631,29 @@ describe("ReactorClient Integration Tests", () => {
         await client.deleteDocument("cascade-root", PropagationMode.Cascade);
 
         const rootResult = await client.get("cascade-root");
-        expect(rootResult.document.initialState.document.isDeleted).toBe(true);
+        expect(rootResult.initialState.document.isDeleted).toBe(true);
 
         const child1Result = await client.get("cascade-child-1");
-        expect(child1Result.document.initialState.document.isDeleted).toBe(
-          true,
-        );
+        expect(child1Result.initialState.document.isDeleted).toBe(true);
 
         const child2Result = await client.get("cascade-child-2");
-        expect(child2Result.document.initialState.document.isDeleted).toBe(
-          true,
-        );
+        expect(child2Result.initialState.document.isDeleted).toBe(true);
 
         const grandchild1Result = await client.get("cascade-grandchild-1");
-        expect(grandchild1Result.document.initialState.document.isDeleted).toBe(
-          true,
-        );
+        expect(grandchild1Result.initialState.document.isDeleted).toBe(true);
 
         const grandchild2Result = await client.get("cascade-grandchild-2");
-        expect(grandchild2Result.document.initialState.document.isDeleted).toBe(
-          true,
-        );
+        expect(grandchild2Result.initialState.document.isDeleted).toBe(true);
 
         const grandchild3Result = await client.get("cascade-grandchild-3");
-        expect(grandchild3Result.document.initialState.document.isDeleted).toBe(
-          true,
-        );
+        expect(grandchild3Result.initialState.document.isDeleted).toBe(true);
 
         const greatGrandchildResult = await client.get(
           "cascade-great-grandchild",
         );
-        expect(
-          greatGrandchildResult.document.initialState.document.isDeleted,
-        ).toBe(true);
+        expect(greatGrandchildResult.initialState.document.isDeleted).toBe(
+          true,
+        );
       });
     });
 
@@ -680,16 +670,14 @@ describe("ReactorClient Integration Tests", () => {
         await client.deleteDocuments(["delete-multi-1", "delete-multi-2"]);
 
         const doc1Result = await client.get("delete-multi-1");
-        expect(doc1Result.document.initialState.document.isDeleted).toBe(true);
+        expect(doc1Result.initialState.document.isDeleted).toBe(true);
 
         const doc2Result = await client.get("delete-multi-2");
-        expect(doc2Result.document.initialState.document.isDeleted).toBe(true);
+        expect(doc2Result.initialState.document.isDeleted).toBe(true);
 
         const doc3Result = await client.get("delete-multi-3");
-        expect(doc3Result.document.header.id).toBe("delete-multi-3");
-        expect(
-          doc3Result.document.initialState.document.isDeleted || false,
-        ).toBe(false);
+        expect(doc3Result.header.id).toBe("delete-multi-3");
+        expect(doc3Result.initialState.document.isDeleted || false).toBe(false);
       });
 
       it("should delete with propagation mode", async () => {
@@ -709,24 +697,16 @@ describe("ReactorClient Integration Tests", () => {
         );
 
         const parent1Result = await client.get("delete-multi-parent-1");
-        expect(parent1Result.document.initialState.document.isDeleted).toBe(
-          true,
-        );
+        expect(parent1Result.initialState.document.isDeleted).toBe(true);
 
         const parent2Result = await client.get("delete-multi-parent-2");
-        expect(parent2Result.document.initialState.document.isDeleted).toBe(
-          true,
-        );
+        expect(parent2Result.initialState.document.isDeleted).toBe(true);
 
         const child1Result = await client.get("delete-multi-child-1");
-        expect(child1Result.document.initialState.document.isDeleted).toBe(
-          true,
-        );
+        expect(child1Result.initialState.document.isDeleted).toBe(true);
 
         const child2Result = await client.get("delete-multi-child-2");
-        expect(child2Result.document.initialState.document.isDeleted).toBe(
-          true,
-        );
+        expect(child2Result.initialState.document.isDeleted).toBe(true);
       });
     });
   });
@@ -789,7 +769,7 @@ describe("ReactorClient Integration Tests", () => {
 
         const result = await client.waitForJob(jobInfo.id);
 
-        expect(result.status).toBe(JobStatus.READ_MODELS_READY);
+        expect(result.status).toBe(JobStatus.READ_READY);
       });
 
       it("should wait for job completion with JobInfo object", async () => {
@@ -806,7 +786,7 @@ describe("ReactorClient Integration Tests", () => {
 
         const result = await client.waitForJob(jobInfo);
 
-        expect(result.status).toBe(JobStatus.READ_MODELS_READY);
+        expect(result.status).toBe(JobStatus.READ_READY);
       });
     });
   });
@@ -875,7 +855,7 @@ describe("ReactorClient Integration Tests", () => {
       expect(createdDoc.header.documentType).toBe("powerhouse/document-model");
 
       const driveResult = await client.get(drive.header.id);
-      const driveState = driveResult.document.state as any;
+      const driveState = driveResult.state as any;
       const files = driveState.global.nodes || [];
       const addedFile = files.find((n: any) => n.id === createdDoc.header.id);
       expect(addedFile).toBeDefined();

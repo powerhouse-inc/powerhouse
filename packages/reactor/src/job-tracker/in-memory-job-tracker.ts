@@ -1,9 +1,9 @@
 import type { IEventBus } from "../events/interfaces.js";
 import {
-  OperationEventTypes,
+  ReactorEventTypes,
   type JobFailedEvent,
-  type OperationsReadyEvent,
-  type OperationWrittenEvent,
+  type JobReadReadyEvent,
+  type JobWriteReadyEvent,
   type Unsubscribe,
 } from "../events/types.js";
 import {
@@ -31,25 +31,25 @@ export class InMemoryJobTracker implements IJobTracker {
   private subscribeToEvents(): void {
     this.unsubscribers.push(
       this.eventBus.subscribe(
-        OperationEventTypes.OPERATION_WRITTEN,
-        (_type, event: OperationWrittenEvent) => {
-          this.handleOperationWritten(event);
+        ReactorEventTypes.JOB_WRITE_READY,
+        (_type, event: JobWriteReadyEvent) => {
+          this.handleWriteReady(event);
         },
       ),
     );
 
     this.unsubscribers.push(
       this.eventBus.subscribe(
-        OperationEventTypes.OPERATIONS_READY,
-        (_type, event: OperationsReadyEvent) => {
-          this.handleOperationsReady(event);
+        ReactorEventTypes.JOB_READ_READY,
+        (_type, event: JobReadReadyEvent) => {
+          this.handleReadReady(event);
         },
       ),
     );
 
     this.unsubscribers.push(
       this.eventBus.subscribe(
-        OperationEventTypes.JOB_FAILED,
+        ReactorEventTypes.JOB_FAILED,
         (_type, event: JobFailedEvent) => {
           this.handleJobFailed(event);
         },
@@ -57,26 +57,26 @@ export class InMemoryJobTracker implements IJobTracker {
     );
   }
 
-  private handleOperationWritten(event: OperationWrittenEvent): void {
+  private handleWriteReady(event: JobWriteReadyEvent): void {
     const jobId = event.jobId;
     const job = this.jobs.get(jobId);
     if (job && job.status === JobStatus.RUNNING) {
       const consistencyToken = createConsistencyToken(event.operations);
       this.jobs.set(jobId, {
         ...job,
-        status: JobStatus.WRITE_COMPLETED,
+        status: JobStatus.WRITE_READY,
         consistencyToken,
       });
     }
   }
 
-  private handleOperationsReady(event: OperationsReadyEvent): void {
+  private handleReadReady(event: JobReadReadyEvent): void {
     const jobId = event.jobId;
     const job = this.jobs.get(jobId);
-    if (job && job.status === JobStatus.WRITE_COMPLETED) {
+    if (job && job.status === JobStatus.WRITE_READY) {
       this.jobs.set(jobId, {
         ...job,
-        status: JobStatus.READ_MODELS_READY,
+        status: JobStatus.READ_READY,
       });
     }
   }

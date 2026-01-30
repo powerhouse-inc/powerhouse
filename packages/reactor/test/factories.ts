@@ -48,9 +48,7 @@ import type { IReadModelCoordinator } from "../src/read-models/interfaces.js";
 import { DocumentModelRegistry } from "../src/registry/implementation.js";
 import type { IDocumentModelRegistry } from "../src/registry/interfaces.js";
 import type { IJobAwaiter } from "../src/shared/awaiter.js";
-import { ConsistencyTracker } from "../src/shared/consistency-tracker.js";
 import { JobStatus } from "../src/shared/types.js";
-import { ConsistencyAwareLegacyStorage } from "../src/storage/consistency-aware-legacy-storage.js";
 import type {
   IDocumentIndexer,
   IDocumentView,
@@ -487,18 +485,26 @@ export function createMockOperationStore(
         branch: "main",
       },
     }),
-    getSince: vi
-      .fn()
-      .mockResolvedValue({ items: [], nextCursor: undefined, hasMore: false }),
-    getSinceTimestamp: vi
-      .fn()
-      .mockResolvedValue({ items: [], nextCursor: undefined, hasMore: false }),
-    getSinceId: vi
-      .fn()
-      .mockResolvedValue({ items: [], nextCursor: undefined, hasMore: false }),
-    getConflicting: vi
-      .fn()
-      .mockResolvedValue({ items: [], nextCursor: undefined, hasMore: false }),
+    getSince: vi.fn().mockResolvedValue({
+      results: [],
+      options: { cursor: "0", limit: 100 },
+      nextCursor: undefined,
+    }),
+    getSinceTimestamp: vi.fn().mockResolvedValue({
+      results: [],
+      options: { cursor: "0", limit: 100 },
+      nextCursor: undefined,
+    }),
+    getSinceId: vi.fn().mockResolvedValue({
+      results: [],
+      options: { cursor: "0", limit: 100 },
+      nextCursor: undefined,
+    }),
+    getConflicting: vi.fn().mockResolvedValue({
+      results: [],
+      options: { cursor: "0", limit: 100 },
+      nextCursor: undefined,
+    }),
     getRevisions: vi.fn().mockResolvedValue({
       revision: {},
       latestTimestamp: new Date(0).toISOString(),
@@ -623,19 +629,10 @@ export async function createTestReactorSetup(
   const documentView = createMockDocumentView();
   const documentIndexer = createMockDocumentIndexer();
 
-  // Wrap storage with consistency-aware storage
-  const legacyStorageConsistencyTracker = new ConsistencyTracker();
-  const consistencyAwareStorage = new ConsistencyAwareLegacyStorage(
-    storage,
-    legacyStorageConsistencyTracker,
-    eventBus,
-  );
-
   // Create reactor
   const reactor = new Reactor(
     createMockLogger(),
     registry,
-    consistencyAwareStorage,
     queue,
     jobTracker,
     readModelCoordinator,
@@ -643,6 +640,7 @@ export async function createTestReactorSetup(
     documentView,
     documentIndexer,
     operationStore,
+    eventBus,
   );
 
   return {
@@ -815,13 +813,17 @@ export function createMockDocumentView(): IDocumentView {
     waitForConsistency: vi.fn().mockResolvedValue(undefined),
     exists: vi.fn().mockResolvedValue([]),
     get: vi.fn().mockRejectedValue(new Error("Not implemented")),
+    getMany: vi.fn().mockResolvedValue([]),
     getByIdOrSlug: vi.fn().mockRejectedValue(new Error("Not implemented")),
     findByType: vi.fn().mockResolvedValue({
-      items: [],
-      nextCursor: undefined,
-      hasMore: false,
+      results: [],
+      options: { cursor: "0", limit: 100 },
     }),
     resolveSlug: vi.fn().mockResolvedValue(undefined),
+    resolveSlugs: vi.fn().mockResolvedValue([]),
+    resolveIdOrSlug: vi.fn().mockImplementation((identifier: string) => {
+      return Promise.resolve(identifier);
+    }),
   };
 }
 
@@ -876,7 +878,7 @@ export async function createTestSyncStorage(): Promise<{
  */
 export function createMockSigner(overrides: Partial<ISigner> = {}): ISigner {
   return {
-    publicKey: vi.fn().mockResolvedValue({}),
+    publicKey: vi.mockObject({}) as unknown as CryptoKey,
     sign: vi.fn().mockResolvedValue(new Uint8Array(0)),
     verify: vi.fn().mockResolvedValue(undefined),
     signAction: vi
@@ -916,7 +918,7 @@ export function createMockJobAwaiter(
   return {
     waitForJob: vi.fn().mockResolvedValue({
       id: "job-1",
-      status: JobStatus.READ_MODELS_READY,
+      status: JobStatus.READ_READY,
       createdAtUtcIso: new Date().toISOString(),
       consistencyToken: createEmptyConsistencyToken(),
     }),

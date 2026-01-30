@@ -48,7 +48,7 @@ jobs:
     if: ${{ github.event.inputs.legacy == 'true' }}
     name: Test document-drive
     runs-on: ubuntu-24.04
-    container: node:22
+    container: node:24
 
     services:
       postgres:
@@ -118,7 +118,7 @@ jobs:
   test-reactor:
     name: Test Reactor
     runs-on: ubuntu-24.04
-    container: node:22
+    container: node:24
 
     steps:
       - name: Checkout repository

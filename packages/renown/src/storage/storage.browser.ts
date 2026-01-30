@@ -3,8 +3,11 @@ import { BaseStorage } from "./common.js";
 export class BrowserStorage<
   T extends Record<string, unknown> = Record<string, unknown>,
 > extends BaseStorage<T> {
+  private readonly namespace: string;
+
   constructor(namespace: string, basename: string | undefined) {
-    super(`${basename}:${namespace}`);
+    super();
+    this.namespace = `${basename}:${namespace}`;
   }
 
   #buildKey(key: keyof T): string {

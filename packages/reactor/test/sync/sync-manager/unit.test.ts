@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { IOperationIndex } from "../../../src/cache/operation-index-types.js";
 import type { IReactor } from "../../../src/core/types.js";
 import type { IEventBus } from "../../../src/events/interfaces.js";
-import { OperationEventTypes } from "../../../src/events/types.js";
+import { ReactorEventTypes } from "../../../src/events/types.js";
 import { ConsoleLogger } from "../../../src/logging/console.js";
 import type {
   ISyncCursorStorage,
@@ -15,6 +15,12 @@ import type {
 } from "../../../src/sync/interfaces.js";
 import { SyncManager } from "../../../src/sync/sync-manager.js";
 import type { ChannelConfig, RemoteRecord } from "../../../src/sync/types.js";
+import {
+  SyncEventTypes,
+  type SyncFailedEvent,
+  type SyncPendingEvent,
+  type SyncSucceededEvent,
+} from "../../../src/sync/types.js";
 
 describe("SyncManager - Unit Tests", () => {
   let syncManager: SyncManager;
@@ -77,11 +83,14 @@ describe("SyncManager - Unit Tests", () => {
     mockOperationIndex = {
       start: vi.fn(),
       commit: vi.fn().mockResolvedValue([]),
-      find: vi.fn().mockResolvedValue({ items: [], total: 0 }),
+      find: vi.fn().mockResolvedValue({
+        results: [],
+        options: { cursor: "0", limit: 100 },
+      }),
       getSinceOrdinal: vi.fn().mockResolvedValue({
-        items: [],
+        results: [],
+        options: { cursor: "0", limit: 100 },
         nextCursor: undefined,
-        hasMore: false,
       }),
       getLatestTimestampForCollection: vi.fn().mockResolvedValue(null),
     };
@@ -150,7 +159,7 @@ describe("SyncManager - Unit Tests", () => {
         mockOperationIndex,
       );
       expect(mockEventBus.subscribe).toHaveBeenCalledWith(
-        OperationEventTypes.OPERATION_WRITTEN,
+        ReactorEventTypes.JOB_WRITE_READY,
         expect.any(Function),
       );
     });
@@ -224,7 +233,7 @@ describe("SyncManager - Unit Tests", () => {
     it("should unsubscribe from event bus", async () => {
       await syncManager.startup();
 
-      expect(eventSubscribers.size).toBe(3);
+      expect(eventSubscribers.size).toBe(5);
 
       syncManager.shutdown();
 
@@ -440,11 +449,11 @@ describe("SyncManager - Unit Tests", () => {
       ];
 
       const subscriber = eventSubscribers.get(
-        OperationEventTypes.OPERATION_WRITTEN,
+        ReactorEventTypes.JOB_WRITE_READY,
       );
       expect(subscriber).toBeDefined();
 
-      subscriber!(OperationEventTypes.OPERATION_WRITTEN, { operations });
+      subscriber!(ReactorEventTypes.JOB_WRITE_READY, { operations });
 
       expect(mockChannel.outbox.add).toHaveBeenCalled();
     });
@@ -484,9 +493,9 @@ describe("SyncManager - Unit Tests", () => {
       ];
 
       const subscriber = eventSubscribers.get(
-        OperationEventTypes.OPERATION_WRITTEN,
+        ReactorEventTypes.JOB_WRITE_READY,
       );
-      subscriber!(OperationEventTypes.OPERATION_WRITTEN, { operations });
+      subscriber!(ReactorEventTypes.JOB_WRITE_READY, { operations });
 
       expect(mockChannel.outbox.add).not.toHaveBeenCalled();
     });
@@ -524,13 +533,266 @@ describe("SyncManager - Unit Tests", () => {
       ];
 
       const subscriber = eventSubscribers.get(
-        OperationEventTypes.OPERATION_WRITTEN,
+        ReactorEventTypes.JOB_WRITE_READY,
       );
       if (subscriber) {
-        subscriber(OperationEventTypes.OPERATION_WRITTEN, { operations });
+        subscriber(ReactorEventTypes.JOB_WRITE_READY, { operations });
       }
 
       expect(mockChannel.outbox.add).not.toHaveBeenCalled();
+    });
+
+    it("should emit SYNC_PENDING when sync operations are created", async () => {
+      await syncManager.startup();
+
+      const channelConfig: ChannelConfig = {
+        type: "internal",
+        parameters: {},
+      };
+
+      await syncManager.add("remote1", "collection1", channelConfig, {
+        documentId: ["doc1"],
+        scope: ["global"],
+        branch: "main",
+      });
+
+      const operations: OperationWithContext[] = [
+        {
+          operation: {
+            id: "op1",
+            index: 0,
+            skip: 0,
+            hash: "hash1",
+            timestampUtcMs: "2023-01-01T00:00:00.000Z",
+            action: { type: "CREATE", scope: "global" } as any,
+          },
+          context: {
+            documentId: "doc1",
+            documentType: "test",
+            scope: "global",
+            branch: "main",
+            ordinal: 1,
+          },
+        },
+      ];
+
+      const subscriber = eventSubscribers.get(
+        ReactorEventTypes.JOB_WRITE_READY,
+      );
+      expect(subscriber).toBeDefined();
+
+      subscriber!(ReactorEventTypes.JOB_WRITE_READY, {
+        jobId: "test-job-1",
+        operations,
+      });
+
+      expect(mockEventBus.emit).toHaveBeenCalledWith(
+        SyncEventTypes.SYNC_PENDING,
+        expect.objectContaining({
+          jobId: "test-job-1",
+          syncOperationCount: 1,
+          remoteNames: ["remote1"],
+        } as SyncPendingEvent),
+      );
+    });
+
+    it("should emit SYNC_SUCCEEDED when all sync operations succeed", async () => {
+      await syncManager.startup();
+
+      let outboxCallback: ((syncOp: any) => void) | undefined;
+      vi.mocked(mockChannel.outbox.onAdded).mockImplementation((cb) => {
+        outboxCallback = cb;
+      });
+
+      const channelConfig: ChannelConfig = {
+        type: "internal",
+        parameters: {},
+      };
+
+      await syncManager.add("remote1", "collection1", channelConfig, {
+        documentId: ["doc1"],
+        scope: ["global"],
+        branch: "main",
+      });
+
+      const operations: OperationWithContext[] = [
+        {
+          operation: {
+            id: "op1",
+            index: 0,
+            skip: 0,
+            hash: "hash1",
+            timestampUtcMs: "2023-01-01T00:00:00.000Z",
+            action: { type: "CREATE", scope: "global" } as any,
+          },
+          context: {
+            documentId: "doc1",
+            documentType: "test",
+            scope: "global",
+            branch: "main",
+            ordinal: 1,
+          },
+        },
+      ];
+
+      let createdSyncOp: any;
+      vi.mocked(mockChannel.outbox.add).mockImplementation((syncOp) => {
+        createdSyncOp = syncOp;
+        if (outboxCallback) {
+          outboxCallback(syncOp);
+        }
+      });
+
+      const subscriber = eventSubscribers.get(
+        ReactorEventTypes.JOB_WRITE_READY,
+      );
+      subscriber!(ReactorEventTypes.JOB_WRITE_READY, {
+        jobId: "test-job-2",
+        operations,
+      });
+
+      expect(createdSyncOp).toBeDefined();
+      expect(createdSyncOp.jobId).toBe("test-job-2");
+
+      createdSyncOp.executed();
+
+      expect(mockEventBus.emit).toHaveBeenCalledWith(
+        SyncEventTypes.SYNC_SUCCEEDED,
+        expect.objectContaining({
+          jobId: "test-job-2",
+          syncOperationCount: 1,
+        } as SyncSucceededEvent),
+      );
+    });
+
+    it("should emit SYNC_FAILED when a sync operation fails", async () => {
+      const { ChannelError } = await import("../../../src/sync/errors.js");
+      const { ChannelErrorSource } = await import("../../../src/sync/types.js");
+      await syncManager.startup();
+
+      let outboxCallback: ((syncOp: any) => void) | undefined;
+      vi.mocked(mockChannel.outbox.onAdded).mockImplementation((cb) => {
+        outboxCallback = cb;
+      });
+
+      const channelConfig: ChannelConfig = {
+        type: "internal",
+        parameters: {},
+      };
+
+      await syncManager.add("remote1", "collection1", channelConfig, {
+        documentId: ["doc1"],
+        scope: ["global"],
+        branch: "main",
+      });
+
+      const operations: OperationWithContext[] = [
+        {
+          operation: {
+            id: "op1",
+            index: 0,
+            skip: 0,
+            hash: "hash1",
+            timestampUtcMs: "2023-01-01T00:00:00.000Z",
+            action: { type: "CREATE", scope: "global" } as any,
+          },
+          context: {
+            documentId: "doc1",
+            documentType: "test",
+            scope: "global",
+            branch: "main",
+            ordinal: 1,
+          },
+        },
+      ];
+
+      let createdSyncOp: any;
+      vi.mocked(mockChannel.outbox.add).mockImplementation((syncOp) => {
+        createdSyncOp = syncOp;
+        if (outboxCallback) {
+          outboxCallback(syncOp);
+        }
+      });
+
+      const subscriber = eventSubscribers.get(
+        ReactorEventTypes.JOB_WRITE_READY,
+      );
+      subscriber!(ReactorEventTypes.JOB_WRITE_READY, {
+        jobId: "test-job-3",
+        operations,
+      });
+
+      expect(createdSyncOp).toBeDefined();
+
+      const error = new ChannelError(
+        ChannelErrorSource.Outbox,
+        new Error("Transport failed"),
+      );
+      createdSyncOp.failed(error);
+
+      expect(mockEventBus.emit).toHaveBeenCalledWith(
+        SyncEventTypes.SYNC_FAILED,
+        expect.objectContaining({
+          jobId: "test-job-3",
+          successCount: 0,
+          failureCount: 1,
+          errors: expect.arrayContaining([
+            expect.objectContaining({
+              remoteName: "remote1",
+              documentId: "doc1",
+              error: expect.stringContaining("Transport failed"),
+            }),
+          ]),
+        } as SyncFailedEvent),
+      );
+    });
+
+    it("should not emit sync events for operations without jobId", async () => {
+      await syncManager.startup();
+
+      const channelConfig: ChannelConfig = {
+        type: "internal",
+        parameters: {},
+      };
+
+      await syncManager.add("remote1", "collection1", channelConfig, {
+        documentId: ["doc1"],
+        scope: ["global"],
+        branch: "main",
+      });
+
+      const operations: OperationWithContext[] = [
+        {
+          operation: {
+            id: "op1",
+            index: 0,
+            skip: 0,
+            hash: "hash1",
+            timestampUtcMs: "2023-01-01T00:00:00.000Z",
+            action: { type: "CREATE", scope: "global" } as any,
+          },
+          context: {
+            documentId: "doc1",
+            documentType: "test",
+            scope: "global",
+            branch: "main",
+            ordinal: 1,
+          },
+        },
+      ];
+
+      const subscriber = eventSubscribers.get(
+        ReactorEventTypes.JOB_WRITE_READY,
+      );
+
+      subscriber!(ReactorEventTypes.JOB_WRITE_READY, {
+        operations,
+      });
+
+      expect(mockEventBus.emit).not.toHaveBeenCalledWith(
+        SyncEventTypes.SYNC_PENDING,
+        expect.anything(),
+      );
     });
   });
 });

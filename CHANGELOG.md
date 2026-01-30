@@ -1,3 +1,59 @@
+## 6.0.0-dev.27 (2026-01-30)
+
+### 🚀 Features
+
+- renown sdk improvements ([bc1099d94](https://github.com/powerhouse-inc/powerhouse/commit/bc1099d94))
+- initial implementation of getMany on document-view ([11fc5f5b4](https://github.com/powerhouse-inc/powerhouse/commit/11fc5f5b4))
+- **ph-cmd:** fix forwarding and versioning bug ([#2272](https://github.com/powerhouse-inc/powerhouse/pull/2272))
+- **profiling:** add min/max operation timing to docs-create script ([2da048a5e](https://github.com/powerhouse-inc/powerhouse/commit/2da048a5e))
+- **profiling:** add --op-loops flag to docs-create for repeated operation sets ([7f5a3eb3a](https://github.com/powerhouse-inc/powerhouse/commit/7f5a3eb3a))
+- **profiling:** add --doc-id flag to run operations on existing documents ([fea513d7b](https://github.com/powerhouse-inc/powerhouse/commit/fea513d7b))
+- **profiling:** add optional percentile statistics to docs-create ([f09a8efa0](https://github.com/powerhouse-inc/powerhouse/commit/f09a8efa0))
+
+### 🩹 Fixes
+
+- exporting more, removing outdated test ([5acdae784](https://github.com/powerhouse-inc/powerhouse/commit/5acdae784))
+- removing unnecessary test ([616819a59](https://github.com/powerhouse-inc/powerhouse/commit/616819a59))
+- compatibility fixes ([0cd3e430c](https://github.com/powerhouse-inc/powerhouse/commit/0cd3e430c))
+- reactor-browser compatibility fixes ([22eefce08](https://github.com/powerhouse-inc/powerhouse/commit/22eefce08))
+- missing unit tests for paging in the document indexer ([6e7d14273](https://github.com/powerhouse-inc/powerhouse/commit/6e7d14273))
+- added a useDocumentOperations hook ([b2a98413f](https://github.com/powerhouse-inc/powerhouse/commit/b2a98413f))
+- fixes for the new way operation history works ([ebe0e5b76](https://github.com/powerhouse-inc/powerhouse/commit/ebe0e5b76))
+- **design-system:** update dropdown icons size and add drive modal position ([a7648b05a](https://github.com/powerhouse-inc/powerhouse/commit/a7648b05a))
+- **profiling:** add input validation for numeric args in docs-create ([07b1754be](https://github.com/powerhouse-inc/powerhouse/commit/07b1754be))
+- **profiling:** use linear interpolation for accurate percentile calculation ([4c916c473](https://github.com/powerhouse-inc/powerhouse/commit/4c916c473))
+
+### 🔥 Performance
+
+- **profiling:** remove unused timings array to prevent memory bloat ([a55f219cf](https://github.com/powerhouse-inc/powerhouse/commit/a55f219cf))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan (@thegoldenmule)
+- Guillermo Puente @gpuente
+- Ryan Wolhuter @ryanwolhuter
+- Samuel Hawksby-Robinson @Samyoul
+
+## 6.0.0-dev.26 (2026-01-29)
+
+### 🚀 Features
+
+- update minimum node version to 24 ([7a71107c5](https://github.com/powerhouse-inc/powerhouse/commit/7a71107c5))
+
+### 🩹 Fixes
+
+- nailed down the two-reactor sync tests with fake timers ([d6d5335da](https://github.com/powerhouse-inc/powerhouse/commit/d6d5335da))
+- broken test expectation ([03a5014d9](https://github.com/powerhouse-inc/powerhouse/commit/03a5014d9))
+- undo my changes to the tsc script ([0a36d0a49](https://github.com/powerhouse-inc/powerhouse/commit/0a36d0a49))
+- **monorepo:** typescript versions ([#2265](https://github.com/powerhouse-inc/powerhouse/pull/2265))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.0.0-dev.25 (2026-01-28)
 
 ### 🩹 Fixes

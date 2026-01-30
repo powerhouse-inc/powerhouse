@@ -352,17 +352,17 @@ export class KyselyWriteCache implements IWriteCache {
         branch,
         -1,
         undefined,
-        { limit: 1 },
+        { cursor: "0", limit: 1 },
         signal,
       );
 
-      if (createOpResult.items.length === 0) {
+      if (createOpResult.results.length === 0) {
         throw new Error(
           `Failed to rebuild document ${documentId}: no CREATE_DOCUMENT operation found in document scope`,
         );
       }
 
-      const createOp = createOpResult.items[0];
+      const createOp = createOpResult.results[0];
       if (createOp.action.type !== "CREATE_DOCUMENT") {
         throw new Error(
           `Failed to rebuild document ${documentId}: first operation in document scope must be CREATE_DOCUMENT, found ${createOp.action.type}`,
@@ -390,7 +390,7 @@ export class KyselyWriteCache implements IWriteCache {
         signal,
       );
 
-      for (const operation of docScopeOps.items) {
+      for (const operation of docScopeOps.results) {
         if (operation.index === 0) {
           continue;
         }
@@ -421,7 +421,7 @@ export class KyselyWriteCache implements IWriteCache {
         throw new Error("Operation aborted");
       }
 
-      const paging = cursor ? { cursor, limit: pageSize } : { limit: pageSize };
+      const paging = { cursor: cursor || "0", limit: pageSize };
 
       try {
         const result = await this.operationStore.getSince(
@@ -434,7 +434,7 @@ export class KyselyWriteCache implements IWriteCache {
           signal,
         );
 
-        for (const operation of result.items) {
+        for (const operation of result.results) {
           if (
             targetRevision !== undefined &&
             operation.index > targetRevision
@@ -453,7 +453,7 @@ export class KyselyWriteCache implements IWriteCache {
 
         const reachedTarget =
           targetRevision !== undefined &&
-          result.items.some((op) => op.index >= targetRevision);
+          result.results.some((op) => op.index >= targetRevision);
         hasMorePages = Boolean(result.nextCursor) && !reachedTarget;
 
         if (hasMorePages) {
@@ -503,7 +503,7 @@ export class KyselyWriteCache implements IWriteCache {
         signal,
       );
 
-      for (const operation of pagedResults.items) {
+      for (const operation of pagedResults.results) {
         if (signal?.aborted) {
           throw new Error("Operation aborted");
         }

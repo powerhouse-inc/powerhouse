@@ -457,7 +457,7 @@ describe("ProcessorManager Integration Tests", () => {
       await vi.waitFor(
         async () => {
           const status = await reactorModule.reactor.getJobStatus(result.id);
-          expect(status.status).toBe(JobStatus.READ_MODELS_READY);
+          expect(status.status).toBe(JobStatus.READ_READY);
         },
         { timeout: 5000 },
       );

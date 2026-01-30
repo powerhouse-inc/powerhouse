@@ -328,7 +328,7 @@ Make sure to keep your key pair file (.pem) secure and never share it. Without i
 
 ## 1. Setting up a new cloud environment
 
-The `install` script provides a streamlined way to install the Powerhouse CLI tool and all its necessary dependencies. This script handles the installation of Node.js 22, pnpm, and the Powerhouse CLI itself. It's designed to work across different Linux distributions, though it's optimized for Ubuntu and Debian-based systems. It also prepares your machine for running Powerhouse services. It handles everything from package installation to service configuration, making the setup process straightforward and automated. This script is particularly useful for setting up new servers or reconfiguring existing ones.
+The `install` script provides a streamlined way to install the Powerhouse CLI tool and all its necessary dependencies. This script handles the installation of Node.js 24, pnpm, and the Powerhouse CLI itself. It's designed to work across different Linux distributions, though it's optimized for Ubuntu and Debian-based systems. It also prepares your machine for running Powerhouse services. It handles everything from package installation to service configuration, making the setup process straightforward and automated. This script is particularly useful for setting up new servers or reconfiguring existing ones.
 
 ### Installation
 

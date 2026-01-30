@@ -5,10 +5,10 @@ import type { IReactor, ReactorModule } from "../src/core/types.js";
 import { EventBus } from "../src/events/event-bus.js";
 import type { IEventBus } from "../src/events/interfaces.js";
 import type { ISyncCursorStorage } from "../src/storage/interfaces.js";
-import { TestChannel } from "../test/sync/channels/test-channel.js";
 import type { IChannelFactory } from "../src/sync/interfaces.js";
 import { SyncBuilder } from "../src/sync/sync-builder.js";
 import type { ChannelConfig, SyncEnvelope } from "../src/sync/types.js";
+import { TestChannel } from "../test/sync/channels/test-channel.js";
 
 type TwoReactorSetup = {
   reactorA: IReactor;
@@ -196,7 +196,7 @@ bench
       for (const docId of documentIds) {
         const docA = await reactorA.get(docId, { branch: "main" });
         const docB = await reactorB.get(docId, { branch: "main" });
-        if (JSON.stringify(docA.document) !== JSON.stringify(docB.document)) {
+        if (JSON.stringify(docA) !== JSON.stringify(docB)) {
           throw new Error(`Documents ${docId} not synced`);
         }
       }
@@ -249,7 +249,7 @@ bench
       for (const docId of documentIds) {
         const docA = await reactorA.get(docId, { branch: "main" });
         const docB = await reactorB.get(docId, { branch: "main" });
-        if (JSON.stringify(docA.document) !== JSON.stringify(docB.document)) {
+        if (JSON.stringify(docA) !== JSON.stringify(docB)) {
           throw new Error(`Documents ${docId} not synced after conflicts`);
         }
       }
@@ -320,7 +320,7 @@ bench
       for (const docId of documentIds) {
         const docA = await reactorA.get(docId, { branch: "main" });
         const docB = await reactorB.get(docId, { branch: "main" });
-        if (JSON.stringify(docA.document) !== JSON.stringify(docB.document)) {
+        if (JSON.stringify(docA) !== JSON.stringify(docB)) {
           throw new Error(`Documents ${docId} not synced under heavy load`);
         }
       }
@@ -383,7 +383,7 @@ bench
       for (const docId of documentIds) {
         const docA = await reactorA.get(docId, { branch: "main" });
         const docB = await reactorB.get(docId, { branch: "main" });
-        if (JSON.stringify(docA.document) !== JSON.stringify(docB.document)) {
+        if (JSON.stringify(docA) !== JSON.stringify(docB)) {
           throw new Error(`Documents ${docId} not synced with deep hierarchy`);
         }
       }

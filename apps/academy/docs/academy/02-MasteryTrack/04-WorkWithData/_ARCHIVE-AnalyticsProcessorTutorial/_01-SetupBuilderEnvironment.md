@@ -9,7 +9,7 @@ If you've already setup git, node, and npm, your most important step is to insta
 ## Table of contents
 
 - [Prerequisites](#prerequisites)
-- [Installing Node.js 22](#installing-nodejs)
+- [Installing Node.js 24](#installing-nodejs)
   - [For Windows](#for-windows)
   - [For macOS](#for-macos)
   - [For Linux (Ubuntu/Debian)](#for-linux-ubuntudebian)
@@ -26,11 +26,11 @@ If you've already setup git, node, and npm, your most important step is to insta
 
 ## Prerequisites
 
-Before we begin with any of the Powerhouse Connect tutorials, we need to install some software on your computer. We'll need three main tools: Node.js 22, which helps us run our code, Visual Studio Code (VS Code), which is where we'll write our code, and Git, which helps us manage our code. Follow the steps below based on your computer's operating system.
+Before we begin with any of the Powerhouse Connect tutorials, we need to install some software on your computer. We'll need three main tools: Node.js 24, which helps us run our code, Visual Studio Code (VS Code), which is where we'll write our code, and Git, which helps us manage our code. Follow the steps below based on your computer's operating system.
 
-### Installing Node.js 22
+### Installing Node.js 24
 
-Node.js 22 is a tool that lets us run our application. Let's install it step by step.
+Node.js 24 is a tool that lets us run our application. Let's install it step by step.
 
 #### For Windows
 
@@ -47,7 +47,7 @@ Node.js 22 is a tool that lets us run our application. Let's install it step by 
    - Type 'A' when prompted to confirm
    - You can now close this window and open PowerShell normally for the remaining steps
 
-2. **Install Node.js 22:**
+2. **Install Node.js 24:**
    - Visit the [Node.js official website](https://nodejs.org/)
    - Click the big green button that says "LTS" (this means Long Term Support - it's the most stable version)
    - Once the installer downloads, double-click it to start installation
@@ -56,12 +56,13 @@ Node.js 22 is a tool that lets us run our application. Let's install it step by 
 3. **Verify Installation:**
    - Open PowerShell (no need for admin mode)
    - Type these commands one at a time and press Enter after each:
+
    ```powershell
    node --version
    pnpm --version
    ```
 
-   - You should see version numbers appear after each command (e.g., v18.17.0). If you do, congratulations - Node.js 22 is installed!
+   - You should see version numbers appear after each command (e.g., v18.17.0). If you do, congratulations - Node.js 24 is installed!
 
 > **Note**: If Node.js commands don't work in VS Code, restart VS Code to refresh environment variables.
 
@@ -77,7 +78,7 @@ Node.js 22 is a tool that lets us run our application. Let's install it step by 
 
    - Follow any additional instructions that appear
 
-2. **Install Node.js 22:**
+2. **Install Node.js 24:**
    - In the same Terminal window, type this command and press Enter:
 
    ```bash
@@ -86,12 +87,13 @@ Node.js 22 is a tool that lets us run our application. Let's install it step by 
 
 3. **Verify Installation:**
    - In Terminal, type these commands one at a time and press Enter after each:
+
    ```bash
    node --version
    pnpm --version
    ```
 
-   - If you see version numbers, you've successfully installed Node.js 22!
+   - If you see version numbers, you've successfully installed Node.js 24!
 
 #### For Linux (Ubuntu/Debian)
 
@@ -105,7 +107,7 @@ Node.js 22 is a tool that lets us run our application. Let's install it step by 
    sudo apt update
    ```
 
-3. **Install Node.js 22 and npm:**
+3. **Install Node.js 24 and npm:**
 
    ```bash
    sudo apt install nodejs npm
@@ -113,6 +115,7 @@ Node.js 22 is a tool that lets us run our application. Let's install it step by 
 
 4. **Verify Installation:**
    - Type these commands one at a time and press Enter after each:
+
    ```bash
    node --version
    pnpm --version

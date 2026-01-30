@@ -68,7 +68,7 @@ async function isDocumentInLocation(
 
       // Case 1: Check for duplicate by ID
       const nodeById = drive.state.global.nodes.find(
-        (node) => node.id === document.header.id,
+        (node: Node) => node.id === document.header.id,
       );
 
       if (nodeById && nodeById.parentFolder === (parentFolder ?? null)) {
@@ -81,7 +81,7 @@ async function isDocumentInLocation(
 
       // Case 2: Check for duplicate by name + type in same parent folder
       const nodeByNameAndType = drive.state.global.nodes.find(
-        (node) =>
+        (node: Node) =>
           isFileNode(node) &&
           node.name === document.header.name &&
           node.documentType === document.header.documentType &&
@@ -104,12 +104,11 @@ async function isDocumentInLocation(
       }
 
       // Get the drive and check its nodes
-      const { document: drive } =
-        await reactorClient.get<DocumentDriveDocument>(driveId);
+      const drive = await reactorClient.get<DocumentDriveDocument>(driveId);
 
       // Case 1: Check for duplicate by ID
       const nodeById = drive.state.global.nodes.find(
-        (node) => node.id === document.header.id,
+        (node: { id: string }) => node.id === document.header.id,
       );
 
       if (nodeById && nodeById.parentFolder === (parentFolder ?? null)) {
@@ -122,7 +121,7 @@ async function isDocumentInLocation(
 
       // Case 2: Check for duplicate by name + type in same parent folder
       const nodeByNameAndType = drive.state.global.nodes.find(
-        (node) =>
+        (node: Node) =>
           isFileNode(node) &&
           node.name === document.header.name &&
           node.documentType === document.header.documentType &&
@@ -769,8 +768,7 @@ export async function addFolder(
     }
 
     // Get the drive document and add folder action
-    const { document: drive } =
-      await reactorClient.get<DocumentDriveDocument>(driveId);
+    const drive = await reactorClient.get<DocumentDriveDocument>(driveId);
     const folderId = generateId();
     const updatedDrive = await reactorClient.execute<DocumentDriveDocument>(
       driveId,
@@ -913,9 +911,8 @@ export async function renameDriveNode(
       updateNode({ id: nodeId, name }),
     ]);
 
-    const { document: drive } =
-      await reactorClient.get<DocumentDriveDocument>(driveId);
-    return drive.state.global.nodes.find((n) => n.id === nodeId);
+    const drive = await reactorClient.get<DocumentDriveDocument>(driveId);
+    return drive.state.global.nodes.find((n: Node) => n.id === nodeId);
   }
 }
 

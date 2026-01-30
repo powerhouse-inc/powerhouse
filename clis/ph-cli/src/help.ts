@@ -537,7 +537,7 @@ Identity Options:
                         switchboard to authenticate with remote drives and services using
                         your authorized Ethereum identity.
 
-  --keypair-path <path>   Path to a custom keypair file. Overrides the default .keypair.json
+  --keypair-path <path>   Path to a custom keypair file. Overrides the default .ph/.keypair.json
                         in the current directory.
 
   --require-identity      Require an existing keypair; fail if not found. Use this when you
@@ -653,7 +653,7 @@ Command Overview:
   1. Generates or loads a cryptographic identity (DID) for the CLI
   2. Opens your browser to the Renown authentication page
   3. You authorize the CLI's DID to act on behalf of your Ethereum address
-  4. Stores the credentials locally in ~/.ph/auth.json
+  4. Stores the credentials locally in .ph/.renown.json
 
 Options:
   --renown-url <url>    Specify a custom Renown server URL. Defaults to
@@ -681,8 +681,8 @@ Authentication Flow:
 Credentials Storage:
   All identity files are stored per-project in the current working directory:
 
-  .keypair.json   The CLI's cryptographic keypair (ECDSA P-256)
-  .auth.json      Your authentication credentials including:
+  .ph/.keypair.json   The CLI's cryptographic keypair (ECDSA P-256)
+  .ph/.renown.json      Your Renown authentication credentials including:
                   - Your Ethereum address (the account you authorized)
                   - Your User DID (did:pkh:eip155:chainId:address)
                   - CLI DID (did:key:... - the CLI's cryptographic identity)
@@ -706,7 +706,7 @@ Examples:
 
 Notes:
   - You only need to authenticate once; credentials persist until you log out
-  - The CLI's DID remains stable unless you delete .keypair.json from your project
+  - The CLI's DID remains stable unless you delete .ph/.keypair.json from your project
   - If already authenticated, the command will show your current status
   - The browser must remain open until authentication completes
   - Your wallet signature authorizes the CLI's DID to act on your behalf
@@ -727,8 +727,8 @@ Command Overview:
 
 Prerequisites:
   You must have a cryptographic identity. Run 'ph login' first to:
-  - Generate a keypair (stored in .keypair.json)
-  - Optionally link your Ethereum address (stored in .auth.json)
+  - Generate a keypair (stored in .ph/.keypair.json)
+  - Optionally link your Ethereum address (stored in .ph/.renown.json)
 
 Options:
   --expiry <duration>     Set the token expiration time. Supports multiple formats:

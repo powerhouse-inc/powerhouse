@@ -78,3 +78,72 @@ export type RemoteRecord = {
   options: RemoteOptions;
   status: RemoteStatus;
 };
+
+/**
+ * Event types for sync lifecycle events.
+ * These events track the sync progress of a job's operations to remotes.
+ * Uses a separate namespace (20000 range) from ReactorEventTypes (10000 range).
+ */
+export const SyncEventTypes = {
+  SYNC_PENDING: 20001,
+  SYNC_SUCCEEDED: 20002,
+  SYNC_FAILED: 20003,
+} as const;
+
+/**
+ * Event emitted when all SyncOperations for a job are queued in outboxes.
+ */
+export type SyncPendingEvent = {
+  jobId: string;
+  syncOperationCount: number;
+  remoteNames: string[];
+};
+
+/**
+ * Event emitted when all sync operations for a job succeed.
+ */
+export type SyncSucceededEvent = {
+  jobId: string;
+  syncOperationCount: number;
+};
+
+/**
+ * Event emitted when at least one sync operation for a job fails.
+ */
+export type SyncFailedEvent = {
+  jobId: string;
+  successCount: number;
+  failureCount: number;
+  errors: Array<{
+    remoteName: string;
+    documentId: string;
+    error: string;
+  }>;
+};
+
+/**
+ * Status of a sync operation result.
+ */
+export type SyncResultStatus = "succeeded" | "failed";
+
+/**
+ * Error information for a failed sync operation to a specific remote.
+ */
+export type SyncResultError = {
+  remoteName: string;
+  documentId: string;
+  error: string;
+};
+
+/**
+ * Result of waiting for sync operations to complete for a job.
+ * Returned by ISyncManager.waitForSync().
+ */
+export type SyncResult = {
+  jobId: string;
+  status: SyncResultStatus;
+  syncOperationCount: number;
+  successCount: number;
+  failureCount: number;
+  errors: SyncResultError[];
+};

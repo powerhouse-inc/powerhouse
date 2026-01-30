@@ -1,13 +1,13 @@
-import { uninstallArgs } from "@powerhousedao/common/clis";
-import { execSync } from "child_process";
-import { command } from "cmd-ts";
-import { AGENTS } from "package-manager-detector";
-import { removeStylesImports, updateConfigFile } from "../utils.js";
 import {
   getPowerhouseProjectInfo,
   getPowerhouseProjectUninstallCommand,
   makeDependenciesWithVersions,
-} from "../utils/projects.js";
+  uninstallArgs,
+} from "@powerhousedao/common/clis";
+import { execSync } from "child_process";
+import { command } from "cmd-ts";
+import { AGENTS } from "package-manager-detector";
+import { removeStylesImports, updateConfigFile } from "../utils.js";
 
 export const uninstall = command({
   name: "uninstall",
@@ -84,5 +84,7 @@ This command:
       console.error("❌ Failed to update styles file");
       throw error;
     }
+
+    process.exit(0);
   },
 });

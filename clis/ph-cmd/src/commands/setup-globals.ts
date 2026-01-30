@@ -1,5 +1,5 @@
 import { command } from "cmd-ts";
-import { createGlobalProject } from "../utils/package-manager.js";
+import { createGlobalProject } from "../utils/create-global-project.js";
 import { initArgs } from "./init.js";
 
 export const setupGlobals = command({

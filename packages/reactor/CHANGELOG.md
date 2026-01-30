@@ -1,3 +1,39 @@
+## 6.0.0-dev.27 (2026-01-30)
+
+### 🚀 Features
+
+- initial implementation of getMany on document-view ([11fc5f5b4](https://github.com/powerhouse-inc/powerhouse/commit/11fc5f5b4))
+- renown sdk improvements ([bc1099d94](https://github.com/powerhouse-inc/powerhouse/commit/bc1099d94))
+- **ph-cmd:** fix forwarding and versioning bug ([#2272](https://github.com/powerhouse-inc/powerhouse/pull/2272))
+
+### 🩹 Fixes
+
+- missing unit tests for paging in the document indexer ([6e7d14273](https://github.com/powerhouse-inc/powerhouse/commit/6e7d14273))
+- exporting more, removing outdated test ([5acdae784](https://github.com/powerhouse-inc/powerhouse/commit/5acdae784))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan (@thegoldenmule)
+- Ryan Wolhuter @ryanwolhuter
+
+## 6.0.0-dev.26 (2026-01-29)
+
+### 🚀 Features
+
+- update minimum node version to 24 ([7a71107c5](https://github.com/powerhouse-inc/powerhouse/commit/7a71107c5))
+
+### 🩹 Fixes
+
+- undo my changes to the tsc script ([0a36d0a49](https://github.com/powerhouse-inc/powerhouse/commit/0a36d0a49))
+- broken test expectation ([03a5014d9](https://github.com/powerhouse-inc/powerhouse/commit/03a5014d9))
+- nailed down the two-reactor sync tests with fake timers ([d6d5335da](https://github.com/powerhouse-inc/powerhouse/commit/d6d5335da))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+
 ## 6.0.0-dev.25 (2026-01-28)
 
 ### 🩹 Fixes

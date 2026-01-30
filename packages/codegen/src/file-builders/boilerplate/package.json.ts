@@ -3,7 +3,7 @@ import {
   makeVersionedDependencies,
   VERSIONED_DEPENDENCIES,
   VERSIONED_DEV_DEPENDENCIES,
-} from "@powerhousedao/codegen/utils";
+} from "@powerhousedao/common/clis";
 
 export async function buildBoilerplatePackageJson(args: {
   name: string;

@@ -2,7 +2,7 @@
 import { config } from "./config.js";
 import { startSwitchboard } from "./server.js";
 
-function ensureNodeVersion(minVersion = "22") {
+function ensureNodeVersion(minVersion = "24") {
   const version = process.versions.node;
   if (!version) {
     return;
@@ -16,7 +16,7 @@ function ensureNodeVersion(minVersion = "22") {
   }
 }
 // Ensure minimum Node.js version
-ensureNodeVersion("22");
+ensureNodeVersion("24");
 
 process.on("SIGINT", () => {
   console.log("\nShutting down...");

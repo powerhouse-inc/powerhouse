@@ -174,7 +174,7 @@ export function filterByType(
  * Validates that all operations share the same scope.
  * Throws an error if any operation has a different scope.
  */
-export function getSharedScope(operations: Operation[]): string {
+export function getSharedOperationScope(operations: Operation[]): string {
   if (operations.length === 0) {
     throw new Error("No operations provided");
   }
@@ -185,6 +185,27 @@ export function getSharedScope(operations: Operation[]): string {
     if (scope !== baseScope) {
       throw new Error(
         `All operations in load must share the same scope. Expected '${baseScope}', received '${scope}' at position ${index}`,
+      );
+    }
+  }
+
+  return baseScope;
+}
+
+/**
+ * Validates that all actions share the same scope.
+ * Throws an error if any action has a different scope.
+ */
+export function getSharedActionScope(actions: Action[]): string {
+  if (actions.length === 0) {
+    throw new Error("No actions provided");
+  }
+
+  const baseScope = actions[0].scope;
+  for (const action of actions) {
+    if (action.scope !== baseScope) {
+      throw new Error(
+        `All actions must share the same scope. Expected '${baseScope}', received '${action.scope}'`,
       );
     }
   }
@@ -208,13 +229,13 @@ export const signAction = async (
       ...action.context,
       signer: {
         user: {
-          address: signature[0],
-          networkId: "",
-          chainId: 0,
+          address: signer.user?.address || "",
+          networkId: signer.user?.networkId || "",
+          chainId: signer.user?.chainId || 0,
         },
         app: {
-          name: "",
-          key: signature[1],
+          name: signer.app?.name || "",
+          key: signer.app?.key || "",
         },
         signatures: [signature],
       },

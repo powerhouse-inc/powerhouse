@@ -2,10 +2,7 @@ import type { Operation } from "document-model";
 import type { IOperationIndex } from "../cache/operation-index-types.js";
 import type { IReactor } from "../core/types.js";
 import type { IEventBus } from "../events/interfaces.js";
-import {
-  OperationEventTypes,
-  type OperationWrittenEvent,
-} from "../events/types.js";
+import { ReactorEventTypes, type JobWriteReadyEvent } from "../events/types.js";
 import type { ILogger } from "../logging/types.js";
 import { JobAwaiter } from "../shared/awaiter.js";
 import {
@@ -19,6 +16,7 @@ import type {
 } from "../storage/interfaces.js";
 import { ChannelError } from "./errors.js";
 import type { IChannelFactory, ISyncManager, Remote } from "./interfaces.js";
+import { SyncAwaiter } from "./sync-awaiter.js";
 import { SyncOperation } from "./sync-operation.js";
 import type {
   ChannelConfig,
@@ -26,13 +24,31 @@ import type {
   RemoteOptions,
   RemoteRecord,
   RemoteStatus,
+  SyncFailedEvent,
+  SyncPendingEvent,
+  SyncResult,
+  SyncSucceededEvent,
 } from "./types.js";
-import { ChannelErrorSource, SyncOperationStatus } from "./types.js";
+import {
+  ChannelErrorSource,
+  SyncEventTypes,
+  SyncOperationStatus,
+} from "./types.js";
 import {
   batchOperationsByDocument,
   createIdleHealth,
   filterOperations,
 } from "./utils.js";
+
+type JobSyncState = {
+  total: number;
+  completed: Set<string>;
+  failed: Map<
+    string,
+    { remoteName: string; documentId: string; error: string }
+  >;
+  remoteNames: string[];
+};
 
 export class SyncManager implements ISyncManager {
   private readonly logger: ILogger;
@@ -44,6 +60,8 @@ export class SyncManager implements ISyncManager {
   private readonly eventBus: IEventBus;
   private readonly remotes: Map<string, Remote>;
   private readonly awaiter: JobAwaiter;
+  private readonly syncAwaiter: SyncAwaiter;
+  private readonly jobSyncStates: Map<string, JobSyncState>;
   private isShutdown: boolean;
   private eventUnsubscribe?: () => void;
 
@@ -69,6 +87,8 @@ export class SyncManager implements ISyncManager {
     this.awaiter = new JobAwaiter(eventBus, (jobId, signal) =>
       reactor.getJobStatus(jobId, signal),
     );
+    this.syncAwaiter = new SyncAwaiter(eventBus);
+    this.jobSyncStates = new Map();
     this.isShutdown = false;
   }
 
@@ -112,9 +132,9 @@ export class SyncManager implements ISyncManager {
       this.wireChannelCallbacks(remote);
     }
 
-    this.eventUnsubscribe = this.eventBus.subscribe<OperationWrittenEvent>(
-      OperationEventTypes.OPERATION_WRITTEN,
-      (_type, event) => this.handleOperationWritten(event),
+    this.eventUnsubscribe = this.eventBus.subscribe<JobWriteReadyEvent>(
+      ReactorEventTypes.JOB_WRITE_READY,
+      (_type, event) => this.handleWriteReady(event),
     );
   }
 
@@ -127,6 +147,7 @@ export class SyncManager implements ISyncManager {
     }
 
     this.awaiter.shutdown();
+    this.syncAwaiter.shutdown();
 
     for (const remote of this.remotes.values()) {
       try {
@@ -254,11 +275,11 @@ export class SyncManager implements ISyncManager {
       return;
     }
 
-    if (historicalOps.items.length === 0) {
+    if (historicalOps.results.length === 0) {
       return;
     }
 
-    const opsWithContext = historicalOps.items.map((entry) => ({
+    const opsWithContext = historicalOps.results.map((entry) => ({
       operation: {
         id: entry.id,
         index: entry.index,
@@ -291,6 +312,7 @@ export class SyncManager implements ISyncManager {
     for (const batch of batches) {
       const syncOp = new SyncOperation(
         crypto.randomUUID(),
+        "",
         remote.name,
         batch.documentId,
         [batch.scope],
@@ -317,6 +339,10 @@ export class SyncManager implements ISyncManager {
     return Array.from(this.remotes.values());
   }
 
+  waitForSync(jobId: string, signal?: AbortSignal): Promise<SyncResult> {
+    return this.syncAwaiter.waitForSync(jobId, signal);
+  }
+
   private wireChannelCallbacks(remote: Remote): void {
     remote.channel.inbox.onAdded((syncOp) => {
       this.handleInboxJob(remote, syncOp);
@@ -327,12 +353,15 @@ export class SyncManager implements ISyncManager {
     });
   }
 
-  private handleOperationWritten(event: OperationWrittenEvent): void {
+  private handleWriteReady(event: JobWriteReadyEvent): void {
     if (this.isShutdown) {
       return;
     }
 
     const sourceRemote = event.jobMeta?.sourceRemote as string | undefined;
+    const syncOpsWithRemote: Array<{ syncOp: SyncOperation; remote: Remote }> =
+      [];
+    const remoteNames: string[] = [];
 
     for (const remote of this.remotes.values()) {
       if (sourceRemote && remote.name === sourceRemote) {
@@ -349,14 +378,50 @@ export class SyncManager implements ISyncManager {
       for (const batch of batches) {
         const syncOp = new SyncOperation(
           crypto.randomUUID(),
+          event.jobId,
           remote.name,
           batch.documentId,
           [batch.scope],
           batch.branch,
           batch.operations,
         );
-        remote.channel.outbox.add(syncOp);
+
+        syncOpsWithRemote.push({ syncOp, remote });
+        if (!remoteNames.includes(remote.name)) {
+          remoteNames.push(remote.name);
+        }
       }
+    }
+
+    if (syncOpsWithRemote.length > 0 && event.jobId) {
+      this.jobSyncStates.set(event.jobId, {
+        total: syncOpsWithRemote.length,
+        completed: new Set(),
+        failed: new Map(),
+        remoteNames,
+      });
+      const pendingEvent: SyncPendingEvent = {
+        jobId: event.jobId,
+        syncOperationCount: syncOpsWithRemote.length,
+        remoteNames,
+      };
+      void this.eventBus.emit(SyncEventTypes.SYNC_PENDING, pendingEvent);
+    }
+
+    for (const { syncOp, remote } of syncOpsWithRemote) {
+      syncOp.on((op, _prev, next) => {
+        if (next === SyncOperationStatus.Applied) {
+          this.markSyncOpCompleted(op.jobId, op.id, true);
+        } else if (next === SyncOperationStatus.Error) {
+          this.markSyncOpCompleted(op.jobId, op.id, false, {
+            remoteName: op.remoteName,
+            documentId: op.documentId,
+            error: op.error?.message ?? "Unknown error",
+          });
+        }
+      });
+
+      remote.channel.outbox.add(syncOp);
     }
   }
 
@@ -431,5 +496,47 @@ export class SyncManager implements ISyncManager {
     }
 
     remote.channel.inbox.remove(syncOp);
+  }
+
+  private markSyncOpCompleted(
+    jobId: string,
+    syncOpId: string,
+    success: boolean,
+    errorInfo?: { remoteName: string; documentId: string; error: string },
+  ): void {
+    if (!jobId) {
+      return;
+    }
+
+    const state = this.jobSyncStates.get(jobId);
+    if (!state) {
+      return;
+    }
+
+    if (success) {
+      state.completed.add(syncOpId);
+    } else if (errorInfo) {
+      state.failed.set(syncOpId, errorInfo);
+    }
+
+    const totalTerminal = state.completed.size + state.failed.size;
+    if (totalTerminal === state.total) {
+      if (state.failed.size === 0) {
+        const succeededEvent: SyncSucceededEvent = {
+          jobId,
+          syncOperationCount: state.total,
+        };
+        void this.eventBus.emit(SyncEventTypes.SYNC_SUCCEEDED, succeededEvent);
+      } else {
+        const failedEvent: SyncFailedEvent = {
+          jobId,
+          successCount: state.completed.size,
+          failureCount: state.failed.size,
+          errors: Array.from(state.failed.values()),
+        };
+        void this.eventBus.emit(SyncEventTypes.SYNC_FAILED, failedEvent);
+      }
+      this.jobSyncStates.delete(jobId);
+    }
   }
 }

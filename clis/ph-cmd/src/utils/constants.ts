@@ -1,8 +1,6 @@
-import { homedir } from "node:os";
-import path from "node:path";
+import { PH_BIN } from "@powerhousedao/common/clis";
 
 export const PH_BIN_PATH = process.argv[1];
-export const PH_BIN = "ph-cli-legacy";
 export const PH_CLI_COMMANDS = [
   "init",
   "dev",
@@ -21,14 +19,9 @@ export const PH_CLI_COMMANDS = [
   "inspect",
   "version",
   "login",
+  "logout",
 ];
-export const POWERHOUSE_CONFIG_FILE = "powerhouse.config.json";
-export const HOME_DIR = homedir();
-export const PH_GLOBAL_DIR_NAME = ".ph";
 export const PH_GLOBAL_PACKAGE_NAME = "ph-global";
-// Keep PH_GLOBAL_PROJECT_NAME for backwards compatibility
-export const PH_GLOBAL_PROJECT_NAME = PH_GLOBAL_DIR_NAME;
-export const POWERHOUSE_GLOBAL_DIR = path.join(HOME_DIR, PH_GLOBAL_DIR_NAME);
 
 export const packageManagers = {
   bun: {

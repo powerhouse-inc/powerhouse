@@ -1,6 +1,5 @@
 import { migrateArgs } from "@powerhousedao/common/clis";
 import { command } from "cmd-ts";
-import { startMigrate } from "../services/migrate.js";
 
 export const migrate = command({
   name: "migrate",
@@ -10,6 +9,7 @@ export const migrate = command({
     if (args.debug) {
       console.log(args);
     }
+    const { startMigrate } = await import("../services/migrate.js");
     await startMigrate(args);
     process.exit(0);
   },

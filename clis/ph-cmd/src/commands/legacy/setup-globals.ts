@@ -2,8 +2,8 @@ import type { Command } from "commander";
 import type { Agent } from "package-manager-detector";
 import { setupGlobalsHelp } from "../../help.js";
 import type { CommandActionType } from "../../types.js";
+import { createGlobalProject } from "../../utils/create-global-project.js";
 import { withCustomHelp } from "../../utils/help.js";
-import { createGlobalProject } from "../../utils/package-manager.js";
 
 // Extract the type parameters for reuse
 export type SetupGlobalsOptions = {

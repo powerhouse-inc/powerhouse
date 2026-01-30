@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import { EventBus } from "../../src/events/event-bus.js";
 import {
-  OperationEventTypes,
-  type OperationsReadyEvent,
+  ReactorEventTypes,
+  type JobReadReadyEvent,
 } from "../../src/events/types.js";
 import { ReadModelCoordinator } from "../../src/read-models/coordinator.js";
 import type { IReadModel } from "../../src/read-models/interfaces.js";
@@ -55,10 +55,10 @@ describe("ReadModelCoordinator", () => {
         [],
       );
 
-      const readyEvents: OperationsReadyEvent[] = [];
+      const readyEvents: JobReadReadyEvent[] = [];
       eventBus.subscribe(
-        OperationEventTypes.OPERATIONS_READY,
-        (type, event: OperationsReadyEvent) => {
+        ReactorEventTypes.JOB_READ_READY,
+        (type, event: JobReadReadyEvent) => {
           readyEvents.push(event);
         },
       );
@@ -66,7 +66,7 @@ describe("ReadModelCoordinator", () => {
       coordinator.start();
 
       const operations = createMockOperations();
-      await eventBus.emit(OperationEventTypes.OPERATION_WRITTEN, {
+      await eventBus.emit(ReactorEventTypes.JOB_WRITE_READY, {
         operations,
       });
 
@@ -81,10 +81,10 @@ describe("ReadModelCoordinator", () => {
       const readModel = createMockReadModel();
       const coordinator = new ReadModelCoordinator(eventBus, [readModel], []);
 
-      let readyEvent: OperationsReadyEvent | null = null;
+      let readyEvent: JobReadReadyEvent | null = null;
       eventBus.subscribe(
-        OperationEventTypes.OPERATIONS_READY,
-        (type, event: OperationsReadyEvent) => {
+        ReactorEventTypes.JOB_READ_READY,
+        (type, event: JobReadReadyEvent) => {
           readyEvent = event;
         },
       );
@@ -92,7 +92,7 @@ describe("ReadModelCoordinator", () => {
       coordinator.start();
 
       const operations = createMockOperations();
-      await eventBus.emit(OperationEventTypes.OPERATION_WRITTEN, {
+      await eventBus.emit(ReactorEventTypes.JOB_WRITE_READY, {
         operations,
       });
 
@@ -116,7 +116,7 @@ describe("ReadModelCoordinator", () => {
       const coordinator = new ReadModelCoordinator(eventBus, [readModel], []);
 
       let readyFired = false;
-      eventBus.subscribe(OperationEventTypes.OPERATIONS_READY, () => {
+      eventBus.subscribe(ReactorEventTypes.JOB_READ_READY, () => {
         readyFired = true;
         expect(indexingComplete).toBe(true);
       });
@@ -124,7 +124,7 @@ describe("ReadModelCoordinator", () => {
       coordinator.start();
 
       const operations = createMockOperations();
-      await eventBus.emit(OperationEventTypes.OPERATION_WRITTEN, {
+      await eventBus.emit(ReactorEventTypes.JOB_WRITE_READY, {
         operations,
       });
 
@@ -159,7 +159,7 @@ describe("ReadModelCoordinator", () => {
       );
 
       let allComplete = false;
-      eventBus.subscribe(OperationEventTypes.OPERATIONS_READY, () => {
+      eventBus.subscribe(ReactorEventTypes.JOB_READ_READY, () => {
         expect(completionOrder).toHaveLength(3);
         allComplete = true;
       });
@@ -167,7 +167,7 @@ describe("ReadModelCoordinator", () => {
       coordinator.start();
 
       const operations = createMockOperations();
-      await eventBus.emit(OperationEventTypes.OPERATION_WRITTEN, {
+      await eventBus.emit(ReactorEventTypes.JOB_WRITE_READY, {
         operations,
       });
 
@@ -179,10 +179,10 @@ describe("ReadModelCoordinator", () => {
       const readModel = createMockReadModel();
       const coordinator = new ReadModelCoordinator(eventBus, [readModel], []);
 
-      const readyEvents: OperationsReadyEvent[] = [];
+      const readyEvents: JobReadReadyEvent[] = [];
       eventBus.subscribe(
-        OperationEventTypes.OPERATIONS_READY,
-        (type, event: OperationsReadyEvent) => {
+        ReactorEventTypes.JOB_READ_READY,
+        (type, event: JobReadReadyEvent) => {
           readyEvents.push(event);
         },
       );
@@ -192,10 +192,10 @@ describe("ReadModelCoordinator", () => {
       const ops1 = createMockOperations();
       const ops2 = createMockOperations();
 
-      await eventBus.emit(OperationEventTypes.OPERATION_WRITTEN, {
+      await eventBus.emit(ReactorEventTypes.JOB_WRITE_READY, {
         operations: ops1,
       });
-      await eventBus.emit(OperationEventTypes.OPERATION_WRITTEN, {
+      await eventBus.emit(ReactorEventTypes.JOB_WRITE_READY, {
         operations: ops2,
       });
 
@@ -209,10 +209,10 @@ describe("ReadModelCoordinator", () => {
       const readModel = createMockReadModel();
       const coordinator = new ReadModelCoordinator(eventBus, [readModel], []);
 
-      const readyEvents: OperationsReadyEvent[] = [];
+      const readyEvents: JobReadReadyEvent[] = [];
       eventBus.subscribe(
-        OperationEventTypes.OPERATIONS_READY,
-        (type, event: OperationsReadyEvent) => {
+        ReactorEventTypes.JOB_READ_READY,
+        (type, event: JobReadReadyEvent) => {
           readyEvents.push(event);
         },
       );
@@ -221,7 +221,7 @@ describe("ReadModelCoordinator", () => {
       coordinator.stop();
 
       const operations = createMockOperations();
-      await eventBus.emit(OperationEventTypes.OPERATION_WRITTEN, {
+      await eventBus.emit(ReactorEventTypes.JOB_WRITE_READY, {
         operations,
       });
 

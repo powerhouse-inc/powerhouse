@@ -4,13 +4,16 @@ import { v4 as uuidv4 } from "uuid";
 import type { IOperationIndex } from "../cache/operation-index-types.js";
 import type { IWriteCache } from "../cache/write/interfaces.js";
 import type { IConsistencyTracker } from "../shared/consistency-tracker.js";
-import type { ConsistencyToken } from "../shared/types.js";
 import type {
+  ConsistencyToken,
+  PagedResults,
+  PagingOptions,
+} from "../shared/types.js";
+import type {
+  DocumentRevisions,
   IDocumentView,
   IOperationStore,
   OperationWithContext,
-  PagedResults,
-  PagingOptions,
   ViewFilter,
 } from "../storage/interfaces.js";
 import type { Database as StorageDatabase } from "../storage/kysely/types.js";
@@ -323,12 +326,16 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
     return document as TDocument;
   }
 
-  async getByIdOrSlug<TDocument extends PHDocument>(
-    identifier: string,
+  async getMany<TDocument extends PHDocument>(
+    documentIds: string[],
     view?: ViewFilter,
     consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
-  ): Promise<TDocument> {
+  ): Promise<TDocument[]> {
+    if (documentIds.length === 0) {
+      return [];
+    }
+
     if (consistencyToken) {
       await this.waitForConsistency(consistencyToken, undefined, signal);
     }
@@ -339,47 +346,109 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
 
     const branch = view?.branch || "main";
 
-    const idCheckPromise = this._db
+    let scopesToQuery: string[];
+    if (view?.scopes && view.scopes.length > 0) {
+      scopesToQuery = [...new Set(["header", "document", ...view.scopes])];
+    } else {
+      scopesToQuery = [];
+    }
+
+    let query = this._db
       .selectFrom("DocumentSnapshot")
-      .select("documentId")
-      .where("documentId", "=", identifier)
+      .selectAll()
+      .where("documentId", "in", documentIds)
       .where("branch", "=", branch)
-      .where("isDeleted", "=", false)
-      .executeTakeFirst();
+      .where("isDeleted", "=", false);
 
-    const slugCheckPromise = this._db
-      .selectFrom("SlugMapping")
-      .select("documentId")
-      .where("slug", "=", identifier)
-      .where("branch", "=", branch)
-      .executeTakeFirst();
+    if (scopesToQuery.length > 0) {
+      query = query.where("scope", "in", scopesToQuery);
+    }
 
-    const [idMatch, slugMatch] = await Promise.all([
-      idCheckPromise,
-      slugCheckPromise,
-    ]);
+    const allSnapshots = await query.execute();
 
     if (signal?.aborted) {
       throw new Error("Operation aborted");
     }
 
-    const idMatchDocId = idMatch?.documentId;
-    const slugMatchDocId = slugMatch?.documentId;
-
-    if (idMatchDocId && slugMatchDocId && idMatchDocId !== slugMatchDocId) {
-      throw new Error(
-        `Ambiguous identifier "${identifier}": matches both document ID "${idMatchDocId}" and slug for document ID "${slugMatchDocId}". ` +
-          `Please use get() for ID or resolveSlug() + get() for slug to be explicit.`,
-      );
+    const snapshotsByDocId = new Map<string, typeof allSnapshots>();
+    for (const snapshot of allSnapshots) {
+      const existing = snapshotsByDocId.get(snapshot.documentId) || [];
+      existing.push(snapshot);
+      snapshotsByDocId.set(snapshot.documentId, existing);
     }
 
-    const resolvedDocumentId = idMatchDocId || slugMatchDocId;
+    const foundDocumentIds = [...snapshotsByDocId.keys()];
+    const revisionResults = await Promise.all(
+      foundDocumentIds.map((docId) =>
+        this.operationStore.getRevisions(docId, branch, signal),
+      ),
+    );
 
-    if (!resolvedDocumentId) {
-      throw new Error(`Document not found: ${identifier}`);
+    const revisionsByDocId = new Map<string, DocumentRevisions>();
+    for (let i = 0; i < foundDocumentIds.length; i++) {
+      revisionsByDocId.set(foundDocumentIds[i], revisionResults[i]);
     }
 
-    return this.get<TDocument>(resolvedDocumentId, view, undefined, signal);
+    if (signal?.aborted) {
+      throw new Error("Operation aborted");
+    }
+
+    const documents: TDocument[] = [];
+    for (const documentId of documentIds) {
+      const snapshots = snapshotsByDocId.get(documentId);
+      if (!snapshots || snapshots.length === 0) {
+        continue;
+      }
+
+      const headerSnapshot = snapshots.find((s) => s.scope === "header");
+      if (!headerSnapshot) {
+        continue;
+      }
+
+      const header = headerSnapshot.content as PHDocumentHeader;
+      const revisions = revisionsByDocId.get(documentId);
+      if (revisions) {
+        header.revision = revisions.revision;
+        header.lastModifiedAtUtcIso = revisions.latestTimestamp;
+      }
+
+      const state: Record<string, unknown> = {};
+      for (const snapshot of snapshots) {
+        if (snapshot.scope === "header") {
+          continue;
+        }
+        state[snapshot.scope] = snapshot.content;
+      }
+
+      const document: PHDocument = {
+        header,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        state: state as any,
+        operations: {},
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        initialState: state as any,
+        clipboard: [],
+      };
+
+      documents.push(document as TDocument);
+    }
+
+    return documents;
+  }
+
+  async getByIdOrSlug<TDocument extends PHDocument>(
+    identifier: string,
+    view?: ViewFilter,
+    consistencyToken?: ConsistencyToken,
+    signal?: AbortSignal,
+  ): Promise<TDocument> {
+    const documentId = await this.resolveIdOrSlug(
+      identifier,
+      view,
+      consistencyToken,
+      signal,
+    );
+    return this.get<TDocument>(documentId, view, undefined, signal);
   }
 
   async findByType(
@@ -452,14 +521,25 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
     const nextCursor = hasMore ? String(startIndex + limit) : undefined;
 
     return {
-      items: documents,
+      results: documents,
+      options: paging || { cursor: "0", limit: 100 },
       nextCursor,
-      hasMore,
+      next: hasMore
+        ? () =>
+            this.findByType(
+              type,
+              view,
+              { cursor: nextCursor!, limit },
+              consistencyToken,
+              signal,
+            )
+        : undefined,
     };
   }
 
   async resolveSlug(
     slug: string,
+    // TODO: this should only be branch
     view?: ViewFilter,
     consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
@@ -505,5 +585,81 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
     }
 
     return mapping.documentId;
+  }
+
+  // TODO: fix
+  async resolveSlugs(
+    slugs: string[],
+    // TODO: this should only be branch
+    view?: ViewFilter,
+    consistencyToken?: ConsistencyToken,
+    signal?: AbortSignal,
+  ): Promise<string[]> {
+    const ids = await Promise.all(
+      slugs.map((slug) =>
+        this.resolveSlug(slug, view, consistencyToken, signal),
+      ),
+    );
+    return ids.filter((id) => id !== undefined) as string[];
+  }
+
+  async resolveIdOrSlug(
+    identifier: string,
+    // TODO: this should only be branch
+    view?: ViewFilter,
+    consistencyToken?: ConsistencyToken,
+    signal?: AbortSignal,
+  ): Promise<string> {
+    if (consistencyToken) {
+      await this.waitForConsistency(consistencyToken, undefined, signal);
+    }
+
+    if (signal?.aborted) {
+      throw new Error("Operation aborted");
+    }
+
+    const branch = view?.branch || "main";
+
+    const idCheckPromise = this._db
+      .selectFrom("DocumentSnapshot")
+      .select("documentId")
+      .where("documentId", "=", identifier)
+      .where("branch", "=", branch)
+      .where("isDeleted", "=", false)
+      .executeTakeFirst();
+
+    const slugCheckPromise = this._db
+      .selectFrom("SlugMapping")
+      .select("documentId")
+      .where("slug", "=", identifier)
+      .where("branch", "=", branch)
+      .executeTakeFirst();
+
+    const [idMatch, slugMatch] = await Promise.all([
+      idCheckPromise,
+      slugCheckPromise,
+    ]);
+
+    if (signal?.aborted) {
+      throw new Error("Operation aborted");
+    }
+
+    const idMatchDocId = idMatch?.documentId;
+    const slugMatchDocId = slugMatch?.documentId;
+
+    if (idMatchDocId && slugMatchDocId && idMatchDocId !== slugMatchDocId) {
+      throw new Error(
+        `Ambiguous identifier "${identifier}": matches both document ID "${idMatchDocId}" and slug for document ID "${slugMatchDocId}". ` +
+          `Please use get() for ID or resolveSlug() + get() for slug to be explicit.`,
+      );
+    }
+
+    const resolvedDocumentId = idMatchDocId || slugMatchDocId;
+
+    if (!resolvedDocumentId) {
+      throw new Error(`Document not found: ${identifier}`);
+    }
+
+    return resolvedDocumentId;
   }
 }

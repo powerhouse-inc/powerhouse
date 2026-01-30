@@ -1,7 +1,6 @@
 import { inspectArgs } from "@powerhousedao/common/clis";
 import { command } from "cmd-ts";
 import console from "console";
-import { startInspect } from "../services/inspect.js";
 
 export const inspect = command({
   name: "inspect",
@@ -17,10 +16,11 @@ This command:
 4. Helps troubleshoot package-related issues`,
   aliases: ["is"],
   args: inspectArgs,
-  handler: (args) => {
+  handler: async (args) => {
     if (args.debug) {
       console.log(args);
     }
+    const { startInspect } = await import("../services/inspect.js");
     startInspect(args);
     process.exit(0);
   },

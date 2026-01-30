@@ -1,31 +1,30 @@
 #!/usr/bin/env node
 import {
   assertNodeVersion,
+  getPowerhouseProjectInfo,
   phCliCommandNames,
 } from "@powerhousedao/common/clis";
 import { run } from "cmd-ts";
 import { execSync } from "node:child_process";
-import { detect, resolveCommand } from "package-manager-detector";
+import { resolveCommand } from "package-manager-detector";
 import { ph } from "./commands/ph.js";
 
-async function executePhCliCommand(command: string) {
+async function executePhCliCommand(phCliCommand: string) {
   const forwardedArgs = process.argv.slice(3);
-  const detectResult = await detect();
-  const agent = detectResult?.agent ?? "npm";
+  const { projectPath, packageManager } = await getPowerhouseProjectInfo();
   const resolveExecuteLocalCommandResult = resolveCommand(
-    agent,
+    packageManager,
     "execute-local",
-    ["ph-cli", command, ...forwardedArgs],
+    ["ph-cli", phCliCommand, ...forwardedArgs],
   );
   if (!resolveExecuteLocalCommandResult) {
     throw new Error(
-      `Command ${command} is not executable by package manager ${agent}. Either install "@powerhousedao/ph-cli" in your local package, or run \`ph setup-globals\` to globally install the "@powerhousedao/ph-cli" package.`,
+      `Command ${phCliCommand} is not executable by package manager ${packageManager}. Either install "@powerhousedao/ph-cli" in your local package, or run \`ph setup-globals\` to globally install the "@powerhousedao/ph-cli" package.`,
     );
   }
-  const { command: packageManager, args: localCommandToExecute } =
-    resolveExecuteLocalCommandResult;
-  const cmd = `${packageManager} ${localCommandToExecute.join(" ")}`;
-  execSync(cmd, { stdio: "inherit" });
+  const { command, args } = resolveExecuteLocalCommandResult;
+  const cmd = `${command} ${args.join(" ")}`;
+  execSync(cmd, { stdio: "inherit", cwd: projectPath });
 }
 
 async function main() {
@@ -42,20 +41,18 @@ async function main() {
     // for the `connect` command
     !args.some((arg) => ["--help", "-h"].includes(arg))
   ) {
-    await executePhCliCommand("connect studio");
-    return;
+    await executePhCliCommand("connect");
+    process.exit(0);
   }
 
   // forward command to the local ph-cli installation if it exists
   if (phCliCommandNames.includes(command)) {
     await executePhCliCommand(command);
-    return;
+    process.exit(0);
   }
 
   await run(ph, args);
+  process.exit(0);
 }
 
-await main().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
+await main();

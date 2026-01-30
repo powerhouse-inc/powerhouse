@@ -19,9 +19,19 @@ export type {
   SyncEnvelope,
   SyncEnvelopeType,
   ChannelMeta,
+  SyncPendingEvent,
+  SyncSucceededEvent,
+  SyncFailedEvent,
+  SyncResult,
+  SyncResultStatus,
+  SyncResultError,
 } from "./types.js";
 
-export { ChannelErrorSource, SyncOperationStatus } from "./types.js";
+export {
+  ChannelErrorSource,
+  SyncEventTypes,
+  SyncOperationStatus,
+} from "./types.js";
 
 export {
   SyncOperation,
@@ -33,8 +43,11 @@ export { ChannelError, PollingChannelError } from "./errors.js";
 
 export {
   PollingChannel,
+  GqlChannel,
   GqlChannelFactory,
   CompositeChannelFactory,
+  type GqlChannelConfig,
+  type IPollTimer,
 } from "./channels/index.js";
 
 export { SyncManager } from "./sync-manager.js";

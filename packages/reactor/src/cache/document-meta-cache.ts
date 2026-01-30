@@ -166,11 +166,11 @@ export class DocumentMetaCache implements IDocumentMetaCache {
       signal,
     );
 
-    if (docScopeOps.items.length === 0) {
+    if (docScopeOps.results.length === 0) {
       throw new Error(`Document ${documentId} not found`);
     }
 
-    const createOp = docScopeOps.items[0];
+    const createOp = docScopeOps.results[0];
     if (createOp.action.type !== "CREATE_DOCUMENT") {
       throw new Error(
         `Invalid document: first operation must be CREATE_DOCUMENT, found ${createOp.action.type}`,
@@ -183,7 +183,7 @@ export class DocumentMetaCache implements IDocumentMetaCache {
     let document = createDocumentFromAction(createAction);
     let documentScopeRevision = 0;
 
-    for (const op of docScopeOps.items) {
+    for (const op of docScopeOps.results) {
       if (targetRevision !== undefined && op.index > targetRevision) {
         break;
       }

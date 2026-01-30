@@ -136,7 +136,7 @@ async function main() {
           );
 
           const allCompleted = statuses.every(
-            (status) => status.status === JobStatus.READ_MODELS_READY,
+            (status) => status.status === JobStatus.READ_READY,
           );
           const anyFailed = statuses.some(
             (status) => status.status === JobStatus.FAILED,

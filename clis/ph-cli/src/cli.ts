@@ -25,7 +25,4 @@ async function main() {
   }
 }
 
-await main().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
+await main();

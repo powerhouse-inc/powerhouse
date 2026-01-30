@@ -1,5 +1,11 @@
 # Release Changelog
 
+## 🚀 **v6.0.0**
+
+### MIGRATION STEPS
+
+- Minimum supported NodeJS version is now 24.
+
 ## 🚀 **v5.3.0**
 
 ### ✨ Highlights

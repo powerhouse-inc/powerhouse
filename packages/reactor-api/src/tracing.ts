@@ -121,7 +121,7 @@ if (TRACING_ENABLED) {
       .finally(() => process.exit(0));
   });
 } else {
-  console.log(
+  console.debug(
     "OpenTelemetry tracing disabled (set ENABLE_TRACING=true to enable)",
   );
 }

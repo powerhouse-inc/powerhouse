@@ -14,13 +14,16 @@ import type { Kysely } from "kysely";
 
 import type { IOperationIndex } from "../cache/operation-index-types.js";
 import type { IWriteCache } from "../cache/write/interfaces.js";
+import type { ReactorClient } from "../client/reactor-client.js";
 import type { IEventBus } from "../events/interfaces.js";
 import type { IJobExecutorManager } from "../executor/interfaces.js";
 import type { IJobTracker } from "../job-tracker/interfaces.js";
+import type { IProcessorManager } from "../processors/types.js";
 import type { IQueue } from "../queue/interfaces.js";
 import type { IReadModelCoordinator } from "../read-models/interfaces.js";
 import type { DocumentViewDatabase } from "../read-models/types.js";
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";
+import type { IJobAwaiter } from "../shared/awaiter.js";
 import type { IConsistencyTracker } from "../shared/consistency-tracker.js";
 import type {
   ConsistencyToken,
@@ -31,8 +34,6 @@ import type {
   ShutdownStatus,
   ViewFilter,
 } from "../shared/types.js";
-import type { IJobAwaiter } from "../shared/awaiter.js";
-import type { ReactorSubscriptionManager } from "../subs/react-subscription-manager.js";
 import type {
   IDocumentIndexer,
   IDocumentView,
@@ -46,10 +47,9 @@ import type {
   DocumentIndexerDatabase,
   Database as StorageDatabase,
 } from "../storage/kysely/types.js";
+import type { ReactorSubscriptionManager } from "../subs/react-subscription-manager.js";
 import type { IReactorSubscriptionManager } from "../subs/types.js";
 import type { IChannelFactory, ISyncManager } from "../sync/interfaces.js";
-import type { ReactorClient } from "../client/reactor-client.js";
-import type { IProcessorManager } from "../processors/types.js";
 
 /**
  * A single mutation job within a batch request.
@@ -109,17 +109,14 @@ export interface IReactor {
    * @param view - Optional filter containing branch and scopes information
    * @param consistencyToken - Optional token for read-after-write consistency
    * @param signal - Optional abort signal to cancel the request
-   * @returns The up-to-date PHDocument with scopes and list of child document ids
+   * @returns The up-to-date PHDocument
    */
   get<TDocument extends PHDocument>(
     id: string,
     view?: ViewFilter,
     consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
-  ): Promise<{
-    document: TDocument;
-    childIds: string[];
-  }>;
+  ): Promise<TDocument>;
 
   /**
    * Retrieves a specific PHDocument by slug
@@ -135,10 +132,7 @@ export interface IReactor {
     view?: ViewFilter,
     consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
-  ): Promise<{
-    document: TDocument;
-    childIds: string[];
-  }>;
+  ): Promise<TDocument>;
 
   /**
    * Retrieves a specific PHDocument by identifier (either id or slug).
@@ -156,10 +150,35 @@ export interface IReactor {
     view?: ViewFilter,
     consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
-  ): Promise<{
-    document: TDocument;
-    childIds: string[];
-  }>;
+  ): Promise<TDocument>;
+
+  /**
+   * Retrieves the children of a document
+   *
+   * @param parentId - The parent document id
+   * @param consistencyToken - Optional token for read-after-write consistency
+   * @param signal - Optional abort signal to cancel the request
+   * @returns The list of child document ids
+   */
+  getChildren(
+    parentId: string,
+    consistencyToken?: ConsistencyToken,
+    signal?: AbortSignal,
+  ): Promise<string[]>;
+
+  /**
+   * Retrieves the parents of a document
+   *
+   * @param childId - The child document id
+   * @param consistencyToken - Optional token for read-after-write consistency
+   * @param signal - Optional abort signal to cancel the request
+   * @returns The list of parent document ids
+   */
+  getParents(
+    childId: string,
+    consistencyToken?: ConsistencyToken,
+    signal?: AbortSignal,
+  ): Promise<string[]>;
 
   /**
    * Retrieves the operations for a document
@@ -329,10 +348,7 @@ export interface IReactor {
 /**
  * Feature flags for reactor configuration
  */
-export type ReactorFeatures = {
-  /** Enable or disable legacy storage reads and writes. Default: true for backward compatibility */
-  legacyStorageEnabled?: boolean;
-};
+export type ReactorFeatures = { [key: string]: boolean };
 
 export type ExecutorConfig = {
   count: number;
@@ -395,6 +411,7 @@ export interface ReactorClientModule {
   reactor: IReactor;
   eventBus: IEventBus;
   documentIndexer: IDocumentIndexer;
+  documentView: IDocumentView;
   signer: ISigner;
   subscriptionManager: IReactorSubscriptionManager;
   jobAwaiter: IJobAwaiter;

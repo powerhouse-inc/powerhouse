@@ -1,3 +1,37 @@
+## 6.0.0-dev.27 (2026-01-30)
+
+### 🚀 Features
+
+- renown sdk improvements ([bc1099d94](https://github.com/powerhouse-inc/powerhouse/commit/bc1099d94))
+- **ph-cmd:** fix forwarding and versioning bug ([#2272](https://github.com/powerhouse-inc/powerhouse/pull/2272))
+
+### 🩹 Fixes
+
+- fixes for the new way operation history works ([ebe0e5b76](https://github.com/powerhouse-inc/powerhouse/commit/ebe0e5b76))
+- added a useDocumentOperations hook ([b2a98413f](https://github.com/powerhouse-inc/powerhouse/commit/b2a98413f))
+- reactor-browser compatibility fixes ([22eefce08](https://github.com/powerhouse-inc/powerhouse/commit/22eefce08))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan (@thegoldenmule)
+- Ryan Wolhuter @ryanwolhuter
+
+## 6.0.0-dev.26 (2026-01-29)
+
+### 🚀 Features
+
+- update minimum node version to 24 ([7a71107c5](https://github.com/powerhouse-inc/powerhouse/commit/7a71107c5))
+
+### 🩹 Fixes
+
+- undo my changes to the tsc script ([0a36d0a49](https://github.com/powerhouse-inc/powerhouse/commit/0a36d0a49))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+
 ## 6.0.0-dev.25 (2026-01-28)
 
 This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.

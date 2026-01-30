@@ -1,4 +1,4 @@
-import type { IConnectCrypto } from "@renown/sdk";
+import type { IRenown } from "@renown/sdk";
 import type { DriveInput, IDocumentDriveServer } from "document-drive";
 
 export type StorageOptions = {
@@ -15,6 +15,9 @@ export type IdentityOptions = {
    * Use this to ensure the switchboard only runs with an authenticated identity.
    */
   requireExisting?: boolean;
+
+  /** Base url of the Renown instance to use */
+  baseUrl?: string;
 };
 
 export type StartServerOptions = {
@@ -39,7 +42,7 @@ export type StartServerOptions = {
     admins: string[];
   };
   /**
-   * Identity options for ConnectCrypto.
+   * Identity options for Renown.
    * When configured, the switchboard will load the keypair from `ph login`
    * and can authenticate with remote services on behalf of the user.
    */
@@ -66,6 +69,6 @@ export type StartServerOptions = {
 export type SwitchboardReactor = {
   defaultDriveUrl: string | undefined;
   reactor: IDocumentDriveServer;
-  /** The ConnectCrypto instance if identity was initialized */
-  connectCrypto: IConnectCrypto | null;
+  /** The Renown instance if identity was initialized */
+  renown: IRenown | null;
 };

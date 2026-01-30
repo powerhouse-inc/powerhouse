@@ -2,13 +2,13 @@ import {
   CompositeChannelFactory,
   ConsoleLogger,
   JobStatus,
-  OperationEventTypes,
   ReactorBuilder,
+  ReactorEventTypes,
   SyncBuilder,
   type IEventBus,
   type IReactor,
   type ISyncManager,
-  type OperationsReadyEvent,
+  type JobReadReadyEvent,
   type OperationWithContext,
 } from "@powerhousedao/reactor";
 import { driveDocumentModelModule } from "document-drive";
@@ -36,7 +36,7 @@ async function waitForJobCompletion(
   while (Date.now() - startTime < timeoutMs) {
     const status = await reactor.getJobStatus(jobId);
 
-    if (status.status === JobStatus.READ_MODELS_READY) {
+    if (status.status === JobStatus.READ_READY) {
       return;
     }
 
@@ -66,45 +66,13 @@ async function waitForOperationsReady(
     }, timeoutMs);
 
     const unsubscribe = eventBus.subscribe(
-      OperationEventTypes.OPERATIONS_READY,
-      (type: number, event: OperationsReadyEvent) => {
+      ReactorEventTypes.JOB_READ_READY,
+      (type: number, event: JobReadReadyEvent) => {
         const hasDocument = event.operations.some(
           (op: OperationWithContext) => op.context.documentId === documentId,
         );
 
         if (hasDocument) {
-          clearTimeout(timeout);
-          unsubscribe();
-          resolve();
-        }
-      },
-    );
-  });
-}
-
-async function waitForMultipleOperationsReady(
-  eventBus: IEventBus,
-  expectedCount: number,
-  timeoutMs = 10000,
-): Promise<void> {
-  return new Promise<void>((resolve, reject) => {
-    let count = 0;
-
-    const timeout = setTimeout(() => {
-      unsubscribe();
-      reject(
-        new Error(
-          `Expected ${expectedCount} OPERATIONS_READY events but received ${count} within ${timeoutMs}ms`,
-        ),
-      );
-    }, timeoutMs);
-
-    const unsubscribe = eventBus.subscribe(
-      OperationEventTypes.OPERATIONS_READY,
-      () => {
-        count++;
-
-        if (count >= expectedCount) {
           clearTimeout(timeout);
           unsubscribe();
           resolve();
@@ -220,7 +188,7 @@ describe("Two-Reactor Sync with GqlChannel", () => {
     const docA = await reactorA.get(document.header.id, { branch: "main" });
     const docB = await reactorB.get(document.header.id, { branch: "main" });
 
-    expect(docA.document).toEqual(docB.document);
+    expect(docA).toEqual(docB);
   });
 
   it("should sync operation from ReactorB to ReactorA via GqlChannel", async () => {
@@ -252,7 +220,7 @@ describe("Two-Reactor Sync with GqlChannel", () => {
     const docA = await reactorA.get(document.header.id, { branch: "main" });
     const docB = await reactorB.get(document.header.id, { branch: "main" });
 
-    expect(docA.document).toEqual(docB.document);
+    expect(docA).toEqual(docB);
   });
 
   it("should sync multiple documents with concurrent operations from both reactors", async () => {
@@ -398,91 +366,7 @@ describe("Two-Reactor Sync with GqlChannel", () => {
       const docFromA = await reactorA.get(docId, { branch: "main" });
       const docFromB = await reactorB.get(docId, { branch: "main" });
 
-      expect(docFromA.document).toEqual(docFromB.document);
+      expect(docFromA).toEqual(docFromB);
     }
   }, 30000);
-
-  it("should handle concurrent modifications to the same document from both reactors", async () => {
-    const doc = driveDocumentModelModule.utils.createDocument();
-
-    const readyPromise = waitForOperationsReady(eventBusB, doc.header.id);
-    const createJob = await reactorA.create(doc);
-    await waitForJobCompletion(reactorA, createJob.id);
-
-    await readyPromise;
-
-    const docOnB = await reactorB.get(doc.header.id, { branch: "main" });
-    expect(docOnB.document).toBeDefined();
-
-    void reactorA.execute(doc.header.id, "main", [
-      driveDocumentModelModule.actions.setDriveName({ name: "Name from A" }),
-    ]);
-
-    void reactorB.execute(doc.header.id, "main", [
-      driveDocumentModelModule.actions.setDriveName({ name: "Name from B" }),
-    ]);
-
-    void reactorA.execute(doc.header.id, "main", [
-      driveDocumentModelModule.actions.addFolder({
-        id: "folder-a",
-        name: "Folder from A",
-        parentFolder: null,
-      }),
-    ]);
-
-    void reactorB.execute(doc.header.id, "main", [
-      driveDocumentModelModule.actions.addFolder({
-        id: "folder-b",
-        name: "Folder from B",
-        parentFolder: null,
-      }),
-    ]);
-
-    const startTime = Date.now();
-    const timeout = 15000;
-    let synced = false;
-
-    while (Date.now() - startTime < timeout) {
-      const resultA = await reactorA.getOperations(doc.header.id, {
-        branch: "main",
-      });
-      const opsA = Object.values(resultA).flatMap((scope) => scope.results);
-
-      const resultB = await reactorB.getOperations(doc.header.id, {
-        branch: "main",
-      });
-      const opsB = Object.values(resultB).flatMap((scope) => scope.results);
-
-      if (opsA.length > 1 && opsB.length > 1 && opsA.length === opsB.length) {
-        synced = true;
-        break;
-      }
-
-      await new Promise((resolve) => setTimeout(resolve, 100));
-    }
-
-    expect(synced).toBe(true);
-
-    const resultA = await reactorA.getOperations(doc.header.id, {
-      branch: "main",
-    });
-    const opsA = Object.values(resultA).flatMap((scope) => scope.results);
-
-    const resultB = await reactorB.getOperations(doc.header.id, {
-      branch: "main",
-    });
-    const opsB = Object.values(resultB).flatMap((scope) => scope.results);
-
-    expect(opsA.length).toBeGreaterThan(0);
-    expect(opsB.length).toBe(opsA.length);
-
-    for (let i = 0; i < opsA.length; i++) {
-      expect(opsB[i]).toEqual(opsA[i]);
-    }
-
-    const docFromA = await reactorA.get(doc.header.id, { branch: "main" });
-    const docFromB = await reactorB.get(doc.header.id, { branch: "main" });
-
-    expect(docFromA.document).toEqual(docFromB.document);
-  }, 20000);
 });

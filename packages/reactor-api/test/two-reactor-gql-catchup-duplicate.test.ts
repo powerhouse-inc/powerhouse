@@ -3,13 +3,13 @@ import {
   ConsoleLogger,
   driveCollectionId,
   JobStatus,
-  OperationEventTypes,
+  ReactorEventTypes,
   ReactorBuilder,
   SyncBuilder,
   type IEventBus,
   type IReactor,
   type ISyncManager,
-  type OperationsReadyEvent,
+  type JobReadReadyEvent,
   type OperationWithContext,
 } from "@powerhousedao/reactor";
 
@@ -45,7 +45,7 @@ async function waitForJobCompletion(
   while (Date.now() - startTime < timeoutMs) {
     const status = await reactor.getJobStatus(jobId);
 
-    if (status.status === JobStatus.READ_MODELS_READY) {
+    if (status.status === JobStatus.READ_READY) {
       return;
     }
 
@@ -75,8 +75,8 @@ async function waitForOperationsReady(
     }, timeoutMs);
 
     const unsubscribe = eventBus.subscribe(
-      OperationEventTypes.OPERATIONS_READY,
-      (type: number, event: OperationsReadyEvent) => {
+      ReactorEventTypes.JOB_READ_READY,
+      (type: number, event: JobReadReadyEvent) => {
         const hasDocument = event.operations.some(
           (op: OperationWithContext) => op.context.documentId === documentId,
         );
@@ -124,8 +124,8 @@ function collectOperationsReady(
   let waitCount = 0;
 
   const unsubscribe = eventBus.subscribe(
-    OperationEventTypes.OPERATIONS_READY,
-    (type: number, event: OperationsReadyEvent) => {
+    ReactorEventTypes.JOB_READ_READY,
+    (type: number, event: JobReadReadyEvent) => {
       for (const op of event.operations) {
         if (op.context.documentId !== documentId) {
           continue;
@@ -193,7 +193,7 @@ function collectDuplicateFailures(
   const failures: JobFailedEventFromEventBus[] = [];
 
   const unsubscribe = eventBus.subscribe(
-    OperationEventTypes.JOB_FAILED,
+    ReactorEventTypes.JOB_FAILED,
     (type: number, event: JobFailedEventFromEventBus) => {
       if (event.error.message.includes("already exists")) {
         failures.push(event);

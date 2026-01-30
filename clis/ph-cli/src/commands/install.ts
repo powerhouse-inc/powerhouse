@@ -1,12 +1,12 @@
-import { installArgs } from "@powerhousedao/common/clis";
-import { execSync } from "child_process";
-import { command } from "cmd-ts";
-import { updateConfigFile, updateStylesFile } from "../utils.js";
 import {
   getPowerhouseProjectInfo,
   getPowerhouseProjectInstallCommand,
+  installArgs,
   makeDependenciesWithVersions,
-} from "../utils/projects.js";
+} from "@powerhousedao/common/clis";
+import { execSync } from "child_process";
+import { command } from "cmd-ts";
+import { updateConfigFile, updateStylesFile } from "../utils.js";
 
 export const install = command({
   name: "install",
@@ -88,5 +88,7 @@ This command:
       console.error("❌ Failed to update styles file");
       throw error;
     }
+
+    process.exit(0);
   },
 });

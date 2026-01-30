@@ -567,6 +567,7 @@ describe("KyselyOperationIndex.find()", () => {
     mocks.execute.mockResolvedValue([]);
 
     await index.find("collection.doc-123", undefined, undefined, {
+      cursor: "0",
       limit: 100,
     });
 
@@ -635,14 +636,14 @@ describe("KyselyOperationIndex.find()", () => {
       "collection.doc-123",
       undefined,
       undefined,
-      { limit: 1 },
+      { cursor: "0", limit: 1 },
     );
 
-    expect(result.hasMore).toBe(true);
-    expect(result.items).toHaveLength(1);
+    expect(result.nextCursor).toBeDefined();
+    expect(result.results).toHaveLength(1);
   });
 
-  it("returns hasMore=false when results within limit", async () => {
+  it("returns no nextCursor when results within limit", async () => {
     const { db, mocks } = createMockKysely();
     const index = new KyselyOperationIndex(db);
 
@@ -674,11 +675,11 @@ describe("KyselyOperationIndex.find()", () => {
       "collection.doc-123",
       undefined,
       undefined,
-      { limit: 10 },
+      { cursor: "0", limit: 10 },
     );
 
-    expect(result.hasMore).toBe(false);
-    expect(result.items).toHaveLength(1);
+    expect(result.nextCursor).toBeUndefined();
+    expect(result.results).toHaveLength(1);
   });
 
   it("generates correct nextCursor from last item", async () => {
@@ -732,7 +733,7 @@ describe("KyselyOperationIndex.find()", () => {
       "collection.doc-123",
       undefined,
       undefined,
-      { limit: 1 },
+      { cursor: "0", limit: 1 },
     );
 
     expect(result.nextCursor).toBe("1");
@@ -746,8 +747,7 @@ describe("KyselyOperationIndex.find()", () => {
 
     const result = await index.find("collection.doc-123");
 
-    expect(result.items).toEqual([]);
-    expect(result.hasMore).toBe(false);
+    expect(result.results).toEqual([]);
     expect(result.nextCursor).toBeUndefined();
   });
 
@@ -799,7 +799,7 @@ describe("KyselyOperationIndex.find()", () => {
 
     const result = await index.find("collection.doc-123");
 
-    expect(result.items[0]).toEqual({
+    expect(result.results[0]).toEqual({
       ordinal: 1,
       documentId: "doc-1",
       documentType: "budget",
@@ -859,6 +859,7 @@ describe("KyselyOperationIndex.find()", () => {
 
     await index.find("collection.doc-123", undefined, undefined, {
       cursor: "42",
+      limit: 100,
     });
 
     expect(mocks.where).toHaveBeenCalledWith("oi.ordinal", ">", 42);

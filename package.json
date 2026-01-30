@@ -14,6 +14,7 @@
     "build-misc": "pnpm -r --no-bail --filter=!academy run build",
     "build-css": "pnpm -r --no-bail build:css",
     "build-vite": "pnpm -r --no-bail build:vite",
+    "build-bundle": "pnpm -r --no-bail bundle",
     "build-storybook": "pnpm -r --no-bail run build:storybook",
     "build-all": "pnpm build-tsc && pnpm build-misc && pnpm build-css && pnpm build-vite",
     "clean": "pnpm exec scripts/simulate-fresh-git-clone.sh",
@@ -67,7 +68,7 @@
     "read-pkg": "^9.0.1"
   },
   "engines": {
-    "node": ">=22"
+    "node": ">=24"
   },
   "pnpm": {
     "overrides": {

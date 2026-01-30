@@ -192,8 +192,6 @@ export async function setDriveAvailableOffline(
     if (!reactorClient) {
       throw new Error("ReactorClient not initialized");
     }
-    const { document: drive } =
-      await reactorClient.get<DocumentDriveDocument>(driveId);
     return await reactorClient.execute(driveId, "main", [
       setAvailableOffline({ availableOffline }),
     ]);

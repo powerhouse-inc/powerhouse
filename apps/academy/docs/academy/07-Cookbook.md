@@ -21,7 +21,7 @@ You need to install the Powerhouse CLI (`ph-cmd`) to create and manage Powerhous
 
 ### Prerequisites
 
-- Node.js 22 installed
+- Node.js 24 installed
 - pnpm package manager 10 installed
 - Terminal or command prompt access
 
@@ -210,7 +210,7 @@ You need to access experimental features, bugfixes, or development versions of P
 
 - Terminal or command prompt access
 - pnpm package manager 10 installed
-- Node.js 22 installed
+- Node.js 24 installed
 
 ### Solution
 
@@ -296,7 +296,7 @@ You want to use a different package manager (npm, yarn, or bun) instead of pnpm 
 
 ### Prerequisites
 
-- Node.js 22 installed
+- Node.js 24 installed
 - Your preferred package manager installed (npm, yarn, or bun)
 - Terminal or command prompt access
 
@@ -445,6 +445,7 @@ ph vetra --interactive
 ```
 
 In interactive mode:
+
 - You receive confirmation prompts before any code generation
 - Changes require explicit confirmation before being processed
 - Provides better control and visibility over document changes
@@ -456,6 +457,7 @@ ph vetra --interactive --watch
 ```
 
 In watch mode:
+
 - Enables dynamic loading for document-models and editors
 - The system watches for changes and reloads them dynamically
 - Best for active development with frequent changes
@@ -467,6 +469,7 @@ ph vetra
 ```
 
 In standard mode:
+
 - Changes are processed automatically with 1-second debounce
 - Multiple changes are batched and processed together
 - Uses the latest document state for processing
@@ -524,6 +527,7 @@ ph init --remote-drive <url>
 ```
 
 Example:
+
 ```bash
 ph init --remote-drive https://switchboard.staging.vetra.io/d/my-team-drive
 ```
@@ -703,6 +707,7 @@ You want to create a new document model using natural language descriptions thro
 ### Step 1: Describe Your Document Model to Claude
 
 Provide a detailed description of your document needs. Be specific about:
+
 - The purpose of the document
 - The data fields and their types
 - The operations users should be able to perform
@@ -712,7 +717,7 @@ Example prompt:
 
 ```
 Create a document model for a task tracker with the following requirements:
-- Each task has a title (string), description (string), status (enum: todo, in-progress, done), 
+- Each task has a title (string), description (string), status (enum: todo, in-progress, done),
   priority (enum: low, medium, high), and due date (optional date)
 - Users should be able to create tasks, update task details, change status, and delete tasks
 - Tasks should track when they were created and last modified
@@ -721,6 +726,7 @@ Create a document model for a task tracker with the following requirements:
 ### Step 2: Review the Generated Schema
 
 Claude will generate:
+
 - An appropriate GraphQL schema
 - The necessary operations
 - Implementation for the required reducers
@@ -730,6 +736,7 @@ Review the proposed schema before confirming.
 ### Step 3: Confirm Generation in Interactive Mode
 
 If running in interactive mode, you'll be prompted to confirm:
+
 - Schema changes
 - Operation definitions
 - Code generation
@@ -788,6 +795,7 @@ You have a document model and want to create a user interface (editor) for it us
 ### Step 1: Describe Your Editor Requirements to Claude
 
 Provide a detailed description including:
+
 - The document model the editor is for
 - UI layout and components needed
 - User interactions and workflows
@@ -809,6 +817,7 @@ Create an editor for my task tracker document model with:
 ### Step 2: Review Generated Components
 
 Claude will generate:
+
 - Editor components
 - Necessary hooks for document operations
 - Required UI elements
@@ -906,6 +915,7 @@ ph vetra --watch
 ```
 
 This will:
+
 - Launch Vetra Studio in your browser
 - Automatically generate code when you make changes to document models
 - Provide live preview of your documents and editors
@@ -1045,6 +1055,7 @@ You need to understand and manage different types of dependencies in your Powerh
 #### 1. Monorepo Dependencies (Powerhouse Core)
 
 The Powerhouse monorepo uses a specific branching strategy:
+
 - **Development** (`dev` tag): Ongoing development on the main branch
 - **Staging** (`staging` tag): Pre-release branch (`Release/staging/v.x.x`)
 - **Production** (`latest` or `prod` tag): Latest stable release (`Release/production/v.x.x`)
@@ -1336,6 +1347,7 @@ ph vetra --watch
 ```
 
 In Vetra Studio, you can:
+
 - Create editors visually or with AI assistance
 - See live preview of your editor as you make changes
 - Automatically generate editor scaffolding
@@ -1597,6 +1609,7 @@ ph vetra --watch
 ```
 
 Vetra includes reactor functionality and provides:
+
 - Automatic code generation when document models change
 - Live preview of documents and editors
 - Integrated development environment
@@ -1756,6 +1769,7 @@ docker compose logs -f
 ### Step 5: Access Your Application
 
 Once services are running, access:
+
 - **Connect**: http://localhost:3000
 - **Switchboard API**: http://localhost:4000
 
@@ -1769,7 +1783,7 @@ services:
     image: ghcr.io/powerhouse-inc/powerhouse/connect:v1.0.0
     env_file:
       - .env
-  
+
   switchboard:
     image: ghcr.io/powerhouse-inc/powerhouse/switchboard:v1.0.0
     env_file:

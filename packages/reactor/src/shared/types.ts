@@ -82,10 +82,10 @@ export enum JobStatus {
   PENDING = "PENDING",
   /** Job is currently being executed */
   RUNNING = "RUNNING",
-  /** Operations have been written to the operation store (OPERATION_WRITTEN event) */
-  WRITE_COMPLETED = "WRITE_COMPLETED",
-  /** Read models have finished indexing operations (OPERATIONS_READY event) */
-  READ_MODELS_READY = "READ_MODELS_READY",
+  /** Operations have been written to the operation store (JOB_WRITE_READY event) */
+  WRITE_READY = "WRITE_READY",
+  /** Read models have finished indexing operations (JOB_READ_READY event) */
+  READ_READY = "READ_READY",
   /** Job failed (may be retried) */
   FAILED = "FAILED",
 }

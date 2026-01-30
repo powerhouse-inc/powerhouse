@@ -8,6 +8,7 @@ import { Mailbox } from "../mailbox.js";
 import type { SyncOperation } from "../sync-operation.js";
 import type { RemoteCursor, RemoteFilter, SyncEnvelope } from "../types.js";
 import { ChannelErrorSource } from "../types.js";
+import type { IPollTimer } from "./poll-timer.js";
 import { envelopesToSyncOperations } from "./utils.js";
 
 /**
@@ -18,8 +19,6 @@ export type GqlChannelConfig = {
   url: string;
   /** Authentication token for the remote */
   authToken?: string;
-  /** Polling interval in milliseconds (default: 5000) */
-  pollIntervalMs?: number;
   /** Base delay for exponential backoff retries in milliseconds (default: 1000) */
   retryBaseDelayMs?: number;
   /** Maximum delay for exponential backoff retries in milliseconds (default: 300000) */
@@ -46,8 +45,9 @@ export class GqlChannel implements IChannel {
   private readonly remoteName: string;
   private readonly cursorStorage: ISyncCursorStorage;
   private readonly config: GqlChannelConfig;
+  private readonly operationIndex: IOperationIndex;
+  private readonly pollTimer: IPollTimer;
   private isShutdown: boolean;
-  private pollTimer?: NodeJS.Timeout;
   private failureCount: number;
   private lastSuccessUtcMs?: number;
   private lastFailureUtcMs?: number;
@@ -58,15 +58,17 @@ export class GqlChannel implements IChannel {
     remoteName: string,
     cursorStorage: ISyncCursorStorage,
     config: GqlChannelConfig,
-    private readonly operationIndex: IOperationIndex,
+    operationIndex: IOperationIndex,
+    pollTimer: IPollTimer,
   ) {
     this.channelId = channelId;
     this.remoteName = remoteName;
     this.cursorStorage = cursorStorage;
+    this.operationIndex = operationIndex;
+    this.pollTimer = pollTimer;
     this.config = {
       url: config.url,
       authToken: config.authToken,
-      pollIntervalMs: config.pollIntervalMs ?? 2000,
       retryBaseDelayMs: config.retryBaseDelayMs ?? 1000,
       retryMaxDelayMs: config.retryMaxDelayMs ?? 300000,
       maxFailures: config.maxFailures ?? 5,
@@ -91,10 +93,7 @@ export class GqlChannel implements IChannel {
    */
   shutdown(): void {
     this.isShutdown = true;
-    if (this.pollTimer) {
-      clearTimeout(this.pollTimer);
-      this.pollTimer = undefined;
-    }
+    this.pollTimer.stop();
   }
 
   /**
@@ -102,22 +101,8 @@ export class GqlChannel implements IChannel {
    */
   async init(): Promise<void> {
     await this.touchRemoteChannel();
-    this.startPolling();
-  }
-
-  /**
-   * Starts the polling loop to fetch operations from the remote.
-   */
-  private startPolling(): void {
-    if (this.isShutdown) {
-      return;
-    }
-
-    void this.poll().then(() => {
-      this.pollTimer = setTimeout(() => {
-        this.startPolling(); // Schedule next poll
-      }, this.config.pollIntervalMs);
-    });
+    this.pollTimer.setDelegate(() => this.poll());
+    this.pollTimer.start();
   }
 
   /**
@@ -219,10 +204,7 @@ export class GqlChannel implements IChannel {
       this.channelId,
     );
 
-    if (this.pollTimer) {
-      clearTimeout(this.pollTimer);
-      this.pollTimer = undefined;
-    }
+    this.pollTimer.stop();
 
     void this.touchRemoteChannel()
       .then(() => {
@@ -231,9 +213,9 @@ export class GqlChannel implements IChannel {
           this.channelId,
         );
         this.failureCount = 0;
-        this.startPolling();
+        this.pollTimer.start();
       })
-      .catch((recoveryError) => {
+      .catch((recoveryError: unknown) => {
         this.logger.error(
           "GqlChannel @ChannelId failed to re-register: @Error",
           this.channelId,
@@ -241,9 +223,7 @@ export class GqlChannel implements IChannel {
         );
         this.failureCount++;
         this.lastFailureUtcMs = Date.now();
-        this.pollTimer = setTimeout(() => {
-          this.startPolling();
-        }, this.config.pollIntervalMs);
+        this.pollTimer.start();
       });
   }
 
