@@ -129,6 +129,7 @@ export type PagedResults<T> = {
 
   next?: () => Promise<PagedResults<T>>;
   nextCursor?: string;
+  totalCount?: number;
 };
 
 /**

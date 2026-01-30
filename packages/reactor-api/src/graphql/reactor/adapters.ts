@@ -78,7 +78,7 @@ export function toPhDocumentResultPage(
     hasNextPage: !!result.nextCursor,
     hasPreviousPage: !!result.options.cursor,
     items: result.results.map(toGqlPhDocument),
-    totalCount: result.results.length,
+    totalCount: result.totalCount ?? result.results.length,
   };
 }
 
