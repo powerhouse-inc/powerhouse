@@ -40,12 +40,12 @@ permissions:
   id-token: write
 
 jobs:
-  setup:
-    name: Setup monorepo for release
+  release:
+    name: Release packages in monorepo
     runs-on: ubuntu-latest
     steps:
       - name: General setup
-        uses: ./github/actions/setup
+        uses: ./.github/actions/setup
 
       - name: Install dependencies for release tools
         run: bun install
@@ -54,23 +54,8 @@ jobs:
       - name: Set git config
         run: |
           git config user.name "Github Actions Bot"
-          git config user.email "-"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
 
-  configure-git:
-    name: Set git configurations
-    needs: setup
-    runs-on: ubuntu-latest
-    steps:
-      - name: Set git config
-        run: |
-          git config user.name "Github Actions Bot"
-          git config user.email "-"
-
-  before-release:
-    name: Update versions and generate changelog
-    needs: configure-git
-    runs-on: ubuntu-latest
-    steps:
       - name: Run release
         run: pnpm run-release
         env:

@@ -185,7 +185,7 @@ const app = command({
       process.exit(0);
     }
 
-    Bun.spawnSync({
+    const buildResult = Bun.spawnSync({
       cmd: ["pnpm", "build-misc"],
       stdio: ["inherit", "inherit", "inherit"],
       env: {
@@ -193,6 +193,11 @@ const app = command({
         WORKSPACE_VERSION: workspaceVersion,
       },
     });
+
+    if (buildResult.exitCode !== 0) {
+      console.error(">>> BUILD FAILED");
+      process.exit(1);
+    }
 
     if (!skipChangelog) {
       await releaseChangelog({
