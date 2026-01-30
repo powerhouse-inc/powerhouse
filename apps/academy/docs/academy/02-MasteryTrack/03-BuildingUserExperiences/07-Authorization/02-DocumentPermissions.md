@@ -321,6 +321,22 @@ query GetOperationPermissions($documentId: String!, $operationType: String!) {
 }
 ```
 
+#### Document Drive Operation Types
+
+For document drives specifically, the following operation permissions are available:
+
+- `ADD_FILE` - Create new files within the drive
+- `ADD_FOLDER` - Create new folders within the drive
+- `DELETE_NODE` - Delete files or folders within the drive
+- `UPDATE_FILE` - Modify existing files within the drive
+- `UPDATE_NODE` - Update properties of files or folders within the drive
+- `COPY_NODE` - Copy files or folders within the drive
+- `MOVE_NODE` - Move files or folders within the drive
+
+:::info Operation Permissions vs Document Permissions
+These operation permissions provide fine-grained control over specific actions within a document drive, separate from the general document permission levels (READ, WRITE, ADMIN). If you need to set operation permissions for documents with different document models, familiarize yourself with the available operations of the installed document model package.
+:::
+
 </details>
 
 <details>
@@ -966,7 +982,7 @@ mutation GrantGroupPermission(
 
 ### Step 7: Grant Specific Operation Permission
 
-Give Finance Manager permission to execute the `AddFile` operation for creating new financial documents:
+Give Finance Manager permission to execute the `ADD_FILE` operation for creating new financial documents. See the [Document Drive Operation Types](#document-drive-operation-types) section for all available operation permissions:
 
 **Mutation:**
 
@@ -993,7 +1009,7 @@ mutation GrantOperationPermission(
 ```json
 {
   "documentId": "drive-uuid-1234-5678-abcd",
-  "operationType": "AddFile",
+  "operationType": "ADD_FILE",
   "userAddress": "0xalice...finance"
 }
 ```
@@ -1004,7 +1020,7 @@ mutation GrantOperationPermission(
 {
   "data": {
     "grantOperationPermission": {
-      "operationType": "AddFile",
+      "operationType": "ADD_FILE",
       "userAddress": "0xalice...finance",
       "documentId": "2d707e84-309a-4b69-803a-400786806ebf"
     }
@@ -1048,7 +1064,7 @@ mutation TodoList_createDocument($name: String!) {
 {
   "errors": [
     {
-      "message": "Forbidden: insufficient permissions to create documents",
+      "message": "Forbidden: insufficient permissions to create documents"
     }
   ]
 }
@@ -1147,26 +1163,81 @@ This scenario demonstrates:
 </details>
 
 <details>
-<summary><strong>Advanced Scenario: Open Source Project Authorization</strong></summary>
+<summary><strong>Advanced Scenario: Todo List Collaboration</strong></summary>
 
-This scenario demonstrates advanced authorization patterns for managing contributor access levels in an open source project, focusing on role-based access control and operation-level permissions.
+This scenario demonstrates advanced authorization patterns for managing contributor access levels to a shared todo list document, focusing on role-based access control and operation-level permissions using the @powerhousedao/todo-demo package. To get access to this subgraph yourself make sure to install the package in your project with `ph install @powerhousedao/todo-demo`
+
+<details>
+<summary><strong>Todo Document Schema Reference</strong></summary>
+
+```graphql
+type TodoList implements IDocument {
+  id: String!
+  name: String!
+  documentType: String!
+  operations(skip: Int, first: Int): [Operation!]!
+  revision: Int!
+  createdAtUtcIso: DateTime!
+  lastModifiedAtUtcIso: DateTime!
+  initialState: TodoList_TodoListState!
+  state: TodoList_TodoListState!
+  stateJSON: JSONObject
+}
+
+"""
+Module: Todos
+"""
+input TodoList_AddTodoItemInput {
+  text: String!
+}
+
+input TodoList_DeleteTodoItemInput {
+  id: OID!
+}
+
+type TodoList_TodoItem {
+  id: OID!
+  text: String!
+  checked: Boolean!
+}
+
+type TodoList_TodoListState {
+  items: [TodoList_TodoItem!]!
+}
+
+input TodoList_UpdateTodoItemInput {
+  id: OID!
+  text: String
+  checked: Boolean
+}
+
+"""
+Queries: TodoList Document
+"""
+type TodoListQueries {
+  getDocument(docId: PHID!, driveId: PHID): TodoList
+  getDocuments(driveId: String!): [TodoList!]
+}
+```
+
+</details>
 
 ### The Setup
 
 - **Project Lead** (Alice): Full admin control
-- **Core Contributors** (Bob, Carol): Can edit code and documentation
-- **External Contributors** (Dave, Eve): Read-only access, can suggest via comments
-- **Package Maintainers** (Frank): Special access to publishing operations only
+- **Core Contributors** (Bob, Carol): Can add and update todo items
+- **External Contributors** (Dave, Eve): Read-only access, can only add new todo items
+- **Team Leads** (Frank): Special access to delete todo items only
 
 ### Step 1: Create Role-Based Groups
 
-**Create contributor hierarchy groups:**
+**Create role-based groups:**
 
 ```graphql
 mutation CreateCoreGroup {
   createGroup(
     name: "core-contributors"
-    description: "Trusted developers with write access"
+    description: "Team members who can add and update todo items"
   ) {
     id
     name
@@ -1178,7 +1249,7 @@ mutation CreateCoreGroup {
 mutation CreateExternalGroup {
   createGroup(
     name: "external-contributors"
-    description: "Community contributors with limited access"
+    description: "External users who can only add new todo items"
   ) {
     id
     name
@@ -1187,10 +1258,10 @@ mutation CreateExternalGroup {
 ```
 
 ```graphql
-mutation CreateMaintainersGroup {
+mutation CreateLeadsGroup {
   createGroup(
-    name: "package-maintainers"
-    description: "Users who can publish packages"
+    name: "team-leads"
+    description: "Team leads who can delete todo items"
   ) {
     id
     name
@@ -1222,22 +1293,22 @@ mutation AddDaveToExternal {
 }
 ```
 
-**Add package maintainer:**
+**Add team lead:**
 
 ```graphql
-mutation AddFrankToMaintainers {
-  addUserToGroup(userAddress: "0xfrank...maintainer", groupId: 3)
+mutation AddFrankToLeads {
+  addUserToGroup(userAddress: "0xfrank...lead", groupId: 3)
 }
 ```
 
 ### Step 3: Set Document-Level Permissions
 
-**Grant different access levels to each group:**
+**Grant different access levels to each group for the todo list document:**
 
 ```graphql
 mutation GrantCoreWriteAccess {
   grantGroupPermission(
-    documentId: "project-drive-id"
+    documentId: "todo-document-id"
     groupId: 1
     permission: WRITE
   ) {
@@ -1253,7 +1324,7 @@ mutation GrantCoreWriteAccess {
 ```graphql
 mutation GrantExternalReadAccess {
   grantGroupPermission(
-    documentId: "project-drive-id"
+    documentId: "todo-document-id"
     groupId: 2
     permission: READ
   ) {
@@ -1267,9 +1338,9 @@ mutation GrantExternalReadAccess {
 ```
 
 ```graphql
-mutation GrantMaintainersReadAccess {
+mutation GrantLeadsReadAccess {
   grantGroupPermission(
-    documentId: "project-drive-id"
+    documentId: "todo-document-id"
     groupId: 3
     permission: READ
   ) {
@@ -1284,13 +1355,13 @@ mutation GrantMaintainersReadAccess {
 
 ### Step 4: Operation-Level Permission Control
 
-**External contributors can only add comments/suggestions:**
+**External contributors can only add new todo items:**
 
 ```graphql
-mutation AllowExternalComments {
+mutation AllowExternalAddTodo {
   grantGroupOperationPermission(
-    documentId: "project-drive-id"
-    operationType: "ADD_COMMENT"
+    documentId: "todo-document-id"
+    operationType: "AddTodoItem"
     groupId: 2
   ) {
     operationType
@@ -1301,14 +1372,14 @@ mutation AllowExternalComments {
 }
 ```
 
-**Only package maintainers can publish packages:**
+**Only core contributors can update todo items:**
 
 ```graphql
-mutation AllowPackagePublishing {
+mutation AllowCoreUpdateTodo {
   grantGroupOperationPermission(
-    documentId: "package-doc-id"
-    operationType: "PUBLISH_PACKAGE"
-    groupId: 3
+    documentId: "todo-document-id"
+    operationType: "UpdateTodoItem"
+    groupId: 1
   ) {
     operationType
     group {
@@ -1318,14 +1389,14 @@ mutation AllowPackagePublishing {
 }
 ```
 
-**Only core contributors can delete documents:**
+**Only team leads can delete todo items:**
 
 ```graphql
-mutation AllowCoreDeletion {
+mutation AllowLeadsDeletion {
   grantGroupOperationPermission(
-    documentId: "project-drive-id"
-    operationType: "DELETE_DOCUMENT"
-    groupId: 1
+    documentId: "todo-document-id"
+    operationType: "DeleteTodoItem"
+    groupId: 3
   ) {
     operationType
     group {
@@ -1407,14 +1478,14 @@ mutation SuspendUser($userAddress: String!) {
 ### Authorization Patterns Demonstrated
 
 1. **Role-Based Access Control (RBAC)**: Groups represent roles with different permission levels
-2. **Hierarchical Permissions**: Permissions inherit from drive → folder → document
-3. **Operation-Level Granularity**: Fine-grained control over specific actions (comments vs. publishing vs. deletion)
+2. **Document-Level Permissions**: Fine-grained control over specific document access
+3. **Operation-Level Granularity**: Fine-grained control over specific todo list operations (add vs. update vs. delete)
 4. **Individual Overrides**: User-specific permissions that supersede group permissions
 5. **Audit Trail**: Complete visibility into who granted what permissions when
 6. **Dynamic Role Management**: Users can be promoted/demoted between roles
 7. **Principle of Least Privilege**: Each role gets minimum necessary permissions
 
-This scenario showcases enterprise-grade access control patterns suitable for collaborative projects with multiple contributor types and security requirements.
+This scenario showcases how to implement granular permission control for collaborative document editing using specific document model operations from installed packages like @powerhousedao/todo-demo.
 
 </details>
 
