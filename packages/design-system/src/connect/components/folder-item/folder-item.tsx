@@ -94,7 +94,10 @@ export function FolderItem(props: {
   );
 
   return (
-    <div className="relative w-64" onClick={() => setSelectedNode(folderNode)}>
+    <div
+      className="relative w-64"
+      onClick={isReadMode ? () => setSelectedNode(folderNode) : undefined}
+    >
       <div {...dragProps} {...dropProps} className={containerStyles}>
         <div className="flex items-center overflow-hidden">
           <div className="p-1">

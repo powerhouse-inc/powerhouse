@@ -157,7 +157,10 @@ export function FileItem(props: Props) {
   );
 
   return (
-    <div className="relative w-64" onClick={() => setSelectedNode(fileNode)}>
+    <div
+      className="relative w-64"
+      onClick={isReadMode ? () => setSelectedNode(fileNode) : undefined}
+    >
       <div {...dragProps} className={containerStyles}>
         <div className="flex items-center">
           <div className="mr-1.5">{iconNode}</div>
