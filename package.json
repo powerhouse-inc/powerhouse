@@ -18,7 +18,7 @@
     "build-storybook": "pnpm -r --no-bail run build:storybook",
     "build-all": "pnpm build-tsc && pnpm build-misc && pnpm build-css && pnpm build-vite",
     "clean": "pnpm exec scripts/simulate-fresh-git-clone.sh",
-    "run-release": "GITHUB_REF_NAME=main bun run releases/release.ts -m prerelease",
+    "run-release": "GITHUB_REF_NAME=main bun run releases/release.ts",
     "prepare": "husky",
     "check-circular-imports": "dpdm -T ./**/* --no-tree --no-warning --exit-code circular:1",
     "check-ts-references": "tsx scripts/check-ts-references.ts",

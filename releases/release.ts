@@ -103,11 +103,41 @@ const app = command({
       defaultValue: () => true,
       defaultValueIsSerializable: true,
     }),
+    skipStage: flag({
+      long: "skip-stage",
+      description: "Do not run the stage step",
+      defaultValue: () => true,
+      defaultValueIsSerializable: true,
+    }),
+    skipCommit: flag({
+      long: "skip-commit",
+      description: "Do not run the commit step",
+      defaultValue: () => true,
+      defaultValueIsSerializable: true,
+    }),
+    skipPush: flag({
+      long: "skip-push",
+      description: "Do not run the push step",
+      defaultValue: () => true,
+      defaultValueIsSerializable: true,
+    }),
   },
   handler: async (args) => {
     console.log(">>> args", { args });
 
-    const { mode, dryRun, verbose, skipPublish, skipChangelog } = args;
+    const {
+      mode,
+      dryRun,
+      verbose,
+      skipPublish,
+      skipChangelog,
+      skipCommit,
+      skipPush,
+      skipStage,
+    } = args;
+    const stageChanges = skipStage !== true;
+    const gitCommit = skipCommit !== true;
+    const gitPush = skipPush !== true;
     const branchName = getBranchName();
     const channel = getReleaseChannelFromBranchName(branchName);
     const specifier = getSpecifier(channel, mode);
@@ -145,9 +175,9 @@ const app = command({
         preid,
         dryRun,
         verbose,
-        stageChanges: false,
-        gitCommit: false,
-        gitPush: false,
+        stageChanges,
+        gitCommit,
+        gitPush,
       });
 
     if (!workspaceVersion) {
@@ -171,9 +201,9 @@ const app = command({
         dryRun,
         releaseGraph,
         verbose,
-        gitCommit: false,
-        stageChanges: false,
-        gitPush: false,
+        gitCommit,
+        stageChanges,
+        gitPush,
       });
     }
 

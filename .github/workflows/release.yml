@@ -2,6 +2,37 @@ name: Release
 
 on:
   workflow_dispatch:
+    inputs:
+      release-mode:
+        type: choice
+        description: "Specify what type of release to perform. NOTE: `prerelease` is not a valid option for releasing to production."
+        options:
+          - prerelease
+          - patch
+          - minor
+          - major
+        default: prerelease
+      dry-run:
+        type: boolean
+        default: false
+      verbose:
+        type: boolean
+        default: false
+      skip-publish:
+        type: boolean
+        default: true
+      skip-changelog:
+        type: boolean
+        default: true
+      skip-stage:
+        type: boolean
+        default: true
+      skip-commit:
+        type: boolean
+        default: true
+      skip-push:
+        type: boolean
+        default: true
 
 permissions:
   contents: write
@@ -10,32 +41,39 @@ permissions:
 
 jobs:
   setup:
-   name: Setup monorepo for release
-   runs-on: ubuntu-latest
-   steps:
-     - name: General setup
-       uses: ./github/actions/setup
-    
-     - name: Install dependencies for release tools
-       run: bun install
-       working-directory: releases
+    name: Setup monorepo for release
+    runs-on: ubuntu-latest
+    steps:
+      - name: General setup
+        uses: ./github/actions/setup
 
-     - name: Set git config
-       run: |
-         git config user.name "Github Actions Bot"
-         git config user.email "-"
+      - name: Install dependencies for release tools
+        run: bun install
+        working-directory: releases
+
+      - name: Set git config
+        run: |
+          git config user.name "Github Actions Bot"
+          git config user.email "-"
 
   configure-git:
-   name: Set git configurations
-   needs: setup
-   runs-on: ubuntu-latest
-   steps:
-    - name: Set git config
-      run: |
-        git config user.name "Github Actions Bot"
-        git config user.email "-"
+    name: Set git configurations
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set git config
+        run: |
+          git config user.name "Github Actions Bot"
+          git config user.email "-"
 
   before-release:
-   name: Update versions and generate changelog
-   needs: configure-git
-   runs-on: ubuntu-latest
+    name: Update versions and generate changelog
+    needs: configure-git
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run release
+        run: pnpm run-release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
+          NPM_CONFIG_PROVENANCE: true
