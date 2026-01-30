@@ -1,6 +1,5 @@
 {
   "name": "releases",
-  "module": "index.ts",
   "type": "module",
   "private": true,
   "devDependencies": {
