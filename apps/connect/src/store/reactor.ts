@@ -316,6 +316,9 @@ export async function createReactor() {
     refreshReactorDataClient(reactorClientModule.client).catch(logger.error);
   });
 
+  // Refresh from ReactorClient to pick up any synced drives
+  await refreshReactorDataClient(reactorClientModule.client);
+
   window.ph.loading = false;
 }
 

@@ -98,13 +98,8 @@ export function AddDriveModal() {
           });
         } catch (error) {
           console.error(error);
-          const authToken = await renown?.getBearerToken?.({
-            expiresIn: 10,
-            aud: url,
-          });
-          return requestPublicDriveFromReactor(url, {
-            Authorization: `Bearer ${authToken}`,
-          });
+
+          return requestPublicDriveFromReactor(url);
         }
       }}
       onOpenChange={(status) => {
