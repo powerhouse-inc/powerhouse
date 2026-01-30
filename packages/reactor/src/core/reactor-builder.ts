@@ -385,12 +385,21 @@ export class ReactorBuilder {
   }
 
   private attachSignalHandlers(module: ReactorModule): void {
+    if (
+      typeof globalThis === "undefined" ||
+      !globalThis.process ||
+      typeof globalThis.process.on !== "function"
+    ) {
+      return;
+    }
+
+    const nodeProcess = globalThis.process;
     let shutdownInProgress = false;
 
     const handler = async (signal: string) => {
       if (shutdownInProgress) {
         this.logger!.warn(`Received ${signal} again, forcing exit`);
-        process.exit(1);
+        nodeProcess.exit(1);
       }
 
       shutdownInProgress = true;
@@ -400,16 +409,25 @@ export class ReactorBuilder {
 
       try {
         await status.completed;
-        await module.database.destroy();
-        this.logger!.info("Shutdown complete");
-        process.exit(0);
       } catch (error) {
-        this.logger!.error("Shutdown failed:", error);
-        process.exit(1);
+        this.logger!.error("Shutdown failed waiting for reactor:", error);
+        nodeProcess.exit(1);
+        return;
       }
+
+      try {
+        await module.database.destroy();
+      } catch (error) {
+        this.logger!.error("Shutdown failed destroying database:", error);
+        nodeProcess.exit(1);
+        return;
+      }
+
+      this.logger!.info("Shutdown complete");
+      nodeProcess.exit(0);
     };
 
-    process.on("SIGINT", () => void handler("SIGINT"));
-    process.on("SIGTERM", () => void handler("SIGTERM"));
+    nodeProcess.on("SIGINT", () => void handler("SIGINT"));
+    nodeProcess.on("SIGTERM", () => void handler("SIGTERM"));
   }
 }
