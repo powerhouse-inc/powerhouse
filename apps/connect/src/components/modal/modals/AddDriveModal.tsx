@@ -63,45 +63,13 @@ export function AddDriveModal() {
 
   const onAddRemoteDrive = async (data: AddRemoteDriveInput) => {
     try {
-      const useLegacy = isLegacyWriteEnabledSync();
-
-      // Legacy path uses listeners/triggers, new path uses channel-based sync
-      const newDrive = useLegacy
-        ? await addRemoteDrive(data.url, {
-            sharingType: data.sharingType,
-            availableOffline: data.availableOffline,
-            listeners: [
-              {
-                block: true,
-                callInfo: {
-                  data: data.url,
-                  name: "switchboard-push",
-                  transmitterType: "SwitchboardPush",
-                },
-                filter: {
-                  branch: ["main"],
-                  documentId: ["*"],
-                  documentType: ["*"],
-                  scope: ["global"],
-                },
-                label: "Switchboard Sync",
-                listenerId: "1",
-                system: true,
-              },
-            ],
-            triggers: [],
-          })
-        : await addRemoteDrive(data.url, {});
+      const driveId = await addRemoteDrive(data.url, {});
 
       toast(t("notifications.addDriveSuccess"), {
         type: "connect-success",
       });
 
-      if (!newDrive) {
-        return;
-      }
-
-      setSelectedDrive(newDrive);
+      setSelectedDrive(driveId);
     } catch (e) {
       console.error(e);
     }

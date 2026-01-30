@@ -1,6 +1,7 @@
 import type { PGlite } from "@electric-sql/pglite";
 import type {
   Database,
+  IDocumentModelRegistry,
   IReactorClient,
   ISyncManager,
   ReactorClientModule,
@@ -29,6 +30,7 @@ export type PHGlobal = PHGlobalConfig & {
   reactorClientModule?: BrowserReactorClientModule;
   reactorClient?: IReactorClient;
   sync?: ISyncManager;
+  modelRegistry?: IDocumentModelRegistry;
   database?: Kysely<Database>;
   pglite?: PGlite;
   connectCrypto?: IConnectCrypto;

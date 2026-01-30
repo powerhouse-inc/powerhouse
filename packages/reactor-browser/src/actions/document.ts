@@ -1,19 +1,14 @@
+import type { IReactorClient } from "@powerhousedao/reactor";
 import type {
   ConflictResolution,
   DocumentTypeIcon,
   FileUploadProgressCallback,
 } from "@powerhousedao/reactor-browser";
-import type {
-  DocumentDriveDocument,
-  IDocumentDriveServer,
-  Node,
-} from "document-drive";
+import type { DocumentDriveDocument, Node } from "document-drive";
 import {
-  addFile as baseAddFile,
   addFolder as baseAddFolder,
   copyNode as baseCopyNode,
   deleteNode as baseDeleteNode,
-  moveNode as baseMoveNode,
   updateFile as baseUpdateFile,
   generateNodesCopy,
   handleTargetNameCollisions,
@@ -37,10 +32,6 @@ import {
   replayDocument,
 } from "document-model/core";
 import { UnsupportedDocumentTypeError } from "../errors.js";
-import {
-  isLegacyReadEnabledSync,
-  isLegacyWriteEnabledSync,
-} from "../hooks/use-feature-flags.js";
 import { isDocumentTypeSupported } from "../utils/documents.js";
 import { getUserPermissions } from "../utils/user.js";
 import { queueActions, queueOperations, uploadOperations } from "./queue.js";
@@ -54,94 +45,50 @@ async function isDocumentInLocation(
   duplicateType?: "id" | "name";
   nodeId?: string;
 }> {
-  const useLegacy = isLegacyReadEnabledSync();
-
-  try {
-    if (useLegacy) {
-      const reactor = window.ph?.legacyReactor;
-      if (!reactor) {
-        throw new Error("Legacy reactor not initialized");
-      }
-
-      // Get the drive and check its nodes
-      const drive = await reactor.getDrive(driveId);
-
-      // Case 1: Check for duplicate by ID
-      const nodeById = drive.state.global.nodes.find(
-        (node: Node) => node.id === document.header.id,
-      );
-
-      if (nodeById && nodeById.parentFolder === (parentFolder ?? null)) {
-        return {
-          isDuplicate: true,
-          duplicateType: "id",
-          nodeId: nodeById.id,
-        };
-      }
-
-      // Case 2: Check for duplicate by name + type in same parent folder
-      const nodeByNameAndType = drive.state.global.nodes.find(
-        (node: Node) =>
-          isFileNode(node) &&
-          node.name === document.header.name &&
-          node.documentType === document.header.documentType &&
-          node.parentFolder === (parentFolder ?? null),
-      );
-
-      if (nodeByNameAndType) {
-        return {
-          isDuplicate: true,
-          duplicateType: "name",
-          nodeId: nodeByNameAndType.id,
-        };
-      }
-
-      return { isDuplicate: false };
-    } else {
-      const reactorClient = window.ph?.reactorClient;
-      if (!reactorClient) {
-        throw new Error("ReactorClient not initialized");
-      }
-
-      // Get the drive and check its nodes
-      const drive = await reactorClient.get<DocumentDriveDocument>(driveId);
-
-      // Case 1: Check for duplicate by ID
-      const nodeById = drive.state.global.nodes.find(
-        (node: { id: string }) => node.id === document.header.id,
-      );
-
-      if (nodeById && nodeById.parentFolder === (parentFolder ?? null)) {
-        return {
-          isDuplicate: true,
-          duplicateType: "id",
-          nodeId: nodeById.id,
-        };
-      }
-
-      // Case 2: Check for duplicate by name + type in same parent folder
-      const nodeByNameAndType = drive.state.global.nodes.find(
-        (node: Node) =>
-          isFileNode(node) &&
-          node.name === document.header.name &&
-          node.documentType === document.header.documentType &&
-          node.parentFolder === (parentFolder ?? null),
-      );
-
-      if (nodeByNameAndType) {
-        return {
-          isDuplicate: true,
-          duplicateType: "name",
-          nodeId: nodeByNameAndType.id,
-        };
-      }
-
-      return { isDuplicate: false };
-    }
-  } catch {
-    // Drive doesn't exist or other error
+  const reactorClient = window.ph?.reactorClient;
+  if (!reactorClient) {
     return { isDuplicate: false };
   }
+
+  // Get the drive and check its nodes
+  let drive;
+  try {
+    drive = await reactorClient.get<DocumentDriveDocument>(driveId);
+  } catch {
+    return { isDuplicate: false };
+  }
+
+  // Case 1: Check for duplicate by ID
+  const nodeById = drive.state.global.nodes.find(
+    (node: { id: string }) => node.id === document.header.id,
+  );
+
+  if (nodeById && nodeById.parentFolder === (parentFolder ?? null)) {
+    return {
+      isDuplicate: true,
+      duplicateType: "id",
+      nodeId: nodeById.id,
+    };
+  }
+
+  // Case 2: Check for duplicate by name + type in same parent folder
+  const nodeByNameAndType = drive.state.global.nodes.find(
+    (node: Node) =>
+      isFileNode(node) &&
+      node.name === document.header.name &&
+      node.documentType === document.header.documentType &&
+      node.parentFolder === (parentFolder ?? null),
+  );
+
+  if (nodeByNameAndType) {
+    return {
+      isDuplicate: true,
+      duplicateType: "name",
+      nodeId: nodeByNameAndType.id,
+    };
+  }
+
+  return { isDuplicate: false };
 }
 
 function getDocumentTypeIcon(
@@ -202,30 +149,16 @@ async function getDocumentExtension(document: PHDocument): Promise<string> {
     return "phdm";
   }
 
-  // For document instances, look up the module's extension
-  const useLegacy = isLegacyReadEnabledSync();
-
   let rawExtension: string | undefined;
 
-  if (useLegacy) {
-    const reactor = window.ph?.legacyReactor;
-    if (reactor) {
-      const documentModelModules = reactor.getDocumentModelModules();
-      const module = documentModelModules.find(
-        (m: DocumentModelModule) => m.documentModel.global.id === documentType,
-      );
-      rawExtension = module?.utils.fileExtension;
-    }
-  } else {
-    const reactorClient = window.ph?.reactorClient;
-    if (reactorClient) {
-      const { results: documentModelModules } =
-        await reactorClient.getDocumentModelModules();
-      const module = documentModelModules.find(
-        (m: DocumentModelModule) => m.documentModel.global.id === documentType,
-      );
-      rawExtension = module?.utils.fileExtension;
-    }
+  const reactorClient = window.ph?.reactorClient;
+  if (reactorClient) {
+    const { results: documentModelModules } =
+      await reactorClient.getDocumentModelModules();
+    const module = documentModelModules.find(
+      (m: DocumentModelModule) => m.documentModel.global.id === documentType,
+    );
+    rawExtension = module?.utils.fileExtension;
   }
 
   // Clean the extension (remove leading/trailing dots) and fallback to "phdm"
@@ -234,16 +167,8 @@ async function getDocumentExtension(document: PHDocument): Promise<string> {
 }
 
 export async function exportFile(document: PHDocument, suggestedName?: string) {
-  // Ensure we have either reactor available for consistency
-  const useLegacy = isLegacyReadEnabledSync();
-  if (useLegacy) {
-    if (!window.ph?.legacyReactor) {
-      throw new Error("Legacy reactor not initialized");
-    }
-  } else {
-    if (!window.ph?.reactorClient) {
-      throw new Error("ReactorClient not initialized");
-    }
+  if (!window.ph?.reactorClient) {
+    throw new Error("ReactorClient not initialized");
   }
 
   // Get the extension from the document model module
@@ -271,48 +196,28 @@ export async function exportFile(document: PHDocument, suggestedName?: string) {
 }
 
 export async function loadFile(path: string | File) {
-  const useLegacy = isLegacyReadEnabledSync();
-
   const baseDocument = await baseLoadFromInput(
     path,
     (state: PHDocument) => state,
     { checkHashes: true },
   );
 
-  if (useLegacy) {
-    const reactor = window.ph?.legacyReactor;
-    if (!reactor) {
-      throw new Error("Legacy reactor not initialized");
-    }
-    const documentModelModules = reactor.getDocumentModelModules();
-    const documentModelModule = documentModelModules.find(
-      (module) =>
-        module.documentModel.global.id === baseDocument.header.documentType,
-    );
-    if (!documentModelModule) {
-      throw new Error(
-        `Document "${baseDocument.header.documentType}" is not supported`,
-      );
-    }
-    return documentModelModule.utils.loadFromInput(path);
-  } else {
-    const reactorClient = window.ph?.reactorClient;
-    if (!reactorClient) {
-      throw new Error("ReactorClient not initialized");
-    }
-    const { results: documentModelModules } =
-      await reactorClient.getDocumentModelModules();
-    const documentModelModule = documentModelModules.find(
-      (module) =>
-        module.documentModel.global.id === baseDocument.header.documentType,
-    );
-    if (!documentModelModule) {
-      throw new Error(
-        `Document "${baseDocument.header.documentType}" is not supported`,
-      );
-    }
-    return documentModelModule.utils.loadFromInput(path);
+  const reactorClient = window.ph?.reactorClient;
+  if (!reactorClient) {
+    throw new Error("ReactorClient not initialized");
   }
+  const { results: documentModelModules } =
+    await reactorClient.getDocumentModelModules();
+  const documentModelModule = documentModelModules.find(
+    (module) =>
+      module.documentModel.global.id === baseDocument.header.documentType,
+  );
+  if (!documentModelModule) {
+    throw new Error(
+      `Document "${baseDocument.header.documentType}" is not supported`,
+    );
+  }
+  return documentModelModule.utils.loadFromInput(path);
 }
 
 export async function addDocument(
@@ -329,92 +234,42 @@ export async function addDocument(
     throw new Error("User is not allowed to create documents");
   }
 
-  const useLegacy = isLegacyWriteEnabledSync();
-
-  if (useLegacy) {
-    const reactor = window.ph?.legacyReactor;
-    if (!reactor) {
-      throw new Error("Legacy reactor not initialized");
-    }
-
-    const drive = await reactor.getDrive(driveId);
-    const documentId = id ?? generateId();
-    const reactorDocumentModelModules = reactor.getDocumentModelModules();
-    const documentModelModuleFromReactor = reactorDocumentModelModules.find(
-      (module) => module.documentModel.global.id === documentType,
-    );
-    if (!documentModelModuleFromReactor) {
-      throw new Error(
-        `Document model module for type ${documentType} not found`,
-      );
-    }
-
-    const newDocument = documentModelModuleFromReactor.utils.createDocument({
-      ...document?.state,
-    });
-    newDocument.header = createPresignedHeader(documentId, documentType);
-    newDocument.header.name = name;
-    const documentMeta = preferredEditor ? { preferredEditor } : undefined;
-    await reactor.addDocument(newDocument, documentMeta);
-
-    const action = baseAddFile({
-      id: documentId,
-      name,
-      documentType,
-      parentFolder: parentFolder ?? null,
-    });
-
-    const unsafeCastAsDrive = (await queueActions(
-      drive,
-      action,
-    )) as DocumentDriveDocument;
-
-    const node = unsafeCastAsDrive.state.global.nodes.find(
-      (node) => node.id === documentId,
-    );
-    if (!node || !isFileNode(node)) {
-      throw new Error("There was an error adding document");
-    }
-
-    return node;
-  } else {
-    const reactorClient = window.ph?.reactorClient;
-    if (!reactorClient) {
-      throw new Error("ReactorClient not initialized");
-    }
-
-    // get the module
-    const documentModelModule =
-      await reactorClient.getDocumentModelModule(documentType);
-
-    // create - use passed document's state if available
-    const newDocument = documentModelModule.utils.createDocument({
-      ...document?.state,
-    });
-    newDocument.header.name = name;
-
-    // Create document using ReactorClient
-    let newDoc: PHDocument;
-    try {
-      newDoc = await reactorClient.createDocumentInDrive(
-        driveId,
-        newDocument,
-        parentFolder,
-      );
-    } catch (e) {
-      logger.error("Error adding document", e);
-      throw new Error("There was an error adding document");
-    }
-
-    // Return a file node structure for compatibility
-    return {
-      id: newDoc.header.id,
-      name: newDoc.header.name,
-      documentType,
-      parentFolder: parentFolder ?? null,
-      kind: "file" as const,
-    };
+  const reactorClient = window.ph?.reactorClient;
+  if (!reactorClient) {
+    throw new Error("ReactorClient not initialized");
   }
+
+  // get the module
+  const documentModelModule =
+    await reactorClient.getDocumentModelModule(documentType);
+
+  // create - use passed document's state if available
+  const newDocument = documentModelModule.utils.createDocument({
+    ...document?.state,
+  });
+  newDocument.header.name = name;
+
+  // Create document using ReactorClient
+  let newDoc: PHDocument;
+  try {
+    newDoc = await reactorClient.createDocumentInDrive(
+      driveId,
+      newDocument,
+      parentFolder,
+    );
+  } catch (e) {
+    logger.error("Error adding document", e);
+    throw new Error("There was an error adding document");
+  }
+
+  // Return a file node structure for compatibility
+  return {
+    id: newDoc.header.id,
+    name: newDoc.header.name,
+    documentType,
+    parentFolder: parentFolder ?? null,
+    kind: "file" as const,
+  };
 }
 
 export async function addFile(
@@ -432,48 +287,20 @@ export async function addFile(
     throw new Error("User is not allowed to create files");
   }
 
-  const useLegacy = isLegacyWriteEnabledSync();
-
   const document = await loadFile(file);
 
   let duplicateId = false;
 
-  if (useLegacy) {
-    const reactor = window.ph?.legacyReactor;
-    if (!reactor) {
-      throw new Error("Legacy reactor not initialized");
-    }
+  const reactorClient = window.ph?.reactorClient;
+  if (!reactorClient) {
+    throw new Error("ReactorClient not initialized");
+  }
 
-    const documentModule = reactor
-      .getDocumentModelModules()
-      .find(
-        (module) =>
-          module.documentModel.global.id === document.header.documentType,
-      );
-    if (!documentModule) {
-      throw new Error(
-        `Document model module for type ${document.header.documentType} not found`,
-      );
-    }
-
-    try {
-      await reactor.getDocument(document.header.id);
-      duplicateId = true;
-    } catch {
-      // document id not found
-    }
-  } else {
-    const reactorClient = window.ph?.reactorClient;
-    if (!reactorClient) {
-      throw new Error("ReactorClient not initialized");
-    }
-
-    try {
-      await reactorClient.get(document.header.id);
-      duplicateId = true;
-    } catch {
-      // document id not found
-    }
+  try {
+    await reactorClient.get(document.header.id);
+    duplicateId = true;
+  } catch {
+    // document id not found
   }
 
   const documentId = duplicateId ? generateId() : document.header.id;
@@ -526,7 +353,7 @@ export async function addFileWithProgress(
   logger.verbose(
     `addFileWithProgress(drive: ${driveId}, name: ${name}, folder: ${parentFolder})`,
   );
-  const reactor = window.ph?.legacyReactor;
+  const reactor = window.ph?.reactorClient;
   if (!reactor) {
     return;
   }
@@ -541,9 +368,6 @@ export async function addFileWithProgress(
     onProgress?.({ stage: "loading", progress: 0 });
 
     const document = await loadFile(file);
-    if (!document) {
-      throw new Error("No document loaded");
-    }
 
     // Check for duplicate in same location
     const duplicateCheck = await isDocumentInLocation(
@@ -590,24 +414,15 @@ export async function addFileWithProgress(
       throw new UnsupportedDocumentTypeError(document.header.documentType);
     }
 
-    const documentModule = reactor
-      .getDocumentModelModules()
-      .find(
-        (module) =>
-          module.documentModel.global.id === document.header.documentType,
-      );
-    if (!documentModule) {
-      throw new Error(
-        `Document model module for type ${document.header.documentType} not found`,
-      );
-    }
+    // ensure we have the module + can load it (throws if not found)
+    await reactor.getDocumentModelModule(document.header.documentType);
 
     // Initializing stage (10-20%)
     onProgress?.({ stage: "initializing", progress: 10 });
 
     let duplicateId = false;
     try {
-      await reactor.getDocument(document.header.id);
+      await reactor.get(document.header.id);
       duplicateId = true;
     } catch {
       // document id not found
@@ -697,7 +512,7 @@ export async function updateFile(
   name?: string,
   parentFolder?: string,
 ) {
-  const reactor = window.ph?.legacyReactor;
+  const reactor = window.ph?.reactorClient;
   if (!reactor) {
     return;
   }
@@ -706,7 +521,7 @@ export async function updateFile(
   if (!isAllowedToCreateDocuments) {
     throw new Error("User is not allowed to update files");
   }
-  const drive = await reactor.getDrive(driveId);
+  const drive = await reactor.get<DocumentDriveDocument>(driveId);
   const unsafeCastAsDrive = (await queueActions(
     drive,
     baseUpdateFile({
@@ -736,60 +551,33 @@ export async function addFolder(
     throw new Error("User is not allowed to create folders");
   }
 
-  const useLegacy = isLegacyWriteEnabledSync();
+  const reactorClient = window.ph?.reactorClient;
+  if (!reactorClient) {
+    throw new Error("ReactorClient not initialized");
+  }
 
-  if (useLegacy) {
-    const reactor = window.ph?.legacyReactor;
-    if (!reactor) {
-      throw new Error("Legacy reactor not initialized");
-    }
-    const folderId = generateId();
-    const drive = await reactor.getDrive(driveId);
-    const unsafeCastAsDrive = (await queueActions(
-      drive,
+  // Get the drive document and add folder action
+  const drive = await reactorClient.get<DocumentDriveDocument>(driveId);
+  const folderId = generateId();
+  const updatedDrive = await reactorClient.execute<DocumentDriveDocument>(
+    driveId,
+    "main",
+    [
       baseAddFolder({
         id: folderId,
         name,
         parentFolder,
       }),
-    )) as DocumentDriveDocument;
+    ],
+  );
 
-    const node = unsafeCastAsDrive.state.global.nodes.find(
-      (node) => node.id === folderId,
-    );
-    if (!node || !isFolderNode(node)) {
-      throw new Error("There was an error adding folder");
-    }
-    return node;
-  } else {
-    const reactorClient = window.ph?.reactorClient;
-    if (!reactorClient) {
-      throw new Error("ReactorClient not initialized");
-    }
-
-    // Get the drive document and add folder action
-    const drive = await reactorClient.get<DocumentDriveDocument>(driveId);
-    const folderId = generateId();
-    const updatedDrive = await reactorClient.execute<DocumentDriveDocument>(
-      driveId,
-      "main",
-      [
-        baseAddFolder({
-          id: folderId,
-          name,
-          parentFolder,
-        }),
-      ],
-    );
-
-    const node = updatedDrive.state.global.nodes.find(
-      (node) => node.id === folderId,
-    );
-    if (!node || !isFolderNode(node)) {
-      throw new Error("There was an error adding folder");
-    }
-    return node;
+  const node = updatedDrive.state.global.nodes.find(
+    (node) => node.id === folderId,
+  );
+  if (!node || !isFolderNode(node)) {
+    throw new Error("There was an error adding folder");
   }
+  return node;
 }
 
 export async function deleteNode(driveId: string, nodeId: string) {
@@ -798,32 +586,18 @@ export async function deleteNode(driveId: string, nodeId: string) {
     throw new Error("User is not allowed to delete documents");
   }
 
-  const useLegacy = isLegacyWriteEnabledSync();
-
-  if (useLegacy) {
-    const reactor = window.ph?.legacyReactor;
-    if (!reactor) {
-      throw new Error("Legacy reactor not initialized");
-    }
-    const drive = await reactor.getDrive(driveId);
-    await queueActions(drive, baseDeleteNode({ id: nodeId }));
-
-    // now delete the document
-    await reactor.deleteDocument(nodeId);
-  } else {
-    const reactorClient = window.ph?.reactorClient;
-    if (!reactorClient) {
-      throw new Error("ReactorClient not initialized");
-    }
-
-    // delete the node in the drive document
-    await reactorClient.execute(driveId, "main", [
-      baseDeleteNode({ id: nodeId }),
-    ]);
-
-    // now delete the document
-    await reactorClient.deleteDocument(nodeId);
+  const reactorClient = window.ph?.reactorClient;
+  if (!reactorClient) {
+    throw new Error("ReactorClient not initialized");
   }
+
+  // delete the node in the drive document
+  await reactorClient.execute(driveId, "main", [
+    baseDeleteNode({ id: nodeId }),
+  ]);
+
+  // now delete the document
+  await reactorClient.deleteDocument(nodeId);
 }
 
 export async function renameNode(
@@ -836,45 +610,23 @@ export async function renameNode(
     throw new Error("User is not allowed to rename documents");
   }
 
-  const useLegacy = isLegacyWriteEnabledSync();
-
-  if (useLegacy) {
-    const reactor = window.ph?.legacyReactor;
-    if (!reactor) {
-      throw new Error("Legacy reactor not initialized");
-    }
-    const drive = await reactor.getDrive(driveId);
-    const unsafeCastAsDrive = (await queueActions(
-      drive,
-      updateNode({ id: nodeId, name }),
-    )) as DocumentDriveDocument;
-
-    const node = unsafeCastAsDrive.state.global.nodes.find(
-      (node) => node.id === nodeId,
-    );
-    if (!node) {
-      throw new Error("There was an error renaming node");
-    }
-    return node;
-  } else {
-    const reactorClient = window.ph?.reactorClient;
-    if (!reactorClient) {
-      throw new Error("ReactorClient not initialized");
-    }
-
-    // Rename the node in the drive document using updateNode action
-    const drive = await reactorClient.execute<DocumentDriveDocument>(
-      driveId,
-      "main",
-      [updateNode({ id: nodeId, name })],
-    );
-
-    const node = drive.state.global.nodes.find((n) => n.id === nodeId);
-    if (!node) {
-      throw new Error("There was an error renaming node");
-    }
-    return node;
+  const reactorClient = window.ph?.reactorClient;
+  if (!reactorClient) {
+    throw new Error("ReactorClient not initialized");
   }
+
+  // Rename the node in the drive document using updateNode action
+  const drive = await reactorClient.execute<DocumentDriveDocument>(
+    driveId,
+    "main",
+    [updateNode({ id: nodeId, name })],
+  );
+
+  const node = drive.state.global.nodes.find((n) => n.id === nodeId);
+  if (!node) {
+    throw new Error("There was an error renaming node");
+  }
+  return node;
 }
 
 export async function renameDriveNode(
@@ -887,33 +639,17 @@ export async function renameDriveNode(
     throw new Error("User is not allowed to rename documents");
   }
 
-  const useLegacy = isLegacyWriteEnabledSync();
-
-  if (useLegacy) {
-    const reactor = window.ph?.legacyReactor;
-    if (!reactor) {
-      throw new Error("Legacy reactor not initialized");
-    }
-    const drive = await reactor.getDrive(driveId);
-    const updatedDrive = (await queueActions(
-      drive,
-      updateNode({ id: nodeId, name }),
-    )) as DocumentDriveDocument;
-
-    return updatedDrive.state.global.nodes.find((n) => n.id === nodeId);
-  } else {
-    const reactorClient = window.ph?.reactorClient;
-    if (!reactorClient) {
-      throw new Error("ReactorClient not initialized");
-    }
-
-    await reactorClient.execute(driveId, "main", [
-      updateNode({ id: nodeId, name }),
-    ]);
-
-    const drive = await reactorClient.get<DocumentDriveDocument>(driveId);
-    return drive.state.global.nodes.find((n: Node) => n.id === nodeId);
+  const reactorClient = window.ph?.reactorClient;
+  if (!reactorClient) {
+    throw new Error("ReactorClient not initialized");
   }
+
+  await reactorClient.execute(driveId, "main", [
+    updateNode({ id: nodeId, name }),
+  ]);
+
+  const drive = await reactorClient.get<DocumentDriveDocument>(driveId);
+  return drive.state.global.nodes.find((n: Node) => n.id === nodeId);
 }
 
 export async function moveNode(
@@ -926,52 +662,26 @@ export async function moveNode(
     throw new Error("User is not allowed to move documents");
   }
 
-  const useLegacy = isLegacyWriteEnabledSync();
-
-  if (useLegacy) {
-    const reactor = window.ph?.legacyReactor;
-    if (!reactor) {
-      throw new Error("Legacy reactor not initialized");
-    }
-
-    const drive = await reactor.getDrive(driveId);
-
-    return await queueActions(
-      drive,
-      baseMoveNode({ srcFolder: src.id, targetParentFolder: target?.id }),
-    );
-  } else {
-    const reactorClient = window.ph?.reactorClient;
-    if (!reactorClient) {
-      throw new Error("ReactorClient not initialized");
-    }
-
-    // Get current parent folder from source node
-    const sourceParent = src.parentFolder ?? driveId;
-    const targetParent = target?.id ?? driveId;
-
-    return await reactorClient.moveChildren(sourceParent, targetParent, [
-      src.id,
-    ]);
+  const reactorClient = window.ph?.reactorClient;
+  if (!reactorClient) {
+    throw new Error("ReactorClient not initialized");
   }
+
+  // Get current parent folder from source node
+  const sourceParent = src.parentFolder ?? driveId;
+  const targetParent = target?.id ?? driveId;
+
+  return await reactorClient.moveChildren(sourceParent, targetParent, [src.id]);
 }
 
-function _duplicateDocument(
-  reactor: IDocumentDriveServer,
+async function _duplicateDocument(
+  reactor: IReactorClient,
   document: PHDocument,
   newId = generateId(),
 ) {
-  const documentModule = reactor
-    .getDocumentModelModules()
-    .find(
-      (module) =>
-        module.documentModel.global.id === document.header.documentType,
-    );
-  if (!documentModule) {
-    throw new Error(
-      `Document model module for type ${document.header.documentType} not found`,
-    );
-  }
+  const documentModule = await reactor.getDocumentModelModule(
+    document.header.documentType,
+  );
 
   return replayDocument(
     document.initialState,
@@ -986,7 +696,7 @@ export async function copyNode(
   src: Node,
   target: Node | undefined,
 ) {
-  const reactor = window.ph?.legacyReactor;
+  const reactor = window.ph?.reactorClient;
   if (!reactor) {
     return;
   }
@@ -996,7 +706,7 @@ export async function copyNode(
     throw new Error("User is not allowed to copy documents");
   }
 
-  const drive = await reactor.getDrive(driveId);
+  const drive = await reactor.get<DocumentDriveDocument>(driveId);
 
   const copyNodesInput = generateNodesCopy(
     {
@@ -1033,9 +743,9 @@ export async function copyNode(
 
   for (const fileNodeToCopy of fileNodesToCopy) {
     try {
-      const document = await reactor.getDocument(fileNodeToCopy.srcId);
+      const document = await reactor.get(fileNodeToCopy.srcId);
 
-      const duplicatedDocument = _duplicateDocument(
+      const duplicatedDocument = await _duplicateDocument(
         reactor,
         document,
         fileNodeToCopy.targetId,
@@ -1047,7 +757,11 @@ export async function copyNode(
         duplicatedDocument.header.name = resolvedName;
       }
 
-      await reactor.addDocument(duplicatedDocument);
+      await reactor.createDocumentInDrive(
+        driveId,
+        duplicatedDocument,
+        target?.id,
+      );
     } catch (e) {
       logger.error(
         `Error copying document ${fileNodeToCopy.srcId}: ${String(e)}`,
