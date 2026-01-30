@@ -200,21 +200,8 @@ The Reactor API stores permission data in a relational database using six tables
 These tables are automatically created by database migrations when you enable `DOCUMENT_PERMISSIONS_ENABLED=true`. You don't need to create them manually.
 :::
 
-## GraphQL API
-
-The Reactor API exposes a GraphQL interface for all operations. When `DOCUMENT_PERMISSIONS_ENABLED=true`, an **Auth subgraph** is registered that adds permission-related queries and mutations to the API.
-
-:::tip How to use these APIs
-All GraphQL operations below require:
-
-1. A valid bearer token from `ph access-token`
-2. The token included in the `Authorization` header followed by 'Bearer &lt;token&gt;'
-3. The Reactor API running with both `AUTH_ENABLED=true` and `DOCUMENT_PERMISSIONS_ENABLED=true` as variables
-   :::
-
-### Queries
-
-Queries allow you to read permission information without modifying it.
+<details>
+<summary><strong>Useful Queries</strong></summary>
 
 #### Get document access info
 
@@ -222,19 +209,22 @@ Queries allow you to read permission information without modifying it.
 query GetDocumentAccess($documentId: String!) {
   documentAccess(documentId: $documentId) {
     documentId
-    permissions {
-      userAddress
-      permission
-      grantedBy
-      createdAt
-    }
     groupPermissions {
+      documentId
       groupId
       group {
+        id
         name
+        description
+        members
       }
       permission
       grantedBy
+    }
+    permissions {
+      documentId
+      userAddress
+      permission
     }
   }
 }
@@ -273,6 +263,429 @@ query CanExecute($documentId: String!, $operation: String!) {
   canExecuteOperation(documentId: $documentId, operationType: $operation)
 }
 ```
+
+#### Get group by ID
+
+```graphql
+query GetGroup($id: Int!) {
+  group(id: $id) {
+    id
+    name
+    description
+    members
+    createdAt
+    updatedAt
+  }
+}
+```
+
+#### Get user groups
+
+```graphql
+query GetUserGroups($userAddress: String!) {
+  userGroups(userAddress: $userAddress) {
+    id
+    name
+    description
+    members
+  }
+}
+```
+
+#### Get operation permissions
+
+```graphql
+query GetOperationPermissions($documentId: String!, $operationType: String!) {
+  operationPermissions(documentId: $documentId, operationType: $operationType) {
+    documentId
+    operationType
+    userPermissions {
+      documentId
+      operationType
+      userAddress
+      grantedBy
+      createdAt
+    }
+    groupPermissions {
+      documentId
+      operationType
+      groupId
+      group {
+        id
+        name
+      }
+      grantedBy
+      createdAt
+    }
+  }
+}
+```
+
+</details>
+
+<details>
+<summary><strong>Useful Mutations</strong></summary>
+
+### Document Permissions
+
+#### Grant document permission to user
+
+```graphql
+mutation GrantDocumentPermission(
+  $documentId: String!
+  $userAddress: String!
+  $permission: DocumentPermissionLevel!
+) {
+  grantDocumentPermission(
+    documentId: $documentId
+    userAddress: $userAddress
+    permission: $permission
+  ) {
+    documentId
+    userAddress
+    permission
+    grantedBy
+    createdAt
+    updatedAt
+  }
+}
+```
+
+#### Revoke document permission from user
+
+```graphql
+mutation RevokeDocumentPermission($documentId: String!, $userAddress: String!) {
+  revokeDocumentPermission(documentId: $documentId, userAddress: $userAddress)
+}
+```
+
+### Group Management
+
+#### Create group
+
+```graphql
+mutation CreateGroup($name: String!, $description: String) {
+  createGroup(name: $name, description: $description) {
+    id
+    name
+    description
+    createdAt
+    updatedAt
+    members
+  }
+}
+```
+
+#### Delete group
+
+```graphql
+mutation DeleteGroup($id: Int!) {
+  deleteGroup(id: $id)
+}
+```
+
+#### Add user to group
+
+```graphql
+mutation AddUserToGroup($userAddress: String!, $groupId: Int!) {
+  addUserToGroup(userAddress: $userAddress, groupId: $groupId)
+}
+```
+
+#### Remove user from group
+
+```graphql
+mutation RemoveUserFromGroup($userAddress: String!, $groupId: Int!) {
+  removeUserFromGroup(userAddress: $userAddress, groupId: $groupId)
+}
+```
+
+### Group Permissions
+
+#### Grant group permission
+
+```graphql
+mutation GrantGroupPermission(
+  $documentId: String!
+  $groupId: Int!
+  $permission: DocumentPermissionLevel!
+) {
+  grantGroupPermission(
+    documentId: $documentId
+    groupId: $groupId
+    permission: $permission
+  ) {
+    documentId
+    groupId
+    group {
+      id
+      name
+    }
+    permission
+    grantedBy
+    createdAt
+    updatedAt
+  }
+}
+```
+
+#### Revoke group permission
+
+```graphql
+mutation RevokeGroupPermission($documentId: String!, $groupId: Int!) {
+  revokeGroupPermission(documentId: $documentId, groupId: $groupId)
+}
+```
+
+### Operation Permissions
+
+#### Grant operation permission to user
+
+```graphql
+mutation GrantOperationPermission(
+  $documentId: String!
+  $operationType: String!
+  $userAddress: String!
+) {
+  grantOperationPermission(
+    documentId: $documentId
+    operationType: $operationType
+    userAddress: $userAddress
+  ) {
+    documentId
+    operationType
+    userAddress
+    grantedBy
+    createdAt
+  }
+}
+```
+
+#### Revoke operation permission from user
+
+```graphql
+mutation RevokeOperationPermission(
+  $documentId: String!
+  $operationType: String!
+  $userAddress: String!
+) {
+  revokeOperationPermission(
+    documentId: $documentId
+    operationType: $operationType
+    userAddress: $userAddress
+  )
+}
+```
+
+#### Grant group operation permission
+
+```graphql
+mutation GrantGroupOperationPermission(
+  $documentId: String!
+  $operationType: String!
+  $groupId: Int!
+) {
+  grantGroupOperationPermission(
+    documentId: $documentId
+    operationType: $operationType
+    groupId: $groupId
+  ) {
+    documentId
+    operationType
+    groupId
+    group {
+      id
+      name
+    }
+    grantedBy
+    createdAt
+  }
+}
+```
+
+#### Revoke group operation permission
+
+```graphql
+mutation RevokeGroupOperationPermission(
+  $documentId: String!
+  $operationType: String!
+  $groupId: Int!
+) {
+  revokeGroupOperationPermission(
+    documentId: $documentId
+    operationType: $operationType
+    groupId: $groupId
+  )
+}
+```
+
+<details>
+<summary><strong>Document Management</strong></summary>
+
+#### Create document
+
+```graphql
+mutation CreateDocument($document: JSONObject!, $parentIdentifier: String) {
+  createDocument(document: $document, parentIdentifier: $parentIdentifier) {
+    id
+    name
+    documentType
+    state
+    createdAtUtcIso
+    lastModifiedAtUtcIso
+    parentId
+  }
+}
+```
+
+#### Create empty document
+
+```graphql
+mutation CreateEmptyDocument(
+  $documentType: String!
+  $parentIdentifier: String
+) {
+  createEmptyDocument(
+    documentType: $documentType
+    parentIdentifier: $parentIdentifier
+  ) {
+    id
+    name
+    documentType
+    state
+    createdAtUtcIso
+    lastModifiedAtUtcIso
+    parentId
+  }
+}
+```
+
+#### Mutate document
+
+```graphql
+mutation MutateDocument(
+  $documentIdentifier: String!
+  $actions: [JSONObject!]!
+  $view: ViewFilterInput
+) {
+  mutateDocument(
+    documentIdentifier: $documentIdentifier
+    actions: $actions
+    view: $view
+  ) {
+    id
+    name
+    documentType
+    state
+    revisionsList {
+      scope
+      revision
+    }
+    lastModifiedAtUtcIso
+  }
+}
+```
+
+#### Rename document
+
+```graphql
+mutation RenameDocument(
+  $documentIdentifier: String!
+  $name: String!
+  $branch: String
+) {
+  renameDocument(
+    documentIdentifier: $documentIdentifier
+    name: $name
+    branch: $branch
+  ) {
+    id
+    name
+    documentType
+    lastModifiedAtUtcIso
+    parentId
+  }
+}
+```
+
+#### Delete document
+
+```graphql
+mutation DeleteDocument($identifier: String!, $propagate: PropagationMode) {
+  deleteDocument(identifier: $identifier, propagate: $propagate)
+}
+```
+
+</details>
+
+<details>
+<summary><strong>Drive Management</strong></summary>
+
+#### Add drive
+
+```graphql
+mutation AddDrive(
+  $name: String!
+  $icon: String
+  $id: String
+  $slug: String
+  $preferredEditor: String
+) {
+  addDrive(
+    name: $name
+    icon: $icon
+    id: $id
+    slug: $slug
+    preferredEditor: $preferredEditor
+  ) {
+    id
+    slug
+    name
+    icon
+    preferredEditor
+  }
+}
+```
+
+#### Delete drive
+
+```graphql
+mutation DeleteDrive($id: String!) {
+  deleteDrive(id: $id)
+}
+```
+
+#### Set drive icon
+
+```graphql
+mutation SetDriveIcon($id: String!, $icon: String!) {
+  setDriveIcon(id: $id, icon: $icon)
+}
+```
+
+#### Set drive name
+
+```graphql
+mutation SetDriveName($id: String!, $name: String!) {
+  setDriveName(id: $id, name: $name)
+}
+```
+
+</details>
+
+</details>
+
+## GraphQL API
+
+The Reactor API exposes a GraphQL interface for all operations. When `DOCUMENT_PERMISSIONS_ENABLED=true`, an **Auth subgraph** is registered that adds permission-related queries and mutations to the API.
+
+:::tip How to use these APIs
+All GraphQL operations below require:
+
+1. A valid bearer token from `ph access-token`
+2. The token included in the `Authorization` header followed by 'Bearer &lt;token&gt;'
+3. The Reactor API running with both `AUTH_ENABLED=true` and `DOCUMENT_PERMISSIONS_ENABLED=true` as variables
+   :::
 
 ## Configuration
 
@@ -329,7 +742,7 @@ Both layers work together. A user must pass the [global role check](./04-Authori
 **Reminder:** When `FREE_ENTRY=true` is enabled, the global role check allows any authenticated user to access the Reactor, simplifying the authorization flow for open environments.
 :::
 
-## Usage Examples: Setting up a 'Secret Society' group
+## Usage Examples: Company Document Access & Permissions
 
 This section provides practical examples for common permission management scenarios. These examples assume you have:
 
@@ -338,9 +751,9 @@ This section provides practical examples for common permission management scenar
 - The Ethereum address of users you want to grant permissions to
 
 <details>
-<summary><strong>Complete Scenario: Secret Society Document Permissions</strong></summary>
+<summary><strong>Complete Scenario: Company Document Access & Permissions</strong></summary>
 
-This walkthrough demonstrates creating a private group with specific document and operation permissions. We'll create a "Secret Society" group, add members, create a private drive, and configure granular permissions.
+This walkthrough demonstrates setting up document access for a company with different departments and roles. We'll create a "Finance Team" group, add team members, create a confidential finance drive, and configure granular permissions for sensitive financial documents.
 
 ### Step 1: Start the Reactor with Authentication
 
@@ -381,7 +794,7 @@ ph access-token --expiry 7d
 
 Copy the access token and include it in your GraphQL requests as: `Authorization: Bearer <your-token>`
 
-### Step 3: Create the Secret Society Group
+### Step 3: Create the Finance Team Group
 
 **Mutation:**
 
@@ -398,7 +811,7 @@ mutation CreateGroup($name: String!) {
 
 ```json
 {
-  "name": "secret-society"
+  "name": "finance-team"
 }
 ```
 
@@ -408,16 +821,16 @@ mutation CreateGroup($name: String!) {
 {
   "data": {
     "createGroup": {
-      "name": "secret-society",
+      "name": "finance-team",
       "id": 1
     }
   }
 }
 ```
 
-### Step 4: Add Members to the Group
+### Step 4: Add Finance Team Members
 
-**Add Member 1:**
+**Add Finance Manager (Alice):**
 
 **Mutation:**
 
@@ -431,7 +844,7 @@ mutation AddUserToGroup($userAddress: String!, $groupId: Int!) {
 
 ```json
 {
-  "userAddress": "0xabcd...1234",
+  "userAddress": "0xalice...finance",
   "groupId": 1
 }
 ```
@@ -446,7 +859,7 @@ mutation AddUserToGroup($userAddress: String!, $groupId: Int!) {
 }
 ```
 
-**Add Member 2:**
+**Add Financial Analyst (Bob):**
 
 Use the same mutation with different variables:
 
@@ -454,12 +867,12 @@ Use the same mutation with different variables:
 
 ```json
 {
-  "userAddress": "0xefgh...5678",
+  "userAddress": "0xbob...analyst",
   "groupId": 1
 }
 ```
 
-### Step 5: Create a Private Drive
+### Step 5: Create a Finance Drive
 
 **Mutation:**
 
@@ -477,7 +890,7 @@ mutation AddDrive($name: String!, $addDriveId: String, $slug: String) {
 
 ```json
 {
-  "name": "secret-drive",
+  "name": "finance-documents",
   "addDriveId": null,
   "slug": null
 }
@@ -490,8 +903,8 @@ mutation AddDrive($name: String!, $addDriveId: String, $slug: String) {
   "data": {
     "addDrive": {
       "id": "drive-uuid-1234-5678-abcd",
-      "name": "secret-drive",
-      "slug": "secret-drive"
+      "name": "finance-documents",
+      "slug": "finance-documents"
     }
   }
 }
@@ -499,7 +912,7 @@ mutation AddDrive($name: String!, $addDriveId: String, $slug: String) {
 
 📝 **Note:** Copy the returned `id` for the next steps.
 
-### Step 6: Grant Group Write Access to the Drive
+### Step 6: Grant Finance Team Write Access to the Drive
 
 **Mutation:**
 
@@ -544,7 +957,7 @@ mutation GrantGroupPermission(
       "grantedBy": "0x1234...abcd",
       "documentId": "drive-uuid-1234-5678-abcd",
       "group": {
-        "name": "secret-society"
+        "name": "finance-team"
       }
     }
   }
@@ -553,7 +966,7 @@ mutation GrantGroupPermission(
 
 ### Step 7: Grant Specific Operation Permission
 
-Give Member 1 permission to execute the `AddFile` operation:
+Give Finance Manager permission to execute the `AddFile` operation for creating new financial documents:
 
 **Mutation:**
 
@@ -581,7 +994,7 @@ mutation GrantOperationPermission(
 {
   "documentId": "drive-uuid-1234-5678-abcd",
   "operationType": "AddFile",
-  "userAddress": "0xBE51A2dcE154DC78Ce73704b37E1C270C06952AC"
+  "userAddress": "0xalice...finance"
 }
 ```
 
@@ -592,7 +1005,7 @@ mutation GrantOperationPermission(
   "data": {
     "grantOperationPermission": {
       "operationType": "AddFile",
-      "userAddress": "0xabcd...1234",
+      "userAddress": "0xalice...finance",
       "documentId": "2d707e84-309a-4b69-803a-400786806ebf"
     }
   }
@@ -603,13 +1016,13 @@ mutation GrantOperationPermission(
 
 Now let's test our permission setup by switching between different user accounts.
 
-#### Test 1: Member 2 tries to create a file (should fail)
+#### Test 1: Financial Analyst tries to create a file (should fail)
 
-First, logout and login as Member 2:
+First, logout and login as Bob (Financial Analyst):
 
 ```bash
-ph logout
-ph login  # Login with Member 2's wallet (0xefgh...5678)
+ph login --logout
+ph login  # Login with Bob's wallet (0xbob...analyst)
 ph access-token --expiry 7d
 ```
 
@@ -625,7 +1038,7 @@ mutation TodoList_createDocument($name: String!) {
 
 ```json
 {
-  "name": "Secret society todos"
+  "name": "Q1 Budget Planning"
 }
 ```
 
@@ -635,19 +1048,19 @@ mutation TodoList_createDocument($name: String!) {
 {
   "errors": [
     {
-      "message": "Insufficient permissions to execute AddFile operation"
+      "message": "Forbidden: insufficient permissions to create documents",
     }
   ]
 }
 ```
 
-#### Test 2: Member 1 creates a file (should succeed)
+#### Test 2: Finance Manager creates a file (should succeed)
 
-Logout and login as Member 1:
+Logout and login as Alice (Finance Manager):
 
 ```bash
-ph logout
-ph login  # Login with Member 1's wallet (0xabcd...1234)
+ph login --logout
+ph login  # Login with Alice's wallet (0xalice...finance)
 ph access-token --expiry 7d
 ```
 
@@ -663,7 +1076,7 @@ mutation TodoList_createDocument($name: String!) {
 
 ```json
 {
-  "name": "Secret society todos"
+  "name": "Q1 Budget Planning"
 }
 ```
 
@@ -677,13 +1090,13 @@ mutation TodoList_createDocument($name: String!) {
 }
 ```
 
-#### Test 3: Member 2 renames the file (should succeed)
+#### Test 3: Financial Analyst renames the file (should succeed)
 
-Switch back to Member 2:
+Switch back to Bob (Financial Analyst):
 
 ```bash
-ph logout
-ph login  # Login with Member 2's wallet
+ph login --logout
+ph login  # Login with Bob's wallet
 ph access-token --expiry 7d
 ```
 
@@ -704,7 +1117,7 @@ mutation RenameDocument($documentIdentifier: String!, $name: String!) {
 ```json
 {
   "documentIdentifier": "document-uuid-abcd-1234-efgh",
-  "name": "Not-so-secret-todos"
+  "name": "Q1 Budget Planning - Draft"
 }
 ```
 
@@ -714,7 +1127,7 @@ mutation RenameDocument($documentIdentifier: String!, $name: String!) {
 {
   "data": {
     "renameDocument": {
-      "name": "Not-so-secret-todos",
+      "name": "Q1 Budget Planning - Draft",
       "parentId": "drive-uuid-1234-5678-abcd",
       "id": "document-uuid-abcd-1234-efgh"
     }
@@ -726,10 +1139,282 @@ mutation RenameDocument($documentIdentifier: String!, $name: String!) {
 
 This scenario demonstrates:
 
-1. **Group-based permissions**: Both members have WRITE access to the drive through group membership
-2. **Operation-level permissions**: Only Member 1 can create new files (`AddFile` operation)
-3. **Permission inheritance**: Once a file exists, all group members can perform other operations (like renaming) due to their WRITE permissions on the parent drive
-4. **Granular control**: You can restrict specific operations while allowing broader document access
+1. **Group-based permissions**: Both finance team members have WRITE access to the finance drive through group membership
+2. **Operation-level permissions**: Only the Finance Manager can create new financial documents (`AddFile` operation)
+3. **Permission inheritance**: Once a document exists, all team members can perform other operations (like renaming) due to their WRITE permissions on the parent drive
+4. **Granular control**: You can restrict specific operations while allowing broader document access, perfect for sensitive financial data
+
+</details>
+
+<details>
+<summary><strong>Advanced Scenario: Open Source Project Authorization</strong></summary>
+
+This scenario demonstrates advanced authorization patterns for managing contributor access levels in an open source project, focusing on role-based access control and operation-level permissions.
+
+### The Setup
+
+- **Project Lead** (Alice): Full admin control
+- **Core Contributors** (Bob, Carol): Can edit code and documentation
+- **External Contributors** (Dave, Eve): Read-only access, can suggest via comments
+- **Package Maintainers** (Frank): Special access to publishing operations only
+
+### Step 1: Create Role-Based Groups
+
+**Create contributor hierarchy groups:**
+
+```graphql
+mutation CreateCoreGroup {
+  createGroup(
+    name: "core-contributors"
+    description: "Trusted developers with write access"
+  ) {
+    id
+    name
+  }
+}
+```
+
+```graphql
+mutation CreateExternalGroup {
+  createGroup(
+    name: "external-contributors"
+    description: "Community contributors with limited access"
+  ) {
+    id
+    name
+  }
+}
+```
+
+```graphql
+mutation CreateMaintainersGroup {
+  createGroup(
+    name: "package-maintainers"
+    description: "Users who can publish packages"
+  ) {
+    id
+    name
+  }
+}
+```
+
+### Step 2: Assign Users to Groups
+
+**Add core team members:**
+
+```graphql
+mutation AddBobToCore {
+  addUserToGroup(userAddress: "0xbob...core", groupId: 1)
+}
+```
+
+```graphql
+mutation AddCarolToCore {
+  addUserToGroup(userAddress: "0xcarol...core", groupId: 1)
+}
+```
+
+**Add external contributors:**
+
+```graphql
+mutation AddDaveToExternal {
+  addUserToGroup(userAddress: "0xdave...external", groupId: 2)
+}
+```
+
+**Add package maintainer:**
+
+```graphql
+mutation AddFrankToMaintainers {
+  addUserToGroup(userAddress: "0xfrank...maintainer", groupId: 3)
+}
+```
+
+### Step 3: Set Document-Level Permissions
+
+**Grant different access levels to each group:**
+
+```graphql
+mutation GrantCoreWriteAccess {
+  grantGroupPermission(
+    documentId: "project-drive-id"
+    groupId: 1
+    permission: WRITE
+  ) {
+    groupId
+    permission
+    group {
+      name
+    }
+  }
+}
+```
+
+```graphql
+mutation GrantExternalReadAccess {
+  grantGroupPermission(
+    documentId: "project-drive-id"
+    groupId: 2
+    permission: READ
+  ) {
+    groupId
+    permission
+    group {
+      name
+    }
+  }
+}
+```
+
+```graphql
+mutation GrantMaintainersReadAccess {
+  grantGroupPermission(
+    documentId: "project-drive-id"
+    groupId: 3
+    permission: READ
+  ) {
+    groupId
+    permission
+    group {
+      name
+    }
+  }
+}
+```
+
+### Step 4: Operation-Level Permission Control
+
+**External contributors can only add comments/suggestions:**
+
+```graphql
+mutation AllowExternalComments {
+  grantGroupOperationPermission(
+    documentId: "project-drive-id"
+    operationType: "ADD_COMMENT"
+    groupId: 2
+  ) {
+    operationType
+    group {
+      name
+    }
+  }
+}
+```
+
+**Only package maintainers can publish packages:**
+
+```graphql
+mutation AllowPackagePublishing {
+  grantGroupOperationPermission(
+    documentId: "package-doc-id"
+    operationType: "PUBLISH_PACKAGE"
+    groupId: 3
+  ) {
+    operationType
+    group {
+      name
+    }
+  }
+}
+```
+
+**Only core contributors can delete documents:**
+
+```graphql
+mutation AllowCoreDeletion {
+  grantGroupOperationPermission(
+    documentId: "project-drive-id"
+    operationType: "DELETE_DOCUMENT"
+    groupId: 1
+  ) {
+    operationType
+    group {
+      name
+    }
+  }
+}
+```
+
+### Step 5: Permission Auditing & Verification
+
+**Check what permissions a user has:**
+
+```graphql
+query MyPermissions {
+  userDocumentPermissions {
+    documentId
+    permission
+    grantedBy
+    createdAt
+  }
+}
+```
+
+**Audit all access to sensitive document:**
+
+```graphql
+query AuditDocumentAccess($docId: String!) {
+  documentAccess(documentId: $docId) {
+    permissions {
+      userAddress
+      permission
+      grantedBy
+    }
+    groupPermissions {
+      group {
+        name
+        members
+      }
+      permission
+      grantedBy
+    }
+  }
+}
+```
+
+**Verify if user can perform specific operation:**
+
+```graphql
+query CheckOperationAccess($docId: String!, $operation: String!) {
+  canExecuteOperation(documentId: $docId, operationType: $operation)
+}
+```
+
+### Step 7: Dynamic Permission Management
+
+**Promote external contributor to core team:**
+
+```graphql
+mutation PromoteContributor($userAddress: String!) {
+  removeUserFromGroup(userAddress: $userAddress, groupId: 2)
+}
+```
+
+```graphql
+mutation AddToCore($userAddress: String!) {
+  addUserToGroup(userAddress: $userAddress, groupId: 1)
+}
+```
+
+**Remove user from all groups (suspend access):**
+
+```graphql
+mutation SuspendUser($userAddress: String!) {
+  removeUserFromGroup(userAddress: $userAddress, groupId: 1)
+}
+```
+
+### Authorization Patterns Demonstrated
+
+1. **Role-Based Access Control (RBAC)**: Groups represent roles with different permission levels
+2. **Hierarchical Permissions**: Permissions inherit from drive → folder → document
+3. **Operation-Level Granularity**: Fine-grained control over specific actions (comments vs. publishing vs. deletion)
+4. **Individual Overrides**: User-specific permissions that supersede group permissions
+5. **Audit Trail**: Complete visibility into who granted what permissions when
+6. **Dynamic Role Management**: Users can be promoted/demoted between roles
+7. **Principle of Least Privilege**: Each role gets minimum necessary permissions
+
+This scenario showcases enterprise-grade access control patterns suitable for collaborative projects with multiple contributor types and security requirements.
 
 </details>
 
