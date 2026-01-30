@@ -1,5 +1,3 @@
-console.log(process.env);
-
 await Bun.build({
   entrypoints: [
     "./src/cli.ts",
@@ -9,6 +7,6 @@ await Bun.build({
   outdir: "./build",
   target: "node",
   define: {
-    CLI_VERSION: `"${process.env.WORKSPACE_VERSION!}"`,
+    CLI_VERSION: `"${process.env.WORKSPACE_VERSION || process.env.npm_package_version!}"`,
   },
 });
