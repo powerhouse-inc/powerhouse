@@ -204,6 +204,14 @@ async function initServer(
     builder.withKysely(kysely);
     // }
 
+    // TODO: replace with reactor shutdown
+    process.on("SIGINT", () => {
+      kysely.destroy().catch(logger.error);
+      if (!pglite.closed) {
+        pglite.close().catch(logger.error);
+      }
+    });
+
     const clientBuilder = new ReactorClientBuilder().withReactorBuilder(
       builder,
     );
