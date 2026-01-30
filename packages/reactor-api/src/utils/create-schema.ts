@@ -335,9 +335,33 @@ function applyGraphQLTypePrefixes(
   return processedSchema;
 }
 
-export function generateDocumentModelSchemaLegacy(
+/**
+ * Options for generating document model GraphQL schemas.
+ */
+export interface DocumentModelSchemaOptions {
+  /**
+   * When true, generates new API patterns:
+   * - Mutations return full document objects (MutationResult type)
+   * - Adds createEmptyDocument mutation
+   * - Makes docId and input parameters required
+   * @default false
+   */
+  useNewApi?: boolean;
+}
+
+/**
+ * Generate a GraphQL schema for a document model.
+ *
+ * @param documentModel - The document model global state
+ * @param options - Schema generation options
+ * @returns GraphQL DocumentNode
+ */
+export function generateDocumentModelSchema(
   documentModel: DocumentModelGlobalState,
+  options: DocumentModelSchemaOptions = {},
 ): DocumentNode {
+  const { useNewApi = false } = options;
+
   const specification = documentModel.specifications.at(-1);
   const documentName = getDocumentModelSchemaName(documentModel);
   const stateSchema = specification?.state.global.schema;
@@ -367,6 +391,91 @@ export function generateDocumentModelSchemaLegacy(
     allTypeNames,
   );
 
+  // Helper to check if schema has actual GraphQL type definitions
+  const hasValidSchema = (schema: string | null | undefined): boolean =>
+    !!(schema && /\b(input|type|enum|union|interface)\s+\w+/.test(schema));
+
+  // Process state schema types (remove input types, clean up, and prefix)
+  const stateSchemaTypes = stateSchema
+    ? applyGraphQLTypePrefixes(
+        stateSchema
+          .replaceAll("scalar DateTime", "")
+          .replaceAll(/input (.*?) {[\s\S]*?}/g, ""),
+        documentName,
+        allTypeNames,
+      )
+    : "";
+
+  if (useNewApi) {
+    // New API: flat queries, typed state, async mutations
+    return generateNewApiSchema(
+      documentName,
+      specification,
+      stateSchemaTypes,
+      prefixedStateInputTypes,
+      allTypeNames,
+      hasValidSchema,
+    );
+  }
+
+  // Legacy API
+  return generateLegacyApiSchema(
+    documentName,
+    specification,
+    prefixedStateInputTypes,
+    allTypeNames,
+    hasValidSchema,
+  );
+}
+
+/**
+ * Generate legacy API schema with nested queries
+ */
+function generateLegacyApiSchema(
+  documentName: string,
+  specification: DocumentModelGlobalState["specifications"][0] | undefined,
+  prefixedStateInputTypes: string,
+  allTypeNames: string[],
+  hasValidSchema: (schema: string | null | undefined) => boolean,
+): DocumentNode {
+  const createDocumentMutation = `${documentName}_createDocument(name:String!, driveId:String): String`;
+
+  const operationMutations =
+    specification?.modules
+      .flatMap((module) =>
+        module.operations
+          .filter((op) => op.name && hasValidSchema(op.schema))
+          .map(
+            (op) =>
+              `${documentName}_${camelCase(op.name!)}(
+            driveId: String, docId: PHID, input: ${documentName}_${pascalCase(op.name!)}Input): Int`,
+          ),
+      )
+      .join("\n        ") ?? "";
+
+  const moduleSchemas =
+    specification?.modules
+      .filter((module) =>
+        module.operations.some((op) => hasValidSchema(op.schema)),
+      )
+      .map(
+        (module) =>
+          `"""
+       Module: ${pascalCase(module.name)}
+       """
+       ${module.operations
+         .filter((op) => hasValidSchema(op.schema))
+         .map((op) =>
+           applyGraphQLTypePrefixes(
+             op.schema ?? "",
+             documentName,
+             allTypeNames,
+           ),
+         )
+         .join("\n  ")}`,
+      )
+      .join("\n") ?? "";
+
   return gql`
     """
     Queries: ${documentName} Document
@@ -385,26 +494,9 @@ export function generateDocumentModelSchemaLegacy(
     Mutations: ${documentName}
     """
     type Mutation {
-        ${documentName}_createDocument(name:String!, driveId:String): String
+        ${createDocumentMutation}
 
-        ${
-          specification?.modules
-            .flatMap((module) =>
-              module.operations
-                .filter(
-                  (op) =>
-                    op.name &&
-                    op.schema &&
-                    /\b(input|type|enum|union|interface)\s+\w+/.test(op.schema),
-                )
-                .map(
-                  (op) =>
-                    `${documentName}_${camelCase(op.name!)}(
-            driveId: String, docId: PHID, input: ${documentName}_${pascalCase(op.name!)}Input): Int`,
-                ),
-            )
-            .join("\n        ") ?? ""
-        }
+        ${operationMutations}
     }
 
     ${
@@ -416,18 +508,131 @@ export function generateDocumentModelSchemaLegacy(
         : ""
     }
 
-    ${(() => {
-      // Helper to check if schema has actual GraphQL type definitions
-      const hasValidSchema = (schema: string | null | undefined) =>
-        schema && /\b(input|type|enum|union|interface)\s+\w+/.test(schema);
-      return (
-        specification?.modules
-          .filter((module) =>
-            module.operations.some((op) => hasValidSchema(op.schema)),
-          )
-          .map(
-            (module) =>
-              `"""
+    ${moduleSchemas}`;
+}
+
+/**
+ * Generate new API schema with flat queries, typed state, and async mutations.
+ * Note: State schema types are NOT included here because they are already defined
+ * in getDocumentModelTypeDefs() which is used during schema composition.
+ * Including them here would cause duplicate type definitions.
+ *
+ * Special case: DocumentModel type doesn't have a typed state defined in
+ * getDocumentModelTypeDefs(), so we use JSONObject for its state field.
+ */
+function generateNewApiSchema(
+  documentName: string,
+  specification: DocumentModelGlobalState["specifications"][0] | undefined,
+  _stateSchemaTypes: string,
+  prefixedStateInputTypes: string,
+  allTypeNames: string[],
+  hasValidSchema: (schema: string | null | undefined) => boolean,
+): DocumentNode {
+  // Special case: DocumentModel doesn't have a typed state in getDocumentModelTypeDefs()
+  // Use JSONObject as fallback for DocumentModel, typed state for everything else
+  const stateType =
+    documentName === "DocumentModel"
+      ? "JSONObject"
+      : `${documentName}_${documentName}State!`;
+
+  // Common input types - use extend to avoid conflicts with other subgraphs
+  const commonInputTypes = `
+    input ${documentName}_ViewFilterInput {
+      branch: String
+      scopes: [String!]
+    }
+
+    input ${documentName}_PagingInput {
+      limit: Int
+      offset: Int
+      cursor: String
+    }
+
+    input ${documentName}_SearchFilterInput {
+      parentId: String
+      identifiers: [String!]
+    }
+  `;
+
+  // Result types with typed state (or JSONObject for DocumentModel)
+  // The state type (${documentName}_${documentName}State) is defined in getDocumentModelTypeDefs()
+  const resultTypes = `
+    """
+    Mutation result type for ${documentName} operations with typed state
+    """
+    type ${documentName}MutationResult {
+      id: String!
+      name: String!
+      documentType: String!
+      revision: Int!
+      state: ${stateType}
+      createdAtUtcIso: DateTime!
+      lastModifiedAtUtcIso: DateTime!
+    }
+
+    """
+    Document with children for ${documentName}
+    """
+    type ${documentName}_DocumentWithChildren {
+      document: ${documentName}MutationResult!
+      childIds: [String!]!
+    }
+
+    """
+    Paginated result type for ${documentName} documents
+    """
+    type ${documentName}_DocumentResultPage {
+      items: [${documentName}MutationResult!]!
+      totalCount: Int!
+      hasNextPage: Boolean!
+      hasPreviousPage: Boolean!
+      cursor: String
+    }
+  `;
+
+  // Flat queries (not nested) - prefixed input types to avoid conflicts
+  const queries = `
+    type Query {
+      """Get a specific ${documentName} document by identifier"""
+      ${documentName}_document(identifier: String!, view: ${documentName}_ViewFilterInput): ${documentName}_DocumentWithChildren
+
+      """Find ${documentName} documents by search criteria"""
+      ${documentName}_findDocuments(search: ${documentName}_SearchFilterInput!, view: ${documentName}_ViewFilterInput, paging: ${documentName}_PagingInput): ${documentName}_DocumentResultPage!
+
+      """Get children of a ${documentName} document"""
+      ${documentName}_documentChildren(parentIdentifier: String!, view: ${documentName}_ViewFilterInput, paging: ${documentName}_PagingInput): ${documentName}_DocumentResultPage!
+
+      """Get parents of a ${documentName} document"""
+      ${documentName}_documentParents(childIdentifier: String!, view: ${documentName}_ViewFilterInput, paging: ${documentName}_PagingInput): ${documentName}_DocumentResultPage!
+    }
+  `;
+
+  // Mutations: sync and async versions
+  const createDocumentMutation = `${documentName}_createDocument(name: String!, driveId: String): ${documentName}MutationResult!`;
+  const createEmptyDocumentMutation = `${documentName}_createEmptyDocument(driveId: String): ${documentName}MutationResult!`;
+
+  const operationMutations =
+    specification?.modules
+      .flatMap((module) =>
+        module.operations
+          .filter((op) => op.name && hasValidSchema(op.schema))
+          .flatMap((op) => [
+            // Sync mutation
+            `${documentName}_${camelCase(op.name!)}(docId: PHID!, input: ${documentName}_${pascalCase(op.name!)}Input!): ${documentName}MutationResult!`,
+            // Async mutation
+            `${documentName}_${camelCase(op.name!)}Async(docId: PHID!, input: ${documentName}_${pascalCase(op.name!)}Input!): String!`,
+          ]),
+      )
+      .join("\n        ") ?? "";
+
+  const moduleSchemas =
+    specification?.modules
+      .filter((module) =>
+        module.operations.some((op) => hasValidSchema(op.schema)),
+      )
+      .map(
+        (module) =>
+          `"""
        Module: ${pascalCase(module.name)}
        """
        ${module.operations
@@ -440,8 +645,40 @@ export function generateDocumentModelSchemaLegacy(
            ),
          )
          .join("\n  ")}`,
-          )
-          .join("\n") ?? ""
-      );
-    })()}`;
+      )
+      .join("\n") ?? "";
+
+  return gql`
+    scalar DateTime
+    scalar JSONObject
+
+    ${commonInputTypes}
+
+    ${resultTypes}
+
+    """
+    Queries: ${documentName} Document
+    """
+    ${queries}
+
+    """
+    Mutations: ${documentName}
+    """
+    type Mutation {
+        ${createDocumentMutation}
+        ${createEmptyDocumentMutation}
+
+        ${operationMutations}
+    }
+
+    ${
+      prefixedStateInputTypes
+        ? `"""
+    Input Types from State Schema
+    """
+    ${prefixedStateInputTypes}`
+        : ""
+    }
+
+    ${moduleSchemas}`;
 }
