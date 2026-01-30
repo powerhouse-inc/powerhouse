@@ -8,6 +8,7 @@ import {
   goToConnectDrive,
   navigateBackAndVerify,
   navigateIntoFolder,
+  openDocumentByName,
   renameFolder,
 } from "@powerhousedao/e2e-utils";
 import { createDocument } from "./helpers/document.js";
@@ -96,14 +97,18 @@ test("Create Document Model", async ({ page }) => {
 test("Document Operation History", async ({ page }) => {
   await goToConnectDrive(page, "My Local Drive");
   await createDocument(page, "DocumentModel", "MyDocumentModel");
-  // wait for 2 seconds
-  await page.waitForTimeout(1000);
+  // Close and reopen document to ensure operations are indexed
+  await closeDocumentFromToolbar(page);
+  await openDocumentByName(page, "MyDocumentModel");
   await clickDocumentOperationHistory(page);
-  const articles = await page
-    .locator(
-      ".flex.items-center.justify-between.rounded-xl.border.border-gray-200.bg-white.px-4.py-2",
-    )
-    .all();
+
+  // Wait for operations to load (wait for at least one operation article to appear)
+  const articleLocator = page.locator(
+    ".flex.items-center.justify-between.rounded-xl.border.border-gray-200.bg-white.px-4.py-2",
+  );
+  await articleLocator.first().waitFor({ state: "visible", timeout: 10000 });
+
+  const articles = await articleLocator.all();
 
   const articlesLength = articles.length;
   expect(articles).toHaveLength(3);

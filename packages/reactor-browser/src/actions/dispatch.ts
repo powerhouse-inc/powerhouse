@@ -16,9 +16,11 @@ async function getDocument(
 
 function getActionErrors(result: PHDocument, actions: Action[]) {
   return actions.reduce((errors, a) => {
-    const op = result.operations[a.scope].findLast(
-      (op) => op.action.id === a.id,
-    );
+    const scopeOperations = result.operations[a.scope];
+    if (!scopeOperations) {
+      return errors;
+    }
+    const op = scopeOperations.findLast((op) => op.action.id === a.id);
 
     if (op?.error) {
       errors.push(new Error(op.error));

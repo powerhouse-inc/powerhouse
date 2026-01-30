@@ -1,12 +1,16 @@
 import type { Operation } from "document-model";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useReactorClient } from "./reactor.js";
 
-type DocumentOperationsState = {
+type InternalState = {
   globalOperations: Operation[];
   localOperations: Operation[];
   isLoading: boolean;
   error: Error | undefined;
+};
+
+type DocumentOperationsState = InternalState & {
+  refetch: () => void;
 };
 
 /**
@@ -20,61 +24,96 @@ export function useDocumentOperations(
   documentId: string | null | undefined,
 ): DocumentOperationsState {
   const reactorClient = useReactorClient();
-  const [state, setState] = useState<DocumentOperationsState>({
+  const hasFetchedRef = useRef(false);
+  const [state, setState] = useState<InternalState>(() => ({
     globalOperations: [],
     localOperations: [],
-    isLoading: false,
+    isLoading: !!documentId,
     error: undefined,
-  });
+  }));
 
-  const fetchOperations = useCallback(async () => {
-    if (!documentId || !reactorClient) {
+  const fetchOperations = useCallback(
+    async (retryCount = 0): Promise<void> => {
+      const MAX_RETRIES = 5;
+      const RETRY_DELAY_MS = 500;
+
+      if (!documentId || !reactorClient) {
+        setState({
+          globalOperations: [],
+          localOperations: [],
+          isLoading: false,
+          error: undefined,
+        });
+        return;
+      }
+
+      setState((prev) => ({ ...prev, isLoading: true, error: undefined }));
+
+      let globalOps: Operation[] = [];
+      let localOps: Operation[] = [];
+      let fetchError: Error | undefined;
+
+      try {
+        const globalResult = await reactorClient.getOperations(documentId, {
+          scopes: ["global"],
+        });
+        globalOps = globalResult.results;
+      } catch (err) {
+        fetchError = err instanceof Error ? err : new Error(String(err));
+      }
+
+      if (!fetchError) {
+        try {
+          const localResult = await reactorClient.getOperations(documentId, {
+            scopes: ["local"],
+          });
+          localOps = localResult.results;
+        } catch (err) {
+          fetchError = err instanceof Error ? err : new Error(String(err));
+        }
+      }
+
+      // If no operations found and we haven't exhausted retries, wait and try again
+      // This handles eventual consistency where operations may not be immediately available
+      if (
+        !fetchError &&
+        globalOps.length === 0 &&
+        localOps.length === 0 &&
+        retryCount < MAX_RETRIES
+      ) {
+        await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
+        return fetchOperations(retryCount + 1);
+      }
+
+      setState({
+        globalOperations: globalOps,
+        localOperations: localOps,
+        isLoading: false,
+        error: fetchError,
+      });
+      hasFetchedRef.current = true;
+    },
+    [documentId, reactorClient],
+  );
+
+  useEffect(() => {
+    if (documentId && reactorClient) {
+      void fetchOperations();
+    } else if (!documentId) {
       setState({
         globalOperations: [],
         localOperations: [],
         isLoading: false,
         error: undefined,
       });
-      return;
+      hasFetchedRef.current = false;
     }
+  }, [documentId, reactorClient, fetchOperations]);
 
-    setState((prev) => ({ ...prev, isLoading: true, error: undefined }));
-
-    let globalOps: Operation[] = [];
-    let localOps: Operation[] = [];
-    let fetchError: Error | undefined;
-
-    try {
-      const globalResult = await reactorClient.getOperations(documentId, {
-        scopes: ["global"],
-      });
-      globalOps = globalResult.results;
-    } catch (err) {
-      fetchError = err instanceof Error ? err : new Error(String(err));
-    }
-
-    if (!fetchError) {
-      try {
-        const localResult = await reactorClient.getOperations(documentId, {
-          scopes: ["local"],
-        });
-        localOps = localResult.results;
-      } catch (err) {
-        fetchError = err instanceof Error ? err : new Error(String(err));
-      }
-    }
-
-    setState({
-      globalOperations: globalOps,
-      localOperations: localOps,
-      isLoading: false,
-      error: fetchError,
-    });
-  }, [documentId, reactorClient]);
-
-  useEffect(() => {
-    void fetchOperations();
+  // Wrap fetchOperations to hide the internal retry parameter
+  const refetch = useCallback(() => {
+    void fetchOperations(0);
   }, [fetchOperations]);
 
-  return state;
+  return { ...state, refetch };
 }
