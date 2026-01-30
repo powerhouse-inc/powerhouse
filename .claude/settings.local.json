@@ -21,7 +21,8 @@
       "mcp__chrome-devtools",
       "Bash(grep:*)",
       "Bash(mkdir:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(git stash show:*)"
     ],
     "deny": [],
     "ask": []

@@ -1,5 +1,6 @@
 import { type Operation } from "document-model";
 import { sql, type Kysely } from "kysely";
+import type { PagedResults, PagingOptions } from "../../shared/types.js";
 import {
   DuplicateOperationError,
   RevisionMismatchError,
@@ -8,8 +9,6 @@ import {
   type IOperationStore,
   type OperationFilter,
   type OperationWithContext,
-  type PagedResults,
-  type PagingOptions,
 } from "../interfaces.js";
 import { AtomicTransaction } from "../txn.js";
 import type { Database, OperationRow } from "./types.js";
@@ -142,9 +141,9 @@ export class KyselyOperationStore implements IOperationStore {
     }
 
     if (paging) {
-      if (paging.cursor) {
-        const lastIndex = Number.parseInt(paging.cursor, 10);
-        query = query.where("index", ">", lastIndex);
+      const cursorValue = Number.parseInt(paging.cursor, 10);
+      if (cursorValue > 0) {
+        query = query.where("index", ">", cursorValue);
       }
 
       if (paging.limit) {
@@ -167,10 +166,26 @@ export class KyselyOperationStore implements IOperationStore {
         ? items[items.length - 1].index.toString()
         : undefined;
 
+    const cursor = paging?.cursor || "0";
+    const limit = paging?.limit || 100;
+    const operations = items.map((row) => this.rowToOperation(row));
+
     return {
-      items: items.map((row) => this.rowToOperation(row)),
+      results: operations,
+      options: { cursor, limit },
       nextCursor,
-      hasMore,
+      next: hasMore
+        ? () =>
+            this.getSince(
+              documentId,
+              scope,
+              branch,
+              revision,
+              filter,
+              { cursor: nextCursor!, limit },
+              signal,
+            )
+        : undefined,
     };
   }
 
@@ -192,9 +207,9 @@ export class KyselyOperationStore implements IOperationStore {
     // Handle cursor-based pagination
     if (paging) {
       // Cursor encodes the last seen id
-      if (paging.cursor) {
-        const lastId = Number.parseInt(paging.cursor, 10);
-        query = query.where("id", ">", lastId);
+      const cursorValue = Number.parseInt(paging.cursor, 10);
+      if (cursorValue > 0) {
+        query = query.where("id", ">", cursorValue);
       }
 
       // Apply limit if specified (fetch one extra to determine hasMore)
@@ -220,10 +235,17 @@ export class KyselyOperationStore implements IOperationStore {
         ? items[items.length - 1].id.toString()
         : undefined;
 
+    const cursor = paging?.cursor || "0";
+    const limit = paging?.limit || 100;
+    const operations = items.map((row) => this.rowToOperationWithContext(row));
+
     return {
-      items: items.map((row) => this.rowToOperationWithContext(row)),
+      results: operations,
+      options: { cursor, limit },
       nextCursor,
-      hasMore,
+      next: hasMore
+        ? () => this.getSinceId(id, { cursor: nextCursor!, limit }, signal)
+        : undefined,
     };
   }
 
@@ -249,9 +271,9 @@ export class KyselyOperationStore implements IOperationStore {
       .orderBy("index", "asc");
 
     if (paging) {
-      if (paging.cursor) {
-        const lastIndex = Number.parseInt(paging.cursor, 10);
-        query = query.where("index", ">", lastIndex);
+      const cursorValue = Number.parseInt(paging.cursor, 10);
+      if (cursorValue > 0) {
+        query = query.where("index", ">", cursorValue);
       }
 
       if (paging.limit) {
@@ -274,10 +296,25 @@ export class KyselyOperationStore implements IOperationStore {
         ? items[items.length - 1].index.toString()
         : undefined;
 
+    const cursor = paging?.cursor || "0";
+    const limit = paging?.limit || 100;
+    const operations = items.map((row) => this.rowToOperation(row));
+
     return {
-      items: items.map((row) => this.rowToOperation(row)),
+      results: operations,
+      options: { cursor, limit },
       nextCursor,
-      hasMore,
+      next: hasMore
+        ? () =>
+            this.getConflicting(
+              documentId,
+              scope,
+              branch,
+              minTimestamp,
+              { cursor: nextCursor!, limit },
+              signal,
+            )
+        : undefined,
     };
   }
 

@@ -112,9 +112,9 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
 
       await waitForJobAndDocumentUpdate(createJobInfo.id);
 
-      const { document: retrievedDocument } =
-        await reactor.get<DocumentDriveDocument>(document.header.id);
-      expect(retrievedDocument).toBeDefined();
+      const retrievedDocument = await reactor.get<DocumentDriveDocument>(
+        document.header.id,
+      );
       expect(retrievedDocument.header.id).toBe(document.header.id);
       expect(retrievedDocument.header.documentType).toBe(
         document.header.documentType,
@@ -128,8 +128,9 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
       const createJobInfo = await reactor.create(document);
       await waitForJobAndDocumentUpdate(createJobInfo.id);
 
-      const { document: retrievedDocument } =
-        await reactor.get<DocumentDriveDocument>(document.header.id);
+      const retrievedDocument = await reactor.get<DocumentDriveDocument>(
+        document.header.id,
+      );
       expect(retrievedDocument.header.protocolVersions).toEqual({
         "base-reducer": 2,
       });
@@ -142,8 +143,9 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
       const createJobInfo = await reactor.create(document);
       await waitForJobAndDocumentUpdate(createJobInfo.id);
 
-      const { document: retrievedDocument } =
-        await reactor.get<DocumentDriveDocument>(document.header.id);
+      const retrievedDocument = await reactor.get<DocumentDriveDocument>(
+        document.header.id,
+      );
       expect(retrievedDocument.header.protocolVersions).toEqual({
         "base-reducer": 1,
       });
@@ -214,8 +216,9 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
       expect(operations.global.results[0].action.type).toBe("ADD_FOLDER");
 
       // Verify state was updated
-      const { document: updatedDocument } =
-        await reactor.get<DocumentDriveDocument>(document.header.id);
+      const updatedDocument = await reactor.get<DocumentDriveDocument>(
+        document.header.id,
+      );
       const globalState = updatedDocument.state.global;
       expect(globalState.nodes).toHaveLength(1);
       expect(globalState.nodes[0]).toMatchObject({
@@ -268,8 +271,9 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
       expect(operations.global.results).toHaveLength(2);
 
       // Verify state contains both nodes
-      const { document: updatedDocument } =
-        await reactor.get<DocumentDriveDocument>(document.header.id);
+      const updatedDocument = await reactor.get<DocumentDriveDocument>(
+        document.header.id,
+      );
       const globalState = updatedDocument.state.global;
       expect(globalState.nodes).toHaveLength(2);
 
@@ -322,8 +326,9 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
       await waitForJobAndDocumentUpdate(jobInfo.id);
 
       // Verify the hierarchy
-      const { document: updatedDocument } =
-        await reactor.get<DocumentDriveDocument>(document.header.id);
+      const updatedDocument = await reactor.get<DocumentDriveDocument>(
+        document.header.id,
+      );
       const globalState = updatedDocument.state.global;
       expect(globalState.nodes).toHaveLength(3);
 
@@ -423,7 +428,7 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
         { timeout: 10000 },
       );
 
-      const { document: childDoc } = await reactor.get<DocumentDriveDocument>(
+      const childDoc = await reactor.get<DocumentDriveDocument>(
         childDocument.header.id,
       );
       expect(childDoc).toBeDefined();
@@ -432,7 +437,7 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
         childDocument.header.documentType,
       );
 
-      const { document: parentDoc } = await reactor.get<DocumentDriveDocument>(
+      const parentDoc = await reactor.get<DocumentDriveDocument>(
         parentDrive.header.id,
       );
       const globalState = parentDoc.state.global;
@@ -453,7 +458,7 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
             parentDrive.header.id,
             ["child"],
           );
-          return relationships.length === 1;
+          return relationships.results.length === 1;
         },
         { timeout: 5000 },
       );
@@ -462,8 +467,8 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
         parentDrive.header.id,
         ["child"],
       );
-      expect(relationships).toHaveLength(1);
-      expect(relationships[0]).toMatchObject({
+      expect(relationships.results).toHaveLength(1);
+      expect(relationships.results[0]).toMatchObject({
         sourceId: parentDrive.header.id,
         targetId: childDocument.header.id,
         relationshipType: "child",
@@ -505,8 +510,9 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
       await waitForJobAndDocumentUpdate(updateJobInfo.id);
 
       // Verify the update
-      const { document: updatedDocument } =
-        await reactor.get<DocumentDriveDocument>(document.header.id);
+      const updatedDocument = await reactor.get<DocumentDriveDocument>(
+        document.header.id,
+      );
       const globalState = updatedDocument.state.global;
       const file = globalState.nodes.find((n) => n.id === fileId);
 
@@ -549,8 +555,9 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
       await waitForJobAndDocumentUpdate(updateJobInfo.id);
 
       // Verify the update
-      const { document: updatedDocument } =
-        await reactor.get<DocumentDriveDocument>(document.header.id);
+      const updatedDocument = await reactor.get<DocumentDriveDocument>(
+        document.header.id,
+      );
       const globalState = updatedDocument.state.global;
       const folder = globalState.nodes.find((n) => n.id === folderId);
 
@@ -593,8 +600,9 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
       await waitForJobAndDocumentUpdate(deleteJobInfo.id);
 
       // Verify the deletion
-      const { document: updatedDocument } =
-        await reactor.get<DocumentDriveDocument>(document.header.id);
+      const updatedDocument = await reactor.get<DocumentDriveDocument>(
+        document.header.id,
+      );
       const globalState = updatedDocument.state.global;
       const folder = globalState.nodes.find((n) => n.id === folderId);
 
@@ -656,8 +664,9 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
       await waitForJobAndDocumentUpdate(deleteJobInfo.id);
 
       // Verify all nodes were deleted
-      const { document: updatedDocument } =
-        await reactor.get<DocumentDriveDocument>(document.header.id);
+      const updatedDocument = await reactor.get<DocumentDriveDocument>(
+        document.header.id,
+      );
       const globalState = updatedDocument.state.global;
 
       expect(globalState.nodes).toHaveLength(0);
@@ -713,8 +722,9 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
       await waitForJobAndDocumentUpdate(moveJobInfo.id);
 
       // Verify the move
-      const { document: updatedDocument } =
-        await reactor.get<DocumentDriveDocument>(document.header.id);
+      const updatedDocument = await reactor.get<DocumentDriveDocument>(
+        document.header.id,
+      );
       const globalState = updatedDocument.state.global;
       const child = globalState.nodes.find((n) => n.id === childId);
 
@@ -764,8 +774,9 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
       await waitForJobAndDocumentUpdate(moveJobInfo.id);
 
       // Verify the move
-      const { document: updatedDocument } =
-        await reactor.get<DocumentDriveDocument>(document.header.id);
+      const updatedDocument = await reactor.get<DocumentDriveDocument>(
+        document.header.id,
+      );
       const globalState = updatedDocument.state.global;
       const child = globalState.nodes.find((n) => n.id === childId);
 
@@ -822,8 +833,9 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
       await waitForJobAndDocumentUpdate(moveJobInfo.id);
 
       // The operation should have been rejected - verify folder1 is still at root
-      const { document: updatedDocument } =
-        await reactor.get<DocumentDriveDocument>(document.header.id);
+      const updatedDocument = await reactor.get<DocumentDriveDocument>(
+        document.header.id,
+      );
       const globalState = updatedDocument.state.global;
       const folder1 = globalState.nodes.find((n) => n.id === folder1Id);
 
@@ -883,8 +895,9 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
       await waitForJobAndDocumentUpdate(copyJobInfo.id);
 
       // Verify the copy
-      const { document: updatedDocument } =
-        await reactor.get<DocumentDriveDocument>(document.header.id);
+      const updatedDocument = await reactor.get<DocumentDriveDocument>(
+        document.header.id,
+      );
       const globalState = updatedDocument.state.global;
 
       // Original should still exist
@@ -933,8 +946,9 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
       await waitForJobAndDocumentUpdate(copyJobInfo.id);
 
       // Verify the copy
-      const { document: updatedDocument } =
-        await reactor.get<DocumentDriveDocument>(document.header.id);
+      const updatedDocument = await reactor.get<DocumentDriveDocument>(
+        document.header.id,
+      );
       const globalState = updatedDocument.state.global;
 
       const copy = globalState.nodes.find((n) => n.id === targetId);
@@ -999,8 +1013,9 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
       await waitForJobAndDocumentUpdate(copyJobInfo.id);
 
       // Verify the node was copied
-      const { document: updatedDocument } =
-        await reactor.get<DocumentDriveDocument>(document.header.id);
+      const updatedDocument = await reactor.get<DocumentDriveDocument>(
+        document.header.id,
+      );
       const globalState = updatedDocument.state.global;
 
       // Find the copied parent
@@ -1048,8 +1063,9 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
       await waitForJobAndDocumentUpdate(jobInfo.id);
 
       // Verify the drive name was set
-      const { document: updatedDocument } =
-        await reactor.get<DocumentDriveDocument>(document.header.id);
+      const updatedDocument = await reactor.get<DocumentDriveDocument>(
+        document.header.id,
+      );
       const globalState = updatedDocument.state.global;
       expect(globalState.name).toBe("My Drive");
     });
@@ -1070,8 +1086,9 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
       await waitForJobAndDocumentUpdate(jobInfo.id);
 
       // Verify the drive icon was set
-      const { document: updatedDocument } =
-        await reactor.get<DocumentDriveDocument>(document.header.id);
+      const updatedDocument = await reactor.get<DocumentDriveDocument>(
+        document.header.id,
+      );
       const globalState = updatedDocument.state.global;
       expect(globalState.icon).toBe("folder-open");
     });
@@ -1092,8 +1109,9 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
       await waitForJobAndDocumentUpdate(jobInfo.id);
 
       // Verify the sharing type was set
-      const { document: updatedDocument } =
-        await reactor.get<DocumentDriveDocument>(document.header.id);
+      const updatedDocument = await reactor.get<DocumentDriveDocument>(
+        document.header.id,
+      );
       const localState = updatedDocument.state.local;
       expect(localState.sharingType).toBe("PUBLIC");
     });
@@ -1114,8 +1132,9 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
       await waitForJobAndDocumentUpdate(jobInfo.id);
 
       // Verify available offline was set
-      const { document: updatedDocument } =
-        await reactor.get<DocumentDriveDocument>(document.header.id);
+      const updatedDocument = await reactor.get<DocumentDriveDocument>(
+        document.header.id,
+      );
       const localState = updatedDocument.state.local;
       expect(localState.availableOffline).toBe(true);
     });
@@ -1170,8 +1189,9 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
       await waitForJobAndDocumentUpdate(jobInfo.id);
 
       // Verify all operations were applied
-      const { document: updatedDocument } =
-        await reactor.get<DocumentDriveDocument>(document.header.id);
+      const updatedDocument = await reactor.get<DocumentDriveDocument>(
+        document.header.id,
+      );
       const globalState = updatedDocument.state.global;
 
       expect(globalState.name).toBe("Multi-Op Drive");
@@ -1234,8 +1254,9 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
       await waitForJobAndDocumentUpdate(jobInfo.id);
 
       // Verify final state
-      const { document: updatedDocument } =
-        await reactor.get<DocumentDriveDocument>(document.header.id);
+      const updatedDocument = await reactor.get<DocumentDriveDocument>(
+        document.header.id,
+      );
       const globalState = updatedDocument.state.global;
 
       const folder = globalState.nodes.find((n) => n.id === folderId);
@@ -1270,8 +1291,9 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
 
       // The operation should have been attempted but may have failed
       // Check that the document state is still valid
-      const { document: updatedDocument } =
-        await reactor.get<DocumentDriveDocument>(document.header.id);
+      const updatedDocument = await reactor.get<DocumentDriveDocument>(
+        document.header.id,
+      );
       const globalState = updatedDocument.state.global;
 
       // File might exist even with invalid parent (depends on reducer logic)
@@ -1313,8 +1335,9 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
       await waitForJobAndDocumentUpdate(jobInfo.id);
 
       // Only one node with the ID should exist
-      const { document: updatedDocument } =
-        await reactor.get<DocumentDriveDocument>(document.header.id);
+      const updatedDocument = await reactor.get<DocumentDriveDocument>(
+        document.header.id,
+      );
       const globalState = updatedDocument.state.global;
       const nodesWithId = globalState.nodes.filter((n) => n.id === duplicateId);
 
@@ -1351,8 +1374,9 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
       await waitForJobAndDocumentUpdate(jobInfo.id);
 
       // Check how the system handled the collision
-      const { document: updatedDocument } =
-        await reactor.get<DocumentDriveDocument>(document.header.id);
+      const updatedDocument = await reactor.get<DocumentDriveDocument>(
+        document.header.id,
+      );
       const globalState = updatedDocument.state.global;
       const foldersWithName = globalState.nodes.filter(
         (n) =>
@@ -1399,8 +1423,9 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
       await waitForJobAndDocumentUpdate(jobInfo.id);
 
       // Check that valid operations were processed
-      const { document: updatedDocument } =
-        await reactor.get<DocumentDriveDocument>(document.header.id);
+      const updatedDocument = await reactor.get<DocumentDriveDocument>(
+        document.header.id,
+      );
       const globalState = updatedDocument.state.global;
 
       const folder1 = globalState.nodes.find((n) => n.id === folder1Id);
@@ -1501,8 +1526,9 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
       await waitForJobAndDocumentUpdate(reorganizeJobInfo.id);
 
       // Verify final structure
-      const { document: updatedDocument } =
-        await reactor.get<DocumentDriveDocument>(document.header.id);
+      const updatedDocument = await reactor.get<DocumentDriveDocument>(
+        document.header.id,
+      );
       const globalState = updatedDocument.state.global;
 
       // Temp folder should be gone
@@ -1598,8 +1624,9 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
       await waitForJobAndDocumentUpdate(jobInfo.id);
 
       // Verify the complete structure
-      const { document: updatedDocument } =
-        await reactor.get<DocumentDriveDocument>(document.header.id);
+      const updatedDocument = await reactor.get<DocumentDriveDocument>(
+        document.header.id,
+      );
       const globalState = updatedDocument.state.global;
 
       expect(globalState.name).toBe("My Project");
@@ -1774,7 +1801,7 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
               parentDrive.header.id,
               ["child"],
             );
-            return relationships.length === 2;
+            return relationships.results.length === 2;
           },
           { timeout: 5000 },
         );
@@ -1845,7 +1872,7 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
               parentDrive.header.id,
               ["child"],
             );
-            return relationships.length === 1;
+            return relationships.results.length === 1;
           },
           { timeout: 5000 },
         );
@@ -1994,7 +2021,7 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
               parentDrive.header.id,
               ["child"],
             );
-            return relationships.length === 2;
+            return relationships.results.length === 2;
           },
           { timeout: 5000 },
         );

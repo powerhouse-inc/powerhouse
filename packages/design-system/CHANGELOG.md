@@ -1,3 +1,20 @@
+## 6.0.0-dev.27 (2026-01-30)
+
+### 🚀 Features
+
+- renown sdk improvements ([bc1099d94](https://github.com/powerhouse-inc/powerhouse/commit/bc1099d94))
+- **ph-cmd:** fix forwarding and versioning bug ([#2272](https://github.com/powerhouse-inc/powerhouse/pull/2272))
+
+### 🩹 Fixes
+
+- **design-system:** update dropdown icons size and add drive modal position ([a7648b05a](https://github.com/powerhouse-inc/powerhouse/commit/a7648b05a))
+
+### ❤️ Thank You
+
+- acaldas
+- Guillermo Puente @gpuente
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.0.0-dev.26 (2026-01-29)
 
 ### 🚀 Features

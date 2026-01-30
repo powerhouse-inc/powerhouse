@@ -86,9 +86,7 @@ export class ReactorClientDocumentCache implements IDocumentCache {
       }
     }
 
-    const documentPromise = this.client
-      .get(id)
-      .then((result) => result.document);
+    const documentPromise = this.client.get(id);
     this.documents.set(id, addPromiseState(documentPromise));
     return documentPromise;
   }

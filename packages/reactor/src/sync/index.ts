@@ -43,8 +43,11 @@ export { ChannelError, PollingChannelError } from "./errors.js";
 
 export {
   PollingChannel,
+  GqlChannel,
   GqlChannelFactory,
   CompositeChannelFactory,
+  type GqlChannelConfig,
+  type IPollTimer,
 } from "./channels/index.js";
 
 export { SyncManager } from "./sync-manager.js";

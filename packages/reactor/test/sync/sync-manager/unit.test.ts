@@ -83,11 +83,14 @@ describe("SyncManager - Unit Tests", () => {
     mockOperationIndex = {
       start: vi.fn(),
       commit: vi.fn().mockResolvedValue([]),
-      find: vi.fn().mockResolvedValue({ items: [], total: 0 }),
+      find: vi.fn().mockResolvedValue({
+        results: [],
+        options: { cursor: "0", limit: 100 },
+      }),
       getSinceOrdinal: vi.fn().mockResolvedValue({
-        items: [],
+        results: [],
+        options: { cursor: "0", limit: 100 },
         nextCursor: undefined,
-        hasMore: false,
       }),
       getLatestTimestampForCollection: vi.fn().mockResolvedValue(null),
     };

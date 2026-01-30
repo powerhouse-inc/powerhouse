@@ -99,10 +99,7 @@ export async function document(
     };
   }
 
-  let result: {
-    document: PHDocument;
-    childIds: string[];
-  };
+  let result: PHDocument;
   try {
     result = await reactorClient.get(args.identifier, view);
   } catch (error) {
@@ -111,10 +108,19 @@ export async function document(
     );
   }
 
+  let children: PagedResults<PHDocument>;
+  try {
+    children = await reactorClient.getChildren(args.identifier, view);
+  } catch (error) {
+    throw new GraphQLError(
+      `Failed to fetch children: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+  }
+
   try {
     return {
-      document: toGqlPhDocument(result.document),
-      childIds: result.childIds,
+      document: toGqlPhDocument(result),
+      childIds: children.results.map((child) => child.header.id),
     };
   } catch (error) {
     throw new GraphQLError(

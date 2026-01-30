@@ -9,7 +9,7 @@ import type {
   SignatureVerificationHandler,
   SignerConfig,
 } from "../signer/types.js";
-import type { IDocumentIndexer } from "../storage/interfaces.js";
+import type { IDocumentIndexer, IDocumentView } from "../storage/interfaces.js";
 import { DefaultSubscriptionErrorHandler } from "../subs/default-error-handler.js";
 import { ReactorSubscriptionManager } from "../subs/react-subscription-manager.js";
 import type { IReactorSubscriptionManager } from "../subs/types.js";
@@ -25,6 +25,7 @@ export class ReactorClientBuilder {
   private reactor?: IReactor;
   private eventBus?: IEventBus;
   private documentIndexer?: IDocumentIndexer;
+  private documentView?: IDocumentView;
   private signer?: ISigner;
   private signatureVerifier?: SignatureVerificationHandler;
   private subscriptionManager?: IReactorSubscriptionManager;
@@ -59,6 +60,7 @@ export class ReactorClientBuilder {
     reactor: IReactor,
     eventBus: IEventBus,
     documentIndexer: IDocumentIndexer,
+    documentView: IDocumentView,
   ): this {
     if (this.reactorBuilder) {
       throw new Error("ReactorBuilder is already set");
@@ -67,6 +69,7 @@ export class ReactorClientBuilder {
     this.reactor = reactor;
     this.eventBus = eventBus;
     this.documentIndexer = documentIndexer;
+    this.documentView = documentView;
     return this;
   }
 
@@ -110,6 +113,7 @@ export class ReactorClientBuilder {
     let reactor: IReactor;
     let eventBus: IEventBus;
     let documentIndexer: IDocumentIndexer;
+    let documentView: IDocumentView;
     let reactorModule: ReactorModule | undefined;
 
     if (this.reactorBuilder) {
@@ -120,14 +124,21 @@ export class ReactorClientBuilder {
       reactor = reactorModule.reactor;
       eventBus = reactorModule.eventBus;
       documentIndexer = reactorModule.documentIndexer;
-    } else if (this.reactor && this.eventBus && this.documentIndexer) {
+      documentView = reactorModule.documentView;
+    } else if (
+      this.reactor &&
+      this.eventBus &&
+      this.documentIndexer &&
+      this.documentView
+    ) {
       reactor = this.reactor;
       eventBus = this.eventBus;
       documentIndexer = this.documentIndexer;
+      documentView = this.documentView;
       reactorModule = undefined;
     } else {
       throw new Error(
-        "Either ReactorBuilder or (Reactor + EventBus + DocumentIndexer) is required",
+        "Either ReactorBuilder or (Reactor + EventBus + DocumentIndexer + DocumentView) is required",
       );
     }
 
@@ -151,6 +162,7 @@ export class ReactorClientBuilder {
       subscriptionManager,
       jobAwaiter,
       documentIndexer,
+      documentView,
     );
 
     return {
@@ -158,6 +170,7 @@ export class ReactorClientBuilder {
       reactor,
       eventBus,
       documentIndexer,
+      documentView,
       signer,
       subscriptionManager,
       jobAwaiter,

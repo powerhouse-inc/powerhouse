@@ -30,6 +30,7 @@ import {
 } from "../shared/types.js";
 import type {
   IDocumentIndexer,
+  IDocumentView,
   OperationFilter,
 } from "../storage/interfaces.js";
 import type { IReactorSubscriptionManager } from "../subs/types.js";
@@ -57,6 +58,7 @@ export class ReactorClient implements IReactorClient {
   private subscriptionManager: IReactorSubscriptionManager;
   private jobAwaiter: IJobAwaiter;
   private documentIndexer: IDocumentIndexer;
+  private documentView: IDocumentView;
 
   constructor(
     logger: ILogger,
@@ -65,6 +67,7 @@ export class ReactorClient implements IReactorClient {
     subscriptionManager: IReactorSubscriptionManager,
     jobAwaiter: IJobAwaiter,
     documentIndexer: IDocumentIndexer,
+    documentView: IDocumentView,
   ) {
     this.logger = logger;
     this.reactor = reactor;
@@ -72,6 +75,7 @@ export class ReactorClient implements IReactorClient {
     this.subscriptionManager = subscriptionManager;
     this.jobAwaiter = jobAwaiter;
     this.documentIndexer = documentIndexer;
+    this.documentView = documentView;
     this.logger.verbose("ReactorClient initialized");
   }
 
@@ -121,10 +125,7 @@ export class ReactorClient implements IReactorClient {
     identifier: string,
     view?: ViewFilter,
     signal?: AbortSignal,
-  ): Promise<{
-    document: TDocument;
-    childIds: string[];
-  }> {
+  ): Promise<TDocument> {
     this.logger.verbose("get(@identifier, @view)", identifier, view);
     return await this.reactor.getByIdOrSlug<TDocument>(
       identifier,
@@ -152,13 +153,12 @@ export class ReactorClient implements IReactorClient {
       paging,
     );
 
-    const doc = await this.reactor.getByIdOrSlug(
+    const documentId = await this.documentView.resolveIdOrSlug(
       documentIdentifier,
       view,
       undefined,
       signal,
     );
-    const documentId = doc.document.header.id;
 
     const operationsByScope = await this.reactor.getOperations(
       documentId,
@@ -199,22 +199,23 @@ export class ReactorClient implements IReactorClient {
       view,
       paging,
     );
-    const parentDoc = await this.reactor.getByIdOrSlug(
+
+    const parentId = await this.documentView.resolveIdOrSlug(
       parentIdentifier,
       view,
       undefined,
       signal,
     );
-    const parentId = parentDoc.document.header.id;
 
     const relationships = await this.documentIndexer.getOutgoing(
       parentId,
       undefined,
       undefined,
+      undefined,
       signal,
     );
 
-    const childIds = relationships.map((rel) => rel.targetId);
+    const childIds = relationships.results.map((rel) => rel.targetId);
 
     if (childIds.length === 0) {
       return {
@@ -247,22 +248,23 @@ export class ReactorClient implements IReactorClient {
       view,
       paging,
     );
-    const childDoc = await this.reactor.getByIdOrSlug(
+
+    const childId = await this.documentView.resolveIdOrSlug(
       childIdentifier,
       view,
       undefined,
       signal,
     );
-    const childId = childDoc.document.header.id;
 
     const relationships = await this.documentIndexer.getIncoming(
       childId,
       undefined,
       undefined,
+      undefined,
       signal,
     );
 
-    const parentIds = relationships.map((rel) => rel.sourceId);
+    const parentIds = relationships.results.map((rel) => rel.sourceId);
 
     if (parentIds.length === 0) {
       return {
@@ -320,14 +322,12 @@ export class ReactorClient implements IReactorClient {
       await this.addChildren(parentIdentifier, [documentId], undefined, signal);
     }
 
-    const result = await this.reactor.get<TDocument>(
+    return await this.reactor.get<TDocument>(
       documentId,
       undefined,
       completedJob.consistencyToken,
       signal,
     );
-
-    return result.document;
   }
 
   /**
@@ -485,8 +485,7 @@ export class ReactorClient implements IReactorClient {
     }
 
     // since we waited for the job to complete we don't need the consistency token
-    const resultingDocument = await this.reactor.get<TDocument>(documentId);
-    return resultingDocument.document;
+    return await this.reactor.get<TDocument>(documentId);
   }
 
   /**
@@ -526,7 +525,7 @@ export class ReactorClient implements IReactorClient {
       completedJob.consistencyToken,
       signal,
     );
-    return result.document;
+    return result;
   }
 
   /**
@@ -612,7 +611,7 @@ export class ReactorClient implements IReactorClient {
       completedJob.consistencyToken,
       signal,
     );
-    return result.document;
+    return result;
   }
 
   /**
@@ -650,7 +649,7 @@ export class ReactorClient implements IReactorClient {
       completedJob.consistencyToken,
       signal,
     );
-    return result.document;
+    return result;
   }
 
   /**
@@ -716,8 +715,8 @@ export class ReactorClient implements IReactorClient {
     );
 
     return {
-      source: sourceResult.document,
-      target: targetResult.document,
+      source: sourceResult,
+      target: targetResult,
     };
   }
 
@@ -758,10 +757,11 @@ export class ReactorClient implements IReactorClient {
           currentId,
           ["child"],
           undefined,
+          undefined,
           signal,
         );
 
-        for (const rel of relationships) {
+        for (const rel of relationships.results) {
           if (!visited.has(rel.targetId)) {
             descendants.push(rel.targetId);
             queue.push(rel.targetId);
@@ -852,9 +852,7 @@ export class ReactorClient implements IReactorClient {
           try {
             const documents = await Promise.all(
               result.results.map((id) =>
-                this.reactor
-                  .get(id, view, undefined, undefined)
-                  .then((res) => res.document),
+                this.reactor.get(id, view, undefined, undefined),
               ),
             );
 

@@ -25,15 +25,16 @@ const __dirname = path.dirname(__filename);
 const DOCUMENT_MODEL_TYPE = "powerhouse/document-model";
 const DOCUMENT_NAME = "ToDoDocument";
 const EXPECTED_OPERATIONS = [
+  "SET_OPERATION_SCHEMA", // Rev 25
   "SET_OPERATION_SCHEMA", // Rev 24
   "SET_OPERATION_SCHEMA", // Rev 23
   "ADD_OPERATION", // Rev 22
   "SET_OPERATION_SCHEMA", // Rev 21
   "SET_OPERATION_SCHEMA", // Rev 20
   "SET_OPERATION_SCHEMA", // Rev 19
-  "SET_OPERATION_SCHEMA", // Rev 18
+  "ADD_OPERATION", // Rev 18
   "SET_OPERATION_SCHEMA", // Rev 17
-  "ADD_OPERATION", // Rev 16
+  "SET_OPERATION_SCHEMA", // Rev 16
   "SET_OPERATION_SCHEMA", // Rev 15
   "ADD_OPERATION", // Rev 14
   "ADD_MODULE", // Rev 13

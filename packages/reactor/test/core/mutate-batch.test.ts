@@ -1,4 +1,3 @@
-import type { IDocumentStorage } from "document-drive";
 import type { Action } from "document-model";
 import { v4 as uuidv4 } from "uuid";
 import { describe, expect, it } from "vitest";
@@ -8,8 +7,6 @@ import { EventBus } from "../../src/events/event-bus.js";
 import { InMemoryJobTracker } from "../../src/job-tracker/in-memory-job-tracker.js";
 import { InMemoryQueue } from "../../src/queue/queue.js";
 import { ReadModelCoordinator } from "../../src/read-models/coordinator.js";
-import { ConsistencyTracker } from "../../src/shared/consistency-tracker.js";
-import { ConsistencyAwareLegacyStorage } from "../../src/storage/consistency-aware-legacy-storage.js";
 import {
   createMockDocumentIndexer,
   createMockDocumentView,
@@ -20,27 +17,16 @@ import {
 } from "../factories.js";
 
 describe("mutateBatch validation", () => {
-  const createMockStorage = (): IDocumentStorage => {
-    return {} as IDocumentStorage;
-  };
-
   const createReactor = (): Reactor => {
     const registry = createTestRegistry();
-    const storage = createMockStorage();
     const eventBus = new EventBus();
     const queue = new InMemoryQueue(eventBus);
     const jobTracker = new InMemoryJobTracker(eventBus);
     const readModelCoordinator = new ReadModelCoordinator(eventBus, [], []);
-    const consistencyTracker = new ConsistencyTracker();
-    const consistencyAwareStorage = new ConsistencyAwareLegacyStorage(
-      storage,
-      consistencyTracker,
-      eventBus,
-    );
+
     return new Reactor(
       createMockLogger(),
       registry,
-      consistencyAwareStorage,
       queue,
       jobTracker,
       readModelCoordinator,

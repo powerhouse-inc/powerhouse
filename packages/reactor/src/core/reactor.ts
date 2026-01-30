@@ -13,7 +13,6 @@ import type {
   DocumentModelModule,
   ISigner,
   Operation,
-  PHBaseState,
   PHDocument,
 } from "document-model";
 import { v4 as uuidv4 } from "uuid";
@@ -37,7 +36,6 @@ import type {
 import { JobStatus } from "../shared/types.js";
 import { matchesScope } from "../shared/utils.js";
 import type {
-  IConsistencyAwareStorage,
   IDocumentIndexer,
   IDocumentView,
   IOperationStore,
@@ -51,7 +49,8 @@ import type {
 } from "./types.js";
 import {
   filterByType,
-  getSharedScope,
+  getSharedActionScope,
+  getSharedOperationScope,
   signAction,
   signActions,
   toErrorInfo,
@@ -67,7 +66,6 @@ import {
 export class Reactor implements IReactor {
   private logger: ILogger;
   private documentModelRegistry: IDocumentModelRegistry;
-  private documentStorage: IConsistencyAwareStorage;
   private shutdownStatus: ShutdownStatus;
   private setShutdown: (value: boolean) => void;
   private queue: IQueue;
@@ -75,14 +73,13 @@ export class Reactor implements IReactor {
   private readModelCoordinator: IReadModelCoordinator;
   private features: ReactorFeatures;
   private documentView: IDocumentView;
-  private _documentIndexer: IDocumentIndexer;
+  private documentIndexer: IDocumentIndexer;
   private operationStore: IOperationStore;
   private eventBus: IEventBus;
 
   constructor(
     logger: ILogger,
     documentModelRegistry: IDocumentModelRegistry,
-    documentStorage: IConsistencyAwareStorage,
     queue: IQueue,
     jobTracker: IJobTracker,
     readModelCoordinator: IReadModelCoordinator,
@@ -94,13 +91,12 @@ export class Reactor implements IReactor {
   ) {
     this.logger = logger;
     this.documentModelRegistry = documentModelRegistry;
-    this.documentStorage = documentStorage;
     this.queue = queue;
     this.jobTracker = jobTracker;
     this.readModelCoordinator = readModelCoordinator;
     this.features = features;
     this.documentView = documentView;
-    this._documentIndexer = documentIndexer;
+    this.documentIndexer = documentIndexer;
     this.operationStore = operationStore;
     this.eventBus = eventBus;
 
@@ -108,35 +104,19 @@ export class Reactor implements IReactor {
     this.shutdownStatus = status;
     this.setShutdown = setter;
 
-    this.logger.verbose(
-      "Reactor({ legacyStorage: @legacy })",
-      features.legacyStorageEnabled,
-    );
-
     this.readModelCoordinator.start();
   }
 
-  /**
-   * Signals that the reactor should shutdown.
-   */
   kill(): ShutdownStatus {
     this.logger.verbose("kill()");
 
-    // Mark the reactor as shutdown
     this.setShutdown(true);
-
-    // Stop the read model coordinator
     this.readModelCoordinator.stop();
-
-    // Stop the job tracker
     this.jobTracker.shutdown();
 
     return this.shutdownStatus;
   }
 
-  /**
-   * Retrieves a list of document model specifications
-   */
   getDocumentModels(
     namespace?: string,
     paging?: PagingOptions,
@@ -148,27 +128,22 @@ export class Reactor implements IReactor {
       paging,
     );
 
-    // Get document model modules from the registry + filter
-    const modules = this.documentModelRegistry.getAllModules();
+    if (signal?.aborted) {
+      throw new AbortError();
+    }
 
+    const modules = this.documentModelRegistry.getAllModules();
     const filteredModels = modules.filter(
       (module: DocumentModelModule) =>
         !namespace || module.documentModel.global.id.startsWith(namespace),
     );
 
-    // Apply paging
     const startIndex = paging ? parseInt(paging.cursor) || 0 : 0;
     const limit = paging?.limit || filteredModels.length;
     const pagedModels = filteredModels.slice(startIndex, startIndex + limit);
 
-    // Create paged results
     const hasMore = startIndex + limit < filteredModels.length;
     const nextCursor = hasMore ? String(startIndex + limit) : undefined;
-
-    // even thought this is currently synchronous, they could have passed in an already-aborted signal
-    if (signal?.aborted) {
-      throw new AbortError();
-    }
 
     return Promise.resolve({
       results: pagedModels,
@@ -185,218 +160,105 @@ export class Reactor implements IReactor {
     });
   }
 
-  /**
-   * Retrieves a specific PHDocument by id
-   */
   async get<TDocument extends PHDocument>(
     id: string,
     view?: ViewFilter,
     consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
-  ): Promise<{
-    document: TDocument;
-    childIds: string[];
-  }> {
+  ): Promise<TDocument> {
     this.logger.verbose("get(@id, @view)", id, view);
 
-    if (this.features.legacyStorageEnabled) {
-      const document = await this.documentStorage.get<TDocument>(
-        id,
-        consistencyToken,
-        signal,
-      );
-
-      if (signal?.aborted) {
-        throw new AbortError();
-      }
-
-      const childIds = await this.documentStorage.getChildren(
-        id,
-        consistencyToken,
-        signal,
-      );
-
-      if (signal?.aborted) {
-        throw new AbortError();
-      }
-
-      for (const scope in document.state) {
-        if (!matchesScope(view, scope)) {
-          delete document.state[scope as keyof PHBaseState];
-        }
-      }
-
-      return {
-        document,
-        childIds,
-      };
-    } else {
-      const document = await this.documentView.get<TDocument>(
-        id,
-        view,
-        consistencyToken,
-        signal,
-      );
-
-      if (signal?.aborted) {
-        throw new AbortError();
-      }
-
-      const relationships = await this._documentIndexer.getOutgoing(
-        id,
-        ["child"],
-        consistencyToken,
-        signal,
-      );
-
-      if (signal?.aborted) {
-        throw new AbortError();
-      }
-
-      const childIds = relationships.map((rel) => rel.targetId);
-
-      return {
-        document,
-        childIds,
-      };
-    }
+    return await this.documentView.get<TDocument>(
+      id,
+      view,
+      consistencyToken,
+      signal,
+    );
   }
 
-  /**
-   * Retrieves a specific PHDocument by slug
-   */
   async getBySlug<TDocument extends PHDocument>(
     slug: string,
     view?: ViewFilter,
     consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
-  ): Promise<{
-    document: TDocument;
-    childIds: string[];
-  }> {
+  ): Promise<TDocument> {
     this.logger.verbose("getBySlug(@slug, @view)", slug, view);
 
-    if (this.features.legacyStorageEnabled) {
-      let ids: string[];
-      try {
-        ids = await this.documentStorage.resolveIds(
-          [slug],
-          consistencyToken,
-          signal,
-        );
-      } catch (error) {
-        if (error instanceof Error && error.message.includes("not found")) {
-          throw new Error(`Document not found with slug: ${slug}`);
-        }
+    const documentId = await this.documentView.resolveSlug(
+      slug,
+      view,
+      consistencyToken,
+      signal,
+    );
 
-        throw error;
-      }
-
-      if (ids.length === 0 || !ids[0]) {
-        throw new Error(`Document not found with slug: ${slug}`);
-      }
-
-      return await this.get<TDocument>(ids[0], view, consistencyToken, signal);
-    } else {
-      const documentId = await this.documentView.resolveSlug(
-        slug,
-        view,
-        consistencyToken,
-        signal,
-      );
-
-      if (!documentId) {
-        throw new Error(`Document not found with slug: ${slug}`);
-      }
-
-      return await this.get<TDocument>(
-        documentId,
-        view,
-        consistencyToken,
-        signal,
-      );
+    if (!documentId) {
+      throw new Error(`Document not found with slug: ${slug}`);
     }
+
+    return await this.get<TDocument>(
+      documentId,
+      view,
+      consistencyToken,
+      signal,
+    );
   }
 
-  /**
-   * Retrieves a specific PHDocument by identifier (either id or slug)
-   */
   async getByIdOrSlug<TDocument extends PHDocument>(
     identifier: string,
     view?: ViewFilter,
     consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
-  ): Promise<{
-    document: TDocument;
-    childIds: string[];
-  }> {
+  ): Promise<TDocument> {
     this.logger.verbose("getByIdOrSlug(@identifier, @view)", identifier, view);
 
-    if (this.features.legacyStorageEnabled) {
-      try {
-        return await this.get<TDocument>(
-          identifier,
-          view,
-          consistencyToken,
-          signal,
-        );
-      } catch {
-        try {
-          const ids = await this.documentStorage.resolveIds(
-            [identifier],
-            consistencyToken,
-            signal,
-          );
-
-          if (ids.length === 0 || !ids[0]) {
-            throw new Error(`Document not found: ${identifier}`);
-          }
-
-          return await this.get<TDocument>(
-            ids[0],
-            view,
-            consistencyToken,
-            signal,
-          );
-        } catch {
-          throw new Error(`Document not found: ${identifier}`);
-        }
-      }
-    } else {
-      const document = await this.documentView.getByIdOrSlug<TDocument>(
-        identifier,
-        view,
-        consistencyToken,
-        signal,
-      );
-
-      if (signal?.aborted) {
-        throw new AbortError();
-      }
-
-      const relationships = await this._documentIndexer.getOutgoing(
-        document.header.id,
-        ["child"],
-        consistencyToken,
-        signal,
-      );
-
-      if (signal?.aborted) {
-        throw new AbortError();
-      }
-
-      const childIds = relationships.map((rel) => rel.targetId);
-
-      return {
-        document,
-        childIds,
-      };
-    }
+    return await this.documentView.getByIdOrSlug<TDocument>(
+      identifier,
+      view,
+      consistencyToken,
+      signal,
+    );
   }
 
-  /**
-   * Retrieves the operations for a document
-   */
+  async getChildren(
+    documentId: string,
+    consistencyToken?: ConsistencyToken,
+    signal?: AbortSignal,
+  ): Promise<string[]> {
+    const relationships = await this.documentIndexer.getOutgoing(
+      documentId,
+      ["child"],
+      undefined,
+      consistencyToken,
+      signal,
+    );
+
+    if (signal?.aborted) {
+      throw new AbortError();
+    }
+
+    return relationships.results.map((rel) => rel.targetId);
+  }
+
+  async getParents(
+    childId: string,
+    consistencyToken?: ConsistencyToken,
+    signal?: AbortSignal,
+  ): Promise<string[]> {
+    const relationships = await this.documentIndexer.getIncoming(
+      childId,
+      ["parent"],
+      undefined,
+      consistencyToken,
+      signal,
+    );
+
+    if (signal?.aborted) {
+      throw new AbortError();
+    }
+
+    return relationships.results.map((rel) => rel.sourceId);
+  }
+
   async getOperations(
     documentId: string,
     view?: ViewFilter,
@@ -413,135 +275,66 @@ export class Reactor implements IReactor {
       paging,
     );
 
-    if (this.features.legacyStorageEnabled) {
-      const document = await this.documentStorage.get(
-        documentId,
-        consistencyToken,
-        signal,
-      );
+    const branch = view?.branch || "main";
 
-      if (signal?.aborted) {
-        throw new AbortError();
-      }
+    const revisions = await this.operationStore.getRevisions(
+      documentId,
+      branch,
+      signal,
+    );
 
-      const operations = document.operations;
-      const result: Record<string, PagedResults<Operation>> = {};
-
-      for (const scope in operations) {
-        if (matchesScope(view, scope)) {
-          let scopeOperations = operations[scope];
-
-          if (filter) {
-            if (filter.actionTypes && filter.actionTypes.length > 0) {
-              scopeOperations = scopeOperations.filter((op) =>
-                filter.actionTypes!.includes(op.action.type),
-              );
-            }
-            if (filter.sinceRevision !== undefined) {
-              scopeOperations = scopeOperations.filter(
-                (op) => op.index >= filter.sinceRevision!,
-              );
-            }
-            if (filter.timestampFrom) {
-              const fromMs = new Date(filter.timestampFrom).getTime();
-              scopeOperations = scopeOperations.filter(
-                (op) => new Date(op.timestampUtcMs).getTime() >= fromMs,
-              );
-            }
-            if (filter.timestampTo) {
-              const toMs = new Date(filter.timestampTo).getTime();
-              scopeOperations = scopeOperations.filter(
-                (op) => new Date(op.timestampUtcMs).getTime() <= toMs,
-              );
-            }
-          }
-
-          const startIndex = paging ? parseInt(paging.cursor) || 0 : 0;
-          const limit = paging?.limit || scopeOperations.length;
-          const pagedOperations = scopeOperations.slice(
-            startIndex,
-            startIndex + limit,
-          );
-
-          result[scope] = {
-            results: pagedOperations,
-            options: { cursor: String(startIndex + limit), limit },
-          };
-        }
-      }
-
-      return Promise.resolve(result);
-    } else {
-      const branch = view?.branch || "main";
-
-      const revisions = await this.operationStore.getRevisions(
-        documentId,
-        branch,
-        signal,
-      );
-
-      if (signal?.aborted) {
-        throw new AbortError();
-      }
-
-      const allScopes = Object.keys(revisions.revision);
-      const result: Record<string, PagedResults<Operation>> = {};
-
-      for (const scope of allScopes) {
-        if (!matchesScope(view, scope)) {
-          continue;
-        }
-
-        if (signal?.aborted) {
-          throw new AbortError();
-        }
-
-        const scopeResult = await this.operationStore.getSince(
-          documentId,
-          scope,
-          branch,
-          -1,
-          filter,
-          paging,
-          signal,
-        );
-
-        const currentCursor = paging?.cursor ? parseInt(paging.cursor) : 0;
-        const currentLimit = paging?.limit || 100;
-
-        result[scope] = {
-          results: scopeResult.items,
-          options: {
-            cursor: scopeResult.nextCursor || String(currentCursor),
-            limit: currentLimit,
-          },
-          nextCursor: scopeResult.nextCursor,
-          next: scopeResult.hasMore
-            ? async () => {
-                const nextPage = await this.getOperations(
-                  documentId,
-                  view,
-                  filter,
-                  {
-                    cursor: scopeResult.nextCursor!,
-                    limit: currentLimit,
-                  },
-                  consistencyToken,
-                  signal,
-                );
-                return nextPage[scope];
-              }
-            : undefined,
-        };
-      }
-
-      return result;
+    if (signal?.aborted) {
+      throw new AbortError();
     }
+
+    const allScopes = Object.keys(revisions.revision);
+    const result: Record<string, PagedResults<Operation>> = {};
+
+    for (const scope of allScopes) {
+      if (!matchesScope(view, scope)) {
+        continue;
+      }
+
+      if (signal?.aborted) {
+        throw new AbortError();
+      }
+
+      const scopeResult = await this.operationStore.getSince(
+        documentId,
+        scope,
+        branch,
+        -1,
+        filter,
+        paging,
+        signal,
+      );
+
+      result[scope] = {
+        results: scopeResult.results,
+        options: scopeResult.options,
+        nextCursor: scopeResult.nextCursor,
+        next: scopeResult.next
+          ? async () => {
+              const nextPage = await this.getOperations(
+                documentId,
+                view,
+                filter,
+                {
+                  cursor: scopeResult.nextCursor!,
+                  limit: scopeResult.options.limit,
+                },
+                consistencyToken,
+                signal,
+              );
+              return nextPage[scope];
+            }
+          : undefined,
+      };
+    }
+
+    return result;
   }
 
-  /**
-   * Filters documents by criteria and returns a list of them
-   */
   async find(
     search: SearchFilter,
     view?: ViewFilter,
@@ -585,6 +378,7 @@ export class Reactor implements IReactor {
         search.parentId,
         view,
         paging,
+        consistencyToken,
         signal,
       );
 
@@ -610,9 +404,6 @@ export class Reactor implements IReactor {
     return results;
   }
 
-  /**
-   * Creates a document
-   */
   async create(
     document: PHDocument,
     signer?: ISigner,
@@ -660,13 +451,11 @@ export class Reactor implements IReactor {
       initialState: document.state,
     });
 
-    // Sign actions if signer is provided
     let actions: Action[] = [createAction, upgradeAction];
     if (signer) {
       actions = await signActions(actions, signer, signal);
     }
 
-    // Create a single job with both CREATE_DOCUMENT and UPGRADE_DOCUMENT actions
     const job: Job = {
       id: uuidv4(),
       kind: "mutation",
@@ -682,7 +471,6 @@ export class Reactor implements IReactor {
       meta,
     };
 
-    // Create job info and register with tracker
     const jobInfo: JobInfo = {
       id: job.id,
       status: JobStatus.PENDING,
@@ -697,15 +485,11 @@ export class Reactor implements IReactor {
     this.jobTracker.registerJob(jobInfo);
     this.emitJobPending(jobInfo.id, meta);
 
-    // Enqueue the job
     await this.queue.enqueue(job);
 
     return jobInfo;
   }
 
-  /**
-   * Deletes a document
-   */
   async deleteDocument(
     id: string,
     signer?: ISigner,
@@ -721,7 +505,6 @@ export class Reactor implements IReactor {
 
     let action = deleteDocumentAction(id);
 
-    // Sign action if signer is provided
     if (signer) {
       action = await signAction(action, signer, signal);
     }
@@ -760,9 +543,6 @@ export class Reactor implements IReactor {
     return jobInfo;
   }
 
-  /**
-   * Applies a list of actions to a document
-   */
   async execute(
     docId: string,
     branch: string,
@@ -782,11 +562,8 @@ export class Reactor implements IReactor {
     }
 
     const createdAtUtcIso = new Date().toISOString();
+    const scope = getSharedActionScope(actions);
 
-    // Determine scope from first action (all actions should have the same scope)
-    const scope = actions.length > 0 ? actions[0].scope || "global" : "global";
-
-    // Create a single job with all actions
     const job: Job = {
       id: uuidv4(),
       kind: "mutation",
@@ -802,7 +579,6 @@ export class Reactor implements IReactor {
       meta,
     };
 
-    // Create job info and register with tracker
     const jobInfo: JobInfo = {
       id: job.id,
       status: JobStatus.PENDING,
@@ -817,7 +593,6 @@ export class Reactor implements IReactor {
     this.jobTracker.registerJob(jobInfo);
     this.emitJobPending(jobInfo.id, meta);
 
-    // Enqueue the job
     await this.queue.enqueue(job);
 
     if (signal?.aborted) {
@@ -827,11 +602,6 @@ export class Reactor implements IReactor {
     return jobInfo;
   }
 
-  /**
-   * Imports pre-existing operations that were produced by another reactor.
-   * This function may cause a reshuffle, which will generate additional
-   * operations.
-   */
   async load(
     docId: string,
     branch: string,
@@ -855,16 +625,7 @@ export class Reactor implements IReactor {
       throw new Error("load requires at least one operation");
     }
 
-    // validate the operations
-    const scope = getSharedScope(operations);
-    operations.forEach((operation, index) => {
-      if (!operation.timestampUtcMs) {
-        throw new Error(
-          `Operation at position ${index} is missing timestampUtcMs`,
-        );
-      }
-    });
-
+    const scope = getSharedOperationScope(operations);
     const createdAtUtcIso = new Date().toISOString();
     const job: Job = {
       id: uuidv4(),
@@ -904,9 +665,6 @@ export class Reactor implements IReactor {
     return jobInfo;
   }
 
-  /**
-   * Applies multiple mutations across documents with dependency management
-   */
   async executeBatch(
     request: BatchExecutionRequest,
     signal?: AbortSignal,
@@ -996,9 +754,6 @@ export class Reactor implements IReactor {
     return result;
   }
 
-  /**
-   * Adds multiple documents as children to another
-   */
   async addChildren(
     parentId: string,
     documentIds: string[],
@@ -1021,7 +776,6 @@ export class Reactor implements IReactor {
       addRelationshipAction(parentId, childId, "child"),
     );
 
-    // Sign actions if signer is provided
     if (signer) {
       actions = await signActions(actions, signer, signal);
     }
@@ -1029,9 +783,6 @@ export class Reactor implements IReactor {
     return await this.execute(parentId, branch, actions, signal);
   }
 
-  /**
-   * Removes multiple documents as children from another
-   */
   async removeChildren(
     parentId: string,
     documentIds: string[],
@@ -1054,7 +805,6 @@ export class Reactor implements IReactor {
       removeRelationshipAction(parentId, childId, "child"),
     );
 
-    // Sign actions if signer is provided
     if (signer) {
       actions = await signActions(actions, signer, signal);
     }
@@ -1062,9 +812,6 @@ export class Reactor implements IReactor {
     return await this.execute(parentId, branch, actions, signal);
   }
 
-  /**
-   * Retrieves the status of a job
-   */
   getJobStatus(jobId: string, signal?: AbortSignal): Promise<JobInfo> {
     this.logger.verbose("getJobStatus(@jobId)", jobId);
 
@@ -1075,7 +822,6 @@ export class Reactor implements IReactor {
     const jobInfo = this.jobTracker.getJobStatus(jobId);
 
     if (!jobInfo) {
-      // Job not found - return FAILED status with appropriate error
       const now = new Date().toISOString();
       return Promise.resolve({
         id: jobId,
@@ -1094,9 +840,6 @@ export class Reactor implements IReactor {
     return Promise.resolve(jobInfo);
   }
 
-  /**
-   * Finds documents by their IDs
-   */
   private async findByIds(
     ids: string[],
     view?: ViewFilter,
@@ -1106,131 +849,27 @@ export class Reactor implements IReactor {
   ): Promise<PagedResults<PHDocument>> {
     this.logger.verbose("findByIds(@count ids)", ids.length);
 
-    if (consistencyToken) {
-      await this.documentView.waitForConsistency(
-        consistencyToken,
-        undefined,
-        signal,
-      );
-    }
-    if (this.features.legacyStorageEnabled) {
-      const documents: PHDocument[] = [];
+    const startIndex = paging?.cursor ? parseInt(paging.cursor) || 0 : 0;
+    const limit = paging?.limit || ids.length;
+    const pagedIds = ids.slice(startIndex, startIndex + limit);
 
-      // Fetch each document by ID using storage directly
-      for (const id of ids) {
-        if (signal?.aborted) {
-          throw new AbortError();
-        }
+    const results = await this.documentView.getMany<PHDocument>(
+      pagedIds,
+      view,
+      consistencyToken,
+      signal,
+    );
 
-        let document: PHDocument;
-        try {
-          document = await this.documentStorage.get<PHDocument>(
-            id,
-            consistencyToken,
-            signal,
-          );
-        } catch {
-          // Skip documents that don't exist or can't be accessed
-          // This matches the behavior expected from a search operation
-          continue;
-        }
+    const hasMore = startIndex + limit < ids.length;
+    const nextCursor = hasMore ? String(startIndex + limit) : undefined;
 
-        // Apply view filter - This will be removed when we pass the viewfilter along
-        // to the underlying store, but is here now for the interface.
-        for (const scope in document.state) {
-          if (!matchesScope(view, scope)) {
-            delete document.state[scope as keyof PHBaseState];
-          }
-        }
-
-        documents.push(document);
-      }
-
-      if (signal?.aborted) {
-        throw new AbortError();
-      }
-
-      // Apply paging
-      const startIndex = paging ? parseInt(paging.cursor) || 0 : 0;
-      const limit = paging?.limit || documents.length;
-      const pagedDocuments = documents.slice(startIndex, startIndex + limit);
-
-      // Create paged results
-      const hasMore = startIndex + limit < documents.length;
-      const nextCursor = hasMore ? String(startIndex + limit) : undefined;
-
-      return {
-        results: pagedDocuments,
-        options: paging || { cursor: "0", limit: documents.length },
-        nextCursor,
-        next: hasMore
-          ? () =>
-              this.findByIds(
-                ids,
-                view,
-                { cursor: nextCursor!, limit },
-                consistencyToken,
-                signal,
-              )
-          : undefined,
-      };
-    } else {
-      const documents: PHDocument[] = [];
-
-      // Fetch each document by ID using documentView
-      for (const id of ids) {
-        if (signal?.aborted) {
-          throw new AbortError();
-        }
-
-        try {
-          const document = await this.documentView.get<PHDocument>(
-            id,
-            view,
-            undefined,
-            signal,
-          );
-          documents.push(document);
-        } catch {
-          // Skip documents that don't exist or can't be accessed
-          continue;
-        }
-      }
-
-      if (signal?.aborted) {
-        throw new AbortError();
-      }
-
-      // Apply paging
-      const startIndex = paging ? parseInt(paging.cursor) || 0 : 0;
-      const limit = paging?.limit || documents.length;
-      const pagedDocuments = documents.slice(startIndex, startIndex + limit);
-
-      // Create paged results
-      const hasMore = startIndex + limit < documents.length;
-      const nextCursor = hasMore ? String(startIndex + limit) : undefined;
-
-      return {
-        results: pagedDocuments,
-        options: paging || { cursor: "0", limit: documents.length },
-        nextCursor,
-        next: hasMore
-          ? () =>
-              this.findByIds(
-                ids,
-                view,
-                { cursor: nextCursor!, limit },
-                consistencyToken,
-                signal,
-              )
-          : undefined,
-      };
-    }
+    return {
+      results,
+      options: paging || { cursor: "0", limit: ids.length },
+      nextCursor,
+    };
   }
 
-  /**
-   * Finds documents by their slugs
-   */
   private async findBySlugs(
     slugs: string[],
     view?: ViewFilter,
@@ -1240,252 +879,37 @@ export class Reactor implements IReactor {
   ): Promise<PagedResults<PHDocument>> {
     this.logger.verbose("findBySlugs(@count slugs)", slugs.length);
 
-    if (consistencyToken) {
-      await this.documentView.waitForConsistency(
-        consistencyToken,
-        undefined,
-        signal,
-      );
-    }
-    if (this.features.legacyStorageEnabled) {
-      const documents: PHDocument[] = [];
+    const ids = await this.documentView.resolveSlugs(
+      slugs,
+      view,
+      consistencyToken,
+      signal,
+    );
 
-      // Use storage to resolve slugs to IDs
-      let ids: string[];
-      try {
-        ids = await this.documentStorage.resolveIds(
-          slugs,
-          consistencyToken,
-          signal,
-        );
-      } catch {
-        // If slug resolution fails, return empty results
-        // This matches the behavior expected from a search operation
-        ids = [];
-      }
-
-      // Fetch each document by resolved ID
-      for (const id of ids) {
-        if (signal?.aborted) {
-          throw new AbortError();
-        }
-
-        let document: PHDocument;
-        try {
-          document = await this.documentStorage.get<PHDocument>(
-            id,
-            consistencyToken,
-            signal,
-          );
-        } catch {
-          // Skip documents that don't exist or can't be accessed
-          continue;
-        }
-
-        // Apply view filter - This will be removed when we pass the viewfilter along
-        // to the underlying store, but is here now for the interface.
-        for (const scope in document.state) {
-          if (!matchesScope(view, scope)) {
-            delete document.state[scope as keyof PHBaseState];
-          }
-        }
-
-        documents.push(document);
-      }
-
-      if (signal?.aborted) {
-        throw new AbortError();
-      }
-
-      // Apply paging - this will be removed when we pass the paging along
-      // to the underlying store, but is here now for the interface.
-      const startIndex = paging ? parseInt(paging.cursor) || 0 : 0;
-      const limit = paging?.limit || documents.length;
-      const pagedDocuments = documents.slice(startIndex, startIndex + limit);
-
-      // Create paged results
-      const hasMore = startIndex + limit < documents.length;
-      const nextCursor = hasMore ? String(startIndex + limit) : undefined;
-
-      return {
-        results: pagedDocuments,
-        options: paging || { cursor: "0", limit: documents.length },
-        nextCursor,
-        next: hasMore
-          ? () =>
-              this.findBySlugs(
-                slugs,
-                view,
-                { cursor: nextCursor!, limit },
-                consistencyToken,
-                signal,
-              )
-          : undefined,
-      };
-    } else {
-      const documents: PHDocument[] = [];
-
-      // Resolve each slug to a document ID
-      const documentIds: string[] = [];
-      for (const slug of slugs) {
-        if (signal?.aborted) {
-          throw new AbortError();
-        }
-
-        const documentId = await this.documentView.resolveSlug(
-          slug,
-          view,
-          undefined,
-          signal,
-        );
-
-        if (documentId) {
-          documentIds.push(documentId);
-        }
-      }
-
-      // Fetch each document
-      for (const documentId of documentIds) {
-        if (signal?.aborted) {
-          throw new AbortError();
-        }
-
-        try {
-          const document = await this.documentView.get<PHDocument>(
-            documentId,
-            view,
-            undefined,
-            signal,
-          );
-          documents.push(document);
-        } catch {
-          // Skip documents that don't exist or can't be accessed
-          continue;
-        }
-      }
-
-      if (signal?.aborted) {
-        throw new AbortError();
-      }
-
-      // Apply paging
-      const startIndex = paging ? parseInt(paging.cursor) || 0 : 0;
-      const limit = paging?.limit || documents.length;
-      const pagedDocuments = documents.slice(startIndex, startIndex + limit);
-
-      // Create paged results
-      const hasMore = startIndex + limit < documents.length;
-      const nextCursor = hasMore ? String(startIndex + limit) : undefined;
-
-      return {
-        results: pagedDocuments,
-        options: paging || { cursor: "0", limit: documents.length },
-        nextCursor,
-        next: hasMore
-          ? () =>
-              this.findBySlugs(
-                slugs,
-                view,
-                { cursor: nextCursor!, limit },
-                consistencyToken,
-                signal,
-              )
-          : undefined,
-      };
-    }
+    return await this.findByIds(ids, view, paging, consistencyToken, signal);
   }
 
-  /**
-   * Finds documents by parent ID
-   */
   private async findByParentId(
     parentId: string,
     view?: ViewFilter,
     paging?: PagingOptions,
+    consistencyToken?: ConsistencyToken,
     signal?: AbortSignal,
   ): Promise<PagedResults<PHDocument>> {
     this.logger.verbose("findByParentId(@parentId)", parentId);
 
-    // Get child relationships from indexer
-    const relationships = await this._documentIndexer.getOutgoing(
+    const relationships = await this.documentIndexer.getOutgoing(
       parentId,
       ["child"],
-      undefined,
+      paging,
+      consistencyToken,
       signal,
     );
 
-    if (signal?.aborted) {
-      throw new AbortError();
-    }
-
-    const documents: PHDocument[] = [];
-
-    // Fetch each child document using the appropriate storage method
-    for (const relationship of relationships) {
-      if (signal?.aborted) {
-        throw new AbortError();
-      }
-
-      try {
-        let document: PHDocument;
-        if (this.features.legacyStorageEnabled) {
-          document = await this.documentStorage.get<PHDocument>(
-            relationship.targetId,
-          );
-
-          // Apply view filter for legacy storage
-          for (const scope in document.state) {
-            if (!matchesScope(view, scope)) {
-              delete document.state[scope as keyof PHBaseState];
-            }
-          }
-        } else {
-          document = await this.documentView.get<PHDocument>(
-            relationship.targetId,
-            view,
-            undefined,
-            signal,
-          );
-        }
-        documents.push(document);
-      } catch {
-        // Skip documents that don't exist or can't be accessed
-        continue;
-      }
-    }
-
-    if (signal?.aborted) {
-      throw new AbortError();
-    }
-
-    // Apply paging
-    const startIndex = paging ? parseInt(paging.cursor) || 0 : 0;
-    const limit = paging?.limit || documents.length;
-    const pagedDocuments = documents.slice(startIndex, startIndex + limit);
-
-    // Create paged results
-    const hasMore = startIndex + limit < documents.length;
-    const nextCursor = hasMore ? String(startIndex + limit) : undefined;
-
-    return {
-      results: pagedDocuments,
-      options: paging || { cursor: "0", limit: documents.length },
-      nextCursor,
-      next: hasMore
-        ? () =>
-            this.findByParentId(
-              parentId,
-              view,
-              { cursor: nextCursor!, limit },
-              signal,
-            )
-        : undefined,
-    };
+    const ids = relationships.results.map((rel) => rel.targetId);
+    return await this.findByIds(ids, view, paging, undefined, signal);
   }
 
-  /**
-   * Finds documents by type
-   */
   private async findByType(
     type: string,
     view?: ViewFilter,
@@ -1495,114 +919,13 @@ export class Reactor implements IReactor {
   ): Promise<PagedResults<PHDocument>> {
     this.logger.verbose("findByType(@type)", type);
 
-    if (consistencyToken) {
-      await this.documentView.waitForConsistency(
-        consistencyToken,
-        undefined,
-        signal,
-      );
-    }
-    if (this.features.legacyStorageEnabled) {
-      const documents: PHDocument[] = [];
-
-      // Use storage's findByType method directly
-      const cursor = paging?.cursor;
-      const limit = paging?.limit || 100;
-
-      // Get document IDs of the specified type
-      const { documents: documentIds, nextCursor } =
-        await this.documentStorage.findByType(
-          type,
-          limit,
-          cursor,
-          consistencyToken,
-          signal,
-        );
-
-      if (signal?.aborted) {
-        throw new AbortError();
-      }
-
-      // Fetch each document by its ID
-      for (const documentId of documentIds) {
-        if (signal?.aborted) {
-          throw new AbortError();
-        }
-
-        let document: PHDocument;
-        try {
-          document = await this.documentStorage.get<PHDocument>(
-            documentId,
-            consistencyToken,
-            signal,
-          );
-        } catch {
-          // Skip documents that can't be retrieved
-          continue;
-        }
-
-        // Apply view filter
-        for (const scope in document.state) {
-          if (!matchesScope(view, scope)) {
-            delete document.state[scope as keyof PHBaseState];
-          }
-        }
-
-        documents.push(document);
-      }
-
-      if (signal?.aborted) {
-        throw new AbortError();
-      }
-
-      // Results are already paged from the storage layer
-      return {
-        results: documents,
-        options: paging || { cursor: cursor || "0", limit },
-        nextCursor,
-        next: nextCursor
-          ? async () =>
-              this.findByType(
-                type,
-                view,
-                { cursor: nextCursor, limit },
-                consistencyToken,
-                signal,
-              )
-          : undefined,
-      };
-    } else {
-      const result = await this.documentView.findByType(
-        type,
-        view,
-        paging,
-        consistencyToken,
-        signal,
-      );
-
-      if (signal?.aborted) {
-        throw new AbortError();
-      }
-
-      const cursor = paging?.cursor;
-      const limit = paging?.limit || 100;
-
-      return {
-        results: result.items,
-        options: paging || { cursor: cursor || "0", limit },
-        nextCursor: result.nextCursor,
-        next: result.nextCursor
-          ? async () =>
-              this.findByType(
-                type,
-                view,
-                { cursor: result.nextCursor!, limit },
-                consistencyToken,
-                signal,
-              )
-          : undefined,
-      };
-    }
+    return await this.documentView.findByType(
+      type,
+      view,
+      paging,
+      consistencyToken,
+      signal,
+    );
   }
 
   private emitJobPending(jobId: string, meta?: Record<string, unknown>): void {

@@ -55,10 +55,10 @@ describe("KyselyOperationStore", () => {
 
       // Verify operation was stored
       const result = await store.getSince(documentId, scope, branch, -1);
-      expect(result.items).toHaveLength(1);
-      expect(result.items[0].id).toBe(opId);
-      expect(result.items[0].action.type).toBe("ADD_FOLDER");
-      expect(result.items[0].action.input).toHaveProperty(
+      expect(result.results).toHaveLength(1);
+      expect(result.results[0].id).toBe(opId);
+      expect(result.results[0].action.type).toBe("ADD_FOLDER");
+      expect(result.results[0].action.input).toHaveProperty(
         "name",
         "Test Folder",
       );
@@ -128,9 +128,9 @@ describe("KyselyOperationStore", () => {
       });
 
       const result = await store.getSince(documentId, scope, branch, -1);
-      expect(result.items).toHaveLength(2);
-      expect(result.items[0].id).toBe(sharedOpId);
-      expect(result.items[1].id).toBe(sharedOpId);
+      expect(result.results).toHaveLength(2);
+      expect(result.results[0].id).toBe(sharedOpId);
+      expect(result.results[1].id).toBe(sharedOpId);
     });
 
     it("should allow same opId with different skip (undo/redo scenario)", async () => {
@@ -171,9 +171,9 @@ describe("KyselyOperationStore", () => {
       });
 
       const result = await store.getSince(documentId, scope, branch, -1);
-      expect(result.items).toHaveLength(2);
-      expect(result.items[0].skip).toBe(0);
-      expect(result.items[1].skip).toBe(1);
+      expect(result.results).toHaveLength(2);
+      expect(result.results[0].skip).toBe(0);
+      expect(result.results[1].skip).toBe(1);
     });
 
     it("should reject duplicate (opId, index, skip) combination", async () => {
@@ -246,11 +246,11 @@ describe("KyselyOperationStore", () => {
 
       // Get operations since revision 0 (should return operations at revision 1 and 2)
       const result = await store.getSince(documentId, scope, branch, 0);
-      expect(result.items).toHaveLength(2);
-      expect(result.items[0].index).toBe(1);
-      expect(result.items[1].index).toBe(2);
-      expect(result.items[0].action.type).toBe("ADD_FOLDER");
-      expect(result.hasMore).toBe(false);
+      expect(result.results).toHaveLength(2);
+      expect(result.results[0].index).toBe(1);
+      expect(result.results[1].index).toBe(2);
+      expect(result.results[0].action.type).toBe("ADD_FOLDER");
+      expect(result.nextCursor).toBeUndefined();
     });
 
     it("should return empty array when no operations since revision", async () => {
@@ -280,8 +280,8 @@ describe("KyselyOperationStore", () => {
 
       // Get operations since revision 0 (should return empty array)
       const result = await store.getSince(documentId, scope, branch, 0);
-      expect(result.items).toHaveLength(0);
-      expect(result.hasMore).toBe(false);
+      expect(result.results).toHaveLength(0);
+      expect(result.nextCursor).toBeUndefined();
     });
 
     it("should support cursor-based paging", async () => {
@@ -322,10 +322,9 @@ describe("KyselyOperationStore", () => {
           limit: 2,
         },
       );
-      expect(page1.items).toHaveLength(2);
-      expect(page1.items[0].index).toBe(1);
-      expect(page1.items[1].index).toBe(2);
-      expect(page1.hasMore).toBe(true);
+      expect(page1.results).toHaveLength(2);
+      expect(page1.results[0].index).toBe(1);
+      expect(page1.results[1].index).toBe(2);
       expect(page1.nextCursor).toBeDefined();
 
       // Get second page using cursor
@@ -336,14 +335,14 @@ describe("KyselyOperationStore", () => {
         0,
         undefined,
         {
-          cursor: page1.nextCursor,
+          cursor: page1.nextCursor!,
           limit: 2,
         },
       );
-      expect(page2.items).toHaveLength(2);
-      expect(page2.items[0].index).toBe(3);
-      expect(page2.items[1].index).toBe(4);
-      expect(page2.hasMore).toBe(false);
+      expect(page2.results).toHaveLength(2);
+      expect(page2.results[0].index).toBe(3);
+      expect(page2.results[1].index).toBe(4);
+      expect(page2.nextCursor).toBeUndefined();
     });
   });
 
@@ -374,14 +373,14 @@ describe("KyselyOperationStore", () => {
 
       // Get all operations first to find the first ID
       const allOps = await store.getSince(documentId, scope, branch, -1);
-      expect(allOps.items.length).toBeGreaterThanOrEqual(3);
+      expect(allOps.results.length).toBeGreaterThanOrEqual(3);
 
       // Get operations since the first database ID
       // Note: This uses the internal database ID, not the operation ID
       const result = await store.getSinceId(1); // Assuming first DB ID is 1
 
-      expect(result.items.length).toBeGreaterThanOrEqual(1);
-      result.items.forEach((item) => {
+      expect(result.results.length).toBeGreaterThanOrEqual(1);
+      result.results.forEach((item) => {
         expect(item.operation.action.type).toBe("DELETE_NODE");
         expect(item.context.documentId).toBe(documentId);
       });

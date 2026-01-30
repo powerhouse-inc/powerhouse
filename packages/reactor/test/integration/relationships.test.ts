@@ -78,12 +78,13 @@ describe("Relationship Operations", () => {
     await vi.waitUntil(
       async () => {
         const results = await documentIndexer.getOutgoing(sourceId, types);
-        return results.length === expectedCount;
+        return results.results.length === expectedCount;
       },
       { timeout: 5000 },
     );
 
-    return documentIndexer.getOutgoing(sourceId, types);
+    const results = await documentIndexer.getOutgoing(sourceId, types);
+    return results.results;
   }
 
   async function waitForIncomingCount(
@@ -94,12 +95,13 @@ describe("Relationship Operations", () => {
     await vi.waitUntil(
       async () => {
         const results = await documentIndexer.getIncoming(targetId, types);
-        return results.length === expectedCount;
+        return results.results.length === expectedCount;
       },
       { timeout: 5000 },
     );
 
-    return documentIndexer.getIncoming(targetId, types);
+    const results = await documentIndexer.getIncoming(targetId, types);
+    return results.results;
   }
 
   beforeEach(async () => {
@@ -241,7 +243,7 @@ describe("Relationship Operations", () => {
           const outgoing = await documentIndexer.getOutgoing("parent-5", [
             "child",
           ]);
-          return outgoing.length === 0;
+          return outgoing.results.length === 0;
         },
         { timeout: 5000 },
       );
@@ -255,7 +257,7 @@ describe("Relationship Operations", () => {
       await waitForJobCompletion(removeJob.id);
 
       const outgoing = await documentIndexer.getOutgoing("parent-6", ["child"]);
-      expect(outgoing).toHaveLength(0);
+      expect(outgoing.results).toHaveLength(0);
     });
   });
 
@@ -305,10 +307,10 @@ describe("Relationship Operations", () => {
         ["child"],
       );
 
-      expect(relationships).toHaveLength(1);
-      expect(relationships[0]?.sourceId).toBe("parent-7");
-      expect(relationships[0]?.targetId).toBe("child-7");
-      expect(relationships[0]?.relationshipType).toBe("child");
+      expect(relationships.results).toHaveLength(1);
+      expect(relationships.results[0]?.sourceId).toBe("parent-7");
+      expect(relationships.results[0]?.targetId).toBe("child-7");
+      expect(relationships.results[0]?.relationshipType).toBe("child");
     });
 
     it("should find path between documents", async () => {

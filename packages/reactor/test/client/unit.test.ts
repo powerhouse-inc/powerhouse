@@ -15,11 +15,15 @@ import {
   type JobInfo,
   type PagedResults,
 } from "../../src/shared/types.js";
-import type { IDocumentIndexer } from "../../src/storage/interfaces.js";
+import type {
+  IDocumentIndexer,
+  IDocumentView,
+} from "../../src/storage/interfaces.js";
 import type { IReactorSubscriptionManager } from "../../src/subs/types.js";
 import {
   createEmptyConsistencyToken,
   createMockDocumentIndexer,
+  createMockDocumentView,
   createMockJobAwaiter,
   createMockLogger,
   createMockSigner,
@@ -33,9 +37,11 @@ describe("ReactorClient Unit Tests", () => {
   let mockSubscriptionManager: IReactorSubscriptionManager;
   let mockJobAwaiter: IJobAwaiter;
   let mockDocumentIndexer: IDocumentIndexer;
+  let mockDocumentView: IDocumentView;
 
   beforeEach(() => {
     mockDocumentIndexer = createMockDocumentIndexer();
+    mockDocumentView = createMockDocumentView();
 
     mockReactor = {
       documentIndexer: mockDocumentIndexer,
@@ -46,6 +52,7 @@ describe("ReactorClient Unit Tests", () => {
       get: vi.fn(),
       getBySlug: vi.fn(),
       getByIdOrSlug: vi.fn(),
+      getOperations: vi.fn().mockResolvedValue({}),
       find: vi.fn().mockResolvedValue({
         results: [],
         options: { cursor: "", limit: 10 },
@@ -71,6 +78,7 @@ describe("ReactorClient Unit Tests", () => {
       mockSubscriptionManager,
       mockJobAwaiter,
       mockDocumentIndexer,
+      mockDocumentView,
     );
   });
 
@@ -116,10 +124,7 @@ describe("ReactorClient Unit Tests", () => {
         header: { id: "doc-1", documentType: "test" },
       } as PHDocument;
 
-      vi.mocked(mockReactor.getByIdOrSlug).mockResolvedValue({
-        document: mockDoc,
-        childIds: [],
-      });
+      vi.mocked(mockReactor.getByIdOrSlug).mockResolvedValue(mockDoc);
 
       const result = await client.get("doc-1");
 
@@ -129,7 +134,7 @@ describe("ReactorClient Unit Tests", () => {
         undefined,
         undefined,
       );
-      expect(result.document).toEqual(mockDoc);
+      expect(result).toEqual(mockDoc);
     });
 
     it("should resolve both IDs and slugs", async () => {
@@ -137,10 +142,7 @@ describe("ReactorClient Unit Tests", () => {
         header: { id: "doc-1", documentType: "test", slug: "my-doc" },
       } as PHDocument;
 
-      vi.mocked(mockReactor.getByIdOrSlug).mockResolvedValue({
-        document: mockDoc,
-        childIds: [],
-      });
+      vi.mocked(mockReactor.getByIdOrSlug).mockResolvedValue(mockDoc);
 
       const result = await client.get("my-doc");
 
@@ -150,17 +152,14 @@ describe("ReactorClient Unit Tests", () => {
         undefined,
         undefined,
       );
-      expect(result.document.header.slug).toBe("my-doc");
+      expect(result.header.slug).toBe("my-doc");
     });
 
     it("should pass view and signal parameters", async () => {
       const view = { branch: "main" };
       const signal = new AbortController().signal;
 
-      vi.mocked(mockReactor.getByIdOrSlug).mockResolvedValue({
-        document: {} as PHDocument,
-        childIds: [],
-      });
+      vi.mocked(mockReactor.getByIdOrSlug).mockResolvedValue({} as PHDocument);
 
       await client.get("doc-1", view, signal);
 
@@ -213,6 +212,247 @@ describe("ReactorClient Unit Tests", () => {
     });
   });
 
+  describe("getOperations", () => {
+    it("should use documentView.resolveIdOrSlug to resolve the identifier", async () => {
+      vi.mocked(mockDocumentView.resolveIdOrSlug).mockResolvedValue(
+        "resolved-doc-id",
+      );
+      vi.mocked(mockReactor.getOperations).mockResolvedValue({});
+
+      await client.getOperations("my-slug");
+
+      expect(mockDocumentView.resolveIdOrSlug).toHaveBeenCalledWith(
+        "my-slug",
+        undefined,
+        undefined,
+        undefined,
+      );
+      expect(mockReactor.getOperations).toHaveBeenCalledWith(
+        "resolved-doc-id",
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+      );
+    });
+
+    it("should pass view and signal to resolveIdOrSlug", async () => {
+      const view = { branch: "feature" };
+      const signal = new AbortController().signal;
+
+      vi.mocked(mockDocumentView.resolveIdOrSlug).mockResolvedValue("doc-1");
+      vi.mocked(mockReactor.getOperations).mockResolvedValue({});
+
+      await client.getOperations("doc-1", view, undefined, undefined, signal);
+
+      expect(mockDocumentView.resolveIdOrSlug).toHaveBeenCalledWith(
+        "doc-1",
+        view,
+        undefined,
+        signal,
+      );
+    });
+  });
+
+  describe("getChildren", () => {
+    it("should use documentView.resolveIdOrSlug to resolve the parent identifier", async () => {
+      vi.mocked(mockDocumentView.resolveIdOrSlug).mockResolvedValue(
+        "resolved-parent-id",
+      );
+      vi.mocked(mockDocumentIndexer.getOutgoing).mockResolvedValue({
+        results: [],
+        options: { cursor: "0", limit: 100 },
+      });
+
+      await client.getChildren("parent-slug");
+
+      expect(mockDocumentView.resolveIdOrSlug).toHaveBeenCalledWith(
+        "parent-slug",
+        undefined,
+        undefined,
+        undefined,
+      );
+      expect(mockDocumentIndexer.getOutgoing).toHaveBeenCalledWith(
+        "resolved-parent-id",
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+      );
+    });
+
+    it("should pass view and signal to resolveIdOrSlug", async () => {
+      const view = { branch: "feature" };
+      const signal = new AbortController().signal;
+
+      vi.mocked(mockDocumentView.resolveIdOrSlug).mockResolvedValue("parent-1");
+      vi.mocked(mockDocumentIndexer.getOutgoing).mockResolvedValue({
+        results: [],
+        options: { cursor: "0", limit: 100 },
+      });
+
+      await client.getChildren("parent-1", view, undefined, signal);
+
+      expect(mockDocumentView.resolveIdOrSlug).toHaveBeenCalledWith(
+        "parent-1",
+        view,
+        undefined,
+        signal,
+      );
+    });
+
+    it("should return empty results when no children exist", async () => {
+      vi.mocked(mockDocumentView.resolveIdOrSlug).mockResolvedValue("parent-1");
+      vi.mocked(mockDocumentIndexer.getOutgoing).mockResolvedValue({
+        results: [],
+        options: { cursor: "0", limit: 100 },
+      });
+
+      const result = await client.getChildren("parent-1");
+
+      expect(result.results).toEqual([]);
+      expect(mockReactor.find).not.toHaveBeenCalled();
+    });
+
+    it("should return child documents when children exist", async () => {
+      const childDocs = [
+        { header: { id: "child-1" } },
+        { header: { id: "child-2" } },
+      ] as PHDocument[];
+
+      vi.mocked(mockDocumentView.resolveIdOrSlug).mockResolvedValue("parent-1");
+      vi.mocked(mockDocumentIndexer.getOutgoing).mockResolvedValue({
+        results: [
+          {
+            sourceId: "parent-1",
+            targetId: "child-1",
+            relationshipType: "child",
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+          {
+            sourceId: "parent-1",
+            targetId: "child-2",
+            relationshipType: "child",
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+        ],
+        options: { cursor: "0", limit: 100 },
+      });
+      vi.mocked(mockReactor.find).mockResolvedValue({
+        results: childDocs,
+        options: { cursor: "", limit: 10 },
+      });
+
+      const result = await client.getChildren("parent-1");
+
+      expect(mockReactor.find).toHaveBeenCalledWith(
+        { ids: ["child-1", "child-2"] },
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+      );
+      expect(result.results).toEqual(childDocs);
+    });
+  });
+
+  describe("getParents", () => {
+    it("should use documentView.resolveIdOrSlug to resolve the child identifier", async () => {
+      vi.mocked(mockDocumentView.resolveIdOrSlug).mockResolvedValue(
+        "resolved-child-id",
+      );
+      vi.mocked(mockDocumentIndexer.getIncoming).mockResolvedValue({
+        results: [],
+        options: { cursor: "0", limit: 100 },
+      });
+
+      await client.getParents("child-slug");
+
+      expect(mockDocumentView.resolveIdOrSlug).toHaveBeenCalledWith(
+        "child-slug",
+        undefined,
+        undefined,
+        undefined,
+      );
+      expect(mockDocumentIndexer.getIncoming).toHaveBeenCalledWith(
+        "resolved-child-id",
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+      );
+    });
+
+    it("should pass view and signal to resolveIdOrSlug", async () => {
+      const view = { branch: "feature" };
+      const signal = new AbortController().signal;
+
+      vi.mocked(mockDocumentView.resolveIdOrSlug).mockResolvedValue("child-1");
+      vi.mocked(mockDocumentIndexer.getIncoming).mockResolvedValue({
+        results: [],
+        options: { cursor: "0", limit: 100 },
+      });
+
+      await client.getParents("child-1", view, undefined, signal);
+
+      expect(mockDocumentView.resolveIdOrSlug).toHaveBeenCalledWith(
+        "child-1",
+        view,
+        undefined,
+        signal,
+      );
+    });
+
+    it("should return empty results when no parents exist", async () => {
+      vi.mocked(mockDocumentView.resolveIdOrSlug).mockResolvedValue("child-1");
+      vi.mocked(mockDocumentIndexer.getIncoming).mockResolvedValue({
+        results: [],
+        options: { cursor: "0", limit: 100 },
+      });
+
+      const result = await client.getParents("child-1");
+
+      expect(result.results).toEqual([]);
+      expect(mockReactor.find).not.toHaveBeenCalled();
+    });
+
+    it("should return parent documents when parents exist", async () => {
+      const parentDocs = [{ header: { id: "parent-1" } }] as PHDocument[];
+
+      vi.mocked(mockDocumentView.resolveIdOrSlug).mockResolvedValue("child-1");
+      vi.mocked(mockDocumentIndexer.getIncoming).mockResolvedValue({
+        results: [
+          {
+            sourceId: "parent-1",
+            targetId: "child-1",
+            relationshipType: "parent",
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+        ],
+        options: { cursor: "0", limit: 100 },
+      });
+      vi.mocked(mockReactor.find).mockResolvedValue({
+        results: parentDocs,
+        options: { cursor: "", limit: 10 },
+      });
+
+      const result = await client.getParents("child-1");
+
+      expect(mockReactor.find).toHaveBeenCalledWith(
+        { ids: ["parent-1"] },
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+      );
+      expect(result.results).toEqual(parentDocs);
+    });
+  });
+
   describe("create", () => {
     it("should pass signer to reactor.create, wait for job, and return document", async () => {
       const document: PHDocument = {
@@ -235,10 +475,7 @@ describe("ReactorClient Unit Tests", () => {
 
       vi.mocked(mockReactor.create).mockResolvedValue(jobInfo);
       vi.mocked(mockJobAwaiter.waitForJob).mockResolvedValue(completedJobInfo);
-      vi.mocked(mockReactor.get).mockResolvedValue({
-        document,
-        childIds: [],
-      });
+      vi.mocked(mockReactor.get).mockResolvedValue(document);
 
       const result = await client.create(document);
 
@@ -274,10 +511,7 @@ describe("ReactorClient Unit Tests", () => {
       };
 
       vi.mocked(mockReactor.create).mockResolvedValue(jobInfo);
-      vi.mocked(mockReactor.get).mockResolvedValue({
-        document,
-        childIds: [],
-      });
+      vi.mocked(mockReactor.get).mockResolvedValue(document);
 
       await client.create(document, undefined, signal);
 
@@ -327,15 +561,9 @@ describe("ReactorClient Unit Tests", () => {
 
       vi.mocked(mockReactor.create).mockResolvedValue(jobInfo);
       vi.mocked(mockJobAwaiter.waitForJob).mockResolvedValue(completedJobInfo);
-      vi.mocked(mockReactor.get).mockResolvedValue({
-        document,
-        childIds: [],
-      });
+      vi.mocked(mockReactor.get).mockResolvedValue(document);
       vi.mocked(mockReactor.addChildren).mockResolvedValue(addChildrenJobInfo);
-      vi.mocked(mockReactor.getByIdOrSlug).mockResolvedValue({
-        document: parentDocument,
-        childIds: ["doc-1"],
-      });
+      vi.mocked(mockReactor.getByIdOrSlug).mockResolvedValue(parentDocument);
 
       const result = await client.create(document, "parent-1");
 
@@ -388,10 +616,7 @@ describe("ReactorClient Unit Tests", () => {
 
       vi.mocked(mockReactor.execute).mockResolvedValue(jobInfo);
       vi.mocked(mockJobAwaiter.waitForJob).mockResolvedValue(completedJobInfo);
-      vi.mocked(mockReactor.getByIdOrSlug).mockResolvedValue({
-        document: mockDoc,
-        childIds: [],
-      });
+      vi.mocked(mockReactor.getByIdOrSlug).mockResolvedValue(mockDoc);
 
       const result = await client.execute(documentId, "main", actions);
 
@@ -456,10 +681,7 @@ describe("ReactorClient Unit Tests", () => {
       };
 
       vi.mocked(mockReactor.execute).mockResolvedValue(jobInfo);
-      vi.mocked(mockReactor.getByIdOrSlug).mockResolvedValue({
-        document: {} as PHDocument,
-        childIds: [],
-      });
+      vi.mocked(mockReactor.getByIdOrSlug).mockResolvedValue({} as PHDocument);
 
       await client.execute(documentId, "main", actions, signal);
 
@@ -493,10 +715,7 @@ describe("ReactorClient Unit Tests", () => {
       };
 
       vi.mocked(mockReactor.execute).mockResolvedValue(jobInfo);
-      vi.mocked(mockReactor.getByIdOrSlug).mockResolvedValue({
-        document: {} as PHDocument,
-        childIds: [],
-      });
+      vi.mocked(mockReactor.getByIdOrSlug).mockResolvedValue({} as PHDocument);
 
       await client.execute(documentId, "main", actions);
 
@@ -519,10 +738,7 @@ describe("ReactorClient Unit Tests", () => {
       };
 
       vi.mocked(mockReactor.execute).mockResolvedValue(jobInfo);
-      vi.mocked(mockReactor.getByIdOrSlug).mockResolvedValue({
-        document: {} as PHDocument,
-        childIds: [],
-      });
+      vi.mocked(mockReactor.getByIdOrSlug).mockResolvedValue({} as PHDocument);
 
       await client.execute(documentId, branch, actions, signal);
 
@@ -641,10 +857,7 @@ describe("ReactorClient Unit Tests", () => {
 
       vi.mocked(mockReactor.addChildren).mockResolvedValue(jobInfo);
       vi.mocked(mockJobAwaiter.waitForJob).mockResolvedValue(completedJobInfo);
-      vi.mocked(mockReactor.getByIdOrSlug).mockResolvedValue({
-        document: mockDoc,
-        childIds: ["child-1", "child-2"],
-      });
+      vi.mocked(mockReactor.getByIdOrSlug).mockResolvedValue(mockDoc);
 
       const result = await client.addChildren(parentId, childIds);
 
@@ -694,10 +907,7 @@ describe("ReactorClient Unit Tests", () => {
 
       vi.mocked(mockReactor.removeChildren).mockResolvedValue(jobInfo);
       vi.mocked(mockJobAwaiter.waitForJob).mockResolvedValue(completedJobInfo);
-      vi.mocked(mockReactor.getByIdOrSlug).mockResolvedValue({
-        document: mockDoc,
-        childIds: [],
-      });
+      vi.mocked(mockReactor.getByIdOrSlug).mockResolvedValue(mockDoc);
 
       const result = await client.removeChildren(parentId, childIds);
 
@@ -790,15 +1000,18 @@ describe("ReactorClient Unit Tests", () => {
         consistencyToken: createEmptyConsistencyToken(),
       };
 
-      vi.mocked(mockDocumentIndexer.getOutgoing).mockResolvedValue([
-        {
-          sourceId: parentId,
-          targetId: childId,
-          relationshipType: "child",
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-      ]);
+      vi.mocked(mockDocumentIndexer.getOutgoing).mockResolvedValue({
+        results: [
+          {
+            sourceId: parentId,
+            targetId: childId,
+            relationshipType: "child",
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+        ],
+        options: { cursor: "0", limit: 100 },
+      });
 
       vi.mocked(mockReactor.deleteDocument).mockResolvedValue(childJobInfo);
       vi.mocked(mockReactor.deleteDocument).mockResolvedValueOnce(childJobInfo);
@@ -811,6 +1024,7 @@ describe("ReactorClient Unit Tests", () => {
       expect(mockDocumentIndexer.getOutgoing).toHaveBeenCalledWith(
         parentId,
         ["child"],
+        undefined,
         undefined,
         signal,
       );
@@ -1194,15 +1408,18 @@ describe("ReactorClient Unit Tests", () => {
         consistencyToken: createEmptyConsistencyToken(),
       };
 
-      vi.mocked(mockDocumentIndexer.getOutgoing).mockResolvedValue([
-        {
-          sourceId: parentId,
-          targetId: childId,
-          relationshipType: "child",
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-      ]);
+      vi.mocked(mockDocumentIndexer.getOutgoing).mockResolvedValue({
+        results: [
+          {
+            sourceId: parentId,
+            targetId: childId,
+            relationshipType: "child",
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+        ],
+        options: { cursor: "0", limit: 100 },
+      });
 
       vi.mocked(mockReactor.deleteDocument)
         .mockResolvedValueOnce(childJobInfo)

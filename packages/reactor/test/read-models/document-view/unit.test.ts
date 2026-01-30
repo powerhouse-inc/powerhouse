@@ -28,11 +28,14 @@ describe("KyselyDocumentView Unit Tests", () => {
     mockOperationIndex = {
       start: vi.fn(),
       commit: vi.fn().mockResolvedValue([]),
-      find: vi.fn().mockResolvedValue({ items: [], total: 0 }),
+      find: vi.fn().mockResolvedValue({
+        results: [],
+        options: { cursor: "0", limit: 100 },
+      }),
       getSinceOrdinal: vi.fn().mockResolvedValue({
-        items: [],
+        results: [],
+        options: { cursor: "0", limit: 100 },
         nextCursor: undefined,
-        hasMore: false,
       }),
       getLatestTimestampForCollection: vi.fn().mockResolvedValue(null),
     };
@@ -250,6 +253,186 @@ describe("KyselyDocumentView Unit Tests", () => {
     });
   });
 
+  describe("getMany", () => {
+    it("should return empty array for empty input", async () => {
+      const result = await view.getMany([]);
+      expect(result).toEqual([]);
+    });
+
+    it("should query database with all document IDs in single query", async () => {
+      mockDb.execute.mockResolvedValue([
+        {
+          documentId: "doc-1",
+          scope: "header",
+          content: { id: "doc-1", documentType: "test" },
+        },
+        {
+          documentId: "doc-1",
+          scope: "document",
+          content: { isDeleted: false },
+        },
+        {
+          documentId: "doc-2",
+          scope: "header",
+          content: { id: "doc-2", documentType: "test" },
+        },
+        {
+          documentId: "doc-2",
+          scope: "document",
+          content: { isDeleted: false },
+        },
+      ]);
+
+      vi.mocked(mockOperationStore.getRevisions).mockResolvedValue({
+        revision: {},
+        latestTimestamp: new Date().toISOString(),
+      });
+
+      await view.getMany(["doc-1", "doc-2"]);
+
+      expect(mockDb.selectFrom).toHaveBeenCalledWith("DocumentSnapshot");
+      expect(mockDb.where).toHaveBeenCalledWith("documentId", "in", [
+        "doc-1",
+        "doc-2",
+      ]);
+      expect(mockDb.where).toHaveBeenCalledWith("branch", "=", "main");
+      expect(mockDb.where).toHaveBeenCalledWith("isDeleted", "=", false);
+    });
+
+    it("should skip missing documents without throwing", async () => {
+      mockDb.execute.mockResolvedValue([
+        {
+          documentId: "doc-1",
+          scope: "header",
+          content: { id: "doc-1", documentType: "test" },
+        },
+        {
+          documentId: "doc-1",
+          scope: "document",
+          content: {},
+        },
+      ]);
+
+      vi.mocked(mockOperationStore.getRevisions).mockResolvedValue({
+        revision: {},
+        latestTimestamp: new Date().toISOString(),
+      });
+
+      const result = await view.getMany(["doc-1", "doc-2", "doc-3"]);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].header.id).toBe("doc-1");
+    });
+
+    it("should use main branch by default", async () => {
+      mockDb.execute.mockResolvedValue([]);
+
+      await view.getMany(["doc-1"]);
+
+      expect(mockDb.where).toHaveBeenCalledWith("branch", "=", "main");
+    });
+
+    it("should use specified branch from view filter", async () => {
+      mockDb.execute.mockResolvedValue([]);
+
+      await view.getMany(["doc-1"], { branch: "feature" });
+
+      expect(mockDb.where).toHaveBeenCalledWith("branch", "=", "feature");
+    });
+
+    it("should include header and document scopes when specific scopes requested", async () => {
+      mockDb.execute.mockResolvedValue([]);
+
+      await view.getMany(["doc-1"], { scopes: ["global"] });
+
+      expect(mockDb.where).toHaveBeenCalledWith(
+        "scope",
+        "in",
+        expect.arrayContaining(["header", "document", "global"]),
+      );
+    });
+
+    it("should throw when signal is aborted before query", async () => {
+      const controller = new AbortController();
+      controller.abort();
+
+      await expect(
+        view.getMany(["doc-1"], undefined, undefined, controller.signal),
+      ).rejects.toThrow("Operation aborted");
+    });
+
+    it("should throw when signal is aborted after query", async () => {
+      const controller = new AbortController();
+      mockDb.execute.mockImplementation(() => {
+        controller.abort();
+        return Promise.resolve([]);
+      });
+
+      await expect(
+        view.getMany(["doc-1"], undefined, undefined, controller.signal),
+      ).rejects.toThrow("Operation aborted");
+    });
+
+    it("should handle consistencyToken by calling waitForConsistency", async () => {
+      const token = {
+        version: 1 as const,
+        createdAtUtcIso: "2023-01-01",
+        coordinates: [
+          {
+            documentId: "doc-1",
+            scope: "global",
+            branch: "main",
+            ordinal: 1,
+            operationIndex: 0,
+          },
+        ],
+      };
+      mockDb.execute.mockResolvedValue([]);
+
+      await view.getMany(["doc-1"], undefined, token);
+
+      expect(mockConsistencyTracker.waitFor).toHaveBeenCalledWith(
+        [
+          {
+            documentId: "doc-1",
+            scope: "global",
+            branch: "main",
+            ordinal: 1,
+            operationIndex: 0,
+          },
+        ],
+        undefined,
+        undefined,
+      );
+    });
+
+    it("should handle duplicate IDs in input", async () => {
+      mockDb.execute.mockResolvedValue([
+        {
+          documentId: "doc-1",
+          scope: "header",
+          content: { id: "doc-1", documentType: "test" },
+        },
+        {
+          documentId: "doc-1",
+          scope: "document",
+          content: {},
+        },
+      ]);
+
+      vi.mocked(mockOperationStore.getRevisions).mockResolvedValue({
+        revision: {},
+        latestTimestamp: new Date().toISOString(),
+      });
+
+      const result = await view.getMany(["doc-1", "doc-1"]);
+
+      expect(result).toHaveLength(2);
+      expect(result[0].header.id).toBe("doc-1");
+      expect(result[1].header.id).toBe("doc-1");
+    });
+  });
+
   describe("indexOperations", () => {
     it("should return early for empty items array", async () => {
       await view.indexOperations([]);
@@ -265,7 +448,10 @@ describe("KyselyDocumentView Unit Tests", () => {
         revision: {},
         latestTimestamp: new Date().toISOString(),
       });
-      mockOperationStore.getSinceId = vi.fn().mockResolvedValue({ items: [] });
+      mockOperationStore.getSinceId = vi.fn().mockResolvedValue({
+        results: [],
+        options: { cursor: "0", limit: 100 },
+      });
     });
 
     it("should query by type and return empty results for no matches", async () => {
@@ -282,8 +468,7 @@ describe("KyselyDocumentView Unit Tests", () => {
       expect(mockDb.where).toHaveBeenCalledWith("branch", "=", "main");
       expect(mockDb.where).toHaveBeenCalledWith("isDeleted", "=", false);
       expect(mockDb.orderBy).toHaveBeenCalledWith("lastUpdatedAt", "desc");
-      expect(result.items).toEqual([]);
-      expect(result.hasMore).toBe(false);
+      expect(result.results).toEqual([]);
       expect(result.nextCursor).toBeUndefined();
     });
 
@@ -320,9 +505,8 @@ describe("KyselyDocumentView Unit Tests", () => {
         limit: 1,
       });
 
-      expect(result.items).toHaveLength(1);
+      expect(result.results).toHaveLength(1);
       expect(result.nextCursor).toBe("2");
-      expect(result.hasMore).toBe(true);
     });
 
     it("should handle consistencyToken by calling waitForConsistency", async () => {
@@ -387,7 +571,6 @@ describe("KyselyDocumentView Unit Tests", () => {
         limit: 10,
       });
 
-      expect(result.hasMore).toBe(false);
       expect(result.nextCursor).toBeUndefined();
     });
 
@@ -436,7 +619,7 @@ describe("KyselyDocumentView Unit Tests", () => {
 
       const result = await view.findByType("test-type");
 
-      expect(result.items).toHaveLength(2);
+      expect(result.results).toHaveLength(2);
     });
 
     it("should skip documents that fail to retrieve", async () => {
@@ -458,7 +641,7 @@ describe("KyselyDocumentView Unit Tests", () => {
 
       const result = await view.findByType("test-type");
 
-      expect(result.items).toHaveLength(0);
+      expect(result.results).toHaveLength(0);
     });
 
     it("should handle default limit of 100", async () => {
@@ -471,7 +654,6 @@ describe("KyselyDocumentView Unit Tests", () => {
 
       const result = await view.findByType("test-type");
 
-      expect(result.hasMore).toBe(true);
       expect(result.nextCursor).toBe("100");
     });
 

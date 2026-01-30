@@ -69,9 +69,9 @@ describe("ReactorSubgraph Permission Checks", () => {
     };
 
     // Create mock ReactorClient
-    // Note: get() returns { document, childIds }
+    // Note: get() returns PHDocument directly
     mockReactorClient = {
-      get: vi.fn().mockResolvedValue({ document: mockDocument, childIds: [] }),
+      get: vi.fn().mockResolvedValue(mockDocument),
       getChildren: vi.fn().mockResolvedValue({
         results: [],
         options: { limit: 10, cursor: "" },
@@ -531,12 +531,11 @@ describe("ReactorSubgraph Permission Checks", () => {
     });
 
     it("should throw error when document is null in result", async () => {
-      // When get() returns { document: null, childIds: [] }, resolver throws
+      // When get() returns null, resolver throws
       // because it tries to access document.header
-      vi.mocked(mockReactorClient.get!).mockResolvedValue({
-        document: null as unknown as PHDocument,
-        childIds: [],
-      });
+      vi.mocked(mockReactorClient.get!).mockResolvedValue(
+        null as unknown as PHDocument,
+      );
       const ctx = createContext({ isAdmin: true, userAddress: "0xadmin" });
 
       const query = (reactorSubgraph.resolvers.Query as any)?.document;

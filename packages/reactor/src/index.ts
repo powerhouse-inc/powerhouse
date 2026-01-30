@@ -127,7 +127,6 @@ export {
 
 // Storage
 export type { Database } from "./core/types.js";
-export { ConsistencyAwareLegacyStorage } from "./storage/consistency-aware-legacy-storage.js";
 export {
   DuplicateOperationError,
   OptimisticLockError,
@@ -137,7 +136,6 @@ export {
   type DocumentRelationship,
   type DocumentRevisions,
   type DocumentSnapshot,
-  type IConsistencyAwareStorage,
   type IDocumentGraph,
   type IDocumentIndexer,
   type IDocumentView,
@@ -171,7 +169,10 @@ export type {
 
 // Cache
 export { KyselyWriteCache } from "./cache/kysely-write-cache.js";
-export { driveCollectionId } from "./cache/operation-index-types.js";
+export {
+  driveCollectionId,
+  type IOperationIndex,
+} from "./cache/operation-index-types.js";
 export type {
   CachedSnapshot,
   DocumentStreamKey,
@@ -202,6 +203,7 @@ export {
   ChannelError,
   ChannelErrorSource,
   CompositeChannelFactory,
+  GqlChannel,
   GqlChannelFactory,
   Mailbox,
   PollingChannel,
@@ -214,8 +216,10 @@ export {
   type ChannelConfig,
   type ChannelHealth,
   type ChannelMeta,
+  type GqlChannelConfig,
   type IChannel,
   type IChannelFactory,
+  type IPollTimer,
   type ISyncManager,
   type MailboxItem,
   type Remote,

@@ -1322,10 +1322,10 @@ export class SimpleJobExecutor implements IJobExecutor {
         scope,
         job.branch,
         minIncomingTimestamp,
-        { limit: this.config.maxSkipThreshold + 1 },
+        { cursor: "0", limit: this.config.maxSkipThreshold + 1 },
       );
 
-      if (conflictingResult.hasMore) {
+      if (conflictingResult.nextCursor !== undefined) {
         return {
           job,
           success: false,
@@ -1337,7 +1337,7 @@ export class SimpleJobExecutor implements IJobExecutor {
         };
       }
 
-      conflictingOps = conflictingResult.items;
+      conflictingOps = conflictingResult.results;
     } catch {
       conflictingOps = [];
     }
@@ -1358,9 +1358,9 @@ export class SimpleJobExecutor implements IJobExecutor {
           job.branch,
           minConflictingIndex - 1,
           undefined,
-          { limit: this.config.maxSkipThreshold * 2 },
+          { cursor: "0", limit: this.config.maxSkipThreshold * 2 },
         );
-        allOpsFromMinConflictingIndex = allOpsResult.items;
+        allOpsFromMinConflictingIndex = allOpsResult.results;
       } catch {
         allOpsFromMinConflictingIndex = conflictingOps;
       }

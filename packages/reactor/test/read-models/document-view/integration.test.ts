@@ -147,9 +147,9 @@ describe("KyselyDocumentView", () => {
 
       // Mock getSinceOrdinal to return operations with resultingState
       vi.spyOn(operationIndex, "getSinceOrdinal").mockResolvedValue({
-        items: operations,
+        results: operations,
+        options: { cursor: "0", limit: 100 },
         nextCursor: undefined,
-        hasMore: false,
       });
 
       // Initialize the view - it should process all operations
@@ -974,6 +974,356 @@ describe("KyselyDocumentView", () => {
     });
   });
 
+  describe("getMany", () => {
+    beforeEach(async () => {
+      await view.init();
+    });
+
+    it("should retrieve multiple documents with full state", async () => {
+      const doc1Id = generateId();
+      const doc2Id = generateId();
+      const documentType = "powerhouse/document-drive";
+      const scope = "document";
+      const branch = "main";
+
+      for (const docId of [doc1Id, doc2Id]) {
+        const action = addFolder({
+          id: generateId(),
+          name: `Folder ${docId}`,
+          parentFolder: null,
+        });
+
+        await operationStore.apply(
+          docId,
+          documentType,
+          scope,
+          branch,
+          0,
+          (txn) => {
+            txn.addOperations({
+              index: 0,
+              timestampUtcMs: new Date().toISOString(),
+              hash: `hash-${docId}`,
+              skip: 0,
+              id: generateId(),
+              action,
+            });
+          },
+        );
+
+        await view.indexOperations([
+          {
+            operation: {
+              index: 0,
+              timestampUtcMs: new Date().toISOString(),
+              hash: `hash-${docId}`,
+              skip: 0,
+              id: generateId(),
+              action,
+            },
+            context: {
+              documentId: docId,
+              documentType,
+              scope,
+              branch,
+              resultingState: JSON.stringify({
+                header: { id: docId, documentType },
+                document: {},
+              }),
+              ordinal: 1,
+            },
+          },
+        ]);
+      }
+
+      const result = await view.getMany([doc1Id, doc2Id]);
+
+      expect(result).toHaveLength(2);
+      expect(result[0]?.header.id).toBe(doc1Id);
+      expect(result[1]?.header.id).toBe(doc2Id);
+    });
+
+    it("should skip non-existent documents", async () => {
+      const existingDocId = generateId();
+      const nonExistentDocId = generateId();
+      const documentType = "powerhouse/document-drive";
+      const scope = "document";
+      const branch = "main";
+
+      const action = addFolder({
+        id: generateId(),
+        name: "Test Folder",
+        parentFolder: null,
+      });
+
+      await operationStore.apply(
+        existingDocId,
+        documentType,
+        scope,
+        branch,
+        0,
+        (txn) => {
+          txn.addOperations({
+            index: 0,
+            timestampUtcMs: new Date().toISOString(),
+            hash: "hash-0",
+            skip: 0,
+            id: generateId(),
+            action,
+          });
+        },
+      );
+
+      await view.indexOperations([
+        {
+          operation: {
+            index: 0,
+            timestampUtcMs: new Date().toISOString(),
+            hash: "hash-0",
+            skip: 0,
+            id: generateId(),
+            action,
+          },
+          context: {
+            documentId: existingDocId,
+            documentType,
+            scope,
+            branch,
+            resultingState: JSON.stringify({
+              header: { id: existingDocId, documentType },
+              document: {},
+            }),
+            ordinal: 1,
+          },
+        },
+      ]);
+
+      const result = await view.getMany([existingDocId, nonExistentDocId]);
+
+      expect(result).toHaveLength(1);
+      expect(result[0]?.header.id).toBe(existingDocId);
+    });
+
+    it("should respect consistency token for read-after-write", async () => {
+      const documentId = generateId();
+      const documentType = "powerhouse/document-drive";
+      const scope = "document";
+      const branch = "main";
+
+      const action = addFolder({
+        id: generateId(),
+        name: "Test Folder",
+        parentFolder: null,
+      });
+
+      await operationStore.apply(
+        documentId,
+        documentType,
+        scope,
+        branch,
+        0,
+        (txn) => {
+          txn.addOperations({
+            index: 0,
+            timestampUtcMs: new Date().toISOString(),
+            hash: "hash-0",
+            skip: 0,
+            id: generateId(),
+            action,
+          });
+        },
+      );
+
+      const indexPromise = view.indexOperations([
+        {
+          operation: {
+            index: 0,
+            timestampUtcMs: new Date().toISOString(),
+            hash: "hash-0",
+            skip: 0,
+            id: generateId(),
+            action,
+          },
+          context: {
+            documentId,
+            documentType,
+            scope,
+            branch,
+            resultingState: JSON.stringify({
+              header: { id: documentId, documentType },
+              document: {},
+            }),
+            ordinal: 1,
+          },
+        },
+      ]);
+
+      const consistencyToken = {
+        version: 1 as const,
+        createdAtUtcIso: new Date().toISOString(),
+        coordinates: [
+          {
+            documentId,
+            scope,
+            branch,
+            operationIndex: 0,
+          },
+        ],
+      };
+
+      const resultPromise = view.getMany(
+        [documentId],
+        undefined,
+        consistencyToken,
+      );
+
+      await Promise.all([indexPromise, resultPromise]);
+
+      const result = await resultPromise;
+
+      expect(result).toHaveLength(1);
+      expect(result[0]?.header.id).toBe(documentId);
+    });
+
+    it("should filter by branch correctly", async () => {
+      const documentId = generateId();
+      const documentType = "powerhouse/document-drive";
+      const scope = "document";
+
+      for (const branch of ["main", "feature"]) {
+        const action = addFolder({
+          id: generateId(),
+          name: `Folder ${branch}`,
+          parentFolder: null,
+        });
+
+        await operationStore.apply(
+          documentId,
+          documentType,
+          scope,
+          branch,
+          0,
+          (txn) => {
+            txn.addOperations({
+              index: 0,
+              timestampUtcMs: new Date().toISOString(),
+              hash: `hash-${branch}`,
+              skip: 0,
+              id: generateId(),
+              action,
+            });
+          },
+        );
+
+        await view.indexOperations([
+          {
+            operation: {
+              index: 0,
+              timestampUtcMs: new Date().toISOString(),
+              hash: `hash-${branch}`,
+              skip: 0,
+              id: generateId(),
+              action,
+            },
+            context: {
+              documentId,
+              documentType,
+              scope,
+              branch,
+              resultingState: JSON.stringify({
+                header: { id: documentId, documentType },
+                document: {},
+              }),
+              ordinal: 1,
+            },
+          },
+        ]);
+      }
+
+      const mainResult = await view.getMany([documentId], { branch: "main" });
+      const featureResult = await view.getMany([documentId], {
+        branch: "feature",
+      });
+
+      expect(mainResult).toHaveLength(1);
+      expect(featureResult).toHaveLength(1);
+    });
+
+    it("should exclude deleted documents", async () => {
+      const documentId = generateId();
+      const documentType = "powerhouse/document-drive";
+      const scope = "document";
+      const branch = "main";
+
+      const action = addFolder({
+        id: generateId(),
+        name: "Test Folder",
+        parentFolder: null,
+      });
+
+      await operationStore.apply(
+        documentId,
+        documentType,
+        scope,
+        branch,
+        0,
+        (txn) => {
+          txn.addOperations({
+            index: 0,
+            timestampUtcMs: new Date().toISOString(),
+            hash: "hash-0",
+            skip: 0,
+            id: generateId(),
+            action,
+          });
+        },
+      );
+
+      await view.indexOperations([
+        {
+          operation: {
+            index: 0,
+            timestampUtcMs: new Date().toISOString(),
+            hash: "hash-0",
+            skip: 0,
+            id: generateId(),
+            action,
+          },
+          context: {
+            documentId,
+            documentType,
+            scope,
+            branch,
+            resultingState: JSON.stringify({
+              header: { id: documentId, documentType },
+              document: {},
+            }),
+            ordinal: 1,
+          },
+        },
+      ]);
+
+      await db
+        .updateTable("DocumentSnapshot")
+        .set({ isDeleted: true })
+        .where("documentId", "=", documentId)
+        .execute();
+
+      const result = await view.getMany([documentId]);
+
+      expect(result).toHaveLength(0);
+    });
+
+    it("should abort when signal is aborted", async () => {
+      const controller = new AbortController();
+      controller.abort();
+
+      await expect(
+        view.getMany([generateId()], undefined, undefined, controller.signal),
+      ).rejects.toThrow("Operation aborted");
+    });
+  });
+
   describe("findByType", () => {
     beforeEach(async () => {
       await view.init();
@@ -1035,10 +1385,10 @@ describe("KyselyDocumentView", () => {
 
       const result = await view.findByType(documentType);
 
-      expect(result.items).toHaveLength(1);
-      expect(result.items[0]?.header.id).toBe(documentId);
-      expect(result.items[0]?.header.documentType).toBe(documentType);
-      expect(result.hasMore).toBe(false);
+      expect(result.results).toHaveLength(1);
+      expect(result.results[0]?.header.id).toBe(documentId);
+      expect(result.results[0]?.header.documentType).toBe(documentType);
+      expect(result.nextCursor).toBeUndefined();
     });
 
     it("should respect consistency token for read-after-write consistency", async () => {
@@ -1119,8 +1469,8 @@ describe("KyselyDocumentView", () => {
 
       const result = await resultPromise;
 
-      expect(result.items).toHaveLength(1);
-      expect(result.items[0]?.header.id).toBe(documentId);
+      expect(result.results).toHaveLength(1);
+      expect(result.results[0]?.header.id).toBe(documentId);
     });
 
     it("should paginate through large result sets", async () => {
@@ -1184,17 +1534,17 @@ describe("KyselyDocumentView", () => {
         limit: 2,
       });
 
-      expect(firstPage.items).toHaveLength(2);
-      expect(firstPage.hasMore).toBe(true);
+      expect(firstPage.results).toHaveLength(2);
+      expect(firstPage.nextCursor).toBeDefined();
       expect(firstPage.nextCursor).toBe("2");
 
       const secondPage = await view.findByType(documentType, undefined, {
-        cursor: firstPage.nextCursor,
+        cursor: firstPage.nextCursor!,
         limit: 2,
       });
 
-      expect(secondPage.items).toHaveLength(2);
-      expect(secondPage.hasMore).toBe(true);
+      expect(secondPage.results).toHaveLength(2);
+      expect(secondPage.nextCursor).toBeDefined();
     });
 
     it("should filter by branch correctly when multiple branches exist", async () => {
@@ -1259,8 +1609,8 @@ describe("KyselyDocumentView", () => {
         branch: "feature",
       });
 
-      expect(mainResult.items).toHaveLength(1);
-      expect(featureResult.items).toHaveLength(1);
+      expect(mainResult.results).toHaveLength(1);
+      expect(featureResult.results).toHaveLength(1);
     });
 
     it("should exclude deleted documents from results", async () => {
@@ -1325,7 +1675,7 @@ describe("KyselyDocumentView", () => {
 
       const result = await view.findByType(documentType);
 
-      expect(result.items).toHaveLength(0);
+      expect(result.results).toHaveLength(0);
     });
   });
 

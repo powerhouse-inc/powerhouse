@@ -228,9 +228,9 @@ describe("SimpleJobExecutor Integration (Modern Storage)", () => {
         -1,
       );
 
-      expect(operations.items).toHaveLength(1);
+      expect(operations.results).toHaveLength(1);
 
-      const persistedOperation = operations.items[0];
+      const persistedOperation = operations.results[0];
       expect(persistedOperation.action.type).toBe("ADD_FOLDER");
       expect(persistedOperation.action.input).toMatchObject({
         id: "folder-1",
@@ -327,7 +327,7 @@ describe("SimpleJobExecutor Integration (Modern Storage)", () => {
         -1,
       );
 
-      expect(operations.items).toHaveLength(2);
+      expect(operations.results).toHaveLength(2);
 
       const documentState = await writeCache.getState(
         document.header.id,
@@ -428,7 +428,7 @@ describe("SimpleJobExecutor Integration (Modern Storage)", () => {
         -1,
       );
 
-      expect(operations.items).toHaveLength(2);
+      expect(operations.results).toHaveLength(2);
 
       const documentState = await writeCache.getState(
         document.header.id,
@@ -765,13 +765,13 @@ describe("SimpleJobExecutor Integration (Modern Storage)", () => {
       const collectionId = driveCollectionId("main", "new-doc-1");
       const indexedOps = await operationIndex.find(collectionId);
 
-      expect(indexedOps.items).toHaveLength(1);
-      expect(indexedOps.items[0].documentId).toBe("new-doc-1");
-      expect(indexedOps.items[0].documentType).toBe(
+      expect(indexedOps.results).toHaveLength(1);
+      expect(indexedOps.results[0].documentId).toBe("new-doc-1");
+      expect(indexedOps.results[0].documentType).toBe(
         "powerhouse/document-drive",
       );
-      expect(indexedOps.items[0].scope).toBe("document");
-      expect(indexedOps.items[0].branch).toBe("main");
+      expect(indexedOps.results[0].scope).toBe("document");
+      expect(indexedOps.results[0].branch).toBe("main");
     });
 
     it("should create collection when creating a document-drive document", async () => {
@@ -807,8 +807,8 @@ describe("SimpleJobExecutor Integration (Modern Storage)", () => {
       const collectionId = driveCollectionId("main", driveId);
       const collectionOps = await operationIndex.find(collectionId);
 
-      expect(collectionOps.items).toHaveLength(1);
-      expect(collectionOps.items[0].documentId).toBe(driveId);
+      expect(collectionOps.results).toHaveLength(1);
+      expect(collectionOps.results[0].documentId).toBe(driveId);
     });
 
     it("should add documents to collection when adding relationships", async () => {
@@ -861,7 +861,7 @@ describe("SimpleJobExecutor Integration (Modern Storage)", () => {
       const collectionId = driveCollectionId("main", driveId);
       const collectionOps = await operationIndex.find(collectionId);
 
-      const addRelOp = collectionOps.items.find(
+      const addRelOp = collectionOps.results.find(
         (op) =>
           op.documentId === driveId && op.action.type === "ADD_RELATIONSHIP",
       );
@@ -908,8 +908,8 @@ describe("SimpleJobExecutor Integration (Modern Storage)", () => {
       const collectionId = driveCollectionId("main", document.header.id);
       const collectionOps = await operationIndex.find(collectionId);
 
-      expect(collectionOps.items.length).toBeGreaterThan(0);
-      const upgradeOps = collectionOps.items.filter(
+      expect(collectionOps.results.length).toBeGreaterThan(0);
+      const upgradeOps = collectionOps.results.filter(
         (op) => op.action.type === "UPGRADE_DOCUMENT",
       );
       expect(upgradeOps.length).toBeGreaterThan(0);

@@ -1,8 +1,12 @@
 import {
   verifyAuthBearerToken,
-  type AuthVerifiedCredential,
   type PowerhouseVerifiableCredential,
 } from "@renown/sdk";
+
+type VerifiedCredential =
+  Awaited<ReturnType<typeof verifyAuthBearerToken>> extends false | infer T
+    ? T
+    : never;
 import type { NextFunction, Request, Response } from "express";
 
 export interface AuthConfig {
@@ -165,7 +169,7 @@ export class AuthService {
    * Extract user information from verification result
    */
   private extractUserFromVerification(
-    verified: AuthVerifiedCredential,
+    verified: VerifiedCredential,
   ): User | null {
     try {
       const { address, chainId, networkId } =

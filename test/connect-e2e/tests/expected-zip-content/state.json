@@ -4,13 +4,13 @@
     "version": 1
   },
   "global": {
-    "id": "",
-    "name": "",
-    "extension": "",
-    "description": "",
+    "id": "powerhouse/todo",
+    "name": "ToDoDocument",
+    "extension": ".phdm",
+    "description": "ToDo Document Model",
     "author": {
-      "name": "",
-      "website": ""
+      "name": "Powerhouse",
+      "website": "https://www.powerhouse.inc"
     },
     "specifications": [
       {
@@ -18,8 +18,8 @@
         "changeLog": [],
         "state": {
           "global": {
-            "schema": "",
-            "initialValue": "",
+            "schema": "type ToDoDocumentState {\n  items: [ToDoItem!]!\n  stats: ToDoListStats!\n}\n\ntype ToDoItem {\n  id: ID!\n  text: String!\n  checked: Boolean!\n}\n\ntype ToDoListStats {\n  total: Int!\n  checked: Int!\n  unchecked: Int!\n}",
+            "initialValue": "{\n  \"items\": [],\n  \"stats\": {\n    \"total\": 0,\n    \"checked\": 0,\n    \"unchecked\": 0\n  }\n}",
             "examples": []
           },
           "local": {
@@ -28,7 +28,44 @@
             "examples": []
           }
         },
-        "modules": []
+        "modules": [
+          {
+            "name": "base_operations",
+            "description": "",
+            "operations": [
+              {
+                "name": "ADD_TODO_ITEM_INPUT",
+                "description": "",
+                "schema": "input AddTodoItemInputInput {\n  id: ID!\n  text: String!\n}\n",
+                "template": "",
+                "reducer": "",
+                "errors": [],
+                "examples": [],
+                "scope": "global"
+              },
+              {
+                "name": "UPDATE_TODO_ITEM_INPUT",
+                "description": "",
+                "schema": "input UpdateTodoItemInputInput {\n  id: ID!\n  text: String\n  checked: Boolean\n}\n",
+                "template": "",
+                "reducer": "",
+                "errors": [],
+                "examples": [],
+                "scope": "global"
+              },
+              {
+                "name": "DELETE_TODO_ITEM_INPUT",
+                "description": "",
+                "schema": "input DeleteTodoItemInputInput {\n  id: ID!\n}\n",
+                "template": "",
+                "reducer": "",
+                "errors": [],
+                "examples": [],
+                "scope": "global"
+              }
+            ]
+          }
+        ]
       }
     ]
   },
