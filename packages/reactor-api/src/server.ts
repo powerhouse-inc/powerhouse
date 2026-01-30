@@ -542,7 +542,6 @@ async function _setupAPI(
 
   // set up subgraph manager
   const coreSubgraphs: SubgraphClass[] = DefaultCoreSubgraphs.slice();
-  coreSubgraphs.push(ReactorSubgraph);
 
   // Register Auth subgraph when document permission service is available
   if (documentPermissionService) {

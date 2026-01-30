@@ -41,6 +41,7 @@ import {
 } from "../utils/create-schema.js";
 import { DocumentModelSubgraphLegacy } from "./document-model-subgraph.js";
 import { DriveSubgraph } from "./drive-subgraph.js";
+import { ReactorSubgraph } from "./reactor/subgraph.js";
 import { useServer } from "./websocket.js";
 
 class AuthenticatedDataSource extends RemoteGraphQLDataSource {
@@ -275,6 +276,9 @@ export class GraphQLManager {
 
     // special case for drive
     await this.registerSubgraph(DriveSubgraph, undefined, true);
+
+    // special case for new reactor
+    await this.registerSubgraph(ReactorSubgraph, undefined, true);
 
     return this.#setupSubgraphs(this.coreSubgraphsMap, this.coreRouter);
   }

@@ -35,7 +35,7 @@ export class ReactorSubgraph extends BaseSubgraph {
     this.logger.verbose(`constructor()`);
   }
 
-  name = "r/:reactor";
+  name = "graphql/r/";
   hasSubscriptions = true;
 
   /**
