@@ -1,3 +1,28 @@
+## 6.0.0-dev.28 (2026-01-31)
+
+### 🚀 Features
+
+- added a withSignalHandlers function to the reactor-builder ([666cec6c7](https://github.com/powerhouse-inc/powerhouse/commit/666cec6c7))
+- adding signal handlers and removing old feature flags ([f08253a2d](https://github.com/powerhouse-inc/powerhouse/commit/f08253a2d))
+- add e2e tests to simulate ([6ba43d19b](https://github.com/powerhouse-inc/powerhouse/commit/6ba43d19b))
+- **profiling:** add docs-count script to test totalCount field ([73108b1ad](https://github.com/powerhouse-inc/powerhouse/commit/73108b1ad))
+- **reactor:** added totalCount in findDocuments pagination ([7f1118022](https://github.com/powerhouse-inc/powerhouse/commit/7f1118022))
+
+### 🩹 Fixes
+
+- process limitations in browser ([e674f48a6](https://github.com/powerhouse-inc/powerhouse/commit/e674f48a6))
+- revert my previous test changes ([16e0a0a5c](https://github.com/powerhouse-inc/powerhouse/commit/16e0a0a5c))
+- test fixes due to changed endpoint ([bab3fcaf9](https://github.com/powerhouse-inc/powerhouse/commit/bab3fcaf9))
+- **design-system:** prevent file/folder from opening during rename ([0f6bf5875](https://github.com/powerhouse-inc/powerhouse/commit/0f6bf5875))
+- **reactor-api:** enable document-model subgraph generation ([#2261](https://github.com/powerhouse-inc/powerhouse/pull/2261))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Guillermo Puente @gpuente
+- Guillermo Puente Sandoval @gpuente
+- Samuel Hawksby-Robinson @Samyoul
+
 ## 6.0.0-dev.27 (2026-01-30)
 
 ### 🚀 Features

@@ -1,3 +1,18 @@
+## 6.0.0-dev.28 (2026-01-31)
+
+### 🚀 Features
+
+- add e2e tests to simulate ([6ba43d19b](https://github.com/powerhouse-inc/powerhouse/commit/6ba43d19b))
+- adding signal handlers and removing old feature flags ([f08253a2d](https://github.com/powerhouse-inc/powerhouse/commit/f08253a2d))
+
+### 🩹 Fixes
+
+- test fixes due to changed endpoint ([bab3fcaf9](https://github.com/powerhouse-inc/powerhouse/commit/bab3fcaf9))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+
 ## 6.0.0-dev.27 (2026-01-30)
 
 ### 🚀 Features
