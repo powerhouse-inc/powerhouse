@@ -15,16 +15,20 @@ ${phCliVersionInfo}
 }
 
 export async function getPhCliVersionInfo() {
-  const { projectPath, packageManager, isGlobal } =
-    await getPowerhouseProjectInfo();
-  const projectPackageJsonPath = path.join(projectPath, "package.json");
-  const projectPackageJsonExists = await fileExists(projectPackageJsonPath);
-  if (!projectPackageJsonExists) {
-    return `
+  const noProjectWarningMessage = `
   No Powerhouse project directory found.
   To create a local project, run \`ph init\`.
   To create a global project, run \`ph setup-globals\`.
 `.trim();
+  const { projectPath, packageManager, isGlobal } =
+    await getPowerhouseProjectInfo();
+  if (!projectPath) {
+    return noProjectWarningMessage;
+  }
+  const projectPackageJsonPath = path.join(projectPath, "package.json");
+  const projectPackageJsonExists = await fileExists(projectPackageJsonPath);
+  if (!projectPackageJsonExists) {
+    return noProjectWarningMessage;
   }
   const projectPackageJson = await readPackage({ cwd: projectPath });
   const phCliVersion =

@@ -7,6 +7,6 @@ await Bun.build({
   outdir: "./build",
   target: "node",
   define: {
-    CLI_VERSION: `"${process.env.npm_package_version!}"`,
+    CLI_VERSION: `"${process.env.WORKSPACE_VERSION || process.env.npm_package_version!}"`,
   },
 });

@@ -3,7 +3,6 @@ import {
   phCliHelpCommands,
 } from "@powerhousedao/common/clis";
 import { subcommands } from "cmd-ts";
-import { readPackageUp } from "read-package-up";
 import { init } from "./init.js";
 import { setupGlobals } from "./setup-globals.js";
 import { update } from "./update.js";

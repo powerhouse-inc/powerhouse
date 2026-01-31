@@ -5,3 +5,4 @@ packages:
   - "test/*"
   - "packages/reactor/test/atlas"
   - "scripts/*"
+  - "!releases"

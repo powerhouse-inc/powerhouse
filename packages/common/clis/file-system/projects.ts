@@ -109,11 +109,6 @@ export async function getPowerhouseProjectInfo(
   const localProjectPath = await getLocalPowerhouseProjectDirPath();
   const globalProjectPath = await getGlobalPowerhouseProjectDirPath();
   const projectPath = localProjectPath ?? globalProjectPath;
-  if (!projectPath) {
-    throw new Error(
-      "Powerhouse project does not exist. Either create a new project with `ph init` or run `ph setup-globals` to use a global project.",
-    );
-  }
   const isGlobal = !localProjectPath && !!globalProjectPath;
   const packageManagerFromArgs = parsePackageManager(args);
   const packageManagerFromProject =

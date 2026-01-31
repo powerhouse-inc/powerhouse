@@ -34,7 +34,7 @@ const cliDescription = phCli.description ?? "";
 async function main() {
   await writeCliDocsMarkdownFile({
     filePath: "COMMANDS.md",
-    docsTitle: "Powerhouse CLI Commands",
+    docsTitle: `Powerhouse CLI Commands (${process.env.WORKSPACE_VERSION || process.env.npm_package_version})`,
     docsIntroduction:
       "This document provides detailed information about the available commands in the Powerhouse CLI.",
     cliDescription,

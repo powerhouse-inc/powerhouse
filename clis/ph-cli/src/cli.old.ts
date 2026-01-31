@@ -18,11 +18,9 @@ program
   .allowUnknownOption(true)
   .option("--verbose, --debug", "Enable debug mode");
 
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore build time version file
-import("./version.js")
-  .then(({ version }: { version: string }) => program.version(version))
-  .catch((error: unknown) => console.error("Error loading version", error));
+program.version(
+  process.env.WORKSPACE_VERSION || process.env.npm_package_version!,
+);
 
 registerCommands(program);
 
