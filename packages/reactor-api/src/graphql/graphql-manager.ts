@@ -9,7 +9,6 @@ import {
 } from "@apollo/gateway";
 import { ApolloServer } from "@apollo/server";
 import { ApolloServerPluginInlineTraceDisabled } from "@apollo/server/plugin/disabled";
-import { ApolloServerPluginDrainHttpServer } from "@apollo/server/plugin/drainHttpServer";
 import { ApolloServerPluginLandingPageLocalDefault } from "@apollo/server/plugin/landingPage/default";
 import { expressMiddleware } from "@as-integrations/express4";
 import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
@@ -94,6 +93,8 @@ export class GraphQLManager {
   private readonly subgraphs = new Map<string, ISubgraph[]>();
   private authService: AuthService | null = null;
 
+  private coreApolloServer: ApolloServer<Context> | null = null;
+
   private readonly logger = childLogger(["reactor-api", "graphql-manager"]);
 
   private readonly apolloLogger = childLogger([
@@ -142,30 +143,6 @@ export class GraphQLManager {
       bodyParser.urlencoded({ extended: true, limit: "50mb" }),
     );
 
-    this.app.use("/", (req, res, next) => {
-      this.setAdditionalContextFields({
-        user: req.user,
-        isAdmin: (address: string) =>
-          !req.auth_enabled
-            ? true
-            : (req.admins
-                ?.map((a) => a.toLowerCase())
-                .includes(address.toLowerCase() ?? "") ?? false),
-        isUser: (address: string) =>
-          !req.auth_enabled
-            ? true
-            : (req.users
-                ?.map((a) => a.toLowerCase())
-                .includes(address.toLowerCase() ?? "") ?? false),
-        isGuest: (address: string) =>
-          !req.auth_enabled
-            ? true
-            : (req.guests
-                ?.map((a) => a.toLowerCase())
-                .includes(address.toLowerCase() ?? "") ?? false),
-      });
-      this.coreRouter(req, res, next);
-    });
     this.app.use("/", (req, res, next) => {
       this.setAdditionalContextFields({
         user: req.user,
@@ -539,25 +516,26 @@ export class GraphQLManager {
         },
       });
 
-      const server = new ApolloServer<Context>({
+      if (this.coreApolloServer) {
+        await this.coreApolloServer.stop();
+      }
+
+      this.coreApolloServer = new ApolloServer<Context>({
         gateway,
         logger: this.apolloLogger,
         introspection: true,
         plugins: [
-          ApolloServerPluginDrainHttpServer({
-            httpServer: this.httpServer,
-          }),
           ApolloServerPluginInlineTraceDisabled(),
           ApolloServerPluginLandingPageLocalDefault(),
         ],
       });
 
-      await server.start();
-      await this.#waitForServer(server);
+      await this.coreApolloServer.start();
+      await this.#waitForServer(this.coreApolloServer);
 
       const superGraphPath = path.join(this.path, "graphql");
       this.#setupApolloExpressMiddleware(
-        server,
+        this.coreApolloServer,
         this.reactorRouter,
         superGraphPath,
       );
@@ -566,7 +544,7 @@ export class GraphQLManager {
         this.logger.info(`Registered ${superGraphPath} supergraph `);
         this.initialized = true;
       }
-      return server;
+      return;
     } catch (e) {
       if (e instanceof Error) {
         this.logger.error(e.message);

@@ -34,12 +34,10 @@ import type { TlsOptions } from "node:tls";
 import type { Pool } from "pg";
 import { WebSocketServer } from "ws";
 // Import tracing - initializes OpenTelemetry and provides stub functions for backwards compatibility
-import { initTracing, isTracingEnabled, trace } from "./tracing.js";
 import { config, DefaultCoreSubgraphs } from "./config.js";
 import { AuthSubgraph } from "./graphql/auth/subgraph.js";
 import { GraphQLManager } from "./graphql/graphql-manager.js";
 import { renderGraphqlPlayground } from "./graphql/playground.js";
-import { ReactorSubgraph } from "./graphql/reactor/subgraph.js";
 import type { SubgraphClass } from "./graphql/types.js";
 import { runMigrations } from "./migrations/index.js";
 import { ImportPackageLoader } from "./packages/import-loader.js";
@@ -50,6 +48,7 @@ import {
 import type { AuthenticatedRequest } from "./services/auth.service.js";
 import { AuthService } from "./services/auth.service.js";
 import { DocumentPermissionService } from "./services/document-permission.service.js";
+import { initTracing, isTracingEnabled, trace } from "./tracing.js";
 import type { API, IPackageLoader, Processor } from "./types.js";
 import {
   getDbClient,
