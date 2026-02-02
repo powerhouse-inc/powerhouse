@@ -371,30 +371,67 @@ sudo chown -R 1000:1000 ./data
 
 ## CI/CD Integration
 
-The generated `.github/workflows/sync-and-publish.yml` workflow can be extended to build and push Docker images:
+The generated `.github/workflows/sync-and-publish.yml` workflow automatically builds and pushes Docker images when you release your package. The workflow handles:
 
-```yaml
-- name: Build and push Connect image
-  uses: docker/build-push-action@v5
-  with:
-    context: .
-    target: connect
-    push: true
-    tags: ${{ env.REGISTRY }}/${{ github.repository }}/connect:${{ github.ref_name }}
-    build-args: |
-      TAG=${{ github.ref_name }}
-      PACKAGE_NAME=${{ github.repository }}
+- Syncing Powerhouse dependencies when new versions are released
+- Publishing your package to npm
+- Building and pushing Docker images to both GitHub Container Registry (GHCR) and Vetra Docker Registry
 
-- name: Build and push Switchboard image
-  uses: docker/build-push-action@v5
-  with:
-    context: .
-    target: switchboard
-    push: true
-    tags: ${{ env.REGISTRY }}/${{ github.repository }}/switchboard:${{ github.ref_name }}
-    build-args: |
-      TAG=${{ github.ref_name }}
-```
+### Required GitHub Secrets
+
+To enable the full CI/CD pipeline, configure these secrets in your GitHub repository settings (**Settings > Secrets and variables > Actions**):
+
+| Secret             | Required | Description                                                                   |
+| ------------------ | -------- | ----------------------------------------------------------------------------- |
+| `NPM_ACCESS_TOKEN` | Yes      | npm access token for publishing packages. Create at npmjs.com > Access Tokens |
+| `DOCKER_USERNAME`  | Yes      | Username for the Vetra Docker registry (cr.vetra.io)                          |
+| `DOCKER_PASSWORD`  | Yes      | Password for the Vetra Docker registry                                        |
+| `DOCKER_PROJECT`   | No       | Custom Docker project name. Defaults to repository name if not set            |
+
+:::tip Getting Docker Registry Credentials
+Contact the Powerhouse team to get credentials for the Vetra Docker registry (cr.vetra.io). If you prefer to use your own registry, you can modify the workflow to use a different registry.
+:::
+
+### Setting Up Secrets
+
+1. Go to your GitHub repository
+2. Navigate to **Settings > Secrets and variables > Actions**
+3. Click **New repository secret**
+4. Add each secret with its corresponding value
+
+### Workflow Triggers
+
+The workflow runs automatically in two scenarios:
+
+1. **Repository dispatch**: When the Powerhouse monorepo releases a new version, it triggers downstream projects to sync and rebuild
+2. **Manual dispatch**: You can manually trigger the workflow from the GitHub Actions tab
+
+### Manual Workflow Options
+
+When triggering manually, you can configure:
+
+| Input         | Description                            | Default   |
+| ------------- | -------------------------------------- | --------- |
+| `channel`     | Release channel (dev, staging, latest) | `staging` |
+| `version`     | Specific Powerhouse version to sync to | (latest)  |
+| `dry-run`     | Skip publishing, only test the build   | `false`   |
+| `skip-docker` | Skip Docker build and push             | `false`   |
+
+### Docker Image Tags
+
+The workflow pushes images to two registries with the following tag patterns:
+
+**GitHub Container Registry (GHCR)**:
+
+- `ghcr.io/<owner>/<project>/connect:v<version>`
+- `ghcr.io/<owner>/<project>/switchboard:v<version>`
+- `ghcr.io/<owner>/<project>/connect:<channel>` (dev, staging, or latest)
+
+**Vetra Docker Registry**:
+
+- `cr.vetra.io/<project>/connect:v<version>`
+- `cr.vetra.io/<project>/switchboard:v<version>`
+- `cr.vetra.io/<project>/connect:<channel>` (dev, staging, or latest)
 
 ## Next Steps
 
