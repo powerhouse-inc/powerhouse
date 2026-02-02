@@ -1,5 +1,4 @@
 import { boolean, command, flag, oneOf, option, run } from "cmd-ts";
-import console from "console";
 import { ReleaseClient } from "nx/release";
 import type { ReleaseType } from "semver";
 

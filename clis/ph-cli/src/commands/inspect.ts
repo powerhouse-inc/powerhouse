@@ -1,6 +1,5 @@
 import { inspectArgs } from "@powerhousedao/common/clis";
 import { command } from "cmd-ts";
-import console from "console";
 
 export const inspect = command({
   name: "inspect",

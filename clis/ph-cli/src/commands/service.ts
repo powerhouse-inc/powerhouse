@@ -1,7 +1,6 @@
 import { serviceArgs, type ServiceAction } from "@powerhousedao/common/clis";
 import { command } from "cmd-ts";
 import { execSync } from "node:child_process";
-import console from "node:console";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";

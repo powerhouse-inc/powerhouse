@@ -33,7 +33,7 @@ on:
       skip_push:
         type: boolean
         default: false
-      skip_tag:
+      skip_git_tag:
         type: boolean
         default: false
 
@@ -55,7 +55,7 @@ jobs:
       SKIP_STAGE: ${{ inputs.skip_stage }}
       SKIP_COMMIT: ${{ inputs.skip_commit }}
       SKIP_PUSH: ${{ inputs.skip_push }}
-      SKIP_TAG: ${{ inputs.skip_tag }}
+      SKIP_GIT_TAG: ${{ inputs.skip_git_tag }}
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       NODE_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
       NPM_CONFIG_PROVENANCE: true
@@ -70,6 +70,7 @@ jobs:
           echo "SKIP_STAGE=$SKIP_STAGE"
           echo "SKIP_COMMIT=$SKIP_COMMIT"
           echo "SKIP_PUSH=$SKIP_PUSH"
+          echo "SKIP_GIT_TAG=$SKIP_GIT_TAG"
 
       - name: General setup
         uses: ./.github/actions/setup
@@ -94,4 +95,4 @@ jobs:
           --skip-stage="$SKIP_STAGE"
           --skip-commit="$SKIP_COMMIT"
           --skip-push="$SKIP_PUSH"
-          --skip-tag="$SKIP_TAG"
+          --skip-git-tag="$SKIP_GIT_TAG"
