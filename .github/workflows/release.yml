@@ -71,6 +71,11 @@ jobs:
           echo "SKIP_PUSH=$SKIP_PUSH"
           echo "SKIP_GIT_TAG=$SKIP_GIT_TAG"
 
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+         fetch-depth: 0
+
       - name: General setup
         uses: ./.github/actions/setup
 

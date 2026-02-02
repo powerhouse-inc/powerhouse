@@ -3,11 +3,6 @@ description: Set up the required environment for running actions in the Powerhou
 runs:
   using: composite
   steps:
-    - name: Checkout repository
-      uses: actions/checkout@v6
-      with:
-        fetch-depth: 0
-
     - name: Setup Node
       uses: actions/setup-node@v6
       with:
