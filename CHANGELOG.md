@@ -1,3 +1,16 @@
+## 5.3.0-staging.18 (2026-02-02)
+
+### 🩹 Fixes
+
+- **codegen:** deduplicate module errors by name ([35145b1b1](https://github.com/powerhouse-inc/powerhouse/commit/35145b1b1))
+- **reactor-api:** close apollo server before starting new one ([e8d263f69](https://github.com/powerhouse-inc/powerhouse/commit/e8d263f69))
+- **reactor-api:** provide operations on document query ([9621e32e0](https://github.com/powerhouse-inc/powerhouse/commit/9621e32e0))
+- **switchboard:** handling sigint correctly ([2bc78f889](https://github.com/powerhouse-inc/powerhouse/commit/2bc78f889))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 5.3.0-staging.17 (2026-01-30)
 
 ### 🚀 Features

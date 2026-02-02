@@ -1,3 +1,13 @@
+## 5.3.0-staging.18 (2026-02-02)
+
+### 🩹 Fixes
+
+- **switchboard:** handling sigint correctly ([2bc78f889](https://github.com/powerhouse-inc/powerhouse/commit/2bc78f889))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 5.3.0-staging.17 (2026-01-30)
 
 ### 🩹 Fixes

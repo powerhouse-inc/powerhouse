@@ -1,3 +1,13 @@
+## 5.3.0-staging.18 (2026-02-02)
+
+### 🩹 Fixes
+
+- **codegen:** deduplicate module errors by name ([35145b1b1](https://github.com/powerhouse-inc/powerhouse/commit/35145b1b1))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 5.3.0-staging.17 (2026-01-30)
 
 ### 🩹 Fixes

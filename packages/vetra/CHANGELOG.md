@@ -1,3 +1,7 @@
+## 5.3.0-staging.18 (2026-02-02)
+
+This was a version bump only for @powerhousedao/vetra to align it with other projects, there were no code changes.
+
 ## 5.3.0-staging.17 (2026-01-30)
 
 This was a version bump only for @powerhousedao/vetra to align it with other projects, there were no code changes.
