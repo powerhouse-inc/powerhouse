@@ -9,7 +9,7 @@
     "test-coverage": "pnpm vitest run --coverage",
     "simulate-ci-workflow": "pnpm clean && pnpm install-ci && pnpm check-ts-references && pnpm check-wrong-tsc-usage && pnpm build-tsc && pnpm build-misc && pnpm build-css && pnpm build-vite && pnpm install-ci && pnpm lint && pnpm test-ci && pnpm test-codegen && pnpm test-e2e && pnpm build-storybook && pnpm check-circular-imports",
     "lint": "NODE_OPTIONS=--max-old-space-size=8192 eslint --config eslint.config.js --quiet --fix --cache --cache-strategy content",
-    "install-ci": "pnpm i --frozen-lockfile && bun install --cwd releases",
+    "install-ci": "pnpm i --frozen-lockfile",
     "build-tsc": "tsc --build",
     "build-misc": "pnpm -r --no-bail build:misc",
     "build-css": "pnpm -r --no-bail build:css",

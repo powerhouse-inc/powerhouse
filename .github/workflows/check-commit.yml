@@ -48,6 +48,10 @@ jobs:
       - name: Install deps (frozen lockfile)
         run: pnpm install-ci
 
+      - name: Install release tool dependencies
+        run: bun install
+        working-directory: releases
+
       - name: Check tsconfig references
         run: pnpm check-ts-references
 
