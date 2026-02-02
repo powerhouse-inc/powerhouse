@@ -1,6 +1,5 @@
 import type { PGlite } from "@electric-sql/pglite";
 import type {
-  Database,
   IReactorClient,
   ReactorClientModule,
 } from "@powerhousedao/reactor";
@@ -9,7 +8,6 @@ import type {
   DocumentDriveDocument,
   IDocumentDriveServer,
 } from "document-drive";
-import type { Kysely } from "kysely";
 import type { PHGlobalConfig } from "./config.js";
 import type { IDocumentCache } from "./documents.js";
 import type { PHModal } from "./modals.js";
@@ -26,8 +24,6 @@ export type PHGlobal = PHGlobalConfig & {
   legacyReactor?: IDocumentDriveServer;
   reactorClientModule?: BrowserReactorClientModule;
   reactorClient?: IReactorClient;
-  database?: Kysely<Database>;
-  pglite?: PGlite;
   connectCrypto?: IConnectCrypto;
   did?: DID;
   renown?: IRenown;

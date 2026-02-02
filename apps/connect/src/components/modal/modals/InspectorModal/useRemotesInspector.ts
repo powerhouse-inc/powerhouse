@@ -8,7 +8,7 @@ export function useRemotesInspector() {
   }
 
   const getRemotes = useCallback(() => {
-    return Promise.resolve(syncManager?.list() ?? []);
+    return Promise.resolve(syncManager.list());
   }, [syncManager]);
 
   return {

@@ -101,9 +101,7 @@ export { setDrives } from "./drives.js";
 export { setLoading, useLoading } from "./loading.js";
 export { setLoginStatus, useLoginStatus } from "./login-status.js";
 export {
-  setDatabase,
   setLegacyReactor,
-  setPGlite,
   setReactorClient,
   setReactorClientModule,
   useDatabase,

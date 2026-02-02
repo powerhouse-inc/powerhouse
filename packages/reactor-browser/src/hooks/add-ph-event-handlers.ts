@@ -62,11 +62,9 @@ import { addLoadingEventHandler } from "./loading.js";
 import { addLoginStatusEventHandler } from "./login-status.js";
 import { addModalEventHandler } from "./modals.js";
 import {
-  addDatabaseEventHandler,
   addLegacyReactorEventHandler,
-  addPGliteEventHandler,
   addReactorClientEventHandler,
-  addReactorClientModuleEventHandler,
+  addReactorClientModuleEventHandler
 } from "./reactor.js";
 import { addRenownEventHandler } from "./renown.js";
 import { addRevisionHistoryVisibleEventHandler } from "./revision-history.js";
@@ -91,8 +89,6 @@ const phGlobalEventHandlerRegisterFunctions: PHGlobalEventHandlerAdders = {
   reactorClientModule: addReactorClientModuleEventHandler,
   reactorClient: addReactorClientEventHandler,
   features: addFeaturesEventHandler,
-  database: addDatabaseEventHandler,
-  pglite: addPGliteEventHandler,
   modal: addModalEventHandler,
   connectCrypto: addConnectCryptoEventHandler,
   did: addDidEventHandler,
