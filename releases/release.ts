@@ -49,18 +49,6 @@ function getReleaseChannelFromBranchName(branchName: string): Channel {
   return tag;
 }
 
-function getReleaseTag(channel: Channel, mode: Mode) {
-  if (channel === "production") {
-    return { pattern: "v{version}" };
-  }
-
-  if (mode === "prerelease") {
-    return { pattern: `v{version}-${channel}.{prerelease}` };
-  }
-
-  return { pattern: `v{version}-${channel}` };
-}
-
 function getPreid(channel: Channel): string | undefined {
   if (channel === "production") return "latest";
   return channel;
@@ -143,14 +131,12 @@ const app = command({
     const branchName = getBranchName();
     const channel = getReleaseChannelFromBranchName(branchName);
     const specifier = getSpecifier(channel, mode);
-    const releaseTag = getReleaseTag(channel, mode);
     const preid = getPreid(channel);
 
     console.log(">>> release inputs", {
       branchName,
       channel,
       specifier,
-      releaseTag,
       preid,
     });
 
@@ -158,7 +144,7 @@ const app = command({
       {
         projects: ["packages/*", "clis/*", "apps/*"],
         projectsRelationship: "fixed",
-        releaseTag,
+        releaseTag: { pattern: "v{version}" },
         changelog: {
           automaticFromRef: true,
           projectChangelogs: {
@@ -180,6 +166,7 @@ const app = command({
         stageChanges,
         gitCommit,
         gitPush,
+        gitTag: true,
       });
 
     if (!workspaceVersion) {
