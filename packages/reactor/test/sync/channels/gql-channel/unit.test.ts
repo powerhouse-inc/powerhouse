@@ -162,9 +162,7 @@ describe("GqlChannel", () => {
         "channel-1",
         "remote-1",
         cursorStorage,
-        createTestConfig({
-          authToken: "test-token",
-        }),
+        createTestConfig(),
         createMockOperationIndex(),
         createPollTimer(),
       );
@@ -317,7 +315,7 @@ describe("GqlChannel", () => {
       channel.shutdown();
     });
 
-    it("should include auth token in headers when provided", async () => {
+    it("should include auth token in headers when jwtHandler provided", async () => {
       const cursorStorage = createMockCursorStorage();
       const mockFetch = createMockFetch({
         pollSyncEnvelopes: [],
@@ -325,13 +323,15 @@ describe("GqlChannel", () => {
       });
       global.fetch = mockFetch;
 
+      const jwtHandler = vi.fn().mockResolvedValue("secret-token");
+
       const channel = new GqlChannel(
         createMockLogger(),
         "channel-1",
         "remote-1",
         cursorStorage,
         createTestConfig({
-          authToken: "secret-token",
+          jwtHandler,
         }),
         createMockOperationIndex(),
         createPollTimer(),
@@ -340,12 +340,85 @@ describe("GqlChannel", () => {
 
       await vi.advanceTimersByTimeAsync(5000);
 
+      expect(jwtHandler).toHaveBeenCalledWith("https://example.com/graphql");
       expect(mockFetch).toHaveBeenCalledWith(
         "https://example.com/graphql",
         expect.objectContaining({
           headers: expect.objectContaining({
             Authorization: "Bearer secret-token",
           }),
+        }),
+      );
+    });
+
+    it("should not include auth header when jwtHandler returns undefined", async () => {
+      const cursorStorage = createMockCursorStorage();
+      const mockFetch = createMockFetch({
+        pollSyncEnvelopes: [],
+        touchChannel: true,
+      });
+      global.fetch = mockFetch;
+
+      const jwtHandler = vi.fn().mockResolvedValue(undefined);
+
+      const channel = new GqlChannel(
+        createMockLogger(),
+        "channel-1",
+        "remote-1",
+        cursorStorage,
+        createTestConfig({
+          jwtHandler,
+        }),
+        createMockOperationIndex(),
+        createPollTimer(),
+      );
+      await channel.init();
+
+      await vi.advanceTimersByTimeAsync(5000);
+
+      expect(jwtHandler).toHaveBeenCalled();
+      expect(mockFetch).toHaveBeenCalledWith(
+        "https://example.com/graphql",
+        expect.objectContaining({
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }),
+      );
+    });
+
+    it("should handle jwtHandler errors gracefully", async () => {
+      const cursorStorage = createMockCursorStorage();
+      const mockFetch = createMockFetch({
+        pollSyncEnvelopes: [],
+        touchChannel: true,
+      });
+      global.fetch = mockFetch;
+
+      const jwtHandler = vi.fn().mockRejectedValue(new Error("JWT error"));
+
+      const channel = new GqlChannel(
+        createMockLogger(),
+        "channel-1",
+        "remote-1",
+        cursorStorage,
+        createTestConfig({
+          jwtHandler,
+        }),
+        createMockOperationIndex(),
+        createPollTimer(),
+      );
+      await channel.init();
+
+      await vi.advanceTimersByTimeAsync(5000);
+
+      expect(jwtHandler).toHaveBeenCalled();
+      expect(mockFetch).toHaveBeenCalledWith(
+        "https://example.com/graphql",
+        expect.objectContaining({
+          headers: {
+            "Content-Type": "application/json",
+          },
         }),
       );
     });

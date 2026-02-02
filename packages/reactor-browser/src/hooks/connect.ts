@@ -112,4 +112,5 @@ export {
   useSyncList,
 } from "./reactor.js";
 export { setRenown, useRenown } from "./renown.js";
+export { login, logout } from "../renown/utils.js";
 export { setUser, useUser } from "./user.js";

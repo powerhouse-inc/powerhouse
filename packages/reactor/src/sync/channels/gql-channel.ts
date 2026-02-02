@@ -6,7 +6,12 @@ import { ChannelError } from "../errors.js";
 import type { IChannel } from "../interfaces.js";
 import { Mailbox } from "../mailbox.js";
 import type { SyncOperation } from "../sync-operation.js";
-import type { RemoteCursor, RemoteFilter, SyncEnvelope } from "../types.js";
+import type {
+  JwtHandler,
+  RemoteCursor,
+  RemoteFilter,
+  SyncEnvelope,
+} from "../types.js";
 import { ChannelErrorSource } from "../types.js";
 import type { IPollTimer } from "./poll-timer.js";
 import { envelopesToSyncOperations } from "./utils.js";
@@ -17,8 +22,8 @@ import { envelopesToSyncOperations } from "./utils.js";
 export type GqlChannelConfig = {
   /** The GraphQL endpoint URL */
   url: string;
-  /** Authentication token for the remote */
-  authToken?: string;
+  /** Dynamic JWT token handler for generating fresh tokens per-request */
+  jwtHandler?: JwtHandler;
   /** Base delay for exponential backoff retries in milliseconds (default: 1000) */
   retryBaseDelayMs?: number;
   /** Maximum delay for exponential backoff retries in milliseconds (default: 300000) */
@@ -68,7 +73,7 @@ export class GqlChannel implements IChannel {
     this.pollTimer = pollTimer;
     this.config = {
       url: config.url,
-      authToken: config.authToken,
+      jwtHandler: config.jwtHandler,
       retryBaseDelayMs: config.retryBaseDelayMs ?? 1000,
       retryMaxDelayMs: config.retryMaxDelayMs ?? 300000,
       maxFailures: config.maxFailures ?? 5,
@@ -458,6 +463,25 @@ export class GqlChannel implements IChannel {
   }
 
   /**
+   * Gets the authorization header value using jwtHandler.
+   */
+  private async getAuthorizationHeader(): Promise<string | undefined> {
+    if (!this.config.jwtHandler) {
+      return undefined;
+    }
+
+    try {
+      const token = await this.config.jwtHandler(this.config.url);
+      if (token) {
+        return `Bearer ${token}`;
+      }
+    } catch (error) {
+      this.logger.error("JWT handler failed: @Error", error);
+    }
+    return undefined;
+  }
+
+  /**
    * Executes a GraphQL query or mutation against the remote endpoint.
    */
   private async executeGraphQL<T>(
@@ -468,8 +492,9 @@ export class GqlChannel implements IChannel {
       "Content-Type": "application/json",
     };
 
-    if (this.config.authToken) {
-      headers["Authorization"] = `Bearer ${this.config.authToken}`;
+    const authHeader = await this.getAuthorizationHeader();
+    if (authHeader) {
+      headers["Authorization"] = authHeader;
     }
 
     const fetchFn = this.config.fetchFn ?? fetch;

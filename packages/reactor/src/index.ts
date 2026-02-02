@@ -221,6 +221,7 @@ export {
   type IChannelFactory,
   type IPollTimer,
   type ISyncManager,
+  type JwtHandler,
   type MailboxItem,
   type Remote,
   type RemoteCursor,

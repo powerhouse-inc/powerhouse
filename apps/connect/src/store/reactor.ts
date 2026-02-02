@@ -24,6 +24,7 @@ import {
 } from "@powerhousedao/reactor-browser";
 import {
   addPHEventHandlers,
+  login,
   setConnectCrypto,
   setDefaultPHGlobalConfig,
   setDid,
@@ -38,13 +39,8 @@ import {
   RenownBuilder,
   RenownCryptoBuilder,
 } from "@renown/sdk";
-import type {
-  DocumentDriveDocument,
-  IDocumentDriveServer,
-} from "document-drive";
 import { logger } from "document-drive";
 import type { DocumentModelModule } from "document-model";
-import { generateId } from "document-model/core";
 import { loadCommonPackage } from "./document-model.js";
 import {
   loadExternalPackages,
@@ -67,51 +63,6 @@ async function updateVetraPackages(externalPackages: VetraPackage[]) {
   const packages = [commonPackage, ...externalPackages];
   setVetraPackages([commonPackage, ...externalPackages]);
   return packages;
-}
-
-async function loadDriveFromRemoteUrl(
-  remoteUrl: string,
-  reactor: IDocumentDriveServer,
-  drives: DocumentDriveDocument[],
-): Promise<DocumentDriveDocument | undefined> {
-  const driveFromRemoteUrl = drives.find((drive) =>
-    drive.state.local.triggers.find(
-      (trigger) =>
-        trigger.type === "PullResponder" && trigger.data?.url === remoteUrl,
-    ),
-  );
-  if (driveFromRemoteUrl) {
-    return driveFromRemoteUrl;
-  }
-  try {
-    const remoteDrive = await reactor.addRemoteDrive(remoteUrl, {
-      sharingType: "PUBLIC",
-      availableOffline: true,
-      listeners: [
-        {
-          block: true,
-          callInfo: {
-            data: remoteUrl,
-            name: "switchboard-push",
-            transmitterType: "SwitchboardPush",
-          },
-          filter: {
-            branch: ["main"],
-            documentId: ["*"],
-            documentType: ["*"],
-            scope: ["global"],
-          },
-          label: "Switchboard Sync",
-          listenerId: generateId(),
-          system: true,
-        },
-      ],
-      triggers: [],
-    });
-    return remoteDrive;
-  } catch (error) {
-    logger.error("Error adding remote drive", error);
-  }
 }
 
 export async function createReactor() {
@@ -202,9 +153,9 @@ export async function createReactor() {
   const driveSlug = extractDriveSlugFromPath(path);
   const nodeSlug = extractNodeSlugFromPath(path);
 
-  // initialize user
-  //const didFromUrl = getDidFromUrl();
-  //await login(didFromUrl, legacyReactor, renown);
+  // initialize user from URL parameter
+  const didFromUrl = getDidFromUrl();
+  await login(didFromUrl, renown);
 
   const documentCache = new ReactorClientDocumentCache(
     reactorClientModule.client,

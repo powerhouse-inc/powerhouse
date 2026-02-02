@@ -9,6 +9,7 @@ import {
   SyncBuilder,
   type Database,
   type ISyncManager,
+  type JwtHandler,
   type ParsedDriveUrl,
   type SignerConfig,
 } from "@powerhousedao/reactor";
@@ -94,6 +95,13 @@ export async function createBrowserReactor(
     verifier: createSignatureVerifier(),
   };
 
+  const jwtHandler: JwtHandler = async (url: string) => {
+    if (!renown.user) {
+      return undefined;
+    }
+    return renown.getBearerToken({ expiresIn: 10, aud: url });
+  };
+
   const pg = new PGlite("idb://reactor", {
     relaxedDurability: true,
   });
@@ -106,7 +114,9 @@ export async function createBrowserReactor(
         .withDocumentModels(documentModelModules)
         .withUpgradeManifests(upgradeManifests)
         .withSync(
-          new SyncBuilder().withChannelFactory(new GqlChannelFactory(logger)),
+          new SyncBuilder().withChannelFactory(
+            new GqlChannelFactory(logger, jwtHandler),
+          ),
         )
         .withKysely(
           new Kysely<Database>({

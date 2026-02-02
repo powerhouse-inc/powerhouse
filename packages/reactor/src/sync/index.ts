@@ -10,6 +10,7 @@ export type { ShutdownStatus } from "../shared/types.js";
 export type {
   ChannelConfig,
   ChannelHealth,
+  JwtHandler,
   SyncOperationErrorType,
   RemoteFilter,
   RemoteOptions,

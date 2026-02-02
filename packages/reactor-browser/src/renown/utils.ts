@@ -1,5 +1,5 @@
 import type { IRenown, User } from "@renown/sdk";
-import { logger, type IDocumentDriveServer } from "document-drive";
+import { logger } from "document-drive";
 import { setLoginStatus, setUser } from "../connect.js";
 import { RENOWN_CHAIN_ID, RENOWN_NETWORK_ID, RENOWN_URL } from "./constants.js";
 
@@ -16,10 +16,9 @@ export function openRenown() {
 
 export async function login(
   userDid: string | undefined,
-  reactor: IDocumentDriveServer | undefined,
   renown: IRenown | undefined,
 ): Promise<User | undefined> {
-  if (!renown || !reactor) {
+  if (!renown) {
     return;
   }
   try {
@@ -29,9 +28,6 @@ export async function login(
     if (user?.did && (user.did === userDid || !userDid)) {
       setLoginStatus("authorized");
       setUser(user);
-      reactor.setGenerateJwtHandler(async (driveUrl) =>
-        renown.getBearerToken({ expiresIn: 10, aud: driveUrl }),
-      );
       return user;
     }
 
@@ -43,9 +39,7 @@ export async function login(
     const newUser = await renown.login(userDid);
     setLoginStatus("authorized");
     setUser(newUser);
-    reactor.setGenerateJwtHandler(async (driveUrl) =>
-      renown.getBearerToken({ aud: driveUrl, expiresIn: 10 }),
-    );
+    return newUser;
   } catch (error) {
     setLoginStatus("not-authorized");
     logger.error(error);
@@ -54,11 +48,8 @@ export async function login(
 
 export async function logout() {
   setLoginStatus("initial");
+  setUser(undefined);
 
   const renown = window.ph?.renown;
   await renown?.logout();
-
-  // todo: remove jwt handler from channels
-  //const reactor = window.ph?.legacyReactor;
-  //reactor?.removeJwtHandler();
 }
