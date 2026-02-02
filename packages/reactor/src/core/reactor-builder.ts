@@ -1,12 +1,8 @@
 import type {
-  BaseDocumentDriveServer,
   IDocumentOperationStorage,
   IDocumentStorage,
 } from "document-drive";
-import {
-  ReactorBuilder as DriveReactorBuilder,
-  MemoryStorage,
-} from "document-drive";
+import { MemoryStorage } from "document-drive";
 import type { DocumentModelModule, UpgradeManifest } from "document-model";
 import { DocumentMetaCache } from "../cache/document-meta-cache.js";
 import { KyselyOperationIndex } from "../cache/kysely-operation-index.js";
@@ -178,12 +174,6 @@ export class ReactorBuilder {
       documentModelRegistry.registerModules(...this.documentModels);
     }
 
-    const builder = new DriveReactorBuilder(this.documentModels).withStorage(
-      storage as MemoryStorage,
-    );
-    const driveServer = builder.build() as unknown as BaseDocumentDriveServer;
-    await driveServer.initialize();
-
     const baseDatabase =
       this.kyselyInstance ??
       new Kysely<Database>({
@@ -353,7 +343,6 @@ export class ReactorBuilder {
     }
 
     const module: ReactorModule = {
-      driveServer,
       storage,
       eventBus,
       documentModelRegistry,

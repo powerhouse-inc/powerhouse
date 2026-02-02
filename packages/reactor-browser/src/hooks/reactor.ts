@@ -20,7 +20,6 @@ const reactorClientModuleEventFunctions = makePHEventFunctions(
   "reactorClientModule",
 );
 const reactorClientEventFunctions = makePHEventFunctions("reactorClient");
-const syncEventFunctions = makePHEventFunctions("sync");
 
 /** Returns the legacy reactor */
 export const useLegacyReactor: UsePHGlobalValue<IDocumentDriveServer> =
@@ -54,35 +53,9 @@ export const useReactorClient: UsePHGlobalValue<IReactorClient> =
 export const setReactorClient: SetPHGlobalValue<IReactorClient> =
   reactorClientEventFunctions.setValue;
 
-const modelRegistryEventFunctions = makePHEventFunctions("modelRegistry");
-
-/** Returns the model registry */
-export const useModelRegistry: UsePHGlobalValue<IDocumentModelRegistry> =
-  modelRegistryEventFunctions.useValue;
-
-/** Sets the model registry */
-export const setModelRegistry: SetPHGlobalValue<IDocumentModelRegistry> =
-  modelRegistryEventFunctions.setValue;
-
-/** Adds an event handler for the model registry */
-export const addModelRegistryEventHandler: AddPHGlobalEventHandler =
-  modelRegistryEventFunctions.addEventHandler;
-
 /** Adds an event handler for the reactor client */
 export const addReactorClientEventHandler: AddPHGlobalEventHandler =
   reactorClientEventFunctions.addEventHandler;
-
-/** Returns the sync manager */
-export const useSync: UsePHGlobalValue<ISyncManager> =
-  syncEventFunctions.useValue;
-
-/** Sets the sync manager */
-export const setSync: SetPHGlobalValue<ISyncManager> =
-  syncEventFunctions.setValue;
-
-/** Adds an event handler for the sync manager */
-export const addSyncEventHandler: AddPHGlobalEventHandler =
-  syncEventFunctions.addEventHandler;
 
 const databaseEventFunctions = makePHEventFunctions("database");
 
@@ -111,3 +84,11 @@ export const setPGlite: SetPHGlobalValue<PGlite> =
 /** Adds an event handler for the PGlite instance */
 export const addPGliteEventHandler: AddPHGlobalEventHandler =
   pgliteEventFunctions.addEventHandler;
+
+// The following are derived from the reactor client module:
+
+export const useSync = (): ISyncManager | undefined =>
+  useReactorClientModule()?.reactorModule?.syncModule?.syncManager;
+
+export const useModelRegistry = (): IDocumentModelRegistry | undefined =>
+  useReactorClientModule()?.reactorModule?.documentModelRegistry;

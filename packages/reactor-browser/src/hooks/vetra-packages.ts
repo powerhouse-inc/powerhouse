@@ -21,7 +21,9 @@ export function setVetraPackages(vetraPackages: VetraPackage[] | undefined) {
     window.ph?.legacyReactor?.setDocumentModelModules(documentModelModules);
 
     try {
-      window.ph?.modelRegistry?.registerModules(...documentModelModules);
+      window.ph?.reactorClientModule?.reactorModule?.documentModelRegistry.registerModules(
+        ...documentModelModules,
+      );
     } catch (error) {
       // check if it's a duplicate module error
       if (error instanceof DuplicateModuleError) {

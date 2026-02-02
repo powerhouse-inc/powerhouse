@@ -33,13 +33,10 @@ import {
   setDocumentCache,
   setDrives,
   setLegacyReactor,
-  setModelRegistry,
   setPGlite,
-  setProcessorManager,
   setReactorClient,
   setReactorClientModule,
   setRenown,
-  setSync,
 } from "@powerhousedao/reactor-browser/connect";
 import {
   BrowserKeyStorage,
@@ -265,15 +262,12 @@ export async function createReactor() {
   setLegacyReactor(legacyReactor);
   setReactorClientModule(reactorClientModule);
   setReactorClient(reactorClientModule.client);
-  setModelRegistry(reactorClientModule.reactorModule?.documentModelRegistry);
-  setSync(reactorClientModule.reactorModule?.syncModule?.syncManager);
   setDatabase(reactorClientModule.reactorModule?.database);
   setPGlite(reactorClientModule.pg);
   setDocumentCache(documentCache);
   setConnectCrypto(renownCrypto);
   setDid(renown.did);
   setRenown(renown);
-  setProcessorManager(reactorClientModule.reactorModule?.processorManager);
   setDrives(drives);
   setVetraPackages(vetraPackages);
   setSelectedDrive(driveSlug);

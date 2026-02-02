@@ -50,7 +50,8 @@ export async function addRemoteDrive(
     throw new Error("ReactorClient not initialized");
   }
 
-  const sync = window.ph?.sync;
+  const sync =
+    window.ph?.reactorClientModule?.reactorModule?.syncModule?.syncManager;
   if (!sync) {
     throw new Error("Sync not initialized");
   }

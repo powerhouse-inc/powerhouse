@@ -61,15 +61,12 @@ import { addDrivesEventHandler } from "./drives.js";
 import { addLoadingEventHandler } from "./loading.js";
 import { addLoginStatusEventHandler } from "./login-status.js";
 import { addModalEventHandler } from "./modals.js";
-import { addProcessorManagerEventHandler } from "./processor-manager.js";
 import {
   addDatabaseEventHandler,
   addLegacyReactorEventHandler,
-  addModelRegistryEventHandler,
   addPGliteEventHandler,
   addReactorClientEventHandler,
   addReactorClientModuleEventHandler,
-  addSyncEventHandler,
 } from "./reactor.js";
 import { addRenownEventHandler } from "./renown.js";
 import { addRevisionHistoryVisibleEventHandler } from "./revision-history.js";
@@ -93,8 +90,6 @@ const phGlobalEventHandlerRegisterFunctions: PHGlobalEventHandlerAdders = {
   legacyReactor: addLegacyReactorEventHandler,
   reactorClientModule: addReactorClientModuleEventHandler,
   reactorClient: addReactorClientEventHandler,
-  modelRegistry: addModelRegistryEventHandler,
-  sync: addSyncEventHandler,
   features: addFeaturesEventHandler,
   database: addDatabaseEventHandler,
   pglite: addPGliteEventHandler,
@@ -104,7 +99,6 @@ const phGlobalEventHandlerRegisterFunctions: PHGlobalEventHandlerAdders = {
   renown: addRenownEventHandler,
   loginStatus: addLoginStatusEventHandler,
   user: addUserEventHandler,
-  processorManager: addProcessorManagerEventHandler,
   drives: addDrivesEventHandler,
   documentCache: addDocumentCacheEventHandler,
   selectedDriveId: () => {
