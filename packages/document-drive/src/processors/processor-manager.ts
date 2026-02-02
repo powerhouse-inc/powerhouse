@@ -32,7 +32,7 @@ export class ProcessorManager implements IProcessorManager {
     identifier: string,
     factory: ProcessorFactory,
   ): Promise<void> {
-    this.logger.debug(`Registering factory '${identifier}'.`);
+    this.logger.debug("Registering factory '@identifier'.", identifier);
 
     this.idToFactory.set(identifier, factory);
 
@@ -49,7 +49,7 @@ export class ProcessorManager implements IProcessorManager {
     for (const listener of listeners) {
       await this.listeners
         .removeListener(listener.driveId, listener.listenerId)
-        .catch(this.logger.error);
+        .catch((e) => this.logger.error("@error", e));
 
       if (listener.transmitter?.disconnect) {
         await listener.transmitter.disconnect();
@@ -60,7 +60,7 @@ export class ProcessorManager implements IProcessorManager {
   }
 
   async registerDrive(driveId: string) {
-    this.logger.debug(`Registering drive '${driveId}'.`);
+    this.logger.debug("Registering drive '@driveId'.", driveId);
 
     // iterate over all factories and create listeners
     for (const [identifier, factory] of this.idToFactory) {
@@ -98,7 +98,11 @@ export class ProcessorManager implements IProcessorManager {
     try {
       processors = await factory(drive.header);
     } catch (e) {
-      this.logger.error(`Error creating processors for drive ${driveId}:`, e);
+      this.logger.error(
+        "Error creating processors for drive @driveId: @error",
+        driveId,
+        e,
+      );
       return;
     }
 
@@ -115,7 +119,9 @@ export class ProcessorManager implements IProcessorManager {
         )
       ) {
         this.logger.debug(
-          `Processor with namespace '${processor.namespace}' already registered for drive '${driveId}'.`,
+          "Processor with namespace '@namespace' already registered for drive '@driveId'.",
+          processor.namespace,
+          driveId,
         );
         continue;
       }

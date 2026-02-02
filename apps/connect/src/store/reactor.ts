@@ -83,7 +83,8 @@ export async function createReactor() {
   const features = await initFeatureFlags();
 
   logger.info(
-    `Features: ${JSON.stringify(Object.fromEntries(features), null, 2)}`,
+    "Features: @features",
+    JSON.stringify(Object.fromEntries(features), null, 2),
   );
 
   // initialize renown crypto
@@ -178,8 +179,10 @@ export async function createReactor() {
   // Subscribe via ReactorClient interface
   const reactorClient = reactorClientModule.client;
   reactorClient.subscribe({ type: "powerhouse/document-drive" }, (event) => {
-    logger.verbose("ReactorClient subscription event", event);
-    refreshReactorDataClient(reactorClientModule.client).catch(logger.error);
+    logger.verbose("ReactorClient subscription event: @event", event);
+    refreshReactorDataClient(reactorClientModule.client).catch((e) =>
+      logger.error("@error", e),
+    );
   });
 
   // Refresh from ReactorClient to pick up any synced drives

@@ -4,6 +4,8 @@ export * from "./documents.js";
 export * from "./errors.js";
 export * from "./files.js";
 export * from "./header.js";
+export * from "./logger.js";
+export * from "./logger-types.js";
 export * from "./operations.js";
 export * from "./reducer.js";
 export * from "./schemas.js";

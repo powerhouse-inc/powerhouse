@@ -140,7 +140,7 @@ export class SystemSubgraph extends BaseSubgraph {
 
           return driveAdded;
         } catch (e) {
-          logger.error(e);
+          logger.error("@error", e);
           throw e instanceof Error ? e : new Error(e as string);
         }
       },
@@ -159,7 +159,7 @@ export class SystemSubgraph extends BaseSubgraph {
 
           return true;
         } catch (e) {
-          logger.error(e);
+          logger.error("@error", e);
 
           return false;
         }

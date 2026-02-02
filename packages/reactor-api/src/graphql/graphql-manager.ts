@@ -202,9 +202,11 @@ export class GraphQLManager {
       if (this.featureFlags.enableDocumentModelSubgraphs) {
         this.#setupDocumentModelSubgraphs("graphql", documentModels)
           .then(() => this.updateRouter())
-          .catch((error: unknown) => this.logger.error(error));
+          .catch((error: unknown) => this.logger.error("@error", error));
       } else {
-        this.updateRouter().catch((error: unknown) => this.logger.error(error));
+        this.updateRouter().catch((error: unknown) =>
+          this.logger.error("@error", error),
+        );
       }
     });
 
@@ -268,7 +270,7 @@ export class GraphQLManager {
           `Failed to setup document model subgraph for ${documentModel.documentModel.global.id}`,
           error instanceof Error ? error.message : error,
         );
-        this.logger.debug(error);
+        this.logger.debug("@error", error);
       }
     }
 
@@ -475,9 +477,11 @@ export class GraphQLManager {
           this.#setupApolloExpressMiddleware(server, router, path);
         } catch (error) {
           this.logger.error(
-            `Failed to setup subgraph ${subgraph.name} at path ${this.#getSubgraphPath(subgraph, supergraph)}`,
+            "Failed to setup subgraph @name at path @path: @error",
+            subgraph.name,
+            this.#getSubgraphPath(subgraph, supergraph),
+            error,
           );
-          this.logger.error(error);
         }
       }
     }

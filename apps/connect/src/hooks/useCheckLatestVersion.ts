@@ -20,7 +20,9 @@ export const useCheckLatestVersion = () => {
       !connectConfig.warnOutdatedApp
     ) {
       logger.warn(
-        `Connect is outdated: \nCurrent: ${result.currentVersion}\nLatest: ${result.latestVersion}`,
+        "Connect is outdated: \nCurrent: @currentVersion\nLatest: @latestVersion",
+        result.currentVersion,
+        result.latestVersion,
       );
     } else {
       toast(createElement(ReloadConnectToast), {

@@ -22,7 +22,8 @@ export async function signOperation<TState extends PHBaseState = PHBaseState>(
   if (!operation.action.context?.signer) return operation;
   if (!reducer) {
     logger.error(
-      `Document model '${document.header.documentType}' does not have a reducer`,
+      "Document model '@documentType' does not have a reducer",
+      document.header.documentType,
     );
     return operation;
   }

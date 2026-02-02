@@ -67,7 +67,7 @@ export class EventQueueManager implements IQueueManager {
     this.emitter.on(
       "jobAdded",
       wrapErrorHandler(async (job) => {
-        this.logger.verbose("Added job", job);
+        this.logger.verbose("Added job: @job", job);
         await this.processNextJob();
       }),
     );
@@ -75,7 +75,7 @@ export class EventQueueManager implements IQueueManager {
     this.emitter.on(
       "jobStarted",
       wrapErrorHandler(async (job) => {
-        this.logger.verbose("Started job", job.jobId);
+        this.logger.verbose("Started job: @jobId", job.jobId);
         this.runningJobs.push(job);
         await this.processNextJob();
       }),
@@ -84,7 +84,7 @@ export class EventQueueManager implements IQueueManager {
     this.emitter.on(
       "jobCompleted",
       wrapErrorHandler(async (job, result) => {
-        this.logger.verbose("Completed job", job.jobId);
+        this.logger.verbose("Completed job: @jobId", job.jobId);
         await this.handleJobCompleted(job, result);
       }),
     );
@@ -92,7 +92,7 @@ export class EventQueueManager implements IQueueManager {
     this.emitter.on(
       "jobFailed",
       wrapErrorHandler(async (job, error) => {
-        this.logger.error("Failed job", job, error);
+        this.logger.error("Failed job: @job @error", job, error);
         this.removeJob(job);
         onError(error);
         await this.processNextJob();
@@ -198,7 +198,7 @@ export class EventQueueManager implements IQueueManager {
       (j) => j.jobId === job.jobId,
     );
     if (indexRunning === -1) {
-      this.logger.warn("Running job not found", job.jobId);
+      this.logger.warn("Running job not found: @jobId", job.jobId);
     }
     this.runningJobs.splice(indexRunning, 1);
 
@@ -206,7 +206,7 @@ export class EventQueueManager implements IQueueManager {
       (j) => j.jobId === job.jobId,
     );
     if (indexGlobal === -1) {
-      this.logger.warn("Job not found on global queue", job.jobId);
+      this.logger.warn("Job not found on global queue: @jobId", job.jobId);
     }
     this.globalQueue.splice(indexGlobal, 1);
   }
@@ -248,7 +248,7 @@ export class EventQueueManager implements IQueueManager {
       queue = queueJob?.queue;
       job = queueJob?.job;
     } catch (error) {
-      logger.error("Error finding next job", error);
+      logger.error("Error finding next job: @error", error);
     }
     if (!queue || !job) {
       this.workers--;
@@ -265,7 +265,7 @@ export class EventQueueManager implements IQueueManager {
       await queue.setRunning(false);
       this.emit("jobCompleted", job, result);
     } catch (error) {
-      logger.error("Job failed", error);
+      logger.error("Job failed: @error", error);
       this.workers--;
       this.isFindingJob = false;
       await queue.setRunning(false);
@@ -294,7 +294,7 @@ export class EventQueueManager implements IQueueManager {
       const queueJob = await queue.getNextJob();
       if (queueJob?.jobId !== job.jobId) {
         logger.warn("Queue has different job waiting to be picked up"); // TODO ensure this is not possible
-        logger.error(job, queueJob);
+        logger.error("@job @queueJob", job, queueJob);
         continue;
       }
 

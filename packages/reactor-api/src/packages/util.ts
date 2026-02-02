@@ -87,7 +87,7 @@ async function loadDependency<T = unknown>(
       logger.warn(
         `Unable to load dependency ${fullPath}.${packageName === cwd() ? " Did you build your project?" : ""}`,
       );
-      logger.debug(e);
+      logger.debug("@error", e);
     } else if (
       e instanceof Error &&
       "code" in e &&

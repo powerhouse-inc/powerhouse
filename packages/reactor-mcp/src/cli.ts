@@ -5,6 +5,6 @@ initStdioMcpServer({
   remoteDrive: process.argv.at(2),
   root: process.cwd(),
 }).catch((error: unknown) => {
-  logger.error(error);
+  logger.error("@error", error);
   process.exit(1);
 });

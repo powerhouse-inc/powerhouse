@@ -43,7 +43,7 @@ export async function login(
     return newUser;
   } catch (error) {
     setLoginStatus("not-authorized");
-    logger.error(error);
+    logger.error("@error", error);
   }
 }
 

@@ -54,12 +54,12 @@ export async function initStdioMcpServer(options?: IMcpOptions) {
     try {
       const loadedModels = await documentModelsLoader.load();
       documentModels.push(...loadedModels);
-      logger.log(
-        "Loaded document models:",
+      logger.info(
+        "Loaded document models: @models",
         loadedModels.map((m) => m.documentModel.global.name).join(", "),
       );
     } catch (e) {
-      logger.error(e);
+      logger.error("@error", e);
     }
   }
 

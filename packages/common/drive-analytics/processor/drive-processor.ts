@@ -138,7 +138,7 @@ export class DriveAnalyticsProcessor implements IProcessor {
     try {
       await this.analyticsStore.clearSeriesBySource(source, true);
     } catch (e) {
-      this.logger.error("Failed to clear source", e);
+      this.logger.error("Failed to clear source: @error", e);
     }
   }
 }

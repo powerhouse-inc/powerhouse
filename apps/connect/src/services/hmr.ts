@@ -105,7 +105,7 @@ export function useSubscribeToVetraPackages() {
       hmrRef.current = hmr;
       hmr?.on("studio:external-packages-updated", handler);
     }
-    subscribe().catch(logger.error);
+    subscribe().catch((e) => logger.error("@error", e));
 
     return () => {
       hmrRef.current?.off("studio:external-packages-updated", handler);

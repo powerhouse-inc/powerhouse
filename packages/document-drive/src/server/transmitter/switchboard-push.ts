@@ -29,18 +29,25 @@ export class SwitchboardPushTransmitter implements ITransmitter {
 
   private async getAuthHeaders(): Promise<Record<string, string>> {
     if (!this.manager?.generateJwtHandler) {
-      this.logger.verbose(`No JWT handler available for ${this.targetURL}`);
+      this.logger.verbose(
+        "No JWT handler available for @targetURL",
+        this.targetURL,
+      );
       return {};
     }
     try {
       const jwt = await this.manager.generateJwtHandler(this.targetURL);
       if (!jwt) {
-        this.logger.verbose(`No JWT generated for ${this.targetURL}`);
+        this.logger.verbose("No JWT generated for @targetURL", this.targetURL);
         return {};
       }
       return { Authorization: `Bearer ${jwt}` };
     } catch (error) {
-      this.logger.error(`Error generating JWT for ${this.targetURL}:`, error);
+      this.logger.error(
+        "Error generating JWT for @targetURL: @error",
+        this.targetURL,
+        error,
+      );
       return {};
     }
   }
@@ -76,7 +83,10 @@ export class SwitchboardPushTransmitter implements ITransmitter {
       source.type === "trigger" &&
       source.trigger.data?.url === this.targetURL
     ) {
-      this.logger.verbose(`Cutting trigger loop from ${this.targetURL}.`);
+      this.logger.verbose(
+        "Cutting trigger loop from @targetURL.",
+        this.targetURL,
+      );
 
       return strands.map((strand) => {
         return {
@@ -117,11 +127,13 @@ export class SwitchboardPushTransmitter implements ITransmitter {
     }
 
     this.logger.verbose(
-      ` Total update: [${strands.map((s) => s.operations.length).join(", ")}] operations`,
+      "Total update: [@opCounts] operations",
+      strands.map((s) => s.operations.length).join(", "),
     );
 
     this.logger.verbose(
-      `Culled update: [${culledStrands.map((s) => s.operations.length).join(", ")}] operations`,
+      "Culled update: [@opCounts] operations",
+      culledStrands.map((s) => s.operations.length).join(", "),
     );
 
     // Send Graphql mutation to switchboard
@@ -175,7 +187,7 @@ export class SwitchboardPushTransmitter implements ITransmitter {
 
       return result.pushUpdates;
     } catch (e) {
-      this.logger.error(e);
+      this.logger.error("@error", e);
       throw e;
     }
   }

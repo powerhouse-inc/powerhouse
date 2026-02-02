@@ -64,7 +64,7 @@ const ENABLE_DUAL_ACTION_CREATE_DEFAULT = true;
 const app = express();
 
 if (process.env.SENTRY_DSN) {
-  logger.info("Initialized Sentry with env:", process.env.SENTRY_ENV);
+  logger.info("Initialized Sentry with env: @env", process.env.SENTRY_ENV);
   Sentry.init({
     dsn: process.env.SENTRY_DSN,
     environment: process.env.SENTRY_ENV,
@@ -85,9 +85,9 @@ async function initPrismaStorage(connectionString: string, cache: ICache) {
     if (e instanceof Error && e.message.includes(prismaConnectError)) {
       const dbUrl = connectionString;
       const safeUrl = `${dbUrl.slice(0, dbUrl.indexOf(":") + 1)}{...}${dbUrl.slice(dbUrl.indexOf("@"), dbUrl.lastIndexOf("?"))}`;
-      logger.warn(`Can't reach database server at '${safeUrl}'`);
+      logger.warn("Can't reach database server at '@safeUrl'", safeUrl);
     } else {
-      logger.error(e);
+      logger.error("@error", e);
     }
     throw e;
   }
@@ -137,7 +137,7 @@ async function initServer(
     try {
       redis = await initRedis(redisUrl);
     } catch (e) {
-      logger.error(e);
+      logger.error("@error", e);
     }
   }
   const cache = redis ? new RedisCache(redis) : new InMemoryCache();
@@ -316,14 +316,18 @@ async function initServer(
             },
           );
         }
-        logger.debug(`Remote drive ${remoteDriveUrl} synced`);
+        logger.debug("Remote drive @remoteDriveUrl synced", remoteDriveUrl);
       } catch (error) {
         if (error instanceof DocumentAlreadyExistsError) {
-          logger.debug(`Remote drive already added: ${remoteDriveUrl}`);
+          logger.debug(
+            "Remote drive already added: @remoteDriveUrl",
+            remoteDriveUrl,
+          );
           driveId = remoteDriveUrl.split("/").pop();
         } else {
           logger.error(
-            `Failed to connect to remote drive ${remoteDriveUrl}:`,
+            "Failed to connect to remote drive @remoteDriveUrl: @error",
+            remoteDriveUrl,
             error,
           );
         }
@@ -377,7 +381,7 @@ export const startSwitchboard = async (
     storageV2,
   };
 
-  logger.info("Feature flags:", {
+  logger.info("Feature flags: @flags", {
     DOCUMENT_MODEL_SUBGRAPHS_ENABLED: enableDocumentModelSubgraphs,
     REACTOR_STORAGE_V2: storageV2,
     ENABLE_DUAL_ACTION_CREATE: enableDualActionCreate,
@@ -388,7 +392,7 @@ export const startSwitchboard = async (
       await initProfilerFromEnv(process.env);
     } catch (e) {
       Sentry.captureException(e);
-      logger.error("Error starting profiler", e);
+      logger.error("Error starting profiler: @error", e);
     }
   }
 
@@ -397,7 +401,7 @@ export const startSwitchboard = async (
   try {
     renown = await initRenown(options.identity);
   } catch (e) {
-    logger.warn("Failed to initialize ConnectCrypto:", e);
+    logger.warn("Failed to initialize ConnectCrypto: @error", e);
     if (options.identity?.requireExisting) {
       throw new Error(
         'Identity required but failed to initialize. Run "ph login" first.',
@@ -409,7 +413,7 @@ export const startSwitchboard = async (
     return await initServer(serverPort, options, renown);
   } catch (e) {
     Sentry.captureException(e);
-    logger.error("App crashed", e);
+    logger.error("App crashed: @error", e);
     throw e;
   }
 };

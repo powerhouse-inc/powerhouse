@@ -173,7 +173,7 @@ export async function requestPublicDrive(
     }
     drive = result.drive;
   } catch (e) {
-    logger.error(e);
+    logger.error("@error", e);
     throw new Error("Couldn't find drive info");
   }
 
@@ -241,7 +241,7 @@ export async function requestPublicDriveFromReactor(
       meta: globalState?.meta,
     };
   } catch (e) {
-    logger.error(e);
+    logger.error("@error", e);
     throw new Error("Couldn't find drive info");
   }
 

@@ -1,4 +1,4 @@
-import { ConsoleLogger } from "@powerhousedao/reactor";
+import { childLogger } from "document-drive";
 import {
   DEFAULT_RENOWN_URL,
   NodeKeyStorage,
@@ -7,7 +7,7 @@ import {
   type IRenown,
 } from "@renown/sdk/node";
 
-const logger = new ConsoleLogger(["switchboard", "renown"]);
+const logger = childLogger(["switchboard", "renown"]);
 
 export interface RenownOptions {
   /** Path to the keypair file. Defaults to .ph/.keypair.json in cwd */
@@ -59,7 +59,7 @@ export async function initRenown(
     .withBaseUrl(baseUrl)
     .build();
 
-  logger.info(`Switchboard identity initialized: ${renownCrypto.did}`);
+  logger.info("Switchboard identity initialized: @did", renownCrypto.did);
 
   return renown;
 }

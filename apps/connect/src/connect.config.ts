@@ -100,7 +100,7 @@ export const defaultPHDriveEditorConfig: PHDriveEditorConfig = {
 
 // Set log level from validated config
 setLogLevel(env.PH_CONNECT_LOG_LEVEL);
-logger.debug(`Setting log level to ${env.PH_CONNECT_LOG_LEVEL}.`);
+logger.debug("Setting log level to @level.", env.PH_CONNECT_LOG_LEVEL);
 
 // Normalize the base path to ensure it starts and ends with a forward slash
 const PH_CONNECT_BASE_PATH = normalizeBasePath(

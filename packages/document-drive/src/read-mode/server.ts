@@ -34,7 +34,7 @@ export function ReadModeServer(
             this.#notifyListeners(drives, "add");
           }
         })
-        .catch(logger.error);
+        .catch((e) => logger.error("@error", e));
     }
 
     async #buildDrives() {
@@ -109,7 +109,7 @@ export function ReadModeServer(
         return newDrive;
       } catch (error) {
         // if an error is thrown, then add the read drive again
-        logger.error(error);
+        logger.error("@error", error);
         await this.addReadDrive(result.url, readOptions);
         throw error;
       }
