@@ -3,17 +3,12 @@ import type { Action, ActionSigner, PHDocument } from "document-model";
 import { buildSignedAction } from "document-model/core";
 
 export async function signAction(action: Action, document: PHDocument) {
-  const reactor = window.ph?.legacyReactor;
+  const reactor = window.ph?.reactorClient;
   if (!reactor) return action;
 
-  const documentModelModules = reactor.getDocumentModelModules();
-  const documentModelModule = documentModelModules.find(
-    (module) => module.documentModel.global.id === document.header.documentType,
+  const documentModelModule = await reactor.getDocumentModelModule(
+    document.header.documentType,
   );
-  if (!documentModelModule) {
-    logger.error(`Document model '${document.header.documentType}' not found`);
-    return action;
-  }
   const reducer = documentModelModule.reducer;
   const user = window.ph?.user;
   const connectCrypto = window.ph?.connectCrypto;

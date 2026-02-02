@@ -5,9 +5,7 @@ import type {
   SyncStatus,
   Trigger,
 } from "document-drive";
-import { SynchronizationUnitNotFoundError } from "document-drive";
 import type { PHDocument } from "document-model";
-import { isLegacyReadEnabledSync } from "../hooks/use-feature-flags.js";
 
 function handleSettledResults<T>(results: PromiseSettledResult<T>[]): T[] {
   return results.reduce((acc, result) => {
@@ -126,27 +124,9 @@ export function getSyncStatus(
 ): Promise<SyncStatus | undefined> {
   if (sharingType === "LOCAL") return Promise.resolve(undefined);
 
-  const useLegacy = isLegacyReadEnabledSync();
-
-  if (useLegacy) {
-    const reactor = window.ph?.legacyReactor;
-    if (!reactor) {
-      return Promise.resolve(undefined);
-    }
-    try {
-      const syncStatus = reactor.getSyncStatus(documentId);
-      if (syncStatus instanceof SynchronizationUnitNotFoundError)
-        return Promise.resolve("INITIAL_SYNC");
-      return Promise.resolve(syncStatus);
-    } catch (error) {
-      console.error(error);
-      return Promise.resolve("ERROR");
-    }
-  } else {
-    // TODO: Implement sync status via ReactorClient/SyncManager
-    // For now, return undefined as sync status is managed differently
-    return Promise.resolve(undefined);
-  }
+  // TODO: Implement sync status via ReactorClient/SyncManager
+  // For now, return undefined as sync status is managed differently
+  return Promise.resolve(undefined);
 }
 
 export function getSyncStatusSync(
@@ -155,27 +135,9 @@ export function getSyncStatusSync(
 ): SyncStatus | undefined {
   if (sharingType === "LOCAL") return;
 
-  const useLegacy = isLegacyReadEnabledSync();
-
-  if (useLegacy) {
-    const reactor = window.ph?.legacyReactor;
-    if (!reactor) {
-      return;
-    }
-    try {
-      const syncStatus = reactor.getSyncStatus(documentId);
-      if (syncStatus instanceof SynchronizationUnitNotFoundError)
-        return "INITIAL_SYNC";
-      return syncStatus;
-    } catch (error) {
-      console.error(error);
-      return "ERROR";
-    }
-  } else {
-    // TODO: Implement sync status via ReactorClient/SyncManager
-    // For now, return undefined as sync status is managed differently
-    return undefined;
-  }
+  // TODO: Implement sync status via ReactorClient/SyncManager
+  // For now, return undefined as sync status is managed differently
+  return undefined;
 }
 
 export function getDrivePullResponderTrigger(

@@ -6,7 +6,6 @@ import type {
   Operation,
   PHDocument,
 } from "document-model";
-import { isLegacyWriteEnabledSync } from "../hooks/use-feature-flags.js";
 
 export async function queueActions(
   document: PHDocument | undefined,
@@ -26,27 +25,12 @@ export async function queueActions(
     throw new Error("No actions provided");
   }
 
-  const useLegacy = isLegacyWriteEnabledSync();
-
-  if (useLegacy) {
-    const reactor = window.ph?.legacyReactor;
-    if (!reactor) {
-      throw new Error("Legacy reactor not initialized");
-    }
-
-    const result = await reactor.queueActions(document.header.id, actions);
-    if (result.status !== "SUCCESS") {
-      logger.error(result.error);
-    }
-    return result.document;
-  } else {
-    const reactorClient = window.ph?.reactorClient;
-    if (!reactorClient) {
-      throw new Error("ReactorClient not initialized");
-    }
-
-    return await reactorClient.execute(document.header.id, "main", actions);
+  const reactorClient = window.ph?.reactorClient;
+  if (!reactorClient) {
+    throw new Error("ReactorClient not initialized");
   }
+
+  return await reactorClient.execute(document.header.id, "main", actions);
 }
 
 export async function queueOperations(
@@ -67,28 +51,13 @@ export async function queueOperations(
     throw new Error("No operations provided");
   }
 
-  const useLegacy = isLegacyWriteEnabledSync();
-
-  if (useLegacy) {
-    const reactor = window.ph?.legacyReactor;
-    if (!reactor) {
-      throw new Error("Legacy reactor not initialized");
-    }
-
-    const result = await reactor.queueOperations(documentId, operations);
-    if (result.status !== "SUCCESS") {
-      logger.error(result.error);
-    }
-    return result.document;
-  } else {
-    const reactorClient = window.ph?.reactorClient;
-    if (!reactorClient) {
-      throw new Error("ReactorClient not initialized");
-    }
-
-    const actions = operations.map((op) => op.action);
-    return await reactorClient.execute(documentId, "main", actions);
+  const reactorClient = window.ph?.reactorClient;
+  if (!reactorClient) {
+    throw new Error("ReactorClient not initialized");
   }
+
+  const actions = operations.map((op) => op.action);
+  return await reactorClient.execute(documentId, "main", actions);
 }
 
 export function deduplicateOperations(

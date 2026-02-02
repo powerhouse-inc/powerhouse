@@ -7,7 +7,7 @@
     "test-ci": "pnpm -r --no-bail --filter=!codegen --filter=!document-drive --filter=!reactor --filter=!atlas --filter=!load-test-client --filter=!scripts run test -- --silent passed-only related",
     "test-codegen": "pnpm --filter=codegen run test -- --silent passed-only related",
     "test-coverage": "pnpm vitest run --coverage",
-    "simulate-ci-workflow": "pnpm clean && pnpm install-ci && pnpm check-ts-references && pnpm check-wrong-tsc-usage && pnpm build-tsc && pnpm build-misc && pnpm build-css && pnpm build-vite && pnpm install-ci && pnpm lint && pnpm test-ci && pnpm test-codegen && pnpm build-storybook && pnpm check-circular-imports",
+    "simulate-ci-workflow": "pnpm clean && pnpm install-ci && pnpm check-ts-references && pnpm check-wrong-tsc-usage && pnpm build-tsc && pnpm build-misc && pnpm build-css && pnpm build-vite && pnpm install-ci && pnpm lint && pnpm test-ci && pnpm test-codegen && pnpm test-e2e && pnpm build-storybook && pnpm check-circular-imports",
     "lint": "NODE_OPTIONS=--max-old-space-size=8192 eslint --config eslint.config.js --quiet --fix --cache --cache-strategy content",
     "install-ci": "pnpm i --frozen-lockfile",
     "build-tsc": "tsc --build",
@@ -22,7 +22,8 @@
     "prepare": "husky",
     "check-circular-imports": "dpdm -T ./**/* --no-tree --no-warning --exit-code circular:1",
     "check-ts-references": "tsx scripts/check-ts-references.ts",
-    "check-wrong-tsc-usage": "tsx scripts/check-wrong-tsc-usage.ts"
+    "check-wrong-tsc-usage": "tsx scripts/check-wrong-tsc-usage.ts",
+    "test-e2e": "pnpm --filter=test-package-vetra --filter=connect-e2e run test:e2e"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.8.1",

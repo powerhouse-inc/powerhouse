@@ -1,3 +1,18 @@
+## 6.0.0-dev.28 (2026-01-31)
+
+### 🚀 Features
+
+- add e2e tests to simulate ([6ba43d19b](https://github.com/powerhouse-inc/powerhouse/commit/6ba43d19b))
+
+### 🩹 Fixes
+
+- **design-system:** prevent file/folder from opening during rename ([0f6bf5875](https://github.com/powerhouse-inc/powerhouse/commit/0f6bf5875))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Guillermo Puente @gpuente
+
 ## 6.0.0-dev.27 (2026-01-30)
 
 ### 🚀 Features

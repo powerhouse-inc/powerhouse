@@ -33,8 +33,8 @@ export {
   useDocumentModelModuleById,
   useDocumentModelModules,
 } from "./document-model-modules.js";
-export { useDocumentOperations } from "./document-operations.js";
 export { useDocumentOfType } from "./document-of-type.js";
+export { useDocumentOperations } from "./document-operations.js";
 export { useDocumentTypes } from "./document-types.js";
 export { useDriveById } from "./drive-by-id.js";
 export { useDrives } from "./drives.js";
@@ -115,14 +115,8 @@ export {
 } from "./timeline-revision.js";
 export { setPHToast, usePHToast } from "./toast.js";
 export {
-  isChannelSyncEnabledSync,
   isInspectorEnabledSync,
-  isLegacyReadEnabledSync,
-  isLegacyWriteEnabledSync,
-  useChannelSyncEnabled,
   useInspectorEnabled,
-  useLegacyReadEnabled,
-  useLegacyWriteEnabled,
 } from "./use-feature-flags.js";
 export { useGetSwitchboardLink } from "./use-get-switchboard-link.js";
 export { useOnDropFile } from "./use-on-drop-file.js";

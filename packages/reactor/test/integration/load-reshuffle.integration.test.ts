@@ -22,9 +22,6 @@ describe("Load Reshuffles", () => {
         documentModelDocumentModelModule as any,
         driveDocumentModelModule as any,
       ])
-      .withFeatures({
-        legacyStorageEnabled: false,
-      })
       .withLegacyStorage(new MemoryStorage());
 
     reactorA = await builderA.build();
@@ -34,9 +31,6 @@ describe("Load Reshuffles", () => {
         documentModelDocumentModelModule as any,
         driveDocumentModelModule as any,
       ])
-      .withFeatures({
-        legacyStorageEnabled: false,
-      })
       .withLegacyStorage(new MemoryStorage());
 
     reactorB = await builderB.build();

@@ -4,12 +4,14 @@ import { describe, expect, it } from "vitest";
 import { Reactor } from "../../src/core/reactor.js";
 import type { BatchExecutionRequest } from "../../src/core/types.js";
 import { EventBus } from "../../src/events/event-bus.js";
+import { SimpleJobExecutorManager } from "../../src/executor/simple-job-executor-manager.js";
 import { InMemoryJobTracker } from "../../src/job-tracker/in-memory-job-tracker.js";
 import { InMemoryQueue } from "../../src/queue/queue.js";
 import { ReadModelCoordinator } from "../../src/read-models/coordinator.js";
 import {
   createMockDocumentIndexer,
   createMockDocumentView,
+  createMockJobExecutor,
   createMockLogger,
   createMockOperationStore,
   createMockReactorFeatures,
@@ -23,6 +25,13 @@ describe("mutateBatch validation", () => {
     const queue = new InMemoryQueue(eventBus);
     const jobTracker = new InMemoryJobTracker(eventBus);
     const readModelCoordinator = new ReadModelCoordinator(eventBus, [], []);
+    const executorManager = new SimpleJobExecutorManager(
+      () => createMockJobExecutor(),
+      eventBus,
+      queue,
+      jobTracker,
+      createMockLogger(),
+    );
 
     return new Reactor(
       createMockLogger(),
@@ -35,6 +44,7 @@ describe("mutateBatch validation", () => {
       createMockDocumentIndexer(),
       createMockOperationStore(),
       eventBus,
+      executorManager,
     );
   };
 

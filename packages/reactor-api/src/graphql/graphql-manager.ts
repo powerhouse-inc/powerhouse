@@ -55,10 +55,7 @@ class AuthenticatedDataSource extends RemoteGraphQLDataSource {
   }
 }
 
-const DOCUMENT_MODELS_TO_EXCLUDE = [
-  "powerhouse/document-model",
-  "powerhouse/document-drive",
-];
+const DOCUMENT_MODELS_TO_EXCLUDE = ["powerhouse/document-drive"];
 
 /**
  * Check if a document model has any operations with valid schemas.

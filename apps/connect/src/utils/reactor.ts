@@ -124,7 +124,6 @@ export async function createBrowserReactor(
         .withSync(
           new SyncBuilder().withChannelFactory(new GqlChannelFactory(logger)),
         )
-        .withFeatures({ legacyStorageEnabled: true })
         .withKysely(
           new Kysely<Database>({
             dialect: new PGliteDialect(pg),

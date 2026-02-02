@@ -194,9 +194,7 @@ async function initServer(
           new CompositeChannelFactory(new ConsoleLogger(["switchboard"])),
         ),
       )
-      .withFeatures({
-        legacyStorageEnabled: !options.reactorOptions?.storageV2,
-      });
+      .withSignalHandlers();
 
     const reactorDbUrl = process.env.PH_REACTOR_DATABASE_URL;
     if (reactorDbUrl && isPostgresUrl(reactorDbUrl)) {

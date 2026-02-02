@@ -74,6 +74,7 @@ export class ReactorBuilder {
   private readModelCoordinator?: IReadModelCoordinator;
   private signatureVerifier?: SignatureVerificationHandler;
   private kyselyInstance?: Kysely<Database>;
+  private signalHandlersEnabled = false;
 
   withLogger(logger: ILogger): this {
     this.logger = logger;
@@ -149,6 +150,11 @@ export class ReactorBuilder {
 
   withKysely(kysely: Kysely<Database>): this {
     this.kyselyInstance = kysely;
+    return this;
+  }
+
+  withSignalHandlers(): this {
+    this.signalHandlersEnabled = true;
     return this;
   }
 
@@ -331,6 +337,7 @@ export class ReactorBuilder {
       documentIndexer,
       operationStore,
       eventBus,
+      executorManager,
     );
 
     let syncModule: SyncModule | undefined = undefined;
@@ -345,7 +352,7 @@ export class ReactorBuilder {
       await syncModule.syncManager.startup();
     }
 
-    return {
+    const module: ReactorModule = {
       driveServer,
       storage,
       eventBus,
@@ -369,5 +376,58 @@ export class ReactorBuilder {
       syncModule,
       reactor,
     };
+
+    if (this.signalHandlersEnabled) {
+      this.attachSignalHandlers(module);
+    }
+
+    return module;
+  }
+
+  private attachSignalHandlers(module: ReactorModule): void {
+    if (
+      typeof globalThis === "undefined" ||
+      !globalThis.process ||
+      typeof globalThis.process.on !== "function"
+    ) {
+      return;
+    }
+
+    const nodeProcess = globalThis.process;
+    let shutdownInProgress = false;
+
+    const handler = async (signal: string) => {
+      if (shutdownInProgress) {
+        this.logger!.warn(`Received ${signal} again, forcing exit`);
+        nodeProcess.exit(1);
+      }
+
+      shutdownInProgress = true;
+      this.logger!.info(`Received ${signal}, starting graceful shutdown...`);
+
+      const status = module.reactor.kill();
+
+      try {
+        await status.completed;
+      } catch (error) {
+        this.logger!.error("Shutdown failed waiting for reactor:", error);
+        nodeProcess.exit(1);
+        return;
+      }
+
+      try {
+        await module.database.destroy();
+      } catch (error) {
+        this.logger!.error("Shutdown failed destroying database:", error);
+        nodeProcess.exit(1);
+        return;
+      }
+
+      this.logger!.info("Shutdown complete");
+      nodeProcess.exit(0);
+    };
+
+    nodeProcess.on("SIGINT", () => void handler("SIGINT"));
+    nodeProcess.on("SIGTERM", () => void handler("SIGTERM"));
   }
 }

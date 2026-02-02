@@ -18,6 +18,7 @@ import type {
 import { v4 as uuidv4 } from "uuid";
 import type { IEventBus } from "../events/interfaces.js";
 import { ReactorEventTypes, type JobPendingEvent } from "../events/types.js";
+import type { IJobExecutorManager } from "../executor/interfaces.js";
 import type { IJobTracker } from "../job-tracker/interfaces.js";
 import type { IQueue } from "../queue/interfaces.js";
 import type { Job } from "../queue/types.js";
@@ -68,6 +69,7 @@ export class Reactor implements IReactor {
   private documentModelRegistry: IDocumentModelRegistry;
   private shutdownStatus: ShutdownStatus;
   private setShutdown: (value: boolean) => void;
+  private setCompleted: (completed: Promise<void>) => void;
   private queue: IQueue;
   private jobTracker: IJobTracker;
   private readModelCoordinator: IReadModelCoordinator;
@@ -76,6 +78,7 @@ export class Reactor implements IReactor {
   private documentIndexer: IDocumentIndexer;
   private operationStore: IOperationStore;
   private eventBus: IEventBus;
+  private executorManager: IJobExecutorManager;
 
   constructor(
     logger: ILogger,
@@ -88,6 +91,7 @@ export class Reactor implements IReactor {
     documentIndexer: IDocumentIndexer,
     operationStore: IOperationStore,
     eventBus: IEventBus,
+    executorManager: IJobExecutorManager,
   ) {
     this.logger = logger;
     this.documentModelRegistry = documentModelRegistry;
@@ -99,10 +103,13 @@ export class Reactor implements IReactor {
     this.documentIndexer = documentIndexer;
     this.operationStore = operationStore;
     this.eventBus = eventBus;
+    this.executorManager = executorManager;
 
-    const [status, setter] = createMutableShutdownStatus(false);
+    const [status, setShutdown, setCompleted] =
+      createMutableShutdownStatus(false);
     this.shutdownStatus = status;
-    this.setShutdown = setter;
+    this.setShutdown = setShutdown;
+    this.setCompleted = setCompleted;
 
     this.readModelCoordinator.start();
   }
@@ -110,9 +117,20 @@ export class Reactor implements IReactor {
   kill(): ShutdownStatus {
     this.logger.verbose("kill()");
 
+    if (this.shutdownStatus.isShutdown) {
+      return this.shutdownStatus;
+    }
+
     this.setShutdown(true);
-    this.readModelCoordinator.stop();
-    this.jobTracker.shutdown();
+
+    const shutdownAsync = async () => {
+      await this.executorManager.stop(true);
+
+      this.readModelCoordinator.stop();
+      this.jobTracker.shutdown();
+    };
+
+    this.setCompleted(shutdownAsync());
 
     return this.shutdownStatus;
   }

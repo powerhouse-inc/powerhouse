@@ -1,10 +1,10 @@
 import type { PGlite } from "@electric-sql/pglite";
 import type {
   Database,
+  IDocumentModelRegistry,
   IReactorClient,
   ISyncManager,
 } from "@powerhousedao/reactor";
-import type { Kysely } from "kysely";
 import type {
   AddPHGlobalEventHandler,
   BrowserReactorClientModule,
@@ -12,6 +12,7 @@ import type {
   UsePHGlobalValue,
 } from "@powerhousedao/reactor-browser";
 import type { IDocumentDriveServer } from "document-drive";
+import type { Kysely } from "kysely";
 import { makePHEventFunctions } from "./make-ph-event-functions.js";
 
 const legacyEventFunctions = makePHEventFunctions("legacyReactor");
@@ -52,6 +53,20 @@ export const useReactorClient: UsePHGlobalValue<IReactorClient> =
 /** Sets the reactor client */
 export const setReactorClient: SetPHGlobalValue<IReactorClient> =
   reactorClientEventFunctions.setValue;
+
+const modelRegistryEventFunctions = makePHEventFunctions("modelRegistry");
+
+/** Returns the model registry */
+export const useModelRegistry: UsePHGlobalValue<IDocumentModelRegistry> =
+  modelRegistryEventFunctions.useValue;
+
+/** Sets the model registry */
+export const setModelRegistry: SetPHGlobalValue<IDocumentModelRegistry> =
+  modelRegistryEventFunctions.setValue;
+
+/** Adds an event handler for the model registry */
+export const addModelRegistryEventHandler: AddPHGlobalEventHandler =
+  modelRegistryEventFunctions.addEventHandler;
 
 /** Adds an event handler for the reactor client */
 export const addReactorClientEventHandler: AddPHGlobalEventHandler =

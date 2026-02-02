@@ -1,3 +1,21 @@
+## 6.0.0-dev.28 (2026-01-31)
+
+### 🚀 Features
+
+- add e2e tests to simulate ([6ba43d19b](https://github.com/powerhouse-inc/powerhouse/commit/6ba43d19b))
+- adding signal handlers and removing old feature flags ([f08253a2d](https://github.com/powerhouse-inc/powerhouse/commit/f08253a2d))
+- **reactor:** added totalCount in findDocuments pagination ([7f1118022](https://github.com/powerhouse-inc/powerhouse/commit/7f1118022))
+
+### 🩹 Fixes
+
+- **reactor-api:** enable document-model subgraph generation ([#2261](https://github.com/powerhouse-inc/powerhouse/pull/2261))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Guillermo Puente Sandoval @gpuente
+- Samuel Hawksby-Robinson @Samyoul
+
 ## 6.0.0-dev.27 (2026-01-30)
 
 ### 🚀 Features

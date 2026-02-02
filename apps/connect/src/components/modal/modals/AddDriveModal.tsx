@@ -8,16 +8,12 @@ import {
   addDrive,
   addRemoteDrive,
   closePHModal,
-  isLegacyWriteEnabledSync,
   setSelectedDrive,
   useDriveEditorModules,
   usePHModal,
 } from "@powerhousedao/reactor-browser";
 import { useRenown, useUser } from "@powerhousedao/reactor-browser/connect";
-import {
-  requestPublicDrive,
-  requestPublicDriveFromReactor,
-} from "document-drive";
+import { requestPublicDriveFromReactor } from "document-drive";
 import { t } from "i18next";
 
 export function AddDriveModal() {
@@ -63,45 +59,13 @@ export function AddDriveModal() {
 
   const onAddRemoteDrive = async (data: AddRemoteDriveInput) => {
     try {
-      const useLegacy = isLegacyWriteEnabledSync();
-
-      // Legacy path uses listeners/triggers, new path uses channel-based sync
-      const newDrive = useLegacy
-        ? await addRemoteDrive(data.url, {
-            sharingType: data.sharingType,
-            availableOffline: data.availableOffline,
-            listeners: [
-              {
-                block: true,
-                callInfo: {
-                  data: data.url,
-                  name: "switchboard-push",
-                  transmitterType: "SwitchboardPush",
-                },
-                filter: {
-                  branch: ["main"],
-                  documentId: ["*"],
-                  documentType: ["*"],
-                  scope: ["global"],
-                },
-                label: "Switchboard Sync",
-                listenerId: "1",
-                system: true,
-              },
-            ],
-            triggers: [],
-          })
-        : await addRemoteDrive(data.url, {});
+      const driveId = await addRemoteDrive(data.url, {});
 
       toast(t("notifications.addDriveSuccess"), {
         type: "connect-success",
       });
 
-      if (!newDrive) {
-        return;
-      }
-
-      setSelectedDrive(newDrive);
+      setSelectedDrive(driveId);
     } catch (e) {
       console.error(e);
     }
@@ -124,28 +88,18 @@ export function AddDriveModal() {
       onAddLocalDrive={onAddLocalDriveSubmit}
       onAddRemoteDrive={onAddRemoteDriveSubmit}
       requestPublicDrive={async (url: string) => {
-        const useLegacy = isLegacyWriteEnabledSync();
-        const requestFn = useLegacy
-          ? requestPublicDrive
-          : requestPublicDriveFromReactor;
-
         try {
           const authToken = await renown?.getBearerToken?.({
             expiresIn: 10,
             aud: url,
           });
-          return requestFn(url, {
+          return requestPublicDriveFromReactor(url, {
             Authorization: `Bearer ${authToken}`,
           });
         } catch (error) {
           console.error(error);
-          const authToken = await renown?.getBearerToken?.({
-            expiresIn: 10,
-            aud: url,
-          });
-          return requestFn(url, {
-            Authorization: `Bearer ${authToken}`,
-          });
+
+          return requestPublicDriveFromReactor(url);
         }
       }}
       onOpenChange={(status) => {

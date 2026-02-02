@@ -107,6 +107,7 @@ export {
 export {
   setDatabase,
   setLegacyReactor,
+  setModelRegistry,
   setPGlite,
   setReactorClient,
   setReactorClientModule,

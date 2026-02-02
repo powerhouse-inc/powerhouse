@@ -53,7 +53,6 @@ describe("Consistency Tokens with Document View", () => {
       ])
       .withEventBus(eventBus)
       .withLegacyStorage(storage)
-      .withFeatures({ legacyStorageEnabled: false })
       .withReadModelCoordinator(testCoordinator);
 
     const module = await builder.buildModule();

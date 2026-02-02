@@ -391,7 +391,12 @@ export function generateDocumentModelSchemaLegacy(
           specification?.modules
             .flatMap((module) =>
               module.operations
-                .filter((op) => op.name)
+                .filter(
+                  (op) =>
+                    op.name &&
+                    op.schema &&
+                    /\b(input|type|enum|union|interface)\s+\w+/.test(op.schema),
+                )
                 .map(
                   (op) =>
                     `${documentName}_${camelCase(op.name!)}(

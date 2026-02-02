@@ -621,6 +621,15 @@ export async function createTestReactorSetup(
     undefined,
   );
 
+  // Create executor manager
+  const executorManager = new SimpleJobExecutorManager(
+    () => jobExecutor,
+    eventBus,
+    queue,
+    jobTracker,
+    createMockLogger(),
+  );
+
   // Create mock read model coordinator
   const readModelCoordinator = createMockReadModelCoordinator();
 
@@ -641,6 +650,7 @@ export async function createTestReactorSetup(
     documentIndexer,
     operationStore,
     eventBus,
+    executorManager,
   );
 
   return {
@@ -651,6 +661,7 @@ export async function createTestReactorSetup(
     queue,
     jobTracker,
     jobExecutor,
+    executorManager,
     registry,
     operationStore,
   };

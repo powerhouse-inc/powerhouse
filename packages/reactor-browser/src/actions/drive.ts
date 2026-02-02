@@ -4,27 +4,16 @@ import type {
   DriveInput,
   PullResponderTrigger,
   RemoteDriveOptions,
-  ServerListener,
   SharingType,
   Trigger,
 } from "document-drive";
 import {
   driveCreateDocument,
-  PullResponderTransmitter,
-  addTrigger as baseAddTrigger,
-  removeTrigger as baseRemoveTrigger,
   setAvailableOffline,
-  setDriveName,
   setSharingType,
 } from "document-drive";
 import type { PHDocument } from "document-model";
-import { generateId } from "document-model/core";
-import {
-  isChannelSyncEnabledSync,
-  isLegacyWriteEnabledSync,
-} from "../hooks/use-feature-flags.js";
 import { getUserPermissions } from "../utils/user.js";
-import { queueActions } from "./queue.js";
 
 export async function addDrive(input: DriveInput, preferredEditor?: string) {
   const { isAllowedToCreateDocuments } = getUserPermissions();
@@ -32,86 +21,53 @@ export async function addDrive(input: DriveInput, preferredEditor?: string) {
     throw new Error("User is not allowed to create drives");
   }
 
-  const useLegacy = isLegacyWriteEnabledSync();
-
-  if (useLegacy) {
-    const reactor = window.ph?.legacyReactor;
-    if (!reactor) {
-      throw new Error("Legacy reactor not initialized");
-    }
-
-    const id = input.id || generateId();
-    const newDrive = await reactor.addDrive(
-      {
-        global: input.global,
-        local: input.local,
-        id,
-      },
-      preferredEditor,
-    );
-    return newDrive;
-  } else {
-    const reactorClient = window.ph?.reactorClient;
-    if (!reactorClient) {
-      throw new Error("ReactorClient not initialized");
-    }
-
-    const driveDoc = driveCreateDocument({
-      global: {
-        name: input.global.name || "",
-        icon: input.global.icon ?? null,
-        nodes: [],
-      },
-    });
-
-    if (preferredEditor) {
-      driveDoc.header.meta = { preferredEditor };
-    }
-
-    return await reactorClient.create<DocumentDriveDocument>(driveDoc);
+  const reactorClient = window.ph?.reactorClient;
+  if (!reactorClient) {
+    throw new Error("ReactorClient not initialized");
   }
+
+  const driveDoc = driveCreateDocument({
+    global: {
+      name: input.global.name || "",
+      icon: input.global.icon ?? null,
+      nodes: [],
+    },
+  });
+
+  if (preferredEditor) {
+    driveDoc.header.meta = { preferredEditor };
+  }
+
+  return await reactorClient.create<DocumentDriveDocument>(driveDoc);
 }
 
 export async function addRemoteDrive(
   url: string,
   options: RemoteDriveOptions | Record<string, never>,
 ) {
-  const useLegacy = isLegacyWriteEnabledSync();
-
-  if (useLegacy) {
-    const reactor = window.ph?.legacyReactor;
-    if (!reactor) {
-      throw new Error("Legacy reactor not initialized");
-    }
-
-    const newDrive = await reactor.addRemoteDrive(
-      url,
-      options as RemoteDriveOptions,
-    );
-    return newDrive;
-  } else {
-    const reactorClient = window.ph?.reactorClient;
-    if (!reactorClient) {
-      throw new Error("ReactorClient not initialized");
-    }
-
-    const sync = window.ph?.sync;
-    if (!sync) {
-      throw new Error("Sync not initialized");
-    }
-
-    const { driveId, graphqlEndpoint: reactorGraphqlUrl } = parseDriveUrl(url);
-
-    // Use a unique name for the remote to allow multiple subscribers to the same drive
-    const remoteName = crypto.randomUUID();
-
-    await sync.add(remoteName, driveCollectionId("main", driveId), {
-      type: "gql",
-      parameters: {
-        url: reactorGraphqlUrl,
-      },
-    });
+  const reactorClient = window.ph?.reactorClient;
+  if (!reactorClient) {
+    throw new Error("ReactorClient not initialized");
   }
+
+  const sync = window.ph?.sync;
+  if (!sync) {
+    throw new Error("Sync not initialized");
+  }
+
+  const { driveId, graphqlEndpoint: reactorGraphqlUrl } = parseDriveUrl(url);
+
+  // Use a unique name for the remote to allow multiple subscribers to the same drive
+  const remoteName = crypto.randomUUID();
+
+  await sync.add(remoteName, driveCollectionId("main", driveId), {
+    type: "gql",
+    parameters: {
+      url: reactorGraphqlUrl,
+    },
+  });
+
+  return driveId;
 }
 
 export async function deleteDrive(driveId: string) {
@@ -120,21 +76,11 @@ export async function deleteDrive(driveId: string) {
     throw new Error("User is not allowed to delete drives");
   }
 
-  const useLegacy = isLegacyWriteEnabledSync();
-
-  if (useLegacy) {
-    const reactor = window.ph?.legacyReactor;
-    if (!reactor) {
-      throw new Error("Legacy reactor not initialized");
-    }
-    await reactor.deleteDrive(driveId);
-  } else {
-    const reactorClient = window.ph?.reactorClient;
-    if (!reactorClient) {
-      throw new Error("ReactorClient not initialized");
-    }
-    await reactorClient.deleteDocument(driveId);
+  const reactorClient = window.ph?.reactorClient;
+  if (!reactorClient) {
+    throw new Error("ReactorClient not initialized");
   }
+  await reactorClient.deleteDocument(driveId);
 }
 
 export async function renameDrive(
@@ -146,23 +92,11 @@ export async function renameDrive(
     throw new Error("User is not allowed to rename drives");
   }
 
-  const useLegacy = isLegacyWriteEnabledSync();
-
-  if (useLegacy) {
-    const reactor = window.ph?.legacyReactor;
-    if (!reactor) {
-      throw new Error("Legacy reactor not initialized");
-    }
-    const drive = await reactor.getDrive(driveId);
-    const renamedDrive = await queueActions(drive, setDriveName({ name }));
-    return renamedDrive;
-  } else {
-    const reactorClient = window.ph?.reactorClient;
-    if (!reactorClient) {
-      throw new Error("ReactorClient not initialized");
-    }
-    return await reactorClient.rename(driveId, name);
+  const reactorClient = window.ph?.reactorClient;
+  if (!reactorClient) {
+    throw new Error("ReactorClient not initialized");
   }
+  return await reactorClient.rename(driveId, name);
 }
 
 export async function setDriveAvailableOffline(
@@ -174,28 +108,13 @@ export async function setDriveAvailableOffline(
     throw new Error("User is not allowed to change drive availability");
   }
 
-  const useLegacy = isLegacyWriteEnabledSync();
-
-  if (useLegacy) {
-    const reactor = window.ph?.legacyReactor;
-    if (!reactor) {
-      throw new Error("Legacy reactor not initialized");
-    }
-    const drive = await reactor.getDrive(driveId);
-    const updatedDrive = await queueActions(
-      drive,
-      setAvailableOffline({ availableOffline }),
-    );
-    return updatedDrive;
-  } else {
-    const reactorClient = window.ph?.reactorClient;
-    if (!reactorClient) {
-      throw new Error("ReactorClient not initialized");
-    }
-    return await reactorClient.execute(driveId, "main", [
-      setAvailableOffline({ availableOffline }),
-    ]);
+  const reactorClient = window.ph?.reactorClient;
+  if (!reactorClient) {
+    throw new Error("ReactorClient not initialized");
   }
+  return await reactorClient.execute(driveId, "main", [
+    setAvailableOffline({ availableOffline }),
+  ]);
 }
 
 export async function setDriveSharingType(
@@ -207,143 +126,33 @@ export async function setDriveSharingType(
     throw new Error("User is not allowed to change drive sharing type");
   }
 
-  const useLegacy = isLegacyWriteEnabledSync();
-
-  if (useLegacy) {
-    const reactor = window.ph?.legacyReactor;
-    if (!reactor) {
-      throw new Error("Legacy reactor not initialized");
-    }
-    const drive = await reactor.getDrive(driveId);
-    const updatedDrive = await queueActions(
-      drive,
-      setSharingType({ type: sharingType }),
-    );
-    return updatedDrive;
-  } else {
-    const reactorClient = window.ph?.reactorClient;
-    if (!reactorClient) {
-      throw new Error("ReactorClient not initialized");
-    }
-    return await reactorClient.execute(driveId, "main", [
-      setSharingType({ type: sharingType }),
-    ]);
+  const reactorClient = window.ph?.reactorClient;
+  if (!reactorClient) {
+    throw new Error("ReactorClient not initialized");
   }
+  return await reactorClient.execute(driveId, "main", [
+    setSharingType({ type: sharingType }),
+  ]);
 }
 
+// @deprecated
 export async function removeTrigger(driveId: string, triggerId: string) {
-  const useChannelSync = isChannelSyncEnabledSync();
-  if (useChannelSync) {
-    // Channel sync replaces triggers - no-op
-    return;
-  }
-
-  const reactor = window.ph?.legacyReactor;
-  if (!reactor) {
-    throw new Error("Legacy reactor not initialized");
-  }
-  const drive = await reactor.getDrive(driveId);
-  const unsafeCastAsDrive = (await queueActions(
-    drive,
-    baseRemoveTrigger({ triggerId }),
-  )) as DocumentDriveDocument;
-
-  const trigger = unsafeCastAsDrive.state.local.triggers.find(
-    (trigger) => trigger.id === triggerId,
-  );
-
-  if (trigger) {
-    throw new Error(`There was an error removing trigger ${triggerId}`);
-  }
+  // Legacy -- to be removed.
+  return;
 }
 
+// @deprecated
 export async function registerNewPullResponderTrigger(
   driveId: string,
   url: string,
   options: Pick<RemoteDriveOptions, "pullFilter" | "pullInterval">,
 ): Promise<PullResponderTrigger | undefined> {
-  const useChannelSync = isChannelSyncEnabledSync();
-  if (useChannelSync) {
-    // Channel sync replaces triggers - no-op
-    return;
-  }
-
-  const reactor = window.ph?.legacyReactor;
-  if (!reactor) {
-    throw new Error("Legacy reactor not initialized");
-  }
-
-  const uuid = generateId();
-  const listener: ServerListener = {
-    driveId,
-    listenerId: uuid,
-    block: false,
-    filter: {
-      branch: options.pullFilter?.branch ?? [],
-      documentId: options.pullFilter?.documentId ?? [],
-      documentType: options.pullFilter?.documentType ?? [],
-      scope: options.pullFilter?.scope ?? [],
-    },
-    system: false,
-    label: `Pullresponder #${uuid}`,
-    callInfo: {
-      data: "",
-      name: "PullResponder",
-      transmitterType: "PullResponder",
-    },
-  };
-
-  // TODO: circular reference
-  // TODO: once we have DI, remove this and pass around
-  const listenerManager = reactor.listeners;
-  listener.transmitter = new PullResponderTransmitter(
-    listener,
-    listenerManager,
-  );
-
-  // set the listener on the manager directly (bypassing operations)
-  try {
-    await listenerManager.setListener(driveId, listener);
-  } catch (error) {
-    throw new Error(`Listener couldn't be registered: ${error}`);
-  }
-
-  // for backwards compatibility: return everything but the transmitter
-  return {
-    driveId,
-    filter: listener.filter,
-    data: {
-      interval: `${options.pullInterval}` || "1000",
-      listenerId: uuid,
-      url,
-    },
-    id: uuid,
-    type: "PullResponder",
-  };
+  // Legacy -- to be removed.
+  return undefined;
 }
 
+// @deprecated
 export async function addTrigger(driveId: string, trigger: Trigger) {
-  const useChannelSync = isChannelSyncEnabledSync();
-  if (useChannelSync) {
-    // Channel sync replaces triggers - no-op
-    return;
-  }
-
-  const reactor = window.ph?.legacyReactor;
-  if (!reactor) {
-    throw new Error("Legacy reactor not initialized");
-  }
-  const drive = await reactor.getDrive(driveId);
-  const unsafeCastAsDrive = (await queueActions(
-    drive,
-    baseAddTrigger({ trigger }),
-  )) as DocumentDriveDocument;
-
-  const newTrigger = unsafeCastAsDrive.state.local.triggers.find(
-    (t) => t.id === trigger.id,
-  );
-
-  if (!newTrigger) {
-    throw new Error(`There was an error adding the trigger ${trigger.id}`);
-  }
+  // Legacy -- to be removed.
+  return;
 }

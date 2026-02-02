@@ -1,3 +1,4 @@
+import { DuplicateModuleError } from "@powerhousedao/reactor";
 import type { VetraPackage } from "../types/vetra.js";
 import { makePHEventFunctions } from "./make-ph-event-functions.js";
 
@@ -18,5 +19,15 @@ export function setVetraPackages(vetraPackages: VetraPackage[] | undefined) {
     .filter((module) => module !== undefined);
   if (documentModelModules) {
     window.ph?.legacyReactor?.setDocumentModelModules(documentModelModules);
+
+    try {
+      window.ph?.modelRegistry?.registerModules(...documentModelModules);
+    } catch (error) {
+      // check if it's a duplicate module error
+      if (error instanceof DuplicateModuleError) {
+        return;
+      }
+      throw error;
+    }
   }
 }
