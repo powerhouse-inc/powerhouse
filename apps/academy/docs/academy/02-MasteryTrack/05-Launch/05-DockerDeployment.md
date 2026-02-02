@@ -375,7 +375,7 @@ The generated `.github/workflows/sync-and-publish.yml` workflow automatically bu
 
 - Syncing Powerhouse dependencies when new versions are released
 - Publishing your package to npm
-- Building and pushing Docker images to both GitHub Container Registry (GHCR) and Vetra Docker Registry
+- Building and pushing Docker images to your configured registry
 
 ### Required GitHub Secrets
 
@@ -384,12 +384,13 @@ To enable the full CI/CD pipeline, configure these secrets in your GitHub reposi
 | Secret             | Required | Description                                                                   |
 | ------------------ | -------- | ----------------------------------------------------------------------------- |
 | `NPM_ACCESS_TOKEN` | Yes      | npm access token for publishing packages. Create at npmjs.com > Access Tokens |
-| `DOCKER_USERNAME`  | Yes      | Username for the Vetra Docker registry (cr.vetra.io)                          |
-| `DOCKER_PASSWORD`  | Yes      | Password for the Vetra Docker registry                                        |
+| `DOCKER_REGISTRY`  | No       | Docker registry URL (e.g., `cr.vetra.io`). Defaults to `ghcr.io` if not set   |
+| `DOCKER_USERNAME`  | No       | Username for the Docker registry. Defaults to `github.actor` for GHCR         |
+| `DOCKER_PASSWORD`  | No       | Password for the Docker registry. Defaults to `GITHUB_TOKEN` for GHCR         |
 | `DOCKER_PROJECT`   | No       | Custom Docker project name. Defaults to repository name if not set            |
 
-:::tip Getting Docker Registry Credentials
-Contact the Powerhouse team to get credentials for the Vetra Docker registry (cr.vetra.io). If you prefer to use your own registry, you can modify the workflow to use a different registry.
+:::tip Default Registry
+If you don't configure any Docker secrets, the workflow will automatically use **GitHub Container Registry (ghcr.io)** with your GitHub credentials. This is the easiest way to get started - no additional configuration required.
 :::
 
 ### Setting Up Secrets
@@ -419,19 +420,19 @@ When triggering manually, you can configure:
 
 ### Docker Image Tags
 
-The workflow pushes images to two registries with the following tag patterns:
+The workflow pushes images to your configured registry with the following tag patterns:
 
-**GitHub Container Registry (GHCR)**:
+**For GitHub Container Registry (ghcr.io)**:
 
 - `ghcr.io/<owner>/<project>/connect:v<version>`
 - `ghcr.io/<owner>/<project>/switchboard:v<version>`
-- `ghcr.io/<owner>/<project>/connect:<channel>` (dev, staging, or latest)
+- `ghcr.io/<owner>/<project>/<target>:<channel>` (dev, staging, or latest)
 
-**Vetra Docker Registry**:
+**For other registries**:
 
-- `cr.vetra.io/<project>/connect:v<version>`
-- `cr.vetra.io/<project>/switchboard:v<version>`
-- `cr.vetra.io/<project>/connect:<channel>` (dev, staging, or latest)
+- `<registry>/<project>/connect:v<version>`
+- `<registry>/<project>/switchboard:v<version>`
+- `<registry>/<project>/<target>:<channel>` (dev, staging, or latest)
 
 ## Next Steps
 
