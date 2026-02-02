@@ -378,6 +378,7 @@ const app = command({
       }
     }
     console.log(">>> Release successfully completed 🚀");
+    process.exit(0);
   },
 });
 
