@@ -1,11 +1,10 @@
+import type { IReactorClient } from "@powerhousedao/reactor";
 import type {
   DocumentDriveDocument,
-  IDocumentDriveServer,
   SharingType,
   SyncStatus,
-  Trigger,
+  Trigger
 } from "document-drive";
-import type { PHDocument } from "document-model";
 
 function handleSettledResults<T>(results: PromiseSettledResult<T>[]): T[] {
   return results.reduce((acc, result) => {
@@ -67,55 +66,13 @@ export function getDriveAvailableOffline(
   return _availableOffline ?? false;
 }
 
-export async function getDocumentsForDriveId(
-  reactor: IDocumentDriveServer | undefined,
-  driveId: string | undefined,
-): Promise<PHDocument[]> {
-  if (!reactor || !driveId) return [];
-  const documentIds = await reactor.getDocuments(driveId);
-  const documents = await Promise.allSettled(
-    documentIds.map((id) => reactor.getDocument(id)),
-  );
-  return handleSettledResults(documents);
-}
-
 export async function getDrives(
-  reactor: IDocumentDriveServer | undefined,
+  reactor: IReactorClient,
 ): Promise<DocumentDriveDocument[]> {
-  if (!reactor) return [];
-  const driveIds = await reactor.getDrives();
-  const drives = await Promise.allSettled(
-    driveIds.map((id) => reactor.getDrive(id)),
-  );
-  return handleSettledResults(drives);
-}
-
-export async function getDocumentIds(
-  reactor: IDocumentDriveServer | undefined,
-): Promise<string[]> {
-  if (!reactor) return [];
-  const driveIds = await reactor.getDrives();
-  return handleSettledResults(
-    await Promise.allSettled(driveIds.map((id) => reactor.getDocuments(id))),
-  ).flat();
-}
-
-export async function getDocuments(
-  reactor: IDocumentDriveServer | undefined,
-): Promise<PHDocument[]> {
-  if (!reactor) return [];
-  const documentIds = await getDocumentIds(reactor);
-  return handleSettledResults(
-    await Promise.allSettled(documentIds.map((id) => reactor.getDocument(id))),
-  );
-}
-
-export async function getDriveById(
-  reactor: IDocumentDriveServer | undefined,
-  driveId: string | undefined,
-): Promise<DocumentDriveDocument | undefined> {
-  if (!reactor || !driveId) return undefined;
-  return await reactor.getDrive(driveId);
+  const results = await reactor.find({
+    type: "powerhouse/document-drive",
+  });
+  return results.results as DocumentDriveDocument[];
 }
 
 export function getSyncStatus(

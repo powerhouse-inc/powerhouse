@@ -227,7 +227,7 @@ export async function createReactor() {
   await initLegacyReactor(legacyReactor, renown);
 
   // get the drives from the reactor
-  let drives = await getDrives(legacyReactor);
+  let drives = await getDrives(reactorClientModule.client);
 
   // if remoteUrl is set and drive not already existing add remote drive and open it
   const remoteUrl = getDriveUrl();
@@ -237,7 +237,7 @@ export async function createReactor() {
 
   // if a remote drive was added then refetches the drives
   if (remoteDrive) {
-    drives = await getDrives(legacyReactor);
+    drives = await getDrives(reactorClientModule.client);
   }
 
   // get the documents from the reactor

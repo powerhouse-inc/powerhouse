@@ -1,13 +1,12 @@
 import type { IReactorClient } from "@powerhousedao/reactor";
 import type { IRenown } from "@renown/sdk";
 import { BrowserKeyStorage, RenownCryptoBuilder } from "@renown/sdk";
-import type {
-  DefaultRemoteDriveInput,
-  DocumentDriveDocument,
-  DocumentDriveServerOptions,
-  IDocumentDriveServer,
+import {
+  type DefaultRemoteDriveInput,
+  type DocumentDriveDocument,
+  type DocumentDriveServerOptions,
+  type IDocumentDriveServer,
 } from "document-drive";
-import { generateId } from "document-model/core";
 import { setDrives } from "./hooks/drives.js";
 import { getDrives } from "./utils/drives.js";
 
@@ -72,9 +71,9 @@ export type RefreshReactorDataConfig = {
 const DEFAULT_DEBOUNCE_DELAY_MS = 200;
 const DEFAULT_IMMEDIATE_THRESHOLD_MS = 1000;
 
-async function _refreshReactorData(reactor: IDocumentDriveServer | undefined) {
-  if (!reactor) return;
+async function _refreshReactorData(reactor: IReactorClient) {
   const drives = await getDrives(reactor);
+
   setDrives(drives);
 }
 
@@ -92,7 +91,7 @@ function createDebouncedRefreshReactorData(
   let timeout: ReturnType<typeof setTimeout> | null = null;
   let lastRefreshTime = 0;
 
-  return (reactor: IDocumentDriveServer | undefined, immediate = false) => {
+  return (reactor: IReactorClient, immediate = false) => {
     const now = Date.now();
     const timeSinceLastRefresh = now - lastRefreshTime;
 
@@ -163,35 +162,6 @@ export async function initLegacyReactor(
   if (error) {
     throw error;
   }
-}
-
-export async function handleCreateFirstLocalDrive(
-  reactor: IDocumentDriveServer | undefined,
-  localDrivesEnabled = true,
-) {
-  if (!localDrivesEnabled || reactor === undefined) return;
-
-  const drives = await getDrives(reactor);
-  const hasDrives = drives.length > 0;
-  if (hasDrives) return;
-
-  const driveId = generateId();
-  const driveSlug = `my-local-drive-${driveId}`;
-  const document = await reactor.addDrive({
-    id: driveId,
-    slug: driveSlug,
-    global: {
-      name: "My Local Drive",
-      icon: null,
-    },
-    local: {
-      availableOffline: false,
-      sharingType: "private",
-      listeners: [],
-      triggers: [],
-    },
-  });
-  return document;
 }
 
 async function initJwtHandler(
