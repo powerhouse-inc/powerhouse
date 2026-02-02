@@ -42,9 +42,12 @@ jobs:
       - name: Setup bun global install
         uses: oven-sh/setup-bun@v2
 
+      - name: Install release tool dependencies
+        run: bun install
+        working-directory: releases
+
       - name: Build typescript project
-        run: pnpm tsc -b
-        working-directory: './test/connect-e2e'
+        run: pnpm build-tsc
 
       - name: Run misc build scripts
         run: pnpm build-misc
@@ -57,6 +60,9 @@ jobs:
 
       - name: Run vite build scripts
         run: pnpm build-vite
+
+      - name: Run build clis
+        run: pnpm build-cli
 
       - name: Install Playwright Browsers
         run: pnpm exec playwright install --with-deps chromium
