@@ -80,7 +80,30 @@
       "vite": "^7.2.6"
     },
     "onlyBuiltDependencies": [
-      "nx"
+      "@apollo/protobufjs",
+      "@datadog/pprof",
+      "@ipshipyard/node-datachannel",
+      "@parcel/watcher",
+      "@prisma/client",
+      "@prisma/engines",
+      "@sentry/cli",
+      "@swc/core",
+      "bufferutil",
+      "core-js",
+      "core-js-pure",
+      "cypress",
+      "edgedriver",
+      "es5-ext",
+      "esbuild",
+      "geckodriver",
+      "keccak",
+      "msw",
+      "nx",
+      "prisma",
+      "protobufjs",
+      "sqlite3",
+      "unrs-resolver",
+      "utf-8-validate"
     ]
   },
   "commitlint": {
