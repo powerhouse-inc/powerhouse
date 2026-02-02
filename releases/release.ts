@@ -1,10 +1,11 @@
 import { boolean, command, flag, oneOf, option, run } from "cmd-ts";
 import console from "console";
 import { ReleaseClient } from "nx/release";
+import type { ReleaseGraph } from "nx/src/command-line/release/utils/release-graph";
+import type { VersionData } from "nx/src/command-line/release/utils/shared";
 import type { ReleaseType } from "semver";
 
-const channels = ["dev", "staging", "production"] as const;
-type Channel = (typeof channels)[number];
+type Channel = "dev" | "staging" | "production";
 const modes = ["prerelease", "patch", "minor", "major"] as const;
 type Mode = (typeof modes)[number];
 
@@ -166,15 +167,18 @@ const app = command({
 
     const { releaseVersion, releaseChangelog, releasePublish } = releaseClient;
 
+    let workspaceVersion: string | null | undefined;
+    let projectsVersionData: VersionData;
+    let releaseGraph: ReleaseGraph;
+
     try {
-      const { workspaceVersion } = await releaseVersion({
+      const dryRunResult = await releaseVersion({
         specifier,
         preid,
         verbose,
         dryRun: true,
       });
-
-      if (!workspaceVersion) {
+      if (!dryRunResult.workspaceVersion) {
         console.log(">>> No version calculated (likely no changes). Exiting.");
         process.exit(0);
       }
@@ -183,8 +187,8 @@ const app = command({
       throw error;
     }
 
-    const { workspaceVersion, projectsVersionData, releaseGraph } =
-      await releaseVersion({
+    try {
+      const result = await releaseVersion({
         specifier,
         preid,
         verbose,
@@ -194,6 +198,13 @@ const app = command({
         gitTag: false,
         gitPush: false,
       });
+      workspaceVersion = result.workspaceVersion;
+      projectsVersionData = result.projectsVersionData;
+      releaseGraph = result.releaseGraph;
+    } catch (error) {
+      console.error("Error occurred in release versioning dry run:");
+      throw error;
+    }
 
     try {
       const buildResult = runCommandWithBun(["pnpm", "build-cli"], {
@@ -218,24 +229,32 @@ const app = command({
           dryRun: true,
         });
         if (!changeLogDryRunResult.projectChangelogs) {
-          throw new Error("No project changelogs were generated");
+          throw new Error("No project changelogs were generated in dry run");
         }
       } catch (error) {
-        console.error("Failed to generate changelogs");
+        console.error("Error occurred in changelog generation dry run:");
         throw error;
       }
 
-      await releaseChangelog({
-        version: workspaceVersion,
-        versionData: projectsVersionData,
-        dryRun,
-        releaseGraph,
-        verbose,
-        gitCommit: false,
-        stageChanges: false,
-        gitPush: false,
-        gitTag: false,
-      });
+      try {
+        const result = await releaseChangelog({
+          version: workspaceVersion,
+          versionData: projectsVersionData,
+          dryRun,
+          releaseGraph,
+          verbose,
+          gitCommit: false,
+          stageChanges: false,
+          gitPush: false,
+          gitTag: false,
+        });
+        if (!result.projectChangelogs) {
+          throw new Error("No project changelogs were generated in dry run");
+        }
+      } catch (error) {
+        console.error("Error occurred in changelog generation:");
+        throw error;
+      }
     }
 
     if (!skipPublish) {
@@ -260,20 +279,25 @@ const app = command({
         throw error;
       }
 
-      const publishResult = await releasePublish({
-        tag: preid,
-        versionData: projectsVersionData,
-        releaseGraph,
-        verbose,
-        dryRun,
-      });
+      try {
+        const publishResult = await releasePublish({
+          tag: preid,
+          versionData: projectsVersionData,
+          releaseGraph,
+          verbose,
+          dryRun,
+        });
 
-      for (const [name, { code }] of Object.entries(publishResult)) {
-        if (code !== 0) {
-          throw new Error(
-            `Release of project "${name}" failed with exit code ${code}`,
-          );
+        for (const [name, { code }] of Object.entries(publishResult)) {
+          if (code !== 0) {
+            throw new Error(
+              `Release of project "${name}" failed with exit code ${code}`,
+            );
+          }
         }
+      } catch (error) {
+        console.error("Failed to publish:");
+        throw error;
       }
     }
 
