@@ -89,11 +89,11 @@ jobs:
             PROJECT_NAME="\${GITHUB_REPOSITORY#*/}"
           fi
 
-          # Use DOCKER_REGISTRY secret if set, otherwise default to ghcr.io
+          # Use DOCKER_REGISTRY secret if set, otherwise default to cr.vetra.io
           if [ -n "\${{ secrets.DOCKER_REGISTRY }}" ]; then
             DOCKER_REGISTRY="\${{ secrets.DOCKER_REGISTRY }}"
           else
-            DOCKER_REGISTRY="ghcr.io"
+            DOCKER_REGISTRY="cr.vetra.io"
           fi
 
           echo "channel=\$CHANNEL" >> \$GITHUB_OUTPUT

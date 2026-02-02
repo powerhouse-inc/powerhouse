@@ -384,13 +384,13 @@ To enable the full CI/CD pipeline, configure these secrets in your GitHub reposi
 | Secret             | Required | Description                                                                   |
 | ------------------ | -------- | ----------------------------------------------------------------------------- |
 | `NPM_ACCESS_TOKEN` | Yes      | npm access token for publishing packages. Create at npmjs.com > Access Tokens |
-| `DOCKER_REGISTRY`  | No       | Docker registry URL (e.g., `cr.vetra.io`). Defaults to `ghcr.io` if not set   |
-| `DOCKER_USERNAME`  | No       | Username for the Docker registry. Defaults to `github.actor` for GHCR         |
-| `DOCKER_PASSWORD`  | No       | Password for the Docker registry. Defaults to `GITHUB_TOKEN` for GHCR         |
+| `DOCKER_USERNAME`  | Yes      | Username for the Docker registry                                              |
+| `DOCKER_PASSWORD`  | Yes      | Password for the Docker registry                                              |
+| `DOCKER_REGISTRY`  | No       | Docker registry URL. Defaults to `cr.vetra.io` if not set                     |
 | `DOCKER_PROJECT`   | No       | Custom Docker project name. Defaults to repository name if not set            |
 
-:::tip Default Registry
-If you don't configure any Docker secrets, the workflow will automatically use **GitHub Container Registry (ghcr.io)** with your GitHub credentials. This is the easiest way to get started - no additional configuration required.
+:::tip Getting Docker Registry Credentials
+Contact the Powerhouse team to get credentials for the default Vetra Docker registry (cr.vetra.io). If you prefer to use a different registry (e.g., ghcr.io), set the `DOCKER_REGISTRY` secret accordingly.
 :::
 
 ### Setting Up Secrets
@@ -420,19 +420,12 @@ When triggering manually, you can configure:
 
 ### Docker Image Tags
 
-The workflow pushes images to your configured registry with the following tag patterns:
-
-**For GitHub Container Registry (ghcr.io)**:
-
-- `ghcr.io/<owner>/<project>/connect:v<version>`
-- `ghcr.io/<owner>/<project>/switchboard:v<version>`
-- `ghcr.io/<owner>/<project>/<target>:<channel>` (dev, staging, or latest)
-
-**For other registries**:
+The workflow pushes images to your configured registry (default: `cr.vetra.io`) with the following tag patterns:
 
 - `<registry>/<project>/connect:v<version>`
+- `<registry>/<project>/connect:<channel>` (dev, staging, or latest)
 - `<registry>/<project>/switchboard:v<version>`
-- `<registry>/<project>/<target>:<channel>` (dev, staging, or latest)
+- `<registry>/<project>/switchboard:<channel>` (dev, staging, or latest)
 
 ## Next Steps
 
