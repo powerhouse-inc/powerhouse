@@ -1,10 +1,7 @@
 import type { PGlite } from "@electric-sql/pglite";
 import { REACTOR_SCHEMA } from "@powerhousedao/reactor";
 
-export async function dropAllTables(
-  pg: PGlite,
-  schema: string = REACTOR_SCHEMA,
-): Promise<void> {
+async function dropTablesInSchema(pg: PGlite, schema: string): Promise<void> {
   await pg.exec(`
 DO $$
 DECLARE
@@ -20,4 +17,18 @@ BEGIN
     END IF;
 END $$;
 `);
+}
+
+export async function dropAllTables(
+  pg: PGlite,
+  schema: string = REACTOR_SCHEMA,
+): Promise<void> {
+  await dropTablesInSchema(pg, schema);
+}
+
+export async function dropAllReactorStorage(pg: PGlite): Promise<void> {
+  await dropTablesInSchema(pg, REACTOR_SCHEMA);
+
+  // legacy
+  await dropTablesInSchema(pg, "public");
 }

@@ -1,6 +1,6 @@
 import type {
   IDocumentOperationStorage,
-  IDocumentStorage
+  IDocumentStorage,
 } from "document-drive";
 import type {
   Action,

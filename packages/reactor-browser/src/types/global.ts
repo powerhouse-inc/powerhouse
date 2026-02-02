@@ -4,10 +4,7 @@ import type {
   ReactorClientModule,
 } from "@powerhousedao/reactor";
 import type { DID, IConnectCrypto, IRenown, User } from "@renown/sdk";
-import type {
-  DocumentDriveDocument,
-  IDocumentDriveServer,
-} from "document-drive";
+import type { DocumentDriveDocument } from "document-drive";
 import type { PHGlobalConfig } from "./config.js";
 import type { IDocumentCache } from "./documents.js";
 import type { PHModal } from "./modals.js";
@@ -21,7 +18,6 @@ export type BrowserReactorClientModule = ReactorClientModule & {
 
 export type PHGlobal = PHGlobalConfig & {
   loading?: boolean;
-  legacyReactor?: IDocumentDriveServer;
   reactorClientModule?: BrowserReactorClientModule;
   reactorClient?: IReactorClient;
   connectCrypto?: IConnectCrypto;

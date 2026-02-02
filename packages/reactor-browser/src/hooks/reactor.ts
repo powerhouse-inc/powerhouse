@@ -12,28 +12,14 @@ import type {
   UsePHGlobalValue,
 } from "@powerhousedao/reactor-browser";
 import { useQuery } from "@tanstack/react-query";
-import type { IDocumentDriveServer } from "document-drive";
 import type { Kysely } from "kysely";
 import { useCallback } from "react";
 import { makePHEventFunctions } from "./make-ph-event-functions.js";
 
-const legacyEventFunctions = makePHEventFunctions("legacyReactor");
 const reactorClientModuleEventFunctions = makePHEventFunctions(
   "reactorClientModule",
 );
 const reactorClientEventFunctions = makePHEventFunctions("reactorClient");
-
-/** Returns the legacy reactor */
-export const useLegacyReactor: UsePHGlobalValue<IDocumentDriveServer> =
-  legacyEventFunctions.useValue;
-
-/** Sets the legacy reactor */
-export const setLegacyReactor: SetPHGlobalValue<IDocumentDriveServer> =
-  legacyEventFunctions.setValue;
-
-/** Adds an event handler for the reactor */
-export const addLegacyReactorEventHandler: AddPHGlobalEventHandler =
-  legacyEventFunctions.addEventHandler;
 
 /** Returns the reactor client module */
 export const useReactorClientModule: UsePHGlobalValue<BrowserReactorClientModule> =

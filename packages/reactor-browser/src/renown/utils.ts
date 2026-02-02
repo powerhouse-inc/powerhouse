@@ -53,9 +53,12 @@ export async function login(
 }
 
 export async function logout() {
-  const renown = window.ph?.renown;
-  const reactor = window.ph?.legacyReactor;
   setLoginStatus("initial");
+
+  const renown = window.ph?.renown;
   await renown?.logout();
-  reactor?.removeJwtHandler();
+
+  // todo: remove jwt handler from channels
+  //const reactor = window.ph?.legacyReactor;
+  //reactor?.removeJwtHandler();
 }

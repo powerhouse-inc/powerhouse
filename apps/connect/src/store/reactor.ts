@@ -3,18 +3,16 @@ import { initFeatureFlags } from "@powerhousedao/connect/feature-flags.js";
 import { toast } from "@powerhousedao/connect/services";
 import {
   addDefaultDrivesForNewReactor,
-  createBrowserDocumentDriveServer,
   createBrowserReactor,
   getDefaultDrivesFromEnv,
 } from "@powerhousedao/connect/utils";
+import { driveCollectionId } from "@powerhousedao/reactor";
 import {
   ReactorClientDocumentCache,
-  truncateAllTables as dropAllTables,
+  dropAllReactorStorage,
   extractDriveSlugFromPath,
   extractNodeSlugFromPath,
   getDrives,
-  initLegacyReactor,
-  login,
   refreshReactorDataClient,
   setFeatures,
   setPHToast,
@@ -31,7 +29,6 @@ import {
   setDid,
   setDocumentCache,
   setDrives,
-  setLegacyReactor,
   setReactorClient,
   setReactorClientModule,
   setRenown,
@@ -43,7 +40,6 @@ import {
 } from "@renown/sdk";
 import type {
   DocumentDriveDocument,
-  DocumentDriveServerOptions,
   IDocumentDriveServer,
 } from "document-drive";
 import { logger } from "document-drive";
@@ -56,11 +52,14 @@ import {
 } from "./external-packages.js";
 
 export async function clearReactorStorage() {
-  // clear all the reactor dependencies
   const pg = window.ph?.reactorClientModule?.pg;
-  if (pg) {
-    await dropAllTables(pg);
+  if (!pg) {
+    throw new Error("PGlite not found");
   }
+
+  await dropAllReactorStorage(pg);
+
+  await pg.close();
 }
 
 async function updateVetraPackages(externalPackages: VetraPackage[]) {
@@ -68,31 +67,6 @@ async function updateVetraPackages(externalPackages: VetraPackage[]) {
   const packages = [commonPackage, ...externalPackages];
   setVetraPackages([commonPackage, ...externalPackages]);
   return packages;
-}
-
-/**
- * Filters document model modules to only include the latest version of each document type.
- * This is needed for legacy reactor v1 which doesn't support multiple versions.
- */
-function filterToLatestVersions(
-  modules: DocumentModelModule[],
-): DocumentModelModule[] {
-  const latestByType = new Map<string, DocumentModelModule>();
-
-  for (const module of modules) {
-    const documentType = module.documentModel.global.id;
-    const version =
-      module.documentModel.global.specifications?.[0]?.version ?? 1;
-    const existing = latestByType.get(documentType);
-    const existingVersion =
-      existing?.documentModel.global.specifications?.[0]?.version ?? 1;
-
-    if (!existing || version > existingVersion) {
-      latestByType.set(documentType, module);
-    }
-  }
-
-  return Array.from(latestByType.values());
 }
 
 async function loadDriveFromRemoteUrl(
@@ -144,7 +118,7 @@ export async function createReactor() {
   if (!window.ph) {
     window.ph = {};
   }
-  if (window.ph.legacyReactor || window.ph.loading) return;
+  if (window.ph.loading) return;
 
   window.ph.loading = true;
 
@@ -188,24 +162,6 @@ export async function createReactor() {
   // get upgrade manifests from packages
   const upgradeManifests = vetraPackages.flatMap((pkg) => pkg.upgradeManifests);
 
-  // filter to latest versions for legacy reactor (doesn't support versioning)
-  const latestModules = filterToLatestVersions(
-    documentModelModules as unknown as DocumentModelModule[],
-  );
-
-  // create the legacy reactor with only latest versions
-  // Only include default drives config for legacy reactor when using legacy reads
-  const legacyReactorOptions: DocumentDriveServerOptions = {
-    featureFlags: {
-      enableDualActionCreate: true,
-    },
-  };
-
-  const legacyReactor = createBrowserDocumentDriveServer(
-    latestModules,
-    legacyReactorOptions,
-  );
-
   // create reactor v2 with all versions and upgrade manifests
   const reactorClientModule = await createBrowserReactor(
     documentModelModules as unknown as DocumentModelModule[],
@@ -223,33 +179,32 @@ export async function createReactor() {
     }
   }
 
-  // initialize the reactor
-  await initLegacyReactor(legacyReactor, renown);
-
   // get the drives from the reactor
-  let drives = await getDrives(reactorClientModule.client);
+  const drives = await getDrives(reactorClientModule.client);
 
   // if remoteUrl is set and drive not already existing add remote drive and open it
   const remoteUrl = getDriveUrl();
-  const remoteDrive = remoteUrl
-    ? await loadDriveFromRemoteUrl(remoteUrl, legacyReactor, drives)
-    : undefined;
-
-  // if a remote drive was added then refetches the drives
-  if (remoteDrive) {
-    drives = await getDrives(reactorClientModule.client);
+  if (remoteUrl) {
+    // Extract driveId from URL (e.g., "http://localhost:4001/d/abc123" -> "abc123")
+    const driveId = remoteUrl.split("/").pop() ?? "";
+    await reactorClientModule.reactorModule?.syncModule?.syncManager.add(
+      `remote-drive-${driveId}`,
+      driveCollectionId("main", driveId),
+      {
+        type: "gql",
+        parameters: { url: remoteUrl },
+      },
+    );
   }
-
-  // get the documents from the reactor
 
   // set the selected drive and node from the path
   const path = window.location.pathname;
-  const driveSlug = remoteDrive?.header.slug ?? extractDriveSlugFromPath(path);
-  const nodeSlug = !remoteDrive ? extractNodeSlugFromPath(path) : "";
+  const driveSlug = extractDriveSlugFromPath(path);
+  const nodeSlug = extractNodeSlugFromPath(path);
 
   // initialize user
-  const didFromUrl = getDidFromUrl();
-  await login(didFromUrl, legacyReactor, renown);
+  //const didFromUrl = getDidFromUrl();
+  //await login(didFromUrl, legacyReactor, renown);
 
   const documentCache = new ReactorClientDocumentCache(
     reactorClientModule.client,
@@ -257,7 +212,6 @@ export async function createReactor() {
 
   // dispatch the events to set the values in the window object
   setDefaultPHGlobalConfig(phGlobalConfigFromEnv);
-  setLegacyReactor(legacyReactor);
   setReactorClientModule(reactorClientModule);
   setReactorClient(reactorClientModule.client);
   setDocumentCache(documentCache);

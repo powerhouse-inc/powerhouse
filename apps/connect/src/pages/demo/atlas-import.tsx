@@ -3,7 +3,7 @@ import RefreshIcon from "@powerhousedao/connect/assets/icons/refresh.svg?react";
 import { toast } from "@powerhousedao/connect/services";
 import { PowerhouseButton } from "@powerhousedao/design-system";
 import { addRemoteDrive } from "@powerhousedao/reactor-browser";
-import { useLegacyReactor } from "@powerhousedao/reactor-browser/connect";
+import { useReactorClient } from "@powerhousedao/reactor-browser/connect";
 import { gql, request } from "graphql-request";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
@@ -36,7 +36,7 @@ export function AtlasImport() {
   const status = useRef<
     "initial" | "forking" | "forked" | "addingDrive" | "done" | "error"
   >("initial");
-  const reactor = useLegacyReactor();
+  const reactor = useReactorClient();
   const { documentId } = useParams();
   const reactorUrl = useReactorUrl();
   const navigate = useNavigate();
