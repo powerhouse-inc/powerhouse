@@ -769,7 +769,62 @@ This section provides practical examples for common permission management scenar
 <details>
 <summary><strong>Complete Scenario: Company Document Access & Permissions</strong></summary>
 
-This walkthrough demonstrates setting up document access for a company with different departments and roles. We'll create a "Finance Team" group, add team members, create a confidential finance drive, and configure granular permissions for sensitive financial documents.
+This walkthrough demonstrates setting up document access for a company with different departments and roles. We'll create a "Finance Team" group, add team members, create a confidential finance drive, and configure granular permissions for sensitive financial documents. This scenario demonstrates advanced authorization patterns for managing contributor access levels to a shared finances todo list document, focusing on role-based access control and operation-level permissions using the @powerhousedao/todo-demo package. To get access to this subgraph yourself make sure to install the package in your project with `ph install @powerhousedao/todo-demo`
+
+<details>
+<summary><strong>Todo Document Schema Reference</strong></summary>
+
+```graphql
+type TodoList implements IDocument {
+  id: String!
+  name: String!
+  documentType: String!
+  operations(skip: Int, first: Int): [Operation!]!
+  revision: Int!
+  createdAtUtcIso: DateTime!
+  lastModifiedAtUtcIso: DateTime!
+  initialState: TodoList_TodoListState!
+  state: TodoList_TodoListState!
+  stateJSON: JSONObject
+}
+
+"""
+Module: Todos
+"""
+input TodoList_AddTodoItemInput {
+  text: String!
+}
+
+input TodoList_DeleteTodoItemInput {
+  id: OID!
+}
+
+type TodoList_TodoItem {
+  id: OID!
+  text: String!
+  checked: Boolean!
+}
+
+type TodoList_TodoListState {
+  items: [TodoList_TodoItem!]!
+}
+
+input TodoList_UpdateTodoItemInput {
+  id: OID!
+  text: String
+  checked: Boolean
+}
+
+"""
+Queries: TodoList Document
+"""
+type TodoListQueries {
+  getDocument(docId: PHID!, driveId: PHID): TodoList
+  getDocuments(driveId: String!): [TodoList!]
+}
+```
+
+</details>
 
 ### Step 1: Start the Reactor with Authentication
 
@@ -1083,8 +1138,8 @@ ph access-token --expiry 7d
 **Mutation:**
 
 ```graphql
-mutation TodoList_createDocument($name: String!) {
-  TodoList_createDocument(name: $name)
+mutation TodoList_createDocument($name: String!, $driveId: String) {
+  TodoList_createDocument(name: $name, driveId: $driveId)
 }
 ```
 
@@ -1092,7 +1147,8 @@ mutation TodoList_createDocument($name: String!) {
 
 ```json
 {
-  "name": "Q1 Budget Planning"
+  "name": "Q1 Budget Planning",
+  "driveId": "drive-uuid-1234-5678-abcd"
 }
 ```
 
@@ -1106,7 +1162,7 @@ mutation TodoList_createDocument($name: String!) {
 }
 ```
 
-#### Test 3: Financial Analyst renames the file (should succeed)
+#### Test 3: Financial Analyst adds a todo to the file (should succeed)
 
 Switch back to Bob (Financial Analyst):
 
@@ -1119,12 +1175,8 @@ ph access-token --expiry 7d
 **Mutation:**
 
 ```graphql
-mutation RenameDocument($documentIdentifier: String!, $name: String!) {
-  renameDocument(documentIdentifier: $documentIdentifier, name: $name) {
-    name
-    parentId
-    id
-  }
+mutation TodoList_addTodoItem($docId: PHID, $driveId: String, $input: TodoList_AddTodoItemInput) {
+  TodoList_addTodoItem(docId: $docId, driveId: $driveId, input: $input)
 }
 ```
 
@@ -1132,23 +1184,39 @@ mutation RenameDocument($documentIdentifier: String!, $name: String!) {
 
 ```json
 {
-  "documentIdentifier": "document-uuid-abcd-1234-efgh",
-  "name": "Q1 Budget Planning - Draft"
+  "docId": "document-uuid-abcd-1234-efgh",
+  "driveId": "drive-uuid-1234-5678-abcd",
+  "input": {
+    "text": "confirm runway expectations"
+  }
 }
 ```
 
 **Expected Result:** ✅ **Success**
 
 ```json
-{
-  "data": {
-    "renameDocument": {
-      "name": "Q1 Budget Planning - Draft",
-      "parentId": "drive-uuid-1234-5678-abcd",
-      "id": "document-uuid-abcd-1234-efgh"
+  {
+    "data": {
+      "TodoList_addTodoItem": {
+        "id": "b2af1c61-621e-48d3-a0de-0014eac87755",
+        "success": true,
+        "document": {
+          "id":
+  "b2af1c61-621e-48d3-a0de-0014eac87755",
+          "state": {
+            "todos": [
+              {
+                "id": "generated-todo-id-123",
+                "text": "confirm runway expectations",
+                "completed": false,
+                "createdAt": "2026-02-02T10:30:00Z"
+              }
+            ]
+          }
+        }
+      }
     }
   }
-}
 ```
 
 ### Summary
