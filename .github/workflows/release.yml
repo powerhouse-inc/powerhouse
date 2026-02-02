@@ -82,11 +82,11 @@ jobs:
       - name: Run release
         run: |
           pnpm run-release \
-          --release-mode "$RELEASE_MODE"
-          --dry-run "$DRY_RUN"
-          --verbose "$VERBOSE"
-          --skip-publish "$SKIP_PUBLISH"
-          --skip-changelog "$SKIP_CHANGELOG"
-          --skip-stage "$SKIP_STAGE"
-          --skip-commit "$SKIP_COMMIT"
-          --skip-push "$SKIP_PUSH"
+          --release-mode="$RELEASE_MODE"
+          --dry-run="$DRY_RUN"
+          --verbose="$VERBOSE"
+          --skip-publish="$SKIP_PUBLISH"
+          --skip-changelog="$SKIP_CHANGELOG"
+          --skip-stage="$SKIP_STAGE"
+          --skip-commit="$SKIP_COMMIT"
+          --skip-push =$SKIP_PUSH"
