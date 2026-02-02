@@ -122,6 +122,13 @@ jobs:
       tag: ${{ steps.get-tag.outputs.tag }}
       channel: ${{ steps.get-tag.outputs.channel }}
 
+  publish-academy:
+    name: Publish Academy Docker Image
+    needs: build-and-publish
+    if: ${{ !inputs.dry-run }}
+    uses: "./.github/workflows/publish-academy-docker.yml"
+    secrets: inherit
+
   trigger-downstream:
     name: Trigger Downstream Packages
     needs: build-and-publish

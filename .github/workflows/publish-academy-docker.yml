@@ -1,0 +1,65 @@
+name: Build and Publish Academy Docker Image
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: cr.vetra.io
+
+jobs:
+  academy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Get tags
+        run: git fetch --tags origin
+
+      - name: Set last tag
+        id: get-tag
+        run: |
+          TAG=$(git for-each-ref --sort=-creatordate --format '%(tag)' refs/tags | head -n 1)
+          echo "GITHUB_TAG=$TAG" >> $GITHUB_ENV
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+      - name: Set project name
+        run: echo "PROJECT=powerhouse-academy" >> $GITHUB_ENV
+
+      - name: Determine additional tag
+        run: |
+          if [[ "${{ env.GITHUB_TAG }}" == *"-dev."* ]]; then
+            echo "ADDITIONAL_TAG=dev" >> $GITHUB_ENV
+          elif [[ "${{ env.GITHUB_TAG }}" == *"-staging."* ]]; then
+            echo "ADDITIONAL_TAG=staging" >> $GITHUB_ENV
+          elif [[ "${{ env.GITHUB_TAG }}" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "ADDITIONAL_TAG=latest" >> $GITHUB_ENV
+          else
+            echo "ADDITIONAL_TAG=" >> $GITHUB_ENV
+          fi
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./apps/academy
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.PROJECT }}/academy:${{ env.GITHUB_TAG }}
+            ${{ env.REGISTRY }}/${{ env.PROJECT }}/academy:${{ env.ADDITIONAL_TAG }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
