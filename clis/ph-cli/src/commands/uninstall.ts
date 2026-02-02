@@ -36,6 +36,10 @@ This command:
       isGlobal,
     } = await getPowerhouseProjectInfo(args);
 
+    if (!projectPath) {
+      throw new Error(`Could not find project path to uninstall from`);
+    }
+
     const dependenciesWithVersions = await makeDependenciesWithVersions(
       args.dependencies,
     );
