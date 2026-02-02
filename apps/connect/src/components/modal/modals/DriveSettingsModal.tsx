@@ -1,8 +1,7 @@
 import { DriveSettingsModal as ConnectDriveSettingsModal } from "@powerhousedao/design-system/connect";
+import { driveCollectionId } from "@powerhousedao/reactor";
 import {
   closePHModal,
-  getDriveAvailableOffline,
-  getDriveSharingType,
   renameDrive,
   setDriveAvailableOffline,
   setDriveSharingType,
@@ -10,15 +9,23 @@ import {
   useDriveById,
   usePHModal,
 } from "@powerhousedao/reactor-browser";
+import { useSyncList } from "@powerhousedao/reactor-browser/connect";
 import type { DocumentDriveDocument, SharingType } from "document-drive";
+import { useMemo } from "react";
 
 export function DriveSettingsModal() {
   const phModal = usePHModal();
   const open = phModal?.type === "driveSettings";
   const driveId = open ? phModal.driveId : undefined;
   const [drive] = useDriveById(driveId);
-  const sharingType = getDriveSharingType(drive);
-  const availableOffline = getDriveAvailableOffline(drive);
+  const { data: remotes = [] } = useSyncList();
+
+  const isRemoteDrive = useMemo(() => {
+    return remotes.some(
+      (remote) =>
+        remote.collectionId === driveCollectionId("main", drive.header.id),
+    );
+  }, [remotes, drive]);
 
   if (!driveId || !drive) {
     return null;
@@ -45,8 +52,8 @@ export function DriveSettingsModal() {
   return (
     <ConnectDriveSettingsModal
       drive={drive}
-      sharingType={sharingType ?? "LOCAL"}
-      availableOffline={availableOffline}
+      sharingType={isRemoteDrive ? "PUBLIC" : "LOCAL"}
+      availableOffline={!isRemoteDrive}
       open={open}
       onRenameDrive={onRenameDrive}
       onDeleteDrive={() => showPHModal({ type: "deleteDrive", driveId })}

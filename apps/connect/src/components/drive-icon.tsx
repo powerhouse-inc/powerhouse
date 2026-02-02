@@ -1,13 +1,24 @@
 import { Icon } from "@powerhousedao/design-system";
-import { getDriveSharingType } from "@powerhousedao/reactor-browser";
+import { driveCollectionId } from "@powerhousedao/reactor";
+import { useSyncList } from "@powerhousedao/reactor-browser/connect";
 import type { DocumentDriveDocument } from "document-drive";
+import { useMemo } from "react";
 
 export function DriveIcon({
   drive,
 }: {
   drive: DocumentDriveDocument | undefined;
 }) {
-  const sharingType = getDriveSharingType(drive);
+  const { data: remotes = [] } = useSyncList();
+  const isRemoteDrive = useMemo(() => {
+    if (!drive) return false;
+
+    return remotes.some(
+      (remote) =>
+        remote.collectionId === driveCollectionId("main", drive.header.id),
+    );
+  }, [remotes, drive]);
+
   const driveIconSrc = drive?.state.global.icon;
 
   if (driveIconSrc) {
@@ -16,7 +27,7 @@ export function DriveIcon({
     );
   }
 
-  if (sharingType === "LOCAL") {
+  if (!isRemoteDrive) {
     return <Icon name="Hdd" size={32} />;
   }
 

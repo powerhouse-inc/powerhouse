@@ -2,57 +2,8 @@ import type { IReactorClient } from "@powerhousedao/reactor";
 import type {
   DocumentDriveDocument,
   SharingType,
-  SyncStatus
+  SyncStatus,
 } from "document-drive";
-
-/** Returns the sharing type for a drive. */
-export function getDriveSharingType(
-  drive:
-    | {
-        state: {
-          local: {
-            sharingType?: string | null;
-          };
-        };
-        readContext?: {
-          sharingType?: string | null;
-        };
-      }
-    | undefined
-    | null,
-) {
-  if (!drive) return "PUBLIC";
-  const isReadDrive = "readContext" in drive;
-  const { sharingType: _sharingType } = !isReadDrive
-    ? drive.state.local
-    : { sharingType: "PUBLIC" };
-  const __sharingType = _sharingType?.toUpperCase();
-  return (__sharingType === "PRIVATE" ? "LOCAL" : __sharingType) as SharingType;
-}
-
-/** Returns whether a drive is available offline. */
-export function getDriveAvailableOffline(
-  drive:
-    | {
-        state: {
-          local: {
-            availableOffline?: boolean | null;
-          };
-        };
-        readContext?: {
-          availableOffline?: boolean | null;
-        };
-      }
-    | undefined
-    | null,
-) {
-  if (!drive) return false;
-  const isReadDrive = "readContext" in drive;
-  const { availableOffline: _availableOffline } = !isReadDrive
-    ? drive.state.local
-    : { availableOffline: false };
-  return _availableOffline ?? false;
-}
 
 export async function getDrives(
   reactor: IReactorClient,
