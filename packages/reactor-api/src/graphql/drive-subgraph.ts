@@ -351,7 +351,7 @@ export class DriveSubgraph extends BaseSubgraph {
         const typeName = pascalCase(
           (dm?.documentModel.global.name || "").replaceAll("/", " "),
         );
-
+        ctx.document = document;
         return responseForDocument(document, typeName, node?.name);
       },
       system: () => ({ sync: {} }),
