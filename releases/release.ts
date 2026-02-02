@@ -50,7 +50,7 @@ function getReleaseChannelFromBranchName(branchName: string): Channel {
 }
 
 function getPreid(channel: Channel): string | undefined {
-  if (channel === "production") return "latest";
+  if (channel === "production") return undefined;
   return channel;
 }
 
