@@ -17,17 +17,13 @@ import { getReactorDefaultDrivesConfig as getReactorDefaultDrivesConfigBase } fr
 import { createSignatureVerifier, type IRenown } from "@renown/sdk";
 import type {
   DocumentDriveServerOptions,
-  IDocumentAdminStorage,
   IDocumentDriveServer,
-  IDocumentOperationStorage,
-  IDocumentStorage,
-  IDriveOperationStorage,
 } from "document-drive";
 import {
-  BrowserStorage,
   EventQueueManager,
   InMemoryCache,
   ReactorBuilder as LegacyReactorBuilder,
+  MemoryStorage,
 } from "document-drive";
 import type { DocumentModelModule, UpgradeManifest } from "document-model";
 import { Kysely } from "kysely";
@@ -72,22 +68,12 @@ export const getReactorDefaultDrivesConfig = (): Pick<
   };
 };
 
-export function createBrowserStorage(
-  routerBasename: string,
-): IDriveOperationStorage &
-  IDocumentOperationStorage &
-  IDocumentStorage &
-  IDocumentAdminStorage {
-  return new BrowserStorage(routerBasename);
-}
-
 export function createBrowserDocumentDriveServer(
   documentModels: DocumentModelModule<any>[],
-  storage: IDriveOperationStorage,
   options: DocumentDriveServerOptions,
 ): IDocumentDriveServer {
   return new LegacyReactorBuilder(documentModels)
-    .withStorage(storage)
+    .withStorage(new MemoryStorage())
     .withCache(new InMemoryCache())
     .withQueueManager(new EventQueueManager())
     .withOptions(options)
@@ -101,7 +87,6 @@ export function createBrowserDocumentDriveServer(
 export async function createBrowserReactor(
   documentModelModules: DocumentModelModule[],
   upgradeManifests: UpgradeManifest<readonly number[]>[],
-  legacyStorage: IDocumentStorage & IDocumentOperationStorage,
   renown: IRenown,
 ): Promise<BrowserReactorClientModule> {
   const signerConfig: SignerConfig = {
@@ -120,7 +105,6 @@ export async function createBrowserReactor(
       new ReactorBuilder()
         .withDocumentModels(documentModelModules)
         .withUpgradeManifests(upgradeManifests)
-        .withLegacyStorage(legacyStorage)
         .withSync(
           new SyncBuilder().withChannelFactory(new GqlChannelFactory(logger)),
         )

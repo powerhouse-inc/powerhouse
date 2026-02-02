@@ -5,7 +5,6 @@ import {
   addDefaultDrivesForNewReactor,
   createBrowserDocumentDriveServer,
   createBrowserReactor,
-  createBrowserStorage,
   getDefaultDrivesFromEnv,
 } from "@powerhousedao/connect/utils";
 import {
@@ -50,7 +49,6 @@ import {
 import type {
   DocumentDriveDocument,
   DocumentDriveServerOptions,
-  IDocumentAdminStorage,
   IDocumentDriveServer,
 } from "document-drive";
 import { ProcessorManager, logger } from "document-drive";
@@ -62,23 +60,12 @@ import {
   subscribeExternalPackages,
 } from "./external-packages.js";
 
-let reactorLegacyStorage: IDocumentAdminStorage | undefined;
-
-function setLegacyReactorStorage(storage: IDocumentAdminStorage) {
-  reactorLegacyStorage = storage;
-}
-
 export async function clearReactorStorage() {
-  // clear legacy storage
-  await reactorLegacyStorage?.clear();
-
   // clear all the reactor dependencies
   const pg = window.ph?.reactorClientModule?.pg;
   if (pg) {
     await dropAllTables(pg);
   }
-
-  return !!reactorLegacyStorage;
 }
 
 async function updateVetraPackages(externalPackages: VetraPackage[]) {
@@ -193,12 +180,6 @@ export async function createReactor() {
     .withCrypto(renownCrypto)
     .build();
 
-  // initialize storage
-  const storage = createBrowserStorage(phGlobalConfigFromEnv.routerBasename!);
-
-  // store storage for admin access
-  setLegacyReactorStorage(storage);
-
   // load vetra packages
   const externalPackages = await loadExternalPackages();
   const vetraPackages = await updateVetraPackages(externalPackages);
@@ -229,7 +210,6 @@ export async function createReactor() {
 
   const legacyReactor = createBrowserDocumentDriveServer(
     latestModules,
-    storage,
     legacyReactorOptions,
   );
 
@@ -237,7 +217,6 @@ export async function createReactor() {
   const reactorClientModule = await createBrowserReactor(
     documentModelModules as unknown as DocumentModelModule[],
     upgradeManifests,
-    storage,
     renown,
   );
 
