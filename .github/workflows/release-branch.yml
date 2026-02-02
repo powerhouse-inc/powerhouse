@@ -102,9 +102,3 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
           NPM_CONFIG_PROVENANCE: true
-
-  publish-docker:
-    name: Build and Publish Docker Images
-    needs: build-and-publish
-    uses: "./.github/workflows/publish-docker-images.yml"
-    secrets: inherit
