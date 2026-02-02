@@ -110,7 +110,8 @@ export {
   usePGlite,
   useReactorClient,
   useReactorClientModule,
-  useSync
+  useSync,
+  useSyncList
 } from "./reactor.js";
 export { setRenown, useRenown } from "./renown.js";
 export { setUser, useUser } from "./user.js";

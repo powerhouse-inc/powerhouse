@@ -2,20 +2,8 @@ import type { IReactorClient } from "@powerhousedao/reactor";
 import type {
   DocumentDriveDocument,
   SharingType,
-  SyncStatus,
-  Trigger
+  SyncStatus
 } from "document-drive";
-
-function handleSettledResults<T>(results: PromiseSettledResult<T>[]): T[] {
-  return results.reduce((acc, result) => {
-    if (result.status === "fulfilled") {
-      acc.push(result.value);
-    } else {
-      console.warn(result.reason);
-    }
-    return acc;
-  }, [] as T[]);
-}
 
 /** Returns the sharing type for a drive. */
 export function getDriveSharingType(
@@ -95,43 +83,4 @@ export function getSyncStatusSync(
   // TODO: Implement sync status via ReactorClient/SyncManager
   // For now, return undefined as sync status is managed differently
   return undefined;
-}
-
-export function getDrivePullResponderTrigger(
-  drive: DocumentDriveDocument | undefined,
-): Trigger | undefined {
-  return drive?.state.local.triggers.find(
-    (trigger) => trigger.type === "PullResponder",
-  );
-}
-
-export function getDrivePullResponderUrl(
-  drive: DocumentDriveDocument | undefined,
-): string | undefined {
-  const pullResponder = getDrivePullResponderTrigger(drive);
-  return pullResponder?.data?.url;
-}
-
-export function getDriveRemoteUrl(
-  drive: DocumentDriveDocument | undefined,
-): string | undefined {
-  if (!drive) return undefined;
-  const pullResponderUrl = getDrivePullResponderUrl(drive);
-
-  if ("remoteUrl" in drive.state.global) {
-    const remoteUrl = drive.state.global.remoteUrl;
-    if (typeof remoteUrl === "string") {
-      return remoteUrl;
-    }
-  }
-
-  return pullResponderUrl;
-}
-
-export function getDriveIsRemote(
-  drive: DocumentDriveDocument | undefined,
-): boolean {
-  const remoteUrl = getDriveRemoteUrl(drive);
-  const pullResponderUrl = getDrivePullResponderUrl(drive);
-  return remoteUrl !== undefined || pullResponderUrl !== undefined;
 }

@@ -40,11 +40,11 @@ export class GqlChannel implements IChannel {
   readonly inbox: Mailbox<SyncOperation>;
   readonly outbox: Mailbox<SyncOperation>;
   readonly deadLetter: Mailbox<SyncOperation>;
+  readonly config: GqlChannelConfig;
 
   private readonly channelId: string;
   private readonly remoteName: string;
   private readonly cursorStorage: ISyncCursorStorage;
-  private readonly config: GqlChannelConfig;
   private readonly operationIndex: IOperationIndex;
   private readonly pollTimer: IPollTimer;
   private isShutdown: boolean;
