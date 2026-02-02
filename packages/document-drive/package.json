@@ -51,7 +51,7 @@
   "scripts": {
     "tsc": "tsc",
     "lint": "eslint",
-    "build": "pnpm run copy-prisma",
+    "build:misc": "pnpm run copy-prisma",
     "release": "semantic-release",
     "test:legacy": "vitest run --coverage --exclude \"test/flaky/**\"",
     "test:flaky": "vitest run --coverage test/flaky",

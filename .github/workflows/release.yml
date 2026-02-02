@@ -33,6 +33,9 @@ on:
       skip_push:
         type: boolean
         default: false
+      skip_tag:
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -52,6 +55,7 @@ jobs:
       SKIP_STAGE: ${{ inputs.skip_stage }}
       SKIP_COMMIT: ${{ inputs.skip_commit }}
       SKIP_PUSH: ${{ inputs.skip_push }}
+      SKIP_TAG: ${{ inputs.skip_tag }}
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       NODE_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
       NPM_CONFIG_PROVENANCE: true
@@ -70,10 +74,6 @@ jobs:
       - name: General setup
         uses: ./.github/actions/setup
 
-      - name: Install dependencies for release tools
-        run: bun install
-        working-directory: releases
-
       - name: Set git config
         run: |
           git config user.name "Github Actions Bot"
@@ -89,4 +89,5 @@ jobs:
           --skip-changelog="$SKIP_CHANGELOG"
           --skip-stage="$SKIP_STAGE"
           --skip-commit="$SKIP_COMMIT"
-          --skip-push=$SKIP_PUSH"
+          --skip-push="$SKIP_PUSH"
+          --skip-tag="$SKIP_TAG"

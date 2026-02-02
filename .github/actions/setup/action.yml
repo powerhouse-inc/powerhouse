@@ -31,3 +31,15 @@ runs:
       shell: bash
       run: pnpm build-tsc
 
+    - name: Run css build scripts
+      shell: bash
+      run: pnpm build-css
+
+    - name: Run vite build scripts
+      shell: bash
+      run: pnpm build-vite
+
+    - name: Run misc build scripts
+      shell: bash
+      run: pnpm build-misc
+

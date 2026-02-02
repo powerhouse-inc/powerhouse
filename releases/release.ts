@@ -111,6 +111,12 @@ const app = command({
       defaultValue: () => false,
       defaultValueIsSerializable: true,
     }),
+    skipGitTag: flag({
+      long: "skip-git-tag",
+      description: "Do not set a git tag",
+      defaultValue: () => false,
+      defaultValueIsSerializable: true,
+    }),
   },
   handler: async (args) => {
     console.log(">>> args", { args });
@@ -124,10 +130,12 @@ const app = command({
       skipCommit,
       skipPush,
       skipStage,
+      skipGitTag,
     } = args;
     const stageChanges = skipStage !== true;
     const gitCommit = skipCommit !== true;
     const gitPush = skipPush !== true;
+    const gitTag = skipGitTag !== true;
     const branchName = getBranchName();
     const channel = getReleaseChannelFromBranchName(branchName);
     const specifier = getSpecifier(channel, mode);
@@ -166,7 +174,7 @@ const app = command({
         stageChanges,
         gitCommit,
         gitPush,
-        gitTag: true,
+        gitTag,
       });
 
     if (!workspaceVersion) {
@@ -175,7 +183,7 @@ const app = command({
     }
 
     const buildResult = Bun.spawnSync({
-      cmd: ["pnpm", "build-misc"],
+      cmd: ["pnpm", "build-cli"],
       stdio: ["inherit", "inherit", "inherit"],
       env: {
         ...process.env,
