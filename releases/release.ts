@@ -23,6 +23,15 @@ function getBranchName(): string {
   return fromEnv;
 }
 
+/** Takes a branch name with the correct format, either:
+ * main
+ * release/[staging|production]/[semver]
+ *
+ * @returns release channel:
+ * "dev" for main branch
+ * "staging" for release/staging/[semver]
+ * "production" for release/production/[semver]
+ *  */
 function getReleaseChannelFromBranchName(branchName: string): Channel {
   if (branchName === "main") return "dev";
 
@@ -47,6 +56,12 @@ function getReleaseChannelFromBranchName(branchName: string): Channel {
   return tag;
 }
 
+/** Get the preid to use for npm tags in prereleases.
+ *
+ * For production the preid is undefined, since it is not a prerelease by definition.
+ * For staging the tag is staging.
+ * For dev the tag is dev.
+ */
 function getPreid(channel: Channel): string | undefined {
   if (channel === "production") return undefined;
   return channel;
@@ -130,11 +145,17 @@ const app = command({
       skipStage,
       skipGitTag,
     } = args;
+    // do not stage, commit, tag, or push with git on a dry run
     const doGitSideEffects = !dryRun;
+
     const stageChanges = doGitSideEffects && skipStage !== true;
+    // do not commit if staging is disabled
     const gitCommit = stageChanges && skipCommit !== true;
+    // do not tag if committing is disabled
     const gitTag = gitCommit && skipGitTag !== true;
+    // do not push of committing is disabled
     const gitPush = gitCommit && skipPush !== true;
+
     const branchName = getBranchName();
     const channel = getReleaseChannelFromBranchName(branchName);
     const specifier = getSpecifier(channel, mode);
@@ -165,6 +186,8 @@ const app = command({
     const { releaseVersion, releaseChangelog, releasePublish } = releaseClient;
 
     let workspaceVersion: string | null | undefined;
+
+    // persist project version data and release graph to avoid duplicate computations
     let projectsVersionData: Awaited<
       ReturnType<typeof releaseVersion>
     >["projectsVersionData"];
@@ -305,10 +328,13 @@ const app = command({
       }
     }
 
+    // do not commit if nothing is staged
     let hasStaged = false;
+    // do not push if nothing is committed
     let didCommit = false;
 
     if (stageChanges) {
+      // only stage package.json and CHANGELOG.md files
       const stageChangesCmd = [
         "git",
         "add",
