@@ -1,6 +1,7 @@
 import type { IRenown, User } from "@renown/sdk";
 import { logger } from "document-drive";
-import { setLoginStatus, setUser } from "../connect.js";
+import { setLoginStatus } from "../hooks/login-status.js";
+import { setUser } from "../hooks/user.js";
 import { RENOWN_CHAIN_ID, RENOWN_NETWORK_ID, RENOWN_URL } from "./constants.js";
 
 export function openRenown() {
