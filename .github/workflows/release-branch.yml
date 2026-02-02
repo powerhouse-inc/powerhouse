@@ -97,8 +97,37 @@ jobs:
           git tag | grep -v '^v[0-9]\+\.[0-9]\+\.[0-9]\+-dev\.[0-9]\+$' | xargs -r git tag -d
 
       - name: Update pkg version and publish to npm
+        id: release
         run: npx tsx tools/scripts/release.ts --dry-run=${{ inputs.dry-run }} --version=${{ env.VERSION }} --branch-release=${{ env.BRANCH_RELEASE }} --verbose=${{ inputs.verbose }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
           NPM_CONFIG_PROVENANCE: true
+
+      - name: Get release tag
+        id: get-tag
+        run: |
+          TAG=$(git for-each-ref --sort=-creatordate --format '%(tag)' refs/tags | head -n 1)
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          # Determine channel from tag
+          if [[ "$TAG" == *"-dev."* ]]; then
+            echo "channel=dev" >> $GITHUB_OUTPUT
+          elif [[ "$TAG" == *"-staging."* ]]; then
+            echo "channel=staging" >> $GITHUB_OUTPUT
+          else
+            echo "channel=latest" >> $GITHUB_OUTPUT
+          fi
+
+    outputs:
+      tag: ${{ steps.get-tag.outputs.tag }}
+      channel: ${{ steps.get-tag.outputs.channel }}
+
+  trigger-downstream:
+    name: Trigger Downstream Packages
+    needs: build-and-publish
+    if: ${{ !inputs.dry-run }}
+    uses: "./.github/workflows/trigger-downstream-packages.yml"
+    with:
+      version: ${{ needs.build-and-publish.outputs.tag }}
+      channel: ${{ needs.build-and-publish.outputs.channel }}
+    secrets: inherit
