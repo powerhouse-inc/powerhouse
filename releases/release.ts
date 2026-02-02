@@ -309,7 +309,14 @@ const app = command({
     let didCommit = false;
 
     if (stageChanges) {
-      const stageChangesCmd = ["git", "add", "--all"];
+      const stageChangesCmd = [
+        "git",
+        "add",
+        "package.json",
+        "CHANGELOG.md",
+        ":(glob)**/package.json",
+        ":(glob)**/CHANGELOG.md",
+      ];
       console.log(
         `Staging files in git with the following command: ${stageChangesCmd.join(" ")}`,
       );
@@ -319,10 +326,10 @@ const app = command({
       }
       console.log("Staged the following files:");
       runCommandWithBun(["git", "diff", "--cached", "--name-only"]);
-      hasStaged =
-        runCommandWithBun(["git", "diff", "--cached", "--quiet"]).exitCode !==
-        0;
     }
+
+    hasStaged =
+      runCommandWithBun(["git", "diff", "--cached", "--quiet"]).exitCode !== 0;
 
     if (gitCommit && hasStaged) {
       const commitChangesCmd = [

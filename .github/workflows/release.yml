@@ -46,6 +46,7 @@ jobs:
   release:
     name: Release packages in monorepo
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     env:
       RELEASE_MODE: ${{ inputs.release_mode }}
       DRY_RUN: ${{ inputs.dry_run }}
