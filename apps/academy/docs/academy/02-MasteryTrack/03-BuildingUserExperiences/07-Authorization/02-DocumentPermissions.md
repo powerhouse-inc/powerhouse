@@ -329,12 +329,12 @@ For document drives specifically, the following operation permissions are availa
 - `ADD_FOLDER` - Create new folders within the drive
 - `DELETE_NODE` - Delete files or folders within the drive
 - `UPDATE_FILE` - Modify existing files within the drive
-- `UPDATE_NODE` - Update properties of files or folders within the drive
+- `UPDATE_NODE` - Update properties of files or folders within the drive (including renaming documents)
 - `COPY_NODE` - Copy files or folders within the drive
 - `MOVE_NODE` - Move files or folders within the drive
 
 :::info Operation Permissions vs Document Permissions
-These operation permissions provide fine-grained control over specific actions within a document drive, separate from the general document permission levels (READ, WRITE, ADMIN). If you need to set operation permissions for documents with different document models, familiarize yourself with the available operations of the installed document model package.
+These operation permissions provide fine-grained control over specific actions within a document drive, separate from the general document permission levels (READ, WRITE, ADMIN). Note that renaming a document is not part of the WRITE permission on the document itself—it's an `UPDATE_NODE` operation on the drive document. If you need to set operation permissions for documents with different document models, familiarize yourself with the available operations of the installed document model package.
 :::
 
 </details>
