@@ -1,0 +1,100 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_mode:
+        type: choice
+        description: "Specify what type of release to perform. NOTE: `prerelease` is not a valid option for releasing to production."
+        options:
+          - prerelease
+          - patch
+          - minor
+          - major
+        default: prerelease
+      dry_run:
+        type: boolean
+        default: false
+      verbose:
+        type: boolean
+        default: false
+      skip_publish:
+        type: boolean
+        default: false
+      skip_changelog:
+        type: boolean
+        default: false
+      skip_stage:
+        type: boolean
+        default: false
+      skip_commit:
+        type: boolean
+        default: false
+      skip_push:
+        type: boolean
+        default: false
+      skip_git_tag:
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  packages: write
+  id-token: write
+
+jobs:
+  release:
+    name: Release packages in monorepo
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      RELEASE_MODE: ${{ inputs.release_mode }}
+      DRY_RUN: ${{ inputs.dry_run }}
+      VERBOSE: ${{ inputs.verbose }}
+      SKIP_PUBLISH: ${{ inputs.skip_publish }}
+      SKIP_CHANGELOG: ${{ inputs.skip_changelog }}
+      SKIP_STAGE: ${{ inputs.skip_stage }}
+      SKIP_COMMIT: ${{ inputs.skip_commit }}
+      SKIP_PUSH: ${{ inputs.skip_push }}
+      SKIP_GIT_TAG: ${{ inputs.skip_git_tag }}
+      NPM_CONFIG_PROVENANCE: true
+    steps:
+      - name: Log inputs
+        run: |
+          echo "RELEASE_MODE=$RELEASE_MODE"
+          echo "DRY_RUN=$DRY_RUN"
+          echo "VERBOSE=$VERBOSE"
+          echo "SKIP_PUBLISH=$SKIP_PUBLISH"
+          echo "SKIP_CHANGELOG=$SKIP_CHANGELOG"
+          echo "SKIP_STAGE=$SKIP_STAGE"
+          echo "SKIP_COMMIT=$SKIP_COMMIT"
+          echo "SKIP_PUSH=$SKIP_PUSH"
+          echo "SKIP_GIT_TAG=$SKIP_GIT_TAG"
+
+      - name: General setup
+        uses: ./.github/actions/setup
+
+      - name: Install release tool dependencies
+        run: bun install
+        working-directory: releases
+
+      - name: Set git config
+        run: |
+          git config user.name "Github Actions Bot"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Run release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
+        run: |
+          pnpm run-release \
+          --release-mode="$RELEASE_MODE"
+          --dry-run="$DRY_RUN"
+          --verbose="$VERBOSE"
+          --skip-publish="$SKIP_PUBLISH"
+          --skip-changelog="$SKIP_CHANGELOG"
+          --skip-stage="$SKIP_STAGE"
+          --skip-commit="$SKIP_COMMIT"
+          --skip-push="$SKIP_PUSH"
+          --skip-git-tag="$SKIP_GIT_TAG"
