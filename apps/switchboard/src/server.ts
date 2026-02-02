@@ -204,13 +204,18 @@ async function initServer(
     builder.withKysely(kysely);
     // }
 
-    // TODO: replace with reactor shutdown
-    process.on("SIGINT", () => {
-      kysely.destroy().catch(logger.error);
+    async function closeDb() {
+      logger.info("Shutting down");
+      await kysely.destroy();
       if (!pglite.closed) {
-        pglite.close().catch(logger.error);
+        await pglite.close();
       }
-    });
+      process.exit(0);
+    }
+
+    // TODO: replace with reactor shutdown
+    // eslint-disable-next-line @typescript-eslint/no-misused-promises
+    process.on("SIGINT", closeDb);
 
     const clientBuilder = new ReactorClientBuilder().withReactorBuilder(
       builder,
