@@ -132,10 +132,11 @@ const app = command({
       skipStage,
       skipGitTag,
     } = args;
-    const stageChanges = skipStage !== true;
-    const gitCommit = skipCommit !== true;
-    const gitPush = skipPush !== true;
-    const gitTag = skipGitTag !== true;
+    const doGitSideEffects = !dryRun;
+    const stageChanges = doGitSideEffects && skipStage !== true;
+    const gitCommit = stageChanges && skipCommit !== true;
+    const gitTag = gitCommit && skipGitTag !== true;
+    const gitPush = gitCommit && skipPush !== true;
     const branchName = getBranchName();
     const channel = getReleaseChannelFromBranchName(branchName);
     const specifier = getSpecifier(channel, mode);
@@ -165,69 +166,204 @@ const app = command({
 
     const { releaseVersion, releaseChangelog, releasePublish } = releaseClient;
 
+    try {
+      const { workspaceVersion } = await releaseVersion({
+        specifier,
+        preid,
+        verbose,
+        dryRun: true,
+      });
+
+      if (!workspaceVersion) {
+        console.log(">>> No version calculated (likely no changes). Exiting.");
+        process.exit(0);
+      }
+    } catch (error) {
+      console.error("Error occurred when checking versioning in dry run:");
+      throw error;
+    }
+
     const { workspaceVersion, projectsVersionData, releaseGraph } =
       await releaseVersion({
         specifier,
         preid,
-        dryRun,
         verbose,
-        stageChanges,
-        gitCommit,
-        gitPush,
-        gitTag,
+        dryRun,
+        stageChanges: false,
+        gitCommit: false,
+        gitTag: false,
+        gitPush: false,
       });
 
-    if (!workspaceVersion) {
-      console.log(">>> No version calculated (likely no changes). Exiting.");
-      process.exit(0);
-    }
+    try {
+      const buildResult = runCommandWithBun(["pnpm", "build-cli"], {
+        WORKSPACE_VERSION: workspaceVersion!,
+      });
 
-    const buildResult = Bun.spawnSync({
-      cmd: ["pnpm", "build-cli"],
-      stdio: ["inherit", "inherit", "inherit"],
-      env: {
-        ...process.env,
-        WORKSPACE_VERSION: workspaceVersion,
-      },
-    });
-
-    if (buildResult.exitCode !== 0) {
-      console.error(">>> BUILD FAILED");
-      process.exit(1);
+      if (buildResult.exitCode !== 0) {
+        throw new Error(">>> BUILD FAILED");
+      }
+    } catch (error) {
+      console.error("Building clis failed:");
+      throw error;
     }
 
     if (!skipChangelog) {
+      try {
+        const changeLogDryRunResult = await releaseChangelog({
+          version: workspaceVersion,
+          versionData: projectsVersionData,
+          releaseGraph,
+          verbose,
+          dryRun: true,
+        });
+        if (!changeLogDryRunResult.projectChangelogs) {
+          throw new Error("No project changelogs were generated");
+        }
+      } catch (error) {
+        console.error("Failed to generate changelogs");
+        throw error;
+      }
+
       await releaseChangelog({
         version: workspaceVersion,
         versionData: projectsVersionData,
         dryRun,
         releaseGraph,
         verbose,
-        gitCommit,
-        stageChanges,
-        gitPush,
+        gitCommit: false,
+        stageChanges: false,
+        gitPush: false,
+        gitTag: false,
       });
     }
 
     if (!skipPublish) {
+      try {
+        const publishDryRunResult = await releasePublish({
+          tag: preid,
+          versionData: projectsVersionData,
+          releaseGraph,
+          verbose,
+          dryRun: true,
+        });
+
+        for (const [name, { code }] of Object.entries(publishDryRunResult)) {
+          if (code !== 0) {
+            throw new Error(
+              `Dry run release of project "${name}" failed with exit code ${code}`,
+            );
+          }
+        }
+      } catch (error) {
+        console.error("Error occurred in release dry run:");
+        throw error;
+      }
+
       const publishResult = await releasePublish({
         tag: preid,
         versionData: projectsVersionData,
-        dryRun,
-        verbose,
         releaseGraph,
+        verbose,
+        dryRun,
       });
 
-      const failed = Object.values(publishResult).some((r) => r.code !== 0);
-      if (failed) {
-        console.error(">>> PUBLISH FAILED");
-        console.error(publishResult);
-        process.exit(1);
+      for (const [name, { code }] of Object.entries(publishResult)) {
+        if (code !== 0) {
+          throw new Error(
+            `Release of project "${name}" failed with exit code ${code}`,
+          );
+        }
       }
     }
 
+    let hasStaged = false;
+    let didCommit = false;
+
+    if (stageChanges) {
+      const stageChangesCmd = ["git", "add", "--all"];
+      console.log(
+        `Staging files in git with the following command: ${stageChangesCmd.join(" ")}`,
+      );
+      const result = runCommandWithBun(stageChangesCmd);
+      if (result.exitCode !== 0) {
+        throw new Error("Failed to stage changes with git");
+      }
+      console.log("Staged the following files:");
+      runCommandWithBun(["git", "diff", "--cached", "--name-only"]);
+      hasStaged =
+        runCommandWithBun(["git", "diff", "--cached", "--quiet"]).exitCode !==
+        0;
+    }
+
+    if (gitCommit && hasStaged) {
+      const commitChangesCmd = [
+        "git",
+        "commit",
+        "--message",
+        `chore(release): publish ${workspaceVersion}`,
+      ];
+      console.log(
+        `Committing files in git with the following command: ${commitChangesCmd.join(" ")}`,
+      );
+      const result = runCommandWithBun(commitChangesCmd);
+      if (result.exitCode !== 0) {
+        throw new Error("Failed to commit changes with git");
+      }
+      didCommit = true;
+    }
+
+    if (gitTag && didCommit) {
+      const commitGitTag = `v${workspaceVersion}`;
+      const tagCommitCmd = [
+        "git",
+        "tag",
+        "--annotate",
+        commitGitTag,
+        "--message",
+        commitGitTag,
+      ];
+      console.log(
+        `Tagging the current commit in git with the following command: ${tagCommitCmd.join(" ")}`,
+      );
+      const result = runCommandWithBun(tagCommitCmd);
+      if (result.exitCode !== 0) {
+        throw new Error("Failed to tag commit with git");
+      }
+    }
+
+    if (gitPush && didCommit) {
+      const gitPushCommitCmd = [
+        "git",
+        "push",
+        "origin",
+        "HEAD",
+        "--follow-tags",
+      ];
+      console.log(
+        `Pushing the current commit in git with the following command: ${gitPushCommitCmd.join(" ")}`,
+      );
+      const result = runCommandWithBun(gitPushCommitCmd);
+      if (result.exitCode !== 0) {
+        throw new Error("Failed to push commit with git");
+      }
+    }
     console.log(">>> Release successfully completed 🚀");
   },
 });
 
 await run(app, process.argv.slice(2));
+
+function runCommandWithBun(
+  cmd: string[],
+  env?: Record<string, string | undefined>,
+) {
+  return Bun.spawnSync({
+    cmd,
+    stdio: ["inherit", "inherit", "inherit"],
+    env: {
+      ...process.env,
+      ...env,
+    },
+  });
+}
