@@ -165,6 +165,30 @@ export class GraphQLManager {
                 ?.map((a) => a.toLowerCase())
                 .includes(address.toLowerCase() ?? "") ?? false),
       });
+      this.coreRouter(req, res, next);
+    });
+    this.app.use("/", (req, res, next) => {
+      this.setAdditionalContextFields({
+        user: req.user,
+        isAdmin: (address: string) =>
+          !req.auth_enabled
+            ? true
+            : (req.admins
+                ?.map((a) => a.toLowerCase())
+                .includes(address.toLowerCase() ?? "") ?? false),
+        isUser: (address: string) =>
+          !req.auth_enabled
+            ? true
+            : (req.users
+                ?.map((a) => a.toLowerCase())
+                .includes(address.toLowerCase() ?? "") ?? false),
+        isGuest: (address: string) =>
+          !req.auth_enabled
+            ? true
+            : (req.guests
+                ?.map((a) => a.toLowerCase())
+                .includes(address.toLowerCase() ?? "") ?? false),
+      });
       this.reactorRouter(req, res, next);
     });
 
@@ -318,7 +342,7 @@ export class GraphQLManager {
     this.logger.debug("Updating router");
     const newRouter = Router();
     newRouter.use(cors());
-    newRouter.use(bodyParser.json());
+    newRouter.use(bodyParser.json({ limit: "50mb" }));
 
     // @todo:
     // if auth enabled, subgraphs are only available to guests, users and admins
