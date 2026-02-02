@@ -49,14 +49,16 @@ function getReleaseChannelFromBranchName(branchName: string): Channel {
   return tag;
 }
 
-function getReleaseTag(channel: Channel) {
-  if (channel === "production")
-    return {
-      pattern: "v{version}",
-    };
-  return {
-    pattern: `v{version}-${channel}.{prerelease}`,
-  };
+function getReleaseTag(channel: Channel, mode: Mode) {
+  if (channel === "production") {
+    return { pattern: "v{version}" };
+  }
+
+  if (mode === "prerelease") {
+    return { pattern: `v{version}-${channel}.{prerelease}` };
+  }
+
+  return { pattern: `v{version}-${channel}` };
 }
 
 function getPreid(channel: Channel): string | undefined {
@@ -141,7 +143,7 @@ const app = command({
     const branchName = getBranchName();
     const channel = getReleaseChannelFromBranchName(branchName);
     const specifier = getSpecifier(channel, mode);
-    const releaseTag = getReleaseTag(channel);
+    const releaseTag = getReleaseTag(channel, mode);
     const preid = getPreid(channel);
 
     console.log(">>> release inputs", {
