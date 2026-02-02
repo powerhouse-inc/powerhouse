@@ -3,7 +3,7 @@ name: Release
 on:
   workflow_dispatch:
     inputs:
-      release-mode:
+      release_mode:
         type: choice
         description: "Specify what type of release to perform. NOTE: `prerelease` is not a valid option for releasing to production."
         options:
@@ -12,27 +12,27 @@ on:
           - minor
           - major
         default: prerelease
-      dry-run:
+      dry_run:
         type: boolean
         default: false
       verbose:
         type: boolean
         default: false
-      skip-publish:
+      skip_publish:
         type: boolean
-        default: true
-      skip-changelog:
+        default: false
+      skip_changelog:
         type: boolean
-        default: true
-      skip-stage:
+        default: false
+      skip_stage:
         type: boolean
-        default: true
-      skip-commit:
+        default: false
+      skip_commit:
         type: boolean
-        default: true
-      skip-push:
+        default: false
+      skip_push:
         type: boolean
-        default: true
+        default: false
 
 permissions:
   contents: write
@@ -43,7 +43,30 @@ jobs:
   release:
     name: Release packages in monorepo
     runs-on: ubuntu-latest
+    env:
+      RELEASE_MODE: ${{ inputs.release_mode }}
+      DRY_RUN: ${{ inputs.dry_run }}
+      VERBOSE: ${{ inputs.verbose }}
+      SKIP_PUBLISH: ${{ inputs.skip_publish }}
+      SKIP_CHANGELOG: ${{ inputs.skip_changelog }}
+      SKIP_STAGE: ${{ inputs.skip_stage }}
+      SKIP_COMMIT: ${{ inputs.skip_commit }}
+      SKIP_PUSH: ${{ inputs.skip_push }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      NODE_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
+      NPM_CONFIG_PROVENANCE: true
     steps:
+      - name: Log inputs
+        run: |
+          echo "RELEASE_MODE=$RELEASE_MODE"
+          echo "DRY_RUN=$DRY_RUN"
+          echo "VERBOSE=$VERBOSE"
+          echo "SKIP_PUBLISH=$SKIP_PUBLISH"
+          echo "SKIP_CHANGELOG=$SKIP_CHANGELOG"
+          echo "SKIP_STAGE=$SKIP_STAGE"
+          echo "SKIP_COMMIT=$SKIP_COMMIT"
+          echo "SKIP_PUSH=$SKIP_PUSH"
+
       - name: General setup
         uses: ./.github/actions/setup
 
@@ -57,8 +80,13 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Run release
-        run: pnpm run-release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
-          NPM_CONFIG_PROVENANCE: true
+        run: |
+          pnpm run-release \
+          --release-mode "$RELEASE_MODE"
+          --dry-run "$DRY_RUN"
+          --verbose "$VERBOSE"
+          --skip-publish "$SKIP_PUBLISH"
+          --skip-changelog "$SKIP_CHANGELOG"
+          --skip-stage "$SKIP_STAGE"
+          --skip-commit "$SKIP_COMMIT"
+          --skip-push "$SKIP_PUSH"

@@ -36,7 +36,7 @@ This command:
     } = await getPowerhouseProjectInfo(args);
 
     if (!projectPath) {
-      throw new Error(`Could not find project path to uninstall from`);
+      throw new Error(`Could not find project path to install from.`);
     }
 
     const dependenciesWithVersions = await makeDependenciesWithVersions(
