@@ -14,72 +14,10 @@ import {
   type SignerConfig,
 } from "@powerhousedao/reactor";
 import type { BrowserReactorClientModule } from "@powerhousedao/reactor-browser";
-import { getReactorDefaultDrivesConfig as getReactorDefaultDrivesConfigBase } from "@powerhousedao/reactor-browser";
 import { createSignatureVerifier, type IRenown } from "@renown/sdk";
-import type {
-  DocumentDriveServerOptions,
-  IDocumentDriveServer,
-} from "document-drive";
-import {
-  EventQueueManager,
-  InMemoryCache,
-  ReactorBuilder as LegacyReactorBuilder,
-  MemoryStorage,
-} from "document-drive";
 import type { DocumentModelModule, UpgradeManifest } from "document-model";
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
-import { createRemoveOldRemoteDrivesConfig } from "./drive-preservation.js";
-
-/**
- * Gets the default drives URLs from environment variable at call time.
- * This must be called at runtime, not at module initialization, because
- * the env var is set after the module is first imported during Vite dev server startup.
- */
-function getDefaultDrivesUrlFromEnv(): string[] {
-  const envValue = import.meta.env.PH_CONNECT_DEFAULT_DRIVES_URL as
-    | string
-    | undefined;
-  if (!envValue) return [];
-  return envValue.split(",").filter((url) => url.trim().length > 0);
-}
-
-/**
- * Gets the default drives config for Connect, reading URLs from PH_CONNECT_DEFAULT_DRIVES_URL
- * and using the Connect-specific preservation strategy from config.
- */
-export const getReactorDefaultDrivesConfig = (): Pick<
-  DocumentDriveServerOptions,
-  "defaultDrives"
-> => {
-  // Read env var at call time, not at module initialization
-  const defaultDrivesUrl = getDefaultDrivesUrlFromEnv();
-
-  const baseConfig = getReactorDefaultDrivesConfigBase({
-    defaultDrivesUrl,
-  });
-
-  // Override the removeOldRemoteDrives strategy with Connect-specific config
-  return {
-    defaultDrives: {
-      ...baseConfig.defaultDrives,
-      removeOldRemoteDrives:
-        createRemoveOldRemoteDrivesConfig(defaultDrivesUrl),
-    },
-  };
-};
-
-export function createBrowserDocumentDriveServer(
-  documentModels: DocumentModelModule<any>[],
-  options: DocumentDriveServerOptions,
-): IDocumentDriveServer {
-  return new LegacyReactorBuilder(documentModels)
-    .withStorage(new MemoryStorage())
-    .withCache(new InMemoryCache())
-    .withQueueManager(new EventQueueManager())
-    .withOptions(options)
-    .build();
-}
 
 /**
  * Creates a Reactor that plugs into legacy storage but syncs through the new
