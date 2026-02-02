@@ -23,7 +23,7 @@ import {
 import { Kysely } from "kysely";
 import { PGlite } from "@electric-sql/pglite";
 import { PGliteDialect } from "kysely-pglite-dialect";
-import pg from "pg";
+import { Pool } from "pg";
 import { PostgresDialect } from "kysely";
 
 interface MemoryStats {
@@ -125,16 +125,12 @@ async function waitForJob(
   while (Date.now() - startTime < timeout) {
     const status = await reactor.getJobStatus(jobId);
     lastStatus = status.status;
-    if (status.status === JobStatus.FAILED || status.status === "FAILED") {
+    if (status.status === JobStatus.FAILED) {
       throw new Error(
         `Job failed: ${status.error?.message ?? "unknown error"}`,
       );
     }
-    if (
-      status.status === JobStatus.READ_READY ||
-      status.status === "READ_READY" ||
-      status.status === "READ_MODELS_READY"
-    ) {
+    if (status.status === JobStatus.READ_READY) {
       return;
     }
     await new Promise((resolve) => setTimeout(resolve, 10));
@@ -337,7 +333,7 @@ async function createDatabase(
     console.log(
       `  Connecting to PostgreSQL: ${dbPath.replace(/:[^:@]+@/, ":***@")}`,
     );
-    const pool = new pg.Pool({ connectionString: dbPath });
+    const pool = new Pool({ connectionString: dbPath });
     return new Kysely({ dialect: new PostgresDialect({ pool }) });
   }
 
@@ -370,7 +366,7 @@ async function main() {
   const reactor = await new ReactorBuilder()
     .withDocumentModels([documentModelDocumentModelModule as any])
     .withKysely(db)
-    .withMigrationStrategy("skip")
+    .withMigrationStrategy("none")
     .build();
 
   const initDuration = ((Date.now() - initStart) / 1000).toFixed(2);
@@ -387,8 +383,8 @@ async function main() {
     // Verify and load existing document
     console.log(`\nLoading target document: ${docId}`);
     try {
-      const { document } = await reactor.get(docId);
-      console.log(`  Found document: ${document.header.name || "(unnamed)"}`);
+      const doc = await reactor.get(docId);
+      console.log(`  Found document: ${doc.header.name || "(unnamed)"}`);
       documentIds = [docId];
     } catch (error) {
       throw new Error(
@@ -538,6 +534,7 @@ async function main() {
 
   // Cleanup
   reactor.kill();
+  await db.destroy();
 
   // Summary
   const finalMemory = getMemoryStats();
