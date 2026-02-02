@@ -1,8 +1,6 @@
 import { boolean, command, flag, oneOf, option, run } from "cmd-ts";
 import console from "console";
 import { ReleaseClient } from "nx/release";
-import type { ReleaseGraph } from "nx/src/command-line/release/utils/release-graph";
-import type { VersionData } from "nx/src/command-line/release/utils/shared";
 import type { ReleaseType } from "semver";
 
 type Channel = "dev" | "staging" | "production";
@@ -168,8 +166,12 @@ const app = command({
     const { releaseVersion, releaseChangelog, releasePublish } = releaseClient;
 
     let workspaceVersion: string | null | undefined;
-    let projectsVersionData: VersionData;
-    let releaseGraph: ReleaseGraph;
+    let projectsVersionData: Awaited<
+      ReturnType<typeof releaseVersion>
+    >["projectsVersionData"];
+    let releaseGraph: Awaited<
+      ReturnType<typeof releaseVersion>
+    >["releaseGraph"];
 
     try {
       const dryRunResult = await releaseVersion({
@@ -183,7 +185,7 @@ const app = command({
         process.exit(0);
       }
     } catch (error) {
-      console.error("Error occurred when checking versioning in dry run:");
+      console.error("Error occurred in release versioning dry run:");
       throw error;
     }
 
@@ -202,13 +204,16 @@ const app = command({
       projectsVersionData = result.projectsVersionData;
       releaseGraph = result.releaseGraph;
     } catch (error) {
-      console.error("Error occurred in release versioning dry run:");
+      console.error("Error occurred in release versioning:");
       throw error;
     }
 
+    if (!workspaceVersion)
+      throw new Error("Expected workspaceVersion after releaseVersion run");
+
     try {
       const buildResult = runCommandWithBun(["pnpm", "build-cli"], {
-        WORKSPACE_VERSION: workspaceVersion!,
+        WORKSPACE_VERSION: workspaceVersion,
       });
 
       if (buildResult.exitCode !== 0) {
@@ -249,7 +254,7 @@ const app = command({
           gitTag: false,
         });
         if (!result.projectChangelogs) {
-          throw new Error("No project changelogs were generated in dry run");
+          throw new Error("No project changelogs were generated");
         }
       } catch (error) {
         console.error("Error occurred in changelog generation:");
