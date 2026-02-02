@@ -181,7 +181,7 @@ const app = command({
       });
       if (!dryRunResult.workspaceVersion) {
         console.log(">>> No version calculated (likely no changes). Exiting.");
-        process.exit(0);
+        process.exit(1);
       }
     } catch (error) {
       console.error("Error occurred in release versioning dry run:");
