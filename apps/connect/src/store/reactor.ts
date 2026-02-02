@@ -51,7 +51,7 @@ import type {
   DocumentDriveServerOptions,
   IDocumentDriveServer,
 } from "document-drive";
-import { ProcessorManager, logger } from "document-drive";
+import { logger } from "document-drive";
 import type { DocumentModelModule } from "document-model";
 import { generateId } from "document-model/core";
 import { loadCommonPackage } from "./document-model.js";
@@ -191,9 +191,7 @@ export async function createReactor() {
     .filter((module) => module !== undefined);
 
   // get upgrade manifests from packages
-  const upgradeManifests = vetraPackages
-    .flatMap((pkg) => pkg.upgradeManifests)
-    .filter((manifest) => manifest !== undefined);
+  const upgradeManifests = vetraPackages.flatMap((pkg) => pkg.upgradeManifests);
 
   // filter to latest versions for legacy reactor (doesn't support versioning)
   const latestModules = filterToLatestVersions(
@@ -232,12 +230,6 @@ export async function createReactor() {
 
   // initialize the reactor
   await initLegacyReactor(legacyReactor, renown);
-
-  // create the processor manager
-  const processorManager = new ProcessorManager(
-    legacyReactor.listeners,
-    legacyReactor,
-  );
 
   // get the drives from the reactor
   let drives = await getDrives(legacyReactor);
@@ -281,7 +273,7 @@ export async function createReactor() {
   setConnectCrypto(renownCrypto);
   setDid(renown.did);
   setRenown(renown);
-  setProcessorManager(processorManager);
+  setProcessorManager(reactorClientModule.reactorModule?.processorManager);
   setDrives(drives);
   setVetraPackages(vetraPackages);
   setSelectedDrive(driveSlug);

@@ -2,6 +2,7 @@ import type { PGlite } from "@electric-sql/pglite";
 import type {
   Database,
   IDocumentModelRegistry,
+  IProcessorManager,
   IReactorClient,
   ISyncManager,
   ReactorClientModule,
@@ -10,7 +11,6 @@ import type { DID, IConnectCrypto, IRenown, User } from "@renown/sdk";
 import type {
   DocumentDriveDocument,
   IDocumentDriveServer,
-  ProcessorManager,
 } from "document-drive";
 import type { Kysely } from "kysely";
 import type { PHGlobalConfig } from "./config.js";
@@ -39,7 +39,7 @@ export type PHGlobal = PHGlobalConfig & {
   user?: User;
   loginStatus?: LoginStatus;
   vetraPackages?: VetraPackage[];
-  processorManager?: ProcessorManager;
+  processorManager?: IProcessorManager;
   drives?: DocumentDriveDocument[];
   documentCache?: IDocumentCache;
   selectedDriveId?: string;
