@@ -15,6 +15,17 @@ import { GraphQLJSONObject } from "graphql-type-json";
 const logger = childLogger(["reactor-api", "create-schema"]);
 
 /**
+ * Revision type - matches the definition in reactor/schema.graphql.
+ * Used by PHDocument and document mutation results.
+ */
+const RevisionType = `
+  type Revision {
+    scope: String!
+    revision: Int!
+  }
+`;
+
+/**
  * Strip scalar definitions from a DocumentNode to avoid duplicates
  * when combining with other schemas that define the same scalars.
  */
@@ -528,12 +539,53 @@ function generateNewApiSchema(
   allTypeNames: string[],
   hasValidSchema: (schema: string | null | undefined) => boolean,
 ): DocumentNode {
-  // Special case: DocumentModel doesn't have a typed state in getDocumentModelTypeDefs()
-  // Use JSONObject as fallback for DocumentModel, typed state for everything else
-  const stateType =
+  // Use full state type for all document models
+  const stateType = `${documentName}_FullState!`;
+
+  // Shared base types for document state structure (same for all document types)
+  const sharedBaseTypes = `
+    """Hash configuration for document state"""
+    type ${documentName}_PHHashConfig {
+      algorithm: String!
+      encoding: String!
+    }
+
+    """Document scope state (same for all document types)"""
+    type ${documentName}_PHDocumentScopeState {
+      version: Int!
+      hash: ${documentName}_PHHashConfig!
+      isDeleted: Boolean
+      deletedAtUtcIso: String
+      deletedBy: String
+      deletionReason: String
+    }
+  `;
+
+  // Full state type with all scopes (auth, document, global, local)
+  // Note: DocumentModel uses different naming convention (GlobalState suffix instead of State)
+  // For local state, check if the specification defines a local state type
+  const localSchema = specification?.state.local.schema ?? "";
+  const hasLocalStateType = localSchema.includes(
+    `type ${documentName}LocalState`,
+  );
+
+  const globalStateType =
     documentName === "DocumentModel"
-      ? "JSONObject"
+      ? `${documentName}_${documentName}GlobalState!`
       : `${documentName}_${documentName}State!`;
+  const localStateType = !hasLocalStateType
+    ? "JSONObject"
+    : `${documentName}_${documentName}LocalState!`;
+
+  const fullStateType = `
+    """Full state with all scopes for ${documentName}"""
+    type ${documentName}_FullState {
+      auth: JSONObject!
+      document: ${documentName}_PHDocumentScopeState!
+      global: ${globalStateType}
+      local: ${localStateType}!
+    }
+  `;
 
   // Common input types - use extend to avoid conflicts with other subgraphs
   const commonInputTypes = `
@@ -554,20 +606,28 @@ function generateNewApiSchema(
     }
   `;
 
+  // Revision type - imported from shared-schema.ts for consistency with ReactorSubgraph
+  // Must be defined in each subgraph for Apollo Federation
+  const revisionType = RevisionType;
+
   // Result types with typed state (or JSONObject for DocumentModel)
   // The state type (${documentName}_${documentName}State) is defined in getDocumentModelTypeDefs()
+  // Uses revisionsList with shared Revision type to match ReactorSubgraph pattern
   const resultTypes = `
     """
-    Mutation result type for ${documentName} operations with typed state
+    Mutation result type for ${documentName} operations with typed state.
+    Matches ReactorSubgraph PHDocument pattern with revisionsList.
     """
     type ${documentName}MutationResult {
       id: String!
+      slug: String
       name: String!
       documentType: String!
-      revision: Int!
       state: ${stateType}
+      revisionsList: [Revision!]!
       createdAtUtcIso: DateTime!
       lastModifiedAtUtcIso: DateTime!
+      parentId: String
     }
 
     """
@@ -608,8 +668,8 @@ function generateNewApiSchema(
   `;
 
   // Mutations: sync and async versions
-  const createDocumentMutation = `${documentName}_createDocument(name: String!, driveId: String): ${documentName}MutationResult!`;
-  const createEmptyDocumentMutation = `${documentName}_createEmptyDocument(driveId: String): ${documentName}MutationResult!`;
+  const createDocumentMutation = `${documentName}_createDocument(name: String!, parentIdentifier: String): ${documentName}MutationResult!`;
+  const createEmptyDocumentMutation = `${documentName}_createEmptyDocument(parentIdentifier: String): ${documentName}MutationResult!`;
 
   const operationMutations =
     specification?.modules
@@ -651,6 +711,12 @@ function generateNewApiSchema(
   return gql`
     scalar DateTime
     scalar JSONObject
+
+    ${revisionType}
+
+    ${sharedBaseTypes}
+
+    ${fullStateType}
 
     ${commonInputTypes}
 

@@ -1,8 +1,3 @@
-import type {
-  PagedResults,
-  PagingOptions,
-  ViewFilter,
-} from "@powerhousedao/reactor";
 import { camelCase, kebabCase } from "change-case";
 import { addFile } from "document-drive";
 import {
@@ -17,56 +12,17 @@ import {
   getDocumentModelSchemaName,
 } from "../utils/create-schema.js";
 import { BaseSubgraph } from "./base-subgraph.js";
+import { toGqlPhDocument } from "./reactor/adapters.js";
+import {
+  createGetParentIdsFn,
+  document as documentResolver,
+  documentChildren as documentChildrenResolver,
+  documentParents as documentParentsResolver,
+  findDocuments as findDocumentsResolver,
+  createEmptyDocument as createEmptyDocumentResolver,
+} from "./reactor/resolvers.js";
 import type { Context, SubgraphArgs } from "./types.js";
 import { buildGraphQlDocument } from "./utils.js";
-
-// Type for GraphQL paging input
-interface GraphQLPagingInput {
-  limit?: number;
-  offset?: number;
-  cursor?: string;
-}
-
-// Convert GraphQL paging input to reactor PagingOptions
-// Note: Using type assertion because PagingOptions in shared/types has required fields,
-// but the actual runtime behavior accepts partial options
-function toReactorPaging(
-  paging?: GraphQLPagingInput,
-): PagingOptions | undefined {
-  if (!paging) return undefined;
-  if (paging.limit === undefined && paging.cursor === undefined)
-    return undefined;
-  return {
-    ...(paging.limit !== undefined ? { limit: paging.limit } : {}),
-    ...(paging.cursor !== undefined ? { cursor: paging.cursor } : {}),
-  } as PagingOptions;
-}
-
-// Convert GraphQL view input to reactor ViewFilter
-function toReactorView(view?: {
-  branch?: string;
-  scopes?: string[];
-}): ViewFilter | undefined {
-  if (!view) return undefined;
-  return view as ViewFilter;
-}
-
-// Adapter function for document-model-specific result pages
-function toDocumentModelResultPage(result: PagedResults<PHDocument>): {
-  items: ReturnType<typeof buildGraphQlDocument>[];
-  totalCount: number;
-  hasNextPage: boolean;
-  hasPreviousPage: boolean;
-  cursor: string | null;
-} {
-  return {
-    cursor: result.nextCursor ?? null,
-    hasNextPage: !!result.nextCursor,
-    hasPreviousPage: !!result.options.cursor,
-    items: result.results.map(buildGraphQlDocument),
-    totalCount: result.results.length,
-  };
-}
 
 /**
  * New document model subgraph that uses reactorClient instead of legacy reactor.
@@ -108,17 +64,11 @@ export class DocumentModelSubgraph extends BaseSubgraph {
   }
 
   /**
-   * Get the parent IDs function for hierarchical permission checks
+   * Get the parent IDs function for hierarchical permission checks.
+   * Uses the shared createGetParentIdsFn from reactor/resolvers.
    */
   private getParentIdsFn(): GetParentIdsFn {
-    return async (documentId: string): Promise<string[]> => {
-      try {
-        const result = await this.reactorClient.getParents(documentId);
-        return result.results.map((doc) => doc.header.id);
-      } catch {
-        return [];
-      }
-    };
+    return createGetParentIdsFn(this.reactorClient);
   }
 
   /**
@@ -250,7 +200,7 @@ export class DocumentModelSubgraph extends BaseSubgraph {
     return {
       Query: {
         // Flat query: Get a specific document by identifier
-        // Uses prefixed input types: ${documentName}_ViewFilterInput
+        // Uses shared documentResolver from reactor/resolvers.ts
         [`${documentName}_document`]: async (
           _: unknown,
           args: {
@@ -265,32 +215,28 @@ export class DocumentModelSubgraph extends BaseSubgraph {
             throw new GraphQLError("Document identifier is required");
           }
 
-          const doc = await this.reactorClient.get(
+          // Use shared resolver function
+          const result = await documentResolver(this.reactorClient, {
             identifier,
-            toReactorView(view),
-          );
+            view,
+          });
 
-          if (doc.header.documentType !== documentType) {
+          // Validate document type
+          if (result.document.documentType !== documentType) {
             throw new GraphQLError(
               `Document with id ${identifier} is not of type ${documentType}`,
             );
           }
 
-          await this.assertCanRead(doc.header.id, ctx);
+          // Check permissions
+          await this.assertCanRead(result.document.id, ctx);
 
-          // Get children
-          const children = await this.reactorClient.getChildren(identifier, {
-            branch: view?.branch,
-          });
-
-          return {
-            document: buildGraphQlDocument(doc),
-            childIds: children.results.map((c) => c.header.id),
-          };
+          // Return shared resolver result directly (matches PHDocument format)
+          return result;
         },
 
         // Flat query: Find documents by search criteria (type is built-in)
-        // Uses prefixed input types: ${documentName}_SearchFilterInput, ${documentName}_ViewFilterInput, ${documentName}_PagingInput
+        // Uses shared findDocumentsResolver from reactor/resolvers.ts
         [`${documentName}_findDocuments`]: async (
           _: unknown,
           args: {
@@ -302,40 +248,41 @@ export class DocumentModelSubgraph extends BaseSubgraph {
         ) => {
           const { search, view, paging } = args;
 
-          // Type is built-in for this document model subgraph
-          const result = await this.reactorClient.find(
-            {
+          // Use shared resolver function with built-in type filter
+          const result = await findDocumentsResolver(this.reactorClient, {
+            search: {
+              type: documentType, // Type is built-in for this document model subgraph
               parentId: search.parentId,
-              ids: search.identifiers,
-              type: documentType,
             },
-            toReactorView(view),
-            toReactorPaging(paging),
-          );
+            view,
+            paging,
+          });
 
           // Filter by permission if needed
           if (
             !this.hasGlobalReadAccess(ctx) &&
             this.documentPermissionService
           ) {
-            const filteredResults: PHDocument[] = [];
-            for (const doc of result.results) {
-              const canRead = await this.canReadDocument(doc.header.id, ctx);
+            const filteredItems = [];
+            for (const item of result.items) {
+              const canRead = await this.canReadDocument(item.id, ctx);
               if (canRead) {
-                filteredResults.push(doc);
+                filteredItems.push(item);
               }
             }
-            return toDocumentModelResultPage({
+            return {
               ...result,
-              results: filteredResults,
-            });
+              items: filteredItems,
+              totalCount: filteredItems.length,
+            };
           }
 
-          return toDocumentModelResultPage(result);
+          // Return shared resolver result directly (matches PHDocument format)
+          return result;
         },
 
         // Flat query: Get children of a document (filtered by this document type)
-        // Uses prefixed input types: ${documentName}_ViewFilterInput, ${documentName}_PagingInput
+        // Uses shared documentChildrenResolver from reactor/resolvers.ts
         [`${documentName}_documentChildren`]: async (
           _: unknown,
           args: {
@@ -349,25 +296,27 @@ export class DocumentModelSubgraph extends BaseSubgraph {
 
           await this.assertCanRead(parentIdentifier, ctx);
 
-          const result = await this.reactorClient.getChildren(
+          // Use shared resolver function
+          const result = await documentChildrenResolver(this.reactorClient, {
             parentIdentifier,
-            toReactorView(view),
-            toReactorPaging(paging),
-          );
+            view,
+            paging,
+          });
 
           // Filter children by this document type
-          const filteredResults = result.results.filter(
-            (doc) => doc.header.documentType === documentType,
+          const filteredItems = result.items.filter(
+            (item) => item.documentType === documentType,
           );
 
-          return toDocumentModelResultPage({
+          return {
             ...result,
-            results: filteredResults,
-          });
+            items: filteredItems,
+            totalCount: filteredItems.length,
+          };
         },
 
         // Flat query: Get parents of a document
-        // Uses prefixed input types: ${documentName}_ViewFilterInput, ${documentName}_PagingInput
+        // Uses shared documentParentsResolver from reactor/resolvers.ts
         [`${documentName}_documentParents`]: async (
           _: unknown,
           args: {
@@ -381,66 +330,74 @@ export class DocumentModelSubgraph extends BaseSubgraph {
 
           await this.assertCanRead(childIdentifier, ctx);
 
-          const result = await this.reactorClient.getParents(
+          // Use shared resolver function - return directly
+          return documentParentsResolver(this.reactorClient, {
             childIdentifier,
-            toReactorView(view),
-            toReactorPaging(paging),
-          );
-
-          return toDocumentModelResultPage(result);
+            view,
+            paging,
+          });
         },
       },
       Mutation: {
+        // Uses shared createEmptyDocumentResolver from reactor/resolvers.ts
         [`${documentName}_createDocument`]: async (
           _: unknown,
-          args: { name: string; driveId?: string },
+          args: { name: string; parentIdentifier?: string },
           ctx: Context,
         ) => {
-          const { driveId, name } = args;
+          const { parentIdentifier, name } = args;
 
-          if (driveId) {
-            await this.assertCanWrite(driveId, ctx);
+          if (parentIdentifier) {
+            await this.assertCanWrite(parentIdentifier, ctx);
           } else if (!this.hasGlobalWriteAccess(ctx)) {
             throw new GraphQLError(
               "Forbidden: insufficient permissions to create documents",
             );
           }
 
-          const document = await this.reactorClient.createEmpty(documentType, {
-            parentIdentifier: driveId,
-          });
+          // Use shared resolver function - returns PHDocument format
+          const createdDoc = await createEmptyDocumentResolver(
+            this.reactorClient,
+            {
+              documentType,
+              parentIdentifier,
+            },
+          );
 
           if (name) {
             const updatedDoc = await this.reactorClient.execute(
-              document.header.id,
+              createdDoc.id,
               "main",
               [setName(name)],
             );
-            return buildGraphQlDocument(updatedDoc);
+            // Use toGqlPhDocument for PHDocument format with revisionsList
+            return toGqlPhDocument(updatedDoc);
           }
 
-          return buildGraphQlDocument(document);
+          // Return directly - already in PHDocument format
+          return createdDoc;
         },
+        // Uses shared createEmptyDocumentResolver from reactor/resolvers.ts
         [`${documentName}_createEmptyDocument`]: async (
           _: unknown,
-          args: { driveId?: string },
+          args: { parentIdentifier?: string },
           ctx: Context,
         ) => {
-          const { driveId } = args;
+          const { parentIdentifier } = args;
 
-          if (driveId) {
-            await this.assertCanWrite(driveId, ctx);
+          if (parentIdentifier) {
+            await this.assertCanWrite(parentIdentifier, ctx);
           } else if (!this.hasGlobalWriteAccess(ctx)) {
             throw new GraphQLError(
               "Forbidden: insufficient permissions to create documents",
             );
           }
 
-          const document = await this.reactorClient.createEmpty(documentType, {
-            parentIdentifier: driveId,
+          // Use shared resolver function - returns PHDocument format directly
+          return createEmptyDocumentResolver(this.reactorClient, {
+            documentType,
+            parentIdentifier,
           });
-
-          return buildGraphQlDocument(document);
         },
         // Generate sync and async mutations for each operation
         ...operations.reduce(
@@ -474,7 +431,8 @@ export class DocumentModelSubgraph extends BaseSubgraph {
                   "main",
                   [action(input)],
                 );
-                return buildGraphQlDocument(updatedDoc);
+                // Use toGqlPhDocument for PHDocument format with revisionsList
+                return toGqlPhDocument(updatedDoc);
               } catch (error) {
                 throw new GraphQLError(
                   error instanceof Error
