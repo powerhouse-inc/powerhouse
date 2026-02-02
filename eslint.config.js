@@ -224,7 +224,6 @@ const typescriptLanguageOptions = {
         "eslint.config.js",
         "mcr.config.js",
         "tools/scripts/merge-coverage.js",
-        "releases/release.ts",
       ],
     },
     tsconfigRootDir: import.meta.dirname,
