@@ -19,6 +19,7 @@
     "build-all": "pnpm build-tsc && pnpm build-misc && pnpm build-css && pnpm build-vite",
     "clean": "pnpm exec scripts/simulate-fresh-git-clone.sh",
     "run-release": "bun run releases/release.ts",
+    "run-release-safe": "pnpm run-release --verbose --skip-publish --skip-changelog --skip-push",
     "prepare": "husky",
     "check-circular-imports": "dpdm -T ./**/* --no-tree --no-warning --exit-code circular:1",
     "check-ts-references": "tsx scripts/check-ts-references.ts",

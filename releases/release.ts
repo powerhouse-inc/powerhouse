@@ -60,7 +60,7 @@ function getReleaseTag(channel: Channel) {
 }
 
 function getPreid(channel: Channel): string | undefined {
-  if (channel === "production") return undefined;
+  if (channel === "production") return "latest";
   return channel;
 }
 

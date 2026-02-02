@@ -89,4 +89,4 @@ jobs:
           --skip-changelog="$SKIP_CHANGELOG"
           --skip-stage="$SKIP_STAGE"
           --skip-commit="$SKIP_COMMIT"
-          --skip-push =$SKIP_PUSH"
+          --skip-push=$SKIP_PUSH"
