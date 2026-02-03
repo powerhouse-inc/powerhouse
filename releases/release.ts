@@ -150,11 +150,11 @@ const app = command({
 
     const stageChanges = doGitSideEffects && skipStage !== true;
     // do not commit if staging is disabled
-    const gitCommit = stageChanges && skipCommit !== true;
+    const gitCommit = doGitSideEffects && stageChanges && skipCommit !== true;
     // do not tag if committing is disabled
-    const gitTag = gitCommit && skipGitTag !== true;
+    const gitTag = doGitSideEffects && gitCommit && skipGitTag !== true;
     // do not push of committing is disabled
-    const gitPush = gitCommit && skipPush !== true;
+    const gitPush = doGitSideEffects && gitCommit && skipPush !== true;
 
     const branchName = getBranchName();
     const channel = getReleaseChannelFromBranchName(branchName);
