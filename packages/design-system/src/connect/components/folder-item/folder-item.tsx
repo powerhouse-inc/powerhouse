@@ -24,7 +24,8 @@ export function FolderItem(props: {
   const [mode, setMode] = useState<"READ" | "WRITE">("READ");
   const [isDropdownMenuOpen, setIsDropdownMenuOpen] = useState(false);
   const { dragProps } = useDrag({ node: folderNode });
-  const { onRenameNode, onRenameDriveNodes, onDuplicateNode } = useNodeActions();
+  const { onRenameNode, onRenameDriveNodes, onDuplicateNode } =
+    useNodeActions();
   const { isDropTarget, dropProps } = useDrop({
     target: folderNode,
   });
@@ -34,6 +35,11 @@ export function FolderItem(props: {
   }
 
   function onSubmit(name: string) {
+    if (name === folderNode.name) {
+      setMode("READ");
+      return;
+    }
+
     Promise.all([
       onRenameNode(name, folderNode),
       onRenameDriveNodes(name, folderNode.id),

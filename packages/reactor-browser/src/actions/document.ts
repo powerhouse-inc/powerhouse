@@ -844,23 +844,32 @@ export async function renameNode(
       throw new Error("Legacy reactor not initialized");
     }
 
-    // Update the document's own header.name
-    await reactor.queueActions(nodeId, [setName(name)]);
-
-    // Update the drive's node list
+    // Get the drive first to check node type
     const drive = await reactor.getDrive(driveId);
+    const node = drive.state.global.nodes.find((n) => n.id === nodeId);
+
+    if (!node) {
+      throw new Error("Node not found");
+    }
+
+    // Only update document header for files (folders don't have documents)
+    if (isFileNode(node)) {
+      await reactor.queueActions(nodeId, [setName(name)]);
+    }
+
+    // Update the drive's node list (works for both files and folders)
     const unsafeCastAsDrive = (await queueActions(
       drive,
       updateNode({ id: nodeId, name }),
     )) as DocumentDriveDocument;
 
-    const node = unsafeCastAsDrive.state.global.nodes.find(
-      (node) => node.id === nodeId,
+    const updatedNode = unsafeCastAsDrive.state.global.nodes.find(
+      (n) => n.id === nodeId,
     );
-    if (!node) {
+    if (!updatedNode) {
       throw new Error("There was an error renaming node");
     }
-    return node;
+    return updatedNode;
   } else {
     const reactorClient = window.ph?.reactorClient;
     if (!reactorClient) {

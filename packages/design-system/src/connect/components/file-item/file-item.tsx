@@ -34,7 +34,8 @@ export function FileItem(props: Props) {
     : "LOCAL";
   const { dragProps } = useDrag({ node: fileNode });
   const { isAllowedToCreateDocuments } = useUserPermissions();
-  const { onRenameNode, onRenameDriveNodes, onDuplicateNode } = useNodeActions();
+  const { onRenameNode, onRenameDriveNodes, onDuplicateNode } =
+    useNodeActions();
   const isReadMode = mode === "READ";
   const syncStatus = getSyncStatusSync(fileNode.id, sharingType);
 
@@ -56,6 +57,11 @@ export function FileItem(props: Props) {
     );
 
   function onSubmit(name: string) {
+    if (name === fileNode.name) {
+      setMode("READ");
+      return;
+    }
+
     Promise.all([
       onRenameNode(name, fileNode),
       onRenameDriveNodes(name, fileNode.id),
