@@ -281,27 +281,6 @@ const app = command({
 
     if (!skipPublish) {
       try {
-        const publishDryRunResult = await releasePublish({
-          tag: preid,
-          versionData: projectsVersionData,
-          releaseGraph,
-          verbose,
-          dryRun: true,
-        });
-
-        for (const [name, { code }] of Object.entries(publishDryRunResult)) {
-          if (code !== 0) {
-            throw new Error(
-              `Dry run release of project "${name}" failed with exit code ${code}`,
-            );
-          }
-        }
-      } catch (error) {
-        console.error("Error occurred in release dry run:");
-        throw error;
-      }
-
-      try {
         const publishResult = await releasePublish({
           tag: preid,
           versionData: projectsVersionData,
@@ -337,6 +316,8 @@ const app = command({
         "CHANGELOG.md",
         ":(glob)**/package.json",
         ":(glob)**/CHANGELOG.md",
+        ":(glob)**/COMMANDS.md",
+        ":(glob)**/COMMANDS_LEGACY.md",
       ];
       console.log(
         `Staging files in git with the following command: ${stageChangesCmd.join(" ")}`,
