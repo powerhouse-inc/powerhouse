@@ -104,8 +104,6 @@ describe("SimpleJobExecutor load jobs", () => {
     executor = new SimpleJobExecutor(
       createMockLogger(),
       registry,
-      mockDocStorage,
-      mockOperationStorage,
       mockOperationStore,
       {
         emit: vi.fn().mockResolvedValue(undefined),

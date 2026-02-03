@@ -1,8 +1,4 @@
 import type {
-  IDocumentOperationStorage,
-  IDocumentStorage,
-} from "document-drive";
-import type {
   Action,
   DocumentModelModule,
   ISigner,
@@ -348,10 +344,6 @@ export interface IReactor {
  */
 export type ReactorFeatures = { [key: string]: boolean };
 
-export type ExecutorConfig = {
-  count: number;
-};
-
 /**
  * Combined database type that includes all schemas
  */
@@ -375,7 +367,6 @@ export interface SyncModule {
  * testing, or integration scenarios.
  */
 export interface ReactorModule {
-  storage: IDocumentStorage & IDocumentOperationStorage;
   eventBus: IEventBus;
   documentModelRegistry: IDocumentModelRegistry;
   queue: IQueue;

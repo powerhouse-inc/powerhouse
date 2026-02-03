@@ -1,8 +1,4 @@
 import type { SignatureVerificationHandler } from "#index.js";
-import type {
-  IDocumentOperationStorage,
-  IDocumentStorage,
-} from "document-drive";
 import { deriveOperationId } from "document-model";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { IWriteCache } from "../../src/cache/write/interfaces.js";
@@ -13,9 +9,7 @@ import { InvalidSignatureError } from "../../src/shared/errors.js";
 import type { IOperationStore } from "../../src/storage/interfaces.js";
 import {
   createMockDocumentMetaCache,
-  createMockDocumentStorage,
   createMockLogger,
-  createMockOperationStorage,
   createMockOperationStore,
   createSignedTestOperation,
   createTestAction,
@@ -26,8 +20,6 @@ import { SimpleSigner } from "../utils/simple-signer.js";
 describe("SimpleJobExecutor signature verification", () => {
   let executor: SimpleJobExecutor;
   let signer: SimpleSigner;
-  let mockDocStorage: IDocumentStorage;
-  let mockOperationStorage: IDocumentOperationStorage;
   let mockOperationStore: IOperationStore;
   let mockWriteCache: IWriteCache;
   let registry: IDocumentModelRegistry;
@@ -63,8 +55,6 @@ describe("SimpleJobExecutor signature verification", () => {
       registerModules: vi.fn(),
     } as unknown as IDocumentModelRegistry;
 
-    mockDocStorage = createMockDocumentStorage();
-    mockOperationStorage = createMockOperationStorage();
     mockOperationStore = createMockOperationStore();
 
     mockOperationStore.apply = vi
@@ -158,8 +148,6 @@ describe("SimpleJobExecutor signature verification", () => {
     executor = new SimpleJobExecutor(
       createMockLogger(),
       registry,
-      mockDocStorage,
-      mockOperationStorage,
       mockOperationStore,
       {
         emit: vi.fn().mockResolvedValue(undefined),

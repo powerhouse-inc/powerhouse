@@ -586,13 +586,14 @@ describe("Two-Reactor Sync", () => {
   it("should trigger excessive reshuffle error when loading operation with index far in the past", async () => {
     const testReactor = await new ReactorBuilder()
       .withDocumentModels([driveDocumentModelModule as any])
+      .withExecutorConfig({ maxSkipThreshold: 10 })
       .build();
 
     const document = driveDocumentModelModule.utils.createDocument();
     await testReactor.create(document);
 
     const actions = [];
-    for (let i = 0; i < 150; i++) {
+    for (let i = 0; i < 15; i++) {
       actions.push(
         driveDocumentModelModule.actions.setDriveName({ name: `Drive ${i}` }),
       );
@@ -615,10 +616,10 @@ describe("Two-Reactor Sync", () => {
     );
     const globalOps = operations.global.results;
 
-    expect(globalOps.length).toBe(150);
+    expect(globalOps.length).toBe(15);
 
     const latestIndex = Math.max(...globalOps.map((op) => op.index));
-    expect(latestIndex).toBeGreaterThanOrEqual(149);
+    expect(latestIndex).toBeGreaterThanOrEqual(14);
 
     const oldOperation = {
       ...globalOps[0],

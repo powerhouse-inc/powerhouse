@@ -1,7 +1,3 @@
-import type {
-  IDocumentOperationStorage,
-  IDocumentStorage,
-} from "document-drive";
 import { documentModelDocumentModelModule } from "document-model";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { IWriteCache } from "../../../src/cache/write/interfaces.js";
@@ -11,9 +7,7 @@ import type { IDocumentModelRegistry } from "../../../src/registry/interfaces.js
 import type { IOperationStore } from "../../../src/storage/interfaces.js";
 import {
   createMockDocumentMetaCache,
-  createMockDocumentStorage,
   createMockLogger,
-  createMockOperationStorage,
   createMockOperationStore,
   createTestEventBus,
   createTestRegistry,
@@ -22,17 +16,19 @@ import {
 describe("SimpleJobExecutor", () => {
   let executor: SimpleJobExecutor;
   let registry: IDocumentModelRegistry;
-  let mockDocStorage: IDocumentStorage;
-  let mockOperationStorage: IDocumentOperationStorage;
   let mockOperationStore: IOperationStore;
+  let mockWriteCache: IWriteCache;
 
   beforeEach(() => {
     // Setup registry with real document model
     registry = createTestRegistry([documentModelDocumentModelModule]);
 
-    // Setup mock document storage with additional mock for operations/state structure
-    mockDocStorage = createMockDocumentStorage({
-      get: vi.fn().mockImplementation((docId) =>
+    // Setup mock operation store
+    mockOperationStore = createMockOperationStore();
+
+    // Create mock write cache
+    mockWriteCache = {
+      getState: vi.fn().mockImplementation((docId) =>
         Promise.resolve({
           header: {
             id: docId,
@@ -67,21 +63,6 @@ describe("SimpleJobExecutor", () => {
           },
         }),
       ),
-      exists: vi.fn().mockResolvedValue(true),
-      resolveSlugs: vi.fn().mockResolvedValue([]),
-    });
-
-    // Setup mock operation storage
-    mockOperationStorage = createMockOperationStorage();
-
-    // Setup mock operation store
-    mockOperationStore = createMockOperationStore();
-
-    // Create mock write cache
-    const mockWriteCache: IWriteCache = {
-      getState: vi.fn().mockImplementation(async (docId) => {
-        return await mockDocStorage.get(docId);
-      }),
       putState: vi.fn(),
       invalidate: vi.fn(),
       clear: vi.fn(),
@@ -105,8 +86,6 @@ describe("SimpleJobExecutor", () => {
     executor = new SimpleJobExecutor(
       createMockLogger(),
       registry,
-      mockDocStorage,
-      mockOperationStorage,
       mockOperationStore,
       eventBus,
       mockWriteCache,
@@ -118,7 +97,7 @@ describe("SimpleJobExecutor", () => {
 
   describe("executeJob", () => {
     it("should handle document not found", async () => {
-      mockDocStorage.get = vi
+      mockWriteCache.getState = vi
         .fn()
         .mockRejectedValue(new Error("Document not found"));
 
@@ -152,7 +131,7 @@ describe("SimpleJobExecutor", () => {
 
     it("should handle missing reducer", async () => {
       // Mock a document with unknown type but with CREATE_DOCUMENT to pass validation
-      mockDocStorage.get = vi.fn().mockResolvedValue({
+      mockWriteCache.getState = vi.fn().mockResolvedValue({
         header: {
           id: "doc-1",
           documentType: "unknown/type",
@@ -213,7 +192,7 @@ describe("SimpleJobExecutor", () => {
     });
 
     it("should handle storage errors", async () => {
-      mockDocStorage.get = vi
+      mockWriteCache.getState = vi
         .fn()
         .mockRejectedValue(new Error("Storage error"));
 
@@ -250,7 +229,7 @@ describe("SimpleJobExecutor", () => {
     it("should delete document successfully", async () => {
       const documentId = "doc-to-delete";
 
-      mockDocStorage.get = vi.fn().mockResolvedValue({
+      mockWriteCache.getState = vi.fn().mockResolvedValue({
         header: {
           id: documentId,
           documentType: "powerhouse/document-model",
@@ -305,20 +284,17 @@ describe("SimpleJobExecutor", () => {
         errorHistory: [],
       };
 
-      mockDocStorage.delete = vi.fn().mockResolvedValue(undefined);
-
       const result = await executor.executeJob(job);
 
       expect(result.success).toBe(true);
       expect(result.operations).toBeDefined();
       expect(result.operations?.[0].action).toEqual(job.actions[0]);
-      expect(mockDocStorage.delete).toHaveBeenCalledWith(documentId);
     });
 
-    it("should return error if document deletion fails", async () => {
+    it("should return error if operation write fails during delete", async () => {
       const documentId = "doc-delete-fail";
 
-      mockDocStorage.get = vi.fn().mockResolvedValue({
+      mockWriteCache.getState = vi.fn().mockResolvedValue({
         header: {
           id: documentId,
           documentType: "powerhouse/document-model",
@@ -373,16 +349,15 @@ describe("SimpleJobExecutor", () => {
         errorHistory: [],
       };
 
-      mockDocStorage.delete = vi
+      mockOperationStore.apply = vi
         .fn()
-        .mockRejectedValue(new Error("Delete failed"));
+        .mockRejectedValue(new Error("Write failed"));
 
       const result = await executor.executeJob(job);
 
       expect(result.success).toBe(false);
       expect(result.error).toBeDefined();
-      expect(result.error?.message).toContain("Failed to delete document");
-      expect(result.error?.message).toContain("Delete failed");
+      expect(result.error?.message).toContain("Failed to write operation");
     });
 
     it("should return error if documentId is missing from input", async () => {
@@ -414,7 +389,6 @@ describe("SimpleJobExecutor", () => {
       expect(result.error?.message).toContain(
         "DELETE_DOCUMENT action requires a documentId",
       );
-      expect(mockDocStorage.delete).not.toHaveBeenCalled();
     });
   });
 
@@ -448,8 +422,6 @@ describe("SimpleJobExecutor", () => {
           errorHistory: [],
         };
 
-        mockDocStorage.create = vi.fn().mockResolvedValue(undefined);
-
         const result = await executor.executeJob(job);
 
         expect(result.success).toBe(true);
@@ -463,7 +435,7 @@ describe("SimpleJobExecutor", () => {
     describe("DELETE_DOCUMENT", () => {
       it("should calculate next index based on operations in the same scope only", async () => {
         const documentId = "doc-with-ops";
-        mockDocStorage.get = vi.fn().mockResolvedValue({
+        mockWriteCache.getState = vi.fn().mockResolvedValue({
           header: {
             id: documentId,
             documentType: "powerhouse/document-model",
@@ -510,8 +482,6 @@ describe("SimpleJobExecutor", () => {
           errorHistory: [],
         };
 
-        mockDocStorage.delete = vi.fn().mockResolvedValue(undefined);
-
         const result = await executor.executeJob(job);
 
         expect(result.success).toBe(true);
@@ -525,7 +495,7 @@ describe("SimpleJobExecutor", () => {
     describe("UPGRADE_DOCUMENT", () => {
       it("should calculate next index based on existing operations", async () => {
         const documentId = "doc-to-upgrade";
-        mockDocStorage.get = vi.fn().mockResolvedValue({
+        mockWriteCache.getState = vi.fn().mockResolvedValue({
           header: {
             id: documentId,
             documentType: "powerhouse/document-model",
@@ -622,9 +592,8 @@ describe("SimpleJobExecutor", () => {
           errorHistory: [],
         };
 
-        mockDocStorage.create = vi.fn().mockResolvedValue(undefined);
         // After CREATE, document will have one operation
-        mockDocStorage.get = vi.fn().mockResolvedValue({
+        mockWriteCache.getState = vi.fn().mockResolvedValue({
           header: {
             id: documentId,
             documentType: "powerhouse/document-model",
@@ -680,7 +649,7 @@ describe("SimpleJobExecutor", () => {
         const documentId = "doc-multi-scope";
 
         // Set up document with index 0 in multiple scopes
-        mockDocStorage.get = vi.fn().mockResolvedValue({
+        mockWriteCache.getState = vi.fn().mockResolvedValue({
           header: {
             id: documentId,
             documentType: "powerhouse/document-model",
@@ -720,7 +689,6 @@ describe("SimpleJobExecutor", () => {
           errorHistory: [],
         };
 
-        mockDocStorage.delete = vi.fn().mockResolvedValue(undefined);
         const result = await executor.executeJob(job);
 
         expect(result.success).toBe(true);
@@ -759,7 +727,7 @@ describe("SimpleJobExecutor", () => {
           state: { document: { isDeleted: false } },
         };
 
-        mockDocStorage.get = vi.fn().mockResolvedValue(document);
+        mockWriteCache.getState = vi.fn().mockResolvedValue(document);
 
         // Test UPGRADE in document scope (should be 2, not 4)
         const job: Job = {
@@ -837,10 +805,8 @@ describe("SimpleJobExecutor", () => {
           errorHistory: [],
         };
 
-        mockDocStorage.create = vi.fn().mockResolvedValue(undefined);
-
         // After CREATE, document will have one operation
-        mockDocStorage.get = vi.fn().mockResolvedValue({
+        mockWriteCache.getState = vi.fn().mockResolvedValue({
           header: {
             id: documentId,
             documentType: "powerhouse/document-model",
@@ -953,8 +919,6 @@ describe("SimpleJobExecutor", () => {
           queueHint: [],
           errorHistory: [],
         };
-
-        mockDocStorage.create = vi.fn().mockResolvedValue(undefined);
 
         const result = await executor.executeJob(job);
 

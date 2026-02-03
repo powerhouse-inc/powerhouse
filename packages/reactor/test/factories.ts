@@ -610,8 +610,6 @@ export async function createTestReactorSetup(
   const jobExecutor = new SimpleJobExecutor(
     createMockLogger(),
     registry,
-    storage,
-    storage,
     operationStore,
     eventBus,
     mockWriteCache,

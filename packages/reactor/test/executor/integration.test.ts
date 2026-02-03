@@ -160,14 +160,12 @@ describe("SimpleJobExecutor Integration (Modern Storage)", () => {
     executor = new SimpleJobExecutor(
       createMockLogger(),
       registry,
-      null as any,
-      null as any,
       operationStore,
       eventBus,
       writeCache,
       operationIndex,
       documentMetaCache,
-      { legacyStorageEnabled: false },
+      {},
     );
   });
 
