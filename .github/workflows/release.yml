@@ -84,13 +84,13 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
         run: |
-          pnpm run-release \
-          --release-mode="${{ inputs.release_mode }}"
-          --dry-run="${{ inputs.dry_run }}"
-          --verbose="${{ inputs.verbose }}"
-          --skip-publish="${{ inputs.skip_publish }}"
-          --skip-changelog="${{ inputs.skip_changelog }}"
-          --skip-stage="${{ inputs.skip_stage }}"
-          --skip-commit="${{ inputs.skip_commit }}"
-          --skip-push="${{ inputs.skip_push }}"
+          pnpm run run-release -- \
+          --release-mode="${{ inputs.release_mode }}" \
+          --dry-run="${{ inputs.dry_run }}" \
+          --verbose="${{ inputs.verbose }}" \
+          --skip-publish="${{ inputs.skip_publish }}" \
+          --skip-changelog="${{ inputs.skip_changelog }}" \
+          --skip-stage="${{ inputs.skip_stage }}" \
+          --skip-commit="${{ inputs.skip_commit }}" \
+          --skip-push="${{ inputs.skip_push }}" \
           --skip-git-tag="${{ inputs.skip_git_tag }}"
