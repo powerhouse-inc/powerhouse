@@ -1,3 +1,21 @@
+## 6.0.0-dev.29 (2026-02-03)
+
+### 🚀 Features
+
+- **release:** add doc comments ([3ab9879d4](https://github.com/powerhouse-inc/powerhouse/commit/3ab9879d4))
+- **monorepo:** simplified release workflow ([#2276](https://github.com/powerhouse-inc/powerhouse/pull/2276))
+
+### 🩹 Fixes
+
+- package.json onlyBuilt ([3b6165267](https://github.com/powerhouse-inc/powerhouse/commit/3b6165267))
+- **release:** move checkout action ([4ed305d57](https://github.com/powerhouse-inc/powerhouse/commit/4ed305d57))
+
+### ❤️ Thank You
+
+- Benjamin Jordan (@thegoldenmule)
+- Ryan Wolhuter @ryanwolhuter
+- ryanwolhuter @ryanwolhuter
+
 ## 6.0.0-dev.28 (2026-01-31)
 
 ### 🚀 Features

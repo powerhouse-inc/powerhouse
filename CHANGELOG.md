@@ -1,3 +1,30 @@
+## 6.0.0-dev.29 (2026-02-03)
+
+### 🚀 Features
+
+- **monorepo:** simplified release workflow ([#2276](https://github.com/powerhouse-inc/powerhouse/pull/2276))
+- **release:** add doc comments ([3ab9879d4](https://github.com/powerhouse-inc/powerhouse/commit/3ab9879d4))
+
+### 🩹 Fixes
+
+- package.json onlyBuilt ([3b6165267](https://github.com/powerhouse-inc/powerhouse/commit/3b6165267))
+- circular ref ([c66f8cf27](https://github.com/powerhouse-inc/powerhouse/commit/c66f8cf27))
+- **codegen:** update index.html template used on ph init ([57932e263](https://github.com/powerhouse-inc/powerhouse/commit/57932e263))
+- **codegen:** fix type import on custom subgraph template ([b2d4c50a7](https://github.com/powerhouse-inc/powerhouse/commit/b2d4c50a7))
+- **codegen:** do not assume prettier is globally installed ([31f6d5b45](https://github.com/powerhouse-inc/powerhouse/commit/31f6d5b45))
+- **codegen:** deduplicate module errors by name ([c2ba9a74f](https://github.com/powerhouse-inc/powerhouse/commit/c2ba9a74f))
+- **reactor-api:** close apollo server before starting new one ([9a216b924](https://github.com/powerhouse-inc/powerhouse/commit/9a216b924))
+- **reactor-api:** provide operations on document query ([fcbb8bd4f](https://github.com/powerhouse-inc/powerhouse/commit/fcbb8bd4f))
+- **reactor-api:** missing import ([764ffa4af](https://github.com/powerhouse-inc/powerhouse/commit/764ffa4af))
+- **release:** move checkout action ([4ed305d57](https://github.com/powerhouse-inc/powerhouse/commit/4ed305d57))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+- Ryan Wolhuter @ryanwolhuter
+- ryanwolhuter @ryanwolhuter
+
 ## 6.0.0-dev.28 (2026-01-31)
 
 ### 🚀 Features
