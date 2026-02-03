@@ -1,5 +1,5 @@
 import type { Context, GqlDriveDocument } from "@powerhousedao/reactor-api";
-import { childLogger, type DocumentDriveDocument } from "document-drive";
+import { deleteNode as baseDeleteNode, childLogger } from "document-drive";
 import { GraphQLError } from "graphql";
 import { gql } from "graphql-tag";
 import { BaseSubgraph } from "../base-subgraph.js";
@@ -40,6 +40,7 @@ export class SystemSubgraph extends BaseSubgraph {
       deleteDrive(id: String!): Boolean
       setDriveIcon(id: String!, icon: String!): Boolean
       setDriveName(id: String!, name: String!): Boolean
+      deleteDocument(id: PHID!): Boolean
     }
 
     type AddDriveResult {
@@ -75,12 +76,13 @@ export class SystemSubgraph extends BaseSubgraph {
         args: { idOrSlug: string },
         ctx: SystemContext,
       ): Promise<GqlDriveDocument> => {
-        let drive: DocumentDriveDocument;
+        let driveId: string;
         try {
-          drive = await this.reactor.getDriveBySlug(args.idOrSlug);
+          driveId = await this.reactor.getDriveIdBySlug(args.idOrSlug);
         } catch {
-          drive = await this.reactor.getDrive(args.idOrSlug);
+          driveId = args.idOrSlug;
         }
+        const drive = await this.reactor.getDrive(driveId);
         ctx.document = drive;
         return buildGraphQlDriveDocument(drive);
       },
@@ -163,6 +165,55 @@ export class SystemSubgraph extends BaseSubgraph {
 
           return false;
         }
+      },
+      deleteDocument: async (
+        _: unknown,
+        { id }: { id: string },
+        ctx: SystemContext,
+      ): Promise<boolean> => {
+        logger.verbose(`deleteDocument(id: ${id})`);
+
+        if (!id) {
+          throw new Error("Document id is required");
+        }
+
+        const isGlobalAdmin = ctx.isAdmin?.(ctx.user?.address ?? "");
+        const isGlobalUser = ctx.isUser?.(ctx.user?.address ?? "");
+        const hasGlobalWriteAccess = isGlobalAdmin || isGlobalUser;
+
+        if (!hasGlobalWriteAccess && this.documentPermissionService) {
+          const canWrite =
+            await this.documentPermissionService.canWriteDocument(
+              id,
+              ctx.user?.address,
+            );
+          if (!canWrite) {
+            logger.warn(
+              `deleteDocument rejected: user ${ctx.user?.address ?? "anonymous"} lacks write permission for document ${id}`,
+            );
+            throw new GraphQLError(
+              "Forbidden: insufficient permissions to delete this document",
+            );
+          }
+        } else if (!hasGlobalWriteAccess) {
+          throw new GraphQLError("Forbidden");
+        }
+
+        // Find the drive that contains this document as a node
+        // and remove the node from the drive first
+        const driveIds = await this.reactor.getDrives();
+        for (const driveId of driveIds) {
+          const drive = await this.reactor.getDrive(driveId);
+          const node = drive.state.global.nodes.find((n) => n.id === id);
+          if (node) {
+            await this.reactor.addAction(driveId, baseDeleteNode({ id }));
+            break;
+          }
+        }
+
+        // Delete the document itself
+        await this.reactor.deleteDocument(id);
+        return true;
       },
     },
     ...DocumentDriveResolvers,
