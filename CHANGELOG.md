@@ -1,3 +1,14 @@
+## 5.3.0-staging.19 (2026-02-03)
+
+### 🩹 Fixes
+
+- **codegen:** fix prettier command on ph init ([9a310dca3](https://github.com/powerhouse-inc/powerhouse/commit/9a310dca3))
+- **reactor-api:** avoid exception when stopping apollo server before it has started ([fa91b94bc](https://github.com/powerhouse-inc/powerhouse/commit/fa91b94bc))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 5.3.0-staging.18 (2026-02-02)
 
 ### 🩹 Fixes

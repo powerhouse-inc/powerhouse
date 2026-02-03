@@ -1,3 +1,7 @@
+## 5.3.0-staging.19 (2026-02-03)
+
+This was a version bump only for @powerhousedao/config to align it with other projects, there were no code changes.
+
 ## 5.3.0-staging.18 (2026-02-02)
 
 This was a version bump only for @powerhousedao/config to align it with other projects, there were no code changes.

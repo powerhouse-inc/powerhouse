@@ -1,3 +1,13 @@
+## 5.3.0-staging.19 (2026-02-03)
+
+### 🩹 Fixes
+
+- **codegen:** fix prettier command on ph init ([9a310dca3](https://github.com/powerhouse-inc/powerhouse/commit/9a310dca3))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 5.3.0-staging.18 (2026-02-02)
 
 ### 🩹 Fixes
