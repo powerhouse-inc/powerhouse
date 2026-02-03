@@ -102,10 +102,16 @@ export class SimpleJobExecutor implements IJobExecutor {
           result.operationsWithContext[i].context.ordinal = ordinals[i];
         }
         if (result.operationsWithContext.length > 0) {
+          const collectionMemberships =
+            await this.getCollectionMembershipsForOperations(
+              result.operationsWithContext,
+              indexTxn.getCollectionMemberships(),
+            );
           const event: JobWriteReadyEvent = {
             jobId: job.id,
             operations: result.operationsWithContext,
             jobMeta: job.meta,
+            collectionMemberships,
           };
           this.eventBus
             .emit(ReactorEventTypes.JOB_WRITE_READY, event)
@@ -139,10 +145,16 @@ export class SimpleJobExecutor implements IJobExecutor {
       for (let i = 0; i < result.operationsWithContext.length; i++) {
         result.operationsWithContext[i].context.ordinal = ordinals[i];
       }
+      const collectionMemberships =
+        await this.getCollectionMembershipsForOperations(
+          result.operationsWithContext,
+          indexTxn.getCollectionMemberships(),
+        );
       const event: JobWriteReadyEvent = {
         jobId: job.id,
         operations: result.operationsWithContext,
         jobMeta: job.meta,
+        collectionMemberships,
       };
       this.eventBus.emit(ReactorEventTypes.JOB_WRITE_READY, event).catch(() => {
         // TODO: Log error
@@ -156,6 +168,32 @@ export class SimpleJobExecutor implements IJobExecutor {
       operationsWithContext: result.operationsWithContext,
       duration: Date.now() - startTime,
     };
+  }
+
+  private async getCollectionMembershipsForOperations(
+    operations: OperationWithContext[],
+    txnMemberships: Record<string, string[]>,
+  ): Promise<Record<string, string[]>> {
+    const documentIds = [
+      ...new Set(operations.map((op) => op.context.documentId)),
+    ];
+    const existingMemberships =
+      await this.operationIndex.getCollectionsForDocuments(documentIds);
+
+    const result: Record<string, string[]> = { ...existingMemberships };
+
+    for (const [docId, collections] of Object.entries(txnMemberships)) {
+      if (!(docId in result)) {
+        result[docId] = [];
+      }
+      for (const col of collections) {
+        if (!result[docId].includes(col)) {
+          result[docId].push(col);
+        }
+      }
+    }
+
+    return result;
   }
 
   private async processActions(

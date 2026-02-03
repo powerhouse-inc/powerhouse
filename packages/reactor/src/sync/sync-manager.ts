@@ -13,6 +13,7 @@ import {
 import type {
   ISyncCursorStorage,
   ISyncRemoteStorage,
+  OperationWithContext,
 } from "../storage/interfaces.js";
 import { ChannelError } from "./errors.js";
 import type { IChannelFactory, ISyncManager, Remote } from "./interfaces.js";
@@ -369,9 +370,22 @@ export class SyncManager implements ISyncManager {
         continue;
       }
 
-      const filteredOps = filterOperations(event.operations, remote.filter);
+      let filteredOps = filterOperations(event.operations, remote.filter);
       if (filteredOps.length === 0) {
         continue;
+      }
+
+      // If remote has empty documentId filter, it means "sync all docs in this collection"
+      // In this case, we need to filter by collection membership
+      if (remote.filter.documentId.length === 0) {
+        filteredOps = this.filterByCollectionMembership(
+          filteredOps,
+          remote.collectionId,
+          event.collectionMemberships,
+        );
+        if (filteredOps.length === 0) {
+          continue;
+        }
       }
 
       const batches = batchOperationsByDocument(filteredOps);
@@ -539,5 +553,26 @@ export class SyncManager implements ISyncManager {
       }
       this.jobSyncStates.delete(jobId);
     }
+  }
+
+  private filterByCollectionMembership(
+    operations: OperationWithContext[],
+    collectionId: string,
+    collectionMemberships?: Record<string, string[]>,
+  ): OperationWithContext[] {
+    // If no collection memberships provided, we can't verify membership
+    // This maintains backwards compatibility but effectively disables routing
+    // for remotes with empty documentId filter when membership info is missing
+    if (!collectionMemberships) {
+      return [];
+    }
+
+    return operations.filter((op) => {
+      const documentId = op.context.documentId;
+      if (!(documentId in collectionMemberships)) {
+        return false;
+      }
+      return collectionMemberships[documentId].includes(collectionId);
+    });
   }
 }

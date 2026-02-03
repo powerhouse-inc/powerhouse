@@ -132,6 +132,7 @@ const createMockOperationIndex = (): IOperationIndex => ({
     .fn()
     .mockResolvedValue({ items: [], nextCursor: undefined, hasMore: false }),
   getLatestTimestampForCollection: vi.fn().mockResolvedValue(null),
+  getCollectionsForDocuments: vi.fn().mockResolvedValue({}),
 });
 
 const createPollTimer = (intervalMs = 2000): IPollTimer =>

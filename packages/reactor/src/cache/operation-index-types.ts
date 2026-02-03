@@ -19,6 +19,11 @@ export interface IOperationIndexTxn {
   addToCollection(collectionId: string, documentId: string): void;
   removeFromCollection(collectionId: string, documentId: string): void;
   write(operations: OperationIndexEntry[]): void;
+  /**
+   * Returns a map of documentId to collection IDs for all membership
+   * changes recorded in this transaction.
+   */
+  getCollectionMemberships(): Record<string, string[]>;
 }
 
 export interface IOperationIndex {
@@ -40,6 +45,13 @@ export interface IOperationIndex {
     collectionId: string,
     signal?: AbortSignal,
   ): Promise<string | null>;
+  /**
+   * Get all collection memberships for the given document IDs.
+   * Returns a map of documentId to array of collection IDs.
+   */
+  getCollectionsForDocuments(
+    documentIds: string[],
+  ): Promise<Record<string, string[]>>;
 }
 
 export interface DocumentCollectionTable {

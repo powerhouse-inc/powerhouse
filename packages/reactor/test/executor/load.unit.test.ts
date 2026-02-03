@@ -91,13 +91,16 @@ describe("SimpleJobExecutor load jobs", () => {
       start: vi.fn().mockReturnValue({
         createCollection: vi.fn(),
         addToCollection: vi.fn(),
+        removeFromCollection: vi.fn(),
         write: vi.fn(),
+        getCollectionMemberships: vi.fn().mockReturnValue({}),
       }),
       commit: vi.fn().mockResolvedValue([]),
       find: vi.fn().mockResolvedValue({
         results: [],
         options: { cursor: "0", limit: 100 },
       }),
+      getCollectionsForDocuments: vi.fn().mockResolvedValue({}),
     };
 
     const mockDocumentMetaCache = createMockDocumentMetaCache();
