@@ -10,6 +10,11 @@
  *   - Default: in-memory PGlite (no persistence)
  *   - PostgreSQL: --db "postgresql://user:pass@localhost:5432/dbname"
  *   - PGlite file: --db "./data" (persists to filesystem)
+ *
+ * Pyroscope profiling:
+ *   - Start Pyroscope: docker compose -f scripts/profiling/docker-compose.yml up pyroscope
+ *   - Enable profiling: --pyroscope [server-address]
+ *   - View results: http://localhost:4040
  */
 
 import { documentModelDocumentModelModule } from "document-model";
@@ -25,6 +30,7 @@ import { PGlite } from "@electric-sql/pglite";
 import { PGliteDialect } from "kysely-pglite-dialect";
 import { Pool } from "pg";
 import { PostgresDialect } from "kysely";
+import Pyroscope from "@pyroscope/nodejs";
 
 interface MemoryStats {
   heapUsed: number;
@@ -227,6 +233,7 @@ function parseArgs(args: string[]): {
   showActionTypes: boolean;
   dbPath: string | undefined;
   docId: string | undefined;
+  pyroscope: string | undefined;
 } {
   let count = 10;
   let operations = 0;
@@ -236,6 +243,7 @@ function parseArgs(args: string[]): {
   let showActionTypes = false;
   let dbPath: string | undefined = undefined;
   let docId: string | undefined = undefined;
+  let pyroscope: string | undefined = undefined;
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
@@ -253,6 +261,15 @@ function parseArgs(args: string[]): {
       percentiles = true;
     } else if (arg === "--show-action-types" || arg === "-a") {
       showActionTypes = true;
+    } else if (arg === "--pyroscope") {
+      // Check if next arg is a server address (not another flag)
+      const nextArg = args[i + 1];
+      if (nextArg && !nextArg.startsWith("-")) {
+        pyroscope = nextArg;
+        i++;
+      } else {
+        pyroscope = "http://localhost:4040";
+      }
     } else if (arg === "--help" || arg === "-h") {
       console.log(`
 Usage: tsx reactor-direct.ts [N] [options]
@@ -270,6 +287,7 @@ Options:
   --verbose, -v             Show detailed operation timings
   --percentiles, -p         Show percentile statistics (p50, p90, p95, p99) per line
   --show-action-types, -a   Show action type names in min/max timings
+  --pyroscope [address]     Enable Pyroscope profiling (default: http://localhost:4040)
   --help, -h                Show this help message
 
 Process flow:
@@ -341,6 +359,7 @@ Examples:
     showActionTypes,
     dbPath,
     docId,
+    pyroscope,
   };
 }
 
@@ -381,7 +400,29 @@ async function main() {
     showActionTypes,
     dbPath,
     docId,
+    pyroscope: pyroscopeServer,
   } = parseArgs(process.argv.slice(2));
+
+  // Initialize Pyroscope profiling if enabled
+  if (pyroscopeServer) {
+    console.log(`Initializing Pyroscope profiler at: ${pyroscopeServer}`);
+    Pyroscope.init({
+      serverAddress: pyroscopeServer,
+      appName: "reactor-direct-profiler",
+      wall: {
+        samplingDurationMs: 10000,
+        samplingIntervalMicros: 10000,
+        collectCpuTime: true,
+      },
+      heap: {
+        samplingIntervalBytes: 512 * 1024,
+        stackDepth: 64,
+      },
+    });
+    Pyroscope.startWallProfiling();
+    Pyroscope.startCpuProfiling();
+    console.log("  Wall and CPU profiling enabled");
+  }
 
   console.log("Initializing reactor directly (no GraphQL API)...");
   const initStart = Date.now();
@@ -568,6 +609,10 @@ async function main() {
   }
 
   // Cleanup
+  if (pyroscopeServer) {
+    Pyroscope.stopWallProfiling();
+    Pyroscope.stopCpuProfiling();
+  }
   reactor.kill();
   await db.destroy();
 

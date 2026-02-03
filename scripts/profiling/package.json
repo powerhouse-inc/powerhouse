@@ -12,6 +12,7 @@
   "dependencies": {
     "@electric-sql/pglite": "^0.2.17",
     "@powerhousedao/reactor": "workspace:*",
+    "@pyroscope/nodejs": "^0.4.7",
     "document-model": "workspace:*",
     "graphql-request": "^7.4.0",
     "kysely": "^0.28.2",
