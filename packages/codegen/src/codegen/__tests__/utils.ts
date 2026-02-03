@@ -2,6 +2,14 @@ import { paramCase } from "change-case";
 import { mkdirSync, rmSync } from "node:fs";
 import fs from "node:fs/promises";
 import path from "path";
+import {
+  DiagnosticCategory,
+  IndentationText,
+  ModuleKind,
+  Project,
+  ScriptTarget,
+  ts,
+} from "ts-morph";
 import { PURGE_AFTER_TEST } from "./config.js";
 import { TEST_DATA_DIR, TEST_OUTPUT_DIR } from "./constants.js";
 
@@ -53,5 +61,41 @@ export function purgeDirAfterTest(outDirName: string) {
     } catch (error) {
       // Ignore error if folder doesn't exist
     }
+  }
+}
+
+export async function runTsc(testOutDirPath: string) {
+  const project = new Project({
+    compilerOptions: {
+      module: ModuleKind.NodeNext,
+      target: ScriptTarget.ESNext,
+      jsx: ts.JsxEmit.ReactJSX,
+      sourceMap: false,
+      declaration: false,
+      declarationMap: false,
+      strict: true,
+      verbatimModuleSyntax: true,
+      isolatedModules: true,
+      noUncheckedSideEffectImports: true,
+      moduleDetection: ts.ModuleDetectionKind.Force,
+      skipLibCheck: true,
+    },
+    skipAddingFilesFromTsConfig: true,
+    // use formatting rules which match prettier
+    manipulationSettings: {
+      useTrailingCommas: true,
+      indentationText: IndentationText.TwoSpaces,
+    },
+  });
+  project.addSourceFilesAtPaths(path.join(testOutDirPath, "**/*"));
+  await project.save();
+  const diagnostics = project.getPreEmitDiagnostics();
+  const errorDiagnostics = diagnostics.filter(
+    (diagnostic) => diagnostic.getCategory() === DiagnosticCategory.Error,
+  );
+  if (errorDiagnostics.length !== 0) {
+    const formattedDiagnostics =
+      project.formatDiagnosticsWithColorAndContext(errorDiagnostics);
+    throw new Error(formattedDiagnostics);
   }
 }

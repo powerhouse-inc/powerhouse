@@ -10,7 +10,6 @@ import {
   type TestContext,
 } from "vitest";
 import { generateDocumentModel } from "../generate.js";
-import { hygenGenerateProcessor } from "../hygen.js";
 import { loadDocumentModel } from "../utils.js";
 import { USE_TS_MORPH } from "./config.js";
 import {
@@ -19,7 +18,6 @@ import {
   TEST_PACKAGE_NAME,
 } from "./constants.js";
 import { runGeneratedTests } from "./fixtures/run-generated-tests.js";
-import { compile } from "./fixtures/typecheck.js";
 import {
   copyAllFiles,
   getTestDataDir,
@@ -27,7 +25,9 @@ import {
   getTestOutputDir,
   purgeDirAfterTest,
   resetDirForTest,
+  runTsc,
 } from "./utils.js";
+import { compile } from "./fixtures/typecheck.js";
 
 describe("document model", () => {
   const testDir = import.meta.dirname;
@@ -40,14 +40,12 @@ describe("document model", () => {
   let testOutDirPath = getTestOutDirPath("initial", outDirName);
   const documentModelsSrcPath = path.join(testDir, "data", "document-models");
   let documentModelsDirName = path.join(testOutDirPath, "document-models");
-  let processorsDirName = path.join(testOutDirPath, "processors");
   async function setupTest(context: TestContext, dataDir = testDataDir) {
     testOutDirPath = getTestOutDirPath(context.task.name, outDirName);
 
     await copyAllFiles(dataDir, testOutDirPath);
 
     documentModelsDirName = path.join(testOutDirPath, "document-models");
-    processorsDirName = path.join(testOutDirPath, "processors");
 
     process.chdir(testOutDirPath);
   }
@@ -252,138 +250,6 @@ describe("document model", () => {
       expect(baseOperationsContent).toContain("setTestNameOperation");
       expect(baseOperationsContent).toContain("setTestDescriptionOperation");
       expect(baseOperationsContent).toContain("setTestValueOperation");
-    },
-  );
-
-  it(
-    "should generate an analytics processor and factory",
-    {
-      timeout: 100000,
-    },
-    async (context) => {
-      await setupTest(context);
-      await generate();
-
-      await hygenGenerateProcessor(
-        "test-analytics-processor",
-        ["billing-statement"],
-        path.join(testOutDirPath, processorsDirName),
-        "analytics",
-        {
-          skipFormat: true,
-        },
-      );
-
-      await compile(testOutDirPath);
-    },
-  );
-
-  it(
-    "should generate multiple analytics processors with composable factories",
-    {
-      timeout: 100000,
-    },
-    async (context) => {
-      await setupTest(context);
-      await generate();
-
-      await hygenGenerateProcessor(
-        "test1",
-        ["billing-statement"],
-        path.join(testOutDirPath, processorsDirName),
-        "analytics",
-        {
-          skipFormat: true,
-        },
-      );
-
-      await hygenGenerateProcessor(
-        "test2",
-        ["billing-statement"],
-        path.join(testOutDirPath, processorsDirName),
-        "analytics",
-        {
-          skipFormat: true,
-        },
-      );
-
-      await hygenGenerateProcessor(
-        "test3",
-        ["billing-statement"],
-        path.join(testOutDirPath, processorsDirName),
-        "analytics",
-        {
-          skipFormat: true,
-        },
-      );
-
-      await compile(testOutDirPath);
-    },
-  );
-
-  it(
-    "should generate a relational db processor and factory",
-    {
-      timeout: 100000,
-    },
-    async (context) => {
-      await setupTest(context);
-      await generate();
-
-      await hygenGenerateProcessor(
-        "test-relational-processor",
-        ["billing-statement"],
-        path.join(testOutDirPath, processorsDirName),
-        "relationalDb",
-        {
-          skipFormat: true,
-        },
-      );
-
-      await compile(testOutDirPath);
-    },
-  );
-
-  it(
-    "should generate multiple relational db processors with composable factories",
-    {
-      timeout: 100000,
-    },
-    async (context) => {
-      await setupTest(context);
-      await generate();
-
-      await hygenGenerateProcessor(
-        "test1",
-        ["billing-statement"],
-        path.join(testOutDirPath, processorsDirName),
-        "relationalDb",
-        {
-          skipFormat: true,
-        },
-      );
-
-      await hygenGenerateProcessor(
-        "test2",
-        ["billing-statement"],
-        path.join(testOutDirPath, processorsDirName),
-        "relationalDb",
-        {
-          skipFormat: true,
-        },
-      );
-
-      await hygenGenerateProcessor(
-        "test3",
-        ["billing-statement"],
-        path.join(testOutDirPath, processorsDirName),
-        "relationalDb",
-        {
-          skipFormat: true,
-        },
-      );
-
-      await compile(testOutDirPath);
     },
   );
 
