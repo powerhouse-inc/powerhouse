@@ -42,6 +42,7 @@ interface Percentiles {
 interface OperationTiming {
   opIndex: number;
   durationMs: number;
+  actionType: string;
 }
 
 interface OperationsResult {
@@ -97,22 +98,45 @@ function formatPercentiles(p: Percentiles): string {
 function createAction(docIndex: number, opIndex: number) {
   const actions = documentModelDocumentModelModule.actions;
   const actionCreators = [
-    () => actions.setModelName({ name: `Model-${docIndex}-op${opIndex}` }),
-    () =>
-      actions.setModelDescription({
-        description: `Description for document ${docIndex}, operation ${opIndex}`,
-      }),
-    () =>
-      actions.setAuthorName({ authorName: `Author-${docIndex}-op${opIndex}` }),
-    () =>
-      actions.setAuthorWebsite({
-        authorWebsite: `https://example-${docIndex}-${opIndex}.com`,
-      }),
-    () => actions.setModelExtension({ extension: `.ext${opIndex}` }),
-    () => actions.setModelId({ id: `org/model-${docIndex}-v${opIndex}` }),
+    {
+      name: "setModelName",
+      create: () =>
+        actions.setModelName({ name: `Model-${docIndex}-op${opIndex}` }),
+    },
+    {
+      name: "setModelDescription",
+      create: () =>
+        actions.setModelDescription({
+          description: `Description for document ${docIndex}, operation ${opIndex}`,
+        }),
+    },
+    {
+      name: "setAuthorName",
+      create: () =>
+        actions.setAuthorName({
+          authorName: `Author-${docIndex}-op${opIndex}`,
+        }),
+    },
+    {
+      name: "setAuthorWebsite",
+      create: () =>
+        actions.setAuthorWebsite({
+          authorWebsite: `https://example-${docIndex}-${opIndex}.com`,
+        }),
+    },
+    {
+      name: "setModelExtension",
+      create: () => actions.setModelExtension({ extension: `.ext${opIndex}` }),
+    },
+    {
+      name: "setModelId",
+      create: () =>
+        actions.setModelId({ id: `org/model-${docIndex}-v${opIndex}` }),
+    },
   ];
 
-  return actionCreators[opIndex % actionCreators.length]();
+  const creator = actionCreators[opIndex % actionCreators.length];
+  return { action: creator.create(), actionType: creator.name };
 }
 
 async function waitForJob(
@@ -165,7 +189,7 @@ async function performOperations(
   const durations: number[] = [];
 
   for (let i = 0; i < operationCount; i++) {
-    const action = createAction(docIndex, i + 1);
+    const { action, actionType } = createAction(docIndex, i + 1);
     const opStart = Date.now();
 
     const jobInfo = await reactor.execute(documentId, "main", [action]);
@@ -179,7 +203,7 @@ async function performOperations(
     const durationMs = Date.now() - opStart;
     durations.push(durationMs);
 
-    const timing: OperationTiming = { opIndex: i + 1, durationMs };
+    const timing: OperationTiming = { opIndex: i + 1, durationMs, actionType };
 
     if (minOp === null || durationMs < minOp.durationMs) {
       minOp = timing;
@@ -200,6 +224,7 @@ function parseArgs(args: string[]): {
   opLoops: number;
   verbose: boolean;
   percentiles: boolean;
+  showActionTypes: boolean;
   dbPath: string | undefined;
   docId: string | undefined;
 } {
@@ -208,6 +233,7 @@ function parseArgs(args: string[]): {
   let opLoops = 1;
   let verbose = false;
   let percentiles = false;
+  let showActionTypes = false;
   let dbPath: string | undefined = undefined;
   let docId: string | undefined = undefined;
 
@@ -225,6 +251,8 @@ function parseArgs(args: string[]): {
       verbose = true;
     } else if (arg === "--percentiles" || arg === "-p") {
       percentiles = true;
+    } else if (arg === "--show-action-types" || arg === "-a") {
+      showActionTypes = true;
     } else if (arg === "--help" || arg === "-h") {
       console.log(`
 Usage: tsx reactor-direct.ts [N] [options]
@@ -241,6 +269,7 @@ Options:
   --doc-id, -d <id>         Target an existing document by ID (skips document creation)
   --verbose, -v             Show detailed operation timings
   --percentiles, -p         Show percentile statistics (p50, p90, p95, p99) per line
+  --show-action-types, -a   Show action type names in min/max timings
   --help, -h                Show this help message
 
 Process flow:
@@ -309,6 +338,7 @@ Examples:
     opLoops,
     verbose,
     percentiles,
+    showActionTypes,
     dbPath,
     docId,
   };
@@ -348,6 +378,7 @@ async function main() {
     opLoops,
     verbose,
     percentiles: showPercentiles,
+    showActionTypes,
     dbPath,
     docId,
   } = parseArgs(process.argv.slice(2));
@@ -490,7 +521,9 @@ async function main() {
 
         const minMax =
           result.minOp && result.maxOp
-            ? `, min: ${result.minOp.durationMs}ms, max: ${result.maxOp.durationMs}ms`
+            ? showActionTypes
+              ? `, min: ${result.minOp.durationMs}ms (${result.minOp.actionType}), max: ${result.maxOp.durationMs}ms (${result.maxOp.actionType})`
+              : `, min: ${result.minOp.durationMs}ms, max: ${result.maxOp.durationMs}ms`
             : "";
 
         const loopPercentiles = showPercentiles
@@ -518,7 +551,9 @@ async function main() {
     const phase2Memory = getMemoryStats();
     const overallMinMax =
       overallMinOp && overallMaxOp
-        ? `, min: ${overallMinOp.timing.durationMs}ms, max: ${overallMaxOp.timing.durationMs}ms`
+        ? showActionTypes
+          ? `, min: ${overallMinOp.timing.durationMs}ms (${overallMinOp.timing.actionType}), max: ${overallMaxOp.timing.durationMs}ms (${overallMaxOp.timing.actionType})`
+          : `, min: ${overallMinOp.timing.durationMs}ms, max: ${overallMaxOp.timing.durationMs}ms`
         : "";
     console.log(
       `  Completed ${totalOps} operations in ${opsDuration}s (avg: ${avgMsPerOp}ms/op${overallMinMax})`,
