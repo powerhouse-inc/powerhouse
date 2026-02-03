@@ -1,3 +1,13 @@
+## 5.3.0-staging.20 (2026-02-03)
+
+### 🩹 Fixes
+
+- **design-system:** rename bugs ([f34486349](https://github.com/powerhouse-inc/powerhouse/commit/f34486349))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 5.3.0-staging.19 (2026-02-03)
 
 ### 🩹 Fixes
