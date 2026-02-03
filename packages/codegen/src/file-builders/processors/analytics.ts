@@ -1,4 +1,7 @@
-import { analyticsIndexTemplate } from "@powerhousedao/codegen/templates";
+import {
+  analyticsFactoryTemplate,
+  analyticsIndexTemplate,
+} from "@powerhousedao/codegen/templates";
 import {
   buildTsMorphProject,
   formatSourceFileWithPrettier,
@@ -31,6 +34,13 @@ export function tsMorphGenerateAnalyticsProcessor(args: {
     pascalCaseName,
     dirPath,
   });
+
+  makeFactoryFile({
+    project,
+    pascalCaseName,
+    dirPath,
+    documentTypes,
+  });
 }
 
 function makeIndexFile(v: {
@@ -42,6 +52,23 @@ function makeIndexFile(v: {
   const { alreadyExists, sourceFile } = getOrCreateSourceFile(
     v.project,
     path.join(v.dirPath, "index.ts"),
+  );
+  if (alreadyExists) return;
+  sourceFile.replaceWithText(template);
+  formatSourceFileWithPrettier(sourceFile);
+  v.project.saveSync();
+}
+
+function makeFactoryFile(v: {
+  project: Project;
+  pascalCaseName: string;
+  dirPath: string;
+  documentTypes: string[];
+}) {
+  const template = analyticsFactoryTemplate(v);
+  const { alreadyExists, sourceFile } = getOrCreateSourceFile(
+    v.project,
+    path.join(v.dirPath, "factory.ts"),
   );
   if (alreadyExists) return;
   sourceFile.replaceWithText(template);
