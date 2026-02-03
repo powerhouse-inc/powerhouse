@@ -4,6 +4,7 @@ import {
 } from "@powerhousedao/codegen/templates";
 import {
   buildTsMorphProject,
+  ensureDirectoriesExist,
   formatSourceFileWithPrettier,
   getOrCreateSourceFile,
 } from "@powerhousedao/codegen/utils";
@@ -17,17 +18,19 @@ export function tsMorphGenerateAnalyticsProcessor(args: {
   rootDir: string;
 }) {
   const { name, documentTypesString, rootDir } = args;
-  const processorsDirPath = path.join(rootDir, "processors");
-  const sourceFilesPath = path.join(processorsDirPath, "/**/*");
-  const documentTypes = documentTypesString
-    .split(",")
-    .filter((type) => type !== "");
   const paramCaseName = paramCase(name);
   const camelCaseName = camelCase(name);
   const pascalCaseName = pascalCase(name);
-  const project = buildTsMorphProject(rootDir);
-  project.addSourceFilesAtPaths(sourceFilesPath);
+  const processorsDirPath = path.join(rootDir, "processors");
   const dirPath = path.join(processorsDirPath, paramCaseName);
+  const sourceFilesPath = path.join(processorsDirPath, "/**/*");
+  const project = buildTsMorphProject(rootDir);
+  ensureDirectoriesExist(project, processorsDirPath, dirPath);
+  project.addSourceFilesAtPaths(sourceFilesPath);
+
+  const documentTypes = documentTypesString
+    .split(",")
+    .filter((type) => type !== "");
 
   makeIndexFile({
     project,
@@ -56,7 +59,6 @@ function makeIndexFile(v: {
   if (alreadyExists) return;
   sourceFile.replaceWithText(template);
   formatSourceFileWithPrettier(sourceFile);
-  v.project.saveSync();
 }
 
 function makeFactoryFile(v: {
@@ -73,5 +75,4 @@ function makeFactoryFile(v: {
   if (alreadyExists) return;
   sourceFile.replaceWithText(template);
   formatSourceFileWithPrettier(sourceFile);
-  v.project.saveSync();
 }
