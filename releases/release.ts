@@ -312,12 +312,13 @@ const app = command({
       const stageChangesCmd = [
         "git",
         "add",
+        "--ignore-errors",
         "package.json",
         "CHANGELOG.md",
         ":(glob)**/package.json",
         ":(glob)**/CHANGELOG.md",
         ":(glob)**/COMMANDS.md",
-        ":(glob)**/COMMANDS_LEGACY.md",
+        ":(glob)**/COMMANDS-LEGACY.md",
       ];
       console.log(
         `Staging files in git with the following command: ${stageChangesCmd.join(" ")}`,
