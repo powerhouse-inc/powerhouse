@@ -7,6 +7,7 @@ import type { IDocumentModelRegistry } from "../../src/registry/interfaces.js";
 import { InvalidSignatureError } from "../../src/shared/errors.js";
 import type { IOperationStore } from "../../src/storage/interfaces.js";
 import {
+  createMockCollectionMembershipCache,
   createMockDocumentMetaCache,
   createMockLogger,
   createMockOperationStore,
@@ -143,6 +144,7 @@ describe("SimpleJobExecutor mutation signature verification", () => {
     };
 
     const mockDocumentMetaCache = createMockDocumentMetaCache();
+    const mockCollectionMembershipCache = createMockCollectionMembershipCache();
     executor = new SimpleJobExecutor(
       createMockLogger(),
       registry,
@@ -154,6 +156,7 @@ describe("SimpleJobExecutor mutation signature verification", () => {
       mockWriteCache,
       mockOperationIndex,
       mockDocumentMetaCache,
+      mockCollectionMembershipCache,
       {},
       verificationHandler,
     );

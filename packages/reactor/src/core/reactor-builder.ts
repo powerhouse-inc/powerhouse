@@ -4,6 +4,7 @@ import type {
 } from "document-drive";
 import { MemoryStorage } from "document-drive";
 import type { DocumentModelModule, UpgradeManifest } from "document-model";
+import { CollectionMembershipCache } from "../cache/collection-membership-cache.js";
 import { DocumentMetaCache } from "../cache/document-meta-cache.js";
 import { KyselyOperationIndex } from "../cache/kysely-operation-index.js";
 import { KyselyWriteCache } from "../cache/kysely-write-cache.js";
@@ -223,6 +224,10 @@ export class ReactorBuilder {
     });
     await documentMetaCache.startup();
 
+    const collectionMembershipCache = new CollectionMembershipCache(
+      operationIndex,
+    );
+
     let executorManager = this.executorManager;
     if (!executorManager) {
       executorManager = new SimpleJobExecutorManager(
@@ -235,6 +240,7 @@ export class ReactorBuilder {
             writeCache,
             operationIndex,
             documentMetaCache,
+            collectionMembershipCache,
             this.executorConfig,
             this.signatureVerifier,
           ),

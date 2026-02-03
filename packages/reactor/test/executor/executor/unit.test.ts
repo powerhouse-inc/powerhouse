@@ -6,6 +6,7 @@ import type { Job } from "../../../src/queue/types.js";
 import type { IDocumentModelRegistry } from "../../../src/registry/interfaces.js";
 import type { IOperationStore } from "../../../src/storage/interfaces.js";
 import {
+  createMockCollectionMembershipCache,
   createMockDocumentMetaCache,
   createMockLogger,
   createMockOperationStore,
@@ -86,6 +87,7 @@ describe("SimpleJobExecutor", () => {
 
     const eventBus = createTestEventBus();
     const mockDocumentMetaCache = createMockDocumentMetaCache();
+    const mockCollectionMembershipCache = createMockCollectionMembershipCache();
     executor = new SimpleJobExecutor(
       createMockLogger(),
       registry,
@@ -94,6 +96,7 @@ describe("SimpleJobExecutor", () => {
       mockWriteCache,
       mockOperationIndex,
       mockDocumentMetaCache,
+      mockCollectionMembershipCache,
       {},
     );
   });

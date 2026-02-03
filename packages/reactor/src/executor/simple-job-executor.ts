@@ -12,6 +12,7 @@ import type {
   UpgradeTransition,
 } from "document-model";
 import { deriveOperationId, isUndoRedo } from "document-model/core";
+import type { ICollectionMembershipCache } from "../cache/collection-membership-cache.js";
 import type { IDocumentMetaCache } from "../cache/document-meta-cache-types.js";
 import type {
   IOperationIndex,
@@ -74,6 +75,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     private writeCache: IWriteCache,
     private operationIndex: IOperationIndex,
     private documentMetaCache: IDocumentMetaCache,
+    private collectionMembershipCache: ICollectionMembershipCache,
     config: JobExecutorConfig,
     private signatureVerifier?: SignatureVerificationHandler,
   ) {
@@ -98,6 +100,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       const result = await this.executeLoadJob(job, startTime, indexTxn);
       if (result.success && result.operationsWithContext) {
         const ordinals = await this.operationIndex.commit(indexTxn);
+
         for (let i = 0; i < result.operationsWithContext.length; i++) {
           result.operationsWithContext[i].context.ordinal = ordinals[i];
         }
@@ -105,7 +108,6 @@ export class SimpleJobExecutor implements IJobExecutor {
           const collectionMemberships =
             await this.getCollectionMembershipsForOperations(
               result.operationsWithContext,
-              indexTxn.getCollectionMemberships(),
             );
           const event: JobWriteReadyEvent = {
             jobId: job.id,
@@ -148,7 +150,6 @@ export class SimpleJobExecutor implements IJobExecutor {
       const collectionMemberships =
         await this.getCollectionMembershipsForOperations(
           result.operationsWithContext,
-          indexTxn.getCollectionMemberships(),
         );
       const event: JobWriteReadyEvent = {
         jobId: job.id,
@@ -172,28 +173,13 @@ export class SimpleJobExecutor implements IJobExecutor {
 
   private async getCollectionMembershipsForOperations(
     operations: OperationWithContext[],
-    txnMemberships: Record<string, string[]>,
   ): Promise<Record<string, string[]>> {
     const documentIds = [
       ...new Set(operations.map((op) => op.context.documentId)),
     ];
-    const existingMemberships =
-      await this.operationIndex.getCollectionsForDocuments(documentIds);
-
-    const result: Record<string, string[]> = { ...existingMemberships };
-
-    for (const [docId, collections] of Object.entries(txnMemberships)) {
-      if (!(docId in result)) {
-        result[docId] = [];
-      }
-      for (const col of collections) {
-        if (!result[docId].includes(col)) {
-          result[docId].push(col);
-        }
-      }
-    }
-
-    return result;
+    return this.collectionMembershipCache.getCollectionsForDocuments(
+      documentIds,
+    );
   }
 
   private async processActions(
@@ -860,6 +846,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     if (sourceDoc.header.documentType === "powerhouse/document-drive") {
       const collectionId = driveCollectionId(job.branch, input.sourceId);
       indexTxn.addToCollection(collectionId, input.targetId);
+      this.collectionMembershipCache.invalidate(input.targetId);
     }
 
     this.documentMetaCache.putDocumentMeta(input.sourceId, job.branch, {
@@ -996,6 +983,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     if (sourceDoc.header.documentType === "powerhouse/document-drive") {
       const collectionId = driveCollectionId(job.branch, input.sourceId);
       indexTxn.removeFromCollection(collectionId, input.targetId);
+      this.collectionMembershipCache.invalidate(input.targetId);
     }
 
     this.documentMetaCache.putDocumentMeta(input.sourceId, job.branch, {
