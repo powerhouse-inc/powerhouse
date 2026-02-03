@@ -17,6 +17,7 @@ import fs from "node:fs";
 import path, { join } from "node:path";
 import { readPackage, type NormalizedPackageJson } from "read-pkg";
 import semver from "semver";
+import { tsMorphGenerateProcessor } from "../file-builders/processors/processor.js";
 import { TSMorphCodeGenerator } from "../ts-morph-generator/core/TSMorphCodeGenerator.js";
 import { generateDocumentModelZodSchemas, generateSchemas } from "./graphql.js";
 import {
@@ -410,7 +411,17 @@ export async function generateProcessor(
   type: "analytics" | "relationalDb",
   documentTypes: string[],
   skipFormat: boolean,
+  useTsMorph: boolean,
 ) {
+  if (useTsMorph) {
+    return tsMorphGenerateProcessor({
+      name,
+      processorType: type,
+      documentTypes,
+      rootDir: process.cwd(),
+    });
+  }
+
   return hygenGenerateProcessor(name, documentTypes, "processors", type, {
     skipFormat,
   });

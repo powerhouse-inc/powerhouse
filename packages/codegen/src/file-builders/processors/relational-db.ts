@@ -3,34 +3,18 @@ import {
   relationalDbIndexTemplate,
 } from "@powerhousedao/codegen/templates";
 import {
-  buildTsMorphProject,
-  ensureDirectoriesExist,
   formatSourceFileWithPrettier,
   getOrCreateSourceFile,
 } from "@powerhousedao/codegen/utils";
-import { camelCase, paramCase, pascalCase } from "change-case";
 import path from "path";
 import type { Project } from "ts-morph";
+import type { GenerateProcessorArgs } from "./types.js";
 
-export function tsMorphGenerateRelationalDbProcessor(args: {
-  name: string;
-  documentTypesString: string;
-  rootDir: string;
-}) {
-  const { name, documentTypesString, rootDir } = args;
-  const paramCaseName = paramCase(name);
-  const camelCaseName = camelCase(name);
-  const pascalCaseName = pascalCase(name);
-  const processorsDirPath = path.join(rootDir, "processors");
-  const dirPath = path.join(processorsDirPath, paramCaseName);
-  const sourceFilesPath = path.join(processorsDirPath, "/**/*");
-  const project = buildTsMorphProject(rootDir);
-  ensureDirectoriesExist(project, processorsDirPath, dirPath);
-  project.addSourceFilesAtPaths(sourceFilesPath);
-
-  const documentTypes = documentTypesString
-    .split(",")
-    .filter((type) => type !== "");
+export function tsMorphGenerateRelationalDbProcessor(
+  args: GenerateProcessorArgs,
+) {
+  const { project, documentTypes, camelCaseName, pascalCaseName, dirPath } =
+    args;
 
   makeIndexFile({
     project,

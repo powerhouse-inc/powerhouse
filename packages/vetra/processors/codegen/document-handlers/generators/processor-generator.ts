@@ -6,6 +6,7 @@ import type {
 } from "../../../../document-models/processor-module/index.js";
 import { logger } from "../../logger.js";
 import { BaseDocumentGen } from "../base-document-gen.js";
+import { USE_TS_MORPH } from "./constants.js";
 import { minimalBackupDocument } from "./utils.js";
 
 /**
@@ -87,6 +88,7 @@ export class ProcessorGenerator extends BaseDocumentGen {
           processorType,
           documentTypes,
           this.config.PH_CONFIG.skipFormat,
+          USE_TS_MORPH,
         );
 
         logger.info(

@@ -11,26 +11,25 @@ import {
 import { camelCase, paramCase, pascalCase } from "change-case";
 import path from "path";
 import type { Project } from "ts-morph";
+import { tsMorphGenerateAnalyticsProcessor } from "./analytics.js";
+import { tsMorphGenerateRelationalDbProcessor } from "./relational-db.js";
 
-export function tsMorphGenerateProcessorProcessor(args: {
+export function tsMorphGenerateProcessor(args: {
   name: string;
-  documentTypesString: string;
+  documentTypes: string[];
   rootDir: string;
+  processorType: "relationalDb" | "analytics";
 }) {
-  const { name, documentTypesString, rootDir } = args;
+  const { name, documentTypes, rootDir, processorType } = args;
   const paramCaseName = paramCase(name);
   const camelCaseName = camelCase(name);
   const pascalCaseName = pascalCase(name);
   const processorsDirPath = path.join(rootDir, "processors");
   const dirPath = path.join(processorsDirPath, paramCaseName);
-  const sourceFilesPath = path.join(processorsDirPath, "/**/*");
+  const sourceFilesPath = path.join(processorsDirPath, "**/*");
   const project = buildTsMorphProject(rootDir);
   ensureDirectoriesExist(project, processorsDirPath, dirPath);
   project.addSourceFilesAtPaths(sourceFilesPath);
-
-  const documentTypes = documentTypesString
-    .split(",")
-    .filter((type) => type !== "");
 
   makeIndexFile({
     project,
@@ -40,6 +39,33 @@ export function tsMorphGenerateProcessorProcessor(args: {
   makeFactoryFile({
     project,
     dirPath,
+  });
+
+  if (processorType === "analytics") {
+    tsMorphGenerateAnalyticsProcessor({
+      name,
+      documentTypes,
+      rootDir,
+      camelCaseName,
+      dirPath,
+      paramCaseName,
+      pascalCaseName,
+      processorsDirPath,
+      project,
+    });
+    return;
+  }
+
+  tsMorphGenerateRelationalDbProcessor({
+    name,
+    documentTypes,
+    rootDir,
+    camelCaseName,
+    dirPath,
+    paramCaseName,
+    pascalCaseName,
+    processorsDirPath,
+    project,
   });
 }
 

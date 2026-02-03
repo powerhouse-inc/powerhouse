@@ -1,5 +1,5 @@
 import { paramCase } from "change-case";
-import { mkdir, rm } from "node:fs/promises";
+import { rm } from "node:fs/promises";
 import path from "path";
 import {
   afterAll,
@@ -9,8 +9,10 @@ import {
   it,
   type TestContext,
 } from "vitest";
-import { hygenGenerateProcessor } from "../hygen.js";
-import { purgeDirAfterTest, resetDirForTest, runTsc } from "./utils.js";
+import { generateProcessor } from "../generate.js";
+import { USE_TS_MORPH } from "./config.js";
+import { compile } from "./fixtures/typecheck.js";
+import { copyAllFiles, purgeDirAfterTest, resetDirForTest } from "./utils.js";
 
 let testCount = 1;
 
@@ -22,7 +24,8 @@ const testOutputParentDir = path.join(
   parentOutDirName,
 );
 let testOutDirPath = "";
-const processorsDirName = "processors";
+
+const testsDataDir = path.join(testsDir, "data", "processors-test-project");
 
 function getTestOutDir(context: TestContext) {
   const testDirName = `${testCount++}-${paramCase(context.task.name)}`;
@@ -33,7 +36,8 @@ describe("generate processor", () => {
   beforeEach(async (context) => {
     testOutDirPath = getTestOutDir(context);
     await rm(testOutDirPath, { recursive: true, force: true });
-    await mkdir(testOutDirPath, { recursive: true });
+    // await mkdir(testOutDirPath, { recursive: true });
+    await copyAllFiles(testsDataDir, testOutDirPath);
     process.chdir(testOutDirPath);
   });
   beforeAll(() => {
@@ -49,18 +53,16 @@ describe("generate processor", () => {
       timeout: 100000,
     },
     async () => {
-      await hygenGenerateProcessor(
+      await generateProcessor(
         "test-analytics-processor",
-        ["billing-statement"],
-        path.join(testOutDirPath, processorsDirName),
         "analytics",
-        {
-          skipFormat: true,
-        },
+        ["billing-statement"],
+        true,
+        USE_TS_MORPH,
       );
 
       // await compile(testOutDirPath);
-      await runTsc(testOutDirPath);
+      await compile(testOutDirPath);
     },
   );
   it(
@@ -69,38 +71,32 @@ describe("generate processor", () => {
       timeout: 100000,
     },
     async () => {
-      await hygenGenerateProcessor(
+      await generateProcessor(
         "test1",
-        ["billing-statement"],
-        path.join(testOutDirPath, processorsDirName),
         "analytics",
-        {
-          skipFormat: true,
-        },
+        ["billing-statement"],
+        true,
+        USE_TS_MORPH,
       );
 
-      await hygenGenerateProcessor(
+      await generateProcessor(
         "test2",
-        ["billing-statement"],
-        path.join(testOutDirPath, processorsDirName),
         "analytics",
-        {
-          skipFormat: true,
-        },
+        ["billing-statement"],
+
+        true,
+        USE_TS_MORPH,
       );
 
-      await hygenGenerateProcessor(
+      await generateProcessor(
         "test3",
-        ["billing-statement"],
-        path.join(testOutDirPath, processorsDirName),
         "analytics",
-        {
-          skipFormat: true,
-        },
+        ["billing-statement"],
+        true,
+        USE_TS_MORPH,
       );
 
-      // await compile(testOutDirPath);
-      await runTsc(testOutDirPath);
+      await compile(testOutDirPath);
     },
   );
   it(
@@ -109,18 +105,15 @@ describe("generate processor", () => {
       timeout: 100000,
     },
     async () => {
-      await hygenGenerateProcessor(
+      await generateProcessor(
         "test-relational-processor",
-        ["billing-statement"],
-        path.join(testOutDirPath, processorsDirName),
         "relationalDb",
-        {
-          skipFormat: true,
-        },
+        ["billing-statement"],
+        true,
+        USE_TS_MORPH,
       );
 
-      // await compile(testOutDirPath);
-      await runTsc(testOutDirPath);
+      await compile(testOutDirPath);
     },
   );
 
@@ -130,38 +123,31 @@ describe("generate processor", () => {
       timeout: 100000,
     },
     async () => {
-      await hygenGenerateProcessor(
+      await generateProcessor(
         "test1",
-        ["billing-statement"],
-        path.join(testOutDirPath, processorsDirName),
         "relationalDb",
-        {
-          skipFormat: true,
-        },
+        ["billing-statement"],
+        true,
+        USE_TS_MORPH,
       );
 
-      await hygenGenerateProcessor(
+      await generateProcessor(
         "test2",
-        ["billing-statement"],
-        path.join(testOutDirPath, processorsDirName),
         "relationalDb",
-        {
-          skipFormat: true,
-        },
+        ["billing-statement"],
+        true,
+        USE_TS_MORPH,
       );
 
-      await hygenGenerateProcessor(
+      await generateProcessor(
         "test3",
-        ["billing-statement"],
-        path.join(testOutDirPath, processorsDirName),
         "relationalDb",
-        {
-          skipFormat: true,
-        },
+        ["billing-statement"],
+        true,
+        USE_TS_MORPH,
       );
 
-      // await compile(testOutDirPath);
-      await runTsc(testOutDirPath);
+      await compile(testOutDirPath);
     },
   );
 });
