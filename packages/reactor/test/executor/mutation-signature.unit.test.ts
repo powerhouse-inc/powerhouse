@@ -103,7 +103,6 @@ describe("SimpleJobExecutor mutation signature verification", () => {
         addToCollection: vi.fn(),
         removeFromCollection: vi.fn(),
         write: vi.fn(),
-        getCollectionMemberships: vi.fn().mockReturnValue({}),
       }),
       commit: vi.fn().mockResolvedValue([]),
       find: vi.fn().mockResolvedValue({ items: [], total: 0 }),

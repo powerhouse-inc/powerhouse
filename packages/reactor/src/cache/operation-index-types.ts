@@ -19,11 +19,6 @@ export interface IOperationIndexTxn {
   addToCollection(collectionId: string, documentId: string): void;
   removeFromCollection(collectionId: string, documentId: string): void;
   write(operations: OperationIndexEntry[]): void;
-  /**
-   * Returns a map of documentId to collection IDs for all membership
-   * changes recorded in this transaction.
-   */
-  getCollectionMemberships(): Record<string, string[]>;
 }
 
 export interface IOperationIndex {

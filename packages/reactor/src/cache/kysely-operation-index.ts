@@ -70,19 +70,6 @@ class KyselyOperationIndexTxn implements IOperationIndexTxn {
     return this.collections;
   }
 
-  getCollectionMemberships(): Record<string, string[]> {
-    const result: Record<string, string[]> = {};
-    for (const m of this.collectionMemberships) {
-      if (!result[m.documentId]) {
-        result[m.documentId] = [];
-      }
-      if (!result[m.documentId].includes(m.collectionId)) {
-        result[m.documentId].push(m.collectionId);
-      }
-    }
-    return result;
-  }
-
   getCollectionMembershipRecords(): CollectionMembershipRecord[] {
     return this.collectionMemberships;
   }
