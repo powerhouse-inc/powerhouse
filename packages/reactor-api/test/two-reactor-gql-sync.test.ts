@@ -1,6 +1,7 @@
 import {
   CompositeChannelFactory,
   ConsoleLogger,
+  driveCollectionId,
   JobStatus,
   ReactorBuilder,
   ReactorEventTypes,
@@ -24,6 +25,9 @@ type TwoReactorSetup = {
   reactorB: IReactor;
   eventBusA: IEventBus;
   eventBusB: IEventBus;
+  syncManagerA: ISyncManager;
+  syncManagerB: ISyncManager;
+  resolverBridge: typeof fetch;
 };
 
 async function waitForJobCompletion(
@@ -82,7 +86,7 @@ async function waitForOperationsReady(
   });
 }
 
-async function setupTwoReactorsWithGqlChannel(): Promise<TwoReactorSetup> {
+async function setupTwoReactors(): Promise<TwoReactorSetup> {
   const syncManagerRegistry = new Map<string, ISyncManager>();
 
   const resolverBridge = createResolverBridge(syncManagerRegistry);
@@ -114,6 +118,24 @@ async function setupTwoReactorsWithGqlChannel(): Promise<TwoReactorSetup> {
   syncManagerRegistry.set("reactora", syncManagerA);
   syncManagerRegistry.set("reactorb", syncManagerB);
 
+  return {
+    reactorA,
+    reactorB,
+    eventBusA,
+    eventBusB,
+    syncManagerA,
+    syncManagerB,
+    resolverBridge,
+  };
+}
+
+async function setupSyncForDrive(
+  syncManagerA: ISyncManager,
+  driveId: string,
+  resolverBridge: typeof fetch,
+): Promise<void> {
+  const collectionId = driveCollectionId("main", driveId);
+
   const filter = {
     documentId: [],
     scope: [],
@@ -128,16 +150,12 @@ async function setupTwoReactorsWithGqlChannel(): Promise<TwoReactorSetup> {
     fetchFn: resolverBridge,
   };
 
-  // ReactorA adds remote pointing to B
-  // touchChannel automatically creates receiving channel on B
   await syncManagerA.add(
-    "remoteB",
-    "collection1",
+    `remoteB-${driveId}`,
+    collectionId,
     { type: "gql", parameters: gqlParamsToB },
     filter,
   );
-
-  return { reactorA, reactorB, eventBusA, eventBusB };
 }
 
 describe("Two-Reactor Sync with GqlChannel", () => {
@@ -145,13 +163,17 @@ describe("Two-Reactor Sync with GqlChannel", () => {
   let reactorB: IReactor;
   let eventBusA: IEventBus;
   let eventBusB: IEventBus;
+  let syncManagerA: ISyncManager;
+  let resolverBridge: typeof fetch;
 
   beforeEach(async () => {
-    const setup = await setupTwoReactorsWithGqlChannel();
+    const setup = await setupTwoReactors();
     reactorA = setup.reactorA;
     reactorB = setup.reactorB;
     eventBusA = setup.eventBusA;
     eventBusB = setup.eventBusB;
+    syncManagerA = setup.syncManagerA;
+    resolverBridge = setup.resolverBridge;
   });
 
   afterEach(() => {
@@ -161,6 +183,9 @@ describe("Two-Reactor Sync with GqlChannel", () => {
 
   it("should sync operation from ReactorA to ReactorB via GqlChannel", async () => {
     const document = driveDocumentModelModule.utils.createDocument();
+
+    await setupSyncForDrive(syncManagerA, document.header.id, resolverBridge);
+
     const readyPromise = waitForOperationsReady(eventBusB, document.header.id);
     const jobInfo = await reactorA.create(document);
 
@@ -193,6 +218,9 @@ describe("Two-Reactor Sync with GqlChannel", () => {
 
   it("should sync operation from ReactorB to ReactorA via GqlChannel", async () => {
     const document = driveDocumentModelModule.utils.createDocument();
+
+    await setupSyncForDrive(syncManagerA, document.header.id, resolverBridge);
+
     const readyPromise = waitForOperationsReady(eventBusA, document.header.id);
     const jobInfo = await reactorB.create(document);
 
@@ -224,7 +252,6 @@ describe("Two-Reactor Sync with GqlChannel", () => {
   });
 
   it("should sync multiple documents with concurrent operations from both reactors", async () => {
-    // Create 4 documents (2 for each reactor)
     const docA1 = driveDocumentModelModule.utils.createDocument();
     const docA2 = driveDocumentModelModule.utils.createDocument();
     const docB1 = driveDocumentModelModule.utils.createDocument();
@@ -237,13 +264,18 @@ describe("Two-Reactor Sync with GqlChannel", () => {
       docB2.header.id,
     ];
 
-    // Set up listeners for docs to sync to the other reactor
+    await Promise.all([
+      setupSyncForDrive(syncManagerA, docA1.header.id, resolverBridge),
+      setupSyncForDrive(syncManagerA, docA2.header.id, resolverBridge),
+      setupSyncForDrive(syncManagerA, docB1.header.id, resolverBridge),
+      setupSyncForDrive(syncManagerA, docB2.header.id, resolverBridge),
+    ]);
+
     const readyOnB_A1 = waitForOperationsReady(eventBusB, docA1.header.id);
     const readyOnB_A2 = waitForOperationsReady(eventBusB, docA2.header.id);
     const readyOnA_B1 = waitForOperationsReady(eventBusA, docB1.header.id);
     const readyOnA_B2 = waitForOperationsReady(eventBusA, docB2.header.id);
 
-    // Create documents on their respective reactors
     const [jobA1, jobA2] = await Promise.all([
       reactorA.create(docA1),
       reactorA.create(docA2),
@@ -253,7 +285,6 @@ describe("Two-Reactor Sync with GqlChannel", () => {
       reactorB.create(docB2),
     ]);
 
-    // Wait for all creates to complete on source reactors
     await Promise.all([
       waitForJobCompletion(reactorA, jobA1.id),
       waitForJobCompletion(reactorA, jobA2.id),
@@ -261,10 +292,8 @@ describe("Two-Reactor Sync with GqlChannel", () => {
       waitForJobCompletion(reactorB, jobB2.id),
     ]);
 
-    // Wait for all docs to sync to the other reactor
     await Promise.all([readyOnB_A1, readyOnB_A2, readyOnA_B1, readyOnA_B2]);
 
-    // Now fire concurrent modify operations on each doc
     void reactorA.execute(docA1.header.id, "main", [
       driveDocumentModelModule.actions.setDriveName({ name: "Drive A1" }),
       driveDocumentModelModule.actions.addFolder({
@@ -298,7 +327,6 @@ describe("Two-Reactor Sync with GqlChannel", () => {
       }),
     ]);
 
-    // Poll until all 4 documents are synced on both reactors
     const startTime = Date.now();
     const timeout = 25000;
     let synced = false;
@@ -318,8 +346,6 @@ describe("Two-Reactor Sync with GqlChannel", () => {
           });
           const opsB = Object.values(resultB).flatMap((scope) => scope.results);
 
-          // Each doc should have at least 2 ops (create + execute with actions)
-          // and both reactors should have same count
           if (
             opsA.length < 2 ||
             opsB.length < 2 ||
@@ -329,7 +355,6 @@ describe("Two-Reactor Sync with GqlChannel", () => {
             break;
           }
         } catch {
-          // Document may not exist on one reactor yet
           allDocsSynced = false;
           break;
         }
@@ -345,7 +370,6 @@ describe("Two-Reactor Sync with GqlChannel", () => {
 
     expect(synced).toBe(true);
 
-    // Verify operation equality for all 4 documents
     for (const docId of allDocIds) {
       const resultA = await reactorA.getOperations(docId, { branch: "main" });
       const opsA = Object.values(resultA).flatMap((scope) => scope.results);
@@ -361,7 +385,6 @@ describe("Two-Reactor Sync with GqlChannel", () => {
       }
     }
 
-    // Verify document state equality for all 4 documents
     for (const docId of allDocIds) {
       const docFromA = await reactorA.get(docId, { branch: "main" });
       const docFromB = await reactorB.get(docId, { branch: "main" });
