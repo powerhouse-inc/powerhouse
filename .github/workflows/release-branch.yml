@@ -108,3 +108,67 @@ jobs:
     needs: build-and-publish
     uses: "./.github/workflows/publish-docker-images.yml"
     secrets: inherit
+
+  determine-downstream-params:
+    name: Determine Downstream Parameters
+    needs: [build-and-publish, publish-docker]
+    if: ${{ inputs.dry-run != true }}
+    runs-on: ubuntu-latest
+    outputs:
+      channel: ${{ steps.params.outputs.channel }}
+      version: ${{ steps.params.outputs.version }}
+      skip: ${{ steps.params.outputs.skip }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Determine channel and version
+        id: params
+        run: |
+          # Determine channel based on branch
+          # main = dev, release/staging/* = staging, release/production/* = latest
+          BRANCH="${{ github.ref_name }}"
+          if [[ "$BRANCH" == "main" ]]; then
+            CHANNEL="dev"
+          elif [[ "$BRANCH" == release/staging/* ]]; then
+            CHANNEL="staging"
+          elif [[ "$BRANCH" == release/production/* ]]; then
+            CHANNEL="latest"
+          else
+            echo "Unknown branch pattern: $BRANCH, skipping downstream trigger"
+            echo "skip=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Get the latest version tag for this channel
+          if [[ "$CHANNEL" == "dev" ]]; then
+            VERSION=$(git tag --sort=-v:refname | grep -E "^v[0-9]+\.[0-9]+\.[0-9]+-dev\.[0-9]+$" | head -1)
+          elif [[ "$CHANNEL" == "staging" ]]; then
+            VERSION=$(git tag --sort=-v:refname | grep -E "^v[0-9]+\.[0-9]+\.[0-9]+-staging\.[0-9]+$" | head -1)
+          else
+            VERSION=$(git tag --sort=-v:refname | grep -E "^v[0-9]+\.[0-9]+\.[0-9]+$" | head -1)
+          fi
+
+          if [[ -z "$VERSION" ]]; then
+            echo "Could not determine version for channel $CHANNEL"
+            echo "skip=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo "channel=$CHANNEL" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "skip=false" >> $GITHUB_OUTPUT
+          echo "Triggering downstream with channel=$CHANNEL version=$VERSION"
+
+  trigger-downstream:
+    name: Trigger Downstream Packages
+    needs: determine-downstream-params
+    if: ${{ needs.determine-downstream-params.outputs.skip != 'true' }}
+    uses: ./.github/workflows/trigger-downstream-packages.yml
+    with:
+      version: ${{ needs.determine-downstream-params.outputs.version }}
+      channel: ${{ needs.determine-downstream-params.outputs.channel }}
+      dry-run: false
+    secrets: inherit
