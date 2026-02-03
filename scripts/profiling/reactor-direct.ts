@@ -24,6 +24,7 @@ import {
   runMigrations,
   REACTOR_SCHEMA,
   type IReactor,
+  type Database,
 } from "@powerhousedao/reactor";
 import { Kysely } from "kysely";
 import { PGlite } from "@electric-sql/pglite";
@@ -436,8 +437,8 @@ async function main() {
   }
 
   const reactor = await new ReactorBuilder()
-    .withDocumentModels([documentModelDocumentModelModule as any])
-    .withKysely(db)
+    .withDocumentModels([documentModelDocumentModelModule])
+    .withKysely(db as Kysely<Database>)
     .withMigrationStrategy("none")
     .build();
 
