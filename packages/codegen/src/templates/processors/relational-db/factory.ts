@@ -1,14 +1,12 @@
 import { ts } from "@tmpl/core";
+import { getDocumentType } from "../utils.js";
 
-function getDocumentType(documentTypes: string[]) {
-  if (!documentTypes.length) return "*";
-  return documentTypes.map((type) => `"${type}"`).join(", ");
-}
 export const relationalDbFactoryTemplate = (v: {
   camelCaseName: string;
   pascalCaseName: string;
   documentTypes: string[];
-}) => ts`
+}) =>
+  ts`
 import {
   type ProcessorRecord,
   type IProcessorHostModule
@@ -45,4 +43,4 @@ export const ${v.camelCaseName}ProcessorFactory = (module: IProcessorHostModule)
     },
   ];
 }
-`;
+`.raw;
