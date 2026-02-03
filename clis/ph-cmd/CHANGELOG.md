@@ -1,3 +1,16 @@
+## 6.0.0-dev.30 (2026-02-03)
+
+### 🩹 Fixes
+
+- **release:** typo in script name ([8e908a2d7](https://github.com/powerhouse-inc/powerhouse/commit/8e908a2d7))
+- **release:** ignore errors on git stage ([e0c10d604](https://github.com/powerhouse-inc/powerhouse/commit/e0c10d604))
+- **releases:** remove problematic publish dry run ([8b9b065b9](https://github.com/powerhouse-inc/powerhouse/commit/8b9b065b9))
+- **releases:** include git side effects check in all booleans ([19c44503d](https://github.com/powerhouse-inc/powerhouse/commit/19c44503d))
+
+### ❤️ Thank You
+
+- ryanwolhuter @ryanwolhuter
+
 ## 6.0.0-dev.29 (2026-02-03)
 
 ### 🚀 Features
