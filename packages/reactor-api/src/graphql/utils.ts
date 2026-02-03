@@ -62,9 +62,12 @@ export function buildGraphqlOperation(operation: Operation): GqlOperation {
 }
 
 export function buildGraphQlDocument(doc: PHDocument): GqlDocument {
-  const state = "global" in doc.state ? doc.state.global : {};
-  const initialState =
-    "global" in doc.initialState ? doc.initialState.global : {};
+  // Return full state with all scopes (auth, document, global, local)
+  // This matches the ReactorSubgraph pattern in adapters.ts
+  const state = doc.state;
+  const initialState = doc.initialState;
+  // For stateJSON, use global state for backward compatibility
+  const globalState = "global" in doc.state ? doc.state.global : {};
   return {
     id: doc.header.id,
     name: doc.header.name,
@@ -73,7 +76,7 @@ export function buildGraphQlDocument(doc: PHDocument): GqlDocument {
     createdAtUtcIso: doc.header.createdAtUtcIso,
     lastModifiedAtUtcIso: doc.header.lastModifiedAtUtcIso,
     operations: [],
-    stateJSON: state as JSON,
+    stateJSON: globalState as JSON,
     state,
     initialState,
   };
