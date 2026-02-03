@@ -18,8 +18,8 @@ import {
   createMockOperationStorage,
   createMockOperationStore,
   createTestAction,
+  createTestLegacyReactorSetup,
   createTestOperation,
-  createTestReactorSetup,
 } from "../factories.js";
 
 describe("SimpleJobExecutor load jobs", () => {
@@ -174,7 +174,7 @@ describe("Reactor.load", () => {
   let queue: IQueue;
 
   beforeEach(async () => {
-    const setup = await createTestReactorSetup();
+    const setup = await createTestLegacyReactorSetup();
     reactor = setup.reactor;
     queue = setup.queue;
   });

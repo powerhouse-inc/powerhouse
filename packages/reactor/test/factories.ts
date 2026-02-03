@@ -556,7 +556,7 @@ export function createMockReadModelCoordinator(
 /**
  * Factory for creating a complete test reactor setup
  */
-export async function createTestReactorSetup(
+export async function createTestLegacyReactorSetup(
   documentModels: DocumentModelModule<any>[] = [
     documentModelDocumentModelModule,
     driveDocumentModelModule,
