@@ -48,9 +48,8 @@ jobs:
         package:
           - repo: powerhouse-inc/renown-package
             name: renown-package
-          # Add more packages as needed:
-          # - repo: powerhouse-inc/other-package
-          #   name: other-package
+          - repo: powerhouse-inc/powerhouse-demo
+            name: powerhouse-demo
     steps:
       - name: Trigger ${{ matrix.package.name }}
         uses: peter-evans/repository-dispatch@v3
