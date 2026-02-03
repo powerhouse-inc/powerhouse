@@ -541,7 +541,12 @@ export class GraphQLManager {
       });
 
       if (this.coreApolloServer) {
-        await this.coreApolloServer.stop();
+        try {
+          await this.#waitForServer(this.coreApolloServer);
+          await this.coreApolloServer.stop();
+        } catch {
+          // ignore error when stopping apollo server
+        }
       }
 
       this.coreApolloServer = new ApolloServer<Context>({
