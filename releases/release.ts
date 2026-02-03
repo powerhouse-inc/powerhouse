@@ -77,58 +77,40 @@ const app = command({
       description:
         "Semver release mode to use. NOTE: using prerelease on a production branch is invalid and will throw an error.",
       type: oneOf(modes),
-      defaultValue: () => "prerelease" as const,
-      defaultValueIsSerializable: true,
     }),
     dryRun: flag({
       long: "dry-run",
       description: "Dry run",
       type: boolean,
-      defaultValue: () => false,
-      defaultValueIsSerializable: true,
     }),
     verbose: flag({
       long: "verbose",
       description: "Verbose",
       type: boolean,
-      defaultValue: () => false,
-      defaultValueIsSerializable: true,
     }),
     skipPublish: flag({
       long: "skip-publish",
       description: "Do not run the publish step",
-      defaultValue: () => false,
-      defaultValueIsSerializable: true,
     }),
     skipChangelog: flag({
       long: "skip-changelog",
       description: "Do not run the changelog step",
-      defaultValue: () => false,
-      defaultValueIsSerializable: true,
     }),
     skipStage: flag({
       long: "skip-stage",
       description: "Do not run the stage step",
-      defaultValue: () => false,
-      defaultValueIsSerializable: true,
     }),
     skipCommit: flag({
       long: "skip-commit",
       description: "Do not run the commit step",
-      defaultValue: () => false,
-      defaultValueIsSerializable: true,
     }),
     skipPush: flag({
       long: "skip-push",
       description: "Do not run the push step",
-      defaultValue: () => false,
-      defaultValueIsSerializable: true,
     }),
     skipGitTag: flag({
       long: "skip-git-tag",
       description: "Do not set a git tag",
-      defaultValue: () => false,
-      defaultValueIsSerializable: true,
     }),
   },
   handler: async (args) => {
@@ -146,7 +128,7 @@ const app = command({
       skipGitTag,
     } = args;
     // do not stage, commit, tag, or push with git on a dry run
-    const doGitSideEffects = !dryRun;
+    const doGitSideEffects = false;
 
     const stageChanges = doGitSideEffects && skipStage !== true;
     // do not commit if staging is disabled

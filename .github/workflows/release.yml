@@ -48,28 +48,19 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      RELEASE_MODE: ${{ inputs.release_mode }}
-      DRY_RUN: ${{ inputs.dry_run }}
-      VERBOSE: ${{ inputs.verbose }}
-      SKIP_PUBLISH: ${{ inputs.skip_publish }}
-      SKIP_CHANGELOG: ${{ inputs.skip_changelog }}
-      SKIP_STAGE: ${{ inputs.skip_stage }}
-      SKIP_COMMIT: ${{ inputs.skip_commit }}
-      SKIP_PUSH: ${{ inputs.skip_push }}
-      SKIP_GIT_TAG: ${{ inputs.skip_git_tag }}
       NPM_CONFIG_PROVENANCE: true
     steps:
       - name: Log inputs
         run: |
-          echo "RELEASE_MODE=$RELEASE_MODE"
-          echo "DRY_RUN=$DRY_RUN"
-          echo "VERBOSE=$VERBOSE"
-          echo "SKIP_PUBLISH=$SKIP_PUBLISH"
-          echo "SKIP_CHANGELOG=$SKIP_CHANGELOG"
-          echo "SKIP_STAGE=$SKIP_STAGE"
-          echo "SKIP_COMMIT=$SKIP_COMMIT"
-          echo "SKIP_PUSH=$SKIP_PUSH"
-          echo "SKIP_GIT_TAG=$SKIP_GIT_TAG"
+          echo "release_mode=${{ inputs.release_mode }}"
+          echo "dry_run=${{ inputs.dry_run }}"
+          echo "verbose=${{ inputs.verbose }}"
+          echo "skip_publish=${{ inputs.skip_publish }}"
+          echo "skip_changelog=${{ inputs.skip_changelog }}"
+          echo "skip_stage=${{ inputs.skip_stage }}"
+          echo "skip_commit=${{ inputs.skip_commit }}"
+          echo "skip_push=${{ inputs.skip_push }}"
+          echo "skip_git_tag=${{ inputs.skip_git_tag }}"
 
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -94,12 +85,12 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
         run: |
           pnpm run-release \
-          --release-mode="$RELEASE_MODE"
-          --dry-run="$DRY_RUN"
-          --verbose="$VERBOSE"
-          --skip-publish="$SKIP_PUBLISH"
-          --skip-changelog="$SKIP_CHANGELOG"
-          --skip-stage="$SKIP_STAGE"
-          --skip-commit="$SKIP_COMMIT"
-          --skip-push="$SKIP_PUSH"
-          --skip-git-tag="$SKIP_GIT_TAG"
+          --release-mode="${{ inputs.release_mode }}"
+          --dry-run="${{ inputs.dry_run }}"
+          --verbose="${{ inputs.verbose }}"
+          --skip-publish="${{ inputs.skip_publish }}"
+          --skip-changelog="${{ inputs.skip_changelog }}"
+          --skip-stage="${{ inputs.skip_stage }}"
+          --skip-commit="${{ inputs.skip_commit }}"
+          --skip-push="${{ inputs.skip_push }}"
+          --skip-git-tag="${{ inputs.skip_git_tag }}"
