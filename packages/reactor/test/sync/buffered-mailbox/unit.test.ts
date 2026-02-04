@@ -100,7 +100,7 @@ describe("BufferedMailbox", () => {
       vi.advanceTimersByTime(100);
 
       expect(callback).toHaveBeenCalledTimes(1);
-      expect(callback).toHaveBeenCalledWith(item);
+      expect(callback).toHaveBeenCalledWith([item]);
     });
 
     it("should call onRemoved callback after timer fires", () => {
@@ -117,10 +117,10 @@ describe("BufferedMailbox", () => {
       vi.advanceTimersByTime(100);
 
       expect(callback).toHaveBeenCalledTimes(1);
-      expect(callback).toHaveBeenCalledWith(item);
+      expect(callback).toHaveBeenCalledWith([item]);
     });
 
-    it("should call callback for all buffered items on flush", () => {
+    it("should call callback with all buffered items on flush", () => {
       const mailbox = new BufferedMailbox<TestItem>(100, 10);
       const callback = vi.fn();
       const item1: TestItem = { id: "item1", value: 1 };
@@ -134,10 +134,8 @@ describe("BufferedMailbox", () => {
 
       vi.advanceTimersByTime(100);
 
-      expect(callback).toHaveBeenCalledTimes(3);
-      expect(callback).toHaveBeenNthCalledWith(1, item1);
-      expect(callback).toHaveBeenNthCalledWith(2, item2);
-      expect(callback).toHaveBeenNthCalledWith(3, item3);
+      expect(callback).toHaveBeenCalledTimes(1);
+      expect(callback).toHaveBeenCalledWith([item1, item2, item3]);
     });
   });
 
@@ -148,14 +146,19 @@ describe("BufferedMailbox", () => {
 
       mailbox.onAdded(callback);
 
-      mailbox.add({ id: "item1", value: 1 });
+      const item1 = { id: "item1", value: 1 };
+      const item2 = { id: "item2", value: 2 };
+      const item3 = { id: "item3", value: 3 };
+
+      mailbox.add(item1);
       expect(callback).not.toHaveBeenCalled();
 
-      mailbox.add({ id: "item2", value: 2 });
+      mailbox.add(item2);
       expect(callback).not.toHaveBeenCalled();
 
-      mailbox.add({ id: "item3", value: 3 });
-      expect(callback).toHaveBeenCalledTimes(3);
+      mailbox.add(item3);
+      expect(callback).toHaveBeenCalledTimes(1);
+      expect(callback).toHaveBeenCalledWith([item1, item2, item3]);
     });
 
     it("should flush immediately when maxQueued reached on remove", () => {
@@ -180,7 +183,8 @@ describe("BufferedMailbox", () => {
       expect(callback).not.toHaveBeenCalled();
 
       mailbox.remove(items[2]);
-      expect(callback).toHaveBeenCalledTimes(3);
+      expect(callback).toHaveBeenCalledTimes(1);
+      expect(callback).toHaveBeenCalledWith([items[0], items[1], items[2]]);
     });
 
     it("should reset buffer after max queue flush", () => {
@@ -192,7 +196,7 @@ describe("BufferedMailbox", () => {
       mailbox.add({ id: "item1", value: 1 });
       mailbox.add({ id: "item2", value: 2 });
 
-      expect(callback).toHaveBeenCalledTimes(2);
+      expect(callback).toHaveBeenCalledTimes(1);
       callback.mockClear();
 
       mailbox.add({ id: "item3", value: 3 });
@@ -210,18 +214,22 @@ describe("BufferedMailbox", () => {
 
       mailbox.onAdded(callback);
 
-      mailbox.add({ id: "item1", value: 1 });
+      const item1 = { id: "item1", value: 1 };
+      const item2 = { id: "item2", value: 2 };
+
+      mailbox.add(item1);
 
       vi.advanceTimersByTime(50);
       expect(callback).not.toHaveBeenCalled();
 
-      mailbox.add({ id: "item2", value: 2 });
+      mailbox.add(item2);
 
       vi.advanceTimersByTime(50);
       expect(callback).not.toHaveBeenCalled();
 
       vi.advanceTimersByTime(50);
-      expect(callback).toHaveBeenCalledTimes(2);
+      expect(callback).toHaveBeenCalledTimes(1);
+      expect(callback).toHaveBeenCalledWith([item1, item2]);
     });
 
     it("should reset timer when new item removed", () => {
@@ -248,7 +256,8 @@ describe("BufferedMailbox", () => {
       expect(callback).not.toHaveBeenCalled();
 
       vi.advanceTimersByTime(50);
-      expect(callback).toHaveBeenCalledTimes(2);
+      expect(callback).toHaveBeenCalledTimes(1);
+      expect(callback).toHaveBeenCalledWith([items[0], items[1]]);
     });
   });
 
@@ -287,22 +296,27 @@ describe("BufferedMailbox", () => {
       mailbox.onAdded(addedCallback);
       mailbox.onRemoved(removedCallback);
 
-      mailbox.add({ id: "item1", value: 1 });
-      mailbox.add({ id: "item2", value: 2 });
+      const item1 = { id: "item1", value: 1 };
+      const item2 = { id: "item2", value: 2 };
 
-      expect(addedCallback).toHaveBeenCalledTimes(2);
+      mailbox.add(item1);
+      mailbox.add(item2);
+
+      expect(addedCallback).toHaveBeenCalledTimes(1);
+      expect(addedCallback).toHaveBeenCalledWith([item1, item2]);
       expect(removedCallback).not.toHaveBeenCalled();
 
-      mailbox.remove({ id: "item1", value: 1 });
+      mailbox.remove(item1);
       expect(removedCallback).not.toHaveBeenCalled();
 
-      mailbox.remove({ id: "item2", value: 2 });
-      expect(removedCallback).toHaveBeenCalledTimes(2);
+      mailbox.remove(item2);
+      expect(removedCallback).toHaveBeenCalledTimes(1);
+      expect(removedCallback).toHaveBeenCalledWith([item1, item2]);
     });
   });
 
   describe("callback invocation order", () => {
-    it("should call all callbacks in registration order for each item", () => {
+    it("should call all callbacks in registration order", () => {
       const mailbox = new BufferedMailbox<TestItem>(100, 10);
       const callOrder: string[] = [];
 
@@ -315,21 +329,16 @@ describe("BufferedMailbox", () => {
 
       vi.advanceTimersByTime(100);
 
-      expect(callOrder).toEqual([
-        "callback1",
-        "callback2",
-        "callback3",
-        "callback1",
-        "callback2",
-        "callback3",
-      ]);
+      expect(callOrder).toEqual(["callback1", "callback2", "callback3"]);
     });
 
-    it("should invoke callbacks for items in the order they were added", () => {
+    it("should invoke callbacks with items in the order they were added", () => {
       const mailbox = new BufferedMailbox<TestItem>(100, 10);
-      const receivedItems: TestItem[] = [];
+      let receivedItems: TestItem[] = [];
 
-      mailbox.onAdded((item) => receivedItems.push(item));
+      mailbox.onAdded((items) => {
+        receivedItems = items;
+      });
 
       const item1: TestItem = { id: "item1", value: 1 };
       const item2: TestItem = { id: "item2", value: 2 };
@@ -387,10 +396,10 @@ describe("BufferedMailbox", () => {
         // Expected to throw
       }
 
-      expect(callback1).toHaveBeenCalledWith(item);
-      expect(callback2).toHaveBeenCalledWith(item);
-      expect(callback3).toHaveBeenCalledWith(item);
-      expect(callback4).toHaveBeenCalledWith(item);
+      expect(callback1).toHaveBeenCalledWith([item]);
+      expect(callback2).toHaveBeenCalledWith([item]);
+      expect(callback3).toHaveBeenCalledWith([item]);
+      expect(callback4).toHaveBeenCalledWith([item]);
     });
 
     it("should include all errors in aggregate error", () => {
@@ -416,11 +425,14 @@ describe("BufferedMailbox", () => {
       }
     });
 
-    it("should collect errors across multiple items", () => {
+    it("should collect errors from each callback", () => {
       const mailbox = new BufferedMailbox<TestItem>(100, 10);
 
       mailbox.onAdded(() => {
-        throw new Error("Error");
+        throw new Error("Error 1");
+      });
+      mailbox.onAdded(() => {
+        throw new Error("Error 2");
       });
 
       mailbox.add({ id: "item1", value: 1 });
@@ -507,7 +519,7 @@ describe("BufferedMailbox", () => {
         mailbox.add({ id: `item${i}`, value: i });
       }
 
-      expect(callback).toHaveBeenCalledTimes(100);
+      expect(callback).toHaveBeenCalledTimes(2);
     });
 
     it("should handle maxQueued of 1", () => {
@@ -596,9 +608,9 @@ describe("BufferedMailbox", () => {
       mailbox.add(item);
       vi.advanceTimersByTime(100);
 
-      expect(callback1).toHaveBeenCalledWith(item);
-      expect(callback2).toHaveBeenCalledWith(item);
-      expect(callback3).toHaveBeenCalledWith(item);
+      expect(callback1).toHaveBeenCalledWith([item]);
+      expect(callback2).toHaveBeenCalledWith([item]);
+      expect(callback3).toHaveBeenCalledWith([item]);
     });
 
     it("should trigger all registered onRemoved callbacks", () => {
@@ -617,9 +629,9 @@ describe("BufferedMailbox", () => {
       mailbox.remove(item);
       vi.advanceTimersByTime(100);
 
-      expect(callback1).toHaveBeenCalledWith(item);
-      expect(callback2).toHaveBeenCalledWith(item);
-      expect(callback3).toHaveBeenCalledWith(item);
+      expect(callback1).toHaveBeenCalledWith([item]);
+      expect(callback2).toHaveBeenCalledWith([item]);
+      expect(callback3).toHaveBeenCalledWith([item]);
     });
   });
 });

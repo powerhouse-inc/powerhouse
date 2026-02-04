@@ -206,7 +206,7 @@ describe("SyncManager - Event Tests", () => {
     it("SYNC_SUCCEEDED emits when all ops complete", async () => {
       await syncManager.startup();
 
-      let outboxCallback: ((syncOp: SyncOperation) => void) | undefined;
+      let outboxCallback: ((syncOps: SyncOperation[]) => void) | undefined;
       vi.mocked(mockChannel.outbox.onAdded).mockImplementation((cb) => {
         outboxCallback = cb;
       });
@@ -224,7 +224,7 @@ describe("SyncManager - Event Tests", () => {
 
       vi.mocked(mockChannel.outbox.add).mockImplementation((syncOp) => {
         if (outboxCallback) {
-          outboxCallback(syncOp);
+          outboxCallback([syncOp]);
         }
       });
 
@@ -251,7 +251,7 @@ describe("SyncManager - Event Tests", () => {
     it("SYNC_FAILED emits when any op fails with correct successCount, failureCount, errors", async () => {
       await syncManager.startup();
 
-      let outboxCallback: ((syncOp: SyncOperation) => void) | undefined;
+      let outboxCallback: ((syncOps: SyncOperation[]) => void) | undefined;
       vi.mocked(mockChannel.outbox.onAdded).mockImplementation((cb) => {
         outboxCallback = cb;
       });
@@ -269,7 +269,7 @@ describe("SyncManager - Event Tests", () => {
 
       vi.mocked(mockChannel.outbox.add).mockImplementation((syncOp) => {
         if (outboxCallback) {
-          outboxCallback(syncOp);
+          outboxCallback([syncOp]);
         }
       });
 
@@ -316,7 +316,7 @@ describe("SyncManager - Event Tests", () => {
     it("PENDING fires before SUCCEEDED", async () => {
       await syncManager.startup();
 
-      let outboxCallback: ((syncOp: SyncOperation) => void) | undefined;
+      let outboxCallback: ((syncOps: SyncOperation[]) => void) | undefined;
       vi.mocked(mockChannel.outbox.onAdded).mockImplementation((cb) => {
         outboxCallback = cb;
       });
@@ -334,7 +334,7 @@ describe("SyncManager - Event Tests", () => {
 
       vi.mocked(mockChannel.outbox.add).mockImplementation((syncOp) => {
         if (outboxCallback) {
-          outboxCallback(syncOp);
+          outboxCallback([syncOp]);
         }
       });
 
@@ -357,7 +357,7 @@ describe("SyncManager - Event Tests", () => {
     it("PENDING fires before FAILED", async () => {
       await syncManager.startup();
 
-      let outboxCallback: ((syncOp: SyncOperation) => void) | undefined;
+      let outboxCallback: ((syncOps: SyncOperation[]) => void) | undefined;
       vi.mocked(mockChannel.outbox.onAdded).mockImplementation((cb) => {
         outboxCallback = cb;
       });
@@ -375,7 +375,7 @@ describe("SyncManager - Event Tests", () => {
 
       vi.mocked(mockChannel.outbox.add).mockImplementation((syncOp) => {
         if (outboxCallback) {
-          outboxCallback(syncOp);
+          outboxCallback([syncOp]);
         }
       });
 
@@ -404,7 +404,7 @@ describe("SyncManager - Event Tests", () => {
     it("Only one terminal event per job (never both SUCCEEDED and FAILED)", async () => {
       await syncManager.startup();
 
-      let outboxCallback: ((syncOp: SyncOperation) => void) | undefined;
+      let outboxCallback: ((syncOps: SyncOperation[]) => void) | undefined;
       vi.mocked(mockChannel.outbox.onAdded).mockImplementation((cb) => {
         outboxCallback = cb;
       });
@@ -432,7 +432,7 @@ describe("SyncManager - Event Tests", () => {
           },
         );
         if (outboxCallback) {
-          outboxCallback(syncOp);
+          outboxCallback([syncOp]);
         }
       });
 
@@ -465,8 +465,12 @@ describe("SyncManager - Event Tests", () => {
     it("Multiple ops to multiple remotes - SUCCEEDED after all complete", async () => {
       await syncManager.startup();
 
-      let channel1OutboxCallback: ((syncOp: SyncOperation) => void) | undefined;
-      let channel2OutboxCallback: ((syncOp: SyncOperation) => void) | undefined;
+      let channel1OutboxCallback:
+        | ((syncOps: SyncOperation[]) => void)
+        | undefined;
+      let channel2OutboxCallback:
+        | ((syncOps: SyncOperation[]) => void)
+        | undefined;
 
       const mockChannel1 = {
         inbox: { onAdded: vi.fn() },
@@ -523,14 +527,14 @@ describe("SyncManager - Event Tests", () => {
       vi.mocked(mockChannel1.outbox.add).mockImplementation((syncOp) => {
         syncOps1.push(syncOp);
         if (channel1OutboxCallback) {
-          channel1OutboxCallback(syncOp);
+          channel1OutboxCallback([syncOp]);
         }
       });
 
       vi.mocked(mockChannel2.outbox.add).mockImplementation((syncOp) => {
         syncOps2.push(syncOp);
         if (channel2OutboxCallback) {
-          channel2OutboxCallback(syncOp);
+          channel2OutboxCallback([syncOp]);
         }
       });
 
@@ -570,8 +574,12 @@ describe("SyncManager - Event Tests", () => {
     it("Partial failure - FAILED with correct counts", async () => {
       await syncManager.startup();
 
-      let channel1OutboxCallback: ((syncOp: SyncOperation) => void) | undefined;
-      let channel2OutboxCallback: ((syncOp: SyncOperation) => void) | undefined;
+      let channel1OutboxCallback:
+        | ((syncOps: SyncOperation[]) => void)
+        | undefined;
+      let channel2OutboxCallback:
+        | ((syncOps: SyncOperation[]) => void)
+        | undefined;
 
       const mockChannel1 = {
         inbox: { onAdded: vi.fn() },
@@ -628,14 +636,14 @@ describe("SyncManager - Event Tests", () => {
       vi.mocked(mockChannel1.outbox.add).mockImplementation((syncOp) => {
         syncOps1.push(syncOp);
         if (channel1OutboxCallback) {
-          channel1OutboxCallback(syncOp);
+          channel1OutboxCallback([syncOp]);
         }
       });
 
       vi.mocked(mockChannel2.outbox.add).mockImplementation((syncOp) => {
         syncOps2.push(syncOp);
         if (channel2OutboxCallback) {
-          channel2OutboxCallback(syncOp);
+          channel2OutboxCallback([syncOp]);
         }
       });
 
@@ -927,7 +935,7 @@ describe("SyncManager - Event Tests", () => {
     it("Synchronous channel completion (like TestChannel) emits events correctly", async () => {
       await syncManager.startup();
 
-      let outboxCallback: ((syncOp: SyncOperation) => void) | undefined;
+      let outboxCallback: ((syncOps: SyncOperation[]) => void) | undefined;
       vi.mocked(mockChannel.outbox.onAdded).mockImplementation((cb) => {
         outboxCallback = cb;
       });
@@ -945,7 +953,7 @@ describe("SyncManager - Event Tests", () => {
 
       vi.mocked(mockChannel.outbox.add).mockImplementation((syncOp) => {
         if (outboxCallback) {
-          outboxCallback(syncOp);
+          outboxCallback([syncOp]);
         }
         (syncOp as { executed: () => void }).executed();
       });

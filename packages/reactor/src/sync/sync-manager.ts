@@ -346,12 +346,16 @@ export class SyncManager implements ISyncManager {
   }
 
   private wireChannelCallbacks(remote: Remote): void {
-    remote.channel.inbox.onAdded((syncOp) => {
-      this.handleInboxJob(remote, syncOp);
+    remote.channel.inbox.onAdded((syncOps) => {
+      for (const syncOp of syncOps) {
+        this.handleInboxJob(remote, syncOp);
+      }
     });
 
-    remote.channel.outbox.onAdded((syncOp) => {
-      this.handleOutboxJob(remote, syncOp);
+    remote.channel.outbox.onAdded((syncOps) => {
+      for (const syncOp of syncOps) {
+        this.handleOutboxJob(remote, syncOp);
+      }
     });
   }
 

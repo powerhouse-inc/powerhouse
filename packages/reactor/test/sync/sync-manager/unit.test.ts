@@ -640,7 +640,7 @@ describe("SyncManager - Unit Tests", () => {
       vi.mocked(mockChannel.outbox.add).mockImplementation((syncOp) => {
         createdSyncOp = syncOp;
         if (outboxCallback) {
-          outboxCallback(syncOp);
+          outboxCallback([syncOp]);
         }
       });
 
@@ -711,7 +711,7 @@ describe("SyncManager - Unit Tests", () => {
       vi.mocked(mockChannel.outbox.add).mockImplementation((syncOp) => {
         createdSyncOp = syncOp;
         if (outboxCallback) {
-          outboxCallback(syncOp);
+          outboxCallback([syncOp]);
         }
       });
 

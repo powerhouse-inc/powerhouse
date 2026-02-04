@@ -49,7 +49,7 @@ describe("Mailbox", () => {
       mailbox.add(item);
 
       expect(callback).toHaveBeenCalledTimes(1);
-      expect(callback).toHaveBeenCalledWith(item);
+      expect(callback).toHaveBeenCalledWith([item]);
     });
 
     it("should trigger all registered onAdded callbacks", () => {
@@ -65,9 +65,9 @@ describe("Mailbox", () => {
 
       mailbox.add(item);
 
-      expect(callback1).toHaveBeenCalledWith(item);
-      expect(callback2).toHaveBeenCalledWith(item);
-      expect(callback3).toHaveBeenCalledWith(item);
+      expect(callback1).toHaveBeenCalledWith([item]);
+      expect(callback2).toHaveBeenCalledWith([item]);
+      expect(callback3).toHaveBeenCalledWith([item]);
     });
 
     it("should call callbacks in registration order", () => {
@@ -119,7 +119,7 @@ describe("Mailbox", () => {
       mailbox.remove(item);
 
       expect(callback).toHaveBeenCalledTimes(1);
-      expect(callback).toHaveBeenCalledWith(item);
+      expect(callback).toHaveBeenCalledWith([item]);
     });
 
     it("should trigger all registered onRemoved callbacks", () => {
@@ -136,9 +136,9 @@ describe("Mailbox", () => {
       mailbox.add(item);
       mailbox.remove(item);
 
-      expect(callback1).toHaveBeenCalledWith(item);
-      expect(callback2).toHaveBeenCalledWith(item);
-      expect(callback3).toHaveBeenCalledWith(item);
+      expect(callback1).toHaveBeenCalledWith([item]);
+      expect(callback2).toHaveBeenCalledWith([item]);
+      expect(callback3).toHaveBeenCalledWith([item]);
     });
 
     it("should remove correct item when multiple items exist", () => {
@@ -266,10 +266,10 @@ describe("Mailbox", () => {
 
       expect(() => mailbox.add(item)).toThrow(MailboxAggregateError);
 
-      expect(callback1).toHaveBeenCalledWith(item);
-      expect(callback2).toHaveBeenCalledWith(item);
-      expect(callback3).toHaveBeenCalledWith(item);
-      expect(callback4).toHaveBeenCalledWith(item);
+      expect(callback1).toHaveBeenCalledWith([item]);
+      expect(callback2).toHaveBeenCalledWith([item]);
+      expect(callback3).toHaveBeenCalledWith([item]);
+      expect(callback4).toHaveBeenCalledWith([item]);
 
       try {
         mailbox.add(item);

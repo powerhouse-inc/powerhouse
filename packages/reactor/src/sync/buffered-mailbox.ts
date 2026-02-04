@@ -149,15 +149,11 @@ export class BufferedMailbox<T extends MailboxItem> implements IMailbox<T> {
     const callbacksCopy = [...callbacks];
     const errors: Error[] = [];
 
-    for (const item of items) {
-      for (const callback of callbacksCopy) {
-        try {
-          callback(item);
-        } catch (error) {
-          errors.push(
-            error instanceof Error ? error : new Error(String(error)),
-          );
-        }
+    for (const callback of callbacksCopy) {
+      try {
+        callback(items);
+      } catch (error) {
+        errors.push(error instanceof Error ? error : new Error(String(error)));
       }
     }
 

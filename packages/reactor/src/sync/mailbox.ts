@@ -2,7 +2,7 @@ export type MailboxItem = {
   id: string;
 };
 
-export type MailboxCallback<T extends MailboxItem> = (item: T) => void;
+export type MailboxCallback<T extends MailboxItem> = (items: T[]) => void;
 
 export interface IMailbox<T extends MailboxItem> {
   readonly items: ReadonlyArray<T>;
@@ -56,7 +56,7 @@ export class Mailbox<T extends MailboxItem> implements IMailbox<T> {
     const errors: Error[] = [];
     for (const callback of callbacks) {
       try {
-        callback(item);
+        callback([item]);
       } catch (error) {
         errors.push(error instanceof Error ? error : new Error(String(error)));
       }
@@ -76,7 +76,7 @@ export class Mailbox<T extends MailboxItem> implements IMailbox<T> {
     const errors: Error[] = [];
     for (const callback of callbacks) {
       try {
-        callback(item);
+        callback([item]);
       } catch (error) {
         errors.push(error instanceof Error ? error : new Error(String(error)));
       }
@@ -107,11 +107,12 @@ export class Mailbox<T extends MailboxItem> implements IMailbox<T> {
     const addedItems = this.addedBuffer;
     this.addedBuffer = [];
     const errors: Error[] = [];
-    for (const item of addedItems) {
+
+    if (addedItems.length > 0) {
       const callbacks = [...this.addedCallbacks];
       for (const callback of callbacks) {
         try {
-          callback(item);
+          callback(addedItems);
         } catch (error) {
           errors.push(
             error instanceof Error ? error : new Error(String(error)),
@@ -122,11 +123,12 @@ export class Mailbox<T extends MailboxItem> implements IMailbox<T> {
 
     const removedItems = this.removedBuffer;
     this.removedBuffer = [];
-    for (const item of removedItems) {
+
+    if (removedItems.length > 0) {
       const callbacks = [...this.removedCallbacks];
       for (const callback of callbacks) {
         try {
-          callback(item);
+          callback(removedItems);
         } catch (error) {
           errors.push(
             error instanceof Error ? error : new Error(String(error)),

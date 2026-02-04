@@ -237,6 +237,7 @@ describe("PollingChannel", () => {
       channel.receive(envelope);
 
       expect(callback).toHaveBeenCalledTimes(1);
+      expect(callback).toHaveBeenCalledWith([expect.any(SyncOperation)]);
     });
 
     it("should allow jobs to be marked as executed", () => {

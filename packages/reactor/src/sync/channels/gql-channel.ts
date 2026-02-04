@@ -87,12 +87,12 @@ export class GqlChannel implements IChannel {
     this.failureCount = 0;
 
     this.inbox = new Mailbox<SyncOperation>();
-    this.bufferedOutbox = new BufferedMailbox<SyncOperation>(100, 10);
+    this.bufferedOutbox = new BufferedMailbox<SyncOperation>(500, 25);
     this.outbox = this.bufferedOutbox;
     this.deadLetter = new Mailbox<SyncOperation>();
 
-    this.outbox.onAdded((syncOp) => {
-      this.handleOutboxAdded(syncOp);
+    this.outbox.onAdded((syncOps) => {
+      this.handleOutboxAdded(syncOps);
     });
   }
 
@@ -356,30 +356,37 @@ export class GqlChannel implements IChannel {
   /**
    * Handles sync operations added to the outbox by sending them to the remote.
    */
-  private handleOutboxAdded(syncOp: SyncOperation): void {
+  private handleOutboxAdded(syncOps: SyncOperation[]): void {
     if (this.isShutdown) {
       return;
     }
 
     // Execute async but don't await (fire and forget with error handling)
-    this.pushSyncOperation(syncOp).catch((error) => {
+    this.pushSyncOperations(syncOps).catch((error) => {
       const err = error instanceof Error ? error : new Error(String(error));
       const channelError = new ChannelError(ChannelErrorSource.Outbox, err);
-      syncOp.failed(channelError);
-      this.deadLetter.add(syncOp);
-      this.outbox.remove(syncOp);
+      for (const syncOp of syncOps) {
+        syncOp.failed(channelError);
+        this.deadLetter.add(syncOp);
+        this.outbox.remove(syncOp);
+      }
     });
   }
 
   /**
-   * Pushes a sync operation to the remote via GraphQL mutation.
+   * Pushes multiple sync operations to the remote via a single GraphQL mutation.
+   * Merges all operations from multiple SyncOperations into one SyncEnvelope.
    */
-  private async pushSyncOperation(syncOp: SyncOperation): Promise<void> {
-    syncOp.started();
+  private async pushSyncOperations(syncOps: SyncOperation[]): Promise<void> {
+    for (const syncOp of syncOps) {
+      syncOp.started();
+    }
+
+    const allOperations = syncOps.flatMap((syncOp) => syncOp.operations);
 
     this.logger.debug(
       "[PUSH]: @Operations",
-      syncOp.operations.map(
+      allOperations.map(
         (op) =>
           `(${op.context.documentId}, ${op.context.branch}, ${op.context.scope}, ${op.operation.index})`,
       ),
@@ -388,7 +395,7 @@ export class GqlChannel implements IChannel {
     const envelope: SyncEnvelope = {
       type: "operations",
       channelMeta: { id: this.channelId },
-      operations: syncOp.operations,
+      operations: allOperations,
     };
 
     const mutation = `
@@ -408,7 +415,9 @@ export class GqlChannel implements IChannel {
 
     // Successfully sent - the outbox will be cleared when we receive ACK
     // For now, we optimistically remove from outbox
-    this.outbox.remove(syncOp);
+    for (const syncOp of syncOps) {
+      this.outbox.remove(syncOp);
+    }
   }
 
   /**
