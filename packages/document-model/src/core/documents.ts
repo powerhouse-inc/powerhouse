@@ -1108,16 +1108,25 @@ export function diffOperations<TOp extends OperationIndex>(
   );
 }
 
-// it's operations, falling back to the initial state
+// Returns the timestamp of the latest operation by index (and skip as tiebreaker),
+// falling back to the document header's lastModifiedAtUtcIso
 export function getDocumentLastModified(document: PHDocument) {
-  const sortedOperations = sortOperations(
-    Object.values(document.operations).flatMap((ops) => ops || []),
-  );
+  let latest: Operation | undefined;
 
-  return (
-    sortedOperations.at(-1)?.timestampUtcMs ||
-    document.header.lastModifiedAtUtcIso
-  );
+  for (const ops of Object.values(document.operations)) {
+    if (!ops) continue;
+    for (const op of ops) {
+      if (
+        !latest ||
+        op.index > latest.index ||
+        (op.index === latest.index && op.skip > latest.skip)
+      ) {
+        latest = op;
+      }
+    }
+  }
+
+  return latest?.timestampUtcMs || document.header.lastModifiedAtUtcIso;
 }
 
 /**
