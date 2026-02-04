@@ -57,7 +57,10 @@ export { SyncManager } from "./sync-manager.js";
 export { SyncBuilder } from "./sync-builder.js";
 
 export {
+  batchOperationsByDocument,
   createIdleHealth,
   filterOperations,
   sortEnvelopesByFirstOperationTimestamp,
 } from "./utils.js";
+
+export type { OperationBatch } from "./utils.js";

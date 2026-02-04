@@ -479,6 +479,12 @@ export class SyncManager implements ISyncManager {
       );
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error));
+      this.logger.error(
+        "Failed to load operations from inbox (@remote, @documentId, @error)",
+        remote.name,
+        syncOp.documentId,
+        err.message,
+      );
       const channelError = new ChannelError(ChannelErrorSource.Inbox, err);
       syncOp.failed(channelError);
       remote.channel.deadLetter.add(syncOp);
@@ -491,6 +497,13 @@ export class SyncManager implements ISyncManager {
       completedJobInfo = await this.awaiter.waitForJob(jobInfo.id);
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error));
+      this.logger.error(
+        "Failed to wait for job completion (@remote, @documentId, @jobId, @error)",
+        remote.name,
+        syncOp.documentId,
+        jobInfo.id,
+        err.message,
+      );
       const channelError = new ChannelError(ChannelErrorSource.Inbox, err);
       syncOp.failed(channelError);
       remote.channel.deadLetter.add(syncOp);
@@ -502,11 +515,17 @@ export class SyncManager implements ISyncManager {
     this.loadJobs.set(jobKey, completedJobInfo);
 
     if (completedJobInfo.status === JobStatus.FAILED) {
+      const errorMessage = completedJobInfo.error?.message || "Unknown error";
+      this.logger.error(
+        "Failed to apply operations from inbox (@remote, @documentId, @jobId, @error)",
+        remote.name,
+        syncOp.documentId,
+        completedJobInfo.id,
+        errorMessage,
+      );
       const error = new ChannelError(
         ChannelErrorSource.Inbox,
-        new Error(
-          `Failed to apply operations: ${completedJobInfo.error?.message || "Unknown error"}`,
-        ),
+        new Error(`Failed to apply operations: ${errorMessage}`),
       );
       syncOp.failed(error);
       remote.channel.deadLetter.add(syncOp);

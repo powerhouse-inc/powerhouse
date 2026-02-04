@@ -200,6 +200,7 @@ export {
   type ISyncRemoteStorage,
 } from "./storage/index.js";
 export {
+  batchOperationsByDocument,
   ChannelError,
   ChannelErrorSource,
   CompositeChannelFactory,
@@ -225,6 +226,7 @@ export {
   type ISyncManager,
   type JwtHandler,
   type MailboxItem,
+  type OperationBatch,
   type Remote,
   type RemoteCursor,
   type RemoteFilter,

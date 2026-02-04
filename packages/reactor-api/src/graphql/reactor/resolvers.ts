@@ -1,10 +1,12 @@
 import {
+  batchOperationsByDocument,
   SyncOperation,
   sortEnvelopesByFirstOperationTimestamp,
   type IReactorClient,
   type ISyncManager,
   type JobInfo,
   type OperationFilter,
+  type OperationBatch,
   type PagedResults,
   type PagingOptions,
   type PropagationMode,
@@ -898,12 +900,6 @@ export function pushSyncEnvelopes(
       continue;
     }
 
-    const firstOp = envelope.operations[0];
-    const syncOpId = `syncop-${envelope.channelMeta.id}-${Date.now()}-${crypto.randomUUID()}`;
-    const jobId = `job-${envelope.channelMeta.id}-${Date.now()}-${crypto.randomUUID()}`;
-    const scopes: string[] = [
-      ...new Set(envelope.operations.map((op) => op.context.scope)),
-    ];
     const operations = envelope.operations.map((op) => ({
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       operation: op.operation,
@@ -916,22 +912,29 @@ export function pushSyncEnvelopes(
       },
     }));
 
-    const syncOp = new SyncOperation(
-      syncOpId,
-      jobId,
-      remote.name,
-      firstOp.context.documentId,
-      scopes,
-      firstOp.context.branch,
-      operations,
-    );
+    const batches: OperationBatch[] = batchOperationsByDocument(operations);
 
-    try {
-      remote.channel.inbox.add(syncOp);
-    } catch (error) {
-      throw new GraphQLError(
-        `Failed to push sync envelope: ${error instanceof Error ? error.message : "Unknown error"}`,
+    for (const batch of batches) {
+      const syncOpId = `syncop-${envelope.channelMeta.id}-${Date.now()}-${crypto.randomUUID()}`;
+      const jobId = `job-${envelope.channelMeta.id}-${Date.now()}-${crypto.randomUUID()}`;
+
+      const syncOp = new SyncOperation(
+        syncOpId,
+        jobId,
+        remote.name,
+        batch.documentId,
+        [batch.scope],
+        batch.branch,
+        batch.operations,
       );
+
+      try {
+        remote.channel.inbox.add(syncOp);
+      } catch (error) {
+        throw new GraphQLError(
+          `Failed to push sync envelope: ${error instanceof Error ? error.message : "Unknown error"}`,
+        );
+      }
     }
   }
 
