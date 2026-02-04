@@ -10,6 +10,7 @@ interface CliOptions {
   documentInterval: string;
   mutationInterval: string;
   verbose: boolean;
+  singleDocument: boolean;
 }
 
 const program = new Command();
@@ -29,6 +30,11 @@ program
     "Interval for sending mutations per document",
     "5",
   )
+  .option(
+    "--single-document",
+    "Create only one document, then apply operations to it",
+    false,
+  )
   .option("--verbose", "Enable verbose logging", false)
   .action(async (options: CliOptions) => {
     const config: LoadTestConfig = {
@@ -37,6 +43,7 @@ program
       documentInterval: parseInt(options.documentInterval, 10),
       mutationInterval: parseInt(options.mutationInterval, 10),
       verbose: options.verbose,
+      singleDocument: options.singleDocument,
     };
 
     // Validate config

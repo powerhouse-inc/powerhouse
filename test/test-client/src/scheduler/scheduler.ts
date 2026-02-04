@@ -86,14 +86,16 @@ export class TestScheduler {
     this.startTime = Date.now();
     this.metrics.setStartTime(this.startTime);
 
-    // Start document creation timer
-    this.documentTimer = setInterval(
-      () => this.createDocument(),
-      this.config.documentInterval * 1000,
-    );
-
     // Create first document immediately
     await this.createDocument();
+
+    // Start document creation timer (unless single-document mode)
+    if (!this.config.singleDocument) {
+      this.documentTimer = setInterval(
+        () => this.createDocument(),
+        this.config.documentInterval * 1000,
+      );
+    }
 
     // Start mutation timer
     this.mutationTimer = setInterval(
