@@ -2,7 +2,16 @@ export type MailboxItem = {
   id: string;
 };
 
-type MailboxCallback<T extends MailboxItem> = (item: T) => void;
+export type MailboxCallback<T extends MailboxItem> = (item: T) => void;
+
+export interface IMailbox<T extends MailboxItem> {
+  readonly items: ReadonlyArray<T>;
+  get(id: string): T | undefined;
+  add(item: T): void;
+  remove(item: T): void;
+  onAdded(callback: MailboxCallback<T>): void;
+  onRemoved(callback: MailboxCallback<T>): void;
+}
 
 export class MailboxAggregateError extends Error {
   errors: Error[];
@@ -17,7 +26,7 @@ export class MailboxAggregateError extends Error {
   }
 }
 
-export class Mailbox<T extends MailboxItem> {
+export class Mailbox<T extends MailboxItem> implements IMailbox<T> {
   private itemsMap: Map<string, T> = new Map();
   private addedCallbacks: MailboxCallback<T>[] = [];
   private removedCallbacks: MailboxCallback<T>[] = [];

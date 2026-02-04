@@ -1,8 +1,11 @@
-import { type MailboxItem, MailboxAggregateError } from "./mailbox.js";
+import {
+  type MailboxItem,
+  type MailboxCallback,
+  type IMailbox,
+  MailboxAggregateError,
+} from "./mailbox.js";
 
-type MailboxCallback<T extends MailboxItem> = (item: T) => void;
-
-export class BufferedMailbox<T extends MailboxItem> {
+export class BufferedMailbox<T extends MailboxItem> implements IMailbox<T> {
   private itemsMap: Map<string, T> = new Map();
   private addedCallbacks: MailboxCallback<T>[] = [];
   private removedCallbacks: MailboxCallback<T>[] = [];

@@ -2,9 +2,10 @@ import type { Action, Signature } from "document-model";
 import type { IOperationIndex } from "../../cache/operation-index-types.js";
 import type { ILogger } from "../../logging/types.js";
 import type { ISyncCursorStorage } from "../../storage/interfaces.js";
+import { BufferedMailbox } from "../buffered-mailbox.js";
 import { ChannelError } from "../errors.js";
 import type { IChannel } from "../interfaces.js";
-import { Mailbox } from "../mailbox.js";
+import { type IMailbox, Mailbox } from "../mailbox.js";
 import type { SyncOperation } from "../sync-operation.js";
 import type {
   JwtHandler,
@@ -42,10 +43,11 @@ export type GqlChannelConfig = {
  * GraphQL-based synchronization channel for network communication between reactors.
  */
 export class GqlChannel implements IChannel {
-  readonly inbox: Mailbox<SyncOperation>;
-  readonly outbox: Mailbox<SyncOperation>;
-  readonly deadLetter: Mailbox<SyncOperation>;
+  readonly inbox: IMailbox<SyncOperation>;
+  readonly outbox: IMailbox<SyncOperation>;
+  readonly deadLetter: IMailbox<SyncOperation>;
   readonly config: GqlChannelConfig;
+  private readonly bufferedOutbox: BufferedMailbox<SyncOperation>;
 
   private readonly channelId: string;
   private readonly remoteName: string;
@@ -85,7 +87,8 @@ export class GqlChannel implements IChannel {
     this.failureCount = 0;
 
     this.inbox = new Mailbox<SyncOperation>();
-    this.outbox = new Mailbox<SyncOperation>();
+    this.bufferedOutbox = new BufferedMailbox<SyncOperation>(100, 10);
+    this.outbox = this.bufferedOutbox;
     this.deadLetter = new Mailbox<SyncOperation>();
 
     this.outbox.onAdded((syncOp) => {
@@ -97,6 +100,7 @@ export class GqlChannel implements IChannel {
    * Shuts down the channel and prevents further operations.
    */
   shutdown(): void {
+    this.bufferedOutbox.flush();
     this.isShutdown = true;
     this.pollTimer.stop();
   }
