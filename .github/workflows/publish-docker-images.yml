@@ -13,121 +13,13 @@ env:
   HARBOR_REGISTRY: cr.vetra.io
 
 jobs:
-  connect:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-      - name: Get tags
-        run: git fetch --tags origin
-      - name: Set last tag
-        run: echo "GITHUB_TAG=$(git for-each-ref --sort=creatordate --format '%(tag)' refs/tags  | tail -n 1)" >> $GITHUB_ENV
-      - name: Set Harbor project name
-        run: echo "HARBOR_PROJECT=${GITHUB_REPOSITORY//\//-}" >> $GITHUB_ENV
-      - name: Determine additional tag
-        run: |
-          if [[ "${{ env.GITHUB_TAG }}" == *"-dev."* ]]; then
-            echo "ADDITIONAL_TAG=dev" >> $GITHUB_ENV
-          elif [[ "${{ env.GITHUB_TAG }}" == *"-staging."* ]]; then
-            echo "ADDITIONAL_TAG=staging" >> $GITHUB_ENV
-          elif [[ "${{ env.GITHUB_TAG }}" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "ADDITIONAL_TAG=latest" >> $GITHUB_ENV
-          else
-            echo "ADDITIONAL_TAG=" >> $GITHUB_ENV
-          fi
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.PATNAME }}
-
-      - name: Log in to Harbor
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.HARBOR_REGISTRY }}
-          username: ${{ secrets.HARBOR_USERNAME }}
-          password: ${{ secrets.HARBOR_PASSWORD }}
-
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: ./apps/connect
-          push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ github.repository }}/connect:${{ env.GITHUB_TAG }}
-            ${{ env.REGISTRY }}/${{ github.repository }}/connect:${{ env.ADDITIONAL_TAG }}
-            ${{ env.HARBOR_REGISTRY }}/${{ env.HARBOR_PROJECT }}/connect:${{ env.GITHUB_TAG }}
-            ${{ env.HARBOR_REGISTRY }}/${{ env.HARBOR_PROJECT }}/connect:${{ env.ADDITIONAL_TAG }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          build-args: |
-            TAG=${{env.GITHUB_TAG}}
-
-  switchboard:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-      - name: Get tags
-        run: git fetch --tags origin
-      - name: Set last tag
-        run: echo "GITHUB_TAG=$(git for-each-ref --sort=creatordate --format '%(tag)' refs/tags  | tail -n 1)" >> $GITHUB_ENV
-      - name: Set Harbor project name
-        run: echo "HARBOR_PROJECT=${GITHUB_REPOSITORY//\//-}" >> $GITHUB_ENV
-      - name: Determine additional tag
-        run: |
-          if [[ "${{ env.GITHUB_TAG }}" == *"-dev."* ]]; then
-            echo "ADDITIONAL_TAG=dev" >> $GITHUB_ENV
-          elif [[ "${{ env.GITHUB_TAG }}" == *"-staging."* ]]; then
-            echo "ADDITIONAL_TAG=staging" >> $GITHUB_ENV
-          elif [[ "${{ env.GITHUB_TAG }}" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "ADDITIONAL_TAG=latest" >> $GITHUB_ENV
-          else
-            echo "ADDITIONAL_TAG=" >> $GITHUB_ENV
-          fi
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.PATNAME }}
-
-      - name: Log in to Harbor
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.HARBOR_REGISTRY }}
-          username: ${{ secrets.HARBOR_USERNAME }}
-          password: ${{ secrets.HARBOR_PASSWORD }}
-
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: ./apps/switchboard
-          push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ github.repository }}/switchboard:${{ env.GITHUB_TAG }}
-            ${{ env.REGISTRY }}/${{ github.repository }}/switchboard:${{ env.ADDITIONAL_TAG }}
-            ${{ env.HARBOR_REGISTRY }}/${{ env.HARBOR_PROJECT }}/switchboard:${{ env.GITHUB_TAG }}
-            ${{ env.HARBOR_REGISTRY }}/${{ env.HARBOR_PROJECT }}/switchboard:${{ env.ADDITIONAL_TAG }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          build-args: |
-            TAG=${{env.GITHUB_TAG}}
-
   academy:
     runs-on: ubuntu-latest
     outputs:
       tag: ${{ steps.get-tag.outputs.tag }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Get tags
         run: git fetch --tags origin
       - name: Set last tag
@@ -181,9 +73,30 @@ jobs:
           build-args: |
             TAG=${{env.GITHUB_TAG}}
 
-  deploy-k8s:
-    needs: [connect, switchboard, academy]
-    uses: "./.github/workflows/deploy-k8s.yml"
+  # Determine channel from tag for downstream packages
+  determine-channel:
+    needs: [academy]
+    runs-on: ubuntu-latest
+    outputs:
+      channel: ${{ steps.channel.outputs.channel }}
+    steps:
+      - name: Determine channel from tag
+        id: channel
+        run: |
+          TAG="${{ needs.academy.outputs.tag }}"
+          if [[ "$TAG" == *"-dev."* ]]; then
+            echo "channel=dev" >> $GITHUB_OUTPUT
+          elif [[ "$TAG" == *"-staging."* ]]; then
+            echo "channel=staging" >> $GITHUB_OUTPUT
+          else
+            echo "channel=latest" >> $GITHUB_OUTPUT
+          fi
+
+  # Trigger downstream package updates
+  trigger-downstream:
+    needs: [academy, determine-channel]
+    uses: "./.github/workflows/trigger-downstream-packages.yml"
     with:
-      tag: ${{ needs.academy.outputs.tag }}
+      version: ${{ needs.academy.outputs.tag }}
+      channel: ${{ needs.determine-channel.outputs.channel }}
     secrets: inherit
