@@ -15,6 +15,7 @@ export class BufferedMailbox<T extends MailboxItem> implements IMailbox<T> {
   private removedTimer: ReturnType<typeof setTimeout> | null = null;
   private readonly milliseconds: number;
   private readonly maxQueued: number;
+  private paused: boolean = false;
 
   constructor(milliseconds: number, maxQueued: number) {
     this.milliseconds = milliseconds;
@@ -33,6 +34,10 @@ export class BufferedMailbox<T extends MailboxItem> implements IMailbox<T> {
     this.itemsMap.set(item.id, item);
     this.addedBuffer.push(item);
 
+    if (this.paused) {
+      return;
+    }
+
     if (this.addedBuffer.length >= this.maxQueued) {
       this.flushAdded();
     } else {
@@ -43,6 +48,10 @@ export class BufferedMailbox<T extends MailboxItem> implements IMailbox<T> {
   remove(item: T): void {
     this.itemsMap.delete(item.id);
     this.removedBuffer.push(item);
+
+    if (this.paused) {
+      return;
+    }
 
     if (this.removedBuffer.length >= this.maxQueued) {
       this.flushRemoved();
@@ -57,6 +66,32 @@ export class BufferedMailbox<T extends MailboxItem> implements IMailbox<T> {
 
   onRemoved(callback: MailboxCallback<T>): void {
     this.removedCallbacks.push(callback);
+  }
+
+  pause(): void {
+    this.paused = true;
+    if (this.addedTimer !== null) {
+      clearTimeout(this.addedTimer);
+      this.addedTimer = null;
+    }
+    if (this.removedTimer !== null) {
+      clearTimeout(this.removedTimer);
+      this.removedTimer = null;
+    }
+  }
+
+  resume(): void {
+    this.paused = false;
+    if (this.addedBuffer.length > 0) {
+      this.scheduleAddedFlush();
+    }
+    if (this.removedBuffer.length > 0) {
+      this.scheduleRemovedFlush();
+    }
+  }
+
+  isPaused(): boolean {
+    return this.paused;
   }
 
   flush(): void {

@@ -74,6 +74,11 @@ export function ChannelInspector({
     isRunning: pollerControls?.isRunning() ?? false,
   }));
 
+  const [mailboxStates, setMailboxStates] = useState(() => ({
+    inbox: { isPaused: channel.inbox.isPaused() },
+    outbox: { isPaused: channel.outbox.isPaused() },
+  }));
+
   const handlePause = useCallback(() => {
     if (pollerControls) {
       pollerControls.pause();
@@ -99,6 +104,42 @@ export function ChannelInspector({
       pollerControls.triggerNow();
     }
   }, [pollerControls]);
+
+  const handleMailboxPause = useCallback(
+    (mailbox: "inbox" | "outbox") => {
+      const mailboxInstance =
+        mailbox === "inbox" ? channel.inbox : channel.outbox;
+      mailboxInstance.pause();
+      setMailboxStates((prev) => ({
+        ...prev,
+        [mailbox]: { isPaused: mailboxInstance.isPaused() },
+      }));
+    },
+    [channel],
+  );
+
+  const handleMailboxResume = useCallback(
+    (mailbox: "inbox" | "outbox") => {
+      const mailboxInstance =
+        mailbox === "inbox" ? channel.inbox : channel.outbox;
+      mailboxInstance.resume();
+      setMailboxStates((prev) => ({
+        ...prev,
+        [mailbox]: { isPaused: mailboxInstance.isPaused() },
+      }));
+    },
+    [channel],
+  );
+
+  const handleMailboxFlush = useCallback(
+    (mailbox: "inbox" | "outbox") => {
+      const mailboxInstance =
+        mailbox === "inbox" ? channel.inbox : channel.outbox;
+      mailboxInstance.flush();
+      onRefresh?.();
+    },
+    [channel, onRefresh],
+  );
 
   return (
     <div className="flex h-full flex-col gap-4 p-4">
@@ -172,6 +213,96 @@ export function ChannelInspector({
           </div>
         </div>
       )}
+
+      <div className="shrink-0 rounded border border-gray-200 bg-white p-4">
+        <h3 className="mb-3 text-sm font-semibold text-gray-900">
+          Mailbox Processing
+        </h3>
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-gray-600">
+              Inbox:{" "}
+              <span
+                className={
+                  mailboxStates.inbox.isPaused
+                    ? "text-yellow-600"
+                    : "text-green-600"
+                }
+              >
+                {mailboxStates.inbox.isPaused ? "Paused" : "Active"}
+              </span>
+            </div>
+            <div className="flex gap-2">
+              {mailboxStates.inbox.isPaused ? (
+                <button
+                  className="flex items-center gap-1 rounded border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100"
+                  onClick={() => handleMailboxResume("inbox")}
+                  type="button"
+                >
+                  Resume
+                </button>
+              ) : (
+                <button
+                  className="flex items-center gap-1 rounded border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100"
+                  onClick={() => handleMailboxPause("inbox")}
+                  type="button"
+                >
+                  Pause
+                </button>
+              )}
+              <button
+                className="flex items-center gap-1 rounded border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={!mailboxStates.inbox.isPaused}
+                onClick={() => handleMailboxFlush("inbox")}
+                type="button"
+              >
+                Flush
+              </button>
+            </div>
+          </div>
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-gray-600">
+              Outbox:{" "}
+              <span
+                className={
+                  mailboxStates.outbox.isPaused
+                    ? "text-yellow-600"
+                    : "text-green-600"
+                }
+              >
+                {mailboxStates.outbox.isPaused ? "Paused" : "Active"}
+              </span>
+            </div>
+            <div className="flex gap-2">
+              {mailboxStates.outbox.isPaused ? (
+                <button
+                  className="flex items-center gap-1 rounded border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100"
+                  onClick={() => handleMailboxResume("outbox")}
+                  type="button"
+                >
+                  Resume
+                </button>
+              ) : (
+                <button
+                  className="flex items-center gap-1 rounded border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100"
+                  onClick={() => handleMailboxPause("outbox")}
+                  type="button"
+                >
+                  Pause
+                </button>
+              )}
+              <button
+                className="flex items-center gap-1 rounded border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={!mailboxStates.outbox.isPaused}
+                onClick={() => handleMailboxFlush("outbox")}
+                type="button"
+              >
+                Flush
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <div className="flex flex-1 flex-col gap-6 overflow-auto">
         <MailboxTable
