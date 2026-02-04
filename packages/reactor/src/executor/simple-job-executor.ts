@@ -97,6 +97,12 @@ export class SimpleJobExecutor implements IJobExecutor {
     const indexTxn = this.operationIndex.start();
 
     if (job.kind === "load") {
+      this.logger.info(
+        "Executing load job @JobId: @Operations",
+        job.id,
+        job.operations,
+      );
+
       const result = await this.executeLoadJob(job, startTime, indexTxn);
       if (result.success && result.operationsWithContext) {
         const ordinals = await this.operationIndex.commit(indexTxn);
@@ -124,6 +130,8 @@ export class SimpleJobExecutor implements IJobExecutor {
       }
       return result;
     }
+
+    this.logger.info("Executing job @JobId: @Actions", job.id, job.actions);
 
     const result = await this.processActions(
       job,

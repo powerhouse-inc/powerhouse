@@ -36,6 +36,9 @@ const createMockOperationIndex = (): IOperationIndex => ({
   find: vi
     .fn()
     .mockResolvedValue({ items: [], nextCursor: undefined, hasMore: false }),
+  get: vi
+    .fn()
+    .mockResolvedValue({ results: [], options: { cursor: "0", limit: 100 } }),
   getSinceOrdinal: vi
     .fn()
     .mockResolvedValue({ items: [], nextCursor: undefined, hasMore: false }),

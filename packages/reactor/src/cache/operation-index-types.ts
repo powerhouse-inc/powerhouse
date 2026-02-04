@@ -31,6 +31,16 @@ export interface IOperationIndex {
     paging?: PagingOptions,
     signal?: AbortSignal,
   ): Promise<PagedResults<OperationIndexEntry>>;
+  /**
+   * Get all operations for a specific document, ordered by ordinal.
+   * Used for retroactive sync when a document is added to a collection.
+   */
+  get(
+    documentId: string,
+    view?: ViewFilter,
+    paging?: PagingOptions,
+    signal?: AbortSignal,
+  ): Promise<PagedResults<OperationIndexEntry>>;
   getSinceOrdinal(
     ordinal: number,
     paging?: PagingOptions,

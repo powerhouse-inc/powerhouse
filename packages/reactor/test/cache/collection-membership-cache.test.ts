@@ -10,6 +10,7 @@ function createMockOperationIndex(): IOperationIndex {
     start: vi.fn(),
     commit: vi.fn(),
     find: vi.fn(),
+    get: vi.fn(),
     getSinceOrdinal: vi.fn(),
     getLatestTimestampForCollection: vi.fn(),
     getCollectionsForDocuments: vi.fn(),
