@@ -344,6 +344,7 @@ export function replayDocument<TState extends PHBaseState = PHBaseState>(
         result = updateHeaderRevision(
           result,
           lastOperation.action.scope,
+          lastOperation.timestampUtcMs,
         ) as PHDocument<TState>;
       }
     }
@@ -1147,13 +1148,15 @@ function getNextRevision(document: PHDocument, scope: string) {
  * Updates the document header with the latest revision number and
  * date of last modification.
  *
- * @param state The current state of the document.
- * @param operation The action being applied to the document.
+ * @param document The current state of the document.
+ * @param scope The scope of the operation.
+ * @param lastModifiedTimestamp Optional timestamp to use directly, avoiding a scan of all operations.
  * @returns The updated document state.
  */
 export function updateHeaderRevision(
   document: PHDocument,
   scope: string,
+  lastModifiedTimestamp?: string,
 ): PHDocument {
   const header: PHDocumentHeader = {
     ...document.header,
@@ -1161,7 +1164,8 @@ export function updateHeaderRevision(
       ...document.header.revision,
       [scope]: getNextRevision(document, scope),
     },
-    lastModifiedAtUtcIso: getDocumentLastModified(document),
+    lastModifiedAtUtcIso:
+      lastModifiedTimestamp ?? getDocumentLastModified(document),
   };
 
   return {
