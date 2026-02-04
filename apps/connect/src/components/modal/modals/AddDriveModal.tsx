@@ -59,7 +59,7 @@ export function AddDriveModal() {
 
   const onAddRemoteDrive = async (data: AddRemoteDriveInput) => {
     try {
-      const driveId = await addRemoteDrive(data.url, {});
+      const driveId = await addRemoteDrive(data.url, {}, data.id);
 
       toast(t("notifications.addDriveSuccess"), {
         type: "connect-success",

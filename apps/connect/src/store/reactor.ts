@@ -6,7 +6,7 @@ import {
   createBrowserReactor,
   getDefaultDrivesFromEnv,
 } from "@powerhousedao/connect/utils";
-import { driveCollectionId } from "@powerhousedao/reactor";
+import { driveCollectionId, parseDriveUrl } from "@powerhousedao/reactor";
 import {
   ReactorClientDocumentCache,
   dropAllReactorStorage,
@@ -137,16 +137,20 @@ export async function createReactor() {
   // if remoteUrl is set and drive not already existing add remote drive and open it
   const remoteUrl = getDriveUrl();
   if (remoteUrl) {
-    // Extract driveId from URL (e.g., "http://localhost:4001/d/abc123" -> "abc123")
-    const driveId = remoteUrl.split("/").pop() ?? "";
-    await reactorClientModule.reactorModule?.syncModule?.syncManager.add(
-      `remote-drive-${driveId}`,
-      driveCollectionId("main", driveId),
-      {
-        type: "gql",
-        parameters: { url: remoteUrl },
-      },
-    );
+    try {
+      const response = await fetch(remoteUrl);
+      if (response.ok) {
+        const driveInfo = (await response.json()) as { id: string };
+        const { graphqlEndpoint } = parseDriveUrl(remoteUrl);
+        await reactorClientModule.reactorModule?.syncModule?.syncManager.add(
+          `remote-drive-${driveInfo.id}`,
+          driveCollectionId("main", driveInfo.id),
+          { type: "gql", parameters: { url: graphqlEndpoint } },
+        );
+      }
+    } catch (error) {
+      console.error(`Failed to add remote drive from ${remoteUrl}:`, error);
+    }
   }
 
   // set the selected drive and node from the path

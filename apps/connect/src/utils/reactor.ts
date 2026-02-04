@@ -96,12 +96,16 @@ export async function addDefaultDrivesForNewReactor(
 
   for (const config of defaultDrivesConfig) {
     try {
-      const remoteName = `default-drive-${config.driveId}`;
+      const response = await fetch(config.url);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const driveInfo = (await response.json()) as { id: string };
+
+      const remoteName = `default-drive-${driveInfo.id}`;
       if (existingRemoteNames.has(remoteName)) {
-        // Remote already exists, skip adding it
         continue;
       }
-      await sync.add(remoteName, driveCollectionId("main", config.driveId), {
+
+      await sync.add(remoteName, driveCollectionId("main", driveInfo.id), {
         type: "gql",
         parameters: { url: config.graphqlEndpoint },
       });
