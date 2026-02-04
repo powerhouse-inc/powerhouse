@@ -39,6 +39,7 @@ export {
   SyncOperationAggregateError,
 } from "./sync-operation.js";
 export { Mailbox, type MailboxItem } from "./mailbox.js";
+export { BufferedMailbox } from "./buffered-mailbox.js";
 
 export { ChannelError, PollingChannelError } from "./errors.js";
 
