@@ -434,25 +434,11 @@ export class GraphQLManager {
 
   async #waitForServer(server: ApolloServer<Context>): Promise<boolean> {
     try {
-      const serverState = (
-        server as unknown as { internals: { state: { phase: string } } }
-      ).internals.state;
-
-      if (serverState.phase === "started") {
-        return true;
-      } else {
-        throw new Error(`Server not started: ${serverState.phase}`);
-      }
-    } catch (error) {
-      if (
-        error instanceof Error &&
-        error.message.startsWith("Server not started")
-      ) {
-        await setTimeout(100);
-        return this.#waitForServer(server);
-      }
-      this.logger.error(error);
-      return false;
+      server.assertStarted("waitForServer");
+      return true;
+    } catch {
+      await setTimeout(100);
+      return this.#waitForServer(server);
     }
   }
 
@@ -469,17 +455,6 @@ export class GraphQLManager {
         this.logger.debug(`Setting up subgraph ${subgraph.name}`);
         const subgraphPath = this.#getSubgraphPath(subgraph, supergraph);
         try {
-          // stop existing apollo server before starting new one
-          const existingServer = this.subgraphApolloServers.get(subgraphPath);
-          if (existingServer) {
-            try {
-              await this.#waitForServer(existingServer);
-              await existingServer.stop();
-            } catch {
-              // ignore error when stopping apollo server
-            }
-          }
-
           // dispose existing websocket server before starting new one
           const existingWsDisposer = this.subgraphWsDisposers.get(subgraphPath);
           if (existingWsDisposer) {
@@ -519,7 +494,7 @@ export class GraphQLManager {
               this.wsServer,
             );
             this.subgraphWsDisposers.set(subgraphPath, wsDisposer);
-            this.logger.info(
+            this.logger.debug(
               `WebSocket subscriptions enabled for ${subgraph.name}`,
             );
           }
