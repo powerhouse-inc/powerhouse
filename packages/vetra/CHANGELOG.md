@@ -1,3 +1,13 @@
+## 6.0.0-dev.32 (2026-02-04)
+
+### 🩹 Fixes
+
+- remove duplicate trigger-downstream from publish-docker-images ([1f70c8041](https://github.com/powerhouse-inc/powerhouse/commit/1f70c8041))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 6.0.0-dev.31 (2026-02-04)
 
 ### 🚀 Features
