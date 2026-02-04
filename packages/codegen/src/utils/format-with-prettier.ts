@@ -11,7 +11,6 @@ export function formatSourceFileWithPrettier(sourceFile: SourceFile) {
   })
     .then((formattedText) => {
       sourceFile.replaceWithText(formattedText);
-      sourceFile.saveSync();
     })
     .catch((error) => {
       console.error("Error formatting source file:", error);

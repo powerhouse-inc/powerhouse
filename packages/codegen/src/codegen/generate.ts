@@ -414,7 +414,7 @@ export async function generateProcessor(
   useTsMorph: boolean,
 ) {
   if (useTsMorph) {
-    return tsMorphGenerateProcessor({
+    return await tsMorphGenerateProcessor({
       name,
       processorType: type,
       documentTypes,
