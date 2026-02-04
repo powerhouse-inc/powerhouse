@@ -17,7 +17,11 @@ import type {
 } from "document-model";
 import { v4 as uuidv4 } from "uuid";
 import type { IEventBus } from "../events/interfaces.js";
-import { ReactorEventTypes, type JobPendingEvent } from "../events/types.js";
+import {
+  ReactorEventTypes,
+  type JobFailedEvent,
+  type JobPendingEvent,
+} from "../events/types.js";
 import type { IJobExecutorManager } from "../executor/interfaces.js";
 import type { IJobTracker } from "../job-tracker/interfaces.js";
 import type { IQueue } from "../queue/interfaces.js";
@@ -110,6 +114,18 @@ export class Reactor implements IReactor {
     this.shutdownStatus = status;
     this.setShutdown = setShutdown;
     this.setCompleted = setCompleted;
+
+    this.eventBus.subscribe(
+      ReactorEventTypes.JOB_FAILED,
+      (_type, event: JobFailedEvent) => {
+        this.logger.error(
+          "Job @JobId failed with @Message: @Job",
+          event.jobId,
+          event.error.message,
+          event.job,
+        );
+      },
+    );
 
     this.readModelCoordinator.start();
   }

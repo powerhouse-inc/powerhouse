@@ -19,16 +19,16 @@ program
   .name("ph-load-test")
   .description("Load testing CLI for Powerhouse Switchboard Reactor")
   .requiredOption("--url <url>", "Switchboard GraphQL endpoint URL")
-  .option("--duration <seconds>", "Test duration in seconds", "60")
+  .option("--duration <ms>", "Test duration in milliseconds", "60000")
   .option(
-    "--document-interval <seconds>",
-    "Interval for creating new documents",
-    "10",
+    "--document-interval <ms>",
+    "Interval for creating new documents in milliseconds",
+    "10000",
   )
   .option(
-    "--mutation-interval <seconds>",
-    "Interval for sending mutations per document",
-    "5",
+    "--mutation-interval <ms>",
+    "Interval for sending mutations per document in milliseconds",
+    "5000",
   )
   .option(
     "--single-document",

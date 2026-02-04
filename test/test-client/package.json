@@ -12,10 +12,10 @@
   "types": "./dist/src/index.d.ts",
   "scripts": {
     "dev": "tsx src/cli.ts",
-    "scenario-1": "tsx src/cli.ts --url http://localhost:4001/graphql --duration 60 --document-interval 10 --mutation-interval 5",
-    "scenario-2": "tsx src/cli.ts --url http://localhost:4001/graphql --duration 120 --document-interval 5 --mutation-interval 2",
-    "scenario-stress": "tsx src/cli.ts --url http://localhost:4001/graphql --duration 300 --document-interval 3 --mutation-interval 1",
-    "scenario-single": "tsx src/cli.ts --url http://localhost:4001/graphql --duration 60 --single-document --mutation-interval 2",
+    "scenario-1": "tsx src/cli.ts --url http://localhost:4001/graphql --duration 60000 --document-interval 10000 --mutation-interval 5000",
+    "scenario-2": "tsx src/cli.ts --url http://localhost:4001/graphql --duration 120000 --document-interval 5000 --mutation-interval 2000",
+    "scenario-stress": "tsx src/cli.ts --url http://localhost:4001/graphql --duration 300000 --document-interval 3000 --mutation-interval 500",
+    "scenario-single": "tsx src/cli.ts --url http://localhost:4001/graphql --duration 60000 --single-document --mutation-interval 2000",
     "test": "vitest --run"
   },
   "dependencies": {

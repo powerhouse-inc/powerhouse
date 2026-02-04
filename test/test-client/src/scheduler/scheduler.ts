@@ -78,7 +78,7 @@ export class TestScheduler {
 
     this.reporter.printInfo(`Found ${this.drives.length} drive(s)`);
     this.reporter.printInfo(
-      `Starting load test for ${this.config.duration}s...`,
+      `Starting load test for ${this.config.duration / 1000}s...`,
     );
     console.log();
 
@@ -93,21 +93,21 @@ export class TestScheduler {
     if (!this.config.singleDocument) {
       this.documentTimer = setInterval(
         () => this.createDocument(),
-        this.config.documentInterval * 1000,
+        this.config.documentInterval,
       );
     }
 
     // Start mutation timer
     this.mutationTimer = setInterval(
       () => this.sendMutations(),
-      this.config.mutationInterval * 1000,
+      this.config.mutationInterval,
     );
 
     // Start progress update timer
     this.progressTimer = setInterval(() => this.updateProgress(), 500);
 
     // Set up stop timer
-    setTimeout(() => this.stop(), this.config.duration * 1000);
+    setTimeout(() => this.stop(), this.config.duration);
   }
 
   async stop(): Promise<void> {

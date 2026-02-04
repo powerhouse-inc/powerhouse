@@ -64,6 +64,12 @@ export class GraphQLClient {
       parentIdentifier,
     });
 
+    console.log(`${data.createEmptyDocument.id} -> CREATE_DOCUMENT`);
+    console.log(`${data.createEmptyDocument.id} -> UPGRADE_DOCUMENT`);
+    if (parentIdentifier) {
+      console.log(`${data.createEmptyDocument.id} -> ADD_RELATIONSHIP`);
+    }
+
     return data.createEmptyDocument;
   }
 
@@ -71,6 +77,10 @@ export class GraphQLClient {
     documentIdentifier: string,
     actions: Action[],
   ): Promise<PhDocument> {
+    for (const action of actions) {
+      console.log(`${documentIdentifier} -> ${action.type}`);
+    }
+
     const data = await this.request<{
       mutateDocument: PhDocument;
     }>(MUTATE_DOCUMENT_MUTATION, {

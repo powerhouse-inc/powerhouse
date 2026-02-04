@@ -391,6 +391,9 @@ export class SyncManager implements ISyncManager {
       return;
     }
 
+    // Extract sourceRemote early so we can use it for backfill filtering
+    const sourceRemote = event.jobMeta?.sourceRemote as string | undefined;
+
     // FIRST: Queue historical operations for any ADD_RELATIONSHIP on document-drives
     // This ensures CREATE_DOCUMENT/UPGRADE_DOCUMENT are queued BEFORE ADD_RELATIONSHIP
     for (const op of event.operations) {
@@ -423,11 +426,11 @@ export class SyncManager implements ISyncManager {
         input.targetId,
         collectionId,
         op.context.branch,
+        sourceRemote,
       );
     }
 
     // THEN: Build syncOpsWithRemote and queue current job's operations
-    const sourceRemote = event.jobMeta?.sourceRemote as string | undefined;
     const syncOpsWithRemote: Array<{ syncOp: SyncOperation; remote: Remote }> =
       [];
     const remoteNames: string[] = [];
@@ -666,6 +669,7 @@ export class SyncManager implements ISyncManager {
     documentId: string,
     collectionId: string,
     branch: string,
+    sourceRemote?: string,
   ): Promise<void> {
     let historicalOps;
     try {
@@ -699,6 +703,11 @@ export class SyncManager implements ISyncManager {
     );
 
     for (const remote of this.remotes.values()) {
+      // Skip the source remote to avoid echoing operations back
+      if (sourceRemote && remote.name === sourceRemote) {
+        continue;
+      }
+
       if (remote.filter.documentId.length > 0) {
         continue;
       }
