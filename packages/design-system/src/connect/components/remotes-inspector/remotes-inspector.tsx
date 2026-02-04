@@ -133,7 +133,7 @@ export function RemotesInspector({ getRemotes }: RemotesInspectorProps) {
   const sortedRemotes = sortRemotes(remotes, sort);
 
   return (
-    <div className="flex h-full flex-col gap-2 p-4">
+    <div className="flex h-full flex-col gap-2">
       <div className="flex shrink-0 items-center justify-between">
         <h2 className="text-lg font-semibold text-gray-900">
           Remotes Inspector

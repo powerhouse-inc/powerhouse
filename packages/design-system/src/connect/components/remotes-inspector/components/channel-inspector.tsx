@@ -142,7 +142,7 @@ export function ChannelInspector({
   );
 
   return (
-    <div className="flex h-full flex-col gap-4 p-4">
+    <div className="flex h-full flex-col gap-3">
       <div className="flex shrink-0 items-center justify-between">
         <div className="flex items-center gap-2">
           <button
@@ -304,7 +304,7 @@ export function ChannelInspector({
         </div>
       </div>
 
-      <div className="flex flex-1 flex-col gap-6 overflow-auto">
+      <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-auto">
         <MailboxTable
           collapsed={collapsed.inbox}
           mailboxType="inbox"
