@@ -13,7 +13,6 @@ import type {
 } from "@powerhousedao/config";
 import { paramCase } from "change-case";
 import type { DocumentModelGlobalState } from "document-model";
-import fs from "node:fs";
 import path, { join } from "node:path";
 import { readPackage, type NormalizedPackageJson } from "read-pkg";
 import semver from "semver";
@@ -30,6 +29,9 @@ import {
 } from "./hygen.js";
 import type { CodegenOptions } from "./types.js";
 import { getDocumentTypesMap, loadDocumentModel } from "./utils.js";
+import { readdir } from "node:fs/promises";
+import { fileExists } from "@powerhousedao/common/clis";
+import fs from "node:fs";
 
 export async function generateAll(args: {
   dir: string;
@@ -49,7 +51,7 @@ export async function generateAll(args: {
     verbose = true,
     force = true,
   } = args;
-  const files = fs.readdirSync(dir, { withFileTypes: true });
+  const files = await readdir(dir, { withFileTypes: true });
   const documentModelStates: DocumentModelGlobalState[] = [];
 
   for (const directory of files.filter((f) => f.isDirectory())) {
@@ -58,7 +60,8 @@ export async function generateAll(args: {
       directory.name,
       `${directory.name}.json`,
     );
-    if (!fs.existsSync(documentModelPath)) {
+    const pathExists = await fileExists(documentModelPath);
+    if (!pathExists) {
       continue;
     }
 
@@ -310,7 +313,7 @@ export async function generateEditor(args: GenerateEditorArgs) {
   const editorId = editorIdArg || paramCase(editorName);
   const editorDir = editorDirName || paramCase(editorName);
 
-  tsMorphGenerateDocumentEditor({
+  await tsMorphGenerateDocumentEditor({
     packageName,
     projectDir,
     editorDir,
@@ -369,7 +372,7 @@ export async function generateDriveEditor(options: {
     });
   }
 
-  tsMorphGenerateDriveEditor({
+  await tsMorphGenerateDriveEditor({
     projectDir,
     editorDir: driveEditorDirName || paramCase(driveEditorName),
     editorName: driveEditorName,
@@ -387,7 +390,9 @@ export async function generateSubgraphFromDocumentModel(
   options: CodegenOptions = {},
 ) {
   await hygenGenerateSubgraph(name, documentModel, { ...config, ...options });
-  makeSubgraphsIndexFile({ projectDir: path.dirname(config.subgraphsDir) });
+  await makeSubgraphsIndexFile({
+    projectDir: path.dirname(config.subgraphsDir),
+  });
 }
 
 export async function generateSubgraph(
@@ -403,7 +408,9 @@ export async function generateSubgraph(
     ...config,
     ...options,
   });
-  makeSubgraphsIndexFile({ projectDir: path.dirname(config.subgraphsDir) });
+  await makeSubgraphsIndexFile({
+    projectDir: path.dirname(config.subgraphsDir),
+  });
 }
 
 export async function generateProcessor(

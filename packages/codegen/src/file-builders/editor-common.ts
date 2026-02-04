@@ -43,5 +43,4 @@ export function makeEditorModuleFile({
     documentTypes,
   });
   sourceFile.replaceWithText(template);
-  project.saveSync();
 }

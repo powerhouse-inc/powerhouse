@@ -1,9 +1,9 @@
+import { upgradeTransitionTemplate } from "@powerhousedao/codegen/templates";
 import {
   formatSourceFileWithPrettier,
   getObjectLiteral,
   getOrCreateSourceFile,
 } from "@powerhousedao/codegen/utils";
-import { upgradeTransitionTemplate } from "@powerhousedao/codegen/templates";
 import { ts } from "@tmpl/core";
 import path from "path";
 import { VariableDeclarationKind, type Project } from "ts-morph";
@@ -15,7 +15,7 @@ type MakeUpgradeFileArgs = {
   documentModelPackageImportPath: string;
   phStateName: string;
 };
-export function makeUpgradeFile(args: MakeUpgradeFileArgs) {
+export async function makeUpgradeFile(args: MakeUpgradeFileArgs) {
   const {
     project,
     version,
@@ -42,10 +42,10 @@ export function makeUpgradeFile(args: MakeUpgradeFileArgs) {
   });
 
   sourceFile.replaceWithText(template);
-  formatSourceFileWithPrettier(sourceFile);
+  await formatSourceFileWithPrettier(sourceFile);
 }
 
-export function createOrUpdateUpgradeManifestFile(args: {
+export async function createOrUpdateUpgradeManifestFile(args: {
   project: Project;
   specVersions: number[];
   latestVersion: number;
@@ -81,7 +81,7 @@ export function createOrUpdateUpgradeManifestFile(args: {
   const upgradesProperty = objectLiteral.getPropertyOrThrow("upgrades");
   const upgrades = buildUpgrades(specVersions);
   upgradesProperty.replaceWithText(upgrades);
-  formatSourceFileWithPrettier(sourceFile);
+  await formatSourceFileWithPrettier(sourceFile);
 }
 
 function buildUpgrades(specVersions: number[]) {
@@ -120,7 +120,7 @@ type MakeVersionConstantsFileArgs = {
   specVersions: number[];
   latestVersion: number;
 };
-export function createOrUpdateVersionConstantsFile({
+export async function createOrUpdateVersionConstantsFile({
   specVersions,
   latestVersion,
   project,
@@ -158,7 +158,7 @@ export function createOrUpdateVersionConstantsFile({
     ],
   });
 
-  formatSourceFileWithPrettier(sourceFile);
+  await formatSourceFileWithPrettier(sourceFile);
 }
 
 type MakeUpgradesIndexFileArgs = {
@@ -166,7 +166,7 @@ type MakeUpgradesIndexFileArgs = {
   upgradesDirPath: string;
   specVersions: number[];
 };
-export function makeUpgradesIndexFile({
+export async function makeUpgradesIndexFile({
   project,
   upgradesDirPath,
   specVersions,
@@ -188,7 +188,7 @@ export function makeUpgradesIndexFile({
     },
     ...upgradeReducerExports,
   ]);
-  formatSourceFileWithPrettier(sourceFile);
+  await formatSourceFileWithPrettier(sourceFile);
 }
 
 function makeUpgradeReducerExports(specVersions: number[]) {

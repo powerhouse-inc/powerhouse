@@ -1,4 +1,3 @@
-import { readFileSync, rmSync } from "node:fs";
 import path from "node:path";
 import {
   afterAll,
@@ -27,6 +26,7 @@ import {
   resetDirForTest,
 } from "./utils.js";
 import { compile } from "./fixtures/typecheck.js";
+import { readFile, rm } from "node:fs/promises";
 
 describe("document model", () => {
   const testDir = import.meta.dirname;
@@ -53,12 +53,12 @@ describe("document model", () => {
     await setupTest(context);
   });
 
-  beforeAll(() => {
-    resetDirForTest(outDirName);
+  beforeAll(async () => {
+    await resetDirForTest(outDirName);
   });
 
-  afterAll(() => {
-    purgeDirAfterTest(outDirName);
+  afterAll(async () => {
+    await purgeDirAfterTest(outDirName);
   });
 
   const generate = async () => {
@@ -135,12 +135,12 @@ describe("document model", () => {
         "document-models.ts",
       );
 
-      rmSync(documentModelsFilePath, { force: true });
+      await rm(documentModelsFilePath, { force: true });
 
       await generate();
       await compile(testOutDirPath);
 
-      const documentModelsContent = readFileSync(
+      const documentModelsContent = await readFile(
         documentModelsFilePath,
         "utf-8",
       );
@@ -175,7 +175,7 @@ describe("document model", () => {
         documentModelsDirName,
         "document-models.ts",
       );
-      const documentModelsContent = readFileSync(
+      const documentModelsContent = await readFile(
         documentModelsFilePath,
         "utf-8",
       );
@@ -216,7 +216,7 @@ describe("document model", () => {
 
       // TODO: this is a hack to get the test to pass, we should be able to update the reducer file once is generated
       // remove .out/document-model/test-doc/src/reducers/base-operations.ts file
-      rmSync(
+      await rm(
         path.join(
           documentModelsDirName,
           "test-doc",
@@ -244,7 +244,7 @@ describe("document model", () => {
         "reducers",
         "base-operations.ts",
       );
-      const baseOperationsContent = readFileSync(baseOperationsPath, "utf-8");
+      const baseOperationsContent = await readFile(baseOperationsPath, "utf-8");
       expect(baseOperationsContent).toContain("setTestIdOperation");
       expect(baseOperationsContent).toContain("setTestNameOperation");
       expect(baseOperationsContent).toContain("setTestDescriptionOperation");
@@ -268,7 +268,7 @@ describe("document model", () => {
         "general",
         "error.ts",
       );
-      const generalErrorContent = readFileSync(generalErrorPath, "utf-8");
+      const generalErrorContent = await readFile(generalErrorPath, "utf-8");
 
       // Check that InvalidStatusTransition error is generated
       expect(generalErrorContent).toContain("export type ErrorCode =");
@@ -288,7 +288,7 @@ describe("document model", () => {
         "line-items",
         "error.ts",
       );
-      const lineItemsErrorContent = readFileSync(lineItemsErrorPath, "utf-8");
+      const lineItemsErrorContent = await readFile(lineItemsErrorPath, "utf-8");
 
       // Check that both DuplicateLineItem and InvalidStatusTransition errors are generated (but deduplicated)
       expect(lineItemsErrorContent).toContain("export type ErrorCode =");
@@ -341,7 +341,7 @@ describe("document model", () => {
         "test-operations",
         "error.ts",
       );
-      const testOperationsErrorContent = readFileSync(
+      const testOperationsErrorContent = await readFile(
         testOperationsErrorPath,
         "utf-8",
       );

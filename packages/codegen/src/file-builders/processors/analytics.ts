@@ -10,16 +10,18 @@ import path from "path";
 import type { Project } from "ts-morph";
 import type { GenerateProcessorArgs } from "./types.js";
 
-export function tsMorphGenerateAnalyticsProcessor(args: GenerateProcessorArgs) {
+export async function tsMorphGenerateAnalyticsProcessor(
+  args: GenerateProcessorArgs,
+) {
   const { project, documentTypes, pascalCaseName, dirPath } = args;
 
-  makeIndexFile({
+  await makeIndexFile({
     project,
     pascalCaseName,
     dirPath,
   });
 
-  makeFactoryFile({
+  await makeFactoryFile({
     project,
     pascalCaseName,
     dirPath,
@@ -27,7 +29,7 @@ export function tsMorphGenerateAnalyticsProcessor(args: GenerateProcessorArgs) {
   });
 }
 
-function makeIndexFile(v: {
+async function makeIndexFile(v: {
   project: Project;
   pascalCaseName: string;
   dirPath: string;
@@ -39,10 +41,10 @@ function makeIndexFile(v: {
   );
   if (alreadyExists) return;
   sourceFile.replaceWithText(template);
-  formatSourceFileWithPrettier(sourceFile);
+  await formatSourceFileWithPrettier(sourceFile);
 }
 
-function makeFactoryFile(v: {
+async function makeFactoryFile(v: {
   project: Project;
   pascalCaseName: string;
   dirPath: string;
@@ -55,5 +57,5 @@ function makeFactoryFile(v: {
   );
   if (alreadyExists) return;
   sourceFile.replaceWithText(template);
-  formatSourceFileWithPrettier(sourceFile);
+  await formatSourceFileWithPrettier(sourceFile);
 }

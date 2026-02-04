@@ -11,14 +11,14 @@ import type {
   ModuleSpecification,
 } from "document-model";
 import type { ValidationSchemaPluginConfig } from "graphql-codegen-typescript-validation-schema";
-import { readdirSync, readFileSync, writeFileSync } from "node:fs";
+import fs from "node:fs/promises";
 import path from "node:path";
 import { format } from "prettier";
 
-const getDirectories = (source: string) =>
-  readdirSync(source, { withFileTypes: true })
-    .filter((dirent) => dirent.isDirectory())
-    .map((dirent) => dirent);
+const getDirectories = async (source: string) => {
+  const dir = await fs.readdir(source, { withFileTypes: true });
+  return dir.filter((dirent) => dirent.isDirectory()).map((dirent) => dirent);
+};
 
 export const scalars = {
   Unknown: "unknown",
@@ -174,34 +174,36 @@ export async function generateDocumentModelZodSchemas(args: {
     watch,
   });
 
-  writeFileSync(path.join(documentModelDirPath, "schema.graphql"), schema);
+  await fs.writeFile(path.join(documentModelDirPath, "schema.graphql"), schema);
 }
 
 export const generateSchemas = async (
   inDir: string,
   { watch = false, skipFormat = false, writeFile = true, outDir = inDir } = {},
 ) => {
-  const dirs = getDirectories(inDir);
-  const inputs = dirs.map((dir) => {
-    const documentModelJsonFile = readFileSync(
-      path.join(dir.parentPath, dir.name, `${dir.name}.json`),
-      "utf-8",
-    );
-    const parsedJson = JSON.parse(
-      documentModelJsonFile,
-    ) as DocumentModelGlobalState;
+  const dirs = await getDirectories(inDir);
+  const inputs = await Promise.all(
+    dirs.map(async (dir) => {
+      const documentModelJsonFile = await fs.readFile(
+        path.join(dir.parentPath, dir.name, `${dir.name}.json`),
+        "utf-8",
+      );
+      const parsedJson = JSON.parse(
+        documentModelJsonFile,
+      ) as DocumentModelGlobalState;
 
-    const latestSpecification =
-      parsedJson.specifications[parsedJson.specifications.length - 1];
+      const latestSpecification =
+        parsedJson.specifications[parsedJson.specifications.length - 1];
 
-    const schema = buildGraphqlDocumentStringForSpecification(
-      latestSpecification,
-    )
-      .filter(Boolean)
-      .join("\n\n");
+      const schema = buildGraphqlDocumentStringForSpecification(
+        latestSpecification,
+      )
+        .filter(Boolean)
+        .join("\n\n");
 
-    return { dirName: path.join(outDir, dir.name), schema };
-  });
+      return { dirName: path.join(outDir, dir.name), schema };
+    }),
+  );
 
   await Promise.all(
     inputs.map(async ({ schema, dirName }) => {

@@ -3,18 +3,12 @@ import { format } from "prettier";
 import type { SourceFile } from "ts-morph";
 
 /** Formats the text of a ts-morph source file with prettier before writing the text to memory */
-export function formatSourceFileWithPrettier(sourceFile: SourceFile) {
+export async function formatSourceFileWithPrettier(sourceFile: SourceFile) {
   const sourceText = sourceFile.getFullText();
-
-  format(sourceText, {
+  const formattedText = await format(sourceText, {
     parser: "typescript",
-  })
-    .then((formattedText) => {
-      sourceFile.replaceWithText(formattedText);
-    })
-    .catch((error) => {
-      console.error("Error formatting source file:", error);
-    });
+  });
+  sourceFile.replaceWithText(formattedText);
 }
 
 export async function runPrettier() {

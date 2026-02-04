@@ -2,7 +2,7 @@ import path from "path";
 import { IndentationText, Project } from "ts-morph";
 
 type MakeSubgraphsIndexFileArgs = { projectDir: string };
-export function makeSubgraphsIndexFile({
+export async function makeSubgraphsIndexFile({
   projectDir,
 }: MakeSubgraphsIndexFileArgs) {
   // use the local tsconfig.json file for a given project
@@ -65,5 +65,5 @@ export function makeSubgraphsIndexFile({
     });
   }
 
-  project.saveSync();
+  await project.save();
 }

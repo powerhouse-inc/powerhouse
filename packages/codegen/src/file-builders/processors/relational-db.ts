@@ -12,19 +12,19 @@ import path from "path";
 import type { Project } from "ts-morph";
 import type { GenerateProcessorArgs } from "./types.js";
 
-export function tsMorphGenerateRelationalDbProcessor(
+export async function tsMorphGenerateRelationalDbProcessor(
   args: GenerateProcessorArgs,
 ) {
   const { project, documentTypes, camelCaseName, pascalCaseName, dirPath } =
     args;
 
-  makeIndexFile({
+  await makeIndexFile({
     project,
     pascalCaseName,
     dirPath,
   });
 
-  makeFactoryFile({
+  await makeFactoryFile({
     project,
     pascalCaseName,
     camelCaseName,
@@ -32,12 +32,12 @@ export function tsMorphGenerateRelationalDbProcessor(
     documentTypes,
   });
 
-  makeMigrationsFile({ project, dirPath });
+  await makeMigrationsFile({ project, dirPath });
 
-  makeSchemaFile({ project, dirPath });
+  await makeSchemaFile({ project, dirPath });
 }
 
-function makeIndexFile(v: {
+async function makeIndexFile(v: {
   project: Project;
   pascalCaseName: string;
   dirPath: string;
@@ -49,10 +49,10 @@ function makeIndexFile(v: {
   );
   if (alreadyExists) return;
   sourceFile.replaceWithText(template);
-  formatSourceFileWithPrettier(sourceFile);
+  await formatSourceFileWithPrettier(sourceFile);
 }
 
-function makeFactoryFile(v: {
+async function makeFactoryFile(v: {
   project: Project;
   pascalCaseName: string;
   camelCaseName: string;
@@ -66,10 +66,10 @@ function makeFactoryFile(v: {
   );
   if (alreadyExists) return;
   sourceFile.replaceWithText(template);
-  formatSourceFileWithPrettier(sourceFile);
+  await formatSourceFileWithPrettier(sourceFile);
 }
 
-function makeSchemaFile(v: { project: Project; dirPath: string }) {
+async function makeSchemaFile(v: { project: Project; dirPath: string }) {
   const template = relationalDbSchemaTemplate();
   const { alreadyExists, sourceFile } = getOrCreateSourceFile(
     v.project,
@@ -77,10 +77,10 @@ function makeSchemaFile(v: { project: Project; dirPath: string }) {
   );
   if (alreadyExists) return;
   sourceFile.replaceWithText(template);
-  formatSourceFileWithPrettier(sourceFile);
+  await formatSourceFileWithPrettier(sourceFile);
 }
 
-function makeMigrationsFile(v: { project: Project; dirPath: string }) {
+async function makeMigrationsFile(v: { project: Project; dirPath: string }) {
   const template = relationalDbMigrationsTemplate();
   const { alreadyExists, sourceFile } = getOrCreateSourceFile(
     v.project,
@@ -88,5 +88,5 @@ function makeMigrationsFile(v: { project: Project; dirPath: string }) {
   );
   if (alreadyExists) return;
   sourceFile.replaceWithText(template);
-  formatSourceFileWithPrettier(sourceFile);
+  await formatSourceFileWithPrettier(sourceFile);
 }

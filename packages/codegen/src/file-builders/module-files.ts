@@ -146,8 +146,6 @@ export function makeModulesFile({
       modules,
     });
   }
-
-  project.saveSync();
 }
 
 /** Generates the `document-models.ts` file which exports the document models defined in each document model dir's `module.ts` file */
@@ -344,6 +342,4 @@ export function makeUpgradeManifestsExport({
     manifests.map((m) => m.aliasedName),
     { useNewLines: true },
   );
-
-  project.saveSync();
 }

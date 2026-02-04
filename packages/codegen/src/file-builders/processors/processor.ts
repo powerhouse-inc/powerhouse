@@ -28,11 +28,11 @@ export async function tsMorphGenerateProcessor(args: {
   const dirPath = path.join(processorsDirPath, paramCaseName);
   const sourceFilesPath = path.join(processorsDirPath, "**/*");
   const project = buildTsMorphProject(rootDir);
-  ensureDirectoriesExist(project, processorsDirPath, dirPath);
+  await ensureDirectoriesExist(project, processorsDirPath, dirPath);
   project.addSourceFilesAtPaths(sourceFilesPath);
 
   if (processorType === "analytics") {
-    tsMorphGenerateAnalyticsProcessor({
+    await tsMorphGenerateAnalyticsProcessor({
       name,
       documentTypes,
       rootDir,
@@ -44,7 +44,7 @@ export async function tsMorphGenerateProcessor(args: {
       project,
     });
   } else {
-    tsMorphGenerateRelationalDbProcessor({
+    await tsMorphGenerateRelationalDbProcessor({
       name,
       documentTypes,
       rootDir,
@@ -57,12 +57,15 @@ export async function tsMorphGenerateProcessor(args: {
     });
   }
 
-  updateIndexFile({ processorsDirPath, project });
-  updateFactoryFile({ processorsDirPath, project });
+  await updateIndexFile({ processorsDirPath, project });
+  await updateFactoryFile({ processorsDirPath, project });
   await project.save();
 }
 
-function updateIndexFile(v: { project: Project; processorsDirPath: string }) {
+async function updateIndexFile(v: {
+  project: Project;
+  processorsDirPath: string;
+}) {
   const { project, processorsDirPath } = v;
   const template = processorsIndexTemplate();
   const indexFilePath = path.join(processorsDirPath, "index.ts");
@@ -149,11 +152,13 @@ function updateIndexFile(v: { project: Project; processorsDirPath: string }) {
       sourceFile.addExportDeclaration(d);
     }
   }
-  formatSourceFileWithPrettier(sourceFile);
-  sourceFile.saveSync();
+  await formatSourceFileWithPrettier(sourceFile);
 }
 
-function updateFactoryFile(v: { project: Project; processorsDirPath: string }) {
+async function updateFactoryFile(v: {
+  project: Project;
+  processorsDirPath: string;
+}) {
   const { project, processorsDirPath } = v;
   const template = processorsFactoryTemplate();
   const filePath = path.join(processorsDirPath, "factory.ts");
@@ -205,6 +210,5 @@ function updateFactoryFile(v: { project: Project; processorsDirPath: string }) {
   sourceFile.fixMissingImports(undefined, {
     importModuleSpecifierEnding: "js",
   });
-  formatSourceFileWithPrettier(sourceFile);
-  sourceFile.saveSync();
+  await formatSourceFileWithPrettier(sourceFile);
 }

@@ -1,26 +1,30 @@
 import type { DocumentModelFileMakerArgs } from "@powerhousedao/codegen";
 import {
-  formatSourceFileWithPrettier,
-  getOrCreateSourceFile,
-} from "@powerhousedao/codegen/utils";
-import {
   documentModelHooksFileTemplate,
   documentModelIndexTemplate,
   documentModelModuleFileTemplate,
   documentModelRootActionsFileTemplate,
   documentModelUtilsTemplate,
 } from "@powerhousedao/codegen/templates";
+import {
+  formatSourceFileWithPrettier,
+  getOrCreateSourceFile,
+} from "@powerhousedao/codegen/utils";
 import path from "path";
 
-export function makeRootDirFiles(fileMakerArgs: DocumentModelFileMakerArgs) {
-  makeDocumentModelVersionIndexFile(fileMakerArgs);
-  makeDocumentModelRootActionsFile(fileMakerArgs);
-  makeDocumentModelModuleFile(fileMakerArgs);
-  makeDocumentModelUtilsFile(fileMakerArgs);
-  makeDocumentModelHooksFile(fileMakerArgs);
+export async function makeRootDirFiles(
+  fileMakerArgs: DocumentModelFileMakerArgs,
+) {
+  await makeDocumentModelVersionIndexFile(fileMakerArgs);
+  await makeDocumentModelRootActionsFile(fileMakerArgs);
+  await makeDocumentModelModuleFile(fileMakerArgs);
+  await makeDocumentModelUtilsFile(fileMakerArgs);
+  await makeDocumentModelHooksFile(fileMakerArgs);
 }
 
-function makeDocumentModelVersionIndexFile(args: DocumentModelFileMakerArgs) {
+async function makeDocumentModelVersionIndexFile(
+  args: DocumentModelFileMakerArgs,
+) {
   const template = documentModelIndexTemplate;
   const { project, documentModelVersionDirPath } = args;
 
@@ -29,10 +33,10 @@ function makeDocumentModelVersionIndexFile(args: DocumentModelFileMakerArgs) {
   const { sourceFile } = getOrCreateSourceFile(project, filePath);
 
   sourceFile.replaceWithText(template);
-  formatSourceFileWithPrettier(sourceFile);
+  await formatSourceFileWithPrettier(sourceFile);
 }
 
-function makeDocumentModelUtilsFile(args: DocumentModelFileMakerArgs) {
+async function makeDocumentModelUtilsFile(args: DocumentModelFileMakerArgs) {
   const template = documentModelUtilsTemplate(args);
   const { project, documentModelVersionDirPath } = args;
 
@@ -40,10 +44,12 @@ function makeDocumentModelUtilsFile(args: DocumentModelFileMakerArgs) {
 
   const { sourceFile } = getOrCreateSourceFile(project, filePath);
   sourceFile.replaceWithText(template);
-  formatSourceFileWithPrettier(sourceFile);
+  await formatSourceFileWithPrettier(sourceFile);
 }
 
-function makeDocumentModelRootActionsFile(args: DocumentModelFileMakerArgs) {
+async function makeDocumentModelRootActionsFile(
+  args: DocumentModelFileMakerArgs,
+) {
   const template = documentModelRootActionsFileTemplate(args);
   const { project, documentModelVersionDirPath } = args;
 
@@ -52,10 +58,10 @@ function makeDocumentModelRootActionsFile(args: DocumentModelFileMakerArgs) {
   const { sourceFile } = getOrCreateSourceFile(project, filePath);
 
   sourceFile.replaceWithText(template);
-  formatSourceFileWithPrettier(sourceFile);
+  await formatSourceFileWithPrettier(sourceFile);
 }
 
-function makeDocumentModelHooksFile(args: DocumentModelFileMakerArgs) {
+async function makeDocumentModelHooksFile(args: DocumentModelFileMakerArgs) {
   const template = documentModelHooksFileTemplate(args);
   const { project, documentModelVersionDirPath } = args;
 
@@ -64,10 +70,10 @@ function makeDocumentModelHooksFile(args: DocumentModelFileMakerArgs) {
   const { sourceFile } = getOrCreateSourceFile(project, filePath);
 
   sourceFile.replaceWithText(template);
-  formatSourceFileWithPrettier(sourceFile);
+  await formatSourceFileWithPrettier(sourceFile);
 }
 
-function makeDocumentModelModuleFile(args: DocumentModelFileMakerArgs) {
+async function makeDocumentModelModuleFile(args: DocumentModelFileMakerArgs) {
   const { project, documentModelVersionDirPath } = args;
   const template = documentModelModuleFileTemplate(args);
 
@@ -77,5 +83,5 @@ function makeDocumentModelModuleFile(args: DocumentModelFileMakerArgs) {
 
   sourceFile.replaceWithText(template);
 
-  formatSourceFileWithPrettier(sourceFile);
+  await formatSourceFileWithPrettier(sourceFile);
 }

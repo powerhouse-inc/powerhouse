@@ -40,11 +40,11 @@ describe("generate processor", () => {
     await copyAllFiles(testsDataDir, testOutDirPath);
     process.chdir(testOutDirPath);
   });
-  beforeAll(() => {
-    resetDirForTest(testOutputParentDir);
+  beforeAll(async () => {
+    await resetDirForTest(testOutputParentDir);
   });
-  afterAll(() => {
-    purgeDirAfterTest(testOutputParentDir);
+  afterAll(async () => {
+    await purgeDirAfterTest(testOutputParentDir);
   });
 
   it(

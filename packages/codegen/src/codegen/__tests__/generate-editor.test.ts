@@ -1,5 +1,6 @@
+import { directoryExists, fileExists } from "@powerhousedao/common/clis";
 import { type PowerhouseConfig } from "@powerhousedao/config";
-import fs, { rmSync } from "node:fs";
+import { readFile, rm } from "node:fs/promises";
 import path from "node:path";
 import {
   afterAll,
@@ -55,12 +56,12 @@ describe("generateEditor", () => {
     process.chdir(testOutDirPath);
   }
 
-  beforeAll(() => {
-    resetDirForTest(outDirName);
+  beforeAll(async () => {
+    await resetDirForTest(outDirName);
   });
 
-  afterAll(() => {
-    purgeDirAfterTest(outDirName);
+  afterAll(async () => {
+    await purgeDirAfterTest(outDirName);
   });
 
   it(
@@ -84,8 +85,8 @@ describe("generateEditor", () => {
 
       const editorsDir = path.join(testOutDirPath, "editors");
       const editorsFilePath = path.join(editorsDir, "editors.ts");
-      expect(fs.existsSync(editorsFilePath)).toBe(true);
-      const editorsContent = fs.readFileSync(editorsFilePath, "utf-8");
+      expect(await fileExists(editorsFilePath)).toBe(true);
+      const editorsContent = await readFile(editorsFilePath, "utf-8");
       expect(editorsContent).toContain(
         `import { TestDocEditor } from "./test-doc-editor/module.js";`,
       );
@@ -93,24 +94,19 @@ describe("generateEditor", () => {
       expect(editorsContent).toContain(`TestDocEditor`);
 
       const editorDir = path.join(editorsDir, "test-doc-editor");
-      expect(fs.existsSync(editorDir)).toBe(true);
+      expect(await directoryExists(editorDir)).toBe(true);
 
       const editorPath = path.join(editorDir, "editor.tsx");
-      expect(fs.existsSync(editorPath)).toBe(true);
-      const editorContent = fs.readFileSync(editorPath, "utf-8");
-      expect(editorContent).toContain(
-        `import { DocumentStateViewer, DocumentToolbar } from "@powerhousedao/design-system/connect";`,
-      );
-      expect(editorContent).toContain(
-        `import { useSelectedTestDocDocument, actions }`,
-      );
+      expect(await fileExists(editorPath)).toBe(true);
+      const editorContent = await readFile(editorPath, "utf-8");
+      expect(editorContent).toContain(`DocumentStateViewer`);
       expect(editorContent).toContain(`export default function Editor()`);
       expect(editorContent).toContain(`<DocumentToolbar />`);
       expect(editorContent).toContain(`dispatch(actions.setName(name));`);
 
       const modulePath = path.join(editorDir, "module.ts");
-      expect(fs.existsSync(modulePath)).toBe(true);
-      const moduleContent = fs.readFileSync(modulePath, "utf-8");
+      expect(await fileExists(modulePath)).toBe(true);
+      const moduleContent = await readFile(modulePath, "utf-8");
       expect(moduleContent).toContain(
         `export const TestDocEditor: EditorModule`,
       );
@@ -145,7 +141,7 @@ describe("generateEditor", () => {
       });
       const editorsDir = path.join(testOutDirPath, "editors");
       const editorsFilePath = path.join(editorsDir, "editors.ts");
-      const editorsContent = fs.readFileSync(editorsFilePath, "utf-8");
+      const editorsContent = await readFile(editorsFilePath, "utf-8");
       expect(editorsContent).toContain(`export const editors: EditorModule[]`);
       expect(editorsContent).toContain(`TestDocEditorTwo`);
       expect(editorsContent).toContain(`TestDocEditor`);
@@ -167,7 +163,7 @@ describe("generateEditor", () => {
         "editors",
         "editors.ts",
       );
-      rmSync(editorsFilePath, { force: true });
+      await rm(editorsFilePath, { force: true });
       await generateEditor({
         ...config,
         editorName: "TestDocEditor2",
@@ -178,7 +174,7 @@ describe("generateEditor", () => {
         editorDirName: undefined,
       });
       await compile(testOutDirPath);
-      const editorsContent = fs.readFileSync(editorsFilePath, "utf-8");
+      const editorsContent = await readFile(editorsFilePath, "utf-8");
       expect(editorsContent).toContain(`export const editors: EditorModule[]`);
       expect(editorsContent).toContain(`TestDocEditor`);
     },

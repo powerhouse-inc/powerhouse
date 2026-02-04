@@ -1,4 +1,3 @@
-import type { DocumentTypesMap } from "@powerhousedao/codegen";
 import { pascalCase } from "change-case";
 import type {
   DocumentModelDocument,
@@ -7,8 +6,10 @@ import type {
 import { documentModelReducer } from "document-model";
 import { baseLoadFromFile } from "document-model/node";
 import fs from "node:fs";
+import { readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { format } from "prettier";
+import type { DocumentTypesMap } from "./types.js";
 
 export async function loadDocumentModel(
   path: string,
@@ -21,7 +22,7 @@ export async function loadDocumentModel(
       const file = await baseLoadFromFile(path, documentModelReducer);
       documentModel = file.state.global;
     } else if (path.endsWith(".json")) {
-      const data = fs.readFileSync(path, "utf-8");
+      const data = await readFile(path, "utf-8");
       const parsedData = JSON.parse(data) as DocumentModelDocument;
       if ("state" in parsedData) {
         documentModel = parsedData.state.global;

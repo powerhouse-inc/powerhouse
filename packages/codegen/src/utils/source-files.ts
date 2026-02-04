@@ -21,7 +21,7 @@ export function getOrCreateSourceFile(project: Project, filePath: string) {
 /** Ensures that the directories at the given paths exist within the
  * ts-morph Project
  */
-export function ensureDirectoriesExist(
+export async function ensureDirectoriesExist(
   project: Project,
   ...pathsToEnsure: string[]
 ) {
@@ -29,9 +29,9 @@ export function ensureDirectoriesExist(
     const dir = project.getDirectory(dirPath);
     if (!dir) {
       project.createDirectory(dirPath);
-      project.saveSync();
     }
   }
+  await project.save();
 }
 
 export function getPreviousVersionSourceFile(args: {

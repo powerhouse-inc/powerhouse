@@ -1,10 +1,5 @@
 import type { CommonGenerateEditorArgs } from "@powerhousedao/codegen";
 import {
-  buildTsMorphProject,
-  formatSourceFileWithPrettier,
-  getOrCreateSourceFile,
-} from "@powerhousedao/codegen/utils";
-import {
   createDocumentFileTemplate,
   driveEditorConfigFileTemplate,
   driveEditorDriveContentsFileTemplate,
@@ -16,6 +11,12 @@ import {
   emptyStateFileTemplate,
   folderTreeFileTemplate,
 } from "@powerhousedao/codegen/templates";
+import {
+  buildTsMorphProject,
+  ensureDirectoriesExist,
+  formatSourceFileWithPrettier,
+  getOrCreateSourceFile,
+} from "@powerhousedao/codegen/utils";
 import path from "path";
 import { type Project } from "ts-morph";
 import { makeEditorModuleFile } from "./editor-common.js";
@@ -26,7 +27,7 @@ type GenerateDriveEditorArgs = CommonGenerateEditorArgs & {
   isDragAndDropEnabled: boolean;
 };
 /** Generates a drive editor with the configs for `allowedDocumentModelIds` and `isDragAndDropEnabled` */
-export function tsMorphGenerateDriveEditor({
+export async function tsMorphGenerateDriveEditor({
   projectDir,
   editorDir,
   editorName,
@@ -34,9 +35,10 @@ export function tsMorphGenerateDriveEditor({
   allowedDocumentModelIds,
   isDragAndDropEnabled,
 }: GenerateDriveEditorArgs) {
+  const documentModelsDirPath = path.join(projectDir, "document-models");
   const documentModelsSourceFilesPath = path.join(
-    projectDir,
-    "document-models/**/*",
+    documentModelsDirPath,
+    "/**/*",
   );
   const editorsDirPath = path.join(projectDir, "editors");
   const editorSourceFilesPath = path.join(editorsDirPath, "/**/*");
@@ -44,55 +46,62 @@ export function tsMorphGenerateDriveEditor({
   const editorComponentsDirPath = path.join(editorDirPath, "components");
 
   const project = buildTsMorphProject(projectDir);
+  await ensureDirectoriesExist(
+    project,
+    documentModelsDirPath,
+    editorsDirPath,
+    editorDirPath,
+    editorComponentsDirPath,
+  );
   project.addSourceFilesAtPaths(documentModelsSourceFilesPath);
   project.addSourceFilesAtPaths(editorSourceFilesPath);
 
-  makeNavigationBreadcrumbsFile({
+  await makeNavigationBreadcrumbsFile({
     project,
     editorComponentsDirPath,
   });
 
-  makeCreateDocumentFile({
+  await makeCreateDocumentFile({
     project,
     editorComponentsDirPath,
   });
 
-  makeEmptyStateFile({
+  await makeEmptyStateFile({
     project,
     editorComponentsDirPath,
   });
 
-  makeFoldersFile({
+  await makeFoldersFile({
     project,
     editorComponentsDirPath,
   });
 
-  makeFolderTreeFile({
+  await makeFolderTreeFile({
     project,
     editorComponentsDirPath,
   });
 
-  makeFilesFile({
+  await makeFilesFile({
     project,
     editorComponentsDirPath,
   });
 
-  makeDriveExplorerFile({
+  await makeDriveExplorerFile({
     project,
     editorComponentsDirPath,
   });
 
-  makeDriveContentsFile({
+  await makeDriveContentsFile({
     project,
     editorComponentsDirPath,
   });
 
-  makeDriveEditorComponent({
+  await makeDriveEditorComponent({
     project,
     editorDirPath,
   });
 
-  makeDriveEditorConfigFile({
+  await makeDriveEditorConfigFile({
     project,
     allowedDocumentModelIds,
     isDragAndDropEnabled,
@@ -109,14 +118,14 @@ export function tsMorphGenerateDriveEditor({
 
   makeEditorsModulesFile(project, projectDir);
 
-  project.saveSync();
+  await project.save();
 }
 
 type MakeDriveEditorComponentArgs = {
   project: Project;
   editorDirPath: string;
 };
-function makeDriveEditorComponent({
+async function makeDriveEditorComponent({
   project,
   editorDirPath,
 }: MakeDriveEditorComponentArgs) {
@@ -137,7 +146,7 @@ function makeDriveEditorComponent({
   }
   const template = driveEditorEditorFileTemplate();
   sourceFile.replaceWithText(template);
-  formatSourceFileWithPrettier(sourceFile);
+  await formatSourceFileWithPrettier(sourceFile);
 }
 
 type MakeDriveEditorConfigFileArgs = {
@@ -146,7 +155,7 @@ type MakeDriveEditorConfigFileArgs = {
   allowedDocumentModelIds: string[];
   isDragAndDropEnabled: boolean;
 };
-function makeDriveEditorConfigFile({
+async function makeDriveEditorConfigFile({
   project,
   editorDirPath,
   allowedDocumentModelIds,
@@ -162,14 +171,14 @@ function makeDriveEditorConfigFile({
     allowedDocumentTypesString,
   });
   sourceFile.replaceWithText(template);
-  formatSourceFileWithPrettier(sourceFile);
+  await formatSourceFileWithPrettier(sourceFile);
 }
 
 type MakeDriveContentsFileArgs = {
   project: Project;
   editorComponentsDirPath: string;
 };
-function makeDriveContentsFile({
+async function makeDriveContentsFile({
   project,
   editorComponentsDirPath,
 }: MakeDriveContentsFileArgs) {
@@ -183,7 +192,7 @@ function makeDriveContentsFile({
 
   const template = driveEditorDriveContentsFileTemplate();
   sourceFile.replaceWithText(template);
-  formatSourceFileWithPrettier(sourceFile);
+  await formatSourceFileWithPrettier(sourceFile);
 }
 
 type MakeNavigationBreadcrumbsFileArgs = {
@@ -191,7 +200,7 @@ type MakeNavigationBreadcrumbsFileArgs = {
   editorComponentsDirPath: string;
 };
 
-function makeNavigationBreadcrumbsFile({
+async function makeNavigationBreadcrumbsFile({
   project,
   editorComponentsDirPath,
 }: MakeNavigationBreadcrumbsFileArgs) {
@@ -207,14 +216,14 @@ function makeNavigationBreadcrumbsFile({
   if (alreadyExists) return;
 
   sourceFile.replaceWithText(driveExplorerNavigationBreadcrumbsFileTemplate());
-  formatSourceFileWithPrettier(sourceFile);
+  await formatSourceFileWithPrettier(sourceFile);
 }
 
 type MakeFoldersFileArgs = {
   project: Project;
   editorComponentsDirPath: string;
 };
-function makeFoldersFile({
+async function makeFoldersFile({
   project,
   editorComponentsDirPath,
 }: MakeFoldersFileArgs) {
@@ -228,14 +237,14 @@ function makeFoldersFile({
 
   const template = driveEditorFoldersFileTemplate();
   sourceFile.replaceWithText(template);
-  formatSourceFileWithPrettier(sourceFile);
+  await formatSourceFileWithPrettier(sourceFile);
 }
 
 type MakeFilesFileArgs = {
   project: Project;
   editorComponentsDirPath: string;
 };
-function makeFilesFile({
+async function makeFilesFile({
   project,
   editorComponentsDirPath,
 }: MakeFilesFileArgs) {
@@ -249,14 +258,14 @@ function makeFilesFile({
 
   const template = driveEditorFilesFileTemplate();
   sourceFile.replaceWithText(template);
-  formatSourceFileWithPrettier(sourceFile);
+  await formatSourceFileWithPrettier(sourceFile);
 }
 
 type MakeDriveExplorerFileArgs = {
   project: Project;
   editorComponentsDirPath: string;
 };
-function makeDriveExplorerFile({
+async function makeDriveExplorerFile({
   project,
   editorComponentsDirPath,
 }: MakeDriveExplorerFileArgs) {
@@ -269,14 +278,14 @@ function makeDriveExplorerFile({
   if (alreadyExists) return;
 
   sourceFile.replaceWithText(driveExplorerFileTemplate);
-  formatSourceFileWithPrettier(sourceFile);
+  await formatSourceFileWithPrettier(sourceFile);
 }
 
 type MakeFolderTreeFileArgs = {
   project: Project;
   editorComponentsDirPath: string;
 };
-function makeFolderTreeFile({
+async function makeFolderTreeFile({
   project,
   editorComponentsDirPath,
 }: MakeFolderTreeFileArgs) {
@@ -289,14 +298,14 @@ function makeFolderTreeFile({
   if (alreadyExists) return;
 
   sourceFile.replaceWithText(folderTreeFileTemplate);
-  formatSourceFileWithPrettier(sourceFile);
+  await formatSourceFileWithPrettier(sourceFile);
 }
 
 type MakeEmptyStateFileArgs = {
   project: Project;
   editorComponentsDirPath: string;
 };
-function makeEmptyStateFile({
+async function makeEmptyStateFile({
   project,
   editorComponentsDirPath,
 }: MakeEmptyStateFileArgs) {
@@ -309,14 +318,14 @@ function makeEmptyStateFile({
   if (alreadyExists) return;
 
   sourceFile.replaceWithText(emptyStateFileTemplate);
-  formatSourceFileWithPrettier(sourceFile);
+  await formatSourceFileWithPrettier(sourceFile);
 }
 
 type MakeCreateDocumentFileArgs = {
   project: Project;
   editorComponentsDirPath: string;
 };
-function makeCreateDocumentFile({
+async function makeCreateDocumentFile({
   project,
   editorComponentsDirPath,
 }: MakeCreateDocumentFileArgs) {
@@ -329,5 +338,5 @@ function makeCreateDocumentFile({
   if (alreadyExists) return;
 
   sourceFile.replaceWithText(createDocumentFileTemplate);
-  formatSourceFileWithPrettier(sourceFile);
+  await formatSourceFileWithPrettier(sourceFile);
 }

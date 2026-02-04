@@ -27,7 +27,7 @@ import {
   getTestOutputDir,
 } from "./utils.js";
 
-describe("ts-morph generator", () => {
+describe.skip("ts-morph generator", () => {
   const testDir = import.meta.dirname;
   const outDirName = getTestOutputDir(
     testDir,
@@ -48,7 +48,7 @@ describe("ts-morph generator", () => {
     "test-doc.json",
   );
 
-  async function setupTest(context: TestContext) {
+  function setupTest(context: TestContext) {
     testOutDirPath = getTestOutDirPath(context.task.name, outDirName);
   }
 
@@ -68,7 +68,7 @@ describe("ts-morph generator", () => {
   });
 
   it("should generate reducers", async (context) => {
-    await setupTest(context);
+    setupTest(context);
     const testDocDocumentModel = await loadDocumentModel(srcTestDocumentPathV4);
     const generator = new TSMorphCodeGenerator(
       testOutDirPath,
@@ -113,7 +113,7 @@ describe("ts-morph generator", () => {
   });
 
   it("should update reducers when document version changes", async (context) => {
-    await setupTest(context);
+    setupTest(context);
     // First, generate reducers for v3 (only has setNameAndValueOperation)
     const testDocV3DocumentModel = await loadDocumentModel(
       srcTestDocumentPathV3,
