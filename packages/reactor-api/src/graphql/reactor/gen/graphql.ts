@@ -173,7 +173,7 @@ export type Mutation = {
   readonly moveChildren: MoveChildrenResult;
   readonly mutateDocument: PhDocument;
   readonly mutateDocumentAsync: Scalars["String"]["output"];
-  readonly pushSyncEnvelope: Scalars["Boolean"]["output"];
+  readonly pushSyncEnvelopes: Scalars["Boolean"]["output"];
   readonly removeChildren: PhDocument;
   readonly renameDocument: PhDocument;
 };
@@ -227,8 +227,8 @@ export type MutationMutateDocumentAsyncArgs = {
   view?: InputMaybe<ViewFilterInput>;
 };
 
-export type MutationPushSyncEnvelopeArgs = {
-  envelope: SyncEnvelopeInput;
+export type MutationPushSyncEnvelopesArgs = {
+  envelopes: ReadonlyArray<SyncEnvelopeInput>;
 };
 
 export type MutationRemoveChildrenArgs = {
@@ -1392,11 +1392,11 @@ export type MutationResolvers<
       "actions" | "documentIdentifier"
     >
   >;
-  pushSyncEnvelope?: Resolver<
+  pushSyncEnvelopes?: Resolver<
     ResolversTypes["Boolean"],
     ParentType,
     ContextType,
-    RequireFields<MutationPushSyncEnvelopeArgs, "envelope">
+    RequireFields<MutationPushSyncEnvelopesArgs, "envelopes">
   >;
   removeChildren?: Resolver<
     ResolversTypes["PHDocument"],

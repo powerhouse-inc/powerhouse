@@ -589,17 +589,17 @@ export class ReactorSubgraph extends BaseSubgraph {
         }
       },
 
-      pushSyncEnvelope: async (_parent, args) => {
-        this.logger.debug("pushSyncEnvelope(@args)", args);
+      pushSyncEnvelopes: async (_parent, args) => {
+        this.logger.debug("pushSyncEnvelopes(@args)", args);
 
         try {
           // Convert readonly arrays to mutable arrays for the resolver
           const mutableArgs = {
-            envelope: {
-              type: args.envelope.type,
-              channelMeta: { id: args.envelope.channelMeta.id },
-              operations: args.envelope.operations
-                ? args.envelope.operations.map((op) => ({
+            envelopes: args.envelopes.map((envelope) => ({
+              type: envelope.type,
+              channelMeta: { id: envelope.channelMeta.id },
+              operations: envelope.operations
+                ? envelope.operations.map((op) => ({
                     operation: op.operation,
                     context: {
                       documentId: op.context.documentId,
@@ -609,22 +609,22 @@ export class ReactorSubgraph extends BaseSubgraph {
                     },
                   }))
                 : null,
-              cursor: args.envelope.cursor
+              cursor: envelope.cursor
                 ? {
-                    remoteName: args.envelope.cursor.remoteName,
-                    cursorOrdinal: args.envelope.cursor.cursorOrdinal,
-                    lastSyncedAtUtcMs: args.envelope.cursor.lastSyncedAtUtcMs,
+                    remoteName: envelope.cursor.remoteName,
+                    cursorOrdinal: envelope.cursor.cursorOrdinal,
+                    lastSyncedAtUtcMs: envelope.cursor.lastSyncedAtUtcMs,
                   }
                 : null,
-            },
+            })),
           };
 
-          return await resolvers.pushSyncEnvelope(
+          return await resolvers.pushSyncEnvelopes(
             this.syncManager,
             mutableArgs,
           );
         } catch (error) {
-          this.logger.error("Error in pushSyncEnvelope(@args): @Error", error);
+          this.logger.error("Error in pushSyncEnvelopes(@args): @Error", error);
           throw error;
         }
       },

@@ -56,4 +56,8 @@ export {
 export { SyncManager } from "./sync-manager.js";
 export { SyncBuilder } from "./sync-builder.js";
 
-export { createIdleHealth, filterOperations } from "./utils.js";
+export {
+  createIdleHealth,
+  filterOperations,
+  sortEnvelopesByFirstOperationTimestamp,
+} from "./utils.js";

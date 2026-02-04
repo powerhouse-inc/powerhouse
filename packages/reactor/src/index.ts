@@ -209,6 +209,7 @@ export {
   Mailbox,
   PollingChannel,
   PollingChannelError,
+  sortEnvelopesByFirstOperationTimestamp,
   SyncBuilder,
   SyncEventTypes,
   SyncOperation,

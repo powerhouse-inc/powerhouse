@@ -14,6 +14,7 @@ import type {
   SyncEnvelope,
 } from "../types.js";
 import { ChannelErrorSource } from "../types.js";
+import { sortEnvelopesByFirstOperationTimestamp } from "../utils.js";
 import type { IPollTimer } from "./poll-timer.js";
 import { envelopesToSyncOperations } from "./utils.js";
 
@@ -146,7 +147,8 @@ export class GqlChannel implements IChannel {
 
     let maxCursorOrdinal = cursorOrdinal;
 
-    for (const envelope of envelopes) {
+    const sortedEnvelopes = sortEnvelopesByFirstOperationTimestamp(envelopes);
+    for (const envelope of sortedEnvelopes) {
       if (envelope.type.toLowerCase() === "operations" && envelope.operations) {
         const syncOps = envelopesToSyncOperations(envelope, this.remoteName);
         for (const syncOp of syncOps) {
@@ -399,16 +401,16 @@ export class GqlChannel implements IChannel {
     };
 
     const mutation = `
-      mutation PushSyncEnvelope($envelope: SyncEnvelopeInput!) {
-        pushSyncEnvelope(envelope: $envelope)
+      mutation PushSyncEnvelopes($envelopes: [SyncEnvelopeInput!]!) {
+        pushSyncEnvelopes(envelopes: $envelopes)
       }
     `;
 
     const variables = {
-      envelope: this.serializeEnvelope(envelope),
+      envelopes: [this.serializeEnvelope(envelope)],
     };
 
-    await this.executeGraphQL<{ pushSyncEnvelope: boolean }>(
+    await this.executeGraphQL<{ pushSyncEnvelopes: boolean }>(
       mutation,
       variables,
     );
