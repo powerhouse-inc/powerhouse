@@ -579,4 +579,8 @@ export class GqlChannel implements IChannel {
       failureCount: this.failureCount,
     };
   }
+
+  get poller(): IPollTimer {
+    return this.pollTimer;
+  }
 }

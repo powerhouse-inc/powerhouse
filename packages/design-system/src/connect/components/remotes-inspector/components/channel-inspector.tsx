@@ -1,6 +1,10 @@
 import { Icon } from "@powerhousedao/design-system";
-import type { IChannel } from "@powerhousedao/reactor";
-import { useState } from "react";
+import {
+  GqlChannel,
+  IntervalPollTimer,
+  type IChannel,
+} from "@powerhousedao/reactor";
+import { useCallback, useState } from "react";
 import { type SortDirection, type SortOptions } from "../utils.js";
 import { MailboxTable, type MailboxType } from "./mailbox-table.js";
 
@@ -53,6 +57,49 @@ export function ChannelInspector({
     });
   };
 
+  const getPollerControls = useCallback(() => {
+    if (!(channel instanceof GqlChannel)) {
+      return null;
+    }
+    const poller = channel.poller;
+    if (!(poller instanceof IntervalPollTimer)) {
+      return null;
+    }
+    return poller;
+  }, [channel]);
+
+  const pollerControls = getPollerControls();
+  const [pollerState, setPollerState] = useState(() => ({
+    isPaused: pollerControls?.isPaused() ?? false,
+    isRunning: pollerControls?.isRunning() ?? false,
+  }));
+
+  const handlePause = useCallback(() => {
+    if (pollerControls) {
+      pollerControls.pause();
+      setPollerState({
+        isPaused: pollerControls.isPaused(),
+        isRunning: pollerControls.isRunning(),
+      });
+    }
+  }, [pollerControls]);
+
+  const handleResume = useCallback(() => {
+    if (pollerControls) {
+      pollerControls.resume();
+      setPollerState({
+        isPaused: pollerControls.isPaused(),
+        isRunning: pollerControls.isRunning(),
+      });
+    }
+  }, [pollerControls]);
+
+  const handlePollNow = useCallback(() => {
+    if (pollerControls) {
+      pollerControls.triggerNow();
+    }
+  }, [pollerControls]);
+
   return (
     <div className="flex h-full flex-col gap-4 p-4">
       <div className="flex shrink-0 items-center justify-between">
@@ -80,6 +127,51 @@ export function ChannelInspector({
           </button>
         )}
       </div>
+
+      {pollerControls && (
+        <div className="shrink-0 rounded border border-gray-200 bg-white p-4">
+          <h3 className="mb-3 text-sm font-semibold text-gray-900">Poller</h3>
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-gray-600">
+              Status:{" "}
+              <span
+                className={
+                  pollerState.isPaused ? "text-yellow-600" : "text-green-600"
+                }
+              >
+                {pollerState.isPaused ? "Paused" : "Running"}
+              </span>
+            </div>
+            <div className="flex gap-2">
+              {pollerState.isPaused ? (
+                <button
+                  className="flex items-center gap-1 rounded border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100"
+                  onClick={handleResume}
+                  type="button"
+                >
+                  Resume
+                </button>
+              ) : (
+                <button
+                  className="flex items-center gap-1 rounded border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100"
+                  onClick={handlePause}
+                  type="button"
+                >
+                  Pause
+                </button>
+              )}
+              <button
+                className="flex items-center gap-1 rounded border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={!pollerState.isPaused}
+                onClick={handlePollNow}
+                type="button"
+              >
+                Poll Now
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="flex flex-1 flex-col gap-6 overflow-auto">
         <MailboxTable

@@ -205,6 +205,7 @@ export {
   CompositeChannelFactory,
   GqlChannel,
   GqlChannelFactory,
+  IntervalPollTimer,
   Mailbox,
   PollingChannel,
   PollingChannelError,

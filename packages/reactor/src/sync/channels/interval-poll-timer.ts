@@ -8,9 +8,11 @@ export class IntervalPollTimer implements IPollTimer {
   private delegate: (() => Promise<void>) | undefined;
   private timer: NodeJS.Timeout | undefined;
   private running: boolean;
+  private paused: boolean;
 
   constructor(private readonly intervalMs: number) {
     this.running = false;
+    this.paused = false;
   }
 
   setDelegate(delegate: () => Promise<void>): void {
@@ -40,7 +42,36 @@ export class IntervalPollTimer implements IPollTimer {
   }
 
   private scheduleNext(): void {
-    if (!this.running) return;
+    if (!this.running || this.paused) return;
     this.timer = setTimeout(() => this.tick(), this.intervalMs);
+  }
+
+  pause(): void {
+    this.paused = true;
+    if (this.timer) {
+      clearTimeout(this.timer);
+      this.timer = undefined;
+    }
+  }
+
+  resume(): void {
+    this.paused = false;
+    if (this.running) {
+      this.scheduleNext();
+    }
+  }
+
+  triggerNow(): void {
+    if (this.running && this.delegate) {
+      this.tick();
+    }
+  }
+
+  isPaused(): boolean {
+    return this.paused;
+  }
+
+  isRunning(): boolean {
+    return this.running;
   }
 }

@@ -47,6 +47,7 @@ export {
   GqlChannel,
   GqlChannelFactory,
   CompositeChannelFactory,
+  IntervalPollTimer,
   type GqlChannelConfig,
   type IPollTimer,
 } from "./channels/index.js";
