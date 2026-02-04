@@ -1,6 +1,8 @@
 import {
   relationalDbFactoryTemplate,
   relationalDbIndexTemplate,
+  relationalDbMigrationsTemplate,
+  relationalDbSchemaTemplate,
 } from "@powerhousedao/codegen/templates";
 import {
   formatSourceFileWithPrettier,
@@ -29,6 +31,10 @@ export function tsMorphGenerateRelationalDbProcessor(
     dirPath,
     documentTypes,
   });
+
+  makeMigrationsFile({ project, dirPath });
+
+  makeSchemaFile({ project, dirPath });
 }
 
 function makeIndexFile(v: {
@@ -57,6 +63,28 @@ function makeFactoryFile(v: {
   const { alreadyExists, sourceFile } = getOrCreateSourceFile(
     v.project,
     path.join(v.dirPath, "factory.ts"),
+  );
+  if (alreadyExists) return;
+  sourceFile.replaceWithText(template);
+  formatSourceFileWithPrettier(sourceFile);
+}
+
+function makeSchemaFile(v: { project: Project; dirPath: string }) {
+  const template = relationalDbSchemaTemplate();
+  const { alreadyExists, sourceFile } = getOrCreateSourceFile(
+    v.project,
+    path.join(v.dirPath, "schema.ts"),
+  );
+  if (alreadyExists) return;
+  sourceFile.replaceWithText(template);
+  formatSourceFileWithPrettier(sourceFile);
+}
+
+function makeMigrationsFile(v: { project: Project; dirPath: string }) {
+  const template = relationalDbMigrationsTemplate();
+  const { alreadyExists, sourceFile } = getOrCreateSourceFile(
+    v.project,
+    path.join(v.dirPath, "migrations.ts"),
   );
   if (alreadyExists) return;
   sourceFile.replaceWithText(template);

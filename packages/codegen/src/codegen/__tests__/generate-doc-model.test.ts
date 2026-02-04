@@ -25,7 +25,6 @@ import {
   getTestOutputDir,
   purgeDirAfterTest,
   resetDirForTest,
-  runTsc,
 } from "./utils.js";
 import { compile } from "./fixtures/typecheck.js";
 
