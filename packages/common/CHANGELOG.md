@@ -1,3 +1,13 @@
+## 5.3.0-staging.23 (2026-02-04)
+
+### 🩹 Fixes
+
+- remove dspot-powerhouse-components from builder-tools ([dee11a3a8](https://github.com/powerhouse-inc/powerhouse/commit/dee11a3a8))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 5.3.0-staging.22 (2026-02-04)
 
 This was a version bump only for @powerhousedao/common to align it with other projects, there were no code changes.
