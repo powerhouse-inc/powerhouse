@@ -4,6 +4,10 @@ import type { ComponentPropsWithoutRef } from "react";
 import { twMerge } from "tailwind-merge";
 import { DBExplorer, type DBExplorerProps } from "../../db-explorer/index.js";
 import {
+  QueueInspector,
+  type QueueInspectorProps,
+} from "../../queue-inspector/index.js";
+import {
   RemotesInspector,
   type RemotesInspectorProps,
 } from "../../remotes-inspector/index.js";
@@ -19,7 +23,8 @@ export type InspectorModalProps = {
   readonly containerProps?: DivProps;
   readonly dbExplorerProps: DBExplorerProps;
   readonly remotesInspectorProps: RemotesInspectorProps;
-  readonly defaultTab?: "Database" | "Remotes";
+  readonly queueInspectorProps?: QueueInspectorProps;
+  readonly defaultTab?: "Database" | "Remotes" | "Queue";
 };
 
 export function InspectorModal({
@@ -29,6 +34,7 @@ export function InspectorModal({
   containerProps,
   dbExplorerProps,
   remotesInspectorProps,
+  queueInspectorProps,
   defaultTab = "Database",
 }: InspectorModalProps) {
   return (
@@ -70,6 +76,13 @@ export function InspectorModal({
                 <RemotesInspector {...remotesInspectorProps} />
               </div>
             </TabContent>
+            {queueInspectorProps && (
+              <TabContent description="Queue inspector" label="Queue">
+                <div className="h-full">
+                  <QueueInspector {...queueInspectorProps} />
+                </div>
+              </TabContent>
+            )}
           </Tabs>
         </div>
       </div>
