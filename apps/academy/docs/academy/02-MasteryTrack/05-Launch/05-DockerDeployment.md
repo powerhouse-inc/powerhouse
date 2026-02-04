@@ -2,7 +2,7 @@
 
 ## Introduction
 
-Powerhouse provides official Docker images for deploying your applications in containerized environments. This guide covers the available Docker images, how to use them with Docker Compose, and the environment variables you can configure.
+Powerhouse projects include Docker support out of the box. When you create a new project with `ph init`, all necessary Docker files are automatically generated, allowing you to build and deploy containerized versions of your Connect frontend and Switchboard backend.
 
 Docker deployment is ideal for:
 
@@ -14,102 +14,120 @@ Docker deployment is ideal for:
 :::tip Deployment Options
 This guide covers **Docker-based deployment**. If you prefer **traditional VM/server deployment** with direct installation, see the [Setup Environment Guide](./03-SetupEnvironment.md).
 
-**Choose Docker if:** You want the fastest path to production, prefer containerized workflows, or are deploying to cloud platforms.
+**Choose Docker if:** You want containerized workflows, consistent environments, or are deploying to cloud platforms.
 **Choose Direct Installation if:** You need maximum performance, want full control, or are setting up a dedicated server.
 :::
 
-## Available Docker Images
+## Generated Docker Files
 
-Powerhouse publishes three official Docker images to the GitHub Container Registry (ghcr.io):
-
-### 1. Connect
-
-The Connect image provides the Powerhouse web application frontend with an embedded Nginx server.
+When you run `ph init my-project`, the following Docker-related files are automatically created:
 
 ```
-ghcr.io/powerhouse-inc/powerhouse/connect
+my-project/
+├── Dockerfile                      # Multi-stage Dockerfile for Connect and Switchboard
+└── docker/
+    ├── nginx.conf                  # Nginx configuration template for Connect
+    ├── connect-entrypoint.sh       # Startup script for Connect container
+    └── switchboard-entrypoint.sh   # Startup script for Switchboard container
 ```
 
-**Available tags:**
+## Building Docker Images
 
-- `latest` - Latest stable release
-- `dev` - Development builds
-- `staging` - Staging builds
-- `vX.Y.Z` - Specific version tags (e.g., `v1.0.0`)
+The generated Dockerfile uses multi-stage builds to create two separate images:
 
-### 2. Switchboard
+### Build the Connect Image (Frontend)
 
-The Switchboard image provides the backend API server that handles document synchronization and GraphQL endpoints.
-
-```
-ghcr.io/powerhouse-inc/powerhouse/switchboard
+```bash
+docker build --target connect -t my-registry/my-project/connect:latest .
 ```
 
-**Available tags:**
+### Build the Switchboard Image (Backend)
 
-- `latest` - Latest stable release
-- `dev` - Development builds
-- `staging` - Staging builds
-- `vX.Y.Z` - Specific version tags (e.g., `v1.0.0`)
-
-### 3. Academy
-
-The Academy image provides the documentation website.
-
-```
-ghcr.io/powerhouse-inc/powerhouse/academy
+```bash
+docker build --target switchboard -t my-registry/my-project/switchboard:latest .
 ```
 
-**Available tags:**
+### Build Arguments
 
-- `latest` - Latest stable release
-- `dev` - Development builds
-- `staging` - Staging builds
-- `vX.Y.Z` - Specific version tags (e.g., `v1.0.0`)
+The Dockerfile accepts several build arguments:
 
-## Quick Start with Docker Compose
+| Argument               | Description                                                                | Default            |
+| ---------------------- | -------------------------------------------------------------------------- | ------------------ |
+| `TAG`                  | Powerhouse package version tag (latest, dev, staging, or specific version) | `latest`           |
+| `PH_CONNECT_BASE_PATH` | Base URL path for Connect                                                  | `/`                |
+| `PACKAGE_NAME`         | Your published package name to install                                     | (uses local build) |
 
-The easiest way to run Powerhouse locally is using Docker Compose. Create a `docker-compose.yml` file or use the one provided in the repository:
+Example with build arguments:
+
+```bash
+docker build --target connect \
+  --build-arg TAG=v1.0.0 \
+  --build-arg PH_CONNECT_BASE_PATH=/app \
+  --build-arg PACKAGE_NAME=@myorg/my-package \
+  -t my-registry/my-project/connect:v1.0.0 .
+```
+
+## Running with Docker Compose
+
+Create a `docker-compose.yml` file to run your application stack:
 
 ```yaml
-name: powerhouse
+name: my-project
 
 services:
   connect:
-    image: ghcr.io/powerhouse-inc/powerhouse/connect:dev
+    build:
+      context: .
+      target: connect
+      args:
+        TAG: latest
+        PH_CONNECT_BASE_PATH: /
     environment:
-      - DATABASE_URL=postgres://postgres:postgres@postgres:5432/postgres
-      - BASE_PATH=/
+      - PORT=3001
+      - PH_CONNECT_BASE_PATH=/
     ports:
-      - "127.0.0.1:3000:4000"
+      - "127.0.0.1:3000:3001"
     networks:
-      - powerhouse_network
+      - app_network
     depends_on:
-      postgres:
+      switchboard:
         condition: service_healthy
 
   switchboard:
-    image: ghcr.io/powerhouse-inc/powerhouse/switchboard:dev
+    build:
+      context: .
+      target: switchboard
+      args:
+        TAG: latest
     environment:
+      - PORT=3000
       - DATABASE_URL=postgres://postgres:postgres@postgres:5432/postgres
     ports:
-      - "127.0.0.1:4000:4001"
+      - "127.0.0.1:4000:3000"
     networks:
-      - powerhouse_network
+      - app_network
     depends_on:
       postgres:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 3s
+      start_period: 30s
+      retries: 3
 
   postgres:
-    image: postgres:16.1
+    image: postgres:16-alpine
     ports:
-      - "127.0.0.1:5444:5432"
+      - "127.0.0.1:5432:5432"
     environment:
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=postgres
       - POSTGRES_USER=postgres
     networks:
-      - powerhouse_network
+      - app_network
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -117,8 +135,11 @@ services:
       retries: 3
 
 networks:
-  powerhouse_network:
-    name: powerhouse_network
+  app_network:
+    name: app_network
+
+volumes:
+  postgres_data:
 ```
 
 ### Running the Stack
@@ -150,14 +171,10 @@ After starting, you can access:
 
 ### Connect Environment Variables
 
-| Variable                | Description                                            | Default  |
-| ----------------------- | ------------------------------------------------------ | -------- |
-| `PORT`                  | Port the server listens on                             | `4000`   |
-| `PH_CONNECT_BASE_PATH`  | Base URL path for the application                      | `/`      |
-| `PH_PACKAGES`           | Comma-separated list of packages to install at startup | `""`     |
-| `PH_CONNECT_SENTRY_DSN` | Sentry DSN for error tracking                          | `""`     |
-| `PH_CONNECT_SENTRY_ENV` | Sentry environment name                                | `""`     |
-| `DATABASE_URL`          | PostgreSQL connection string                           | Required |
+| Variable               | Description                       | Default |
+| ---------------------- | --------------------------------- | ------- |
+| `PORT`                 | Port the server listens on        | `3001`  |
+| `PH_CONNECT_BASE_PATH` | Base URL path for the application | `/`     |
 
 #### Feature Flags
 
@@ -190,14 +207,11 @@ After starting, you can access:
 
 #### Core Configuration
 
-| Variable                      | Description                                            | Default    |
-| ----------------------------- | ------------------------------------------------------ | ---------- |
-| `PORT`                        | Port the server listens on                             | `4001`     |
-| `PH_SWITCHBOARD_PORT`         | Alias for PORT                                         | `$PORT`    |
-| `DATABASE_URL`                | PostgreSQL or SQLite connection string                 | `"dev.db"` |
-| `PH_SWITCHBOARD_DATABASE_URL` | Alias for DATABASE_URL                                 | `"dev.db"` |
-| `BASE_PATH`                   | Base URL path for the API                              | `"/"`      |
-| `PH_PACKAGES`                 | Comma-separated list of packages to install at startup | `""`       |
+| Variable             | Description                            | Default    |
+| -------------------- | -------------------------------------- | ---------- |
+| `PORT`               | Port the server listens on             | `3000`     |
+| `DATABASE_URL`       | PostgreSQL or SQLite connection string | `"dev.db"` |
+| `SKIP_DB_MIGRATIONS` | Skip database migrations on startup    | `"false"`  |
 
 #### Authentication
 
@@ -217,74 +231,56 @@ After starting, you can access:
 | `SENTRY_ENV`               | Sentry environment name (e.g., "production", "staging") | `""`    |
 | `PYROSCOPE_SERVER_ADDRESS` | Pyroscope server address for performance profiling      | `""`    |
 
-## Installing Custom Packages
-
-Both Connect and Switchboard support installing custom Powerhouse packages at container startup using the `PH_PACKAGES` environment variable.
-
-```yaml
-services:
-  connect:
-    image: ghcr.io/powerhouse-inc/powerhouse/connect:dev
-    environment:
-      - PH_PACKAGES=@powerhousedao/todo-demo-package,@powerhousedao/another-package
-```
-
-Packages are installed using the `ph install` command before the service starts.
-
 ## Image Architecture
 
 ### Connect Image
 
-The Connect image is based on Alpine Linux and includes:
+The Connect image is based on Alpine Linux with Nginx and includes:
 
-- Node.js and pnpm
-- Nginx with Brotli compression
-- The `ph-cmd` CLI tool
-- A pre-initialized Powerhouse project
+- Nginx with gzip compression
+- Optimized caching for static assets
+- Health check endpoint at `/health`
+- Environment variable substitution for runtime configuration
 
 At startup, the entrypoint script:
 
-1. Installs any packages specified in `PH_PACKAGES`
-2. Builds the Connect frontend with `ph connect build`
-3. Configures and starts Nginx to serve the built files
+1. Substitutes environment variables in the nginx configuration
+2. Validates the nginx configuration
+3. Starts Nginx to serve the built frontend
 
 ### Switchboard Image
 
-The Switchboard image is based on Node.js 24 and includes:
+The Switchboard image is based on Node.js 24 Alpine and includes:
 
 - pnpm package manager
 - The `ph-cmd` CLI tool
 - Prisma CLI for database migrations
-- A pre-initialized Powerhouse project
 
 At startup, the entrypoint script:
 
-1. Installs any packages specified in `PH_PACKAGES`
-2. Runs Prisma database migrations (if using PostgreSQL)
-3. Starts the Switchboard server with `ph switchboard`
+1. Regenerates Prisma client for the current platform
+2. Runs database migrations (if using PostgreSQL and not skipped)
+3. Starts the Switchboard server
 
 ## Production Considerations
 
 ### Using Specific Version Tags
 
-For production deployments, always use specific version tags instead of `latest` or `dev`:
+For production deployments, use specific version tags when building:
 
-```yaml
-services:
-  connect:
-    image: ghcr.io/powerhouse-inc/powerhouse/connect:v1.0.0
-  switchboard:
-    image: ghcr.io/powerhouse-inc/powerhouse/switchboard:v1.0.0
+```bash
+docker build --target connect --build-arg TAG=v1.0.0 -t my-registry/connect:v1.0.0 .
+docker build --target switchboard --build-arg TAG=v1.0.0 -t my-registry/switchboard:v1.0.0 .
 ```
 
 ### Database Persistence
 
-For production, ensure your PostgreSQL data is persisted using volumes:
+Ensure your PostgreSQL data is persisted using volumes:
 
 ```yaml
 services:
   postgres:
-    image: postgres:16.1
+    image: postgres:16-alpine
     volumes:
       - postgres_data:/var/lib/postgresql/data
     environment:
@@ -296,17 +292,13 @@ volumes:
   postgres_data:
 ```
 
-### Health Checks
-
-The provided docker-compose.yml includes health checks for PostgreSQL. Services wait for the database to be healthy before starting, preventing connection errors during startup.
-
 ### Network Security
 
 The example configuration binds ports to `127.0.0.1` only:
 
 ```yaml
 ports:
-  - "127.0.0.1:3000:4000"
+  - "127.0.0.1:3000:3001"
 ```
 
 This prevents direct external access. In production, use a reverse proxy (like Nginx or Traefik) to:
@@ -328,7 +320,9 @@ DATABASE_URL=postgres://powerhouse:your-secure-password@postgres:5432/powerhouse
 ```yaml
 services:
   switchboard:
-    image: ghcr.io/powerhouse-inc/powerhouse/switchboard:latest
+    build:
+      context: .
+      target: switchboard
     env_file:
       - .env
 ```
@@ -358,13 +352,13 @@ Verify the `DATABASE_URL` format:
 postgres://user:password@host:port/database
 ```
 
-### Package Installation Fails
+### Build Failures
 
-If custom packages fail to install, check:
+If the build fails, check:
 
-1. Package name is correct
-2. Network connectivity from container
-3. Container has access to npm registry
+1. Docker has enough memory allocated (at least 4GB recommended)
+2. Network connectivity for downloading dependencies
+3. Build arguments are correctly specified
 
 ### Permission Issues
 
@@ -375,26 +369,63 @@ If you encounter permission issues with volumes:
 sudo chown -R 1000:1000 ./data
 ```
 
-## Building Custom Images
+## CI/CD Integration
 
-You can extend the official images for custom deployments:
+The generated `.github/workflows/sync-and-publish.yml` workflow automatically builds and pushes Docker images when you release your package. The workflow handles:
 
-```dockerfile
-FROM ghcr.io/powerhouse-inc/powerhouse/connect:latest
+- Syncing Powerhouse dependencies when new versions are released
+- Publishing your package to npm
+- Building and pushing Docker images to your configured registry
 
-# Install additional packages at build time
-RUN ph install @powerhousedao/my-custom-package
+### Required GitHub Secrets
 
-# Add custom configuration
-COPY my-nginx.conf /etc/nginx/nginx.conf.template
-```
+To enable the full CI/CD pipeline, configure these secrets in your GitHub repository settings (**Settings > Secrets and variables > Actions**):
 
-Build and push your custom image:
+| Secret             | Required | Description                                                                   |
+| ------------------ | -------- | ----------------------------------------------------------------------------- |
+| `NPM_ACCESS_TOKEN` | Yes      | npm access token for publishing packages. Create at npmjs.com > Access Tokens |
+| `DOCKER_USERNAME`  | Yes      | Username for the Docker registry                                              |
+| `DOCKER_PASSWORD`  | Yes      | Password for the Docker registry                                              |
+| `DOCKER_REGISTRY`  | No       | Docker registry URL. Defaults to `cr.vetra.io` if not set                     |
+| `DOCKER_PROJECT`   | No       | Custom Docker project name. Defaults to repository name if not set            |
 
-```bash
-docker build -t my-registry/my-connect:latest .
-docker push my-registry/my-connect:latest
-```
+:::tip Getting Docker Registry Credentials
+Contact the Powerhouse team to get credentials for the default Vetra Docker registry (cr.vetra.io). If you prefer to use a different registry (e.g., ghcr.io), set the `DOCKER_REGISTRY` secret accordingly.
+:::
+
+### Setting Up Secrets
+
+1. Go to your GitHub repository
+2. Navigate to **Settings > Secrets and variables > Actions**
+3. Click **New repository secret**
+4. Add each secret with its corresponding value
+
+### Workflow Triggers
+
+The workflow runs automatically in two scenarios:
+
+1. **Repository dispatch**: When the Powerhouse monorepo releases a new version, it triggers downstream projects to sync and rebuild
+2. **Manual dispatch**: You can manually trigger the workflow from the GitHub Actions tab
+
+### Manual Workflow Options
+
+When triggering manually, you can configure:
+
+| Input         | Description                            | Default   |
+| ------------- | -------------------------------------- | --------- |
+| `channel`     | Release channel (dev, staging, latest) | `staging` |
+| `version`     | Specific Powerhouse version to sync to | (latest)  |
+| `dry-run`     | Skip publishing, only test the build   | `false`   |
+| `skip-docker` | Skip Docker build and push             | `false`   |
+
+### Docker Image Tags
+
+The workflow pushes images to your configured registry (default: `cr.vetra.io`) with the following tag patterns:
+
+- `<registry>/<project>/connect:v<version>`
+- `<registry>/<project>/connect:<channel>` (dev, staging, or latest)
+- `<registry>/<project>/switchboard:v<version>`
+- `<registry>/<project>/switchboard:<channel>` (dev, staging, or latest)
 
 ## Next Steps
 

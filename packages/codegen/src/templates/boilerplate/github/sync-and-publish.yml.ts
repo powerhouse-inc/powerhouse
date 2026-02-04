@@ -38,8 +38,6 @@ on:
 env:
   NODE_VERSION: '24'
   PNPM_VERSION: '10'
-  DOCKER_REGISTRY: cr.vetra.io
-  GHCR_REGISTRY: ghcr.io
 
 jobs:
   # ==========================================================================
@@ -53,6 +51,7 @@ jobs:
       version: \${{ steps.params.outputs.version }}
       branch: \${{ steps.params.outputs.branch }}
       project_name: \${{ steps.params.outputs.project_name }}
+      docker_registry: \${{ steps.params.outputs.docker_registry }}
       dry_run: \${{ steps.params.outputs.dry_run }}
       skip_docker: \${{ steps.params.outputs.skip_docker }}
     steps:
@@ -90,10 +89,18 @@ jobs:
             PROJECT_NAME="\${GITHUB_REPOSITORY#*/}"
           fi
 
+          # Use DOCKER_REGISTRY secret if set, otherwise default to cr.vetra.io
+          if [ -n "\${{ secrets.DOCKER_REGISTRY }}" ]; then
+            DOCKER_REGISTRY="\${{ secrets.DOCKER_REGISTRY }}"
+          else
+            DOCKER_REGISTRY="cr.vetra.io"
+          fi
+
           echo "channel=\$CHANNEL" >> \$GITHUB_OUTPUT
           echo "version=\$VERSION" >> \$GITHUB_OUTPUT
           echo "branch=\$BRANCH" >> \$GITHUB_OUTPUT
           echo "project_name=\$PROJECT_NAME" >> \$GITHUB_OUTPUT
+          echo "docker_registry=\$DOCKER_REGISTRY" >> \$GITHUB_OUTPUT
           echo "dry_run=\$DRY_RUN" >> \$GITHUB_OUTPUT
           echo "skip_docker=\$SKIP_DOCKER" >> \$GITHUB_OUTPUT
 
@@ -101,6 +108,7 @@ jobs:
           echo "Version: \$VERSION"
           echo "Branch: \$BRANCH"
           echo "Project: \$PROJECT_NAME"
+          echo "Docker Registry: \$DOCKER_REGISTRY"
           echo "Dry Run: \$DRY_RUN"
           echo "Skip Docker: \$SKIP_DOCKER"
 
@@ -194,16 +202,17 @@ jobs:
         run: git push
 
       - name: Setup npm for publishing
-        if: needs.prepare.outputs.dry_run != 'true' && secrets.NPM_ACCESS_TOKEN != ''
+        if: needs.prepare.outputs.dry_run != 'true'
         uses: actions/setup-node@v4
         with:
           node-version: \${{ env.NODE_VERSION }}
           registry-url: 'https://registry.npmjs.org'
 
       - name: Publish to npm with provenance
-        if: needs.prepare.outputs.dry_run != 'true' && secrets.NPM_ACCESS_TOKEN != ''
+        if: needs.prepare.outputs.dry_run != 'true' && env.NPM_ACCESS_TOKEN != ''
         env:
           NODE_AUTH_TOKEN: \${{ secrets.NPM_ACCESS_TOKEN }}
+          NPM_ACCESS_TOKEN: \${{ secrets.NPM_ACCESS_TOKEN }}
           NPM_CONFIG_PROVENANCE: true
         run: |
           CHANNEL="\${{ needs.prepare.outputs.channel }}"
@@ -225,11 +234,7 @@ jobs:
   build-docker:
     name: Build Docker Images
     needs: [prepare, update-and-publish]
-    if: |
-      needs.prepare.outputs.skip_docker != 'true' &&
-      needs.prepare.outputs.dry_run != 'true' &&
-      secrets.DOCKER_USERNAME != '' &&
-      secrets.DOCKER_PASSWORD != ''
+    if: needs.prepare.outputs.skip_docker != 'true' && needs.prepare.outputs.dry_run != 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -249,54 +254,12 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Ensure Docker project exists
-        run: |
-          PROJECT_NAME="\${{ needs.prepare.outputs.project_name }}"
-
-          # Check if project exists, create if not
-          STATUS=\$(curl -s -o /dev/null -w "%{http_code}" \\
-            -u "\${{ secrets.DOCKER_USERNAME }}:\${{ secrets.DOCKER_PASSWORD }}" \\
-            "https://\${{ env.DOCKER_REGISTRY }}/api/v2.0/projects?name=\${PROJECT_NAME}")
-
-          if [ "\$STATUS" = "200" ]; then
-            # Check if the project is in the response
-            EXISTS=\$(curl -s \\
-              -u "\${{ secrets.DOCKER_USERNAME }}:\${{ secrets.DOCKER_PASSWORD }}" \\
-              "https://\${{ env.DOCKER_REGISTRY }}/api/v2.0/projects?name=\${PROJECT_NAME}" | \\
-              jq -r ".[] | select(.name==\\"\${PROJECT_NAME}\\") | .name")
-
-            if [ "\$EXISTS" = "\$PROJECT_NAME" ]; then
-              echo "Project \${PROJECT_NAME} already exists"
-            else
-              echo "Creating project \${PROJECT_NAME}..."
-              curl -X POST \\
-                -u "\${{ secrets.DOCKER_USERNAME }}:\${{ secrets.DOCKER_PASSWORD }}" \\
-                -H "Content-Type: application/json" \\
-                -d "{\\"project_name\\": \\"\${PROJECT_NAME}\\", \\"public\\": false}" \\
-                "https://\${{ env.DOCKER_REGISTRY }}/api/v2.0/projects"
-            fi
-          else
-            echo "Creating project \${PROJECT_NAME}..."
-            curl -X POST \\
-              -u "\${{ secrets.DOCKER_USERNAME }}:\${{ secrets.DOCKER_PASSWORD }}" \\
-              -H "Content-Type: application/json" \\
-              -d "{\\"project_name\\": \\"\${PROJECT_NAME}\\", \\"public\\": false}" \\
-              "https://\${{ env.DOCKER_REGISTRY }}/api/v2.0/projects"
-          fi
-
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: \${{ env.GHCR_REGISTRY }}
-          username: \${{ github.actor }}
-          password: \${{ secrets.GITHUB_TOKEN }}
-
       - name: Login to Docker Registry
         uses: docker/login-action@v3
         with:
-          registry: \${{ env.DOCKER_REGISTRY }}
-          username: \${{ secrets.DOCKER_USERNAME }}
-          password: \${{ secrets.DOCKER_PASSWORD }}
+          registry: \${{ needs.prepare.outputs.docker_registry }}
+          username: \${{ secrets.DOCKER_USERNAME || github.actor }}
+          password: \${{ secrets.DOCKER_PASSWORD || secrets.GITHUB_TOKEN }}
 
       - name: Extract package name
         id: package
@@ -311,24 +274,25 @@ jobs:
           CHANNEL="\${{ needs.prepare.outputs.channel }}"
           PROJECT="\${{ needs.prepare.outputs.project_name }}"
           TARGET="\${{ matrix.target }}"
+          REGISTRY="\${{ needs.prepare.outputs.docker_registry }}"
 
-          # GHCR tags
-          GHCR_BASE="\${{ env.GHCR_REGISTRY }}/\${{ github.repository_owner }}/\${PROJECT}/\${TARGET}"
-
-          # Docker registry tags
-          DOCKER_BASE="\${{ env.DOCKER_REGISTRY }}/\${PROJECT}/\${TARGET}"
+          # Determine the image base path
+          if [ "\$REGISTRY" = "ghcr.io" ]; then
+            # GHCR uses owner/project structure
+            IMAGE_BASE="\${REGISTRY}/\${{ github.repository_owner }}/\${PROJECT}/\${TARGET}"
+          else
+            # Other registries use project/image structure
+            IMAGE_BASE="\${REGISTRY}/\${PROJECT}/\${TARGET}"
+          fi
 
           # Build tag list
-          TAGS="\${GHCR_BASE}:v\${VERSION}"
-          TAGS="\${TAGS},\${DOCKER_BASE}:v\${VERSION}"
+          TAGS="\${IMAGE_BASE}:v\${VERSION}"
 
           # Add channel tag
           if [ "\$CHANNEL" = "latest" ] || [ "\$CHANNEL" = "main" ]; then
-            TAGS="\${TAGS},\${GHCR_BASE}:latest"
-            TAGS="\${TAGS},\${DOCKER_BASE}:latest"
+            TAGS="\${TAGS},\${IMAGE_BASE}:latest"
           else
-            TAGS="\${TAGS},\${GHCR_BASE}:\${CHANNEL}"
-            TAGS="\${TAGS},\${DOCKER_BASE}:\${CHANNEL}"
+            TAGS="\${TAGS},\${IMAGE_BASE}:\${CHANNEL}"
           fi
 
           echo "tags=\$TAGS" >> \$GITHUB_OUTPUT
@@ -368,9 +332,10 @@ jobs:
           echo "| Branch | \${{ needs.prepare.outputs.branch }} |" >> \$GITHUB_STEP_SUMMARY
           echo "| Powerhouse Version | \${{ needs.prepare.outputs.version }} |" >> \$GITHUB_STEP_SUMMARY
           echo "| Package Version | \${{ needs.update-and-publish.outputs.new_version }} |" >> \$GITHUB_STEP_SUMMARY
+          echo "| Docker Registry | \${{ needs.prepare.outputs.docker_registry }} |" >> \$GITHUB_STEP_SUMMARY
           echo "| Dry Run | \${{ needs.prepare.outputs.dry_run }} |" >> \$GITHUB_STEP_SUMMARY
           echo "" >> \$GITHUB_STEP_SUMMARY
           echo "### Docker Images" >> \$GITHUB_STEP_SUMMARY
-          echo "- \\\`\${{ env.DOCKER_REGISTRY }}/\${{ needs.prepare.outputs.project_name }}/connect:v\${{ needs.update-and-publish.outputs.new_version }}\\\`" >> \$GITHUB_STEP_SUMMARY
-          echo "- \\\`\${{ env.DOCKER_REGISTRY }}/\${{ needs.prepare.outputs.project_name }}/switchboard:v\${{ needs.update-and-publish.outputs.new_version }}\\\`" >> \$GITHUB_STEP_SUMMARY
+          echo "- \\\`\${{ needs.prepare.outputs.docker_registry }}/\${{ needs.prepare.outputs.project_name }}/connect:v\${{ needs.update-and-publish.outputs.new_version }}\\\`" >> \$GITHUB_STEP_SUMMARY
+          echo "- \\\`\${{ needs.prepare.outputs.docker_registry }}/\${{ needs.prepare.outputs.project_name }}/switchboard:v\${{ needs.update-and-publish.outputs.new_version }}\\\`" >> \$GITHUB_STEP_SUMMARY
 `.raw;
