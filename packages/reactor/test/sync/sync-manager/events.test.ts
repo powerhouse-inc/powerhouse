@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { IOperationIndex } from "../../../src/cache/operation-index-types.js";
+import { driveCollectionId } from "../../../src/cache/operation-index-types.js";
 import type { IReactor } from "../../../src/core/types.js";
 import type { IEventBus } from "../../../src/events/interfaces.js";
 import { ReactorEventTypes } from "../../../src/events/types.js";
@@ -95,6 +96,7 @@ describe("SyncManager - Event Tests", () => {
         nextCursor: undefined,
       }),
       getLatestTimestampForCollection: vi.fn().mockResolvedValue(null),
+      getCollectionsForDocuments: vi.fn().mockResolvedValue({}),
     };
 
     mockReactor = {
@@ -667,6 +669,199 @@ describe("SyncManager - Event Tests", () => {
       expect(failedEvent.failureCount).toBe(1);
       expect(failedEvent.errors).toHaveLength(1);
       expect(failedEvent.errors[0].remoteName).toBe("remote2");
+    });
+  });
+
+  describe("Collection-based routing", () => {
+    const driveA = "drive-a-id";
+    const driveB = "drive-b-id";
+    const collectionA = driveCollectionId("main", driveA);
+    const collectionB = driveCollectionId("main", driveB);
+
+    const createMockChannelForCollection = () => {
+      return {
+        inbox: {
+          items: [],
+          add: vi.fn(),
+          remove: vi.fn(),
+          get: vi.fn(),
+          onAdded: vi.fn(),
+          onRemoved: vi.fn(),
+        },
+        outbox: {
+          items: [],
+          add: vi.fn(),
+          remove: vi.fn(),
+          get: vi.fn(),
+          onAdded: vi.fn(),
+          onRemoved: vi.fn(),
+        },
+        deadLetter: {
+          items: [],
+          add: vi.fn(),
+          remove: vi.fn(),
+          get: vi.fn(),
+          onAdded: vi.fn(),
+          onRemoved: vi.fn(),
+        },
+        init: vi.fn().mockResolvedValue(undefined),
+        shutdown: vi.fn(),
+      } as unknown as IChannel;
+    };
+
+    const triggerWriteReadyWithCollections = (
+      jobId: string,
+      operations: OperationWithContext[],
+      collectionMemberships: Record<string, string[]>,
+    ): void => {
+      const subscriber = eventSubscribers.get(
+        ReactorEventTypes.JOB_WRITE_READY,
+      );
+      if (subscriber) {
+        subscriber(ReactorEventTypes.JOB_WRITE_READY, {
+          jobId,
+          operations,
+          collectionMemberships,
+        });
+      }
+    };
+
+    it("should route operations only to remotes whose collection contains the document", async () => {
+      await syncManager.startup();
+
+      const channelA = createMockChannelForCollection();
+      const channelB = createMockChannelForCollection();
+
+      let channelIndex = 0;
+      vi.mocked(mockChannelFactory.instance).mockImplementation(() => {
+        channelIndex++;
+        return channelIndex === 1 ? channelA : channelB;
+      });
+
+      const channelConfig: ChannelConfig = {
+        type: "internal",
+        parameters: {},
+      };
+
+      // Remote A: syncs driveA's collection with empty documentId filter (sync all in collection)
+      await syncManager.add("remoteA", collectionA, channelConfig, {
+        documentId: [],
+        scope: [],
+        branch: "main",
+      });
+
+      // Remote B: syncs driveB's collection with empty documentId filter
+      await syncManager.add("remoteB", collectionB, channelConfig, {
+        documentId: [],
+        scope: [],
+        branch: "main",
+      });
+
+      // Emit an operation for a document that belongs to driveA's collection
+      const docInDriveA = "doc-in-driveA";
+      const operationsForDriveA = [createOperation(docInDriveA, "op1")];
+      triggerWriteReadyWithCollections("job-1", operationsForDriveA, {
+        [docInDriveA]: [collectionA],
+      });
+
+      // EXPECTED: Only channelA.outbox should have the operation
+      expect(channelA.outbox.add).toHaveBeenCalled();
+      expect(channelB.outbox.add).not.toHaveBeenCalled();
+    });
+
+    it("should not route operations for documents not in any synced collection", async () => {
+      await syncManager.startup();
+
+      const channelA = createMockChannelForCollection();
+      vi.mocked(mockChannelFactory.instance).mockReturnValue(channelA);
+
+      const channelConfig: ChannelConfig = {
+        type: "internal",
+        parameters: {},
+      };
+
+      await syncManager.add("remoteA", collectionA, channelConfig, {
+        documentId: [],
+        scope: [],
+        branch: "main",
+      });
+
+      // Emit operation for a new standalone drive (not in driveA's collection)
+      const newDriveId = "new-drive-id";
+      const newDriveCollection = driveCollectionId("main", newDriveId);
+      const operationsForNewDrive = [createOperation(newDriveId, "op1")];
+      triggerWriteReadyWithCollections("job-2", operationsForNewDrive, {
+        [newDriveId]: [newDriveCollection],
+      });
+
+      // EXPECTED: channelA should NOT receive this
+      expect(channelA.outbox.add).not.toHaveBeenCalled();
+    });
+
+    it("should route operations to multiple remotes if document is in multiple collections", async () => {
+      await syncManager.startup();
+
+      const channelA = createMockChannelForCollection();
+      const channelB = createMockChannelForCollection();
+
+      let channelIndex = 0;
+      vi.mocked(mockChannelFactory.instance).mockImplementation(() => {
+        channelIndex++;
+        return channelIndex === 1 ? channelA : channelB;
+      });
+
+      const channelConfig: ChannelConfig = {
+        type: "internal",
+        parameters: {},
+      };
+
+      await syncManager.add("remoteA", collectionA, channelConfig, {
+        documentId: [],
+        scope: [],
+        branch: "main",
+      });
+
+      await syncManager.add("remoteB", collectionB, channelConfig, {
+        documentId: [],
+        scope: [],
+        branch: "main",
+      });
+
+      // Document is in both collections
+      const sharedDocId = "shared-doc";
+      const operations = [createOperation(sharedDocId, "op1")];
+      triggerWriteReadyWithCollections("job-3", operations, {
+        [sharedDocId]: [collectionA, collectionB],
+      });
+
+      // EXPECTED: Both channels should receive the operation
+      expect(channelA.outbox.add).toHaveBeenCalled();
+      expect(channelB.outbox.add).toHaveBeenCalled();
+    });
+
+    it("should handle missing collectionMemberships by not routing to any remote with empty documentId filter", async () => {
+      await syncManager.startup();
+
+      const channelA = createMockChannelForCollection();
+      vi.mocked(mockChannelFactory.instance).mockReturnValue(channelA);
+
+      const channelConfig: ChannelConfig = {
+        type: "internal",
+        parameters: {},
+      };
+
+      await syncManager.add("remoteA", collectionA, channelConfig, {
+        documentId: [],
+        scope: [],
+        branch: "main",
+      });
+
+      // Emit without collectionMemberships (old behavior / legacy events)
+      const operations = [createOperation("some-doc", "op1")];
+      triggerWriteReady("job-4", operations);
+
+      // EXPECTED: channelA should NOT receive this since we can't verify membership
+      expect(channelA.outbox.add).not.toHaveBeenCalled();
     });
   });
 

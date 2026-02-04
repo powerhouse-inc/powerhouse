@@ -1,11 +1,8 @@
+import { driveCollectionId, GqlChannel } from "@powerhousedao/reactor";
 import type { PHDocument } from "document-model";
 import { useMemo } from "react";
-import {
-  buildDocumentSubgraphUrl,
-  getDriveIsRemote,
-  getDriveRemoteUrl,
-} from "../utils/index.js";
-import { useRenown, useUser } from "./connect.js";
+import { buildDocumentSubgraphUrl } from "../utils/index.js";
+import { useRenown, useSyncList, useUser } from "./connect.js";
 import { useSelectedDrive } from "./selected-drive.js";
 
 /**
@@ -23,8 +20,26 @@ export function useGetSwitchboardLink(
   document: PHDocument | undefined,
 ): (() => Promise<string>) | null {
   const [drive] = useSelectedDrive();
-  const isRemoteDrive = getDriveIsRemote(drive);
-  const remoteUrl = getDriveRemoteUrl(drive);
+  const { data: remotes = [] } = useSyncList();
+
+  const isRemoteDrive = useMemo(() => {
+    return remotes.some(
+      (remote) =>
+        remote.collectionId === driveCollectionId("main", drive.header.id),
+    );
+  }, [remotes, drive]);
+  const remoteUrl = useMemo(() => {
+    const remote = remotes.find(
+      (remote) =>
+        remote.collectionId === driveCollectionId("main", drive.header.id),
+    );
+
+    if (remote?.channel instanceof GqlChannel) {
+      return (remote.channel as GqlChannel).config.url;
+    }
+
+    return null;
+  }, [remotes, drive]);
   const renown = useRenown();
   const user = useUser();
 

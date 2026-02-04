@@ -66,7 +66,8 @@ function operationFromStorage(
 
   const operation: Operation = {
     id:
-      op.opId ?? deriveOperationId(op.documentId, op.scope, op.branch, op.actionId),
+      op.opId ??
+      deriveOperationId(op.documentId, op.scope, op.branch, op.actionId),
     skip: op.skip,
     hash: op.hash,
     index: op.index,
@@ -97,7 +98,7 @@ function getRetryTransactionsClient<T extends PrismaClient>(
             // Retry the transaction only if the error was due to a write conflict or deadlock
             // See: https://www.prisma.io/docs/reference/api-reference/error-reference#p2034
             if (code !== "P2034") {
-              logger.error("TRANSACTION ERROR", e);
+              logger.error("TRANSACTION ERROR: @error", e);
             }
             return code === "P2034";
           },
@@ -593,7 +594,7 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
       });
     } catch (e: unknown) {
       this.logger.error(
-        "Error deleting document from drives, could not delete DriveDocument links",
+        "Error deleting document from drives, could not delete DriveDocument links: @error",
         e,
       );
 
@@ -618,7 +619,7 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
       return result.count > 0;
     } catch (e: unknown) {
       this.logger.error(
-        "Error deleting document from drives, could not delete Document",
+        "Error deleting document from drives, could not delete Document: @error",
         e,
       );
 
@@ -1027,7 +1028,7 @@ export class PrismaStorage implements IDriveOperationStorage, IDocumentStorage {
             )
             WHERE context->'signer' ? 'signature'  -- Check if the 'signature' key exists
         `;
-    logger.info(`Migrated ${count} operations`);
+    logger.info("Migrated @count operations", count);
     return;
   }
 }

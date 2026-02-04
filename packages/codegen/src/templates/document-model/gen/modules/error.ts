@@ -47,14 +47,21 @@ function getErrorClassImplementations(errors: OperationErrorSpecification[]) {
 function getErrorsImplementations(errors: OperationErrorSpecification[]) {
   if (!errors.length) return "";
 
+  const deduplicatedErrors = errors.reduce((acc, error) => {
+    if (!acc.some((e) => getErrorName(e) === getErrorName(error))) {
+      acc.push(error);
+    }
+    return acc;
+  }, new Array<OperationErrorSpecification>());
+
   return ts`
-    ${getErrorCodeType(errors)}
+    ${getErrorCodeType(deduplicatedErrors)}
 
     export interface ReducerError {
       errorCode: ErrorCode;
     }
 
-    ${getErrorClassImplementations(errors)}
+    ${getErrorClassImplementations(deduplicatedErrors)}
   `.raw;
 }
 

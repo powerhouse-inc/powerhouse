@@ -1,9 +1,4 @@
 import type {
-  BaseDocumentDriveServer,
-  IDocumentOperationStorage,
-  IDocumentStorage,
-} from "document-drive";
-import type {
   Action,
   DocumentModelModule,
   ISigner,
@@ -47,7 +42,6 @@ import type {
   DocumentIndexerDatabase,
   Database as StorageDatabase,
 } from "../storage/kysely/types.js";
-import type { ReactorSubscriptionManager } from "../subs/react-subscription-manager.js";
 import type { IReactorSubscriptionManager } from "../subs/types.js";
 import type { IChannelFactory, ISyncManager } from "../sync/interfaces.js";
 
@@ -350,10 +344,6 @@ export interface IReactor {
  */
 export type ReactorFeatures = { [key: string]: boolean };
 
-export type ExecutorConfig = {
-  count: number;
-};
-
 /**
  * Combined database type that includes all schemas
  */
@@ -377,8 +367,6 @@ export interface SyncModule {
  * testing, or integration scenarios.
  */
 export interface ReactorModule {
-  driveServer: BaseDocumentDriveServer;
-  storage: IDocumentStorage & IDocumentOperationStorage;
   eventBus: IEventBus;
   documentModelRegistry: IDocumentModelRegistry;
   queue: IQueue;
@@ -394,7 +382,7 @@ export interface ReactorModule {
   documentIndexer: IDocumentIndexer;
   documentIndexerConsistencyTracker: IConsistencyTracker;
   readModelCoordinator: IReadModelCoordinator;
-  subscriptionManager: ReactorSubscriptionManager;
+  subscriptionManager: IReactorSubscriptionManager;
   processorManager: IProcessorManager;
   processorManagerConsistencyTracker: IConsistencyTracker;
   syncModule: SyncModule | undefined;

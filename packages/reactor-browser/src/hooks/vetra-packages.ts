@@ -12,16 +12,16 @@ export const addVetraPackagesEventHandler =
   vetraPackageEventFunctions.addEventHandler;
 
 /** Sets the Vetra packages for the Connect instance */
-export function setVetraPackages(vetraPackages: VetraPackage[] | undefined) {
+export function setVetraPackages(vetraPackages: VetraPackage[] = []) {
   vetraPackageEventFunctions.setValue(vetraPackages);
   const documentModelModules = vetraPackages
-    ?.flatMap((pkg) => pkg.modules.documentModelModules)
+    .flatMap((pkg) => pkg.modules.documentModelModules)
     .filter((module) => module !== undefined);
-  if (documentModelModules) {
-    window.ph?.legacyReactor?.setDocumentModelModules(documentModelModules);
-
+  if (documentModelModules.length > 0) {
     try {
-      window.ph?.modelRegistry?.registerModules(...documentModelModules);
+      window.ph?.reactorClientModule?.reactorModule?.documentModelRegistry.registerModules(
+        ...documentModelModules,
+      );
     } catch (error) {
       // check if it's a duplicate module error
       if (error instanceof DuplicateModuleError) {

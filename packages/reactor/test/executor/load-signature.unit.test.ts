@@ -1,8 +1,4 @@
 import type { SignatureVerificationHandler } from "#index.js";
-import type {
-  IDocumentOperationStorage,
-  IDocumentStorage,
-} from "document-drive";
 import { deriveOperationId } from "document-model";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { IWriteCache } from "../../src/cache/write/interfaces.js";
@@ -12,10 +8,9 @@ import type { IDocumentModelRegistry } from "../../src/registry/interfaces.js";
 import { InvalidSignatureError } from "../../src/shared/errors.js";
 import type { IOperationStore } from "../../src/storage/interfaces.js";
 import {
+  createMockCollectionMembershipCache,
   createMockDocumentMetaCache,
-  createMockDocumentStorage,
   createMockLogger,
-  createMockOperationStorage,
   createMockOperationStore,
   createSignedTestOperation,
   createTestAction,
@@ -26,8 +21,6 @@ import { SimpleSigner } from "../utils/simple-signer.js";
 describe("SimpleJobExecutor signature verification", () => {
   let executor: SimpleJobExecutor;
   let signer: SimpleSigner;
-  let mockDocStorage: IDocumentStorage;
-  let mockOperationStorage: IDocumentOperationStorage;
   let mockOperationStore: IOperationStore;
   let mockWriteCache: IWriteCache;
   let registry: IDocumentModelRegistry;
@@ -63,8 +56,6 @@ describe("SimpleJobExecutor signature verification", () => {
       registerModules: vi.fn(),
     } as unknown as IDocumentModelRegistry;
 
-    mockDocStorage = createMockDocumentStorage();
-    mockOperationStorage = createMockOperationStorage();
     mockOperationStore = createMockOperationStore();
 
     mockOperationStore.apply = vi
@@ -112,6 +103,7 @@ describe("SimpleJobExecutor signature verification", () => {
       start: vi.fn().mockReturnValue({
         createCollection: vi.fn(),
         addToCollection: vi.fn(),
+        removeFromCollection: vi.fn(),
         write: vi.fn(),
       }),
       commit: vi.fn().mockResolvedValue([]),
@@ -119,6 +111,7 @@ describe("SimpleJobExecutor signature verification", () => {
         results: [],
         options: { cursor: "0", limit: 100 },
       }),
+      getCollectionsForDocuments: vi.fn().mockResolvedValue({}),
     } as never;
 
     const verificationHandler: SignatureVerificationHandler = async (
@@ -155,11 +148,10 @@ describe("SimpleJobExecutor signature verification", () => {
     };
 
     const mockDocumentMetaCache = createMockDocumentMetaCache();
+    const mockCollectionMembershipCache = createMockCollectionMembershipCache();
     executor = new SimpleJobExecutor(
       createMockLogger(),
       registry,
-      mockDocStorage,
-      mockOperationStorage,
       mockOperationStore,
       {
         emit: vi.fn().mockResolvedValue(undefined),
@@ -168,6 +160,7 @@ describe("SimpleJobExecutor signature verification", () => {
       mockWriteCache,
       mockOperationIndex,
       mockDocumentMetaCache,
+      mockCollectionMembershipCache,
       {},
       verificationHandler,
     );

@@ -26,7 +26,7 @@ export class LRUCacheStorage<Value extends {}> implements ICacheStorage {
       maxSize,
       sizeCalculation,
     });
-    this.logger.info(`Created LRUCache with maxSize: ${maxSize} bytes`);
+    this.logger.info("Created LRUCache with maxSize: @maxSize bytes", maxSize);
   }
 
   get(key: string) {

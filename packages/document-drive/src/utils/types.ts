@@ -1,4 +1,3 @@
-import type { LogLevel } from "@powerhousedao/config";
 import type { Pick } from "@prisma/client/runtime/library";
 import type {
   DefaultRemoteDriveInfo,
@@ -10,6 +9,8 @@ import type {
 } from "document-drive";
 import type { Operation, PHBaseState, PHDocument } from "document-model";
 import type { GraphQLError } from "graphql";
+
+export type { ILogger, LoggerErrorHandler } from "document-model/core";
 
 export type DriveState = DriveInfo &
   Pick<DocumentDriveLocalState, "availableOffline" | "sharingType"> & {
@@ -25,17 +26,6 @@ export type DocumentGraphQLResult<TState extends PHBaseState = PHBaseState> =
       inputText: string;
     })[];
   };
-export type ILogger = Pick<
-  Console,
-  "log" | "info" | "warn" | "error" | "debug"
-> & {
-  level: LogLevel | "env";
-  errorHandler: LoggerErrorHandler | undefined;
-
-  verbose: (message?: any, ...optionalParams: any[]) => void;
-};
-
-export type LoggerErrorHandler = (...data: any[]) => void;
 
 export type GraphQLResult<T> = { [K in keyof T]: T[K] | null } & {
   errors?: GraphQLError[];

@@ -12,14 +12,15 @@ import type { IDocumentModelRegistry } from "../../src/registry/interfaces.js";
 import { JobStatus } from "../../src/shared/types.js";
 import type { IOperationStore } from "../../src/storage/interfaces.js";
 import {
+  createMockCollectionMembershipCache,
   createMockDocumentMetaCache,
   createMockDocumentStorage,
   createMockLogger,
   createMockOperationStorage,
   createMockOperationStore,
   createTestAction,
+  createTestLegacyReactorSetup,
   createTestOperation,
-  createTestReactorSetup,
 } from "../factories.js";
 
 describe("SimpleJobExecutor load jobs", () => {
@@ -91,6 +92,7 @@ describe("SimpleJobExecutor load jobs", () => {
       start: vi.fn().mockReturnValue({
         createCollection: vi.fn(),
         addToCollection: vi.fn(),
+        removeFromCollection: vi.fn(),
         write: vi.fn(),
       }),
       commit: vi.fn().mockResolvedValue([]),
@@ -98,14 +100,14 @@ describe("SimpleJobExecutor load jobs", () => {
         results: [],
         options: { cursor: "0", limit: 100 },
       }),
+      getCollectionsForDocuments: vi.fn().mockResolvedValue({}),
     };
 
     const mockDocumentMetaCache = createMockDocumentMetaCache();
+    const mockCollectionMembershipCache = createMockCollectionMembershipCache();
     executor = new SimpleJobExecutor(
       createMockLogger(),
       registry,
-      mockDocStorage,
-      mockOperationStorage,
       mockOperationStore,
       {
         emit: vi.fn().mockResolvedValue(undefined),
@@ -114,6 +116,7 @@ describe("SimpleJobExecutor load jobs", () => {
       mockWriteCache,
       mockOperationIndex,
       mockDocumentMetaCache,
+      mockCollectionMembershipCache,
       {},
       undefined,
     );
@@ -176,7 +179,7 @@ describe("Reactor.load", () => {
   let queue: IQueue;
 
   beforeEach(async () => {
-    const setup = await createTestReactorSetup();
+    const setup = await createTestLegacyReactorSetup();
     reactor = setup.reactor;
     queue = setup.queue;
   });

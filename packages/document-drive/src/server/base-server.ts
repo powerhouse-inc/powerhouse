@@ -292,21 +292,25 @@ export class BaseDocumentDriveServer
     await this.listenerManager.initialize(this.handleListenerError.bind(this));
 
     await this.queueManager.init(this.queueDelegate, (error) => {
-      this.logger.error(`Error initializing queue manager`, error);
+      this.logger.error("Error initializing queue manager: @error", error);
       // errors.push(error);
     });
 
     try {
       await this.defaultDrivesManager.removeOldremoteDrives();
     } catch (error) {
-      this.logger.error(error);
+      this.logger.error("@error", error);
     }
 
     const errors: Error[] = [];
     const drives = await this.getDrives();
     for (const drive of drives) {
       await this._initializeDrive(drive).catch((error) => {
-        this.logger.error(`Error initializing drive ${drive}`, error);
+        this.logger.error(
+          "Error initializing drive @drive: @error",
+          drive,
+          error,
+        );
         errors.push(error as Error);
       });
     }
@@ -350,7 +354,8 @@ export class BaseDocumentDriveServer
     listener: ListenerState,
   ) {
     this.logger.error(
-      `Listener ${listener.listener.label ?? listener.listener.listenerId} error:`,
+      "Listener @listenerId error: @error",
+      listener.listener.label ?? listener.listener.listenerId,
       error,
     );
 
@@ -480,7 +485,7 @@ export class BaseDocumentDriveServer
                       { documentId, scope, branch },
                       revision.revision,
                     )
-                    .catch(this.logger.error);
+                    .catch((e) => this.logger.error("@error", e));
                 }
               }
             }
@@ -511,27 +516,34 @@ export class BaseDocumentDriveServer
     const drive = await this.getDrive(driveId);
 
     this.logger.verbose(
-      `[SYNC DEBUG] Initializing drive ${driveId} with slug "${drive.header.slug}"`,
+      '[SYNC DEBUG] Initializing drive @driveId with slug "@slug"',
+      driveId,
+      drive.header.slug,
     );
 
     await this.synchronizationManager.initializeDriveSyncStatus(driveId, drive);
 
     if (this.shouldSyncRemoteDrive(drive)) {
       this.logger.verbose(
-        `[SYNC DEBUG] Starting sync for remote drive ${driveId}`,
+        "[SYNC DEBUG] Starting sync for remote drive @driveId",
+        driveId,
       );
       await this.startSyncRemoteDrive(driveId);
     }
 
     // add switchboard push listeners
     this.logger.verbose(
-      `[SYNC DEBUG] Processing ${drive.state.local.listeners.length} listeners for drive ${driveId}`,
+      "[SYNC DEBUG] Processing @count listeners for drive @driveId",
+      drive.state.local.listeners.length,
+      driveId,
     );
 
     for (const zodListener of drive.state.local.listeners) {
       if (zodListener.callInfo?.transmitterType === "SwitchboardPush") {
         this.logger.verbose(
-          `[SYNC DEBUG] Setting up SwitchboardPush listener ${zodListener.listenerId} for drive ${driveId}`,
+          "[SYNC DEBUG] Setting up SwitchboardPush listener @listenerId for drive @driveId",
+          zodListener.listenerId,
+          driveId,
         );
 
         const transmitter = new SwitchboardPushTransmitter(
@@ -540,7 +552,8 @@ export class BaseDocumentDriveServer
         );
 
         this.logger.verbose(
-          `[SYNC DEBUG] Created SwitchboardPush transmitter with URL: ${zodListener.callInfo.data || "none"}`,
+          "[SYNC DEBUG] Created SwitchboardPush transmitter with URL: @url",
+          zodListener.callInfo.data || "none",
         );
 
         await this.listenerManager
@@ -561,12 +574,16 @@ export class BaseDocumentDriveServer
           })
           .then(() => {
             this.logger.verbose(
-              `[SYNC DEBUG] Successfully set up listener ${zodListener.listenerId} for drive ${driveId}`,
+              "[SYNC DEBUG] Successfully set up listener @listenerId for drive @driveId",
+              zodListener.listenerId,
+              driveId,
             );
           });
       } else if (zodListener.callInfo?.transmitterType === "PullResponder") {
         this.logger.verbose(
-          `[SYNC DEBUG] Setting up PullResponder listener ${zodListener.listenerId} for drive ${driveId}`,
+          "[SYNC DEBUG] Setting up PullResponder listener @listenerId for drive @driveId",
+          zodListener.listenerId,
+          driveId,
         );
 
         const pullResponderListener: ServerListener = {
@@ -592,7 +609,9 @@ export class BaseDocumentDriveServer
         await this.listenerManager.setListener(driveId, pullResponderListener);
       } else {
         this.logger.error(
-          `Skipping listener ${zodListener.listenerId} with unsupported type ${zodListener.callInfo?.transmitterType || "unknown"}`,
+          "Skipping listener @listenerId with unsupported type @transmitterType",
+          zodListener.listenerId,
+          zodListener.callInfo?.transmitterType || "unknown",
         );
       }
     }
@@ -787,7 +806,7 @@ export class BaseDocumentDriveServer
         }
       }
     } catch (e) {
-      this.logger.error("Error getting drive from cache", e);
+      this.logger.error("Error getting drive from cache: @error", e);
     }
 
     const driveStorage = document ?? (await this.documentStorage.get(driveId));
@@ -796,8 +815,12 @@ export class BaseDocumentDriveServer
       throw new Error(`Document with id ${driveId} is not a Document Drive`);
     } else {
       if (!options?.revisions) {
-        this.cache.setDocument(driveId, result).catch(this.logger.error);
-        this.cache.setDrive(driveId, result).catch(this.logger.error);
+        this.cache
+          .setDocument(driveId, result)
+          .catch((e) => this.logger.error("@error", e));
+        this.cache
+          .setDrive(driveId, result)
+          .catch((e) => this.logger.error("@error", e));
       }
       return result;
     }
@@ -810,7 +833,7 @@ export class BaseDocumentDriveServer
         return drive;
       }
     } catch (e) {
-      this.logger.error("Error getting drive from cache", e);
+      this.logger.error("Error getting drive from cache: @error", e);
     }
 
     const driveStorage = await this.documentStorage.getBySlug(slug);
@@ -818,7 +841,9 @@ export class BaseDocumentDriveServer
     if (!isDocumentDrive(document)) {
       throw new Error(`Document with slug ${slug} is not a Document Drive`);
     } else {
-      this.cache.setDriveBySlug(slug, document).catch(this.logger.error);
+      this.cache
+        .setDriveBySlug(slug, document)
+        .catch((e) => this.logger.error("@error", e));
       return document;
     }
   }
@@ -830,7 +855,7 @@ export class BaseDocumentDriveServer
         return drive.header.id;
       }
     } catch (e) {
-      this.logger.error("Error getting drive from cache", e);
+      this.logger.error("Error getting drive from cache: @error", e);
     }
 
     const driveStorage = await this.documentStorage.getBySlug(slug);
@@ -871,7 +896,7 @@ export class BaseDocumentDriveServer
         return cachedDocument;
       }
     } catch (e) {
-      this.logger.error("Error getting document from cache", e);
+      this.logger.error("Error getting document from cache: @error", e);
     }
 
     const documentStorage =
@@ -879,7 +904,9 @@ export class BaseDocumentDriveServer
     const document = this._buildDocument<TDocument>(documentStorage, options);
 
     if (!options?.revisions) {
-      this.cache.setDocument(documentId, document).catch(this.logger.error);
+      this.cache
+        .setDocument(documentId, document)
+        .catch((e) => this.logger.error("@error", e));
     }
 
     return document;
@@ -898,7 +925,7 @@ export class BaseDocumentDriveServer
       await this.documentStorage.addChild(parentId, documentId);
       // TODO: update listener manager?
     } catch (e) {
-      this.logger.error("Error adding child document", e);
+      this.logger.error("Error adding child document: @error", e);
       throw e;
     }
   }
@@ -917,14 +944,14 @@ export class BaseDocumentDriveServer
         ]);
       await this.listenerManager.removeSyncUnits(parentId, childSynUnits);
     } catch (e) {
-      this.logger.warn("Error removing sync units of child", e);
+      this.logger.warn("Error removing sync units of child: @error", e);
     }
 
     // remove child relationship from storage
     try {
       await this.documentStorage.removeChild(parentId, documentId);
     } catch (e) {
-      this.logger.error("Error adding child document", e);
+      this.logger.error("Error adding child document: @error", e);
       throw e;
     }
   }
@@ -1337,7 +1364,7 @@ export class BaseDocumentDriveServer
           .catch(this.logger.warn);
       }
     } catch (error) {
-      this.logger.warn("Error deleting document", error);
+      this.logger.warn("Error deleting document: @error", error);
     }
     await Promise.allSettled([
       this.cache.deleteDocument(documentId).catch(this.logger.warn),
@@ -1749,7 +1776,7 @@ export class BaseDocumentDriveServer
       appliedOperation.hash !== operation.hash &&
       !skipHashValidation
     ) {
-      this.logger.warn(JSON.stringify(appliedOperation, null, 2));
+      this.logger.warn("@appliedOperation", appliedOperation);
       throw new ConflictOperationError(operation, appliedOperation);
     }
 
@@ -1882,7 +1909,7 @@ export class BaseDocumentDriveServer
         options,
       });
     } catch (error) {
-      this.logger.error("Error adding job", error);
+      this.logger.error("Error adding job: @error", error);
       throw error;
     }
 
@@ -2054,7 +2081,7 @@ export class BaseDocumentDriveServer
         options,
       });
     } catch (error) {
-      this.logger.error("Error adding job", error);
+      this.logger.error("Error adding job: @error", error);
       throw error;
     }
 
@@ -2172,7 +2199,7 @@ export class BaseDocumentDriveServer
         );
       });
     } catch (error) {
-      this.logger.error("Error adding job", error);
+      this.logger.error("Error adding job: @error", error);
       throw error;
     }
   }
@@ -2227,7 +2254,7 @@ export class BaseDocumentDriveServer
         },
       );
     } catch (error) {
-      this.logger.error("Error adding drive job", error);
+      this.logger.error("Error adding drive job: @error", error);
       throw error;
     }
   }
@@ -2315,7 +2342,9 @@ export class BaseDocumentDriveServer
       const syncUnits = new Array<SynchronizationUnit>();
 
       if (document) {
-        this.cache.setDocument(documentId, document).catch(this.logger.error);
+        this.cache
+          .setDocument(documentId, document)
+          .catch((e) => this.logger.error("@error", e));
 
         // creates array of unique sync units from the applied operations
         for (const operation of operationsApplied) {
@@ -2399,7 +2428,7 @@ export class BaseDocumentDriveServer
           })
           .catch((error) => {
             this.logger.error(
-              "Non handled error updating sync revision",
+              "Non handled error updating sync revision: @error",
               error,
             );
             this.synchronizationManager.updateSyncStatus(
@@ -2592,7 +2621,7 @@ export class BaseDocumentDriveServer
         );
       });
     } catch (error) {
-      this.logger.error("Error adding drive job", error);
+      this.logger.error("Error adding drive job: @error", error);
       throw error;
     }
   }
@@ -2649,8 +2678,12 @@ export class BaseDocumentDriveServer
         throw error ?? new Error("Invalid Document Drive document");
       }
 
-      this.cache.setDocument(driveId, document).catch(this.logger.error);
-      this.cache.setDrive(driveId, document).catch(this.logger.error);
+      this.cache
+        .setDocument(driveId, document)
+        .catch((e) => this.logger.error("@error", e));
+      this.cache
+        .setDrive(driveId, document)
+        .catch((e) => this.logger.error("@error", e));
 
       // update listener cache
       const lastOperation = operationsApplied
@@ -2710,7 +2743,7 @@ export class BaseDocumentDriveServer
           })
           .catch((error) => {
             this.logger.error(
-              "Non handled error updating sync revision",
+              "Non handled error updating sync revision: @error",
               error,
             );
             this.synchronizationManager.updateSyncStatus(
@@ -2724,9 +2757,13 @@ export class BaseDocumentDriveServer
       }
 
       if (this.shouldSyncRemoteDrive(document)) {
-        this.startSyncRemoteDrive(driveId).catch(this.logger.error);
+        this.startSyncRemoteDrive(driveId).catch((e) =>
+          this.logger.error("@error", e),
+        );
       } else {
-        this.stopSyncRemoteDrive(driveId).catch(this.logger.error);
+        this.stopSyncRemoteDrive(driveId).catch((e) =>
+          this.logger.error("@error", e),
+        );
       }
 
       // after applying all the valid operations,throws
@@ -3093,13 +3130,16 @@ export class BaseDocumentDriveServer
           source,
         });
       } catch (error) {
-        this.logger.error("Error queueing operations", error);
+        this.logger.error("Error queueing operations: @error", error);
         throw error;
       }
     }
 
     if (!result) {
-      this.logger.debug(`Document ${strand.documentId} already exists`);
+      this.logger.debug(
+        "Document @documentId already exists",
+        strand.documentId,
+      );
       return {
         status: "SUCCESS",
         document: await this.getDocument(strand.documentId),

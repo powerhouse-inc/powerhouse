@@ -1,18 +1,10 @@
 import type { PGlite } from "@electric-sql/pglite";
 import type {
-  Database,
-  IDocumentModelRegistry,
   IReactorClient,
-  ISyncManager,
   ReactorClientModule,
 } from "@powerhousedao/reactor";
 import type { DID, IConnectCrypto, IRenown, User } from "@renown/sdk";
-import type {
-  DocumentDriveDocument,
-  IDocumentDriveServer,
-  ProcessorManager,
-} from "document-drive";
-import type { Kysely } from "kysely";
+import type { DocumentDriveDocument } from "document-drive";
 import type { PHGlobalConfig } from "./config.js";
 import type { IDocumentCache } from "./documents.js";
 import type { PHModal } from "./modals.js";
@@ -26,20 +18,14 @@ export type BrowserReactorClientModule = ReactorClientModule & {
 
 export type PHGlobal = PHGlobalConfig & {
   loading?: boolean;
-  legacyReactor?: IDocumentDriveServer;
   reactorClientModule?: BrowserReactorClientModule;
   reactorClient?: IReactorClient;
-  sync?: ISyncManager;
-  modelRegistry?: IDocumentModelRegistry;
-  database?: Kysely<Database>;
-  pglite?: PGlite;
   connectCrypto?: IConnectCrypto;
   did?: DID;
   renown?: IRenown;
   user?: User;
   loginStatus?: LoginStatus;
   vetraPackages?: VetraPackage[];
-  processorManager?: ProcessorManager;
   drives?: DocumentDriveDocument[];
   documentCache?: IDocumentCache;
   selectedDriveId?: string;

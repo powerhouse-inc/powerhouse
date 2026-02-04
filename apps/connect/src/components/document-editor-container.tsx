@@ -1,29 +1,18 @@
 import { DocumentEditor } from "@powerhousedao/connect/components";
 import { toast } from "@powerhousedao/connect/services";
-import { openUrl } from "@powerhousedao/connect/utils";
 import {
-  buildDocumentSubgraphUrl,
   exportFile,
-  getDriveIsRemote,
-  getDriveRemoteUrl,
   setSelectedNode,
   showPHModal,
   useNodeParentFolderById,
   useSelectedDocument,
-  useSelectedDrive,
   validateDocument,
 } from "@powerhousedao/reactor-browser";
-import { useRenown, useUser } from "@powerhousedao/reactor-browser/connect";
 import { useCallback, useMemo } from "react";
 
 export function DocumentEditorContainer() {
-  const [selectedDrive] = useSelectedDrive();
   const [selectedDocument] = useSelectedDocument();
   const parentFolder = useNodeParentFolderById(selectedDocument.header.id);
-  const isRemoteDrive = getDriveIsRemote(selectedDrive);
-  const remoteUrl = getDriveRemoteUrl(selectedDrive);
-  const renown = useRenown();
-  const user = useUser();
 
   const onExport = useCallback(() => {
     const validationErrors = validateDocument(selectedDocument);
@@ -45,41 +34,12 @@ export function DocumentEditorContainer() {
     }
   }, [selectedDocument]);
 
-  // TODO: fix this mess
+  // TODO: unused
   const onOpenSwitchboardLink = useMemo(() => {
-    return isRemoteDrive
-      ? async () => {
-          if (!selectedDocument.header.id) {
-            console.error("No selected document");
-            return;
-          }
-
-          if (!remoteUrl) {
-            console.error("No remote drive url found");
-            return;
-          }
-
-          // @todo: add environment variable for token expiration
-          const token = user?.address
-            ? await renown?.getBearerToken({
-                expiresIn: 600,
-                aud: remoteUrl,
-              })
-            : undefined;
-
-          const url = buildDocumentSubgraphUrl(
-            remoteUrl,
-            selectedDocument.header.id,
-            token,
-          );
-          try {
-            openUrl(url);
-          } catch (e) {
-            console.error("Error opening switchboard link", e);
-          }
-        }
-      : undefined;
-  }, [isRemoteDrive, remoteUrl, selectedDocument]);
+    return async () => {
+      //
+    };
+  }, []);
 
   const onClose = useCallback(() => {
     setSelectedNode(parentFolder);

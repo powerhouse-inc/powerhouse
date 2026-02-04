@@ -67,7 +67,10 @@ export class ListenerManager implements IListenerManager {
       window.addEventListener("online", () => {
         this.triggerUpdate(false, { type: "local" }, undefined, handler).catch(
           (error) => {
-            this.logger.error("Non handled error updating listeners", error);
+            this.logger.error(
+              "Non handled error updating listeners: @error",
+              error,
+            );
           },
         );
       });
@@ -80,7 +83,9 @@ export class ListenerManager implements IListenerManager {
 
   async setListener(driveId: string, listener: ServerListener) {
     this.logger.verbose(
-      `setListener(drive: ${driveId}, listener: ${listener.listenerId})`,
+      "setListener(drive: @driveId, listener: @listenerId)",
+      driveId,
+      listener.listenerId,
     );
 
     // slight code smell -- drive id may not need to be on listener or not passed in
@@ -215,7 +220,9 @@ export class ListenerManager implements IListenerManager {
     maxContinues = 500,
   ) {
     this.logger.verbose(
-      `_triggerUpdate(source: ${source.type}, maxContinues: ${maxContinues})`,
+      "_triggerUpdate(source: @sourceType, maxContinues: @maxContinues) @listenerStateByDriveId",
+      source.type,
+      maxContinues,
       this.listenerStateByDriveId,
     );
 
@@ -237,7 +244,7 @@ export class ListenerManager implements IListenerManager {
         const syncUnits = await this.getListenerSyncUnits(driveId, listenerId);
         const strandUpdates: StrandUpdate[] = [];
 
-        this.logger.verbose("syncUnits", syncUnits);
+        this.logger.verbose("syncUnits: @syncUnits", syncUnits);
 
         // TODO change to push one after the other, reusing operation data
         const tasks = syncUnits.map((syncUnit) => async () => {
@@ -245,12 +252,19 @@ export class ListenerManager implements IListenerManager {
 
           if (unitState && unitState.listenerRev >= syncUnit.revision) {
             this.logger.verbose(
-              `Abandoning push for sync unit ${JSON.stringify(syncUnit)}: already up-to-date (${unitState.listenerRev} >= ${syncUnit.revision})`,
+              "Abandoning push for sync unit @syncUnit: already up-to-date (@listenerRev >= @revision)",
+              syncUnit,
+              unitState.listenerRev,
+              syncUnit.revision,
             );
             return;
           } else {
             this.logger.verbose(
-              `Listener out-of-date for sync unit (${syncUnit.scope}, ${syncUnit.documentId}): ${unitState?.listenerRev} < ${syncUnit.revision}`,
+              "Listener out-of-date for sync unit (@scope, @documentId): @listenerRev < @revision",
+              syncUnit.scope,
+              syncUnit.documentId,
+              unitState?.listenerRev,
+              syncUnit.revision,
             );
           }
 
@@ -266,12 +280,13 @@ export class ListenerManager implements IListenerManager {
               );
               opData.push(...data);
             } catch (e) {
-              this.logger.error(e);
+              this.logger.error("@error", e);
             }
 
             if (!opData.length) {
               this.logger.verbose(
-                `Abandoning push for ${JSON.stringify(syncUnit)}: no operations found`,
+                "Abandoning push for @syncUnit: no operations found",
+                syncUnit,
               );
               return;
             }
@@ -289,21 +304,24 @@ export class ListenerManager implements IListenerManager {
 
         if (this.options.sequentialUpdates) {
           this.logger.verbose(
-            `Collecting ${tasks.length} syncUnit strandUpdates in sequence`,
+            "Collecting @count syncUnit strandUpdates in sequence",
+            tasks.length,
           );
           for (const task of tasks) {
             await task();
           }
         } else {
           this.logger.verbose(
-            `Collecting ${tasks.length} syncUnit strandUpdates in parallel`,
+            "Collecting @count syncUnit strandUpdates in parallel",
+            tasks.length,
           );
           await Promise.all(tasks.map((task) => task()));
         }
 
         if (strandUpdates.length == 0) {
           this.logger.verbose(
-            `No strandUpdates needed for listener ${listenerId}`,
+            "No strandUpdates needed for listener @listenerId",
+            listenerId,
           );
           continue;
         }
@@ -317,7 +335,8 @@ export class ListenerManager implements IListenerManager {
         // TODO update listeners in parallel, blocking for listeners with block=true
         try {
           this.logger.verbose(
-            `_triggerUpdate(source: ${source.type}) > transmitter.transmit`,
+            "_triggerUpdate(source: @sourceType) > transmitter.transmit",
+            source.type,
           );
 
           const listenerRevisions = await transmitter.transmit(
@@ -326,7 +345,8 @@ export class ListenerManager implements IListenerManager {
           );
 
           this.logger.verbose(
-            `_triggerUpdate(source: ${source.type}) > transmission succeeded`,
+            "_triggerUpdate(source: @sourceType) > transmission succeeded: @listenerRevisions",
+            source.type,
             listenerRevisions,
           );
 
@@ -363,19 +383,29 @@ export class ListenerManager implements IListenerManager {
                 const suIndex = su.operations.at(-1)?.index;
                 if (suIndex !== revision.revision) {
                   this.logger.verbose(
-                    `Revision still out-of-date for ${su.documentId}:${su.scope}:${su.branch} ${suIndex} <> ${revision.revision}`,
+                    "Revision still out-of-date for @documentId:@scope:@branch @suIndex <> @revision",
+                    su.documentId,
+                    su.scope,
+                    su.branch,
+                    suIndex,
+                    revision.revision,
                   );
                   continuationNeeded = true;
                 } else {
                   this.logger.verbose(
-                    `Revision match for ${su.documentId}:${su.scope}:${su.branch} ${suIndex}`,
+                    "Revision match for @documentId:@scope:@branch @suIndex",
+                    su.documentId,
+                    su.scope,
+                    su.branch,
+                    suIndex,
                   );
                 }
               }
               // Check for revision status ^^
             } else {
               this.logger.warn(
-                `Received revision for untracked unit for listener ${listenerState.listener.listenerId}`,
+                "Received revision for untracked unit for listener @listenerId: @revision",
+                listenerState.listener.listenerId,
                 revision,
               );
             }
@@ -421,7 +451,8 @@ export class ListenerManager implements IListenerManager {
     }
 
     this.logger.verbose(
-      `Returning listener updates (maxContinues: ${maxContinues})`,
+      "Returning listener updates (maxContinues: @maxContinues): @listenerUpdates",
+      maxContinues,
       listenerUpdates,
     );
 
@@ -479,7 +510,7 @@ export class ListenerManager implements IListenerManager {
       try {
         await listenerState.listener.transmitter?.disconnect?.();
       } catch (error) {
-        this.logger.error(error);
+        this.logger.error("@error", error);
       }
     }
   }
@@ -491,18 +522,27 @@ export class ListenerManager implements IListenerManager {
   ): Promise<StrandUpdate[]> {
     // this will throw if listenerState is not found
     this.logger.verbose(
-      `[SYNC DEBUG] ListenerManager.getStrands called for drive: ${driveId}, listener: ${listenerId}, options: ${JSON.stringify(options || {})}`,
+      "[SYNC DEBUG] ListenerManager.getStrands called for drive: @driveId, listener: @listenerId, options: @options",
+      driveId,
+      listenerId,
+      options || {},
     );
 
     let listenerState;
     try {
       listenerState = this.getListenerState(driveId, listenerId);
       this.logger.verbose(
-        `[SYNC DEBUG] Found listener state for drive: ${driveId}, listener: ${listenerId}, status: ${listenerState.listenerStatus}`,
+        "[SYNC DEBUG] Found listener state for drive: @driveId, listener: @listenerId, status: @status",
+        driveId,
+        listenerId,
+        listenerState.listenerStatus,
       );
     } catch (error) {
       this.logger.error(
-        `[SYNC DEBUG] Failed to find listener state for drive: ${driveId}, listener: ${listenerId}. Error: ${error}`,
+        "[SYNC DEBUG] Failed to find listener state for drive: @driveId, listener: @listenerId. Error: @error",
+        driveId,
+        listenerId,
+        error,
       );
       throw error;
     }
@@ -513,7 +553,10 @@ export class ListenerManager implements IListenerManager {
     try {
       const syncUnits = await this.getListenerSyncUnits(driveId, listenerId);
       this.logger.verbose(
-        `[SYNC DEBUG] Retrieved ${syncUnits.length} sync units for drive: ${driveId}, listener: ${listenerId}`,
+        "[SYNC DEBUG] Retrieved @count sync units for drive: @driveId, listener: @listenerId",
+        syncUnits.length,
+        driveId,
+        listenerId,
       );
 
       const limit = options?.limit; // maximum number of operations to send across all sync units
@@ -526,14 +569,19 @@ export class ListenerManager implements IListenerManager {
         }
         if (syncUnit.revision < 0) {
           this.logger.verbose(
-            `[SYNC DEBUG] Skipping sync unit with negative revision: ${JSON.stringify(syncUnit)}, revision: ${syncUnit.revision}`,
+            "[SYNC DEBUG] Skipping sync unit with negative revision: @syncUnit, revision: @revision",
+            syncUnit,
+            syncUnit.revision,
           );
           return;
         }
         const entry = listenerState.syncUnits.get(syncUnit);
         if (entry && entry.listenerRev >= syncUnit.revision) {
           this.logger.verbose(
-            `[SYNC DEBUG] Skipping sync unit - listener already up to date: ${JSON.stringify(syncUnit)}, listenerRev: ${entry.listenerRev}, revision: ${syncUnit.revision}`,
+            "[SYNC DEBUG] Skipping sync unit - listener already up to date: @syncUnit, listenerRev: @listenerRev, revision: @revision",
+            syncUnit,
+            entry.listenerRev,
+            syncUnit.revision,
           );
           return;
         }
@@ -543,7 +591,8 @@ export class ListenerManager implements IListenerManager {
         try {
           if (syncUnit.revision > 0) {
             this.logger.verbose(
-              `[SYNC DEBUG] Getting operations for syncUnit: ${JSON.stringify(syncUnit)}`,
+              "[SYNC DEBUG] Getting operations for syncUnit: @syncUnit",
+              syncUnit,
             );
 
             operations = await this.syncManager.getOperationData(
@@ -557,7 +606,9 @@ export class ListenerManager implements IListenerManager {
             );
           }
           this.logger.verbose(
-            `[SYNC DEBUG] Retrieved ${operations.length} operations for syncUnit: ${JSON.stringify(syncUnit)}`,
+            "[SYNC DEBUG] Retrieved @count operations for syncUnit: @syncUnit",
+            operations.length,
+            syncUnit,
           );
 
           operationsCount += operations.length;
@@ -572,11 +623,15 @@ export class ListenerManager implements IListenerManager {
           });
 
           this.logger.verbose(
-            `[SYNC DEBUG] Added strand with ${operations.length} operations for syncUnit: ${JSON.stringify(syncUnit)}`,
+            "[SYNC DEBUG] Added strand with @count operations for syncUnit: @syncUnit",
+            operations.length,
+            syncUnit,
           );
         } catch (error) {
           this.logger.error(
-            `Error getting operations for syncUnit: ${JSON.stringify(syncUnit)}, error: ${error}`,
+            "Error getting operations for syncUnit: @syncUnit, error: @error",
+            syncUnit,
+            error,
           );
           return;
         }
@@ -584,23 +639,28 @@ export class ListenerManager implements IListenerManager {
 
       if (this.options.sequentialUpdates) {
         this.logger.verbose(
-          `[SYNC DEBUG] Processing ${tasks.length} sync units sequentially`,
+          "[SYNC DEBUG] Processing @count sync units sequentially",
+          tasks.length,
         );
         for (const task of tasks) {
           await task();
         }
       } else {
         this.logger.verbose(
-          `[SYNC DEBUG] Processing ${tasks.length} sync units in parallel`,
+          "[SYNC DEBUG] Processing @count sync units in parallel",
+          tasks.length,
         );
         await Promise.all(tasks.map((task) => task()));
       }
     } catch (error) {
-      this.logger.error(`Error in getStrands: ${error}`);
+      this.logger.error("Error in getStrands: @error", error);
     }
 
     this.logger.verbose(
-      `ListenerManager.getStrands returning ${strands.length} strands for drive: ${driveId}, listener: ${listenerId}`,
+      "ListenerManager.getStrands returning @count strands for drive: @driveId, listener: @listenerId",
+      strands.length,
+      driveId,
+      listenerId,
     );
     return strands;
   }

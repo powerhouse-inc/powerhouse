@@ -11,28 +11,15 @@ import type {
   SetPHGlobalValue,
   UsePHGlobalValue,
 } from "@powerhousedao/reactor-browser";
-import type { IDocumentDriveServer } from "document-drive";
+import { useQuery } from "@tanstack/react-query";
 import type { Kysely } from "kysely";
+import { useCallback } from "react";
 import { makePHEventFunctions } from "./make-ph-event-functions.js";
 
-const legacyEventFunctions = makePHEventFunctions("legacyReactor");
 const reactorClientModuleEventFunctions = makePHEventFunctions(
   "reactorClientModule",
 );
 const reactorClientEventFunctions = makePHEventFunctions("reactorClient");
-const syncEventFunctions = makePHEventFunctions("sync");
-
-/** Returns the legacy reactor */
-export const useLegacyReactor: UsePHGlobalValue<IDocumentDriveServer> =
-  legacyEventFunctions.useValue;
-
-/** Sets the legacy reactor */
-export const setLegacyReactor: SetPHGlobalValue<IDocumentDriveServer> =
-  legacyEventFunctions.setValue;
-
-/** Adds an event handler for the reactor */
-export const addLegacyReactorEventHandler: AddPHGlobalEventHandler =
-  legacyEventFunctions.addEventHandler;
 
 /** Returns the reactor client module */
 export const useReactorClientModule: UsePHGlobalValue<BrowserReactorClientModule> =
@@ -54,60 +41,32 @@ export const useReactorClient: UsePHGlobalValue<IReactorClient> =
 export const setReactorClient: SetPHGlobalValue<IReactorClient> =
   reactorClientEventFunctions.setValue;
 
-const modelRegistryEventFunctions = makePHEventFunctions("modelRegistry");
-
-/** Returns the model registry */
-export const useModelRegistry: UsePHGlobalValue<IDocumentModelRegistry> =
-  modelRegistryEventFunctions.useValue;
-
-/** Sets the model registry */
-export const setModelRegistry: SetPHGlobalValue<IDocumentModelRegistry> =
-  modelRegistryEventFunctions.setValue;
-
-/** Adds an event handler for the model registry */
-export const addModelRegistryEventHandler: AddPHGlobalEventHandler =
-  modelRegistryEventFunctions.addEventHandler;
-
 /** Adds an event handler for the reactor client */
 export const addReactorClientEventHandler: AddPHGlobalEventHandler =
   reactorClientEventFunctions.addEventHandler;
 
-/** Returns the sync manager */
-export const useSync: UsePHGlobalValue<ISyncManager> =
-  syncEventFunctions.useValue;
+// The following are derived from the reactor client module:
 
-/** Sets the sync manager */
-export const setSync: SetPHGlobalValue<ISyncManager> =
-  syncEventFunctions.setValue;
+export const useSync = (): ISyncManager | undefined =>
+  useReactorClientModule()?.reactorModule?.syncModule?.syncManager;
 
-/** Adds an event handler for the sync manager */
-export const addSyncEventHandler: AddPHGlobalEventHandler =
-  syncEventFunctions.addEventHandler;
+export const useSyncList = () => {
+  const sync = useSync();
+  const fn = useCallback(() => {
+    if (!sync) return [];
+    return sync.list();
+  }, [sync]);
 
-const databaseEventFunctions = makePHEventFunctions("database");
+  return useQuery({
+    queryKey: ["sync", "list"],
+    queryFn: fn,
+  });
+};
 
-/** Returns the database */
-export const useDatabase: UsePHGlobalValue<Kysely<Database>> =
-  databaseEventFunctions.useValue;
+export const useModelRegistry = (): IDocumentModelRegistry | undefined =>
+  useReactorClientModule()?.reactorModule?.documentModelRegistry;
 
-/** Sets the database */
-export const setDatabase: SetPHGlobalValue<Kysely<Database>> =
-  databaseEventFunctions.setValue;
+export const useDatabase = (): Kysely<Database> | undefined =>
+  useReactorClientModule()?.reactorModule?.database;
 
-/** Adds an event handler for the database */
-export const addDatabaseEventHandler: AddPHGlobalEventHandler =
-  databaseEventFunctions.addEventHandler;
-
-const pgliteEventFunctions = makePHEventFunctions("pglite");
-
-/** Returns the PGlite instance */
-export const usePGlite: UsePHGlobalValue<PGlite> =
-  pgliteEventFunctions.useValue;
-
-/** Sets the PGlite instance */
-export const setPGlite: SetPHGlobalValue<PGlite> =
-  pgliteEventFunctions.setValue;
-
-/** Adds an event handler for the PGlite instance */
-export const addPGliteEventHandler: AddPHGlobalEventHandler =
-  pgliteEventFunctions.addEventHandler;
+export const usePGlite = (): PGlite | undefined => useReactorClientModule()?.pg;

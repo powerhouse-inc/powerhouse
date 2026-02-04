@@ -1,4 +1,4 @@
-# Powerhouse CLI Commands<br>
+# Powerhouse CLI Commands (6.0.0-dev.30)<br>
 This document provides detailed information about the available commands in the Powerhouse CLI.<br><br>
 The Powerhouse CLI (ph-cli) is a command-line interface tool that provides essential commands for managing Powerhouse projects. The tool and it's commands are fundamental for creating, building, and running Document Models as a builder in studio mode.<br>
 ## Table of Contents
@@ -506,8 +506,8 @@ This command:
 
 Prerequisites:
   You must have a cryptographic identity. Run 'ph login' first to:
-  - Generate a keypair (stored in .keypair.json)
-  - Optionally link your Ethereum address (stored in .auth.json)
+  - Generate a keypair (stored in .ph/.keypair.json)
+  - Optionally link your Ethereum address (stored in .ph/.renown.json)
 
 Token Details:
   The generated token is a JWT (JSON Web Token) containing:
@@ -731,7 +731,7 @@ This command:
 1. Generates or loads a cryptographic identity (DID) for the CLI
 2. Opens your browser to the Renown authentication page
 3. You authorize the CLI's DID to act on behalf of your Ethereum address
-4. Stores the credentials locally in ~/.ph/auth.json
+4. Stores the credentials locally in .ph/.renown.json
   
 ### options
 #### Renown Url <br>

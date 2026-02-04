@@ -2,7 +2,7 @@ import type { IOperationIndex } from "../../cache/operation-index-types.js";
 import type { ILogger } from "../../logging/types.js";
 import type { ISyncCursorStorage } from "../../storage/interfaces.js";
 import type { IChannel, IChannelFactory } from "../interfaces.js";
-import type { ChannelConfig, RemoteFilter } from "../types.js";
+import type { ChannelConfig, JwtHandler, RemoteFilter } from "../types.js";
 import { GqlChannel, type GqlChannelConfig } from "./gql-channel.js";
 import { IntervalPollTimer } from "./interval-poll-timer.js";
 
@@ -11,12 +11,17 @@ import { IntervalPollTimer } from "./interval-poll-timer.js";
  *
  * Extracts GraphQL-specific configuration from ChannelConfig.parameters and
  * instantiates GqlChannel instances for network-based synchronization.
+ *
+ * The optional jwtHandler enables dynamic JWT token generation per-request,
+ * which is useful for short-lived tokens with audience-specific claims.
  */
 export class GqlChannelFactory implements IChannelFactory {
   private readonly logger: ILogger;
+  private readonly jwtHandler?: JwtHandler;
 
-  constructor(logger: ILogger) {
+  constructor(logger: ILogger, jwtHandler?: JwtHandler) {
     this.logger = logger;
+    this.jwtHandler = jwtHandler;
   }
 
   /**
@@ -57,14 +62,8 @@ export class GqlChannelFactory implements IChannelFactory {
       url,
       collectionId,
       filter,
+      jwtHandler: this.jwtHandler,
     };
-
-    if (config.parameters.authToken !== undefined) {
-      if (typeof config.parameters.authToken !== "string") {
-        throw new Error('"authToken" parameter must be a string');
-      }
-      gqlConfig.authToken = config.parameters.authToken;
-    }
 
     let pollIntervalMs = 2000;
     if (config.parameters.pollIntervalMs !== undefined) {

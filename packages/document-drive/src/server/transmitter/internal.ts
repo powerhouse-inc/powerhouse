@@ -131,7 +131,7 @@ export class InternalTransmitter implements ITransmitter {
           };
         });
       } catch (error) {
-        logger.error(error);
+        logger.error("@error", error);
         // TODO check which strand caused an error
         return strands.map(({ operations, ...s }) => ({
           ...s,

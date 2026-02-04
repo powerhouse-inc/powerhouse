@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/ph-cli",
-  "version": "6.0.0-dev.28",
+  "version": "6.0.0-dev.31",
   "description": "",
   "license": "AGPL-3.0-only",
   "type": "module",
@@ -30,10 +30,9 @@
   "scripts": {
     "tsc": "tsc",
     "lint": "eslint",
-    "generate-docs-legacy": "tsx scripts/generate-docs-legacy.ts",
+    "generate-docs-legacy": "bun run scripts/generate-docs-legacy.ts",
     "generate-docs": "bun run scripts/generate-commands-docs.ts",
-    "generate-version": "tsx scripts/generate-version.ts",
-    "build": "pnpm generate-docs-legacy && pnpm generate-version && pnpm tsc && pnpm generate-docs && pnpm copy-scripts",
+    "build:cli": "bun generate-docs && bun generate-docs-legacy && bun copy-scripts",
     "copy-scripts": "copyfiles scripts/* dist/",
     "dev": "concurrently -P 'pnpm -w run tsc --watch' 'nodemon --watch \"../..\" -e ts,tsx,js,json dist/src/cli.js -- {@}' --",
     "cli": "node ./dist/src/cli.js",

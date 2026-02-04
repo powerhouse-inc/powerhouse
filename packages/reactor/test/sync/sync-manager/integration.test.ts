@@ -523,6 +523,9 @@ describe("SyncManager Integration", () => {
 
       await eventBus.emit(ReactorEventTypes.JOB_WRITE_READY, {
         operations,
+        collectionMemberships: {
+          doc1: ["collection1"],
+        },
       });
 
       expect(sentEnvelopes).toHaveLength(1);

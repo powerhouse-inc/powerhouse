@@ -1,5 +1,12 @@
 import type { OperationWithContext } from "../storage/interfaces.js";
 
+/**
+ * Dynamic JWT token handler for generating authentication tokens per-request.
+ * Called with the target URL to enable audience-specific tokens (aud claim).
+ * Returns undefined if no authentication is available (e.g., user not logged in).
+ */
+export type JwtHandler = (url: string) => Promise<string | undefined>;
+
 export type RemoteOptions = {
   sinceTimestampUtcMs: string;
 };

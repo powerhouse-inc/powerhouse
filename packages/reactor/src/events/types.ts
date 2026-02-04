@@ -76,6 +76,12 @@ export type JobWriteReadyEvent = {
   jobId: string;
   operations: OperationWithContext[];
   jobMeta?: Record<string, unknown>;
+  /**
+   * Maps documentId to the collection IDs it belongs to.
+   * Used by SyncManager to route operations only to remotes
+   * whose collection contains the document.
+   */
+  collectionMemberships?: Record<string, string[]>;
 };
 
 /**

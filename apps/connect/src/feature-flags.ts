@@ -5,7 +5,7 @@ import {
   type Provider,
   type ResolutionDetails,
 } from "@openfeature/web-sdk";
-import type { LogLevel } from "@powerhousedao/config";
+import type { ILogger } from "document-drive";
 import { logger, setLogLevel } from "document-drive";
 import { connectConfig } from "./connect.config.js";
 
@@ -198,13 +198,16 @@ export async function initFeatureFlags(
   if (logLevelParam) {
     const validLogLevels = ["verbose", "debug", "info", "warn", "error"];
     if (validLogLevels.includes(logLevelParam.toLowerCase())) {
-      setLogLevel(logLevelParam.toLowerCase() as LogLevel);
+      setLogLevel(logLevelParam.toLowerCase() as ILogger["level"]);
       logger.info(
-        `Log level set to ${logLevelParam.toLowerCase()} via query param`,
+        "Log level set to @level via query param",
+        logLevelParam.toLowerCase(),
       );
     } else {
       logger.warn(
-        `Invalid LOG_LEVEL query param: ${logLevelParam}. Valid values: ${validLogLevels.join(", ")}`,
+        "Invalid LOG_LEVEL query param: @param. Valid values: @validLevels",
+        logLevelParam,
+        validLogLevels.join(", "),
       );
     }
   }

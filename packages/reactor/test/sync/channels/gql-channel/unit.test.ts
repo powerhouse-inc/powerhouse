@@ -132,6 +132,7 @@ const createMockOperationIndex = (): IOperationIndex => ({
     .fn()
     .mockResolvedValue({ items: [], nextCursor: undefined, hasMore: false }),
   getLatestTimestampForCollection: vi.fn().mockResolvedValue(null),
+  getCollectionsForDocuments: vi.fn().mockResolvedValue({}),
 });
 
 const createPollTimer = (intervalMs = 2000): IPollTimer =>
@@ -162,9 +163,7 @@ describe("GqlChannel", () => {
         "channel-1",
         "remote-1",
         cursorStorage,
-        createTestConfig({
-          authToken: "test-token",
-        }),
+        createTestConfig(),
         createMockOperationIndex(),
         createPollTimer(),
       );
@@ -236,10 +235,13 @@ describe("GqlChannel", () => {
       await vi.advanceTimersByTimeAsync(5000);
       expect(mockFetch).not.toHaveBeenCalled();
 
-      // After init, polling should start immediately
+      // After init, polling should start immediately (async)
       await channel.init();
-      // init() calls touchChannel + immediate poll
-      expect(mockFetch).toHaveBeenCalledTimes(2);
+      // init() calls touchChannel synchronously, poll is async
+      // Wait for the immediate poll to complete
+      await vi.waitFor(() => {
+        expect(mockFetch).toHaveBeenCalledTimes(2);
+      });
 
       // Fast-forward time to trigger next poll
       await vi.advanceTimersByTimeAsync(5000);
@@ -269,8 +271,11 @@ describe("GqlChannel", () => {
       );
       await channel.init();
 
-      // init() calls touchChannel + immediate poll
-      expect(mockFetch).toHaveBeenCalledTimes(2);
+      // init() calls touchChannel synchronously, poll is async
+      // Wait for the immediate poll to complete
+      await vi.waitFor(() => {
+        expect(mockFetch).toHaveBeenCalledTimes(2);
+      });
 
       // After first poll interval
       await vi.advanceTimersByTimeAsync(3000);
@@ -317,7 +322,7 @@ describe("GqlChannel", () => {
       channel.shutdown();
     });
 
-    it("should include auth token in headers when provided", async () => {
+    it("should include auth token in headers when jwtHandler provided", async () => {
       const cursorStorage = createMockCursorStorage();
       const mockFetch = createMockFetch({
         pollSyncEnvelopes: [],
@@ -325,13 +330,15 @@ describe("GqlChannel", () => {
       });
       global.fetch = mockFetch;
 
+      const jwtHandler = vi.fn().mockResolvedValue("secret-token");
+
       const channel = new GqlChannel(
         createMockLogger(),
         "channel-1",
         "remote-1",
         cursorStorage,
         createTestConfig({
-          authToken: "secret-token",
+          jwtHandler,
         }),
         createMockOperationIndex(),
         createPollTimer(),
@@ -340,12 +347,85 @@ describe("GqlChannel", () => {
 
       await vi.advanceTimersByTimeAsync(5000);
 
+      expect(jwtHandler).toHaveBeenCalledWith("https://example.com/graphql");
       expect(mockFetch).toHaveBeenCalledWith(
         "https://example.com/graphql",
         expect.objectContaining({
           headers: expect.objectContaining({
             Authorization: "Bearer secret-token",
           }),
+        }),
+      );
+    });
+
+    it("should not include auth header when jwtHandler returns undefined", async () => {
+      const cursorStorage = createMockCursorStorage();
+      const mockFetch = createMockFetch({
+        pollSyncEnvelopes: [],
+        touchChannel: true,
+      });
+      global.fetch = mockFetch;
+
+      const jwtHandler = vi.fn().mockResolvedValue(undefined);
+
+      const channel = new GqlChannel(
+        createMockLogger(),
+        "channel-1",
+        "remote-1",
+        cursorStorage,
+        createTestConfig({
+          jwtHandler,
+        }),
+        createMockOperationIndex(),
+        createPollTimer(),
+      );
+      await channel.init();
+
+      await vi.advanceTimersByTimeAsync(5000);
+
+      expect(jwtHandler).toHaveBeenCalled();
+      expect(mockFetch).toHaveBeenCalledWith(
+        "https://example.com/graphql",
+        expect.objectContaining({
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }),
+      );
+    });
+
+    it("should handle jwtHandler errors gracefully", async () => {
+      const cursorStorage = createMockCursorStorage();
+      const mockFetch = createMockFetch({
+        pollSyncEnvelopes: [],
+        touchChannel: true,
+      });
+      global.fetch = mockFetch;
+
+      const jwtHandler = vi.fn().mockRejectedValue(new Error("JWT error"));
+
+      const channel = new GqlChannel(
+        createMockLogger(),
+        "channel-1",
+        "remote-1",
+        cursorStorage,
+        createTestConfig({
+          jwtHandler,
+        }),
+        createMockOperationIndex(),
+        createPollTimer(),
+      );
+      await channel.init();
+
+      await vi.advanceTimersByTimeAsync(5000);
+
+      expect(jwtHandler).toHaveBeenCalled();
+      expect(mockFetch).toHaveBeenCalledWith(
+        "https://example.com/graphql",
+        expect.objectContaining({
+          headers: {
+            "Content-Type": "application/json",
+          },
         }),
       );
     });
@@ -919,8 +999,11 @@ describe("GqlChannel", () => {
       );
       await channel.init();
 
-      // init() calls touchChannel + immediate poll = 2 calls
-      expect(mockFetch).toHaveBeenCalledTimes(2);
+      // init() calls touchChannel synchronously, poll is async
+      // Wait for the immediate poll to complete
+      await vi.waitFor(() => {
+        expect(mockFetch).toHaveBeenCalledTimes(2);
+      });
 
       await vi.advanceTimersByTimeAsync(1000);
       // After 1000ms, another poll = 3 calls
@@ -1107,7 +1190,11 @@ describe("GqlChannel", () => {
 
       await channel.init();
 
-      expect(mockFetch).toHaveBeenCalledTimes(2);
+      // init() calls touchChannel synchronously, poll is triggered async by ManualPollTimer.start()
+      // Wait for the immediate poll to complete
+      await vi.waitFor(() => {
+        expect(mockFetch).toHaveBeenCalledTimes(2);
+      });
 
       await manualTimer.tick();
       expect(mockFetch).toHaveBeenCalledTimes(3);
@@ -1140,7 +1227,11 @@ describe("GqlChannel", () => {
 
       await channel.init();
 
-      expect(mockFetch).toHaveBeenCalledTimes(2);
+      // init() calls touchChannel synchronously, poll is triggered async by ManualPollTimer.start()
+      // Wait for the immediate poll to complete
+      await vi.waitFor(() => {
+        expect(mockFetch).toHaveBeenCalledTimes(2);
+      });
 
       channel.shutdown();
 

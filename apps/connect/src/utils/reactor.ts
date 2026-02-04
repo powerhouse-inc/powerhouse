@@ -9,90 +9,15 @@ import {
   SyncBuilder,
   type Database,
   type ISyncManager,
+  type JwtHandler,
   type ParsedDriveUrl,
   type SignerConfig,
 } from "@powerhousedao/reactor";
 import type { BrowserReactorClientModule } from "@powerhousedao/reactor-browser";
-import { getReactorDefaultDrivesConfig as getReactorDefaultDrivesConfigBase } from "@powerhousedao/reactor-browser";
 import { createSignatureVerifier, type IRenown } from "@renown/sdk";
-import type {
-  DocumentDriveServerOptions,
-  IDocumentAdminStorage,
-  IDocumentDriveServer,
-  IDocumentOperationStorage,
-  IDocumentStorage,
-  IDriveOperationStorage,
-} from "document-drive";
-import {
-  BrowserStorage,
-  EventQueueManager,
-  InMemoryCache,
-  ReactorBuilder as LegacyReactorBuilder,
-} from "document-drive";
 import type { DocumentModelModule, UpgradeManifest } from "document-model";
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
-import { createRemoveOldRemoteDrivesConfig } from "./drive-preservation.js";
-
-/**
- * Gets the default drives URLs from environment variable at call time.
- * This must be called at runtime, not at module initialization, because
- * the env var is set after the module is first imported during Vite dev server startup.
- */
-function getDefaultDrivesUrlFromEnv(): string[] {
-  const envValue = import.meta.env.PH_CONNECT_DEFAULT_DRIVES_URL as
-    | string
-    | undefined;
-  if (!envValue) return [];
-  return envValue.split(",").filter((url) => url.trim().length > 0);
-}
-
-/**
- * Gets the default drives config for Connect, reading URLs from PH_CONNECT_DEFAULT_DRIVES_URL
- * and using the Connect-specific preservation strategy from config.
- */
-export const getReactorDefaultDrivesConfig = (): Pick<
-  DocumentDriveServerOptions,
-  "defaultDrives"
-> => {
-  // Read env var at call time, not at module initialization
-  const defaultDrivesUrl = getDefaultDrivesUrlFromEnv();
-
-  const baseConfig = getReactorDefaultDrivesConfigBase({
-    defaultDrivesUrl,
-  });
-
-  // Override the removeOldRemoteDrives strategy with Connect-specific config
-  return {
-    defaultDrives: {
-      ...baseConfig.defaultDrives,
-      removeOldRemoteDrives:
-        createRemoveOldRemoteDrivesConfig(defaultDrivesUrl),
-    },
-  };
-};
-
-export function createBrowserStorage(
-  routerBasename: string,
-): IDriveOperationStorage &
-  IDocumentOperationStorage &
-  IDocumentStorage &
-  IDocumentAdminStorage {
-  return new BrowserStorage(routerBasename);
-}
-
-export function createBrowserDocumentDriveServer(
-  documentModels: DocumentModelModule<any>[],
-  storage: IDriveOperationStorage,
-  options: DocumentDriveServerOptions,
-): IDocumentDriveServer {
-  return new LegacyReactorBuilder(documentModels)
-    .withStorage(storage)
-    .withCache(new InMemoryCache())
-    .withQueueManager(new EventQueueManager())
-    .withOptions(options)
-    .build();
-}
 
 /**
  * Creates a Reactor that plugs into legacy storage but syncs through the new
@@ -101,12 +26,18 @@ export function createBrowserDocumentDriveServer(
 export async function createBrowserReactor(
   documentModelModules: DocumentModelModule[],
   upgradeManifests: UpgradeManifest<readonly number[]>[],
-  legacyStorage: IDocumentStorage & IDocumentOperationStorage,
   renown: IRenown,
 ): Promise<BrowserReactorClientModule> {
   const signerConfig: SignerConfig = {
     signer: renown.signer,
     verifier: createSignatureVerifier(),
+  };
+
+  const jwtHandler: JwtHandler = async (url: string) => {
+    if (!renown.user) {
+      return undefined;
+    }
+    return renown.getBearerToken({ expiresIn: 10, aud: url });
   };
 
   const pg = new PGlite("idb://reactor", {
@@ -120,9 +51,10 @@ export async function createBrowserReactor(
       new ReactorBuilder()
         .withDocumentModels(documentModelModules)
         .withUpgradeManifests(upgradeManifests)
-        .withLegacyStorage(legacyStorage)
         .withSync(
-          new SyncBuilder().withChannelFactory(new GqlChannelFactory(logger)),
+          new SyncBuilder().withChannelFactory(
+            new GqlChannelFactory(logger, jwtHandler),
+          ),
         )
         .withKysely(
           new Kysely<Database>({

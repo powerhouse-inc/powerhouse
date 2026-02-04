@@ -74,7 +74,7 @@ export const useClientErrorHandler = (): ClientErrorHandler => {
           delay === DELAY_LIMIT ? delay : delay * 10,
         );
 
-        logger.error(error);
+        logger.error("@error", error);
       } finally {
         setHandlingInProgress((state) =>
           state.filter((code) => code !== handlerCode),
@@ -125,7 +125,7 @@ export const useClientErrorHandler = (): ClientErrorHandler => {
           }
         }
       } catch (e: unknown) {
-        logger.error(e);
+        logger.error("@error", e);
       } finally {
         setHandlingInProgress((state) =>
           state.filter((code) => code !== handlerCode),

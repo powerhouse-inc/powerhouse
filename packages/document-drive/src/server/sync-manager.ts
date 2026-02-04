@@ -53,7 +53,8 @@ export class SynchronizationManager implements ISynchronizationManager {
     );
 
     this.logger.verbose(
-      `getSynchronizationUnits query: ${JSON.stringify(synchronizationUnitsQuery)}`,
+      "getSynchronizationUnits query: @query",
+      synchronizationUnitsQuery,
     );
 
     const result = await this.getSynchronizationUnitsRevision(
@@ -69,7 +70,8 @@ export class SynchronizationManager implements ISynchronizationManager {
       await this.storage.getSynchronizationUnitsRevision(syncUnitsQuery);
 
     this.logger.verbose(
-      `getSynchronizationUnitsRevision: ${JSON.stringify(revisions)}`,
+      "getSynchronizationUnitsRevision: @revisions",
+      revisions,
     );
 
     return syncUnitsQuery.map((query) =>
@@ -145,19 +147,25 @@ export class SynchronizationManager implements ISynchronizationManager {
     filter: GetStrandsOptions,
   ): Promise<OperationUpdate[]> {
     this.logger.verbose(
-      `[SYNC DEBUG] SynchronizationManager.getOperationData called for syncId: ${JSON.stringify(syncId)}, filter: ${JSON.stringify(filter)}`,
+      "[SYNC DEBUG] SynchronizationManager.getOperationData called for syncId: @syncId, filter: @filter",
+      syncId,
+      filter,
     );
 
     const document = await this.getDocument(syncId.documentId);
 
     this.logger.verbose(
-      `[SYNC DEBUG] Retrieved document ${document.header.id} with type: ${document.header.documentType}`,
+      "[SYNC DEBUG] Retrieved document @documentId with type: @documentType",
+      document.header.id,
+      document.header.documentType,
     );
 
     const operations = document.operations[syncId.scope] ?? []; // TODO filter by branch also
 
     this.logger.verbose(
-      `[SYNC DEBUG] Found ${operations.length} total operations in scope ${syncId.scope}`,
+      "[SYNC DEBUG] Found @count total operations in scope @scope",
+      operations.length,
+      syncId.scope,
     );
 
     const filteredOperations = operations.filter(
@@ -170,10 +178,9 @@ export class SynchronizationManager implements ISynchronizationManager {
     );
 
     this.logger.verbose(
-      `[SYNC DEBUG] Filtered to ${filteredOperations.length} operations based on filter criteria` +
-        (filter.fromRevision !== undefined
-          ? ` (fromRevision: ${filter.fromRevision})`
-          : ""),
+      "[SYNC DEBUG] Filtered to @count operations based on filter criteria (fromRevision: @fromRevision)",
+      filteredOperations.length,
+      filter.fromRevision,
     );
 
     const limitedOperations = filter.limit
@@ -181,17 +188,22 @@ export class SynchronizationManager implements ISynchronizationManager {
       : filteredOperations;
 
     this.logger.verbose(
-      `[SYNC DEBUG] Returning ${limitedOperations.length} operations after applying limit`,
+      "[SYNC DEBUG] Returning @count operations after applying limit",
+      limitedOperations.length,
     );
 
     if (limitedOperations.length > 0) {
       const firstOp = limitedOperations[0];
       const lastOp = limitedOperations[limitedOperations.length - 1];
       this.logger.verbose(
-        `[SYNC DEBUG] First operation: index=${firstOp.index}, type=${firstOp.action.type}`,
+        "[SYNC DEBUG] First operation: index=@index, type=@type",
+        firstOp.index,
+        firstOp.action.type,
       );
       this.logger.verbose(
-        `[SYNC DEBUG] Last operation: index=${lastOp.index}, type=${lastOp.action.type}`,
+        "[SYNC DEBUG] Last operation: index=@index, type=@type",
+        lastOp.index,
+        lastOp.action.type,
       );
     }
 
@@ -215,7 +227,7 @@ export class SynchronizationManager implements ISynchronizationManager {
         return cachedDocument;
       }
     } catch (e) {
-      this.logger.error("Error getting document from cache", e);
+      this.logger.error("Error getting document from cache: @error", e);
     }
     const documentStorage = await this.documentStorage.get(documentId);
     return this._buildDocument(documentStorage);

@@ -9,7 +9,6 @@ import {
 } from "@apollo/gateway";
 import { ApolloServer } from "@apollo/server";
 import { ApolloServerPluginInlineTraceDisabled } from "@apollo/server/plugin/disabled";
-import { ApolloServerPluginDrainHttpServer } from "@apollo/server/plugin/drainHttpServer";
 import { ApolloServerPluginLandingPageLocalDefault } from "@apollo/server/plugin/landingPage/default";
 import { expressMiddleware } from "@as-integrations/express4";
 import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
@@ -39,7 +38,10 @@ import {
   buildSubgraphSchemaModule,
   createSchema,
 } from "../utils/create-schema.js";
-import { DocumentModelSubgraphLegacy } from "./document-model-subgraph.js";
+import {
+  DocumentModelSubgraph,
+  DocumentModelSubgraphLegacy,
+} from "./document-model-subgraph.js";
 import { DriveSubgraph } from "./drive-subgraph.js";
 import { useServer } from "./websocket.js";
 
@@ -73,12 +75,46 @@ function hasOperationSchemas(documentModel: DocumentModelModule): boolean {
   );
 }
 
+/**
+ * Filter document models to keep only the latest version of each unique document model.
+ * When multiple versions exist with the same name, the one with the most recent specification is kept.
+ */
+function filterLatestDocumentModelVersions(
+  documentModels: DocumentModelModule[],
+): DocumentModelModule[] {
+  const latestByName = new Map<string, DocumentModelModule>();
+
+  for (const documentModel of documentModels) {
+    const name = documentModel.documentModel.global.name;
+    const existing = latestByName.get(name);
+
+    if (!existing) {
+      latestByName.set(name, documentModel);
+      continue;
+    }
+
+    // Compare version numbers from the latest specification
+    const currentVersion =
+      documentModel.documentModel.global.specifications.at(-1)?.version ?? 0;
+    const existingVersion =
+      existing.documentModel.global.specifications.at(-1)?.version ?? 0;
+
+    if (currentVersion > existingVersion) {
+      latestByName.set(name, documentModel);
+    }
+  }
+
+  return Array.from(latestByName.values());
+}
+
 const DefaultFeatureFlags = {
   enableDocumentModelSubgraphs: true,
+  useNewDocumentModelSubgraph: false,
 };
 
 export type GraphqlManagerFeatureFlags = {
   enableDocumentModelSubgraphs?: boolean;
+  useNewDocumentModelSubgraph?: boolean;
 };
 
 export class GraphQLManager {
@@ -89,6 +125,8 @@ export class GraphQLManager {
   private contextFields: Record<string, any> = {};
   private readonly subgraphs = new Map<string, ISubgraph[]>();
   private authService: AuthService | null = null;
+
+  private coreApolloServer: ApolloServer<Context> | null = null;
 
   private readonly logger = childLogger(["reactor-api", "graphql-manager"]);
 
@@ -201,9 +239,11 @@ export class GraphQLManager {
       if (this.featureFlags.enableDocumentModelSubgraphs) {
         this.#setupDocumentModelSubgraphs("graphql", documentModels)
           .then(() => this.updateRouter())
-          .catch((error: unknown) => this.logger.error(error));
+          .catch((error: unknown) => this.logger.error("@error", error));
       } else {
-        this.updateRouter().catch((error: unknown) => this.logger.error(error));
+        this.updateRouter().catch((error: unknown) =>
+          this.logger.error("@error", error),
+        );
       }
     });
 
@@ -235,7 +275,11 @@ export class GraphQLManager {
     supergraph: string,
     documentModels: DocumentModelModule[],
   ) {
-    for (const documentModel of documentModels) {
+    // Filter to keep only the latest version of each document model
+    const latestDocumentModels =
+      filterLatestDocumentModelVersions(documentModels);
+
+    for (const documentModel of latestDocumentModels) {
       if (
         DOCUMENT_MODELS_TO_EXCLUDE.includes(
           documentModel.documentModel.global.id,
@@ -247,19 +291,20 @@ export class GraphQLManager {
         continue; // Skip document models without operation schemas
       }
       try {
-        const subgraphInstance = new DocumentModelSubgraphLegacy(
-          documentModel,
-          {
-            relationalDb: this.relationalDb,
-            analyticsStore: this.analyticsStore,
-            reactor: this.reactor,
-            reactorClient: this.reactorClient,
-            graphqlManager: this,
-            syncManager: this.syncManager,
-            path: this.path,
-            documentPermissionService: this.documentPermissionService,
-          },
-        );
+        const SubgraphClass = this.featureFlags.useNewDocumentModelSubgraph
+          ? DocumentModelSubgraph
+          : DocumentModelSubgraphLegacy;
+
+        const subgraphInstance = new SubgraphClass(documentModel, {
+          relationalDb: this.relationalDb,
+          analyticsStore: this.analyticsStore,
+          reactor: this.reactor,
+          reactorClient: this.reactorClient,
+          graphqlManager: this,
+          syncManager: this.syncManager,
+          path: this.path,
+          documentPermissionService: this.documentPermissionService,
+        });
 
         await this.#addSubgraphInstance(subgraphInstance, supergraph, false);
       } catch (error) {
@@ -267,7 +312,7 @@ export class GraphQLManager {
           `Failed to setup document model subgraph for ${documentModel.documentModel.global.id}`,
           error instanceof Error ? error.message : error,
         );
-        this.logger.debug(error);
+        this.logger.debug("@error", error);
       }
     }
 
@@ -282,18 +327,22 @@ export class GraphQLManager {
     supergraph = "",
     core = false,
   ) {
-    await subgraphInstance.onSetup?.();
-
     const subgraphsMap = core ? this.coreSubgraphsMap : this.subgraphs;
-
     const subgraphs = subgraphsMap.get(supergraph) ?? [];
 
     const existingSubgraph = subgraphs.find(
       (it) => it.name === subgraphInstance.name,
     );
 
-    subgraphs.push(subgraphInstance);
+    if (existingSubgraph) {
+      this.logger.debug(
+        `Skipping duplicate subgraph: ${subgraphInstance.name}`,
+      );
+      return existingSubgraph;
+    }
 
+    await subgraphInstance.onSetup?.();
+    subgraphs.push(subgraphInstance);
     subgraphsMap.set(supergraph, subgraphs);
 
     // also add to global graphql supergraph
@@ -301,12 +350,9 @@ export class GraphQLManager {
       subgraphsMap.get("graphql")?.push(subgraphInstance);
     }
 
-    const logMessage = `Registered ${this.path.endsWith("/") ? this.path : this.path + "/"}${supergraph ? supergraph + "/" : ""}${subgraphInstance.name} subgraph.`;
-    if (!existingSubgraph) {
-      this.logger.info(logMessage);
-    } else {
-      this.logger.debug(logMessage);
-    }
+    this.logger.info(
+      `Registered ${this.path.endsWith("/") ? this.path : this.path + "/"}${supergraph ? supergraph + "/" : ""}${subgraphInstance.name} subgraph.`,
+    );
     return subgraphInstance;
   }
 
@@ -335,7 +381,7 @@ export class GraphQLManager {
     this.logger.debug("Updating router");
     const newRouter = Router();
     newRouter.use(cors());
-    newRouter.use(bodyParser.json());
+    newRouter.use(bodyParser.json({ limit: "50mb" }));
 
     // @todo:
     // if auth enabled, subgraphs are only available to guests, users and admins
@@ -474,9 +520,11 @@ export class GraphQLManager {
           this.#setupApolloExpressMiddleware(server, router, path);
         } catch (error) {
           this.logger.error(
-            `Failed to setup subgraph ${subgraph.name} at path ${this.#getSubgraphPath(subgraph, supergraph)}`,
+            "Failed to setup subgraph @name at path @path: @error",
+            subgraph.name,
+            this.#getSubgraphPath(subgraph, supergraph),
+            error,
           );
-          this.logger.error(error);
         }
       }
     }
@@ -533,25 +581,31 @@ export class GraphQLManager {
         },
       });
 
-      const server = new ApolloServer<Context>({
+      if (this.coreApolloServer) {
+        try {
+          await this.#waitForServer(this.coreApolloServer);
+          await this.coreApolloServer.stop();
+        } catch {
+          // ignore error when stopping apollo server
+        }
+      }
+
+      this.coreApolloServer = new ApolloServer<Context>({
         gateway,
         logger: this.apolloLogger,
         introspection: true,
         plugins: [
-          ApolloServerPluginDrainHttpServer({
-            httpServer: this.httpServer,
-          }),
           ApolloServerPluginInlineTraceDisabled(),
           ApolloServerPluginLandingPageLocalDefault(),
         ],
       });
 
-      await server.start();
-      await this.#waitForServer(server);
+      await this.coreApolloServer.start();
+      await this.#waitForServer(this.coreApolloServer);
 
       const superGraphPath = path.join(this.path, "graphql");
       this.#setupApolloExpressMiddleware(
-        server,
+        this.coreApolloServer,
         this.reactorRouter,
         superGraphPath,
       );
@@ -560,7 +614,7 @@ export class GraphQLManager {
         this.logger.info(`Registered ${superGraphPath} supergraph `);
         this.initialized = true;
       }
-      return server;
+      return;
     } catch (e) {
       if (e instanceof Error) {
         this.logger.error(e.message);

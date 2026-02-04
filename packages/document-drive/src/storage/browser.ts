@@ -583,7 +583,7 @@ export class BrowserStorage
           };
         } catch (error) {
           this.logger.error(
-            "Error getting synchronization units revision",
+            "Error getting synchronization units revision: @error",
             error,
           );
           return undefined;

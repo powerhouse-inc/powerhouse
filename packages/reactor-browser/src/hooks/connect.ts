@@ -101,23 +101,16 @@ export { setDrives } from "./drives.js";
 export { setLoading, useLoading } from "./loading.js";
 export { setLoginStatus, useLoginStatus } from "./login-status.js";
 export {
-  setProcessorManager,
-  useProcessorManager,
-} from "./processor-manager.js";
-export {
-  setDatabase,
-  setLegacyReactor,
-  setModelRegistry,
-  setPGlite,
   setReactorClient,
   setReactorClientModule,
-  setSync,
   useDatabase,
-  useLegacyReactor,
+  useModelRegistry,
   usePGlite,
   useReactorClient,
   useReactorClientModule,
   useSync,
+  useSyncList,
 } from "./reactor.js";
 export { setRenown, useRenown } from "./renown.js";
+export { login, logout } from "../renown/utils.js";
 export { setUser, useUser } from "./user.js";

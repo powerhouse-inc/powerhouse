@@ -1,3 +1,59 @@
+## 6.0.0-dev.31 (2026-02-04)
+
+### 🚀 Features
+
+- trigger powerhouse-demo after release ([f5b63728d](https://github.com/powerhouse-inc/powerhouse/commit/f5b63728d))
+- **profiling:** add Pyroscope monitoring to reactor-direct ([2c7779229](https://github.com/powerhouse-inc/powerhouse/commit/2c7779229))
+- **profiling:** add reactor-direct.ts for direct reactor performance profiling ([806714e27](https://github.com/powerhouse-inc/powerhouse/commit/806714e27))
+
+### 🩹 Fixes
+
+- linting issues ([e1eb2c806](https://github.com/powerhouse-inc/powerhouse/commit/e1eb2c806))
+- ignore release.ts ([25a40d2a6](https://github.com/powerhouse-inc/powerhouse/commit/25a40d2a6))
+- **codegen:** fix prettier command on ph init ([c61a5f35e](https://github.com/powerhouse-inc/powerhouse/commit/c61a5f35e))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan
+- Frank
+- Samuel Hawksby-Robinson @Samyoul
+
+## 6.0.0-dev.30 (2026-02-03)
+
+### 🩹 Fixes
+
+- **release:** ignore errors on git stage ([e0c10d604](https://github.com/powerhouse-inc/powerhouse/commit/e0c10d604))
+- **releases:** remove problematic publish dry run ([8b9b065b9](https://github.com/powerhouse-inc/powerhouse/commit/8b9b065b9))
+- **releases:** include git side effects check in all booleans ([19c44503d](https://github.com/powerhouse-inc/powerhouse/commit/19c44503d))
+
+### ❤️ Thank You
+
+- ryanwolhuter @ryanwolhuter
+
+## 6.0.0-dev.29 (2026-02-03)
+
+### 🚀 Features
+
+- **release:** add doc comments ([3ab9879d4](https://github.com/powerhouse-inc/powerhouse/commit/3ab9879d4))
+- **monorepo:** simplified release workflow ([#2276](https://github.com/powerhouse-inc/powerhouse/pull/2276))
+
+### 🩹 Fixes
+
+- package.json onlyBuilt ([3b6165267](https://github.com/powerhouse-inc/powerhouse/commit/3b6165267))
+- **codegen:** deduplicate module errors by name ([c2ba9a74f](https://github.com/powerhouse-inc/powerhouse/commit/c2ba9a74f))
+- **codegen:** do not assume prettier is globally installed ([31f6d5b45](https://github.com/powerhouse-inc/powerhouse/commit/31f6d5b45))
+- **codegen:** fix type import on custom subgraph template ([b2d4c50a7](https://github.com/powerhouse-inc/powerhouse/commit/b2d4c50a7))
+- **codegen:** update index.html template used on ph init ([57932e263](https://github.com/powerhouse-inc/powerhouse/commit/57932e263))
+- **release:** move checkout action ([4ed305d57](https://github.com/powerhouse-inc/powerhouse/commit/4ed305d57))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan (@thegoldenmule)
+- Ryan Wolhuter @ryanwolhuter
+- ryanwolhuter @ryanwolhuter
+
 ## 6.0.0-dev.28 (2026-01-31)
 
 ### 🚀 Features

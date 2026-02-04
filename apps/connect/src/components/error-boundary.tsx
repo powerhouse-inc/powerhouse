@@ -175,7 +175,7 @@ export function ErrorBoundary(props: ErrorBoundaryProps) {
     }
 
     const contextLogger = loggerContext ? childLogger(loggerContext) : logger;
-    contextLogger.error(error, info);
+    contextLogger.error("@error @info", error, info);
     onError?.(error, info);
   };
 

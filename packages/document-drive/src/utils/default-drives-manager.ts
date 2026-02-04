@@ -55,7 +55,7 @@ export class DefaultDrivesManager implements IDefaultDrivesManager {
     try {
       await this.server.deleteDrive(driveId);
     } catch (error) {
-      logger.error(error);
+      logger.error("@error", error);
     }
   }
 
@@ -272,7 +272,7 @@ export class DefaultDrivesManager implements IDefaultDrivesManager {
               ? this.server.deleteDrive(driveInfo.id)
               : readServer?.deleteReadDrive(driveInfo.id));
           } catch (e) {
-            logger.error(e);
+            logger.error("@error", e);
           }
         }
 

@@ -1,13 +1,10 @@
 import type {
-  BaseDocumentDriveServer,
   IDocumentOperationStorage,
   IDocumentStorage,
 } from "document-drive";
-import {
-  ReactorBuilder as DriveReactorBuilder,
-  MemoryStorage,
-} from "document-drive";
+import { MemoryStorage } from "document-drive";
 import type { DocumentModelModule, UpgradeManifest } from "document-model";
+import { CollectionMembershipCache } from "../cache/collection-membership-cache.js";
 import { DocumentMetaCache } from "../cache/document-meta-cache.js";
 import { KyselyOperationIndex } from "../cache/kysely-operation-index.js";
 import { KyselyWriteCache } from "../cache/kysely-write-cache.js";
@@ -33,7 +30,6 @@ import type { SyncBuilder } from "../sync/sync-builder.js";
 import { Reactor } from "./reactor.js";
 import type {
   Database,
-  ExecutorConfig,
   IReactor,
   ReactorFeatures,
   ReactorModule,
@@ -41,6 +37,7 @@ import type {
 } from "./types.js";
 
 import type { IJobExecutorManager } from "#executor/interfaces.js";
+import type { JobExecutorConfig } from "#executor/types.js";
 import { ConsoleLogger } from "#logging/console.js";
 import type { ILogger } from "#logging/types.js";
 import { PGlite } from "@electric-sql/pglite";
@@ -66,7 +63,7 @@ export class ReactorBuilder {
   private features: ReactorFeatures = { legacyStorageEnabled: false };
   private readModels: IReadModel[] = [];
   private executorManager: IJobExecutorManager | undefined;
-  private executorConfig: ExecutorConfig = { count: 1 };
+  private executorConfig: JobExecutorConfig = {};
   private writeCacheConfig?: Partial<WriteCacheConfig>;
   private migrationStrategy: MigrationStrategy = "auto";
   private syncBuilder?: SyncBuilder;
@@ -118,7 +115,7 @@ export class ReactorBuilder {
     return this;
   }
 
-  withExecutorConfig(config: Partial<ExecutorConfig>): this {
+  withExecutorConfig(config: Partial<JobExecutorConfig>): this {
     this.executorConfig = { ...this.executorConfig, ...config };
     return this;
   }
@@ -178,12 +175,6 @@ export class ReactorBuilder {
       documentModelRegistry.registerModules(...this.documentModels);
     }
 
-    const builder = new DriveReactorBuilder(this.documentModels).withStorage(
-      storage as MemoryStorage,
-    );
-    const driveServer = builder.build() as unknown as BaseDocumentDriveServer;
-    await driveServer.initialize();
-
     const baseDatabase =
       this.kyselyInstance ??
       new Kysely<Database>({
@@ -233,6 +224,10 @@ export class ReactorBuilder {
     });
     await documentMetaCache.startup();
 
+    const collectionMembershipCache = new CollectionMembershipCache(
+      operationIndex,
+    );
+
     let executorManager = this.executorManager;
     if (!executorManager) {
       executorManager = new SimpleJobExecutorManager(
@@ -240,14 +235,13 @@ export class ReactorBuilder {
           new SimpleJobExecutor(
             this.logger!,
             documentModelRegistry,
-            storage,
-            storage,
             operationStore,
             eventBus,
             writeCache,
             operationIndex,
             documentMetaCache,
-            { legacyStorageEnabled: this.features.legacyStorageEnabled },
+            collectionMembershipCache,
+            this.executorConfig,
             this.signatureVerifier,
           ),
         eventBus,
@@ -257,7 +251,7 @@ export class ReactorBuilder {
       );
     }
 
-    await executorManager.start(this.executorConfig.count);
+    await executorManager.start(this.executorConfig.maxConcurrency ?? 1);
 
     const readModelInstances: IReadModel[] = Array.from(
       new Set([...this.readModels]),
@@ -353,8 +347,6 @@ export class ReactorBuilder {
     }
 
     const module: ReactorModule = {
-      driveServer,
-      storage,
       eventBus,
       documentModelRegistry,
       queue,

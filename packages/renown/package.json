@@ -1,6 +1,6 @@
 {
   "name": "@renown/sdk",
-  "version": "6.0.0-dev.28",
+  "version": "6.0.0-dev.31",
   "description": "",
   "license": "AGPL-3.0-only",
   "private": false,
@@ -38,7 +38,7 @@
   ],
   "scripts": {
     "tsc": "tsc",
-    "build": "pnpm run copy-assets",
+    "build:misc": "pnpm run copy-assets",
     "copy-assets": "copyfiles 'src/assets/*' dist/",
     "lint": "eslint",
     "dev:e2e": "vite --config e2e/fixtures/vite.config.ts",

@@ -88,7 +88,7 @@ export function useInitSentry() {
 
   useEffect(() => {
     if (!analytics) {
-      closeClient().catch((error: unknown) => logger.error(error));
+      closeClient().catch((error: unknown) => logger.error("@error", error));
       return;
     }
 
@@ -100,6 +100,6 @@ export function useInitSentry() {
       return;
     }
 
-    initSentry().catch((error: unknown) => logger.error(error));
+    initSentry().catch((error: unknown) => logger.error("@error", error));
   }, [analytics]);
 }

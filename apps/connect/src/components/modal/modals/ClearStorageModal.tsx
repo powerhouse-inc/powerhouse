@@ -29,7 +29,7 @@ export function ClearStorageModal() {
         window.location.reload();
       })
       .catch((error) => {
-        logger.error("Error clearing storage", error);
+        logger.error("Error clearing storage: @error", error);
         setLoading(false);
       });
   }

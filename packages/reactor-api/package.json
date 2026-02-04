@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/reactor-api",
-  "version": "6.0.0-dev.28",
+  "version": "6.0.0-dev.31",
   "description": "",
   "type": "module",
   "repository": {
@@ -23,7 +23,7 @@
   "sideEffects": false,
   "scripts": {
     "tsc": "tsc",
-    "build": "copyfiles -u 0 \"src/**/*.graphql\" dist/",
+    "build:misc": "copyfiles -u 0 \"src/**/*.graphql\" dist/",
     "lint": "eslint",
     "test": "vitest --run",
     "bench": "vitest bench",
