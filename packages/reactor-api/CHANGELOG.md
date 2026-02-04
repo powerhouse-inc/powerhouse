@@ -1,3 +1,19 @@
+## 5.3.0-staging.21 (2026-02-04)
+
+### 🚀 Features
+
+- **reactor-api:** add deleteDocument mutation to SystemSubgraph ([c8f133491](https://github.com/powerhouse-inc/powerhouse/commit/c8f133491))
+
+### 🩹 Fixes
+
+- **reactor-api:** revert changes to subgraph server handling ([144a0b34b](https://github.com/powerhouse-inc/powerhouse/commit/144a0b34b))
+- **reactor-api:** stop existing server and ws subscription before starting new one for subgraphs ([5984b1998](https://github.com/powerhouse-inc/powerhouse/commit/5984b1998))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Guillermo Puente @gpuente
+
 ## 5.3.0-staging.20 (2026-02-03)
 
 This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
