@@ -70,7 +70,7 @@ class KyselyOperationIndexTxn implements IOperationIndexTxn {
     return this.collections;
   }
 
-  getCollectionMemberships(): CollectionMembershipRecord[] {
+  getCollectionMembershipRecords(): CollectionMembershipRecord[] {
     return this.collectionMemberships;
   }
 
@@ -100,7 +100,7 @@ export class KyselyOperationIndex implements IOperationIndex {
 
     const kyselyTxn = txn as KyselyOperationIndexTxn;
     const collections = kyselyTxn.getCollections();
-    const memberships = kyselyTxn.getCollectionMemberships();
+    const memberships = kyselyTxn.getCollectionMembershipRecords();
     const removals = kyselyTxn.getCollectionRemovals();
     const operations = kyselyTxn.getOperations();
 
@@ -392,5 +392,29 @@ export class KyselyOperationIndex implements IOperationIndex {
       .executeTakeFirst();
 
     return result?.timestampUtcMs ?? null;
+  }
+
+  async getCollectionsForDocuments(
+    documentIds: string[],
+  ): Promise<Record<string, string[]>> {
+    if (documentIds.length === 0) {
+      return {};
+    }
+
+    const rows = await this.db
+      .selectFrom("document_collections")
+      .select(["documentId", "collectionId"])
+      .where("documentId", "in", documentIds)
+      .where("leftOrdinal", "is", null)
+      .execute();
+
+    const result: Record<string, string[]> = {};
+    for (const row of rows) {
+      if (!result[row.documentId]) {
+        result[row.documentId] = [];
+      }
+      result[row.documentId].push(row.collectionId);
+    }
+    return result;
   }
 }

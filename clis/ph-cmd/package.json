@@ -1,6 +1,6 @@
 {
   "name": "ph-cmd",
-  "version": "6.0.0-dev.29",
+  "version": "6.0.0-dev.31",
   "description": "",
   "license": "AGPL-3.0-only",
   "type": "module",
@@ -27,7 +27,7 @@
     "generate-docs-legacy": "tsx scripts/generate-docs-legacy.ts",
     "generate-docs": "node ./build/generate-commands-docs.js",
     "build:cli": "bun run ./bundle.ts",
-    "postbuild:ci": "bun generate-docs && bun generate-docs-legacy",
+    "postbuild:cli": "bun generate-docs && bun generate-docs-legacy",
     "dev": "tsx src/cli.ts",
     "cli": "node build/cli.js",
     "test": "vitest --run",

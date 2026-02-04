@@ -18,5 +18,5 @@ export function formatSourceFileWithPrettier(sourceFile: SourceFile) {
 }
 
 export async function runPrettier() {
-  await spawnAsync("npx prettier", ["--write", "."]);
+  await spawnAsync("npx", ["prettier", "--write", "."]);
 }

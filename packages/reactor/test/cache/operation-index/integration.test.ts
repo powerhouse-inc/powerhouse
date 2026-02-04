@@ -576,4 +576,143 @@ describe("KyselyOperationIndex Integration", () => {
       expect(result).toBe("1704067202000");
     });
   });
+
+  describe("getCollectionsForDocuments()", () => {
+    it("should return empty object for empty input", async () => {
+      const result = await operationIndex.getCollectionsForDocuments([]);
+      expect(result).toEqual({});
+    });
+
+    it("should return collection memberships for documents", async () => {
+      const collectionId = `drive.main.drive-123`;
+      const childDocId = `child-doc-456`;
+      const driveDocId = `drive-123`;
+
+      const txn = operationIndex.start();
+      txn.createCollection(collectionId);
+      txn.write([
+        {
+          id: "op-1",
+          documentId: driveDocId,
+          documentType: "powerhouse/document-drive",
+          branch: "main",
+          scope: "document",
+          index: 0,
+          timestampUtcMs: "1704067200000",
+          hash: "hash-1",
+          skip: 0,
+          action: {
+            id: "action-1",
+            type: "CREATE_DOCUMENT",
+            scope: "document",
+            timestampUtcMs: "1704067200000",
+            input: {},
+          },
+        },
+      ]);
+      txn.addToCollection(collectionId, driveDocId);
+      txn.write([
+        {
+          id: "op-2",
+          documentId: childDocId,
+          documentType: "test-document",
+          branch: "main",
+          scope: "document",
+          index: 0,
+          timestampUtcMs: "1704067201000",
+          hash: "hash-2",
+          skip: 0,
+          action: {
+            id: "action-2",
+            type: "CREATE_DOCUMENT",
+            scope: "document",
+            timestampUtcMs: "1704067201000",
+            input: {},
+          },
+        },
+      ]);
+      txn.addToCollection(collectionId, childDocId);
+      await operationIndex.commit(txn);
+
+      const result = await operationIndex.getCollectionsForDocuments([
+        driveDocId,
+        childDocId,
+      ]);
+
+      expect(result[driveDocId]).toContain(collectionId);
+      expect(result[childDocId]).toContain(collectionId);
+    });
+
+    it("should not return removed collection memberships", async () => {
+      const collectionId = `drive.main.drive-removed`;
+      const docId = `doc-removed-456`;
+
+      const txn1 = operationIndex.start();
+      txn1.createCollection(collectionId);
+      txn1.write([
+        {
+          id: "op-add",
+          documentId: docId,
+          documentType: "test-document",
+          branch: "main",
+          scope: "document",
+          index: 0,
+          timestampUtcMs: "1704067200000",
+          hash: "hash-1",
+          skip: 0,
+          action: {
+            id: "action-add",
+            type: "CREATE_DOCUMENT",
+            scope: "document",
+            timestampUtcMs: "1704067200000",
+            input: {},
+          },
+        },
+      ]);
+      txn1.addToCollection(collectionId, docId);
+      await operationIndex.commit(txn1);
+
+      const resultBefore = await operationIndex.getCollectionsForDocuments([
+        docId,
+      ]);
+      expect(resultBefore[docId]).toContain(collectionId);
+
+      const txn2 = operationIndex.start();
+      txn2.write([
+        {
+          id: "op-remove",
+          documentId: docId,
+          documentType: "test-document",
+          branch: "main",
+          scope: "document",
+          index: 1,
+          timestampUtcMs: "1704067201000",
+          hash: "hash-2",
+          skip: 0,
+          action: {
+            id: "action-remove",
+            type: "DELETE_DOCUMENT",
+            scope: "document",
+            timestampUtcMs: "1704067201000",
+            input: {},
+          },
+        },
+      ]);
+      txn2.removeFromCollection(collectionId, docId);
+      await operationIndex.commit(txn2);
+
+      const resultAfter = await operationIndex.getCollectionsForDocuments([
+        docId,
+      ]);
+      expect(resultAfter[docId]).toBeUndefined();
+    });
+
+    it("should return empty object for non-existent documents", async () => {
+      const result = await operationIndex.getCollectionsForDocuments([
+        "non-existent-doc-1",
+        "non-existent-doc-2",
+      ]);
+      expect(result).toEqual({});
+    });
+  });
 });

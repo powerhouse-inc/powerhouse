@@ -1,3 +1,40 @@
+## 6.0.0-dev.31 (2026-02-04)
+
+### 🚀 Features
+
+- collection membership cache ([6a733e22d](https://github.com/powerhouse-inc/powerhouse/commit/6a733e22d))
+- trigger powerhouse-demo after release ([f5b63728d](https://github.com/powerhouse-inc/powerhouse/commit/f5b63728d))
+- **profiling:** add Pyroscope monitoring to reactor-direct ([2c7779229](https://github.com/powerhouse-inc/powerhouse/commit/2c7779229))
+- **profiling:** add reactor-direct.ts for direct reactor performance profiling ([806714e27](https://github.com/powerhouse-inc/powerhouse/commit/806714e27))
+
+### 🩹 Fixes
+
+- collection filtering ([f7627857b](https://github.com/powerhouse-inc/powerhouse/commit/f7627857b))
+- linting issues ([e1eb2c806](https://github.com/powerhouse-inc/powerhouse/commit/e1eb2c806))
+- more test fixes, and removing bad tests ([7f256071d](https://github.com/powerhouse-inc/powerhouse/commit/7f256071d))
+- refactoring job execution config ([76f9a7ce0](https://github.com/powerhouse-inc/powerhouse/commit/76f9a7ce0))
+- resolve TypeScript errors in reactor-direct profiling script ([5262c3ff5](https://github.com/powerhouse-inc/powerhouse/commit/5262c3ff5))
+- unit test fixes ([014fc07ed](https://github.com/powerhouse-inc/powerhouse/commit/014fc07ed))
+- ignore release.ts ([25a40d2a6](https://github.com/powerhouse-inc/powerhouse/commit/25a40d2a6))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Frank
+- Samuel Hawksby-Robinson @Samyoul
+
+## 6.0.0-dev.30 (2026-02-03)
+
+### 🩹 Fixes
+
+- **release:** ignore errors on git stage ([e0c10d604](https://github.com/powerhouse-inc/powerhouse/commit/e0c10d604))
+- **releases:** remove problematic publish dry run ([8b9b065b9](https://github.com/powerhouse-inc/powerhouse/commit/8b9b065b9))
+- **releases:** include git side effects check in all booleans ([19c44503d](https://github.com/powerhouse-inc/powerhouse/commit/19c44503d))
+
+### ❤️ Thank You
+
+- ryanwolhuter @ryanwolhuter
+
 ## 6.0.0-dev.29 (2026-02-03)
 
 ### 🚀 Features

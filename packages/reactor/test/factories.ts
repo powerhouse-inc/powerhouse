@@ -25,6 +25,7 @@ import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
 import { v4 as uuidv4 } from "uuid";
 import { vi } from "vitest";
+import type { ICollectionMembershipCache } from "../src/cache/collection-membership-cache.js";
 import type {
   CachedDocumentMeta,
   IDocumentMetaCache,
@@ -541,6 +542,19 @@ export function createMockDocumentMetaCache(
 }
 
 /**
+ * Factory for creating mock ICollectionMembershipCache
+ */
+export function createMockCollectionMembershipCache(
+  overrides: Partial<ICollectionMembershipCache> = {},
+): ICollectionMembershipCache {
+  return {
+    getCollectionsForDocuments: vi.fn().mockResolvedValue({}),
+    invalidate: vi.fn(),
+    ...overrides,
+  };
+}
+
+/**
  * Factory for creating mock IReadModelCoordinator
  */
 export function createMockReadModelCoordinator(
@@ -556,7 +570,7 @@ export function createMockReadModelCoordinator(
 /**
  * Factory for creating a complete test reactor setup
  */
-export async function createTestReactorSetup(
+export async function createTestLegacyReactorSetup(
   documentModels: DocumentModelModule<any>[] = [
     documentModelDocumentModelModule,
     driveDocumentModelModule,
@@ -597,6 +611,7 @@ export async function createTestReactorSetup(
     start: vi.fn().mockReturnValue({
       createCollection: vi.fn(),
       addToCollection: vi.fn(),
+      removeFromCollection: vi.fn(),
       write: vi.fn(),
     }),
     commit: vi.fn().mockResolvedValue([]),
@@ -606,17 +621,19 @@ export async function createTestReactorSetup(
   // Create mock document meta cache
   const mockDocumentMetaCache = createMockDocumentMetaCache();
 
+  // Create mock collection membership cache
+  const mockCollectionMembershipCache = createMockCollectionMembershipCache();
+
   // Create job executor with event bus
   const jobExecutor = new SimpleJobExecutor(
     createMockLogger(),
     registry,
-    storage,
-    storage,
     operationStore,
     eventBus,
     mockWriteCache,
     mockOperationIndex,
     mockDocumentMetaCache,
+    mockCollectionMembershipCache,
     executorConfig ?? {},
     undefined,
   );

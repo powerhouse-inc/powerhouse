@@ -122,8 +122,6 @@ async function createReactorSetup(): Promise<ReactorTestSetup> {
   const executor = new SimpleJobExecutor(
     createMockLogger(),
     registry,
-    storage,
-    storage,
     operationStore,
     eventBus,
     writeCache,

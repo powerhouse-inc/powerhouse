@@ -601,8 +601,8 @@ can be used to authenticate requests to Powerhouse APIs like reactor-api (Switch
 
 Prerequisites:
   You must have a cryptographic identity. Run 'ph login' first to:
-  - Generate a keypair (stored in .keypair.json)
-  - Optionally link your Ethereum address (stored in .auth.json)
+  - Generate a keypair (stored in .ph/.keypair.json)
+  - Optionally link your Ethereum address (stored in .ph/.renown.json)
 
 Token Details:
   The generated token is a JWT (JSON Web Token) containing:
@@ -795,7 +795,7 @@ the CLI to act on behalf of your Ethereum identity for authenticated operations.
 - 1. Generates or loads a cryptographic identity (DID) for the CLI
 - 2. Opens your browser to the Renown authentication page
 - 3. You authorize the CLI's DID to act on behalf of your Ethereum address
-- 4. Stores the credentials locally in ~/.ph/auth.json
+- 4. Stores the credentials locally in .ph/.renown.json
   
 
 

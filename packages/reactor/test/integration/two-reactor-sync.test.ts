@@ -6,6 +6,7 @@ import {
   operationFromAction,
 } from "document-model/core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { driveCollectionId } from "../../src/cache/operation-index-types.js";
 import { ReactorBuilder } from "../../src/core/reactor-builder.js";
 import type { IReactor, ReactorModule } from "../../src/core/types.js";
 import { EventBus } from "../../src/events/event-bus.js";
@@ -45,9 +46,18 @@ const sentActionIds = new Map<string, number>();
 async function setupTwoReactors(): Promise<TwoReactorSetup> {
   sentActionIds.clear();
   const channelRegistry = new Map<string, TestChannel>();
-  const peerMapping = new Map<string, string>();
-  peerMapping.set("remoteA", "remoteB");
-  peerMapping.set("remoteB", "remoteA");
+
+  // Get peer name by extracting the drive ID suffix and swapping A<->B
+  const getPeerName = (remoteName: string): string | undefined => {
+    if (remoteName.startsWith("remoteA-")) {
+      const driveId = remoteName.substring("remoteA-".length);
+      return `remoteB-${driveId}`;
+    } else if (remoteName.startsWith("remoteB-")) {
+      const driveId = remoteName.substring("remoteB-".length);
+      return `remoteA-${driveId}`;
+    }
+    return undefined;
+  };
 
   const createChannelFactory = (): IChannelFactory => {
     return {
@@ -57,7 +67,7 @@ async function setupTwoReactors(): Promise<TwoReactorSetup> {
         config: ChannelConfig,
         cursorStorage: ISyncCursorStorage,
       ): TestChannel {
-        const peerName = peerMapping.get(remoteName);
+        const peerName = getPeerName(remoteName);
 
         const send = (envelope: SyncEnvelope): void => {
           const peerChannel = peerName
@@ -115,9 +125,29 @@ async function setupTwoReactors(): Promise<TwoReactorSetup> {
   const reactorA = moduleA.reactor;
   const reactorB = moduleB.reactor;
 
+  return {
+    reactorA,
+    reactorB,
+    moduleA,
+    moduleB,
+    channelRegistry,
+    eventBusA,
+    eventBusB,
+  };
+}
+
+async function setupSyncForDrive(
+  moduleA: ReactorModule,
+  moduleB: ReactorModule,
+  driveId: string,
+): Promise<void> {
+  const collectionId = driveCollectionId("main", driveId);
+  const remoteNameForB = `remoteB-${driveId}`;
+  const remoteNameForA = `remoteA-${driveId}`;
+
   await moduleA.syncModule!.syncManager.add(
-    "remoteB",
-    "collection1",
+    remoteNameForB,
+    collectionId,
     {
       type: "internal",
       parameters: {},
@@ -130,8 +160,8 @@ async function setupTwoReactors(): Promise<TwoReactorSetup> {
   );
 
   await moduleB.syncModule!.syncManager.add(
-    "remoteA",
-    "collection1",
+    remoteNameForA,
+    collectionId,
     {
       type: "internal",
       parameters: {},
@@ -142,16 +172,6 @@ async function setupTwoReactors(): Promise<TwoReactorSetup> {
       branch: "main",
     },
   );
-
-  return {
-    reactorA,
-    reactorB,
-    moduleA,
-    moduleB,
-    channelRegistry,
-    eventBusA,
-    eventBusB,
-  };
 }
 
 describe("Two-Reactor Sync", () => {
@@ -266,6 +286,9 @@ describe("Two-Reactor Sync", () => {
     const document = driveDocumentModelModule.utils.createDocument();
     const syncManager = moduleA.syncModule!.syncManager;
 
+    // Set up sync for this drive's collection before creating
+    await setupSyncForDrive(moduleA, moduleB, document.header.id);
+
     const jobInfo = await reactorA.create(document);
 
     // wait for reactor a to push
@@ -305,6 +328,10 @@ describe("Two-Reactor Sync", () => {
     const docB = driveDocumentModelModule.utils.createDocument();
     const docC = driveDocumentModelModule.utils.createDocument();
     const docD = driveDocumentModelModule.utils.createDocument();
+    await setupSyncForDrive(moduleA, moduleB, docA.header.id);
+    await setupSyncForDrive(moduleA, moduleB, docB.header.id);
+    await setupSyncForDrive(moduleA, moduleB, docC.header.id);
+    await setupSyncForDrive(moduleA, moduleB, docD.header.id);
 
     const jobA = await reactorA.create(docA);
     const jobB = await reactorA.create(docB);
@@ -458,6 +485,7 @@ describe("Two-Reactor Sync", () => {
     const syncManagerB = moduleB.syncModule!.syncManager;
 
     const doc = driveDocumentModelModule.utils.createDocument();
+    await setupSyncForDrive(moduleA, moduleB, doc.header.id);
 
     const createJob = await reactorA.create(doc);
     await syncManagerA.waitForSync(createJob.id);
@@ -586,13 +614,14 @@ describe("Two-Reactor Sync", () => {
   it("should trigger excessive reshuffle error when loading operation with index far in the past", async () => {
     const testReactor = await new ReactorBuilder()
       .withDocumentModels([driveDocumentModelModule as any])
+      .withExecutorConfig({ maxSkipThreshold: 10 })
       .build();
 
     const document = driveDocumentModelModule.utils.createDocument();
     await testReactor.create(document);
 
     const actions = [];
-    for (let i = 0; i < 150; i++) {
+    for (let i = 0; i < 15; i++) {
       actions.push(
         driveDocumentModelModule.actions.setDriveName({ name: `Drive ${i}` }),
       );
@@ -615,10 +644,10 @@ describe("Two-Reactor Sync", () => {
     );
     const globalOps = operations.global.results;
 
-    expect(globalOps.length).toBe(150);
+    expect(globalOps.length).toBe(15);
 
     const latestIndex = Math.max(...globalOps.map((op) => op.index));
-    expect(latestIndex).toBeGreaterThanOrEqual(149);
+    expect(latestIndex).toBeGreaterThanOrEqual(14);
 
     const oldOperation = {
       ...globalOps[0],
@@ -644,12 +673,15 @@ describe("Two-Reactor Sync", () => {
   it("should not echo operations back to sender", async () => {
     const syncManagerA = moduleA.syncModule!.syncManager;
     const document = driveDocumentModelModule.utils.createDocument();
+    await setupSyncForDrive(moduleA, moduleB, document.header.id);
     const jobInfo = await reactorA.create(document);
 
     await syncManagerA.waitForSync(jobInfo.id);
     await vi.waitUntil(() => areChannelsEmpty(moduleB));
 
-    const remoteA = moduleB.syncModule!.syncManager.getByName("remoteA");
+    const remoteA = moduleB.syncModule!.syncManager.getByName(
+      `remoteA-${document.header.id}`,
+    );
 
     const outboxOps = remoteA.channel.outbox.items;
     expect(outboxOps.length).toBe(0);
@@ -658,12 +690,15 @@ describe("Two-Reactor Sync", () => {
   it("should clean up outbox after successful send", async () => {
     const syncManagerA = moduleA.syncModule!.syncManager;
     const document = driveDocumentModelModule.utils.createDocument();
+    await setupSyncForDrive(moduleA, moduleB, document.header.id);
     const jobInfo = await reactorA.create(document);
 
     await syncManagerA.waitForSync(jobInfo.id);
     await vi.waitUntil(() => areChannelsEmpty(moduleB));
 
-    const remoteB = moduleA.syncModule!.syncManager.getByName("remoteB");
+    const remoteB = moduleA.syncModule!.syncManager.getByName(
+      `remoteB-${document.header.id}`,
+    );
 
     const outboxOps = remoteB.channel.outbox.items;
     expect(outboxOps.length).toBe(0);
@@ -675,6 +710,7 @@ describe("Two-Reactor Sync", () => {
 
     // Create a single document on ReactorA
     const doc = driveDocumentModelModule.utils.createDocument();
+    await setupSyncForDrive(moduleA, moduleB, doc.header.id);
 
     const createJob = await reactorA.create(doc);
     await syncManagerA.waitForSync(createJob.id);
@@ -735,6 +771,8 @@ describe("Two-Reactor Sync", () => {
     // Create 2 documents (1 on each reactor)
     const docA = driveDocumentModelModule.utils.createDocument();
     const docB = driveDocumentModelModule.utils.createDocument();
+    await setupSyncForDrive(moduleA, moduleB, docA.header.id);
+    await setupSyncForDrive(moduleA, moduleB, docB.header.id);
 
     const jobA = await reactorA.create(docA);
     const jobB = await reactorB.create(docB);
@@ -807,6 +845,7 @@ describe("Two-Reactor Sync", () => {
 
     // 1. ReactorA creates document
     const doc = driveDocumentModelModule.utils.createDocument();
+    await setupSyncForDrive(moduleA, moduleB, doc.header.id);
     const createJob = await reactorA.create(doc);
     await syncManagerA.waitForSync(createJob.id);
 
@@ -1064,6 +1103,7 @@ describe("Two-Reactor Sync", () => {
 
     // 1. ReactorA creates document and syncs to B
     const doc = driveDocumentModelModule.utils.createDocument();
+    await setupSyncForDrive(moduleA, moduleB, doc.header.id);
     const createJob = await reactorA.create(doc);
     await syncManagerA.waitForSync(createJob.id);
     await vi.waitUntil(() => areChannelsEmpty(moduleB));

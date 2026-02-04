@@ -40,6 +40,13 @@ export interface IOperationIndex {
     collectionId: string,
     signal?: AbortSignal,
   ): Promise<string | null>;
+  /**
+   * Get all collection memberships for the given document IDs.
+   * Returns a map of documentId to array of collection IDs.
+   */
+  getCollectionsForDocuments(
+    documentIds: string[],
+  ): Promise<Record<string, string[]>>;
 }
 
 export interface DocumentCollectionTable {

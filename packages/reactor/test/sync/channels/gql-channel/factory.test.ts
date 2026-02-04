@@ -40,6 +40,7 @@ const createMockOperationIndex = (): IOperationIndex => ({
     .fn()
     .mockResolvedValue({ items: [], nextCursor: undefined, hasMore: false }),
   getLatestTimestampForCollection: vi.fn().mockResolvedValue(null),
+  getCollectionsForDocuments: vi.fn().mockResolvedValue({}),
 });
 
 describe("GqlChannelFactory", () => {
@@ -245,30 +246,6 @@ describe("GqlChannelFactory", () => {
       ).toThrow(
         'GqlChannelFactory requires "url" parameter in config.parameters',
       );
-    });
-
-    it("should throw error if authToken is not a string", () => {
-      const cursorStorage = createMockCursorStorage();
-
-      const config: ChannelConfig = {
-        type: "gql",
-        parameters: {
-          url: "https://example.com/graphql",
-          authToken: 123 as any,
-        },
-      };
-
-      expect(() =>
-        factory.instance(
-          "test-id",
-          "test-remote",
-          config,
-          cursorStorage,
-          TEST_COLLECTION_ID,
-          TEST_FILTER,
-          createMockOperationIndex(),
-        ),
-      ).toThrow('"authToken" parameter must be a string');
     });
 
     it("should throw error if pollIntervalMs is not a number", () => {

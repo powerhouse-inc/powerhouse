@@ -38,7 +38,10 @@ import {
   buildSubgraphSchemaModule,
   createSchema,
 } from "../utils/create-schema.js";
-import { DocumentModelSubgraphLegacy } from "./document-model-subgraph.js";
+import {
+  DocumentModelSubgraph,
+  DocumentModelSubgraphLegacy,
+} from "./document-model-subgraph.js";
 import { DriveSubgraph } from "./drive-subgraph.js";
 import { useServer } from "./websocket.js";
 
@@ -72,12 +75,46 @@ function hasOperationSchemas(documentModel: DocumentModelModule): boolean {
   );
 }
 
+/**
+ * Filter document models to keep only the latest version of each unique document model.
+ * When multiple versions exist with the same name, the one with the most recent specification is kept.
+ */
+function filterLatestDocumentModelVersions(
+  documentModels: DocumentModelModule[],
+): DocumentModelModule[] {
+  const latestByName = new Map<string, DocumentModelModule>();
+
+  for (const documentModel of documentModels) {
+    const name = documentModel.documentModel.global.name;
+    const existing = latestByName.get(name);
+
+    if (!existing) {
+      latestByName.set(name, documentModel);
+      continue;
+    }
+
+    // Compare version numbers from the latest specification
+    const currentVersion =
+      documentModel.documentModel.global.specifications.at(-1)?.version ?? 0;
+    const existingVersion =
+      existing.documentModel.global.specifications.at(-1)?.version ?? 0;
+
+    if (currentVersion > existingVersion) {
+      latestByName.set(name, documentModel);
+    }
+  }
+
+  return Array.from(latestByName.values());
+}
+
 const DefaultFeatureFlags = {
   enableDocumentModelSubgraphs: true,
+  useNewDocumentModelSubgraph: false,
 };
 
 export type GraphqlManagerFeatureFlags = {
   enableDocumentModelSubgraphs?: boolean;
+  useNewDocumentModelSubgraph?: boolean;
 };
 
 export class GraphQLManager {
@@ -238,7 +275,11 @@ export class GraphQLManager {
     supergraph: string,
     documentModels: DocumentModelModule[],
   ) {
-    for (const documentModel of documentModels) {
+    // Filter to keep only the latest version of each document model
+    const latestDocumentModels =
+      filterLatestDocumentModelVersions(documentModels);
+
+    for (const documentModel of latestDocumentModels) {
       if (
         DOCUMENT_MODELS_TO_EXCLUDE.includes(
           documentModel.documentModel.global.id,
@@ -250,19 +291,20 @@ export class GraphQLManager {
         continue; // Skip document models without operation schemas
       }
       try {
-        const subgraphInstance = new DocumentModelSubgraphLegacy(
-          documentModel,
-          {
-            relationalDb: this.relationalDb,
-            analyticsStore: this.analyticsStore,
-            reactor: this.reactor,
-            reactorClient: this.reactorClient,
-            graphqlManager: this,
-            syncManager: this.syncManager,
-            path: this.path,
-            documentPermissionService: this.documentPermissionService,
-          },
-        );
+        const SubgraphClass = this.featureFlags.useNewDocumentModelSubgraph
+          ? DocumentModelSubgraph
+          : DocumentModelSubgraphLegacy;
+
+        const subgraphInstance = new SubgraphClass(documentModel, {
+          relationalDb: this.relationalDb,
+          analyticsStore: this.analyticsStore,
+          reactor: this.reactor,
+          reactorClient: this.reactorClient,
+          graphqlManager: this,
+          syncManager: this.syncManager,
+          path: this.path,
+          documentPermissionService: this.documentPermissionService,
+        });
 
         await this.#addSubgraphInstance(subgraphInstance, supergraph, false);
       } catch (error) {
@@ -285,18 +327,22 @@ export class GraphQLManager {
     supergraph = "",
     core = false,
   ) {
-    await subgraphInstance.onSetup?.();
-
     const subgraphsMap = core ? this.coreSubgraphsMap : this.subgraphs;
-
     const subgraphs = subgraphsMap.get(supergraph) ?? [];
 
     const existingSubgraph = subgraphs.find(
       (it) => it.name === subgraphInstance.name,
     );
 
-    subgraphs.push(subgraphInstance);
+    if (existingSubgraph) {
+      this.logger.debug(
+        `Skipping duplicate subgraph: ${subgraphInstance.name}`,
+      );
+      return existingSubgraph;
+    }
 
+    await subgraphInstance.onSetup?.();
+    subgraphs.push(subgraphInstance);
     subgraphsMap.set(supergraph, subgraphs);
 
     // also add to global graphql supergraph
@@ -304,12 +350,9 @@ export class GraphQLManager {
       subgraphsMap.get("graphql")?.push(subgraphInstance);
     }
 
-    const logMessage = `Registered ${this.path.endsWith("/") ? this.path : this.path + "/"}${supergraph ? supergraph + "/" : ""}${subgraphInstance.name} subgraph.`;
-    if (!existingSubgraph) {
-      this.logger.info(logMessage);
-    } else {
-      this.logger.debug(logMessage);
-    }
+    this.logger.info(
+      `Registered ${this.path.endsWith("/") ? this.path : this.path + "/"}${supergraph ? supergraph + "/" : ""}${subgraphInstance.name} subgraph.`,
+    );
     return subgraphInstance;
   }
 
@@ -539,7 +582,12 @@ export class GraphQLManager {
       });
 
       if (this.coreApolloServer) {
-        await this.coreApolloServer.stop();
+        try {
+          await this.#waitForServer(this.coreApolloServer);
+          await this.coreApolloServer.stop();
+        } catch {
+          // ignore error when stopping apollo server
+        }
       }
 
       this.coreApolloServer = new ApolloServer<Context>({

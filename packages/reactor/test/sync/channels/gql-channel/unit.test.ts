@@ -132,6 +132,7 @@ const createMockOperationIndex = (): IOperationIndex => ({
     .fn()
     .mockResolvedValue({ items: [], nextCursor: undefined, hasMore: false }),
   getLatestTimestampForCollection: vi.fn().mockResolvedValue(null),
+  getCollectionsForDocuments: vi.fn().mockResolvedValue({}),
 });
 
 const createPollTimer = (intervalMs = 2000): IPollTimer =>
@@ -234,10 +235,13 @@ describe("GqlChannel", () => {
       await vi.advanceTimersByTimeAsync(5000);
       expect(mockFetch).not.toHaveBeenCalled();
 
-      // After init, polling should start immediately
+      // After init, polling should start immediately (async)
       await channel.init();
-      // init() calls touchChannel + immediate poll
-      expect(mockFetch).toHaveBeenCalledTimes(2);
+      // init() calls touchChannel synchronously, poll is async
+      // Wait for the immediate poll to complete
+      await vi.waitFor(() => {
+        expect(mockFetch).toHaveBeenCalledTimes(2);
+      });
 
       // Fast-forward time to trigger next poll
       await vi.advanceTimersByTimeAsync(5000);
@@ -267,8 +271,11 @@ describe("GqlChannel", () => {
       );
       await channel.init();
 
-      // init() calls touchChannel + immediate poll
-      expect(mockFetch).toHaveBeenCalledTimes(2);
+      // init() calls touchChannel synchronously, poll is async
+      // Wait for the immediate poll to complete
+      await vi.waitFor(() => {
+        expect(mockFetch).toHaveBeenCalledTimes(2);
+      });
 
       // After first poll interval
       await vi.advanceTimersByTimeAsync(3000);
@@ -992,8 +999,11 @@ describe("GqlChannel", () => {
       );
       await channel.init();
 
-      // init() calls touchChannel + immediate poll = 2 calls
-      expect(mockFetch).toHaveBeenCalledTimes(2);
+      // init() calls touchChannel synchronously, poll is async
+      // Wait for the immediate poll to complete
+      await vi.waitFor(() => {
+        expect(mockFetch).toHaveBeenCalledTimes(2);
+      });
 
       await vi.advanceTimersByTimeAsync(1000);
       // After 1000ms, another poll = 3 calls
@@ -1180,7 +1190,11 @@ describe("GqlChannel", () => {
 
       await channel.init();
 
-      expect(mockFetch).toHaveBeenCalledTimes(2);
+      // init() calls touchChannel synchronously, poll is triggered async by ManualPollTimer.start()
+      // Wait for the immediate poll to complete
+      await vi.waitFor(() => {
+        expect(mockFetch).toHaveBeenCalledTimes(2);
+      });
 
       await manualTimer.tick();
       expect(mockFetch).toHaveBeenCalledTimes(3);
@@ -1213,7 +1227,11 @@ describe("GqlChannel", () => {
 
       await channel.init();
 
-      expect(mockFetch).toHaveBeenCalledTimes(2);
+      // init() calls touchChannel synchronously, poll is triggered async by ManualPollTimer.start()
+      // Wait for the immediate poll to complete
+      await vi.waitFor(() => {
+        expect(mockFetch).toHaveBeenCalledTimes(2);
+      });
 
       channel.shutdown();
 

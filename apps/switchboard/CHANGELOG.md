@@ -1,3 +1,37 @@
+## 6.0.0-dev.31 (2026-02-04)
+
+### 🚀 Features
+
+- trigger powerhouse-demo after release ([f5b63728d](https://github.com/powerhouse-inc/powerhouse/commit/f5b63728d))
+- **profiling:** add Pyroscope monitoring to reactor-direct ([2c7779229](https://github.com/powerhouse-inc/powerhouse/commit/2c7779229))
+- **profiling:** add reactor-direct.ts for direct reactor performance profiling ([806714e27](https://github.com/powerhouse-inc/powerhouse/commit/806714e27))
+- align document-model-subgraph with ReactorSubgraph patterns ([0c0813ef7](https://github.com/powerhouse-inc/powerhouse/commit/0c0813ef7))
+- add new document model subgraph with new reactor API ([a282586c3](https://github.com/powerhouse-inc/powerhouse/commit/a282586c3))
+
+### 🩹 Fixes
+
+- linting issues ([e1eb2c806](https://github.com/powerhouse-inc/powerhouse/commit/e1eb2c806))
+- ignore release.ts ([25a40d2a6](https://github.com/powerhouse-inc/powerhouse/commit/25a40d2a6))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Frank
+- Guillermo Puente @gpuente
+- Samuel Hawksby-Robinson @Samyoul
+
+## 6.0.0-dev.30 (2026-02-03)
+
+### 🩹 Fixes
+
+- **release:** ignore errors on git stage ([e0c10d604](https://github.com/powerhouse-inc/powerhouse/commit/e0c10d604))
+- **releases:** remove problematic publish dry run ([8b9b065b9](https://github.com/powerhouse-inc/powerhouse/commit/8b9b065b9))
+- **releases:** include git side effects check in all booleans ([19c44503d](https://github.com/powerhouse-inc/powerhouse/commit/19c44503d))
+
+### ❤️ Thank You
+
+- ryanwolhuter @ryanwolhuter
+
 ## 6.0.0-dev.29 (2026-02-03)
 
 ### 🚀 Features

@@ -2,6 +2,7 @@ import { driveDocumentModelModule } from "document-drive";
 import { deriveOperationId, generateId } from "document-model/core";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { CollectionMembershipCache } from "../../src/cache/collection-membership-cache.js";
 import type { IDocumentMetaCache } from "../../src/cache/document-meta-cache-types.js";
 import { DocumentMetaCache } from "../../src/cache/document-meta-cache.js";
 import { KyselyOperationIndex } from "../../src/cache/kysely-operation-index.js";
@@ -156,18 +157,21 @@ describe("SimpleJobExecutor Integration (Modern Storage)", () => {
     });
     await documentMetaCache.startup();
 
+    const collectionMembershipCache = new CollectionMembershipCache(
+      operationIndex,
+    );
+
     const eventBus = createTestEventBus();
     executor = new SimpleJobExecutor(
       createMockLogger(),
       registry,
-      null as any,
-      null as any,
       operationStore,
       eventBus,
       writeCache,
       operationIndex,
       documentMetaCache,
-      { legacyStorageEnabled: false },
+      collectionMembershipCache,
+      {},
     );
   });
 
