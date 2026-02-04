@@ -1,3 +1,24 @@
+## 6.0.0-dev.31 (2026-02-04)
+
+### 🚀 Features
+
+- trigger powerhouse-demo after release ([f5b63728d](https://github.com/powerhouse-inc/powerhouse/commit/f5b63728d))
+- **profiling:** add Pyroscope monitoring to reactor-direct ([2c7779229](https://github.com/powerhouse-inc/powerhouse/commit/2c7779229))
+- **profiling:** add reactor-direct.ts for direct reactor performance profiling ([806714e27](https://github.com/powerhouse-inc/powerhouse/commit/806714e27))
+
+### 🩹 Fixes
+
+- linting issues ([e1eb2c806](https://github.com/powerhouse-inc/powerhouse/commit/e1eb2c806))
+- more test fixes, and removing bad tests ([7f256071d](https://github.com/powerhouse-inc/powerhouse/commit/7f256071d))
+- temporary fix for bad extensions ([a19df5358](https://github.com/powerhouse-inc/powerhouse/commit/a19df5358))
+- ignore release.ts ([25a40d2a6](https://github.com/powerhouse-inc/powerhouse/commit/25a40d2a6))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Frank
+- Samuel Hawksby-Robinson @Samyoul
+
 ## 6.0.0-dev.30 (2026-02-03)
 
 ### 🩹 Fixes
