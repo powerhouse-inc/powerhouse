@@ -15,7 +15,7 @@ const meta: Meta<typeof RemotesInspector> = {
   },
   decorators: [
     (Story) => (
-      <div className="h-[600px] w-full">
+      <div className="h-[90vh] w-full p-4">
         <Story />
       </div>
     ),
@@ -25,10 +25,21 @@ const meta: Meta<typeof RemotesInspector> = {
 export default meta;
 type Story = StoryObj<typeof RemotesInspector>;
 
-function createMockMailbox<T>(items: T[]): { items: readonly T[] } {
+function createMockMailbox<T>(items: T[]) {
+  let paused = false;
   return {
     get items() {
       return items as readonly T[];
+    },
+    pause() {
+      paused = true;
+    },
+    resume() {
+      paused = false;
+    },
+    flush() {},
+    isPaused() {
+      return paused;
     },
   };
 }

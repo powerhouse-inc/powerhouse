@@ -1,3 +1,38 @@
+## 6.0.0-dev.33 (2026-02-05)
+
+### 🚀 Features
+
+- single doc support on the test-client ([f7fd03afd](https://github.com/powerhouse-inc/powerhouse/commit/f7fd03afd))
+- adding inspector for channel polling ([f9ff2d411](https://github.com/powerhouse-inc/powerhouse/commit/f9ff2d411))
+- initial implementation of buffered mailbox ([fa91c8996](https://github.com/powerhouse-inc/powerhouse/commit/fa91c8996))
+- replacing outbox with buffered outbox ([3a9397c67](https://github.com/powerhouse-inc/powerhouse/commit/3a9397c67))
+- fixing pause, resume, flush of mailbox processing inspector ([cd11eeba0](https://github.com/powerhouse-inc/powerhouse/commit/cd11eeba0))
+- batching mailbox items ([3b7a5ff7e](https://github.com/powerhouse-inc/powerhouse/commit/3b7a5ff7e))
+- new queue inspector ([3c0c2f9cc](https://github.com/powerhouse-inc/powerhouse/commit/3c0c2f9cc))
+
+### 🩹 Fixes
+
+- batches need to keep doc id + scope in mind, dummy ([83de46307](https://github.com/powerhouse-inc/powerhouse/commit/83de46307))
+- sync-manager fix that backfills before ADD_RELATIONSHIP ([7662e8109](https://github.com/powerhouse-inc/powerhouse/commit/7662e8109))
+- reintroduced echo issue, but fixed along with test-client updates ([66d8e873f](https://github.com/powerhouse-inc/powerhouse/commit/66d8e873f))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
+## 6.0.0-dev.32 (2026-02-04)
+
+### 🩹 Fixes
+
+- remove duplicate trigger-downstream from publish-docker-images ([1f70c8041](https://github.com/powerhouse-inc/powerhouse/commit/1f70c8041))
+- **reactor-api:** stop existing server and ws subscription before starting new one for subgraphs ([946f1f0d2](https://github.com/powerhouse-inc/powerhouse/commit/946f1f0d2))
+- **reactor-api:** revert changes to subgraph server handling ([4260ec929](https://github.com/powerhouse-inc/powerhouse/commit/4260ec929))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Frank
+
 ## 6.0.0-dev.31 (2026-02-04)
 
 ### 🚀 Features

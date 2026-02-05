@@ -9,5 +9,5 @@ export type TabContentProps = {
 export function TabContent(props: TabContentProps) {
   const { label, children } = props;
 
-  return <div>{children}</div>;
+  return <div className="h-full">{children}</div>;
 }

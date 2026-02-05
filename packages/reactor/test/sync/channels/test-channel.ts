@@ -44,8 +44,10 @@ export class TestChannel implements IChannel {
     this.outbox = new Mailbox<SyncOperation>();
     this.deadLetter = new Mailbox<SyncOperation>();
 
-    this.outbox.onAdded((syncOp) => {
-      this.handleOutboxAdded(syncOp);
+    this.outbox.onAdded((syncOps) => {
+      for (const syncOp of syncOps) {
+        this.handleOutboxAdded(syncOp);
+      }
     });
   }
 

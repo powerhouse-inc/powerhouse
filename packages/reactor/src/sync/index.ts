@@ -39,6 +39,7 @@ export {
   SyncOperationAggregateError,
 } from "./sync-operation.js";
 export { Mailbox, type MailboxItem } from "./mailbox.js";
+export { BufferedMailbox } from "./buffered-mailbox.js";
 
 export { ChannelError, PollingChannelError } from "./errors.js";
 
@@ -47,6 +48,7 @@ export {
   GqlChannel,
   GqlChannelFactory,
   CompositeChannelFactory,
+  IntervalPollTimer,
   type GqlChannelConfig,
   type IPollTimer,
 } from "./channels/index.js";
@@ -54,4 +56,11 @@ export {
 export { SyncManager } from "./sync-manager.js";
 export { SyncBuilder } from "./sync-builder.js";
 
-export { createIdleHealth, filterOperations } from "./utils.js";
+export {
+  batchOperationsByDocument,
+  createIdleHealth,
+  filterOperations,
+  sortEnvelopesByFirstOperationTimestamp,
+} from "./utils.js";
+
+export type { OperationBatch } from "./utils.js";

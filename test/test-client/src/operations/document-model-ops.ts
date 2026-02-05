@@ -19,7 +19,7 @@ function createAction(type: string, input: unknown, scope = "global"): Action {
   return {
     id: generateId(),
     type,
-    timestampUtcMs: Date.now().toString(),
+    timestampUtcMs: new Date().toISOString(),
     input,
     scope,
   };

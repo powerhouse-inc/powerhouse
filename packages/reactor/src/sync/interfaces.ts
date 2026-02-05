@@ -2,7 +2,7 @@ import type { IOperationIndex } from "../cache/operation-index-types.js";
 import type { ShutdownStatus } from "../shared/types.js";
 import type { ISyncCursorStorage } from "../storage/interfaces.js";
 import type { SyncOperation } from "./sync-operation.js";
-import type { Mailbox } from "./mailbox.js";
+import type { IMailbox } from "./mailbox.js";
 import type {
   ChannelConfig,
   RemoteFilter,
@@ -29,19 +29,19 @@ export interface IChannel {
    * Mailbox containing sync operations received from the remote that need to be applied locally.
    * Consumers should register callbacks via onAdded to process incoming sync operations.
    */
-  inbox: Mailbox<SyncOperation>;
+  inbox: IMailbox<SyncOperation>;
 
   /**
    * Mailbox containing sync operations that need to be sent to the remote.
    * The channel is responsible for transporting these sync operations and handling ACKs.
    */
-  outbox: Mailbox<SyncOperation>;
+  outbox: IMailbox<SyncOperation>;
 
   /**
    * Mailbox containing sync operations that failed and cannot be retried.
    * These sync operations require manual intervention or should be logged for debugging.
    */
-  deadLetter: Mailbox<SyncOperation>;
+  deadLetter: IMailbox<SyncOperation>;
 
   /**
    * Initializes the channel asynchronously.

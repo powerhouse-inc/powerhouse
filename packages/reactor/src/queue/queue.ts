@@ -20,6 +20,7 @@ export class InMemoryQueue implements IQueue {
   private jobIndex = new Map<string, Job>();
   private isBlocked = false;
   private onDrainedCallback?: () => void;
+  private isPausedFlag = false;
 
   constructor(private eventBus: IEventBus) {}
 
@@ -200,6 +201,10 @@ export class InMemoryQueue implements IQueue {
   dequeueNext(signal?: AbortSignal): Promise<IJobExecutionHandle | null> {
     if (signal?.aborted) {
       return Promise.reject(new Error("Operation aborted"));
+    }
+
+    if (this.isPausedFlag) {
+      return Promise.resolve(null);
     }
 
     // Find the first non-empty queue for a document that's not currently executing
@@ -468,5 +473,65 @@ export class InMemoryQueue implements IQueue {
   unblock(): void {
     this.isBlocked = false;
     this.onDrainedCallback = undefined;
+  }
+
+  /**
+   * Pauses job dequeuing. Jobs can still be enqueued but dequeueNext() will return null.
+   */
+  pause(): void {
+    this.isPausedFlag = true;
+  }
+
+  /**
+   * Resumes job dequeuing and emits JOB_AVAILABLE events for pending jobs to wake up executors.
+   */
+  async resume(): Promise<void> {
+    this.isPausedFlag = false;
+    // Emit JOB_AVAILABLE for each queue with pending jobs to wake up the executor manager
+    for (const [, queue] of this.queues.entries()) {
+      if (queue.length > 0) {
+        const job = queue[0];
+        await this.eventBus.emit(QueueEventTypes.JOB_AVAILABLE, {
+          documentId: job.documentId,
+          scope: job.scope,
+          branch: job.branch,
+          jobId: job.id,
+        });
+      }
+    }
+  }
+
+  /**
+   * Returns whether job dequeuing is paused.
+   */
+  get paused(): boolean {
+    return this.isPausedFlag;
+  }
+
+  /**
+   * Returns all pending jobs across all queues.
+   */
+  getPendingJobs(): Job[] {
+    const jobs: Job[] = [];
+    for (const queue of this.queues.values()) {
+      jobs.push(...queue);
+    }
+    return jobs;
+  }
+
+  /**
+   * Returns a map of document IDs to sets of executing job IDs.
+   */
+  getExecutingJobIds(): Map<string, Set<string>> {
+    return new Map(
+      Array.from(this.docIdToJobId.entries()).map(([k, v]) => [k, new Set(v)]),
+    );
+  }
+
+  /**
+   * Returns a job by ID from the job index.
+   */
+  getJob(jobId: string): Job | undefined {
+    return this.jobIndex.get(jobId);
   }
 }

@@ -1,5 +1,8 @@
 import type { Operation } from "document-model";
-import type { IOperationIndex } from "../cache/operation-index-types.js";
+import {
+  driveCollectionId,
+  type IOperationIndex,
+} from "../cache/operation-index-types.js";
 import type { IReactor } from "../core/types.js";
 import type { IEventBus } from "../events/interfaces.js";
 import { ReactorEventTypes, type JobWriteReadyEvent } from "../events/types.js";
@@ -65,6 +68,8 @@ export class SyncManager implements ISyncManager {
   private readonly jobSyncStates: Map<string, JobSyncState>;
   private isShutdown: boolean;
   private eventUnsubscribe?: () => void;
+  private writeReadyQueue: JobWriteReadyEvent[] = [];
+  private processingWriteReady: boolean = false;
 
   public loadJobs: Map<string, JobInfo> = new Map();
 
@@ -135,12 +140,13 @@ export class SyncManager implements ISyncManager {
 
     this.eventUnsubscribe = this.eventBus.subscribe<JobWriteReadyEvent>(
       ReactorEventTypes.JOB_WRITE_READY,
-      (_type, event) => this.handleWriteReady(event),
+      (_type, event) => this.enqueueWriteReady(event),
     );
   }
 
   shutdown(): ShutdownStatus {
     this.isShutdown = true;
+    this.writeReadyQueue = [];
 
     if (this.eventUnsubscribe) {
       this.eventUnsubscribe();
@@ -346,21 +352,85 @@ export class SyncManager implements ISyncManager {
   }
 
   private wireChannelCallbacks(remote: Remote): void {
-    remote.channel.inbox.onAdded((syncOp) => {
-      this.handleInboxJob(remote, syncOp);
+    remote.channel.inbox.onAdded((syncOps) => {
+      for (const syncOp of syncOps) {
+        this.handleInboxJob(remote, syncOp);
+      }
     });
 
-    remote.channel.outbox.onAdded((syncOp) => {
-      this.handleOutboxJob(remote, syncOp);
+    remote.channel.outbox.onAdded((syncOps) => {
+      for (const syncOp of syncOps) {
+        this.handleOutboxJob(remote, syncOp);
+      }
     });
   }
 
-  private handleWriteReady(event: JobWriteReadyEvent): void {
+  private enqueueWriteReady(event: JobWriteReadyEvent): void {
+    this.writeReadyQueue.push(event);
+    void this.processWriteReadyQueue();
+  }
+
+  private async processWriteReadyQueue(): Promise<void> {
+    if (this.processingWriteReady) {
+      return;
+    }
+    this.processingWriteReady = true;
+
+    while (this.writeReadyQueue.length > 0) {
+      const event = this.writeReadyQueue.shift()!;
+      await this.handleWriteReadyAsync(event);
+    }
+
+    this.processingWriteReady = false;
+  }
+
+  private async handleWriteReadyAsync(
+    event: JobWriteReadyEvent,
+  ): Promise<void> {
     if (this.isShutdown) {
       return;
     }
 
+    // Extract sourceRemote early so we can use it for backfill filtering
     const sourceRemote = event.jobMeta?.sourceRemote as string | undefined;
+
+    // FIRST: Queue historical operations for any ADD_RELATIONSHIP on document-drives
+    // This ensures CREATE_DOCUMENT/UPGRADE_DOCUMENT are queued BEFORE ADD_RELATIONSHIP
+    for (const op of event.operations) {
+      const action = op.operation.action as {
+        type: string;
+        input?: { sourceId?: string; targetId?: string };
+      };
+
+      if (action.type !== "ADD_RELATIONSHIP") {
+        continue;
+      }
+
+      // ADD_RELATIONSHIP on non-document-drive is undefined behavior for sync
+      if (op.context.documentType !== "powerhouse/document-drive") {
+        this.logger.error(
+          "ADD_RELATIONSHIP on non-document-drive may cause sync issues (@documentType, @documentId)",
+          op.context.documentType,
+          op.context.documentId,
+        );
+        continue;
+      }
+
+      const input = action.input;
+      if (!input?.sourceId || !input?.targetId) {
+        continue;
+      }
+
+      const collectionId = driveCollectionId(op.context.branch, input.sourceId);
+      await this.syncDocumentToCollection(
+        input.targetId,
+        collectionId,
+        op.context.branch,
+        sourceRemote,
+      );
+    }
+
+    // THEN: Build syncOpsWithRemote and queue current job's operations
     const syncOpsWithRemote: Array<{ syncOp: SyncOperation; remote: Remote }> =
       [];
     const remoteNames: string[] = [];
@@ -475,6 +545,12 @@ export class SyncManager implements ISyncManager {
       );
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error));
+      this.logger.error(
+        "Failed to load operations from inbox (@remote, @documentId, @error)",
+        remote.name,
+        syncOp.documentId,
+        err.message,
+      );
       const channelError = new ChannelError(ChannelErrorSource.Inbox, err);
       syncOp.failed(channelError);
       remote.channel.deadLetter.add(syncOp);
@@ -487,6 +563,13 @@ export class SyncManager implements ISyncManager {
       completedJobInfo = await this.awaiter.waitForJob(jobInfo.id);
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error));
+      this.logger.error(
+        "Failed to wait for job completion (@remote, @documentId, @jobId, @error)",
+        remote.name,
+        syncOp.documentId,
+        jobInfo.id,
+        err.message,
+      );
       const channelError = new ChannelError(ChannelErrorSource.Inbox, err);
       syncOp.failed(channelError);
       remote.channel.deadLetter.add(syncOp);
@@ -498,11 +581,17 @@ export class SyncManager implements ISyncManager {
     this.loadJobs.set(jobKey, completedJobInfo);
 
     if (completedJobInfo.status === JobStatus.FAILED) {
+      const errorMessage = completedJobInfo.error?.message || "Unknown error";
+      this.logger.error(
+        "Failed to apply operations from inbox (@remote, @documentId, @jobId, @error)",
+        remote.name,
+        syncOp.documentId,
+        completedJobInfo.id,
+        errorMessage,
+      );
       const error = new ChannelError(
         ChannelErrorSource.Inbox,
-        new Error(
-          `Failed to apply operations: ${completedJobInfo.error?.message || "Unknown error"}`,
-        ),
+        new Error(`Failed to apply operations: ${errorMessage}`),
       );
       syncOp.failed(error);
       remote.channel.deadLetter.add(syncOp);
@@ -574,5 +663,84 @@ export class SyncManager implements ISyncManager {
       }
       return collectionMemberships[documentId].includes(collectionId);
     });
+  }
+
+  private async syncDocumentToCollection(
+    documentId: string,
+    collectionId: string,
+    branch: string,
+    sourceRemote?: string,
+  ): Promise<void> {
+    let historicalOps;
+    try {
+      historicalOps = await this._operationIndex.get(documentId, { branch });
+    } catch {
+      return;
+    }
+
+    if (historicalOps.results.length === 0) {
+      return;
+    }
+
+    const opsWithContext: OperationWithContext[] = historicalOps.results.map(
+      (entry) => ({
+        operation: {
+          id: entry.id,
+          index: entry.index,
+          skip: entry.skip,
+          hash: entry.hash,
+          timestampUtcMs: entry.timestampUtcMs,
+          action: entry.action,
+        } as Operation,
+        context: {
+          documentId: entry.documentId,
+          documentType: entry.documentType,
+          scope: entry.scope,
+          branch: entry.branch,
+          ordinal: entry.ordinal ?? 0,
+        },
+      }),
+    );
+
+    for (const remote of this.remotes.values()) {
+      // Skip the source remote to avoid echoing operations back
+      if (sourceRemote && remote.name === sourceRemote) {
+        continue;
+      }
+
+      if (remote.filter.documentId.length > 0) {
+        continue;
+      }
+
+      if (remote.collectionId !== collectionId) {
+        continue;
+      }
+
+      let filteredOps = filterOperations(opsWithContext, remote.filter);
+
+      filteredOps = filteredOps.filter(
+        (op) =>
+          op.operation.timestampUtcMs > remote.options.sinceTimestampUtcMs,
+      );
+
+      if (filteredOps.length === 0) {
+        continue;
+      }
+
+      const batches = batchOperationsByDocument(filteredOps);
+
+      for (const batch of batches) {
+        const syncOp = new SyncOperation(
+          crypto.randomUUID(),
+          "",
+          remote.name,
+          batch.documentId,
+          [batch.scope],
+          batch.branch,
+          batch.operations,
+        );
+        remote.channel.outbox.add(syncOp);
+      }
+    }
   }
 }

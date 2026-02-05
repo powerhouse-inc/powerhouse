@@ -10,8 +10,11 @@ export function Tabs({
   defaultValue: string;
 }) {
   return (
-    <Root defaultValue={defaultValue} className="flex flex-col gap-2">
-      <div className="flex w-full justify-between">
+    <Root
+      defaultValue={defaultValue}
+      className="flex min-h-0 flex-1 flex-col gap-2"
+    >
+      <div className="flex w-full shrink-0 justify-between">
         {/* <EditorUndoRedoButtons {...props} /> */}
         <List className="flex w-full gap-x-2 rounded-xl bg-slate-50 p-1 text-sm font-semibold text-gray-600 outline-none">
           {React.Children.map(children, (child, i) => {
@@ -30,12 +33,12 @@ export function Tabs({
           })}
         </List>
       </div>
-      <div className="mt-3 rounded-md bg-white">
+      <div className="mt-3 min-h-0 flex-1 rounded-md bg-white">
         {React.Children.map(children, (child, i) => {
           if (!React.isValidElement(child)) return;
           const { label } = child.props as TabContentProps;
           return (
-            <Content value={label as string} key={i}>
+            <Content className="h-full" value={label as string} key={i}>
               {child}
             </Content>
           );

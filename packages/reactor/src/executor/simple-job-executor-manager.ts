@@ -140,12 +140,6 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
         error instanceof Error ? error : String(error),
       );
 
-      this.logger.error(
-        "Error executing job @JobId: @Error",
-        handle.job.id,
-        errorInfo,
-      );
-
       handle.fail(errorInfo);
       this.activeJobs--;
       this.jobTracker.markFailed(handle.job.id, errorInfo, handle.job);
@@ -182,11 +176,6 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
           const retryErrorInfo = this.toErrorInfo(
             error instanceof Error ? error : "Failed to retry job",
           );
-          this.logger.error(
-            "Failed to retry job @JobId: @Error",
-            handle.job.id,
-            retryErrorInfo.message,
-          );
 
           this.jobTracker.markFailed(handle.job.id, retryErrorInfo, handle.job);
 
@@ -209,14 +198,6 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
           handle.job.errorHistory,
           currentErrorInfo,
           retryCount + 1,
-        );
-
-        this.logger.error(
-          "@Kind job @JobId failed after @Attempts attempts: @Error",
-          handle.job.kind,
-          handle.job.id,
-          retryCount + 1,
-          fullErrorInfo.message,
         );
 
         this.jobTracker.markFailed(handle.job.id, fullErrorInfo, handle.job);

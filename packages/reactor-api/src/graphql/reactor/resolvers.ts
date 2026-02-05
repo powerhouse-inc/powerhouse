@@ -1,9 +1,12 @@
 import {
+  batchOperationsByDocument,
   SyncOperation,
+  sortEnvelopesByFirstOperationTimestamp,
   type IReactorClient,
   type ISyncManager,
   type JobInfo,
   type OperationFilter,
+  type OperationBatch,
   type PagedResults,
   type PagingOptions,
   type PropagationMode,
@@ -851,79 +854,88 @@ export async function pollSyncEnvelopes(
     },
   }));
 
-  return envelopes;
+  return sortEnvelopesByFirstOperationTimestamp(envelopes);
 }
 
-export function pushSyncEnvelope(
+type SyncEnvelopeArg = {
+  type: string;
+  channelMeta: { id: string };
+  operations?: Array<{
+    operation: any;
+    context: {
+      documentId: string;
+      documentType: string;
+      scope: string;
+      branch: string;
+    };
+  }> | null;
+  cursor?: {
+    remoteName: string;
+    cursorOrdinal: number;
+    lastSyncedAtUtcMs?: string | null;
+  } | null;
+};
+
+export function pushSyncEnvelopes(
   syncManager: ISyncManager,
   args: {
-    envelope: {
-      type: string;
-      channelMeta: { id: string };
-      operations?: Array<{
-        operation: any;
-        context: {
-          documentId: string;
-          documentType: string;
-          scope: string;
-          branch: string;
-        };
-      }> | null;
-      cursor?: {
-        remoteName: string;
-        cursorOrdinal: number;
-        lastSyncedAtUtcMs?: string | null;
-      } | null;
-    };
+    envelopes: SyncEnvelopeArg[];
   },
 ): Promise<boolean> {
-  let remote;
-  try {
-    remote = syncManager.getById(args.envelope.channelMeta.id);
-  } catch (error) {
-    throw new GraphQLError(
-      `Channel not found: ${error instanceof Error ? error.message : "Unknown error"}`,
-    );
-  }
-
-  if (!args.envelope.operations || args.envelope.operations.length === 0) {
-    return Promise.resolve(true);
-  }
-
-  const firstOp = args.envelope.operations[0];
-  const syncOpId = `syncop-${args.envelope.channelMeta.id}-${Date.now()}-${crypto.randomUUID()}`;
-  const jobId = `job-${args.envelope.channelMeta.id}-${Date.now()}-${crypto.randomUUID()}`;
-  const scopes = [
-    ...new Set(args.envelope.operations.map((op) => op.context.scope)),
-  ];
-  const operations = args.envelope.operations.map((op) => ({
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    operation: op.operation,
-    context: {
-      documentId: op.context.documentId,
-      documentType: op.context.documentType,
-      scope: op.context.scope,
-      branch: op.context.branch,
-      ordinal: 0,
-    },
-  }));
-
-  const syncOp = new SyncOperation(
-    syncOpId,
-    jobId,
-    remote.name,
-    firstOp.context.documentId,
-    scopes,
-    firstOp.context.branch,
-    operations,
+  const sortedEnvelopes = sortEnvelopesByFirstOperationTimestamp(
+    args.envelopes,
   );
 
-  try {
-    remote.channel.inbox.add(syncOp);
-  } catch (error) {
-    throw new GraphQLError(
-      `Failed to push sync envelope: ${error instanceof Error ? error.message : "Unknown error"}`,
-    );
+  for (const envelope of sortedEnvelopes) {
+    let remote;
+    try {
+      remote = syncManager.getById(envelope.channelMeta.id);
+    } catch (error) {
+      throw new GraphQLError(
+        `Channel not found: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
+    }
+
+    if (!envelope.operations || envelope.operations.length === 0) {
+      continue;
+    }
+
+    const operations = envelope.operations.map((op) => ({
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      operation: op.operation,
+      context: {
+        documentId: op.context.documentId,
+        documentType: op.context.documentType,
+        scope: op.context.scope,
+        branch: op.context.branch,
+        ordinal: 0,
+      },
+    }));
+
+    const batches: OperationBatch[] = batchOperationsByDocument(operations);
+
+    for (const batch of batches) {
+      const syncOpId = `syncop-${envelope.channelMeta.id}-${Date.now()}-${crypto.randomUUID()}`;
+      const jobId = `job-${envelope.channelMeta.id}-${Date.now()}-${crypto.randomUUID()}`;
+
+      const syncOp = new SyncOperation(
+        syncOpId,
+        jobId,
+        remote.name,
+        batch.documentId,
+        [batch.scope],
+        batch.branch,
+        batch.operations,
+      );
+
+      try {
+        remote.channel.inbox.add(syncOp);
+      } catch (error) {
+        throw new GraphQLError(
+          `Failed to push sync envelope: ${error instanceof Error ? error.message : "Unknown error"}`,
+        );
+      }
+    }
   }
 
   return Promise.resolve(true);

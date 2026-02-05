@@ -128,6 +128,9 @@ const createMockOperationIndex = (): IOperationIndex => ({
   find: vi
     .fn()
     .mockResolvedValue({ items: [], nextCursor: undefined, hasMore: false }),
+  get: vi
+    .fn()
+    .mockResolvedValue({ results: [], options: { cursor: "0", limit: 100 } }),
   getSinceOrdinal: vi
     .fn()
     .mockResolvedValue({ items: [], nextCursor: undefined, hasMore: false }),
@@ -559,7 +562,7 @@ describe("GqlChannel", () => {
       const cursorStorage = createMockCursorStorage();
       const mockFetch = createMockFetch({
         pollSyncEnvelopes: [],
-        pushSyncEnvelope: true,
+        pushSyncEnvelopes: true,
       });
       global.fetch = mockFetch;
 
@@ -581,7 +584,7 @@ describe("GqlChannel", () => {
         expect(mockFetch).toHaveBeenCalledWith(
           "https://example.com/graphql",
           expect.objectContaining({
-            body: expect.stringContaining("pushSyncEnvelope"),
+            body: expect.stringContaining("pushSyncEnvelopes"),
           }),
         );
       });
@@ -591,7 +594,7 @@ describe("GqlChannel", () => {
       const cursorStorage = createMockCursorStorage();
       const mockFetch = createMockFetch({
         pollSyncEnvelopes: [],
-        pushSyncEnvelope: true,
+        pushSyncEnvelopes: true,
       });
       global.fetch = mockFetch;
 
@@ -622,7 +625,7 @@ describe("GqlChannel", () => {
       const cursorStorage = createMockCursorStorage();
       const mockFetch = createMockFetch({
         pollSyncEnvelopes: [],
-        pushSyncEnvelope: true,
+        pushSyncEnvelopes: true,
       });
       global.fetch = mockFetch;
 
@@ -641,12 +644,12 @@ describe("GqlChannel", () => {
 
       await vi.waitFor(() => {
         const pushCall = mockFetch.mock.calls.find((call) =>
-          (call[1]?.body as string).includes("pushSyncEnvelope"),
+          (call[1]?.body as string).includes("pushSyncEnvelopes"),
         );
         expect(pushCall).toBeDefined();
 
         const body = JSON.parse(pushCall![1]?.body as string);
-        expect(body.variables.envelope.channelMeta.id).toBe("channel-1");
+        expect(body.variables.envelopes[0].channelMeta.id).toBe("channel-1");
       });
     });
 
@@ -1038,7 +1041,7 @@ describe("GqlChannel", () => {
       const cursorStorage = createMockCursorStorage();
       const mockFetch = createMockFetch({
         pollSyncEnvelopes: [],
-        pushSyncEnvelope: true,
+        pushSyncEnvelopes: true,
       });
       global.fetch = mockFetch;
 

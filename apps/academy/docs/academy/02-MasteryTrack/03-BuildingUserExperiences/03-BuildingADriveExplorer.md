@@ -30,7 +30,7 @@ When using **Vetra Studio**, Drive-app generation is automatic. Simply create a 
 
 1. Open Vetra Studio (`ph vetra --watch`)
 2. In your Vetra Studio Drive, click **"Add new specification"** in the Apps section
-3. Name your Drive-app (e.g., `todo-drive-explorer`)
+3. Name your Drive-app (e.g., `todo-list-drive-explorer`)
 4. Vetra automatically generates the Drive-app template code
 
 <details>
@@ -87,13 +87,13 @@ If not, you can follow the shortened guide below to prepare your project for thi
 
 - Start by running Vetra Studio locally with `ph vetra --watch`
 
-- Download the `todolist.phdm.zip` file from the [todo-demo-package GitHub repository](https://github.com/powerhouse-inc/todo-demo-package/blob/production/todolist.phdm.zip).
+- Follow the [Get Started guide](/academy/GetStarted/02-DefineToDoListDocumentModel) to create your TodoList document model specification.
 - Drop the downloaded file in the Vetra Studio drive. You'll find it under document models. Vetra should now automatically generate the necessary code for your project
 
 ### 2. Add the reducer code:
 
-- Copy the code from [`base-operations.ts`](https://github.com/powerhouse-inc/todo-demo-package/blob/production/document-models/to-do-list/src/reducers/base-operations.ts)
-- Paste it into `document-models/to-do/src/reducers/base-operations.ts`
+- Copy the code from [`todos.ts`](https://github.com/powerhouse-inc/todo-tutorial/blob/step-3-complete-implement-todo-list-document-model-reducer-operation-handlers/document-models/todo-list/src/reducers/todos.ts)
+- Paste it into `document-models/todo-list/src/reducers/todos.ts`
 
 ### 3. Generate a document editor:
 
@@ -114,8 +114,7 @@ ph generate --editor TodoList --document-types powerhouse/todo-list
 
 ### 4. Add the editor code:
 
-- Copy the code from [`editor.tsx`](https://github.com/powerhouse-inc/todo-demo-package/blob/production/editors/to-do-list/editor.tsx)
-- Paste it into `editors/to-do-list/editor.tsx`
+- Follow the [Build TodoList Editor guide](/academy/GetStarted/05-BuildToDoListEditor) to implement your editor components.
 
 <details>
 <summary>Alternatively: Use Connect instead of Vetra Studio</summary>
@@ -134,14 +133,14 @@ You can also start by running Connect locally with `ph connect` instead of Vetra
 With Vetra Studio running (`ph vetra --watch`), create a Drive-app specification:
 
 1. In your Vetra Studio Drive, click **"Add new specification"** in the Apps section
-2. Name your Drive-app `todo-drive-explorer`
-3. Vetra automatically generates the Drive-app template in `editors/todo-drive-explorer/`
+2. Name your Drive-app `todo-list-drive-explorer`
+3. Vetra automatically generates the Drive-app template in `editors/todo-list-drive-explorer/`
 
 <details>
 <summary>Alternatively: Manual generation with ph generate</summary>
 
 ```bash
-ph generate --drive-editor todo-drive-explorer
+ph generate --drive-editor todo-list-drive-explorer
 ```
 
 </details>
@@ -161,22 +160,22 @@ ph generate --drive-editor todo-drive-explorer
   },
   "documentModels": [
     {
-      "id": "to-do-list",
-      "name": "To-do List"
+      "id": "todo-list",
+      "name": "TodoList"
     }
   ],
   "editors": [
     {
-      "id": "to-do-list-editor",
-      "name": "To-do List Editor",
+      "id": "todo-list-editor",
+      "name": "TodoList Editor",
       "documentTypes": ["todo-list"]
     }
   ],
   "apps": [
     {
-      "id": "todo-drive-explorer",
-      "name": "To-do drive-app",
-      "driveEditor": "todo-drive-explorer"
+      "id": "todo-list-drive-explorer",
+      "name": "TodoList drive-app",
+      "driveEditor": "todo-list-drive-explorer"
     }
   ],
   "subgraphs": [],
@@ -189,10 +188,10 @@ ph generate --drive-editor todo-drive-explorer
 - First, let's remove some default template files that we won't need for this specific demo. If you want to see what the default template looks like before removing files, you can run `ph connect` at any time.
 
 ```bash
-rm -rf editors/todo-drive-explorer/hooks
-rm -rf editors/todo-drive-explorer/components/FileItemsGrid.tsx
-rm -rf editors/todo-drive-explorer/components/FolderItemsGrid.tsx
-rm -rf editors/todo-drive-explorer/components/FolderTree.tsx
+rm -rf editors/todo-list-drive-explorer/hooks
+rm -rf editors/todo-list-drive-explorer/components/FileItemsGrid.tsx
+rm -rf editors/todo-list-drive-explorer/components/FolderItemsGrid.tsx
+rm -rf editors/todo-list-drive-explorer/components/FolderTree.tsx
 ```
 
 ### 4. Create custom components for your Drive-app:
@@ -200,27 +199,27 @@ rm -rf editors/todo-drive-explorer/components/FolderTree.tsx
 - Next, create the following files. These will define the data types for our todo-list items and provide the custom React components for our Drive-app.
 
 <details>
-<summary>Create `editors/todo-drive-explorer/types/todo.ts`</summary>
+<summary>Create `editors/todo-list-drive-explorer/types/todo.ts`</summary>
 
      This file defines the TypeScript type `ToDoState`. It specifies the shape of todo-list document data within the Drive-app, combining the document's revision information with its global state. This ensures that our components work with a predictable and strongly-typed data structure.
 
      ```typescript
-     import { type ToDoListDocument} from "../../../document-models/to-do-list/index.js"
+     import type { TodoListDocument } from "todo-tutorial/document-models/todo-list";
 
-      export type ToDoState = {
+      export type TodoState = {
          documentType: string;
          revision: {
             global: number;
             local: number;
          };
-         global: ToDoListDocument["state"]["global"];
+         global: TodoListDocument["state"]["global"];
       };
       ```
 
 </details>
 
 <details>
-<summary>Create `editors/todo-drive-explorer/components/ProgressBar.tsx`</summary>
+<summary>Create `editors/todo-list-drive-explorer/components/ProgressBar.tsx`</summary>
 
      This is a simple React component that renders a visual progress bar. It takes a `value` and `max` number to calculate the percentage of completed tasks. It also displays the percentage and has a special state for when there are no tasks.
 
@@ -261,7 +260,7 @@ rm -rf editors/todo-drive-explorer/components/FolderTree.tsx
       </details>
 
    <details>
-   <summary>Update `editors/todo-drive-explorer/components/DriveExplorer.tsx`</summary>
+   <summary>Update `editors/todo-list-drive-explorer/components/DriveExplorer.tsx`</summary>
 
 This is the main component of our Drive-app. It fetches all `powerhouse/todo-list` documents from the drive, displays them in a table with their progress, and allows a user to click on a document to open it in the `EditorContainer`. It also includes a button to create new documents.
 
@@ -274,8 +273,16 @@ import { CreateDocumentModal } from "@powerhousedao/design-system";
 import { CreateDocument } from "./CreateDocument.js";
 import { type DriveEditorContext, useDriveContext } from "@powerhousedao/reactor-browser";
 import { ProgressBar } from "./ProgressBar.js";
+import type { TodoListDocument } from "todo-tutorial/document-models/todo-list";
 
-import { type ToDoState } from "../types/todo.js"
+type TodoState = {
+  documentType: string;
+  revision: {
+    global: number;
+    local: number;
+  };
+  global: TodoListDocument["state"]["global"];
+};
 
 interface DriveExplorerProps {
 driveId: string;
@@ -311,14 +318,14 @@ const { todoNodes } = useMemo(() => {
    return Object.keys(state).reduce(
       (acc, curr) => {
       const document = state[curr];
-      if (document.documentType.startsWith("powerhouse/todo")) {
-         acc.todoNodes[curr] = document as ToDoState;
+      if (document.documentType === "powerhouse/todo-list") {
+         acc.todoNodes[curr] = document as TodoState;
       }
 
       return acc;
       },
       {
-      todoNodes: {} as Record<string, ToDoState>,
+      todoNodes: {} as Record<string, TodoState>,
       },
    );
 }, [state]);
@@ -470,9 +477,9 @@ return (
    </details>
 
    <details>
-   <summary>Update `editors/todo-drive-explorer/components/EditorContainer.tsx`</summary>
+   <summary>Update `editors/todo-list-drive-explorer/components/EditorContainer.tsx`</summary>
 
-This component acts as a wrapper for the document editor. When a user selects a document in `DriveExplorer.tsx`, this component mounts the appropriate editor (`to-do-list` editor in this case) and provides it with the necessary context and properties to function. It also renders the `DocumentToolbar` which provides actions like closing, exporting, and viewing revision history.
+This component acts as a wrapper for the document editor. When a user selects a document in `DriveExplorer.tsx`, this component mounts the appropriate editor (`todo-list-editor` in this case) and provides it with the necessary context and properties to function. It also renders the `DocumentToolbar` which provides actions like closing, exporting, and viewing revision history.
 
 ```typescript
 import {
@@ -589,7 +596,7 @@ return showRevisionHistory ? (
 
    </details>
 
-- In case you are getting stuck and want to verify your progress with the reference repository you can find the example repository of the [Todo-demo-package here](/academy/MasteryTrack/DocumentModelCreation/ExampleToDoListRepository)
+- In case you are getting stuck and want to verify your progress with the reference repository you can find the example repository of the [Todo Tutorial here](https://github.com/powerhouse-inc/todo-tutorial)
 
 ### 3. Run the application:
 

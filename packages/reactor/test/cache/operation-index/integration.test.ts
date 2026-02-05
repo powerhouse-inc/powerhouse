@@ -577,6 +577,254 @@ describe("KyselyOperationIndex Integration", () => {
     });
   });
 
+  describe("get() document operations query", () => {
+    it("should return all operations for a document ordered by ordinal", async () => {
+      const docId = "doc-get-1";
+
+      const txn1 = operationIndex.start();
+      const createActionId = generateId();
+      txn1.write([
+        {
+          id: deriveOperationId(docId, "document", "main", createActionId),
+          documentId: docId,
+          documentType: "powerhouse/document-model",
+          branch: "main",
+          scope: "document",
+          index: 0,
+          timestampUtcMs: "1704067200000",
+          hash: "hash-1",
+          skip: 0,
+          action: {
+            id: createActionId,
+            type: "CREATE_DOCUMENT",
+            scope: "document",
+            timestampUtcMs: "1704067200000",
+            input: { documentId: docId, model: "powerhouse/document-model" },
+          },
+        },
+      ]);
+      await operationIndex.commit(txn1);
+
+      const txn2 = operationIndex.start();
+      const updateActionId = generateId();
+      txn2.write([
+        {
+          id: deriveOperationId(docId, "global", "main", updateActionId),
+          documentId: docId,
+          documentType: "powerhouse/document-model",
+          branch: "main",
+          scope: "global",
+          index: 0,
+          timestampUtcMs: "1704067201000",
+          hash: "hash-2",
+          skip: 0,
+          action: {
+            id: updateActionId,
+            type: "SET_NAME",
+            scope: "global",
+            timestampUtcMs: "1704067201000",
+            input: { name: "My Document" },
+          },
+        },
+      ]);
+      await operationIndex.commit(txn2);
+
+      const result = await operationIndex.get(docId);
+
+      expect(result.results).toHaveLength(2);
+      expect((result.results[0].action as { type: string }).type).toBe(
+        "CREATE_DOCUMENT",
+      );
+      expect((result.results[1].action as { type: string }).type).toBe(
+        "SET_NAME",
+      );
+      expect(result.results[0].ordinal).toBeLessThan(
+        result.results[1].ordinal!,
+      );
+    });
+
+    it("should filter by branch when view filter is provided", async () => {
+      const docId = "doc-get-branch";
+
+      const txn1 = operationIndex.start();
+      const mainActionId = generateId();
+      txn1.write([
+        {
+          id: deriveOperationId(docId, "document", "main", mainActionId),
+          documentId: docId,
+          documentType: "powerhouse/document-model",
+          branch: "main",
+          scope: "document",
+          index: 0,
+          timestampUtcMs: "1704067200000",
+          hash: "hash-1",
+          skip: 0,
+          action: {
+            id: mainActionId,
+            type: "CREATE_DOCUMENT",
+            scope: "document",
+            timestampUtcMs: "1704067200000",
+            input: { documentId: docId, model: "powerhouse/document-model" },
+          },
+        },
+      ]);
+      await operationIndex.commit(txn1);
+
+      const txn2 = operationIndex.start();
+      const draftActionId = generateId();
+      txn2.write([
+        {
+          id: deriveOperationId(docId, "document", "draft", draftActionId),
+          documentId: docId,
+          documentType: "powerhouse/document-model",
+          branch: "draft",
+          scope: "document",
+          index: 0,
+          timestampUtcMs: "1704067201000",
+          hash: "hash-2",
+          skip: 0,
+          action: {
+            id: draftActionId,
+            type: "CREATE_DOCUMENT",
+            scope: "document",
+            timestampUtcMs: "1704067201000",
+            input: { documentId: docId, model: "powerhouse/document-model" },
+          },
+        },
+      ]);
+      await operationIndex.commit(txn2);
+
+      const mainResult = await operationIndex.get(docId, { branch: "main" });
+      expect(mainResult.results).toHaveLength(1);
+      expect(mainResult.results[0].branch).toBe("main");
+
+      const draftResult = await operationIndex.get(docId, { branch: "draft" });
+      expect(draftResult.results).toHaveLength(1);
+      expect(draftResult.results[0].branch).toBe("draft");
+    });
+
+    it("should filter by scopes when view filter is provided", async () => {
+      const docId = "doc-get-scope";
+
+      const txn1 = operationIndex.start();
+      const docScopeActionId = generateId();
+      txn1.write([
+        {
+          id: deriveOperationId(docId, "document", "main", docScopeActionId),
+          documentId: docId,
+          documentType: "powerhouse/document-model",
+          branch: "main",
+          scope: "document",
+          index: 0,
+          timestampUtcMs: "1704067200000",
+          hash: "hash-1",
+          skip: 0,
+          action: {
+            id: docScopeActionId,
+            type: "CREATE_DOCUMENT",
+            scope: "document",
+            timestampUtcMs: "1704067200000",
+            input: { documentId: docId, model: "powerhouse/document-model" },
+          },
+        },
+      ]);
+      await operationIndex.commit(txn1);
+
+      const txn2 = operationIndex.start();
+      const globalScopeActionId = generateId();
+      txn2.write([
+        {
+          id: deriveOperationId(docId, "global", "main", globalScopeActionId),
+          documentId: docId,
+          documentType: "powerhouse/document-model",
+          branch: "main",
+          scope: "global",
+          index: 0,
+          timestampUtcMs: "1704067201000",
+          hash: "hash-2",
+          skip: 0,
+          action: {
+            id: globalScopeActionId,
+            type: "SET_NAME",
+            scope: "global",
+            timestampUtcMs: "1704067201000",
+            input: { name: "My Document" },
+          },
+        },
+      ]);
+      await operationIndex.commit(txn2);
+
+      const docScopeResult = await operationIndex.get(docId, {
+        scopes: ["document"],
+      });
+      expect(docScopeResult.results).toHaveLength(1);
+      expect(docScopeResult.results[0].scope).toBe("document");
+
+      const globalScopeResult = await operationIndex.get(docId, {
+        scopes: ["global"],
+      });
+      expect(globalScopeResult.results).toHaveLength(1);
+      expect(globalScopeResult.results[0].scope).toBe("global");
+    });
+
+    it("should return empty results for non-existent document", async () => {
+      const result = await operationIndex.get("non-existent-doc");
+
+      expect(result.results).toHaveLength(0);
+    });
+
+    it("should support pagination", async () => {
+      const docId = "doc-get-paging";
+
+      const txn = operationIndex.start();
+      for (let i = 0; i < 5; i++) {
+        const actionId = generateId();
+        txn.write([
+          {
+            id: deriveOperationId(docId, "global", "main", actionId),
+            documentId: docId,
+            documentType: "powerhouse/document-model",
+            branch: "main",
+            scope: "global",
+            index: i,
+            timestampUtcMs: `170406720${i}000`,
+            hash: `hash-${i}`,
+            skip: 0,
+            action: {
+              id: actionId,
+              type: "SET_NAME",
+              scope: "global",
+              timestampUtcMs: `170406720${i}000`,
+              input: { name: `Name ${i}` },
+            },
+          },
+        ]);
+      }
+      await operationIndex.commit(txn);
+
+      const page1 = await operationIndex.get(docId, undefined, {
+        cursor: "0",
+        limit: 2,
+      });
+      expect(page1.results).toHaveLength(2);
+      expect(page1.nextCursor).toBeDefined();
+
+      const page2 = await operationIndex.get(docId, undefined, {
+        limit: 2,
+        cursor: page1.nextCursor!,
+      });
+      expect(page2.results).toHaveLength(2);
+      expect(page2.nextCursor).toBeDefined();
+
+      const page3 = await operationIndex.get(docId, undefined, {
+        limit: 2,
+        cursor: page2.nextCursor!,
+      });
+      expect(page3.results).toHaveLength(1);
+      expect(page3.nextCursor).toBeUndefined();
+    });
+  });
+
   describe("getCollectionsForDocuments()", () => {
     it("should return empty object for empty input", async () => {
       const result = await operationIndex.getCollectionsForDocuments([]);

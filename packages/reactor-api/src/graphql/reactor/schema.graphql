@@ -416,8 +416,8 @@ type Mutation {
   # Touch (create or update) a channel for sync
   touchChannel(input: TouchChannelInput!): Boolean!
 
-  # Push sync envelope to a channel
-  pushSyncEnvelope(envelope: SyncEnvelopeInput!): Boolean!
+  # Push sync envelopes to a channel
+  pushSyncEnvelopes(envelopes: [SyncEnvelopeInput!]!): Boolean!
 }
 
 type Subscription {

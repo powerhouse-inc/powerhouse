@@ -127,6 +127,14 @@ export class GraphQLManager {
   private authService: AuthService | null = null;
 
   private coreApolloServer: ApolloServer<Context> | null = null;
+  private readonly subgraphApolloServers = new Map<
+    string,
+    ApolloServer<Context>
+  >();
+  private readonly subgraphWsDisposers = new Map<
+    string,
+    { dispose: () => void | Promise<void> }
+  >();
 
   private readonly logger = childLogger(["reactor-api", "graphql-manager"]);
 
@@ -484,7 +492,19 @@ export class GraphQLManager {
     for (const [supergraph, subgraphs] of subgraphsMap.entries()) {
       for (const subgraph of subgraphs) {
         this.logger.debug(`Setting up subgraph ${subgraph.name}`);
+        const subgraphPath = this.#getSubgraphPath(subgraph, supergraph);
         try {
+          // dispose existing websocket server before starting new one
+          const existingWsDisposer = this.subgraphWsDisposers.get(subgraphPath);
+          if (existingWsDisposer) {
+            try {
+              await existingWsDisposer.dispose();
+            } catch {
+              // ignore error when disposing websocket server
+            }
+            this.subgraphWsDisposers.delete(subgraphPath);
+          }
+
           // create subgraph schema
           const schema = createSchema(
             this.reactor,
@@ -496,9 +516,10 @@ export class GraphQLManager {
           const server = this.#createApolloServer(schema);
           server.startInBackgroundHandlingStartupErrorsByLoggingAndFailingAllRequests();
           await this.#waitForServer(server);
+          this.subgraphApolloServers.set(subgraphPath, server);
 
           if (subgraph.hasSubscriptions) {
-            useServer(
+            const wsDisposer = useServer(
               {
                 schema,
                 context: async (ctx: {
@@ -511,18 +532,18 @@ export class GraphQLManager {
               },
               this.wsServer,
             );
-            this.logger.info(
+            this.subgraphWsDisposers.set(subgraphPath, wsDisposer);
+            this.logger.debug(
               `WebSocket subscriptions enabled for ${subgraph.name}`,
             );
           }
 
-          const path = this.#getSubgraphPath(subgraph, supergraph);
-          this.#setupApolloExpressMiddleware(server, router, path);
+          this.#setupApolloExpressMiddleware(server, router, subgraphPath);
         } catch (error) {
           this.logger.error(
             "Failed to setup subgraph @name at path @path: @error",
             subgraph.name,
-            this.#getSubgraphPath(subgraph, supergraph),
+            subgraphPath,
             error,
           );
         }

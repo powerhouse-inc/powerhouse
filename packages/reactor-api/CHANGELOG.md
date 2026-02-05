@@ -1,3 +1,26 @@
+## 6.0.0-dev.33 (2026-02-05)
+
+### 🩹 Fixes
+
+- batches need to keep doc id + scope in mind, dummy ([83de46307](https://github.com/powerhouse-inc/powerhouse/commit/83de46307))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
+## 6.0.0-dev.32 (2026-02-04)
+
+### 🩹 Fixes
+
+- remove duplicate trigger-downstream from publish-docker-images ([1f70c8041](https://github.com/powerhouse-inc/powerhouse/commit/1f70c8041))
+- **reactor-api:** revert changes to subgraph server handling ([4260ec929](https://github.com/powerhouse-inc/powerhouse/commit/4260ec929))
+- **reactor-api:** stop existing server and ws subscription before starting new one for subgraphs ([946f1f0d2](https://github.com/powerhouse-inc/powerhouse/commit/946f1f0d2))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Frank
+
 ## 6.0.0-dev.31 (2026-02-04)
 
 ### 🚀 Features

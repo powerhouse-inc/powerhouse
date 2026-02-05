@@ -2,9 +2,10 @@ import type { Action, Signature } from "document-model";
 import type { IOperationIndex } from "../../cache/operation-index-types.js";
 import type { ILogger } from "../../logging/types.js";
 import type { ISyncCursorStorage } from "../../storage/interfaces.js";
+import { BufferedMailbox } from "../buffered-mailbox.js";
 import { ChannelError } from "../errors.js";
 import type { IChannel } from "../interfaces.js";
-import { Mailbox } from "../mailbox.js";
+import { type IMailbox, Mailbox } from "../mailbox.js";
 import type { SyncOperation } from "../sync-operation.js";
 import type {
   JwtHandler,
@@ -13,6 +14,7 @@ import type {
   SyncEnvelope,
 } from "../types.js";
 import { ChannelErrorSource } from "../types.js";
+import { sortEnvelopesByFirstOperationTimestamp } from "../utils.js";
 import type { IPollTimer } from "./poll-timer.js";
 import { envelopesToSyncOperations } from "./utils.js";
 
@@ -42,10 +44,11 @@ export type GqlChannelConfig = {
  * GraphQL-based synchronization channel for network communication between reactors.
  */
 export class GqlChannel implements IChannel {
-  readonly inbox: Mailbox<SyncOperation>;
-  readonly outbox: Mailbox<SyncOperation>;
-  readonly deadLetter: Mailbox<SyncOperation>;
+  readonly inbox: IMailbox<SyncOperation>;
+  readonly outbox: IMailbox<SyncOperation>;
+  readonly deadLetter: IMailbox<SyncOperation>;
   readonly config: GqlChannelConfig;
+  private readonly bufferedOutbox: BufferedMailbox<SyncOperation>;
 
   private readonly channelId: string;
   private readonly remoteName: string;
@@ -85,11 +88,12 @@ export class GqlChannel implements IChannel {
     this.failureCount = 0;
 
     this.inbox = new Mailbox<SyncOperation>();
-    this.outbox = new Mailbox<SyncOperation>();
+    this.bufferedOutbox = new BufferedMailbox<SyncOperation>(500, 25);
+    this.outbox = this.bufferedOutbox;
     this.deadLetter = new Mailbox<SyncOperation>();
 
-    this.outbox.onAdded((syncOp) => {
-      this.handleOutboxAdded(syncOp);
+    this.outbox.onAdded((syncOps) => {
+      this.handleOutboxAdded(syncOps);
     });
   }
 
@@ -97,6 +101,7 @@ export class GqlChannel implements IChannel {
    * Shuts down the channel and prevents further operations.
    */
   shutdown(): void {
+    this.bufferedOutbox.flush();
     this.isShutdown = true;
     this.pollTimer.stop();
   }
@@ -142,7 +147,8 @@ export class GqlChannel implements IChannel {
 
     let maxCursorOrdinal = cursorOrdinal;
 
-    for (const envelope of envelopes) {
+    const sortedEnvelopes = sortEnvelopesByFirstOperationTimestamp(envelopes);
+    for (const envelope of sortedEnvelopes) {
       if (envelope.type.toLowerCase() === "operations" && envelope.operations) {
         const syncOps = envelopesToSyncOperations(envelope, this.remoteName);
         for (const syncOp of syncOps) {
@@ -352,30 +358,37 @@ export class GqlChannel implements IChannel {
   /**
    * Handles sync operations added to the outbox by sending them to the remote.
    */
-  private handleOutboxAdded(syncOp: SyncOperation): void {
+  private handleOutboxAdded(syncOps: SyncOperation[]): void {
     if (this.isShutdown) {
       return;
     }
 
     // Execute async but don't await (fire and forget with error handling)
-    this.pushSyncOperation(syncOp).catch((error) => {
+    this.pushSyncOperations(syncOps).catch((error) => {
       const err = error instanceof Error ? error : new Error(String(error));
       const channelError = new ChannelError(ChannelErrorSource.Outbox, err);
-      syncOp.failed(channelError);
-      this.deadLetter.add(syncOp);
-      this.outbox.remove(syncOp);
+      for (const syncOp of syncOps) {
+        syncOp.failed(channelError);
+        this.deadLetter.add(syncOp);
+        this.outbox.remove(syncOp);
+      }
     });
   }
 
   /**
-   * Pushes a sync operation to the remote via GraphQL mutation.
+   * Pushes multiple sync operations to the remote via a single GraphQL mutation.
+   * Merges all operations from multiple SyncOperations into one SyncEnvelope.
    */
-  private async pushSyncOperation(syncOp: SyncOperation): Promise<void> {
-    syncOp.started();
+  private async pushSyncOperations(syncOps: SyncOperation[]): Promise<void> {
+    for (const syncOp of syncOps) {
+      syncOp.started();
+    }
+
+    const allOperations = syncOps.flatMap((syncOp) => syncOp.operations);
 
     this.logger.debug(
       "[PUSH]: @Operations",
-      syncOp.operations.map(
+      allOperations.map(
         (op) =>
           `(${op.context.documentId}, ${op.context.branch}, ${op.context.scope}, ${op.operation.index})`,
       ),
@@ -384,27 +397,29 @@ export class GqlChannel implements IChannel {
     const envelope: SyncEnvelope = {
       type: "operations",
       channelMeta: { id: this.channelId },
-      operations: syncOp.operations,
+      operations: allOperations,
     };
 
     const mutation = `
-      mutation PushSyncEnvelope($envelope: SyncEnvelopeInput!) {
-        pushSyncEnvelope(envelope: $envelope)
+      mutation PushSyncEnvelopes($envelopes: [SyncEnvelopeInput!]!) {
+        pushSyncEnvelopes(envelopes: $envelopes)
       }
     `;
 
     const variables = {
-      envelope: this.serializeEnvelope(envelope),
+      envelopes: [this.serializeEnvelope(envelope)],
     };
 
-    await this.executeGraphQL<{ pushSyncEnvelope: boolean }>(
+    await this.executeGraphQL<{ pushSyncEnvelopes: boolean }>(
       mutation,
       variables,
     );
 
     // Successfully sent - the outbox will be cleared when we receive ACK
     // For now, we optimistically remove from outbox
-    this.outbox.remove(syncOp);
+    for (const syncOp of syncOps) {
+      this.outbox.remove(syncOp);
+    }
   }
 
   /**
@@ -578,5 +593,9 @@ export class GqlChannel implements IChannel {
       lastFailureUtcMs: this.lastFailureUtcMs,
       failureCount: this.failureCount,
     };
+  }
+
+  get poller(): IPollTimer {
+    return this.pollTimer;
   }
 }

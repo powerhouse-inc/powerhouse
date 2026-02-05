@@ -2,7 +2,7 @@ import type { ISyncManager } from "@powerhousedao/reactor";
 import {
   touchChannel,
   pollSyncEnvelopes,
-  pushSyncEnvelope,
+  pushSyncEnvelopes,
 } from "../../src/graphql/reactor/resolvers.js";
 
 type SyncManagerRegistry = Map<string, ISyncManager>;
@@ -76,9 +76,9 @@ export function createResolverBridge(
       return createMockResponse({ pollSyncEnvelopes: result });
     }
 
-    if (body.query.includes("pushSyncEnvelope")) {
+    if (body.query.includes("pushSyncEnvelopes")) {
       const variables = body.variables as {
-        envelope: {
+        envelopes: Array<{
           type: string;
           channelMeta: { id: string };
           operations?: Array<{
@@ -95,12 +95,12 @@ export function createResolverBridge(
             cursorOrdinal: number;
             lastSyncedAtUtcMs?: string | null;
           } | null;
-        };
+        }>;
       };
 
-      const result = await pushSyncEnvelope(syncManager, variables);
+      const result = await pushSyncEnvelopes(syncManager, variables);
 
-      return createMockResponse({ pushSyncEnvelope: result });
+      return createMockResponse({ pushSyncEnvelopes: result });
     }
 
     if (body.query.includes("touchChannel")) {

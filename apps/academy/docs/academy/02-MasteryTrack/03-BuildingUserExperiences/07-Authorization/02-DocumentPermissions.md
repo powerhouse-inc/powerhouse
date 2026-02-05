@@ -1195,29 +1195,46 @@ mutation TodoList_addTodoItem($docId: PHID, $driveId: String, $input: TodoList_A
 **Expected Result:** ✅ **Success**
 
 ```json
-  {
-    "data": {
-      "TodoList_addTodoItem": {
-        "id": "b2af1c61-621e-48d3-a0de-0014eac87755",
-        "success": true,
-        "document": {
-          "id":
-  "b2af1c61-621e-48d3-a0de-0014eac87755",
-          "state": {
-            "todos": [
-              {
-                "id": "generated-todo-id-123",
-                "text": "confirm runway expectations",
-                "completed": false,
-                "createdAt": "2026-02-02T10:30:00Z"
-              }
-            ]
-          }
-        }
+{
+  "data": {
+    "TodoList_addTodoItem": 1
+  }
+}
+```
+
+**Query the todo-List to verify**
+
+```graphql
+query GetDocument($docId: PHID!, $driveId: PHID) {
+  TodoList {
+    getDocument(docId: $docId, driveId: $driveId) {
+      id
+      name
+      operations {
+        inputText
       }
     }
   }
+}
 ```
+
+**Variables:**
+{
+  "docId": "document-uuid-abcd-1234-efgh",
+  "driveId": "drive-uuid-1234-5678-abcd",
+}  
+
+**Expected Result:**
+{
+  "data": {
+    "TodoList": {
+      "getDocument": {
+        "id": "23fe9b72-6540-4eee-b55e-87e414429dd2",
+        "name": "Q1 Budget Planning",
+      }
+    }
+  }
+}
 
 ### Summary
 
@@ -1370,6 +1387,8 @@ mutation AddFrankToLeads {
 ```
 
 ### Step 3: Set Document-Level Permissions
+
+Create a todo document for the next steps. 
 
 **Grant different access levels to each group for the todo list document:**
 
