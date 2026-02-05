@@ -142,8 +142,8 @@ export function ChannelInspector({
   );
 
   return (
-    <div className="flex h-full flex-col gap-3">
-      <div className="flex shrink-0 items-center justify-between">
+    <div className="flex h-full flex-col gap-3 overflow-auto">
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <button
             className="flex items-center gap-1 rounded border border-gray-300 bg-white px-2 py-1 text-sm text-gray-700 hover:bg-gray-100"
@@ -170,7 +170,7 @@ export function ChannelInspector({
       </div>
 
       {pollerControls && (
-        <div className="shrink-0 rounded border border-gray-200 bg-white p-4">
+        <div className="rounded border border-gray-200 bg-white p-4">
           <h3 className="mb-3 text-sm font-semibold text-gray-900">Poller</h3>
           <div className="flex items-center justify-between">
             <div className="text-sm text-gray-600">
@@ -214,7 +214,7 @@ export function ChannelInspector({
         </div>
       )}
 
-      <div className="shrink-0 rounded border border-gray-200 bg-white p-4">
+      <div className="rounded border border-gray-200 bg-white p-4">
         <h3 className="mb-3 text-sm font-semibold text-gray-900">
           Mailbox Processing
         </h3>
@@ -304,7 +304,7 @@ export function ChannelInspector({
         </div>
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-auto">
+      <div className="flex flex-col gap-6">
         <MailboxTable
           collapsed={collapsed.inbox}
           mailboxType="inbox"

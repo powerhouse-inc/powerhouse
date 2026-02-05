@@ -2,6 +2,7 @@ import { Icon } from "@powerhousedao/design-system";
 import type { Job } from "@powerhousedao/reactor";
 import { useCallback, useEffect, useState } from "react";
 import { twMerge } from "tailwind-merge";
+import { ObjectInspectorModal } from "../object-inspector-modal/index.js";
 
 export type QueueState = {
   readonly isPaused: boolean;
@@ -30,7 +31,10 @@ type ColumnDef = {
   readonly width?: string;
 };
 
+const VIEW_COLUMN: ColumnDef = { key: "view", label: "", width: "60px" };
+
 const COLUMNS: ColumnDef[] = [
+  VIEW_COLUMN,
   { key: "id", label: "ID", width: "120px" },
   { key: "kind", label: "Kind", width: "80px" },
   { key: "documentId", label: "Document ID", width: "150px" },
@@ -136,6 +140,7 @@ export function QueueInspector({
   const [loading, setLoading] = useState(true);
   const [sort, setSort] = useState<SortOptions | undefined>();
   const [actionInProgress, setActionInProgress] = useState(false);
+  const [selectedJob, setSelectedJob] = useState<JobWithStatus | null>(null);
 
   const loadState = useCallback(async () => {
     const newState = await getQueueState();
@@ -292,7 +297,16 @@ export function QueueInspector({
                   key={job.id}
                   className="odd:bg-white even:bg-gray-50 hover:bg-blue-50"
                 >
-                  <td className="px-3 py-2 text-xs text-gray-900">
+                  <td className="px-3 py-2 text-xs">
+                    <button
+                      className="flex items-center gap-1 rounded bg-blue-50 px-2 py-1 text-xs text-blue-700 hover:bg-blue-100"
+                      onClick={() => setSelectedJob(job)}
+                      type="button"
+                    >
+                      View
+                    </button>
+                  </td>
+                  <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-900">
                     <span className="block truncate" title={job.id}>
                       {truncateId(job.id)}
                     </span>
@@ -357,6 +371,13 @@ export function QueueInspector({
       <div className="shrink-0 text-sm text-gray-600">
         Showing {sortedJobs.length} job(s)
       </div>
+
+      <ObjectInspectorModal
+        object={selectedJob}
+        onOpenChange={(open) => !open && setSelectedJob(null)}
+        open={selectedJob !== null}
+        title="Job"
+      />
     </div>
   );
 }
