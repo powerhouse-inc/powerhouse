@@ -181,7 +181,7 @@ export async function hygenGenerateEditor(
   await run(args, { skipFormat, verbose });
   const projectDir = path.dirname(dir);
   const project = buildTsMorphProject(projectDir);
-  makeEditorsModulesFile(project, projectDir);
+  await makeEditorsModulesFile(project, projectDir);
   await project.save();
 }
 
@@ -344,6 +344,6 @@ export async function hygenGenerateDriveEditor(options: {
 
   const projectDir = path.dirname(dir);
   const project = buildTsMorphProject(projectDir);
-  makeEditorsModulesFile(project, projectDir);
+  await makeEditorsModulesFile(project, projectDir);
   await project.save();
 }

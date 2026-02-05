@@ -1,10 +1,13 @@
-import { upgradeTransitionTemplate } from "@powerhousedao/codegen/templates";
+import {
+  upgradeManifestTemplate,
+  upgradeTransitionTemplate,
+} from "@powerhousedao/codegen/templates";
 import {
   formatSourceFileWithPrettier,
   getObjectLiteral,
   getOrCreateSourceFile,
+  getVariableDeclarationByTypeName,
 } from "@powerhousedao/codegen/utils";
-import { ts } from "@tmpl/core";
 import path from "path";
 import { VariableDeclarationKind, type Project } from "ts-morph";
 
@@ -51,23 +54,23 @@ export async function createOrUpdateUpgradeManifestFile(args: {
   latestVersion: number;
   upgradesDirPath: string;
   documentModelId: string;
+  upgradeManifestName: string;
 }) {
-  const { project, specVersions, upgradesDirPath, documentModelId } = args;
+  const {
+    project,
+    specVersions,
+    upgradesDirPath,
+    documentModelId,
+    upgradeManifestName,
+  } = args;
   const filePath = path.join(upgradesDirPath, "upgrade-manifest.ts");
 
   const { sourceFile } = getOrCreateSourceFile(project, filePath);
 
-  const template = ts`
-  import type { UpgradeManifest } from "document-model";
-  import { latestVersion, supportedVersions } from "./versions.js";
-
-  export const upgradeManifest: UpgradeManifest<typeof supportedVersions> = {
-    documentType: "${documentModelId}",
-    latestVersion,
-    supportedVersions,
-    upgrades: {},
-  };
-  `.raw;
+  const template = upgradeManifestTemplate({
+    documentModelId,
+    upgradeManifestName,
+  });
 
   sourceFile.replaceWithText(template);
 
@@ -75,8 +78,10 @@ export async function createOrUpdateUpgradeManifestFile(args: {
 
   sourceFile.addImportDeclarations(upgradeTransitionImports);
 
-  const upgradeManifestStatement =
-    sourceFile.getVariableStatementOrThrow("upgradeManifest");
+  const upgradeManifestStatement = getVariableDeclarationByTypeName(
+    sourceFile,
+    "UpgradeManifest",
+  )?.getVariableStatementOrThrow();
   const objectLiteral = getObjectLiteral(upgradeManifestStatement)!;
   const upgradesProperty = objectLiteral.getPropertyOrThrow("upgrades");
   const upgrades = buildUpgrades(specVersions);
@@ -164,12 +169,14 @@ export async function createOrUpdateVersionConstantsFile({
 type MakeUpgradesIndexFileArgs = {
   project: Project;
   upgradesDirPath: string;
+  upgradeManifestName: string;
   specVersions: number[];
 };
 export async function makeUpgradesIndexFile({
   project,
   upgradesDirPath,
   specVersions,
+  upgradeManifestName,
 }: MakeUpgradesIndexFileArgs) {
   const filePath = path.join(upgradesDirPath, "index.ts");
   const { sourceFile } = getOrCreateSourceFile(project, filePath);
@@ -179,7 +186,7 @@ export async function makeUpgradesIndexFile({
 
   sourceFile.addExportDeclarations([
     {
-      namedExports: ["upgradeManifest"],
+      namedExports: [upgradeManifestName],
       moduleSpecifier: "./upgrade-manifest.js",
     },
     {

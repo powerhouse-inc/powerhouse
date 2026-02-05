@@ -1,4 +1,8 @@
-import type { ObjectLiteralExpression, VariableStatement } from "ts-morph";
+import type {
+  ObjectLiteralExpression,
+  SourceFile,
+  VariableStatement,
+} from "ts-morph";
 import { SyntaxKind } from "ts-morph";
 
 /** Returns a ts-morph ObjectLiteralExpression from a variable statement
@@ -23,4 +27,14 @@ export function getObjectProperty<T extends SyntaxKind>(
     ?.getChildren()
     .find((child) => child.getKind() === propertyType)
     ?.asKindOrThrow(propertyType);
+}
+
+export function getVariableDeclarationByTypeName(
+  sourceFile: SourceFile,
+  typeName: string,
+) {
+  const declaration = sourceFile.getVariableDeclaration((declaration) =>
+    declaration.getType().getText().includes(typeName),
+  );
+  return declaration;
 }

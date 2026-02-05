@@ -116,7 +116,7 @@ export async function tsMorphGenerateDriveEditor({
     documentModelId: "powerhouse/document-drive",
   });
 
-  makeEditorsModulesFile(project, projectDir);
+  await makeEditorsModulesFile(project, projectDir);
 
   await project.save();
 }

@@ -18,6 +18,24 @@ export function getOrCreateSourceFile(project: Project, filePath: string) {
   };
 }
 
+/** Gets a Directory by name in a ts-morph Project, or creates a new one
+ * if none with that path exists.
+ */
+export function getOrCreateDirectory(project: Project, dirPath: string) {
+  const directory = project.getDirectory(dirPath);
+  if (!directory) {
+    const newDirectory = project.createDirectory(dirPath);
+    return {
+      alreadyExists: false,
+      directory: newDirectory,
+    };
+  }
+  return {
+    alreadyExists: true,
+    directory,
+  };
+}
+
 /** Ensures that the directories at the given paths exist within the
  * ts-morph Project
  */

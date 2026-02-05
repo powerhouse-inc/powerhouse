@@ -211,7 +211,7 @@ export async function generateDocumentModel(args: GenerateDocumentModelArgs) {
     await generator.generateReducers();
 
     const project = buildTsMorphProject(projectDir);
-    makeDocumentModelModulesFile({
+    await makeDocumentModelModulesFile({
       project,
       projectDir,
     });

@@ -1,3 +1,3 @@
-export { upgradeManifest } from "./upgrade-manifest.js";
-export { supportedVersions, latestVersion } from "./versions.js";
+export { testEmptyCodesUpgradeManifest } from "./upgrade-manifest.js";
 export { v2 } from "./v2.js";
+export { latestVersion, supportedVersions } from "./versions.js";

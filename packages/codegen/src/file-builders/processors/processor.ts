@@ -106,13 +106,17 @@ async function updateIndexFile(v: {
         c.fileName.replace(".ts", ".js"),
       )}`,
     }));
-  for (const d of processorExportDeclarations) {
+  for (const declaration of processorExportDeclarations) {
     if (
-      !sourceFile.getExportDeclaration((e) =>
-        e.getNamedExports().some((e) => d.namedExports.includes(e.getName())),
+      !sourceFile.getExportDeclaration((exportDeclaration) =>
+        exportDeclaration
+          .getNamedExports()
+          .some((exportSpecifier) =>
+            declaration.namedExports.includes(exportSpecifier.getName()),
+          ),
       )
     ) {
-      sourceFile.addExportDeclaration(d);
+      sourceFile.addExportDeclaration(declaration);
     }
   }
   const factoryFiles = processorDirs
