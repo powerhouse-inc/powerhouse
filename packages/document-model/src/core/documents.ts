@@ -1173,7 +1173,8 @@ export function updateHeaderRevision(
       [scope]: getNextRevision(document, scope),
     },
     lastModifiedAtUtcIso:
-      !currentTimestamp || newTimestamp > currentTimestamp
+      !currentTimestamp ||
+      new Date(newTimestamp).getTime() > new Date(currentTimestamp).getTime()
         ? newTimestamp
         : currentTimestamp,
   };
