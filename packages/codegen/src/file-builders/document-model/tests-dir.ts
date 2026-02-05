@@ -64,7 +64,7 @@ async function makeOperationModuleTestFile(
     } else {
       sourceFile.replaceWithText(
         ts`
-        import { generateMock } from "@powerhousedao/common";
+        import { generateMock } from "@powerhousedao/common/utils";
         import { describe, expect, it } from "vitest";
 
         describe("${moduleOperationsTypeName}", () => {

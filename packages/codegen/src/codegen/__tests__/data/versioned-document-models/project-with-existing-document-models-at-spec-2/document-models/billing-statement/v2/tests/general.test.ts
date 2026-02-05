@@ -1,4 +1,4 @@
-import { generateMock } from "@powerhousedao/common";
+import { generateMock } from "@powerhousedao/common/utils";
 import {
   editBillingStatement,
   EditBillingStatementInputSchema,
