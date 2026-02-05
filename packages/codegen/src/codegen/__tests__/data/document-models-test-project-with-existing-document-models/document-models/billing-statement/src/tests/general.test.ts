@@ -3,19 +3,19 @@
  * - change it by adding new tests or modifying the existing ones
  */
 
-import { describe, it, expect } from "vitest";
-import { generateMock } from "@powerhousedao/codegen";
+import { generateMock } from "@powerhousedao/common/utils";
 import {
-  reducer,
-  utils,
-  isBillingStatementDocument,
   editBillingStatement,
   EditBillingStatementInputSchema,
   editContributor,
   EditContributorInputSchema,
   editStatus,
   EditStatusInputSchema,
+  isBillingStatementDocument,
+  reducer,
+  utils,
 } from "test/document-models/billing-statement";
+import { describe, expect, it } from "vitest";
 
 describe("General Operations", () => {
   it("should handle editBillingStatement operation", () => {

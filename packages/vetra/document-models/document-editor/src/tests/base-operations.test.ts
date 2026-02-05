@@ -3,6 +3,7 @@
  * - change it by adding new tests or modifying the existing ones
  */
 
+import { generateMock } from "@powerhousedao/common/utils";
 import type {
   AddDocumentTypeInput,
   DocumentEditorDocument,
@@ -11,19 +12,18 @@ import type {
 } from "@powerhousedao/vetra/document-models/document-editor";
 import {
   addDocumentType,
+  AddDocumentTypeInputSchema,
+  isDocumentEditorDocument,
   reducer,
   removeDocumentType,
-  setEditorName,
-  setEditorStatus,
-  utils,
-  isDocumentEditorDocument,
-  SetEditorNameInputSchema,
-  AddDocumentTypeInputSchema,
   RemoveDocumentTypeInputSchema,
+  setEditorName,
+  SetEditorNameInputSchema,
+  setEditorStatus,
   SetEditorStatusInputSchema,
+  utils,
 } from "@powerhousedao/vetra/document-models/document-editor";
 import { beforeEach, describe, expect, it } from "vitest";
-import { generateMock } from "@powerhousedao/codegen";
 
 describe("BaseOperations Operations", () => {
   let document: DocumentEditorDocument;

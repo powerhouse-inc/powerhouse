@@ -14,13 +14,17 @@ import {
   getInitialStates,
   getOrCreateSourceFile,
 } from "@powerhousedao/codegen/utils";
+import { directoryExists, fileExists } from "@powerhousedao/common/clis";
 import { paramCase } from "change-case";
 import type { DocumentModelGlobalState } from "document-model";
-import { writeFileSync } from "fs";
+import { copyFile, mkdir, readdir, writeFile } from "node:fs/promises";
 import path from "path";
 import { type Project } from "ts-morph";
 import { generateDocumentModelZodSchemas } from "../../codegen/graphql.js";
-import { makeDocumentModelModulesFile } from "../module-files.js";
+import {
+  makeDocumentModelModulesFile,
+  makeUpgradeManifestsFile,
+} from "../module-files.js";
 import { makeGenDirFiles } from "./gen-dir.js";
 import { makeRootDirFiles } from "./root-dir.js";
 import { makeSrcDirFiles } from "./src-dir.js";
@@ -31,7 +35,6 @@ import {
   makeUpgradeFile,
   makeUpgradesIndexFile,
 } from "./upgrades-dir.js";
-import { makeUpgradeManifestsExport } from "../module-files.js";
 
 /** Generates a document model from the given `documentModelState`
  *
@@ -49,23 +52,25 @@ export async function tsMorphGenerateDocumentModel({
     projectDir,
     "document-models/**/*",
   );
-  project.addSourceFilesAtPaths(documentModelsSourceFilesPath);
   const documentModelsDirPath = path.join(projectDir, "document-models");
   const documentModelDirName = getDocumentModelDirName(documentModelState);
   const documentModelDirPath = path.join(
     documentModelsDirPath,
     documentModelDirName,
   );
+  const upgradesDirPath = path.join(documentModelDirPath, "upgrades");
   const documentModelVariableNames = getDocumentModelVariableNames(
     documentModelState.name,
   );
-  ensureDirectoriesExist(project, documentModelsDirPath, documentModelDirPath);
-
-  const upgradesDirPath = path.join(documentModelDirPath, "upgrades");
-
+  await ensureDirectoriesExist(
+    project,
+    documentModelsDirPath,
+    documentModelDirPath,
+  );
   if (useVersioning) {
-    ensureDirectoriesExist(project, upgradesDirPath);
+    await ensureDirectoriesExist(project, upgradesDirPath);
   }
+  project.addSourceFilesAtPaths(documentModelsSourceFilesPath);
 
   const documentModelPackageImportPath = path.join(
     packageName,
@@ -96,7 +101,7 @@ export async function tsMorphGenerateDocumentModel({
     );
   }
 
-  writeDocumentModelStateJsonFile({
+  await writeDocumentModelStateJsonFile({
     documentModelState,
     documentModelDirName,
     documentModelDirPath,
@@ -123,7 +128,7 @@ export async function tsMorphGenerateDocumentModel({
     );
 
     for (const version of specVersions) {
-      makeUpgradeFile({
+      await makeUpgradeFile({
         version,
         upgradesDirPath,
         project,
@@ -132,20 +137,20 @@ export async function tsMorphGenerateDocumentModel({
       });
     }
 
-    makeDocumentModelIndexFile({
+    await makeDocumentModelIndexFile({
       project,
       documentModelDirPath,
       latestVersion,
     });
 
-    createOrUpdateVersionConstantsFile({
+    await createOrUpdateVersionConstantsFile({
       project,
       specVersions,
       latestVersion,
       upgradesDirPath,
     });
 
-    createOrUpdateUpgradeManifestFile({
+    await createOrUpdateUpgradeManifestFile({
       project,
       specVersions,
       latestVersion,
@@ -154,21 +159,11 @@ export async function tsMorphGenerateDocumentModel({
       ...documentModelVariableNames,
     });
 
-    makeUpgradesIndexFile({ project, upgradesDirPath, specVersions });
-
-    // Generate upgradeManifests export in document-models.ts
-    // This needs to run after upgrade-manifest.ts files are created
-    const documentModelsOutputFilePath = path.join(
-      documentModelsDirPath,
-      "document-models.ts",
-    );
-    makeUpgradeManifestsExport({
+    await makeUpgradesIndexFile({
       project,
-      modulesDirPath: documentModelsDirPath,
-      outputFilePath: documentModelsOutputFilePath,
-      variableName: "upgradeManifests",
-      variableType: "UpgradeManifest<readonly number[]>[]",
-      typeName: "UpgradeManifest",
+      upgradesDirPath,
+      specVersions,
+      ...documentModelVariableNames,
     });
   } else {
     await generateDocumentModelForSpec({
@@ -186,7 +181,7 @@ export async function tsMorphGenerateDocumentModel({
     });
   }
 
-  project.saveSync();
+  await project.save();
 }
 
 type GenerateDocumentModelFromSpecArgs = {
@@ -258,7 +253,7 @@ async function generateDocumentModelForSpec({
     path.join(genDirPath, paramCase(module.name)),
   );
 
-  ensureDirectoriesExist(
+  await ensureDirectoriesExist(
     project,
     documentModelVersionDirPath,
     reducersDirPath,
@@ -300,13 +295,18 @@ async function generateDocumentModelForSpec({
     specification,
   });
 
-  makeRootDirFiles(fileMakerArgs);
-  makeGenDirFiles(fileMakerArgs);
-  makeSrcDirFiles(fileMakerArgs);
-  makeTestsDirFiles(fileMakerArgs);
-  makeDocumentModelModulesFile(fileMakerArgs);
+  await makeRootDirFiles(fileMakerArgs);
+  await makeGenDirFiles(fileMakerArgs);
+  await makeSrcDirFiles(fileMakerArgs);
+  await makeTestsDirFiles(fileMakerArgs);
+  await makeDocumentModelModulesFile(fileMakerArgs);
 
   if (!useVersioning) return;
+
+  await makeUpgradeManifestsFile({
+    project,
+    projectDir,
+  });
 
   const previousVersionDirPath = getPreviousVersionDirPath(
     documentModelDirPath,
@@ -315,15 +315,14 @@ async function generateDocumentModelForSpec({
 
   if (!previousVersionDirPath) return;
 
-  persistCustomFilesFromPreviousVersion({
-    project,
+  await persistCustomFilesFromPreviousVersion({
     currentVersionDirPath: documentModelVersionDirPath,
     previousVersionDirPath,
   });
 }
 
 /** Writes a json file derived from a `documentModelState` */
-function writeDocumentModelStateJsonFile({
+async function writeDocumentModelStateJsonFile({
   documentModelState,
   documentModelDirName,
   documentModelDirPath,
@@ -337,7 +336,7 @@ function writeDocumentModelStateJsonFile({
     `${documentModelDirName}.json`,
   );
   const documentModelStateJson = JSON.stringify(documentModelState, null, 2);
-  writeFileSync(filePath, documentModelStateJson);
+  await writeFile(filePath, documentModelStateJson);
 }
 
 function getPreviousVersionDirPath(
@@ -352,7 +351,7 @@ function getPreviousVersionDirPath(
   return path.join(documentModelDirPath, previousVersionDirName);
 }
 
-function makeDocumentModelIndexFile(args: {
+async function makeDocumentModelIndexFile(args: {
   project: Project;
   documentModelDirPath: string;
   latestVersion: number;
@@ -369,71 +368,62 @@ function makeDocumentModelIndexFile(args: {
     { moduleSpecifier: `./upgrades/index.js` },
   ]);
 
-  formatSourceFileWithPrettier(sourceFile);
+  await formatSourceFileWithPrettier(sourceFile);
 }
 
 type PersistCustomFilesFromPreviousVersionArgs = {
-  project: Project;
   currentVersionDirPath: string;
   previousVersionDirPath: string;
 };
-function persistCustomFilesFromPreviousVersion(
+async function persistCustomFilesFromPreviousVersion(
   args: PersistCustomFilesFromPreviousVersionArgs,
 ) {
-  const { project, currentVersionDirPath, previousVersionDirPath } = args;
-  const currentVersionDir = project.getDirectoryOrThrow(currentVersionDirPath);
+  const { currentVersionDirPath, previousVersionDirPath } = args;
 
-  const previousVersionDir = project.getDirectory(previousVersionDirPath);
-
-  if (!previousVersionDir) return;
-
-  const currentVersionSourceFiles =
-    currentVersionDir.getDescendantSourceFiles();
-  const previousVersionSourceFiles =
-    previousVersionDir.getDescendantSourceFiles();
-  const currentVersionDirs = currentVersionDir.getDescendantDirectories();
-  const previousVersionDirs = previousVersionDir.getDescendantDirectories();
-
-  const previousVersionRelativeDirPaths = previousVersionDirs.map((d) =>
-    previousVersionDir.getRelativePathTo(d),
-  );
-  const currentVersionRelativeDirPaths = currentVersionDirs.map((d) =>
-    currentVersionDir.getRelativePathTo(d),
+  const previousVersionDirExists = await directoryExists(
+    previousVersionDirPath,
   );
 
-  const missingDirPaths = previousVersionRelativeDirPaths.filter(
-    (p) => !currentVersionRelativeDirPaths.includes(p),
-  );
+  if (!previousVersionDirExists) return;
 
-  const missingDirs = previousVersionDirs.filter((f) =>
-    missingDirPaths.includes(previousVersionDir.getRelativePathTo(f)),
-  );
+  const previousVersionDirContents = await readdir(previousVersionDirPath, {
+    withFileTypes: true,
+    recursive: true,
+  });
 
-  for (const dir of missingDirs) {
-    const relativePath = previousVersionDir.getRelativePathTo(dir);
-    const newDir = currentVersionDir.createDirectory(relativePath);
-    newDir.saveSync();
-  }
+  const previousVersionFiles = previousVersionDirContents
+    .filter((dirEnt) => dirEnt.isFile())
+    .map(({ name, parentPath }) => ({
+      name,
+      parentPath,
+      relativePath: path.relative(previousVersionDirPath, parentPath),
+    }));
 
-  const previousVersionRelativeFilePaths = previousVersionSourceFiles.map((f) =>
-    previousVersionDir.getRelativePathTo(f),
-  );
-  const currentVersionRelativeFilePaths = currentVersionSourceFiles.map((f) =>
-    currentVersionDir.getRelativePathTo(f),
-  );
-
-  const missingFilePaths = previousVersionRelativeFilePaths.filter(
-    (p) => !currentVersionRelativeFilePaths.includes(p),
-  );
-
-  const missingFiles = previousVersionSourceFiles.filter((f) =>
-    missingFilePaths.includes(previousVersionDir.getRelativePathTo(f)),
-  );
-
-  for (const file of missingFiles) {
-    const relativePath = previousVersionDir.getRelativePathTo(file);
-    const fileText = file.getText();
-    const newFile = currentVersionDir.createSourceFile(relativePath, fileText);
-    newFile.saveSync();
+  for (const { name, relativePath } of previousVersionFiles) {
+    const filePathInCurrentVersionDir = path.join(
+      currentVersionDirPath,
+      relativePath,
+      name,
+    );
+    const filePathInPreviousVersionDir = path.join(
+      previousVersionDirPath,
+      relativePath,
+      name,
+    );
+    const existsInPreviousVersionDir = await fileExists(
+      filePathInPreviousVersionDir,
+    );
+    const existsInCurrentVersionDir = await fileExists(
+      filePathInCurrentVersionDir,
+    );
+    if (existsInPreviousVersionDir && !existsInCurrentVersionDir) {
+      console.log(
+        `Persisting file "${path.join(relativePath, name)}" from previous version directory.`,
+      );
+      await mkdir(path.join(currentVersionDirPath, relativePath), {
+        recursive: true,
+      });
+      await copyFile(filePathInPreviousVersionDir, filePathInCurrentVersionDir);
+    }
   }
 }

@@ -2,6 +2,12 @@ import { camelCase, pascalCase } from "change-case";
 import path from "node:path";
 import type { Project } from "ts-morph";
 import { SyntaxKind, VariableDeclarationKind } from "ts-morph";
+import {
+  ensureDirectoriesExist,
+  getOrCreateDirectory,
+  getOrCreateSourceFile,
+} from "../utils/source-files.js";
+import { getVariableDeclarationByTypeName } from "../utils/syntax-getters.js";
 import { makeLegacyIndexFile } from "./index-files.js";
 
 type MakeModuleFileArgs = {
@@ -9,8 +15,6 @@ type MakeModuleFileArgs = {
   project: Project;
   /** The directory containing the module.ts files to generate from */
   modulesDirPath: string;
-  /** The path to the module.ts files to generate from */
-  modulesSourceFilesPath: string;
   /** The name of the output file which exports the modules, e.g. 'document-models.ts' or 'editors.ts' */
   outputFileName: string;
   /** The type name of the modules exported by the module.ts files, e.g. 'DocumentModelModule' or 'EditorModule' */
@@ -21,38 +25,40 @@ type MakeModuleFileArgs = {
   variableType: string;
   /** Whether to make a legacy index.ts file for the modules, to be removed in the future */
   shouldMakeLegacyIndexFile?: boolean;
+  /** Name of the module file to look for
+   * @default module.ts
+   */
+  moduleFileName?: string;
 };
 /**
  * Makes a file which exports the modules from the module.ts files in the given directory as a variable declaration.
  */
-export function makeModulesFile({
+export async function makeModulesFile({
   project,
   modulesDirPath,
-  modulesSourceFilesPath,
   outputFileName,
   typeName,
   variableName,
   variableType,
   shouldMakeLegacyIndexFile = true,
+  moduleFileName = "module.ts",
 }: MakeModuleFileArgs) {
+  await ensureDirectoriesExist(project, modulesDirPath);
+  const modulesSourceFilesPath = path.join(modulesDirPath, "**/*");
   // we only need the files in the directory we're creating the modules file from
   project.addSourceFilesAtPaths(modulesSourceFilesPath);
 
-  let modulesDir = project.getDirectory(modulesDirPath);
-  if (!modulesDir) {
-    modulesDir = project.addDirectoryAtPath(modulesDirPath);
-  }
+  const { directory: modulesDir } = getOrCreateDirectory(
+    project,
+    modulesDirPath,
+  );
   const moduleFiles = modulesDir
     .getDescendantSourceFiles()
-    .filter((file) => file.getFilePath().includes(`module.ts`));
+    .filter((file) => file.getBaseName().includes(moduleFileName));
 
   // get the variable declaration for the module object exported by each module.ts file by the given type name
   const moduleDeclarations = moduleFiles
-    .map((file) =>
-      file.getVariableDeclaration((declaration) =>
-        declaration.getType().getText().includes(typeName),
-      ),
-    )
+    .map((file) => getVariableDeclarationByTypeName(file, typeName))
     .filter((v) => v !== undefined);
 
   const modules = moduleDeclarations.map((module) => {
@@ -70,17 +76,12 @@ export function makeModulesFile({
 
   const moduleExportsFilePath = path.join(modulesDirPath, outputFileName);
 
-  // get the source file for the modules file if it exists
-  let moduleExportsSourceFile = project.getSourceFile(moduleExportsFilePath);
-  // if the modules file doesn't exist, create it
-  if (!moduleExportsSourceFile) {
-    moduleExportsSourceFile = project.createSourceFile(
-      moduleExportsFilePath,
-      "",
-    );
-  } else {
-    moduleExportsSourceFile.replaceWithText("");
-  }
+  const { sourceFile: moduleExportsSourceFile } = getOrCreateSourceFile(
+    project,
+    moduleExportsFilePath,
+  );
+
+  moduleExportsSourceFile.replaceWithText("");
 
   const typeImport = {
     namedImports: [typeName],
@@ -97,8 +98,21 @@ export function makeModulesFile({
       moduleSpecifier,
     }),
   );
-  const imports = [typeImport, ...moduleImports];
-  moduleExportsSourceFile.addImportDeclarations(imports);
+  const importDeclarations = [typeImport, ...moduleImports];
+
+  for (const declaration of importDeclarations) {
+    if (
+      !moduleExportsSourceFile.getImportDeclaration((importDeclaration) =>
+        importDeclaration
+          .getNamedImports()
+          .some((importSpecifier) =>
+            declaration.namedImports.includes(importSpecifier.getName()),
+          ),
+      )
+    ) {
+      moduleExportsSourceFile.addImportDeclaration(declaration);
+    }
+  }
 
   // create the variable statement for the modules file
   // start as an empty array
@@ -147,11 +161,29 @@ export function makeModulesFile({
     });
   }
 
-  project.saveSync();
+  await project.save();
+}
+
+export async function makeUpgradeManifestsFile(args: {
+  project: Project;
+  projectDir: string;
+}) {
+  const { project, projectDir } = args;
+  const documentModelsDirPath = path.join(projectDir, "document-models");
+
+  await makeModulesFile({
+    project,
+    modulesDirPath: documentModelsDirPath,
+    outputFileName: "upgrade-manifests.ts",
+    typeName: "UpgradeManifest",
+    variableName: "upgradeManifests",
+    variableType: "UpgradeManifest<readonly number[]>[]",
+    moduleFileName: "upgrade-manifest.ts",
+  });
 }
 
 /** Generates the `document-models.ts` file which exports the document models defined in each document model dir's `module.ts` file */
-export function makeDocumentModelModulesFile({
+export async function makeDocumentModelModulesFile({
   project,
   projectDir,
 }: {
@@ -159,14 +191,9 @@ export function makeDocumentModelModulesFile({
   projectDir: string;
 }) {
   const documentModelsDirPath = path.join(projectDir, "document-models");
-  const documentModelsSourceFilesPath = path.join(
-    documentModelsDirPath,
-    "/**/*",
-  );
-  makeModulesFile({
+  await makeModulesFile({
     project,
     modulesDirPath: documentModelsDirPath,
-    modulesSourceFilesPath: documentModelsSourceFilesPath,
     outputFileName: "document-models.ts",
     typeName: "DocumentModelModule",
     variableName: "documentModels",
@@ -175,13 +202,14 @@ export function makeDocumentModelModulesFile({
 }
 
 /** Generates the `editors.ts` file which exports the editors defined in each editor dir's `module.ts` file */
-export function makeEditorsModulesFile(project: Project, projectDir: string) {
+export async function makeEditorsModulesFile(
+  project: Project,
+  projectDir: string,
+) {
   const modulesDirPath = path.join(projectDir, "editors");
-  const modulesSourceFilesPath = path.join(modulesDirPath, "/**/*");
-  makeModulesFile({
+  await makeModulesFile({
     project,
     modulesDirPath,
-    modulesSourceFilesPath,
     outputFileName: "editors.ts",
     typeName: "EditorModule",
     variableName: "editors",
@@ -344,6 +372,4 @@ export function makeUpgradeManifestsExport({
     manifests.map((m) => m.aliasedName),
     { useNewLines: true },
   );
-
-  project.saveSync();
 }

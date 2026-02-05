@@ -1,1 +1,1 @@
-export const processorsIndexTemplate = "";
+export const boilerplateProcessorsIndexTemplate = "";

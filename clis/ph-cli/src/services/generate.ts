@@ -90,6 +90,7 @@ export async function startGenerate(options: GenerateArgs) {
       processorType,
       [documentType].filter((dt) => dt !== undefined),
       skipFormat,
+      useTsMorph,
     );
   } else if (subgraphName !== undefined) {
     await generateSubgraph(subgraphName, filePath || null, config, {

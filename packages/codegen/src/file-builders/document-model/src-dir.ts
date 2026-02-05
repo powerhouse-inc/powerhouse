@@ -15,25 +15,27 @@ import type { ModuleSpecification } from "document-model";
 import path from "path";
 import { VariableDeclarationKind } from "ts-morph";
 
-export function makeSrcDirFiles(fileMakerArgs: DocumentModelFileMakerArgs) {
-  makeDocumentModelSrcIndexFile(fileMakerArgs);
-  makeDocumentModelSrcUtilsFile(fileMakerArgs);
-  makeReducerOperationHandlersForModules(fileMakerArgs);
+export async function makeSrcDirFiles(
+  fileMakerArgs: DocumentModelFileMakerArgs,
+) {
+  await makeDocumentModelSrcIndexFile(fileMakerArgs);
+  await makeDocumentModelSrcUtilsFile(fileMakerArgs);
+  await makeReducerOperationHandlersForModules(fileMakerArgs);
 }
 
-function makeReducerOperationHandlersForModules(
+async function makeReducerOperationHandlersForModules(
   fileMakerArgs: DocumentModelFileMakerArgs,
 ) {
   const { modules } = fileMakerArgs;
   for (const module of modules) {
-    makeReducerOperationHandlerForModule({
+    await makeReducerOperationHandlerForModule({
       ...fileMakerArgs,
       module,
     });
   }
 }
 
-function makeReducerOperationHandlerForModule({
+async function makeReducerOperationHandlerForModule({
   project,
   module,
   version,
@@ -132,10 +134,10 @@ function makeReducerOperationHandlerForModule({
     });
   }
 
-  formatSourceFileWithPrettier(sourceFile);
+  await formatSourceFileWithPrettier(sourceFile);
 }
 
-function makeDocumentModelSrcIndexFile({
+async function makeDocumentModelSrcIndexFile({
   project,
   ...variableNames
 }: DocumentModelFileMakerArgs) {
@@ -147,10 +149,10 @@ function makeDocumentModelSrcIndexFile({
   const { sourceFile } = getOrCreateSourceFile(project, filePath);
 
   sourceFile.replaceWithText(template);
-  formatSourceFileWithPrettier(sourceFile);
+  await formatSourceFileWithPrettier(sourceFile);
 }
 
-function makeDocumentModelSrcUtilsFile({
+async function makeDocumentModelSrcUtilsFile({
   project,
   srcDirPath,
   version,
@@ -178,5 +180,5 @@ function makeDocumentModelSrcUtilsFile({
     }
   }
 
-  formatSourceFileWithPrettier(sourceFile);
+  await formatSourceFileWithPrettier(sourceFile);
 }

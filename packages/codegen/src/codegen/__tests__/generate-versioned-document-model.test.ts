@@ -1,5 +1,5 @@
 import { paramCase } from "change-case";
-import { readdirSync, readFileSync } from "fs";
+import { readdir, readFile } from "fs/promises";
 import path from "path";
 import { describe, expect, it, type TestContext } from "vitest";
 import { generateDocumentModel } from "../generate.js";
@@ -34,9 +34,11 @@ function getDocumentModelJsonFilePath(basePath: string, dirName: string) {
 async function loadDocumentModelsInDir(inDirName: string, testOutDir: string) {
   const documentModelsInDir = getDirInTestDataDir(inDirName);
   const documentModelsOutDir = path.join(testOutDir, "document-models");
-  const documentModelDirs = readdirSync(documentModelsInDir, {
-    withFileTypes: true,
-  })
+  const documentModelDirs = (
+    await readdir(documentModelsInDir, {
+      withFileTypes: true,
+    })
+  )
     .filter((value) => value.isDirectory())
     .map((value) => value.name);
 
@@ -74,12 +76,12 @@ describe("versioned document models", () => {
       },
       async (context) => {
         const testOutDir = getTestOutDir(context);
-        resetDirForTest(testOutDir);
+        await resetDirForTest(testOutDir);
         await loadBaseProjectFromDir("empty-project", testOutDir);
         await loadDocumentModelsInDir("spec-version-1", testOutDir);
         await compile(testOutDir);
         await runGeneratedTests(testOutDir);
-        purgeDirAfterTest(testOutDir);
+        await purgeDirAfterTest(testOutDir);
       },
     );
 
@@ -90,7 +92,7 @@ describe("versioned document models", () => {
       },
       async (context) => {
         const testOutDir = getTestOutDir(context);
-        resetDirForTest(testOutDir);
+        await resetDirForTest(testOutDir);
         await loadBaseProjectFromDir(
           "project-with-existing-document-models-at-spec-1",
           testOutDir,
@@ -101,7 +103,7 @@ describe("versioned document models", () => {
         );
         await compile(testOutDir);
         await runGeneratedTests(testOutDir);
-        purgeDirAfterTest(testOutDir);
+        await purgeDirAfterTest(testOutDir);
       },
     );
   });
@@ -114,12 +116,12 @@ describe("versioned document models", () => {
       },
       async (context) => {
         const testOutDir = getTestOutDir(context);
-        resetDirForTest(testOutDir);
+        await resetDirForTest(testOutDir);
         await loadBaseProjectFromDir("empty-project", testOutDir);
         await loadDocumentModelsInDir("spec-version-2", testOutDir);
         await compile(testOutDir);
         await runGeneratedTests(testOutDir);
-        purgeDirAfterTest(testOutDir);
+        await purgeDirAfterTest(testOutDir);
       },
     );
 
@@ -130,7 +132,7 @@ describe("versioned document models", () => {
       },
       async (context) => {
         const testOutDir = getTestOutDir(context);
-        resetDirForTest(testOutDir);
+        await resetDirForTest(testOutDir);
         await loadBaseProjectFromDir(
           "project-with-existing-document-models-at-spec-1",
           testOutDir,
@@ -138,7 +140,7 @@ describe("versioned document models", () => {
         await loadDocumentModelsInDir("spec-version-2", testOutDir);
         await compile(testOutDir);
         await runGeneratedTests(testOutDir);
-        purgeDirAfterTest(testOutDir);
+        await purgeDirAfterTest(testOutDir);
       },
     );
 
@@ -149,7 +151,7 @@ describe("versioned document models", () => {
       },
       async (context) => {
         const testOutDir = getTestOutDir(context);
-        resetDirForTest(testOutDir);
+        await resetDirForTest(testOutDir);
         await loadBaseProjectFromDir(
           "project-with-existing-document-models-at-spec-1",
           testOutDir,
@@ -159,7 +161,7 @@ describe("versioned document models", () => {
           testOutDir,
         );
         await expect(() => compile(testOutDir)).rejects.toThrow();
-        purgeDirAfterTest(testOutDir);
+        await purgeDirAfterTest(testOutDir);
       },
     );
 
@@ -170,7 +172,7 @@ describe("versioned document models", () => {
       },
       async (context) => {
         const testOutDir = getTestOutDir(context);
-        resetDirForTest(testOutDir);
+        await resetDirForTest(testOutDir);
         await loadBaseProjectFromDir("empty-project", testOutDir);
         await loadDocumentModelsInDir("spec-version-2", testOutDir);
 
@@ -189,8 +191,8 @@ describe("versioned document models", () => {
           "module.ts",
         );
 
-        const v1ModuleContent = readFileSync(v1ModulePath, "utf-8");
-        const v2ModuleContent = readFileSync(v2ModulePath, "utf-8");
+        const v1ModuleContent = await readFile(v1ModulePath, "utf-8");
+        const v2ModuleContent = await readFile(v2ModulePath, "utf-8");
 
         expect(v1ModuleContent).toContain("version: 1,");
         expect(v2ModuleContent).toContain("version: 2,");
@@ -198,7 +200,7 @@ describe("versioned document models", () => {
         await compile(testOutDir);
         await runGeneratedTests(testOutDir);
 
-        purgeDirAfterTest(testOutDir);
+        await purgeDirAfterTest(testOutDir);
       },
     );
   });
@@ -211,12 +213,12 @@ describe("versioned document models", () => {
       },
       async (context) => {
         const testOutDir = getTestOutDir(context);
-        resetDirForTest(testOutDir);
+        await resetDirForTest(testOutDir);
         await loadBaseProjectFromDir("empty-project", testOutDir);
         await loadDocumentModelsInDir("spec-version-3", testOutDir);
         await compile(testOutDir);
         await runGeneratedTests(testOutDir);
-        purgeDirAfterTest(testOutDir);
+        await purgeDirAfterTest(testOutDir);
       },
     );
 
@@ -227,7 +229,7 @@ describe("versioned document models", () => {
       },
       async (context) => {
         const testOutDir = getTestOutDir(context);
-        resetDirForTest(testOutDir);
+        await resetDirForTest(testOutDir);
         await loadBaseProjectFromDir(
           "project-with-existing-document-models-at-spec-2",
           testOutDir,
@@ -235,7 +237,7 @@ describe("versioned document models", () => {
         await loadDocumentModelsInDir("spec-version-3", testOutDir);
         await compile(testOutDir);
         await runGeneratedTests(testOutDir);
-        purgeDirAfterTest(testOutDir);
+        await purgeDirAfterTest(testOutDir);
       },
     );
 
@@ -246,7 +248,7 @@ describe("versioned document models", () => {
       },
       async (context) => {
         const testOutDir = getTestOutDir(context);
-        resetDirForTest(testOutDir);
+        await resetDirForTest(testOutDir);
         await loadBaseProjectFromDir(
           "project-with-existing-document-models-at-spec-2",
           testOutDir,
@@ -256,7 +258,7 @@ describe("versioned document models", () => {
           testOutDir,
         );
         await expect(() => compile(testOutDir)).rejects.toThrow();
-        purgeDirAfterTest(testOutDir);
+        await purgeDirAfterTest(testOutDir);
       },
     );
   });

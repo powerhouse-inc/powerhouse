@@ -16,16 +16,18 @@ import type { ModuleSpecification } from "document-model";
 import path from "path";
 import { SyntaxKind } from "ts-morph";
 
-export function makeTestsDirFiles(fileMakerArgs: DocumentModelFileMakerArgs) {
-  makeDocumentModelTestFile(fileMakerArgs);
+export async function makeTestsDirFiles(
+  fileMakerArgs: DocumentModelFileMakerArgs,
+) {
+  await makeDocumentModelTestFile(fileMakerArgs);
   const modules = fileMakerArgs.modules;
 
   for (const module of modules) {
-    makeOperationModuleTestFile({ ...fileMakerArgs, module });
+    await makeOperationModuleTestFile({ ...fileMakerArgs, module });
   }
 }
 
-function makeOperationModuleTestFile(
+async function makeOperationModuleTestFile(
   args: DocumentModelFileMakerArgs & { module: ModuleSpecification },
 ) {
   const {
@@ -62,7 +64,7 @@ function makeOperationModuleTestFile(
     } else {
       sourceFile.replaceWithText(
         ts`
-        import { generateMock } from "@powerhousedao/codegen";
+        import { generateMock } from "@powerhousedao/common/utils";
         import { describe, expect, it } from "vitest";
 
         describe("${moduleOperationsTypeName}", () => {
@@ -171,10 +173,10 @@ function makeOperationModuleTestFile(
   }
 
   sourceFile.fixUnusedIdentifiers();
-  formatSourceFileWithPrettier(sourceFile);
+  await formatSourceFileWithPrettier(sourceFile);
 }
 
-function makeDocumentModelTestFile(args: DocumentModelFileMakerArgs) {
+async function makeDocumentModelTestFile(args: DocumentModelFileMakerArgs) {
   const { project, testsDirPath } = args;
   const template = documentModelTestFileTemplate(args);
 
@@ -188,5 +190,5 @@ function makeDocumentModelTestFile(args: DocumentModelFileMakerArgs) {
   if (alreadyExists) return;
 
   sourceFile.replaceWithText(template);
-  formatSourceFileWithPrettier(sourceFile);
+  await formatSourceFileWithPrettier(sourceFile);
 }

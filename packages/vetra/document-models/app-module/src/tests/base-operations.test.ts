@@ -3,6 +3,7 @@
  * - change it by adding new tests or modifying the existing ones
  */
 
+import { generateMock } from "@powerhousedao/common/utils";
 import type {
   AddDocumentTypeInput,
   AppModuleDocument,
@@ -11,21 +12,20 @@ import type {
 } from "@powerhousedao/vetra/document-models/app-module";
 import {
   addDocumentType,
+  AddDocumentTypeInputSchema,
+  isAppModuleDocument,
   reducer,
   removeDocumentType,
-  setAppName,
-  setAppStatus,
-  utils,
-  isAppModuleDocument,
-  setDocumentTypes,
-  SetAppNameInputSchema,
-  SetAppStatusInputSchema,
-  AddDocumentTypeInputSchema,
   RemoveDocumentTypeInputSchema,
+  setAppName,
+  SetAppNameInputSchema,
+  setAppStatus,
+  SetAppStatusInputSchema,
+  setDocumentTypes,
   SetDocumentTypesInputSchema,
+  utils,
 } from "@powerhousedao/vetra/document-models/app-module";
 import { beforeEach, describe, expect, it } from "vitest";
-import { generateMock } from "@powerhousedao/codegen";
 
 describe("BaseOperations Operations", () => {
   let document: AppModuleDocument;

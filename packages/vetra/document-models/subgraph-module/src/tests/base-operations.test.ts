@@ -3,21 +3,21 @@
  * - change it by adding new tests or modifying the existing ones
  */
 
+import { generateMock } from "@powerhousedao/common/utils";
 import type {
   SetSubgraphNameInput,
   SubgraphModuleDocument,
 } from "@powerhousedao/vetra/document-models/subgraph-module";
 import {
+  isSubgraphModuleDocument,
   reducer,
   setSubgraphName,
-  setSubgraphStatus,
-  utils,
-  isSubgraphModuleDocument,
   SetSubgraphNameInputSchema,
+  setSubgraphStatus,
   SetSubgraphStatusInputSchema,
+  utils,
 } from "@powerhousedao/vetra/document-models/subgraph-module";
 import { beforeEach, describe, expect, it } from "vitest";
-import { generateMock } from "@powerhousedao/codegen";
 
 describe("BaseOperations Operations", () => {
   let document: SubgraphModuleDocument;

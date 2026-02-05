@@ -1,6 +1,7 @@
 import { buildBoilerplatePackageJson } from "@powerhousedao/codegen/file-builders";
 import {
   agentsTemplate,
+  boilerplateProcessorsIndexTemplate,
   buildPowerhouseConfigTemplate,
   claudeSettingsLocalTemplate,
   claudeTemplate,
@@ -21,7 +22,6 @@ import {
   nginxConfTemplate,
   npmrcTemplate,
   powerhouseManifestTemplate,
-  processorsIndexTemplate,
   readmeTemplate,
   styleTemplate,
   subgraphsIndexTemplate,
@@ -152,7 +152,10 @@ async function writeModuleFiles() {
   );
   await writeFileEnsuringDir("editors/editors.ts", editorsTemplate);
   await writeFileEnsuringDir("editors/index.ts", editorsIndexTemplate);
-  await writeFileEnsuringDir("processors/index.ts", processorsIndexTemplate);
+  await writeFileEnsuringDir(
+    "processors/index.ts",
+    boilerplateProcessorsIndexTemplate,
+  );
   await writeFileEnsuringDir("subgraphs/index.ts", subgraphsIndexTemplate);
 }
 

@@ -85,6 +85,7 @@ export function getDocumentModelVariableNames(documentType: string) {
   const actionTypeName = `${pascalCaseDocumentType}Action`;
   const actionsTypeName = `${actionTypeName}s`;
   const actionsName = camelCase(actionsTypeName);
+  const upgradeManifestName = `${camelCaseDocumentType}UpgradeManifest`;
 
   const stateSchemaName = `${stateName}Schema`;
   const phDocumentSchemaName = `${phDocumentTypeName}Schema`;
@@ -102,6 +103,7 @@ export function getDocumentModelVariableNames(documentType: string) {
     pascalCaseDocumentType,
     camelCaseDocumentType,
     documentTypeVariableName,
+    upgradeManifestName,
     stateName,
     globalStateName,
     localStateName,

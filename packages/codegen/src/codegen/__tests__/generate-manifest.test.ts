@@ -2,7 +2,6 @@ import type {
   PartialPowerhouseManifest,
   PowerhouseManifest,
 } from "@powerhousedao/config";
-import fs from "node:fs";
 import path from "node:path";
 import {
   afterAll,
@@ -26,6 +25,8 @@ import {
   purgeDirAfterTest,
   resetDirForTest,
 } from "./utils.js";
+import { readFile, rm, writeFile } from "node:fs/promises";
+import { fileExists } from "@powerhousedao/common/clis";
 
 describe("generateManifest", () => {
   const testDir = import.meta.dirname;
@@ -41,12 +42,12 @@ describe("generateManifest", () => {
     await copyAllFiles(testDataDir, testOutDirPath);
   }
 
-  beforeAll(() => {
-    resetDirForTest(outDirName);
+  beforeAll(async () => {
+    await resetDirForTest(outDirName);
   });
 
-  afterAll(() => {
-    purgeDirAfterTest(outDirName);
+  afterAll(async () => {
+    await purgeDirAfterTest(outDirName);
   });
   it("should generate a new manifest from scratch with partial data", async (context) => {
     await setupTest(context, getTestDataDir(testDir, MANIFEST_TEST_PROJECT));
@@ -57,12 +58,12 @@ describe("generateManifest", () => {
 
     const manifestPath = generateManifest(manifestData, testOutDirPath);
 
-    expect(fs.existsSync(manifestPath)).toBe(true);
+    expect(await fileExists(manifestPath)).toBe(true);
     expect(manifestPath).toBe(
       path.join(testOutDirPath, "powerhouse.manifest.json"),
     );
 
-    const content = fs.readFileSync(manifestPath, "utf-8");
+    const content = await readFile(manifestPath, "utf-8");
     const manifest = JSON.parse(content) as PowerhouseManifest;
 
     expect(manifest.name).toBe("@test/package");
@@ -88,7 +89,7 @@ describe("generateManifest", () => {
     };
 
     const manifestPath = generateManifest(updateData, testOutDirPath);
-    const content = fs.readFileSync(manifestPath, "utf-8");
+    const content = await readFile(manifestPath, "utf-8");
 
     const manifest = JSON.parse(content) as PowerhouseManifest;
 
@@ -145,7 +146,7 @@ describe("generateManifest", () => {
 
     const manifestPath = generateManifest(updateData, testOutDirPath);
 
-    const content = fs.readFileSync(manifestPath, "utf-8");
+    const content = await readFile(manifestPath, "utf-8");
     const manifest = JSON.parse(content) as PowerhouseManifest;
 
     expect(manifest.publisher).toEqual({
@@ -157,7 +158,7 @@ describe("generateManifest", () => {
   it("should handle malformed existing manifest gracefully", async (context) => {
     await setupTest(context, getTestDataDir(testDir, MANIFEST_TEST_PROJECT));
     const manifestPath = path.join(testOutDirPath, "powerhouse.manifest.json");
-    fs.writeFileSync(manifestPath, "{ invalid json }");
+    await writeFile(manifestPath, "{ invalid json }");
 
     const updateData = {
       name: "@test/package",
@@ -166,9 +167,9 @@ describe("generateManifest", () => {
 
     const resultPath = generateManifest(updateData, testOutDirPath);
 
-    expect(fs.existsSync(resultPath)).toBe(true);
+    expect(await fileExists(resultPath)).toBe(true);
 
-    const content = fs.readFileSync(resultPath, "utf-8");
+    const content = await readFile(resultPath, "utf-8");
     const manifest = JSON.parse(content) as PowerhouseManifest;
 
     expect(manifest.name).toBe("@test/package");
@@ -176,7 +177,7 @@ describe("generateManifest", () => {
     expect(manifest.category).toBe("");
   });
 
-  it("should use current working directory when projectRoot is not provided", () => {
+  it("should use current working directory when projectRoot is not provided", async () => {
     const originalCwd = process.cwd();
     process.chdir(testDir);
 
@@ -189,9 +190,9 @@ describe("generateManifest", () => {
       const manifestPath = generateManifest(manifestData);
 
       expect(manifestPath).toBe(path.join(testDir, "powerhouse.manifest.json"));
-      expect(fs.existsSync(manifestPath)).toBe(true);
+      expect(await fileExists(manifestPath)).toBe(true);
     } finally {
-      fs.rmSync(path.join(testDir, "powerhouse.manifest.json"), {
+      await rm(path.join(testDir, "powerhouse.manifest.json"), {
         force: true,
       });
       process.chdir(originalCwd);
@@ -240,7 +241,7 @@ describe("generateManifest", () => {
     };
 
     const manifestPath = generateManifest(manifestData, testOutDirPath);
-    const content = fs.readFileSync(manifestPath, "utf-8");
+    const content = await readFile(manifestPath, "utf-8");
 
     // Verify it's properly formatted JSON
     expect(() => JSON.parse(content) as PowerhouseManifest).not.toThrow();

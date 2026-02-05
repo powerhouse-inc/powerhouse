@@ -124,6 +124,7 @@ export async function startGenerate(
       processorType,
       options.documentTypes?.split(",") ?? [],
       config.skipFormat,
+      useTsMorph,
     );
   } else if (command.subgraph && command.subgraphName) {
     await generateSubgraph(command.subgraphName, options.file || null, config);

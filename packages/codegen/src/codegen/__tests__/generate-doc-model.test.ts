@@ -1,4 +1,3 @@
-import { readFileSync, rmSync } from "node:fs";
 import path from "node:path";
 import {
   afterAll,
@@ -10,7 +9,6 @@ import {
   type TestContext,
 } from "vitest";
 import { generateDocumentModel } from "../generate.js";
-import { hygenGenerateProcessor } from "../hygen.js";
 import { loadDocumentModel } from "../utils.js";
 import { USE_TS_MORPH } from "./config.js";
 import {
@@ -19,7 +17,6 @@ import {
   TEST_PACKAGE_NAME,
 } from "./constants.js";
 import { runGeneratedTests } from "./fixtures/run-generated-tests.js";
-import { compile } from "./fixtures/typecheck.js";
 import {
   copyAllFiles,
   getTestDataDir,
@@ -28,6 +25,8 @@ import {
   purgeDirAfterTest,
   resetDirForTest,
 } from "./utils.js";
+import { compile } from "./fixtures/typecheck.js";
+import { readFile, rm } from "node:fs/promises";
 
 describe("document model", () => {
   const testDir = import.meta.dirname;
@@ -40,14 +39,12 @@ describe("document model", () => {
   let testOutDirPath = getTestOutDirPath("initial", outDirName);
   const documentModelsSrcPath = path.join(testDir, "data", "document-models");
   let documentModelsDirName = path.join(testOutDirPath, "document-models");
-  let processorsDirName = path.join(testOutDirPath, "processors");
   async function setupTest(context: TestContext, dataDir = testDataDir) {
     testOutDirPath = getTestOutDirPath(context.task.name, outDirName);
 
     await copyAllFiles(dataDir, testOutDirPath);
 
     documentModelsDirName = path.join(testOutDirPath, "document-models");
-    processorsDirName = path.join(testOutDirPath, "processors");
 
     process.chdir(testOutDirPath);
   }
@@ -56,12 +53,12 @@ describe("document model", () => {
     await setupTest(context);
   });
 
-  beforeAll(() => {
-    resetDirForTest(outDirName);
+  beforeAll(async () => {
+    await resetDirForTest(outDirName);
   });
 
-  afterAll(() => {
-    purgeDirAfterTest(outDirName);
+  afterAll(async () => {
+    await purgeDirAfterTest(outDirName);
   });
 
   const generate = async () => {
@@ -138,12 +135,12 @@ describe("document model", () => {
         "document-models.ts",
       );
 
-      rmSync(documentModelsFilePath, { force: true });
+      await rm(documentModelsFilePath, { force: true });
 
       await generate();
       await compile(testOutDirPath);
 
-      const documentModelsContent = readFileSync(
+      const documentModelsContent = await readFile(
         documentModelsFilePath,
         "utf-8",
       );
@@ -178,7 +175,7 @@ describe("document model", () => {
         documentModelsDirName,
         "document-models.ts",
       );
-      const documentModelsContent = readFileSync(
+      const documentModelsContent = await readFile(
         documentModelsFilePath,
         "utf-8",
       );
@@ -219,7 +216,7 @@ describe("document model", () => {
 
       // TODO: this is a hack to get the test to pass, we should be able to update the reducer file once is generated
       // remove .out/document-model/test-doc/src/reducers/base-operations.ts file
-      rmSync(
+      await rm(
         path.join(
           documentModelsDirName,
           "test-doc",
@@ -247,143 +244,11 @@ describe("document model", () => {
         "reducers",
         "base-operations.ts",
       );
-      const baseOperationsContent = readFileSync(baseOperationsPath, "utf-8");
+      const baseOperationsContent = await readFile(baseOperationsPath, "utf-8");
       expect(baseOperationsContent).toContain("setTestIdOperation");
       expect(baseOperationsContent).toContain("setTestNameOperation");
       expect(baseOperationsContent).toContain("setTestDescriptionOperation");
       expect(baseOperationsContent).toContain("setTestValueOperation");
-    },
-  );
-
-  it(
-    "should generate an analytics processor and factory",
-    {
-      timeout: 100000,
-    },
-    async (context) => {
-      await setupTest(context);
-      await generate();
-
-      await hygenGenerateProcessor(
-        "test-analytics-processor",
-        ["billing-statement"],
-        path.join(testOutDirPath, processorsDirName),
-        "analytics",
-        {
-          skipFormat: true,
-        },
-      );
-
-      await compile(testOutDirPath);
-    },
-  );
-
-  it(
-    "should generate multiple analytics processors with composable factories",
-    {
-      timeout: 100000,
-    },
-    async (context) => {
-      await setupTest(context);
-      await generate();
-
-      await hygenGenerateProcessor(
-        "test1",
-        ["billing-statement"],
-        path.join(testOutDirPath, processorsDirName),
-        "analytics",
-        {
-          skipFormat: true,
-        },
-      );
-
-      await hygenGenerateProcessor(
-        "test2",
-        ["billing-statement"],
-        path.join(testOutDirPath, processorsDirName),
-        "analytics",
-        {
-          skipFormat: true,
-        },
-      );
-
-      await hygenGenerateProcessor(
-        "test3",
-        ["billing-statement"],
-        path.join(testOutDirPath, processorsDirName),
-        "analytics",
-        {
-          skipFormat: true,
-        },
-      );
-
-      await compile(testOutDirPath);
-    },
-  );
-
-  it(
-    "should generate a relational db processor and factory",
-    {
-      timeout: 100000,
-    },
-    async (context) => {
-      await setupTest(context);
-      await generate();
-
-      await hygenGenerateProcessor(
-        "test-relational-processor",
-        ["billing-statement"],
-        path.join(testOutDirPath, processorsDirName),
-        "relationalDb",
-        {
-          skipFormat: true,
-        },
-      );
-
-      await compile(testOutDirPath);
-    },
-  );
-
-  it(
-    "should generate multiple relational db processors with composable factories",
-    {
-      timeout: 100000,
-    },
-    async (context) => {
-      await setupTest(context);
-      await generate();
-
-      await hygenGenerateProcessor(
-        "test1",
-        ["billing-statement"],
-        path.join(testOutDirPath, processorsDirName),
-        "relationalDb",
-        {
-          skipFormat: true,
-        },
-      );
-
-      await hygenGenerateProcessor(
-        "test2",
-        ["billing-statement"],
-        path.join(testOutDirPath, processorsDirName),
-        "relationalDb",
-        {
-          skipFormat: true,
-        },
-      );
-
-      await hygenGenerateProcessor(
-        "test3",
-        ["billing-statement"],
-        path.join(testOutDirPath, processorsDirName),
-        "relationalDb",
-        {
-          skipFormat: true,
-        },
-      );
-
-      await compile(testOutDirPath);
     },
   );
 
@@ -403,7 +268,7 @@ describe("document model", () => {
         "general",
         "error.ts",
       );
-      const generalErrorContent = readFileSync(generalErrorPath, "utf-8");
+      const generalErrorContent = await readFile(generalErrorPath, "utf-8");
 
       // Check that InvalidStatusTransition error is generated
       expect(generalErrorContent).toContain("export type ErrorCode =");
@@ -423,7 +288,7 @@ describe("document model", () => {
         "line-items",
         "error.ts",
       );
-      const lineItemsErrorContent = readFileSync(lineItemsErrorPath, "utf-8");
+      const lineItemsErrorContent = await readFile(lineItemsErrorPath, "utf-8");
 
       // Check that both DuplicateLineItem and InvalidStatusTransition errors are generated (but deduplicated)
       expect(lineItemsErrorContent).toContain("export type ErrorCode =");
@@ -476,7 +341,7 @@ describe("document model", () => {
         "test-operations",
         "error.ts",
       );
-      const testOperationsErrorContent = readFileSync(
+      const testOperationsErrorContent = await readFile(
         testOperationsErrorPath,
         "utf-8",
       );

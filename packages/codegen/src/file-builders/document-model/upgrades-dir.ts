@@ -1,10 +1,13 @@
 import {
+  upgradeManifestTemplate,
+  upgradeTransitionTemplate,
+} from "@powerhousedao/codegen/templates";
+import {
   formatSourceFileWithPrettier,
   getObjectLiteral,
   getOrCreateSourceFile,
+  getVariableDeclarationByTypeName,
 } from "@powerhousedao/codegen/utils";
-import { upgradeTransitionTemplate } from "@powerhousedao/codegen/templates";
-import { ts } from "@tmpl/core";
 import path from "path";
 import { VariableDeclarationKind, type Project } from "ts-morph";
 
@@ -15,7 +18,7 @@ type MakeUpgradeFileArgs = {
   documentModelPackageImportPath: string;
   phStateName: string;
 };
-export function makeUpgradeFile(args: MakeUpgradeFileArgs) {
+export async function makeUpgradeFile(args: MakeUpgradeFileArgs) {
   const {
     project,
     version,
@@ -42,32 +45,32 @@ export function makeUpgradeFile(args: MakeUpgradeFileArgs) {
   });
 
   sourceFile.replaceWithText(template);
-  formatSourceFileWithPrettier(sourceFile);
+  await formatSourceFileWithPrettier(sourceFile);
 }
 
-export function createOrUpdateUpgradeManifestFile(args: {
+export async function createOrUpdateUpgradeManifestFile(args: {
   project: Project;
   specVersions: number[];
   latestVersion: number;
   upgradesDirPath: string;
   documentModelId: string;
+  upgradeManifestName: string;
 }) {
-  const { project, specVersions, upgradesDirPath, documentModelId } = args;
+  const {
+    project,
+    specVersions,
+    upgradesDirPath,
+    documentModelId,
+    upgradeManifestName,
+  } = args;
   const filePath = path.join(upgradesDirPath, "upgrade-manifest.ts");
 
   const { sourceFile } = getOrCreateSourceFile(project, filePath);
 
-  const template = ts`
-  import type { UpgradeManifest } from "document-model";
-  import { latestVersion, supportedVersions } from "./versions.js";
-
-  export const upgradeManifest: UpgradeManifest<typeof supportedVersions> = {
-    documentType: "${documentModelId}",
-    latestVersion,
-    supportedVersions,
-    upgrades: {},
-  };
-  `.raw;
+  const template = upgradeManifestTemplate({
+    documentModelId,
+    upgradeManifestName,
+  });
 
   sourceFile.replaceWithText(template);
 
@@ -75,13 +78,15 @@ export function createOrUpdateUpgradeManifestFile(args: {
 
   sourceFile.addImportDeclarations(upgradeTransitionImports);
 
-  const upgradeManifestStatement =
-    sourceFile.getVariableStatementOrThrow("upgradeManifest");
+  const upgradeManifestStatement = getVariableDeclarationByTypeName(
+    sourceFile,
+    "UpgradeManifest",
+  )?.getVariableStatementOrThrow();
   const objectLiteral = getObjectLiteral(upgradeManifestStatement)!;
   const upgradesProperty = objectLiteral.getPropertyOrThrow("upgrades");
   const upgrades = buildUpgrades(specVersions);
   upgradesProperty.replaceWithText(upgrades);
-  formatSourceFileWithPrettier(sourceFile);
+  await formatSourceFileWithPrettier(sourceFile);
 }
 
 function buildUpgrades(specVersions: number[]) {
@@ -120,7 +125,7 @@ type MakeVersionConstantsFileArgs = {
   specVersions: number[];
   latestVersion: number;
 };
-export function createOrUpdateVersionConstantsFile({
+export async function createOrUpdateVersionConstantsFile({
   specVersions,
   latestVersion,
   project,
@@ -158,18 +163,20 @@ export function createOrUpdateVersionConstantsFile({
     ],
   });
 
-  formatSourceFileWithPrettier(sourceFile);
+  await formatSourceFileWithPrettier(sourceFile);
 }
 
 type MakeUpgradesIndexFileArgs = {
   project: Project;
   upgradesDirPath: string;
+  upgradeManifestName: string;
   specVersions: number[];
 };
-export function makeUpgradesIndexFile({
+export async function makeUpgradesIndexFile({
   project,
   upgradesDirPath,
   specVersions,
+  upgradeManifestName,
 }: MakeUpgradesIndexFileArgs) {
   const filePath = path.join(upgradesDirPath, "index.ts");
   const { sourceFile } = getOrCreateSourceFile(project, filePath);
@@ -179,7 +186,7 @@ export function makeUpgradesIndexFile({
 
   sourceFile.addExportDeclarations([
     {
-      namedExports: ["upgradeManifest"],
+      namedExports: [upgradeManifestName],
       moduleSpecifier: "./upgrade-manifest.js",
     },
     {
@@ -188,7 +195,7 @@ export function makeUpgradesIndexFile({
     },
     ...upgradeReducerExports,
   ]);
-  formatSourceFileWithPrettier(sourceFile);
+  await formatSourceFileWithPrettier(sourceFile);
 }
 
 function makeUpgradeReducerExports(specVersions: number[]) {
