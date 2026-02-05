@@ -1,3 +1,15 @@
+## 6.0.0-dev.33 (2026-02-05)
+
+### 🚀 Features
+
+- new queue inspector ([3c0c2f9cc](https://github.com/powerhouse-inc/powerhouse/commit/3c0c2f9cc))
+- fixing pause, resume, flush of mailbox processing inspector ([cd11eeba0](https://github.com/powerhouse-inc/powerhouse/commit/cd11eeba0))
+- adding inspector for channel polling ([f9ff2d411](https://github.com/powerhouse-inc/powerhouse/commit/f9ff2d411))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
 ## 6.0.0-dev.32 (2026-02-04)
 
 ### 🩹 Fixes

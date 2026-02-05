@@ -1,3 +1,13 @@
+## 6.0.0-dev.33 (2026-02-05)
+
+### 🩹 Fixes
+
+- batches need to keep doc id + scope in mind, dummy ([83de46307](https://github.com/powerhouse-inc/powerhouse/commit/83de46307))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
 ## 6.0.0-dev.32 (2026-02-04)
 
 ### 🩹 Fixes

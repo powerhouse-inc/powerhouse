@@ -1,3 +1,13 @@
+## 6.0.0-dev.33 (2026-02-05)
+
+### 🚀 Features
+
+- new queue inspector ([3c0c2f9cc](https://github.com/powerhouse-inc/powerhouse/commit/3c0c2f9cc))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
 ## 6.0.0-dev.32 (2026-02-04)
 
 ### 🩹 Fixes

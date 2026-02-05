@@ -1,3 +1,23 @@
+## 6.0.0-dev.33 (2026-02-05)
+
+### 🚀 Features
+
+- new queue inspector ([3c0c2f9cc](https://github.com/powerhouse-inc/powerhouse/commit/3c0c2f9cc))
+- batching mailbox items ([3b7a5ff7e](https://github.com/powerhouse-inc/powerhouse/commit/3b7a5ff7e))
+- replacing outbox with buffered outbox ([3a9397c67](https://github.com/powerhouse-inc/powerhouse/commit/3a9397c67))
+- initial implementation of buffered mailbox ([fa91c8996](https://github.com/powerhouse-inc/powerhouse/commit/fa91c8996))
+- adding inspector for channel polling ([f9ff2d411](https://github.com/powerhouse-inc/powerhouse/commit/f9ff2d411))
+
+### 🩹 Fixes
+
+- reintroduced echo issue, but fixed along with test-client updates ([66d8e873f](https://github.com/powerhouse-inc/powerhouse/commit/66d8e873f))
+- sync-manager fix that backfills before ADD_RELATIONSHIP ([7662e8109](https://github.com/powerhouse-inc/powerhouse/commit/7662e8109))
+- batches need to keep doc id + scope in mind, dummy ([83de46307](https://github.com/powerhouse-inc/powerhouse/commit/83de46307))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
 ## 6.0.0-dev.32 (2026-02-04)
 
 ### 🩹 Fixes
