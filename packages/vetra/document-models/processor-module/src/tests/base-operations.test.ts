@@ -3,6 +3,7 @@
  * - change it by adding new tests or modifying the existing ones
  */
 
+import { generateMock } from "@powerhousedao/common";
 import type {
   AddDocumentTypeInput,
   ProcessorModuleDocument,
@@ -11,21 +12,20 @@ import type {
 } from "@powerhousedao/vetra/document-models/processor-module";
 import {
   addDocumentType,
+  AddDocumentTypeInputSchema,
+  isProcessorModuleDocument,
   reducer,
   removeDocumentType,
-  setProcessorName,
-  setProcessorStatus,
-  setProcessorType,
-  utils,
-  isProcessorModuleDocument,
-  SetProcessorNameInputSchema,
-  SetProcessorTypeInputSchema,
-  AddDocumentTypeInputSchema,
   RemoveDocumentTypeInputSchema,
+  setProcessorName,
+  SetProcessorNameInputSchema,
+  setProcessorStatus,
   SetProcessorStatusInputSchema,
+  setProcessorType,
+  SetProcessorTypeInputSchema,
+  utils,
 } from "@powerhousedao/vetra/document-models/processor-module";
 import { beforeEach, describe, expect, it } from "vitest";
-import { generateMock } from "@powerhousedao/codegen";
 
 describe("BaseOperations Operations", () => {
   let document: ProcessorModuleDocument;

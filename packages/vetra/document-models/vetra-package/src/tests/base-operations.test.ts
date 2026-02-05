@@ -3,7 +3,7 @@
  * - change it by adding new tests or modifying the existing ones
  */
 
-import { generateMock } from "@powerhousedao/codegen";
+import { generateMock } from "@powerhousedao/common";
 import type {
   AddPackageKeywordInput,
   SetPackageAuthorInput,

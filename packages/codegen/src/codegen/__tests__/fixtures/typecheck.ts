@@ -6,7 +6,7 @@ export const compile = (testDir: string) =>
       stdout: [],
       stderr: [],
     };
-    const child = exec(`npm install && npx tsc --noEmit`, { cwd: testDir });
+    const child = exec(`npm i && npx tsc`, { cwd: testDir });
     child.stdout?.on("data", (data: string) => {
       output.stdout.push(data);
     });

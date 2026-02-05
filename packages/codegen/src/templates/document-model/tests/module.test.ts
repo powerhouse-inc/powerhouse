@@ -95,7 +95,7 @@ export const documentModelOperationsModuleTestFileTemplate = (
  */
 
 import { describe, it, expect } from 'vitest';
-import { generateMock } from '@powerhousedao/codegen';
+import { generateMock } from '@powerhousedao/common';
 import {
   reducer,
   utils,

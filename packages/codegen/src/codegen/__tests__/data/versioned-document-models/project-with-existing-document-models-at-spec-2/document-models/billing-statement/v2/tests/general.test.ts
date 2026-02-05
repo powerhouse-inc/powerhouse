@@ -1,18 +1,18 @@
-import { generateMock } from "@powerhousedao/codegen";
-import { describe, expect, it } from "vitest";
+import { generateMock } from "@powerhousedao/common";
 import {
+  editBillingStatement,
+  EditBillingStatementInputSchema,
+  editBillingStatementTest,
+  EditBillingStatementTestInputSchema,
+  editContributor,
+  EditContributorInputSchema,
+  editStatus,
+  EditStatusInputSchema,
+  isBillingStatementDocument,
   reducer,
   utils,
-  isBillingStatementDocument,
-  editBillingStatementTest,
-  editBillingStatement,
-  editContributor,
-  editStatus,
-  EditBillingStatementTestInputSchema,
-  EditBillingStatementInputSchema,
-  EditContributorInputSchema,
-  EditStatusInputSchema,
 } from "test/document-models/billing-statement/v2";
+import { describe, expect, it } from "vitest";
 
 describe("GeneralOperations", () => {
   it("should handle editBillingStatementTest operation", () => {

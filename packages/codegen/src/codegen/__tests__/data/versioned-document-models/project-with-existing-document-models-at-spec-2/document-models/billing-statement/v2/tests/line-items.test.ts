@@ -1,14 +1,14 @@
-import { generateMock } from "@powerhousedao/codegen";
-import { describe, expect, it } from "vitest";
+import { generateMock } from "@powerhousedao/common";
 import {
+  addLineItem,
+  AddLineItemInputSchema,
+  editLineItem,
+  EditLineItemInputSchema,
+  isBillingStatementDocument,
   reducer,
   utils,
-  isBillingStatementDocument,
-  addLineItem,
-  editLineItem,
-  AddLineItemInputSchema,
-  EditLineItemInputSchema,
 } from "test/document-models/billing-statement/v2";
+import { describe, expect, it } from "vitest";
 
 describe("LineItemsOperations", () => {
   it("should handle addLineItem operation", () => {

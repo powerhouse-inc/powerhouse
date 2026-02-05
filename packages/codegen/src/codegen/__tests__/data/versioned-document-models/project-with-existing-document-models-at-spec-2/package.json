@@ -66,9 +66,5 @@
     "vetra": "ph-cli vetra",
     "service-startup": "bash ./node_modules/@powerhousedao/ph-cli/dist/scripts/service-startup.sh",
     "service-unstartup": "bash ./node_modules/@powerhousedao/ph-cli/dist/scripts/service-unstartup.sh"
-  },
-  "dependencies": {
-    "@powerhousedao/codegen": "file:../../../../../../"
-
   }
 }

@@ -395,6 +395,7 @@ describe("CodegenProcessorLegacy E2E Tests", () => {
         "analytics",
         ["powerhouse/document-model", "powerhouse/budget-statement"],
         mockConfig.PH_CONFIG.skipFormat,
+        USE_TS_MORPH,
       );
     });
 
@@ -424,6 +425,7 @@ describe("CodegenProcessorLegacy E2E Tests", () => {
         "relationalDb",
         ["powerhouse/document-model"],
         mockConfig.PH_CONFIG.skipFormat,
+        USE_TS_MORPH,
       );
     });
 

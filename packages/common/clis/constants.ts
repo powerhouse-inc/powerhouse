@@ -56,7 +56,6 @@ export const VERSIONED_DEPENDENCIES = [
 ];
 
 export const VERSIONED_DEV_DEPENDENCIES = [
-  "@powerhousedao/codegen",
   "@powerhousedao/config",
   "@powerhousedao/ph-cli",
   "@powerhousedao/reactor-api",
