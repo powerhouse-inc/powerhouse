@@ -1139,9 +1139,13 @@ export function getDocumentLastModified(document: PHDocument) {
  */
 function getNextRevision(document: PHDocument, scope: string) {
   const scopeOperations = document.operations[scope];
-  const latestOperationIndex = scopeOperations?.at(-1)?.index ?? -1;
-
-  return (latestOperationIndex ?? -1) + 1;
+  let maxIndex = -1;
+  if (scopeOperations) {
+    for (const op of scopeOperations) {
+      if (op.index > maxIndex) maxIndex = op.index;
+    }
+  }
+  return maxIndex + 1;
 }
 
 /**
