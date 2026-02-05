@@ -8296,35 +8296,20 @@ packages:
       '@powerhousedao/analytics-engine-core': 0.5.0
       '@powerhousedao/analytics-engine-knex': 0.5.1
 
-<<<<<<< HEAD
   '@powerhousedao/builder-tools@6.0.0-dev.33':
     resolution: {integrity: sha512-ecduKiZQyTv+CKHOMoOF+Gq0uWykpCL3HdxEQYwxs/aX/PWS/gcjLl/ToyNUz1XDSu0DdEEPt5qy1sFj3aRsVQ==}
-=======
-  '@powerhousedao/builder-tools@6.0.0-dev.31':
-    resolution: {integrity: sha512-3VQnf0hGOTWvwmy7I2XwOJgez65nn++TUJnEvl3c470BewxRPs0AT+hkKOmtEXbF003AR6SktN2tmkg40lEOkg==}
->>>>>>> perf(document-model): optimize getDocumentLastModified from O(n log n) to O(n)
     peerDependencies:
       react: '>=19.0.0'
       react-dom: '>=19.0.0'
 
-<<<<<<< HEAD
   '@powerhousedao/common@6.0.0-dev.33':
     resolution: {integrity: sha512-XBVWgA2mKYtVL2GeEk5GDdeaTTD1uzcNcrqlvlLElNOs9r5YymxcZfV5sw9ooRzamrVZV8nABtXUwDyvohs07g==}
-=======
-  '@powerhousedao/common@6.0.0-dev.31':
-    resolution: {integrity: sha512-VylQ4jZ/NaBsKiEADxAQehJmp4UahFiW9H0uRO0oc2Hf9hHYAjU2Nl3SHahpqmTUn6XgOH8K9FuKkV1wG+KKdQ==}
->>>>>>> perf(document-model): optimize getDocumentLastModified from O(n log n) to O(n)
     peerDependencies:
       react: '>=19.0.0'
       react-dom: '>=19.0.0'
 
-<<<<<<< HEAD
   '@powerhousedao/config@6.0.0-dev.33':
     resolution: {integrity: sha512-R44ZcmZtMjvrBBxzEL0y/O+QY+gXvSnAWPBnr2nzmphLN7JbZP4REg2T8IQIzhGeR3LUExXqOigjcZBy3Wt0Lg==}
-=======
-  '@powerhousedao/config@6.0.0-dev.31':
-    resolution: {integrity: sha512-ZTlTWw0V/uYX8u/NjJMhksL03hf9JC4xXdTh02OcnytzFEfGGtP87UGuWzGdklM3E4d4CT8JhHn5FwxO4lsBhA==}
->>>>>>> perf(document-model): optimize getDocumentLastModified from O(n log n) to O(n)
 
   '@powerhousedao/design-system@1.40.2':
     resolution: {integrity: sha512-AnMwstM405qLQcf0oliD7Zt/FTxX/nTnO1aKTtCPROJONT7xnJSeqp7bbqy/3qxAkq5erTDX6LA6aCD4+qwrEA==}
@@ -8332,13 +8317,8 @@ packages:
       react: ^18.3.1
       react-dom: ^18.3.1
 
-<<<<<<< HEAD
   '@powerhousedao/design-system@6.0.0-dev.33':
     resolution: {integrity: sha512-eUm6K+3830aoqy5zt6s6dXek/QIw8ELuIYsFW2HdfMaDSQ8+SFmFnjY7ngkdYwDiUBdFSIBHlehuUux8K51aDA==}
-=======
-  '@powerhousedao/design-system@6.0.0-dev.31':
-    resolution: {integrity: sha512-UqEPfTMJV/SI/ZkxAWMfH1c5VAR6TZErpBYg6ZuNRf42uKCOos26x8PMAT4To74oWl/Es70v4A6PoulrpSiCIQ==}
->>>>>>> perf(document-model): optimize getDocumentLastModified from O(n log n) to O(n)
     peerDependencies:
       react: '>=19.0.0'
       react-dom: '>=19.0.0'
@@ -8355,24 +8335,14 @@ packages:
       react: ^19.2.0
       react-dom: ^19.2.0
 
-<<<<<<< HEAD
   '@powerhousedao/reactor-browser@6.0.0-dev.33':
     resolution: {integrity: sha512-cbLNE6vY+Swhs20kOmldvG8/WqOkt1zJ1I7XPs2+d/AxN/cXuHHPyQZoeeyaxNY/mEY7G02XtqQVVjMKmtmjwA==}
-=======
-  '@powerhousedao/reactor-browser@6.0.0-dev.31':
-    resolution: {integrity: sha512-a3CT78uXcw3XV7ncJBeA13YuNesevKiyrl+I7y4xug3pVsywsRp0jU+Oc67LbM1lDZrxd+Pi/k5zQP+X+V9y7A==}
->>>>>>> perf(document-model): optimize getDocumentLastModified from O(n log n) to O(n)
     peerDependencies:
       react: '>=19.0.0'
       react-dom: '>=19.0.0'
 
-<<<<<<< HEAD
   '@powerhousedao/reactor@6.0.0-dev.33':
     resolution: {integrity: sha512-eBOFlKOBYks0sgVtqomsExaD13b8Ms4/a5L/zZtzlLalLP6W+4DdU+orheDJGL1DvnuBGlxNOWaELJchr4uIMw==}
-=======
-  '@powerhousedao/reactor@6.0.0-dev.31':
-    resolution: {integrity: sha512-7eF82Bs3tilDe9q1jL3ucekDyFYGso1OOyJ9EeVEJFWjvLFREdjW8ovRnxRIbqu9yvKgmFp4S5Skb7stmP6Irw==}
->>>>>>> perf(document-model): optimize getDocumentLastModified from O(n log n) to O(n)
 
   '@powerhousedao/scalars@2.0.1':
     resolution: {integrity: sha512-LKDGuKAg5NJiYO5/2AFwfBeJg2kIRCD4UTUEWqIK/YQeVdXLC5ps92TsW1ga+XcZ+8IYwh8/e3oq3XH4x6N6dg==}
@@ -9074,19 +9044,11 @@ packages:
     resolution: {integrity: sha512-O3rHJzAQKamUz1fvE0Qaw0xSFqsA/yafi2iqeE0pvdFtCO1viYx8QL6f3Ln/aCCTLxs68SLf0KPM9eSeM8yBnA==}
     engines: {node: '>=14.0.0'}
 
-<<<<<<< HEAD
   '@renown/sdk@6.0.0-dev.33':
     resolution: {integrity: sha512-L4TwrnFg7bC22xbkx/inKIe0Lyf8r3HuYnMawauOzqVZQA7YSGAa7ipKxxXr2SsYsQc5pnCy6EhJ5VInKMgMGw==}
     peerDependencies:
       '@powerhousedao/reactor': 6.0.0-dev.33
       document-model: 6.0.0-dev.33
-=======
-  '@renown/sdk@6.0.0-dev.31':
-    resolution: {integrity: sha512-qFR73jTVcrVbT5IyQfk24iFv7sMJByGNjzLieRo472bV7s4os1nz3j0bg+biqTl5hvZQI2VTfYLwcJDDvKHTpA==}
-    peerDependencies:
-      '@powerhousedao/reactor': 6.0.0-dev.31
-      document-model: 6.0.0-dev.31
->>>>>>> perf(document-model): optimize getDocumentLastModified from O(n log n) to O(n)
       react: ^18.0.0 || ^19.0.0
     peerDependenciesMeta:
       react:
@@ -31183,11 +31145,7 @@ snapshots:
       - supports-color
       - tedious
 
-<<<<<<< HEAD
   '@powerhousedao/builder-tools@6.0.0-dev.33(ab1051dafb0267ca1709a3fed67c64ad)':
-=======
-  '@powerhousedao/builder-tools@6.0.0-dev.31(a78b3c950db1f87d290b16f5e5d20202)':
->>>>>>> perf(document-model): optimize getDocumentLastModified from O(n log n) to O(n)
     dependencies:
       '@codemirror/autocomplete': 6.18.6
       '@codemirror/commands': 6.8.1
@@ -31202,17 +31160,10 @@ snapshots:
       '@graphql-tools/schema': 10.0.30(graphql@16.12.0)
       '@graphql-tools/utils': 10.11.0(graphql@16.12.0)
       '@hookform/resolvers': 5.2.2(react-hook-form@7.66.0(react@19.2.0))
-<<<<<<< HEAD
       '@powerhousedao/config': 6.0.0-dev.33(@types/node@24.10.0)
       '@powerhousedao/design-system': 6.0.0-dev.33(@powerhousedao/analytics-engine-knex@0.6.0(@powerhousedao/analytics-engine-core@0.5.0))(@types/express@4.17.25)(@types/node@24.10.0)(@types/react-dom@19.2.2(@types/react@19.2.2))(@types/react@19.2.2)(bufferutil@4.0.9)(encoding@0.1.13)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@5.9.3)(utf-8-validate@5.0.10)
       '@powerhousedao/document-engineering': 1.40.1(@types/express@4.17.25)(@types/react-dom@19.2.2(@types/react@19.2.2))(@types/react@19.2.2)(bufferutil@4.0.9)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@5.9.3)(utf-8-validate@5.0.10)
       '@powerhousedao/reactor-browser': 6.0.0-dev.33(@powerhousedao/analytics-engine-knex@0.6.0(@powerhousedao/analytics-engine-core@0.5.0))(@types/node@24.10.0)(bufferutil@4.0.9)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@4.3.5)
-=======
-      '@powerhousedao/config': 6.0.0-dev.31(@types/node@24.10.0)
-      '@powerhousedao/design-system': 6.0.0-dev.31(@powerhousedao/analytics-engine-knex@0.6.0(@powerhousedao/analytics-engine-core@0.5.0))(@types/node@24.10.0)(@types/react-dom@19.2.2(@types/react@19.2.2))(@types/react@19.2.2)(bufferutil@4.0.9)(encoding@0.1.13)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@5.9.3)(utf-8-validate@5.0.10)
-      '@powerhousedao/document-engineering': 1.40.1(@types/express@4.17.25)(@types/react-dom@19.2.2(@types/react@19.2.2))(@types/react@19.2.2)(bufferutil@4.0.9)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@5.9.3)(utf-8-validate@5.0.10)
-      '@powerhousedao/reactor-browser': 6.0.0-dev.31(@powerhousedao/analytics-engine-knex@0.6.0(@powerhousedao/analytics-engine-core@0.5.0))(@types/node@24.10.0)(bufferutil@4.0.9)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@4.3.5)
->>>>>>> perf(document-model): optimize getDocumentLastModified from O(n log n) to O(n)
       '@prettier/sync': 0.5.5(prettier@3.6.2)
       '@radix-ui/react-checkbox': 1.3.3(@types/react-dom@19.2.2(@types/react@19.2.2))(@types/react@19.2.2)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
       '@radix-ui/react-icons': 1.3.2(react@19.2.0)
@@ -31320,19 +31271,11 @@ snapshots:
       - vite
       - ws
 
-<<<<<<< HEAD
   '@powerhousedao/common@6.0.0-dev.33(1239385e61fcf8d9c3ed155e99dc276d)':
     dependencies:
       '@powerhousedao/analytics-engine-core': 0.5.0
       '@powerhousedao/builder-tools': 6.0.0-dev.33(ab1051dafb0267ca1709a3fed67c64ad)
       '@powerhousedao/design-system': 6.0.0-dev.33(@powerhousedao/analytics-engine-knex@0.6.0(@powerhousedao/analytics-engine-core@0.5.0))(@types/express@4.17.25)(@types/node@24.10.0)(@types/react-dom@19.2.2(@types/react@19.2.2))(@types/react@19.2.2)(bufferutil@4.0.9)(encoding@0.1.13)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@5.9.3)(utf-8-validate@5.0.10)
-=======
-  '@powerhousedao/common@6.0.0-dev.31(4ec50757caa4e0f4301ba2beb6fae1b6)':
-    dependencies:
-      '@powerhousedao/analytics-engine-core': 0.5.0
-      '@powerhousedao/builder-tools': 6.0.0-dev.31(a78b3c950db1f87d290b16f5e5d20202)
-      '@powerhousedao/design-system': 6.0.0-dev.31(@powerhousedao/analytics-engine-knex@0.6.0(@powerhousedao/analytics-engine-core@0.5.0))(@types/node@24.10.0)(@types/react-dom@19.2.2(@types/react@19.2.2))(@types/react@19.2.2)(bufferutil@4.0.9)(encoding@0.1.13)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@5.9.3)(utf-8-validate@5.0.10)
->>>>>>> perf(document-model): optimize getDocumentLastModified from O(n log n) to O(n)
       '@tanstack/react-virtual': 3.13.12(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
       '@types/luxon': 3.7.1
       chalk: 5.6.2
@@ -31408,11 +31351,7 @@ snapshots:
       - vite
       - ws
 
-<<<<<<< HEAD
   '@powerhousedao/config@6.0.0-dev.33(@types/node@24.10.0)':
-=======
-  '@powerhousedao/config@6.0.0-dev.31(@types/node@24.10.0)':
->>>>>>> perf(document-model): optimize getDocumentLastModified from O(n log n) to O(n)
     dependencies:
       '@microsoft/api-extractor': 7.54.0(@types/node@24.10.0)
     transitivePeerDependencies:
@@ -31500,19 +31439,11 @@ snapshots:
       - utf-8-validate
       - ws
 
-<<<<<<< HEAD
   '@powerhousedao/design-system@6.0.0-dev.33(@powerhousedao/analytics-engine-knex@0.6.0(@powerhousedao/analytics-engine-core@0.5.0))(@types/express@4.17.25)(@types/node@24.10.0)(@types/react-dom@19.2.2(@types/react@19.2.2))(@types/react@19.2.2)(bufferutil@4.0.9)(encoding@0.1.13)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@5.9.3)(utf-8-validate@5.0.10)':
     dependencies:
       '@internationalized/date': 3.10.0
       '@powerhousedao/document-engineering': 1.40.1(@types/express@4.17.25)(@types/react-dom@19.2.2(@types/react@19.2.2))(@types/react@19.2.2)(bufferutil@4.0.9)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@5.9.3)(utf-8-validate@5.0.10)
       '@powerhousedao/reactor-browser': 6.0.0-dev.33(@powerhousedao/analytics-engine-knex@0.6.0(@powerhousedao/analytics-engine-core@0.5.0))(@types/node@24.10.0)(bufferutil@4.0.9)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@4.3.5)
-=======
-  '@powerhousedao/design-system@6.0.0-dev.31(@powerhousedao/analytics-engine-knex@0.6.0(@powerhousedao/analytics-engine-core@0.5.0))(@types/node@24.10.0)(@types/react-dom@19.2.2(@types/react@19.2.2))(@types/react@19.2.2)(bufferutil@4.0.9)(encoding@0.1.13)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@5.9.3)(utf-8-validate@5.0.10)':
-    dependencies:
-      '@internationalized/date': 3.10.0
-      '@powerhousedao/document-engineering': 1.40.1(@types/express@4.17.25)(@types/react-dom@19.2.2(@types/react@19.2.2))(@types/react@19.2.2)(bufferutil@4.0.9)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@5.9.3)(utf-8-validate@5.0.10)
-      '@powerhousedao/reactor-browser': 6.0.0-dev.31(@powerhousedao/analytics-engine-knex@0.6.0(@powerhousedao/analytics-engine-core@0.5.0))(@types/node@24.10.0)(bufferutil@4.0.9)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@4.3.5)
->>>>>>> perf(document-model): optimize getDocumentLastModified from O(n log n) to O(n)
       '@radix-ui/react-checkbox': 1.3.3(@types/react-dom@19.2.2(@types/react@19.2.2))(@types/react@19.2.2)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
       '@radix-ui/react-dialog': 1.1.15(@types/react-dom@19.2.2(@types/react@19.2.2))(@types/react@19.2.2)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
       '@radix-ui/react-dropdown-menu': 2.1.16(@types/react-dom@19.2.2(@types/react@19.2.2))(@types/react@19.2.2)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
@@ -31712,25 +31643,15 @@ snapshots:
       - typescript
       - utf-8-validate
 
-<<<<<<< HEAD
   '@powerhousedao/reactor-browser@6.0.0-dev.33(@powerhousedao/analytics-engine-knex@0.6.0(@powerhousedao/analytics-engine-core@0.5.0))(@types/node@24.10.0)(bufferutil@4.0.9)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@3.25.76)':
-=======
-  '@powerhousedao/reactor-browser@6.0.0-dev.31(@powerhousedao/analytics-engine-knex@0.6.0(@powerhousedao/analytics-engine-core@0.5.0))(@types/node@24.10.0)(bufferutil@4.0.9)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@3.25.76)':
->>>>>>> perf(document-model): optimize getDocumentLastModified from O(n log n) to O(n)
     dependencies:
       '@electric-sql/pglite': 0.2.17
       '@electric-sql/pglite-react': 0.2.31(@electric-sql/pglite@0.2.17)(react@19.2.0)
       '@powerhousedao/analytics-engine-browser': 0.6.0(@powerhousedao/analytics-engine-core@0.5.0)(@powerhousedao/analytics-engine-knex@0.6.0(@powerhousedao/analytics-engine-core@0.5.0))
       '@powerhousedao/analytics-engine-core': 0.5.0
-<<<<<<< HEAD
       '@powerhousedao/config': 6.0.0-dev.33(@types/node@24.10.0)
       '@powerhousedao/reactor': 6.0.0-dev.33
       '@renown/sdk': 6.0.0-dev.33(@powerhousedao/reactor@6.0.0-dev.33)(bufferutil@4.0.9)(document-model@packages+document-model)(react@19.2.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@3.25.76)
-=======
-      '@powerhousedao/config': 6.0.0-dev.31(@types/node@24.10.0)
-      '@powerhousedao/reactor': 6.0.0-dev.31
-      '@renown/sdk': 6.0.0-dev.31(@powerhousedao/reactor@6.0.0-dev.31)(bufferutil@4.0.9)(document-model@packages+document-model)(react@19.2.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@3.25.76)
->>>>>>> perf(document-model): optimize getDocumentLastModified from O(n log n) to O(n)
       '@tanstack/react-query': 5.90.7(react@19.2.0)
       change-case: 5.4.4
       did-jwt: 8.0.18
@@ -31764,25 +31685,15 @@ snapshots:
       - utf-8-validate
       - zod
 
-<<<<<<< HEAD
   '@powerhousedao/reactor-browser@6.0.0-dev.33(@powerhousedao/analytics-engine-knex@0.6.0(@powerhousedao/analytics-engine-core@0.5.0))(@types/node@24.10.0)(bufferutil@4.0.9)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@4.3.5)':
-=======
-  '@powerhousedao/reactor-browser@6.0.0-dev.31(@powerhousedao/analytics-engine-knex@0.6.0(@powerhousedao/analytics-engine-core@0.5.0))(@types/node@24.10.0)(bufferutil@4.0.9)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@4.3.5)':
->>>>>>> perf(document-model): optimize getDocumentLastModified from O(n log n) to O(n)
     dependencies:
       '@electric-sql/pglite': 0.2.17
       '@electric-sql/pglite-react': 0.2.31(@electric-sql/pglite@0.2.17)(react@19.2.0)
       '@powerhousedao/analytics-engine-browser': 0.6.0(@powerhousedao/analytics-engine-core@0.5.0)(@powerhousedao/analytics-engine-knex@0.6.0(@powerhousedao/analytics-engine-core@0.5.0))
       '@powerhousedao/analytics-engine-core': 0.5.0
-<<<<<<< HEAD
       '@powerhousedao/config': 6.0.0-dev.33(@types/node@24.10.0)
       '@powerhousedao/reactor': 6.0.0-dev.33
       '@renown/sdk': 6.0.0-dev.33(@powerhousedao/reactor@6.0.0-dev.33)(bufferutil@4.0.9)(document-model@packages+document-model)(react@19.2.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@4.3.5)
-=======
-      '@powerhousedao/config': 6.0.0-dev.31(@types/node@24.10.0)
-      '@powerhousedao/reactor': 6.0.0-dev.31
-      '@renown/sdk': 6.0.0-dev.31(@powerhousedao/reactor@6.0.0-dev.31)(bufferutil@4.0.9)(document-model@packages+document-model)(react@19.2.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@4.3.5)
->>>>>>> perf(document-model): optimize getDocumentLastModified from O(n log n) to O(n)
       '@tanstack/react-query': 5.90.7(react@19.2.0)
       change-case: 5.4.4
       did-jwt: 8.0.18
@@ -31816,11 +31727,7 @@ snapshots:
       - utf-8-validate
       - zod
 
-<<<<<<< HEAD
   '@powerhousedao/reactor@6.0.0-dev.33':
-=======
-  '@powerhousedao/reactor@6.0.0-dev.31':
->>>>>>> perf(document-model): optimize getDocumentLastModified from O(n log n) to O(n)
     dependencies:
       '@electric-sql/pglite': 0.2.17
       document-drive: link:packages/document-drive
@@ -32558,17 +32465,10 @@ snapshots:
 
   '@remix-run/router@1.23.0': {}
 
-<<<<<<< HEAD
   '@renown/sdk@6.0.0-dev.33(@powerhousedao/reactor@6.0.0-dev.33)(bufferutil@4.0.9)(document-model@packages+document-model)(react@19.2.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@3.25.76)':
     dependencies:
       '@didtools/key-did': 1.0.0(bufferutil@4.0.9)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@3.25.76)
       '@powerhousedao/reactor': 6.0.0-dev.33
-=======
-  '@renown/sdk@6.0.0-dev.31(@powerhousedao/reactor@6.0.0-dev.31)(bufferutil@4.0.9)(document-model@packages+document-model)(react@19.2.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@3.25.76)':
-    dependencies:
-      '@didtools/key-did': 1.0.0(bufferutil@4.0.9)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@3.25.76)
-      '@powerhousedao/reactor': 6.0.0-dev.31
->>>>>>> perf(document-model): optimize getDocumentLastModified from O(n log n) to O(n)
       did-jwt: 8.0.18
       did-jwt-vc: 4.0.16
       did-key-creator: 1.2.0
@@ -32584,17 +32484,10 @@ snapshots:
       - utf-8-validate
       - zod
 
-<<<<<<< HEAD
   '@renown/sdk@6.0.0-dev.33(@powerhousedao/reactor@6.0.0-dev.33)(bufferutil@4.0.9)(document-model@packages+document-model)(react@19.2.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@4.3.5)':
     dependencies:
       '@didtools/key-did': 1.0.0(bufferutil@4.0.9)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@4.3.5)
       '@powerhousedao/reactor': 6.0.0-dev.33
-=======
-  '@renown/sdk@6.0.0-dev.31(@powerhousedao/reactor@6.0.0-dev.31)(bufferutil@4.0.9)(document-model@packages+document-model)(react@19.2.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@4.3.5)':
-    dependencies:
-      '@didtools/key-did': 1.0.0(bufferutil@4.0.9)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@4.3.5)
-      '@powerhousedao/reactor': 6.0.0-dev.31
->>>>>>> perf(document-model): optimize getDocumentLastModified from O(n log n) to O(n)
       did-jwt: 8.0.18
       did-jwt-vc: 4.0.16
       did-key-creator: 1.2.0
@@ -33546,17 +33439,10 @@ snapshots:
   '@sky-ph/atlas@2.0.0-canary.1(33ba51ab3c05d97837ef661f40f8ceee)':
     dependencies:
       '@hookform/resolvers': 3.10.0(react-hook-form@7.66.0(react@19.2.0))
-<<<<<<< HEAD
       '@powerhousedao/common': 6.0.0-dev.33(1239385e61fcf8d9c3ed155e99dc276d)
       '@powerhousedao/design-system': 6.0.0-dev.33(@powerhousedao/analytics-engine-knex@0.6.0(@powerhousedao/analytics-engine-core@0.5.0))(@types/express@4.17.25)(@types/node@24.10.0)(@types/react-dom@19.2.2(@types/react@19.2.2))(@types/react@19.2.2)(bufferutil@4.0.9)(encoding@0.1.13)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@5.9.3)(utf-8-validate@5.0.10)
       '@powerhousedao/document-engineering': 1.22.0(@types/react-dom@19.2.2(@types/react@19.2.2))(@types/react@19.2.2)(bufferutil@4.0.9)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@5.9.3)(utf-8-validate@5.0.10)
       '@powerhousedao/reactor-browser': 6.0.0-dev.33(@powerhousedao/analytics-engine-knex@0.6.0(@powerhousedao/analytics-engine-core@0.5.0))(@types/node@24.10.0)(bufferutil@4.0.9)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@3.25.76)
-=======
-      '@powerhousedao/common': 6.0.0-dev.31(4ec50757caa4e0f4301ba2beb6fae1b6)
-      '@powerhousedao/design-system': 6.0.0-dev.31(@powerhousedao/analytics-engine-knex@0.6.0(@powerhousedao/analytics-engine-core@0.5.0))(@types/node@24.10.0)(@types/react-dom@19.2.2(@types/react@19.2.2))(@types/react@19.2.2)(bufferutil@4.0.9)(encoding@0.1.13)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@5.9.3)(utf-8-validate@5.0.10)
-      '@powerhousedao/document-engineering': 1.22.0(@types/react-dom@19.2.2(@types/react@19.2.2))(@types/react@19.2.2)(bufferutil@4.0.9)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@5.9.3)(utf-8-validate@5.0.10)
-      '@powerhousedao/reactor-browser': 6.0.0-dev.31(@powerhousedao/analytics-engine-knex@0.6.0(@powerhousedao/analytics-engine-core@0.5.0))(@types/node@24.10.0)(bufferutil@4.0.9)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@3.25.76)
->>>>>>> perf(document-model): optimize getDocumentLastModified from O(n log n) to O(n)
       '@radix-ui/react-dialog': 1.1.15(@types/react-dom@19.2.2(@types/react@19.2.2))(@types/react@19.2.2)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
       '@radix-ui/react-dropdown-menu': 2.1.16(@types/react-dom@19.2.2(@types/react@19.2.2))(@types/react@19.2.2)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
       '@radix-ui/react-label': 2.1.8(@types/react-dom@19.2.2(@types/react@19.2.2))(@types/react@19.2.2)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
