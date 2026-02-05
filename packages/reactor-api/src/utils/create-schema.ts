@@ -15,6 +15,17 @@ import { GraphQLJSONObject } from "graphql-type-json";
 const logger = childLogger(["reactor-api", "create-schema"]);
 
 /**
+ * Operations whose input schemas reference output/union types in input position,
+ * which is invalid GraphQL. These operations are excluded from schema generation.
+ * - ADD_LISTENER: `input AddListenerInput { listener: Listener! }` — Listener is an output type
+ * - ADD_TRIGGER: `input AddTriggerInput { trigger: Trigger! }` — Trigger is a union type
+ */
+export const OPERATIONS_WITH_INVALID_INPUT_SCHEMAS = new Set([
+  "ADD_LISTENER",
+  "ADD_TRIGGER",
+]);
+
+/**
  * Revision type - matches the definition in reactor/schema.graphql.
  * Used by PHDocument and document mutation results.
  */
@@ -106,13 +117,16 @@ export const getDocumentModelTypeDefs = (
 
     \n`;
 
-    const found = tmpDmSchema.match(/(type|enum|union|interface)\s+(\w+)\s/g);
+    const found = tmpDmSchema.match(
+      /(type|enum|union|interface)\s+(\w+)[\s{]/g,
+    );
     const trimmedFound = found?.map((f) =>
       f
         .replaceAll("type ", "")
         .replaceAll("enum ", "")
         .replaceAll("union ", "")
         .replaceAll("interface ", "")
+        .replaceAll("{", "")
         .trim(),
     );
     trimmedFound?.forEach((f) => {
@@ -455,7 +469,12 @@ function generateLegacyApiSchema(
     specification?.modules
       .flatMap((module) =>
         module.operations
-          .filter((op) => op.name && hasValidSchema(op.schema))
+          .filter(
+            (op) =>
+              op.name &&
+              hasValidSchema(op.schema) &&
+              !OPERATIONS_WITH_INVALID_INPUT_SCHEMAS.has(op.name!),
+          )
           .map(
             (op) =>
               `${documentName}_${camelCase(op.name!)}(
@@ -467,7 +486,11 @@ function generateLegacyApiSchema(
   const moduleSchemas =
     specification?.modules
       .filter((module) =>
-        module.operations.some((op) => hasValidSchema(op.schema)),
+        module.operations.some(
+          (op) =>
+            hasValidSchema(op.schema) &&
+            !OPERATIONS_WITH_INVALID_INPUT_SCHEMAS.has(op.name!),
+        ),
       )
       .map(
         (module) =>
@@ -475,7 +498,11 @@ function generateLegacyApiSchema(
        Module: ${pascalCase(module.name)}
        """
        ${module.operations
-         .filter((op) => hasValidSchema(op.schema))
+         .filter(
+           (op) =>
+             hasValidSchema(op.schema) &&
+             !OPERATIONS_WITH_INVALID_INPUT_SCHEMAS.has(op.name!),
+         )
          .map((op) =>
            applyGraphQLTypePrefixes(
              op.schema ?? "",
@@ -574,7 +601,7 @@ function generateNewApiSchema(
       ? `${documentName}_${documentName}GlobalState!`
       : `${documentName}_${documentName}State!`;
   const localStateType = !hasLocalStateType
-    ? "JSONObject"
+    ? "JSONObject!"
     : `${documentName}_${documentName}LocalState!`;
 
   const fullStateType = `
@@ -583,7 +610,7 @@ function generateNewApiSchema(
       auth: JSONObject!
       document: ${documentName}_PHDocumentScopeState!
       global: ${globalStateType}
-      local: ${localStateType}!
+      local: ${localStateType}
     }
   `;
 
@@ -675,7 +702,12 @@ function generateNewApiSchema(
     specification?.modules
       .flatMap((module) =>
         module.operations
-          .filter((op) => op.name && hasValidSchema(op.schema))
+          .filter(
+            (op) =>
+              op.name &&
+              hasValidSchema(op.schema) &&
+              !OPERATIONS_WITH_INVALID_INPUT_SCHEMAS.has(op.name!),
+          )
           .flatMap((op) => [
             // Sync mutation
             `${documentName}_${camelCase(op.name!)}(docId: PHID!, input: ${documentName}_${pascalCase(op.name!)}Input!): ${documentName}MutationResult!`,
@@ -688,7 +720,11 @@ function generateNewApiSchema(
   const moduleSchemas =
     specification?.modules
       .filter((module) =>
-        module.operations.some((op) => hasValidSchema(op.schema)),
+        module.operations.some(
+          (op) =>
+            hasValidSchema(op.schema) &&
+            !OPERATIONS_WITH_INVALID_INPUT_SCHEMAS.has(op.name!),
+        ),
       )
       .map(
         (module) =>
@@ -696,7 +732,11 @@ function generateNewApiSchema(
        Module: ${pascalCase(module.name)}
        """
        ${module.operations
-         .filter((op) => hasValidSchema(op.schema))
+         .filter(
+           (op) =>
+             hasValidSchema(op.schema) &&
+             !OPERATIONS_WITH_INVALID_INPUT_SCHEMAS.has(op.name!),
+         )
          .map((op) =>
            applyGraphQLTypePrefixes(
              op.schema ?? "",
