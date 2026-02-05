@@ -1,3 +1,29 @@
+## 6.0.0-dev.34 (2026-02-05)
+
+### 🚀 Features
+
+- added a mode in the test-client where we instead query documents instead of creating them ([ba2a14e04](https://github.com/powerhouse-inc/powerhouse/commit/ba2a14e04))
+- **codegen:** update processors codegen ([#2293](https://github.com/powerhouse-inc/powerhouse/pull/2293))
+
+### 🩹 Fixes
+
+- **ci:** allow release to continue when academy build fails ([477d9ef71](https://github.com/powerhouse-inc/powerhouse/commit/477d9ef71))
+- **document-model:** use Date comparison in updateHeaderRevision to handle mixed timestamp precision ([66f4cd356](https://github.com/powerhouse-inc/powerhouse/commit/66f4cd356))
+
+### 🔥 Performance
+
+- **document-model:** optimize getDocumentLastModified from O(n log n) to O(n) ([bb94ff310](https://github.com/powerhouse-inc/powerhouse/commit/bb94ff310))
+- **document-model:** pass timestamp directly to updateHeaderRevision ([86d72e831](https://github.com/powerhouse-inc/powerhouse/commit/86d72e831))
+- **document-model:** prevent lastModifiedAtUtcIso from regressing to an earlier timestamp ([f48f6fb39](https://github.com/powerhouse-inc/powerhouse/commit/f48f6fb39))
+- **document-model:** use linear scan in getNextRevision to avoid sorted-array assumption ([08a10de16](https://github.com/powerhouse-inc/powerhouse/commit/08a10de16))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Frank
+- Ryan Wolhuter @ryanwolhuter
+- Samuel Hawksby-Robinson @Samyoul
+
 ## 6.0.0-dev.33 (2026-02-05)
 
 ### 🚀 Features

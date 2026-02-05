@@ -1,3 +1,23 @@
+## 6.0.0-dev.34 (2026-02-05)
+
+### 🚀 Features
+
+- **codegen:** update processors codegen ([#2293](https://github.com/powerhouse-inc/powerhouse/pull/2293))
+
+### 🩹 Fixes
+
+- **ci:** allow release to continue when academy build fails ([477d9ef71](https://github.com/powerhouse-inc/powerhouse/commit/477d9ef71))
+
+### 🔥 Performance
+
+- **document-model:** optimize getDocumentLastModified from O(n log n) to O(n) ([bb94ff310](https://github.com/powerhouse-inc/powerhouse/commit/bb94ff310))
+
+### ❤️ Thank You
+
+- Frank
+- Ryan Wolhuter @ryanwolhuter
+- Samuel Hawksby-Robinson @Samyoul
+
 ## 6.0.0-dev.33 (2026-02-05)
 
 This was a version bump only for @powerhousedao/vetra to align it with other projects, there were no code changes.
