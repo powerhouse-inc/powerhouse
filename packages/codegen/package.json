@@ -77,7 +77,7 @@
     "read-pkg": "^9.0.1",
     "semver": "^7.7.3",
     "ts-morph": "^27.0.2",
-     "zocker": "^3.0.0"
+    "zocker": "^3.0.0"
   },
   "devDependencies": {
     "@powerhousedao/analytics-engine-core": "^0.5.0",

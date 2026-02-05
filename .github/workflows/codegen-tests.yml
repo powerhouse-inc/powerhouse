@@ -48,6 +48,12 @@ jobs:
       - name: Build typescript project
         run: pnpm build-tsc
 
+      - name: Run css build scripts
+        run: pnpm build-css
+
+      - name: Run vite build scripts
+        run: pnpm build-vite
+
       - name: Run tests
         if: ${{ steps.diff.outputs.files != '' }}
         run: pnpm test-codegen ${{ steps.diff.outputs.files }}
