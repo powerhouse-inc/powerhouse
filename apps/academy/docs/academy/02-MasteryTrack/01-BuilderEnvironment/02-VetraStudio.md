@@ -38,14 +38,22 @@ A **document model** is a structured data type that defines what information you
 
 - **Document model specification**: Defines the structure and operations of a document model using [GraphQL SDL](https://graphql.org/learn/schema/) (Schema Definition Language), ensuring consistent data management and processing.
 
+→ [Learn more about Document Models](/academy/02-MasteryTrack/02-DocumentModelCreation/01-WhatIsADocumentModel)
+
 ### 2. User Experiences
 - **Editor specification**: Outlines the interface and functionalities of a document model editor, allowing users to interact with and modify document data.
 - **Drive-app specification**: Specifies the UI and interactions for managing documents within a drive, providing tailored views and functionalities.
+
+→ [Learn more about Building Document Editors](/academy/02-MasteryTrack/03-BuildingUserExperiences/01-BuildingDocumentEditors)
+→ [Learn more about Building a Drive Explorer](/academy/02-MasteryTrack/03-BuildingUserExperiences/03-BuildingADriveExplorer)
 
 ### 3. Data Integrations
 - **Subgraph specification**: Details the connections and relationships within a subgraph (a subset of your data exposed via a GraphQL API), facilitating efficient data querying and manipulation.
 - **Codegen Processor Specification**: Describes the process for automatically generating code from document model specifications, ensuring alignment with intended architecture.
 - **RelationalDb Processor Specification**: Defines how relational databases are structured and queried, supporting efficient data management and retrieval.
+
+→ [Learn more about Using Subgraphs](/academy/02-MasteryTrack/04-WorkWithData/03-UsingSubgraphs)
+→ [Learn more about Relational DB Processor](/academy/02-MasteryTrack/04-WorkWithData/05-RelationalDbProcessor)
 
 <figure className="image-container">
   <img

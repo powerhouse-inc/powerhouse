@@ -220,6 +220,8 @@ You can create document models in two ways:
 - Add the required modules to your package
 - The document model creation chapter in the Mastery track provides in depth support [here](/academy/MasteryTrack/DocumentModelCreation/SpecifyTheStateSchema)
 
+→ [Learn more about Document Models](/academy/02-MasteryTrack/02-DocumentModelCreation/01-WhatIsADocumentModel)
+
 #### Using MCP (AI-Assisted)
 - Describe your package, it's functionality and your needs in natural language in great detail.
 - Claude will:
@@ -229,6 +231,9 @@ You can create document models in two ways:
   - Place the document in the Vetra drive
 
 - Claude will also add the necessary interface in the form of a [document editor](/academy/MasteryTrack/BuildingUserExperiences/BuildingDocumentEditors) and scaffold the [drive-app functionality](/academy/MasteryTrack/BuildingUserExperiences/BuildingADriveExplorer) when specified.
+
+→ [Learn more about Building Document Editors](/academy/02-MasteryTrack/03-BuildingUserExperiences/01-BuildingDocumentEditors)
+→ [Learn more about Building a Drive Explorer](/academy/02-MasteryTrack/03-BuildingUserExperiences/03-BuildingADriveExplorer)
 
 <details>
 <summary>Alternatively: Use Connect</summary>
@@ -278,6 +283,8 @@ This command creates a new directory under `document-models/YourModelName/` cont
   - Generate editor components
   - Implement necessary hooks
   - Create required UI elements
+
+→ [Learn more about Building Document Editors](/academy/02-MasteryTrack/03-BuildingUserExperiences/01-BuildingDocumentEditors)
 
 <details>
 <summary>Alternatively: Generate command</summary>
