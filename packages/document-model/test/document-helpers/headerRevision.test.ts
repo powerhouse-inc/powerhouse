@@ -233,6 +233,21 @@ describe("updateHeaderRevision", () => {
     expect(updated.header.lastModifiedAtUtcIso).toBe(futureTimestamp);
   });
 
+  it("compares timestamps correctly when precision differs", () => {
+    const doc = createTestDocument();
+    // Header has millisecond precision
+    const currentTimestamp = "2025-01-01T00:00:00.000Z";
+    doc.header.lastModifiedAtUtcIso = currentTimestamp;
+
+    // New timestamp lacks milliseconds — same instant, but lexicographically
+    // "Z" (90) > "." (46) would make string comparison treat it as later
+    const sameInstantNoMs = "2025-01-01T00:00:00Z";
+    const updated = updateHeaderRevision(doc, "global", sameInstantNoMs);
+
+    // Should keep the current timestamp since they represent the same instant
+    expect(updated.header.lastModifiedAtUtcIso).toBe(currentTimestamp);
+  });
+
   it("advances timestamp when new is later", () => {
     const doc = createTestDocument();
     doc.header.lastModifiedAtUtcIso = "2023-01-01T00:00:00.000Z";
