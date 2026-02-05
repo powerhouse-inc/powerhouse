@@ -36,9 +36,15 @@ export type IRelationalDb<Schema = unknown> = IBaseRelationalDb<Schema> & {
   ): IRelationalQueryBuilder<NamespaceSchema>;
 };
 
+export type ReactorContext = {
+  app?: "connect" | "switchboard";
+  environment?: "browser" | "node";
+};
+
 export interface IProcessorHostModule {
   analyticsStore: IAnalyticsStore;
   relationalDb: IRelationalDb;
+  context?: ReactorContext;
   config?: Map<string, unknown>;
 }
 

@@ -6,12 +6,15 @@ export const analyticsFactoryTemplate = (v: {
   documentTypes: string[];
 }) =>
   ts`
-import { type ProcessorRecord } from "document-drive";
-import { type IProcessorHostModule } from "document-drive";
+import type { 
+  ProcessorRecord, 
+  ReactorContext,
+  IProcessorHostModule
+} from "document-drive";
 import { type PHDocumentHeader } from "document-model";
 import { ${v.pascalCaseName}Processor } from "./index.js";
 
-export const ${v.pascalCaseName}ProcessorFactory = (module: IProcessorHostModule) => (driveHeader: PHDocumentHeader): ProcessorRecord[] => {
+export const ${v.pascalCaseName}ProcessorFactory = (module: IProcessorHostModule) => (driveHeader: PHDocumentHeader, context?: ReactorContext): ProcessorRecord[] => {
   return [
     {
       processor: new ${v.pascalCaseName}Processor(module.analyticsStore),

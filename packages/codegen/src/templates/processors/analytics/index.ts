@@ -6,6 +6,7 @@ export const analyticsIndexTemplate = (v: { pascalCaseName: string }) =>
 import type { AnalyticsSeriesInput, IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import { AnalyticsPath } from "@powerhousedao/analytics-engine-core";
 import type { InternalTransmitterUpdate, IProcessor } from "document-drive";
+import type { OperationWithContext } from "@powerhousedao/reactor";
 
 export class ${v.pascalCaseName}Processor implements IProcessor {
   private readonly NAMESPACE = "${v.pascalCaseName}";
@@ -14,6 +15,14 @@ export class ${v.pascalCaseName}Processor implements IProcessor {
 
   constructor(private readonly analyticsStore: IAnalyticsStore) {
     //
+  }
+
+  onOperations(operations: OperationWithContext[]): Promise<void> {
+    return Promise.resolve();
+  }
+
+  onDisconnect(): Promise<void> {
+    return Promise.resolve();
   }
 
   async onStrands(strands: InternalTransmitterUpdate[]): Promise<void> {
@@ -47,10 +56,6 @@ export class ${v.pascalCaseName}Processor implements IProcessor {
 
       this.inputs.length = 0;
     }
-  }
-
-  async onDisconnect() {
-    //
   }
 
   private async clearSource(source: AnalyticsPath) {

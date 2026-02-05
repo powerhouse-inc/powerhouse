@@ -1,3 +1,4 @@
+import type { ReactorContext } from "document-drive";
 import type { PHDocumentHeader } from "document-model";
 import type { OperationWithContext } from "../storage/interfaces.js";
 
@@ -44,6 +45,7 @@ export type ProcessorRecord = {
  */
 export type ProcessorFactory = (
   driveHeader: PHDocumentHeader,
+  context?: ReactorContext,
 ) => ProcessorRecord[] | Promise<ProcessorRecord[]>;
 
 /**

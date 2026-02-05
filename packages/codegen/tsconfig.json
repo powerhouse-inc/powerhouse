@@ -18,6 +18,7 @@
     { "path": "../reactor-browser" },
     { "path": "../design-system" },
     { "path": "../common" },
-    { "path": "../config" }
+    { "path": "../config" },
+    { "path": "../reactor" }
   ]
 }

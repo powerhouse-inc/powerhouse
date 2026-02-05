@@ -9,9 +9,18 @@ export const relationalDbIndexTemplate = (v: { pascalCaseName: string }) =>
 import { RelationalDbProcessor } from "document-drive";
 import type { InternalTransmitterUpdate } from "document-drive";
 import { up } from "./migrations.js";
-import type {  DB } from "./schema.js";
+import type { DB } from "./schema.js";
+import type { OperationWithContext } from "@powerhousedao/reactor";
 
 export class ${v.pascalCaseName}Processor extends RelationalDbProcessor<DB> {
+    onOperations(operations: OperationWithContext[]): Promise<void> {
+    return Promise.resolve();
+  }
+
+  onDisconnect(): Promise<void> {
+    return Promise.resolve();
+  }
+
   static override getNamespace(driveId: string): string {
     ${defaultNamespaceComment}
     return super.getNamespace(driveId);
@@ -45,8 +54,5 @@ export class ${v.pascalCaseName}Processor extends RelationalDbProcessor<DB> {
       }
     }
   }
-
-  async onDisconnect() {}
-
 }
 `.raw;
