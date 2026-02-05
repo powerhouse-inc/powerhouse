@@ -11,6 +11,7 @@ interface CliOptions {
   mutationInterval: string;
   verbose: boolean;
   singleDocument: boolean;
+  queryMode: boolean;
 }
 
 const program = new Command();
@@ -35,6 +36,11 @@ program
     "Create only one document, then apply operations to it",
     false,
   )
+  .option(
+    "--query-mode",
+    "Query existing documents instead of creating new ones",
+    false,
+  )
   .option("--verbose", "Enable verbose logging", false)
   .action(async (options: CliOptions) => {
     const config: LoadTestConfig = {
@@ -44,6 +50,7 @@ program
       mutationInterval: parseInt(options.mutationInterval, 10),
       verbose: options.verbose,
       singleDocument: options.singleDocument,
+      queryMode: options.queryMode,
     };
 
     // Validate config
