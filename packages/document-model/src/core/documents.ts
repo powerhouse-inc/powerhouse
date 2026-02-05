@@ -1158,6 +1158,10 @@ export function updateHeaderRevision(
   scope: string,
   lastModifiedTimestamp?: string,
 ): PHDocument {
+  const newTimestamp =
+    lastModifiedTimestamp ?? getDocumentLastModified(document);
+  const currentTimestamp = document.header.lastModifiedAtUtcIso;
+
   const header: PHDocumentHeader = {
     ...document.header,
     revision: {
@@ -1165,7 +1169,9 @@ export function updateHeaderRevision(
       [scope]: getNextRevision(document, scope),
     },
     lastModifiedAtUtcIso:
-      lastModifiedTimestamp ?? getDocumentLastModified(document),
+      !currentTimestamp || newTimestamp > currentTimestamp
+        ? newTimestamp
+        : currentTimestamp,
   };
 
   return {
