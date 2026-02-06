@@ -19,7 +19,6 @@ import type {
 import { GraphQLError } from "graphql";
 import {
   fromInputMaybe,
-  serializeOperationForGraphQL,
   toDocumentModelResultPage,
   toGqlJobInfo,
   toGqlPhDocument,
@@ -841,7 +840,7 @@ export async function pollSyncEnvelopes(
       id: args.channelId,
     },
     operations: syncOp.operations.map((op) => ({
-      operation: serializeOperationForGraphQL(op.operation),
+      operation: op.operation,
       context: op.context,
     })),
     cursor: {

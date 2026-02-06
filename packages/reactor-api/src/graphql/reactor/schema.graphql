@@ -147,7 +147,7 @@ type ReactorSignerApp {
 type ReactorSigner {
   user: ReactorSignerUser
   app: ReactorSignerApp
-  signatures: [String!]!
+  signatures: [[String!]!]!
 }
 
 type ActionContext {

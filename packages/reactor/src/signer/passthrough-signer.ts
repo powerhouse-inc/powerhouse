@@ -18,4 +18,8 @@ export class PassthroughSigner implements ISigner {
   signAction(): Promise<Signature> {
     return Promise.resolve(["", "", "", "", ""]);
   }
+
+  verifyAction(): Promise<void> {
+    return Promise.resolve();
+  }
 }

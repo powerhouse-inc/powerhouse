@@ -72,6 +72,13 @@ async function createTestSigner(): Promise<ISigner> {
     ): Promise<Signature> {
       throw new Error("signAction not implemented in test signer");
     },
+
+    async verifyAction(
+      _action: Action,
+      _abortSignal?: AbortSignal,
+    ): Promise<void> {
+      throw new Error("verifyAction not implemented in test signer");
+    },
   };
 }
 

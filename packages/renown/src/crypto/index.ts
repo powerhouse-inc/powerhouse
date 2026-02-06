@@ -15,5 +15,8 @@ export { ConnectCrypto, RenownCrypto } from "./renown-crypto.js";
 export { BrowserKeyStorage } from "./browser-key-storage.js";
 export { MemoryKeyStorage } from "./memory-key-storage.js";
 
+// Renown Signer
+export { RenownCryptoSigner } from "./signer.js";
+
 // Signer utilities
-export { createSignatureVerifier, RenownCryptoSigner } from "./signer.js";
+export { createSignatureVerifier, signAction, signActions } from "./utils.js";

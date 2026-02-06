@@ -229,13 +229,18 @@ export const signAction = async (
       ...action.context,
       signer: {
         user: {
-          address: signer.user?.address || "",
-          networkId: signer.user?.networkId || "",
-          chainId: signer.user?.chainId || 0,
+          address:
+            action.context?.signer?.user?.address || signer.user?.address || "",
+          networkId:
+            action.context?.signer?.user?.networkId ||
+            signer.user?.networkId ||
+            "",
+          chainId:
+            action.context?.signer?.user?.chainId || signer.user?.chainId || 0,
         },
         app: {
-          name: signer.app?.name || "",
-          key: signer.app?.key || "",
+          name: action.context?.signer?.app?.name || signer.app?.name || "",
+          key: action.context?.signer?.app?.key || signer.app?.key || "",
         },
         signatures: [signature],
       },

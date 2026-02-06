@@ -1,7 +1,6 @@
 import type {
   JobInfo as ClientJobInfo,
   DocumentChangeEvent,
-  IReactorClient,
   PagedResults,
 } from "@powerhousedao/reactor";
 import { camelCase } from "change-case";
@@ -20,7 +19,6 @@ import type {
   JobInfo as GqlJobInfo,
   PhDocument,
   PhDocumentResultPage,
-  ReactorOperation,
   ReactorOperationResultPage,
 } from "./gen/graphql.js";
 
@@ -115,7 +113,7 @@ export function toGqlJobInfo(job: ClientJobInfo): GqlJobInfo {
     createdAt: job.createdAtUtcIso,
     completedAt: job.completedAtUtcIso ?? null,
     error: job.error?.message ?? null,
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
     result: job.result ?? null,
   };
 }
@@ -273,34 +271,6 @@ export function validateActions(actions: readonly unknown[]): Action[] {
 }
 
 /**
- * Transforms an operation to serialize signatures from tuples to strings for GraphQL compatibility.
- */
-export function serializeOperationForGraphQL(
-  operation: Operation,
-): ReactorOperation {
-  const signer = operation.action.context?.signer;
-  if (!signer?.signatures) {
-    return operation as unknown as ReactorOperation;
-  }
-
-  return {
-    ...operation,
-    action: {
-      ...operation.action,
-      context: {
-        ...operation.action.context,
-        signer: {
-          ...signer,
-          signatures: signer.signatures.map((sig) =>
-            Array.isArray(sig) ? sig.join(", ") : sig,
-          ),
-        },
-      },
-    },
-  } as unknown as ReactorOperation;
-}
-
-/**
  * Converts a PagedResults of Operation to GraphQL ReactorOperationResultPage format
  */
 export function toOperationResultPage(
@@ -310,7 +280,7 @@ export function toOperationResultPage(
     cursor: result.nextCursor ?? null,
     hasNextPage: !!result.nextCursor,
     hasPreviousPage: !!result.options.cursor && result.options.cursor !== "0",
-    items: result.results.map(serializeOperationForGraphQL),
+    items: result.results,
     totalCount: result.results.length,
   };
 }

@@ -15,14 +15,15 @@ const config: CodegenConfig = {
       config: {
         contextType: "../../types.js#Context",
         scalars: {
-          JSONObject: "NonNullable<unknown>",
+          JSONObject: "unknown",
           DateTime: "string | Date",
         },
         scalarSchemas: {
-          JSONObject: "z.custom<NonNullable<unknown>>((v) => v != null)",
+          JSONObject: "z.custom<unknown>((v) => v != null)",
           DateTime: "z.union([z.string(), z.date()])",
         },
         useIndexSignature: true,
+        useTypeImports: true,
         strictScalars: true,
         skipTypename: true,
         enumsAsTypes: false,
@@ -30,8 +31,9 @@ const config: CodegenConfig = {
         immutableTypes: true,
         maybeValue: "T | null | undefined",
         arrayInputCoercion: false,
-        schema: "zod",
+        schema: "zodv4",
         gqlImport: "graphql-tag#gql",
+        withObjectType: true,
       },
     },
   },

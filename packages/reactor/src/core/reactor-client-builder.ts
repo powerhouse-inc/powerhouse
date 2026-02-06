@@ -88,6 +88,11 @@ export class ReactorClientBuilder {
     return this;
   }
 
+  public withSignatureVerifier(verifier: SignatureVerificationHandler): this {
+    this.signatureVerifier = verifier;
+    return this;
+  }
+
   public withSubscriptionManager(
     subscriptionManager: IReactorSubscriptionManager,
   ): this {

@@ -536,7 +536,7 @@ export type ActionVerificationHandler = (
  * Handler for verifying operation signatures.
  *
  * @param operation - The operation to verify
- * @param publicKey - The public key to verify against (from signer.app.key)
+ * @param publicKey - The public key to verify against
  * @returns Promise that resolves to true if signature is valid, false otherwise
  */
 export type SignatureVerificationHandler = (
@@ -706,6 +706,7 @@ export interface ISigner {
    *
    * @param data - The data to verify.
    * @param signature - The signature to verify.
+   * @throws {Error} If the signature is invalid.
    */
   verify: (data: Uint8Array, signature: Uint8Array) => Promise<void>;
 
@@ -717,4 +718,12 @@ export interface ISigner {
    * @returns The signature tuple.
    */
   signAction: (action: Action, abortSignal?: AbortSignal) => Promise<Signature>;
+
+  /**
+   * Verifies an action signature.
+   *
+   * @param action - The action to verify.
+   * @throws {Error} If the signature is invalid.
+   */
+  verifyAction: (action: Action) => Promise<void>;
 }

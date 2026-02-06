@@ -171,8 +171,9 @@ export type PHBaseState = {
  * This will be refactored in a future release.
  */
 //  [
-//     signerAddress,
-//     hash (docID, scope, operationID, operationName, operationInput),
+//     timestamp,
+//     signer DID,
+//     hash (scope, operation type, operationInput),
 //     prevStateHash,
 //     signature bytes
 //  ]

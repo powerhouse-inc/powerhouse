@@ -56,6 +56,10 @@ export async function createVerificationSigner(
         throw new Error("invalid signature");
       }
     },
+
+    async verifyAction(action: Action): Promise<void> {
+      throw new Error("verification-only signer cannot verify actions");
+    },
   };
 }
 

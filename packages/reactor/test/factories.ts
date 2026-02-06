@@ -918,6 +918,7 @@ export function createMockSigner(overrides: Partial<ISigner> = {}): ISigner {
         "mock-prev-state-hash",
         "mock-signature-hex",
       ]),
+    verifyAction: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   };
 }
