@@ -663,6 +663,19 @@ async function main() {
       }
     }
     console.log(`  Memory: ${formatMemory(phase2Memory)}`);
+
+    // Verify operations by checking document revisions
+    console.log(`\nVerification:`);
+    for (const id of documentIds) {
+      const doc = await reactor.get(id);
+      const revisions = Object.entries(doc.header.revision)
+        .map(([scope, rev]) => `${scope}:${rev}`)
+        .join(", ");
+      const opCount = Object.values(doc.operations)
+        .flat()
+        .filter(Boolean).length;
+      console.log(`  ${id}: revision={${revisions}}, operations=${opCount}`);
+    }
   }
 
   // Cleanup
