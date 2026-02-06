@@ -852,6 +852,9 @@ export async function pollSyncEnvelopes(
       cursorOrdinal: maxOrdinal,
       lastSyncedAtUtcMs: Date.now().toString(),
     },
+    key: syncOp.jobId || undefined,
+    dependsOn:
+      syncOp.jobDependencies.length > 0 ? syncOp.jobDependencies : undefined,
   }));
 
   return sortEnvelopesByFirstOperationTimestamp(envelopes);

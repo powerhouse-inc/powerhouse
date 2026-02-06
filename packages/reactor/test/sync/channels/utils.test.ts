@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { envelopeToSyncOperation } from "../../../src/sync/channels/utils.js";
+import {
+  envelopeToSyncOperation,
+  envelopesToSyncOperations,
+} from "../../../src/sync/channels/utils.js";
 import type { SyncEnvelope } from "../../../src/sync/types.js";
 import { SyncOperationStatus } from "../../../src/sync/types.js";
 
@@ -387,5 +390,173 @@ describe("envelopeToSyncOperation", () => {
     expect(
       syncOp.operations[0].operation.action.context?.signer,
     ).toBeUndefined();
+  });
+
+  it("should pass through key and dependsOn to SyncOperation", () => {
+    const envelope: SyncEnvelope = {
+      type: "operations",
+      channelMeta: { id: "channel-1" },
+      key: "batch-key-1",
+      dependsOn: ["batch-key-0"],
+      operations: [
+        {
+          operation: {
+            index: 0,
+            skip: 0,
+            id: "op-1",
+            timestampUtcMs: "2024-01-01T00:00:00.000Z",
+            hash: "hash-1",
+            action: {
+              type: "TEST_OP",
+              id: "action-1",
+              scope: "public",
+              timestampUtcMs: "2024-01-01T00:00:00.000Z",
+              input: {},
+            },
+          },
+          context: {
+            documentId: "doc-1",
+            documentType: "test/document",
+            scope: "public",
+            branch: "main",
+            ordinal: 1,
+          },
+        },
+      ],
+    };
+
+    const syncOp = envelopeToSyncOperation(envelope, "remote-1");
+
+    expect(syncOp.jobId).toBe("batch-key-1");
+    expect(syncOp.jobDependencies).toEqual(["batch-key-0"]);
+  });
+
+  it("should default key to empty string and dependsOn to empty array when absent", () => {
+    const envelope: SyncEnvelope = {
+      type: "operations",
+      channelMeta: { id: "channel-1" },
+      operations: [
+        {
+          operation: {
+            index: 0,
+            skip: 0,
+            id: "op-1",
+            timestampUtcMs: "2024-01-01T00:00:00.000Z",
+            hash: "hash-1",
+            action: {
+              type: "TEST_OP",
+              id: "action-1",
+              scope: "public",
+              timestampUtcMs: "2024-01-01T00:00:00.000Z",
+              input: {},
+            },
+          },
+          context: {
+            documentId: "doc-1",
+            documentType: "test/document",
+            scope: "public",
+            branch: "main",
+            ordinal: 1,
+          },
+        },
+      ],
+    };
+
+    const syncOp = envelopeToSyncOperation(envelope, "remote-1");
+
+    expect(syncOp.jobId).toBe("");
+    expect(syncOp.jobDependencies).toEqual([]);
+  });
+});
+
+describe("envelopesToSyncOperations", () => {
+  it("should pass through key and dependsOn to SyncOperations", () => {
+    const envelope: SyncEnvelope = {
+      type: "operations",
+      channelMeta: { id: "channel-1" },
+      key: "batch-key-1",
+      dependsOn: ["batch-key-0"],
+      operations: [
+        {
+          operation: {
+            index: 0,
+            skip: 0,
+            id: "op-1",
+            timestampUtcMs: "2024-01-01T00:00:00.000Z",
+            hash: "hash-1",
+            action: {
+              type: "TEST_OP",
+              id: "action-1",
+              scope: "public",
+              timestampUtcMs: "2024-01-01T00:00:00.000Z",
+              input: {},
+            },
+          },
+          context: {
+            documentId: "doc-1",
+            documentType: "test/document",
+            scope: "public",
+            branch: "main",
+            ordinal: 1,
+          },
+        },
+      ],
+    };
+
+    const syncOps = envelopesToSyncOperations(envelope, "remote-1");
+
+    expect(syncOps).toHaveLength(1);
+    expect(syncOps[0].jobId).toBe("batch-key-1");
+    expect(syncOps[0].jobDependencies).toEqual(["batch-key-0"]);
+  });
+
+  it("should default key to empty string and dependsOn to empty array when absent", () => {
+    const envelope: SyncEnvelope = {
+      type: "operations",
+      channelMeta: { id: "channel-1" },
+      operations: [
+        {
+          operation: {
+            index: 0,
+            skip: 0,
+            id: "op-1",
+            timestampUtcMs: "2024-01-01T00:00:00.000Z",
+            hash: "hash-1",
+            action: {
+              type: "TEST_OP",
+              id: "action-1",
+              scope: "public",
+              timestampUtcMs: "2024-01-01T00:00:00.000Z",
+              input: {},
+            },
+          },
+          context: {
+            documentId: "doc-1",
+            documentType: "test/document",
+            scope: "public",
+            branch: "main",
+            ordinal: 1,
+          },
+        },
+      ],
+    };
+
+    const syncOps = envelopesToSyncOperations(envelope, "remote-1");
+
+    expect(syncOps).toHaveLength(1);
+    expect(syncOps[0].jobId).toBe("");
+    expect(syncOps[0].jobDependencies).toEqual([]);
+  });
+
+  it("should return empty array for envelope with no operations", () => {
+    const envelope: SyncEnvelope = {
+      type: "operations",
+      channelMeta: { id: "channel-1" },
+      operations: [],
+    };
+
+    const syncOps = envelopesToSyncOperations(envelope, "remote-1");
+
+    expect(syncOps).toEqual([]);
   });
 });

@@ -148,17 +148,36 @@ export class GqlChannel implements IChannel {
     let maxCursorOrdinal = cursorOrdinal;
 
     const sortedEnvelopes = sortEnvelopesByFirstOperationTimestamp(envelopes);
-    for (const envelope of sortedEnvelopes) {
-      if (envelope.type.toLowerCase() === "operations" && envelope.operations) {
-        const syncOps = envelopesToSyncOperations(envelope, this.remoteName);
-        for (const syncOp of syncOps) {
-          syncOp.transported();
-          this.inbox.add(syncOp);
+    const hasKeyedEnvelopes = sortedEnvelopes.some(
+      (e) => e.key || (e.dependsOn && e.dependsOn.length > 0),
+    );
+
+    if (hasKeyedEnvelopes) {
+      this.inbox.pause();
+    }
+    try {
+      for (const envelope of sortedEnvelopes) {
+        if (
+          envelope.type.toLowerCase() === "operations" &&
+          envelope.operations
+        ) {
+          const syncOps = envelopesToSyncOperations(envelope, this.remoteName);
+          for (const syncOp of syncOps) {
+            syncOp.transported();
+            this.inbox.add(syncOp);
+          }
+        }
+
+        if (
+          envelope.cursor &&
+          envelope.cursor.cursorOrdinal > maxCursorOrdinal
+        ) {
+          maxCursorOrdinal = envelope.cursor.cursorOrdinal;
         }
       }
-
-      if (envelope.cursor && envelope.cursor.cursorOrdinal > maxCursorOrdinal) {
-        maxCursorOrdinal = envelope.cursor.cursorOrdinal;
+    } finally {
+      if (hasKeyedEnvelopes) {
+        this.inbox.resume();
       }
     }
 
@@ -300,6 +319,8 @@ export class GqlChannel implements IChannel {
             cursorOrdinal
             lastSyncedAtUtcMs
           }
+          key
+          dependsOn
         }
       }
     `;

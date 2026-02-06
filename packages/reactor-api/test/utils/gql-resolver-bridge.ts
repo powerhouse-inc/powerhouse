@@ -95,6 +95,8 @@ export function createResolverBridge(
             cursorOrdinal: number;
             lastSyncedAtUtcMs?: string | null;
           } | null;
+          key?: string;
+          dependsOn?: string[];
         }>;
       };
 

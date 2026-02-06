@@ -92,8 +92,8 @@ export function envelopeToSyncOperation(
 
   return new SyncOperation(
     syncOpId,
-    "",
-    [],
+    envelope.key ?? "",
+    envelope.dependsOn ?? [],
     remoteName,
     documentId,
     scopes,
@@ -131,8 +131,8 @@ export function envelopesToSyncOperations(
     const syncOpId = `syncop-${envelope.channelMeta.id}-${Date.now()}-${syncOpCounter++}`;
     return new SyncOperation(
       syncOpId,
-      "",
-      [],
+      envelope.key ?? "",
+      envelope.dependsOn ?? [],
       remoteName,
       batch.documentId,
       [batch.scope],
