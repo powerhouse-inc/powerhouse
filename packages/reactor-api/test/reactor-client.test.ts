@@ -1,6 +1,6 @@
 import { print } from "graphql";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createReactorClient } from "../src/graphql/reactor/factory.js";
+import { createReactorGraphQLClient } from "../src/graphql/index.js";
 import { GetDocumentDocument } from "../src/graphql/reactor/gen/graphql.js";
 import type { FetchLike } from "../src/graphql/reactor/requester.js";
 import { createFetchRequester } from "../src/graphql/reactor/requester.js";
@@ -214,7 +214,7 @@ describe("ReactorSDK", () => {
     });
   });
 
-  describe("createReactorClient integration", () => {
+  describe("createReactorGraphQLClient integration", () => {
     let mockFetch: FetchLike;
 
     beforeEach(() => {
@@ -247,7 +247,7 @@ describe("ReactorSDK", () => {
       };
       (mockFetch as any).mockResolvedValue(mockResponse);
 
-      const sdk = createReactorClient(
+      const sdk = createReactorGraphQLClient(
         "https://api.test.com/graphql",
         mockFetch,
         { Authorization: "Bearer token123" },
@@ -281,7 +281,7 @@ describe("ReactorSDK", () => {
       };
       (mockFetch as any).mockResolvedValue(mockResponse);
 
-      const sdk = createReactorClient(
+      const sdk = createReactorGraphQLClient(
         "https://api.test.com/graphql",
         mockFetch,
       );
