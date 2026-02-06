@@ -24,6 +24,7 @@ export class SyncOperationAggregateError extends Error {
 export class SyncOperation {
   readonly id: string;
   readonly jobId: string;
+  jobDependencies: string[];
   readonly remoteName: string;
   readonly documentId: string;
   readonly scopes: string[];
@@ -37,6 +38,7 @@ export class SyncOperation {
   constructor(
     id: string,
     jobId: string,
+    jobDependencies: string[],
     remoteName: string,
     documentId: string,
     scopes: string[],
@@ -45,6 +47,7 @@ export class SyncOperation {
   ) {
     this.id = id;
     this.jobId = jobId;
+    this.jobDependencies = jobDependencies;
     this.remoteName = remoteName;
     this.documentId = documentId;
     this.scopes = scopes;

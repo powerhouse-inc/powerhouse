@@ -699,7 +699,7 @@ The Reactor API exposes a GraphQL interface for all operations. When `DOCUMENT_P
 All GraphQL operations below require:
 
 1. A valid bearer token from `ph access-token`
-2. The token included in the `Authorization` header followed by 'Bearer &lt;token&gt;'
+2. The token included in the `Authorization` header followed by 'Bearer `<token>`'
 3. The Reactor API running with both `AUTH_ENABLED=true` and `DOCUMENT_PERMISSIONS_ENABLED=true` as variables
    :::
 
@@ -1175,7 +1175,11 @@ ph access-token --expiry 7d
 **Mutation:**
 
 ```graphql
-mutation TodoList_addTodoItem($docId: PHID, $driveId: String, $input: TodoList_AddTodoItemInput) {
+mutation TodoList_addTodoItem(
+  $docId: PHID
+  $driveId: String
+  $input: TodoList_AddTodoItemInput
+) {
   TodoList_addTodoItem(docId: $docId, driveId: $driveId, input: $input)
 }
 ```
@@ -1219,22 +1223,28 @@ query GetDocument($docId: PHID!, $driveId: PHID) {
 ```
 
 **Variables:**
+
+```json
 {
   "docId": "document-uuid-abcd-1234-efgh",
-  "driveId": "drive-uuid-1234-5678-abcd",
-}  
+  "driveId": "drive-uuid-1234-5678-abcd"
+}
+```
 
 **Expected Result:**
+
+```json
 {
   "data": {
     "TodoList": {
       "getDocument": {
         "id": "23fe9b72-6540-4eee-b55e-87e414429dd2",
-        "name": "Q1 Budget Planning",
+        "name": "Q1 Budget Planning"
       }
     }
   }
 }
+```
 
 ### Summary
 
@@ -1388,7 +1398,7 @@ mutation AddFrankToLeads {
 
 ### Step 3: Set Document-Level Permissions
 
-Create a todo document for the next steps. 
+Create a todo document for the next steps.
 
 **Grant different access levels to each group for the todo list document:**
 

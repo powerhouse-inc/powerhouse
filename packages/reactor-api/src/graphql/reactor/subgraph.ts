@@ -218,11 +218,10 @@ export class ReactorSubgraph extends BaseSubgraph {
       document: async (_parent, args, ctx: Context) => {
         this.logger.debug("document(@args)", args);
         try {
-          // Resolve the document ID first
           const doc = await resolvers.document(this.reactorClient, args);
-          if (doc) {
-            await this.assertCanRead(doc.document.id, ctx);
-          }
+
+          await this.assertCanRead(doc.document.id, ctx);
+
           return doc;
         } catch (error) {
           this.logger.error("Error in document: @Error", error);
@@ -238,9 +237,9 @@ export class ReactorSubgraph extends BaseSubgraph {
             identifier: args.parentIdentifier,
             view: args.view,
           });
-          if (parent) {
-            await this.assertCanRead(parent.document.id, ctx);
-          }
+
+          await this.assertCanRead(parent.document.id, ctx);
+
           return await resolvers.documentChildren(this.reactorClient, args);
         } catch (error) {
           this.logger.error("Error in documentChildren: @Error", error);
@@ -256,9 +255,9 @@ export class ReactorSubgraph extends BaseSubgraph {
             identifier: args.childIdentifier,
             view: args.view,
           });
-          if (child) {
-            await this.assertCanRead(child.document.id, ctx);
-          }
+
+          await this.assertCanRead(child.document.id, ctx);
+
           return await resolvers.documentParents(this.reactorClient, args);
         } catch (error) {
           this.logger.error("Error in documentParents: @Error", error);
@@ -321,9 +320,9 @@ export class ReactorSubgraph extends BaseSubgraph {
               scopes: args.filter.scopes,
             },
           });
-          if (doc) {
-            await this.assertCanRead(doc.document.id, ctx);
-          }
+
+          await this.assertCanRead(doc.document.id, ctx);
+
           return await resolvers.documentOperations(this.reactorClient, args);
         } catch (error) {
           this.logger.error("Error in documentOperations: @Error", error);
@@ -356,9 +355,8 @@ export class ReactorSubgraph extends BaseSubgraph {
             const parent = await resolvers.document(this.reactorClient, {
               identifier: args.parentIdentifier,
             });
-            if (parent) {
-              await this.assertCanWrite(parent.document.id, ctx);
-            }
+
+            await this.assertCanWrite(parent.document.id, ctx);
           } else if (!this.hasGlobalWriteAccess(ctx)) {
             throw new GraphQLError(
               "Forbidden: insufficient permissions to create documents",
@@ -379,9 +377,8 @@ export class ReactorSubgraph extends BaseSubgraph {
             const parent = await resolvers.document(this.reactorClient, {
               identifier: args.parentIdentifier,
             });
-            if (parent) {
-              await this.assertCanWrite(parent.document.id, ctx);
-            }
+
+            await this.assertCanWrite(parent.document.id, ctx);
           } else if (!this.hasGlobalWriteAccess(ctx)) {
             throw new GraphQLError(
               "Forbidden: insufficient permissions to create documents",
@@ -405,15 +402,16 @@ export class ReactorSubgraph extends BaseSubgraph {
             identifier: args.documentIdentifier,
             view: args.view,
           });
-          if (doc) {
-            await this.assertCanWrite(doc.document.id, ctx);
-            // Check operation-level permissions for each action
-            await this.assertCanExecuteOperations(
-              doc.document.id,
-              args.actions,
-              ctx,
-            );
-          }
+
+          await this.assertCanWrite(doc.document.id, ctx);
+
+          // Check operation-level permissions for each action
+          await this.assertCanExecuteOperations(
+            doc.document.id,
+            args.actions,
+            ctx,
+          );
+
           return await resolvers.mutateDocument(this.reactorClient, args);
         } catch (error) {
           this.logger.error("Error in mutateDocument(@args): @Error", error);
@@ -429,15 +427,16 @@ export class ReactorSubgraph extends BaseSubgraph {
             identifier: args.documentIdentifier,
             view: args.view,
           });
-          if (doc) {
-            await this.assertCanWrite(doc.document.id, ctx);
-            // Check operation-level permissions for each action
-            await this.assertCanExecuteOperations(
-              doc.document.id,
-              args.actions,
-              ctx,
-            );
-          }
+
+          await this.assertCanWrite(doc.document.id, ctx);
+
+          // Check operation-level permissions for each action
+          await this.assertCanExecuteOperations(
+            doc.document.id,
+            args.actions,
+            ctx,
+          );
+
           return await resolvers.mutateDocumentAsync(this.reactorClient, args);
         } catch (error) {
           this.logger.error(
@@ -455,9 +454,9 @@ export class ReactorSubgraph extends BaseSubgraph {
           const doc = await resolvers.document(this.reactorClient, {
             identifier: args.documentIdentifier,
           });
-          if (doc) {
-            await this.assertCanWrite(doc.document.id, ctx);
-          }
+
+          await this.assertCanWrite(doc.document.id, ctx);
+
           return await resolvers.renameDocument(this.reactorClient, args);
         } catch (error) {
           this.logger.error("Error in renameDocument(@args): @Error", error);
@@ -472,9 +471,9 @@ export class ReactorSubgraph extends BaseSubgraph {
           const parent = await resolvers.document(this.reactorClient, {
             identifier: args.parentIdentifier,
           });
-          if (parent) {
-            await this.assertCanWrite(parent.document.id, ctx);
-          }
+
+          await this.assertCanWrite(parent.document.id, ctx);
+
           return await resolvers.addChildren(this.reactorClient, args);
         } catch (error) {
           this.logger.error("Error in addChildren(@args): @Error", error);
@@ -489,9 +488,9 @@ export class ReactorSubgraph extends BaseSubgraph {
           const parent = await resolvers.document(this.reactorClient, {
             identifier: args.parentIdentifier,
           });
-          if (parent) {
-            await this.assertCanWrite(parent.document.id, ctx);
-          }
+
+          await this.assertCanWrite(parent.document.id, ctx);
+
           return await resolvers.removeChildren(this.reactorClient, args);
         } catch (error) {
           this.logger.error("Error in removeChildren(@args): @Error", error);
@@ -506,16 +505,15 @@ export class ReactorSubgraph extends BaseSubgraph {
           const sourceParent = await resolvers.document(this.reactorClient, {
             identifier: args.sourceParentIdentifier,
           });
-          if (sourceParent) {
-            await this.assertCanWrite(sourceParent.document.id, ctx);
-          }
+
+          await this.assertCanWrite(sourceParent.document.id, ctx);
 
           const targetParent = await resolvers.document(this.reactorClient, {
             identifier: args.targetParentIdentifier,
           });
-          if (targetParent) {
-            await this.assertCanWrite(targetParent.document.id, ctx);
-          }
+
+          await this.assertCanWrite(targetParent.document.id, ctx);
+
           return await resolvers.moveChildren(this.reactorClient, args);
         } catch (error) {
           this.logger.error(
@@ -534,9 +532,9 @@ export class ReactorSubgraph extends BaseSubgraph {
           const doc = await resolvers.document(this.reactorClient, {
             identifier: args.identifier,
           });
-          if (doc) {
-            await this.assertCanWrite(doc.document.id, ctx);
-          }
+
+          await this.assertCanWrite(doc.document.id, ctx);
+
           return await resolvers.deleteDocument(this.reactorClient, args);
         } catch (error) {
           this.logger.error("Error in deleteDocument(@args): @Error", error);
@@ -552,9 +550,8 @@ export class ReactorSubgraph extends BaseSubgraph {
             const doc = await resolvers.document(this.reactorClient, {
               identifier,
             });
-            if (doc) {
-              await this.assertCanWrite(doc.document.id, ctx);
-            }
+
+            await this.assertCanWrite(doc.document.id, ctx);
           }
           return await resolvers.deleteDocuments(this.reactorClient, args);
         } catch (error) {
@@ -616,6 +613,10 @@ export class ReactorSubgraph extends BaseSubgraph {
                     lastSyncedAtUtcMs: envelope.cursor.lastSyncedAtUtcMs,
                   }
                 : null,
+              key: envelope.key ?? undefined,
+              dependsOn: envelope.dependsOn
+                ? [...envelope.dependsOn]
+                : undefined,
             })),
           };
 

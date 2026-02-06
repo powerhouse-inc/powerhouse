@@ -392,4 +392,76 @@ describe("Two-Reactor Sync with GqlChannel", () => {
       expect(docFromA).toEqual(docFromB);
     }
   }, 30000);
+
+  it("should include key/dependsOn in poll response for batch operations", async () => {
+    const driveDoc = driveDocumentModelModule.utils.createDocument();
+
+    await setupSyncForDrive(syncManagerA, driveDoc.header.id, resolverBridge);
+
+    const readyPromise = waitForOperationsReady(eventBusA, driveDoc.header.id);
+    const createJob = await reactorB.create(driveDoc);
+
+    await waitForJobCompletion(reactorB, createJob.id);
+    await readyPromise;
+
+    const batchResult = await reactorB.executeBatch({
+      jobs: [
+        {
+          key: "rename",
+          documentId: driveDoc.header.id,
+          scope: "global",
+          branch: "main",
+          actions: [
+            driveDocumentModelModule.actions.setDriveName({
+              name: "Renamed Drive",
+            }),
+          ],
+          dependsOn: [],
+        },
+        {
+          key: "add-folder",
+          documentId: driveDoc.header.id,
+          scope: "global",
+          branch: "main",
+          actions: [
+            driveDocumentModelModule.actions.addFolder({
+              id: "folder-1",
+              name: "Folder 1",
+              parentFolder: null,
+            }),
+          ],
+          dependsOn: ["rename"],
+        },
+      ],
+    });
+
+    for (const jobInfo of Object.values(batchResult.jobs)) {
+      await waitForJobCompletion(reactorB, jobInfo.id);
+    }
+
+    const startTime = Date.now();
+    const timeout = 10000;
+    let statesSynced = false;
+    while (Date.now() - startTime < timeout) {
+      const docA = await reactorA.get(driveDoc.header.id, { branch: "main" });
+      const docB = await reactorB.get(driveDoc.header.id, { branch: "main" });
+
+      if (
+        docA &&
+        docB &&
+        JSON.stringify(docA.state) === JSON.stringify(docB.state)
+      ) {
+        statesSynced = true;
+        break;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+
+    expect(statesSynced).toBe(true);
+
+    const docA = await reactorA.get(driveDoc.header.id, { branch: "main" });
+    const docB = await reactorB.get(driveDoc.header.id, { branch: "main" });
+
+    expect(docA!.state).toEqual(docB!.state);
+  }, 15000);
 });

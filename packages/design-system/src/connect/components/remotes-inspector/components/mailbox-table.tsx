@@ -3,26 +3,44 @@ import {
   type SyncOperation,
   SyncOperationStatus,
 } from "@powerhousedao/reactor";
+import { useState } from "react";
 import { twMerge } from "tailwind-merge";
+import { ObjectInspectorModal } from "../../object-inspector-modal/index.js";
 import { type ColumnDef, type SortOptions, truncateId } from "../utils.js";
 import { SortIcon } from "./sort-icon.js";
 
 export type MailboxType = "inbox" | "outbox" | "deadLetter";
 
+const VIEW_COLUMN: ColumnDef = { key: "view", label: "", width: "60px" };
+
 const COLUMNS: ColumnDef[] = [
-  { key: "id", label: "ID", width: "120px" },
+  VIEW_COLUMN,
   { key: "documentId", label: "Document ID", width: "150px" },
   { key: "branch", label: "Branch", width: "100px" },
+  { key: "scopes", label: "Scopes", width: "100px" },
   { key: "status", label: "Status", width: "150px" },
   { key: "opsCount", label: "Ops Count", width: "80px" },
 ];
 
 const DEAD_LETTER_COLUMNS: ColumnDef[] = [
-  { key: "id", label: "ID", width: "120px" },
+  VIEW_COLUMN,
   { key: "documentId", label: "Document ID", width: "150px" },
   { key: "branch", label: "Branch", width: "100px" },
+  { key: "scopes", label: "Scopes", width: "100px" },
   { key: "error", label: "Error", width: "200px" },
 ];
+
+function toSerializableObject(obj: unknown): unknown {
+  return JSON.parse(
+    JSON.stringify(obj, (_key, value: unknown) => {
+      if (typeof value === "function") return "[Function]";
+      if (typeof value === "symbol") return "[Symbol]";
+      if (value instanceof Error)
+        return { name: value.name, message: value.message };
+      return value;
+    }),
+  );
+}
 
 function getStatusLabel(status: SyncOperationStatus): string {
   switch (status) {
@@ -71,14 +89,14 @@ function sortOperations(
     let comparison = 0;
 
     switch (sort.column) {
-      case "id":
-        comparison = a.id.localeCompare(b.id);
-        break;
       case "documentId":
         comparison = a.documentId.localeCompare(b.documentId);
         break;
       case "branch":
         comparison = a.branch.localeCompare(b.branch);
+        break;
+      case "scopes":
+        comparison = a.scopes.join(",").localeCompare(b.scopes.join(","));
         break;
       case "status":
         comparison = a.status - b.status;
@@ -118,6 +136,8 @@ export function MailboxTable({
   collapsed,
   onToggleCollapse,
 }: MailboxTableProps) {
+  const [selectedOperation, setSelectedOperation] =
+    useState<SyncOperation | null>(null);
   const columns = mailboxType === "deadLetter" ? DEAD_LETTER_COLUMNS : COLUMNS;
   const sortedOps = sortOperations(operations, sort);
 
@@ -125,23 +145,44 @@ export function MailboxTable({
     onSort(mailboxType, columnKey);
   };
 
+  const handleCopyAll = async () => {
+    const serializable = toSerializableObject(operations);
+    const json = JSON.stringify(serializable, null, 2);
+    await navigator.clipboard.writeText(json);
+  };
+
   return (
     <div className="flex flex-col gap-2">
-      <button
-        className="flex items-center gap-2 text-left text-sm font-medium text-gray-700 hover:text-gray-900"
-        onClick={onToggleCollapse}
-        type="button"
-      >
-        <Icon
-          className={twMerge("transition-transform", collapsed && "-rotate-90")}
-          name="ChevronDown"
-          size={14}
-        />
-        {title} ({operations.length} item{operations.length !== 1 ? "s" : ""})
-      </button>
+      <div className="flex items-center justify-between">
+        <button
+          className="flex items-center gap-2 text-left text-sm font-medium text-gray-700 hover:text-gray-900"
+          onClick={onToggleCollapse}
+          type="button"
+        >
+          <Icon
+            className={twMerge(
+              "transition-transform",
+              collapsed && "-rotate-90",
+            )}
+            name="ChevronDown"
+            size={14}
+          />
+          {title} ({operations.length} item{operations.length !== 1 ? "s" : ""})
+        </button>
+        {operations.length > 0 && (
+          <button
+            className="flex items-center gap-1 rounded bg-gray-100 px-2 py-1 text-xs text-gray-700 hover:bg-gray-200"
+            onClick={() => void handleCopyAll()}
+            type="button"
+          >
+            <Icon name="Copy" size={12} />
+            Copy All
+          </button>
+        )}
+      </div>
 
       {!collapsed && (
-        <div className="max-h-64 overflow-auto rounded-lg border border-gray-300">
+        <div className="overflow-hidden rounded-lg border border-gray-300">
           <table className="w-full border-collapse">
             <thead className="sticky top-0 bg-gray-100">
               <tr>
@@ -184,10 +225,14 @@ export function MailboxTable({
                     key={op.id}
                     className="odd:bg-white even:bg-gray-50 hover:bg-blue-50"
                   >
-                    <td className="px-3 py-2 text-xs text-gray-900">
-                      <span className="block truncate" title={op.id}>
-                        {truncateId(op.id)}
-                      </span>
+                    <td className="px-3 py-2 text-xs">
+                      <button
+                        className="flex items-center gap-1 rounded bg-blue-50 px-2 py-1 text-xs text-blue-700 hover:bg-blue-100"
+                        onClick={() => setSelectedOperation(op)}
+                        type="button"
+                      >
+                        View
+                      </button>
                     </td>
                     <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-900">
                       <span className="block truncate" title={op.documentId}>
@@ -199,13 +244,21 @@ export function MailboxTable({
                         {op.branch}
                       </span>
                     </td>
+                    <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-900">
+                      <span
+                        className="block truncate"
+                        title={op.scopes.join(", ")}
+                      >
+                        {op.scopes.join(", ")}
+                      </span>
+                    </td>
                     {mailboxType === "deadLetter" ? (
                       <td className="border-l border-gray-300 px-3 py-2 text-xs">
                         <span
                           className="block truncate text-red-600"
                           title={getErrorMessage(op.error)}
                         >
-                          ❌ {getErrorMessage(op.error) || "Unknown error"}
+                          {getErrorMessage(op.error) || "Unknown error"}
                         </span>
                       </td>
                     ) : (
@@ -228,6 +281,13 @@ export function MailboxTable({
           </table>
         </div>
       )}
+
+      <ObjectInspectorModal
+        object={selectedOperation}
+        onOpenChange={(open) => !open && setSelectedOperation(null)}
+        open={selectedOperation !== null}
+        title="Sync Operation"
+      />
     </div>
   );
 }

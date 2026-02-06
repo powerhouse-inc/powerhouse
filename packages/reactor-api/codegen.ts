@@ -30,7 +30,7 @@ const config: CodegenConfig = {
         immutableTypes: true,
         maybeValue: "T | null | undefined",
         arrayInputCoercion: false,
-        schema: "zod",
+        schema: "zodv4",
         gqlImport: "graphql-tag#gql",
       },
     },

@@ -287,6 +287,8 @@ type SyncEnvelope {
   channelMeta: ChannelMeta!
   operations: [OperationWithContext!]
   cursor: RemoteCursor
+  key: String
+  dependsOn: [String!]
 }
 
 input SyncEnvelopeInput {
@@ -294,6 +296,8 @@ input SyncEnvelopeInput {
   channelMeta: ChannelMetaInput!
   operations: [OperationWithContextInput!]
   cursor: RemoteCursorInput
+  key: String
+  dependsOn: [String!]
 }
 
 input RemoteFilterInput {

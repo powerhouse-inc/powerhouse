@@ -111,7 +111,7 @@ jobs:
 
   determine-downstream-params:
     name: Determine Downstream Parameters
-    needs: [build-and-publish, publish-docker]
+    needs: build-and-publish
     if: ${{ inputs.dry-run != true }}
     runs-on: ubuntu-latest
     outputs:

@@ -9,6 +9,7 @@ export interface LoadTestConfig {
   mutationInterval: number;
   verbose: boolean;
   singleDocument: boolean;
+  queryMode: boolean;
 }
 
 // Internal tracking for test documents

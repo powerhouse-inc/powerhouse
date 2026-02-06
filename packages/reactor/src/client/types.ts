@@ -5,6 +5,7 @@ import type {
   PHDocument,
 } from "document-model";
 
+import type { BatchLoadRequest, BatchLoadResult } from "../core/types.js";
 import type {
   JobInfo,
   PagedResults,
@@ -338,6 +339,19 @@ export interface IReactorClient {
     propagate?: PropagationMode,
     signal?: AbortSignal,
   ): Promise<void>;
+
+  /**
+   * Loads multiple batches of pre-existing operations across documents with dependency management.
+   * Waits for all jobs to complete.
+   *
+   * @param request - Batch load request containing jobs with dependencies
+   * @param signal - Optional abort signal to cancel the request
+   * @returns Map of job keys to completed job information
+   */
+  loadBatch(
+    request: BatchLoadRequest,
+    signal?: AbortSignal,
+  ): Promise<BatchLoadResult>;
 
   /**
    * Retrieves the status of a job

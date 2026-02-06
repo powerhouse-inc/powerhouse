@@ -1,3 +1,37 @@
+## 6.0.0-dev.35 (2026-02-06)
+
+### 🩹 Fixes
+
+- **document-model:** use string comparison for timestamps in updateHeaderRevision ([3a70e205e](https://github.com/powerhouse-inc/powerhouse/commit/3a70e205e))
+
+### ❤️ Thank You
+
+- Samuel Hawksby-Robinson @Samyoul
+
+## 6.0.0-dev.34 (2026-02-05)
+
+### 🚀 Features
+
+- **codegen:** update processors codegen ([#2293](https://github.com/powerhouse-inc/powerhouse/pull/2293))
+
+### 🩹 Fixes
+
+- **ci:** allow release to continue when academy build fails ([477d9ef71](https://github.com/powerhouse-inc/powerhouse/commit/477d9ef71))
+- **document-model:** use Date comparison in updateHeaderRevision to handle mixed timestamp precision ([66f4cd356](https://github.com/powerhouse-inc/powerhouse/commit/66f4cd356))
+
+### 🔥 Performance
+
+- **document-model:** use linear scan in getNextRevision to avoid sorted-array assumption ([08a10de16](https://github.com/powerhouse-inc/powerhouse/commit/08a10de16))
+- **document-model:** prevent lastModifiedAtUtcIso from regressing to an earlier timestamp ([f48f6fb39](https://github.com/powerhouse-inc/powerhouse/commit/f48f6fb39))
+- **document-model:** pass timestamp directly to updateHeaderRevision ([86d72e831](https://github.com/powerhouse-inc/powerhouse/commit/86d72e831))
+- **document-model:** optimize getDocumentLastModified from O(n log n) to O(n) ([bb94ff310](https://github.com/powerhouse-inc/powerhouse/commit/bb94ff310))
+
+### ❤️ Thank You
+
+- Frank
+- Ryan Wolhuter @ryanwolhuter
+- Samuel Hawksby-Robinson @Samyoul
+
 ## 6.0.0-dev.33 (2026-02-05)
 
 This was a version bump only for document-model to align it with other projects, there were no code changes.

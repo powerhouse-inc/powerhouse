@@ -19,7 +19,10 @@ export { ReactorBuilder } from "./core/reactor-builder.js";
 export { ReactorClientBuilder } from "./core/reactor-client-builder.js";
 export { Reactor } from "./core/reactor.js";
 export {
+  type BatchLoadRequest,
+  type BatchLoadResult,
   type IReactor,
+  type LoadJobPlan,
   type ReactorClientModule,
   type ReactorFeatures,
   type ReactorModule,

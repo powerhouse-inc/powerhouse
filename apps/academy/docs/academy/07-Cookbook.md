@@ -72,6 +72,107 @@ pnpm install -g ph-cmd@<version>
 - [Powerhouse Builder Tools](/academy/MasteryTrack/BuilderEnvironment/BuilderTools)
 </details>
 
+<details id="managing-ph-cmd-versions">
+<summary>Managing ph-cmd Versions and Package Information</summary>
+
+### How to Switch Between ph-cmd Versions
+
+---
+
+### Problem statement
+
+You need to switch to a different version of `ph-cmd`, check available versions, or understand how to manage package versions effectively.
+
+### Prerequisites
+
+- Powerhouse CLI (`ph-cmd`) installed
+- Terminal or command prompt access
+- Package manager (pnpm, npm, or yarn) installed
+
+### Solution
+
+### Using Version Tags and Specific Versions
+
+To change to a different version of `ph-cmd`, reinstall it globally with your package manager:
+
+```bash
+# Install latest version with a specific tag
+npm install -g ph-cmd@staging
+pnpm install -g ph-cmd@dev
+
+# Install a specific version number
+npm install -g ph-cmd@1.2.3-staging.10
+pnpm install -g ph-cmd@6.0.0-dev.33
+```
+
+**Important:** Always use the same package manager you used for the original global install to avoid conflicting installations.
+
+### Checking Your Current Installation
+
+Use the `which` command to see where your global install is located:
+
+```bash
+which ph
+# Example output: /Users/username/Library/pnpm/ph
+```
+
+This shows which package manager was used (in this case, pnpm).
+
+### Viewing Available Versions
+
+Use `npm view` to see all available versions and tags for any package:
+
+```bash
+npm view ph-cmd
+```
+
+This displays:
+
+- Current version information
+- Available dist-tags (latest, dev, staging, test)
+- Specific version numbers for each tag
+- Package maintainers and publish information
+
+**Example dist-tags output:**
+
+```
+dist-tags:
+latest: 5.3.0
+dev: 6.0.0-dev.33
+staging: 5.3.0-staging.24
+test: 2.5.0-test.0
+```
+
+### Expected outcome
+
+- Ability to switch between different versions of `ph-cmd`
+- Understanding of available version tags and specific versions
+- Knowledge of how to check current installation and available versions
+
+### Best Practices
+
+- Use specific version numbers (e.g., `ph-cmd@6.0.0-dev.33`) instead of tags when you need to ensure exact version consistency
+- Check `npm view ph-cmd` before switching to see the latest available versions
+- Remember that without specifying a version, `@latest` is installed by default
+
+### Common issues and solutions
+
+- Issue: Conflicting installations or commands not working
+  - Solution: Ensure you use the same package manager for all global installs. Use `which ph` to verify your installation location.
+- Issue: Outdated version after installation
+  - Solution: Use `npm view ph-cmd` to check the latest available versions and install the specific version you need.
+
+### Related recipes
+
+- [Installing 'ph-cmd'](#installing-ph-cmd)
+- [Uninstalling 'ph-cmd'](#uninstalling-ph-cmd)
+- [Using Different Branches in Powerhouse](#using-different-branches-in-powerhouse)
+
+### Further reading
+
+- [Powerhouse Builder Tools](/academy/MasteryTrack/BuilderEnvironment/BuilderTools)
+</details>
+
 <details id="uninstalling-ph-cmd">
 <summary>Uninstalling 'ph-cmd'</summary>
 

@@ -33,6 +33,7 @@ export * from "./modal/add-drive-modal/add-drive-modal.js";
 export * from "./modal/index.js";
 export * from "./modal/settings-modal-v2/danger-zone.js";
 export * from "./node-input/node-input.js";
+export * from "./object-inspector-modal/index.js";
 export * from "./queue-inspector/index.js";
 export * from "./remotes-inspector/index.js";
 export * from "./revision-history/revision-history.js";

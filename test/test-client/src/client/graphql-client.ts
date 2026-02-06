@@ -2,6 +2,7 @@ import type { Action } from "document-model";
 import type { DriveInfo, PhDocument } from "../types.js";
 import {
   CREATE_EMPTY_DOCUMENT_MUTATION,
+  FIND_DOCUMENT_MODELS_QUERY,
   FIND_DRIVES_QUERY,
   MUTATE_DOCUMENT_MUTATION,
 } from "./queries.js";
@@ -51,6 +52,17 @@ export class GraphQLClient {
     }>(FIND_DRIVES_QUERY);
 
     return data.findDocuments.items;
+  }
+
+  async findDocumentModels(): Promise<{
+    items: PhDocument[];
+    totalCount: number;
+  }> {
+    const data = await this.request<{
+      findDocuments: { items: PhDocument[]; totalCount: number };
+    }>(FIND_DOCUMENT_MODELS_QUERY);
+
+    return data.findDocuments;
   }
 
   async createEmptyDocument(

@@ -852,6 +852,9 @@ export async function pollSyncEnvelopes(
       cursorOrdinal: maxOrdinal,
       lastSyncedAtUtcMs: Date.now().toString(),
     },
+    key: syncOp.jobId || undefined,
+    dependsOn:
+      syncOp.jobDependencies.length > 0 ? syncOp.jobDependencies : undefined,
   }));
 
   return sortEnvelopesByFirstOperationTimestamp(envelopes);
@@ -874,6 +877,8 @@ type SyncEnvelopeArg = {
     cursorOrdinal: number;
     lastSyncedAtUtcMs?: string | null;
   } | null;
+  key?: string;
+  dependsOn?: string[];
 };
 
 export function pushSyncEnvelopes(
@@ -886,8 +891,11 @@ export function pushSyncEnvelopes(
     args.envelopes,
   );
 
+  type RemoteRef = ReturnType<ISyncManager["getById"]>;
+  const remoteSyncOps = new Map<RemoteRef, SyncOperation[]>();
+
   for (const envelope of sortedEnvelopes) {
-    let remote;
+    let remote: RemoteRef;
     try {
       remote = syncManager.getById(envelope.channelMeta.id);
     } catch (error) {
@@ -916,11 +924,13 @@ export function pushSyncEnvelopes(
 
     for (const batch of batches) {
       const syncOpId = `syncop-${envelope.channelMeta.id}-${Date.now()}-${crypto.randomUUID()}`;
-      const jobId = `job-${envelope.channelMeta.id}-${Date.now()}-${crypto.randomUUID()}`;
+      const jobId = envelope.key ?? "";
+      const jobDependencies = envelope.dependsOn ?? [];
 
       const syncOp = new SyncOperation(
         syncOpId,
         jobId,
+        jobDependencies,
         remote.name,
         batch.documentId,
         [batch.scope],
@@ -928,14 +938,33 @@ export function pushSyncEnvelopes(
         batch.operations,
       );
 
-      try {
-        remote.channel.inbox.add(syncOp);
-      } catch (error) {
-        throw new GraphQLError(
-          `Failed to push sync envelope: ${error instanceof Error ? error.message : "Unknown error"}`,
-        );
+      if (!remoteSyncOps.has(remote)) {
+        remoteSyncOps.set(remote, []);
       }
+      remoteSyncOps.get(remote)!.push(syncOp);
     }
+  }
+
+  for (const [remote, syncOps] of remoteSyncOps) {
+    const validKeys = new Set(syncOps.map((op) => op.jobId).filter(Boolean));
+    for (const syncOp of syncOps) {
+      syncOp.jobDependencies = syncOp.jobDependencies.filter((dep) =>
+        validKeys.has(dep),
+      );
+    }
+
+    remote.channel.inbox.pause();
+    try {
+      for (const syncOp of syncOps) {
+        remote.channel.inbox.add(syncOp);
+      }
+    } catch (error) {
+      remote.channel.inbox.resume();
+      throw new GraphQLError(
+        `Failed to push sync envelope: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
+    }
+    remote.channel.inbox.resume();
   }
 
   return Promise.resolve(true);

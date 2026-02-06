@@ -206,7 +206,11 @@ export function updateDocument<TDocument extends PHDocument>(
     ) as TDocument;
   }
 
-  newDocument = updateHeaderRevision(newDocument, action.scope) as TDocument;
+  newDocument = updateHeaderRevision(
+    newDocument,
+    action.scope,
+    action.timestampUtcMs,
+  ) as TDocument;
   return newDocument;
 }
 

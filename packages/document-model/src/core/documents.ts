@@ -344,6 +344,7 @@ export function replayDocument<TState extends PHBaseState = PHBaseState>(
         result = updateHeaderRevision(
           result,
           lastOperation.action.scope,
+          lastOperation.timestampUtcMs,
         ) as PHDocument<TState>;
       }
     }
@@ -1108,16 +1109,25 @@ export function diffOperations<TOp extends OperationIndex>(
   );
 }
 
-// it's operations, falling back to the initial state
+// Returns the timestamp of the latest operation by index (and skip as tiebreaker),
+// falling back to the document header's lastModifiedAtUtcIso
 export function getDocumentLastModified(document: PHDocument) {
-  const sortedOperations = sortOperations(
-    Object.values(document.operations).flatMap((ops) => ops || []),
-  );
+  let latest: Operation | undefined;
 
-  return (
-    sortedOperations.at(-1)?.timestampUtcMs ||
-    document.header.lastModifiedAtUtcIso
-  );
+  for (const ops of Object.values(document.operations)) {
+    if (!ops) continue;
+    for (const op of ops) {
+      if (
+        !latest ||
+        op.index > latest.index ||
+        (op.index === latest.index && op.skip > latest.skip)
+      ) {
+        latest = op;
+      }
+    }
+  }
+
+  return latest?.timestampUtcMs || document.header.lastModifiedAtUtcIso;
 }
 
 /**
@@ -1129,30 +1139,43 @@ export function getDocumentLastModified(document: PHDocument) {
  */
 function getNextRevision(document: PHDocument, scope: string) {
   const scopeOperations = document.operations[scope];
-  const latestOperationIndex = scopeOperations?.at(-1)?.index ?? -1;
-
-  return (latestOperationIndex ?? -1) + 1;
+  let maxIndex = -1;
+  if (scopeOperations) {
+    for (const op of scopeOperations) {
+      if (op.index > maxIndex) maxIndex = op.index;
+    }
+  }
+  return maxIndex + 1;
 }
 
 /**
  * Updates the document header with the latest revision number and
  * date of last modification.
  *
- * @param state The current state of the document.
- * @param operation The action being applied to the document.
+ * @param document The current state of the document.
+ * @param scope The scope of the operation.
+ * @param lastModifiedTimestamp Optional timestamp to use directly, avoiding a scan of all operations.
  * @returns The updated document state.
  */
 export function updateHeaderRevision(
   document: PHDocument,
   scope: string,
+  lastModifiedTimestamp?: string,
 ): PHDocument {
+  const newTimestamp =
+    lastModifiedTimestamp ?? getDocumentLastModified(document);
+  const currentTimestamp = document.header.lastModifiedAtUtcIso;
+
   const header: PHDocumentHeader = {
     ...document.header,
     revision: {
       ...document.header.revision,
       [scope]: getNextRevision(document, scope),
     },
-    lastModifiedAtUtcIso: getDocumentLastModified(document),
+    lastModifiedAtUtcIso:
+      !currentTimestamp || newTimestamp > currentTimestamp
+        ? newTimestamp
+        : currentTimestamp,
   };
 
   return {

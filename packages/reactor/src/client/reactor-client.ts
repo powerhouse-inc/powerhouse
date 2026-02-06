@@ -14,9 +14,14 @@ import {
   createDocumentAction,
   upgradeDocumentAction,
 } from "#actions/index.js";
-import { signActions } from "#core/utils.js";
+import { getSharedActionScope, signActions } from "#core/utils.js";
 import type { ILogger } from "#logging/types.js";
-import type { IReactor } from "../core/types.js";
+import type {
+  BatchLoadRequest,
+  BatchLoadResult,
+  ExecutionJobPlan,
+  IReactor,
+} from "../core/types.js";
 import { type IJobAwaiter } from "../shared/awaiter.js";
 import {
   JobStatus,
@@ -308,26 +313,87 @@ export class ReactorClient implements IReactorClient {
       document.header.id,
       parentIdentifier,
     );
-    const jobInfo = await this.reactor.create(document, this.signer, signal);
-
-    const completedJob = await this.waitForJob(jobInfo, signal);
-
-    if (completedJob.status === JobStatus.FAILED) {
-      throw new Error(completedJob.error?.message);
-    }
 
     const documentId = document.header.id;
 
-    if (parentIdentifier) {
-      await this.addChildren(parentIdentifier, [documentId], undefined, signal);
-    }
-
-    return await this.reactor.get<TDocument>(
+    const createInput: CreateDocumentActionInput = {
+      model: document.header.documentType,
+      version: 0,
       documentId,
-      undefined,
-      completedJob.consistencyToken,
+      signing: {
+        signature: documentId,
+        publicKey: document.header.sig.publicKey,
+        nonce: document.header.sig.nonce,
+        createdAtUtcIso: document.header.createdAtUtcIso,
+        documentType: document.header.documentType,
+      },
+      slug: document.header.slug,
+      name: document.header.name,
+      branch: document.header.branch,
+      meta: document.header.meta,
+      protocolVersions: document.header.protocolVersions ?? {
+        "base-reducer": 2,
+      },
+    };
+
+    const createActions: Action[] = await signActions(
+      [
+        createDocumentAction(createInput),
+        upgradeDocumentAction({
+          documentId,
+          model: document.header.documentType,
+          fromVersion: 0,
+          toVersion: document.state.document.version,
+          initialState: document.state,
+        }),
+      ],
+      this.signer,
       signal,
     );
+
+    const jobs: ExecutionJobPlan[] = [
+      {
+        key: "create",
+        documentId,
+        scope: getSharedActionScope(createActions),
+        branch: "main",
+        actions: createActions,
+        dependsOn: [],
+      },
+    ];
+
+    if (parentIdentifier) {
+      const parentActions: Action[] = await signActions(
+        [addRelationshipAction(parentIdentifier, documentId, "child")],
+        this.signer,
+        signal,
+      );
+
+      jobs.push({
+        key: "parent",
+        documentId: parentIdentifier,
+        scope: getSharedActionScope(parentActions),
+        branch: "main",
+        actions: parentActions,
+        dependsOn: ["create"],
+      });
+    }
+
+    const batchResult = await this.reactor.executeBatch({ jobs }, signal);
+
+    const completedJobs = await Promise.all(
+      Object.values(batchResult.jobs).map((job) =>
+        this.waitForJob(job, signal),
+      ),
+    );
+
+    for (const job of completedJobs) {
+      if (job.status === JobStatus.FAILED) {
+        throw new Error(job.error?.message);
+      }
+    }
+
+    return await this.reactor.get<TDocument>(documentId);
   }
 
   /**
@@ -453,35 +519,40 @@ export class ReactorClient implements IReactorClient {
       signal,
     );
 
-    const documentJob = await this.reactor.execute(
-      documentId,
-      "main",
-      documentActions,
+    const batchResult = await this.reactor.executeBatch(
+      {
+        jobs: [
+          {
+            key: "document",
+            documentId,
+            scope: getSharedActionScope(documentActions),
+            branch: "main",
+            actions: documentActions,
+            dependsOn: [],
+          },
+          {
+            key: "drive",
+            documentId: driveId,
+            scope: getSharedActionScope(driveActions),
+            branch: "main",
+            actions: driveActions,
+            dependsOn: ["document"],
+          },
+        ],
+      },
       signal,
     );
-    const completedDocumentJob = await this.waitForJob(documentJob, signal);
-    if (completedDocumentJob.status === JobStatus.FAILED) {
-      throw new Error(completedDocumentJob.error?.message);
-    }
 
-    const driveJob = await this.reactor.execute(
-      driveId,
-      "main",
-      driveActions,
-      signal,
+    const completedJobs = await Promise.all(
+      Object.values(batchResult.jobs).map((job) =>
+        this.waitForJob(job, signal),
+      ),
     );
-    const completedDriveJob = await this.waitForJob(driveJob, signal);
-    if (completedDriveJob.status === JobStatus.FAILED) {
-      this.logger.error(
-        "Document was created but the drive operation failed for (@driveId, @documentId) with @error",
-        driveId,
-        documentId,
-        completedDriveJob.error?.message,
-      );
 
-      // TODO: rollback?
-
-      throw new Error(completedDriveJob.error?.message);
+    for (const job of completedJobs) {
+      if (job.status === JobStatus.FAILED) {
+        throw new Error(job.error?.message);
+      }
     }
 
     // since we waited for the job to complete we don't need the consistency token
@@ -718,6 +789,29 @@ export class ReactorClient implements IReactorClient {
       source: sourceResult,
       target: targetResult,
     };
+  }
+
+  async loadBatch(
+    request: BatchLoadRequest,
+    signal?: AbortSignal,
+  ): Promise<BatchLoadResult> {
+    this.logger.verbose("loadBatch(@count jobs)", request.jobs.length);
+    const result = await this.reactor.loadBatch(request, signal);
+
+    const completedJobs = await Promise.all(
+      Object.entries(result.jobs).map(async ([key, jobInfo]) => {
+        const completed = await this.waitForJob(jobInfo, signal);
+        return [key, completed] as const;
+      }),
+    );
+
+    for (const [, completedJob] of completedJobs) {
+      if (completedJob.status === JobStatus.FAILED) {
+        throw new Error(completedJob.error?.message);
+      }
+    }
+
+    return { jobs: Object.fromEntries(completedJobs) };
   }
 
   /**

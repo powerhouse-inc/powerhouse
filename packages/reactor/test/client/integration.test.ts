@@ -7,6 +7,9 @@ import { ReactorBuilder } from "../../src/core/reactor-builder.js";
 import { ReactorClientBuilder } from "../../src/core/reactor-client-builder.js";
 import type { IReactor } from "../../src/core/types.js";
 import { EventBus } from "../../src/events/event-bus.js";
+import type { IEventBus } from "../../src/events/interfaces.js";
+import type { JobWriteReadyEvent } from "../../src/events/types.js";
+import { ReactorEventTypes } from "../../src/events/types.js";
 import { ConsistencyTracker } from "../../src/shared/consistency-tracker.js";
 import { JobStatus, PropagationMode } from "../../src/shared/types.js";
 import type { IDocumentIndexer } from "../../src/storage/interfaces.js";
@@ -23,13 +26,14 @@ describe("ReactorClient Integration Tests", () => {
   let reactor: IReactor;
   let documentIndexer: IDocumentIndexer;
   let db: Kysely<Database>;
+  let eventBus: IEventBus;
 
   beforeEach(async () => {
     const setup = await createTestOperationStore();
     db = setup.db as unknown as Kysely<Database>;
     const operationStore = setup.store;
 
-    const eventBus = new EventBus();
+    eventBus = new EventBus();
 
     const documentIndexerConsistencyTracker = new ConsistencyTracker();
     documentIndexer = new KyselyDocumentIndexer(
@@ -290,6 +294,55 @@ describe("ReactorClient Integration Tests", () => {
         const children = await client.getChildren("create-parent");
         expect(children.results.length).toBe(1);
         expect(children.results[0].header.id).toBe("create-child");
+      });
+
+      it("should batch document creation with parent relationship via executeBatch", async () => {
+        const parent = createDocModelDocument({ id: "batch-parent" });
+        await client.create(parent);
+
+        let completedBatchId = "";
+        let batchJobIds: string[] = [];
+        const seenJobIds = new Set<string>();
+
+        const batchCompletedPromise = new Promise<void>((resolve) => {
+          const unsubscribe = eventBus.subscribe<JobWriteReadyEvent>(
+            ReactorEventTypes.JOB_WRITE_READY,
+            (_type, event) => {
+              const meta = event.jobMeta as
+                | { batchId?: string; batchJobIds?: string[] }
+                | undefined;
+              if (!meta?.batchId || !meta?.batchJobIds) {
+                return;
+              }
+
+              seenJobIds.add(event.jobId);
+
+              const allSeen = meta.batchJobIds.every((id) =>
+                seenJobIds.has(id),
+              );
+              if (allSeen) {
+                completedBatchId = meta.batchId;
+                batchJobIds = meta.batchJobIds;
+                unsubscribe();
+                resolve();
+              }
+            },
+          );
+        });
+
+        const child = createDocModelDocument({ id: "batch-child" });
+        const result = await client.create(child, "batch-parent");
+        await batchCompletedPromise;
+
+        expect(result.header.id).toBe("batch-child");
+        expect(completedBatchId).toMatch(
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+        );
+        expect(batchJobIds.length).toBe(2);
+
+        const children = await client.getChildren("batch-parent");
+        expect(children.results.length).toBe(1);
+        expect(children.results[0].header.id).toBe("batch-child");
       });
 
       it("should wait for job completion", async () => {
@@ -856,6 +909,59 @@ describe("ReactorClient Integration Tests", () => {
       const addedFile = files.find((n: any) => n.id === createdDoc.header.id);
       expect(addedFile).toBeDefined();
       expect(addedFile.name).toBe("My New Document");
+    });
+
+    it("should emit JOB_WRITE_READY events with batch metadata that allows detecting batch completion", async () => {
+      const drive = driveDocumentModelModule.utils.createDocument();
+      await client.create(drive);
+
+      let completedBatchId = "";
+      let batchJobIds: string[] = [];
+      const seenJobIds = new Set<string>();
+
+      const batchCompletedPromise = new Promise<void>((resolve) => {
+        const unsubscribe = eventBus.subscribe<JobWriteReadyEvent>(
+          ReactorEventTypes.JOB_WRITE_READY,
+          (_type, event) => {
+            const meta = event.jobMeta as
+              | { batchId?: string; batchJobIds?: string[] }
+              | undefined;
+            if (!meta?.batchId || !meta?.batchJobIds) {
+              return;
+            }
+
+            seenJobIds.add(event.jobId);
+
+            const allSeen = meta.batchJobIds.every((id) => seenJobIds.has(id));
+            if (allSeen) {
+              completedBatchId = meta.batchId;
+              batchJobIds = meta.batchJobIds;
+              unsubscribe();
+              resolve();
+            }
+          },
+        );
+      });
+
+      const doc = documentModelDocumentModelModule.utils.createDocument();
+      doc.header.name = "Batch Test Document";
+      await client.createDocumentInDrive(drive.header.id, doc);
+      await batchCompletedPromise;
+
+      expect(completedBatchId).toMatch(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+      );
+      expect(batchJobIds.length).toBe(2);
+
+      const createdDoc = await client.get(doc.header.id);
+      expect(createdDoc).toBeDefined();
+      expect(createdDoc.header.name).toBe("Batch Test Document");
+
+      const driveResult = await client.get(drive.header.id);
+      const driveState = driveResult.state as any;
+      const files = driveState.global.nodes || [];
+      const addedFile = files.find((n: any) => n.id === doc.header.id);
+      expect(addedFile).toBeDefined();
     });
   });
 });

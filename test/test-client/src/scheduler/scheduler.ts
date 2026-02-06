@@ -86,15 +86,27 @@ export class TestScheduler {
     this.startTime = Date.now();
     this.metrics.setStartTime(this.startTime);
 
-    // Create first document immediately
-    await this.createDocument();
+    // In query mode, query for existing documents; otherwise create new ones
+    if (this.config.queryMode) {
+      // Query for existing documents immediately
+      await this.queryDocuments();
 
-    // Start document creation timer (unless single-document mode)
-    if (!this.config.singleDocument) {
+      // Start document query timer
       this.documentTimer = setInterval(
-        () => this.createDocument(),
+        () => this.queryDocuments(),
         this.config.documentInterval,
       );
+    } else {
+      // Create first document immediately
+      await this.createDocument();
+
+      // Start document creation timer (unless single-document mode)
+      if (!this.config.singleDocument) {
+        this.documentTimer = setInterval(
+          () => this.createDocument(),
+          this.config.documentInterval,
+        );
+      }
     }
 
     // Start mutation timer
@@ -186,6 +198,47 @@ export class TestScheduler {
     }
 
     this.metrics.recordDocumentCreation(result);
+  }
+
+  private async queryDocuments(): Promise<void> {
+    if (!this.isRunning) return;
+
+    try {
+      const result = await this.client.findDocumentModels();
+      let newDocCount = 0;
+
+      for (const doc of result.items) {
+        // Skip documents we already have
+        if (this.documents.has(doc.id)) {
+          continue;
+        }
+
+        // Convert to TestDocument and add to our tracking map
+        const testDoc = createTestDocument(
+          doc.id,
+          doc.documentType,
+          "powerhouse",
+        );
+        this.documents.set(doc.id, testDoc);
+        newDocCount++;
+
+        this.reporter.printVerbose(
+          `Discovered document: ${doc.id} (${doc.name || "unnamed"})`,
+          this.config.verbose,
+        );
+      }
+
+      if (newDocCount > 0) {
+        this.reporter.printVerbose(
+          `Query found ${newDocCount} new document(s), total: ${this.documents.size}`,
+          this.config.verbose,
+        );
+      }
+    } catch (error) {
+      this.reporter.printError(
+        `Document query failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
   }
 
   private async sendMutations(): Promise<void> {

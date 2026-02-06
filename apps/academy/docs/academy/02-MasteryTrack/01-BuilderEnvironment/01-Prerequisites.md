@@ -76,12 +76,13 @@ Node.js 24 is a tool that lets us run our application. Let's install it step by 
    ```powershell
    npm install -g pnpm
    ```
-   
+
    - Note: Node.js comes with npm by default, so npm is already available after installing Node.js
 
 4. **Verify Installation:**
    - Open PowerShell (no need for admin mode)
    - Type these commands one at a time and press Enter after each:
+
    ```powershell
    node --version
    pnpm --version
@@ -120,6 +121,7 @@ Node.js 24 is a tool that lets us run our application. Let's install it step by 
 
 3. **Verify Installation:**
    - In Terminal, type these commands one at a time and press Enter after each:
+
    ```bash
    node --version
    pnpm --version
@@ -151,6 +153,7 @@ Node.js 24 is a tool that lets us run our application. Let's install it step by 
 
 4. **Verify Installation:**
    - Type these commands one at a time and press Enter after each:
+
    ```bash
    node --version
    pnpm --version
@@ -303,6 +306,62 @@ When installing or using the Powerhouse CLI commands you can use the dev & stagi
 | **ph use prod**                    | Switch all dependencies to production versions        |
 
 Please be aware that these versions can contain bugs and experimental features that aren't fully tested.
+
+</details>
+
+<details>
+<summary>Managing ph-cmd Versions and Package Information</summary>
+
+### Switching Between Versions
+
+To change to a different version of `ph-cmd`, reinstall it globally with your package manager:
+
+```bash
+# Install latest version with a specific tag
+npm install -g ph-cmd@staging
+pnpm install -g ph-cmd@dev
+
+# Install a specific version number
+npm install -g ph-cmd@1.2.3-staging.10
+pnpm install -g ph-cmd@6.0.0-dev.33
+```
+
+**Important:** Always use the same package manager you used for the original global install to avoid conflicting installations.
+
+### Checking Your Installation
+
+Use the `which` command to see where your global install is located:
+
+```bash
+which ph
+# Example output: /Users/username/Library/pnpm/ph
+```
+
+This shows which package manager was used (in this case, pnpm).
+
+### Viewing Available Versions
+
+Use `npm view` to see all available versions and tags:
+
+```bash
+npm view ph-cmd
+```
+
+**Example dist-tags output:**
+
+```
+dist-tags:
+latest: 5.3.0
+dev: 6.0.0-dev.33
+staging: 5.3.0-staging.24
+test: 2.5.0-test.0
+```
+
+### Best Practices
+
+- Use specific version numbers instead of tags when you need exact version consistency
+- Check `npm view ph-cmd` before switching to see the latest available versions
+- Remember that without specifying a version, `@latest` is installed by default
 
 </details>
 
