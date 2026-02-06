@@ -1,12 +1,55 @@
 ---
 toc_max_heading_level: 2
-
-
 ---
 
 # Relational Database
 
 This page covers the relational database tools available in Powerhouse applications, providing type-safe database operations with real-time updates through PGlite integration.
+
+<details>
+<summary>Introduction for New Developers</summary>
+
+### What is the Relational Database API?
+
+This API helps you build applications that need to store, query, and analyze data from Powerhouse documents using traditional database tools. If you're familiar with SQL databases like PostgreSQL or MySQL, this will feel familiar while adding powerful real-time capabilities.
+
+### When Should You Use This API?
+
+**Perfect for:**
+
+- Building dashboards that show live data
+- Creating reports and analytics
+- Integrating with existing business tools
+- Applications needing complex data queries
+- Systems requiring audit trails of document changes
+
+**Not needed for:**
+
+- Simple document viewing or editing
+- Basic CRUD operations on individual documents
+- Applications with minimal data analysis needs
+
+### Learning Path
+
+**New to relational database processors?** Start with our step-by-step tutorial: [Building a Relational Database Processor](/academy/MasteryTrack/WorkWithData/RelationalDbProcessor) - it walks you through creating a complete todo-list processor from scratch.
+
+**Ready to implement?** Use this API reference for detailed function signatures, parameters, and advanced patterns.
+
+### Quick Overview: How It Works
+
+1. **Define your data structure** - Describe what information you want to track
+2. **Set up processing** - Configure automatic data extraction from document changes
+3. **Query your data** - Use familiar database operations with real-time updates
+4. **Build your UI** - Connect to any frontend framework or reporting tool
+
+### Key Concepts (Simplified)
+
+- **Processors**: Background workers that automatically organize document data
+- **Live Queries**: Database queries that update automatically when data changes
+- **Type Safety**: Built-in error prevention that catches mistakes before they happen
+- **Hooks**: Ready-to-use functions for common data access patterns
+
+</details>
 
 ## Overview
 
