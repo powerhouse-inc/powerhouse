@@ -5,7 +5,11 @@ import {
 } from "../cache/operation-index-types.js";
 import type { IReactor } from "../core/types.js";
 import type { IEventBus } from "../events/interfaces.js";
-import { ReactorEventTypes, type JobWriteReadyEvent } from "../events/types.js";
+import {
+  ReactorEventTypes,
+  type JobFailedEvent,
+  type JobWriteReadyEvent,
+} from "../events/types.js";
 import type { ILogger } from "../logging/types.js";
 import { JobAwaiter } from "../shared/awaiter.js";
 import {
@@ -54,6 +58,12 @@ type JobSyncState = {
   remoteNames: string[];
 };
 
+type PendingBatch = {
+  expectedJobIds: Set<string>;
+  arrivedJobIds: Set<string>;
+  events: JobWriteReadyEvent[];
+};
+
 export class SyncManager implements ISyncManager {
   private readonly logger: ILogger;
   private readonly remoteStorage: ISyncRemoteStorage;
@@ -68,8 +78,10 @@ export class SyncManager implements ISyncManager {
   private readonly jobSyncStates: Map<string, JobSyncState>;
   private isShutdown: boolean;
   private eventUnsubscribe?: () => void;
+  private failedEventUnsubscribe?: () => void;
   private writeReadyQueue: JobWriteReadyEvent[] = [];
   private processingWriteReady: boolean = false;
+  private readonly pendingBatches: Map<string, PendingBatch> = new Map();
 
   public loadJobs: Map<string, JobInfo> = new Map();
 
@@ -142,15 +154,26 @@ export class SyncManager implements ISyncManager {
       ReactorEventTypes.JOB_WRITE_READY,
       (_type, event) => this.enqueueWriteReady(event),
     );
+
+    this.failedEventUnsubscribe = this.eventBus.subscribe<JobFailedEvent>(
+      ReactorEventTypes.JOB_FAILED,
+      (_type, event) => this.handleJobFailedForBatch(event),
+    );
   }
 
   shutdown(): ShutdownStatus {
     this.isShutdown = true;
     this.writeReadyQueue = [];
+    this.pendingBatches.clear();
 
     if (this.eventUnsubscribe) {
       this.eventUnsubscribe();
       this.eventUnsubscribe = undefined;
+    }
+
+    if (this.failedEventUnsubscribe) {
+      this.failedEventUnsubscribe();
+      this.failedEventUnsubscribe = undefined;
     }
 
     this.awaiter.shutdown();
@@ -392,123 +415,226 @@ export class SyncManager implements ISyncManager {
       return;
     }
 
-    // Extract sourceRemote early so we can use it for backfill filtering
-    const sourceRemote = event.jobMeta?.sourceRemote as string | undefined;
+    const batchId = event.jobMeta?.batchId as string | undefined;
+    const batchJobIds = event.jobMeta?.batchJobIds as string[] | undefined;
 
-    // FIRST: Queue historical operations for any ADD_RELATIONSHIP on document-drives
-    // This ensures CREATE_DOCUMENT/UPGRADE_DOCUMENT are queued BEFORE ADD_RELATIONSHIP
-    for (const op of event.operations) {
-      const action = op.operation.action as {
-        type: string;
-        input?: { sourceId?: string; targetId?: string };
-      };
-
-      if (action.type !== "ADD_RELATIONSHIP") {
-        continue;
-      }
-
-      // ADD_RELATIONSHIP on non-document-drive is undefined behavior for sync
-      if (op.context.documentType !== "powerhouse/document-drive") {
-        this.logger.error(
-          "ADD_RELATIONSHIP on non-document-drive may cause sync issues (@documentType, @documentId)",
-          op.context.documentType,
-          op.context.documentId,
-        );
-        continue;
-      }
-
-      const input = action.input;
-      if (!input?.sourceId || !input?.targetId) {
-        continue;
-      }
-
-      const collectionId = driveCollectionId(op.context.branch, input.sourceId);
-      await this.syncDocumentToCollection(
-        input.targetId,
-        collectionId,
-        op.context.branch,
-        sourceRemote,
-      );
+    if (!batchId || !batchJobIds || batchJobIds.length <= 1) {
+      await this.processCompleteBatch([event]);
+      return;
     }
 
-    // THEN: Build syncOpsWithRemote and queue current job's operations
-    const syncOpsWithRemote: Array<{ syncOp: SyncOperation; remote: Remote }> =
-      [];
-    const remoteNames: string[] = [];
+    let pending = this.pendingBatches.get(batchId);
+    if (!pending) {
+      pending = {
+        expectedJobIds: new Set(batchJobIds),
+        arrivedJobIds: new Set(),
+        events: [],
+      };
+      this.pendingBatches.set(batchId, pending);
+    }
 
-    for (const remote of this.remotes.values()) {
-      if (sourceRemote && remote.name === sourceRemote) {
-        continue;
+    pending.arrivedJobIds.add(event.jobId);
+    pending.events.push(event);
+
+    if (pending.arrivedJobIds.size >= pending.expectedJobIds.size) {
+      this.pendingBatches.delete(batchId);
+      await this.processCompleteBatch(pending.events);
+    }
+  }
+
+  private handleJobFailedForBatch(event: JobFailedEvent): void {
+    if (this.isShutdown) {
+      return;
+    }
+
+    const batchId = event.job?.meta?.batchId as string | undefined;
+    if (!batchId) {
+      return;
+    }
+
+    const pending = this.pendingBatches.get(batchId);
+    if (!pending) {
+      return;
+    }
+
+    this.pendingBatches.delete(batchId);
+    if (pending.events.length > 0) {
+      void this.processCompleteBatch(pending.events);
+    }
+  }
+
+  private async processCompleteBatch(
+    events: JobWriteReadyEvent[],
+  ): Promise<void> {
+    const isBatch = events.length > 1;
+
+    const mergedMemberships: Record<string, string[]> = {};
+    const inBatchDocumentIds = new Set<string>();
+
+    for (const event of events) {
+      for (const op of event.operations) {
+        inBatchDocumentIds.add(op.context.documentId);
       }
-
-      let filteredOps = filterOperations(event.operations, remote.filter);
-      if (filteredOps.length === 0) {
-        continue;
-      }
-
-      // If remote has empty documentId filter, it means "sync all docs in this collection"
-      // In this case, we need to filter by collection membership
-      if (remote.filter.documentId.length === 0) {
-        filteredOps = this.filterByCollectionMembership(
-          filteredOps,
-          remote.collectionId,
+      if (event.collectionMemberships) {
+        for (const [docId, collections] of Object.entries(
           event.collectionMemberships,
+        )) {
+          if (!mergedMemberships[docId]) {
+            mergedMemberships[docId] = [];
+          }
+          for (const c of collections) {
+            if (!mergedMemberships[docId].includes(c)) {
+              mergedMemberships[docId].push(c);
+            }
+          }
+        }
+      }
+    }
+
+    const priorJobIds: string[] = [];
+
+    for (const event of events) {
+      // Extract sourceRemote early so we can use it for backfill filtering
+      const sourceRemote = event.jobMeta?.sourceRemote as string | undefined;
+
+      // FIRST: Queue historical operations for any ADD_RELATIONSHIP on document-drives
+      // This ensures CREATE_DOCUMENT/UPGRADE_DOCUMENT are queued BEFORE ADD_RELATIONSHIP
+      for (const op of event.operations) {
+        const action = op.operation.action as {
+          type: string;
+          input?: { sourceId?: string; targetId?: string };
+        };
+
+        if (action.type !== "ADD_RELATIONSHIP") {
+          continue;
+        }
+
+        // ADD_RELATIONSHIP on non-document-drive is undefined behavior for sync
+        if (op.context.documentType !== "powerhouse/document-drive") {
+          this.logger.error(
+            "ADD_RELATIONSHIP on non-document-drive may cause sync issues (@documentType, @documentId)",
+            op.context.documentType,
+            op.context.documentId,
+          );
+          continue;
+        }
+
+        const input = action.input;
+        if (!input?.sourceId || !input?.targetId) {
+          continue;
+        }
+
+        const collectionId = driveCollectionId(
+          op.context.branch,
+          input.sourceId,
         );
+
+        // Derive collection membership from ADD_RELATIONSHIP
+        if (!mergedMemberships[input.targetId]) {
+          mergedMemberships[input.targetId] = [];
+        }
+        if (!mergedMemberships[input.targetId].includes(collectionId)) {
+          mergedMemberships[input.targetId].push(collectionId);
+        }
+
+        // Skip backfill when the target document's operations are already in the batch
+        if (isBatch && inBatchDocumentIds.has(input.targetId)) {
+          continue;
+        }
+
+        await this.syncDocumentToCollection(
+          input.targetId,
+          collectionId,
+          op.context.branch,
+          sourceRemote,
+        );
+      }
+
+      // THEN: Build syncOpsWithRemote and queue current job's operations
+      const syncOpsWithRemote: Array<{
+        syncOp: SyncOperation;
+        remote: Remote;
+      }> = [];
+      const remoteNames: string[] = [];
+
+      for (const remote of this.remotes.values()) {
+        if (sourceRemote && remote.name === sourceRemote) {
+          continue;
+        }
+
+        let filteredOps = filterOperations(event.operations, remote.filter);
         if (filteredOps.length === 0) {
           continue;
         }
-      }
 
-      const batches = batchOperationsByDocument(filteredOps);
+        // If remote has empty documentId filter, it means "sync all docs in this collection"
+        // In this case, we need to filter by collection membership
+        if (remote.filter.documentId.length === 0) {
+          filteredOps = this.filterByCollectionMembership(
+            filteredOps,
+            remote.collectionId,
+            mergedMemberships,
+          );
+          if (filteredOps.length === 0) {
+            continue;
+          }
+        }
 
-      for (const batch of batches) {
-        const syncOp = new SyncOperation(
-          crypto.randomUUID(),
-          event.jobId,
-          [],
-          remote.name,
-          batch.documentId,
-          [batch.scope],
-          batch.branch,
-          batch.operations,
-        );
+        const batches = batchOperationsByDocument(filteredOps);
 
-        syncOpsWithRemote.push({ syncOp, remote });
-        if (!remoteNames.includes(remote.name)) {
-          remoteNames.push(remote.name);
+        for (const batch of batches) {
+          const syncOp = new SyncOperation(
+            crypto.randomUUID(),
+            event.jobId,
+            isBatch ? [...priorJobIds] : [],
+            remote.name,
+            batch.documentId,
+            [batch.scope],
+            batch.branch,
+            batch.operations,
+          );
+
+          syncOpsWithRemote.push({ syncOp, remote });
+          if (!remoteNames.includes(remote.name)) {
+            remoteNames.push(remote.name);
+          }
         }
       }
-    }
 
-    if (syncOpsWithRemote.length > 0 && event.jobId) {
-      this.jobSyncStates.set(event.jobId, {
-        total: syncOpsWithRemote.length,
-        completed: new Set(),
-        failed: new Map(),
-        remoteNames,
-      });
-      const pendingEvent: SyncPendingEvent = {
-        jobId: event.jobId,
-        syncOperationCount: syncOpsWithRemote.length,
-        remoteNames,
-      };
-      void this.eventBus.emit(SyncEventTypes.SYNC_PENDING, pendingEvent);
-    }
+      if (syncOpsWithRemote.length > 0 && event.jobId) {
+        this.jobSyncStates.set(event.jobId, {
+          total: syncOpsWithRemote.length,
+          completed: new Set(),
+          failed: new Map(),
+          remoteNames,
+        });
+        const pendingEvent: SyncPendingEvent = {
+          jobId: event.jobId,
+          syncOperationCount: syncOpsWithRemote.length,
+          remoteNames,
+        };
+        void this.eventBus.emit(SyncEventTypes.SYNC_PENDING, pendingEvent);
+      }
 
-    for (const { syncOp, remote } of syncOpsWithRemote) {
-      syncOp.on((op, _prev, next) => {
-        if (next === SyncOperationStatus.Applied) {
-          this.markSyncOpCompleted(op.jobId, op.id, true);
-        } else if (next === SyncOperationStatus.Error) {
-          this.markSyncOpCompleted(op.jobId, op.id, false, {
-            remoteName: op.remoteName,
-            documentId: op.documentId,
-            error: op.error?.message ?? "Unknown error",
-          });
-        }
-      });
+      for (const { syncOp, remote } of syncOpsWithRemote) {
+        syncOp.on((op, _prev, next) => {
+          if (next === SyncOperationStatus.Applied) {
+            this.markSyncOpCompleted(op.jobId, op.id, true);
+          } else if (next === SyncOperationStatus.Error) {
+            this.markSyncOpCompleted(op.jobId, op.id, false, {
+              remoteName: op.remoteName,
+              documentId: op.documentId,
+              error: op.error?.message ?? "Unknown error",
+            });
+          }
+        });
 
-      remote.channel.outbox.add(syncOp);
+        remote.channel.outbox.add(syncOp);
+      }
+
+      if (isBatch && event.jobId) {
+        priorJobIds.push(event.jobId);
+      }
     }
   }
 
