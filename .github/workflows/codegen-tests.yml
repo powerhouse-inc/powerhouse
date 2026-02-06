@@ -27,9 +27,8 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Get changed files
-        id: diff
-        uses: ./.github/actions/changed-files
+      - name: Setup bun global install
+        uses: oven-sh/setup-bun@v2
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
@@ -51,16 +50,9 @@ jobs:
       - name: Run css build scripts
         run: pnpm build-css
 
-      - name: Run vite build scripts
-        run: pnpm build-vite
-
       - name: Run tests
-        if: ${{ steps.diff.outputs.files != '' }}
-        run: pnpm test-codegen ${{ steps.diff.outputs.files }}
-
-      - name: Skip tests
-        if: ${{ steps.diff.outputs.files == '' }}
-        run: echo "No changed files; skipping vitest related."
+        run: pnpm test
+        working-directory: packages/codegen
 
   notify-discord:
     if: failure() && github.event_name != 'pull_request'
