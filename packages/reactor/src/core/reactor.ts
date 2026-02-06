@@ -722,6 +722,13 @@ export class Reactor implements IReactor {
     for (const jobPlan of request.jobs) {
       planKeyToJobId.set(jobPlan.key, uuidv4());
     }
+    const batchId = uuidv4();
+    const batchJobIds = [...planKeyToJobId.values()];
+    const batchMeta: Record<string, unknown> = {
+      ...meta,
+      batchId,
+      batchJobIds,
+    };
     const jobInfos = new Map<string, JobInfo>();
     for (const jobPlan of request.jobs) {
       const jobId = planKeyToJobId.get(jobPlan.key)!;
@@ -734,10 +741,10 @@ export class Reactor implements IReactor {
           createdAtUtcIso,
           coordinates: [],
         },
-        meta,
+        meta: batchMeta,
       };
       this.jobTracker.registerJob(jobInfo);
-      this.emitJobPending(jobInfo.id, meta);
+      this.emitJobPending(jobInfo.id, batchMeta);
       jobInfos.set(jobPlan.key, jobInfo);
     }
     const sortedKeys = topologicalSort(request.jobs);
@@ -764,7 +771,7 @@ export class Reactor implements IReactor {
           queueHint,
           maxRetries: 3,
           errorHistory: [],
-          meta,
+          meta: batchMeta,
         };
         await this.queue.enqueue(job);
         enqueuedKeys.push(key);
@@ -811,6 +818,13 @@ export class Reactor implements IReactor {
     for (const jobPlan of request.jobs) {
       planKeyToJobId.set(jobPlan.key, uuidv4());
     }
+    const batchId = uuidv4();
+    const batchJobIds = [...planKeyToJobId.values()];
+    const batchMeta: Record<string, unknown> = {
+      ...meta,
+      batchId,
+      batchJobIds,
+    };
     const jobInfos = new Map<string, JobInfo>();
     for (const jobPlan of request.jobs) {
       const jobId = planKeyToJobId.get(jobPlan.key)!;
@@ -823,10 +837,10 @@ export class Reactor implements IReactor {
           createdAtUtcIso,
           coordinates: [],
         },
-        meta,
+        meta: batchMeta,
       };
       this.jobTracker.registerJob(jobInfo);
-      this.emitJobPending(jobInfo.id, meta);
+      this.emitJobPending(jobInfo.id, batchMeta);
       jobInfos.set(jobPlan.key, jobInfo);
     }
     const sortedKeys = topologicalSort(request.jobs);
@@ -853,7 +867,7 @@ export class Reactor implements IReactor {
           queueHint,
           maxRetries: 3,
           errorHistory: [],
-          meta,
+          meta: batchMeta,
         };
         await this.queue.enqueue(job);
         enqueuedKeys.push(key);
