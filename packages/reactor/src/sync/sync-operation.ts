@@ -24,7 +24,7 @@ export class SyncOperationAggregateError extends Error {
 export class SyncOperation {
   readonly id: string;
   readonly jobId: string;
-  readonly jobDependencies: string[];
+  jobDependencies: string[];
   readonly remoteName: string;
   readonly documentId: string;
   readonly scopes: string[];

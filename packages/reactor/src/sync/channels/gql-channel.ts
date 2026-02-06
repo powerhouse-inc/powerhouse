@@ -377,28 +377,51 @@ export class GqlChannel implements IChannel {
 
   /**
    * Pushes multiple sync operations to the remote via a single GraphQL mutation.
-   * Merges all operations from multiple SyncOperations into one SyncEnvelope.
+   * Creates one SyncEnvelope per SyncOperation with key/dependsOn for batch ordering.
    */
   private async pushSyncOperations(syncOps: SyncOperation[]): Promise<void> {
     for (const syncOp of syncOps) {
       syncOp.started();
     }
 
-    const allOperations = syncOps.flatMap((syncOp) => syncOp.operations);
+    const jobIdToKeys = new Map<string, string[]>();
+    const envelopes: SyncEnvelope[] = [];
 
-    this.logger.debug(
-      "[PUSH]: @Operations",
-      allOperations.map(
-        (op) =>
-          `(${op.context.documentId}, ${op.context.branch}, ${op.context.scope}, ${op.operation.index})`,
-      ),
-    );
+    for (let i = 0; i < syncOps.length; i++) {
+      const syncOp = syncOps[i];
+      const key = String(i);
 
-    const envelope: SyncEnvelope = {
-      type: "operations",
-      channelMeta: { id: this.channelId },
-      operations: allOperations,
-    };
+      if (syncOp.jobId) {
+        if (!jobIdToKeys.has(syncOp.jobId)) {
+          jobIdToKeys.set(syncOp.jobId, []);
+        }
+        jobIdToKeys.get(syncOp.jobId)!.push(key);
+      }
+
+      const dependsOn: string[] = [];
+      for (const dep of syncOp.jobDependencies) {
+        const depKeys = jobIdToKeys.get(dep);
+        if (depKeys) {
+          dependsOn.push(...depKeys);
+        }
+      }
+
+      this.logger.debug(
+        "[PUSH]: @Operations",
+        syncOp.operations.map(
+          (op) =>
+            `(${op.context.documentId}, ${op.context.branch}, ${op.context.scope}, ${op.operation.index})`,
+        ),
+      );
+
+      envelopes.push({
+        type: "operations",
+        channelMeta: { id: this.channelId },
+        operations: syncOp.operations,
+        key,
+        dependsOn,
+      });
+    }
 
     const mutation = `
       mutation PushSyncEnvelopes($envelopes: [SyncEnvelopeInput!]!) {
@@ -407,7 +430,7 @@ export class GqlChannel implements IChannel {
     `;
 
     const variables = {
-      envelopes: [this.serializeEnvelope(envelope)],
+      envelopes: envelopes.map((e) => this.serializeEnvelope(e)),
     };
 
     await this.executeGraphQL<{ pushSyncEnvelopes: boolean }>(
@@ -415,8 +438,6 @@ export class GqlChannel implements IChannel {
       variables,
     );
 
-    // Successfully sent - the outbox will be cleared when we receive ACK
-    // For now, we optimistically remove from outbox
     for (const syncOp of syncOps) {
       this.outbox.remove(syncOp);
     }
@@ -451,6 +472,8 @@ export class GqlChannel implements IChannel {
         },
       })),
       cursor: envelope.cursor,
+      key: envelope.key,
+      dependsOn: envelope.dependsOn,
     };
   }
 

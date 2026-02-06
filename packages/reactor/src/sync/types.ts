@@ -34,6 +34,8 @@ export type SyncEnvelope = {
   channelMeta: ChannelMeta;
   operations?: OperationWithContext[];
   cursor?: RemoteCursor;
+  key?: string;
+  dependsOn?: string[];
 };
 
 export enum SyncOperationStatus {

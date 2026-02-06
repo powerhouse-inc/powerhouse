@@ -801,8 +801,8 @@ describe("SyncManager - Unit Tests", () => {
     });
   });
 
-  describe("retroactive sync on ADD_RELATIONSHIP", () => {
-    it("should sync document operations when ADD_RELATIONSHIP adds document to collection", async () => {
+  describe("ADD_RELATIONSHIP membership derivation", () => {
+    it("should derive collection membership from ADD_RELATIONSHIP and route ops", async () => {
       await syncManager.startup();
 
       const driveId = "drive-1";
@@ -822,63 +822,50 @@ describe("SyncManager - Unit Tests", () => {
         { sinceTimestampUtcMs: "0" },
       );
 
-      vi.mocked(mockOperationIndex.get).mockResolvedValue({
-        results: [
-          {
+      const batchId = "batch-membership";
+      const batchJobIds = ["j1", "j2"];
+
+      // Event 1: CREATE_DOCUMENT for the target doc
+      const event1Operations: OperationWithContext[] = [
+        {
+          operation: {
             id: "op-create",
-            documentId: targetDocId,
-            documentType: "powerhouse/document-model",
-            branch: "main",
-            scope: "document",
             index: 0,
-            timestampUtcMs: "1704067200000",
-            hash: "hash-1",
             skip: 0,
-            ordinal: 1,
+            hash: "hash-create",
+            timestampUtcMs: "1000",
             action: {
               id: "action-create",
               type: "CREATE_DOCUMENT",
               scope: "document",
-              timestampUtcMs: "1704067200000",
+              timestampUtcMs: "1000",
               input: {},
-            },
+            } as any,
           },
-          {
-            id: "op-upgrade",
+          context: {
             documentId: targetDocId,
             documentType: "powerhouse/document-model",
-            branch: "main",
             scope: "document",
-            index: 1,
-            timestampUtcMs: "1704067200001",
-            hash: "hash-2",
-            skip: 0,
-            ordinal: 2,
-            action: {
-              id: "action-upgrade",
-              type: "UPGRADE_DOCUMENT",
-              scope: "document",
-              timestampUtcMs: "1704067200001",
-              input: {},
-            },
+            branch: "main",
+            ordinal: 1,
           },
-        ],
-        options: { cursor: "0", limit: 100 },
-      });
+        },
+      ];
 
-      const addRelationshipOps: OperationWithContext[] = [
+      // Event 2: ADD_RELATIONSHIP on the drive (establishes membership)
+      const event2Operations: OperationWithContext[] = [
         {
           operation: {
             id: "op-add-rel",
             index: 0,
             skip: 0,
-            hash: "hash-3",
-            timestampUtcMs: "1704067201000",
+            hash: "hash-rel",
+            timestampUtcMs: "2000",
             action: {
               id: "action-add-rel",
               type: "ADD_RELATIONSHIP",
               scope: "document",
-              timestampUtcMs: "1704067201000",
+              timestampUtcMs: "2000",
               input: {
                 sourceId: driveId,
                 targetId: targetDocId,
@@ -891,7 +878,7 @@ describe("SyncManager - Unit Tests", () => {
             documentType: "powerhouse/document-drive",
             scope: "document",
             branch: "main",
-            ordinal: 3,
+            ordinal: 2,
           },
         },
       ];
@@ -899,185 +886,31 @@ describe("SyncManager - Unit Tests", () => {
       const subscriber = eventSubscribers.get(
         ReactorEventTypes.JOB_WRITE_READY,
       );
+
       subscriber!(ReactorEventTypes.JOB_WRITE_READY, {
-        jobId: "test-job",
-        operations: addRelationshipOps,
+        jobId: "j1",
+        operations: event1Operations,
+        jobMeta: { batchId, batchJobIds },
+        collectionMemberships: { [targetDocId]: [collectionId] },
+      });
+
+      subscriber!(ReactorEventTypes.JOB_WRITE_READY, {
+        jobId: "j2",
+        operations: event2Operations,
+        jobMeta: { batchId, batchJobIds },
         collectionMemberships: { [driveId]: [collectionId] },
       });
 
-      await new Promise((resolve) => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 20));
 
-      expect(mockOperationIndex.get).toHaveBeenCalledWith(targetDocId, {
-        branch: "main",
-      });
+      // No backfill should occur
+      expect(mockOperationIndex.get).not.toHaveBeenCalled();
 
+      // Both events should be routed (membership derived from ADD_RELATIONSHIP in pre-pass)
       expect(mockChannel.outbox.add).toHaveBeenCalled();
     });
 
-    it("should not sync if ADD_RELATIONSHIP is not on a document-drive", async () => {
-      await syncManager.startup();
-
-      const sourceDocId = "regular-doc";
-      const targetDocId = "target-doc";
-
-      const channelConfig: ChannelConfig = {
-        type: "internal",
-        parameters: {},
-      };
-
-      await syncManager.add(
-        "remote1",
-        "collection1",
-        channelConfig,
-        { documentId: [], scope: [], branch: "main" },
-        { sinceTimestampUtcMs: "0" },
-      );
-
-      const addRelationshipOps: OperationWithContext[] = [
-        {
-          operation: {
-            id: "op-add-rel",
-            index: 0,
-            skip: 0,
-            hash: "hash-1",
-            timestampUtcMs: "1704067200000",
-            action: {
-              id: "action-add-rel",
-              type: "ADD_RELATIONSHIP",
-              scope: "document",
-              timestampUtcMs: "1704067200000",
-              input: {
-                sourceId: sourceDocId,
-                targetId: targetDocId,
-                relationshipType: "reference",
-              },
-            } as any,
-          },
-          context: {
-            documentId: sourceDocId,
-            documentType: "powerhouse/document-model",
-            scope: "document",
-            branch: "main",
-            ordinal: 1,
-          },
-        },
-      ];
-
-      const subscriber = eventSubscribers.get(
-        ReactorEventTypes.JOB_WRITE_READY,
-      );
-      subscriber!(ReactorEventTypes.JOB_WRITE_READY, {
-        jobId: "test-job",
-        operations: addRelationshipOps,
-        collectionMemberships: {},
-      });
-
-      await new Promise((resolve) => setTimeout(resolve, 10));
-
-      expect(mockOperationIndex.get).not.toHaveBeenCalled();
-    });
-
-    it("should filter retroactive sync by remote sinceTimestampUtcMs", async () => {
-      await syncManager.startup();
-
-      const driveId = "drive-2";
-      const targetDocId = "new-doc-2";
-      const collectionId = `drive.main.${driveId}`;
-
-      const channelConfig: ChannelConfig = {
-        type: "internal",
-        parameters: {},
-      };
-
-      await syncManager.add(
-        "remote1",
-        collectionId,
-        channelConfig,
-        { documentId: [], scope: [], branch: "main" },
-        { sinceTimestampUtcMs: "1704067200500" },
-      );
-
-      vi.mocked(mockOperationIndex.get).mockResolvedValue({
-        results: [
-          {
-            id: "op-old",
-            documentId: targetDocId,
-            documentType: "powerhouse/document-model",
-            branch: "main",
-            scope: "document",
-            index: 0,
-            timestampUtcMs: "1704067200000",
-            hash: "hash-1",
-            skip: 0,
-            ordinal: 1,
-            action: {
-              id: "action-old",
-              type: "CREATE_DOCUMENT",
-              scope: "document",
-              timestampUtcMs: "1704067200000",
-              input: {},
-            },
-          },
-        ],
-        options: { cursor: "0", limit: 100 },
-      });
-
-      const addRelationshipOps: OperationWithContext[] = [
-        {
-          operation: {
-            id: "op-add-rel",
-            index: 0,
-            skip: 0,
-            hash: "hash-2",
-            timestampUtcMs: "1704067201000",
-            action: {
-              id: "action-add-rel",
-              type: "ADD_RELATIONSHIP",
-              scope: "document",
-              timestampUtcMs: "1704067201000",
-              input: {
-                sourceId: driveId,
-                targetId: targetDocId,
-                relationshipType: "child",
-              },
-            } as any,
-          },
-          context: {
-            documentId: driveId,
-            documentType: "powerhouse/document-drive",
-            scope: "document",
-            branch: "main",
-            ordinal: 2,
-          },
-        },
-      ];
-
-      vi.mocked(mockChannel.outbox.add).mockClear();
-
-      const subscriber = eventSubscribers.get(
-        ReactorEventTypes.JOB_WRITE_READY,
-      );
-      subscriber!(ReactorEventTypes.JOB_WRITE_READY, {
-        jobId: "test-job",
-        operations: addRelationshipOps,
-        collectionMemberships: { [driveId]: [collectionId] },
-      });
-
-      await new Promise((resolve) => setTimeout(resolve, 10));
-
-      expect(mockOperationIndex.get).toHaveBeenCalledWith(targetDocId, {
-        branch: "main",
-      });
-
-      const outboxCalls = vi.mocked(mockChannel.outbox.add).mock.calls;
-      const retroactiveSyncCalls = outboxCalls.filter((call) => {
-        const syncOp = call[0] as any;
-        return syncOp.documentId === targetDocId;
-      });
-      expect(retroactiveSyncCalls).toHaveLength(0);
-    });
-
-    it("should only sync to remotes watching the matching collection", async () => {
+    it("should not route operations to non-matching collections", async () => {
       await syncManager.startup();
 
       const driveId = "drive-3";
@@ -1096,31 +929,6 @@ describe("SyncManager - Unit Tests", () => {
         { documentId: [], scope: [], branch: "main" },
         { sinceTimestampUtcMs: "0" },
       );
-
-      vi.mocked(mockOperationIndex.get).mockResolvedValue({
-        results: [
-          {
-            id: "op-create",
-            documentId: targetDocId,
-            documentType: "powerhouse/document-model",
-            branch: "main",
-            scope: "document",
-            index: 0,
-            timestampUtcMs: "1704067200000",
-            hash: "hash-1",
-            skip: 0,
-            ordinal: 1,
-            action: {
-              id: "action-create",
-              type: "CREATE_DOCUMENT",
-              scope: "document",
-              timestampUtcMs: "1704067200000",
-              input: {},
-            },
-          },
-        ],
-        options: { cursor: "0", limit: 100 },
-      });
 
       vi.mocked(mockChannel.outbox.add).mockClear();
 
@@ -1262,105 +1070,6 @@ describe("SyncManager - Unit Tests", () => {
       expect(mockChannel.outbox.add).toHaveBeenCalledTimes(2);
     });
 
-    it("should queue historical ops BEFORE current ops for ADD_RELATIONSHIP", async () => {
-      await syncManager.startup();
-
-      const driveId = "drive-order";
-      const targetDocId = "new-doc-order";
-      const collectionId = `drive.main.${driveId}`;
-
-      const channelConfig: ChannelConfig = {
-        type: "internal",
-        parameters: {},
-      };
-
-      await syncManager.add(
-        "remote1",
-        collectionId,
-        channelConfig,
-        { documentId: [], scope: [], branch: "main" },
-        { sinceTimestampUtcMs: "0" },
-      );
-
-      const addOrder: string[] = [];
-      vi.mocked(mockChannel.outbox.add).mockImplementation((syncOp: any) => {
-        addOrder.push(syncOp.documentId);
-      });
-
-      // Historical ops for the target document
-      vi.mocked(mockOperationIndex.get).mockResolvedValue({
-        results: [
-          {
-            id: "op-create",
-            documentId: targetDocId,
-            documentType: "powerhouse/document-model",
-            branch: "main",
-            scope: "document",
-            index: 0,
-            timestampUtcMs: "1000",
-            hash: "hash-create",
-            skip: 0,
-            ordinal: 1,
-            action: {
-              id: "action-create",
-              type: "CREATE_DOCUMENT",
-              scope: "document",
-              timestampUtcMs: "1000",
-              input: {},
-            },
-          },
-        ],
-        options: { cursor: "0", limit: 100 },
-      });
-
-      const addRelationshipOps: OperationWithContext[] = [
-        {
-          operation: {
-            id: "op-add-rel",
-            index: 0,
-            skip: 0,
-            hash: "hash-rel",
-            timestampUtcMs: "2000",
-            action: {
-              id: "action-add-rel",
-              type: "ADD_RELATIONSHIP",
-              scope: "document",
-              timestampUtcMs: "2000",
-              input: {
-                sourceId: driveId,
-                targetId: targetDocId,
-                relationshipType: "child",
-              },
-            } as any,
-          },
-          context: {
-            documentId: driveId,
-            documentType: "powerhouse/document-drive",
-            scope: "document",
-            branch: "main",
-            ordinal: 2,
-          },
-        },
-      ];
-
-      const subscriber = eventSubscribers.get(
-        ReactorEventTypes.JOB_WRITE_READY,
-      );
-      subscriber!(ReactorEventTypes.JOB_WRITE_READY, {
-        jobId: "test-job",
-        operations: addRelationshipOps,
-        collectionMemberships: { [driveId]: [collectionId] },
-      });
-
-      await new Promise((resolve) => setTimeout(resolve, 20));
-
-      // Historical ops (CREATE_DOCUMENT for targetDocId) should come BEFORE
-      // current ops (ADD_RELATIONSHIP for driveId)
-      expect(addOrder.length).toBe(2);
-      expect(addOrder[0]).toBe(targetDocId); // Historical (CREATE_DOCUMENT)
-      expect(addOrder[1]).toBe(driveId); // Current (ADD_RELATIONSHIP)
-    });
-
     it("should clear queue on shutdown and not process remaining events", async () => {
       await syncManager.startup();
 
@@ -1418,88 +1127,6 @@ describe("SyncManager - Unit Tests", () => {
 
       // No operations should have been added after shutdown
       expect(mockChannel.outbox.add).not.toHaveBeenCalled();
-    });
-
-    it("should log error for ADD_RELATIONSHIP on non-document-drive", async () => {
-      const mockError = vi.fn();
-      const customLogger = {
-        debug: vi.fn(),
-        info: vi.fn(),
-        warn: vi.fn(),
-        error: mockError,
-      } as any;
-
-      const customSyncManager = new SyncManager(
-        customLogger,
-        mockRemoteStorage,
-        mockCursorStorage,
-        mockChannelFactory,
-        mockOperationIndex,
-        mockReactor,
-        mockEventBus,
-      );
-
-      await customSyncManager.startup();
-
-      const channelConfig: ChannelConfig = {
-        type: "internal",
-        parameters: {},
-      };
-
-      await customSyncManager.add("remote1", "collection1", channelConfig, {
-        documentId: [],
-        scope: [],
-        branch: "main",
-      });
-
-      const addRelationshipOps: OperationWithContext[] = [
-        {
-          operation: {
-            id: "op-add-rel",
-            index: 0,
-            skip: 0,
-            hash: "hash-1",
-            timestampUtcMs: "1000",
-            action: {
-              id: "action-add-rel",
-              type: "ADD_RELATIONSHIP",
-              scope: "document",
-              timestampUtcMs: "1000",
-              input: {
-                sourceId: "source-doc",
-                targetId: "target-doc",
-                relationshipType: "reference",
-              },
-            } as any,
-          },
-          context: {
-            documentId: "source-doc",
-            documentType: "powerhouse/budget-statement", // NOT document-drive
-            scope: "document",
-            branch: "main",
-            ordinal: 1,
-          },
-        },
-      ];
-
-      const subscriber = eventSubscribers.get(
-        ReactorEventTypes.JOB_WRITE_READY,
-      );
-      subscriber!(ReactorEventTypes.JOB_WRITE_READY, {
-        jobId: "test-job",
-        operations: addRelationshipOps,
-        collectionMemberships: {},
-      });
-
-      await new Promise((resolve) => setTimeout(resolve, 20));
-
-      expect(mockError).toHaveBeenCalledWith(
-        "ADD_RELATIONSHIP on non-document-drive may cause sync issues (@documentType, @documentId)",
-        "powerhouse/budget-statement",
-        "source-doc",
-      );
-
-      customSyncManager.shutdown();
     });
   });
 
@@ -1843,100 +1470,6 @@ describe("SyncManager - Unit Tests", () => {
       expect(mockChannel.outbox.add).toHaveBeenCalled();
     });
 
-    it("should still backfill for non-batch ADD_RELATIONSHIP", async () => {
-      await syncManager.startup();
-
-      const driveId = "drive-single";
-      const targetDocId = "new-doc-single";
-      const collectionId = `drive.main.${driveId}`;
-
-      const channelConfig: ChannelConfig = {
-        type: "internal",
-        parameters: {},
-      };
-
-      await syncManager.add(
-        "remote1",
-        collectionId,
-        channelConfig,
-        { documentId: [], scope: [], branch: "main" },
-        { sinceTimestampUtcMs: "0" },
-      );
-
-      vi.mocked(mockOperationIndex.get).mockResolvedValue({
-        results: [
-          {
-            id: "op-create",
-            documentId: targetDocId,
-            documentType: "powerhouse/document-model",
-            branch: "main",
-            scope: "document",
-            index: 0,
-            timestampUtcMs: "1000",
-            hash: "hash-1",
-            skip: 0,
-            ordinal: 1,
-            action: {
-              id: "action-create",
-              type: "CREATE_DOCUMENT",
-              scope: "document",
-              timestampUtcMs: "1000",
-              input: {},
-            },
-          },
-        ],
-        options: { cursor: "0", limit: 100 },
-      });
-
-      const addRelationshipOps: OperationWithContext[] = [
-        {
-          operation: {
-            id: "op-add-rel",
-            index: 0,
-            skip: 0,
-            hash: "hash-rel",
-            timestampUtcMs: "2000",
-            action: {
-              id: "action-add-rel",
-              type: "ADD_RELATIONSHIP",
-              scope: "document",
-              timestampUtcMs: "2000",
-              input: {
-                sourceId: driveId,
-                targetId: targetDocId,
-                relationshipType: "child",
-              },
-            } as any,
-          },
-          context: {
-            documentId: driveId,
-            documentType: "powerhouse/document-drive",
-            scope: "document",
-            branch: "main",
-            ordinal: 2,
-          },
-        },
-      ];
-
-      const subscriber = eventSubscribers.get(
-        ReactorEventTypes.JOB_WRITE_READY,
-      );
-
-      // Single event (no batch), should backfill
-      subscriber!(ReactorEventTypes.JOB_WRITE_READY, {
-        jobId: "j1",
-        operations: addRelationshipOps,
-        collectionMemberships: { [driveId]: [collectionId] },
-      });
-
-      await new Promise((resolve) => setTimeout(resolve, 20));
-
-      // operationIndex.get SHOULD be called for backfill
-      expect(mockOperationIndex.get).toHaveBeenCalledWith(targetDocId, {
-        branch: "main",
-      });
-    });
-
     it("should merge collection memberships from all batch events", async () => {
       await syncManager.startup();
 
@@ -2179,6 +1712,427 @@ describe("SyncManager - Unit Tests", () => {
 
       // The partial batch should have been flushed with the one event we had
       expect(mockChannel.outbox.add).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("inbox batch processing", () => {
+    it("should call reactor.loadBatch for keyed SyncOps", async () => {
+      await syncManager.startup();
+
+      const channelConfig: ChannelConfig = {
+        type: "internal",
+        parameters: {},
+      };
+
+      const mockChannel2 = {
+        inbox: {
+          items: [] as any[],
+          add: vi.fn(),
+          remove: vi.fn(),
+          get: vi.fn(),
+          onAdded: vi.fn(),
+          onRemoved: vi.fn(),
+          pause: vi.fn(),
+          resume: vi.fn(),
+          isPaused: vi.fn().mockReturnValue(false),
+          flush: vi.fn(),
+        },
+        outbox: {
+          items: [] as any[],
+          add: vi.fn(),
+          remove: vi.fn(),
+          get: vi.fn(),
+          onAdded: vi.fn(),
+          onRemoved: vi.fn(),
+          pause: vi.fn(),
+          resume: vi.fn(),
+          isPaused: vi.fn().mockReturnValue(false),
+          flush: vi.fn(),
+        },
+        deadLetter: {
+          items: [] as any[],
+          add: vi.fn(),
+          remove: vi.fn(),
+          get: vi.fn(),
+          onAdded: vi.fn(),
+          onRemoved: vi.fn(),
+          pause: vi.fn(),
+          resume: vi.fn(),
+          isPaused: vi.fn().mockReturnValue(false),
+          flush: vi.fn(),
+        },
+        init: vi.fn().mockResolvedValue(undefined),
+        shutdown: vi.fn(),
+        updateCursor: vi.fn(),
+        getHealth: vi.fn(),
+        poller: {} as any,
+        config: {} as any,
+      } as any;
+
+      vi.mocked(mockChannelFactory.instance).mockReturnValue(mockChannel2);
+
+      await syncManager.add("remote-inbox", "collection1", channelConfig, {
+        documentId: ["doc1"],
+        scope: ["global"],
+        branch: "main",
+      });
+
+      const { SyncOperation: SyncOp } = await import(
+        "../../../src/sync/sync-operation.js"
+      );
+
+      const syncOp1 = new SyncOp(
+        "syncop-1",
+        "key-0",
+        [],
+        "remote-inbox",
+        "doc1",
+        ["global"],
+        "main",
+        [
+          {
+            operation: {
+              id: "op1",
+              index: 0,
+              skip: 0,
+              hash: "h1",
+              timestampUtcMs: "1000",
+              action: { type: "CREATE", scope: "global" } as any,
+            },
+            context: {
+              documentId: "doc1",
+              documentType: "test",
+              scope: "global",
+              branch: "main",
+              ordinal: 1,
+            },
+          },
+        ],
+      );
+
+      const syncOp2 = new SyncOp(
+        "syncop-2",
+        "key-1",
+        ["key-0"],
+        "remote-inbox",
+        "doc1",
+        ["global"],
+        "main",
+        [
+          {
+            operation: {
+              id: "op2",
+              index: 1,
+              skip: 0,
+              hash: "h2",
+              timestampUtcMs: "2000",
+              action: { type: "UPDATE", scope: "global" } as any,
+            },
+            context: {
+              documentId: "doc1",
+              documentType: "test",
+              scope: "global",
+              branch: "main",
+              ordinal: 2,
+            },
+          },
+        ],
+      );
+
+      vi.mocked(mockReactor as any).loadBatch = vi.fn().mockResolvedValue({
+        jobs: {
+          "key-0": { id: "reactor-job-0", status: "PENDING" },
+          "key-1": { id: "reactor-job-1", status: "PENDING" },
+        },
+      });
+
+      // Get the inbox onAdded callback
+      const inboxCallback = vi.mocked(mockChannel2.inbox.onAdded).mock
+        .calls[0][0];
+
+      // Simulate batch arrival (multiple items at once)
+      inboxCallback([syncOp1, syncOp2]);
+
+      await new Promise((resolve) => setTimeout(resolve, 20));
+
+      expect((mockReactor as any).loadBatch).toHaveBeenCalledWith(
+        {
+          jobs: [
+            expect.objectContaining({
+              key: "key-0",
+              documentId: "doc1",
+              dependsOn: [],
+            }),
+            expect.objectContaining({
+              key: "key-1",
+              documentId: "doc1",
+              dependsOn: ["key-0"],
+            }),
+          ],
+        },
+        undefined,
+        { sourceRemote: "remote-inbox" },
+      );
+    });
+
+    it("should call reactor.load for non-keyed SyncOps individually", async () => {
+      await syncManager.startup();
+
+      const channelConfig: ChannelConfig = {
+        type: "internal",
+        parameters: {},
+      };
+
+      const mockChannel2 = {
+        inbox: {
+          items: [] as any[],
+          add: vi.fn(),
+          remove: vi.fn(),
+          get: vi.fn(),
+          onAdded: vi.fn(),
+          onRemoved: vi.fn(),
+          pause: vi.fn(),
+          resume: vi.fn(),
+          isPaused: vi.fn().mockReturnValue(false),
+          flush: vi.fn(),
+        },
+        outbox: {
+          items: [] as any[],
+          add: vi.fn(),
+          remove: vi.fn(),
+          get: vi.fn(),
+          onAdded: vi.fn(),
+          onRemoved: vi.fn(),
+          pause: vi.fn(),
+          resume: vi.fn(),
+          isPaused: vi.fn().mockReturnValue(false),
+          flush: vi.fn(),
+        },
+        deadLetter: {
+          items: [] as any[],
+          add: vi.fn(),
+          remove: vi.fn(),
+          get: vi.fn(),
+          onAdded: vi.fn(),
+          onRemoved: vi.fn(),
+          pause: vi.fn(),
+          resume: vi.fn(),
+          isPaused: vi.fn().mockReturnValue(false),
+          flush: vi.fn(),
+        },
+        init: vi.fn().mockResolvedValue(undefined),
+        shutdown: vi.fn(),
+        updateCursor: vi.fn(),
+        getHealth: vi.fn(),
+        poller: {} as any,
+        config: {} as any,
+      } as any;
+
+      vi.mocked(mockChannelFactory.instance).mockReturnValue(mockChannel2);
+
+      await syncManager.add("remote-inbox2", "collection1", channelConfig, {
+        documentId: ["doc1"],
+        scope: ["global"],
+        branch: "main",
+      });
+
+      const { SyncOperation: SyncOp } = await import(
+        "../../../src/sync/sync-operation.js"
+      );
+
+      // Non-keyed SyncOp (empty jobId)
+      const syncOp = new SyncOp(
+        "syncop-1",
+        "",
+        [],
+        "remote-inbox2",
+        "doc1",
+        ["global"],
+        "main",
+        [
+          {
+            operation: {
+              id: "op1",
+              index: 0,
+              skip: 0,
+              hash: "h1",
+              timestampUtcMs: "1000",
+              action: { type: "CREATE", scope: "global" } as any,
+            },
+            context: {
+              documentId: "doc1",
+              documentType: "test",
+              scope: "global",
+              branch: "main",
+              ordinal: 1,
+            },
+          },
+        ],
+      );
+
+      // Get the inbox onAdded callback
+      const inboxCallback = vi.mocked(mockChannel2.inbox.onAdded).mock
+        .calls[0][0];
+
+      // Simulate single non-keyed item arrival
+      inboxCallback([syncOp]);
+
+      await new Promise((resolve) => setTimeout(resolve, 20));
+
+      // Should call reactor.load (not loadBatch)
+      expect(mockReactor.load).toHaveBeenCalledWith(
+        "doc1",
+        "main",
+        expect.any(Array),
+        undefined,
+        { sourceRemote: "remote-inbox2" },
+      );
+    });
+
+    it("should handle loadBatch failure by marking all SyncOps as failed", async () => {
+      await syncManager.startup();
+
+      const channelConfig: ChannelConfig = {
+        type: "internal",
+        parameters: {},
+      };
+
+      const mockChannel2 = {
+        inbox: {
+          items: [] as any[],
+          add: vi.fn(),
+          remove: vi.fn(),
+          get: vi.fn(),
+          onAdded: vi.fn(),
+          onRemoved: vi.fn(),
+          pause: vi.fn(),
+          resume: vi.fn(),
+          isPaused: vi.fn().mockReturnValue(false),
+          flush: vi.fn(),
+        },
+        outbox: {
+          items: [] as any[],
+          add: vi.fn(),
+          remove: vi.fn(),
+          get: vi.fn(),
+          onAdded: vi.fn(),
+          onRemoved: vi.fn(),
+          pause: vi.fn(),
+          resume: vi.fn(),
+          isPaused: vi.fn().mockReturnValue(false),
+          flush: vi.fn(),
+        },
+        deadLetter: {
+          items: [] as any[],
+          add: vi.fn(),
+          remove: vi.fn(),
+          get: vi.fn(),
+          onAdded: vi.fn(),
+          onRemoved: vi.fn(),
+          pause: vi.fn(),
+          resume: vi.fn(),
+          isPaused: vi.fn().mockReturnValue(false),
+          flush: vi.fn(),
+        },
+        init: vi.fn().mockResolvedValue(undefined),
+        shutdown: vi.fn(),
+        updateCursor: vi.fn(),
+        getHealth: vi.fn(),
+        poller: {} as any,
+        config: {} as any,
+      } as any;
+
+      vi.mocked(mockChannelFactory.instance).mockReturnValue(mockChannel2);
+
+      await syncManager.add("remote-inbox3", "collection1", channelConfig, {
+        documentId: ["doc1"],
+        scope: ["global"],
+        branch: "main",
+      });
+
+      const { SyncOperation: SyncOp } = await import(
+        "../../../src/sync/sync-operation.js"
+      );
+
+      const syncOp1 = new SyncOp(
+        "syncop-1",
+        "key-0",
+        [],
+        "remote-inbox3",
+        "doc1",
+        ["global"],
+        "main",
+        [
+          {
+            operation: {
+              id: "op1",
+              index: 0,
+              skip: 0,
+              hash: "h1",
+              timestampUtcMs: "1000",
+              action: { type: "CREATE", scope: "global" } as any,
+            },
+            context: {
+              documentId: "doc1",
+              documentType: "test",
+              scope: "global",
+              branch: "main",
+              ordinal: 1,
+            },
+          },
+        ],
+      );
+
+      const syncOp2 = new SyncOp(
+        "syncop-2",
+        "key-1",
+        ["key-0"],
+        "remote-inbox3",
+        "doc1",
+        ["global"],
+        "main",
+        [
+          {
+            operation: {
+              id: "op2",
+              index: 1,
+              skip: 0,
+              hash: "h2",
+              timestampUtcMs: "2000",
+              action: { type: "UPDATE", scope: "global" } as any,
+            },
+            context: {
+              documentId: "doc1",
+              documentType: "test",
+              scope: "global",
+              branch: "main",
+              ordinal: 2,
+            },
+          },
+        ],
+      );
+
+      vi.mocked(mockReactor as any).loadBatch = vi
+        .fn()
+        .mockRejectedValue(new Error("Batch load failed"));
+
+      const inboxCallback = vi.mocked(mockChannel2.inbox.onAdded).mock
+        .calls[0][0];
+
+      inboxCallback([syncOp1, syncOp2]);
+
+      await new Promise((resolve) => setTimeout(resolve, 20));
+
+      // Both SyncOps should be moved to dead letter
+      expect(mockChannel2.deadLetter.add).toHaveBeenCalledTimes(2);
+      expect(mockChannel2.inbox.remove).toHaveBeenCalledTimes(2);
+
+      // Both SyncOps should be in error state
+      const { SyncOperationStatus } = await import(
+        "../../../src/sync/types.js"
+      );
+      expect(syncOp1.status).toBe(SyncOperationStatus.Error);
+      expect(syncOp2.status).toBe(SyncOperationStatus.Error);
     });
   });
 });

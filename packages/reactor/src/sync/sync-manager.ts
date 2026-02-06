@@ -3,7 +3,11 @@ import {
   driveCollectionId,
   type IOperationIndex,
 } from "../cache/operation-index-types.js";
-import type { IReactor } from "../core/types.js";
+import type {
+  BatchLoadRequest,
+  BatchLoadResult,
+  IReactor,
+} from "../core/types.js";
 import type { IEventBus } from "../events/interfaces.js";
 import {
   ReactorEventTypes,
@@ -377,9 +381,7 @@ export class SyncManager implements ISyncManager {
 
   private wireChannelCallbacks(remote: Remote): void {
     remote.channel.inbox.onAdded((syncOps) => {
-      for (const syncOp of syncOps) {
-        this.handleInboxJob(remote, syncOp);
-      }
+      this.handleInboxAdded(remote, syncOps);
     });
 
     remote.channel.outbox.onAdded((syncOps) => {
@@ -469,12 +471,8 @@ export class SyncManager implements ISyncManager {
     const isBatch = events.length > 1;
 
     const mergedMemberships: Record<string, string[]> = {};
-    const inBatchDocumentIds = new Set<string>();
 
     for (const event of events) {
-      for (const op of event.operations) {
-        inBatchDocumentIds.add(op.context.documentId);
-      }
       if (event.collectionMemberships) {
         for (const [docId, collections] of Object.entries(
           event.collectionMemberships,
@@ -489,36 +487,15 @@ export class SyncManager implements ISyncManager {
           }
         }
       }
-    }
 
-    const priorJobIds: string[] = [];
-
-    for (const event of events) {
-      // Extract sourceRemote early so we can use it for backfill filtering
-      const sourceRemote = event.jobMeta?.sourceRemote as string | undefined;
-
-      // FIRST: Queue historical operations for any ADD_RELATIONSHIP on document-drives
-      // This ensures CREATE_DOCUMENT/UPGRADE_DOCUMENT are queued BEFORE ADD_RELATIONSHIP
       for (const op of event.operations) {
         const action = op.operation.action as {
           type: string;
           input?: { sourceId?: string; targetId?: string };
         };
-
         if (action.type !== "ADD_RELATIONSHIP") {
           continue;
         }
-
-        // ADD_RELATIONSHIP on non-document-drive is undefined behavior for sync
-        if (op.context.documentType !== "powerhouse/document-drive") {
-          this.logger.error(
-            "ADD_RELATIONSHIP on non-document-drive may cause sync issues (@documentType, @documentId)",
-            op.context.documentType,
-            op.context.documentId,
-          );
-          continue;
-        }
-
         const input = action.input;
         if (!input?.sourceId || !input?.targetId) {
           continue;
@@ -528,29 +505,19 @@ export class SyncManager implements ISyncManager {
           op.context.branch,
           input.sourceId,
         );
-
-        // Derive collection membership from ADD_RELATIONSHIP
         if (!mergedMemberships[input.targetId]) {
           mergedMemberships[input.targetId] = [];
         }
         if (!mergedMemberships[input.targetId].includes(collectionId)) {
           mergedMemberships[input.targetId].push(collectionId);
         }
-
-        // Skip backfill when the target document's operations are already in the batch
-        if (isBatch && inBatchDocumentIds.has(input.targetId)) {
-          continue;
-        }
-
-        await this.syncDocumentToCollection(
-          input.targetId,
-          collectionId,
-          op.context.branch,
-          sourceRemote,
-        );
       }
+    }
 
-      // THEN: Build syncOpsWithRemote and queue current job's operations
+    const priorJobIds: string[] = [];
+
+    for (const event of events) {
+      const sourceRemote = event.jobMeta?.sourceRemote as string | undefined;
       const syncOpsWithRemote: Array<{
         syncOp: SyncOperation;
         remote: Remote;
@@ -638,12 +605,29 @@ export class SyncManager implements ISyncManager {
     }
   }
 
-  private handleInboxJob(remote: Remote, syncOp: SyncOperation): void {
+  private handleInboxAdded(remote: Remote, syncOps: SyncOperation[]): void {
     if (this.isShutdown) {
       return;
     }
 
-    void this.applyInboxJob(remote, syncOp);
+    const keyed: SyncOperation[] = [];
+    const nonKeyed: SyncOperation[] = [];
+
+    for (const syncOp of syncOps) {
+      if (syncOp.jobId) {
+        keyed.push(syncOp);
+      } else {
+        nonKeyed.push(syncOp);
+      }
+    }
+
+    for (const syncOp of nonKeyed) {
+      void this.applyInboxJob(remote, syncOp);
+    }
+
+    if (keyed.length > 0) {
+      void this.applyInboxBatch(keyed.map((syncOp) => ({ remote, syncOp })));
+    }
   }
 
   private handleOutboxJob(remote: Remote, syncOp: SyncOperation): void {
@@ -730,6 +714,73 @@ export class SyncManager implements ISyncManager {
     remote.channel.inbox.remove(syncOp);
   }
 
+  private async applyInboxBatch(
+    items: Array<{ remote: Remote; syncOp: SyncOperation }>,
+  ): Promise<void> {
+    const sourceRemote = items[0].remote.name;
+
+    const jobs = items.map(({ syncOp }) => ({
+      key: syncOp.jobId,
+      documentId: syncOp.documentId,
+      scope: syncOp.scopes[0],
+      branch: syncOp.branch,
+      operations: syncOp.operations.map((op) => op.operation),
+      dependsOn: syncOp.jobDependencies,
+    }));
+
+    const request: BatchLoadRequest = { jobs };
+
+    let result: BatchLoadResult;
+    try {
+      result = await this.reactor.loadBatch(request, undefined, {
+        sourceRemote,
+      });
+    } catch (error) {
+      for (const { remote, syncOp } of items) {
+        const err = error instanceof Error ? error : new Error(String(error));
+        syncOp.failed(new ChannelError(ChannelErrorSource.Inbox, err));
+        remote.channel.deadLetter.add(syncOp);
+        remote.channel.inbox.remove(syncOp);
+      }
+      return;
+    }
+
+    for (const { remote, syncOp } of items) {
+      const jobInfo = result.jobs[syncOp.jobId];
+      if (!jobInfo) {
+        continue;
+      }
+
+      let completedJobInfo;
+      try {
+        completedJobInfo = await this.awaiter.waitForJob(jobInfo.id);
+      } catch (error) {
+        const err = error instanceof Error ? error : new Error(String(error));
+        syncOp.failed(new ChannelError(ChannelErrorSource.Inbox, err));
+        remote.channel.deadLetter.add(syncOp);
+        remote.channel.inbox.remove(syncOp);
+        continue;
+      }
+
+      const jobKey = `${syncOp.documentId}:${syncOp.branch}`;
+      this.loadJobs.set(jobKey, completedJobInfo);
+
+      if (completedJobInfo.status === JobStatus.FAILED) {
+        const errorMessage = completedJobInfo.error?.message || "Unknown error";
+        const channelError = new ChannelError(
+          ChannelErrorSource.Inbox,
+          new Error(`Failed to apply operations: ${errorMessage}`),
+        );
+        syncOp.failed(channelError);
+        remote.channel.deadLetter.add(syncOp);
+      } else {
+        syncOp.executed();
+      }
+
+      remote.channel.inbox.remove(syncOp);
+    }
+  }
+
   private markSyncOpCompleted(
     jobId: string,
     syncOpId: string,
@@ -791,85 +842,5 @@ export class SyncManager implements ISyncManager {
       }
       return collectionMemberships[documentId].includes(collectionId);
     });
-  }
-
-  private async syncDocumentToCollection(
-    documentId: string,
-    collectionId: string,
-    branch: string,
-    sourceRemote?: string,
-  ): Promise<void> {
-    let historicalOps;
-    try {
-      historicalOps = await this._operationIndex.get(documentId, { branch });
-    } catch {
-      return;
-    }
-
-    if (historicalOps.results.length === 0) {
-      return;
-    }
-
-    const opsWithContext: OperationWithContext[] = historicalOps.results.map(
-      (entry) => ({
-        operation: {
-          id: entry.id,
-          index: entry.index,
-          skip: entry.skip,
-          hash: entry.hash,
-          timestampUtcMs: entry.timestampUtcMs,
-          action: entry.action,
-        } as Operation,
-        context: {
-          documentId: entry.documentId,
-          documentType: entry.documentType,
-          scope: entry.scope,
-          branch: entry.branch,
-          ordinal: entry.ordinal ?? 0,
-        },
-      }),
-    );
-
-    for (const remote of this.remotes.values()) {
-      // Skip the source remote to avoid echoing operations back
-      if (sourceRemote && remote.name === sourceRemote) {
-        continue;
-      }
-
-      if (remote.filter.documentId.length > 0) {
-        continue;
-      }
-
-      if (remote.collectionId !== collectionId) {
-        continue;
-      }
-
-      let filteredOps = filterOperations(opsWithContext, remote.filter);
-
-      filteredOps = filteredOps.filter(
-        (op) =>
-          op.operation.timestampUtcMs > remote.options.sinceTimestampUtcMs,
-      );
-
-      if (filteredOps.length === 0) {
-        continue;
-      }
-
-      const batches = batchOperationsByDocument(filteredOps);
-
-      for (const batch of batches) {
-        const syncOp = new SyncOperation(
-          crypto.randomUUID(),
-          "",
-          [],
-          remote.name,
-          batch.documentId,
-          [batch.scope],
-          batch.branch,
-          batch.operations,
-        );
-        remote.channel.outbox.add(syncOp);
-      }
-    }
   }
 }

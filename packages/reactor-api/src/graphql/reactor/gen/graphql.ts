@@ -1,12 +1,12 @@
 import type {
-  DocumentNode,
   GraphQLResolveInfo,
   GraphQLScalarType,
   GraphQLScalarTypeConfig,
 } from "graphql";
-import { z } from "zod/v3";
-import { gql } from "graphql-tag";
 import type { Context } from "../../types.js";
+import * as z from "zod";
+import type { DocumentNode } from "graphql";
+import { gql } from "graphql-tag";
 export type Maybe<T> = T | null | undefined;
 export type InputMaybe<T> = T | null | undefined;
 export type Exact<T extends { [key: string]: unknown }> = {
@@ -93,13 +93,6 @@ export type ChannelMetaInput = {
   readonly id: Scalars["String"]["input"];
 };
 
-export type CreateChannelInput = {
-  readonly collectionId: Scalars["String"]["input"];
-  readonly filter: RemoteFilterInput;
-  readonly id: Scalars["String"]["input"];
-  readonly name: Scalars["String"]["input"];
-};
-
 export type DocumentChangeContext = {
   readonly childId?: Maybe<Scalars["String"]["output"]>;
   readonly parentId?: Maybe<Scalars["String"]["output"]>;
@@ -165,7 +158,6 @@ export type MoveChildrenResult = {
 
 export type Mutation = {
   readonly addChildren: PhDocument;
-  readonly createChannel: Scalars["Boolean"]["output"];
   readonly createDocument: PhDocument;
   readonly createEmptyDocument: PhDocument;
   readonly deleteDocument: Scalars["Boolean"]["output"];
@@ -176,16 +168,13 @@ export type Mutation = {
   readonly pushSyncEnvelopes: Scalars["Boolean"]["output"];
   readonly removeChildren: PhDocument;
   readonly renameDocument: PhDocument;
+  readonly touchChannel: Scalars["Boolean"]["output"];
 };
 
 export type MutationAddChildrenArgs = {
   branch?: InputMaybe<Scalars["String"]["input"]>;
   documentIdentifiers: ReadonlyArray<Scalars["String"]["input"]>;
   parentIdentifier: Scalars["String"]["input"];
-};
-
-export type MutationCreateChannelArgs = {
-  input: CreateChannelInput;
 };
 
 export type MutationCreateDocumentArgs = {
@@ -243,6 +232,10 @@ export type MutationRenameDocumentArgs = {
   name: Scalars["String"]["input"];
 };
 
+export type MutationTouchChannelArgs = {
+  input: TouchChannelInput;
+};
+
 export type OperationContext = {
   readonly branch: Scalars["String"]["output"];
   readonly documentId: Scalars["String"]["output"];
@@ -277,6 +270,16 @@ export type OperationWithContextInput = {
   readonly operation: OperationInput;
 };
 
+export type OperationsFilterInput = {
+  readonly actionTypes?: InputMaybe<ReadonlyArray<Scalars["String"]["input"]>>;
+  readonly branch?: InputMaybe<Scalars["String"]["input"]>;
+  readonly documentId: Scalars["String"]["input"];
+  readonly scopes?: InputMaybe<ReadonlyArray<Scalars["String"]["input"]>>;
+  readonly sinceRevision?: InputMaybe<Scalars["Int"]["input"]>;
+  readonly timestampFrom?: InputMaybe<Scalars["String"]["input"]>;
+  readonly timestampTo?: InputMaybe<Scalars["String"]["input"]>;
+};
+
 export type PhDocument = {
   readonly createdAtUtcIso: Scalars["DateTime"]["output"];
   readonly documentType: Scalars["String"]["output"];
@@ -294,14 +297,6 @@ export type PhDocumentResultPage = {
   readonly hasNextPage: Scalars["Boolean"]["output"];
   readonly hasPreviousPage: Scalars["Boolean"]["output"];
   readonly items: ReadonlyArray<PhDocument>;
-  readonly totalCount: Scalars["Int"]["output"];
-};
-
-export type ReactorOperationResultPage = {
-  readonly cursor?: Maybe<Scalars["String"]["output"]>;
-  readonly hasNextPage: Scalars["Boolean"]["output"];
-  readonly hasPreviousPage: Scalars["Boolean"]["output"];
-  readonly items: ReadonlyArray<ReactorOperation>;
   readonly totalCount: Scalars["Int"]["output"];
 };
 
@@ -343,6 +338,11 @@ export type QueryDocumentModelsArgs = {
   paging?: InputMaybe<PagingInput>;
 };
 
+export type QueryDocumentOperationsArgs = {
+  filter: OperationsFilterInput;
+  paging?: InputMaybe<PagingInput>;
+};
+
 export type QueryDocumentParentsArgs = {
   childIdentifier: Scalars["String"]["input"];
   paging?: InputMaybe<PagingInput>;
@@ -359,11 +359,6 @@ export type QueryJobStatusArgs = {
   jobId: Scalars["String"]["input"];
 };
 
-export type QueryDocumentOperationsArgs = {
-  filter: OperationsFilterInput;
-  paging?: InputMaybe<PagingInput>;
-};
-
 export type QueryPollSyncEnvelopesArgs = {
   channelId: Scalars["String"]["input"];
   cursorOrdinal: Scalars["Int"]["input"];
@@ -377,6 +372,14 @@ export type ReactorOperation = {
   readonly index: Scalars["Int"]["output"];
   readonly skip: Scalars["Int"]["output"];
   readonly timestampUtcMs: Scalars["String"]["output"];
+};
+
+export type ReactorOperationResultPage = {
+  readonly cursor?: Maybe<Scalars["String"]["output"]>;
+  readonly hasNextPage: Scalars["Boolean"]["output"];
+  readonly hasPreviousPage: Scalars["Boolean"]["output"];
+  readonly items: ReadonlyArray<ReactorOperation>;
+  readonly totalCount: Scalars["Int"]["output"];
 };
 
 export type ReactorSigner = {
@@ -442,16 +445,6 @@ export type SearchFilterInput = {
   readonly type?: InputMaybe<Scalars["String"]["input"]>;
 };
 
-export type OperationsFilterInput = {
-  readonly documentId: Scalars["String"]["input"];
-  readonly branch?: InputMaybe<Scalars["String"]["input"]>;
-  readonly scopes?: InputMaybe<ReadonlyArray<Scalars["String"]["input"]>>;
-  readonly actionTypes?: InputMaybe<ReadonlyArray<Scalars["String"]["input"]>>;
-  readonly sinceRevision?: InputMaybe<Scalars["Int"]["input"]>;
-  readonly timestampFrom?: InputMaybe<Scalars["String"]["input"]>;
-  readonly timestampTo?: InputMaybe<Scalars["String"]["input"]>;
-};
-
 export type Subscription = {
   readonly documentChanges: DocumentChangeEvent;
   readonly jobChanges: JobChangeEvent;
@@ -469,6 +462,8 @@ export type SubscriptionJobChangesArgs = {
 export type SyncEnvelope = {
   readonly channelMeta: ChannelMeta;
   readonly cursor?: Maybe<RemoteCursor>;
+  readonly dependsOn?: Maybe<ReadonlyArray<Scalars["String"]["output"]>>;
+  readonly key?: Maybe<Scalars["String"]["output"]>;
   readonly operations?: Maybe<ReadonlyArray<OperationWithContext>>;
   readonly type: SyncEnvelopeType;
 };
@@ -476,6 +471,8 @@ export type SyncEnvelope = {
 export type SyncEnvelopeInput = {
   readonly channelMeta: ChannelMetaInput;
   readonly cursor?: InputMaybe<RemoteCursorInput>;
+  readonly dependsOn?: InputMaybe<ReadonlyArray<Scalars["String"]["input"]>>;
+  readonly key?: InputMaybe<Scalars["String"]["input"]>;
   readonly operations?: InputMaybe<ReadonlyArray<OperationWithContextInput>>;
   readonly type: SyncEnvelopeType;
 };
@@ -484,6 +481,14 @@ export enum SyncEnvelopeType {
   Ack = "ACK",
   Operations = "OPERATIONS",
 }
+
+export type TouchChannelInput = {
+  readonly collectionId: Scalars["String"]["input"];
+  readonly filter: RemoteFilterInput;
+  readonly id: Scalars["String"]["input"];
+  readonly name: Scalars["String"]["input"];
+  readonly sinceTimestampUtcMs: Scalars["String"]["input"];
+};
 
 export type ViewFilterInput = {
   readonly branch?: InputMaybe<Scalars["String"]["input"]>;
@@ -1023,7 +1028,6 @@ export type ResolversTypes = ResolversObject<{
   Boolean: ResolverTypeWrapper<Scalars["Boolean"]["output"]>;
   ChannelMeta: ResolverTypeWrapper<ChannelMeta>;
   ChannelMetaInput: ChannelMetaInput;
-  CreateChannelInput: CreateChannelInput;
   DateTime: ResolverTypeWrapper<Scalars["DateTime"]["output"]>;
   DocumentChangeContext: ResolverTypeWrapper<DocumentChangeContext>;
   DocumentChangeEvent: ResolverTypeWrapper<DocumentChangeEvent>;
@@ -1042,13 +1046,14 @@ export type ResolversTypes = ResolversObject<{
   OperationInput: OperationInput;
   OperationWithContext: ResolverTypeWrapper<OperationWithContext>;
   OperationWithContextInput: OperationWithContextInput;
+  OperationsFilterInput: OperationsFilterInput;
   PHDocument: ResolverTypeWrapper<PhDocument>;
   PHDocumentResultPage: ResolverTypeWrapper<PhDocumentResultPage>;
-  ReactorOperationResultPage: ResolverTypeWrapper<ReactorOperationResultPage>;
   PagingInput: PagingInput;
   PropagationMode: PropagationMode;
   Query: ResolverTypeWrapper<{}>;
   ReactorOperation: ResolverTypeWrapper<ReactorOperation>;
+  ReactorOperationResultPage: ResolverTypeWrapper<ReactorOperationResultPage>;
   ReactorSigner: ResolverTypeWrapper<ReactorSigner>;
   ReactorSignerApp: ResolverTypeWrapper<ReactorSignerApp>;
   ReactorSignerAppInput: ReactorSignerAppInput;
@@ -1065,6 +1070,7 @@ export type ResolversTypes = ResolversObject<{
   SyncEnvelope: ResolverTypeWrapper<SyncEnvelope>;
   SyncEnvelopeInput: SyncEnvelopeInput;
   SyncEnvelopeType: SyncEnvelopeType;
+  TouchChannelInput: TouchChannelInput;
   ViewFilterInput: ViewFilterInput;
 }>;
 
@@ -1079,7 +1085,6 @@ export type ResolversParentTypes = ResolversObject<{
   Boolean: Scalars["Boolean"]["output"];
   ChannelMeta: ChannelMeta;
   ChannelMetaInput: ChannelMetaInput;
-  CreateChannelInput: CreateChannelInput;
   DateTime: Scalars["DateTime"]["output"];
   DocumentChangeContext: DocumentChangeContext;
   DocumentChangeEvent: DocumentChangeEvent;
@@ -1097,12 +1102,13 @@ export type ResolversParentTypes = ResolversObject<{
   OperationInput: OperationInput;
   OperationWithContext: OperationWithContext;
   OperationWithContextInput: OperationWithContextInput;
+  OperationsFilterInput: OperationsFilterInput;
   PHDocument: PhDocument;
   PHDocumentResultPage: PhDocumentResultPage;
-  ReactorOperationResultPage: ReactorOperationResultPage;
   PagingInput: PagingInput;
   Query: {};
   ReactorOperation: ReactorOperation;
+  ReactorOperationResultPage: ReactorOperationResultPage;
   ReactorSigner: ReactorSigner;
   ReactorSignerApp: ReactorSignerApp;
   ReactorSignerAppInput: ReactorSignerAppInput;
@@ -1118,6 +1124,7 @@ export type ResolversParentTypes = ResolversObject<{
   Subscription: {};
   SyncEnvelope: SyncEnvelope;
   SyncEnvelopeInput: SyncEnvelopeInput;
+  TouchChannelInput: TouchChannelInput;
   ViewFilterInput: ViewFilterInput;
 }>;
 
@@ -1336,12 +1343,6 @@ export type MutationResolvers<
       "documentIdentifiers" | "parentIdentifier"
     >
   >;
-  createChannel?: Resolver<
-    ResolversTypes["Boolean"],
-    ParentType,
-    ContextType,
-    RequireFields<MutationCreateChannelArgs, "input">
-  >;
   createDocument?: Resolver<
     ResolversTypes["PHDocument"],
     ParentType,
@@ -1412,6 +1413,12 @@ export type MutationResolvers<
     ParentType,
     ContextType,
     RequireFields<MutationRenameDocumentArgs, "documentIdentifier" | "name">
+  >;
+  touchChannel?: Resolver<
+    ResolversTypes["Boolean"],
+    ParentType,
+    ContextType,
+    RequireFields<MutationTouchChannelArgs, "input">
   >;
 }>;
 
@@ -1495,27 +1502,6 @@ export type PhDocumentResultPageResolvers<
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
-export type ReactorOperationResultPageResolvers<
-  ContextType = Context,
-  ParentType extends
-    ResolversParentTypes["ReactorOperationResultPage"] = ResolversParentTypes["ReactorOperationResultPage"],
-> = ResolversObject<{
-  cursor?: Resolver<Maybe<ResolversTypes["String"]>, ParentType, ContextType>;
-  hasNextPage?: Resolver<ResolversTypes["Boolean"], ParentType, ContextType>;
-  hasPreviousPage?: Resolver<
-    ResolversTypes["Boolean"],
-    ParentType,
-    ContextType
-  >;
-  items?: Resolver<
-    ReadonlyArray<ResolversTypes["ReactorOperation"]>,
-    ParentType,
-    ContextType
-  >;
-  totalCount?: Resolver<ResolversTypes["Int"], ParentType, ContextType>;
-  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
-}>;
-
 export type QueryResolvers<
   ContextType = Context,
   ParentType extends
@@ -1583,6 +1569,27 @@ export type ReactorOperationResolvers<
   index?: Resolver<ResolversTypes["Int"], ParentType, ContextType>;
   skip?: Resolver<ResolversTypes["Int"], ParentType, ContextType>;
   timestampUtcMs?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+
+export type ReactorOperationResultPageResolvers<
+  ContextType = Context,
+  ParentType extends
+    ResolversParentTypes["ReactorOperationResultPage"] = ResolversParentTypes["ReactorOperationResultPage"],
+> = ResolversObject<{
+  cursor?: Resolver<Maybe<ResolversTypes["String"]>, ParentType, ContextType>;
+  hasNextPage?: Resolver<ResolversTypes["Boolean"], ParentType, ContextType>;
+  hasPreviousPage?: Resolver<
+    ResolversTypes["Boolean"],
+    ParentType,
+    ContextType
+  >;
+  items?: Resolver<
+    ReadonlyArray<ResolversTypes["ReactorOperation"]>,
+    ParentType,
+    ContextType
+  >;
+  totalCount?: Resolver<ResolversTypes["Int"], ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
@@ -1691,6 +1698,12 @@ export type SyncEnvelopeResolvers<
     ParentType,
     ContextType
   >;
+  dependsOn?: Resolver<
+    Maybe<ReadonlyArray<ResolversTypes["String"]>>,
+    ParentType,
+    ContextType
+  >;
+  key?: Resolver<Maybe<ResolversTypes["String"]>, ParentType, ContextType>;
   operations?: Resolver<
     Maybe<ReadonlyArray<ResolversTypes["OperationWithContext"]>>,
     ParentType,
@@ -1720,9 +1733,9 @@ export type Resolvers<ContextType = Context> = ResolversObject<{
   OperationWithContext?: OperationWithContextResolvers<ContextType>;
   PHDocument?: PhDocumentResolvers<ContextType>;
   PHDocumentResultPage?: PhDocumentResultPageResolvers<ContextType>;
-  ReactorOperationResultPage?: ReactorOperationResultPageResolvers<ContextType>;
   Query?: QueryResolvers<ContextType>;
   ReactorOperation?: ReactorOperationResolvers<ContextType>;
+  ReactorOperationResultPage?: ReactorOperationResultPageResolvers<ContextType>;
   ReactorSigner?: ReactorSignerResolvers<ContextType>;
   ReactorSignerApp?: ReactorSignerAppResolvers<ContextType>;
   ReactorSignerUser?: ReactorSignerUserResolvers<ContextType>;
@@ -1745,11 +1758,11 @@ export const definedNonNullAnySchema = z
   .any()
   .refine((v) => isDefinedNonNullAny(v));
 
-export const DocumentChangeTypeSchema = z.nativeEnum(DocumentChangeType);
+export const DocumentChangeTypeSchema = z.enum(DocumentChangeType);
 
-export const PropagationModeSchema = z.nativeEnum(PropagationMode);
+export const PropagationModeSchema = z.enum(PropagationMode);
 
-export const SyncEnvelopeTypeSchema = z.nativeEnum(SyncEnvelopeType);
+export const SyncEnvelopeTypeSchema = z.enum(SyncEnvelopeType);
 
 export function ActionContextInputSchema(): z.ZodObject<
   Properties<ActionContextInput>
@@ -1791,17 +1804,6 @@ export function ChannelMetaInputSchema(): z.ZodObject<
   });
 }
 
-export function CreateChannelInputSchema(): z.ZodObject<
-  Properties<CreateChannelInput>
-> {
-  return z.object({
-    collectionId: z.string(),
-    filter: z.lazy(() => RemoteFilterInputSchema()),
-    id: z.string(),
-    name: z.string(),
-  });
-}
-
 export function OperationContextInputSchema(): z.ZodObject<
   Properties<OperationContextInput>
 > {
@@ -1833,6 +1835,20 @@ export function OperationWithContextInputSchema(): z.ZodObject<
   return z.object({
     context: z.lazy(() => OperationContextInputSchema()),
     operation: z.lazy(() => OperationInputSchema()),
+  });
+}
+
+export function OperationsFilterInputSchema(): z.ZodObject<
+  Properties<OperationsFilterInput>
+> {
+  return z.object({
+    actionTypes: z.array(z.string()).nullish(),
+    branch: z.string().nullish(),
+    documentId: z.string(),
+    scopes: z.array(z.string()).nullish(),
+    sinceRevision: z.number().nullish(),
+    timestampFrom: z.string().nullish(),
+    timestampTo: z.string().nullish(),
   });
 }
 
@@ -1909,10 +1925,24 @@ export function SyncEnvelopeInputSchema(): z.ZodObject<
   return z.object({
     channelMeta: z.lazy(() => ChannelMetaInputSchema()),
     cursor: z.lazy(() => RemoteCursorInputSchema().nullish()),
+    dependsOn: z.array(z.string()).nullish(),
+    key: z.string().nullish(),
     operations: z
       .array(z.lazy(() => OperationWithContextInputSchema()))
       .nullish(),
     type: SyncEnvelopeTypeSchema,
+  });
+}
+
+export function TouchChannelInputSchema(): z.ZodObject<
+  Properties<TouchChannelInput>
+> {
+  return z.object({
+    collectionId: z.string(),
+    filter: z.lazy(() => RemoteFilterInputSchema()),
+    id: z.string(),
+    name: z.string(),
+    sinceTimestampUtcMs: z.string(),
   });
 }
 

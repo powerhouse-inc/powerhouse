@@ -22,7 +22,8 @@
       "Bash(grep:*)",
       "Bash(mkdir:*)",
       "Bash(npm run build:*)",
-      "Bash(git stash show:*)"
+      "Bash(git stash show:*)",
+      "Bash(wc:*)"
     ],
     "deny": [],
     "ask": []

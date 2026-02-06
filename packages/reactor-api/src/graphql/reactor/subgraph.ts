@@ -613,6 +613,10 @@ export class ReactorSubgraph extends BaseSubgraph {
                     lastSyncedAtUtcMs: envelope.cursor.lastSyncedAtUtcMs,
                   }
                 : null,
+              key: envelope.key ?? undefined,
+              dependsOn: envelope.dependsOn
+                ? [...envelope.dependsOn]
+                : undefined,
             })),
           };
 
