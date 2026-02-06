@@ -14,7 +14,7 @@ import {
   createDocumentAction,
   upgradeDocumentAction,
 } from "#actions/index.js";
-import { signActions } from "#core/utils.js";
+import { getSharedActionScope, signActions } from "#core/utils.js";
 import type { ILogger } from "#logging/types.js";
 import type {
   BatchLoadRequest,
@@ -457,35 +457,40 @@ export class ReactorClient implements IReactorClient {
       signal,
     );
 
-    const documentJob = await this.reactor.execute(
-      documentId,
-      "main",
-      documentActions,
+    const batchResult = await this.reactor.executeBatch(
+      {
+        jobs: [
+          {
+            key: "document",
+            documentId,
+            scope: getSharedActionScope(documentActions),
+            branch: "main",
+            actions: documentActions,
+            dependsOn: [],
+          },
+          {
+            key: "drive",
+            documentId: driveId,
+            scope: getSharedActionScope(driveActions),
+            branch: "main",
+            actions: driveActions,
+            dependsOn: ["document"],
+          },
+        ],
+      },
       signal,
     );
-    const completedDocumentJob = await this.waitForJob(documentJob, signal);
-    if (completedDocumentJob.status === JobStatus.FAILED) {
-      throw new Error(completedDocumentJob.error?.message);
-    }
 
-    const driveJob = await this.reactor.execute(
-      driveId,
-      "main",
-      driveActions,
-      signal,
+    const completedJobs = await Promise.all(
+      Object.values(batchResult.jobs).map((job) =>
+        this.waitForJob(job, signal),
+      ),
     );
-    const completedDriveJob = await this.waitForJob(driveJob, signal);
-    if (completedDriveJob.status === JobStatus.FAILED) {
-      this.logger.error(
-        "Document was created but the drive operation failed for (@driveId, @documentId) with @error",
-        driveId,
-        documentId,
-        completedDriveJob.error?.message,
-      );
 
-      // TODO: rollback?
-
-      throw new Error(completedDriveJob.error?.message);
+    for (const job of completedJobs) {
+      if (job.status === JobStatus.FAILED) {
+        throw new Error(job.error?.message);
+      }
     }
 
     // since we waited for the job to complete we don't need the consistency token
