@@ -204,6 +204,37 @@ export class ReactorSubgraph extends BaseSubgraph {
   );
 
   resolvers: Resolvers = {
+    // Field resolver for PHDocument.operations - fetches operations on demand
+    PHDocument: {
+      operations: async (parent, args, ctx: Context) => {
+        this.logger.debug(
+          "PHDocument.operations(@parent.id, @args)",
+          parent.id,
+          args,
+        );
+        try {
+          // Build the filter using the document's id
+          const filter = {
+            documentId: parent.id,
+            branch: args.filter?.branch,
+            scopes: args.filter?.scopes,
+            actionTypes: args.filter?.actionTypes,
+            sinceRevision: args.filter?.sinceRevision,
+            timestampFrom: args.filter?.timestampFrom,
+            timestampTo: args.filter?.timestampTo,
+          };
+
+          return await resolvers.documentOperations(this.reactorClient, {
+            filter,
+            paging: args.paging,
+          });
+        } catch (error) {
+          this.logger.error("Error in PHDocument.operations: @Error", error);
+          throw error;
+        }
+      },
+    },
+
     Query: {
       documentModels: async (_parent, args) => {
         this.logger.debug("documentModels(@args)", args);

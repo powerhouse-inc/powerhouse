@@ -30,6 +30,15 @@ input OperationsFilterInput {
   timestampTo: String
 }
 
+input DocumentOperationsFilterInput {
+  branch: String
+  scopes: [String!]
+  actionTypes: [String!]
+  sinceRevision: Int
+  timestampFrom: String
+  timestampTo: String
+}
+
 # Enums
 enum PropagationMode {
   CASCADE
@@ -78,6 +87,10 @@ type PHDocument {
   createdAtUtcIso: DateTime!
   lastModifiedAtUtcIso: DateTime!
   parentId: String
+  operations(
+    filter: DocumentOperationsFilterInput
+    paging: PagingInput
+  ): ReactorOperationResultPage
 }
 
 type PHDocumentResultPage {
