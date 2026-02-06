@@ -30,25 +30,34 @@ describe("PollingChannel Integration", () => {
     remoteName: string,
     ordinal: number,
   ): SyncOperation => {
-    return new SyncOperation(id, "", remoteName, "doc-1", ["public"], "main", [
-      {
-        operation: {
-          index: 0,
-          skip: 0,
-          id: `op-${ordinal}`,
-          timestampUtcMs: new Date().toISOString(),
-          hash: `hash-${ordinal}`,
-          action: {
-            type: "TEST_OP",
-            id: `action-${ordinal}`,
-            scope: "public",
+    return new SyncOperation(
+      id,
+      "",
+      [],
+      remoteName,
+      "doc-1",
+      ["public"],
+      "main",
+      [
+        {
+          operation: {
+            index: 0,
+            skip: 0,
+            id: `op-${ordinal}`,
             timestampUtcMs: new Date().toISOString(),
-            input: {},
+            hash: `hash-${ordinal}`,
+            action: {
+              type: "TEST_OP",
+              id: `action-${ordinal}`,
+              scope: "public",
+              timestampUtcMs: new Date().toISOString(),
+              input: {},
+            },
           },
+          context: createMockOperationContext(ordinal),
         },
-        context: createMockOperationContext(ordinal),
-      },
-    ]);
+      ],
+    );
   };
 
   const createTestRemote = async (name: string): Promise<void> => {

@@ -94,25 +94,34 @@ const createMockSyncOperation = (
   id: string,
   remoteName: string,
 ): SyncOperation => {
-  return new SyncOperation(id, "", remoteName, "doc-1", ["public"], "main", [
-    {
-      operation: {
-        index: 0,
-        skip: 0,
-        id: "op-1",
-        timestampUtcMs: new Date().toISOString(),
-        hash: "hash-1",
-        action: {
-          type: "TEST_OP",
-          id: "action-1",
-          scope: "public",
+  return new SyncOperation(
+    id,
+    "",
+    [],
+    remoteName,
+    "doc-1",
+    ["public"],
+    "main",
+    [
+      {
+        operation: {
+          index: 0,
+          skip: 0,
+          id: "op-1",
           timestampUtcMs: new Date().toISOString(),
-          input: {},
+          hash: "hash-1",
+          action: {
+            type: "TEST_OP",
+            id: "action-1",
+            scope: "public",
+            timestampUtcMs: new Date().toISOString(),
+            input: {},
+          },
         },
+        context: createMockOperationContext(),
       },
-      context: createMockOperationContext(),
-    },
-  ]);
+    ],
+  );
 };
 
 const createMockFetch = (response: any = {}) => {

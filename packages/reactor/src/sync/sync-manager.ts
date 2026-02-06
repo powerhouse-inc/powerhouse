@@ -321,6 +321,7 @@ export class SyncManager implements ISyncManager {
       const syncOp = new SyncOperation(
         crypto.randomUUID(),
         "",
+        [],
         remote.name,
         batch.documentId,
         [batch.scope],
@@ -464,6 +465,7 @@ export class SyncManager implements ISyncManager {
         const syncOp = new SyncOperation(
           crypto.randomUUID(),
           event.jobId,
+          [],
           remote.name,
           batch.documentId,
           [batch.scope],
@@ -733,6 +735,7 @@ export class SyncManager implements ISyncManager {
         const syncOp = new SyncOperation(
           crypto.randomUUID(),
           "",
+          [],
           remote.name,
           batch.documentId,
           [batch.scope],

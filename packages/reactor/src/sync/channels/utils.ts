@@ -93,6 +93,7 @@ export function envelopeToSyncOperation(
   return new SyncOperation(
     syncOpId,
     "",
+    [],
     remoteName,
     documentId,
     scopes,
@@ -131,6 +132,7 @@ export function envelopesToSyncOperations(
     return new SyncOperation(
       syncOpId,
       "",
+      [],
       remoteName,
       batch.documentId,
       [batch.scope],

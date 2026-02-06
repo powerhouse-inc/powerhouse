@@ -46,6 +46,7 @@ describe("SyncOperation", () => {
       const handle = new SyncOperation(
         "syncop1",
         "job1",
+        [],
         "remote1",
         "doc1",
         ["global"],
@@ -70,6 +71,7 @@ describe("SyncOperation", () => {
       const handle = new SyncOperation(
         "syncop1",
         "job1",
+        [],
         "remote1",
         "doc1",
         ["global"],
@@ -95,6 +97,7 @@ describe("SyncOperation", () => {
       const handle = new SyncOperation(
         "syncop1",
         "job1",
+        [],
         "remote1",
         "doc1",
         ["global"],
@@ -122,6 +125,7 @@ describe("SyncOperation", () => {
       const handle = new SyncOperation(
         "syncop1",
         "job1",
+        [],
         "remote1",
         "doc1",
         ["global"],
@@ -150,6 +154,7 @@ describe("SyncOperation", () => {
       const handle = new SyncOperation(
         "syncop1",
         "job1",
+        [],
         "remote1",
         "doc1",
         ["global"],
@@ -182,6 +187,7 @@ describe("SyncOperation", () => {
       const handle = new SyncOperation(
         "syncop1",
         "job1",
+        [],
         "remote1",
         "doc1",
         ["global"],
@@ -212,6 +218,7 @@ describe("SyncOperation", () => {
       const handle = new SyncOperation(
         "syncop1",
         "job1",
+        [],
         "remote1",
         "doc1",
         ["global"],
@@ -244,6 +251,7 @@ describe("SyncOperation", () => {
       const handle = new SyncOperation(
         "syncop1",
         "job1",
+        [],
         "remote1",
         "doc1",
         ["global"],
@@ -266,6 +274,7 @@ describe("SyncOperation", () => {
       const handle = new SyncOperation(
         "syncop1",
         "job1",
+        [],
         "remote1",
         "doc1",
         ["global"],
@@ -306,6 +315,7 @@ describe("SyncOperation", () => {
       const handle = new SyncOperation(
         "syncop1",
         "job1",
+        [],
         "remote1",
         "doc1",
         ["global"],
@@ -335,6 +345,7 @@ describe("SyncOperation", () => {
       const handle = new SyncOperation(
         "syncop1",
         "job1",
+        [],
         "remote1",
         "doc1",
         ["global"],
@@ -399,6 +410,7 @@ describe("SyncOperation", () => {
       const handle = new SyncOperation(
         "syncop1",
         "job1",
+        [],
         "remote1",
         "doc1",
         ["global"],
@@ -421,6 +433,7 @@ describe("SyncOperation", () => {
       const handle = new SyncOperation(
         "syncop1",
         "job1",
+        [],
         "remote1",
         "doc1",
         ["global"],
@@ -449,6 +462,7 @@ describe("SyncOperation", () => {
       const handle = new SyncOperation(
         "syncop1",
         "job1",
+        [],
         "remote1",
         "doc1",
         ["global"],
@@ -473,6 +487,7 @@ describe("SyncOperation", () => {
       const handle = new SyncOperation(
         "syncop1",
         "job1",
+        [],
         "remote1",
         "doc1",
         ["global"],
@@ -501,6 +516,7 @@ describe("SyncOperation", () => {
       const handle = new SyncOperation(
         "syncop1",
         "job1",
+        [],
         "remote1",
         "doc1",
         ["global"],
@@ -521,6 +537,7 @@ describe("SyncOperation", () => {
       const handle = new SyncOperation(
         "syncop1",
         "job1",
+        [],
         "remote1",
         "doc1",
         ["global", "protected"],
@@ -535,6 +552,7 @@ describe("SyncOperation", () => {
       const handle = new SyncOperation(
         "syncop1",
         "job1",
+        [],
         "remote1",
         "doc1",
         [],

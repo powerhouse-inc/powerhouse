@@ -921,6 +921,7 @@ export function pushSyncEnvelopes(
       const syncOp = new SyncOperation(
         syncOpId,
         jobId,
+        [],
         remote.name,
         batch.documentId,
         [batch.scope],
