@@ -7,7 +7,7 @@ import type {
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ReactorClient } from "../../src/client/reactor-client.js";
 import type { IReactorClient } from "../../src/client/types.js";
-import type { IReactor } from "../../src/core/types.js";
+import type { BatchExecutionResult, IReactor } from "../../src/core/types.js";
 import type { IJobAwaiter } from "../../src/shared/awaiter.js";
 import {
   JobStatus,
@@ -29,6 +29,29 @@ import {
   createMockSigner,
   createMockSubscriptionManager,
 } from "../factories.js";
+
+function createMockPHDocument(id: string, documentType = "test"): PHDocument {
+  return {
+    header: {
+      id,
+      documentType,
+      slug: "",
+      name: "",
+      branch: "main",
+      meta: {},
+      sig: {
+        publicKey: "mock-pub-key",
+        nonce: "mock-nonce",
+      },
+      createdAtUtcIso: new Date().toISOString(),
+      protocolVersions: { "base-reducer": 2 },
+    },
+    state: {
+      document: { version: 1 },
+    },
+    initialState: {},
+  } as unknown as PHDocument;
+}
 
 describe("ReactorClient Unit Tests", () => {
   let client: IReactorClient;
@@ -58,6 +81,7 @@ describe("ReactorClient Unit Tests", () => {
         options: { cursor: "", limit: 10 },
       }),
       execute: vi.fn(),
+      executeBatch: vi.fn(),
       addChildren: vi.fn(),
       removeChildren: vi.fn(),
       deleteDocument: vi.fn(),
@@ -454,17 +478,8 @@ describe("ReactorClient Unit Tests", () => {
   });
 
   describe("create", () => {
-    it("should pass signer to reactor.create, wait for job, and return document", async () => {
-      const document: PHDocument = {
-        header: { id: "doc-1", documentType: "test" },
-      } as PHDocument;
-
-      const jobInfo: JobInfo = {
-        id: "job-1",
-        status: JobStatus.PENDING,
-        createdAtUtcIso: new Date().toISOString(),
-        consistencyToken: createEmptyConsistencyToken(),
-      };
+    it("should call executeBatch, wait for job, and return document", async () => {
+      const document = createMockPHDocument("doc-1");
 
       const completedJobInfo: JobInfo = {
         id: "job-1",
@@ -473,84 +488,47 @@ describe("ReactorClient Unit Tests", () => {
         consistencyToken: createEmptyConsistencyToken(),
       };
 
-      vi.mocked(mockReactor.create).mockResolvedValue(jobInfo);
+      const batchResult: BatchExecutionResult = {
+        jobs: {
+          create: {
+            id: "job-1",
+            status: JobStatus.PENDING,
+            createdAtUtcIso: new Date().toISOString(),
+            consistencyToken: createEmptyConsistencyToken(),
+          },
+        },
+      };
+
+      vi.mocked(mockReactor.executeBatch).mockResolvedValue(batchResult);
       vi.mocked(mockJobAwaiter.waitForJob).mockResolvedValue(completedJobInfo);
       vi.mocked(mockReactor.get).mockResolvedValue(document);
 
       const result = await client.create(document);
 
-      expect(mockReactor.create).toHaveBeenCalledWith(
-        document,
-        mockSigner,
+      expect(mockReactor.executeBatch).toHaveBeenCalledWith(
+        {
+          jobs: [
+            expect.objectContaining({
+              key: "create",
+              documentId: "doc-1",
+              branch: "main",
+              dependsOn: [],
+            }),
+          ],
+        },
         undefined,
       );
       expect(mockJobAwaiter.waitForJob).toHaveBeenCalledWith(
         "job-1",
         undefined,
       );
-      expect(mockReactor.get).toHaveBeenCalledWith(
-        "doc-1",
-        undefined,
-        completedJobInfo.consistencyToken,
-        undefined,
-      );
+      expect(mockReactor.get).toHaveBeenCalledWith("doc-1");
       expect(result).toEqual(document);
     });
 
-    it("should pass signal to reactor.create", async () => {
-      const document: PHDocument = {
-        header: { id: "doc-1", documentType: "test" },
-      } as PHDocument;
+    it("should pass signal to executeBatch", async () => {
+      const document = createMockPHDocument("doc-1");
       const signal = new AbortController().signal;
-
-      const jobInfo: JobInfo = {
-        id: "job-1",
-        status: JobStatus.PENDING,
-        createdAtUtcIso: new Date().toISOString(),
-        consistencyToken: createEmptyConsistencyToken(),
-      };
-
-      vi.mocked(mockReactor.create).mockResolvedValue(jobInfo);
-      vi.mocked(mockReactor.get).mockResolvedValue(document);
-
-      await client.create(document, undefined, signal);
-
-      expect(mockReactor.create).toHaveBeenCalledWith(
-        document,
-        mockSigner,
-        signal,
-      );
-      expect(mockJobAwaiter.waitForJob).toHaveBeenCalledWith("job-1", signal);
-      expect(mockReactor.get).toHaveBeenCalledWith(
-        "doc-1",
-        undefined,
-        expect.any(Object),
-        signal,
-      );
-    });
-
-    it("should add children when parentIdentifier is provided", async () => {
-      const document: PHDocument = {
-        header: { id: "doc-1", documentType: "test" },
-      } as PHDocument;
-
-      const parentDocument: PHDocument = {
-        header: { id: "parent-1", documentType: "test" },
-      } as PHDocument;
-
-      const jobInfo: JobInfo = {
-        id: "job-1",
-        status: JobStatus.PENDING,
-        createdAtUtcIso: new Date().toISOString(),
-        consistencyToken: createEmptyConsistencyToken(),
-      };
-
-      const addChildrenJobInfo: JobInfo = {
-        id: "job-2",
-        status: JobStatus.PENDING,
-        createdAtUtcIso: new Date().toISOString(),
-        consistencyToken: createEmptyConsistencyToken(),
-      };
 
       const completedJobInfo: JobInfo = {
         id: "job-1",
@@ -559,24 +537,80 @@ describe("ReactorClient Unit Tests", () => {
         consistencyToken: createEmptyConsistencyToken(),
       };
 
-      vi.mocked(mockReactor.create).mockResolvedValue(jobInfo);
+      const batchResult: BatchExecutionResult = {
+        jobs: {
+          create: {
+            id: "job-1",
+            status: JobStatus.PENDING,
+            createdAtUtcIso: new Date().toISOString(),
+            consistencyToken: createEmptyConsistencyToken(),
+          },
+        },
+      };
+
+      vi.mocked(mockReactor.executeBatch).mockResolvedValue(batchResult);
       vi.mocked(mockJobAwaiter.waitForJob).mockResolvedValue(completedJobInfo);
       vi.mocked(mockReactor.get).mockResolvedValue(document);
-      vi.mocked(mockReactor.addChildren).mockResolvedValue(addChildrenJobInfo);
-      vi.mocked(mockReactor.getByIdOrSlug).mockResolvedValue(parentDocument);
+
+      await client.create(document, undefined, signal);
+
+      expect(mockReactor.executeBatch).toHaveBeenCalledWith(
+        expect.any(Object),
+        signal,
+      );
+      expect(mockJobAwaiter.waitForJob).toHaveBeenCalledWith("job-1", signal);
+    });
+
+    it("should include parent job in executeBatch when parentIdentifier is provided", async () => {
+      const document = createMockPHDocument("doc-1");
+
+      const completedJobInfo: JobInfo = {
+        id: "job-1",
+        status: JobStatus.READ_READY,
+        createdAtUtcIso: new Date().toISOString(),
+        consistencyToken: createEmptyConsistencyToken(),
+      };
+
+      const batchResult: BatchExecutionResult = {
+        jobs: {
+          create: {
+            id: "job-1",
+            status: JobStatus.PENDING,
+            createdAtUtcIso: new Date().toISOString(),
+            consistencyToken: createEmptyConsistencyToken(),
+          },
+          parent: {
+            id: "job-2",
+            status: JobStatus.PENDING,
+            createdAtUtcIso: new Date().toISOString(),
+            consistencyToken: createEmptyConsistencyToken(),
+          },
+        },
+      };
+
+      vi.mocked(mockReactor.executeBatch).mockResolvedValue(batchResult);
+      vi.mocked(mockJobAwaiter.waitForJob).mockResolvedValue(completedJobInfo);
+      vi.mocked(mockReactor.get).mockResolvedValue(document);
 
       const result = await client.create(document, "parent-1");
 
-      expect(mockReactor.create).toHaveBeenCalledWith(
-        document,
-        mockSigner,
-        undefined,
-      );
-      expect(mockReactor.addChildren).toHaveBeenCalledWith(
-        "parent-1",
-        ["doc-1"],
-        "main",
-        mockSigner,
+      expect(mockReactor.executeBatch).toHaveBeenCalledWith(
+        {
+          jobs: [
+            expect.objectContaining({
+              key: "create",
+              documentId: "doc-1",
+              branch: "main",
+              dependsOn: [],
+            }),
+            expect.objectContaining({
+              key: "parent",
+              documentId: "parent-1",
+              branch: "main",
+              dependsOn: ["create"],
+            }),
+          ],
+        },
         undefined,
       );
       expect(result).toEqual(document);
@@ -1179,16 +1213,7 @@ describe("ReactorClient Unit Tests", () => {
 
   describe("Job Failure Handling", () => {
     it("should throw error when create job fails", async () => {
-      const document: PHDocument = {
-        header: { id: "doc-1", documentType: "test" },
-      } as PHDocument;
-
-      const jobInfo: JobInfo = {
-        id: "job-1",
-        status: JobStatus.PENDING,
-        createdAtUtcIso: new Date().toISOString(),
-        consistencyToken: createEmptyConsistencyToken(),
-      };
+      const document = createMockPHDocument("doc-1");
 
       const failedJobInfo: JobInfo = {
         id: "job-1",
@@ -1198,7 +1223,18 @@ describe("ReactorClient Unit Tests", () => {
         error: { message: "Create document failed", stack: "" },
       };
 
-      vi.mocked(mockReactor.create).mockResolvedValue(jobInfo);
+      const batchResult: BatchExecutionResult = {
+        jobs: {
+          create: {
+            id: "job-1",
+            status: JobStatus.PENDING,
+            createdAtUtcIso: new Date().toISOString(),
+            consistencyToken: createEmptyConsistencyToken(),
+          },
+        },
+      };
+
+      vi.mocked(mockReactor.executeBatch).mockResolvedValue(batchResult);
       vi.mocked(mockJobAwaiter.waitForJob).mockResolvedValue(failedJobInfo);
 
       await expect(client.create(document)).rejects.toThrow(

@@ -296,6 +296,55 @@ describe("ReactorClient Integration Tests", () => {
         expect(children.results[0].header.id).toBe("create-child");
       });
 
+      it("should batch document creation with parent relationship via executeBatch", async () => {
+        const parent = createDocModelDocument({ id: "batch-parent" });
+        await client.create(parent);
+
+        let completedBatchId = "";
+        let batchJobIds: string[] = [];
+        const seenJobIds = new Set<string>();
+
+        const batchCompletedPromise = new Promise<void>((resolve) => {
+          const unsubscribe = eventBus.subscribe<JobWriteReadyEvent>(
+            ReactorEventTypes.JOB_WRITE_READY,
+            (_type, event) => {
+              const meta = event.jobMeta as
+                | { batchId?: string; batchJobIds?: string[] }
+                | undefined;
+              if (!meta?.batchId || !meta?.batchJobIds) {
+                return;
+              }
+
+              seenJobIds.add(event.jobId);
+
+              const allSeen = meta.batchJobIds.every((id) =>
+                seenJobIds.has(id),
+              );
+              if (allSeen) {
+                completedBatchId = meta.batchId;
+                batchJobIds = meta.batchJobIds;
+                unsubscribe();
+                resolve();
+              }
+            },
+          );
+        });
+
+        const child = createDocModelDocument({ id: "batch-child" });
+        const result = await client.create(child, "batch-parent");
+        await batchCompletedPromise;
+
+        expect(result.header.id).toBe("batch-child");
+        expect(completedBatchId).toMatch(
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+        );
+        expect(batchJobIds.length).toBe(2);
+
+        const children = await client.getChildren("batch-parent");
+        expect(children.results.length).toBe(1);
+        expect(children.results[0].header.id).toBe("batch-child");
+      });
+
       it("should wait for job completion", async () => {
         const doc = createDocModelDocument({ id: "create-wait-test" });
 
