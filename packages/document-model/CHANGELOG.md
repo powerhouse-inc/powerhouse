@@ -1,3 +1,13 @@
+## 6.0.0-dev.35 (2026-02-06)
+
+### 🩹 Fixes
+
+- **document-model:** use string comparison for timestamps in updateHeaderRevision ([3a70e205e](https://github.com/powerhouse-inc/powerhouse/commit/3a70e205e))
+
+### ❤️ Thank You
+
+- Samuel Hawksby-Robinson @Samyoul
+
 ## 6.0.0-dev.34 (2026-02-05)
 
 ### 🚀 Features
