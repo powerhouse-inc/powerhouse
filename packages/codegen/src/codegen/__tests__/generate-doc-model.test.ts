@@ -1,371 +1,276 @@
-import path from "node:path";
-import {
-  afterAll,
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  it,
-  type TestContext,
-} from "vitest";
+import { $ } from "bun";
+import { describe, expect, test } from "bun:test";
+import { cp, readdir } from "node:fs/promises";
+import path from "path";
+import { Project, ts } from "ts-morph";
 import { generateDocumentModel } from "../generate.js";
 import { loadDocumentModel } from "../utils.js";
-import { USE_TS_MORPH } from "./config.js";
-import {
-  DOCUMENT_MODELS_TEST_PROJECT,
-  GENERATE_DOC_MODEL_TEST_OUTPUT_DIR,
-  TEST_PACKAGE_NAME,
-} from "./constants.js";
-import { runGeneratedTests } from "./fixtures/run-generated-tests.js";
-import {
-  copyAllFiles,
-  getTestDataDir,
-  getTestOutDirPath,
-  getTestOutputDir,
-  purgeDirAfterTest,
-  resetDirForTest,
-} from "./utils.js";
-import { compile } from "./fixtures/typecheck.js";
-import { readFile, rm } from "node:fs/promises";
+const testsDir = import.meta.dirname;
+const testOutputDir = path.join(testsDir, ".test-output");
 
-describe("document model", () => {
-  const testDir = import.meta.dirname;
-  const outDirName = getTestOutputDir(
-    testDir,
-    GENERATE_DOC_MODEL_TEST_OUTPUT_DIR,
+function getDocumentModelJsonFilePath(basePath: string, dirName: string) {
+  return path.join(basePath, dirName, `${dirName}.json`);
+}
+
+async function loadDocumentModelsInDir(
+  documentModelsInDir: string,
+  testOutDir: string,
+  useVersioning = true,
+) {
+  const documentModelsOutDir = path.join(testOutDir, "document-models");
+  const documentModelDirs = (
+    await readdir(documentModelsInDir, {
+      withFileTypes: true,
+    })
+  )
+    .filter((value) => value.isDirectory())
+    .map((value) => value.name);
+
+  const documentModelStates = await Promise.all(
+    documentModelDirs.map(
+      async (dirName) =>
+        await loadDocumentModel(
+          getDocumentModelJsonFilePath(documentModelsInDir, dirName),
+        ),
+    ),
   );
-  const testDataDir = getTestDataDir(testDir, DOCUMENT_MODELS_TEST_PROJECT);
 
-  let testOutDirPath = getTestOutDirPath("initial", outDirName);
-  const documentModelsSrcPath = path.join(testDir, "data", "document-models");
-  let documentModelsDirName = path.join(testOutDirPath, "document-models");
-  async function setupTest(context: TestContext, dataDir = testDataDir) {
-    testOutDirPath = getTestOutDirPath(context.task.name, outDirName);
-
-    await copyAllFiles(dataDir, testOutDirPath);
-
-    documentModelsDirName = path.join(testOutDirPath, "document-models");
-
-    process.chdir(testOutDirPath);
+  for (const documentModelState of documentModelStates) {
+    await generateDocumentModel({
+      documentModelState,
+      dir: documentModelsOutDir,
+      useTsMorph: true,
+      useVersioning,
+      specifiedPackageName: "test",
+    });
   }
+}
 
-  beforeEach(async (context) => {
-    await setupTest(context);
+async function runDocumentModelTests(args: {
+  testsDataDir: string;
+  testOutputParentDir: string;
+  useVersioning?: boolean;
+  inDirName: string;
+  specDirName: string;
+}) {
+  const {
+    inDirName,
+    specDirName,
+    testsDataDir,
+    testOutputParentDir,
+    useVersioning = true,
+  } = args;
+  const dataDir = path.join(testsDataDir, inDirName);
+  const documentModelsInDir = path.join(testsDataDir, specDirName);
+  const outDir = path.join(testOutputParentDir, `${inDirName}-${specDirName}`);
+  await cp(dataDir, outDir, {
+    recursive: true,
+    force: true,
   });
+  await loadDocumentModelsInDir(documentModelsInDir, outDir, useVersioning);
+  await $`bun run --cwd ${outDir} tsc`;
+  await $`bun run --cwd ${outDir} vitest --run --silent passed-only`;
+  return outDir;
+}
 
-  beforeAll(async () => {
-    await resetDirForTest(outDirName);
+async function checkFileContents(outDir: string) {
+  const project = new Project({
+    tsConfigFilePath: path.join(outDir, "tsconfig.json"),
+    skipAddingFilesFromTsConfig: true,
+    skipFileDependencyResolution: true,
+    skipLoadingLibFiles: true,
   });
+  project.addSourceFilesAtPaths(path.join(outDir, "document-models/**/*"));
 
-  afterAll(async () => {
-    await purgeDirAfterTest(outDirName);
-  });
+  const documentModelsFile = project.getSourceFileOrThrow("document-models.ts");
+  const documentModelsArray = documentModelsFile
+    .getVariableStatementOrThrow("documentModels")
+    .getDescendantsOfKind(ts.SyntaxKind.ArrayLiteralExpression)
+    .at(0);
 
-  const generate = async () => {
-    const billingStatementDocumentModel = await loadDocumentModel(
-      path.join(
-        documentModelsSrcPath,
-        "billing-statement",
-        "billing-statement.json",
-      ),
-    );
+  const elements = documentModelsArray!
+    .getElements()
+    .map((e) => e.getText())
+    .join(" ");
+  expect(elements).toContain("BillingStatement");
+  expect(elements).toContain("TestDoc");
 
-    await generateDocumentModel({
-      dir: documentModelsDirName,
-      specifiedPackageName: TEST_PACKAGE_NAME,
-      documentModelState: billingStatementDocumentModel,
-      useTsMorph: USE_TS_MORPH,
-      useVersioning: false,
-      skipFormat: true,
+  const billingStatementErrorFile = await Bun.file(
+    path.join(
+      outDir,
+      "document-models",
+      "billing-statement",
+      "gen",
+      "general",
+      "error.ts",
+    ),
+  ).text();
+  expect(billingStatementErrorFile).toContain("export type ErrorCode");
+  expect(billingStatementErrorFile).toContain(`"InvalidStatusTransition"`);
+  expect(billingStatementErrorFile).toContain(
+    "export class InvalidStatusTransition extends Error implements ReducerError",
+  );
+  expect(billingStatementErrorFile).toContain(
+    `errorCode = "InvalidStatusTransition" as ErrorCode`,
+  );
+
+  const lineItemsErrorFile = await Bun.file(
+    path.join(
+      outDir,
+      "document-models",
+      "billing-statement",
+      "gen",
+      "line-items",
+      "error.ts",
+    ),
+  ).text();
+
+  expect(lineItemsErrorFile).toContain("export type ErrorCode =");
+  expect(lineItemsErrorFile).toContain(`"DuplicateLineItem"`);
+  expect(lineItemsErrorFile).toContain(`"InvalidStatusTransition"`);
+  expect(lineItemsErrorFile).toContain(
+    "export class DuplicateLineItem extends Error implements ReducerError",
+  );
+  expect(lineItemsErrorFile).toContain(
+    "export class InvalidStatusTransition extends Error implements ReducerError",
+  );
+
+  const errorCodeMatches = lineItemsErrorFile.match(
+    /"InvalidStatusTransition"/g,
+  );
+  expect(errorCodeMatches?.length).toBe(3);
+}
+
+describe("generate doc model", () => {
+  const parentOutDirName = "generate-doc-model";
+  const testOutputParentDir = path.join(testOutputDir, parentOutDirName);
+  const testsDataDir = path.join(testsDir, "data");
+  const useVersioning = false;
+  test("generate document models", async () => {
+    const outDir = await runDocumentModelTests({
+      inDirName: "document-models-test-project",
+      specDirName: "document-models",
+      testOutputParentDir,
+      testsDataDir,
+      useVersioning,
     });
-
-    const testDocDocumentModel = await loadDocumentModel(
-      path.join(documentModelsSrcPath, "test-doc", "test-doc.json"),
-    );
-
-    await generateDocumentModel({
-      useTsMorph: USE_TS_MORPH,
-      useVersioning: false,
-      dir: documentModelsDirName,
-      specifiedPackageName: TEST_PACKAGE_NAME,
-      documentModelState: testDocDocumentModel,
-      skipFormat: true,
+    await checkFileContents(outDir);
+  });
+  test("generate document models in existing project", async () => {
+    const outDir = await runDocumentModelTests({
+      inDirName: "document-models-test-project-with-existing-document-models",
+      specDirName: "document-models",
+      testOutputParentDir,
+      testsDataDir,
+      useVersioning,
     });
-  };
+    await checkFileContents(outDir);
+  });
+});
 
-  it(
-    "should generate a document model",
-    {
-      timeout: 100000,
-    },
-    async (context) => {
-      await setupTest(context);
-      await generate();
-      await compile(testOutDirPath);
-      await runGeneratedTests(testOutDirPath);
-    },
-  );
-
-  it(
-    "should generate a document model when previous document models exist",
-    {
-      timeout: 100000,
-    },
-    async (context) => {
-      const dataDirOverride = getTestDataDir(
-        testDir,
-        "document-models-test-project-with-existing-document-models",
-      );
-      await setupTest(context, dataDirOverride);
-      await generate();
-      await compile(testOutDirPath);
-      await runGeneratedTests(testOutDirPath);
-    },
-  );
-
-  it(
-    "should create the document-models.ts file if it does not exist",
-    {
-      timeout: 100000,
-    },
-    async (context) => {
-      await setupTest(context);
-      const documentModelsFilePath = path.join(
-        documentModelsDirName,
-        "document-models.ts",
-      );
-
-      await rm(documentModelsFilePath, { force: true });
-
-      await generate();
-      await compile(testOutDirPath);
-
-      const documentModelsContent = await readFile(
-        documentModelsFilePath,
-        "utf-8",
-      );
-
-      // Check that both models are exported
-      expect(documentModelsContent).toContain(
-        `import { BillingStatement } from "./billing-statement/module.js";`,
-      );
-      expect(documentModelsContent).toContain(
-        `import { TestDoc } from "./test-doc/module.js";`,
-      );
-      expect(documentModelsContent).toContain(
-        "export const documentModels: DocumentModelModule<any>[] = [",
-      );
-      expect(documentModelsContent).toContain("BillingStatement");
-      expect(documentModelsContent).toContain("TestDoc");
-      expect(documentModelsContent).toContain("]");
-    },
-  );
-
-  it(
-    "should generate multiple document models and export both in document-models.ts",
-    {
-      timeout: 100000,
-    },
-    async (context) => {
-      await setupTest(context);
-      await generate();
-      await compile(testOutDirPath);
-
-      const documentModelsFilePath = path.join(
-        documentModelsDirName,
-        "document-models.ts",
-      );
-      const documentModelsContent = await readFile(
-        documentModelsFilePath,
-        "utf-8",
-      );
-
-      // Check that both models are exported
-      expect(documentModelsContent).toContain(
-        `import { BillingStatement } from "./billing-statement/module.js";`,
-      );
-      expect(documentModelsContent).toContain(
-        `import { TestDoc } from "./test-doc/module.js";`,
-      );
-      expect(documentModelsContent).toContain(
-        "export const documentModels: DocumentModelModule<any>[] = [",
-      );
-      expect(documentModelsContent).toContain("BillingStatement");
-      expect(documentModelsContent).toContain("TestDoc");
-      expect(documentModelsContent).toContain("]");
-    },
-  );
-
-  it(
-    "should generate an updated version of test-doc",
-    { timeout: 100000 },
-    async (context) => {
-      await setupTest(context);
-      await generate();
-      await compile(testOutDirPath);
-
-      const testDocDocumentModelV2 = await loadDocumentModel(
-        path.join(
-          documentModelsSrcPath,
-          "..",
-          "test-doc-versions",
-          "test-doc-v2",
-          "test-doc.json",
-        ),
-      );
-
-      // TODO: this is a hack to get the test to pass, we should be able to update the reducer file once is generated
-      // remove .out/document-model/test-doc/src/reducers/base-operations.ts file
-      await rm(
-        path.join(
-          documentModelsDirName,
-          "test-doc",
-          "src",
-          "reducers",
-          "base-operations.ts",
-        ),
-        { force: true },
-      );
-
-      await generateDocumentModel({
-        useTsMorph: USE_TS_MORPH,
-        useVersioning: false,
-        dir: documentModelsDirName,
-        specifiedPackageName: TEST_PACKAGE_NAME,
-        documentModelState: testDocDocumentModelV2,
-        skipFormat: true,
+describe("versioned document models", () => {
+  const parentOutDirName = "versioned-document-models";
+  const testOutputParentDir = path.join(testOutputDir, parentOutDirName);
+  const testsDataDir = path.join(testsDir, "data", "versioned-document-models");
+  describe("v1", () => {
+    test("should generate new document models as v1", async () => {
+      await runDocumentModelTests({
+        inDirName: "empty-project",
+        specDirName: "spec-version-1",
+        testOutputParentDir,
+        testsDataDir,
+      });
+    });
+    test("should persist existing reducers, tests, utils, and custom files when generating for the same spec version", async () => {
+      await runDocumentModelTests({
+        inDirName: "project-with-existing-document-models-at-spec-1",
+        specDirName: "spec-version-1-with-more-operations",
+        testOutputParentDir,
+        testsDataDir,
+      });
+    });
+  });
+  describe("v2", () => {
+    test("should handle generating document models as v2", async () => {
+      const testOutDir = await runDocumentModelTests({
+        inDirName: "empty-project",
+        specDirName: "spec-version-2",
+        testOutputParentDir,
+        testsDataDir,
       });
 
-      // expect .out/document-model/test-doc/src/reducers/base-operations.ts to contain setTestIdOperation, setTestNameOperation, setTestDescriptionOperation and setTestValueOperation
-      const baseOperationsPath = path.join(
-        documentModelsDirName,
+      const v1ModulePath = path.join(
+        testOutDir,
+        "document-models",
         "test-doc",
-        "src",
-        "reducers",
-        "base-operations.ts",
+        "v1",
+        "module.ts",
       );
-      const baseOperationsContent = await readFile(baseOperationsPath, "utf-8");
-      expect(baseOperationsContent).toContain("setTestIdOperation");
-      expect(baseOperationsContent).toContain("setTestNameOperation");
-      expect(baseOperationsContent).toContain("setTestDescriptionOperation");
-      expect(baseOperationsContent).toContain("setTestValueOperation");
-    },
-  );
-
-  it(
-    "should generate error classes and types from billing statement errors",
-    { timeout: 100000 },
-    async (context) => {
-      await setupTest(context);
-      await generate();
-      await compile(testOutDirPath);
-
-      // Check general module errors
-      const generalErrorPath = path.join(
-        documentModelsDirName,
-        "billing-statement",
-        "gen",
-        "general",
-        "error.ts",
-      );
-      const generalErrorContent = await readFile(generalErrorPath, "utf-8");
-
-      // Check that InvalidStatusTransition error is generated
-      expect(generalErrorContent).toContain("export type ErrorCode =");
-      expect(generalErrorContent).toContain(`"InvalidStatusTransition"`);
-      expect(generalErrorContent).toContain(
-        "export class InvalidStatusTransition extends Error implements ReducerError",
-      );
-      expect(generalErrorContent).toContain(
-        `errorCode = "InvalidStatusTransition" as ErrorCode`,
+      const v2ModulePath = path.join(
+        testOutDir,
+        "document-models",
+        "test-doc",
+        "v2",
+        "module.ts",
       );
 
-      // Check line_items module errors
-      const lineItemsErrorPath = path.join(
-        documentModelsDirName,
-        "billing-statement",
-        "gen",
-        "line-items",
-        "error.ts",
-      );
-      const lineItemsErrorContent = await readFile(lineItemsErrorPath, "utf-8");
+      const v1ModuleContent = await Bun.file(v1ModulePath).text();
+      const v2ModuleContent = await Bun.file(v2ModulePath).text();
 
-      // Check that both DuplicateLineItem and InvalidStatusTransition errors are generated (but deduplicated)
-      expect(lineItemsErrorContent).toContain("export type ErrorCode =");
-      expect(lineItemsErrorContent).toContain(`"DuplicateLineItem"`);
-      expect(lineItemsErrorContent).toContain(`"InvalidStatusTransition"`);
-      expect(lineItemsErrorContent).toContain(
-        "export class DuplicateLineItem extends Error implements ReducerError",
-      );
-      expect(lineItemsErrorContent).toContain(
-        "export class InvalidStatusTransition extends Error implements ReducerError",
-      );
-
-      // Verify that InvalidStatusTransition only appears once in the ErrorCode type (deduplication test)
-      const errorCodeMatches = lineItemsErrorContent.match(
-        /"InvalidStatusTransition"/g,
-      );
-      expect(errorCodeMatches?.length).toBe(3); // Once in type definition, once in each class
-    },
-  );
-
-  it(
-    "should generate error codes for legacy documents with empty error codes",
-    { timeout: 100000 },
-    async (context) => {
-      await setupTest(context);
-      await generate();
-
-      const testEmptyCodesDocumentModel = await loadDocumentModel(
-        path.join(
-          documentModelsSrcPath,
-          "test-empty-error-codes",
-          "test-empty-error-codes.json",
-        ),
-      );
-
-      await generateDocumentModel({
-        useTsMorph: USE_TS_MORPH,
-        useVersioning: false,
-        dir: documentModelsDirName,
-        specifiedPackageName: TEST_PACKAGE_NAME,
-        documentModelState: testEmptyCodesDocumentModel,
-        skipFormat: true,
+      expect(v1ModuleContent).toContain("version: 1,");
+      expect(v2ModuleContent).toContain("version: 2,");
+    });
+    test("should persist existing reducers, tests, utils, and custom files when generating a new spec version", async () => {
+      await runDocumentModelTests({
+        inDirName: "project-with-existing-document-models-at-spec-1",
+        specDirName: "spec-version-2",
+        testOutputParentDir,
+        testsDataDir,
       });
+    });
 
-      // Check that error codes are generated from error names
-      const testOperationsErrorPath = path.join(
-        documentModelsDirName,
-        "test-empty-codes",
-        "gen",
-        "test-operations",
-        "error.ts",
-      );
-      const testOperationsErrorContent = await readFile(
-        testOperationsErrorPath,
-        "utf-8",
-      );
+    test("should throw a typescript error in upgrades when new state does not match old state", () => {
+      expect(
+        async () =>
+          await runDocumentModelTests({
+            inDirName: "project-with-existing-document-models-at-spec-1",
+            specDirName: "spec-version-2-with-state-changes",
+            testOutputParentDir,
+            testsDataDir,
+          }),
+      ).toThrow();
+    });
+  });
 
-      // Check that error codes are generated from names in PascalCase when empty
-      expect(testOperationsErrorContent).toContain("export type ErrorCode =");
-      expect(testOperationsErrorContent).toContain(`"InvalidValue"`);
-      expect(testOperationsErrorContent).toContain(`"EmptyValue"`);
+  describe("v3", () => {
+    test("should handle generating document models as v3", async () => {
+      await runDocumentModelTests({
+        inDirName: "empty-project",
+        specDirName: "spec-version-3",
+        testOutputParentDir,
+        testsDataDir,
+      });
+    });
 
-      // Check that error classes are generated
-      expect(testOperationsErrorContent).toContain(
-        "export class InvalidValue extends Error implements ReducerError",
-      );
-      expect(testOperationsErrorContent).toContain(
-        "export class EmptyValue extends Error implements ReducerError",
-      );
+    test("should persist existing reducers, tests, utils, and custom files when generating a new spec version", async () => {
+      await runDocumentModelTests({
+        inDirName: "project-with-existing-document-models-at-spec-2",
+        specDirName: "spec-version-3",
+        testOutputParentDir,
+        testsDataDir,
+      });
+    });
 
-      // Verify error code constants are set properly in PascalCase
-      expect(testOperationsErrorContent).toContain(
-        `errorCode = "InvalidValue" as ErrorCode`,
-      );
-      expect(testOperationsErrorContent).toContain(
-        `errorCode = "EmptyValue" as ErrorCode`,
-      );
-    },
-  );
+    test("should throw a typescript error in upgrades when new state does not match old state", () => {
+      expect(
+        async () =>
+          await runDocumentModelTests({
+            inDirName: "project-with-existing-document-models-at-spec-2",
+            specDirName: "spec-version-3-with-state-changes",
+            testOutputParentDir,
+            testsDataDir,
+          }),
+      ).toThrow();
+    });
+  });
 });

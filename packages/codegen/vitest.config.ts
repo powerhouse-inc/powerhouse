@@ -9,6 +9,7 @@ export default defineConfig({
     exclude: [
       "src/codegen/__tests__/data/**/*",
       "src/codegen/__tests__/.test-output/**/*",
+      "src/codegen/__tests__/generate-doc-model.test.ts",
     ],
     fileParallelism: false,
     globalSetup: "./src/codegen/__tests__/global-setup.ts",
