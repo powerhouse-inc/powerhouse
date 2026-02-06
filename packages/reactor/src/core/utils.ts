@@ -17,12 +17,30 @@ export type JobPlanForValidation = {
 };
 
 /**
+ * Represents a minimal load job plan for validation purposes
+ */
+export type LoadJobPlanForValidation = {
+  key: string;
+  operations: Operation[];
+  dependsOn: string[];
+};
+
+/**
  * Represents a job plan with scope information for action validation
  */
 export type JobPlanWithScope = {
   key: string;
   scope: string;
   actions: Action[];
+};
+
+/**
+ * Represents a load job plan with scope information for operation validation
+ */
+export type LoadJobPlanWithScope = {
+  key: string;
+  scope: string;
+  operations: Operation[];
 };
 
 /**
@@ -34,9 +52,10 @@ export type JobPlanForSorting = {
 };
 
 /**
- * Validates a batch mutation request for common errors
+ * Validates structural properties shared by all batch requests:
+ * duplicate keys, missing dependencies, and dependency cycles.
  */
-export function validateBatchRequest(jobs: JobPlanForValidation[]): void {
+export function validateBatchStructure(jobs: JobPlanForSorting[]): void {
   const keys = new Set<string>();
   for (const job of jobs) {
     if (keys.has(job.key)) {
@@ -80,9 +99,30 @@ export function validateBatchRequest(jobs: JobPlanForValidation[]): void {
       }
     }
   }
+}
+
+/**
+ * Validates a batch mutation request for common errors
+ */
+export function validateBatchRequest(jobs: JobPlanForValidation[]): void {
+  validateBatchStructure(jobs);
   for (const job of jobs) {
     if (job.actions.length === 0) {
       throw new Error(`Job '${job.key}' has empty actions array`);
+    }
+  }
+}
+
+/**
+ * Validates a batch load request for common errors
+ */
+export function validateBatchLoadRequest(
+  jobs: LoadJobPlanForValidation[],
+): void {
+  validateBatchStructure(jobs);
+  for (const job of jobs) {
+    if (job.operations.length === 0) {
+      throw new Error(`Job '${job.key}' has empty operations array`);
     }
   }
 }
@@ -96,6 +136,20 @@ export function validateActionScopes(job: JobPlanWithScope): void {
     if (actionScope !== job.scope) {
       throw new Error(
         `Job '${job.key}' declares scope '${job.scope}' but action has scope '${actionScope}'`,
+      );
+    }
+  }
+}
+
+/**
+ * Validates that all operations in a job match the declared scope
+ */
+export function validateOperationScopes(job: LoadJobPlanWithScope): void {
+  for (const operation of job.operations) {
+    const operationScope = operation.action.scope || "global";
+    if (operationScope !== job.scope) {
+      throw new Error(
+        `Job '${job.key}' declares scope '${job.scope}' but operation has scope '${operationScope}'`,
       );
     }
   }

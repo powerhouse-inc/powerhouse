@@ -16,7 +16,11 @@ import {
 } from "#actions/index.js";
 import { signActions } from "#core/utils.js";
 import type { ILogger } from "#logging/types.js";
-import type { IReactor } from "../core/types.js";
+import type {
+  BatchLoadRequest,
+  BatchLoadResult,
+  IReactor,
+} from "../core/types.js";
 import { type IJobAwaiter } from "../shared/awaiter.js";
 import {
   JobStatus,
@@ -718,6 +722,29 @@ export class ReactorClient implements IReactorClient {
       source: sourceResult,
       target: targetResult,
     };
+  }
+
+  async loadBatch(
+    request: BatchLoadRequest,
+    signal?: AbortSignal,
+  ): Promise<BatchLoadResult> {
+    this.logger.verbose("loadBatch(@count jobs)", request.jobs.length);
+    const result = await this.reactor.loadBatch(request, signal);
+
+    const completedJobs = await Promise.all(
+      Object.entries(result.jobs).map(async ([key, jobInfo]) => {
+        const completed = await this.waitForJob(jobInfo, signal);
+        return [key, completed] as const;
+      }),
+    );
+
+    for (const [, completedJob] of completedJobs) {
+      if (completedJob.status === JobStatus.FAILED) {
+        throw new Error(completedJob.error?.message);
+      }
+    }
+
+    return { jobs: Object.fromEntries(completedJobs) };
   }
 
   /**

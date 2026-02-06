@@ -72,6 +72,32 @@ export type BatchExecutionResult = {
 };
 
 /**
+ * A single load job within a batch request.
+ */
+export type LoadJobPlan = {
+  key: string;
+  documentId: string;
+  scope: string;
+  branch: string;
+  operations: Operation[];
+  dependsOn: string[];
+};
+
+/**
+ * Request for batch load operation.
+ */
+export type BatchLoadRequest = {
+  jobs: LoadJobPlan[];
+};
+
+/**
+ * Result from batch load operation.
+ */
+export type BatchLoadResult = {
+  jobs: Record<string, JobInfo>;
+};
+
+/**
  * The main Reactor interface that serves as a facade for document operations.
  * This interface provides a unified API for document management, including
  * creation, retrieval, mutation, and deletion operations.
@@ -293,6 +319,20 @@ export interface IReactor {
     signal?: AbortSignal,
     meta?: Record<string, unknown>,
   ): Promise<BatchExecutionResult>;
+
+  /**
+   * Loads multiple batches of pre-existing operations across documents with dependency management.
+   *
+   * @param request - Batch load request containing jobs with dependencies
+   * @param signal - Optional abort signal to cancel the request
+   * @param meta - Optional metadata that flows through the job lifecycle
+   * @returns Map of job keys to job information
+   */
+  loadBatch(
+    request: BatchLoadRequest,
+    signal?: AbortSignal,
+    meta?: Record<string, unknown>,
+  ): Promise<BatchLoadResult>;
 
   /**
    * Adds multiple documents as children to another

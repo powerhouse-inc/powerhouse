@@ -49,6 +49,8 @@ import type {
 import type {
   BatchExecutionRequest,
   BatchExecutionResult,
+  BatchLoadRequest,
+  BatchLoadResult,
   IReactor,
   ReactorFeatures,
 } from "./types.js";
@@ -61,7 +63,9 @@ import {
   toErrorInfo,
   topologicalSort,
   validateActionScopes,
+  validateBatchLoadRequest,
   validateBatchRequest,
+  validateOperationScopes,
 } from "./utils.js";
 
 /**
@@ -783,6 +787,95 @@ export class Reactor implements IReactor {
       throw error;
     }
     const result: BatchExecutionResult = {
+      jobs: Object.fromEntries(jobInfos),
+    };
+    return result;
+  }
+
+  async loadBatch(
+    request: BatchLoadRequest,
+    signal?: AbortSignal,
+    meta?: Record<string, unknown>,
+  ): Promise<BatchLoadResult> {
+    this.logger.verbose("loadBatch(@count jobs)", request.jobs.length);
+
+    if (signal?.aborted) {
+      throw new AbortError();
+    }
+    validateBatchLoadRequest(request.jobs);
+    for (const jobPlan of request.jobs) {
+      validateOperationScopes(jobPlan);
+    }
+    const createdAtUtcIso = new Date().toISOString();
+    const planKeyToJobId = new Map<string, string>();
+    for (const jobPlan of request.jobs) {
+      planKeyToJobId.set(jobPlan.key, uuidv4());
+    }
+    const jobInfos = new Map<string, JobInfo>();
+    for (const jobPlan of request.jobs) {
+      const jobId = planKeyToJobId.get(jobPlan.key)!;
+      const jobInfo: JobInfo = {
+        id: jobId,
+        status: JobStatus.PENDING,
+        createdAtUtcIso,
+        consistencyToken: {
+          version: 1,
+          createdAtUtcIso,
+          coordinates: [],
+        },
+        meta,
+      };
+      this.jobTracker.registerJob(jobInfo);
+      this.emitJobPending(jobInfo.id, meta);
+      jobInfos.set(jobPlan.key, jobInfo);
+    }
+    const sortedKeys = topologicalSort(request.jobs);
+    const enqueuedKeys: string[] = [];
+    try {
+      for (const key of sortedKeys) {
+        if (signal?.aborted) {
+          throw new AbortError();
+        }
+        const jobPlan = request.jobs.find((j) => j.key === key)!;
+        const jobId = planKeyToJobId.get(key)!;
+        const queueHint = jobPlan.dependsOn.map(
+          (depKey) => planKeyToJobId.get(depKey)!,
+        );
+        const job: Job = {
+          id: jobId,
+          kind: "load",
+          documentId: jobPlan.documentId,
+          scope: jobPlan.scope,
+          branch: jobPlan.branch,
+          actions: [],
+          operations: jobPlan.operations,
+          createdAt: createdAtUtcIso,
+          queueHint,
+          maxRetries: 3,
+          errorHistory: [],
+          meta,
+        };
+        await this.queue.enqueue(job);
+        enqueuedKeys.push(key);
+      }
+    } catch (error) {
+      for (const key of enqueuedKeys) {
+        const jobId = planKeyToJobId.get(key)!;
+        try {
+          await this.queue.remove(jobId);
+        } catch {
+          // Ignore removal errors during cleanup
+        }
+      }
+      for (const jobInfo of jobInfos.values()) {
+        this.jobTracker.markFailed(
+          jobInfo.id,
+          toErrorInfo("Batch enqueue failed"),
+        );
+      }
+      throw error;
+    }
+    const result: BatchLoadResult = {
       jobs: Object.fromEntries(jobInfos),
     };
     return result;
