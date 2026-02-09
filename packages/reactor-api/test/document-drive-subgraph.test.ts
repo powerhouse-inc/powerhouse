@@ -59,17 +59,18 @@ describe("Document-Drive Subgraph", () => {
       expect(printed).toContain(`${documentName}_removeTrigger`);
     });
 
-    it("should exclude operations with invalid input schemas", () => {
+    it("should include listener and trigger operations", () => {
       const schema = generateDocumentModelSchema(
         driveModule.documentModel.global,
         { useNewApi: true },
       );
       const printed = print(schema);
 
-      expect(printed).not.toContain(`${documentName}_addListener(`);
-      expect(printed).not.toContain(`${documentName}_addTrigger(`);
-      expect(printed).not.toContain(`${documentName}_addListenerAsync(`);
-      expect(printed).not.toContain(`${documentName}_addTriggerAsync(`);
+      // ADD_LISTENER and ADD_TRIGGER now have proper input types and should be included
+      expect(printed).toContain(`${documentName}_addListener(`);
+      expect(printed).toContain(`${documentName}_addTrigger(`);
+      expect(printed).toContain(`${documentName}_addListenerAsync(`);
+      expect(printed).toContain(`${documentName}_addTriggerAsync(`);
     });
 
     it("should include query types", () => {
@@ -157,13 +158,18 @@ describe("Document-Drive Subgraph", () => {
       expect(mutations[`${documentName}_removeTrigger`]).toBeTypeOf("function");
     });
 
-    it("should NOT generate mutation resolvers for excluded operations", () => {
+    it("should generate mutation resolvers for listener and trigger operations", () => {
       const mutations = subgraph.resolvers.Mutation as Record<string, unknown>;
 
-      expect(mutations[`${documentName}_addListener`]).toBeUndefined();
-      expect(mutations[`${documentName}_addTrigger`]).toBeUndefined();
-      expect(mutations[`${documentName}_addListenerAsync`]).toBeUndefined();
-      expect(mutations[`${documentName}_addTriggerAsync`]).toBeUndefined();
+      // ADD_LISTENER and ADD_TRIGGER now have proper input types and should be included
+      expect(mutations[`${documentName}_addListener`]).toBeTypeOf("function");
+      expect(mutations[`${documentName}_addTrigger`]).toBeTypeOf("function");
+      expect(mutations[`${documentName}_addListenerAsync`]).toBeTypeOf(
+        "function",
+      );
+      expect(mutations[`${documentName}_addTriggerAsync`]).toBeTypeOf(
+        "function",
+      );
     });
 
     it("should generate flat query resolvers", () => {

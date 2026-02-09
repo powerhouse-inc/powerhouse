@@ -6,7 +6,6 @@ import type { GetParentIdsFn } from "../services/document-permission.service.js"
 import {
   generateDocumentModelSchema,
   getDocumentModelSchemaName,
-  OPERATIONS_WITH_INVALID_INPUT_SCHEMAS,
 } from "../utils/create-schema.js";
 import { BaseSubgraph } from "./base-subgraph.js";
 import { toGqlPhDocument } from "./reactor/adapters.js";
@@ -267,10 +266,7 @@ export class DocumentModelSubgraph extends BaseSubgraph {
       this.documentModel.documentModel.global.specifications
         .at(-1)
         ?.modules.flatMap((module) =>
-          module.operations.filter(
-            (op) =>
-              op.name && !OPERATIONS_WITH_INVALID_INPUT_SCHEMAS.has(op.name),
-          ),
+          module.operations.filter((op) => op.name),
         ) ?? [];
 
     return {
@@ -750,10 +746,7 @@ export class DocumentModelSubgraphLegacy extends BaseSubgraph {
       this.documentModel.documentModel.global.specifications
         .at(-1)
         ?.modules.flatMap((module) =>
-          module.operations.filter(
-            (op) =>
-              op.name && !OPERATIONS_WITH_INVALID_INPUT_SCHEMAS.has(op.name),
-          ),
+          module.operations.filter((op) => op.name),
         ) ?? [];
 
     return {
