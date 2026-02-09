@@ -1,48 +1,34 @@
 import type {
   Action,
-  AddRelationshipActionInput,
-  CreateDocumentAction,
-  DeleteDocumentActionInput,
   DocumentModelModule,
   Operation,
   PHDocument,
-  RemoveRelationshipActionInput,
-  UpgradeDocumentAction,
-  UpgradeDocumentActionInput,
-  UpgradeTransition,
 } from "document-model";
-import { deriveOperationId, isUndoRedo } from "document-model/core";
+import { isUndoRedo } from "document-model/core";
 import type { ICollectionMembershipCache } from "../cache/collection-membership-cache.js";
 import type { IDocumentMetaCache } from "../cache/document-meta-cache-types.js";
 import type {
   IOperationIndex,
   IOperationIndexTxn,
 } from "../cache/operation-index-types.js";
-import { driveCollectionId } from "../cache/operation-index-types.js";
 import type { IWriteCache } from "../cache/write/interfaces.js";
 import type { IEventBus } from "../events/interfaces.js";
 import { ReactorEventTypes, type JobWriteReadyEvent } from "../events/types.js";
 import type { ILogger } from "../logging/types.js";
 import type { Job } from "../queue/types.js";
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";
-import {
-  DocumentDeletedError,
-  InvalidSignatureError,
-} from "../shared/errors.js";
+import { DocumentDeletedError } from "../shared/errors.js";
 import type { SignatureVerificationHandler } from "../signer/types.js";
 import type {
   IOperationStore,
   OperationWithContext,
 } from "../storage/interfaces.js";
 import { reshuffleByTimestamp } from "../utils/reshuffle.js";
+import { DocumentActionHandler } from "./document-action-handler.js";
 import type { IJobExecutor } from "./interfaces.js";
+import { SignatureVerifier } from "./signature-verifier.js";
 import type { JobExecutorConfig, JobResult } from "./types.js";
-import {
-  applyDeleteDocumentAction,
-  applyUpgradeDocumentAction,
-  createDocumentFromAction,
-  getNextIndexForScope,
-} from "./util.js";
+import { buildErrorResult } from "./util.js";
 
 const MAX_SKIP_THRESHOLD = 1000;
 
@@ -66,6 +52,8 @@ const documentScopeActions = [
  */
 export class SimpleJobExecutor implements IJobExecutor {
   private config: Required<JobExecutorConfig>;
+  private signatureVerifierModule: SignatureVerifier;
+  private documentActionHandler: DocumentActionHandler;
 
   constructor(
     private logger: ILogger,
@@ -77,7 +65,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     private documentMetaCache: IDocumentMetaCache,
     private collectionMembershipCache: ICollectionMembershipCache,
     config: JobExecutorConfig,
-    private signatureVerifier?: SignatureVerificationHandler,
+    signatureVerifier?: SignatureVerificationHandler,
   ) {
     this.config = {
       maxSkipThreshold: config.maxSkipThreshold ?? MAX_SKIP_THRESHOLD,
@@ -86,6 +74,15 @@ export class SimpleJobExecutor implements IJobExecutor {
       retryBaseDelayMs: config.retryBaseDelayMs ?? 100,
       retryMaxDelayMs: config.retryMaxDelayMs ?? 5000,
     };
+    this.signatureVerifierModule = new SignatureVerifier(signatureVerifier);
+    this.documentActionHandler = new DocumentActionHandler(
+      writeCache,
+      operationStore,
+      documentMetaCache,
+      collectionMembershipCache,
+      registry,
+      logger,
+    );
   }
 
   /**
@@ -194,7 +191,11 @@ export class SimpleJobExecutor implements IJobExecutor {
     const operationsWithContext: OperationWithContext[] = [];
 
     try {
-      await this.verifyActionSignatures(job, actions);
+      await this.signatureVerifierModule.verifyActions(
+        job.documentId,
+        job.branch,
+        actions,
+      );
     } catch (error) {
       return {
         success: false,
@@ -211,7 +212,7 @@ export class SimpleJobExecutor implements IJobExecutor {
 
       const isDocumentAction = documentScopeActions.includes(action.type);
       const result = isDocumentAction
-        ? await this.executeDocumentAction(
+        ? await this.documentActionHandler.execute(
             job,
             action,
             startTime,
@@ -249,763 +250,6 @@ export class SimpleJobExecutor implements IJobExecutor {
     };
   }
 
-  /**
-   * Execute a document scope action (CREATE_DOCUMENT, DELETE_DOCUMENT, UPGRADE_DOCUMENT,
-   * ADD_RELATIONSHIP, REMOVE_RELATIONSHIP) by dispatching to the appropriate handler.
-   */
-  private async executeDocumentAction(
-    job: Job,
-    action: Action,
-    startTime: number,
-    indexTxn: IOperationIndexTxn,
-    skip: number = 0,
-  ): Promise<
-    JobResult & {
-      operationsWithContext?: Array<{
-        operation: Operation;
-        context: {
-          documentId: string;
-          scope: string;
-          branch: string;
-          documentType: string;
-        };
-      }>;
-    }
-  > {
-    switch (action.type) {
-      case "CREATE_DOCUMENT":
-        return this.executeCreateDocumentAction(
-          job,
-          action,
-          startTime,
-          indexTxn,
-          skip,
-        );
-      case "DELETE_DOCUMENT":
-        return this.executeDeleteDocumentAction(
-          job,
-          action,
-          startTime,
-          indexTxn,
-        );
-      case "UPGRADE_DOCUMENT":
-        return this.executeUpgradeDocumentAction(
-          job,
-          action,
-          startTime,
-          indexTxn,
-          skip,
-        );
-      case "ADD_RELATIONSHIP":
-        return this.executeAddRelationshipAction(
-          job,
-          action,
-          startTime,
-          indexTxn,
-        );
-      case "REMOVE_RELATIONSHIP":
-        return this.executeRemoveRelationshipAction(
-          job,
-          action,
-          startTime,
-          indexTxn,
-        );
-      default:
-        return this.buildErrorResult(
-          job,
-          new Error(`Unknown document action type: ${action.type}`),
-          startTime,
-        );
-    }
-  }
-
-  /**
-   * Execute a CREATE_DOCUMENT system action.
-   * This creates a new document in storage along with its initial operation.
-   * For a new document, the operation index is always 0.
-   */
-  private async executeCreateDocumentAction(
-    job: Job,
-    action: Action,
-    startTime: number,
-    indexTxn: IOperationIndexTxn,
-    skip: number = 0,
-  ): Promise<
-    JobResult & {
-      operationsWithContext?: Array<{
-        operation: Operation;
-        context: {
-          documentId: string;
-          scope: string;
-          branch: string;
-          documentType: string;
-        };
-      }>;
-    }
-  > {
-    if (job.scope !== "document") {
-      return {
-        job,
-        success: false,
-        error: new Error(
-          `CREATE_DOCUMENT must be in "document" scope, got "${job.scope}"`,
-        ),
-        duration: Date.now() - startTime,
-      };
-    }
-
-    const document = createDocumentFromAction(action as CreateDocumentAction);
-
-    const operation = this.createOperation(action, 0, skip, {
-      documentId: document.header.id,
-      scope: job.scope,
-      branch: job.branch,
-    });
-
-    // Compute resultingState for passing via context (not persisted)
-    // Include header and all scopes present in the document state (auth, document, etc.)
-    // but not global/local which aren't initialized by CREATE_DOCUMENT
-    const resultingStateObj: Record<string, unknown> = {
-      header: document.header,
-      ...document.state,
-    };
-    const resultingState = JSON.stringify(resultingStateObj);
-
-    const writeError = await this.writeOperationToStore(
-      document.header.id,
-      document.header.documentType,
-      job.scope,
-      job.branch,
-      operation,
-      job,
-      startTime,
-    );
-    if (writeError !== null) {
-      return writeError;
-    }
-
-    this.updateDocumentRevision(document, job.scope, operation.index);
-
-    this.writeCacheState(
-      document.header.id,
-      job.scope,
-      job.branch,
-      operation.index,
-      document,
-    );
-
-    indexTxn.write([
-      {
-        ...operation,
-        documentId: document.header.id,
-        documentType: document.header.documentType,
-        branch: job.branch,
-        scope: job.scope,
-      },
-    ]);
-
-    // collection membership has to be _after_ the write, as it requires the
-    // ordinal of the operation to be set
-    if (document.header.documentType === "powerhouse/document-drive") {
-      const collectionId = driveCollectionId(job.branch, document.header.id);
-      indexTxn.createCollection(collectionId);
-      indexTxn.addToCollection(collectionId, document.header.id);
-    }
-
-    this.documentMetaCache.putDocumentMeta(document.header.id, job.branch, {
-      state: document.state.document,
-      documentType: document.header.documentType,
-      documentScopeRevision: 1,
-    });
-
-    return this.buildSuccessResult(
-      job,
-      operation,
-      document.header.id,
-      document.header.documentType,
-      resultingState,
-      startTime,
-    );
-  }
-
-  /**
-   * Execute a DELETE_DOCUMENT system action.
-   * This deletes a document from legacy storage and writes the operation to IOperationStore.
-   * The operation index is determined from the document's current operation count.
-   */
-  private async executeDeleteDocumentAction(
-    job: Job,
-    action: Action,
-    startTime: number,
-    indexTxn: IOperationIndexTxn,
-  ): Promise<
-    JobResult & {
-      operationsWithContext?: Array<{
-        operation: Operation;
-        context: {
-          documentId: string;
-          scope: string;
-          branch: string;
-          documentType: string;
-        };
-      }>;
-    }
-  > {
-    const input = action.input as DeleteDocumentActionInput;
-
-    if (!input.documentId) {
-      return this.buildErrorResult(
-        job,
-        new Error("DELETE_DOCUMENT action requires a documentId in input"),
-        startTime,
-      );
-    }
-
-    const documentId = input.documentId;
-
-    let document: PHDocument;
-    try {
-      document = await this.writeCache.getState(
-        documentId,
-        job.scope,
-        job.branch,
-      );
-    } catch (error) {
-      return this.buildErrorResult(
-        job,
-        new Error(
-          `Failed to fetch document before deletion: ${error instanceof Error ? error.message : String(error)}`,
-        ),
-        startTime,
-      );
-    }
-
-    // Check if document is already deleted
-    const documentState = document.state.document;
-    if (documentState.isDeleted) {
-      return this.buildErrorResult(
-        job,
-        new DocumentDeletedError(documentId, documentState.deletedAtUtcIso),
-        startTime,
-      );
-    }
-
-    const nextIndex = getNextIndexForScope(document, job.scope);
-
-    const operation = this.createOperation(action, nextIndex, 0, {
-      documentId,
-      scope: job.scope,
-      branch: job.branch,
-    });
-
-    // Mark the document as deleted in the state for read model indexing
-    applyDeleteDocumentAction(document, action as never);
-
-    // Compute resultingState for passing via context (not persisted)
-    // DELETE_DOCUMENT only affects header and document scopes
-    const resultingStateObj: Record<string, unknown> = {
-      header: document.header,
-      document: document.state.document,
-    };
-    const resultingState = JSON.stringify(resultingStateObj);
-
-    const writeError = await this.writeOperationToStore(
-      documentId,
-      document.header.documentType,
-      job.scope,
-      job.branch,
-      operation,
-      job,
-      startTime,
-    );
-    if (writeError !== null) {
-      return writeError;
-    }
-
-    indexTxn.write([
-      {
-        ...operation,
-        documentId: documentId,
-        documentType: document.header.documentType,
-        branch: job.branch,
-        scope: job.scope,
-      },
-    ]);
-
-    this.documentMetaCache.putDocumentMeta(documentId, job.branch, {
-      state: document.state.document,
-      documentType: document.header.documentType,
-      documentScopeRevision: operation.index + 1,
-    });
-
-    return this.buildSuccessResult(
-      job,
-      operation,
-      documentId,
-      document.header.documentType,
-      resultingState,
-      startTime,
-    );
-  }
-
-  /**
-   * Execute an UPGRADE_DOCUMENT system action.
-   * Handles initial upgrades (version 0 to N), same-version no-ops, and multi-step upgrade chains.
-   * The operation index is determined from the document's current operation count.
-   */
-  private async executeUpgradeDocumentAction(
-    job: Job,
-    action: Action,
-    startTime: number,
-    indexTxn: IOperationIndexTxn,
-    skip: number = 0,
-  ): Promise<
-    JobResult & {
-      operationsWithContext?: Array<{
-        operation: Operation;
-        context: {
-          documentId: string;
-          scope: string;
-          branch: string;
-          documentType: string;
-        };
-      }>;
-    }
-  > {
-    const input = action.input as UpgradeDocumentActionInput;
-
-    if (!input.documentId) {
-      return this.buildErrorResult(
-        job,
-        new Error("UPGRADE_DOCUMENT action requires a documentId in input"),
-        startTime,
-      );
-    }
-
-    const documentId = input.documentId;
-
-    const fromVersion = input.fromVersion;
-    const toVersion = input.toVersion;
-
-    let document: PHDocument;
-    try {
-      document = await this.writeCache.getState(
-        documentId,
-        job.scope,
-        job.branch,
-      );
-    } catch (error) {
-      return this.buildErrorResult(
-        job,
-        new Error(
-          `Failed to fetch document for upgrade: ${error instanceof Error ? error.message : String(error)}`,
-        ),
-        startTime,
-      );
-    }
-
-    const documentState = document.state.document;
-    if (documentState.isDeleted) {
-      return this.buildErrorResult(
-        job,
-        new DocumentDeletedError(documentId, documentState.deletedAtUtcIso),
-        startTime,
-      );
-    }
-
-    const nextIndex = getNextIndexForScope(document, job.scope);
-
-    let upgradePath: UpgradeTransition[] | undefined;
-    if (fromVersion > 0 && fromVersion < toVersion) {
-      try {
-        upgradePath = this.registry.computeUpgradePath(
-          document.header.documentType,
-          fromVersion,
-          toVersion,
-        );
-      } catch (error) {
-        return this.buildErrorResult(
-          job,
-          error instanceof Error ? error : new Error(String(error)),
-          startTime,
-        );
-      }
-    }
-
-    if (fromVersion === toVersion && fromVersion > 0) {
-      return {
-        job,
-        success: true,
-        operations: [],
-        operationsWithContext: [],
-        duration: Date.now() - startTime,
-      };
-    }
-
-    try {
-      document = applyUpgradeDocumentAction(
-        document,
-        action as UpgradeDocumentAction,
-        upgradePath,
-      );
-    } catch (error) {
-      return this.buildErrorResult(
-        job,
-        error instanceof Error ? error : new Error(String(error)),
-        startTime,
-      );
-    }
-
-    const operation = this.createOperation(action, nextIndex, skip, {
-      documentId,
-      scope: job.scope,
-      branch: job.branch,
-    });
-
-    // Compute resultingState for passing via context (not persisted)
-    const resultingStateObj: Record<string, unknown> = {
-      header: document.header,
-      ...document.state,
-    };
-    const resultingState = JSON.stringify(resultingStateObj);
-
-    const writeError = await this.writeOperationToStore(
-      documentId,
-      document.header.documentType,
-      job.scope,
-      job.branch,
-      operation,
-      job,
-      startTime,
-    );
-    if (writeError !== null) {
-      return writeError;
-    }
-
-    this.updateDocumentRevision(document, job.scope, operation.index);
-
-    this.writeCacheState(
-      documentId,
-      job.scope,
-      job.branch,
-      operation.index,
-      document,
-    );
-
-    indexTxn.write([
-      {
-        ...operation,
-        documentId: documentId,
-        documentType: document.header.documentType,
-        branch: job.branch,
-        scope: job.scope,
-      },
-    ]);
-
-    this.documentMetaCache.putDocumentMeta(documentId, job.branch, {
-      state: document.state.document,
-      documentType: document.header.documentType,
-      documentScopeRevision: operation.index + 1,
-    });
-
-    return this.buildSuccessResult(
-      job,
-      operation,
-      documentId,
-      document.header.documentType,
-      resultingState,
-      startTime,
-    );
-  }
-
-  private async executeAddRelationshipAction(
-    job: Job,
-    action: Action,
-    startTime: number,
-    indexTxn: IOperationIndexTxn,
-  ): Promise<
-    JobResult & {
-      operationsWithContext?: Array<{
-        operation: Operation;
-        context: {
-          documentId: string;
-          scope: string;
-          branch: string;
-          documentType: string;
-        };
-      }>;
-    }
-  > {
-    if (job.scope !== "document") {
-      return this.buildErrorResult(
-        job,
-        new Error(
-          `ADD_RELATIONSHIP must be in "document" scope, got "${job.scope}"`,
-        ),
-        startTime,
-      );
-    }
-
-    const input = action.input as AddRelationshipActionInput;
-
-    if (!input.sourceId || !input.targetId || !input.relationshipType) {
-      return this.buildErrorResult(
-        job,
-        new Error(
-          "ADD_RELATIONSHIP action requires sourceId, targetId, and relationshipType in input",
-        ),
-        startTime,
-      );
-    }
-
-    if (input.sourceId === input.targetId) {
-      return this.buildErrorResult(
-        job,
-        new Error(
-          "ADD_RELATIONSHIP: sourceId and targetId cannot be the same (self-relationships not allowed)",
-        ),
-        startTime,
-      );
-    }
-
-    let sourceDoc: PHDocument;
-    try {
-      sourceDoc = await this.writeCache.getState(
-        input.sourceId,
-        "document",
-        job.branch,
-      );
-    } catch (error) {
-      return this.buildErrorResult(
-        job,
-        new Error(
-          `ADD_RELATIONSHIP: source document ${input.sourceId} not found: ${error instanceof Error ? error.message : String(error)}`,
-        ),
-        startTime,
-      );
-    }
-
-    const nextIndex = getNextIndexForScope(sourceDoc, job.scope);
-
-    const operation = this.createOperation(action, nextIndex, 0, {
-      documentId: input.sourceId,
-      scope: job.scope,
-      branch: job.branch,
-    });
-
-    const writeError = await this.writeOperationToStore(
-      input.sourceId,
-      sourceDoc.header.documentType,
-      job.scope,
-      job.branch,
-      operation,
-      job,
-      startTime,
-    );
-    if (writeError !== null) {
-      return writeError;
-    }
-
-    sourceDoc.header.lastModifiedAtUtcIso =
-      operation.timestampUtcMs || new Date().toISOString();
-
-    this.updateDocumentRevision(sourceDoc, job.scope, operation.index);
-
-    sourceDoc.operations = {
-      ...sourceDoc.operations,
-      [job.scope]: [...(sourceDoc.operations[job.scope] ?? []), operation],
-    };
-
-    const scopeState = (sourceDoc.state as Record<string, unknown>)[job.scope];
-    const resultingStateObj: Record<string, unknown> = {
-      header: structuredClone(sourceDoc.header),
-      [job.scope]: scopeState === undefined ? {} : structuredClone(scopeState),
-    };
-    const resultingState = JSON.stringify(resultingStateObj);
-
-    this.writeCacheState(
-      input.sourceId,
-      job.scope,
-      job.branch,
-      operation.index,
-      sourceDoc,
-    );
-
-    indexTxn.write([
-      {
-        ...operation,
-        documentId: input.sourceId,
-        documentType: sourceDoc.header.documentType,
-        branch: job.branch,
-        scope: job.scope,
-      },
-    ]);
-
-    // collection membership has to be _after_ the write, as it requires the
-    // ordinal of the operation to be set
-    if (sourceDoc.header.documentType === "powerhouse/document-drive") {
-      const collectionId = driveCollectionId(job.branch, input.sourceId);
-      indexTxn.addToCollection(collectionId, input.targetId);
-      this.collectionMembershipCache.invalidate(input.targetId);
-    }
-
-    this.documentMetaCache.putDocumentMeta(input.sourceId, job.branch, {
-      state: sourceDoc.state.document,
-      documentType: sourceDoc.header.documentType,
-      documentScopeRevision: operation.index + 1,
-    });
-
-    return this.buildSuccessResult(
-      job,
-      operation,
-      input.sourceId,
-      sourceDoc.header.documentType,
-      resultingState,
-      startTime,
-    );
-  }
-
-  private async executeRemoveRelationshipAction(
-    job: Job,
-    action: Action,
-    startTime: number,
-    indexTxn: IOperationIndexTxn,
-  ): Promise<
-    JobResult & {
-      operationsWithContext?: Array<{
-        operation: Operation;
-        context: {
-          documentId: string;
-          scope: string;
-          branch: string;
-          documentType: string;
-        };
-      }>;
-    }
-  > {
-    if (job.scope !== "document") {
-      return this.buildErrorResult(
-        job,
-        new Error(
-          `REMOVE_RELATIONSHIP must be in "document" scope, got "${job.scope}"`,
-        ),
-        startTime,
-      );
-    }
-
-    const input = action.input as RemoveRelationshipActionInput;
-
-    if (!input.sourceId || !input.targetId || !input.relationshipType) {
-      return this.buildErrorResult(
-        job,
-        new Error(
-          "REMOVE_RELATIONSHIP action requires sourceId, targetId, and relationshipType in input",
-        ),
-        startTime,
-      );
-    }
-
-    let sourceDoc: PHDocument;
-    try {
-      sourceDoc = await this.writeCache.getState(
-        input.sourceId,
-        "document",
-        job.branch,
-      );
-    } catch (error) {
-      return this.buildErrorResult(
-        job,
-        new Error(
-          `REMOVE_RELATIONSHIP: source document ${input.sourceId} not found: ${error instanceof Error ? error.message : String(error)}`,
-        ),
-        startTime,
-      );
-    }
-
-    const nextIndex = getNextIndexForScope(sourceDoc, job.scope);
-
-    const operation = this.createOperation(action, nextIndex, 0, {
-      documentId: input.sourceId,
-      scope: job.scope,
-      branch: job.branch,
-    });
-
-    const writeError = await this.writeOperationToStore(
-      input.sourceId,
-      sourceDoc.header.documentType,
-      job.scope,
-      job.branch,
-      operation,
-      job,
-      startTime,
-    );
-    if (writeError !== null) {
-      return writeError;
-    }
-
-    sourceDoc.header.lastModifiedAtUtcIso =
-      operation.timestampUtcMs || new Date().toISOString();
-
-    this.updateDocumentRevision(sourceDoc, job.scope, operation.index);
-
-    sourceDoc.operations = {
-      ...sourceDoc.operations,
-      [job.scope]: [...(sourceDoc.operations[job.scope] ?? []), operation],
-    };
-
-    const scopeState = (sourceDoc.state as Record<string, unknown>)[job.scope];
-    const resultingStateObj: Record<string, unknown> = {
-      header: structuredClone(sourceDoc.header),
-      [job.scope]: scopeState === undefined ? {} : structuredClone(scopeState),
-    };
-    const resultingState = JSON.stringify(resultingStateObj);
-
-    this.writeCacheState(
-      input.sourceId,
-      job.scope,
-      job.branch,
-      operation.index,
-      sourceDoc,
-    );
-
-    indexTxn.write([
-      {
-        ...operation,
-        documentId: input.sourceId,
-        documentType: sourceDoc.header.documentType,
-        branch: job.branch,
-        scope: job.scope,
-      },
-    ]);
-
-    // collection membership has to be _after_ the write, as it requires the
-    // ordinal of the operation to be set
-    if (sourceDoc.header.documentType === "powerhouse/document-drive") {
-      const collectionId = driveCollectionId(job.branch, input.sourceId);
-      indexTxn.removeFromCollection(collectionId, input.targetId);
-      this.collectionMembershipCache.invalidate(input.targetId);
-    }
-
-    this.documentMetaCache.putDocumentMeta(input.sourceId, job.branch, {
-      state: sourceDoc.state.document,
-      documentType: sourceDoc.header.documentType,
-      documentScopeRevision: operation.index + 1,
-    });
-
-    return this.buildSuccessResult(
-      job,
-      operation,
-      input.sourceId,
-      sourceDoc.header.documentType,
-      resultingState,
-      startTime,
-    );
-  }
-
-  /**
-   * Execute a regular document action by applying it through the document model reducer.
-   * If sourceOperation is provided (for load jobs), its id and timestamp are preserved.
-   */
   private async executeRegularAction(
     job: Job,
     action: Action,
@@ -1033,7 +277,7 @@ export class SimpleJobExecutor implements IJobExecutor {
         job.branch,
       );
     } catch (error) {
-      return this.buildErrorResult(
+      return buildErrorResult(
         job,
         error instanceof Error ? error : new Error(String(error)),
         startTime,
@@ -1041,7 +285,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     }
 
     if (docMeta.state.isDeleted) {
-      return this.buildErrorResult(
+      return buildErrorResult(
         job,
         new DocumentDeletedError(job.documentId, docMeta.state.deletedAtUtcIso),
         startTime,
@@ -1056,7 +300,7 @@ export class SimpleJobExecutor implements IJobExecutor {
         job.branch,
       );
     } catch (error) {
-      return this.buildErrorResult(
+      return buildErrorResult(
         job,
         error instanceof Error ? error : new Error(String(error)),
         startTime,
@@ -1065,8 +309,6 @@ export class SimpleJobExecutor implements IJobExecutor {
 
     let module: DocumentModelModule;
     try {
-      // Use document version to get the correct module
-      // Version 0 means not yet upgraded - use latest version
       const moduleVersion =
         docMeta.state.version === 0 ? undefined : docMeta.state.version;
       module = this.registry.getModule(
@@ -1074,7 +316,7 @@ export class SimpleJobExecutor implements IJobExecutor {
         moduleVersion,
       );
     } catch (error) {
-      return this.buildErrorResult(
+      return buildErrorResult(
         job,
         error instanceof Error ? error : new Error(String(error)),
         startTime,
@@ -1105,14 +347,14 @@ export class SimpleJobExecutor implements IJobExecutor {
       if (error instanceof Error && error.stack) {
         enhancedError.stack = `${contextMessage}\n\nOriginal stack trace:\n${error.stack}`;
       }
-      return this.buildErrorResult(job, enhancedError, startTime);
+      return buildErrorResult(job, enhancedError, startTime);
     }
 
     const scope = job.scope;
     const operations = updatedDocument.operations[scope];
 
     if (operations.length === 0) {
-      return this.buildErrorResult(
+      return buildErrorResult(
         job,
         new Error("No operation generated from action"),
         startTime,
@@ -1130,18 +372,34 @@ export class SimpleJobExecutor implements IJobExecutor {
       header: updatedDocument.header,
     });
 
-    const writeFailResult = await this.writeOperationToStore(
-      job.documentId,
-      document.header.documentType,
-      scope,
-      job.branch,
-      newOperation,
-      job,
-      startTime,
-    );
+    try {
+      await this.operationStore.apply(
+        job.documentId,
+        document.header.documentType,
+        scope,
+        job.branch,
+        newOperation.index,
+        (txn) => {
+          txn.addOperations(newOperation);
+        },
+      );
+    } catch (error) {
+      this.logger.error(
+        "Error writing @Operation to IOperationStore: @Error",
+        newOperation,
+        error,
+      );
 
-    if (writeFailResult !== null) {
-      return writeFailResult;
+      this.writeCache.invalidate(job.documentId, scope, job.branch);
+
+      return {
+        job,
+        success: false,
+        error: new Error(
+          `Failed to write operation to IOperationStore: ${error instanceof Error ? error.message : String(error)}`,
+        ),
+        duration: Date.now() - startTime,
+      };
     }
 
     updatedDocument.header.revision = {
@@ -1188,36 +446,13 @@ export class SimpleJobExecutor implements IJobExecutor {
     };
   }
 
-  private createOperation(
-    action: Action,
-    index: number,
-    skip: number = 0,
-    context: { documentId: string; scope: string; branch: string },
-  ): Operation {
-    const id = deriveOperationId(
-      context.documentId,
-      context.scope,
-      context.branch,
-      action.id,
-    );
-
-    return {
-      id,
-      index: index,
-      timestampUtcMs: action.timestampUtcMs || new Date().toISOString(),
-      hash: "",
-      skip: skip,
-      action: action,
-    };
-  }
-
   private async executeLoadJob(
     job: Job,
     startTime: number,
     indexTxn: IOperationIndexTxn,
   ): Promise<JobResult> {
     if (job.operations.length === 0) {
-      return this.buildErrorResult(
+      return buildErrorResult(
         job,
         new Error("Load job must include at least one operation"),
         startTime,
@@ -1274,10 +509,6 @@ export class SimpleJobExecutor implements IJobExecutor {
       conflictingOps = [];
     }
 
-    // To properly detect superseded operations, we need to look at ALL operations
-    // from the minimum conflicting index onwards, not just the conflicting ones.
-    // An operation with an earlier timestamp (not in conflictingOps) might have
-    // a skip value that supersedes operations in conflictingOps.
     let allOpsFromMinConflictingIndex: Operation[] = conflictingOps;
     if (conflictingOps.length > 0) {
       const minConflictingIndex = Math.min(
@@ -1298,11 +529,6 @@ export class SimpleJobExecutor implements IJobExecutor {
       }
     }
 
-    // Filter out operations that have been superseded by later operations with skip values.
-    // An operation at index N is superseded if there exists an operation at index M > N
-    // where (M - skip_M) <= N, meaning the later operation's logical index covers N.
-    // We check against ALL operations (not just conflicting) to catch superseding ops
-    // that have earlier timestamps.
     const nonSupersededOps = conflictingOps.filter((op) => {
       for (const laterOp of allOpsFromMinConflictingIndex) {
         if (laterOp.index > op.index && laterOp.skip > 0) {
@@ -1315,10 +541,8 @@ export class SimpleJobExecutor implements IJobExecutor {
       return true;
     });
 
-    // All non-superseded conflicting operations need to be reshuffled
     const existingOpsToReshuffle = nonSupersededOps;
 
-    // Skip count is the number of existing operations that need to be rewound
     const skipCount = existingOpsToReshuffle.length;
 
     if (skipCount > this.config.maxSkipThreshold) {
@@ -1333,8 +557,6 @@ export class SimpleJobExecutor implements IJobExecutor {
       };
     }
 
-    // Filter out incoming operations that are duplicates (action already exists locally
-    // or appears multiple times in incoming)
     const existingActionIds = new Set(
       nonSupersededOps.map((op) => op.action.id),
     );
@@ -1358,7 +580,6 @@ export class SimpleJobExecutor implements IJobExecutor {
       })),
     );
 
-    // For v2, all NOOPs have skip=1 - consecutive NOOPs are handled during state rebuild
     for (const operation of reshuffledOperations) {
       if (operation.action.type === "NOOP") {
         operation.skip = 1;
@@ -1399,221 +620,6 @@ export class SimpleJobExecutor implements IJobExecutor {
       operationsWithContext: result.operationsWithContext,
       duration: Date.now() - startTime,
     };
-  }
-
-  private async writeOperationToStore(
-    documentId: string,
-    documentType: string,
-    scope: string,
-    branch: string,
-    operation: Operation,
-    job: Job,
-    startTime: number,
-  ): Promise<JobResult | null> {
-    try {
-      await this.operationStore.apply(
-        documentId,
-        documentType,
-        scope,
-        branch,
-        operation.index,
-        (txn) => {
-          txn.addOperations(operation);
-        },
-      );
-      return null;
-    } catch (error) {
-      this.logger.error(
-        "Error writing @Operation to IOperationStore: @Error",
-        operation,
-        error,
-      );
-
-      this.writeCache.invalidate(documentId, scope, branch);
-
-      return {
-        job,
-        success: false,
-        error: new Error(
-          `Failed to write operation to IOperationStore: ${error instanceof Error ? error.message : String(error)}`,
-        ),
-        duration: Date.now() - startTime,
-      };
-    }
-  }
-
-  private updateDocumentRevision(
-    document: PHDocument,
-    scope: string,
-    operationIndex: number,
-  ): void {
-    document.header.revision = {
-      ...document.header.revision,
-      [scope]: operationIndex + 1,
-    };
-  }
-
-  private writeCacheState(
-    documentId: string,
-    scope: string,
-    branch: string,
-    operationIndex: number,
-    document: PHDocument,
-  ): void {
-    this.writeCache.putState(
-      documentId,
-      scope,
-      branch,
-      operationIndex,
-      document,
-    );
-  }
-
-  private buildSuccessResult(
-    job: Job,
-    operation: Operation,
-    documentId: string,
-    documentType: string,
-    resultingState: string,
-    startTime: number,
-  ): JobResult {
-    return {
-      job,
-      success: true,
-      operations: [operation],
-      operationsWithContext: [
-        {
-          operation,
-          context: {
-            documentId: documentId,
-            scope: job.scope,
-            branch: job.branch,
-            documentType: documentType,
-            resultingState,
-            ordinal: 0,
-          },
-        },
-      ],
-      duration: Date.now() - startTime,
-    };
-  }
-
-  private buildErrorResult(
-    job: Job,
-    error: Error,
-    startTime: number,
-  ): JobResult {
-    return {
-      job,
-      success: false,
-      error: error,
-      duration: Date.now() - startTime,
-    };
-  }
-
-  private async verifyOperationSignatures(
-    job: Job,
-    operations: Operation[],
-  ): Promise<void> {
-    if (!this.signatureVerifier) {
-      return;
-    }
-
-    for (let i = 0; i < operations.length; i++) {
-      const operation = operations[i];
-      const signer = operation.action.context?.signer;
-
-      if (!signer) {
-        continue;
-      }
-
-      if (signer.signatures.length === 0) {
-        throw new InvalidSignatureError(
-          job.documentId,
-          `Operation ${operation.id} at index ${operation.index} has signer but no signatures`,
-        );
-      }
-
-      const publicKey = signer.app.key;
-      let isValid = false;
-
-      try {
-        isValid = await this.signatureVerifier(operation, publicKey);
-      } catch (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : String(error);
-        throw new InvalidSignatureError(
-          job.documentId,
-          `Operation ${operation.id} at index ${operation.index} verification failed: ${errorMessage}`,
-        );
-      }
-
-      if (!isValid) {
-        throw new InvalidSignatureError(
-          job.documentId,
-          `Operation ${operation.id} at index ${operation.index} signature verification returned false`,
-        );
-      }
-    }
-  }
-
-  private async verifyActionSignatures(
-    job: Job,
-    actions: Action[],
-  ): Promise<void> {
-    if (!this.signatureVerifier) {
-      return;
-    }
-
-    for (const action of actions) {
-      const signer = action.context?.signer;
-
-      if (!signer) {
-        continue;
-      }
-
-      if (signer.signatures.length === 0) {
-        throw new InvalidSignatureError(
-          job.documentId,
-          `Action ${action.id} has signer but no signatures`,
-        );
-      }
-
-      const publicKey = signer.app.key;
-      let isValid = false;
-
-      try {
-        const tempOperation: Operation = {
-          id: deriveOperationId(
-            job.documentId,
-            action.scope,
-            job.branch,
-            action.id,
-          ),
-          index: 0,
-          timestampUtcMs: action.timestampUtcMs || new Date().toISOString(),
-          hash: "",
-          skip: 0,
-          action: action,
-        };
-
-        isValid = await this.signatureVerifier(tempOperation, publicKey);
-      } catch (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : String(error);
-        throw new InvalidSignatureError(
-          job.documentId,
-          `Action ${action.id} verification failed: ${errorMessage}`,
-        );
-      }
-
-      if (!isValid) {
-        throw new InvalidSignatureError(
-          job.documentId,
-          `Action ${action.id} signature verification returned false`,
-        );
-      }
-    }
   }
 
   private accumulateResultOrReturnError(

@@ -1,18 +1,26 @@
 import type {
+  Action,
   CreateDocumentAction,
   CreateDocumentActionInput,
   DeleteDocumentAction,
+  Operation,
   PHDocument,
   UpgradeDocumentAction,
   UpgradeTransition,
 } from "document-model";
-import { createPresignedHeader, defaultBaseState } from "document-model/core";
+import {
+  createPresignedHeader,
+  defaultBaseState,
+  deriveOperationId,
+} from "document-model/core";
 import { DowngradeNotSupportedError } from "../shared/errors.js";
+import type { Job } from "../queue/types.js";
 import type {
   ConsistencyCoordinate,
   ConsistencyToken,
 } from "../shared/types.js";
 import type { OperationWithContext } from "../storage/interfaces.js";
+import type { JobResult } from "./types.js";
 
 /**
  * Creates a PHDocument from a CREATE_DOCUMENT action input.
@@ -238,5 +246,81 @@ export function createConsistencyToken(
     version: 1,
     createdAtUtcIso: new Date().toISOString(),
     coordinates,
+  };
+}
+
+export function createOperation(
+  action: Action,
+  index: number,
+  skip: number,
+  context: { documentId: string; scope: string; branch: string },
+): Operation {
+  const id = deriveOperationId(
+    context.documentId,
+    context.scope,
+    context.branch,
+    action.id,
+  );
+
+  return {
+    id,
+    index: index,
+    timestampUtcMs: action.timestampUtcMs || new Date().toISOString(),
+    hash: "",
+    skip: skip,
+    action: action,
+  };
+}
+
+export function updateDocumentRevision(
+  document: PHDocument,
+  scope: string,
+  operationIndex: number,
+): void {
+  document.header.revision = {
+    ...document.header.revision,
+    [scope]: operationIndex + 1,
+  };
+}
+
+export function buildSuccessResult(
+  job: Job,
+  operation: Operation,
+  documentId: string,
+  documentType: string,
+  resultingState: string,
+  startTime: number,
+): JobResult {
+  return {
+    job,
+    success: true,
+    operations: [operation],
+    operationsWithContext: [
+      {
+        operation,
+        context: {
+          documentId: documentId,
+          scope: job.scope,
+          branch: job.branch,
+          documentType: documentType,
+          resultingState,
+          ordinal: 0,
+        },
+      },
+    ],
+    duration: Date.now() - startTime,
+  };
+}
+
+export function buildErrorResult(
+  job: Job,
+  error: Error,
+  startTime: number,
+): JobResult {
+  return {
+    job,
+    success: false,
+    error: error,
+    duration: Date.now() - startTime,
   };
 }
