@@ -44,7 +44,7 @@
     "pretest": "pnpm build:misc",
     "test:bun": "bun test --concurrent --timeout 1000000",
     "test:vitest": "vitest --run",
-    "test": "pnpm test:bun generate-doc-model.test.ts && pnpm test:vitest",
+    "test": "pnpm test:bun generate-doc-model.test.ts generate-processor.test.ts && pnpm test:vitest",
     "test:keep": "KEEP_TEST_OUTPUT=true pnpm test",
     "test:hygen": "USE_TS_MORPH=false pnpm test",
     "test:keep:hygen": "USE_TS_MORPH=false KEEP_TEST_OUTPUT=true pnpm test"
