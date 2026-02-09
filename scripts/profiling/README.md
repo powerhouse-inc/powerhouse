@@ -28,6 +28,16 @@ cd scripts/profiling
 pnpm install
 ```
 
+Build the packages that the profiling scripts depend on. Run these from the repository root:
+
+```bash
+pnpm --filter document-model run tsc --build
+pnpm --filter @powerhousedao/reactor run build
+pnpm --filter @powerhousedao/switchboard run tsc --build
+```
+
+Rebuild after any source changes in these packages, otherwise the scripts will run against stale code.
+
 Scripts are run with [tsx](https://github.com/privatenumber/tsx). The GraphQL-based scripts (`docs-*`) require a running switchboard instance (default: `http://localhost:4001/graphql`).
 
 ## Scripts
