@@ -15,21 +15,48 @@ import type {
 import type { PHDocumentHeader } from "document-model";
 import type { ReactorContext } from "document-drive";
 
-export const processorFactory = (module: IProcessorHostModule) => {
-  // Initialize all processor factories once with the module
+export const processorFactory = async (module: IProcessorHostModule) => {
   const factories: ProcessorFactory[] = [];
+
+  if (module.context?.app === "connect") {
+    // dynamically import connect processors and add them
+    // to the factories array
+    await addConnectProcessorFactories(factories, module);
+  }
+
+  if (module.context?.app === "connect") {
+    // dynamically import connect processors and add them
+    // to the factories array
+    await addSwitchboardProcessorFactories(factories, module);
+  }
   
   // Return the inner function that will be called for each drive
-  return async (driveHeader: PHDocumentHeader): Promise<ProcessorRecord[]> => {
+  return async (driveHeader: PHDocumentHeader, context?: ReactorContext): Promise<ProcessorRecord[]> => {
     const processors: ProcessorRecord[] = [];
     
     // Call each cached factory with the driveHeader
     for (const factory of factories) {
-      const factoryProcessors = await factory(driveHeader);
+      const factoryProcessors = await factory(driveHeader, context);
       processors.push(...factoryProcessors);
     }
     
     return processors;
   };
+}
+
+async function addConnectProcessorFactories(factories: ProcessorFactory[], module: IProcessorHostModule) {
+const connectProcessorFactories: ProcessorFactory[] = [];
+
+  for (const factory of connectProcessorFactories) {
+    factories.push(factory);
+  }
+}
+
+async function addSwitchboardProcessorFactories(factories: ProcessorFactory[], module: IProcessorHostModule) {
+  const switchboardProcessorFactories: ProcessorFactory[] = [];
+
+  for (const factory of switchboardProcessorFactories) {
+    factories.push(factory);
+  }
 }
 `.raw;

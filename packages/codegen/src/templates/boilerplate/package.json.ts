@@ -29,6 +29,14 @@ const exportsTemplate = json`
     "types": "./dist/processors/index.d.ts",
     "import": "./dist/processors/index.js"
   },
+  "./processors/connect": {
+    "types": "./dist/processors/connect.d.ts",
+    "import": "./dist/processors/connect.js"
+  },
+  "./processors/switchboard": {
+    "types": "./dist/processors/switchboard.d.ts",
+    "import": "./dist/processors/switchboard.js"
+  },
   "./manifest": "./dist/powerhouse.manifest.json",
   "./style.css": "./dist/style.css"
 `;

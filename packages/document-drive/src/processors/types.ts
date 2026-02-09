@@ -38,7 +38,6 @@ export type IRelationalDb<Schema = unknown> = IBaseRelationalDb<Schema> & {
 
 export type ReactorContext = {
   app?: "connect" | "switchboard";
-  environment?: "browser" | "node";
 };
 
 export interface IProcessorHostModule {
@@ -82,6 +81,7 @@ export type ProcessorRecord = {
  */
 export type ProcessorFactory = (
   driveHeader: PHDocumentHeader,
+  context?: ReactorContext,
 ) => ProcessorRecord[] | Promise<ProcessorRecord[]>;
 
 /**
