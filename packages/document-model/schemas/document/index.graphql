@@ -53,9 +53,13 @@ enum SET_NAME {
   SET_NAME
 }
 
+input SetNameActionInput {
+  name: String!
+}
+
 type SetNameOperation implements IOperation {
   type: String!
-  input: String!
+  input: SetNameActionInput!
   index: Int!
   timestamp: DateTime!
   hash: String!
@@ -63,25 +67,33 @@ type SetNameOperation implements IOperation {
 
 input SetNameAction {
   type: SET_NAME!
-  input: String!
+  input: SetNameActionInput!
 }
 
 enum UNDO {
   UNDO
 }
 
+input UndoActionInput {
+  count: Int!
+}
+
 input UndoAction {
   type: UNDO!
-  input: Int!
+  input: UndoActionInput!
 }
 
 enum REDO {
   REDO
 }
 
+input RedoActionInput {
+  count: Int!
+}
+
 input RedoAction {
   type: REDO!
-  input: Int!
+  input: RedoActionInput!
 }
 
 enum PRUNE {

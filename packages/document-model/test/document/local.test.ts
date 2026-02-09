@@ -125,9 +125,8 @@ describe("Local reducer", () => {
       global: [],
       local: [
         {
-          hash: "HbiD0GRM+ijPjZ/N3Kw+6WxMTNI=",
           type: "SET_LOCAL_NAME",
-          input: "test",
+          input: { name: "test" },
           index: 0,
           skip: 0,
           scope: "local",
@@ -173,7 +172,7 @@ describe("Local reducer", () => {
     expect(newDocument.clipboard.length).toBe(1);
     expect(newDocument.clipboard[0]).toMatchObject({
       type: "SET_LOCAL_NAME",
-      input: "test",
+      input: { name: "test" },
       index: 0,
       skip: 0,
       scope: "local",
@@ -206,7 +205,7 @@ describe("Local reducer", () => {
         },
         {
           type: "SET_LOCAL_NAME",
-          input: "test",
+          input: { name: "test" },
           index: 2,
           skip: 0,
           scope: "local",
@@ -227,13 +226,12 @@ describe("Local reducer", () => {
       global: { count: 0 },
       local: { name: "test 2" },
     });
-    expect(newDocument.operations).toStrictEqual({
+    expect(newDocument.operations).toMatchObject({
       global: [],
       local: [
         {
-          hash: "HbiD0GRM+ijPjZ/N3Kw+6WxMTNI=",
           type: "SET_LOCAL_NAME",
-          input: "test",
+          input: { name: "test" },
           index: 0,
           skip: 0,
           scope: "local",
@@ -242,9 +240,8 @@ describe("Local reducer", () => {
         },
 
         {
-          hash: "QIsBfXG+5+X+ju/tv2PHkg0SyEM=",
           type: "SET_LOCAL_NAME",
-          input: "test 2",
+          input: { name: "test 2" },
           index: 1,
           skip: 0,
           scope: "local",

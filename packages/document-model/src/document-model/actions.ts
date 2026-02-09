@@ -148,7 +148,7 @@ import {
 export const setName = (name: string) =>
   createAction<SetNameAction>(
     "SET_NAME",
-    name,
+    { name },
     undefined,
     SetNameActionInputSchema,
     // TODO: THIS IS A BUG: This needs to be changed to a HEADER scope action if it's changing the header.

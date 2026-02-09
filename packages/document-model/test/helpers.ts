@@ -93,7 +93,7 @@ export type DecrementAction = Action & { type: "DECREMENT"; input: {} };
 export type ErrorAction = Action & { type: "ERROR"; input: {} };
 export type SetLocalNameAction = Action & {
   type: "SET_LOCAL_NAME";
-  input: string;
+  input: { name: string };
 };
 export type CountAction =
   | IncrementAction
@@ -114,7 +114,7 @@ export const error = () => createAction<ErrorAction>("ERROR", {});
 export const setLocalName = (name: string) =>
   createAction<SetLocalNameAction>(
     "SET_LOCAL_NAME",
-    name,
+    { name },
     undefined,
     undefined,
     "local",
@@ -129,7 +129,7 @@ export const baseCountReducer: StateReducer<CountPHState> = (state, action) => {
       state.global.count -= 1;
       break;
     case "SET_LOCAL_NAME":
-      state.local.name = action.input as string;
+      state.local.name = (action.input as { name: string }).name;
       break;
     case "ERROR":
       throw new Error("Error action");
@@ -156,7 +156,10 @@ export const mutableCountReducer: StateReducer<CountPHState> = (
     case "SET_LOCAL_NAME":
       return {
         ...state,
-        local: { ...state.local, name: action.input as string },
+        local: {
+          ...state.local,
+          name: (action.input as { name: string }).name,
+        },
       };
     case "ERROR":
       throw new Error("Error action");

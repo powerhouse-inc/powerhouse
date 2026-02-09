@@ -143,20 +143,24 @@ export type Query = {
 
 export type Redo = "REDO";
 
+export type RedoActionInput = { count: Scalars["Int"]["input"] };
+
 export type SchemaRedoAction = {
   id: Scalars["String"]["output"];
   timestampUtcMs: Scalars["DateTime"]["output"];
-  input: Scalars["Int"]["input"];
+  input: RedoActionInput;
   type: Redo;
   scope: string;
 };
 
 export type Set_Name = "SET_NAME";
 
+export type SetNameActionInput = { name: Scalars["String"]["input"] };
+
 export type SchemaSetNameAction = {
   id: Scalars["String"]["output"];
   timestampUtcMs: Scalars["DateTime"]["output"];
-  input: Scalars["String"]["input"];
+  input: SetNameActionInput;
   type: Set_Name;
   scope: "global";
 };
@@ -172,10 +176,12 @@ export type SetNameOperation = IOperation & {
 
 export type Undo = "UNDO";
 
+export type UndoActionInput = { count: Scalars["Int"]["input"] };
+
 export type SchemaUndoAction = {
   id: Scalars["String"]["output"];
   timestampUtcMs: Scalars["DateTime"]["output"];
-  input: Scalars["Int"]["input"];
+  input: UndoActionInput;
   type: Undo;
   scope: string;
 };

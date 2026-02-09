@@ -54,10 +54,10 @@ export type OperationContext = {
  * @param count - Number of operations to cancel
  * @category Actions
  */
-export const undo = (skip = 1, scope = "global") =>
+export const undo = (count = 1, scope = "global") =>
   createAction<UndoAction>(
     "UNDO",
-    skip,
+    { count },
     undefined,
     UndoActionInputSchema,
     scope,
@@ -72,7 +72,7 @@ export const undo = (skip = 1, scope = "global") =>
 export const redo = (count = 1, scope = "global") =>
   createAction<RedoAction>(
     "REDO",
-    count,
+    { count },
     undefined,
     RedoActionInputSchema,
     scope,
