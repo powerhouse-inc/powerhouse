@@ -6,7 +6,7 @@ import type {
 } from "../../../../document-models/processor-module/index.js";
 import { logger } from "../../logger.js";
 import { BaseDocumentGen } from "../base-document-gen.js";
-import { USE_TS_MORPH } from "./constants.js";
+import { TEMP_HARDCODED_PROCESSOR_APP, USE_TS_MORPH } from "./constants.js";
 import { minimalBackupDocument } from "./utils.js";
 
 /**
@@ -83,13 +83,14 @@ export class ProcessorGenerator extends BaseDocumentGen {
         const documentTypes = state.documentTypes.map((dt) => dt.documentType);
 
         // Generate the processor using the codegen function
-        await generateProcessor(
-          state.name,
+        await generateProcessor({
+          processorName: state.name,
           processorType,
           documentTypes,
-          this.config.PH_CONFIG.skipFormat,
-          USE_TS_MORPH,
-        );
+          skipFormat: this.config.PH_CONFIG.skipFormat,
+          useTsMorph: USE_TS_MORPH,
+          processorApp: TEMP_HARDCODED_PROCESSOR_APP,
+        });
 
         logger.info(
           `✅ Processor generation completed successfully for: ${state.name}`,

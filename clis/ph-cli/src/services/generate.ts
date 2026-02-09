@@ -31,6 +31,7 @@ export async function startGenerate(options: GenerateArgs) {
     disableDragAndDrop,
     processorName,
     processorType,
+    processorApp,
     importScriptName,
     migrationFile,
     schemaFile,
@@ -51,14 +52,15 @@ export async function startGenerate(options: GenerateArgs) {
     ? documentModelFile.join(" ")
     : documentModelFile;
 
+  const documentTypeFromDocumentTypes = documentTypes?.split(",")[0];
+  if (documentTypes) {
+    console.warn(
+      `[WARNING] --document-types is deprecated. Generated editor code is not set up to use multiple document types. Using the first document type in the list you specified (${documentTypeFromDocumentTypes})`,
+    );
+  }
+  const documentTypeToUse = documentType ?? documentTypeFromDocumentTypes;
+
   if (editorName !== undefined) {
-    const documentTypeFromDocumentTypes = documentTypes?.split(",")[0];
-    if (documentTypes) {
-      console.warn(
-        `[WARNING] --document-types is deprecated. Generated editor code is not set up to use multiple document types. Using the first document type in the list you specified (${documentTypeFromDocumentTypes})`,
-      );
-    }
-    const documentTypeToUse = documentType ?? documentTypeFromDocumentTypes;
     if (!documentTypeToUse) {
       throw new Error(
         "Please specify a document type for the generated editor.",
@@ -85,13 +87,14 @@ export async function startGenerate(options: GenerateArgs) {
       specifiedPackageName,
     });
   } else if (processorName !== undefined) {
-    await generateProcessor(
+    await generateProcessor({
       processorName,
       processorType,
-      [documentType].filter((dt) => dt !== undefined),
       skipFormat,
       useTsMorph,
-    );
+      processorApp,
+      documentTypes: [documentTypeToUse].filter((t) => t !== undefined),
+    });
   } else if (subgraphName !== undefined) {
     await generateSubgraph(subgraphName, filePath || null, config, {
       verbose,
@@ -99,7 +102,6 @@ export async function startGenerate(options: GenerateArgs) {
     });
   } else if (importScriptName !== undefined) {
     await generateImportScript(importScriptName, config);
-    return;
   } else if (migrationFile !== undefined) {
     await generateDBSchema({
       migrationFile: path.join(process.cwd(), migrationFile),

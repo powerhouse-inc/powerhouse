@@ -1,153 +1,261 @@
-import { paramCase } from "change-case";
-import { rm } from "node:fs/promises";
+import { $ } from "bun";
+import { describe, it } from "bun:test";
+import { cp } from "node:fs/promises";
 import path from "path";
-import {
-  afterAll,
-  beforeAll,
-  beforeEach,
-  describe,
-  it,
-  type TestContext,
-} from "vitest";
 import { generateProcessor } from "../generate.js";
-import { USE_TS_MORPH } from "./config.js";
-import { compile } from "./fixtures/typecheck.js";
-import { copyAllFiles, purgeDirAfterTest, resetDirForTest } from "./utils.js";
 
-let testCount = 1;
-
-const parentOutDirName = "generate-processors";
 const testsDir = import.meta.dirname;
-const testOutputParentDir = path.join(
-  testsDir,
-  ".test-output",
-  parentOutDirName,
-);
-let testOutDirPath = "";
+const testOutputDir = path.join(testsDir, ".test-output");
+const testsDataDir = path.join(testsDir, "data");
+const dataDirName = "processors-test-project";
+const parentOutDirName = "generate-processors";
+const testOutputParentDir = path.join(testOutputDir, parentOutDirName);
+type ProcessorTestsInput = {
+  processorName: string;
+  processorType: "analytics" | "relationalDb";
+  processorApp: "connect" | "switchboard";
+  documentTypes: string[];
+};
+async function runProcessorTests(args: {
+  outDirName: string;
+  inputs: ProcessorTestsInput[];
+}) {
+  const { outDirName, inputs } = args;
 
-const testsDataDir = path.join(testsDir, "data", "processors-test-project");
+  const dataDir = path.join(testsDataDir, dataDirName);
+  const outDir = path.join(testOutputParentDir, outDirName);
 
-function getTestOutDir(context: TestContext) {
-  const testDirName = `${testCount++}-${paramCase(context.task.name)}`;
-  return path.join(testOutputParentDir, testDirName);
+  await cp(dataDir, outDir, {
+    recursive: true,
+    force: true,
+  });
+
+  for (const input of inputs) {
+    await generateProcessor({
+      ...input,
+      useTsMorph: true,
+      rootDir: outDir,
+    });
+  }
+  await $`bun run --cwd ${outDir} tsc`;
+  return outDir;
 }
 
 describe("generate processor", () => {
-  beforeEach(async (context) => {
-    testOutDirPath = getTestOutDir(context);
-    await rm(testOutDirPath, { recursive: true, force: true });
-    // await mkdir(testOutDirPath, { recursive: true });
-    await copyAllFiles(testsDataDir, testOutDirPath);
-    process.chdir(testOutDirPath);
+  it("should generate an analytics processor and factory with app connect", async () => {
+    await runProcessorTests({
+      outDirName: "analytics-with-app-connect",
+      inputs: [
+        {
+          processorName: "test-analytics-processor",
+          processorType: "analytics",
+          documentTypes: ["billing-statement"],
+          processorApp: "connect",
+        },
+      ],
+    });
   });
-  beforeAll(async () => {
-    await resetDirForTest(testOutputParentDir);
+  it("should generate an analytics processor and factory with app switchboard", async () => {
+    await runProcessorTests({
+      outDirName: "analytics-with-app-switchboard",
+      inputs: [
+        {
+          processorName: "test-analytics-processor",
+          processorType: "analytics",
+          documentTypes: ["billing-statement"],
+          processorApp: "switchboard",
+        },
+      ],
+    });
   });
-  afterAll(async () => {
-    await purgeDirAfterTest(testOutputParentDir);
+  it("should generate multiple analytics processors with composable factories with app connect", async () => {
+    await runProcessorTests({
+      outDirName: "multiple-analytics-with-app-connect",
+      inputs: [
+        {
+          processorName: "test1",
+          processorType: "analytics",
+          documentTypes: ["billing-statement"],
+          processorApp: "connect",
+        },
+        {
+          processorName: "test2",
+          processorType: "analytics",
+          documentTypes: ["billing-statement"],
+          processorApp: "connect",
+        },
+        {
+          processorName: "test3",
+          processorType: "analytics",
+          documentTypes: ["billing-statement"],
+          processorApp: "connect",
+        },
+      ],
+    });
+  });
+  it("should generate multiple analytics processors with composable factories with app switchboard", async () => {
+    await runProcessorTests({
+      outDirName: "multiple-analytics-with-app-switchboard",
+      inputs: [
+        {
+          processorName: "test1",
+          processorType: "analytics",
+          documentTypes: ["billing-statement"],
+          processorApp: "switchboard",
+        },
+        {
+          processorName: "test2",
+          processorType: "analytics",
+          documentTypes: ["billing-statement"],
+          processorApp: "switchboard",
+        },
+        {
+          processorName: "test3",
+          processorType: "analytics",
+          documentTypes: ["billing-statement"],
+          processorApp: "switchboard",
+        },
+      ],
+    });
+  });
+  it("should generate multiple analytics processors with composable factories with a combination of processor apps", async () => {
+    await runProcessorTests({
+      outDirName: "multiple-analytics-with-both-switchboard-and-connect",
+      inputs: [
+        {
+          processorName: "test1",
+          processorType: "analytics",
+          documentTypes: ["billing-statement"],
+          processorApp: "switchboard",
+        },
+        {
+          processorName: "test2",
+          processorType: "analytics",
+          documentTypes: ["billing-statement"],
+          processorApp: "connect",
+        },
+        {
+          processorName: "test3",
+          processorType: "analytics",
+          documentTypes: ["billing-statement"],
+          processorApp: "switchboard",
+        },
+        {
+          processorName: "test4",
+          processorType: "analytics",
+          documentTypes: ["billing-statement"],
+          processorApp: "connect",
+        },
+      ],
+    });
+  });
+  it("should generate a relational db processor and factory with app connect", async () => {
+    await runProcessorTests({
+      outDirName: "relational-db-with-connect",
+      inputs: [
+        {
+          processorName: "test-relational-processor",
+          processorType: "relationalDb",
+          documentTypes: ["billing-statement"],
+          processorApp: "connect",
+        },
+      ],
+    });
+  });
+  it("should generate a relational db processor and factory with app switchboard", async () => {
+    await runProcessorTests({
+      outDirName: "relational-db-with-switchboard",
+      inputs: [
+        {
+          processorName: "test-relational-processor",
+          processorType: "relationalDb",
+          documentTypes: ["billing-statement"],
+          processorApp: "switchboard",
+        },
+      ],
+    });
   });
 
-  it(
-    "should generate an analytics processor and factory",
-    {
-      timeout: 100000,
-    },
-    async () => {
-      await generateProcessor(
-        "test-analytics-processor",
-        "analytics",
-        ["billing-statement"],
-        true,
-        USE_TS_MORPH,
-      );
+  it("should generate multiple relational db processors with composable factories with app connect", async () => {
+    await runProcessorTests({
+      outDirName: "multiple-relational-db-with-connect",
+      inputs: [
+        {
+          processorName: "test1",
+          processorType: "relationalDb",
+          documentTypes: ["billing-statement"],
+          processorApp: "connect",
+        },
+        {
+          processorName: "test2",
+          processorType: "relationalDb",
+          documentTypes: ["billing-statement"],
+          processorApp: "connect",
+        },
+        {
+          processorName: "test3",
+          processorType: "relationalDb",
+          documentTypes: ["billing-statement"],
+          processorApp: "connect",
+        },
+      ],
+    });
+  });
 
-      // await compile(testOutDirPath);
-      await compile(testOutDirPath);
-    },
-  );
-  it(
-    "should generate multiple analytics processors with composable factories",
-    {
-      timeout: 100000,
-    },
-    async () => {
-      await generateProcessor(
-        "test1",
-        "analytics",
-        ["billing-statement"],
-        true,
-        USE_TS_MORPH,
-      );
-
-      await generateProcessor(
-        "test2",
-        "analytics",
-        ["billing-statement"],
-
-        true,
-        USE_TS_MORPH,
-      );
-
-      await generateProcessor(
-        "test3",
-        "analytics",
-        ["billing-statement"],
-        true,
-        USE_TS_MORPH,
-      );
-
-      await compile(testOutDirPath);
-    },
-  );
-  it(
-    "should generate a relational db processor and factory",
-    {
-      timeout: 100000,
-    },
-    async () => {
-      await generateProcessor(
-        "test-relational-processor",
-        "relationalDb",
-        ["billing-statement"],
-        true,
-        USE_TS_MORPH,
-      );
-
-      await compile(testOutDirPath);
-    },
-  );
-
-  it(
-    "should generate multiple relational db processors with composable factories",
-    {
-      timeout: 100000,
-    },
-    async () => {
-      await generateProcessor(
-        "test1",
-        "relationalDb",
-        ["billing-statement"],
-        true,
-        USE_TS_MORPH,
-      );
-
-      await generateProcessor(
-        "test2",
-        "relationalDb",
-        ["billing-statement"],
-        true,
-        USE_TS_MORPH,
-      );
-
-      await generateProcessor(
-        "test3",
-        "relationalDb",
-        ["billing-statement"],
-        true,
-        USE_TS_MORPH,
-      );
-
-      await compile(testOutDirPath);
-    },
-  );
+  it("should generate multiple relational db processors with composable factories with app switchboard", async () => {
+    await runProcessorTests({
+      outDirName: "multiple-relational-db-with-switchboard",
+      inputs: [
+        {
+          processorName: "test1",
+          processorType: "relationalDb",
+          documentTypes: ["billing-statement"],
+          processorApp: "switchboard",
+        },
+        {
+          processorName: "test2",
+          processorType: "relationalDb",
+          documentTypes: ["billing-statement"],
+          processorApp: "switchboard",
+        },
+        {
+          processorName: "test3",
+          processorType: "relationalDb",
+          documentTypes: ["billing-statement"],
+          processorApp: "switchboard",
+        },
+      ],
+    });
+  });
+  it("should generate multiple relational db processors with composable factories with a combination of apps connect and switchboard", async () => {
+    await runProcessorTests({
+      outDirName: "multiple-relational-db-with-connect-and-switchboard",
+      inputs: [
+        {
+          processorName: "test1",
+          processorType: "relationalDb",
+          documentTypes: ["billing-statement"],
+          processorApp: "connect",
+        },
+        {
+          processorName: "test2",
+          processorType: "relationalDb",
+          documentTypes: ["billing-statement"],
+          processorApp: "switchboard",
+        },
+        {
+          processorName: "test3",
+          processorType: "relationalDb",
+          documentTypes: ["billing-statement"],
+          processorApp: "connect",
+        },
+        {
+          processorName: "test4",
+          processorType: "relationalDb",
+          documentTypes: ["billing-statement"],
+          processorApp: "switchboard",
+        },
+      ],
+    });
+  });
 });

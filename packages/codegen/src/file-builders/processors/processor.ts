@@ -15,15 +15,17 @@ import { tsMorphGenerateAnalyticsProcessor } from "./analytics.js";
 import { tsMorphGenerateRelationalDbProcessor } from "./relational-db.js";
 
 export async function tsMorphGenerateProcessor(args: {
-  name: string;
+  processorName: string;
   documentTypes: string[];
   rootDir: string;
   processorType: "relationalDb" | "analytics";
+  processorApp: "switchboard" | "connect";
 }) {
-  const { name, documentTypes, rootDir, processorType } = args;
-  const paramCaseName = paramCase(name);
-  const camelCaseName = camelCase(name);
-  const pascalCaseName = pascalCase(name);
+  const { processorName, documentTypes, rootDir, processorType, processorApp } =
+    args;
+  const paramCaseName = paramCase(processorName);
+  const camelCaseName = camelCase(processorName);
+  const pascalCaseName = pascalCase(processorName);
   const processorsDirPath = path.join(rootDir, "processors");
   const dirPath = path.join(processorsDirPath, paramCaseName);
   const sourceFilesPath = path.join(processorsDirPath, "**/*");
@@ -33,7 +35,7 @@ export async function tsMorphGenerateProcessor(args: {
 
   if (processorType === "analytics") {
     await tsMorphGenerateAnalyticsProcessor({
-      name,
+      processorName,
       documentTypes,
       rootDir,
       camelCaseName,
@@ -45,7 +47,7 @@ export async function tsMorphGenerateProcessor(args: {
     });
   } else {
     await tsMorphGenerateRelationalDbProcessor({
-      name,
+      processorName,
       documentTypes,
       rootDir,
       camelCaseName,
@@ -59,7 +61,65 @@ export async function tsMorphGenerateProcessor(args: {
 
   await updateIndexFile({ processorsDirPath, project });
   await updateFactoryFile({ processorsDirPath, project });
+  await updateAppProcessorsFile({
+    processorsDirPath,
+    processorApp,
+    project,
+    dirPath,
+    pascalCaseName,
+    camelCaseName,
+  });
   await project.save();
+}
+
+async function updateAppProcessorsFile(args: {
+  project: Project;
+  processorApp: "switchboard" | "connect";
+  processorsDirPath: string;
+  dirPath: string;
+  pascalCaseName: string;
+  camelCaseName: string;
+}) {
+  const {
+    project,
+    processorsDirPath,
+    processorApp,
+    dirPath,
+    pascalCaseName,
+    camelCaseName,
+  } = args;
+  const processorFilePath = path.join(processorsDirPath, `${processorApp}.ts`);
+  const { sourceFile } = getOrCreateSourceFile(project, processorFilePath);
+
+  const processorClassName = `${pascalCaseName}Processor`;
+  const processorClassModuleSpecifier = `./${path.join(
+    path.basename(dirPath),
+    "index.js",
+  )}`;
+  const processorFactoryName = `${camelCaseName}ProcessorFactory`;
+  const processorFactoryModuleSpecifier = `./${path.join(
+    path.basename(dirPath),
+    "factory.js",
+  )}`;
+  const exportedNames = sourceFile
+    .getExportDeclarations()
+    .flatMap((e) => e.getNamedExports().map((n) => n.getText()));
+
+  if (!exportedNames.includes(processorClassName)) {
+    sourceFile.addExportDeclaration({
+      namedExports: [processorClassName],
+      moduleSpecifier: processorClassModuleSpecifier,
+    });
+  }
+
+  if (!exportedNames.includes(processorFactoryName)) {
+    sourceFile.addExportDeclaration({
+      namedExports: [processorFactoryName],
+      moduleSpecifier: processorFactoryModuleSpecifier,
+    });
+  }
+
+  await formatSourceFileWithPrettier(sourceFile);
 }
 
 async function updateIndexFile(v: {

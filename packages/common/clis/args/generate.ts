@@ -78,6 +78,13 @@ export const generateArgs = {
     defaultValue: () => "analytics" as const,
     defaultValueIsSerializable: true,
   }),
+  processorApp: option({
+    type: oneOf(["connect", "switchboard"] as const),
+    long: "app",
+    description: "The app where the generated processor will run",
+    defaultValue: () => "switchboard" as const,
+    defaultValueIsSerializable: true,
+  }),
   subgraphName: option({
     type: optional(string),
     long: "subgraph",

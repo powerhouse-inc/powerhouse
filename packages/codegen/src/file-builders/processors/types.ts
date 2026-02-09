@@ -1,7 +1,7 @@
 import type { Project } from "ts-morph";
 
 export type GenerateProcessorArgs = {
-  name: string;
+  processorName: string;
   project: Project;
   rootDir: string;
   dirPath: string;

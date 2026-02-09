@@ -6,6 +6,7 @@ import {
   tsMorphGenerateDriveEditor,
 } from "@powerhousedao/codegen/file-builders";
 import { buildTsMorphProject } from "@powerhousedao/codegen/utils";
+import { fileExists } from "@powerhousedao/common/clis";
 import type {
   PartialPowerhouseManifest,
   PowerhouseConfig,
@@ -13,6 +14,8 @@ import type {
 } from "@powerhousedao/config";
 import { paramCase } from "change-case";
 import type { DocumentModelGlobalState } from "document-model";
+import fs from "node:fs";
+import { readdir } from "node:fs/promises";
 import path, { join } from "node:path";
 import { readPackage, type NormalizedPackageJson } from "read-pkg";
 import semver from "semver";
@@ -29,9 +32,6 @@ import {
 } from "./hygen.js";
 import type { CodegenOptions } from "./types.js";
 import { getDocumentTypesMap, loadDocumentModel } from "./utils.js";
-import { readdir } from "node:fs/promises";
-import { fileExists } from "@powerhousedao/common/clis";
-import fs from "node:fs";
 
 export async function generateAll(args: {
   dir: string;
@@ -413,25 +413,39 @@ export async function generateSubgraph(
   });
 }
 
-export async function generateProcessor(
-  name: string,
-  type: "analytics" | "relationalDb",
-  documentTypes: string[],
-  skipFormat: boolean,
-  useTsMorph: boolean,
-) {
+export async function generateProcessor(args: {
+  processorName: string;
+  processorType: "analytics" | "relationalDb";
+  processorApp: "connect" | "switchboard";
+  documentTypes: string[];
+  skipFormat?: boolean;
+  useTsMorph?: boolean;
+  rootDir?: string;
+}) {
+  const {
+    processorName,
+    processorType,
+    documentTypes,
+    skipFormat,
+    useTsMorph,
+    rootDir = process.cwd(),
+  } = args;
   if (useTsMorph) {
     return await tsMorphGenerateProcessor({
-      name,
-      processorType: type,
-      documentTypes,
-      rootDir: process.cwd(),
+      rootDir,
+      ...args,
     });
   }
 
-  return hygenGenerateProcessor(name, documentTypes, "processors", type, {
-    skipFormat,
-  });
+  return hygenGenerateProcessor(
+    processorName,
+    documentTypes,
+    "processors",
+    processorType,
+    {
+      skipFormat,
+    },
+  );
 }
 
 export async function generateImportScript(

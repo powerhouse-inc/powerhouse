@@ -17,10 +17,10 @@ import type { ReactorContext } from "document-drive";
 
 export const processorFactory = (module: IProcessorHostModule) => {
   // Initialize all processor factories once with the module
-  const factories: Array<ProcessorFactory> = [];
+  const factories: ProcessorFactory[] = [];
   
   // Return the inner function that will be called for each drive
-  return async (driveHeader: PHDocumentHeader, context?: ReactorContext): Promise<ProcessorRecord[]> => {
+  return async (driveHeader: PHDocumentHeader): Promise<ProcessorRecord[]> => {
     const processors: ProcessorRecord[] = [];
     
     // Call each cached factory with the driveHeader
