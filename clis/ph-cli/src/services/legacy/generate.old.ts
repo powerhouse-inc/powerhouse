@@ -119,13 +119,14 @@ export async function startGenerate(
   } else if (command.processor && options.processor) {
     const processorType =
       options.processorType === "relationalDb" ? "relationalDb" : "analytics";
-    await generateProcessor(
-      options.processor,
+    await generateProcessor({
+      processorName: options.processor,
       processorType,
-      options.documentTypes?.split(",") ?? [],
-      config.skipFormat,
+      documentTypes: options.documentTypes?.split(",") ?? [],
+      skipFormat: config.skipFormat,
       useTsMorph,
-    );
+      processorApp: "switchboard",
+    });
   } else if (command.subgraph && command.subgraphName) {
     await generateSubgraph(command.subgraphName, options.file || null, config);
   } else if (command.importScript && command.importScriptName) {

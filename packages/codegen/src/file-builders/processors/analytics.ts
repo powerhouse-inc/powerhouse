@@ -13,7 +13,8 @@ import type { GenerateProcessorArgs } from "./types.js";
 export async function tsMorphGenerateAnalyticsProcessor(
   args: GenerateProcessorArgs,
 ) {
-  const { project, documentTypes, pascalCaseName, dirPath } = args;
+  const { project, documentTypes, pascalCaseName, dirPath, camelCaseName } =
+    args;
 
   await makeIndexFile({
     project,
@@ -24,6 +25,7 @@ export async function tsMorphGenerateAnalyticsProcessor(
   await makeFactoryFile({
     project,
     pascalCaseName,
+    camelCaseName,
     dirPath,
     documentTypes,
   });
@@ -47,6 +49,7 @@ async function makeIndexFile(v: {
 async function makeFactoryFile(v: {
   project: Project;
   pascalCaseName: string;
+  camelCaseName: string;
   dirPath: string;
   documentTypes: string[];
 }) {

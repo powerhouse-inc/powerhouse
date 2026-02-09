@@ -15,15 +15,17 @@ import { tsMorphGenerateAnalyticsProcessor } from "./analytics.js";
 import { tsMorphGenerateRelationalDbProcessor } from "./relational-db.js";
 
 export async function tsMorphGenerateProcessor(args: {
-  name: string;
+  processorName: string;
   documentTypes: string[];
   rootDir: string;
   processorType: "relationalDb" | "analytics";
+  processorApp: "switchboard" | "connect";
 }) {
-  const { name, documentTypes, rootDir, processorType } = args;
-  const paramCaseName = paramCase(name);
-  const camelCaseName = camelCase(name);
-  const pascalCaseName = pascalCase(name);
+  const { processorName, documentTypes, rootDir, processorType, processorApp } =
+    args;
+  const paramCaseName = paramCase(processorName);
+  const camelCaseName = camelCase(processorName);
+  const pascalCaseName = pascalCase(processorName);
   const processorsDirPath = path.join(rootDir, "processors");
   const dirPath = path.join(processorsDirPath, paramCaseName);
   const sourceFilesPath = path.join(processorsDirPath, "**/*");
@@ -33,7 +35,7 @@ export async function tsMorphGenerateProcessor(args: {
 
   if (processorType === "analytics") {
     await tsMorphGenerateAnalyticsProcessor({
-      name,
+      processorName,
       documentTypes,
       rootDir,
       camelCaseName,
@@ -45,7 +47,7 @@ export async function tsMorphGenerateProcessor(args: {
     });
   } else {
     await tsMorphGenerateRelationalDbProcessor({
-      name,
+      processorName,
       documentTypes,
       rootDir,
       camelCaseName,
@@ -58,8 +60,72 @@ export async function tsMorphGenerateProcessor(args: {
   }
 
   await updateIndexFile({ processorsDirPath, project });
-  await updateFactoryFile({ processorsDirPath, project });
+  await updateFactoryFile({
+    processorsDirPath,
+    project,
+    camelCaseName,
+    dirPath,
+    processorApp,
+  });
+  await updateAppProcessorsFile({
+    processorsDirPath,
+    processorApp,
+    project,
+    dirPath,
+    pascalCaseName,
+    camelCaseName,
+  });
   await project.save();
+}
+
+async function updateAppProcessorsFile(args: {
+  project: Project;
+  processorsDirPath: string;
+  processorApp: "switchboard" | "connect";
+  dirPath: string;
+  pascalCaseName: string;
+  camelCaseName: string;
+}) {
+  const {
+    project,
+    processorsDirPath,
+    processorApp,
+    dirPath,
+    pascalCaseName,
+    camelCaseName,
+  } = args;
+  const processorFilePath = path.join(processorsDirPath, `${processorApp}.ts`);
+  const { sourceFile } = getOrCreateSourceFile(project, processorFilePath);
+
+  const processorClassName = `${pascalCaseName}Processor`;
+  const processorClassModuleSpecifier = `./${path.join(
+    path.basename(dirPath),
+    "index.js",
+  )}`;
+  const processorFactoryName = `${camelCaseName}ProcessorFactory`;
+  const processorFactoryModuleSpecifier = `./${path.join(
+    path.basename(dirPath),
+    "factory.js",
+  )}`;
+  const exportedNames = sourceFile
+    .getExportDeclarations()
+    .flatMap((e) => e.getNamedExports().map((n) => n.getText()));
+
+  if (!exportedNames.includes(processorClassName)) {
+    sourceFile.addExportDeclaration({
+      namedExports: [processorClassName],
+      moduleSpecifier: processorClassModuleSpecifier,
+    });
+  }
+
+  if (!exportedNames.includes(processorFactoryName)) {
+    sourceFile.addExportDeclaration({
+      namedExports: [processorFactoryName],
+      moduleSpecifier: processorFactoryModuleSpecifier,
+    });
+  }
+
+  await formatSourceFileWithPrettier(sourceFile);
 }
 
 async function updateIndexFile(v: {
@@ -76,85 +142,15 @@ async function updateIndexFile(v: {
   if (!alreadyExists) {
     sourceFile.replaceWithText(template);
   }
-  const processorsDir = project.getDirectoryOrThrow(processorsDirPath);
-  const processorDirs = processorsDir.getDirectories();
-  const indexFiles = processorDirs
-    .flatMap((d) => d.getSourceFile("index.ts"))
-    .filter((f) => f !== undefined);
-  const processorExportDeclarations = indexFiles
-    .flatMap((f) => f.getClasses())
-    .filter(
-      (c) =>
-        c.getExtends()?.getFullText().includes("RelationalDbProcessor") ||
-        c.getImplements().some((i) => i.getFullText().includes("IProcessor")),
-    )
-    .map((c) => {
-      const name = c.getNameOrThrow();
-      const file = c.getSourceFile();
-      const fileName = file.getBaseName();
-      const dirName = file.getDirectory().getBaseName();
-      return {
-        name,
-        fileName,
-        dirName,
-      };
-    })
-    .map((c) => ({
-      namedExports: [c.name],
-      moduleSpecifier: `./${path.posix.join(
-        c.dirName,
-        c.fileName.replace(".ts", ".js"),
-      )}`,
-    }));
-  for (const declaration of processorExportDeclarations) {
-    if (
-      !sourceFile.getExportDeclaration((exportDeclaration) =>
-        exportDeclaration
-          .getNamedExports()
-          .some((exportSpecifier) =>
-            declaration.namedExports.includes(exportSpecifier.getName()),
-          ),
-      )
-    ) {
-      sourceFile.addExportDeclaration(declaration);
-    }
-  }
-  const factoryFiles = processorDirs
-    .flatMap((d) => d.getSourceFile("factory.ts"))
-    .filter((f) => f !== undefined);
-  const factoryExportDeclarations = factoryFiles
-    .flatMap((f) => f.getVariableDeclarations())
-    .filter((d) => d.getName().includes("ProcessorFactory"))
-    .map((v) => {
-      const name = v.getName();
-      const file = v.getSourceFile();
-      const fileName = file.getBaseName();
-      const dirName = file.getDirectory().getBaseName();
-      return {
-        name,
-        fileName,
-        dirName,
-      };
-    })
-    .map((v) => ({
-      namedExports: [v.name],
-      moduleSpecifier: `./${path.posix.join(
-        v.dirName,
-        v.fileName.replace(".ts", ".js"),
-      )}`,
-    }));
+  const exportNames = sourceFile
+    .getExportDeclarations()
+    .flatMap((e) => e.getNamedExports().map((n) => n.getText()));
 
-  for (const d of [
-    { namedExports: ["processorFactory"], moduleSpecifier: "./factory.js" },
-    ...factoryExportDeclarations,
-  ]) {
-    if (
-      !sourceFile.getExportDeclaration((e) =>
-        e.getNamedExports().some((e) => d.namedExports.includes(e.getName())),
-      )
-    ) {
-      sourceFile.addExportDeclaration(d);
-    }
+  if (!exportNames.includes("processorFactory")) {
+    sourceFile.addExportDeclaration({
+      namedExports: ["processorFactory"],
+      moduleSpecifier: "./factory.ts",
+    });
   }
   await formatSourceFileWithPrettier(sourceFile);
 }
@@ -162,8 +158,12 @@ async function updateIndexFile(v: {
 async function updateFactoryFile(v: {
   project: Project;
   processorsDirPath: string;
+  processorApp: "switchboard" | "connect";
+  dirPath: string;
+  camelCaseName: string;
 }) {
-  const { project, processorsDirPath } = v;
+  const { project, processorsDirPath, processorApp, dirPath, camelCaseName } =
+    v;
   const template = processorsFactoryTemplate();
   const filePath = path.join(processorsDirPath, "factory.ts");
   const { alreadyExists, sourceFile } = getOrCreateSourceFile(
@@ -173,46 +173,46 @@ async function updateFactoryFile(v: {
   if (!alreadyExists) {
     sourceFile.replaceWithText(template);
   }
-  const processorFactoryFunction = sourceFile
-    .getVariableDeclarationOrThrow("processorFactory")
-    .getFirstChildByKindOrThrow(ts.SyntaxKind.ArrowFunction);
-  const functionBody = processorFactoryFunction
-    .getBody()
+  const processorFactoryName = `${camelCaseName}ProcessorFactory`;
+  const processorFactoryModuleSpecifier = `./${path.join(
+    path.basename(dirPath),
+    "factory.js",
+  )}`;
+  const addFactoriesFunctionName = camelCase(
+    `add_${processorApp}_ProcessorFactories`,
+  );
+  const factoriesArrayName = camelCase(`${processorApp}ProcessorFactories`);
+  const addProcessorFactoriesFunction = sourceFile.getFunctionOrThrow(
+    addFactoriesFunctionName,
+  );
+  const functionBody = addProcessorFactoriesFunction
+    .getBodyOrThrow()
     .asKindOrThrow(ts.SyntaxKind.Block);
 
   const factoriesArray = functionBody
     .getDescendantsOfKind(ts.SyntaxKind.VariableStatement)
     .flatMap((d) => d.getDescendantsOfKind(ts.SyntaxKind.VariableDeclaration))
-    .find((d) => d.getName() === "factories")
+    .find((d) => d.getName() === factoriesArrayName)
     ?.getDescendantsOfKind(ts.SyntaxKind.ArrayLiteralExpression)
     .at(0);
 
   if (!factoriesArray) {
-    throw new Error("`factories` array is missing in `processorFactory`");
-  }
-  const processorsDir = project.getDirectoryOrThrow(processorsDirPath);
-  const processorDirs = processorsDir.getDirectories();
-  const factoryFiles = processorDirs
-    .flatMap((d) => d.getSourceFile("factory.ts"))
-    .filter((f) => f !== undefined);
-  const factoryNames = factoryFiles
-    .flatMap((f) => f.getVariableDeclarations())
-    .filter((d) => d.getName().includes("ProcessorFactory"))
-    .map((v) => v.getName());
-
-  const factoriesArrayElements = factoriesArray
-    .getElements()
-    .map((e) => e.getText());
-
-  for (const name of factoryNames) {
-    const callExpression = `${name}(module)`;
-    if (!factoriesArrayElements.includes(callExpression)) {
-      factoriesArray.addElement(callExpression, { useNewLines: true });
-    }
+    throw new Error(
+      `"${factoriesArrayName}" array is missing in "${addFactoriesFunctionName}"`,
+    );
   }
 
-  sourceFile.fixMissingImports(undefined, {
-    importModuleSpecifierEnding: "js",
-  });
+  const factoryFunctionInvocation = `${processorFactoryName}(module)`;
+
+  const arrayElements = factoriesArray.getElements().map((e) => e.getText());
+
+  if (!arrayElements.includes(factoryFunctionInvocation)) {
+    functionBody.insertStatements(
+      0,
+      `const { ${processorFactoryName} } = await import("${processorFactoryModuleSpecifier}");`,
+    );
+    factoriesArray.addElement(factoryFunctionInvocation);
+  }
+
   await formatSourceFileWithPrettier(sourceFile);
 }

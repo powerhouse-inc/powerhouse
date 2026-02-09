@@ -3,6 +3,7 @@ import { getDocumentType } from "../utils.js";
 
 export const analyticsFactoryTemplate = (v: {
   pascalCaseName: string;
+  camelCaseName: string;
   documentTypes: string[];
 }) =>
   ts`
@@ -14,7 +15,7 @@ import type {
 import { type PHDocumentHeader } from "document-model";
 import { ${v.pascalCaseName}Processor } from "./index.js";
 
-export const ${v.pascalCaseName}ProcessorFactory = (module: IProcessorHostModule) => (driveHeader: PHDocumentHeader, context?: ReactorContext): ProcessorRecord[] => {
+export const ${v.camelCaseName}ProcessorFactory = (module: IProcessorHostModule) => (driveHeader: PHDocumentHeader, context?: ReactorContext): ProcessorRecord[] => {
   return [
     {
       processor: new ${v.pascalCaseName}Processor(module.analyticsStore),

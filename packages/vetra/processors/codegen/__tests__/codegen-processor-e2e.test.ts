@@ -390,13 +390,19 @@ describe("CodegenProcessorLegacy E2E Tests", () => {
       await processor.onStrands([strand]);
       await vi.runAllTimersAsync();
 
-      expect(generateProcessor).toHaveBeenCalledWith(
-        "Test Processor",
-        "analytics",
-        ["powerhouse/document-model", "powerhouse/budget-statement"],
-        mockConfig.PH_CONFIG.skipFormat,
-        USE_TS_MORPH,
-      );
+      expect(generateProcessor).toHaveBeenCalledWith<
+        Parameters<typeof generateProcessor>
+      >({
+        processorName: "Test Processor",
+        processorType: "analytics",
+        documentTypes: [
+          "powerhouse/document-model",
+          "powerhouse/budget-statement",
+        ],
+        skipFormat: mockConfig.PH_CONFIG.skipFormat,
+        processorApp: "switchboard",
+        useTsMorph: USE_TS_MORPH,
+      });
     });
 
     it("should map relational type to relationalDb when processing processor strand", async () => {
@@ -420,13 +426,16 @@ describe("CodegenProcessorLegacy E2E Tests", () => {
       await processor.onStrands([strand]);
       await vi.runAllTimersAsync();
 
-      expect(generateProcessor).toHaveBeenCalledWith(
-        "Test Processor",
-        "relationalDb",
-        ["powerhouse/document-model"],
-        mockConfig.PH_CONFIG.skipFormat,
-        USE_TS_MORPH,
-      );
+      expect(generateProcessor).toHaveBeenCalledWith<
+        Parameters<typeof generateProcessor>
+      >({
+        processorName: "Test Processor",
+        processorType: "relationalDb",
+        documentTypes: ["powerhouse/document-model"],
+        skipFormat: mockConfig.PH_CONFIG.skipFormat,
+        useTsMorph: USE_TS_MORPH,
+        processorApp: "switchboard",
+      });
     });
 
     it("should not call generateProcessor for unsupported processor type", async () => {
