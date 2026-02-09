@@ -1,17 +1,18 @@
 import { PGlite } from "@electric-sql/pglite";
 import {
   ConsoleLogger,
-  driveCollectionId,
   GqlChannelFactory,
   ReactorBuilder,
   ReactorClientBuilder,
   SyncBuilder,
   type Database,
-  type ISyncManager,
   type JwtHandler,
   type SignerConfig,
 } from "@powerhousedao/reactor";
-import type { BrowserReactorClientModule } from "@powerhousedao/reactor-browser";
+import {
+  addRemoteDrive,
+  type BrowserReactorClientModule,
+} from "@powerhousedao/reactor-browser";
 import { createSignatureVerifier, type IRenown } from "@renown/sdk";
 import type { DocumentModelModule, UpgradeManifest } from "document-model";
 import { Kysely } from "kysely";
@@ -82,34 +83,14 @@ export function getDefaultDrivesFromEnv(): string[] {
 
 /**
  * Add default drives for the new reactor via sync manager.
- * @param sync - The sync manager instance
  * @param defaultDriveUrls - Array of drive REST endpoint URLs (e.g., "https://example.com/d/powerhouse")
  */
 export async function addDefaultDrivesForNewReactor(
-  sync: ISyncManager,
   defaultDriveUrls: string[],
 ): Promise<void> {
-  const existingRemotes = sync.list();
-  const existingRemoteNames = new Set(existingRemotes.map((r) => r.name));
-
   for (const url of defaultDriveUrls) {
     try {
-      const response = await fetch(url);
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const driveInfo = (await response.json()) as {
-        id: string;
-        graphqlEndpoint: string;
-      };
-
-      const remoteName = `default-drive-${driveInfo.id}`;
-      if (existingRemoteNames.has(remoteName)) {
-        continue;
-      }
-
-      await sync.add(remoteName, driveCollectionId("main", driveInfo.id), {
-        type: "gql",
-        parameters: { url: driveInfo.graphqlEndpoint },
-      });
+      await addRemoteDrive(url, {});
     } catch (error) {
       console.error(`Failed to add default drive ${url}:`, error);
     }

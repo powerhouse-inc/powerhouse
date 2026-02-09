@@ -592,7 +592,8 @@ export class GraphQLManager {
         // Construct the graphqlEndpoint from the request
         const protocol = req.protocol + ":";
         const host = req.get("host") ?? "";
-        const graphqlEndpoint = `${protocol}//${host}${this.path}/graphql/r/local`;
+        const basePath = this.path === "/" ? "" : this.path;
+        const graphqlEndpoint = `${protocol}//${host}${basePath}/graphql/r/local`;
 
         const driveInfo = responseForDrive(driveDoc, graphqlEndpoint);
         res.json(driveInfo);

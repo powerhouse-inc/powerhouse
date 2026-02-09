@@ -6,8 +6,8 @@ import {
   createBrowserReactor,
   getDefaultDrivesFromEnv,
 } from "@powerhousedao/connect/utils";
-import { driveCollectionId } from "@powerhousedao/reactor";
 import {
+  addRemoteDrive,
   ReactorClientDocumentCache,
   dropAllReactorStorage,
   extractDriveSlugFromPath,
@@ -121,39 +121,8 @@ export async function createReactor() {
     renown,
   );
 
-  // Add default drives for new reactor
-  const defaultDrivesConfig = getDefaultDrivesFromEnv();
-  if (defaultDrivesConfig.length > 0) {
-    const syncManager =
-      reactorClientModule.reactorModule?.syncModule?.syncManager;
-    if (syncManager) {
-      await addDefaultDrivesForNewReactor(syncManager, defaultDrivesConfig);
-    }
-  }
-
   // get the drives from the reactor
   const drives = await getDrives(reactorClientModule.client);
-
-  // if remoteUrl is set and drive not already existing add remote drive and open it
-  const remoteUrl = getDriveUrl();
-  if (remoteUrl) {
-    try {
-      const response = await fetch(remoteUrl);
-      if (response.ok) {
-        const driveInfo = (await response.json()) as {
-          id: string;
-          graphqlEndpoint: string;
-        };
-        await reactorClientModule.reactorModule?.syncModule?.syncManager.add(
-          `remote-drive-${driveInfo.id}`,
-          driveCollectionId("main", driveInfo.id),
-          { type: "gql", parameters: { url: driveInfo.graphqlEndpoint } },
-        );
-      }
-    } catch (error) {
-      console.error(`Failed to add remote drive from ${remoteUrl}:`, error);
-    }
-  }
 
   // set the selected drive and node from the path
   const path = window.location.pathname;
@@ -181,6 +150,22 @@ export async function createReactor() {
   setSelectedDrive(driveSlug);
   setSelectedNode(nodeSlug);
   setFeatures(features);
+
+  // Add default drives for new reactor (after window.ph is set up)
+  const defaultDrivesConfig = getDefaultDrivesFromEnv();
+  if (defaultDrivesConfig.length > 0) {
+    await addDefaultDrivesForNewReactor(defaultDrivesConfig);
+  }
+
+  // if remoteUrl is set and drive not already existing add remote drive and open it
+  const remoteUrl = getDriveUrl();
+  if (remoteUrl) {
+    try {
+      await addRemoteDrive(remoteUrl, {});
+    } catch (error) {
+      console.error(`Failed to add remote drive from ${remoteUrl}:`, error);
+    }
+  }
 
   // Subscribe via ReactorClient interface
   const reactorClient = reactorClientModule.client;
