@@ -269,7 +269,7 @@ describe("IntervalPollTimer", () => {
     timer.stop();
   });
 
-  it("should trigger poll when paused via triggerNow()", async () => {
+  it("should trigger poll when paused via triggerNow()", () => {
     const timer = new IntervalPollTimer(1000);
     const delegate = vi.fn().mockResolvedValue(undefined);
 

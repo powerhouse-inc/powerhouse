@@ -2,7 +2,6 @@ import type {
   IDocumentOperationStorage,
   IDocumentStorage,
 } from "document-drive";
-import { MemoryStorage } from "document-drive";
 import type { DocumentModelModule, UpgradeManifest } from "document-model";
 import { CollectionMembershipCache } from "../cache/collection-membership-cache.js";
 import { DocumentMetaCache } from "../cache/document-meta-cache.js";
@@ -164,8 +163,6 @@ export class ReactorBuilder {
     if (!this.logger) {
       this.logger = new ConsoleLogger(["reactor"]);
     }
-
-    const storage = this.storage || new MemoryStorage();
 
     const documentModelRegistry = new DocumentModelRegistry();
     if (this.upgradeManifests.length > 0) {
@@ -379,7 +376,7 @@ export class ReactorBuilder {
   private attachSignalHandlers(module: ReactorModule): void {
     if (
       typeof globalThis === "undefined" ||
-      !globalThis.process ||
+      !("process" in globalThis) ||
       typeof globalThis.process.on !== "function"
     ) {
       return;

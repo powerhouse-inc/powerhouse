@@ -311,7 +311,7 @@ describe("ReactorClient Integration Tests", () => {
               const meta = event.jobMeta as
                 | { batchId?: string; batchJobIds?: string[] }
                 | undefined;
-              if (!meta?.batchId || !meta?.batchJobIds) {
+              if (!meta?.batchId || !meta.batchJobIds) {
                 return;
               }
 
@@ -926,7 +926,7 @@ describe("ReactorClient Integration Tests", () => {
             const meta = event.jobMeta as
               | { batchId?: string; batchJobIds?: string[] }
               | undefined;
-            if (!meta?.batchId || !meta?.batchJobIds) {
+            if (!meta?.batchId || !meta.batchJobIds) {
               return;
             }
 

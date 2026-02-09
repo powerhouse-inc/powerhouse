@@ -473,7 +473,7 @@ export class KyselyOperationIndex implements IOperationIndex {
 
     const result: Record<string, string[]> = {};
     for (const row of rows) {
-      if (!result[row.documentId]) {
+      if (!(row.documentId in result)) {
         result[row.documentId] = [];
       }
       result[row.documentId].push(row.collectionId);

@@ -998,10 +998,6 @@ describe("SyncManager - Unit Tests", () => {
       });
 
       const processingOrder: string[] = [];
-      let resolveFirst: (() => void) | undefined;
-      const firstEventBlocking = new Promise<void>((resolve) => {
-        resolveFirst = resolve;
-      });
 
       vi.mocked(mockChannel.outbox.add).mockImplementation((syncOp: any) => {
         processingOrder.push(syncOp.documentId);

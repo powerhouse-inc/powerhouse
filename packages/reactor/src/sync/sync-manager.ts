@@ -396,7 +396,7 @@ export class SyncManager implements ISyncManager {
     void this.processWriteReadyQueue();
   }
 
-  private async processWriteReadyQueue(): Promise<void> {
+  private processWriteReadyQueue(): void {
     if (this.processingWriteReady) {
       return;
     }
@@ -404,15 +404,13 @@ export class SyncManager implements ISyncManager {
 
     while (this.writeReadyQueue.length > 0) {
       const event = this.writeReadyQueue.shift()!;
-      await this.handleWriteReadyAsync(event);
+      this.handleWriteReadyAsync(event);
     }
 
     this.processingWriteReady = false;
   }
 
-  private async handleWriteReadyAsync(
-    event: JobWriteReadyEvent,
-  ): Promise<void> {
+  private handleWriteReadyAsync(event: JobWriteReadyEvent): void {
     if (this.isShutdown) {
       return;
     }
@@ -421,7 +419,7 @@ export class SyncManager implements ISyncManager {
     const batchJobIds = event.jobMeta?.batchJobIds as string[] | undefined;
 
     if (!batchId || !batchJobIds || batchJobIds.length <= 1) {
-      await this.processCompleteBatch([event]);
+      this.processCompleteBatch([event]);
       return;
     }
 
@@ -440,7 +438,7 @@ export class SyncManager implements ISyncManager {
 
     if (pending.arrivedJobIds.size >= pending.expectedJobIds.size) {
       this.pendingBatches.delete(batchId);
-      await this.processCompleteBatch(pending.events);
+      this.processCompleteBatch(pending.events);
     }
   }
 
@@ -465,9 +463,7 @@ export class SyncManager implements ISyncManager {
     }
   }
 
-  private async processCompleteBatch(
-    events: JobWriteReadyEvent[],
-  ): Promise<void> {
+  private processCompleteBatch(events: JobWriteReadyEvent[]): void {
     const isBatch = events.length > 1;
 
     const mergedMemberships: Record<string, string[]> = {};
@@ -477,7 +473,7 @@ export class SyncManager implements ISyncManager {
         for (const [docId, collections] of Object.entries(
           event.collectionMemberships,
         )) {
-          if (!mergedMemberships[docId]) {
+          if (!(docId in mergedMemberships)) {
             mergedMemberships[docId] = [];
           }
           for (const c of collections) {
@@ -497,7 +493,7 @@ export class SyncManager implements ISyncManager {
           continue;
         }
         const input = action.input;
-        if (!input?.sourceId || !input?.targetId) {
+        if (!input?.sourceId || !input.targetId) {
           continue;
         }
 
@@ -505,7 +501,7 @@ export class SyncManager implements ISyncManager {
           op.context.branch,
           input.sourceId,
         );
-        if (!mergedMemberships[input.targetId]) {
+        if (!(input.targetId in mergedMemberships)) {
           mergedMemberships[input.targetId] = [];
         }
         if (!mergedMemberships[input.targetId].includes(collectionId)) {
@@ -746,10 +742,10 @@ export class SyncManager implements ISyncManager {
     }
 
     for (const { remote, syncOp } of items) {
-      const jobInfo = result.jobs[syncOp.jobId];
-      if (!jobInfo) {
+      if (!(syncOp.jobId in result.jobs)) {
         continue;
       }
+      const jobInfo = result.jobs[syncOp.jobId];
 
       let completedJobInfo;
       try {

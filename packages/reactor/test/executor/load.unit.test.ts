@@ -1,7 +1,3 @@
-import type {
-  IDocumentOperationStorage,
-  IDocumentStorage,
-} from "document-drive";
 import type { Operation } from "document-model";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { IWriteCache } from "../../src/cache/write/interfaces.js";
@@ -14,9 +10,7 @@ import type { IOperationStore } from "../../src/storage/interfaces.js";
 import {
   createMockCollectionMembershipCache,
   createMockDocumentMetaCache,
-  createMockDocumentStorage,
   createMockLogger,
-  createMockOperationStorage,
   createMockOperationStore,
   createTestAction,
   createTestLegacyReactorSetup,
@@ -25,8 +19,6 @@ import {
 
 describe("SimpleJobExecutor load jobs", () => {
   let executor: SimpleJobExecutor;
-  let mockDocStorage: IDocumentStorage;
-  let mockOperationStorage: IDocumentOperationStorage;
   let mockOperationStore: IOperationStore;
   let mockWriteCache: IWriteCache;
   let registry: IDocumentModelRegistry;
@@ -60,8 +52,6 @@ describe("SimpleJobExecutor load jobs", () => {
       registerModules: vi.fn(),
     } as unknown as IDocumentModelRegistry;
 
-    mockDocStorage = createMockDocumentStorage();
-    mockOperationStorage = createMockOperationStorage();
     mockOperationStore = createMockOperationStore();
     mockWriteCache = {
       getState: vi.fn().mockResolvedValue({
