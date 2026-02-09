@@ -24,7 +24,7 @@ export const processorFactory = async (module: IProcessorHostModule) => {
     await addConnectProcessorFactories(factories, module);
   }
 
-  if (module.context?.app === "connect") {
+  if (module.context?.app === "switchboard") {
     // dynamically import connect processors and add them
     // to the factories array
     await addSwitchboardProcessorFactories(factories, module);
