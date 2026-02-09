@@ -15,23 +15,27 @@
  *   - Start Pyroscope: docker compose -f scripts/profiling/docker-compose.yml up pyroscope
  *   - Enable profiling: --pyroscope [server-address]
  *   - View results: http://localhost:4040
+ *
+ * Batch mode:
+ *   - Use --batch-size <N> to send N operations per execute call
+ *   - Default is 1 (each operation in its own call)
+ *   - Use this to measure per-call overhead vs batched execution
  */
 
-import { documentModelDocumentModelModule } from "document-model";
-import {
-  ReactorBuilder,
-  JobStatus,
-  runMigrations,
-  REACTOR_SCHEMA,
-  type IReactor,
-  type Database,
-} from "@powerhousedao/reactor";
-import { Kysely } from "kysely";
 import { PGlite } from "@electric-sql/pglite";
+import {
+  JobStatus,
+  REACTOR_SCHEMA,
+  ReactorBuilder,
+  runMigrations,
+  type Database,
+  type IReactor,
+} from "@powerhousedao/reactor";
+import Pyroscope from "@pyroscope/nodejs";
+import { documentModelDocumentModelModule } from "document-model";
+import { Kysely, PostgresDialect } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
 import { Pool } from "pg";
-import { PostgresDialect } from "kysely";
-import Pyroscope from "@pyroscope/nodejs";
 
 interface MemoryStats {
   heapUsed: number;
@@ -189,37 +193,62 @@ async function performOperations(
   documentId: string,
   docIndex: number,
   operationCount: number,
-  onProgress: (opNum: number, durationMs: number) => void,
+  batchSize: number,
+  onProgress: (opNum: number, durationMs: number, batchCount: number) => void,
 ): Promise<OperationsResult> {
   let minOp: OperationTiming | null = null;
   let maxOp: OperationTiming | null = null;
   const durations: number[] = [];
 
-  for (let i = 0; i < operationCount; i++) {
-    const { action, actionType } = createAction(docIndex, i + 1);
+  for (let i = 0; i < operationCount; i += batchSize) {
+    const batchEnd = Math.min(i + batchSize, operationCount);
+    const batchCount = batchEnd - i;
+
+    // Build batch of actions
+    const actions = [];
+    const actionTypes: string[] = [];
+    for (let j = i; j < batchEnd; j++) {
+      const { action, actionType } = createAction(docIndex, j + 1);
+      actions.push(action);
+      actionTypes.push(actionType);
+    }
+
     const opStart = Date.now();
 
-    const jobInfo = await reactor.execute(documentId, "main", [action]);
+    const jobInfo = await reactor.execute(documentId, "main", actions);
     if (!jobInfo?.id) {
       throw new Error(
-        `Execute returned invalid job info for operation ${i + 1}`,
+        `Execute returned invalid job info for operations ${i + 1}-${batchEnd}`,
       );
     }
     await waitForJob(reactor, jobInfo.id);
 
-    const durationMs = Date.now() - opStart;
-    durations.push(durationMs);
+    const batchDurationMs = Date.now() - opStart;
+    // Calculate per-operation duration for consistent min/max tracking
+    const perOpDurationMs = batchDurationMs / batchCount;
 
-    const timing: OperationTiming = { opIndex: i + 1, durationMs, actionType };
+    // Store per-operation durations for percentile calculations
+    for (let j = 0; j < batchCount; j++) {
+      durations.push(perOpDurationMs);
+    }
 
-    if (minOp === null || durationMs < minOp.durationMs) {
+    // For min/max tracking, always use per-operation time
+    const actionType =
+      batchCount === 1 ? actionTypes[0] : `batch(${batchCount})`;
+    const timing: OperationTiming = {
+      opIndex: batchEnd,
+      durationMs: perOpDurationMs,
+      actionType,
+    };
+
+    if (minOp === null || perOpDurationMs < minOp.durationMs) {
       minOp = timing;
     }
-    if (maxOp === null || durationMs > maxOp.durationMs) {
+    if (maxOp === null || perOpDurationMs > maxOp.durationMs) {
       maxOp = timing;
     }
 
-    onProgress(i + 1, durationMs);
+    onProgress(batchEnd, batchDurationMs, batchCount);
   }
 
   return { minOp, maxOp, durations };
@@ -229,6 +258,7 @@ function parseArgs(args: string[]): {
   count: number;
   operations: number;
   opLoops: number;
+  batchSize: number;
   verbose: boolean;
   percentiles: boolean;
   showActionTypes: boolean;
@@ -239,6 +269,7 @@ function parseArgs(args: string[]): {
   let count = 10;
   let operations = 0;
   let opLoops = 1;
+  let batchSize = 1;
   let verbose = false;
   let percentiles = false;
   let showActionTypes = false;
@@ -252,6 +283,8 @@ function parseArgs(args: string[]): {
       operations = Number(args[++i]);
     } else if ((arg === "--op-loops" || arg === "-l") && args[i + 1]) {
       opLoops = Number(args[++i]);
+    } else if ((arg === "--batch-size" || arg === "-b") && args[i + 1]) {
+      batchSize = Number(args[++i]);
     } else if (arg === "--db" && args[i + 1]) {
       dbPath = args[++i];
     } else if ((arg === "--doc-id" || arg === "-d") && args[i + 1]) {
@@ -281,6 +314,8 @@ Arguments:
 Options:
   --operations, -o <M>      Number of operations per loop (default: 0)
   --op-loops, -l <L>        Number of operation loops per document (default: 1)
+  --batch-size, -b <N>      Operations per execute call (default: 1)
+                            Use higher values to measure per-call overhead
   --db <connection>         Database connection (default: in-memory PGlite)
                             PostgreSQL: "postgresql://user:pass@host:port/db"
                             PGlite file: "./data" (persists to filesystem)
@@ -303,6 +338,7 @@ Examples:
   tsx reactor-direct.ts 5 -o 10 -l 3 -p
   tsx reactor-direct.ts 1 -o 25 -l 10 --db "postgresql://postgres:postgres@localhost:5432/reactor"
   tsx reactor-direct.ts -d abc123 -o 10 -l 5 --db "./data"
+  tsx reactor-direct.ts 1 -o 100 -b 10      # 10 ops per execute call (10 calls total)
 `);
       process.exit(0);
     } else if (!isNaN(Number(arg)) && arg.trim() !== "") {
@@ -339,9 +375,22 @@ Examples:
     process.exit(1);
   }
 
+  if (isNaN(batchSize) || batchSize < 1) {
+    console.error(
+      `Error: Invalid batch-size value: must be a positive integer (>= 1).`,
+    );
+    process.exit(1);
+  }
+
   if (operations === 0 && opLoops > 1) {
     console.warn(
       `Warning: --op-loops=${opLoops} has no effect when operations is 0.`,
+    );
+  }
+
+  if (operations === 0 && batchSize > 1) {
+    console.warn(
+      `Warning: --batch-size=${batchSize} has no effect when operations is 0.`,
     );
   }
 
@@ -355,6 +404,7 @@ Examples:
     count,
     operations,
     opLoops,
+    batchSize,
     verbose,
     percentiles,
     showActionTypes,
@@ -396,6 +446,7 @@ async function main() {
     count,
     operations,
     opLoops,
+    batchSize,
     verbose,
     percentiles: showPercentiles,
     showActionTypes,
@@ -490,9 +541,10 @@ async function main() {
   if (operations > 0) {
     const docCount = documentIds.length;
     const loopLabel = opLoops > 1 ? ` x ${opLoops} loops` : "";
+    const batchLabel = batchSize > 1 ? ` (batch size: ${batchSize})` : "";
     const phaseLabel = docId
-      ? `Performing ${operations} operations${loopLabel} on target document...`
-      : `Performing ${operations} operations${loopLabel} on each document...`;
+      ? `Performing ${operations} operations${loopLabel}${batchLabel} on target document...`
+      : `Performing ${operations} operations${loopLabel}${batchLabel} on each document...`;
     console.log(`\nPhase 2: ${phaseLabel}`);
     const opsStartTime = Date.now();
     const totalOps = docCount * operations * opLoops;
@@ -528,9 +580,13 @@ async function main() {
           docId,
           docNum,
           operations,
-          (opNum, durationMs) => {
+          batchSize,
+          (opNum, durationMs, batchCount) => {
+            const batchInfo = batchCount > 1 ? ` (${batchCount} ops)` : "";
             if (verbose) {
-              console.log(`    op ${opNum}/${operations}: ${durationMs}ms`);
+              console.log(
+                `    op ${opNum}/${operations}: ${durationMs}ms${batchInfo}`,
+              );
             } else {
               process.stdout.write(
                 `\r  [${docNum}/${docCount}] ${docId}: ${loopPrefix}${opNum}/${operations} ops`,
@@ -607,6 +663,19 @@ async function main() {
       }
     }
     console.log(`  Memory: ${formatMemory(phase2Memory)}`);
+
+    // Verify operations by checking document revisions
+    console.log(`\nVerification:`);
+    for (const id of documentIds) {
+      const doc = await reactor.get(id);
+      const revisions = Object.entries(doc.header.revision)
+        .map(([scope, rev]) => `${scope}:${rev}`)
+        .join(", ");
+      const opCount = Object.values(doc.operations)
+        .flat()
+        .filter(Boolean).length;
+      console.log(`  ${id}: revision={${revisions}}, operations=${opCount}`);
+    }
   }
 
   // Cleanup
