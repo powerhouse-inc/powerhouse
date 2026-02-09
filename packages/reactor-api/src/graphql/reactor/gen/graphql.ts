@@ -130,6 +130,15 @@ export type DocumentModelResultPage = {
   readonly totalCount: Scalars["Int"]["output"];
 };
 
+export type DocumentOperationsFilterInput = {
+  readonly actionTypes?: InputMaybe<ReadonlyArray<Scalars["String"]["input"]>>;
+  readonly branch?: InputMaybe<Scalars["String"]["input"]>;
+  readonly scopes?: InputMaybe<ReadonlyArray<Scalars["String"]["input"]>>;
+  readonly sinceRevision?: InputMaybe<Scalars["Int"]["input"]>;
+  readonly timestampFrom?: InputMaybe<Scalars["String"]["input"]>;
+  readonly timestampTo?: InputMaybe<Scalars["String"]["input"]>;
+};
+
 export type DocumentWithChildren = {
   readonly childIds: ReadonlyArray<Scalars["String"]["output"]>;
   readonly document: PhDocument;
@@ -286,10 +295,16 @@ export type PhDocument = {
   readonly id: Scalars["String"]["output"];
   readonly lastModifiedAtUtcIso: Scalars["DateTime"]["output"];
   readonly name: Scalars["String"]["output"];
+  readonly operations?: Maybe<ReactorOperationResultPage>;
   readonly parentId?: Maybe<Scalars["String"]["output"]>;
   readonly revisionsList: ReadonlyArray<Revision>;
   readonly slug?: Maybe<Scalars["String"]["output"]>;
   readonly state: Scalars["JSONObject"]["output"];
+};
+
+export type PhDocumentOperationsArgs = {
+  filter?: InputMaybe<DocumentOperationsFilterInput>;
+  paging?: InputMaybe<PagingInput>;
 };
 
 export type PhDocumentResultPage = {
@@ -1034,6 +1049,7 @@ export type ResolversTypes = ResolversObject<{
   DocumentChangeType: DocumentChangeType;
   DocumentModelGlobalState: ResolverTypeWrapper<DocumentModelGlobalState>;
   DocumentModelResultPage: ResolverTypeWrapper<DocumentModelResultPage>;
+  DocumentOperationsFilterInput: DocumentOperationsFilterInput;
   DocumentWithChildren: ResolverTypeWrapper<DocumentWithChildren>;
   Int: ResolverTypeWrapper<Scalars["Int"]["output"]>;
   JSONObject: ResolverTypeWrapper<Scalars["JSONObject"]["output"]>;
@@ -1090,6 +1106,7 @@ export type ResolversParentTypes = ResolversObject<{
   DocumentChangeEvent: DocumentChangeEvent;
   DocumentModelGlobalState: DocumentModelGlobalState;
   DocumentModelResultPage: DocumentModelResultPage;
+  DocumentOperationsFilterInput: DocumentOperationsFilterInput;
   DocumentWithChildren: DocumentWithChildren;
   Int: Scalars["Int"]["output"];
   JSONObject: Scalars["JSONObject"]["output"];
@@ -1470,6 +1487,12 @@ export type PhDocumentResolvers<
     ContextType
   >;
   name?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
+  operations?: Resolver<
+    Maybe<ResolversTypes["ReactorOperationResultPage"]>,
+    ParentType,
+    ContextType,
+    Partial<PhDocumentOperationsArgs>
+  >;
   parentId?: Resolver<Maybe<ResolversTypes["String"]>, ParentType, ContextType>;
   revisionsList?: Resolver<
     ReadonlyArray<ResolversTypes["Revision"]>,
@@ -1801,6 +1824,19 @@ export function ChannelMetaInputSchema(): z.ZodObject<
 > {
   return z.object({
     id: z.string(),
+  });
+}
+
+export function DocumentOperationsFilterInputSchema(): z.ZodObject<
+  Properties<DocumentOperationsFilterInput>
+> {
+  return z.object({
+    actionTypes: z.array(z.string()).nullish(),
+    branch: z.string().nullish(),
+    scopes: z.array(z.string()).nullish(),
+    sinceRevision: z.number().nullish(),
+    timestampFrom: z.string().nullish(),
+    timestampTo: z.string().nullish(),
   });
 }
 

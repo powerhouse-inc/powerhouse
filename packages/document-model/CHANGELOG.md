@@ -1,3 +1,15 @@
+## 6.0.0-dev.36 (2026-02-06)
+
+### 🚀 Features
+
+- **codegen:** use bun for the slowest tests ([#2303](https://github.com/powerhouse-inc/powerhouse/pull/2303))
+- loadBatch interface ([03bdf8a2a](https://github.com/powerhouse-inc/powerhouse/commit/03bdf8a2a))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.0.0-dev.35 (2026-02-06)
 
 ### 🩹 Fixes

@@ -1,3 +1,19 @@
+## 6.0.0-dev.36 (2026-02-06)
+
+### 🚀 Features
+
+- **codegen:** use bun for the slowest tests ([#2303](https://github.com/powerhouse-inc/powerhouse/pull/2303))
+
+### 🩹 Fixes
+
+- dependencies are passed through poll as well ([8b9534bbd](https://github.com/powerhouse-inc/powerhouse/commit/8b9534bbd))
+- removing unnecessary null checks ([f8d47b8b4](https://github.com/powerhouse-inc/powerhouse/commit/f8d47b8b4))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.0.0-dev.35 (2026-02-06)
 
 This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.

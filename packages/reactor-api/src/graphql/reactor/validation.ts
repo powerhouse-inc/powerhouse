@@ -79,3 +79,20 @@ export const DocumentChangeContextDTO = z
     childId: z.string().nullable().optional(),
   })
   .strip();
+
+export const DocumentChangeEventDTO = z
+  .object({
+    type: z.string(),
+    documents: z.array(PHDocumentDTO),
+    context: DocumentChangeContextDTO.nullable().optional(),
+  })
+  .strip();
+
+export const JobChangeEventDTO = z
+  .object({
+    jobId: z.string(),
+    status: z.string(),
+    result: JSONObjectDTO.nullable().optional(),
+    error: z.string().nullable().optional(),
+  })
+  .strip();

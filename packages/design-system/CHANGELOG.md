@@ -1,3 +1,15 @@
+## 6.0.0-dev.36 (2026-02-06)
+
+### 🚀 Features
+
+- **codegen:** use bun for the slowest tests ([#2303](https://github.com/powerhouse-inc/powerhouse/pull/2303))
+- fixing scrolling and adding copy to mailbox and job inspectors ([0d2351f6f](https://github.com/powerhouse-inc/powerhouse/commit/0d2351f6f))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.0.0-dev.35 (2026-02-06)
 
 This was a version bump only for @powerhousedao/design-system to align it with other projects, there were no code changes.

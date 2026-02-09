@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/reactor-api",
-  "version": "6.0.0-dev.35",
+  "version": "6.0.0-dev.36",
   "description": "",
   "type": "module",
   "repository": {
@@ -11,6 +11,14 @@
     ".": {
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
+    },
+    "./graphql": {
+      "import": "./dist/graphql/index.js",
+      "types": "./dist/graphql/index.d.ts"
+    },
+    "./graphql/*": {
+      "import": "./dist/graphql/*.js",
+      "types": "./dist/graphql/*.d.ts"
     },
     "./test": {
       "import": "./test/index.ts"
@@ -70,6 +78,7 @@
     "ethers": "^6.0.8",
     "express": "^4.21.1",
     "graphql": "^16.11.0",
+    "graphql-request": "^7.4.0",
     "graphql-subscriptions": "^3.0.0",
     "graphql-type-json": "^0.3.2",
     "graphql-ws": "^6.0.6",
@@ -109,6 +118,7 @@
     "@types/ws": "^8.18.1",
     "copyfiles": "^2.4.1",
     "esbuild": "^0.24.0",
+    "graphql-codegen-typescript-validation-schema": "0.18.1",
     "graphql-tag": "^2.12.6",
     "kysely-pglite-dialect": "^1.2.0",
     "msw": "^2.7.3",
