@@ -6,7 +6,7 @@ import {
   createBrowserReactor,
   getDefaultDrivesFromEnv,
 } from "@powerhousedao/connect/utils";
-import { driveCollectionId, parseDriveUrl } from "@powerhousedao/reactor";
+import { driveCollectionId } from "@powerhousedao/reactor";
 import {
   ReactorClientDocumentCache,
   dropAllReactorStorage,
@@ -140,12 +140,14 @@ export async function createReactor() {
     try {
       const response = await fetch(remoteUrl);
       if (response.ok) {
-        const driveInfo = (await response.json()) as { id: string };
-        const { graphqlEndpoint } = parseDriveUrl(remoteUrl);
+        const driveInfo = (await response.json()) as {
+          id: string;
+          graphqlEndpoint: string;
+        };
         await reactorClientModule.reactorModule?.syncModule?.syncManager.add(
           `remote-drive-${driveInfo.id}`,
           driveCollectionId("main", driveInfo.id),
-          { type: "gql", parameters: { url: graphqlEndpoint } },
+          { type: "gql", parameters: { url: driveInfo.graphqlEndpoint } },
         );
       }
     } catch (error) {

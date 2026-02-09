@@ -572,7 +572,7 @@ export class GraphQLManager {
   /**
    * Setup REST GET endpoint for drive info at /d/:drive
    * Accepts both drive slug (e.g., "powerhouse") and UUID
-   * Returns DriveInfo JSON: { id, name, slug, icon, meta }
+   * Returns DriveInfo JSON: { id, name, slug, icon, meta, graphqlEndpoint }
    */
   #setupDriveInfoRestEndpoint(router: IRouter) {
     const routePath = path.join(this.path, "d/:drive");
@@ -588,7 +588,13 @@ export class GraphQLManager {
       (async () => {
         const driveDoc =
           await this.reactorClient.get<DocumentDriveDocument>(driveIdOrSlug);
-        const driveInfo = responseForDrive(driveDoc);
+
+        // Construct the graphqlEndpoint from the request
+        const protocol = req.protocol + ":";
+        const host = req.get("host") ?? "";
+        const graphqlEndpoint = `${protocol}//${host}${this.path}/graphql/r/local`;
+
+        const driveInfo = responseForDrive(driveDoc, graphqlEndpoint);
         res.json(driveInfo);
       })().catch((error: unknown) => {
         this.logger.debug(`Drive not found: ${driveIdOrSlug}`, error);
