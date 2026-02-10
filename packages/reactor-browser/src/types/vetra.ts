@@ -1,5 +1,8 @@
 import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
-import type { IRelationalDb, ProcessorRecord } from "document-drive";
+import type {
+  IRelationalDbLegacy,
+  ProcessorRecordLegacy,
+} from "document-drive";
 import type {
   Action,
   Author,
@@ -15,8 +18,8 @@ import type {
 
 export type Processors = (module: {
   analyticsStore: IAnalyticsStore;
-  relationalDb: IRelationalDb;
-}) => (driveHeader: PHDocumentHeader) => ProcessorRecord[];
+  relationalDb: IRelationalDbLegacy;
+}) => (driveHeader: PHDocumentHeader) => ProcessorRecordLegacy[];
 
 export type VetraMeta = {
   id: string;

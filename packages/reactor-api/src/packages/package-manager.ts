@@ -1,11 +1,10 @@
 import { getConfig } from "@powerhousedao/config/node";
-import type { IProcessorHostModule } from "@powerhousedao/reactor";
 import type { SubgraphClass } from "@powerhousedao/reactor-api";
-import {
-  childLogger,
-  driveDocumentModelModule,
-  type ProcessorFactory,
+import type {
+  IProcessorHostModuleLegacy,
+  ProcessorFactoryLegacy,
 } from "document-drive";
+import { childLogger, driveDocumentModelModule } from "document-drive";
 import type { DocumentModelModule } from "document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import EventEmitter from "node:events";
@@ -41,7 +40,7 @@ export class PackageManager implements IPackageManager {
   private subgraphsMap = new Map<string, SubgraphClass[]>();
   private processorMap = new Map<
     string,
-    ((module: IProcessorHostModule) => ProcessorFactory)[]
+    ((module: IProcessorHostModuleLegacy) => ProcessorFactoryLegacy)[]
   >();
   private configWatcher: StatWatcher | undefined;
   private debouncedUpdateCallbacks = new Map<string, () => void>();
@@ -49,7 +48,10 @@ export class PackageManager implements IPackageManager {
     documentModelsChange: [Record<string, DocumentModelModule[]>];
     subgraphsChange: [Map<string, SubgraphClass[]>];
     processorsChange: [
-      Map<string, ((module: IProcessorHostModule) => ProcessorFactory)[]>,
+      Map<
+        string,
+        ((module: IProcessorHostModuleLegacy) => ProcessorFactoryLegacy)[]
+      >,
     ];
   }>();
 
@@ -175,7 +177,10 @@ export class PackageManager implements IPackageManager {
   private async loadProcessors(
     packages: string[],
   ): Promise<
-    Map<string, ((module: IProcessorHostModule) => ProcessorFactory)[]>
+    Map<
+      string,
+      ((module: IProcessorHostModuleLegacy) => ProcessorFactoryLegacy)[]
+    >
   > {
     this.logger.debug(
       `Loading processors from packages: ${packages.join(", ")}`,
@@ -183,13 +188,13 @@ export class PackageManager implements IPackageManager {
 
     const processorsMap = new Map<
       string,
-      ((module: IProcessorHostModule) => ProcessorFactory)[]
+      ((module: IProcessorHostModuleLegacy) => ProcessorFactoryLegacy)[]
     >();
 
     for (const pkg of packages) {
       const allProcessors: ((
-        module: IProcessorHostModule,
-      ) => ProcessorFactory)[] = [];
+        module: IProcessorHostModuleLegacy,
+      ) => ProcessorFactoryLegacy)[] = [];
 
       for (const loader of this.loaders) {
         try {
@@ -308,7 +313,7 @@ export class PackageManager implements IPackageManager {
   private updateProcessorsMap(
     processorsMap: Map<
       string,
-      ((module: IProcessorHostModule) => ProcessorFactory)[]
+      ((module: IProcessorHostModuleLegacy) => ProcessorFactoryLegacy)[]
     >,
   ) {
     const oldPackages = Array.from(this.processorMap.keys());
@@ -339,7 +344,7 @@ export class PackageManager implements IPackageManager {
     handler: (
       processors: Map<
         string,
-        ((module: IProcessorHostModule) => ProcessorFactory)[]
+        ((module: IProcessorHostModuleLegacy) => ProcessorFactoryLegacy)[]
       >,
     ) => void,
   ): void {

@@ -1,7 +1,8 @@
+import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import type {
   InternalTransmitterUpdate,
   ListenerFilter,
-  RelationalDbProcessor,
+  RelationalDbProcessorLegacy,
 } from "document-drive";
 import type { PHDocumentHeader } from "document-model";
 import type { Kysely, QueryCreator } from "kysely";
@@ -12,33 +13,47 @@ export type IRelationalQueryMethods =
   | "with"
   | "withRecursive";
 
-export type IRelationalQueryBuilder<Schema = unknown> = Pick<
+export type IRelationalQueryBuilderLegacy<Schema = unknown> = Pick<
   QueryCreator<Schema>,
   IRelationalQueryMethods
 > & {
-  withSchema: (schema: string) => IRelationalQueryBuilder<Schema>;
+  withSchema: (schema: string) => IRelationalQueryBuilderLegacy<Schema>;
 };
 
-export type IBaseRelationalDb<Schema = unknown> = Kysely<Schema>;
+export type IBaseRelationalDbLegacy<Schema = unknown> = Kysely<Schema>;
 
 /**
  * The standardized relational database interface for relational db processors.
  * This abstraction provides type-safe database operations while hiding the underlying
  * database framework implementation details.
  **/
-export type IRelationalDb<Schema = unknown> = IBaseRelationalDb<Schema> & {
-  createNamespace<NamespaceSchema>(
-    namespace: string,
-  ): Promise<IRelationalDb<ExtractProcessorSchemaOrSelf<NamespaceSchema>>>;
-  queryNamespace<NamespaceSchema>(
-    namespace: string,
-  ): IRelationalQueryBuilder<NamespaceSchema>;
+export type IRelationalDbLegacy<Schema = unknown> =
+  IBaseRelationalDbLegacy<Schema> & {
+    createNamespace<NamespaceSchema>(
+      namespace: string,
+    ): Promise<
+      IRelationalDbLegacy<ExtractProcessorSchemaOrSelf<NamespaceSchema>>
+    >;
+    queryNamespace<NamespaceSchema>(
+      namespace: string,
+    ): IRelationalQueryBuilderLegacy<NamespaceSchema>;
+  };
+
+export type ReactorContext = {
+  app?: "connect" | "switchboard";
 };
+
+export interface IProcessorHostModuleLegacy {
+  analyticsStore: IAnalyticsStore;
+  relationalDb: IRelationalDbLegacy;
+  context?: ReactorContext;
+  config?: Map<string, unknown>;
+}
 
 /**
  * Describes an object that can process strands.
  */
-export interface IProcessor {
+export interface IProcessorLegacy {
   /**
    * Processes a list of strands.
    *
@@ -56,8 +71,8 @@ export interface IProcessor {
 /**
  * Relates a processor to a listener filter.
  */
-export type ProcessorRecord = {
-  processor: IProcessor;
+export type ProcessorRecordLegacy = {
+  processor: IProcessorLegacy;
   filter: ListenerFilter;
 };
 
@@ -67,14 +82,15 @@ export type ProcessorRecord = {
  * @param driveHeader The drive header to create processors for.
  * @returns A list of processor records.
  */
-export type ProcessorFactory = (
+export type ProcessorFactoryLegacy = (
   driveHeader: PHDocumentHeader,
-) => ProcessorRecord[] | Promise<ProcessorRecord[]>;
+  context?: ReactorContext,
+) => ProcessorRecordLegacy[] | Promise<ProcessorRecordLegacy[]>;
 
 /**
  * Manages processor creation and destruction.
  */
-export interface IProcessorManager {
+export interface IProcessorManagerLegacy {
   /**
    * Registers a processor factory for a given identifier. This will create
    * processors for all drives that have already been registered.
@@ -82,7 +98,10 @@ export interface IProcessorManager {
    * @param identifier Any identifier to associate with the factory.
    * @param factory The factory to register.
    */
-  registerFactory(identifier: string, factory: ProcessorFactory): Promise<void>;
+  registerFactory(
+    identifier: string,
+    factory: ProcessorFactoryLegacy,
+  ): Promise<void>;
 
   /**
    * Unregisters a processor factory for a given identifier. This will remove
@@ -101,24 +120,26 @@ export interface IProcessorManager {
   registerDrive(driveId: string): Promise<void>;
 }
 
-export type RelationalDbProcessorFilter = ListenerFilter;
-export interface IRelationalDbProcessor<TDatabaseSchema = unknown>
-  extends IProcessor {
+export type RelationalDbProcessorFilterLegacy = ListenerFilter;
+export interface IRelationalDbProcessorLegacy<TDatabaseSchema = unknown>
+  extends IProcessorLegacy {
   namespace: string;
-  query: IRelationalQueryBuilder<TDatabaseSchema>;
-  filter: RelationalDbProcessorFilter;
+  query: IRelationalQueryBuilderLegacy<TDatabaseSchema>;
+  filter: RelationalDbProcessorFilterLegacy;
   initAndUpgrade(): Promise<void>;
 }
 
 export type ExtractProcessorSchema<TProcessor> =
-  TProcessor extends RelationalDbProcessor<infer TSchema> ? TSchema : never;
+  TProcessor extends RelationalDbProcessorLegacy<infer TSchema>
+    ? TSchema
+    : never;
 
 export type ExtractProcessorSchemaOrSelf<TProcessor> =
-  TProcessor extends RelationalDbProcessor<infer TSchema>
+  TProcessor extends RelationalDbProcessorLegacy<infer TSchema>
     ? TSchema
     : TProcessor;
 
-export type RelationalDbProcessorClass<TSchema> =
-  typeof RelationalDbProcessor<TSchema>;
+export type RelationalDbProcessorClassLegacy<TSchema> =
+  typeof RelationalDbProcessorLegacy<TSchema>;
 
-export type HashAlgorithms = "fnv1a";
+export type HashAlgorithmsLegacy = "fnv1a";

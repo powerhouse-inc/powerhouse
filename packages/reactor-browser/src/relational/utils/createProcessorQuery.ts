@@ -4,8 +4,8 @@ import type {
   useRelationalQueryOptions,
 } from "@powerhousedao/reactor-browser";
 import type {
-  IRelationalQueryBuilder,
-  RelationalDbProcessorClass,
+  IRelationalQueryBuilderLegacy,
+  RelationalDbProcessorClassLegacy,
 } from "document-drive";
 import type { CompiledQuery } from "kysely";
 import deepEqual from "lodash.isequal";
@@ -25,12 +25,12 @@ function useStableParams<T>(params: T): T {
 }
 
 export function createProcessorQuery<TSchema>(
-  ProcessorClass: RelationalDbProcessorClass<TSchema>,
+  ProcessorClass: RelationalDbProcessorClassLegacy<TSchema>,
 ) {
   // Overload for queries without parameters
   function useQuery<
     TQueryBuilder extends (
-      db: IRelationalQueryBuilder<TSchema>,
+      db: IRelationalQueryBuilderLegacy<TSchema>,
     ) => QueryCallbackReturnType,
   >(
     driveId: string,
@@ -47,7 +47,7 @@ export function createProcessorQuery<TSchema>(
   function useQuery<
     TParams,
     TQueryBuilder extends (
-      db: IRelationalQueryBuilder<TSchema>,
+      db: IRelationalQueryBuilderLegacy<TSchema>,
       parameters: TParams,
     ) => QueryCallbackReturnType,
   >(
@@ -66,7 +66,7 @@ export function createProcessorQuery<TSchema>(
   function useQuery<
     TParams,
     TQueryBuilder extends (
-      db: IRelationalQueryBuilder<TSchema>,
+      db: IRelationalQueryBuilderLegacy<TSchema>,
       parameters?: TParams,
     ) => QueryCallbackReturnType,
   >(

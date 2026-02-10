@@ -1,5 +1,5 @@
 import {
-  RelationalDbProcessor,
+  RelationalDbProcessorLegacy,
   type InternalTransmitterUpdate,
 } from "document-drive";
 import type { VetraPackageState } from "../../document-models/vetra-package/gen/schema/types.js";
@@ -8,7 +8,7 @@ import { type DB } from "./schema.js";
 
 interface VetraPackageGlobalState extends VetraPackageState {}
 
-export class VetraReadModelProcessorLegacy extends RelationalDbProcessor<DB> {
+export class VetraReadModelProcessorLegacy extends RelationalDbProcessorLegacy<DB> {
   static override getNamespace(driveId: string): string {
     // Default namespace: `${this.name}_${driveId.replaceAll("-", "_")}`
     // we keep all vetra packages in the same namespace even if they are stored in different drives

@@ -1,10 +1,10 @@
 import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
-import type { IProcessorHostModule } from "@powerhousedao/reactor";
 import type { GraphQLManager } from "@powerhousedao/reactor-api";
 import type {
-  IProcessorManager,
-  IRelationalDb,
-  ProcessorFactory,
+  IProcessorHostModuleLegacy,
+  IProcessorManagerLegacy,
+  IRelationalDbLegacy,
+  ProcessorFactoryLegacy,
 } from "document-drive";
 import type { Express } from "express";
 import type { IPackageManager } from "./packages/types.js";
@@ -16,13 +16,15 @@ export type {
 export type API = {
   app: Express;
   graphqlManager: GraphQLManager;
-  processorManager: IProcessorManager;
+  processorManager: IProcessorManagerLegacy;
   packages: IPackageManager;
 };
 
 export type ReactorModule = {
   analyticsStore: IAnalyticsStore;
-  relationalDb: IRelationalDb;
+  relationalDb: IRelationalDbLegacy;
 };
 
-export type Processor = ((module: IProcessorHostModule) => ProcessorFactory)[];
+export type Processor = ((
+  module: IProcessorHostModuleLegacy,
+) => ProcessorFactoryLegacy)[];

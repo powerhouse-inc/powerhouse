@@ -1,7 +1,7 @@
 import type { LiveQueryResults } from "@electric-sql/pglite/live";
 import type {
-  IRelationalQueryBuilder,
-  RelationalDbProcessorClass,
+  IRelationalQueryBuilderLegacy,
+  RelationalDbProcessorClassLegacy,
 } from "document-drive";
 import { useEffect, useRef, useState } from "react";
 import { useRelationalDb } from "./useRelationalDb.js";
@@ -38,10 +38,10 @@ type LiveQueryType = {
 };
 
 export function useRelationalQuery<Schema, T = unknown, TParams = undefined>(
-  ProcessorClass: RelationalDbProcessorClass<Schema>,
+  ProcessorClass: RelationalDbProcessorClassLegacy<Schema>,
   driveId: string,
   queryCallback: (
-    db: IRelationalQueryBuilder<Schema>,
+    db: IRelationalQueryBuilderLegacy<Schema>,
     parameters?: TParams,
   ) => QueryCallbackReturnType,
   parameters?: TParams,

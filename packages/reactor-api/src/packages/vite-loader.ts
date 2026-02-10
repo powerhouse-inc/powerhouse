@@ -1,7 +1,10 @@
 import { viteCommonjs } from "@originjs/vite-plugin-commonjs";
-import type { IProcessorHostModule } from "@powerhousedao/reactor";
 import type { SubgraphClass } from "@powerhousedao/reactor-api";
-import { childLogger, type ProcessorFactory } from "document-drive";
+import type {
+  IProcessorHostModuleLegacy,
+  ProcessorFactoryLegacy,
+} from "document-drive";
+import { childLogger } from "document-drive";
 import type { DocumentModelModule } from "document-model";
 import path from "node:path";
 import { readPackage } from "read-pkg";
@@ -115,7 +118,9 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
 
   async loadProcessors(
     identifier: string,
-  ): Promise<((module: IProcessorHostModule) => ProcessorFactory) | null> {
+  ): Promise<
+    ((module: IProcessorHostModuleLegacy) => ProcessorFactoryLegacy) | null
+  > {
     const fullPath = this.getProcessorsPath(identifier);
 
     this.logger.verbose("Loading processors from", fullPath);
@@ -130,7 +135,8 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
       const factory = (
         pkgModule as Record<
           string,
-          ((module: IProcessorHostModule) => ProcessorFactory) | undefined
+          | ((module: IProcessorHostModuleLegacy) => ProcessorFactoryLegacy)
+          | undefined
         >
       )?.[factoryName];
 
@@ -138,7 +144,9 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
         this.logger.verbose(
           `  ➜  Loaded Processor Factory (${factoryName}) from: ${identifier}`,
         );
-        return factory as (module: IProcessorHostModule) => ProcessorFactory;
+        return factory as (
+          module: IProcessorHostModuleLegacy,
+        ) => ProcessorFactoryLegacy;
       }
 
       // Fallback: if legacy requested but not found, try default (backwards compat)
@@ -151,8 +159,8 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
           `  ➜  Loaded Processor Factory (fallback to processorFactory) from: ${identifier}`,
         );
         return pkgModule.processorFactory as (
-          module: IProcessorHostModule,
-        ) => ProcessorFactory;
+          module: IProcessorHostModuleLegacy,
+        ) => ProcessorFactoryLegacy;
       }
     } catch (e) {
       this.logger.debug(
@@ -209,7 +217,9 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
   onProcessorsChange(
     identifier: string,
     handler: (
-      processors: ((module: IProcessorHostModule) => ProcessorFactory) | null,
+      processors:
+        | ((module: IProcessorHostModuleLegacy) => ProcessorFactoryLegacy)
+        | null,
     ) => void,
     options?: ISubscriptionOptions,
   ): () => void {

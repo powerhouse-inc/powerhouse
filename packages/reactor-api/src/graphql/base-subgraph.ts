@@ -4,7 +4,7 @@ import type {
   ISubgraph,
   SubgraphArgs,
 } from "@powerhousedao/reactor-api";
-import type { IDocumentDriveServer, IRelationalDb } from "document-drive";
+import type { IDocumentDriveServer, IRelationalDbLegacy } from "document-drive";
 import type { DocumentNode } from "graphql";
 import { gql } from "graphql-tag";
 import type { DocumentPermissionService } from "../services/document-permission.service.js";
@@ -25,7 +25,7 @@ export class BaseSubgraph implements ISubgraph {
   reactor: IDocumentDriveServer;
   reactorClient: IReactorClient;
   graphqlManager: GraphQLManager;
-  relationalDb: IRelationalDb;
+  relationalDb: IRelationalDbLegacy;
   syncManager: ISyncManager;
   documentPermissionService?: DocumentPermissionService;
 

@@ -248,6 +248,7 @@ export {
 export { ProcessorManager } from "./processors/index.js";
 export { RelationalDbProcessor } from "./processors/relational/relational-db-processor.js";
 export type * from "./processors/relational/types.js";
+export { createRelationalDb } from "./processors/relational/utils.js";
 export type {
   IProcessor,
   IProcessorHostModule,

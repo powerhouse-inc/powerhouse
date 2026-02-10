@@ -1,7 +1,10 @@
+import type { Remote } from "@powerhousedao/reactor";
 import { useSync } from "@powerhousedao/reactor-browser/connect";
 import { useCallback } from "react";
 
-export function useRemotesInspector() {
+export function useRemotesInspector(): {
+  getRemotes: () => Promise<Remote[]>;
+} {
   const syncManager = useSync();
   if (!syncManager) {
     throw new Error("Sync manager not found");

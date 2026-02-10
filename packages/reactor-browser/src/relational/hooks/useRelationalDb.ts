@@ -1,7 +1,7 @@
 import type { PGlite } from "@electric-sql/pglite";
 import type { LiveNamespace, PGliteWithLive } from "@electric-sql/pglite/live";
-import type { IRelationalDb as _IRelationalDb } from "document-drive";
-import { createRelationalDb } from "document-drive";
+import type { IRelationalDbLegacy as _IRelationalDb } from "document-drive";
+import { createRelationalDbLegacy } from "document-drive";
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
 import { useMemo } from "react";
@@ -25,7 +25,7 @@ function createRelationalDbWithLive<Schema>(
   const baseDb = new Kysely<Schema>({
     dialect: new PGliteDialect(pgliteInstance as unknown as PGlite),
   });
-  const relationalDb = createRelationalDb(baseDb);
+  const relationalDb = createRelationalDbLegacy(baseDb);
 
   // Inject the live namespace with proper typing
   const relationalDBWithLive = relationalDb as RelationalDbWithLive<Schema>;

@@ -1,10 +1,10 @@
 import type { Options } from "@sindresorhus/fnv1a";
 import fnv1a from "@sindresorhus/fnv1a";
 import type {
-  HashAlgorithms,
-  IBaseRelationalDb,
-  IRelationalDb,
-  IRelationalQueryBuilder,
+  HashAlgorithmsLegacy,
+  IBaseRelationalDbLegacy,
+  IRelationalDbLegacy,
+  IRelationalQueryBuilderLegacy,
 } from "document-drive";
 
 const SUPPORTED_SIZES: Options["size"][] = [32, 64, 128, 256, 512, 1024];
@@ -16,10 +16,10 @@ const LOG2_26 = Math.log2(26); //
  * @param algorithm The hashing algorithm to use. Defaults to "fnv1a".
  * @returns The hashed string.
  */
-export function hashNamespace(
+export function hashNamespaceLegacy(
   str: string,
   length = 10,
-  algorithm: HashAlgorithms = "fnv1a",
+  algorithm: HashAlgorithmsLegacy = "fnv1a",
 ) {
   if (algorithm === "fnv1a") {
     const requiredBits = Math.ceil(length * LOG2_26);
@@ -49,17 +49,17 @@ function toBase26(num: bigint, length = 10): string {
  * @param baseOptions The default options for namespace creation. Hashes namespace by default.
  * @returns The enhanced RelationalDb instance.
  */
-export function createRelationalDb<Schema>(
-  baseDb: IBaseRelationalDb<Schema>,
+export function createRelationalDbLegacy<Schema>(
+  baseDb: IBaseRelationalDbLegacy<Schema>,
   baseOptions?: NamespaceOptions,
-): IRelationalDb<Schema> {
-  const relationalDb = baseDb as IRelationalDb<Schema>;
+): IRelationalDbLegacy<Schema> {
+  const relationalDb = baseDb as IRelationalDbLegacy<Schema>;
 
   relationalDb.createNamespace = <NamespaceSchema>(
     namespace: string,
     options?: NamespaceOptions,
   ) =>
-    createNamespacedDb<NamespaceSchema>(
+    createNamespacedDbLegacy<NamespaceSchema>(
       baseDb,
       namespace,
       options ?? baseOptions,
@@ -69,7 +69,7 @@ export function createRelationalDb<Schema>(
     namespace: string,
     options?: NamespaceOptions,
   ) =>
-    createNamespacedQueryBuilder<NamespaceSchema>(
+    createNamespacedQueryBuilderLegacy<NamespaceSchema>(
       baseDb,
       namespace,
       options ?? baseOptions,
@@ -82,28 +82,28 @@ type NamespaceOptions = {
   hashNamespace?: boolean;
 };
 
-export async function createNamespacedDb<Schema>(
-  db: IBaseRelationalDb<any>,
+export async function createNamespacedDbLegacy<Schema>(
+  db: IBaseRelationalDbLegacy<any>,
   namespace: string,
   options?: NamespaceOptions,
-): Promise<IRelationalDb<Schema>> {
+): Promise<IRelationalDbLegacy<Schema>> {
   // hash the namespace to avoid too long namespaces
   const shouldHash = options?.hashNamespace ?? true;
-  const hashValue = shouldHash ? hashNamespace(namespace) : namespace;
+  const hashValue = shouldHash ? hashNamespaceLegacy(namespace) : namespace;
   await db.schema.createSchema(hashValue).ifNotExists().execute();
   const schemaRelationalDb = db.withSchema(hashValue);
-  return schemaRelationalDb as IRelationalDb<Schema>;
+  return schemaRelationalDb as IRelationalDbLegacy<Schema>;
 }
 
-export function createNamespacedQueryBuilder<Schema>(
-  db: IBaseRelationalDb<any>,
+export function createNamespacedQueryBuilderLegacy<Schema>(
+  db: IBaseRelationalDbLegacy<any>,
   namespace: string,
   options?: NamespaceOptions,
-): IRelationalQueryBuilder<Schema> {
+): IRelationalQueryBuilderLegacy<Schema> {
   const shouldHash = options?.hashNamespace ?? true;
-  const hashValue = shouldHash ? hashNamespace(namespace) : namespace;
-  const namespacedDb = db.withSchema(hashValue) as IRelationalDb<Schema>;
-  return relationalDbToQueryBuilder(namespacedDb);
+  const hashValue = shouldHash ? hashNamespaceLegacy(namespace) : namespace;
+  const namespacedDb = db.withSchema(hashValue) as IRelationalDbLegacy<Schema>;
+  return relationalDbToQueryBuilderLegacy(namespacedDb);
 }
 
 /**
@@ -111,15 +111,15 @@ export function createNamespacedQueryBuilder<Schema>(
  * @param query The RelationalDb instance to convert.
  * @returns The IRelationalQueryBuilder instance.
  */
-export function relationalDbToQueryBuilder<TSchema>(
-  query: IBaseRelationalDb<TSchema>,
-): IRelationalQueryBuilder<TSchema> {
+export function relationalDbToQueryBuilderLegacy<TSchema>(
+  query: IBaseRelationalDbLegacy<TSchema>,
+): IRelationalQueryBuilderLegacy<TSchema> {
   return {
     selectFrom: query.selectFrom.bind(query),
     selectNoFrom: query.selectNoFrom.bind(query),
     with: query.with.bind(query),
     withRecursive: query.withRecursive.bind(query),
     withSchema: (schema: string) =>
-      relationalDbToQueryBuilder<TSchema>(query.withSchema(schema)),
+      relationalDbToQueryBuilderLegacy<TSchema>(query.withSchema(schema)),
   };
 }

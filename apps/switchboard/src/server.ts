@@ -152,7 +152,7 @@ async function initServer(
       ? ".ph/read-storage"
       : dbPath;
 
-  const driveServerInitializer = async (
+  const initializeDriveServer = async (
     documentModels: DocumentModelModule[],
   ) => {
     const driveServer = new LegacyReactorBuilder(
@@ -177,7 +177,7 @@ async function initServer(
     return driveServer;
   };
 
-  const clientInitializer = async (
+  const initializeClient = async (
     driveServer: IDocumentDriveServer,
     documentModels: DocumentModelModule[],
   ) => {
@@ -253,11 +253,10 @@ async function initServer(
   const packageLoader = vite
     ? VitePackageLoader.build(vite, { legacyReactor })
     : undefined;
-  const api = await initializeAndStartAPI({
-    driveServerInitializer,
-    clientInitializer,
-    processorApp: "switchboard",
-    options: {
+  const api = await initializeAndStartAPI(
+    initializeDriveServer,
+    initializeClient,
+    {
       express: app,
       port: serverPort,
       dbPath: readModelPath,
@@ -273,9 +272,9 @@ async function initServer(
       useNewDocumentModelSubgraph: options.useNewDocumentModelSubgraph,
       legacyReactor,
     },
-  });
+  );
 
-  const { reactor, reactorClient } = api;
+  const { client, driveServer } = api;
 
   // Create default drive if provided
   if (options.drive) {
@@ -284,8 +283,8 @@ async function initServer(
     }
 
     defaultDriveUrl = await addDefaultDrive(
-      reactor,
-      reactorClient,
+      driveServer,
+      client,
       options.drive,
       serverPort,
     );
@@ -304,7 +303,7 @@ async function initServer(
       try {
         if (legacyReactor) {
           // Use legacy reactor's addRemoteDrive
-          const remoteDrive = await addRemoteDrive(reactor, remoteDriveUrl);
+          const remoteDrive = await addRemoteDrive(driveServer, remoteDriveUrl);
           driveId = remoteDrive.header.id;
         } else {
           // Use new reactor's sync manager
@@ -349,7 +348,7 @@ async function initServer(
   return {
     defaultDriveUrl,
     api,
-    reactor,
+    reactor: driveServer,
     renown,
   };
 }
