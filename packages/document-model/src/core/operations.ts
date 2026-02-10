@@ -8,9 +8,9 @@ import type { LoadStateActionInput } from "./types.js";
 // updates the name of the document
 export function setNameOperation<TDocument extends PHDocument>(
   document: TDocument,
-  name: string,
+  input: { name: string },
 ) {
-  return { ...document, header: { ...document.header, name } };
+  return { ...document, header: { ...document.header, name: input.name } };
 }
 
 export function undoOperation<TDocument extends PHDocument>(
@@ -153,11 +153,17 @@ export function redoOperation<TDocument extends PHDocument>(
       );
     }
 
-    if (typeof input !== "number" || input > 1) {
+    // Handle both object format { count: number } and legacy number format
+    const count =
+      typeof input === "object" && input !== null && "count" in input
+        ? (input as { count: number }).count
+        : input;
+
+    if (typeof count !== "number" || count > 1) {
       throw new Error(`Cannot redo: you can only redo one operation at a time`);
     }
 
-    if (typeof input !== "number" || input < 1) {
+    if (typeof count !== "number" || count < 1) {
       throw new Error(`Invalid REDO action: invalid redo input value`);
     }
 

@@ -71,11 +71,11 @@ export type AddFolderInput = {
 };
 
 export type AddListenerInput = {
-  listener: Listener;
+  listener: ListenerInput;
 };
 
 export type AddTriggerInput = {
-  trigger: Trigger;
+  trigger: TriggerInput;
 };
 
 export type CopyNodeInput = {
@@ -131,10 +131,25 @@ export type Listener = {
   system: Scalars["Boolean"]["output"];
 };
 
+export type ListenerInput = {
+  block: Scalars["Boolean"]["input"];
+  callInfo?: InputMaybe<ListenerCallInfoInput>;
+  filter: ListenerFilterInput;
+  label?: InputMaybe<Scalars["String"]["input"]>;
+  listenerId: Scalars["ID"]["input"];
+  system: Scalars["Boolean"]["input"];
+};
+
 export type ListenerCallInfo = {
   data: Maybe<Scalars["String"]["output"]>;
   name: Maybe<Scalars["String"]["output"]>;
   transmitterType: Maybe<TransmitterType>;
+};
+
+export type ListenerCallInfoInput = {
+  data?: InputMaybe<Scalars["String"]["input"]>;
+  name?: InputMaybe<Scalars["String"]["input"]>;
+  transmitterType?: InputMaybe<TransmitterType>;
 };
 
 export type ListenerFilter = {
@@ -142,6 +157,13 @@ export type ListenerFilter = {
   documentId: Maybe<Array<Scalars["ID"]["output"]>>;
   documentType: Maybe<Array<Scalars["String"]["output"]>>;
   scope: Maybe<Array<Scalars["String"]["output"]>>;
+};
+
+export type ListenerFilterInput = {
+  branch?: InputMaybe<Array<Scalars["String"]["input"]>>;
+  documentId?: InputMaybe<Array<Scalars["ID"]["input"]>>;
+  documentType?: InputMaybe<Array<Scalars["String"]["input"]>>;
+  scope?: InputMaybe<Array<Scalars["String"]["input"]>>;
 };
 
 export type MoveNodeInput = {
@@ -155,6 +177,12 @@ export type PullResponderTriggerData = {
   interval: Scalars["String"]["output"];
   listenerId: Scalars["ID"]["output"];
   url: Scalars["String"]["output"];
+};
+
+export type PullResponderTriggerDataInput = {
+  interval: Scalars["String"]["input"];
+  listenerId: Scalars["ID"]["input"];
+  url: Scalars["String"]["input"];
 };
 
 export type RemoveListenerInput = {
@@ -192,6 +220,12 @@ export type TransmitterType =
 export type Trigger = {
   data: Maybe<TriggerData>;
   id: Scalars["ID"]["output"];
+  type: TriggerType;
+};
+
+export type TriggerInput = {
+  data?: InputMaybe<PullResponderTriggerDataInput>;
+  id: Scalars["ID"]["input"];
   type: TriggerType;
 };
 

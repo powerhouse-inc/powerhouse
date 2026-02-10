@@ -20,8 +20,12 @@ import type {
 } from "@powerhousedao/reactor-api";
 import bodyParser from "body-parser";
 import cors from "cors";
-import type { IDocumentDriveServer, IRelationalDbLegacy } from "document-drive";
-import { childLogger, debounce } from "document-drive";
+import type {
+  DocumentDriveDocument,
+  IDocumentDriveServer,
+  IRelationalDbLegacy,
+} from "document-drive";
+import { childLogger, debounce, responseForDrive } from "document-drive";
 import type { DocumentModelModule } from "document-model";
 import type express from "express";
 import type { IRouter } from "express";
@@ -42,7 +46,6 @@ import {
   DocumentModelSubgraph,
   DocumentModelSubgraphLegacy,
 } from "./document-model-subgraph.js";
-import { DriveSubgraph } from "./drive-subgraph.js";
 import { useServer } from "./websocket.js";
 
 class AuthenticatedDataSource extends RemoteGraphQLDataSource {
@@ -57,7 +60,7 @@ class AuthenticatedDataSource extends RemoteGraphQLDataSource {
   }
 }
 
-const DOCUMENT_MODELS_TO_EXCLUDE = ["powerhouse/document-drive"];
+const DOCUMENT_MODELS_TO_EXCLUDE: string[] = [];
 
 /**
  * Check if a document model has any operations with valid schemas.
@@ -273,8 +276,8 @@ export class GraphQLManager {
       }
     }
 
-    // special case for drive
-    await this.registerSubgraph(DriveSubgraph, undefined, true);
+    // REST endpoint for drive info at /d/:drive
+    this.#setupDriveInfoRestEndpoint(this.coreRouter);
 
     return this.#setupSubgraphs(this.coreSubgraphsMap, this.coreRouter);
   }
@@ -323,9 +326,6 @@ export class GraphQLManager {
         this.logger.debug("@error", error);
       }
     }
-
-    // special case for drive
-    await this.registerSubgraph(DriveSubgraph, undefined, true);
 
     return this.#setupSubgraphs(this.coreSubgraphsMap, this.coreRouter);
   }
@@ -567,6 +567,43 @@ export class GraphQLManager {
       }
     }
     return subgraphsMap;
+  }
+
+  /**
+   * Setup REST GET endpoint for drive info at /d/:drive
+   * Accepts both drive slug (e.g., "powerhouse") and UUID
+   * Returns DriveInfo JSON: { id, name, slug, icon, meta, graphqlEndpoint }
+   */
+  #setupDriveInfoRestEndpoint(router: IRouter) {
+    const routePath = path.join(this.path, "d/:drive");
+
+    router.get(routePath, (req, res) => {
+      const driveIdOrSlug = req.params.drive;
+
+      if (!driveIdOrSlug) {
+        res.status(400).json({ error: "Drive ID or slug is required" });
+        return;
+      }
+
+      (async () => {
+        const driveDoc =
+          await this.reactorClient.get<DocumentDriveDocument>(driveIdOrSlug);
+
+        // Construct the graphqlEndpoint from the request
+        const protocol = req.protocol + ":";
+        const host = req.get("host") ?? "";
+        const basePath = this.path === "/" ? "" : this.path;
+        const graphqlEndpoint = `${protocol}//${host}${basePath}/graphql/r/local`;
+
+        const driveInfo = responseForDrive(driveDoc, graphqlEndpoint);
+        res.json(driveInfo);
+      })().catch((error: unknown) => {
+        this.logger.debug(`Drive not found: ${driveIdOrSlug}`, error);
+        res.status(404).json({ error: "Drive not found" });
+      });
+    });
+
+    this.logger.info(`Registered REST endpoint: GET ${routePath}`);
   }
 
   #buildSubgraphSchemaModule(subgraph: ISubgraph) {

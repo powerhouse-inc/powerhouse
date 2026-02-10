@@ -30,6 +30,13 @@ type ListenerFilter {
   branch: [String!]
 }
 
+input ListenerFilterInput {
+  documentType: [String!]
+  documentId: [ID!]
+  scope: [String!]
+  branch: [String!]
+}
+
 enum TransmitterType {
   Internal
   SwitchboardPush
@@ -45,6 +52,12 @@ type ListenerCallInfo {
   data: String
 }
 
+input ListenerCallInfoInput {
+  transmitterType: TransmitterType
+  name: String
+  data: String
+}
+
 type Listener {
   listenerId: ID!
   label: String
@@ -52,6 +65,15 @@ type Listener {
   system: Boolean!
   filter: ListenerFilter!
   callInfo: ListenerCallInfo
+}
+
+input ListenerInput {
+  listenerId: ID!
+  label: String
+  block: Boolean!
+  system: Boolean!
+  filter: ListenerFilterInput!
+  callInfo: ListenerCallInfoInput
 }
 
 enum TriggerType {
@@ -64,12 +86,24 @@ type PullResponderTriggerData {
   interval: String!
 }
 
+input PullResponderTriggerDataInput {
+  listenerId: ID!
+  url: String!
+  interval: String!
+}
+
 union TriggerData = PullResponderTriggerData
 
 type Trigger {
   id: ID!
   type: TriggerType!
   data: TriggerData
+}
+
+input TriggerInput {
+  id: ID!
+  type: TriggerType!
+  data: PullResponderTriggerDataInput
 }
 
 type DocumentDriveLocalState {
@@ -142,7 +176,7 @@ input SetAvailableOfflineInput {
 }
 
 input AddListenerInput {
-  listener: Listener!
+  listener: ListenerInput!
 }
 
 input RemoveListenerInput {
@@ -150,7 +184,7 @@ input RemoveListenerInput {
 }
 
 input AddTriggerInput {
-  trigger: Trigger!
+  trigger: TriggerInput!
 }
 
 input RemoveTriggerInput {

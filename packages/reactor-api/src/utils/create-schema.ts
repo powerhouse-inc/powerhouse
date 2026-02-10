@@ -106,13 +106,16 @@ export const getDocumentModelTypeDefs = (
 
     \n`;
 
-    const found = tmpDmSchema.match(/(type|enum|union|interface)\s+(\w+)\s/g);
+    const found = tmpDmSchema.match(
+      /(type|enum|union|interface)\s+(\w+)[\s{]/g,
+    );
     const trimmedFound = found?.map((f) =>
       f
         .replaceAll("type ", "")
         .replaceAll("enum ", "")
         .replaceAll("union ", "")
         .replaceAll("interface ", "")
+        .replaceAll("{", "")
         .trim(),
     );
     trimmedFound?.forEach((f) => {
@@ -375,8 +378,11 @@ export function generateDocumentModelSchema(
 
   const specification = documentModel.specifications.at(-1);
   const documentName = getDocumentModelSchemaName(documentModel);
-  const stateSchema = specification?.state.global.schema;
-  const stateTypeNames = extractTypeNames(stateSchema ?? "");
+  const globalStateSchema = specification?.state.global.schema;
+  const localStateSchema = specification?.state.local.schema;
+  const globalStateTypeNames = extractTypeNames(globalStateSchema ?? "");
+  const localStateTypeNames = extractTypeNames(localStateSchema ?? "");
+  const stateTypeNames = [...globalStateTypeNames, ...localStateTypeNames];
 
   // Collect ALL type names from all operations' schemas
   const allOperationTypeNames =
@@ -393,7 +399,7 @@ export function generateDocumentModelSchema(
   // (those are already defined in op.schema)
   const operationInputTypeNames = new Set(allOperationTypeNames);
   const stateInputTypes = extractInputTypeDefinitions(
-    stateSchema ?? "",
+    globalStateSchema ?? "",
     operationInputTypeNames,
   );
   const prefixedStateInputTypes = applyGraphQLTypePrefixes(
@@ -407,9 +413,9 @@ export function generateDocumentModelSchema(
     !!(schema && /\b(input|type|enum|union|interface)\s+\w+/.test(schema));
 
   // Process state schema types (remove input types, clean up, and prefix)
-  const stateSchemaTypes = stateSchema
+  const stateSchemaTypes = globalStateSchema
     ? applyGraphQLTypePrefixes(
-        stateSchema
+        globalStateSchema
           .replaceAll("scalar DateTime", "")
           .replaceAll(/input (.*?) {[\s\S]*?}/g, ""),
         documentName,
@@ -574,7 +580,7 @@ function generateNewApiSchema(
       ? `${documentName}_${documentName}GlobalState!`
       : `${documentName}_${documentName}State!`;
   const localStateType = !hasLocalStateType
-    ? "JSONObject"
+    ? "JSONObject!"
     : `${documentName}_${documentName}LocalState!`;
 
   const fullStateType = `
@@ -583,7 +589,7 @@ function generateNewApiSchema(
       auth: JSONObject!
       document: ${documentName}_PHDocumentScopeState!
       global: ${globalStateType}
-      local: ${localStateType}!
+      local: ${localStateType}
     }
   `;
 

@@ -59,7 +59,7 @@ export function AddDriveModal() {
 
   const onAddRemoteDrive = async (data: AddRemoteDriveInput) => {
     try {
-      const driveId = await addRemoteDrive(data.url, {});
+      const driveId = await addRemoteDrive(data.url, {}, data.id);
 
       toast(t("notifications.addDriveSuccess"), {
         type: "connect-success",
@@ -89,16 +89,18 @@ export function AddDriveModal() {
       onAddRemoteDrive={onAddRemoteDriveSubmit}
       requestPublicDrive={async (url: string) => {
         try {
-          const authToken = await renown?.getBearerToken?.({
-            expiresIn: 10,
-            aud: url,
-          });
-          return requestPublicDriveFromReactor(url, {
-            Authorization: `Bearer ${authToken}`,
-          });
+          if (user) {
+            const authToken = await renown?.getBearerToken?.({
+              expiresIn: 10,
+              aud: url,
+            });
+            return requestPublicDriveFromReactor(url, {
+              Authorization: `Bearer ${authToken}`,
+            });
+          }
+          return requestPublicDriveFromReactor(url);
         } catch (error) {
           console.error(error);
-
           return requestPublicDriveFromReactor(url);
         }
       }}

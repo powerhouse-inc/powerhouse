@@ -1,11 +1,7 @@
 import { camelCase, kebabCase } from "change-case";
 import { addFile } from "document-drive";
-import {
-  setName,
-  type DocumentModelModule,
-  type PHDocument,
-} from "document-model";
-import { GraphQLError } from "graphql";
+import { setName, type DocumentModelModule } from "document-model";
+import { GraphQLError, Kind, parse } from "graphql";
 import type { GetParentIdsFn } from "../services/document-permission.service.js";
 import {
   generateDocumentModelSchema,
@@ -14,12 +10,12 @@ import {
 import { BaseSubgraph } from "./base-subgraph.js";
 import { toGqlPhDocument } from "./reactor/adapters.js";
 import {
+  createEmptyDocument as createEmptyDocumentResolver,
   createGetParentIdsFn,
-  document as documentResolver,
   documentChildren as documentChildrenResolver,
   documentParents as documentParentsResolver,
+  document as documentResolver,
   findDocuments as findDocumentsResolver,
-  createEmptyDocument as createEmptyDocumentResolver,
 } from "./reactor/resolvers.js";
 import type { Context, SubgraphArgs } from "./types.js";
 import { buildGraphQlDocument } from "./utils.js";
@@ -182,6 +178,82 @@ export class DocumentModelSubgraph extends BaseSubgraph {
   }
 
   /**
+   * Generate __resolveType functions for union types found in the document model schema.
+   * Parses the state schema to find union definitions and their member types,
+   * then uses unique field presence to discriminate between member types at runtime.
+   */
+  private generateUnionResolvers(): Record<string, unknown> {
+    const documentName = getDocumentModelSchemaName(
+      this.documentModel.documentModel.global,
+    );
+    const specification =
+      this.documentModel.documentModel.global.specifications.at(-1);
+    if (!specification) return {};
+
+    const globalSchema = specification.state.global.schema ?? "";
+    const localSchema = specification.state.local.schema ?? "";
+    const fullSchema = `${globalSchema}\n${localSchema}`;
+
+    if (!fullSchema.trim()) return {};
+
+    let ast;
+    try {
+      ast = parse(fullSchema);
+    } catch {
+      return {};
+    }
+
+    // Build map: object type name -> field names
+    const objectFieldsMap = new Map<string, string[]>();
+    for (const def of ast.definitions) {
+      if (def.kind === Kind.OBJECT_TYPE_DEFINITION) {
+        objectFieldsMap.set(
+          def.name.value,
+          def.fields?.map((f) => f.name.value) ?? [],
+        );
+      }
+    }
+
+    const resolvers: Record<string, unknown> = {};
+
+    for (const def of ast.definitions) {
+      if (def.kind !== Kind.UNION_TYPE_DEFINITION) continue;
+
+      const unionName = def.name.value;
+      const memberTypes = def.types?.map((t) => t.name.value) ?? [];
+      if (memberTypes.length === 0) continue;
+
+      // Compute unique fields per member type
+      const uniqueFields: Record<string, string[]> = {};
+      for (const memberType of memberTypes) {
+        const ownFields = objectFieldsMap.get(memberType) ?? [];
+        const otherFields = new Set(
+          memberTypes
+            .filter((t) => t !== memberType)
+            .flatMap((t) => objectFieldsMap.get(t) ?? []),
+        );
+        uniqueFields[memberType] = ownFields.filter((f) => !otherFields.has(f));
+      }
+
+      const prefixedUnionName = `${documentName}_${unionName}`;
+
+      resolvers[prefixedUnionName] = {
+        __resolveType: (obj: Record<string, unknown>) => {
+          for (const memberType of memberTypes) {
+            const fields = uniqueFields[memberType] ?? [];
+            if (fields.length > 0 && fields.some((f) => f in obj)) {
+              return `${documentName}_${memberType}`;
+            }
+          }
+          return `${documentName}_${memberTypes[0]}`;
+        },
+      };
+    }
+
+    return resolvers;
+  }
+
+  /**
    * Generate resolvers for this document model using reactorClient
    * Uses flat queries (not nested) consistent with ReactorSubgraph patterns
    */
@@ -198,6 +270,7 @@ export class DocumentModelSubgraph extends BaseSubgraph {
         ) ?? [];
 
     return {
+      ...this.generateUnionResolvers(),
       Query: {
         // Flat query: Get a specific document by identifier
         // Uses shared documentResolver from reactor/resolvers.ts
