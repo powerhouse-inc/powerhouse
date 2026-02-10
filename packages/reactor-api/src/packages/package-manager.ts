@@ -1,7 +1,11 @@
 import { getConfig } from "@powerhousedao/config/node";
+import type { IProcessorHostModule } from "@powerhousedao/reactor";
 import type { SubgraphClass } from "@powerhousedao/reactor-api";
-import type { IProcessorHostModule, ProcessorFactory } from "document-drive";
-import { childLogger, driveDocumentModelModule } from "document-drive";
+import {
+  childLogger,
+  driveDocumentModelModule,
+  type ProcessorFactory,
+} from "document-drive";
 import type { DocumentModelModule } from "document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import EventEmitter from "node:events";

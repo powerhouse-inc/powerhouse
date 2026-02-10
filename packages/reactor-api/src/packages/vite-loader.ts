@@ -1,7 +1,7 @@
 import { viteCommonjs } from "@originjs/vite-plugin-commonjs";
+import type { IProcessorHostModule } from "@powerhousedao/reactor";
 import type { SubgraphClass } from "@powerhousedao/reactor-api";
-import type { IProcessorHostModule, ProcessorFactory } from "document-drive";
-import { childLogger } from "document-drive";
+import { childLogger, type ProcessorFactory } from "document-drive";
 import type { DocumentModelModule } from "document-model";
 import path from "node:path";
 import { readPackage } from "read-pkg";

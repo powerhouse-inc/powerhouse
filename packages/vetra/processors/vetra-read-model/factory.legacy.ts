@@ -1,5 +1,5 @@
+import type { IProcessorHostModule } from "@powerhousedao/reactor";
 import {
-  type IProcessorHostModule,
   type ProcessorRecord,
   type RelationalDbProcessorFilter,
 } from "document-drive";

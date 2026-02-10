@@ -1,7 +1,7 @@
 import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
+import type { IProcessorHostModule } from "@powerhousedao/reactor";
 import type { GraphQLManager } from "@powerhousedao/reactor-api";
 import type {
-  IProcessorHostModule,
   IProcessorManager,
   IRelationalDb,
   ProcessorFactory,

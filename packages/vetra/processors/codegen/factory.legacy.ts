@@ -1,6 +1,7 @@
 import type { VetraProcessorConfigType } from "@powerhousedao/config";
 import { VETRA_PROCESSOR_CONFIG_KEY } from "@powerhousedao/config";
-import type { IProcessorHostModule, ProcessorRecord } from "document-drive";
+import type { IProcessorHostModule } from "@powerhousedao/reactor";
+import type { ProcessorRecord } from "document-drive";
 import type { PHDocumentHeader } from "document-model";
 import { CodegenProcessorLegacy } from "./index.legacy.js";
 import { logger } from "./logger.js";

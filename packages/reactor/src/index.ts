@@ -75,9 +75,9 @@ export {
   EventBusAggregateError,
   ReactorEventTypes,
   type JobPendingEvent,
+  type JobReadReadyEvent,
   type JobRunningEvent,
   type JobWriteReadyEvent,
-  type JobReadReadyEvent,
   type JobFailedEvent as ReactorJobFailedEvent,
   type Unsubscribe,
 } from "./events/types.js";
@@ -248,8 +248,9 @@ export {
 export { ProcessorManager } from "./processors/index.js";
 export type {
   IProcessor,
+  IProcessorHostModule,
   IProcessorManager,
   ProcessorFactory,
   ProcessorFilter,
   ProcessorRecord,
-} from "./processors/index.js";
+} from "./processors/types.js";

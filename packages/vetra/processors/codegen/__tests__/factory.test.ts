@@ -1,5 +1,5 @@
 import { VETRA_PROCESSOR_CONFIG_KEY } from "@powerhousedao/config";
-import type { IProcessorHostModule } from "document-drive";
+import type { IProcessorHostModule } from "@powerhousedao/reactor";
 import type { PHDocumentHeader } from "document-model";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { codegenProcessorFactory } from "../factory.js";

@@ -122,7 +122,7 @@ const startServer = async (
       },
     });
 
-  const driveServer = reactorBuilder.build();
+  const reactor = reactorBuilder.build();
 
   const eventBus = new EventBus();
   const builder = new ReactorBuilder()
@@ -135,7 +135,7 @@ const startServer = async (
     .withReactorBuilder(builder)
     .buildModule();
 
-  const client = clientModule.client;
+  const reactorClient = clientModule.client;
   const syncManager = clientModule.reactorModule?.syncModule?.syncManager;
   if (!syncManager) {
     throw new Error("SyncManager not available from ReactorClientBuilder");
@@ -149,26 +149,30 @@ const startServer = async (
   }
 
   // init drive server + conditionally add a default drive
-  await driveServer.initialize();
+  await reactor.initialize();
   const driveUrl = options?.disableDefaultDrive
     ? null
-    : await addDefaultDrive(driveServer, drive, serverPort);
+    : await addDefaultDrive(reactor, drive, serverPort);
 
   // create loader
   const packageLoader = vite ? VitePackageLoader.build(vite) : undefined;
 
   // start api
-  const api = await startAPI(driveServer, client, registry, syncManager, {
-    port: serverPort,
-    dbPath,
-    https: options?.https,
-    packageLoader,
-    configFile,
-    packages,
-    mcp,
-    // processors: {
-    //   "ph/common/drive-analytics": [DriveAnalyticsProcessorFactory],
-    // },
+  const api = await startAPI({
+    reactor,
+    reactorClient,
+    registry,
+    syncManager,
+    processorApp: "switchboard",
+    options: {
+      port: serverPort,
+      dbPath,
+      https: options?.https,
+      packageLoader,
+      configFile,
+      packages,
+      mcp,
+    },
   });
 
   // add vite middleware after express app is initialized if applicable
@@ -182,7 +186,7 @@ const startServer = async (
 
     for (const remoteDrive of processedRemoteDrives) {
       try {
-        await driveServer.addRemoteDrive(remoteDrive.url, remoteDrive.options);
+        await reactor.addRemoteDrive(remoteDrive.url, remoteDrive.options);
       } catch (error) {
         logger.error(
           `  ➜  Failed to connect to remote drive ${remoteDrive.url}:`,
@@ -210,7 +214,7 @@ const startServer = async (
       }
       return path.join(storage.filesystemPath, driveId, `${documentId}.json`);
     },
-    server: driveServer,
+    server: reactor,
   };
 };
 

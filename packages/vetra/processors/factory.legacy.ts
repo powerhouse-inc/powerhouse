@@ -3,14 +3,11 @@ import { vetraReadModelProcessorFactoryLegacy } from "./vetra-read-model/factory
  * This file aggregates all legacy processor factories
  */
 
-import type {
-  IProcessorHostModule,
-  ProcessorFactory,
-  ProcessorRecord,
-} from "document-drive";
+import type { ProcessorFactory, ProcessorRecord } from "document-drive";
 import type { PHDocumentHeader } from "document-model";
 
 // Import other processor factories here as they are generated
+import type { IProcessorHostModule } from "@powerhousedao/reactor";
 import { codegenProcessorFactoryLegacy } from "./codegen/factory.legacy.js";
 
 export const processorFactoryLegacy = (module: IProcessorHostModule) => {

@@ -95,7 +95,6 @@
   },
   "devDependencies": {
     "@anatine/zod-mock": "^3.14.0",
-    "@powerhousedao/analytics-engine-core": "^0.5.0",
     "@types/node": "^24.6.1",
     "@types/uuid": "^9.0.8",
     "@vitest/coverage-v8": "^3.2.4",

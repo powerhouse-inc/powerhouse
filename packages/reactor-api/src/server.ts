@@ -4,6 +4,7 @@ import { PostgresAnalyticsStore } from "@powerhousedao/analytics-engine-pg";
 import { getConfig } from "@powerhousedao/config/node";
 import type {
   IDocumentModelRegistry,
+  IProcessorHostModule,
   IReactorClient,
   IProcessorManager as IReactorProcessorManager,
   ISyncManager,
@@ -15,7 +16,6 @@ import devcert from "devcert";
 import type {
   DocumentDriveDocument,
   IDocumentDriveServer,
-  IProcessorHostModule,
   IProcessorManager,
   IRelationalDb,
   ProcessorFactory,
@@ -37,6 +37,7 @@ import type { TlsOptions } from "node:tls";
 import type { Pool } from "pg";
 import { WebSocketServer } from "ws";
 // Import tracing - initializes OpenTelemetry and provides stub functions for backwards compatibility
+import type { ProcessorApp } from "../../reactor/src/processors/types.js";
 import { config, DefaultCoreSubgraphs } from "./config.js";
 import { AuthSubgraph } from "./graphql/auth/subgraph.js";
 import { GraphQLManager } from "./graphql/graphql-manager.js";
@@ -225,10 +226,7 @@ function setupEventListeners(
   reactor: IDocumentDriveServer,
   graphqlManager: GraphQLManager,
   processorManager: IProcessorManager,
-  module: {
-    relationalDb: IRelationalDb;
-    analyticsStore: IAnalyticsStore;
-  },
+  module: IProcessorHostModule,
 ): void {
   pkgManager.onDocumentModelsChange(async (documentModels) => {
     reactor.setDocumentModelModules(Object.values(documentModels).flat());
@@ -252,6 +250,7 @@ function setupEventListeners(
         fn({
           analyticsStore: module.analyticsStore,
           relationalDb: module.relationalDb,
+          processorApp: module.processorApp,
         }),
       );
 
@@ -471,33 +470,56 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
 /**
  * Private helper function containing common setup logic for API initialization
  */
-async function _setupAPI(
-  reactor: IDocumentDriveServer,
-  reactorClient: IReactorClient,
-  syncManager: ISyncManager,
-  app: Express,
-  port: number,
-  packages: PackageManager,
-  relationalDb: IRelationalDb,
-  analyticsStore: IAnalyticsStore,
-  documentPermissionService: DocumentPermissionService | undefined,
+async function _setupAPI(args: {
+  reactor: IDocumentDriveServer;
+  reactorClient: IReactorClient;
+  syncManager: ISyncManager;
+  app: Express;
+  port: number;
+  packages: PackageManager;
+  relationalDb: IRelationalDb;
+  analyticsStore: IAnalyticsStore;
+  processorApp: ProcessorApp;
+  documentPermissionService: DocumentPermissionService | undefined;
   processors: Map<
     string,
     ((module: IProcessorHostModule) => ProcessorFactory)[]
-  >,
-  subgraphs: Map<string, SubgraphClass[]>,
-  options: Options,
+  >;
+  subgraphs: Map<string, SubgraphClass[]>;
+  options: Options;
   auth: {
     enabled: boolean;
     guests: string[];
     users: string[];
     admins: string[];
     freeEntry: boolean;
-  },
-  legacyReactor: boolean,
-  reactorProcessorManager?: IReactorProcessorManager,
-): Promise<API> {
-  const module: IProcessorHostModule = { relationalDb, analyticsStore };
+  };
+  legacyReactor: boolean;
+  reactorProcessorManager?: IReactorProcessorManager;
+}): Promise<API> {
+  const {
+    reactor,
+    legacyReactor,
+    reactorClient,
+    packages,
+    syncManager,
+    subgraphs,
+    reactorProcessorManager,
+    relationalDb,
+    analyticsStore,
+    processorApp,
+    options,
+    processors,
+    app,
+    port,
+    auth,
+    documentPermissionService,
+  } = args;
+  const module: IProcessorHostModule = {
+    relationalDb,
+    analyticsStore,
+    processorApp,
+  };
   const mcpServerEnabled = options.mcp ?? true;
 
   // initialize processors
@@ -513,11 +535,7 @@ async function _setupAPI(
     ]) {
       const factories = fns.map((fn) => {
         try {
-          return fn({
-            analyticsStore: module.analyticsStore,
-            relationalDb: module.relationalDb,
-            config: options.processorConfig,
-          });
+          return fn(module);
         } catch (e) {
           logger.error(
             `Error initializing processor factory for package ${packageName}:`,
@@ -577,11 +595,7 @@ async function _setupAPI(
     ]) {
       const factories = fns.map((fn) => {
         try {
-          return fn({
-            analyticsStore: module.analyticsStore,
-            relationalDb: module.relationalDb,
-            config: options.processorConfig,
-          });
+          return fn(module);
         } catch (e) {
           logger.error(
             `Error initializing processor factory for package ${packageName}:`,
@@ -696,13 +710,22 @@ async function _setupAPI(
  *
  * @returns The API server components.
  */
-export async function startAPI(
-  driveServer: IDocumentDriveServer,
-  client: IReactorClient,
-  registry: IDocumentModelRegistry,
-  syncManager: ISyncManager,
-  options: Options,
-): Promise<API> {
+export async function startAPI(args: {
+  reactor: IDocumentDriveServer;
+  reactorClient: IReactorClient;
+  registry: IDocumentModelRegistry;
+  syncManager: ISyncManager;
+  processorApp: ProcessorApp;
+  options: Options;
+}): Promise<API> {
+  const {
+    reactor,
+    reactorClient,
+    registry,
+    syncManager,
+    processorApp,
+    options,
+  } = args;
   const {
     port,
     app,
@@ -724,9 +747,9 @@ export async function startAPI(
   );
 
   // pass to legacy reactor
-  driveServer.setDocumentModelModules(
+  reactor.setDocumentModelModules(
     getUniqueDocumentModels([
-      ...driveServer.getDocumentModelModules(),
+      ...reactor.getDocumentModelModules(),
       ...documentModels,
     ]),
   );
@@ -737,10 +760,11 @@ export async function startAPI(
   // startAPI always uses legacy reactor since it doesn't have ReactorClientModule
   const legacyReactor = true;
 
-  return _setupAPI(
-    driveServer,
-    client,
+  return _setupAPI({
+    reactor,
+    reactorClient,
     syncManager,
+    processorApp,
     app,
     port,
     packages,
@@ -752,8 +776,9 @@ export async function startAPI(
     options,
     auth,
     legacyReactor,
-    undefined, // no reactorProcessorManager in legacy mode
-  );
+    // no reactorProcessorManager in legacy mode
+    reactorProcessorManager: undefined,
+  });
 }
 
 /**
@@ -767,22 +792,25 @@ export async function startAPI(
  *
  * @returns The API server components along with the created drive server and client instances.
  */
-export async function initializeAndStartAPI(
+export async function initializeAndStartAPI(args: {
   driveServerInitializer: (
     documentModelModules: DocumentModelModule[],
-  ) => Promise<IDocumentDriveServer>,
+  ) => Promise<IDocumentDriveServer>;
   clientInitializer: (
     driveServer: IDocumentDriveServer,
     documentModels: DocumentModelModule[],
-  ) => Promise<ReactorClientModule>,
-  options: Options,
-): Promise<
+  ) => Promise<ReactorClientModule>;
+  processorApp: ProcessorApp;
+  options: Options;
+}): Promise<
   API & {
-    driveServer: IDocumentDriveServer;
-    client: IReactorClient;
+    reactor: IDocumentDriveServer;
+    reactorClient: IReactorClient;
     syncManager: ISyncManager;
   }
 > {
+  const { driveServerInitializer, clientInitializer, processorApp, options } =
+    args;
   const {
     port,
     app,
@@ -827,7 +855,7 @@ export async function initializeAndStartAPI(
   const reactorProcessorManager =
     reactorClientModule.reactorModule?.processorManager;
 
-  const api = await _setupAPI(
+  const api = await _setupAPI({
     reactor,
     reactorClient,
     syncManager,
@@ -836,6 +864,7 @@ export async function initializeAndStartAPI(
     packages,
     relationalDb,
     analyticsStore,
+    processorApp,
     documentPermissionService,
     processors,
     subgraphs,
@@ -843,12 +872,12 @@ export async function initializeAndStartAPI(
     auth,
     legacyReactor,
     reactorProcessorManager,
-  );
+  });
 
   return {
     ...api,
-    driveServer: reactor,
-    client: reactorClient,
+    reactor,
+    reactorClient,
     syncManager,
   };
 }

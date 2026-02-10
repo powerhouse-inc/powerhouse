@@ -1,6 +1,16 @@
-import type { ReactorContext } from "document-drive";
+import type { IRelationalDb } from "document-drive";
 import type { PHDocumentHeader } from "document-model";
 import type { OperationWithContext } from "../storage/interfaces.js";
+import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
+
+export type ProcessorApp = "connect" | "switchboard";
+
+export interface IProcessorHostModule {
+  analyticsStore: IAnalyticsStore;
+  relationalDb: IRelationalDb;
+  processorApp: ProcessorApp;
+  config?: Map<string, unknown>;
+}
 
 /**
  * Filter for matching operations to processors.
@@ -45,7 +55,6 @@ export type ProcessorRecord = {
  */
 export type ProcessorFactory = (
   driveHeader: PHDocumentHeader,
-  context?: ReactorContext,
 ) => ProcessorRecord[] | Promise<ProcessorRecord[]>;
 
 /**

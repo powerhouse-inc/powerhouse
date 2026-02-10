@@ -1,4 +1,3 @@
-import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import type {
   InternalTransmitterUpdate,
   ListenerFilter,
@@ -36,17 +35,6 @@ export type IRelationalDb<Schema = unknown> = IBaseRelationalDb<Schema> & {
   ): IRelationalQueryBuilder<NamespaceSchema>;
 };
 
-export type ReactorContext = {
-  app?: "connect" | "switchboard";
-};
-
-export interface IProcessorHostModule {
-  analyticsStore: IAnalyticsStore;
-  relationalDb: IRelationalDb;
-  context?: ReactorContext;
-  config?: Map<string, unknown>;
-}
-
 /**
  * Describes an object that can process strands.
  */
@@ -81,7 +69,6 @@ export type ProcessorRecord = {
  */
 export type ProcessorFactory = (
   driveHeader: PHDocumentHeader,
-  context?: ReactorContext,
 ) => ProcessorRecord[] | Promise<ProcessorRecord[]>;
 
 /**
