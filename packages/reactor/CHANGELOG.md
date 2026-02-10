@@ -1,3 +1,18 @@
+## 6.0.0-dev.37 (2026-02-10)
+
+### 🚀 Features
+
+- **reactor-api:** added nested operations query on phdocument and Graphql client update ([67584e3fc](https://github.com/powerhouse-inc/powerhouse/commit/67584e3fc))
+
+### 🩹 Fixes
+
+- fixing all linter warnings ([0662a0b45](https://github.com/powerhouse-inc/powerhouse/commit/0662a0b45))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+
 ## 6.0.0-dev.36 (2026-02-06)
 
 ### 🚀 Features
