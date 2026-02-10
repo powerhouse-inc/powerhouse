@@ -6,7 +6,6 @@ import {
   createBrowserReactor,
   getDefaultDrivesFromEnv,
 } from "@powerhousedao/connect/utils";
-import { driveCollectionId } from "@powerhousedao/reactor";
 import {
   ReactorClientDocumentCache,
   dropAllReactorStorage,
@@ -34,6 +33,7 @@ import {
   setReactorClientModule,
   setRenown,
 } from "@powerhousedao/reactor-browser/connect";
+import { driveCollectionId } from "@powerhousedao/reactor/cache/operation-index-types";
 import {
   BrowserKeyStorage,
   RenownBuilder,

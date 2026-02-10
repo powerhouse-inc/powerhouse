@@ -3,8 +3,8 @@ import type {
   FilterGroup,
   SortOptions,
 } from "@powerhousedao/design-system/connect";
-import { REACTOR_SCHEMA } from "@powerhousedao/reactor";
 import { useDatabase, usePGlite } from "@powerhousedao/reactor-browser/connect";
+import { REACTOR_SCHEMA } from "@powerhousedao/reactor/storage/migrations/migrator";
 import { sql } from "kysely";
 import { useCallback } from "react";
 
@@ -112,61 +112,47 @@ export function useDbExplorer() {
       const limit = options.limit;
       const offset = options.offset;
       const sort = options.sort;
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
       const filters = options.filters;
       const tableRef = sql.raw(`${REACTOR_SCHEMA}."${table}"`);
 
       // Build WHERE clause from filters
       let whereClause = sql``;
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+
       if (filters?.clauses && filters.clauses.length > 0) {
         const conditions: ReturnType<typeof sql>[] = [];
 
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         for (let i = 0; i < filters.clauses.length; i++) {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
           const clause = filters.clauses[i];
           if (!clause) continue;
 
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
           const columnRef = sql.raw(`"${clause.column}"`);
 
           let condition: ReturnType<typeof sql>;
 
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
           if (clause.operator === "IS NULL") {
             condition = sql`${columnRef} IS NULL`;
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
           } else if (clause.operator === "IS NOT NULL") {
             condition = sql`${columnRef} IS NOT NULL`;
           } else if (
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
             clause.operator === "LIKE" ||
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
             clause.operator === "ILIKE"
           ) {
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
             const value = clause.value;
             const operator =
-              // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
               clause.operator === "LIKE" ? sql`LIKE` : sql`ILIKE`;
             condition = sql`${columnRef} ${operator} ${value}`;
           } else {
             // For =, !=, >, <, >=, <=
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument
+
             const operator = sql.raw(clause.operator);
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
+
             const value = clause.value;
 
             // Try to parse as number if it looks like a number
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
             let parsedValue: string | number = value;
-            if (
-              value !== "" &&
-              !isNaN(Number(value)) &&
-              // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-              value.trim() !== ""
-            ) {
+            if (value !== "" && !isNaN(Number(value)) && value.trim() !== "") {
               parsedValue = Number(value);
             }
 
@@ -176,11 +162,10 @@ export function useDbExplorer() {
           conditions.push(condition);
 
           // Add connector if not the last clause
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+
           if (i < filters.clauses.length - 1) {
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
             const connector = filters.connectors?.[i] ?? "AND";
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+
             conditions.push(sql.raw(connector));
           }
         }

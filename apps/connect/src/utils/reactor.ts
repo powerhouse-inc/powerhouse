@@ -1,21 +1,21 @@
 import { PGlite } from "@electric-sql/pglite";
-import {
-  ConsoleLogger,
-  driveCollectionId,
-  GqlChannelFactory,
-  parseDriveUrl,
-  ReactorBuilder,
-  ReactorClientBuilder,
-  SyncBuilder,
-  type Database,
-  type ISyncManager,
-  type JwtHandler,
-  type ParsedDriveUrl,
-  type SignerConfig,
+import type {
+  Database,
+  ISyncManager,
+  JwtHandler,
+  ParsedDriveUrl,
+  SignerConfig,
 } from "@powerhousedao/reactor";
 import type { BrowserReactorClientModule } from "@powerhousedao/reactor-browser";
+import { driveCollectionId } from "@powerhousedao/reactor/cache/operation-index-types";
+import { ReactorBuilder } from "@powerhousedao/reactor/core/reactor-builder";
+import { ReactorClientBuilder } from "@powerhousedao/reactor/core/reactor-client-builder";
+import { parseDriveUrl } from "@powerhousedao/reactor/shared/drive-url";
+import { GqlChannelFactory } from "@powerhousedao/reactor/sync/channels/gql-channel-factory";
+import { SyncBuilder } from "@powerhousedao/reactor/sync/sync-builder";
 import { createSignatureVerifier, type IRenown } from "@renown/sdk";
 import type { DocumentModelModule, UpgradeManifest } from "document-model";
+import { ConsoleLogger } from "document-model";
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
 

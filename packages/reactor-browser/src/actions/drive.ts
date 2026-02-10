@@ -1,4 +1,5 @@
-import { driveCollectionId, parseDriveUrl } from "@powerhousedao/reactor";
+import { driveCollectionId } from "@powerhousedao/reactor/cache/operation-index-types";
+import { parseDriveUrl } from "@powerhousedao/reactor/shared/drive-url";
 import type {
   DocumentDriveDocument,
   DriveInput,

@@ -1,8 +1,6 @@
 import { Icon } from "@powerhousedao/design-system";
-import {
-  type SyncOperation,
-  SyncOperationStatus,
-} from "@powerhousedao/reactor";
+import type { SyncOperation } from "@powerhousedao/reactor";
+import { SyncOperationStatus } from "@powerhousedao/reactor/sync/types";
 import { useState } from "react";
 import { twMerge } from "tailwind-merge";
 import { ObjectInspectorModal } from "../../object-inspector-modal/index.js";

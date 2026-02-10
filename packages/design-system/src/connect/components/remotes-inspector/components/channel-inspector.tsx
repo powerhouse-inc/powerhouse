@@ -1,9 +1,7 @@
 import { Icon } from "@powerhousedao/design-system";
-import {
-  GqlChannel,
-  IntervalPollTimer,
-  type IChannel,
-} from "@powerhousedao/reactor";
+import type { IChannel } from "@powerhousedao/reactor";
+import { GqlChannel } from "@powerhousedao/reactor/sync/channels/gql-channel";
+import { IntervalPollTimer } from "@powerhousedao/reactor/sync/channels/interval-poll-timer";
 import { useCallback, useState } from "react";
 import { type SortDirection, type SortOptions } from "../utils.js";
 import { MailboxTable, type MailboxType } from "./mailbox-table.js";

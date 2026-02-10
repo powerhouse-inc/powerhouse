@@ -1,5 +1,5 @@
 import type { PGlite } from "@electric-sql/pglite";
-import { REACTOR_SCHEMA } from "@powerhousedao/reactor";
+import { REACTOR_SCHEMA } from "@powerhousedao/reactor/storage/migrations/migrator";
 
 async function dropTablesInSchema(pg: PGlite, schema: string): Promise<void> {
   await pg.exec(`

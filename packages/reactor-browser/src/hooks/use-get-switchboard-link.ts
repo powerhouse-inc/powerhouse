@@ -1,4 +1,5 @@
-import { driveCollectionId, GqlChannel } from "@powerhousedao/reactor";
+import { driveCollectionId } from "@powerhousedao/reactor/cache/operation-index-types";
+import { GqlChannel } from "@powerhousedao/reactor/sync/channels/gql-channel";
 import type { PHDocument } from "document-model";
 import { useMemo } from "react";
 import { buildDocumentSubgraphUrl } from "../utils/index.js";

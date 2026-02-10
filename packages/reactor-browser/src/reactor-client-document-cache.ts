@@ -2,7 +2,7 @@ import {
   DocumentChangeType,
   type DocumentChangeEvent,
   type IReactorClient,
-} from "@powerhousedao/reactor";
+} from "@powerhousedao/reactor/client/types";
 import type { PHDocument } from "document-model";
 import { addPromiseState, readPromiseState } from "./document-cache.js";
 import type {

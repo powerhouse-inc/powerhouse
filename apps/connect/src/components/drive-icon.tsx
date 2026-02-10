@@ -1,6 +1,6 @@
 import { Icon } from "@powerhousedao/design-system";
-import { driveCollectionId } from "@powerhousedao/reactor";
 import { useSyncList } from "@powerhousedao/reactor-browser/connect";
+import { driveCollectionId } from "@powerhousedao/reactor/cache/operation-index-types";
 import type { DocumentDriveDocument } from "document-drive";
 import { useMemo } from "react";
 

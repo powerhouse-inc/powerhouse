@@ -3,4 +3,4 @@ export {
   driveIdFromUrl,
   parseDriveUrl,
   type ParsedDriveUrl,
-} from "@powerhousedao/reactor";
+} from "@powerhousedao/reactor/shared/drive-url";

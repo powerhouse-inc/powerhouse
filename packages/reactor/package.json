@@ -9,7 +9,8 @@
   "type": "module",
   "types": "./dist/src/index.d.ts",
   "exports": {
-    ".": "./dist/src/index.js"
+    ".": "./dist/src/index.js",
+    "./*": "./dist/src/*.js"
   },
   "imports": {
     "#*": "./dist/src/*"

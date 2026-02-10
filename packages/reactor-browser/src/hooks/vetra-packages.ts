@@ -1,4 +1,4 @@
-import { DuplicateModuleError } from "@powerhousedao/reactor";
+import { DuplicateModuleError } from "@powerhousedao/reactor/registry/implementation";
 import type { VetraPackage } from "../types/vetra.js";
 import { makePHEventFunctions } from "./make-ph-event-functions.js";
 
