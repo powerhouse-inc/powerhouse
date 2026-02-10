@@ -264,6 +264,7 @@ describe("Subscription Filtering", () => {
           createdAtUtcIso: "2024-01-01T00:00:00Z",
           coordinates: [],
         },
+        meta: { batchId: "batch-1", batchJobIds: ["job-1"] },
       });
 
       const cleanup1 = ensureJobSubscription(mockReactorClient, "job-1");
@@ -285,6 +286,7 @@ describe("Subscription Filtering", () => {
           createdAtUtcIso: "2024-01-01T00:00:00Z",
           coordinates: [],
         },
+        meta: { batchId: "batch-1", batchJobIds: ["job-1"] },
       });
 
       const cleanup1 = ensureJobSubscription(mockReactorClient, "job-1");
