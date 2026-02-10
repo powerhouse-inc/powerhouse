@@ -2,7 +2,10 @@ import type { Size } from "@powerhousedao/design-system";
 import { getDimensions } from "@powerhousedao/design-system";
 import type { ComponentPropsWithoutRef, CSSProperties } from "react";
 
-const ConnectLoaderVideo = new URL('../../../../../assets/connect-loader.mp4', import.meta.url).href
+const ConnectLoaderVideo = new URL(
+  "../../../../../assets/connect-loader.mp4",
+  import.meta.url,
+).href;
 
 type Props = ComponentPropsWithoutRef<"video"> & {
   readonly size?: Size;
