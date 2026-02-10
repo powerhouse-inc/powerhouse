@@ -1,5 +1,9 @@
-const HomeBgAvif = new URL('../../../../../assets/home-bg.avif', import.meta.url).href
-const HomeBg = new URL('../../../../../assets/home-bg.png', import.meta.url).href
+const HomeBgAvif = new URL(
+  "../../../../../assets/home-bg.avif",
+  import.meta.url,
+).href;
+const HomeBg = new URL("../../../../../assets/home-bg.png", import.meta.url)
+  .href;
 
 export function HomeBackgroundImage() {
   return (
