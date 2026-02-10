@@ -1,17 +1,26 @@
+import { PGlite } from "@electric-sql/pglite";
 import type {
   IDocumentOperationStorage,
   IDocumentStorage,
 } from "document-drive";
 import type { DocumentModelModule, UpgradeManifest } from "document-model";
+import { Kysely } from "kysely";
+import { PGliteDialect } from "kysely-pglite-dialect";
 import { CollectionMembershipCache } from "../cache/collection-membership-cache.js";
 import { DocumentMetaCache } from "../cache/document-meta-cache.js";
 import { KyselyOperationIndex } from "../cache/kysely-operation-index.js";
 import { KyselyWriteCache } from "../cache/kysely-write-cache.js";
 import type { WriteCacheConfig } from "../cache/write-cache-types.js";
 import { EventBus } from "../events/event-bus.js";
+import type { IEventBus } from "../events/interfaces.js";
+import type { IJobExecutorManager } from "../executor/interfaces.js";
 import { SimpleJobExecutorManager } from "../executor/simple-job-executor-manager.js";
 import { SimpleJobExecutor } from "../executor/simple-job-executor.js";
+import type { JobExecutorConfig } from "../executor/types.js";
 import { InMemoryJobTracker } from "../job-tracker/in-memory-job-tracker.js";
+import { ConsoleLogger } from "../logging/console.js";
+import type { ILogger } from "../logging/types.js";
+import { ProcessorManager } from "../processors/processor-manager.js";
 import { InMemoryQueue } from "../queue/queue.js";
 import { ReadModelCoordinator } from "../read-models/coordinator.js";
 import { KyselyDocumentView } from "../read-models/document-view.js";
@@ -21,10 +30,19 @@ import type {
 } from "../read-models/interfaces.js";
 import { DocumentModelRegistry } from "../registry/implementation.js";
 import { ConsistencyTracker } from "../shared/consistency-tracker.js";
+import type { SignatureVerificationHandler } from "../signer/types.js";
 import { KyselyDocumentIndexer } from "../storage/kysely/document-indexer.js";
 import { KyselyKeyframeStore } from "../storage/kysely/keyframe-store.js";
 import { KyselyOperationStore } from "../storage/kysely/store.js";
 import type { Database as StorageDatabase } from "../storage/kysely/types.js";
+import {
+  REACTOR_SCHEMA,
+  runMigrations,
+} from "../storage/migrations/migrator.js";
+import type { MigrationStrategy } from "../storage/migrations/types.js";
+import { DefaultSubscriptionErrorHandler } from "../subs/default-error-handler.js";
+import { ReactorSubscriptionManager } from "../subs/react-subscription-manager.js";
+import { SubscriptionNotificationReadModel } from "../subs/subscription-notification-read-model.js";
 import type { SyncBuilder } from "../sync/sync-builder.js";
 import { Reactor } from "./reactor.js";
 import type {
@@ -34,25 +52,6 @@ import type {
   ReactorModule,
   SyncModule,
 } from "./types.js";
-
-import type { IJobExecutorManager } from "#executor/interfaces.js";
-import type { JobExecutorConfig } from "#executor/types.js";
-import { ConsoleLogger } from "#logging/console.js";
-import type { ILogger } from "#logging/types.js";
-import { PGlite } from "@electric-sql/pglite";
-import { Kysely } from "kysely";
-import { PGliteDialect } from "kysely-pglite-dialect";
-import type { IEventBus } from "../events/interfaces.js";
-import { ProcessorManager } from "../processors/processor-manager.js";
-import type { SignatureVerificationHandler } from "../signer/types.js";
-import {
-  REACTOR_SCHEMA,
-  runMigrations,
-} from "../storage/migrations/migrator.js";
-import type { MigrationStrategy } from "../storage/migrations/types.js";
-import { DefaultSubscriptionErrorHandler } from "../subs/default-error-handler.js";
-import { ReactorSubscriptionManager } from "../subs/react-subscription-manager.js";
-import { SubscriptionNotificationReadModel } from "../subs/subscription-notification-read-model.js";
 
 export class ReactorBuilder {
   private logger?: ILogger;

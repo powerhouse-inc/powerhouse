@@ -1,4 +1,4 @@
-import type { SignatureVerificationHandler } from "#index.js";
+import type { SignatureVerificationHandler } from "../../src/index.js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { IWriteCache } from "../../src/cache/write/interfaces.js";
 import { SimpleJobExecutor } from "../../src/executor/simple-job-executor.js";
