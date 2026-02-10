@@ -5,6 +5,7 @@ import {
   batchOperationsByDocument,
   createIdleHealth,
   filterOperations,
+  sortEnvelopesByFirstOperationTimestamp,
 } from "../../src/sync/utils.js";
 
 describe("filterOperations", () => {
@@ -445,5 +446,67 @@ describe("batchOperationsByDocument", () => {
       scope: "document",
     });
     expect(result[4].operations).toHaveLength(1);
+  });
+});
+
+describe("sortEnvelopesByFirstOperationTimestamp", () => {
+  function createEnvelope(timestampUtcMs?: string) {
+    if (timestampUtcMs === undefined) {
+      return { operations: [] };
+    }
+    return {
+      operations: [{ operation: { timestampUtcMs } }],
+    };
+  }
+
+  it("should sort envelopes by timestamp chronologically", () => {
+    const envelopes = [
+      createEnvelope("2023-03-15T12:00:00.000Z"),
+      createEnvelope("2023-01-01T00:00:00.000Z"),
+      createEnvelope("2023-02-10T06:30:00.000Z"),
+    ];
+
+    const result = sortEnvelopesByFirstOperationTimestamp(envelopes);
+
+    expect(result[0].operations![0].operation.timestampUtcMs).toBe(
+      "2023-01-01T00:00:00.000Z",
+    );
+    expect(result[1].operations![0].operation.timestampUtcMs).toBe(
+      "2023-02-10T06:30:00.000Z",
+    );
+    expect(result[2].operations![0].operation.timestampUtcMs).toBe(
+      "2023-03-15T12:00:00.000Z",
+    );
+  });
+
+  it("should place envelopes without operations at the end", () => {
+    const envelopes = [
+      createEnvelope(),
+      createEnvelope("2023-01-01T00:00:00.000Z"),
+      createEnvelope(),
+      createEnvelope("2023-02-01T00:00:00.000Z"),
+    ];
+
+    const result = sortEnvelopesByFirstOperationTimestamp(envelopes);
+
+    expect(result[0].operations![0].operation.timestampUtcMs).toBe(
+      "2023-01-01T00:00:00.000Z",
+    );
+    expect(result[1].operations![0].operation.timestampUtcMs).toBe(
+      "2023-02-01T00:00:00.000Z",
+    );
+    expect(result[2].operations).toHaveLength(0);
+    expect(result[3].operations).toHaveLength(0);
+  });
+
+  it("should handle envelopes where all lack operations", () => {
+    const envelopes = [createEnvelope(), createEnvelope(), createEnvelope()];
+
+    const result = sortEnvelopesByFirstOperationTimestamp(envelopes);
+
+    expect(result).toHaveLength(3);
+    for (const envelope of result) {
+      expect(envelope.operations).toHaveLength(0);
+    }
   });
 });
