@@ -1,3 +1,13 @@
+## 6.0.0-dev.38 (2026-02-10)
+
+### 🩹 Fixes
+
+- **reactor:** avoid browser breaking # import ([b444b86df](https://github.com/powerhouse-inc/powerhouse/commit/b444b86df))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 6.0.0-dev.37 (2026-02-10)
 
 ### 🚀 Features
