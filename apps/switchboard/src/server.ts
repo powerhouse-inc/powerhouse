@@ -272,7 +272,7 @@ async function initServer(
       useNewDocumentModelSubgraph: options.useNewDocumentModelSubgraph,
       legacyReactor,
     },
-    ["switchboard"],
+    "switchboard",
   );
 
   const { client, driveServer } = api;

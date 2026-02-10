@@ -19,7 +19,6 @@ import type {
   IProcessorManagerLegacy,
   IRelationalDbLegacy,
   ProcessorAppLegacy,
-  ProcessorAppsLegacy,
   ProcessorFactoryLegacy,
 } from "document-drive";
 import {
@@ -489,13 +488,13 @@ async function _setupAPI(
     freeEntry: boolean;
   },
   legacyReactor: boolean,
-  processorApps: ProcessorAppsLegacy,
+  processorApp: ProcessorAppLegacy,
   reactorProcessorManager?: IReactorProcessorManager,
 ): Promise<API> {
   const module: IProcessorHostModuleLegacy = {
     relationalDb,
     analyticsStore,
-    processorApps,
+    processorApp,
     config: options.processorConfig,
   };
   const mcpServerEnabled = options.mcp ?? true;
@@ -694,7 +693,7 @@ export async function startAPI(
   registry: IDocumentModelRegistry,
   syncManager: ISyncManager,
   options: Options,
-  processorApps: ProcessorAppsLegacy,
+  processorApp: ProcessorAppLegacy,
 ): Promise<API> {
   const {
     port,
@@ -745,7 +744,7 @@ export async function startAPI(
     options,
     auth,
     legacyReactor,
-    processorApps,
+    processorApp,
     undefined, // no reactorProcessorManager in legacy mode
   );
 }
@@ -770,7 +769,7 @@ export async function initializeAndStartAPI(
     documentModels: DocumentModelModule[],
   ) => Promise<ReactorClientModule>,
   options: Options,
-  processorApps: ProcessorAppsLegacy,
+  processorApp: ProcessorAppLegacy,
 ): Promise<
   API & {
     driveServer: IDocumentDriveServer;
@@ -837,7 +836,7 @@ export async function initializeAndStartAPI(
     options,
     auth,
     legacyReactor,
-    processorApps,
+    processorApp,
     reactorProcessorManager,
   );
 

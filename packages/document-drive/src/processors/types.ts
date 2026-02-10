@@ -45,7 +45,7 @@ export type ProcessorAppLegacy = ProcessorAppsLegacy[number];
 export interface IProcessorHostModuleLegacy {
   analyticsStore: IAnalyticsStore;
   relationalDb: IRelationalDbLegacy;
-  processorApps: ProcessorAppsLegacy;
+  processorApp: ProcessorAppLegacy;
   config?: Map<string, unknown>;
 }
 
