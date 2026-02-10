@@ -1,5 +1,5 @@
 import type { Job } from "../queue/types.js";
-import type { OperationWithContext } from "#storage/interfaces.js";
+import type { OperationWithContext } from "../storage/interfaces.js";
 
 /**
  * Describes a function to unsubscribe from an event.
