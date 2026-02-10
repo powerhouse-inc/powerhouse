@@ -2,6 +2,7 @@ import type { Operation } from "document-model";
 import {
   driveCollectionId,
   type IOperationIndex,
+  type OperationIndexEntry,
 } from "../cache/operation-index-types.js";
 import type {
   BatchLoadRequest,
@@ -67,6 +68,14 @@ type PendingBatch = {
   arrivedJobIds: Set<string>;
   events: JobWriteReadyEvent[];
 };
+
+type IndexSyncBuildOptions = {
+  maxOrdinal?: number;
+  sinceTimestampUtcMs?: string;
+  fallbackOperations?: OperationWithContext[];
+};
+
+const INDEX_PAGE_LIMIT = 500;
 
 export class SyncManager implements ISyncManager {
   private readonly logger: ILogger;
@@ -156,12 +165,12 @@ export class SyncManager implements ISyncManager {
 
     this.eventUnsubscribe = this.eventBus.subscribe<JobWriteReadyEvent>(
       ReactorEventTypes.JOB_WRITE_READY,
-      (_type, event) => this.enqueueWriteReady(event),
+      async (_type, event) => this.enqueueWriteReady(event),
     );
 
     this.failedEventUnsubscribe = this.eventBus.subscribe<JobFailedEvent>(
       ReactorEventTypes.JOB_FAILED,
-      (_type, event) => this.handleJobFailedForBatch(event),
+      async (_type, event) => this.handleJobFailedForBatch(event),
     );
   }
 
@@ -287,75 +296,31 @@ export class SyncManager implements ISyncManager {
     this.remotes.set(name, remote);
     this.wireChannelCallbacks(remote);
 
-    await this.backfillOutbox(
-      remote,
-      collectionId,
-      filter,
-      options.sinceTimestampUtcMs,
-    );
+    await this.backfillOutbox(remote, options.sinceTimestampUtcMs);
 
     return remote;
   }
 
   private async backfillOutbox(
     remote: Remote,
-    collectionId: string,
-    filter: RemoteFilter,
     sinceTimestampUtcMs: string,
   ): Promise<void> {
-    let historicalOps;
-    try {
-      historicalOps = await this.operationIndex.find(collectionId);
-    } catch {
+    const syncOps = await this.buildSyncOpsFromIndex(remote, "", [], {
+      sinceTimestampUtcMs,
+    });
+
+    if (syncOps.length === 0) {
       return;
     }
 
-    if (historicalOps.results.length === 0) {
-      return;
-    }
-
-    const opsWithContext = historicalOps.results.map((entry) => ({
-      operation: {
-        id: entry.id,
-        index: entry.index,
-        skip: entry.skip,
-        hash: entry.hash,
-        timestampUtcMs: entry.timestampUtcMs,
-        action: entry.action,
-      } as Operation,
-      context: {
-        documentId: entry.documentId,
-        documentType: entry.documentType,
-        scope: entry.scope,
-        branch: entry.branch,
-        ordinal: entry.ordinal ?? 0,
-      },
-    }));
-
-    let filteredOps = filterOperations(opsWithContext, filter);
-
-    filteredOps = filteredOps.filter(
-      (op) => op.operation.timestampUtcMs > sinceTimestampUtcMs,
-    );
-
-    if (filteredOps.length === 0) {
-      return;
-    }
-
-    const batches = batchOperationsByDocument(filteredOps);
-
-    for (const batch of batches) {
-      const syncOp = new SyncOperation(
-        crypto.randomUUID(),
-        "",
-        [],
-        remote.name,
-        batch.documentId,
-        [batch.scope],
-        batch.branch,
-        batch.operations,
-      );
+    let maxOrdinal = 0;
+    for (const syncOp of syncOps) {
       remote.channel.outbox.add(syncOp);
+      maxOrdinal = Math.max(maxOrdinal, this.getMaxOrdinal(syncOp.operations));
+    }
+
+    if (maxOrdinal > 0) {
+      await this.setOutboxCheckpoint(remote.name, maxOrdinal);
     }
   }
 
@@ -366,6 +331,7 @@ export class SyncManager implements ISyncManager {
     }
 
     await this.remoteStorage.remove(name);
+    await this.cursorStorage.remove(name);
 
     remote.channel.shutdown();
     this.remotes.delete(name);
@@ -391,26 +357,39 @@ export class SyncManager implements ISyncManager {
     });
   }
 
-  private enqueueWriteReady(event: JobWriteReadyEvent): void {
+  private async enqueueWriteReady(event: JobWriteReadyEvent): Promise<void> {
     this.writeReadyQueue.push(event);
-    void this.processWriteReadyQueue();
+    await this.processWriteReadyQueue();
   }
 
-  private processWriteReadyQueue(): void {
+  private async processWriteReadyQueue(): Promise<void> {
     if (this.processingWriteReady) {
       return;
     }
     this.processingWriteReady = true;
 
-    while (this.writeReadyQueue.length > 0) {
-      const event = this.writeReadyQueue.shift()!;
-      this.handleWriteReadyAsync(event);
+    try {
+      while (this.writeReadyQueue.length > 0) {
+        const event = this.writeReadyQueue.shift()!;
+        try {
+          await this.handleWriteReadyAsync(event);
+        } catch (error) {
+          const err = error instanceof Error ? error : new Error(String(error));
+          this.logger.error(
+            "Failed to process write-ready event (@jobId, @error)",
+            event.jobId,
+            err.message,
+          );
+        }
+      }
+    } finally {
+      this.processingWriteReady = false;
     }
-
-    this.processingWriteReady = false;
   }
 
-  private handleWriteReadyAsync(event: JobWriteReadyEvent): void {
+  private async handleWriteReadyAsync(
+    event: JobWriteReadyEvent,
+  ): Promise<void> {
     if (this.isShutdown) {
       return;
     }
@@ -418,7 +397,7 @@ export class SyncManager implements ISyncManager {
     const { batchId, batchJobIds } = event.jobMeta;
 
     if (batchJobIds.length <= 1) {
-      this.processCompleteBatch([event]);
+      await this.processCompleteBatch([event]);
       return;
     }
 
@@ -437,11 +416,11 @@ export class SyncManager implements ISyncManager {
 
     if (pending.arrivedJobIds.size >= pending.expectedJobIds.size) {
       this.pendingBatches.delete(batchId);
-      this.processCompleteBatch(pending.events);
+      await this.processCompleteBatch(pending.events);
     }
   }
 
-  private handleJobFailedForBatch(event: JobFailedEvent): void {
+  private async handleJobFailedForBatch(event: JobFailedEvent): Promise<void> {
     if (this.isShutdown) {
       return;
     }
@@ -458,110 +437,52 @@ export class SyncManager implements ISyncManager {
 
     this.pendingBatches.delete(batchId);
     if (pending.events.length > 0) {
-      void this.processCompleteBatch(pending.events);
+      await this.processCompleteBatch(pending.events);
     }
   }
 
-  private processCompleteBatch(events: JobWriteReadyEvent[]): void {
+  private async processCompleteBatch(
+    events: JobWriteReadyEvent[],
+  ): Promise<void> {
     const isBatch = events.length > 1;
 
-    const mergedMemberships: Record<string, string[]> = {};
-
-    for (const event of events) {
-      if (event.collectionMemberships) {
-        for (const [docId, collections] of Object.entries(
-          event.collectionMemberships,
-        )) {
-          if (!(docId in mergedMemberships)) {
-            mergedMemberships[docId] = [];
-          }
-          for (const c of collections) {
-            if (!mergedMemberships[docId].includes(c)) {
-              mergedMemberships[docId].push(c);
-            }
-          }
-        }
-      }
-
-      for (const op of event.operations) {
-        const action = op.operation.action as {
-          type: string;
-          input?: { sourceId?: string; targetId?: string };
-        };
-        if (action.type !== "ADD_RELATIONSHIP") {
-          continue;
-        }
-        const input = action.input;
-        if (!input?.sourceId || !input.targetId) {
-          continue;
-        }
-
-        const collectionId = driveCollectionId(
-          op.context.branch,
-          input.sourceId,
-        );
-        if (!(input.targetId in mergedMemberships)) {
-          mergedMemberships[input.targetId] = [];
-        }
-        if (!mergedMemberships[input.targetId].includes(collectionId)) {
-          mergedMemberships[input.targetId].push(collectionId);
-        }
-      }
-    }
+    const mergedMemberships = this.mergeCollectionMemberships(events);
 
     const priorJobIds: string[] = [];
 
     for (const event of events) {
       const sourceRemote = event.jobMeta.sourceRemote as string | undefined;
-      const syncOpsWithRemote: Array<{
-        syncOp: SyncOperation;
-        remote: Remote;
-      }> = [];
-      const remoteNames: string[] = [];
+      const jobDependencies = isBatch ? [...priorJobIds] : [];
+      const maxEventOrdinal = this.getMaxOrdinal(event.operations);
+      const remotePlans: Array<{ remote: Remote; syncOps: SyncOperation[] }> =
+        [];
 
-      for (const remote of this.remotes.values()) {
-        if (sourceRemote && remote.name === sourceRemote) {
-          continue;
-        }
+      for (const { remote, filteredOperations } of this.getAffectedRemotes(
+        event,
+        mergedMemberships,
+        sourceRemote,
+      )) {
+        const syncOps = await this.buildSyncOpsFromIndex(
+          remote,
+          event.jobId,
+          jobDependencies,
+          {
+            maxOrdinal: maxEventOrdinal > 0 ? maxEventOrdinal : undefined,
+            fallbackOperations: filteredOperations,
+          },
+        );
 
-        let filteredOps = filterOperations(event.operations, remote.filter);
-        if (filteredOps.length === 0) {
-          continue;
-        }
-
-        // If remote has empty documentId filter, it means "sync all docs in this collection"
-        // In this case, we need to filter by collection membership
-        if (remote.filter.documentId.length === 0) {
-          filteredOps = this.filterByCollectionMembership(
-            filteredOps,
-            remote.collectionId,
-            mergedMemberships,
-          );
-          if (filteredOps.length === 0) {
-            continue;
-          }
-        }
-
-        const batches = batchOperationsByDocument(filteredOps);
-
-        for (const batch of batches) {
-          const syncOp = new SyncOperation(
-            crypto.randomUUID(),
-            event.jobId,
-            isBatch ? [...priorJobIds] : [],
-            remote.name,
-            batch.documentId,
-            [batch.scope],
-            batch.branch,
-            batch.operations,
-          );
-
-          syncOpsWithRemote.push({ syncOp, remote });
-          if (!remoteNames.includes(remote.name)) {
-            remoteNames.push(remote.name);
-          }
+        if (syncOps.length > 0) {
+          remotePlans.push({ remote, syncOps });
         }
       }
+
+      const syncOpsWithRemote = remotePlans.flatMap((plan) =>
+        plan.syncOps.map((syncOp) => ({ syncOp, remote: plan.remote })),
+      );
+      const remoteNames = [
+        ...new Set(remotePlans.map((plan) => plan.remote.name)),
+      ];
 
       if (syncOpsWithRemote.length > 0 && event.jobId) {
         this.jobSyncStates.set(event.jobId, {
@@ -578,6 +499,7 @@ export class SyncManager implements ISyncManager {
         void this.eventBus.emit(SyncEventTypes.SYNC_PENDING, pendingEvent);
       }
 
+      const checkpointUpdates = new Map<string, number>();
       for (const { syncOp, remote } of syncOpsWithRemote) {
         syncOp.on((op, _prev, next) => {
           if (next === SyncOperationStatus.Applied) {
@@ -592,6 +514,15 @@ export class SyncManager implements ISyncManager {
         });
 
         remote.channel.outbox.add(syncOp);
+        const maxSyncOpOrdinal = this.getMaxOrdinal(syncOp.operations);
+        const previousMax = checkpointUpdates.get(remote.name) ?? 0;
+        if (maxSyncOpOrdinal > previousMax) {
+          checkpointUpdates.set(remote.name, maxSyncOpOrdinal);
+        }
+      }
+
+      for (const [remoteName, maxOrdinal] of checkpointUpdates) {
+        await this.setOutboxCheckpoint(remoteName, maxOrdinal);
       }
 
       if (isBatch && event.jobId) {
@@ -837,5 +768,269 @@ export class SyncManager implements ISyncManager {
       }
       return collectionMemberships[documentId].includes(collectionId);
     });
+  }
+
+  private async getPersistedOutboxCursor(remoteName: string): Promise<number> {
+    const cursor = await this.cursorStorage.get(remoteName, "outbox");
+    return cursor.cursorOrdinal;
+  }
+
+  private getOutboxTailOrdinal(remote: Remote): number {
+    const outboxItems = remote.channel.outbox.items;
+
+    let maxOrdinal = 0;
+    for (const syncOp of outboxItems) {
+      maxOrdinal = Math.max(maxOrdinal, this.getMaxOrdinal(syncOp.operations));
+    }
+    return maxOrdinal;
+  }
+
+  private async getOutboxCheckpoint(remote: Remote): Promise<number> {
+    const persisted = await this.getPersistedOutboxCursor(remote.name);
+    const outboxTail = this.getOutboxTailOrdinal(remote);
+    return Math.max(persisted, outboxTail);
+  }
+
+  private async setOutboxCheckpoint(
+    remoteName: string,
+    cursorOrdinal: number,
+  ): Promise<void> {
+    await this.cursorStorage.upsert({
+      remoteName,
+      cursorType: "outbox",
+      cursorOrdinal,
+      lastSyncedAtUtcMs: Date.now(),
+    });
+  }
+
+  private getMaxOrdinal(operations: OperationWithContext[]): number {
+    return operations.reduce(
+      (maxOrdinal, operation) =>
+        Math.max(maxOrdinal, operation.context.ordinal),
+      0,
+    );
+  }
+
+  private mergeCollectionMemberships(
+    events: JobWriteReadyEvent[],
+  ): Record<string, string[]> {
+    const mergedMemberships: Record<string, string[]> = {};
+
+    for (const event of events) {
+      if (event.collectionMemberships) {
+        for (const [docId, collections] of Object.entries(
+          event.collectionMemberships,
+        )) {
+          if (!(docId in mergedMemberships)) {
+            mergedMemberships[docId] = [];
+          }
+          for (const c of collections) {
+            if (!mergedMemberships[docId].includes(c)) {
+              mergedMemberships[docId].push(c);
+            }
+          }
+        }
+      }
+
+      for (const op of event.operations) {
+        const action = op.operation.action as {
+          type: string;
+          input?: { sourceId?: string; targetId?: string };
+        };
+        if (action.type !== "ADD_RELATIONSHIP") {
+          continue;
+        }
+        const input = action.input;
+        if (!input?.sourceId || !input.targetId) {
+          continue;
+        }
+
+        const collectionId = driveCollectionId(
+          op.context.branch,
+          input.sourceId,
+        );
+        if (!(input.targetId in mergedMemberships)) {
+          mergedMemberships[input.targetId] = [];
+        }
+        if (!mergedMemberships[input.targetId].includes(collectionId)) {
+          mergedMemberships[input.targetId].push(collectionId);
+        }
+      }
+    }
+
+    return mergedMemberships;
+  }
+
+  private getAffectedRemotes(
+    event: JobWriteReadyEvent,
+    mergedMemberships: Record<string, string[]>,
+    sourceRemote?: string,
+  ): Array<{ remote: Remote; filteredOperations: OperationWithContext[] }> {
+    const affected: Array<{
+      remote: Remote;
+      filteredOperations: OperationWithContext[];
+    }> = [];
+
+    for (const remote of this.remotes.values()) {
+      if (sourceRemote && remote.name === sourceRemote) {
+        continue;
+      }
+
+      let filteredOps = filterOperations(event.operations, remote.filter);
+      if (filteredOps.length === 0) {
+        continue;
+      }
+
+      if (remote.filter.documentId.length === 0) {
+        filteredOps = this.filterByCollectionMembership(
+          filteredOps,
+          remote.collectionId,
+          mergedMemberships,
+        );
+        if (filteredOps.length === 0) {
+          continue;
+        }
+      }
+
+      affected.push({ remote, filteredOperations: filteredOps });
+    }
+
+    return affected;
+  }
+
+  private async buildSyncOpsFromIndex(
+    remote: Remote,
+    jobId: string,
+    jobDependencies: string[],
+    options: IndexSyncBuildOptions = {},
+  ): Promise<SyncOperation[]> {
+    const checkpoint = await this.getOutboxCheckpoint(remote);
+    let operations = await this.findRemoteOperationsSince(
+      remote,
+      checkpoint,
+      options,
+    );
+
+    if (operations.length === 0 && options.fallbackOperations) {
+      operations = options.fallbackOperations.filter((op) => {
+        if (op.context.ordinal <= checkpoint) {
+          return false;
+        }
+
+        if (
+          options.sinceTimestampUtcMs &&
+          op.operation.timestampUtcMs <= options.sinceTimestampUtcMs
+        ) {
+          return false;
+        }
+
+        if (
+          options.maxOrdinal !== undefined &&
+          op.context.ordinal > options.maxOrdinal
+        ) {
+          return false;
+        }
+
+        return true;
+      });
+    }
+
+    if (operations.length === 0) {
+      return [];
+    }
+
+    operations.sort((a, b) => a.context.ordinal - b.context.ordinal);
+    const batches = batchOperationsByDocument(operations);
+
+    return batches.map(
+      (batch) =>
+        new SyncOperation(
+          crypto.randomUUID(),
+          jobId,
+          [...jobDependencies],
+          remote.name,
+          batch.documentId,
+          [batch.scope],
+          batch.branch,
+          batch.operations,
+        ),
+    );
+  }
+
+  private async findRemoteOperationsSince(
+    remote: Remote,
+    checkpointOrdinal: number,
+    options: IndexSyncBuildOptions,
+  ): Promise<OperationWithContext[]> {
+    const operations: OperationWithContext[] = [];
+    let page = await this.operationIndex.find(
+      remote.collectionId,
+      checkpointOrdinal,
+      undefined,
+      {
+        cursor: "0",
+        limit: INDEX_PAGE_LIMIT,
+      },
+    );
+
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+    while (true) {
+      const pageOperations = filterOperations(
+        page.results.map((entry) => this.toOperationWithContext(entry)),
+        remote.filter,
+      ).filter((op) => {
+        if (op.context.ordinal <= checkpointOrdinal) {
+          return false;
+        }
+
+        if (
+          options.sinceTimestampUtcMs &&
+          op.operation.timestampUtcMs <= options.sinceTimestampUtcMs
+        ) {
+          return false;
+        }
+
+        if (
+          options.maxOrdinal !== undefined &&
+          op.context.ordinal > options.maxOrdinal
+        ) {
+          return false;
+        }
+
+        return true;
+      });
+
+      operations.push(...pageOperations);
+
+      if (!page.next) {
+        break;
+      }
+
+      page = await page.next();
+    }
+
+    return operations;
+  }
+
+  private toOperationWithContext(
+    entry: OperationIndexEntry,
+  ): OperationWithContext {
+    return {
+      operation: {
+        id: entry.id,
+        index: entry.index,
+        skip: entry.skip,
+        hash: entry.hash,
+        timestampUtcMs: entry.timestampUtcMs,
+        action: entry.action,
+      } as Operation,
+      context: {
+        documentId: entry.documentId,
+        documentType: entry.documentType,
+        scope: entry.scope,
+        branch: entry.branch,
+        ordinal: entry.ordinal ?? 0,
+      },
+    };
   }
 }

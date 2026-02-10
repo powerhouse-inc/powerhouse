@@ -72,6 +72,7 @@ const createMockCursorStorage = (
   const mockGet = vi.fn();
   mockGet.mockResolvedValue({
     remoteName,
+    cursorType: "inbox",
     cursorOrdinal: 0,
   });
   return {
@@ -446,6 +447,7 @@ describe("GqlChannel", () => {
       const cursorStorage = createMockCursorStorage();
       vi.mocked(cursorStorage.get).mockResolvedValue({
         remoteName: "remote-1",
+        cursorType: "inbox",
         cursorOrdinal: 42,
         lastSyncedAtUtcMs: Date.now(),
       });
@@ -479,6 +481,7 @@ describe("GqlChannel", () => {
       const cursorStorage = createMockCursorStorage();
       vi.mocked(cursorStorage.get).mockResolvedValue({
         remoteName: "remote-1",
+        cursorType: "inbox",
         cursorOrdinal: 0,
       });
 

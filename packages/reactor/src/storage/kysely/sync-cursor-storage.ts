@@ -7,6 +7,7 @@ import type { Database, InsertableSyncCursor, SyncCursorRow } from "./types.js";
 function rowToRemoteCursor(row: SyncCursorRow): RemoteCursor {
   return {
     remoteName: row.remote_name,
+    cursorType: row.cursor_type as "inbox" | "outbox",
     cursorOrdinal: Number(row.cursor_ordinal),
     lastSyncedAtUtcMs: row.last_synced_at_utc_ms
       ? new Date(row.last_synced_at_utc_ms).getTime()
@@ -17,6 +18,7 @@ function rowToRemoteCursor(row: SyncCursorRow): RemoteCursor {
 function remoteCursorToRow(cursor: RemoteCursor): InsertableSyncCursor {
   return {
     remote_name: cursor.remoteName,
+    cursor_type: cursor.cursorType,
     cursor_ordinal: BigInt(cursor.cursorOrdinal),
     last_synced_at_utc_ms: cursor.lastSyncedAtUtcMs
       ? new Date(cursor.lastSyncedAtUtcMs).toISOString()
@@ -48,7 +50,11 @@ export class KyselySyncCursorStorage implements ISyncCursorStorage {
     return rows.map(rowToRemoteCursor);
   }
 
-  async get(remoteName: string, signal?: AbortSignal): Promise<RemoteCursor> {
+  async get(
+    remoteName: string,
+    cursorType: "inbox" | "outbox",
+    signal?: AbortSignal,
+  ): Promise<RemoteCursor> {
     if (signal?.aborted) {
       throw new Error("Operation aborted");
     }
@@ -57,6 +63,7 @@ export class KyselySyncCursorStorage implements ISyncCursorStorage {
       .selectFrom("sync_cursors")
       .selectAll()
       .where("remote_name", "=", remoteName)
+      .where("cursor_type", "=", cursorType)
       .executeTakeFirst();
 
     if (signal?.aborted) {
@@ -66,6 +73,7 @@ export class KyselySyncCursorStorage implements ISyncCursorStorage {
     if (!row) {
       return {
         remoteName,
+        cursorType,
         cursorOrdinal: 0,
       };
     }
@@ -85,7 +93,7 @@ export class KyselySyncCursorStorage implements ISyncCursorStorage {
         .insertInto("sync_cursors")
         .values(insertable)
         .onConflict((oc) =>
-          oc.column("remote_name").doUpdateSet({
+          oc.columns(["remote_name", "cursor_type"]).doUpdateSet({
             ...insertable,
             updated_at: sql`NOW()`,
           }),

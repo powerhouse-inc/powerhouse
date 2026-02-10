@@ -116,6 +116,9 @@ describe("SyncManager Backfill", () => {
       expect(sentEnvelopes[0].operations).toHaveLength(1);
       expect(sentEnvelopes[0].operations![0].operation.id).toBe("op1");
       expect(remote.channel.outbox.items).toHaveLength(0);
+
+      const outboxCursor = await syncCursorStorage.get("remote1", "outbox");
+      expect(outboxCursor.cursorOrdinal).toBeGreaterThan(0);
     });
 
     it("should not backfill when collection has no operations", async () => {
@@ -213,6 +216,91 @@ describe("SyncManager Backfill", () => {
       expect(sentEnvelopes[0].operations).toHaveLength(1);
       expect(sentEnvelopes[0].operations![0].operation.id).toBe("op1");
       expect(remote.channel.outbox.items).toHaveLength(0);
+    });
+
+    it("should respect sinceTimestampUtcMs and persist backfill checkpoint", async () => {
+      await syncManager.startup();
+
+      const driveId = "test-drive-3";
+      const collectionId = driveCollectionId("main", driveId);
+
+      const olderOp: Operation = {
+        id: "op-old",
+        index: 0,
+        skip: 0,
+        hash: "hash-old",
+        timestampUtcMs: "2023-01-01T00:00:00.000Z",
+        action: {
+          type: "CREATE_DOCUMENT",
+          scope: "global",
+          id: "action-old",
+          timestampUtcMs: "2023-01-01T00:00:00.000Z",
+          input: {},
+        },
+      };
+
+      const newerOp: Operation = {
+        id: "op-new",
+        index: 1,
+        skip: 0,
+        hash: "hash-new",
+        timestampUtcMs: "2023-01-01T00:00:02.000Z",
+        action: {
+          type: "UPDATE",
+          scope: "global",
+          id: "action-new",
+          timestampUtcMs: "2023-01-01T00:00:02.000Z",
+          input: {},
+        },
+      };
+
+      const txn = operationIndex.start();
+      txn.write([
+        {
+          ...olderOp,
+          documentId: driveId,
+          documentType: "powerhouse/document-drive",
+          branch: "main",
+          scope: "global",
+        },
+      ]);
+      txn.createCollection(collectionId);
+      txn.addToCollection(collectionId, driveId);
+      await operationIndex.commit(txn);
+
+      const txn2 = operationIndex.start();
+      txn2.write([
+        {
+          ...newerOp,
+          documentId: driveId,
+          documentType: "powerhouse/document-drive",
+          branch: "main",
+          scope: "global",
+        },
+      ]);
+      const newOrdinals = await operationIndex.commit(txn2);
+      const newestOrdinal = newOrdinals[0];
+
+      const channelConfig: ChannelConfig = {
+        type: "internal",
+        parameters: {},
+      };
+
+      const remote = await syncManager.add(
+        "remote1",
+        collectionId,
+        channelConfig,
+        undefined,
+        { sinceTimestampUtcMs: "2023-01-01T00:00:01.000Z" },
+      );
+
+      expect(sentEnvelopes).toHaveLength(1);
+      expect(sentEnvelopes[0].operations).toHaveLength(1);
+      expect(sentEnvelopes[0].operations![0].operation.id).toBe("op-new");
+      expect(remote.channel.outbox.items).toHaveLength(0);
+
+      const outboxCursor = await syncCursorStorage.get("remote1", "outbox");
+      expect(outboxCursor.cursorOrdinal).toBe(newestOrdinal);
     });
   });
 });

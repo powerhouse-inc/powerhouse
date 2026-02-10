@@ -38,6 +38,7 @@ describe("SyncManager - Unit Tests", () => {
 
     mockChannel = {
       inbox: {
+        items: [],
         add: vi.fn(),
         remove: vi.fn(),
         get: vi.fn(),
@@ -45,6 +46,7 @@ describe("SyncManager - Unit Tests", () => {
         onRemoved: vi.fn(),
       },
       outbox: {
+        items: [],
         add: vi.fn(),
         remove: vi.fn(),
         get: vi.fn(),
@@ -52,6 +54,7 @@ describe("SyncManager - Unit Tests", () => {
         onRemoved: vi.fn(),
       },
       deadLetter: {
+        items: [],
         add: vi.fn(),
         remove: vi.fn(),
         get: vi.fn(),
@@ -71,7 +74,11 @@ describe("SyncManager - Unit Tests", () => {
 
     mockCursorStorage = {
       list: vi.fn().mockResolvedValue([]),
-      get: vi.fn().mockResolvedValue({ remoteName: "", cursorOrdinal: 0 }),
+      get: vi.fn().mockResolvedValue({
+        remoteName: "",
+        cursorType: "outbox",
+        cursorOrdinal: 0,
+      }),
       upsert: vi.fn().mockResolvedValue(undefined),
       remove: vi.fn().mockResolvedValue(undefined),
     };
@@ -128,6 +135,19 @@ describe("SyncManager - Unit Tests", () => {
   afterEach(() => {
     vi.clearAllMocks();
   });
+
+  const waitForSyncQueue = async (): Promise<void> => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  };
+
+  const emitWriteReady = async (data: any): Promise<void> => {
+    const subscriber = eventSubscribers.get(ReactorEventTypes.JOB_WRITE_READY);
+    if (!subscriber) {
+      return;
+    }
+    subscriber(ReactorEventTypes.JOB_WRITE_READY, data);
+    await waitForSyncQueue();
+  };
 
   describe("startup", () => {
     it("should load remotes from storage and recreate channels", async () => {
@@ -345,6 +365,7 @@ describe("SyncManager - Unit Tests", () => {
 
       expect(mockChannel.shutdown).toHaveBeenCalled();
       expect(mockRemoteStorage.remove).toHaveBeenCalledWith("remote1");
+      expect(mockCursorStorage.remove).toHaveBeenCalledWith("remote1");
       expect(syncManager.list()).toHaveLength(0);
     });
 
@@ -453,18 +474,252 @@ describe("SyncManager - Unit Tests", () => {
         },
       ];
 
-      const subscriber = eventSubscribers.get(
-        ReactorEventTypes.JOB_WRITE_READY,
-      );
-      expect(subscriber).toBeDefined();
-
-      subscriber!(ReactorEventTypes.JOB_WRITE_READY, {
+      await emitWriteReady({
         jobId: "auto-job-1",
         operations,
         jobMeta: { batchId: "auto-1", batchJobIds: ["auto-job-1"] },
       });
 
       expect(mockChannel.outbox.add).toHaveBeenCalled();
+    });
+
+    it("should query index for affected remotes and enqueue indexed operations", async () => {
+      await syncManager.startup();
+
+      const channelConfig: ChannelConfig = {
+        type: "internal",
+        parameters: {},
+      };
+
+      await syncManager.add("remote1", "collection1", channelConfig, {
+        documentId: ["doc1", "doc2"],
+        scope: ["global"],
+        branch: "main",
+      });
+
+      vi.mocked(mockOperationIndex.find).mockClear();
+      vi.mocked(mockCursorStorage.get).mockClear();
+      vi.mocked(mockCursorStorage.upsert).mockClear();
+      vi.mocked(mockChannel.outbox.add).mockClear();
+
+      vi.mocked(mockOperationIndex.find).mockResolvedValueOnce({
+        results: [
+          {
+            id: "index-missed-op",
+            index: 0,
+            skip: 0,
+            hash: "hash-index-missed",
+            timestampUtcMs: "1000",
+            action: {
+              id: "action-index-missed",
+              type: "CREATE",
+              scope: "global",
+              timestampUtcMs: "1000",
+              input: {},
+            },
+            documentId: "doc1",
+            documentType: "test",
+            scope: "global",
+            branch: "main",
+            ordinal: 1,
+          },
+          {
+            id: "index-trigger-op",
+            index: 1,
+            skip: 0,
+            hash: "hash-index-trigger",
+            timestampUtcMs: "2000",
+            action: {
+              id: "action-index-trigger",
+              type: "UPDATE",
+              scope: "global",
+              timestampUtcMs: "2000",
+              input: {},
+            },
+            documentId: "doc2",
+            documentType: "test",
+            scope: "global",
+            branch: "main",
+            ordinal: 2,
+          },
+        ],
+        options: { cursor: "0", limit: 500 },
+      });
+
+      await emitWriteReady({
+        jobId: "job-index-enqueue",
+        operations: [
+          {
+            operation: {
+              id: "payload-only-op",
+              index: 0,
+              skip: 0,
+              hash: "hash-payload-only",
+              timestampUtcMs: "2000",
+              action: { type: "UPDATE", scope: "global" } as any,
+            },
+            context: {
+              documentId: "doc2",
+              documentType: "test",
+              scope: "global",
+              branch: "main",
+              ordinal: 2,
+            },
+          },
+        ],
+        jobMeta: {
+          batchId: "auto-job-index-enqueue",
+          batchJobIds: ["job-index-enqueue"],
+        },
+      });
+
+      expect(mockOperationIndex.find).toHaveBeenCalledWith(
+        "collection1",
+        0,
+        undefined,
+        {
+          cursor: "0",
+          limit: 500,
+        },
+      );
+      expect(mockCursorStorage.get).toHaveBeenCalledWith("remote1", "outbox");
+      expect(mockCursorStorage.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          remoteName: "remote1",
+          cursorType: "outbox",
+          cursorOrdinal: 2,
+        }),
+      );
+
+      const enqueuedOperationIds = vi
+        .mocked(mockChannel.outbox.add)
+        .mock.calls.flatMap(([syncOp]) =>
+          (syncOp as any).operations.map(
+            (operation: OperationWithContext) => operation.operation.id,
+          ),
+        );
+
+      expect(enqueuedOperationIds).toContain("index-missed-op");
+      expect(enqueuedOperationIds).toContain("index-trigger-op");
+      expect(enqueuedOperationIds).not.toContain("payload-only-op");
+    });
+
+    it("should anchor index query from max persisted cursor and outbox tail", async () => {
+      await syncManager.startup();
+
+      const channelConfig: ChannelConfig = {
+        type: "internal",
+        parameters: {},
+      };
+
+      await syncManager.add("remote1", "collection1", channelConfig, {
+        documentId: ["doc1"],
+        scope: ["global"],
+        branch: "main",
+      });
+
+      (mockChannel.outbox as any).items = [
+        {
+          operations: [
+            {
+              operation: {
+                id: "tail-op",
+                index: 0,
+                skip: 0,
+                hash: "tail-hash",
+                timestampUtcMs: "9000",
+                action: { type: "CREATE", scope: "global" },
+              },
+              context: {
+                documentId: "doc1",
+                documentType: "test",
+                scope: "global",
+                branch: "main",
+                ordinal: 9,
+              },
+            },
+          ],
+        },
+      ];
+
+      vi.mocked(mockOperationIndex.find).mockClear();
+      vi.mocked(mockCursorStorage.get).mockClear();
+      vi.mocked(mockCursorStorage.get).mockResolvedValue({
+        remoteName: "remote1",
+        cursorType: "outbox",
+        cursorOrdinal: 5,
+      });
+      vi.mocked(mockCursorStorage.upsert).mockClear();
+
+      vi.mocked(mockOperationIndex.find).mockResolvedValueOnce({
+        results: [
+          {
+            id: "index-op-10",
+            index: 0,
+            skip: 0,
+            hash: "hash-index-10",
+            timestampUtcMs: "10000",
+            action: {
+              id: "action-index-10",
+              type: "UPDATE",
+              scope: "global",
+              timestampUtcMs: "10000",
+              input: {},
+            },
+            documentId: "doc1",
+            documentType: "test",
+            scope: "global",
+            branch: "main",
+            ordinal: 10,
+          },
+        ],
+        options: { cursor: "0", limit: 500 },
+      });
+
+      await emitWriteReady({
+        jobId: "job-checkpoint-max",
+        operations: [
+          {
+            operation: {
+              id: "event-op-10",
+              index: 0,
+              skip: 0,
+              hash: "hash-event-10",
+              timestampUtcMs: "10000",
+              action: { type: "UPDATE", scope: "global" } as any,
+            },
+            context: {
+              documentId: "doc1",
+              documentType: "test",
+              scope: "global",
+              branch: "main",
+              ordinal: 10,
+            },
+          },
+        ],
+        jobMeta: {
+          batchId: "auto-job-checkpoint-max",
+          batchJobIds: ["job-checkpoint-max"],
+        },
+      });
+
+      expect(mockOperationIndex.find).toHaveBeenCalledWith(
+        "collection1",
+        9,
+        undefined,
+        {
+          cursor: "0",
+          limit: 500,
+        },
+      );
+      expect(mockCursorStorage.get).toHaveBeenCalledWith("remote1", "outbox");
+      expect(mockCursorStorage.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          remoteName: "remote1",
+          cursorType: "outbox",
+          cursorOrdinal: 10,
+        }),
+      );
     });
 
     it("should not route operations that do not match filter", async () => {
@@ -501,10 +756,7 @@ describe("SyncManager - Unit Tests", () => {
         },
       ];
 
-      const subscriber = eventSubscribers.get(
-        ReactorEventTypes.JOB_WRITE_READY,
-      );
-      subscriber!(ReactorEventTypes.JOB_WRITE_READY, {
+      await emitWriteReady({
         jobId: "auto-job-1",
         operations,
         jobMeta: { batchId: "auto-1", batchJobIds: ["auto-job-1"] },
@@ -545,16 +797,11 @@ describe("SyncManager - Unit Tests", () => {
         },
       ];
 
-      const subscriber = eventSubscribers.get(
-        ReactorEventTypes.JOB_WRITE_READY,
-      );
-      if (subscriber) {
-        subscriber(ReactorEventTypes.JOB_WRITE_READY, {
-          jobId: "auto-job-1",
-          operations,
-          jobMeta: { batchId: "auto-1", batchJobIds: ["auto-job-1"] },
-        });
-      }
+      await emitWriteReady({
+        jobId: "auto-job-1",
+        operations,
+        jobMeta: { batchId: "auto-1", batchJobIds: ["auto-job-1"] },
+      });
 
       expect(mockChannel.outbox.add).not.toHaveBeenCalled();
     });
@@ -593,12 +840,7 @@ describe("SyncManager - Unit Tests", () => {
         },
       ];
 
-      const subscriber = eventSubscribers.get(
-        ReactorEventTypes.JOB_WRITE_READY,
-      );
-      expect(subscriber).toBeDefined();
-
-      subscriber!(ReactorEventTypes.JOB_WRITE_READY, {
+      await emitWriteReady({
         jobId: "test-job-1",
         operations,
         jobMeta: { batchId: "auto-test-job-1", batchJobIds: ["test-job-1"] },
@@ -609,6 +851,104 @@ describe("SyncManager - Unit Tests", () => {
         expect.objectContaining({
           jobId: "test-job-1",
           syncOperationCount: 1,
+          remoteNames: ["remote1"],
+        } as SyncPendingEvent),
+      );
+    });
+
+    it("should include catch-up sync operations in SYNC_PENDING counts", async () => {
+      await syncManager.startup();
+
+      const channelConfig: ChannelConfig = {
+        type: "internal",
+        parameters: {},
+      };
+
+      await syncManager.add("remote1", "collection1", channelConfig, {
+        documentId: ["doc1", "doc2"],
+        scope: ["global"],
+        branch: "main",
+      });
+
+      vi.mocked(mockOperationIndex.find).mockClear();
+      vi.mocked(mockChannel.outbox.add).mockClear();
+
+      vi.mocked(mockOperationIndex.find).mockResolvedValueOnce({
+        results: [
+          {
+            id: "catchup-op",
+            index: 0,
+            skip: 0,
+            hash: "catchup-hash",
+            timestampUtcMs: "1000",
+            action: {
+              id: "action-catchup",
+              type: "CREATE",
+              scope: "global",
+              timestampUtcMs: "1000",
+              input: {},
+            },
+            documentId: "doc1",
+            documentType: "test",
+            scope: "global",
+            branch: "main",
+            ordinal: 1,
+          },
+          {
+            id: "trigger-op",
+            index: 1,
+            skip: 0,
+            hash: "trigger-hash",
+            timestampUtcMs: "2000",
+            action: {
+              id: "action-trigger",
+              type: "UPDATE",
+              scope: "global",
+              timestampUtcMs: "2000",
+              input: {},
+            },
+            documentId: "doc2",
+            documentType: "test",
+            scope: "global",
+            branch: "main",
+            ordinal: 2,
+          },
+        ],
+        options: { cursor: "0", limit: 500 },
+      });
+
+      await emitWriteReady({
+        jobId: "job-catchup-count",
+        operations: [
+          {
+            operation: {
+              id: "event-trigger",
+              index: 1,
+              skip: 0,
+              hash: "event-trigger-hash",
+              timestampUtcMs: "2000",
+              action: { type: "UPDATE", scope: "global" } as any,
+            },
+            context: {
+              documentId: "doc2",
+              documentType: "test",
+              scope: "global",
+              branch: "main",
+              ordinal: 2,
+            },
+          },
+        ],
+        jobMeta: {
+          batchId: "auto-job-catchup-count",
+          batchJobIds: ["job-catchup-count"],
+        },
+      });
+
+      expect(mockEventBus.emit).toHaveBeenCalledWith(
+        SyncEventTypes.SYNC_PENDING,
+        expect.objectContaining({
+          jobId: "job-catchup-count",
+          syncOperationCount: 2,
           remoteNames: ["remote1"],
         } as SyncPendingEvent),
       );
@@ -661,10 +1001,7 @@ describe("SyncManager - Unit Tests", () => {
         }
       });
 
-      const subscriber = eventSubscribers.get(
-        ReactorEventTypes.JOB_WRITE_READY,
-      );
-      subscriber!(ReactorEventTypes.JOB_WRITE_READY, {
+      await emitWriteReady({
         jobId: "test-job-2",
         operations,
         jobMeta: { batchId: "auto-test-job-2", batchJobIds: ["test-job-2"] },
@@ -733,10 +1070,7 @@ describe("SyncManager - Unit Tests", () => {
         }
       });
 
-      const subscriber = eventSubscribers.get(
-        ReactorEventTypes.JOB_WRITE_READY,
-      );
-      subscriber!(ReactorEventTypes.JOB_WRITE_READY, {
+      await emitWriteReady({
         jobId: "test-job-3",
         operations,
         jobMeta: { batchId: "auto-test-job-3", batchJobIds: ["test-job-3"] },
@@ -850,18 +1184,14 @@ describe("SyncManager - Unit Tests", () => {
         },
       ];
 
-      const subscriber = eventSubscribers.get(
-        ReactorEventTypes.JOB_WRITE_READY,
-      );
-
-      subscriber!(ReactorEventTypes.JOB_WRITE_READY, {
+      await emitWriteReady({
         jobId: "j1",
         operations: event1Operations,
         jobMeta: { batchId, batchJobIds },
         collectionMemberships: { [targetDocId]: [collectionId] },
       });
 
-      subscriber!(ReactorEventTypes.JOB_WRITE_READY, {
+      await emitWriteReady({
         jobId: "j2",
         operations: event2Operations,
         jobMeta: { batchId, batchJobIds },
@@ -929,10 +1259,7 @@ describe("SyncManager - Unit Tests", () => {
         },
       ];
 
-      const subscriber = eventSubscribers.get(
-        ReactorEventTypes.JOB_WRITE_READY,
-      );
-      subscriber!(ReactorEventTypes.JOB_WRITE_READY, {
+      await emitWriteReady({
         jobId: "test-job",
         operations: addRelationshipOps,
         jobMeta: { batchId: "auto-test-job", batchJobIds: ["test-job"] },
@@ -1013,17 +1340,13 @@ describe("SyncManager - Unit Tests", () => {
         },
       ];
 
-      const subscriber = eventSubscribers.get(
-        ReactorEventTypes.JOB_WRITE_READY,
-      );
-
       // Emit both events quickly
-      subscriber!(ReactorEventTypes.JOB_WRITE_READY, {
+      await emitWriteReady({
         jobId: "job1",
         operations: event1Operations,
         jobMeta: { batchId: "auto-job1", batchJobIds: ["job1"] },
       });
-      subscriber!(ReactorEventTypes.JOB_WRITE_READY, {
+      await emitWriteReady({
         jobId: "job2",
         operations: event2Operations,
         jobMeta: { batchId: "auto-job2", batchJobIds: ["job2"] },
@@ -1071,10 +1394,6 @@ describe("SyncManager - Unit Tests", () => {
       ];
 
       // Shutdown immediately after emitting event
-      const subscriber = eventSubscribers.get(
-        ReactorEventTypes.JOB_WRITE_READY,
-      );
-
       // Shutdown first, then emit - the event should not be processed
       syncManager.shutdown();
 
@@ -1082,16 +1401,14 @@ describe("SyncManager - Unit Tests", () => {
       vi.mocked(mockChannel.outbox.add).mockClear();
 
       // This event should not be processed since we're shutdown
-      if (subscriber) {
-        subscriber(ReactorEventTypes.JOB_WRITE_READY, {
-          jobId: "post-shutdown-job",
-          operations,
-          jobMeta: {
-            batchId: "auto-post-shutdown-job",
-            batchJobIds: ["post-shutdown-job"],
-          },
-        });
-      }
+      await emitWriteReady({
+        jobId: "post-shutdown-job",
+        operations,
+        jobMeta: {
+          batchId: "auto-post-shutdown-job",
+          batchJobIds: ["post-shutdown-job"],
+        },
+      });
 
       await new Promise((resolve) => setTimeout(resolve, 20));
 
@@ -1158,11 +1475,7 @@ describe("SyncManager - Unit Tests", () => {
         },
       ];
 
-      const subscriber = eventSubscribers.get(
-        ReactorEventTypes.JOB_WRITE_READY,
-      );
-
-      subscriber!(ReactorEventTypes.JOB_WRITE_READY, {
+      await emitWriteReady({
         jobId: "j1",
         operations: event1Operations,
         jobMeta: { batchId, batchJobIds },
@@ -1171,7 +1484,7 @@ describe("SyncManager - Unit Tests", () => {
       await new Promise((resolve) => setTimeout(resolve, 10));
       expect(mockChannel.outbox.add).not.toHaveBeenCalled();
 
-      subscriber!(ReactorEventTypes.JOB_WRITE_READY, {
+      await emitWriteReady({
         jobId: "j2",
         operations: event2Operations,
         jobMeta: { batchId, batchJobIds },
@@ -1215,11 +1528,7 @@ describe("SyncManager - Unit Tests", () => {
         },
       ];
 
-      const subscriber = eventSubscribers.get(
-        ReactorEventTypes.JOB_WRITE_READY,
-      );
-
-      subscriber!(ReactorEventTypes.JOB_WRITE_READY, {
+      await emitWriteReady({
         jobId: "j1",
         operations,
         jobMeta: { batchId: "batch-single", batchJobIds: ["j1"] },
@@ -1263,11 +1572,7 @@ describe("SyncManager - Unit Tests", () => {
         },
       ];
 
-      const subscriber = eventSubscribers.get(
-        ReactorEventTypes.JOB_WRITE_READY,
-      );
-
-      subscriber!(ReactorEventTypes.JOB_WRITE_READY, {
+      await emitWriteReady({
         jobId: "j1",
         operations,
         jobMeta: { batchId: "auto-1", batchJobIds: ["j1"] },
@@ -1314,11 +1619,7 @@ describe("SyncManager - Unit Tests", () => {
         },
       ];
 
-      const subscriber = eventSubscribers.get(
-        ReactorEventTypes.JOB_WRITE_READY,
-      );
-
-      subscriber!(ReactorEventTypes.JOB_WRITE_READY, {
+      await emitWriteReady({
         jobId: "j1",
         operations,
         jobMeta: { batchId, batchJobIds },
@@ -1414,18 +1715,14 @@ describe("SyncManager - Unit Tests", () => {
         },
       ];
 
-      const subscriber = eventSubscribers.get(
-        ReactorEventTypes.JOB_WRITE_READY,
-      );
-
-      subscriber!(ReactorEventTypes.JOB_WRITE_READY, {
+      await emitWriteReady({
         jobId: "j1",
         operations: event1Operations,
         jobMeta: { batchId, batchJobIds },
         collectionMemberships: { [targetDocId]: [collectionId] },
       });
 
-      subscriber!(ReactorEventTypes.JOB_WRITE_READY, {
+      await emitWriteReady({
         jobId: "j2",
         operations: event2Operations,
         jobMeta: { batchId, batchJobIds },
@@ -1503,12 +1800,8 @@ describe("SyncManager - Unit Tests", () => {
         },
       ];
 
-      const subscriber = eventSubscribers.get(
-        ReactorEventTypes.JOB_WRITE_READY,
-      );
-
       // Event 1 only knows about doc-a's membership
-      subscriber!(ReactorEventTypes.JOB_WRITE_READY, {
+      await emitWriteReady({
         jobId: "j1",
         operations: event1Operations,
         jobMeta: { batchId, batchJobIds },
@@ -1516,7 +1809,7 @@ describe("SyncManager - Unit Tests", () => {
       });
 
       // Event 2 only knows about doc-b's membership
-      subscriber!(ReactorEventTypes.JOB_WRITE_READY, {
+      await emitWriteReady({
         jobId: "j2",
         operations: event2Operations,
         jobMeta: { batchId, batchJobIds },
@@ -1591,17 +1884,13 @@ describe("SyncManager - Unit Tests", () => {
         addedSyncOps.push(syncOp);
       });
 
-      const subscriber = eventSubscribers.get(
-        ReactorEventTypes.JOB_WRITE_READY,
-      );
-
-      subscriber!(ReactorEventTypes.JOB_WRITE_READY, {
+      await emitWriteReady({
         jobId: "j1",
         operations: event1Operations,
         jobMeta: { batchId, batchJobIds },
       });
 
-      subscriber!(ReactorEventTypes.JOB_WRITE_READY, {
+      await emitWriteReady({
         jobId: "j2",
         operations: event2Operations,
         jobMeta: { batchId, batchJobIds },
@@ -1653,12 +1942,8 @@ describe("SyncManager - Unit Tests", () => {
         },
       ];
 
-      const subscriber = eventSubscribers.get(
-        ReactorEventTypes.JOB_WRITE_READY,
-      );
-
       // Send first event of the batch
-      subscriber!(ReactorEventTypes.JOB_WRITE_READY, {
+      await emitWriteReady({
         jobId: "j1",
         operations: event1Operations,
         jobMeta: { batchId, batchJobIds },
