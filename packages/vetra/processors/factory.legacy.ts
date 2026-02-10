@@ -4,18 +4,17 @@ import { vetraReadModelProcessorFactoryLegacy } from "./vetra-read-model/factory
  */
 
 import type {
-  IProcessorHostModule,
-  ProcessorFactory,
-  ProcessorRecord,
+  IProcessorHostModuleLegacy,
+  ProcessorFactoryLegacy,
+  ProcessorRecordLegacy,
 } from "document-drive";
 import type { PHDocumentHeader } from "document-model";
 
-// Import other processor factories here as they are generated
 import { codegenProcessorFactoryLegacy } from "./codegen/factory.legacy.js";
 
-export const processorFactoryLegacy = (module: IProcessorHostModule) => {
+export const processorFactoryLegacy = (module: IProcessorHostModuleLegacy) => {
   // Initialize all processor factories once with the module
-  const factories: Array<ProcessorFactory> = [];
+  const factories: Array<ProcessorFactoryLegacy> = [];
 
   // Add all processor factories
   factories.push(vetraReadModelProcessorFactoryLegacy(module));
@@ -25,7 +24,7 @@ export const processorFactoryLegacy = (module: IProcessorHostModule) => {
 
   // Return the inner function that will be called for each drive
   return async (driveHeader: PHDocumentHeader) => {
-    const processors: ProcessorRecord[] = [];
+    const processors: ProcessorRecordLegacy[] = [];
 
     // Call each cached factory with the driveHeader
     for (const factory of factories) {

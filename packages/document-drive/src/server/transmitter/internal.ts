@@ -1,7 +1,7 @@
 import type {
   IBaseDocumentDriveServer,
   IDocumentDriveServer,
-  IProcessor,
+  IProcessorLegacy,
   ITransmitter,
   InternalOperationUpdate,
   ListenerRevision,
@@ -17,13 +17,13 @@ import { deriveOperationId } from "document-model/core";
 
 export class InternalTransmitter implements ITransmitter {
   protected drive: IBaseDocumentDriveServer;
-  protected processor: IProcessor;
+  protected processor: IProcessorLegacy;
   protected taskQueueMethod: RunAsap<unknown> | null;
   protected transmitQueue: Promise<ListenerRevision[]> | undefined;
 
   constructor(
     drive: IDocumentDriveServer,
-    processor: IProcessor,
+    processor: IProcessorLegacy,
     taskQueueMethod?: RunAsap<unknown> | null,
   ) {
     this.drive = drive;

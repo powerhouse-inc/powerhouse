@@ -1,5 +1,8 @@
-import type { ProcessorRecord } from "@powerhousedao/reactor";
-import type { IProcessorHostModule, IRelationalDb } from "document-drive";
+import type {
+  IProcessorHostModule,
+  ProcessorRecord,
+} from "@powerhousedao/reactor";
+import type { IRelationalDbLegacy } from "document-drive";
 import type { PHDocumentHeader } from "document-model";
 import { VetraReadModelProcessor } from "./index.js";
 import { up } from "./migrations.js";
@@ -12,7 +15,7 @@ export const vetraReadModelProcessorFactory =
     const db = await module.relationalDb.createNamespace<DB>("vetra-packages");
 
     // Run migrations (idempotent - uses ifNotExists)
-    await up(db as IRelationalDb<DB>);
+    await up(db as IRelationalDbLegacy<DB>);
 
     // Create the processor with the relational database
     const processor = new VetraReadModelProcessor(db);

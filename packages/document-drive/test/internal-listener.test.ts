@@ -1,4 +1,4 @@
-import type { IProcessor, ServerListener } from "document-drive";
+import type { IProcessorLegacy, ServerListener } from "document-drive";
 import {
   addFile,
   driveDocumentModelModule,
@@ -23,7 +23,7 @@ describe("Internal Listener", () => {
     driveDocumentModelModule,
   ] as DocumentModelModule<any>[];
 
-  async function buildServer(processor: IProcessor) {
+  async function buildServer(processor: IProcessorLegacy) {
     const builder = new ReactorBuilder(documentModels);
     const server = builder.build();
     await server.initialize();

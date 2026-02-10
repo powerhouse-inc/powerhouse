@@ -8,6 +8,7 @@ import {
   formatSourceFileWithPrettier,
   getOrCreateSourceFile,
 } from "@powerhousedao/codegen/utils";
+import type { ProcessorApp, ProcessorApps } from "@powerhousedao/common/clis";
 import { camelCase, paramCase, pascalCase } from "change-case";
 import path from "path";
 import { ts, type Project } from "ts-morph";
@@ -19,10 +20,15 @@ export async function tsMorphGenerateProcessor(args: {
   documentTypes: string[];
   rootDir: string;
   processorType: "relationalDb" | "analytics";
-  processorApp: "switchboard" | "connect";
+  processorApps: ProcessorApps;
 }) {
-  const { processorName, documentTypes, rootDir, processorType, processorApp } =
-    args;
+  const {
+    processorName,
+    documentTypes,
+    rootDir,
+    processorType,
+    processorApps,
+  } = args;
   const paramCaseName = paramCase(processorName);
   const camelCaseName = camelCase(processorName);
   const pascalCaseName = pascalCase(processorName);
@@ -60,28 +66,30 @@ export async function tsMorphGenerateProcessor(args: {
   }
 
   await updateIndexFile({ processorsDirPath, project });
-  await updateFactoryFile({
-    processorsDirPath,
-    project,
-    camelCaseName,
-    dirPath,
-    processorApp,
-  });
-  await updateAppProcessorsFile({
-    processorsDirPath,
-    processorApp,
-    project,
-    dirPath,
-    pascalCaseName,
-    camelCaseName,
-  });
+  for (const processorApp of processorApps) {
+    await updateFactoryFile({
+      processorsDirPath,
+      project,
+      camelCaseName,
+      dirPath,
+      processorApp,
+    });
+    await updateAppProcessorsFile({
+      processorsDirPath,
+      processorApp,
+      project,
+      dirPath,
+      pascalCaseName,
+      camelCaseName,
+    });
+  }
   await project.save();
 }
 
 async function updateAppProcessorsFile(args: {
   project: Project;
   processorsDirPath: string;
-  processorApp: "switchboard" | "connect";
+  processorApp: ProcessorApp;
   dirPath: string;
   pascalCaseName: string;
   camelCaseName: string;
@@ -158,7 +166,7 @@ async function updateIndexFile(v: {
 async function updateFactoryFile(v: {
   project: Project;
   processorsDirPath: string;
-  processorApp: "switchboard" | "connect";
+  processorApp: ProcessorApp;
   dirPath: string;
   camelCaseName: string;
 }) {

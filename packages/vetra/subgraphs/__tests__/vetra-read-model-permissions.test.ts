@@ -6,9 +6,12 @@
 /* eslint-disable @typescript-eslint/require-await */
 /* eslint-disable @typescript-eslint/unbound-method */
 /* eslint-disable no-unsafe-optional-chaining */
-import type { BaseSubgraph, Context } from "@powerhousedao/reactor-api";
-import type { DocumentPermissionService } from "@powerhousedao/reactor-api";
-import type { IRelationalDb } from "document-drive";
+import type {
+  BaseSubgraph,
+  Context,
+  DocumentPermissionService,
+} from "@powerhousedao/reactor-api";
+import type { IRelationalDbLegacy } from "document-drive";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getResolvers } from "../vetra-read-model/resolvers.js";
 
@@ -34,7 +37,7 @@ import { VetraReadModelProcessorLegacy } from "../../processors/vetra-read-model
 describe("VetraReadModel Subgraph Permission Checks", () => {
   let mockSubgraph: Partial<BaseSubgraph>;
   let mockDocumentPermissionService: Partial<DocumentPermissionService>;
-  let mockRelationalDb: Partial<IRelationalDb>;
+  let mockRelationalDb: Partial<IRelationalDbLegacy>;
   let resolvers: ReturnType<typeof getResolvers>;
 
   // Mock package data
@@ -129,11 +132,11 @@ describe("VetraReadModel Subgraph Permission Checks", () => {
     };
 
     // Create mock relational database
-    mockRelationalDb = {} as IRelationalDb;
+    mockRelationalDb = {} as IRelationalDbLegacy;
 
     // Create mock subgraph
     mockSubgraph = {
-      relationalDb: mockRelationalDb as IRelationalDb,
+      relationalDb: mockRelationalDb as IRelationalDbLegacy,
       documentPermissionService:
         mockDocumentPermissionService as DocumentPermissionService,
       reactorClient: {
@@ -292,7 +295,7 @@ describe("VetraReadModel Subgraph Permission Checks", () => {
       it("should return empty results when no permission service and no global access", async () => {
         setupMockQuery(mockPackages);
         const subgraphWithoutService = {
-          relationalDb: mockRelationalDb as IRelationalDb,
+          relationalDb: mockRelationalDb as IRelationalDbLegacy,
           documentPermissionService: undefined,
           reactorClient: mockSubgraph.reactorClient,
         };
@@ -312,7 +315,7 @@ describe("VetraReadModel Subgraph Permission Checks", () => {
       it("should return all results with global role even without permission service", async () => {
         setupMockQuery(mockPackages);
         const subgraphWithoutService = {
-          relationalDb: mockRelationalDb as IRelationalDb,
+          relationalDb: mockRelationalDb as IRelationalDbLegacy,
           documentPermissionService: undefined,
           reactorClient: mockSubgraph.reactorClient,
         };

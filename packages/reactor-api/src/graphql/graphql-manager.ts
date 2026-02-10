@@ -20,7 +20,7 @@ import type {
 } from "@powerhousedao/reactor-api";
 import bodyParser from "body-parser";
 import cors from "cors";
-import type { IDocumentDriveServer, IRelationalDb } from "document-drive";
+import type { IDocumentDriveServer, IRelationalDbLegacy } from "document-drive";
 import { childLogger, debounce } from "document-drive";
 import type { DocumentModelModule } from "document-model";
 import type express from "express";
@@ -151,7 +151,7 @@ export class GraphQLManager {
     private readonly wsServer: WebSocketServer,
     private readonly reactor: IDocumentDriveServer,
     private readonly reactorClient: IReactorClient,
-    private readonly relationalDb: IRelationalDb,
+    private readonly relationalDb: IRelationalDbLegacy,
     private readonly analyticsStore: IAnalyticsStore,
     private readonly syncManager: ISyncManager,
     private readonly authConfig?: AuthConfig,

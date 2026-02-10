@@ -9,13 +9,13 @@ export const analyticsFactoryTemplate = (v: {
   ts`
 import type { 
   ProcessorRecord, 
-  ReactorContext,
   IProcessorHostModule
-} from "document-drive";
+} from "@powerhousedao/reactor";
 import { type PHDocumentHeader } from "document-model";
+import type { ProcessorApp } from "@powerhousedao/common";
 import { ${v.pascalCaseName}Processor } from "./index.js";
 
-export const ${v.camelCaseName}ProcessorFactory = (module: IProcessorHostModule) => (driveHeader: PHDocumentHeader, context?: ReactorContext): ProcessorRecord[] => {
+export const ${v.camelCaseName}ProcessorFactory = (module: IProcessorHostModule) => (driveHeader: PHDocumentHeader, processorApp?: ProcessorApp): ProcessorRecord[] => {
   return [
     {
       processor: new ${v.pascalCaseName}Processor(module.analyticsStore),

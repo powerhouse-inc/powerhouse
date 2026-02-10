@@ -1,3 +1,4 @@
+import type { Type } from "cmd-ts";
 import {
   array,
   boolean,
@@ -9,7 +10,31 @@ import {
   positional,
   string,
 } from "cmd-ts";
+import { PROCESSOR_APPS } from "../constants.js";
+import type { ProcessorApp, ProcessorApps } from "../types.js";
 import { debugArgs, useHygen } from "./common.js";
+
+const ProcessorAppType: Type<string[], ProcessorApps> = {
+  from(processorApps) {
+    if (processorApps.length === 0) {
+      throw new Error(
+        `No arguments provided for processor apps. Must be "connect" and/or "switchboard"`,
+      );
+    }
+    if (processorApps.length > 2) {
+      throw new Error(
+        `Too many arguments provided for processor apps. Must be "connect" and/or "switchboard"`,
+      );
+    }
+    const allowed = new Set(PROCESSOR_APPS);
+    if (!processorApps.every((p) => allowed.has(p as ProcessorApp))) {
+      throw new Error(
+        `Processor apps can only be "connect" and/or "switchboard".`,
+      );
+    }
+    return Promise.resolve(processorApps as ProcessorApps);
+  },
+};
 
 export const generateArgs = {
   documentModelFilePositional: positional({
@@ -78,11 +103,11 @@ export const generateArgs = {
     defaultValue: () => "analytics" as const,
     defaultValueIsSerializable: true,
   }),
-  processorApp: option({
-    type: oneOf(["connect", "switchboard"] as const),
-    long: "app",
-    description: "The app where the generated processor will run",
-    defaultValue: () => "switchboard" as const,
+  processorApps: multioption({
+    long: "processor-apps",
+    type: ProcessorAppType,
+    description: "The apps where the generated processor will run",
+    defaultValue: () => ["switchboard" as const],
     defaultValueIsSerializable: true,
   }),
   subgraphName: option({

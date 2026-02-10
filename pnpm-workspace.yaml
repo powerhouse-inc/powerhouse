@@ -6,3 +6,6 @@ packages:
   - "packages/reactor/test/atlas"
   - "scripts/*"
   - "!releases"
+
+catalog:
+  "@powerhousedao/analytics-engine-core": 0.5.0

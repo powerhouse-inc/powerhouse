@@ -31,7 +31,7 @@ export async function startGenerate(options: GenerateArgs) {
     disableDragAndDrop,
     processorName,
     processorType,
-    processorApp,
+    processorApps,
     importScriptName,
     migrationFile,
     schemaFile,
@@ -92,7 +92,7 @@ export async function startGenerate(options: GenerateArgs) {
       processorType,
       skipFormat,
       useTsMorph,
-      processorApp,
+      processorApps,
       documentTypes: [documentTypeToUse].filter((t) => t !== undefined),
     });
   } else if (subgraphName !== undefined) {

@@ -1,5 +1,8 @@
-import type { ProcessorFactory, ProcessorRecord } from "@powerhousedao/reactor";
-import type { IProcessorHostModule } from "document-drive";
+import type {
+  IProcessorHostModule,
+  ProcessorFactory,
+  ProcessorRecord,
+} from "@powerhousedao/reactor";
 import type { PHDocumentHeader } from "document-model";
 import { codegenProcessorFactory } from "./codegen/factory.js";
 import { vetraReadModelProcessorFactory } from "./vetra-read-model/factory.js";
@@ -22,7 +25,7 @@ export const processorFactory = (module: IProcessorHostModule) => {
 
     // Call each cached factory with the driveHeader
     for (const factory of factories) {
-      processors.push(...(await factory(driveHeader)));
+      processors.push(...(await factory(driveHeader, module.processorApp)));
     }
 
     return processors;

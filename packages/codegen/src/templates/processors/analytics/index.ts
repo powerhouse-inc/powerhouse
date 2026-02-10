@@ -5,8 +5,7 @@ export const analyticsIndexTemplate = (v: { pascalCaseName: string }) =>
   ts`
 import type { AnalyticsSeriesInput, IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import { AnalyticsPath } from "@powerhousedao/analytics-engine-core";
-import type { InternalTransmitterUpdate, IProcessor } from "document-drive";
-import type { OperationWithContext } from "@powerhousedao/reactor";
+import type { OperationWithContext, IProcessor } from "@powerhousedao/reactor";
 
 export class ${v.pascalCaseName}Processor implements IProcessor {
   private readonly NAMESPACE = "${v.pascalCaseName}";
@@ -23,39 +22,6 @@ export class ${v.pascalCaseName}Processor implements IProcessor {
 
   onDisconnect(): Promise<void> {
     return Promise.resolve();
-  }
-
-  async onStrands(strands: InternalTransmitterUpdate[]): Promise<void> {
-    if (strands.length === 0) {
-      return;
-    }
-
-    for (const strand of strands) {
-      if (strand.operations.length === 0) {
-        continue;
-      }
-
-      const source = AnalyticsPath.fromString(
-        ${analyticsPathFromString},
-      );
-
-      // clear source if we have already inserted these analytics
-      const firstOp = strand.operations[0];
-      if (firstOp.index === 0) {
-        await this.clearSource(source);
-      }
-
-      for (const operation of strand.operations) {
-        // this.inputs.push( ... );
-      }
-    }
-
-    // batch insert
-    if (this.inputs.length > 0) {
-      await this.analyticsStore.addSeriesValues(this.inputs);
-
-      this.inputs.length = 0;
-    }
   }
 
   private async clearSource(source: AnalyticsPath) {

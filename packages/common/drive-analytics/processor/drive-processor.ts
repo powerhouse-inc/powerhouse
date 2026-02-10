@@ -3,7 +3,10 @@ import type {
   IAnalyticsStore,
 } from "@powerhousedao/analytics-engine-core";
 import { AnalyticsPath } from "@powerhousedao/analytics-engine-core";
-import type { InternalTransmitterUpdate, IProcessor } from "document-drive";
+import type {
+  InternalTransmitterUpdate,
+  IProcessorLegacy,
+} from "document-drive";
 import { childLogger } from "document-drive";
 import { DateTime } from "luxon";
 import type { ActionType, NodeTarget } from "./types.js";
@@ -24,7 +27,7 @@ const NODE_ACTIONS = [
 
 type NodeActionInput = { id?: string; targetId?: string; srcFolder?: string };
 
-export class DriveAnalyticsProcessor implements IProcessor {
+export class DriveAnalyticsProcessor implements IProcessorLegacy {
   constructor(
     private readonly analyticsStore: IAnalyticsStore,
     private readonly logger = childLogger(["processor", "drive-analytics"]),

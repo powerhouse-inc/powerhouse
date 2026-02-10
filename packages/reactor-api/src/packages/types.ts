@@ -1,5 +1,8 @@
 import type { SubgraphClass } from "@powerhousedao/reactor-api";
-import type { IProcessorHostModule, ProcessorFactory } from "document-drive";
+import type {
+  IProcessorHostModuleLegacy,
+  ProcessorFactoryLegacy,
+} from "document-drive";
 import type { DocumentModelModule } from "document-model";
 
 export interface IPackageLoader {
@@ -14,7 +17,9 @@ export interface IPackageLoader {
   loadProcessors(
     identifier: string,
     immediate?: boolean,
-  ): Promise<((module: IProcessorHostModule) => ProcessorFactory) | null>;
+  ): Promise<
+    ((module: IProcessorHostModuleLegacy) => ProcessorFactoryLegacy) | null
+  >;
 }
 
 export interface ISubscriptionOptions {
@@ -35,7 +40,9 @@ export interface ISubscribablePackageLoader extends IPackageLoader {
   onProcessorsChange?(
     identifier: string,
     handler: (
-      processors: ((module: IProcessorHostModule) => ProcessorFactory) | null,
+      processors:
+        | ((module: IProcessorHostModuleLegacy) => ProcessorFactoryLegacy)
+        | null,
     ) => void,
     options?: ISubscriptionOptions,
   ): () => void;
@@ -70,6 +77,6 @@ export type PackageManagerResult = {
   subgraphs: Map<string, SubgraphClass[]>;
   processors: Map<
     string,
-    ((module: IProcessorHostModule) => ProcessorFactory)[]
+    ((module: IProcessorHostModuleLegacy) => ProcessorFactoryLegacy)[]
   >;
 };

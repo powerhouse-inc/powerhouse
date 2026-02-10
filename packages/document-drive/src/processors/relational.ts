@@ -1,13 +1,13 @@
 import type {
   InternalTransmitterUpdate,
-  IProcessor,
-  IRelationalDb,
-  IRelationalDbProcessor,
-  IRelationalQueryBuilder,
-  RelationalDbProcessorClass,
-  RelationalDbProcessorFilter,
+  IProcessorLegacy,
+  IRelationalDbLegacy,
+  IRelationalDbProcessorLegacy,
+  IRelationalQueryBuilderLegacy,
+  RelationalDbProcessorClassLegacy,
+  RelationalDbProcessorFilterLegacy,
 } from "document-drive";
-import { relationalDbToQueryBuilder } from "./utils.js";
+import { relationalDbToQueryBuilderLegacy } from "./utils.js";
 
 const IS_RELATIONAL_DB_PROCESSOR = Symbol.for("ph.IS_RELATIONAL_DB_PROCESSOR");
 
@@ -16,18 +16,18 @@ const IS_RELATIONAL_DB_PROCESSOR = Symbol.for("ph.IS_RELATIONAL_DB_PROCESSOR");
  * This class abstracts database initialization, migration management, and resource cleanup,
  * allowing derived classes to focus on business logic.
  */
-export abstract class RelationalDbProcessor<TDatabaseSchema = unknown>
-  implements IRelationalDbProcessor<TDatabaseSchema>
+export abstract class RelationalDbProcessorLegacy<TDatabaseSchema = unknown>
+  implements IRelationalDbProcessorLegacy<TDatabaseSchema>
 {
   constructor(
     protected _namespace: string,
-    protected _filter: RelationalDbProcessorFilter,
-    protected relationalDb: IRelationalDb<TDatabaseSchema>,
+    protected _filter: RelationalDbProcessorFilterLegacy,
+    protected relationalDb: IRelationalDbLegacy<TDatabaseSchema>,
   ) {}
 
   static [IS_RELATIONAL_DB_PROCESSOR] = true;
 
-  static is(p: unknown): p is RelationalDbProcessor {
+  static is(p: unknown): p is RelationalDbProcessorLegacy {
     let proto = Object.getPrototypeOf(p);
     while (proto) {
       if (proto.constructor?.[IS_RELATIONAL_DB_PROCESSOR]) return true;
@@ -46,10 +46,10 @@ export abstract class RelationalDbProcessor<TDatabaseSchema = unknown>
   }
 
   static query<Schema>(
-    this: RelationalDbProcessorClass<Schema>,
+    this: RelationalDbProcessorClassLegacy<Schema>,
     driveId: string,
-    db: IRelationalDb<any>,
-  ): IRelationalQueryBuilder<Schema> {
+    db: IRelationalDbLegacy<any>,
+  ): IRelationalQueryBuilderLegacy<Schema> {
     return db.queryNamespace(this.getNamespace(driveId));
   }
 
@@ -57,7 +57,7 @@ export abstract class RelationalDbProcessor<TDatabaseSchema = unknown>
    * Returns the filter for the processor.
    * This method can be overridden by derived classes to provide a custom filter.
    */
-  get filter(): RelationalDbProcessorFilter {
+  get filter(): RelationalDbProcessorFilterLegacy {
     return this._filter;
   }
 
@@ -68,8 +68,8 @@ export abstract class RelationalDbProcessor<TDatabaseSchema = unknown>
     return this._namespace;
   }
 
-  get query(): IRelationalQueryBuilder<TDatabaseSchema> {
-    return relationalDbToQueryBuilder(this.relationalDb);
+  get query(): IRelationalQueryBuilderLegacy<TDatabaseSchema> {
+    return relationalDbToQueryBuilderLegacy(this.relationalDb);
   }
 
   /**
@@ -92,7 +92,7 @@ export abstract class RelationalDbProcessor<TDatabaseSchema = unknown>
 }
 
 export function isRelationalDbProcessor(
-  p: IProcessor,
-): p is IRelationalDbProcessor {
-  return RelationalDbProcessor.is(p);
+  p: IProcessorLegacy,
+): p is IRelationalDbProcessorLegacy {
+  return RelationalDbProcessorLegacy.is(p);
 }

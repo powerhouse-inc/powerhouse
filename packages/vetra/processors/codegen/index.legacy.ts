@@ -1,5 +1,8 @@
 import { getConfig } from "@powerhousedao/config/node";
-import type { InternalTransmitterUpdate, IProcessor } from "document-drive";
+import type {
+  InternalTransmitterUpdate,
+  IProcessorLegacy,
+} from "document-drive";
 import type { DocumentCodegenManager } from "./document-handlers/document-codegen-manager.js";
 import { DocumentCodegenFactory } from "./document-handlers/index.js";
 import { logger } from "./logger.js";
@@ -7,7 +10,7 @@ import { logger } from "./logger.js";
 const PH_CONFIG = getConfig();
 const CURRENT_WORKING_DIR = process.cwd();
 
-export class CodegenProcessorLegacy implements IProcessor {
+export class CodegenProcessorLegacy implements IProcessorLegacy {
   private manager: DocumentCodegenManager;
 
   constructor(interactiveMode = false) {

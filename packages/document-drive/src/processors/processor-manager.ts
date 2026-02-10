@@ -1,9 +1,9 @@
 import type {
   IDocumentDriveServer,
   IListenerManager,
-  IProcessorManager,
-  ProcessorFactory,
-  ProcessorRecord,
+  IProcessorManagerLegacy,
+  ProcessorFactoryLegacy,
+  ProcessorRecordLegacy,
   ServerListener,
 } from "document-drive";
 import { InternalTransmitter } from "document-drive/server/transmitter/internal";
@@ -11,14 +11,14 @@ import { childLogger } from "document-drive/utils/logger";
 import { generateId } from "document-model/core";
 import { isRelationalDbProcessor } from "./relational.js";
 
-export class ProcessorManager implements IProcessorManager {
+export class ProcessorManagerLegacy implements IProcessorManagerLegacy {
   private readonly logger = childLogger([
     "document-drive",
     "processor-manager",
   ]);
 
-  private processorsByDrive = new Map<string, ProcessorRecord[]>();
-  private idToFactory = new Map<string, ProcessorFactory>();
+  private processorsByDrive = new Map<string, ProcessorRecordLegacy[]>();
+  private idToFactory = new Map<string, ProcessorFactoryLegacy>();
   private identifierToListeners = new Map<string, ServerListener[]>();
 
   constructor(
@@ -30,7 +30,7 @@ export class ProcessorManager implements IProcessorManager {
 
   async registerFactory(
     identifier: string,
-    factory: ProcessorFactory,
+    factory: ProcessorFactoryLegacy,
   ): Promise<void> {
     this.logger.debug("Registering factory '@identifier'.", identifier);
 
@@ -77,7 +77,7 @@ export class ProcessorManager implements IProcessorManager {
   async createProcessors(
     driveId: string,
     identifier: string,
-    factory: ProcessorFactory,
+    factory: ProcessorFactoryLegacy,
   ) {
     const drive = await this.drive.getDrive(driveId);
 
@@ -94,7 +94,7 @@ export class ProcessorManager implements IProcessorManager {
     }
 
     // don't let the factory throw, we want to continue with the rest of the processors
-    let processors: ProcessorRecord[] = [];
+    let processors: ProcessorRecordLegacy[] = [];
     try {
       processors = await factory(drive.header);
     } catch (e) {

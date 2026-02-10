@@ -158,18 +158,25 @@ const startServer = async (
   const packageLoader = vite ? VitePackageLoader.build(vite) : undefined;
 
   // start api
-  const api = await startAPI(driveServer, client, registry, syncManager, {
-    port: serverPort,
-    dbPath,
-    https: options?.https,
-    packageLoader,
-    configFile,
-    packages,
-    mcp,
-    // processors: {
-    //   "ph/common/drive-analytics": [DriveAnalyticsProcessorFactory],
-    // },
-  });
+  const api = await startAPI(
+    driveServer,
+    client,
+    registry,
+    syncManager,
+    {
+      port: serverPort,
+      dbPath,
+      https: options?.https,
+      packageLoader,
+      configFile,
+      packages,
+      mcp,
+      // processors: {
+      //   "ph/common/drive-analytics": [DriveAnalyticsProcessorFactory],
+      // },
+    },
+    "switchboard",
+  );
 
   // add vite middleware after express app is initialized if applicable
   if (vite) {
