@@ -604,7 +604,7 @@ export class KyselyDocumentIndexer implements IDocumentIndexer {
         sourceId: input.sourceId,
         targetId: input.targetId,
         relationshipType: input.relationshipType,
-        metadata: input.metadata || null,
+        metadata: input.metadata ? JSON.stringify(input.metadata) : null,
       };
 
       await trx

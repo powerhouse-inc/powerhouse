@@ -176,7 +176,7 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
                 lastOperationHash: hash,
                 lastUpdatedAt: new Date(),
                 snapshotVersion: existingSnapshot.snapshotVersion + 1,
-                content: newState,
+                content: JSON.stringify(newState),
                 slug,
                 name,
               })
@@ -192,7 +192,7 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
               name,
               scope: scopeName,
               branch,
-              content: newState,
+              content: JSON.stringify(newState),
               documentType,
               lastOperationIndex: index,
               lastOperationHash: hash,

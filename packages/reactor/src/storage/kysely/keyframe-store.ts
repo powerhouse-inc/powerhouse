@@ -26,12 +26,12 @@ export class KyselyKeyframeStore implements IKeyframeStore {
         scope,
         branch,
         revision,
-        document,
+        document: JSON.stringify(document),
       })
       .onConflict((oc) =>
         oc
           .columns(["documentId", "scope", "branch", "revision"])
-          .doUpdateSet({ document }),
+          .doUpdateSet({ document: JSON.stringify(document) }),
       )
       .execute();
   }

@@ -137,7 +137,7 @@ export class KyselyOperationIndex implements IOperationIndex {
             index: op.index,
             skip: op.skip,
             hash: op.hash,
-            action: op.action as unknown,
+            action: JSON.stringify(op.action),
           }));
 
         const insertedOps = await trx
