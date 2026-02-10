@@ -73,7 +73,7 @@ export class SyncManager implements ISyncManager {
   private readonly remoteStorage: ISyncRemoteStorage;
   private readonly cursorStorage: ISyncCursorStorage;
   private readonly channelFactory: IChannelFactory;
-  private readonly _operationIndex: IOperationIndex;
+  private readonly operationIndex: IOperationIndex;
   private readonly reactor: IReactor;
   private readonly eventBus: IEventBus;
   private readonly remotes: Map<string, Remote>;
@@ -102,7 +102,7 @@ export class SyncManager implements ISyncManager {
     this.remoteStorage = remoteStorage;
     this.cursorStorage = cursorStorage;
     this.channelFactory = channelFactory;
-    this._operationIndex = operationIndex;
+    this.operationIndex = operationIndex;
     this.reactor = reactor;
     this.eventBus = eventBus;
     this.remotes = new Map();
@@ -129,7 +129,7 @@ export class SyncManager implements ISyncManager {
         this.cursorStorage,
         record.collectionId,
         record.filter,
-        this._operationIndex,
+        this.operationIndex,
       );
 
       try {
@@ -270,7 +270,7 @@ export class SyncManager implements ISyncManager {
       this.cursorStorage,
       collectionId,
       filter,
-      this._operationIndex,
+      this.operationIndex,
     );
 
     await channel.init();
@@ -305,7 +305,7 @@ export class SyncManager implements ISyncManager {
   ): Promise<void> {
     let historicalOps;
     try {
-      historicalOps = await this._operationIndex.find(collectionId);
+      historicalOps = await this.operationIndex.find(collectionId);
     } catch {
       return;
     }
@@ -415,10 +415,9 @@ export class SyncManager implements ISyncManager {
       return;
     }
 
-    const batchId = event.jobMeta?.batchId as string | undefined;
-    const batchJobIds = event.jobMeta?.batchJobIds as string[] | undefined;
+    const { batchId, batchJobIds } = event.jobMeta;
 
-    if (!batchId || !batchJobIds || batchJobIds.length <= 1) {
+    if (batchJobIds.length <= 1) {
       this.processCompleteBatch([event]);
       return;
     }
@@ -447,7 +446,7 @@ export class SyncManager implements ISyncManager {
       return;
     }
 
-    const batchId = event.job?.meta?.batchId as string | undefined;
+    const batchId = event.job?.meta.batchId;
     if (!batchId) {
       return;
     }
@@ -513,7 +512,7 @@ export class SyncManager implements ISyncManager {
     const priorJobIds: string[] = [];
 
     for (const event of events) {
-      const sourceRemote = event.jobMeta?.sourceRemote as string | undefined;
+      const sourceRemote = event.jobMeta.sourceRemote as string | undefined;
       const syncOpsWithRemote: Array<{
         syncOp: SyncOperation;
         remote: Remote;

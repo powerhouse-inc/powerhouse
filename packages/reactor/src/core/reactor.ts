@@ -32,6 +32,7 @@ import { createMutableShutdownStatus } from "../shared/factories.js";
 import type {
   ConsistencyToken,
   JobInfo,
+  JobMeta,
   PagedResults,
   PagingOptions,
   SearchFilter,
@@ -55,6 +56,7 @@ import type {
   ReactorFeatures,
 } from "./types.js";
 import {
+  buildSingleJobMeta,
   filterByType,
   getSharedActionScope,
   getSharedOperationScope,
@@ -494,8 +496,11 @@ export class Reactor implements IReactor {
       actions = await signActions(actions, signer, signal);
     }
 
+    const jobId = uuidv4();
+    const jobMeta = buildSingleJobMeta(jobId, meta);
+
     const job: Job = {
-      id: uuidv4(),
+      id: jobId,
       kind: "mutation",
       documentId: document.header.id,
       scope: "document",
@@ -506,11 +511,11 @@ export class Reactor implements IReactor {
       queueHint: [],
       maxRetries: 3,
       errorHistory: [],
-      meta,
+      meta: jobMeta,
     };
 
     const jobInfo: JobInfo = {
-      id: job.id,
+      id: jobId,
       status: JobStatus.PENDING,
       createdAtUtcIso,
       consistencyToken: {
@@ -518,10 +523,10 @@ export class Reactor implements IReactor {
         createdAtUtcIso,
         coordinates: [],
       },
-      meta,
+      meta: jobMeta,
     };
     this.jobTracker.registerJob(jobInfo);
-    this.emitJobPending(jobInfo.id, meta);
+    this.emitJobPending(jobInfo.id, jobMeta);
 
     await this.queue.enqueue(job);
 
@@ -547,8 +552,11 @@ export class Reactor implements IReactor {
       action = await signAction(action, signer, signal);
     }
 
+    const jobId = uuidv4();
+    const jobMeta = buildSingleJobMeta(jobId, meta);
+
     const job: Job = {
-      id: uuidv4(),
+      id: jobId,
       kind: "mutation",
       documentId: id,
       scope: "document",
@@ -559,11 +567,11 @@ export class Reactor implements IReactor {
       queueHint: [],
       maxRetries: 3,
       errorHistory: [],
-      meta,
+      meta: jobMeta,
     };
 
     const jobInfo: JobInfo = {
-      id: job.id,
+      id: jobId,
       status: JobStatus.PENDING,
       createdAtUtcIso,
       consistencyToken: {
@@ -571,10 +579,10 @@ export class Reactor implements IReactor {
         createdAtUtcIso,
         coordinates: [],
       },
-      meta,
+      meta: jobMeta,
     };
     this.jobTracker.registerJob(jobInfo);
-    this.emitJobPending(jobInfo.id, meta);
+    this.emitJobPending(jobInfo.id, jobMeta);
 
     await this.queue.enqueue(job);
 
@@ -601,9 +609,11 @@ export class Reactor implements IReactor {
 
     const createdAtUtcIso = new Date().toISOString();
     const scope = getSharedActionScope(actions);
+    const jobId = uuidv4();
+    const jobMeta = buildSingleJobMeta(jobId, meta);
 
     const job: Job = {
-      id: uuidv4(),
+      id: jobId,
       kind: "mutation",
       documentId: docId,
       scope: scope,
@@ -614,11 +624,11 @@ export class Reactor implements IReactor {
       queueHint: [],
       maxRetries: 3,
       errorHistory: [],
-      meta,
+      meta: jobMeta,
     };
 
     const jobInfo: JobInfo = {
-      id: job.id,
+      id: jobId,
       status: JobStatus.PENDING,
       createdAtUtcIso,
       consistencyToken: {
@@ -626,10 +636,10 @@ export class Reactor implements IReactor {
         createdAtUtcIso,
         coordinates: [],
       },
-      meta,
+      meta: jobMeta,
     };
     this.jobTracker.registerJob(jobInfo);
-    this.emitJobPending(jobInfo.id, meta);
+    this.emitJobPending(jobInfo.id, jobMeta);
 
     await this.queue.enqueue(job);
 
@@ -665,8 +675,11 @@ export class Reactor implements IReactor {
 
     const scope = getSharedOperationScope(operations);
     const createdAtUtcIso = new Date().toISOString();
+    const jobId = uuidv4();
+    const jobMeta = buildSingleJobMeta(jobId, meta);
+
     const job: Job = {
-      id: uuidv4(),
+      id: jobId,
       kind: "load",
       documentId: docId,
       scope,
@@ -677,11 +690,11 @@ export class Reactor implements IReactor {
       queueHint: [],
       maxRetries: 3,
       errorHistory: [],
-      meta,
+      meta: jobMeta,
     };
 
     const jobInfo: JobInfo = {
-      id: job.id,
+      id: jobId,
       status: JobStatus.PENDING,
       createdAtUtcIso,
       consistencyToken: {
@@ -689,10 +702,10 @@ export class Reactor implements IReactor {
         createdAtUtcIso,
         coordinates: [],
       },
-      meta,
+      meta: jobMeta,
     };
     this.jobTracker.registerJob(jobInfo);
-    this.emitJobPending(jobInfo.id, meta);
+    this.emitJobPending(jobInfo.id, jobMeta);
 
     await this.queue.enqueue(job);
 
@@ -724,7 +737,7 @@ export class Reactor implements IReactor {
     }
     const batchId = uuidv4();
     const batchJobIds = [...planKeyToJobId.values()];
-    const batchMeta: Record<string, unknown> = {
+    const batchMeta: JobMeta = {
       ...meta,
       batchId,
       batchJobIds,
@@ -820,7 +833,7 @@ export class Reactor implements IReactor {
     }
     const batchId = uuidv4();
     const batchJobIds = [...planKeyToJobId.values()];
-    const batchMeta: Record<string, unknown> = {
+    const batchMeta: JobMeta = {
       ...meta,
       batchId,
       batchJobIds,
@@ -975,6 +988,7 @@ export class Reactor implements IReactor {
           createdAtUtcIso: now,
           coordinates: [],
         },
+        meta: { batchId: jobId, batchJobIds: [jobId] },
       });
     }
 
@@ -1069,7 +1083,7 @@ export class Reactor implements IReactor {
     );
   }
 
-  private emitJobPending(jobId: string, meta?: Record<string, unknown>): void {
+  private emitJobPending(jobId: string, meta: JobMeta): void {
     const event: JobPendingEvent = {
       jobId,
       jobMeta: meta,

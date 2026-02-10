@@ -486,6 +486,7 @@ describe("ReactorClient Unit Tests", () => {
         status: JobStatus.READ_READY,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: ["job-1"] },
       };
 
       const batchResult: BatchExecutionResult = {
@@ -495,6 +496,7 @@ describe("ReactorClient Unit Tests", () => {
             status: JobStatus.PENDING,
             createdAtUtcIso: new Date().toISOString(),
             consistencyToken: createEmptyConsistencyToken(),
+            meta: { batchId: "test", batchJobIds: ["job-1"] },
           },
         },
       };
@@ -535,6 +537,7 @@ describe("ReactorClient Unit Tests", () => {
         status: JobStatus.READ_READY,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: ["job-1"] },
       };
 
       const batchResult: BatchExecutionResult = {
@@ -544,6 +547,7 @@ describe("ReactorClient Unit Tests", () => {
             status: JobStatus.PENDING,
             createdAtUtcIso: new Date().toISOString(),
             consistencyToken: createEmptyConsistencyToken(),
+            meta: { batchId: "test", batchJobIds: ["job-1"] },
           },
         },
       };
@@ -569,6 +573,7 @@ describe("ReactorClient Unit Tests", () => {
         status: JobStatus.READ_READY,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: ["job-1"] },
       };
 
       const batchResult: BatchExecutionResult = {
@@ -578,12 +583,14 @@ describe("ReactorClient Unit Tests", () => {
             status: JobStatus.PENDING,
             createdAtUtcIso: new Date().toISOString(),
             consistencyToken: createEmptyConsistencyToken(),
+            meta: { batchId: "test", batchJobIds: ["job-1"] },
           },
           parent: {
             id: "job-2",
             status: JobStatus.PENDING,
             createdAtUtcIso: new Date().toISOString(),
             consistencyToken: createEmptyConsistencyToken(),
+            meta: { batchId: "test", batchJobIds: ["job-2"] },
           },
         },
       };
@@ -635,6 +642,7 @@ describe("ReactorClient Unit Tests", () => {
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: ["job-1"] },
       };
 
       const completedJobInfo: JobInfo = {
@@ -642,6 +650,7 @@ describe("ReactorClient Unit Tests", () => {
         status: JobStatus.READ_READY,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: ["job-1"] },
       };
 
       const mockDoc: PHDocument = {
@@ -712,6 +721,7 @@ describe("ReactorClient Unit Tests", () => {
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: ["job-1"] },
       };
 
       vi.mocked(mockReactor.execute).mockResolvedValue(jobInfo);
@@ -746,6 +756,7 @@ describe("ReactorClient Unit Tests", () => {
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: ["job-1"] },
       };
 
       vi.mocked(mockReactor.execute).mockResolvedValue(jobInfo);
@@ -769,6 +780,7 @@ describe("ReactorClient Unit Tests", () => {
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: ["job-1"] },
       };
 
       vi.mocked(mockReactor.execute).mockResolvedValue(jobInfo);
@@ -804,6 +816,7 @@ describe("ReactorClient Unit Tests", () => {
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: ["job-1"] },
       };
 
       vi.mocked(mockReactor.execute).mockResolvedValue(jobInfo);
@@ -858,6 +871,7 @@ describe("ReactorClient Unit Tests", () => {
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: ["job-1"] },
       });
 
       await client.executeAsync(documentId, "main", actions, signal);
@@ -876,6 +890,7 @@ describe("ReactorClient Unit Tests", () => {
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: ["job-1"] },
       };
 
       const completedJobInfo: JobInfo = {
@@ -883,6 +898,7 @@ describe("ReactorClient Unit Tests", () => {
         status: JobStatus.READ_READY,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: ["job-1"] },
       };
 
       const mockDoc: PHDocument = {
@@ -926,6 +942,7 @@ describe("ReactorClient Unit Tests", () => {
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: ["job-1"] },
       };
 
       const completedJobInfo: JobInfo = {
@@ -933,6 +950,7 @@ describe("ReactorClient Unit Tests", () => {
         status: JobStatus.READ_READY,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: ["job-1"] },
       };
 
       const mockDoc: PHDocument = {
@@ -975,6 +993,7 @@ describe("ReactorClient Unit Tests", () => {
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: ["job-1"] },
       };
 
       vi.mocked(mockReactor.deleteDocument).mockResolvedValue(jobInfo);
@@ -1001,6 +1020,7 @@ describe("ReactorClient Unit Tests", () => {
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: ["job-1"] },
       };
 
       vi.mocked(mockReactor.deleteDocument).mockResolvedValue(jobInfo);
@@ -1025,6 +1045,7 @@ describe("ReactorClient Unit Tests", () => {
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: ["job-parent"] },
       };
 
       const childJobInfo: JobInfo = {
@@ -1032,6 +1053,7 @@ describe("ReactorClient Unit Tests", () => {
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: ["job-child"] },
       };
 
       vi.mocked(mockDocumentIndexer.getOutgoing).mockResolvedValue({
@@ -1083,6 +1105,7 @@ describe("ReactorClient Unit Tests", () => {
         status: JobStatus.RUNNING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: ["job-1"] },
       };
 
       vi.mocked(mockReactor.getJobStatus).mockResolvedValue(jobInfo);
@@ -1101,6 +1124,7 @@ describe("ReactorClient Unit Tests", () => {
         status: JobStatus.READ_READY,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: ["job-1"] },
       });
 
       await client.getJobStatus("job-1", signal);
@@ -1116,6 +1140,7 @@ describe("ReactorClient Unit Tests", () => {
         status: JobStatus.READ_READY,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: ["job-1"] },
       };
 
       vi.mocked(mockJobAwaiter.waitForJob).mockResolvedValue(completedJobInfo);
@@ -1135,6 +1160,7 @@ describe("ReactorClient Unit Tests", () => {
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: ["job-2"] },
       };
 
       const completedJobInfo: JobInfo = {
@@ -1161,6 +1187,7 @@ describe("ReactorClient Unit Tests", () => {
         status: JobStatus.READ_READY,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: ["job-1"] },
       });
 
       await client.waitForJob("job-1", signal);
@@ -1185,6 +1212,7 @@ describe("ReactorClient Unit Tests", () => {
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: ["job-1"] },
       });
       vi.mocked(mockJobAwaiter.waitForJob).mockRejectedValue(error);
 
@@ -1220,6 +1248,7 @@ describe("ReactorClient Unit Tests", () => {
         status: JobStatus.FAILED,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: ["job-1"] },
         error: { message: "Create document failed", stack: "" },
       };
 
@@ -1230,6 +1259,7 @@ describe("ReactorClient Unit Tests", () => {
             status: JobStatus.PENDING,
             createdAtUtcIso: new Date().toISOString(),
             consistencyToken: createEmptyConsistencyToken(),
+            meta: { batchId: "test", batchJobIds: ["job-1"] },
           },
         },
       };
@@ -1249,6 +1279,7 @@ describe("ReactorClient Unit Tests", () => {
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: ["job-1"] },
       };
 
       const failedJobInfo: JobInfo = {
@@ -1256,6 +1287,7 @@ describe("ReactorClient Unit Tests", () => {
         status: JobStatus.FAILED,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: ["job-1"] },
         error: { message: "Execute action failed", stack: "" },
       };
 
@@ -1274,6 +1306,7 @@ describe("ReactorClient Unit Tests", () => {
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: ["job-1"] },
       };
 
       const failedJobInfo: JobInfo = {
@@ -1281,6 +1314,7 @@ describe("ReactorClient Unit Tests", () => {
         status: JobStatus.FAILED,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: ["job-1"] },
         error: { message: "Add children failed", stack: "" },
       };
 
@@ -1299,6 +1333,7 @@ describe("ReactorClient Unit Tests", () => {
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: ["job-1"] },
       };
 
       const failedJobInfo: JobInfo = {
@@ -1306,6 +1341,7 @@ describe("ReactorClient Unit Tests", () => {
         status: JobStatus.FAILED,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: ["job-1"] },
         error: { message: "Remove children failed", stack: "" },
       };
 
@@ -1324,6 +1360,7 @@ describe("ReactorClient Unit Tests", () => {
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: ["job-remove"] },
       };
 
       const failedRemoveJobInfo: JobInfo = {
@@ -1331,6 +1368,7 @@ describe("ReactorClient Unit Tests", () => {
         status: JobStatus.FAILED,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: ["job-remove"] },
         error: { message: "Remove from source failed", stack: "" },
       };
 
@@ -1351,6 +1389,7 @@ describe("ReactorClient Unit Tests", () => {
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: ["job-remove"] },
       };
 
       const completedRemoveJobInfo: JobInfo = {
@@ -1358,6 +1397,7 @@ describe("ReactorClient Unit Tests", () => {
         status: JobStatus.READ_READY,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: ["job-remove"] },
       };
 
       const addJobInfo: JobInfo = {
@@ -1365,6 +1405,7 @@ describe("ReactorClient Unit Tests", () => {
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: ["job-add"] },
       };
 
       const failedAddJobInfo: JobInfo = {
@@ -1372,6 +1413,7 @@ describe("ReactorClient Unit Tests", () => {
         status: JobStatus.FAILED,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: ["job-add"] },
         error: { message: "Add to target failed", stack: "" },
       };
 
@@ -1393,6 +1435,7 @@ describe("ReactorClient Unit Tests", () => {
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: ["job-1"] },
       };
 
       const failedJobInfo: JobInfo = {
@@ -1400,6 +1443,7 @@ describe("ReactorClient Unit Tests", () => {
         status: JobStatus.FAILED,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: ["job-1"] },
         error: { message: "Delete document failed", stack: "" },
       };
 
@@ -1420,6 +1464,7 @@ describe("ReactorClient Unit Tests", () => {
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: ["job-child"] },
       };
 
       const parentJobInfo: JobInfo = {
@@ -1427,6 +1472,7 @@ describe("ReactorClient Unit Tests", () => {
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: ["job-parent"] },
       };
 
       const failedChildJobInfo: JobInfo = {
@@ -1434,6 +1480,7 @@ describe("ReactorClient Unit Tests", () => {
         status: JobStatus.FAILED,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: ["job-child"] },
         error: { message: "Delete child failed", stack: "" },
       };
 
@@ -1442,6 +1489,7 @@ describe("ReactorClient Unit Tests", () => {
         status: JobStatus.READ_READY,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: ["job-parent"] },
       };
 
       vi.mocked(mockDocumentIndexer.getOutgoing).mockResolvedValue({

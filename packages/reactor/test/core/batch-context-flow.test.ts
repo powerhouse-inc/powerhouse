@@ -116,15 +116,15 @@ describe("batch context flow", () => {
 
       expect(pendingEvents).toHaveLength(2);
 
-      const batchId = pendingEvents[0].jobMeta?.batchId as string;
+      const batchId = pendingEvents[0].jobMeta.batchId;
       expect(batchId).toBeTypeOf("string");
       expect(batchId.length).toBeGreaterThan(0);
 
       for (const event of pendingEvents) {
-        expect(event.jobMeta?.batchId).toBe(batchId);
+        expect(event.jobMeta.batchId).toBe(batchId);
       }
 
-      const batchJobIds = pendingEvents[0].jobMeta?.batchJobIds as string[];
+      const batchJobIds = pendingEvents[0].jobMeta.batchJobIds;
       expect(batchJobIds).toBeInstanceOf(Array);
       expect(batchJobIds).toHaveLength(2);
 
@@ -133,7 +133,7 @@ describe("batch context flow", () => {
       expect(resultJobIds).toEqual(expect.arrayContaining(batchJobIds));
 
       for (const event of pendingEvents) {
-        expect(event.jobMeta?.batchJobIds).toEqual(batchJobIds);
+        expect(event.jobMeta.batchJobIds).toEqual(batchJobIds);
       }
     });
 
@@ -208,15 +208,15 @@ describe("batch context flow", () => {
 
       expect(pendingEvents).toHaveLength(2);
 
-      const batchId = pendingEvents[0].jobMeta?.batchId as string;
+      const batchId = pendingEvents[0].jobMeta.batchId;
       expect(batchId).toBeTypeOf("string");
       expect(batchId.length).toBeGreaterThan(0);
 
       for (const event of pendingEvents) {
-        expect(event.jobMeta?.batchId).toBe(batchId);
+        expect(event.jobMeta.batchId).toBe(batchId);
       }
 
-      const batchJobIds = pendingEvents[0].jobMeta?.batchJobIds as string[];
+      const batchJobIds = pendingEvents[0].jobMeta.batchJobIds;
       expect(batchJobIds).toBeInstanceOf(Array);
       expect(batchJobIds).toHaveLength(2);
 
@@ -225,7 +225,7 @@ describe("batch context flow", () => {
       expect(resultJobIds).toEqual(expect.arrayContaining(batchJobIds));
 
       for (const event of pendingEvents) {
-        expect(event.jobMeta?.batchJobIds).toEqual(batchJobIds);
+        expect(event.jobMeta.batchJobIds).toEqual(batchJobIds);
       }
     });
 
@@ -265,7 +265,7 @@ describe("batch context flow", () => {
   });
 
   describe("non-batch calls", () => {
-    it("should not include batchId in execute JOB_PENDING events", async () => {
+    it("should include auto-generated batchId in execute JOB_PENDING events", async () => {
       const { reactor, eventBus } = createReactorAndBus();
       const pendingEvents: JobPendingEvent[] = [];
       eventBus.subscribe<JobPendingEvent>(
@@ -275,14 +275,16 @@ describe("batch context flow", () => {
         },
       );
 
-      await reactor.execute("doc1", "main", [createAction("global")]);
+      const jobInfo = await reactor.execute("doc1", "main", [
+        createAction("global"),
+      ]);
 
       expect(pendingEvents).toHaveLength(1);
-      expect(pendingEvents[0].jobMeta?.batchId).toBeUndefined();
-      expect(pendingEvents[0].jobMeta?.batchJobIds).toBeUndefined();
+      expect(pendingEvents[0].jobMeta.batchId).toBeTypeOf("string");
+      expect(pendingEvents[0].jobMeta.batchJobIds).toEqual([jobInfo.id]);
     });
 
-    it("should not include batchId in load JOB_PENDING events", async () => {
+    it("should include auto-generated batchId in load JOB_PENDING events", async () => {
       const { reactor, eventBus } = createReactorAndBus();
       const pendingEvents: JobPendingEvent[] = [];
       eventBus.subscribe<JobPendingEvent>(
@@ -292,11 +294,13 @@ describe("batch context flow", () => {
         },
       );
 
-      await reactor.load("doc1", "main", [createOperation("global")]);
+      const jobInfo = await reactor.load("doc1", "main", [
+        createOperation("global"),
+      ]);
 
       expect(pendingEvents).toHaveLength(1);
-      expect(pendingEvents[0].jobMeta?.batchId).toBeUndefined();
-      expect(pendingEvents[0].jobMeta?.batchJobIds).toBeUndefined();
+      expect(pendingEvents[0].jobMeta.batchId).toBeTypeOf("string");
+      expect(pendingEvents[0].jobMeta.batchJobIds).toEqual([jobInfo.id]);
     });
   });
 });

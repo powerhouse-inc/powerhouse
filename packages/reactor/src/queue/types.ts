@@ -1,5 +1,5 @@
 import type { Action, Operation } from "document-model";
-import type { ErrorInfo } from "../shared/types.js";
+import type { ErrorInfo, JobMeta } from "../shared/types.js";
 
 export type JobKind = "mutation" | "load";
 
@@ -70,8 +70,8 @@ export type Job = {
   /** History of all errors from each attempt (ordered) */
   errorHistory: ErrorInfo[];
 
-  /** Optional metadata that flows through the job lifecycle */
-  meta?: Record<string, unknown>;
+  /** Metadata that flows through the job lifecycle */
+  meta: JobMeta;
 };
 
 /**

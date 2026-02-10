@@ -29,6 +29,7 @@ describe("JobAwaiter", () => {
         status: JobStatus.READ_READY,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: [jobId] },
       };
 
       getJobStatusMock.mockResolvedValue(completedJob);
@@ -45,6 +46,7 @@ describe("JobAwaiter", () => {
         status: JobStatus.READ_READY,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: [jobId] },
       };
 
       getJobStatusMock.mockResolvedValue(readModelsReadyJob);
@@ -62,6 +64,7 @@ describe("JobAwaiter", () => {
         createdAtUtcIso: new Date().toISOString(),
         error: { message: "Job failed", stack: "" },
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: [jobId] },
       };
 
       getJobStatusMock.mockResolvedValue(failedJob);
@@ -78,12 +81,14 @@ describe("JobAwaiter", () => {
         status: JobStatus.RUNNING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: [jobId] },
       };
       const completedJob: JobInfo = {
         id: jobId,
         status: JobStatus.READ_READY,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: [jobId] },
       };
 
       getJobStatusMock.mockResolvedValue(runningJob);
@@ -135,12 +140,14 @@ describe("JobAwaiter", () => {
         status: JobStatus.RUNNING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: [jobId] },
       };
       const completedJob: JobInfo = {
         id: jobId,
         status: JobStatus.READ_READY,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: [jobId] },
       };
 
       getJobStatusMock.mockResolvedValue(runningJob);
@@ -177,6 +184,7 @@ describe("JobAwaiter", () => {
         status: JobStatus.RUNNING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: [jobId] },
       };
       const failedJob: JobInfo = {
         id: jobId,
@@ -184,6 +192,7 @@ describe("JobAwaiter", () => {
         createdAtUtcIso: new Date().toISOString(),
         error: { message: "Job failed", stack: "" },
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: [jobId] },
       };
 
       getJobStatusMock.mockResolvedValue(runningJob);
@@ -210,12 +219,14 @@ describe("JobAwaiter", () => {
         status: JobStatus.READ_READY,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: ["job-1"] },
       };
       const job2: JobInfo = {
         id: "job-2",
         status: JobStatus.READ_READY,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: ["job-2"] },
       };
       const job3: JobInfo = {
         id: "job-3",
@@ -223,6 +234,7 @@ describe("JobAwaiter", () => {
         createdAtUtcIso: new Date().toISOString(),
         error: { message: "Job 3 failed", stack: "" },
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: ["job-3"] },
       };
 
       getJobStatusMock.mockImplementation((jobId) => {
@@ -259,6 +271,7 @@ describe("JobAwaiter", () => {
         status: JobStatus.RUNNING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: [jobId] },
       });
 
       const promise = jobAwaiter.waitForJob(jobId, abortController.signal);
@@ -298,12 +311,14 @@ describe("JobAwaiter", () => {
         status: JobStatus.RUNNING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: [jobId] },
       };
       const completedJob: JobInfo = {
         id: jobId,
         status: JobStatus.READ_READY,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: [jobId] },
       };
 
       getJobStatusMock.mockResolvedValue(runningJob);
@@ -361,6 +376,7 @@ describe("JobAwaiter", () => {
         status: JobStatus.RUNNING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: [jobId] },
       });
 
       jobAwaiter.waitForJob(jobId).catch(() => {});
@@ -396,6 +412,7 @@ describe("JobAwaiter", () => {
         status: JobStatus.RUNNING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: ["any"] },
       });
 
       const promise1 = jobAwaiter.waitForJob(jobId1);
@@ -417,6 +434,7 @@ describe("JobAwaiter", () => {
         status: JobStatus.RUNNING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: [jobId] },
       });
 
       jobAwaiter.waitForJob(jobId).catch(() => {});

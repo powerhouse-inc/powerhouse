@@ -237,7 +237,9 @@ describe("SyncManager Integration", () => {
       ];
 
       await eventBus.emit(ReactorEventTypes.JOB_WRITE_READY, {
+        jobId: "auto-job-1",
         operations,
+        jobMeta: { batchId: "auto-auto-job-1", batchJobIds: ["auto-job-1"] },
       });
 
       expect(sentEnvelopes).toHaveLength(1);
@@ -288,7 +290,9 @@ describe("SyncManager Integration", () => {
       ];
 
       await eventBus.emit(ReactorEventTypes.JOB_WRITE_READY, {
+        jobId: "auto-job-1",
         operations,
+        jobMeta: { batchId: "auto-auto-job-1", batchJobIds: ["auto-job-1"] },
       });
 
       const remote = syncManager.getByName("remote1");
@@ -349,7 +353,9 @@ describe("SyncManager Integration", () => {
       ];
 
       await eventBus.emit(ReactorEventTypes.JOB_WRITE_READY, {
+        jobId: "auto-job-1",
         operations,
+        jobMeta: { batchId: "auto-auto-job-1", batchJobIds: ["auto-job-1"] },
       });
 
       expect(sentEnvelopes).toHaveLength(2);
@@ -522,7 +528,9 @@ describe("SyncManager Integration", () => {
       ];
 
       await eventBus.emit(ReactorEventTypes.JOB_WRITE_READY, {
+        jobId: "auto-job-1",
         operations,
+        jobMeta: { batchId: "auto-auto-job-1", batchJobIds: ["auto-job-1"] },
         collectionMemberships: {
           doc1: ["collection1"],
         },

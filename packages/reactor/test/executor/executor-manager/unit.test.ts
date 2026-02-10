@@ -161,6 +161,7 @@ describe("SimpleJobExecutorManager", () => {
         createdAt: "123",
         queueHint: [],
         errorHistory: [],
+        meta: { batchId: "test", batchJobIds: ["job-1"] },
       };
 
       // Enqueue a job
@@ -193,6 +194,7 @@ describe("SimpleJobExecutorManager", () => {
         createdAt: "123",
         queueHint: [],
         errorHistory: [],
+        meta: { batchId: "test", batchJobIds: ["job-1"] },
       };
 
       // Create a mock handle with a spy on start()

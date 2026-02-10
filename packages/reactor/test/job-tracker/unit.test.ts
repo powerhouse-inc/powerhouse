@@ -19,6 +19,7 @@ describe("InMemoryJobTracker", () => {
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: ["job-1"] },
       };
 
       tracker.registerJob(jobInfo);
@@ -33,6 +34,7 @@ describe("InMemoryJobTracker", () => {
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: ["job-1"] },
       };
 
       tracker.registerJob(jobInfo);
@@ -53,6 +55,7 @@ describe("InMemoryJobTracker", () => {
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: ["job-1"] },
       };
 
       tracker.registerJob(jobInfo);
@@ -79,6 +82,7 @@ describe("InMemoryJobTracker", () => {
         status: JobStatus.RUNNING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: ["job-1"] },
       };
 
       tracker.registerJob(jobInfo);
@@ -118,6 +122,7 @@ describe("InMemoryJobTracker", () => {
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: ["job-1"] },
       };
 
       tracker.registerJob(jobInfo);
@@ -139,6 +144,7 @@ describe("InMemoryJobTracker", () => {
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: ["job-1"] },
       };
 
       // Register as pending
@@ -156,6 +162,7 @@ describe("InMemoryJobTracker", () => {
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: ["job-1"] },
       };
 
       // Register as pending
@@ -181,6 +188,7 @@ describe("InMemoryJobTracker", () => {
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: ["job-1"] },
       };
 
       const job2: JobInfo = {
@@ -188,6 +196,7 @@ describe("InMemoryJobTracker", () => {
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: ["job-2"] },
       };
 
       tracker.registerJob(job1);

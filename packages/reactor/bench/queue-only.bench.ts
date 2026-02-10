@@ -19,8 +19,9 @@ function makeRng(seed: number): () => number {
 const rand = makeRng(rootSeed);
 
 function createMinimalJob(): Job {
+  const id = `job-${++jobCounter}`;
   return {
-    id: `job-${++jobCounter}`,
+    id,
     kind: "mutation",
     documentId: "doc1",
     scope: "default",
@@ -39,6 +40,7 @@ function createMinimalJob(): Job {
     createdAt: "2023-01-01T00:00:00.000Z",
     queueHint: [],
     errorHistory: [],
+    meta: { batchId: "test", batchJobIds: [id] },
   };
 }
 
@@ -100,6 +102,7 @@ function createJobVariant({
     createdAt: "2023-01-01T00:00:00.000Z",
     queueHint,
     errorHistory: [],
+    meta: { batchId: "test", batchJobIds: [jobId] },
   };
 }
 

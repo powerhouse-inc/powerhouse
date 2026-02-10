@@ -5,7 +5,8 @@ import type {
   PHDocument,
   Signature,
 } from "document-model";
-import type { ErrorInfo, PagedResults } from "../shared/types.js";
+import { v4 as uuidv4 } from "uuid";
+import type { ErrorInfo, JobMeta, PagedResults } from "../shared/types.js";
 
 /**
  * Represents a minimal job plan for validation purposes
@@ -309,3 +310,10 @@ export const signActions = async (
     actions.map((action) => signAction(action, signer, signal)),
   );
 };
+
+export function buildSingleJobMeta(
+  jobId: string,
+  callerMeta?: Record<string, unknown>,
+): JobMeta {
+  return { ...callerMeta, batchId: uuidv4(), batchJobIds: [jobId] };
+}

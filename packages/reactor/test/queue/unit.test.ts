@@ -1153,6 +1153,7 @@ describe("InMemoryQueue", () => {
         createdAt: new Date().toISOString(),
         queueHint: [],
         errorHistory: [],
+        meta: { batchId: "test", batchJobIds: ["minimal-job"] },
         // retryCount and maxRetries are optional
       } satisfies Job;
 

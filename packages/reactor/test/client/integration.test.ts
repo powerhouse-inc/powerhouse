@@ -308,21 +308,17 @@ describe("ReactorClient Integration Tests", () => {
           const unsubscribe = eventBus.subscribe<JobWriteReadyEvent>(
             ReactorEventTypes.JOB_WRITE_READY,
             (_type, event) => {
-              const meta = event.jobMeta as
-                | { batchId?: string; batchJobIds?: string[] }
-                | undefined;
-              if (!meta?.batchId || !meta.batchJobIds) {
+              const { batchId, batchJobIds: metaBatchJobIds } = event.jobMeta;
+              if (metaBatchJobIds.length <= 1) {
                 return;
               }
 
               seenJobIds.add(event.jobId);
 
-              const allSeen = meta.batchJobIds.every((id) =>
-                seenJobIds.has(id),
-              );
+              const allSeen = metaBatchJobIds.every((id) => seenJobIds.has(id));
               if (allSeen) {
-                completedBatchId = meta.batchId;
-                batchJobIds = meta.batchJobIds;
+                completedBatchId = batchId;
+                batchJobIds = metaBatchJobIds;
                 unsubscribe();
                 resolve();
               }

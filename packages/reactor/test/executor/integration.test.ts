@@ -217,6 +217,7 @@ describe("SimpleJobExecutor Integration (Modern Storage)", () => {
         createdAt: new Date().toISOString(),
         queueHint: [],
         errorHistory: [],
+        meta: { batchId: "test", batchJobIds: ["job-1"] },
       };
 
       const result = await executor.executeJob(job);
@@ -291,6 +292,7 @@ describe("SimpleJobExecutor Integration (Modern Storage)", () => {
         createdAt: new Date().toISOString(),
         queueHint: [],
         errorHistory: [],
+        meta: { batchId: "test", batchJobIds: ["job-1"] },
       };
 
       const result1 = await executor.executeJob(job1);
@@ -319,6 +321,7 @@ describe("SimpleJobExecutor Integration (Modern Storage)", () => {
         createdAt: new Date(Date.now() + 1).toISOString(),
         queueHint: [],
         errorHistory: [],
+        meta: { batchId: "test", batchJobIds: ["job-2"] },
       };
 
       const result2 = await executor.executeJob(job2);
@@ -392,6 +395,7 @@ describe("SimpleJobExecutor Integration (Modern Storage)", () => {
         createdAt: new Date().toISOString(),
         queueHint: [],
         errorHistory: [],
+        meta: { batchId: "test", batchJobIds: ["job-folder"] },
       };
 
       await executor.executeJob(folderJob);
@@ -420,6 +424,7 @@ describe("SimpleJobExecutor Integration (Modern Storage)", () => {
         createdAt: new Date(Date.now() + 1).toISOString(),
         queueHint: [],
         errorHistory: [],
+        meta: { batchId: "test", batchJobIds: ["job-file"] },
       };
 
       const result = await executor.executeJob(fileJob);
@@ -486,6 +491,7 @@ describe("SimpleJobExecutor Integration (Modern Storage)", () => {
         createdAt: new Date().toISOString(),
         queueHint: [],
         errorHistory: [],
+        meta: { batchId: "test", batchJobIds: ["job-non-existent"] },
       };
 
       const result = await executor.executeJob(job);
@@ -529,6 +535,7 @@ describe("SimpleJobExecutor Integration (Modern Storage)", () => {
         createdAt: new Date().toISOString(),
         queueHint: [],
         errorHistory: [],
+        meta: { batchId: "test", batchJobIds: ["global-job-1"] },
       };
 
       const result1 = await executor.executeJob(globalJob1);
@@ -563,6 +570,7 @@ describe("SimpleJobExecutor Integration (Modern Storage)", () => {
         createdAt: deleteTimestamp,
         queueHint: [],
         errorHistory: [],
+        meta: { batchId: "test", batchJobIds: ["load-delete-job"] },
       };
 
       const loadResult = await executor.executeJob(loadJob);
@@ -595,6 +603,7 @@ describe("SimpleJobExecutor Integration (Modern Storage)", () => {
         createdAt: new Date(Date.now() + 100).toISOString(),
         queueHint: [],
         errorHistory: [],
+        meta: { batchId: "test", batchJobIds: ["post-delete-job"] },
       };
 
       const result = await executor.executeJob(postDeleteJob);
@@ -634,6 +643,7 @@ describe("SimpleJobExecutor Integration (Modern Storage)", () => {
         createdAt: new Date().toISOString(),
         queueHint: [],
         errorHistory: [],
+        meta: { batchId: "test", batchJobIds: ["delete-job"] },
       };
 
       const deleteResult = await executor.executeJob(deleteJob);
@@ -662,6 +672,7 @@ describe("SimpleJobExecutor Integration (Modern Storage)", () => {
         createdAt: new Date().toISOString(),
         queueHint: [],
         errorHistory: [],
+        meta: { batchId: "test", batchJobIds: ["job-1"] },
       };
 
       const result = await executor.executeJob(job);
@@ -700,6 +711,7 @@ describe("SimpleJobExecutor Integration (Modern Storage)", () => {
         createdAt: new Date().toISOString(),
         queueHint: [],
         errorHistory: [],
+        meta: { batchId: "test", batchJobIds: ["delete-job-1"] },
       };
 
       const deleteResult1 = await executor.executeJob(deleteJob1);
@@ -724,6 +736,7 @@ describe("SimpleJobExecutor Integration (Modern Storage)", () => {
         createdAt: new Date().toISOString(),
         queueHint: [],
         errorHistory: [],
+        meta: { batchId: "test", batchJobIds: ["delete-job-2"] },
       };
 
       const result = await executor.executeJob(deleteJob2);
@@ -760,6 +773,7 @@ describe("SimpleJobExecutor Integration (Modern Storage)", () => {
         createdAt: new Date().toISOString(),
         queueHint: [],
         errorHistory: [],
+        meta: { batchId: "test", batchJobIds: ["job-create"] },
       };
 
       const result = await executor.executeJob(job);
@@ -802,6 +816,7 @@ describe("SimpleJobExecutor Integration (Modern Storage)", () => {
         createdAt: new Date().toISOString(),
         queueHint: [],
         errorHistory: [],
+        meta: { batchId: "test", batchJobIds: ["job-create-drive"] },
       };
 
       const result = await executor.executeJob(job);
@@ -857,6 +872,7 @@ describe("SimpleJobExecutor Integration (Modern Storage)", () => {
         createdAt: new Date().toISOString(),
         queueHint: [],
         errorHistory: [],
+        meta: { batchId: "test", batchJobIds: ["job-add-relationship"] },
       };
 
       const addRelResult = await executor.executeJob(addRelJob);
@@ -903,6 +919,7 @@ describe("SimpleJobExecutor Integration (Modern Storage)", () => {
         createdAt: new Date().toISOString(),
         queueHint: [],
         errorHistory: [],
+        meta: { batchId: "test", batchJobIds: ["job-upgrade"] },
       };
 
       const result = await executor.executeJob(job);

@@ -36,6 +36,7 @@ describe("JobAwaiter Integration Tests", () => {
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: ["job-1"] },
       };
 
       jobTracker.registerJob(jobInfo);
@@ -87,6 +88,7 @@ describe("JobAwaiter Integration Tests", () => {
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: ["job-write"] },
       };
 
       jobTracker.registerJob(jobInfo);
@@ -117,6 +119,7 @@ describe("JobAwaiter Integration Tests", () => {
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: ["job-read"] },
       };
 
       jobTracker.registerJob(jobInfo);
@@ -167,6 +170,7 @@ describe("JobAwaiter Integration Tests", () => {
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: ["job-2"] },
       };
 
       jobTracker.registerJob(jobInfo);
@@ -191,6 +195,7 @@ describe("JobAwaiter Integration Tests", () => {
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: ["job-3"] },
       };
 
       jobTracker.registerJob(jobInfo);
@@ -250,18 +255,21 @@ describe("JobAwaiter Integration Tests", () => {
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: ["job-concurrent-1"] },
       };
       const job2: JobInfo = {
         id: "job-concurrent-2",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: ["job-concurrent-2"] },
       };
       const job3: JobInfo = {
         id: "job-concurrent-3",
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: ["job-concurrent-3"] },
       };
 
       jobTracker.registerJob(job1);
@@ -363,6 +371,7 @@ describe("JobAwaiter Integration Tests", () => {
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: ["job-duplicate"] },
       };
 
       jobTracker.registerJob(jobInfo);
@@ -413,6 +422,7 @@ describe("JobAwaiter Integration Tests", () => {
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: ["job-abort"] },
       };
 
       jobTracker.registerJob(jobInfo);
@@ -442,6 +452,7 @@ describe("JobAwaiter Integration Tests", () => {
         createdAtUtcIso: new Date().toISOString(),
         completedAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: ["job-immediate"] },
       };
 
       jobTracker.registerJob(jobInfo);
@@ -458,6 +469,7 @@ describe("JobAwaiter Integration Tests", () => {
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: ["job-with-result"] },
       };
 
       jobTracker.registerJob(jobInfo);
@@ -508,12 +520,14 @@ describe("JobAwaiter Integration Tests", () => {
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: ["job-shutdown-1"] },
       };
       const job2: JobInfo = {
         id: "job-shutdown-2",
         status: JobStatus.RUNNING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: ["job-shutdown-2"] },
       };
 
       jobTracker.registerJob(job1);
@@ -538,6 +552,7 @@ describe("JobAwaiter Integration Tests", () => {
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: ["job-cycle-1"] },
       };
 
       jobTracker.registerJob(jobInfo);
@@ -581,6 +596,7 @@ describe("JobAwaiter Integration Tests", () => {
         status: JobStatus.PENDING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: "test", batchJobIds: ["job-cycle-2"] },
       };
 
       jobTracker.registerJob(jobInfo);

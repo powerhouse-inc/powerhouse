@@ -1,5 +1,4 @@
 import type {
-  HashAlgorithms,
   IBaseRelationalDb,
   IRelationalDb,
   IRelationalQueryBuilder,
@@ -16,20 +15,12 @@ const LOG2_26 = Math.log2(26); //
  * @param algorithm The hashing algorithm to use. Defaults to "fnv1a".
  * @returns The hashed string.
  */
-export function hashNamespace(
-  str: string,
-  length = 10,
-  algorithm: HashAlgorithms = "fnv1a",
-) {
-  if (algorithm === "fnv1a") {
-    const requiredBits = Math.ceil(length * LOG2_26);
-    const bitSize =
-      SUPPORTED_SIZES.find((size) => size && size >= requiredBits) ?? 1024;
-    const hash = fnv1a(str, { size: bitSize });
-    return toBase26(hash, length);
-  } else {
-    throw new Error(`Unsupported hashing algorithm: ${algorithm}`);
-  }
+export function hashNamespace(str: string, length = 10) {
+  const requiredBits = Math.ceil(length * LOG2_26);
+  const bitSize =
+    SUPPORTED_SIZES.find((size) => size && size >= requiredBits) ?? 1024;
+  const hash = fnv1a(str, { size: bitSize });
+  return toBase26(hash, length);
 }
 
 // converts hash to lowercase letters

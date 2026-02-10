@@ -113,6 +113,7 @@ export class InMemoryJobTracker implements IJobTracker {
         status: JobStatus.RUNNING,
         createdAtUtcIso: new Date().toISOString(),
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: jobId, batchJobIds: [jobId] },
       });
       return;
     }
@@ -135,6 +136,7 @@ export class InMemoryJobTracker implements IJobTracker {
         error,
         job,
         consistencyToken: createEmptyConsistencyToken(),
+        meta: { batchId: jobId, batchJobIds: [jobId] },
       });
       return;
     }

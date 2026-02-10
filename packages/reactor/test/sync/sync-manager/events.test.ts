@@ -162,7 +162,11 @@ describe("SyncManager - Event Tests", () => {
   ): void => {
     const subscriber = eventSubscribers.get(ReactorEventTypes.JOB_WRITE_READY);
     if (subscriber) {
-      subscriber(ReactorEventTypes.JOB_WRITE_READY, { jobId, operations });
+      subscriber(ReactorEventTypes.JOB_WRITE_READY, {
+        jobId,
+        operations,
+        jobMeta: { batchId: `auto-${jobId}`, batchJobIds: [jobId] },
+      });
     }
   };
 
@@ -734,6 +738,7 @@ describe("SyncManager - Event Tests", () => {
           jobId,
           operations,
           collectionMemberships,
+          jobMeta: { batchId: `auto-${jobId}`, batchJobIds: [jobId] },
         });
       }
     };
@@ -898,7 +903,10 @@ describe("SyncManager - Event Tests", () => {
         ReactorEventTypes.JOB_WRITE_READY,
       );
       if (subscriber) {
-        subscriber(ReactorEventTypes.JOB_WRITE_READY, { operations });
+        subscriber(ReactorEventTypes.JOB_WRITE_READY, {
+          operations,
+          jobMeta: { batchId: "auto-1", batchJobIds: ["auto-job-1"] },
+        });
       }
 
       const syncEvents = emittedEvents.filter(

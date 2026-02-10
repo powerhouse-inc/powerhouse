@@ -177,6 +177,7 @@ describe("SimpleJobExecutor mutation signature verification", () => {
       createdAt: new Date().toISOString(),
       queueHint: [],
       errorHistory: [],
+      meta: { batchId: "test", batchJobIds: ["job-1"] },
     };
 
     const result = await executor.executeJob(job);
@@ -218,6 +219,7 @@ describe("SimpleJobExecutor mutation signature verification", () => {
       createdAt: new Date().toISOString(),
       queueHint: [],
       errorHistory: [],
+      meta: { batchId: "test", batchJobIds: ["job-1"] },
     };
 
     const result = await executor.executeJob(job);
@@ -239,6 +241,7 @@ describe("SimpleJobExecutor mutation signature verification", () => {
       createdAt: new Date().toISOString(),
       queueHint: [],
       errorHistory: [],
+      meta: { batchId: "test", batchJobIds: ["job-1"] },
     };
 
     const result = await executor.executeJob(job);
@@ -269,6 +272,7 @@ describe("SimpleJobExecutor mutation signature verification", () => {
       createdAt: new Date().toISOString(),
       queueHint: [],
       errorHistory: [],
+      meta: { batchId: "test", batchJobIds: ["job-1"] },
     };
 
     const result = await executor.executeJob(job);
@@ -319,6 +323,7 @@ describe("SimpleJobExecutor mutation signature verification", () => {
       createdAt: new Date().toISOString(),
       queueHint: [],
       errorHistory: [],
+      meta: { batchId: "test", batchJobIds: ["job-1"] },
     };
 
     const result = await executor.executeJob(job);
@@ -361,6 +366,7 @@ describe("SimpleJobExecutor mutation signature verification", () => {
       createdAt: new Date().toISOString(),
       queueHint: [],
       errorHistory: [],
+      meta: { batchId: "test", batchJobIds: ["job-1"] },
     };
 
     const writeOpsSpy = vi.spyOn(mockOperationStore, "apply");
@@ -412,6 +418,7 @@ describe("SimpleJobExecutor mutation signature verification", () => {
       createdAt: new Date().toISOString(),
       queueHint: [],
       errorHistory: [],
+      meta: { batchId: "test", batchJobIds: ["job-1"] },
     };
 
     const result = await executor.executeJob(job);

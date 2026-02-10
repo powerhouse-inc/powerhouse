@@ -458,7 +458,11 @@ describe("SyncManager - Unit Tests", () => {
       );
       expect(subscriber).toBeDefined();
 
-      subscriber!(ReactorEventTypes.JOB_WRITE_READY, { operations });
+      subscriber!(ReactorEventTypes.JOB_WRITE_READY, {
+        jobId: "auto-job-1",
+        operations,
+        jobMeta: { batchId: "auto-1", batchJobIds: ["auto-job-1"] },
+      });
 
       expect(mockChannel.outbox.add).toHaveBeenCalled();
     });
@@ -500,7 +504,11 @@ describe("SyncManager - Unit Tests", () => {
       const subscriber = eventSubscribers.get(
         ReactorEventTypes.JOB_WRITE_READY,
       );
-      subscriber!(ReactorEventTypes.JOB_WRITE_READY, { operations });
+      subscriber!(ReactorEventTypes.JOB_WRITE_READY, {
+        jobId: "auto-job-1",
+        operations,
+        jobMeta: { batchId: "auto-1", batchJobIds: ["auto-job-1"] },
+      });
 
       expect(mockChannel.outbox.add).not.toHaveBeenCalled();
     });
@@ -541,7 +549,11 @@ describe("SyncManager - Unit Tests", () => {
         ReactorEventTypes.JOB_WRITE_READY,
       );
       if (subscriber) {
-        subscriber(ReactorEventTypes.JOB_WRITE_READY, { operations });
+        subscriber(ReactorEventTypes.JOB_WRITE_READY, {
+          jobId: "auto-job-1",
+          operations,
+          jobMeta: { batchId: "auto-1", batchJobIds: ["auto-job-1"] },
+        });
       }
 
       expect(mockChannel.outbox.add).not.toHaveBeenCalled();
@@ -589,6 +601,7 @@ describe("SyncManager - Unit Tests", () => {
       subscriber!(ReactorEventTypes.JOB_WRITE_READY, {
         jobId: "test-job-1",
         operations,
+        jobMeta: { batchId: "auto-test-job-1", batchJobIds: ["test-job-1"] },
       });
 
       expect(mockEventBus.emit).toHaveBeenCalledWith(
@@ -654,6 +667,7 @@ describe("SyncManager - Unit Tests", () => {
       subscriber!(ReactorEventTypes.JOB_WRITE_READY, {
         jobId: "test-job-2",
         operations,
+        jobMeta: { batchId: "auto-test-job-2", batchJobIds: ["test-job-2"] },
       });
 
       expect(createdSyncOp).toBeDefined();
@@ -725,6 +739,7 @@ describe("SyncManager - Unit Tests", () => {
       subscriber!(ReactorEventTypes.JOB_WRITE_READY, {
         jobId: "test-job-3",
         operations,
+        jobMeta: { batchId: "auto-test-job-3", batchJobIds: ["test-job-3"] },
       });
 
       expect(createdSyncOp).toBeDefined();
@@ -749,54 +764,6 @@ describe("SyncManager - Unit Tests", () => {
             }),
           ]),
         } as SyncFailedEvent),
-      );
-    });
-
-    it("should not emit sync events for operations without jobId", async () => {
-      await syncManager.startup();
-
-      const channelConfig: ChannelConfig = {
-        type: "internal",
-        parameters: {},
-      };
-
-      await syncManager.add("remote1", "collection1", channelConfig, {
-        documentId: ["doc1"],
-        scope: ["global"],
-        branch: "main",
-      });
-
-      const operations: OperationWithContext[] = [
-        {
-          operation: {
-            id: "op1",
-            index: 0,
-            skip: 0,
-            hash: "hash1",
-            timestampUtcMs: "2023-01-01T00:00:00.000Z",
-            action: { type: "CREATE", scope: "global" } as any,
-          },
-          context: {
-            documentId: "doc1",
-            documentType: "test",
-            scope: "global",
-            branch: "main",
-            ordinal: 1,
-          },
-        },
-      ];
-
-      const subscriber = eventSubscribers.get(
-        ReactorEventTypes.JOB_WRITE_READY,
-      );
-
-      subscriber!(ReactorEventTypes.JOB_WRITE_READY, {
-        operations,
-      });
-
-      expect(mockEventBus.emit).not.toHaveBeenCalledWith(
-        SyncEventTypes.SYNC_PENDING,
-        expect.anything(),
       );
     });
   });
@@ -968,6 +935,7 @@ describe("SyncManager - Unit Tests", () => {
       subscriber!(ReactorEventTypes.JOB_WRITE_READY, {
         jobId: "test-job",
         operations: addRelationshipOps,
+        jobMeta: { batchId: "auto-test-job", batchJobIds: ["test-job"] },
         collectionMemberships: { [driveId]: [collectionId] },
       });
 
@@ -1053,10 +1021,12 @@ describe("SyncManager - Unit Tests", () => {
       subscriber!(ReactorEventTypes.JOB_WRITE_READY, {
         jobId: "job1",
         operations: event1Operations,
+        jobMeta: { batchId: "auto-job1", batchJobIds: ["job1"] },
       });
       subscriber!(ReactorEventTypes.JOB_WRITE_READY, {
         jobId: "job2",
         operations: event2Operations,
+        jobMeta: { batchId: "auto-job2", batchJobIds: ["job2"] },
       });
 
       // Wait for processing
@@ -1116,6 +1086,10 @@ describe("SyncManager - Unit Tests", () => {
         subscriber(ReactorEventTypes.JOB_WRITE_READY, {
           jobId: "post-shutdown-job",
           operations,
+          jobMeta: {
+            batchId: "auto-post-shutdown-job",
+            batchJobIds: ["post-shutdown-job"],
+          },
         });
       }
 
@@ -1255,7 +1229,7 @@ describe("SyncManager - Unit Tests", () => {
       expect(mockChannel.outbox.add).toHaveBeenCalledTimes(1);
     });
 
-    it("should treat event without batchId as non-batch", async () => {
+    it("should treat single-job batchJobIds as non-batch", async () => {
       await syncManager.startup();
 
       const channelConfig: ChannelConfig = {
@@ -1296,6 +1270,7 @@ describe("SyncManager - Unit Tests", () => {
       subscriber!(ReactorEventTypes.JOB_WRITE_READY, {
         jobId: "j1",
         operations,
+        jobMeta: { batchId: "auto-1", batchJobIds: ["j1"] },
       });
 
       await new Promise((resolve) => setTimeout(resolve, 10));

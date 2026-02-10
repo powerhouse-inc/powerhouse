@@ -131,8 +131,9 @@ export async function createTestOperationStore(): Promise<{
  * Factory for creating test Job objects
  */
 export function createTestJob(overrides: Partial<Job> = {}): Job {
+  const id = overrides.id || `job-${uuidv4()}`;
   const defaultJob: Job = {
-    id: overrides.id || `job-${uuidv4()}`,
+    id,
     kind: overrides.kind ?? "mutation",
     documentId: "doc-1",
     scope: "global",
@@ -144,6 +145,7 @@ export function createTestJob(overrides: Partial<Job> = {}): Job {
     retryCount: 0,
     maxRetries: 3,
     errorHistory: [],
+    meta: { batchId: `test-${id}`, batchJobIds: [id] },
   };
 
   return {
@@ -156,8 +158,9 @@ export function createTestJob(overrides: Partial<Job> = {}): Job {
  * Factory for creating minimal Job objects (useful for performance tests)
  */
 export function createMinimalJob(overrides: Partial<Job> = {}): Job {
+  const id = overrides.id || `job-${uuidv4()}`;
   return {
-    id: overrides.id || `job-${uuidv4()}`,
+    id,
     kind: overrides.kind ?? "mutation",
     documentId: overrides.documentId || "doc-1",
     scope: overrides.scope || "global",
@@ -167,6 +170,7 @@ export function createMinimalJob(overrides: Partial<Job> = {}): Job {
     createdAt: overrides.createdAt || "2023-01-01T00:00:00.000Z",
     queueHint: overrides.queueHint || [],
     errorHistory: overrides.errorHistory || [],
+    meta: { batchId: `test-${id}`, batchJobIds: [id] },
     ...overrides,
   };
 }

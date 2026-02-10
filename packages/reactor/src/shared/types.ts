@@ -52,6 +52,21 @@ export enum RelationshipChangeType {
   Removed = "removed",
 }
 
+/**
+ * Batch-specific metadata always present on every job.
+ * Single jobs get a unique batchId and batchJobIds of [jobId].
+ */
+export type BatchMeta = {
+  batchId: string;
+  batchJobIds: string[];
+};
+
+/**
+ * Metadata that flows through the job lifecycle.
+ * Always includes batch fields; callers may add additional properties.
+ */
+export type JobMeta = BatchMeta & Record<string, unknown>;
+
 import type { Job } from "../queue/types.js";
 
 /**
@@ -72,9 +87,9 @@ export type JobInfo = {
   consistencyToken: ConsistencyToken;
 
   /**
-   * Optional metadata that flows through the job lifecycle.
+   * Metadata that flows through the job lifecycle.
    */
-  meta?: Record<string, unknown>;
+  meta: JobMeta;
 
   /**
    * The full job object, populated on failure for debugging purposes.

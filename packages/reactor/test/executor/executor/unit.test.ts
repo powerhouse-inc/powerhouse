@@ -125,6 +125,7 @@ describe("SimpleJobExecutor", () => {
         createdAt: "123",
         queueHint: [],
         errorHistory: [],
+        meta: { batchId: "test", batchJobIds: ["job-2"] },
       };
 
       const result = await executor.executeJob(job);
@@ -185,6 +186,7 @@ describe("SimpleJobExecutor", () => {
         createdAt: "123",
         queueHint: [],
         errorHistory: [],
+        meta: { batchId: "test", batchJobIds: ["job-3"] },
       };
 
       const result = await executor.executeJob(job);
@@ -220,6 +222,7 @@ describe("SimpleJobExecutor", () => {
         createdAt: "123",
         queueHint: [],
         errorHistory: [],
+        meta: { batchId: "test", batchJobIds: ["job-4"] },
       };
 
       const result = await executor.executeJob(job);
@@ -287,6 +290,7 @@ describe("SimpleJobExecutor", () => {
         createdAt: "1234567890",
         queueHint: [],
         errorHistory: [],
+        meta: { batchId: "test", batchJobIds: ["delete-job-1"] },
       };
 
       const result = await executor.executeJob(job);
@@ -352,6 +356,7 @@ describe("SimpleJobExecutor", () => {
         createdAt: "1234567890",
         queueHint: [],
         errorHistory: [],
+        meta: { batchId: "test", batchJobIds: ["delete-job-2"] },
       };
 
       mockOperationStore.apply = vi
@@ -385,6 +390,7 @@ describe("SimpleJobExecutor", () => {
         createdAt: "1234567890",
         queueHint: [],
         errorHistory: [],
+        meta: { batchId: "test", batchJobIds: ["delete-job-3"] },
       };
 
       const result = await executor.executeJob(job);
@@ -425,6 +431,7 @@ describe("SimpleJobExecutor", () => {
           createdAt: "1234567890",
           queueHint: [],
           errorHistory: [],
+          meta: { batchId: "test", batchJobIds: ["create-job-1"] },
         };
 
         const result = await executor.executeJob(job);
@@ -485,6 +492,7 @@ describe("SimpleJobExecutor", () => {
           createdAt: "1234567890",
           queueHint: [],
           errorHistory: [],
+          meta: { batchId: "test", batchJobIds: ["delete-job-index"] },
         };
 
         const result = await executor.executeJob(job);
@@ -543,6 +551,7 @@ describe("SimpleJobExecutor", () => {
           createdAt: "1234567890",
           queueHint: [],
           errorHistory: [],
+          meta: { batchId: "test", batchJobIds: ["upgrade-job-index"] },
         };
 
         const result = await executor.executeJob(job);
@@ -595,6 +604,7 @@ describe("SimpleJobExecutor", () => {
           createdAt: "1234567890",
           queueHint: [],
           errorHistory: [],
+          meta: { batchId: "test", batchJobIds: ["create-and-upgrade-job"] },
         };
 
         // After CREATE, document will have one operation
@@ -692,6 +702,7 @@ describe("SimpleJobExecutor", () => {
           createdAt: "1234567890",
           queueHint: [],
           errorHistory: [],
+          meta: { batchId: "test", batchJobIds: ["delete-job"] },
         };
 
         const result = await executor.executeJob(job);
@@ -757,6 +768,7 @@ describe("SimpleJobExecutor", () => {
           createdAt: "1234567890",
           queueHint: [],
           errorHistory: [],
+          meta: { batchId: "test", batchJobIds: ["upgrade-job"] },
         };
 
         const result = await executor.executeJob(job);
@@ -808,6 +820,7 @@ describe("SimpleJobExecutor", () => {
           createdAt: "1234567890",
           queueHint: [],
           errorHistory: [],
+          meta: { batchId: "test", batchJobIds: ["create-and-upgrade-job"] },
         };
 
         // After CREATE, document will have one operation
@@ -886,6 +899,7 @@ describe("SimpleJobExecutor", () => {
           createdAt: "1234567890",
           queueHint: [],
           errorHistory: [],
+          meta: { batchId: "test", batchJobIds: ["create-job-wrong-scope"] },
         };
 
         const result = await executor.executeJob(job);
@@ -923,6 +937,7 @@ describe("SimpleJobExecutor", () => {
           createdAt: "1234567890",
           queueHint: [],
           errorHistory: [],
+          meta: { batchId: "test", batchJobIds: ["create-job-correct-scope"] },
         };
 
         const result = await executor.executeJob(job);

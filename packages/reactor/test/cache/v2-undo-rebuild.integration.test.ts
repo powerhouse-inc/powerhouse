@@ -220,6 +220,7 @@ describe("V2 UNDO Cache Rebuild Integration Tests", () => {
         createdAt: new Date().toISOString(),
         queueHint: [],
         errorHistory: [],
+        meta: { batchId: "test", batchJobIds: ["job-set-name"] },
       };
 
       const setNameResult = await executor.executeJob(setModelNameJob);
@@ -251,6 +252,7 @@ describe("V2 UNDO Cache Rebuild Integration Tests", () => {
         createdAt: new Date().toISOString(),
         queueHint: [],
         errorHistory: [],
+        meta: { batchId: "test", batchJobIds: ["job-undo"] },
       };
 
       const undoResult = await executor.executeJob(undoJob);
@@ -302,6 +304,7 @@ describe("V2 UNDO Cache Rebuild Integration Tests", () => {
         createdAt: new Date().toISOString(),
         queueHint: [],
         errorHistory: [],
+        meta: { batchId: "test", batchJobIds: ["job-set-name-1"] },
       };
 
       await executor.executeJob(setModelName1Job);
@@ -325,6 +328,7 @@ describe("V2 UNDO Cache Rebuild Integration Tests", () => {
         createdAt: new Date().toISOString(),
         queueHint: [],
         errorHistory: [],
+        meta: { batchId: "test", batchJobIds: ["job-set-name-2"] },
       };
 
       await executor.executeJob(setModelName2Job);
@@ -355,6 +359,7 @@ describe("V2 UNDO Cache Rebuild Integration Tests", () => {
         createdAt: new Date().toISOString(),
         queueHint: [],
         errorHistory: [],
+        meta: { batchId: "test", batchJobIds: ["job-undo-1"] },
       };
 
       const undo1Result = await executor.executeJob(undo1Job);
@@ -386,6 +391,7 @@ describe("V2 UNDO Cache Rebuild Integration Tests", () => {
         createdAt: new Date().toISOString(),
         queueHint: [],
         errorHistory: [],
+        meta: { batchId: "test", batchJobIds: ["job-undo-2"] },
       };
 
       const undo2Result = await executor.executeJob(undo2Job);
@@ -435,6 +441,7 @@ describe("V2 UNDO Cache Rebuild Integration Tests", () => {
         createdAt: new Date().toISOString(),
         queueHint: [],
         errorHistory: [],
+        meta: { batchId: "test", batchJobIds: ["job-set-1"] },
       });
 
       await executor.executeJob({
@@ -456,6 +463,7 @@ describe("V2 UNDO Cache Rebuild Integration Tests", () => {
         createdAt: new Date().toISOString(),
         queueHint: [],
         errorHistory: [],
+        meta: { batchId: "test", batchJobIds: ["job-set-2"] },
       });
 
       await executor.executeJob({
@@ -477,6 +485,7 @@ describe("V2 UNDO Cache Rebuild Integration Tests", () => {
         createdAt: new Date().toISOString(),
         queueHint: [],
         errorHistory: [],
+        meta: { batchId: "test", batchJobIds: ["job-undo-1"] },
       });
 
       await executor.executeJob({
@@ -498,6 +507,7 @@ describe("V2 UNDO Cache Rebuild Integration Tests", () => {
         createdAt: new Date().toISOString(),
         queueHint: [],
         errorHistory: [],
+        meta: { batchId: "test", batchJobIds: ["job-undo-2"] },
       });
 
       await executor.executeJob({
@@ -519,6 +529,7 @@ describe("V2 UNDO Cache Rebuild Integration Tests", () => {
         createdAt: new Date().toISOString(),
         queueHint: [],
         errorHistory: [],
+        meta: { batchId: "test", batchJobIds: ["job-set-3"] },
       });
 
       const docBeforeRebuild = (await writeCache.getState(

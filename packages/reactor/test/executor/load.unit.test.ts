@@ -157,6 +157,7 @@ describe("SimpleJobExecutor load jobs", () => {
       createdAt: new Date().toISOString(),
       queueHint: [],
       errorHistory: [],
+      meta: { batchId: "test", batchJobIds: ["job-load-order"] },
     });
 
     expect(result.success).toBe(true);

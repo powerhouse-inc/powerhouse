@@ -23,27 +23,31 @@ describe("Batch mutation queue ordering", () => {
     scope: string,
     branch: string,
     queueHint: string[] = [],
-  ): Job => ({
-    id: uuidv4(),
-    kind: "mutation",
-    documentId,
-    scope,
-    branch,
-    actions: [
-      {
-        id: uuidv4(),
-        type: "TEST_ACTION",
-        scope,
-        timestampUtcMs: new Date().toISOString(),
-        input: {},
-      } as Action,
-    ],
-    operations: [],
-    createdAt: new Date().toISOString(),
-    queueHint,
-    maxRetries: 3,
-    errorHistory: [],
-  });
+  ): Job => {
+    const id = uuidv4();
+    return {
+      id,
+      kind: "mutation",
+      documentId,
+      scope,
+      branch,
+      actions: [
+        {
+          id: uuidv4(),
+          type: "TEST_ACTION",
+          scope,
+          timestampUtcMs: new Date().toISOString(),
+          input: {},
+        } as Action,
+      ],
+      operations: [],
+      createdAt: new Date().toISOString(),
+      queueHint,
+      maxRetries: 3,
+      errorHistory: [],
+      meta: { batchId: "test", batchJobIds: [id] },
+    };
+  };
 
   it("should respect queueHint dependencies across documents", async () => {
     const job1Id = uuidv4();
@@ -68,6 +72,7 @@ describe("Batch mutation queue ordering", () => {
       queueHint: [],
       maxRetries: 3,
       errorHistory: [],
+      meta: { batchId: "test", batchJobIds: [job1Id] },
     };
     const job2: Job = {
       id: job2Id,
@@ -89,6 +94,7 @@ describe("Batch mutation queue ordering", () => {
       queueHint: [job1Id],
       maxRetries: 3,
       errorHistory: [],
+      meta: { batchId: "test", batchJobIds: [job2Id] },
     };
     await queue.enqueue(job1);
     await queue.enqueue(job2);
@@ -139,6 +145,7 @@ describe("Batch mutation queue ordering", () => {
       queueHint: [],
       maxRetries: 3,
       errorHistory: [],
+      meta: { batchId: "test", batchJobIds: [job1Id] },
     };
     const job2: Job = {
       id: job2Id,
@@ -160,6 +167,7 @@ describe("Batch mutation queue ordering", () => {
       queueHint: [job1Id],
       maxRetries: 3,
       errorHistory: [],
+      meta: { batchId: "test", batchJobIds: [job2Id] },
     };
     const job3: Job = {
       id: job3Id,
@@ -181,6 +189,7 @@ describe("Batch mutation queue ordering", () => {
       queueHint: [job2Id],
       maxRetries: 3,
       errorHistory: [],
+      meta: { batchId: "test", batchJobIds: [job3Id] },
     };
     await queue.enqueue(job1);
     await queue.enqueue(job2);

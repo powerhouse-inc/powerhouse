@@ -1,4 +1,5 @@
 import type { Job } from "../queue/types.js";
+import type { JobMeta } from "../shared/types.js";
 import type { OperationWithContext } from "../storage/interfaces.js";
 
 /**
@@ -57,7 +58,7 @@ export const ReactorEventTypes = {
  */
 export type JobPendingEvent = {
   jobId: string;
-  jobMeta?: Record<string, unknown>;
+  jobMeta: JobMeta;
 };
 
 /**
@@ -65,7 +66,7 @@ export type JobPendingEvent = {
  */
 export type JobRunningEvent = {
   jobId: string;
-  jobMeta?: Record<string, unknown>;
+  jobMeta: JobMeta;
 };
 
 /**
@@ -75,7 +76,7 @@ export type JobRunningEvent = {
 export type JobWriteReadyEvent = {
   jobId: string;
   operations: OperationWithContext[];
-  jobMeta?: Record<string, unknown>;
+  jobMeta: JobMeta;
   /**
    * Maps documentId to the collection IDs it belongs to.
    * Used by SyncManager to route operations only to remotes

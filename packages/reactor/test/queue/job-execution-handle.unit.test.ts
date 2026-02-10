@@ -315,6 +315,7 @@ describe("JobExecutionHandle", () => {
         retryCount: 2,
         maxRetries: 5,
         errorHistory: [{ message: "previous error", stack: "" }],
+        meta: { batchId: "test", batchJobIds: ["test-job-id"] },
       };
 
       const handle = new JobExecutionHandle(job, JobQueueState.READY);
