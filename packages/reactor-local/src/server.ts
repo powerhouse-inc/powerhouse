@@ -169,7 +169,7 @@ const startServer = async (
     // processors: {
     //   "ph/common/drive-analytics": [DriveAnalyticsProcessorFactory],
     // },
-  });
+  }, ["connect" as const, "switchboard" as const]);
 
   // add vite middleware after express app is initialized if applicable
   if (vite) {

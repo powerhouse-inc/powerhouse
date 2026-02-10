@@ -39,14 +39,13 @@ export type IRelationalDbLegacy<Schema = unknown> =
     ): IRelationalQueryBuilderLegacy<NamespaceSchema>;
   };
 
-export type ReactorContext = {
-  app?: "connect" | "switchboard";
-};
+export type ProcessorAppsLegacy = ("connect" | "switchboard")[];
+export type ProcessorAppLegacy = ProcessorAppsLegacy[number];
 
 export interface IProcessorHostModuleLegacy {
   analyticsStore: IAnalyticsStore;
   relationalDb: IRelationalDbLegacy;
-  context?: ReactorContext;
+  processorApps: ProcessorAppsLegacy;
   config?: Map<string, unknown>;
 }
 
@@ -84,7 +83,7 @@ export type ProcessorRecordLegacy = {
  */
 export type ProcessorFactoryLegacy = (
   driveHeader: PHDocumentHeader,
-  context?: ReactorContext,
+  processorApp?: ProcessorAppLegacy,
 ) => ProcessorRecordLegacy[] | Promise<ProcessorRecordLegacy[]>;
 
 /**

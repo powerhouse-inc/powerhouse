@@ -18,6 +18,8 @@ import type {
   IProcessorHostModuleLegacy,
   IProcessorManagerLegacy,
   IRelationalDbLegacy,
+  ProcessorAppLegacy,
+  ProcessorAppsLegacy,
   ProcessorFactoryLegacy,
 } from "document-drive";
 import {
@@ -225,10 +227,7 @@ function setupEventListeners(
   reactor: IDocumentDriveServer,
   graphqlManager: GraphQLManager,
   processorManager: IProcessorManagerLegacy,
-  module: {
-    relationalDb: IRelationalDbLegacy;
-    analyticsStore: IAnalyticsStore;
-  },
+  module: IProcessorHostModuleLegacy,
 ): void {
   pkgManager.onDocumentModelsChange(async (documentModels) => {
     reactor.setDocumentModelModules(Object.values(documentModels).flat());
@@ -248,12 +247,7 @@ function setupEventListeners(
     for (const [packageName, fns] of processors) {
       await processorManager.unregisterFactory(packageName);
 
-      const factories = fns.map((fn) =>
-        fn({
-          analyticsStore: module.analyticsStore,
-          relationalDb: module.relationalDb,
-        }),
-      );
+      const factories = fns.map((fn) => fn(module));
 
       await processorManager.registerFactory(packageName, async (driveHeader) =>
         (
@@ -495,9 +489,15 @@ async function _setupAPI(
     freeEntry: boolean;
   },
   legacyReactor: boolean,
+  processorApps: ProcessorAppsLegacy,
   reactorProcessorManager?: IReactorProcessorManager,
 ): Promise<API> {
-  const module: IProcessorHostModuleLegacy = { relationalDb, analyticsStore };
+  const module: IProcessorHostModuleLegacy = {
+    relationalDb,
+    analyticsStore,
+    processorApps,
+    config: options.processorConfig,
+  };
   const mcpServerEnabled = options.mcp ?? true;
 
   // initialize processors
@@ -513,11 +513,7 @@ async function _setupAPI(
     ]) {
       const factories = fns.map((fn) => {
         try {
-          return fn({
-            analyticsStore: module.analyticsStore,
-            relationalDb: module.relationalDb,
-            config: options.processorConfig,
-          });
+          return fn(module);
         } catch (e) {
           logger.error(
             `Error initializing processor factory for package ${packageName}:`,
@@ -577,11 +573,7 @@ async function _setupAPI(
     ]) {
       const factories = fns.map((fn) => {
         try {
-          return fn({
-            analyticsStore: module.analyticsStore,
-            relationalDb: module.relationalDb,
-            config: options.processorConfig,
-          });
+          return fn(module);
         } catch (e) {
           logger.error(
             `Error initializing processor factory for package ${packageName}:`,
@@ -702,6 +694,7 @@ export async function startAPI(
   registry: IDocumentModelRegistry,
   syncManager: ISyncManager,
   options: Options,
+  processorApps: ProcessorAppsLegacy,
 ): Promise<API> {
   const {
     port,
@@ -752,6 +745,7 @@ export async function startAPI(
     options,
     auth,
     legacyReactor,
+    processorApps,
     undefined, // no reactorProcessorManager in legacy mode
   );
 }
@@ -776,6 +770,7 @@ export async function initializeAndStartAPI(
     documentModels: DocumentModelModule[],
   ) => Promise<ReactorClientModule>,
   options: Options,
+  processorApps: ProcessorAppsLegacy,
 ): Promise<
   API & {
     driveServer: IDocumentDriveServer;
@@ -842,6 +837,7 @@ export async function initializeAndStartAPI(
     options,
     auth,
     legacyReactor,
+    processorApps,
     reactorProcessorManager,
   );
 
