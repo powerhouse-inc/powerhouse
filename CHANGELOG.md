@@ -1,3 +1,14 @@
+## 6.0.0-dev.38 (2026-02-10)
+
+### 🩹 Fixes
+
+- **design-system:** import assets with runtime relative paths ([852e94754](https://github.com/powerhouse-inc/powerhouse/commit/852e94754))
+- **reactor:** avoid browser breaking # import ([b444b86df](https://github.com/powerhouse-inc/powerhouse/commit/b444b86df))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 6.0.0-dev.37 (2026-02-10)
 
 ### 🚀 Features
