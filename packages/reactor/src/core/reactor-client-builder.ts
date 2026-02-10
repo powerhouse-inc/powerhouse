@@ -1,8 +1,8 @@
-import type { IEventBus } from "#events/interfaces.js";
-import { ConsoleLogger } from "#logging/console.js";
-import type { ILogger } from "#logging/types.js";
 import type { ISigner } from "document-model";
 import { ReactorClient } from "../client/reactor-client.js";
+import type { IEventBus } from "../events/interfaces.js";
+import { ConsoleLogger } from "../logging/console.js";
+import type { ILogger } from "../logging/types.js";
 import { JobAwaiter, type IJobAwaiter } from "../shared/awaiter.js";
 import { PassthroughSigner } from "../signer/passthrough-signer.js";
 import type {

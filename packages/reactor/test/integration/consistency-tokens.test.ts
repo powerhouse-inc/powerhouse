@@ -1,9 +1,9 @@
-import { EventBus } from "#index.js";
 import { MemoryStorage, driveDocumentModelModule } from "document-drive";
 import { documentModelDocumentModelModule } from "document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ReactorBuilder } from "../../src/core/reactor-builder.js";
 import type { IReactor } from "../../src/core/types.js";
+import { EventBus } from "../../src/index.js";
 import type { ConsistencyToken, JobInfo } from "../../src/shared/types.js";
 import { JobStatus } from "../../src/shared/types.js";
 import { createDocModelDocument } from "../factories.js";

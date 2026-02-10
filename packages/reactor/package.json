@@ -12,9 +12,6 @@
     ".": "./dist/src/index.js",
     "./*": "./dist/src/*.js"
   },
-  "imports": {
-    "#*": "./dist/src/*"
-  },
   "files": [
     "./dist/src"
   ],

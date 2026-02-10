@@ -8,20 +8,19 @@ import type {
   PHDocument,
 } from "document-model";
 import { actions } from "document-model";
-
 import {
   addRelationshipAction,
   createDocumentAction,
   upgradeDocumentAction,
-} from "#actions/index.js";
-import { getSharedActionScope, signActions } from "#core/utils.js";
-import type { ILogger } from "#logging/types.js";
+} from "../actions/index.js";
 import type {
   BatchLoadRequest,
   BatchLoadResult,
   ExecutionJobPlan,
   IReactor,
 } from "../core/types.js";
+import { getSharedActionScope, signActions } from "../core/utils.js";
+import type { ILogger } from "../logging/types.js";
 import { type IJobAwaiter } from "../shared/awaiter.js";
 import {
   JobStatus,
