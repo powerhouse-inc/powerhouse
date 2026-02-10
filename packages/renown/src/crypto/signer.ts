@@ -48,25 +48,59 @@ export class RenownCryptoSigner implements ISigner {
     action: Action,
     abortSignal?: AbortSignal,
   ): Promise<Signature> {
+    const hashField = action.context?.prevOpHash ?? "";
+    return this._signAction(action, hashField, abortSignal);
+  }
+
+  /**
+   * Signs an action including a predicted resulting state hash.
+   *
+   * The resulting hash is packed into the signature tuple's 4th element (index 3)
+   * using the format: `${prevStateHash}:${resultingStateHash}`
+   *
+   * This allows offline verification of documents without reducer logic:
+   * - Verifier can check that the signature is valid for the claimed resulting state
+   * - Verifier can compare claimed resulting state to actual operation.hash
+   *
+   * @param action - The action to sign
+   * @param resultingStateHash - The predicted hash of document state AFTER this action runs
+   * @param abortSignal - Optional abort signal
+   * @returns A Signature tuple with the resulting hash encoded in element [3]
+   */
+  async signActionWithResultingState(
+    action: Action,
+    resultingStateHash: string,
+    abortSignal?: AbortSignal,
+  ): Promise<Signature> {
+    const prevStateHash = action.context?.prevOpHash ?? "";
+    const hashField = `${prevStateHash}:${resultingStateHash}`;
+    return this._signAction(action, hashField, abortSignal);
+  }
+
+  /**
+   * Internal signing implementation shared by signAction and signActionWithResultingState.
+   */
+  private async _signAction(
+    action: Action,
+    hashField: string,
+    abortSignal?: AbortSignal,
+  ): Promise<Signature> {
     if (abortSignal?.aborted) {
       throw new Error("Signing aborted");
     }
 
     const timestamp = (new Date().getTime() / 1000).toFixed(0);
-
     const hash = await this.hashAction(action);
 
     if (abortSignal?.aborted) {
       throw new Error("Signing aborted");
     }
 
-    const prevStateHash = action.context?.prevOpHash ?? "";
-
     const params: [string, string, string, string] = [
       timestamp,
       this.crypto.did,
       hash,
-      prevStateHash,
+      hashField,
     ];
     const message = this.buildSignatureMessage(params);
     const signatureBytes = await this.crypto.sign(message);
@@ -318,4 +352,57 @@ function bigIntToBytes(n: bigint, length: number): Uint8Array {
     n = n >> BigInt(8);
   }
   return bytes;
+}
+
+/**
+ * Parses the hash field (element [3]) from a signature tuple.
+ *
+ * Supports two formats:
+ * - Old format: just `prevStateHash` (no colon)
+ * - New format: `prevStateHash:resultingStateHash` (colon-separated)
+ *
+ * @param hashField - The 4th element of a Signature tuple
+ * @returns Object with prevStateHash and optional resultingStateHash
+ */
+export function parseSignatureHashField(hashField: string): {
+  prevStateHash: string;
+  resultingStateHash: string | undefined;
+} {
+  const colonIndex = hashField.indexOf(":");
+
+  if (colonIndex === -1) {
+    return {
+      prevStateHash: hashField,
+      resultingStateHash: undefined,
+    };
+  }
+
+  return {
+    prevStateHash: hashField.substring(0, colonIndex),
+    resultingStateHash: hashField.substring(colonIndex + 1),
+  };
+}
+
+/**
+ * Extracts the resulting state hash from a signature, if present.
+ *
+ * @param signature - A Signature tuple
+ * @returns The resulting state hash, or undefined if not present
+ */
+export function extractResultingHashFromSignature(
+  signature: Signature,
+): string | undefined {
+  const hashField = signature[3];
+  const { resultingStateHash } = parseSignatureHashField(hashField);
+  return resultingStateHash;
+}
+
+/**
+ * Checks if a signature includes a resulting state hash.
+ *
+ * @param signature - A Signature tuple
+ * @returns true if the signature includes a resulting state hash
+ */
+export function signatureHasResultingHash(signature: Signature): boolean {
+  return extractResultingHashFromSignature(signature) !== undefined;
 }
