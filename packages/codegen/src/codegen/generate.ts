@@ -6,7 +6,7 @@ import {
   tsMorphGenerateDriveEditor,
 } from "@powerhousedao/codegen/file-builders";
 import { buildTsMorphProject } from "@powerhousedao/codegen/utils";
-import { fileExists } from "@powerhousedao/common/clis";
+import { fileExists, type ProcessorApps } from "@powerhousedao/common/clis";
 import type {
   PartialPowerhouseManifest,
   PowerhouseConfig,
@@ -416,7 +416,7 @@ export async function generateSubgraph(
 export async function generateProcessor(args: {
   processorName: string;
   processorType: "analytics" | "relationalDb";
-  processorApp: "connect" | "switchboard";
+  processorApps: ProcessorApps;
   documentTypes: string[];
   skipFormat?: boolean;
   useTsMorph?: boolean;

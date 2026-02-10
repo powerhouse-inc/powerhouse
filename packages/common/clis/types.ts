@@ -3,6 +3,7 @@ import type { getPackageManagerCommand } from "./args/common.js";
 import type {
   DRIVES_PRESERVE_STRATEGIES,
   LOG_LEVELS,
+  PROCESSOR_APPS,
   SERVICE_ACTIONS,
 } from "./constants.js";
 
@@ -19,3 +20,6 @@ export type PackageManagerArgs = ParsedCmdResult<
 >;
 
 export type PathValidation = (dir: string) => boolean;
+export type ProcessorApp = (typeof PROCESSOR_APPS)[number];
+
+export type ProcessorApps = readonly ProcessorApp[];

@@ -37,7 +37,6 @@ import type { TlsOptions } from "node:tls";
 import type { Pool } from "pg";
 import { WebSocketServer } from "ws";
 // Import tracing - initializes OpenTelemetry and provides stub functions for backwards compatibility
-import type { ProcessorApp } from "../../reactor/src/processors/types.js";
 import { config, DefaultCoreSubgraphs } from "./config.js";
 import { AuthSubgraph } from "./graphql/auth/subgraph.js";
 import { GraphQLManager } from "./graphql/graphql-manager.js";
@@ -60,6 +59,7 @@ import {
   initAnalyticsStoreSql,
   type DocumentPermissionDatabase,
 } from "./utils/db.js";
+import type { TempProcessorAppToBeRemoved } from "@powerhousedao/reactor";
 
 const logger = childLogger(["reactor-api", "server"]);
 
@@ -479,7 +479,7 @@ async function _setupAPI(args: {
   packages: PackageManager;
   relationalDb: IRelationalDb;
   analyticsStore: IAnalyticsStore;
-  processorApp: ProcessorApp;
+  processorApp: TempProcessorAppToBeRemoved;
   documentPermissionService: DocumentPermissionService | undefined;
   processors: Map<
     string,
@@ -715,7 +715,7 @@ export async function startAPI(args: {
   reactorClient: IReactorClient;
   registry: IDocumentModelRegistry;
   syncManager: ISyncManager;
-  processorApp: ProcessorApp;
+  processorApp: TempProcessorAppToBeRemoved;
   options: Options;
 }): Promise<API> {
   const {
@@ -800,7 +800,7 @@ export async function initializeAndStartAPI(args: {
     driveServer: IDocumentDriveServer,
     documentModels: DocumentModelModule[],
   ) => Promise<ReactorClientModule>;
-  processorApp: ProcessorApp;
+  processorApp: TempProcessorAppToBeRemoved;
   options: Options;
 }): Promise<
   API & {

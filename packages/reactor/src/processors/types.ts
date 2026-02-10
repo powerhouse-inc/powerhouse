@@ -1,14 +1,17 @@
-import type { IRelationalDb } from "document-drive";
-import type { PHDocumentHeader } from "document-model";
-import type { OperationWithContext } from "../storage/interfaces.js";
 import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
+import type {
+  IRelationalDb,
+  OperationWithContext,
+} from "@powerhousedao/reactor";
+import type { PHDocumentHeader } from "document-model";
 
-export type ProcessorApp = "connect" | "switchboard";
+// TODO: move the generic drive explorer to its own package so that it is possible to use the common package as the source of the type here
+export type TempProcessorAppToBeRemoved = "connect" | "switchboard";
 
 export interface IProcessorHostModule {
   analyticsStore: IAnalyticsStore;
   relationalDb: IRelationalDb;
-  processorApp: ProcessorApp;
+  processorApp: TempProcessorAppToBeRemoved;
   config?: Map<string, unknown>;
 }
 
@@ -55,6 +58,7 @@ export type ProcessorRecord = {
  */
 export type ProcessorFactory = (
   driveHeader: PHDocumentHeader,
+  processorApp?: TempProcessorAppToBeRemoved,
 ) => ProcessorRecord[] | Promise<ProcessorRecord[]>;
 
 /**

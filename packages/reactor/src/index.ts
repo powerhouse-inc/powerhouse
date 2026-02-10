@@ -246,6 +246,8 @@ export {
 
 // Processors
 export { ProcessorManager } from "./processors/index.js";
+export { RelationalDbProcessor } from "./processors/relational/relational-db-processor.js";
+export type * from "./processors/relational/types.js";
 export type {
   IProcessor,
   IProcessorHostModule,
@@ -253,4 +255,5 @@ export type {
   ProcessorFactory,
   ProcessorFilter,
   ProcessorRecord,
+  TempProcessorAppToBeRemoved,
 } from "./processors/types.js";

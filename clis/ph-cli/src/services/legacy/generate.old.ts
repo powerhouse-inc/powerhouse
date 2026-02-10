@@ -8,6 +8,7 @@ import {
   generateProcessor,
   generateSubgraph,
 } from "@powerhousedao/codegen";
+import { PROCESSOR_APPS } from "@powerhousedao/common/clis";
 import { getConfig } from "@powerhousedao/config/node";
 import path from "path";
 
@@ -125,7 +126,7 @@ export async function startGenerate(
       documentTypes: options.documentTypes?.split(",") ?? [],
       skipFormat: config.skipFormat,
       useTsMorph,
-      processorApp: "switchboard",
+      processorApps: PROCESSOR_APPS,
     });
   } else if (command.subgraph && command.subgraphName) {
     await generateSubgraph(command.subgraphName, options.file || null, config);

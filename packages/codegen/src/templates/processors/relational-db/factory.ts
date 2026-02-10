@@ -7,16 +7,16 @@ export const relationalDbFactoryTemplate = (v: {
   documentTypes: string[];
 }) =>
   ts`
-import type {
+import type { 
   ProcessorRecord,
   IProcessorHostModule,
-  RelationalDbProcessorFilter,
-  ReactorContext,
-} from "document-drive";
+  ProcessorFilter
+ } from "@powerhousedao/reactor"
 import type { PHDocumentHeader } from "document-model";
+import type { ProcessorApp } from "@powerhousedao/common";
 import { ${v.pascalCaseName}Processor } from "./index.js";
 
-export const ${v.camelCaseName}ProcessorFactory = (module: IProcessorHostModule) => async (driveHeader: PHDocumentHeader, context?: ReactorContext): Promise<ProcessorRecord[]> => {
+export const ${v.camelCaseName}ProcessorFactory = (module: IProcessorHostModule) => async (driveHeader: PHDocumentHeader, processorApp?: ProcessorApp): Promise<ProcessorRecord[]> => {
   // Create a namespace for the processor and the provided drive id
   const namespace = ${v.pascalCaseName}Processor.getNamespace(driveHeader.id);
 
@@ -26,7 +26,7 @@ export const ${v.camelCaseName}ProcessorFactory = (module: IProcessorHostModule)
   );
 
   // Create a filter for the processor
-  const filter: RelationalDbProcessorFilter = {
+  const filter: ProcessorFilter = {
     branch: ["main"],
     documentId: ["*"],
     documentType: [${getDocumentType(v.documentTypes)}],

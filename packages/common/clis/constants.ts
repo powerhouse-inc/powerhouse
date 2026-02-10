@@ -58,6 +58,7 @@ export const VERSIONED_DEPENDENCIES = [
 export const VERSIONED_DEV_DEPENDENCIES = [
   "@powerhousedao/config",
   "@powerhousedao/ph-cli",
+  "@powerhousedao/reactor",
   "@powerhousedao/reactor-api",
   "@powerhousedao/reactor-browser",
   "@powerhousedao/reactor-local",
@@ -65,3 +66,5 @@ export const VERSIONED_DEV_DEPENDENCIES = [
   "@powerhousedao/connect",
   "document-drive",
 ];
+
+export const PROCESSOR_APPS = ["connect", "switchboard"] as const;

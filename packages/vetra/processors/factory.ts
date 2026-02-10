@@ -25,7 +25,7 @@ export const processorFactory = (module: IProcessorHostModule) => {
 
     // Call each cached factory with the driveHeader
     for (const factory of factories) {
-      processors.push(...(await factory(driveHeader)));
+      processors.push(...(await factory(driveHeader, module.processorApp)));
     }
 
     return processors;
