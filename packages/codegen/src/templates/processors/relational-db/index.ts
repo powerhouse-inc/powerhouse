@@ -10,7 +10,7 @@ import { up } from "./migrations.js";
 import type { DB } from "./schema.js";
 
 export class ${v.pascalCaseName}Processor extends RelationalDbProcessor<DB> {
-    onOperations(operations: OperationWithContext[]): Promise<void> {
+  onOperations(operations: OperationWithContext[]): Promise<void> {
     return Promise.resolve();
   }
 
