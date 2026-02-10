@@ -75,6 +75,7 @@ export class PollingChannel implements IChannel {
   async updateCursor(cursorOrdinal: number): Promise<void> {
     const cursor: RemoteCursor = {
       remoteName: this.remoteName,
+      cursorType: "inbox",
       cursorOrdinal,
       lastSyncedAtUtcMs: Date.now(),
     };

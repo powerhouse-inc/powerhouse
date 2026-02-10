@@ -74,7 +74,11 @@ describe("SyncManager - Event Tests", () => {
 
     mockCursorStorage = {
       list: vi.fn().mockResolvedValue([]),
-      get: vi.fn().mockResolvedValue({ remoteName: "", cursorOrdinal: 0 }),
+      get: vi.fn().mockResolvedValue({
+        remoteName: "",
+        cursorType: "outbox",
+        cursorOrdinal: 0,
+      }),
       upsert: vi.fn().mockResolvedValue(undefined),
       remove: vi.fn().mockResolvedValue(undefined),
     };
@@ -156,10 +160,10 @@ describe("SyncManager - Event Tests", () => {
     },
   });
 
-  const triggerWriteReady = (
+  const triggerWriteReady = async (
     jobId: string,
     operations: OperationWithContext[],
-  ): void => {
+  ): Promise<void> => {
     const subscriber = eventSubscribers.get(ReactorEventTypes.JOB_WRITE_READY);
     if (subscriber) {
       subscriber(ReactorEventTypes.JOB_WRITE_READY, {
@@ -168,6 +172,7 @@ describe("SyncManager - Event Tests", () => {
         jobMeta: { batchId: `auto-${jobId}`, batchJobIds: [jobId] },
       });
     }
+    await new Promise((resolve) => setTimeout(resolve, 0));
   };
 
   const getLastSyncOpFromOutbox = (): unknown => {
@@ -194,7 +199,7 @@ describe("SyncManager - Event Tests", () => {
       });
 
       const operations = [createOperation("doc1", "op1")];
-      triggerWriteReady("job-1", operations);
+      await triggerWriteReady("job-1", operations);
 
       const pendingEvents = emittedEvents.filter(
         (e) => e.type === SyncEventTypes.SYNC_PENDING,
@@ -237,7 +242,7 @@ describe("SyncManager - Event Tests", () => {
       });
 
       const operations = [createOperation("doc1", "op1")];
-      triggerWriteReady("job-2", operations);
+      await triggerWriteReady("job-2", operations);
 
       const syncOp = getLastSyncOpFromOutbox() as { executed: () => void };
       expect(syncOp).toBeDefined();
@@ -282,7 +287,7 @@ describe("SyncManager - Event Tests", () => {
       });
 
       const operations = [createOperation("doc1", "op1")];
-      triggerWriteReady("job-3", operations);
+      await triggerWriteReady("job-3", operations);
 
       const syncOp = getLastSyncOpFromOutbox() as {
         failed: (err: ChannelError) => void;
@@ -347,7 +352,7 @@ describe("SyncManager - Event Tests", () => {
       });
 
       const operations = [createOperation("doc1", "op1")];
-      triggerWriteReady("job-lifecycle-1", operations);
+      await triggerWriteReady("job-lifecycle-1", operations);
 
       const syncOp = getLastSyncOpFromOutbox() as { executed: () => void };
       syncOp.executed();
@@ -388,7 +393,7 @@ describe("SyncManager - Event Tests", () => {
       });
 
       const operations = [createOperation("doc1", "op1")];
-      triggerWriteReady("job-lifecycle-2", operations);
+      await triggerWriteReady("job-lifecycle-2", operations);
 
       const syncOp = getLastSyncOpFromOutbox() as {
         failed: (err: ChannelError) => void;
@@ -448,7 +453,7 @@ describe("SyncManager - Event Tests", () => {
         createOperation("doc1", "op1"),
         createOperation("doc2", "op2"),
       ];
-      triggerWriteReady("job-terminal", operations);
+      await triggerWriteReady("job-terminal", operations);
 
       expect(syncOps).toHaveLength(2);
 
@@ -481,8 +486,9 @@ describe("SyncManager - Event Tests", () => {
         | undefined;
 
       const mockChannel1 = {
-        inbox: { onAdded: vi.fn() },
+        inbox: { items: [], onAdded: vi.fn() },
         outbox: {
+          items: [],
           add: vi.fn(),
           remove: vi.fn(),
           onAdded: vi.fn((cb) => {
@@ -494,8 +500,9 @@ describe("SyncManager - Event Tests", () => {
       } as unknown as IChannel;
 
       const mockChannel2 = {
-        inbox: { onAdded: vi.fn() },
+        inbox: { items: [], onAdded: vi.fn() },
         outbox: {
+          items: [],
           add: vi.fn(),
           remove: vi.fn(),
           onAdded: vi.fn((cb) => {
@@ -547,7 +554,7 @@ describe("SyncManager - Event Tests", () => {
       });
 
       const operations = [createOperation("doc1", "op1")];
-      triggerWriteReady("job-multi-remote", operations);
+      await triggerWriteReady("job-multi-remote", operations);
 
       expect(syncOps1).toHaveLength(1);
       expect(syncOps2).toHaveLength(1);
@@ -590,8 +597,9 @@ describe("SyncManager - Event Tests", () => {
         | undefined;
 
       const mockChannel1 = {
-        inbox: { onAdded: vi.fn() },
+        inbox: { items: [], onAdded: vi.fn() },
         outbox: {
+          items: [],
           add: vi.fn(),
           remove: vi.fn(),
           onAdded: vi.fn((cb) => {
@@ -603,8 +611,9 @@ describe("SyncManager - Event Tests", () => {
       } as unknown as IChannel;
 
       const mockChannel2 = {
-        inbox: { onAdded: vi.fn() },
+        inbox: { items: [], onAdded: vi.fn() },
         outbox: {
+          items: [],
           add: vi.fn(),
           remove: vi.fn(),
           onAdded: vi.fn((cb) => {
@@ -656,7 +665,7 @@ describe("SyncManager - Event Tests", () => {
       });
 
       const operations = [createOperation("doc1", "op1")];
-      triggerWriteReady("job-partial-fail", operations);
+      await triggerWriteReady("job-partial-fail", operations);
 
       syncOps1[0].executed();
       const error = new ChannelError(
@@ -725,11 +734,11 @@ describe("SyncManager - Event Tests", () => {
       } as unknown as IChannel;
     };
 
-    const triggerWriteReadyWithCollections = (
+    const triggerWriteReadyWithCollections = async (
       jobId: string,
       operations: OperationWithContext[],
       collectionMemberships: Record<string, string[]>,
-    ): void => {
+    ): Promise<void> => {
       const subscriber = eventSubscribers.get(
         ReactorEventTypes.JOB_WRITE_READY,
       );
@@ -741,6 +750,7 @@ describe("SyncManager - Event Tests", () => {
           jobMeta: { batchId: `auto-${jobId}`, batchJobIds: [jobId] },
         });
       }
+      await new Promise((resolve) => setTimeout(resolve, 0));
     };
 
     it("should route operations only to remotes whose collection contains the document", async () => {
@@ -777,7 +787,7 @@ describe("SyncManager - Event Tests", () => {
       // Emit an operation for a document that belongs to driveA's collection
       const docInDriveA = "doc-in-driveA";
       const operationsForDriveA = [createOperation(docInDriveA, "op1")];
-      triggerWriteReadyWithCollections("job-1", operationsForDriveA, {
+      await triggerWriteReadyWithCollections("job-1", operationsForDriveA, {
         [docInDriveA]: [collectionA],
       });
 
@@ -807,7 +817,7 @@ describe("SyncManager - Event Tests", () => {
       const newDriveId = "new-drive-id";
       const newDriveCollection = driveCollectionId("main", newDriveId);
       const operationsForNewDrive = [createOperation(newDriveId, "op1")];
-      triggerWriteReadyWithCollections("job-2", operationsForNewDrive, {
+      await triggerWriteReadyWithCollections("job-2", operationsForNewDrive, {
         [newDriveId]: [newDriveCollection],
       });
 
@@ -847,7 +857,7 @@ describe("SyncManager - Event Tests", () => {
       // Document is in both collections
       const sharedDocId = "shared-doc";
       const operations = [createOperation(sharedDocId, "op1")];
-      triggerWriteReadyWithCollections("job-3", operations, {
+      await triggerWriteReadyWithCollections("job-3", operations, {
         [sharedDocId]: [collectionA, collectionB],
       });
 
@@ -875,7 +885,7 @@ describe("SyncManager - Event Tests", () => {
 
       // Emit without collectionMemberships (old behavior / legacy events)
       const operations = [createOperation("some-doc", "op1")];
-      triggerWriteReady("job-4", operations);
+      await triggerWriteReady("job-4", operations);
 
       // EXPECTED: channelA should NOT receive this since we can't verify membership
       expect(channelA.outbox.add).not.toHaveBeenCalled();
@@ -908,6 +918,7 @@ describe("SyncManager - Event Tests", () => {
           jobMeta: { batchId: "auto-1", batchJobIds: ["auto-job-1"] },
         });
       }
+      await new Promise((resolve) => setTimeout(resolve, 0));
 
       const syncEvents = emittedEvents.filter(
         (e) =>
@@ -933,7 +944,7 @@ describe("SyncManager - Event Tests", () => {
       });
 
       const operations = [createOperation("doc-no-match", "op1")];
-      triggerWriteReady("job-no-match", operations);
+      await triggerWriteReady("job-no-match", operations);
 
       const syncEvents = emittedEvents.filter(
         (e) =>
@@ -971,7 +982,7 @@ describe("SyncManager - Event Tests", () => {
       });
 
       const operations = [createOperation("doc1", "op1")];
-      triggerWriteReady("job-sync-channel", operations);
+      await triggerWriteReady("job-sync-channel", operations);
 
       const pendingEvents = emittedEvents.filter(
         (e) => e.type === SyncEventTypes.SYNC_PENDING,

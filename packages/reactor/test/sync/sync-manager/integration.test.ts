@@ -363,6 +363,282 @@ describe("SyncManager Integration", () => {
       expect(remote1.channel.outbox.items).toHaveLength(0);
       expect(remote2.channel.outbox.items).toHaveLength(0);
     });
+
+    it("should catch up indexed operations and avoid duplicates after checkpoint advances", async () => {
+      await syncManager.startup();
+
+      const channelConfig: ChannelConfig = {
+        type: "internal",
+        parameters: {},
+      };
+
+      await syncManager.add("remote1", "collection1", channelConfig, {
+        documentId: ["doc1", "doc2"],
+        scope: ["global"],
+        branch: "main",
+      });
+
+      const findSpy = vi.spyOn(operationIndex, "find");
+      findSpy.mockClear();
+      sentEnvelopes.length = 0;
+
+      const indexedMissed: Operation = {
+        id: "indexed-missed",
+        index: 0,
+        skip: 0,
+        hash: "hash-indexed-missed",
+        timestampUtcMs: "2023-01-01T00:00:00.000Z",
+        action: {
+          type: "CREATE",
+          scope: "global",
+          id: "action-indexed-missed",
+          timestampUtcMs: "2023-01-01T00:00:00.000Z",
+          input: {},
+        },
+      };
+
+      const indexedTrigger: Operation = {
+        id: "indexed-trigger",
+        index: 1,
+        skip: 0,
+        hash: "hash-indexed-trigger",
+        timestampUtcMs: "2023-01-01T00:00:01.000Z",
+        action: {
+          type: "UPDATE",
+          scope: "global",
+          id: "action-indexed-trigger",
+          timestampUtcMs: "2023-01-01T00:00:01.000Z",
+          input: {},
+        },
+      };
+
+      const txn = operationIndex.start();
+      txn.write([
+        {
+          ...indexedMissed,
+          documentId: "doc1",
+          documentType: "test",
+          scope: "global",
+          branch: "main",
+        },
+        {
+          ...indexedTrigger,
+          documentId: "doc2",
+          documentType: "test",
+          scope: "global",
+          branch: "main",
+        },
+      ]);
+      txn.createCollection("collection1");
+      txn.addToCollection("collection1", "doc1");
+      txn.addToCollection("collection1", "doc2");
+      const ordinals = await operationIndex.commit(txn);
+      const triggerOrdinal = ordinals[1];
+      expect(triggerOrdinal).toBeGreaterThan(0);
+
+      await eventBus.emit(ReactorEventTypes.JOB_WRITE_READY, {
+        jobId: "job-catchup-1",
+        operations: [
+          {
+            operation: {
+              ...indexedTrigger,
+              id: "payload-event-only",
+            } as Operation,
+            context: {
+              documentId: "doc2",
+              documentType: "test",
+              scope: "global",
+              branch: "main",
+              ordinal: triggerOrdinal,
+            },
+          },
+        ],
+        jobMeta: {
+          batchId: "auto-job-catchup-1",
+          batchJobIds: ["job-catchup-1"],
+        },
+      });
+
+      expect(sentEnvelopes).toHaveLength(2);
+      expect(findSpy).toHaveBeenCalledWith("collection1", 0, undefined, {
+        cursor: "0",
+        limit: 500,
+      });
+      const sentOperationIds = sentEnvelopes.map(
+        (envelope) => envelope.operations![0].operation.id,
+      );
+      expect(sentOperationIds).toContain("indexed-missed");
+      expect(sentOperationIds).toContain("indexed-trigger");
+
+      const outboxCursor = await syncCursorStorage.get("remote1", "outbox");
+      expect(outboxCursor.cursorOrdinal).toBe(triggerOrdinal);
+
+      sentEnvelopes.length = 0;
+
+      await eventBus.emit(ReactorEventTypes.JOB_WRITE_READY, {
+        jobId: "job-catchup-2",
+        operations: [
+          {
+            operation: {
+              ...indexedTrigger,
+              id: "payload-duplicate-only",
+            } as Operation,
+            context: {
+              documentId: "doc2",
+              documentType: "test",
+              scope: "global",
+              branch: "main",
+              ordinal: triggerOrdinal,
+            },
+          },
+        ],
+        jobMeta: {
+          batchId: "auto-job-catchup-2",
+          batchJobIds: ["job-catchup-2"],
+        },
+      });
+
+      expect(findSpy).toHaveBeenLastCalledWith(
+        "collection1",
+        triggerOrdinal,
+        undefined,
+        { cursor: "0", limit: 500 },
+      );
+      expect(sentEnvelopes).toHaveLength(0);
+    });
+
+    it("should defer batch outbox fill until the batch is complete", async () => {
+      await syncManager.startup();
+
+      const channelConfig: ChannelConfig = {
+        type: "internal",
+        parameters: {},
+      };
+
+      await syncManager.add("remote1", "collection1", channelConfig, {
+        documentId: ["doc1", "doc2"],
+        scope: ["global"],
+        branch: "main",
+      });
+
+      const findSpy = vi.spyOn(operationIndex, "find");
+      findSpy.mockClear();
+      sentEnvelopes.length = 0;
+
+      const indexedOp1: Operation = {
+        id: "batch-indexed-op1",
+        index: 0,
+        skip: 0,
+        hash: "hash-batch-indexed-op1",
+        timestampUtcMs: "2023-01-01T00:00:00.000Z",
+        action: {
+          type: "CREATE",
+          scope: "global",
+          id: "action-batch-indexed-op1",
+          timestampUtcMs: "2023-01-01T00:00:00.000Z",
+          input: {},
+        },
+      };
+
+      const indexedOp2: Operation = {
+        id: "batch-indexed-op2",
+        index: 1,
+        skip: 0,
+        hash: "hash-batch-indexed-op2",
+        timestampUtcMs: "2023-01-01T00:00:01.000Z",
+        action: {
+          type: "UPDATE",
+          scope: "global",
+          id: "action-batch-indexed-op2",
+          timestampUtcMs: "2023-01-01T00:00:01.000Z",
+          input: {},
+        },
+      };
+
+      const txn = operationIndex.start();
+      txn.write([
+        {
+          ...indexedOp1,
+          documentId: "doc1",
+          documentType: "test",
+          scope: "global",
+          branch: "main",
+        },
+        {
+          ...indexedOp2,
+          documentId: "doc2",
+          documentType: "test",
+          scope: "global",
+          branch: "main",
+        },
+      ]);
+      txn.createCollection("collection1");
+      txn.addToCollection("collection1", "doc1");
+      txn.addToCollection("collection1", "doc2");
+      const ordinals = await operationIndex.commit(txn);
+      const ordinal1 = ordinals[0];
+      const ordinal2 = ordinals[1];
+      expect(ordinal1).toBeGreaterThan(0);
+      expect(ordinal2).toBeGreaterThan(0);
+
+      const batchId = "batch-index-fill";
+      const batchJobIds = ["batch-job-1", "batch-job-2"];
+
+      await eventBus.emit(ReactorEventTypes.JOB_WRITE_READY, {
+        jobId: "batch-job-1",
+        operations: [
+          {
+            operation: {
+              ...indexedOp1,
+              id: "batch-payload-op1",
+            } as Operation,
+            context: {
+              documentId: "doc1",
+              documentType: "test",
+              scope: "global",
+              branch: "main",
+              ordinal: ordinal1,
+            },
+          },
+        ],
+        jobMeta: { batchId, batchJobIds },
+      });
+
+      expect(sentEnvelopes).toHaveLength(0);
+
+      await eventBus.emit(ReactorEventTypes.JOB_WRITE_READY, {
+        jobId: "batch-job-2",
+        operations: [
+          {
+            operation: {
+              ...indexedOp2,
+              id: "batch-payload-op2",
+            } as Operation,
+            context: {
+              documentId: "doc2",
+              documentType: "test",
+              scope: "global",
+              branch: "main",
+              ordinal: ordinal2,
+            },
+          },
+        ],
+        jobMeta: { batchId, batchJobIds },
+      });
+
+      expect(sentEnvelopes).toHaveLength(2);
+      expect(findSpy).toHaveBeenLastCalledWith(
+        "collection1",
+        ordinal1,
+        undefined,
+        { cursor: "0", limit: 500 },
+      );
+      const sentOperationIds = sentEnvelopes.map(
+        (envelope) => envelope.operations![0].operation.id,
+      );
+      expect(sentOperationIds).toContain("batch-indexed-op1");
+      expect(sentOperationIds).toContain("batch-indexed-op2");
+    });
   });
 
   describe("inbox processing", () => {

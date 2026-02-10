@@ -568,10 +568,15 @@ export interface ISyncCursorStorage {
    * Gets a cursor for a remote.
    *
    * @param remoteName - The name of the remote
+   * @param cursorType - The type of cursor ("inbox" or "outbox")
    * @param signal - Optional abort signal to cancel the request
    * @returns The cursor
    */
-  get(remoteName: string, signal?: AbortSignal): Promise<RemoteCursor>;
+  get(
+    remoteName: string,
+    cursorType: "inbox" | "outbox",
+    signal?: AbortSignal,
+  ): Promise<RemoteCursor>;
 
   /**
    * Upserts a cursor.

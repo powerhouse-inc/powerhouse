@@ -129,7 +129,7 @@ export class GqlChannel implements IChannel {
 
     let cursor;
     try {
-      cursor = await this.cursorStorage.get(this.remoteName);
+      cursor = await this.cursorStorage.get(this.remoteName, "inbox");
     } catch (error) {
       this.handlePollError(error);
       return;
@@ -610,6 +610,7 @@ export class GqlChannel implements IChannel {
   async updateCursor(cursorOrdinal: number): Promise<void> {
     const cursor: RemoteCursor = {
       remoteName: this.remoteName,
+      cursorType: "inbox",
       cursorOrdinal,
       lastSyncedAtUtcMs: Date.now(),
     };

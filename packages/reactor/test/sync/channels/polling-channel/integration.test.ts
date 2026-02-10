@@ -181,7 +181,7 @@ describe("PollingChannel Integration", () => {
 
       await channel.updateCursor(42);
 
-      const cursor = await cursorStorage.get("remote-a");
+      const cursor = await cursorStorage.get("remote-a", "inbox");
       expect(cursor.remoteName).toBe("remote-a");
       expect(cursor.cursorOrdinal).toBe(42);
       expect(cursor.lastSyncedAtUtcMs).toBeGreaterThan(0);
@@ -198,7 +198,7 @@ describe("PollingChannel Integration", () => {
       await channel1.updateCursor(100);
       channel1.shutdown();
 
-      const cursor = await cursorStorage.get("remote-a");
+      const cursor = await cursorStorage.get("remote-a", "inbox");
       expect(cursor.cursorOrdinal).toBe(100);
 
       const channel2 = new PollingChannel(
@@ -206,7 +206,7 @@ describe("PollingChannel Integration", () => {
         "remote-a",
         cursorStorage,
       );
-      const loadedCursor = await cursorStorage.get("remote-a");
+      const loadedCursor = await cursorStorage.get("remote-a", "inbox");
       expect(loadedCursor.cursorOrdinal).toBe(100);
       channel2.shutdown();
     });
@@ -224,7 +224,7 @@ describe("PollingChannel Integration", () => {
       await channel.updateCursor(2);
       await channel.updateCursor(3);
 
-      const cursor = await cursorStorage.get("remote-a");
+      const cursor = await cursorStorage.get("remote-a", "inbox");
       expect(cursor.cursorOrdinal).toBe(3);
     });
 
@@ -241,7 +241,7 @@ describe("PollingChannel Integration", () => {
       await channel.updateCursor(10);
       const after = Date.now();
 
-      const cursor = await cursorStorage.get("remote-a");
+      const cursor = await cursorStorage.get("remote-a", "inbox");
       expect(cursor.lastSyncedAtUtcMs).toBeGreaterThanOrEqual(before);
       expect(cursor.lastSyncedAtUtcMs).toBeLessThanOrEqual(after);
     });
