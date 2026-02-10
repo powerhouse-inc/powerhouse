@@ -80,7 +80,7 @@ export function sortEnvelopesByFirstOperationTimestamp<
     if (!aTimestamp) return 1;
     if (!bTimestamp) return -1;
 
-    return Number(aTimestamp) - Number(bTimestamp);
+    return new Date(aTimestamp).getTime() - new Date(bTimestamp).getTime();
   });
 }
 
