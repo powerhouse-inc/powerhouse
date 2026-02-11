@@ -61,6 +61,72 @@ describe("BufferedMailbox", () => {
     });
   });
 
+  describe("batch add/remove", () => {
+    it("should store multiple items immediately on batch add", () => {
+      const mailbox = new BufferedMailbox<TestItem>(100, 10);
+      const item1: TestItem = { id: "item1", value: 1 };
+      const item2: TestItem = { id: "item2", value: 2 };
+      const item3: TestItem = { id: "item3", value: 3 };
+
+      mailbox.add(item1, item2, item3);
+
+      expect(mailbox.items).toHaveLength(3);
+      expect(mailbox.get("item1")).toBe(item1);
+      expect(mailbox.get("item2")).toBe(item2);
+      expect(mailbox.get("item3")).toBe(item3);
+    });
+
+    it("should trigger maxQueued flush when batch crosses threshold", () => {
+      const mailbox = new BufferedMailbox<TestItem>(100, 3);
+      const callback = vi.fn();
+
+      mailbox.onAdded(callback);
+
+      const item1: TestItem = { id: "item1", value: 1 };
+      const item2: TestItem = { id: "item2", value: 2 };
+      const item3: TestItem = { id: "item3", value: 3 };
+
+      mailbox.add(item1, item2, item3);
+
+      expect(callback).toHaveBeenCalledTimes(1);
+      expect(callback).toHaveBeenCalledWith([item1, item2, item3]);
+    });
+
+    it("should deliver all batch-added items in one callback invocation after timer", () => {
+      const mailbox = new BufferedMailbox<TestItem>(100, 10);
+      const callback = vi.fn();
+
+      mailbox.onAdded(callback);
+
+      const item1: TestItem = { id: "item1", value: 1 };
+      const item2: TestItem = { id: "item2", value: 2 };
+
+      mailbox.add(item1, item2);
+
+      expect(callback).not.toHaveBeenCalled();
+
+      vi.advanceTimersByTime(100);
+
+      expect(callback).toHaveBeenCalledTimes(1);
+      expect(callback).toHaveBeenCalledWith([item1, item2]);
+    });
+
+    it("should remove multiple items immediately on batch remove", () => {
+      const mailbox = new BufferedMailbox<TestItem>(100, 10);
+      const item1: TestItem = { id: "item1", value: 1 };
+      const item2: TestItem = { id: "item2", value: 2 };
+      const item3: TestItem = { id: "item3", value: 3 };
+
+      mailbox.add(item1, item2, item3);
+      vi.advanceTimersByTime(100);
+
+      mailbox.remove(item1, item3);
+
+      expect(mailbox.items).toHaveLength(1);
+      expect(mailbox.get("item2")).toBe(item2);
+    });
+  });
+
   describe("deferred callbacks", () => {
     it("should not call onAdded callback immediately", () => {
       const mailbox = new BufferedMailbox<TestItem>(100, 10);

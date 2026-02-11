@@ -30,9 +30,11 @@ export class BufferedMailbox<T extends MailboxItem> implements IMailbox<T> {
     return this.itemsMap.get(id);
   }
 
-  add(item: T): void {
-    this.itemsMap.set(item.id, item);
-    this.addedBuffer.push(item);
+  add(...items: T[]): void {
+    for (const item of items) {
+      this.itemsMap.set(item.id, item);
+    }
+    this.addedBuffer.push(...items);
 
     if (this.paused) {
       return;
@@ -45,9 +47,11 @@ export class BufferedMailbox<T extends MailboxItem> implements IMailbox<T> {
     }
   }
 
-  remove(item: T): void {
-    this.itemsMap.delete(item.id);
-    this.removedBuffer.push(item);
+  remove(...items: T[]): void {
+    for (const item of items) {
+      this.itemsMap.delete(item.id);
+    }
+    this.removedBuffer.push(...items);
 
     if (this.paused) {
       return;

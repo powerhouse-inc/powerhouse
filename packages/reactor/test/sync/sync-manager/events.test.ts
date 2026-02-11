@@ -235,9 +235,9 @@ describe("SyncManager - Event Tests", () => {
         branch: "main",
       });
 
-      vi.mocked(mockChannel.outbox.add).mockImplementation((syncOp) => {
+      vi.mocked(mockChannel.outbox.add).mockImplementation((...syncOps) => {
         if (outboxCallback) {
-          outboxCallback([syncOp]);
+          outboxCallback(syncOps);
         }
       });
 
@@ -280,9 +280,9 @@ describe("SyncManager - Event Tests", () => {
         branch: "main",
       });
 
-      vi.mocked(mockChannel.outbox.add).mockImplementation((syncOp) => {
+      vi.mocked(mockChannel.outbox.add).mockImplementation((...syncOps) => {
         if (outboxCallback) {
-          outboxCallback([syncOp]);
+          outboxCallback(syncOps);
         }
       });
 
@@ -345,9 +345,9 @@ describe("SyncManager - Event Tests", () => {
         branch: "main",
       });
 
-      vi.mocked(mockChannel.outbox.add).mockImplementation((syncOp) => {
+      vi.mocked(mockChannel.outbox.add).mockImplementation((...syncOps) => {
         if (outboxCallback) {
-          outboxCallback([syncOp]);
+          outboxCallback(syncOps);
         }
       });
 
@@ -386,9 +386,9 @@ describe("SyncManager - Event Tests", () => {
         branch: "main",
       });
 
-      vi.mocked(mockChannel.outbox.add).mockImplementation((syncOp) => {
+      vi.mocked(mockChannel.outbox.add).mockImplementation((...syncOps) => {
         if (outboxCallback) {
-          outboxCallback([syncOp]);
+          outboxCallback(syncOps);
         }
       });
 
@@ -437,15 +437,17 @@ describe("SyncManager - Event Tests", () => {
         executed: () => void;
         failed: (err: ChannelError) => void;
       }> = [];
-      vi.mocked(mockChannel.outbox.add).mockImplementation((syncOp) => {
-        syncOps.push(
-          syncOp as {
-            executed: () => void;
-            failed: (err: ChannelError) => void;
-          },
-        );
+      vi.mocked(mockChannel.outbox.add).mockImplementation((...args) => {
+        for (const syncOp of args) {
+          syncOps.push(
+            syncOp as {
+              executed: () => void;
+              failed: (err: ChannelError) => void;
+            },
+          );
+        }
         if (outboxCallback) {
-          outboxCallback([syncOp]);
+          outboxCallback(args);
         }
       });
 
@@ -539,17 +541,17 @@ describe("SyncManager - Event Tests", () => {
       const syncOps1: SyncOperation[] = [];
       const syncOps2: SyncOperation[] = [];
 
-      vi.mocked(mockChannel1.outbox.add).mockImplementation((syncOp) => {
-        syncOps1.push(syncOp);
+      vi.mocked(mockChannel1.outbox.add).mockImplementation((...args) => {
+        syncOps1.push(...args);
         if (channel1OutboxCallback) {
-          channel1OutboxCallback([syncOp]);
+          channel1OutboxCallback(args);
         }
       });
 
-      vi.mocked(mockChannel2.outbox.add).mockImplementation((syncOp) => {
-        syncOps2.push(syncOp);
+      vi.mocked(mockChannel2.outbox.add).mockImplementation((...args) => {
+        syncOps2.push(...args);
         if (channel2OutboxCallback) {
-          channel2OutboxCallback([syncOp]);
+          channel2OutboxCallback(args);
         }
       });
 
@@ -650,17 +652,17 @@ describe("SyncManager - Event Tests", () => {
       const syncOps1: SyncOperation[] = [];
       const syncOps2: SyncOperation[] = [];
 
-      vi.mocked(mockChannel1.outbox.add).mockImplementation((syncOp) => {
-        syncOps1.push(syncOp);
+      vi.mocked(mockChannel1.outbox.add).mockImplementation((...args) => {
+        syncOps1.push(...args);
         if (channel1OutboxCallback) {
-          channel1OutboxCallback([syncOp]);
+          channel1OutboxCallback(args);
         }
       });
 
-      vi.mocked(mockChannel2.outbox.add).mockImplementation((syncOp) => {
-        syncOps2.push(syncOp);
+      vi.mocked(mockChannel2.outbox.add).mockImplementation((...args) => {
+        syncOps2.push(...args);
         if (channel2OutboxCallback) {
-          channel2OutboxCallback([syncOp]);
+          channel2OutboxCallback(args);
         }
       });
 
@@ -974,11 +976,13 @@ describe("SyncManager - Event Tests", () => {
         branch: "main",
       });
 
-      vi.mocked(mockChannel.outbox.add).mockImplementation((syncOp) => {
+      vi.mocked(mockChannel.outbox.add).mockImplementation((...syncOps) => {
         if (outboxCallback) {
-          outboxCallback([syncOp]);
+          outboxCallback(syncOps);
         }
-        (syncOp as { executed: () => void }).executed();
+        for (const syncOp of syncOps) {
+          (syncOp as { executed: () => void }).executed();
+        }
       });
 
       const operations = [createOperation("doc1", "op1")];

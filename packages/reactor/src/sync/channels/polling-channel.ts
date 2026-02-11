@@ -61,8 +61,8 @@ export class PollingChannel implements IChannel {
       const syncOps = envelopesToSyncOperations(envelope, this.remoteName);
       for (const syncOp of syncOps) {
         syncOp.transported();
-        this.inbox.add(syncOp);
       }
+      this.inbox.add(...syncOps);
     }
   }
 
@@ -82,14 +82,18 @@ export class PollingChannel implements IChannel {
 
     await this.cursorStorage.upsert(cursor);
 
+    const toRemove: SyncOperation[] = [];
     for (const op of this.outbox.items) {
       const maxOrdinal = Math.max(
         ...op.operations.map((o) => o.context.ordinal),
       );
       if (maxOrdinal <= cursorOrdinal) {
         op.executed();
-        this.outbox.remove(op);
+        toRemove.push(op);
       }
+    }
+    if (toRemove.length > 0) {
+      this.outbox.remove(...toRemove);
     }
   }
 }

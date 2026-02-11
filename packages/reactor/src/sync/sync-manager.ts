@@ -330,9 +330,10 @@ export class SyncManager implements ISyncManager {
 
     let maxOrdinal = 0;
     for (const syncOp of syncOps) {
-      remote.channel.outbox.add(syncOp);
       maxOrdinal = Math.max(maxOrdinal, getMaxOrdinal(syncOp.operations));
     }
+
+    remote.channel.outbox.add(...syncOps);
 
     if (maxOrdinal > 0) {
       await this.setOutboxCheckpoint(remote.name, maxOrdinal);
@@ -401,6 +402,11 @@ export class SyncManager implements ISyncManager {
       }
 
       const checkpointUpdates = new Map<string, number>();
+      const groupedByRemote = new Map<
+        string,
+        { remote: Remote; syncOps: SyncOperation[] }
+      >();
+
       for (const { syncOp, remote } of syncOpsWithRemote) {
         syncOp.on((op, _prev, next) => {
           if (next === SyncOperationStatus.Applied) {
@@ -414,12 +420,22 @@ export class SyncManager implements ISyncManager {
           }
         });
 
-        remote.channel.outbox.add(syncOp);
+        let group = groupedByRemote.get(remote.name);
+        if (!group) {
+          group = { remote, syncOps: [] };
+          groupedByRemote.set(remote.name, group);
+        }
+        group.syncOps.push(syncOp);
+
         const maxSyncOpOrdinal = getMaxOrdinal(syncOp.operations);
         const previousMax = checkpointUpdates.get(remote.name) ?? 0;
         if (maxSyncOpOrdinal > previousMax) {
           checkpointUpdates.set(remote.name, maxSyncOpOrdinal);
         }
+      }
+
+      for (const { remote, syncOps } of groupedByRemote.values()) {
+        remote.channel.outbox.add(...syncOps);
       }
 
       for (const [remoteName, maxOrdinal] of checkpointUpdates) {
