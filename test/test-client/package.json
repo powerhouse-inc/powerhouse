@@ -25,6 +25,7 @@
     "document-model": "workspace:*"
   },
   "devDependencies": {
+    "shared": "workspace:*",
     "@types/node": "^24.6.1",
     "tsx": "^4.20.3",
     "vitest": "^3.2.4"

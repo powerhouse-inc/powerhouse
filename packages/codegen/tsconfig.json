@@ -19,6 +19,7 @@
     { "path": "../design-system" },
     { "path": "../common" },
     { "path": "../config" },
-    { "path": "../reactor" }
+    { "path": "../reactor" },
+    { "path": "../../shared" }
   ]
 }

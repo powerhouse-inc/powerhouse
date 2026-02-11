@@ -69,6 +69,7 @@
   "devDependencies": {
     "@powerhousedao/config": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",
+    "shared": "workspace:*",
     "@storybook/addon-actions": "^8.6.7",
     "@storybook/addon-docs": "^8.6.3",
     "@storybook/addon-essentials": "^8.6.7",

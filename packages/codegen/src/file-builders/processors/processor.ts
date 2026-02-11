@@ -8,9 +8,9 @@ import {
   formatSourceFileWithPrettier,
   getOrCreateSourceFile,
 } from "@powerhousedao/codegen/utils";
-import type { ProcessorApp, ProcessorApps } from "@powerhousedao/common/clis";
 import { camelCase, paramCase, pascalCase } from "change-case";
 import path from "path";
+import type { ProcessorApp, ProcessorApps } from "shared";
 import { ts, type Project } from "ts-morph";
 import { tsMorphGenerateAnalyticsProcessor } from "./analytics.js";
 import { tsMorphGenerateRelationalDbProcessor } from "./relational-db.js";

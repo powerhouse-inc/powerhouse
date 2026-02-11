@@ -5,6 +5,7 @@ packages:
   - "test/*"
   - "packages/reactor/test/atlas"
   - "scripts/*"
+  - "shared"
   - "!releases"
 
 catalog:
