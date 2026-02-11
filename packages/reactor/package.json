@@ -39,8 +39,8 @@
     "@sindresorhus/fnv1a": "^3.1.0",
     "document-drive": "workspace:*",
     "document-model": "workspace:*",
-    "kysely": "^0.28.2",
-    "kysely-pglite-dialect": "^1.1.1",
+    "kysely": "catalog:",
+    "kysely-pglite-dialect": "catalog:",
     "uuid": "^11.0.5"
   },
   "devDependencies": {

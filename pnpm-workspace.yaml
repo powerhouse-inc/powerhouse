@@ -10,3 +10,7 @@ packages:
 
 catalog:
   "@powerhousedao/analytics-engine-core": 0.5.0
+  "kysely": 0.28.11
+  "kysely-pglite-dialect": 1.2.0
+  "kysely-pglite": 0.6.1
+  "kysely-knex": 0.2.0
