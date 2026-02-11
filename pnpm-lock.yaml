@@ -2491,6 +2491,9 @@ importers:
       react-dom:
         specifier: ^19.2.0
         version: 19.2.0(react@19.2.0)
+      shared:
+        specifier: workspace:*
+        version: link:../../shared
       tailwindcss:
         specifier: ^4.0.15
         version: 4.1.16
@@ -2515,6 +2518,9 @@ importers:
       '@powerhousedao/config':
         specifier: workspace:*
         version: link:../../packages/config
+      shared:
+        specifier: workspace:*
+        version: link:../../shared
 
   test/test-client:
     dependencies:
@@ -2531,6 +2537,9 @@ importers:
       '@types/node':
         specifier: ^24.6.1
         version: 24.10.0
+      shared:
+        specifier: workspace:*
+        version: link:../../shared
       tsx:
         specifier: ^4.20.3
         version: 4.21.0
@@ -2573,6 +2582,9 @@ importers:
       kysely:
         specifier: ^0.28.7
         version: 0.28.8
+      shared:
+        specifier: workspace:*
+        version: link:../../shared
       uuid:
         specifier: ^11.1.0
         version: 11.1.0
@@ -2794,6 +2806,9 @@ importers:
       react-dom:
         specifier: ^19.2.0
         version: 19.2.0(react@19.2.0)
+      shared:
+        specifier: workspace:*
+        version: link:../../shared
       storybook:
         specifier: ^8.6.14
         version: 8.6.14(bufferutil@4.0.9)(prettier@3.6.2)(utf-8-validate@5.0.10)
