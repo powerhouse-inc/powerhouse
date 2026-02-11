@@ -98,6 +98,7 @@
     "zod": "^4.3.5"
   },
   "devDependencies": {
+    "shared": "workspace:*",
     "@graphql-codegen/cli": "^5.0.0",
     "@graphql-codegen/client-preset": "^4.1.0",
     "@graphql-codegen/typed-document-node": "^5.0.1",

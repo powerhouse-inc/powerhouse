@@ -64,6 +64,9 @@
     },
     {
       "path": "../reactor"
+    },
+    {
+      "path": "../../shared"
     }
   ]
 }

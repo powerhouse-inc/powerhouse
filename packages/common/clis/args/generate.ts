@@ -10,8 +10,8 @@ import {
   positional,
   string,
 } from "cmd-ts";
-import { PROCESSOR_APPS } from "../constants.js";
-import type { ProcessorApp, ProcessorApps } from "../types.js";
+import type { ProcessorApp, ProcessorApps } from "shared";
+import { PROCESSOR_APPS } from "shared";
 import { debugArgs, useHygen } from "./common.js";
 
 const ProcessorAppType: Type<string[], ProcessorApps> = {

@@ -66,5 +66,3 @@ export const VERSIONED_DEV_DEPENDENCIES = [
   "@powerhousedao/connect",
   "document-drive",
 ];
-
-export const PROCESSOR_APPS = ["connect", "switchboard"] as const;

@@ -6,7 +6,7 @@ import {
   tsMorphGenerateDriveEditor,
 } from "@powerhousedao/codegen/file-builders";
 import { buildTsMorphProject } from "@powerhousedao/codegen/utils";
-import { fileExists, type ProcessorApps } from "@powerhousedao/common/clis";
+import { fileExists } from "@powerhousedao/common/clis";
 import type {
   PartialPowerhouseManifest,
   PowerhouseConfig,
@@ -19,6 +19,7 @@ import { readdir } from "node:fs/promises";
 import path, { join } from "node:path";
 import { readPackage, type NormalizedPackageJson } from "read-pkg";
 import semver from "semver";
+import type { ProcessorApps } from "shared";
 import { tsMorphGenerateProcessor } from "../file-builders/processors/processor.js";
 import { TSMorphCodeGenerator } from "../ts-morph-generator/core/TSMorphCodeGenerator.js";
 import { generateDocumentModelZodSchemas, generateSchemas } from "./graphql.js";
