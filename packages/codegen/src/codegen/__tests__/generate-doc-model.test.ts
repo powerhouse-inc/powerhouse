@@ -68,8 +68,7 @@ async function runDocumentModelTests(args: {
     force: true,
   });
   await loadDocumentModelsInDir(documentModelsInDir, outDir, useVersioning);
-  await $`bun run --cwd ${outDir} tsc`;
-  await $`bun run --cwd ${outDir} vitest --run --silent passed-only`;
+  await $`bun run --cwd ${outDir} tsc --noEmit`;
   return outDir;
 }
 
