@@ -1,3 +1,13 @@
+## 6.0.0-dev.39 (2026-02-11)
+
+### 🚀 Features
+
+- **reactor,codegen:** handle processor apps in cli ([#2319](https://github.com/powerhouse-inc/powerhouse/pull/2319))
+
+### ❤️ Thank You
+
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.0.0-dev.38 (2026-02-10)
 
 This was a version bump only for @powerhousedao/academy to align it with other projects, there were no code changes.

@@ -1,3 +1,16 @@
+## 6.0.0-dev.39 (2026-02-11)
+
+### 🚀 Features
+
+- **reactor:** update drive info handling to include graphqlEndpoint in responses and streamline drive URL parsing ([7d40dda03](https://github.com/powerhouse-inc/powerhouse/commit/7d40dda03))
+- use new drive GET REST endpoint ([69be5dc19](https://github.com/powerhouse-inc/powerhouse/commit/69be5dc19))
+- **reactor,codegen:** handle processor apps in cli ([#2319](https://github.com/powerhouse-inc/powerhouse/pull/2319))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.0.0-dev.38 (2026-02-10)
 
 This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.

@@ -1,3 +1,18 @@
+## 6.0.0-dev.39 (2026-02-11)
+
+### 🚀 Features
+
+- **reactor,codegen:** handle processor apps in cli ([#2319](https://github.com/powerhouse-inc/powerhouse/pull/2319))
+
+### 🩹 Fixes
+
+- **design-system:** fix lint issue ([2ba774546](https://github.com/powerhouse-inc/powerhouse/commit/2ba774546))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.0.0-dev.38 (2026-02-10)
 
 ### 🩹 Fixes
