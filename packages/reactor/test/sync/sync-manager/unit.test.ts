@@ -593,9 +593,11 @@ describe("SyncManager - Unit Tests", () => {
 
       const enqueuedOperationIds = vi
         .mocked(mockChannel.outbox.add)
-        .mock.calls.flatMap(([syncOp]) =>
-          (syncOp as any).operations.map(
-            (operation: OperationWithContext) => operation.operation.id,
+        .mock.calls.flatMap((args) =>
+          args.flatMap((syncOp) =>
+            (syncOp as any).operations.map(
+              (operation: OperationWithContext) => operation.operation.id,
+            ),
           ),
         );
 
@@ -994,10 +996,10 @@ describe("SyncManager - Unit Tests", () => {
       ];
 
       let createdSyncOp: any;
-      vi.mocked(mockChannel.outbox.add).mockImplementation((syncOp) => {
-        createdSyncOp = syncOp;
+      vi.mocked(mockChannel.outbox.add).mockImplementation((...syncOps) => {
+        createdSyncOp = syncOps[0];
         if (outboxCallback) {
-          outboxCallback([syncOp]);
+          outboxCallback(syncOps);
         }
       });
 
@@ -1063,10 +1065,10 @@ describe("SyncManager - Unit Tests", () => {
       ];
 
       let createdSyncOp: any;
-      vi.mocked(mockChannel.outbox.add).mockImplementation((syncOp) => {
-        createdSyncOp = syncOp;
+      vi.mocked(mockChannel.outbox.add).mockImplementation((...syncOps) => {
+        createdSyncOp = syncOps[0];
         if (outboxCallback) {
-          outboxCallback([syncOp]);
+          outboxCallback(syncOps);
         }
       });
 
@@ -1270,8 +1272,7 @@ describe("SyncManager - Unit Tests", () => {
 
       const outboxCalls = vi.mocked(mockChannel.outbox.add).mock.calls;
       const retroactiveSyncCalls = outboxCalls.filter((call) => {
-        const syncOp = call[0] as any;
-        return syncOp.documentId === targetDocId;
+        return call.some((syncOp: any) => syncOp.documentId === targetDocId);
       });
       expect(retroactiveSyncCalls).toHaveLength(0);
     });
@@ -1294,9 +1295,13 @@ describe("SyncManager - Unit Tests", () => {
 
       const processingOrder: string[] = [];
 
-      vi.mocked(mockChannel.outbox.add).mockImplementation((syncOp: any) => {
-        processingOrder.push(syncOp.documentId);
-      });
+      vi.mocked(mockChannel.outbox.add).mockImplementation(
+        (...syncOps: any[]) => {
+          for (const syncOp of syncOps) {
+            processingOrder.push(syncOp.documentId);
+          }
+        },
+      );
 
       // Make the first operation slow by mocking something async
       // The first event will start processing but we control when operations are added
@@ -1880,9 +1885,11 @@ describe("SyncManager - Unit Tests", () => {
       ];
 
       const addedSyncOps: any[] = [];
-      vi.mocked(mockChannel.outbox.add).mockImplementation((syncOp: any) => {
-        addedSyncOps.push(syncOp);
-      });
+      vi.mocked(mockChannel.outbox.add).mockImplementation(
+        (...syncOps: any[]) => {
+          addedSyncOps.push(...syncOps);
+        },
+      );
 
       await emitWriteReady({
         jobId: "j1",

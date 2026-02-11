@@ -156,6 +156,7 @@ export class GqlChannel implements IChannel {
       this.inbox.pause();
     }
     try {
+      const allSyncOps: SyncOperation[] = [];
       for (const envelope of sortedEnvelopes) {
         if (
           envelope.type.toLowerCase() === "operations" &&
@@ -164,8 +165,8 @@ export class GqlChannel implements IChannel {
           const syncOps = envelopesToSyncOperations(envelope, this.remoteName);
           for (const syncOp of syncOps) {
             syncOp.transported();
-            this.inbox.add(syncOp);
           }
+          allSyncOps.push(...syncOps);
         }
 
         if (
@@ -174,6 +175,9 @@ export class GqlChannel implements IChannel {
         ) {
           maxCursorOrdinal = envelope.cursor.cursorOrdinal;
         }
+      }
+      if (allSyncOps.length > 0) {
+        this.inbox.add(...allSyncOps);
       }
     } finally {
       if (hasKeyedEnvelopes) {
@@ -390,9 +394,9 @@ export class GqlChannel implements IChannel {
       const channelError = new ChannelError(ChannelErrorSource.Outbox, err);
       for (const syncOp of syncOps) {
         syncOp.failed(channelError);
-        this.deadLetter.add(syncOp);
-        this.outbox.remove(syncOp);
       }
+      this.deadLetter.add(...syncOps);
+      this.outbox.remove(...syncOps);
     });
   }
 
@@ -459,9 +463,7 @@ export class GqlChannel implements IChannel {
       variables,
     );
 
-    for (const syncOp of syncOps) {
-      this.outbox.remove(syncOp);
-    }
+    this.outbox.remove(...syncOps);
   }
 
   /**

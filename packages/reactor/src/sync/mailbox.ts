@@ -7,8 +7,8 @@ export type MailboxCallback<T extends MailboxItem> = (items: T[]) => void;
 export interface IMailbox<T extends MailboxItem> {
   readonly items: ReadonlyArray<T>;
   get(id: string): T | undefined;
-  add(item: T): void;
-  remove(item: T): void;
+  add(...items: T[]): void;
+  remove(...items: T[]): void;
   onAdded(callback: MailboxCallback<T>): void;
   onRemoved(callback: MailboxCallback<T>): void;
   pause(): void;
@@ -46,17 +46,19 @@ export class Mailbox<T extends MailboxItem> implements IMailbox<T> {
     return this.itemsMap.get(id);
   }
 
-  add(item: T): void {
-    this.itemsMap.set(item.id, item);
+  add(...items: T[]): void {
+    for (const item of items) {
+      this.itemsMap.set(item.id, item);
+    }
     if (this.paused) {
-      this.addedBuffer.push(item);
+      this.addedBuffer.push(...items);
       return;
     }
     const callbacks = [...this.addedCallbacks];
     const errors: Error[] = [];
     for (const callback of callbacks) {
       try {
-        callback([item]);
+        callback(items);
       } catch (error) {
         errors.push(error instanceof Error ? error : new Error(String(error)));
       }
@@ -66,17 +68,19 @@ export class Mailbox<T extends MailboxItem> implements IMailbox<T> {
     }
   }
 
-  remove(item: T): void {
-    this.itemsMap.delete(item.id);
+  remove(...items: T[]): void {
+    for (const item of items) {
+      this.itemsMap.delete(item.id);
+    }
     if (this.paused) {
-      this.removedBuffer.push(item);
+      this.removedBuffer.push(...items);
       return;
     }
     const callbacks = [...this.removedCallbacks];
     const errors: Error[] = [];
     for (const callback of callbacks) {
       try {
-        callback([item]);
+        callback(items);
       } catch (error) {
         errors.push(error instanceof Error ? error : new Error(String(error)));
       }

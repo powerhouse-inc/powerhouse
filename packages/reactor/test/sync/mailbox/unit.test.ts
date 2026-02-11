@@ -98,6 +98,85 @@ describe("Mailbox", () => {
     });
   });
 
+  describe("batch add", () => {
+    it("should add multiple items in a single call", () => {
+      const mailbox = new Mailbox<TestItem>();
+      const item1: TestItem = { id: "item1", value: 1 };
+      const item2: TestItem = { id: "item2", value: 2 };
+      const item3: TestItem = { id: "item3", value: 3 };
+
+      mailbox.add(item1, item2, item3);
+
+      expect(mailbox.items).toHaveLength(3);
+      expect(mailbox.get("item1")).toBe(item1);
+      expect(mailbox.get("item2")).toBe(item2);
+      expect(mailbox.get("item3")).toBe(item3);
+    });
+
+    it("should trigger onAdded callback once with all items", () => {
+      const mailbox = new Mailbox<TestItem>();
+      const callback = vi.fn();
+      const item1: TestItem = { id: "item1", value: 1 };
+      const item2: TestItem = { id: "item2", value: 2 };
+      const item3: TestItem = { id: "item3", value: 3 };
+
+      mailbox.onAdded(callback);
+      mailbox.add(item1, item2, item3);
+
+      expect(callback).toHaveBeenCalledTimes(1);
+      expect(callback).toHaveBeenCalledWith([item1, item2, item3]);
+    });
+
+    it("should buffer all items from a batch add when paused", () => {
+      const mailbox = new Mailbox<TestItem>();
+      const callback = vi.fn();
+      const a: TestItem = { id: "a", value: 1 };
+      const b: TestItem = { id: "b", value: 2 };
+      const c: TestItem = { id: "c", value: 3 };
+
+      mailbox.onAdded(callback);
+      mailbox.pause();
+      mailbox.add(a, b, c);
+
+      expect(callback).not.toHaveBeenCalled();
+      expect(mailbox.items).toHaveLength(3);
+
+      mailbox.resume();
+
+      expect(callback).toHaveBeenCalledTimes(1);
+      expect(callback).toHaveBeenCalledWith([a, b, c]);
+    });
+  });
+
+  describe("batch remove", () => {
+    it("should remove multiple items in a single call", () => {
+      const mailbox = new Mailbox<TestItem>();
+      const item1: TestItem = { id: "item1", value: 1 };
+      const item2: TestItem = { id: "item2", value: 2 };
+      const item3: TestItem = { id: "item3", value: 3 };
+
+      mailbox.add(item1, item2, item3);
+      mailbox.remove(item1, item3);
+
+      expect(mailbox.items).toHaveLength(1);
+      expect(mailbox.get("item2")).toBe(item2);
+    });
+
+    it("should trigger onRemoved callback once with all items", () => {
+      const mailbox = new Mailbox<TestItem>();
+      const callback = vi.fn();
+      const item1: TestItem = { id: "item1", value: 1 };
+      const item2: TestItem = { id: "item2", value: 2 };
+
+      mailbox.onRemoved(callback);
+      mailbox.add(item1, item2);
+      mailbox.remove(item1, item2);
+
+      expect(callback).toHaveBeenCalledTimes(1);
+      expect(callback).toHaveBeenCalledWith([item1, item2]);
+    });
+  });
+
   describe("remove", () => {
     it("should remove item from mailbox", () => {
       const mailbox = new Mailbox<TestItem>();
