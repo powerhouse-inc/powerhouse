@@ -17,6 +17,7 @@ import {
 } from "../events/types.js";
 import type { ILogger } from "../logging/types.js";
 import { JobAwaiter } from "../shared/awaiter.js";
+import { BatchAggregator } from "./batch-aggregator.js";
 import {
   JobStatus,
   type JobInfo,
@@ -63,12 +64,6 @@ type JobSyncState = {
   remoteNames: string[];
 };
 
-type PendingBatch = {
-  expectedJobIds: Set<string>;
-  arrivedJobIds: Set<string>;
-  events: JobWriteReadyEvent[];
-};
-
 type IndexSyncBuildOptions = {
   maxOrdinal?: number;
   sinceTimestampUtcMs?: string;
@@ -92,9 +87,7 @@ export class SyncManager implements ISyncManager {
   private isShutdown: boolean;
   private eventUnsubscribe?: () => void;
   private failedEventUnsubscribe?: () => void;
-  private writeReadyQueue: JobWriteReadyEvent[] = [];
-  private processingWriteReady: boolean = false;
-  private readonly pendingBatches: Map<string, PendingBatch> = new Map();
+  private readonly batchAggregator: BatchAggregator;
 
   public loadJobs: Map<string, JobInfo> = new Map();
 
@@ -121,6 +114,9 @@ export class SyncManager implements ISyncManager {
     this.syncAwaiter = new SyncAwaiter(eventBus);
     this.jobSyncStates = new Map();
     this.isShutdown = false;
+    this.batchAggregator = new BatchAggregator(logger, (events) =>
+      this.processCompleteBatch(events),
+    );
   }
 
   async startup(): Promise<void> {
@@ -165,19 +161,18 @@ export class SyncManager implements ISyncManager {
 
     this.eventUnsubscribe = this.eventBus.subscribe<JobWriteReadyEvent>(
       ReactorEventTypes.JOB_WRITE_READY,
-      async (_type, event) => this.enqueueWriteReady(event),
+      async (_type, event) => this.batchAggregator.enqueueWriteReady(event),
     );
 
     this.failedEventUnsubscribe = this.eventBus.subscribe<JobFailedEvent>(
       ReactorEventTypes.JOB_FAILED,
-      async (_type, event) => this.handleJobFailedForBatch(event),
+      async (_type, event) => this.batchAggregator.handleJobFailed(event),
     );
   }
 
   shutdown(): ShutdownStatus {
     this.isShutdown = true;
-    this.writeReadyQueue = [];
-    this.pendingBatches.clear();
+    this.batchAggregator.clear();
 
     if (this.eventUnsubscribe) {
       this.eventUnsubscribe();
@@ -355,90 +350,6 @@ export class SyncManager implements ISyncManager {
         this.handleOutboxJob(remote, syncOp);
       }
     });
-  }
-
-  private async enqueueWriteReady(event: JobWriteReadyEvent): Promise<void> {
-    this.writeReadyQueue.push(event);
-    await this.processWriteReadyQueue();
-  }
-
-  private async processWriteReadyQueue(): Promise<void> {
-    if (this.processingWriteReady) {
-      return;
-    }
-    this.processingWriteReady = true;
-
-    try {
-      while (this.writeReadyQueue.length > 0) {
-        const event = this.writeReadyQueue.shift()!;
-        try {
-          await this.handleWriteReadyAsync(event);
-        } catch (error) {
-          const err = error instanceof Error ? error : new Error(String(error));
-          this.logger.error(
-            "Failed to process write-ready event (@jobId, @error)",
-            event.jobId,
-            err.message,
-          );
-        }
-      }
-    } finally {
-      this.processingWriteReady = false;
-    }
-  }
-
-  private async handleWriteReadyAsync(
-    event: JobWriteReadyEvent,
-  ): Promise<void> {
-    if (this.isShutdown) {
-      return;
-    }
-
-    const { batchId, batchJobIds } = event.jobMeta;
-
-    if (batchJobIds.length <= 1) {
-      await this.processCompleteBatch([event]);
-      return;
-    }
-
-    let pending = this.pendingBatches.get(batchId);
-    if (!pending) {
-      pending = {
-        expectedJobIds: new Set(batchJobIds),
-        arrivedJobIds: new Set(),
-        events: [],
-      };
-      this.pendingBatches.set(batchId, pending);
-    }
-
-    pending.arrivedJobIds.add(event.jobId);
-    pending.events.push(event);
-
-    if (pending.arrivedJobIds.size >= pending.expectedJobIds.size) {
-      this.pendingBatches.delete(batchId);
-      await this.processCompleteBatch(pending.events);
-    }
-  }
-
-  private async handleJobFailedForBatch(event: JobFailedEvent): Promise<void> {
-    if (this.isShutdown) {
-      return;
-    }
-
-    const batchId = event.job?.meta.batchId;
-    if (!batchId) {
-      return;
-    }
-
-    const pending = this.pendingBatches.get(batchId);
-    if (!pending) {
-      return;
-    }
-
-    this.pendingBatches.delete(batchId);
-    if (pending.events.length > 0) {
-      await this.processCompleteBatch(pending.events);
-    }
   }
 
   private async processCompleteBatch(

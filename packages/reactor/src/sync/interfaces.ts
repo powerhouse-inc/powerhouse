@@ -1,8 +1,8 @@
 import type { IOperationIndex } from "../cache/operation-index-types.js";
 import type { ShutdownStatus } from "../shared/types.js";
 import type { ISyncCursorStorage } from "../storage/interfaces.js";
-import type { SyncOperation } from "./sync-operation.js";
 import type { IMailbox } from "./mailbox.js";
+import type { SyncOperation } from "./sync-operation.js";
 import type {
   ChannelConfig,
   RemoteFilter,
@@ -87,9 +87,11 @@ export interface IChannelFactory {
     remoteId: string,
     remoteName: string,
     config: ChannelConfig,
+    // TODO: remove from the interface -- currently this is created inside of the builder
     cursorStorage: ISyncCursorStorage,
     collectionId: string,
     filter: RemoteFilter,
+    // TODO: remove from the interface -- currently this is created inside of the builder
     operationIndex: IOperationIndex,
   ): IChannel;
 }
