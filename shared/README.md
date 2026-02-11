@@ -4,7 +4,7 @@ This directory is an npm package which is intended for sharing code across packa
 
 This package is excluded from the release workflow and is never intended to be published ("private": true) in package.json.
 
-The only exports is for the `index.ts` file because we never intend to publish this package directory. It also doesn't define anything in the "files" field of the `package.json` for the same reason.
+It also doesn't define anything in the "files" field of the `package.json` for the same reason.
 
 This package should **never depend on any other package in this monorepo**. We want to be able to use the code kept here in any of the other monorepo packages without circular imports.
 
