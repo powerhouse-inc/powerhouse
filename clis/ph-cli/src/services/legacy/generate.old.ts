@@ -8,7 +8,7 @@ import {
   generateProcessor,
   generateSubgraph,
 } from "@powerhousedao/codegen";
-import { PROCESSOR_APPS } from "@powerhousedao/common/clis";
+import { PROCESSOR_APPS } from "shared";
 import { getConfig } from "@powerhousedao/config/node";
 import path from "path";
 

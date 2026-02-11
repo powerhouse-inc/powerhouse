@@ -40,6 +40,9 @@
     },
     {
       "path": "../../packages/reactor"
+    },
+    {
+      "path": "../../shared"
     }
   ]
 }

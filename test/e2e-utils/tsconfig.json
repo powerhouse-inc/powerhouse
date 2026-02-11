@@ -5,5 +5,12 @@
     "types": ["node"]
   },
   "include": ["**/*"],
-  "references": [{ "path": "../../packages/config" }]
+  "references": [
+    {
+      "path": "../../packages/config"
+    },
+    {
+      "path": "../../shared"
+    }
+  ]
 }

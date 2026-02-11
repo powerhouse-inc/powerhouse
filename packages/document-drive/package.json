@@ -95,6 +95,7 @@
     "zod": "^4.3.5"
   },
   "devDependencies": {
+    "shared": "workspace:*",
     "@anatine/zod-mock": "^3.14.0",
     "@types/node": "^24.6.1",
     "@types/uuid": "^9.0.8",
