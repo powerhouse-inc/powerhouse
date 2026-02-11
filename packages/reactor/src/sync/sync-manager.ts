@@ -34,42 +34,16 @@ import type {
   RemoteOptions,
   RemoteRecord,
   RemoteStatus,
-  SyncFailedEvent,
-  SyncPendingEvent,
   SyncResult,
-  SyncSucceededEvent,
 } from "./types.js";
-import {
-  ChannelErrorSource,
-  SyncEventTypes,
-  SyncOperationStatus,
-} from "./types.js";
+import { ChannelErrorSource, SyncOperationStatus } from "./types.js";
 import {
   batchOperationsByDocument,
   createIdleHealth,
-  filterByCollectionMembership,
   filterOperations,
   getMaxOrdinal,
   toOperationWithContext,
 } from "./utils.js";
-
-type JobSyncState = {
-  total: number;
-  completed: Set<string>;
-  failed: Map<
-    string,
-    { remoteName: string; documentId: string; error: string }
-  >;
-  remoteNames: string[];
-};
-
-type IndexSyncBuildOptions = {
-  maxOrdinal?: number;
-  sinceTimestampUtcMs?: string;
-  fallbackOperations?: OperationWithContext[];
-};
-
-const INDEX_PAGE_LIMIT = 500;
 
 export class SyncManager implements ISyncManager {
   private readonly logger: ILogger;
@@ -82,7 +56,6 @@ export class SyncManager implements ISyncManager {
   private readonly remotes: Map<string, Remote>;
   private readonly awaiter: JobAwaiter;
   private readonly syncAwaiter: SyncAwaiter;
-  private readonly jobSyncStates: Map<string, JobSyncState>;
   private isShutdown: boolean;
   private eventUnsubscribe?: () => void;
   private failedEventUnsubscribe?: () => void;
@@ -111,7 +84,6 @@ export class SyncManager implements ISyncManager {
       reactor.getJobStatus(jobId, signal),
     );
     this.syncAwaiter = new SyncAwaiter(eventBus);
-    this.jobSyncStates = new Map();
     this.isShutdown = false;
     this.batchAggregator = new BatchAggregator(logger, (batch) =>
       this.processCompleteBatch(batch),
@@ -290,7 +262,13 @@ export class SyncManager implements ISyncManager {
     this.remotes.set(name, remote);
     this.wireChannelCallbacks(remote);
 
-    await this.backfillOutbox(remote, options.sinceTimestampUtcMs);
+    // get outbox cursor from storage for this remote + backfill
+    const cursor = await this.cursorStorage.get(remote.name, "outbox");
+    const persisted = cursor.cursorOrdinal;
+
+    if (persisted > 0) {
+      await this.backfillOutbox(remote, persisted);
+    }
 
     return remote;
   }
@@ -316,30 +294,6 @@ export class SyncManager implements ISyncManager {
     return this.syncAwaiter.waitForSync(jobId, signal);
   }
 
-  private async backfillOutbox(
-    remote: Remote,
-    sinceTimestampUtcMs: string,
-  ): Promise<void> {
-    const syncOps = await this.buildSyncOpsFromIndex(remote, "", [], {
-      sinceTimestampUtcMs,
-    });
-
-    if (syncOps.length === 0) {
-      return;
-    }
-
-    let maxOrdinal = 0;
-    for (const syncOp of syncOps) {
-      maxOrdinal = Math.max(maxOrdinal, getMaxOrdinal(syncOp.operations));
-    }
-
-    remote.channel.outbox.add(...syncOps);
-
-    if (maxOrdinal > 0) {
-      await this.setOutboxCheckpoint(remote.name, maxOrdinal);
-    }
-  }
-
   private wireChannelCallbacks(remote: Remote): void {
     remote.channel.inbox.onAdded((syncOps) => {
       this.handleInboxAdded(remote, syncOps);
@@ -352,95 +306,43 @@ export class SyncManager implements ISyncManager {
     });
   }
 
+  private getRemotesForCollection(collectionId: string): Remote[] {
+    return Array.from(this.remotes.values()).filter(
+      (remote) => remote.collectionId === collectionId,
+    );
+  }
+
   private async processCompleteBatch(batch: PreparedBatch): Promise<void> {
-    for (const { event, jobDependencies } of batch.entries) {
-      const sourceRemote = event.jobMeta.sourceRemote as string | undefined;
-      const maxEventOrdinal = getMaxOrdinal(event.operations);
-      const remotePlans: Array<{ remote: Remote; syncOps: SyncOperation[] }> =
-        [];
+    // get the unique set of collection ids
+    const collectionIds = [
+      ...new Set(
+        Object.values(batch.collectionMemberships).flatMap(
+          (collections) => collections,
+        ),
+      ),
+    ];
 
-      for (const { remote, filteredOperations } of this.getAffectedRemotes(
-        event,
-        batch.collectionMemberships,
-        sourceRemote,
-      )) {
-        const syncOps = await this.buildSyncOpsFromIndex(
-          remote,
-          event.jobId,
-          jobDependencies,
-          {
-            maxOrdinal: maxEventOrdinal > 0 ? maxEventOrdinal : undefined,
-            fallbackOperations: filteredOperations,
-          },
-        );
-
-        if (syncOps.length > 0) {
-          remotePlans.push({ remote, syncOps });
+    // get the unique set of affected remotes
+    const affectedRemotes: Remote[] = [];
+    for (const collectionId of collectionIds) {
+      const remotes = this.getRemotesForCollection(collectionId);
+      for (const remote of remotes) {
+        if (!affectedRemotes.includes(remote)) {
+          affectedRemotes.push(remote);
         }
       }
+    }
 
-      const syncOpsWithRemote = remotePlans.flatMap((plan) =>
-        plan.syncOps.map((syncOp) => ({ syncOp, remote: plan.remote })),
-      );
-      const remoteNames = [
-        ...new Set(remotePlans.map((plan) => plan.remote.name)),
-      ];
-
-      if (syncOpsWithRemote.length > 0 && event.jobId) {
-        this.jobSyncStates.set(event.jobId, {
-          total: syncOpsWithRemote.length,
-          completed: new Set(),
-          failed: new Map(),
-          remoteNames,
-        });
-        const pendingEvent: SyncPendingEvent = {
-          jobId: event.jobId,
-          syncOperationCount: syncOpsWithRemote.length,
-          remoteNames,
-        };
-        void this.eventBus.emit(SyncEventTypes.SYNC_PENDING, pendingEvent);
+    // now work through the affected remotes and backfill based on the last operation in the outbox
+    for (const remote of affectedRemotes) {
+      let outboxOrdinal = this.getMaxOutboxOrdinal(remote);
+      if (outboxOrdinal === 0) {
+        // the outbox is empty, so we need to lookup the cursor instead
+        const cursor = await this.cursorStorage.get(remote.name, "outbox");
+        outboxOrdinal = cursor.cursorOrdinal;
       }
 
-      const checkpointUpdates = new Map<string, number>();
-      const groupedByRemote = new Map<
-        string,
-        { remote: Remote; syncOps: SyncOperation[] }
-      >();
-
-      for (const { syncOp, remote } of syncOpsWithRemote) {
-        syncOp.on((op, _prev, next) => {
-          if (next === SyncOperationStatus.Applied) {
-            this.markSyncOpCompleted(op.jobId, op.id, true);
-          } else if (next === SyncOperationStatus.Error) {
-            this.markSyncOpCompleted(op.jobId, op.id, false, {
-              remoteName: op.remoteName,
-              documentId: op.documentId,
-              error: op.error?.message ?? "Unknown error",
-            });
-          }
-        });
-
-        let group = groupedByRemote.get(remote.name);
-        if (!group) {
-          group = { remote, syncOps: [] };
-          groupedByRemote.set(remote.name, group);
-        }
-        group.syncOps.push(syncOp);
-
-        const maxSyncOpOrdinal = getMaxOrdinal(syncOp.operations);
-        const previousMax = checkpointUpdates.get(remote.name) ?? 0;
-        if (maxSyncOpOrdinal > previousMax) {
-          checkpointUpdates.set(remote.name, maxSyncOpOrdinal);
-        }
-      }
-
-      for (const { remote, syncOps } of groupedByRemote.values()) {
-        remote.channel.outbox.add(...syncOps);
-      }
-
-      for (const [remoteName, maxOrdinal] of checkpointUpdates) {
-        await this.setOutboxCheckpoint(remoteName, maxOrdinal);
-      }
+      await this.backfillOutbox(remote, outboxOrdinal);
     }
   }
 
@@ -620,229 +522,59 @@ export class SyncManager implements ISyncManager {
     }
   }
 
-  private markSyncOpCompleted(
-    jobId: string,
-    syncOpId: string,
-    success: boolean,
-    errorInfo?: { remoteName: string; documentId: string; error: string },
-  ): void {
-    if (!jobId) {
+  private async backfillOutbox(remote: Remote, cursor: number): Promise<void> {
+    const operations = await this.getOperationsForRemote(remote, cursor);
+    if (operations.length === 0) {
       return;
     }
 
-    const state = this.jobSyncStates.get(jobId);
-    if (!state) {
-      return;
+    // create sync operations, each batch has a dependency on the previous one
+    const batches = batchOperationsByDocument(operations);
+
+    let prevJobId = "";
+    const syncOps: SyncOperation[] = [];
+    for (const batch of batches) {
+      const jobId = crypto.randomUUID();
+      const syncOp = new SyncOperation(
+        crypto.randomUUID(),
+        jobId,
+        [prevJobId],
+        remote.name,
+        batch.documentId,
+        [batch.scope],
+        batch.branch,
+        batch.operations,
+      );
+
+      syncOps.push(syncOp);
+
+      prevJobId = jobId;
     }
 
-    if (success) {
-      state.completed.add(syncOpId);
-    } else if (errorInfo) {
-      state.failed.set(syncOpId, errorInfo);
-    }
-
-    const totalTerminal = state.completed.size + state.failed.size;
-    if (totalTerminal === state.total) {
-      if (state.failed.size === 0) {
-        const succeededEvent: SyncSucceededEvent = {
-          jobId,
-          syncOperationCount: state.total,
-        };
-        void this.eventBus.emit(SyncEventTypes.SYNC_SUCCEEDED, succeededEvent);
-      } else {
-        const failedEvent: SyncFailedEvent = {
-          jobId,
-          successCount: state.completed.size,
-          failureCount: state.failed.size,
-          errors: Array.from(state.failed.values()),
-        };
-        void this.eventBus.emit(SyncEventTypes.SYNC_FAILED, failedEvent);
-      }
-      this.jobSyncStates.delete(jobId);
-    }
+    remote.channel.outbox.add(...syncOps);
   }
 
-  private async getPersistedOutboxCursor(remoteName: string): Promise<number> {
-    const cursor = await this.cursorStorage.get(remoteName, "outbox");
-    return cursor.cursorOrdinal;
-  }
-
-  private getOutboxTailOrdinal(remote: Remote): number {
+  private getMaxOutboxOrdinal(remote: Remote): number {
     const outboxItems = remote.channel.outbox.items;
 
     let maxOrdinal = 0;
     for (const syncOp of outboxItems) {
       maxOrdinal = Math.max(maxOrdinal, getMaxOrdinal(syncOp.operations));
     }
+
     return maxOrdinal;
   }
 
-  private async getOutboxCheckpoint(remote: Remote): Promise<number> {
-    const persisted = await this.getPersistedOutboxCursor(remote.name);
-    const outboxTail = this.getOutboxTailOrdinal(remote);
-    return Math.max(persisted, outboxTail);
-  }
-
-  private async setOutboxCheckpoint(
-    remoteName: string,
-    cursorOrdinal: number,
-  ): Promise<void> {
-    await this.cursorStorage.upsert({
-      remoteName,
-      cursorType: "outbox",
-      cursorOrdinal,
-      lastSyncedAtUtcMs: Date.now(),
-    });
-  }
-
-  private getAffectedRemotes(
-    event: JobWriteReadyEvent,
-    mergedMemberships: Record<string, string[]>,
-    sourceRemote?: string,
-  ): Array<{ remote: Remote; filteredOperations: OperationWithContext[] }> {
-    const affected: Array<{
-      remote: Remote;
-      filteredOperations: OperationWithContext[];
-    }> = [];
-
-    for (const remote of this.remotes.values()) {
-      if (sourceRemote && remote.name === sourceRemote) {
-        continue;
-      }
-
-      let filteredOps = filterOperations(event.operations, remote.filter);
-      if (filteredOps.length === 0) {
-        continue;
-      }
-
-      if (remote.filter.documentId.length === 0) {
-        filteredOps = filterByCollectionMembership(
-          filteredOps,
-          remote.collectionId,
-          mergedMemberships,
-        );
-        if (filteredOps.length === 0) {
-          continue;
-        }
-      }
-
-      affected.push({ remote, filteredOperations: filteredOps });
-    }
-
-    return affected;
-  }
-
-  private async buildSyncOpsFromIndex(
+  private async getOperationsForRemote(
     remote: Remote,
-    jobId: string,
-    jobDependencies: string[],
-    options: IndexSyncBuildOptions = {},
-  ): Promise<SyncOperation[]> {
-    const checkpoint = await this.getOutboxCheckpoint(remote);
-    let operations = await this.findRemoteOperationsSince(
-      remote,
-      checkpoint,
-      options,
-    );
-
-    if (operations.length === 0 && options.fallbackOperations) {
-      operations = options.fallbackOperations.filter((op) => {
-        if (op.context.ordinal <= checkpoint) {
-          return false;
-        }
-
-        if (
-          options.sinceTimestampUtcMs &&
-          op.operation.timestampUtcMs <= options.sinceTimestampUtcMs
-        ) {
-          return false;
-        }
-
-        if (
-          options.maxOrdinal !== undefined &&
-          op.context.ordinal > options.maxOrdinal
-        ) {
-          return false;
-        }
-
-        return true;
-      });
-    }
-
-    if (operations.length === 0) {
-      return [];
-    }
-
-    operations.sort((a, b) => a.context.ordinal - b.context.ordinal);
-    const batches = batchOperationsByDocument(operations);
-
-    return batches.map(
-      (batch) =>
-        new SyncOperation(
-          crypto.randomUUID(),
-          jobId,
-          [...jobDependencies],
-          remote.name,
-          batch.documentId,
-          [batch.scope],
-          batch.branch,
-          batch.operations,
-        ),
-    );
-  }
-
-  private async findRemoteOperationsSince(
-    remote: Remote,
-    checkpointOrdinal: number,
-    options: IndexSyncBuildOptions,
+    cursor: number,
   ): Promise<OperationWithContext[]> {
-    const operations: OperationWithContext[] = [];
-    let page = await this.operationIndex.find(
-      remote.collectionId,
-      checkpointOrdinal,
-      undefined,
-      {
-        cursor: "0",
-        limit: INDEX_PAGE_LIMIT,
-      },
+    const results = await this.operationIndex.find(remote.collectionId, cursor);
+
+    // apply the remote filter
+    return filterOperations(
+      results.results.map((entry) => toOperationWithContext(entry)),
+      remote.filter,
     );
-
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-    while (true) {
-      const pageOperations = filterOperations(
-        page.results.map((entry) => toOperationWithContext(entry)),
-        remote.filter,
-      ).filter((op) => {
-        if (op.context.ordinal <= checkpointOrdinal) {
-          return false;
-        }
-
-        if (
-          options.sinceTimestampUtcMs &&
-          op.operation.timestampUtcMs <= options.sinceTimestampUtcMs
-        ) {
-          return false;
-        }
-
-        if (
-          options.maxOrdinal !== undefined &&
-          op.context.ordinal > options.maxOrdinal
-        ) {
-          return false;
-        }
-
-        return true;
-      });
-
-      operations.push(...pageOperations);
-
-      if (!page.next) {
-        break;
-      }
-
-      page = await page.next();
-    }
-
-    return operations;
   }
 }
