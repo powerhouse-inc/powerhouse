@@ -14,7 +14,6 @@ import {
 } from "../events/types.js";
 import type { ILogger } from "../logging/types.js";
 import { JobAwaiter } from "../shared/awaiter.js";
-import { BatchAggregator } from "./batch-aggregator.js";
 import {
   JobStatus,
   type JobInfo,
@@ -24,6 +23,7 @@ import type {
   ISyncCursorStorage,
   ISyncRemoteStorage,
 } from "../storage/interfaces.js";
+import { BatchAggregator, type PreparedBatch } from "./batch-aggregator.js";
 import { ChannelError } from "./errors.js";
 import type { IChannelFactory, ISyncManager, Remote } from "./interfaces.js";
 import { SyncAwaiter } from "./sync-awaiter.js";
@@ -50,7 +50,6 @@ import {
   filterByCollectionMembership,
   filterOperations,
   getMaxOrdinal,
-  mergeCollectionMemberships,
   toOperationWithContext,
 } from "./utils.js";
 
@@ -114,8 +113,8 @@ export class SyncManager implements ISyncManager {
     this.syncAwaiter = new SyncAwaiter(eventBus);
     this.jobSyncStates = new Map();
     this.isShutdown = false;
-    this.batchAggregator = new BatchAggregator(logger, (events) =>
-      this.processCompleteBatch(events),
+    this.batchAggregator = new BatchAggregator(logger, (batch) =>
+      this.processCompleteBatch(batch),
     );
   }
 
@@ -296,6 +295,27 @@ export class SyncManager implements ISyncManager {
     return remote;
   }
 
+  async remove(name: string): Promise<void> {
+    const remote = this.remotes.get(name);
+    if (!remote) {
+      throw new Error(`Remote with name '${name}' does not exist`);
+    }
+
+    await this.remoteStorage.remove(name);
+    await this.cursorStorage.remove(name);
+
+    remote.channel.shutdown();
+    this.remotes.delete(name);
+  }
+
+  list(): Remote[] {
+    return Array.from(this.remotes.values());
+  }
+
+  waitForSync(jobId: string, signal?: AbortSignal): Promise<SyncResult> {
+    return this.syncAwaiter.waitForSync(jobId, signal);
+  }
+
   private async backfillOutbox(
     remote: Remote,
     sinceTimestampUtcMs: string,
@@ -319,27 +339,6 @@ export class SyncManager implements ISyncManager {
     }
   }
 
-  async remove(name: string): Promise<void> {
-    const remote = this.remotes.get(name);
-    if (!remote) {
-      throw new Error(`Remote with name '${name}' does not exist`);
-    }
-
-    await this.remoteStorage.remove(name);
-    await this.cursorStorage.remove(name);
-
-    remote.channel.shutdown();
-    this.remotes.delete(name);
-  }
-
-  list(): Remote[] {
-    return Array.from(this.remotes.values());
-  }
-
-  waitForSync(jobId: string, signal?: AbortSignal): Promise<SyncResult> {
-    return this.syncAwaiter.waitForSync(jobId, signal);
-  }
-
   private wireChannelCallbacks(remote: Remote): void {
     remote.channel.inbox.onAdded((syncOps) => {
       this.handleInboxAdded(remote, syncOps);
@@ -352,25 +351,16 @@ export class SyncManager implements ISyncManager {
     });
   }
 
-  private async processCompleteBatch(
-    events: JobWriteReadyEvent[],
-  ): Promise<void> {
-    const isBatch = events.length > 1;
-
-    const mergedMemberships = mergeCollectionMemberships(events);
-
-    const priorJobIds: string[] = [];
-
-    for (const event of events) {
+  private async processCompleteBatch(batch: PreparedBatch): Promise<void> {
+    for (const { event, jobDependencies } of batch.entries) {
       const sourceRemote = event.jobMeta.sourceRemote as string | undefined;
-      const jobDependencies = isBatch ? [...priorJobIds] : [];
       const maxEventOrdinal = getMaxOrdinal(event.operations);
       const remotePlans: Array<{ remote: Remote; syncOps: SyncOperation[] }> =
         [];
 
       for (const { remote, filteredOperations } of this.getAffectedRemotes(
         event,
-        mergedMemberships,
+        batch.collectionMemberships,
         sourceRemote,
       )) {
         const syncOps = await this.buildSyncOpsFromIndex(
@@ -434,10 +424,6 @@ export class SyncManager implements ISyncManager {
 
       for (const [remoteName, maxOrdinal] of checkpointUpdates) {
         await this.setOutboxCheckpoint(remoteName, maxOrdinal);
-      }
-
-      if (isBatch && event.jobId) {
-        priorJobIds.push(event.jobId);
       }
     }
   }

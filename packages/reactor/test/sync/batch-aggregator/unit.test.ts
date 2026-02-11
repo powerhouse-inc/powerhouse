@@ -4,7 +4,10 @@ import type {
   JobWriteReadyEvent,
 } from "../../../src/events/types.js";
 import type { ILogger } from "../../../src/logging/types.js";
-import { BatchAggregator } from "../../../src/sync/batch-aggregator.js";
+import {
+  BatchAggregator,
+  type PreparedBatch,
+} from "../../../src/sync/batch-aggregator.js";
 
 describe("BatchAggregator", () => {
   let logger: ILogger;
@@ -48,7 +51,10 @@ describe("BatchAggregator", () => {
       await aggregator.enqueueWriteReady(event);
 
       expect(onBatchReady).toHaveBeenCalledTimes(1);
-      expect(onBatchReady).toHaveBeenCalledWith([event]);
+      expect(onBatchReady).toHaveBeenCalledWith({
+        collectionMemberships: {},
+        entries: [{ event, jobDependencies: [] }],
+      });
     });
   });
 
@@ -78,7 +84,14 @@ describe("BatchAggregator", () => {
 
       await aggregator.enqueueWriteReady(event3);
       expect(onBatchReady).toHaveBeenCalledTimes(1);
-      expect(onBatchReady).toHaveBeenCalledWith([event1, event2, event3]);
+      expect(onBatchReady).toHaveBeenCalledWith({
+        collectionMemberships: {},
+        entries: [
+          { event: event1, jobDependencies: [] },
+          { event: event2, jobDependencies: ["job-1"] },
+          { event: event3, jobDependencies: ["job-1", "job-2"] },
+        ],
+      });
     });
 
     it("handles two-job batch correctly", async () => {
@@ -95,7 +108,13 @@ describe("BatchAggregator", () => {
       await aggregator.enqueueWriteReady(event2);
 
       expect(onBatchReady).toHaveBeenCalledTimes(1);
-      expect(onBatchReady).toHaveBeenCalledWith([event1, event2]);
+      expect(onBatchReady).toHaveBeenCalledWith({
+        collectionMemberships: {},
+        entries: [
+          { event: event1, jobDependencies: [] },
+          { event: event2, jobDependencies: ["job-1"] },
+        ],
+      });
     });
   });
 
@@ -120,7 +139,10 @@ describe("BatchAggregator", () => {
       await aggregator.handleJobFailed(failedEvent);
 
       expect(onBatchReady).toHaveBeenCalledTimes(1);
-      expect(onBatchReady).toHaveBeenCalledWith([event1]);
+      expect(onBatchReady).toHaveBeenCalledWith({
+        collectionMemberships: {},
+        entries: [{ event: event1, jobDependencies: [] }],
+      });
     });
 
     it("is a no-op when no pending batch exists for the failed job's batchId", async () => {
@@ -227,7 +249,10 @@ describe("BatchAggregator", () => {
 
       // onBatchReady was called for event1 (already in-progress), but not for event2 (cleared)
       expect(onBatchReady).toHaveBeenCalledTimes(1);
-      expect(onBatchReady).toHaveBeenCalledWith([event1]);
+      expect(onBatchReady).toHaveBeenCalledWith({
+        collectionMemberships: {},
+        entries: [{ event: event1, jobDependencies: [] }],
+      });
     });
   });
 
@@ -245,8 +270,14 @@ describe("BatchAggregator", () => {
 
       expect(logger.error).toHaveBeenCalledTimes(1);
       expect(onBatchReady).toHaveBeenCalledTimes(2);
-      expect(onBatchReady).toHaveBeenNthCalledWith(1, [event1]);
-      expect(onBatchReady).toHaveBeenNthCalledWith(2, [event2]);
+      expect(onBatchReady).toHaveBeenNthCalledWith(1, {
+        collectionMemberships: {},
+        entries: [{ event: event1, jobDependencies: [] }],
+      });
+      expect(onBatchReady).toHaveBeenNthCalledWith(2, {
+        collectionMemberships: {},
+        entries: [{ event: event2, jobDependencies: [] }],
+      });
     });
   });
 
@@ -254,8 +285,8 @@ describe("BatchAggregator", () => {
     it("processes events in order even when enqueued concurrently", async () => {
       const callOrder: string[] = [];
 
-      onBatchReady.mockImplementation((events: JobWriteReadyEvent[]) => {
-        callOrder.push(events[0].jobId);
+      onBatchReady.mockImplementation((batch: PreparedBatch) => {
+        callOrder.push(batch.entries[0].event.jobId);
         return Promise.resolve();
       });
 
