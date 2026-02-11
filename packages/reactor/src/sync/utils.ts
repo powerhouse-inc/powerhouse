@@ -1,3 +1,9 @@
+import type { Operation } from "document-model";
+import {
+  driveCollectionId,
+  type OperationIndexEntry,
+} from "../cache/operation-index-types.js";
+import type { JobWriteReadyEvent } from "../events/types.js";
 import type { OperationWithContext } from "../storage/interfaces.js";
 import type { ChannelHealth, RemoteFilter } from "./types.js";
 
@@ -124,4 +130,98 @@ export function batchOperationsByDocument(
 
   flushBatch();
   return batches;
+}
+
+export function getMaxOrdinal(operations: OperationWithContext[]): number {
+  return operations.reduce(
+    (maxOrdinal, operation) => Math.max(maxOrdinal, operation.context.ordinal),
+    0,
+  );
+}
+
+export function filterByCollectionMembership(
+  operations: OperationWithContext[],
+  collectionId: string,
+  collectionMemberships?: Record<string, string[]>,
+): OperationWithContext[] {
+  if (!collectionMemberships) {
+    return [];
+  }
+
+  return operations.filter((op) => {
+    const documentId = op.context.documentId;
+    if (!(documentId in collectionMemberships)) {
+      return false;
+    }
+    return collectionMemberships[documentId].includes(collectionId);
+  });
+}
+
+export function toOperationWithContext(
+  entry: OperationIndexEntry,
+): OperationWithContext {
+  return {
+    operation: {
+      id: entry.id,
+      index: entry.index,
+      skip: entry.skip,
+      hash: entry.hash,
+      timestampUtcMs: entry.timestampUtcMs,
+      action: entry.action,
+    } as Operation,
+    context: {
+      documentId: entry.documentId,
+      documentType: entry.documentType,
+      scope: entry.scope,
+      branch: entry.branch,
+      ordinal: entry.ordinal ?? 0,
+    },
+  };
+}
+
+export function mergeCollectionMemberships(
+  events: JobWriteReadyEvent[],
+): Record<string, string[]> {
+  const mergedMemberships: Record<string, string[]> = {};
+
+  for (const event of events) {
+    if (event.collectionMemberships) {
+      for (const [docId, collections] of Object.entries(
+        event.collectionMemberships,
+      )) {
+        if (!(docId in mergedMemberships)) {
+          mergedMemberships[docId] = [];
+        }
+        for (const c of collections) {
+          if (!mergedMemberships[docId].includes(c)) {
+            mergedMemberships[docId].push(c);
+          }
+        }
+      }
+    }
+
+    for (const op of event.operations) {
+      const action = op.operation.action as {
+        type: string;
+        input?: { sourceId?: string; targetId?: string };
+      };
+      if (action.type !== "ADD_RELATIONSHIP") {
+        continue;
+      }
+      const input = action.input;
+      if (!input?.sourceId || !input.targetId) {
+        continue;
+      }
+
+      const collectionId = driveCollectionId(op.context.branch, input.sourceId);
+      if (!(input.targetId in mergedMemberships)) {
+        mergedMemberships[input.targetId] = [];
+      }
+      if (!mergedMemberships[input.targetId].includes(collectionId)) {
+        mergedMemberships[input.targetId].push(collectionId);
+      }
+    }
+  }
+
+  return mergedMemberships;
 }

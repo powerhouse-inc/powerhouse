@@ -1,9 +1,5 @@
 import type { Operation } from "document-model";
-import {
-  driveCollectionId,
-  type IOperationIndex,
-  type OperationIndexEntry,
-} from "../cache/operation-index-types.js";
+import type { IOperationIndex } from "../cache/operation-index-types.js";
 import type {
   BatchLoadRequest,
   BatchLoadResult,
@@ -51,7 +47,11 @@ import {
 import {
   batchOperationsByDocument,
   createIdleHealth,
+  filterByCollectionMembership,
   filterOperations,
+  getMaxOrdinal,
+  mergeCollectionMemberships,
+  toOperationWithContext,
 } from "./utils.js";
 
 type JobSyncState = {
@@ -311,7 +311,7 @@ export class SyncManager implements ISyncManager {
     let maxOrdinal = 0;
     for (const syncOp of syncOps) {
       remote.channel.outbox.add(syncOp);
-      maxOrdinal = Math.max(maxOrdinal, this.getMaxOrdinal(syncOp.operations));
+      maxOrdinal = Math.max(maxOrdinal, getMaxOrdinal(syncOp.operations));
     }
 
     if (maxOrdinal > 0) {
@@ -357,14 +357,14 @@ export class SyncManager implements ISyncManager {
   ): Promise<void> {
     const isBatch = events.length > 1;
 
-    const mergedMemberships = this.mergeCollectionMemberships(events);
+    const mergedMemberships = mergeCollectionMemberships(events);
 
     const priorJobIds: string[] = [];
 
     for (const event of events) {
       const sourceRemote = event.jobMeta.sourceRemote as string | undefined;
       const jobDependencies = isBatch ? [...priorJobIds] : [];
-      const maxEventOrdinal = this.getMaxOrdinal(event.operations);
+      const maxEventOrdinal = getMaxOrdinal(event.operations);
       const remotePlans: Array<{ remote: Remote; syncOps: SyncOperation[] }> =
         [];
 
@@ -425,7 +425,7 @@ export class SyncManager implements ISyncManager {
         });
 
         remote.channel.outbox.add(syncOp);
-        const maxSyncOpOrdinal = this.getMaxOrdinal(syncOp.operations);
+        const maxSyncOpOrdinal = getMaxOrdinal(syncOp.operations);
         const previousMax = checkpointUpdates.get(remote.name) ?? 0;
         if (maxSyncOpOrdinal > previousMax) {
           checkpointUpdates.set(remote.name, maxSyncOpOrdinal);
@@ -660,27 +660,6 @@ export class SyncManager implements ISyncManager {
     }
   }
 
-  private filterByCollectionMembership(
-    operations: OperationWithContext[],
-    collectionId: string,
-    collectionMemberships?: Record<string, string[]>,
-  ): OperationWithContext[] {
-    // If no collection memberships provided, we can't verify membership
-    // This maintains backwards compatibility but effectively disables routing
-    // for remotes with empty documentId filter when membership info is missing
-    if (!collectionMemberships) {
-      return [];
-    }
-
-    return operations.filter((op) => {
-      const documentId = op.context.documentId;
-      if (!(documentId in collectionMemberships)) {
-        return false;
-      }
-      return collectionMemberships[documentId].includes(collectionId);
-    });
-  }
-
   private async getPersistedOutboxCursor(remoteName: string): Promise<number> {
     const cursor = await this.cursorStorage.get(remoteName, "outbox");
     return cursor.cursorOrdinal;
@@ -691,7 +670,7 @@ export class SyncManager implements ISyncManager {
 
     let maxOrdinal = 0;
     for (const syncOp of outboxItems) {
-      maxOrdinal = Math.max(maxOrdinal, this.getMaxOrdinal(syncOp.operations));
+      maxOrdinal = Math.max(maxOrdinal, getMaxOrdinal(syncOp.operations));
     }
     return maxOrdinal;
   }
@@ -712,64 +691,6 @@ export class SyncManager implements ISyncManager {
       cursorOrdinal,
       lastSyncedAtUtcMs: Date.now(),
     });
-  }
-
-  private getMaxOrdinal(operations: OperationWithContext[]): number {
-    return operations.reduce(
-      (maxOrdinal, operation) =>
-        Math.max(maxOrdinal, operation.context.ordinal),
-      0,
-    );
-  }
-
-  private mergeCollectionMemberships(
-    events: JobWriteReadyEvent[],
-  ): Record<string, string[]> {
-    const mergedMemberships: Record<string, string[]> = {};
-
-    for (const event of events) {
-      if (event.collectionMemberships) {
-        for (const [docId, collections] of Object.entries(
-          event.collectionMemberships,
-        )) {
-          if (!(docId in mergedMemberships)) {
-            mergedMemberships[docId] = [];
-          }
-          for (const c of collections) {
-            if (!mergedMemberships[docId].includes(c)) {
-              mergedMemberships[docId].push(c);
-            }
-          }
-        }
-      }
-
-      for (const op of event.operations) {
-        const action = op.operation.action as {
-          type: string;
-          input?: { sourceId?: string; targetId?: string };
-        };
-        if (action.type !== "ADD_RELATIONSHIP") {
-          continue;
-        }
-        const input = action.input;
-        if (!input?.sourceId || !input.targetId) {
-          continue;
-        }
-
-        const collectionId = driveCollectionId(
-          op.context.branch,
-          input.sourceId,
-        );
-        if (!(input.targetId in mergedMemberships)) {
-          mergedMemberships[input.targetId] = [];
-        }
-        if (!mergedMemberships[input.targetId].includes(collectionId)) {
-          mergedMemberships[input.targetId].push(collectionId);
-        }
-      }
-    }
-
-    return mergedMemberships;
   }
 
   private getAffectedRemotes(
@@ -793,7 +714,7 @@ export class SyncManager implements ISyncManager {
       }
 
       if (remote.filter.documentId.length === 0) {
-        filteredOps = this.filterByCollectionMembership(
+        filteredOps = filterByCollectionMembership(
           filteredOps,
           remote.collectionId,
           mergedMemberships,
@@ -887,7 +808,7 @@ export class SyncManager implements ISyncManager {
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     while (true) {
       const pageOperations = filterOperations(
-        page.results.map((entry) => this.toOperationWithContext(entry)),
+        page.results.map((entry) => toOperationWithContext(entry)),
         remote.filter,
       ).filter((op) => {
         if (op.context.ordinal <= checkpointOrdinal) {
@@ -921,27 +842,5 @@ export class SyncManager implements ISyncManager {
     }
 
     return operations;
-  }
-
-  private toOperationWithContext(
-    entry: OperationIndexEntry,
-  ): OperationWithContext {
-    return {
-      operation: {
-        id: entry.id,
-        index: entry.index,
-        skip: entry.skip,
-        hash: entry.hash,
-        timestampUtcMs: entry.timestampUtcMs,
-        action: entry.action,
-      } as Operation,
-      context: {
-        documentId: entry.documentId,
-        documentType: entry.documentType,
-        scope: entry.scope,
-        branch: entry.branch,
-        ordinal: entry.ordinal ?? 0,
-      },
-    };
   }
 }
