@@ -86,6 +86,9 @@ jobs:
       - name: Run vite build scripts
         run: pnpm build-vite
 
+      - name: Run cli build scripts
+        run: pnpm build-cli
+
       - name: git config
         run: |
           git config user.name "Github Actions Bot"
