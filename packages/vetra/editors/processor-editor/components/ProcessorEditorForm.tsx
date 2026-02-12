@@ -62,8 +62,8 @@ export const ProcessorEditorForm: React.FC<ProcessorEditorFormProps> = ({
   }, [initialDocumentTypes]);
 
   useEffect(() => {
-    setProcessorApps(processorApps);
-  }, [processorApps]);
+    setProcessorApps(initialProcessorApps);
+  }, [initialProcessorApps]);
 
   // Reset confirmation state if status changes back to DRAFT
   useEffect(() => {
