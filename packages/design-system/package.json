@@ -126,8 +126,8 @@
     "vitest": "^3.2.4"
   },
   "peerDependencies": {
-    "react": "catalog:",
-    "react-dom": "catalog:"
+    "react": ">=19.0.0",
+    "react-dom": ">=19.0.0"
   },
   "dependencies": {
     "@internationalized/date": "^3.5.6",

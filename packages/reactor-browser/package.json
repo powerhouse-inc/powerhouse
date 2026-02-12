@@ -56,8 +56,8 @@
     "vitest-browser-react": "^1.0.1"
   },
   "peerDependencies": {
-    "react": "catalog:",
-    "react-dom": "catalog:"
+    "react": ">=19.0.0",
+    "react-dom": ">=19.0.0"
   },
   "dependencies": {
     "@electric-sql/pglite": "catalog:",

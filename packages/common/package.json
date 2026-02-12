@@ -46,8 +46,8 @@
     "storybook": "storybook dev -p 6006"
   },
   "peerDependencies": {
-    "react": "catalog:",
-    "react-dom": "catalog:"
+    "react": ">=19.0.0",
+    "react-dom": ">=19.0.0"
   },
   "dependencies": {
     "@powerhousedao/analytics-engine-core": "catalog:",
