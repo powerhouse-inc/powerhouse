@@ -269,13 +269,19 @@ export function getSharedActionScope(actions: Action[]): string {
 }
 
 /**
- * Signs an action with the provided signer
+ * Signs an action with the provided signer.
+ * If the action already has valid signatures, it is returned unchanged.
  */
 export const signAction = async (
   action: Action,
   signer: ISigner,
   signal?: AbortSignal,
 ): Promise<Action> => {
+  const existingSignatures = action.context?.signer?.signatures;
+  if (existingSignatures && existingSignatures.length > 0) {
+    return action;
+  }
+
   const signature: Signature = await signer.signAction(action, signal);
 
   return {
