@@ -171,7 +171,6 @@ A token capturing operation coordinates, used for read-after-write consistency. 
 ## Module Conventions
 
 - Use ESM import paths with `.js` extensions.
-- Prefer `#...` path aliases over relative paths when available.
 
 ## Coding Guidelines
 
