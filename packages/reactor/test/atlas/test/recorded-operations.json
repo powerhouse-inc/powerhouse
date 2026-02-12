@@ -2391,9 +2391,7 @@
         "timestampUtcMs": "2025-10-27T16:47:53.654Z",
         "type": "ADD_TAGS",
         "input": {
-          "tags": [
-            "AVC"
-          ]
+          "tags": ["AVC"]
         },
         "scope": "global"
       }
@@ -22016,10 +22014,7 @@
         "timestampUtcMs": "2025-10-27T16:47:53.683Z",
         "type": "ADD_TAGS",
         "input": {
-          "tags": [
-            "RESEARCH_TRACK",
-            "INTERNAL_REFERENCE"
-          ]
+          "tags": ["RESEARCH_TRACK", "INTERNAL_REFERENCE"]
         },
         "scope": "global"
       }
@@ -22807,10 +22802,7 @@
         "timestampUtcMs": "2025-10-27T16:47:53.684Z",
         "type": "ADD_TAGS",
         "input": {
-          "tags": [
-            "ANON_WORKFORCE",
-            "INTERNAL_REFERENCE"
-          ]
+          "tags": ["ANON_WORKFORCE", "INTERNAL_REFERENCE"]
         },
         "scope": "global"
       }
@@ -23006,9 +22998,7 @@
         "timestampUtcMs": "2025-10-27T16:47:53.684Z",
         "type": "ADD_TAGS",
         "input": {
-          "tags": [
-            "INTERNAL_REFERENCE"
-          ]
+          "tags": ["INTERNAL_REFERENCE"]
         },
         "scope": "global"
       }
@@ -23358,9 +23348,7 @@
         "timestampUtcMs": "2025-10-27T16:47:53.686Z",
         "type": "ADD_TAGS",
         "input": {
-          "tags": [
-            "INTERNAL_REFERENCE"
-          ]
+          "tags": ["INTERNAL_REFERENCE"]
         },
         "scope": "global"
       }
@@ -24702,9 +24690,7 @@
         "timestampUtcMs": "2025-10-27T16:47:53.689Z",
         "type": "ADD_TAGS",
         "input": {
-          "tags": [
-            "INTERNAL_REFERENCE"
-          ]
+          "tags": ["INTERNAL_REFERENCE"]
         },
         "scope": "global"
       }
@@ -26057,9 +26043,7 @@
         "timestampUtcMs": "2025-10-27T16:47:53.690Z",
         "type": "ADD_TAGS",
         "input": {
-          "tags": [
-            "INTERNAL_REFERENCE"
-          ]
+          "tags": ["INTERNAL_REFERENCE"]
         },
         "scope": "global"
       }
@@ -26409,10 +26393,7 @@
         "timestampUtcMs": "2025-10-27T16:47:53.690Z",
         "type": "ADD_TAGS",
         "input": {
-          "tags": [
-            "RESEARCH_TRACK",
-            "INTERNAL_REFERENCE"
-          ]
+          "tags": ["RESEARCH_TRACK", "INTERNAL_REFERENCE"]
         },
         "scope": "global"
       }

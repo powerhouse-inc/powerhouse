@@ -1,12 +1,11 @@
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import type { OperationContext } from "document-model";
 import type { ISyncCursorStorage } from "../../../../src/storage/interfaces.js";
 import type { KyselySyncRemoteStorage } from "../../../../src/storage/kysely/sync-remote-storage.js";
 import type { Database } from "../../../../src/storage/kysely/types.js";
-import { PollingChannel } from "../../../../src/sync/channels/polling-channel.js";
+import { GqlResponseChannel } from "../../../../src/sync/channels/gql-res-channel.js";
 import { SyncOperation } from "../../../../src/sync/sync-operation.js";
-
-import type { OperationContext } from "document-model";
 import type { RemoteRecord } from "../../../../src/sync/types.js";
 import { SyncOperationStatus } from "../../../../src/sync/types.js";
 import { createTestSyncStorage } from "../../../factories.js";
@@ -99,7 +98,7 @@ describe("PollingChannel Integration", () => {
     it("should keep operations in outbox until cursor is advanced", async () => {
       await createTestRemote("remote-a");
 
-      const channel = new PollingChannel(
+      const channel = new GqlResponseChannel(
         "channel-a",
         "remote-a",
         cursorStorage,
@@ -128,7 +127,7 @@ describe("PollingChannel Integration", () => {
     it("should mark operations as applied when acknowledged", async () => {
       await createTestRemote("remote-a");
 
-      const channel = new PollingChannel(
+      const channel = new GqlResponseChannel(
         "channel-a",
         "remote-a",
         cursorStorage,
@@ -147,7 +146,7 @@ describe("PollingChannel Integration", () => {
     it("should handle multiple operations with same ordinal", async () => {
       await createTestRemote("remote-a");
 
-      const channel = new PollingChannel(
+      const channel = new GqlResponseChannel(
         "channel-a",
         "remote-a",
         cursorStorage,
@@ -173,7 +172,7 @@ describe("PollingChannel Integration", () => {
     it("should persist cursor to storage", async () => {
       await createTestRemote("remote-a");
 
-      const channel = new PollingChannel(
+      const channel = new GqlResponseChannel(
         "channel-a",
         "remote-a",
         cursorStorage,
@@ -190,7 +189,7 @@ describe("PollingChannel Integration", () => {
     it("should load cursor from storage on restart", async () => {
       await createTestRemote("remote-a");
 
-      const channel1 = new PollingChannel(
+      const channel1 = new GqlResponseChannel(
         "channel-a",
         "remote-a",
         cursorStorage,
@@ -201,7 +200,7 @@ describe("PollingChannel Integration", () => {
       const cursor = await cursorStorage.get("remote-a", "inbox");
       expect(cursor.cursorOrdinal).toBe(100);
 
-      const channel2 = new PollingChannel(
+      const channel2 = new GqlResponseChannel(
         "channel-a",
         "remote-a",
         cursorStorage,
@@ -214,7 +213,7 @@ describe("PollingChannel Integration", () => {
     it("should update cursor multiple times", async () => {
       await createTestRemote("remote-a");
 
-      const channel = new PollingChannel(
+      const channel = new GqlResponseChannel(
         "channel-a",
         "remote-a",
         cursorStorage,
@@ -231,7 +230,7 @@ describe("PollingChannel Integration", () => {
     it("should track lastSyncedAtUtcMs", async () => {
       await createTestRemote("remote-a");
 
-      const channel = new PollingChannel(
+      const channel = new GqlResponseChannel(
         "channel-a",
         "remote-a",
         cursorStorage,
@@ -251,7 +250,7 @@ describe("PollingChannel Integration", () => {
     it("should process multiple jobs from inbox", async () => {
       await createTestRemote("remote-a");
 
-      const channel = new PollingChannel(
+      const channel = new GqlResponseChannel(
         "channel-a",
         "remote-a",
         cursorStorage,
@@ -295,7 +294,7 @@ describe("PollingChannel Integration", () => {
     it("should handle execution failure", async () => {
       await createTestRemote("remote-a");
 
-      const channel = new PollingChannel(
+      const channel = new GqlResponseChannel(
         "channel-a",
         "remote-a",
         cursorStorage,

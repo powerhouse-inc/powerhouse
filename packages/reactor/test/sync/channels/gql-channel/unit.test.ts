@@ -3,9 +3,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { IOperationIndex } from "../../../../src/cache/operation-index-types.js";
 import type { ISyncCursorStorage } from "../../../../src/storage/interfaces.js";
 import {
-  GqlChannel,
+  GqlRequestChannel,
   type GqlChannelConfig,
-} from "../../../../src/sync/channels/gql-channel.js";
+} from "../../../../src/sync/channels/gql-req-channel.js";
 import { IntervalPollTimer } from "../../../../src/sync/channels/interval-poll-timer.js";
 import type { IPollTimer } from "../../../../src/sync/channels/poll-timer.js";
 import { SyncOperation } from "../../../../src/sync/sync-operation.js";
@@ -169,7 +169,7 @@ describe("GqlChannel", () => {
       const mockFetch = createMockFetch({ pollSyncEnvelopes: [] });
       global.fetch = mockFetch;
 
-      const channel = new GqlChannel(
+      const channel = new GqlRequestChannel(
         createMockLogger(),
         "channel-1",
         "remote-1",
@@ -189,7 +189,7 @@ describe("GqlChannel", () => {
       const mockFetch = createMockFetch({ pollSyncEnvelopes: [] });
       global.fetch = mockFetch;
 
-      const channel = new GqlChannel(
+      const channel = new GqlRequestChannel(
         createMockLogger(),
         "channel-1",
         "remote-1",
@@ -209,7 +209,7 @@ describe("GqlChannel", () => {
       const mockFetch = createMockFetch({ pollSyncEnvelopes: [] });
       global.fetch = mockFetch;
 
-      const channel = new GqlChannel(
+      const channel = new GqlRequestChannel(
         createMockLogger(),
         "channel-1",
         "remote-1",
@@ -232,7 +232,7 @@ describe("GqlChannel", () => {
       });
       global.fetch = mockFetch;
 
-      const channel = new GqlChannel(
+      const channel = new GqlRequestChannel(
         createMockLogger(),
         "channel-1",
         "remote-1",
@@ -271,7 +271,7 @@ describe("GqlChannel", () => {
       });
       global.fetch = mockFetch;
 
-      const channel = new GqlChannel(
+      const channel = new GqlRequestChannel(
         createMockLogger(),
         "channel-1",
         "remote-1",
@@ -307,7 +307,7 @@ describe("GqlChannel", () => {
       });
       global.fetch = mockFetch;
 
-      const channel = new GqlChannel(
+      const channel = new GqlRequestChannel(
         createMockLogger(),
         "channel-1",
         "remote-1",
@@ -343,7 +343,7 @@ describe("GqlChannel", () => {
 
       const jwtHandler = vi.fn().mockResolvedValue("secret-token");
 
-      const channel = new GqlChannel(
+      const channel = new GqlRequestChannel(
         createMockLogger(),
         "channel-1",
         "remote-1",
@@ -379,7 +379,7 @@ describe("GqlChannel", () => {
 
       const jwtHandler = vi.fn().mockResolvedValue(undefined);
 
-      const channel = new GqlChannel(
+      const channel = new GqlRequestChannel(
         createMockLogger(),
         "channel-1",
         "remote-1",
@@ -415,7 +415,7 @@ describe("GqlChannel", () => {
 
       const jwtHandler = vi.fn().mockRejectedValue(new Error("JWT error"));
 
-      const channel = new GqlChannel(
+      const channel = new GqlRequestChannel(
         createMockLogger(),
         "channel-1",
         "remote-1",
@@ -456,7 +456,7 @@ describe("GqlChannel", () => {
       });
       global.fetch = mockFetch;
 
-      const channel = new GqlChannel(
+      const channel = new GqlRequestChannel(
         createMockLogger(),
         "channel-1",
         "remote-1",
@@ -489,7 +489,7 @@ describe("GqlChannel", () => {
       });
       global.fetch = mockFetch;
 
-      const channel = new GqlChannel(
+      const channel = new GqlRequestChannel(
         createMockLogger(),
         "channel-1",
         "remote-1",
@@ -540,7 +540,7 @@ describe("GqlChannel", () => {
       });
       global.fetch = mockFetch;
 
-      const channel = new GqlChannel(
+      const channel = new GqlRequestChannel(
         createMockLogger(),
         "channel-1",
         "remote-1",
@@ -576,7 +576,7 @@ describe("GqlChannel", () => {
       });
       global.fetch = mockFetch;
 
-      const channel = new GqlChannel(
+      const channel = new GqlRequestChannel(
         createMockLogger(),
         "channel-1",
         "remote-1",
@@ -608,7 +608,7 @@ describe("GqlChannel", () => {
       });
       global.fetch = mockFetch;
 
-      const channel = new GqlChannel(
+      const channel = new GqlRequestChannel(
         createMockLogger(),
         "channel-1",
         "remote-1",
@@ -639,7 +639,7 @@ describe("GqlChannel", () => {
       });
       global.fetch = mockFetch;
 
-      const channel = new GqlChannel(
+      const channel = new GqlRequestChannel(
         createMockLogger(),
         "channel-1",
         "remote-1",
@@ -668,7 +668,7 @@ describe("GqlChannel", () => {
       const mockFetch = vi.fn().mockRejectedValue(new Error("Network error"));
       global.fetch = mockFetch;
 
-      const channel = new GqlChannel(
+      const channel = new GqlRequestChannel(
         createMockLogger(),
         "channel-1",
         "remote-1",
@@ -701,7 +701,7 @@ describe("GqlChannel", () => {
         .mockRejectedValue(new Error("Network error"));
       global.fetch = mockFetch;
 
-      const channel = new GqlChannel(
+      const channel = new GqlRequestChannel(
         createMockLogger(),
         "channel-1",
         "remote-1",
@@ -740,7 +740,7 @@ describe("GqlChannel", () => {
         .mockRejectedValue(new Error("Network error"));
       global.fetch = mockFetch;
 
-      const channel = new GqlChannel(
+      const channel = new GqlRequestChannel(
         createMockLogger(),
         "channel-1",
         "remote-1",
@@ -795,7 +795,7 @@ describe("GqlChannel", () => {
       });
       global.fetch = mockFetch;
 
-      const channel = new GqlChannel(
+      const channel = new GqlRequestChannel(
         createMockLogger(),
         "channel-1",
         "remote-1",
@@ -840,7 +840,7 @@ describe("GqlChannel", () => {
         });
       global.fetch = mockFetch;
 
-      const channel = new GqlChannel(
+      const channel = new GqlRequestChannel(
         createMockLogger(),
         "channel-1",
         "remote-1",
@@ -878,7 +878,7 @@ describe("GqlChannel", () => {
         });
       global.fetch = mockFetch;
 
-      const channel = new GqlChannel(
+      const channel = new GqlRequestChannel(
         createMockLogger(),
         "channel-1",
         "remote-1",
@@ -934,7 +934,7 @@ describe("GqlChannel", () => {
       });
       global.fetch = mockFetch;
 
-      const channel = new GqlChannel(
+      const channel = new GqlRequestChannel(
         createMockLogger(),
         "channel-1",
         "remote-1",
@@ -971,7 +971,7 @@ describe("GqlChannel", () => {
       const mockFetch = createMockFetch({ pollSyncEnvelopes: [] });
       global.fetch = mockFetch;
 
-      const channel = new GqlChannel(
+      const channel = new GqlRequestChannel(
         createMockLogger(),
         "channel-1",
         "remote-1",
@@ -981,7 +981,7 @@ describe("GqlChannel", () => {
         createPollTimer(),
       );
 
-      await channel.updateCursor(42);
+      await channel.ack(42);
 
       expect(cursorStorage.upsert).toHaveBeenCalledTimes(1);
       const call = vi.mocked(cursorStorage.upsert).mock.calls[0];
@@ -1001,7 +1001,7 @@ describe("GqlChannel", () => {
       });
       global.fetch = mockFetch;
 
-      const channel = new GqlChannel(
+      const channel = new GqlRequestChannel(
         createMockLogger(),
         "channel-1",
         "remote-1",
@@ -1034,7 +1034,7 @@ describe("GqlChannel", () => {
       const mockFetch = createMockFetch({ pollSyncEnvelopes: [] });
       global.fetch = mockFetch;
 
-      const channel = new GqlChannel(
+      const channel = new GqlRequestChannel(
         createMockLogger(),
         "channel-1",
         "remote-1",
@@ -1055,7 +1055,7 @@ describe("GqlChannel", () => {
       });
       global.fetch = mockFetch;
 
-      const channel = new GqlChannel(
+      const channel = new GqlRequestChannel(
         createMockLogger(),
         "channel-1",
         "remote-1",
@@ -1089,7 +1089,7 @@ describe("GqlChannel", () => {
       });
       global.fetch = mockFetch;
 
-      const channel = new GqlChannel(
+      const channel = new GqlRequestChannel(
         createMockLogger(),
         "channel-1",
         "remote-1",
@@ -1120,7 +1120,7 @@ describe("GqlChannel", () => {
         .mockRejectedValue(new Error("Network error"));
       global.fetch = mockFetch;
 
-      const channel = new GqlChannel(
+      const channel = new GqlRequestChannel(
         createMockLogger(),
         "channel-1",
         "remote-1",
@@ -1156,7 +1156,7 @@ describe("GqlChannel", () => {
       });
       global.fetch = mockFetch;
 
-      const channel = new GqlChannel(
+      const channel = new GqlRequestChannel(
         createMockLogger(),
         "channel-1",
         "remote-1",
@@ -1191,7 +1191,7 @@ describe("GqlChannel", () => {
       global.fetch = mockFetch;
 
       const manualTimer = new ManualPollTimer();
-      const channel = new GqlChannel(
+      const channel = new GqlRequestChannel(
         createMockLogger(),
         "channel-1",
         "remote-1",
@@ -1228,7 +1228,7 @@ describe("GqlChannel", () => {
       global.fetch = mockFetch;
 
       const manualTimer = new ManualPollTimer();
-      const channel = new GqlChannel(
+      const channel = new GqlRequestChannel(
         createMockLogger(),
         "channel-1",
         "remote-1",
@@ -1283,7 +1283,7 @@ describe("GqlChannel", () => {
       global.fetch = mockFetch;
 
       const manualTimer = new ManualPollTimer();
-      const channel = new GqlChannel(
+      const channel = new GqlRequestChannel(
         createMockLogger(),
         "channel-1",
         "remote-1",

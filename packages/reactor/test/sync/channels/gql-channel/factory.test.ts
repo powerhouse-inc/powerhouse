@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { IOperationIndex } from "../../../../src/cache/operation-index-types.js";
 import type { ISyncCursorStorage } from "../../../../src/storage/interfaces.js";
 import { GqlChannelFactory } from "../../../../src/sync/channels/gql-channel-factory.js";
-import { GqlChannel } from "../../../../src/sync/channels/gql-channel.js";
+import { GqlRequestChannel } from "../../../../src/sync/channels/gql-req-channel.js";
 import type {
   ChannelConfig,
   RemoteFilter,
@@ -86,7 +86,7 @@ describe("GqlChannelFactory", () => {
         createMockOperationIndex(),
       );
 
-      expect(channel).toBeInstanceOf(GqlChannel);
+      expect(channel).toBeInstanceOf(GqlRequestChannel);
       expect(channel.inbox.items).toHaveLength(0);
       expect(channel.outbox.items).toHaveLength(0);
       expect(channel.deadLetter.items).toHaveLength(0);
@@ -121,7 +121,7 @@ describe("GqlChannelFactory", () => {
         createMockOperationIndex(),
       );
 
-      expect(channel).toBeInstanceOf(GqlChannel);
+      expect(channel).toBeInstanceOf(GqlRequestChannel);
       channel.shutdown();
     });
 
@@ -147,7 +147,7 @@ describe("GqlChannelFactory", () => {
         createMockOperationIndex(),
       );
 
-      expect(channel).toBeInstanceOf(GqlChannel);
+      expect(channel).toBeInstanceOf(GqlRequestChannel);
       channel.shutdown();
     });
   });
@@ -389,8 +389,8 @@ describe("GqlChannelFactory", () => {
         createMockOperationIndex(),
       );
 
-      expect(channel1).toBeInstanceOf(GqlChannel);
-      expect(channel2).toBeInstanceOf(GqlChannel);
+      expect(channel1).toBeInstanceOf(GqlRequestChannel);
+      expect(channel2).toBeInstanceOf(GqlRequestChannel);
       expect(channel1).not.toBe(channel2);
 
       channel1.shutdown();
@@ -423,7 +423,7 @@ describe("GqlChannelFactory", () => {
         createMockOperationIndex(),
       );
 
-      expect(channel).toBeInstanceOf(GqlChannel);
+      expect(channel).toBeInstanceOf(GqlRequestChannel);
       channel.shutdown();
     });
 
@@ -451,7 +451,7 @@ describe("GqlChannelFactory", () => {
         createMockOperationIndex(),
       );
 
-      expect(channel).toBeInstanceOf(GqlChannel);
+      expect(channel).toBeInstanceOf(GqlRequestChannel);
       channel.shutdown();
     });
   });

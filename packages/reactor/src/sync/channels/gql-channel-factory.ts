@@ -3,7 +3,7 @@ import type { ILogger } from "../../logging/types.js";
 import type { ISyncCursorStorage } from "../../storage/interfaces.js";
 import type { IChannel, IChannelFactory } from "../interfaces.js";
 import type { ChannelConfig, JwtHandler, RemoteFilter } from "../types.js";
-import { GqlChannel, type GqlChannelConfig } from "./gql-channel.js";
+import { GqlRequestChannel, type GqlChannelConfig } from "./gql-req-channel.js";
 import { IntervalPollTimer } from "./interval-poll-timer.js";
 
 /**
@@ -103,7 +103,7 @@ export class GqlChannelFactory implements IChannelFactory {
 
     const pollTimer = new IntervalPollTimer(pollIntervalMs);
 
-    return new GqlChannel(
+    return new GqlRequestChannel(
       this.logger,
       remoteId,
       remoteName,
