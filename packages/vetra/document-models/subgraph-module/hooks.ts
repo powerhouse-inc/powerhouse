@@ -31,6 +31,7 @@ export function useSelectedSubgraphModuleDocument(): [
   DocumentDispatch<SubgraphModuleAction>,
 ] {
   const [document, dispatch] = useSelectedDocument();
+
   assertIsSubgraphModuleDocument(document);
   return [document, dispatch] as const;
 }

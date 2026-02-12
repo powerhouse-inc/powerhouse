@@ -379,6 +379,7 @@ describe("CodegenProcessorLegacy E2E Tests", () => {
           { id: "dt-2", documentType: "powerhouse/budget-statement" },
         ],
         status: "CONFIRMED",
+        processorApps: ["connect"],
       };
 
       const strand = {
@@ -400,7 +401,7 @@ describe("CodegenProcessorLegacy E2E Tests", () => {
           "powerhouse/budget-statement",
         ],
         skipFormat: mockConfig.PH_CONFIG.skipFormat,
-        processorApps: ["connect", "switchboard"],
+        processorApps: ["connect"],
         useTsMorph: USE_TS_MORPH,
       });
     });
@@ -415,6 +416,7 @@ describe("CodegenProcessorLegacy E2E Tests", () => {
           { id: "dt-1", documentType: "powerhouse/document-model" },
         ],
         status: "CONFIRMED",
+        processorApps: ["switchboard"],
       };
 
       const strand = {
@@ -434,7 +436,7 @@ describe("CodegenProcessorLegacy E2E Tests", () => {
         documentTypes: ["powerhouse/document-model"],
         skipFormat: mockConfig.PH_CONFIG.skipFormat,
         useTsMorph: USE_TS_MORPH,
-        processorApps: ["connect", "switchboard"],
+        processorApps: ["switchboard"],
       });
     });
 
@@ -448,6 +450,7 @@ describe("CodegenProcessorLegacy E2E Tests", () => {
           { id: "dt-1", documentType: "powerhouse/document-model" },
         ],
         status: "CONFIRMED",
+        processorApps: ["connect"],
       };
 
       const strand = {
@@ -470,6 +473,7 @@ describe("CodegenProcessorLegacy E2E Tests", () => {
         type: "analytics",
         documentTypes: [],
         status: "CONFIRMED",
+        processorApps: ["connect"],
       };
 
       const strand = {

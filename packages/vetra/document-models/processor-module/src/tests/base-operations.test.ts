@@ -13,10 +13,12 @@ import type {
 import {
   addDocumentType,
   AddDocumentTypeInputSchema,
+  addProcessorApp,
   isProcessorModuleDocument,
   reducer,
   removeDocumentType,
   RemoveDocumentTypeInputSchema,
+  removeProcessorApp,
   setProcessorName,
   SetProcessorNameInputSchema,
   setProcessorStatus,
@@ -373,5 +375,32 @@ describe("BaseOperations Operations", () => {
       input,
     );
     expect(updatedDocument.operations.global[0].index).toEqual(0);
+  });
+  describe("addProcessorApp", () => {
+    it("should add valid processor app to empty array", () => {
+      const input = { processorApp: "connect" };
+      const updatedDocument = reducer(document, addProcessorApp(input));
+      expect(updatedDocument.state.global.processorApps).toContain("connect");
+    });
+
+    it("should prevent duplicates", () => {
+      let doc = reducer(document, addProcessorApp({ processorApp: "connect" }));
+      doc = reducer(doc, addProcessorApp({ processorApp: "connect" }));
+      expect(doc.state.global.processorApps).toEqual(["connect"]);
+    });
+
+    it("should reject invalid processor app", () => {
+      const input = { processorApp: "invalid" };
+      const updatedDocument = reducer(document, addProcessorApp(input));
+      expect(updatedDocument.operations.global[0].error).toBeDefined();
+    });
+  });
+
+  describe("removeProcessorApp", () => {
+    it("should remove existing processor app", () => {
+      let doc = reducer(document, addProcessorApp({ processorApp: "connect" }));
+      doc = reducer(doc, removeProcessorApp({ processorApp: "connect" }));
+      expect(doc.state.global.processorApps).not.toContain("connect");
+    });
   });
 });

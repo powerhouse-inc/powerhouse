@@ -15,8 +15,8 @@
     "@pyroscope/nodejs": "^0.4.7",
     "document-model": "workspace:*",
     "graphql-request": "^7.4.0",
-    "kysely": "^0.28.2",
-    "kysely-pglite-dialect": "^1.1.1",
+    "kysely": "catalog:",
+    "kysely-pglite-dialect": "catalog:",
     "pg": "^8.14.0"
   },
   "devDependencies": {

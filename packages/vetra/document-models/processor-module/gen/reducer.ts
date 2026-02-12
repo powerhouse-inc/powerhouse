@@ -12,6 +12,8 @@ import {
   SetProcessorTypeInputSchema,
   AddDocumentTypeInputSchema,
   RemoveDocumentTypeInputSchema,
+  AddProcessorAppInputSchema,
+  RemoveProcessorAppInputSchema,
   SetProcessorStatusInputSchema,
 } from "./schema/zod.js";
 
@@ -64,6 +66,30 @@ const stateReducer: StateReducer<ProcessorModulePHState> = (
       RemoveDocumentTypeInputSchema().parse(action.input);
 
       processorModuleBaseOperationsOperations.removeDocumentTypeOperation(
+        (state as any)[action.scope],
+        action as any,
+        dispatch,
+      );
+
+      break;
+    }
+
+    case "ADD_PROCESSOR_APP": {
+      AddProcessorAppInputSchema().parse(action.input);
+
+      processorModuleBaseOperationsOperations.addProcessorAppOperation(
+        (state as any)[action.scope],
+        action as any,
+        dispatch,
+      );
+
+      break;
+    }
+
+    case "REMOVE_PROCESSOR_APP": {
+      RemoveProcessorAppInputSchema().parse(action.input);
+
+      processorModuleBaseOperationsOperations.removeProcessorAppOperation(
         (state as any)[action.scope],
         action as any,
         dispatch,

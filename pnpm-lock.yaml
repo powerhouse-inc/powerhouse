@@ -9,6 +9,18 @@ catalogs:
     '@powerhousedao/analytics-engine-core':
       specifier: 0.5.0
       version: 0.5.0
+    kysely:
+      specifier: 0.28.11
+      version: 0.28.11
+    kysely-knex:
+      specifier: 0.2.0
+      version: 0.2.0
+    kysely-pglite:
+      specifier: 0.6.1
+      version: 0.6.1
+    kysely-pglite-dialect:
+      specifier: 1.2.0
+      version: 1.2.0
 
 overrides:
   document-model: link:./packages/document-model
@@ -286,11 +298,11 @@ importers:
         specifier: ^25.5.3
         version: 25.6.0(typescript@5.9.3)
       kysely:
-        specifier: ^0.28.2
-        version: 0.28.8
+        specifier: 'catalog:'
+        version: 0.28.11
       kysely-pglite-dialect:
-        specifier: ^1.1.1
-        version: 1.2.0(@electric-sql/pglite@0.2.17)(kysely@0.28.8)
+        specifier: 'catalog:'
+        version: 1.2.0(@electric-sql/pglite@0.2.17)(kysely@0.28.11)
       react:
         specifier: ^19.2.0
         version: 19.2.0
@@ -401,11 +413,11 @@ importers:
         specifier: ^16.11.0
         version: 16.12.0
       kysely:
-        specifier: ^0.28.2
-        version: 0.28.8
+        specifier: 'catalog:'
+        version: 0.28.11
       kysely-pglite-dialect:
-        specifier: ^1.1.1
-        version: 1.2.0(@electric-sql/pglite@0.2.17)(kysely@0.28.8)
+        specifier: 'catalog:'
+        version: 1.2.0(@electric-sql/pglite@0.2.17)(kysely@0.28.11)
       pg:
         specifier: ^8.13.0
         version: 8.16.3
@@ -465,8 +477,8 @@ importers:
         specifier: ^12.1.0
         version: 12.1.0
       kysely:
-        specifier: 0.28.8
-        version: 0.28.8
+        specifier: 'catalog:'
+        version: 0.28.11
       npm-package-arg:
         specifier: ^13.0.2
         version: 13.0.2
@@ -887,11 +899,11 @@ importers:
         specifier: ^6.2.11
         version: 6.2.11
       kysely:
-        specifier: ^0.28.2
-        version: 0.28.8
+        specifier: 'catalog:'
+        version: 0.28.11
       kysely-pglite:
-        specifier: ^0.6.1
-        version: 0.6.1(@electric-sql/pglite@0.3.15)(kysely@0.28.8)(pg@8.16.3)(tarn@3.0.2)
+        specifier: 'catalog:'
+        version: 0.6.1(@electric-sql/pglite@0.3.15)(kysely@0.28.11)(pg@8.16.3)(tarn@3.0.2)
       package-json-validator:
         specifier: ^0.60.0
         version: 0.60.0
@@ -1445,8 +1457,8 @@ importers:
         specifier: ^1.0.12
         version: 1.0.12
       kysely:
-        specifier: ^0.28.2
-        version: 0.28.8
+        specifier: 'catalog:'
+        version: 0.28.11
       lru-cache:
         specifier: ^11.1.0
         version: 11.2.2
@@ -1598,11 +1610,11 @@ importers:
         specifier: link:../document-model
         version: link:../document-model
       kysely:
-        specifier: ^0.28.2
-        version: 0.28.8
+        specifier: 'catalog:'
+        version: 0.28.11
       kysely-pglite-dialect:
-        specifier: ^1.1.1
-        version: 1.2.0(@electric-sql/pglite@0.2.17)(kysely@0.28.8)
+        specifier: 'catalog:'
+        version: 1.2.0(@electric-sql/pglite@0.2.17)(kysely@0.28.11)
       uuid:
         specifier: ^11.0.5
         version: 11.1.0
@@ -1717,7 +1729,7 @@ importers:
         version: 0.25.0
       drizzle-orm:
         specifier: ^0.34.1
-        version: 0.34.1(@electric-sql/pglite@0.2.17)(@libsql/client@0.14.0(bufferutil@4.0.9)(utf-8-validate@5.0.10))(@opentelemetry/api@1.9.0)(@prisma/client@5.17.0(prisma@5.17.0))(@types/pg@8.15.6)(@types/react@19.2.2)(bun-types@1.3.7)(knex@3.1.0(pg@8.16.3)(sqlite3@5.1.7))(kysely@0.28.8)(pg@8.16.3)(prisma@5.17.0)(react@19.2.0)(sqlite3@5.1.7)
+        version: 0.34.1(@electric-sql/pglite@0.2.17)(@libsql/client@0.14.0(bufferutil@4.0.9)(utf-8-validate@5.0.10))(@opentelemetry/api@1.9.0)(@prisma/client@5.17.0(prisma@5.17.0))(@types/pg@8.15.6)(@types/react@19.2.2)(bun-types@1.3.7)(knex@3.1.0(pg@8.16.3)(sqlite3@5.1.7))(kysely@0.28.11)(pg@8.16.3)(prisma@5.17.0)(react@19.2.0)(sqlite3@5.1.7)
       ethers:
         specifier: ^6.0.8
         version: 6.15.0(bufferutil@4.0.9)(utf-8-validate@5.0.10)
@@ -1749,11 +1761,11 @@ importers:
         specifier: ^0.10.0
         version: 0.10.0(pg@8.16.3)(sqlite3@5.1.7)
       kysely:
-        specifier: ^0.28.2
-        version: 0.28.8
+        specifier: 'catalog:'
+        version: 0.28.11
       kysely-knex:
-        specifier: ^0.2.0
-        version: 0.2.0(knex@3.1.0(pg@8.16.3)(sqlite3@5.1.7))(kysely@0.28.8)
+        specifier: 'catalog:'
+        version: 0.2.0(knex@3.1.0(pg@8.16.3)(sqlite3@5.1.7))(kysely@0.28.11)
       ms:
         specifier: ^2.1.3
         version: 2.1.3
@@ -1849,8 +1861,8 @@ importers:
         specifier: ^2.12.6
         version: 2.12.6(graphql@16.12.0)
       kysely-pglite-dialect:
-        specifier: ^1.2.0
-        version: 1.2.0(@electric-sql/pglite@0.2.17)(kysely@0.28.8)
+        specifier: 'catalog:'
+        version: 1.2.0(@electric-sql/pglite@0.2.17)(kysely@0.28.11)
       msw:
         specifier: ^2.7.3
         version: 2.12.0(@types/node@24.10.0)(typescript@5.9.3)
@@ -1915,11 +1927,11 @@ importers:
         specifier: ^3.1.3
         version: 3.1.3
       kysely:
-        specifier: ^0.28.2
-        version: 0.28.8
+        specifier: 'catalog:'
+        version: 0.28.11
       kysely-pglite-dialect:
-        specifier: ^1.1.1
-        version: 1.2.0(@electric-sql/pglite@0.2.17)(kysely@0.28.8)
+        specifier: 'catalog:'
+        version: 1.2.0(@electric-sql/pglite@0.2.17)(kysely@0.28.11)
       lodash.isequal:
         specifier: ^4.5.0
         version: 4.5.0
@@ -2278,8 +2290,8 @@ importers:
         specifier: ^2.12.6
         version: 2.12.6(graphql@16.12.0)
       kysely:
-        specifier: ^0.28.7
-        version: 0.28.8
+        specifier: 'catalog:'
+        version: 0.28.11
       uuid:
         specifier: ^11.1.0
         version: 11.1.0
@@ -2341,18 +2353,6 @@ importers:
       document-drive:
         specifier: link:../document-drive
         version: link:../document-drive
-      eslint:
-        specifier: ^9.22.0
-        version: 9.39.1(jiti@2.6.1)
-      eslint-plugin-react:
-        specifier: ^7.37.4
-        version: 7.37.5(eslint@9.39.1(jiti@2.6.1))
-      eslint-plugin-react-hooks:
-        specifier: ^5.2.0
-        version: 5.2.0(eslint@9.39.1(jiti@2.6.1))
-      globals:
-        specifier: ^16.0.0
-        version: 16.5.0
       package-manager-detector:
         specifier: ^0.2.8
         version: 0.2.11
@@ -2399,11 +2399,11 @@ importers:
         specifier: ^7.4.0
         version: 7.4.0(graphql@16.12.0)
       kysely:
-        specifier: ^0.28.2
-        version: 0.28.8
+        specifier: 'catalog:'
+        version: 0.28.11
       kysely-pglite-dialect:
-        specifier: ^1.1.1
-        version: 1.2.0(@electric-sql/pglite@0.2.17)(kysely@0.28.8)
+        specifier: 'catalog:'
+        version: 1.2.0(@electric-sql/pglite@0.2.17)(kysely@0.28.11)
       pg:
         specifier: ^8.14.0
         version: 8.16.3
@@ -2580,8 +2580,8 @@ importers:
         specifier: ^2.12.6
         version: 2.12.6(graphql@16.12.0)
       kysely:
-        specifier: ^0.28.7
-        version: 0.28.8
+        specifier: 'catalog:'
+        version: 0.28.11
       shared:
         specifier: workspace:*
         version: link:../../shared
@@ -16822,8 +16822,8 @@ packages:
       '@electric-sql/pglite': '*'
       kysely: '*'
 
-  kysely@0.28.8:
-    resolution: {integrity: sha512-QUOgl5ZrS9IRuhq5FvOKFSsD/3+IA6MLE81/bOOTRA/YQpKDza2sFdN5g6JCB9BOpqMJDGefLCQ9F12hRS13TA==}
+  kysely@0.28.11:
+    resolution: {integrity: sha512-zpGIFg0HuoC893rIjYX1BETkVWdDnzTzF5e0kWXJFg5lE0k1/LfNWBejrcnOFu8Q2Rfq/hTDTU7XLUM8QOrpzg==}
     engines: {node: '>=20.0.0'}
 
   latest-version@7.0.0:
@@ -31718,8 +31718,8 @@ snapshots:
       document-drive: link:packages/document-drive
       document-model: link:packages/document-model
       fast-deep-equal: 3.1.3
-      kysely: 0.28.8
-      kysely-pglite-dialect: 1.2.0(@electric-sql/pglite@0.2.17)(kysely@0.28.8)
+      kysely: 0.28.11
+      kysely-pglite-dialect: 1.2.0(@electric-sql/pglite@0.2.17)(kysely@0.28.11)
       lodash.isequal: 4.5.0
       luxon: 3.7.2
       lz-string: 1.5.0
@@ -31760,8 +31760,8 @@ snapshots:
       document-drive: link:packages/document-drive
       document-model: link:packages/document-model
       fast-deep-equal: 3.1.3
-      kysely: 0.28.8
-      kysely-pglite-dialect: 1.2.0(@electric-sql/pglite@0.2.17)(kysely@0.28.8)
+      kysely: 0.28.11
+      kysely-pglite-dialect: 1.2.0(@electric-sql/pglite@0.2.17)(kysely@0.28.11)
       lodash.isequal: 4.5.0
       luxon: 3.7.2
       lz-string: 1.5.0
@@ -31791,8 +31791,8 @@ snapshots:
       '@sindresorhus/fnv1a': 3.1.0
       document-drive: link:packages/document-drive
       document-model: link:packages/document-model
-      kysely: 0.28.8
-      kysely-pglite-dialect: 1.2.0(@electric-sql/pglite@0.2.17)(kysely@0.28.8)
+      kysely: 0.28.11
+      kysely-pglite-dialect: 1.2.0(@electric-sql/pglite@0.2.17)(kysely@0.28.11)
       uuid: 11.1.0
 
   '@powerhousedao/scalars@2.0.1(graphql@16.12.0)(zod@3.25.76)':
@@ -35605,9 +35605,9 @@ snapshots:
       std-env: 3.10.0
       test-exclude: 7.0.1
       tinyrainbow: 2.0.0
-      vitest: 3.2.4(@types/debug@4.1.12)(@types/node@24.10.0)(@vitest/browser@3.2.4)(happy-dom@17.6.3)(jiti@2.6.1)(jsdom@24.1.3(bufferutil@4.0.9)(utf-8-validate@5.0.10))(lightningcss@1.30.2)(msw@2.12.0(@types/node@24.10.0)(typescript@5.9.3))(terser@5.44.1)(tsx@4.21.0)(yaml@2.8.1)
+      vitest: 3.2.4(@types/debug@4.1.12)(@types/node@24.10.0)(@vitest/browser@3.2.4)(happy-dom@17.6.3)(jiti@2.6.1)(jsdom@24.1.3(bufferutil@4.0.9)(utf-8-validate@5.0.10))(lightningcss@1.30.2)(msw@2.12.0(@types/node@24.10.0)(typescript@5.9.3))(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.1)
     optionalDependencies:
-      '@vitest/browser': 3.2.4(bufferutil@4.0.9)(msw@2.12.0(@types/node@24.10.0)(typescript@5.9.3))(playwright@1.57.0)(utf-8-validate@5.0.10)(vite@7.2.6(@types/node@24.10.0)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(tsx@4.21.0)(yaml@2.8.1))(vitest@3.2.4)(webdriverio@9.20.0(bufferutil@4.0.9)(puppeteer-core@24.36.0(bufferutil@4.0.9)(utf-8-validate@5.0.10))(utf-8-validate@5.0.10))
+      '@vitest/browser': 3.2.4(bufferutil@4.0.9)(msw@2.12.0(@types/node@24.10.0)(typescript@5.9.3))(playwright@1.57.0)(utf-8-validate@5.0.10)(vite@7.2.6(@types/node@24.10.0)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(tsx@4.20.6)(yaml@2.8.1))(vitest@3.2.4)(webdriverio@9.20.0(bufferutil@4.0.9)(puppeteer-core@24.36.0(bufferutil@4.0.9)(utf-8-validate@5.0.10))(utf-8-validate@5.0.10))
     transitivePeerDependencies:
       - supports-color
 
@@ -39834,7 +39834,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  drizzle-orm@0.34.1(@electric-sql/pglite@0.2.17)(@libsql/client@0.14.0(bufferutil@4.0.9)(utf-8-validate@5.0.10))(@opentelemetry/api@1.9.0)(@prisma/client@5.17.0(prisma@5.17.0))(@types/pg@8.15.6)(@types/react@19.2.2)(bun-types@1.3.7)(knex@3.1.0(pg@8.16.3)(sqlite3@5.1.7))(kysely@0.28.8)(pg@8.16.3)(prisma@5.17.0)(react@19.2.0)(sqlite3@5.1.7):
+  drizzle-orm@0.34.1(@electric-sql/pglite@0.2.17)(@libsql/client@0.14.0(bufferutil@4.0.9)(utf-8-validate@5.0.10))(@opentelemetry/api@1.9.0)(@prisma/client@5.17.0(prisma@5.17.0))(@types/pg@8.15.6)(@types/react@19.2.2)(bun-types@1.3.7)(knex@3.1.0(pg@8.16.3)(sqlite3@5.1.7))(kysely@0.28.11)(pg@8.16.3)(prisma@5.17.0)(react@19.2.0)(sqlite3@5.1.7):
     optionalDependencies:
       '@electric-sql/pglite': 0.2.17
       '@libsql/client': 0.14.0(bufferutil@4.0.9)(utf-8-validate@5.0.10)
@@ -39844,7 +39844,7 @@ snapshots:
       '@types/react': 19.2.2
       bun-types: 1.3.7
       knex: 3.1.0(pg@8.16.3)(sqlite3@5.1.7)
-      kysely: 0.28.8
+      kysely: 0.28.11
       pg: 8.16.3
       prisma: 5.17.0
       react: 19.2.0
@@ -43999,30 +43999,30 @@ snapshots:
 
   kolorist@1.8.0: {}
 
-  kysely-codegen@0.15.0(kysely@0.28.8)(pg@8.16.3)(tarn@3.0.2):
+  kysely-codegen@0.15.0(kysely@0.28.11)(pg@8.16.3)(tarn@3.0.2):
     dependencies:
       chalk: 4.1.2
       dotenv: 16.6.1
       dotenv-expand: 11.0.7
       git-diff: 2.0.6
-      kysely: 0.28.8
+      kysely: 0.28.11
       micromatch: 4.0.8
       minimist: 1.2.8
     optionalDependencies:
       pg: 8.16.3
       tarn: 3.0.2
 
-  kysely-knex@0.2.0(knex@3.1.0(pg@8.16.3)(sqlite3@5.1.7))(kysely@0.28.8):
+  kysely-knex@0.2.0(knex@3.1.0(pg@8.16.3)(sqlite3@5.1.7))(kysely@0.28.11):
     dependencies:
       knex: 3.1.0(pg@8.16.3)(sqlite3@5.1.7)
-      kysely: 0.28.8
+      kysely: 0.28.11
 
-  kysely-pglite-dialect@1.2.0(@electric-sql/pglite@0.2.17)(kysely@0.28.8):
+  kysely-pglite-dialect@1.2.0(@electric-sql/pglite@0.2.17)(kysely@0.28.11):
     dependencies:
       '@electric-sql/pglite': 0.2.17
-      kysely: 0.28.8
+      kysely: 0.28.11
 
-  kysely-pglite@0.6.1(@electric-sql/pglite@0.3.15)(kysely@0.28.8)(pg@8.16.3)(tarn@3.0.2):
+  kysely-pglite@0.6.1(@electric-sql/pglite@0.3.15)(kysely@0.28.11)(pg@8.16.3)(tarn@3.0.2):
     dependencies:
       '@electric-sql/pglite': 0.3.15
       '@oclif/core': 4.8.0
@@ -44033,8 +44033,8 @@ snapshots:
       fs-extra: 11.3.2
       globby: 14.1.0
       jiti: 2.0.0-beta.3
-      kysely: 0.28.8
-      kysely-codegen: 0.15.0(kysely@0.28.8)(pg@8.16.3)(tarn@3.0.2)
+      kysely: 0.28.11
+      kysely-codegen: 0.15.0(kysely@0.28.11)(pg@8.16.3)(tarn@3.0.2)
       radash: 12.1.1
     transitivePeerDependencies:
       - '@libsql/kysely-libsql'
@@ -44046,7 +44046,7 @@ snapshots:
       - tarn
       - tedious
 
-  kysely@0.28.8: {}
+  kysely@0.28.11: {}
 
   latest-version@7.0.0:
     dependencies:

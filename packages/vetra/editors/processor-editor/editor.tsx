@@ -1,6 +1,7 @@
 import { DocumentToolbar } from "@powerhousedao/design-system/connect";
 import { useSetPHDocumentEditorConfig } from "@powerhousedao/reactor-browser";
 import { useCallback } from "react";
+import type { ProcessorApp, ProcessorApps } from "shared";
 import { actions } from "../../document-models/processor-module/index.js";
 import { useSelectedProcessorModuleDocument } from "../hooks/useVetraDocument.js";
 import { ProcessorEditorForm } from "./components/ProcessorEditorForm.js";
@@ -45,6 +46,20 @@ export default function Editor() {
     [dispatch],
   );
 
+  const onAddProcessorApp = useCallback(
+    (processorApp: ProcessorApp) => {
+      dispatch(actions.addProcessorApp({ processorApp }));
+    },
+    [dispatch],
+  );
+
+  const onRemoveProcessorApp = useCallback(
+    (processorApp: ProcessorApp) => {
+      dispatch(actions.removeProcessorApp({ processorApp }));
+    },
+    [dispatch],
+  );
+
   return (
     <div className="bg-gray-50 p-6">
       <DocumentToolbar />
@@ -53,10 +68,13 @@ export default function Editor() {
         onTypeChange={onTypeChange}
         onAddDocumentType={onAddDocumentType}
         onRemoveDocumentType={onRemoveDocumentType}
+        onAddProcessorApp={onAddProcessorApp}
+        onRemoveProcessorApp={onRemoveProcessorApp}
         status={document.state.global.status}
         processorName={document.state.global.name ?? ""}
         processorType={document.state.global.type ?? ""}
         documentTypes={document.state.global.documentTypes ?? []}
+        processorApps={document.state.global.processorApps as ProcessorApps}
         onConfirm={onConfirm}
       />
     </div>

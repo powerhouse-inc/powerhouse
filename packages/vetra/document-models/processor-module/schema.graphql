@@ -24,6 +24,7 @@ type ProcessorModuleState {
   type: String!
   documentTypes: [DocumentTypeItem!]!
   status: StatusType!
+  processorApps: [String!]!
 }
 
 type DocumentTypeItem {
@@ -53,6 +54,14 @@ input AddDocumentTypeInput {
 
 input RemoveDocumentTypeInput {
   id: OID!
+}
+
+input AddProcessorAppInput {
+  processorApp: String!
+}
+
+input RemoveProcessorAppInput {
+  processorApp: String!
 }
 
 input SetProcessorStatusInput {

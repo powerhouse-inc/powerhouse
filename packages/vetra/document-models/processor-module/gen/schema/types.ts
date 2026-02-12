@@ -64,6 +64,10 @@ export type AddDocumentTypeInput = {
   id: Scalars["OID"]["input"];
 };
 
+export type AddProcessorAppInput = {
+  processorApp: Scalars["String"]["input"];
+};
+
 export type DocumentTypeItem = {
   documentType: Scalars["String"]["output"];
   id: Scalars["OID"]["output"];
@@ -72,12 +76,17 @@ export type DocumentTypeItem = {
 export type ProcessorModuleState = {
   documentTypes: Array<DocumentTypeItem>;
   name: Scalars["String"]["output"];
+  processorApps: Array<Scalars["String"]["output"]>;
   status: StatusType;
   type: Scalars["String"]["output"];
 };
 
 export type RemoveDocumentTypeInput = {
   id: Scalars["OID"]["input"];
+};
+
+export type RemoveProcessorAppInput = {
+  processorApp: Scalars["String"]["input"];
 };
 
 export type SetProcessorNameInput = {

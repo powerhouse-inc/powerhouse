@@ -31,6 +31,7 @@ export function useSelectedVetraPackageDocument(): [
   DocumentDispatch<VetraPackageAction>,
 ] {
   const [document, dispatch] = useSelectedDocument();
+
   assertIsVetraPackageDocument(document);
   return [document, dispatch] as const;
 }

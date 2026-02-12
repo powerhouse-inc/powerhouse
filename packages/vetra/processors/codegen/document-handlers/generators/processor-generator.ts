@@ -1,12 +1,13 @@
 import { generateProcessor } from "@powerhousedao/codegen";
 import type { InternalTransmitterUpdate } from "document-drive";
+import { PROCESSOR_APPS, type ProcessorApp, type ProcessorApps } from "shared";
 import type {
   ProcessorModulePHState,
   ProcessorModuleState,
 } from "../../../../document-models/processor-module/index.js";
 import { logger } from "../../logger.js";
 import { BaseDocumentGen } from "../base-document-gen.js";
-import { TEMP_HARDCODED_PROCESSOR_APPS, USE_TS_MORPH } from "./constants.js";
+import { USE_TS_MORPH } from "./constants.js";
 import { minimalBackupDocument } from "./utils.js";
 
 /**
@@ -46,6 +47,11 @@ export class ProcessorGenerator extends BaseDocumentGen {
       return false;
     }
 
+    if (!state.processorApps || state.processorApps.length === 0) {
+      logger.debug(`>>> No processor apps found for processor: ${state.name}`);
+      return false;
+    }
+
     if (state.status !== "CONFIRMED") {
       logger.debug(
         `>>> Processor not confirmed: ${state.name} (status: ${state.status})`,
@@ -64,6 +70,7 @@ export class ProcessorGenerator extends BaseDocumentGen {
       state.name &&
       state.type &&
       state.documentTypes.length > 0 &&
+      state.processorApps.length > 0 &&
       state.status === "CONFIRMED"
     ) {
       logger.info(`🔄 Starting processor generation for: ${state.name}`);
@@ -82,6 +89,15 @@ export class ProcessorGenerator extends BaseDocumentGen {
         // Extract document types from the state
         const documentTypes = state.documentTypes.map((dt) => dt.documentType);
 
+        const processorApps = state.processorApps;
+
+        if (!isProcessorApps(processorApps)) {
+          logger.error(
+            `❌ Unsupported processor apps: ${processorApps.join(", ")}`,
+          );
+          return;
+        }
+
         // Generate the processor using the codegen function
         await generateProcessor({
           processorName: state.name,
@@ -89,7 +105,7 @@ export class ProcessorGenerator extends BaseDocumentGen {
           documentTypes,
           skipFormat: this.config.PH_CONFIG.skipFormat,
           useTsMorph: USE_TS_MORPH,
-          processorApps: TEMP_HARDCODED_PROCESSOR_APPS,
+          processorApps,
         });
 
         logger.info(
@@ -140,4 +156,15 @@ export class ProcessorGenerator extends BaseDocumentGen {
       }
     }
   }
+}
+
+function isProcessorApps(input: readonly string[]): input is ProcessorApps {
+  if (input.length === 0) return false;
+  if (new Set(input).size !== input.length) {
+    return false;
+  }
+  if (!input.every((i) => PROCESSOR_APPS.includes(i as ProcessorApp)))
+    return false;
+
+  return true;
 }

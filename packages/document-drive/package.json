@@ -81,7 +81,7 @@
     "graphql-request": "^6.1.0",
     "helia": "^5.3.0",
     "json-stringify-deterministic": "^1.0.12",
-    "kysely": "^0.28.2",
+    "kysely": "catalog:",
     "localforage": "^1.10.0",
     "lru-cache": "^11.1.0",
     "nanoevents": "^9.0.0",
