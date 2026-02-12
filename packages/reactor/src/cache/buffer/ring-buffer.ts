@@ -66,6 +66,16 @@ export class RingBuffer<T> {
   }
 
   /**
+   * Returns the newest (most recently pushed) item without allocating an array.
+   * O(1) time complexity.
+   */
+  peekNewest(): T | undefined {
+    if (this.size === 0) return undefined;
+    const index = (this.head + this.size - 1) % this.capacity;
+    return this.buffer[index];
+  }
+
+  /**
    * Gets the current number of items in the buffer.
    */
   get length(): number {

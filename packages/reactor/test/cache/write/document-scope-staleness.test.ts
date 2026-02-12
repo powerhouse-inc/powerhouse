@@ -76,7 +76,6 @@ describe("Document Scope Cross-Scope Dependency Issue", () => {
     config = {
       maxDocuments: 10,
       ringBufferSize: 5,
-      keyframeInterval: 10,
     };
 
     cache = new KyselyWriteCache(
@@ -196,13 +195,14 @@ describe("Document Scope Cross-Scope Dependency Issue", () => {
       // Step 6: Clear in-memory cache
       cache.clear();
 
-      // Step 7: Call getState(docId, "global", branch) - will load from keyframe
-      const docFromKeyframe = await cache.getState(docId, "global", "main", 10);
+      // Step 7: Call getState(docId, "global", branch) - rebuilds from operations (no stale keyframe)
+      const docFromRebuild = await cache.getState(docId, "global", "main", 10);
 
-      // DEMONSTRATES THE BUG: getState returns stale version 1 from keyframe
-      expect(docFromKeyframe.state.document.version).toBe(1);
+      // With eviction-triggered keyframing, no stale keyframe exists,
+      // so rebuild replays all operations including the upgrade to version 2
+      expect(docFromRebuild.state.document.version).toBe(2);
 
-      // Step 8: THE SOLUTION - Use DocumentMetaCache to get correct metadata
+      // Step 8: DocumentMetaCache also returns the correct version
       const correctMeta = await documentMetaCache.getDocumentMeta(
         docId,
         "main",

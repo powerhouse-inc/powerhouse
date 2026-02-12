@@ -85,7 +85,6 @@ async function setupCacheWithData(
   config: WriteCacheConfig = {
     maxDocuments: 100,
     ringBufferSize: 10,
-    keyframeInterval: 10,
   },
 ): Promise<{
   cache: KyselyWriteCache;
@@ -181,7 +180,6 @@ describe("Write Cache Cold Miss Performance", () => {
       const { cache } = await setupCacheWithData(100, {
         maxDocuments: 100,
         ringBufferSize: 10,
-        keyframeInterval: 50,
       });
 
       const doc50 = await cache.getState(DOCUMENT_ID, SCOPE, BRANCH, 50);
@@ -281,7 +279,6 @@ describe("Write Cache LRU Eviction Performance", () => {
       const cache = new KyselyWriteCache(keyframeStore, store, registry, {
         maxDocuments: 10,
         ringBufferSize: 5,
-        keyframeInterval: 10,
       });
       await cache.startup();
 
@@ -336,7 +333,6 @@ describe("Write Cache LRU Eviction Performance", () => {
       const cache = new KyselyWriteCache(keyframeStore, store, registry, {
         maxDocuments: 5,
         ringBufferSize: 5,
-        keyframeInterval: 10,
       });
       await cache.startup();
 
@@ -566,7 +562,6 @@ describe("Write Cache Keyframe Performance", () => {
       const { cache } = await setupCacheWithData(0, {
         maxDocuments: 100,
         ringBufferSize: 10,
-        keyframeInterval: 10,
       });
 
       const baseDoc = driveDocumentModelModule.utils.createDocument();
@@ -586,7 +581,6 @@ describe("Write Cache Keyframe Performance", () => {
       const { cache } = await setupCacheWithData(0, {
         maxDocuments: 100,
         ringBufferSize: 10,
-        keyframeInterval: 1000000,
       });
 
       const baseDoc = driveDocumentModelModule.utils.createDocument();

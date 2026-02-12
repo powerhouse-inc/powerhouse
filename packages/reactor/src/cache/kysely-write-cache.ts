@@ -42,7 +42,7 @@ type DocumentStream = {
  *   keyframeStore,
  *   operationStore,
  *   registry,
- *   { maxDocuments: 1000, ringBufferSize: 10, keyframeInterval: 10 }
+ *   { maxDocuments: 1000, ringBufferSize: 10 }
  * );
  *
  * await cache.startup();
@@ -76,7 +76,6 @@ export class KyselyWriteCache implements IWriteCache {
     this.config = {
       maxDocuments: config.maxDocuments,
       ringBufferSize: config.ringBufferSize,
-      keyframeInterval: config.keyframeInterval,
     };
     this.streams = new Map();
     this.lruTracker = new LRUTracker<string>();
@@ -91,11 +90,27 @@ export class KyselyWriteCache implements IWriteCache {
   }
 
   /**
-   * Shuts down the write cache.
-   * Currently a no-op as keyframe store lifecycle is managed externally.
+   * Shuts down the write cache, persisting the newest snapshot from every
+   * active stream so cold starts have keyframes available.
    */
   async shutdown(): Promise<void> {
-    return Promise.resolve();
+    const promises: Promise<void>[] = [];
+    for (const [key, stream] of this.streams.entries()) {
+      const newest = stream.ringBuffer.peekNewest();
+      if (newest) {
+        const parsed = this.parseStreamKey(key);
+        promises.push(
+          this.keyframeStore.putKeyframe(
+            parsed.documentId,
+            parsed.scope,
+            parsed.branch,
+            newest.revision,
+            newest.document,
+          ),
+        );
+      }
+    }
+    await Promise.allSettled(promises);
   }
 
   /**
@@ -194,7 +209,7 @@ export class KyselyWriteCache implements IWriteCache {
    * Stores the document reference as-is. Callers must avoid mutating cached
    * snapshots if they need to preserve historical revisions.
    * Updates LRU tracker and may evict least recently used stream if at capacity.
-   * Asynchronously persists keyframes at configured intervals (fire-and-forget).
+   * Keyframes are persisted on eviction and shutdown, not during putState.
    *
    * @param documentId - The document identifier
    * @param scope - The operation scope
@@ -219,17 +234,6 @@ export class KyselyWriteCache implements IWriteCache {
     };
 
     stream.ringBuffer.push(snapshot);
-
-    if (this.isKeyframeRevision(revision)) {
-      this.keyframeStore
-        .putKeyframe(documentId, scope, branch, revision, document)
-        .catch((err) => {
-          console.error(
-            `Failed to persist keyframe ${documentId}@${revision}:`,
-            err,
-          );
-        });
-    }
   }
 
   /**
@@ -571,6 +575,15 @@ export class KyselyWriteCache implements IWriteCache {
     return `${documentId}:${scope}:${branch}`;
   }
 
+  private parseStreamKey(key: string): {
+    documentId: string;
+    scope: string;
+    branch: string;
+  } {
+    const [documentId, scope, branch] = key.split(":");
+    return { documentId, scope, branch };
+  }
+
   private getOrCreateStream(key: string): DocumentStream {
     let stream = this.streams.get(key);
 
@@ -578,6 +591,27 @@ export class KyselyWriteCache implements IWriteCache {
       if (this.streams.size >= this.config.maxDocuments) {
         const evictKey = this.lruTracker.evict();
         if (evictKey) {
+          const evictedStream = this.streams.get(evictKey);
+          if (evictedStream) {
+            const newest = evictedStream.ringBuffer.peekNewest();
+            if (newest) {
+              const parsed = this.parseStreamKey(evictKey);
+              this.keyframeStore
+                .putKeyframe(
+                  parsed.documentId,
+                  parsed.scope,
+                  parsed.branch,
+                  newest.revision,
+                  newest.document,
+                )
+                .catch((err) => {
+                  console.error(
+                    `Failed to persist keyframe on eviction for ${evictKey}:`,
+                    err,
+                  );
+                });
+            }
+          }
           this.streams.delete(evictKey);
         }
       }
@@ -591,9 +625,5 @@ export class KyselyWriteCache implements IWriteCache {
 
     this.lruTracker.touch(key);
     return stream;
-  }
-
-  private isKeyframeRevision(revision: number): boolean {
-    return revision > 0 && revision % this.config.keyframeInterval === 0;
   }
 }

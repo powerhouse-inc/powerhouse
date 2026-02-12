@@ -138,7 +138,6 @@ describe("SimpleJobExecutor Integration (Modern Storage)", () => {
     const config: WriteCacheConfig = {
       maxDocuments: 10,
       ringBufferSize: 5,
-      keyframeInterval: 10,
     };
 
     writeCache = new KyselyWriteCache(

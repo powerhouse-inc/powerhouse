@@ -99,7 +99,6 @@ async function createReactorSetup(): Promise<ReactorTestSetup> {
   const writeCacheConfig: WriteCacheConfig = {
     maxDocuments: 100,
     ringBufferSize: 10,
-    keyframeInterval: 10,
   };
 
   const writeCache = new KyselyWriteCache(

@@ -52,7 +52,6 @@ describe("KyselyWriteCache Integration Tests", () => {
     config = {
       maxDocuments: 10,
       ringBufferSize: 5,
-      keyframeInterval: 10,
     };
 
     cache = new KyselyWriteCache(
@@ -115,7 +114,7 @@ describe("KyselyWriteCache Integration Tests", () => {
       expect(document.state).toBeDefined();
     });
 
-    it("should persist and retrieve keyframes at configured intervals", async () => {
+    it("should persist keyframes on shutdown for all active streams", async () => {
       const docId = "integration-test-doc-2";
       const docType = "powerhouse/document-model";
 
@@ -146,29 +145,29 @@ describe("KyselyWriteCache Integration Tests", () => {
         }
       });
 
-      const doc10 = await cache.getState(docId, "global", "main", 10);
-      cache.putState(docId, "global", "main", 10, doc10);
-
       const doc20 = await cache.getState(docId, "global", "main", 20);
       cache.putState(docId, "global", "main", 20, doc20);
 
-      const keyframe10 = await keyframeStore.findNearestKeyframe(
-        docId,
-        "global",
-        "main",
-        10,
-      );
-      expect(keyframe10).toBeDefined();
-      expect(keyframe10?.revision).toBe(10);
-
-      const keyframe20 = await keyframeStore.findNearestKeyframe(
+      // No keyframe should exist yet (no eviction or shutdown)
+      const keyframeBefore = await keyframeStore.findNearestKeyframe(
         docId,
         "global",
         "main",
         20,
       );
-      expect(keyframe20).toBeDefined();
-      expect(keyframe20?.revision).toBe(20);
+      expect(keyframeBefore).toBeUndefined();
+
+      // Shutdown persists keyframes for all active streams
+      await cache.shutdown();
+
+      const keyframeAfter = await keyframeStore.findNearestKeyframe(
+        docId,
+        "global",
+        "main",
+        20,
+      );
+      expect(keyframeAfter).toBeDefined();
+      expect(keyframeAfter?.revision).toBe(20);
     });
 
     it("should use keyframes to accelerate document rebuilds", async () => {
@@ -282,7 +281,6 @@ describe("KyselyWriteCache Integration Tests", () => {
         {
           maxDocuments: 3,
           ringBufferSize: 5,
-          keyframeInterval: 10,
         },
       );
       await limitedCache.startup();

@@ -145,7 +145,6 @@ describe("V2 UNDO Cache Rebuild Integration Tests", () => {
     const config: WriteCacheConfig = {
       maxDocuments: 10,
       ringBufferSize: 5,
-      keyframeInterval: 100,
     };
 
     writeCache = new KyselyWriteCache(

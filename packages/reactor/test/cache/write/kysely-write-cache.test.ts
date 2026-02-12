@@ -82,7 +82,6 @@ describe("KyselyWriteCache", () => {
     config = {
       maxDocuments: 3,
       ringBufferSize: 5,
-      keyframeInterval: 10,
     };
     cache = new KyselyWriteCache(
       keyframeStore,
@@ -170,7 +169,6 @@ describe("KyselyWriteCache", () => {
       const highCapacityConfig: WriteCacheConfig = {
         maxDocuments: 10,
         ringBufferSize: 5,
-        keyframeInterval: 10,
       };
       cacheWithHigherCapacity = new KyselyWriteCache(
         keyframeStore,
@@ -245,53 +243,71 @@ describe("KyselyWriteCache", () => {
   });
 
   describe("keyframe persistence", () => {
-    it("should persist keyframes at interval boundaries", () => {
-      const doc0 = createTestDocument();
-      const doc2 = createTestDocument();
-      const doc10 = createTestDocument();
-      const doc20 = createTestDocument();
+    it("should not persist keyframes during putState", () => {
+      const doc = createTestDocument();
 
-      cache.putState("doc1", "global", "main", 0, doc0);
-      cache.putState("doc1", "global", "main", 2, doc2);
-      cache.putState("doc1", "global", "main", 10, doc10);
-      cache.putState("doc1", "global", "main", 20, doc20);
-
-      expect(keyframeStore.putKeyframe).toHaveBeenCalledTimes(2);
-      expect(keyframeStore.putKeyframe).toHaveBeenNthCalledWith(
-        1,
-        "doc1",
-        "global",
-        "main",
-        10,
-        expect.objectContaining({
-          state: expect.any(Object),
-          header: expect.any(Object),
-        }),
-      );
-      expect(keyframeStore.putKeyframe).toHaveBeenNthCalledWith(
-        2,
-        "doc1",
-        "global",
-        "main",
-        20,
-        expect.objectContaining({
-          state: expect.any(Object),
-          header: expect.any(Object),
-        }),
-      );
-    });
-
-    it("should not persist non-keyframe revisions", () => {
-      const doc5 = createTestDocument();
-      const doc15 = createTestDocument();
-
-      cache.putState("doc1", "global", "main", 5, doc5);
-      cache.putState("doc1", "global", "main", 15, doc15);
+      cache.putState("doc1", "global", "main", 10, doc);
+      cache.putState("doc1", "global", "main", 20, doc);
 
       expect(keyframeStore.putKeyframe).not.toHaveBeenCalled();
     });
 
-    it("should handle keyframe persistence errors gracefully", () => {
+    it("should persist keyframe on eviction with newest snapshot", () => {
+      const doc = createTestDocument();
+
+      cache.putState("doc1", "global", "main", 1, doc);
+      cache.putState("doc1", "global", "main", 5, doc);
+      cache.putState("doc2", "global", "main", 1, doc);
+      cache.putState("doc3", "global", "main", 1, doc);
+
+      // maxDocuments=3, so adding doc4 evicts doc1 (LRU)
+      cache.putState("doc4", "global", "main", 1, doc);
+
+      expect(keyframeStore.putKeyframe).toHaveBeenCalledTimes(1);
+      expect(keyframeStore.putKeyframe).toHaveBeenCalledWith(
+        "doc1",
+        "global",
+        "main",
+        5,
+        expect.objectContaining({
+          state: expect.any(Object),
+          header: expect.any(Object),
+        }),
+      );
+    });
+
+    it("should persist keyframes for all active streams on shutdown", async () => {
+      const doc = createTestDocument();
+
+      cache.putState("doc1", "global", "main", 3, doc);
+      cache.putState("doc2", "global", "main", 7, doc);
+
+      await cache.shutdown();
+
+      expect(keyframeStore.putKeyframe).toHaveBeenCalledTimes(2);
+      expect(keyframeStore.putKeyframe).toHaveBeenCalledWith(
+        "doc1",
+        "global",
+        "main",
+        3,
+        expect.objectContaining({
+          state: expect.any(Object),
+          header: expect.any(Object),
+        }),
+      );
+      expect(keyframeStore.putKeyframe).toHaveBeenCalledWith(
+        "doc2",
+        "global",
+        "main",
+        7,
+        expect.objectContaining({
+          state: expect.any(Object),
+          header: expect.any(Object),
+        }),
+      );
+    });
+
+    it("should handle keyframe persistence errors on eviction gracefully", () => {
       const failingKeyframeStore = createMockKeyframeStore();
       failingKeyframeStore.putKeyframe = vi
         .fn()
@@ -304,11 +320,35 @@ describe("KyselyWriteCache", () => {
         config,
       );
 
-      const doc10 = createTestDocument();
+      const doc = createTestDocument();
 
+      failingCache.putState("doc1", "global", "main", 1, doc);
+      failingCache.putState("doc2", "global", "main", 1, doc);
+      failingCache.putState("doc3", "global", "main", 1, doc);
+
+      // eviction triggers keyframe persist which will fail
       expect(() => {
-        failingCache.putState("doc1", "global", "main", 10, doc10);
+        failingCache.putState("doc4", "global", "main", 1, doc);
       }).not.toThrow();
+    });
+
+    it("should handle keyframe persistence errors on shutdown gracefully", async () => {
+      const failingKeyframeStore = createMockKeyframeStore();
+      failingKeyframeStore.putKeyframe = vi
+        .fn()
+        .mockRejectedValue(new Error("Storage error"));
+
+      const failingCache = new KyselyWriteCache(
+        failingKeyframeStore,
+        operationStore,
+        registry,
+        config,
+      );
+
+      const doc = createTestDocument();
+      failingCache.putState("doc1", "global", "main", 1, doc);
+
+      await expect(failingCache.shutdown()).resolves.toBeUndefined();
     });
   });
 
@@ -464,7 +504,6 @@ describe("KyselyWriteCache (Partial Integration) - Cold Miss Rebuild", () => {
     config = {
       maxDocuments: 10,
       ringBufferSize: 5,
-      keyframeInterval: 10,
     };
     cache = new KyselyWriteCache(
       keyframeStore,
@@ -696,7 +735,6 @@ describe("KyselyWriteCache - Warm Miss Rebuild", () => {
     config = {
       maxDocuments: 10,
       ringBufferSize: 5,
-      keyframeInterval: 10,
     };
     cache = new KyselyWriteCache(
       keyframeStore,

@@ -221,7 +221,6 @@ export class ReactorBuilder {
     const cacheConfig: WriteCacheConfig = {
       maxDocuments: this.writeCacheConfig?.maxDocuments ?? 100,
       ringBufferSize: this.writeCacheConfig?.ringBufferSize ?? 10,
-      keyframeInterval: this.writeCacheConfig?.keyframeInterval ?? 10,
     };
 
     const writeCache = new KyselyWriteCache(

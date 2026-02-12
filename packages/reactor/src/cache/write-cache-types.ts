@@ -9,9 +9,6 @@ export type WriteCacheConfig = {
 
   /** Number of snapshots to keep in each document's ring buffer. Default: 10 */
   ringBufferSize: number;
-
-  /** Persist a keyframe snapshot every N revisions. Default: 10 */
-  keyframeInterval: number;
 };
 
 /**

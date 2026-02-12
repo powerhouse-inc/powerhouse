@@ -81,7 +81,6 @@ describe("KyselyWriteCache - Error Handling", () => {
     config = {
       maxDocuments: 10,
       ringBufferSize: 5,
-      keyframeInterval: 10,
     };
     cache = new KyselyWriteCache(
       keyframeStore,
@@ -752,7 +751,7 @@ describe("KyselyWriteCache - Error Handling", () => {
       ).rejects.toThrow("Keyframe store unavailable");
     });
 
-    it("should log but not fail on keyframe write errors", async () => {
+    it("should log but not fail on keyframe write errors during eviction", async () => {
       const consoleErrorSpy = vi
         .spyOn(console, "error")
         .mockImplementation(() => {});
@@ -762,46 +761,61 @@ describe("KyselyWriteCache - Error Handling", () => {
         .fn()
         .mockRejectedValue(new Error("Keyframe write failed"));
 
+      const smallConfig: WriteCacheConfig = {
+        maxDocuments: 2,
+        ringBufferSize: 5,
+      };
+
       const testCache = new KyselyWriteCache(
         mockKeyframeStore,
         operationStore,
         registry,
-        config,
+        smallConfig,
       );
 
       const doc = documentModelDocumentModelModule.utils.createDocument();
 
+      testCache.putState("doc1", "global", "main", 1, doc);
+      testCache.putState("doc2", "global", "main", 1, doc);
+
       expect(() => {
-        testCache.putState("doc1", "global", "main", 10, doc);
+        testCache.putState("doc3", "global", "main", 1, doc);
       }).not.toThrow();
 
       await new Promise((resolve) => setTimeout(resolve, 10));
 
       expect(consoleErrorSpy).toHaveBeenCalledWith(
-        expect.stringContaining("Failed to persist keyframe"),
+        expect.stringContaining("Failed to persist keyframe on eviction"),
         expect.any(Error),
       );
 
       consoleErrorSpy.mockRestore();
     });
 
-    it("should continue caching in-memory when keyframe store fails", async () => {
+    it("should continue caching in-memory when keyframe store fails on eviction", async () => {
       const mockKeyframeStore = createMockKeyframeStore();
       mockKeyframeStore.putKeyframe = vi
         .fn()
         .mockRejectedValue(new Error("Keyframe store down"));
 
+      const smallConfig: WriteCacheConfig = {
+        maxDocuments: 2,
+        ringBufferSize: 5,
+      };
+
       const testCache = new KyselyWriteCache(
         mockKeyframeStore,
         operationStore,
         registry,
-        config,
+        smallConfig,
       );
 
       const doc = documentModelDocumentModelModule.utils.createDocument();
-      testCache.putState("doc1", "global", "main", 10, doc);
+      testCache.putState("doc1", "global", "main", 1, doc);
+      testCache.putState("doc2", "global", "main", 1, doc);
+      testCache.putState("doc3", "global", "main", 1, doc);
 
-      const retrieved = await testCache.getState("doc1", "global", "main", 10);
+      const retrieved = await testCache.getState("doc3", "global", "main", 1);
 
       expect(retrieved).toEqual(doc);
     });
@@ -1328,7 +1342,6 @@ describe("KyselyWriteCache - Error Handling (Integration)", () => {
     config = {
       maxDocuments: 10,
       ringBufferSize: 5,
-      keyframeInterval: 10,
     };
     cache = new KyselyWriteCache(
       keyframeStore,
