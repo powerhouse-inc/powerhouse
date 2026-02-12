@@ -1,3 +1,7 @@
+## 5.3.2 (2026-02-12)
+
+This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
+
 ## 5.3.1 (2026-02-12)
 
 ### 🩹 Fixes
