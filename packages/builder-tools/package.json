@@ -107,7 +107,7 @@
     "@vitejs/plugin-basic-ssl": "^2.0.0",
     "@vitejs/plugin-react": "^5.0.4",
     "change-case": "^5.4.4",
-    "class-variance-authority": "^0.7.1",
+    "class-variance-authority": "0.7.0",
     "clsx": "^2.1.1",
     "cm6-graphql": "^0.2.1",
     "commander": "^13.1.0",
