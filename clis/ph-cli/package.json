@@ -42,7 +42,7 @@
   "keywords": [],
   "author": "",
   "devDependencies": {
-    "@types/node": "^24.6.1",
+    "@types/node": "catalog:",
     "@types/pg": "^8.11.10",
     "@types/npm-package-arg": "^6.1.4",
     "concurrently": "^9.1.2",
@@ -71,7 +71,7 @@
     "package-manager-detector": "^1.6.0",
     "read-pkg": "^9.0.1",
     "ts-morph": "^26.0.0",
-    "vite": "^7.2.6",
+    "vite": "catalog:",
     "write-package": "^7.2.0"
   }
 }

@@ -1,4 +1,4 @@
-# Powerhouse CLI Commands (6.0.0-dev.30)<br>
+# Powerhouse CLI Commands (6.0.0-dev.40)<br>
 This document provides detailed information about the available commands in the Powerhouse CLI.<br><br>
 The Powerhouse CLI (ph-cli) is a command-line interface tool that provides essential commands for managing Powerhouse projects. The tool and it's commands are fundamental for creating, building, and running Document Models as a builder in studio mode.<br>
 ## Table of Contents
@@ -79,6 +79,10 @@ Processor name.<br><br>
 Whether to generate an analytics processor or a relational DB processor. Default is analytics.<br><br>
 **usage:** `--processor-type <value>`<br>
 **default**: `analytics`
+#### Processor Apps <br>
+The apps where the generated processor will run<br><br>
+**usage:** `--processor-apps <value>`<br>
+**default**: `switchboard`
 #### Subgraph <br>
 Subgraph name.<br><br>
 **usage:** `--subgraph <str>`<br>

@@ -38,7 +38,7 @@
     "@swc/cli": "~0.6.0",
     "@swc/core": "~1.11.1",
     "@swc/helpers": "~0.5.15",
-    "@types/node": "^24.6.1",
+    "@types/node": "catalog:",
     "@types/semver": "^7.7.0",
     "@types/yargs": "^17.0.33",
     "dpdm": "^3.14.0",
@@ -77,7 +77,7 @@
     "overrides": {
       "document-model": "link:./packages/document-model",
       "document-drive": "link:./packages/document-drive",
-      "vite": "^7.2.6"
+      "vite": "catalog:"
     },
     "onlyBuiltDependencies": [
       "@apollo/protobufjs",

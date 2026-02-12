@@ -34,16 +34,16 @@
     "@powerhousedao/design-system": "^1.6.0",
     "clsx": "^2.0.0",
     "prism-react-renderer": "^2.3.0",
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "react": "catalog:",
+    "react-dom": "catalog:"
   },
   "devDependencies": {
     "@docusaurus/module-type-aliases": "^3.9.1",
     "@docusaurus/tsconfig": "^3.9.1",
     "@docusaurus/types": "^3.9.1",
     "@marp-team/marp-cli": "^4.2.3",
-    "@types/react": "^19.2.0",
-    "@types/react-dom": "^19.2.0",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
     "tsx": "^4.20.3"
   },
   "browserslist": {
