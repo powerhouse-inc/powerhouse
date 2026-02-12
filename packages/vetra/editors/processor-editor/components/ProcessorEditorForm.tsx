@@ -93,7 +93,10 @@ export const ProcessorEditorForm: React.FC<ProcessorEditorFormProps> = ({
   };
 
   const canConfirm =
-    processorName.trim() && processorType && documentTypes.length > 0;
+    !!processorName.trim() &&
+    !!processorType &&
+    documentTypes.length > 0 &&
+    processorApps.length > 0;
 
   return (
     <div className="space-y-6 p-6">
