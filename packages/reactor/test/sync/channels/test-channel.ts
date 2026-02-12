@@ -1,11 +1,11 @@
 import type { ISyncCursorStorage } from "../../../src/storage/interfaces.js";
+import { envelopeToSyncOperation } from "../../../src/sync/channels/utils.js";
 import { ChannelError } from "../../../src/sync/errors.js";
 import type { IChannel } from "../../../src/sync/interfaces.js";
-import type { SyncOperation } from "../../../src/sync/sync-operation.js";
 import { Mailbox } from "../../../src/sync/mailbox.js";
+import type { SyncOperation } from "../../../src/sync/sync-operation.js";
 import type { RemoteCursor, SyncEnvelope } from "../../../src/sync/types.js";
 import { ChannelErrorSource } from "../../../src/sync/types.js";
-import { envelopeToSyncOperation } from "../../../src/sync/channels/utils.js";
 
 /**
  * Test channel for bidirectional communication in tests.
@@ -18,9 +18,9 @@ import { envelopeToSyncOperation } from "../../../src/sync/channels/utils.js";
  * suitable for testing synchronization flows.
  */
 export class TestChannel implements IChannel {
-  readonly inbox: Mailbox<SyncOperation>;
-  readonly outbox: Mailbox<SyncOperation>;
-  readonly deadLetter: Mailbox<SyncOperation>;
+  readonly inbox: Mailbox;
+  readonly outbox: Mailbox;
+  readonly deadLetter: Mailbox;
 
   private readonly channelId: string;
   private readonly remoteName: string;
@@ -40,9 +40,9 @@ export class TestChannel implements IChannel {
     this.send = send;
     this.isShutdown = false;
 
-    this.inbox = new Mailbox<SyncOperation>();
-    this.outbox = new Mailbox<SyncOperation>();
-    this.deadLetter = new Mailbox<SyncOperation>();
+    this.inbox = new Mailbox();
+    this.outbox = new Mailbox();
+    this.deadLetter = new Mailbox();
 
     this.outbox.onAdded((syncOps) => {
       for (const syncOp of syncOps) {
