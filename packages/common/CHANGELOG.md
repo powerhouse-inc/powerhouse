@@ -1,3 +1,13 @@
+## 5.3.1 (2026-02-12)
+
+### 🩹 Fixes
+
+- add builder-profile to downstream packages ([cbcc2d8de](https://github.com/powerhouse-inc/powerhouse/commit/cbcc2d8de))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 5.3.0 (2026-02-04)
 
 This was a version bump only for @powerhousedao/common to align it with other projects, there were no code changes.
