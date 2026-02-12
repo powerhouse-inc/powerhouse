@@ -20,6 +20,11 @@
  *   - Use --batch-size <N> to send N operations per execute call
  *   - Default is 1 (each operation in its own call)
  *   - Use this to measure per-call overhead vs batched execution
+ *
+ * Keyframe sampling:
+ *   - Use --sample-keyframes <path> to capture PHDocument state on each putKeyframe call
+ *   - Use --sample-interval <N> to only sample every Nth call (default: 1)
+ *   - Output is newline-delimited JSON (JSONL)
  */
 
 import { PGlite } from "@electric-sql/pglite";
@@ -265,6 +270,8 @@ function parseArgs(args: string[]): {
   dbPath: string | undefined;
   docId: string | undefined;
   pyroscope: string | undefined;
+  sampleKeyframes: string | undefined;
+  sampleInterval: number;
 } {
   let count = 10;
   let operations = 0;
@@ -276,6 +283,8 @@ function parseArgs(args: string[]): {
   let dbPath: string | undefined = undefined;
   let docId: string | undefined = undefined;
   let pyroscope: string | undefined = undefined;
+  let sampleKeyframes: string | undefined = undefined;
+  let sampleInterval = 1;
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
@@ -304,6 +313,10 @@ function parseArgs(args: string[]): {
       } else {
         pyroscope = "http://localhost:4040";
       }
+    } else if (arg === "--sample-keyframes" && args[i + 1]) {
+      sampleKeyframes = args[++i];
+    } else if (arg === "--sample-interval" && args[i + 1]) {
+      sampleInterval = Number(args[++i]);
     } else if (arg === "--help" || arg === "-h") {
       console.log(`
 Usage: tsx reactor-direct.ts [N] [options]
@@ -324,6 +337,8 @@ Options:
   --percentiles, -p         Show percentile statistics (p50, p90, p95, p99) per line
   --show-action-types, -a   Show action type names in min/max timings
   --pyroscope [address]     Enable Pyroscope profiling (default: http://localhost:4040)
+  --sample-keyframes <path> Sample PHDocument state on each putKeyframe call to a JSONL file
+  --sample-interval <N>     Only sample every Nth putKeyframe call (default: 1)
   --help, -h                Show this help message
 
 Process flow:
@@ -339,6 +354,8 @@ Examples:
   tsx reactor-direct.ts 1 -o 25 -l 10 --db "postgresql://postgres:postgres@localhost:5432/reactor"
   tsx reactor-direct.ts -d abc123 -o 10 -l 5 --db "./data"
   tsx reactor-direct.ts 1 -o 100 -b 10      # 10 ops per execute call (10 calls total)
+  tsx reactor-direct.ts 1 -o 50 --sample-keyframes /tmp/keyframes.jsonl
+  tsx reactor-direct.ts 1 -o 50 --sample-keyframes /tmp/keyframes.jsonl --sample-interval 5
 `);
       process.exit(0);
     } else if (!isNaN(Number(arg)) && arg.trim() !== "") {
@@ -411,6 +428,8 @@ Examples:
     dbPath,
     docId,
     pyroscope,
+    sampleKeyframes,
+    sampleInterval,
   };
 }
 
@@ -453,6 +472,8 @@ async function main() {
     dbPath,
     docId,
     pyroscope: pyroscopeServer,
+    sampleKeyframes,
+    sampleInterval,
   } = parseArgs(process.argv.slice(2));
 
   // Initialize Pyroscope profiling if enabled
@@ -487,11 +508,19 @@ async function main() {
     throw new Error(`Migration failed: ${migrationResult.error.message}`);
   }
 
-  const reactor = await new ReactorBuilder()
+  const builder = new ReactorBuilder()
     .withDocumentModels([documentModelDocumentModelModule])
     .withKysely(db as Kysely<Database>)
-    .withMigrationStrategy("none")
-    .build();
+    .withMigrationStrategy("none");
+
+  if (sampleKeyframes) {
+    builder.withKeyframeSampling(sampleKeyframes, sampleInterval);
+    console.log(
+      `  Keyframe sampling enabled: ${sampleKeyframes} (every ${sampleInterval} call(s))`,
+    );
+  }
+
+  const reactor = await builder.build();
 
   const initDuration = ((Date.now() - initStart) / 1000).toFixed(2);
   console.log(`Reactor initialized in ${initDuration}s`);

@@ -70,20 +70,28 @@ tsx reactor-direct.ts 1 -o 100 -l 10 --pyroscope
 
 # Show percentiles and verbose output
 tsx reactor-direct.ts 5 -o 20 --percentiles --verbose --show-action-types
+
+# Sample PHDocument state at every putKeyframe call
+tsx reactor-direct.ts 1 -o 50 --sample-keyframes keyframes.jsonl
+
+# Sample every 5th putKeyframe call
+tsx reactor-direct.ts 1 -o 50 --sample-keyframes keyframes.jsonl --sample-interval 5
 ```
 
-| Flag                  | Short | Description                                                 |
-| --------------------- | ----- | ----------------------------------------------------------- |
-| `N` (positional)      |       | Number of documents to create (default: 10)                 |
-| `--operations`        | `-o`  | Operations per loop (default: 0)                            |
-| `--op-loops`          | `-l`  | Loops per document (default: 1)                             |
-| `--batch-size`        | `-b`  | Operations per execute call (default: 1)                    |
-| `--db`                |       | Database connection string or PGlite path                   |
-| `--doc-id`            | `-d`  | Use an existing document (skips creation)                   |
-| `--pyroscope`         |       | Enable Pyroscope profiling (optionally pass server address) |
-| `--verbose`           | `-v`  | Show per-operation timings                                  |
-| `--percentiles`       | `-p`  | Show p50/p90/p95/p99 stats                                  |
-| `--show-action-types` | `-a`  | Show action names in min/max timings                        |
+| Flag                  | Short | Description                                                                  |
+| --------------------- | ----- | ---------------------------------------------------------------------------- |
+| `N` (positional)      |       | Number of documents to create (default: 10)                                  |
+| `--operations`        | `-o`  | Operations per loop (default: 0)                                             |
+| `--op-loops`          | `-l`  | Loops per document (default: 1)                                              |
+| `--batch-size`        | `-b`  | Operations per execute call (default: 1)                                     |
+| `--db`                |       | Database connection string or PGlite path                                    |
+| `--doc-id`            | `-d`  | Use an existing document (skips creation)                                    |
+| `--pyroscope`         |       | Enable Pyroscope profiling (optionally pass server address)                  |
+| `--verbose`           | `-v`  | Show per-operation timings                                                   |
+| `--percentiles`       | `-p`  | Show p50/p90/p95/p99 stats                                                   |
+| `--show-action-types` | `-a`  | Show action names in min/max timings                                         |
+| `--sample-keyframes`  |       | Path to JSONL file for capturing PHDocument state on each `putKeyframe` call |
+| `--sample-interval`   |       | Sample every Nth `putKeyframe` call (default: 1)                             |
 
 ### `docs-create.ts` — Create documents via GraphQL
 
@@ -225,6 +233,21 @@ tsx reactor-direct.ts 10 -o 50 -l 5 -p --db "postgresql://postgres:postgres@loca
 docker compose -f scripts/profiling/docker-compose.yml up pyroscope -d
 tsx reactor-direct.ts 1 -o 100 -l 50 --pyroscope
 # Open http://localhost:4040 to view flame graphs
+```
+
+### Sample keyframe document state
+
+Capture the full PHDocument state each time `putKeyframe` is called. Output is newline-delimited JSON (JSONL) where each line contains `timestamp`, `callCount`, `documentId`, `scope`, `branch`, `revision`, and the full `document` object. Relative paths resolve against the working directory.
+
+```bash
+# Capture all keyframe writes
+tsx reactor-direct.ts 1 -o 100 -l 10 --sample-keyframes keyframes.jsonl
+
+# Capture every 10th keyframe write to reduce output size
+tsx reactor-direct.ts 1 -o 100 -l 10 --sample-keyframes keyframes.jsonl --sample-interval 10
+
+# Inspect with jq
+jq -c '{callCount, revision, stateSize: (.document | tostring | length)}' keyframes.jsonl
 ```
 
 ### End-to-end switchboard benchmark

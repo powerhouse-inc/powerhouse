@@ -24,6 +24,7 @@ import { DocumentModelRegistry } from "../registry/implementation.js";
 import { ConsistencyTracker } from "../shared/consistency-tracker.js";
 import { KyselyDocumentIndexer } from "../storage/kysely/document-indexer.js";
 import { KyselyKeyframeStore } from "../storage/kysely/keyframe-store.js";
+import { SamplingKeyframeStore } from "../storage/kysely/sampling-keyframe-store.js";
 import { KyselyOperationStore } from "../storage/kysely/store.js";
 import type { Database as StorageDatabase } from "../storage/kysely/types.js";
 import type { SyncBuilder } from "../sync/sync-builder.js";
@@ -72,6 +73,10 @@ export class ReactorBuilder {
   private signatureVerifier?: SignatureVerificationHandler;
   private kyselyInstance?: Kysely<Database>;
   private signalHandlersEnabled = false;
+  private keyframeSamplingConfig?: {
+    outputPath: string;
+    sampleInterval?: number;
+  };
 
   withLogger(logger: ILogger): this {
     this.logger = logger;
@@ -155,6 +160,11 @@ export class ReactorBuilder {
     return this;
   }
 
+  withKeyframeSampling(outputPath: string, sampleInterval?: number): this {
+    this.keyframeSamplingConfig = { outputPath, sampleInterval };
+    return this;
+  }
+
   async build(): Promise<IReactor> {
     const module = await this.buildModule();
     return module.reactor;
@@ -193,9 +203,16 @@ export class ReactorBuilder {
     const operationStore = new KyselyOperationStore(
       database as unknown as Kysely<StorageDatabase>,
     );
-    const keyframeStore = new KyselyKeyframeStore(
+    const baseKeyframeStore = new KyselyKeyframeStore(
       database as unknown as Kysely<StorageDatabase>,
     );
+    const keyframeStore = this.keyframeSamplingConfig
+      ? new SamplingKeyframeStore(
+          baseKeyframeStore,
+          this.keyframeSamplingConfig.outputPath,
+          this.keyframeSamplingConfig.sampleInterval,
+        )
+      : baseKeyframeStore;
 
     const eventBus = this.eventBus || new EventBus();
     const queue = new InMemoryQueue(eventBus);
