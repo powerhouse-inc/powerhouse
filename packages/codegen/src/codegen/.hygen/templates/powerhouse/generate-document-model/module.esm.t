@@ -13,7 +13,7 @@ import {
   utils,
 } from "<%= documentModelDir %>";
 
-/** Document model module for the Todo List document type */
+/** Document model module for the <%= pascalCaseDocumentType %> document type */
 export const <%= pascalCaseDocumentType %>: DocumentModelModule<<%= phStateName %>> = {
   reducer,
   actions,
