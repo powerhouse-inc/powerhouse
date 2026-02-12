@@ -1,16 +1,25 @@
-export type MailboxItem = {
-  id: string;
-};
+import type { SyncOperation } from "./sync-operation.js";
 
-export type MailboxCallback<T extends MailboxItem> = (items: T[]) => void;
+export type MailboxCallback = (items: SyncOperation[]) => void;
 
-export interface IMailbox<T extends MailboxItem> {
-  readonly items: ReadonlyArray<T>;
-  get(id: string): T | undefined;
-  add(...items: T[]): void;
-  remove(...items: T[]): void;
-  onAdded(callback: MailboxCallback<T>): void;
-  onRemoved(callback: MailboxCallback<T>): void;
+export interface IMailbox {
+  get items(): ReadonlyArray<SyncOperation>;
+  get ackOrdinal(): number;
+  get latestOrdinal(): number;
+
+  // sync op management
+  init(latestOrdinal: number): void;
+  get(id: string): SyncOperation | undefined;
+  add(...items: SyncOperation[]): void;
+  remove(...items: SyncOperation[]): void;
+
+  //advanceAck(ack: number): void;
+
+  // listeners
+  onAdded(callback: MailboxCallback): void;
+  onRemoved(callback: MailboxCallback): void;
+
+  // these are mostly for debug use
   pause(): void;
   resume(): void;
   flush(): void;
@@ -30,23 +39,30 @@ export class MailboxAggregateError extends Error {
   }
 }
 
-export class Mailbox<T extends MailboxItem> implements IMailbox<T> {
-  private itemsMap: Map<string, T> = new Map();
-  private addedCallbacks: MailboxCallback<T>[] = [];
-  private removedCallbacks: MailboxCallback<T>[] = [];
+export class Mailbox implements IMailbox {
+  private itemsMap: Map<string, SyncOperation> = new Map();
+  private addedCallbacks: MailboxCallback[] = [];
+  private removedCallbacks: MailboxCallback[] = [];
   private paused: boolean = false;
-  private addedBuffer: T[] = [];
-  private removedBuffer: T[] = [];
+  private addedBuffer: SyncOperation[] = [];
+  private removedBuffer: SyncOperation[] = [];
 
-  get items(): ReadonlyArray<T> {
+  private _ack: number = 0;
+  private _latestOrdinal: number = 0;
+
+  init(latestOrdinal: number) {
+    this._latestOrdinal = latestOrdinal;
+  }
+
+  get items(): ReadonlyArray<SyncOperation> {
     return Array.from(this.itemsMap.values());
   }
 
-  get(id: string): T | undefined {
+  get(id: string): SyncOperation | undefined {
     return this.itemsMap.get(id);
   }
 
-  add(...items: T[]): void {
+  add(...items: SyncOperation[]): void {
     for (const item of items) {
       this.itemsMap.set(item.id, item);
     }
@@ -68,7 +84,7 @@ export class Mailbox<T extends MailboxItem> implements IMailbox<T> {
     }
   }
 
-  remove(...items: T[]): void {
+  remove(...items: SyncOperation[]): void {
     for (const item of items) {
       this.itemsMap.delete(item.id);
     }
@@ -90,12 +106,20 @@ export class Mailbox<T extends MailboxItem> implements IMailbox<T> {
     }
   }
 
-  onAdded(callback: MailboxCallback<T>): void {
+  onAdded(callback: MailboxCallback): void {
     this.addedCallbacks.push(callback);
   }
 
-  onRemoved(callback: MailboxCallback<T>): void {
+  onRemoved(callback: MailboxCallback): void {
     this.removedCallbacks.push(callback);
+  }
+
+  get ackOrdinal(): number {
+    return this._ack;
+  }
+
+  get latestOrdinal(): number {
+    return this._latestOrdinal;
   }
 
   pause(): void {
@@ -108,42 +132,7 @@ export class Mailbox<T extends MailboxItem> implements IMailbox<T> {
   }
 
   flush(): void {
-    const addedItems = this.addedBuffer;
-    this.addedBuffer = [];
-    const errors: Error[] = [];
-
-    if (addedItems.length > 0) {
-      const callbacks = [...this.addedCallbacks];
-      for (const callback of callbacks) {
-        try {
-          callback(addedItems);
-        } catch (error) {
-          errors.push(
-            error instanceof Error ? error : new Error(String(error)),
-          );
-        }
-      }
-    }
-
-    const removedItems = this.removedBuffer;
-    this.removedBuffer = [];
-
-    if (removedItems.length > 0) {
-      const callbacks = [...this.removedCallbacks];
-      for (const callback of callbacks) {
-        try {
-          callback(removedItems);
-        } catch (error) {
-          errors.push(
-            error instanceof Error ? error : new Error(String(error)),
-          );
-        }
-      }
-    }
-
-    if (errors.length > 0) {
-      throw new MailboxAggregateError(errors);
-    }
+    // TODO
   }
 
   isPaused(): boolean {

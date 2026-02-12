@@ -1,14 +1,16 @@
 import { describe, expect, it, vi } from "vitest";
-import { PollingChannel } from "../../../../src/sync/channels/polling-channel.js";
+import type {
+  ISyncCursorStorage,
+  OperationContext,
+} from "../../../../src/storage/interfaces.js";
+import { GqlResponseChannel } from "../../../../src/sync/channels/gql-res-channel.js";
+import { ChannelError } from "../../../../src/sync/errors.js";
 import { SyncOperation } from "../../../../src/sync/sync-operation.js";
 import {
   ChannelErrorSource,
   SyncOperationStatus,
   type SyncEnvelope,
 } from "../../../../src/sync/types.js";
-import { ChannelError } from "../../../../src/sync/errors.js";
-import type { ISyncCursorStorage } from "../../../../src/storage/interfaces.js";
-import type { OperationContext } from "../../../../src/storage/interfaces.js";
 
 const createMockCursorStorage = (): ISyncCursorStorage => ({
   list: vi.fn(),
@@ -64,7 +66,7 @@ describe("PollingChannel", () => {
   describe("constructor and initialization", () => {
     it("should create channel without send function", () => {
       const cursorStorage = createMockCursorStorage();
-      const channel = new PollingChannel(
+      const channel = new GqlResponseChannel(
         "channel-1",
         "remote-1",
         cursorStorage,
@@ -77,7 +79,7 @@ describe("PollingChannel", () => {
 
     it("should initialize empty mailboxes", () => {
       const cursorStorage = createMockCursorStorage();
-      const channel = new PollingChannel(
+      const channel = new GqlResponseChannel(
         "channel-1",
         "remote-1",
         cursorStorage,
@@ -92,7 +94,7 @@ describe("PollingChannel", () => {
   describe("outbox behavior", () => {
     it("should keep operations in outbox (no auto-send)", () => {
       const cursorStorage = createMockCursorStorage();
-      const channel = new PollingChannel(
+      const channel = new GqlResponseChannel(
         "channel-1",
         "remote-1",
         cursorStorage,
@@ -107,7 +109,7 @@ describe("PollingChannel", () => {
 
     it("should keep multiple operations in outbox", () => {
       const cursorStorage = createMockCursorStorage();
-      const channel = new PollingChannel(
+      const channel = new GqlResponseChannel(
         "channel-1",
         "remote-1",
         cursorStorage,
@@ -128,7 +130,7 @@ describe("PollingChannel", () => {
   describe("receive envelope", () => {
     it("should convert envelope to job and add to inbox", () => {
       const cursorStorage = createMockCursorStorage();
-      const channel = new PollingChannel(
+      const channel = new GqlResponseChannel(
         "channel-1",
         "remote-1",
         cursorStorage,
@@ -169,7 +171,7 @@ describe("PollingChannel", () => {
 
     it("should throw error when receiving after shutdown", () => {
       const cursorStorage = createMockCursorStorage();
-      const channel = new PollingChannel(
+      const channel = new GqlResponseChannel(
         "channel-1",
         "remote-1",
         cursorStorage,
@@ -210,7 +212,7 @@ describe("PollingChannel", () => {
   describe("inbox processing", () => {
     it("should allow consumer to register inbox callback", () => {
       const cursorStorage = createMockCursorStorage();
-      const channel = new PollingChannel(
+      const channel = new GqlResponseChannel(
         "channel-1",
         "remote-1",
         cursorStorage,
@@ -251,7 +253,7 @@ describe("PollingChannel", () => {
 
     it("should allow jobs to be marked as executed", () => {
       const cursorStorage = createMockCursorStorage();
-      const channel = new PollingChannel(
+      const channel = new GqlResponseChannel(
         "channel-1",
         "remote-1",
         cursorStorage,
@@ -293,7 +295,7 @@ describe("PollingChannel", () => {
 
     it("should allow jobs to be marked as failed", () => {
       const cursorStorage = createMockCursorStorage();
-      const channel = new PollingChannel(
+      const channel = new GqlResponseChannel(
         "channel-1",
         "remote-1",
         cursorStorage,
@@ -340,7 +342,7 @@ describe("PollingChannel", () => {
   describe("cursor updates and acknowledgment", () => {
     it("should update cursor with correct parameters", async () => {
       const cursorStorage = createMockCursorStorage();
-      const channel = new PollingChannel(
+      const channel = new GqlResponseChannel(
         "channel-1",
         "remote-1",
         cursorStorage,
@@ -358,7 +360,7 @@ describe("PollingChannel", () => {
 
     it("should remove acknowledged operations from outbox", async () => {
       const cursorStorage = createMockCursorStorage();
-      const channel = new PollingChannel(
+      const channel = new GqlResponseChannel(
         "channel-1",
         "remote-1",
         cursorStorage,
@@ -382,7 +384,7 @@ describe("PollingChannel", () => {
 
     it("should mark acknowledged operations as executed", async () => {
       const cursorStorage = createMockCursorStorage();
-      const channel = new PollingChannel(
+      const channel = new GqlResponseChannel(
         "channel-1",
         "remote-1",
         cursorStorage,
@@ -401,7 +403,7 @@ describe("PollingChannel", () => {
 
     it("should not remove operations with ordinal greater than cursor", async () => {
       const cursorStorage = createMockCursorStorage();
-      const channel = new PollingChannel(
+      const channel = new GqlResponseChannel(
         "channel-1",
         "remote-1",
         cursorStorage,
@@ -418,7 +420,7 @@ describe("PollingChannel", () => {
 
     it("should update cursor multiple times", async () => {
       const cursorStorage = createMockCursorStorage();
-      const channel = new PollingChannel(
+      const channel = new GqlResponseChannel(
         "channel-1",
         "remote-1",
         cursorStorage,
@@ -440,7 +442,7 @@ describe("PollingChannel", () => {
   describe("shutdown", () => {
     it("should prevent receiving envelopes after shutdown", () => {
       const cursorStorage = createMockCursorStorage();
-      const channel = new PollingChannel(
+      const channel = new GqlResponseChannel(
         "channel-1",
         "remote-1",
         cursorStorage,
@@ -479,7 +481,7 @@ describe("PollingChannel", () => {
 
     it("should allow shutdown with no issues", () => {
       const cursorStorage = createMockCursorStorage();
-      const channel = new PollingChannel(
+      const channel = new GqlResponseChannel(
         "channel-1",
         "remote-1",
         cursorStorage,
@@ -490,7 +492,7 @@ describe("PollingChannel", () => {
 
     it("should preserve operations in outbox after shutdown", () => {
       const cursorStorage = createMockCursorStorage();
-      const channel = new PollingChannel(
+      const channel = new GqlResponseChannel(
         "channel-1",
         "remote-1",
         cursorStorage,

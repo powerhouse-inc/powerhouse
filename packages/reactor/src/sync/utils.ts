@@ -75,7 +75,10 @@ export function createIdleHealth(): ChannelHealth {
  */
 export function sortEnvelopesByFirstOperationTimestamp<
   T extends {
-    operations?: Array<{ operation: { timestampUtcMs: string } }> | null;
+    operations?:
+      | ReadonlyArray<{ operation: { timestampUtcMs: string } }>
+      | null
+      | undefined;
   },
 >(envelopes: T[]): T[] {
   return envelopes.slice().sort((a, b) => {

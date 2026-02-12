@@ -1,36 +1,43 @@
 import {
-  type MailboxItem,
-  type MailboxCallback,
   type IMailbox,
   MailboxAggregateError,
+  type MailboxCallback,
 } from "./mailbox.js";
+import type { SyncOperation } from "./sync-operation.js";
 
-export class BufferedMailbox<T extends MailboxItem> implements IMailbox<T> {
-  private itemsMap: Map<string, T> = new Map();
-  private addedCallbacks: MailboxCallback<T>[] = [];
-  private removedCallbacks: MailboxCallback<T>[] = [];
-  private addedBuffer: T[] = [];
-  private removedBuffer: T[] = [];
+export class BufferedMailbox implements IMailbox {
+  private itemsMap: Map<string, SyncOperation> = new Map();
+  private addedCallbacks: MailboxCallback[] = [];
+  private removedCallbacks: MailboxCallback[] = [];
+  private addedBuffer: SyncOperation[] = [];
+  private removedBuffer: SyncOperation[] = [];
   private addedTimer: ReturnType<typeof setTimeout> | null = null;
   private removedTimer: ReturnType<typeof setTimeout> | null = null;
   private readonly milliseconds: number;
   private readonly maxQueued: number;
   private paused: boolean = false;
 
+  private _ack: number = 0;
+  private _latestOrdinal: number = 0;
+
   constructor(milliseconds: number, maxQueued: number) {
     this.milliseconds = milliseconds;
     this.maxQueued = maxQueued;
   }
 
-  get items(): ReadonlyArray<T> {
+  init(latestOrdinal: number) {
+    this._latestOrdinal = latestOrdinal;
+  }
+
+  get items(): ReadonlyArray<SyncOperation> {
     return Array.from(this.itemsMap.values());
   }
 
-  get(id: string): T | undefined {
+  get(id: string): SyncOperation | undefined {
     return this.itemsMap.get(id);
   }
 
-  add(...items: T[]): void {
+  add(...items: SyncOperation[]): void {
     for (const item of items) {
       this.itemsMap.set(item.id, item);
     }
@@ -47,7 +54,7 @@ export class BufferedMailbox<T extends MailboxItem> implements IMailbox<T> {
     }
   }
 
-  remove(...items: T[]): void {
+  remove(...items: SyncOperation[]): void {
     for (const item of items) {
       this.itemsMap.delete(item.id);
     }
@@ -64,12 +71,20 @@ export class BufferedMailbox<T extends MailboxItem> implements IMailbox<T> {
     }
   }
 
-  onAdded(callback: MailboxCallback<T>): void {
+  onAdded(callback: MailboxCallback): void {
     this.addedCallbacks.push(callback);
   }
 
-  onRemoved(callback: MailboxCallback<T>): void {
+  onRemoved(callback: MailboxCallback): void {
     this.removedCallbacks.push(callback);
+  }
+
+  get ackOrdinal(): number {
+    return this._ack;
+  }
+
+  get latestOrdinal(): number {
+    return this._latestOrdinal;
   }
 
   pause(): void {
@@ -149,7 +164,10 @@ export class BufferedMailbox<T extends MailboxItem> implements IMailbox<T> {
     }
   }
 
-  private invokeCallbacks(callbacks: MailboxCallback<T>[], items: T[]): void {
+  private invokeCallbacks(
+    callbacks: MailboxCallback[],
+    items: SyncOperation[],
+  ): void {
     const callbacksCopy = [...callbacks];
     const errors: Error[] = [];
 

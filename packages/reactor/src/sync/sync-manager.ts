@@ -36,12 +36,11 @@ import type {
   RemoteStatus,
   SyncResult,
 } from "./types.js";
-import { ChannelErrorSource, SyncOperationStatus } from "./types.js";
+import { ChannelErrorSource } from "./types.js";
 import {
   batchOperationsByDocument,
   createIdleHealth,
   filterOperations,
-  getMaxOrdinal,
   toOperationWithContext,
 } from "./utils.js";
 
@@ -108,15 +107,6 @@ export class SyncManager implements ISyncManager {
         this.operationIndex,
       );
 
-      try {
-        await channel.init();
-      } catch (error) {
-        console.error(
-          `Error initializing channel for remote ${record.name}: ${error instanceof Error ? error.message : String(error)}`,
-        );
-        continue;
-      }
-
       const remote: Remote = {
         id: record.id,
         name: record.name,
@@ -128,6 +118,21 @@ export class SyncManager implements ISyncManager {
 
       this.remotes.set(record.name, remote);
       this.wireChannelCallbacks(remote);
+
+      try {
+        await channel.init();
+      } catch (error) {
+        console.error(
+          `Error initializing channel for remote ${record.name}: ${error instanceof Error ? error.message : String(error)}`,
+        );
+        continue;
+      }
+
+      // backfill
+      const outboxOrdinal = remote.channel.outbox.latestOrdinal;
+      if (outboxOrdinal > 0) {
+        await this.backfillOutbox(remote, outboxOrdinal);
+      }
     }
 
     this.eventUnsubscribe = this.eventBus.subscribe<JobWriteReadyEvent>(
@@ -248,8 +253,6 @@ export class SyncManager implements ISyncManager {
       this.operationIndex,
     );
 
-    await channel.init();
-
     const remote: Remote = {
       id: remoteId,
       name,
@@ -262,12 +265,12 @@ export class SyncManager implements ISyncManager {
     this.remotes.set(name, remote);
     this.wireChannelCallbacks(remote);
 
-    // get outbox cursor from storage for this remote + backfill
-    const cursor = await this.cursorStorage.get(remote.name, "outbox");
-    const persisted = cursor.cursorOrdinal;
+    await channel.init();
 
-    if (persisted > 0) {
-      await this.backfillOutbox(remote, persisted);
+    // backfill
+    const outboxOrdinal = remote.channel.outbox.latestOrdinal;
+    if (outboxOrdinal > 0) {
+      await this.backfillOutbox(remote, outboxOrdinal);
     }
 
     return remote;
@@ -295,14 +298,12 @@ export class SyncManager implements ISyncManager {
   }
 
   private wireChannelCallbacks(remote: Remote): void {
-    remote.channel.inbox.onAdded((syncOps) => {
-      this.handleInboxAdded(remote, syncOps);
-    });
+    remote.channel.inbox.onAdded((syncOps) =>
+      this.handleInboxAdded(remote, syncOps),
+    );
 
     remote.channel.outbox.onAdded((syncOps) => {
-      for (const syncOp of syncOps) {
-        this.handleOutboxJob(remote, syncOp);
-      }
+      // todo: handle sync status updates
     });
   }
 
@@ -335,14 +336,7 @@ export class SyncManager implements ISyncManager {
 
     // now work through the affected remotes and backfill based on the last operation in the outbox
     for (const remote of affectedRemotes) {
-      let outboxOrdinal = this.getMaxOutboxOrdinal(remote);
-      if (outboxOrdinal === 0) {
-        // the outbox is empty, so we need to lookup the cursor instead
-        const cursor = await this.cursorStorage.get(remote.name, "outbox");
-        outboxOrdinal = cursor.cursorOrdinal;
-      }
-
-      await this.backfillOutbox(remote, outboxOrdinal);
+      await this.backfillOutbox(remote, remote.channel.outbox.latestOrdinal);
     }
   }
 
@@ -369,16 +363,6 @@ export class SyncManager implements ISyncManager {
     if (keyed.length > 0) {
       void this.applyInboxBatch(keyed.map((syncOp) => ({ remote, syncOp })));
     }
-  }
-
-  private handleOutboxJob(remote: Remote, syncOp: SyncOperation): void {
-    syncOp.on((syncOp, _prev, next) => {
-      if (next === SyncOperationStatus.Applied) {
-        remote.channel.outbox.remove(syncOp);
-      } else if (next === SyncOperationStatus.Error) {
-        remote.channel.outbox.remove(syncOp);
-      }
-    });
   }
 
   private async applyInboxJob(
@@ -552,17 +536,6 @@ export class SyncManager implements ISyncManager {
     }
 
     remote.channel.outbox.add(...syncOps);
-  }
-
-  private getMaxOutboxOrdinal(remote: Remote): number {
-    const outboxItems = remote.channel.outbox.items;
-
-    let maxOrdinal = 0;
-    for (const syncOp of outboxItems) {
-      maxOrdinal = Math.max(maxOrdinal, getMaxOrdinal(syncOp.operations));
-    }
-
-    return maxOrdinal;
   }
 
   private async getOperationsForRemote(

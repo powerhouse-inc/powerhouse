@@ -13,7 +13,7 @@ import type {
   RemoteFilter,
   SyncEnvelope,
 } from "../types.js";
-import { ChannelErrorSource } from "../types.js";
+import { ChannelErrorSource, SyncOperationStatus } from "../types.js";
 import { sortEnvelopesByFirstOperationTimestamp } from "../utils.js";
 import type { IPollTimer } from "./poll-timer.js";
 import { envelopesToSyncOperations } from "./utils.js";
@@ -43,12 +43,12 @@ export type GqlChannelConfig = {
 /**
  * GraphQL-based synchronization channel for network communication between reactors.
  */
-export class GqlChannel implements IChannel {
-  readonly inbox: IMailbox<SyncOperation>;
-  readonly outbox: IMailbox<SyncOperation>;
-  readonly deadLetter: IMailbox<SyncOperation>;
+export class GqlRequestChannel implements IChannel {
+  readonly inbox: IMailbox;
+  readonly outbox: IMailbox;
+  readonly deadLetter: IMailbox;
   readonly config: GqlChannelConfig;
-  private readonly bufferedOutbox: BufferedMailbox<SyncOperation>;
+  private readonly bufferedOutbox: BufferedMailbox;
 
   private readonly channelId: string;
   private readonly remoteName: string;
@@ -87,13 +87,37 @@ export class GqlChannel implements IChannel {
     this.isShutdown = false;
     this.failureCount = 0;
 
-    this.inbox = new Mailbox<SyncOperation>();
-    this.bufferedOutbox = new BufferedMailbox<SyncOperation>(500, 25);
+    this.inbox = new Mailbox();
+    this.bufferedOutbox = new BufferedMailbox(500, 25);
     this.outbox = this.bufferedOutbox;
-    this.deadLetter = new Mailbox<SyncOperation>();
+    this.deadLetter = new Mailbox();
 
     this.outbox.onAdded((syncOps) => {
       this.handleOutboxAdded(syncOps);
+    });
+
+    // update persistent ack cursor when operations are finished being applied
+    // TODO: this hits for every syncop -- we should only do this after all syncops
+    this.inbox.onAdded((syncOps) => {
+      for (const syncOp of syncOps) {
+        syncOp.on((op, _, next) => {
+          if (next === SyncOperationStatus.Applied) {
+            let maxOrdinal = this.inbox.ackOrdinal;
+            for (const o of op.operations) {
+              maxOrdinal = Math.max(maxOrdinal, o.context.ordinal);
+            }
+
+            if (maxOrdinal > this.inbox.ackOrdinal) {
+              void this.cursorStorage.upsert({
+                remoteName: this.remoteName,
+                cursorType: "inbox",
+                cursorOrdinal: maxOrdinal,
+                lastSyncedAtUtcMs: Date.now(),
+              });
+            }
+          }
+        });
+      }
     });
   }
 
@@ -111,6 +135,16 @@ export class GqlChannel implements IChannel {
    */
   async init(): Promise<void> {
     await this.touchRemoteChannel();
+
+    // get cursors
+    const cursors = await this.cursorStorage.list(this.remoteName);
+    this.inbox.init(
+      cursors.find((c) => c.cursorType === "inbox")?.cursorOrdinal ?? 0,
+    );
+    this.outbox.init(
+      cursors.find((c) => c.cursorType === "outbox")?.cursorOrdinal ?? 0,
+    );
+
     this.pollTimer.setDelegate(() => this.poll());
     this.pollTimer.start();
   }
@@ -127,71 +161,37 @@ export class GqlChannel implements IChannel {
       return;
     }
 
-    let cursor;
+    let response;
     try {
-      cursor = await this.cursorStorage.get(this.remoteName, "inbox");
+      response = await this.pollSyncEnvelopes(
+        this.inbox.ackOrdinal,
+        this.inbox.latestOrdinal,
+      );
     } catch (error) {
       this.handlePollError(error);
       return;
     }
 
-    const cursorOrdinal = cursor.cursorOrdinal;
+    const { envelopes } = response;
 
-    let envelopes;
-    try {
-      envelopes = await this.pollSyncEnvelopes(cursorOrdinal);
-    } catch (error) {
-      this.handlePollError(error);
-      return;
-    }
-
-    let maxCursorOrdinal = cursorOrdinal;
-
+    // todo: Is this necessary? Outbox items should have been sorted when returned.
     const sortedEnvelopes = sortEnvelopesByFirstOperationTimestamp(envelopes);
-    const hasKeyedEnvelopes = sortedEnvelopes.some(
-      (e) => e.key || (e.dependsOn && e.dependsOn.length > 0),
-    );
 
-    if (hasKeyedEnvelopes) {
-      this.inbox.pause();
-    }
-    try {
-      const allSyncOps: SyncOperation[] = [];
-      for (const envelope of sortedEnvelopes) {
-        if (
-          envelope.type.toLowerCase() === "operations" &&
-          envelope.operations
-        ) {
-          const syncOps = envelopesToSyncOperations(envelope, this.remoteName);
-          for (const syncOp of syncOps) {
-            syncOp.transported();
-          }
-          allSyncOps.push(...syncOps);
+    // convert the envelopes to sync operations
+    const allSyncOps: SyncOperation[] = [];
+    for (const envelope of sortedEnvelopes) {
+      if (envelope.type === "operations" && envelope.operations) {
+        const syncOps = envelopesToSyncOperations(envelope, this.remoteName);
+        for (const syncOp of syncOps) {
+          syncOp.transported();
         }
-
-        if (
-          envelope.cursor &&
-          envelope.cursor.cursorOrdinal > maxCursorOrdinal
-        ) {
-          maxCursorOrdinal = envelope.cursor.cursorOrdinal;
-        }
-      }
-      if (allSyncOps.length > 0) {
-        this.inbox.add(...allSyncOps);
-      }
-    } finally {
-      if (hasKeyedEnvelopes) {
-        this.inbox.resume();
+        allSyncOps.push(...syncOps);
       }
     }
 
-    if (maxCursorOrdinal > cursorOrdinal) {
-      try {
-        await this.updateCursor(maxCursorOrdinal);
-      } catch (error) {
-        this.handlePollError(error);
-        return;
-      }
+    // add all of them to the inbox
+    if (allSyncOps.length > 0) {
+      this.inbox.add(...allSyncOps);
     }
 
     this.lastSuccessUtcMs = Date.now();
@@ -265,8 +265,12 @@ export class GqlChannel implements IChannel {
    * Queries the remote GraphQL endpoint for sync envelopes.
    */
   private async pollSyncEnvelopes(
-    cursorOrdinal: number,
-  ): Promise<SyncEnvelope[]> {
+    ackOrdinal: number,
+    latestOrdinal: number,
+  ): Promise<{
+    envelopes: SyncEnvelope[];
+    cursorOrdinal: number;
+  }> {
     const query = `
       query PollSyncEnvelopes($channelId: String!, $cursorOrdinal: Int!) {
         pollSyncEnvelopes(channelId: $channelId, cursorOrdinal: $cursorOrdinal) {
@@ -331,14 +335,19 @@ export class GqlChannel implements IChannel {
 
     const variables = {
       channelId: this.channelId,
-      cursorOrdinal,
+      outboxAck: ackOrdinal,
+      outboxLatest: latestOrdinal,
     };
 
     const response = await this.executeGraphQL<{
       pollSyncEnvelopes: SyncEnvelope[];
+      cursorOrdinal: number;
     }>(query, variables);
 
-    return response.pollSyncEnvelopes;
+    return {
+      envelopes: response.pollSyncEnvelopes,
+      cursorOrdinal: response.cursorOrdinal,
+    };
   }
 
   /**
@@ -462,8 +471,6 @@ export class GqlChannel implements IChannel {
       mutation,
       variables,
     );
-
-    this.outbox.remove(...syncOps);
   }
 
   /**
@@ -609,11 +616,30 @@ export class GqlChannel implements IChannel {
   /**
    * Updates the synchronization cursor for this channel's remote.
    */
-  async updateCursor(cursorOrdinal: number): Promise<void> {
+  async ack(ackOrdinal: number): Promise<void> {
+    // update outbox items
+    const toRemove: SyncOperation[] = [];
+    for (const syncOp of this.outbox.items) {
+      for (const op of syncOp.operations) {
+        if (op.context.ordinal <= ackOrdinal) {
+          toRemove.push(syncOp);
+        }
+      }
+    }
+
+    if (toRemove.length > 0) {
+      this.outbox.remove(...toRemove);
+
+      for (const syncOp of toRemove) {
+        syncOp.executed();
+      }
+    }
+
+    // update the cursor in storage
     const cursor: RemoteCursor = {
       remoteName: this.remoteName,
-      cursorType: "inbox",
-      cursorOrdinal,
+      cursorType: "outbox",
+      cursorOrdinal: ackOrdinal,
       lastSyncedAtUtcMs: Date.now(),
     };
 
