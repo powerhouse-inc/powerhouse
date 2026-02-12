@@ -132,7 +132,40 @@ export class Mailbox implements IMailbox {
   }
 
   flush(): void {
-    // TODO
+    if (this.addedBuffer.length > 0) {
+      const items = this.addedBuffer.splice(0);
+      const callbacks = [...this.addedCallbacks];
+      const errors: Error[] = [];
+      for (const callback of callbacks) {
+        try {
+          callback(items);
+        } catch (error) {
+          errors.push(
+            error instanceof Error ? error : new Error(String(error)),
+          );
+        }
+      }
+      if (errors.length > 0) {
+        throw new MailboxAggregateError(errors);
+      }
+    }
+    if (this.removedBuffer.length > 0) {
+      const items = this.removedBuffer.splice(0);
+      const callbacks = [...this.removedCallbacks];
+      const errors: Error[] = [];
+      for (const callback of callbacks) {
+        try {
+          callback(items);
+        } catch (error) {
+          errors.push(
+            error instanceof Error ? error : new Error(String(error)),
+          );
+        }
+      }
+      if (errors.length > 0) {
+        throw new MailboxAggregateError(errors);
+      }
+    }
   }
 
   isPaused(): boolean {
