@@ -1,3 +1,14 @@
+## 6.0.0-dev.40 (2026-02-12)
+
+### 🚀 Features
+
+- **codegen:** remove redundant run generated tests command ([#2325](https://github.com/powerhouse-inc/powerhouse/pull/2325))
+- **monorepo:** add shared package ([#2324](https://github.com/powerhouse-inc/powerhouse/pull/2324))
+
+### ❤️ Thank You
+
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.0.0-dev.39 (2026-02-11)
 
 ### 🚀 Features
