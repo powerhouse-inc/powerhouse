@@ -24,7 +24,7 @@ export function documentModelModuleFileTemplate({
     utils,
   } from "${versionedDocumentModelPackageImportPath}";
 
-  /** Document model module for the Todo List document type */
+  /** Document model module for the ${pascalCaseDocumentType} document type */
   export const ${pascalCaseDocumentType}: DocumentModelModule<${phStateName}> = {
     version: ${version},
     reducer,
