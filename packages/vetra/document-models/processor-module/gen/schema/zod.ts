@@ -1,9 +1,11 @@
 import * as z from "zod";
 import type {
   AddDocumentTypeInput,
+  AddProcessorAppInput,
   DocumentTypeItem,
   ProcessorModuleState,
   RemoveDocumentTypeInput,
+  RemoveProcessorAppInput,
   SetProcessorNameInput,
   SetProcessorStatusInput,
   SetProcessorTypeInput,
@@ -34,6 +36,14 @@ export function AddDocumentTypeInputSchema(): z.ZodObject<
   });
 }
 
+export function AddProcessorAppInputSchema(): z.ZodObject<
+  Properties<AddProcessorAppInput>
+> {
+  return z.object({
+    processorApp: z.string(),
+  });
+}
+
 export function DocumentTypeItemSchema(): z.ZodObject<
   Properties<DocumentTypeItem>
 > {
@@ -51,6 +61,7 @@ export function ProcessorModuleStateSchema(): z.ZodObject<
     __typename: z.literal("ProcessorModuleState").optional(),
     documentTypes: z.array(z.lazy(() => DocumentTypeItemSchema())),
     name: z.string(),
+    processorApps: z.array(z.string()),
     status: StatusTypeSchema,
     type: z.string(),
   });
@@ -61,6 +72,14 @@ export function RemoveDocumentTypeInputSchema(): z.ZodObject<
 > {
   return z.object({
     id: z.string(),
+  });
+}
+
+export function RemoveProcessorAppInputSchema(): z.ZodObject<
+  Properties<RemoveProcessorAppInput>
+> {
+  return z.object({
+    processorApp: z.string(),
   });
 }
 

@@ -13,8 +13,8 @@
       "changeLog": [],
       "state": {
         "global": {
-          "schema": "type ProcessorModuleState {\n  name: String!\n  type: String!\n  documentTypes: [DocumentTypeItem!]!\n  status: StatusType!\n}\n\ntype DocumentTypeItem {\n  id: OID!\n  documentType: String!\n}\n\nenum StatusType {\n  DRAFT\n  CONFIRMED\n}",
-          "initialValue": "{\n  \"name\": \"\",\n  \"type\": \"\",\n  \"documentTypes\": [],\n  \"status\": \"DRAFT\"\n}",
+          "schema": "type ProcessorModuleState {\n  name: String!\n  type: String!\n  documentTypes: [DocumentTypeItem!]!\n  status: StatusType!\n processorApps: [String!]! \n}\n\ntype DocumentTypeItem {\n  id: OID!\n  documentType: String!\n}\n\nenum StatusType {\n  DRAFT\n  CONFIRMED\n}",
+          "initialValue": "{\n  \"name\": \"\",\n  \"type\": \"\",\n  \"documentTypes\": [],\n  \"status\": \"DRAFT\",\n processorApps: [] \n}",
           "examples": []
         },
         "local": {
@@ -67,6 +67,28 @@
               "name": "REMOVE_DOCUMENT_TYPE",
               "description": "",
               "schema": "input RemoveDocumentTypeInput {\n  id: OID!\n}",
+              "template": "",
+              "reducer": "",
+              "errors": [],
+              "examples": [],
+              "scope": "global"
+            },
+            {
+              "id": "df5eb500-7308-498c-9b80-028878ee198b",
+              "name": "ADD_PROCESSOR_APP",
+              "description": "",
+              "schema": "input AddProcessorAppInput {\n processorApp: String! \n}",
+              "template": "",
+              "reducer": "",
+              "errors": [],
+              "examples": [],
+              "scope": "global"
+            },
+            {
+              "id": "07e4168f-1a7b-41ef-953d-219028be7bb9",
+              "name": "REMOVE_PROCESSOR_APP",
+              "description": "",
+              "schema": "input RemoveProcessorAppInput {\n processorApp: String! \n}",
               "template": "",
               "reducer": "",
               "errors": [],

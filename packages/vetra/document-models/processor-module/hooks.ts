@@ -31,6 +31,7 @@ export function useSelectedProcessorModuleDocument(): [
   DocumentDispatch<ProcessorModuleAction>,
 ] {
   const [document, dispatch] = useSelectedDocument();
+
   assertIsProcessorModuleDocument(document);
   return [document, dispatch] as const;
 }

@@ -41,7 +41,7 @@ export function AuthorSchema(): z.ZodObject<Properties<Author>> {
   return z.object({
     __typename: z.literal("Author").optional(),
     name: z.string().nullish(),
-    website: z.string().url().nullish(),
+    website: z.url().nullish(),
   });
 }
 
@@ -66,7 +66,7 @@ export function SetPackageAuthorInputSchema(): z.ZodObject<
 > {
   return z.object({
     name: z.string().nullish(),
-    website: z.string().url().nullish(),
+    website: z.url().nullish(),
   });
 }
 
@@ -82,7 +82,7 @@ export function SetPackageAuthorWebsiteInputSchema(): z.ZodObject<
   Properties<SetPackageAuthorWebsiteInput>
 > {
   return z.object({
-    website: z.string().url(),
+    website: z.url(),
   });
 }
 
@@ -106,7 +106,7 @@ export function SetPackageGithubUrlInputSchema(): z.ZodObject<
   Properties<SetPackageGithubUrlInput>
 > {
   return z.object({
-    url: z.string().url(),
+    url: z.url(),
   });
 }
 
@@ -122,7 +122,7 @@ export function SetPackageNpmUrlInputSchema(): z.ZodObject<
   Properties<SetPackageNpmUrlInput>
 > {
   return z.object({
-    url: z.string().url(),
+    url: z.url(),
   });
 }
 
@@ -134,9 +134,9 @@ export function VetraPackageStateSchema(): z.ZodObject<
     author: z.lazy(() => AuthorSchema()),
     category: z.string().nullish(),
     description: z.string().nullish(),
-    githubUrl: z.string().url().nullish(),
+    githubUrl: z.url().nullish(),
     keywords: z.array(z.lazy(() => KeywordSchema())),
     name: z.string().nullish(),
-    npmUrl: z.string().url().nullish(),
+    npmUrl: z.url().nullish(),
   });
 }

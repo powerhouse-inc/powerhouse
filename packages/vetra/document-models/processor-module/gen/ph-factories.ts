@@ -17,6 +17,7 @@ export function defaultGlobalState(): ProcessorModuleGlobalState {
     type: "",
     documentTypes: [],
     status: "DRAFT",
+    processorApps: [],
   };
 }
 

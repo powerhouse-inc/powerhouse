@@ -4,6 +4,8 @@ import {
   SetProcessorTypeInputSchema,
   AddDocumentTypeInputSchema,
   RemoveDocumentTypeInputSchema,
+  AddProcessorAppInputSchema,
+  RemoveProcessorAppInputSchema,
   SetProcessorStatusInputSchema,
 } from "../schema/zod.js";
 import type {
@@ -11,6 +13,8 @@ import type {
   SetProcessorTypeInput,
   AddDocumentTypeInput,
   RemoveDocumentTypeInput,
+  AddProcessorAppInput,
+  RemoveProcessorAppInput,
   SetProcessorStatusInput,
 } from "../types.js";
 import type {
@@ -18,6 +22,8 @@ import type {
   SetProcessorTypeAction,
   AddDocumentTypeAction,
   RemoveDocumentTypeAction,
+  AddProcessorAppAction,
+  RemoveProcessorAppAction,
   SetProcessorStatusAction,
 } from "./actions.js";
 
@@ -54,6 +60,24 @@ export const removeDocumentType = (input: RemoveDocumentTypeInput) =>
     { ...input },
     undefined,
     RemoveDocumentTypeInputSchema,
+    "global",
+  );
+
+export const addProcessorApp = (input: AddProcessorAppInput) =>
+  createAction<AddProcessorAppAction>(
+    "ADD_PROCESSOR_APP",
+    { ...input },
+    undefined,
+    AddProcessorAppInputSchema,
+    "global",
+  );
+
+export const removeProcessorApp = (input: RemoveProcessorAppInput) =>
+  createAction<RemoveProcessorAppAction>(
+    "REMOVE_PROCESSOR_APP",
+    { ...input },
+    undefined,
+    RemoveProcessorAppInputSchema,
     "global",
   );
 
