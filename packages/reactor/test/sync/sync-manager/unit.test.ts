@@ -13,9 +13,14 @@ import type {
   IChannel,
   IChannelFactory,
 } from "../../../src/sync/interfaces.js";
+import { JobStatus } from "../../../src/shared/types.js";
 import { SyncManager } from "../../../src/sync/sync-manager.js";
 import { SyncOperation } from "../../../src/sync/sync-operation.js";
-import type { ChannelConfig, RemoteRecord } from "../../../src/sync/types.js";
+import {
+  SyncOperationStatus,
+  type ChannelConfig,
+  type RemoteRecord,
+} from "../../../src/sync/types.js";
 
 describe("SyncManager - Unit Tests", () => {
   let syncManager: SyncManager;
@@ -67,6 +72,16 @@ describe("SyncManager - Unit Tests", () => {
       resume: vi.fn(),
       isPaused: vi.fn().mockReturnValue(false),
       flush: vi.fn(),
+    };
+  }
+
+  function createTestChannel() {
+    return {
+      inbox: createMockMailbox(),
+      outbox: createMockMailbox(),
+      deadLetter: createMockMailbox(),
+      init: vi.fn().mockResolvedValue(undefined),
+      shutdown: vi.fn(),
     };
   }
 
@@ -305,6 +320,47 @@ describe("SyncManager - Unit Tests", () => {
       await expect(syncManager.startup()).rejects.toThrow(
         "SyncManager is already shutdown and cannot be started",
       );
+    });
+
+    it("should backfill outbox from ackOrdinal on startup", async () => {
+      const startupChannel = createTestChannel();
+      startupChannel.outbox.init(5);
+      vi.mocked(mockChannelFactory.instance).mockReturnValue(
+        startupChannel as any,
+      );
+
+      const remoteRecord: RemoteRecord = {
+        id: "channel1",
+        name: "remote1",
+        collectionId: "collection1",
+        channelConfig: { type: "internal", parameters: {} },
+        filter: { documentId: [], scope: [], branch: "main" },
+        options: { sinceTimestampUtcMs: "0" },
+        status: {
+          push: { state: "idle", failureCount: 0 },
+          pull: { state: "idle", failureCount: 0 },
+        },
+      };
+
+      vi.mocked(mockRemoteStorage.list).mockResolvedValue([remoteRecord]);
+      vi.mocked(mockOperationIndex.find).mockResolvedValueOnce(
+        createFindResult([
+          {
+            id: "op6",
+            documentId: "doc1",
+            scope: "global",
+            branch: "main",
+            ordinal: 6,
+          },
+        ]),
+      );
+
+      await syncManager.startup();
+
+      expect(mockOperationIndex.find).toHaveBeenCalledWith("collection1", 5, {
+        excludeSourceRemote: "remote1",
+      });
+      expect(startupChannel.outbox.add).toHaveBeenCalled();
     });
   });
 
@@ -812,14 +868,26 @@ describe("SyncManager - Unit Tests", () => {
         branch: "main",
       });
 
+      vi.mocked(mockOperationIndex.find).mockResolvedValueOnce(
+        createFindResult([
+          {
+            id: "op-wrong-doc",
+            documentId: "doc2",
+            scope: "global",
+            branch: "main",
+            ordinal: 1,
+          },
+        ]),
+      );
+
       const operations: OperationWithContext[] = [
         {
           operation: {
-            id: "op1",
+            id: "op-wrong-doc",
             index: 0,
             skip: 0,
             hash: "hash1",
-            timestampUtcMs: "2023-01-01T00:00:00.000Z",
+            timestampUtcMs: "1000",
             action: { type: "CREATE", scope: "global" } as any,
           },
           context: {
@@ -835,9 +903,11 @@ describe("SyncManager - Unit Tests", () => {
       await emitWriteReady({
         jobId: "auto-job-1",
         operations,
+        collectionMemberships: { doc2: ["collection1"] },
         jobMeta: { batchId: "auto-1", batchJobIds: ["auto-job-1"] },
       });
 
+      expect(mockOperationIndex.find).toHaveBeenCalled();
       expect(mockChannel.outbox.add).not.toHaveBeenCalled();
     });
 
@@ -944,6 +1014,91 @@ describe("SyncManager - Unit Tests", () => {
       });
     });
 
+    it("should ack inbox items matching batch jobIds via trimMailboxFromBatch", async () => {
+      await syncManager.startup();
+
+      const channelConfig: ChannelConfig = {
+        type: "internal",
+        parameters: {},
+      };
+
+      await syncManager.add("remote1", "collection1", channelConfig, {
+        documentId: [],
+        scope: [],
+        branch: "main",
+      });
+
+      const inboxSyncOp = new SyncOperation(
+        "inbox-s1",
+        "j1",
+        [],
+        "remote1",
+        "doc1",
+        ["global"],
+        "main",
+        [
+          {
+            operation: {
+              id: "inbox-op1",
+              index: 0,
+              skip: 0,
+              hash: "h-inbox",
+              timestampUtcMs: "1000",
+              action: { type: "CREATE", scope: "global" } as any,
+            },
+            context: {
+              documentId: "doc1",
+              documentType: "test",
+              scope: "global",
+              branch: "main",
+              ordinal: 1,
+            },
+          },
+        ],
+      );
+      mockChannel.inbox.items.push(inboxSyncOp);
+
+      vi.mocked(mockOperationIndex.find).mockResolvedValueOnce(
+        createFindResult([
+          {
+            id: "idx-op1",
+            documentId: "doc1",
+            scope: "global",
+            branch: "main",
+            ordinal: 1,
+          },
+        ]),
+      );
+
+      await emitWriteReady({
+        jobId: "j1",
+        operations: [
+          {
+            operation: {
+              id: "idx-op1",
+              index: 0,
+              skip: 0,
+              hash: "hash1",
+              timestampUtcMs: "1000",
+              action: { type: "CREATE", scope: "global" } as any,
+            },
+            context: {
+              documentId: "doc1",
+              documentType: "test",
+              scope: "global",
+              branch: "main",
+              ordinal: 1,
+            },
+          },
+        ],
+        collectionMemberships: { doc1: ["collection1"] },
+        jobMeta: { batchId: "auto-1", batchJobIds: ["j1"] },
+      });
+
+      expect(inboxSyncOp.status).toBe(SyncOperationStatus.Applied);
+      expect(mockChannel.inbox.remove).toHaveBeenCalledWith(inboxSyncOp);
+    });
+
     it("should use outbox.latestOrdinal as anchor for index query", async () => {
       await syncManager.startup();
 
@@ -1036,6 +1191,91 @@ describe("SyncManager - Unit Tests", () => {
       expect(mockOperationIndex.find).toHaveBeenCalledWith("collection1", 5, {
         excludeSourceRemote: "remote1",
       });
+    });
+
+    it("should fan out to multiple remotes sharing the same collection", async () => {
+      await syncManager.startup();
+
+      const channelConfig: ChannelConfig = {
+        type: "internal",
+        parameters: {},
+      };
+
+      const ch1 = createTestChannel();
+      const ch2 = createTestChannel();
+      vi.mocked(mockChannelFactory.instance)
+        .mockReturnValueOnce(ch1 as any)
+        .mockReturnValueOnce(ch2 as any);
+
+      await syncManager.add("remote-a", "shared-col", channelConfig, {
+        documentId: [],
+        scope: [],
+        branch: "main",
+      });
+      await syncManager.add("remote-b", "shared-col", channelConfig, {
+        documentId: [],
+        scope: [],
+        branch: "main",
+      });
+
+      vi.mocked(mockOperationIndex.find)
+        .mockResolvedValueOnce(
+          createFindResult([
+            {
+              id: "op1",
+              documentId: "doc1",
+              scope: "global",
+              branch: "main",
+              ordinal: 1,
+            },
+          ]),
+        )
+        .mockResolvedValueOnce(
+          createFindResult([
+            {
+              id: "op1",
+              documentId: "doc1",
+              scope: "global",
+              branch: "main",
+              ordinal: 1,
+            },
+          ]),
+        );
+
+      await emitWriteReady({
+        jobId: "j1",
+        operations: [
+          {
+            operation: {
+              id: "op1",
+              index: 0,
+              skip: 0,
+              hash: "hash1",
+              timestampUtcMs: "1000",
+              action: { type: "CREATE", scope: "global" } as any,
+            },
+            context: {
+              documentId: "doc1",
+              documentType: "test",
+              scope: "global",
+              branch: "main",
+              ordinal: 1,
+            },
+          },
+        ],
+        collectionMemberships: { doc1: ["shared-col"] },
+        jobMeta: { batchId: "auto-1", batchJobIds: ["j1"] },
+      });
+
+      expect(mockOperationIndex.find).toHaveBeenCalledTimes(2);
+      expect(mockOperationIndex.find).toHaveBeenCalledWith("shared-col", 0, {
+        excludeSourceRemote: "remote-a",
+      });
+      expect(mockOperationIndex.find).toHaveBeenCalledWith("shared-col", 0, {
+        excludeSourceRemote: "remote-b",
+      });
+      expect(ch1.outbox.add).toHaveBeenCalled();
+      expect(ch2.outbox.add).toHaveBeenCalled();
     });
   });
 
@@ -2338,6 +2578,70 @@ describe("SyncManager - Unit Tests", () => {
         undefined,
         { sourceRemote: "remote-inbox2" },
       );
+    });
+
+    it("should move non-keyed SyncOp to dead-letter when job status is FAILED", async () => {
+      await syncManager.startup();
+
+      const channelConfig: ChannelConfig = {
+        type: "internal",
+        parameters: {},
+      };
+
+      const ch = createTestChannel();
+      vi.mocked(mockChannelFactory.instance).mockReturnValue(ch as any);
+
+      await syncManager.add("remote-fail", "col1", channelConfig, {
+        documentId: [],
+        scope: [],
+        branch: "main",
+      });
+
+      vi.mocked(mockReactor.load).mockResolvedValueOnce({
+        id: "reactor-job-fail",
+      } as any);
+      vi.mocked(mockReactor.getJobStatus).mockResolvedValueOnce({
+        id: "reactor-job-fail",
+        status: JobStatus.FAILED,
+        error: { message: "Reducer threw" },
+      } as any);
+
+      const syncOp = new SyncOperation(
+        "s1",
+        "",
+        [],
+        "remote-fail",
+        "doc1",
+        ["global"],
+        "main",
+        [
+          {
+            operation: {
+              id: "op1",
+              index: 0,
+              skip: 0,
+              hash: "h1",
+              timestampUtcMs: "1000",
+              action: { type: "CREATE", scope: "global" } as any,
+            },
+            context: {
+              documentId: "doc1",
+              documentType: "test",
+              scope: "global",
+              branch: "main",
+              ordinal: 1,
+            },
+          },
+        ],
+      );
+
+      const inboxCb = vi.mocked(ch.inbox.onAdded).mock.calls[0][0];
+      inboxCb([syncOp]);
+      await new Promise((r) => setTimeout(r, 20));
+
+      expect(syncOp.status).toBe(SyncOperationStatus.Error);
+      expect(ch.deadLetter.add).toHaveBeenCalledWith(syncOp);
+      expect(ch.inbox.remove).toHaveBeenCalledWith(syncOp);
     });
 
     it("should handle loadBatch failure by marking all SyncOps as failed", async () => {
