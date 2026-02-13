@@ -42,6 +42,7 @@ import {
   createIdleHealth,
   filterOperations,
   toOperationWithContext,
+  trimMailboxFromBatch,
 } from "./utils.js";
 
 export class SyncManager implements ISyncManager {
@@ -339,7 +340,7 @@ export class SyncManager implements ISyncManager {
 
     // ack matching inbox items
     for (const remote of affectedRemotes) {
-      this.ackInbox(remote, batch);
+      trimMailboxFromBatch(remote.channel.inbox, batch);
     }
 
     // finally, work through the affected remotes and backfill based on the last operation in the outbox
@@ -511,31 +512,6 @@ export class SyncManager implements ISyncManager {
       }
 
       remote.channel.inbox.remove(syncOp);
-    }
-  }
-
-  private ackInbox(remote: Remote, batch: PreparedBatch): void {
-    const toRemove: SyncOperation[] = [];
-
-    // we want to guarantee:
-    //
-    // 1. sync ops are out of the inbox before being marked as executed
-    // 2. we remove syncops as a batch
-    for (const syncOp of batch.entries) {
-      for (const item of remote.channel.inbox.items) {
-        if (syncOp.event.jobId === item.jobId) {
-          toRemove.push(item);
-          break;
-        }
-      }
-    }
-
-    if (toRemove.length > 0) {
-      remote.channel.inbox.remove(...toRemove);
-
-      for (const syncOp of toRemove) {
-        syncOp.executed();
-      }
     }
   }
 

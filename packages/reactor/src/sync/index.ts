@@ -10,22 +10,22 @@ export type { ShutdownStatus } from "../shared/types.js";
 export type {
   ChannelConfig,
   ChannelHealth,
+  ChannelMeta,
   JwtHandler,
-  SyncOperationErrorType,
+  RemoteCursor,
   RemoteFilter,
   RemoteOptions,
   RemoteRecord,
-  RemoteCursor,
   RemoteStatus,
   SyncEnvelope,
   SyncEnvelopeType,
-  ChannelMeta,
-  SyncPendingEvent,
-  SyncSucceededEvent,
   SyncFailedEvent,
+  SyncOperationErrorType,
+  SyncPendingEvent,
   SyncResult,
-  SyncResultStatus,
   SyncResultError,
+  SyncResultStatus,
+  SyncSucceededEvent,
 } from "./types.js";
 
 export {
@@ -34,33 +34,34 @@ export {
   SyncOperationStatus,
 } from "./types.js";
 
+export { BufferedMailbox } from "./buffered-mailbox.js";
+export { Mailbox, type IMailbox } from "./mailbox.js";
 export {
   SyncOperation,
   SyncOperationAggregateError,
 } from "./sync-operation.js";
-export { Mailbox, type MailboxItem } from "./mailbox.js";
-export { BufferedMailbox } from "./buffered-mailbox.js";
 
 export { ChannelError, PollingChannelError } from "./errors.js";
 
 export {
-  PollingChannel,
+  CompositeChannelFactory,
   GqlChannel,
   GqlChannelFactory,
-  CompositeChannelFactory,
   IntervalPollTimer,
+  PollingChannel,
   type GqlChannelConfig,
   type IPollTimer,
 } from "./channels/index.js";
 
-export { SyncManager } from "./sync-manager.js";
 export { SyncBuilder } from "./sync-builder.js";
+export { SyncManager } from "./sync-manager.js";
 
 export {
   batchOperationsByDocument,
   createIdleHealth,
   filterOperations,
   sortEnvelopesByFirstOperationTimestamp,
+  trimMailboxFromAckOrdinal,
 } from "./utils.js";
 
 export type { OperationBatch } from "./utils.js";

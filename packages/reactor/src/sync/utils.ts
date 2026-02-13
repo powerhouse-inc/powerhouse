@@ -5,6 +5,9 @@ import {
   type OperationIndexEntry,
 } from "../cache/operation-index-types.js";
 import type { JobWriteReadyEvent } from "../events/types.js";
+import type { PreparedBatch } from "./batch-aggregator.js";
+import type { IMailbox } from "./mailbox.js";
+import type { SyncOperation } from "./sync-operation.js";
 import type { ChannelHealth, RemoteFilter } from "./types.js";
 
 export type OperationBatch = {
@@ -13,6 +16,70 @@ export type OperationBatch = {
   scope: string;
   operations: OperationWithContext[];
 };
+
+/**
+ * Trims a mailbox using the jobIds from a batch.
+ */
+export function trimMailboxFromBatch(
+  mailbox: IMailbox,
+  batch: PreparedBatch,
+): void {
+  const toRemove: SyncOperation[] = [];
+
+  // we want to guarantee:
+  //
+  // 1. sync ops are still in the inbox when marked as executed
+  // 2. we remove syncops as a batch after they have been executed
+  for (const syncOp of batch.entries) {
+    for (const item of mailbox.items) {
+      if (syncOp.event.jobId === item.jobId) {
+        toRemove.push(item);
+        break;
+      }
+    }
+  }
+
+  if (toRemove.length > 0) {
+    for (const syncOp of toRemove) {
+      syncOp.executed();
+    }
+
+    mailbox.remove(...toRemove);
+  }
+}
+
+/**
+ * Trims a mailbox using the ack ordinal.
+ */
+export function trimMailboxFromAckOrdinal(
+  mailbox: IMailbox,
+  ackOrdinal: number,
+) {
+  const toRemove: SyncOperation[] = [];
+
+  // we want to guarantee:
+  //
+  // 1. sync ops are still in the mailbox when marked as applied
+  // 2. we remove syncops as a single batch
+  for (const syncOp of mailbox.items) {
+    let maxOrdinal = 0;
+    for (const op of syncOp.operations) {
+      maxOrdinal = Math.max(maxOrdinal, op.context.ordinal);
+    }
+
+    if (maxOrdinal <= ackOrdinal) {
+      toRemove.push(syncOp);
+    }
+  }
+
+  if (toRemove.length > 0) {
+    for (const syncOp of toRemove) {
+      syncOp.executed();
+    }
+
+    mailbox.remove(...toRemove);
+  }
+}
 
 /**
  * Filters operations based on a remote's filter criteria.
