@@ -34,6 +34,9 @@ export class GqlResponseChannel implements IChannel {
     this.outbox = new Mailbox();
     this.deadLetter = new Mailbox();
 
+    // Instead of listening to syncops directly for cursor updates, we listen
+    // to the mailbox. This is for efficiency: many syncops may fire on a trim,
+    // but only one onRemoved callback will be fired for the batch.
     this.outbox.onRemoved((syncOps) => {
       const maxOrdinal = getLatestAppliedOrdinal(syncOps);
       if (maxOrdinal > this.outbox.ackOrdinal) {
