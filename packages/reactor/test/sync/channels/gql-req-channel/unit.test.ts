@@ -76,7 +76,7 @@ const createMockCursorStorage = (
     cursorOrdinal: 0,
   });
   return {
-    list: vi.fn(),
+    list: vi.fn().mockResolvedValue([]),
     get: mockGet,
     upsert: vi.fn().mockResolvedValue(undefined),
     remove: vi.fn().mockResolvedValue(undefined),
@@ -151,7 +151,7 @@ const createMockOperationIndex = (): IOperationIndex => ({
 const createPollTimer = (intervalMs = 2000): IPollTimer =>
   new IntervalPollTimer(intervalMs);
 
-describe("GqlChannel", () => {
+describe("GqlRequestChannel", () => {
   let originalFetch: typeof global.fetch;
 
   beforeEach(() => {
@@ -260,7 +260,7 @@ describe("GqlChannel", () => {
       await vi.advanceTimersByTimeAsync(5000);
       expect(mockFetch).toHaveBeenCalledTimes(3);
 
-      channel.shutdown();
+      await channel.shutdown();
     });
   });
 
@@ -298,7 +298,7 @@ describe("GqlChannel", () => {
       await vi.advanceTimersByTimeAsync(3000);
       expect(mockFetch).toHaveBeenCalledTimes(4);
 
-      channel.shutdown();
+      await channel.shutdown();
     });
 
     it("should query with correct GraphQL syntax", async () => {
@@ -332,7 +332,7 @@ describe("GqlChannel", () => {
           body: expect.stringContaining("pollSyncEnvelopes"),
         }),
       );
-      channel.shutdown();
+      await channel.shutdown();
     });
 
     it("should include auth token in headers when jwtHandler provided", async () => {
@@ -369,6 +369,7 @@ describe("GqlChannel", () => {
           }),
         }),
       );
+      await channel.shutdown();
     });
 
     it("should not include auth header when jwtHandler returns undefined", async () => {
@@ -405,6 +406,7 @@ describe("GqlChannel", () => {
           },
         }),
       );
+      await channel.shutdown();
     });
 
     it("should handle jwtHandler errors gracefully", async () => {
@@ -441,16 +443,19 @@ describe("GqlChannel", () => {
           },
         }),
       );
+      await channel.shutdown();
     });
 
     it("should use cursor from storage when polling", async () => {
       const cursorStorage = createMockCursorStorage();
-      vi.mocked(cursorStorage.get).mockResolvedValue({
-        remoteName: "remote-1",
-        cursorType: "inbox",
-        cursorOrdinal: 42,
-        lastSyncedAtUtcMs: Date.now(),
-      });
+      vi.mocked(cursorStorage.list).mockResolvedValue([
+        {
+          remoteName: "remote-1",
+          cursorType: "inbox",
+          cursorOrdinal: 42,
+          lastSyncedAtUtcMs: Date.now(),
+        },
+      ]);
 
       const mockFetch = createMockFetch({
         pollSyncEnvelopes: [],
@@ -474,7 +479,7 @@ describe("GqlChannel", () => {
       // Second call is the poll (first is touchChannel)
       const callBody = JSON.parse(mockFetch.mock.calls[1][1]?.body as string);
       expect(callBody.variables.cursorOrdinal).toBe(42);
-      channel.shutdown();
+      await channel.shutdown();
     });
 
     it("should use cursor 0 when cursor is at beginning", async () => {
@@ -507,7 +512,7 @@ describe("GqlChannel", () => {
       // Second call is the poll (first is touchChannel)
       const callBody = JSON.parse(mockFetch.mock.calls[1][1]?.body as string);
       expect(callBody.variables.cursorOrdinal).toBe(0);
-      channel.shutdown();
+      await channel.shutdown();
     });
 
     it("should add received operations to inbox", async () => {
@@ -565,7 +570,7 @@ describe("GqlChannel", () => {
       await vi.advanceTimersByTimeAsync(5000);
       expect(channel.inbox.items).toHaveLength(2);
 
-      channel.shutdown();
+      await channel.shutdown();
     });
   });
 
@@ -600,6 +605,7 @@ describe("GqlChannel", () => {
           }),
         );
       });
+      await channel.shutdown();
     });
 
     it("should transition job status during transport", async () => {
@@ -631,6 +637,7 @@ describe("GqlChannel", () => {
       await vi.waitFor(() => {
         expect(job.status).toBe(SyncOperationStatus.TransportPending);
       });
+      await channel.shutdown();
     });
 
     it("should include channel metadata in envelope", async () => {
@@ -663,6 +670,7 @@ describe("GqlChannel", () => {
         const body = JSON.parse(pushCall![1]?.body as string);
         expect(body.variables.envelopes[0].channelMeta.id).toBe("channel-1");
       });
+      await channel.shutdown();
     });
 
     it("should move failed push to dead letter", async () => {
@@ -727,7 +735,7 @@ describe("GqlChannel", () => {
       // After another poll failure, failureCount is 2
       expect(health.failureCount).toBe(2);
       expect(health.state).toBe("running");
-      channel.shutdown();
+      await channel.shutdown();
     });
 
     it("should stop polling after max failures", async () => {
@@ -1024,7 +1032,7 @@ describe("GqlChannel", () => {
       // After 1000ms, another poll = 3 calls
       expect(mockFetch).toHaveBeenCalledTimes(3);
 
-      channel.shutdown();
+      await channel.shutdown();
       mockFetch.mockClear();
 
       await vi.advanceTimersByTimeAsync(10000);
@@ -1075,7 +1083,7 @@ describe("GqlChannel", () => {
         expect(job.status).toBe(SyncOperationStatus.TransportPending);
       });
 
-      channel.shutdown();
+      await channel.shutdown();
 
       // Job should still be in outbox
       expect(channel.outbox.items.length).toBeGreaterThan(0);
@@ -1107,7 +1115,7 @@ describe("GqlChannel", () => {
 
       const health = channel.getHealth();
       expect(health.lastSuccessUtcMs).toBeGreaterThanOrEqual(beforePoll);
-      channel.shutdown();
+      await channel.shutdown();
     });
 
     it("should track last failure timestamp", async () => {
@@ -1138,7 +1146,7 @@ describe("GqlChannel", () => {
 
       const health = channel.getHealth();
       expect(health.lastFailureUtcMs).toBeGreaterThanOrEqual(beforePoll);
-      channel.shutdown();
+      await channel.shutdown();
     });
 
     it("should return correct health state transitions", async () => {
@@ -1217,7 +1225,7 @@ describe("GqlChannel", () => {
       await manualTimer.tick();
       expect(mockFetch).toHaveBeenCalledTimes(4);
 
-      channel.shutdown();
+      await channel.shutdown();
       expect(manualTimer.isRunning()).toBe(false);
     });
 
@@ -1248,7 +1256,7 @@ describe("GqlChannel", () => {
         expect(mockFetch).toHaveBeenCalledTimes(2);
       });
 
-      channel.shutdown();
+      await channel.shutdown();
 
       await manualTimer.tick();
       expect(mockFetch).toHaveBeenCalledTimes(2);
@@ -1309,7 +1317,7 @@ describe("GqlChannel", () => {
       await manualTimer.tick();
       expect(channel.getHealth().failureCount).toBe(0);
 
-      channel.shutdown();
+      await channel.shutdown();
     });
   });
 });

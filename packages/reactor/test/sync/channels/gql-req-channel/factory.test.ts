@@ -46,7 +46,7 @@ const createMockOperationIndex = (): IOperationIndex => ({
   getCollectionsForDocuments: vi.fn().mockResolvedValue({}),
 });
 
-describe("GqlChannelFactory", () => {
+describe("GqlRequestChannelFactory", () => {
   let originalFetch: typeof global.fetch;
   let factory: GqlChannelFactory;
 
@@ -64,7 +64,7 @@ describe("GqlChannelFactory", () => {
   });
 
   describe("instance creation", () => {
-    it("should create GqlChannel with valid config", () => {
+    it("should create GqlChannel with valid config", async () => {
       const cursorStorage = createMockCursorStorage();
       const mockFetch = createMockFetch();
       global.fetch = mockFetch;
@@ -91,10 +91,10 @@ describe("GqlChannelFactory", () => {
       expect(channel.outbox.items).toHaveLength(0);
       expect(channel.deadLetter.items).toHaveLength(0);
 
-      channel.shutdown();
+      await channel.shutdown();
     });
 
-    it("should pass all optional parameters to GqlChannel", () => {
+    it("should pass all optional parameters to GqlChannel", async () => {
       const cursorStorage = createMockCursorStorage();
       const mockFetch = createMockFetch();
       global.fetch = mockFetch;
@@ -122,10 +122,10 @@ describe("GqlChannelFactory", () => {
       );
 
       expect(channel).toBeInstanceOf(GqlRequestChannel);
-      channel.shutdown();
+      await channel.shutdown();
     });
 
-    it("should work with minimal config (url only)", () => {
+    it("should work with minimal config (url only)", async () => {
       const cursorStorage = createMockCursorStorage();
       const mockFetch = createMockFetch();
       global.fetch = mockFetch;
@@ -148,7 +148,7 @@ describe("GqlChannelFactory", () => {
       );
 
       expect(channel).toBeInstanceOf(GqlRequestChannel);
-      channel.shutdown();
+      await channel.shutdown();
     });
   });
 
@@ -349,7 +349,7 @@ describe("GqlChannelFactory", () => {
   });
 
   describe("multiple instances", () => {
-    it("should create multiple independent channels", () => {
+    it("should create multiple independent channels", async () => {
       const cursorStorage1 = createMockCursorStorage();
       const cursorStorage2 = createMockCursorStorage();
       const mockFetch = createMockFetch();
@@ -393,13 +393,13 @@ describe("GqlChannelFactory", () => {
       expect(channel2).toBeInstanceOf(GqlRequestChannel);
       expect(channel1).not.toBe(channel2);
 
-      channel1.shutdown();
-      channel2.shutdown();
+      await channel1.shutdown();
+      await channel2.shutdown();
     });
   });
 
   describe("parameter extraction", () => {
-    it("should handle undefined optional parameters", () => {
+    it("should handle undefined optional parameters", async () => {
       const cursorStorage = createMockCursorStorage();
       const mockFetch = createMockFetch();
       global.fetch = mockFetch;
@@ -424,10 +424,10 @@ describe("GqlChannelFactory", () => {
       );
 
       expect(channel).toBeInstanceOf(GqlRequestChannel);
-      channel.shutdown();
+      await channel.shutdown();
     });
 
-    it("should accept extra unrecognized parameters without error", () => {
+    it("should accept extra unrecognized parameters without error", async () => {
       const cursorStorage = createMockCursorStorage();
       const mockFetch = createMockFetch();
       global.fetch = mockFetch;
@@ -452,7 +452,7 @@ describe("GqlChannelFactory", () => {
       );
 
       expect(channel).toBeInstanceOf(GqlRequestChannel);
-      channel.shutdown();
+      await channel.shutdown();
     });
   });
 });
