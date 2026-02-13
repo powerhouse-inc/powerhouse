@@ -79,6 +79,9 @@ export class SyncOperation {
 
   private transition(next: SyncOperationStatus): void {
     const prev = this.status;
+    if (next <= prev) {
+      return;
+    }
     this.status = next;
     const errors: Error[] = [];
     for (const callback of this.callbacks) {
