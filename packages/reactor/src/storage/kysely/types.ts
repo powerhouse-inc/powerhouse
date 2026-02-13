@@ -49,6 +49,7 @@ export interface OperationIndexOperationTable {
   skip: number;
   hash: string;
   action: unknown;
+  sourceRemote: Generated<string>;
 }
 
 export interface SyncRemoteTable {

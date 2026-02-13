@@ -420,6 +420,7 @@ describe("SyncManager Integration", () => {
           documentId: "doc1",
           documentType: "test",
           scope: "global",
+          sourceRemote: "",
           branch: "main",
         },
         {
@@ -427,6 +428,7 @@ describe("SyncManager Integration", () => {
           documentId: "doc2",
           documentType: "test",
           scope: "global",
+          sourceRemote: "",
           branch: "main",
         },
       ]);
@@ -563,6 +565,7 @@ describe("SyncManager Integration", () => {
           documentId: "doc1",
           documentType: "test",
           scope: "global",
+          sourceRemote: "",
           branch: "main",
         },
         {
@@ -570,6 +573,7 @@ describe("SyncManager Integration", () => {
           documentId: "doc2",
           documentType: "test",
           scope: "global",
+          sourceRemote: "",
           branch: "main",
         },
       ]);

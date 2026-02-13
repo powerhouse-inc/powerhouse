@@ -552,6 +552,7 @@ export class SyncManager implements ISyncManager {
     const results = await this.operationIndex.find(
       remote.collectionId,
       ackOrdinal,
+      { excludeSourceRemote: remote.name },
     );
 
     // apply the remote filter

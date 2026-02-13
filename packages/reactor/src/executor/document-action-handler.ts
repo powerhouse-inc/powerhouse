@@ -48,6 +48,7 @@ export class DocumentActionHandler {
     startTime: number,
     indexTxn: IOperationIndexTxn,
     skip: number = 0,
+    sourceRemote: string = "",
   ): Promise<
     JobResult & {
       operationsWithContext?: Array<{
@@ -63,15 +64,47 @@ export class DocumentActionHandler {
   > {
     switch (action.type) {
       case "CREATE_DOCUMENT":
-        return this.executeCreate(job, action, startTime, indexTxn, skip);
+        return this.executeCreate(
+          job,
+          action,
+          startTime,
+          indexTxn,
+          skip,
+          sourceRemote,
+        );
       case "DELETE_DOCUMENT":
-        return this.executeDelete(job, action, startTime, indexTxn);
+        return this.executeDelete(
+          job,
+          action,
+          startTime,
+          indexTxn,
+          sourceRemote,
+        );
       case "UPGRADE_DOCUMENT":
-        return this.executeUpgrade(job, action, startTime, indexTxn, skip);
+        return this.executeUpgrade(
+          job,
+          action,
+          startTime,
+          indexTxn,
+          skip,
+          sourceRemote,
+        );
       case "ADD_RELATIONSHIP":
-        return this.executeAddRelationship(job, action, startTime, indexTxn);
+        return this.executeAddRelationship(
+          job,
+          action,
+          startTime,
+          indexTxn,
+          sourceRemote,
+        );
       case "REMOVE_RELATIONSHIP":
-        return this.executeRemoveRelationship(job, action, startTime, indexTxn);
+        return this.executeRemoveRelationship(
+          job,
+          action,
+          startTime,
+          indexTxn,
+          sourceRemote,
+        );
       default:
         return buildErrorResult(
           job,
@@ -87,6 +120,7 @@ export class DocumentActionHandler {
     startTime: number,
     indexTxn: IOperationIndexTxn,
     skip: number = 0,
+    sourceRemote: string = "",
   ): Promise<
     JobResult & {
       operationsWithContext?: Array<{
@@ -155,6 +189,7 @@ export class DocumentActionHandler {
         documentType: document.header.documentType,
         branch: job.branch,
         scope: job.scope,
+        sourceRemote,
       },
     ]);
 
@@ -185,6 +220,7 @@ export class DocumentActionHandler {
     action: Action,
     startTime: number,
     indexTxn: IOperationIndexTxn,
+    sourceRemote: string = "",
   ): Promise<
     JobResult & {
       operationsWithContext?: Array<{
@@ -272,6 +308,7 @@ export class DocumentActionHandler {
         documentType: document.header.documentType,
         branch: job.branch,
         scope: job.scope,
+        sourceRemote,
       },
     ]);
 
@@ -297,6 +334,7 @@ export class DocumentActionHandler {
     startTime: number,
     indexTxn: IOperationIndexTxn,
     skip: number = 0,
+    sourceRemote: string = "",
   ): Promise<
     JobResult & {
       operationsWithContext?: Array<{
@@ -436,6 +474,7 @@ export class DocumentActionHandler {
         documentType: document.header.documentType,
         branch: job.branch,
         scope: job.scope,
+        sourceRemote,
       },
     ]);
 
@@ -460,6 +499,7 @@ export class DocumentActionHandler {
     action: Action,
     startTime: number,
     indexTxn: IOperationIndexTxn,
+    sourceRemote: string = "",
   ): Promise<
     JobResult & {
       operationsWithContext?: Array<{
@@ -575,6 +615,7 @@ export class DocumentActionHandler {
         documentType: sourceDoc.header.documentType,
         branch: job.branch,
         scope: job.scope,
+        sourceRemote,
       },
     ]);
 
@@ -605,6 +646,7 @@ export class DocumentActionHandler {
     action: Action,
     startTime: number,
     indexTxn: IOperationIndexTxn,
+    sourceRemote: string = "",
   ): Promise<
     JobResult & {
       operationsWithContext?: Array<{
@@ -710,6 +752,7 @@ export class DocumentActionHandler {
         documentType: sourceDoc.header.documentType,
         branch: job.branch,
         scope: job.scope,
+        sourceRemote,
       },
     ]);
 

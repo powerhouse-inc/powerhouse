@@ -107,6 +107,7 @@ describe("SimpleJobExecutor Integration (Modern Storage)", () => {
         documentType,
         branch: "main",
         scope: "document",
+        sourceRemote: "",
       },
       {
         ...upgradeOperation,
@@ -114,6 +115,7 @@ describe("SimpleJobExecutor Integration (Modern Storage)", () => {
         documentType,
         branch: "main",
         scope: "document",
+        sourceRemote: "",
       },
     ]);
 

@@ -128,6 +128,7 @@ describe("KyselyOperationIndexTxn", () => {
       documentType: "budget",
       branch: "main",
       scope: "document",
+      sourceRemote: "",
       index: 0,
       timestampUtcMs: "2021-01-01T00:00:00.000Z",
       hash: "hash-001",
@@ -165,6 +166,7 @@ describe("KyselyOperationIndexTxn", () => {
       documentType: "budget",
       branch: "main",
       scope: "document",
+      sourceRemote: "",
       index: 0,
       timestampUtcMs: "2021-01-01T00:00:00.000Z",
       hash: "hash-001",
@@ -194,6 +196,7 @@ describe("KyselyOperationIndexTxn", () => {
       documentType: "budget",
       branch: "main",
       scope: "document",
+      sourceRemote: "",
       index: 0,
       timestampUtcMs: "2021-01-01T00:00:00.000Z",
       hash: "hash-001",
@@ -213,6 +216,7 @@ describe("KyselyOperationIndexTxn", () => {
       documentType: "budget",
       branch: "main",
       scope: "document",
+      sourceRemote: "",
       index: 1,
       timestampUtcMs: "2021-01-01T00:00:00.001Z",
       hash: "hash-002",
@@ -333,6 +337,7 @@ describe("KyselyOperationIndex.commit()", () => {
       documentType: "budget",
       branch: "main",
       scope: "document",
+      sourceRemote: "",
       index: 0,
       timestampUtcMs: "2021-01-01T00:00:00.000Z",
       hash: "hash-001",
@@ -375,6 +380,7 @@ describe("KyselyOperationIndex.commit()", () => {
       documentType: "budget",
       branch: "main",
       scope: "document",
+      sourceRemote: "",
       index: 0,
       timestampUtcMs: "2021-01-01T00:00:00.000Z",
       hash: "hash-001",
@@ -420,6 +426,7 @@ describe("KyselyOperationIndex.commit()", () => {
           timestampUtcMs: "2021-01-01T00:00:00.000Z",
           scope: "document",
         },
+        sourceRemote: "",
       },
     ]);
   });
@@ -601,6 +608,7 @@ describe("KyselyOperationIndex.find()", () => {
         index: 0,
         skip: 0,
         hash: "hash-001",
+        sourceRemote: "",
         action: {
           id: "action-1",
           type: "CREATE_DOCUMENT",
@@ -620,6 +628,7 @@ describe("KyselyOperationIndex.find()", () => {
         index: 0,
         skip: 0,
         hash: "hash-002",
+        sourceRemote: "",
         action: {
           id: "action-1",
           type: "CREATE_DOCUMENT",
@@ -659,6 +668,7 @@ describe("KyselyOperationIndex.find()", () => {
         index: 0,
         skip: 0,
         hash: "hash-001",
+        sourceRemote: "",
         action: {
           id: "action-1",
           type: "CREATE_DOCUMENT",
@@ -698,6 +708,7 @@ describe("KyselyOperationIndex.find()", () => {
         index: 0,
         skip: 0,
         hash: "hash-001",
+        sourceRemote: "",
         action: {
           id: "action-1",
           type: "CREATE_DOCUMENT",
@@ -717,6 +728,7 @@ describe("KyselyOperationIndex.find()", () => {
         index: 0,
         skip: 0,
         hash: "hash-002",
+        sourceRemote: "",
         action: {
           id: "action-1",
           type: "CREATE_DOCUMENT",
@@ -785,6 +797,7 @@ describe("KyselyOperationIndex.find()", () => {
         index: 0,
         skip: 0,
         hash: "hash-001",
+        sourceRemote: "",
         action: {
           id: "action-1",
           type: "CREATE_DOCUMENT",
@@ -805,6 +818,7 @@ describe("KyselyOperationIndex.find()", () => {
       documentType: "budget",
       branch: "main",
       scope: "document",
+      sourceRemote: "",
       index: 0,
       timestampUtcMs: "2021-01-01T00:00:00.000Z",
       hash: "hash-001",

@@ -138,6 +138,7 @@ export class KyselyOperationIndex implements IOperationIndex {
             skip: op.skip,
             hash: op.hash,
             action: op.action as unknown,
+            sourceRemote: op.sourceRemote,
           }));
 
         const insertedOps = await trx
@@ -226,6 +227,10 @@ export class KyselyOperationIndex implements IOperationIndex {
 
     if (view?.scopes && view.scopes.length > 0) {
       query = query.where("oi.scope", "in", view.scopes);
+    }
+
+    if (view?.excludeSourceRemote) {
+      query = query.where("oi.sourceRemote", "!=", view.excludeSourceRemote);
     }
 
     if (paging?.cursor) {
@@ -431,6 +436,7 @@ export class KyselyOperationIndex implements IOperationIndex {
       skip: row.skip,
       action: row.action as OperationIndexEntry["action"],
       id: row.opId,
+      sourceRemote: row.sourceRemote,
     };
   }
 
