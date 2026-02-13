@@ -1,9 +1,13 @@
+import type { ILogger } from "../../logging/types.js";
 import type { ISyncCursorStorage } from "../../storage/interfaces.js";
 import type { IChannel } from "../interfaces.js";
 import { Mailbox } from "../mailbox.js";
+import { getLatestAppliedOrdinal } from "./utils.js";
 
 /**
- * Channel for cursor-based polling by external clients.
+ * This class is used server-side to accumulate inbox + outbox operations.
+ *
+ * In general, the resolvers are responsible for updating mailboxes.
  */
 export class GqlResponseChannel implements IChannel {
   readonly inbox: Mailbox;
@@ -16,6 +20,7 @@ export class GqlResponseChannel implements IChannel {
   private isShutdown: boolean;
 
   constructor(
+    private readonly logger: ILogger,
     channelId: string,
     remoteName: string,
     cursorStorage: ISyncCursorStorage,
@@ -28,6 +33,46 @@ export class GqlResponseChannel implements IChannel {
     this.inbox = new Mailbox();
     this.outbox = new Mailbox();
     this.deadLetter = new Mailbox();
+
+    this.outbox.onRemoved((syncOps) => {
+      const maxOrdinal = getLatestAppliedOrdinal(syncOps);
+      if (maxOrdinal > this.outbox.ackOrdinal) {
+        this.cursorStorage
+          .upsert({
+            remoteName: this.remoteName,
+            cursorType: "outbox",
+            cursorOrdinal: maxOrdinal,
+            lastSyncedAtUtcMs: Date.now(),
+          })
+          .catch((error) => {
+            this.logger.error(
+              "Failed to update outbox cursor for @ChannelId! This means that future application runs may resend duplicate operations. This is recoverable (with deduplication protection), but not-optimal: @Error",
+              this.channelId,
+              error,
+            );
+          });
+      }
+    });
+
+    this.inbox.onRemoved((syncOps) => {
+      const maxOrdinal = getLatestAppliedOrdinal(syncOps);
+      if (maxOrdinal > this.inbox.ackOrdinal) {
+        this.cursorStorage
+          .upsert({
+            remoteName: this.remoteName,
+            cursorType: "inbox",
+            cursorOrdinal: maxOrdinal,
+            lastSyncedAtUtcMs: Date.now(),
+          })
+          .catch((error) => {
+            this.logger.error(
+              "Failed to update inbox cursor for @ChannelId! This is unlikely to cause a problem, but not-optimal: @Error",
+              this.channelId,
+              error,
+            );
+          });
+      }
+    });
   }
 
   shutdown(): Promise<void> {
@@ -36,7 +81,7 @@ export class GqlResponseChannel implements IChannel {
   }
 
   async init(): Promise<void> {
-    // get cursors
+    // get cursors -- these are the last acknowledged ordinals for the inbox and outbox
     const cursors = await this.cursorStorage.list(this.remoteName);
     this.inbox.init(
       cursors.find((c) => c.cursorType === "inbox")?.cursorOrdinal ?? 0,

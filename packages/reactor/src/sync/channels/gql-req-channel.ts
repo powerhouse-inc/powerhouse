@@ -1,4 +1,3 @@
-import type { Action, Signature } from "document-model";
 import type { IOperationIndex } from "../../cache/operation-index-types.js";
 import type { ILogger } from "../../logging/types.js";
 import type { ISyncCursorStorage } from "../../storage/interfaces.js";
@@ -7,16 +6,18 @@ import { ChannelError } from "../errors.js";
 import type { IChannel } from "../interfaces.js";
 import { type IMailbox, Mailbox } from "../mailbox.js";
 import type { SyncOperation } from "../sync-operation.js";
-import type {
-  JwtHandler,
-  RemoteCursor,
-  RemoteFilter,
-  SyncEnvelope,
-} from "../types.js";
+import type { JwtHandler, RemoteFilter, SyncEnvelope } from "../types.js";
 import { ChannelErrorSource } from "../types.js";
-import { sortEnvelopesByFirstOperationTimestamp } from "../utils.js";
+import {
+  sortEnvelopesByFirstOperationTimestamp,
+  trimMailboxFromAckOrdinal,
+} from "../utils.js";
 import type { IPollTimer } from "./poll-timer.js";
-import { envelopesToSyncOperations } from "./utils.js";
+import {
+  envelopesToSyncOperations,
+  getLatestAppliedOrdinal,
+  serializeEnvelope,
+} from "./utils.js";
 
 /**
  * Configuration parameters for GqlChannel
@@ -110,6 +111,46 @@ export class GqlRequestChannel implements IChannel {
         this.outbox.remove(...syncOps);
       });
     });
+
+    this.outbox.onRemoved((syncOps) => {
+      const maxOrdinal = getLatestAppliedOrdinal(syncOps);
+      if (maxOrdinal > this.outbox.ackOrdinal) {
+        this.cursorStorage
+          .upsert({
+            remoteName: this.remoteName,
+            cursorType: "outbox",
+            cursorOrdinal: maxOrdinal,
+            lastSyncedAtUtcMs: Date.now(),
+          })
+          .catch((error) => {
+            this.logger.error(
+              "Failed to update outbox cursor for @ChannelId! This means that future application runs may resend duplicate operations. This is recoverable (with deduplication protection), but not-optimal: @Error",
+              this.channelId,
+              error,
+            );
+          });
+      }
+    });
+
+    this.inbox.onRemoved((syncOps) => {
+      const maxOrdinal = getLatestAppliedOrdinal(syncOps);
+      if (maxOrdinal > this.inbox.ackOrdinal) {
+        this.cursorStorage
+          .upsert({
+            remoteName: this.remoteName,
+            cursorType: "inbox",
+            cursorOrdinal: maxOrdinal,
+            lastSyncedAtUtcMs: Date.now(),
+          })
+          .catch((error) => {
+            this.logger.error(
+              "Failed to update inbox cursor for @ChannelId! This is unlikely to cause a problem, but not-optimal: @Error",
+              this.channelId,
+              error,
+            );
+          });
+      }
+    });
   }
 
   /**
@@ -129,7 +170,7 @@ export class GqlRequestChannel implements IChannel {
   async init(): Promise<void> {
     await this.touchRemoteChannel();
 
-    // get cursors
+    // get cursors -- these are the last acknowledged ordinals for the inbox and outbox
     const cursors = await this.cursorStorage.list(this.remoteName);
     this.inbox.init(
       cursors.find((c) => c.cursorType === "inbox")?.cursorOrdinal ?? 0,
@@ -169,25 +210,7 @@ export class GqlRequestChannel implements IChannel {
 
     // first: trim outbox
     if (ackOrdinal > 0) {
-      const toRemove: SyncOperation[] = [];
-      for (const syncOp of this.outbox.items) {
-        let maxOrdinal = 0;
-        for (const op of syncOp.operations) {
-          maxOrdinal = Math.max(maxOrdinal, op.context.ordinal);
-        }
-
-        if (maxOrdinal <= ackOrdinal) {
-          toRemove.push(syncOp);
-        }
-      }
-
-      if (toRemove.length > 0) {
-        this.outbox.remove(...toRemove);
-
-        for (const syncOp of toRemove) {
-          syncOp.executed();
-        }
-      }
+      trimMailboxFromAckOrdinal(this.outbox, ackOrdinal);
     }
 
     // todo: Is this necessary? Outbox items should have been sorted when returned.
@@ -460,70 +483,13 @@ export class GqlRequestChannel implements IChannel {
     `;
 
     const variables = {
-      envelopes: envelopes.map((e) => this.serializeEnvelope(e)),
+      envelopes: envelopes.map((e) => serializeEnvelope(e)),
     };
 
     await this.executeGraphQL<{ pushSyncEnvelopes: boolean }>(
       mutation,
       variables,
     );
-  }
-
-  /**
-   * Serializes a SyncEnvelope for GraphQL transport.
-   *
-   * Signatures are serialized as comma-separated strings since GraphQL schema
-   * defines them as [String!]!. Extra context fields (resultingState, ordinal)
-   * are stripped since they are not defined in OperationContextInput.
-   */
-  private serializeEnvelope(envelope: SyncEnvelope): unknown {
-    return {
-      type: envelope.type.toUpperCase(),
-      channelMeta: envelope.channelMeta,
-      operations: envelope.operations?.map((opWithContext) => ({
-        operation: {
-          index: opWithContext.operation.index,
-          timestampUtcMs: opWithContext.operation.timestampUtcMs,
-          hash: opWithContext.operation.hash,
-          skip: opWithContext.operation.skip,
-          error: opWithContext.operation.error,
-          id: opWithContext.operation.id,
-          action: this.serializeAction(opWithContext.operation.action),
-        },
-        context: {
-          documentId: opWithContext.context.documentId,
-          documentType: opWithContext.context.documentType,
-          scope: opWithContext.context.scope,
-          branch: opWithContext.context.branch,
-        },
-      })),
-      cursor: envelope.cursor,
-      key: envelope.key,
-      dependsOn: envelope.dependsOn,
-    };
-  }
-
-  /**
-   * Serializes an action for GraphQL transport, converting signature tuples to strings.
-   */
-  private serializeAction(action: Action): unknown {
-    const signer = action.context?.signer;
-    if (!signer?.signatures) {
-      return action;
-    }
-
-    return {
-      ...action,
-      context: {
-        ...action.context,
-        signer: {
-          ...signer,
-          signatures: signer.signatures.map((sig: Signature | string) =>
-            Array.isArray(sig) ? sig.join(", ") : sig,
-          ),
-        },
-      },
-    };
   }
 
   /**
@@ -607,39 +573,6 @@ export class GqlRequestChannel implements IChannel {
     }
 
     return result.data;
-  }
-
-  /**
-   * Updates the synchronization cursor for this channel's remote.
-   */
-  async ack(ackOrdinal: number): Promise<void> {
-    // update outbox items
-    const toRemove: SyncOperation[] = [];
-    for (const syncOp of this.outbox.items) {
-      for (const op of syncOp.operations) {
-        if (op.context.ordinal <= ackOrdinal) {
-          toRemove.push(syncOp);
-        }
-      }
-    }
-
-    if (toRemove.length > 0) {
-      this.outbox.remove(...toRemove);
-
-      for (const syncOp of toRemove) {
-        syncOp.executed();
-      }
-    }
-
-    // update the cursor in storage
-    const cursor: RemoteCursor = {
-      remoteName: this.remoteName,
-      cursorType: "outbox",
-      cursorOrdinal: ackOrdinal,
-      lastSyncedAtUtcMs: Date.now(),
-    };
-
-    await this.cursorStorage.upsert(cursor);
   }
 
   /**

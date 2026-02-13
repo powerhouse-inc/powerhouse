@@ -1,10 +1,67 @@
-import type { Operation, Signature } from "document-model";
+import type { Action, Operation, Signature } from "document-model";
 import type { OperationWithContext } from "../../storage/interfaces.js";
 import { SyncOperation } from "../sync-operation.js";
-import type { SyncEnvelope } from "../types.js";
+import { SyncOperationStatus, type SyncEnvelope } from "../types.js";
 import { batchOperationsByDocument } from "../utils.js";
 
 let syncOpCounter = 0;
+
+/**
+ * Serializes an action for GraphQL transport, converting signature tuples to strings.
+ */
+export function serializeAction(action: Action): unknown {
+  const signer = action.context?.signer;
+  if (!signer?.signatures) {
+    return action;
+  }
+
+  return {
+    ...action,
+    context: {
+      ...action.context,
+      signer: {
+        ...signer,
+        signatures: signer.signatures.map((sig: Signature | string) =>
+          Array.isArray(sig) ? sig.join(", ") : sig,
+        ),
+      },
+    },
+  };
+}
+
+/**
+ * Serializes a SyncEnvelope for GraphQL transport.
+ *
+ * Signatures are serialized as comma-separated strings since GraphQL schema
+ * defines them as [String!]!. Extra context fields (resultingState, ordinal)
+ * are stripped since they are not defined in OperationContextInput.
+ */
+export function serializeEnvelope(envelope: SyncEnvelope): unknown {
+  return {
+    type: envelope.type.toUpperCase(),
+    channelMeta: envelope.channelMeta,
+    operations: envelope.operations?.map((opWithContext) => ({
+      operation: {
+        index: opWithContext.operation.index,
+        timestampUtcMs: opWithContext.operation.timestampUtcMs,
+        hash: opWithContext.operation.hash,
+        skip: opWithContext.operation.skip,
+        error: opWithContext.operation.error,
+        id: opWithContext.operation.id,
+        action: serializeAction(opWithContext.operation.action),
+      },
+      context: {
+        documentId: opWithContext.context.documentId,
+        documentType: opWithContext.context.documentType,
+        scope: opWithContext.context.scope,
+        branch: opWithContext.context.branch,
+      },
+    })),
+    cursor: envelope.cursor,
+    key: envelope.key,
+    dependsOn: envelope.dependsOn,
+  };
+}
 
 /**
  * Deserializes a signature from a comma-separated string back to a tuple.
@@ -141,3 +198,15 @@ export function envelopesToSyncOperations(
     );
   });
 }
+
+export const getLatestAppliedOrdinal = (syncOps: SyncOperation[]): number => {
+  let maxOrdinal = 0;
+  for (const syncOp of syncOps) {
+    if (syncOp.status === SyncOperationStatus.Applied) {
+      for (const op of syncOp.operations) {
+        maxOrdinal = Math.max(maxOrdinal, op.context.ordinal);
+      }
+    }
+  }
+  return maxOrdinal;
+};

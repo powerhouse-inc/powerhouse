@@ -16,12 +16,6 @@ import type {
  * - inbox: Sync operations received from the remote that need to be applied locally
  * - outbox: Sync operations to be sent to the remote
  * - deadLetter: Sync operations that failed and cannot be retried
- *
- * Channels are responsible for:
- * - Transporting sync envelopes between reactor instances
- * - Managing sync operation lifecycle through status transitions
- * - Handling errors and moving failed sync operations to dead letter queue
- * - Updating cursors as operations are applied
  */
 export interface IChannel {
   /**

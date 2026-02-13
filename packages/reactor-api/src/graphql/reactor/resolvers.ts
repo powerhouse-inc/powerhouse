@@ -2,6 +2,7 @@ import {
   batchOperationsByDocument,
   sortEnvelopesByFirstOperationTimestamp,
   SyncOperation,
+  trimMailboxFromAckOrdinal,
   type IReactorClient,
   type ISyncManager,
   type JobInfo,
@@ -824,29 +825,7 @@ export function pollSyncEnvelopes(
 
   // trim outbox
   if (args.cursorOrdinal > 0) {
-    // we want to guarantee:
-    //
-    // 1. sync ops are out of the inbox before being marked as executed
-    // 2. we remove syncops as a batch
-    const toRemove: SyncOperation[] = [];
-    for (const syncOp of remote.channel.outbox.items) {
-      let maxOrdinal = 0;
-      for (const op of syncOp.operations) {
-        maxOrdinal = Math.max(maxOrdinal, op.context.ordinal);
-      }
-
-      if (maxOrdinal <= args.cursorOrdinal) {
-        toRemove.push(syncOp);
-      }
-    }
-
-    if (toRemove.length > 0) {
-      remote.channel.outbox.remove(...toRemove);
-
-      for (const syncOp of toRemove) {
-        syncOp.executed();
-      }
-    }
+    trimMailboxFromAckOrdinal(remote.channel.outbox, args.cursorOrdinal);
   }
 
   const operations = remote.channel.outbox.items;
