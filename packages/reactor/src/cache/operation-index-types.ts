@@ -9,6 +9,7 @@ export type OperationIndexEntry = Operation & {
   documentType: string;
   branch: string;
   scope: string;
+  sourceRemote: string;
 };
 
 export interface IOperationIndexTxn {
@@ -76,6 +77,7 @@ export interface OperationIndexOperationTable {
   skip: number;
   hash: string;
   action: unknown;
+  sourceRemote: Generated<string>;
 }
 
 export type DocumentCollectionRow = Selectable<DocumentCollectionTable>;

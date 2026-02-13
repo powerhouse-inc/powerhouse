@@ -95,6 +95,7 @@ describe("SyncManager Backfill", () => {
           documentType: "powerhouse/document-drive",
           branch: "main",
           scope: "global",
+          sourceRemote: "",
         },
       ]);
       txn.createCollection(collectionId);
@@ -182,6 +183,7 @@ describe("SyncManager Backfill", () => {
           documentType: "powerhouse/document-drive",
           branch: "main",
           scope: "global",
+          sourceRemote: "",
         },
       ]);
       txn.createCollection(collectionId);
@@ -196,6 +198,7 @@ describe("SyncManager Backfill", () => {
           documentType: "powerhouse/document-drive",
           branch: "main",
           scope: "local",
+          sourceRemote: "",
         },
       ]);
       await operationIndex.commit(txn2);
@@ -262,6 +265,7 @@ describe("SyncManager Backfill", () => {
           documentType: "powerhouse/document-drive",
           branch: "main",
           scope: "global",
+          sourceRemote: "",
         },
       ]);
       txn.createCollection(collectionId);
@@ -276,6 +280,7 @@ describe("SyncManager Backfill", () => {
           documentType: "powerhouse/document-drive",
           branch: "main",
           scope: "global",
+          sourceRemote: "",
         },
       ]);
       const newOrdinals = await operationIndex.commit(txn2);

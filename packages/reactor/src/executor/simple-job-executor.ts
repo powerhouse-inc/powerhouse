@@ -184,6 +184,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     indexTxn: IOperationIndexTxn,
     skipValues?: number[],
     sourceOperations?: (Operation | undefined)[],
+    sourceRemote: string = "",
   ): Promise<ProcessActionsResult> {
     const generatedOperations: Operation[] = [];
     const operationsWithContext: OperationWithContext[] = [];
@@ -216,6 +217,7 @@ export class SimpleJobExecutor implements IJobExecutor {
             startTime,
             indexTxn,
             skip,
+            sourceRemote,
           )
         : await this.executeRegularAction(
             job,
@@ -224,6 +226,7 @@ export class SimpleJobExecutor implements IJobExecutor {
             indexTxn,
             skip,
             sourceOperation,
+            sourceRemote,
           );
 
       const error = this.accumulateResultOrReturnError(
@@ -255,6 +258,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     indexTxn: IOperationIndexTxn,
     skip: number = 0,
     sourceOperation?: Operation,
+    sourceRemote: string = "",
   ): Promise<
     JobResult & {
       operationsWithContext?: Array<{
@@ -420,6 +424,7 @@ export class SimpleJobExecutor implements IJobExecutor {
         documentType: document.header.documentType,
         branch: job.branch,
         scope,
+        sourceRemote,
       },
     ]);
 
@@ -566,6 +571,16 @@ export class SimpleJobExecutor implements IJobExecutor {
       return true;
     });
 
+    if (incomingOpsToApply.length === 0) {
+      return {
+        job,
+        success: true,
+        operations: [],
+        operationsWithContext: [],
+        duration: Date.now() - startTime,
+      };
+    }
+
     const reshuffledOperations = reshuffleByTimestamp(
       {
         index: latestRevision,
@@ -587,6 +602,11 @@ export class SimpleJobExecutor implements IJobExecutor {
     const actions = reshuffledOperations.map((operation) => operation.action);
     const skipValues = reshuffledOperations.map((operation) => operation.skip);
 
+    const effectiveSourceRemote =
+      skipCount > 0
+        ? "" // reshuffle: send to all remotes including source
+        : (job.meta.sourceRemote as string) || ""; // trivial append: suppress echo to source
+
     const result = await this.processActions(
       job,
       actions,
@@ -594,6 +614,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       indexTxn,
       skipValues,
       reshuffledOperations,
+      effectiveSourceRemote,
     );
 
     if (!result.success) {

@@ -138,6 +138,7 @@ export interface IKeyframeStore {
 export interface ViewFilter {
   branch?: string;
   scopes?: string[];
+  excludeSourceRemote?: string;
 }
 
 export interface SearchFilter {
