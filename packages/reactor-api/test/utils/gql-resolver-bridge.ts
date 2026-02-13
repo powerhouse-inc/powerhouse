@@ -68,7 +68,8 @@ export function createResolverBridge(
     if (body.query.includes("pollSyncEnvelopes")) {
       const variables = body.variables as {
         channelId: string;
-        cursorOrdinal: number;
+        outboxAck: number;
+        outboxLatest: number;
       };
 
       const result = await pollSyncEnvelopes(syncManager, variables);
