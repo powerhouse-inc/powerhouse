@@ -1,3 +1,15 @@
+## 5.3.0-staging.25 (2026-02-13)
+
+### 🩹 Fixes
+
+- add builder-profile to downstream packages ([fe0ffdf5d](https://github.com/powerhouse-inc/powerhouse/commit/fe0ffdf5d))
+- **codegen:** use dynamic document type name in module JSDoc comment ([0212e4901](https://github.com/powerhouse-inc/powerhouse/commit/0212e4901))
+
+### ❤️ Thank You
+
+- Frank
+- Guillermo Puente @gpuente
+
 ## 5.3.0-staging.24 (2026-02-04)
 
 This was a version bump only for @powerhousedao/codegen to align it with other projects, there were no code changes.
