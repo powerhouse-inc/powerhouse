@@ -53,4 +53,11 @@ export async function logout() {
 
   const renown = window.ph?.renown;
   await renown?.logout();
+
+  // Clear the user parameter from URL to prevent auto-login on refresh
+  const url = new URL(window.location.href);
+  if (url.searchParams.has("user")) {
+    url.searchParams.delete("user");
+    window.history.replaceState(null, "", url.toString());
+  }
 }
