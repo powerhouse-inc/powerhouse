@@ -50,6 +50,8 @@ jobs:
             name: renown-package
           - repo: powerhouse-inc/powerhouse-demo
             name: powerhouse-demo
+          - repo: powerhouse-inc/builder-profile
+            name: builder-profile
     steps:
       - name: Trigger ${{ matrix.package.name }}
         uses: peter-evans/repository-dispatch@v3
