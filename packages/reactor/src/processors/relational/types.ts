@@ -1,1 +1,1 @@
-export type * from "shared/processors/relational/types";
+export * from "shared/processors/relational/types";
