@@ -481,7 +481,8 @@ In standard mode:
 ### Related recipes
 
 - [Connecting to a Remote Vetra Drive](#connecting-to-a-remote-vetra-drive)
-- [Connecting Claude with Reactor MCP](#connecting-claude-with-reactor-mcp)
+- [Connecting Claude Desktop with Reactor MCP](#connecting-claude-desktop-with-reactor-mcp)
+- [Connecting Claude Code (CLI) with Reactor MCP](#connecting-claude-code-cli-with-reactor-mcp)
 
 ### Further reading
 
@@ -582,7 +583,8 @@ ph vetra --watch
 ### Related recipes
 
 - [Launching Vetra Studio](#launching-vetra-studio)
-- [Connecting Claude with Reactor MCP](#connecting-claude-with-reactor-mcp)
+- [Connecting Claude Desktop with Reactor MCP](#connecting-claude-desktop-with-reactor-mcp)
+- [Connecting Claude Code (CLI) with Reactor MCP](#connecting-claude-code-cli-with-reactor-mcp)
 
 ### Further reading
 
@@ -590,10 +592,110 @@ ph vetra --watch
 - [Vetra Studio Documentation](/academy/MasteryTrack/BuilderEnvironment/VetraStudio)
 </details>
 
-<details id="connecting-claude-with-reactor-mcp">
-<summary>Connecting Claude with Reactor MCP</summary>
+<details id="connecting-claude-desktop-with-reactor-mcp">
+<summary>Connecting Claude Desktop with Reactor MCP</summary>
 
-### How to Connect Claude with Reactor MCP
+### How to Connect Claude Desktop with Reactor MCP
+
+---
+
+### Problem statement
+
+You want to use Claude Desktop (the GUI application) to interact with Powerhouse documents through natural language - creating documents, populating them with data, parsing files into document models, and managing drives.
+
+### Prerequisites
+
+- Claude Desktop application installed
+- Internet connection to access the Powerhouse switchboard
+
+### Solution
+
+:::warning Important
+The npx-based JSON configuration does **NOT** work for Claude Desktop. You must use the URL-based connector approach described below.
+:::
+
+:::info What Claude Desktop is for
+Claude Desktop is ideal for **document users** who want to interact with existing document models. Use it to:
+- Create new documents from available document types
+- Populate documents with data
+- Parse files into documents (e.g., extract invoice data from a PDF)
+- Browse and manage drives
+
+For **developing** document models, editors, and writing code, use [Claude Code CLI](#connecting-claude-code-cli-with-reactor-mcp) with Vetra Studio instead.
+:::
+
+### Step 1: Open Claude Desktop Settings
+
+Launch Claude Desktop and click on the **Settings** icon (gear icon) in the interface.
+
+### Step 2: Navigate to Connectors
+
+In the Settings panel, click on **Connectors** in the left sidebar.
+
+![Claude Desktop Settings - Connectors](./02-MasteryTrack/01-BuilderEnvironment/images/settings-connector.png)
+
+### Step 3: Add Custom Connector
+
+Click the **Add custom connector** button at the bottom of the Connectors panel.
+
+### Step 4: Configure the Connector
+
+In the "Add custom connector" dialog, enter:
+
+- **Name**: `reactor-mcp`
+- **URL**: `https://switchboard.powerhouse.xyz/mcp`
+
+![Adding custom connector](./02-MasteryTrack/01-BuilderEnvironment/images/new-connector.png)
+
+### Step 5: Click Add
+
+Click the **Add** button to save the connector configuration.
+
+### Step 6: Verify Connection
+
+Once added, you should see "reactor-mcp" in your list of connectors. You can now use Claude Desktop to interact with Powerhouse documents.
+
+### Expected outcome
+
+- The reactor-mcp connector appears in your Claude Desktop connectors list
+- You can ask Claude to interact with Powerhouse documents, drives, and document models
+- Claude has access to 12 tools for document, drive, and document model operations
+
+### Common issues and solutions
+
+- **Issue**: Connector doesn't appear after adding
+  - **Solution**: Restart Claude Desktop and try adding the connector again.
+- **Issue**: Connection errors when using the connector
+  - **Solution**: Verify your internet connection and that `https://switchboard.powerhouse.xyz/mcp` is accessible.
+- **Issue**: Tried using npx-based JSON config and it doesn't work
+  - **Solution**: Claude Desktop requires URL-based connectors. Remove any JSON config and use the GUI method described above.
+
+### Comparison: Claude Desktop vs Claude Code CLI
+
+| Feature | Claude Desktop | Claude Code CLI |
+|---------|---------------|-----------------|
+| Target users | Document users | Developers |
+| Setup method | URL-based connector (GUI) | `.mcp.json` file in project |
+| Configuration | Settings → Connectors → Add custom connector | Created by `ph vetra` |
+| Connection | Remote reactor | Local reactor at `http://localhost:4001/mcp` |
+| Use cases | Create documents, populate data, parse files (e.g., PDF → invoice), manage drives | Build document models, create editors, write code |
+
+### Related recipes
+
+- [Connecting Claude Code (CLI) with Reactor MCP](#connecting-claude-code-cli-with-reactor-mcp)
+- [Creating a Document Model with AI Assistance](#creating-a-document-model-with-ai-assistance)
+- [Creating an Editor with AI Assistance](#creating-an-editor-with-ai-assistance)
+
+### Further reading
+
+- [Vetra Studio Documentation](/academy/MasteryTrack/BuilderEnvironment/VetraStudio)
+- [reactor-mcp Package README](https://www.npmjs.com/package/@powerhousedao/reactor-mcp)
+</details>
+
+<details id="connecting-claude-code-cli-with-reactor-mcp">
+<summary>Connecting Claude Code (CLI) with Reactor MCP</summary>
+
+### How to Connect Claude Code (CLI) with Reactor MCP
 
 ---
 
@@ -618,6 +720,21 @@ First, ensure Vetra Studio is running in your project directory:
 ```bash
 ph vetra --interactive --watch
 ```
+
+When Vetra starts, it creates a `.mcp.json` file in your project directory with the MCP configuration:
+
+```json
+{
+  "mcpServers": {
+    "reactor-mcp": {
+      "type": "http",
+      "url": "http://localhost:4001/mcp"
+    }
+  }
+}
+```
+
+Claude Code CLI reads this file to connect to the reactor-mcp server.
 
 ### Step 2: Open a New Terminal and Navigate to Your Project
 
@@ -667,6 +784,7 @@ running and ready for document model operations.
 
 ### Related recipes
 
+- [Connecting Claude Desktop with Reactor MCP](#connecting-claude-desktop-with-reactor-mcp)
 - [Launching Vetra Studio](#launching-vetra-studio)
 - [Creating a Document Model with AI Assistance](#creating-a-document-model-with-ai-assistance)
 - [Creating an Editor with AI Assistance](#creating-an-editor-with-ai-assistance)

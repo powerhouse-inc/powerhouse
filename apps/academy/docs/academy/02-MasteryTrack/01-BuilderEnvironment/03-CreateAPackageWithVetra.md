@@ -129,6 +129,10 @@ This command typically opens Connect in your browser at `http://localhost:3000/`
 
 ### 1.4. Launch Claude with Reactor-MCP
 
+:::info Claude Desktop Users
+The instructions below are for **Claude Code CLI**. If you're using **Claude Desktop** (the GUI application), see the [Cookbook recipe for connecting Claude Desktop with Reactor MCP](/academy/Cookbook#connecting-claude-desktop-with-reactor-mcp) for step-by-step instructions using the URL-based connector.
+:::
+
 Vetra Studio integrates deeply with Claude through MCP (Model Context Protocol). This is where AI comes into the mix and you get the chance to have greater control and direction over what your LLM is coding for you.
 
 :::info Specification Driven Design & Development
