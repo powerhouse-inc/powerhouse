@@ -1,3 +1,7 @@
+## 5.3.0-staging.26 (2026-02-13)
+
+This was a version bump only for @powerhousedao/academy to align it with other projects, there were no code changes.
+
 ## 5.3.0-staging.25 (2026-02-13)
 
 ### 🩹 Fixes

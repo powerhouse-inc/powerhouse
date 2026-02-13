@@ -1,3 +1,13 @@
+## 5.3.0-staging.26 (2026-02-13)
+
+### 🩹 Fixes
+
+- trigger staging release for builder-profile chain test ([1601f8794](https://github.com/powerhouse-inc/powerhouse/commit/1601f8794))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 5.3.0-staging.25 (2026-02-13)
 
 ### 🩹 Fixes
