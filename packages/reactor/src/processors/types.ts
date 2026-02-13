@@ -4,14 +4,12 @@ import type {
   OperationWithContext,
 } from "@powerhousedao/reactor";
 import type { PHDocumentHeader } from "document-model";
-
-// TODO: move the generic drive explorer to its own package so that it is possible to use the common package as the source of the type here
-export type TempProcessorAppToBeRemoved = "connect" | "switchboard";
+import type { ProcessorApp } from "shared";
 
 export interface IProcessorHostModule {
   analyticsStore: IAnalyticsStore;
   relationalDb: IRelationalDb;
-  processorApp: TempProcessorAppToBeRemoved;
+  processorApp: ProcessorApp;
   config?: Map<string, unknown>;
 }
 
@@ -58,7 +56,7 @@ export type ProcessorRecord = {
  */
 export type ProcessorFactory = (
   driveHeader: PHDocumentHeader,
-  processorApp?: TempProcessorAppToBeRemoved,
+  processorApp?: ProcessorApp,
 ) => ProcessorRecord[] | Promise<ProcessorRecord[]>;
 
 /**

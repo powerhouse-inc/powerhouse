@@ -1,2 +1,3 @@
+export type * from "./document-model/types.js";
 export * from "./processors/constants.js";
-export * from "./processors/types.js";
+export type * from "./processors/types.js";

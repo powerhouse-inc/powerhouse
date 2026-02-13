@@ -256,5 +256,4 @@ export type {
   ProcessorFactory,
   ProcessorFilter,
   ProcessorRecord,
-  TempProcessorAppToBeRemoved,
 } from "./processors/types.js";

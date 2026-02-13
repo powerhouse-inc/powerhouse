@@ -141,7 +141,7 @@ async function updateIndexFile(v: {
   processorsDirPath: string;
 }) {
   const { project, processorsDirPath } = v;
-  const template = processorsIndexTemplate();
+  const template = processorsIndexTemplate;
   const indexFilePath = path.join(processorsDirPath, "index.ts");
   const { alreadyExists, sourceFile } = getOrCreateSourceFile(
     project,

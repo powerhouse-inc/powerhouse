@@ -1,3 +1,11 @@
+import type {
+  Attachment,
+  AttachmentInput,
+  PHBaseState,
+  PHDocument,
+  Reducer,
+  ReplayDocumentOptions,
+} from "document-model";
 import mime from "mime/lite";
 import type { BinaryLike } from "node:crypto";
 import { createHash } from "node:crypto";
@@ -10,14 +18,6 @@ import {
   createZip,
   type MinimalBackupData,
 } from "./files.js";
-import type { PHBaseState, PHDocument } from "./ph-types.js";
-import type {
-  Attachment,
-  AttachmentInput,
-  Reducer,
-  ReplayDocumentOptions,
-} from "./types.js";
-
 function getFileAttributes(
   file: string,
 ): Omit<Attachment, "data" | "mimeType"> {

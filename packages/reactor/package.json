@@ -36,7 +36,7 @@
   "license": "AGPL-3.0-only",
   "dependencies": {
     "@electric-sql/pglite": "catalog:",
-    "@sindresorhus/fnv1a": "^3.1.0",
+    "@sindresorhus/fnv1a": "catalog:",
     "document-drive": "workspace:*",
     "document-model": "workspace:*",
     "kysely": "catalog:",
@@ -49,6 +49,7 @@
     "prettier": "^3.6.2",
     "tinybench": "^2.9.0",
     "tsx": "^4.19.2",
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.4",
+    "shared": "workspace:"
   }
 }
