@@ -4,6 +4,7 @@ import {
   type MailboxCallback,
 } from "./mailbox.js";
 import type { SyncOperation } from "./sync-operation.js";
+import { SyncOperationStatus } from "./types.js";
 
 export class BufferedMailbox implements IMailbox {
   private itemsMap: Map<string, SyncOperation> = new Map();
@@ -33,6 +34,14 @@ export class BufferedMailbox implements IMailbox {
     return Array.from(this.itemsMap.values());
   }
 
+  get ackOrdinal(): number {
+    return this._ack;
+  }
+
+  get latestOrdinal(): number {
+    return this._latestOrdinal;
+  }
+
   get(id: string): SyncOperation | undefined {
     return this.itemsMap.get(id);
   }
@@ -40,6 +49,20 @@ export class BufferedMailbox implements IMailbox {
   add(...items: SyncOperation[]): void {
     for (const item of items) {
       this.itemsMap.set(item.id, item);
+
+      // update latest ordinal
+      for (const op of item.operations) {
+        this._latestOrdinal = Math.max(this._latestOrdinal, op.context.ordinal);
+      }
+
+      // listen for updates to the syncop status
+      item.on((syncOp, _, next) => {
+        if (next === SyncOperationStatus.Applied) {
+          for (const op of syncOp.operations) {
+            this._ack = Math.max(this._ack, op.context.ordinal);
+          }
+        }
+      });
     }
     this.addedBuffer.push(...items);
 
@@ -77,14 +100,6 @@ export class BufferedMailbox implements IMailbox {
 
   onRemoved(callback: MailboxCallback): void {
     this.removedCallbacks.push(callback);
-  }
-
-  get ackOrdinal(): number {
-    return this._ack;
-  }
-
-  get latestOrdinal(): number {
-    return this._latestOrdinal;
   }
 
   pause(): void {

@@ -1,7 +1,14 @@
 import type { SyncOperation } from "./sync-operation.js";
+import { SyncOperationStatus } from "./types.js";
 
 export type MailboxCallback = (items: SyncOperation[]) => void;
 
+/**
+ * The Mailbox interface is not intended to use any persistence. Instead, the
+ * IChannel implementation is responsible for persisting cursors or other data.
+ *
+ * This means that ackOrdinal and latestOrdinal are in memory only.
+ */
 export interface IMailbox {
   get items(): ReadonlyArray<SyncOperation>;
 
@@ -67,6 +74,14 @@ export class Mailbox implements IMailbox {
     return Array.from(this.itemsMap.values());
   }
 
+  get ackOrdinal(): number {
+    return this._ack;
+  }
+
+  get latestOrdinal(): number {
+    return this._latestOrdinal;
+  }
+
   get(id: string): SyncOperation | undefined {
     return this.itemsMap.get(id);
   }
@@ -74,11 +89,27 @@ export class Mailbox implements IMailbox {
   add(...items: SyncOperation[]): void {
     for (const item of items) {
       this.itemsMap.set(item.id, item);
+
+      // update latest ordinal
+      for (const op of item.operations) {
+        this._latestOrdinal = Math.max(this._latestOrdinal, op.context.ordinal);
+      }
+
+      // listen for updates to the syncop status
+      item.on((syncOp, _, next) => {
+        if (next === SyncOperationStatus.Applied) {
+          for (const op of syncOp.operations) {
+            this._ack = Math.max(this._ack, op.context.ordinal);
+          }
+        }
+      });
     }
+
     if (this.paused) {
       this.addedBuffer.push(...items);
       return;
     }
+
     const callbacks = [...this.addedCallbacks];
     const errors: Error[] = [];
     for (const callback of callbacks) {
@@ -97,10 +128,12 @@ export class Mailbox implements IMailbox {
     for (const item of items) {
       this.itemsMap.delete(item.id);
     }
+
     if (this.paused) {
       this.removedBuffer.push(...items);
       return;
     }
+
     const callbacks = [...this.removedCallbacks];
     const errors: Error[] = [];
     for (const callback of callbacks) {
@@ -121,14 +154,6 @@ export class Mailbox implements IMailbox {
 
   onRemoved(callback: MailboxCallback): void {
     this.removedCallbacks.push(callback);
-  }
-
-  get ackOrdinal(): number {
-    return this._ack;
-  }
-
-  get latestOrdinal(): number {
-    return this._latestOrdinal;
   }
 
   pause(): void {
@@ -158,6 +183,7 @@ export class Mailbox implements IMailbox {
         throw new MailboxAggregateError(errors);
       }
     }
+
     if (this.removedBuffer.length > 0) {
       const items = this.removedBuffer.splice(0);
       const callbacks = [...this.removedCallbacks];
