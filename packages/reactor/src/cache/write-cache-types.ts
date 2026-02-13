@@ -9,6 +9,15 @@ export type WriteCacheConfig = {
 
   /** Number of snapshots to keep in each document's ring buffer. Default: 10 */
   ringBufferSize: number;
+
+  /** Time gap in ms below which a stream is considered "hot". Default: 5000 */
+  hotThresholdMs: number;
+
+  /** Revisions between keyframes for hot streams. Default: 1000 */
+  hotKeyframeInterval: number;
+
+  /** Revisions between keyframes for cold streams. Default: 10 */
+  coldKeyframeInterval: number;
 };
 
 /**

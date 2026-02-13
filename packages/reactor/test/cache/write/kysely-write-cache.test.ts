@@ -82,6 +82,9 @@ describe("KyselyWriteCache", () => {
     config = {
       maxDocuments: 3,
       ringBufferSize: 5,
+      hotThresholdMs: 5000,
+      hotKeyframeInterval: Number.MAX_SAFE_INTEGER,
+      coldKeyframeInterval: Number.MAX_SAFE_INTEGER,
     };
     cache = new KyselyWriteCache(
       keyframeStore,
@@ -169,6 +172,9 @@ describe("KyselyWriteCache", () => {
       const highCapacityConfig: WriteCacheConfig = {
         maxDocuments: 10,
         ringBufferSize: 5,
+        hotThresholdMs: 5000,
+        hotKeyframeInterval: Number.MAX_SAFE_INTEGER,
+        coldKeyframeInterval: Number.MAX_SAFE_INTEGER,
       };
       cacheWithHigherCapacity = new KyselyWriteCache(
         keyframeStore,
@@ -352,6 +358,199 @@ describe("KyselyWriteCache", () => {
     });
   });
 
+  describe("adaptive keyframe persistence", () => {
+    it("should persist keyframe when cold stream exceeds coldKeyframeInterval", () => {
+      vi.useFakeTimers();
+
+      const coldCache = new KyselyWriteCache(
+        keyframeStore,
+        operationStore,
+        registry,
+        {
+          maxDocuments: 10,
+          ringBufferSize: 5,
+          hotThresholdMs: 100,
+          hotKeyframeInterval: 1000,
+          coldKeyframeInterval: 5,
+        },
+      );
+
+      const doc = createTestDocument();
+
+      // Revisions 1..4: cold writes (>100ms apart), under coldKeyframeInterval
+      for (let i = 1; i <= 4; i++) {
+        vi.setSystemTime(i * 1000);
+        coldCache.putState("doc1", "global", "main", i, doc);
+      }
+      expect(keyframeStore.putKeyframe).not.toHaveBeenCalled();
+
+      // Revision 5: meets coldKeyframeInterval (5 - 0 = 5 >= 5)
+      vi.setSystemTime(5000);
+      coldCache.putState("doc1", "global", "main", 5, doc);
+      expect(keyframeStore.putKeyframe).toHaveBeenCalledTimes(1);
+      expect(keyframeStore.putKeyframe).toHaveBeenCalledWith(
+        "doc1",
+        "global",
+        "main",
+        5,
+        expect.objectContaining({
+          state: expect.any(Object),
+          header: expect.any(Object),
+        }),
+      );
+
+      vi.useRealTimers();
+    });
+
+    it("should persist keyframe at hotKeyframeInterval during hot writes", () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(1000);
+
+      const hotCache = new KyselyWriteCache(
+        keyframeStore,
+        operationStore,
+        registry,
+        {
+          maxDocuments: 10,
+          ringBufferSize: 5,
+          hotThresholdMs: 5000,
+          hotKeyframeInterval: 10,
+          coldKeyframeInterval: 5,
+        },
+      );
+
+      const doc = createTestDocument();
+
+      // First call sets lastPutTimestamp; subsequent calls within hotThresholdMs are "hot"
+      hotCache.putState("doc1", "global", "main", 1, doc);
+
+      // Rapid writes (1ms apart) — hot path
+      for (let i = 2; i <= 9; i++) {
+        vi.setSystemTime(1000 + i);
+        hotCache.putState("doc1", "global", "main", i, doc);
+      }
+      // Under hotKeyframeInterval (10), no keyframe yet
+      expect(keyframeStore.putKeyframe).not.toHaveBeenCalled();
+
+      // Revision 10: 10 - 0 = 10 >= hotKeyframeInterval
+      vi.setSystemTime(1010);
+      hotCache.putState("doc1", "global", "main", 10, doc);
+      expect(keyframeStore.putKeyframe).toHaveBeenCalledTimes(1);
+
+      vi.useRealTimers();
+    });
+
+    it("should persist keyframe on hot-to-cold transition", () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(1000);
+
+      const transitionCache = new KyselyWriteCache(
+        keyframeStore,
+        operationStore,
+        registry,
+        {
+          maxDocuments: 10,
+          ringBufferSize: 5,
+          hotThresholdMs: 100,
+          hotKeyframeInterval: Number.MAX_SAFE_INTEGER,
+          coldKeyframeInterval: Number.MAX_SAFE_INTEGER,
+        },
+      );
+
+      const doc = createTestDocument();
+
+      // Two rapid writes — establishes hot state
+      transitionCache.putState("doc1", "global", "main", 1, doc);
+      vi.setSystemTime(1010);
+      transitionCache.putState("doc1", "global", "main", 2, doc);
+
+      expect(keyframeStore.putKeyframe).not.toHaveBeenCalled();
+
+      // Jump forward past hotThresholdMs — hot-to-cold transition
+      vi.setSystemTime(2000);
+      transitionCache.putState("doc1", "global", "main", 3, doc);
+
+      expect(keyframeStore.putKeyframe).toHaveBeenCalledTimes(1);
+      expect(keyframeStore.putKeyframe).toHaveBeenCalledWith(
+        "doc1",
+        "global",
+        "main",
+        3,
+        expect.objectContaining({
+          state: expect.any(Object),
+          header: expect.any(Object),
+        }),
+      );
+
+      vi.useRealTimers();
+    });
+
+    it("should not persist keyframe when hot and under hotKeyframeInterval", () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(1000);
+
+      const hotCache = new KyselyWriteCache(
+        keyframeStore,
+        operationStore,
+        registry,
+        {
+          maxDocuments: 10,
+          ringBufferSize: 5,
+          hotThresholdMs: 5000,
+          hotKeyframeInterval: 1000,
+          coldKeyframeInterval: 5,
+        },
+      );
+
+      const doc = createTestDocument();
+
+      // Rapid writes — hot path, well under hotKeyframeInterval
+      for (let i = 1; i <= 20; i++) {
+        vi.setSystemTime(1000 + i);
+        hotCache.putState("doc1", "global", "main", i, doc);
+      }
+
+      expect(keyframeStore.putKeyframe).not.toHaveBeenCalled();
+
+      vi.useRealTimers();
+    });
+
+    it("should reset keyframe counter after persisting", () => {
+      vi.useFakeTimers();
+
+      const coldCache = new KyselyWriteCache(
+        keyframeStore,
+        operationStore,
+        registry,
+        {
+          maxDocuments: 10,
+          ringBufferSize: 5,
+          hotThresholdMs: 100,
+          hotKeyframeInterval: 1000,
+          coldKeyframeInterval: 5,
+        },
+      );
+
+      const doc = createTestDocument();
+
+      // First keyframe at revision 5 (cold writes, >100ms apart)
+      for (let i = 1; i <= 5; i++) {
+        vi.setSystemTime(i * 1000);
+        coldCache.putState("doc1", "global", "main", i, doc);
+      }
+      expect(keyframeStore.putKeyframe).toHaveBeenCalledTimes(1);
+
+      // Next keyframe at revision 10 (5 more since last keyframe at 5)
+      for (let i = 6; i <= 10; i++) {
+        vi.setSystemTime((i + 5) * 1000);
+        coldCache.putState("doc1", "global", "main", i, doc);
+      }
+      expect(keyframeStore.putKeyframe).toHaveBeenCalledTimes(2);
+
+      vi.useRealTimers();
+    });
+  });
+
   describe("startup and shutdown", () => {
     it("should handle startup", async () => {
       await expect(cache.startup()).resolves.toBeUndefined();
@@ -504,6 +703,9 @@ describe("KyselyWriteCache (Partial Integration) - Cold Miss Rebuild", () => {
     config = {
       maxDocuments: 10,
       ringBufferSize: 5,
+      hotThresholdMs: 5000,
+      hotKeyframeInterval: Number.MAX_SAFE_INTEGER,
+      coldKeyframeInterval: Number.MAX_SAFE_INTEGER,
     };
     cache = new KyselyWriteCache(
       keyframeStore,
@@ -735,6 +937,9 @@ describe("KyselyWriteCache - Warm Miss Rebuild", () => {
     config = {
       maxDocuments: 10,
       ringBufferSize: 5,
+      hotThresholdMs: 5000,
+      hotKeyframeInterval: Number.MAX_SAFE_INTEGER,
+      coldKeyframeInterval: Number.MAX_SAFE_INTEGER,
     };
     cache = new KyselyWriteCache(
       keyframeStore,

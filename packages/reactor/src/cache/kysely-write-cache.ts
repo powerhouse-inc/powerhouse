@@ -18,6 +18,9 @@ import type { IWriteCache } from "./write/interfaces.js";
 type DocumentStream = {
   key: string;
   ringBuffer: RingBuffer<CachedSnapshot>;
+  lastPutTimestamp: number;
+  lastKeyframedRevision: number;
+  wasHot: boolean;
 };
 
 /**
@@ -76,6 +79,9 @@ export class KyselyWriteCache implements IWriteCache {
     this.config = {
       maxDocuments: config.maxDocuments,
       ringBufferSize: config.ringBufferSize,
+      hotThresholdMs: config.hotThresholdMs,
+      hotKeyframeInterval: config.hotKeyframeInterval,
+      coldKeyframeInterval: config.coldKeyframeInterval,
     };
     this.streams = new Map();
     this.lruTracker = new LRUTracker<string>();
@@ -234,6 +240,30 @@ export class KyselyWriteCache implements IWriteCache {
     };
 
     stream.ringBuffer.push(snapshot);
+
+    const now = Date.now();
+    const isHot = now - stream.lastPutTimestamp < this.config.hotThresholdMs;
+    const revisionsSinceKeyframe = revision - stream.lastKeyframedRevision;
+
+    if (!isHot && stream.wasHot) {
+      this.fireAndForgetKeyframe(documentId, scope, branch, revision, document);
+      stream.lastKeyframedRevision = revision;
+    } else if (
+      isHot &&
+      revisionsSinceKeyframe >= this.config.hotKeyframeInterval
+    ) {
+      this.fireAndForgetKeyframe(documentId, scope, branch, revision, document);
+      stream.lastKeyframedRevision = revision;
+    } else if (
+      !isHot &&
+      revisionsSinceKeyframe >= this.config.coldKeyframeInterval
+    ) {
+      this.fireAndForgetKeyframe(documentId, scope, branch, revision, document);
+      stream.lastKeyframedRevision = revision;
+    }
+
+    stream.wasHot = isHot;
+    stream.lastPutTimestamp = now;
   }
 
   /**
@@ -596,20 +626,13 @@ export class KyselyWriteCache implements IWriteCache {
             const newest = evictedStream.ringBuffer.peekNewest();
             if (newest) {
               const parsed = this.parseStreamKey(evictKey);
-              this.keyframeStore
-                .putKeyframe(
-                  parsed.documentId,
-                  parsed.scope,
-                  parsed.branch,
-                  newest.revision,
-                  newest.document,
-                )
-                .catch((err) => {
-                  console.error(
-                    `Failed to persist keyframe on eviction for ${evictKey}:`,
-                    err,
-                  );
-                });
+              this.fireAndForgetKeyframe(
+                parsed.documentId,
+                parsed.scope,
+                parsed.branch,
+                newest.revision,
+                newest.document,
+              );
             }
           }
           this.streams.delete(evictKey);
@@ -619,11 +642,31 @@ export class KyselyWriteCache implements IWriteCache {
       stream = {
         key,
         ringBuffer: new RingBuffer<CachedSnapshot>(this.config.ringBufferSize),
+        lastPutTimestamp: 0,
+        lastKeyframedRevision: 0,
+        wasHot: false,
       };
       this.streams.set(key, stream);
     }
 
     this.lruTracker.touch(key);
     return stream;
+  }
+
+  private fireAndForgetKeyframe(
+    documentId: string,
+    scope: string,
+    branch: string,
+    revision: number,
+    document: PHDocument,
+  ): void {
+    this.keyframeStore
+      .putKeyframe(documentId, scope, branch, revision, document)
+      .catch((err) => {
+        console.error(
+          `Failed to persist keyframe ${documentId}@${revision}:`,
+          err,
+        );
+      });
   }
 }

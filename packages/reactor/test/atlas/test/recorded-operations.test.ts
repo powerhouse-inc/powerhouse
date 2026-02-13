@@ -99,6 +99,9 @@ async function createReactorSetup(): Promise<ReactorTestSetup> {
   const writeCacheConfig: WriteCacheConfig = {
     maxDocuments: 100,
     ringBufferSize: 10,
+    hotThresholdMs: 5000,
+    hotKeyframeInterval: Number.MAX_SAFE_INTEGER,
+    coldKeyframeInterval: Number.MAX_SAFE_INTEGER,
   };
 
   const writeCache = new KyselyWriteCache(

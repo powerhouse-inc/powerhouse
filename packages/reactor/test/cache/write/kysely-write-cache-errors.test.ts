@@ -81,6 +81,9 @@ describe("KyselyWriteCache - Error Handling", () => {
     config = {
       maxDocuments: 10,
       ringBufferSize: 5,
+      hotThresholdMs: 5000,
+      hotKeyframeInterval: Number.MAX_SAFE_INTEGER,
+      coldKeyframeInterval: Number.MAX_SAFE_INTEGER,
     };
     cache = new KyselyWriteCache(
       keyframeStore,
@@ -764,6 +767,9 @@ describe("KyselyWriteCache - Error Handling", () => {
       const smallConfig: WriteCacheConfig = {
         maxDocuments: 2,
         ringBufferSize: 5,
+        hotThresholdMs: 5000,
+        hotKeyframeInterval: Number.MAX_SAFE_INTEGER,
+        coldKeyframeInterval: Number.MAX_SAFE_INTEGER,
       };
 
       const testCache = new KyselyWriteCache(
@@ -785,7 +791,7 @@ describe("KyselyWriteCache - Error Handling", () => {
       await new Promise((resolve) => setTimeout(resolve, 10));
 
       expect(consoleErrorSpy).toHaveBeenCalledWith(
-        expect.stringContaining("Failed to persist keyframe on eviction"),
+        expect.stringContaining("Failed to persist keyframe"),
         expect.any(Error),
       );
 
@@ -801,6 +807,9 @@ describe("KyselyWriteCache - Error Handling", () => {
       const smallConfig: WriteCacheConfig = {
         maxDocuments: 2,
         ringBufferSize: 5,
+        hotThresholdMs: 5000,
+        hotKeyframeInterval: Number.MAX_SAFE_INTEGER,
+        coldKeyframeInterval: Number.MAX_SAFE_INTEGER,
       };
 
       const testCache = new KyselyWriteCache(
@@ -1342,6 +1351,9 @@ describe("KyselyWriteCache - Error Handling (Integration)", () => {
     config = {
       maxDocuments: 10,
       ringBufferSize: 5,
+      hotThresholdMs: 5000,
+      hotKeyframeInterval: Number.MAX_SAFE_INTEGER,
+      coldKeyframeInterval: Number.MAX_SAFE_INTEGER,
     };
     cache = new KyselyWriteCache(
       keyframeStore,

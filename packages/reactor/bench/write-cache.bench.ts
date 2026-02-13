@@ -85,6 +85,9 @@ async function setupCacheWithData(
   config: WriteCacheConfig = {
     maxDocuments: 100,
     ringBufferSize: 10,
+    hotThresholdMs: 5000,
+    hotKeyframeInterval: Number.MAX_SAFE_INTEGER,
+    coldKeyframeInterval: Number.MAX_SAFE_INTEGER,
   },
 ): Promise<{
   cache: KyselyWriteCache;
@@ -180,6 +183,9 @@ describe("Write Cache Cold Miss Performance", () => {
       const { cache } = await setupCacheWithData(100, {
         maxDocuments: 100,
         ringBufferSize: 10,
+        hotThresholdMs: 5000,
+        hotKeyframeInterval: Number.MAX_SAFE_INTEGER,
+        coldKeyframeInterval: Number.MAX_SAFE_INTEGER,
       });
 
       const doc50 = await cache.getState(DOCUMENT_ID, SCOPE, BRANCH, 50);
@@ -279,6 +285,9 @@ describe("Write Cache LRU Eviction Performance", () => {
       const cache = new KyselyWriteCache(keyframeStore, store, registry, {
         maxDocuments: 10,
         ringBufferSize: 5,
+        hotThresholdMs: 5000,
+        hotKeyframeInterval: Number.MAX_SAFE_INTEGER,
+        coldKeyframeInterval: Number.MAX_SAFE_INTEGER,
       });
       await cache.startup();
 
@@ -333,6 +342,9 @@ describe("Write Cache LRU Eviction Performance", () => {
       const cache = new KyselyWriteCache(keyframeStore, store, registry, {
         maxDocuments: 5,
         ringBufferSize: 5,
+        hotThresholdMs: 5000,
+        hotKeyframeInterval: Number.MAX_SAFE_INTEGER,
+        coldKeyframeInterval: Number.MAX_SAFE_INTEGER,
       });
       await cache.startup();
 
@@ -562,6 +574,9 @@ describe("Write Cache Keyframe Performance", () => {
       const { cache } = await setupCacheWithData(0, {
         maxDocuments: 100,
         ringBufferSize: 10,
+        hotThresholdMs: 5000,
+        hotKeyframeInterval: Number.MAX_SAFE_INTEGER,
+        coldKeyframeInterval: Number.MAX_SAFE_INTEGER,
       });
 
       const baseDoc = driveDocumentModelModule.utils.createDocument();
@@ -581,6 +596,9 @@ describe("Write Cache Keyframe Performance", () => {
       const { cache } = await setupCacheWithData(0, {
         maxDocuments: 100,
         ringBufferSize: 10,
+        hotThresholdMs: 5000,
+        hotKeyframeInterval: Number.MAX_SAFE_INTEGER,
+        coldKeyframeInterval: Number.MAX_SAFE_INTEGER,
       });
 
       const baseDoc = driveDocumentModelModule.utils.createDocument();
