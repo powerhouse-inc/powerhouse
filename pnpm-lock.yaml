@@ -1702,6 +1702,9 @@ importers:
       kysely-pglite-dialect:
         specifier: 'catalog:'
         version: 1.2.0(@electric-sql/pglite@0.3.15)(kysely@0.28.11)
+      shared:
+        specifier: 'workspace:'
+        version: link:../../shared
       uuid:
         specifier: ^11.0.5
         version: 11.1.0
@@ -1715,9 +1718,6 @@ importers:
       prettier:
         specifier: ^3.6.2
         version: 3.6.2
-      shared:
-        specifier: 'workspace:'
-        version: link:../../shared
       tinybench:
         specifier: ^2.9.0
         version: 2.9.0
