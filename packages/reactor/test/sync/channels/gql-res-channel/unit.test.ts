@@ -60,7 +60,7 @@ const createMockSyncOperation = (
   );
 };
 
-describe("PollingChannel", () => {
+describe("GqlResponseChannel", () => {
   describe("constructor and initialization", () => {
     it("should create channel without send function", () => {
       const cursorStorage = createMockCursorStorage();

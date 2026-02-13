@@ -51,8 +51,9 @@ export class TestChannel implements IChannel {
     });
   }
 
-  shutdown(): void {
+  shutdown(): Promise<void> {
     this.isShutdown = true;
+    return Promise.resolve();
   }
 
   async init(): Promise<void> {}

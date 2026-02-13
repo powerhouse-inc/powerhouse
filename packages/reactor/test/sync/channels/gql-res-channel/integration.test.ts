@@ -10,7 +10,7 @@ import type { RemoteRecord } from "../../../../src/sync/types.js";
 import { SyncOperationStatus } from "../../../../src/sync/types.js";
 import { createTestSyncStorage } from "../../../factories.js";
 
-describe("PollingChannel Integration", () => {
+describe("GqlResponseChannel Integration", () => {
   let db: Kysely<Database>;
   let cursorStorage: ISyncCursorStorage;
   let remoteStorage: KyselySyncRemoteStorage;
