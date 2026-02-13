@@ -1,5 +1,9 @@
 import { useEffect, useState } from "react";
-import { PROCESSOR_APPS, type ProcessorApp, type ProcessorApps } from "shared/processors";
+import {
+  PROCESSOR_APPS,
+  type ProcessorApp,
+  type ProcessorApps,
+} from "shared/processors";
 import type { DocumentTypeItem } from "../../../document-models/processor-module/index.js";
 import { StatusPill } from "../../components/index.js";
 import { useAvailableDocumentTypes, useDebounce } from "../../hooks/index.js";
