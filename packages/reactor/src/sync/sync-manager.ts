@@ -164,21 +164,16 @@ export class SyncManager implements ISyncManager {
     this.awaiter.shutdown();
     this.syncAwaiter.shutdown();
 
+    const promises: Promise<void>[] = [];
     for (const remote of this.remotes.values()) {
-      try {
-        remote.channel.shutdown();
-      } catch (error) {
-        console.error(
-          `Error shutting down channel for remote ${remote.name}: ${error instanceof Error ? error.message : String(error)}`,
-        );
-      }
+      promises.push(remote.channel.shutdown());
     }
 
     this.remotes.clear();
 
     return {
       isShutdown: true,
-      completed: Promise.resolve(),
+      completed: Promise.all(promises).then(() => undefined),
     };
   }
 
@@ -306,7 +301,7 @@ export class SyncManager implements ISyncManager {
       this.handleInboxAdded(remote, syncOps),
     );
 
-    remote.channel.outbox.onAdded((syncOps) => {
+    remote.channel.outbox.onAdded(() => {
       // todo: handle sync status updates
     });
   }
