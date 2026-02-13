@@ -18,7 +18,7 @@ export function DriveSettingsModal() {
   const open = phModal?.type === "driveSettings";
   const driveId = open ? phModal.driveId : undefined;
   const [drive] = useDriveById(driveId);
-  const { data: remotes = [] } = useSyncList();
+  const remotes = useSyncList();
 
   const isRemoteDrive = useMemo(() => {
     return remotes.some(
