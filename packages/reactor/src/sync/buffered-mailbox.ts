@@ -25,8 +25,8 @@ export class BufferedMailbox implements IMailbox {
     this.maxQueued = maxQueued;
   }
 
-  init(latestOrdinal: number) {
-    this._latestOrdinal = latestOrdinal;
+  init(ackOrdinal: number) {
+    this._ack = this._latestOrdinal = ackOrdinal;
   }
 
   get items(): ReadonlyArray<SyncOperation> {

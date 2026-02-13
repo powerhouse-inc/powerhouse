@@ -1,12 +1,12 @@
 import {
   batchOperationsByDocument,
-  SyncOperation,
   sortEnvelopesByFirstOperationTimestamp,
+  SyncOperation,
   type IReactorClient,
   type ISyncManager,
   type JobInfo,
-  type OperationFilter,
   type OperationBatch,
+  type OperationFilter,
   type PagedResults,
   type PagingOptions,
   type PropagationMode,
@@ -20,6 +20,7 @@ import type {
   PHDocument,
 } from "document-model";
 import { GraphQLError } from "graphql";
+import type { GetParentIdsFn } from "../../services/document-permission.service.js";
 import {
   fromInputMaybe,
   serializeOperationForGraphQL,
@@ -802,13 +803,16 @@ export async function touchChannel(
   return true;
 }
 
-export async function pollSyncEnvelopes(
+export function pollSyncEnvelopes(
   syncManager: ISyncManager,
   args: {
     channelId: string;
     cursorOrdinal: number;
   },
-): Promise<any[]> {
+): {
+  envelopes: any[];
+  ackOrdinal: number;
+} {
   let remote;
   try {
     remote = syncManager.getById(args.channelId);
@@ -818,14 +822,40 @@ export async function pollSyncEnvelopes(
     );
   }
 
+  // trim outbox
   if (args.cursorOrdinal > 0) {
-    await remote.channel.updateCursor(args.cursorOrdinal);
+    // we want to guarantee:
+    //
+    // 1. sync ops are out of the inbox before being marked as executed
+    // 2. we remove syncops as a batch
+    const toRemove: SyncOperation[] = [];
+    for (const syncOp of remote.channel.outbox.items) {
+      let maxOrdinal = 0;
+      for (const op of syncOp.operations) {
+        maxOrdinal = Math.max(maxOrdinal, op.context.ordinal);
+      }
+
+      if (maxOrdinal <= args.cursorOrdinal) {
+        toRemove.push(syncOp);
+      }
+    }
+
+    if (toRemove.length > 0) {
+      remote.channel.outbox.remove(...toRemove);
+
+      for (const syncOp of toRemove) {
+        syncOp.executed();
+      }
+    }
   }
 
   const operations = remote.channel.outbox.items;
 
   if (operations.length === 0) {
-    return [];
+    return {
+      envelopes: [],
+      ackOrdinal: remote.channel.inbox.ackOrdinal,
+    };
   }
 
   let maxOrdinal = args.cursorOrdinal;
@@ -857,7 +887,10 @@ export async function pollSyncEnvelopes(
       syncOp.jobDependencies.length > 0 ? syncOp.jobDependencies : undefined,
   }));
 
-  return sortEnvelopesByFirstOperationTimestamp(envelopes);
+  return {
+    envelopes: sortEnvelopesByFirstOperationTimestamp(envelopes),
+    ackOrdinal: remote.channel.inbox.ackOrdinal,
+  };
 }
 
 type SyncEnvelopeArg = {
@@ -953,24 +986,11 @@ export function pushSyncEnvelopes(
       );
     }
 
-    remote.channel.inbox.pause();
-    try {
-      for (const syncOp of syncOps) {
-        remote.channel.inbox.add(syncOp);
-      }
-    } catch (error) {
-      remote.channel.inbox.resume();
-      throw new GraphQLError(
-        `Failed to push sync envelope: ${error instanceof Error ? error.message : "Unknown error"}`,
-      );
-    }
-    remote.channel.inbox.resume();
+    remote.channel.inbox.add(...syncOps);
   }
 
   return Promise.resolve(true);
 }
-
-import type { GetParentIdsFn } from "../../services/document-permission.service.js";
 
 /**
  * Create a getParentIds function using the reactor client

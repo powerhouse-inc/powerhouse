@@ -128,10 +128,10 @@ export class SyncManager implements ISyncManager {
         continue;
       }
 
-      // backfill
-      const outboxOrdinal = remote.channel.outbox.latestOrdinal;
-      if (outboxOrdinal > 0) {
-        await this.backfillOutbox(remote, outboxOrdinal);
+      // backfill channels
+      const outboxAckOrdinal = remote.channel.outbox.ackOrdinal;
+      if (outboxAckOrdinal > 0) {
+        await this.updateOutbox(remote, outboxAckOrdinal);
       }
     }
 
@@ -270,7 +270,7 @@ export class SyncManager implements ISyncManager {
     // backfill
     const outboxOrdinal = remote.channel.outbox.latestOrdinal;
     if (outboxOrdinal > 0) {
-      await this.backfillOutbox(remote, outboxOrdinal);
+      await this.updateOutbox(remote, outboxOrdinal);
     }
 
     return remote;
@@ -282,10 +282,13 @@ export class SyncManager implements ISyncManager {
       throw new Error(`Remote with name '${name}' does not exist`);
     }
 
+    // shutdown the channel
+    await remote.channel.shutdown();
+
+    // delete the remote's data
     await this.remoteStorage.remove(name);
     await this.cursorStorage.remove(name);
 
-    remote.channel.shutdown();
     this.remotes.delete(name);
   }
 
@@ -334,9 +337,14 @@ export class SyncManager implements ISyncManager {
       }
     }
 
-    // now work through the affected remotes and backfill based on the last operation in the outbox
+    // ack matching inbox items
     for (const remote of affectedRemotes) {
-      await this.backfillOutbox(remote, remote.channel.outbox.latestOrdinal);
+      this.ackInbox(remote, batch);
+    }
+
+    // finally, work through the affected remotes and backfill based on the last operation in the outbox
+    for (const remote of affectedRemotes) {
+      await this.updateOutbox(remote, remote.channel.outbox.latestOrdinal);
     }
   }
 
@@ -506,8 +514,36 @@ export class SyncManager implements ISyncManager {
     }
   }
 
-  private async backfillOutbox(remote: Remote, cursor: number): Promise<void> {
-    const operations = await this.getOperationsForRemote(remote, cursor);
+  private ackInbox(remote: Remote, batch: PreparedBatch): void {
+    const toRemove: SyncOperation[] = [];
+
+    // we want to guarantee:
+    //
+    // 1. sync ops are out of the inbox before being marked as executed
+    // 2. we remove syncops as a batch
+    for (const syncOp of batch.entries) {
+      for (const item of remote.channel.inbox.items) {
+        if (syncOp.event.jobId === item.jobId) {
+          toRemove.push(item);
+          break;
+        }
+      }
+    }
+
+    if (toRemove.length > 0) {
+      remote.channel.inbox.remove(...toRemove);
+
+      for (const syncOp of toRemove) {
+        syncOp.executed();
+      }
+    }
+  }
+
+  private async updateOutbox(
+    remote: Remote,
+    ackOrdinal: number,
+  ): Promise<void> {
+    const operations = await this.getOperationsForRemote(remote, ackOrdinal);
     if (operations.length === 0) {
       return;
     }
@@ -540,9 +576,12 @@ export class SyncManager implements ISyncManager {
 
   private async getOperationsForRemote(
     remote: Remote,
-    cursor: number,
+    ackOrdinal: number,
   ): Promise<OperationWithContext[]> {
-    const results = await this.operationIndex.find(remote.collectionId, cursor);
+    const results = await this.operationIndex.find(
+      remote.collectionId,
+      ackOrdinal,
+    );
 
     // apply the remote filter
     return filterOperations(
