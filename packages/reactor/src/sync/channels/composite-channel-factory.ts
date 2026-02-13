@@ -145,6 +145,11 @@ export class CompositeChannelFactory implements IChannelFactory {
     remoteName: string,
     cursorStorage: ISyncCursorStorage,
   ): GqlResponseChannel {
-    return new GqlResponseChannel(remoteId, remoteName, cursorStorage);
+    return new GqlResponseChannel(
+      this.logger,
+      remoteId,
+      remoteName,
+      cursorStorage,
+    );
   }
 }
