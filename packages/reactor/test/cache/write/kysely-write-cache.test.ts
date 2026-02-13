@@ -549,6 +549,301 @@ describe("KyselyWriteCache", () => {
 
       vi.useRealTimers();
     });
+
+    it("should track hot/cold state independently per stream", () => {
+      vi.useFakeTimers();
+
+      const adaptiveCache = new KyselyWriteCache(
+        keyframeStore,
+        operationStore,
+        registry,
+        {
+          maxDocuments: 10,
+          ringBufferSize: 5,
+          hotThresholdMs: 100,
+          hotKeyframeInterval: 999999,
+          coldKeyframeInterval: 3,
+        },
+      );
+
+      const doc = createTestDocument();
+
+      // doc1: cold writes (>100ms apart), should keyframe at revision 3
+      // doc2: hot writes (<100ms apart), should NOT keyframe at revision 3
+      vi.setSystemTime(1000);
+      adaptiveCache.putState("doc1", "global", "main", 1, doc);
+
+      vi.setSystemTime(2000);
+      adaptiveCache.putState("doc1", "global", "main", 2, doc);
+
+      vi.setSystemTime(3000);
+      adaptiveCache.putState("doc1", "global", "main", 3, doc);
+
+      // doc1 (cold) should have triggered a keyframe
+      expect(keyframeStore.putKeyframe).toHaveBeenCalledTimes(1);
+      expect(keyframeStore.putKeyframe).toHaveBeenCalledWith(
+        "doc1",
+        "global",
+        "main",
+        3,
+        expect.objectContaining({
+          state: expect.any(Object),
+          header: expect.any(Object),
+        }),
+      );
+
+      // doc2: three rapid writes — all within 100ms of each other
+      vi.setSystemTime(4000);
+      adaptiveCache.putState("doc2", "global", "main", 1, doc);
+      vi.setSystemTime(4010);
+      adaptiveCache.putState("doc2", "global", "main", 2, doc);
+      vi.setSystemTime(4020);
+      adaptiveCache.putState("doc2", "global", "main", 3, doc);
+
+      // doc2 (hot) should NOT have triggered any additional keyframes
+      expect(keyframeStore.putKeyframe).toHaveBeenCalledTimes(1);
+
+      vi.useRealTimers();
+    });
+
+    it("should trigger multiple keyframes across sustained hot writes", () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(1000);
+
+      const hotCache = new KyselyWriteCache(
+        keyframeStore,
+        operationStore,
+        registry,
+        {
+          maxDocuments: 10,
+          ringBufferSize: 5,
+          hotThresholdMs: 5000,
+          hotKeyframeInterval: 10,
+          coldKeyframeInterval: 999999,
+        },
+      );
+
+      const doc = createTestDocument();
+
+      // 30 rapid writes — should keyframe at revisions 10, 20, 30
+      for (let i = 1; i <= 30; i++) {
+        vi.setSystemTime(1000 + i);
+        hotCache.putState("doc1", "global", "main", i, doc);
+      }
+
+      expect(keyframeStore.putKeyframe).toHaveBeenCalledTimes(3);
+      expect(keyframeStore.putKeyframe).toHaveBeenNthCalledWith(
+        1,
+        "doc1",
+        "global",
+        "main",
+        10,
+        expect.objectContaining({ state: expect.any(Object) }),
+      );
+      expect(keyframeStore.putKeyframe).toHaveBeenNthCalledWith(
+        2,
+        "doc1",
+        "global",
+        "main",
+        20,
+        expect.objectContaining({ state: expect.any(Object) }),
+      );
+      expect(keyframeStore.putKeyframe).toHaveBeenNthCalledWith(
+        3,
+        "doc1",
+        "global",
+        "main",
+        30,
+        expect.objectContaining({ state: expect.any(Object) }),
+      );
+
+      vi.useRealTimers();
+    });
+
+    it("should handle repeated hot/cold oscillation", () => {
+      vi.useFakeTimers();
+
+      const oscillatingCache = new KyselyWriteCache(
+        keyframeStore,
+        operationStore,
+        registry,
+        {
+          maxDocuments: 10,
+          ringBufferSize: 10,
+          hotThresholdMs: 100,
+          hotKeyframeInterval: 999999,
+          coldKeyframeInterval: 999999,
+        },
+      );
+
+      const doc = createTestDocument();
+
+      // First hot burst (revisions 1-3)
+      vi.setSystemTime(1000);
+      oscillatingCache.putState("doc1", "global", "main", 1, doc);
+      vi.setSystemTime(1010);
+      oscillatingCache.putState("doc1", "global", "main", 2, doc);
+      vi.setSystemTime(1020);
+      oscillatingCache.putState("doc1", "global", "main", 3, doc);
+      expect(keyframeStore.putKeyframe).toHaveBeenCalledTimes(0);
+
+      // First hot-to-cold transition (revision 4)
+      vi.setSystemTime(5000);
+      oscillatingCache.putState("doc1", "global", "main", 4, doc);
+      expect(keyframeStore.putKeyframe).toHaveBeenCalledTimes(1);
+
+      // Second hot burst (revisions 5-6)
+      vi.setSystemTime(5010);
+      oscillatingCache.putState("doc1", "global", "main", 5, doc);
+      vi.setSystemTime(5020);
+      oscillatingCache.putState("doc1", "global", "main", 6, doc);
+      expect(keyframeStore.putKeyframe).toHaveBeenCalledTimes(1);
+
+      // Second hot-to-cold transition (revision 7)
+      vi.setSystemTime(10000);
+      oscillatingCache.putState("doc1", "global", "main", 7, doc);
+      expect(keyframeStore.putKeyframe).toHaveBeenCalledTimes(2);
+
+      vi.useRealTimers();
+    });
+
+    it("should handle non-sequential revisions based on revision delta", () => {
+      vi.useFakeTimers();
+
+      const coldCache = new KyselyWriteCache(
+        keyframeStore,
+        operationStore,
+        registry,
+        {
+          maxDocuments: 10,
+          ringBufferSize: 5,
+          hotThresholdMs: 100,
+          hotKeyframeInterval: 999999,
+          coldKeyframeInterval: 50,
+        },
+      );
+
+      const doc = createTestDocument();
+
+      // Revision 1: delta is 1 - 0 = 1, no keyframe
+      vi.setSystemTime(1000);
+      coldCache.putState("doc1", "global", "main", 1, doc);
+      expect(keyframeStore.putKeyframe).not.toHaveBeenCalled();
+
+      // Revision 40: delta is 40 - 0 = 40, still under 50
+      vi.setSystemTime(2000);
+      coldCache.putState("doc1", "global", "main", 40, doc);
+      expect(keyframeStore.putKeyframe).not.toHaveBeenCalled();
+
+      // Revision 50: delta is 50 - 0 = 50, meets coldKeyframeInterval
+      vi.setSystemTime(3000);
+      coldCache.putState("doc1", "global", "main", 50, doc);
+      expect(keyframeStore.putKeyframe).toHaveBeenCalledTimes(1);
+
+      // Revision 200: delta is 200 - 50 = 150, meets interval again
+      vi.setSystemTime(4000);
+      coldCache.putState("doc1", "global", "main", 200, doc);
+      expect(keyframeStore.putKeyframe).toHaveBeenCalledTimes(2);
+
+      vi.useRealTimers();
+    });
+
+    it("should reset tracking fields when stream is re-created after eviction", () => {
+      vi.useFakeTimers();
+
+      const evictionCache = new KyselyWriteCache(
+        keyframeStore,
+        operationStore,
+        registry,
+        {
+          maxDocuments: 3,
+          ringBufferSize: 5,
+          hotThresholdMs: 100,
+          hotKeyframeInterval: 999999,
+          coldKeyframeInterval: 999999,
+        },
+      );
+
+      const doc = createTestDocument();
+
+      // Build up hot state on doc1
+      vi.setSystemTime(1000);
+      evictionCache.putState("doc1", "global", "main", 1, doc);
+      vi.setSystemTime(1010);
+      evictionCache.putState("doc1", "global", "main", 2, doc);
+
+      // Fill cache to capacity (3), then add doc4 to evict doc1 (LRU)
+      vi.setSystemTime(2000);
+      evictionCache.putState("doc2", "global", "main", 1, doc);
+      vi.setSystemTime(3000);
+      evictionCache.putState("doc3", "global", "main", 1, doc);
+      vi.setSystemTime(4000);
+      evictionCache.putState("doc4", "global", "main", 1, doc);
+
+      // doc1 was evicted (keyframe on eviction)
+      expect(keyframeStore.putKeyframe).toHaveBeenCalledTimes(1);
+      vi.mocked(keyframeStore.putKeyframe).mockClear();
+
+      // Touch doc2 + doc3 so doc4 becomes LRU before re-adding doc1
+      vi.setSystemTime(5000);
+      evictionCache.putState("doc2", "global", "main", 2, doc);
+      evictionCache.putState("doc3", "global", "main", 2, doc);
+
+      // Re-create doc1 stream (evicts doc4) — should have fresh tracking fields
+      // Two rapid writes establish hot state from scratch
+      vi.setSystemTime(6000);
+      evictionCache.putState("doc1", "global", "main", 3, doc);
+      vi.setSystemTime(6010);
+      evictionCache.putState("doc1", "global", "main", 4, doc);
+
+      // Eviction of doc4 is 1 call; clear it to isolate the transition test
+      vi.mocked(keyframeStore.putKeyframe).mockClear();
+
+      // Transition to cold — should fire because wasHot was set from the new hot burst
+      vi.setSystemTime(10000);
+      evictionCache.putState("doc1", "global", "main", 5, doc);
+      expect(keyframeStore.putKeyframe).toHaveBeenCalledTimes(1);
+
+      vi.useRealTimers();
+    });
+
+    it("should not persist keyframe on cold-to-hot transition", () => {
+      vi.useFakeTimers();
+
+      const transitionCache = new KyselyWriteCache(
+        keyframeStore,
+        operationStore,
+        registry,
+        {
+          maxDocuments: 10,
+          ringBufferSize: 5,
+          hotThresholdMs: 100,
+          hotKeyframeInterval: 999999,
+          coldKeyframeInterval: 999999,
+        },
+      );
+
+      const doc = createTestDocument();
+
+      // Cold writes
+      vi.setSystemTime(1000);
+      transitionCache.putState("doc1", "global", "main", 1, doc);
+      vi.setSystemTime(2000);
+      transitionCache.putState("doc1", "global", "main", 2, doc);
+
+      // Switch to rapid writes (cold-to-hot)
+      vi.setSystemTime(2010);
+      transitionCache.putState("doc1", "global", "main", 3, doc);
+      vi.setSystemTime(2020);
+      transitionCache.putState("doc1", "global", "main", 4, doc);
+      vi.setSystemTime(2030);
+      transitionCache.putState("doc1", "global", "main", 5, doc);
+
+      // No keyframe should have fired — cold-to-hot does not trigger
+      expect(keyframeStore.putKeyframe).not.toHaveBeenCalled();
+
+      vi.useRealTimers();
+    });
   });
 
   describe("startup and shutdown", () => {
