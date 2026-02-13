@@ -9,12 +9,6 @@ import { IntervalPollTimer } from "./interval-poll-timer.js";
 
 /**
  * Factory for creating channel instances of multiple types.
- *
- * Supports both "gql" channels for network-based synchronization and
- * "internal" channels for in-process communication.
- *
- * The optional jwtHandler enables dynamic JWT token generation per-request
- * for GQL channels, useful for short-lived tokens with audience-specific claims.
  */
 export class CompositeChannelFactory implements IChannelFactory {
   private readonly logger: ILogger;
