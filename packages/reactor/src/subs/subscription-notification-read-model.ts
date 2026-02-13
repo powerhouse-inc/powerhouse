@@ -1,9 +1,7 @@
+import type { OperationWithContext } from "document-model";
 import type { IReadModel } from "../read-models/interfaces.js";
 import { RelationshipChangeType } from "../shared/types.js";
-import type {
-  IDocumentView,
-  OperationWithContext,
-} from "../storage/interfaces.js";
+import type { IDocumentView } from "../storage/interfaces.js";
 import type { ReactorSubscriptionManager } from "./react-subscription-manager.js";
 
 /**

@@ -1,4 +1,4 @@
-import type { Operation } from "document-model";
+import type { Operation, OperationWithContext } from "document-model";
 import type { Kysely } from "kysely";
 import { v4 as uuidv4 } from "uuid";
 import { collectAllPages } from "../../shared/collect-all-pages.js";
@@ -15,7 +15,6 @@ import type {
   IDocumentGraph,
   IDocumentIndexer,
   IOperationStore,
-  OperationWithContext,
 } from "../interfaces.js";
 import type {
   DocumentIndexerDatabase,

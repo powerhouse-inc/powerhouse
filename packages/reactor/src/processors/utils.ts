@@ -1,6 +1,6 @@
 import type { PHDocumentHeader } from "document-model";
-import type { OperationWithContext } from "../storage/interfaces.js";
-import type { ProcessorFilter } from "./types.js";
+import type { OperationWithContext } from "shared/document-model";
+import type { ProcessorFilter } from "shared/processors";
 
 const DRIVE_DOCUMENT_TYPE = "powerhouse/document-drive";
 

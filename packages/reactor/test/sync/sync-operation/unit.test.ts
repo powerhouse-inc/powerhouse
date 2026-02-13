@@ -8,7 +8,7 @@ import {
   ChannelErrorSource,
   SyncOperationStatus,
 } from "../../../src/sync/types.js";
-import type { OperationWithContext } from "../../../src/storage/interfaces.js";
+import type { OperationWithContext } from "shared/document-model";
 
 describe("SyncOperation", () => {
   const createTestOperations = (): OperationWithContext[] => {

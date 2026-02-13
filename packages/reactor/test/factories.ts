@@ -14,6 +14,7 @@ import type {
   DocumentModelModule,
   ISigner,
   Operation,
+  OperationContext,
   PHDocument,
 } from "document-model";
 import {
@@ -55,7 +56,6 @@ import type {
   IDocumentView,
   IOperationStore,
   ISyncCursorStorage,
-  OperationContext,
 } from "../src/storage/interfaces.js";
 import { KyselyKeyframeStore } from "../src/storage/kysely/keyframe-store.js";
 import { KyselyOperationStore } from "../src/storage/kysely/store.js";

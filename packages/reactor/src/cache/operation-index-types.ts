@@ -1,10 +1,7 @@
-import type { Operation } from "document-model";
+import type { Operation, OperationWithContext } from "document-model";
 import type { Generated, Insertable, Selectable, Updateable } from "kysely";
 import type { PagedResults, PagingOptions } from "../shared/types.js";
-import type {
-  OperationWithContext,
-  ViewFilter,
-} from "../storage/interfaces.js";
+import type { ViewFilter } from "../storage/interfaces.js";
 
 export type OperationIndexEntry = Operation & {
   ordinal?: number;

@@ -19,7 +19,7 @@ import { readdir } from "node:fs/promises";
 import path, { join } from "node:path";
 import { readPackage, type NormalizedPackageJson } from "read-pkg";
 import semver from "semver";
-import type { ProcessorApps } from "shared";
+import type { ProcessorApps } from "shared/processors";
 import { tsMorphGenerateProcessor } from "../file-builders/processors/processor.js";
 import { TSMorphCodeGenerator } from "../ts-morph-generator/core/TSMorphCodeGenerator.js";
 import { generateDocumentModelZodSchemas, generateSchemas } from "./graphql.js";

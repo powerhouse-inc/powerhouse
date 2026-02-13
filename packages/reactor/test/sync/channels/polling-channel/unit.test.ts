@@ -1,14 +1,14 @@
+import type { OperationContext } from "document-model";
 import { describe, expect, it, vi } from "vitest";
+import type { ISyncCursorStorage } from "../../../../src/storage/interfaces.js";
 import { PollingChannel } from "../../../../src/sync/channels/polling-channel.js";
+import { ChannelError } from "../../../../src/sync/errors.js";
 import { SyncOperation } from "../../../../src/sync/sync-operation.js";
 import {
   ChannelErrorSource,
   SyncOperationStatus,
   type SyncEnvelope,
 } from "../../../../src/sync/types.js";
-import { ChannelError } from "../../../../src/sync/errors.js";
-import type { ISyncCursorStorage } from "../../../../src/storage/interfaces.js";
-import type { OperationContext } from "../../../../src/storage/interfaces.js";
 
 const createMockCursorStorage = (): ISyncCursorStorage => ({
   list: vi.fn(),

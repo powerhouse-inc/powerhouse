@@ -1,4 +1,8 @@
-import type { Operation, PHDocument } from "document-model";
+import type {
+  Operation,
+  OperationWithContext,
+  PHDocument,
+} from "document-model";
 import type {
   ConsistencyToken,
   PagedResults,
@@ -7,22 +11,6 @@ import type {
 import type { RemoteCursor, RemoteRecord } from "../sync/types.js";
 
 export type { PagedResults, PagingOptions } from "../shared/types.js";
-
-export type OperationContext = {
-  documentId: string;
-  documentType: string;
-  scope: string;
-  branch: string;
-  resultingState?: string;
-
-  // This is a _global_ ordinal that is increasing across all documents and scopes.
-  ordinal: number;
-};
-
-export type OperationWithContext = {
-  operation: Operation;
-  context: OperationContext;
-};
 
 export class DuplicateOperationError extends Error {
   constructor(description: string) {

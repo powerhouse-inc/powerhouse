@@ -7,9 +7,13 @@
     "access": "restricted"
   },
   "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
+    "./processors": {
+      "types": "./dist/processors/index.d.ts",
+      "default": "./dist/processors/index.js"
+    },
+    "./processors/*": {
+      "types": "./dist/processors/*.d.ts",
+      "default": "./dist/processors/*.js"
     },
     "./document-model": {
       "types": "./dist/document-model/index.d.ts",

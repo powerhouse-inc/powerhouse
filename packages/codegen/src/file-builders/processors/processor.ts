@@ -10,7 +10,7 @@ import {
 } from "@powerhousedao/codegen/utils";
 import { camelCase, paramCase, pascalCase } from "change-case";
 import path from "path";
-import type { ProcessorApp, ProcessorApps } from "shared";
+import type { ProcessorApp, ProcessorApps } from "shared/processors";
 import { ts, type Project } from "ts-morph";
 import { tsMorphGenerateAnalyticsProcessor } from "./analytics.js";
 import { tsMorphGenerateRelationalDbProcessor } from "./relational-db.js";

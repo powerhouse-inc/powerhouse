@@ -1,7 +1,7 @@
+import type { OperationWithContext } from "shared/document-model";
+import type { ProcessorFilter } from "shared/processors";
 import { describe, expect, it } from "vitest";
 import { matchesFilter } from "../../src/processors/utils.js";
-import type { OperationWithContext } from "../../src/storage/interfaces.js";
-import type { ProcessorFilter } from "../../src/processors/types.js";
 
 function createOperation(context: {
   documentId: string;
