@@ -381,7 +381,8 @@ export type QueryJobStatusArgs = {
 
 export type QueryPollSyncEnvelopesArgs = {
   channelId: Scalars["String"]["input"];
-  cursorOrdinal: Scalars["Int"]["input"];
+  outboxAck: Scalars["Int"]["input"];
+  outboxLatest: Scalars["Int"]["input"];
 };
 
 export type ReactorOperation = {
@@ -1581,7 +1582,10 @@ export type QueryResolvers<
     ResolversTypes["PollSyncEnvelopesResult"],
     ParentType,
     ContextType,
-    RequireFields<QueryPollSyncEnvelopesArgs, "channelId" | "cursorOrdinal">
+    RequireFields<
+      QueryPollSyncEnvelopesArgs,
+      "channelId" | "outboxAck" | "outboxLatest"
+    >
   >;
 }>;
 

@@ -360,7 +360,7 @@ export class ReactorSubgraph extends BaseSubgraph {
 
       pollSyncEnvelopes: (
         _parent: unknown,
-        args: { channelId: string; cursorOrdinal: number },
+        args: { channelId: string; outboxAck: number; outboxLatest: number },
       ) => {
         this.logger.debug("pollSyncEnvelopes(@args)", args);
 

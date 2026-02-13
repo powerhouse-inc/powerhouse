@@ -314,8 +314,8 @@ export class GqlRequestChannel implements IChannel {
     ackOrdinal: number;
   }> {
     const query = `
-      query PollSyncEnvelopes($channelId: String!, $cursorOrdinal: Int!) {
-        pollSyncEnvelopes(channelId: $channelId, cursorOrdinal: $cursorOrdinal) {
+      query PollSyncEnvelopes($channelId: String!, $outboxAck: Int!, $outboxLatest: Int!) {
+        pollSyncEnvelopes(channelId: $channelId, outboxAck: $outboxAck, outboxLatest: $outboxLatest) {
           type
           channelMeta {
             id

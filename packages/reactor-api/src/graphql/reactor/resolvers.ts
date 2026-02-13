@@ -808,7 +808,8 @@ export function pollSyncEnvelopes(
   syncManager: ISyncManager,
   args: {
     channelId: string;
-    cursorOrdinal: number;
+    outboxAck: number;
+    outboxLatest: number;
   },
 ): {
   envelopes: any[];
@@ -824,11 +825,25 @@ export function pollSyncEnvelopes(
   }
 
   // trim outbox
-  if (args.cursorOrdinal > 0) {
-    trimMailboxFromAckOrdinal(remote.channel.outbox, args.cursorOrdinal);
+  if (args.outboxAck > 0) {
+    trimMailboxFromAckOrdinal(remote.channel.outbox, args.outboxAck);
   }
 
-  const operations = remote.channel.outbox.items;
+  let operations = remote.channel.outbox.items;
+
+  // filter remaining outbox operations by outboxLatest
+  operations = operations.filter((syncOp) => {
+    let maxOrdinal = 0;
+    for (const op of syncOp.operations) {
+      maxOrdinal = Math.max(maxOrdinal, op.context.ordinal);
+    }
+
+    if (maxOrdinal > args.outboxLatest) {
+      return true;
+    }
+
+    return false;
+  });
 
   if (operations.length === 0) {
     return {
@@ -837,7 +852,7 @@ export function pollSyncEnvelopes(
     };
   }
 
-  let maxOrdinal = args.cursorOrdinal;
+  let maxOrdinal = args.outboxLatest;
   for (const syncOp of operations) {
     for (const op of syncOp.operations) {
       const opOrdinal = op.context.ordinal;
