@@ -1,3 +1,13 @@
+## 6.0.0-dev.42 (2026-02-13)
+
+### 🩹 Fixes
+
+- **codegen:** use dynamic document type name in module JSDoc comment ([345ee0678](https://github.com/powerhouse-inc/powerhouse/commit/345ee0678))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 6.0.0-dev.41 (2026-02-12)
 
 ### 🚀 Features

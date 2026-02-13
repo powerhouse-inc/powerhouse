@@ -1,3 +1,19 @@
+## 6.0.0-dev.42 (2026-02-13)
+
+### 🚀 Features
+
+- preserve existing signatures and support resulting state hash ([dd6b44675](https://github.com/powerhouse-inc/powerhouse/commit/dd6b44675))
+- preserve existing signatures and support resulting state hash ([#2322](https://github.com/powerhouse-inc/powerhouse/pull/2322))
+
+### 🩹 Fixes
+
+- **codegen:** use dynamic document type name in module JSDoc comment ([345ee0678](https://github.com/powerhouse-inc/powerhouse/commit/345ee0678))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+- Guillermo Puente Sandoval @gpuente
+
 ## 6.0.0-dev.41 (2026-02-12)
 
 ### 🚀 Features

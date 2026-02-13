@@ -1,3 +1,7 @@
+## 6.0.0-dev.42 (2026-02-13)
+
+This was a version bump only for @powerhousedao/vetra to align it with other projects, there were no code changes.
+
 ## 6.0.0-dev.41 (2026-02-12)
 
 ### 🚀 Features

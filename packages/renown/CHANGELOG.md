@@ -1,3 +1,13 @@
+## 6.0.0-dev.42 (2026-02-13)
+
+### 🚀 Features
+
+- preserve existing signatures and support resulting state hash ([dd6b44675](https://github.com/powerhouse-inc/powerhouse/commit/dd6b44675))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 6.0.0-dev.41 (2026-02-12)
 
 ### 🚀 Features
