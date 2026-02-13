@@ -7,6 +7,7 @@ import {
 } from "@powerhousedao/connect/utils";
 import {
   addRemoteDrive,
+  BrowserPackageManager,
   dropAllReactorStorage,
   extractDriveSlugFromPath,
   extractNodeSlugFromPath,
@@ -17,9 +18,8 @@ import {
   setPHToast,
   setSelectedDrive,
   setSelectedNode,
-  setVetraPackages,
+  setVetraPackageManager,
   type PHToastFn,
-  type VetraPackage,
 } from "@powerhousedao/reactor-browser";
 import {
   addPHEventHandlers,
@@ -33,21 +33,19 @@ import {
   setReactorClientModule,
   setRenown,
 } from "@powerhousedao/reactor-browser/connect";
-import type { ProcessorFactoryBuilder } from "@powerhousedao/shared/processors";
 import {
   BrowserKeyStorage,
   RenownBuilder,
   RenownCryptoBuilder,
 } from "@renown/sdk";
 import { DocumentChangeType } from "@powerhousedao/reactor-browser";
-import { logger } from "document-drive";
+import { childLogger } from "document-drive";
 import type { DocumentModelModule } from "document-model";
 import { initFeatureFlags } from "../feature-flags.js";
 import { loadCommonPackage } from "./document-model.js";
-import {
-  loadExternalPackages,
-  subscribeExternalPackages,
-} from "./external-packages.js";
+import { ProcessorsManager } from "./processor-host-module.js";
+
+const logger = childLogger(["connect", "reactor"]);
 
 export async function clearReactorStorage() {
   const pg = window.ph?.reactorClientModule?.pg;
@@ -58,13 +56,6 @@ export async function clearReactorStorage() {
   await dropAllReactorStorage(pg);
 
   await pg.close();
-}
-
-async function updateVetraPackages(externalPackages: VetraPackage[]) {
-  const commonPackage = await loadCommonPackage();
-  const packages = [commonPackage, ...externalPackages];
-  setVetraPackages([commonPackage, ...externalPackages]);
-  return packages;
 }
 
 export async function createReactor() {
@@ -103,13 +94,23 @@ export async function createReactor() {
     .withCrypto(renownCrypto)
     .build();
 
-  // load vetra packages
-  const externalPackages = await loadExternalPackages();
-  const vetraPackages = await updateVetraPackages(externalPackages);
-  subscribeExternalPackages(updateVetraPackages);
+  // initialize package manager
+  const packageManagerLogger = logger.child(["package-manager"]);
+  const packageManager = new BrowserPackageManager(
+    phGlobalConfigFromEnv.routerBasename ?? "",
+    packageManagerLogger,
+  );
+
+  await packageManager.init();
+
+  // add common package
+  const commonPackage = await loadCommonPackage();
+  await packageManager.addLocalPackage("common", commonPackage);
+
+  setVetraPackageManager(packageManager);
 
   // get document models to set in the reactor (all versions)
-  const documentModelModules = vetraPackages
+  const documentModelModules = packageManager.packages
     .flatMap((pkg) => pkg.modules.documentModelModules)
     .filter(
       (module, index, modules) =>
@@ -123,7 +124,9 @@ export async function createReactor() {
     );
 
   // get upgrade manifests from packages
-  const upgradeManifests = vetraPackages.flatMap((pkg) => pkg.upgradeManifests);
+  const upgradeManifests = packageManager.packages.flatMap(
+    (pkg) => pkg.upgradeManifests,
+  );
 
   // create reactor v2 with all versions and upgrade manifests
   const reactorClientModule = await createBrowserReactor(
@@ -157,7 +160,6 @@ export async function createReactor() {
   setDid(renown.did);
   setRenown(renown);
   setDrives(drives);
-  setVetraPackages(vetraPackages);
   setSelectedDrive(driveSlug);
   setSelectedNode(nodeSlug);
   setFeatures(features);
@@ -211,35 +213,17 @@ export async function createReactor() {
   // Refresh from ReactorClient to pick up any synced drives
   await refreshReactorDataClient(reactorClientModule.client);
 
-  const packagesWithProcessorFactories = vetraPackages.filter(
-    (
-      pkg,
-    ): pkg is VetraPackage & { processorFactory: ProcessorFactoryBuilder } =>
-      pkg.processorFactory !== undefined,
-  );
-
-  if (packagesWithProcessorFactories.length > 0) {
-    const { createProcessorHostModule } =
-      await import("./processor-host-module.js");
-    const processorHostModule = await createProcessorHostModule();
-    if (processorHostModule !== undefined) {
-      await Promise.all(
-        packagesWithProcessorFactories.map(async (pkg) => {
-          const { id, name, processorFactory } = pkg;
-          console.log("Loading processor factory:", name);
-          try {
-            const factory = await processorFactory(processorHostModule);
-            await reactorClientModule.reactorModule?.processorManager.registerFactory(
-              id,
-              factory,
-            );
-          } catch (error) {
-            console.error(`Error registering processor: "${name}".`);
-            console.error(error);
-          }
-        }),
-      );
-    }
+  // Setup processor factories and subscribe to package changes
+  const { createProcessorHostModule } =
+    await import("./processor-host-module.js");
+  const processorHostModule = await createProcessorHostModule();
+  if (processorHostModule !== undefined) {
+    const processorsManager = new ProcessorsManager(
+      reactorClientModule,
+      processorHostModule,
+      packageManager,
+    );
+    await processorsManager.init();
   }
 
   window.ph.loading = false;
