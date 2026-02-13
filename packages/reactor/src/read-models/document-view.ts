@@ -1,4 +1,8 @@
-import type { PHDocument, PHDocumentHeader } from "document-model";
+import type {
+  OperationWithContext,
+  PHDocument,
+  PHDocumentHeader,
+} from "document-model";
 import type { Kysely, Transaction } from "kysely";
 import { v4 as uuidv4 } from "uuid";
 import type { IOperationIndex } from "../cache/operation-index-types.js";
@@ -13,7 +17,6 @@ import type {
   DocumentRevisions,
   IDocumentView,
   IOperationStore,
-  OperationWithContext,
   ViewFilter,
 } from "../storage/interfaces.js";
 import type { Database as StorageDatabase } from "../storage/kysely/types.js";

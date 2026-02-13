@@ -1,4 +1,4 @@
-import { type Operation } from "document-model";
+import { type Operation, type OperationWithContext } from "document-model";
 import { sql, type Kysely } from "kysely";
 import type { PagedResults, PagingOptions } from "../../shared/types.js";
 import {
@@ -8,7 +8,6 @@ import {
   type DocumentRevisions,
   type IOperationStore,
   type OperationFilter,
-  type OperationWithContext,
 } from "../interfaces.js";
 import { AtomicTransaction } from "../txn.js";
 import type { Database, OperationRow } from "./types.js";

@@ -1,11 +1,12 @@
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { PollingChannel } from "../../../../src/sync/channels/polling-channel.js";
-import { SyncOperation } from "../../../../src/sync/sync-operation.js";
 import type { ISyncCursorStorage } from "../../../../src/storage/interfaces.js";
 import type { KyselySyncRemoteStorage } from "../../../../src/storage/kysely/sync-remote-storage.js";
 import type { Database } from "../../../../src/storage/kysely/types.js";
-import type { OperationContext } from "../../../../src/storage/interfaces.js";
+import { PollingChannel } from "../../../../src/sync/channels/polling-channel.js";
+import { SyncOperation } from "../../../../src/sync/sync-operation.js";
+
+import type { OperationContext } from "document-model";
 import type { RemoteRecord } from "../../../../src/sync/types.js";
 import { SyncOperationStatus } from "../../../../src/sync/types.js";
 import { createTestSyncStorage } from "../../../factories.js";

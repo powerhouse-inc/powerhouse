@@ -1,3 +1,4 @@
+import type { OperationWithContext } from "shared/document-model";
 import { describe, expect, it, vi } from "vitest";
 import { EventBus } from "../../src/events/event-bus.js";
 import {
@@ -6,7 +7,6 @@ import {
 } from "../../src/events/types.js";
 import { ReadModelCoordinator } from "../../src/read-models/coordinator.js";
 import type { IReadModel } from "../../src/read-models/interfaces.js";
-import type { OperationWithContext } from "../../src/storage/interfaces.js";
 
 describe("ReadModelCoordinator", () => {
   const createMockOperations = (): OperationWithContext[] => {

@@ -39,3 +39,5 @@ catalog:
   "tailwind-merge": 3.4.0
   "@tailwindcss/cli": 4.1.18
   "zod": 4.3.6
+  "@sindresorhus/fnv1a": 3.1.0
+  "mutative": 1.3.0

@@ -1,5 +1,5 @@
 import type { Operation, Signature } from "document-model";
-import type { OperationWithContext } from "../../storage/interfaces.js";
+import type { OperationWithContext } from "shared/document-model";
 import { SyncOperation } from "../sync-operation.js";
 import type { SyncEnvelope } from "../types.js";
 import { batchOperationsByDocument } from "../utils.js";

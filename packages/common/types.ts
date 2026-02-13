@@ -1,1 +1,1 @@
-export type { ProcessorApp } from "shared";
+export type { ProcessorApp } from "shared/processors";

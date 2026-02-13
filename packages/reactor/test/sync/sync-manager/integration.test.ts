@@ -1,4 +1,4 @@
-import type { Operation } from "document-model";
+import type { Operation, OperationWithContext } from "document-model";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { KyselyOperationIndex } from "../../../src/cache/kysely-operation-index.js";
@@ -11,7 +11,6 @@ import { ConsoleLogger } from "../../../src/logging/console.js";
 import type {
   ISyncCursorStorage,
   ISyncRemoteStorage,
-  OperationWithContext,
 } from "../../../src/storage/interfaces.js";
 import type { Database } from "../../../src/storage/kysely/types.js";
 import type { IChannelFactory } from "../../../src/sync/interfaces.js";

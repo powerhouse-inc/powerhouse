@@ -6,7 +6,7 @@ import type {
 } from "document-drive";
 import type { PHDocumentHeader } from "document-model";
 import type { Kysely, QueryCreator } from "kysely";
-import type { ProcessorApp } from "shared";
+import type { ProcessorApp } from "shared/processors";
 export type IRelationalQueryMethods =
   | "selectFrom"
   | "selectNoFrom"

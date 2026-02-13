@@ -1,4 +1,4 @@
-import type { OperationWithContext } from "../storage/interfaces.js";
+import type { OperationWithContext } from "shared/document-model";
 import type { ChannelHealth, RemoteFilter } from "./types.js";
 
 export type OperationBatch = {

@@ -1,4 +1,4 @@
-import type { Operation } from "document-model";
+import type { Operation, OperationWithContext } from "document-model";
 import {
   driveCollectionId,
   type IOperationIndex,
@@ -24,7 +24,6 @@ import {
 import type {
   ISyncCursorStorage,
   ISyncRemoteStorage,
-  OperationWithContext,
 } from "../storage/interfaces.js";
 import { ChannelError } from "./errors.js";
 import type { IChannelFactory, ISyncManager, Remote } from "./interfaces.js";

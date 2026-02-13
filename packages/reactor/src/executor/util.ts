@@ -13,13 +13,13 @@ import {
   defaultBaseState,
   deriveOperationId,
 } from "document-model/core";
-import { DowngradeNotSupportedError } from "../shared/errors.js";
+import type { OperationWithContext } from "shared/document-model";
 import type { Job } from "../queue/types.js";
+import { DowngradeNotSupportedError } from "../shared/errors.js";
 import type {
   ConsistencyCoordinate,
   ConsistencyToken,
 } from "../shared/types.js";
-import type { OperationWithContext } from "../storage/interfaces.js";
 import type { JobResult } from "./types.js";
 
 /**

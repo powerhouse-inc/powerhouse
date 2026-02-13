@@ -1,19 +1,17 @@
+import { PGlite } from "@electric-sql/pglite";
 import type {
   AddRelationshipAction,
   Operation,
+  OperationContext,
+  OperationWithContext,
   RemoveRelationshipAction,
 } from "document-model";
-import { PGlite } from "@electric-sql/pglite";
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
 import { v4 as uuidv4 } from "uuid";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { IConsistencyTracker } from "../../../src/shared/consistency-tracker.js";
-import type {
-  IOperationStore,
-  OperationContext,
-  OperationWithContext,
-} from "../../../src/storage/interfaces.js";
+import type { IOperationStore } from "../../../src/storage/interfaces.js";
 import { KyselyDocumentIndexer } from "../../../src/storage/kysely/document-indexer.js";
 import type {
   Database,

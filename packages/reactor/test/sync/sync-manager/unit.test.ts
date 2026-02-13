@@ -1,3 +1,4 @@
+import type { OperationWithContext } from "document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { IOperationIndex } from "../../../src/cache/operation-index-types.js";
 import type { IReactor } from "../../../src/core/types.js";
@@ -7,7 +8,6 @@ import { ConsoleLogger } from "../../../src/logging/console.js";
 import type {
   ISyncCursorStorage,
   ISyncRemoteStorage,
-  OperationWithContext,
 } from "../../../src/storage/interfaces.js";
 import type {
   IChannel,

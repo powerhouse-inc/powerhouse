@@ -1,17 +1,17 @@
 import type { PHDocumentHeader } from "document-model";
 import type { Kysely, Transaction } from "kysely";
+import type { OperationWithContext } from "shared/document-model";
 import type { IOperationIndex } from "../cache/operation-index-types.js";
 import type { IWriteCache } from "../cache/write/interfaces.js";
 import { BaseReadModel } from "../read-models/base-read-model.js";
 import type { DocumentViewDatabase } from "../read-models/types.js";
 import type { IConsistencyTracker } from "../shared/consistency-tracker.js";
-import type { OperationWithContext } from "../storage/interfaces.js";
 import type {
   IProcessor,
   IProcessorManager,
   ProcessorFactory,
   ProcessorRecord,
-} from "./types.js";
+} from "shared/processors";
 import {
   createMinimalDriveHeader,
   extractDeletedDocumentId,

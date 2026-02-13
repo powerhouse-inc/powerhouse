@@ -172,6 +172,7 @@
     "zod": "catalog:"
   },
   "devDependencies": {
+    "shared": "workspace:",
     "@tailwindcss/cli": "catalog:"
   }
 }

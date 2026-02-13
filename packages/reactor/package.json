@@ -36,12 +36,13 @@
   "license": "AGPL-3.0-only",
   "dependencies": {
     "@electric-sql/pglite": "catalog:",
-    "@sindresorhus/fnv1a": "^3.1.0",
+    "@sindresorhus/fnv1a": "catalog:",
     "document-drive": "workspace:*",
     "document-model": "workspace:*",
     "kysely": "catalog:",
     "kysely-pglite-dialect": "catalog:",
-    "uuid": "^11.0.5"
+    "uuid": "^11.0.5",
+    "shared": "workspace:"
   },
   "devDependencies": {
     "@powerhousedao/analytics-engine-core": "catalog:",
