@@ -13,7 +13,7 @@ import type {
   RemoteFilter,
   SyncEnvelope,
 } from "../types.js";
-import { ChannelErrorSource, SyncOperationStatus } from "../types.js";
+import { ChannelErrorSource } from "../types.js";
 import { sortEnvelopesByFirstOperationTimestamp } from "../utils.js";
 import type { IPollTimer } from "./poll-timer.js";
 import { envelopesToSyncOperations } from "./utils.js";
@@ -92,42 +92,35 @@ export class GqlRequestChannel implements IChannel {
     this.outbox = this.bufferedOutbox;
     this.deadLetter = new Mailbox();
 
+    // when sync ops are added to the outbox, push them to the remote
     this.outbox.onAdded((syncOps) => {
-      this.handleOutboxAdded(syncOps);
-    });
-
-    // update persistent ack cursor when operations are finished being applied
-    // TODO: this hits for every syncop -- we should only do this after all syncops
-    this.inbox.onAdded((syncOps) => {
-      for (const syncOp of syncOps) {
-        syncOp.on((op, _, next) => {
-          if (next === SyncOperationStatus.Applied) {
-            let maxOrdinal = this.inbox.ackOrdinal;
-            for (const o of op.operations) {
-              maxOrdinal = Math.max(maxOrdinal, o.context.ordinal);
-            }
-
-            if (maxOrdinal > this.inbox.ackOrdinal) {
-              void this.cursorStorage.upsert({
-                remoteName: this.remoteName,
-                cursorType: "inbox",
-                cursorOrdinal: maxOrdinal,
-                lastSyncedAtUtcMs: Date.now(),
-              });
-            }
-          }
-        });
+      if (this.isShutdown) {
+        return;
       }
+
+      this.pushSyncOperations(syncOps).catch((error) => {
+        const err = error instanceof Error ? error : new Error(String(error));
+        const channelError = new ChannelError(ChannelErrorSource.Outbox, err);
+        for (const syncOp of syncOps) {
+          syncOp.failed(channelError);
+        }
+
+        // move to dead letters
+        this.deadLetter.add(...syncOps);
+        this.outbox.remove(...syncOps);
+      });
     });
   }
 
   /**
    * Shuts down the channel and prevents further operations.
    */
-  shutdown(): void {
+  shutdown(): Promise<void> {
     this.bufferedOutbox.flush();
     this.isShutdown = true;
     this.pollTimer.stop();
+
+    return Promise.resolve();
   }
 
   /**
@@ -172,7 +165,30 @@ export class GqlRequestChannel implements IChannel {
       return;
     }
 
-    const { envelopes } = response;
+    const { envelopes, ackOrdinal } = response;
+
+    // first: trim outbox
+    if (ackOrdinal > 0) {
+      const toRemove: SyncOperation[] = [];
+      for (const syncOp of this.outbox.items) {
+        let maxOrdinal = 0;
+        for (const op of syncOp.operations) {
+          maxOrdinal = Math.max(maxOrdinal, op.context.ordinal);
+        }
+
+        if (maxOrdinal <= ackOrdinal) {
+          toRemove.push(syncOp);
+        }
+      }
+
+      if (toRemove.length > 0) {
+        this.outbox.remove(...toRemove);
+
+        for (const syncOp of toRemove) {
+          syncOp.executed();
+        }
+      }
+    }
 
     // todo: Is this necessary? Outbox items should have been sorted when returned.
     const sortedEnvelopes = sortEnvelopesByFirstOperationTimestamp(envelopes);
@@ -269,7 +285,7 @@ export class GqlRequestChannel implements IChannel {
     latestOrdinal: number,
   ): Promise<{
     envelopes: SyncEnvelope[];
-    cursorOrdinal: number;
+    ackOrdinal: number;
   }> {
     const query = `
       query PollSyncEnvelopes($channelId: String!, $cursorOrdinal: Int!) {
@@ -341,12 +357,12 @@ export class GqlRequestChannel implements IChannel {
 
     const response = await this.executeGraphQL<{
       pollSyncEnvelopes: SyncEnvelope[];
-      cursorOrdinal: number;
+      ackOrdinal: number;
     }>(query, variables);
 
     return {
       envelopes: response.pollSyncEnvelopes,
-      cursorOrdinal: response.cursorOrdinal,
+      ackOrdinal: response.ackOrdinal,
     };
   }
 
@@ -387,26 +403,6 @@ export class GqlRequestChannel implements IChannel {
     };
 
     await this.executeGraphQL<{ touchChannel: boolean }>(mutation, variables);
-  }
-
-  /**
-   * Handles sync operations added to the outbox by sending them to the remote.
-   */
-  private handleOutboxAdded(syncOps: SyncOperation[]): void {
-    if (this.isShutdown) {
-      return;
-    }
-
-    // Execute async but don't await (fire and forget with error handling)
-    this.pushSyncOperations(syncOps).catch((error) => {
-      const err = error instanceof Error ? error : new Error(String(error));
-      const channelError = new ChannelError(ChannelErrorSource.Outbox, err);
-      for (const syncOp of syncOps) {
-        syncOp.failed(channelError);
-      }
-      this.deadLetter.add(...syncOps);
-      this.outbox.remove(...syncOps);
-    });
   }
 
   /**

@@ -19,7 +19,7 @@ export type RemoteFilter = {
 
 export type RemoteCursor = {
   remoteName: string;
-  cursorType: "inbox" | "outbox";
+  cursorType: string;
   cursorOrdinal: number;
   lastSyncedAtUtcMs?: number;
 };

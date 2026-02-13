@@ -4,16 +4,25 @@ export type MailboxCallback = (items: SyncOperation[]) => void;
 
 export interface IMailbox {
   get items(): ReadonlyArray<SyncOperation>;
+
+  /**
+   * The latest ordinal that has been acknowledged. Because acknowledged items
+   * are removed from the mailbox, this is the last ordinal that has been removed.
+   */
   get ackOrdinal(): number;
+
+  /**
+   * The latest ordinal of the items that are or have been added to the mailbox.
+   * This may be greater than the ack ordinal if items have been added but not
+   * yet acknowledged.
+   */
   get latestOrdinal(): number;
 
   // sync op management
-  init(latestOrdinal: number): void;
+  init(ackOrdinal: number): void;
   get(id: string): SyncOperation | undefined;
   add(...items: SyncOperation[]): void;
   remove(...items: SyncOperation[]): void;
-
-  //advanceAck(ack: number): void;
 
   // listeners
   onAdded(callback: MailboxCallback): void;
@@ -50,8 +59,8 @@ export class Mailbox implements IMailbox {
   private _ack: number = 0;
   private _latestOrdinal: number = 0;
 
-  init(latestOrdinal: number) {
-    this._latestOrdinal = latestOrdinal;
+  init(ackOrdinal: number) {
+    this._ack = this._latestOrdinal = ackOrdinal;
   }
 
   get items(): ReadonlyArray<SyncOperation> {

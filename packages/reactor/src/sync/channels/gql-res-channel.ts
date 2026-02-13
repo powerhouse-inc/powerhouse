@@ -30,8 +30,9 @@ export class GqlResponseChannel implements IChannel {
     this.deadLetter = new Mailbox();
   }
 
-  shutdown(): void {
+  shutdown(): Promise<void> {
     this.isShutdown = true;
+    return Promise.resolve();
   }
 
   async init(): Promise<void> {

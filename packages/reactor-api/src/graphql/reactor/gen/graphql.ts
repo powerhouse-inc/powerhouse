@@ -1,12 +1,12 @@
 import type {
+  DocumentNode,
   GraphQLResolveInfo,
   GraphQLScalarType,
   GraphQLScalarTypeConfig,
 } from "graphql";
-import type { Context } from "../../types.js";
-import * as z from "zod";
-import type { DocumentNode } from "graphql";
 import { gql } from "graphql-tag";
+import * as z from "zod";
+import type { Context } from "../../types.js";
 export type Maybe<T> = T | null | undefined;
 export type InputMaybe<T> = T | null | undefined;
 export type Exact<T extends { [key: string]: unknown }> = {
@@ -326,6 +326,11 @@ export enum PropagationMode {
   Orphan = "ORPHAN",
 }
 
+export type PollSyncEnvelopesResult = {
+  readonly envelopes: ReadonlyArray<SyncEnvelope>;
+  readonly ackOrdinal: Scalars["Int"]["output"];
+};
+
 export type Query = {
   readonly document?: Maybe<DocumentWithChildren>;
   readonly documentChildren: PhDocumentResultPage;
@@ -334,7 +339,7 @@ export type Query = {
   readonly documentParents: PhDocumentResultPage;
   readonly findDocuments: PhDocumentResultPage;
   readonly jobStatus?: Maybe<JobInfo>;
-  readonly pollSyncEnvelopes: ReadonlyArray<SyncEnvelope>;
+  readonly pollSyncEnvelopes: PollSyncEnvelopesResult;
 };
 
 export type QueryDocumentArgs = {
@@ -1573,7 +1578,7 @@ export type QueryResolvers<
     RequireFields<QueryJobStatusArgs, "jobId">
   >;
   pollSyncEnvelopes?: Resolver<
-    ReadonlyArray<ResolversTypes["SyncEnvelope"]>,
+    ResolversTypes["PollSyncEnvelopesResult"],
     ParentType,
     ContextType,
     RequireFields<QueryPollSyncEnvelopesArgs, "channelId" | "cursorOrdinal">

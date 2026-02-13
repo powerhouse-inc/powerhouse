@@ -52,7 +52,7 @@ export interface IChannel {
   /**
    * Shuts down the channel and prevents further operations.
    */
-  shutdown(): void;
+  shutdown(): Promise<void>;
 }
 
 /**
