@@ -81,17 +81,18 @@ const createMockCursorStorage = (
   };
 };
 
-const createMockOperationContext = (): OperationContext => ({
+const createMockOperationContext = (ordinal: number = 1): OperationContext => ({
   documentId: "doc-1",
   documentType: "test/document",
   scope: "public",
   branch: "main",
-  ordinal: 1,
+  ordinal,
 });
 
 const createMockSyncOperation = (
   id: string,
   remoteName: string,
+  ordinal: number = 0,
 ): SyncOperation => {
   return new SyncOperation(
     id,
@@ -117,7 +118,7 @@ const createMockSyncOperation = (
             input: {},
           },
         },
-        context: createMockOperationContext(),
+        context: createMockOperationContext(ordinal),
       },
     ],
   );
@@ -977,36 +978,6 @@ describe("GqlRequestChannel", () => {
     });
   });
 
-  describe("cursor updates", () => {
-    it("should update cursor with correct parameters", async () => {
-      const cursorStorage = createMockCursorStorage();
-      const mockFetch = createMockFetch({
-        touchChannel: true,
-        pollSyncEnvelopes: [],
-        ackOrdinal: 0,
-      });
-      global.fetch = mockFetch;
-
-      const channel = new GqlRequestChannel(
-        createMockLogger(),
-        "channel-1",
-        "remote-1",
-        cursorStorage,
-        createTestConfig(),
-        createMockOperationIndex(),
-        createPollTimer(),
-      );
-      await channel.init();
-
-      expect(cursorStorage.upsert).toHaveBeenCalledTimes(1);
-      const call = vi.mocked(cursorStorage.upsert).mock.calls[0];
-      expect(call[0]).toMatchObject({
-        cursorOrdinal: 42,
-      });
-      expect(call[0].lastSyncedAtUtcMs).toBeGreaterThan(0);
-    });
-  });
-
   describe("shutdown", () => {
     it("should stop polling after shutdown", async () => {
       const cursorStorage = createMockCursorStorage();
@@ -1193,6 +1164,189 @@ describe("GqlRequestChannel", () => {
       shouldFail = true;
       await vi.advanceTimersByTimeAsync(1000);
       expect(channel.getHealth().state).toBe("running");
+    });
+  });
+
+  describe("cursor persistence", () => {
+    it("should persist outbox cursor when applied operations are removed", async () => {
+      const cursorStorage = createMockCursorStorage();
+      const mockFetch = createMockFetch({
+        pollSyncEnvelopes: [],
+        pushSyncEnvelopes: true,
+      });
+      global.fetch = mockFetch;
+
+      const channel = new GqlRequestChannel(
+        createMockLogger(),
+        "channel-1",
+        "remote-1",
+        cursorStorage,
+        createTestConfig(),
+        createMockOperationIndex(),
+        createPollTimer(),
+      );
+
+      const syncOp = createMockSyncOperation("syncop-1", "remote-1", 5);
+      channel.outbox.add(syncOp);
+
+      // Flush add buffer to trigger push (which calls started())
+      await vi.advanceTimersByTimeAsync(500);
+      await vi.waitFor(() => {
+        expect(syncOp.status).toBe(SyncOperationStatus.TransportPending);
+      });
+
+      syncOp.executed();
+      channel.outbox.remove(syncOp);
+
+      // Flush remove buffer
+      await vi.advanceTimersByTimeAsync(500);
+
+      expect(cursorStorage.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          remoteName: "remote-1",
+          cursorType: "outbox",
+          cursorOrdinal: 5,
+        }),
+      );
+    });
+
+    it("should persist inbox cursor when applied operations are removed", () => {
+      const cursorStorage = createMockCursorStorage();
+      const mockFetch = createMockFetch({ pollSyncEnvelopes: [] });
+      global.fetch = mockFetch;
+
+      const channel = new GqlRequestChannel(
+        createMockLogger(),
+        "channel-1",
+        "remote-1",
+        cursorStorage,
+        createTestConfig(),
+        createMockOperationIndex(),
+        createPollTimer(),
+      );
+
+      const syncOp = createMockSyncOperation("syncop-1", "remote-1", 5);
+      channel.inbox.add(syncOp);
+      syncOp.executed();
+      channel.inbox.remove(syncOp);
+
+      expect(cursorStorage.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          remoteName: "remote-1",
+          cursorType: "inbox",
+          cursorOrdinal: 5,
+        }),
+      );
+    });
+
+    it("should not persist cursor when removed operations are not applied", async () => {
+      const cursorStorage = createMockCursorStorage();
+      const mockFetch = createMockFetch({ pollSyncEnvelopes: [] });
+      global.fetch = mockFetch;
+
+      const channel = new GqlRequestChannel(
+        createMockLogger(),
+        "channel-1",
+        "remote-1",
+        cursorStorage,
+        createTestConfig(),
+        createMockOperationIndex(),
+        createPollTimer(),
+      );
+
+      const syncOp = createMockSyncOperation("syncop-1", "remote-1", 5);
+      channel.outbox.add(syncOp);
+      channel.outbox.remove(syncOp);
+
+      await vi.advanceTimersByTimeAsync(500);
+
+      expect(cursorStorage.upsert).not.toHaveBeenCalled();
+    });
+
+    it("should not persist cursor when ordinal matches last persisted", async () => {
+      const cursorStorage = createMockCursorStorage();
+      const mockFetch = createMockFetch({
+        pollSyncEnvelopes: [],
+        pushSyncEnvelopes: true,
+      });
+      global.fetch = mockFetch;
+
+      const channel = new GqlRequestChannel(
+        createMockLogger(),
+        "channel-1",
+        "remote-1",
+        cursorStorage,
+        createTestConfig(),
+        createMockOperationIndex(),
+        createPollTimer(),
+      );
+
+      const syncOp1 = createMockSyncOperation("syncop-1", "remote-1", 5);
+      channel.outbox.add(syncOp1);
+
+      await vi.advanceTimersByTimeAsync(500);
+      await vi.waitFor(() => {
+        expect(syncOp1.status).toBe(SyncOperationStatus.TransportPending);
+      });
+
+      syncOp1.executed();
+      channel.outbox.remove(syncOp1);
+
+      await vi.advanceTimersByTimeAsync(500);
+
+      expect(cursorStorage.upsert).toHaveBeenCalledTimes(1);
+
+      const syncOp2 = createMockSyncOperation("syncop-2", "remote-1", 5);
+      channel.outbox.add(syncOp2);
+
+      await vi.advanceTimersByTimeAsync(500);
+      await vi.waitFor(() => {
+        expect(syncOp2.status).toBe(SyncOperationStatus.TransportPending);
+      });
+
+      syncOp2.executed();
+      channel.outbox.remove(syncOp2);
+
+      await vi.advanceTimersByTimeAsync(500);
+
+      expect(cursorStorage.upsert).toHaveBeenCalledTimes(1);
+    });
+
+    it("should not persist cursor when ordinal is not greater than stored ack", async () => {
+      const cursorStorage = createMockCursorStorage();
+      vi.mocked(cursorStorage.list).mockResolvedValue([
+        {
+          remoteName: "remote-1",
+          cursorType: "outbox",
+          cursorOrdinal: 10,
+          lastSyncedAtUtcMs: Date.now(),
+        },
+      ]);
+
+      const mockFetch = createMockFetch({
+        pollSyncEnvelopes: [],
+        touchChannel: true,
+      });
+      global.fetch = mockFetch;
+
+      const channel = new GqlRequestChannel(
+        createMockLogger(),
+        "channel-1",
+        "remote-1",
+        cursorStorage,
+        createTestConfig(),
+        createMockOperationIndex(),
+        createPollTimer(),
+      );
+      await channel.init();
+
+      const syncOp = createMockSyncOperation("syncop-1", "remote-1", 5);
+      channel.outbox.add(syncOp);
+      syncOp.executed();
+      channel.outbox.remove(syncOp);
+
+      expect(cursorStorage.upsert).not.toHaveBeenCalled();
+      await channel.shutdown();
     });
   });
 

@@ -18,6 +18,8 @@ export class GqlResponseChannel implements IChannel {
   private readonly remoteName: string;
   private readonly cursorStorage: ISyncCursorStorage;
   private isShutdown: boolean;
+  private lastPersistedInboxOrdinal: number = 0;
+  private lastPersistedOutboxOrdinal: number = 0;
 
   constructor(
     private readonly logger: ILogger,
@@ -39,7 +41,8 @@ export class GqlResponseChannel implements IChannel {
     // but only one onRemoved callback will be fired for the batch.
     this.outbox.onRemoved((syncOps) => {
       const maxOrdinal = getLatestAppliedOrdinal(syncOps);
-      if (maxOrdinal > this.outbox.ackOrdinal) {
+      if (maxOrdinal > this.lastPersistedOutboxOrdinal) {
+        this.lastPersistedOutboxOrdinal = maxOrdinal;
         this.cursorStorage
           .upsert({
             remoteName: this.remoteName,
@@ -59,7 +62,8 @@ export class GqlResponseChannel implements IChannel {
 
     this.inbox.onRemoved((syncOps) => {
       const maxOrdinal = getLatestAppliedOrdinal(syncOps);
-      if (maxOrdinal > this.inbox.ackOrdinal) {
+      if (maxOrdinal > this.lastPersistedInboxOrdinal) {
+        this.lastPersistedInboxOrdinal = maxOrdinal;
         this.cursorStorage
           .upsert({
             remoteName: this.remoteName,
@@ -86,11 +90,13 @@ export class GqlResponseChannel implements IChannel {
   async init(): Promise<void> {
     // get cursors -- these are the last acknowledged ordinals for the inbox and outbox
     const cursors = await this.cursorStorage.list(this.remoteName);
-    this.inbox.init(
-      cursors.find((c) => c.cursorType === "inbox")?.cursorOrdinal ?? 0,
-    );
-    this.outbox.init(
-      cursors.find((c) => c.cursorType === "outbox")?.cursorOrdinal ?? 0,
-    );
+    const inboxOrdinal =
+      cursors.find((c) => c.cursorType === "inbox")?.cursorOrdinal ?? 0;
+    const outboxOrdinal =
+      cursors.find((c) => c.cursorType === "outbox")?.cursorOrdinal ?? 0;
+    this.inbox.init(inboxOrdinal);
+    this.outbox.init(outboxOrdinal);
+    this.lastPersistedInboxOrdinal = inboxOrdinal;
+    this.lastPersistedOutboxOrdinal = outboxOrdinal;
   }
 }
