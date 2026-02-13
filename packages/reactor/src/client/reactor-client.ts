@@ -1,4 +1,4 @@
-import { addFile } from "document-drive";
+import { addFile } from "document-drive/drive-document-model/gen/node/creators";
 import type {
   Action,
   CreateDocumentActionInput,

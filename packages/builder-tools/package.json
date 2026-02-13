@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/builder-tools",
-  "version": "6.0.0-dev.40",
+  "version": "6.0.0-dev.42",
   "type": "module",
   "license": "AGPL-3.0-only",
   "publishConfig": {
@@ -107,7 +107,7 @@
     "@vitejs/plugin-basic-ssl": "^2.0.0",
     "@vitejs/plugin-react": "catalog:",
     "change-case": "^5.4.4",
-    "class-variance-authority": "^0.7.1",
+    "class-variance-authority": "0.7.0",
     "clsx": "^2.1.1",
     "cm6-graphql": "^0.2.1",
     "commander": "^13.1.0",
