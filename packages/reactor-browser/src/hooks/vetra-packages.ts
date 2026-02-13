@@ -1,20 +1,53 @@
 import { DuplicateModuleError } from "@powerhousedao/reactor";
-import type { VetraPackage } from "../types/vetra.js";
+import { useEffect, useState } from "react";
+import type { IPackageManager, VetraPackage } from "../types/vetra.js";
 import { makePHEventFunctions } from "./make-ph-event-functions.js";
 
-const vetraPackageEventFunctions = makePHEventFunctions("vetraPackages");
+const vetraPackageManagerFunctions = makePHEventFunctions(
+  "vetraPackageManager",
+);
+
+export const useVetraPackageManager = vetraPackageManagerFunctions.useValue;
 
 /** Returns all of the Vetra packages loaded by the Connect instance */
-export const useVetraPackages = vetraPackageEventFunctions.useValue;
+export const useVetraPackages = () => {
+  const packageManager = useVetraPackageManager();
+  const [vetraPackages, setVetraPackages] = useState<VetraPackage[]>(
+    packageManager?.packages ?? [],
+  );
+  useEffect(() => {
+    if (!packageManager) {
+      return;
+    }
+    const unsub = packageManager.subscribe((data) => {
+      setVetraPackages(data.packages);
+    });
+    return () => {
+      unsub();
+    };
+  }, [packageManager]);
+  return vetraPackages;
+};
 
 /** Adds the Vetra packages event handler */
-export const addVetraPackagesEventHandler =
-  vetraPackageEventFunctions.addEventHandler;
+export const addVetraPackageManagerEventHandler =
+  vetraPackageManagerFunctions.addEventHandler;
 
 /** Sets the Vetra packages for the Connect instance */
-export function setVetraPackages(vetraPackages: VetraPackage[] = []) {
-  vetraPackageEventFunctions.setValue(vetraPackages);
-  const documentModelModules = vetraPackages
+export function setVetraPackageManager(packageManager: IPackageManager) {
+  vetraPackageManagerFunctions.setValue(packageManager);
+  try {
+    updateReactorClientDocumentModels(packageManager.packages);
+  } catch (error) {
+    console.error(error);
+  }
+  packageManager.subscribe(({ packages }) => {
+    updateReactorClientDocumentModels(packages);
+  });
+}
+
+function updateReactorClientDocumentModels(packages: VetraPackage[]) {
+  const documentModelModules = packages
     .flatMap((pkg) => pkg.modules.documentModelModules)
     .filter((module) => module !== undefined);
   if (documentModelModules.length > 0) {
