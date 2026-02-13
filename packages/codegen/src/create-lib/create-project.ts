@@ -22,6 +22,7 @@ import {
   nginxConfTemplate,
   npmrcTemplate,
   powerhouseManifestTemplate,
+  processorsIndexTemplate,
   readmeTemplate,
   styleTemplate,
   subgraphsIndexTemplate,
@@ -157,6 +158,7 @@ async function writeModuleFiles() {
     boilerplateProcessorsIndexTemplate,
   );
   await writeFileEnsuringDir("subgraphs/index.ts", subgraphsIndexTemplate);
+  await writeFileEnsuringDir("processors/index.ts", processorsIndexTemplate);
 }
 
 async function writeAiConfigFiles() {
