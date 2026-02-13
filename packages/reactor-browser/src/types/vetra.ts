@@ -80,3 +80,21 @@ export type VetraPackageManifest = VetraPackageMeta & {
     [K in keyof VetraModules]: VetraMeta[];
   };
 };
+
+export type IPackagesListener = (data: { packages: VetraPackage[] }) => void;
+export type IPackageListerUnsubscribe = () => void;
+
+export interface IPackageManager {
+  packages: VetraPackage[];
+  addPackage(name: string, registryUrl: string): Promise<void>;
+  addLocalPackage(name: string, localPackage: VetraPackage): Promise<void>;
+  removePackage(name: string): Promise<void>;
+  subscribe(handler: IPackagesListener): IPackageListerUnsubscribe;
+}
+
+export interface IPackage {
+  name: string;
+  url: string;
+}
+
+export type IPackagesMap = Record<"packages", IPackage[]>;

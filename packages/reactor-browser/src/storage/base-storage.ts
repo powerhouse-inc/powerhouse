@@ -1,5 +1,8 @@
 import type { IStorage } from "./types.js";
 
+/**
+ * Base class for storage implementations.
+ */
 export class BaseStorage<
   T extends Record<string, unknown> = Record<string, unknown>,
 > implements IStorage<T>

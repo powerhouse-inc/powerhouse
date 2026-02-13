@@ -120,4 +120,8 @@ export {
 export { useGetSwitchboardLink } from "./use-get-switchboard-link.js";
 export { useOnDropFile } from "./use-on-drop-file.js";
 export { useUserPermissions } from "./user-permissions.js";
-export { setVetraPackages, useVetraPackages } from "./vetra-packages.js";
+export {
+  setVetraPackageManager,
+  useVetraPackageManager,
+  useVetraPackages,
+} from "./vetra-packages.js";

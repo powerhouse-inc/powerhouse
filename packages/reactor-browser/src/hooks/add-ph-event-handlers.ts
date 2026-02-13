@@ -80,7 +80,7 @@ import { addSelectedTimelineItemEventHandler } from "./selected-timeline-item.js
 import { addSelectedTimelineRevisionEventHandler } from "./timeline-revision.js";
 import { addToastEventHandler } from "./toast.js";
 import { addUserEventHandler } from "./user.js";
-import { addVetraPackagesEventHandler } from "./vetra-packages.js";
+import { addVetraPackageManagerEventHandler } from "./vetra-packages.js";
 
 const phGlobalEventHandlerRegisterFunctions: PHGlobalEventHandlerAdders = {
   loading: addLoadingEventHandler,
@@ -104,7 +104,7 @@ const phGlobalEventHandlerRegisterFunctions: PHGlobalEventHandlerAdders = {
     addSelectedNodeIdEventHandler();
     addSetSelectedNodeOnPopStateEventHandler();
   },
-  vetraPackages: addVetraPackagesEventHandler,
+  vetraPackageManager: addVetraPackageManagerEventHandler,
   selectedTimelineRevision: addSelectedTimelineRevisionEventHandler,
   revisionHistoryVisible: addRevisionHistoryVisibleEventHandler,
   selectedTimelineItem: addSelectedTimelineItemEventHandler,

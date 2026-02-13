@@ -6,6 +6,7 @@ export * from "./document-cache.js";
 export * from "./document-model.js";
 export * from "./global/index.js";
 export * from "./hooks/index.js";
+export * from "./package-manager.js";
 export * from "./pglite/index.js";
 export * from "./reactor-client-document-cache.js";
 export * from "./reactor.js";

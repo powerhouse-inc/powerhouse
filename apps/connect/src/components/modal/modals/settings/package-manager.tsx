@@ -1,13 +1,9 @@
 import { PH_PACKAGES } from "@powerhousedao/config";
-
-import {
-  addExternalPackage,
-  removeExternalPackage,
-} from "@powerhousedao/connect/services";
 import { PackageManager } from "@powerhousedao/design-system/connect";
 import {
   makeVetraPackageManifest,
   useDrives,
+  useVetraPackageManager,
   useVetraPackages,
 } from "@powerhousedao/reactor-browser";
 import type { Manifest } from "document-model";
@@ -40,12 +36,16 @@ function manifestToDetails(
   };
 }
 
+const PH_PACKAGES_REGISTRY = "http://localhost:8080/";
+
 export const ConnectPackageManager: React.FC = () => {
+  const packageManager = useVetraPackageManager();
   const vetraPackages = useVetraPackages();
   const drives = useDrives();
   const [reactor, setReactor] = useState("");
+  const [registryUrl, setRegistryUrl] = useState(PH_PACKAGES_REGISTRY);
 
-  const options = useMemo(() => {
+  const reactorOptions = useMemo(() => {
     return drives?.reduce<
       { value: string; label: string; disabled: boolean }[]
     >(
@@ -79,17 +79,21 @@ export const ConnectPackageManager: React.FC = () => {
 
   useEffect(() => {
     setReactor((reactor) => {
-      const defaultOption = options?.find((option) => !option.disabled);
-      if (reactor && options?.find((option) => option.value === reactor)) {
+      const defaultOption = reactorOptions?.find((option) => !option.disabled);
+      if (
+        reactor &&
+        reactorOptions?.find((option) => option.value === reactor)
+      ) {
         return reactor;
       } else {
         return defaultOption?.value ?? "";
       }
     });
-  }, [reactor, options]);
+  }, [reactor, reactorOptions]);
 
-  const packagesInfo = vetraPackages?.map((pkg) =>
-    makeVetraPackageManifest(pkg),
+  const packagesInfo = useMemo(
+    () => vetraPackages.map((pkg) => makeVetraPackageManifest(pkg)),
+    [vetraPackages],
   );
 
   const handleReactorChange = useCallback(
@@ -101,40 +105,45 @@ export const ConnectPackageManager: React.FC = () => {
       if (reactor !== LOCAL_REACTOR_VALUE) {
         throw new Error("Cannot install external package on a remote reactor");
       }
-      return addExternalPackage(packageName);
+      console.debug("Installing package", packageName, "from", registryUrl);
+      return packageManager?.addPackage(packageName, registryUrl);
     },
-    [reactor],
+    [reactor, packageManager, registryUrl],
   );
 
   const handleUninstall = useCallback(
-    (packageName: string) => {
+    (packageId: string) => {
       if (reactor !== LOCAL_REACTOR_VALUE) {
         throw new Error("Cannot delete external package on a remote reactor");
       }
-      return removeExternalPackage(packageName);
+      const pkg = packagesInfo.find((pkg) => pkg.id === packageId);
+      if (!pkg) {
+        throw new Error(`Package wiht id ${packageId} not found`);
+      }
+      packageManager?.removePackage(pkg.name).catch((error) => {
+        console.error(error);
+      });
     },
-    [reactor],
+    [reactor, packageManager, packagesInfo],
   );
 
   return (
     <PackageManager
       mutable={true}
-      reactorOptions={options ?? []}
+      reactorOptions={reactorOptions ?? []}
       reactor={reactor}
-      packages={
-        packagesInfo?.map((pkg) => ({
-          id: pkg.id,
-          name: pkg.name,
-          description: pkg.description,
-          category: pkg.category,
-          publisher: pkg.author.name,
-          publisherUrl: pkg.author.website ?? "",
-          modules: Object.values(pkg.modules).flatMap((modules) =>
-            modules.map((module) => module.name),
-          ),
-          removable: true,
-        })) ?? []
-      }
+      packages={packagesInfo.map((pkg) => ({
+        id: pkg.id,
+        name: pkg.name,
+        description: pkg.description,
+        category: pkg.category,
+        publisher: pkg.author.name,
+        publisherUrl: pkg.author.website ?? "",
+        modules: Object.values(pkg.modules).flatMap((modules) =>
+          modules.map((module) => module.name),
+        ),
+        removable: true,
+      }))}
       onReactorChange={handleReactorChange}
       onInstall={handleInstall}
       onUninstall={handleUninstall}
