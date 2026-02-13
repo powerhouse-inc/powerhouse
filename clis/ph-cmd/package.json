@@ -27,7 +27,8 @@
     "dev": "tsx src/cli.ts",
     "cli": "node build/cli.js",
     "test": "vitest run",
-    "test:watch": "vitest watch"
+    "test:watch": "vitest watch",
+    "prepublishOnly": "npm run generate-version && npm run bundle-cli"
   },
   "keywords": [],
   "author": "",
