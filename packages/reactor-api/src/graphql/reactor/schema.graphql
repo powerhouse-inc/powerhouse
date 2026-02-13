@@ -373,7 +373,7 @@ type Query {
   ): ReactorOperationResultPage!
 
   # Poll for sync envelopes from a channel
-  pollSyncEnvelopes(channelId: String!, cursorOrdinal: Int!): PollSyncEnvelopesResult!
+  pollSyncEnvelopes(channelId: String!, outboxAck: Int!, outboxLatest: Int!): PollSyncEnvelopesResult!
 }
 
 type Mutation {

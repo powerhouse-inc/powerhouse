@@ -458,7 +458,8 @@ describe("GqlRequestChannel", () => {
       ]);
 
       const mockFetch = createMockFetch({
-        pollSyncEnvelopes: [],
+        envelopes: [],
+        ackOrdinal: 42,
         touchChannel: true,
       });
       global.fetch = mockFetch;
@@ -478,7 +479,8 @@ describe("GqlRequestChannel", () => {
 
       // Second call is the poll (first is touchChannel)
       const callBody = JSON.parse(mockFetch.mock.calls[1][1]?.body as string);
-      expect(callBody.variables.cursorOrdinal).toBe(42);
+      expect(callBody.variables.outboxAck).toBe(42);
+      expect(callBody.variables.outboxLatest).toBe(42);
       await channel.shutdown();
     });
 
@@ -491,7 +493,8 @@ describe("GqlRequestChannel", () => {
       });
 
       const mockFetch = createMockFetch({
-        pollSyncEnvelopes: [],
+        envelopes: [],
+        ackOrdinal: 0,
         touchChannel: true,
       });
       global.fetch = mockFetch;
@@ -511,7 +514,8 @@ describe("GqlRequestChannel", () => {
 
       // Second call is the poll (first is touchChannel)
       const callBody = JSON.parse(mockFetch.mock.calls[1][1]?.body as string);
-      expect(callBody.variables.cursorOrdinal).toBe(0);
+      expect(callBody.variables.outboxAck).toBe(0);
+      expect(callBody.variables.outboxLatest).toBe(0);
       await channel.shutdown();
     });
 
@@ -829,7 +833,7 @@ describe("GqlRequestChannel", () => {
       await vi.advanceTimersByTimeAsync(1000);
       expect(channel.getHealth().failureCount).toBe(0);
       expect(channel.getHealth().state).toBe("idle");
-      channel.shutdown();
+      await channel.shutdown();
     });
 
     it("should handle GraphQL errors", async () => {
@@ -869,7 +873,7 @@ describe("GqlRequestChannel", () => {
       // After 5000ms, another poll failure
       await vi.advanceTimersByTimeAsync(5000);
       expect(channel.getHealth().failureCount).toBe(2);
-      channel.shutdown();
+      await channel.shutdown();
     });
 
     it("should handle HTTP errors", async () => {
@@ -907,7 +911,7 @@ describe("GqlRequestChannel", () => {
       // After 5000ms, another poll failure
       await vi.advanceTimersByTimeAsync(5000);
       expect(channel.getHealth().failureCount).toBe(2);
-      channel.shutdown();
+      await channel.shutdown();
     });
 
     it("should re-register channel when 'Channel not found' error occurs", async () => {
@@ -971,14 +975,18 @@ describe("GqlRequestChannel", () => {
       expect(channel.getHealth().failureCount).toBe(0);
       expect(channel.getHealth().state).toBe("idle");
 
-      channel.shutdown();
+      await channel.shutdown();
     });
   });
 
   describe("cursor updates", () => {
     it("should update cursor with correct parameters", async () => {
       const cursorStorage = createMockCursorStorage();
-      const mockFetch = createMockFetch({ pollSyncEnvelopes: [] });
+      const mockFetch = createMockFetch({
+        touchChannel: true,
+        pollSyncEnvelopes: [],
+        ackOrdinal: 0,
+      });
       global.fetch = mockFetch;
 
       const channel = new GqlRequestChannel(
@@ -990,8 +998,7 @@ describe("GqlRequestChannel", () => {
         createMockOperationIndex(),
         createPollTimer(),
       );
-
-      await channel.ack(42);
+      await channel.init();
 
       expect(cursorStorage.upsert).toHaveBeenCalledTimes(1);
       const call = vi.mocked(cursorStorage.upsert).mock.calls[0];
