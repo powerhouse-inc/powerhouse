@@ -11,6 +11,7 @@ import {
   type IReactor,
   type ISyncManager,
   type JobReadReadyEvent,
+  type OperationIndexEntry,
   type ReactorModule,
 } from "@powerhousedao/reactor";
 import { driveDocumentModelModule } from "document-drive";
@@ -63,6 +64,7 @@ async function setupConnectSwitchboard(): Promise<ConnectSwitchboardSetup> {
   syncManagerRegistry.set("switchboard", switchboardSyncManager);
 
   const connectSyncManager = connectModule.syncModule!.syncManager;
+  syncManagerRegistry.set("connect", connectSyncManager);
 
   return {
     connectReactor: connectModule.reactor,
@@ -157,6 +159,65 @@ function waitForOperationsReady(
         }
       },
     );
+  });
+}
+
+async function setupSyncForDriveOnSwitchboard(
+  switchboardSyncManager: ISyncManager,
+  driveId: string,
+  resolverBridge: typeof fetch,
+): Promise<void> {
+  const collectionId = driveCollectionId("main", driveId);
+  await switchboardSyncManager.add(
+    `connect-${driveId}`,
+    collectionId,
+    {
+      type: "gql",
+      parameters: {
+        url: "http://connect/graphql",
+        pollIntervalMs: 100,
+        maxFailures: 10,
+        retryBaseDelayMs: 50,
+        fetchFn: resolverBridge,
+      },
+    },
+    { documentId: [], scope: [], branch: "main" },
+  );
+}
+
+function waitForSyncStabilization(
+  eventBuses: IEventBus[],
+  quietPeriodMs = 500,
+  timeoutMs = 15000,
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    let lastActivityTime = Date.now();
+    const unsubscribes: (() => void)[] = [];
+
+    const timer = setTimeout(() => {
+      cleanup();
+      reject(new Error("Timed out waiting for sync stabilization"));
+    }, timeoutMs);
+
+    const checkQuiet = setInterval(() => {
+      if (Date.now() - lastActivityTime >= quietPeriodMs) {
+        cleanup();
+        resolve();
+      }
+    }, 50);
+
+    function cleanup() {
+      clearTimeout(timer);
+      clearInterval(checkQuiet);
+      for (const unsub of unsubscribes) unsub();
+    }
+
+    for (const bus of eventBuses) {
+      const unsub = bus.subscribe(ReactorEventTypes.JOB_READ_READY, () => {
+        lastActivityTime = Date.now();
+      });
+      unsubscribes.push(unsub);
+    }
   });
 }
 
@@ -353,4 +414,292 @@ describe("Connect-Switchboard Sync", () => {
     };
     expect(state.global.name).toBe("Synced Drive");
   }, 30000);
+
+  describe("sourceRemote echo prevention", () => {
+    it("local mutations always have sourceRemote=''", async () => {
+      const setup = await setupConnectSwitchboard();
+      connectReactor = setup.connectReactor;
+      switchboardReactor = setup.switchboardReactor;
+      connectModule = setup.connectModule;
+      switchboardModule = setup.switchboardModule;
+      connectEventBus = setup.connectEventBus;
+      switchboardEventBus = setup.switchboardEventBus;
+      connectSyncManager = setup.connectSyncManager;
+      switchboardSyncManager = setup.switchboardSyncManager;
+      resolverBridge = setup.resolverBridge;
+
+      const document = driveDocumentModelModule.utils.createDocument({
+        global: { name: "Local Test", icon: null, nodes: [] },
+      });
+      const documentId = document.header.id;
+
+      const createJob = await connectReactor.create(document);
+      await waitForJobCompletion(connectReactor, createJob.id);
+
+      const mutateJob = await connectReactor.execute(documentId, "main", [
+        driveDocumentModelModule.actions.setDriveName({
+          name: "Local Mutation",
+        }),
+      ]);
+      await waitForJobCompletion(connectReactor, mutateJob.id);
+
+      const indexResult = await connectModule.operationIndex.get(documentId);
+      const entries = indexResult.results as OperationIndexEntry[];
+
+      expect(entries.length).toBeGreaterThan(0);
+      for (const entry of entries) {
+        expect(entry.sourceRemote).toBe("");
+      }
+    }, 30000);
+
+    it("trivial append operations are not echoed back to source", async () => {
+      const setup = await setupConnectSwitchboard();
+      connectReactor = setup.connectReactor;
+      switchboardReactor = setup.switchboardReactor;
+      connectModule = setup.connectModule;
+      switchboardModule = setup.switchboardModule;
+      connectEventBus = setup.connectEventBus;
+      switchboardEventBus = setup.switchboardEventBus;
+      connectSyncManager = setup.connectSyncManager;
+      switchboardSyncManager = setup.switchboardSyncManager;
+      resolverBridge = setup.resolverBridge;
+
+      const document = driveDocumentModelModule.utils.createDocument({
+        global: { name: "Echo Test", icon: null, nodes: [] },
+      });
+      const documentId = document.header.id;
+
+      // Set up bidirectional sync BEFORE creating the document
+      // (outbox is only populated from JOB_WRITE_READY when channels exist)
+      await setupSyncForDrive(connectSyncManager, documentId, resolverBridge);
+      await setupSyncForDriveOnSwitchboard(
+        switchboardSyncManager,
+        documentId,
+        resolverBridge,
+      );
+
+      // Create document on Connect, wait for sync to Switchboard
+      const createOnSwitchboard = waitForOperationsReady(
+        switchboardEventBus,
+        documentId,
+      );
+      const createJob = await connectReactor.create(document);
+      await waitForJobCompletion(connectReactor, createJob.id);
+      await createOnSwitchboard;
+
+      // Mutate on Connect, wait for sync to Switchboard
+      const mutationOnSwitchboard = waitForOperationsReady(
+        switchboardEventBus,
+        documentId,
+      );
+      const mutateJob = await connectReactor.execute(documentId, "main", [
+        driveDocumentModelModule.actions.setDriveName({ name: "No Echo" }),
+      ]);
+      await waitForJobCompletion(connectReactor, mutateJob.id);
+      await mutationOnSwitchboard;
+
+      // Verify Switchboard's operations have non-empty sourceRemote
+      const switchboardIndex =
+        await switchboardModule.operationIndex.get(documentId);
+      const switchboardEntries =
+        switchboardIndex.results as OperationIndexEntry[];
+      const remoteEntries = switchboardEntries.filter(
+        (e) => e.sourceRemote !== "",
+      );
+      expect(remoteEntries.length).toBeGreaterThan(0);
+
+      // Record Connect's operation count before stabilization
+      const connectIndexBefore =
+        await connectModule.operationIndex.get(documentId);
+      const connectCountBefore = connectIndexBefore.results.length;
+
+      // Wait for sync to settle
+      await waitForSyncStabilization([connectEventBus, switchboardEventBus]);
+
+      // Assert Connect's operation count did NOT grow (no echo)
+      const connectIndexAfter =
+        await connectModule.operationIndex.get(documentId);
+      const connectCountAfter = connectIndexAfter.results.length;
+      expect(connectCountAfter).toBe(connectCountBefore);
+
+      // All Connect operations should have empty sourceRemote
+      const connectEntries = connectIndexAfter.results as OperationIndexEntry[];
+      for (const entry of connectEntries) {
+        expect(entry.sourceRemote).toBe("");
+      }
+
+      // States should match
+      const connectDoc = await connectReactor.get(documentId, {
+        branch: "main",
+      });
+      const switchboardDoc = await switchboardReactor.get(documentId, {
+        branch: "main",
+      });
+      expect(connectDoc.state).toEqual(switchboardDoc.state);
+    }, 30000);
+
+    it("dedup-empty load produces zero new operations", async () => {
+      const setup = await setupConnectSwitchboard();
+      connectReactor = setup.connectReactor;
+      switchboardReactor = setup.switchboardReactor;
+      connectModule = setup.connectModule;
+      switchboardModule = setup.switchboardModule;
+      connectEventBus = setup.connectEventBus;
+      switchboardEventBus = setup.switchboardEventBus;
+      connectSyncManager = setup.connectSyncManager;
+      switchboardSyncManager = setup.switchboardSyncManager;
+      resolverBridge = setup.resolverBridge;
+
+      const document = driveDocumentModelModule.utils.createDocument({
+        global: { name: "Dedup Test", icon: null, nodes: [] },
+      });
+      const documentId = document.header.id;
+
+      // Set up unidirectional sync (Connect -> Switchboard)
+      await setupSyncForDrive(connectSyncManager, documentId, resolverBridge);
+
+      // Create document on Connect, sync to Switchboard
+      const createOnSwitchboard = waitForOperationsReady(
+        switchboardEventBus,
+        documentId,
+      );
+      const createJob = await connectReactor.create(document);
+      await waitForJobCompletion(connectReactor, createJob.id);
+      await createOnSwitchboard;
+
+      // Mutate on Connect, sync mutation to Switchboard
+      const mutationOnSwitchboard = waitForOperationsReady(
+        switchboardEventBus,
+        documentId,
+      );
+      const mutateJob = await connectReactor.execute(documentId, "main", [
+        driveDocumentModelModule.actions.setDriveName({ name: "Dedup" }),
+      ]);
+      await waitForJobCompletion(connectReactor, mutateJob.id);
+      await mutationOnSwitchboard;
+
+      // Verify both sides have matching operations
+      const connectOps = await connectReactor.getOperations(documentId, {
+        branch: "main",
+      });
+      const switchboardOps = await switchboardReactor.getOperations(
+        documentId,
+        { branch: "main" },
+      );
+      const connectOpCount = Object.values(connectOps).reduce(
+        (sum, scope) => sum + scope.results.length,
+        0,
+      );
+      const switchboardOpCount = Object.values(switchboardOps).reduce(
+        (sum, scope) => sum + scope.results.length,
+        0,
+      );
+      expect(switchboardOpCount).toBe(connectOpCount);
+
+      // Record Switchboard's index count after all operations have synced
+      const indexBefore =
+        await switchboardModule.operationIndex.get(documentId);
+      const countBefore = indexBefore.results.length;
+      expect(countBefore).toBeGreaterThan(0);
+
+      // The sync channel continues polling (100ms interval).
+      // Subsequent polls deliver the same operations that Switchboard
+      // already has. Dedup in the load path must prevent new index entries.
+      await waitForSyncStabilization([connectEventBus, switchboardEventBus]);
+
+      // Assert index count is unchanged (dedup -> no new ops from re-polling)
+      const indexAfter = await switchboardModule.operationIndex.get(documentId);
+      const countAfter = indexAfter.results.length;
+      expect(countAfter).toBe(countBefore);
+    }, 30000);
+
+    it("reshuffle operations converge and terminate", async () => {
+      const setup = await setupConnectSwitchboard();
+      connectReactor = setup.connectReactor;
+      switchboardReactor = setup.switchboardReactor;
+      connectModule = setup.connectModule;
+      switchboardModule = setup.switchboardModule;
+      connectEventBus = setup.connectEventBus;
+      switchboardEventBus = setup.switchboardEventBus;
+      connectSyncManager = setup.connectSyncManager;
+      switchboardSyncManager = setup.switchboardSyncManager;
+      resolverBridge = setup.resolverBridge;
+
+      const document = driveDocumentModelModule.utils.createDocument();
+      const documentId = document.header.id;
+
+      // Set up bidirectional sync BEFORE creating any operations
+      await setupSyncForDrive(connectSyncManager, documentId, resolverBridge);
+      await setupSyncForDriveOnSwitchboard(
+        switchboardSyncManager,
+        documentId,
+        resolverBridge,
+      );
+
+      // Create document on Connect, sync to Switchboard
+      const createOnSwitchboard = waitForOperationsReady(
+        switchboardEventBus,
+        documentId,
+      );
+      const createJob = await connectReactor.create(document);
+      await waitForJobCompletion(connectReactor, createJob.id);
+      await createOnSwitchboard;
+
+      // Mutate on both sides concurrently to create conflicting operations.
+      // Both enqueue before either completes, producing divergent state
+      // that sync must reconcile via reshuffle.
+      const switchboardMutateJob = await switchboardReactor.execute(
+        documentId,
+        "main",
+        [
+          driveDocumentModelModule.actions.setDriveName({
+            name: "Switchboard Mutation",
+          }),
+        ],
+      );
+      const connectMutateJob = await connectReactor.execute(
+        documentId,
+        "main",
+        [
+          driveDocumentModelModule.actions.setDriveName({
+            name: "Connect Mutation",
+          }),
+        ],
+      );
+      await waitForJobCompletion(switchboardReactor, switchboardMutateJob.id);
+      await waitForJobCompletion(connectReactor, connectMutateJob.id);
+
+      // Wait for sync to stabilize with longer quiet period
+      await waitForSyncStabilization(
+        [connectEventBus, switchboardEventBus],
+        1000,
+        20000,
+      );
+
+      // Assert states converged
+      const connectDoc = await connectReactor.get(documentId, {
+        branch: "main",
+      });
+      const switchboardDoc = await switchboardReactor.get(documentId, {
+        branch: "main",
+      });
+      expect(connectDoc.state).toEqual(switchboardDoc.state);
+
+      // Record final operation counts
+      const connectIndex = await connectModule.operationIndex.get(documentId);
+      const switchboardIndex =
+        await switchboardModule.operationIndex.get(documentId);
+      const connectCount = connectIndex.results.length;
+      const switchboardCount = switchboardIndex.results.length;
+
+      // Wait and verify counts haven't grown (echo terminated)
+      await new Promise((r) => setTimeout(r, 1000));
+      const connectIndexFinal =
+        await connectModule.operationIndex.get(documentId);
+      const switchboardIndexFinal =
+        await switchboardModule.operationIndex.get(documentId);
+      expect(connectIndexFinal.results.length).toBe(connectCount);
+      expect(switchboardIndexFinal.results.length).toBe(switchboardCount);
+    }, 30000);
+  });
 });

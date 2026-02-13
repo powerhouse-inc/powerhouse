@@ -175,6 +175,7 @@ export { KyselyWriteCache } from "./cache/kysely-write-cache.js";
 export {
   driveCollectionId,
   type IOperationIndex,
+  type OperationIndexEntry,
 } from "./cache/operation-index-types.js";
 export type {
   CachedSnapshot,
