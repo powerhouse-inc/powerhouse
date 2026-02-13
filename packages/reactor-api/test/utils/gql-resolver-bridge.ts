@@ -72,9 +72,31 @@ export function createResolverBridge(
         outboxLatest: number;
       };
 
-      const result = await pollSyncEnvelopes(syncManager, variables);
+      const result = pollSyncEnvelopes(syncManager, variables);
 
-      return createMockResponse({ pollSyncEnvelopes: result });
+      if (result.envelopes.length > 0) {
+        console.log(
+          `[BRIDGE] pollSyncEnvelopes: ${result.envelopes.length} envelopes for channel ${variables.channelId}`,
+        );
+      }
+
+      // Normalize envelopes for GqlRequestChannel compatibility:
+      // 1. Lowercase type ("OPERATIONS" -> "operations")
+      // 2. Filter empty dependency strings (outbox can have "" as initial prevJobId)
+      const normalizedEnvelopes = result.envelopes.map(
+        (env: Record<string, unknown>) => ({
+          ...env,
+          type: (env.type as string).toLowerCase(),
+          dependsOn: Array.isArray(env.dependsOn)
+            ? (env.dependsOn as string[]).filter(Boolean)
+            : env.dependsOn,
+        }),
+      );
+
+      return createMockResponse({
+        pollSyncEnvelopes: normalizedEnvelopes,
+        ackOrdinal: result.ackOrdinal,
+      });
     }
 
     if (body.query.includes("pushSyncEnvelopes")) {
@@ -101,6 +123,13 @@ export function createResolverBridge(
         }>;
       };
 
+      const envelopeOps = variables.envelopes.flatMap((e) =>
+        (e.operations ?? []).map((op) => op.context.documentId),
+      );
+      console.log(
+        `[BRIDGE] pushSyncEnvelopes: ${variables.envelopes.length} envelopes, docs: ${[...new Set(envelopeOps)].join(",")}`,
+      );
+
       const result = await pushSyncEnvelopes(syncManager, variables);
 
       return createMockResponse({ pushSyncEnvelopes: result });
@@ -121,7 +150,13 @@ export function createResolverBridge(
         };
       };
 
+      console.log(
+        `[BRIDGE] touchChannel: id=${variables.input.id} collection=${variables.input.collectionId}`,
+      );
+
       const result = await touchChannel(syncManager, variables);
+
+      console.log(`[BRIDGE] touchChannel result: ${result}`);
 
       return createMockResponse({ touchChannel: result });
     }
