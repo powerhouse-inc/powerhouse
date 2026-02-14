@@ -94,8 +94,10 @@ export function createResolverBridge(
       );
 
       return createMockResponse({
-        pollSyncEnvelopes: normalizedEnvelopes,
-        ackOrdinal: result.ackOrdinal,
+        pollSyncEnvelopes: {
+          envelopes: normalizedEnvelopes,
+          ackOrdinal: result.ackOrdinal,
+        },
       });
     }
 

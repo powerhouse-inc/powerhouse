@@ -128,6 +128,10 @@ const operationValidators: OperationValidators = {
       JobChangeEventDTO.parse(data.jobChanges);
     }
   },
+  // Sync operations (used inline by reactor/gql-req-channel.ts, not through this SDK)
+  PollSyncEnvelopes: () => {},
+  TouchChannel: () => {},
+  PushSyncEnvelopes: () => {},
 };
 
 export function createValidatingRequester(

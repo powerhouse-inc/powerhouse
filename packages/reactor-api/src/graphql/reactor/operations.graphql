@@ -251,3 +251,83 @@ subscription JobChanges($jobId: String!) {
     error
   }
 }
+
+# Sync operations (validated here; used as inline strings in reactor/gql-req-channel.ts)
+query PollSyncEnvelopes(
+  $channelId: String!
+  $outboxAck: Int!
+  $outboxLatest: Int!
+) {
+  pollSyncEnvelopes(
+    channelId: $channelId
+    outboxAck: $outboxAck
+    outboxLatest: $outboxLatest
+  ) {
+    envelopes {
+      type
+      channelMeta {
+        id
+      }
+      operations {
+        operation {
+          index
+          timestampUtcMs
+          hash
+          skip
+          error
+          id
+          action {
+            id
+            type
+            timestampUtcMs
+            input
+            scope
+            attachments {
+              data
+              mimeType
+              hash
+              extension
+              fileName
+            }
+            context {
+              signer {
+                user {
+                  address
+                  networkId
+                  chainId
+                }
+                app {
+                  name
+                  key
+                }
+                signatures
+              }
+            }
+          }
+        }
+        context {
+          documentId
+          documentType
+          scope
+          branch
+        }
+      }
+      cursor {
+        remoteName
+        cursorOrdinal
+        lastSyncedAtUtcMs
+      }
+      key
+      dependsOn
+    }
+    ackOrdinal
+  }
+}
+
+mutation TouchChannel($input: TouchChannelInput!) {
+  touchChannel(input: $input)
+}
+
+mutation PushSyncEnvelopes($envelopes: [SyncEnvelopeInput!]!) {
+  pushSyncEnvelopes(envelopes: $envelopes)
+}
