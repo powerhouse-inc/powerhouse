@@ -150,7 +150,7 @@ export function envelopeToSyncOperation(
   return new SyncOperation(
     syncOpId,
     envelope.key ?? "",
-    envelope.dependsOn ?? [],
+    (envelope.dependsOn ?? []).filter(Boolean),
     remoteName,
     documentId,
     scopes,
@@ -189,7 +189,7 @@ export function envelopesToSyncOperations(
     return new SyncOperation(
       syncOpId,
       envelope.key ?? "",
-      envelope.dependsOn ?? [],
+      (envelope.dependsOn ?? []).filter(Boolean),
       remoteName,
       batch.documentId,
       [batch.scope],

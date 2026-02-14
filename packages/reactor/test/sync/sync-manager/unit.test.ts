@@ -2301,8 +2301,8 @@ describe("SyncManager - Unit Tests", () => {
       await new Promise((resolve) => setTimeout(resolve, 20));
 
       expect(addedSyncOps).toHaveLength(2);
-      // First SyncOp should have empty prevJobId dependency
-      expect(addedSyncOps[0].jobDependencies).toEqual([""]);
+      // First SyncOp should have no dependencies
+      expect(addedSyncOps[0].jobDependencies).toEqual([]);
       // Second SyncOp should depend on the first SyncOp's jobId
       expect(addedSyncOps[1].jobDependencies).toEqual([addedSyncOps[0].jobId]);
     });
@@ -3098,6 +3098,79 @@ describe("SyncManager - Unit Tests", () => {
       );
       expect(syncOp1.status).toBe(SyncOperationStatus.Error);
       expect(syncOp2.status).toBe(SyncOperationStatus.Error);
+    });
+
+    it("should not dead-letter keyed SyncOps with empty-string dependencies", async () => {
+      await syncManager.startup();
+
+      const channelConfig: ChannelConfig = {
+        type: "internal",
+        parameters: {},
+      };
+
+      const ch = createTestChannel();
+      vi.mocked(mockChannelFactory.instance).mockReturnValue(ch as any);
+
+      await syncManager.add("remote-empty-dep", "collection1", channelConfig, {
+        documentId: [],
+        scope: [],
+        branch: "main",
+      });
+
+      const syncOp = new SyncOperation(
+        "syncop-ed",
+        "key-0",
+        [""],
+        "remote-empty-dep",
+        "doc1",
+        ["global"],
+        "main",
+        [
+          {
+            operation: {
+              id: "op1",
+              index: 0,
+              skip: 0,
+              hash: "h1",
+              timestampUtcMs: "1000",
+              action: { type: "CREATE", scope: "global" } as any,
+            },
+            context: {
+              documentId: "doc1",
+              documentType: "test",
+              scope: "global",
+              branch: "main",
+              ordinal: 1,
+            },
+          },
+        ],
+      );
+
+      vi.mocked(mockReactor as any).loadBatch = vi.fn().mockResolvedValue({
+        jobs: {
+          "key-0": { id: "reactor-job-0", status: "PENDING" },
+        },
+      });
+
+      const inboxCb = vi.mocked(ch.inbox.onAdded).mock.calls[0][0];
+      inboxCb([syncOp]);
+      await new Promise((r) => setTimeout(r, 20));
+
+      expect((mockReactor as any).loadBatch).toHaveBeenCalledWith(
+        {
+          jobs: [
+            expect.objectContaining({
+              key: "key-0",
+              documentId: "doc1",
+              dependsOn: [],
+            }),
+          ],
+        },
+        undefined,
+        { sourceRemote: "remote-empty-dep" },
+      );
+
+      expect(ch.deadLetter.add).not.toHaveBeenCalled();
     });
   });
 });
