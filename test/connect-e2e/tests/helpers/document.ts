@@ -88,7 +88,17 @@ export async function createDocumentAndFillBasicData(
   await page.getByText("Global State Schema").first().click();
 
   if (data.global) {
-    // Focus the editor
+    // Uncheck "Sync with schema" FIRST to prevent auto-sync race condition.
+    // The StateEditor's useMemo/useEffect auto-sync computes a fixedState
+    // with _placeholder when the schema changes and sync is enabled,
+    // corrupting the initialValue string via concatenation in CodeMirror.
+    const syncCheckbox = page.getByRole("checkbox", {
+      name: "Sync with schema",
+    });
+    await syncCheckbox.uncheck();
+    await expect(syncCheckbox).not.toBeChecked();
+
+    // Focus the schema editor
     await page.click(".cm-editor");
 
     // Select all and delete
@@ -99,18 +109,15 @@ export async function createDocumentAndFillBasicData(
 
     await page.getByText("Global State Schema").first().click();
 
-    // Uncheck "Sync with schema" to prevent auto-updates overwriting our value
-    const syncCheckbox = page.getByRole("checkbox", {
-      name: "Sync with schema",
-    });
-    if (await syncCheckbox.isChecked()) {
-      await syncCheckbox.click();
-    }
-
     // Wait for the second CodeMirror editor to be ready
     const initialStateEditor = page.locator(".cm-content").nth(1);
     await expect(initialStateEditor).toBeVisible({ timeout: 5000 });
 
+    // Clear the initial state editor before filling to avoid content
+    // concatenation if auto-sync managed to populate it
+    await initialStateEditor.click();
+    await page.keyboard.press("ControlOrMeta+A");
+    await page.keyboard.press("Backspace");
     await initialStateEditor.fill(data.global.initialState);
 
     await page.getByText("global state initial value").first().click();
