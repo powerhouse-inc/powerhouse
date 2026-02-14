@@ -182,8 +182,10 @@ describe("GqlRequestChannel Integration", () => {
         json: () =>
           Promise.resolve({
             data: {
-              pollSyncEnvelopes: pollResponse.envelopes ?? [],
-              ackOrdinal: pollResponse.ackOrdinal ?? 0,
+              pollSyncEnvelopes: {
+                envelopes: pollResponse.envelopes ?? [],
+                ackOrdinal: pollResponse.ackOrdinal ?? 0,
+              },
             },
           }),
       });
@@ -379,8 +381,10 @@ describe("GqlRequestChannel Integration", () => {
         json: () =>
           Promise.resolve({
             data: {
-              pollSyncEnvelopes: [],
-              ackOrdinal: 10,
+              pollSyncEnvelopes: {
+                envelopes: [],
+                ackOrdinal: 10,
+              },
             },
           }),
       });
