@@ -228,7 +228,7 @@ export class GqlRequestChannel implements IChannel {
     // convert the envelopes to sync operations
     const allSyncOps: SyncOperation[] = [];
     for (const envelope of sortedEnvelopes) {
-      if (envelope.type === "operations" && envelope.operations) {
+      if (envelope.type.toLowerCase() === "operations" && envelope.operations) {
         const syncOps = envelopesToSyncOperations(envelope, this.remoteName);
         for (const syncOp of syncOps) {
           syncOp.transported();
@@ -369,6 +369,7 @@ export class GqlRequestChannel implements IChannel {
                 documentType
                 scope
                 branch
+                ordinal
               }
             }
             cursor {

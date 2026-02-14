@@ -249,6 +249,7 @@ export type OperationContext = {
   readonly branch: Scalars["String"]["output"];
   readonly documentId: Scalars["String"]["output"];
   readonly documentType: Scalars["String"]["output"];
+  readonly ordinal: Scalars["Int"]["output"];
   readonly scope: Scalars["String"]["output"];
 };
 
@@ -1552,6 +1553,7 @@ export type OperationContextResolvers<
   branch?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
   documentId?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
   documentType?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
+  ordinal?: Resolver<ResolversTypes["Int"], ParentType, ContextType>;
   scope?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;

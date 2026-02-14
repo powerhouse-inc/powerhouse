@@ -256,6 +256,7 @@ type OperationContext {
   documentType: String!
   scope: String!
   branch: String!
+  ordinal: Int!
 }
 
 input OperationContextInput {
@@ -373,7 +374,11 @@ type Query {
   ): ReactorOperationResultPage!
 
   # Poll for sync envelopes from a channel
-  pollSyncEnvelopes(channelId: String!, outboxAck: Int!, outboxLatest: Int!): PollSyncEnvelopesResult!
+  pollSyncEnvelopes(
+    channelId: String!
+    outboxAck: Int!
+    outboxLatest: Int!
+  ): PollSyncEnvelopesResult!
 }
 
 type Mutation {

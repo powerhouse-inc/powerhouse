@@ -124,10 +124,43 @@ const createMockSyncOperation = (
   );
 };
 
-const createMockFetch = (response: any = {}) => {
-  return vi.fn().mockResolvedValue({
-    ok: true,
-    json: () => Promise.resolve({ data: response }),
+const createMockFetch = (
+  response: {
+    pollSyncEnvelopes?: SyncEnvelope[];
+    ackOrdinal?: number;
+    touchChannel?: boolean;
+    pushSyncEnvelopes?: boolean;
+  } = {},
+) => {
+  return vi.fn().mockImplementation((_url: string, options: RequestInit) => {
+    const body = JSON.parse(options?.body as string);
+
+    if (body.query.includes("touchChannel")) {
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ data: { touchChannel: true } }),
+      });
+    }
+
+    if (body.query.includes("pushSyncEnvelopes")) {
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ data: { pushSyncEnvelopes: true } }),
+      });
+    }
+
+    return Promise.resolve({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          data: {
+            pollSyncEnvelopes: {
+              envelopes: response.pollSyncEnvelopes ?? [],
+              ackOrdinal: response.ackOrdinal ?? 0,
+            },
+          },
+        }),
+    });
   });
 };
 
@@ -457,9 +490,8 @@ describe("GqlRequestChannel", () => {
       ]);
 
       const mockFetch = createMockFetch({
-        envelopes: [],
+        pollSyncEnvelopes: [],
         ackOrdinal: 42,
-        touchChannel: true,
       });
       global.fetch = mockFetch;
 
@@ -492,9 +524,8 @@ describe("GqlRequestChannel", () => {
       });
 
       const mockFetch = createMockFetch({
-        envelopes: [],
+        pollSyncEnvelopes: [],
         ackOrdinal: 0,
-        touchChannel: true,
       });
       global.fetch = mockFetch;
 
@@ -803,7 +834,12 @@ describe("GqlRequestChannel", () => {
         }
         return Promise.resolve({
           ok: true,
-          json: () => Promise.resolve({ data: { pollSyncEnvelopes: [] } }),
+          json: () =>
+            Promise.resolve({
+              data: {
+                pollSyncEnvelopes: { envelopes: [], ackOrdinal: 0 },
+              },
+            }),
         });
       });
       global.fetch = mockFetch;
@@ -942,7 +978,12 @@ describe("GqlRequestChannel", () => {
         // Subsequent polls succeed
         return Promise.resolve({
           ok: true,
-          json: () => Promise.resolve({ data: { pollSyncEnvelopes: [] } }),
+          json: () =>
+            Promise.resolve({
+              data: {
+                pollSyncEnvelopes: { envelopes: [], ackOrdinal: 0 },
+              },
+            }),
         });
       });
       global.fetch = mockFetch;
@@ -1128,18 +1169,29 @@ describe("GqlRequestChannel", () => {
     it("should return correct health state transitions", async () => {
       const cursorStorage = createMockCursorStorage();
       let shouldFail = false;
-      const mockFetch = vi.fn().mockImplementation(() => {
-        if (shouldFail) {
-          throw new Error("Network error");
-        }
-        return Promise.resolve({
-          ok: true,
-          json: () =>
-            Promise.resolve({
-              data: { pollSyncEnvelopes: [], touchChannel: true },
-            }),
+      const mockFetch = vi
+        .fn()
+        .mockImplementation((_url: string, options: RequestInit) => {
+          if (shouldFail) {
+            throw new Error("Network error");
+          }
+          const body = JSON.parse(options?.body as string);
+          if (body.query.includes("touchChannel")) {
+            return Promise.resolve({
+              ok: true,
+              json: () => Promise.resolve({ data: { touchChannel: true } }),
+            });
+          }
+          return Promise.resolve({
+            ok: true,
+            json: () =>
+              Promise.resolve({
+                data: {
+                  pollSyncEnvelopes: { envelopes: [], ackOrdinal: 0 },
+                },
+              }),
+          });
         });
-      });
       global.fetch = mockFetch;
 
       const channel = new GqlRequestChannel(
@@ -1446,7 +1498,12 @@ describe("GqlRequestChannel", () => {
         }
         return Promise.resolve({
           ok: true,
-          json: () => Promise.resolve({ data: { pollSyncEnvelopes: [] } }),
+          json: () =>
+            Promise.resolve({
+              data: {
+                pollSyncEnvelopes: { envelopes: [], ackOrdinal: 0 },
+              },
+            }),
         });
       });
       global.fetch = mockFetch;
