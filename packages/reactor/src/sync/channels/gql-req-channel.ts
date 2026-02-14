@@ -322,61 +322,64 @@ export class GqlRequestChannel implements IChannel {
     const query = `
       query PollSyncEnvelopes($channelId: String!, $outboxAck: Int!, $outboxLatest: Int!) {
         pollSyncEnvelopes(channelId: $channelId, outboxAck: $outboxAck, outboxLatest: $outboxLatest) {
-          type
-          channelMeta {
-            id
-          }
-          operations {
-            operation {
-              index
-              timestampUtcMs
-              hash
-              skip
-              error
+          envelopes {
+            type
+            channelMeta {
               id
-              action {
-                id
-                type
+            }
+            operations {
+              operation {
+                index
                 timestampUtcMs
-                input
-                scope
-                attachments {
-                  data
-                  mimeType
-                  hash
-                  extension
-                  fileName
-                }
-                context {
-                  signer {
-                    user {
-                      address
-                      networkId
-                      chainId
+                hash
+                skip
+                error
+                id
+                action {
+                  id
+                  type
+                  timestampUtcMs
+                  input
+                  scope
+                  attachments {
+                    data
+                    mimeType
+                    hash
+                    extension
+                    fileName
+                  }
+                  context {
+                    signer {
+                      user {
+                        address
+                        networkId
+                        chainId
+                      }
+                      app {
+                        name
+                        key
+                      }
+                      signatures
                     }
-                    app {
-                      name
-                      key
-                    }
-                    signatures
                   }
                 }
               }
+              context {
+                documentId
+                documentType
+                scope
+                branch
+              }
             }
-            context {
-              documentId
-              documentType
-              scope
-              branch
+            cursor {
+              remoteName
+              cursorOrdinal
+              lastSyncedAtUtcMs
             }
+            key
+            dependsOn
           }
-          cursor {
-            remoteName
-            cursorOrdinal
-            lastSyncedAtUtcMs
-          }
-          key
-          dependsOn
+          ackOrdinal
         }
       }
     `;
@@ -388,13 +391,12 @@ export class GqlRequestChannel implements IChannel {
     };
 
     const response = await this.executeGraphQL<{
-      pollSyncEnvelopes: SyncEnvelope[];
-      ackOrdinal: number;
+      pollSyncEnvelopes: { envelopes: SyncEnvelope[]; ackOrdinal: number };
     }>(query, variables);
 
     return {
-      envelopes: response.pollSyncEnvelopes,
-      ackOrdinal: response.ackOrdinal,
+      envelopes: response.pollSyncEnvelopes.envelopes,
+      ackOrdinal: response.pollSyncEnvelopes.ackOrdinal,
     };
   }
 

@@ -1,12 +1,12 @@
 import type {
-  DocumentNode,
   GraphQLResolveInfo,
   GraphQLScalarType,
   GraphQLScalarTypeConfig,
 } from "graphql";
-import { gql } from "graphql-tag";
-import * as z from "zod";
 import type { Context } from "../../types.js";
+import * as z from "zod";
+import type { DocumentNode } from "graphql";
+import { gql } from "graphql-tag";
 export type Maybe<T> = T | null | undefined;
 export type InputMaybe<T> = T | null | undefined;
 export type Exact<T extends { [key: string]: unknown }> = {
@@ -321,15 +321,15 @@ export type PagingInput = {
   readonly offset?: InputMaybe<Scalars["Int"]["input"]>;
 };
 
+export type PollSyncEnvelopesResult = {
+  readonly ackOrdinal: Scalars["Int"]["output"];
+  readonly envelopes: ReadonlyArray<SyncEnvelope>;
+};
+
 export enum PropagationMode {
   Cascade = "CASCADE",
   Orphan = "ORPHAN",
 }
-
-export type PollSyncEnvelopesResult = {
-  readonly envelopes: ReadonlyArray<SyncEnvelope>;
-  readonly ackOrdinal: Scalars["Int"]["output"];
-};
 
 export type Query = {
   readonly document?: Maybe<DocumentWithChildren>;
@@ -930,6 +930,103 @@ export type JobChangesSubscription = {
   };
 };
 
+export type PollSyncEnvelopesQueryVariables = Exact<{
+  channelId: Scalars["String"]["input"];
+  outboxAck: Scalars["Int"]["input"];
+  outboxLatest: Scalars["Int"]["input"];
+}>;
+
+export type PollSyncEnvelopesQuery = {
+  readonly pollSyncEnvelopes: {
+    readonly ackOrdinal: number;
+    readonly envelopes: ReadonlyArray<{
+      readonly type: SyncEnvelopeType;
+      readonly key?: string | null | undefined;
+      readonly dependsOn?: ReadonlyArray<string> | null | undefined;
+      readonly channelMeta: { readonly id: string };
+      readonly operations?:
+        | ReadonlyArray<{
+            readonly operation: {
+              readonly index: number;
+              readonly timestampUtcMs: string;
+              readonly hash: string;
+              readonly skip: number;
+              readonly error?: string | null | undefined;
+              readonly id?: string | null | undefined;
+              readonly action: {
+                readonly id: string;
+                readonly type: string;
+                readonly timestampUtcMs: string;
+                readonly input: NonNullable<unknown>;
+                readonly scope: string;
+                readonly attachments?:
+                  | ReadonlyArray<{
+                      readonly data: string;
+                      readonly mimeType: string;
+                      readonly hash: string;
+                      readonly extension?: string | null | undefined;
+                      readonly fileName?: string | null | undefined;
+                    }>
+                  | null
+                  | undefined;
+                readonly context?:
+                  | {
+                      readonly signer?:
+                        | {
+                            readonly signatures: ReadonlyArray<string>;
+                            readonly user?:
+                              | {
+                                  readonly address: string;
+                                  readonly networkId: string;
+                                  readonly chainId: number;
+                                }
+                              | null
+                              | undefined;
+                            readonly app?:
+                              | { readonly name: string; readonly key: string }
+                              | null
+                              | undefined;
+                          }
+                        | null
+                        | undefined;
+                    }
+                  | null
+                  | undefined;
+              };
+            };
+            readonly context: {
+              readonly documentId: string;
+              readonly documentType: string;
+              readonly scope: string;
+              readonly branch: string;
+            };
+          }>
+        | null
+        | undefined;
+      readonly cursor?:
+        | {
+            readonly remoteName: string;
+            readonly cursorOrdinal: number;
+            readonly lastSyncedAtUtcMs?: string | null | undefined;
+          }
+        | null
+        | undefined;
+    }>;
+  };
+};
+
+export type TouchChannelMutationVariables = Exact<{
+  input: TouchChannelInput;
+}>;
+
+export type TouchChannelMutation = { readonly touchChannel: boolean };
+
+export type PushSyncEnvelopesMutationVariables = Exact<{
+  envelopes: ReadonlyArray<SyncEnvelopeInput>;
+}>;
+
+export type PushSyncEnvelopesMutation = { readonly pushSyncEnvelopes: boolean };
+
 export type WithIndex<TObject> = TObject & Record<string, any>;
 export type ResolversObject<TObject> = WithIndex<TObject>;
 
@@ -1072,6 +1169,7 @@ export type ResolversTypes = ResolversObject<{
   PHDocument: ResolverTypeWrapper<PhDocument>;
   PHDocumentResultPage: ResolverTypeWrapper<PhDocumentResultPage>;
   PagingInput: PagingInput;
+  PollSyncEnvelopesResult: ResolverTypeWrapper<PollSyncEnvelopesResult>;
   PropagationMode: PropagationMode;
   Query: ResolverTypeWrapper<{}>;
   ReactorOperation: ResolverTypeWrapper<ReactorOperation>;
@@ -1129,6 +1227,7 @@ export type ResolversParentTypes = ResolversObject<{
   PHDocument: PhDocument;
   PHDocumentResultPage: PhDocumentResultPage;
   PagingInput: PagingInput;
+  PollSyncEnvelopesResult: PollSyncEnvelopesResult;
   Query: {};
   ReactorOperation: ReactorOperation;
   ReactorOperationResultPage: ReactorOperationResultPage;
@@ -1531,6 +1630,20 @@ export type PhDocumentResultPageResolvers<
   __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
+export type PollSyncEnvelopesResultResolvers<
+  ContextType = Context,
+  ParentType extends
+    ResolversParentTypes["PollSyncEnvelopesResult"] = ResolversParentTypes["PollSyncEnvelopesResult"],
+> = ResolversObject<{
+  ackOrdinal?: Resolver<ResolversTypes["Int"], ParentType, ContextType>;
+  envelopes?: Resolver<
+    ReadonlyArray<ResolversTypes["SyncEnvelope"]>,
+    ParentType,
+    ContextType
+  >;
+  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
+}>;
+
 export type QueryResolvers<
   ContextType = Context,
   ParentType extends
@@ -1765,6 +1878,7 @@ export type Resolvers<ContextType = Context> = ResolversObject<{
   OperationWithContext?: OperationWithContextResolvers<ContextType>;
   PHDocument?: PhDocumentResolvers<ContextType>;
   PHDocumentResultPage?: PhDocumentResultPageResolvers<ContextType>;
+  PollSyncEnvelopesResult?: PollSyncEnvelopesResultResolvers<ContextType>;
   Query?: QueryResolvers<ContextType>;
   ReactorOperation?: ReactorOperationResolvers<ContextType>;
   ReactorOperationResultPage?: ReactorOperationResultPageResolvers<ContextType>;
@@ -2281,6 +2395,88 @@ export const JobChangesDocument = gql`
     }
   }
 `;
+export const PollSyncEnvelopesDocument = gql`
+  query PollSyncEnvelopes(
+    $channelId: String!
+    $outboxAck: Int!
+    $outboxLatest: Int!
+  ) {
+    pollSyncEnvelopes(
+      channelId: $channelId
+      outboxAck: $outboxAck
+      outboxLatest: $outboxLatest
+    ) {
+      envelopes {
+        type
+        channelMeta {
+          id
+        }
+        operations {
+          operation {
+            index
+            timestampUtcMs
+            hash
+            skip
+            error
+            id
+            action {
+              id
+              type
+              timestampUtcMs
+              input
+              scope
+              attachments {
+                data
+                mimeType
+                hash
+                extension
+                fileName
+              }
+              context {
+                signer {
+                  user {
+                    address
+                    networkId
+                    chainId
+                  }
+                  app {
+                    name
+                    key
+                  }
+                  signatures
+                }
+              }
+            }
+          }
+          context {
+            documentId
+            documentType
+            scope
+            branch
+          }
+        }
+        cursor {
+          remoteName
+          cursorOrdinal
+          lastSyncedAtUtcMs
+        }
+        key
+        dependsOn
+      }
+      ackOrdinal
+    }
+  }
+`;
+export const TouchChannelDocument = gql`
+  mutation TouchChannel($input: TouchChannelInput!) {
+    touchChannel(input: $input)
+  }
+`;
+export const PushSyncEnvelopesDocument = gql`
+  mutation PushSyncEnvelopes($envelopes: [SyncEnvelopeInput!]!) {
+    pushSyncEnvelopes(envelopes: $envelopes)
+  }
+`;
 export type Requester<C = {}> = <R, V>(
   doc: DocumentNode,
   vars?: V,
@@ -2485,6 +2681,39 @@ export function getSdk<C>(requester: Requester<C>) {
         variables,
         options,
       ) as AsyncIterable<JobChangesSubscription>;
+    },
+    PollSyncEnvelopes(
+      variables: PollSyncEnvelopesQueryVariables,
+      options?: C,
+    ): Promise<PollSyncEnvelopesQuery> {
+      return requester<PollSyncEnvelopesQuery, PollSyncEnvelopesQueryVariables>(
+        PollSyncEnvelopesDocument,
+        variables,
+        options,
+      ) as Promise<PollSyncEnvelopesQuery>;
+    },
+    TouchChannel(
+      variables: TouchChannelMutationVariables,
+      options?: C,
+    ): Promise<TouchChannelMutation> {
+      return requester<TouchChannelMutation, TouchChannelMutationVariables>(
+        TouchChannelDocument,
+        variables,
+        options,
+      ) as Promise<TouchChannelMutation>;
+    },
+    PushSyncEnvelopes(
+      variables: PushSyncEnvelopesMutationVariables,
+      options?: C,
+    ): Promise<PushSyncEnvelopesMutation> {
+      return requester<
+        PushSyncEnvelopesMutation,
+        PushSyncEnvelopesMutationVariables
+      >(
+        PushSyncEnvelopesDocument,
+        variables,
+        options,
+      ) as Promise<PushSyncEnvelopesMutation>;
     },
   };
 }
