@@ -210,36 +210,56 @@ describe("SyncManager Integration", () => {
         branch: "main",
       });
 
+      const op1: Operation = {
+        id: "op1",
+        index: 0,
+        skip: 0,
+        hash: "hash1",
+        timestampUtcMs: "2023-01-01T00:00:00.000Z",
+        action: {
+          type: "CREATE",
+          scope: "global",
+          id: "action1",
+          timestampUtcMs: "2023-01-01T00:00:00.000Z",
+          input: {},
+        },
+      } as Operation;
+
+      const txn = operationIndex.start();
+      txn.write([
+        {
+          ...op1,
+          documentId: "doc1",
+          documentType: "test",
+          scope: "global",
+          sourceRemote: "",
+          branch: "main",
+        },
+      ]);
+      txn.createCollection("collection1");
+      txn.addToCollection("collection1", "doc1");
+      const ordinals = await operationIndex.commit(txn);
+
       const operations: OperationWithContext[] = [
         {
-          operation: {
-            id: "op1",
-            index: 0,
-            skip: 0,
-            hash: "hash1",
-            timestampUtcMs: "2023-01-01T00:00:00.000Z",
-            action: {
-              type: "CREATE",
-              scope: "global",
-              id: "action1",
-              timestampUtcMs: "2023-01-01T00:00:00.000Z",
-              input: {},
-            },
-          } as Operation,
+          operation: op1,
           context: {
             documentId: "doc1",
             documentType: "test",
             scope: "global",
             branch: "main",
-            ordinal: 1,
+            ordinal: ordinals[0],
           },
         },
       ];
+
+      sentEnvelopes.length = 0;
 
       await eventBus.emit(ReactorEventTypes.JOB_WRITE_READY, {
         jobId: "auto-job-1",
         operations,
         jobMeta: { batchId: "auto-auto-job-1", batchJobIds: ["auto-job-1"] },
+        collectionMemberships: { doc1: ["collection1"] },
       });
 
       expect(sentEnvelopes).toHaveLength(1);
@@ -326,36 +346,58 @@ describe("SyncManager Integration", () => {
         branch: "main",
       });
 
+      const op1: Operation = {
+        id: "op1",
+        index: 0,
+        skip: 0,
+        hash: "hash1",
+        timestampUtcMs: "2023-01-01T00:00:00.000Z",
+        action: {
+          type: "CREATE",
+          scope: "global",
+          id: "action1",
+          timestampUtcMs: "2023-01-01T00:00:00.000Z",
+          input: {},
+        },
+      } as Operation;
+
+      const txn = operationIndex.start();
+      txn.write([
+        {
+          ...op1,
+          documentId: "doc1",
+          documentType: "test",
+          scope: "global",
+          sourceRemote: "",
+          branch: "main",
+        },
+      ]);
+      txn.createCollection("collection1");
+      txn.addToCollection("collection1", "doc1");
+      txn.createCollection("collection2");
+      txn.addToCollection("collection2", "doc1");
+      const ordinals = await operationIndex.commit(txn);
+
       const operations: OperationWithContext[] = [
         {
-          operation: {
-            id: "op1",
-            index: 0,
-            skip: 0,
-            hash: "hash1",
-            timestampUtcMs: "2023-01-01T00:00:00.000Z",
-            action: {
-              type: "CREATE",
-              scope: "global",
-              id: "action1",
-              timestampUtcMs: "2023-01-01T00:00:00.000Z",
-              input: {},
-            },
-          } as Operation,
+          operation: op1,
           context: {
             documentId: "doc1",
             documentType: "test",
             scope: "global",
             branch: "main",
-            ordinal: 1,
+            ordinal: ordinals[0],
           },
         },
       ];
+
+      sentEnvelopes.length = 0;
 
       await eventBus.emit(ReactorEventTypes.JOB_WRITE_READY, {
         jobId: "auto-job-1",
         operations,
         jobMeta: { batchId: "auto-auto-job-1", batchJobIds: ["auto-job-1"] },
+        collectionMemberships: { doc1: ["collection1", "collection2"] },
       });
 
       expect(sentEnvelopes).toHaveLength(2);
@@ -460,12 +502,12 @@ describe("SyncManager Integration", () => {
           batchId: "auto-job-catchup-1",
           batchJobIds: ["job-catchup-1"],
         },
+        collectionMemberships: { doc2: ["collection1"] },
       });
 
       expect(sentEnvelopes).toHaveLength(2);
-      expect(findSpy).toHaveBeenCalledWith("collection1", 0, undefined, {
-        cursor: "0",
-        limit: 500,
+      expect(findSpy).toHaveBeenCalledWith("collection1", 0, {
+        excludeSourceRemote: "remote1",
       });
       const sentOperationIds = sentEnvelopes.map(
         (envelope) => envelope.operations![0].operation.id,
@@ -499,14 +541,12 @@ describe("SyncManager Integration", () => {
           batchId: "auto-job-catchup-2",
           batchJobIds: ["job-catchup-2"],
         },
+        collectionMemberships: { doc2: ["collection1"] },
       });
 
-      expect(findSpy).toHaveBeenLastCalledWith(
-        "collection1",
-        triggerOrdinal,
-        undefined,
-        { cursor: "0", limit: 500 },
-      );
+      expect(findSpy).toHaveBeenLastCalledWith("collection1", triggerOrdinal, {
+        excludeSourceRemote: "remote1",
+      });
       expect(sentEnvelopes).toHaveLength(0);
     });
 
@@ -607,6 +647,7 @@ describe("SyncManager Integration", () => {
           },
         ],
         jobMeta: { batchId, batchJobIds },
+        collectionMemberships: { doc1: ["collection1"] },
       });
 
       expect(sentEnvelopes).toHaveLength(0);
@@ -629,15 +670,13 @@ describe("SyncManager Integration", () => {
           },
         ],
         jobMeta: { batchId, batchJobIds },
+        collectionMemberships: { doc2: ["collection1"] },
       });
 
       expect(sentEnvelopes).toHaveLength(2);
-      expect(findSpy).toHaveBeenLastCalledWith(
-        "collection1",
-        ordinal1,
-        undefined,
-        { cursor: "0", limit: 500 },
-      );
+      expect(findSpy).toHaveBeenLastCalledWith("collection1", 0, {
+        excludeSourceRemote: "remote1",
+      });
       const sentOperationIds = sentEnvelopes.map(
         (envelope) => envelope.operations![0].operation.id,
       );
@@ -781,31 +820,50 @@ describe("SyncManager Integration", () => {
 
       await syncManager.add("remote1", "collection1", channelConfig);
 
+      const op1: Operation = {
+        id: "op1",
+        index: 0,
+        skip: 0,
+        hash: "hash1",
+        timestampUtcMs: "2023-01-01T00:00:00.000Z",
+        action: {
+          type: "CREATE",
+          scope: "global",
+          id: "action1",
+          timestampUtcMs: "2023-01-01T00:00:00.000Z",
+          input: {},
+        },
+      } as Operation;
+
+      const txn = operationIndex.start();
+      txn.write([
+        {
+          ...op1,
+          documentId: "doc1",
+          documentType: "test",
+          scope: "global",
+          sourceRemote: "",
+          branch: "main",
+        },
+      ]);
+      txn.createCollection("collection1");
+      txn.addToCollection("collection1", "doc1");
+      const ordinals = await operationIndex.commit(txn);
+
       const operations: OperationWithContext[] = [
         {
-          operation: {
-            id: "op1",
-            index: 0,
-            skip: 0,
-            hash: "hash1",
-            timestampUtcMs: "2023-01-01T00:00:00.000Z",
-            action: {
-              type: "CREATE",
-              scope: "global",
-              id: "action1",
-              timestampUtcMs: "2023-01-01T00:00:00.000Z",
-              input: {},
-            },
-          } as Operation,
+          operation: op1,
           context: {
             documentId: "doc1",
             documentType: "test",
             scope: "global",
             branch: "main",
-            ordinal: 1,
+            ordinal: ordinals[0],
           },
         },
       ];
+
+      sentEnvelopes.length = 0;
 
       await eventBus.emit(ReactorEventTypes.JOB_WRITE_READY, {
         jobId: "auto-job-1",

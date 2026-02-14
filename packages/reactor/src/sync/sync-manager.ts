@@ -273,10 +273,7 @@ export class SyncManager implements ISyncManager {
     }
 
     // backfill
-    const outboxOrdinal = remote.channel.outbox.latestOrdinal;
-    if (outboxOrdinal > 0) {
-      await this.updateOutbox(remote, outboxOrdinal);
-    }
+    await this.updateOutbox(remote, 0);
 
     return remote;
   }
@@ -577,10 +574,19 @@ export class SyncManager implements ISyncManager {
       { excludeSourceRemote: remote.name },
     );
 
-    // apply the remote filter
-    return filterOperations(
-      results.results.map((entry) => toOperationWithContext(entry)),
-      remote.filter,
+    let operations = results.results.map((entry) =>
+      toOperationWithContext(entry),
     );
+
+    // apply the sinceTimestampUtcMs filter
+    const sinceTimestamp = remote.options.sinceTimestampUtcMs;
+    if (sinceTimestamp && sinceTimestamp !== "0") {
+      operations = operations.filter(
+        (op) => op.operation.timestampUtcMs >= sinceTimestamp,
+      );
+    }
+
+    // apply the remote filter
+    return filterOperations(operations, remote.filter);
   }
 }

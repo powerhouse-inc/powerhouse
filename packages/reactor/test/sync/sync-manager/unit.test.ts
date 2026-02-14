@@ -1130,7 +1130,7 @@ describe("SyncManager - Unit Tests", () => {
           },
         ],
       );
-      mockChannel.inbox.items.push(inboxSyncOp);
+      mockChannel.inbox.add(inboxSyncOp);
 
       vi.mocked(mockOperationIndex.find).mockResolvedValueOnce(
         createFindResult([
@@ -1292,6 +1292,7 @@ describe("SyncManager - Unit Tests", () => {
         branch: "main",
       });
 
+      vi.mocked(mockOperationIndex.find).mockClear();
       vi.mocked(mockOperationIndex.find)
         .mockResolvedValueOnce(
           createFindResult([
