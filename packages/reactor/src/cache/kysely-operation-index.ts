@@ -211,7 +211,7 @@ export class KyselyOperationIndex implements IOperationIndex {
       .select(["dc.documentId", "dc.collectionId"])
       .where("dc.collectionId", "=", collectionId)
       .where(
-        sql<boolean>`dc."leftOrdinal" IS NULL OR oi.ordinal < dc."leftOrdinal"`,
+        sql<boolean>`(dc."leftOrdinal" IS NULL OR oi.ordinal < dc."leftOrdinal")`,
       )
       .orderBy("oi.ordinal", "asc");
 
@@ -452,7 +452,7 @@ export class KyselyOperationIndex implements IOperationIndex {
       .select("oi.timestampUtcMs")
       .where("dc.collectionId", "=", collectionId)
       .where(
-        sql<boolean>`dc."leftOrdinal" IS NULL OR oi.ordinal < dc."leftOrdinal"`,
+        sql<boolean>`(dc."leftOrdinal" IS NULL OR oi.ordinal < dc."leftOrdinal")`,
       )
       .orderBy("oi.ordinal", "desc")
       .limit(1)

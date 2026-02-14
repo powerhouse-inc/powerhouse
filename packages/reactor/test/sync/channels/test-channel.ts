@@ -1,5 +1,8 @@
 import type { ISyncCursorStorage } from "../../../src/storage/interfaces.js";
-import { envelopeToSyncOperation } from "../../../src/sync/channels/utils.js";
+import {
+  envelopeToSyncOperation,
+  getLatestAppliedOrdinal,
+} from "../../../src/sync/channels/utils.js";
 import { ChannelError } from "../../../src/sync/errors.js";
 import type { IChannel } from "../../../src/sync/interfaces.js";
 import { Mailbox } from "../../../src/sync/mailbox.js";
@@ -47,6 +50,18 @@ export class TestChannel implements IChannel {
     this.outbox.onAdded((syncOps) => {
       for (const syncOp of syncOps) {
         this.handleOutboxAdded(syncOp);
+      }
+    });
+
+    this.outbox.onRemoved((syncOps) => {
+      const maxOrdinal = getLatestAppliedOrdinal(syncOps);
+      if (maxOrdinal > 0) {
+        void this.cursorStorage.upsert({
+          remoteName: this.remoteName,
+          cursorType: "outbox",
+          cursorOrdinal: maxOrdinal,
+          lastSyncedAtUtcMs: Date.now(),
+        });
       }
     });
   }
