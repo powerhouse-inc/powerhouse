@@ -186,7 +186,9 @@ describe("SyncManager - Unit Tests", () => {
     };
 
     mockReactor = {
-      load: vi.fn().mockResolvedValue({ status: "ok" }),
+      load: vi
+        .fn()
+        .mockResolvedValue({ id: "default-job-id", status: "READ_READY" }),
       getJobStatus: vi.fn().mockResolvedValue({ id: "", status: "READ_READY" }),
       loadBatch: vi.fn().mockResolvedValue({ jobs: {} }),
     } as any;
@@ -319,6 +321,56 @@ describe("SyncManager - Unit Tests", () => {
 
       await expect(syncManager.startup()).rejects.toThrow(
         "SyncManager is already shutdown and cannot be started",
+      );
+    });
+
+    it("should not register remote when channel.init() fails", async () => {
+      const failChannel = createTestChannel();
+      failChannel.init.mockRejectedValue(new Error("init boom"));
+
+      const okChannel = createTestChannel();
+
+      vi.mocked(mockChannelFactory.instance)
+        .mockReturnValueOnce(failChannel as any)
+        .mockReturnValueOnce(okChannel as any);
+
+      const remoteRecords: RemoteRecord[] = [
+        {
+          id: "ch-fail",
+          name: "remote-fail",
+          collectionId: "col1",
+          channelConfig: { type: "internal", parameters: {} },
+          filter: { documentId: [], scope: [], branch: "main" },
+          options: { sinceTimestampUtcMs: "0" },
+          status: {
+            push: { state: "idle", failureCount: 0 },
+            pull: { state: "idle", failureCount: 0 },
+          },
+        },
+        {
+          id: "ch-ok",
+          name: "remote-ok",
+          collectionId: "col1",
+          channelConfig: { type: "internal", parameters: {} },
+          filter: { documentId: [], scope: [], branch: "main" },
+          options: { sinceTimestampUtcMs: "0" },
+          status: {
+            push: { state: "idle", failureCount: 0 },
+            pull: { state: "idle", failureCount: 0 },
+          },
+        },
+      ];
+
+      vi.mocked(mockRemoteStorage.list).mockResolvedValue(remoteRecords);
+
+      await syncManager.startup();
+
+      const remotes = syncManager.list();
+      expect(remotes).toHaveLength(1);
+      expect(remotes[0].name).toBe("remote-ok");
+
+      expect(() => syncManager.getByName("remote-fail")).toThrow(
+        "Remote with name 'remote-fail' does not exist",
       );
     });
 
@@ -468,6 +520,28 @@ describe("SyncManager - Unit Tests", () => {
           parameters: {},
         }),
       ).rejects.toThrow("SyncManager is shutdown and cannot add remotes");
+    });
+
+    it("should clean up on channel.init() failure", async () => {
+      await syncManager.startup();
+
+      const failChannel = createTestChannel();
+      failChannel.init.mockRejectedValue(new Error("init failed"));
+      vi.mocked(mockChannelFactory.instance).mockReturnValue(
+        failChannel as any,
+      );
+
+      const channelConfig: ChannelConfig = {
+        type: "internal",
+        parameters: {},
+      };
+
+      await expect(
+        syncManager.add("remote-init-fail", "col1", channelConfig),
+      ).rejects.toThrow("init failed");
+
+      expect(syncManager.list()).toHaveLength(0);
+      expect(mockRemoteStorage.remove).toHaveBeenCalledWith("remote-init-fail");
     });
 
     it("should use default filter and options if not provided", async () => {
@@ -2642,6 +2716,241 @@ describe("SyncManager - Unit Tests", () => {
       expect(syncOp.status).toBe(SyncOperationStatus.Error);
       expect(ch.deadLetter.add).toHaveBeenCalledWith(syncOp);
       expect(ch.inbox.remove).toHaveBeenCalledWith(syncOp);
+    });
+
+    it("should dead-letter SyncOps missing from batch load result", async () => {
+      await syncManager.startup();
+
+      const channelConfig: ChannelConfig = {
+        type: "internal",
+        parameters: {},
+      };
+
+      const ch = createTestChannel();
+      vi.mocked(mockChannelFactory.instance).mockReturnValue(ch as any);
+
+      await syncManager.add("remote-partial", "collection1", channelConfig, {
+        documentId: [],
+        scope: [],
+        branch: "main",
+      });
+
+      const syncOp0 = new SyncOperation(
+        "syncop-0",
+        "key-0",
+        [],
+        "remote-partial",
+        "doc1",
+        ["global"],
+        "main",
+        [
+          {
+            operation: {
+              id: "op0",
+              index: 0,
+              skip: 0,
+              hash: "h0",
+              timestampUtcMs: "1000",
+              action: { type: "CREATE", scope: "global" } as any,
+            },
+            context: {
+              documentId: "doc1",
+              documentType: "test",
+              scope: "global",
+              branch: "main",
+              ordinal: 1,
+            },
+          },
+        ],
+      );
+
+      const syncOp1 = new SyncOperation(
+        "syncop-1",
+        "key-1",
+        ["key-0"],
+        "remote-partial",
+        "doc1",
+        ["global"],
+        "main",
+        [
+          {
+            operation: {
+              id: "op1",
+              index: 1,
+              skip: 0,
+              hash: "h1",
+              timestampUtcMs: "2000",
+              action: { type: "UPDATE", scope: "global" } as any,
+            },
+            context: {
+              documentId: "doc1",
+              documentType: "test",
+              scope: "global",
+              branch: "main",
+              ordinal: 2,
+            },
+          },
+        ],
+      );
+
+      vi.mocked(mockReactor as any).loadBatch = vi.fn().mockResolvedValue({
+        jobs: {
+          "key-0": { id: "reactor-job-0", status: "PENDING" },
+        },
+      });
+
+      const inboxCb = vi.mocked(ch.inbox.onAdded).mock.calls[0][0];
+      inboxCb([syncOp0, syncOp1]);
+      await new Promise((r) => setTimeout(r, 20));
+
+      expect(syncOp1.status).toBe(SyncOperationStatus.Error);
+      expect(ch.deadLetter.add).toHaveBeenCalledWith(syncOp1);
+      expect(ch.inbox.remove).toHaveBeenCalledWith(syncOp1);
+
+      expect(syncOp0.status).toBe(SyncOperationStatus.Applied);
+      expect(ch.inbox.remove).toHaveBeenCalledWith(syncOp0);
+    });
+
+    it("should route mixed keyed and non-keyed inbox items correctly", async () => {
+      await syncManager.startup();
+
+      const channelConfig: ChannelConfig = {
+        type: "internal",
+        parameters: {},
+      };
+
+      const ch = createTestChannel();
+      vi.mocked(mockChannelFactory.instance).mockReturnValue(ch as any);
+
+      await syncManager.add("remote-mixed", "collection1", channelConfig, {
+        documentId: [],
+        scope: [],
+        branch: "main",
+      });
+
+      const nonKeyedSyncOp = new SyncOperation(
+        "syncop-nk",
+        "",
+        [],
+        "remote-mixed",
+        "doc1",
+        ["global"],
+        "main",
+        [
+          {
+            operation: {
+              id: "op-nk",
+              index: 0,
+              skip: 0,
+              hash: "h-nk",
+              timestampUtcMs: "1000",
+              action: { type: "CREATE", scope: "global" } as any,
+            },
+            context: {
+              documentId: "doc1",
+              documentType: "test",
+              scope: "global",
+              branch: "main",
+              ordinal: 1,
+            },
+          },
+        ],
+      );
+
+      const keyedSyncOp1 = new SyncOperation(
+        "syncop-k1",
+        "key-1",
+        [],
+        "remote-mixed",
+        "doc2",
+        ["global"],
+        "main",
+        [
+          {
+            operation: {
+              id: "op-k1",
+              index: 0,
+              skip: 0,
+              hash: "h-k1",
+              timestampUtcMs: "2000",
+              action: { type: "CREATE", scope: "global" } as any,
+            },
+            context: {
+              documentId: "doc2",
+              documentType: "test",
+              scope: "global",
+              branch: "main",
+              ordinal: 2,
+            },
+          },
+        ],
+      );
+
+      const keyedSyncOp2 = new SyncOperation(
+        "syncop-k2",
+        "key-2",
+        ["key-1"],
+        "remote-mixed",
+        "doc2",
+        ["global"],
+        "main",
+        [
+          {
+            operation: {
+              id: "op-k2",
+              index: 1,
+              skip: 0,
+              hash: "h-k2",
+              timestampUtcMs: "3000",
+              action: { type: "UPDATE", scope: "global" } as any,
+            },
+            context: {
+              documentId: "doc2",
+              documentType: "test",
+              scope: "global",
+              branch: "main",
+              ordinal: 3,
+            },
+          },
+        ],
+      );
+
+      vi.mocked(mockReactor.load).mockResolvedValueOnce({
+        id: "reactor-nk-job",
+        status: "READ_READY",
+      } as any);
+
+      vi.mocked(mockReactor as any).loadBatch = vi.fn().mockResolvedValue({
+        jobs: {
+          "key-1": { id: "reactor-k1-job", status: "PENDING" },
+          "key-2": { id: "reactor-k2-job", status: "PENDING" },
+        },
+      });
+
+      const inboxCb = vi.mocked(ch.inbox.onAdded).mock.calls[0][0];
+      inboxCb([nonKeyedSyncOp, keyedSyncOp1, keyedSyncOp2]);
+      await new Promise((r) => setTimeout(r, 20));
+
+      expect(mockReactor.load).toHaveBeenCalledTimes(1);
+      expect(mockReactor.load).toHaveBeenCalledWith(
+        "doc1",
+        "main",
+        expect.any(Array),
+        undefined,
+        { sourceRemote: "remote-mixed" },
+      );
+
+      expect((mockReactor as any).loadBatch).toHaveBeenCalledTimes(1);
+      expect((mockReactor as any).loadBatch).toHaveBeenCalledWith(
+        {
+          jobs: [
+            expect.objectContaining({ key: "key-1", documentId: "doc2" }),
+            expect.objectContaining({ key: "key-2", documentId: "doc2" }),
+          ],
+        },
+        undefined,
+        { sourceRemote: "remote-mixed" },
+      );
     });
 
     it("should handle loadBatch failure by marking all SyncOps as failed", async () => {
