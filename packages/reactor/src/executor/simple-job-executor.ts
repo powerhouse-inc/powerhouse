@@ -99,23 +99,23 @@ export class SimpleJobExecutor implements IJobExecutor {
         for (let i = 0; i < result.operationsWithContext.length; i++) {
           result.operationsWithContext[i].context.ordinal = ordinals[i];
         }
-        if (result.operationsWithContext.length > 0) {
-          const collectionMemberships =
-            await this.getCollectionMembershipsForOperations(
-              result.operationsWithContext,
-            );
-          const event: JobWriteReadyEvent = {
-            jobId: job.id,
-            operations: result.operationsWithContext,
-            jobMeta: job.meta,
-            collectionMemberships,
-          };
-          this.eventBus
-            .emit(ReactorEventTypes.JOB_WRITE_READY, event)
-            .catch(() => {
-              // TODO: Log error
-            });
-        }
+        const collectionMemberships =
+          result.operationsWithContext.length > 0
+            ? await this.getCollectionMembershipsForOperations(
+                result.operationsWithContext,
+              )
+            : {};
+        const event: JobWriteReadyEvent = {
+          jobId: job.id,
+          operations: result.operationsWithContext,
+          jobMeta: job.meta,
+          collectionMemberships,
+        };
+        this.eventBus
+          .emit(ReactorEventTypes.JOB_WRITE_READY, event)
+          .catch(() => {
+            // TODO: Log error
+          });
       }
       return result;
     }
