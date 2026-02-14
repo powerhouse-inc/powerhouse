@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import { userEvent } from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { utils } from "../../document-models/processor-module/utils.js";
 import { useSelectedProcessorModuleDocument } from "../hooks/useVetraDocument.js";
 import Editor from "./editor.js";
 
@@ -18,22 +19,14 @@ vi.mock("../hooks/useAvailableDocumentTypes.js", () => ({
 
 describe("ProcessorModule Editor", () => {
   let mockDispatch: ReturnType<typeof vi.fn>;
+  const document = utils.createDocument();
 
   beforeEach(() => {
     mockDispatch = vi.fn();
     vi.mocked(useSelectedProcessorModuleDocument).mockReturnValue([
-      {
-        state: {
-          global: {
-            name: "",
-            type: "",
-            status: "DRAFT",
-            documentTypes: [],
-          },
-        },
-      },
+      document,
       mockDispatch,
-    ] as any);
+    ]);
   });
 
   describe("Core Rendering", () => {
@@ -48,22 +41,23 @@ describe("ProcessorModule Editor", () => {
     });
 
     it("should display existing processor data when document has values", () => {
-      vi.mocked(useSelectedProcessorModuleDocument).mockReturnValue([
-        {
-          state: {
-            global: {
-              name: "test-processor",
-              type: "analytics",
-              status: "DRAFT",
-              documentTypes: [
-                { id: "dt-1", documentType: "powerhouse/document-model" },
-                { id: "dt-2", documentType: "powerhouse/budget-statement" },
-              ],
-            },
-          },
+      const document = utils.createDocument({
+        global: {
+          name: "test-processor",
+          type: "analytics",
+          status: "DRAFT",
+          documentTypes: [
+            { id: "dt-1", documentType: "powerhouse/document-model" },
+            { id: "dt-2", documentType: "powerhouse/budget-statement" },
+          ],
+          processorApps: ["connect"],
         },
+      });
+
+      vi.mocked(useSelectedProcessorModuleDocument).mockReturnValue([
+        document,
         mockDispatch,
-      ] as any);
+      ]);
 
       render(<Editor />);
 
@@ -102,19 +96,19 @@ describe("ProcessorModule Editor", () => {
     });
 
     it("should dispatch when clearing a non-empty field", async () => {
-      vi.mocked(useSelectedProcessorModuleDocument).mockReturnValue([
-        {
-          state: {
-            global: {
-              name: "existing-processor",
-              type: "",
-              status: "DRAFT",
-              documentTypes: [],
-            },
-          },
+      const document = utils.createDocument({
+        global: {
+          name: "existing-processor",
+          type: "",
+          status: "DRAFT",
+          documentTypes: [],
+          processorApps: [],
         },
+      });
+      vi.mocked(useSelectedProcessorModuleDocument).mockReturnValue([
+        document,
         mockDispatch,
-      ] as any);
+      ]);
 
       const user = userEvent.setup();
       render(<Editor />);
@@ -136,19 +130,19 @@ describe("ProcessorModule Editor", () => {
     });
 
     it("should NOT dispatch when typing identical value without clearing", async () => {
-      vi.mocked(useSelectedProcessorModuleDocument).mockReturnValue([
-        {
-          state: {
-            global: {
-              name: "test",
-              type: "",
-              status: "DRAFT",
-              documentTypes: [],
-            },
-          },
+      const document = utils.createDocument({
+        global: {
+          name: "test",
+          type: "",
+          status: "DRAFT",
+          documentTypes: [],
+          processorApps: [],
         },
+      });
+      vi.mocked(useSelectedProcessorModuleDocument).mockReturnValue([
+        document,
         mockDispatch,
-      ] as any);
+      ]);
 
       const user = userEvent.setup();
       render(<Editor />);
@@ -198,19 +192,19 @@ describe("ProcessorModule Editor", () => {
     });
 
     it("should NOT dispatch when selecting same type", async () => {
-      vi.mocked(useSelectedProcessorModuleDocument).mockReturnValue([
-        {
-          state: {
-            global: {
-              name: "test-processor",
-              type: "analytics",
-              status: "DRAFT",
-              documentTypes: [],
-            },
-          },
+      const document = utils.createDocument({
+        global: {
+          name: "test-processor",
+          type: "analytics",
+          status: "DRAFT",
+          documentTypes: [],
+          processorApps: [],
         },
+      });
+      vi.mocked(useSelectedProcessorModuleDocument).mockReturnValue([
+        document,
         mockDispatch,
-      ] as any);
+      ]);
 
       const user = userEvent.setup();
       render(<Editor />);
@@ -259,22 +253,22 @@ describe("ProcessorModule Editor", () => {
     });
 
     it("should remove document type", async () => {
-      vi.mocked(useSelectedProcessorModuleDocument).mockReturnValue([
-        {
-          state: {
-            global: {
-              name: "test-processor",
-              type: "analytics",
-              status: "DRAFT",
-              documentTypes: [
-                { id: "dt-1", documentType: "powerhouse/document-model" },
-                { id: "dt-2", documentType: "powerhouse/budget-statement" },
-              ],
-            },
-          },
+      const document = utils.createDocument({
+        global: {
+          name: "test-processor",
+          type: "analytics",
+          status: "DRAFT",
+          documentTypes: [
+            { id: "dt-1", documentType: "powerhouse/document-model" },
+            { id: "dt-2", documentType: "powerhouse/budget-statement" },
+          ],
+          processorApps: [],
         },
+      });
+      vi.mocked(useSelectedProcessorModuleDocument).mockReturnValue([
+        document,
         mockDispatch,
-      ] as any);
+      ]);
 
       const user = userEvent.setup();
       render(<Editor />);
@@ -296,21 +290,21 @@ describe("ProcessorModule Editor", () => {
     });
 
     it("should NOT show duplicate document type in dropdown", () => {
-      vi.mocked(useSelectedProcessorModuleDocument).mockReturnValue([
-        {
-          state: {
-            global: {
-              name: "test-processor",
-              type: "analytics",
-              status: "DRAFT",
-              documentTypes: [
-                { id: "dt-1", documentType: "powerhouse/document-model" },
-              ],
-            },
-          },
+      const document = utils.createDocument({
+        global: {
+          name: "test-processor",
+          type: "analytics",
+          status: "DRAFT",
+          documentTypes: [
+            { id: "dt-1", documentType: "powerhouse/document-model" },
+          ],
+          processorApps: [],
         },
+      });
+      vi.mocked(useSelectedProcessorModuleDocument).mockReturnValue([
+        document,
         mockDispatch,
-      ] as any);
+      ]);
 
       render(<Editor />);
 
@@ -353,22 +347,22 @@ describe("ProcessorModule Editor", () => {
     });
 
     it("should display existing document types list", () => {
-      vi.mocked(useSelectedProcessorModuleDocument).mockReturnValue([
-        {
-          state: {
-            global: {
-              name: "test-processor",
-              type: "analytics",
-              status: "DRAFT",
-              documentTypes: [
-                { id: "dt-1", documentType: "powerhouse/document-model" },
-                { id: "dt-2", documentType: "powerhouse/budget-statement" },
-              ],
-            },
-          },
+      const document = utils.createDocument({
+        global: {
+          name: "test-processor",
+          type: "analytics",
+          status: "DRAFT",
+          documentTypes: [
+            { id: "dt-1", documentType: "powerhouse/document-model" },
+            { id: "dt-2", documentType: "powerhouse/budget-statement" },
+          ],
+          processorApps: [],
         },
+      });
+      vi.mocked(useSelectedProcessorModuleDocument).mockReturnValue([
+        document,
         mockDispatch,
-      ] as any);
+      ]);
 
       render(<Editor />);
 
@@ -381,21 +375,21 @@ describe("ProcessorModule Editor", () => {
 
   describe("Confirm Button", () => {
     it("should dispatch setProcessorStatus when confirm clicked", async () => {
-      vi.mocked(useSelectedProcessorModuleDocument).mockReturnValue([
-        {
-          state: {
-            global: {
-              name: "test-processor",
-              type: "analytics",
-              status: "DRAFT",
-              documentTypes: [
-                { id: "dt-1", documentType: "powerhouse/document-model" },
-              ],
-            },
-          },
+      const document = utils.createDocument({
+        global: {
+          name: "test-processor",
+          type: "analytics",
+          status: "DRAFT",
+          documentTypes: [
+            { id: "dt-1", documentType: "powerhouse/document-model" },
+          ],
+          processorApps: ["connect"],
         },
+      });
+      vi.mocked(useSelectedProcessorModuleDocument).mockReturnValue([
+        document,
         mockDispatch,
-      ] as any);
+      ]);
 
       const user = userEvent.setup();
       render(<Editor />);
@@ -412,21 +406,21 @@ describe("ProcessorModule Editor", () => {
     });
 
     it("should be disabled when processor name is empty", () => {
-      vi.mocked(useSelectedProcessorModuleDocument).mockReturnValue([
-        {
-          state: {
-            global: {
-              name: "",
-              type: "analytics",
-              status: "DRAFT",
-              documentTypes: [
-                { id: "dt-1", documentType: "powerhouse/document-model" },
-              ],
-            },
-          },
+      const document = utils.createDocument({
+        global: {
+          name: "",
+          type: "analytics",
+          status: "DRAFT",
+          documentTypes: [
+            { id: "dt-1", documentType: "powerhouse/document-model" },
+          ],
+          processorApps: ["connect"],
         },
+      });
+      vi.mocked(useSelectedProcessorModuleDocument).mockReturnValue([
+        document,
         mockDispatch,
-      ] as any);
+      ]);
 
       render(<Editor />);
 
@@ -435,21 +429,21 @@ describe("ProcessorModule Editor", () => {
     });
 
     it("should be disabled when processor type is empty", () => {
-      vi.mocked(useSelectedProcessorModuleDocument).mockReturnValue([
-        {
-          state: {
-            global: {
-              name: "test-processor",
-              type: "",
-              status: "DRAFT",
-              documentTypes: [
-                { id: "dt-1", documentType: "powerhouse/document-model" },
-              ],
-            },
-          },
+      const document = utils.createDocument({
+        global: {
+          name: "test-processor",
+          type: "",
+          status: "DRAFT",
+          documentTypes: [
+            { id: "dt-1", documentType: "powerhouse/document-model" },
+          ],
+          processorApps: ["connect"],
         },
+      });
+      vi.mocked(useSelectedProcessorModuleDocument).mockReturnValue([
+        document,
         mockDispatch,
-      ] as any);
+      ]);
 
       render(<Editor />);
 
@@ -458,19 +452,19 @@ describe("ProcessorModule Editor", () => {
     });
 
     it("should be disabled when no document types selected", () => {
-      vi.mocked(useSelectedProcessorModuleDocument).mockReturnValue([
-        {
-          state: {
-            global: {
-              name: "test-processor",
-              type: "analytics",
-              status: "DRAFT",
-              documentTypes: [],
-            },
-          },
+      const document = utils.createDocument({
+        global: {
+          name: "test-processor",
+          type: "analytics",
+          status: "DRAFT",
+          documentTypes: [],
+          processorApps: ["connect"],
         },
+      });
+      vi.mocked(useSelectedProcessorModuleDocument).mockReturnValue([
+        document,
         mockDispatch,
-      ] as any);
+      ]);
 
       render(<Editor />);
 
@@ -479,21 +473,21 @@ describe("ProcessorModule Editor", () => {
     });
 
     it("should be hidden when status is CONFIRMED", () => {
-      vi.mocked(useSelectedProcessorModuleDocument).mockReturnValue([
-        {
-          state: {
-            global: {
-              name: "test-processor",
-              type: "analytics",
-              status: "CONFIRMED",
-              documentTypes: [
-                { id: "dt-1", documentType: "powerhouse/document-model" },
-              ],
-            },
-          },
+      const document = utils.createDocument({
+        global: {
+          name: "test-processor",
+          type: "analytics",
+          status: "CONFIRMED",
+          documentTypes: [
+            { id: "dt-1", documentType: "powerhouse/document-model" },
+          ],
+          processorApps: ["connect"],
         },
+      });
+      vi.mocked(useSelectedProcessorModuleDocument).mockReturnValue([
+        document,
         mockDispatch,
-      ] as any);
+      ]);
 
       render(<Editor />);
 
@@ -504,21 +498,21 @@ describe("ProcessorModule Editor", () => {
 
   describe("Read-only Mode", () => {
     it("should disable form fields when status is CONFIRMED", () => {
-      vi.mocked(useSelectedProcessorModuleDocument).mockReturnValue([
-        {
-          state: {
-            global: {
-              name: "test-processor",
-              type: "analytics",
-              status: "CONFIRMED",
-              documentTypes: [
-                { id: "dt-1", documentType: "powerhouse/document-model" },
-              ],
-            },
-          },
+      const document = utils.createDocument({
+        global: {
+          name: "test-processor",
+          type: "analytics",
+          status: "CONFIRMED",
+          documentTypes: [
+            { id: "dt-1", documentType: "powerhouse/document-model" },
+          ],
+          processorApps: ["connect"],
         },
+      });
+      vi.mocked(useSelectedProcessorModuleDocument).mockReturnValue([
+        document,
         mockDispatch,
-      ] as any);
+      ]);
 
       render(<Editor />);
 
@@ -538,21 +532,21 @@ describe("ProcessorModule Editor", () => {
     });
 
     it("should enable form fields when status is DRAFT", () => {
-      vi.mocked(useSelectedProcessorModuleDocument).mockReturnValue([
-        {
-          state: {
-            global: {
-              name: "test-processor",
-              type: "analytics",
-              status: "DRAFT",
-              documentTypes: [
-                { id: "dt-1", documentType: "powerhouse/document-model" },
-              ],
-            },
-          },
+      const document = utils.createDocument({
+        global: {
+          name: "test-processor",
+          type: "analytics",
+          status: "DRAFT",
+          documentTypes: [
+            { id: "dt-1", documentType: "powerhouse/document-model" },
+          ],
+          processorApps: [],
         },
+      });
+      vi.mocked(useSelectedProcessorModuleDocument).mockReturnValue([
+        document,
         mockDispatch,
-      ] as any);
+      ]);
 
       render(<Editor />);
 

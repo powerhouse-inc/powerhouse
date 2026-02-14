@@ -11,9 +11,13 @@ import type {
   FolderNode,
   Listener,
   ListenerCallInfo,
+  ListenerCallInfoInput,
   ListenerFilter,
+  ListenerFilterInput,
+  ListenerInput,
   MoveNodeInput,
   PullResponderTriggerData,
+  PullResponderTriggerDataInput,
   RemoveListenerInput,
   RemoveTriggerInput,
   SetAvailableOfflineInput,
@@ -21,6 +25,7 @@ import type {
   SetDriveNameInput,
   SetSharingTypeInput,
   Trigger,
+  TriggerInput,
   UpdateFileInput,
   UpdateNodeInput,
 } from "document-drive";
@@ -73,7 +78,7 @@ export function AddListenerInputSchema(): z.ZodObject<
   Properties<AddListenerInput>
 > {
   return z.object({
-    listener: ListenerSchema(),
+    listener: ListenerInputSchema(),
   });
 }
 
@@ -81,7 +86,7 @@ export function AddTriggerInputSchema(): z.ZodObject<
   Properties<AddTriggerInput>
 > {
   return z.object({
-    trigger: TriggerSchema(),
+    trigger: TriggerInputSchema(),
   });
 }
 
@@ -158,6 +163,17 @@ export function ListenerSchema(): z.ZodObject<Properties<Listener>> {
   });
 }
 
+export function ListenerInputSchema(): z.ZodObject<Properties<ListenerInput>> {
+  return z.object({
+    block: z.boolean(),
+    callInfo: ListenerCallInfoInputSchema().nullish(),
+    filter: ListenerFilterInputSchema(),
+    label: z.string().nullish(),
+    listenerId: z.string(),
+    system: z.boolean(),
+  });
+}
+
 export function ListenerCallInfoSchema(): z.ZodObject<
   Properties<ListenerCallInfo>
 > {
@@ -166,6 +182,16 @@ export function ListenerCallInfoSchema(): z.ZodObject<
     data: z.string().nullable(),
     name: z.string().nullable(),
     transmitterType: TransmitterTypeSchema.nullable(),
+  });
+}
+
+export function ListenerCallInfoInputSchema(): z.ZodObject<
+  Properties<ListenerCallInfoInput>
+> {
+  return z.object({
+    data: z.string().nullish(),
+    name: z.string().nullish(),
+    transmitterType: TransmitterTypeSchema.nullish(),
   });
 }
 
@@ -178,6 +204,17 @@ export function ListenerFilterSchema(): z.ZodObject<
     documentId: z.array(z.string()).nullable(),
     documentType: z.array(z.string()),
     scope: z.array(z.string()).nullable(),
+  });
+}
+
+export function ListenerFilterInputSchema(): z.ZodObject<
+  Properties<ListenerFilterInput>
+> {
+  return z.object({
+    branch: z.array(z.string()).nullish(),
+    documentId: z.array(z.string()).nullish(),
+    documentType: z.array(z.string()).nullish(),
+    scope: z.array(z.string()).nullish(),
   });
 }
 
@@ -197,6 +234,16 @@ export function PullResponderTriggerDataSchema(): z.ZodObject<
 > {
   return z.object({
     __typename: z.literal("PullResponderTriggerData").optional(),
+    interval: z.string(),
+    listenerId: z.string(),
+    url: z.string(),
+  });
+}
+
+export function PullResponderTriggerDataInputSchema(): z.ZodObject<
+  Properties<PullResponderTriggerDataInput>
+> {
+  return z.object({
     interval: z.string(),
     listenerId: z.string(),
     url: z.string(),
@@ -255,6 +302,14 @@ export function TriggerSchema(): z.ZodObject<Properties<Trigger>> {
   return z.object({
     __typename: z.literal("Trigger").optional(),
     data: TriggerDataSchema().nullable(),
+    id: z.string(),
+    type: TriggerTypeSchema,
+  });
+}
+
+export function TriggerInputSchema(): z.ZodObject<Properties<TriggerInput>> {
+  return z.object({
+    data: PullResponderTriggerDataInputSchema().nullish(),
     id: z.string(),
     type: TriggerTypeSchema,
   });

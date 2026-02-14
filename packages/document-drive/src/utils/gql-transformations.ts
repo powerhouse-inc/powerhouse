@@ -7,14 +7,19 @@ type ResponseForDrive = {
   meta: Record<string, unknown> | undefined;
   name: string;
   icon: string | undefined;
+  graphqlEndpoint?: string;
 };
-export function responseForDrive(drive: DocumentDriveDocument) {
+export function responseForDrive(
+  drive: DocumentDriveDocument,
+  graphqlEndpoint?: string,
+) {
   const response: ResponseForDrive = {
     id: drive.header.id,
     slug: drive.header.slug,
     meta: drive.header.meta,
     name: drive.state.global.name,
     icon: drive.state.global.icon ?? undefined,
+    ...(graphqlEndpoint && { graphqlEndpoint }),
   };
   return response;
 }

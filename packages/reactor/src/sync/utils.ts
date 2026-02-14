@@ -1,10 +1,10 @@
 import type { Operation } from "document-model";
+import type { OperationWithContext } from "shared/document-model";
 import {
   driveCollectionId,
   type OperationIndexEntry,
 } from "../cache/operation-index-types.js";
 import type { JobWriteReadyEvent } from "../events/types.js";
-import type { OperationWithContext } from "../storage/interfaces.js";
 import type { PreparedBatch } from "./batch-aggregator.js";
 import type { IMailbox } from "./mailbox.js";
 import type { SyncOperation } from "./sync-operation.js";

@@ -11,6 +11,7 @@ import {
 
 /** Document model module for the Todo List document type */
 export const SubgraphModule: DocumentModelModule<SubgraphModulePHState> = {
+  version: 1,
   reducer,
   actions,
   utils,

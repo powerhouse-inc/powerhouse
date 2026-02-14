@@ -4,7 +4,11 @@
  * - delete the file and run the code generator again to have it reset
  */
 
-import type { DocumentDriveDriveOperations } from "document-drive";
+import type {
+  DocumentDriveDriveOperations,
+  Listener,
+  Trigger,
+} from "document-drive";
 
 export const driveReducer: DocumentDriveDriveOperations = {
   setDriveNameOperation(state, action, dispatch) {
@@ -20,16 +24,31 @@ export const driveReducer: DocumentDriveDriveOperations = {
     state.availableOffline = action.input.availableOffline;
   },
   addListenerOperation(state, action, dispatch) {
-    if (
-      state.listeners.find(
-        (listener) => listener.listenerId === action.input.listener.listenerId,
-      )
-    ) {
-      throw new Error(
-        `A listener with Id: ${action.input.listener.listenerId} already exists`,
-      );
+    const { listener: input } = action.input;
+    if (state.listeners.find((l) => l.listenerId === input.listenerId)) {
+      throw new Error(`A listener with Id: ${input.listenerId} already exists`);
     }
-    state.listeners.push(action.input.listener);
+    // Convert InputMaybe (undefined | null | T) to Maybe (null | T)
+    const listener: Listener = {
+      listenerId: input.listenerId,
+      label: input.label ?? null,
+      block: input.block,
+      system: input.system,
+      filter: {
+        documentType: input.filter.documentType ?? null,
+        documentId: input.filter.documentId ?? null,
+        scope: input.filter.scope ?? null,
+        branch: input.filter.branch ?? null,
+      },
+      callInfo: input.callInfo
+        ? {
+            transmitterType: input.callInfo.transmitterType ?? null,
+            name: input.callInfo.name ?? null,
+            data: input.callInfo.data ?? null,
+          }
+        : null,
+    };
+    state.listeners.push(listener);
   },
   removeListenerOperation(state, action, dispatch) {
     state.listeners = state.listeners.filter(
@@ -37,14 +56,17 @@ export const driveReducer: DocumentDriveDriveOperations = {
     );
   },
   addTriggerOperation(state, action, dispatch) {
-    if (
-      state.triggers.find((trigger) => trigger.id === action.input.trigger.id)
-    ) {
-      throw new Error(
-        `A trigger with Id: ${action.input.trigger.id} already exists`,
-      );
+    const { trigger: input } = action.input;
+    if (state.triggers.find((t) => t.id === input.id)) {
+      throw new Error(`A trigger with Id: ${input.id} already exists`);
     }
-    state.triggers.push(action.input.trigger);
+    // Convert InputMaybe to Maybe - PullResponderTriggerData has all required fields so spread works
+    const trigger: Trigger = {
+      id: input.id,
+      type: input.type,
+      data: input.data ? { ...input.data } : null,
+    };
+    state.triggers.push(trigger);
   },
   removeTriggerOperation(state, action, dispatch) {
     state.triggers = state.triggers.filter(

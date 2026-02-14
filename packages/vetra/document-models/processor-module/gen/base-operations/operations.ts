@@ -4,6 +4,8 @@ import type {
   SetProcessorTypeAction,
   AddDocumentTypeAction,
   RemoveDocumentTypeAction,
+  AddProcessorAppAction,
+  RemoveProcessorAppAction,
   SetProcessorStatusAction,
 } from "./actions.js";
 import type { ProcessorModuleState } from "../types.js";
@@ -27,6 +29,16 @@ export interface ProcessorModuleBaseOperationsOperations {
   removeDocumentTypeOperation: (
     state: ProcessorModuleState,
     action: RemoveDocumentTypeAction,
+    dispatch?: SignalDispatch,
+  ) => void;
+  addProcessorAppOperation: (
+    state: ProcessorModuleState,
+    action: AddProcessorAppAction,
+    dispatch?: SignalDispatch,
+  ) => void;
+  removeProcessorAppOperation: (
+    state: ProcessorModuleState,
+    action: RemoveProcessorAppAction,
     dispatch?: SignalDispatch,
   ) => void;
   setProcessorStatusOperation: (

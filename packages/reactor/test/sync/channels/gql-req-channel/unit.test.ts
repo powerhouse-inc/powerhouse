@@ -1,9 +1,7 @@
+import type { OperationContext } from "document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { IOperationIndex } from "../../../../src/cache/operation-index-types.js";
-import type {
-  ISyncCursorStorage,
-  OperationContext,
-} from "../../../../src/storage/interfaces.js";
+import type { ISyncCursorStorage } from "../../../../src/storage/interfaces.js";
 import {
   GqlRequestChannel,
   type GqlChannelConfig,

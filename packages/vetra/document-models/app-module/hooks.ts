@@ -31,6 +31,7 @@ export function useSelectedAppModuleDocument(): [
   DocumentDispatch<AppModuleAction>,
 ] {
   const [document, dispatch] = useSelectedDocument();
+
   assertIsAppModuleDocument(document);
   return [document, dispatch] as const;
 }

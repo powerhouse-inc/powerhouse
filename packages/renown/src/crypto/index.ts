@@ -16,4 +16,10 @@ export { BrowserKeyStorage } from "./browser-key-storage.js";
 export { MemoryKeyStorage } from "./memory-key-storage.js";
 
 // Signer utilities
-export { createSignatureVerifier, RenownCryptoSigner } from "./signer.js";
+export {
+  createSignatureVerifier,
+  RenownCryptoSigner,
+  parseSignatureHashField,
+  extractResultingHashFromSignature,
+  signatureHasResultingHash,
+} from "./signer.js";

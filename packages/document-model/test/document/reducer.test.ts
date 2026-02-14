@@ -107,7 +107,7 @@ describe("Base reducer", () => {
       id: setNameAction.id,
       timestampUtcMs: setNameAction.timestampUtcMs,
       type: "SET_NAME",
-      input: "Document",
+      input: { name: "Document" },
       scope: "global",
     });
   });

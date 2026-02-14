@@ -7,13 +7,13 @@ import type {
 } from "document-model";
 import type { Kysely } from "kysely";
 
+import type { IProcessorManager } from "shared/processors";
 import type { IOperationIndex } from "../cache/operation-index-types.js";
 import type { IWriteCache } from "../cache/write/interfaces.js";
 import type { ReactorClient } from "../client/reactor-client.js";
 import type { IEventBus } from "../events/interfaces.js";
 import type { IJobExecutorManager } from "../executor/interfaces.js";
 import type { IJobTracker } from "../job-tracker/interfaces.js";
-import type { IProcessorManager } from "../processors/types.js";
 import type { IQueue } from "../queue/interfaces.js";
 import type { IReadModelCoordinator } from "../read-models/interfaces.js";
 import type { DocumentViewDatabase } from "../read-models/types.js";

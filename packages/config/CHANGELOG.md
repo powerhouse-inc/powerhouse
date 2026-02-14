@@ -1,3 +1,56 @@
+## 6.0.0-dev.43 (2026-02-14)
+
+### 🚀 Features
+
+- **monorepo:** move more shared stuff to shared ([#2335](https://github.com/powerhouse-inc/powerhouse/pull/2335))
+
+### ❤️ Thank You
+
+- Ryan Wolhuter @ryanwolhuter
+
+## 6.0.0-dev.42 (2026-02-13)
+
+This was a version bump only for @powerhousedao/config to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.41 (2026-02-12)
+
+### 🚀 Features
+
+- **monorepo:** use catalog for other shared deps ([#2330](https://github.com/powerhouse-inc/powerhouse/pull/2330))
+- **vetra:** add processor apps input to vetra ([#2329](https://github.com/powerhouse-inc/powerhouse/pull/2329))
+
+### 🩹 Fixes
+
+- **builder-tools:** use same class-variance-authority as design-systom ([d600feb49](https://github.com/powerhouse-inc/powerhouse/commit/d600feb49))
+- **design-system:** copy assets to dist folder to enable relative path import ([de5cb5e4e](https://github.com/powerhouse-inc/powerhouse/commit/de5cb5e4e))
+- **monorepo:** add build-cli to old release workflow ([a30624bd2](https://github.com/powerhouse-inc/powerhouse/commit/a30624bd2))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Ryan Wolhuter @ryanwolhuter
+- ryanwolhuter @ryanwolhuter
+
+## 6.0.0-dev.40 (2026-02-12)
+
+### 🚀 Features
+
+- **monorepo:** add shared package ([#2324](https://github.com/powerhouse-inc/powerhouse/pull/2324))
+
+### ❤️ Thank You
+
+- Ryan Wolhuter @ryanwolhuter
+
+## 6.0.0-dev.39 (2026-02-11)
+
+### 🚀 Features
+
+- **reactor,codegen:** handle processor apps in cli ([#2319](https://github.com/powerhouse-inc/powerhouse/pull/2319))
+
+### ❤️ Thank You
+
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.0.0-dev.38 (2026-02-10)
 
 This was a version bump only for @powerhousedao/config to align it with other projects, there were no code changes.

@@ -31,6 +31,7 @@ export function useSelectedDocumentEditorDocument(): [
   DocumentDispatch<DocumentEditorAction>,
 ] {
   const [document, dispatch] = useSelectedDocument();
+
   assertIsDocumentEditorDocument(document);
   return [document, dispatch] as const;
 }

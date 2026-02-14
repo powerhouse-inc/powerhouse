@@ -1,56 +1,11 @@
 import type {
   Action,
-  AssertIsDocumentOfType,
-  AssertIsStateOfType,
-  CreateDocument,
-  CreateState,
-  EditorModule,
-  ImportScriptModule,
+  DocumentModelGlobalState,
   InputMaybe,
-  IsDocumentOfType,
-  IsStateOfType,
-  LoadFromInput,
-  Manifest,
   Maybe,
-  PHBaseState,
-  PHDocument,
-  Reducer,
-  SaveToFileHandle,
   Scalars,
-  SubgraphModule,
-  UpgradeManifest,
 } from "document-model";
-
-export type DocumentModelModule<TState extends PHBaseState = PHBaseState> = {
-  /** optional version field, should be made required */
-  version?: number;
-  reducer: Reducer<TState>;
-  actions: Record<string, (...args: any[]) => Action>;
-  utils: DocumentModelUtils<TState>;
-  documentModel: DocumentModelPHState;
-};
-export type DocumentModelUtils<TState extends PHBaseState = PHBaseState> = {
-  fileExtension: string;
-  createState: CreateState<TState>;
-  createDocument: CreateDocument<TState>;
-  loadFromInput: LoadFromInput<TState>;
-  saveToFileHandle: SaveToFileHandle;
-  isStateOfType: IsStateOfType<TState>;
-  assertIsStateOfType: AssertIsStateOfType<TState>;
-  isDocumentOfType: IsDocumentOfType<TState>;
-  assertIsDocumentOfType: AssertIsDocumentOfType<TState>;
-};
-export type DocumentModelLib<TState extends PHBaseState = PHBaseState> = {
-  manifest: Manifest;
-  documentModels: DocumentModelModule<TState>[];
-  editors: EditorModule[];
-  subgraphs: SubgraphModule[];
-  importScripts: ImportScriptModule[];
-  upgradeManifests: UpgradeManifest<readonly number[]>[];
-};
-export type DocumentModelDocument = PHDocument<DocumentModelPHState>;
-export type DocumentModelDocumentModelModule =
-  DocumentModelModule<DocumentModelPHState>;
+export type * from "shared/document-model/types";
 
 export type DocumentModelAction =
   | DocumentModelHeaderAction
@@ -105,18 +60,6 @@ export type AddStateExampleInput = {
   example: Scalars["String"]["input"];
   id: Scalars["ID"]["input"];
   insertBefore?: InputMaybe<Scalars["ID"]["input"]>;
-};
-
-export type Author = {
-  __typename?: "Author";
-  name: Scalars["String"]["output"];
-  website: Maybe<Scalars["String"]["output"]>;
-};
-
-export type CodeExample = {
-  __typename?: "CodeExample";
-  id: Scalars["ID"]["output"];
-  value: Scalars["String"]["output"];
 };
 
 export type DeleteChangeLogItemInput = {
@@ -187,42 +130,6 @@ export type DocumentModelInput =
   | UpdateChangeLogItemInput
   | UpdateOperationExampleInput
   | UpdateStateExampleInput;
-
-export type DocumentModelGlobalState = {
-  author: Author;
-  description: Scalars["String"]["output"];
-  extension: Scalars["String"]["output"];
-  id: Scalars["String"]["output"];
-  name: Scalars["String"]["output"];
-  specifications: Array<DocumentSpecification>;
-};
-
-export type DocumentModelLocalState = {};
-export type DocumentModelPHState = PHBaseState & {
-  global: DocumentModelGlobalState;
-  local: DocumentModelLocalState;
-};
-
-export type ScopeState = {
-  global: State;
-  local: State;
-};
-
-export type DocumentSpecification = {
-  __typename?: "DocumentSpecification";
-  changeLog: Array<Scalars["String"]["output"]>;
-  modules: Array<ModuleSpecification>;
-  state: ScopeState;
-  version: Scalars["Int"]["output"];
-};
-
-export type ModuleSpecification = {
-  __typename?: "ModuleSpecification";
-  description: Maybe<Scalars["String"]["output"]>;
-  id: Scalars["ID"]["output"];
-  name: Scalars["String"]["output"];
-  operations: Array<OperationSpecification>;
-};
 
 export type MoveOperationInput = {
   newModuleId: Scalars["ID"]["input"];
@@ -439,28 +346,6 @@ export type MutationUpdateStateExampleArgs = {
   input: UpdateStateExampleInput;
 };
 
-export type OperationSpecification = {
-  __typename?: "OperationSpecification";
-  description: Maybe<Scalars["String"]["output"]>;
-  errors: Array<OperationErrorSpecification>;
-  examples: Array<CodeExample>;
-  id: Scalars["ID"]["output"];
-  name: Maybe<Scalars["String"]["output"]>;
-  reducer: Maybe<Scalars["String"]["output"]>;
-  schema: Maybe<Scalars["String"]["output"]>;
-  template: Maybe<Scalars["String"]["output"]>;
-  scope: string;
-};
-
-export type OperationErrorSpecification = {
-  __typename?: "OperationErrorSpecification";
-  code: Maybe<Scalars["String"]["output"]>;
-  description: Maybe<Scalars["String"]["output"]>;
-  id: Scalars["ID"]["output"];
-  name: Maybe<Scalars["String"]["output"]>;
-  template: Maybe<Scalars["String"]["output"]>;
-};
-
 export type ReorderChangeLogItemsInput = {
   __typename?: "ReorderChangeLogItemsInput";
   order: Array<Scalars["ID"]["output"]>;
@@ -582,13 +467,6 @@ export type SetOperationTemplateInput = {
 export type SetStateSchemaInput = {
   scope: Scalars["String"]["input"];
   schema: Scalars["String"]["input"];
-};
-
-export type State = {
-  __typename?: "State";
-  examples: Array<CodeExample>;
-  initialValue: Scalars["String"]["output"];
-  schema: Scalars["String"]["output"];
 };
 
 export type UpdateChangeLogItemInput = {

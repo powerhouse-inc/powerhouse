@@ -1,4 +1,4 @@
-import type { ProcessorApps } from "@powerhousedao/common/clis";
+import type { ProcessorApps } from "shared/processors";
 import { $ } from "bun";
 import { describe, it } from "bun:test";
 import { cp } from "node:fs/promises";

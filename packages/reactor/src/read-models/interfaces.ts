@@ -1,4 +1,4 @@
-import type { OperationWithContext } from "../storage/interfaces.js";
+import type { OperationWithContext } from "shared/document-model";
 
 /**
  * Generic interface for any read model that can index operations.

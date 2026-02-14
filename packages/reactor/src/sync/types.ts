@@ -1,4 +1,4 @@
-import type { OperationWithContext } from "../storage/interfaces.js";
+import type { OperationWithContext } from "shared/document-model";
 
 /**
  * Dynamic JWT token handler for generating authentication tokens per-request.

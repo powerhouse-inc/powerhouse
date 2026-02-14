@@ -1,3 +1,95 @@
+## 6.0.0-dev.43 (2026-02-14)
+
+### 🚀 Features
+
+- **monorepo:** move more shared stuff to shared ([#2335](https://github.com/powerhouse-inc/powerhouse/pull/2335))
+
+### 🩹 Fixes
+
+- use working renown.id domain and clear user param on logout ([a88f6d6c5](https://github.com/powerhouse-inc/powerhouse/commit/a88f6d6c5))
+- **reactor-browser:** do not use react-query for useSyncList hook ([62a82b9ea](https://github.com/powerhouse-inc/powerhouse/commit/62a82b9ea))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Guillermo Puente @gpuente
+- Ryan Wolhuter @ryanwolhuter
+
+## 6.0.0-dev.42 (2026-02-13)
+
+### 🚀 Features
+
+- preserve existing signatures and support resulting state hash ([dd6b44675](https://github.com/powerhouse-inc/powerhouse/commit/dd6b44675))
+- preserve existing signatures and support resulting state hash ([#2322](https://github.com/powerhouse-inc/powerhouse/pull/2322))
+
+### 🩹 Fixes
+
+- **codegen:** use dynamic document type name in module JSDoc comment ([345ee0678](https://github.com/powerhouse-inc/powerhouse/commit/345ee0678))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+- Guillermo Puente Sandoval @gpuente
+
+## 6.0.0-dev.41 (2026-02-12)
+
+### 🚀 Features
+
+- **monorepo:** use catalog for other shared deps ([#2330](https://github.com/powerhouse-inc/powerhouse/pull/2330))
+- **vetra:** add processor apps input to vetra ([#2329](https://github.com/powerhouse-inc/powerhouse/pull/2329))
+
+### 🩹 Fixes
+
+- **builder-tools:** use same class-variance-authority as design-systom ([d600feb49](https://github.com/powerhouse-inc/powerhouse/commit/d600feb49))
+- **connect:** correctly import lazy components of document model and generic drive editors ([5ca50910b](https://github.com/powerhouse-inc/powerhouse/commit/5ca50910b))
+- **design-system:** copy assets to dist folder to enable relative path import ([de5cb5e4e](https://github.com/powerhouse-inc/powerhouse/commit/de5cb5e4e))
+- **monorepo:** add build-cli to old release workflow ([a30624bd2](https://github.com/powerhouse-inc/powerhouse/commit/a30624bd2))
+- **reactor:** use direct imports from document-drive ([88563000f](https://github.com/powerhouse-inc/powerhouse/commit/88563000f))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Ryan Wolhuter @ryanwolhuter
+- ryanwolhuter @ryanwolhuter
+
+## 6.0.0-dev.40 (2026-02-12)
+
+### 🚀 Features
+
+- **codegen:** remove redundant run generated tests command ([#2325](https://github.com/powerhouse-inc/powerhouse/pull/2325))
+- **monorepo:** add shared package ([#2324](https://github.com/powerhouse-inc/powerhouse/pull/2324))
+
+### ❤️ Thank You
+
+- Ryan Wolhuter @ryanwolhuter
+
+## 6.0.0-dev.39 (2026-02-11)
+
+### 🚀 Features
+
+- use new drive GET REST endpoint ([69be5dc19](https://github.com/powerhouse-inc/powerhouse/commit/69be5dc19))
+- enable ADD_LISTENER and ADD_TRIGGER GraphQL mutations with proper input types ([58a911c4f](https://github.com/powerhouse-inc/powerhouse/commit/58a911c4f))
+- use addRemoteDrive from reactor-browser ([ad2e1137b](https://github.com/powerhouse-inc/powerhouse/commit/ad2e1137b))
+- clean drive subgraphs ([#2302](https://github.com/powerhouse-inc/powerhouse/pull/2302))
+- **reactor:** update drive info handling to include graphqlEndpoint in responses and streamline drive URL parsing ([7d40dda03](https://github.com/powerhouse-inc/powerhouse/commit/7d40dda03))
+- **reactor,codegen:** handle processor apps in cli ([#2319](https://github.com/powerhouse-inc/powerhouse/pull/2319))
+- **reactor-api:** add REST endpoint for drive info retrieval ([81034a7ae](https://github.com/powerhouse-inc/powerhouse/commit/81034a7ae))
+- **reactor-api:** generate document-drive subgraph with union resolvers and  invalid op filtering ([2998d9500](https://github.com/powerhouse-inc/powerhouse/commit/2998d9500))
+- **reactor-api:** remove SystemSubgraph and related tests, update DefaultCoreSubgraphs ([e4412d6f7](https://github.com/powerhouse-inc/powerhouse/commit/e4412d6f7))
+
+### 🩹 Fixes
+
+- build fix for compatibility change ([20e0baf51](https://github.com/powerhouse-inc/powerhouse/commit/20e0baf51))
+- **design-system:** fix lint issue ([2ba774546](https://github.com/powerhouse-inc/powerhouse/commit/2ba774546))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan
+- Guillermo Puente @gpuente
+- Guillermo Puente Sandoval @gpuente
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.0.0-dev.38 (2026-02-10)
 
 ### 🩹 Fixes

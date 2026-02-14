@@ -13,6 +13,9 @@
   "references": [
     {
       "path": "../../packages/document-model"
+    },
+    {
+      "path": "../../shared"
     }
   ]
 }

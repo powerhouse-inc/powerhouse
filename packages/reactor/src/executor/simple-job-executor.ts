@@ -2,6 +2,7 @@ import type {
   Action,
   DocumentModelModule,
   Operation,
+  OperationWithContext,
   PHDocument,
 } from "document-model";
 import { isUndoRedo } from "document-model/core";
@@ -19,10 +20,7 @@ import type { Job } from "../queue/types.js";
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";
 import { DocumentDeletedError } from "../shared/errors.js";
 import type { SignatureVerificationHandler } from "../signer/types.js";
-import type {
-  IOperationStore,
-  OperationWithContext,
-} from "../storage/interfaces.js";
+import type { IOperationStore } from "../storage/interfaces.js";
 import { reshuffleByTimestamp } from "../utils/reshuffle.js";
 import { DocumentActionHandler } from "./document-action-handler.js";
 import type { IJobExecutor } from "./interfaces.js";

@@ -1,4 +1,9 @@
 import { useEffect, useState } from "react";
+import {
+  PROCESSOR_APPS,
+  type ProcessorApp,
+  type ProcessorApps,
+} from "shared/processors";
 import type { DocumentTypeItem } from "../../../document-models/processor-module/index.js";
 import { StatusPill } from "../../components/index.js";
 import { useAvailableDocumentTypes, useDebounce } from "../../hooks/index.js";
@@ -7,11 +12,14 @@ export interface ProcessorEditorFormProps {
   processorName?: string;
   processorType?: string;
   documentTypes?: DocumentTypeItem[];
+  processorApps?: ProcessorApps;
   status?: string;
   onNameChange?: (name: string) => void;
   onTypeChange?: (type: string) => void;
   onAddDocumentType?: (id: string, documentType: string) => void;
   onRemoveDocumentType?: (id: string) => void;
+  onAddProcessorApp?: (processorApp: ProcessorApp) => void;
+  onRemoveProcessorApp?: (processorApp: ProcessorApp) => void;
   onConfirm?: () => void;
 }
 
@@ -19,11 +27,14 @@ export const ProcessorEditorForm: React.FC<ProcessorEditorFormProps> = ({
   processorName: initialProcessorName = "",
   processorType: initialProcessorType = "",
   documentTypes: initialDocumentTypes = [],
+  processorApps: initialProcessorApps = [],
   status = "DRAFT",
   onNameChange,
   onTypeChange,
   onAddDocumentType,
   onRemoveDocumentType,
+  onAddProcessorApp,
+  onRemoveProcessorApp,
   onConfirm,
 }) => {
   const [processorName, setProcessorName] = useState(initialProcessorName);
@@ -31,6 +42,7 @@ export const ProcessorEditorForm: React.FC<ProcessorEditorFormProps> = ({
   const [documentTypes, setDocumentTypes] =
     useState<DocumentTypeItem[]>(initialDocumentTypes);
   const [selectedDocumentType, setSelectedDocumentType] = useState("");
+  const [processorApps, setProcessorApps] = useState(initialProcessorApps);
   const [isConfirmed, setIsConfirmed] = useState(false);
 
   // Get available document types from the hook (combines reactor and vetra drive)
@@ -53,6 +65,10 @@ export const ProcessorEditorForm: React.FC<ProcessorEditorFormProps> = ({
     setDocumentTypes(initialDocumentTypes);
   }, [initialDocumentTypes]);
 
+  useEffect(() => {
+    setProcessorApps(initialProcessorApps);
+  }, [initialProcessorApps]);
+
   // Reset confirmation state if status changes back to DRAFT
   useEffect(() => {
     if (status === "DRAFT") {
@@ -64,7 +80,12 @@ export const ProcessorEditorForm: React.FC<ProcessorEditorFormProps> = ({
   const isReadOnly = isConfirmed || status === "CONFIRMED";
 
   const handleConfirm = () => {
-    if (processorName.trim() && processorType && documentTypes.length > 0) {
+    if (
+      processorName.trim() &&
+      processorType &&
+      documentTypes.length > 0 &&
+      processorApps.length > 0
+    ) {
       setIsConfirmed(true); // Immediate UI update
       onConfirm?.();
     }
@@ -76,7 +97,10 @@ export const ProcessorEditorForm: React.FC<ProcessorEditorFormProps> = ({
   };
 
   const canConfirm =
-    processorName.trim() && processorType && documentTypes.length > 0;
+    !!processorName.trim() &&
+    !!processorType &&
+    documentTypes.length > 0 &&
+    processorApps.length > 0;
 
   return (
     <div className="space-y-6 p-6">
@@ -197,7 +221,56 @@ export const ProcessorEditorForm: React.FC<ProcessorEditorFormProps> = ({
           </div>
         </div>
       </div>
-
+      {/* Processor Apps Field */}
+      <div>
+        <label
+          htmlFor="processor-apps"
+          className="mb-2 block text-sm font-medium text-gray-700"
+        >
+          Processor Apps
+        </label>
+        <div className="space-y-2">
+          {!isReadOnly && (
+            <>
+              {PROCESSOR_APPS.map((processorApp) => (
+                <div key={processorApp} className="flex gap-1">
+                  <input
+                    type="checkbox"
+                    name={processorApp}
+                    id={processorApp}
+                    checked={processorApps.includes(processorApp)}
+                    onChange={(event) => {
+                      const isChecked = event.target.checked;
+                      if (isChecked) {
+                        setProcessorApps((processorApps) => [
+                          ...new Set([...processorApps, processorApp]),
+                        ]);
+                        onAddProcessorApp?.(processorApp);
+                      } else {
+                        if (processorApps.length > 1) {
+                          setProcessorApps((processorApps) =>
+                            processorApps.filter((p) => p !== processorApp),
+                          );
+                          onRemoveProcessorApp?.(processorApp);
+                        }
+                      }
+                    }}
+                  />
+                  <label htmlFor={processorApp}>{processorApp}</label>
+                </div>
+              ))}
+            </>
+          )}
+          <div className="space-y-1">
+            {isReadOnly &&
+              processorApps.map((processorApp) => (
+                <span key={processorApp} className="text-sm text-gray-700">
+                  {processorApp}
+                </span>
+              ))}
+          </div>
+        </div>
+      </div>
       {/* Confirm Button - only show if not in read-only mode */}
       {!isReadOnly && (
         <div>

@@ -1,3 +1,68 @@
+## 6.0.0-dev.43 (2026-02-14)
+
+### 🚀 Features
+
+- **monorepo:** move more shared stuff to shared ([#2335](https://github.com/powerhouse-inc/powerhouse/pull/2335))
+
+### ❤️ Thank You
+
+- Ryan Wolhuter @ryanwolhuter
+
+## 6.0.0-dev.42 (2026-02-13)
+
+This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.41 (2026-02-12)
+
+### 🚀 Features
+
+- **monorepo:** use catalog for other shared deps ([#2330](https://github.com/powerhouse-inc/powerhouse/pull/2330))
+- **vetra:** add processor apps input to vetra ([#2329](https://github.com/powerhouse-inc/powerhouse/pull/2329))
+
+### 🩹 Fixes
+
+- **builder-tools:** use same class-variance-authority as design-systom ([d600feb49](https://github.com/powerhouse-inc/powerhouse/commit/d600feb49))
+- **design-system:** copy assets to dist folder to enable relative path import ([de5cb5e4e](https://github.com/powerhouse-inc/powerhouse/commit/de5cb5e4e))
+- **monorepo:** add build-cli to old release workflow ([a30624bd2](https://github.com/powerhouse-inc/powerhouse/commit/a30624bd2))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Ryan Wolhuter @ryanwolhuter
+- ryanwolhuter @ryanwolhuter
+
+## 6.0.0-dev.40 (2026-02-12)
+
+### 🚀 Features
+
+- **monorepo:** add shared package ([#2324](https://github.com/powerhouse-inc/powerhouse/pull/2324))
+
+### ❤️ Thank You
+
+- Ryan Wolhuter @ryanwolhuter
+
+## 6.0.0-dev.39 (2026-02-11)
+
+### 🚀 Features
+
+- use addRemoteDrive from reactor-browser ([ad2e1137b](https://github.com/powerhouse-inc/powerhouse/commit/ad2e1137b))
+- enable ADD_LISTENER and ADD_TRIGGER GraphQL mutations with proper input types ([58a911c4f](https://github.com/powerhouse-inc/powerhouse/commit/58a911c4f))
+- **reactor:** update drive info handling to include graphqlEndpoint in responses and streamline drive URL parsing ([7d40dda03](https://github.com/powerhouse-inc/powerhouse/commit/7d40dda03))
+- **reactor-api:** remove SystemSubgraph and related tests, update DefaultCoreSubgraphs ([e4412d6f7](https://github.com/powerhouse-inc/powerhouse/commit/e4412d6f7))
+- **reactor-api:** generate document-drive subgraph with union resolvers and  invalid op filtering ([2998d9500](https://github.com/powerhouse-inc/powerhouse/commit/2998d9500))
+- **reactor-api:** add REST endpoint for drive info retrieval ([81034a7ae](https://github.com/powerhouse-inc/powerhouse/commit/81034a7ae))
+- **reactor,codegen:** handle processor apps in cli ([#2319](https://github.com/powerhouse-inc/powerhouse/pull/2319))
+
+### 🩹 Fixes
+
+- build fix for compatibility change ([20e0baf51](https://github.com/powerhouse-inc/powerhouse/commit/20e0baf51))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Guillermo Puente @gpuente
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.0.0-dev.38 (2026-02-10)
 
 This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.

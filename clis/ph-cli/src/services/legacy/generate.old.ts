@@ -8,9 +8,9 @@ import {
   generateProcessor,
   generateSubgraph,
 } from "@powerhousedao/codegen";
-import { PROCESSOR_APPS } from "@powerhousedao/common/clis";
 import { getConfig } from "@powerhousedao/config/node";
 import path from "path";
+import { PROCESSOR_APPS } from "shared/processors";
 
 export type GenerateOptions = {
   interactive?: boolean;

@@ -1,5 +1,5 @@
+import type { OperationWithContext } from "shared/document-model";
 import { describe, expect, it } from "vitest";
-import type { OperationWithContext } from "../../src/storage/interfaces.js";
 import type { RemoteFilter } from "../../src/sync/types.js";
 import {
   batchOperationsByDocument,

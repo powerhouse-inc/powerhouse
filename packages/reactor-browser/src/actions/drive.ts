@@ -1,4 +1,4 @@
-import { driveCollectionId, parseDriveUrl } from "@powerhousedao/reactor";
+import { driveCollectionId } from "@powerhousedao/reactor";
 import type {
   DocumentDriveDocument,
   DriveInput,
@@ -44,6 +44,7 @@ export async function addDrive(input: DriveInput, preferredEditor?: string) {
 export async function addRemoteDrive(
   url: string,
   options: RemoteDriveOptions | Record<string, never>,
+  driveId?: string,
 ) {
   const reactorClient = window.ph?.reactorClient;
   if (!reactorClient) {
@@ -56,19 +57,29 @@ export async function addRemoteDrive(
     throw new Error("Sync not initialized");
   }
 
-  const { driveId, graphqlEndpoint: reactorGraphqlUrl } = parseDriveUrl(url);
+  // Fetch drive info from the REST endpoint to get both id and graphqlEndpoint
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Failed to resolve drive info from ${url}`);
+  }
+  const driveInfo = (await response.json()) as {
+    id: string;
+    graphqlEndpoint: string;
+  };
+
+  const resolvedDriveId = driveId ?? driveInfo.id;
 
   // Use a unique name for the remote to allow multiple subscribers to the same drive
   const remoteName = crypto.randomUUID();
 
-  await sync.add(remoteName, driveCollectionId("main", driveId), {
+  await sync.add(remoteName, driveCollectionId("main", resolvedDriveId), {
     type: "gql",
     parameters: {
-      url: reactorGraphqlUrl,
+      url: driveInfo.graphqlEndpoint,
     },
   });
 
-  return driveId;
+  return resolvedDriveId;
 }
 
 export async function deleteDrive(driveId: string) {

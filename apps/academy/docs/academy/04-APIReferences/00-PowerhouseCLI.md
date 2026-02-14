@@ -271,6 +271,9 @@ processors, and other components based on your document model files.
 **Processor Type** - Whether to generate an analytics processor or a relational DB processor. Default is analytics. - Usage: `--processor-type <value>`
 
 **Default:** `analytics`
+**Processor Apps** - The apps where the generated processor will run - Usage: `--processor-apps <value>`
+
+**Default:** `switchboard`
 **Subgraph** - Subgraph name. - Usage: `--subgraph <str>`
 
 **Import Script** - Import script name. - Usage: `--import-script <str>`

@@ -129,6 +129,10 @@ export {
 } from "./registry/index.js";
 
 // Storage
+export type {
+  OperationContext,
+  OperationWithContext,
+} from "shared/document-model";
 export type { Database } from "./core/types.js";
 export {
   DuplicateOperationError,
@@ -144,9 +148,7 @@ export {
   type IDocumentView,
   type IKeyframeStore,
   type IOperationStore,
-  type OperationContext,
   type OperationFilter,
-  type OperationWithContext,
 } from "./storage/interfaces.js";
 export { KyselyDocumentIndexer } from "./storage/kysely/document-indexer.js";
 export { KyselyKeyframeStore } from "./storage/kysely/keyframe-store.js";
@@ -246,10 +248,7 @@ export {
 } from "./sync/index.js";
 
 // Processors
-export { ProcessorManager } from "./processors/index.js";
-export { RelationalDbProcessor } from "./processors/relational/relational-db-processor.js";
-export type * from "./processors/relational/types.js";
-export { createRelationalDb } from "./processors/relational/utils.js";
+export { createRelationalDb, RelationalDbProcessor } from "shared/processors";
 export type {
   IProcessor,
   IProcessorHostModule,
@@ -257,5 +256,6 @@ export type {
   ProcessorFactory,
   ProcessorFilter,
   ProcessorRecord,
-  TempProcessorAppToBeRemoved,
-} from "./processors/types.js";
+  IRelationalDb,
+} from "shared/processors";
+export { ProcessorManager } from "./processors/index.js";

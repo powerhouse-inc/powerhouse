@@ -1,6 +1,6 @@
 import type { Operation } from "document-model";
+import type { OperationWithContext } from "shared/document-model";
 import type { Job } from "../queue/types.js";
-import type { OperationWithContext } from "../storage/interfaces.js";
 
 /**
  * Represents the result of a job execution

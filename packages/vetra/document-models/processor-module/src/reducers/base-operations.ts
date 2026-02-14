@@ -1,4 +1,5 @@
 import type { ProcessorModuleBaseOperationsOperations } from "@powerhousedao/vetra/document-models/processor-module";
+import { PROCESSOR_APPS, type ProcessorApp } from "shared/processors";
 
 export const processorModuleBaseOperationsOperations: ProcessorModuleBaseOperationsOperations =
   {
@@ -39,5 +40,22 @@ export const processorModuleBaseOperationsOperations: ProcessorModuleBaseOperati
     },
     setProcessorStatusOperation(state, action, dispatch) {
       state.status = action.input.status;
+    },
+    addProcessorAppOperation(state, action) {
+      const { processorApp } = action.input;
+      if (!PROCESSOR_APPS.includes(processorApp as ProcessorApp)) {
+        throw new Error(
+          `${processorApp} is not a valid processor app. Must be one of ${PROCESSOR_APPS.join(", ")}.`,
+        );
+      }
+      state.processorApps = [
+        ...new Set([...state.processorApps, processorApp]),
+      ];
+    },
+    removeProcessorAppOperation(state, action) {
+      const { processorApp } = action.input;
+      state.processorApps = state.processorApps.filter(
+        (p) => p !== processorApp,
+      );
     },
   };

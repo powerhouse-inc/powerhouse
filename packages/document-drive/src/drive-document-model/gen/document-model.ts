@@ -173,7 +173,8 @@ export const driveDocumentModel: DocumentModelGlobalState = {
               id: "qGCiPGpTt/cyz3HzyrBn92z9dsU=",
               name: "ADD_LISTENER",
               description: "",
-              schema: "input AddListenerInput {\n    listener: Listener!\n}",
+              schema:
+                "input ListenerFilterInput {\n    documentType: [String!]\n    documentId: [ID!]\n    scope: [String!]\n    branch: [String!]\n}\n\ninput ListenerCallInfoInput {\n    transmitterType: TransmitterType\n    name: String\n    data: String\n}\n\ninput ListenerInput {\n    listenerId: ID!\n    label: String\n    block: Boolean!\n    system: Boolean!\n    filter: ListenerFilterInput!\n    callInfo: ListenerCallInfoInput\n}\n\ninput AddListenerInput {\n    listener: ListenerInput!\n}",
               template: "",
               reducer: "",
               errors: [],
@@ -195,7 +196,8 @@ export const driveDocumentModel: DocumentModelGlobalState = {
               id: "qGCiPGpTt/cyz3HzyrBn92z20dsU=",
               name: "ADD_TRIGGER",
               description: "",
-              schema: "input AddTriggerInput {\n    trigger: Trigger!\n}",
+              schema:
+                "input PullResponderTriggerDataInput {\n    listenerId: ID!\n    url: String!\n    interval: String!\n}\n\ninput TriggerInput {\n    id: ID!\n    type: TriggerType!\n    data: PullResponderTriggerDataInput\n}\n\ninput AddTriggerInput {\n    trigger: TriggerInput!\n}",
               template: "",
               reducer: "",
               errors: [],

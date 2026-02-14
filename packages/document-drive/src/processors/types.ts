@@ -6,7 +6,7 @@ import type {
 } from "document-drive";
 import type { PHDocumentHeader } from "document-model";
 import type { Kysely, QueryCreator } from "kysely";
-
+import type { ProcessorApp } from "shared/processors";
 export type IRelationalQueryMethods =
   | "selectFrom"
   | "selectNoFrom"
@@ -39,13 +39,10 @@ export type IRelationalDbLegacy<Schema = unknown> =
     ): IRelationalQueryBuilderLegacy<NamespaceSchema>;
   };
 
-export type ProcessorAppsLegacy = ("connect" | "switchboard")[];
-export type ProcessorAppLegacy = ProcessorAppsLegacy[number];
-
 export interface IProcessorHostModuleLegacy {
   analyticsStore: IAnalyticsStore;
   relationalDb: IRelationalDbLegacy;
-  processorApp: ProcessorAppLegacy;
+  processorApp: ProcessorApp;
   config?: Map<string, unknown>;
 }
 
@@ -83,7 +80,7 @@ export type ProcessorRecordLegacy = {
  */
 export type ProcessorFactoryLegacy = (
   driveHeader: PHDocumentHeader,
-  processorApp?: ProcessorAppLegacy,
+  processorApp?: ProcessorApp,
 ) => ProcessorRecordLegacy[] | Promise<ProcessorRecordLegacy[]>;
 
 /**

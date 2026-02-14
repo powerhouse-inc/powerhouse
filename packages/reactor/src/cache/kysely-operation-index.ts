@@ -1,10 +1,8 @@
+import type { OperationWithContext } from "document-model";
 import type { Kysely } from "kysely";
 import { sql } from "kysely";
 import type { PagedResults, PagingOptions } from "../shared/types.js";
-import type {
-  OperationWithContext,
-  ViewFilter,
-} from "../storage/interfaces.js";
+import type { ViewFilter } from "../storage/interfaces.js";
 import type { Database } from "../storage/kysely/types.js";
 import type {
   InsertableDocumentCollection,

@@ -4,6 +4,7 @@ import type { DocumentModelModule, PHDocumentHeader } from "document-model";
 import { documentModelDocumentModelModule, generateId } from "document-model";
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
+import type { OperationWithContext } from "shared/document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { KyselyOperationIndex } from "../../src/cache/kysely-operation-index.js";
 import type { IOperationIndex } from "../../src/cache/operation-index-types.js";
@@ -15,11 +16,10 @@ import type {
   IProcessor,
   ProcessorFactory,
   ProcessorFilter,
-} from "../../src/processors/types.js";
+} from "shared/processors";
 import type { DocumentViewDatabase } from "../../src/read-models/types.js";
 import { ConsistencyTracker } from "../../src/shared/consistency-tracker.js";
 import { JobStatus } from "../../src/shared/types.js";
-import type { OperationWithContext } from "../../src/storage/interfaces.js";
 import type { Database as StorageDatabase } from "../../src/storage/kysely/types.js";
 import {
   REACTOR_SCHEMA,

@@ -18,7 +18,6 @@ import type {
   IProcessorHostModuleLegacy,
   IProcessorManagerLegacy,
   IRelationalDbLegacy,
-  ProcessorAppLegacy,
   ProcessorFactoryLegacy,
 } from "document-drive";
 import {
@@ -38,6 +37,7 @@ import type { TlsOptions } from "node:tls";
 import type { Pool } from "pg";
 import { WebSocketServer } from "ws";
 // Import tracing - initializes OpenTelemetry and provides stub functions for backwards compatibility
+import type { ProcessorApp } from "shared/processors";
 import { config, DefaultCoreSubgraphs } from "./config.js";
 import { AuthSubgraph } from "./graphql/auth/subgraph.js";
 import { GraphQLManager } from "./graphql/graphql-manager.js";
@@ -488,7 +488,7 @@ async function _setupAPI(
     freeEntry: boolean;
   },
   legacyReactor: boolean,
-  processorApp: ProcessorAppLegacy,
+  processorApp: ProcessorApp,
   reactorProcessorManager?: IReactorProcessorManager,
 ): Promise<API> {
   const module: IProcessorHostModuleLegacy = {
@@ -693,7 +693,7 @@ export async function startAPI(
   registry: IDocumentModelRegistry,
   syncManager: ISyncManager,
   options: Options,
-  processorApp: ProcessorAppLegacy,
+  processorApp: ProcessorApp,
 ): Promise<API> {
   const {
     port,
@@ -769,7 +769,7 @@ export async function initializeAndStartAPI(
     documentModels: DocumentModelModule[],
   ) => Promise<ReactorClientModule>,
   options: Options,
-  processorApp: ProcessorAppLegacy,
+  processorApp: ProcessorApp,
 ): Promise<
   API & {
     driveServer: IDocumentDriveServer;

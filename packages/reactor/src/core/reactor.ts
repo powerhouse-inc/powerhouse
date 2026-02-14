@@ -1,4 +1,4 @@
-import { AbortError } from "document-drive";
+import { AbortError } from "document-drive/utils/errors";
 import type {
   Action,
   CreateDocumentActionInput,

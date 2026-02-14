@@ -39,6 +39,9 @@
     },
     {
       "path": "../config"
+    },
+    {
+      "path": "../../shared"
     }
   ]
 }

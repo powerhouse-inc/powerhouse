@@ -10,17 +10,17 @@
   "license": "ISC",
   "packageManager": "pnpm@10.16.1",
   "dependencies": {
-    "@electric-sql/pglite": "^0.2.17",
+    "@electric-sql/pglite": "catalog:",
     "@powerhousedao/reactor": "workspace:*",
     "@pyroscope/nodejs": "^0.4.7",
     "document-model": "workspace:*",
-    "graphql-request": "^7.4.0",
-    "kysely": "^0.28.2",
-    "kysely-pglite-dialect": "^1.1.1",
+    "graphql-request": "catalog:",
+    "kysely": "catalog:",
+    "kysely-pglite-dialect": "catalog:",
     "pg": "^8.14.0"
   },
   "devDependencies": {
-    "@types/node": "^22.15.2",
+    "@types/node": "catalog:",
     "@types/pg": "^8.11.6"
   }
 }

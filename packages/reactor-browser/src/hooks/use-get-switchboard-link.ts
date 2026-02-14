@@ -20,7 +20,7 @@ export function useGetSwitchboardLink(
   document: PHDocument | undefined,
 ): (() => Promise<string>) | null {
   const [drive] = useSelectedDrive();
-  const { data: remotes = [] } = useSyncList();
+  const remotes = useSyncList();
 
   const isRemoteDrive = useMemo(() => {
     return remotes.some(

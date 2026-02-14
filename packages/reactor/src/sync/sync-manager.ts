@@ -1,4 +1,5 @@
 import type { Operation } from "document-model";
+import type { OperationWithContext } from "shared/document-model";
 import type { IOperationIndex } from "../cache/operation-index-types.js";
 import type {
   BatchLoadRequest,
@@ -21,7 +22,6 @@ import {
 import type {
   ISyncCursorStorage,
   ISyncRemoteStorage,
-  OperationWithContext,
 } from "../storage/interfaces.js";
 import { BatchAggregator, type PreparedBatch } from "./batch-aggregator.js";
 import { ChannelError } from "./errors.js";

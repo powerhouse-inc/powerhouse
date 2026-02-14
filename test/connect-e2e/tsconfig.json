@@ -37,6 +37,9 @@
     },
     {
       "path": "../../packages/document-model"
+    },
+    {
+      "path": "../../shared"
     }
   ],
   "include": ["**/*", "powerhouse.manifest.json"]
