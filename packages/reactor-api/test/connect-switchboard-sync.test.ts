@@ -735,6 +735,10 @@ describe("Connect-Switchboard Sync", () => {
       await waitForJobCompletion(connectReactor, createJob.id);
       await createOnSwitchboard;
 
+      // Remove sync to prevent polling from loading T1 as a trivial append
+      // (preserving sourceRemote) before Connect creates T2.
+      await connectSyncManager.remove(`switchboard-${documentId}`);
+
       // Mutate on Switchboard first (earlier timestamp T1)
       const switchboardMutateJob = await switchboardReactor.execute(
         documentId,
@@ -792,6 +796,9 @@ describe("Connect-Switchboard Sync", () => {
         branch: "main",
       });
       expect(connectDoc.state).toBeDefined();
+
+      // Re-establish Connect->Switchboard sync for bidirectional convergence test
+      await setupSyncForDrive(connectSyncManager, documentId, resolverBridge);
 
       // Now set up bidirectional sync and verify echo termination
       await setupSyncForDriveOnSwitchboard(
