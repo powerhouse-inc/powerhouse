@@ -1,9 +1,7 @@
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import type {
-  ISyncCursorStorage,
-  OperationContext,
-} from "../../../../src/storage/interfaces.js";
+import type { OperationContext } from "shared/document-model";
+import type { ISyncCursorStorage } from "../../../../src/storage/interfaces.js";
 import type { KyselySyncRemoteStorage } from "../../../../src/storage/kysely/sync-remote-storage.js";
 import type { Database } from "../../../../src/storage/kysely/types.js";
 import { GqlResponseChannel } from "../../../../src/sync/channels/gql-res-channel.js";

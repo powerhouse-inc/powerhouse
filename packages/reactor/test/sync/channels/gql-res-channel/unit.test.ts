@@ -1,8 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import type {
-  ISyncCursorStorage,
-  OperationContext,
-} from "../../../../src/storage/interfaces.js";
+import type { OperationContext } from "shared/document-model";
+import type { ISyncCursorStorage } from "../../../../src/storage/interfaces.js";
 import { GqlResponseChannel } from "../../../../src/sync/channels/gql-res-channel.js";
 import { SyncOperation } from "../../../../src/sync/sync-operation.js";
 import { createMockLogger } from "../../../factories.js";
