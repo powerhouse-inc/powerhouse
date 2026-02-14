@@ -1,3 +1,20 @@
+## 6.0.0-dev.43 (2026-02-14)
+
+### 🚀 Features
+
+- **monorepo:** move more shared stuff to shared ([#2335](https://github.com/powerhouse-inc/powerhouse/pull/2335))
+
+### 🩹 Fixes
+
+- use working renown.id domain and clear user param on logout ([a88f6d6c5](https://github.com/powerhouse-inc/powerhouse/commit/a88f6d6c5))
+- **reactor-browser:** do not use react-query for useSyncList hook ([62a82b9ea](https://github.com/powerhouse-inc/powerhouse/commit/62a82b9ea))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Guillermo Puente @gpuente
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.0.0-dev.42 (2026-02-13)
 
 ### 🚀 Features
