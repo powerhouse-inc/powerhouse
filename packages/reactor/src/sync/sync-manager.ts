@@ -123,9 +123,12 @@ export class SyncManager implements ISyncManager {
       try {
         await channel.init();
       } catch (error) {
-        console.error(
-          `Error initializing channel for remote ${record.name}: ${error instanceof Error ? error.message : String(error)}`,
+        this.logger.error(
+          "Error initializing channel for remote (@name, @error)",
+          record.name,
+          error instanceof Error ? error.message : String(error),
         );
+        this.remotes.delete(record.name);
         continue;
       }
 
@@ -261,7 +264,13 @@ export class SyncManager implements ISyncManager {
     this.remotes.set(name, remote);
     this.wireChannelCallbacks(remote);
 
-    await channel.init();
+    try {
+      await channel.init();
+    } catch (error) {
+      this.remotes.delete(name);
+      await this.remoteStorage.remove(name);
+      throw error;
+    }
 
     // backfill
     const outboxOrdinal = remote.channel.outbox.latestOrdinal;
@@ -476,6 +485,19 @@ export class SyncManager implements ISyncManager {
 
     for (const { remote, syncOp } of items) {
       if (!(syncOp.jobId in result.jobs)) {
+        this.logger.error(
+          "Job key missing from batch load result (@remote, @documentId, @jobId)",
+          remote.name,
+          syncOp.documentId,
+          syncOp.jobId,
+        );
+        const error = new ChannelError(
+          ChannelErrorSource.Inbox,
+          new Error(`Job key '${syncOp.jobId}' missing from batch load result`),
+        );
+        syncOp.failed(error);
+        remote.channel.deadLetter.add(syncOp);
+        remote.channel.inbox.remove(syncOp);
         continue;
       }
       const jobInfo = result.jobs[syncOp.jobId];
