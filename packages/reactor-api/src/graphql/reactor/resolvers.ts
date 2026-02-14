@@ -878,7 +878,9 @@ export function pollSyncEnvelopes(
     },
     key: syncOp.jobId || undefined,
     dependsOn:
-      syncOp.jobDependencies.length > 0 ? syncOp.jobDependencies : undefined,
+      syncOp.jobDependencies.filter(Boolean).length > 0
+        ? syncOp.jobDependencies.filter(Boolean)
+        : undefined,
   }));
 
   return {

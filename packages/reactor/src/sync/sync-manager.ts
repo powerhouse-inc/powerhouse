@@ -310,6 +310,19 @@ export class SyncManager implements ISyncManager {
     remote.channel.outbox.onAdded(() => {
       // todo: handle sync status updates
     });
+
+    remote.channel.deadLetter.onAdded((syncOps) => {
+      for (const syncOp of syncOps) {
+        this.logger.error(
+          "Dead letter (@remote, @documentId, @jobId, @error, @dependencies)",
+          remote.name,
+          syncOp.documentId,
+          syncOp.jobId,
+          syncOp.error?.message ?? "unknown",
+          syncOp.jobDependencies,
+        );
+      }
+    });
   }
 
   private getRemotesForCollection(collectionId: string): Remote[] {
@@ -460,7 +473,7 @@ export class SyncManager implements ISyncManager {
       scope: syncOp.scopes[0],
       branch: syncOp.branch,
       operations: syncOp.operations.map((op) => op.operation),
-      dependsOn: syncOp.jobDependencies,
+      dependsOn: syncOp.jobDependencies.filter(Boolean),
     }));
 
     const request: BatchLoadRequest = { jobs };
@@ -541,14 +554,14 @@ export class SyncManager implements ISyncManager {
     // create sync operations, each batch has a dependency on the previous one
     const batches = batchOperationsByDocument(operations);
 
-    let prevJobId = "";
+    let prevJobId: string | undefined;
     const syncOps: SyncOperation[] = [];
     for (const batch of batches) {
       const jobId = crypto.randomUUID();
       const syncOp = new SyncOperation(
         crypto.randomUUID(),
         jobId,
-        [prevJobId],
+        prevJobId ? [prevJobId] : [],
         remote.name,
         batch.documentId,
         [batch.scope],
