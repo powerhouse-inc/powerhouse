@@ -1,3 +1,27 @@
+## 6.0.0-dev.44 (2026-02-15)
+
+### 🚀 Features
+
+- echo-prevention tests ([fb30d7e80](https://github.com/powerhouse-inc/powerhouse/commit/fb30d7e80))
+- added some more tests to prove consistency ([5d9c4469a](https://github.com/powerhouse-inc/powerhouse/commit/5d9c4469a))
+
+### 🩹 Fixes
+
+- log out all dead letters, correctly parse empty dependencies ([672f444d6](https://github.com/powerhouse-inc/powerhouse/commit/672f444d6))
+- ordinal was not being sent in payload, and fixed gql shape change in tests ([58375cb69](https://github.com/powerhouse-inc/powerhouse/commit/58375cb69))
+- regenerating from schema to fix gql issues ([1ba2c4f09](https://github.com/powerhouse-inc/powerhouse/commit/1ba2c4f09))
+- build fixes with import changes ([bd8bb613c](https://github.com/powerhouse-inc/powerhouse/commit/bd8bb613c))
+- found a sql issue and fixed other failing reactor tests ([9c0b1f745](https://github.com/powerhouse-inc/powerhouse/commit/9c0b1f745))
+- fixed an issue with connect-switchboard sync and added more proof tests ([0ff5791c1](https://github.com/powerhouse-inc/powerhouse/commit/0ff5791c1))
+- fixed a couple edge cases in sync-manager ([873654f12](https://github.com/powerhouse-inc/powerhouse/commit/873654f12))
+- fixing unit tests for channels and fixing persistence bug ([eea411d8b](https://github.com/powerhouse-inc/powerhouse/commit/eea411d8b))
+- build fixes ([f0aab9190](https://github.com/powerhouse-inc/powerhouse/commit/f0aab9190))
+- timestamp comparator was busted ([829784954](https://github.com/powerhouse-inc/powerhouse/commit/829784954))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
 ## 6.0.0-dev.43 (2026-02-14)
 
 ### 🚀 Features

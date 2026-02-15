@@ -1,3 +1,22 @@
+## 6.0.0-dev.44 (2026-02-15)
+
+### 🚀 Features
+
+- echo-prevention tests ([fb30d7e80](https://github.com/powerhouse-inc/powerhouse/commit/fb30d7e80))
+
+### 🩹 Fixes
+
+- test was flaky, so we need to wait to setup sync until we are sure to enforce a reshuffle ([bd7b58718](https://github.com/powerhouse-inc/powerhouse/commit/bd7b58718))
+- log out all dead letters, correctly parse empty dependencies ([672f444d6](https://github.com/powerhouse-inc/powerhouse/commit/672f444d6))
+- ordinal was not being sent in payload, and fixed gql shape change in tests ([58375cb69](https://github.com/powerhouse-inc/powerhouse/commit/58375cb69))
+- regenerating from schema to fix gql issues ([1ba2c4f09](https://github.com/powerhouse-inc/powerhouse/commit/1ba2c4f09))
+- fixed an issue with connect-switchboard sync and added more proof tests ([0ff5791c1](https://github.com/powerhouse-inc/powerhouse/commit/0ff5791c1))
+- build fix in reactor-api for resolver changes ([00bddf850](https://github.com/powerhouse-inc/powerhouse/commit/00bddf850))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
 ## 6.0.0-dev.43 (2026-02-14)
 
 ### 🚀 Features

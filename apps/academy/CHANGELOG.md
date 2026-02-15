@@ -1,3 +1,7 @@
+## 6.0.0-dev.44 (2026-02-15)
+
+This was a version bump only for @powerhousedao/academy to align it with other projects, there were no code changes.
+
 ## 6.0.0-dev.43 (2026-02-14)
 
 ### 🚀 Features
