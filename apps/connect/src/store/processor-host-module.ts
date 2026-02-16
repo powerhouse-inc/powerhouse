@@ -5,15 +5,22 @@ import {
 } from "shared/processors";
 import { getDb } from "../pglite.db.js";
 
-export async function createProcessorHostModule(): Promise<IProcessorHostModule> {
-  const relationalDb = await getDb();
-  const analyticsStore = await createOrGetAnalyticsStore({
-    databaseName: DEFAULT_ANALYTICS_PROCESSOR_DB_NAME,
-  });
-  const processorApp = "connect" as const;
-  return {
-    relationalDb,
-    analyticsStore,
-    processorApp,
-  };
+export async function createProcessorHostModule(): Promise<
+  IProcessorHostModule | undefined
+> {
+  try {
+    const relationalDb = await getDb();
+    const analyticsStore = await createOrGetAnalyticsStore({
+      databaseName: DEFAULT_ANALYTICS_PROCESSOR_DB_NAME,
+    });
+    const processorApp = "connect" as const;
+    return {
+      relationalDb,
+      analyticsStore,
+      processorApp,
+    };
+  } catch (error) {
+    console.error(`Failed to initialize processor host module:`);
+    console.error(error);
+  }
 }

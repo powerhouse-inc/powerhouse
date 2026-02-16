@@ -190,17 +190,24 @@ export async function createReactor() {
 
   if (packagesWithProcessorFactories.length > 0) {
     const processorHostModule = await createProcessorHostModule();
-    await Promise.all(
-      packagesWithProcessorFactories.map(async (pkg) => {
-        const { id, name, processorFactory } = pkg;
-        console.log("Loading processor factory:", name);
-        const factory = await processorFactory(processorHostModule);
-        await reactorClientModule.reactorModule?.processorManager.registerFactory(
-          id,
-          factory,
-        );
-      }),
-    );
+    if (processorHostModule !== undefined) {
+      await Promise.all(
+        packagesWithProcessorFactories.map(async (pkg) => {
+          const { id, name, processorFactory } = pkg;
+          console.log("Loading processor factory:", name);
+          try {
+            const factory = await processorFactory(processorHostModule);
+            await reactorClientModule.reactorModule?.processorManager.registerFactory(
+              id,
+              factory,
+            );
+          } catch (error) {
+            console.error(`Error registering processor: "${name}".`);
+            console.error(error);
+          }
+        }),
+      );
+    }
   }
 
   window.ph.loading = false;
