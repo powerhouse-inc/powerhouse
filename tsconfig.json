@@ -56,6 +56,9 @@
       "path": "./packages/reactor-mcp"
     },
     {
+      "path": "./packages/registry"
+    },
+    {
       "path": "./packages/renown"
     },
     {

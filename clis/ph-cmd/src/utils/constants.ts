@@ -82,6 +82,7 @@ export const PACKAGES_DEPENDENCIES = [
   "@powerhousedao/reactor-browser",
   "@powerhousedao/reactor-local",
   "@powerhousedao/reactor-mcp",
+  "@powerhousedao/registry",
   "@powerhousedao/switchboard-gui",
   "@powerhousedao/vetra",
 ] as const;
