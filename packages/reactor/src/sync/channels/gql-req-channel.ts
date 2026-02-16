@@ -12,6 +12,7 @@ import {
   sortEnvelopesByFirstOperationTimestamp,
   trimMailboxFromAckOrdinal,
 } from "../utils.js";
+import { calculateBackoffDelay } from "./interval-poll-timer.js";
 import type { IPollTimer } from "./poll-timer.js";
 import {
   envelopesToSyncOperations,
@@ -33,6 +34,10 @@ export type GqlChannelConfig = {
   collectionId: string;
   /** Filter to apply to operations */
   filter: RemoteFilter;
+  /** Base delay in ms for exponential backoff on push retries */
+  retryBaseDelayMs: number;
+  /** Maximum delay in ms for exponential backoff on push retries */
+  retryMaxDelayMs: number;
 };
 
 /**
@@ -56,6 +61,9 @@ export class GqlRequestChannel implements IChannel {
   private lastFailureUtcMs?: number;
   private lastPersistedInboxOrdinal: number = 0;
   private lastPersistedOutboxOrdinal: number = 0;
+  private pushFailureCount: number = 0;
+  private pushRetryTimer: ReturnType<typeof setTimeout> | null = null;
+  private pushBlocked: boolean = false;
 
   constructor(
     private readonly logger: ILogger,
@@ -77,6 +85,8 @@ export class GqlRequestChannel implements IChannel {
       fetchFn: config.fetchFn,
       collectionId: config.collectionId,
       filter: config.filter,
+      retryBaseDelayMs: config.retryBaseDelayMs,
+      retryMaxDelayMs: config.retryMaxDelayMs,
     };
     this.isShutdown = false;
     this.failureCount = 0;
@@ -88,21 +98,9 @@ export class GqlRequestChannel implements IChannel {
 
     // when sync ops are added to the outbox, push them to the remote
     this.outbox.onAdded((syncOps) => {
-      if (this.isShutdown) {
-        return;
-      }
-
-      this.pushSyncOperations(syncOps).catch((error) => {
-        const err = error instanceof Error ? error : new Error(String(error));
-        const channelError = new ChannelError(ChannelErrorSource.Outbox, err);
-        for (const syncOp of syncOps) {
-          syncOp.failed(channelError);
-        }
-
-        // move to dead letters
-        this.deadLetter.add(...syncOps);
-        this.outbox.remove(...syncOps);
-      });
+      if (this.isShutdown) return;
+      if (this.pushBlocked) return; // ops stay in outbox, included in next retry
+      this.attemptPush(syncOps);
     });
 
     // Instead of listening to syncops directly for cursor updates, we listen
@@ -158,6 +156,11 @@ export class GqlRequestChannel implements IChannel {
     this.bufferedOutbox.flush();
     this.isShutdown = true;
     this.pollTimer.stop();
+
+    if (this.pushRetryTimer) {
+      clearTimeout(this.pushRetryTimer);
+      this.pushRetryTimer = null;
+    }
 
     return Promise.resolve();
   }
@@ -421,6 +424,80 @@ export class GqlRequestChannel implements IChannel {
     };
 
     await this.executeGraphQL<{ touchChannel: boolean }>(mutation, variables);
+  }
+
+  /**
+   * Fire-and-forget push with retry on recoverable errors.
+   * On success, clears push blocked state. On recoverable error, blocks
+   * further pushes and schedules a retry. On unrecoverable error, moves
+   * ops to deadLetter.
+   */
+  private attemptPush(syncOps: SyncOperation[]): void {
+    this.pushSyncOperations(syncOps)
+      .then(() => {
+        this.pushBlocked = false;
+        this.pushFailureCount = 0;
+      })
+      .catch((error) => {
+        const err = error instanceof Error ? error : new Error(String(error));
+
+        if (this.isRecoverablePushError(err)) {
+          this.pushFailureCount++;
+          this.pushBlocked = true;
+          this.logger.error(
+            "GqlChannel push failed (attempt @FailureCount), will retry: @Error",
+            this.pushFailureCount,
+            err,
+          );
+          this.schedulePushRetry();
+        } else {
+          const channelError = new ChannelError(ChannelErrorSource.Outbox, err);
+          for (const syncOp of syncOps) {
+            syncOp.failed(channelError);
+          }
+          this.deadLetter.add(...syncOps);
+          this.outbox.remove(...syncOps);
+        }
+      });
+  }
+
+  /**
+   * Schedules a retry of all current outbox items using exponential backoff.
+   */
+  private schedulePushRetry(): void {
+    if (this.pushRetryTimer) return;
+
+    const delay = calculateBackoffDelay(
+      this.pushFailureCount,
+      this.config.retryBaseDelayMs,
+      this.config.retryMaxDelayMs,
+      Math.random(),
+    );
+
+    this.pushRetryTimer = setTimeout(() => {
+      this.pushRetryTimer = null;
+
+      if (this.isShutdown) return;
+
+      const allItems = this.outbox.items;
+      if (allItems.length === 0) {
+        this.pushBlocked = false;
+        this.pushFailureCount = 0;
+        return;
+      }
+
+      this.attemptPush([...allItems]);
+    }, delay);
+  }
+
+  /**
+   * Returns true if the error is recoverable (transient network/HTTP/parse
+   * failure). Returns false for explicit GraphQL server rejections.
+   */
+  private isRecoverablePushError(error: Error): boolean {
+    if (error.message.startsWith("GraphQL errors:")) return false;
+    if (error.message === "GraphQL response missing data field") return false;
+    return true;
   }
 
   /**

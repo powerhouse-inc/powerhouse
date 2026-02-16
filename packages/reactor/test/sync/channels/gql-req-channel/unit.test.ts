@@ -62,6 +62,8 @@ const createTestConfig = (
   url: "https://example.com/graphql",
   collectionId: "test-collection",
   filter: TEST_FILTER,
+  retryBaseDelayMs: 1000,
+  retryMaxDelayMs: 300000,
   ...overrides,
 });
 
@@ -713,9 +715,15 @@ describe("GqlRequestChannel", () => {
       await channel.shutdown();
     });
 
-    it("should move failed push to dead letter", async () => {
+    it("should move unrecoverable push errors to dead letter", async () => {
       const cursorStorage = createMockCursorStorage();
-      const mockFetch = vi.fn().mockRejectedValue(new Error("Network error"));
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            errors: [{ message: "Validation failed" }],
+          }),
+      });
       global.fetch = mockFetch;
 
       const channel = new GqlRequestChannel(
@@ -735,7 +743,43 @@ describe("GqlRequestChannel", () => {
         expect(channel.deadLetter.items).toHaveLength(1);
         expect(channel.outbox.items).toHaveLength(0);
       });
+      await channel.shutdown();
     });
+
+    it("should retry recoverable push errors instead of dead-lettering", async () => {
+      const cursorStorage = createMockCursorStorage();
+      const mockFetch = vi.fn().mockRejectedValue(new Error("Network error"));
+      global.fetch = mockFetch;
+
+      const channel = new GqlRequestChannel(
+        createMockLogger(),
+        "channel-1",
+        "remote-1",
+        cursorStorage,
+        createTestConfig({
+          retryBaseDelayMs: 10,
+          retryMaxDelayMs: 50,
+        }),
+        createMockOperationIndex(),
+        createPollTimer(),
+      );
+
+      const job = createMockSyncOperation("job-1", "remote-1");
+      channel.outbox.add(job);
+
+      // Wait for BufferedMailbox flush (500ms) + push attempt + backoff
+      await vi.waitFor(
+        () => {
+          expect(mockFetch).toHaveBeenCalled();
+        },
+        { timeout: 2000 },
+      );
+
+      // Recoverable error: stays in outbox, not dead-lettered
+      expect(channel.deadLetter.items).toHaveLength(0);
+      expect(channel.outbox.items).toHaveLength(1);
+      await channel.shutdown();
+    }, 10000);
   });
 
   describe("error handling", () => {

@@ -63,6 +63,8 @@ export class GqlRequestChannelFactory implements IChannelFactory {
       collectionId,
       filter,
       jwtHandler: this.jwtHandler,
+      retryBaseDelayMs: 1000,
+      retryMaxDelayMs: 300000,
     };
 
     let pollIntervalMs = 2000;
@@ -94,6 +96,13 @@ export class GqlRequestChannelFactory implements IChannelFactory {
         throw new Error('"fetchFn" parameter must be a function');
       }
       gqlConfig.fetchFn = config.parameters.fetchFn as typeof fetch;
+    }
+
+    if (retryBaseDelayMs !== undefined) {
+      gqlConfig.retryBaseDelayMs = retryBaseDelayMs;
+    }
+    if (retryMaxDelayMs !== undefined) {
+      gqlConfig.retryMaxDelayMs = retryMaxDelayMs;
     }
 
     let maxQueueDepth: number | undefined;

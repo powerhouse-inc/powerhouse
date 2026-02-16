@@ -147,6 +147,8 @@ describe("GqlRequestChannel Integration", () => {
     url: "https://example.com/graphql",
     collectionId: "test-collection",
     filter: TEST_FILTER,
+    retryBaseDelayMs: 1000,
+    retryMaxDelayMs: 300000,
     ...overrides,
   });
 
