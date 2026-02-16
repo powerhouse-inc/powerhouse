@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { IOperationIndex } from "../../../../src/cache/operation-index-types.js";
+import type { IQueue } from "../../../../src/queue/interfaces.js";
 import type { ISyncCursorStorage } from "../../../../src/storage/interfaces.js";
 import { GqlChannelFactory } from "../../../../src/sync/channels/gql-channel-factory.js";
 import { GqlRequestChannel } from "../../../../src/sync/channels/gql-req-channel.js";
@@ -15,6 +16,11 @@ const TEST_FILTER: RemoteFilter = {
   scope: [],
   branch: "main",
 };
+
+const createMockQueue = (): IQueue =>
+  ({
+    totalSize: vi.fn().mockResolvedValue(0),
+  }) as unknown as IQueue;
 
 const createMockCursorStorage = (): ISyncCursorStorage => ({
   list: vi.fn(),
@@ -54,7 +60,11 @@ describe("GqlRequestChannelFactory", () => {
     originalFetch = global.fetch;
     vi.useFakeTimers();
 
-    factory = new GqlChannelFactory(createMockLogger());
+    factory = new GqlChannelFactory(
+      createMockLogger(),
+      undefined,
+      createMockQueue(),
+    );
   });
 
   afterEach(() => {

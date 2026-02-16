@@ -57,10 +57,8 @@ describe("SyncManager - Unit Tests", () => {
       add: vi.fn((...items: SyncOperation[]) => {
         for (const item of items) {
           _items.push(item);
-          if (item.operations) {
-            for (const op of item.operations) {
-              _latestOrdinal = Math.max(_latestOrdinal, op.context.ordinal);
-            }
+          for (const op of item.operations) {
+            _latestOrdinal = Math.max(_latestOrdinal, op.context.ordinal);
           }
         }
       }),

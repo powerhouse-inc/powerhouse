@@ -5,6 +5,9 @@ export {
   type GqlChannelConfig,
 } from "./gql-req-channel.js";
 export { GqlResponseChannel as PollingChannel } from "./gql-res-channel.js";
-export { IntervalPollTimer } from "./interval-poll-timer.js";
+export {
+  IntervalPollTimer,
+  type PollTimerConfig,
+} from "./interval-poll-timer.js";
 export { type IPollTimer } from "./poll-timer.js";
 export { envelopeToSyncOperation } from "./utils.js";

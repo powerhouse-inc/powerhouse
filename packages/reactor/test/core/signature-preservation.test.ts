@@ -26,14 +26,14 @@ function createTestSigner(name: string, publicKey: string): ISigner {
     publicKey: {} as CryptoKey,
     sign: vi.fn().mockResolvedValue(new Uint8Array(0)),
     verify: vi.fn().mockResolvedValue(undefined),
-    signAction: vi.fn().mockImplementation(async (): Promise<Signature> => {
-      return [
+    signAction: vi.fn().mockImplementation((): Promise<Signature> => {
+      return Promise.resolve<Signature>([
         String(Date.now() / 1000),
         publicKey,
         "action-hash",
         "prev-state-hash",
         "0xsignature",
-      ];
+      ]);
     }),
   };
 }
@@ -62,7 +62,7 @@ describe("Signature Preservation", () => {
   });
 
   afterEach(() => {
-    reactor?.kill();
+    reactor.kill();
   });
 
   it("should NOT overwrite pre-signed actions", async () => {
@@ -99,7 +99,7 @@ describe("Signature Preservation", () => {
     expect(callsAfterExecute).toBe(callsBeforeExecute);
 
     const operations = await reactor.getOperations(doc.header.id);
-    const globalOps = operations.global?.results ?? [];
+    const globalOps = operations.global.results;
     const lastOp = globalOps[globalOps.length - 1];
 
     const opSigner = lastOp.action.context?.signer;
@@ -126,7 +126,7 @@ describe("Signature Preservation", () => {
     expect(callsAfterExecute).toBe(callsBeforeExecute + 1);
 
     const operations = await reactor.getOperations(doc.header.id);
-    const globalOps = operations.global?.results ?? [];
+    const globalOps = operations.global.results;
     const lastOp = globalOps[globalOps.length - 1];
 
     const opSigner = lastOp.action.context?.signer;

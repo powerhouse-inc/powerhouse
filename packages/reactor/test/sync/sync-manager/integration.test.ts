@@ -47,6 +47,8 @@ describe("SyncManager Integration", () => {
 
     mockReactor = {
       load: vi.fn().mockResolvedValue({ status: "ok" }),
+      getJobStatus: vi.fn().mockResolvedValue({ id: "", status: "READ_READY" }),
+      loadBatch: vi.fn().mockResolvedValue({ jobs: {} }),
     } as any;
 
     channelRegistry = new Map();
@@ -748,6 +750,11 @@ describe("SyncManager Integration", () => {
     it("should handle reactor errors and move to dead letter", async () => {
       const { JobStatus } = await import("../../../src/shared/types.js");
       vi.mocked(mockReactor.load).mockResolvedValue({
+        status: JobStatus.FAILED,
+        error: { message: "Test error", stack: "" },
+      } as any);
+      vi.mocked(mockReactor.getJobStatus).mockResolvedValue({
+        id: "",
         status: JobStatus.FAILED,
         error: { message: "Test error", stack: "" },
       } as any);

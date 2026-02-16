@@ -44,6 +44,8 @@ describe("SyncManager Backfill", () => {
 
     mockReactor = {
       load: vi.fn().mockResolvedValue({ status: "ok" }),
+      getJobStatus: vi.fn().mockResolvedValue({ id: "", status: "READ_READY" }),
+      loadBatch: vi.fn().mockResolvedValue({ jobs: {} }),
     } as any;
 
     sentEnvelopes = [];

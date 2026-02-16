@@ -1,5 +1,6 @@
 import type { IOperationIndex } from "../../cache/operation-index-types.js";
 import type { ILogger } from "../../logging/types.js";
+import type { IQueue } from "../../queue/interfaces.js";
 import type { ISyncCursorStorage } from "../../storage/interfaces.js";
 import type { IChannel, IChannelFactory } from "../interfaces.js";
 import type { ChannelConfig, JwtHandler, RemoteFilter } from "../types.js";
@@ -18,10 +19,16 @@ import { IntervalPollTimer } from "./interval-poll-timer.js";
 export class GqlChannelFactory implements IChannelFactory {
   private readonly logger: ILogger;
   private readonly jwtHandler?: JwtHandler;
+  private readonly queue: IQueue;
 
-  constructor(logger: ILogger, jwtHandler?: JwtHandler) {
+  constructor(
+    logger: ILogger,
+    jwtHandler: JwtHandler | undefined,
+    queue: IQueue,
+  ) {
     this.logger = logger;
     this.jwtHandler = jwtHandler;
+    this.queue = queue;
   }
 
   /**
@@ -101,7 +108,32 @@ export class GqlChannelFactory implements IChannelFactory {
       gqlConfig.fetchFn = config.parameters.fetchFn as typeof fetch;
     }
 
-    const pollTimer = new IntervalPollTimer(pollIntervalMs);
+    let maxQueueDepth: number | undefined;
+    if (config.parameters.maxQueueDepth !== undefined) {
+      if (typeof config.parameters.maxQueueDepth !== "number") {
+        throw new Error('"maxQueueDepth" parameter must be a number');
+      }
+      maxQueueDepth = config.parameters.maxQueueDepth;
+    }
+
+    let backpressureCheckIntervalMs: number | undefined;
+    if (config.parameters.backpressureCheckIntervalMs !== undefined) {
+      if (typeof config.parameters.backpressureCheckIntervalMs !== "number") {
+        throw new Error(
+          '"backpressureCheckIntervalMs" parameter must be a number',
+        );
+      }
+      backpressureCheckIntervalMs =
+        config.parameters.backpressureCheckIntervalMs;
+    }
+
+    const pollTimer = new IntervalPollTimer(this.queue, {
+      intervalMs: pollIntervalMs,
+      ...(maxQueueDepth !== undefined && { maxQueueDepth }),
+      ...(backpressureCheckIntervalMs !== undefined && {
+        backpressureCheckIntervalMs,
+      }),
+    });
 
     return new GqlRequestChannel(
       this.logger,

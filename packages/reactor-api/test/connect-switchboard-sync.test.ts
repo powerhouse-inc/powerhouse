@@ -3,6 +3,7 @@ import {
   ConsoleLogger,
   driveCollectionId,
   EventBus,
+  InMemoryQueue,
   JobStatus,
   ReactorBuilder,
   ReactorEventTypes,
@@ -40,23 +41,32 @@ async function setupConnectSwitchboard(): Promise<ConnectSwitchboardSetup> {
   const connectEventBus = new EventBus();
   const switchboardEventBus = new EventBus();
 
+  const connectQueue = new InMemoryQueue(connectEventBus);
+  const switchboardQueue = new InMemoryQueue(switchboardEventBus);
+
   const connectModule = await new ReactorBuilder()
     .withEventBus(connectEventBus)
+    .withQueue(connectQueue)
     .withDocumentModels([
       driveDocumentModelModule as unknown as DocumentModelModule,
     ])
     .withSync(
-      new SyncBuilder().withChannelFactory(new CompositeChannelFactory(logger)),
+      new SyncBuilder().withChannelFactory(
+        new CompositeChannelFactory(logger, undefined, connectQueue),
+      ),
     )
     .buildModule();
 
   const switchboardModule = await new ReactorBuilder()
     .withEventBus(switchboardEventBus)
+    .withQueue(switchboardQueue)
     .withDocumentModels([
       driveDocumentModelModule as unknown as DocumentModelModule,
     ])
     .withSync(
-      new SyncBuilder().withChannelFactory(new CompositeChannelFactory(logger)),
+      new SyncBuilder().withChannelFactory(
+        new CompositeChannelFactory(logger, undefined, switchboardQueue),
+      ),
     )
     .buildModule();
 

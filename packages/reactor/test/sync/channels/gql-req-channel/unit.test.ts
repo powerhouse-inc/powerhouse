@@ -1,6 +1,7 @@
 import type { OperationContext } from "document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { IOperationIndex } from "../../../../src/cache/operation-index-types.js";
+import type { IQueue } from "../../../../src/queue/interfaces.js";
 import type { ISyncCursorStorage } from "../../../../src/storage/interfaces.js";
 import {
   GqlRequestChannel,
@@ -133,7 +134,7 @@ const createMockFetch = (
   } = {},
 ) => {
   return vi.fn().mockImplementation((_url: string, options: RequestInit) => {
-    const body = JSON.parse(options?.body as string);
+    const body = JSON.parse(options.body as string);
 
     if (body.query.includes("touchChannel")) {
       return Promise.resolve({
@@ -180,8 +181,13 @@ const createMockOperationIndex = (): IOperationIndex => ({
   getCollectionsForDocuments: vi.fn().mockResolvedValue({}),
 });
 
+const createMockQueue = (): IQueue =>
+  ({
+    totalSize: vi.fn().mockResolvedValue(0),
+  }) as unknown as IQueue;
+
 const createPollTimer = (intervalMs = 2000): IPollTimer =>
-  new IntervalPollTimer(intervalMs);
+  new IntervalPollTimer(createMockQueue(), { intervalMs });
 
 describe("GqlRequestChannel", () => {
   let originalFetch: typeof global.fetch;
@@ -953,7 +959,7 @@ describe("GqlRequestChannel", () => {
       const cursorStorage = createMockCursorStorage();
       let pollCount = 0;
       const mockFetch = vi.fn().mockImplementation((_url, options) => {
-        const body = JSON.parse(options?.body as string);
+        const body = JSON.parse(options.body as string);
 
         // touchChannel mutation - always succeeds
         if (body.query.includes("touchChannel")) {
@@ -1175,7 +1181,7 @@ describe("GqlRequestChannel", () => {
           if (shouldFail) {
             throw new Error("Network error");
           }
-          const body = JSON.parse(options?.body as string);
+          const body = JSON.parse(options.body as string);
           if (body.query.includes("touchChannel")) {
             return Promise.resolve({
               ok: true,
@@ -1477,7 +1483,7 @@ describe("GqlRequestChannel", () => {
       const cursorStorage = createMockCursorStorage();
       let pollCount = 0;
       const mockFetch = vi.fn().mockImplementation((_url, options) => {
-        const body = JSON.parse(options?.body as string);
+        const body = JSON.parse(options.body as string);
 
         if (body.query.includes("touchChannel")) {
           return Promise.resolve({

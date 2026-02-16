@@ -1,5 +1,26 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { IQueue } from "../../../../src/queue/interfaces.js";
 import { IntervalPollTimer } from "../../../../src/sync/channels/interval-poll-timer.js";
+
+function createMockQueue(totalSizeValue = 0): IQueue {
+  return {
+    enqueue: vi.fn(),
+    dequeue: vi.fn(),
+    dequeueNext: vi.fn(),
+    size: vi.fn(),
+    totalSize: vi.fn().mockResolvedValue(totalSizeValue),
+    remove: vi.fn(),
+    clear: vi.fn(),
+    clearAll: vi.fn(),
+    hasJobs: vi.fn(),
+    completeJob: vi.fn(),
+    failJob: vi.fn(),
+    retryJob: vi.fn(),
+    isDrained: true,
+    block: vi.fn(),
+    unblock: vi.fn(),
+  } as unknown as IQueue;
+}
 
 describe("IntervalPollTimer", () => {
   beforeEach(() => {
@@ -11,12 +32,15 @@ describe("IntervalPollTimer", () => {
     vi.useRealTimers();
   });
 
-  it("should call delegate immediately on start()", () => {
-    const timer = new IntervalPollTimer(1000);
+  it("should call delegate immediately on start()", async () => {
+    const mockQueue = createMockQueue();
+    const timer = new IntervalPollTimer(mockQueue, { intervalMs: 1000 });
     const delegate = vi.fn().mockResolvedValue(undefined);
 
     timer.setDelegate(delegate);
     timer.start();
+
+    await vi.advanceTimersByTimeAsync(0);
 
     expect(delegate).toHaveBeenCalledTimes(1);
 
@@ -24,12 +48,14 @@ describe("IntervalPollTimer", () => {
   });
 
   it("should call delegate repeatedly after intervalMs", async () => {
-    const timer = new IntervalPollTimer(1000);
+    const mockQueue = createMockQueue();
+    const timer = new IntervalPollTimer(mockQueue, { intervalMs: 1000 });
     const delegate = vi.fn().mockResolvedValue(undefined);
 
     timer.setDelegate(delegate);
     timer.start();
 
+    await vi.advanceTimersByTimeAsync(0);
     expect(delegate).toHaveBeenCalledTimes(1);
 
     await vi.advanceTimersByTimeAsync(1000);
@@ -45,7 +71,8 @@ describe("IntervalPollTimer", () => {
   });
 
   it("should wait for delegate completion before scheduling next", async () => {
-    const timer = new IntervalPollTimer(1000);
+    const mockQueue = createMockQueue();
+    const timer = new IntervalPollTimer(mockQueue, { intervalMs: 1000 });
     let resolveDelegate: () => void;
     const delegatePromise = new Promise<void>((resolve) => {
       resolveDelegate = resolve;
@@ -55,6 +82,7 @@ describe("IntervalPollTimer", () => {
     timer.setDelegate(delegate);
     timer.start();
 
+    await vi.advanceTimersByTimeAsync(0);
     expect(delegate).toHaveBeenCalledTimes(1);
 
     await vi.advanceTimersByTimeAsync(2000);
@@ -70,12 +98,14 @@ describe("IntervalPollTimer", () => {
   });
 
   it("should stop calling delegate after stop()", async () => {
-    const timer = new IntervalPollTimer(1000);
+    const mockQueue = createMockQueue();
+    const timer = new IntervalPollTimer(mockQueue, { intervalMs: 1000 });
     const delegate = vi.fn().mockResolvedValue(undefined);
 
     timer.setDelegate(delegate);
     timer.start();
 
+    await vi.advanceTimersByTimeAsync(0);
     expect(delegate).toHaveBeenCalledTimes(1);
 
     await vi.advanceTimersByTimeAsync(1000);
@@ -88,12 +118,14 @@ describe("IntervalPollTimer", () => {
   });
 
   it("should clear pending timer on stop()", async () => {
-    const timer = new IntervalPollTimer(1000);
+    const mockQueue = createMockQueue();
+    const timer = new IntervalPollTimer(mockQueue, { intervalMs: 1000 });
     const delegate = vi.fn().mockResolvedValue(undefined);
 
     timer.setDelegate(delegate);
     timer.start();
 
+    await vi.advanceTimersByTimeAsync(0);
     expect(delegate).toHaveBeenCalledTimes(1);
 
     await vi.advanceTimersByTimeAsync(500);
@@ -104,7 +136,8 @@ describe("IntervalPollTimer", () => {
   });
 
   it("should not call delegate if not running", async () => {
-    const timer = new IntervalPollTimer(1000);
+    const mockQueue = createMockQueue();
+    const timer = new IntervalPollTimer(mockQueue, { intervalMs: 1000 });
     const delegate = vi.fn().mockResolvedValue(undefined);
 
     timer.setDelegate(delegate);
@@ -114,12 +147,14 @@ describe("IntervalPollTimer", () => {
   });
 
   it("should handle delegate that throws error", async () => {
-    const timer = new IntervalPollTimer(1000);
+    const mockQueue = createMockQueue();
+    const timer = new IntervalPollTimer(mockQueue, { intervalMs: 1000 });
     const delegate = vi.fn().mockRejectedValue(new Error("Test error"));
 
     timer.setDelegate(delegate);
     timer.start();
 
+    await vi.advanceTimersByTimeAsync(0);
     expect(delegate).toHaveBeenCalledTimes(1);
 
     await vi.advanceTimersByTimeAsync(1000);
@@ -129,12 +164,14 @@ describe("IntervalPollTimer", () => {
   });
 
   it("should allow restart after stop", async () => {
-    const timer = new IntervalPollTimer(1000);
+    const mockQueue = createMockQueue();
+    const timer = new IntervalPollTimer(mockQueue, { intervalMs: 1000 });
     const delegate = vi.fn().mockResolvedValue(undefined);
 
     timer.setDelegate(delegate);
     timer.start();
 
+    await vi.advanceTimersByTimeAsync(0);
     expect(delegate).toHaveBeenCalledTimes(1);
 
     timer.stop();
@@ -143,6 +180,7 @@ describe("IntervalPollTimer", () => {
     expect(delegate).toHaveBeenCalledTimes(1);
 
     timer.start();
+    await vi.advanceTimersByTimeAsync(0);
     expect(delegate).toHaveBeenCalledTimes(2);
 
     await vi.advanceTimersByTimeAsync(1000);
@@ -152,7 +190,8 @@ describe("IntervalPollTimer", () => {
   });
 
   it("should not schedule next tick if stopped during delegate execution", async () => {
-    const timer = new IntervalPollTimer(1000);
+    const mockQueue = createMockQueue();
+    const timer = new IntervalPollTimer(mockQueue, { intervalMs: 1000 });
     let resolveDelegate: () => void;
     const delegatePromise = new Promise<void>((resolve) => {
       resolveDelegate = resolve;
@@ -162,6 +201,7 @@ describe("IntervalPollTimer", () => {
     timer.setDelegate(delegate);
     timer.start();
 
+    await vi.advanceTimersByTimeAsync(0);
     expect(delegate).toHaveBeenCalledTimes(1);
 
     timer.stop();
@@ -174,7 +214,8 @@ describe("IntervalPollTimer", () => {
   });
 
   it("should report isRunning() correctly", () => {
-    const timer = new IntervalPollTimer(1000);
+    const mockQueue = createMockQueue();
+    const timer = new IntervalPollTimer(mockQueue, { intervalMs: 1000 });
     const delegate = vi.fn().mockResolvedValue(undefined);
     timer.setDelegate(delegate);
 
@@ -188,7 +229,8 @@ describe("IntervalPollTimer", () => {
   });
 
   it("should report isPaused() correctly", () => {
-    const timer = new IntervalPollTimer(1000);
+    const mockQueue = createMockQueue();
+    const timer = new IntervalPollTimer(mockQueue, { intervalMs: 1000 });
     const delegate = vi.fn().mockResolvedValue(undefined);
     timer.setDelegate(delegate);
 
@@ -207,12 +249,14 @@ describe("IntervalPollTimer", () => {
   });
 
   it("should stop scheduling when paused", async () => {
-    const timer = new IntervalPollTimer(1000);
+    const mockQueue = createMockQueue();
+    const timer = new IntervalPollTimer(mockQueue, { intervalMs: 1000 });
     const delegate = vi.fn().mockResolvedValue(undefined);
 
     timer.setDelegate(delegate);
     timer.start();
 
+    await vi.advanceTimersByTimeAsync(0);
     expect(delegate).toHaveBeenCalledTimes(1);
 
     await vi.advanceTimersByTimeAsync(1000);
@@ -227,12 +271,14 @@ describe("IntervalPollTimer", () => {
   });
 
   it("should resume scheduling after pause", async () => {
-    const timer = new IntervalPollTimer(1000);
+    const mockQueue = createMockQueue();
+    const timer = new IntervalPollTimer(mockQueue, { intervalMs: 1000 });
     const delegate = vi.fn().mockResolvedValue(undefined);
 
     timer.setDelegate(delegate);
     timer.start();
 
+    await vi.advanceTimersByTimeAsync(0);
     expect(delegate).toHaveBeenCalledTimes(1);
 
     await vi.advanceTimersByTimeAsync(1000);
@@ -252,57 +298,67 @@ describe("IntervalPollTimer", () => {
   });
 
   it("should trigger immediate poll with triggerNow()", async () => {
-    const timer = new IntervalPollTimer(1000);
+    const mockQueue = createMockQueue();
+    const timer = new IntervalPollTimer(mockQueue, { intervalMs: 1000 });
     const delegate = vi.fn().mockResolvedValue(undefined);
 
     timer.setDelegate(delegate);
     timer.start();
 
+    await vi.advanceTimersByTimeAsync(0);
     expect(delegate).toHaveBeenCalledTimes(1);
 
     await vi.advanceTimersByTimeAsync(500);
     expect(delegate).toHaveBeenCalledTimes(1);
 
     timer.triggerNow();
+    await vi.advanceTimersByTimeAsync(0);
     expect(delegate).toHaveBeenCalledTimes(2);
 
     timer.stop();
   });
 
-  it("should trigger poll when paused via triggerNow()", () => {
-    const timer = new IntervalPollTimer(1000);
+  it("should trigger poll when paused via triggerNow()", async () => {
+    const mockQueue = createMockQueue();
+    const timer = new IntervalPollTimer(mockQueue, { intervalMs: 1000 });
     const delegate = vi.fn().mockResolvedValue(undefined);
 
     timer.setDelegate(delegate);
     timer.start();
 
+    await vi.advanceTimersByTimeAsync(0);
     expect(delegate).toHaveBeenCalledTimes(1);
 
     timer.pause();
 
     timer.triggerNow();
+    await vi.advanceTimersByTimeAsync(0);
     expect(delegate).toHaveBeenCalledTimes(2);
 
     timer.stop();
   });
 
-  it("should not trigger poll when not running", () => {
-    const timer = new IntervalPollTimer(1000);
+  it("should not trigger poll when not running", async () => {
+    const mockQueue = createMockQueue();
+    const timer = new IntervalPollTimer(mockQueue, { intervalMs: 1000 });
     const delegate = vi.fn().mockResolvedValue(undefined);
 
     timer.setDelegate(delegate);
 
     timer.triggerNow();
+    await vi.advanceTimersByTimeAsync(0);
     expect(delegate).toHaveBeenCalledTimes(0);
   });
 
   it("should clear timer when paused", async () => {
-    const timer = new IntervalPollTimer(1000);
+    const mockQueue = createMockQueue();
+    const timer = new IntervalPollTimer(mockQueue, { intervalMs: 1000 });
     const delegate = vi.fn().mockResolvedValue(undefined);
 
     timer.setDelegate(delegate);
     timer.start();
 
+    await vi.advanceTimersByTimeAsync(0);
     expect(delegate).toHaveBeenCalledTimes(1);
 
     await vi.advanceTimersByTimeAsync(500);
@@ -316,7 +372,8 @@ describe("IntervalPollTimer", () => {
   });
 
   it("should not resume if not running", async () => {
-    const timer = new IntervalPollTimer(1000);
+    const mockQueue = createMockQueue();
+    const timer = new IntervalPollTimer(mockQueue, { intervalMs: 1000 });
     const delegate = vi.fn().mockResolvedValue(undefined);
 
     timer.setDelegate(delegate);
@@ -326,5 +383,115 @@ describe("IntervalPollTimer", () => {
 
     await vi.advanceTimersByTimeAsync(5000);
     expect(delegate).toHaveBeenCalledTimes(0);
+  });
+
+  describe("backpressure", () => {
+    it("should skip delegate when queue exceeds maxQueueDepth", async () => {
+      const mockQueue = createMockQueue(200);
+      const timer = new IntervalPollTimer(mockQueue, {
+        intervalMs: 1000,
+        maxQueueDepth: 100,
+        backpressureCheckIntervalMs: 500,
+      });
+      const delegate = vi.fn().mockResolvedValue(undefined);
+
+      timer.setDelegate(delegate);
+      timer.start();
+
+      await vi.advanceTimersByTimeAsync(0);
+      expect(delegate).not.toHaveBeenCalled();
+
+      timer.stop();
+    });
+
+    it("should recheck at backpressureCheckIntervalMs when saturated", async () => {
+      const mockQueue = createMockQueue(200);
+      const timer = new IntervalPollTimer(mockQueue, {
+        intervalMs: 1000,
+        maxQueueDepth: 100,
+        backpressureCheckIntervalMs: 500,
+      });
+      const delegate = vi.fn().mockResolvedValue(undefined);
+
+      timer.setDelegate(delegate);
+      timer.start();
+
+      await vi.advanceTimersByTimeAsync(0);
+      expect(delegate).not.toHaveBeenCalled();
+      expect(mockQueue.totalSize).toHaveBeenCalledTimes(1);
+
+      await vi.advanceTimersByTimeAsync(500);
+      expect(delegate).not.toHaveBeenCalled();
+      expect(mockQueue.totalSize).toHaveBeenCalledTimes(2);
+
+      timer.stop();
+    });
+
+    it("should resume delegate calls when queue drains below threshold", async () => {
+      const mockQueue = createMockQueue(200);
+      const timer = new IntervalPollTimer(mockQueue, {
+        intervalMs: 1000,
+        maxQueueDepth: 100,
+        backpressureCheckIntervalMs: 500,
+      });
+      const delegate = vi.fn().mockResolvedValue(undefined);
+
+      timer.setDelegate(delegate);
+      timer.start();
+
+      await vi.advanceTimersByTimeAsync(0);
+      expect(delegate).not.toHaveBeenCalled();
+
+      vi.mocked(mockQueue.totalSize).mockResolvedValue(50);
+
+      await vi.advanceTimersByTimeAsync(500);
+      expect(delegate).toHaveBeenCalledTimes(1);
+
+      timer.stop();
+    });
+
+    it("should call delegate when queue is exactly at threshold", async () => {
+      const mockQueue = createMockQueue(100);
+      const timer = new IntervalPollTimer(mockQueue, {
+        intervalMs: 1000,
+        maxQueueDepth: 100,
+        backpressureCheckIntervalMs: 500,
+      });
+      const delegate = vi.fn().mockResolvedValue(undefined);
+
+      timer.setDelegate(delegate);
+      timer.start();
+
+      await vi.advanceTimersByTimeAsync(0);
+      expect(delegate).toHaveBeenCalledTimes(1);
+
+      timer.stop();
+    });
+
+    it("should fail-open and schedule next at normal interval when totalSize() throws", async () => {
+      const mockQueue = createMockQueue();
+      vi.mocked(mockQueue.totalSize).mockRejectedValue(
+        new Error("queue error"),
+      );
+      const timer = new IntervalPollTimer(mockQueue, {
+        intervalMs: 1000,
+        maxQueueDepth: 100,
+        backpressureCheckIntervalMs: 500,
+      });
+      const delegate = vi.fn().mockResolvedValue(undefined);
+
+      timer.setDelegate(delegate);
+      timer.start();
+
+      await vi.advanceTimersByTimeAsync(0);
+      expect(delegate).not.toHaveBeenCalled();
+
+      vi.mocked(mockQueue.totalSize).mockResolvedValue(0);
+
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(delegate).toHaveBeenCalledTimes(1);
+
+      timer.stop();
+    });
   });
 });

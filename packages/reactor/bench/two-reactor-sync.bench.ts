@@ -37,6 +37,9 @@ async function setupTwoReactors(): Promise<TwoReactorSetup> {
         remoteName: string,
         config: ChannelConfig,
         cursorStorage: ISyncCursorStorage,
+        _collectionId: string,
+        _filter: unknown,
+        _operationIndex: unknown,
       ): TestChannel {
         const peerName = peerMapping.get(remoteName);
 

@@ -21,6 +21,7 @@ import { InMemoryJobTracker } from "../job-tracker/in-memory-job-tracker.js";
 import { ConsoleLogger } from "../logging/console.js";
 import type { ILogger } from "../logging/types.js";
 import { ProcessorManager } from "../processors/processor-manager.js";
+import type { IQueue } from "../queue/interfaces.js";
 import { InMemoryQueue } from "../queue/queue.js";
 import { ReadModelCoordinator } from "../read-models/coordinator.js";
 import { KyselyDocumentView } from "../read-models/document-view.js";
@@ -70,6 +71,7 @@ export class ReactorBuilder {
   private signatureVerifier?: SignatureVerificationHandler;
   private kyselyInstance?: Kysely<Database>;
   private signalHandlersEnabled = false;
+  private queueInstance?: IQueue;
 
   withLogger(logger: ILogger): this {
     this.logger = logger;
@@ -148,6 +150,11 @@ export class ReactorBuilder {
     return this;
   }
 
+  withQueue(queue: IQueue): this {
+    this.queueInstance = queue;
+    return this;
+  }
+
   withSignalHandlers(): this {
     this.signalHandlersEnabled = true;
     return this;
@@ -194,7 +201,7 @@ export class ReactorBuilder {
     );
 
     const eventBus = this.eventBus || new EventBus();
-    const queue = new InMemoryQueue(eventBus);
+    const queue = this.queueInstance ?? new InMemoryQueue(eventBus);
     const jobTracker = new InMemoryJobTracker(eventBus);
 
     const cacheConfig: WriteCacheConfig = {
