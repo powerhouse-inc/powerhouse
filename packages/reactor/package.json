@@ -41,8 +41,7 @@
     "document-model": "workspace:*",
     "kysely": "catalog:",
     "kysely-pglite-dialect": "catalog:",
-    "uuid": "^11.0.5",
-    "shared": "workspace:"
+    "uuid": "^11.0.5"
   },
   "devDependencies": {
     "@powerhousedao/analytics-engine-core": "catalog:",
@@ -50,6 +49,7 @@
     "prettier": "^3.6.2",
     "tinybench": "^2.9.0",
     "tsx": "^4.19.2",
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.4",
+    "shared": "workspace:"
   }
 }
