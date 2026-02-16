@@ -245,6 +245,11 @@ async function fetchProfile(
     const tickCount = data.flamebearer.numTicks ?? 0;
     process.stdout.write(`${tickCount.toLocaleString()} ticks\n`);
     return data;
+  } catch (err) {
+    if (err instanceof DOMException && err.name === "AbortError") {
+      throw new Error(`Timed out fetching ${profileType} profile after 30s`);
+    }
+    throw err;
   } finally {
     clearTimeout(timeout);
   }
