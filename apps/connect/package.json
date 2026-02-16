@@ -170,8 +170,7 @@
     "vite-plugin-html": "catalog:",
     "vite-plugin-node-polyfills": "catalog:",
     "vite-plugin-svgr": "catalog:",
-    "zod": "catalog:",
-    "shared": "workspace:"
+    "zod": "catalog:"
   },
   "devDependencies": {
     "shared": "workspace:",
