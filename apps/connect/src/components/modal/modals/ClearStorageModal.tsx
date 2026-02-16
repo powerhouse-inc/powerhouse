@@ -37,8 +37,8 @@ export function ClearStorageModal() {
   return (
     <ConnectConfirmationModal
       open={open}
-      header={t("modals.clearStorage.title")}
-      title={t("modals.clearStorage.title")}
+      header={t("modals.connectSettings.clearStorage.confirmation.title")}
+      title={t("modals.connectSettings.clearStorage.confirmation.title")}
       body={t("modals.connectSettings.clearStorage.confirmation.body")}
       cancelLabel={t("common.cancel")}
       continueLabel={t(
