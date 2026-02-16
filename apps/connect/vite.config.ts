@@ -17,12 +17,6 @@ export default defineConfig(({ mode }) => {
     resolve: {
       conditions: ["source", "browser", "module", "jsnext:main", "jsnext"],
     },
-    optimizeDeps: {
-      exclude: ["@electric-sql/pglite"],
-    },
-    worker: {
-      format: "es",
-    },
     build: {
       sourcemap: false,
       minify: true,
