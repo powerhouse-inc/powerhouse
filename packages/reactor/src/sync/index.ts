@@ -30,6 +30,7 @@ export type {
 
 export {
   ChannelErrorSource,
+  ChannelScheme,
   SyncEventTypes,
   SyncOperationStatus,
 } from "./types.js";
@@ -44,11 +45,11 @@ export {
 export { ChannelError, PollingChannelError } from "./errors.js";
 
 export {
-  CompositeChannelFactory,
-  GqlChannel,
-  GqlChannelFactory,
+  GqlRequestChannel,
+  GqlRequestChannelFactory,
+  GqlResponseChannel,
+  GqlResponseChannelFactory,
   IntervalPollTimer,
-  PollingChannel,
   type GqlChannelConfig,
   type IPollTimer,
 } from "./channels/index.js";

@@ -1,4 +1,10 @@
+import type { CreateDocumentActionInput } from "document-model";
 import type { IEventBus } from "../events/interfaces.js";
+import { ModuleNotFoundError } from "../registry/implementation.js";
+import type {
+  IDocumentModelLoader,
+  IDocumentModelRegistry,
+} from "../registry/interfaces.js";
 import type { ErrorInfo } from "../shared/types.js";
 import type { IQueue } from "./interfaces.js";
 import { JobExecutionHandle } from "./job-execution-handle.js";
@@ -21,8 +27,14 @@ export class InMemoryQueue implements IQueue {
   private isBlocked = false;
   private onDrainedCallback?: () => void;
   private isPausedFlag = false;
+  private loadingModels = new Map<string, Promise<void>>();
+  private failedModelTypes = new Set<string>();
 
-  constructor(private eventBus: IEventBus) {}
+  constructor(
+    private eventBus: IEventBus,
+    private registry?: IDocumentModelRegistry,
+    private loader?: IDocumentModelLoader,
+  ) {}
 
   private toErrorInfo(error: Error | string): ErrorInfo {
     if (error instanceof Error) {
@@ -117,6 +129,71 @@ export class InMemoryQueue implements IQueue {
     return null;
   }
 
+  private getCreateDocumentType(job: Job): string | undefined {
+    for (const action of job.actions) {
+      if (action.type === "CREATE_DOCUMENT") {
+        return (action.input as CreateDocumentActionInput).model;
+      }
+    }
+    for (const operation of job.operations) {
+      if (operation.action.type === "CREATE_DOCUMENT") {
+        return (operation.action.input as CreateDocumentActionInput).model;
+      }
+    }
+    return undefined;
+  }
+
+  private async ensureModelLoaded(documentType: string): Promise<void> {
+    if (!this.registry) {
+      return;
+    }
+
+    try {
+      this.registry.getModule(documentType);
+      return;
+    } catch (error) {
+      if (!(error instanceof ModuleNotFoundError)) {
+        throw error;
+      }
+    }
+
+    if (!this.loader) {
+      throw new Error(
+        `No document model loader configured for type: ${documentType}`,
+      );
+    }
+
+    if (this.failedModelTypes.has(documentType)) {
+      throw new Error(
+        `Document model type previously failed to load: ${documentType}`,
+      );
+    }
+
+    const existing = this.loadingModels.get(documentType);
+    if (existing) {
+      return existing;
+    }
+
+    const loadPromise = (async () => {
+      try {
+        const module = await this.loader!.load(documentType);
+        try {
+          this.registry!.registerModules(module);
+        } catch {
+          // DuplicateModuleError is fine - another path registered it
+        }
+      } catch (error) {
+        this.failedModelTypes.add(documentType);
+        throw error;
+      } finally {
+        this.loadingModels.delete(documentType);
+      }
+    })();
+
+    this.loadingModels.set(documentType, loadPromise);
+    return loadPromise;
+  }
+
   async enqueue(job: Job): Promise<void> {
     // Throw error if queue is blocked
     if (this.isBlocked) {
@@ -132,6 +209,20 @@ export class InMemoryQueue implements IQueue {
     // Track job location for removal and dependency resolution
     this.jobIdToQueueKey.set(job.id, queueKey);
     this.jobIndex.set(job.id, job);
+
+    // Gate CREATE_DOCUMENT jobs on model availability
+    const documentType = this.getCreateDocumentType(job);
+    if (documentType) {
+      try {
+        await this.ensureModelLoaded(documentType);
+      } catch {
+        await this.failJob(job.id, {
+          message: `Failed to load document model for type: ${documentType}`,
+          stack: new Error().stack || "",
+        });
+        return;
+      }
+    }
 
     // Emit job available event
     const eventData: JobAvailableEvent = {

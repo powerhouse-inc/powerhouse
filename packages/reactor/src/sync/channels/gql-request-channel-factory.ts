@@ -8,15 +8,15 @@ import { GqlRequestChannel, type GqlChannelConfig } from "./gql-req-channel.js";
 import { IntervalPollTimer } from "./interval-poll-timer.js";
 
 /**
- * Factory for creating GqlChannel instances.
+ * Factory for creating GqlRequestChannel instances.
  *
  * Extracts GraphQL-specific configuration from ChannelConfig.parameters and
- * instantiates GqlChannel instances for network-based synchronization.
+ * instantiates GqlRequestChannel instances for network-based synchronization.
  *
  * The optional jwtHandler enables dynamic JWT token generation per-request,
  * which is useful for short-lived tokens with audience-specific claims.
  */
-export class GqlChannelFactory implements IChannelFactory {
+export class GqlRequestChannelFactory implements IChannelFactory {
   private readonly logger: ILogger;
   private readonly jwtHandler?: JwtHandler;
   private readonly queue: IQueue;
@@ -32,14 +32,13 @@ export class GqlChannelFactory implements IChannelFactory {
   }
 
   /**
-   * Creates a new GqlChannel instance with the given configuration.
+   * Creates a new GqlRequestChannel instance with the given configuration.
    * See GqlChannelConfig for the expected parameters.
    *
    * @param config - Channel configuration including type and parameters
    * @param cursorStorage - Storage for persisting synchronization cursors
    * @param operationIndex - Operation index for querying timestamps
-   * @returns A new GqlChannel instance
-   * @throws Error if config.type is not "gql" or required parameters are missing
+   * @returns A new GqlRequestChannel instance
    */
   instance(
     remoteId: string,
@@ -50,17 +49,11 @@ export class GqlChannelFactory implements IChannelFactory {
     filter: RemoteFilter,
     operationIndex: IOperationIndex,
   ): IChannel {
-    if (config.type !== "gql") {
-      throw new Error(
-        `GqlChannelFactory can only create channels of type "gql", got "${config.type}"`,
-      );
-    }
-
     // Extract and validate required parameters
     const url = config.parameters.url;
     if (typeof url !== "string" || !url) {
       throw new Error(
-        'GqlChannelFactory requires "url" parameter in config.parameters',
+        'GqlRequestChannelFactory requires "url" parameter in config.parameters',
       );
     }
 

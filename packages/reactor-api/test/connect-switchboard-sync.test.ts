@@ -1,13 +1,16 @@
 import {
-  CompositeChannelFactory,
   ConsoleLogger,
   driveCollectionId,
   EventBus,
+  GqlRequestChannelFactory,
+  GqlResponseChannelFactory,
   InMemoryQueue,
   JobStatus,
   ReactorBuilder,
   ReactorEventTypes,
   SyncBuilder,
+  type IChannel,
+  type IChannelFactory,
   type IEventBus,
   type IReactor,
   type ISyncManager,
@@ -44,6 +47,22 @@ async function setupConnectSwitchboard(): Promise<ConnectSwitchboardSetup> {
   const connectQueue = new InMemoryQueue(connectEventBus);
   const switchboardQueue = new InMemoryQueue(switchboardEventBus);
 
+  // Both reactors need to handle "gql" (for active polling) and "polling"
+  // (for touchChannel-created response channels) in bidirectional sync tests.
+  function createCompositeFactory(queue: typeof connectQueue): IChannelFactory {
+    const request = new GqlRequestChannelFactory(logger, undefined, queue);
+    const response = new GqlResponseChannelFactory(logger);
+    return {
+      instance(...args): IChannel {
+        const [remoteId, remoteName, config, cursorStorage] = args;
+        if (config.type === "polling") {
+          return response.instance(remoteId, remoteName, config, cursorStorage);
+        }
+        return request.instance(...args);
+      },
+    };
+  }
+
   const connectModule = await new ReactorBuilder()
     .withEventBus(connectEventBus)
     .withQueue(connectQueue)
@@ -52,7 +71,7 @@ async function setupConnectSwitchboard(): Promise<ConnectSwitchboardSetup> {
     ])
     .withSync(
       new SyncBuilder().withChannelFactory(
-        new CompositeChannelFactory(logger, undefined, connectQueue),
+        createCompositeFactory(connectQueue),
       ),
     )
     .buildModule();
@@ -65,7 +84,7 @@ async function setupConnectSwitchboard(): Promise<ConnectSwitchboardSetup> {
     ])
     .withSync(
       new SyncBuilder().withChannelFactory(
-        new CompositeChannelFactory(logger, undefined, switchboardQueue),
+        createCompositeFactory(switchboardQueue),
       ),
     )
     .buildModule();

@@ -1,10 +1,9 @@
 import { PGlite } from "@electric-sql/pglite";
 import {
+  ChannelScheme,
   ConsoleLogger,
-  GqlChannelFactory,
   ReactorBuilder,
   ReactorClientBuilder,
-  SyncBuilder,
   type Database,
   type JwtHandler,
   type SignerConfig,
@@ -50,11 +49,8 @@ export async function createBrowserReactor(
       new ReactorBuilder()
         .withDocumentModels(documentModelModules)
         .withUpgradeManifests(upgradeManifests)
-        .withSync(
-          new SyncBuilder().withChannelFactory(
-            new GqlChannelFactory(logger, jwtHandler),
-          ),
-        )
+        .withChannelScheme(ChannelScheme.CONNECT)
+        .withJwtHandler(jwtHandler)
         .withKysely(
           new Kysely<Database>({
             dialect: new PGliteDialect(pg),

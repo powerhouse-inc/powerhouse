@@ -1,6 +1,6 @@
 import { Icon } from "@powerhousedao/design-system";
 import {
-  GqlChannel,
+  GqlRequestChannel,
   IntervalPollTimer,
   type IChannel,
 } from "@powerhousedao/reactor";
@@ -58,7 +58,7 @@ export function ChannelInspector({
   };
 
   const getPollerControls = useCallback(() => {
-    if (!(channel instanceof GqlChannel)) {
+    if (!(channel instanceof GqlRequestChannel)) {
       return null;
     }
     const poller = channel.poller;

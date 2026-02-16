@@ -1,12 +1,10 @@
 #!/usr/bin/env node
 import { PGlite } from "@electric-sql/pglite";
 import {
-  CompositeChannelFactory,
-  ConsoleLogger,
+  ChannelScheme,
   EventBus,
   ReactorBuilder,
   ReactorClientBuilder,
-  SyncBuilder,
   driveCollectionId,
   parseDriveUrl,
   type Database,
@@ -192,11 +190,7 @@ async function initServer(
         ]),
       )
       .withLegacyStorage(storage)
-      .withSync(
-        new SyncBuilder().withChannelFactory(
-          new CompositeChannelFactory(new ConsoleLogger(["switchboard"])),
-        ),
-      )
+      .withChannelScheme(ChannelScheme.SWITCHBOARD)
       .withSignalHandlers();
 
     const reactorDbUrl = process.env.PH_REACTOR_DATABASE_URL;

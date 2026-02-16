@@ -30,8 +30,13 @@ import type {
   IReadModelCoordinator,
 } from "../read-models/interfaces.js";
 import { DocumentModelRegistry } from "../registry/implementation.js";
+import type { IDocumentModelLoader } from "../registry/interfaces.js";
 import { ConsistencyTracker } from "../shared/consistency-tracker.js";
 import type { SignatureVerificationHandler } from "../signer/types.js";
+import { GqlRequestChannelFactory } from "../sync/channels/gql-request-channel-factory.js";
+import { GqlResponseChannelFactory } from "../sync/channels/gql-response-channel-factory.js";
+import { ChannelScheme } from "../sync/types.js";
+import type { JwtHandler } from "../sync/types.js";
 import { KyselyDocumentIndexer } from "../storage/kysely/document-indexer.js";
 import { KyselyKeyframeStore } from "../storage/kysely/keyframe-store.js";
 import { KyselyOperationStore } from "../storage/kysely/store.js";
@@ -44,7 +49,7 @@ import type { MigrationStrategy } from "../storage/migrations/types.js";
 import { DefaultSubscriptionErrorHandler } from "../subs/default-error-handler.js";
 import { ReactorSubscriptionManager } from "../subs/react-subscription-manager.js";
 import { SubscriptionNotificationReadModel } from "../subs/subscription-notification-read-model.js";
-import type { SyncBuilder } from "../sync/sync-builder.js";
+import { SyncBuilder } from "../sync/sync-builder.js";
 import { Reactor } from "./reactor.js";
 import type {
   Database,
@@ -72,6 +77,9 @@ export class ReactorBuilder {
   private kyselyInstance?: Kysely<Database>;
   private signalHandlersEnabled = false;
   private queueInstance?: IQueue;
+  private channelScheme?: ChannelScheme;
+  private jwtHandler?: JwtHandler;
+  private documentModelLoader?: IDocumentModelLoader;
 
   withLogger(logger: ILogger): this {
     this.logger = logger;
@@ -155,6 +163,21 @@ export class ReactorBuilder {
     return this;
   }
 
+  withChannelScheme(scheme: ChannelScheme): this {
+    this.channelScheme = scheme;
+    return this;
+  }
+
+  withJwtHandler(handler: JwtHandler): this {
+    this.jwtHandler = handler;
+    return this;
+  }
+
+  withDocumentModelLoader(loader: IDocumentModelLoader): this {
+    this.documentModelLoader = loader;
+    return this;
+  }
+
   withSignalHandlers(): this {
     this.signalHandlersEnabled = true;
     return this;
@@ -201,7 +224,13 @@ export class ReactorBuilder {
     );
 
     const eventBus = this.eventBus || new EventBus();
-    const queue = this.queueInstance ?? new InMemoryQueue(eventBus);
+    const queue =
+      this.queueInstance ??
+      new InMemoryQueue(
+        eventBus,
+        documentModelRegistry,
+        this.documentModelLoader,
+      );
     const jobTracker = new InMemoryJobTracker(eventBus);
 
     const cacheConfig: WriteCacheConfig = {
@@ -338,7 +367,22 @@ export class ReactorBuilder {
     );
 
     let syncModule: SyncModule | undefined = undefined;
-    if (this.syncBuilder) {
+    if (this.channelScheme) {
+      const factory =
+        this.channelScheme === ChannelScheme.CONNECT
+          ? new GqlRequestChannelFactory(this.logger, this.jwtHandler, queue)
+          : new GqlResponseChannelFactory(this.logger);
+
+      const syncBuilder = new SyncBuilder().withChannelFactory(factory);
+      syncModule = syncBuilder.buildModule(
+        reactor,
+        this.logger,
+        operationIndex,
+        eventBus,
+        database as unknown as Kysely<StorageDatabase>,
+      );
+      await syncModule.syncManager.startup();
+    } else if (this.syncBuilder) {
       syncModule = this.syncBuilder.buildModule(
         reactor,
         this.logger,

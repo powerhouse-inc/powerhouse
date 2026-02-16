@@ -1,5 +1,10 @@
 import type { OperationWithContext } from "shared/document-model";
 
+export enum ChannelScheme {
+  CONNECT = "connect",
+  SWITCHBOARD = "switchboard",
+}
+
 /**
  * Dynamic JWT token handler for generating authentication tokens per-request.
  * Called with the target URL to enable audience-specific tokens (aud claim).

@@ -6,6 +6,15 @@ import type {
 } from "document-model";
 
 /**
+ * Loader that can asynchronously resolve and return a document model module
+ * for a given document type. Used by the queue to gate CREATE_DOCUMENT jobs
+ * until the required model is available in the registry.
+ */
+export interface IDocumentModelLoader {
+  load(documentType: string): Promise<DocumentModelModule<any>>;
+}
+
+/**
  * Registry for managing document model modules.
  * Provides centralized access to document models' reducers, utils, and specifications.
  * Supports version-aware module storage and upgrade manifest management.

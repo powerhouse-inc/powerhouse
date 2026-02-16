@@ -1,4 +1,4 @@
-import { driveCollectionId, GqlChannel } from "@powerhousedao/reactor";
+import { driveCollectionId, GqlRequestChannel } from "@powerhousedao/reactor";
 import type { PHDocument } from "document-model";
 import { useMemo } from "react";
 import { buildDocumentSubgraphUrl } from "../utils/index.js";
@@ -34,8 +34,8 @@ export function useGetSwitchboardLink(
         remote.collectionId === driveCollectionId("main", drive.header.id),
     );
 
-    if (remote?.channel instanceof GqlChannel) {
-      return (remote.channel as GqlChannel).config.url;
+    if (remote?.channel instanceof GqlRequestChannel) {
+      return (remote.channel as GqlRequestChannel).config.url;
     }
 
     return null;

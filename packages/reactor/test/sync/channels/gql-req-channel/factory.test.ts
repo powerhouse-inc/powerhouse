@@ -2,8 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { IOperationIndex } from "../../../../src/cache/operation-index-types.js";
 import type { IQueue } from "../../../../src/queue/interfaces.js";
 import type { ISyncCursorStorage } from "../../../../src/storage/interfaces.js";
-import { GqlChannelFactory } from "../../../../src/sync/channels/gql-channel-factory.js";
 import { GqlRequestChannel } from "../../../../src/sync/channels/gql-req-channel.js";
+import { GqlRequestChannelFactory } from "../../../../src/sync/channels/gql-request-channel-factory.js";
 import type {
   ChannelConfig,
   RemoteFilter,
@@ -54,13 +54,13 @@ const createMockOperationIndex = (): IOperationIndex => ({
 
 describe("GqlRequestChannelFactory", () => {
   let originalFetch: typeof global.fetch;
-  let factory: GqlChannelFactory;
+  let factory: GqlRequestChannelFactory;
 
   beforeEach(() => {
     originalFetch = global.fetch;
     vi.useFakeTimers();
 
-    factory = new GqlChannelFactory(
+    factory = new GqlRequestChannelFactory(
       createMockLogger(),
       undefined,
       createMockQueue(),
@@ -163,31 +163,6 @@ describe("GqlRequestChannelFactory", () => {
   });
 
   describe("validation", () => {
-    it("should throw error if type is not gql", () => {
-      const cursorStorage = createMockCursorStorage();
-
-      const config: ChannelConfig = {
-        type: "internal",
-        parameters: {
-          url: "https://example.com/graphql",
-        },
-      };
-
-      expect(() =>
-        factory.instance(
-          "test-id",
-          "test-remote",
-          config,
-          cursorStorage,
-          TEST_COLLECTION_ID,
-          TEST_FILTER,
-          createMockOperationIndex(),
-        ),
-      ).toThrow(
-        'GqlChannelFactory can only create channels of type "gql", got "internal"',
-      );
-    });
-
     it("should throw error if url is missing", () => {
       const cursorStorage = createMockCursorStorage();
 
@@ -207,7 +182,7 @@ describe("GqlRequestChannelFactory", () => {
           createMockOperationIndex(),
         ),
       ).toThrow(
-        'GqlChannelFactory requires "url" parameter in config.parameters',
+        'GqlRequestChannelFactory requires "url" parameter in config.parameters',
       );
     });
 
@@ -232,7 +207,7 @@ describe("GqlRequestChannelFactory", () => {
           createMockOperationIndex(),
         ),
       ).toThrow(
-        'GqlChannelFactory requires "url" parameter in config.parameters',
+        'GqlRequestChannelFactory requires "url" parameter in config.parameters',
       );
     });
 
@@ -257,7 +232,7 @@ describe("GqlRequestChannelFactory", () => {
           createMockOperationIndex(),
         ),
       ).toThrow(
-        'GqlChannelFactory requires "url" parameter in config.parameters',
+        'GqlRequestChannelFactory requires "url" parameter in config.parameters',
       );
     });
 
