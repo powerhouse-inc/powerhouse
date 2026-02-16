@@ -8,11 +8,11 @@ import {
 } from "@powerhousedao/connect/utils";
 import {
   addRemoteDrive,
-  ReactorClientDocumentCache,
   dropAllReactorStorage,
   extractDriveSlugFromPath,
   extractNodeSlugFromPath,
   getDrives,
+  ReactorClientDocumentCache,
   refreshReactorDataClient,
   setFeatures,
   setPHToast,
@@ -41,11 +41,13 @@ import {
 } from "@renown/sdk";
 import { logger } from "document-drive";
 import type { DocumentModelModule } from "document-model";
+import type { ProcessorFactoryBuilder } from "shared/processors";
 import { loadCommonPackage } from "./document-model.js";
 import {
   loadExternalPackages,
   subscribeExternalPackages,
 } from "./external-packages.js";
+import { createProcessorHostModule } from "./processor-host-module.js";
 
 export async function clearReactorStorage() {
   const pg = window.ph?.reactorClientModule?.pg;
@@ -106,6 +108,13 @@ export async function createReactor() {
   const vetraPackages = await updateVetraPackages(externalPackages);
   subscribeExternalPackages(updateVetraPackages);
 
+  const packagesWithProcessorFactories = vetraPackages.filter(
+    (
+      pkg,
+    ): pkg is VetraPackage & { processorFactory: ProcessorFactoryBuilder } =>
+      pkg.processorFactory !== undefined,
+  );
+
   // get document models to set in the reactor (all versions)
   const documentModelModules = vetraPackages
     .flatMap((pkg) => pkg.modules.documentModelModules)
@@ -120,6 +129,18 @@ export async function createReactor() {
     upgradeManifests,
     renown,
   );
+
+  if (packagesWithProcessorFactories.length > 0) {
+    const processorHostModule = await createProcessorHostModule();
+    for (const { id, processorFactory } of packagesWithProcessorFactories) {
+      const factory = await processorFactory(processorHostModule);
+      console.log({ factory });
+      await reactorClientModule.reactorModule?.processorManager.registerFactory(
+        id,
+        factory,
+      );
+    }
+  }
 
   // get the drives from the reactor
   const drives = await getDrives(reactorClientModule.client);

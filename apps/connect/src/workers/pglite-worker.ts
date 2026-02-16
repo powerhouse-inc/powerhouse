@@ -1,34 +1,27 @@
-// import { IdbFs, PGlite } from "@electric-sql/pglite";
-// import { live } from "@electric-sql/pglite/live";
-// import type { PGliteWorkerOptions } from "@electric-sql/pglite/worker";
-// import { worker } from "@electric-sql/pglite/worker";
+import { IdbFs, PGlite } from "@electric-sql/pglite";
+import { live } from "@electric-sql/pglite/live";
+import { worker } from "@electric-sql/pglite/worker";
 
-// interface PGLiteWorkerOptions extends PGliteWorkerOptions {
-//   meta: {
-//     databaseName: string;
-//   };
-// }
+worker({
+  async init(options) {
+    // const databaseName =
+    //   process.env.PH_CONNECT_ANALYTICS_DATABASE_NAME ??
+    //   "http://localhost:5173" + ":analytics";
 
-// worker({
-//   async init(options) {
-//     const databaseName = (options as PGLiteWorkerOptions).meta.databaseName;
-//     if (!databaseName) {
-//       throw new Error("Database name not provided");
-//     }
+    // const idbFs: IdbFs = new IdbFs(databaseName);
+    // Create and return a PGlite instance
+    // const db = PGlite.create({
+    //   // fs: idbFs,
+    //   relaxedDurability: true,
+    //   extensions: {
+    //     live,
+    //   },
+    // });
 
-//     const idbFs: IdbFs = new IdbFs(databaseName);
-//     // Create and return a PGlite instance
-//     const db = PGlite.create({
-//       fs: idbFs,
-//       relaxedDurability: true,
-//       extensions: {
-//         live,
-//       },
-//     });
-
-//     return db;
-//   },
-// }).catch((error: unknown) => {
-//   console.error("Error initializing PGlite worker:", error);
-//   throw error;
-// });
+    // return db;
+    return new PGlite("idb://my-db", options);
+  },
+}).catch((error: unknown) => {
+  console.error("Error initializing PGlite worker:", error);
+  throw error;
+});

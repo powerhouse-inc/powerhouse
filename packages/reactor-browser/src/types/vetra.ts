@@ -15,6 +15,7 @@ import type {
   SubgraphModule,
   UpgradeManifest,
 } from "document-model";
+import type { ProcessorFactoryBuilder } from "../../../reactor/src/processors/index.js";
 
 export type Processors = (module: {
   analyticsStore: IAnalyticsStore;
@@ -67,11 +68,11 @@ export type VetraModules = {
   editorModules?: VetraEditorModule[];
   subgraphModules?: SubgraphModule[];
   importScriptModules?: ImportScriptModule[];
-  processorModules?: VetraProcessorModule[];
 };
 
 export type VetraPackage = BaseVetraPackage<VetraModules> & {
   upgradeManifests: UpgradeManifest<readonly number[]>[];
+  processorFactory?: ProcessorFactoryBuilder;
 };
 
 export type VetraPackageManifest = VetraPackageMeta & {
