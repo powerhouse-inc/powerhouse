@@ -477,7 +477,7 @@ async function main() {
     console.log("  Wall and CPU profiling enabled");
   }
 
-  const pyroscopeFrom = Math.floor(Date.now() / 1000);
+  const pyroscopeFrom = Math.floor(Date.now() / 1000) - 30;
 
   console.log("Initializing reactor directly (no GraphQL API)...");
   const initStart = Date.now();
@@ -682,7 +682,8 @@ async function main() {
   }
 
   // Cleanup
-  const pyroscopeUntil = Math.floor(Date.now() / 1000);
+  const pyroscopeFlushDelay = 10;
+  const pyroscopeUntil = Math.floor(Date.now() / 1000) + pyroscopeFlushDelay;
 
   if (pyroscopeServer) {
     Pyroscope.stopWallProfiling();
@@ -709,6 +710,23 @@ async function main() {
     const analyseUrl = `${pyroscopeServer}/?query=${query}&from=${pyroscopeFrom}&until=${pyroscopeUntil}`;
     const outputBase = `${pyroscopeFrom}-pyroscope`;
     console.log(`\nPyroscope URL:\n  ${analyseUrl}`);
+
+    // Wait for Pyroscope to flush profiling data
+    const waitUntilMs = pyroscopeUntil * 1000;
+    let remaining = Math.ceil((waitUntilMs - Date.now()) / 1000);
+    if (remaining > 0) {
+      process.stdout.write(
+        `\nWaiting for Pyroscope to flush data... ${remaining}s`,
+      );
+      while (Date.now() < waitUntilMs) {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        remaining = Math.max(0, Math.ceil((waitUntilMs - Date.now()) / 1000));
+        process.stdout.write(
+          `\rWaiting for Pyroscope to flush data... ${remaining}s `,
+        );
+      }
+      process.stdout.write("\rWaiting for Pyroscope to flush data... done\n");
+    }
 
     console.log("\nRunning pyroscope-analyse...\n");
     execFileSync(
