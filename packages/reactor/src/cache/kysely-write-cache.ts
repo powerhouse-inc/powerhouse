@@ -222,7 +222,11 @@ export class KyselyWriteCache implements IWriteCache {
 
     if (this.isKeyframeRevision(revision)) {
       this.keyframeStore
-        .putKeyframe(documentId, scope, branch, revision, document)
+        .putKeyframe(documentId, scope, branch, revision, {
+          ...document,
+          operations: {},
+          clipboard: [],
+        })
         .catch((err) => {
           console.error(
             `Failed to persist keyframe ${documentId}@${revision}:`,
