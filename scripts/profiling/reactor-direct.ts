@@ -477,7 +477,7 @@ async function main() {
     console.log("  Wall and CPU profiling enabled");
   }
 
-  const pyroscopeFrom = Math.floor(Date.now() / 1000) - 30;
+  const pyroscopeFrom = Math.floor(Date.now() / 1000);
 
   console.log("Initializing reactor directly (no GraphQL API)...");
   const initStart = Date.now();
@@ -729,20 +729,27 @@ async function main() {
     }
 
     console.log("\nRunning pyroscope-analyse...\n");
-    execFileSync(
-      "tsx",
-      [
-        new URL("pyroscope-analyse.ts", import.meta.url).pathname,
-        analyseUrl,
-        "--output-json",
-        outputBase,
-        "--output-md",
-        `${outputBase}.md`,
-      ],
-      {
-        stdio: "inherit",
-      },
-    );
+    try {
+      execFileSync(
+        "tsx",
+        [
+          new URL("pyroscope-analyse.ts", import.meta.url).pathname,
+          analyseUrl,
+          "--output-json",
+          outputBase,
+          "--output-md",
+          `${outputBase}.md`,
+        ],
+        {
+          stdio: "inherit",
+        },
+      );
+    } catch {
+      console.error(
+        "\nPyroscope analysis failed. You can retry manually with:",
+      );
+      console.error(`  tsx pyroscope-analyse.ts '${analyseUrl}'`);
+    }
   }
 }
 
