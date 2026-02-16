@@ -1,6 +1,6 @@
 {
   "name": "document-model",
-  "version": "6.0.0-dev.44",
+  "version": "6.0.0-dev.45",
   "license": "AGPL-3.0-only",
   "private": false,
   "files": [
@@ -48,7 +48,8 @@
     "playwright": "^1.46.1",
     "react": "catalog:",
     "rollup-plugin-polyfill-node": "^0.13.0",
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.4",
+    "shared": "workspace:*"
   },
   "dependencies": {
     "change-case": "^5.4.4",
@@ -57,7 +58,6 @@
     "mutative": "^1.0.5",
     "safe-stable-stringify": "^2.4.3",
     "sha1-uint8array": "^0.10.7",
-    "zod": "catalog:",
-    "shared": "workspace:*"
+    "zod": "catalog:"
   }
 }

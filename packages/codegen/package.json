@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/codegen",
-  "version": "6.0.0-dev.44",
+  "version": "6.0.0-dev.45",
   "license": "AGPL-3.0-only",
   "private": false,
   "type": "module",
@@ -52,9 +52,9 @@
   "dependencies": {
     "@anatine/zod-mock": "^3.13.3",
     "@faker-js/faker": "^8.3.1",
-    "@graphql-codegen/cli": "^6.1.0",
-    "@graphql-codegen/core": "^5.0.0",
-    "@graphql-codegen/typescript": "^5.0.6",
+    "@graphql-codegen/cli": "catalog:",
+    "@graphql-codegen/core": "catalog:",
+    "@graphql-codegen/typescript": "catalog:",
     "@powerhousedao/common": "workspace:*",
     "@powerhousedao/config": "workspace:*",
     "@powerhousedao/design-system": "workspace:*",
@@ -76,7 +76,7 @@
     "package-json-validator": "^0.60.0",
     "package-manager-detector": "^1.6.0",
     "prettier": "^3.6.2",
-    "read-pkg": "^9.0.1",
+    "read-pkg": "catalog:",
     "semver": "^7.7.3",
     "ts-morph": "^27.0.2",
     "zocker": "^3.0.0"

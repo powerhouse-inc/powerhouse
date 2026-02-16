@@ -72,7 +72,6 @@
     "service-unstartup": "bash ./node_modules/@powerhousedao/ph-cli/dist/scripts/service-unstartup.sh"
   },
   "dependencies": {
-    "shared": "workspace:*",
     "@powerhousedao/builder-tools": "workspace:*",
     "@powerhousedao/common": "workspace:*",
     "@powerhousedao/config": "workspace:*",
@@ -88,6 +87,7 @@
     "zod": "catalog:"
   },
   "devDependencies": {
+    "shared": "workspace:*",
     "@electric-sql/pglite": "catalog:",
     "@powerhousedao/analytics-engine-core": "catalog:",
     "@powerhousedao/codegen": "workspace:*",
