@@ -1,6 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { IQueue } from "../../../../src/queue/interfaces.js";
-import { IntervalPollTimer } from "../../../../src/sync/channels/interval-poll-timer.js";
+import {
+  IntervalPollTimer,
+  calculateBackoffDelay,
+} from "../../../../src/sync/channels/interval-poll-timer.js";
 
 function createMockQueue(totalSizeValue = 0): IQueue {
   return {
@@ -146,9 +149,14 @@ describe("IntervalPollTimer", () => {
     expect(delegate).not.toHaveBeenCalled();
   });
 
-  it("should handle delegate that throws error", async () => {
+  it("should retry with backoff after delegate throws error", async () => {
     const mockQueue = createMockQueue();
-    const timer = new IntervalPollTimer(mockQueue, { intervalMs: 1000 });
+    vi.spyOn(Math, "random").mockReturnValue(0.5);
+    const timer = new IntervalPollTimer(mockQueue, {
+      intervalMs: 1000,
+      retryBaseDelayMs: 1000,
+      retryMaxDelayMs: 300000,
+    });
     const delegate = vi.fn().mockRejectedValue(new Error("Test error"));
 
     timer.setDelegate(delegate);
@@ -157,8 +165,13 @@ describe("IntervalPollTimer", () => {
     await vi.advanceTimersByTimeAsync(0);
     expect(delegate).toHaveBeenCalledTimes(1);
 
-    await vi.advanceTimersByTimeAsync(1000);
-    expect(delegate).toHaveBeenCalledTimes(1);
+    // First failure: backoff = min(300000, 1000*2^0) = 1000, delay = 500 + 0.5*500 = 750
+    await vi.advanceTimersByTimeAsync(750);
+    expect(delegate).toHaveBeenCalledTimes(2);
+
+    // Second failure: backoff = min(300000, 1000*2^1) = 2000, delay = 1000 + 0.5*1000 = 1500
+    await vi.advanceTimersByTimeAsync(1500);
+    expect(delegate).toHaveBeenCalledTimes(3);
 
     timer.stop();
   });
@@ -383,6 +396,134 @@ describe("IntervalPollTimer", () => {
 
     await vi.advanceTimersByTimeAsync(5000);
     expect(delegate).toHaveBeenCalledTimes(0);
+  });
+
+  describe("calculateBackoffDelay", () => {
+    it("should compute correct delay for first failure", () => {
+      // backoff = min(300000, 1000*2^0) = 1000, delay = 500 + 0.5*500 = 750
+      expect(calculateBackoffDelay(1, 1000, 300000, 0.5)).toBe(750);
+    });
+
+    it("should compute correct delay for second failure", () => {
+      // backoff = min(300000, 1000*2^1) = 2000, delay = 1000 + 0.5*1000 = 1500
+      expect(calculateBackoffDelay(2, 1000, 300000, 0.5)).toBe(1500);
+    });
+
+    it("should cap at retryMaxDelayMs", () => {
+      // backoff = min(5000, 1000*2^19) = 5000, delay = 2500 + 0.5*2500 = 3750
+      expect(calculateBackoffDelay(20, 1000, 5000, 0.5)).toBe(3750);
+    });
+
+    it("should return half the backoff when random is 0", () => {
+      // backoff = 1000, delay = 500 + 0*500 = 500
+      expect(calculateBackoffDelay(1, 1000, 300000, 0)).toBe(500);
+    });
+
+    it("should return the full backoff when random is 1", () => {
+      // backoff = 1000, delay = 500 + 1*500 = 1000
+      expect(calculateBackoffDelay(1, 1000, 300000, 1)).toBe(1000);
+    });
+  });
+
+  describe("timer backoff integration", () => {
+    it("should retry after delegate rejection", async () => {
+      const mockQueue = createMockQueue();
+      vi.spyOn(Math, "random").mockReturnValue(0.5);
+      const timer = new IntervalPollTimer(mockQueue, {
+        intervalMs: 1000,
+        retryBaseDelayMs: 1000,
+        retryMaxDelayMs: 300000,
+      });
+      const delegate = vi.fn().mockRejectedValue(new Error("fail"));
+
+      timer.setDelegate(delegate);
+      timer.start();
+
+      await vi.advanceTimersByTimeAsync(0);
+      expect(delegate).toHaveBeenCalledTimes(1);
+
+      // Should retry after backoff delay (750ms for first failure)
+      await vi.advanceTimersByTimeAsync(750);
+      expect(delegate).toHaveBeenCalledTimes(2);
+
+      expect(timer.isRunning()).toBe(true);
+      timer.stop();
+    });
+
+    it("should reset to base intervalMs after success", async () => {
+      const mockQueue = createMockQueue();
+      vi.spyOn(Math, "random").mockReturnValue(0.5);
+      const timer = new IntervalPollTimer(mockQueue, {
+        intervalMs: 1000,
+        retryBaseDelayMs: 1000,
+        retryMaxDelayMs: 300000,
+      });
+
+      let callCount = 0;
+      const delegate = vi.fn().mockImplementation(() => {
+        callCount++;
+        if (callCount <= 2) {
+          return Promise.reject(new Error("fail"));
+        }
+        return Promise.resolve();
+      });
+
+      timer.setDelegate(delegate);
+      timer.start();
+
+      // First call fails
+      await vi.advanceTimersByTimeAsync(0);
+      expect(delegate).toHaveBeenCalledTimes(1);
+
+      // Second call at backoff 750ms, also fails
+      await vi.advanceTimersByTimeAsync(750);
+      expect(delegate).toHaveBeenCalledTimes(2);
+
+      // Third call at backoff 1500ms, succeeds
+      await vi.advanceTimersByTimeAsync(1500);
+      expect(delegate).toHaveBeenCalledTimes(3);
+
+      // Next call should be at normal interval (1000ms), not backoff
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(delegate).toHaveBeenCalledTimes(4);
+
+      timer.stop();
+    });
+
+    it("should reset backoff state on start()", async () => {
+      const mockQueue = createMockQueue();
+      vi.spyOn(Math, "random").mockReturnValue(0.5);
+      const timer = new IntervalPollTimer(mockQueue, {
+        intervalMs: 1000,
+        retryBaseDelayMs: 1000,
+        retryMaxDelayMs: 300000,
+      });
+      const delegate = vi.fn().mockRejectedValue(new Error("fail"));
+
+      timer.setDelegate(delegate);
+      timer.start();
+
+      // Build up some failures
+      await vi.advanceTimersByTimeAsync(0);
+      expect(delegate).toHaveBeenCalledTimes(1);
+      await vi.advanceTimersByTimeAsync(750);
+      expect(delegate).toHaveBeenCalledTimes(2);
+
+      timer.stop();
+
+      // Restart should reset backoff - first retry should be at 750ms again
+      delegate.mockClear();
+      timer.start();
+
+      await vi.advanceTimersByTimeAsync(0);
+      expect(delegate).toHaveBeenCalledTimes(1);
+
+      // First failure after restart: delay = 750ms (not escalated)
+      await vi.advanceTimersByTimeAsync(750);
+      expect(delegate).toHaveBeenCalledTimes(2);
+
+      timer.stop();
+    });
   });
 
   describe("backpressure", () => {

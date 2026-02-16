@@ -27,12 +27,6 @@ export type GqlChannelConfig = {
   url: string;
   /** Dynamic JWT token handler for generating fresh tokens per-request */
   jwtHandler?: JwtHandler;
-  /** Base delay for exponential backoff retries in milliseconds (default: 1000) */
-  retryBaseDelayMs?: number;
-  /** Maximum delay for exponential backoff retries in milliseconds (default: 300000) */
-  retryMaxDelayMs?: number;
-  /** Maximum number of consecutive failures before marking as error (default: 5) */
-  maxFailures?: number;
   /** Custom fetch function for testing (default: global fetch) */
   fetchFn?: typeof fetch;
   /** Collection ID to synchronize */
@@ -80,9 +74,6 @@ export class GqlRequestChannel implements IChannel {
     this.config = {
       url: config.url,
       jwtHandler: config.jwtHandler,
-      retryBaseDelayMs: config.retryBaseDelayMs ?? 1000,
-      retryMaxDelayMs: config.retryMaxDelayMs ?? 300000,
-      maxFailures: config.maxFailures ?? 5,
       fetchFn: config.fetchFn,
       collectionId: config.collectionId,
       filter: config.filter,
@@ -200,10 +191,6 @@ export class GqlRequestChannel implements IChannel {
       return;
     }
 
-    if (this.failureCount >= this.config.maxFailures!) {
-      return;
-    }
-
     let response;
     try {
       response = await this.pollSyncEnvelopes(
@@ -211,7 +198,9 @@ export class GqlRequestChannel implements IChannel {
         this.inbox.latestOrdinal,
       );
     } catch (error) {
-      this.handlePollError(error);
+      if (!this.handlePollError(error)) {
+        throw error;
+      }
       return;
     }
 
@@ -249,12 +238,12 @@ export class GqlRequestChannel implements IChannel {
   /**
    * Handles polling errors with exponential backoff.
    */
-  private handlePollError(error: unknown): void {
+  private handlePollError(error: unknown): boolean {
     const err = error instanceof Error ? error : new Error(String(error));
 
     if (err.message.includes("Channel not found")) {
       this.recoverFromChannelNotFound();
-      return;
+      return true;
     }
 
     this.failureCount++;
@@ -263,18 +252,12 @@ export class GqlRequestChannel implements IChannel {
     const channelError = new ChannelError(ChannelErrorSource.Inbox, err);
 
     this.logger.error(
-      "GqlChannel poll error (@FailureCount/@MaxFailures): @Error",
+      "GqlChannel poll error (@FailureCount): @Error",
       this.failureCount,
-      this.config.maxFailures,
       channelError,
     );
 
-    if (this.failureCount >= this.config.maxFailures!) {
-      this.logger.error(
-        "GqlChannel @ChannelId exceeded failure threshold, stopping polls",
-        this.channelId,
-      );
-    }
+    return false;
   }
 
   /**
@@ -597,12 +580,7 @@ export class GqlRequestChannel implements IChannel {
     failureCount: number;
   } {
     return {
-      state:
-        this.failureCount >= this.config.maxFailures!
-          ? "error"
-          : this.failureCount > 0
-            ? "running"
-            : "idle",
+      state: this.failureCount > 0 ? "error" : "idle",
       lastSuccessUtcMs: this.lastSuccessUtcMs,
       lastFailureUtcMs: this.lastFailureUtcMs,
       failureCount: this.failureCount,

@@ -5,13 +5,30 @@ export type PollTimerConfig = {
   intervalMs: number;
   maxQueueDepth: number;
   backpressureCheckIntervalMs: number;
+  retryBaseDelayMs: number;
+  retryMaxDelayMs: number;
 };
 
 const DEFAULT_CONFIG: PollTimerConfig = {
   intervalMs: 2000,
   maxQueueDepth: 100,
   backpressureCheckIntervalMs: 500,
+  retryBaseDelayMs: 1000,
+  retryMaxDelayMs: 300000,
 };
+
+export function calculateBackoffDelay(
+  consecutiveFailures: number,
+  retryBaseDelayMs: number,
+  retryMaxDelayMs: number,
+  random: number,
+): number {
+  const backoff = Math.min(
+    retryMaxDelayMs,
+    retryBaseDelayMs * Math.pow(2, consecutiveFailures - 1),
+  );
+  return backoff / 2 + random * (backoff / 2);
+}
 
 /**
  * Default poll timer using setTimeout.
@@ -23,6 +40,7 @@ export class IntervalPollTimer implements IPollTimer {
   private timer: NodeJS.Timeout | undefined;
   private running: boolean;
   private paused: boolean;
+  private consecutiveFailures: number;
   private readonly queue: IQueue;
   private readonly config: PollTimerConfig;
 
@@ -31,6 +49,7 @@ export class IntervalPollTimer implements IPollTimer {
     this.config = { ...DEFAULT_CONFIG, ...config };
     this.running = false;
     this.paused = false;
+    this.consecutiveFailures = 0;
   }
 
   setDelegate(delegate: () => Promise<void>): void {
@@ -39,6 +58,7 @@ export class IntervalPollTimer implements IPollTimer {
 
   start(): void {
     this.running = true;
+    this.consecutiveFailures = 0;
     this.tick();
   }
 
@@ -63,9 +83,13 @@ export class IntervalPollTimer implements IPollTimer {
           this.scheduleBackpressureRecheck();
         } else {
           void delegate()
-            .then(() => this.scheduleNext())
+            .then(() => {
+              this.consecutiveFailures = 0;
+              this.scheduleNext();
+            })
             .catch(() => {
-              // Delegate errors are not propagated; timer stops on error
+              this.consecutiveFailures++;
+              this.scheduleRetry();
             });
         }
       })
@@ -78,6 +102,17 @@ export class IntervalPollTimer implements IPollTimer {
   private scheduleNext(): void {
     if (!this.running || this.paused) return;
     this.timer = setTimeout(() => this.tick(), this.config.intervalMs);
+  }
+
+  private scheduleRetry(): void {
+    if (!this.running || this.paused) return;
+    const delay = calculateBackoffDelay(
+      this.consecutiveFailures,
+      this.config.retryBaseDelayMs,
+      this.config.retryMaxDelayMs,
+      Math.random(),
+    );
+    this.timer = setTimeout(() => this.tick(), delay);
   }
 
   private scheduleBackpressureRecheck(): void {

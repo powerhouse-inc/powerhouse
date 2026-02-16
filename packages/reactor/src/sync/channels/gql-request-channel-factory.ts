@@ -73,25 +73,20 @@ export class GqlRequestChannelFactory implements IChannelFactory {
       pollIntervalMs = config.parameters.pollIntervalMs;
     }
 
+    let retryBaseDelayMs: number | undefined;
     if (config.parameters.retryBaseDelayMs !== undefined) {
       if (typeof config.parameters.retryBaseDelayMs !== "number") {
         throw new Error('"retryBaseDelayMs" parameter must be a number');
       }
-      gqlConfig.retryBaseDelayMs = config.parameters.retryBaseDelayMs;
+      retryBaseDelayMs = config.parameters.retryBaseDelayMs;
     }
 
+    let retryMaxDelayMs: number | undefined;
     if (config.parameters.retryMaxDelayMs !== undefined) {
       if (typeof config.parameters.retryMaxDelayMs !== "number") {
         throw new Error('"retryMaxDelayMs" parameter must be a number');
       }
-      gqlConfig.retryMaxDelayMs = config.parameters.retryMaxDelayMs;
-    }
-
-    if (config.parameters.maxFailures !== undefined) {
-      if (typeof config.parameters.maxFailures !== "number") {
-        throw new Error('"maxFailures" parameter must be a number');
-      }
-      gqlConfig.maxFailures = config.parameters.maxFailures;
+      retryMaxDelayMs = config.parameters.retryMaxDelayMs;
     }
 
     if (config.parameters.fetchFn !== undefined) {
@@ -122,6 +117,8 @@ export class GqlRequestChannelFactory implements IChannelFactory {
 
     const pollTimer = new IntervalPollTimer(this.queue, {
       intervalMs: pollIntervalMs,
+      ...(retryBaseDelayMs !== undefined && { retryBaseDelayMs }),
+      ...(retryMaxDelayMs !== undefined && { retryMaxDelayMs }),
       ...(maxQueueDepth !== undefined && { maxQueueDepth }),
       ...(backpressureCheckIntervalMs !== undefined && {
         backpressureCheckIntervalMs,

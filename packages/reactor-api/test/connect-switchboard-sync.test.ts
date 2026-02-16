@@ -123,7 +123,6 @@ async function setupSyncForDrive(
       parameters: {
         url: "http://switchboard/graphql",
         pollIntervalMs: 100,
-        maxFailures: 10,
         retryBaseDelayMs: 50,
         fetchFn: resolverBridge,
       },
@@ -205,7 +204,6 @@ async function setupSyncForDriveOnSwitchboard(
       parameters: {
         url: "http://connect/graphql",
         pollIntervalMs: 100,
-        maxFailures: 10,
         retryBaseDelayMs: 50,
         fetchFn: resolverBridge,
       },

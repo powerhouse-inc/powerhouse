@@ -31,7 +31,7 @@ class ManualPollTimer implements IPollTimer {
   start(): void {
     this.running = true;
     if (this.delegate) {
-      void this.delegate();
+      void this.delegate().catch(() => {});
     }
   }
 
@@ -741,6 +741,7 @@ describe("GqlRequestChannel", () => {
   describe("error handling", () => {
     it("should handle network errors during poll", async () => {
       const cursorStorage = createMockCursorStorage();
+      const manualTimer = new ManualPollTimer();
       // First call (touchChannel) succeeds, subsequent calls (poll) fail
       const mockFetch = vi
         .fn()
@@ -756,11 +757,9 @@ describe("GqlRequestChannel", () => {
         "channel-1",
         "remote-1",
         cursorStorage,
-        createTestConfig({
-          maxFailures: 3,
-        }),
+        createTestConfig(),
         createMockOperationIndex(),
-        createPollTimer(5000),
+        manualTimer,
       );
       await channel.init();
 
@@ -769,17 +768,17 @@ describe("GqlRequestChannel", () => {
         expect(channel.getHealth().failureCount).toBe(1);
       });
 
-      await vi.advanceTimersByTimeAsync(5000);
+      await manualTimer.tick().catch(() => {});
 
       const health = channel.getHealth();
-      // After another poll failure, failureCount is 2
       expect(health.failureCount).toBe(2);
-      expect(health.state).toBe("running");
+      expect(health.state).toBe("error");
       await channel.shutdown();
     });
 
-    it("should stop polling after max failures", async () => {
+    it("should propagate poll errors so timer can back off", async () => {
       const cursorStorage = createMockCursorStorage();
+      const manualTimer = new ManualPollTimer();
       // First call (touchChannel) succeeds, subsequent calls (poll) fail
       const mockFetch = vi
         .fn()
@@ -795,11 +794,9 @@ describe("GqlRequestChannel", () => {
         "channel-1",
         "remote-1",
         cursorStorage,
-        createTestConfig({
-          maxFailures: 3,
-        }),
+        createTestConfig(),
         createMockOperationIndex(),
-        createPollTimer(1000),
+        manualTimer,
       );
       await channel.init();
 
@@ -808,22 +805,14 @@ describe("GqlRequestChannel", () => {
         expect(channel.getHealth().failureCount).toBe(1);
       });
 
-      // Trigger 2 more failures to reach maxFailures=3
-      await vi.advanceTimersByTimeAsync(1000);
-      await vi.advanceTimersByTimeAsync(1000);
-
-      const health = channel.getHealth();
-      expect(health.failureCount).toBe(3);
-      expect(health.state).toBe("error");
-
-      // Should not poll anymore
-      mockFetch.mockClear();
-      await vi.advanceTimersByTimeAsync(10000);
-      expect(mockFetch).not.toHaveBeenCalled();
+      // Manual tick should reject (error propagated to timer)
+      await expect(manualTimer.tick()).rejects.toThrow("Network error");
+      expect(channel.getHealth().failureCount).toBe(2);
     });
 
     it("should reset failure count on success", async () => {
       const cursorStorage = createMockCursorStorage();
+      const manualTimer = new ManualPollTimer();
       let callCount = 0;
       const mockFetch = vi.fn().mockImplementation(() => {
         callCount++;
@@ -857,7 +846,7 @@ describe("GqlRequestChannel", () => {
         cursorStorage,
         createTestConfig(),
         createMockOperationIndex(),
-        createPollTimer(1000),
+        manualTimer,
       );
       await channel.init();
 
@@ -866,12 +855,12 @@ describe("GqlRequestChannel", () => {
         expect(channel.getHealth().failureCount).toBe(1);
       });
 
-      // After 1000ms, call 3 fails
-      await vi.advanceTimersByTimeAsync(1000);
+      // Call 3 fails
+      await manualTimer.tick().catch(() => {});
       expect(channel.getHealth().failureCount).toBe(2);
 
-      // After 1000ms, call 4 succeeds - failureCount resets
-      await vi.advanceTimersByTimeAsync(1000);
+      // Call 4 succeeds - failureCount resets
+      await manualTimer.tick();
       expect(channel.getHealth().failureCount).toBe(0);
       expect(channel.getHealth().state).toBe("idle");
       await channel.shutdown();
@@ -879,6 +868,7 @@ describe("GqlRequestChannel", () => {
 
     it("should handle GraphQL errors", async () => {
       const cursorStorage = createMockCursorStorage();
+      const manualTimer = new ManualPollTimer();
       // First call (touchChannel) succeeds, subsequent calls return GraphQL errors
       const mockFetch = vi
         .fn()
@@ -902,7 +892,7 @@ describe("GqlRequestChannel", () => {
         cursorStorage,
         createTestConfig(),
         createMockOperationIndex(),
-        createPollTimer(5000),
+        manualTimer,
       );
       await channel.init();
 
@@ -911,14 +901,15 @@ describe("GqlRequestChannel", () => {
         expect(channel.getHealth().failureCount).toBe(1);
       });
 
-      // After 5000ms, another poll failure
-      await vi.advanceTimersByTimeAsync(5000);
+      // Another poll failure
+      await manualTimer.tick().catch(() => {});
       expect(channel.getHealth().failureCount).toBe(2);
       await channel.shutdown();
     });
 
     it("should handle HTTP errors", async () => {
       const cursorStorage = createMockCursorStorage();
+      const manualTimer = new ManualPollTimer();
       // First call (touchChannel) succeeds, subsequent calls (poll) fail with HTTP 500
       const mockFetch = vi
         .fn()
@@ -940,7 +931,7 @@ describe("GqlRequestChannel", () => {
         cursorStorage,
         createTestConfig(),
         createMockOperationIndex(),
-        createPollTimer(5000),
+        manualTimer,
       );
       await channel.init();
 
@@ -949,9 +940,69 @@ describe("GqlRequestChannel", () => {
         expect(channel.getHealth().failureCount).toBe(1);
       });
 
-      // After 5000ms, another poll failure
-      await vi.advanceTimersByTimeAsync(5000);
+      // Another poll failure
+      await manualTimer.tick().catch(() => {});
       expect(channel.getHealth().failureCount).toBe(2);
+      await channel.shutdown();
+    });
+
+    it("should not propagate 'Channel not found' errors to timer", async () => {
+      const cursorStorage = createMockCursorStorage();
+      const manualTimer = new ManualPollTimer();
+      let pollCount = 0;
+      const mockFetch = vi.fn().mockImplementation((_url, options) => {
+        const body = JSON.parse(options.body as string);
+        if (body.query.includes("touchChannel")) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ data: { touchChannel: true } }),
+          });
+        }
+        pollCount++;
+        if (pollCount === 1) {
+          return Promise.resolve({
+            ok: true,
+            json: () =>
+              Promise.resolve({
+                errors: [{ message: "Channel not found" }],
+              }),
+          });
+        }
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              data: {
+                pollSyncEnvelopes: { envelopes: [], ackOrdinal: 0 },
+              },
+            }),
+        });
+      });
+      global.fetch = mockFetch;
+
+      const channel = new GqlRequestChannel(
+        createMockLogger(),
+        "channel-1",
+        "remote-1",
+        cursorStorage,
+        createTestConfig(),
+        createMockOperationIndex(),
+        manualTimer,
+      );
+      await channel.init();
+
+      // Wait for the "Channel not found" recovery to complete
+      await vi.waitFor(() => {
+        const touchChannelCalls = mockFetch.mock.calls.filter((call) =>
+          (call[1]?.body as string).includes("touchChannel"),
+        );
+        expect(touchChannelCalls.length).toBe(2);
+      });
+
+      // Timer should NOT have received a rejection (poll returned, didn't throw)
+      // Verify by checking that manual tick resolves (not rejects)
+      await expect(manualTimer.tick()).resolves.toBeUndefined();
+      expect(channel.getHealth().failureCount).toBe(0);
       await channel.shutdown();
     });
 
@@ -1218,10 +1269,10 @@ describe("GqlRequestChannel", () => {
       await vi.advanceTimersByTimeAsync(1000);
       expect(channel.getHealth().state).toBe("idle");
 
-      // After failure: running (has failures but under threshold)
+      // After failure: error (has failures)
       shouldFail = true;
       await vi.advanceTimersByTimeAsync(1000);
-      expect(channel.getHealth().state).toBe("running");
+      expect(channel.getHealth().state).toBe("error");
     });
   });
 

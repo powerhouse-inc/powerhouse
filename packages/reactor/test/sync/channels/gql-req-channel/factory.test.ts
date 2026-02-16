@@ -117,7 +117,6 @@ describe("GqlRequestChannelFactory", () => {
           pollIntervalMs: 3000,
           retryBaseDelayMs: 500,
           retryMaxDelayMs: 10000,
-          maxFailures: 3,
         },
       };
 
@@ -306,30 +305,6 @@ describe("GqlRequestChannelFactory", () => {
           createMockOperationIndex(),
         ),
       ).toThrow('"retryMaxDelayMs" parameter must be a number');
-    });
-
-    it("should throw error if maxFailures is not a number", () => {
-      const cursorStorage = createMockCursorStorage();
-
-      const config: ChannelConfig = {
-        type: "gql",
-        parameters: {
-          url: "https://example.com/graphql",
-          maxFailures: "5" as any,
-        },
-      };
-
-      expect(() =>
-        factory.instance(
-          "test-id",
-          "test-remote",
-          config,
-          cursorStorage,
-          TEST_COLLECTION_ID,
-          TEST_FILTER,
-          createMockOperationIndex(),
-        ),
-      ).toThrow('"maxFailures" parameter must be a number');
     });
   });
 
