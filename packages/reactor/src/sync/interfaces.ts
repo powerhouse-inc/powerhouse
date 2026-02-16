@@ -3,6 +3,10 @@ import type { ShutdownStatus } from "../shared/types.js";
 import type { ISyncCursorStorage } from "../storage/interfaces.js";
 import type { IMailbox } from "./mailbox.js";
 import type {
+  SyncStatus,
+  SyncStatusChangeCallback,
+} from "./sync-status-tracker.js";
+import type {
   ChannelConfig,
   RemoteFilter,
   RemoteOptions,
@@ -216,4 +220,20 @@ export interface ISyncManager {
    * @returns The sync result
    */
   waitForSync(jobId: string, signal?: AbortSignal): Promise<SyncResult>;
+
+  /**
+   * Gets the current sync status for a document.
+   *
+   * @param documentId - The document ID to check
+   * @returns The sync status, or undefined if the document has never been tracked
+   */
+  getSyncStatus(documentId: string): SyncStatus | undefined;
+
+  /**
+   * Registers a callback that fires when a document's sync status changes.
+   *
+   * @param callback - Called with (documentId, newStatus) on each transition
+   * @returns Unsubscribe function
+   */
+  onSyncStatusChange(callback: SyncStatusChangeCallback): () => void;
 }

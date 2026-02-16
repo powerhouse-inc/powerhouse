@@ -28,6 +28,11 @@ import { ChannelError } from "./errors.js";
 import type { IChannelFactory, ISyncManager, Remote } from "./interfaces.js";
 import { SyncAwaiter } from "./sync-awaiter.js";
 import { SyncOperation } from "./sync-operation.js";
+import {
+  SyncStatusTracker,
+  type SyncStatus,
+  type SyncStatusChangeCallback,
+} from "./sync-status-tracker.js";
 import type {
   ChannelConfig,
   RemoteFilter,
@@ -60,6 +65,7 @@ export class SyncManager implements ISyncManager {
   private eventUnsubscribe?: () => void;
   private failedEventUnsubscribe?: () => void;
   private readonly batchAggregator: BatchAggregator;
+  private readonly syncStatusTracker: SyncStatusTracker;
 
   public loadJobs: Map<string, JobInfo> = new Map();
 
@@ -88,6 +94,7 @@ export class SyncManager implements ISyncManager {
     this.batchAggregator = new BatchAggregator(logger, (batch) =>
       this.processCompleteBatch(batch),
     );
+    this.syncStatusTracker = new SyncStatusTracker();
   }
 
   async startup(): Promise<void> {
@@ -166,6 +173,7 @@ export class SyncManager implements ISyncManager {
 
     this.awaiter.shutdown();
     this.syncAwaiter.shutdown();
+    this.syncStatusTracker.clear();
 
     const promises: Promise<void>[] = [];
     for (const remote of this.remotes.values()) {
@@ -291,6 +299,7 @@ export class SyncManager implements ISyncManager {
     await this.remoteStorage.remove(name);
     await this.cursorStorage.remove(name);
 
+    this.syncStatusTracker.untrackRemote(name);
     this.remotes.delete(name);
   }
 
@@ -302,14 +311,20 @@ export class SyncManager implements ISyncManager {
     return this.syncAwaiter.waitForSync(jobId, signal);
   }
 
+  getSyncStatus(documentId: string): SyncStatus | undefined {
+    return this.syncStatusTracker.getStatus(documentId);
+  }
+
+  onSyncStatusChange(callback: SyncStatusChangeCallback): () => void {
+    return this.syncStatusTracker.onChange(callback);
+  }
+
   private wireChannelCallbacks(remote: Remote): void {
     remote.channel.inbox.onAdded((syncOps) =>
       this.handleInboxAdded(remote, syncOps),
     );
 
-    remote.channel.outbox.onAdded(() => {
-      // todo: handle sync status updates
-    });
+    this.syncStatusTracker.trackRemote(remote.name, remote.channel);
 
     remote.channel.deadLetter.onAdded((syncOps) => {
       for (const syncOp of syncOps) {

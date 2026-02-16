@@ -222,6 +222,8 @@ export {
   SyncOperation,
   SyncOperationAggregateError,
   SyncOperationStatus,
+  SyncStatus,
+  SyncStatusTracker,
   trimMailboxFromAckOrdinal,
   type ChannelConfig,
   type ChannelHealth,
@@ -231,6 +233,7 @@ export {
   type IChannelFactory,
   type IPollTimer,
   type ISyncManager,
+  type ISyncStatusTracker,
   type JwtHandler,
   type OperationBatch,
   type Remote,
@@ -244,6 +247,7 @@ export {
   type SyncFailedEvent,
   type SyncOperationErrorType,
   type SyncPendingEvent,
+  type SyncStatusChangeCallback,
   type SyncSucceededEvent,
 } from "./sync/index.js";
 

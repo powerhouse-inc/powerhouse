@@ -1,9 +1,18 @@
 import type { IReactorClient } from "@powerhousedao/reactor";
+import { SyncStatus } from "@powerhousedao/reactor";
 import type {
   DocumentDriveDocument,
   SharingType,
-  SyncStatus,
+  SyncStatus as UISyncStatus,
 } from "document-drive";
+
+const syncStatusToUI: Record<SyncStatus, UISyncStatus> = {
+  [SyncStatus.Synced]: "SUCCESS",
+  [SyncStatus.Outgoing]: "SYNCING",
+  [SyncStatus.Incoming]: "SYNCING",
+  [SyncStatus.OutgoingAndIncoming]: "SYNCING",
+  [SyncStatus.Error]: "ERROR",
+};
 
 export async function getDrives(
   reactor: IReactorClient,
@@ -17,21 +26,22 @@ export async function getDrives(
 export function getSyncStatus(
   documentId: string,
   sharingType: SharingType,
-): Promise<SyncStatus | undefined> {
-  if (sharingType === "LOCAL") return Promise.resolve(undefined);
-
-  // TODO: Implement sync status via ReactorClient/SyncManager
-  // For now, return undefined as sync status is managed differently
-  return Promise.resolve(undefined);
+): Promise<UISyncStatus | undefined> {
+  return Promise.resolve(getSyncStatusSync(documentId, sharingType));
 }
 
 export function getSyncStatusSync(
   documentId: string,
   sharingType: SharingType,
-): SyncStatus | undefined {
+): UISyncStatus | undefined {
   if (sharingType === "LOCAL") return;
 
-  // TODO: Implement sync status via ReactorClient/SyncManager
-  // For now, return undefined as sync status is managed differently
-  return undefined;
+  const syncManager =
+    window.ph?.reactorClientModule?.reactorModule?.syncModule?.syncManager;
+  if (!syncManager) return;
+
+  const status = syncManager.getSyncStatus(documentId);
+  if (status === undefined) return;
+
+  return syncStatusToUI[status];
 }

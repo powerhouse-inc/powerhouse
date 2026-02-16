@@ -55,6 +55,11 @@ export {
 
 export { SyncBuilder } from "./sync-builder.js";
 export { SyncManager } from "./sync-manager.js";
+export { SyncStatus, SyncStatusTracker } from "./sync-status-tracker.js";
+export type {
+  ISyncStatusTracker,
+  SyncStatusChangeCallback,
+} from "./sync-status-tracker.js";
 
 export {
   batchOperationsByDocument,
