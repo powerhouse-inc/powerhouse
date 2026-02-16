@@ -57,6 +57,11 @@ export type ProcessorFactory = (
   processorApp?: ProcessorApp,
 ) => ProcessorRecord[] | Promise<ProcessorRecord[]>;
 
+/** Takes a processor host module and builds processor factories using its context */
+export type ProcessorFactoryBuilder = (
+  module: IProcessorHostModule,
+) => Promise<(driveHeader: PHDocumentHeader) => Promise<ProcessorRecord[]>>;
+
 /**
  * Manages processor creation and destruction based on drive operations.
  */

@@ -41,6 +41,7 @@ export function convertLegacyLibToVetraPackage(
       ),
     },
     upgradeManifests: legacyLib.upgradeManifests,
+    processorFactory: legacyLib.processorFactory,
   };
   return vetraPackage;
 }

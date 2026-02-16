@@ -113,13 +113,9 @@ export const init = command({
       throw new Error("You must provide a name for your project.");
     }
 
-    console.log("step 1 done");
-
     if (version !== undefined && !valid(clean(version))) {
       throw new Error(`Invalid version: ${version}`);
     }
-
-    console.log("step w done");
 
     handleMutuallyExclusiveOptions(
       {
@@ -130,8 +126,6 @@ export const init = command({
       },
       "versioning strategy",
     );
-
-    console.log("step 3 done");
 
     handleMutuallyExclusiveOptions(
       {
@@ -144,8 +138,6 @@ export const init = command({
       "package manager",
     );
 
-    console.log("step 4 done");
-
     const parsedPackageManager =
       parsePackageManager({
         npm,
@@ -154,8 +146,6 @@ export const init = command({
         bun,
         packageManager,
       }) ?? "npm";
-
-    console.log("step 5 done");
 
     const parsedTag = parseTag({
       tag,

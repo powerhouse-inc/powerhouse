@@ -24,7 +24,6 @@ export * from "./boilerplate/package.json.js";
 export * from "./boilerplate/package.json.legacy.js";
 export * from "./boilerplate/powerhouse.config.json.js";
 export * from "./boilerplate/powerhouse.manifest.json.js";
-export * from "./boilerplate/processors/index.js";
 export * from "./boilerplate/README.md.js";
 export * from "./boilerplate/style.css.js";
 export * from "./boilerplate/subgraphs/index.js";

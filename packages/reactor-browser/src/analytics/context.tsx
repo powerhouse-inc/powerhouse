@@ -3,7 +3,6 @@ import type {
   AnalyticsQueryEngine,
   IAnalyticsStore,
 } from "@powerhousedao/analytics-engine-core";
-import { getGlobal, setGlobal } from "@powerhousedao/reactor-browser";
 import {
   QueryClient,
   QueryClientProvider,
@@ -15,6 +14,7 @@ import {
 import { childLogger } from "document-drive";
 import type { PropsWithChildren } from "react";
 import { useEffect, useMemo } from "react";
+import { getGlobal, setGlobal } from "../global/core.js";
 
 const logger = childLogger(["reactor-browser", "analytics", "provider"]);
 

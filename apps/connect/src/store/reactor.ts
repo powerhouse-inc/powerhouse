@@ -8,11 +8,11 @@ import {
 } from "@powerhousedao/connect/utils";
 import {
   addRemoteDrive,
-  ReactorClientDocumentCache,
   dropAllReactorStorage,
   extractDriveSlugFromPath,
   extractNodeSlugFromPath,
   getDrives,
+  ReactorClientDocumentCache,
   refreshReactorDataClient,
   setFeatures,
   setPHToast,
@@ -41,11 +41,13 @@ import {
 } from "@renown/sdk";
 import { logger } from "document-drive";
 import type { DocumentModelModule } from "document-model";
+import type { ProcessorFactoryBuilder } from "shared/processors";
 import { loadCommonPackage } from "./document-model.js";
 import {
   loadExternalPackages,
   subscribeExternalPackages,
 } from "./external-packages.js";
+import { createProcessorHostModule } from "./processor-host-module.js";
 
 export async function clearReactorStorage() {
   const pg = window.ph?.reactorClientModule?.pg;
@@ -178,6 +180,35 @@ export async function createReactor() {
 
   // Refresh from ReactorClient to pick up any synced drives
   await refreshReactorDataClient(reactorClientModule.client);
+
+  const packagesWithProcessorFactories = vetraPackages.filter(
+    (
+      pkg,
+    ): pkg is VetraPackage & { processorFactory: ProcessorFactoryBuilder } =>
+      pkg.processorFactory !== undefined,
+  );
+
+  if (packagesWithProcessorFactories.length > 0) {
+    const processorHostModule = await createProcessorHostModule();
+    if (processorHostModule !== undefined) {
+      await Promise.all(
+        packagesWithProcessorFactories.map(async (pkg) => {
+          const { id, name, processorFactory } = pkg;
+          console.log("Loading processor factory:", name);
+          try {
+            const factory = await processorFactory(processorHostModule);
+            await reactorClientModule.reactorModule?.processorManager.registerFactory(
+              id,
+              factory,
+            );
+          } catch (error) {
+            console.error(`Error registering processor: "${name}".`);
+            console.error(error);
+          }
+        }),
+      );
+    }
+  }
 
   window.ph.loading = false;
 }

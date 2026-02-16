@@ -1,4 +1,4 @@
-import { useDocumentById } from "@powerhousedao/reactor-browser";
+import { useDocumentById } from "../../hooks/document-by-id.js";
 import { useTimelineItems } from "./timeline-items.js";
 
 export function useDocumentTimeline(documentId?: string) {

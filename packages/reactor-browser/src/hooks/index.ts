@@ -82,7 +82,6 @@ export {
   useNodeParentFolderById,
   useParentFolderForSelectedNode,
 } from "./parent-folder.js";
-export { useProcessorModules, useProcessors } from "./processor-modules.js";
 export {
   hideRevisionHistory,
   setRevisionHistoryVisible,
