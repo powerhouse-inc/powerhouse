@@ -10,7 +10,6 @@ import type { PHDocumentHeader } from "document-model";
  */
 
 export const processorFactory = async (module: IProcessorHostModule) => {
-  console.log({ module });
   // Initialize all processor factories once with the module
   const factories: Array<ProcessorFactory> = [];
 
