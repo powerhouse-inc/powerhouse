@@ -266,6 +266,8 @@ describe("KyselyWriteCache", () => {
         expect.objectContaining({
           state: expect.any(Object),
           header: expect.any(Object),
+          operations: {},
+          clipboard: [],
         }),
       );
       expect(keyframeStore.putKeyframe).toHaveBeenNthCalledWith(
@@ -277,6 +279,8 @@ describe("KyselyWriteCache", () => {
         expect.objectContaining({
           state: expect.any(Object),
           header: expect.any(Object),
+          operations: {},
+          clipboard: [],
         }),
       );
     });
@@ -570,7 +574,11 @@ describe("KyselyWriteCache (Partial Integration) - Cold Miss Rebuild", () => {
     });
 
     const doc20 = await cache.getState(docId, "global", "main", 20);
-    await keyframeStore.putKeyframe(docId, "global", "main", 20, doc20);
+    await keyframeStore.putKeyframe(docId, "global", "main", 20, {
+      ...doc20,
+      operations: {},
+      clipboard: [],
+    });
 
     // now delete operations 1 - 20, this will prove that the keyframe is used
     await db
