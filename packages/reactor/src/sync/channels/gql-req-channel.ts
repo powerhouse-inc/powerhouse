@@ -1,4 +1,3 @@
-import type { Action, Signature } from "document-model";
 import type { IOperationIndex } from "../../cache/operation-index-types.js";
 import type { ILogger } from "../../logging/types.js";
 import type { ISyncCursorStorage } from "../../storage/interfaces.js";
@@ -7,16 +6,18 @@ import { ChannelError } from "../errors.js";
 import type { IChannel } from "../interfaces.js";
 import { type IMailbox, Mailbox } from "../mailbox.js";
 import type { SyncOperation } from "../sync-operation.js";
-import type {
-  JwtHandler,
-  RemoteCursor,
-  RemoteFilter,
-  SyncEnvelope,
-} from "../types.js";
+import type { JwtHandler, RemoteFilter, SyncEnvelope } from "../types.js";
 import { ChannelErrorSource } from "../types.js";
-import { sortEnvelopesByFirstOperationTimestamp } from "../utils.js";
+import {
+  sortEnvelopesByFirstOperationTimestamp,
+  trimMailboxFromAckOrdinal,
+} from "../utils.js";
 import type { IPollTimer } from "./poll-timer.js";
-import { envelopesToSyncOperations } from "./utils.js";
+import {
+  envelopesToSyncOperations,
+  getLatestAppliedOrdinal,
+  serializeEnvelope,
+} from "./utils.js";
 
 /**
  * Configuration parameters for GqlChannel
@@ -43,12 +44,12 @@ export type GqlChannelConfig = {
 /**
  * GraphQL-based synchronization channel for network communication between reactors.
  */
-export class GqlChannel implements IChannel {
-  readonly inbox: IMailbox<SyncOperation>;
-  readonly outbox: IMailbox<SyncOperation>;
-  readonly deadLetter: IMailbox<SyncOperation>;
+export class GqlRequestChannel implements IChannel {
+  readonly inbox: IMailbox;
+  readonly outbox: IMailbox;
+  readonly deadLetter: IMailbox;
   readonly config: GqlChannelConfig;
-  private readonly bufferedOutbox: BufferedMailbox<SyncOperation>;
+  private readonly bufferedOutbox: BufferedMailbox;
 
   private readonly channelId: string;
   private readonly remoteName: string;
@@ -59,6 +60,8 @@ export class GqlChannel implements IChannel {
   private failureCount: number;
   private lastSuccessUtcMs?: number;
   private lastFailureUtcMs?: number;
+  private lastPersistedInboxOrdinal: number = 0;
+  private lastPersistedOutboxOrdinal: number = 0;
 
   constructor(
     private readonly logger: ILogger,
@@ -87,23 +90,85 @@ export class GqlChannel implements IChannel {
     this.isShutdown = false;
     this.failureCount = 0;
 
-    this.inbox = new Mailbox<SyncOperation>();
-    this.bufferedOutbox = new BufferedMailbox<SyncOperation>(500, 25);
+    this.inbox = new Mailbox();
+    this.bufferedOutbox = new BufferedMailbox(500, 25);
     this.outbox = this.bufferedOutbox;
-    this.deadLetter = new Mailbox<SyncOperation>();
+    this.deadLetter = new Mailbox();
 
+    // when sync ops are added to the outbox, push them to the remote
     this.outbox.onAdded((syncOps) => {
-      this.handleOutboxAdded(syncOps);
+      if (this.isShutdown) {
+        return;
+      }
+
+      this.pushSyncOperations(syncOps).catch((error) => {
+        const err = error instanceof Error ? error : new Error(String(error));
+        const channelError = new ChannelError(ChannelErrorSource.Outbox, err);
+        for (const syncOp of syncOps) {
+          syncOp.failed(channelError);
+        }
+
+        // move to dead letters
+        this.deadLetter.add(...syncOps);
+        this.outbox.remove(...syncOps);
+      });
+    });
+
+    // Instead of listening to syncops directly for cursor updates, we listen
+    // to the mailbox. This is for efficiency: many syncops may fire on a trim,
+    // but only one onRemoved callback will be fired for the batch.
+    this.outbox.onRemoved((syncOps) => {
+      const maxOrdinal = getLatestAppliedOrdinal(syncOps);
+      if (maxOrdinal > this.lastPersistedOutboxOrdinal) {
+        this.lastPersistedOutboxOrdinal = maxOrdinal;
+        this.cursorStorage
+          .upsert({
+            remoteName: this.remoteName,
+            cursorType: "outbox",
+            cursorOrdinal: maxOrdinal,
+            lastSyncedAtUtcMs: Date.now(),
+          })
+          .catch((error) => {
+            this.logger.error(
+              "Failed to update outbox cursor for @ChannelId! This means that future application runs may resend duplicate operations. This is recoverable (with deduplication protection), but not-optimal: @Error",
+              this.channelId,
+              error,
+            );
+          });
+      }
+    });
+
+    this.inbox.onRemoved((syncOps) => {
+      const maxOrdinal = getLatestAppliedOrdinal(syncOps);
+      if (maxOrdinal > this.lastPersistedInboxOrdinal) {
+        this.lastPersistedInboxOrdinal = maxOrdinal;
+        this.cursorStorage
+          .upsert({
+            remoteName: this.remoteName,
+            cursorType: "inbox",
+            cursorOrdinal: maxOrdinal,
+            lastSyncedAtUtcMs: Date.now(),
+          })
+          .catch((error) => {
+            this.logger.error(
+              "Failed to update inbox cursor for @ChannelId! This is unlikely to cause a problem, but not-optimal: @Error",
+              this.channelId,
+              error,
+            );
+          });
+      }
     });
   }
 
   /**
    * Shuts down the channel and prevents further operations.
    */
-  shutdown(): void {
+  shutdown(): Promise<void> {
     this.bufferedOutbox.flush();
     this.isShutdown = true;
     this.pollTimer.stop();
+
+    return Promise.resolve();
   }
 
   /**
@@ -111,6 +176,18 @@ export class GqlChannel implements IChannel {
    */
   async init(): Promise<void> {
     await this.touchRemoteChannel();
+
+    // get cursors -- these are the last acknowledged ordinals for the inbox and outbox
+    const cursors = await this.cursorStorage.list(this.remoteName);
+    const inboxOrdinal =
+      cursors.find((c) => c.cursorType === "inbox")?.cursorOrdinal ?? 0;
+    const outboxOrdinal =
+      cursors.find((c) => c.cursorType === "outbox")?.cursorOrdinal ?? 0;
+    this.inbox.init(inboxOrdinal);
+    this.outbox.init(outboxOrdinal);
+    this.lastPersistedInboxOrdinal = inboxOrdinal;
+    this.lastPersistedOutboxOrdinal = outboxOrdinal;
+
     this.pollTimer.setDelegate(() => this.poll());
     this.pollTimer.start();
   }
@@ -127,67 +204,42 @@ export class GqlChannel implements IChannel {
       return;
     }
 
-    let cursor;
+    let response;
     try {
-      cursor = await this.cursorStorage.get(this.remoteName);
+      response = await this.pollSyncEnvelopes(
+        this.inbox.ackOrdinal,
+        this.inbox.latestOrdinal,
+      );
     } catch (error) {
       this.handlePollError(error);
       return;
     }
 
-    const cursorOrdinal = cursor.cursorOrdinal;
+    const { envelopes, ackOrdinal } = response;
 
-    let envelopes;
-    try {
-      envelopes = await this.pollSyncEnvelopes(cursorOrdinal);
-    } catch (error) {
-      this.handlePollError(error);
-      return;
+    // first: trim outbox
+    if (ackOrdinal > 0) {
+      trimMailboxFromAckOrdinal(this.outbox, ackOrdinal);
     }
 
-    let maxCursorOrdinal = cursorOrdinal;
-
+    // todo: Is this necessary? Outbox items should have been sorted when returned.
     const sortedEnvelopes = sortEnvelopesByFirstOperationTimestamp(envelopes);
-    const hasKeyedEnvelopes = sortedEnvelopes.some(
-      (e) => e.key || (e.dependsOn && e.dependsOn.length > 0),
-    );
 
-    if (hasKeyedEnvelopes) {
-      this.inbox.pause();
-    }
-    try {
-      for (const envelope of sortedEnvelopes) {
-        if (
-          envelope.type.toLowerCase() === "operations" &&
-          envelope.operations
-        ) {
-          const syncOps = envelopesToSyncOperations(envelope, this.remoteName);
-          for (const syncOp of syncOps) {
-            syncOp.transported();
-            this.inbox.add(syncOp);
-          }
+    // convert the envelopes to sync operations
+    const allSyncOps: SyncOperation[] = [];
+    for (const envelope of sortedEnvelopes) {
+      if (envelope.type.toLowerCase() === "operations" && envelope.operations) {
+        const syncOps = envelopesToSyncOperations(envelope, this.remoteName);
+        for (const syncOp of syncOps) {
+          syncOp.transported();
         }
-
-        if (
-          envelope.cursor &&
-          envelope.cursor.cursorOrdinal > maxCursorOrdinal
-        ) {
-          maxCursorOrdinal = envelope.cursor.cursorOrdinal;
-        }
-      }
-    } finally {
-      if (hasKeyedEnvelopes) {
-        this.inbox.resume();
+        allSyncOps.push(...syncOps);
       }
     }
 
-    if (maxCursorOrdinal > cursorOrdinal) {
-      try {
-        await this.updateCursor(maxCursorOrdinal);
-      } catch (error) {
-        this.handlePollError(error);
-        return;
-      }
+    // add all of them to the inbox
+    if (allSyncOps.length > 0) {
+      this.inbox.add(...allSyncOps);
     }
 
     this.lastSuccessUtcMs = Date.now();
@@ -261,80 +313,92 @@ export class GqlChannel implements IChannel {
    * Queries the remote GraphQL endpoint for sync envelopes.
    */
   private async pollSyncEnvelopes(
-    cursorOrdinal: number,
-  ): Promise<SyncEnvelope[]> {
+    ackOrdinal: number,
+    latestOrdinal: number,
+  ): Promise<{
+    envelopes: SyncEnvelope[];
+    ackOrdinal: number;
+  }> {
     const query = `
-      query PollSyncEnvelopes($channelId: String!, $cursorOrdinal: Int!) {
-        pollSyncEnvelopes(channelId: $channelId, cursorOrdinal: $cursorOrdinal) {
-          type
-          channelMeta {
-            id
-          }
-          operations {
-            operation {
-              index
-              timestampUtcMs
-              hash
-              skip
-              error
+      query PollSyncEnvelopes($channelId: String!, $outboxAck: Int!, $outboxLatest: Int!) {
+        pollSyncEnvelopes(channelId: $channelId, outboxAck: $outboxAck, outboxLatest: $outboxLatest) {
+          envelopes {
+            type
+            channelMeta {
               id
-              action {
-                id
-                type
+            }
+            operations {
+              operation {
+                index
                 timestampUtcMs
-                input
-                scope
-                attachments {
-                  data
-                  mimeType
-                  hash
-                  extension
-                  fileName
-                }
-                context {
-                  signer {
-                    user {
-                      address
-                      networkId
-                      chainId
+                hash
+                skip
+                error
+                id
+                action {
+                  id
+                  type
+                  timestampUtcMs
+                  input
+                  scope
+                  attachments {
+                    data
+                    mimeType
+                    hash
+                    extension
+                    fileName
+                  }
+                  context {
+                    signer {
+                      user {
+                        address
+                        networkId
+                        chainId
+                      }
+                      app {
+                        name
+                        key
+                      }
+                      signatures
                     }
-                    app {
-                      name
-                      key
-                    }
-                    signatures
                   }
                 }
               }
+              context {
+                documentId
+                documentType
+                scope
+                branch
+                ordinal
+              }
             }
-            context {
-              documentId
-              documentType
-              scope
-              branch
+            cursor {
+              remoteName
+              cursorOrdinal
+              lastSyncedAtUtcMs
             }
+            key
+            dependsOn
           }
-          cursor {
-            remoteName
-            cursorOrdinal
-            lastSyncedAtUtcMs
-          }
-          key
-          dependsOn
+          ackOrdinal
         }
       }
     `;
 
     const variables = {
       channelId: this.channelId,
-      cursorOrdinal,
+      outboxAck: ackOrdinal,
+      outboxLatest: latestOrdinal,
     };
 
     const response = await this.executeGraphQL<{
-      pollSyncEnvelopes: SyncEnvelope[];
+      pollSyncEnvelopes: { envelopes: SyncEnvelope[]; ackOrdinal: number };
     }>(query, variables);
 
-    return response.pollSyncEnvelopes;
+    return {
+      envelopes: response.pollSyncEnvelopes.envelopes,
+      ackOrdinal: response.pollSyncEnvelopes.ackOrdinal,
+    };
   }
 
   /**
@@ -374,26 +438,6 @@ export class GqlChannel implements IChannel {
     };
 
     await this.executeGraphQL<{ touchChannel: boolean }>(mutation, variables);
-  }
-
-  /**
-   * Handles sync operations added to the outbox by sending them to the remote.
-   */
-  private handleOutboxAdded(syncOps: SyncOperation[]): void {
-    if (this.isShutdown) {
-      return;
-    }
-
-    // Execute async but don't await (fire and forget with error handling)
-    this.pushSyncOperations(syncOps).catch((error) => {
-      const err = error instanceof Error ? error : new Error(String(error));
-      const channelError = new ChannelError(ChannelErrorSource.Outbox, err);
-      for (const syncOp of syncOps) {
-        syncOp.failed(channelError);
-        this.deadLetter.add(syncOp);
-        this.outbox.remove(syncOp);
-      }
-    });
   }
 
   /**
@@ -451,74 +495,13 @@ export class GqlChannel implements IChannel {
     `;
 
     const variables = {
-      envelopes: envelopes.map((e) => this.serializeEnvelope(e)),
+      envelopes: envelopes.map((e) => serializeEnvelope(e)),
     };
 
     await this.executeGraphQL<{ pushSyncEnvelopes: boolean }>(
       mutation,
       variables,
     );
-
-    for (const syncOp of syncOps) {
-      this.outbox.remove(syncOp);
-    }
-  }
-
-  /**
-   * Serializes a SyncEnvelope for GraphQL transport.
-   *
-   * Signatures are serialized as comma-separated strings since GraphQL schema
-   * defines them as [String!]!. Extra context fields (resultingState, ordinal)
-   * are stripped since they are not defined in OperationContextInput.
-   */
-  private serializeEnvelope(envelope: SyncEnvelope): unknown {
-    return {
-      type: envelope.type.toUpperCase(),
-      channelMeta: envelope.channelMeta,
-      operations: envelope.operations?.map((opWithContext) => ({
-        operation: {
-          index: opWithContext.operation.index,
-          timestampUtcMs: opWithContext.operation.timestampUtcMs,
-          hash: opWithContext.operation.hash,
-          skip: opWithContext.operation.skip,
-          error: opWithContext.operation.error,
-          id: opWithContext.operation.id,
-          action: this.serializeAction(opWithContext.operation.action),
-        },
-        context: {
-          documentId: opWithContext.context.documentId,
-          documentType: opWithContext.context.documentType,
-          scope: opWithContext.context.scope,
-          branch: opWithContext.context.branch,
-        },
-      })),
-      cursor: envelope.cursor,
-      key: envelope.key,
-      dependsOn: envelope.dependsOn,
-    };
-  }
-
-  /**
-   * Serializes an action for GraphQL transport, converting signature tuples to strings.
-   */
-  private serializeAction(action: Action): unknown {
-    const signer = action.context?.signer;
-    if (!signer?.signatures) {
-      return action;
-    }
-
-    return {
-      ...action,
-      context: {
-        ...action.context,
-        signer: {
-          ...signer,
-          signatures: signer.signatures.map((sig: Signature | string) =>
-            Array.isArray(sig) ? sig.join(", ") : sig,
-          ),
-        },
-      },
-    };
   }
 
   /**
@@ -602,19 +585,6 @@ export class GqlChannel implements IChannel {
     }
 
     return result.data;
-  }
-
-  /**
-   * Updates the synchronization cursor for this channel's remote.
-   */
-  async updateCursor(cursorOrdinal: number): Promise<void> {
-    const cursor: RemoteCursor = {
-      remoteName: this.remoteName,
-      cursorOrdinal,
-      lastSyncedAtUtcMs: Date.now(),
-    };
-
-    await this.cursorStorage.upsert(cursor);
   }
 
   /**

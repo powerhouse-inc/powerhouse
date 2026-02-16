@@ -49,6 +49,7 @@ export interface OperationIndexOperationTable {
   skip: number;
   hash: string;
   action: unknown;
+  sourceRemote: Generated<string>;
 }
 
 export interface SyncRemoteTable {
@@ -75,6 +76,7 @@ export interface SyncRemoteTable {
 
 export interface SyncCursorTable {
   remote_name: string;
+  cursor_type: string;
   cursor_ordinal: bigint;
   last_synced_at_utc_ms: string | null;
   updated_at: Generated<Date>;

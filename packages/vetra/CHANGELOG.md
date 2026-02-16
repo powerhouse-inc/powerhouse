@@ -1,3 +1,17 @@
+## 6.0.0-dev.44 (2026-02-15)
+
+This was a version bump only for @powerhousedao/vetra to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.43 (2026-02-14)
+
+### 🚀 Features
+
+- **monorepo:** move more shared stuff to shared ([#2335](https://github.com/powerhouse-inc/powerhouse/pull/2335))
+
+### ❤️ Thank You
+
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.0.0-dev.42 (2026-02-13)
 
 This was a version bump only for @powerhousedao/vetra to align it with other projects, there were no code changes.

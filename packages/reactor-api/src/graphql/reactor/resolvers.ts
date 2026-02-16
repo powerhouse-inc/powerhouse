@@ -1,12 +1,13 @@
 import {
   batchOperationsByDocument,
-  SyncOperation,
   sortEnvelopesByFirstOperationTimestamp,
+  SyncOperation,
+  trimMailboxFromAckOrdinal,
   type IReactorClient,
   type ISyncManager,
   type JobInfo,
-  type OperationFilter,
   type OperationBatch,
+  type OperationFilter,
   type PagedResults,
   type PagingOptions,
   type PropagationMode,
@@ -20,6 +21,7 @@ import type {
   PHDocument,
 } from "document-model";
 import { GraphQLError } from "graphql";
+import type { GetParentIdsFn } from "../../services/document-permission.service.js";
 import {
   fromInputMaybe,
   serializeOperationForGraphQL,
@@ -802,13 +804,17 @@ export async function touchChannel(
   return true;
 }
 
-export async function pollSyncEnvelopes(
+export function pollSyncEnvelopes(
   syncManager: ISyncManager,
   args: {
     channelId: string;
-    cursorOrdinal: number;
+    outboxAck: number;
+    outboxLatest: number;
   },
-): Promise<any[]> {
+): {
+  envelopes: any[];
+  ackOrdinal: number;
+} {
   let remote;
   try {
     remote = syncManager.getById(args.channelId);
@@ -818,17 +824,35 @@ export async function pollSyncEnvelopes(
     );
   }
 
-  if (args.cursorOrdinal > 0) {
-    await remote.channel.updateCursor(args.cursorOrdinal);
+  // trim outbox
+  if (args.outboxAck > 0) {
+    trimMailboxFromAckOrdinal(remote.channel.outbox, args.outboxAck);
   }
 
-  const operations = remote.channel.outbox.items;
+  let operations = remote.channel.outbox.items;
+
+  // filter remaining outbox operations by outboxLatest
+  operations = operations.filter((syncOp) => {
+    let maxOrdinal = 0;
+    for (const op of syncOp.operations) {
+      maxOrdinal = Math.max(maxOrdinal, op.context.ordinal);
+    }
+
+    if (maxOrdinal > args.outboxLatest) {
+      return true;
+    }
+
+    return false;
+  });
 
   if (operations.length === 0) {
-    return [];
+    return {
+      envelopes: [],
+      ackOrdinal: remote.channel.inbox.ackOrdinal,
+    };
   }
 
-  let maxOrdinal = args.cursorOrdinal;
+  let maxOrdinal = args.outboxLatest;
   for (const syncOp of operations) {
     for (const op of syncOp.operations) {
       const opOrdinal = op.context.ordinal;
@@ -854,10 +878,15 @@ export async function pollSyncEnvelopes(
     },
     key: syncOp.jobId || undefined,
     dependsOn:
-      syncOp.jobDependencies.length > 0 ? syncOp.jobDependencies : undefined,
+      syncOp.jobDependencies.filter(Boolean).length > 0
+        ? syncOp.jobDependencies.filter(Boolean)
+        : undefined,
   }));
 
-  return sortEnvelopesByFirstOperationTimestamp(envelopes);
+  return {
+    envelopes: sortEnvelopesByFirstOperationTimestamp(envelopes),
+    ackOrdinal: remote.channel.inbox.ackOrdinal,
+  };
 }
 
 type SyncEnvelopeArg = {
@@ -953,24 +982,11 @@ export function pushSyncEnvelopes(
       );
     }
 
-    remote.channel.inbox.pause();
-    try {
-      for (const syncOp of syncOps) {
-        remote.channel.inbox.add(syncOp);
-      }
-    } catch (error) {
-      remote.channel.inbox.resume();
-      throw new GraphQLError(
-        `Failed to push sync envelope: ${error instanceof Error ? error.message : "Unknown error"}`,
-      );
-    }
-    remote.channel.inbox.resume();
+    remote.channel.inbox.add(...syncOps);
   }
 
   return Promise.resolve(true);
 }
-
-import type { GetParentIdsFn } from "../../services/document-permission.service.js";
 
 /**
  * Create a getParentIds function using the reactor client

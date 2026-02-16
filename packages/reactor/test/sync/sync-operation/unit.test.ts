@@ -183,6 +183,107 @@ describe("SyncOperation", () => {
       expect(callback).toHaveBeenCalledTimes(1);
     });
 
+    describe("forward-only guard", () => {
+      it("should block backward transitions", () => {
+        const handle = new SyncOperation(
+          "syncop1",
+          "job1",
+          [],
+          "remote1",
+          "doc1",
+          ["global"],
+          "main",
+          createTestOperations(),
+        );
+
+        handle.started();
+        handle.executed();
+
+        const callback = vi.fn();
+        handle.on(callback);
+
+        handle.started();
+
+        expect(handle.status).toBe(SyncOperationStatus.Applied);
+        expect(callback).not.toHaveBeenCalled();
+      });
+
+      it("should block same-status transitions", () => {
+        const handle = new SyncOperation(
+          "syncop1",
+          "job1",
+          [],
+          "remote1",
+          "doc1",
+          ["global"],
+          "main",
+          createTestOperations(),
+        );
+
+        handle.started();
+
+        const callback = vi.fn();
+        handle.on(callback);
+
+        handle.started();
+
+        expect(handle.status).toBe(SyncOperationStatus.TransportPending);
+        expect(callback).not.toHaveBeenCalled();
+      });
+
+      it("should allow forward skip transitions", () => {
+        const handle = new SyncOperation(
+          "syncop1",
+          "job1",
+          [],
+          "remote1",
+          "doc1",
+          ["global"],
+          "main",
+          createTestOperations(),
+        );
+
+        const callback = vi.fn();
+        handle.on(callback);
+
+        handle.executed();
+
+        expect(handle.status).toBe(SyncOperationStatus.Applied);
+        expect(callback).toHaveBeenCalledWith(
+          handle,
+          SyncOperationStatus.Unknown,
+          SyncOperationStatus.Applied,
+        );
+      });
+
+      it("should make terminal Error sticky", () => {
+        const handle = new SyncOperation(
+          "syncop1",
+          "job1",
+          [],
+          "remote1",
+          "doc1",
+          ["global"],
+          "main",
+          createTestOperations(),
+        );
+
+        const error = new ChannelError(
+          ChannelErrorSource.Channel,
+          new Error("Fatal"),
+        );
+        handle.failed(error);
+
+        const callback = vi.fn();
+        handle.on(callback);
+
+        handle.executed();
+
+        expect(handle.status).toBe(SyncOperationStatus.Error);
+        expect(callback).not.toHaveBeenCalled();
+      });
+    });
+
     it("should complete full lifecycle: Unknown -> TransportPending -> ExecutionPending -> Applied", () => {
       const handle = new SyncOperation(
         "syncop1",

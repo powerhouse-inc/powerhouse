@@ -3,14 +3,8 @@
   "compilerOptions": {
     "outDir": "./dist"
   },
-  "include": [
-    "**/*"
-  ],
-  "exclude": [
-    "dist",
-    "node_modules",
-    "test/atlas"
-  ],
+  "include": ["**/*"],
+  "exclude": ["dist", "node_modules", "test/atlas"],
   "references": [
     {
       "path": "../document-drive"

@@ -3,9 +3,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { IOperationIndex } from "../../../../src/cache/operation-index-types.js";
 import type { ISyncCursorStorage } from "../../../../src/storage/interfaces.js";
 import {
-  GqlChannel,
+  GqlRequestChannel,
   type GqlChannelConfig,
-} from "../../../../src/sync/channels/gql-channel.js";
+} from "../../../../src/sync/channels/gql-req-channel.js";
 import { IntervalPollTimer } from "../../../../src/sync/channels/interval-poll-timer.js";
 import type { IPollTimer } from "../../../../src/sync/channels/poll-timer.js";
 import { SyncOperation } from "../../../../src/sync/sync-operation.js";
@@ -70,27 +70,29 @@ const createMockCursorStorage = (
   const mockGet = vi.fn();
   mockGet.mockResolvedValue({
     remoteName,
+    cursorType: "inbox",
     cursorOrdinal: 0,
   });
   return {
-    list: vi.fn(),
+    list: vi.fn().mockResolvedValue([]),
     get: mockGet,
     upsert: vi.fn().mockResolvedValue(undefined),
     remove: vi.fn().mockResolvedValue(undefined),
   };
 };
 
-const createMockOperationContext = (): OperationContext => ({
+const createMockOperationContext = (ordinal: number = 1): OperationContext => ({
   documentId: "doc-1",
   documentType: "test/document",
   scope: "public",
   branch: "main",
-  ordinal: 1,
+  ordinal,
 });
 
 const createMockSyncOperation = (
   id: string,
   remoteName: string,
+  ordinal: number = 0,
 ): SyncOperation => {
   return new SyncOperation(
     id,
@@ -116,16 +118,49 @@ const createMockSyncOperation = (
             input: {},
           },
         },
-        context: createMockOperationContext(),
+        context: createMockOperationContext(ordinal),
       },
     ],
   );
 };
 
-const createMockFetch = (response: any = {}) => {
-  return vi.fn().mockResolvedValue({
-    ok: true,
-    json: () => Promise.resolve({ data: response }),
+const createMockFetch = (
+  response: {
+    pollSyncEnvelopes?: SyncEnvelope[];
+    ackOrdinal?: number;
+    touchChannel?: boolean;
+    pushSyncEnvelopes?: boolean;
+  } = {},
+) => {
+  return vi.fn().mockImplementation((_url: string, options: RequestInit) => {
+    const body = JSON.parse(options?.body as string);
+
+    if (body.query.includes("touchChannel")) {
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ data: { touchChannel: true } }),
+      });
+    }
+
+    if (body.query.includes("pushSyncEnvelopes")) {
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ data: { pushSyncEnvelopes: true } }),
+      });
+    }
+
+    return Promise.resolve({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          data: {
+            pollSyncEnvelopes: {
+              envelopes: response.pollSyncEnvelopes ?? [],
+              ackOrdinal: response.ackOrdinal ?? 0,
+            },
+          },
+        }),
+    });
   });
 };
 
@@ -148,7 +183,7 @@ const createMockOperationIndex = (): IOperationIndex => ({
 const createPollTimer = (intervalMs = 2000): IPollTimer =>
   new IntervalPollTimer(intervalMs);
 
-describe("GqlChannel", () => {
+describe("GqlRequestChannel", () => {
   let originalFetch: typeof global.fetch;
 
   beforeEach(() => {
@@ -168,7 +203,7 @@ describe("GqlChannel", () => {
       const mockFetch = createMockFetch({ pollSyncEnvelopes: [] });
       global.fetch = mockFetch;
 
-      const channel = new GqlChannel(
+      const channel = new GqlRequestChannel(
         createMockLogger(),
         "channel-1",
         "remote-1",
@@ -188,7 +223,7 @@ describe("GqlChannel", () => {
       const mockFetch = createMockFetch({ pollSyncEnvelopes: [] });
       global.fetch = mockFetch;
 
-      const channel = new GqlChannel(
+      const channel = new GqlRequestChannel(
         createMockLogger(),
         "channel-1",
         "remote-1",
@@ -208,7 +243,7 @@ describe("GqlChannel", () => {
       const mockFetch = createMockFetch({ pollSyncEnvelopes: [] });
       global.fetch = mockFetch;
 
-      const channel = new GqlChannel(
+      const channel = new GqlRequestChannel(
         createMockLogger(),
         "channel-1",
         "remote-1",
@@ -231,7 +266,7 @@ describe("GqlChannel", () => {
       });
       global.fetch = mockFetch;
 
-      const channel = new GqlChannel(
+      const channel = new GqlRequestChannel(
         createMockLogger(),
         "channel-1",
         "remote-1",
@@ -257,7 +292,7 @@ describe("GqlChannel", () => {
       await vi.advanceTimersByTimeAsync(5000);
       expect(mockFetch).toHaveBeenCalledTimes(3);
 
-      channel.shutdown();
+      await channel.shutdown();
     });
   });
 
@@ -270,7 +305,7 @@ describe("GqlChannel", () => {
       });
       global.fetch = mockFetch;
 
-      const channel = new GqlChannel(
+      const channel = new GqlRequestChannel(
         createMockLogger(),
         "channel-1",
         "remote-1",
@@ -295,7 +330,7 @@ describe("GqlChannel", () => {
       await vi.advanceTimersByTimeAsync(3000);
       expect(mockFetch).toHaveBeenCalledTimes(4);
 
-      channel.shutdown();
+      await channel.shutdown();
     });
 
     it("should query with correct GraphQL syntax", async () => {
@@ -306,7 +341,7 @@ describe("GqlChannel", () => {
       });
       global.fetch = mockFetch;
 
-      const channel = new GqlChannel(
+      const channel = new GqlRequestChannel(
         createMockLogger(),
         "channel-1",
         "remote-1",
@@ -329,7 +364,7 @@ describe("GqlChannel", () => {
           body: expect.stringContaining("pollSyncEnvelopes"),
         }),
       );
-      channel.shutdown();
+      await channel.shutdown();
     });
 
     it("should include auth token in headers when jwtHandler provided", async () => {
@@ -342,7 +377,7 @@ describe("GqlChannel", () => {
 
       const jwtHandler = vi.fn().mockResolvedValue("secret-token");
 
-      const channel = new GqlChannel(
+      const channel = new GqlRequestChannel(
         createMockLogger(),
         "channel-1",
         "remote-1",
@@ -366,6 +401,7 @@ describe("GqlChannel", () => {
           }),
         }),
       );
+      await channel.shutdown();
     });
 
     it("should not include auth header when jwtHandler returns undefined", async () => {
@@ -378,7 +414,7 @@ describe("GqlChannel", () => {
 
       const jwtHandler = vi.fn().mockResolvedValue(undefined);
 
-      const channel = new GqlChannel(
+      const channel = new GqlRequestChannel(
         createMockLogger(),
         "channel-1",
         "remote-1",
@@ -402,6 +438,7 @@ describe("GqlChannel", () => {
           },
         }),
       );
+      await channel.shutdown();
     });
 
     it("should handle jwtHandler errors gracefully", async () => {
@@ -414,7 +451,7 @@ describe("GqlChannel", () => {
 
       const jwtHandler = vi.fn().mockRejectedValue(new Error("JWT error"));
 
-      const channel = new GqlChannel(
+      const channel = new GqlRequestChannel(
         createMockLogger(),
         "channel-1",
         "remote-1",
@@ -438,23 +475,27 @@ describe("GqlChannel", () => {
           },
         }),
       );
+      await channel.shutdown();
     });
 
     it("should use cursor from storage when polling", async () => {
       const cursorStorage = createMockCursorStorage();
-      vi.mocked(cursorStorage.get).mockResolvedValue({
-        remoteName: "remote-1",
-        cursorOrdinal: 42,
-        lastSyncedAtUtcMs: Date.now(),
-      });
+      vi.mocked(cursorStorage.list).mockResolvedValue([
+        {
+          remoteName: "remote-1",
+          cursorType: "inbox",
+          cursorOrdinal: 42,
+          lastSyncedAtUtcMs: Date.now(),
+        },
+      ]);
 
       const mockFetch = createMockFetch({
         pollSyncEnvelopes: [],
-        touchChannel: true,
+        ackOrdinal: 42,
       });
       global.fetch = mockFetch;
 
-      const channel = new GqlChannel(
+      const channel = new GqlRequestChannel(
         createMockLogger(),
         "channel-1",
         "remote-1",
@@ -469,24 +510,26 @@ describe("GqlChannel", () => {
 
       // Second call is the poll (first is touchChannel)
       const callBody = JSON.parse(mockFetch.mock.calls[1][1]?.body as string);
-      expect(callBody.variables.cursorOrdinal).toBe(42);
-      channel.shutdown();
+      expect(callBody.variables.outboxAck).toBe(42);
+      expect(callBody.variables.outboxLatest).toBe(42);
+      await channel.shutdown();
     });
 
     it("should use cursor 0 when cursor is at beginning", async () => {
       const cursorStorage = createMockCursorStorage();
       vi.mocked(cursorStorage.get).mockResolvedValue({
         remoteName: "remote-1",
+        cursorType: "inbox",
         cursorOrdinal: 0,
       });
 
       const mockFetch = createMockFetch({
         pollSyncEnvelopes: [],
-        touchChannel: true,
+        ackOrdinal: 0,
       });
       global.fetch = mockFetch;
 
-      const channel = new GqlChannel(
+      const channel = new GqlRequestChannel(
         createMockLogger(),
         "channel-1",
         "remote-1",
@@ -501,8 +544,9 @@ describe("GqlChannel", () => {
 
       // Second call is the poll (first is touchChannel)
       const callBody = JSON.parse(mockFetch.mock.calls[1][1]?.body as string);
-      expect(callBody.variables.cursorOrdinal).toBe(0);
-      channel.shutdown();
+      expect(callBody.variables.outboxAck).toBe(0);
+      expect(callBody.variables.outboxLatest).toBe(0);
+      await channel.shutdown();
     });
 
     it("should add received operations to inbox", async () => {
@@ -537,7 +581,7 @@ describe("GqlChannel", () => {
       });
       global.fetch = mockFetch;
 
-      const channel = new GqlChannel(
+      const channel = new GqlRequestChannel(
         createMockLogger(),
         "channel-1",
         "remote-1",
@@ -560,7 +604,7 @@ describe("GqlChannel", () => {
       await vi.advanceTimersByTimeAsync(5000);
       expect(channel.inbox.items).toHaveLength(2);
 
-      channel.shutdown();
+      await channel.shutdown();
     });
   });
 
@@ -573,7 +617,7 @@ describe("GqlChannel", () => {
       });
       global.fetch = mockFetch;
 
-      const channel = new GqlChannel(
+      const channel = new GqlRequestChannel(
         createMockLogger(),
         "channel-1",
         "remote-1",
@@ -595,6 +639,7 @@ describe("GqlChannel", () => {
           }),
         );
       });
+      await channel.shutdown();
     });
 
     it("should transition job status during transport", async () => {
@@ -605,7 +650,7 @@ describe("GqlChannel", () => {
       });
       global.fetch = mockFetch;
 
-      const channel = new GqlChannel(
+      const channel = new GqlRequestChannel(
         createMockLogger(),
         "channel-1",
         "remote-1",
@@ -626,6 +671,7 @@ describe("GqlChannel", () => {
       await vi.waitFor(() => {
         expect(job.status).toBe(SyncOperationStatus.TransportPending);
       });
+      await channel.shutdown();
     });
 
     it("should include channel metadata in envelope", async () => {
@@ -636,7 +682,7 @@ describe("GqlChannel", () => {
       });
       global.fetch = mockFetch;
 
-      const channel = new GqlChannel(
+      const channel = new GqlRequestChannel(
         createMockLogger(),
         "channel-1",
         "remote-1",
@@ -658,6 +704,7 @@ describe("GqlChannel", () => {
         const body = JSON.parse(pushCall![1]?.body as string);
         expect(body.variables.envelopes[0].channelMeta.id).toBe("channel-1");
       });
+      await channel.shutdown();
     });
 
     it("should move failed push to dead letter", async () => {
@@ -665,7 +712,7 @@ describe("GqlChannel", () => {
       const mockFetch = vi.fn().mockRejectedValue(new Error("Network error"));
       global.fetch = mockFetch;
 
-      const channel = new GqlChannel(
+      const channel = new GqlRequestChannel(
         createMockLogger(),
         "channel-1",
         "remote-1",
@@ -698,7 +745,7 @@ describe("GqlChannel", () => {
         .mockRejectedValue(new Error("Network error"));
       global.fetch = mockFetch;
 
-      const channel = new GqlChannel(
+      const channel = new GqlRequestChannel(
         createMockLogger(),
         "channel-1",
         "remote-1",
@@ -722,7 +769,7 @@ describe("GqlChannel", () => {
       // After another poll failure, failureCount is 2
       expect(health.failureCount).toBe(2);
       expect(health.state).toBe("running");
-      channel.shutdown();
+      await channel.shutdown();
     });
 
     it("should stop polling after max failures", async () => {
@@ -737,7 +784,7 @@ describe("GqlChannel", () => {
         .mockRejectedValue(new Error("Network error"));
       global.fetch = mockFetch;
 
-      const channel = new GqlChannel(
+      const channel = new GqlRequestChannel(
         createMockLogger(),
         "channel-1",
         "remote-1",
@@ -787,12 +834,17 @@ describe("GqlChannel", () => {
         }
         return Promise.resolve({
           ok: true,
-          json: () => Promise.resolve({ data: { pollSyncEnvelopes: [] } }),
+          json: () =>
+            Promise.resolve({
+              data: {
+                pollSyncEnvelopes: { envelopes: [], ackOrdinal: 0 },
+              },
+            }),
         });
       });
       global.fetch = mockFetch;
 
-      const channel = new GqlChannel(
+      const channel = new GqlRequestChannel(
         createMockLogger(),
         "channel-1",
         "remote-1",
@@ -816,7 +868,7 @@ describe("GqlChannel", () => {
       await vi.advanceTimersByTimeAsync(1000);
       expect(channel.getHealth().failureCount).toBe(0);
       expect(channel.getHealth().state).toBe("idle");
-      channel.shutdown();
+      await channel.shutdown();
     });
 
     it("should handle GraphQL errors", async () => {
@@ -837,7 +889,7 @@ describe("GqlChannel", () => {
         });
       global.fetch = mockFetch;
 
-      const channel = new GqlChannel(
+      const channel = new GqlRequestChannel(
         createMockLogger(),
         "channel-1",
         "remote-1",
@@ -856,7 +908,7 @@ describe("GqlChannel", () => {
       // After 5000ms, another poll failure
       await vi.advanceTimersByTimeAsync(5000);
       expect(channel.getHealth().failureCount).toBe(2);
-      channel.shutdown();
+      await channel.shutdown();
     });
 
     it("should handle HTTP errors", async () => {
@@ -875,7 +927,7 @@ describe("GqlChannel", () => {
         });
       global.fetch = mockFetch;
 
-      const channel = new GqlChannel(
+      const channel = new GqlRequestChannel(
         createMockLogger(),
         "channel-1",
         "remote-1",
@@ -894,7 +946,7 @@ describe("GqlChannel", () => {
       // After 5000ms, another poll failure
       await vi.advanceTimersByTimeAsync(5000);
       expect(channel.getHealth().failureCount).toBe(2);
-      channel.shutdown();
+      await channel.shutdown();
     });
 
     it("should re-register channel when 'Channel not found' error occurs", async () => {
@@ -926,12 +978,17 @@ describe("GqlChannel", () => {
         // Subsequent polls succeed
         return Promise.resolve({
           ok: true,
-          json: () => Promise.resolve({ data: { pollSyncEnvelopes: [] } }),
+          json: () =>
+            Promise.resolve({
+              data: {
+                pollSyncEnvelopes: { envelopes: [], ackOrdinal: 0 },
+              },
+            }),
         });
       });
       global.fetch = mockFetch;
 
-      const channel = new GqlChannel(
+      const channel = new GqlRequestChannel(
         createMockLogger(),
         "channel-1",
         "remote-1",
@@ -958,34 +1015,7 @@ describe("GqlChannel", () => {
       expect(channel.getHealth().failureCount).toBe(0);
       expect(channel.getHealth().state).toBe("idle");
 
-      channel.shutdown();
-    });
-  });
-
-  describe("cursor updates", () => {
-    it("should update cursor with correct parameters", async () => {
-      const cursorStorage = createMockCursorStorage();
-      const mockFetch = createMockFetch({ pollSyncEnvelopes: [] });
-      global.fetch = mockFetch;
-
-      const channel = new GqlChannel(
-        createMockLogger(),
-        "channel-1",
-        "remote-1",
-        cursorStorage,
-        createTestConfig(),
-        createMockOperationIndex(),
-        createPollTimer(),
-      );
-
-      await channel.updateCursor(42);
-
-      expect(cursorStorage.upsert).toHaveBeenCalledTimes(1);
-      const call = vi.mocked(cursorStorage.upsert).mock.calls[0];
-      expect(call[0]).toMatchObject({
-        cursorOrdinal: 42,
-      });
-      expect(call[0].lastSyncedAtUtcMs).toBeGreaterThan(0);
+      await channel.shutdown();
     });
   });
 
@@ -998,7 +1028,7 @@ describe("GqlChannel", () => {
       });
       global.fetch = mockFetch;
 
-      const channel = new GqlChannel(
+      const channel = new GqlRequestChannel(
         createMockLogger(),
         "channel-1",
         "remote-1",
@@ -1019,7 +1049,7 @@ describe("GqlChannel", () => {
       // After 1000ms, another poll = 3 calls
       expect(mockFetch).toHaveBeenCalledTimes(3);
 
-      channel.shutdown();
+      await channel.shutdown();
       mockFetch.mockClear();
 
       await vi.advanceTimersByTimeAsync(10000);
@@ -1031,7 +1061,7 @@ describe("GqlChannel", () => {
       const mockFetch = createMockFetch({ pollSyncEnvelopes: [] });
       global.fetch = mockFetch;
 
-      const channel = new GqlChannel(
+      const channel = new GqlRequestChannel(
         createMockLogger(),
         "channel-1",
         "remote-1",
@@ -1052,7 +1082,7 @@ describe("GqlChannel", () => {
       });
       global.fetch = mockFetch;
 
-      const channel = new GqlChannel(
+      const channel = new GqlRequestChannel(
         createMockLogger(),
         "channel-1",
         "remote-1",
@@ -1070,7 +1100,7 @@ describe("GqlChannel", () => {
         expect(job.status).toBe(SyncOperationStatus.TransportPending);
       });
 
-      channel.shutdown();
+      await channel.shutdown();
 
       // Job should still be in outbox
       expect(channel.outbox.items.length).toBeGreaterThan(0);
@@ -1086,7 +1116,7 @@ describe("GqlChannel", () => {
       });
       global.fetch = mockFetch;
 
-      const channel = new GqlChannel(
+      const channel = new GqlRequestChannel(
         createMockLogger(),
         "channel-1",
         "remote-1",
@@ -1102,7 +1132,7 @@ describe("GqlChannel", () => {
 
       const health = channel.getHealth();
       expect(health.lastSuccessUtcMs).toBeGreaterThanOrEqual(beforePoll);
-      channel.shutdown();
+      await channel.shutdown();
     });
 
     it("should track last failure timestamp", async () => {
@@ -1117,7 +1147,7 @@ describe("GqlChannel", () => {
         .mockRejectedValue(new Error("Network error"));
       global.fetch = mockFetch;
 
-      const channel = new GqlChannel(
+      const channel = new GqlRequestChannel(
         createMockLogger(),
         "channel-1",
         "remote-1",
@@ -1133,27 +1163,38 @@ describe("GqlChannel", () => {
 
       const health = channel.getHealth();
       expect(health.lastFailureUtcMs).toBeGreaterThanOrEqual(beforePoll);
-      channel.shutdown();
+      await channel.shutdown();
     });
 
     it("should return correct health state transitions", async () => {
       const cursorStorage = createMockCursorStorage();
       let shouldFail = false;
-      const mockFetch = vi.fn().mockImplementation(() => {
-        if (shouldFail) {
-          throw new Error("Network error");
-        }
-        return Promise.resolve({
-          ok: true,
-          json: () =>
-            Promise.resolve({
-              data: { pollSyncEnvelopes: [], touchChannel: true },
-            }),
+      const mockFetch = vi
+        .fn()
+        .mockImplementation((_url: string, options: RequestInit) => {
+          if (shouldFail) {
+            throw new Error("Network error");
+          }
+          const body = JSON.parse(options?.body as string);
+          if (body.query.includes("touchChannel")) {
+            return Promise.resolve({
+              ok: true,
+              json: () => Promise.resolve({ data: { touchChannel: true } }),
+            });
+          }
+          return Promise.resolve({
+            ok: true,
+            json: () =>
+              Promise.resolve({
+                data: {
+                  pollSyncEnvelopes: { envelopes: [], ackOrdinal: 0 },
+                },
+              }),
+          });
         });
-      });
       global.fetch = mockFetch;
 
-      const channel = new GqlChannel(
+      const channel = new GqlRequestChannel(
         createMockLogger(),
         "channel-1",
         "remote-1",
@@ -1178,6 +1219,189 @@ describe("GqlChannel", () => {
     });
   });
 
+  describe("cursor persistence", () => {
+    it("should persist outbox cursor when applied operations are removed", async () => {
+      const cursorStorage = createMockCursorStorage();
+      const mockFetch = createMockFetch({
+        pollSyncEnvelopes: [],
+        pushSyncEnvelopes: true,
+      });
+      global.fetch = mockFetch;
+
+      const channel = new GqlRequestChannel(
+        createMockLogger(),
+        "channel-1",
+        "remote-1",
+        cursorStorage,
+        createTestConfig(),
+        createMockOperationIndex(),
+        createPollTimer(),
+      );
+
+      const syncOp = createMockSyncOperation("syncop-1", "remote-1", 5);
+      channel.outbox.add(syncOp);
+
+      // Flush add buffer to trigger push (which calls started())
+      await vi.advanceTimersByTimeAsync(500);
+      await vi.waitFor(() => {
+        expect(syncOp.status).toBe(SyncOperationStatus.TransportPending);
+      });
+
+      syncOp.executed();
+      channel.outbox.remove(syncOp);
+
+      // Flush remove buffer
+      await vi.advanceTimersByTimeAsync(500);
+
+      expect(cursorStorage.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          remoteName: "remote-1",
+          cursorType: "outbox",
+          cursorOrdinal: 5,
+        }),
+      );
+    });
+
+    it("should persist inbox cursor when applied operations are removed", () => {
+      const cursorStorage = createMockCursorStorage();
+      const mockFetch = createMockFetch({ pollSyncEnvelopes: [] });
+      global.fetch = mockFetch;
+
+      const channel = new GqlRequestChannel(
+        createMockLogger(),
+        "channel-1",
+        "remote-1",
+        cursorStorage,
+        createTestConfig(),
+        createMockOperationIndex(),
+        createPollTimer(),
+      );
+
+      const syncOp = createMockSyncOperation("syncop-1", "remote-1", 5);
+      channel.inbox.add(syncOp);
+      syncOp.executed();
+      channel.inbox.remove(syncOp);
+
+      expect(cursorStorage.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          remoteName: "remote-1",
+          cursorType: "inbox",
+          cursorOrdinal: 5,
+        }),
+      );
+    });
+
+    it("should not persist cursor when removed operations are not applied", async () => {
+      const cursorStorage = createMockCursorStorage();
+      const mockFetch = createMockFetch({ pollSyncEnvelopes: [] });
+      global.fetch = mockFetch;
+
+      const channel = new GqlRequestChannel(
+        createMockLogger(),
+        "channel-1",
+        "remote-1",
+        cursorStorage,
+        createTestConfig(),
+        createMockOperationIndex(),
+        createPollTimer(),
+      );
+
+      const syncOp = createMockSyncOperation("syncop-1", "remote-1", 5);
+      channel.outbox.add(syncOp);
+      channel.outbox.remove(syncOp);
+
+      await vi.advanceTimersByTimeAsync(500);
+
+      expect(cursorStorage.upsert).not.toHaveBeenCalled();
+    });
+
+    it("should not persist cursor when ordinal matches last persisted", async () => {
+      const cursorStorage = createMockCursorStorage();
+      const mockFetch = createMockFetch({
+        pollSyncEnvelopes: [],
+        pushSyncEnvelopes: true,
+      });
+      global.fetch = mockFetch;
+
+      const channel = new GqlRequestChannel(
+        createMockLogger(),
+        "channel-1",
+        "remote-1",
+        cursorStorage,
+        createTestConfig(),
+        createMockOperationIndex(),
+        createPollTimer(),
+      );
+
+      const syncOp1 = createMockSyncOperation("syncop-1", "remote-1", 5);
+      channel.outbox.add(syncOp1);
+
+      await vi.advanceTimersByTimeAsync(500);
+      await vi.waitFor(() => {
+        expect(syncOp1.status).toBe(SyncOperationStatus.TransportPending);
+      });
+
+      syncOp1.executed();
+      channel.outbox.remove(syncOp1);
+
+      await vi.advanceTimersByTimeAsync(500);
+
+      expect(cursorStorage.upsert).toHaveBeenCalledTimes(1);
+
+      const syncOp2 = createMockSyncOperation("syncop-2", "remote-1", 5);
+      channel.outbox.add(syncOp2);
+
+      await vi.advanceTimersByTimeAsync(500);
+      await vi.waitFor(() => {
+        expect(syncOp2.status).toBe(SyncOperationStatus.TransportPending);
+      });
+
+      syncOp2.executed();
+      channel.outbox.remove(syncOp2);
+
+      await vi.advanceTimersByTimeAsync(500);
+
+      expect(cursorStorage.upsert).toHaveBeenCalledTimes(1);
+    });
+
+    it("should not persist cursor when ordinal is not greater than stored ack", async () => {
+      const cursorStorage = createMockCursorStorage();
+      vi.mocked(cursorStorage.list).mockResolvedValue([
+        {
+          remoteName: "remote-1",
+          cursorType: "outbox",
+          cursorOrdinal: 10,
+          lastSyncedAtUtcMs: Date.now(),
+        },
+      ]);
+
+      const mockFetch = createMockFetch({
+        pollSyncEnvelopes: [],
+        touchChannel: true,
+      });
+      global.fetch = mockFetch;
+
+      const channel = new GqlRequestChannel(
+        createMockLogger(),
+        "channel-1",
+        "remote-1",
+        cursorStorage,
+        createTestConfig(),
+        createMockOperationIndex(),
+        createPollTimer(),
+      );
+      await channel.init();
+
+      const syncOp = createMockSyncOperation("syncop-1", "remote-1", 5);
+      channel.outbox.add(syncOp);
+      syncOp.executed();
+      channel.outbox.remove(syncOp);
+
+      expect(cursorStorage.upsert).not.toHaveBeenCalled();
+      await channel.shutdown();
+    });
+  });
+
   describe("with ManualPollTimer", () => {
     it("should allow manual control of polling", async () => {
       const cursorStorage = createMockCursorStorage();
@@ -1188,7 +1412,7 @@ describe("GqlChannel", () => {
       global.fetch = mockFetch;
 
       const manualTimer = new ManualPollTimer();
-      const channel = new GqlChannel(
+      const channel = new GqlRequestChannel(
         createMockLogger(),
         "channel-1",
         "remote-1",
@@ -1212,7 +1436,7 @@ describe("GqlChannel", () => {
       await manualTimer.tick();
       expect(mockFetch).toHaveBeenCalledTimes(4);
 
-      channel.shutdown();
+      await channel.shutdown();
       expect(manualTimer.isRunning()).toBe(false);
     });
 
@@ -1225,7 +1449,7 @@ describe("GqlChannel", () => {
       global.fetch = mockFetch;
 
       const manualTimer = new ManualPollTimer();
-      const channel = new GqlChannel(
+      const channel = new GqlRequestChannel(
         createMockLogger(),
         "channel-1",
         "remote-1",
@@ -1243,7 +1467,7 @@ describe("GqlChannel", () => {
         expect(mockFetch).toHaveBeenCalledTimes(2);
       });
 
-      channel.shutdown();
+      await channel.shutdown();
 
       await manualTimer.tick();
       expect(mockFetch).toHaveBeenCalledTimes(2);
@@ -1274,13 +1498,18 @@ describe("GqlChannel", () => {
         }
         return Promise.resolve({
           ok: true,
-          json: () => Promise.resolve({ data: { pollSyncEnvelopes: [] } }),
+          json: () =>
+            Promise.resolve({
+              data: {
+                pollSyncEnvelopes: { envelopes: [], ackOrdinal: 0 },
+              },
+            }),
         });
       });
       global.fetch = mockFetch;
 
       const manualTimer = new ManualPollTimer();
-      const channel = new GqlChannel(
+      const channel = new GqlRequestChannel(
         createMockLogger(),
         "channel-1",
         "remote-1",
@@ -1304,7 +1533,7 @@ describe("GqlChannel", () => {
       await manualTimer.tick();
       expect(channel.getHealth().failureCount).toBe(0);
 
-      channel.shutdown();
+      await channel.shutdown();
     });
   });
 });

@@ -226,6 +226,7 @@ describe("BaseReadModel idempotency", () => {
         documentType: "test/document",
         scope: "global",
         branch: "main",
+        sourceRemote: "",
       },
       {
         ...initialOperations[1]!.operation,
@@ -233,6 +234,7 @@ describe("BaseReadModel idempotency", () => {
         documentType: "test/document",
         scope: "global",
         branch: "main",
+        sourceRemote: "",
       },
       {
         ...initialOperations[2]!.operation,
@@ -240,6 +242,7 @@ describe("BaseReadModel idempotency", () => {
         documentType: "test/document",
         scope: "global",
         branch: "main",
+        sourceRemote: "",
       },
     ]);
 
@@ -253,6 +256,7 @@ describe("BaseReadModel idempotency", () => {
         documentType: "test/document",
         scope: "global",
         branch: "main",
+        sourceRemote: "",
       },
       {
         ...newOp2.operation,
@@ -260,6 +264,7 @@ describe("BaseReadModel idempotency", () => {
         documentType: "test/document",
         scope: "global",
         branch: "main",
+        sourceRemote: "",
       },
     ]);
 
@@ -324,6 +329,7 @@ describe("BaseReadModel idempotency", () => {
           documentType: "test/document",
           scope: "global",
           branch: "main",
+          sourceRemote: "",
         },
       ]);
     }
@@ -341,6 +347,7 @@ describe("BaseReadModel idempotency", () => {
           documentType: "test/document",
           scope: "global",
           branch: "main",
+          sourceRemote: "",
         },
       ]);
     }

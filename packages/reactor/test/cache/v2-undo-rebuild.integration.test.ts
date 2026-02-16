@@ -121,6 +121,7 @@ describe("V2 UNDO Cache Rebuild Integration Tests", () => {
         documentType,
         branch: "main",
         scope: "document",
+        sourceRemote: "",
       },
       {
         ...upgradeOperation,
@@ -128,6 +129,7 @@ describe("V2 UNDO Cache Rebuild Integration Tests", () => {
         documentType,
         branch: "main",
         scope: "document",
+        sourceRemote: "",
       },
     ]);
     await operationIndex.commit(indexTxn);

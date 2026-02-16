@@ -1,38 +1,70 @@
 import {
-  type MailboxItem,
-  type MailboxCallback,
   type IMailbox,
   MailboxAggregateError,
+  type MailboxCallback,
 } from "./mailbox.js";
+import type { SyncOperation } from "./sync-operation.js";
+import { SyncOperationStatus } from "./types.js";
 
-export class BufferedMailbox<T extends MailboxItem> implements IMailbox<T> {
-  private itemsMap: Map<string, T> = new Map();
-  private addedCallbacks: MailboxCallback<T>[] = [];
-  private removedCallbacks: MailboxCallback<T>[] = [];
-  private addedBuffer: T[] = [];
-  private removedBuffer: T[] = [];
+export class BufferedMailbox implements IMailbox {
+  private itemsMap: Map<string, SyncOperation> = new Map();
+  private addedCallbacks: MailboxCallback[] = [];
+  private removedCallbacks: MailboxCallback[] = [];
+  private addedBuffer: SyncOperation[] = [];
+  private removedBuffer: SyncOperation[] = [];
   private addedTimer: ReturnType<typeof setTimeout> | null = null;
   private removedTimer: ReturnType<typeof setTimeout> | null = null;
   private readonly milliseconds: number;
   private readonly maxQueued: number;
   private paused: boolean = false;
 
+  private _ack: number = 0;
+  private _latestOrdinal: number = 0;
+
   constructor(milliseconds: number, maxQueued: number) {
     this.milliseconds = milliseconds;
     this.maxQueued = maxQueued;
   }
 
-  get items(): ReadonlyArray<T> {
+  init(ackOrdinal: number) {
+    this._ack = this._latestOrdinal = ackOrdinal;
+  }
+
+  get items(): ReadonlyArray<SyncOperation> {
     return Array.from(this.itemsMap.values());
   }
 
-  get(id: string): T | undefined {
+  get ackOrdinal(): number {
+    return this._ack;
+  }
+
+  get latestOrdinal(): number {
+    return this._latestOrdinal;
+  }
+
+  get(id: string): SyncOperation | undefined {
     return this.itemsMap.get(id);
   }
 
-  add(item: T): void {
-    this.itemsMap.set(item.id, item);
-    this.addedBuffer.push(item);
+  add(...items: SyncOperation[]): void {
+    for (const item of items) {
+      this.itemsMap.set(item.id, item);
+
+      // update latest ordinal
+      for (const op of item.operations) {
+        this._latestOrdinal = Math.max(this._latestOrdinal, op.context.ordinal);
+      }
+
+      // listen for updates to the syncop status
+      item.on((syncOp, _, next) => {
+        if (next === SyncOperationStatus.Applied) {
+          for (const op of syncOp.operations) {
+            this._ack = Math.max(this._ack, op.context.ordinal);
+          }
+        }
+      });
+    }
+    this.addedBuffer.push(...items);
 
     if (this.paused) {
       return;
@@ -45,9 +77,11 @@ export class BufferedMailbox<T extends MailboxItem> implements IMailbox<T> {
     }
   }
 
-  remove(item: T): void {
-    this.itemsMap.delete(item.id);
-    this.removedBuffer.push(item);
+  remove(...items: SyncOperation[]): void {
+    for (const item of items) {
+      this.itemsMap.delete(item.id);
+    }
+    this.removedBuffer.push(...items);
 
     if (this.paused) {
       return;
@@ -60,11 +94,11 @@ export class BufferedMailbox<T extends MailboxItem> implements IMailbox<T> {
     }
   }
 
-  onAdded(callback: MailboxCallback<T>): void {
+  onAdded(callback: MailboxCallback): void {
     this.addedCallbacks.push(callback);
   }
 
-  onRemoved(callback: MailboxCallback<T>): void {
+  onRemoved(callback: MailboxCallback): void {
     this.removedCallbacks.push(callback);
   }
 
@@ -145,7 +179,10 @@ export class BufferedMailbox<T extends MailboxItem> implements IMailbox<T> {
     }
   }
 
-  private invokeCallbacks(callbacks: MailboxCallback<T>[], items: T[]): void {
+  private invokeCallbacks(
+    callbacks: MailboxCallback[],
+    items: SyncOperation[],
+  ): void {
     const callbacksCopy = [...callbacks];
     const errors: Error[] = [];
 

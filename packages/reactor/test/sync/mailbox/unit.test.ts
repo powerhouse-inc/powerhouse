@@ -1,15 +1,28 @@
+import { generateId } from "document-model";
 import { describe, expect, it, vi } from "vitest";
 import { Mailbox, MailboxAggregateError } from "../../../src/sync/mailbox.js";
+import { SyncOperation } from "../../../src/sync/sync-operation.js";
 
-type TestItem = {
-  id: string;
-  value: number;
+const createMockSyncOperation = (
+  id: string,
+  remoteName: string,
+): SyncOperation => {
+  return new SyncOperation(
+    id,
+    generateId(),
+    [],
+    remoteName,
+    "doc-1",
+    ["public"],
+    "main",
+    [],
+  );
 };
 
 describe("Mailbox", () => {
   describe("constructor", () => {
     it("should initialize with empty items", () => {
-      const mailbox = new Mailbox<TestItem>();
+      const mailbox = new Mailbox();
 
       expect(mailbox.items).toEqual([]);
     });
@@ -17,8 +30,8 @@ describe("Mailbox", () => {
 
   describe("add", () => {
     it("should add item to mailbox", () => {
-      const mailbox = new Mailbox<TestItem>();
-      const item: TestItem = { id: "item1", value: 42 };
+      const mailbox = new Mailbox();
+      const item = createMockSyncOperation("item1", "remote1");
 
       mailbox.add(item);
 
@@ -27,10 +40,10 @@ describe("Mailbox", () => {
     });
 
     it("should add multiple items", () => {
-      const mailbox = new Mailbox<TestItem>();
-      const item1: TestItem = { id: "item1", value: 1 };
-      const item2: TestItem = { id: "item2", value: 2 };
-      const item3: TestItem = { id: "item3", value: 3 };
+      const mailbox = new Mailbox();
+      const item1 = createMockSyncOperation("item1", "remote1");
+      const item2 = createMockSyncOperation("item2", "remote2");
+      const item3 = createMockSyncOperation("item3", "remote3");
 
       mailbox.add(item1);
       mailbox.add(item2);
@@ -41,9 +54,9 @@ describe("Mailbox", () => {
     });
 
     it("should trigger onAdded callback", () => {
-      const mailbox = new Mailbox<TestItem>();
+      const mailbox = new Mailbox();
       const callback = vi.fn();
-      const item: TestItem = { id: "item1", value: 42 };
+      const item = createMockSyncOperation("item1", "remote1");
 
       mailbox.onAdded(callback);
       mailbox.add(item);
@@ -53,11 +66,11 @@ describe("Mailbox", () => {
     });
 
     it("should trigger all registered onAdded callbacks", () => {
-      const mailbox = new Mailbox<TestItem>();
+      const mailbox = new Mailbox();
       const callback1 = vi.fn();
       const callback2 = vi.fn();
       const callback3 = vi.fn();
-      const item: TestItem = { id: "item1", value: 42 };
+      const item = createMockSyncOperation("item1", "remote1");
 
       mailbox.onAdded(callback1);
       mailbox.onAdded(callback2);
@@ -71,9 +84,9 @@ describe("Mailbox", () => {
     });
 
     it("should call callbacks in registration order", () => {
-      const mailbox = new Mailbox<TestItem>();
+      const mailbox = new Mailbox();
       const callOrder: number[] = [];
-      const item: TestItem = { id: "item1", value: 42 };
+      const item = createMockSyncOperation("item1", "remote1");
 
       mailbox.onAdded(() => callOrder.push(1));
       mailbox.onAdded(() => callOrder.push(2));
@@ -85,23 +98,101 @@ describe("Mailbox", () => {
     });
 
     it("should replace item with same id", () => {
-      const mailbox = new Mailbox<TestItem>();
-      const item1: TestItem = { id: "item1", value: 1 };
-      const item2: TestItem = { id: "item1", value: 2 };
+      const mailbox = new Mailbox();
+      const item1 = createMockSyncOperation("item1", "remote1");
+      const item2 = createMockSyncOperation("item1", "remote2");
 
       mailbox.add(item1);
       mailbox.add(item2);
 
       expect(mailbox.items).toHaveLength(1);
       expect(mailbox.items[0]).toBe(item2);
-      expect(mailbox.items[0].value).toBe(2);
+    });
+  });
+
+  describe("batch add", () => {
+    it("should add multiple items in a single call", () => {
+      const mailbox = new Mailbox();
+      const item1 = createMockSyncOperation("item1", "remote1");
+      const item2 = createMockSyncOperation("item2", "remote2");
+      const item3 = createMockSyncOperation("item3", "remote3");
+
+      mailbox.add(item1, item2, item3);
+
+      expect(mailbox.items).toHaveLength(3);
+      expect(mailbox.get("item1")).toBe(item1);
+      expect(mailbox.get("item2")).toBe(item2);
+      expect(mailbox.get("item3")).toBe(item3);
+    });
+
+    it("should trigger onAdded callback once with all items", () => {
+      const mailbox = new Mailbox();
+      const callback = vi.fn();
+      const item1 = createMockSyncOperation("item1", "remote1");
+      const item2 = createMockSyncOperation("item2", "remote2");
+      const item3 = createMockSyncOperation("item3", "remote3");
+
+      mailbox.onAdded(callback);
+      mailbox.add(item1, item2, item3);
+
+      expect(callback).toHaveBeenCalledTimes(1);
+      expect(callback).toHaveBeenCalledWith([item1, item2, item3]);
+    });
+
+    it("should buffer all items from a batch add when paused", () => {
+      const mailbox = new Mailbox();
+      const callback = vi.fn();
+      const a = createMockSyncOperation("a", "remote1");
+      const b = createMockSyncOperation("b", "remote2");
+      const c = createMockSyncOperation("c", "remote3");
+
+      mailbox.onAdded(callback);
+      mailbox.pause();
+      mailbox.add(a, b, c);
+
+      expect(callback).not.toHaveBeenCalled();
+      expect(mailbox.items).toHaveLength(3);
+
+      mailbox.resume();
+
+      expect(callback).toHaveBeenCalledTimes(1);
+      expect(callback).toHaveBeenCalledWith([a, b, c]);
+    });
+  });
+
+  describe("batch remove", () => {
+    it("should remove multiple items in a single call", () => {
+      const mailbox = new Mailbox();
+      const item1 = createMockSyncOperation("item1", "remote1");
+      const item2 = createMockSyncOperation("item2", "remote2");
+      const item3 = createMockSyncOperation("item3", "remote3");
+
+      mailbox.add(item1, item2, item3);
+      mailbox.remove(item1, item3);
+
+      expect(mailbox.items).toHaveLength(1);
+      expect(mailbox.get("item2")).toBe(item2);
+    });
+
+    it("should trigger onRemoved callback once with all items", () => {
+      const mailbox = new Mailbox();
+      const callback = vi.fn();
+      const item1 = createMockSyncOperation("item1", "remote1");
+      const item2 = createMockSyncOperation("item2", "remote2");
+
+      mailbox.onRemoved(callback);
+      mailbox.add(item1, item2);
+      mailbox.remove(item1, item2);
+
+      expect(callback).toHaveBeenCalledTimes(1);
+      expect(callback).toHaveBeenCalledWith([item1, item2]);
     });
   });
 
   describe("remove", () => {
     it("should remove item from mailbox", () => {
-      const mailbox = new Mailbox<TestItem>();
-      const item: TestItem = { id: "item1", value: 42 };
+      const mailbox = new Mailbox();
+      const item = createMockSyncOperation("item1", "remote1");
 
       mailbox.add(item);
       mailbox.remove(item);
@@ -110,9 +201,9 @@ describe("Mailbox", () => {
     });
 
     it("should trigger onRemoved callback", () => {
-      const mailbox = new Mailbox<TestItem>();
+      const mailbox = new Mailbox();
       const callback = vi.fn();
-      const item: TestItem = { id: "item1", value: 42 };
+      const item = createMockSyncOperation("item1", "remote1");
 
       mailbox.onRemoved(callback);
       mailbox.add(item);
@@ -123,11 +214,11 @@ describe("Mailbox", () => {
     });
 
     it("should trigger all registered onRemoved callbacks", () => {
-      const mailbox = new Mailbox<TestItem>();
+      const mailbox = new Mailbox();
       const callback1 = vi.fn();
       const callback2 = vi.fn();
       const callback3 = vi.fn();
-      const item: TestItem = { id: "item1", value: 42 };
+      const item = createMockSyncOperation("item1", "remote1");
 
       mailbox.onRemoved(callback1);
       mailbox.onRemoved(callback2);
@@ -142,10 +233,10 @@ describe("Mailbox", () => {
     });
 
     it("should remove correct item when multiple items exist", () => {
-      const mailbox = new Mailbox<TestItem>();
-      const item1: TestItem = { id: "item1", value: 1 };
-      const item2: TestItem = { id: "item2", value: 2 };
-      const item3: TestItem = { id: "item3", value: 3 };
+      const mailbox = new Mailbox();
+      const item1 = createMockSyncOperation("item1", "remote1");
+      const item2 = createMockSyncOperation("item2", "remote2");
+      const item3 = createMockSyncOperation("item3", "remote3");
 
       mailbox.add(item1);
       mailbox.add(item2);
@@ -158,9 +249,9 @@ describe("Mailbox", () => {
     });
 
     it("should not trigger callback if item not in mailbox", () => {
-      const mailbox = new Mailbox<TestItem>();
+      const mailbox = new Mailbox();
       const callback = vi.fn();
-      const item: TestItem = { id: "item1", value: 42 };
+      const item = createMockSyncOperation("item1", "remote1");
 
       mailbox.onRemoved(callback);
       mailbox.remove(item);
@@ -171,8 +262,8 @@ describe("Mailbox", () => {
 
   describe("get", () => {
     it("should return item by id", () => {
-      const mailbox = new Mailbox<TestItem>();
-      const item: TestItem = { id: "item1", value: 42 };
+      const mailbox = new Mailbox();
+      const item = createMockSyncOperation("item1", "remote1");
 
       mailbox.add(item);
 
@@ -182,7 +273,7 @@ describe("Mailbox", () => {
     });
 
     it("should return undefined for non-existent id", () => {
-      const mailbox = new Mailbox<TestItem>();
+      const mailbox = new Mailbox();
 
       const retrieved = mailbox.get("nonexistent");
 
@@ -190,10 +281,10 @@ describe("Mailbox", () => {
     });
 
     it("should return correct item when multiple items exist", () => {
-      const mailbox = new Mailbox<TestItem>();
-      const item1: TestItem = { id: "item1", value: 1 };
-      const item2: TestItem = { id: "item2", value: 2 };
-      const item3: TestItem = { id: "item3", value: 3 };
+      const mailbox = new Mailbox();
+      const item1 = createMockSyncOperation("item1", "remote1");
+      const item2 = createMockSyncOperation("item2", "remote2");
+      const item3 = createMockSyncOperation("item3", "remote3");
 
       mailbox.add(item1);
       mailbox.add(item2);
@@ -205,8 +296,8 @@ describe("Mailbox", () => {
     });
 
     it("should return undefined after item is removed", () => {
-      const mailbox = new Mailbox<TestItem>();
-      const item: TestItem = { id: "item1", value: 42 };
+      const mailbox = new Mailbox();
+      const item = createMockSyncOperation("item1", "remote1");
 
       mailbox.add(item);
       mailbox.remove(item);
@@ -217,8 +308,8 @@ describe("Mailbox", () => {
 
   describe("items", () => {
     it("should return readonly array", () => {
-      const mailbox = new Mailbox<TestItem>();
-      const item: TestItem = { id: "item1", value: 42 };
+      const mailbox = new Mailbox();
+      const item = createMockSyncOperation("item1", "remote1");
 
       mailbox.add(item);
 
@@ -229,9 +320,9 @@ describe("Mailbox", () => {
     });
 
     it("should reflect current state of mailbox", () => {
-      const mailbox = new Mailbox<TestItem>();
-      const item1: TestItem = { id: "item1", value: 1 };
-      const item2: TestItem = { id: "item2", value: 2 };
+      const mailbox = new Mailbox();
+      const item1 = createMockSyncOperation("item1", "remote1");
+      const item2 = createMockSyncOperation("item2", "remote2");
 
       expect(mailbox.items).toHaveLength(0);
 
@@ -248,7 +339,7 @@ describe("Mailbox", () => {
 
   describe("event callbacks", () => {
     it("should guarantee delivery even if callbacks throw errors", () => {
-      const mailbox = new Mailbox<TestItem>();
+      const mailbox = new Mailbox();
       const callback1 = vi.fn(() => {
         throw new Error("Callback 1 error");
       });
@@ -257,7 +348,7 @@ describe("Mailbox", () => {
         throw new Error("Callback 3 error");
       });
       const callback4 = vi.fn();
-      const item: TestItem = { id: "item1", value: 42 };
+      const item = createMockSyncOperation("item1", "remote1");
 
       mailbox.onAdded(callback1);
       mailbox.onAdded(callback2);
@@ -286,10 +377,10 @@ describe("Mailbox", () => {
     });
 
     it("should handle multiple add/remove cycles", () => {
-      const mailbox = new Mailbox<TestItem>();
+      const mailbox = new Mailbox();
       const addedCallback = vi.fn();
       const removedCallback = vi.fn();
-      const item: TestItem = { id: "item1", value: 42 };
+      const item = createMockSyncOperation("item1", "remote1");
 
       mailbox.onAdded(addedCallback);
       mailbox.onRemoved(removedCallback);
@@ -304,9 +395,9 @@ describe("Mailbox", () => {
     });
 
     it("should handle callback registered during add operation", () => {
-      const mailbox = new Mailbox<TestItem>();
-      const item1: TestItem = { id: "item1", value: 1 };
-      const item2: TestItem = { id: "item2", value: 2 };
+      const mailbox = new Mailbox();
+      const item1 = createMockSyncOperation("item1", "remote1");
+      const item2 = createMockSyncOperation("item2", "remote2");
       const callOrder: string[] = [];
 
       mailbox.onAdded(() => {
@@ -327,11 +418,11 @@ describe("Mailbox", () => {
 
   describe("edge cases", () => {
     it("should handle rapid add/remove operations", () => {
-      const mailbox = new Mailbox<TestItem>();
-      const items: TestItem[] = [];
+      const mailbox = new Mailbox();
+      const items: SyncOperation[] = [];
 
       for (let i = 0; i < 100; i++) {
-        const item: TestItem = { id: `item${i}`, value: i };
+        const item = createMockSyncOperation(`item${i}`, `remote${i}`);
         items.push(item);
         mailbox.add(item);
       }
@@ -346,9 +437,9 @@ describe("Mailbox", () => {
     });
 
     it("should handle items with same id correctly", () => {
-      const mailbox = new Mailbox<TestItem>();
-      const item1: TestItem = { id: "same", value: 1 };
-      const item2: TestItem = { id: "same", value: 2 };
+      const mailbox = new Mailbox();
+      const item1 = createMockSyncOperation("same", "remote1");
+      const item2 = createMockSyncOperation("same", "remote2");
       const callback = vi.fn();
 
       mailbox.onAdded(callback);
@@ -364,8 +455,8 @@ describe("Mailbox", () => {
     });
 
     it("should maintain item reference integrity", () => {
-      const mailbox = new Mailbox<TestItem>();
-      const item: TestItem = { id: "item1", value: 42 };
+      const mailbox = new Mailbox();
+      const item = createMockSyncOperation("item1", "remote1");
 
       mailbox.add(item);
 
@@ -379,8 +470,8 @@ describe("Mailbox", () => {
 
   describe("callback registration", () => {
     it("should allow multiple callback registrations", () => {
-      const mailbox = new Mailbox<TestItem>();
-      const item: TestItem = { id: "item1", value: 42 };
+      const mailbox = new Mailbox();
+      const item = createMockSyncOperation("item1", "remote1");
 
       for (let i = 0; i < 10; i++) {
         mailbox.onAdded(vi.fn());
@@ -390,10 +481,10 @@ describe("Mailbox", () => {
     });
 
     it("should handle onAdded and onRemoved separately", () => {
-      const mailbox = new Mailbox<TestItem>();
+      const mailbox = new Mailbox();
       const addedCallback = vi.fn();
       const removedCallback = vi.fn();
-      const item: TestItem = { id: "item1", value: 42 };
+      const item = createMockSyncOperation("item1", "remote1");
 
       mailbox.onAdded(addedCallback);
       mailbox.onRemoved(removedCallback);

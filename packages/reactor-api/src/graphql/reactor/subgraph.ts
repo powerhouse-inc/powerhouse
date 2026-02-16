@@ -358,15 +358,21 @@ export class ReactorSubgraph extends BaseSubgraph {
         }
       },
 
-      pollSyncEnvelopes: async (
+      pollSyncEnvelopes: (
         _parent: unknown,
-        args: { channelId: string; cursorOrdinal: number },
+        args: { channelId: string; outboxAck: number; outboxLatest: number },
       ) => {
         this.logger.debug("pollSyncEnvelopes(@args)", args);
 
         try {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-          return await resolvers.pollSyncEnvelopes(this.syncManager, args);
+          const { envelopes, ackOrdinal } = resolvers.pollSyncEnvelopes(
+            this.syncManager,
+            args,
+          );
+          return {
+            envelopes,
+            ackOrdinal,
+          };
         } catch (error) {
           this.logger.error("Error in pollSyncEnvelopes(@args): @Error", error);
           throw error;

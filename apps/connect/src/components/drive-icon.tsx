@@ -9,7 +9,7 @@ export function DriveIcon({
 }: {
   drive: DocumentDriveDocument | undefined;
 }) {
-  const { data: remotes = [] } = useSyncList();
+  const remotes = useSyncList();
   const isRemoteDrive = useMemo(() => {
     if (!drive) return false;
 

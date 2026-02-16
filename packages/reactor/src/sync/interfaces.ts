@@ -1,7 +1,6 @@
 import type { IOperationIndex } from "../cache/operation-index-types.js";
 import type { ShutdownStatus } from "../shared/types.js";
 import type { ISyncCursorStorage } from "../storage/interfaces.js";
-import type { SyncOperation } from "./sync-operation.js";
 import type { IMailbox } from "./mailbox.js";
 import type {
   ChannelConfig,
@@ -17,31 +16,25 @@ import type {
  * - inbox: Sync operations received from the remote that need to be applied locally
  * - outbox: Sync operations to be sent to the remote
  * - deadLetter: Sync operations that failed and cannot be retried
- *
- * Channels are responsible for:
- * - Transporting sync envelopes between reactor instances
- * - Managing sync operation lifecycle through status transitions
- * - Handling errors and moving failed sync operations to dead letter queue
- * - Updating cursors as operations are applied
  */
 export interface IChannel {
   /**
    * Mailbox containing sync operations received from the remote that need to be applied locally.
    * Consumers should register callbacks via onAdded to process incoming sync operations.
    */
-  inbox: IMailbox<SyncOperation>;
+  inbox: IMailbox;
 
   /**
    * Mailbox containing sync operations that need to be sent to the remote.
    * The channel is responsible for transporting these sync operations and handling ACKs.
    */
-  outbox: IMailbox<SyncOperation>;
+  outbox: IMailbox;
 
   /**
    * Mailbox containing sync operations that failed and cannot be retried.
    * These sync operations require manual intervention or should be logged for debugging.
    */
-  deadLetter: IMailbox<SyncOperation>;
+  deadLetter: IMailbox;
 
   /**
    * Initializes the channel asynchronously.
@@ -53,15 +46,7 @@ export interface IChannel {
   /**
    * Shuts down the channel and prevents further operations.
    */
-  shutdown(): void;
-
-  /**
-   * Updates the synchronization cursor for this channel.
-   * For polling channels, this also removes acknowledged operations from the outbox.
-   *
-   * @param cursorOrdinal - The last processed ordinal
-   */
-  updateCursor(cursorOrdinal: number): Promise<void>;
+  shutdown(): Promise<void>;
 }
 
 /**
@@ -87,9 +72,11 @@ export interface IChannelFactory {
     remoteId: string,
     remoteName: string,
     config: ChannelConfig,
+    // TODO: remove from the interface -- currently this is created inside of the builder
     cursorStorage: ISyncCursorStorage,
     collectionId: string,
     filter: RemoteFilter,
+    // TODO: remove from the interface -- currently this is created inside of the builder
     operationIndex: IOperationIndex,
   ): IChannel;
 }

@@ -3,18 +3,12 @@ import type { ILogger } from "../../logging/types.js";
 import type { ISyncCursorStorage } from "../../storage/interfaces.js";
 import type { IChannel, IChannelFactory } from "../interfaces.js";
 import type { ChannelConfig, JwtHandler, RemoteFilter } from "../types.js";
-import { GqlChannel, type GqlChannelConfig } from "./gql-channel.js";
+import { GqlRequestChannel, type GqlChannelConfig } from "./gql-req-channel.js";
+import { GqlResponseChannel } from "./gql-res-channel.js";
 import { IntervalPollTimer } from "./interval-poll-timer.js";
-import { PollingChannel } from "./polling-channel.js";
 
 /**
  * Factory for creating channel instances of multiple types.
- *
- * Supports both "gql" channels for network-based synchronization and
- * "internal" channels for in-process communication.
- *
- * The optional jwtHandler enables dynamic JWT token generation per-request
- * for GQL channels, useful for short-lived tokens with audience-specific claims.
  */
 export class CompositeChannelFactory implements IChannelFactory {
   private readonly logger: ILogger;
@@ -76,7 +70,7 @@ export class CompositeChannelFactory implements IChannelFactory {
     collectionId: string,
     filter: RemoteFilter,
     operationIndex: IOperationIndex,
-  ): GqlChannel {
+  ): GqlRequestChannel {
     const url = config.parameters.url;
     if (typeof url !== "string" || !url) {
       throw new Error(
@@ -129,7 +123,7 @@ export class CompositeChannelFactory implements IChannelFactory {
 
     const pollTimer = new IntervalPollTimer(pollIntervalMs);
 
-    return new GqlChannel(
+    return new GqlRequestChannel(
       this.logger,
       remoteId,
       remoteName,
@@ -144,7 +138,12 @@ export class CompositeChannelFactory implements IChannelFactory {
     remoteId: string,
     remoteName: string,
     cursorStorage: ISyncCursorStorage,
-  ): PollingChannel {
-    return new PollingChannel(remoteId, remoteName, cursorStorage);
+  ): GqlResponseChannel {
+    return new GqlResponseChannel(
+      this.logger,
+      remoteId,
+      remoteName,
+      cursorStorage,
+    );
   }
 }

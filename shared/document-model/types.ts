@@ -1,4 +1,3 @@
-import type { ProcessorFactoryBuilder } from "../processors/types.js";
 import type { Action } from "./core/actions.js";
 import type { PHDocument } from "./core/documents.js";
 import type { PHBaseState } from "./core/state.js";
@@ -14,7 +13,6 @@ import type {
   IsStateOfType,
   LoadFromInput,
   Manifest,
-  ProcessorModule,
   Reducer,
   SaveToFileHandle,
   SubgraphModule,
@@ -59,7 +57,6 @@ export type DocumentModelLib<TState extends PHBaseState = PHBaseState> = {
   editors: EditorModule[];
   subgraphs: SubgraphModule[];
   importScripts: ImportScriptModule[];
-  processorFactory: ProcessorFactoryBuilder;
   upgradeManifests: UpgradeManifest<readonly number[]>[];
 };
 

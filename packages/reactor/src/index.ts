@@ -177,6 +177,7 @@ export { KyselyWriteCache } from "./cache/kysely-write-cache.js";
 export {
   driveCollectionId,
   type IOperationIndex,
+  type OperationIndexEntry,
 } from "./cache/operation-index-types.js";
 export type {
   CachedSnapshot,
@@ -221,6 +222,7 @@ export {
   SyncOperation,
   SyncOperationAggregateError,
   SyncOperationStatus,
+  trimMailboxFromAckOrdinal,
   type ChannelConfig,
   type ChannelHealth,
   type ChannelMeta,
@@ -230,7 +232,6 @@ export {
   type IPollTimer,
   type ISyncManager,
   type JwtHandler,
-  type MailboxItem,
   type OperationBatch,
   type Remote,
   type RemoteCursor,

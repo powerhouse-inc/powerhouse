@@ -548,6 +548,45 @@ describe("envelopesToSyncOperations", () => {
     expect(syncOps[0].jobDependencies).toEqual([]);
   });
 
+  it("should filter empty strings from dependsOn", () => {
+    const envelope: SyncEnvelope = {
+      type: "operations",
+      channelMeta: { id: "channel-1" },
+      key: "batch-key-1",
+      dependsOn: [""],
+      operations: [
+        {
+          operation: {
+            index: 0,
+            skip: 0,
+            id: "op-1",
+            timestampUtcMs: "2024-01-01T00:00:00.000Z",
+            hash: "hash-1",
+            action: {
+              type: "TEST_OP",
+              id: "action-1",
+              scope: "public",
+              timestampUtcMs: "2024-01-01T00:00:00.000Z",
+              input: {},
+            },
+          },
+          context: {
+            documentId: "doc-1",
+            documentType: "test/document",
+            scope: "public",
+            branch: "main",
+            ordinal: 1,
+          },
+        },
+      ],
+    };
+
+    const syncOps = envelopesToSyncOperations(envelope, "remote-1");
+
+    expect(syncOps).toHaveLength(1);
+    expect(syncOps[0].jobDependencies).toEqual([]);
+  });
+
   it("should return empty array for envelope with no operations", () => {
     const envelope: SyncEnvelope = {
       type: "operations",

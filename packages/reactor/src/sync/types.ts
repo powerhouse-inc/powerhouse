@@ -19,6 +19,7 @@ export type RemoteFilter = {
 
 export type RemoteCursor = {
   remoteName: string;
+  cursorType: string;
   cursorOrdinal: number;
   lastSyncedAtUtcMs?: number;
 };

@@ -1,6 +1,5 @@
 import type { Draft } from "mutative";
 import type { FC, ReactNode } from "react";
-import type { ProcessorFactoryBuilder } from "../../processors/types.js";
 import type {
   Action,
   ActionSigner,
@@ -577,10 +576,6 @@ export type ImportScriptModule = {
   name: string;
   gql: string;
   endpoint: string;
-};
-
-export type ProcessorModule = {
-  processorFactory: ProcessorFactoryBuilder;
 };
 
 export type EditorModule<TProps = any> = {

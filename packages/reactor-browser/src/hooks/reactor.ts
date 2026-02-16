@@ -11,9 +11,7 @@ import type {
   SetPHGlobalValue,
   UsePHGlobalValue,
 } from "@powerhousedao/reactor-browser";
-import { useQuery } from "@tanstack/react-query";
 import type { Kysely } from "kysely";
-import { useCallback } from "react";
 import { makePHEventFunctions } from "./make-ph-event-functions.js";
 
 const reactorClientModuleEventFunctions = makePHEventFunctions(
@@ -52,15 +50,7 @@ export const useSync = (): ISyncManager | undefined =>
 
 export const useSyncList = () => {
   const sync = useSync();
-  const fn = useCallback(() => {
-    if (!sync) return [];
-    return sync.list();
-  }, [sync]);
-
-  return useQuery({
-    queryKey: ["sync", "list"],
-    queryFn: fn,
-  });
+  return sync?.list() ?? [];
 };
 
 export const useModelRegistry = (): IDocumentModelRegistry | undefined =>
