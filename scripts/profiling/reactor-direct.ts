@@ -22,6 +22,7 @@
  *   - Use this to measure per-call overhead vs batched execution
  */
 
+import { execFileSync } from "node:child_process";
 import { PGlite } from "@electric-sql/pglite";
 import {
   JobStatus,
@@ -476,6 +477,8 @@ async function main() {
     console.log("  Wall and CPU profiling enabled");
   }
 
+  const pyroscopeFrom = Math.floor(Date.now() / 1000);
+
   console.log("Initializing reactor directly (no GraphQL API)...");
   const initStart = Date.now();
 
@@ -679,6 +682,8 @@ async function main() {
   }
 
   // Cleanup
+  const pyroscopeUntil = Math.floor(Date.now() / 1000);
+
   if (pyroscopeServer) {
     Pyroscope.stopWallProfiling();
     Pyroscope.stopCpuProfiling();
@@ -695,6 +700,32 @@ async function main() {
   console.log(
     `Memory delta: heap: ${heapDelta >= 0 ? "+" : ""}${formatBytes(heapDelta)}, rss: ${rssDelta >= 0 ? "+" : ""}${formatBytes(rssDelta)}`,
   );
+
+  if (pyroscopeServer) {
+    const appName = "reactor-direct-profiler";
+    const query = encodeURIComponent(
+      `wall:wall:nanoseconds:wall:nanoseconds{service_name="${appName}"}`,
+    );
+    const analyseUrl = `${pyroscopeServer}/?query=${query}&from=${pyroscopeFrom}&until=${pyroscopeUntil}`;
+    const outputBase = `${pyroscopeFrom}-pyroscope`;
+    console.log(`\nPyroscope URL:\n  ${analyseUrl}`);
+
+    console.log("\nRunning pyroscope-analyse...\n");
+    execFileSync(
+      "tsx",
+      [
+        new URL("pyroscope-analyse.ts", import.meta.url).pathname,
+        analyseUrl,
+        "--output-json",
+        outputBase,
+        "--output-md",
+        `${outputBase}.md`,
+      ],
+      {
+        stdio: "inherit",
+      },
+    );
+  }
 }
 
 main().catch((error) => {
