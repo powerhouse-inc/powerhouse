@@ -6,6 +6,6 @@ import manifestJson from "./powerhouse.manifest.json" with { type: "json" };
 export { documentModels } from "./document-models/document-models.js";
 export { upgradeManifests } from "./document-models/upgrade-manifests.js";
 export { editors } from "./editors/editors.js";
-export { processorFactory } from "./processors/index.js";
+export { processorFactory } from "./processors/factory.js";
 export const manifest: Manifest = manifestJson;
 `.raw;

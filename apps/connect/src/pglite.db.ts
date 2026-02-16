@@ -5,7 +5,7 @@ import { PGliteDialect } from "kysely-pglite-dialect";
 import { createRelationalDb } from "shared/processors";
 
 export async function getDb() {
-  const worker = new Worker(new URL("./pglite.worker.ts", import.meta.url), {
+  const worker = new Worker(new URL("./pglite.worker.js", import.meta.url), {
     type: "module",
   });
 
