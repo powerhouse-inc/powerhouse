@@ -124,7 +124,7 @@
     "magic-string": "^0.30.17",
     "postcss": "^8.5.3",
     "react-hook-form": "^7.56.1",
-    "read-pkg": "^9.0.1",
+    "read-pkg": "catalog:",
     "resolve.exports": "^2.0.3",
     "tailwind-merge": "catalog:",
     "tailwindcss": "catalog:",
