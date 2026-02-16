@@ -71,6 +71,51 @@ This is where you write custom logic. Unlike `gen/`, these files are meant for m
 - **`reducers/`**: Contains skeleton reducer files (e.g., `todos.ts`) with function stubs for each operation that you implement with state transition logic.
 - **`tests/`**: Test files for your reducer logic.
 
+## Versioned Document Models
+
+When your document model needs to evolve over time—adding new fields, operations, or changing behavior—you can use **versioning**. This allows multiple versions of the same document model to coexist, with automatic upgrade paths between them.
+
+### Enabling Versioning
+
+Add the `--use-versioning` flag when generating:
+
+```bash
+ph generate TodoList.phd --use-versioning
+```
+
+### Versioned Folder Structure
+
+With versioning enabled, the generator creates a different structure:
+
+```
+document-models/
+└── todo/
+    ├── v1/                     # Version 1 code
+    │   ├── gen/                # Auto-generated v1 types and utilities
+    │   ├── src/reducers/       # V1 reducer implementations
+    │   └── module.ts           # Exports DocumentModelModule with version: 1
+    ├── v2/                     # Version 2 code
+    │   ├── gen/
+    │   ├── src/reducers/
+    │   └── module.ts           # Exports DocumentModelModule with version: 2
+    ├── upgrades/               # Migration logic
+    │   ├── versions.ts         # Supported versions list
+    │   ├── v2.ts               # Upgrade reducer: v1 → v2
+    │   └── upgrade-manifest.ts
+    └── document-models.ts      # Exports all versions + manifests
+```
+
+### Key Differences with Versioning
+
+| Standard Generation | Versioned Generation |
+|---------------------|---------------------|
+| Single `gen/` and `src/` folder | Separate `v1/`, `v2/` folders per version |
+| One reducer implementation | Version-specific reducers |
+| No upgrade logic | `upgrades/` folder with manifests |
+| Direct module export | Exports all versions + upgrade manifests |
+
+For comprehensive documentation on implementing versioning, including upgrade reducers and integration with Connect and Switchboard, see [Document Model Versioning](/academy/MasteryTrack/DocumentModelCreation/DocumentModelVersioning).
+
 ## Benefits of Generated Scaffolding
 
 The generation process—whether automatic via Vetra or manual via `ph generate`—provides:
@@ -81,6 +126,7 @@ The generation process—whether automatic via Vetra or manual via `ph generate`
 4. **Accelerated Development:** Focus on business logic instead of foundational plumbing.
 5. **Ecosystem Alignment:** Generated code integrates seamlessly with the Powerhouse ecosystem.
 6. **Single Source of Truth:** Code stays synchronized with your specification.
+7. **Version Support:** Optional versioning enables safe schema evolution over time.
 
 ## Practical Examples
 

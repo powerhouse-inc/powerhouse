@@ -337,6 +337,7 @@ describe("Document Migration", () => {
 
 - [PHDocument Architecture](/academy/Architecture/PowerhouseArchitecture)
 - [Document Model Creation](/academy/MasteryTrack/DocumentModelCreation/WhatIsADocumentModel)
+- [Document Model Versioning](/academy/MasteryTrack/DocumentModelCreation/DocumentModelVersioning) - For evolving document schemas over time
 - [React Hooks](/academy/APIReferences/ReactHooks)
 
 ---
