@@ -1,3 +1,14 @@
+## 5.3.3 (2026-02-16)
+
+### 🩹 Fixes
+
+- **ph-cmd:** ensure correct version is embedded during publish ([bfc64c0a8](https://github.com/powerhouse-inc/powerhouse/commit/bfc64c0a8))
+- **reactor-browser:** properly reset user state on logout ([973fecc26](https://github.com/powerhouse-inc/powerhouse/commit/973fecc26))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 5.3.2 (2026-02-12)
 
 ### 🩹 Fixes
