@@ -231,17 +231,35 @@ async function fetchProfile(
   profileType: string,
 ): Promise<PyroscopeResponse> {
   process.stdout.write(`  Fetching ${profileType} profile... `);
-  const res = await fetch(url);
-  if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    throw new Error(
-      `Failed to fetch ${profileType} profile (${res.status}): ${body}`,
-    );
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 30_000);
+  try {
+    const res = await fetch(url, { signal: controller.signal });
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      throw new Error(
+        `Failed to fetch ${profileType} profile (${res.status}): ${body}`,
+      );
+    }
+    const data = validatePyroscopeResponse(await res.json());
+    const tickCount = data.flamebearer.numTicks ?? 0;
+    process.stdout.write(`${tickCount.toLocaleString()} ticks\n`);
+    return data;
+  } finally {
+    clearTimeout(timeout);
   }
-  const data = (await res.json()) as PyroscopeResponse;
-  const tickCount = data.flamebearer?.numTicks ?? 0;
-  process.stdout.write(`${tickCount.toLocaleString()} ticks\n`);
-  return data;
+}
+
+function validatePyroscopeResponse(data: unknown): PyroscopeResponse {
+  if (!data || typeof data !== "object") {
+    throw new Error("Invalid Pyroscope response: expected an object");
+  }
+  const obj = data as Record<string, unknown>;
+  const fb = obj.flamebearer as Record<string, unknown> | undefined;
+  if (!fb || !Array.isArray(fb.names) || !Array.isArray(fb.levels)) {
+    throw new Error("Invalid Pyroscope response: missing flamebearer data");
+  }
+  return data as PyroscopeResponse;
 }
 
 // ── Flamegraph parser ──────────────────────────────────────────────────────
@@ -334,14 +352,6 @@ function formatTicks(ticks: number, units: string, sampleRate: number): string {
     return `${(seconds * 1000).toFixed(1)}ms`;
   }
   return `${ticks.toLocaleString()} samples`;
-}
-
-function padRight(s: string, n: number): string {
-  return s.length >= n ? s : s + " ".repeat(n - s.length);
-}
-
-function padLeft(s: string, n: number): string {
-  return s.length >= n ? s : " ".repeat(n - s.length) + s;
 }
 
 // ── Markdown generation ────────────────────────────────────────────────────
@@ -533,7 +543,7 @@ async function loadJson(
 ): Promise<PyroscopeResponse> {
   const filePath = `${basePath}-${profileType}.json`;
   const content = await readFile(filePath, "utf-8");
-  return JSON.parse(content) as PyroscopeResponse;
+  return validatePyroscopeResponse(JSON.parse(content));
 }
 
 // ── Main ───────────────────────────────────────────────────────────────────
@@ -562,11 +572,17 @@ async function main() {
       args.from,
       args.until,
     );
-    const data = await fetchProfile(url, profileType);
-    rawProfiles.set(profileType, data);
+    try {
+      const data = await fetchProfile(url, profileType);
+      rawProfiles.set(profileType, data);
 
-    if (args.outputJson) {
-      await saveJson(args.outputJson, profileType, data);
+      if (args.outputJson) {
+        await saveJson(args.outputJson, profileType, data);
+      }
+    } catch (err) {
+      console.error(
+        `  Warning: Failed to fetch ${profileType}: ${err instanceof Error ? err.message : err}`,
+      );
     }
   }
 
