@@ -64,7 +64,7 @@ function Drive(props: ModifyDrivesProps & { drive: DocumentDriveDocument }) {
       src={drive.state.global.icon}
     />
   ) : (
-    <Icon name="M" size={16} className="flex-none" />
+    <Icon name="Server" size={16} className="flex-none" />
   );
 
   function getNodeIcon() {
@@ -96,7 +96,7 @@ function Drive(props: ModifyDrivesProps & { drive: DocumentDriveDocument }) {
           <span className="text-sm text-gray-600">
             {capitalCase(getDriveSharingType(drive))} App
           </span>
-          <a className="group flex items-center gap-x-2 text-sm text-slate-500 transition-colors hover:text-[#9896FF]">
+          <a href="https://www.powerhouse.inc/" target="_blank" rel="noopener noreferrer" className="group flex items-center gap-x-2 text-sm text-slate-500 transition-colors hover:text-[#9896FF]">
             By Powerhouse
             <svg
               xmlns="http://www.w3.org/2000/svg"
