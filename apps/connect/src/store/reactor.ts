@@ -108,13 +108,6 @@ export async function createReactor() {
   const vetraPackages = await updateVetraPackages(externalPackages);
   subscribeExternalPackages(updateVetraPackages);
 
-  const packagesWithProcessorFactories = vetraPackages.filter(
-    (
-      pkg,
-    ): pkg is VetraPackage & { processorFactory: ProcessorFactoryBuilder } =>
-      pkg.processorFactory !== undefined,
-  );
-
   // get document models to set in the reactor (all versions)
   const documentModelModules = vetraPackages
     .flatMap((pkg) => pkg.modules.documentModelModules)
@@ -129,19 +122,6 @@ export async function createReactor() {
     upgradeManifests,
     renown,
   );
-
-  if (packagesWithProcessorFactories.length > 0) {
-    const processorHostModule = await createProcessorHostModule();
-    for (const pkg of packagesWithProcessorFactories) {
-      const { id, name, processorFactory } = pkg;
-      console.log("Loading processor factory:", name);
-      const factory = await processorFactory(processorHostModule);
-      await reactorClientModule.reactorModule?.processorManager.registerFactory(
-        id,
-        factory,
-      );
-    }
-  }
 
   // get the drives from the reactor
   const drives = await getDrives(reactorClientModule.client);
@@ -200,6 +180,28 @@ export async function createReactor() {
 
   // Refresh from ReactorClient to pick up any synced drives
   await refreshReactorDataClient(reactorClientModule.client);
+
+  const packagesWithProcessorFactories = vetraPackages.filter(
+    (
+      pkg,
+    ): pkg is VetraPackage & { processorFactory: ProcessorFactoryBuilder } =>
+      pkg.processorFactory !== undefined,
+  );
+
+  if (packagesWithProcessorFactories.length > 0) {
+    const processorHostModule = await createProcessorHostModule();
+    await Promise.all(
+      packagesWithProcessorFactories.map(async (pkg) => {
+        const { id, name, processorFactory } = pkg;
+        console.log("Loading processor factory:", name);
+        const factory = await processorFactory(processorHostModule);
+        await reactorClientModule.reactorModule?.processorManager.registerFactory(
+          id,
+          factory,
+        );
+      }),
+    );
+  }
 
   window.ph.loading = false;
 }
