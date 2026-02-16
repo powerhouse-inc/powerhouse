@@ -52,6 +52,12 @@ jobs:
             name: powerhouse-demo
           - repo: powerhouse-inc/builder-profile
             name: builder-profile
+          - repo: powerhouse-inc/contributor-billing
+            name: contributor-billing
+          - repo: powerhouse-inc/project-management
+            name: project-management
+          - repo: powerhouse-inc/network-admin
+            name: network-admin
     steps:
       - name: Trigger ${{ matrix.package.name }}
         uses: peter-evans/repository-dispatch@v3
