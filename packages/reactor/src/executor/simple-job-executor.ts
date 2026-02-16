@@ -113,8 +113,12 @@ export class SimpleJobExecutor implements IJobExecutor {
         };
         this.eventBus
           .emit(ReactorEventTypes.JOB_WRITE_READY, event)
-          .catch(() => {
-            // TODO: Log error
+          .catch((error) => {
+            this.logger.error(
+              "Failed to emit JOB_WRITE_READY event: @Event : @Error",
+              event,
+              error,
+            );
           });
       }
       return result;
@@ -152,9 +156,15 @@ export class SimpleJobExecutor implements IJobExecutor {
         jobMeta: job.meta,
         collectionMemberships,
       };
-      this.eventBus.emit(ReactorEventTypes.JOB_WRITE_READY, event).catch(() => {
-        // TODO: Log error
-      });
+      this.eventBus
+        .emit(ReactorEventTypes.JOB_WRITE_READY, event)
+        .catch((error) => {
+          this.logger.error(
+            "Failed to emit JOB_WRITE_READY event: @Event : @Error",
+            event,
+            error,
+          );
+        });
     }
 
     return {
