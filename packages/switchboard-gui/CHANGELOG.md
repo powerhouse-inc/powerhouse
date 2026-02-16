@@ -1,3 +1,13 @@
+## 6.0.0-dev.45 (2026-02-16)
+
+### 🚀 Features
+
+- **monorepo:** ensure shared is only in dev deps ([#2341](https://github.com/powerhouse-inc/powerhouse/pull/2341))
+
+### ❤️ Thank You
+
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.0.0-dev.44 (2026-02-15)
 
 This was a version bump only for @powerhousedao/switchboard-gui to align it with other projects, there were no code changes.
