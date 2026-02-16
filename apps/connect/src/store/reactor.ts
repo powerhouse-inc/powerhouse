@@ -134,7 +134,7 @@ export async function createReactor() {
     const processorHostModule = await createProcessorHostModule();
     for (const { id, processorFactory } of packagesWithProcessorFactories) {
       const factory = await processorFactory(processorHostModule);
-      console.log({ factory });
+      console.log("Loading processor factory:", { factory });
       await reactorClientModule.reactorModule?.processorManager.registerFactory(
         id,
         factory,

@@ -172,7 +172,7 @@ async function updateFactoryFile(v: {
 }) {
   const { project, processorsDirPath, processorApp, dirPath, camelCaseName } =
     v;
-  const template = processorsFactoryTemplate();
+  const template = processorsFactoryTemplate;
   const filePath = path.join(processorsDirPath, "factory.ts");
   const { alreadyExists, sourceFile } = getOrCreateSourceFile(
     project,

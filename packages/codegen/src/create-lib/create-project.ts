@@ -1,7 +1,6 @@
 import { buildBoilerplatePackageJson } from "@powerhousedao/codegen/file-builders";
 import {
   agentsTemplate,
-  boilerplateProcessorsIndexTemplate,
   buildPowerhouseConfigTemplate,
   claudeSettingsLocalTemplate,
   claudeTemplate,
@@ -22,6 +21,7 @@ import {
   nginxConfTemplate,
   npmrcTemplate,
   powerhouseManifestTemplate,
+  processorsFactoryTemplate,
   processorsIndexTemplate,
   readmeTemplate,
   styleTemplate,
@@ -36,6 +36,7 @@ import { runPrettier } from "@powerhousedao/codegen/utils";
 import chalk from "chalk";
 import fs from "node:fs";
 import path from "path";
+import { upgradeManifestsTemplate } from "../templates/boilerplate/document-models/upgrade-manifests.js";
 import { runCmd, writeFileEnsuringDir } from "./utils.js";
 type CreateProjectArgs = {
   name: string;
@@ -151,12 +152,17 @@ async function writeModuleFiles() {
     "document-models/index.ts",
     documentModelsIndexTemplate,
   );
+  await writeFileEnsuringDir(
+    "document-models/upgrade-manifests.ts",
+    upgradeManifestsTemplate,
+  );
   await writeFileEnsuringDir("editors/editors.ts", editorsTemplate);
   await writeFileEnsuringDir("editors/index.ts", editorsIndexTemplate);
   await writeFileEnsuringDir(
-    "processors/index.ts",
-    boilerplateProcessorsIndexTemplate,
+    "processors/factory.ts",
+    processorsFactoryTemplate,
   );
+  await writeFileEnsuringDir("processors/index.ts", processorsIndexTemplate);
   await writeFileEnsuringDir("subgraphs/index.ts", subgraphsIndexTemplate);
   await writeFileEnsuringDir("processors/index.ts", processorsIndexTemplate);
 }

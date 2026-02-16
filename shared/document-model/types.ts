@@ -1,3 +1,4 @@
+import type { ProcessorFactoryBuilder } from "../processors/types.js";
 import type { Action } from "./core/actions.js";
 import type { PHDocument } from "./core/documents.js";
 import type { PHBaseState } from "./core/state.js";
@@ -58,6 +59,7 @@ export type DocumentModelLib<TState extends PHBaseState = PHBaseState> = {
   subgraphs: SubgraphModule[];
   importScripts: ImportScriptModule[];
   upgradeManifests: UpgradeManifest<readonly number[]>[];
+  processorFactory: ProcessorFactoryBuilder;
 };
 
 export type Author = {
