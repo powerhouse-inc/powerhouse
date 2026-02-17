@@ -1,3 +1,26 @@
+## 6.0.0-dev.46 (2026-02-17)
+
+### 🚀 Features
+
+- adding exponential backoff and jitter for retries ([bbee985eb](https://github.com/powerhouse-inc/powerhouse/commit/bbee985eb))
+- the poll scheduler now considers backpressure when scheduling polls, also fixed some mocking issues ([df40e2502](https://github.com/powerhouse-inc/powerhouse/commit/df40e2502))
+- added sync status back ([6d8d8e420](https://github.com/powerhouse-inc/powerhouse/commit/6d8d8e420))
+- **connect:** re enable processors in connect ([#2342](https://github.com/powerhouse-inc/powerhouse/pull/2342))
+
+### 🩹 Fixes
+
+- instead of moving failed outbox messages to deadletter, set for retry and only move unrecoverable errors ([5a6d4cae1](https://github.com/powerhouse-inc/powerhouse/commit/5a6d4cae1))
+
+### 🔥 Performance
+
+- strip operations and clipboard from keyframes on persist ([d1cb126c2](https://github.com/powerhouse-inc/powerhouse/commit/d1cb126c2))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Ryan Wolhuter @ryanwolhuter
+- Samuel Hawksby-Robinson @Samyoul
+
 ## 6.0.0-dev.45 (2026-02-16)
 
 ### 🚀 Features

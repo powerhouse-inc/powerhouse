@@ -1,3 +1,34 @@
+## 6.0.0-dev.46 (2026-02-17)
+
+### 🚀 Features
+
+- added sync status back ([6d8d8e420](https://github.com/powerhouse-inc/powerhouse/commit/6d8d8e420))
+- the poll scheduler now considers backpressure when scheduling polls, also fixed some mocking issues ([df40e2502](https://github.com/powerhouse-inc/powerhouse/commit/df40e2502))
+- adding exponential backoff and jitter for retries ([bbee985eb](https://github.com/powerhouse-inc/powerhouse/commit/bbee985eb))
+- **connect:** re enable processors in connect ([#2342](https://github.com/powerhouse-inc/powerhouse/pull/2342))
+- **profiling:** add Pyroscope data extraction and analysis script ([229736d74](https://github.com/powerhouse-inc/powerhouse/commit/229736d74))
+- **profiling:** auto-run pyroscope-analyse after reactor-direct profiling ([9c978269f](https://github.com/powerhouse-inc/powerhouse/commit/9c978269f))
+- **profiling:** auto-run pyroscope-analyse with flush delay and countdown ([7d3ed04a0](https://github.com/powerhouse-inc/powerhouse/commit/7d3ed04a0))
+
+### 🩹 Fixes
+
+- instead of moving failed outbox messages to deadletter, set for retry and only move unrecoverable errors ([5a6d4cae1](https://github.com/powerhouse-inc/powerhouse/commit/5a6d4cae1))
+- **connect:** use correct translation key in ClearStorageModal ([34ba42246](https://github.com/powerhouse-inc/powerhouse/commit/34ba42246))
+- **design-system:** fix drive icon and link in settings danger zone ([63392731e](https://github.com/powerhouse-inc/powerhouse/commit/63392731e))
+- **profiling:** harden pyroscope-analyse error handling ([1794ed3d3](https://github.com/powerhouse-inc/powerhouse/commit/1794ed3d3))
+- **profiling:** improve error handling and fix timestamp padding ([b26d9e788](https://github.com/powerhouse-inc/powerhouse/commit/b26d9e788))
+
+### 🔥 Performance
+
+- strip operations and clipboard from keyframes on persist ([d1cb126c2](https://github.com/powerhouse-inc/powerhouse/commit/d1cb126c2))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Guillermo Puente @gpuente
+- Ryan Wolhuter @ryanwolhuter
+- Samuel Hawksby-Robinson @Samyoul
+
 ## 6.0.0-dev.45 (2026-02-16)
 
 ### 🚀 Features

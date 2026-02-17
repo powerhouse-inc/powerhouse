@@ -1,3 +1,18 @@
+## 6.0.0-dev.46 (2026-02-17)
+
+### 🚀 Features
+
+- **connect:** re enable processors in connect ([#2342](https://github.com/powerhouse-inc/powerhouse/pull/2342))
+
+### 🩹 Fixes
+
+- **design-system:** fix drive icon and link in settings danger zone ([63392731e](https://github.com/powerhouse-inc/powerhouse/commit/63392731e))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.0.0-dev.45 (2026-02-16)
 
 ### 🚀 Features

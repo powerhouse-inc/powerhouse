@@ -1,3 +1,15 @@
+## 6.0.0-dev.46 (2026-02-17)
+
+### 🚀 Features
+
+- added sync status back ([6d8d8e420](https://github.com/powerhouse-inc/powerhouse/commit/6d8d8e420))
+- **connect:** re enable processors in connect ([#2342](https://github.com/powerhouse-inc/powerhouse/pull/2342))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.0.0-dev.45 (2026-02-16)
 
 ### 🚀 Features
