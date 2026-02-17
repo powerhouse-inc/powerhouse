@@ -123,7 +123,7 @@
     "tailwind-scrollbar": "^4.0.1",
     "tailwindcss": "catalog:",
     "vite": "catalog:",
-    "vitest": "^3.2.4"
+    "vitest": "catalog:"
   },
   "peerDependencies": {
     "react": ">=19.0.0",
@@ -146,7 +146,7 @@
     "@radix-ui/react-visually-hidden": "^1.1.0",
     "@tanstack/react-query": "^5.49.2",
     "@tanstack/react-virtual": "^3.8.1",
-    "change-case": "^5.4.4",
+    "change-case": "catalog:",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "cmdk": "^1.0.4",

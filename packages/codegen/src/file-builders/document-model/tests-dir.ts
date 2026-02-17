@@ -1,17 +1,17 @@
 import type { DocumentModelFileMakerArgs } from "@powerhousedao/codegen";
 import { getDocumentModelOperationsModuleVariableNames } from "@powerhousedao/codegen/name-builders";
 import {
-  documentModelTestFileTemplate,
-  makeActionImportNames,
-  makeTestCaseForAction,
+    documentModelTestFileTemplate,
+    makeActionImportNames,
+    makeTestCaseForAction,
 } from "@powerhousedao/codegen/templates";
 import {
-  formatSourceFileWithPrettier,
-  getOrCreateSourceFile,
-  getPreviousVersionSourceFile,
+    formatSourceFileWithPrettier,
+    getOrCreateSourceFile,
+    getPreviousVersionSourceFile,
 } from "@powerhousedao/codegen/utils";
 import { ts } from "@tmpl/core";
-import { camelCase, paramCase, pascalCase } from "change-case";
+import { camelCase, kebabCase, pascalCase } from "change-case";
 import type { ModuleSpecification } from "document-model";
 import path from "path";
 import { SyntaxKind } from "ts-morph";
@@ -42,10 +42,10 @@ async function makeOperationModuleTestFile(
   const moduleVariableNames =
     getDocumentModelOperationsModuleVariableNames(module);
   const { actions } = moduleVariableNames;
-  const paramCaseModuleName = paramCase(module.name);
+  const kebabCaseModuleName = kebabCase(module.name);
   const pascalCaseModuleName = pascalCase(module.name);
   const moduleOperationsTypeName = `${pascalCaseModuleName}Operations`;
-  const filePath = path.join(testsDirPath, `${paramCaseModuleName}.test.ts`);
+  const filePath = path.join(testsDirPath, `${kebabCaseModuleName}.test.ts`);
 
   const { alreadyExists, sourceFile } = getOrCreateSourceFile(
     project,

@@ -1,9 +1,9 @@
 import type { DocumentModelTemplateInputs } from "@powerhousedao/codegen/file-builders";
 import { ts } from "@tmpl/core";
-import { camelCase, constantCase, paramCase, pascalCase } from "change-case";
+import { camelCase, constantCase, kebabCase, pascalCase } from "change-case";
 import type {
-  ModuleSpecification,
-  OperationSpecification,
+    ModuleSpecification,
+    OperationSpecification,
 } from "document-model";
 
 function makePascalCaseOperationName(operation: OperationSpecification) {
@@ -44,8 +44,8 @@ function makeModuleOperationsImport(
   camelCaseDocumentType: string,
 ) {
   const pascalCaseModuleName = pascalCase(module.name);
-  const paramCaseModuleName = paramCase(module.name);
-  return `import { ${camelCaseDocumentType}${pascalCaseModuleName}Operations } from "../src/reducers/${paramCaseModuleName}.js";`;
+  const kebabCaseModuleName = kebabCase(module.name);
+  return `import { ${camelCaseDocumentType}${pascalCaseModuleName}Operations } from "../src/reducers/${kebabCaseModuleName}.js";`;
 }
 
 function makeModulesOperationsImports(

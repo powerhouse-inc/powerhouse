@@ -43,15 +43,16 @@
   "author": "",
   "devDependencies": {
     "@types/node": "catalog:",
-    "@types/pg": "^8.11.10",
-    "@types/npm-package-arg": "^6.1.4",
+    "@types/pg": "catalog:",
+    "@types/npm-package-arg": "catalog:",
     "concurrently": "^9.1.2",
     "copyfiles": "^2.4.1",
     "document-drive": "workspace:*",
     "document-model": "workspace:*",
     "shared": "workspace:*",
     "nodemon": "^3.1.9",
-    "vitest": "^3.2.4"
+    "vitest": "catalog:",
+    "@types/bun": "catalog:"
   },
   "dependencies": {
     "@powerhousedao/builder-tools": "workspace:*",
@@ -61,17 +62,17 @@
     "@powerhousedao/reactor": "workspace:*",
     "@powerhousedao/switchboard": "workspace:*",
     "@renown/sdk": "workspace:*",
-    "chalk": "^5.6.2",
-    "cmd-ts": "^0.14.3",
-    "colorette": "^2.0.20",
-    "commander": "^12.1.0",
+    "chalk": "catalog:",
+    "cmd-ts": "catalog:",
+    "colorette": "catalog:",
+    "commander": "catalog:",
     "kysely": "catalog:",
-    "pg": "^8.13.0",
-    "npm-package-arg": "^13.0.2",
-    "package-manager-detector": "^1.6.0",
+    "pg": "catalog:",
+    "npm-package-arg": "catalog:",
+    "package-manager-detector": "catalog:",
     "read-pkg": "catalog:",
-    "ts-morph": "^26.0.0",
+    "ts-morph": "catalog:",
     "vite": "catalog:",
-    "write-package": "^7.2.0"
+    "write-package": "catalog:"
   }
 }

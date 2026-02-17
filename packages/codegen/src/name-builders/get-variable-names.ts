@@ -1,13 +1,13 @@
 import type {
-  ActionFromOperation,
-  DocumentModelDocumentTypeMetadata,
+    ActionFromOperation,
+    DocumentModelDocumentTypeMetadata,
 } from "@powerhousedao/codegen";
-import { camelCase, paramCase, pascalCase } from "change-case";
+import { camelCase, kebabCase, pascalCase } from "change-case";
 import type {
-  DocumentModelGlobalState,
-  ModuleSpecification,
-  OperationErrorSpecification,
-  OperationSpecification,
+    DocumentModelGlobalState,
+    ModuleSpecification,
+    OperationErrorSpecification,
+    OperationSpecification,
 } from "document-model";
 
 export function getEditorVariableNames({
@@ -33,7 +33,7 @@ export function getDocumentModelDirName(
   existingDirName?: string,
 ) {
   if (existingDirName) return existingDirName;
-  return paramCase(documentModelState.name);
+  return kebabCase(documentModelState.name);
 }
 
 export function getLatestDocumentModelSpec({
@@ -73,7 +73,7 @@ export function getLatestDocumentModelSpecVersionNumber(
 }
 
 export function getDocumentModelVariableNames(documentType: string) {
-  const paramCaseDocumentType = paramCase(documentType);
+  const kebabCaseDocumentType = kebabCase(documentType);
   const pascalCaseDocumentType = pascalCase(documentType);
   const camelCaseDocumentType = camelCase(documentType);
   const documentTypeVariableName = `${camelCaseDocumentType}DocumentType`;
@@ -99,7 +99,7 @@ export function getDocumentModelVariableNames(documentType: string) {
   const useInSelectedFolderHookName = `use${phDocumentTypeName}sInSelectedFolder`;
 
   return {
-    paramCaseDocumentType,
+    kebabCaseDocumentType,
     pascalCaseDocumentType,
     camelCaseDocumentType,
     documentTypeVariableName,

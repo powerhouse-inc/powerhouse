@@ -1,14 +1,14 @@
 import {
-  processorsFactoryTemplate,
-  processorsIndexTemplate,
+    processorsFactoryTemplate,
+    processorsIndexTemplate,
 } from "@powerhousedao/codegen/templates";
 import {
-  buildTsMorphProject,
-  ensureDirectoriesExist,
-  formatSourceFileWithPrettier,
-  getOrCreateSourceFile,
+    buildTsMorphProject,
+    ensureDirectoriesExist,
+    formatSourceFileWithPrettier,
+    getOrCreateSourceFile,
 } from "@powerhousedao/codegen/utils";
-import { camelCase, paramCase, pascalCase } from "change-case";
+import { camelCase, kebabCase, pascalCase } from "change-case";
 import path from "path";
 import type { ProcessorApp, ProcessorApps } from "shared/processors";
 import { ts, type Project } from "ts-morph";
@@ -29,11 +29,11 @@ export async function tsMorphGenerateProcessor(args: {
     processorType,
     processorApps,
   } = args;
-  const paramCaseName = paramCase(processorName);
+  const kebabCaseName = kebabCase(processorName);
   const camelCaseName = camelCase(processorName);
   const pascalCaseName = pascalCase(processorName);
   const processorsDirPath = path.join(rootDir, "processors");
-  const dirPath = path.join(processorsDirPath, paramCaseName);
+  const dirPath = path.join(processorsDirPath, kebabCaseName);
   const sourceFilesPath = path.join(processorsDirPath, "**/*");
   const project = buildTsMorphProject(rootDir);
   await ensureDirectoriesExist(project, processorsDirPath, dirPath);
@@ -46,7 +46,7 @@ export async function tsMorphGenerateProcessor(args: {
       rootDir,
       camelCaseName,
       dirPath,
-      paramCaseName,
+      kebabCaseName,
       pascalCaseName,
       processorsDirPath,
       project,
@@ -58,7 +58,7 @@ export async function tsMorphGenerateProcessor(args: {
       rootDir,
       camelCaseName,
       dirPath,
-      paramCaseName,
+      kebabCaseName,
       pascalCaseName,
       processorsDirPath,
       project,

@@ -1,5 +1,5 @@
 // @ts-check
-const { paramCase, pascalCase } = require("change-case");
+const { kebabCase, pascalCase } = require("change-case");
 
 module.exports = {
   params: ({ args }) => {
@@ -50,17 +50,17 @@ module.exports = {
     const phDocumentTypeName = `${pascalCaseDocumentType}Document`;
     const isPhDocumentOfTypeFunctionName = `is${phDocumentTypeName}`;
     const assertIsPhDocumentOfTypeFunctionName = `assertIs${phDocumentTypeName}`;
-    const paramCaseDocumentType = paramCase(documentType);
+    const kebabCaseDocumentType = kebabCase(documentType);
     const packageName = args.packageName;
-    const documentModelDir = `${packageName}/document-models/${paramCaseDocumentType}`;
+    const documentModelDir = `${packageName}/document-models/${kebabCaseDocumentType}`;
     return {
       rootDir: args.rootDir,
       documentType: documentModel.name,
-      module: paramCase(args.module),
+      module: kebabCase(args.module),
       actions,
       errors,
       pascalCaseDocumentType,
-      paramCaseDocumentType,
+      kebabCaseDocumentType,
       packageName,
       documentModelDir,
       phDocumentTypeName,

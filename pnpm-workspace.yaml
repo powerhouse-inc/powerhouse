@@ -55,3 +55,21 @@ catalog:
   "@graphql-tools/utils": 11.0.0
   "@graphql-tools/graphql-file-loader": 8.1.9
   "@graphql-tools/load": 8.1.8
+  "@types/bun": 1.3.9
+  "ts-morph": 27.0.2
+  "semver": 7.7.4
+  "prettier": 3.8.1
+  "chalk": 5.6.2
+  "cmd-ts": 0.15.0
+  "change-case": 5.4.4
+  "graphql-codegen-typescript-validation-schema": 0.18.1
+  "commander": 12.1.0
+  "enquirer": 2.4.1
+  "package-manager-detector": 1.6.0
+  "write-package": 7.2.0
+  "vitest": 3.2.4
+  "npm-package-arg": 13.0.2
+  "@types/npm-package-arg": 6.1.4
+  "pg": 8.13.0
+  "@types/pg": 8.11.10
+  "colorette": 2.0.20

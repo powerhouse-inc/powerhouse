@@ -48,11 +48,11 @@
     "playwright": "^1.46.1",
     "react": "catalog:",
     "rollup-plugin-polyfill-node": "^0.13.0",
-    "vitest": "^3.2.4",
+    "vitest": "catalog:",
     "shared": "workspace:*"
   },
   "dependencies": {
-    "change-case": "^5.4.4",
+    "change-case": "catalog:",
     "jszip": "^3.10.1",
     "mime": "^4.0.4",
     "mutative": "^1.0.5",

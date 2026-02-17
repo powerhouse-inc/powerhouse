@@ -88,7 +88,7 @@
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "@vitejs/plugin-react": "catalog:",
-    "change-case": "^5.4.4",
+    "change-case": "catalog:",
     "document-drive": "workspace:*",
     "eslint": "^9.37.0",
     "eslint-plugin-react": "^7.37.5",
@@ -103,7 +103,7 @@
     "typescript-eslint": "^8.46.0",
     "vite": "catalog:",
     "vite-plugin-node-polyfills": "catalog:",
-    "vitest": "^3.0.9"
+    "vitest": "catalog:"
   },
   "peerDependencies": {
     "react": ">=19.0.0",

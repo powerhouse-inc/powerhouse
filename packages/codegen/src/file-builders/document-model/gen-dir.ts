@@ -1,30 +1,30 @@
 import type {
-  DocumentModelFileMakerArgs,
-  DocumentModelTemplateInputsWithModule,
+    DocumentModelFileMakerArgs,
+    DocumentModelTemplateInputsWithModule,
 } from "@powerhousedao/codegen/file-builders";
 import { getDocumentModelOperationsModuleVariableNames } from "@powerhousedao/codegen/name-builders";
 import {
-  documentModelDocumentSchemaFileTemplate,
-  documentModelDocumentTypeTemplate,
-  documentModelGenActionsFileTemplate,
-  documentModelGenCreatorsFileTemplate,
-  documentModelGenIndexFileTemplate,
-  documentModelGenReducerFileTemplate,
-  documentModelGenTypesTemplate,
-  documentModelGenUtilsTemplate,
-  documentModelOperationModuleActionsFileTemplate,
-  documentModelOperationsModuleCreatorsFileTemplate,
-  documentModelOperationsModuleErrorFileTemplate,
-  documentModelOperationsModuleOperationsFileTemplate,
-  documentModelPhFactoriesFileTemplate,
-  documentModelSchemaIndexTemplate,
+    documentModelDocumentSchemaFileTemplate,
+    documentModelDocumentTypeTemplate,
+    documentModelGenActionsFileTemplate,
+    documentModelGenCreatorsFileTemplate,
+    documentModelGenIndexFileTemplate,
+    documentModelGenReducerFileTemplate,
+    documentModelGenTypesTemplate,
+    documentModelGenUtilsTemplate,
+    documentModelOperationModuleActionsFileTemplate,
+    documentModelOperationsModuleCreatorsFileTemplate,
+    documentModelOperationsModuleErrorFileTemplate,
+    documentModelOperationsModuleOperationsFileTemplate,
+    documentModelPhFactoriesFileTemplate,
+    documentModelSchemaIndexTemplate,
 } from "@powerhousedao/codegen/templates";
 import {
-  buildObjectLiteral,
-  formatSourceFileWithPrettier,
-  getOrCreateSourceFile,
+    buildObjectLiteral,
+    formatSourceFileWithPrettier,
+    getOrCreateSourceFile,
 } from "@powerhousedao/codegen/utils";
-import { paramCase, pascalCase } from "change-case";
+import { kebabCase, pascalCase } from "change-case";
 import path from "path";
 import { VariableDeclarationKind } from "ts-morph";
 
@@ -236,7 +236,7 @@ async function makeOperationModuleGenActionsFile(
   const { module } = args;
   const { actions } = getDocumentModelOperationsModuleVariableNames(module);
   const pascalCaseModuleName = pascalCase(module.name);
-  const paramCaseModuleName = paramCase(module.name);
+  const kebabCaseModuleName = kebabCase(module.name);
   const template = documentModelOperationModuleActionsFileTemplate({
     ...args,
     actions,
@@ -244,7 +244,7 @@ async function makeOperationModuleGenActionsFile(
   });
   const { project, genDirPath } = args;
 
-  const dirPath = path.join(genDirPath, paramCaseModuleName);
+  const dirPath = path.join(genDirPath, kebabCaseModuleName);
   const filePath = path.join(dirPath, "actions.ts");
 
   const { sourceFile } = getOrCreateSourceFile(project, filePath);
@@ -259,14 +259,14 @@ async function makeOperationModuleGenCreatorsFile(
   const { module } = args;
   const moduleVariableNames =
     getDocumentModelOperationsModuleVariableNames(module);
-  const paramCaseModuleName = paramCase(module.name);
+  const kebabCaseModuleName = kebabCase(module.name);
   const template = documentModelOperationsModuleCreatorsFileTemplate({
     ...args,
     ...moduleVariableNames,
   });
   const { project, genDirPath } = args;
 
-  const dirPath = path.join(genDirPath, paramCaseModuleName);
+  const dirPath = path.join(genDirPath, kebabCaseModuleName);
   const filePath = path.join(dirPath, "creators.ts");
 
   const { sourceFile } = getOrCreateSourceFile(project, filePath);
@@ -281,14 +281,14 @@ async function makeOperationModuleGenOperationsFile(
   const { module } = args;
   const moduleVariableNames =
     getDocumentModelOperationsModuleVariableNames(module);
-  const paramCaseModuleName = paramCase(module.name);
+  const kebabCaseModuleName = kebabCase(module.name);
   const template = documentModelOperationsModuleOperationsFileTemplate({
     ...args,
     ...moduleVariableNames,
   });
   const { project, genDirPath } = args;
 
-  const dirPath = path.join(genDirPath, paramCaseModuleName);
+  const dirPath = path.join(genDirPath, kebabCaseModuleName);
   const filePath = path.join(dirPath, "operations.ts");
 
   const { sourceFile } = getOrCreateSourceFile(project, filePath);
@@ -303,14 +303,14 @@ async function makeOperationModuleGenErrorFile(
   const { module } = args;
   const moduleVariableNames =
     getDocumentModelOperationsModuleVariableNames(module);
-  const paramCaseModuleName = paramCase(module.name);
+  const kebabCaseModuleName = kebabCase(module.name);
   const template = documentModelOperationsModuleErrorFileTemplate({
     ...args,
     ...moduleVariableNames,
   });
   const { project, genDirPath } = args;
 
-  const dirPath = path.join(genDirPath, paramCaseModuleName);
+  const dirPath = path.join(genDirPath, kebabCaseModuleName);
 
   const filePath = path.join(dirPath, "error.ts");
 

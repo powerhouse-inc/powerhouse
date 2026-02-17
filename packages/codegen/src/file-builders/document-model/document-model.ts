@@ -1,39 +1,39 @@
 import type {
-  DocumentModelFileMakerArgs,
-  DocumentModelVariableNames,
-  GenerateDocumentModelArgs,
+    DocumentModelFileMakerArgs,
+    DocumentModelVariableNames,
+    GenerateDocumentModelArgs,
 } from "@powerhousedao/codegen";
 import {
-  getDocumentModelDirName,
-  getDocumentModelVariableNames,
+    getDocumentModelDirName,
+    getDocumentModelVariableNames,
 } from "@powerhousedao/codegen/name-builders";
 import {
-  buildTsMorphProject,
-  ensureDirectoriesExist,
-  formatSourceFileWithPrettier,
-  getInitialStates,
-  getOrCreateSourceFile,
+    buildTsMorphProject,
+    ensureDirectoriesExist,
+    formatSourceFileWithPrettier,
+    getInitialStates,
+    getOrCreateSourceFile,
 } from "@powerhousedao/codegen/utils";
 import { directoryExists, fileExists } from "@powerhousedao/common/clis";
-import { paramCase } from "change-case";
+import { kebabCase } from "change-case";
 import type { DocumentModelGlobalState } from "document-model";
 import { copyFile, mkdir, readdir, writeFile } from "node:fs/promises";
 import path from "path";
 import { type Project } from "ts-morph";
 import { generateDocumentModelZodSchemas } from "../../codegen/graphql.js";
 import {
-  makeDocumentModelModulesFile,
-  makeUpgradeManifestsFile,
+    makeDocumentModelModulesFile,
+    makeUpgradeManifestsFile,
 } from "../module-files.js";
 import { makeGenDirFiles } from "./gen-dir.js";
 import { makeRootDirFiles } from "./root-dir.js";
 import { makeSrcDirFiles } from "./src-dir.js";
 import { makeTestsDirFiles } from "./tests-dir.js";
 import {
-  createOrUpdateUpgradeManifestFile,
-  createOrUpdateVersionConstantsFile,
-  makeUpgradeFile,
-  makeUpgradesIndexFile,
+    createOrUpdateUpgradeManifestFile,
+    createOrUpdateVersionConstantsFile,
+    makeUpgradeFile,
+    makeUpgradesIndexFile,
 } from "./upgrades-dir.js";
 
 /** Generates a document model from the given `documentModelState`
@@ -250,7 +250,7 @@ async function generateDocumentModelForSpec({
   const hasLocalSchema = specification.state.local.schema !== "";
   const modules = specification.modules;
   const moduleDirPaths = modules.map((module) =>
-    path.join(genDirPath, paramCase(module.name)),
+    path.join(genDirPath, kebabCase(module.name)),
   );
 
   await ensureDirectoriesExist(

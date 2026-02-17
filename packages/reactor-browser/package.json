@@ -52,7 +52,7 @@
     "react": "catalog:",
     "react-dom": "catalog:",
     "vite-plugin-node-polyfills": "catalog:",
-    "vitest": "^3.2.4",
+    "vitest": "catalog:",
     "vitest-browser-react": "^1.0.1"
   },
   "peerDependencies": {
@@ -68,7 +68,7 @@
     "@powerhousedao/reactor": "workspace:*",
     "@renown/sdk": "workspace:*",
     "@tanstack/react-query": "^5.49.2",
-    "change-case": "^5.4.4",
+    "change-case": "catalog:",
     "did-jwt": "^8.0.17",
     "did-jwt-vc": "^4.0.15",
     "did-key-creator": "^1.2.0",

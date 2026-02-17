@@ -1,4 +1,4 @@
-const { pascalCase, paramCase } = require("change-case");
+const { pascalCase, kebabCase } = require("change-case");
 const path = require("path");
 
 // @ts-check
@@ -6,10 +6,10 @@ module.exports = {
   params: ({ args }) => {
     const name = args.name;
     const rootDir = args.rootDir;
-    const driveEditorDirName = args.driveEditorDirName || paramCase(args.name);
+    const driveEditorDirName = args.driveEditorDirName || kebabCase(args.name);
     const driveEditorDir = path.join(rootDir, driveEditorDirName);
     const pascalCaseDriveEditorName = pascalCase(name);
-    const paramCaseDriveEditorName = paramCase(name);
+    const kebabCaseDriveEditorName = kebabCase(name);
 
     return {
       rootDir,
@@ -19,7 +19,7 @@ module.exports = {
       isDragAndDropEnabled: args.isDragAndDropEnabled,
       allowedDocumentTypes: args.allowedDocumentTypes,
       pascalCaseDriveEditorName,
-      paramCaseDriveEditorName,
+      kebabCaseDriveEditorName,
     };
   },
 };

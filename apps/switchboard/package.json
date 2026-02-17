@@ -61,13 +61,13 @@
     "graphql": "catalog:",
     "kysely": "catalog:",
     "kysely-pglite-dialect": "catalog:",
-    "pg": "^8.13.0",
+    "pg": "catalog:",
     "redis": "^4.7.0"
   },
   "devDependencies": {
     "@types/express": "^4.17.25",
     "@types/node": "catalog:",
-    "@types/pg": "^8.11.10",
+    "@types/pg": "catalog:",
     "concurrently": "^9.1.2",
     "nodemon": "^3.1.9"
   }

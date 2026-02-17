@@ -77,8 +77,8 @@
     "@powerhousedao/connect": "workspace:*",
     "@powerhousedao/design-system": "workspace:*",
     "@powerhousedao/reactor": "workspace:*",
-    "change-case": "^5.4.4",
-    "colorette": "^2.0.20",
+    "change-case": "catalog:",
+    "colorette": "catalog:",
     "document-model": "workspace:*",
     "graphql": "catalog:",
     "graphql-tag": "^2.12.6",
@@ -106,14 +106,14 @@
     "@types/react-dom": "catalog:",
     "@vitejs/plugin-react": "catalog:",
     "document-drive": "workspace:*",
-    "package-manager-detector": "^0.2.8",
+    "package-manager-detector": "catalog:",
     "pm2": "^5.4.3",
     "react": "catalog:",
     "react-dom": "catalog:",
     "tailwindcss": "catalog:",
     "vite": "catalog:",
     "vite-plugin-node-polyfills": "catalog:",
-    "vitest": "^3.2.4"
+    "vitest": "catalog:"
   },
   "peerDependencies": {
     "react": ">=19.0.0",

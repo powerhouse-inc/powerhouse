@@ -39,7 +39,7 @@
     "@powerhousedao/codegen": "workspace:*",
     "@powerhousedao/config": "workspace:*",
     "ai": "^5.0.0",
-    "change-case": "^5.4.4",
+    "change-case": "catalog:",
     "document-drive": "workspace:*",
     "document-model": "workspace:*",
     "express": "^4.21.1",
@@ -49,6 +49,6 @@
   "devDependencies": {
     "@types/express": "^4.17.25",
     "@types/node": "catalog:",
-    "vitest": "^3.2.4"
+    "vitest": "catalog:"
   }
 }

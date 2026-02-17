@@ -1,13 +1,13 @@
 import type { DocumentModelTemplateInputs } from "@powerhousedao/codegen/file-builders";
 import { ts } from "@tmpl/core";
-import { camelCase, paramCase } from "change-case";
+import { camelCase, kebabCase } from "change-case";
 import type { ModuleSpecification } from "document-model";
 
 function buildModuleCreatorsExport(module: ModuleSpecification) {
-  const paramCaseModuleName = paramCase(module.name);
+  const kebabCaseModuleName = kebabCase(module.name);
   const camelCaseModuleName = camelCase(module.name);
-  const moduleCreatorsExport = `export * from "./${paramCaseModuleName}/creators.js";`;
-  const moduleCreatorsNamespaceExport = `export * as ${camelCaseModuleName}Actions from "./${paramCaseModuleName}/creators.js";`;
+  const moduleCreatorsExport = `export * from "./${kebabCaseModuleName}/creators.js";`;
+  const moduleCreatorsNamespaceExport = `export * as ${camelCaseModuleName}Actions from "./${kebabCaseModuleName}/creators.js";`;
 
   return [moduleCreatorsExport, moduleCreatorsNamespaceExport];
 }

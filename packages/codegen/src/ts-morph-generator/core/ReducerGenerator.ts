@@ -1,15 +1,15 @@
-import { camelCase, paramCase, pascalCase } from "change-case";
+import { camelCase, kebabCase, pascalCase } from "change-case";
 import type { OperationErrorSpecification } from "document-model";
 import type {
-  MethodDeclaration,
-  ObjectLiteralExpression,
-  SourceFile,
+    MethodDeclaration,
+    ObjectLiteralExpression,
+    SourceFile,
 } from "ts-morph";
 import { SyntaxKind, VariableDeclarationKind } from "ts-morph";
 import { FileGenerator } from "./FileGenerator.js";
 import type {
-  CodegenOperation,
-  GenerationContext,
+    CodegenOperation,
+    GenerationContext,
 } from "./GenerationContext.js";
 
 export class ReducerGenerator extends FileGenerator {
@@ -26,7 +26,7 @@ export class ReducerGenerator extends FileGenerator {
     const packageName = context.packageName;
     // Reducer-specific import logic
     const typeImportName = `${pascalCase(context.docModel.name)}${pascalCase(context.module.name)}Operations`;
-    const typeImportPath = `${packageName}/document-models/${paramCase(context.docModel.name)}`;
+    const typeImportPath = `${packageName}/document-models/${kebabCase(context.docModel.name)}`;
 
     // Import management (shared utility)
     this.importManager.replaceImportByName(
@@ -89,7 +89,7 @@ export class ReducerGenerator extends FileGenerator {
 
     // Add imports for used errors (only if they're not already imported)
     if (usedErrors.size > 0) {
-      const errorImportPath = `../../gen/${paramCase(context.module.name)}/error.js`;
+      const errorImportPath = `../../gen/${kebabCase(context.module.name)}/error.js`;
       const errorClassNames = Array.from(usedErrors);
 
       // Check if imports already exist to avoid duplicates

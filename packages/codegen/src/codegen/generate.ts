@@ -1,18 +1,18 @@
 import {
-  makeDocumentModelModulesFile,
-  makeSubgraphsIndexFile,
-  tsMorphGenerateDocumentEditor,
-  tsMorphGenerateDocumentModel,
-  tsMorphGenerateDriveEditor,
+    makeDocumentModelModulesFile,
+    makeSubgraphsIndexFile,
+    tsMorphGenerateDocumentEditor,
+    tsMorphGenerateDocumentModel,
+    tsMorphGenerateDriveEditor,
 } from "@powerhousedao/codegen/file-builders";
 import { buildTsMorphProject } from "@powerhousedao/codegen/utils";
 import { fileExists } from "@powerhousedao/common/clis";
 import type {
-  PartialPowerhouseManifest,
-  PowerhouseConfig,
-  PowerhouseManifest,
+    PartialPowerhouseManifest,
+    PowerhouseConfig,
+    PowerhouseManifest,
 } from "@powerhousedao/config";
-import { paramCase } from "change-case";
+import { kebabCase } from "change-case";
 import type { DocumentModelGlobalState } from "document-model";
 import fs from "node:fs";
 import { readdir } from "node:fs/promises";
@@ -24,12 +24,12 @@ import { tsMorphGenerateProcessor } from "../file-builders/processors/processor.
 import { TSMorphCodeGenerator } from "../ts-morph-generator/core/TSMorphCodeGenerator.js";
 import { generateDocumentModelZodSchemas, generateSchemas } from "./graphql.js";
 import {
-  hygenGenerateDocumentModel,
-  hygenGenerateDriveEditor,
-  hygenGenerateEditor,
-  hygenGenerateImportScript,
-  hygenGenerateProcessor,
-  hygenGenerateSubgraph,
+    hygenGenerateDocumentModel,
+    hygenGenerateDriveEditor,
+    hygenGenerateEditor,
+    hygenGenerateImportScript,
+    hygenGenerateProcessor,
+    hygenGenerateSubgraph,
 } from "./hygen.js";
 import type { CodegenOptions } from "./types.js";
 import { getDocumentTypesMap, loadDocumentModel } from "./utils.js";
@@ -191,7 +191,7 @@ export async function generateDocumentModel(args: GenerateDocumentModelArgs) {
     const documentModelsDirPath = path.join(projectDir, "document-models");
     const documentModelDirPath = path.join(
       documentModelsDirPath,
-      paramCase(documentModelState.name),
+      kebabCase(documentModelState.name),
     );
 
     await generateDocumentModelZodSchemas({
@@ -311,8 +311,8 @@ export async function generateEditor(args: GenerateEditorArgs) {
   }
 
   const documentModelId = documentTypes[0];
-  const editorId = editorIdArg || paramCase(editorName);
-  const editorDir = editorDirName || paramCase(editorName);
+  const editorId = editorIdArg || kebabCase(editorName);
+  const editorDir = editorDirName || kebabCase(editorName);
 
   await tsMorphGenerateDocumentEditor({
     packageName,
@@ -365,7 +365,7 @@ export async function generateDriveEditor(options: {
     return hygenGenerateDriveEditor({
       name,
       dir,
-      appId: driveEditorId ?? paramCase(name),
+      appId: driveEditorId ?? kebabCase(name),
       allowedDocumentTypes: allowedDocumentTypes?.join(","),
       isDragAndDropEnabled: isDragAndDropEnabled ?? true,
       skipFormat,
@@ -375,9 +375,9 @@ export async function generateDriveEditor(options: {
 
   await tsMorphGenerateDriveEditor({
     projectDir,
-    editorDir: driveEditorDirName || paramCase(driveEditorName),
+    editorDir: driveEditorDirName || kebabCase(driveEditorName),
     editorName: driveEditorName,
-    editorId: driveEditorId ?? paramCase(driveEditorName),
+    editorId: driveEditorId ?? kebabCase(driveEditorName),
     packageName,
     allowedDocumentModelIds: allowedDocumentTypes ?? [],
     isDragAndDropEnabled: isDragAndDropEnabled ?? true,
@@ -581,7 +581,7 @@ async function generateFromDocumentModel(args: {
       config.logLevel === "info",
     force = false,
   } = options;
-  const name = paramCase(documentModelState.name);
+  const name = kebabCase(documentModelState.name);
   const documentModelDir = join(config.documentModelsDir, name);
   // create document model folder and spec as json
   fs.mkdirSync(documentModelDir, { recursive: true });
