@@ -17,6 +17,10 @@ export class ModuleNotFoundError extends Error {
     );
     this.name = "ModuleNotFoundError";
   }
+
+  static isError(error: unknown): error is ModuleNotFoundError {
+    return Error.isError(error) && error.name === "ModuleNotFoundError";
+  }
 }
 
 /**
@@ -29,6 +33,10 @@ export class DuplicateModuleError extends Error {
       `Document model module already registered for type: ${documentType}${versionSuffix}`,
     );
     this.name = "DuplicateModuleError";
+  }
+
+  static isError(error: unknown): error is DuplicateModuleError {
+    return Error.isError(error) && error.name === "DuplicateModuleError";
   }
 }
 
