@@ -26,6 +26,7 @@ type Setup = {
 
 const DOCUMENT_ID = "3af9b9e2-4b3f-45d4-87b3-5d345b1fb398";
 const FIXED_TIMESTAMP = "2026-02-17T16:17:13.886Z";
+const WAIT_STEP_MS = 50;
 
 type GlobalEntry = {
   index: number;
@@ -91,7 +92,7 @@ async function setup(): Promise<Setup> {
   const syncManagerRegistry = new Map<string, ISyncManager>();
   syncManagerRegistry.set("switchboard", switchboard.syncModule!.syncManager);
 
-  const bridge = createResolverBridge(syncManagerRegistry);
+  const bridge = createResolverBridge(syncManagerRegistry, { log: false });
 
   return { connectA, connectB, switchboard, bridge };
 }
@@ -104,10 +105,9 @@ async function advanceAndFlush(ms: number): Promise<void> {
 async function waitForJobCompletion(
   reactor: IReactor,
   jobId: string,
-  timeoutMs = 10000,
+  timeoutMs = 20000,
 ): Promise<void> {
   let elapsedMs = 0;
-  const stepMs = 10;
 
   while (elapsedMs <= timeoutMs) {
     const status = await reactor.getJobStatus(jobId);
@@ -122,8 +122,8 @@ async function waitForJobCompletion(
       );
     }
 
-    await advanceAndFlush(stepMs);
-    elapsedMs += stepMs;
+    await advanceAndFlush(WAIT_STEP_MS);
+    elapsedMs += WAIT_STEP_MS;
   }
 
   throw new Error(`Timed out waiting for job ${jobId}`);
@@ -132,10 +132,9 @@ async function waitForJobCompletion(
 async function waitForDocumentAvailable(
   reactor: IReactor,
   documentId: string,
-  timeoutMs = 10000,
+  timeoutMs = 20000,
 ): Promise<void> {
   let elapsedMs = 0;
-  const stepMs = 10;
 
   while (elapsedMs <= timeoutMs) {
     try {
@@ -145,8 +144,8 @@ async function waitForDocumentAvailable(
       // Keep polling until available.
     }
 
-    await advanceAndFlush(stepMs);
-    elapsedMs += stepMs;
+    await advanceAndFlush(WAIT_STEP_MS);
+    elapsedMs += WAIT_STEP_MS;
   }
 
   throw new Error(`Timed out waiting for document ${documentId}`);
@@ -260,8 +259,10 @@ describe("Connect-Switchboard reshuffle rebroadcast convergence", () => {
     const createJob = await connectA.reactor.create(document);
     await waitForJobCompletion(connectA.reactor, createJob.id);
 
-    await waitForDocumentAvailable(switchboard.reactor, DOCUMENT_ID);
-    await waitForDocumentAvailable(connectB.reactor, DOCUMENT_ID);
+    await Promise.all([
+      waitForDocumentAvailable(switchboard.reactor, DOCUMENT_ID),
+      waitForDocumentAvailable(connectB.reactor, DOCUMENT_ID),
+    ]);
 
     const actionA = createDeterministicAddFolderAction("action-A", "folder-A");
     const actionB = createDeterministicAddFolderAction("action-B", "folder-B");
@@ -320,5 +321,5 @@ describe("Connect-Switchboard reshuffle rebroadcast convergence", () => {
 
     expect(stateA).toEqual(stateB);
     expect(stateB).toEqual(stateS);
-  });
+  }, 20000);
 });

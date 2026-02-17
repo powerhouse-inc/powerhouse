@@ -12,6 +12,10 @@ type GraphQLRequest = {
   variables?: Record<string, unknown>;
 };
 
+type ResolverBridgeOptions = {
+  log?: boolean;
+};
+
 function createMockResponse<T>(data: T): Response {
   const body = JSON.stringify({ data });
   return new Response(body, {
@@ -44,7 +48,10 @@ function extractSyncManagerFromUrl(
  */
 export function createResolverBridge(
   syncManagers: SyncManagerRegistry,
+  options: ResolverBridgeOptions = {},
 ): typeof fetch {
+  const logEnabled = options.log ?? true;
+
   return async (
     input: RequestInfo | URL,
     init?: RequestInit,
@@ -74,7 +81,7 @@ export function createResolverBridge(
 
       const result = pollSyncEnvelopes(syncManager, variables);
 
-      if (result.envelopes.length > 0) {
+      if (logEnabled && result.envelopes.length > 0) {
         console.log(
           `[BRIDGE] pollSyncEnvelopes: ${result.envelopes.length} envelopes for channel ${variables.channelId}`,
         );
@@ -128,9 +135,11 @@ export function createResolverBridge(
       const envelopeOps = variables.envelopes.flatMap((e) =>
         (e.operations ?? []).map((op) => op.context.documentId),
       );
-      console.log(
-        `[BRIDGE] pushSyncEnvelopes: ${variables.envelopes.length} envelopes, docs: ${[...new Set(envelopeOps)].join(",")}`,
-      );
+      if (logEnabled) {
+        console.log(
+          `[BRIDGE] pushSyncEnvelopes: ${variables.envelopes.length} envelopes, docs: ${[...new Set(envelopeOps)].join(",")}`,
+        );
+      }
 
       const result = await pushSyncEnvelopes(syncManager, variables);
 
@@ -152,13 +161,17 @@ export function createResolverBridge(
         };
       };
 
-      console.log(
-        `[BRIDGE] touchChannel: id=${variables.input.id} collection=${variables.input.collectionId}`,
-      );
+      if (logEnabled) {
+        console.log(
+          `[BRIDGE] touchChannel: id=${variables.input.id} collection=${variables.input.collectionId}`,
+        );
+      }
 
       const result = await touchChannel(syncManager, variables);
 
-      console.log(`[BRIDGE] touchChannel result: ${result}`);
+      if (logEnabled) {
+        console.log(`[BRIDGE] touchChannel result: ${result}`);
+      }
 
       return createMockResponse({ touchChannel: result });
     }
