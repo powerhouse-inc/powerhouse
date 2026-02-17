@@ -1,3 +1,13 @@
+## 6.0.0-dev.50 (2026-02-17)
+
+### 🩹 Fixes
+
+- **reactor-api:** use X-Forwarded-Proto header for correct protocol detection ([34cefd878](https://github.com/powerhouse-inc/powerhouse/commit/34cefd878))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 6.0.0-dev.49 (2026-02-17)
 
 This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
