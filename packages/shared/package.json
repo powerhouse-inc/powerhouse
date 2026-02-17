@@ -24,12 +24,14 @@
       "default": "./dist/document-model/*.js"
     }
   },
-  "devDependencies": {
+  "dependencies": {
     "kysely": "catalog:",
     "@sindresorhus/fnv1a": "catalog:",
     "@powerhousedao/analytics-engine-core": "catalog:",
     "mutative": "catalog:",
-    "react": "catalog:",
+    "react": "catalog:"
+  },
+  "devDependencies": {
     "@types/react": "catalog:"
   }
 }
