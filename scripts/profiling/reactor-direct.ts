@@ -23,6 +23,7 @@
  */
 
 import { execFileSync } from "node:child_process";
+import { createWriteStream, type WriteStream } from "node:fs";
 import { PGlite } from "@electric-sql/pglite";
 import {
   JobStatus,
@@ -266,6 +267,7 @@ function parseArgs(args: string[]): {
   dbPath: string | undefined;
   docId: string | undefined;
   pyroscope: string | undefined;
+  output: string | undefined;
 } {
   let count = 10;
   let operations = 0;
@@ -277,6 +279,7 @@ function parseArgs(args: string[]): {
   let dbPath: string | undefined = undefined;
   let docId: string | undefined = undefined;
   let pyroscope: string | undefined = undefined;
+  let output: string | undefined = undefined;
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
@@ -305,6 +308,8 @@ function parseArgs(args: string[]): {
       } else {
         pyroscope = "http://localhost:4040";
       }
+    } else if ((arg === "--output" || arg === "-O") && args[i + 1]) {
+      output = args[++i];
     } else if (arg === "--help" || arg === "-h") {
       console.log(`
 Usage: tsx reactor-direct.ts [N] [options]
@@ -324,6 +329,7 @@ Options:
   --verbose, -v             Show detailed operation timings
   --percentiles, -p         Show percentile statistics (p50, p90, p95, p99) per line
   --show-action-types, -a   Show action type names in min/max timings
+  --output, -O <file>       Write output to a file (in addition to stdout)
   --pyroscope [address]     Enable Pyroscope profiling (default: http://localhost:4040)
   --help, -h                Show this help message
 
@@ -412,6 +418,7 @@ Examples:
     dbPath,
     docId,
     pyroscope,
+    output,
   };
 }
 
@@ -454,7 +461,36 @@ async function main() {
     dbPath,
     docId,
     pyroscope: pyroscopeServer,
+    output: outputFile,
   } = parseArgs(process.argv.slice(2));
+
+  // Set up output file tee if requested
+  // console.log/warn/error write through process.stdout/stderr.write internally,
+  // so we only need to intercept at the stream level to avoid duplicate lines.
+  let outputStream: WriteStream | undefined;
+  if (outputFile) {
+    outputStream = createWriteStream(outputFile);
+    const origStdoutWrite = process.stdout.write.bind(process.stdout);
+    const origStderrWrite = process.stderr.write.bind(process.stderr);
+
+    process.stdout.write = (
+      chunk: string | Uint8Array,
+      ...rest: any[]
+    ): boolean => {
+      outputStream!.write(chunk);
+      return (origStdoutWrite as any)(chunk, ...rest);
+    };
+
+    process.stderr.write = (
+      chunk: string | Uint8Array,
+      ...rest: any[]
+    ): boolean => {
+      outputStream!.write(chunk);
+      return (origStderrWrite as any)(chunk, ...rest);
+    };
+
+    console.log(`Writing output to: ${outputFile}`);
+  }
 
   // Initialize Pyroscope profiling if enabled
   if (pyroscopeServer) {
@@ -750,6 +786,10 @@ async function main() {
       );
       console.error(`  tsx pyroscope-analyse.ts '${analyseUrl}'`);
     }
+  }
+
+  if (outputStream) {
+    outputStream.end();
   }
 }
 
