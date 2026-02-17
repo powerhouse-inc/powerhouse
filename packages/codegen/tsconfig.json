@@ -20,6 +20,6 @@
     { "path": "../common" },
     { "path": "../config" },
     { "path": "../reactor" },
-    { "path": "../../shared" }
+    { "path": "../shared" }
   ]
 }

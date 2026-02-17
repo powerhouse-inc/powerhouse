@@ -21,7 +21,7 @@
   },
   "targetDefaults": {},
   "release": {
-    "projects": ["packages/*", "clis/*", "apps/*", "shared"],
+    "projects": ["packages/*", "clis/*", "apps/*"],
     "projectsRelationship": "managed",
     "version": {
       "conventionalCommits": true,

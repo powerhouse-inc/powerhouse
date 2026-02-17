@@ -1,6 +1,6 @@
 {
   // extend our monorepo's base tsconfig
-  "extends": "../tsconfig.options.json",
+  "extends": "../../tsconfig.options.json",
   "compilerOptions": {
     // output transpiled code in the dist file relative to this package's root
     "outDir": "./dist"

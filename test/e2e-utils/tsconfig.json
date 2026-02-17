@@ -10,7 +10,7 @@
       "path": "../../packages/config"
     },
     {
-      "path": "../../shared"
+      "path": "../../packages/shared"
     }
   ]
 }
