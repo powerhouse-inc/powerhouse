@@ -2441,9 +2441,8 @@ describe("SyncManager - Unit Tests", () => {
         branch: "main",
       });
 
-      const { SyncOperation: SyncOp } = await import(
-        "../../../src/sync/sync-operation.js"
-      );
+      const { SyncOperation: SyncOp } =
+        await import("../../../src/sync/sync-operation.js");
 
       const syncOp1 = new SyncOp(
         "syncop-1",
@@ -2600,9 +2599,8 @@ describe("SyncManager - Unit Tests", () => {
         branch: "main",
       });
 
-      const { SyncOperation: SyncOp } = await import(
-        "../../../src/sync/sync-operation.js"
-      );
+      const { SyncOperation: SyncOp } =
+        await import("../../../src/sync/sync-operation.js");
 
       // Non-keyed SyncOp (empty jobId)
       const syncOp = new SyncOp(
@@ -3013,9 +3011,8 @@ describe("SyncManager - Unit Tests", () => {
         branch: "main",
       });
 
-      const { SyncOperation: SyncOp } = await import(
-        "../../../src/sync/sync-operation.js"
-      );
+      const { SyncOperation: SyncOp } =
+        await import("../../../src/sync/sync-operation.js");
 
       const syncOp1 = new SyncOp(
         "syncop-1",
@@ -3091,9 +3088,8 @@ describe("SyncManager - Unit Tests", () => {
       expect(mockChannel2.inbox.remove).toHaveBeenCalledTimes(2);
 
       // Both SyncOps should be in error state
-      const { SyncOperationStatus } = await import(
-        "../../../src/sync/types.js"
-      );
+      const { SyncOperationStatus } =
+        await import("../../../src/sync/types.js");
       expect(syncOp1.status).toBe(SyncOperationStatus.Error);
       expect(syncOp2.status).toBe(SyncOperationStatus.Error);
     });

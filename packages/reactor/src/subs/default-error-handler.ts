@@ -7,9 +7,7 @@ import type {
  * Default error handler that re-throws subscription errors.
  * This ensures that errors are not silently swallowed.
  */
-export class DefaultSubscriptionErrorHandler
-  implements ISubscriptionErrorHandler
-{
+export class DefaultSubscriptionErrorHandler implements ISubscriptionErrorHandler {
   handleError(error: unknown, context: SubscriptionErrorContext): void {
     const errorMessage = `Subscription error in ${context.eventType} (${context.subscriptionId})`;
 
