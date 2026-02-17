@@ -1,20 +1,20 @@
+import type { OperationContext } from "@powerhousedao/shared/document-model";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { IOperationIndex } from "../../../../src/cache/operation-index-types.js";
-import type { OperationContext } from "shared/document-model";
 import type { ISyncCursorStorage } from "../../../../src/storage/interfaces.js";
 import type { KyselySyncRemoteStorage } from "../../../../src/storage/kysely/sync-remote-storage.js";
 import type { Database } from "../../../../src/storage/kysely/types.js";
 import {
-  GqlRequestChannel,
-  type GqlChannelConfig,
+    GqlRequestChannel,
+    type GqlChannelConfig,
 } from "../../../../src/sync/channels/gql-req-channel.js";
 import type { IPollTimer } from "../../../../src/sync/channels/poll-timer.js";
 import { SyncOperation } from "../../../../src/sync/sync-operation.js";
 import type {
-  RemoteFilter,
-  RemoteRecord,
-  SyncEnvelope,
+    RemoteFilter,
+    RemoteRecord,
+    SyncEnvelope,
 } from "../../../../src/sync/types.js";
 import { createMockLogger, createTestSyncStorage } from "../../../factories.js";
 

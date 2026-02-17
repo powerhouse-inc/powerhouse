@@ -1,8 +1,8 @@
+import type { OperationWithContext } from "@powerhousedao/shared/document-model";
 import type { Operation } from "document-model";
-import type { OperationWithContext } from "shared/document-model";
 import {
-  driveCollectionId,
-  type OperationIndexEntry,
+    driveCollectionId,
+    type OperationIndexEntry,
 } from "../cache/operation-index-types.js";
 import type { JobWriteReadyEvent } from "../events/types.js";
 import type { PreparedBatch } from "./batch-aggregator.js";

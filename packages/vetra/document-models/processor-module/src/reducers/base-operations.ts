@@ -1,5 +1,5 @@
+import { PROCESSOR_APPS, type ProcessorApp } from "@powerhousedao/shared/processors";
 import type { ProcessorModuleBaseOperationsOperations } from "@powerhousedao/vetra/document-models/processor-module";
-import { PROCESSOR_APPS, type ProcessorApp } from "shared/processors";
 
 export const processorModuleBaseOperationsOperations: ProcessorModuleBaseOperationsOperations =
   {

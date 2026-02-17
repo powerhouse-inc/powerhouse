@@ -1,17 +1,18 @@
 import {
-  makeDocumentModelModulesFile,
-  makeSubgraphsIndexFile,
-  tsMorphGenerateDocumentEditor,
-  tsMorphGenerateDocumentModel,
-  tsMorphGenerateDriveEditor,
+    makeDocumentModelModulesFile,
+    makeSubgraphsIndexFile,
+    tsMorphGenerateDocumentEditor,
+    tsMorphGenerateDocumentModel,
+    tsMorphGenerateDriveEditor,
 } from "@powerhousedao/codegen/file-builders";
 import { buildTsMorphProject } from "@powerhousedao/codegen/utils";
 import { fileExists } from "@powerhousedao/common/clis";
 import type {
-  PartialPowerhouseManifest,
-  PowerhouseConfig,
-  PowerhouseManifest,
+    PartialPowerhouseManifest,
+    PowerhouseConfig,
+    PowerhouseManifest,
 } from "@powerhousedao/config";
+import type { ProcessorApps } from "@powerhousedao/shared/processors";
 import { paramCase } from "change-case";
 import type { DocumentModelGlobalState } from "document-model";
 import fs from "node:fs";
@@ -19,17 +20,16 @@ import { readdir } from "node:fs/promises";
 import path, { join } from "node:path";
 import { readPackage, type NormalizedPackageJson } from "read-pkg";
 import semver from "semver";
-import type { ProcessorApps } from "shared/processors";
 import { tsMorphGenerateProcessor } from "../file-builders/processors/processor.js";
 import { TSMorphCodeGenerator } from "../ts-morph-generator/core/TSMorphCodeGenerator.js";
 import { generateDocumentModelZodSchemas, generateSchemas } from "./graphql.js";
 import {
-  hygenGenerateDocumentModel,
-  hygenGenerateDriveEditor,
-  hygenGenerateEditor,
-  hygenGenerateImportScript,
-  hygenGenerateProcessor,
-  hygenGenerateSubgraph,
+    hygenGenerateDocumentModel,
+    hygenGenerateDriveEditor,
+    hygenGenerateEditor,
+    hygenGenerateImportScript,
+    hygenGenerateProcessor,
+    hygenGenerateSubgraph,
 } from "./hygen.js";
 import type { CodegenOptions } from "./types.js";
 import { getDocumentTypesMap, loadDocumentModel } from "./utils.js";

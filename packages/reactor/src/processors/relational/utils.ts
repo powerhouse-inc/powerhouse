@@ -1,1 +1,1 @@
-export * from "shared/processors/relational/utils";
+export * from "@powerhousedao/shared/processors/relational/utils";

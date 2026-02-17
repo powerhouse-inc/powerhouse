@@ -1,5 +1,5 @@
 import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
-import type { OperationWithContext } from "shared/document-model";
+import type { OperationWithContext } from "@powerhousedao/shared/document-model";
 import type { PHDocumentHeader } from "../document-model/core/documents.js";
 import type { PROCESSOR_APPS } from "./constants.js";
 import type { IRelationalDb } from "./relational/types.js";

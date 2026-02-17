@@ -170,10 +170,10 @@
     "vite-plugin-html": "catalog:",
     "vite-plugin-node-polyfills": "catalog:",
     "vite-plugin-svgr": "catalog:",
+    "@powerhousedao/shared": "workspace:",
     "zod": "catalog:"
   },
   "devDependencies": {
-    "shared": "workspace:",
     "@tailwindcss/cli": "catalog:"
   }
 }

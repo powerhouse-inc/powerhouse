@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
 import {
-  PROCESSOR_APPS,
-  type ProcessorApp,
-  type ProcessorApps,
-} from "shared/processors";
+    PROCESSOR_APPS,
+    type ProcessorApp,
+    type ProcessorApps,
+} from "@powerhousedao/shared/processors";
+import { useEffect, useState } from "react";
 import type { DocumentTypeItem } from "../../../document-models/processor-module/index.js";
 import { StatusPill } from "../../components/index.js";
 import { useAvailableDocumentTypes, useDebounce } from "../../hooks/index.js";

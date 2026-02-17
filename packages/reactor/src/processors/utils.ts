@@ -1,6 +1,6 @@
+import type { OperationWithContext } from "@powerhousedao/shared/document-model";
+import type { ProcessorFilter } from "@powerhousedao/shared/processors";
 import type { PHDocumentHeader } from "document-model";
-import type { OperationWithContext } from "shared/document-model";
-import type { ProcessorFilter } from "shared/processors";
 
 const DRIVE_DOCUMENT_TYPE = "powerhouse/document-drive";
 

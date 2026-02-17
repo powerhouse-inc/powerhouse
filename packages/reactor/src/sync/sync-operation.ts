@@ -1,4 +1,4 @@
-import type { OperationWithContext } from "shared/document-model";
+import type { OperationWithContext } from "@powerhousedao/shared/document-model";
 import type { ChannelError } from "./errors.js";
 import { SyncOperationStatus } from "./types.js";
 

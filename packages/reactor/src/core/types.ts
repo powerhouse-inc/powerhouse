@@ -1,13 +1,13 @@
 import type {
-  Action,
-  DocumentModelModule,
-  ISigner,
-  Operation,
-  PHDocument,
+    Action,
+    DocumentModelModule,
+    ISigner,
+    Operation,
+    PHDocument,
 } from "document-model";
 import type { Kysely } from "kysely";
 
-import type { IProcessorManager } from "shared/processors";
+import type { IProcessorManager } from "@powerhousedao/shared/processors";
 import type { IOperationIndex } from "../cache/operation-index-types.js";
 import type { IWriteCache } from "../cache/write/interfaces.js";
 import type { ReactorClient } from "../client/reactor-client.js";
@@ -21,26 +21,26 @@ import type { IDocumentModelRegistry } from "../registry/interfaces.js";
 import type { IJobAwaiter } from "../shared/awaiter.js";
 import type { IConsistencyTracker } from "../shared/consistency-tracker.js";
 import type {
-  ConsistencyToken,
-  JobInfo,
-  PagedResults,
-  PagingOptions,
-  SearchFilter,
-  ShutdownStatus,
-  ViewFilter,
+    ConsistencyToken,
+    JobInfo,
+    PagedResults,
+    PagingOptions,
+    SearchFilter,
+    ShutdownStatus,
+    ViewFilter,
 } from "../shared/types.js";
 import type {
-  IDocumentIndexer,
-  IDocumentView,
-  IKeyframeStore,
-  IOperationStore,
-  ISyncCursorStorage,
-  ISyncRemoteStorage,
-  OperationFilter,
+    IDocumentIndexer,
+    IDocumentView,
+    IKeyframeStore,
+    IOperationStore,
+    ISyncCursorStorage,
+    ISyncRemoteStorage,
+    OperationFilter,
 } from "../storage/interfaces.js";
 import type {
-  DocumentIndexerDatabase,
-  Database as StorageDatabase,
+    DocumentIndexerDatabase,
+    Database as StorageDatabase,
 } from "../storage/kysely/types.js";
 import type { IReactorSubscriptionManager } from "../subs/types.js";
 import type { IChannelFactory, ISyncManager } from "../sync/interfaces.js";

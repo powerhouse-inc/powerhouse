@@ -1,1 +1,1 @@
-export * from "shared/processors/relational/types";
+export * from "@powerhousedao/shared/processors/relational/types";

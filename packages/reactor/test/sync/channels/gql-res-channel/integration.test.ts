@@ -1,6 +1,6 @@
+import type { OperationContext } from "@powerhousedao/shared/document-model";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import type { OperationContext } from "shared/document-model";
 import type { ISyncCursorStorage } from "../../../../src/storage/interfaces.js";
 import type { KyselySyncRemoteStorage } from "../../../../src/storage/kysely/sync-remote-storage.js";
 import type { Database } from "../../../../src/storage/kysely/types.js";

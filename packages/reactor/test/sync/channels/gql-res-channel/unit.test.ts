@@ -1,4 +1,4 @@
-import type { OperationContext } from "shared/document-model";
+import type { OperationContext } from "@powerhousedao/shared/document-model";
 import { describe, expect, it, vi } from "vitest";
 import type { ISyncCursorStorage } from "../../../../src/storage/interfaces.js";
 import { GqlResponseChannel } from "../../../../src/sync/channels/gql-res-channel.js";

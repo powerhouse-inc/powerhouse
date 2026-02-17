@@ -1,16 +1,16 @@
 import {
-  generate as generateCode,
-  generateDBSchema,
-  generateDriveEditor,
-  generateEditor,
-  generateFromFile,
-  generateImportScript,
-  generateProcessor,
-  generateSubgraph,
+    generate as generateCode,
+    generateDBSchema,
+    generateDriveEditor,
+    generateEditor,
+    generateFromFile,
+    generateImportScript,
+    generateProcessor,
+    generateSubgraph,
 } from "@powerhousedao/codegen";
 import { getConfig } from "@powerhousedao/config/node";
+import { PROCESSOR_APPS } from "@powerhousedao/shared/processors";
 import path from "path";
-import { PROCESSOR_APPS } from "shared/processors";
 
 export type GenerateOptions = {
   interactive?: boolean;

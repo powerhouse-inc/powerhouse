@@ -1,7 +1,7 @@
 import { DocumentToolbar } from "@powerhousedao/design-system/connect";
 import { useSetPHDocumentEditorConfig } from "@powerhousedao/reactor-browser";
+import type { ProcessorApp, ProcessorApps } from "@powerhousedao/shared/processors";
 import { useCallback } from "react";
-import type { ProcessorApp, ProcessorApps } from "shared/processors";
 import { actions } from "../../document-models/processor-module/index.js";
 import { useSelectedProcessorModuleDocument } from "../hooks/useVetraDocument.js";
 import { ProcessorEditorForm } from "./components/ProcessorEditorForm.js";

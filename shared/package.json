@@ -1,11 +1,11 @@
 {
-  "name": "shared",
-  "version": "0.0.0",
-  "private": true,
+  "name": "@powerhousedao/shared",
+  "version": "6.0.0-dev.46",
   "type": "module",
   "publishConfig": {
-    "access": "restricted"
+    "access": "public"
   },
+  "files": ["dist"],
   "exports": {
     "./processors": {
       "types": "./dist/processors/index.d.ts",

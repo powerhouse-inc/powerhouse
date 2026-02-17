@@ -1,27 +1,27 @@
+import type { OperationWithContext } from "@powerhousedao/shared/document-model";
 import type { Operation } from "document-model";
-import type { OperationWithContext } from "shared/document-model";
 import type { IOperationIndex } from "../cache/operation-index-types.js";
 import type {
-  BatchLoadRequest,
-  BatchLoadResult,
-  IReactor,
+    BatchLoadRequest,
+    BatchLoadResult,
+    IReactor,
 } from "../core/types.js";
 import type { IEventBus } from "../events/interfaces.js";
 import {
-  ReactorEventTypes,
-  type JobFailedEvent,
-  type JobWriteReadyEvent,
+    ReactorEventTypes,
+    type JobFailedEvent,
+    type JobWriteReadyEvent,
 } from "../events/types.js";
 import type { ILogger } from "../logging/types.js";
 import { JobAwaiter } from "../shared/awaiter.js";
 import {
-  JobStatus,
-  type JobInfo,
-  type ShutdownStatus,
+    JobStatus,
+    type JobInfo,
+    type ShutdownStatus,
 } from "../shared/types.js";
 import type {
-  ISyncCursorStorage,
-  ISyncRemoteStorage,
+    ISyncCursorStorage,
+    ISyncRemoteStorage,
 } from "../storage/interfaces.js";
 import { BatchAggregator, type PreparedBatch } from "./batch-aggregator.js";
 import { ChannelError } from "./errors.js";
@@ -29,25 +29,25 @@ import type { IChannelFactory, ISyncManager, Remote } from "./interfaces.js";
 import { SyncAwaiter } from "./sync-awaiter.js";
 import { SyncOperation } from "./sync-operation.js";
 import {
-  SyncStatusTracker,
-  type SyncStatus,
-  type SyncStatusChangeCallback,
+    SyncStatusTracker,
+    type SyncStatus,
+    type SyncStatusChangeCallback,
 } from "./sync-status-tracker.js";
 import type {
-  ChannelConfig,
-  RemoteFilter,
-  RemoteOptions,
-  RemoteRecord,
-  RemoteStatus,
-  SyncResult,
+    ChannelConfig,
+    RemoteFilter,
+    RemoteOptions,
+    RemoteRecord,
+    RemoteStatus,
+    SyncResult,
 } from "./types.js";
 import { ChannelErrorSource } from "./types.js";
 import {
-  batchOperationsByDocument,
-  createIdleHealth,
-  filterOperations,
-  toOperationWithContext,
-  trimMailboxFromBatch,
+    batchOperationsByDocument,
+    createIdleHealth,
+    filterOperations,
+    toOperationWithContext,
+    trimMailboxFromBatch,
 } from "./utils.js";
 
 export class SyncManager implements ISyncManager {

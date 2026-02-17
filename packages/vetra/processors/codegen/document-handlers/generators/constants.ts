@@ -1,4 +1,4 @@
-import { PROCESSOR_APPS } from "shared/processors";
+import { PROCESSOR_APPS } from "@powerhousedao/shared/processors";
 
 export const USE_TS_MORPH = true;
 export const USE_VERSIONING = false;
