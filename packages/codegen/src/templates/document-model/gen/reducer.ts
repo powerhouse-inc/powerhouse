@@ -2,8 +2,8 @@ import type { DocumentModelTemplateInputs } from "@powerhousedao/codegen/file-bu
 import { ts } from "@tmpl/core";
 import { camelCase, constantCase, kebabCase, pascalCase } from "change-case";
 import type {
-    ModuleSpecification,
-    OperationSpecification,
+  ModuleSpecification,
+  OperationSpecification,
 } from "document-model";
 
 function makePascalCaseOperationName(operation: OperationSpecification) {

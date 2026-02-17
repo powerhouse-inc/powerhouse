@@ -1,14 +1,14 @@
 import type { DocumentModelFileMakerArgs } from "@powerhousedao/codegen";
 import { getDocumentModelOperationsModuleVariableNames } from "@powerhousedao/codegen/name-builders";
 import {
-    documentModelTestFileTemplate,
-    makeActionImportNames,
-    makeTestCaseForAction,
+  documentModelTestFileTemplate,
+  makeActionImportNames,
+  makeTestCaseForAction,
 } from "@powerhousedao/codegen/templates";
 import {
-    formatSourceFileWithPrettier,
-    getOrCreateSourceFile,
-    getPreviousVersionSourceFile,
+  formatSourceFileWithPrettier,
+  getOrCreateSourceFile,
+  getPreviousVersionSourceFile,
 } from "@powerhousedao/codegen/utils";
 import { ts } from "@tmpl/core";
 import { camelCase, kebabCase, pascalCase } from "change-case";

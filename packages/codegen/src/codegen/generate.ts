@@ -1,16 +1,16 @@
 import {
-    makeDocumentModelModulesFile,
-    makeSubgraphsIndexFile,
-    tsMorphGenerateDocumentEditor,
-    tsMorphGenerateDocumentModel,
-    tsMorphGenerateDriveEditor,
+  makeDocumentModelModulesFile,
+  makeSubgraphsIndexFile,
+  tsMorphGenerateDocumentEditor,
+  tsMorphGenerateDocumentModel,
+  tsMorphGenerateDriveEditor,
 } from "@powerhousedao/codegen/file-builders";
 import { buildTsMorphProject } from "@powerhousedao/codegen/utils";
 import { fileExists } from "@powerhousedao/common/clis";
 import type {
-    PartialPowerhouseManifest,
-    PowerhouseConfig,
-    PowerhouseManifest,
+  PartialPowerhouseManifest,
+  PowerhouseConfig,
+  PowerhouseManifest,
 } from "@powerhousedao/config";
 import type { ProcessorApps } from "@powerhousedao/shared/processors";
 import { kebabCase } from "change-case";
@@ -24,12 +24,12 @@ import { tsMorphGenerateProcessor } from "../file-builders/processors/processor.
 import { TSMorphCodeGenerator } from "../ts-morph-generator/core/TSMorphCodeGenerator.js";
 import { generateDocumentModelZodSchemas, generateSchemas } from "./graphql.js";
 import {
-    hygenGenerateDocumentModel,
-    hygenGenerateDriveEditor,
-    hygenGenerateEditor,
-    hygenGenerateImportScript,
-    hygenGenerateProcessor,
-    hygenGenerateSubgraph,
+  hygenGenerateDocumentModel,
+  hygenGenerateDriveEditor,
+  hygenGenerateEditor,
+  hygenGenerateImportScript,
+  hygenGenerateProcessor,
+  hygenGenerateSubgraph,
 } from "./hygen.js";
 import type { CodegenOptions } from "./types.js";
 import { getDocumentTypesMap, loadDocumentModel } from "./utils.js";

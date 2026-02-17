@@ -1,28 +1,28 @@
 import type {
-    DocumentModelFileMakerArgs,
-    DocumentModelTemplateInputsWithModule,
+  DocumentModelFileMakerArgs,
+  DocumentModelTemplateInputsWithModule,
 } from "@powerhousedao/codegen/file-builders";
 import { getDocumentModelOperationsModuleVariableNames } from "@powerhousedao/codegen/name-builders";
 import {
-    documentModelDocumentSchemaFileTemplate,
-    documentModelDocumentTypeTemplate,
-    documentModelGenActionsFileTemplate,
-    documentModelGenCreatorsFileTemplate,
-    documentModelGenIndexFileTemplate,
-    documentModelGenReducerFileTemplate,
-    documentModelGenTypesTemplate,
-    documentModelGenUtilsTemplate,
-    documentModelOperationModuleActionsFileTemplate,
-    documentModelOperationsModuleCreatorsFileTemplate,
-    documentModelOperationsModuleErrorFileTemplate,
-    documentModelOperationsModuleOperationsFileTemplate,
-    documentModelPhFactoriesFileTemplate,
-    documentModelSchemaIndexTemplate,
+  documentModelDocumentSchemaFileTemplate,
+  documentModelDocumentTypeTemplate,
+  documentModelGenActionsFileTemplate,
+  documentModelGenCreatorsFileTemplate,
+  documentModelGenIndexFileTemplate,
+  documentModelGenReducerFileTemplate,
+  documentModelGenTypesTemplate,
+  documentModelGenUtilsTemplate,
+  documentModelOperationModuleActionsFileTemplate,
+  documentModelOperationsModuleCreatorsFileTemplate,
+  documentModelOperationsModuleErrorFileTemplate,
+  documentModelOperationsModuleOperationsFileTemplate,
+  documentModelPhFactoriesFileTemplate,
+  documentModelSchemaIndexTemplate,
 } from "@powerhousedao/codegen/templates";
 import {
-    buildObjectLiteral,
-    formatSourceFileWithPrettier,
-    getOrCreateSourceFile,
+  buildObjectLiteral,
+  formatSourceFileWithPrettier,
+  getOrCreateSourceFile,
 } from "@powerhousedao/codegen/utils";
 import { kebabCase, pascalCase } from "change-case";
 import path from "path";

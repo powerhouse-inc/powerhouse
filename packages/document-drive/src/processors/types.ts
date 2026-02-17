@@ -117,8 +117,9 @@ export interface IProcessorManagerLegacy {
 }
 
 export type RelationalDbProcessorFilterLegacy = ListenerFilter;
-export interface IRelationalDbProcessorLegacy<TDatabaseSchema = unknown>
-  extends IProcessorLegacy {
+export interface IRelationalDbProcessorLegacy<
+  TDatabaseSchema = unknown,
+> extends IProcessorLegacy {
   namespace: string;
   query: IRelationalQueryBuilderLegacy<TDatabaseSchema>;
   filter: RelationalDbProcessorFilterLegacy;

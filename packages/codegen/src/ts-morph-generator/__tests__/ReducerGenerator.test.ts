@@ -1,11 +1,11 @@
 import type {
-    CodegenOperation,
-    GenerationContext,
+  CodegenOperation,
+  GenerationContext,
 } from "@powerhousedao/codegen";
 import {
-    DeclarationManager,
-    DirectoryManager,
-    ImportManager,
+  DeclarationManager,
+  DirectoryManager,
+  ImportManager,
 } from "@powerhousedao/codegen";
 import { camelCase, kebabCase, pascalCase } from "change-case";
 import { Project } from "ts-morph";

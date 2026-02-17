@@ -1,12 +1,12 @@
 import {
-    processorsFactoryTemplate,
-    processorsIndexTemplate,
+  processorsFactoryTemplate,
+  processorsIndexTemplate,
 } from "@powerhousedao/codegen/templates";
 import {
-    buildTsMorphProject,
-    ensureDirectoriesExist,
-    formatSourceFileWithPrettier,
-    getOrCreateSourceFile,
+  buildTsMorphProject,
+  ensureDirectoriesExist,
+  formatSourceFileWithPrettier,
+  getOrCreateSourceFile,
 } from "@powerhousedao/codegen/utils";
 import type {
   ProcessorApp,

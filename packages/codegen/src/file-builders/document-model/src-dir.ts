@@ -1,13 +1,13 @@
 import type { DocumentModelFileMakerArgs } from "@powerhousedao/codegen";
 import {
-    documentModelSrcIndexFileTemplate,
-    documentModelSrcUtilsTemplate,
+  documentModelSrcIndexFileTemplate,
+  documentModelSrcUtilsTemplate,
 } from "@powerhousedao/codegen/templates";
 import {
-    formatSourceFileWithPrettier,
-    getObjectLiteral,
-    getOrCreateSourceFile,
-    getPreviousVersionSourceFile,
+  formatSourceFileWithPrettier,
+  getObjectLiteral,
+  getOrCreateSourceFile,
+  getPreviousVersionSourceFile,
 } from "@powerhousedao/codegen/utils";
 import { ts } from "@tmpl/core";
 import { kebabCase, pascalCase } from "change-case";
