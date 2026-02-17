@@ -1,5 +1,5 @@
 import { DuplicateModuleError } from "@powerhousedao/reactor";
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import type { IPackageManager, VetraPackage } from "../types/vetra.js";
 import { makePHEventFunctions } from "./make-ph-event-functions.js";
 
@@ -12,21 +12,11 @@ export const useVetraPackageManager = vetraPackageManagerFunctions.useValue;
 /** Returns all of the Vetra packages loaded by the Connect instance */
 export const useVetraPackages = () => {
   const packageManager = useVetraPackageManager();
-  const [vetraPackages, setVetraPackages] = useState<VetraPackage[]>(
-    packageManager?.packages ?? [],
+
+  return useSyncExternalStore(
+    (cb) => (packageManager ? packageManager.subscribe(cb) : () => {}),
+    () => packageManager?.packages ?? [],
   );
-  useEffect(() => {
-    if (!packageManager) {
-      return;
-    }
-    const unsub = packageManager.subscribe((data) => {
-      setVetraPackages(data.packages);
-    });
-    return () => {
-      unsub();
-    };
-  }, [packageManager]);
-  return vetraPackages;
 };
 
 /** Adds the Vetra packages event handler */
