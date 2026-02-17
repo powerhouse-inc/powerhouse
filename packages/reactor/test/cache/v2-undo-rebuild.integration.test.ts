@@ -195,7 +195,7 @@ describe("V2 UNDO Cache Rebuild Integration Tests", () => {
   });
 
   describe("Single UNDO rebuild", () => {
-    it("should correctly rebuild document state when a single UNDO (NOOP with skip=1) exists", async () => {
+    it("should correctly rebuild document state when a single UNDO with undoOf exists", async () => {
       const document = documentModelDocumentModelModule.utils.createDocument();
       await createDocumentWithCreateOperation(
         document.header.id,
@@ -203,6 +203,7 @@ describe("V2 UNDO Cache Rebuild Integration Tests", () => {
         document.state,
       );
 
+      const setNameActionId = generateId();
       const setModelNameJob: Job = {
         id: "job-set-name",
         kind: "mutation",
@@ -211,7 +212,7 @@ describe("V2 UNDO Cache Rebuild Integration Tests", () => {
         branch: "main",
         actions: [
           {
-            id: generateId(),
+            id: setNameActionId,
             type: "SET_MODEL_NAME",
             scope: "global",
             timestampUtcMs: new Date().toISOString(),
@@ -247,7 +248,7 @@ describe("V2 UNDO Cache Rebuild Integration Tests", () => {
             type: "UNDO",
             scope: "global",
             timestampUtcMs: new Date().toISOString(),
-            input: {},
+            input: { undoOf: setNameActionId },
           },
         ],
         operations: [],
@@ -287,6 +288,7 @@ describe("V2 UNDO Cache Rebuild Integration Tests", () => {
         document.state,
       );
 
+      const setName1ActionId = generateId();
       const setModelName1Job: Job = {
         id: "job-set-name-1",
         kind: "mutation",
@@ -295,7 +297,7 @@ describe("V2 UNDO Cache Rebuild Integration Tests", () => {
         branch: "main",
         actions: [
           {
-            id: generateId(),
+            id: setName1ActionId,
             type: "SET_MODEL_NAME",
             scope: "global",
             timestampUtcMs: new Date().toISOString(),
@@ -311,6 +313,7 @@ describe("V2 UNDO Cache Rebuild Integration Tests", () => {
 
       await executor.executeJob(setModelName1Job);
 
+      const setName2ActionId = generateId();
       const setModelName2Job: Job = {
         id: "job-set-name-2",
         kind: "mutation",
@@ -319,7 +322,7 @@ describe("V2 UNDO Cache Rebuild Integration Tests", () => {
         branch: "main",
         actions: [
           {
-            id: generateId(),
+            id: setName2ActionId,
             type: "SET_MODEL_NAME",
             scope: "global",
             timestampUtcMs: new Date().toISOString(),
@@ -354,7 +357,7 @@ describe("V2 UNDO Cache Rebuild Integration Tests", () => {
             type: "UNDO",
             scope: "global",
             timestampUtcMs: new Date().toISOString(),
-            input: {},
+            input: { undoOf: setName2ActionId },
           },
         ],
         operations: [],
@@ -386,7 +389,7 @@ describe("V2 UNDO Cache Rebuild Integration Tests", () => {
             type: "UNDO",
             scope: "global",
             timestampUtcMs: new Date().toISOString(),
-            input: {},
+            input: { undoOf: setName1ActionId },
           },
         ],
         operations: [],
@@ -424,6 +427,7 @@ describe("V2 UNDO Cache Rebuild Integration Tests", () => {
         document.state,
       );
 
+      const set1ActionId = generateId();
       await executor.executeJob({
         id: "job-set-1",
         kind: "mutation",
@@ -432,7 +436,7 @@ describe("V2 UNDO Cache Rebuild Integration Tests", () => {
         branch: "main",
         actions: [
           {
-            id: generateId(),
+            id: set1ActionId,
             type: "SET_MODEL_NAME",
             scope: "global",
             timestampUtcMs: new Date().toISOString(),
@@ -446,6 +450,7 @@ describe("V2 UNDO Cache Rebuild Integration Tests", () => {
         meta: { batchId: "test", batchJobIds: ["job-set-1"] },
       });
 
+      const set2ActionId = generateId();
       await executor.executeJob({
         id: "job-set-2",
         kind: "mutation",
@@ -454,7 +459,7 @@ describe("V2 UNDO Cache Rebuild Integration Tests", () => {
         branch: "main",
         actions: [
           {
-            id: generateId(),
+            id: set2ActionId,
             type: "SET_MODEL_NAME",
             scope: "global",
             timestampUtcMs: new Date().toISOString(),
@@ -480,7 +485,7 @@ describe("V2 UNDO Cache Rebuild Integration Tests", () => {
             type: "UNDO",
             scope: "global",
             timestampUtcMs: new Date().toISOString(),
-            input: {},
+            input: { undoOf: set2ActionId },
           },
         ],
         operations: [],
@@ -502,7 +507,7 @@ describe("V2 UNDO Cache Rebuild Integration Tests", () => {
             type: "UNDO",
             scope: "global",
             timestampUtcMs: new Date().toISOString(),
-            input: {},
+            input: { undoOf: set1ActionId },
           },
         ],
         operations: [],

@@ -603,12 +603,6 @@ export class SimpleJobExecutor implements IJobExecutor {
       })),
     );
 
-    for (const operation of reshuffledOperations) {
-      if (operation.action.type === "NOOP") {
-        operation.skip = 1;
-      }
-    }
-
     const actions = reshuffledOperations.map((operation) => operation.action);
     const skipValues = reshuffledOperations.map((operation) => operation.skip);
 

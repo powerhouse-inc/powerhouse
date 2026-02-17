@@ -461,6 +461,11 @@ describe("processOperations", () => {
   it("should preserve the right order of the operations when merge conflict is applied", async () => {
     let document = await buildFile();
 
+    // Ensure distinct timestamps between operations so that
+    // reshuffleByTimestamp produces deterministic ordering
+    // (its tiebreaker uses random operation IDs)
+    const delay = () => new Promise((r) => setTimeout(r, 2));
+
     const operation0 = buildOperation(
       documentModelReducer,
       document,
@@ -473,6 +478,8 @@ describe("processOperations", () => {
     expect(resultOp0.status).toBe("SUCCESS");
 
     document = await server.getDocument(documentId);
+
+    await delay();
 
     const operation1 = buildOperation(
       documentModelReducer,
@@ -487,6 +494,8 @@ describe("processOperations", () => {
 
     document = await server.getDocument<DocumentModelDocument>(documentId);
 
+    await delay();
+
     const operation2 = buildOperation(
       documentModelReducer,
       document,
@@ -499,6 +508,8 @@ describe("processOperations", () => {
     expect(resultOp2.status).toBe("SUCCESS");
 
     document = await server.getDocument<DocumentModelDocument>(documentId);
+
+    await delay();
 
     const operation3 = buildOperation(
       documentModelReducer,
@@ -567,18 +578,26 @@ describe("processOperations", () => {
       documentModelReducer,
     );
 
+    // Ensure distinct timestamps between operations so that
+    // reshuffleByTimestamp produces deterministic ordering
+    // (its tiebreaker uses random operation IDs)
+    const delay = () => new Promise((r) => setTimeout(r, 2));
+
     client1.dispatchDocumentAction(setModelName({ name: "1" }));
     pushOperationResult = await client1.pushOperationsToServer();
     expect(pushOperationResult.status).toBe("SUCCESS");
 
+    await delay();
     client2.dispatchDocumentAction(setModelName({ name: "2" }));
     pushOperationResult = await client2.pushOperationsToServer();
     expect(pushOperationResult.status).toBe("SUCCESS");
 
+    await delay();
     client2.dispatchDocumentAction(setModelId({ id: "3" }));
     pushOperationResult = await client2.pushOperationsToServer();
     expect(pushOperationResult.status).toBe("SUCCESS");
 
+    await delay();
     client1.dispatchDocumentAction(setModelId({ id: "4" }));
     pushOperationResult = await client1.pushOperationsToServer();
     expect(pushOperationResult.status).toBe("SUCCESS");

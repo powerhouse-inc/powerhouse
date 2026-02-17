@@ -119,8 +119,17 @@ export const loadState = <TState extends PHBaseState = PHBaseState>(
     LoadStateActionInputSchema,
   );
 
-export const noop = (scope = "global") =>
-  createAction<NOOPAction>("NOOP", {}, undefined, undefined, scope);
+export const noop = (scope = "global", undoOf: string) =>
+  createAction<NOOPAction>("NOOP", { undoOf }, undefined, undefined, scope);
+
+export const undoV2 = (undoOf: string, scope = "global") =>
+  createAction<Action & { type: "UNDO"; input: { undoOf: string } }>(
+    "UNDO",
+    { undoOf },
+    undefined,
+    undefined,
+    scope,
+  );
 
 // TODO improve base actions type
 

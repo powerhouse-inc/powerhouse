@@ -144,76 +144,74 @@ export function mapSkippedOperations(
   return scopeOpsWithIgnore.reverse();
 }
 
+export function isNoopWithUndoOf(action: Action): boolean {
+  return (
+    action.type === "NOOP" &&
+    typeof action.input === "object" &&
+    action.input !== null &&
+    "undoOf" in (action.input as Record<string, unknown>)
+  );
+}
+
 /**
  * V2 version of mapSkippedOperations for protocol version 2+.
- * In V2, all NOOPs have skip=1 and consecutive NOOPs form chains.
- * N consecutive NOOPs at any point skip N preceding content operations.
- *
- * Algorithm: Process from end to start
- * - When hitting a NOOP: increment chain length, mark as ignored
- * - When hitting a non-NOOP:
- *   - If chain > 0: decrement chain, mark as ignored (this op was undone)
- *   - If chain == 0: mark as not ignored (apply this op)
+ * Uses explicit undoOf references instead of positional chain counting.
+ * Each NOOP with an undoOf field targets a specific action by ID.
+ * Only the first NOOP targeting a given action ID counts; duplicates are ignored.
  */
 export function mapSkippedOperationsV2(
   operations: Operation[],
 ): MappedOperation[] {
-  const ops = [...operations];
-  const result: MappedOperation[] = [];
+  const undoneActionIds = new Set<string>();
 
-  let noopChainLength = 0;
-
-  for (let i = ops.length - 1; i >= 0; i--) {
-    const operation = ops[i];
-    const isNoop = operation.action.type === "NOOP";
-
-    if (isNoop) {
-      noopChainLength++;
-      result.unshift({ ignore: true, operation });
-    } else if (noopChainLength > 0) {
-      noopChainLength--;
-      result.unshift({ ignore: true, operation });
-    } else {
-      result.unshift({ ignore: false, operation });
+  for (const operation of operations) {
+    if (isNoopWithUndoOf(operation.action)) {
+      const undoOf = (operation.action.input as { undoOf: string }).undoOf;
+      undoneActionIds.add(undoOf);
     }
   }
 
-  return result;
+  return operations.map((operation) => {
+    const isNoop = operation.action.type === "NOOP";
+    const isUndone = undoneActionIds.has(operation.action.id);
+    return {
+      ignore: isNoop || isUndone,
+      operation,
+    };
+  });
 }
 
 /**
  * V2 garbage collect that returns only operations that should be applied for state.
- * Uses the V2 model where consecutive NOOPs form chains.
- * Unlike V1 garbageCollect, this preserves ALL operations but marks which to apply.
+ * Uses explicit undoOf references to determine which operations are undone.
+ * Keeps NOOPs (for history) and non-undone content operations.
+ * Only the first NOOP per target action ID counts; duplicates are ignored.
  */
 export function garbageCollectV2<TOpIndex extends OperationIndex>(
   sortedOperations: TOpIndex[],
 ): TOpIndex[] {
-  const result: TOpIndex[] = [];
-  let noopChainLength = 0;
+  const undoneActionIds = new Set<string>();
 
-  for (let i = sortedOperations.length - 1; i >= 0; i--) {
-    const op = sortedOperations[i];
-    // Check if this is a NOOP operation
-    const isNoop =
-      "action" in op &&
-      (op as unknown as Operation).action.type === "NOOP" &&
-      op.skip > 0;
-
-    if (isNoop) {
-      noopChainLength++;
-      // Include the NOOP in result (for operation history)
-      result.unshift(op);
-    } else if (noopChainLength > 0) {
-      noopChainLength--;
-      // Skip this operation - it was undone
-    } else {
-      // Include this operation
-      result.unshift(op);
+  for (const op of sortedOperations) {
+    if ("action" in op) {
+      const operation = op as unknown as Operation;
+      if (isNoopWithUndoOf(operation.action)) {
+        const undoOf = (operation.action.input as { undoOf: string }).undoOf;
+        undoneActionIds.add(undoOf);
+      }
     }
   }
 
-  return result;
+  return sortedOperations.filter((op) => {
+    if ("action" in op) {
+      const operation = op as unknown as Operation;
+      if (operation.action.type === "NOOP") {
+        return true;
+      }
+      return !undoneActionIds.has(operation.action.id);
+    }
+    return true;
+  });
 }
 
 // Flattens the mapped operations (with ignore flag) from all scopes into

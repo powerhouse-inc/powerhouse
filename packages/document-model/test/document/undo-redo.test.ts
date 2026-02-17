@@ -1,8 +1,8 @@
 import type { Action, Operation } from "document-model";
 import {
   baseCreateDocument,
+  createAction,
   deriveOperationId,
-  noop,
   processUndoRedo,
   redo,
   undo,
@@ -53,10 +53,15 @@ describe("UNDO/REDO", () => {
       const skip = 0;
       const undoAction = undo();
 
-      document = countReducer(document, noop(), undefined, {
-        skip: 3,
-        ignoreSkipOperations: true,
-      });
+      document = countReducer(
+        document,
+        createAction("NOOP", {}, undefined, undefined, "global"),
+        undefined,
+        {
+          skip: 3,
+          ignoreSkipOperations: true,
+        },
+      );
       const result = processUndoRedo(document, undoAction, skip);
 
       expect(result.skip).toBe(4);
@@ -79,10 +84,15 @@ describe("UNDO/REDO", () => {
       const skip = 0;
       const undoAction = undo();
 
-      document = countReducer(document, noop(), undefined, {
-        skip: 0,
-        ignoreSkipOperations: true,
-      });
+      document = countReducer(
+        document,
+        createAction("NOOP", {}, undefined, undefined, "global"),
+        undefined,
+        {
+          skip: 0,
+          ignoreSkipOperations: true,
+        },
+      );
       const result = processUndoRedo(document, undoAction, skip);
 
       expect(result.skip).toBe(1);

@@ -1718,30 +1718,40 @@ export class BaseDocumentDriveServer
       },
     );
 
-    // when we have NOOP operations with skip > 0 we need to populate the
-    // clipboard with the operations that were skipped to allow redo
-    if (
+    // Populate clipboard for redo support
+    const noopInput =
+      operation.action.type === "NOOP" ? operation.action.input : undefined;
+    const undoOf =
+      typeof noopInput === "object" &&
+      noopInput !== null &&
+      "undoOf" in (noopInput as Record<string, unknown>)
+        ? (noopInput as { undoOf: string }).undoOf
+        : undefined;
+
+    if (undoOf && newDocument.clipboard.length === 0) {
+      const scopeOps = newDocument.operations[scope] || [];
+      const undoneOp = scopeOps.find(
+        (op: Operation) => op.action.id === undoOf && op.action.type !== "NOOP",
+      );
+      if (undoneOp) {
+        newDocument = {
+          ...newDocument,
+          clipboard: [undoneOp],
+        };
+      }
+    } else if (
       operation.action.type === "NOOP" &&
       operation.skip > 0 &&
       newDocument.clipboard.length === 0
     ) {
       const scopeOperationsAfter = newDocument.operations[scope] || [];
-
-      // Get operations AFTER garbageCollect (with NOOP)
       const afterOperations = garbageCollect(
         sortOperations(scopeOperationsAfter),
       );
-
-      // Get operations BEFORE the reducer ran (before NOOP was applied)
       const beforeOperations = garbageCollect(
         sortOperations(operationsBeforeReducer),
       );
-
-      // Calculate what was removed by comparing before vs after
-      // The diff shows operations that were in "before" but not in "after"
       const diff = diffOperations(beforeOperations, afterOperations);
-
-      // Populate clipboard with skipped operations (excluding NOOPs)
       newDocument = {
         ...newDocument,
         clipboard: sortOperations(

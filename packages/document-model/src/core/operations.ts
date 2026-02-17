@@ -1,9 +1,10 @@
 import type { Draft } from "mutative";
 import { castDraft, create } from "mutative";
-import { noop } from "./actions.js";
+import { createAction, noop } from "./actions.js";
 import { nextSkipNumber, sortOperations } from "./documents.js";
 import type { Action, PHBaseState, PHDocument } from "./ph-types.js";
-import type { LoadStateActionInput } from "./types.js";
+import type { LoadStateActionInput, NOOPAction } from "./types.js";
+import { generateId } from "./utils.js";
 
 // updates the name of the document
 export function setNameOperation<TDocument extends PHDocument>(
@@ -37,7 +38,13 @@ export function undoOperation<TDocument extends PHDocument>(
     const operations = [...document.operations[scope]];
     const sortedOperations = sortOperations(operations);
 
-    draft.action = noop(scope) as Draft<Action>;
+    draft.action = createAction<NOOPAction>(
+      "NOOP",
+      {},
+      undefined,
+      undefined,
+      scope,
+    ) as Draft<Action>;
 
     const lastOperation = sortedOperations.at(-1);
     let nextIndex = lastOperation?.index ?? -1;
@@ -72,10 +79,10 @@ export function undoOperation<TDocument extends PHDocument>(
 
 /**
  * V2 of undoOperation for protocol version 2+.
- * Key differences from undoOperation:
+ * Key differences from V1:
  * - Never reuses operation index (always increments)
- * - Always sets skip=1 (consecutive NOOPs are handled during rebuild/GC)
- * - No complex skip calculation - simpler model where each UNDO is independent
+ * - Sets skip=0 (undo semantics carried by undoOf reference, not positional skip)
+ * - The UNDO action's input must contain { undoOf: string } referencing the target action ID
  */
 export function undoOperationV2<TDocument extends PHDocument>(
   document: TDocument,
@@ -87,7 +94,8 @@ export function undoOperationV2<TDocument extends PHDocument>(
   skip: number;
   reuseLastOperationIndex: false;
 } {
-  const { scope } = action;
+  const { scope, input } = action;
+  const undoOf = (input as { undoOf: string }).undoOf;
 
   const defaultResult = {
     document,
@@ -97,33 +105,8 @@ export function undoOperationV2<TDocument extends PHDocument>(
   };
 
   return create(defaultResult, (draft) => {
-    const operations = document.operations[scope] || [];
-    const sortedOperations = sortOperations([...operations]);
-
-    // Count non-NOOP operations to determine if there's anything to undo
-    const nonNoopOps = sortedOperations.filter(
-      (op) => op.action.type !== "NOOP",
-    );
-
-    // Count consecutive NOOPs at the end (these represent pending undos)
-    let noopChainLength = 0;
-    for (let i = sortedOperations.length - 1; i >= 0; i--) {
-      if (sortedOperations[i].action.type === "NOOP") {
-        noopChainLength++;
-      } else {
-        break;
-      }
-    }
-
-    // Check if we can undo: need more non-NOOP ops than the current NOOP chain
-    if (nonNoopOps.length <= noopChainLength) {
-      throw new Error(
-        `Cannot undo: no more operations to undo in scope history`,
-      );
-    }
-
-    draft.action = noop(scope) as Draft<Action>;
-    draft.skip = 1;
+    draft.action = noop(scope, undoOf) as Draft<Action>;
+    draft.skip = 0;
   });
 }
 
@@ -183,6 +166,8 @@ export function redoOperation<TDocument extends PHDocument>(
     const operation = draft.document.clipboard.splice(operationIndex, 1)[0];
 
     draft.action = castDraft({
+      id: generateId(),
+      timestampUtcMs: new Date().toISOString(),
       type: operation.action.type,
       scope: operation.action.scope,
       input: operation.action.input,

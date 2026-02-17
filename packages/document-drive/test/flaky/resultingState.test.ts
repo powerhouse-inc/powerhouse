@@ -188,7 +188,11 @@ describe("Document operations", () => {
       "test",
 
       {
-        ...actions.noop(),
+        id: "noop-1",
+        timestampUtcMs: new Date().toISOString(),
+        type: "NOOP",
+        input: {},
+        scope: "global",
         skip: 1,
         index: 3,
         hash: driveStorage.operations.global!.at(1)?.hash,

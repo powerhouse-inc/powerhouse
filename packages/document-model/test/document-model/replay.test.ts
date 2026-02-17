@@ -1,8 +1,8 @@
 import type { PHDocument } from "document-model";
 import {
+  createAction,
   createReducer,
   HashMismatchError,
-  noop,
   replayDocument,
 } from "document-model/core";
 import type { CountPHState } from "document-model/test";
@@ -44,7 +44,12 @@ describe("DocumentModel Replay", () => {
     let newDocument = reducer(initialDocument, increment());
     newDocument = reducer(newDocument, increment());
     newDocument = reducer(newDocument, increment());
-    newDocument = reducer(newDocument, noop(), undefined, { skip: 1 });
+    newDocument = reducer(
+      newDocument,
+      createAction("NOOP", {}, undefined, undefined, "global"),
+      undefined,
+      { skip: 1 },
+    );
     expect(mockReducer).toHaveBeenCalledTimes(6);
     expect(newDocument.state.global.count).toBe(2);
   });
@@ -62,10 +67,15 @@ describe("DocumentModel Replay", () => {
     newDocument = reducer(newDocument, increment(), undefined, {
       reuseOperationResultingState: true,
     });
-    newDocument = reducer(newDocument, noop(), undefined, {
-      skip: 1,
-      reuseOperationResultingState: true,
-    });
+    newDocument = reducer(
+      newDocument,
+      createAction("NOOP", {}, undefined, undefined, "global"),
+      undefined,
+      {
+        skip: 1,
+        reuseOperationResultingState: true,
+      },
+    );
     expect(mockReducer).toHaveBeenCalledTimes(4);
     expect(newDocument.state.global.count).toBe(2);
   });
@@ -86,10 +96,15 @@ describe("DocumentModel Replay", () => {
     }
 
     newDocument = reducer(newDocument, increment());
-    newDocument = reducer(newDocument, noop(), undefined, {
-      skip: 1,
-      reuseOperationResultingState: true,
-    });
+    newDocument = reducer(
+      newDocument,
+      createAction("NOOP", {}, undefined, undefined, "global"),
+      undefined,
+      {
+        skip: 1,
+        reuseOperationResultingState: true,
+      },
+    );
 
     expect(mockReducer).toHaveBeenCalledTimes(4);
     expect(newDocument.state.global.count).toBe(2);
@@ -128,7 +143,12 @@ describe("DocumentModel Replay", () => {
 
     let newDocument = reducer(initialDocument, increment());
     newDocument = reducer(newDocument, increment());
-    newDocument = reducer(newDocument, noop(), undefined, { skip: 1 });
+    newDocument = reducer(
+      newDocument,
+      createAction("NOOP", {}, undefined, undefined, "global"),
+      undefined,
+      { skip: 1 },
+    );
     expect(mockReducer).toHaveBeenCalledTimes(4);
 
     const document = replayDocument(
@@ -154,10 +174,15 @@ describe("DocumentModel Replay", () => {
     newDocument = reducer(newDocument, increment(), undefined, {
       reuseOperationResultingState: true,
     });
-    newDocument = reducer(newDocument, noop(), undefined, {
-      skip: 1,
-      reuseOperationResultingState: true,
-    });
+    newDocument = reducer(
+      newDocument,
+      createAction("NOOP", {}, undefined, undefined, "global"),
+      undefined,
+      {
+        skip: 1,
+        reuseOperationResultingState: true,
+      },
+    );
     expect(mockReducer).toHaveBeenCalledTimes(3);
     expect(newDocument.state.global.count).toBe(1);
 
