@@ -51,7 +51,7 @@
       "path": "../../packages/document-drive"
     },
     {
-      "path": "../../shared"
+      "path": "../../packages/shared"
     }
   ],
   "include": ["**/*", "powerhouse.manifest.json"],

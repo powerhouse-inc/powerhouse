@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/common",
-  "version": "6.0.0-dev.46",
+  "version": "6.0.0-dev.49",
   "license": "AGPL-3.0-only",
   "type": "module",
   "files": [
@@ -64,12 +64,12 @@
     "package-directory": "^8.1.0",
     "react-i18next": "^13.5.0",
     "resolve-global": "^2.0.0",
+    "@powerhousedao/shared": "workspace:*",
     "zocker": "^3.0.0"
   },
   "devDependencies": {
     "@powerhousedao/config": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",
-    "shared": "workspace:*",
     "@storybook/addon-actions": "^8.6.7",
     "@storybook/addon-docs": "^8.6.3",
     "@storybook/addon-essentials": "^8.6.7",

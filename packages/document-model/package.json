@@ -1,6 +1,6 @@
 {
   "name": "document-model",
-  "version": "6.0.0-dev.46",
+  "version": "6.0.0-dev.49",
   "license": "AGPL-3.0-only",
   "private": false,
   "files": [
@@ -48,10 +48,10 @@
     "playwright": "^1.46.1",
     "react": "catalog:",
     "rollup-plugin-polyfill-node": "^0.13.0",
-    "vitest": "catalog:",
-    "shared": "workspace:*"
+    "vitest": "^3.2.4"
   },
   "dependencies": {
+    "@powerhousedao/shared": "workspace:*",
     "change-case": "catalog:",
     "jszip": "^3.10.1",
     "mime": "^4.0.4",

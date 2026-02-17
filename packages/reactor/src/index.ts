@@ -133,7 +133,7 @@ export {
 export type {
   OperationContext,
   OperationWithContext,
-} from "shared/document-model";
+} from "@powerhousedao/shared/document-model";
 export type { Database } from "./core/types.js";
 export {
   DuplicateOperationError,
@@ -194,8 +194,8 @@ export { type ILogger } from "./logging/types.js";
 
 // Migrations
 export {
-  getMigrationStatus,
   REACTOR_SCHEMA,
+  getMigrationStatus,
   runMigrations,
 } from "./storage/migrations/migrator.js";
 
@@ -207,7 +207,6 @@ export {
   type ISyncRemoteStorage,
 } from "./storage/index.js";
 export {
-  batchOperationsByDocument,
   ChannelError,
   ChannelErrorSource,
   ChannelScheme,
@@ -218,7 +217,6 @@ export {
   IntervalPollTimer,
   Mailbox,
   PollingChannelError,
-  sortEnvelopesByFirstOperationTimestamp,
   SyncBuilder,
   SyncEventTypes,
   SyncOperation,
@@ -226,6 +224,8 @@ export {
   SyncOperationStatus,
   SyncStatus,
   SyncStatusTracker,
+  batchOperationsByDocument,
+  sortEnvelopesByFirstOperationTimestamp,
   trimMailboxFromAckOrdinal,
   type ChannelConfig,
   type ChannelHealth,
@@ -254,14 +254,17 @@ export {
 } from "./sync/index.js";
 
 // Processors
-export { createRelationalDb, RelationalDbProcessor } from "shared/processors";
+export {
+  RelationalDbProcessor,
+  createRelationalDb,
+} from "@powerhousedao/shared/processors";
 export type {
   IProcessor,
   IProcessorHostModule,
   IProcessorManager,
+  IRelationalDb,
   ProcessorFactory,
   ProcessorFilter,
   ProcessorRecord,
-  IRelationalDb,
-} from "shared/processors";
+} from "@powerhousedao/shared/processors";
 export { ProcessorManager } from "./processors/index.js";

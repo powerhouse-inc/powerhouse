@@ -1,4 +1,4 @@
-import type { OperationWithContext } from "shared/document-model";
+import type { OperationWithContext } from "@powerhousedao/shared/document-model";
 import type { Job } from "../queue/types.js";
 import type { JobMeta } from "../shared/types.js";
 

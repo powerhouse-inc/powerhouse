@@ -1,6 +1,6 @@
 {
   "name": "document-drive",
-  "version": "6.0.0-dev.46",
+  "version": "6.0.0-dev.49",
   "license": "AGPL-3.0-only",
   "type": "module",
   "types": "./dist/index.d.ts",
@@ -92,10 +92,10 @@
     "sqlite3": "^5.1.7",
     "uuid": "^11.0.5",
     "zocker": "^3.0.0",
+    "@powerhousedao/shared": "workspace:*",
     "zod": "catalog:"
   },
   "devDependencies": {
-    "shared": "workspace:*",
     "@anatine/zod-mock": "^3.14.0",
     "@types/node": "catalog:",
     "@types/uuid": "^9.0.8",

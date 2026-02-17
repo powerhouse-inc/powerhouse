@@ -1,5 +1,5 @@
+import type { OperationWithContext } from "@powerhousedao/shared/document-model";
 import type { Operation } from "document-model";
-import type { OperationWithContext } from "shared/document-model";
 import {
   driveCollectionId,
   type OperationIndexEntry,

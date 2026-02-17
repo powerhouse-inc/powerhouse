@@ -22,10 +22,10 @@
   "dependencies": {
     "colorette": "catalog:",
     "commander": "catalog:",
-    "document-model": "workspace:*"
+    "document-model": "workspace:*",
+    "@powerhousedao/shared": "workspace:*"
   },
   "devDependencies": {
-    "shared": "workspace:*",
     "@types/node": "catalog:",
     "tsx": "^4.20.3",
     "vitest": "catalog:"

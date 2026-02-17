@@ -49,7 +49,7 @@
       "path": "../../apps/switchboard"
     },
     {
-      "path": "../../shared"
+      "path": "../../packages/shared"
     }
   ]
 }

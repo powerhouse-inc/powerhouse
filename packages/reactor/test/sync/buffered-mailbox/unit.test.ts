@@ -1,5 +1,5 @@
+import type { OperationWithContext } from "@powerhousedao/shared/document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { OperationWithContext } from "shared/document-model";
 import { BufferedMailbox } from "../../../src/sync/buffered-mailbox.js";
 import { MailboxAggregateError } from "../../../src/sync/mailbox.js";
 import { SyncOperation } from "../../../src/sync/sync-operation.js";

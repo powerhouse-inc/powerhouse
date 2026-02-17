@@ -1,1 +1,1 @@
-export type { ProcessorApp } from "shared/processors";
+export type { ProcessorApp } from "@powerhousedao/shared/processors";

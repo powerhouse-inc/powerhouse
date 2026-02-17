@@ -17,7 +17,7 @@
       "path": "../config"
     },
     {
-      "path": "../../shared"
+      "path": "../shared"
     }
   ]
 }

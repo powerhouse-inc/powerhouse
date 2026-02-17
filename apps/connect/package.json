@@ -1,7 +1,7 @@
 {
   "name": "@powerhousedao/connect",
   "productName": "Powerhouse-Connect",
-  "version": "6.0.0-dev.46",
+  "version": "6.0.0-dev.49",
   "description": "Powerhouse Connect",
   "main": "dist/index.html",
   "type": "module",
@@ -170,10 +170,10 @@
     "vite-plugin-html": "catalog:",
     "vite-plugin-node-polyfills": "catalog:",
     "vite-plugin-svgr": "catalog:",
+    "@powerhousedao/shared": "workspace:",
     "zod": "catalog:"
   },
   "devDependencies": {
-    "shared": "workspace:",
     "@tailwindcss/cli": "catalog:"
   }
 }

@@ -1,3 +1,8 @@
+import type {
+  ProcessorApp,
+  ProcessorApps,
+} from "@powerhousedao/shared/processors";
+import { PROCESSOR_APPS } from "@powerhousedao/shared/processors";
 import type { Type } from "cmd-ts";
 import {
   array,
@@ -10,8 +15,6 @@ import {
   positional,
   string,
 } from "cmd-ts";
-import type { ProcessorApp, ProcessorApps } from "shared/processors";
-import { PROCESSOR_APPS } from "shared/processors";
 import { debugArgs, useHygen } from "./common.js";
 
 const ProcessorAppType: Type<string[], ProcessorApps> = {

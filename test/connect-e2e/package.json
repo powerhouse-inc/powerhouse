@@ -63,7 +63,6 @@
   "devDependencies": {
     "@electric-sql/pglite": "catalog:",
     "@playwright/test": "^1.41.2",
-    "shared": "workspace:*",
     "@powerhousedao/builder-tools": "workspace:*",
     "@powerhousedao/codegen": "workspace:*",
     "@powerhousedao/config": "workspace:*",
@@ -91,5 +90,8 @@
     "vite": "catalog:",
     "vite-plugin-node-polyfills": "catalog:",
     "zod": "catalog:"
+  },
+  "dependencies": {
+    "@powerhousedao/shared": "workspace:*"
   }
 }

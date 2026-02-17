@@ -84,10 +84,10 @@
     "graphql-tag": "^2.12.6",
     "kysely": "catalog:",
     "uuid": "^11.1.0",
+    "@powerhousedao/shared": "workspace:*",
     "zod": "catalog:"
   },
   "devDependencies": {
-    "shared": "workspace:*",
     "@electric-sql/pglite": "catalog:",
     "@powerhousedao/analytics-engine-core": "catalog:",
     "@powerhousedao/codegen": "workspace:*",

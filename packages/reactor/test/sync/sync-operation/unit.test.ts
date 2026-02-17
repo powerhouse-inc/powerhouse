@@ -1,3 +1,4 @@
+import type { OperationWithContext } from "@powerhousedao/shared/document-model";
 import { describe, expect, it, vi } from "vitest";
 import { ChannelError } from "../../../src/sync/errors.js";
 import {
@@ -8,7 +9,6 @@ import {
   ChannelErrorSource,
   SyncOperationStatus,
 } from "../../../src/sync/types.js";
-import type { OperationWithContext } from "shared/document-model";
 
 describe("SyncOperation", () => {
   const createTestOperations = (): OperationWithContext[] => {

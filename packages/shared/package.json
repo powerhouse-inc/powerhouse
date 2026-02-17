@@ -1,10 +1,16 @@
 {
-  "name": "shared",
-  "version": "0.0.0",
-  "private": true,
+  "name": "@powerhousedao/shared",
+  "version": "6.0.0-dev.49",
   "type": "module",
   "publishConfig": {
-    "access": "restricted"
+    "access": "public"
+  },
+  "files": [
+    "dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/powerhouse-inc/powerhouse"
   },
   "exports": {
     "./processors": {
@@ -24,12 +30,14 @@
       "default": "./dist/document-model/*.js"
     }
   },
-  "devDependencies": {
+  "dependencies": {
     "kysely": "catalog:",
     "@sindresorhus/fnv1a": "catalog:",
     "@powerhousedao/analytics-engine-core": "catalog:",
     "mutative": "catalog:",
-    "react": "catalog:",
+    "react": "catalog:"
+  },
+  "devDependencies": {
     "@types/react": "catalog:"
   }
 }

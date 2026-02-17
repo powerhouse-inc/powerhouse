@@ -1,5 +1,5 @@
+import type { OperationWithContext } from "@powerhousedao/shared/document-model";
 import type { Kysely, QueryCreator } from "kysely";
-import type { OperationWithContext } from "shared/document-model";
 import type { IProcessor, ProcessorFilter } from "../types.js";
 import { relationalDbToQueryBuilder } from "./utils.js";
 

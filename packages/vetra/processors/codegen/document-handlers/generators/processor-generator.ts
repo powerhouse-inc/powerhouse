@@ -1,10 +1,10 @@
 import { generateProcessor } from "@powerhousedao/codegen";
-import type { InternalTransmitterUpdate } from "document-drive";
 import {
   PROCESSOR_APPS,
   type ProcessorApp,
   type ProcessorApps,
-} from "shared/processors";
+} from "@powerhousedao/shared/processors";
+import type { InternalTransmitterUpdate } from "document-drive";
 import type {
   ProcessorModulePHState,
   ProcessorModuleState,

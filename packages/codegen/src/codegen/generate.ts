@@ -12,6 +12,7 @@ import type {
     PowerhouseConfig,
     PowerhouseManifest,
 } from "@powerhousedao/config";
+import type { ProcessorApps } from "@powerhousedao/shared/processors";
 import { kebabCase } from "change-case";
 import type { DocumentModelGlobalState } from "document-model";
 import fs from "node:fs";
@@ -19,7 +20,6 @@ import { readdir } from "node:fs/promises";
 import path, { join } from "node:path";
 import { readPackage, type NormalizedPackageJson } from "read-pkg";
 import semver from "semver";
-import type { ProcessorApps } from "shared/processors";
 import { tsMorphGenerateProcessor } from "../file-builders/processors/processor.js";
 import { TSMorphCodeGenerator } from "../ts-morph-generator/core/TSMorphCodeGenerator.js";
 import { generateDocumentModelZodSchemas, generateSchemas } from "./graphql.js";

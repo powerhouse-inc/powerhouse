@@ -1,8 +1,8 @@
 import { PGlite } from "@electric-sql/pglite";
+import type { OperationWithContext } from "@powerhousedao/shared/document-model";
 import { generateId } from "document-model/core";
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
-import type { OperationWithContext } from "shared/document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { KyselyOperationIndex } from "../../../src/cache/kysely-operation-index.js";
 import type { IOperationIndex } from "../../../src/cache/operation-index-types.js";

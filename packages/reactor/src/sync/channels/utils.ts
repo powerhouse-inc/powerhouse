@@ -1,5 +1,5 @@
+import type { OperationWithContext } from "@powerhousedao/shared/document-model";
 import type { Action, Operation, Signature } from "document-model";
-import type { OperationWithContext } from "shared/document-model";
 import { SyncOperation } from "../sync-operation.js";
 import { SyncOperationStatus, type SyncEnvelope } from "../types.js";
 import { batchOperationsByDocument } from "../utils.js";

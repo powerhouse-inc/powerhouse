@@ -1,4 +1,4 @@
-# Powerhouse CLI Commands (6.0.0-dev.45)<br>
+# Powerhouse CLI Commands (6.0.0-dev.47)<br>
 This document provides detailed information about the available commands in the Powerhouse CLI.<br><br>
 The Powerhouse CLI (ph-cli) is a command-line interface tool that provides essential commands for managing Powerhouse projects. The tool and it's commands are fundamental for creating, building, and running Document Models as a builder in studio mode.<br>
 ## Table of Contents

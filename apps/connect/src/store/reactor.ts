@@ -34,6 +34,7 @@ import {
   setReactorClientModule,
   setRenown,
 } from "@powerhousedao/reactor-browser/connect";
+import type { ProcessorFactoryBuilder } from "@powerhousedao/shared/processors";
 import {
   BrowserKeyStorage,
   RenownBuilder,
@@ -41,7 +42,6 @@ import {
 } from "@renown/sdk";
 import { logger } from "document-drive";
 import type { DocumentModelModule } from "document-model";
-import type { ProcessorFactoryBuilder } from "shared/processors";
 import { loadCommonPackage } from "./document-model.js";
 import {
   loadExternalPackages,

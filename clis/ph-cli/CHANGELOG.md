@@ -1,3 +1,17 @@
+## 6.0.0-dev.49 (2026-02-17)
+
+This was a version bump only for @powerhousedao/ph-cli to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.47 (2026-02-17)
+
+### 🩹 Fixes
+
+- **monorepo:** make shared package publicly available ([#2348](https://github.com/powerhouse-inc/powerhouse/pull/2348))
+
+### ❤️ Thank You
+
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.0.0-dev.46 (2026-02-17)
 
 ### 🚀 Features
