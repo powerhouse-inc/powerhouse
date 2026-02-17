@@ -30,7 +30,7 @@ describe("Drive Info Endpoint - Protocol Detection", () => {
     const protocol = getProtocol(req);
     const host = req.get("host") ?? "";
     const normalizedBasePath = basePath === "/" ? "" : basePath;
-    return `${protocol}//${host}${normalizedBasePath}/graphql/r/local`;
+    return `${protocol}//${host}${normalizedBasePath}/graphql/r`;
   }
 
   describe("getProtocol", () => {
@@ -93,7 +93,7 @@ describe("Drive Info Endpoint - Protocol Detection", () => {
       };
 
       const endpoint = buildGraphqlEndpoint(mockReq, "/");
-      expect(endpoint).toBe("https://my-app.herokuapp.com/graphql/r/local");
+      expect(endpoint).toBe("https://my-app.herokuapp.com/graphql/r");
     });
 
     it("should build correct HTTPS endpoint when behind Traefik proxy", () => {
@@ -107,7 +107,7 @@ describe("Drive Info Endpoint - Protocol Detection", () => {
       };
 
       const endpoint = buildGraphqlEndpoint(mockReq, "/");
-      expect(endpoint).toBe("https://api.powerhouse.dev/graphql/r/local");
+      expect(endpoint).toBe("https://api.powerhouse.dev/graphql/r");
     });
 
     it("should build correct HTTP endpoint for local development", () => {
@@ -120,7 +120,7 @@ describe("Drive Info Endpoint - Protocol Detection", () => {
       };
 
       const endpoint = buildGraphqlEndpoint(mockReq, "/");
-      expect(endpoint).toBe("http://localhost:3000/graphql/r/local");
+      expect(endpoint).toBe("http://localhost:3000/graphql/r");
     });
 
     it("should include base path when not root", () => {
@@ -134,7 +134,7 @@ describe("Drive Info Endpoint - Protocol Detection", () => {
       };
 
       const endpoint = buildGraphqlEndpoint(mockReq, "/api/v1");
-      expect(endpoint).toBe("https://api.example.com/api/v1/graphql/r/local");
+      expect(endpoint).toBe("https://api.example.com/api/v1/graphql/r");
     });
   });
 });
