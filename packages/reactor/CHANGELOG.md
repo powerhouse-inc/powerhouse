@@ -1,3 +1,13 @@
+## 6.0.0-dev.51 (2026-02-17)
+
+### 🩹 Fixes
+
+- **reactor-browser,reactor:** improved error instance checks ([c6b8625e7](https://github.com/powerhouse-inc/powerhouse/commit/c6b8625e7))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 6.0.0-dev.50 (2026-02-17)
 
 This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.

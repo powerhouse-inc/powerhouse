@@ -1,3 +1,13 @@
+## 6.0.0-dev.51 (2026-02-17)
+
+### 🩹 Fixes
+
+- **design-system:** fix static assets relative path ([ae9d936dc](https://github.com/powerhouse-inc/powerhouse/commit/ae9d936dc))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 6.0.0-dev.50 (2026-02-17)
 
 This was a version bump only for @powerhousedao/design-system to align it with other projects, there were no code changes.
