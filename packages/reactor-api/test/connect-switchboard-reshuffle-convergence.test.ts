@@ -66,7 +66,9 @@ function createSwitchboardModule(
       driveDocumentModelModule as unknown as DocumentModelModule,
     ])
     .withSync(
-      new SyncBuilder().withChannelFactory(new GqlResponseChannelFactory(logger)),
+      new SyncBuilder().withChannelFactory(
+        new GqlResponseChannelFactory(logger),
+      ),
     )
     .buildModule();
 }
@@ -286,8 +288,11 @@ describe("Connect-Switchboard reshuffle rebroadcast convergence", () => {
       switchboard.operationIndex.get(DOCUMENT_ID),
     ]);
 
-    const globalEntries = [...indexA.results, ...indexB.results, ...indexS.results]
-      .filter((entry) => entry.scope === "global");
+    const globalEntries = [
+      ...indexA.results,
+      ...indexB.results,
+      ...indexS.results,
+    ].filter((entry) => entry.scope === "global");
 
     expect(globalEntries.length).toBeGreaterThan(0);
     expect(globalEntries.some((entry) => entry.skip > 0)).toBe(true);
