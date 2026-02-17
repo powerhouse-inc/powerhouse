@@ -516,6 +516,10 @@ async function main() {
     console.log(`Writing output to: ${outputPath}`);
   }
 
+  console.log(
+    `Command: tsx reactor-direct.ts ${process.argv.slice(2).join(" ")}`,
+  );
+
   // Initialize Pyroscope profiling if enabled
   if (pyroscopeServer) {
     console.log(`Initializing Pyroscope profiler at: ${pyroscopeServer}`);
