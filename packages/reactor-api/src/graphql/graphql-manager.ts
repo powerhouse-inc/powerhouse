@@ -590,7 +590,9 @@ export class GraphQLManager {
           await this.reactorClient.get<DocumentDriveDocument>(driveIdOrSlug);
 
         // Construct the graphqlEndpoint from the request
-        const protocol = req.protocol + ":";
+        // Use X-Forwarded-Proto header when behind a reverse proxy (Heroku, Traefik, etc.)
+        const forwardedProto = req.get("x-forwarded-proto");
+        const protocol = (forwardedProto ?? req.protocol) + ":";
         const host = req.get("host") ?? "";
         const basePath = this.path === "/" ? "" : this.path;
         const graphqlEndpoint = `${protocol}//${host}${basePath}/graphql/r/local`;
