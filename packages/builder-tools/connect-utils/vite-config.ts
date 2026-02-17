@@ -21,7 +21,6 @@ import { createHtmlPlugin } from "vite-plugin-html";
 import svgr from "vite-plugin-svgr";
 import { stripVersionFromPackage } from "./helpers.js";
 import type { IConnectOptions } from "./types.js";
-import { phExternalPackagesPlugin } from "./vite-plugins/ph-external-packages.js";
 
 export const connectClientConfig = {
   meta: [
@@ -197,7 +196,7 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     tailwind(),
     svgr(),
     react(),
-    phExternalPackagesPlugin(phPackages, localPackage),
+    // phExternalPackagesPlugin(phPackages, localPackage),
     createHtmlPlugin({
       minify: false,
       inject: {

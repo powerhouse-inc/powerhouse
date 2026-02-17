@@ -53,6 +53,7 @@ export class BrowserPackageManager implements IPackageManager {
   #packages: Map<string, VetraPackage> = new Map();
   #logger: ILogger;
   #subscribers = new Set<IPackagesListener>();
+  #packagesMemo: VetraPackage[] = [];
 
   constructor(
     namespace: string,
@@ -84,7 +85,7 @@ export class BrowserPackageManager implements IPackageManager {
   }
 
   get packages() {
-    return Array.from(this.#packages.values());
+    return this.#packagesMemo; // returns memoized value to integrate with react
   }
 
   async addPackage(name: string, registryUrl: string) {
@@ -135,6 +136,7 @@ export class BrowserPackageManager implements IPackageManager {
 
   #notifyPackagesChanged() {
     const packages = this.packages;
+    this.#packagesMemo = Array.from(this.#packages.values());
     this.#subscribers.forEach((handler) => {
       try {
         handler({ packages });
