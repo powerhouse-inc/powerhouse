@@ -17,7 +17,7 @@ describe("drive-url", () => {
       expect(result).toEqual({
         url: "https://example.com/d/drive-id-123",
         driveId: "drive-id-123",
-        graphqlEndpoint: "http://localhost:4001/graphql/r",
+        graphqlEndpoint: "https://example.com/graphql/r",
       });
     });
 
@@ -37,7 +37,7 @@ describe("drive-url", () => {
       expect(result).toEqual({
         url: "https://api.staging.example.com/d/drive123",
         driveId: "drive123",
-        graphqlEndpoint: "https://api.staging.example.com/graphql/r/local",
+        graphqlEndpoint: "https://api.staging.example.com/graphql/r",
       });
     });
 
@@ -48,7 +48,7 @@ describe("drive-url", () => {
       expect(result).toEqual({
         url: "https://example.com/api/v1/drives/d/my-drive",
         driveId: "my-drive",
-        graphqlEndpoint: "http://localhost:4001/graphql/r",
+        graphqlEndpoint: "https://example.com/graphql/r",
       });
     });
 
@@ -77,7 +77,7 @@ describe("drive-url", () => {
       expect(result).toEqual({
         url: "https://example.com/d/550e8400-e29b-41d4-a716-446655440000",
         driveId: "550e8400-e29b-41d4-a716-446655440000",
-        graphqlEndpoint: "http://localhost:4001/graphql/r",
+        graphqlEndpoint: "https://example.com/graphql/r",
       });
     });
 
