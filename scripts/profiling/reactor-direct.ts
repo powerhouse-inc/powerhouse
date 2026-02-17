@@ -469,6 +469,7 @@ async function main() {
   // console.log/warn/error write through process.stdout/stderr.write internally,
   // so we only need to intercept at the stream level to avoid duplicate lines.
   let outputStream: WriteStream | undefined;
+  let pendingLine = "";
   if (outputFile) {
     const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
     const outputPath = join(
@@ -479,11 +480,28 @@ async function main() {
     const origStdoutWrite = process.stdout.write.bind(process.stdout);
     const origStderrWrite = process.stderr.write.bind(process.stderr);
 
+    // Buffer that simulates terminal \r behavior: carriage return resets
+    // the current line so only the final version is written to the file.
+    const fileWrite = (chunk: string | Uint8Array) => {
+      const text =
+        typeof chunk === "string" ? chunk : new TextDecoder().decode(chunk);
+      for (const ch of text) {
+        if (ch === "\r") {
+          pendingLine = "";
+        } else if (ch === "\n") {
+          outputStream!.write(pendingLine + "\n");
+          pendingLine = "";
+        } else {
+          pendingLine += ch;
+        }
+      }
+    };
+
     process.stdout.write = (
       chunk: string | Uint8Array,
       ...rest: any[]
     ): boolean => {
-      outputStream!.write(chunk);
+      fileWrite(chunk);
       return (origStdoutWrite as any)(chunk, ...rest);
     };
 
@@ -491,7 +509,7 @@ async function main() {
       chunk: string | Uint8Array,
       ...rest: any[]
     ): boolean => {
-      outputStream!.write(chunk);
+      fileWrite(chunk);
       return (origStderrWrite as any)(chunk, ...rest);
     };
 
@@ -798,6 +816,9 @@ async function main() {
   }
 
   if (outputStream) {
+    if (pendingLine) {
+      outputStream.write(pendingLine + "\n");
+    }
     outputStream.end();
   }
 }
