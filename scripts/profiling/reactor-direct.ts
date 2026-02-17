@@ -24,6 +24,7 @@
 
 import { execFileSync } from "node:child_process";
 import { createWriteStream, type WriteStream } from "node:fs";
+import { basename, dirname, join } from "node:path";
 import { PGlite } from "@electric-sql/pglite";
 import {
   JobStatus,
@@ -469,7 +470,12 @@ async function main() {
   // so we only need to intercept at the stream level to avoid duplicate lines.
   let outputStream: WriteStream | undefined;
   if (outputFile) {
-    outputStream = createWriteStream(outputFile);
+    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+    const outputPath = join(
+      dirname(outputFile),
+      `${timestamp}-${basename(outputFile)}`,
+    );
+    outputStream = createWriteStream(outputPath);
     const origStdoutWrite = process.stdout.write.bind(process.stdout);
     const origStderrWrite = process.stderr.write.bind(process.stderr);
 
@@ -489,7 +495,7 @@ async function main() {
       return (origStderrWrite as any)(chunk, ...rest);
     };
 
-    console.log(`Writing output to: ${outputFile}`);
+    console.log(`Writing output to: ${outputPath}`);
   }
 
   // Initialize Pyroscope profiling if enabled
@@ -744,7 +750,10 @@ async function main() {
       `wall:wall:nanoseconds:wall:nanoseconds{service_name="${appName}"}`,
     );
     const analyseUrl = `${pyroscopeServer}/?query=${query}&from=${pyroscopeFrom}&until=${pyroscopeUntil}`;
-    const outputBase = `${pyroscopeFrom}-pyroscope`;
+    const pyroscopeTimestamp = new Date(pyroscopeFrom * 1000)
+      .toISOString()
+      .replace(/[:.]/g, "-");
+    const outputBase = `${pyroscopeTimestamp}-pyroscope`;
     console.log(`\nPyroscope URL:\n  ${analyseUrl}`);
 
     // Wait for Pyroscope to flush profiling data
