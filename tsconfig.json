@@ -77,7 +77,7 @@
       "path": "./scripts"
     },
     {
-      "path": "./shared"
+      "path": "./packages/shared"
     }
   ],
   "files": []

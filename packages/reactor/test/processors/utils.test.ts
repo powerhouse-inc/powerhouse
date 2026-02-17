@@ -1,5 +1,5 @@
-import type { OperationWithContext } from "shared/document-model";
-import type { ProcessorFilter } from "shared/processors";
+import type { OperationWithContext } from "@powerhousedao/shared/document-model";
+import type { ProcessorFilter } from "@powerhousedao/shared/processors";
 import { describe, expect, it } from "vitest";
 import { matchesFilter } from "../../src/processors/utils.js";
 

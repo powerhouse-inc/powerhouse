@@ -95,10 +95,10 @@
     "uuid": "^9.0.1",
     "wildcard-match": "^5.1.3",
     "ws": "^8.18.3",
+    "@powerhousedao/shared": "workspace:*",
     "zod": "catalog:"
   },
   "devDependencies": {
-    "shared": "workspace:*",
     "@graphql-codegen/cli": "catalog:",
     "@graphql-codegen/client-preset": "catalog:",
     "@graphql-codegen/typed-document-node": "catalog:",

@@ -42,7 +42,7 @@
       "path": "../../packages/reactor"
     },
     {
-      "path": "../../shared"
+      "path": "../../packages/shared"
     }
   ]
 }

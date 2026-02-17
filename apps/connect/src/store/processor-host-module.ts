@@ -2,7 +2,7 @@ import { createOrGetAnalyticsStore } from "@powerhousedao/reactor-browser";
 import {
   DEFAULT_ANALYTICS_PROCESSOR_DB_NAME,
   type IProcessorHostModule,
-} from "shared/processors";
+} from "@powerhousedao/shared/processors";
 import { getDb } from "../pglite.db.js";
 
 export async function createProcessorHostModule(): Promise<

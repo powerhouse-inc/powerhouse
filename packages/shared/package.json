@@ -1,11 +1,11 @@
 {
-  "name": "shared",
-  "version": "0.0.0",
-  "private": true,
+  "name": "@powerhousedao/shared",
+  "version": "6.0.0-dev.46",
   "type": "module",
   "publishConfig": {
-    "access": "restricted"
+    "access": "public"
   },
+  "files": ["dist"],
   "exports": {
     "./processors": {
       "types": "./dist/processors/index.d.ts",
@@ -24,12 +24,14 @@
       "default": "./dist/document-model/*.js"
     }
   },
-  "devDependencies": {
+  "dependencies": {
     "kysely": "catalog:",
     "@sindresorhus/fnv1a": "catalog:",
     "@powerhousedao/analytics-engine-core": "catalog:",
     "mutative": "catalog:",
-    "react": "catalog:",
+    "react": "catalog:"
+  },
+  "devDependencies": {
     "@types/react": "catalog:"
   }
 }

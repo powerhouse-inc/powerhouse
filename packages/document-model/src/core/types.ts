@@ -1,1 +1,1 @@
-export type * from "shared/document-model/core/types";
+export type * from "@powerhousedao/shared/document-model/core/types";

@@ -1,5 +1,5 @@
+import type { OperationWithContext } from "@powerhousedao/shared/document-model";
 import type { Kysely, Transaction } from "kysely";
-import type { OperationWithContext } from "shared/document-model";
 import type { IOperationIndex } from "../cache/operation-index-types.js";
 import type { IWriteCache } from "../cache/write/interfaces.js";
 import type { IConsistencyTracker } from "../shared/consistency-tracker.js";

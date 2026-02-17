@@ -35,6 +35,7 @@
   "author": "",
   "license": "AGPL-3.0-only",
   "dependencies": {
+    "@powerhousedao/shared": "workspace:",
     "@electric-sql/pglite": "catalog:",
     "@sindresorhus/fnv1a": "catalog:",
     "document-drive": "workspace:*",
@@ -49,7 +50,6 @@
     "prettier": "^3.6.2",
     "tinybench": "^2.9.0",
     "tsx": "^4.19.2",
-    "vitest": "^3.2.4",
-    "shared": "workspace:"
+    "vitest": "^3.2.4"
   }
 }

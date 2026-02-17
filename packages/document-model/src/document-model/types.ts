@@ -5,7 +5,7 @@ import type {
   Maybe,
   Scalars,
 } from "document-model";
-export type * from "shared/document-model/types";
+export type * from "@powerhousedao/shared/document-model/types";
 
 export type DocumentModelAction =
   | DocumentModelHeaderAction

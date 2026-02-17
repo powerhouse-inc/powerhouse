@@ -1,2 +1,2 @@
+export type * from "@powerhousedao/shared/processors";
 export { ProcessorManager } from "./processor-manager.js";
-export type * from "shared/processors";

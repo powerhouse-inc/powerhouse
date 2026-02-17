@@ -7,7 +7,7 @@ import type {
 } from "document-model";
 import type { Kysely } from "kysely";
 
-import type { IProcessorManager } from "shared/processors";
+import type { IProcessorManager } from "@powerhousedao/shared/processors";
 import type { IOperationIndex } from "../cache/operation-index-types.js";
 import type { IWriteCache } from "../cache/write/interfaces.js";
 import type { ReactorClient } from "../client/reactor-client.js";

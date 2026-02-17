@@ -1,3 +1,4 @@
+import type { OperationWithContext } from "@powerhousedao/shared/document-model";
 import type {
   Action,
   CreateDocumentAction,
@@ -13,7 +14,6 @@ import {
   defaultBaseState,
   deriveOperationId,
 } from "document-model/core";
-import type { OperationWithContext } from "shared/document-model";
 import type { Job } from "../queue/types.js";
 import { DowngradeNotSupportedError } from "../shared/errors.js";
 import type {

@@ -1,4 +1,4 @@
-import type { ProcessorApps } from "shared/processors";
+import type { ProcessorApps } from "@powerhousedao/shared/processors";
 import { $ } from "bun";
 import { describe, it } from "bun:test";
 import { cp } from "node:fs/promises";
