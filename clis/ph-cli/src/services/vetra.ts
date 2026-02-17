@@ -120,7 +120,7 @@ async function startLocalVetraSwitchboard(args: VetraArgs) {
     if (watch) {
       previewDriveUrl = await startVetraPreviewDrive(
         switchboard.reactor,
-        connectPort,
+        switchboardPort,
         verbose,
       );
     }
