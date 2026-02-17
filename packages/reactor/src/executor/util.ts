@@ -1,24 +1,24 @@
 import type { OperationWithContext } from "@powerhousedao/shared/document-model";
 import type {
-    Action,
-    CreateDocumentAction,
-    CreateDocumentActionInput,
-    DeleteDocumentAction,
-    Operation,
-    PHDocument,
-    UpgradeDocumentAction,
-    UpgradeTransition,
+  Action,
+  CreateDocumentAction,
+  CreateDocumentActionInput,
+  DeleteDocumentAction,
+  Operation,
+  PHDocument,
+  UpgradeDocumentAction,
+  UpgradeTransition,
 } from "document-model";
 import {
-    createPresignedHeader,
-    defaultBaseState,
-    deriveOperationId,
+  createPresignedHeader,
+  defaultBaseState,
+  deriveOperationId,
 } from "document-model/core";
 import type { Job } from "../queue/types.js";
 import { DowngradeNotSupportedError } from "../shared/errors.js";
 import type {
-    ConsistencyCoordinate,
-    ConsistencyToken,
+  ConsistencyCoordinate,
+  ConsistencyToken,
 } from "../shared/types.js";
 import type { JobResult } from "./types.js";
 

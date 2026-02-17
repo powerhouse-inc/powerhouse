@@ -1,7 +1,7 @@
 import {
-    PROCESSOR_APPS,
-    type ProcessorApp,
-    type ProcessorApps,
+  PROCESSOR_APPS,
+  type ProcessorApp,
+  type ProcessorApps,
 } from "@powerhousedao/shared/processors";
 import { useEffect, useState } from "react";
 import type { DocumentTypeItem } from "../../../document-models/processor-module/index.js";

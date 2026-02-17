@@ -2,12 +2,12 @@ import type { OperationWithContext } from "@powerhousedao/shared/document-model"
 import { describe, expect, it, vi } from "vitest";
 import { ChannelError } from "../../../src/sync/errors.js";
 import {
-    SyncOperation,
-    SyncOperationAggregateError,
+  SyncOperation,
+  SyncOperationAggregateError,
 } from "../../../src/sync/sync-operation.js";
 import {
-    ChannelErrorSource,
-    SyncOperationStatus,
+  ChannelErrorSource,
+  SyncOperationStatus,
 } from "../../../src/sync/types.js";
 
 describe("SyncOperation", () => {

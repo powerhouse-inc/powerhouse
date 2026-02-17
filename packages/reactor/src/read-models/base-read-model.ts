@@ -4,8 +4,8 @@ import type { IOperationIndex } from "../cache/operation-index-types.js";
 import type { IWriteCache } from "../cache/write/interfaces.js";
 import type { IConsistencyTracker } from "../shared/consistency-tracker.js";
 import type {
-    ConsistencyCoordinate,
-    ConsistencyToken,
+  ConsistencyCoordinate,
+  ConsistencyToken,
 } from "../shared/types.js";
 import type { IReadModel } from "./interfaces.js";
 import type { DocumentViewDatabase } from "./types.js";

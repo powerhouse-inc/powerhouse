@@ -1,12 +1,12 @@
 import {
-    generate as generateCode,
-    generateDBSchema,
-    generateDriveEditor,
-    generateEditor,
-    generateFromFile,
-    generateImportScript,
-    generateProcessor,
-    generateSubgraph,
+  generate as generateCode,
+  generateDBSchema,
+  generateDriveEditor,
+  generateEditor,
+  generateFromFile,
+  generateImportScript,
+  generateProcessor,
+  generateSubgraph,
 } from "@powerhousedao/codegen";
 import { getConfig } from "@powerhousedao/config/node";
 import { PROCESSOR_APPS } from "@powerhousedao/shared/processors";

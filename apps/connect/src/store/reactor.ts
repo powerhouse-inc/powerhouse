@@ -2,50 +2,50 @@ import { phGlobalConfigFromEnv } from "@powerhousedao/connect/config";
 import { initFeatureFlags } from "@powerhousedao/connect/feature-flags.js";
 import { toast } from "@powerhousedao/connect/services";
 import {
-    addDefaultDrivesForNewReactor,
-    createBrowserReactor,
-    getDefaultDrivesFromEnv,
+  addDefaultDrivesForNewReactor,
+  createBrowserReactor,
+  getDefaultDrivesFromEnv,
 } from "@powerhousedao/connect/utils";
 import {
-    addRemoteDrive,
-    dropAllReactorStorage,
-    extractDriveSlugFromPath,
-    extractNodeSlugFromPath,
-    getDrives,
-    ReactorClientDocumentCache,
-    refreshReactorDataClient,
-    setFeatures,
-    setPHToast,
-    setSelectedDrive,
-    setSelectedNode,
-    setVetraPackages,
-    type PHToastFn,
-    type VetraPackage,
+  addRemoteDrive,
+  dropAllReactorStorage,
+  extractDriveSlugFromPath,
+  extractNodeSlugFromPath,
+  getDrives,
+  ReactorClientDocumentCache,
+  refreshReactorDataClient,
+  setFeatures,
+  setPHToast,
+  setSelectedDrive,
+  setSelectedNode,
+  setVetraPackages,
+  type PHToastFn,
+  type VetraPackage,
 } from "@powerhousedao/reactor-browser";
 import {
-    addPHEventHandlers,
-    login,
-    setConnectCrypto,
-    setDefaultPHGlobalConfig,
-    setDid,
-    setDocumentCache,
-    setDrives,
-    setReactorClient,
-    setReactorClientModule,
-    setRenown,
+  addPHEventHandlers,
+  login,
+  setConnectCrypto,
+  setDefaultPHGlobalConfig,
+  setDid,
+  setDocumentCache,
+  setDrives,
+  setReactorClient,
+  setReactorClientModule,
+  setRenown,
 } from "@powerhousedao/reactor-browser/connect";
 import type { ProcessorFactoryBuilder } from "@powerhousedao/shared/processors";
 import {
-    BrowserKeyStorage,
-    RenownBuilder,
-    RenownCryptoBuilder,
+  BrowserKeyStorage,
+  RenownBuilder,
+  RenownCryptoBuilder,
 } from "@renown/sdk";
 import { logger } from "document-drive";
 import type { DocumentModelModule } from "document-model";
 import { loadCommonPackage } from "./document-model.js";
 import {
-    loadExternalPackages,
-    subscribeExternalPackages,
+  loadExternalPackages,
+  subscribeExternalPackages,
 } from "./external-packages.js";
 import { createProcessorHostModule } from "./processor-host-module.js";
 

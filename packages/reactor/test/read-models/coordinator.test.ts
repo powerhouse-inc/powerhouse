@@ -2,8 +2,8 @@ import type { OperationWithContext } from "@powerhousedao/shared/document-model"
 import { describe, expect, it, vi } from "vitest";
 import { EventBus } from "../../src/events/event-bus.js";
 import {
-    ReactorEventTypes,
-    type JobReadReadyEvent,
+  ReactorEventTypes,
+  type JobReadReadyEvent,
 } from "../../src/events/types.js";
 import { ReadModelCoordinator } from "../../src/read-models/coordinator.js";
 import type { IReadModel } from "../../src/read-models/interfaces.js";

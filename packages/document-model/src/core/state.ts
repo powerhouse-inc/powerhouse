@@ -1,6 +1,6 @@
 import {
-    HASH_ALGORITHM_SHA1,
-    HASH_ENCODING_BASE64,
+  HASH_ALGORITHM_SHA1,
+  HASH_ENCODING_BASE64,
 } from "@powerhousedao/shared/document-model";
 import type { PHAuthState, PHBaseState, PHDocumentState } from "./ph-types.js";
 

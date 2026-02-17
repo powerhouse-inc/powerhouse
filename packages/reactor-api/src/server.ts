@@ -3,27 +3,27 @@ import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import { PostgresAnalyticsStore } from "@powerhousedao/analytics-engine-pg";
 import { getConfig } from "@powerhousedao/config/node";
 import type {
-    IDocumentModelRegistry,
-    IReactorClient,
-    IProcessorManager as IReactorProcessorManager,
-    ISyncManager,
-    ReactorClientModule,
-    ProcessorRecord as ReactorProcessorRecord,
+  IDocumentModelRegistry,
+  IReactorClient,
+  IProcessorManager as IReactorProcessorManager,
+  ISyncManager,
+  ReactorClientModule,
+  ProcessorRecord as ReactorProcessorRecord,
 } from "@powerhousedao/reactor";
 import { setupMcpServer } from "@powerhousedao/reactor-mcp";
 import devcert from "devcert";
 import type {
-    DocumentDriveDocument,
-    IDocumentDriveServer,
-    IProcessorHostModuleLegacy,
-    IProcessorManagerLegacy,
-    IRelationalDbLegacy,
-    ProcessorFactoryLegacy,
+  DocumentDriveDocument,
+  IDocumentDriveServer,
+  IProcessorHostModuleLegacy,
+  IProcessorManagerLegacy,
+  IRelationalDbLegacy,
+  ProcessorFactoryLegacy,
 } from "document-drive";
 import {
-    childLogger,
-    createRelationalDbLegacy,
-    ProcessorManagerLegacy,
+  childLogger,
+  createRelationalDbLegacy,
+  ProcessorManagerLegacy,
 } from "document-drive";
 import type { DocumentModelModule } from "document-model";
 import type { Express } from "express";
@@ -47,8 +47,8 @@ import type { SubgraphClass } from "./graphql/types.js";
 import { runMigrations } from "./migrations/index.js";
 import { ImportPackageLoader } from "./packages/import-loader.js";
 import {
-    getUniqueDocumentModels,
-    PackageManager,
+  getUniqueDocumentModels,
+  PackageManager,
 } from "./packages/package-manager.js";
 import type { AuthenticatedRequest } from "./services/auth.service.js";
 import { AuthService } from "./services/auth.service.js";
@@ -56,9 +56,9 @@ import { DocumentPermissionService } from "./services/document-permission.servic
 import { initTracing, isTracingEnabled, trace } from "./tracing.js";
 import type { API, IPackageLoader, Processor } from "./types.js";
 import {
-    getDbClient,
-    initAnalyticsStoreSql,
-    type DocumentPermissionDatabase,
+  getDbClient,
+  initAnalyticsStoreSql,
+  type DocumentPermissionDatabase,
 } from "./utils/db.js";
 
 const logger = childLogger(["reactor-api", "server"]);

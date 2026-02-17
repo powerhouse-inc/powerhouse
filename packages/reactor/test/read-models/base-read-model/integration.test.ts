@@ -12,8 +12,8 @@ import type { DocumentViewDatabase } from "../../../src/read-models/types.js";
 import { ConsistencyTracker } from "../../../src/shared/consistency-tracker.js";
 import type { Database as StorageDatabase } from "../../../src/storage/kysely/types.js";
 import {
-    REACTOR_SCHEMA,
-    runMigrations,
+  REACTOR_SCHEMA,
+  runMigrations,
 } from "../../../src/storage/migrations/migrator.js";
 
 type Database = StorageDatabase & DocumentViewDatabase;

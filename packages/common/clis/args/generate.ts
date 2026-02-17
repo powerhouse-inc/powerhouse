@@ -1,16 +1,19 @@
-import type { ProcessorApp, ProcessorApps } from "@powerhousedao/shared/processors";
+import type {
+  ProcessorApp,
+  ProcessorApps,
+} from "@powerhousedao/shared/processors";
 import { PROCESSOR_APPS } from "@powerhousedao/shared/processors";
 import type { Type } from "cmd-ts";
 import {
-    array,
-    boolean,
-    flag,
-    multioption,
-    oneOf,
-    option,
-    optional,
-    positional,
-    string,
+  array,
+  boolean,
+  flag,
+  multioption,
+  oneOf,
+  option,
+  optional,
+  positional,
+  string,
 } from "cmd-ts";
 import { debugArgs, useHygen } from "./common.js";
 

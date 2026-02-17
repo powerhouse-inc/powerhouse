@@ -1,7 +1,7 @@
 import { createOrGetAnalyticsStore } from "@powerhousedao/reactor-browser";
 import {
-    DEFAULT_ANALYTICS_PROCESSOR_DB_NAME,
-    type IProcessorHostModule,
+  DEFAULT_ANALYTICS_PROCESSOR_DB_NAME,
+  type IProcessorHostModule,
 } from "@powerhousedao/shared/processors";
 import { getDb } from "../pglite.db.js";
 

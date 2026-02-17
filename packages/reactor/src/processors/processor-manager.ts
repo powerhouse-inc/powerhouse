@@ -1,9 +1,9 @@
 import type { OperationWithContext } from "@powerhousedao/shared/document-model";
 import type {
-    IProcessor,
-    IProcessorManager,
-    ProcessorFactory,
-    ProcessorRecord,
+  IProcessor,
+  IProcessorManager,
+  ProcessorFactory,
+  ProcessorRecord,
 } from "@powerhousedao/shared/processors";
 import type { PHDocumentHeader } from "document-model";
 import type { Kysely, Transaction } from "kysely";
@@ -13,12 +13,12 @@ import { BaseReadModel } from "../read-models/base-read-model.js";
 import type { DocumentViewDatabase } from "../read-models/types.js";
 import type { IConsistencyTracker } from "../shared/consistency-tracker.js";
 import {
-    createMinimalDriveHeader,
-    extractDeletedDocumentId,
-    extractDriveHeader,
-    isDriveCreation,
-    isDriveDeletion,
-    matchesFilter,
+  createMinimalDriveHeader,
+  extractDeletedDocumentId,
+  extractDriveHeader,
+  isDriveCreation,
+  isDriveDeletion,
+  matchesFilter,
 } from "./utils.js";
 
 /**

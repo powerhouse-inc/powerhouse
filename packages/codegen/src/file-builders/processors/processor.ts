@@ -1,14 +1,17 @@
 import {
-    processorsFactoryTemplate,
-    processorsIndexTemplate,
+  processorsFactoryTemplate,
+  processorsIndexTemplate,
 } from "@powerhousedao/codegen/templates";
 import {
-    buildTsMorphProject,
-    ensureDirectoriesExist,
-    formatSourceFileWithPrettier,
-    getOrCreateSourceFile,
+  buildTsMorphProject,
+  ensureDirectoriesExist,
+  formatSourceFileWithPrettier,
+  getOrCreateSourceFile,
 } from "@powerhousedao/codegen/utils";
-import type { ProcessorApp, ProcessorApps } from "@powerhousedao/shared/processors";
+import type {
+  ProcessorApp,
+  ProcessorApps,
+} from "@powerhousedao/shared/processors";
 import { camelCase, paramCase, pascalCase } from "change-case";
 import path from "path";
 import { ts, type Project } from "ts-morph";

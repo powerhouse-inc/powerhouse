@@ -2,10 +2,10 @@ import type { OperationWithContext } from "@powerhousedao/shared/document-model"
 import { describe, expect, it } from "vitest";
 import type { RemoteFilter } from "../../src/sync/types.js";
 import {
-    batchOperationsByDocument,
-    createIdleHealth,
-    filterOperations,
-    sortEnvelopesByFirstOperationTimestamp,
+  batchOperationsByDocument,
+  createIdleHealth,
+  filterOperations,
+  sortEnvelopesByFirstOperationTimestamp,
 } from "../../src/sync/utils.js";
 
 describe("filterOperations", () => {
