@@ -44,7 +44,7 @@
     "@openfeature/env-var-provider": "^0.3.1",
     "@openfeature/server-sdk": "^1.19.0",
     "@powerhousedao/analytics-engine-core": "catalog:",
-    "@powerhousedao/analytics-engine-knex": "^0.6.0",
+    "@powerhousedao/analytics-engine-knex": "catalog:",
     "@powerhousedao/config": "workspace:*",
     "@powerhousedao/reactor": "workspace:*",
     "@powerhousedao/reactor-api": "workspace:*",
@@ -68,7 +68,7 @@
     "@types/express": "^4.17.25",
     "@types/node": "catalog:",
     "@types/pg": "catalog:",
-    "concurrently": "^9.1.2",
-    "nodemon": "^3.1.9"
+    "concurrently": "catalog:",
+    "nodemon": "catalog:"
   }
 }

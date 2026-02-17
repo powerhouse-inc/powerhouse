@@ -72,3 +72,8 @@ catalog:
   "pg": 8.13.0
   "@types/pg": 8.11.10
   "colorette": 2.0.20
+  "tsx": 4.21.0
+  "copyfiles": 2.4.1
+  "nodemon": 3.1.11
+  "concurrently": 9.2.1
+  "@powerhousedao/analytics-engine-knex": 0.6.0

@@ -117,7 +117,7 @@
     "@types/node": "catalog:",
     "@types/pg": "catalog:",
     "@types/ws": "^8.18.1",
-    "copyfiles": "^2.4.1",
+    "copyfiles": "catalog:",
     "esbuild": "^0.24.0",
     "graphql-codegen-typescript-validation-schema": "catalog:",
     "graphql-tag": "^2.12.6",

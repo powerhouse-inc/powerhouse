@@ -103,7 +103,7 @@
     "storybook-mock-date-decorator": "^2.0.6",
     "tailwind-merge": "catalog:",
     "tailwindcss": "catalog:",
-    "tsx": "^4.20.3",
+    "tsx": "catalog:",
     "uuid": "^11.0.5",
     "vite": "catalog:",
     "vite-plugin-node-polyfills": "catalog:",

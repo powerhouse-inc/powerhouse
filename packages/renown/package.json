@@ -58,7 +58,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.57.0",
-    "copyfiles": "^2.4.1",
+    "copyfiles": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "@vitejs/plugin-react": "catalog:",
