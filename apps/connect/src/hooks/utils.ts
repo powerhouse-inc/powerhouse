@@ -12,17 +12,22 @@ const urlBranchMap: Record<string, string> = {
   localhost: "develop",
 };
 
+/**
+ * @deprecated this is not working for now, we need to figure out how to get the latest version
+ */
 const getGithubLinkFromUrl = () => {
-  const githubLink = "https://raw.githubusercontent.com/powerhouse-inc/connect";
-  const url = window.location.href;
+  return undefined;
+  // const githubLink =
+  //   "https://raw.githubusercontent.com/powerhouse-inc/powerhouse";
+  // const url = window.location.href;
 
-  const env = Object.keys(urlBranchMap).find((env) => url.includes(env));
-  const value = env ? urlBranchMap[env] : undefined;
-  if (!value) {
-    return undefined;
-  } else {
-    return `${githubLink}/${value}/package.json`;
-  }
+  // const env = Object.keys(urlBranchMap).find((env) => url.includes(env));
+  // const value = env ? urlBranchMap[env] : undefined;
+  // if (!value) {
+  //   return undefined;
+  // } else {
+  //   return `${githubLink}/${value}/package.json`;
+  // }
 };
 
 const fetchLatestVersion = async () => {
@@ -30,10 +35,14 @@ const fetchLatestVersion = async () => {
   if (!link) {
     return undefined;
   }
-  const result = await fetch(link);
-  const data = (await result.json()) as { version: string };
-  const { version } = data;
-  return version;
+  try {
+    const result = await fetch(link);
+    const data = (await result.json()) as { version: string };
+    const { version } = data;
+    return version;
+  } catch {
+    return undefined;
+  }
 };
 
 export const isLatestVersion = async () => {

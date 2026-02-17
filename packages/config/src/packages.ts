@@ -7,4 +7,10 @@ export const PH_PACKAGES: PowerhousePackage[] = [
     provider: "npm",
     url: "https://www.npmjs.com/package/@sky-ph/atlas",
   },
+  {
+    packageName: "@powerhousedao/vetra",
+    version: "latest",
+    provider: "npm",
+    url: "https://www.npmjs.com/package/@powerhousedao/vetra",
+  },
 ];
