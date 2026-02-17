@@ -8,7 +8,7 @@ export const DefaultServeStaticOptions: ServeStaticOptions = {
   dotfiles: "deny",
   etag: true,
   extensions: ["js", "mjs", "css", "json", "wasm", "index.js"],
-  index: ["index.js", "/index.mjs"],
+  index: ["index.js", "index.mjs"],
   redirect: true,
 };
 

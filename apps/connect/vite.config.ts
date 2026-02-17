@@ -21,8 +21,8 @@ export default defineConfig(({ mode }) => {
       sourcemap: true,
       minify: false,
       rollupOptions: {
-        external(source, importer, isResolved) {
-          return !!["react", "react-dom", "@powerhousedao/vetra"].find(
+        external(source) {
+          return !!["react", "react-dom", "/index.ts", "/style.css"].find(
             (dep) => dep === source || source.startsWith(dep + "/"),
           );
         },

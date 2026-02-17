@@ -39,9 +39,10 @@ import {
   RenownBuilder,
   RenownCryptoBuilder,
 } from "@renown/sdk";
-import { childLogger } from "document-drive";
 import type { DocumentModelModule } from "document-model";
+import { childLogger } from "document-model/core";
 import { loadCommonPackage } from "./document-model.js";
+import { loadLocalPackage } from "./local-package.js";
 import {
   createProcessorHostModule,
   ProcessorsManager,
@@ -102,12 +103,26 @@ export async function createReactor() {
     phGlobalConfigFromEnv.routerBasename ?? "",
     packageManagerLogger,
   );
-
-  await packageManager.init();
-
   // add common package
   const commonPackage = await loadCommonPackage();
   await packageManager.addLocalPackage("common", commonPackage);
+
+  // load external packages if available
+  // TODO: load if PH_CONNECT_PACKAGES is set
+
+  // load local package if available
+  // TODO: load if PH_CONNECT_LOCAL_PACKAGE is set
+  try {
+    const localPackage = await loadLocalPackage();
+    if (localPackage) {
+      await packageManager.addLocalPackage("local", localPackage);
+    }
+  } catch (error) {
+    console.error("Failed to load local package:", error);
+  }
+
+  // load packages from storage
+  await packageManager.init();
 
   setVetraPackageManager(packageManager);
 
