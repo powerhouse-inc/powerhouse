@@ -38,6 +38,7 @@ import type { GraphQLSchema } from "graphql";
 import type http from "node:http";
 import path from "node:path";
 import { setTimeout } from "node:timers/promises";
+import { match, type MatchFunction, type ParamData } from "path-to-regexp";
 import type { WebSocketServer } from "ws";
 import type { AuthConfig } from "../services/auth.service.js";
 import { AuthService } from "../services/auth.service.js";
@@ -134,7 +135,13 @@ export class GraphQLManager {
 
   private coreApolloServer: ApolloServer<Context> | null = null;
   private readonly subgraphServers = new Map<string, ApolloServer<Context>>();
-  private readonly subgraphHandlers = new Map<string, express.RequestHandler>();
+  private readonly subgraphHandlers = new Map<
+    string,
+    {
+      handler: express.RequestHandler;
+      matcher: MatchFunction<ParamData>;
+    }
+  >();
   private readonly subgraphWsDisposers = new Map<
     string,
     { dispose: () => void | Promise<void> }
@@ -192,12 +199,14 @@ export class GraphQLManager {
     this.router.use(bodyParser.json({ limit: "50mb" }));
     this.router.use(bodyParser.urlencoded({ extended: true, limit: "50mb" }));
 
-    this.router.use((req, res, next) => {
-      const handler = this.subgraphHandlers.get(req.path);
-      if (!handler) {
+    this.router.use("/graphql", (req, res, next) => {
+      const result = this.subgraphHandlers.values().find(({ matcher }) => {
+        return matcher("/graphql" + req.path);
+      });
+      if (!result) {
         return res.status(404).send(`${req.path} subgraph not found`);
       }
-      return handler(req, res, next);
+      return result.handler(req, res, next);
     });
 
     this.app.use("/", (req, res, next) => {
@@ -267,7 +276,7 @@ export class GraphQLManager {
     }
 
     // REST endpoint for drive info at /d/:drive
-    this.#setupDriveInfoRestEndpoint(this.coreRouter);
+    this.#setupDriveInfoRestEndpoint(this.router);
 
     return this.#setupSubgraphs(this.coreSubgraphsMap);
   }
@@ -580,7 +589,7 @@ export class GraphQLManager {
         const protocol = (forwardedProto ?? req.protocol) + ":";
         const host = req.get("host") ?? "";
         const basePath = this.path === "/" ? "" : this.path;
-        const graphqlEndpoint = `${protocol}//${host}${basePath}/graphql/r/local`;
+        const graphqlEndpoint = `${protocol}//${host}${basePath}/graphql/r`;
 
         const driveInfo = responseForDrive(driveDoc, graphqlEndpoint);
         res.json(driveInfo);
@@ -665,9 +674,8 @@ export class GraphQLManager {
   }
 
   #setupApolloExpressMiddleware(server: ApolloServer<Context>, path: string) {
-    this.subgraphHandlers.set(
-      path,
-      expressMiddleware(server, {
+    this.subgraphHandlers.set(path, {
+      handler: expressMiddleware(server, {
         context: ({ req }) =>
           Promise.resolve<Context>({
             headers: req.headers,
@@ -677,6 +685,7 @@ export class GraphQLManager {
             ...this.getAdditionalContextFields(),
           }),
       }),
-    );
+      matcher: match(path),
+    });
   }
 }
