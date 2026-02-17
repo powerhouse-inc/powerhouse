@@ -1,3 +1,20 @@
+## 6.0.0-dev.52 (2026-02-17)
+
+### 🚀 Features
+
+- **reactor-api:** optimize apollo server integration with express ([d6a765917](https://github.com/powerhouse-inc/powerhouse/commit/d6a765917))
+
+### 🩹 Fixes
+
+- **connect:** deduplicate document models by type and version ([564fb61b8](https://github.com/powerhouse-inc/powerhouse/commit/564fb61b8))
+- **ph-cli:** fixed vetra preview drive port ([e8144cc4e](https://github.com/powerhouse-inc/powerhouse/commit/e8144cc4e))
+- **reactor-api:** improved subgraph path matching and removed name parameter from reactor subgraph ([dcadf7fb3](https://github.com/powerhouse-inc/powerhouse/commit/dcadf7fb3))
+- **vetra:** removed deprecated document model subgraphs ([6a4076af6](https://github.com/powerhouse-inc/powerhouse/commit/6a4076af6))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 6.0.0-dev.51 (2026-02-17)
 
 ### 🩹 Fixes
