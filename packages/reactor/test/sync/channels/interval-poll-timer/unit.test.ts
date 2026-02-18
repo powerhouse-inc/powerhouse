@@ -526,6 +526,77 @@ describe("IntervalPollTimer", () => {
     });
   });
 
+  describe("getIntervalMs / setIntervalMs", () => {
+    it("should return the configured intervalMs", () => {
+      const mockQueue = createMockQueue();
+      const timer = new IntervalPollTimer(mockQueue, { intervalMs: 5000 });
+
+      expect(timer.getIntervalMs()).toBe(5000);
+    });
+
+    it("should return the default intervalMs when not specified", () => {
+      const mockQueue = createMockQueue();
+      const timer = new IntervalPollTimer(mockQueue);
+
+      expect(timer.getIntervalMs()).toBe(2000);
+    });
+
+    it("should update the interval used by subsequent ticks", async () => {
+      const mockQueue = createMockQueue();
+      const timer = new IntervalPollTimer(mockQueue, { intervalMs: 1000 });
+      const delegate = vi.fn().mockResolvedValue(undefined);
+
+      timer.setDelegate(delegate);
+      timer.start();
+
+      await vi.advanceTimersByTimeAsync(0);
+      expect(delegate).toHaveBeenCalledTimes(1);
+
+      timer.setIntervalMs(3000);
+      expect(timer.getIntervalMs()).toBe(3000);
+
+      // Old interval (1000ms) should not trigger a tick
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(delegate).toHaveBeenCalledTimes(2);
+
+      // New interval should be used for the next schedule
+      await vi.advanceTimersByTimeAsync(3000);
+      expect(delegate).toHaveBeenCalledTimes(3);
+
+      timer.stop();
+    });
+
+    it("should not affect the currently pending timer", async () => {
+      const mockQueue = createMockQueue();
+      const timer = new IntervalPollTimer(mockQueue, { intervalMs: 1000 });
+      const delegate = vi.fn().mockResolvedValue(undefined);
+
+      timer.setDelegate(delegate);
+      timer.start();
+
+      // First tick fires immediately
+      await vi.advanceTimersByTimeAsync(0);
+      expect(delegate).toHaveBeenCalledTimes(1);
+
+      // 500ms into the 1000ms wait, change interval to 5000ms
+      await vi.advanceTimersByTimeAsync(500);
+      timer.setIntervalMs(5000);
+
+      // The already-scheduled timer at 1000ms still fires
+      await vi.advanceTimersByTimeAsync(500);
+      expect(delegate).toHaveBeenCalledTimes(2);
+
+      // Now the new 5000ms interval is used
+      await vi.advanceTimersByTimeAsync(4999);
+      expect(delegate).toHaveBeenCalledTimes(2);
+
+      await vi.advanceTimersByTimeAsync(1);
+      expect(delegate).toHaveBeenCalledTimes(3);
+
+      timer.stop();
+    });
+  });
+
   describe("backpressure", () => {
     it("should skip delegate when queue exceeds maxQueueDepth", async () => {
       const mockQueue = createMockQueue(200);

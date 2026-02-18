@@ -151,4 +151,12 @@ export class IntervalPollTimer implements IPollTimer {
   isRunning(): boolean {
     return this.running;
   }
+
+  getIntervalMs(): number {
+    return this.config.intervalMs;
+  }
+
+  setIntervalMs(ms: number): void {
+    this.config.intervalMs = ms;
+  }
 }

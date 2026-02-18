@@ -66,6 +66,40 @@ function createMockSyncOperation(
   } as unknown as SyncOperation;
 }
 
+function createMockPoller() {
+  let paused = false;
+  let running = true;
+  let intervalMs = 2000;
+  return {
+    start() {
+      running = true;
+    },
+    stop() {
+      running = false;
+    },
+    pause() {
+      paused = true;
+    },
+    resume() {
+      paused = false;
+    },
+    triggerNow() {},
+    isPaused() {
+      return paused;
+    },
+    isRunning() {
+      return running;
+    },
+    getIntervalMs() {
+      return intervalMs;
+    },
+    setIntervalMs(ms: number) {
+      intervalMs = ms;
+    },
+    setDelegate() {},
+  };
+}
+
 function createMockChannel(
   inboxOps: SyncOperation[],
   outboxOps: SyncOperation[],
@@ -75,6 +109,7 @@ function createMockChannel(
     inbox: createMockMailbox(inboxOps),
     outbox: createMockMailbox(outboxOps),
     deadLetter: createMockMailbox(deadLetterOps),
+    poller: createMockPoller(),
   } as unknown as IChannel;
 }
 
