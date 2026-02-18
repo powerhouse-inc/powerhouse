@@ -23,7 +23,7 @@
  */
 
 import { execFileSync } from "node:child_process";
-import { createWriteStream, type WriteStream } from "node:fs";
+import { createWriteStream, mkdirSync, type WriteStream } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { PGlite } from "@electric-sql/pglite";
 import {
@@ -470,360 +470,377 @@ async function main() {
   // so we only need to intercept at the stream level to avoid duplicate lines.
   let outputStream: WriteStream | undefined;
   let pendingLine = "";
+  const origStdoutWrite = process.stdout.write.bind(process.stdout);
+  const origStderrWrite = process.stderr.write.bind(process.stderr);
   if (outputFile) {
     const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
     const outputPath = join(
       dirname(outputFile),
       `${timestamp}-${basename(outputFile)}`,
     );
+    mkdirSync(dirname(outputPath), { recursive: true });
+    console.log(`Writing output to: ${outputPath}`);
     outputStream = createWriteStream(outputPath);
-    const origStdoutWrite = process.stdout.write.bind(process.stdout);
-    const origStderrWrite = process.stderr.write.bind(process.stderr);
 
     // Buffer that simulates terminal \r behavior: carriage return resets
     // the current line so only the final version is written to the file.
+    // Processes by line boundaries for efficiency and correct \r\n handling.
     const fileWrite = (chunk: string | Uint8Array) => {
       const text =
         typeof chunk === "string" ? chunk : new TextDecoder().decode(chunk);
-      for (const ch of text) {
-        if (ch === "\r") {
-          pendingLine = "";
-        } else if (ch === "\n") {
-          outputStream!.write(pendingLine + "\n");
-          pendingLine = "";
+      const parts = text.split("\n");
+
+      for (let i = 0; i < parts.length; i++) {
+        const part = parts[i];
+
+        if (i === parts.length - 1) {
+          // Last part (no trailing \n)
+          const crParts = part.split("\r");
+          pendingLine = crParts[crParts.length - 1];
         } else {
-          pendingLine += ch;
+          // Has trailing \n
+          const crParts = part.split("\r");
+          const finalPart = crParts[crParts.length - 1];
+          outputStream!.write(pendingLine + finalPart + "\n");
+          pendingLine = "";
         }
       }
     };
 
+    type WriteCallback = (error?: Error | null) => void;
     process.stdout.write = (
       chunk: string | Uint8Array,
-      ...rest: any[]
+      encodingOrCallback?: BufferEncoding | WriteCallback,
+      callback?: WriteCallback,
     ): boolean => {
       fileWrite(chunk);
-      return (origStdoutWrite as any)(chunk, ...rest);
+      return origStdoutWrite(chunk, encodingOrCallback as any, callback as any);
     };
 
     process.stderr.write = (
       chunk: string | Uint8Array,
-      ...rest: any[]
+      encodingOrCallback?: BufferEncoding | WriteCallback,
+      callback?: WriteCallback,
     ): boolean => {
       fileWrite(chunk);
-      return (origStderrWrite as any)(chunk, ...rest);
+      return origStderrWrite(chunk, encodingOrCallback as any, callback as any);
     };
-
-    console.log(`Writing output to: ${outputPath}`);
   }
 
-  console.log(
-    `Command: tsx reactor-direct.ts ${process.argv.slice(2).join(" ")}`,
-  );
-
-  // Initialize Pyroscope profiling if enabled
-  if (pyroscopeServer) {
-    console.log(`Initializing Pyroscope profiler at: ${pyroscopeServer}`);
-    Pyroscope.init({
-      serverAddress: pyroscopeServer,
-      appName: "reactor-direct-profiler",
-      wall: {
-        samplingDurationMs: 10000,
-        samplingIntervalMicros: 10000,
-        collectCpuTime: true,
-      },
-      heap: {
-        samplingIntervalBytes: 512 * 1024,
-        stackDepth: 64,
-      },
-    });
-    Pyroscope.startWallProfiling();
-    Pyroscope.startCpuProfiling();
-    console.log("  Wall and CPU profiling enabled");
-  }
-
-  const pyroscopeFrom = Math.floor(Date.now() / 1000);
-
-  console.log("Initializing reactor directly (no GraphQL API)...");
-  const initStart = Date.now();
-
-  const db = await createDatabase(dbPath);
-
-  console.log("  Running database migrations...");
-  const migrationResult = await runMigrations(db, REACTOR_SCHEMA);
-  if (!migrationResult.success && migrationResult.error) {
-    throw new Error(`Migration failed: ${migrationResult.error.message}`);
-  }
-
-  const reactor = await new ReactorBuilder()
-    .withDocumentModels([documentModelDocumentModelModule])
-    .withKysely(db as Kysely<Database>)
-    .withMigrationStrategy("none")
-    .build();
-
-  const initDuration = ((Date.now() - initStart) / 1000).toFixed(2);
-  console.log(`Reactor initialized in ${initDuration}s`);
-
-  const initialMemory = getMemoryStats();
-  console.log(`\nInitial memory: ${formatMemory(initialMemory)}`);
-
-  const overallStartTime = Date.now();
-
-  let documentIds: string[];
-
-  if (docId) {
-    // Verify and load existing document
-    console.log(`\nLoading target document: ${docId}`);
-    try {
-      const doc = await reactor.get(docId);
-      console.log(`  Found document: ${doc.header.name || "(unnamed)"}`);
-      documentIds = [docId];
-    } catch (error) {
-      throw new Error(
-        `Failed to load document ${docId}: ${error instanceof Error ? error.message : error}`,
-      );
-    }
-  } else {
-    // Phase 1: Create documents
-    console.log(`\nPhase 1: Creating ${count} documents...`);
-    const createStartTime = Date.now();
-    documentIds = [];
-
-    for (let i = 0; i < count; i++) {
-      const id = await createDocument(reactor, `doc-${i + 1}`);
-      documentIds.push(id);
-      process.stdout.write(`\r  Progress: ${i + 1}/${count}`);
-    }
-
-    const createDurationMs = Date.now() - createStartTime;
-    const createDuration = (createDurationMs / 1000).toFixed(2);
-    const msPerDoc = (createDurationMs / count).toFixed(0);
-    const phase1Memory = getMemoryStats();
+  try {
     console.log(
-      `\n  Created ${count} documents in ${createDuration}s (avg: ${msPerDoc}ms/doc)`,
+      `Command: tsx reactor-direct.ts ${process.argv.slice(2).join(" ")}`,
     );
-    console.log(`  Memory: ${formatMemory(phase1Memory)}`);
-  }
 
-  // Phase 2: Perform operations on each document
-  if (operations > 0) {
-    const docCount = documentIds.length;
-    const loopLabel = opLoops > 1 ? ` x ${opLoops} loops` : "";
-    const batchLabel = batchSize > 1 ? ` (batch size: ${batchSize})` : "";
-    const phaseLabel = docId
-      ? `Performing ${operations} operations${loopLabel}${batchLabel} on target document...`
-      : `Performing ${operations} operations${loopLabel}${batchLabel} on each document...`;
-    console.log(`\nPhase 2: ${phaseLabel}`);
-    const opsStartTime = Date.now();
-    const totalOps = docCount * operations * opLoops;
+    // Initialize Pyroscope profiling if enabled
+    if (pyroscopeServer) {
+      console.log(`Initializing Pyroscope profiler at: ${pyroscopeServer}`);
+      Pyroscope.init({
+        serverAddress: pyroscopeServer,
+        appName: "reactor-direct-profiler",
+        wall: {
+          samplingDurationMs: 10000,
+          samplingIntervalMicros: 10000,
+          collectCpuTime: true,
+        },
+        heap: {
+          samplingIntervalBytes: 512 * 1024,
+          stackDepth: 64,
+        },
+      });
+      Pyroscope.startWallProfiling();
+      Pyroscope.startCpuProfiling();
+      console.log("  Wall and CPU profiling enabled");
+    }
 
-    let overallMinOp: {
-      docId: string;
-      docNum: number;
-      loop: number;
-      timing: OperationTiming;
-    } | null = null;
-    let overallMaxOp: {
-      docId: string;
-      docNum: number;
-      loop: number;
-      timing: OperationTiming;
-    } | null = null;
-    const allDurations: number[] = [];
+    const pyroscopeFrom = Math.floor(Date.now() / 1000);
 
-    for (let i = 0; i < documentIds.length; i++) {
-      const docNum = i + 1;
-      const docId = documentIds[i];
+    console.log("Initializing reactor directly (no GraphQL API)...");
+    const initStart = Date.now();
 
-      for (let loop = 1; loop <= opLoops; loop++) {
-        const loopStartTime = Date.now();
-        const loopPrefix = opLoops > 1 ? `loop ${loop}/${opLoops}: ` : "";
+    const db = await createDatabase(dbPath);
 
-        if (verbose) {
-          console.log(`  [${docNum}/${docCount}] ${docId} ${loopPrefix}:`);
-        }
+    console.log("  Running database migrations...");
+    const migrationResult = await runMigrations(db, REACTOR_SCHEMA);
+    if (!migrationResult.success && migrationResult.error) {
+      throw new Error(`Migration failed: ${migrationResult.error.message}`);
+    }
 
-        const result = await performOperations(
-          reactor,
-          docId,
-          docNum,
-          operations,
-          batchSize,
-          (opNum, durationMs, batchCount) => {
-            const batchInfo = batchCount > 1 ? ` (${batchCount} ops)` : "";
-            if (verbose) {
-              console.log(
-                `    op ${opNum}/${operations}: ${durationMs}ms${batchInfo}`,
-              );
-            } else {
-              process.stdout.write(
-                `\r  [${docNum}/${docCount}] ${docId}: ${loopPrefix}${opNum}/${operations} ops`,
-              );
-            }
-          },
+    const reactor = await new ReactorBuilder()
+      .withDocumentModels([documentModelDocumentModelModule])
+      .withKysely(db as Kysely<Database>)
+      .withMigrationStrategy("none")
+      .build();
+
+    const initDuration = ((Date.now() - initStart) / 1000).toFixed(2);
+    console.log(`Reactor initialized in ${initDuration}s`);
+
+    const initialMemory = getMemoryStats();
+    console.log(`\nInitial memory: ${formatMemory(initialMemory)}`);
+
+    const overallStartTime = Date.now();
+
+    let documentIds: string[];
+
+    if (docId) {
+      // Verify and load existing document
+      console.log(`\nLoading target document: ${docId}`);
+      try {
+        const doc = await reactor.get(docId);
+        console.log(`  Found document: ${doc.header.name || "(unnamed)"}`);
+        documentIds = [docId];
+      } catch (error) {
+        throw new Error(
+          `Failed to load document ${docId}: ${error instanceof Error ? error.message : error}`,
         );
+      }
+    } else {
+      // Phase 1: Create documents
+      console.log(`\nPhase 1: Creating ${count} documents...`);
+      const createStartTime = Date.now();
+      documentIds = [];
 
-        if (
-          result.minOp &&
-          (overallMinOp === null ||
-            result.minOp.durationMs < overallMinOp.timing.durationMs)
-        ) {
-          overallMinOp = { docId, docNum, loop, timing: result.minOp };
-        }
-        if (
-          result.maxOp &&
-          (overallMaxOp === null ||
-            result.maxOp.durationMs > overallMaxOp.timing.durationMs)
-        ) {
-          overallMaxOp = { docId, docNum, loop, timing: result.maxOp };
-        }
-        if (showPercentiles) {
-          allDurations.push(...result.durations);
-        }
+      for (let i = 0; i < count; i++) {
+        const id = await createDocument(reactor, `doc-${i + 1}`);
+        documentIds.push(id);
+        process.stdout.write(`\r  Progress: ${i + 1}/${count}`);
+      }
 
-        const loopDurationMs = Date.now() - loopStartTime;
-        const loopDuration = (loopDurationMs / 1000).toFixed(2);
-        const msPerOp = (loopDurationMs / operations).toFixed(0);
+      const createDurationMs = Date.now() - createStartTime;
+      const createDuration = (createDurationMs / 1000).toFixed(2);
+      const msPerDoc = (createDurationMs / count).toFixed(0);
+      const phase1Memory = getMemoryStats();
+      console.log(
+        `\n  Created ${count} documents in ${createDuration}s (avg: ${msPerDoc}ms/doc)`,
+      );
+      console.log(`  Memory: ${formatMemory(phase1Memory)}`);
+    }
 
-        const minMax =
-          result.minOp && result.maxOp
-            ? showActionTypes
-              ? `, min: ${result.minOp.durationMs}ms (${result.minOp.actionType}), max: ${result.maxOp.durationMs}ms (${result.maxOp.actionType})`
-              : `, min: ${result.minOp.durationMs}ms, max: ${result.maxOp.durationMs}ms`
+    // Phase 2: Perform operations on each document
+    if (operations > 0) {
+      const docCount = documentIds.length;
+      const loopLabel = opLoops > 1 ? ` x ${opLoops} loops` : "";
+      const batchLabel = batchSize > 1 ? ` (batch size: ${batchSize})` : "";
+      const phaseLabel = docId
+        ? `Performing ${operations} operations${loopLabel}${batchLabel} on target document...`
+        : `Performing ${operations} operations${loopLabel}${batchLabel} on each document...`;
+      console.log(`\nPhase 2: ${phaseLabel}`);
+      const opsStartTime = Date.now();
+      const totalOps = docCount * operations * opLoops;
+
+      let overallMinOp: {
+        docId: string;
+        docNum: number;
+        loop: number;
+        timing: OperationTiming;
+      } | null = null;
+      let overallMaxOp: {
+        docId: string;
+        docNum: number;
+        loop: number;
+        timing: OperationTiming;
+      } | null = null;
+      const allDurations: number[] = [];
+
+      for (let i = 0; i < documentIds.length; i++) {
+        const docNum = i + 1;
+        const docId = documentIds[i];
+
+        for (let loop = 1; loop <= opLoops; loop++) {
+          const loopStartTime = Date.now();
+          const loopPrefix = opLoops > 1 ? `loop ${loop}/${opLoops}: ` : "";
+
+          if (verbose) {
+            console.log(`  [${docNum}/${docCount}] ${docId} ${loopPrefix}:`);
+          }
+
+          const result = await performOperations(
+            reactor,
+            docId,
+            docNum,
+            operations,
+            batchSize,
+            (opNum, durationMs, batchCount) => {
+              const batchInfo = batchCount > 1 ? ` (${batchCount} ops)` : "";
+              if (verbose) {
+                console.log(
+                  `    op ${opNum}/${operations}: ${durationMs}ms${batchInfo}`,
+                );
+              } else {
+                process.stdout.write(
+                  `\r  [${docNum}/${docCount}] ${docId}: ${loopPrefix}${opNum}/${operations} ops`,
+                );
+              }
+            },
+          );
+
+          if (
+            result.minOp &&
+            (overallMinOp === null ||
+              result.minOp.durationMs < overallMinOp.timing.durationMs)
+          ) {
+            overallMinOp = { docId, docNum, loop, timing: result.minOp };
+          }
+          if (
+            result.maxOp &&
+            (overallMaxOp === null ||
+              result.maxOp.durationMs > overallMaxOp.timing.durationMs)
+          ) {
+            overallMaxOp = { docId, docNum, loop, timing: result.maxOp };
+          }
+          if (showPercentiles) {
+            allDurations.push(...result.durations);
+          }
+
+          const loopDurationMs = Date.now() - loopStartTime;
+          const loopDuration = (loopDurationMs / 1000).toFixed(2);
+          const msPerOp = (loopDurationMs / operations).toFixed(0);
+
+          const minMax =
+            result.minOp && result.maxOp
+              ? showActionTypes
+                ? `, min: ${result.minOp.durationMs}ms (${result.minOp.actionType}), max: ${result.maxOp.durationMs}ms (${result.maxOp.actionType})`
+                : `, min: ${result.minOp.durationMs}ms, max: ${result.maxOp.durationMs}ms`
+              : "";
+
+          const loopPercentiles = showPercentiles
+            ? calculatePercentiles(result.durations)
+            : null;
+          const percentilesStr = loopPercentiles
+            ? `\n      ${formatPercentiles(loopPercentiles)}`
             : "";
 
-        const loopPercentiles = showPercentiles
-          ? calculatePercentiles(result.durations)
-          : null;
-        const percentilesStr = loopPercentiles
-          ? `\n      ${formatPercentiles(loopPercentiles)}`
-          : "";
+          if (verbose) {
+            console.log(
+              `    Done: ${loopDuration}s, ${msPerOp}ms/op${minMax}${percentilesStr}`,
+            );
+          } else {
+            process.stdout.write(
+              ` (${loopDuration}s, ${msPerOp}ms/op${minMax})${percentilesStr}\n`,
+            );
+          }
+        }
+      }
 
-        if (verbose) {
+      const opsDurationMs = Date.now() - opsStartTime;
+      const opsDuration = (opsDurationMs / 1000).toFixed(2);
+      const avgMsPerOp = (opsDurationMs / totalOps).toFixed(0);
+      const phase2Memory = getMemoryStats();
+      const overallMinMax =
+        overallMinOp && overallMaxOp
+          ? showActionTypes
+            ? `, min: ${overallMinOp.timing.durationMs}ms (${overallMinOp.timing.actionType}), max: ${overallMaxOp.timing.durationMs}ms (${overallMaxOp.timing.actionType})`
+            : `, min: ${overallMinOp.timing.durationMs}ms, max: ${overallMaxOp.timing.durationMs}ms`
+          : "";
+      console.log(
+        `  Completed ${totalOps} operations in ${opsDuration}s (avg: ${avgMsPerOp}ms/op${overallMinMax})`,
+      );
+      if (showPercentiles) {
+        const percentiles = calculatePercentiles(allDurations);
+        if (percentiles) {
           console.log(
-            `    Done: ${loopDuration}s, ${msPerOp}ms/op${minMax}${percentilesStr}`,
-          );
-        } else {
-          process.stdout.write(
-            ` (${loopDuration}s, ${msPerOp}ms/op${minMax})${percentilesStr}\n`,
+            `  Overall percentiles: ${formatPercentiles(percentiles)}`,
           );
         }
       }
+      console.log(`  Memory: ${formatMemory(phase2Memory)}`);
+
+      // Verify operations by checking document revisions
+      console.log(`\nVerification:`);
+      for (const id of documentIds) {
+        const doc = await reactor.get(id);
+        const revisions = Object.entries(doc.header.revision)
+          .map(([scope, rev]) => `${scope}:${rev}`)
+          .join(", ");
+        const opCount = Object.values(doc.operations)
+          .flat()
+          .filter(Boolean).length;
+        console.log(`  ${id}: revision={${revisions}}, operations=${opCount}`);
+      }
     }
 
-    const opsDurationMs = Date.now() - opsStartTime;
-    const opsDuration = (opsDurationMs / 1000).toFixed(2);
-    const avgMsPerOp = (opsDurationMs / totalOps).toFixed(0);
-    const phase2Memory = getMemoryStats();
-    const overallMinMax =
-      overallMinOp && overallMaxOp
-        ? showActionTypes
-          ? `, min: ${overallMinOp.timing.durationMs}ms (${overallMinOp.timing.actionType}), max: ${overallMaxOp.timing.durationMs}ms (${overallMaxOp.timing.actionType})`
-          : `, min: ${overallMinOp.timing.durationMs}ms, max: ${overallMaxOp.timing.durationMs}ms`
-        : "";
+    // Cleanup
+    const pyroscopeFlushDelay = 10;
+    const pyroscopeUntil = Math.floor(Date.now() / 1000) + pyroscopeFlushDelay;
+
+    if (pyroscopeServer) {
+      Pyroscope.stopWallProfiling();
+      Pyroscope.stopCpuProfiling();
+    }
+    reactor.kill();
+    await db.destroy();
+
+    // Summary
+    const finalMemory = getMemoryStats();
+    const totalDuration = ((Date.now() - overallStartTime) / 1000).toFixed(2);
+    const heapDelta = finalMemory.heapUsed - initialMemory.heapUsed;
+    const rssDelta = finalMemory.rss - initialMemory.rss;
+    console.log(`\nDone! Total time: ${totalDuration}s`);
     console.log(
-      `  Completed ${totalOps} operations in ${opsDuration}s (avg: ${avgMsPerOp}ms/op${overallMinMax})`,
+      `Memory delta: heap: ${heapDelta >= 0 ? "+" : ""}${formatBytes(heapDelta)}, rss: ${rssDelta >= 0 ? "+" : ""}${formatBytes(rssDelta)}`,
     );
-    if (showPercentiles) {
-      const percentiles = calculatePercentiles(allDurations);
-      if (percentiles) {
-        console.log(`  Overall percentiles: ${formatPercentiles(percentiles)}`);
-      }
-    }
-    console.log(`  Memory: ${formatMemory(phase2Memory)}`);
 
-    // Verify operations by checking document revisions
-    console.log(`\nVerification:`);
-    for (const id of documentIds) {
-      const doc = await reactor.get(id);
-      const revisions = Object.entries(doc.header.revision)
-        .map(([scope, rev]) => `${scope}:${rev}`)
-        .join(", ");
-      const opCount = Object.values(doc.operations)
-        .flat()
-        .filter(Boolean).length;
-      console.log(`  ${id}: revision={${revisions}}, operations=${opCount}`);
-    }
-  }
-
-  // Cleanup
-  const pyroscopeFlushDelay = 10;
-  const pyroscopeUntil = Math.floor(Date.now() / 1000) + pyroscopeFlushDelay;
-
-  if (pyroscopeServer) {
-    Pyroscope.stopWallProfiling();
-    Pyroscope.stopCpuProfiling();
-  }
-  reactor.kill();
-  await db.destroy();
-
-  // Summary
-  const finalMemory = getMemoryStats();
-  const totalDuration = ((Date.now() - overallStartTime) / 1000).toFixed(2);
-  const heapDelta = finalMemory.heapUsed - initialMemory.heapUsed;
-  const rssDelta = finalMemory.rss - initialMemory.rss;
-  console.log(`\nDone! Total time: ${totalDuration}s`);
-  console.log(
-    `Memory delta: heap: ${heapDelta >= 0 ? "+" : ""}${formatBytes(heapDelta)}, rss: ${rssDelta >= 0 ? "+" : ""}${formatBytes(rssDelta)}`,
-  );
-
-  if (pyroscopeServer) {
-    const appName = "reactor-direct-profiler";
-    const query = encodeURIComponent(
-      `wall:wall:nanoseconds:wall:nanoseconds{service_name="${appName}"}`,
-    );
-    const analyseUrl = `${pyroscopeServer}/?query=${query}&from=${pyroscopeFrom}&until=${pyroscopeUntil}`;
-    const pyroscopeTimestamp = new Date(pyroscopeFrom * 1000)
-      .toISOString()
-      .replace(/[:.]/g, "-");
-    const outputBase = `${pyroscopeTimestamp}-pyroscope`;
-    console.log(`\nPyroscope URL:\n  ${analyseUrl}`);
-
-    // Wait for Pyroscope to flush profiling data
-    const waitUntilMs = pyroscopeUntil * 1000;
-    let remaining = Math.ceil((waitUntilMs - Date.now()) / 1000);
-    if (remaining > 0) {
-      process.stdout.write(
-        `\nWaiting for Pyroscope to flush data... ${remaining}s`,
+    if (pyroscopeServer) {
+      const appName = "reactor-direct-profiler";
+      const query = encodeURIComponent(
+        `wall:wall:nanoseconds:wall:nanoseconds{service_name="${appName}"}`,
       );
-      while (Date.now() < waitUntilMs) {
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        remaining = Math.max(0, Math.ceil((waitUntilMs - Date.now()) / 1000));
+      const analyseUrl = `${pyroscopeServer}/?query=${query}&from=${pyroscopeFrom}&until=${pyroscopeUntil}`;
+      const pyroscopeTimestamp = new Date(pyroscopeFrom * 1000)
+        .toISOString()
+        .replace(/[:.]/g, "-");
+      const outputBase = `${pyroscopeTimestamp}-pyroscope`;
+      console.log(`\nPyroscope URL:\n  ${analyseUrl}`);
+
+      // Wait for Pyroscope to flush profiling data
+      const waitUntilMs = pyroscopeUntil * 1000;
+      let remaining = Math.ceil((waitUntilMs - Date.now()) / 1000);
+      if (remaining > 0) {
         process.stdout.write(
-          `\rWaiting for Pyroscope to flush data... ${remaining}s `,
+          `\nWaiting for Pyroscope to flush data... ${remaining}s`,
         );
+        while (Date.now() < waitUntilMs) {
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+          remaining = Math.max(0, Math.ceil((waitUntilMs - Date.now()) / 1000));
+          process.stdout.write(
+            `\rWaiting for Pyroscope to flush data... ${remaining}s `,
+          );
+        }
+        process.stdout.write("\rWaiting for Pyroscope to flush data... done\n");
       }
-      process.stdout.write("\rWaiting for Pyroscope to flush data... done\n");
-    }
 
-    console.log("\nRunning pyroscope-analyse...\n");
-    try {
-      execFileSync(
-        "tsx",
-        [
-          new URL("pyroscope-analyse.ts", import.meta.url).pathname,
-          analyseUrl,
-          "--output-json",
-          outputBase,
-          "--output-md",
-          `${outputBase}.md`,
-        ],
-        {
-          stdio: "inherit",
-        },
-      );
-    } catch {
-      console.error(
-        "\nPyroscope analysis failed. You can retry manually with:",
-      );
-      console.error(`  tsx pyroscope-analyse.ts '${analyseUrl}'`);
+      console.log("\nRunning pyroscope-analyse...\n");
+      try {
+        execFileSync(
+          "tsx",
+          [
+            new URL("pyroscope-analyse.ts", import.meta.url).pathname,
+            analyseUrl,
+            "--output-json",
+            outputBase,
+            "--output-md",
+            `${outputBase}.md`,
+          ],
+          {
+            stdio: "inherit",
+          },
+        );
+      } catch {
+        console.error(
+          "\nPyroscope analysis failed. You can retry manually with:",
+        );
+        console.error(`  tsx pyroscope-analyse.ts '${analyseUrl}'`);
+      }
     }
-  }
-
-  if (outputStream) {
-    if (pendingLine) {
-      outputStream.write(pendingLine + "\n");
+  } finally {
+    if (outputStream) {
+      process.stdout.write = origStdoutWrite;
+      process.stderr.write = origStderrWrite;
+      if (pendingLine) {
+        outputStream.write(pendingLine + "\n");
+      }
+      outputStream.end();
     }
-    outputStream.end();
   }
 }
 
