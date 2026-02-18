@@ -269,6 +269,7 @@ function parseArgs(args: string[]): {
   docId: string | undefined;
   pyroscope: string | undefined;
   output: string | undefined;
+  outputTimestamp: boolean;
 } {
   let count = 10;
   let operations = 0;
@@ -281,6 +282,7 @@ function parseArgs(args: string[]): {
   let docId: string | undefined = undefined;
   let pyroscope: string | undefined = undefined;
   let output: string | undefined = undefined;
+  let outputTimestamp = false;
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
@@ -311,6 +313,16 @@ function parseArgs(args: string[]): {
       }
     } else if ((arg === "--output" || arg === "-O") && args[i + 1]) {
       output = args[++i];
+      outputTimestamp = false;
+    } else if (arg === "--file") {
+      const nextArg = args[i + 1];
+      if (nextArg && !nextArg.startsWith("-")) {
+        output = nextArg;
+        i++;
+      } else {
+        output = "reactor-direct.txt";
+      }
+      outputTimestamp = true;
     } else if (arg === "--help" || arg === "-h") {
       console.log(`
 Usage: tsx reactor-direct.ts [N] [options]
@@ -330,7 +342,8 @@ Options:
   --verbose, -v             Show detailed operation timings
   --percentiles, -p         Show percentile statistics (p50, p90, p95, p99) per line
   --show-action-types, -a   Show action type names in min/max timings
-  --output, -O <file>       Write output to a file (in addition to stdout)
+  --file [name]             Write output to a timestamped file (default: reactor-direct.txt)
+  --output, -O <file>       Write output to a specific file (no timestamp prefix)
   --pyroscope [address]     Enable Pyroscope profiling (default: http://localhost:4040)
   --help, -h                Show this help message
 
@@ -420,6 +433,7 @@ Examples:
     docId,
     pyroscope,
     output,
+    outputTimestamp,
   };
 }
 
@@ -463,6 +477,7 @@ async function main() {
     docId,
     pyroscope: pyroscopeServer,
     output: outputFile,
+    outputTimestamp,
   } = parseArgs(process.argv.slice(2));
 
   // Set up output file tee if requested
@@ -473,11 +488,12 @@ async function main() {
   const origStdoutWrite = process.stdout.write.bind(process.stdout);
   const origStderrWrite = process.stderr.write.bind(process.stderr);
   if (outputFile) {
-    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-    const outputPath = join(
-      dirname(outputFile),
-      `${timestamp}-${basename(outputFile)}`,
-    );
+    const outputPath = outputTimestamp
+      ? join(
+          dirname(outputFile),
+          `${new Date().toISOString().replace(/[:.]/g, "-")}-${basename(outputFile)}`,
+        )
+      : outputFile;
     mkdirSync(dirname(outputPath), { recursive: true });
     console.log(`Writing output to: ${outputPath}`);
     outputStream = createWriteStream(outputPath);
