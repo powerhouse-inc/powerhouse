@@ -10,6 +10,7 @@ export interface LoadTestConfig {
   verbose: boolean;
   singleDocument: boolean;
   queryMode: boolean;
+  documentId?: string;
 }
 
 // Internal tracking for test documents

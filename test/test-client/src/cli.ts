@@ -12,6 +12,7 @@ interface CliOptions {
   verbose: boolean;
   singleDocument: boolean;
   queryMode: boolean;
+  documentId?: string;
 }
 
 const program = new Command();
@@ -41,6 +42,10 @@ program
     "Query existing documents instead of creating new ones",
     false,
   )
+  .option(
+    "--document-id <id>",
+    "Target an existing document ID (skip document creation)",
+  )
   .option("--verbose", "Enable verbose logging", false)
   .action(async (options: CliOptions) => {
     const config: LoadTestConfig = {
@@ -51,6 +56,7 @@ program
       verbose: options.verbose,
       singleDocument: options.singleDocument,
       queryMode: options.queryMode,
+      documentId: options.documentId,
     };
 
     // Validate config

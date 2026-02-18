@@ -17,6 +17,8 @@
     "scenario-stress": "tsx src/cli.ts --url http://localhost:4001/graphql --duration 300000 --document-interval 3000 --mutation-interval 500",
     "scenario-single": "tsx src/cli.ts --url http://localhost:4001/graphql --duration 60000 --single-document --mutation-interval 2000",
     "scenario-query": "tsx src/cli.ts --url http://localhost:4001/graphql --duration 60000 --query-mode --mutation-interval 2000",
+    "scenario-spam": "tsx src/cli.ts --url http://localhost:4001/graphql --duration 60000 --mutation-interval 500 --document-id",
+    "scenario-concurrent": "tsx src/orchestrator.ts --url http://localhost:4001/graphql --clients 3 --duration 60000 --mutation-interval 2000",
     "test": "vitest --run"
   },
   "dependencies": {

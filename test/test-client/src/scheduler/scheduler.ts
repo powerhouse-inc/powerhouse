@@ -69,14 +69,23 @@ export class TestScheduler {
       throw new Error("Connection failed");
     }
 
-    // Find available drives
-    this.drives = await this.client.findDrives();
-    if (this.drives.length === 0) {
-      this.reporter.printError("No drives found. Please create a drive first.");
-      throw new Error("No drives available");
+    // When targeting an existing document, skip drive discovery
+    if (this.config.documentId) {
+      this.reporter.printInfo(
+        `Targeting existing document: ${this.config.documentId}`,
+      );
+    } else {
+      // Find available drives
+      this.drives = await this.client.findDrives();
+      if (this.drives.length === 0) {
+        this.reporter.printError(
+          "No drives found. Please create a drive first.",
+        );
+        throw new Error("No drives available");
+      }
+      this.reporter.printInfo(`Found ${this.drives.length} drive(s)`);
     }
 
-    this.reporter.printInfo(`Found ${this.drives.length} drive(s)`);
     this.reporter.printInfo(
       `Starting load test for ${this.config.duration / 1000}s...`,
     );
@@ -86,8 +95,14 @@ export class TestScheduler {
     this.startTime = Date.now();
     this.metrics.setStartTime(this.startTime);
 
-    // In query mode, query for existing documents; otherwise create new ones
-    if (this.config.queryMode) {
+    if (this.config.documentId) {
+      // Document ID mode: register the provided document and only run mutations
+      const testDoc = createTestDocument(
+        this.config.documentId,
+        DOCUMENT_MODEL_TYPE,
+      );
+      this.documents.set(this.config.documentId, testDoc);
+    } else if (this.config.queryMode) {
       // Query for existing documents immediately
       await this.queryDocuments();
 
