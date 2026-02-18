@@ -1,14 +1,12 @@
-import {
-  About,
-  ConnectPackageManager,
-  DangerZone,
-  DefaultEditor,
-} from "@powerhousedao/connect/components";
 import { Icon } from "@powerhousedao/design-system";
 import { SettingsModal as SettingsModalV2 } from "@powerhousedao/design-system/connect";
 import { closePHModal, usePHModal } from "@powerhousedao/reactor-browser";
 import { t } from "i18next";
 import React, { useMemo } from "react";
+import { About } from "./settings/about.js";
+import { DangerZone } from "./settings/danger-zone.js";
+import { DefaultEditor } from "./settings/default-editor.js";
+import { ConnectPackageManager } from "./settings/package-manager.js";
 
 export const SettingsModal: React.FC = () => {
   const phModal = usePHModal();
