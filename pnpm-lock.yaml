@@ -88,8 +88,8 @@ catalogs:
       specifier: 6.1.4
       version: 6.1.4
     '@types/pg':
-      specifier: 8.11.10
-      version: 8.11.10
+      specifier: 8.16.0
+      version: 8.16.0
     '@types/react':
       specifier: 19.2.14
       version: 19.2.14
@@ -163,8 +163,8 @@ catalogs:
       specifier: 1.6.0
       version: 1.6.0
     pg:
-      specifier: 8.13.0
-      version: 8.13.0
+      specifier: 8.18.0
+      version: 8.18.0
     prettier:
       specifier: 3.8.1
       version: 3.8.1
@@ -615,7 +615,7 @@ importers:
         version: 1.2.0(@electric-sql/pglite@0.3.15)(kysely@0.28.11)
       pg:
         specifier: 'catalog:'
-        version: 8.13.0
+        version: 8.18.0
       redis:
         specifier: ^4.7.0
         version: 4.7.1
@@ -628,7 +628,7 @@ importers:
         version: 25.2.3
       '@types/pg':
         specifier: 'catalog:'
-        version: 8.11.10
+        version: 8.16.0
       concurrently:
         specifier: 'catalog:'
         version: 9.2.1
@@ -685,7 +685,7 @@ importers:
         version: 1.6.0
       pg:
         specifier: 'catalog:'
-        version: 8.13.0
+        version: 8.18.0
       read-pkg:
         specifier: 'catalog:'
         version: 10.1.0
@@ -710,7 +710,7 @@ importers:
         version: 6.1.4
       '@types/pg':
         specifier: 'catalog:'
-        version: 8.11.10
+        version: 8.16.0
       concurrently:
         specifier: 'catalog:'
         version: 9.2.1
@@ -1098,7 +1098,7 @@ importers:
         version: 0.28.11
       kysely-pglite:
         specifier: 'catalog:'
-        version: 0.6.1(@electric-sql/pglite@0.3.15)(kysely@0.28.11)(pg@8.16.3)(tarn@3.0.2)
+        version: 0.6.1(@electric-sql/pglite@0.3.15)(kysely@0.28.11)(pg@8.18.0)(tarn@3.0.2)
       package-json-validator:
         specifier: ^0.60.0
         version: 0.60.0
@@ -1927,7 +1927,7 @@ importers:
         version: 0.25.0
       drizzle-orm:
         specifier: ^0.34.1
-        version: 0.34.1(@electric-sql/pglite@0.3.15)(@libsql/client@0.14.0(bufferutil@4.0.9)(utf-8-validate@5.0.10))(@opentelemetry/api@1.9.0)(@prisma/client@5.17.0(prisma@5.17.0))(@types/pg@8.11.10)(@types/react@19.2.14)(bun-types@1.3.9)(knex@3.1.0(pg@8.13.0)(sqlite3@5.1.7))(kysely@0.28.11)(pg@8.13.0)(prisma@5.17.0)(react@19.2.4)(sqlite3@5.1.7)
+        version: 0.34.1(@electric-sql/pglite@0.3.15)(@libsql/client@0.14.0(bufferutil@4.0.9)(utf-8-validate@5.0.10))(@opentelemetry/api@1.9.0)(@prisma/client@5.17.0(prisma@5.17.0))(@types/pg@8.16.0)(@types/react@19.2.14)(bun-types@1.3.9)(knex@3.1.0(pg@8.18.0)(sqlite3@5.1.7))(kysely@0.28.11)(pg@8.18.0)(prisma@5.17.0)(react@19.2.4)(sqlite3@5.1.7)
       ethers:
         specifier: ^6.0.8
         version: 6.15.0(bufferutil@4.0.9)(utf-8-validate@5.0.10)
@@ -1954,16 +1954,16 @@ importers:
         version: 9.0.2
       knex:
         specifier: 'catalog:'
-        version: 3.1.0(pg@8.13.0)(sqlite3@5.1.7)
+        version: 3.1.0(pg@8.18.0)(sqlite3@5.1.7)
       knex-pglite:
         specifier: 'catalog:'
-        version: 0.13.0(@electric-sql/pglite@0.3.15)(knex@3.1.0(pg@8.13.0)(sqlite3@5.1.7))
+        version: 0.13.0(@electric-sql/pglite@0.3.15)(knex@3.1.0(pg@8.18.0)(sqlite3@5.1.7))
       kysely:
         specifier: 'catalog:'
         version: 0.28.11
       kysely-knex:
         specifier: 'catalog:'
-        version: 0.2.0(knex@3.1.0(pg@8.13.0)(sqlite3@5.1.7))(kysely@0.28.11)
+        version: 0.2.0(knex@3.1.0(pg@8.18.0)(sqlite3@5.1.7))(kysely@0.28.11)
       ms:
         specifier: ^2.1.3
         version: 2.1.3
@@ -1975,7 +1975,7 @@ importers:
         version: 8.3.0
       pg:
         specifier: 'catalog:'
-        version: 8.13.0
+        version: 8.18.0
       read-pkg:
         specifier: 'catalog:'
         version: 10.1.0
@@ -2045,7 +2045,7 @@ importers:
         version: 25.2.3
       '@types/pg':
         specifier: 'catalog:'
-        version: 8.11.10
+        version: 8.16.0
       '@types/ws':
         specifier: ^8.18.1
         version: 8.18.1
@@ -2623,14 +2623,14 @@ importers:
         version: 1.2.0(@electric-sql/pglite@0.3.15)(kysely@0.28.11)
       pg:
         specifier: 'catalog:'
-        version: 8.13.0
+        version: 8.18.0
     devDependencies:
       '@types/node':
         specifier: 'catalog:'
         version: 25.2.3
       '@types/pg':
         specifier: 'catalog:'
-        version: 8.11.10
+        version: 8.16.0
 
   test/connect-e2e:
     dependencies:
@@ -10887,8 +10887,8 @@ packages:
   '@types/pg-pool@2.0.6':
     resolution: {integrity: sha512-TaAUE5rq2VQYxab5Ts7WZhKNmuN78Q6PiFonTDdpbx8a1H0M1vhy3rhiMjl+e2iHmogyMw7jZF4FrE6eJUy5HQ==}
 
-  '@types/pg@8.11.10':
-    resolution: {integrity: sha512-LczQUW4dbOQzsH2RQ5qoeJ6qJPdrcM/DcMLoqWQkMLMsq83J5lAX3LXjdkWdpscFy67JSOWDnh7Ny/sPFykmkg==}
+  '@types/pg@8.16.0':
+    resolution: {integrity: sha512-RmhMd/wD+CF8Dfo+cVIy3RR5cl8CyfXQ0tGgW6XBL8L4LM/UTEbNXYRbLwU6w+CgrKBNbrQWt4FUtTfaU5jSYQ==}
 
   '@types/pg@8.6.1':
     resolution: {integrity: sha512-1Kc4oAGzAl7uqUStZCDvaLFqZrW9qWSjXOmBfdgyBP5La7Us6Mg4GBvRlSoaZMhQF/zSj1C8CtKMBkoiT8eL8w==}
@@ -18622,8 +18622,11 @@ packages:
   performance-now@2.1.0:
     resolution: {integrity: sha512-7EAHlyLHI56VEIdK57uwHdHKIaAGbnXPiw0yWbarQZOKaKpvUIgW0jWRVLiatnM+XXlSwsanIBH/hzGMJulMow==}
 
-  pg-cloudflare@1.2.7:
-    resolution: {integrity: sha512-YgCtzMH0ptvZJslLM1ffsY4EuGaU0cx4XSdXLRFae8bPP4dS5xL1tNB3k2o/N64cHJpwU7dxKli/nZ2lUa5fLg==}
+  pg-cloudflare@1.3.0:
+    resolution: {integrity: sha512-6lswVVSztmHiRtD6I8hw4qP/nDm1EJbKMRhf3HCYaqud7frGysPv7FYJ5noZQdhQtN2xJnimfMtvQq21pdbzyQ==}
+
+  pg-connection-string@2.11.0:
+    resolution: {integrity: sha512-kecgoJwhOpxYU21rZjULrmrBJ698U2RxXofKVzOn5UDj61BPj/qMb7diYUR1nLScCDbrztQFl1TaQZT0t1EtzQ==}
 
   pg-connection-string@2.6.2:
     resolution: {integrity: sha512-ch6OwaeaPYcova4kKZ15sbJ2hKb/VP48ZD2gE7i1J+L4MspCtBMAx8nMgz7bksc7IojCIIWuEhHibSMFH8m8oA==}
@@ -18635,37 +18638,23 @@ packages:
     resolution: {integrity: sha512-WCtabS6t3c8SkpDBUlb1kjOs7l66xsGdKpIPZsg4wR+B3+u9UAum2odSsF9tnvxg80h4ZxLWMy4pRjOsFIqQpw==}
     engines: {node: '>=4.0.0'}
 
-  pg-numeric@1.0.2:
-    resolution: {integrity: sha512-BM/Thnrw5jm2kKLE5uJkXqqExRUY/toLHda65XgFTBTFYZyopbKjBe29Ii3RbkvlsMoFwD+tHeGaCjjv0gHlyw==}
-    engines: {node: '>=4'}
-
-  pg-pool@3.10.1:
-    resolution: {integrity: sha512-Tu8jMlcX+9d8+QVzKIvM/uJtp07PKr82IUOYEphaWcoBhIYkoHpLXN3qO59nAI11ripznDsEzEv8nUxBVWajGg==}
+  pg-pool@3.11.0:
+    resolution: {integrity: sha512-MJYfvHwtGp870aeusDh+hg9apvOe2zmpZJpyt+BMtzUWlVqbhFmMK6bOBXLBUPd7iRtIF9fZplDc7KrPN3PN7w==}
     peerDependencies:
       pg: '>=8.0'
 
   pg-protocol@1.10.3:
     resolution: {integrity: sha512-6DIBgBQaTKDJyxnXaLiLR8wBpQQcGWuAESkRBX/t6OwA8YsqP+iVSiond2EDy6Y/dsGk8rh/jtax3js5NeV7JQ==}
 
+  pg-protocol@1.11.0:
+    resolution: {integrity: sha512-pfsxk2M9M3BuGgDOfuy37VNRRX3jmKgMjcvAcWqNDpZSf4cUmv8HSOl5ViRQFsfARFn0KuUQTgLxVMbNq5NW3g==}
+
   pg-types@2.2.0:
     resolution: {integrity: sha512-qTAAlrEsl8s4OiEQY69wDvcMIdQN6wdz5ojQiOy6YRMuynxenON0O5oCpJI6lshc6scgAY8qvJ2On/p+CXY0GA==}
     engines: {node: '>=4'}
 
-  pg-types@4.1.0:
-    resolution: {integrity: sha512-o2XFanIMy/3+mThw69O8d4n1E5zsLhdO+OPqswezu7Z5ekP4hYDqlDjlmOpYMbzY2Br0ufCwJLdDIXeNVwcWFg==}
-    engines: {node: '>=10'}
-
-  pg@8.13.0:
-    resolution: {integrity: sha512-34wkUTh3SxTClfoHB3pQ7bIMvw9dpFU1audQQeZG837fmHfHpr14n/AELVDoOYVDW2h5RDWU78tFjkD+erSBsw==}
-    engines: {node: '>= 8.0.0'}
-    peerDependencies:
-      pg-native: '>=3.0.1'
-    peerDependenciesMeta:
-      pg-native:
-        optional: true
-
-  pg@8.16.3:
-    resolution: {integrity: sha512-enxc1h0jA/aq5oSDMvqyW3q89ra6XIIDZgCX9vkMrnz5DFTw/Ny3Li2lFQ+pt3L6MCgm/5o2o8HW9hiJji+xvw==}
+  pg@8.18.0:
+    resolution: {integrity: sha512-xqrUDL1b9MbkydY/s+VZ6v+xiMUmOUk7SS9d/1kpyQxoJ6U9AO1oIJyUWVZojbfe5Cc/oluutcgFG4L9RDP1iQ==}
     engines: {node: '>= 16.0.0'}
     peerDependencies:
       pg-native: '>=3.0.1'
@@ -19226,36 +19215,17 @@ packages:
     resolution: {integrity: sha512-VpZrUqU5A69eQyW2c5CA1jtLecCsN2U/bD6VilrFDWq5+5UIEVO7nazS3TEcHf1zuPYO/sqGvUvW62g86RXZuA==}
     engines: {node: '>=4'}
 
-  postgres-array@3.0.4:
-    resolution: {integrity: sha512-nAUSGfSDGOaOAEGwqsRY27GPOea7CNipJPOA7lPbdEpx5Kg3qzdP0AaWC5MlhTWV9s4hFX39nomVZ+C4tnGOJQ==}
-    engines: {node: '>=12'}
-
   postgres-bytea@1.0.0:
     resolution: {integrity: sha512-xy3pmLuQqRBZBXDULy7KbaitYqLcmxigw14Q5sj8QBVLqEwXfeybIKVWiqAXTlcvdvb0+xkOtDbfQMOf4lST1w==}
     engines: {node: '>=0.10.0'}
-
-  postgres-bytea@3.0.0:
-    resolution: {integrity: sha512-CNd4jim9RFPkObHSjVHlVrxoVQXz7quwNFpz7RY1okNNme49+sVyiTvTRobiLV548Hx/hb1BG+iE7h9493WzFw==}
-    engines: {node: '>= 6'}
 
   postgres-date@1.0.7:
     resolution: {integrity: sha512-suDmjLVQg78nMK2UZ454hAG+OAW+HQPZ6n++TNDUX+L0+uUlLywnoxJKDou51Zm+zTCjrCl0Nq6J9C5hP9vK/Q==}
     engines: {node: '>=0.10.0'}
 
-  postgres-date@2.1.0:
-    resolution: {integrity: sha512-K7Juri8gtgXVcDfZttFKVmhglp7epKb1K4pgrkLxehjqkrgPhfG6OO8LHLkfaqkbpjNRnra018XwAr1yQFWGcA==}
-    engines: {node: '>=12'}
-
   postgres-interval@1.2.0:
     resolution: {integrity: sha512-9ZhXKM/rw350N1ovuWHbGxnGh/SNJ4cnxHiM0rxE4VN41wsg8P8zWn9hv/buK00RP4WvlOyr/RBDiptyxVbkZQ==}
     engines: {node: '>=0.10.0'}
-
-  postgres-interval@3.0.0:
-    resolution: {integrity: sha512-BSNDnbyZCXSxgA+1f5UU2GmwhoI0aU5yMxRGO8CdFEcY2BQF9xm/7MqKnYoM1nJDk8nONNWDk9WeSmePFhQdlw==}
-    engines: {node: '>=12'}
-
-  postgres-range@1.1.4:
-    resolution: {integrity: sha512-i/hbxIE9803Alj/6ytL7UHQxRvZkI9O4Sy+J3HGc4F4oo/2eQAjTSNJ0bfxyse3bH0nuVesCk+3IRLaMtG3H6w==}
 
   pprof-format@2.2.1:
     resolution: {integrity: sha512-p4tVN7iK19ccDqQv8heyobzUmbHyds4N2FI6aBMcXz6y99MglTWDxIyhFkNaLeEXs6IFUEzT0zya0icbSLLY0g==}
@@ -31162,7 +31132,7 @@ snapshots:
       '@powerhousedao/analytics-engine-knex': 0.6.0(@powerhousedao/analytics-engine-core@0.5.0)(sqlite3@5.1.7)
       date-fns: 3.6.0
       events: 3.3.0
-      knex: 3.1.0(pg@8.13.0)(sqlite3@5.1.7)
+      knex: 3.1.0(pg@8.18.0)(sqlite3@5.1.7)
       luxon: 3.7.2
       util: 0.12.5
     transitivePeerDependencies:
@@ -31189,11 +31159,11 @@ snapshots:
       '@powerhousedao/analytics-engine-core': 0.5.0
       '@types/luxon': 3.7.1
       '@types/node': 22.19.0
-      '@types/pg': 8.11.10
+      '@types/pg': 8.16.0
       date-fns: 3.6.0
-      knex: 3.1.0(pg@8.16.3)(sqlite3@5.1.7)
+      knex: 3.1.0(pg@8.18.0)(sqlite3@5.1.7)
       luxon: 3.7.2
-      pg: 8.16.3
+      pg: 8.18.0
     transitivePeerDependencies:
       - better-sqlite3
       - mysql
@@ -31208,9 +31178,9 @@ snapshots:
       '@powerhousedao/analytics-engine-core': 0.5.0
       '@powerhousedao/analytics-engine-knex': 0.6.0(@powerhousedao/analytics-engine-core@0.5.0)(sqlite3@5.1.7)
       date-fns: 3.6.0
-      knex: 3.1.0(pg@8.13.0)(sqlite3@5.1.7)
+      knex: 3.1.0(pg@8.18.0)(sqlite3@5.1.7)
       luxon: 3.7.2
-      pg: 8.13.0
+      pg: 8.18.0
     transitivePeerDependencies:
       - better-sqlite3
       - mysql
@@ -34554,13 +34524,13 @@ snapshots:
 
   '@types/pg-pool@2.0.6':
     dependencies:
-      '@types/pg': 8.11.10
+      '@types/pg': 8.16.0
 
-  '@types/pg@8.11.10':
+  '@types/pg@8.16.0':
     dependencies:
       '@types/node': 25.2.3
       pg-protocol: 1.10.3
-      pg-types: 4.1.0
+      pg-types: 2.2.0
 
   '@types/pg@8.6.1':
     dependencies:
@@ -39052,18 +39022,18 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  drizzle-orm@0.34.1(@electric-sql/pglite@0.3.15)(@libsql/client@0.14.0(bufferutil@4.0.9)(utf-8-validate@5.0.10))(@opentelemetry/api@1.9.0)(@prisma/client@5.17.0(prisma@5.17.0))(@types/pg@8.11.10)(@types/react@19.2.14)(bun-types@1.3.9)(knex@3.1.0(pg@8.13.0)(sqlite3@5.1.7))(kysely@0.28.11)(pg@8.13.0)(prisma@5.17.0)(react@19.2.4)(sqlite3@5.1.7):
+  drizzle-orm@0.34.1(@electric-sql/pglite@0.3.15)(@libsql/client@0.14.0(bufferutil@4.0.9)(utf-8-validate@5.0.10))(@opentelemetry/api@1.9.0)(@prisma/client@5.17.0(prisma@5.17.0))(@types/pg@8.16.0)(@types/react@19.2.14)(bun-types@1.3.9)(knex@3.1.0(pg@8.18.0)(sqlite3@5.1.7))(kysely@0.28.11)(pg@8.18.0)(prisma@5.17.0)(react@19.2.4)(sqlite3@5.1.7):
     optionalDependencies:
       '@electric-sql/pglite': 0.3.15
       '@libsql/client': 0.14.0(bufferutil@4.0.9)(utf-8-validate@5.0.10)
       '@opentelemetry/api': 1.9.0
       '@prisma/client': 5.17.0(prisma@5.17.0)
-      '@types/pg': 8.11.10
+      '@types/pg': 8.16.0
       '@types/react': 19.2.14
       bun-types: 1.3.9
-      knex: 3.1.0(pg@8.13.0)(sqlite3@5.1.7)
+      knex: 3.1.0(pg@8.18.0)(sqlite3@5.1.7)
       kysely: 0.28.11
-      pg: 8.13.0
+      pg: 8.18.0
       prisma: 5.17.0
       react: 19.2.4
       sqlite3: 5.1.7
@@ -43051,12 +43021,12 @@ snapshots:
 
   kleur@3.0.3: {}
 
-  knex-pglite@0.13.0(@electric-sql/pglite@0.3.15)(knex@3.1.0(pg@8.13.0)(sqlite3@5.1.7)):
+  knex-pglite@0.13.0(@electric-sql/pglite@0.3.15)(knex@3.1.0(pg@8.18.0)(sqlite3@5.1.7)):
     dependencies:
       '@electric-sql/pglite': 0.3.15
-      knex: 3.1.0(pg@8.13.0)(sqlite3@5.1.7)
+      knex: 3.1.0(pg@8.18.0)(sqlite3@5.1.7)
 
-  knex@3.1.0(pg@8.13.0)(sqlite3@5.1.7):
+  knex@3.1.0(pg@8.18.0)(sqlite3@5.1.7):
     dependencies:
       colorette: 2.0.19
       commander: 10.0.1
@@ -43073,36 +43043,14 @@ snapshots:
       tarn: 3.0.2
       tildify: 2.0.0
     optionalDependencies:
-      pg: 8.13.0
-      sqlite3: 5.1.7
-    transitivePeerDependencies:
-      - supports-color
-
-  knex@3.1.0(pg@8.16.3)(sqlite3@5.1.7):
-    dependencies:
-      colorette: 2.0.19
-      commander: 10.0.1
-      debug: 4.3.4
-      escalade: 3.2.0
-      esm: 3.2.25
-      get-package-type: 0.1.0
-      getopts: 2.3.0
-      interpret: 2.2.0
-      lodash: 4.17.21
-      pg-connection-string: 2.6.2
-      rechoir: 0.8.0
-      resolve-from: 5.0.0
-      tarn: 3.0.2
-      tildify: 2.0.0
-    optionalDependencies:
-      pg: 8.16.3
+      pg: 8.18.0
       sqlite3: 5.1.7
     transitivePeerDependencies:
       - supports-color
 
   kolorist@1.8.0: {}
 
-  kysely-codegen@0.15.0(kysely@0.28.11)(pg@8.16.3)(tarn@3.0.2):
+  kysely-codegen@0.15.0(kysely@0.28.11)(pg@8.18.0)(tarn@3.0.2):
     dependencies:
       chalk: 4.1.2
       dotenv: 16.6.1
@@ -43112,12 +43060,12 @@ snapshots:
       micromatch: 4.0.8
       minimist: 1.2.8
     optionalDependencies:
-      pg: 8.16.3
+      pg: 8.18.0
       tarn: 3.0.2
 
-  kysely-knex@0.2.0(knex@3.1.0(pg@8.13.0)(sqlite3@5.1.7))(kysely@0.28.11):
+  kysely-knex@0.2.0(knex@3.1.0(pg@8.18.0)(sqlite3@5.1.7))(kysely@0.28.11):
     dependencies:
-      knex: 3.1.0(pg@8.13.0)(sqlite3@5.1.7)
+      knex: 3.1.0(pg@8.18.0)(sqlite3@5.1.7)
       kysely: 0.28.11
 
   kysely-pglite-dialect@1.2.0(@electric-sql/pglite@0.3.15)(kysely@0.28.11):
@@ -43125,7 +43073,7 @@ snapshots:
       '@electric-sql/pglite': 0.3.15
       kysely: 0.28.11
 
-  kysely-pglite@0.6.1(@electric-sql/pglite@0.3.15)(kysely@0.28.11)(pg@8.16.3)(tarn@3.0.2):
+  kysely-pglite@0.6.1(@electric-sql/pglite@0.3.15)(kysely@0.28.11)(pg@8.18.0)(tarn@3.0.2):
     dependencies:
       '@electric-sql/pglite': 0.3.15
       '@oclif/core': 4.8.0
@@ -43137,7 +43085,7 @@ snapshots:
       globby: 14.1.0
       jiti: 2.0.0-beta.3
       kysely: 0.28.11
-      kysely-codegen: 0.15.0(kysely@0.28.11)(pg@8.16.3)(tarn@3.0.2)
+      kysely-codegen: 0.15.0(kysely@0.28.11)(pg@8.18.0)(tarn@3.0.2)
       radash: 12.1.1
     transitivePeerDependencies:
       - '@libsql/kysely-libsql'
@@ -45540,26 +45488,25 @@ snapshots:
 
   performance-now@2.1.0: {}
 
-  pg-cloudflare@1.2.7:
+  pg-cloudflare@1.3.0:
     optional: true
+
+  pg-connection-string@2.11.0: {}
 
   pg-connection-string@2.6.2: {}
 
-  pg-connection-string@2.9.1: {}
+  pg-connection-string@2.9.1:
+    optional: true
 
   pg-int8@1.0.1: {}
 
-  pg-numeric@1.0.2: {}
-
-  pg-pool@3.10.1(pg@8.13.0):
+  pg-pool@3.11.0(pg@8.18.0):
     dependencies:
-      pg: 8.13.0
-
-  pg-pool@3.10.1(pg@8.16.3):
-    dependencies:
-      pg: 8.16.3
+      pg: 8.18.0
 
   pg-protocol@1.10.3: {}
+
+  pg-protocol@1.11.0: {}
 
   pg-types@2.2.0:
     dependencies:
@@ -45569,35 +45516,15 @@ snapshots:
       postgres-date: 1.0.7
       postgres-interval: 1.2.0
 
-  pg-types@4.1.0:
+  pg@8.18.0:
     dependencies:
-      pg-int8: 1.0.1
-      pg-numeric: 1.0.2
-      postgres-array: 3.0.4
-      postgres-bytea: 3.0.0
-      postgres-date: 2.1.0
-      postgres-interval: 3.0.0
-      postgres-range: 1.1.4
-
-  pg@8.13.0:
-    dependencies:
-      pg-connection-string: 2.9.1
-      pg-pool: 3.10.1(pg@8.13.0)
-      pg-protocol: 1.10.3
+      pg-connection-string: 2.11.0
+      pg-pool: 3.11.0(pg@8.18.0)
+      pg-protocol: 1.11.0
       pg-types: 2.2.0
       pgpass: 1.0.5
     optionalDependencies:
-      pg-cloudflare: 1.2.7
-
-  pg@8.16.3:
-    dependencies:
-      pg-connection-string: 2.9.1
-      pg-pool: 3.10.1(pg@8.16.3)
-      pg-protocol: 1.10.3
-      pg-types: 2.2.0
-      pgpass: 1.0.5
-    optionalDependencies:
-      pg-cloudflare: 1.2.7
+      pg-cloudflare: 1.3.0
 
   pgpass@1.0.5:
     dependencies:
@@ -46250,25 +46177,13 @@ snapshots:
 
   postgres-array@2.0.0: {}
 
-  postgres-array@3.0.4: {}
-
   postgres-bytea@1.0.0: {}
 
-  postgres-bytea@3.0.0:
-    dependencies:
-      obuf: 1.1.2
-
   postgres-date@1.0.7: {}
-
-  postgres-date@2.1.0: {}
 
   postgres-interval@1.2.0:
     dependencies:
       xtend: 4.0.2
-
-  postgres-interval@3.0.0: {}
-
-  postgres-range@1.1.4: {}
 
   pprof-format@2.2.1: {}
 

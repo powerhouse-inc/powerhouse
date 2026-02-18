@@ -69,8 +69,8 @@ catalog:
   "vitest": 3.2.4
   "npm-package-arg": 13.0.2
   "@types/npm-package-arg": 6.1.4
-  "pg": 8.13.0
-  "@types/pg": 8.11.10
+  "pg": 8.18.0
+  "@types/pg": 8.16.0
   "colorette": 2.0.20
   "tsx": 4.21.0
   "copyfiles": 2.4.1
