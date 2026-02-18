@@ -47,7 +47,7 @@
     "eslint-plugin-prettier": "^5.5.4",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^6.1.0",
-    "glob": "^13.0.4",
+    "glob": "^13.0.5",
     "globals": "^16.4.0",
     "husky": "^9.1.7",
     "monocart-coverage-reports": "^2.12.8",
