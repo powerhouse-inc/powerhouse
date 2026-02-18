@@ -22,9 +22,6 @@
  *   - Use this to measure per-call overhead vs batched execution
  */
 
-import { execFileSync } from "node:child_process";
-import { createWriteStream, mkdirSync, type WriteStream } from "node:fs";
-import { basename, dirname, join } from "node:path";
 import { PGlite } from "@electric-sql/pglite";
 import {
   JobStatus,
@@ -38,6 +35,9 @@ import Pyroscope from "@pyroscope/nodejs";
 import { documentModelDocumentModelModule } from "document-model";
 import { Kysely, PostgresDialect } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
+import { execFileSync } from "node:child_process";
+import { createWriteStream, mkdirSync, type WriteStream } from "node:fs";
+import { basename, dirname, join } from "node:path";
 import { Pool } from "pg";
 
 interface MemoryStats {
@@ -530,7 +530,11 @@ async function main() {
       callback?: WriteCallback,
     ): boolean => {
       fileWrite(chunk);
-      return origStdoutWrite(chunk, encodingOrCallback as any, callback as any);
+      return origStdoutWrite(
+        chunk,
+        encodingOrCallback as BufferEncoding,
+        callback,
+      );
     };
 
     process.stderr.write = (
@@ -539,7 +543,11 @@ async function main() {
       callback?: WriteCallback,
     ): boolean => {
       fileWrite(chunk);
-      return origStderrWrite(chunk, encodingOrCallback as any, callback as any);
+      return origStderrWrite(
+        chunk,
+        encodingOrCallback as BufferEncoding,
+        callback,
+      );
     };
   }
 
