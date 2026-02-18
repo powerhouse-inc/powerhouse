@@ -1,3 +1,14 @@
+## 6.0.0-dev.53 (2026-02-18)
+
+### 🩹 Fixes
+
+- failing test because of timing pressure ([c996aa83e](https://github.com/powerhouse-inc/powerhouse/commit/c996aa83e))
+- fixing reshuffle issue with correct tiebreakers ([7be1adf54](https://github.com/powerhouse-inc/powerhouse/commit/7be1adf54))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
 ## 6.0.0-dev.52 (2026-02-17)
 
 ### 🚀 Features

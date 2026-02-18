@@ -1,3 +1,7 @@
+## 6.0.0-dev.53 (2026-02-18)
+
+This was a version bump only for @powerhousedao/switchboard-gui to align it with other projects, there were no code changes.
+
 ## 6.0.0-dev.52 (2026-02-17)
 
 ### 🩹 Fixes
