@@ -1,8 +1,9 @@
 import type { VetraProcessorConfigType } from "@powerhousedao/config";
 import { VETRA_PROCESSOR_CONFIG_KEY } from "@powerhousedao/config";
+import type { IReactorClient } from "@powerhousedao/reactor";
+import { addDefaultDrive } from "@powerhousedao/switchboard/utils";
 import { blue, red } from "colorette";
-import type { IDocumentDriveServer } from "document-drive";
-import { setLogLevel } from "document-drive";
+import { setLogLevel, type IDocumentDriveServer } from "document-drive";
 import type { VetraArgs } from "../types.js";
 import { generateProjectDriveId } from "../utils.js";
 import {
@@ -21,7 +22,8 @@ const getDriveId = (driveUrl: string | undefined): string =>
   driveUrl?.split("/").pop() ?? generateProjectDriveId(VETRA_DRIVE_NAME);
 
 async function startVetraPreviewDrive(
-  reactor: IDocumentDriveServer,
+  reactor: IReactorClient,
+  reactorLegacy: IDocumentDriveServer,
   port: number,
   verbose?: boolean,
 ): Promise<string> {
@@ -33,6 +35,7 @@ async function startVetraPreviewDrive(
     global: {
       name: "Vetra Preview",
       icon: "https://azure-elderly-tortoise-212.mypinata.cloud/ipfs/bafkreifddkbopiyvcirf7vaqar74th424r5phlxkdxniirdyg3qgu2ajha",
+      nodes: [],
     },
     local: {
       availableOffline: true,
@@ -42,25 +45,17 @@ async function startVetraPreviewDrive(
     },
   };
 
-  try {
-    await reactor.addDrive(previewDrive);
-    if (verbose) {
-      console.log(
-        blue(`[Vetra Switchboard]: Preview drive created: ${previewDriveId}`),
-      );
-    }
-  } catch {
-    // Drive might already exist, which is fine
-    if (verbose) {
-      console.log(
-        blue(
-          `[Vetra Switchboard]: Preview drive already exists: ${previewDriveId}`,
-        ),
-      );
-    }
+  const driveUrl = await addDefaultDrive(
+    reactorLegacy,
+    reactor,
+    previewDrive,
+    port,
+  );
+  console.log("OLEOL", driveUrl);
+  if (verbose) {
+    console.log(blue(`[Vetra Switchboard]: Preview drive: ${driveUrl}`));
   }
-
-  return `http://localhost:${port}/d/${previewDriveId}`;
+  return driveUrl;
 }
 async function startLocalVetraSwitchboard(args: VetraArgs) {
   const {
@@ -118,11 +113,16 @@ async function startLocalVetraSwitchboard(args: VetraArgs) {
     // Add preview drive (only in watch mode)
     let previewDriveUrl: string | null = null;
     if (watch) {
-      previewDriveUrl = await startVetraPreviewDrive(
-        switchboard.reactor,
-        switchboardPort,
-        verbose,
-      );
+      try {
+        previewDriveUrl = await startVetraPreviewDrive(
+          switchboard.reactor,
+          switchboard.legacyReactor,
+          switchboardPort,
+          verbose,
+        );
+      } catch (error) {
+        console.error(error);
+      }
     }
 
     if (verbose) {

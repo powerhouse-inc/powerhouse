@@ -343,7 +343,8 @@ async function initServer(
   return {
     defaultDriveUrl,
     api,
-    reactor: driveServer,
+    reactor: client,
+    legacyReactor: driveServer,
     renown,
   };
 }
