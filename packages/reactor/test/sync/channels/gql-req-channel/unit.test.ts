@@ -1503,6 +1503,39 @@ describe("GqlRequestChannel", () => {
     });
   });
 
+  describe("dead letter", () => {
+    it("should stop poller when a dead letter is added", async () => {
+      const cursorStorage = createMockCursorStorage();
+      const mockFetch = createMockFetch({
+        pollSyncEnvelopes: [],
+        touchChannel: true,
+      });
+      global.fetch = mockFetch;
+
+      const manualTimer = new ManualPollTimer();
+      const channel = new GqlRequestChannel(
+        createMockLogger(),
+        "channel-1",
+        "remote-1",
+        cursorStorage,
+        createTestConfig(),
+        createMockOperationIndex(),
+        manualTimer,
+      );
+
+      await channel.init();
+
+      await vi.waitFor(() => {
+        expect(manualTimer.isRunning()).toBe(true);
+      });
+
+      const deadLetterOp = createMockSyncOperation("dead-1", "remote-1");
+      channel.deadLetter.add(deadLetterOp);
+
+      expect(manualTimer.isRunning()).toBe(false);
+    });
+  });
+
   describe("with ManualPollTimer", () => {
     it("should allow manual control of polling", async () => {
       const cursorStorage = createMockCursorStorage();

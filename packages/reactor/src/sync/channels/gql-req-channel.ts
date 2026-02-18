@@ -96,6 +96,11 @@ export class GqlRequestChannel implements IChannel {
     this.outbox = this.bufferedOutbox;
     this.deadLetter = new Mailbox();
 
+    // when a dead letter is added, stop polling — the channel is in a failed state
+    this.deadLetter.onAdded(() => {
+      this.pollTimer.stop();
+    });
+
     // when sync ops are added to the outbox, push them to the remote
     this.outbox.onAdded((syncOps) => {
       if (this.isShutdown) return;
