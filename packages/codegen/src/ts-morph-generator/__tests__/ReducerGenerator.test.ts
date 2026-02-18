@@ -7,13 +7,13 @@ import {
   DirectoryManager,
   ImportManager,
 } from "@powerhousedao/codegen";
-import { camelCase, paramCase, pascalCase } from "change-case";
+import { camelCase, kebabCase, pascalCase } from "change-case";
 import { Project } from "ts-morph";
 import { beforeEach, describe, expect, it } from "vitest";
 import { ReducerGenerator } from "../core/ReducerGenerator.js";
 
 function makeVariableAndTypeNamesFromContext(context: GenerationContext) {
-  const typeImportPath = `${context.packageName}/document-models/${paramCase(context.docModel.name)}`;
+  const typeImportPath = `${context.packageName}/document-models/${kebabCase(context.docModel.name)}`;
   const typeImportName = `${pascalCase(context.docModel.name)}${pascalCase(context.module.name)}Operations`;
   const operationHandlersObjectName = `${camelCase(context.docModel.name)}${pascalCase(context.module.name)}Operations`;
   return { typeImportPath, typeImportName, operationHandlersObjectName };
@@ -113,7 +113,7 @@ describe("ReducerGenerator Integration", () => {
       const expectedPath =
         "/test/document-model/test-doc/src/reducers/test-module.ts";
       const sourceFile = project.getSourceFile(expectedPath);
-      const typeImportPath = `${context.packageName}/document-models/${paramCase(context.docModel.name)}`;
+      const typeImportPath = `${context.packageName}/document-models/${kebabCase(context.docModel.name)}`;
       const operationHandlersObjectName = `${camelCase(context.docModel.name)}${pascalCase(context.module.name)}Operations`;
 
       expect(sourceFile).toBeDefined();
@@ -260,7 +260,7 @@ describe("ReducerGenerator Integration", () => {
       let sourceFile = project.getSourceFile(filePath);
       let content = sourceFile!.getFullText();
 
-      const typeImportPath = `${context.packageName}/document-models/${paramCase(context.docModel.name)}`;
+      const typeImportPath = `${context.packageName}/document-models/${kebabCase(context.docModel.name)}`;
       const typeImportName = `${pascalCase(context.docModel.name)}${pascalCase(context.module.name)}Operations`;
       const operationHandlersObjectName = `${camelCase(context.docModel.name)}${pascalCase(context.module.name)}Operations`;
 

@@ -48,7 +48,7 @@
     "@openfeature/env-var-provider": "^0.3.1",
     "@openfeature/server-sdk": "^1.19.0",
     "@powerhousedao/analytics-engine-core": "catalog:",
-    "@powerhousedao/analytics-engine-knex": "^0.6.0",
+    "@powerhousedao/analytics-engine-knex": "catalog:",
     "@powerhousedao/config": "workspace:*",
     "@powerhousedao/reactor": "workspace:*",
     "@powerhousedao/reactor-api": "workspace:*",
@@ -65,14 +65,14 @@
     "graphql": "catalog:",
     "kysely": "catalog:",
     "kysely-pglite-dialect": "catalog:",
-    "pg": "^8.13.0",
+    "pg": "catalog:",
     "redis": "^4.7.0"
   },
   "devDependencies": {
     "@types/express": "^4.17.25",
     "@types/node": "catalog:",
-    "@types/pg": "^8.11.10",
-    "concurrently": "^9.1.2",
-    "nodemon": "^3.1.9"
+    "@types/pg": "catalog:",
+    "concurrently": "catalog:",
+    "nodemon": "catalog:"
   }
 }

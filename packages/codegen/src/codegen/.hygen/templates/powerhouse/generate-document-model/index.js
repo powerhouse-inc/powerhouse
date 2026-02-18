@@ -1,5 +1,5 @@
 // @ts-check
-const { paramCase, pascalCase, camelCase } = require("change-case");
+const { kebabCase, pascalCase, camelCase } = require("change-case");
 function documentModelToString(documentModel) {
   return JSON.stringify(
     {
@@ -33,7 +33,7 @@ module.exports = {
     const documentType = documentModel.name;
     const documentTypeId = documentModel.id;
     const rootDir = args.rootDir;
-    const paramCaseDocumentType = paramCase(documentType);
+    const kebabCaseDocumentType = kebabCase(documentType);
     const pascalCaseDocumentType = pascalCase(documentType);
     const camelCaseDocumentType = camelCase(documentType);
     const documentTypeVariableName = `${camelCaseDocumentType}DocumentType`;
@@ -46,7 +46,7 @@ module.exports = {
     const actionsTypeName = `${actionTypeName}s`;
     const actionsName = camelCase(actionsTypeName);
     const packageName = args.packageName;
-    const documentModelDir = `${packageName}/document-models/${paramCaseDocumentType}`;
+    const documentModelDir = `${packageName}/document-models/${kebabCaseDocumentType}`;
     const stateSchemaName = `${stateName}Schema`;
     const phDocumentSchemaName = `${phDocumentTypeName}Schema`;
     const isPhStateOfTypeFunctionName = `is${stateName}`;
@@ -69,7 +69,7 @@ module.exports = {
       documentTypeId,
       documentType,
       camelCaseDocumentType,
-      paramCaseDocumentType,
+      kebabCaseDocumentType,
       pascalCaseDocumentType,
       stateName,
       globalStateName,
@@ -89,7 +89,7 @@ module.exports = {
       extension: documentModel.extension,
       modules: latestSpec.modules.map((m) => ({
         ...m,
-        name: paramCase(m.name),
+        name: kebabCase(m.name),
       })),
       fileExtension: documentModel.extension || "",
       hasLocalSchema: latestSpec.state.local.schema !== "",

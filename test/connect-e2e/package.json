@@ -75,7 +75,7 @@
     "@powerhousedao/reactor-browser": "workspace:*",
     "@types/jszip": "^3.4.1",
     "@types/node": "catalog:",
-    "change-case": "^5.4.4",
+    "change-case": "catalog:",
     "document-drive": "workspace:*",
     "document-model": "workspace:*",
     "graphql": "catalog:",

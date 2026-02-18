@@ -47,9 +47,9 @@
   "devDependencies": {
     "@powerhousedao/analytics-engine-core": "catalog:",
     "@vitest/coverage-v8": "^3.2.4",
-    "prettier": "^3.6.2",
+    "prettier": "catalog:",
     "tinybench": "^2.9.0",
-    "tsx": "^4.19.2",
-    "vitest": "^3.2.4"
+    "tsx": "catalog:",
+    "vitest": "catalog:"
   }
 }

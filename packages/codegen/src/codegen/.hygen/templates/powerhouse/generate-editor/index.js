@@ -1,6 +1,6 @@
 const {
   pascalCase,
-  paramCase,
+  kebabCase,
   capitalCase,
   camelCase,
 } = require("change-case");
@@ -11,7 +11,7 @@ const { join } = require("path");
 module.exports = {
   params: ({ args }) => {
     const rootDir = args.rootDir;
-    const editorDirName = args.editorDirName || paramCase(args.name);
+    const editorDirName = args.editorDirName || kebabCase(args.name);
     const editorDir = join(rootDir, editorDirName);
     const documentTypes = args.documentTypes
       .split(",")
@@ -27,9 +27,9 @@ module.exports = {
       : undefined;
     const packageName = args.packageName;
     const pascalCaseEditorName = pascalCase(args.name);
-    const paramCaseEditorName = paramCase(args.name);
+    const kebabCaseEditorName = kebabCase(args.name);
     const pascalCaseDocumentType = pascalCase(documentType?.name);
-    const paramCaseDocumentType = paramCase(documentType?.name);
+    const kebabCaseDocumentType = kebabCase(documentType?.name);
     const camelCaseDocumentType = camelCase(documentType?.name);
     const documentVariableName = documentType
       ? `${camelCaseDocumentType}Document`
@@ -38,7 +38,7 @@ module.exports = {
       ? `${pascalCaseDocumentType}Document`
       : "Document";
     const actionTypeName = `${pascalCaseDocumentType}Action`;
-    const documentModelDir = `${packageName}/document-models/${paramCaseDocumentType}`;
+    const documentModelDir = `${packageName}/document-models/${kebabCaseDocumentType}`;
     const hooksDir = `${packageName}/editors/hooks`;
     const isDocumentOfTypeFunctionName = `is${phDocumentTypeName}`;
     const assertIsDocumentOfTypeFunctionName = `assertIs${phDocumentTypeName}`;
@@ -62,9 +62,9 @@ module.exports = {
       documentModelsDir: args.documentModelsDir,
       name: args.name,
       pascalCaseEditorName,
-      paramCaseEditorName,
+      kebabCaseEditorName,
       pascalCaseDocumentType,
-      paramCaseDocumentType,
+      kebabCaseDocumentType,
       camelCaseDocumentType,
       documentVariableName,
       phDocumentTypeName,

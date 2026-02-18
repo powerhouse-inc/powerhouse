@@ -123,7 +123,7 @@
     "tailwind-scrollbar": "^4.0.1",
     "tailwindcss": "catalog:",
     "vite": "catalog:",
-    "vitest": "^3.2.4"
+    "vitest": "catalog:"
   },
   "peerDependencies": {
     "react": ">=19.0.0",
@@ -146,11 +146,11 @@
     "@radix-ui/react-visually-hidden": "^1.1.0",
     "@tanstack/react-query": "^5.49.2",
     "@tanstack/react-virtual": "^3.8.1",
-    "change-case": "^5.4.4",
+    "change-case": "catalog:",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "cmdk": "^1.0.4",
-    "copyfiles": "^2.4.1",
+    "copyfiles": "catalog:",
     "date-fns": "^4.1.0",
     "date-fns-tz": "^3.2.0",
     "diff": "^7.0.0",
@@ -170,7 +170,7 @@
     "react-toastify": "^10.0.4",
     "react-virtualized": "^9.22.6",
     "tailwind-merge": "catalog:",
-    "tsx": "^4.20.3",
+    "tsx": "catalog:",
     "usehooks-ts": "^3.1.1",
     "viem": "^2.16.1",
     "wagmi": "^2.12.17",

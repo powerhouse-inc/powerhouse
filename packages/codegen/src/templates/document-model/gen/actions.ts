@@ -1,6 +1,6 @@
 import type { DocumentModelTemplateInputs } from "@powerhousedao/codegen/file-builders";
 import { ts } from "@tmpl/core";
-import { paramCase, pascalCase } from "change-case";
+import { kebabCase, pascalCase } from "change-case";
 import type { ModuleSpecification } from "document-model";
 
 function makeModuleActionsTypeImport(
@@ -8,8 +8,8 @@ function makeModuleActionsTypeImport(
   pascalCaseDocumentType: string,
 ) {
   const pascalCaseModuleName = pascalCase(module.name);
-  const paramCaseModuleName = paramCase(module.name);
-  return `import type { ${pascalCaseDocumentType}${pascalCaseModuleName}Action } from "./${paramCaseModuleName}/actions.js";`;
+  const kebabCaseModuleName = kebabCase(module.name);
+  return `import type { ${pascalCaseDocumentType}${pascalCaseModuleName}Action } from "./${kebabCaseModuleName}/actions.js";`;
 }
 function makeModuleActionsTypeImports(
   modules: ModuleSpecification[],
@@ -23,8 +23,8 @@ function makeModuleActionsTypeImports(
 }
 
 function makeModuleActionsTypeExport(module: ModuleSpecification) {
-  const paramCaseModuleName = paramCase(module.name);
-  return `export * from "./${paramCaseModuleName}/actions.js";`;
+  const kebabCaseModuleName = kebabCase(module.name);
+  return `export * from "./${kebabCaseModuleName}/actions.js";`;
 }
 
 function makeModuleActionsTypeExports(modules: ModuleSpecification[]) {

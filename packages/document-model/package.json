@@ -52,7 +52,7 @@
   },
   "dependencies": {
     "@powerhousedao/shared": "workspace:*",
-    "change-case": "^5.4.4",
+    "change-case": "catalog:",
     "jszip": "^3.10.1",
     "mime": "^4.0.4",
     "mutative": "^1.0.5",
