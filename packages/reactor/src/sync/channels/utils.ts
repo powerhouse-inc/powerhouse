@@ -33,8 +33,8 @@ export function serializeAction(action: Action): unknown {
  * Serializes a SyncEnvelope for GraphQL transport.
  *
  * Signatures are serialized as comma-separated strings since GraphQL schema
- * defines them as [String!]!. Extra context fields (resultingState, ordinal)
- * are stripped since they are not defined in OperationContextInput.
+ * defines them as [String!]!. The resultingState context field is stripped
+ * since it is not defined in OperationContextInput.
  */
 export function serializeEnvelope(envelope: SyncEnvelope): unknown {
   return {
@@ -55,6 +55,7 @@ export function serializeEnvelope(envelope: SyncEnvelope): unknown {
         documentType: opWithContext.context.documentType,
         scope: opWithContext.context.scope,
         branch: opWithContext.context.branch,
+        ordinal: opWithContext.context.ordinal,
       },
     })),
     cursor: envelope.cursor,

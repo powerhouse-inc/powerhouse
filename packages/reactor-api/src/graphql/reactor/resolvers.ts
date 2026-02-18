@@ -804,6 +804,17 @@ export async function touchChannel(
   return true;
 }
 
+/**
+ * Polls the switchboard for new sync envelopes and acknowledges previously
+ * received operations.
+ *
+ * Ordinal frames of reference:
+ * - `outboxAck` / `outboxLatest`: switchboard's ordinals (used to trim/filter
+ *   the switchboard's outbox)
+ * - `ackOrdinal` in the response: the pushing client's ordinals (highest
+ *   client ordinal the switchboard has successfully applied, so the client
+ *   can trim its own outbox)
+ */
 export function pollSyncEnvelopes(
   syncManager: ISyncManager,
   args: {
@@ -814,6 +825,7 @@ export function pollSyncEnvelopes(
 ): {
   envelopes: any[];
   ackOrdinal: number;
+  deadLetters: Array<{ documentId: string; error: string }>;
 } {
   let remote;
   try {
@@ -823,6 +835,11 @@ export function pollSyncEnvelopes(
       `Channel not found: ${error instanceof Error ? error.message : "Unknown error"}`,
     );
   }
+
+  const deadLetters = remote.channel.deadLetter.items.map((syncOp) => ({
+    documentId: syncOp.documentId,
+    error: syncOp.error?.message ?? "Unknown error",
+  }));
 
   // trim outbox
   if (args.outboxAck > 0) {
@@ -849,6 +866,7 @@ export function pollSyncEnvelopes(
     return {
       envelopes: [],
       ackOrdinal: remote.channel.inbox.ackOrdinal,
+      deadLetters,
     };
   }
 
@@ -886,6 +904,7 @@ export function pollSyncEnvelopes(
   return {
     envelopes: sortEnvelopesByFirstOperationTimestamp(envelopes),
     ackOrdinal: remote.channel.inbox.ackOrdinal,
+    deadLetters,
   };
 }
 
@@ -899,6 +918,7 @@ type SyncEnvelopeArg = {
       documentType: string;
       scope: string;
       branch: string;
+      ordinal: number;
     };
   }> | null;
   cursor?: {
@@ -910,6 +930,14 @@ type SyncEnvelopeArg = {
   dependsOn?: string[];
 };
 
+/**
+ * Receives sync envelopes pushed by a client and adds them to the
+ * appropriate channel inboxes.
+ *
+ * The `ordinal` in each operation's context is the client's local ordinal.
+ * It must be preserved because the inbox mailbox tracks applied ordinals
+ * and returns the highest one as `ackOrdinal` in pollSyncEnvelopes.
+ */
 export function pushSyncEnvelopes(
   syncManager: ISyncManager,
   args: {
@@ -945,7 +973,7 @@ export function pushSyncEnvelopes(
         documentType: op.context.documentType,
         scope: op.context.scope,
         branch: op.context.branch,
-        ordinal: 0,
+        ordinal: op.context.ordinal,
       },
     }));
 

@@ -131,6 +131,7 @@ const createMockFetch = (
   response: {
     pollSyncEnvelopes?: SyncEnvelope[];
     ackOrdinal?: number;
+    deadLetters?: Array<{ documentId: string; error: string }>;
     touchChannel?: boolean;
     pushSyncEnvelopes?: boolean;
   } = {},
@@ -160,6 +161,7 @@ const createMockFetch = (
             pollSyncEnvelopes: {
               envelopes: response.pollSyncEnvelopes ?? [],
               ackOrdinal: response.ackOrdinal ?? 0,
+              deadLetters: response.deadLetters ?? [],
             },
           },
         }),
@@ -1533,6 +1535,216 @@ describe("GqlRequestChannel", () => {
       channel.deadLetter.add(deadLetterOp);
 
       expect(manualTimer.isRunning()).toBe(false);
+    });
+  });
+
+  describe("remote dead letter handling", () => {
+    it("should add dead letters to local deadLetter mailbox when poll returns them", async () => {
+      const cursorStorage = createMockCursorStorage();
+      const manualTimer = new ManualPollTimer();
+      const mockFetch = createMockFetch({
+        deadLetters: [
+          { documentId: "doc-1", error: "Missing operations gap" },
+          { documentId: "doc-2", error: "Schema validation failed" },
+        ],
+      });
+      global.fetch = mockFetch;
+
+      const channel = new GqlRequestChannel(
+        createMockLogger(),
+        "channel-1",
+        "remote-1",
+        cursorStorage,
+        createTestConfig(),
+        createMockOperationIndex(),
+        manualTimer,
+      );
+
+      await channel.init();
+
+      await vi.waitFor(() => {
+        expect(channel.deadLetter.items).toHaveLength(2);
+      });
+
+      expect(channel.deadLetter.items[0].documentId).toBe("doc-1");
+      expect(channel.deadLetter.items[1].documentId).toBe("doc-2");
+      await channel.shutdown();
+    });
+
+    it("should stop poller after receiving remote dead letters", async () => {
+      const cursorStorage = createMockCursorStorage();
+      const manualTimer = new ManualPollTimer();
+      const mockFetch = createMockFetch({
+        deadLetters: [{ documentId: "doc-1", error: "Missing operations gap" }],
+      });
+      global.fetch = mockFetch;
+
+      const channel = new GqlRequestChannel(
+        createMockLogger(),
+        "channel-1",
+        "remote-1",
+        cursorStorage,
+        createTestConfig(),
+        createMockOperationIndex(),
+        manualTimer,
+      );
+
+      await channel.init();
+
+      await vi.waitFor(() => {
+        expect(channel.deadLetter.items).toHaveLength(1);
+      });
+
+      expect(manualTimer.isRunning()).toBe(false);
+      await channel.shutdown();
+    });
+
+    it("should not push new outbox items when dead letters exist", async () => {
+      const cursorStorage = createMockCursorStorage();
+      const manualTimer = new ManualPollTimer();
+      const mockFetch = createMockFetch({
+        deadLetters: [{ documentId: "doc-1", error: "Missing operations gap" }],
+        pushSyncEnvelopes: true,
+      });
+      global.fetch = mockFetch;
+
+      const channel = new GqlRequestChannel(
+        createMockLogger(),
+        "channel-1",
+        "remote-1",
+        cursorStorage,
+        createTestConfig(),
+        createMockOperationIndex(),
+        manualTimer,
+      );
+
+      await channel.init();
+
+      await vi.waitFor(() => {
+        expect(channel.deadLetter.items).toHaveLength(1);
+      });
+
+      const pushCallsBefore = mockFetch.mock.calls.filter((call) =>
+        (call[1]?.body as string).includes("pushSyncEnvelopes"),
+      ).length;
+
+      const job = createMockSyncOperation("job-1", "remote-1");
+      channel.outbox.add(job);
+
+      await vi.advanceTimersByTimeAsync(1000);
+
+      const pushCallsAfter = mockFetch.mock.calls.filter((call) =>
+        (call[1]?.body as string).includes("pushSyncEnvelopes"),
+      ).length;
+
+      expect(pushCallsAfter).toBe(pushCallsBefore);
+      await channel.shutdown();
+    });
+
+    it("should not create dead letter ops when deadLetters array is empty", async () => {
+      const cursorStorage = createMockCursorStorage();
+      const manualTimer = new ManualPollTimer();
+      const mockFetch = createMockFetch({
+        deadLetters: [],
+      });
+      global.fetch = mockFetch;
+
+      const channel = new GqlRequestChannel(
+        createMockLogger(),
+        "channel-1",
+        "remote-1",
+        cursorStorage,
+        createTestConfig(),
+        createMockOperationIndex(),
+        manualTimer,
+      );
+
+      await channel.init();
+
+      await vi.waitFor(() => {
+        expect(mockFetch).toHaveBeenCalledTimes(2);
+      });
+
+      expect(channel.deadLetter.items).toHaveLength(0);
+      expect(manualTimer.isRunning()).toBe(true);
+      await channel.shutdown();
+    });
+
+    it("should process envelopes before handling dead letters", async () => {
+      const cursorStorage = createMockCursorStorage();
+      const manualTimer = new ManualPollTimer();
+      const mockEnvelope: SyncEnvelope = {
+        type: "operations",
+        channelMeta: { id: "channel-1" },
+        operations: [
+          {
+            operation: {
+              index: 1,
+              skip: 0,
+              id: "op-1",
+              timestampUtcMs: new Date().toISOString(),
+              hash: "hash-1",
+              action: {
+                type: "TEST_OP",
+                id: "action-1",
+                scope: "public",
+                timestampUtcMs: new Date().toISOString(),
+                input: {},
+              },
+            },
+            context: createMockOperationContext(),
+          },
+        ],
+      };
+
+      let callCount = 0;
+      const mockFetch = vi.fn().mockImplementation((_url, options) => {
+        const body = JSON.parse(options.body as string);
+        if (body.query.includes("touchChannel")) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ data: { touchChannel: true } }),
+          });
+        }
+        callCount++;
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              data: {
+                pollSyncEnvelopes: {
+                  envelopes: callCount === 1 ? [mockEnvelope] : [],
+                  ackOrdinal: 0,
+                  deadLetters:
+                    callCount === 1
+                      ? [{ documentId: "doc-x", error: "gap error" }]
+                      : [],
+                },
+              },
+            }),
+        });
+      });
+      global.fetch = mockFetch;
+
+      const channel = new GqlRequestChannel(
+        createMockLogger(),
+        "channel-1",
+        "remote-1",
+        cursorStorage,
+        createTestConfig(),
+        createMockOperationIndex(),
+        manualTimer,
+      );
+
+      await channel.init();
+
+      await vi.waitFor(() => {
+        expect(channel.deadLetter.items).toHaveLength(1);
+      });
+
+      expect(channel.inbox.items).toHaveLength(1);
+      expect(channel.deadLetter.items).toHaveLength(1);
+      await channel.shutdown();
     });
   });
 

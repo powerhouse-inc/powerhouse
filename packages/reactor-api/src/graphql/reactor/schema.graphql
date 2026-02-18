@@ -109,9 +109,15 @@ type ReactorOperationResultPage {
   cursor: String
 }
 
+type DeadLetterInfo {
+  documentId: String!
+  error: String!
+}
+
 type PollSyncEnvelopesResult {
   envelopes: [SyncEnvelope!]!
   ackOrdinal: Int!
+  deadLetters: [DeadLetterInfo!]!
 }
 
 type DocumentWithChildren {
@@ -264,6 +270,7 @@ input OperationContextInput {
   documentType: String!
   scope: String!
   branch: String!
+  ordinal: Int!
 }
 
 type OperationWithContext {

@@ -120,6 +120,7 @@ export function createResolverBridge(
               documentType: string;
               scope: string;
               branch: string;
+              ordinal: number;
             };
           }> | null;
           cursor?: {

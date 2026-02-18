@@ -365,13 +365,12 @@ export class ReactorSubgraph extends BaseSubgraph {
         this.logger.debug("pollSyncEnvelopes(@args)", args);
 
         try {
-          const { envelopes, ackOrdinal } = resolvers.pollSyncEnvelopes(
-            this.syncManager,
-            args,
-          );
+          const { envelopes, ackOrdinal, deadLetters } =
+            resolvers.pollSyncEnvelopes(this.syncManager, args);
           return {
             envelopes,
             ackOrdinal,
+            deadLetters,
           };
         } catch (error) {
           this.logger.error("Error in pollSyncEnvelopes(@args): @Error", error);
@@ -593,6 +592,7 @@ export class ReactorSubgraph extends BaseSubgraph {
                       documentType: op.context.documentType,
                       scope: op.context.scope,
                       branch: op.context.branch,
+                      ordinal: op.context.ordinal,
                     },
                   }))
                 : null,
