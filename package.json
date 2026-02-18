@@ -17,7 +17,7 @@
     "build-cli": "pnpm -r --no-bail build:cli",
     "build-storybook": "pnpm -r --no-bail run build:storybook",
     "build-all": "pnpm build-tsc && pnpm build-misc && pnpm build-css && pnpm build-vite && pnpm build-cli",
-    "clean": "pnpm exec scripts/simulate-fresh-git-clone.sh",
+    "clean": "bunx git clean -fdX",
     "run-release": "bun run releases/release.ts",
     "run-release-safe": "pnpm run-release --verbose --skip-publish --skip-changelog --skip-push",
     "prepare": "husky",
