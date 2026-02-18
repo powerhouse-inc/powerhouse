@@ -47,7 +47,6 @@ import {
   loadExternalPackages,
   subscribeExternalPackages,
 } from "./external-packages.js";
-import { createProcessorHostModule } from "./processor-host-module.js";
 
 export async function clearReactorStorage() {
   const pg = window.ph?.reactorClientModule?.pg;
@@ -198,6 +197,8 @@ export async function createReactor() {
   );
 
   if (packagesWithProcessorFactories.length > 0) {
+    const { createProcessorHostModule } =
+      await import("./processor-host-module.js");
     const processorHostModule = await createProcessorHostModule();
     if (processorHostModule !== undefined) {
       await Promise.all(

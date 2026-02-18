@@ -1,4 +1,3 @@
-import { usePHModal } from "@powerhousedao/reactor-browser";
 import { lazy, Suspense } from "react";
 import { ErrorBoundary } from "../error-boundary.js";
 
@@ -84,18 +83,23 @@ const modalComponents = {
   upgradeDrive: UpgradeDriveModal,
 } as const;
 
-export function ModalsContainer() {
-  const phModal = usePHModal();
+export const ModalsContainer = lazy(async () => {
+  const { usePHModal } = await import("@powerhousedao/reactor-browser");
+  return {
+    default: () => {
+      const phModal = usePHModal();
 
-  if (!phModal?.type) return null;
+      if (!phModal?.type) return null;
 
-  const ModalComponent = modalComponents[phModal.type];
+      const ModalComponent = modalComponents[phModal.type];
 
-  return ModalComponent ? (
-    <ErrorBoundary variant="silent" loggerContext={["Connect", "Modals"]}>
-      <Suspense fallback={null}>
-        <ModalComponent />
-      </Suspense>
-    </ErrorBoundary>
-  ) : null;
-}
+      return ModalComponent ? (
+        <ErrorBoundary variant="silent" loggerContext={["Connect", "Modals"]}>
+          <Suspense fallback={null}>
+            <ModalComponent />
+          </Suspense>
+        </ErrorBoundary>
+      ) : null;
+    },
+  };
+});

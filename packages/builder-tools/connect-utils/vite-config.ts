@@ -297,11 +297,21 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
             [packageJson.name]: localPackage,
           }
         : undefined,
-      dedupe: ["react", "react-dom", "react/jsx-runtime"],
+      dedupe: [
+        "react",
+        "react-dom",
+        "react/jsx-runtime",
+        "@electric-sql/pglite",
+      ],
     },
     build: {
       minify: true,
-      sourcemap: false,
+      sourcemap: true,
+      rollupOptions: {
+        treeshake: {
+          moduleSideEffects: false,
+        },
+      },
     },
     server: {
       watch: env.PH_DISABLE_LOCAL_PACKAGE
