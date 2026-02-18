@@ -98,24 +98,23 @@ function updateOperationsForAction<TDocument extends PHDocument>(
   }
 
   const scope = action.scope;
-
-  let operations: Operation[] = [];
-  if (document.operations[scope]) {
-    operations = document.operations[scope].slice();
-  }
-
-  const latestOperation = operations.sort((a, b) => a.index - b.index).at(-1);
-  const lastOperationIndex = latestOperation?.index ?? -1;
+  const existing = document.operations[scope];
+  const lastOperationIndex = existing?.at(-1)?.index ?? -1;
 
   const index = reuseLastOperationIndex
     ? lastOperationIndex
     : lastOperationIndex + 1;
 
   const newOperation = operationFromAction(action, index, skip, context);
-  operations.push(newOperation);
 
-  // adds the action to the operations history with
-  // the latest index and current timestamp
+  // Pre-allocate array with exact size to avoid resize overhead
+  const existingLen = existing?.length ?? 0;
+  const operations = new Array<Operation>(existingLen + 1);
+  for (let i = 0; i < existingLen; i++) {
+    operations[i] = existing![i];
+  }
+  operations[existingLen] = newOperation;
+
   return {
     ...document,
     operations: { ...document.operations, [scope]: operations },
@@ -131,13 +130,8 @@ function updateOperationsForOperation<TDocument extends PHDocument>(
   skipIndexValidation?: boolean,
 ): TDocument {
   const scope = operation.action.scope;
-  const scopeOperations = document.operations[scope];
-  const operations: Operation[] = scopeOperations
-    ? scopeOperations.slice()
-    : [];
-
-  const latestOperation = operations.sort((a, b) => a.index - b.index).at(-1);
-  const lastOperationIndex = latestOperation?.index ?? -1;
+  const existing = document.operations[scope];
+  const lastOperationIndex = existing?.at(-1)?.index ?? -1;
 
   const nextIndex = reuseLastOperationIndex
     ? lastOperationIndex
@@ -155,10 +149,15 @@ function updateOperationsForOperation<TDocument extends PHDocument>(
     skip,
     context,
   );
-  operations.push(newOperation);
 
-  // adds the action to the operations history with
-  // the latest index and current timestamp
+  // Pre-allocate array with exact size to avoid resize overhead
+  const existingLen = existing?.length ?? 0;
+  const operations = new Array<Operation>(existingLen + 1);
+  for (let i = 0; i < existingLen; i++) {
+    operations[i] = existing![i];
+  }
+  operations[existingLen] = newOperation;
+
   return {
     ...document,
     operations: { ...document.operations, [scope]: operations },
