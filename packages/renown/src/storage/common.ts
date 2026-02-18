@@ -10,8 +10,7 @@ export interface IStorage<
 export abstract class BaseStorage<
   T extends Record<string, unknown> = Record<string, unknown>,
   Key extends keyof T = keyof T,
-> implements IStorage<T>
-{
+> implements IStorage<T> {
   abstract get(key: Key): T[Key] | undefined;
   abstract set(key: Key, value?: T[Key]): void;
   abstract delete(key: Key): void;

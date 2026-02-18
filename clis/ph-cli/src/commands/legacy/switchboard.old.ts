@@ -86,9 +86,8 @@ export function switchboardCommand(program: Command) {
       const options = args[0];
 
       if (options.migrate || options.migrateStatus) {
-        const { runSwitchboardMigrations } = await import(
-          "../../services/switchboard-migrate.js"
-        );
+        const { runSwitchboardMigrations } =
+          await import("../../services/switchboard-migrate.js");
         await runSwitchboardMigrations({
           dbPath: options.dbPath,
           statusOnly: options.migrateStatus,

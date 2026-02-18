@@ -3,8 +3,9 @@ import * as RadioGroupPrimitive from "@radix-ui/react-radio-group";
 import React, { useId } from "react";
 import { FormLabel } from "../form-label/form-label.js";
 
-export interface RadioProps
-  extends React.ComponentPropsWithoutRef<typeof RadioGroupPrimitive.Item> {
+export interface RadioProps extends React.ComponentPropsWithoutRef<
+  typeof RadioGroupPrimitive.Item
+> {
   className?: string;
   description?: string;
   disabled?: boolean;

@@ -6,9 +6,9 @@ export class TypedCustomEvent<T> extends CustomEvent<T> {
   }
 }
 
-export class BrowserEventEmitter<Events extends Record<string, unknown>>
-  implements IEventEmitter<Events>
-{
+export class BrowserEventEmitter<
+  Events extends Record<string, unknown>,
+> implements IEventEmitter<Events> {
   #eventTarget = new EventTarget();
 
   on<K extends keyof Events>(

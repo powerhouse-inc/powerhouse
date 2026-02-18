@@ -4,8 +4,10 @@ import { twMerge } from "tailwind-merge";
 import type { SettingsRowProps } from "./row.js";
 import { SettingsRow } from "./row.js";
 
-export interface DocumentSelectSettingsRowProps
-  extends Omit<SettingsRowProps, "onChange"> {
+export interface DocumentSelectSettingsRowProps extends Omit<
+  SettingsRowProps,
+  "onChange"
+> {
   options: Option[];
   selected?: Option[];
   onChange: (options: Option[]) => void;

@@ -6,7 +6,8 @@ import type { ConnectSidebarHeaderProps } from "./sidebar-header.js";
 import { ConnectSidebarHeader } from "./sidebar-header.js";
 
 export interface ConnectSidebarProps
-  extends HTMLAttributes<HTMLElement>,
+  extends
+    HTMLAttributes<HTMLElement>,
     ConnectSidebarHeaderProps,
     ConnectSidebarFooterProps {
   maxWidth?: string;

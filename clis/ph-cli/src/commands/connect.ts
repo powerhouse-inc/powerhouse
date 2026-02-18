@@ -49,9 +49,8 @@ NOTE: You must run \`ph connect build\` first
     if (args.debug) {
       console.log(args);
     }
-    const { runConnectPreview } = await import(
-      "../services/connect-preview.js"
-    );
+    const { runConnectPreview } =
+      await import("../services/connect-preview.js");
     await runConnectPreview(args);
   },
 });

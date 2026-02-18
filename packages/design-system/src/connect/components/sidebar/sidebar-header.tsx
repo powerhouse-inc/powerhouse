@@ -2,8 +2,9 @@ import { SidebarHeader } from "@powerhousedao/design-system";
 import type { ComponentProps } from "react";
 import { twMerge } from "tailwind-merge";
 
-export interface ConnectSidebarHeaderProps
-  extends ComponentProps<typeof SidebarHeader> {}
+export interface ConnectSidebarHeaderProps extends ComponentProps<
+  typeof SidebarHeader
+> {}
 
 export const ConnectSidebarHeader: React.FC<ConnectSidebarHeaderProps> = ({
   className,

@@ -41,9 +41,8 @@ This command:
 
     console.debug("Initializing cryptographic identity...");
 
-    const { generateSessionId, getRenown } = await import(
-      "../services/auth.js"
-    );
+    const { generateSessionId, getRenown } =
+      await import("../services/auth.js");
     const renown = await getRenown();
 
     // Check if already authenticated
@@ -224,9 +223,8 @@ async function showStatus(): Promise<void> {
  */
 async function showDid(): Promise<void> {
   try {
-    const { generateSessionId, getRenown } = await import(
-      "../services/auth.js"
-    );
+    const { generateSessionId, getRenown } =
+      await import("../services/auth.js");
     const renown = await getRenown();
     console.log(renown.did);
   } catch (e) {

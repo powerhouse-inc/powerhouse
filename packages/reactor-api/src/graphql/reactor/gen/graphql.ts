@@ -1278,8 +1278,8 @@ export type ResolversParentTypes = ResolversObject<{
 
 export type ActionResolvers<
   ContextType = Context,
-  ParentType extends
-    ResolversParentTypes["Action"] = ResolversParentTypes["Action"],
+  ParentType extends ResolversParentTypes["Action"] =
+    ResolversParentTypes["Action"],
 > = ResolversObject<{
   attachments?: Resolver<
     Maybe<ReadonlyArray<ResolversTypes["Attachment"]>>,
@@ -1300,8 +1300,8 @@ export type ActionResolvers<
 
 export type ActionContextResolvers<
   ContextType = Context,
-  ParentType extends
-    ResolversParentTypes["ActionContext"] = ResolversParentTypes["ActionContext"],
+  ParentType extends ResolversParentTypes["ActionContext"] =
+    ResolversParentTypes["ActionContext"],
 > = ResolversObject<{
   signer?: Resolver<
     Maybe<ResolversTypes["ReactorSigner"]>,
@@ -1312,8 +1312,8 @@ export type ActionContextResolvers<
 
 export type AttachmentResolvers<
   ContextType = Context,
-  ParentType extends
-    ResolversParentTypes["Attachment"] = ResolversParentTypes["Attachment"],
+  ParentType extends ResolversParentTypes["Attachment"] =
+    ResolversParentTypes["Attachment"],
 > = ResolversObject<{
   data?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
   extension?: Resolver<
@@ -1328,21 +1328,23 @@ export type AttachmentResolvers<
 
 export type ChannelMetaResolvers<
   ContextType = Context,
-  ParentType extends
-    ResolversParentTypes["ChannelMeta"] = ResolversParentTypes["ChannelMeta"],
+  ParentType extends ResolversParentTypes["ChannelMeta"] =
+    ResolversParentTypes["ChannelMeta"],
 > = ResolversObject<{
   id?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
 }>;
 
-export interface DateTimeScalarConfig
-  extends GraphQLScalarTypeConfig<ResolversTypes["DateTime"], any> {
+export interface DateTimeScalarConfig extends GraphQLScalarTypeConfig<
+  ResolversTypes["DateTime"],
+  any
+> {
   name: "DateTime";
 }
 
 export type DeadLetterInfoResolvers<
   ContextType = Context,
-  ParentType extends
-    ResolversParentTypes["DeadLetterInfo"] = ResolversParentTypes["DeadLetterInfo"],
+  ParentType extends ResolversParentTypes["DeadLetterInfo"] =
+    ResolversParentTypes["DeadLetterInfo"],
 > = ResolversObject<{
   documentId?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
   error?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
@@ -1350,8 +1352,8 @@ export type DeadLetterInfoResolvers<
 
 export type DocumentChangeContextResolvers<
   ContextType = Context,
-  ParentType extends
-    ResolversParentTypes["DocumentChangeContext"] = ResolversParentTypes["DocumentChangeContext"],
+  ParentType extends ResolversParentTypes["DocumentChangeContext"] =
+    ResolversParentTypes["DocumentChangeContext"],
 > = ResolversObject<{
   childId?: Resolver<Maybe<ResolversTypes["String"]>, ParentType, ContextType>;
   parentId?: Resolver<Maybe<ResolversTypes["String"]>, ParentType, ContextType>;
@@ -1359,8 +1361,8 @@ export type DocumentChangeContextResolvers<
 
 export type DocumentChangeEventResolvers<
   ContextType = Context,
-  ParentType extends
-    ResolversParentTypes["DocumentChangeEvent"] = ResolversParentTypes["DocumentChangeEvent"],
+  ParentType extends ResolversParentTypes["DocumentChangeEvent"] =
+    ResolversParentTypes["DocumentChangeEvent"],
 > = ResolversObject<{
   context?: Resolver<
     Maybe<ResolversTypes["DocumentChangeContext"]>,
@@ -1381,8 +1383,8 @@ export type DocumentChangeEventResolvers<
 
 export type DocumentModelGlobalStateResolvers<
   ContextType = Context,
-  ParentType extends
-    ResolversParentTypes["DocumentModelGlobalState"] = ResolversParentTypes["DocumentModelGlobalState"],
+  ParentType extends ResolversParentTypes["DocumentModelGlobalState"] =
+    ResolversParentTypes["DocumentModelGlobalState"],
 > = ResolversObject<{
   id?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
   name?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
@@ -1401,8 +1403,8 @@ export type DocumentModelGlobalStateResolvers<
 
 export type DocumentModelResultPageResolvers<
   ContextType = Context,
-  ParentType extends
-    ResolversParentTypes["DocumentModelResultPage"] = ResolversParentTypes["DocumentModelResultPage"],
+  ParentType extends ResolversParentTypes["DocumentModelResultPage"] =
+    ResolversParentTypes["DocumentModelResultPage"],
 > = ResolversObject<{
   cursor?: Resolver<Maybe<ResolversTypes["String"]>, ParentType, ContextType>;
   hasNextPage?: Resolver<ResolversTypes["Boolean"], ParentType, ContextType>;
@@ -1421,8 +1423,8 @@ export type DocumentModelResultPageResolvers<
 
 export type DocumentWithChildrenResolvers<
   ContextType = Context,
-  ParentType extends
-    ResolversParentTypes["DocumentWithChildren"] = ResolversParentTypes["DocumentWithChildren"],
+  ParentType extends ResolversParentTypes["DocumentWithChildren"] =
+    ResolversParentTypes["DocumentWithChildren"],
 > = ResolversObject<{
   childIds?: Resolver<
     ReadonlyArray<ResolversTypes["String"]>,
@@ -1432,15 +1434,17 @@ export type DocumentWithChildrenResolvers<
   document?: Resolver<ResolversTypes["PHDocument"], ParentType, ContextType>;
 }>;
 
-export interface JsonObjectScalarConfig
-  extends GraphQLScalarTypeConfig<ResolversTypes["JSONObject"], any> {
+export interface JsonObjectScalarConfig extends GraphQLScalarTypeConfig<
+  ResolversTypes["JSONObject"],
+  any
+> {
   name: "JSONObject";
 }
 
 export type JobChangeEventResolvers<
   ContextType = Context,
-  ParentType extends
-    ResolversParentTypes["JobChangeEvent"] = ResolversParentTypes["JobChangeEvent"],
+  ParentType extends ResolversParentTypes["JobChangeEvent"] =
+    ResolversParentTypes["JobChangeEvent"],
 > = ResolversObject<{
   error?: Resolver<Maybe<ResolversTypes["String"]>, ParentType, ContextType>;
   jobId?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
@@ -1450,8 +1454,8 @@ export type JobChangeEventResolvers<
 
 export type JobInfoResolvers<
   ContextType = Context,
-  ParentType extends
-    ResolversParentTypes["JobInfo"] = ResolversParentTypes["JobInfo"],
+  ParentType extends ResolversParentTypes["JobInfo"] =
+    ResolversParentTypes["JobInfo"],
 > = ResolversObject<{
   completedAt?: Resolver<
     Maybe<ResolversTypes["DateTime"]>,
@@ -1467,8 +1471,8 @@ export type JobInfoResolvers<
 
 export type MoveChildrenResultResolvers<
   ContextType = Context,
-  ParentType extends
-    ResolversParentTypes["MoveChildrenResult"] = ResolversParentTypes["MoveChildrenResult"],
+  ParentType extends ResolversParentTypes["MoveChildrenResult"] =
+    ResolversParentTypes["MoveChildrenResult"],
 > = ResolversObject<{
   source?: Resolver<ResolversTypes["PHDocument"], ParentType, ContextType>;
   target?: Resolver<ResolversTypes["PHDocument"], ParentType, ContextType>;
@@ -1476,8 +1480,8 @@ export type MoveChildrenResultResolvers<
 
 export type MutationResolvers<
   ContextType = Context,
-  ParentType extends
-    ResolversParentTypes["Mutation"] = ResolversParentTypes["Mutation"],
+  ParentType extends ResolversParentTypes["Mutation"] =
+    ResolversParentTypes["Mutation"],
 > = ResolversObject<{
   addChildren?: Resolver<
     ResolversTypes["PHDocument"],
@@ -1569,8 +1573,8 @@ export type MutationResolvers<
 
 export type OperationContextResolvers<
   ContextType = Context,
-  ParentType extends
-    ResolversParentTypes["OperationContext"] = ResolversParentTypes["OperationContext"],
+  ParentType extends ResolversParentTypes["OperationContext"] =
+    ResolversParentTypes["OperationContext"],
 > = ResolversObject<{
   branch?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
   documentId?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
@@ -1581,8 +1585,8 @@ export type OperationContextResolvers<
 
 export type OperationWithContextResolvers<
   ContextType = Context,
-  ParentType extends
-    ResolversParentTypes["OperationWithContext"] = ResolversParentTypes["OperationWithContext"],
+  ParentType extends ResolversParentTypes["OperationWithContext"] =
+    ResolversParentTypes["OperationWithContext"],
 > = ResolversObject<{
   context?: Resolver<
     ResolversTypes["OperationContext"],
@@ -1598,8 +1602,8 @@ export type OperationWithContextResolvers<
 
 export type PhDocumentResolvers<
   ContextType = Context,
-  ParentType extends
-    ResolversParentTypes["PHDocument"] = ResolversParentTypes["PHDocument"],
+  ParentType extends ResolversParentTypes["PHDocument"] =
+    ResolversParentTypes["PHDocument"],
 > = ResolversObject<{
   createdAtUtcIso?: Resolver<
     ResolversTypes["DateTime"],
@@ -1632,8 +1636,8 @@ export type PhDocumentResolvers<
 
 export type PhDocumentResultPageResolvers<
   ContextType = Context,
-  ParentType extends
-    ResolversParentTypes["PHDocumentResultPage"] = ResolversParentTypes["PHDocumentResultPage"],
+  ParentType extends ResolversParentTypes["PHDocumentResultPage"] =
+    ResolversParentTypes["PHDocumentResultPage"],
 > = ResolversObject<{
   cursor?: Resolver<Maybe<ResolversTypes["String"]>, ParentType, ContextType>;
   hasNextPage?: Resolver<ResolversTypes["Boolean"], ParentType, ContextType>;
@@ -1652,8 +1656,8 @@ export type PhDocumentResultPageResolvers<
 
 export type PollSyncEnvelopesResultResolvers<
   ContextType = Context,
-  ParentType extends
-    ResolversParentTypes["PollSyncEnvelopesResult"] = ResolversParentTypes["PollSyncEnvelopesResult"],
+  ParentType extends ResolversParentTypes["PollSyncEnvelopesResult"] =
+    ResolversParentTypes["PollSyncEnvelopesResult"],
 > = ResolversObject<{
   ackOrdinal?: Resolver<ResolversTypes["Int"], ParentType, ContextType>;
   deadLetters?: Resolver<
@@ -1670,8 +1674,8 @@ export type PollSyncEnvelopesResultResolvers<
 
 export type QueryResolvers<
   ContextType = Context,
-  ParentType extends
-    ResolversParentTypes["Query"] = ResolversParentTypes["Query"],
+  ParentType extends ResolversParentTypes["Query"] =
+    ResolversParentTypes["Query"],
 > = ResolversObject<{
   document?: Resolver<
     Maybe<ResolversTypes["DocumentWithChildren"]>,
@@ -1728,8 +1732,8 @@ export type QueryResolvers<
 
 export type ReactorOperationResolvers<
   ContextType = Context,
-  ParentType extends
-    ResolversParentTypes["ReactorOperation"] = ResolversParentTypes["ReactorOperation"],
+  ParentType extends ResolversParentTypes["ReactorOperation"] =
+    ResolversParentTypes["ReactorOperation"],
 > = ResolversObject<{
   action?: Resolver<ResolversTypes["Action"], ParentType, ContextType>;
   error?: Resolver<Maybe<ResolversTypes["String"]>, ParentType, ContextType>;
@@ -1742,8 +1746,8 @@ export type ReactorOperationResolvers<
 
 export type ReactorOperationResultPageResolvers<
   ContextType = Context,
-  ParentType extends
-    ResolversParentTypes["ReactorOperationResultPage"] = ResolversParentTypes["ReactorOperationResultPage"],
+  ParentType extends ResolversParentTypes["ReactorOperationResultPage"] =
+    ResolversParentTypes["ReactorOperationResultPage"],
 > = ResolversObject<{
   cursor?: Resolver<Maybe<ResolversTypes["String"]>, ParentType, ContextType>;
   hasNextPage?: Resolver<ResolversTypes["Boolean"], ParentType, ContextType>;
@@ -1762,8 +1766,8 @@ export type ReactorOperationResultPageResolvers<
 
 export type ReactorSignerResolvers<
   ContextType = Context,
-  ParentType extends
-    ResolversParentTypes["ReactorSigner"] = ResolversParentTypes["ReactorSigner"],
+  ParentType extends ResolversParentTypes["ReactorSigner"] =
+    ResolversParentTypes["ReactorSigner"],
 > = ResolversObject<{
   app?: Resolver<
     Maybe<ResolversTypes["ReactorSignerApp"]>,
@@ -1784,8 +1788,8 @@ export type ReactorSignerResolvers<
 
 export type ReactorSignerAppResolvers<
   ContextType = Context,
-  ParentType extends
-    ResolversParentTypes["ReactorSignerApp"] = ResolversParentTypes["ReactorSignerApp"],
+  ParentType extends ResolversParentTypes["ReactorSignerApp"] =
+    ResolversParentTypes["ReactorSignerApp"],
 > = ResolversObject<{
   key?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
   name?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
@@ -1793,8 +1797,8 @@ export type ReactorSignerAppResolvers<
 
 export type ReactorSignerUserResolvers<
   ContextType = Context,
-  ParentType extends
-    ResolversParentTypes["ReactorSignerUser"] = ResolversParentTypes["ReactorSignerUser"],
+  ParentType extends ResolversParentTypes["ReactorSignerUser"] =
+    ResolversParentTypes["ReactorSignerUser"],
 > = ResolversObject<{
   address?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
   chainId?: Resolver<ResolversTypes["Int"], ParentType, ContextType>;
@@ -1803,8 +1807,8 @@ export type ReactorSignerUserResolvers<
 
 export type RemoteCursorResolvers<
   ContextType = Context,
-  ParentType extends
-    ResolversParentTypes["RemoteCursor"] = ResolversParentTypes["RemoteCursor"],
+  ParentType extends ResolversParentTypes["RemoteCursor"] =
+    ResolversParentTypes["RemoteCursor"],
 > = ResolversObject<{
   cursorOrdinal?: Resolver<ResolversTypes["Int"], ParentType, ContextType>;
   lastSyncedAtUtcMs?: Resolver<
@@ -1817,8 +1821,8 @@ export type RemoteCursorResolvers<
 
 export type RevisionResolvers<
   ContextType = Context,
-  ParentType extends
-    ResolversParentTypes["Revision"] = ResolversParentTypes["Revision"],
+  ParentType extends ResolversParentTypes["Revision"] =
+    ResolversParentTypes["Revision"],
 > = ResolversObject<{
   revision?: Resolver<ResolversTypes["Int"], ParentType, ContextType>;
   scope?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
@@ -1826,8 +1830,8 @@ export type RevisionResolvers<
 
 export type SubscriptionResolvers<
   ContextType = Context,
-  ParentType extends
-    ResolversParentTypes["Subscription"] = ResolversParentTypes["Subscription"],
+  ParentType extends ResolversParentTypes["Subscription"] =
+    ResolversParentTypes["Subscription"],
 > = ResolversObject<{
   documentChanges?: SubscriptionResolver<
     ResolversTypes["DocumentChangeEvent"],
@@ -1847,8 +1851,8 @@ export type SubscriptionResolvers<
 
 export type SyncEnvelopeResolvers<
   ContextType = Context,
-  ParentType extends
-    ResolversParentTypes["SyncEnvelope"] = ResolversParentTypes["SyncEnvelope"],
+  ParentType extends ResolversParentTypes["SyncEnvelope"] =
+    ResolversParentTypes["SyncEnvelope"],
 > = ResolversObject<{
   channelMeta?: Resolver<
     ResolversTypes["ChannelMeta"],

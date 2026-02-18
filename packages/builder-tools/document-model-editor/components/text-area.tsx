@@ -2,8 +2,7 @@ import * as React from "react";
 import { forwardRef, useImperativeHandle, useRef, useCallback } from "react";
 import { cn } from "../utils/style.js";
 
-export interface TextareaProps
-  extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {}
+export interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {}
 
 export interface TextareaHandle {
   focus: () => void;

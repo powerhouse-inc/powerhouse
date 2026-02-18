@@ -1,8 +1,9 @@
 import React, { useId } from "react";
 import * as RadioGroupPrimitive from "@radix-ui/react-radio-group";
 
-export interface CustomizableRadioGroupProps
-  extends React.ComponentPropsWithoutRef<typeof RadioGroupPrimitive.Root> {
+export interface CustomizableRadioGroupProps extends React.ComponentPropsWithoutRef<
+  typeof RadioGroupPrimitive.Root
+> {
   children: React.ReactNode;
   className?: string;
   id?: string;

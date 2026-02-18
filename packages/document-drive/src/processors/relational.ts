@@ -16,9 +16,9 @@ const IS_RELATIONAL_DB_PROCESSOR = Symbol.for("ph.IS_RELATIONAL_DB_PROCESSOR");
  * This class abstracts database initialization, migration management, and resource cleanup,
  * allowing derived classes to focus on business logic.
  */
-export abstract class RelationalDbProcessorLegacy<TDatabaseSchema = unknown>
-  implements IRelationalDbProcessorLegacy<TDatabaseSchema>
-{
+export abstract class RelationalDbProcessorLegacy<
+  TDatabaseSchema = unknown,
+> implements IRelationalDbProcessorLegacy<TDatabaseSchema> {
   constructor(
     protected _namespace: string,
     protected _filter: RelationalDbProcessorFilterLegacy,

@@ -10,8 +10,10 @@ export type CookieInput = {
   value: boolean;
 };
 
-export interface CookieBannerProps
-  extends Omit<React.HTMLAttributes<HTMLDivElement>, "onSubmit"> {
+export interface CookieBannerProps extends Omit<
+  React.HTMLAttributes<HTMLDivElement>,
+  "onSubmit"
+> {
   cookies: CookieInput[];
   submitLabel?: string;
   rejectLabel?: string;

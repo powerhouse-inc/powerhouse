@@ -14,7 +14,8 @@ import TextInputDiff from "./text-input-diff.js";
 import type { CommonTextProps } from "./types.js";
 
 interface TextInputProps
-  extends Omit<
+  extends
+    Omit<
       InputBaseProps<string> &
         Omit<React.InputHTMLAttributes<HTMLInputElement>, "pattern"> &
         CommonTextProps,

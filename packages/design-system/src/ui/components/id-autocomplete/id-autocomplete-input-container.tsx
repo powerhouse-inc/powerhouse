@@ -10,8 +10,10 @@ import { Tooltip, TooltipProvider } from "../tooltip/tooltip.js";
 import { ValueTransformer } from "../value-transformer/value-transformer.js";
 import type { IdAutocompleteOption } from "./types.js";
 
-interface IdAutocompleteInputContainerProps
-  extends Omit<InputBaseProps<string>, "defaultValue" | "errors" | "warnings"> {
+interface IdAutocompleteInputContainerProps extends Omit<
+  InputBaseProps<string>,
+  "defaultValue" | "errors" | "warnings"
+> {
   isLoading: boolean;
   haveFetchError: boolean;
   onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;

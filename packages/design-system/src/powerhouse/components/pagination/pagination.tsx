@@ -14,8 +14,10 @@ export type PaginationPageEvent = {
   page: PageItem;
 };
 
-export interface PaginationProps
-  extends Omit<UsePaginationBaseResult, "pageCount" | "currentPage"> {
+export interface PaginationProps extends Omit<
+  UsePaginationBaseResult,
+  "pageCount" | "currentPage"
+> {
   displayPagesLeftIndicator?: boolean;
   firstPageLabel?: React.ReactNode;
   lastPageLabel?: React.ReactNode;
