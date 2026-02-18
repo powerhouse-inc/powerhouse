@@ -1,6 +1,6 @@
 import { Icon } from "@powerhousedao/design-system";
 import type { Remote } from "@powerhousedao/reactor";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { twMerge } from "tailwind-merge";
 import { ChannelInspector } from "./components/channel-inspector.js";
 import { SortIcon } from "./components/sort-icon.js";
@@ -13,15 +13,22 @@ import {
 
 export type RemotesInspectorProps = {
   readonly getRemotes: () => Promise<Remote[]>;
+  readonly removeRemote?: (name: string) => Promise<void>;
 };
 
-const COLUMNS: ColumnDef[] = [
+const BASE_COLUMNS: ColumnDef[] = [
   { key: "id", label: "ID", width: "120px" },
   { key: "name", label: "Name", width: "150px" },
   { key: "collectionId", label: "Collection ID", width: "200px" },
   { key: "filter", label: "Filter", width: "200px" },
   { key: "channel", label: "Channel", width: "100px" },
 ];
+
+const ACTIONS_COLUMN: ColumnDef = {
+  key: "actions",
+  label: "Actions",
+  width: "100px",
+};
 
 function formatFilter(filter: Remote["filter"]): string {
   const parts: string[] = [];
@@ -77,11 +84,19 @@ function sortRemotes(
   });
 }
 
-export function RemotesInspector({ getRemotes }: RemotesInspectorProps) {
+export function RemotesInspector({
+  getRemotes,
+  removeRemote,
+}: RemotesInspectorProps) {
   const [remotes, setRemotes] = useState<Remote[]>([]);
   const [loading, setLoading] = useState(true);
   const [sort, setSort] = useState<SortOptions | undefined>();
   const [selectedRemote, setSelectedRemote] = useState<Remote | undefined>();
+
+  const columns = useMemo(
+    () => (removeRemote ? [...BASE_COLUMNS, ACTIONS_COLUMN] : BASE_COLUMNS),
+    [removeRemote],
+  );
 
   const loadRemotes = useCallback(async () => {
     setLoading(true);
@@ -103,7 +118,7 @@ export function RemotesInspector({ getRemotes }: RemotesInspectorProps) {
   }, [loadRemotes, selectedRemote, remotes]);
 
   const handleSort = (columnKey: string) => {
-    if (columnKey === "channel") return;
+    if (columnKey === "channel" || columnKey === "actions") return;
 
     const newDirection: SortDirection =
       sort?.column === columnKey && sort.direction === "asc" ? "desc" : "asc";
@@ -114,6 +129,18 @@ export function RemotesInspector({ getRemotes }: RemotesInspectorProps) {
   const handleViewChannel = (remote: Remote) => {
     setSelectedRemote(remote);
   };
+
+  const handleRemove = useCallback(
+    async (remote: Remote) => {
+      if (!removeRemote) return;
+      await removeRemote(remote.name);
+      await loadRemotes();
+      if (selectedRemote?.id === remote.id) {
+        setSelectedRemote(undefined);
+      }
+    },
+    [removeRemote, loadRemotes, selectedRemote],
+  );
 
   const handleBack = () => {
     setSelectedRemote(undefined);
@@ -153,10 +180,11 @@ export function RemotesInspector({ getRemotes }: RemotesInspectorProps) {
         <table className="w-full border-collapse">
           <thead className="sticky top-0 bg-gray-100">
             <tr>
-              {COLUMNS.map((column, index) => {
+              {columns.map((column, index) => {
                 const isActive = sort?.column === column.key;
                 const sortDirection = isActive ? sort.direction : "asc";
-                const isSortable = column.key !== "channel";
+                const isSortable =
+                  column.key !== "channel" && column.key !== "actions";
 
                 return (
                   <th
@@ -186,7 +214,7 @@ export function RemotesInspector({ getRemotes }: RemotesInspectorProps) {
               <tr>
                 <td
                   className="px-3 py-8 text-center text-sm text-gray-500"
-                  colSpan={COLUMNS.length}
+                  colSpan={columns.length}
                 >
                   Loading...
                 </td>
@@ -195,7 +223,7 @@ export function RemotesInspector({ getRemotes }: RemotesInspectorProps) {
               <tr>
                 <td
                   className="px-3 py-8 text-center text-sm text-gray-500"
-                  colSpan={COLUMNS.length}
+                  colSpan={columns.length}
                 >
                   No remotes configured
                 </td>
@@ -242,6 +270,17 @@ export function RemotesInspector({ getRemotes }: RemotesInspectorProps) {
                       <Icon name="CaretRight" size={12} />
                     </button>
                   </td>
+                  {removeRemote && (
+                    <td className="border-l border-gray-300 px-3 py-2">
+                      <button
+                        className="rounded bg-red-50 px-2 py-1 text-xs text-red-700 hover:bg-red-100"
+                        onClick={() => void handleRemove(remote)}
+                        type="button"
+                      >
+                        Remove
+                      </button>
+                    </td>
+                  )}
                 </tr>
               ))
             )}

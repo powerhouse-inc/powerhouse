@@ -179,9 +179,15 @@ const mockRemotes: Remote[] = [
   },
 ];
 
+const mockRemoveRemote = async (name: string) => {
+  console.log(`Removing remote: ${name}`);
+  await Promise.resolve();
+};
+
 export const Default: Story = {
   args: {
     getRemotes: () => Promise.resolve(mockRemotes),
+    removeRemote: mockRemoveRemote,
   },
 };
 
@@ -194,6 +200,7 @@ export const EmptyRemotes: Story = {
 export const SingleRemote: Story = {
   args: {
     getRemotes: () => Promise.resolve([mockRemotes[0]]),
+    removeRemote: mockRemoveRemote,
   },
 };
 
@@ -244,5 +251,6 @@ const manyRemotes: Remote[] = Array.from({ length: 20 }, (_, i) => ({
 export const ManyRemotes: Story = {
   args: {
     getRemotes: () => Promise.resolve(manyRemotes),
+    removeRemote: mockRemoveRemote,
   },
 };

@@ -4,6 +4,7 @@ import { useCallback } from "react";
 
 export function useRemotesInspector(): {
   getRemotes: () => Promise<Remote[]>;
+  removeRemote: (name: string) => Promise<void>;
 } {
   const syncManager = useSync();
   if (!syncManager) {
@@ -14,7 +15,13 @@ export function useRemotesInspector(): {
     return Promise.resolve(syncManager.list());
   }, [syncManager]);
 
+  const removeRemote = useCallback(
+    (name: string) => syncManager.remove(name),
+    [syncManager],
+  );
+
   return {
     getRemotes,
+    removeRemote,
   };
 }
