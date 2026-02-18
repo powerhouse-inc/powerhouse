@@ -15,6 +15,7 @@ import devcert from "devcert";
 import type {
   DocumentDriveDocument,
   IDocumentDriveServer,
+  ILogger,
   IProcessorHostModuleLegacy,
   IProcessorManagerLegacy,
   IRelationalDbLegacy,
@@ -61,7 +62,7 @@ import {
   type DocumentPermissionDatabase,
 } from "./utils/db.js";
 
-const logger = childLogger(["reactor-api", "server"]);
+const defaultLogger = childLogger(["reactor-api", "server"]);
 
 type Options = {
   express?: Express;
@@ -107,6 +108,7 @@ type Options = {
    * the driveAdded event. When false (default), uses ProcessorManager from ReactorModule.
    */
   legacyReactor?: boolean;
+  logger?: ILogger;
 };
 
 const DEFAULT_PORT = 4000;
@@ -168,6 +170,7 @@ async function setupGraphQLManager(
     extended: Map<string, SubgraphClass[]>;
     core: SubgraphClass[];
   },
+  logger: ILogger,
   auth?: {
     enabled: boolean;
     guests: string[];
@@ -190,6 +193,7 @@ async function setupGraphQLManager(
     relationalDb,
     analyticsStore,
     syncManager,
+    logger,
     {
       enabled: auth?.enabled ?? false,
       guests: auth?.guests ?? [],
@@ -266,6 +270,7 @@ async function startServer(
   app: Express,
   port: number,
   httpsOptions: Options["https"],
+  logger: ILogger,
 ): Promise<{ httpServer: http.Server; wsServer: WebSocketServer }> {
   let httpServer: http.Server;
 
@@ -391,6 +396,8 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     res.status(200).send("OK");
   });
 
+  const logger = options.logger ?? defaultLogger;
+
   // add auth middleware if auth is enabled
   if (authEnabled) {
     logger.info("Setting up Auth middleware");
@@ -498,6 +505,8 @@ async function _setupAPI(
     config: options.processorConfig,
   };
   const mcpServerEnabled = options.mcp ?? true;
+
+  const logger = options.logger ?? defaultLogger;
 
   // initialize processors
   let processorManager: IProcessorManagerLegacy;
@@ -624,7 +633,12 @@ async function _setupAPI(
   }
 
   // Start the server
-  const { httpServer, wsServer } = await startServer(app, port, options.https);
+  const { httpServer, wsServer } = await startServer(
+    app,
+    port,
+    options.https,
+    logger,
+  );
 
   // set up subgraph manager
   const coreSubgraphs: SubgraphClass[] = DefaultCoreSubgraphs.slice();
@@ -649,6 +663,7 @@ async function _setupAPI(
       extended: subgraphs,
       core: coreSubgraphs,
     },
+    logger.child(["graphql-manager"]),
     auth,
     documentPermissionService,
     options.enableDocumentModelSubgraphs,

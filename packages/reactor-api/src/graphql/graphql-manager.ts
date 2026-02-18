@@ -27,6 +27,7 @@ import cors from "cors";
 import type {
   DocumentDriveDocument,
   IDocumentDriveServer,
+  ILogger,
   IRelationalDbLegacy,
 } from "document-drive";
 import { childLogger, debounce, responseForDrive } from "document-drive";
@@ -152,8 +153,6 @@ export class GraphQLManager {
     getDataSource: GetDataSourceFunction;
   } | null = null;
 
-  private readonly logger = childLogger(["reactor-api", "graphql-manager"]);
-
   private readonly apolloLogger = childLogger([
     "reactor-api",
     "graphql-manager",
@@ -170,6 +169,7 @@ export class GraphQLManager {
     private readonly relationalDb: IRelationalDbLegacy,
     private readonly analyticsStore: IAnalyticsStore,
     private readonly syncManager: ISyncManager,
+    private readonly logger: ILogger,
     private readonly authConfig?: AuthConfig,
     private readonly documentPermissionService?: DocumentPermissionService,
     private readonly featureFlags: GraphqlManagerFeatureFlags = DefaultFeatureFlags,

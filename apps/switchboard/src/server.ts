@@ -11,6 +11,7 @@ import {
 } from "@powerhousedao/reactor";
 import {
   VitePackageLoader,
+  createViteLogger,
   getUniqueDocumentModels,
   initializeAndStartAPI,
   startViteServer,
@@ -44,7 +45,7 @@ import { initRenown } from "./renown.js";
 import type { StartServerOptions, SwitchboardReactor } from "./types.js";
 import { addDefaultDrive, addRemoteDrive, isPostgresUrl } from "./utils.js";
 
-const logger = childLogger(["switchboard"]);
+const defaultLogger = childLogger(["switchboard"]);
 
 dotenv.config();
 
@@ -65,7 +66,10 @@ const USE_NEW_DOCUMENT_MODEL_SUBGRAPH_DEFAULT = true;
 const app = express();
 
 if (process.env.SENTRY_DSN) {
-  logger.info("Initialized Sentry with env: @env", process.env.SENTRY_ENV);
+  defaultLogger.info(
+    "Initialized Sentry with env: @env",
+    process.env.SENTRY_ENV,
+  );
   Sentry.init({
     dsn: process.env.SENTRY_DSN,
     environment: process.env.SENTRY_ENV,
@@ -86,9 +90,9 @@ async function initPrismaStorage(connectionString: string, cache: ICache) {
     if (e instanceof Error && e.message.includes(prismaConnectError)) {
       const dbUrl = connectionString;
       const safeUrl = `${dbUrl.slice(0, dbUrl.indexOf(":") + 1)}{...}${dbUrl.slice(dbUrl.indexOf("@"), dbUrl.lastIndexOf("?"))}`;
-      logger.warn("Can't reach database server at '@safeUrl'", safeUrl);
+      defaultLogger.warn("Can't reach database server at '@safeUrl'", safeUrl);
     } else {
-      logger.error("@error", e);
+      defaultLogger.error("@error", e);
     }
     throw e;
   }
@@ -111,7 +115,7 @@ async function initReactorStorage(
       return { storage, storagePath: dbPath };
     }
   } catch {
-    logger.warn("Falling back to filesystem storage");
+    defaultLogger.warn("Falling back to filesystem storage");
   }
 
   // if url was postgres and connection failed, fallback to filesystem on default path
@@ -127,7 +131,12 @@ async function initServer(
   options: StartServerOptions,
   renown: IRenown | null,
 ) {
-  const { dev, packages = [], remoteDrives = [] } = options;
+  const {
+    dev,
+    packages = [],
+    remoteDrives = [],
+    logger = defaultLogger,
+  } = options;
 
   const dbPath = options.dbPath ?? process.env.DATABASE_URL;
 
@@ -175,6 +184,7 @@ async function initServer(
     return driveServer;
   };
 
+  const reactorLogger = logger.child(["reactor"]);
   const initializeClient = async (
     driveServer: IDocumentDriveServer,
     documentModels: DocumentModelModule[],
@@ -191,7 +201,8 @@ async function initServer(
       )
       .withLegacyStorage(storage)
       .withChannelScheme(ChannelScheme.SWITCHBOARD)
-      .withSignalHandlers();
+      .withSignalHandlers()
+      .withLogger(reactorLogger);
 
     const reactorDbUrl = process.env.PH_REACTOR_DATABASE_URL;
     if (reactorDbUrl && isPostgresUrl(reactorDbUrl)) {
@@ -233,7 +244,10 @@ async function initServer(
   // TODO get path from powerhouse config
   // start vite server if dev mode is enabled
   const basePath = process.cwd();
-  const vite = dev ? await startViteServer(process.cwd()) : undefined;
+  const viteLogger = createViteLogger(logger);
+  const vite = dev
+    ? await startViteServer(process.cwd(), viteLogger)
+    : undefined;
 
   // get paths to local document models
   if (!options.disableLocalPackages) {
@@ -247,6 +261,8 @@ async function initServer(
   const packageLoader = vite
     ? VitePackageLoader.build(vite, { legacyReactor })
     : undefined;
+
+  const apiLogger = logger.child(["reactor-api"]);
   const api = await initializeAndStartAPI(
     initializeDriveServer,
     initializeClient,
@@ -262,6 +278,7 @@ async function initServer(
         options.configFile ??
         path.join(process.cwd(), "powerhouse.config.json"),
       mcp: options.mcp ?? true,
+      logger: apiLogger,
       enableDocumentModelSubgraphs: options.enableDocumentModelSubgraphs,
       useNewDocumentModelSubgraph: options.useNewDocumentModelSubgraph,
       legacyReactor,
@@ -389,12 +406,21 @@ export const startSwitchboard = async (
     storageV2,
   };
 
-  logger.info("Feature flags: @flags", {
-    DOCUMENT_MODEL_SUBGRAPHS_ENABLED: enableDocumentModelSubgraphs,
-    REACTOR_STORAGE_V2: storageV2,
-    ENABLE_DUAL_ACTION_CREATE: enableDualActionCreate,
-    USE_NEW_DOCUMENT_MODEL_SUBGRAPH: useNewDocumentModelSubgraph,
-  });
+  const logger = options.logger ?? defaultLogger;
+
+  logger.info(
+    "Feature flags: @flags",
+    JSON.stringify(
+      {
+        DOCUMENT_MODEL_SUBGRAPHS_ENABLED: enableDocumentModelSubgraphs,
+        REACTOR_STORAGE_V2: storageV2,
+        ENABLE_DUAL_ACTION_CREATE: enableDualActionCreate,
+        USE_NEW_DOCUMENT_MODEL_SUBGRAPH: useNewDocumentModelSubgraph,
+      },
+      null,
+      2,
+    ),
+  );
 
   if (process.env.PYROSCOPE_SERVER_ADDRESS) {
     try {
