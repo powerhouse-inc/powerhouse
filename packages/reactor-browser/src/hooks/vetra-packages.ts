@@ -24,7 +24,7 @@ export function setVetraPackages(vetraPackages: VetraPackage[] = []) {
       );
     } catch (error) {
       // check if it's a duplicate module error
-      if (error instanceof DuplicateModuleError) {
+      if (DuplicateModuleError.isError(error)) {
         return;
       }
       throw error;

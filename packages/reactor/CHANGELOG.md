@@ -1,3 +1,37 @@
+## 6.0.0-dev.53 (2026-02-18)
+
+### 🩹 Fixes
+
+- fixing reshuffle issue with correct tiebreakers ([7be1adf54](https://github.com/powerhouse-inc/powerhouse/commit/7be1adf54))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
+## 6.0.0-dev.52 (2026-02-17)
+
+### 🩹 Fixes
+
+- **reactor-api:** improved subgraph path matching and removed name parameter from reactor subgraph ([dcadf7fb3](https://github.com/powerhouse-inc/powerhouse/commit/dcadf7fb3))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 6.0.0-dev.51 (2026-02-17)
+
+### 🩹 Fixes
+
+- **reactor-browser,reactor:** improved error instance checks ([c6b8625e7](https://github.com/powerhouse-inc/powerhouse/commit/c6b8625e7))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 6.0.0-dev.50 (2026-02-17)
+
+This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.
+
 ## 6.0.0-dev.49 (2026-02-17)
 
 This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.

@@ -1,3 +1,26 @@
+## 6.0.0-dev.53 (2026-02-18)
+
+This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.52 (2026-02-17)
+
+### 🩹 Fixes
+
+- **connect:** deduplicate document models by type and version ([564fb61b8](https://github.com/powerhouse-inc/powerhouse/commit/564fb61b8))
+- **reactor-api:** improved subgraph path matching and removed name parameter from reactor subgraph ([dcadf7fb3](https://github.com/powerhouse-inc/powerhouse/commit/dcadf7fb3))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 6.0.0-dev.51 (2026-02-17)
+
+This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.50 (2026-02-17)
+
+This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.
+
 ## 6.0.0-dev.49 (2026-02-17)
 
 This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.

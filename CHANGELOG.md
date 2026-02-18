@@ -1,3 +1,52 @@
+## 6.0.0-dev.53 (2026-02-18)
+
+### 🩹 Fixes
+
+- fixing reshuffle issue with correct tiebreakers ([7be1adf54](https://github.com/powerhouse-inc/powerhouse/commit/7be1adf54))
+- failing test because of timing pressure ([c996aa83e](https://github.com/powerhouse-inc/powerhouse/commit/c996aa83e))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
+## 6.0.0-dev.52 (2026-02-17)
+
+### 🚀 Features
+
+- **reactor-api:** optimize apollo server integration with express ([d6a765917](https://github.com/powerhouse-inc/powerhouse/commit/d6a765917))
+
+### 🩹 Fixes
+
+- **connect:** deduplicate document models by type and version ([564fb61b8](https://github.com/powerhouse-inc/powerhouse/commit/564fb61b8))
+- **ph-cli:** fixed vetra preview drive port ([e8144cc4e](https://github.com/powerhouse-inc/powerhouse/commit/e8144cc4e))
+- **reactor-api:** improved subgraph path matching and removed name parameter from reactor subgraph ([dcadf7fb3](https://github.com/powerhouse-inc/powerhouse/commit/dcadf7fb3))
+- **vetra:** removed deprecated document model subgraphs ([6a4076af6](https://github.com/powerhouse-inc/powerhouse/commit/6a4076af6))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 6.0.0-dev.51 (2026-02-17)
+
+### 🩹 Fixes
+
+- **design-system:** fix static assets relative path ([ae9d936dc](https://github.com/powerhouse-inc/powerhouse/commit/ae9d936dc))
+- **reactor-browser,reactor:** improved error instance checks ([c6b8625e7](https://github.com/powerhouse-inc/powerhouse/commit/c6b8625e7))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 6.0.0-dev.50 (2026-02-17)
+
+### 🩹 Fixes
+
+- **reactor-api:** use X-Forwarded-Proto header for correct protocol detection ([34cefd878](https://github.com/powerhouse-inc/powerhouse/commit/34cefd878))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 6.0.0-dev.49 (2026-02-17)
 
 ### 🩹 Fixes

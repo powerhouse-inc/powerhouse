@@ -111,7 +111,16 @@ export async function createReactor() {
   // get document models to set in the reactor (all versions)
   const documentModelModules = vetraPackages
     .flatMap((pkg) => pkg.modules.documentModelModules)
-    .filter((module) => module !== undefined);
+    .filter(
+      (module, index, modules) =>
+        module !== undefined &&
+        // deduplicate by documentType and version
+        modules.findIndex(
+          (m) =>
+            m?.documentType === module.documentType &&
+            m.version === module.version,
+        ) === index,
+    );
 
   // get upgrade manifests from packages
   const upgradeManifests = vetraPackages.flatMap((pkg) => pkg.upgradeManifests);

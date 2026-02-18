@@ -143,7 +143,7 @@ async function startLocalVetraSwitchboard(
     let previewDriveUrl: string | null = null;
     if (options?.watch) {
       previewDriveUrl = await startVetraPreviewDrive(
-        switchboard.reactor,
+        switchboard.legacyReactor,
         port,
         verbose,
       );

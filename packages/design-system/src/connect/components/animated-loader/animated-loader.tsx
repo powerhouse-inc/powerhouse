@@ -3,7 +3,7 @@ import { getDimensions } from "@powerhousedao/design-system";
 import type { ComponentPropsWithoutRef, CSSProperties } from "react";
 
 const ConnectLoaderVideo = new URL(
-  "../../../../../assets/connect-loader.mp4",
+  "../../../../assets/connect-loader.mp4",
   import.meta.url,
 ).href;
 

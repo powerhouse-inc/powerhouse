@@ -72,6 +72,12 @@ tsx reactor-direct.ts 10 --db "./data"
 # Enable Pyroscope continuous profiling
 tsx reactor-direct.ts 1 -o 100 -l 10 --pyroscope
 
+# Save output to a timestamped file (e.g. 2026-02-18T12-00-00-000Z-reactor-direct.txt)
+tsx reactor-direct.ts 5 -o 20 -l 10 -p --file
+
+# Save output to a specific file
+tsx reactor-direct.ts 5 -o 20 -l 10 -p -O results.txt
+
 # Show percentiles and verbose output
 tsx reactor-direct.ts 5 -o 20 --percentiles --verbose --show-action-types
 ```
@@ -85,6 +91,8 @@ tsx reactor-direct.ts 5 -o 20 --percentiles --verbose --show-action-types
 | `--db`                |       | Database connection string or PGlite path                                                                                |
 | `--doc-id`            | `-d`  | Use an existing document (skips creation)                                                                                |
 | `--pyroscope`         |       | Enable Pyroscope profiling (optionally pass server address). Automatically runs `pyroscope-analyse.ts` after completion. |
+| `--file`              |       | Write output to a timestamped file (default name: `reactor-direct.txt`)                                                  |
+| `--output`            | `-O`  | Write output to a specific file (no timestamp prefix)                                                                    |
 | `--verbose`           | `-v`  | Show per-operation timings                                                                                               |
 | `--percentiles`       | `-p`  | Show p50/p90/p95/p99 stats                                                                                               |
 | `--show-action-types` | `-a`  | Show action names in min/max timings                                                                                     |

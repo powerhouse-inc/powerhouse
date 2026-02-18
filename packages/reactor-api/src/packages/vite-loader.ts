@@ -1,6 +1,7 @@
 import { viteCommonjs } from "@originjs/vite-plugin-commonjs";
 import type { SubgraphClass } from "@powerhousedao/reactor-api";
 import type {
+  ILogger,
   IProcessorHostModuleLegacy,
   ProcessorFactoryLegacy,
 } from "document-drive";
@@ -8,8 +9,8 @@ import { childLogger } from "document-drive";
 import type { DocumentModelModule } from "document-model";
 import path from "node:path";
 import { readPackage } from "read-pkg";
-import type { ViteDevServer } from "vite";
-import { createServer } from "vite";
+import type { Logger, ViteDevServer } from "vite";
+import { createLogger, createServer } from "vite";
 import { isSubgraphClass } from "../graphql/utils.js";
 import type {
   IPackageLoaderOptions,
@@ -17,6 +18,16 @@ import type {
   ISubscriptionOptions,
 } from "./types.js";
 import { debounce, isSubpath } from "./util.js";
+
+export function createViteLogger(logger: ILogger, prefix = "") {
+  const customLogger = createLogger("info", {
+    prefix,
+  });
+  customLogger.info = logger.info;
+  customLogger.warn = logger.warn;
+  customLogger.error = logger.error;
+  return customLogger;
+}
 
 export class VitePackageLoader implements ISubscribablePackageLoader {
   private readonly logger = childLogger(["reactor-api", "vite-loader"]);
@@ -238,12 +249,13 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
   }
 }
 
-export async function startViteServer(root: string) {
+export async function startViteServer(root: string, logger?: Logger) {
   const packageJson = await readPackage({ cwd: root });
 
   const vite = await createServer({
     root,
     configFile: false,
+    logger,
     server: { middlewareMode: true, watch: { ignored: ["**/.ph/**"] } },
     appType: "custom",
     build: {

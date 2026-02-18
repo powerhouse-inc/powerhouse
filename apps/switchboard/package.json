@@ -1,7 +1,7 @@
 {
   "name": "@powerhousedao/switchboard",
   "type": "module",
-  "version": "6.0.0-dev.49",
+  "version": "6.0.0-dev.53",
   "main": "dist/src/index.js",
   "exports": {
     ".": {
@@ -11,6 +11,10 @@
     "./server": {
       "import": "./dist/src/server.js",
       "types": "./dist/src/server.d.ts"
+    },
+    "./utils": {
+      "import": "./dist/src/utils.js",
+      "types": "./dist/src/utils.d.ts"
     }
   },
   "engines": {

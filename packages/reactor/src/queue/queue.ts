@@ -152,7 +152,7 @@ export class InMemoryQueue implements IQueue {
       this.registry.getModule(documentType);
       return;
     } catch (error) {
-      if (!(error instanceof ModuleNotFoundError)) {
+      if (!ModuleNotFoundError.isError(error)) {
         throw error;
       }
     }

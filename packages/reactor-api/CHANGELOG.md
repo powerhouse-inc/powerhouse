@@ -1,3 +1,42 @@
+## 6.0.0-dev.53 (2026-02-18)
+
+### 🩹 Fixes
+
+- failing test because of timing pressure ([c996aa83e](https://github.com/powerhouse-inc/powerhouse/commit/c996aa83e))
+- fixing reshuffle issue with correct tiebreakers ([7be1adf54](https://github.com/powerhouse-inc/powerhouse/commit/7be1adf54))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
+## 6.0.0-dev.52 (2026-02-17)
+
+### 🚀 Features
+
+- **reactor-api:** optimize apollo server integration with express ([d6a765917](https://github.com/powerhouse-inc/powerhouse/commit/d6a765917))
+
+### 🩹 Fixes
+
+- **reactor-api:** improved subgraph path matching and removed name parameter from reactor subgraph ([dcadf7fb3](https://github.com/powerhouse-inc/powerhouse/commit/dcadf7fb3))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 6.0.0-dev.51 (2026-02-17)
+
+This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.50 (2026-02-17)
+
+### 🩹 Fixes
+
+- **reactor-api:** use X-Forwarded-Proto header for correct protocol detection ([34cefd878](https://github.com/powerhouse-inc/powerhouse/commit/34cefd878))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 6.0.0-dev.49 (2026-02-17)
 
 This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.

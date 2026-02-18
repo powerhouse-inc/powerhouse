@@ -195,7 +195,7 @@ describe("Reshuffle Functions", () => {
   });
 
   describe("reshuffleByTimestamp with identical timestamps", () => {
-    it("should use operation id as tiebreaker when timestamps are identical", () => {
+    it("should use action id as tiebreaker when logical index and timestamps are identical", () => {
       const sameTimestamp = "2021-01-01T00:00:00.000Z";
       const operationsA = buildOperations([
         {
@@ -235,7 +235,10 @@ describe("Reshuffle Functions", () => {
       );
 
       expect(result.length).toBe(2);
-      expect(result[0].id < result[1].id).toBe(true);
+      expect(result.map((op) => op.action.id)).toEqual([
+        "action-A",
+        "action-B",
+      ]);
     });
 
     it("should produce deterministic order regardless of input order", () => {
@@ -284,6 +287,138 @@ describe("Reshuffle Functions", () => {
 
       expect(resultAB[0].action.type).toBe(resultBA[0].action.type);
       expect(resultAB[1].action.type).toBe(resultBA[1].action.type);
+    });
+
+    it("should use action id tie-breaking when logical indexes are equivalent", () => {
+      const sameTimestamp = "2021-01-01T00:00:00.000Z";
+      const localOp = buildOperation({
+        index: 0,
+        skip: 0,
+        type: "LOCAL_OP",
+        timestampUtcMs: sameTimestamp,
+        action: {
+          id: "action-B",
+          type: "LOCAL_OP",
+          input: {},
+          scope: "global",
+          timestampUtcMs: sameTimestamp,
+        },
+      });
+      const rebroadcastOp = buildOperation({
+        index: 1,
+        skip: 1,
+        type: "REBROADCAST_OP",
+        timestampUtcMs: sameTimestamp,
+        action: {
+          id: "action-A",
+          type: "REBROADCAST_OP",
+          input: {},
+          scope: "global",
+          timestampUtcMs: sameTimestamp,
+        },
+      });
+
+      const resultAB = reshuffleByTimestamp(
+        { index: 10, skip: 1 },
+        [localOp],
+        [rebroadcastOp],
+      );
+      const resultBA = reshuffleByTimestamp(
+        { index: 10, skip: 1 },
+        [rebroadcastOp],
+        [localOp],
+      );
+
+      expect(resultAB.map((op) => op.action.id)).toEqual([
+        "action-A",
+        "action-B",
+      ]);
+      expect(resultBA.map((op) => op.action.id)).toEqual([
+        "action-A",
+        "action-B",
+      ]);
+    });
+
+    it("should keep action id ordering deterministic when logical indexes differ", () => {
+      const sameTimestamp = "2021-01-01T00:00:00.000Z";
+      const firstLogical = buildOperation({
+        index: 0,
+        skip: 0,
+        type: "FIRST_LOGICAL",
+        timestampUtcMs: sameTimestamp,
+        action: {
+          id: "action-Z",
+          type: "FIRST_LOGICAL",
+          input: {},
+          scope: "global",
+          timestampUtcMs: sameTimestamp,
+        },
+      });
+      const secondLogical = buildOperation({
+        index: 2,
+        skip: 1,
+        type: "SECOND_LOGICAL",
+        timestampUtcMs: sameTimestamp,
+        action: {
+          id: "action-A",
+          type: "SECOND_LOGICAL",
+          input: {},
+          scope: "global",
+          timestampUtcMs: sameTimestamp,
+        },
+      });
+
+      const result = reshuffleByTimestamp(
+        { index: 20, skip: 0 },
+        [firstLogical],
+        [secondLogical],
+      );
+
+      expect(result.map((op) => op.action.id)).toEqual([
+        "action-A",
+        "action-Z",
+      ]);
+    });
+
+    it("should prioritize logical index for strict document action types", () => {
+      const sameTimestamp = "2021-01-01T00:00:00.000Z";
+      const createDocument = buildOperation({
+        index: 0,
+        skip: 0,
+        type: "CREATE_DOCUMENT",
+        timestampUtcMs: sameTimestamp,
+        action: {
+          id: "action-Z",
+          type: "CREATE_DOCUMENT",
+          input: {},
+          scope: "document",
+          timestampUtcMs: sameTimestamp,
+        },
+      });
+      const upgradeDocument = buildOperation({
+        index: 1,
+        skip: 0,
+        type: "UPGRADE_DOCUMENT",
+        timestampUtcMs: sameTimestamp,
+        action: {
+          id: "action-A",
+          type: "UPGRADE_DOCUMENT",
+          input: {},
+          scope: "document",
+          timestampUtcMs: sameTimestamp,
+        },
+      });
+
+      const result = reshuffleByTimestamp(
+        { index: 50, skip: 0 },
+        [createDocument],
+        [upgradeDocument],
+      );
+
+      expect(result.map((op) => op.action.type)).toEqual([
+        "CREATE_DOCUMENT",
+        "UPGRADE_DOCUMENT",
+      ]);
     });
 
     it("should handle multiple operations with same timestamp", () => {
@@ -339,9 +474,11 @@ describe("Reshuffle Functions", () => {
       );
 
       expect(result.length).toBe(3);
-      for (let i = 0; i < result.length - 1; i++) {
-        expect(result[i].id < result[i + 1].id).toBe(true);
-      }
+      expect(result.map((op) => op.action.id)).toEqual([
+        "action-A",
+        "action-B",
+        "action-C",
+      ]);
     });
   });
 
