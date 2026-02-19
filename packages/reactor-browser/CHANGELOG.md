@@ -1,3 +1,19 @@
+## 6.0.0-dev.54 (2026-02-19)
+
+### 🚀 Features
+
+- wip orchestrator for the test-client ([186d7c015](https://github.com/powerhouse-inc/powerhouse/commit/186d7c015))
+- **connect:** build tweaks ([22b6bc7d5](https://github.com/powerhouse-inc/powerhouse/commit/22b6bc7d5))
+
+### 🩹 Fixes
+
+- only add default drives once ([c06395d64](https://github.com/powerhouse-inc/powerhouse/commit/c06395d64))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan
+
 ## 6.0.0-dev.53 (2026-02-18)
 
 This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.

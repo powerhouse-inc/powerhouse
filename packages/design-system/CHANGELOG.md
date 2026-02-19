@@ -1,3 +1,17 @@
+## 6.0.0-dev.54 (2026-02-19)
+
+### 🚀 Features
+
+- wip orchestrator for the test-client ([186d7c015](https://github.com/powerhouse-inc/powerhouse/commit/186d7c015))
+- add the ability to change the poll interval in the inspector ([0d47c30f9](https://github.com/powerhouse-inc/powerhouse/commit/0d47c30f9))
+- added ability to remove a remote through the inspector ([0a06fcdc1](https://github.com/powerhouse-inc/powerhouse/commit/0a06fcdc1))
+- **connect:** build tweaks ([22b6bc7d5](https://github.com/powerhouse-inc/powerhouse/commit/22b6bc7d5))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan
+
 ## 6.0.0-dev.53 (2026-02-18)
 
 This was a version bump only for @powerhousedao/design-system to align it with other projects, there were no code changes.

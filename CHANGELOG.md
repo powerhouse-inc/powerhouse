@@ -1,3 +1,36 @@
+## 6.0.0-dev.54 (2026-02-19)
+
+### 🚀 Features
+
+- improved logging on vetra, switchboard and connect ([3fb127687](https://github.com/powerhouse-inc/powerhouse/commit/3fb127687))
+- added ability to remove a remote through the inspector ([0a06fcdc1](https://github.com/powerhouse-inc/powerhouse/commit/0a06fcdc1))
+- add the ability to change the poll interval in the inspector ([0d47c30f9](https://github.com/powerhouse-inc/powerhouse/commit/0d47c30f9))
+- wip orchestrator for the test-client ([186d7c015](https://github.com/powerhouse-inc/powerhouse/commit/186d7c015))
+- **connect:** build tweaks ([22b6bc7d5](https://github.com/powerhouse-inc/powerhouse/commit/22b6bc7d5))
+- **profiling:** add --output option to reactor-direct for saving results to file ([6fb58db6d](https://github.com/powerhouse-inc/powerhouse/commit/6fb58db6d))
+- **profiling:** use ISO 8601 timestamps in output file names ([09a74ae49](https://github.com/powerhouse-inc/powerhouse/commit/09a74ae49))
+- **profiling:** print command arguments at start of reactor-direct output ([acbdc71f6](https://github.com/powerhouse-inc/powerhouse/commit/acbdc71f6))
+- **profiling:** split output into --file (timestamped) and --output (exact path) ([971cc0c88](https://github.com/powerhouse-inc/powerhouse/commit/971cc0c88))
+
+### 🩹 Fixes
+
+- when a dead letter is added to the gql-req-channel, stop polling for goodness sake ([b2ac429bb](https://github.com/powerhouse-inc/powerhouse/commit/b2ac429bb))
+- only add default drives once ([c06395d64](https://github.com/powerhouse-inc/powerhouse/commit/c06395d64))
+- ackordinal now works again, in addition we send dead letters back in poll ([ba3f39a17](https://github.com/powerhouse-inc/powerhouse/commit/ba3f39a17))
+- **ph-cli,switchboard:** create preview drive on new reactor ([1e5ed8794](https://github.com/powerhouse-inc/powerhouse/commit/1e5ed8794))
+- **profiling:** simulate terminal carriage return behavior in output file ([2df9d9369](https://github.com/powerhouse-inc/powerhouse/commit/2df9d9369))
+- **profiling:** improve output file robustness in reactor-direct ([020c76d7b](https://github.com/powerhouse-inc/powerhouse/commit/020c76d7b))
+
+### 🔥 Performance
+
+- **profiling:** added docker compose memory limits ([f26508a2b](https://github.com/powerhouse-inc/powerhouse/commit/f26508a2b))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan
+- Samuel Hawksby-Robinson @Samyoul
+
 ## 6.0.0-dev.53 (2026-02-18)
 
 ### 🩹 Fixes

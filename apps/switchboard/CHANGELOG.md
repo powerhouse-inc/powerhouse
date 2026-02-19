@@ -1,3 +1,20 @@
+## 6.0.0-dev.54 (2026-02-19)
+
+### 🚀 Features
+
+- wip orchestrator for the test-client ([186d7c015](https://github.com/powerhouse-inc/powerhouse/commit/186d7c015))
+- **connect:** build tweaks ([22b6bc7d5](https://github.com/powerhouse-inc/powerhouse/commit/22b6bc7d5))
+- improved logging on vetra, switchboard and connect ([3fb127687](https://github.com/powerhouse-inc/powerhouse/commit/3fb127687))
+
+### 🩹 Fixes
+
+- **ph-cli,switchboard:** create preview drive on new reactor ([1e5ed8794](https://github.com/powerhouse-inc/powerhouse/commit/1e5ed8794))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan
+
 ## 6.0.0-dev.53 (2026-02-18)
 
 This was a version bump only for @powerhousedao/switchboard to align it with other projects, there were no code changes.

@@ -1,3 +1,21 @@
+## 6.0.0-dev.54 (2026-02-19)
+
+### 🚀 Features
+
+- wip orchestrator for the test-client ([186d7c015](https://github.com/powerhouse-inc/powerhouse/commit/186d7c015))
+- add the ability to change the poll interval in the inspector ([0d47c30f9](https://github.com/powerhouse-inc/powerhouse/commit/0d47c30f9))
+- **connect:** build tweaks ([22b6bc7d5](https://github.com/powerhouse-inc/powerhouse/commit/22b6bc7d5))
+
+### 🩹 Fixes
+
+- ackordinal now works again, in addition we send dead letters back in poll ([ba3f39a17](https://github.com/powerhouse-inc/powerhouse/commit/ba3f39a17))
+- when a dead letter is added to the gql-req-channel, stop polling for goodness sake ([b2ac429bb](https://github.com/powerhouse-inc/powerhouse/commit/b2ac429bb))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan
+
 ## 6.0.0-dev.53 (2026-02-18)
 
 ### 🩹 Fixes
