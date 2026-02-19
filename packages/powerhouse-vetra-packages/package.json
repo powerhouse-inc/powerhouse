@@ -50,7 +50,7 @@
       "import": "./dist/manifest.js",
       "types": "./dist/manifest.d.ts"
     },
-    "./style.css": "./dist/style.css"
+    "./editors/style.css": "./dist/editors/style.css"
   },
   "scripts": {
     "tsc": "tsc",
