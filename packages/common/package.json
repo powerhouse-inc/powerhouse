@@ -41,7 +41,6 @@
   },
   "dependencies": {
     "@powerhousedao/analytics-engine-core": "catalog:",
-    "@powerhousedao/builder-tools": "workspace:*",
     "@powerhousedao/design-system": "workspace:*",
     "@tanstack/react-virtual": "^3.8.1",
     "@types/luxon": "^3.7.1",

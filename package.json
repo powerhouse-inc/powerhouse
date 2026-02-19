@@ -24,7 +24,8 @@
     "check-circular-imports": "dpdm -T ./**/* --no-tree --no-warning --exit-code circular:1",
     "check-ts-references": "tsx scripts/check-ts-references.ts",
     "check-wrong-tsc-usage": "tsx scripts/check-wrong-tsc-usage.ts",
-    "test-e2e": "pnpm --filter=test-package-vetra --filter=connect-e2e run test:e2e"
+    "test-e2e": "pnpm --filter=test-package-vetra --filter=connect-e2e run test:e2e",
+    "check-unused-deps": "knip"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.8.1",
@@ -63,7 +64,8 @@
     "vitest": "catalog:",
     "vitest-monocart-coverage": "^3.0.2",
     "yargs": "^18.0.0",
-    "read-pkg": "catalog:"
+    "read-pkg": "catalog:",
+    "knip": "catalog:"
   },
   "dependencies": {
     "@nx/devkit": "20.4.6",
