@@ -24,7 +24,8 @@
       "Bash(npm run build:*)",
       "Bash(git stash show:*)",
       "Bash(wc:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(npx tsx:*)"
     ],
     "deny": [],
     "ask": []
