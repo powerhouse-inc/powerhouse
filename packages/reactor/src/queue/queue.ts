@@ -1,5 +1,6 @@
 import type { CreateDocumentActionInput } from "document-model";
 import type { IEventBus } from "../events/interfaces.js";
+import { ReactorEventTypes } from "../events/types.js";
 import { ModuleNotFoundError } from "../registry/implementation.js";
 import type {
   IDocumentModelLoader,
@@ -476,9 +477,21 @@ export class InMemoryQueue implements IQueue {
     // Remove from job index
     this.jobIndex.delete(jobId);
 
+    // Track as completed so dependent jobs are unblocked
+    this.completedJobs.add(jobId);
+
     // For in-memory queue, failing just removes the job
     // In a persistent queue, this would update the job status and store the error
     await this.remove(jobId);
+
+    // Emit JOB_FAILED so subscribers (sync manager, job tracker, etc.) can react
+    this.eventBus
+      .emit(ReactorEventTypes.JOB_FAILED, {
+        jobId,
+        error: new Error(error?.message ?? "Job failed"),
+        job,
+      })
+      .catch(() => {});
 
     // Check if queue is now drained
     this.checkDrained();
