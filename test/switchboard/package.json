@@ -1,0 +1,27 @@
+{
+  "name": "switchboard-test",
+  "version": "5.1.0-dev.26",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/powerhouse-inc/powerhouse"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "sideEffects": false,
+  "scripts": {
+    "reactor": "ph-cli reactor",
+    "test": "vitest run",
+    "test:e2e": "vitest run http-registry.e2e.test.ts"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@powerhousedao/ph-cli": "workspace:*",
+    "@powerhousedao/switchboard": "workspace:*",
+    "vitest": "^3.2.4"
+  },
+  "peerDependencies": {},
+  "description": ""
+}

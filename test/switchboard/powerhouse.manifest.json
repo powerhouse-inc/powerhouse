@@ -1,0 +1,14 @@
+{
+  "name": "switchboard-test",
+  "description": "switchboard-test",
+  "category": "",
+  "publisher": {
+    "name": "@powerhousedao",
+    "url": ""
+  },
+  "documentModels": [],
+  "editors": [],
+  "apps": [],
+  "subgraphs": [],
+  "importScripts": []
+}

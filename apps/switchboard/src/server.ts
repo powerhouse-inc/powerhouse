@@ -1,4 +1,10 @@
 #!/usr/bin/env node
+import { register } from "node:module";
+import { httpsHooksPath } from "@powerhousedao/reactor-api";
+
+// Register HTTP/HTTPS module loader hooks for dynamic package imports
+register(httpsHooksPath, import.meta.url);
+
 import { PGlite } from "@electric-sql/pglite";
 import {
   ChannelScheme,
@@ -10,6 +16,7 @@ import {
   type Database,
 } from "@powerhousedao/reactor";
 import {
+  HttpPackageLoader,
   VitePackageLoader,
   getUniqueDocumentModels,
   initializeAndStartAPI,
@@ -150,6 +157,38 @@ async function initServer(
       ? ".ph/read-storage"
       : dbPath;
 
+  // Load document models from HTTP registry if configured
+  let httpDocumentModels: DocumentModelModule[] = [];
+  const registryUrl = process.env.PH_REGISTRY_URL;
+  const registryPackages = process.env.PH_REGISTRY_PACKAGES;
+
+  if (registryUrl && registryPackages) {
+    const packageNames = registryPackages.split(",").filter(Boolean);
+    if (packageNames.length > 0) {
+      logger.info(
+        "Loading packages from HTTP registry: @packages",
+        packageNames,
+      );
+      const httpLoader = new HttpPackageLoader({ registryUrl });
+      httpDocumentModels = await httpLoader.loadPackages(packageNames, {
+        info: (msg) => logger.info(msg),
+        error: (msg, err) => logger.error("@msg: @err", msg, err),
+      });
+      logger.info(
+        "Loaded @count document models from HTTP registry",
+        httpDocumentModels.length,
+      );
+      // Log the loaded document model IDs for debugging
+      for (const model of httpDocumentModels) {
+        logger.info(
+          "  - Loaded document model: @id (@name)",
+          model.documentModel.global.id,
+          model.documentModel.global.name,
+        );
+      }
+    }
+  }
+
   const initializeDriveServer = async (
     documentModels: DocumentModelModule[],
   ) => {
@@ -158,6 +197,7 @@ async function initServer(
         documentModelDocumentModelModule,
         driveDocumentModelModule,
         ...documentModels,
+        ...httpDocumentModels,
       ]),
     )
       .withStorage(storage)
@@ -187,6 +227,7 @@ async function initServer(
           documentModelDocumentModelModule,
           driveDocumentModelModule,
           ...documentModels,
+          ...httpDocumentModels,
         ]),
       )
       .withLegacyStorage(storage)
