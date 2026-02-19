@@ -75,6 +75,8 @@
     "@codemirror/search": "6.5.10",
     "@codemirror/state": "6.5.2",
     "@codemirror/theme-one-dark": "6.1.2",
+    "@tanstack/react-virtual": "^3.8.1",
+    "react-i18next": "^13.5.0",
     "@codemirror/view": "6.36.7",
     "@graphql-tools/schema": "catalog:",
     "@graphql-tools/utils": "catalog:",
