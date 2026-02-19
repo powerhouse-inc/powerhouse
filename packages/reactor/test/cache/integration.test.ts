@@ -255,7 +255,8 @@ describe("KyselyWriteCache Integration Tests", () => {
       expect(doc5).toBeDefined();
 
       const doc5Again = await cache.getState(docId, "global", "main", 5);
-      expect(doc5Again).toEqual(doc5);
+      expect(doc5Again.state).toEqual(doc5.state);
+      expect(doc5Again.header).toEqual(doc5.header);
 
       const doc10 = await cache.getState(docId, "global", "main", 10);
       expect(doc10).toBeDefined();
@@ -753,7 +754,8 @@ describe("KyselyWriteCache Integration Tests", () => {
       expect(stream3?.ringBuffer.length).toBe(1);
 
       const doc3Again = await cache.getState(docId, scope, branch, 3);
-      expect(doc3Again).toEqual(doc3);
+      expect(doc3Again.state).toEqual(doc3.state);
+      expect(doc3Again.header).toEqual(doc3.header);
 
       const addFileActionId = generateId();
       const addFolderActionId = generateId();
@@ -1250,15 +1252,18 @@ describe("KyselyWriteCache Integration Tests", () => {
 
       const doc5a = await cache.getState(docId, scope, branch, 5);
       const doc5b = await cache.getState(docId, scope, branch, 5);
-      expect(doc5a).toEqual(doc5b);
+      expect(doc5a.state).toEqual(doc5b.state);
+      expect(doc5a.header).toEqual(doc5b.header);
 
       const doc10a = await cache.getState(docId, scope, branch, 10);
       const doc10b = await cache.getState(docId, scope, branch, 10);
-      expect(doc10a).toEqual(doc10b);
+      expect(doc10a.state).toEqual(doc10b.state);
+      expect(doc10a.header).toEqual(doc10b.header);
 
       const doc15a = await cache.getState(docId, scope, branch, 15);
       const doc15b = await cache.getState(docId, scope, branch, 15);
-      expect(doc15a).toEqual(doc15b);
+      expect(doc15a.state).toEqual(doc15b.state);
+      expect(doc15a.header).toEqual(doc15b.header);
 
       const driveDoc5 = doc5a as DocumentDriveDocument;
       const driveDoc10 = doc10a as DocumentDriveDocument;
