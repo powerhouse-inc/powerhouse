@@ -15,28 +15,23 @@
     "node": ">=24.0.0"
   },
   "bin": {
-    "ph-cli": "dist/src/cli.js",
-    "ph-cli-legacy": "dist/src/cli.old.js"
+    "ph-cli": "./build/cli.js",
+    "ph-cli-legacy": "./build/cli.old.js"
   },
   "files": [
-    "dist"
+    "build"
   ],
-  "exports": {
-    ".": {
-      "types": "./dist/src/index.d.ts",
-      "default": "./dist/src/index.js"
-    }
-  },
   "scripts": {
     "tsc": "tsc",
     "lint": "eslint",
+    "build:cli": "bun run ./bundle.ts",
     "generate-docs-legacy": "bun run scripts/generate-docs-legacy.ts",
     "generate-docs": "bun run scripts/generate-commands-docs.ts",
-    "build:cli": "bun generate-docs && bun generate-docs-legacy && bun copy-scripts",
-    "copy-scripts": "copyfiles scripts/* dist/",
-    "dev": "concurrently -P 'pnpm -w run tsc --watch' 'nodemon --watch \"../..\" -e ts,tsx,js,json dist/src/cli.js -- {@}' --",
-    "cli": "node ./dist/src/cli.js",
-    "cli-legacy": "node ./dist/src/cli.old.js",
+    "postbuild:cli": "bun generate-docs && bun generate-docs-legacy && bun copy-scripts",
+    "copy-scripts": "copyfiles scripts/* build/",
+    "dev": "concurrently -P 'pnpm -w run tsc --watch' 'nodemon --watch \"../..\" -e ts,tsx,js,json ./build/cli.js -- {@}' --",
+    "cli": "node ./build/cli.js",
+    "cli-legacy": "node ./build/cli.old.js",
     "test": "vitest --run"
   },
   "keywords": [],
