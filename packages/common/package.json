@@ -95,7 +95,6 @@
     "cmd-ts": "catalog:",
     "document-model": "workspace:*",
     "package-manager-detector": "catalog:",
-    "postcss": "^8.5.1",
     "react": "catalog:",
     "react-dom": "catalog:",
     "storybook": "^8.6.14",

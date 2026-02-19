@@ -1,80 +1,87 @@
 packages:
-  - "apps/*"
-  - "clis/*"
-  - "packages/*"
-  - "test/*"
-  - "packages/reactor/test/atlas"
-  - "scripts/*"
+  - apps/*
+  - clis/*
+  - packages/*
+  - test/*
+  - packages/reactor/test/atlas
+  - scripts/*
   - "!releases"
 
 catalog:
-  "@powerhousedao/analytics-engine-core": 0.6.1
-  "@powerhousedao/analytics-engine-graphql": 0.6.1
-  "@powerhousedao/analytics-engine-pg": 0.6.1
-  "@powerhousedao/analytics-engine-knex": 0.6.1
-  "@powerhousedao/analytics-engine-browser": 0.6.1
-  "@powerhousedao/document-engineering": 1.40.1
-  "kysely": 0.28.11
-  "kysely-pglite-dialect": 1.2.0
-  "kysely-pglite": 0.6.1
-  "kysely-knex": 0.2.0
   "@electric-sql/pglite": 0.3.15
-  "@electric-sql/pglite-tools": 0.2.20
   "@electric-sql/pglite-react": 0.2.33
-  "knex": 3.1.0
-  "knex-pglite": 0.13.0
-  "react": 19.2.4
-  "react-dom": 19.2.4
-  "@tailwindcss/vite": 4.1.18
-  "@types/node": 25.2.3
-  "@types/react": 19.2.14
-  "@types/react-dom": 19.2.3
-  "@vitejs/plugin-react": 5.1.4
-  "graphql": 16.12.0
-  "graphql-request": 7.4.0
-  "vite": 7.3.1
-  "vite-plugin-html": 3.2.2
-  "vite-plugin-node-polyfills": 0.25.0
-  "vite-plugin-svgr": 4.5.0
-  "tailwindcss": 4.1.18
-  "tailwind-merge": 3.4.0
-  "@tailwindcss/cli": 4.1.18
-  "zod": 4.3.6
-  "@sindresorhus/fnv1a": 3.1.0
-  "mutative": 1.3.0
-  "read-pkg": 10.1.0
+  "@electric-sql/pglite-tools": 0.2.20
   "@graphql-codegen/cli": 6.1.1
-  "@graphql-codegen/core": 5.0.0
   "@graphql-codegen/client-preset": 5.2.2
+  "@graphql-codegen/core": 5.0.0
   "@graphql-codegen/typed-document-node": 6.1.5
   "@graphql-codegen/typescript": 5.0.7
   "@graphql-codegen/typescript-generic-sdk": 4.1.0
   "@graphql-codegen/typescript-graphql-request": 6.4.0
   "@graphql-codegen/typescript-operations": 5.0.7
   "@graphql-codegen/typescript-resolvers": 5.1.5
-  "@graphql-tools/schema": 10.0.31
-  "@graphql-tools/utils": 11.0.0
   "@graphql-tools/graphql-file-loader": 8.1.9
   "@graphql-tools/load": 8.1.8
+  "@graphql-tools/schema": 10.0.31
+  "@graphql-tools/utils": 11.0.0
+  "@powerhousedao/analytics-engine-browser": 0.6.4
+  "@powerhousedao/analytics-engine-core": 0.6.4
+  "@powerhousedao/analytics-engine-graphql": 0.6.4
+  "@powerhousedao/analytics-engine-knex": 0.6.4
+  "@powerhousedao/analytics-engine-pg": 0.6.4
+  "@powerhousedao/document-engineering": 1.40.1
+  "@sindresorhus/fnv1a": 3.1.0
+  "@tailwindcss/cli": 4.1.18
+  "@tailwindcss/vite": 4.1.18
   "@types/bun": 1.3.9
-  "ts-morph": 27.0.2
-  "semver": 7.7.4
-  "prettier": 3.8.1
-  "chalk": 5.6.2
-  "cmd-ts": 0.15.0
-  "change-case": 5.4.4
-  "graphql-codegen-typescript-validation-schema": 0.18.1
-  "commander": 12.1.0
-  "enquirer": 2.4.1
-  "package-manager-detector": 1.6.0
-  "write-package": 7.2.0
-  "vitest": 3.2.4
-  "npm-package-arg": 13.0.2
+  "@types/node": 25.2.3
   "@types/npm-package-arg": 6.1.4
-  "pg": 8.18.0
   "@types/pg": 8.16.0
-  "colorette": 2.0.20
-  "tsx": 4.21.0
-  "copyfiles": 2.4.1
-  "nodemon": 3.1.11
-  "concurrently": 9.2.1
+  "@types/react": 19.2.14
+  "@types/react-dom": 19.2.3
+  "@vitejs/plugin-react": 5.1.4
+  better-sqlite3: 12.6.2
+  chalk: 5.6.2
+  change-case: 5.4.4
+  cmd-ts: 0.15.0
+  colorette: 2.0.20
+  commander: 12.1.0
+  concurrently: 9.2.1
+  copyfiles: 2.4.1
+  enquirer: 2.4.1
+  graphql: 16.12.0
+  graphql-codegen-typescript-validation-schema: 0.18.1
+  graphql-request: 7.4.0
+  knex: 3.1.0
+  knex-pglite: 0.13.0
+  kysely: 0.28.11
+  kysely-knex: 0.2.0
+  kysely-pglite: 0.6.1
+  kysely-pglite-dialect: 1.2.0
+  mutative: 1.3.0
+  mysql: 2.18.1
+  mysql2: 3.17.2
+  nodemon: 3.1.11
+  npm-package-arg: 13.0.2
+  oracledb: 6.10.0
+  package-manager-detector: 1.6.0
+  pg: 8.18.0
+  pg-query-stream: 4.12.0
+  prettier: 3.8.1
+  react: 19.2.4
+  react-dom: 19.2.4
+  read-pkg: 10.1.0
+  semver: 7.7.4
+  sqlite3: 5.1.7
+  tailwind-merge: 3.4.0
+  tailwindcss: 4.1.18
+  tedious: 19.2.1
+  ts-morph: 27.0.2
+  tsx: 4.21.0
+  vite: 7.3.1
+  vite-plugin-html: 3.2.2
+  vite-plugin-node-polyfills: 0.25.0
+  vite-plugin-svgr: 4.5.0
+  vitest: 3.2.4
+  write-package: 7.2.0
+  zod: 4.3.6

@@ -51,9 +51,8 @@
     "document-model": "workspace:*",
     "nodemon": "catalog:",
     "vitest": "catalog:",
-    "@types/bun": "catalog:"
-  },
-  "dependencies": {
+    "@types/bun": "catalog:",
+    "vite": "catalog:",
     "@powerhousedao/shared": "workspace:*",
     "@powerhousedao/builder-tools": "workspace:*",
     "@powerhousedao/codegen": "workspace:*",
@@ -72,7 +71,6 @@
     "package-manager-detector": "catalog:",
     "read-pkg": "catalog:",
     "ts-morph": "catalog:",
-    "vite": "catalog:",
     "write-package": "catalog:"
   }
 }

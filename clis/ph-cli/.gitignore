@@ -5,3 +5,4 @@ processors
 *.db
 .ph
 src/version.ts
+build
