@@ -8,9 +8,11 @@ packages:
   - "!releases"
 
 catalog:
-  "@powerhousedao/analytics-engine-core": 0.5.0
-  "@powerhousedao/analytics-engine-graphql": 0.4.0
-  "@powerhousedao/analytics-engine-pg": 0.6.0
+  "@powerhousedao/analytics-engine-core": 0.6.1
+  "@powerhousedao/analytics-engine-graphql": 0.6.1
+  "@powerhousedao/analytics-engine-pg": 0.6.1
+  "@powerhousedao/analytics-engine-knex": 0.6.1
+  "@powerhousedao/analytics-engine-browser": 0.6.1
   "@powerhousedao/document-engineering": 1.40.1
   "kysely": 0.28.11
   "kysely-pglite-dialect": 1.2.0
@@ -76,4 +78,3 @@ catalog:
   "copyfiles": 2.4.1
   "nodemon": 3.1.11
   "concurrently": 9.2.1
-  "@powerhousedao/analytics-engine-knex": 0.6.0
