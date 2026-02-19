@@ -1,1 +1,1 @@
-export { DocumentModelEditor } from "./document-model-editor/module.js"
+export { DocumentModelEditor } from "./document-model-editor/module.js";

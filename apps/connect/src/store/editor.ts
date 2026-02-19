@@ -1,6 +1,6 @@
-import { documentModelEditorModule } from "@powerhousedao/builder-tools/editor";
-import "@powerhousedao/builder-tools/style.css";
+import "@powerhousedao/powerhouse-vetra-packages/editors/style.css";
 import { GenericDriveExplorer } from "@powerhousedao/common/generic-drive-explorer";
+import { DocumentModelEditor } from "@powerhousedao/powerhouse-vetra-packages/editors";
 import type { VetraEditorModule } from "@powerhousedao/reactor-browser";
 import { DEFAULT_DRIVE_EDITOR_ID } from "@powerhousedao/reactor-browser";
 
@@ -21,7 +21,7 @@ export function loadDocumentModelEditor(): VetraEditorModule {
   const name = "Document Model Editor";
   const id = "document-model-editor-v2";
   const documentTypes = ["powerhouse/document-model"];
-  const Component = documentModelEditorModule.Component;
+  const Component = DocumentModelEditor.Component;
   const vetraEditorModule: VetraEditorModule = {
     id,
     name,
