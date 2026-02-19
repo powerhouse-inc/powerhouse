@@ -112,6 +112,10 @@ type ReactorOperationResultPage {
 type DeadLetterInfo {
   documentId: String!
   error: String!
+  jobId: String!
+  branch: String!
+  scopes: [String!]!
+  operationCount: Int!
 }
 
 type PollSyncEnvelopesResult {

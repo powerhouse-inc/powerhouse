@@ -1,0 +1,33 @@
+{
+  "name": "@powerhousedao/load-test-connect",
+  "version": "1.0.0",
+  "description": "Load testing CLI that simulates Connect sync to a Switchboard",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "private": true,
+  "bin": {
+    "ph-load-test-connect": "dist/src/cli.js"
+  },
+  "exports": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
+  "scripts": {
+    "dev": "tsx src/cli.ts",
+    "test": "vitest --run",
+    "scenario:sync": "tsx src/orchestrator.ts",
+    "scenario:sync:stress": "tsx src/orchestrator.ts --clients 5 --duration 120000 --mutation-interval 200",
+    "analyze": "tsx src/analyze-logs.ts"
+  },
+  "dependencies": {
+    "@powerhousedao/reactor": "workspace:*",
+    "@powerhousedao/load-test-client": "workspace:*",
+    "document-model": "workspace:*",
+    "document-drive": "workspace:*",
+    "colorette": "catalog:",
+    "commander": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "tsx": "catalog:",
+    "vitest": "catalog:"
+  }
+}
