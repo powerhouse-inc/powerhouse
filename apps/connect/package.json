@@ -137,7 +137,7 @@
     "@powerhousedao/reactor": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",
     "@powerhousedao/shared": "workspace:",
-    "@powerhousedao/powerhouse-vetra-packages": "workspace:",
+    "@powerhousedao/powerhouse-vetra-packages": "workspace:*",
     "@renown/sdk": "workspace:*",
     "@sentry/browser": "^10.17.0",
     "@sentry/react": "^10.17.0",

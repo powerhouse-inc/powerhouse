@@ -22,14 +22,6 @@
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
     },
-    "./document-models": {
-      "import": "./dist/document-models/index.js",
-      "types": "./dist/document-models/index.d.ts"
-    },
-    "./document-models/*": {
-      "types": "./dist/document-models/*/index.d.ts",
-      "default": "./dist/document-models/*/index.js"
-    },
     "./editors/*": {
       "types": "./dist/editors/*/index.d.ts",
       "default": "./dist/editors/*/index.js"
@@ -37,18 +29,6 @@
     "./editors": {
       "import": "./dist/editors/index.js",
       "types": "./dist/editors/index.d.ts"
-    },
-    "./subgraphs": {
-      "import": "./dist/subgraphs/index.js",
-      "types": "./dist/subgraphs/index.d.ts"
-    },
-    "./processors": {
-      "import": "./dist/processors/index.js",
-      "types": "./dist/processors/index.d.ts"
-    },
-    "./manifest": {
-      "import": "./dist/manifest.js",
-      "types": "./dist/manifest.d.ts"
     },
     "./editors/style.css": "./dist/editors/style.css"
   },
