@@ -2,7 +2,11 @@ import { Router } from "express";
 import path from "node:path";
 import type { ServeStaticOptions } from "serve-static";
 import serveStatic from "serve-static";
-import { loadPackage, scanPackages } from "./packages.js";
+import {
+  findPackagesByDocumentType,
+  loadPackage,
+  scanPackages,
+} from "./packages.js";
 
 export const DefaultServeStaticOptions: ServeStaticOptions = {
   dotfiles: "deny",
@@ -30,6 +34,20 @@ export function createRegistryRouter(
   router.get("/packages", (_req, res) => {
     const packages = scanPackages(absDir);
     res.json(packages);
+  });
+
+  // Find packages by document type - returns array of package names
+  router.get("/packages/by-document-type", (req, res) => {
+    const documentType = req.query.type;
+
+    if (typeof documentType !== "string" || !documentType) {
+      res.status(400).json({ error: "Missing required query parameter: type" });
+      return;
+    }
+
+    const packages = findPackagesByDocumentType(absDir, documentType);
+    const packageNames = packages.map((pkg) => pkg.name);
+    res.json(packageNames);
   });
 
   // Get package info (wildcard to support scoped names like @powerhousedao/vetra)

@@ -162,14 +162,19 @@ async function initServer(
   const registryUrl = process.env.PH_REGISTRY_URL;
   const registryPackages = process.env.PH_REGISTRY_PACKAGES;
 
+  // Create httpLoader in outer scope for use in initializeClient (dynamic loading)
+  let httpLoader: HttpPackageLoader | undefined;
+  if (registryUrl) {
+    httpLoader = new HttpPackageLoader({ registryUrl });
+  }
+
   if (registryUrl && registryPackages) {
     const packageNames = registryPackages.split(",").filter(Boolean);
-    if (packageNames.length > 0) {
+    if (packageNames.length > 0 && httpLoader) {
       logger.info(
         "Loading packages from HTTP registry: @packages",
         packageNames,
       );
-      const httpLoader = new HttpPackageLoader({ registryUrl });
       httpDocumentModels = await httpLoader.loadPackages(packageNames, {
         info: (msg) => logger.info(msg),
         error: (msg, err) => logger.error("@msg: @err", msg, err),
@@ -233,6 +238,11 @@ async function initServer(
       .withLegacyStorage(storage)
       .withChannelScheme(ChannelScheme.SWITCHBOARD)
       .withSignalHandlers();
+
+    // Enable dynamic document model loading from HTTP registry
+    if (httpLoader) {
+      builder.withDocumentModelLoader(httpLoader);
+    }
 
     const reactorDbUrl = process.env.PH_REACTOR_DATABASE_URL;
     if (reactorDbUrl && isPostgresUrl(reactorDbUrl)) {

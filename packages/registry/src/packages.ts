@@ -23,7 +23,8 @@ export function loadPackage(
     return null;
   }
   return {
-    name,
+    // Use manifest.name as authoritative source, fallback to provided name
+    name: manifest.name ?? name,
     path: `/${name}`,
     manifest,
   };
@@ -55,21 +56,42 @@ export function scanPackages(packagesDir: string): PackageInfo[] {
       for (const scopedEntry of scopedEntries) {
         if (!scopedEntry.isDirectory()) continue;
         const pkgDir = path.join(scopeDir, scopedEntry.name);
+        const manifest = readManifest(pkgDir);
+        // Use manifest.name as authoritative source, fallback to directory path
+        const dirName = `${entry.name}/${scopedEntry.name}`;
+        const name = manifest?.name ?? dirName;
         packages.push({
-          name: `${entry.name}/${scopedEntry.name}`,
-          path: `/${entry.name}/${scopedEntry.name}`,
-          manifest: readManifest(pkgDir),
+          name,
+          path: `/${dirName}`,
+          manifest,
         });
       }
     } else {
       const pkgDir = path.join(absDir, entry.name);
+      const manifest = readManifest(pkgDir);
+      // Use manifest.name as authoritative source, fallback to directory name
+      const name = manifest?.name ?? entry.name;
       packages.push({
-        name: entry.name,
+        name,
         path: `/${entry.name}`,
-        manifest: readManifest(pkgDir),
+        manifest,
       });
     }
   }
 
   return packages;
+}
+
+export function findPackagesByDocumentType(
+  packagesDir: string,
+  documentType: string,
+): PackageInfo[] {
+  const allPackages = scanPackages(packagesDir);
+
+  return allPackages.filter((pkg) => {
+    if (!pkg.manifest?.documentModels) {
+      return false;
+    }
+    return pkg.manifest.documentModels.some((dm) => dm.id === documentType);
+  });
 }

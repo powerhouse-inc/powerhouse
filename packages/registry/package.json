@@ -19,7 +19,8 @@
   },
   "sideEffects": false,
   "scripts": {
-    "start": "node dist/src/run.js"
+    "start": "node dist/src/run.js",
+    "test": "vitest --run"
   },
   "keywords": [],
   "author": "",
@@ -31,6 +32,9 @@
     "serve-static": "^2.2.1"
   },
   "devDependencies": {
-    "@types/express": "^5.0.6"
+    "@types/express": "^5.0.6",
+    "@types/supertest": "^6.0.2",
+    "supertest": "^7.1.0",
+    "vitest": "^3.2.4"
   }
 }
