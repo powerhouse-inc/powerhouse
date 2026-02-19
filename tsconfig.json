@@ -20,6 +20,9 @@
       "path": "./packages/builder-tools"
     },
     {
+      "path": "./packages/powerhouse-vetra-packages"
+    },
+    {
       "path": "./packages/codegen"
     },
     {
