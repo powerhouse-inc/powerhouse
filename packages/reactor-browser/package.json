@@ -62,7 +62,7 @@
   "dependencies": {
     "@electric-sql/pglite": "catalog:",
     "@electric-sql/pglite-react": "catalog:",
-    "@powerhousedao/analytics-engine-browser": "^0.6.0",
+    "@powerhousedao/analytics-engine-browser": "catalog:",
     "@powerhousedao/analytics-engine-core": "catalog:",
     "@powerhousedao/config": "workspace:*",
     "@powerhousedao/reactor": "workspace:*",
