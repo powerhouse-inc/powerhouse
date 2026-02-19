@@ -4,7 +4,7 @@
     "types": ["node"],
     "outDir": "./dist"
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "vitest.config.ts"],
   "references": [
     { "path": "../../packages/reactor" },
     { "path": "../../packages/document-model" },
