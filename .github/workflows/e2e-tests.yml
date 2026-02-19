@@ -52,6 +52,9 @@ jobs:
       - name: Run misc build scripts
         run: pnpm build-misc
 
+      - name: Run build clis
+        run: pnpm build-cli
+
       - name: Run install again after generating binaries
         run: pnpm install-ci
 
@@ -132,6 +135,9 @@ jobs:
 
       - name: Run misc build scripts
         run: pnpm build-misc
+
+      - name: Run build clis
+        run: pnpm build-cli
 
       - name: Run install again after generating binaries
         run: pnpm install-ci
