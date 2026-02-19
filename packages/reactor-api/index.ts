@@ -1,5 +1,7 @@
 export * from "./src/graphql/index.js";
 export * from "./src/graphql/types.js";
+export * from "./src/packages/http-loader.js";
+export { httpsHooksPath } from "./src/packages/https-hooks.mjs";
 export * from "./src/packages/import-loader.js";
 export * from "./src/packages/package-manager.js";
 export * from "./src/packages/vite-loader.js";
