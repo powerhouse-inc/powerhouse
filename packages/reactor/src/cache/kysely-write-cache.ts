@@ -213,9 +213,24 @@ export class KyselyWriteCache implements IWriteCache {
     const streamKey = this.makeStreamKey(documentId, scope, branch);
     const stream = this.getOrCreateStream(streamKey);
 
+    // Keep only the last operation per scope in the ring buffer. The reducer
+    // only needs at(-1).index to determine the next index, so carrying the
+    // full history causes O(n²) array copies across n operations. UNDO/REDO
+    // paths bypass this by forcing a cold-miss rebuild in the job executor.
+    const slicedDocument: PHDocument = {
+      ...document,
+      operations: Object.fromEntries(
+        Object.entries(document.operations).map(([k, ops]) => [
+          k,
+          ops && ops.length > 0 ? [ops[ops.length - 1]] : [],
+        ]),
+      ),
+      clipboard: [],
+    };
+
     const snapshot: CachedSnapshot = {
       revision,
-      document,
+      document: slicedDocument,
     };
 
     stream.ringBuffer.push(snapshot);

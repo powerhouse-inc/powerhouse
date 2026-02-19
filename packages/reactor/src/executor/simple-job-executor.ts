@@ -304,6 +304,13 @@ export class SimpleJobExecutor implements IJobExecutor {
       );
     }
 
+    // UNDO/REDO need the full operation history to replay state correctly.
+    // The write cache stores sliced documents (last op per scope only), so
+    // invalidate before loading to force a cold-miss rebuild from the store.
+    if (isUndoRedo(action)) {
+      this.writeCache.invalidate(job.documentId, job.scope, job.branch);
+    }
+
     let document: PHDocument;
     try {
       document = await this.writeCache.getState(
