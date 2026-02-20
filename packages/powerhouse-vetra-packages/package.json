@@ -45,6 +45,7 @@
     "service-unstartup": "bash ./node_modules/@powerhousedao/ph-cli/dist/scripts/service-unstartup.sh"
   },
   "dependencies": {
+    "react-i18next": "catalog:",
     "@codemirror/autocomplete": "6.18.6",
     "@codemirror/commands": "6.8.1",
     "@codemirror/lang-json": "6.0.1",

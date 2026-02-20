@@ -59,6 +59,7 @@
     "react-dom": ">=19.0.0"
   },
   "dependencies": {
+    "fast-deep-equal": "catalog:",
     "@electric-sql/pglite": "catalog:",
     "@powerhousedao/analytics-engine-browser": "catalog:",
     "@powerhousedao/analytics-engine-core": "catalog:",

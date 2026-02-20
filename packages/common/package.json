@@ -46,11 +46,15 @@
     "npm-package-arg": "catalog:",
     "package-directory": "^8.1.0",
     "@powerhousedao/shared": "workspace:*",
+    "@powerhousedao/reactor-browser": "workspace:*",
+    "@powerhousedao/analytics-engine-core": "catalog:",
+    "luxon": "catalog:",
     "zocker": "^3.0.0"
   },
   "devDependencies": {
     "@powerhousedao/config": "workspace:*",
     "@types/node": "catalog:",
+    "@types/luxon": "catalog:",
     "@types/npm-package-arg": "catalog:",
     "@types/wicg-file-system-access": "^2020.9.6",
     "cmd-ts": "catalog:",

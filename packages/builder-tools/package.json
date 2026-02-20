@@ -29,6 +29,9 @@
     "lint": "eslint"
   },
   "devDependencies": {
+    "esbuild-plugins-node-modules-polyfill": "catalog:",
+    "@vitejs/plugin-basic-ssl": "catalog:",
+    "vite-envs": "catalog:",
     "@sentry/vite-plugin": "^4.3.0",
     "@tailwindcss/vite": "catalog:",
     "@types/react": "catalog:",

@@ -101,7 +101,7 @@
     "@types/pg": "catalog:",
     "@types/ws": "^8.18.1",
     "copyfiles": "catalog:",
-    "graphql-tag": "^2.12.6",
+    "graphql-tag": "catalog:",
     "msw": "^2.7.3",
     "vite": "catalog:",
     "vitest": "catalog:"

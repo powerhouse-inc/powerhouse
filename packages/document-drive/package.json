@@ -85,7 +85,8 @@
     "object-sizeof": "^2.6.5",
     "prisma": "5.17.0",
     "@powerhousedao/shared": "workspace:*",
-    "zod": "catalog:"
+    "zod": "catalog:",
+    "zocker": "catalog:"
   },
   "devDependencies": {
     "@types/node": "catalog:",

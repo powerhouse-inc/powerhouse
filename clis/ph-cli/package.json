@@ -59,6 +59,7 @@
     "@powerhousedao/config": "workspace:*",
     "@powerhousedao/reactor": "workspace:*",
     "@powerhousedao/switchboard": "workspace:*",
+    "@powerhousedao/shared": "workspace:*",
     "@renown/sdk": "workspace:*",
     "cmd-ts": "catalog:",
     "colorette": "catalog:",

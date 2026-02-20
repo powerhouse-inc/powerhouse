@@ -27,7 +27,9 @@
     "@powerhousedao/reactor": "workspace:*",
     "@powerhousedao/reactor-api": "workspace:*",
     "document-drive": "workspace:*",
-    "dotenv": "^16.4.5"
+    "dotenv": "^16.4.5",
+    "@openfeature/env-var-provider": "^0.3.1",
+    "@openfeature/server-sdk": "^1.19.0"
   },
   "devDependencies": {
     "@powerhousedao/config": "workspace:*",

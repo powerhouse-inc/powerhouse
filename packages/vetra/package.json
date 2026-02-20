@@ -82,7 +82,8 @@
     "graphql": "catalog:",
     "kysely": "catalog:",
     "@powerhousedao/shared": "workspace:*",
-    "zod": "catalog:"
+    "zod": "catalog:",
+    "graphql-tag": "catalog:"
   },
   "devDependencies": {
     "@powerhousedao/codegen": "workspace:*",
