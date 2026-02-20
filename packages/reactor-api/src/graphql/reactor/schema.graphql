@@ -86,7 +86,6 @@ type PHDocument {
   revisionsList: [Revision!]!
   createdAtUtcIso: DateTime!
   lastModifiedAtUtcIso: DateTime!
-  parentId: String
   operations(
     filter: DocumentOperationsFilterInput
     paging: PagingInput
