@@ -14,6 +14,8 @@ Parameters derived from codebase:
   RTT ≈ 50ms      (assumed network round-trip)
 """
 
+import argparse
+import json
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
@@ -30,7 +32,7 @@ RTT = 0.05          # network round-trip time (seconds)
 
 def t_batch(M):
     """Time between batch flushes for a single client at M ops/sec."""
-    return max(B / M, T_FLUSH) if M > 0 else T_FLUSH
+    return min(B / M, T_FLUSH) if M > 0 else T_FLUSH
 
 
 def b_eff(M):
@@ -132,12 +134,44 @@ def simulate(N, M, X_ms, duration_sec=30.0, dt=0.01):
     }
 
 
+# ─── Experimental data ────────────────────────────────────────────────────────
+
+def load_experimental(path):
+    """Load parsed experiment results from JSON."""
+    if path and os.path.exists(path):
+        with open(path) as f:
+            return json.load(f)
+    return []
+
+
+def overlay_experimental(ax, experiments, annotate=True):
+    """Overlay experimental data points on an (N, M) axis."""
+    for e in experiments:
+        N = e["clients"]
+        M = e["M_approx"]
+        stable = e["stable"]
+        color = "#00ff00" if stable else "#ff0000"
+        marker = "o" if stable else "X"
+        edge = "black"
+        ax.plot(N, M, marker, color=color, markersize=14,
+                markeredgecolor=edge, markeredgewidth=1.5, zorder=10)
+        if annotate:
+            ttf = ""
+            if not stable and e.get("first_reshuffle_ms") is not None:
+                ttf = f"\n{e['first_reshuffle_ms']/1000:.0f}s"
+            elif not stable and e.get("first_dead_letter_ms") is not None:
+                ttf = f"\n{e['first_dead_letter_ms']/1000:.0f}s"
+            label = f"{'OK' if stable else 'FAIL'}{ttf}"
+            ax.annotate(label, (N, M), (N + 0.3, M + 1.5),
+                        color='white', fontsize=8, fontweight='bold', zorder=11)
+
+
 # ─── Plot 1: Stability heatmap in (N, M) space ──────────────────────────────
 
-def plot_stability_heatmap(X_fixed=10.0, output="reshuffle_heatmap.png"):
+def plot_stability_heatmap(X_fixed=25.0, output="reshuffle_heatmap.png", experiments=None):
     """Heatmap: stable vs unstable regions for fixed X (ms/op)."""
     N_range = np.arange(1, 21)
-    M_range = np.linspace(1, 50, 100)
+    M_range = np.linspace(0.1, 20, 100)
     Ngrid, Mgrid = np.meshgrid(N_range, M_range)
 
     # Compute ratio: X_fixed / X_crit. > 1 means unstable
@@ -160,11 +194,11 @@ def plot_stability_heatmap(X_fixed=10.0, output="reshuffle_heatmap.png"):
     ax.set_title(f"Reshuffle Stability Map (X = {X_fixed} ms/op)\nWhite dashed = critical boundary")
     ax.set_xticks(N_range)
 
-    # Mark the stress test point (N=5, M=10)
-    ax.plot(5, 10, 'w*', markersize=15, markeredgecolor='black', markeredgewidth=1)
-    ax.annotate("Stress test\n(N=5, M=10)", (5, 10), (7, 15),
-                color='white', fontsize=10, fontweight='bold',
-                arrowprops=dict(arrowstyle='->', color='white', lw=1.5))
+    # Overlay experimental data
+    if experiments:
+        overlay_experimental(ax, experiments)
+        ax.set_title(f"Reshuffle Stability Map (X = {X_fixed} ms/op)\n"
+                     f"White dashed = analytical boundary | Circles/Xs = experimental")
 
     plt.tight_layout()
     plt.savefig(output, dpi=150)
@@ -179,10 +213,10 @@ def plot_time_series(output="reshuffle_timeseries.png"):
     # X=10ms/op: each op involves DB reads, document model processing,
     # conflict detection, and index updates.
     configs = [
-        (2, 5, 10.0, "N=2, M=5"),
-        (3, 10, 10.0, "N=3, M=10"),
-        (5, 10, 10.0, "N=5, M=10 (stress test)"),
-        (10, 10, 10.0, "N=10, M=10"),
+        (2, 5, 25.0, "N=2, M=5"),
+        (3, 10, 25.0, "N=3, M=10"),
+        (5, 10, 25.0, "N=5, M=10 (stress test)"),
+        (10, 10, 25.0, "N=10, M=10"),
     ]
 
     fig, axes = plt.subplots(2, 1, figsize=(12, 8), sharex=True)
@@ -249,7 +283,7 @@ def plot_critical_x(output="reshuffle_critical_x.png"):
 
 def plot_queue_explosion(output="reshuffle_queue_explosion.png"):
     """Detailed view of queue/conflict/age feedback loop for one config."""
-    N, M, X = 5, 10, 10.0
+    N, M, X = 5, 10, 25.0
     result = simulate(N, M, X, duration_sec=20.0, dt=0.005)
 
     fig, axes = plt.subplots(3, 1, figsize=(12, 9), sharex=True)
@@ -286,6 +320,75 @@ def plot_queue_explosion(output="reshuffle_queue_explosion.png"):
     print(f"  Saved: {output}")
 
 
+# ─── Plot 5: Experimental results summary ────────────────────────────────────
+
+def plot_experimental_summary(experiments, output="reshuffle_experimental.png"):
+    """Bar chart: time-to-failure for each experiment config."""
+    if not experiments:
+        return
+
+    labels = []
+    ttf_values = []
+    colors = []
+    duration_sec = []
+
+    for e in experiments:
+        N = e["clients"]
+        M = e["M_approx"]
+        dur = e.get("duration", 30000) / 1000.0
+        labels.append(f"N={N}\nM={M:.0f}")
+        duration_sec.append(dur)
+
+        if e["stable"]:
+            ttf_values.append(dur)  # survived full duration
+            colors.append("#2ecc71")
+        else:
+            # Time to first failure
+            ttf = None
+            if e.get("first_reshuffle_ms") is not None:
+                ttf = e["first_reshuffle_ms"] / 1000.0
+            elif e.get("first_dead_letter_ms") is not None:
+                ttf = e["first_dead_letter_ms"] / 1000.0
+            ttf_values.append(ttf if ttf else 0)
+            colors.append("#e74c3c")
+
+    fig, ax = plt.subplots(figsize=(10, 5))
+    x = np.arange(len(labels))
+    bars = ax.bar(x, ttf_values, color=colors, edgecolor='black', linewidth=0.5)
+
+    # Show full duration line
+    max_dur = max(duration_sec) if duration_sec else 30
+    ax.axhline(y=max_dur, color='gray', linestyle=':', linewidth=1, alpha=0.5)
+    ax.text(len(labels) - 0.5, max_dur + 0.5, f"test duration ({max_dur:.0f}s)",
+            fontsize=8, color='gray', ha='right')
+
+    # Annotate bars
+    for i, (bar, e) in enumerate(zip(bars, experiments)):
+        xc = x_crit(e["clients"], e["M_approx"])
+        if e["stable"]:
+            ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.5,
+                    f"STABLE\nXc={xc:.1f}ms", ha='center', fontsize=8, color='#2ecc71',
+                    fontweight='bold')
+        else:
+            reshuffles = e.get("reshuffle_count", 0)
+            dead = e.get("dead_letter_count", 0)
+            ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.5,
+                    f"FAIL\nXc={xc:.1f}ms\n{reshuffles}R/{dead}DL",
+                    ha='center', fontsize=7, color='#e74c3c', fontweight='bold')
+
+    ax.set_xticks(x)
+    ax.set_xticklabels(labels)
+    ax.set_ylabel("Time to First Failure (seconds)")
+    ax.set_title("Experimental Results: Stable vs Unstable Configurations\n"
+                 "Green = survived full test | Red = reshuffle explosion")
+    ax.set_ylim(0, max_dur * 1.3)
+
+    plt.tight_layout()
+    plt.savefig(output, dpi=150)
+    plt.close()
+    print(f"  Saved: {output}")
+
+
 # ─── Summary table ───────────────────────────────────────────────────────────
 
 def print_summary():
@@ -296,9 +399,9 @@ def print_summary():
     print(f"\nParameters: B={B}, T_flush={T_FLUSH*1000:.0f}ms, "
           f"S_max={S_MAX}, RTT={RTT*1000:.0f}ms")
     print(f"\nStability condition: X < X_crit = (T_batch*1000/N) / (B_eff + N*M*age)")
-    print(f"  where age = T_batch + RTT, T_batch = max(B/M, {T_FLUSH})")
+    print(f"  where age = T_batch + RTT, T_batch = min(B/M, {T_FLUSH})")
 
-    X_ref = 10.0  # realistic estimate: ~10ms/op for DB + document model processing
+    X_ref = 25.0  # experimentally derived: N=2,M=10 fails → X > 22ms/op
     print(f"\n{'N':>3} {'M':>6} {'T_batch':>8} {'B_eff':>6} {'age':>6} "
           f"{'conflicts':>10} {'X_crit':>8} {f'X={X_ref:.0f}ms?':>10}")
     print("-" * 70)
@@ -327,7 +430,7 @@ def print_summary():
     print(f"  X_crit      = {xc:.4f} ms/op")
     print(f"  → Server must process each op in < {xc:.2f}ms to stay stable")
     print(f"  → Stress test was failing, so actual X > {xc:.2f}ms/op")
-    for X_est in [1.0, 5.0, 10.0]:
+    for X_est in [1.0, 10.0, 25.0]:
         ratio = X_est / xc
         status = "STABLE" if ratio < 1.0 else f"UNSTABLE ({ratio:.1f}x over)"
         print(f"  → At X={X_est:.0f}ms/op: {status}")
@@ -337,17 +440,35 @@ def print_summary():
 
 if __name__ == "__main__":
     import os
+
+    parser = argparse.ArgumentParser(description="Reshuffle Growth Dynamics Model")
+    parser.add_argument("--experimental", "-e", type=str, default=None,
+                        help="Path to experiments.json from parse-experiments.py")
+    args = parser.parse_args()
+
     # Output plots to the test-connect directory
     out_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     os.chdir(out_dir)
+
+    experiments = load_experimental(args.experimental)
+    if experiments:
+        print(f"Loaded {len(experiments)} experimental data points from {args.experimental}")
+    else:
+        # Check default location
+        experiments = load_experimental("experiments.json")
+        if experiments:
+            print(f"Loaded {len(experiments)} experimental data points from experiments.json")
 
     print("Generating reshuffle dynamics model...")
     print_summary()
 
     print("\nGenerating plots...")
-    plot_stability_heatmap()
+    plot_stability_heatmap(experiments=experiments)
     plot_time_series()
     plot_critical_x()
     plot_queue_explosion()
+
+    if experiments:
+        plot_experimental_summary(experiments)
 
     print("\nDone! Check the PNG files in:", out_dir)
