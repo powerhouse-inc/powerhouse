@@ -6,7 +6,7 @@
   "author": "",
   "license": "AGPL-3.0-only",
   "type": "module",
-  "sideEffects": false,
+  "sideEffects": ["**/*.css"],
   "repository": {
     "type": "git",
     "url": "https://github.com/powerhouse-inc/powerhouse"
@@ -76,11 +76,11 @@
     "zod": "catalog:"
   },
   "devDependencies": {
-    "tailwindcss": "catalog:",
-    "@tailwindcss/cli": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "@types/validator": "^13.12.2",
+    "tailwindcss": "catalog:",
+    "@tailwindcss/cli": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:"
   },
