@@ -14,6 +14,7 @@ import {
 import { SimpleJobExecutorManager } from "../../src/executor/simple-job-executor-manager.js";
 import { InMemoryJobTracker } from "../../src/job-tracker/in-memory-job-tracker.js";
 import { InMemoryQueue } from "../../src/queue/queue.js";
+import { NullDocumentModelResolver } from "../../src/registry/document-model-resolver.js";
 import { ReadModelCoordinator } from "../../src/read-models/coordinator.js";
 import {
   createMockDocumentIndexer,
@@ -29,7 +30,7 @@ describe("batch context flow", () => {
   const createReactorAndBus = (): { reactor: Reactor; eventBus: EventBus } => {
     const registry = createTestRegistry();
     const eventBus = new EventBus();
-    const queue = new InMemoryQueue(eventBus);
+    const queue = new InMemoryQueue(eventBus, new NullDocumentModelResolver());
     const jobTracker = new InMemoryJobTracker(eventBus);
     const readModelCoordinator = new ReadModelCoordinator(eventBus, [], []);
     const executorManager = new SimpleJobExecutorManager(
@@ -38,6 +39,7 @@ describe("batch context flow", () => {
       queue,
       jobTracker,
       createMockLogger(),
+      new NullDocumentModelResolver(),
     );
 
     const reactor = new Reactor(

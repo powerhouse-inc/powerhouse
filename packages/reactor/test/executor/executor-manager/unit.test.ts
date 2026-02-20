@@ -1,3 +1,4 @@
+import type { DocumentModelModule } from "document-model";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { EventBus } from "../../../src/events/event-bus.js";
 import type { IEventBus } from "../../../src/events/interfaces.js";
@@ -11,7 +12,16 @@ import type { IQueue } from "../../../src/queue/interfaces.js";
 import { InMemoryQueue } from "../../../src/queue/queue.js";
 import type { IJobExecutionHandle, Job } from "../../../src/queue/types.js";
 import { JobQueueState } from "../../../src/queue/types.js";
-import { createMockLogger } from "../../factories.js";
+import {
+  DocumentModelResolver,
+  NullDocumentModelResolver,
+} from "../../../src/registry/document-model-resolver.js";
+import {
+  DocumentModelRegistry,
+  ModuleNotFoundError,
+} from "../../../src/registry/implementation.js";
+import type { IDocumentModelLoader } from "../../../src/registry/interfaces.js";
+import { createMockLogger, createTestJob } from "../../factories.js";
 
 describe("SimpleJobExecutorManager", () => {
   let manager: SimpleJobExecutorManager;
@@ -38,7 +48,7 @@ describe("SimpleJobExecutorManager", () => {
   beforeEach(() => {
     mockExecutors = [];
     eventBus = new EventBus();
-    queue = new InMemoryQueue(eventBus);
+    queue = new InMemoryQueue(eventBus, new NullDocumentModelResolver());
     jobTracker = new InMemoryJobTracker(eventBus);
 
     // Create factory that returns mock executors
@@ -50,6 +60,7 @@ describe("SimpleJobExecutorManager", () => {
       queue,
       jobTracker,
       createMockLogger(),
+      new NullDocumentModelResolver(),
     );
   });
 
@@ -227,6 +238,255 @@ describe("SimpleJobExecutorManager", () => {
 
       // This should FAIL because start() is never called in the current implementation
       expect(startMock).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("model recovery", () => {
+    function createMockModule(documentType: string): DocumentModelModule<any> {
+      return {
+        documentModel: {
+          global: { id: documentType },
+        },
+        reducer: vi.fn(),
+        utils: {},
+      } as unknown as DocumentModelModule<any>;
+    }
+
+    it("should load missing model and retry job on ModuleNotFoundError", async () => {
+      const registry = new DocumentModelRegistry();
+      const mockModule = createMockModule("test/type");
+      const loader: IDocumentModelLoader = {
+        load: vi.fn().mockResolvedValue(mockModule),
+      };
+      const resolver = new DocumentModelResolver(registry, loader);
+
+      const recoveryEventBus = new EventBus();
+      const recoveryQueue = new InMemoryQueue(
+        recoveryEventBus,
+        new NullDocumentModelResolver(),
+      );
+      const recoveryJobTracker = new InMemoryJobTracker(recoveryEventBus);
+
+      let callCount = 0;
+      const mockExecutor: IJobExecutor = {
+        executeJob: vi.fn().mockImplementation(() => {
+          callCount++;
+          if (callCount === 1) {
+            return {
+              success: false,
+              error: new ModuleNotFoundError("test/type"),
+            };
+          }
+          return { success: true, duration: 10 };
+        }),
+      };
+
+      const recoveryManager = new SimpleJobExecutorManager(
+        () => mockExecutor,
+        recoveryEventBus,
+        recoveryQueue,
+        recoveryJobTracker,
+        createMockLogger(),
+        resolver,
+      );
+
+      await recoveryManager.start(1);
+
+      const job = createTestJob({ id: "recovery-job" });
+      await recoveryQueue.enqueue(job);
+
+      await new Promise((resolve) => setTimeout(resolve, 200));
+
+      expect(loader.load).toHaveBeenCalledWith("test/type");
+      expect(mockExecutor.executeJob).toHaveBeenCalledTimes(2);
+      expect(registry.getModule("test/type")).toBe(mockModule);
+    });
+
+    it("should fall through to normal failure when model load fails", async () => {
+      const registry = new DocumentModelRegistry();
+      const loader: IDocumentModelLoader = {
+        load: vi.fn().mockRejectedValue(new Error("Load failed")),
+      };
+      const resolver = new DocumentModelResolver(registry, loader);
+
+      const recoveryEventBus = new EventBus();
+      const recoveryQueue = new InMemoryQueue(
+        recoveryEventBus,
+        new NullDocumentModelResolver(),
+      );
+      const recoveryJobTracker = new InMemoryJobTracker(recoveryEventBus);
+
+      const mockExecutor: IJobExecutor = {
+        executeJob: vi.fn().mockResolvedValue({
+          success: false,
+          error: new ModuleNotFoundError("bad/type"),
+        }),
+      };
+
+      const recoveryManager = new SimpleJobExecutorManager(
+        () => mockExecutor,
+        recoveryEventBus,
+        recoveryQueue,
+        recoveryJobTracker,
+        createMockLogger(),
+        resolver,
+      );
+
+      await recoveryManager.start(1);
+
+      const job = createTestJob({
+        id: "fail-job",
+        retryCount: 0,
+        maxRetries: 0,
+      });
+      await recoveryQueue.enqueue(job);
+
+      await new Promise((resolve) => setTimeout(resolve, 200));
+
+      expect(loader.load).toHaveBeenCalledWith("bad/type");
+      // Should not retry, just the one execution
+      expect(mockExecutor.executeJob).toHaveBeenCalledTimes(1);
+    });
+
+    it("should cache failed model type across attempts", async () => {
+      const registry = new DocumentModelRegistry();
+      const loader: IDocumentModelLoader = {
+        load: vi.fn().mockRejectedValue(new Error("Load failed")),
+      };
+      const resolver = new DocumentModelResolver(registry, loader);
+
+      const recoveryEventBus = new EventBus();
+      const recoveryQueue = new InMemoryQueue(
+        recoveryEventBus,
+        new NullDocumentModelResolver(),
+      );
+      const recoveryJobTracker = new InMemoryJobTracker(recoveryEventBus);
+
+      const mockExecutor: IJobExecutor = {
+        executeJob: vi.fn().mockResolvedValue({
+          success: false,
+          error: new ModuleNotFoundError("bad/type"),
+        }),
+      };
+
+      const recoveryManager = new SimpleJobExecutorManager(
+        () => mockExecutor,
+        recoveryEventBus,
+        recoveryQueue,
+        recoveryJobTracker,
+        createMockLogger(),
+        resolver,
+      );
+
+      await recoveryManager.start(1);
+
+      // First job
+      const job1 = createTestJob({
+        id: "cache-job-1",
+        retryCount: 0,
+        maxRetries: 0,
+      });
+      await recoveryQueue.enqueue(job1);
+      await new Promise((resolve) => setTimeout(resolve, 200));
+
+      // Second job with same type
+      const job2 = createTestJob({
+        id: "cache-job-2",
+        retryCount: 0,
+        maxRetries: 0,
+      });
+      await recoveryQueue.enqueue(job2);
+      await new Promise((resolve) => setTimeout(resolve, 200));
+
+      // Loader should only have been called once due to caching
+      expect(loader.load).toHaveBeenCalledTimes(1);
+    });
+
+    it("should not intercept non-ModuleNotFoundError failures", async () => {
+      const registry = new DocumentModelRegistry();
+      const loader: IDocumentModelLoader = {
+        load: vi.fn(),
+      };
+      const resolver = new DocumentModelResolver(registry, loader);
+
+      const recoveryEventBus = new EventBus();
+      const recoveryQueue = new InMemoryQueue(
+        recoveryEventBus,
+        new NullDocumentModelResolver(),
+      );
+      const recoveryJobTracker = new InMemoryJobTracker(recoveryEventBus);
+
+      const mockExecutor: IJobExecutor = {
+        executeJob: vi.fn().mockResolvedValue({
+          success: false,
+          error: new Error("Some other error"),
+        }),
+      };
+
+      const recoveryManager = new SimpleJobExecutorManager(
+        () => mockExecutor,
+        recoveryEventBus,
+        recoveryQueue,
+        recoveryJobTracker,
+        createMockLogger(),
+        resolver,
+      );
+
+      await recoveryManager.start(1);
+
+      const job = createTestJob({
+        id: "other-error-job",
+        retryCount: 0,
+        maxRetries: 0,
+      });
+      await recoveryQueue.enqueue(job);
+
+      await new Promise((resolve) => setTimeout(resolve, 200));
+
+      expect(loader.load).not.toHaveBeenCalled();
+      expect(mockExecutor.executeJob).toHaveBeenCalledTimes(1);
+    });
+
+    it("should fall through when NullDocumentModelResolver is used", async () => {
+      const nullResolverEventBus = new EventBus();
+      const nullResolver = new NullDocumentModelResolver();
+      const nullResolverQueue = new InMemoryQueue(
+        nullResolverEventBus,
+        nullResolver,
+      );
+      const nullResolverJobTracker = new InMemoryJobTracker(
+        nullResolverEventBus,
+      );
+
+      const mockExecutor: IJobExecutor = {
+        executeJob: vi.fn().mockResolvedValue({
+          success: false,
+          error: new ModuleNotFoundError("test/type"),
+        }),
+      };
+
+      const nullResolverManager = new SimpleJobExecutorManager(
+        () => mockExecutor,
+        nullResolverEventBus,
+        nullResolverQueue,
+        nullResolverJobTracker,
+        createMockLogger(),
+        nullResolver,
+      );
+
+      await nullResolverManager.start(1);
+
+      const job = createTestJob({
+        id: "null-resolver-job",
+        retryCount: 0,
+        maxRetries: 0,
+      });
+      await nullResolverQueue.enqueue(job);
+
+      await new Promise((resolve) => setTimeout(resolve, 200));
+
+      // Should just process once and fail normally
+      expect(mockExecutor.executeJob).toHaveBeenCalledTimes(1);
     });
   });
 });

@@ -8,7 +8,12 @@ import type { IQueue } from "../../src/queue/interfaces.js";
 import { InMemoryQueue } from "../../src/queue/queue.js";
 import type { Job, JobAvailableEvent } from "../../src/queue/types.js";
 import { QueueEventTypes } from "../../src/queue/types.js";
+import {
+  DocumentModelResolver,
+  NullDocumentModelResolver,
+} from "../../src/registry/document-model-resolver.js";
 import { DocumentModelRegistry } from "../../src/registry/implementation.js";
+import type { IDocumentModelLoader } from "../../src/registry/interfaces.js";
 import {
   createJobDependencyChain,
   createJobWithDependencies,
@@ -27,7 +32,7 @@ describe("InMemoryQueue", () => {
     mockEventBusEmit = vi.fn().mockResolvedValue(undefined);
     eventBus.emit = mockEventBusEmit;
 
-    queue = new InMemoryQueue(eventBus);
+    queue = new InMemoryQueue(eventBus, new NullDocumentModelResolver());
   });
 
   describe("enqueue", () => {
@@ -1201,7 +1206,11 @@ describe("InMemoryQueue", () => {
     it("should emit JOB_FAILED when a CREATE_DOCUMENT job fails due to missing model", async () => {
       const realEventBus = new EventBus();
       const registry = new DocumentModelRegistry();
-      const queueWithRegistry = new InMemoryQueue(realEventBus, registry);
+      const failingLoader: IDocumentModelLoader = {
+        load: () => Promise.reject(new Error("Model not available")),
+      };
+      const resolver = new DocumentModelResolver(registry, failingLoader);
+      const queueWithRegistry = new InMemoryQueue(realEventBus, resolver);
 
       const failedEvents: JobFailedEvent[] = [];
       realEventBus.subscribe(
@@ -1222,7 +1231,11 @@ describe("InMemoryQueue", () => {
     it("should unblock dependent jobs when a job fails during enqueue", async () => {
       const realEventBus = new EventBus();
       const registry = new DocumentModelRegistry();
-      const queueWithRegistry = new InMemoryQueue(realEventBus, registry);
+      const failingLoader: IDocumentModelLoader = {
+        load: () => Promise.reject(new Error("Model not available")),
+      };
+      const resolver = new DocumentModelResolver(registry, failingLoader);
+      const queueWithRegistry = new InMemoryQueue(realEventBus, resolver);
 
       const job1 = createCreateDocumentJob("job-1", "unknown/type");
       const job2 = createTestJob({
@@ -1244,7 +1257,11 @@ describe("InMemoryQueue", () => {
     it("should unblock a dependency chain when a middle job fails during enqueue", async () => {
       const realEventBus = new EventBus();
       const registry = new DocumentModelRegistry();
-      const queueWithRegistry = new InMemoryQueue(realEventBus, registry);
+      const failingLoader: IDocumentModelLoader = {
+        load: () => Promise.reject(new Error("Model not available")),
+      };
+      const resolver = new DocumentModelResolver(registry, failingLoader);
+      const queueWithRegistry = new InMemoryQueue(realEventBus, resolver);
 
       const job1 = createTestJob({ id: "job-1", queueHint: [] });
       const job2 = createCreateDocumentJob("job-2", "unknown/type", ["job-1"]);

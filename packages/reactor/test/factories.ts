@@ -47,6 +47,7 @@ import type { IQueue } from "../src/queue/interfaces.js";
 import { InMemoryQueue } from "../src/queue/queue.js";
 import type { Job } from "../src/queue/types.js";
 import type { IReadModelCoordinator } from "../src/read-models/interfaces.js";
+import { NullDocumentModelResolver } from "../src/registry/document-model-resolver.js";
 import { DocumentModelRegistry } from "../src/registry/implementation.js";
 import type { IDocumentModelRegistry } from "../src/registry/interfaces.js";
 import type { IJobAwaiter } from "../src/shared/awaiter.js";
@@ -390,7 +391,10 @@ export function createTestEventBus(): IEventBus {
  * Factory for creating test Queue instances
  */
 export function createTestQueue(eventBus?: IEventBus): IQueue {
-  return new InMemoryQueue(eventBus || createTestEventBus());
+  return new InMemoryQueue(
+    eventBus || createTestEventBus(),
+    new NullDocumentModelResolver(),
+  );
 }
 
 /**
@@ -583,7 +587,7 @@ export async function createTestLegacyReactorSetup(
 ) {
   const storage = new MemoryStorage();
   const eventBus = new EventBus();
-  const queue = new InMemoryQueue(eventBus);
+  const queue = new InMemoryQueue(eventBus, new NullDocumentModelResolver());
   const jobTracker = new InMemoryJobTracker(eventBus);
 
   // Create real drive server
@@ -649,6 +653,7 @@ export async function createTestLegacyReactorSetup(
     queue,
     jobTracker,
     createMockLogger(),
+    new NullDocumentModelResolver(),
   );
 
   // Create mock read model coordinator
@@ -708,6 +713,7 @@ export function createTestJobExecutorManager(
     actualQueue,
     actualJobTracker,
     createMockLogger(),
+    new NullDocumentModelResolver(),
   );
 
   return {

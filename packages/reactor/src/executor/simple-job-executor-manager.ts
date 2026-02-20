@@ -5,6 +5,8 @@ import type { ILogger } from "../logging/types.js";
 import type { IQueue } from "../queue/interfaces.js";
 import type { IJobExecutionHandle } from "../queue/types.js";
 import { QueueEventTypes } from "../queue/types.js";
+import type { IDocumentModelResolver } from "../registry/document-model-resolver.js";
+import { ModuleNotFoundError } from "../registry/implementation.js";
 import type { ErrorInfo } from "../shared/types.js";
 import type { IJobExecutor, IJobExecutorManager } from "./interfaces.js";
 import type { ExecutorManagerStatus, JobResult } from "./types.js";
@@ -28,6 +30,7 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
     private queue: IQueue,
     private jobTracker: IJobTracker,
     private logger: ILogger,
+    private resolver: IDocumentModelResolver,
   ) {}
 
   async start(numExecutors: number): Promise<void> {
@@ -161,6 +164,29 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
       handle.complete();
       this.totalJobsProcessed++;
     } else {
+      // Attempt model recovery before exhausting retries
+      if (result.error && ModuleNotFoundError.isError(result.error)) {
+        let modelLoaded = false;
+        try {
+          await this.resolver.ensureModelLoaded(result.error.documentType);
+          modelLoaded = true;
+        } catch {
+          // Model could not be loaded, fall through to normal failure path
+        }
+
+        if (modelLoaded) {
+          const errorInfo = this.toErrorInfo(result.error);
+          try {
+            await this.queue.retryJob(handle.job.id, errorInfo);
+            this.activeJobs--;
+            await this.checkForMoreJobs();
+            return;
+          } catch {
+            // Fall through to normal failure path
+          }
+        }
+      }
+
       // Handle retry logic
       const retryCount = handle.job.retryCount || 0;
       const maxRetries = handle.job.maxRetries || 0;

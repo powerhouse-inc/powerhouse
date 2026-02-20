@@ -2,6 +2,7 @@ import { describe, expect, it, beforeEach, afterEach } from "vitest";
 import { EventBus } from "../../src/events/event-bus.js";
 import { InMemoryQueue } from "../../src/queue/queue.js";
 import type { Job } from "../../src/queue/types.js";
+import { NullDocumentModelResolver } from "../../src/registry/document-model-resolver.js";
 import { v4 as uuidv4 } from "uuid";
 import type { Action } from "document-model";
 
@@ -11,7 +12,7 @@ describe("Batch mutation queue ordering", () => {
 
   beforeEach(() => {
     eventBus = new EventBus();
-    queue = new InMemoryQueue(eventBus);
+    queue = new InMemoryQueue(eventBus, new NullDocumentModelResolver());
   });
 
   afterEach(async () => {

@@ -29,6 +29,10 @@ import type {
   IReadModel,
   IReadModelCoordinator,
 } from "../read-models/interfaces.js";
+import {
+  DocumentModelResolver,
+  NullDocumentModelResolver,
+} from "../registry/document-model-resolver.js";
 import { DocumentModelRegistry } from "../registry/implementation.js";
 import type { IDocumentModelLoader } from "../registry/interfaces.js";
 import { ConsistencyTracker } from "../shared/consistency-tracker.js";
@@ -224,13 +228,13 @@ export class ReactorBuilder {
     );
 
     const eventBus = this.eventBus || new EventBus();
-    const queue =
-      this.queueInstance ??
-      new InMemoryQueue(
-        eventBus,
-        documentModelRegistry,
-        this.documentModelLoader,
-      );
+    const resolver = this.documentModelLoader
+      ? new DocumentModelResolver(
+          documentModelRegistry,
+          this.documentModelLoader,
+        )
+      : new NullDocumentModelResolver(documentModelRegistry);
+    const queue = this.queueInstance ?? new InMemoryQueue(eventBus, resolver);
     const jobTracker = new InMemoryJobTracker(eventBus);
 
     const cacheConfig: WriteCacheConfig = {
@@ -280,6 +284,7 @@ export class ReactorBuilder {
         queue,
         jobTracker,
         this.logger,
+        resolver,
       );
     }
 

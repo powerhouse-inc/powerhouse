@@ -27,6 +27,7 @@ import { InMemoryQueue } from "../../../src/queue/queue.js";
 import { ReadModelCoordinator } from "../../../src/read-models/coordinator.js";
 import { KyselyDocumentView } from "../../../src/read-models/document-view.js";
 import type { DocumentViewDatabase } from "../../../src/read-models/types.js";
+import { NullDocumentModelResolver } from "../../../src/registry/document-model-resolver.js";
 import { DocumentModelRegistry } from "../../../src/registry/implementation.js";
 import { ConsistencyTracker } from "../../../src/shared/consistency-tracker.js";
 import { JobStatus } from "../../../src/shared/types.js";
@@ -93,7 +94,7 @@ async function createReactorSetup(): Promise<ReactorTestSetup> {
   );
 
   const eventBus = new EventBus();
-  const queue = new InMemoryQueue(eventBus);
+  const queue = new InMemoryQueue(eventBus, new NullDocumentModelResolver());
   const jobTracker = new InMemoryJobTracker(eventBus);
 
   const writeCacheConfig: WriteCacheConfig = {
@@ -136,6 +137,7 @@ async function createReactorSetup(): Promise<ReactorTestSetup> {
     queue,
     jobTracker,
     createMockLogger(),
+    new NullDocumentModelResolver(),
   );
 
   await executorManager.start(1);

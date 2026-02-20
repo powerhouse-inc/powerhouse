@@ -3,6 +3,7 @@ import { bench, describe, expect } from "vitest";
 import { EventBus } from "../src/events/event-bus.js";
 import { InMemoryQueue } from "../src/queue/queue.js";
 import type { Job } from "../src/queue/types.js";
+import { NullDocumentModelResolver } from "../src/registry/document-model-resolver.js";
 
 let jobCounter = 0;
 
@@ -46,7 +47,7 @@ function createJob({
 
 function createQueue() {
   const eventBus = new EventBus();
-  const queue = new InMemoryQueue(eventBus);
+  const queue = new InMemoryQueue(eventBus, new NullDocumentModelResolver());
   return { queue };
 }
 

@@ -7,6 +7,7 @@ import { EventBus } from "../../src/events/event-bus.js";
 import { SimpleJobExecutorManager } from "../../src/executor/simple-job-executor-manager.js";
 import { InMemoryJobTracker } from "../../src/job-tracker/in-memory-job-tracker.js";
 import { InMemoryQueue } from "../../src/queue/queue.js";
+import { NullDocumentModelResolver } from "../../src/registry/document-model-resolver.js";
 import { ReadModelCoordinator } from "../../src/read-models/coordinator.js";
 import {
   createMockDocumentIndexer,
@@ -22,7 +23,7 @@ describe("mutateBatch validation", () => {
   const createReactor = (): Reactor => {
     const registry = createTestRegistry();
     const eventBus = new EventBus();
-    const queue = new InMemoryQueue(eventBus);
+    const queue = new InMemoryQueue(eventBus, new NullDocumentModelResolver());
     const jobTracker = new InMemoryJobTracker(eventBus);
     const readModelCoordinator = new ReadModelCoordinator(eventBus, [], []);
     const executorManager = new SimpleJobExecutorManager(
@@ -31,6 +32,7 @@ describe("mutateBatch validation", () => {
       queue,
       jobTracker,
       createMockLogger(),
+      new NullDocumentModelResolver(),
     );
 
     return new Reactor(
