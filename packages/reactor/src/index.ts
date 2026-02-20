@@ -125,6 +125,7 @@ export {
   DuplicateModuleError,
   InvalidModuleError,
   ModuleNotFoundError,
+  NullDocumentModelResolver,
   type IDocumentModelLoader,
   type IDocumentModelRegistry,
 } from "./registry/index.js";

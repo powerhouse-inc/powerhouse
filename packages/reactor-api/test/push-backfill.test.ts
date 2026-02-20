@@ -6,6 +6,7 @@ import {
   GqlResponseChannelFactory,
   InMemoryQueue,
   JobStatus,
+  NullDocumentModelResolver,
   ReactorBuilder,
   ReactorEventTypes,
   SyncBuilder,
@@ -83,8 +84,9 @@ async function setupPushBackfill(): Promise<PushBackfillSetup> {
   const connectEventBus = new EventBus();
   const switchboardEventBus = new EventBus();
 
-  const connectQueue = new InMemoryQueue(connectEventBus);
-  const switchboardQueue = new InMemoryQueue(switchboardEventBus);
+  const resolver = new NullDocumentModelResolver();
+  const connectQueue = new InMemoryQueue(connectEventBus, resolver);
+  const switchboardQueue = new InMemoryQueue(switchboardEventBus, resolver);
 
   function createCompositeFactory(queue: typeof connectQueue): IChannelFactory {
     const request = new GqlRequestChannelFactory(logger, undefined, queue);

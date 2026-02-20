@@ -5,6 +5,7 @@ import {
   GqlResponseChannelFactory,
   InMemoryQueue,
   JobStatus,
+  NullDocumentModelResolver,
   ReactorBuilder,
   SyncBuilder,
   driveCollectionId,
@@ -81,9 +82,10 @@ async function setup(): Promise<Setup> {
   const eventB = new EventBus();
   const eventS = new EventBus();
 
-  const queueA = new InMemoryQueue(eventA);
-  const queueB = new InMemoryQueue(eventB);
-  const queueS = new InMemoryQueue(eventS);
+  const resolver = new NullDocumentModelResolver();
+  const queueA = new InMemoryQueue(eventA, resolver);
+  const queueB = new InMemoryQueue(eventB, resolver);
+  const queueS = new InMemoryQueue(eventS, resolver);
 
   const connectA = await createConnectModule(logger, eventA, queueA);
   const connectB = await createConnectModule(logger, eventB, queueB);
