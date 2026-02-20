@@ -35,10 +35,21 @@ export class HttpPackageLoader implements IDocumentModelLoader {
     DocumentModelModule[]
   >();
 
+  // Callback to notify when a model is dynamically loaded
+  private onModelLoaded?: (model: DocumentModelModule) => void;
+
   constructor(options: HttpPackageLoaderOptions) {
     this.registryUrl = options.registryUrl.endsWith("/")
       ? options.registryUrl
       : `${options.registryUrl}/`;
+  }
+
+  /**
+   * Set a callback to be notified when a model is dynamically loaded.
+   * This is used to trigger subgraph generation for dynamically loaded models.
+   */
+  setOnModelLoaded(callback: (model: DocumentModelModule) => void): void {
+    this.onModelLoaded = callback;
   }
 
   /**
@@ -158,6 +169,11 @@ export class HttpPackageLoader implements IDocumentModelLoader {
     this.logger.info(
       `Loaded document model "${documentType}" from package "${packageName}"`,
     );
+
+    // Notify listener about the dynamically loaded model
+    if (this.onModelLoaded) {
+      this.onModelLoaded(model);
+    }
 
     return model;
   }
