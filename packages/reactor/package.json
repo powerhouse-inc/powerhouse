@@ -37,7 +37,6 @@
   "dependencies": {
     "@powerhousedao/shared": "workspace:",
     "@electric-sql/pglite": "catalog:",
-    "@sindresorhus/fnv1a": "catalog:",
     "document-drive": "workspace:*",
     "document-model": "workspace:*",
     "kysely": "catalog:",
@@ -45,7 +44,6 @@
     "uuid": "^11.0.5"
   },
   "devDependencies": {
-    "@powerhousedao/analytics-engine-core": "catalog:",
     "@vitest/coverage-v8": "^3.2.4",
     "prettier": "catalog:",
     "tinybench": "^2.9.0",
