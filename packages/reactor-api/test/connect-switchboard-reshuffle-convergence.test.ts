@@ -1,5 +1,6 @@
 import {
   ConsoleLogger,
+  DocumentModelRegistry,
   EventBus,
   GqlRequestChannelFactory,
   GqlResponseChannelFactory,
@@ -82,7 +83,11 @@ async function setup(): Promise<Setup> {
   const eventB = new EventBus();
   const eventS = new EventBus();
 
-  const resolver = new NullDocumentModelResolver();
+  const modelRegistry = new DocumentModelRegistry();
+  modelRegistry.registerModules(
+    driveDocumentModelModule as unknown as DocumentModelModule,
+  );
+  const resolver = new NullDocumentModelResolver(modelRegistry);
   const queueA = new InMemoryQueue(eventA, resolver);
   const queueB = new InMemoryQueue(eventB, resolver);
   const queueS = new InMemoryQueue(eventS, resolver);

@@ -1,5 +1,6 @@
 import {
   ConsoleLogger,
+  DocumentModelRegistry,
   driveCollectionId,
   EventBus,
   GqlRequestChannelFactory,
@@ -84,7 +85,11 @@ async function setupPushBackfill(): Promise<PushBackfillSetup> {
   const connectEventBus = new EventBus();
   const switchboardEventBus = new EventBus();
 
-  const resolver = new NullDocumentModelResolver();
+  const modelRegistry = new DocumentModelRegistry();
+  modelRegistry.registerModules(
+    driveDocumentModelModule as unknown as DocumentModelModule,
+  );
+  const resolver = new NullDocumentModelResolver(modelRegistry);
   const connectQueue = new InMemoryQueue(connectEventBus, resolver);
   const switchboardQueue = new InMemoryQueue(switchboardEventBus, resolver);
 
