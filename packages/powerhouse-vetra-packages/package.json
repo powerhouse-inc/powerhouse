@@ -76,8 +76,6 @@
     "cm6-graphql": "^0.2.1",
     "document-model": "workspace:*",
     "graphql": "catalog:",
-    "react": "catalog:",
-    "react-dom": "catalog:",
     "react-hook-form": "^7.56.1",
     "tailwind-merge": "catalog:",
     "thememirror": "^2.0.1",
@@ -91,7 +89,9 @@
     "@types/react-dom": "catalog:",
     "@types/validator": "^13.12.2",
     "tailwindcss": "catalog:",
-    "@tailwindcss/cli": "catalog:"
+    "@tailwindcss/cli": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:"
   },
   "peerDependencies": {
     "react": ">=19.0.0",
