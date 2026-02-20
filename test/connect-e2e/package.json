@@ -65,6 +65,7 @@
     "@powerhousedao/builder-tools": "workspace:*",
     "@powerhousedao/e2e-utils": "workspace:*",
     "@powerhousedao/ph-cli": "workspace:*",
+    "@powerhousedao/connect": "workspace:*",
     "@types/node": "catalog:",
     "change-case": "catalog:",
     "document-model": "workspace:*",

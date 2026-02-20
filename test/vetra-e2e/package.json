@@ -64,6 +64,7 @@
     "@playwright/test": "^1.55.0",
     "@powerhousedao/e2e-utils": "workspace:*",
     "@powerhousedao/ph-cli": "workspace:*",
+    "@powerhousedao/connect": "workspace:*",
     "@tailwindcss/cli": "catalog:",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
