@@ -1,7 +1,7 @@
 import type { EditorModule } from "document-model";
 import { lazy } from "react";
 
-export const documentModelEditorModule: EditorModule = {
+export const DocumentModelEditor: EditorModule = {
   config: {
     id: "document-model-editor-v2",
     name: "Document Model Editor",

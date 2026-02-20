@@ -8,8 +8,7 @@ import {
   makeStateSchemaNameForScope,
   StateValidationError,
   validateStateObject,
-} from "../document-model-editor/utils/helpers.js";
-
+} from "./helpers.js";
 function getStateTypeNode(
   sdl: string,
   typeName: string,

@@ -1,16 +1,17 @@
 {
-  "extends": "../../tsconfig.json",
+  "extends": "../../tsconfig.options.json",
   "compilerOptions": {
-    "outDir": "./dist",
-    "types": ["vite/client"]
+    "outDir": "./dist"
   },
-  "include": ["**/*"],
+  "include": [
+    "**/*"
+  ],
   "references": [
     {
-      "path": "../config"
+      "path": "../document-model"
     },
     {
-      "path": "../document-model"
+      "path": "../builder-tools"
     },
     {
       "path": "../design-system"

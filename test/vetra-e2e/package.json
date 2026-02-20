@@ -98,7 +98,6 @@
     "pm2": "^5.4.3",
     "react": "catalog:",
     "react-dom": "catalog:",
-    "storybook": "^8.6.14",
     "tailwindcss": "catalog:",
     "typescript-eslint": "^8.46.0",
     "vite": "catalog:",

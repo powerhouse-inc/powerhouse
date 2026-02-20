@@ -1,4 +1,4 @@
-import { GenericDriveExplorer } from "@powerhousedao/common/generic-drive-explorer";
+import { GenericDriveExplorer } from "@powerhousedao/powerhouse-vetra-packages/editors";
 import { DropZoneWrapper } from "@powerhousedao/design-system/connect";
 import {
   useDefaultDriveEditorModule,
