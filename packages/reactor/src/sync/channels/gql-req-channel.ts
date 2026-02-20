@@ -258,7 +258,14 @@ export class GqlRequestChannel implements IChannel {
    * Creates local dead letter SyncOperations so the channel quiesces.
    */
   private handleRemoteDeadLetters(
-    deadLetters: Array<{ documentId: string; error: string }>,
+    deadLetters: Array<{
+      documentId: string;
+      error: string;
+      jobId: string;
+      branch: string;
+      scopes: string[];
+      operationCount: number;
+    }>,
   ): void {
     for (const dl of deadLetters) {
       this.logger.error(
@@ -273,12 +280,12 @@ export class GqlRequestChannel implements IChannel {
     for (const dl of deadLetters) {
       const syncOp = new SyncOperation(
         crypto.randomUUID(),
-        "",
+        dl.jobId,
         [],
         this.remoteName,
         dl.documentId,
-        [],
-        "",
+        dl.scopes,
+        dl.branch,
         [],
       );
       syncOp.failed(
@@ -355,7 +362,14 @@ export class GqlRequestChannel implements IChannel {
   ): Promise<{
     envelopes: SyncEnvelope[];
     ackOrdinal: number;
-    deadLetters: Array<{ documentId: string; error: string }>;
+    deadLetters: Array<{
+      documentId: string;
+      error: string;
+      jobId: string;
+      branch: string;
+      scopes: string[];
+      operationCount: number;
+    }>;
   }> {
     const query = `
       query PollSyncEnvelopes($channelId: String!, $outboxAck: Int!, $outboxLatest: Int!) {
@@ -422,6 +436,10 @@ export class GqlRequestChannel implements IChannel {
           deadLetters {
             documentId
             error
+            jobId
+            branch
+            scopes
+            operationCount
           }
         }
       }
@@ -437,7 +455,14 @@ export class GqlRequestChannel implements IChannel {
       pollSyncEnvelopes: {
         envelopes: SyncEnvelope[];
         ackOrdinal: number;
-        deadLetters?: Array<{ documentId: string; error: string }>;
+        deadLetters?: Array<{
+          documentId: string;
+          error: string;
+          jobId: string;
+          branch: string;
+          scopes: string[];
+          operationCount: number;
+        }>;
       };
     }>(query, variables);
 
@@ -660,6 +685,17 @@ export class GqlRequestChannel implements IChannel {
       headers["Authorization"] = authHeader;
     }
 
+    const operationMatch = query.match(/(?:query|mutation)\s+(\w+)/);
+    const operationName = operationMatch?.[1] ?? "unknown";
+
+    this.logger.verbose(
+      "GQL request @channelId @operation @url vars=@variables",
+      this.channelId,
+      operationName,
+      this.config.url,
+      JSON.stringify(variables),
+    );
+
     const fetchFn = this.config.fetchFn ?? fetch;
     let response;
     try {
@@ -694,6 +730,15 @@ export class GqlRequestChannel implements IChannel {
         `Failed to parse GraphQL response: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
+
+    this.logger.verbose(
+      "GQL response @channelId @operation status=@status data=@data errors=@errors",
+      this.channelId,
+      operationName,
+      response.status,
+      JSON.stringify(result.data),
+      result.errors ? JSON.stringify(result.errors) : "none",
+    );
 
     if (result.errors) {
       throw new Error(

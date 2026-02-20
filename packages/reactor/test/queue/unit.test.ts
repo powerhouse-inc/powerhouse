@@ -2,13 +2,17 @@ import { generateId } from "document-model";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { EventBus } from "../../src/events/event-bus.js";
 import type { IEventBus } from "../../src/events/interfaces.js";
+import type { JobFailedEvent } from "../../src/events/types.js";
+import { ReactorEventTypes } from "../../src/events/types.js";
 import type { IQueue } from "../../src/queue/interfaces.js";
 import { InMemoryQueue } from "../../src/queue/queue.js";
 import type { Job, JobAvailableEvent } from "../../src/queue/types.js";
 import { QueueEventTypes } from "../../src/queue/types.js";
+import { DocumentModelRegistry } from "../../src/registry/implementation.js";
 import {
   createJobDependencyChain,
   createJobWithDependencies,
+  createTestAction,
   createTestJob,
   createTestOperation,
 } from "../factories.js";
@@ -824,7 +828,7 @@ describe("InMemoryQueue", () => {
       expect(dequeuedJob?.job.id).toBe("job-3");
     });
 
-    it("should handle failJob without marking as completed", async () => {
+    it("should unblock dependents when a job fails", async () => {
       const job1 = createTestJob({ id: "job-1", queueHint: [] });
       const job2 = createTestJob({ id: "job-2", queueHint: ["job-1"] });
 
@@ -836,13 +840,13 @@ describe("InMemoryQueue", () => {
       expect(d1?.job.id).toBe("job-1");
       await queue.failJob("job-1", { message: "Test error", stack: "" });
 
-      // Job 2 should still be blocked since job 1 wasn't completed
+      // Job 2 should be unblocked since job 1 is resolved (failed counts as resolved)
       const dequeuedJob = await queue.dequeue(
         job2.documentId,
         job2.scope,
         job2.branch,
       );
-      expect(dequeuedJob).toBeNull();
+      expect(dequeuedJob?.job.id).toBe("job-2");
     });
   });
 
@@ -1167,6 +1171,103 @@ describe("InMemoryQueue", () => {
       expect(dequeuedJob?.job).toEqual(job);
       expect(dequeuedJob?.job.retryCount).toBeUndefined();
       expect(dequeuedJob?.job.maxRetries).toBeUndefined();
+    });
+  });
+
+  describe("failJob event emission and dependency unblocking", () => {
+    function createCreateDocumentJob(
+      id: string,
+      documentType: string,
+      dependencies: string[] = [],
+    ): Job {
+      return createTestJob({
+        id,
+        kind: "load",
+        actions: [
+          createTestAction({
+            type: "CREATE_DOCUMENT",
+            scope: "document",
+            input: {
+              documentId: `doc-${id}`,
+              model: documentType,
+              version: 0,
+            },
+          }),
+        ],
+        queueHint: dependencies,
+      });
+    }
+
+    it("should emit JOB_FAILED when a CREATE_DOCUMENT job fails due to missing model", async () => {
+      const realEventBus = new EventBus();
+      const registry = new DocumentModelRegistry();
+      const queueWithRegistry = new InMemoryQueue(realEventBus, registry);
+
+      const failedEvents: JobFailedEvent[] = [];
+      realEventBus.subscribe(
+        ReactorEventTypes.JOB_FAILED,
+        (_type, data: unknown) => {
+          failedEvents.push(data as JobFailedEvent);
+        },
+      );
+
+      const job = createCreateDocumentJob("job-1", "unknown/type");
+      await queueWithRegistry.enqueue(job);
+
+      expect(failedEvents).toHaveLength(1);
+      expect(failedEvents[0].jobId).toBe("job-1");
+      expect(failedEvents[0].error.message).toContain("unknown/type");
+    });
+
+    it("should unblock dependent jobs when a job fails during enqueue", async () => {
+      const realEventBus = new EventBus();
+      const registry = new DocumentModelRegistry();
+      const queueWithRegistry = new InMemoryQueue(realEventBus, registry);
+
+      const job1 = createCreateDocumentJob("job-1", "unknown/type");
+      const job2 = createTestJob({
+        id: "job-2",
+        queueHint: ["job-1"],
+      });
+
+      await queueWithRegistry.enqueue(job1);
+      await queueWithRegistry.enqueue(job2);
+
+      const dequeued = await queueWithRegistry.dequeue(
+        job2.documentId,
+        job2.scope,
+        job2.branch,
+      );
+      expect(dequeued?.job.id).toBe("job-2");
+    });
+
+    it("should unblock a dependency chain when a middle job fails during enqueue", async () => {
+      const realEventBus = new EventBus();
+      const registry = new DocumentModelRegistry();
+      const queueWithRegistry = new InMemoryQueue(realEventBus, registry);
+
+      const job1 = createTestJob({ id: "job-1", queueHint: [] });
+      const job2 = createCreateDocumentJob("job-2", "unknown/type", ["job-1"]);
+      const job3 = createTestJob({ id: "job-3", queueHint: ["job-2"] });
+
+      await queueWithRegistry.enqueue(job1);
+      await queueWithRegistry.enqueue(job2);
+      await queueWithRegistry.enqueue(job3);
+
+      const d1 = await queueWithRegistry.dequeue(
+        job1.documentId,
+        job1.scope,
+        job1.branch,
+      );
+      expect(d1?.job.id).toBe("job-1");
+      await queueWithRegistry.completeJob("job-1");
+
+      const d3 = await queueWithRegistry.dequeue(
+        job3.documentId,
+        job3.scope,
+        job3.branch,
+      );
+      expect(d3?.job.id).toBe("job-3");
     });
   });
 });

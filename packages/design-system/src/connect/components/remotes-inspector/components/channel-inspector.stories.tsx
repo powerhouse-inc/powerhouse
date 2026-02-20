@@ -25,12 +25,14 @@ const meta: Meta<typeof ChannelInspector> = {
 export default meta;
 type Story = StoryObj<typeof ChannelInspector>;
 
-function createMockMailbox<T>(items: T[]) {
+function createMockMailbox<T>(items: T[], ackOrdinal = 0, latestOrdinal = 0) {
   let paused = false;
   return {
     get items() {
       return items as readonly T[];
     },
+    ackOrdinal,
+    latestOrdinal,
     pause() {
       paused = true;
     },
@@ -70,10 +72,22 @@ function createMockChannel(
   inboxOps: SyncOperation[],
   outboxOps: SyncOperation[],
   deadLetterOps: SyncOperation[],
+  ordinals?: {
+    inbox?: { ack: number; latest: number };
+    outbox?: { ack: number; latest: number };
+  },
 ): IChannel {
   return {
-    inbox: createMockMailbox(inboxOps),
-    outbox: createMockMailbox(outboxOps),
+    inbox: createMockMailbox(
+      inboxOps,
+      ordinals?.inbox?.ack ?? 0,
+      ordinals?.inbox?.latest ?? 0,
+    ),
+    outbox: createMockMailbox(
+      outboxOps,
+      ordinals?.outbox?.ack ?? 0,
+      ordinals?.outbox?.latest ?? 0,
+    ),
     deadLetter: createMockMailbox(deadLetterOps),
   } as unknown as IChannel;
 }
@@ -128,6 +142,10 @@ const fullChannel = createMockChannel(
       "SIGNATURE_INVALID",
     ),
   ],
+  {
+    inbox: { ack: 42, latest: 45 },
+    outbox: { ack: 38, latest: 40 },
+  },
 );
 
 export const Default: Story = {

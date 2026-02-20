@@ -261,16 +261,22 @@ export function ChannelInspector({
         </h3>
         <div className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
-            <div className="text-sm text-gray-600">
-              Inbox:{" "}
-              <span
-                className={
-                  mailboxStates.inbox.isPaused
-                    ? "text-yellow-600"
-                    : "text-green-600"
-                }
-              >
-                {mailboxStates.inbox.isPaused ? "Paused" : "Active"}
+            <div className="flex items-center gap-3 text-sm text-gray-600">
+              <span>
+                Inbox:{" "}
+                <span
+                  className={
+                    mailboxStates.inbox.isPaused
+                      ? "text-yellow-600"
+                      : "text-green-600"
+                  }
+                >
+                  {mailboxStates.inbox.isPaused ? "Paused" : "Active"}
+                </span>
+              </span>
+              <span className="font-mono text-sm text-gray-500">
+                We ack'd (theirs): {channel.inbox.ackOrdinal} | Received:{" "}
+                {channel.inbox.latestOrdinal}
               </span>
             </div>
             <div className="flex gap-2">
@@ -302,16 +308,22 @@ export function ChannelInspector({
             </div>
           </div>
           <div className="flex items-center justify-between">
-            <div className="text-sm text-gray-600">
-              Outbox:{" "}
-              <span
-                className={
-                  mailboxStates.outbox.isPaused
-                    ? "text-yellow-600"
-                    : "text-green-600"
-                }
-              >
-                {mailboxStates.outbox.isPaused ? "Paused" : "Active"}
+            <div className="flex items-center gap-3 text-sm text-gray-600">
+              <span>
+                Outbox:{" "}
+                <span
+                  className={
+                    mailboxStates.outbox.isPaused
+                      ? "text-yellow-600"
+                      : "text-green-600"
+                  }
+                >
+                  {mailboxStates.outbox.isPaused ? "Paused" : "Active"}
+                </span>
+              </span>
+              <span className="font-mono text-sm text-gray-500">
+                They ack'd (ours): {channel.outbox.ackOrdinal} | Sent:{" "}
+                {channel.outbox.latestOrdinal}
               </span>
             </div>
             <div className="flex gap-2">

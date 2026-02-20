@@ -825,7 +825,14 @@ export function pollSyncEnvelopes(
 ): {
   envelopes: any[];
   ackOrdinal: number;
-  deadLetters: Array<{ documentId: string; error: string }>;
+  deadLetters: Array<{
+    documentId: string;
+    error: string;
+    jobId: string;
+    branch: string;
+    scopes: string[];
+    operationCount: number;
+  }>;
 } {
   let remote;
   try {
@@ -839,6 +846,10 @@ export function pollSyncEnvelopes(
   const deadLetters = remote.channel.deadLetter.items.map((syncOp) => ({
     documentId: syncOp.documentId,
     error: syncOp.error?.message ?? "Unknown error",
+    jobId: syncOp.jobId,
+    branch: syncOp.branch,
+    scopes: syncOp.scopes,
+    operationCount: syncOp.operations.length,
   }));
 
   // trim outbox

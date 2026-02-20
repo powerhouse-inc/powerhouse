@@ -94,8 +94,12 @@ export type ChannelMetaInput = {
 };
 
 export type DeadLetterInfo = {
+  readonly branch: Scalars["String"]["output"];
   readonly documentId: Scalars["String"]["output"];
   readonly error: Scalars["String"]["output"];
+  readonly jobId: Scalars["String"]["output"];
+  readonly operationCount: Scalars["Int"]["output"];
+  readonly scopes: ReadonlyArray<Scalars["String"]["output"]>;
 };
 
 export type DocumentChangeContext = {
@@ -1346,8 +1350,16 @@ export type DeadLetterInfoResolvers<
   ParentType extends ResolversParentTypes["DeadLetterInfo"] =
     ResolversParentTypes["DeadLetterInfo"],
 > = ResolversObject<{
+  branch?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
   documentId?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
   error?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
+  jobId?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
+  operationCount?: Resolver<ResolversTypes["Int"], ParentType, ContextType>;
+  scopes?: Resolver<
+    ReadonlyArray<ResolversTypes["String"]>,
+    ParentType,
+    ContextType
+  >;
 }>;
 
 export type DocumentChangeContextResolvers<

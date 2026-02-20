@@ -1,3 +1,17 @@
+## 6.0.0-dev.55 (2026-02-20)
+
+### 🚀 Features
+
+- test-connect and reactor gql updates to pass along more context ([ae581e8e8](https://github.com/powerhouse-inc/powerhouse/commit/ae581e8e8))
+
+### 🩹 Fixes
+
+- fail job when loader fails ([f32b72a94](https://github.com/powerhouse-inc/powerhouse/commit/f32b72a94))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
 ## 6.0.0-dev.54 (2026-02-19)
 
 ### 🚀 Features

@@ -1,3 +1,20 @@
+## 6.0.0-dev.55 (2026-02-20)
+
+### 🚀 Features
+
+- added ordinals to the channel inspector ([dd472fab8](https://github.com/powerhouse-inc/powerhouse/commit/dd472fab8))
+- test-connect and reactor gql updates to pass along more context ([ae581e8e8](https://github.com/powerhouse-inc/powerhouse/commit/ae581e8e8))
+
+### 🩹 Fixes
+
+- fail job when loader fails ([f32b72a94](https://github.com/powerhouse-inc/powerhouse/commit/f32b72a94))
+- fixed deep bug where index count was wrong during reshuffle ([a25ad9f91](https://github.com/powerhouse-inc/powerhouse/commit/a25ad9f91))
+- linter and testing issues ([34215801a](https://github.com/powerhouse-inc/powerhouse/commit/34215801a))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
 ## 6.0.0-dev.54 (2026-02-19)
 
 ### 🚀 Features
