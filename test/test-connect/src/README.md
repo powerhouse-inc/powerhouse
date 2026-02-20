@@ -45,19 +45,27 @@ For the stress test config (N=5, M=10): **X_crit = 3.77 ms/op**.
 
 ## Generated Plots
 
-### reshuffle_heatmap.png
+### Stability Heatmap
+
+![Stability Heatmap](../reshuffle_heatmap.png)
 
 Stability map in (N, M) space at X=10ms/op. Green regions are stable (server keeps up), red regions are unstable (queue explosion). The white dashed line is the analytical stability boundary. The star marks the stress test configuration (N=5, M=10), which sits well inside the unstable zone.
 
-### reshuffle_timeseries.png
+### Time Series
+
+![Time Series](../reshuffle_timeseries.png)
 
 Time series of conflict count (top) and server queue depth (bottom) for four configurations at X=10ms/op. Stable configs stay flat; unstable configs show monotonically growing conflicts and queue depth. The red dotted line marks S_max=1000.
 
-### reshuffle_critical_x.png
+### Critical X
+
+![Critical X](../reshuffle_critical_x.png)
 
 Maximum sustainable processing time per operation (X_crit) as a function of client count N, plotted for several ops/sec rates M. Any point above its curve is stable; below is unstable. The shaded band shows the typical server processing range. This plot answers: "how fast must the server be to handle N clients at M ops/sec?"
 
-### reshuffle_queue_explosion.png
+### Queue Explosion
+
+![Queue Explosion](../reshuffle_queue_explosion.png)
 
 Detailed view of the feedback loop for the stress test config (N=5, M=10, X=10ms/op). Three panels show the coupled dynamics:
 
