@@ -11,6 +11,7 @@ export class JobExecutionHandle implements IJobExecutionHandle {
   private onStart?: () => void;
   private onComplete?: () => void;
   private onFail?: (error: ErrorInfo) => void;
+  private onDefer?: () => void;
 
   private getStateName(state: JobQueueState): string {
     switch (state) {
@@ -36,6 +37,7 @@ export class JobExecutionHandle implements IJobExecutionHandle {
       onStart?: () => void;
       onComplete?: () => void;
       onFail?: (error: ErrorInfo) => void;
+      onDefer?: () => void;
     },
   ) {
     this._job = job;
@@ -43,6 +45,7 @@ export class JobExecutionHandle implements IJobExecutionHandle {
     this.onStart = callbacks?.onStart;
     this.onComplete = callbacks?.onComplete;
     this.onFail = callbacks?.onFail;
+    this.onDefer = callbacks?.onDefer;
   }
 
   get job(): Job {
@@ -81,5 +84,15 @@ export class JobExecutionHandle implements IJobExecutionHandle {
     }
     this._state = JobQueueState.RESOLVED;
     this.onFail?.(error);
+  }
+
+  defer(): void {
+    if (this._state !== JobQueueState.RUNNING) {
+      throw new Error(
+        `Cannot defer job in state ${this.getStateName(this._state)}`,
+      );
+    }
+    this._state = JobQueueState.RESOLVED;
+    this.onDefer?.();
   }
 }

@@ -227,6 +227,9 @@ export class InMemoryQueue implements IQueue {
       onFail: (error: ErrorInfo) => {
         void this.failJob(job.id, error);
       },
+      onDefer: () => {
+        void this.deferJob(job.id);
+      },
     });
 
     return Promise.resolve(handle);
@@ -278,6 +281,9 @@ export class InMemoryQueue implements IQueue {
             },
             onFail: (error: ErrorInfo) => {
               void this.failJob(job.id, error);
+            },
+            onDefer: () => {
+              void this.deferJob(job.id);
             },
           });
 
@@ -437,6 +443,14 @@ export class InMemoryQueue implements IQueue {
 
     // Check if queue is now drained
     this.checkDrained();
+  }
+
+  deferJob(jobId: string): void {
+    const documentId = this.jobIdToDocId.get(jobId);
+    if (documentId) {
+      this.markJobComplete(jobId, documentId);
+    }
+    this.jobIndex.delete(jobId);
   }
 
   async retryJob(jobId: string, error?: ErrorInfo): Promise<void> {

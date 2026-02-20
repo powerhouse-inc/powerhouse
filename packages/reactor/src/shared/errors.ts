@@ -90,3 +90,22 @@ export class UpgradeManifestNotFoundError extends Error {
     Error.captureStackTrace(this, UpgradeManifestNotFoundError);
   }
 }
+
+/**
+ * Error thrown when a document is not found (no operations exist for the document ID).
+ */
+export class DocumentNotFoundError extends Error {
+  public readonly documentId: string;
+
+  constructor(documentId: string) {
+    super(`Document ${documentId} not found`);
+    this.name = "DocumentNotFoundError";
+    this.documentId = documentId;
+
+    Error.captureStackTrace(this, DocumentNotFoundError);
+  }
+
+  static isError(error: unknown): error is DocumentNotFoundError {
+    return Error.isError(error) && error.name === "DocumentNotFoundError";
+  }
+}

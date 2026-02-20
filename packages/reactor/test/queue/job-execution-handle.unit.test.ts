@@ -288,6 +288,121 @@ describe("JobExecutionHandle", () => {
     });
   });
 
+  describe("defer", () => {
+    it("should transition from RUNNING to RESOLVED", () => {
+      const job = createTestJob();
+      const handle = new JobExecutionHandle(job, JobQueueState.READY);
+      handle.start();
+
+      handle.defer();
+
+      expect(handle.state).toBe(JobQueueState.RESOLVED);
+    });
+
+    it("should call onDefer callback", () => {
+      const job = createTestJob();
+      const onDefer = vi.fn();
+      const handle = new JobExecutionHandle(job, JobQueueState.READY, {
+        onDefer,
+      });
+      handle.start();
+
+      handle.defer();
+
+      expect(onDefer).toHaveBeenCalledTimes(1);
+    });
+
+    it("should throw when deferring from PREPROCESSING state", () => {
+      const job = createTestJob();
+      const handle = new JobExecutionHandle(job, JobQueueState.PREPROCESSING);
+
+      expect(() => handle.defer()).toThrow(
+        "Cannot defer job in state PREPROCESSING",
+      );
+    });
+
+    it("should throw when deferring from PENDING state", () => {
+      const job = createTestJob();
+      const handle = new JobExecutionHandle(job, JobQueueState.PENDING);
+
+      expect(() => handle.defer()).toThrow("Cannot defer job in state PENDING");
+    });
+
+    it("should throw when deferring from READY state", () => {
+      const job = createTestJob();
+      const handle = new JobExecutionHandle(job, JobQueueState.READY);
+
+      expect(() => handle.defer()).toThrow("Cannot defer job in state READY");
+    });
+
+    it("should throw when deferring from RESOLVED state", () => {
+      const job = createTestJob();
+      const handle = new JobExecutionHandle(job, JobQueueState.RESOLVED);
+
+      expect(() => handle.defer()).toThrow(
+        "Cannot defer job in state RESOLVED",
+      );
+    });
+
+    it("should throw when deferring after complete", () => {
+      const job = createTestJob();
+      const handle = new JobExecutionHandle(job, JobQueueState.READY);
+      handle.start();
+      handle.complete();
+
+      expect(() => handle.defer()).toThrow(
+        "Cannot defer job in state RESOLVED",
+      );
+    });
+
+    it("should throw when deferring after fail", () => {
+      const job = createTestJob();
+      const handle = new JobExecutionHandle(job, JobQueueState.READY);
+      handle.start();
+      handle.fail({ message: "error", stack: "" });
+
+      expect(() => handle.defer()).toThrow(
+        "Cannot defer job in state RESOLVED",
+      );
+    });
+
+    it("should throw when completing after defer", () => {
+      const job = createTestJob();
+      const handle = new JobExecutionHandle(job, JobQueueState.READY);
+      handle.start();
+      handle.defer();
+
+      expect(() => handle.complete()).toThrow(
+        "Cannot complete job in state RESOLVED",
+      );
+    });
+
+    it("should throw when failing after defer", () => {
+      const job = createTestJob();
+      const handle = new JobExecutionHandle(job, JobQueueState.READY);
+      handle.start();
+      handle.defer();
+
+      expect(() => handle.fail({ message: "error", stack: "" })).toThrow(
+        "Cannot fail job in state RESOLVED",
+      );
+    });
+
+    it("should allow callback to throw without preventing state change", () => {
+      const job = createTestJob();
+      const onDefer = vi.fn().mockImplementation(() => {
+        throw new Error("onDefer error");
+      });
+      const handle = new JobExecutionHandle(job, JobQueueState.READY, {
+        onDefer,
+      });
+      handle.start();
+
+      expect(() => handle.defer()).toThrow("onDefer error");
+      expect(handle.state).toBe(JobQueueState.RESOLVED);
+    });
+  });
+
   describe("getStateName", () => {
     it("should return UNKNOWN for invalid state values", () => {
       const job = createTestJob();
@@ -373,6 +488,19 @@ describe("JobExecutionHandle", () => {
       handle.fail({ message: "test", stack: "" });
 
       expect(onFail).toHaveBeenCalled();
+    });
+
+    it("should work with only onDefer callback", () => {
+      const job = createTestJob();
+      const onDefer = vi.fn();
+      const handle = new JobExecutionHandle(job, JobQueueState.READY, {
+        onDefer,
+      });
+
+      handle.start();
+      handle.defer();
+
+      expect(onDefer).toHaveBeenCalled();
     });
   });
 });

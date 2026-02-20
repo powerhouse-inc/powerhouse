@@ -5,6 +5,7 @@ import { SimpleJobExecutor } from "../../../src/executor/simple-job-executor.js"
 import type { Job } from "../../../src/queue/types.js";
 import type { IDocumentModelRegistry } from "../../../src/registry/interfaces.js";
 import type { IOperationStore } from "../../../src/storage/interfaces.js";
+import { DocumentNotFoundError } from "../../../src/shared/errors.js";
 import {
   createMockCollectionMembershipCache,
   createMockDocumentMetaCache,
@@ -230,6 +231,66 @@ describe("SimpleJobExecutor", () => {
       expect(result.success).toBe(false);
       expect(result.error).toBeDefined();
       expect(result.error?.message).toContain("Storage error");
+    });
+
+    it("should return DocumentNotFoundError when document does not exist", async () => {
+      const mockDocumentMetaCache = createMockDocumentMetaCache({
+        getDocumentMeta: vi
+          .fn()
+          .mockRejectedValue(new DocumentNotFoundError("missing-doc")),
+      });
+
+      const localExecutor = new SimpleJobExecutor(
+        createMockLogger(),
+        registry,
+        mockOperationStore,
+        createTestEventBus(),
+        mockWriteCache,
+        {
+          start: vi.fn().mockReturnValue({
+            createCollection: vi.fn(),
+            addToCollection: vi.fn(),
+            removeFromCollection: vi.fn(),
+            write: vi.fn(),
+          }),
+          commit: vi.fn().mockResolvedValue([]),
+          find: vi.fn().mockResolvedValue({ items: [], total: 0 }),
+          getCollectionsForDocuments: vi.fn().mockResolvedValue({}),
+        } as any,
+        mockDocumentMetaCache,
+        createMockCollectionMembershipCache(),
+        {},
+      );
+
+      const job: Job = {
+        kind: "mutation",
+        id: "job-typed-error",
+        documentId: "missing-doc",
+        scope: "global",
+        branch: "main",
+        actions: [
+          {
+            id: "action-typed-error",
+            type: "SET_NAME",
+            scope: "global",
+            timestampUtcMs: "123",
+            input: { name: "Test" },
+          },
+        ],
+        operations: [],
+        createdAt: "123",
+        queueHint: [],
+        errorHistory: [],
+        meta: { batchId: "test", batchJobIds: ["job-typed-error"] },
+      };
+
+      const result = await localExecutor.executeJob(job);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBeInstanceOf(DocumentNotFoundError);
+      expect((result.error as DocumentNotFoundError).documentId).toBe(
+        "missing-doc",
+      );
     });
   });
 

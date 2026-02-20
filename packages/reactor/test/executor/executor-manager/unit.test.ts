@@ -2,6 +2,10 @@ import type { DocumentModelModule } from "document-model";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { EventBus } from "../../../src/events/event-bus.js";
 import type { IEventBus } from "../../../src/events/interfaces.js";
+import {
+  ReactorEventTypes,
+  type JobFailedEvent,
+} from "../../../src/events/types.js";
 import type { IJobExecutor } from "../../../src/executor/interfaces.js";
 import type { JobExecutorFactory } from "../../../src/executor/simple-job-executor-manager.js";
 import { SimpleJobExecutorManager } from "../../../src/executor/simple-job-executor-manager.js";
@@ -20,6 +24,7 @@ import {
   DocumentModelRegistry,
   ModuleNotFoundError,
 } from "../../../src/registry/implementation.js";
+import { DocumentNotFoundError } from "../../../src/shared/errors.js";
 import type { IDocumentModelLoader } from "../../../src/registry/interfaces.js";
 import { createMockLogger, createTestJob } from "../../factories.js";
 
@@ -219,6 +224,7 @@ describe("SimpleJobExecutorManager", () => {
         start: startMock,
         complete: completeMock,
         fail: failMock,
+        defer: vi.fn(),
       };
 
       // Mock the queue's dequeueNext to return our mock handle
@@ -447,6 +453,51 @@ describe("SimpleJobExecutorManager", () => {
       expect(mockExecutor.executeJob).toHaveBeenCalledTimes(1);
     });
 
+    it("should not intercept DocumentNotFoundError failures", async () => {
+      const registry = new DocumentModelRegistry();
+      const loader: IDocumentModelLoader = {
+        load: vi.fn(),
+      };
+      const resolver = new DocumentModelResolver(registry, loader);
+
+      const recoveryEventBus = new EventBus();
+      const recoveryQueue = new InMemoryQueue(
+        recoveryEventBus,
+        new NullDocumentModelResolver(),
+      );
+      const recoveryJobTracker = new InMemoryJobTracker(recoveryEventBus);
+
+      const mockExecutor: IJobExecutor = {
+        executeJob: vi.fn().mockResolvedValue({
+          success: false,
+          error: new DocumentNotFoundError("missing-doc"),
+        }),
+      };
+
+      const recoveryManager = new SimpleJobExecutorManager(
+        () => mockExecutor,
+        recoveryEventBus,
+        recoveryQueue,
+        recoveryJobTracker,
+        createMockLogger(),
+        resolver,
+      );
+
+      await recoveryManager.start(1);
+
+      const job = createTestJob({
+        id: "doc-not-found-job",
+        retryCount: 0,
+        maxRetries: 0,
+      });
+      await recoveryQueue.enqueue(job);
+
+      await new Promise((resolve) => setTimeout(resolve, 200));
+
+      expect(loader.load).not.toHaveBeenCalled();
+      expect(mockExecutor.executeJob).toHaveBeenCalledTimes(1);
+    });
+
     it("should fall through when NullDocumentModelResolver is used", async () => {
       const nullResolverEventBus = new EventBus();
       const nullResolver = new NullDocumentModelResolver();
@@ -487,6 +538,291 @@ describe("SimpleJobExecutorManager", () => {
 
       // Should just process once and fail normally
       expect(mockExecutor.executeJob).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("out-of-order operation recovery", () => {
+    it("should not waste retries on DocumentNotFoundError", async () => {
+      const noRetryEventBus = new EventBus();
+      const noRetryQueue = new InMemoryQueue(
+        noRetryEventBus,
+        new NullDocumentModelResolver(),
+      );
+      const noRetryJobTracker = new InMemoryJobTracker(noRetryEventBus);
+
+      const mockExecutor: IJobExecutor = {
+        executeJob: vi.fn().mockResolvedValue({
+          success: false,
+          error: new DocumentNotFoundError("missing-doc"),
+        }),
+      };
+
+      const noRetryManager = new SimpleJobExecutorManager(
+        () => mockExecutor,
+        noRetryEventBus,
+        noRetryQueue,
+        noRetryJobTracker,
+        createMockLogger(),
+        new NullDocumentModelResolver(),
+      );
+
+      await noRetryManager.start(1);
+
+      const job = createTestJob({
+        id: "no-retry-job",
+        documentId: "missing-doc",
+        scope: "global",
+        retryCount: 0,
+        maxRetries: 3,
+      });
+      await noRetryQueue.enqueue(job);
+
+      // Wait for processing to complete (job is deferred, not retried)
+      await new Promise((resolve) => setTimeout(resolve, 200));
+
+      // DocumentNotFoundError should execute only once — no retries consumed.
+      expect(mockExecutor.executeJob).toHaveBeenCalledTimes(1);
+
+      // The deferred job emits JOB_FAILED on stop()
+      const failedPromise = new Promise<JobFailedEvent>((resolve) => {
+        noRetryEventBus.subscribe(
+          ReactorEventTypes.JOB_FAILED,
+          (_type: number, data: JobFailedEvent) => {
+            resolve(data);
+          },
+        );
+      });
+      await noRetryManager.stop(true);
+      const failedEvent = await failedPromise;
+      expect(failedEvent.jobId).toBe("no-retry-job");
+    });
+
+    it("should recover when operations arrive before CREATE_DOCUMENT", async () => {
+      const oooEventBus = new EventBus();
+      const oooQueue = new InMemoryQueue(
+        oooEventBus,
+        new NullDocumentModelResolver(),
+      );
+      const oooJobTracker = new InMemoryJobTracker(oooEventBus);
+
+      // Track which documents have been "created" (simulates CREATE_DOCUMENT completing)
+      const createdDocuments = new Set<string>();
+
+      const mockExecutor: IJobExecutor = {
+        executeJob: vi.fn().mockImplementation((job: Job) => {
+          // CREATE_DOCUMENT always succeeds and registers the document
+          if (job.scope === "document") {
+            createdDocuments.add(job.documentId);
+            return { success: true, duration: 10 };
+          }
+
+          // Global-scope actions fail with DocumentNotFoundError until document exists
+          if (!createdDocuments.has(job.documentId)) {
+            return {
+              success: false,
+              error: new DocumentNotFoundError(job.documentId),
+            };
+          }
+
+          return { success: true, duration: 10 };
+        }),
+      };
+
+      const oooManager = new SimpleJobExecutorManager(
+        () => mockExecutor,
+        oooEventBus,
+        oooQueue,
+        oooJobTracker,
+        createMockLogger(),
+        new NullDocumentModelResolver(),
+      );
+
+      const failedJobIds: string[] = [];
+
+      oooEventBus.subscribe(
+        ReactorEventTypes.JOB_FAILED,
+        (_type: number, data: JobFailedEvent) => {
+          failedJobIds.push(data.jobId);
+        },
+      );
+
+      await oooManager.start(1);
+
+      // Job 1: global-scope action arrives BEFORE CREATE_DOCUMENT
+      const setNameJob = createTestJob({
+        id: "set-name-job",
+        documentId: "doc-1",
+        scope: "global",
+        retryCount: 0,
+        maxRetries: 3,
+      });
+      await oooQueue.enqueue(setNameJob);
+
+      // Small delay to let the first job start processing (and fail once)
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      // Job 2: CREATE_DOCUMENT arrives after the global action
+      const createJob = createTestJob({
+        id: "create-job",
+        documentId: "doc-1",
+        scope: "document",
+        actions: [
+          {
+            id: "create-action",
+            type: "CREATE_DOCUMENT",
+            scope: "document",
+            timestampUtcMs: "100",
+            input: { documentId: "doc-1" },
+          },
+        ],
+        retryCount: 0,
+        maxRetries: 0,
+      });
+      await oooQueue.enqueue(createJob);
+
+      // Wait for all processing to settle
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await oooManager.stop(true);
+
+      // The SET_NAME job should NOT have failed permanently.
+      // It should have eventually succeeded after CREATE_DOCUMENT completed.
+      expect(failedJobIds).not.toContain("set-name-job");
+    });
+  });
+
+  describe("document not found error classification", () => {
+    it("should emit JOB_FAILED with DocumentNotFoundError when document does not exist", async () => {
+      const failedEventBus = new EventBus();
+      const failedQueue = new InMemoryQueue(
+        failedEventBus,
+        new NullDocumentModelResolver(),
+      );
+      const failedJobTracker = new InMemoryJobTracker(failedEventBus);
+
+      const mockExecutor: IJobExecutor = {
+        executeJob: vi.fn().mockResolvedValue({
+          success: false,
+          error: new DocumentNotFoundError("missing-doc"),
+        }),
+      };
+
+      const failedManager = new SimpleJobExecutorManager(
+        () => mockExecutor,
+        failedEventBus,
+        failedQueue,
+        failedJobTracker,
+        createMockLogger(),
+        new NullDocumentModelResolver(),
+      );
+
+      await failedManager.start(1);
+
+      const job = createTestJob({
+        id: "doc-not-found-job",
+        retryCount: 0,
+        maxRetries: 0,
+      });
+      await failedQueue.enqueue(job);
+
+      // Wait for processing (job is deferred, not failed yet)
+      await new Promise((resolve) => setTimeout(resolve, 200));
+
+      // Subscribe before stop() to capture the deferred JOB_FAILED
+      const failedPromise = new Promise<JobFailedEvent>((resolve) => {
+        failedEventBus.subscribe(
+          ReactorEventTypes.JOB_FAILED,
+          (_type: number, data: JobFailedEvent) => {
+            resolve(data);
+          },
+        );
+      });
+      await failedManager.stop(true);
+
+      const failedEvent = await failedPromise;
+      expect(failedEvent.error).toBeInstanceOf(DocumentNotFoundError);
+      expect((failedEvent.error as DocumentNotFoundError).documentId).toBe(
+        "doc-1",
+      );
+    });
+
+    it("should distinguish DocumentNotFoundError from other failures", async () => {
+      const classifyEventBus = new EventBus();
+      const classifyQueue = new InMemoryQueue(
+        classifyEventBus,
+        new NullDocumentModelResolver(),
+      );
+      const classifyJobTracker = new InMemoryJobTracker(classifyEventBus);
+
+      let callCount = 0;
+      const mockExecutor: IJobExecutor = {
+        executeJob: vi.fn().mockImplementation(() => {
+          callCount++;
+          if (callCount === 1) {
+            return {
+              success: false,
+              error: new DocumentNotFoundError("missing-doc"),
+            };
+          }
+          return {
+            success: false,
+            error: new Error("generic failure"),
+          };
+        }),
+      };
+
+      const classifyManager = new SimpleJobExecutorManager(
+        () => mockExecutor,
+        classifyEventBus,
+        classifyQueue,
+        classifyJobTracker,
+        createMockLogger(),
+        new NullDocumentModelResolver(),
+      );
+
+      const failedEvents: JobFailedEvent[] = [];
+      classifyEventBus.subscribe(
+        ReactorEventTypes.JOB_FAILED,
+        (_type: number, data: JobFailedEvent) => {
+          failedEvents.push(data);
+        },
+      );
+
+      await classifyManager.start(1);
+
+      const job1 = createTestJob({
+        id: "classify-job-1",
+        retryCount: 0,
+        maxRetries: 0,
+      });
+      await classifyQueue.enqueue(job1);
+
+      const job2 = createTestJob({
+        id: "classify-job-2",
+        retryCount: 0,
+        maxRetries: 0,
+      });
+      await classifyQueue.enqueue(job2);
+
+      // Wait for processing: job1 (DocumentNotFoundError) is deferred,
+      // job2 (generic) emits JOB_FAILED from both manager and queue
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      const genericEvents = failedEvents.filter(
+        (e) => e.jobId === "classify-job-2",
+      );
+      expect(genericEvents.length).toBeGreaterThanOrEqual(1);
+      expect(
+        genericEvents.every((e) => !DocumentNotFoundError.isError(e.error)),
+      ).toBe(true);
+
+      // Stop the manager to flush the deferred DocumentNotFoundError job
+      await classifyManager.stop(true);
+      const deferredEvents = failedEvents.filter(
+        (e) => e.jobId === "classify-job-1",
+      );
+      expect(deferredEvents.length).toBeGreaterThanOrEqual(1);
+      expect(
+        deferredEvents.some((e) => DocumentNotFoundError.isError(e.error)),
+      ).toBe(true);
     });
   });
 });
