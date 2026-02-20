@@ -340,6 +340,24 @@ async function initServer(
 
   const { client, driveServer } = api;
 
+  // Wire up dynamic model loading → subgraph generation
+  if (httpLoader) {
+    httpLoader.setOnModelLoaded((model: DocumentModelModule) => {
+      const current = driveServer.getDocumentModelModules();
+      if (
+        !current.some(
+          (m) => m.documentModel.global.id === model.documentModel.global.id,
+        )
+      ) {
+        logger.info(
+          "Registering dynamically loaded model: @modelId",
+          model.documentModel.global.id,
+        );
+        driveServer.setDocumentModelModules([...current, model]);
+      }
+    });
+  }
+
   // Create default drive if provided
   if (options.drive) {
     if (!renown) {
