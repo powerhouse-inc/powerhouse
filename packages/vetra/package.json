@@ -86,6 +86,7 @@
     "graphql-tag": "catalog:"
   },
   "devDependencies": {
+    "tailwindcss": "catalog:",
     "@powerhousedao/codegen": "workspace:*",
     "@powerhousedao/ph-cli": "workspace:*",
     "@powerhousedao/reactor-api": "workspace:*",

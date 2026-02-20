@@ -79,9 +79,10 @@
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@tailwindcss/cli": "catalog:",
+    "tailwindcss": "catalog:",
     "@powerhousedao/ph-cli": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",
-    "@tailwindcss/cli": "catalog:",
     "@testing-library/jest-dom": "^6.9.1",
     "@types/node": "catalog:",
     "@types/react": "catalog:",

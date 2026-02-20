@@ -56,6 +56,7 @@
   },
   "dependencies": {
     "@powerhousedao/builder-tools": "workspace:*",
+    "@powerhousedao/design-system": "workspace:*",
     "document-model": "workspace:*"
   },
   "devDependencies": {
@@ -75,7 +76,8 @@
     "react": "catalog:",
     "react-dom": "catalog:",
     "typescript-eslint": "^8.46.0",
-    "vite": "catalog:"
+    "vite": "catalog:",
+    "tailwindcss": "catalog:"
   },
   "peerDependencies": {
     "react": ">=19.0.0",

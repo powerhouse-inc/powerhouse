@@ -76,10 +76,11 @@
     "zod": "catalog:"
   },
   "devDependencies": {
+    "tailwindcss": "catalog:",
+    "@tailwindcss/cli": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "@types/validator": "^13.12.2",
-    "@tailwindcss/cli": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:"
   },
