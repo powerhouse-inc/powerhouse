@@ -1639,15 +1639,9 @@ importers:
       '@hookform/resolvers':
         specifier: ^5.0.1
         version: 5.2.2(react-hook-form@7.66.0(react@19.2.4))
-      '@powerhousedao/builder-tools':
-        specifier: workspace:*
-        version: link:../builder-tools
       '@powerhousedao/design-system':
         specifier: workspace:*
         version: link:../design-system
-      '@powerhousedao/document-engineering':
-        specifier: 'catalog:'
-        version: 1.40.1(@types/express@4.17.25)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(bufferutil@4.0.9)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.9.3)(utf-8-validate@5.0.10)
       '@powerhousedao/reactor-browser':
         specifier: workspace:*
         version: link:../reactor-browser
@@ -1693,12 +1687,6 @@ importers:
       graphql:
         specifier: 'catalog:'
         version: 16.12.0
-      react:
-        specifier: 'catalog:'
-        version: 19.2.4
-      react-dom:
-        specifier: 'catalog:'
-        version: 19.2.4(react@19.2.4)
       react-hook-form:
         specifier: ^7.56.1
         version: 7.66.0(react@19.2.4)
@@ -1733,6 +1721,12 @@ importers:
       '@types/validator':
         specifier: ^13.12.2
         version: 13.15.4
+      react:
+        specifier: 'catalog:'
+        version: 19.2.4
+      react-dom:
+        specifier: 'catalog:'
+        version: 19.2.4(react@19.2.4)
       tailwindcss:
         specifier: 'catalog:'
         version: 4.1.18
