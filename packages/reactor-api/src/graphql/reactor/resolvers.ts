@@ -574,6 +574,7 @@ export async function renameDocument(
     name: string;
     branch?: string | null;
   },
+  signal?: AbortSignal,
 ): Promise<ReturnType<typeof toGqlPhDocument>> {
   const branch = fromInputMaybe(args.branch);
 
@@ -583,6 +584,7 @@ export async function renameDocument(
       args.documentIdentifier,
       args.name,
       branch,
+      signal,
     );
   } catch (error) {
     throw new GraphQLError(
