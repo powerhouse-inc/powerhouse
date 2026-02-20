@@ -2063,7 +2063,14 @@ importers:
         version: 8.16.0
 
   test/connect-e2e:
+    dependencies:
+      '@powerhousedao/design-system':
+        specifier: workspace:*
+        version: link:../../packages/design-system
     devDependencies:
+      '@electric-sql/pglite':
+        specifier: 'catalog:'
+        version: 0.3.15
       '@playwright/test':
         specifier: ^1.41.2
         version: 1.57.0
@@ -2079,6 +2086,9 @@ importers:
       '@powerhousedao/ph-cli':
         specifier: workspace:*
         version: link:../../clis/ph-cli
+      '@powerhousedao/reactor-browser':
+        specifier: workspace:*
+        version: link:../../packages/reactor-browser
       '@types/node':
         specifier: 'catalog:'
         version: 25.2.3
@@ -2103,6 +2113,9 @@ importers:
       vite:
         specifier: 7.3.1
         version: 7.3.1(@types/node@25.2.3)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(tsx@4.21.0)(yaml@2.8.1)
+      vite-plugin-node-polyfills:
+        specifier: 'catalog:'
+        version: 0.25.0(rollup@4.52.5)(vite@7.3.1(@types/node@25.2.3)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(tsx@4.21.0)(yaml@2.8.1))
 
   test/e2e-utils:
     devDependencies:
@@ -2226,9 +2239,6 @@ importers:
 
   test/vetra-e2e:
     dependencies:
-      '@powerhousedao/builder-tools':
-        specifier: workspace:*
-        version: link:../../packages/builder-tools
       '@powerhousedao/design-system':
         specifier: workspace:*
         version: link:../../packages/design-system
@@ -2236,12 +2246,18 @@ importers:
         specifier: link:../../packages/document-model
         version: link:../../packages/document-model
     devDependencies:
+      '@electric-sql/pglite':
+        specifier: 'catalog:'
+        version: 0.3.15
       '@eslint/js':
         specifier: ^9.37.0
         version: 9.39.1
       '@playwright/test':
         specifier: ^1.55.0
         version: 1.57.0
+      '@powerhousedao/builder-tools':
+        specifier: workspace:*
+        version: link:../../packages/builder-tools
       '@powerhousedao/connect':
         specifier: workspace:*
         version: link:../../apps/connect
@@ -2251,6 +2267,12 @@ importers:
       '@powerhousedao/ph-cli':
         specifier: workspace:*
         version: link:../../clis/ph-cli
+      '@powerhousedao/reactor-browser':
+        specifier: workspace:*
+        version: link:../../packages/reactor-browser
+      '@powerhousedao/vetra':
+        specifier: workspace:*
+        version: link:../../packages/vetra
       '@tailwindcss/cli':
         specifier: 'catalog:'
         version: 4.1.18
@@ -2293,6 +2315,9 @@ importers:
       vite:
         specifier: 7.3.1
         version: 7.3.1(@types/node@25.2.3)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(tsx@4.21.0)(yaml@2.8.1)
+      vite-plugin-node-polyfills:
+        specifier: 'catalog:'
+        version: 0.25.0(rollup@4.52.5)(vite@7.3.1(@types/node@25.2.3)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(tsx@4.21.0)(yaml@2.8.1))
 
 packages:
 

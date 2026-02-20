@@ -66,6 +66,7 @@
     "@powerhousedao/e2e-utils": "workspace:*",
     "@powerhousedao/ph-cli": "workspace:*",
     "@powerhousedao/connect": "workspace:*",
+    "@powerhousedao/reactor-browser": "workspace:*",
     "@types/node": "catalog:",
     "change-case": "catalog:",
     "document-model": "workspace:*",
@@ -73,7 +74,11 @@
     "monocart-coverage-reports": "^2.12.8",
     "react": "catalog:",
     "react-dom": "catalog:",
-    "vite": "catalog:"
+    "vite": "catalog:",
+    "vite-plugin-node-polyfills": "catalog:",
+    "@electric-sql/pglite": "catalog:"
   },
-  "dependencies": {}
+  "dependencies": {
+    "@powerhousedao/design-system": "workspace:*"
+  }
 }

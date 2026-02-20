@@ -55,16 +55,18 @@
     "test:e2e:ui": "rimraf .ph && playwright test --ui"
   },
   "dependencies": {
-    "@powerhousedao/builder-tools": "workspace:*",
     "@powerhousedao/design-system": "workspace:*",
     "document-model": "workspace:*"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "catalog:",
     "@eslint/js": "^9.37.0",
     "@playwright/test": "^1.55.0",
     "@powerhousedao/e2e-utils": "workspace:*",
     "@powerhousedao/ph-cli": "workspace:*",
     "@powerhousedao/connect": "workspace:*",
+    "@powerhousedao/reactor-browser": "workspace:*",
+    "@powerhousedao/builder-tools": "workspace:*",
     "@tailwindcss/cli": "catalog:",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
@@ -78,7 +80,9 @@
     "react-dom": "catalog:",
     "typescript-eslint": "^8.46.0",
     "vite": "catalog:",
-    "tailwindcss": "catalog:"
+    "tailwindcss": "catalog:",
+    "vite-plugin-node-polyfills": "catalog:",
+    "@powerhousedao/vetra": "workspace:*"
   },
   "peerDependencies": {
     "react": ">=19.0.0",
