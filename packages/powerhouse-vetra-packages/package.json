@@ -61,6 +61,7 @@
     "@graphql-tools/utils": "catalog:",
     "@powerhousedao/design-system": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",
+    "@powerhousedao/document-engineering": "catalog:",
     "@radix-ui/react-checkbox": "^1.2.3",
     "@radix-ui/react-icons": "^1.3.2",
     "@radix-ui/react-label": "^2.1.4",
