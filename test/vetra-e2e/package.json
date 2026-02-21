@@ -95,7 +95,7 @@
     "eslint-plugin-react-hooks": "^5.2.0",
     "globals": "^16.0.0",
     "monocart-coverage-reports": "^2.12.8",
-    "pm2": "^5.4.3",
+    "pm2": "^6.0.14",
     "react": "catalog:",
     "react-dom": "catalog:",
     "tailwindcss": "catalog:",
