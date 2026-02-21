@@ -58,6 +58,7 @@ const sidebars = {
             "academy/MasteryTrack/DocumentModelCreation/ImplementDocumentReducers",
             "academy/MasteryTrack/DocumentModelCreation/ImplementDocumentModelTests",
             "academy/MasteryTrack/DocumentModelCreation/ExampleToDoListRepository",
+            "academy/MasteryTrack/DocumentModelCreation/DocumentModelVersioning",
           ],
         },
         {
