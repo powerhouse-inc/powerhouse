@@ -1,3 +1,21 @@
+## 6.0.0-dev.56 (2026-02-21)
+
+### 🚀 Features
+
+- honing in on the mamth model v experimental data ([db3833e7c](https://github.com/powerhouse-inc/powerhouse/commit/db3833e7c))
+- document-model resolution fixes ([41c95c507](https://github.com/powerhouse-inc/powerhouse/commit/41c95c507))
+- jobs that fail from document not found errors get deferred and requeued ([5232928f0](https://github.com/powerhouse-inc/powerhouse/commit/5232928f0))
+
+### 🩹 Fixes
+
+- whoops, properly export things for reactor-api ([2a769bda9](https://github.com/powerhouse-inc/powerhouse/commit/2a769bda9))
+- reactor-api tests were broken since they did not use the resolver ([169e2b11d](https://github.com/powerhouse-inc/powerhouse/commit/169e2b11d))
+- gql rename can timeout ([aacda89f7](https://github.com/powerhouse-inc/powerhouse/commit/aacda89f7))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
 ## 6.0.0-dev.55 (2026-02-20)
 
 ### 🚀 Features

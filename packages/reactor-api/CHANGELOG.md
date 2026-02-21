@@ -1,3 +1,15 @@
+## 6.0.0-dev.56 (2026-02-21)
+
+### 🩹 Fixes
+
+- gql rename can timeout ([aacda89f7](https://github.com/powerhouse-inc/powerhouse/commit/aacda89f7))
+- reactor-api tests were broken since they did not use the resolver ([169e2b11d](https://github.com/powerhouse-inc/powerhouse/commit/169e2b11d))
+- whoops, properly export things for reactor-api ([2a769bda9](https://github.com/powerhouse-inc/powerhouse/commit/2a769bda9))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
 ## 6.0.0-dev.55 (2026-02-20)
 
 ### 🚀 Features

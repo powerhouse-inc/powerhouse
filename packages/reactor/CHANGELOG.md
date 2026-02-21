@@ -1,3 +1,18 @@
+## 6.0.0-dev.56 (2026-02-21)
+
+### 🚀 Features
+
+- jobs that fail from document not found errors get deferred and requeued ([5232928f0](https://github.com/powerhouse-inc/powerhouse/commit/5232928f0))
+- document-model resolution fixes ([41c95c507](https://github.com/powerhouse-inc/powerhouse/commit/41c95c507))
+
+### 🩹 Fixes
+
+- whoops, properly export things for reactor-api ([2a769bda9](https://github.com/powerhouse-inc/powerhouse/commit/2a769bda9))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
 ## 6.0.0-dev.55 (2026-02-20)
 
 ### 🚀 Features
