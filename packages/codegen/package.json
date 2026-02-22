@@ -50,16 +50,11 @@
     "test:keep:hygen": "USE_TS_MORPH=false KEEP_TEST_OUTPUT=true pnpm test"
   },
   "dependencies": {
-    "@anatine/zod-mock": "^3.13.3",
-    "@faker-js/faker": "^8.3.1",
     "@graphql-codegen/cli": "catalog:",
-    "@graphql-codegen/core": "catalog:",
     "@graphql-codegen/typescript": "catalog:",
     "@powerhousedao/common": "workspace:*",
     "@powerhousedao/config": "workspace:*",
-    "@powerhousedao/design-system": "workspace:*",
     "@powerhousedao/document-engineering": "catalog:",
-    "@powerhousedao/reactor-browser": "workspace:*",
     "@tmpl/core": "npm:@jsr/tmpl__core@^0.6.3",
     "@types/node": "catalog:",
     "arg": "^5.0.2",
@@ -71,10 +66,7 @@
     "graphql": "catalog:",
     "graphql-codegen-typescript-validation-schema": "catalog:",
     "hygen": "^6.2.11",
-    "kysely": "catalog:",
-    "kysely-pglite": "catalog:",
     "package-json-validator": "^0.60.0",
-    "package-manager-detector": "catalog:",
     "prettier": "catalog:",
     "read-pkg": "catalog:",
     "@powerhousedao/shared": "workspace:*",
@@ -83,16 +75,17 @@
     "zocker": "^3.0.0"
   },
   "devDependencies": {
-    "@powerhousedao/analytics-engine-core": "catalog:",
-    "@powerhousedao/reactor": "workspace:*",
     "@types/bun": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
-    "copyfiles": "catalog:",
-    "document-drive": "workspace:*",
     "react": "catalog:",
     "react-dom": "catalog:",
     "vitest": "catalog:",
-    "zod": "catalog:"
+    "zod": "catalog:",
+    "@powerhousedao/reactor": "workspace:*",
+    "@powerhousedao/reactor-browser": "workspace:*",
+    "@powerhousedao/analytics-engine-core": "catalog:",
+    "@powerhousedao/design-system": "workspace:*",
+    "document-drive": "workspace:"
   }
 }

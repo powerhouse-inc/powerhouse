@@ -283,7 +283,6 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     envPrefix: ["PH_CONNECT_"],
     envDir: false,
     optimizeDeps: {
-      include: ["vite-plugin-node-polyfills/shims/process"],
       exclude: [
         "@electric-sql/pglite",
         "@electric-sql/pglite-tools",

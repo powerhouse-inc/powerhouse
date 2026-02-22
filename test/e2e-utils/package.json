@@ -35,10 +35,7 @@
     "@playwright/test": "^1.41.2"
   },
   "devDependencies": {
-    "@playwright/test": "^1.41.2",
-    "@powerhousedao/config": "workspace:*"
+    "@playwright/test": "^1.41.2"
   },
-  "dependencies": {
-    "@powerhousedao/shared": "workspace:*"
-  }
+  "dependencies": {}
 }
