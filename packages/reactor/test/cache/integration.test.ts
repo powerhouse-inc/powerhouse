@@ -1272,6 +1272,110 @@ describe("KyselyWriteCache Integration Tests", () => {
       expect(Object.keys(driveDoc5.state.global.nodes)).toHaveLength(5);
       expect(Object.keys(driveDoc10.state.global.nodes)).toHaveLength(10);
       expect(Object.keys(driveDoc15.state.global.nodes)).toHaveLength(15);
+
+      // Slicing contract: every cached snapshot stores at most 1 op per scope
+      const stream = cache.getStream(docId, scope, branch);
+      for (const snapshot of stream?.ringBuffer.getAll() ?? []) {
+        for (const ops of Object.values(snapshot.document.operations)) {
+          expect((ops ?? []).length).toBeLessThanOrEqual(1);
+        }
+      }
+    });
+
+    it("should rebuild full operation history after cache invalidation", async () => {
+      const docId = "drive-doc-invalidation";
+      const docType = "powerhouse/document-drive";
+      const scope = "global";
+      const branch = "main";
+
+      const initialState = driveDocumentModelModule.utils.createState();
+
+      const createActionId = generateId();
+      const upgradeActionId = generateId();
+      await operationStore.apply(
+        docId,
+        docType,
+        "document",
+        branch,
+        0,
+        (txn) => {
+          txn.addOperations({
+            id: deriveOperationId(docId, "document", branch, createActionId),
+            index: 0,
+            skip: 0,
+            hash: "hash-doc-0",
+            timestampUtcMs: new Date().toISOString(),
+            action: {
+              id: createActionId,
+              type: "CREATE_DOCUMENT",
+              scope: "document",
+              timestampUtcMs: Date.now().toString(),
+              input: { documentId: docId, model: docType, version: 0 },
+            },
+          });
+          txn.addOperations({
+            id: deriveOperationId(docId, "document", branch, upgradeActionId),
+            index: 1,
+            skip: 0,
+            hash: "hash-doc-1",
+            timestampUtcMs: new Date().toISOString(),
+            action: {
+              id: upgradeActionId,
+              type: "UPGRADE_DOCUMENT",
+              scope: "document",
+              timestampUtcMs: Date.now().toString(),
+              input: {
+                documentId: docId,
+                model: docType,
+                fromVersion: 0,
+                toVersion: 1,
+                initialState,
+              },
+            },
+          });
+        },
+      );
+
+      await operationStore.apply(docId, docType, scope, branch, 0, (txn) => {
+        for (let i = 1; i <= 5; i++) {
+          const actionId = generateId();
+          txn.addOperations({
+            id: deriveOperationId(docId, scope, branch, actionId),
+            index: i,
+            skip: 0,
+            hash: `hash-${i}`,
+            timestampUtcMs: new Date().toISOString(),
+            action: {
+              id: actionId,
+              type: "ADD_FOLDER",
+              scope: "global",
+              timestampUtcMs: Date.now().toString(),
+              input: {
+                id: `folder-${i}`,
+                name: `Folder ${i}`,
+                parentFolder: null,
+              },
+            },
+          });
+        }
+      });
+
+      // Warm the cache
+      const cachedDoc = await cache.getState(docId, scope, branch, 5);
+      expect(
+        Object.keys((cachedDoc as DocumentDriveDocument).state.global.nodes),
+      ).toHaveLength(5);
+
+      // Cached doc should be sliced to 1 op
+      const streamBefore = cache.getStream(docId, scope, branch);
+      const snapshotBefore = streamBefore?.ringBuffer.getAll().at(-1);
+      expect((snapshotBefore?.document.operations[scope] ?? []).length).toBe(1);
+
+      // After invalidation, the next getState must cold-miss rebuild with full state
+      cache.invalidate(docId, scope, branch);
+      const rebuiltDoc = await cache.getState(docId, scope, branch, 5);
+      expect(rebuiltDoc.state).toEqual(cachedDoc.state);
+      expect(rebuiltDoc.header.revision).toEqual(cachedDoc.header.revision);
     });
   });
 });
