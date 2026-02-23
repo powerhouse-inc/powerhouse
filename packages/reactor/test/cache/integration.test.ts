@@ -1280,6 +1280,10 @@ describe("KyselyWriteCache Integration Tests", () => {
           expect((ops ?? []).length).toBeLessThanOrEqual(1);
         }
       }
+
+      // Warm cache hit: the sliced snapshot (1 op per scope) still yields the
+      // correct next index, since the executor reads operations[scope].at(-1).index.
+      expect(getNextIndexForScope(doc15b, scope)).toBe(16);
     });
 
     it("should rebuild full operation history after cache invalidation", async () => {

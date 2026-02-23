@@ -312,6 +312,8 @@ export class KyselyWriteCache implements IWriteCache {
   /**
    * Retrieves a specific stream for a document. Exposed on the implementation
    * for testing, but not on the interface.
+   *
+   * @internal
    */
   getStream(
     documentId: string,

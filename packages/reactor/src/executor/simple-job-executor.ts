@@ -304,10 +304,16 @@ export class SimpleJobExecutor implements IJobExecutor {
       );
     }
 
-    // UNDO, REDO, and PRUNE need the full operation history to replay state
-    // correctly. The write cache stores sliced documents (last op per scope
-    // only), so invalidate before loading to force a cold-miss rebuild.
-    if (isUndoRedo(action) || action.type === "PRUNE") {
+    // UNDO, REDO, PRUNE, and NOOP+skip need the full operation history to
+    // replay state correctly. The write cache stores sliced documents (last
+    // op per scope only), so invalidate before loading to force a cold-miss
+    // rebuild. NOOP+skip arises in executeLoadJob when sync reshuffling
+    // converts conflicting local ops to NOOPs.
+    if (
+      isUndoRedo(action) ||
+      action.type === "PRUNE" ||
+      (action.type === "NOOP" && skip > 0)
+    ) {
       this.writeCache.invalidate(job.documentId, job.scope, job.branch);
     }
 
