@@ -68,9 +68,6 @@ const REACTOR_STORAGE_V2_DEFAULT = true;
 const ENABLE_DUAL_ACTION_CREATE = "ENABLE_DUAL_ACTION_CREATE";
 const ENABLE_DUAL_ACTION_CREATE_DEFAULT = true;
 
-const USE_NEW_DOCUMENT_MODEL_SUBGRAPH = "USE_NEW_DOCUMENT_MODEL_SUBGRAPH";
-const USE_NEW_DOCUMENT_MODEL_SUBGRAPH_DEFAULT = true;
-
 // Create a monolith express app for all subgraphs
 const app = express();
 
@@ -339,7 +336,6 @@ async function initServer(
       mcp: options.mcp ?? true,
       logger: apiLogger,
       enableDocumentModelSubgraphs: options.enableDocumentModelSubgraphs,
-      useNewDocumentModelSubgraph: options.useNewDocumentModelSubgraph,
       legacyReactor,
     },
     "switchboard",
@@ -515,14 +511,6 @@ export const startSwitchboard = async (
       ENABLE_DUAL_ACTION_CREATE_DEFAULT,
   );
 
-  const useNewDocumentModelSubgraph = await featureFlags.getBooleanValue(
-    USE_NEW_DOCUMENT_MODEL_SUBGRAPH,
-    options.useNewDocumentModelSubgraph ??
-      USE_NEW_DOCUMENT_MODEL_SUBGRAPH_DEFAULT,
-  );
-
-  options.useNewDocumentModelSubgraph = useNewDocumentModelSubgraph;
-
   options.reactorOptions = {
     enableDualActionCreate,
     storageV2,
@@ -537,7 +525,6 @@ export const startSwitchboard = async (
         DOCUMENT_MODEL_SUBGRAPHS_ENABLED: enableDocumentModelSubgraphs,
         REACTOR_STORAGE_V2: storageV2,
         ENABLE_DUAL_ACTION_CREATE: enableDualActionCreate,
-        USE_NEW_DOCUMENT_MODEL_SUBGRAPH: useNewDocumentModelSubgraph,
       },
       null,
       2,

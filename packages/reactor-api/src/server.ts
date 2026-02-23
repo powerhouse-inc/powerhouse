@@ -99,11 +99,6 @@ type Options = {
   documentPermissionService?: DocumentPermissionService;
   enableDocumentModelSubgraphs?: boolean;
   /**
-   * When true, uses the new DocumentModelSubgraph class that uses reactorClient.
-   * When false (default), uses the legacy DocumentModelSubgraphLegacy class.
-   */
-  useNewDocumentModelSubgraph?: boolean;
-  /**
    * When true, uses the legacy ProcessorManager from document-drive and hooks up
    * the driveAdded event. When false (default), uses ProcessorManager from ReactorModule.
    */
@@ -180,7 +175,6 @@ async function setupGraphQLManager(
   },
   documentPermissionService?: DocumentPermissionService,
   enableDocumentModelSubgraphs?: boolean,
-  useNewDocumentModelSubgraph?: boolean,
   port?: number,
 ): Promise<GraphQLManager> {
   const graphqlManager = new GraphQLManager(
@@ -204,7 +198,6 @@ async function setupGraphQLManager(
     documentPermissionService,
     {
       enableDocumentModelSubgraphs,
-      useNewDocumentModelSubgraph,
     },
     port,
   );
@@ -667,7 +660,6 @@ async function _setupAPI(
     auth,
     documentPermissionService,
     options.enableDocumentModelSubgraphs,
-    options.useNewDocumentModelSubgraph,
     port,
   );
 
