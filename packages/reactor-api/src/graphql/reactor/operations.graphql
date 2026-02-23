@@ -11,7 +11,6 @@ fragment PHDocumentFields on PHDocument {
   }
   createdAtUtcIso
   lastModifiedAtUtcIso
-  parentId
 }
 
 # Query operations
@@ -321,6 +320,10 @@ query PollSyncEnvelopes(
       dependsOn
     }
     ackOrdinal
+    deadLetters {
+      documentId
+      error
+    }
   }
 }
 

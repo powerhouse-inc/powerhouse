@@ -5,7 +5,7 @@ import { BufferedMailbox } from "../buffered-mailbox.js";
 import { ChannelError } from "../errors.js";
 import type { IChannel } from "../interfaces.js";
 import { type IMailbox, Mailbox } from "../mailbox.js";
-import type { SyncOperation } from "../sync-operation.js";
+import { SyncOperation } from "../sync-operation.js";
 import type { JwtHandler, RemoteFilter, SyncEnvelope } from "../types.js";
 import { ChannelErrorSource } from "../types.js";
 import {
@@ -96,10 +96,20 @@ export class GqlRequestChannel implements IChannel {
     this.outbox = this.bufferedOutbox;
     this.deadLetter = new Mailbox();
 
+    // when a dead letter is added, stop polling and cancel any pending push retry
+    this.deadLetter.onAdded(() => {
+      this.pollTimer.stop();
+      if (this.pushRetryTimer) {
+        clearTimeout(this.pushRetryTimer);
+        this.pushRetryTimer = null;
+      }
+    });
+
     // when sync ops are added to the outbox, push them to the remote
     this.outbox.onAdded((syncOps) => {
       if (this.isShutdown) return;
       if (this.pushBlocked) return; // ops stay in outbox, included in next retry
+      if (this.deadLetter.items.length > 0) return;
       this.attemptPush(syncOps);
     });
 
@@ -207,7 +217,7 @@ export class GqlRequestChannel implements IChannel {
       return;
     }
 
-    const { envelopes, ackOrdinal } = response;
+    const { envelopes, ackOrdinal, deadLetters } = response;
 
     // first: trim outbox
     if (ackOrdinal > 0) {
@@ -234,8 +244,56 @@ export class GqlRequestChannel implements IChannel {
       this.inbox.add(...allSyncOps);
     }
 
+    // handle dead letters from the remote
+    if (deadLetters.length > 0) {
+      this.handleRemoteDeadLetters(deadLetters);
+    }
+
     this.lastSuccessUtcMs = Date.now();
     this.failureCount = 0;
+  }
+
+  /**
+   * Handles dead letters reported by the remote server.
+   * Creates local dead letter SyncOperations so the channel quiesces.
+   */
+  private handleRemoteDeadLetters(
+    deadLetters: Array<{
+      documentId: string;
+      error: string;
+      jobId: string;
+      branch: string;
+      scopes: string[];
+      operationCount: number;
+    }>,
+  ): void {
+    for (const dl of deadLetters) {
+      this.logger.error(
+        "Remote dead letter on @ChannelId: document @DocumentId failed with: @Error",
+        this.channelId,
+        dl.documentId,
+        dl.error,
+      );
+    }
+
+    const syncOps: SyncOperation[] = [];
+    for (const dl of deadLetters) {
+      const syncOp = new SyncOperation(
+        crypto.randomUUID(),
+        dl.jobId,
+        [],
+        this.remoteName,
+        dl.documentId,
+        dl.scopes,
+        dl.branch,
+        [],
+      );
+      syncOp.failed(
+        new ChannelError(ChannelErrorSource.Outbox, new Error(dl.error)),
+      );
+      syncOps.push(syncOp);
+    }
+    this.deadLetter.add(...syncOps);
   }
 
   /**
@@ -304,6 +362,14 @@ export class GqlRequestChannel implements IChannel {
   ): Promise<{
     envelopes: SyncEnvelope[];
     ackOrdinal: number;
+    deadLetters: Array<{
+      documentId: string;
+      error: string;
+      jobId: string;
+      branch: string;
+      scopes: string[];
+      operationCount: number;
+    }>;
   }> {
     const query = `
       query PollSyncEnvelopes($channelId: String!, $outboxAck: Int!, $outboxLatest: Int!) {
@@ -367,6 +433,14 @@ export class GqlRequestChannel implements IChannel {
             dependsOn
           }
           ackOrdinal
+          deadLetters {
+            documentId
+            error
+            jobId
+            branch
+            scopes
+            operationCount
+          }
         }
       }
     `;
@@ -378,12 +452,24 @@ export class GqlRequestChannel implements IChannel {
     };
 
     const response = await this.executeGraphQL<{
-      pollSyncEnvelopes: { envelopes: SyncEnvelope[]; ackOrdinal: number };
+      pollSyncEnvelopes: {
+        envelopes: SyncEnvelope[];
+        ackOrdinal: number;
+        deadLetters?: Array<{
+          documentId: string;
+          error: string;
+          jobId: string;
+          branch: string;
+          scopes: string[];
+          operationCount: number;
+        }>;
+      };
     }>(query, variables);
 
     return {
       envelopes: response.pollSyncEnvelopes.envelopes,
       ackOrdinal: response.pollSyncEnvelopes.ackOrdinal,
+      deadLetters: response.pollSyncEnvelopes.deadLetters ?? [],
     };
   }
 
@@ -599,6 +685,17 @@ export class GqlRequestChannel implements IChannel {
       headers["Authorization"] = authHeader;
     }
 
+    const operationMatch = query.match(/(?:query|mutation)\s+(\w+)/);
+    const operationName = operationMatch?.[1] ?? "unknown";
+
+    this.logger.verbose(
+      "GQL request @channelId @operation @url vars=@variables",
+      this.channelId,
+      operationName,
+      this.config.url,
+      JSON.stringify(variables),
+    );
+
     const fetchFn = this.config.fetchFn ?? fetch;
     let response;
     try {
@@ -633,6 +730,15 @@ export class GqlRequestChannel implements IChannel {
         `Failed to parse GraphQL response: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
+
+    this.logger.verbose(
+      "GQL response @channelId @operation status=@status data=@data errors=@errors",
+      this.channelId,
+      operationName,
+      response.status,
+      JSON.stringify(result.data),
+      result.errors ? JSON.stringify(result.errors) : "none",
+    );
 
     if (result.errors) {
       throw new Error(

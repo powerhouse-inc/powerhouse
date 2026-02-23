@@ -34,9 +34,8 @@ type CliConnectPreviewOptions = Omit<
   CliConnectCommonOptions;
 
 async function startConnectStudio(options: CliConnectStudioOptions = {}) {
-  const { startConnectStudio } = await import(
-    "../../services/legacy/connect.old.js"
-  );
+  const { startConnectStudio } =
+    await import("../../services/legacy/connect.old.js");
   const { port, host, open, cors, strictPort, force, ...otherOptions } =
     options;
   return startConnectStudio({
@@ -103,9 +102,8 @@ const buildCommand = new Command("build")
 setCustomHelp(buildCommand, connectBuildHelp);
 
 async function previewConnect(options?: CliConnectPreviewOptions) {
-  const { previewConnect } = await import(
-    "../../services/legacy/connect.old.js"
-  );
+  const { previewConnect } =
+    await import("../../services/legacy/connect.old.js");
   return previewConnect(options);
 }
 

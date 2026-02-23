@@ -2,8 +2,7 @@ import type { IStorage } from "./types.js";
 
 export class BaseStorage<
   T extends Record<string, unknown> = Record<string, unknown>,
-> implements IStorage<T>
-{
+> implements IStorage<T> {
   #store: IStorage<T>;
   #namespace: string;
 

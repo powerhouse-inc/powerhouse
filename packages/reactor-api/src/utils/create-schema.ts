@@ -633,7 +633,6 @@ function generateNewApiSchema(
       revisionsList: [Revision!]!
       createdAtUtcIso: DateTime!
       lastModifiedAtUtcIso: DateTime!
-      parentId: String
     }
 
     """

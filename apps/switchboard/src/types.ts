@@ -1,5 +1,6 @@
+import type { IReactorClient } from "@powerhousedao/reactor";
 import type { IRenown } from "@renown/sdk";
-import type { DriveInput, IDocumentDriveServer } from "document-drive";
+import type { DriveInput, IDocumentDriveServer, ILogger } from "document-drive";
 
 export type StorageOptions = {
   type: "filesystem" | "memory" | "postgres" | "browser";
@@ -69,11 +70,13 @@ export type StartServerOptions = {
    * When false (default), uses the legacy DocumentModelSubgraphLegacy class.
    */
   useNewDocumentModelSubgraph?: boolean;
+  logger?: ILogger;
 };
 
 export type SwitchboardReactor = {
   defaultDriveUrl: string | undefined;
-  reactor: IDocumentDriveServer;
+  reactor: IReactorClient;
+  legacyReactor: IDocumentDriveServer;
   /** The Renown instance if identity was initialized */
   renown: IRenown | null;
 };

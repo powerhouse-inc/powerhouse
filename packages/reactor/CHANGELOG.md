@@ -1,3 +1,84 @@
+## 6.0.0-dev.56 (2026-02-21)
+
+### 🚀 Features
+
+- jobs that fail from document not found errors get deferred and requeued ([5232928f0](https://github.com/powerhouse-inc/powerhouse/commit/5232928f0))
+- document-model resolution fixes ([41c95c507](https://github.com/powerhouse-inc/powerhouse/commit/41c95c507))
+
+### 🩹 Fixes
+
+- whoops, properly export things for reactor-api ([2a769bda9](https://github.com/powerhouse-inc/powerhouse/commit/2a769bda9))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
+## 6.0.0-dev.55 (2026-02-20)
+
+### 🚀 Features
+
+- test-connect and reactor gql updates to pass along more context ([ae581e8e8](https://github.com/powerhouse-inc/powerhouse/commit/ae581e8e8))
+
+### 🩹 Fixes
+
+- fail job when loader fails ([f32b72a94](https://github.com/powerhouse-inc/powerhouse/commit/f32b72a94))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
+## 6.0.0-dev.54 (2026-02-19)
+
+### 🚀 Features
+
+- wip orchestrator for the test-client ([186d7c015](https://github.com/powerhouse-inc/powerhouse/commit/186d7c015))
+- add the ability to change the poll interval in the inspector ([0d47c30f9](https://github.com/powerhouse-inc/powerhouse/commit/0d47c30f9))
+- **connect:** build tweaks ([22b6bc7d5](https://github.com/powerhouse-inc/powerhouse/commit/22b6bc7d5))
+
+### 🩹 Fixes
+
+- ackordinal now works again, in addition we send dead letters back in poll ([ba3f39a17](https://github.com/powerhouse-inc/powerhouse/commit/ba3f39a17))
+- when a dead letter is added to the gql-req-channel, stop polling for goodness sake ([b2ac429bb](https://github.com/powerhouse-inc/powerhouse/commit/b2ac429bb))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan
+
+## 6.0.0-dev.53 (2026-02-18)
+
+### 🩹 Fixes
+
+- fixing reshuffle issue with correct tiebreakers ([7be1adf54](https://github.com/powerhouse-inc/powerhouse/commit/7be1adf54))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
+## 6.0.0-dev.52 (2026-02-17)
+
+### 🩹 Fixes
+
+- **reactor-api:** improved subgraph path matching and removed name parameter from reactor subgraph ([dcadf7fb3](https://github.com/powerhouse-inc/powerhouse/commit/dcadf7fb3))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 6.0.0-dev.51 (2026-02-17)
+
+### 🩹 Fixes
+
+- **reactor-browser,reactor:** improved error instance checks ([c6b8625e7](https://github.com/powerhouse-inc/powerhouse/commit/c6b8625e7))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 6.0.0-dev.50 (2026-02-17)
+
+This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.
+
 ## 6.0.0-dev.49 (2026-02-17)
 
 This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.

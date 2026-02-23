@@ -1,11 +1,13 @@
 import {
   ConsoleLogger,
+  DocumentModelRegistry,
   driveCollectionId,
   EventBus,
   GqlRequestChannelFactory,
   GqlResponseChannelFactory,
   InMemoryQueue,
   JobStatus,
+  NullDocumentModelResolver,
   ReactorBuilder,
   ReactorEventTypes,
   SyncBuilder,
@@ -83,8 +85,13 @@ async function setupPushBackfill(): Promise<PushBackfillSetup> {
   const connectEventBus = new EventBus();
   const switchboardEventBus = new EventBus();
 
-  const connectQueue = new InMemoryQueue(connectEventBus);
-  const switchboardQueue = new InMemoryQueue(switchboardEventBus);
+  const modelRegistry = new DocumentModelRegistry();
+  modelRegistry.registerModules(
+    driveDocumentModelModule as unknown as DocumentModelModule,
+  );
+  const resolver = new NullDocumentModelResolver(modelRegistry);
+  const connectQueue = new InMemoryQueue(connectEventBus, resolver);
+  const switchboardQueue = new InMemoryQueue(switchboardEventBus, resolver);
 
   function createCompositeFactory(queue: typeof connectQueue): IChannelFactory {
     const request = new GqlRequestChannelFactory(logger, undefined, queue);

@@ -1,3 +1,61 @@
+## 6.0.0-dev.56 (2026-02-21)
+
+This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.55 (2026-02-20)
+
+### 🚀 Features
+
+- test-connect and reactor gql updates to pass along more context ([ae581e8e8](https://github.com/powerhouse-inc/powerhouse/commit/ae581e8e8))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
+## 6.0.0-dev.54 (2026-02-19)
+
+### 🚀 Features
+
+- wip orchestrator for the test-client ([186d7c015](https://github.com/powerhouse-inc/powerhouse/commit/186d7c015))
+- **connect:** build tweaks ([22b6bc7d5](https://github.com/powerhouse-inc/powerhouse/commit/22b6bc7d5))
+
+### 🩹 Fixes
+
+- only add default drives once ([c06395d64](https://github.com/powerhouse-inc/powerhouse/commit/c06395d64))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan
+
+## 6.0.0-dev.53 (2026-02-18)
+
+This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.52 (2026-02-17)
+
+### 🩹 Fixes
+
+- **reactor-api:** improved subgraph path matching and removed name parameter from reactor subgraph ([dcadf7fb3](https://github.com/powerhouse-inc/powerhouse/commit/dcadf7fb3))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 6.0.0-dev.51 (2026-02-17)
+
+### 🩹 Fixes
+
+- **reactor-browser,reactor:** improved error instance checks ([c6b8625e7](https://github.com/powerhouse-inc/powerhouse/commit/c6b8625e7))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 6.0.0-dev.50 (2026-02-17)
+
+This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.
+
 ## 6.0.0-dev.49 (2026-02-17)
 
 This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.

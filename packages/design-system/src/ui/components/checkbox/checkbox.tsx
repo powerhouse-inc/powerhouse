@@ -12,8 +12,7 @@ type CheckboxBaseProps = Omit<
 >;
 
 export interface CheckboxProps
-  extends CheckboxBaseProps,
-    InputBaseProps<CheckboxValue> {
+  extends CheckboxBaseProps, InputBaseProps<CheckboxValue> {
   onChange?: ((checked: CheckboxValue) => void) | ((checked: boolean) => void);
 }
 

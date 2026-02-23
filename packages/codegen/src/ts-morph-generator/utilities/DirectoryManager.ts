@@ -1,8 +1,8 @@
-import { paramCase, pascalCase } from "change-case";
+import type { PHProjectDirectories } from "@powerhousedao/codegen";
+import { kebabCase, pascalCase } from "change-case";
 import fs from "fs/promises";
 import path from "path";
 import type { Project, SourceFile } from "ts-morph";
-import type { PHProjectDirectories } from "@powerhousedao/codegen";
 
 export class DirectoryManager {
   private directories: Required<PHProjectDirectories> = {
@@ -36,10 +36,10 @@ export class DirectoryManager {
     return path.join(
       rootDir,
       this.directories.documentModelDir,
-      paramCase(docModelName),
+      kebabCase(docModelName),
       "src",
       "reducers",
-      `${paramCase(moduleName)}.ts`,
+      `${kebabCase(moduleName)}.ts`,
     );
   }
 
@@ -51,10 +51,10 @@ export class DirectoryManager {
     return path.join(
       rootDir,
       this.directories.documentModelDir,
-      paramCase(docModelName),
+      kebabCase(docModelName),
       "src",
       "actions",
-      `${paramCase(moduleName)}.ts`,
+      `${kebabCase(moduleName)}.ts`,
     );
   }
 
@@ -66,7 +66,7 @@ export class DirectoryManager {
     return path.join(
       rootDir,
       this.directories.documentModelDir,
-      paramCase(docModelName),
+      kebabCase(docModelName),
       "src",
       "components",
       `${pascalCase(componentName)}.tsx`,
@@ -77,7 +77,7 @@ export class DirectoryManager {
     return path.join(
       rootDir,
       this.directories.documentModelDir,
-      paramCase(docModelName),
+      kebabCase(docModelName),
       "src",
       "types.ts",
     );

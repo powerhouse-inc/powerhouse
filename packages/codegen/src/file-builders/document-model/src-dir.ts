@@ -10,7 +10,7 @@ import {
   getPreviousVersionSourceFile,
 } from "@powerhousedao/codegen/utils";
 import { ts } from "@tmpl/core";
-import { paramCase, pascalCase } from "change-case";
+import { kebabCase, pascalCase } from "change-case";
 import type { ModuleSpecification } from "document-model";
 import path from "path";
 import { VariableDeclarationKind } from "ts-morph";
@@ -44,9 +44,9 @@ async function makeReducerOperationHandlerForModule({
   camelCaseDocumentType,
   versionedDocumentModelPackageImportPath,
 }: DocumentModelFileMakerArgs & { module: ModuleSpecification }) {
-  const paramCaseModuleName = paramCase(module.name);
+  const kebabCaseModuleName = kebabCase(module.name);
   const pascalCaseModuleName = pascalCase(module.name);
-  const filePath = path.join(reducersDirPath, `${paramCaseModuleName}.ts`);
+  const filePath = path.join(reducersDirPath, `${kebabCaseModuleName}.ts`);
   const { alreadyExists, sourceFile } = getOrCreateSourceFile(
     project,
     filePath,

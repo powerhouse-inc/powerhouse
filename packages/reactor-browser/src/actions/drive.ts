@@ -68,11 +68,18 @@ export async function addRemoteDrive(
   };
 
   const resolvedDriveId = driveId ?? driveInfo.id;
+  const collectionId = driveCollectionId("main", resolvedDriveId);
 
-  // Use a unique name for the remote to allow multiple subscribers to the same drive
+  const existingRemote = sync
+    .list()
+    .find((remote) => remote.collectionId === collectionId);
+  if (existingRemote) {
+    return resolvedDriveId;
+  }
+
   const remoteName = crypto.randomUUID();
 
-  await sync.add(remoteName, driveCollectionId("main", resolvedDriveId), {
+  await sync.add(remoteName, collectionId, {
     type: "gql",
     parameters: {
       url: driveInfo.graphqlEndpoint,

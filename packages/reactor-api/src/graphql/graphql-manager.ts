@@ -1,6 +1,9 @@
 import type {
+  GetDataSourceFunction,
   GraphQLDataSourceProcessOptions,
   ServiceDefinition,
+  SubgraphHealthCheckFunction,
+  SupergraphSdlUpdateFunction,
 } from "@apollo/gateway";
 import {
   ApolloGateway,
@@ -9,6 +12,7 @@ import {
 } from "@apollo/gateway";
 import { ApolloServer } from "@apollo/server";
 import { ApolloServerPluginInlineTraceDisabled } from "@apollo/server/plugin/disabled";
+import { ApolloServerPluginDrainHttpServer } from "@apollo/server/plugin/drainHttpServer";
 import { ApolloServerPluginLandingPageLocalDefault } from "@apollo/server/plugin/landingPage/default";
 import { expressMiddleware } from "@as-integrations/express4";
 import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
@@ -23,6 +27,7 @@ import cors from "cors";
 import type {
   DocumentDriveDocument,
   IDocumentDriveServer,
+  ILogger,
   IRelationalDbLegacy,
 } from "document-drive";
 import { childLogger, debounce, responseForDrive } from "document-drive";
@@ -34,6 +39,7 @@ import type { GraphQLSchema } from "graphql";
 import type http from "node:http";
 import path from "node:path";
 import { setTimeout } from "node:timers/promises";
+import { match, type MatchFunction, type ParamData } from "path-to-regexp";
 import type { WebSocketServer } from "ws";
 import type { AuthConfig } from "../services/auth.service.js";
 import { AuthService } from "../services/auth.service.js";
@@ -122,24 +128,30 @@ export type GraphqlManagerFeatureFlags = {
 
 export class GraphQLManager {
   private initialized = false;
-  private coreRouter: IRouter = Router();
+  private router: IRouter = Router();
   private coreSubgraphsMap = new Map<string, ISubgraph[]>();
-  private reactorRouter: IRouter = Router();
   private contextFields: Record<string, any> = {};
   private readonly subgraphs = new Map<string, ISubgraph[]>();
   private authService: AuthService | null = null;
 
   private coreApolloServer: ApolloServer<Context> | null = null;
-  private readonly subgraphApolloServers = new Map<
+  private readonly subgraphServers = new Map<string, ApolloServer<Context>>();
+  private readonly subgraphHandlers = new Map<
     string,
-    ApolloServer<Context>
+    {
+      handler: express.RequestHandler;
+      matcher: MatchFunction<ParamData>;
+    }
   >();
   private readonly subgraphWsDisposers = new Map<
     string,
     { dispose: () => void | Promise<void> }
   >();
-
-  private readonly logger = childLogger(["reactor-api", "graphql-manager"]);
+  private gatewayOptions: {
+    update: SupergraphSdlUpdateFunction;
+    healthCheck: SubgraphHealthCheckFunction;
+    getDataSource: GetDataSourceFunction;
+  } | null = null;
 
   private readonly apolloLogger = childLogger([
     "reactor-api",
@@ -157,6 +169,7 @@ export class GraphQLManager {
     private readonly relationalDb: IRelationalDbLegacy,
     private readonly analyticsStore: IAnalyticsStore,
     private readonly syncManager: ISyncManager,
+    private readonly logger: ILogger,
     private readonly authConfig?: AuthConfig,
     private readonly documentPermissionService?: DocumentPermissionService,
     private readonly featureFlags: GraphqlManagerFeatureFlags = DefaultFeatureFlags,
@@ -182,11 +195,19 @@ export class GraphQLManager {
       throw new Error("DocumentDrive model required");
     }
 
-    this.coreRouter.use(cors());
-    this.coreRouter.use(bodyParser.json({ limit: "50mb" }));
-    this.coreRouter.use(
-      bodyParser.urlencoded({ extended: true, limit: "50mb" }),
-    );
+    this.router.use(cors());
+    this.router.use(bodyParser.json({ limit: "50mb" }));
+    this.router.use(bodyParser.urlencoded({ extended: true, limit: "50mb" }));
+
+    this.router.use("/graphql", (req, res, next) => {
+      const result = this.subgraphHandlers.values().find(({ matcher }) => {
+        return matcher("/graphql" + req.path);
+      });
+      if (!result) {
+        return res.status(404).send(`${req.path} subgraph not found`);
+      }
+      return result.handler(req, res, next);
+    });
 
     this.app.use("/", (req, res, next) => {
       this.setAdditionalContextFields({
@@ -210,31 +231,7 @@ export class GraphQLManager {
                 ?.map((a) => a.toLowerCase())
                 .includes(address.toLowerCase() ?? "") ?? false),
       });
-      this.coreRouter(req, res, next);
-    });
-    this.app.use("/", (req, res, next) => {
-      this.setAdditionalContextFields({
-        user: req.user,
-        isAdmin: (address: string) =>
-          !req.auth_enabled
-            ? true
-            : (req.admins
-                ?.map((a) => a.toLowerCase())
-                .includes(address.toLowerCase() ?? "") ?? false),
-        isUser: (address: string) =>
-          !req.auth_enabled
-            ? true
-            : (req.users
-                ?.map((a) => a.toLowerCase())
-                .includes(address.toLowerCase() ?? "") ?? false),
-        isGuest: (address: string) =>
-          !req.auth_enabled
-            ? true
-            : (req.guests
-                ?.map((a) => a.toLowerCase())
-                .includes(address.toLowerCase() ?? "") ?? false),
-      });
-      this.reactorRouter(req, res, next);
+      this.router(req, res, next);
     });
 
     await this.#setupCoreSubgraphs("graphql", coreSubgraphs);
@@ -258,6 +255,8 @@ export class GraphQLManager {
       }
     });
 
+    await this.#createApolloGateway();
+
     return this.updateRouter();
   }
 
@@ -277,9 +276,9 @@ export class GraphQLManager {
     }
 
     // REST endpoint for drive info at /d/:drive
-    this.#setupDriveInfoRestEndpoint(this.coreRouter);
+    this.#setupDriveInfoRestEndpoint(this.router);
 
-    return this.#setupSubgraphs(this.coreSubgraphsMap, this.coreRouter);
+    return this.#setupSubgraphs(this.coreSubgraphsMap);
   }
 
   async #setupDocumentModelSubgraphs(
@@ -327,7 +326,7 @@ export class GraphQLManager {
       }
     }
 
-    return this.#setupSubgraphs(this.coreSubgraphsMap, this.coreRouter);
+    return this.#setupSubgraphs(this.coreSubgraphsMap);
   }
 
   async #addSubgraphInstance(
@@ -387,19 +386,13 @@ export class GraphQLManager {
 
   private async _updateRouter() {
     this.logger.debug("Updating router");
-    const newRouter = Router();
-    newRouter.use(cors());
-    newRouter.use(bodyParser.json({ limit: "50mb" }));
 
     // @todo:
     // if auth enabled, subgraphs are only available to guests, users and admins
     // if auth enabled, set req user to the graphql context
     // if auth disabled, subgraphs are available to all
 
-    await this.#setupSubgraphs(this.subgraphs, newRouter);
-    this.reactorRouter = newRouter;
-    await this.#createApolloGateway();
-    return;
+    await this.#setupSubgraphs(this.subgraphs);
   }
 
   getAdditionalContextFields = () => {
@@ -459,8 +452,8 @@ export class GraphQLManager {
     });
   }
 
-  #createApolloServer(schema: GraphQLSchema) {
-    return new ApolloServer<Context>({
+  async #createApolloServer(schema: GraphQLSchema) {
+    const server = new ApolloServer<Context>({
       schema,
       logger: this.apolloLogger,
       introspection: true,
@@ -469,6 +462,9 @@ export class GraphQLManager {
         ApolloServerPluginLandingPageLocalDefault(),
       ],
     });
+    server.startInBackgroundHandlingStartupErrorsByLoggingAndFailingAllRequests();
+    await this.#waitForServer(server);
+    return server;
   }
 
   async #waitForServer(server: ApolloServer<Context>): Promise<boolean> {
@@ -485,10 +481,7 @@ export class GraphQLManager {
     return path.join(subgraph.path ?? "", supergraph, subgraph.name);
   }
 
-  async #setupSubgraphs(
-    subgraphsMap: Map<string, ISubgraph[]>,
-    router: IRouter,
-  ) {
+  async #setupSubgraphs(subgraphsMap: Map<string, ISubgraph[]>) {
     for (const [supergraph, subgraphs] of subgraphsMap.entries()) {
       for (const subgraph of subgraphs) {
         this.logger.debug(`Setting up subgraph ${subgraph.name}`);
@@ -513,10 +506,11 @@ export class GraphQLManager {
           );
 
           // create and start apollo server
-          const server = this.#createApolloServer(schema);
-          server.startInBackgroundHandlingStartupErrorsByLoggingAndFailingAllRequests();
-          await this.#waitForServer(server);
-          this.subgraphApolloServers.set(subgraphPath, server);
+          const existingServer = this.subgraphServers.get(subgraphPath);
+          const server =
+            existingServer || (await this.#createApolloServer(schema));
+
+          this.subgraphServers.set(subgraphPath, server);
 
           if (subgraph.hasSubscriptions) {
             const wsDisposer = useServer(
@@ -538,7 +532,7 @@ export class GraphQLManager {
             );
           }
 
-          this.#setupApolloExpressMiddleware(server, router, subgraphPath);
+          this.#setupApolloExpressMiddleware(server, subgraphPath);
         } catch (error) {
           this.logger.error(
             "Failed to setup subgraph @name at path @path: @error",
@@ -590,10 +584,12 @@ export class GraphQLManager {
           await this.reactorClient.get<DocumentDriveDocument>(driveIdOrSlug);
 
         // Construct the graphqlEndpoint from the request
-        const protocol = req.protocol + ":";
+        // Use X-Forwarded-Proto header when behind a reverse proxy (Heroku, Traefik, etc.)
+        const forwardedProto = req.get("x-forwarded-proto");
+        const protocol = (forwardedProto ?? req.protocol) + ":";
         const host = req.get("host") ?? "";
         const basePath = this.path === "/" ? "" : this.path;
-        const graphqlEndpoint = `${protocol}//${host}${basePath}/graphql/r/local`;
+        const graphqlEndpoint = `${protocol}//${host}${basePath}/graphql/r`;
 
         const driveInfo = responseForDrive(driveDoc, graphqlEndpoint);
         res.json(driveInfo);
@@ -614,82 +610,72 @@ export class GraphQLManager {
     );
   }
 
-  async #createApolloGateway() {
+  async #buildSupergrahSdl() {
+    if (!this.gatewayOptions) {
+      throw new Error("Gateway is not ready");
+    }
     const subgraphs = this.#getAllSubgraphs();
 
-    try {
-      const herokuOrLocal = process.env.HEROKU_APP_DEFAULT_DOMAIN_NAME
-        ? `https://${process.env.HEROKU_APP_DEFAULT_DOMAIN_NAME}`
-        : `http://localhost:${this.port}`;
+    const herokuOrLocal = process.env.HEROKU_APP_DEFAULT_DOMAIN_NAME
+      ? `https://${process.env.HEROKU_APP_DEFAULT_DOMAIN_NAME}`
+      : `http://localhost:${this.port}`;
 
-      const serviceList: ServiceDefinition[] = Array.from(
-        subgraphs.entries(),
-      ).map(([path, subgraph]) => ({
-        name: path.replace("/", ":"),
-        typeDefs: this.#buildSubgraphSchemaModule(subgraph).typeDefs,
-        url: `${herokuOrLocal}${path}`,
-      }));
+    const serviceList: ServiceDefinition[] = Array.from(
+      subgraphs.entries(),
+    ).map(([path, subgraph]) => ({
+      name: path.replace("/", ":"),
+      typeDefs: this.#buildSubgraphSchemaModule(subgraph).typeDefs,
+      url: `${herokuOrLocal}${path}`,
+    }));
 
-      const gateway = new ApolloGateway({
-        supergraphSdl: new LocalCompose({
-          localServiceList: serviceList,
-        }),
-        buildService: (serviceConfig) => {
-          return new AuthenticatedDataSource(serviceConfig);
-        },
-      });
-
-      if (this.coreApolloServer) {
-        try {
-          await this.#waitForServer(this.coreApolloServer);
-          await this.coreApolloServer.stop();
-        } catch {
-          // ignore error when stopping apollo server
-        }
-      }
-
-      this.coreApolloServer = new ApolloServer<Context>({
-        gateway,
-        logger: this.apolloLogger,
-        introspection: true,
-        plugins: [
-          ApolloServerPluginInlineTraceDisabled(),
-          ApolloServerPluginLandingPageLocalDefault(),
-        ],
-      });
-
-      await this.coreApolloServer.start();
-      await this.#waitForServer(this.coreApolloServer);
-
-      const superGraphPath = path.join(this.path, "graphql");
-      this.#setupApolloExpressMiddleware(
-        this.coreApolloServer,
-        this.reactorRouter,
-        superGraphPath,
-      );
-
-      if (!this.initialized) {
-        this.logger.info(`Registered ${superGraphPath} supergraph `);
-        this.initialized = true;
-      }
-      return;
-    } catch (e) {
-      if (e instanceof Error) {
-        this.logger.error(e.message);
-      } else {
-        this.logger.error("Could not create Apollo Gateway", e);
-      }
-    }
+    const localCompose = new LocalCompose({
+      localServiceList: serviceList,
+    });
+    return await localCompose.initialize(this.gatewayOptions!);
   }
 
-  #setupApolloExpressMiddleware(
-    server: ApolloServer<Context>,
-    router: IRouter,
-    path: string,
-  ) {
-    router.use(
-      path,
-      expressMiddleware(server, {
+  async #createApolloGateway() {
+    const gateway = new ApolloGateway({
+      supergraphSdl: async (options) => {
+        this.gatewayOptions = options;
+        return await this.#buildSupergrahSdl();
+      },
+      buildService: (serviceConfig) => {
+        return new AuthenticatedDataSource(serviceConfig);
+      },
+    });
+
+    if (this.coreApolloServer) {
+      throw new Error("Supergrah server is already running");
+    }
+
+    this.coreApolloServer = new ApolloServer<Context>({
+      gateway,
+      logger: this.apolloLogger,
+      introspection: true,
+      plugins: [
+        ApolloServerPluginDrainHttpServer({ httpServer: this.httpServer }),
+        ApolloServerPluginInlineTraceDisabled(),
+        ApolloServerPluginLandingPageLocalDefault(),
+      ],
+    });
+
+    await this.coreApolloServer.start();
+    await this.#waitForServer(this.coreApolloServer);
+
+    const superGraphPath = path.join(this.path, "graphql");
+    this.#setupApolloExpressMiddleware(this.coreApolloServer, superGraphPath);
+
+    if (!this.initialized) {
+      this.logger.info(`Registered ${superGraphPath} supergraph `);
+      this.initialized = true;
+    }
+    return;
+  }
+
+  #setupApolloExpressMiddleware(server: ApolloServer<Context>, path: string) {
+    this.subgraphHandlers.set(path, {
+      handler: expressMiddleware(server, {
         context: ({ req }) =>
           Promise.resolve<Context>({
             headers: req.headers,
@@ -699,6 +685,7 @@ export class GraphQLManager {
             ...this.getAdditionalContextFields(),
           }),
       }),
-    );
+      matcher: match(path),
+    });
   }
 }

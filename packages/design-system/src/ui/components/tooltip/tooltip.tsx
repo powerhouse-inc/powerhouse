@@ -13,8 +13,7 @@ import {
 import { forwardRef } from "react";
 
 interface TooltipProps
-  extends TooltipPrimitiveProps,
-    Omit<TooltipContentProps, "content"> {
+  extends TooltipPrimitiveProps, Omit<TooltipContentProps, "content"> {
   content: React.ReactNode;
   className?: string;
   triggerAsChild?: boolean;

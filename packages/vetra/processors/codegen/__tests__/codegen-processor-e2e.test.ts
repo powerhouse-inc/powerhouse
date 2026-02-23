@@ -118,9 +118,8 @@ describe("CodegenProcessorLegacy E2E Tests", () => {
 
   describe("Document Editor E2E", () => {
     it("should process valid document-editor strand and call generateEditor with correct arguments", async () => {
-      const { generateEditor, generateManifest } = await import(
-        "@powerhousedao/codegen"
-      );
+      const { generateEditor, generateManifest } =
+        await import("@powerhousedao/codegen");
 
       const validState: DocumentEditorState = {
         name: "Test Editor",
@@ -175,9 +174,8 @@ describe("CodegenProcessorLegacy E2E Tests", () => {
     });
 
     it("should not call codegen functions for invalid document-editor strand (missing name)", async () => {
-      const { generateEditor, generateManifest } = await import(
-        "@powerhousedao/codegen"
-      );
+      const { generateEditor, generateManifest } =
+        await import("@powerhousedao/codegen");
 
       const invalidState: DocumentEditorState = {
         name: "",
@@ -201,9 +199,8 @@ describe("CodegenProcessorLegacy E2E Tests", () => {
     });
 
     it("should not call codegen functions for invalid document-editor strand (DRAFT status)", async () => {
-      const { generateEditor, generateManifest } = await import(
-        "@powerhousedao/codegen"
-      );
+      const { generateEditor, generateManifest } =
+        await import("@powerhousedao/codegen");
 
       const invalidState: DocumentEditorState = {
         name: "Test Editor",
@@ -227,9 +224,8 @@ describe("CodegenProcessorLegacy E2E Tests", () => {
     });
 
     it("should not call codegen functions for invalid document-editor strand (empty documentTypes)", async () => {
-      const { generateEditor, generateManifest } = await import(
-        "@powerhousedao/codegen"
-      );
+      const { generateEditor, generateManifest } =
+        await import("@powerhousedao/codegen");
 
       const invalidState: DocumentEditorState = {
         name: "Test Editor",
@@ -253,9 +249,8 @@ describe("CodegenProcessorLegacy E2E Tests", () => {
 
   describe("Document Model E2E", () => {
     it("should process valid document-model strand and call model and manifest codegen functions", async () => {
-      const { generateFromDocument, generateManifest } = await import(
-        "@powerhousedao/codegen"
-      );
+      const { generateFromDocument, generateManifest } =
+        await import("@powerhousedao/codegen");
 
       const validState = {
         id: "test-model-id",
@@ -491,9 +486,8 @@ describe("CodegenProcessorLegacy E2E Tests", () => {
 
   describe("App E2E", () => {
     it("should process valid app strand without dragAndDrop", async () => {
-      const { generateDriveEditor, generateManifest } = await import(
-        "@powerhousedao/codegen"
-      );
+      const { generateDriveEditor, generateManifest } =
+        await import("@powerhousedao/codegen");
 
       const validState: AppModuleGlobalState = {
         name: "Test App",
@@ -541,9 +535,8 @@ describe("CodegenProcessorLegacy E2E Tests", () => {
     });
 
     it("should process valid app strand with dragAndDrop enabled", async () => {
-      const { generateDriveEditor, generateManifest } = await import(
-        "@powerhousedao/codegen"
-      );
+      const { generateDriveEditor, generateManifest } =
+        await import("@powerhousedao/codegen");
 
       const validState: AppModuleGlobalState = {
         name: "Test App",
@@ -580,9 +573,8 @@ describe("CodegenProcessorLegacy E2E Tests", () => {
     });
 
     it("should not call codegen functions for invalid app strand (DRAFT status)", async () => {
-      const { generateDriveEditor, generateManifest } = await import(
-        "@powerhousedao/codegen"
-      );
+      const { generateDriveEditor, generateManifest } =
+        await import("@powerhousedao/codegen");
 
       const invalidState: AppModuleGlobalState = {
         name: "Test App",
@@ -607,9 +599,8 @@ describe("CodegenProcessorLegacy E2E Tests", () => {
 
   describe("Subgraph E2E", () => {
     it("should process valid subgraph strand and call generateSubgraph with null", async () => {
-      const { generateSubgraph, generateManifest } = await import(
-        "@powerhousedao/codegen"
-      );
+      const { generateSubgraph, generateManifest } =
+        await import("@powerhousedao/codegen");
 
       const validState: SubgraphModuleState = {
         name: "Test Subgraph",
@@ -646,9 +637,8 @@ describe("CodegenProcessorLegacy E2E Tests", () => {
     });
 
     it("should not call codegen functions for invalid subgraph strand (DRAFT status)", async () => {
-      const { generateSubgraph, generateManifest } = await import(
-        "@powerhousedao/codegen"
-      );
+      const { generateSubgraph, generateManifest } =
+        await import("@powerhousedao/codegen");
 
       const invalidState: SubgraphModuleState = {
         name: "Test Subgraph",
@@ -792,9 +782,8 @@ describe("CodegenProcessorLegacy E2E Tests", () => {
     });
 
     it("should process valid strands and skip invalid strands in the same batch", async () => {
-      const { generateEditor, generateSubgraph } = await import(
-        "@powerhousedao/codegen"
-      );
+      const { generateEditor, generateSubgraph } =
+        await import("@powerhousedao/codegen");
 
       const validEditorState: DocumentEditorState = {
         name: "Test Editor",
@@ -899,9 +888,8 @@ describe("CodegenProcessorLegacy E2E Tests", () => {
     });
 
     it("should not process strand with missing documentId", async () => {
-      const { generateEditor, generateManifest } = await import(
-        "@powerhousedao/codegen"
-      );
+      const { generateEditor, generateManifest } =
+        await import("@powerhousedao/codegen");
 
       const validState: DocumentEditorState = {
         name: "Test Editor",
@@ -926,9 +914,8 @@ describe("CodegenProcessorLegacy E2E Tests", () => {
     });
 
     it("should not process strand with missing state", async () => {
-      const { generateEditor, generateManifest } = await import(
-        "@powerhousedao/codegen"
-      );
+      const { generateEditor, generateManifest } =
+        await import("@powerhousedao/codegen");
 
       const strand = {
         documentId: "test-doc-1",

@@ -1,7 +1,13 @@
 import type { ILogger, LoggerErrorHandler } from "./logger-types.js";
 
 const tokenSub = /@([a-zA-Z0-9_]+)/g;
-const dtf = new Intl.DateTimeFormat();
+const dtf = new Intl.DateTimeFormat(undefined, {
+  hour12: false,
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+  fractionalSecondDigits: 2,
+});
 
 const formatMessage = (
   tagString: string,
@@ -106,7 +112,7 @@ export class ConsoleLogger implements ILogger {
         replacements,
       );
 
-      console.debug(`[${meta["timestamp"]}] ${formattedMessage}`, meta);
+      console.debug(`[${meta["timestamp"]}] ${formattedMessage}`);
     }
   }
 
@@ -118,7 +124,7 @@ export class ConsoleLogger implements ILogger {
         replacements,
       );
 
-      console.debug(`[${meta["timestamp"]}] ${formattedMessage}`, meta);
+      console.debug(`[${meta["timestamp"]}] ${formattedMessage}`);
     }
   }
 
@@ -130,7 +136,7 @@ export class ConsoleLogger implements ILogger {
         replacements,
       );
 
-      console.info(`[${meta["timestamp"]}] ${formattedMessage}`, meta);
+      console.info(`[${meta["timestamp"]}] ${formattedMessage}`);
     }
   }
 
@@ -142,7 +148,7 @@ export class ConsoleLogger implements ILogger {
         replacements,
       );
 
-      console.warn(`[${meta["timestamp"]}] ${formattedMessage}`, meta);
+      console.warn(`[${meta["timestamp"]}] ${formattedMessage}`);
     }
   }
 
@@ -154,7 +160,7 @@ export class ConsoleLogger implements ILogger {
         replacements,
       );
 
-      console.error(`[${meta["timestamp"]}] ${formattedMessage}`, meta);
+      console.error(`[${meta["timestamp"]}] ${formattedMessage}`);
     }
   }
 }

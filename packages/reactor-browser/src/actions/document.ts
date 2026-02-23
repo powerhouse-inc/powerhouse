@@ -492,7 +492,7 @@ export async function addFileWithProgress(
     return fileNode;
   } catch (error) {
     // Don't override unsupported-document-type status
-    if (!(error instanceof UnsupportedDocumentTypeError)) {
+    if (!UnsupportedDocumentTypeError.isError(error)) {
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error occurred";
       onProgress?.({

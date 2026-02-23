@@ -1,3 +1,120 @@
+## 6.0.0-dev.56 (2026-02-21)
+
+### 🚀 Features
+
+- honing in on the mamth model v experimental data ([db3833e7c](https://github.com/powerhouse-inc/powerhouse/commit/db3833e7c))
+- document-model resolution fixes ([41c95c507](https://github.com/powerhouse-inc/powerhouse/commit/41c95c507))
+- jobs that fail from document not found errors get deferred and requeued ([5232928f0](https://github.com/powerhouse-inc/powerhouse/commit/5232928f0))
+
+### 🩹 Fixes
+
+- whoops, properly export things for reactor-api ([2a769bda9](https://github.com/powerhouse-inc/powerhouse/commit/2a769bda9))
+- reactor-api tests were broken since they did not use the resolver ([169e2b11d](https://github.com/powerhouse-inc/powerhouse/commit/169e2b11d))
+- gql rename can timeout ([aacda89f7](https://github.com/powerhouse-inc/powerhouse/commit/aacda89f7))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
+## 6.0.0-dev.55 (2026-02-20)
+
+### 🚀 Features
+
+- added ordinals to the channel inspector ([dd472fab8](https://github.com/powerhouse-inc/powerhouse/commit/dd472fab8))
+- test-connect and reactor gql updates to pass along more context ([ae581e8e8](https://github.com/powerhouse-inc/powerhouse/commit/ae581e8e8))
+
+### 🩹 Fixes
+
+- fail job when loader fails ([f32b72a94](https://github.com/powerhouse-inc/powerhouse/commit/f32b72a94))
+- fixed deep bug where index count was wrong during reshuffle ([a25ad9f91](https://github.com/powerhouse-inc/powerhouse/commit/a25ad9f91))
+- linter and testing issues ([34215801a](https://github.com/powerhouse-inc/powerhouse/commit/34215801a))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
+## 6.0.0-dev.54 (2026-02-19)
+
+### 🚀 Features
+
+- improved logging on vetra, switchboard and connect ([3fb127687](https://github.com/powerhouse-inc/powerhouse/commit/3fb127687))
+- added ability to remove a remote through the inspector ([0a06fcdc1](https://github.com/powerhouse-inc/powerhouse/commit/0a06fcdc1))
+- add the ability to change the poll interval in the inspector ([0d47c30f9](https://github.com/powerhouse-inc/powerhouse/commit/0d47c30f9))
+- wip orchestrator for the test-client ([186d7c015](https://github.com/powerhouse-inc/powerhouse/commit/186d7c015))
+- **connect:** build tweaks ([22b6bc7d5](https://github.com/powerhouse-inc/powerhouse/commit/22b6bc7d5))
+- **profiling:** add --output option to reactor-direct for saving results to file ([6fb58db6d](https://github.com/powerhouse-inc/powerhouse/commit/6fb58db6d))
+- **profiling:** use ISO 8601 timestamps in output file names ([09a74ae49](https://github.com/powerhouse-inc/powerhouse/commit/09a74ae49))
+- **profiling:** print command arguments at start of reactor-direct output ([acbdc71f6](https://github.com/powerhouse-inc/powerhouse/commit/acbdc71f6))
+- **profiling:** split output into --file (timestamped) and --output (exact path) ([971cc0c88](https://github.com/powerhouse-inc/powerhouse/commit/971cc0c88))
+
+### 🩹 Fixes
+
+- when a dead letter is added to the gql-req-channel, stop polling for goodness sake ([b2ac429bb](https://github.com/powerhouse-inc/powerhouse/commit/b2ac429bb))
+- only add default drives once ([c06395d64](https://github.com/powerhouse-inc/powerhouse/commit/c06395d64))
+- ackordinal now works again, in addition we send dead letters back in poll ([ba3f39a17](https://github.com/powerhouse-inc/powerhouse/commit/ba3f39a17))
+- **ph-cli,switchboard:** create preview drive on new reactor ([1e5ed8794](https://github.com/powerhouse-inc/powerhouse/commit/1e5ed8794))
+- **profiling:** simulate terminal carriage return behavior in output file ([2df9d9369](https://github.com/powerhouse-inc/powerhouse/commit/2df9d9369))
+- **profiling:** improve output file robustness in reactor-direct ([020c76d7b](https://github.com/powerhouse-inc/powerhouse/commit/020c76d7b))
+
+### 🔥 Performance
+
+- **profiling:** added docker compose memory limits ([f26508a2b](https://github.com/powerhouse-inc/powerhouse/commit/f26508a2b))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan
+- Samuel Hawksby-Robinson @Samyoul
+
+## 6.0.0-dev.53 (2026-02-18)
+
+### 🩹 Fixes
+
+- fixing reshuffle issue with correct tiebreakers ([7be1adf54](https://github.com/powerhouse-inc/powerhouse/commit/7be1adf54))
+- failing test because of timing pressure ([c996aa83e](https://github.com/powerhouse-inc/powerhouse/commit/c996aa83e))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
+## 6.0.0-dev.52 (2026-02-17)
+
+### 🚀 Features
+
+- **reactor-api:** optimize apollo server integration with express ([d6a765917](https://github.com/powerhouse-inc/powerhouse/commit/d6a765917))
+
+### 🩹 Fixes
+
+- **connect:** deduplicate document models by type and version ([564fb61b8](https://github.com/powerhouse-inc/powerhouse/commit/564fb61b8))
+- **ph-cli:** fixed vetra preview drive port ([e8144cc4e](https://github.com/powerhouse-inc/powerhouse/commit/e8144cc4e))
+- **reactor-api:** improved subgraph path matching and removed name parameter from reactor subgraph ([dcadf7fb3](https://github.com/powerhouse-inc/powerhouse/commit/dcadf7fb3))
+- **vetra:** removed deprecated document model subgraphs ([6a4076af6](https://github.com/powerhouse-inc/powerhouse/commit/6a4076af6))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 6.0.0-dev.51 (2026-02-17)
+
+### 🩹 Fixes
+
+- **design-system:** fix static assets relative path ([ae9d936dc](https://github.com/powerhouse-inc/powerhouse/commit/ae9d936dc))
+- **reactor-browser,reactor:** improved error instance checks ([c6b8625e7](https://github.com/powerhouse-inc/powerhouse/commit/c6b8625e7))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 6.0.0-dev.50 (2026-02-17)
+
+### 🩹 Fixes
+
+- **reactor-api:** use X-Forwarded-Proto header for correct protocol detection ([34cefd878](https://github.com/powerhouse-inc/powerhouse/commit/34cefd878))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 6.0.0-dev.49 (2026-02-17)
 
 ### 🩹 Fixes

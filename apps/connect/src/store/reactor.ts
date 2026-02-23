@@ -47,7 +47,6 @@ import {
   loadExternalPackages,
   subscribeExternalPackages,
 } from "./external-packages.js";
-import { createProcessorHostModule } from "./processor-host-module.js";
 
 export async function clearReactorStorage() {
   const pg = window.ph?.reactorClientModule?.pg;
@@ -111,7 +110,16 @@ export async function createReactor() {
   // get document models to set in the reactor (all versions)
   const documentModelModules = vetraPackages
     .flatMap((pkg) => pkg.modules.documentModelModules)
-    .filter((module) => module !== undefined);
+    .filter(
+      (module, index, modules) =>
+        module !== undefined &&
+        // deduplicate by documentType and version
+        modules.findIndex(
+          (m) =>
+            m?.documentType === module.documentType &&
+            m.version === module.version,
+        ) === index,
+    );
 
   // get upgrade manifests from packages
   const upgradeManifests = vetraPackages.flatMap((pkg) => pkg.upgradeManifests);
@@ -189,6 +197,8 @@ export async function createReactor() {
   );
 
   if (packagesWithProcessorFactories.length > 0) {
+    const { createProcessorHostModule } =
+      await import("./processor-host-module.js");
     const processorHostModule = await createProcessorHostModule();
     if (processorHostModule !== undefined) {
       await Promise.all(

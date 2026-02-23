@@ -161,28 +161,6 @@ export async function initFeatureFlags(
   const features = new Map<string, boolean>();
   const client = OpenFeature.getClient();
 
-  features.set(
-    FEATURE_LEGACY_READ_ENABLED,
-    client.getBooleanValue(
-      FEATURE_LEGACY_READ_ENABLED,
-      FEATURE_LEGACY_READ_ENABLED_DEFAULT,
-    ),
-  );
-  features.set(
-    FEATURE_LEGACY_WRITE_ENABLED,
-    client.getBooleanValue(
-      FEATURE_LEGACY_WRITE_ENABLED,
-      FEATURE_LEGACY_WRITE_ENABLED_DEFAULT,
-    ),
-  );
-  features.set(
-    FEATURE_CHANNEL_SYNC_ENABLED,
-    client.getBooleanValue(
-      FEATURE_CHANNEL_SYNC_ENABLED,
-      FEATURE_CHANNEL_SYNC_ENABLED_DEFAULT,
-    ),
-  );
-
   // Query param overrides env var for inspector
   const inspectorFromParam = params.has(FEATURE_INSPECTOR_ENABLED);
   const inspectorEnabled = inspectorFromParam
@@ -215,62 +193,8 @@ export async function initFeatureFlags(
   return features;
 }
 
-const FEATURE_LEGACY_READ_ENABLED = "FEATURE_LEGACY_READ_ENABLED";
-const FEATURE_LEGACY_READ_ENABLED_DEFAULT = false;
-
-const FEATURE_LEGACY_WRITE_ENABLED = "FEATURE_LEGACY_WRITE_ENABLED";
-const FEATURE_LEGACY_WRITE_ENABLED_DEFAULT = false;
-
-const FEATURE_CHANNEL_SYNC_ENABLED = "FEATURE_CHANNEL_SYNC_ENABLED";
-const FEATURE_CHANNEL_SYNC_ENABLED_DEFAULT = true;
-
 const FEATURE_INSPECTOR_ENABLED = "FEATURE_INSPECTOR_ENABLED";
 const FEATURE_INSPECTOR_ENABLED_DEFAULT = false;
-
-/**
- * If true, reads go through legacy reactor.
- *
- * If false, reads go through the new reactor.
- */
-export async function isLegacyReadEnabled(): Promise<boolean> {
-  const client = OpenFeature.getClient();
-  return Promise.resolve(
-    client.getBooleanValue(
-      FEATURE_LEGACY_READ_ENABLED,
-      FEATURE_LEGACY_READ_ENABLED_DEFAULT,
-    ),
-  );
-}
-
-/**
- * If true, writes go through legacy reactor.
- *
- * If false, writes go through the new reactor.
- */
-export async function isLegacyWriteEnabled(): Promise<boolean> {
-  const client = OpenFeature.getClient();
-  return Promise.resolve(
-    client.getBooleanValue(
-      FEATURE_LEGACY_WRITE_ENABLED,
-      FEATURE_LEGACY_WRITE_ENABLED_DEFAULT,
-    ),
-  );
-}
-
-/**
- * If true, sync through channels and disables sync through legacy reactor.
- *
- * If false, sync through legacy reactor and disables sync through channels.
- */
-export async function isChannelSyncEnabled(): Promise<boolean> {
-  const client = OpenFeature.getClient();
-  return Promise.resolve(
-    client.getBooleanValue(
-      FEATURE_CHANNEL_SYNC_ENABLED,
-      FEATURE_CHANNEL_SYNC_ENABLED_DEFAULT,
-    ),
-  );
-}
 
 /**
  * If true, shows the inspector button in the sidebar.

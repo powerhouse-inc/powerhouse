@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/common",
-  "version": "6.0.0-dev.49",
+  "version": "6.0.0-dev.56",
   "license": "AGPL-3.0-only",
   "type": "module",
   "files": [
@@ -14,14 +14,6 @@
     ".": {
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
-    },
-    "./generic-drive-explorer": {
-      "import": "./dist/editors/generic-drive-explorer/module.js",
-      "types": "./dist/editors/generic-drive-explorer/module.d.ts"
-    },
-    "./generic-drive-explorer/editor-component": {
-      "import": "./dist/editors/generic-drive-explorer/editor.js",
-      "types": "./dist/editors/generic-drive-explorer/editor.d.ts"
     },
     "./utils": {
       "import": "./dist/utils/index.js",
@@ -41,9 +33,7 @@
   "scripts": {
     "tsc": "tsc",
     "lint": "eslint",
-    "dev": "ph-cli dev --config-file ./powerhouse.config.json",
-    "build:css": "pnpm exec tailwindcss -i ./editors/styles.css -o ./dist/editors/styles.css",
-    "storybook": "storybook dev -p 6006"
+    "dev": "ph-cli dev --config-file ./powerhouse.config.json"
   },
   "peerDependencies": {
     "react": ">=19.0.0",
@@ -51,16 +41,15 @@
   },
   "dependencies": {
     "@powerhousedao/analytics-engine-core": "catalog:",
-    "@powerhousedao/builder-tools": "workspace:*",
     "@powerhousedao/design-system": "workspace:*",
     "@tanstack/react-virtual": "^3.8.1",
     "@types/luxon": "^3.7.1",
-    "chalk": "^5.6.2",
+    "chalk": "catalog:",
     "document-drive": "workspace:*",
     "document-model": "workspace:*",
     "graphql-request": "catalog:",
     "luxon": "^3.7.1",
-    "npm-package-arg": "^13.0.2",
+    "npm-package-arg": "catalog:",
     "package-directory": "^8.1.0",
     "react-i18next": "^13.5.0",
     "resolve-global": "^2.0.0",
@@ -70,44 +59,26 @@
   "devDependencies": {
     "@powerhousedao/config": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",
-    "@storybook/addon-actions": "^8.6.7",
-    "@storybook/addon-docs": "^8.6.3",
-    "@storybook/addon-essentials": "^8.6.7",
-    "@storybook/addon-interactions": "^8.6.7",
-    "@storybook/addon-links": "^8.6.7",
-    "@storybook/addon-themes": "^8.6.7",
-    "@storybook/blocks": "^8.6.7",
-    "@storybook/components": "^8.6.7",
-    "@storybook/manager-api": "^8.6.7",
-    "@storybook/preview-api": "^8.6.7",
-    "@storybook/react": "^8.6.7",
-    "@storybook/react-vite": "^8.6.7",
-    "@storybook/test": "^8.6.7",
-    "@storybook/types": "^8.6.7",
     "@tailwindcss/cli": "catalog:",
     "@tailwindcss/vite": "catalog:",
     "@types/node": "catalog:",
-    "@types/npm-package-arg": "^6.1.4",
+    "@types/npm-package-arg": "catalog:",
     "@types/react": "catalog:",
     "@types/wicg-file-system-access": "^2020.9.6",
     "autoprefixer": "^10.4.20",
     "clsx": "^2.1.1",
-    "cmd-ts": "^0.14.3",
+    "cmd-ts": "catalog:",
     "document-model": "workspace:*",
-    "package-manager-detector": "^0.2.8",
-    "postcss": "^8.5.1",
+    "package-manager-detector": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
-    "storybook": "^8.6.14",
-    "storybook-addon-pseudo-states": "^4.0.4",
-    "storybook-mock-date-decorator": "^2.0.6",
     "tailwind-merge": "catalog:",
     "tailwindcss": "catalog:",
-    "tsx": "^4.20.3",
+    "tsx": "catalog:",
     "uuid": "^11.0.5",
     "vite": "catalog:",
     "vite-plugin-node-polyfills": "catalog:",
-    "vitest": "^3.2.4",
+    "vitest": "catalog:",
     "zod": "catalog:"
   }
 }

@@ -309,15 +309,20 @@ describe("ReactorSubgraph Mutation Resolvers", () => {
   });
 
   describe("Error Handling", () => {
-    it("should handle rename errors", async () => {
+    it("should timeout on deferred queue", async () => {
+      const signal = AbortSignal.timeout(2000);
       await expect(
-        resolvers.renameDocument(module.client, {
-          documentIdentifier: "non-existent-id",
-          name: "New Name",
-          branch: null,
-        }),
+        resolvers.renameDocument(
+          module.client,
+          {
+            documentIdentifier: "non-existent-id",
+            name: "New Name",
+            branch: null,
+          },
+          signal,
+        ),
       ).rejects.toThrow();
-    });
+    }, 10000);
 
     it("should handle delete errors", async () => {
       await expect(

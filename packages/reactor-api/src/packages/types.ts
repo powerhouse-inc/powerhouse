@@ -1,5 +1,6 @@
 import type { SubgraphClass } from "@powerhousedao/reactor-api";
 import type {
+  ILogger,
   IProcessorHostModuleLegacy,
   ProcessorFactoryLegacy,
 } from "document-drive";
@@ -56,6 +57,7 @@ export interface IPackageManager {
 
 export type IPackageLoaderOptions = {
   legacyReactor?: boolean;
+  logger?: ILogger;
 };
 
 export type IPackageManagerOptions = {

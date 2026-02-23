@@ -5,11 +5,10 @@ import { useState } from "react";
 import { twMerge } from "tailwind-merge";
 import { ConnectTooltip } from "../../tooltip/tooltip.js";
 
-export interface TimelineBarProps
-  extends Omit<
-    TimelineBarItem,
-    "id" | "type" | "revision" | "startDate" | "endDate"
-  > {
+export interface TimelineBarProps extends Omit<
+  TimelineBarItem,
+  "id" | "type" | "revision" | "startDate" | "endDate"
+> {
   readonly className?: string;
   onClick?: () => void;
   isSelected?: boolean;

@@ -174,3 +174,31 @@ sequenceDiagram
     SyncManager->>SyncManager: Aggregate into batch
     SyncManager->>GqlResponseChannel: Trim inbox
 ```
+
+## Ordinal Semantics
+
+Ordinals are local to each reactor instance. Each reactor has its own operation
+index that assigns monotonically increasing ordinals to operations as they are
+committed. The same logical operation has different ordinals on different reactor
+instances.
+
+The `pollSyncEnvelopes` exchange uses ordinals from two different frames of
+reference:
+
+| Field                        | Direction             | Whose ordinals? | Purpose                                                          |
+| ---------------------------- | --------------------- | --------------- | ---------------------------------------------------------------- |
+| `outboxAck` (request)        | Client -> Switchboard | Switchboard's   | Client acknowledges switchboard outbox operations it has applied |
+| `outboxLatest` (request)     | Client -> Switchboard | Switchboard's   | Highest switchboard ordinal the client has seen                  |
+| `ackOrdinal` (response)      | Switchboard -> Client | Client's        | Switchboard acknowledges client-pushed operations it has applied |
+| envelope ordinals (response) | Switchboard -> Client | Switchboard's   | Ordinals on outbox operations for the client to track            |
+
+`ackOrdinal` must be in terms of the client's ordinals because the client uses
+it to trim its outbox (`trimMailboxFromAckOrdinal`), and the outbox items have
+ordinals from the client's operation index.
+
+`outboxAck` is in terms of the switchboard's ordinals because the switchboard
+uses it to trim its outbox.
+
+This means the client's ordinals must be preserved through the push path
+(`pushSyncEnvelopes`) so that the switchboard's inbox mailbox can track them
+and return the correct `ackOrdinal` in the poll response.

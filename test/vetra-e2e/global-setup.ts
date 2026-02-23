@@ -42,7 +42,7 @@ async function waitForDrivesReady(
 ): Promise<void> {
   const startTime = Date.now();
   // The reactor subgraph is at /graphql/r/:reactor - we use 'local' as the reactor name
-  const graphqlUrl = `http://localhost:${reactorPort}/graphql/r/local`;
+  const graphqlUrl = `http://localhost:${reactorPort}/graphql/r`;
 
   console.log("⏳ Waiting for reactor drives to be ready...");
 

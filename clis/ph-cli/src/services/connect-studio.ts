@@ -3,11 +3,14 @@ import {
   resolveConnectPublicDir,
   resolveViteConfigPath,
 } from "@powerhousedao/builder-tools";
-import type { InlineConfig } from "vite";
+import type { InlineConfig, Logger } from "vite";
 import type { ConnectStudioArgs } from "../types.js";
 import { assignEnvVars } from "../utils/assign-env-vars.js";
 
-export async function runConnectStudio(args: ConnectStudioArgs) {
+export async function runConnectStudio(
+  args: ConnectStudioArgs,
+  viteLogger?: Logger,
+) {
   const {
     port,
     host,
@@ -39,6 +42,7 @@ export async function runConnectStudio(args: ConnectStudioArgs) {
     optimizeDeps: {
       force,
     },
+    customLogger: viteLogger,
   };
 
   const mergedConfig = vite.mergeConfig(

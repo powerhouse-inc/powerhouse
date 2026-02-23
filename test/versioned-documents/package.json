@@ -77,8 +77,8 @@
     "@powerhousedao/config": "workspace:*",
     "@powerhousedao/connect": "workspace:*",
     "@powerhousedao/design-system": "workspace:*",
-    "change-case": "^5.4.4",
-    "colorette": "^2.0.20",
+    "change-case": "catalog:",
+    "colorette": "catalog:",
     "document-model": "workspace:*",
     "graphql": "catalog:",
     "graphql-tag": "^2.12.6",
@@ -110,14 +110,14 @@
     "eslint-plugin-react": "^7.37.4",
     "eslint-plugin-react-hooks": "^5.2.0",
     "globals": "^16.0.0",
-    "package-manager-detector": "^0.2.8",
+    "package-manager-detector": "catalog:",
     "pm2": "^5.4.3",
     "react": "catalog:",
     "react-dom": "catalog:",
     "tailwindcss": "catalog:",
     "vite": "catalog:",
     "vite-plugin-node-polyfills": "catalog:",
-    "vitest": "^3.2.4"
+    "vitest": "catalog:"
   },
   "peerDependencies": {
     "react": ">=19.0.0",

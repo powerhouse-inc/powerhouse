@@ -20,7 +20,9 @@ import {
   type ShutdownStatus,
 } from "../shared/types.js";
 import type {
+  DeadLetterRecord,
   ISyncCursorStorage,
+  ISyncDeadLetterStorage,
   ISyncRemoteStorage,
 } from "../storage/interfaces.js";
 import { BatchAggregator, type PreparedBatch } from "./batch-aggregator.js";
@@ -54,6 +56,7 @@ export class SyncManager implements ISyncManager {
   private readonly logger: ILogger;
   private readonly remoteStorage: ISyncRemoteStorage;
   private readonly cursorStorage: ISyncCursorStorage;
+  private readonly deadLetterStorage: ISyncDeadLetterStorage;
   private readonly channelFactory: IChannelFactory;
   private readonly operationIndex: IOperationIndex;
   private readonly reactor: IReactor;
@@ -66,6 +69,7 @@ export class SyncManager implements ISyncManager {
   private failedEventUnsubscribe?: () => void;
   private readonly batchAggregator: BatchAggregator;
   private readonly syncStatusTracker: SyncStatusTracker;
+  private readonly maxDeadLettersPerRemote: number;
 
   public loadJobs: Map<string, JobInfo> = new Map();
 
@@ -73,18 +77,22 @@ export class SyncManager implements ISyncManager {
     logger: ILogger,
     remoteStorage: ISyncRemoteStorage,
     cursorStorage: ISyncCursorStorage,
+    deadLetterStorage: ISyncDeadLetterStorage,
     channelFactory: IChannelFactory,
     operationIndex: IOperationIndex,
     reactor: IReactor,
     eventBus: IEventBus,
+    maxDeadLettersPerRemote: number = 100,
   ) {
     this.logger = logger;
     this.remoteStorage = remoteStorage;
     this.cursorStorage = cursorStorage;
+    this.deadLetterStorage = deadLetterStorage;
     this.channelFactory = channelFactory;
     this.operationIndex = operationIndex;
     this.reactor = reactor;
     this.eventBus = eventBus;
+    this.maxDeadLettersPerRemote = maxDeadLettersPerRemote;
     this.remotes = new Map();
     this.awaiter = new JobAwaiter(eventBus, (jobId, signal) =>
       reactor.getJobStatus(jobId, signal),
@@ -125,6 +133,7 @@ export class SyncManager implements ISyncManager {
       };
 
       this.remotes.set(record.name, remote);
+      await this.loadDeadLetters(remote);
       this.wireChannelCallbacks(remote);
 
       try {
@@ -270,6 +279,7 @@ export class SyncManager implements ISyncManager {
     };
 
     this.remotes.set(name, remote);
+    await this.loadDeadLetters(remote);
     this.wireChannelCallbacks(remote);
 
     try {
@@ -336,8 +346,90 @@ export class SyncManager implements ISyncManager {
           syncOp.error?.message ?? "unknown",
           syncOp.jobDependencies,
         );
+
+        const record: DeadLetterRecord = {
+          id: syncOp.id,
+          jobId: syncOp.jobId,
+          jobDependencies: syncOp.jobDependencies,
+          remoteName: syncOp.remoteName,
+          documentId: syncOp.documentId,
+          scopes: syncOp.scopes,
+          branch: syncOp.branch,
+          operations: syncOp.operations,
+          errorSource: syncOp.error?.source ?? ChannelErrorSource.None,
+          errorMessage: syncOp.error?.error?.message ?? "unknown",
+        };
+
+        void this.deadLetterStorage.add(record).catch((err) => {
+          this.logger.error(
+            "Failed to persist dead letter (@id, @error)",
+            record.id,
+            err instanceof Error ? err.message : String(err),
+          );
+        });
+      }
+
+      // Evict oldest dead letters from mailbox if over capacity
+      const items = remote.channel.deadLetter.items;
+      if (items.length > this.maxDeadLettersPerRemote) {
+        const excessCount = items.length - this.maxDeadLettersPerRemote;
+        const toEvict = items.slice(0, excessCount);
+        remote.channel.deadLetter.remove(...toEvict);
       }
     });
+  }
+
+  private async loadDeadLetters(remote: Remote): Promise<void> {
+    let records: DeadLetterRecord[];
+    try {
+      const page = await this.deadLetterStorage.list(remote.name, {
+        cursor: "0",
+        limit: this.maxDeadLettersPerRemote,
+      });
+      records = page.results;
+    } catch (error) {
+      this.logger.error(
+        "Failed to load dead letters for remote (@name, @error)",
+        remote.name,
+        error instanceof Error ? error.message : String(error),
+      );
+      return;
+    }
+
+    if (records.length === 0) {
+      return;
+    }
+
+    // Records come in ordinal DESC order (newest first).
+    // Reverse so the Map maintains chronological insertion order (oldest first),
+    // which makes eviction (slice from the front) straightforward.
+    records.reverse();
+
+    const syncOps: SyncOperation[] = [];
+    for (const record of records) {
+      const syncOp = new SyncOperation(
+        record.id,
+        record.jobId,
+        record.jobDependencies,
+        record.remoteName,
+        record.documentId,
+        record.scopes,
+        record.branch,
+        record.operations,
+      );
+      syncOp.failed(
+        new ChannelError(record.errorSource, new Error(record.errorMessage)),
+      );
+      syncOps.push(syncOp);
+    }
+
+    remote.channel.deadLetter.add(...syncOps);
+
+    this.logger.debug(
+      "Loaded @count persisted dead letters for remote @name",
+      records.length,
+      remote.name,
+    );
   }
 
   private getRemotesForCollection(collectionId: string): Remote[] {

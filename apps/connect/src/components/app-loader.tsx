@@ -1,26 +1,10 @@
-import {
-  App,
-  AppSkeleton,
-  CookieBanner,
-  ModalsContainer,
-} from "@powerhousedao/connect/components";
-import { useCheckLatestVersion } from "@powerhousedao/connect/hooks";
 import "@powerhousedao/connect/i18n";
-import { useSubscribeToVetraPackages } from "@powerhousedao/connect/services";
-import { createReactor, useSetSentryUser } from "@powerhousedao/connect/store";
-import { lazy, StrictMode, Suspense, type ReactNode } from "react";
+import { lazy, StrictMode, Suspense } from "react";
+import AppSkeleton from "./app-skeleton.js";
+import { App, CookieBanner } from "./index.js";
+import { ModalsContainer } from "./modal/modals-container.js";
 
-const Load = lazy(async () => {
-  await createReactor();
-  return {
-    default: ({ children }: { children?: ReactNode }) => {
-      useSubscribeToVetraPackages();
-      useSetSentryUser();
-      useCheckLatestVersion();
-      return children;
-    },
-  };
-});
+const Load = lazy(() => import("./load.js").then((m) => m.loadComponent()));
 
 export const AppLoader = () => (
   <StrictMode>
@@ -32,6 +16,8 @@ export const AppLoader = () => (
     <Suspense name="CookieBanner">
       <CookieBanner />
     </Suspense>
-    <ModalsContainer />
+    <Suspense name="ModalsContainer">
+      <ModalsContainer />
+    </Suspense>
   </StrictMode>
 );

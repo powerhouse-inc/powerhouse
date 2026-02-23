@@ -26,9 +26,8 @@ This command:
     }
 
     if (migrate || migrateStatus) {
-      const { runSwitchboardMigrations } = await import(
-        "../services/switchboard-migrate.js"
-      );
+      const { runSwitchboardMigrations } =
+        await import("../services/switchboard-migrate.js");
       await runSwitchboardMigrations({
         dbPath,
         statusOnly: migrateStatus,

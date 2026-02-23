@@ -3,6 +3,7 @@ services:
     image: postgres:16-alpine
     container_name: postgres16
     restart: unless-stopped
+    mem_limit: 1g
 
     environment:
       POSTGRES_USER: postgres
@@ -20,6 +21,7 @@ services:
     container_name: pyroscope
     command: server
     restart: unless-stopped
+    mem_limit: 512m
 
     ports:
       - "4040:4040"

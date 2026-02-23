@@ -3,6 +3,7 @@ import type {
   StartServerOptions,
 } from "@powerhousedao/switchboard/server";
 import { startSwitchboard as startSwitchboardServer } from "@powerhousedao/switchboard/server";
+import type { ILogger } from "document-drive";
 import path from "node:path";
 import type { SwitchboardArgs } from "../types.js";
 
@@ -50,7 +51,10 @@ function getDefaultVetraSwitchboardOptions(
   };
 }
 
-export async function startSwitchboard(options: SwitchboardArgs) {
+export async function startSwitchboard(
+  options: SwitchboardArgs,
+  logger?: ILogger,
+) {
   const {
     packages: packagesString,
     remoteDrives,
@@ -88,6 +92,7 @@ export async function startSwitchboard(options: SwitchboardArgs) {
           remoteDrives,
           identity,
           packages,
+          logger,
         }
       : {
           ...defaultOptions,
@@ -95,6 +100,7 @@ export async function startSwitchboard(options: SwitchboardArgs) {
           remoteDrives,
           identity,
           packages,
+          logger,
         };
 
   const reactor = await startSwitchboardServer(finalOptions);

@@ -15,7 +15,7 @@ import {
   getOrCreateSourceFile,
 } from "@powerhousedao/codegen/utils";
 import { directoryExists, fileExists } from "@powerhousedao/common/clis";
-import { paramCase } from "change-case";
+import { kebabCase } from "change-case";
 import type { DocumentModelGlobalState } from "document-model";
 import { copyFile, mkdir, readdir, writeFile } from "node:fs/promises";
 import path from "path";
@@ -250,7 +250,7 @@ async function generateDocumentModelForSpec({
   const hasLocalSchema = specification.state.local.schema !== "";
   const modules = specification.modules;
   const moduleDirPaths = modules.map((module) =>
-    path.join(genDirPath, paramCase(module.name)),
+    path.join(genDirPath, kebabCase(module.name)),
   );
 
   await ensureDirectoriesExist(

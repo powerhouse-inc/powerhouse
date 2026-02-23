@@ -3,6 +3,12 @@ export class UnsupportedDocumentTypeError extends Error {
     super(`Document type ${documentType} is not supported`);
     this.name = "UnsupportedDocumentTypeError";
   }
+
+  static isError(error: unknown): error is UnsupportedDocumentTypeError {
+    return (
+      Error.isError(error) && error.name === "UnsupportedDocumentTypeError"
+    );
+  }
 }
 
 export class DocumentNotFoundError extends Error {

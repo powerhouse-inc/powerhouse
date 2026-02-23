@@ -74,6 +74,10 @@ export function ChannelInspector({
     isRunning: pollerControls?.isRunning() ?? false,
   }));
 
+  const [intervalMs, setIntervalMs] = useState(
+    () => pollerControls?.getIntervalMs() ?? 2000,
+  );
+
   const [mailboxStates, setMailboxStates] = useState(() => ({
     inbox: { isPaused: channel.inbox.isPaused() },
     outbox: { isPaused: channel.outbox.isPaused() },
@@ -104,6 +108,12 @@ export function ChannelInspector({
       pollerControls.triggerNow();
     }
   }, [pollerControls]);
+
+  const handleApplyInterval = useCallback(() => {
+    if (pollerControls) {
+      pollerControls.setIntervalMs(intervalMs);
+    }
+  }, [pollerControls, intervalMs]);
 
   const handleMailboxPause = useCallback(
     (mailbox: "inbox" | "outbox") => {
@@ -173,15 +183,46 @@ export function ChannelInspector({
         <div className="rounded border border-gray-200 bg-white p-4">
           <h3 className="mb-3 text-sm font-semibold text-gray-900">Poller</h3>
           <div className="flex items-center justify-between">
-            <div className="text-sm text-gray-600">
-              Status:{" "}
-              <span
-                className={
-                  pollerState.isPaused ? "text-yellow-600" : "text-green-600"
-                }
-              >
-                {pollerState.isPaused ? "Paused" : "Running"}
-              </span>
+            <div className="flex items-center gap-4">
+              <div className="text-sm text-gray-600">
+                Status:{" "}
+                <span
+                  className={
+                    pollerState.isPaused ? "text-yellow-600" : "text-green-600"
+                  }
+                >
+                  {pollerState.isPaused ? "Paused" : "Running"}
+                </span>
+              </div>
+              <div className="flex items-center gap-1">
+                <label
+                  className="text-sm text-gray-600"
+                  htmlFor="poll-interval"
+                >
+                  Interval:
+                </label>
+                <input
+                  className="w-20 rounded border border-gray-300 px-2 py-1 text-sm"
+                  id="poll-interval"
+                  min={100}
+                  onChange={(e) => setIntervalMs(Number(e.target.value))}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      handleApplyInterval();
+                    }
+                  }}
+                  type="number"
+                  value={intervalMs}
+                />
+                <span className="text-sm text-gray-500">ms</span>
+                <button
+                  className="ml-1 rounded border border-gray-300 bg-white px-2 py-1 text-sm text-gray-700 hover:bg-gray-100"
+                  onClick={handleApplyInterval}
+                  type="button"
+                >
+                  Apply
+                </button>
+              </div>
             </div>
             <div className="flex gap-2">
               {pollerState.isPaused ? (
@@ -220,16 +261,22 @@ export function ChannelInspector({
         </h3>
         <div className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
-            <div className="text-sm text-gray-600">
-              Inbox:{" "}
-              <span
-                className={
-                  mailboxStates.inbox.isPaused
-                    ? "text-yellow-600"
-                    : "text-green-600"
-                }
-              >
-                {mailboxStates.inbox.isPaused ? "Paused" : "Active"}
+            <div className="flex items-center gap-3 text-sm text-gray-600">
+              <span>
+                Inbox:{" "}
+                <span
+                  className={
+                    mailboxStates.inbox.isPaused
+                      ? "text-yellow-600"
+                      : "text-green-600"
+                  }
+                >
+                  {mailboxStates.inbox.isPaused ? "Paused" : "Active"}
+                </span>
+              </span>
+              <span className="font-mono text-sm text-gray-500">
+                We ack'd (theirs): {channel.inbox.ackOrdinal} | Received:{" "}
+                {channel.inbox.latestOrdinal}
               </span>
             </div>
             <div className="flex gap-2">
@@ -261,16 +308,22 @@ export function ChannelInspector({
             </div>
           </div>
           <div className="flex items-center justify-between">
-            <div className="text-sm text-gray-600">
-              Outbox:{" "}
-              <span
-                className={
-                  mailboxStates.outbox.isPaused
-                    ? "text-yellow-600"
-                    : "text-green-600"
-                }
-              >
-                {mailboxStates.outbox.isPaused ? "Paused" : "Active"}
+            <div className="flex items-center gap-3 text-sm text-gray-600">
+              <span>
+                Outbox:{" "}
+                <span
+                  className={
+                    mailboxStates.outbox.isPaused
+                      ? "text-yellow-600"
+                      : "text-green-600"
+                  }
+                >
+                  {mailboxStates.outbox.isPaused ? "Paused" : "Active"}
+                </span>
+              </span>
+              <span className="font-mono text-sm text-gray-500">
+                They ack'd (ours): {channel.outbox.ackOrdinal} | Sent:{" "}
+                {channel.outbox.latestOrdinal}
               </span>
             </div>
             <div className="flex gap-2">

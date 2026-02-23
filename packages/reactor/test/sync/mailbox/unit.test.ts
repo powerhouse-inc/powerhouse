@@ -468,6 +468,110 @@ describe("Mailbox", () => {
     });
   });
 
+  describe("remove callback errors", () => {
+    it("should throw MailboxAggregateError when onRemoved callback throws", () => {
+      const mailbox = new Mailbox();
+      const callback1 = vi.fn(() => {
+        throw new Error("Remove callback error");
+      });
+      const callback2 = vi.fn();
+      const item = createMockSyncOperation("item1", "remote1");
+
+      mailbox.onRemoved(callback1);
+      mailbox.onRemoved(callback2);
+      mailbox.add(item);
+
+      expect(() => mailbox.remove(item)).toThrow(MailboxAggregateError);
+
+      expect(callback1).toHaveBeenCalledWith([item]);
+      expect(callback2).toHaveBeenCalledWith([item]);
+    });
+
+    it("should collect errors from multiple throwing onRemoved callbacks", () => {
+      const mailbox = new Mailbox();
+      const callback1 = vi.fn(() => {
+        throw new Error("Error A");
+      });
+      const callback2 = vi.fn();
+      const callback3 = vi.fn(() => {
+        throw new Error("Error B");
+      });
+      const item = createMockSyncOperation("item1", "remote1");
+
+      mailbox.onRemoved(callback1);
+      mailbox.onRemoved(callback2);
+      mailbox.onRemoved(callback3);
+      mailbox.add(item);
+
+      try {
+        mailbox.remove(item);
+      } catch (error) {
+        expect(error).toBeInstanceOf(MailboxAggregateError);
+        expect((error as MailboxAggregateError).errors).toHaveLength(2);
+        expect((error as MailboxAggregateError).errors[0].message).toBe(
+          "Error A",
+        );
+        expect((error as MailboxAggregateError).errors[1].message).toBe(
+          "Error B",
+        );
+      }
+
+      expect(callback1).toHaveBeenCalledWith([item]);
+      expect(callback2).toHaveBeenCalledWith([item]);
+      expect(callback3).toHaveBeenCalledWith([item]);
+    });
+  });
+
+  describe("flush", () => {
+    it("should replay buffered removed items to onRemoved callbacks", () => {
+      const mailbox = new Mailbox();
+      const removedCallback = vi.fn();
+      const item = createMockSyncOperation("item1", "remote1");
+
+      mailbox.onRemoved(removedCallback);
+      mailbox.add(item);
+
+      mailbox.pause();
+      mailbox.remove(item);
+
+      expect(removedCallback).not.toHaveBeenCalled();
+
+      mailbox.flush();
+
+      expect(removedCallback).toHaveBeenCalledTimes(1);
+      expect(removedCallback).toHaveBeenCalledWith([item]);
+    });
+
+    it("should throw MailboxAggregateError when removed callback throws during flush", () => {
+      const mailbox = new Mailbox();
+      const item = createMockSyncOperation("item1", "remote1");
+
+      mailbox.onRemoved(() => {
+        throw new Error("Flush removed error");
+      });
+      mailbox.add(item);
+
+      mailbox.pause();
+      mailbox.remove(item);
+
+      expect(() => mailbox.flush()).toThrow(MailboxAggregateError);
+    });
+  });
+
+  describe("isPaused", () => {
+    it("should return correct state through pause/resume cycle", () => {
+      const mailbox = new Mailbox();
+
+      expect(mailbox.isPaused()).toBe(false);
+
+      mailbox.pause();
+      expect(mailbox.isPaused()).toBe(true);
+
+      mailbox.resume();
+      expect(mailbox.isPaused()).toBe(false);
+    });
+  });
+
   describe("callback registration", () => {
     it("should allow multiple callback registrations", () => {
       const mailbox = new Mailbox();

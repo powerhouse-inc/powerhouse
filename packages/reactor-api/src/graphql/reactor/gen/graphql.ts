@@ -93,6 +93,15 @@ export type ChannelMetaInput = {
   readonly id: Scalars["String"]["input"];
 };
 
+export type DeadLetterInfo = {
+  readonly branch: Scalars["String"]["output"];
+  readonly documentId: Scalars["String"]["output"];
+  readonly error: Scalars["String"]["output"];
+  readonly jobId: Scalars["String"]["output"];
+  readonly operationCount: Scalars["Int"]["output"];
+  readonly scopes: ReadonlyArray<Scalars["String"]["output"]>;
+};
+
 export type DocumentChangeContext = {
   readonly childId?: Maybe<Scalars["String"]["output"]>;
   readonly parentId?: Maybe<Scalars["String"]["output"]>;
@@ -257,6 +266,7 @@ export type OperationContextInput = {
   readonly branch: Scalars["String"]["input"];
   readonly documentId: Scalars["String"]["input"];
   readonly documentType: Scalars["String"]["input"];
+  readonly ordinal: Scalars["Int"]["input"];
   readonly scope: Scalars["String"]["input"];
 };
 
@@ -297,7 +307,6 @@ export type PhDocument = {
   readonly lastModifiedAtUtcIso: Scalars["DateTime"]["output"];
   readonly name: Scalars["String"]["output"];
   readonly operations?: Maybe<ReactorOperationResultPage>;
-  readonly parentId?: Maybe<Scalars["String"]["output"]>;
   readonly revisionsList: ReadonlyArray<Revision>;
   readonly slug?: Maybe<Scalars["String"]["output"]>;
   readonly state: Scalars["JSONObject"]["output"];
@@ -324,6 +333,7 @@ export type PagingInput = {
 
 export type PollSyncEnvelopesResult = {
   readonly ackOrdinal: Scalars["Int"]["output"];
+  readonly deadLetters: ReadonlyArray<DeadLetterInfo>;
   readonly envelopes: ReadonlyArray<SyncEnvelope>;
 };
 
@@ -525,7 +535,6 @@ export type PhDocumentFieldsFragment = {
   readonly state: NonNullable<unknown>;
   readonly createdAtUtcIso: string | Date;
   readonly lastModifiedAtUtcIso: string | Date;
-  readonly parentId?: string | null | undefined;
   readonly revisionsList: ReadonlyArray<{
     readonly scope: string;
     readonly revision: number;
@@ -570,7 +579,6 @@ export type GetDocumentQuery = {
           readonly state: NonNullable<unknown>;
           readonly createdAtUtcIso: string | Date;
           readonly lastModifiedAtUtcIso: string | Date;
-          readonly parentId?: string | null | undefined;
           readonly revisionsList: ReadonlyArray<{
             readonly scope: string;
             readonly revision: number;
@@ -601,7 +609,6 @@ export type GetDocumentChildrenQuery = {
       readonly state: NonNullable<unknown>;
       readonly createdAtUtcIso: string | Date;
       readonly lastModifiedAtUtcIso: string | Date;
-      readonly parentId?: string | null | undefined;
       readonly revisionsList: ReadonlyArray<{
         readonly scope: string;
         readonly revision: number;
@@ -630,7 +637,6 @@ export type GetDocumentParentsQuery = {
       readonly state: NonNullable<unknown>;
       readonly createdAtUtcIso: string | Date;
       readonly lastModifiedAtUtcIso: string | Date;
-      readonly parentId?: string | null | undefined;
       readonly revisionsList: ReadonlyArray<{
         readonly scope: string;
         readonly revision: number;
@@ -659,7 +665,6 @@ export type FindDocumentsQuery = {
       readonly state: NonNullable<unknown>;
       readonly createdAtUtcIso: string | Date;
       readonly lastModifiedAtUtcIso: string | Date;
-      readonly parentId?: string | null | undefined;
       readonly revisionsList: ReadonlyArray<{
         readonly scope: string;
         readonly revision: number;
@@ -700,7 +705,6 @@ export type CreateDocumentMutation = {
     readonly state: NonNullable<unknown>;
     readonly createdAtUtcIso: string | Date;
     readonly lastModifiedAtUtcIso: string | Date;
-    readonly parentId?: string | null | undefined;
     readonly revisionsList: ReadonlyArray<{
       readonly scope: string;
       readonly revision: number;
@@ -722,7 +726,6 @@ export type CreateEmptyDocumentMutation = {
     readonly state: NonNullable<unknown>;
     readonly createdAtUtcIso: string | Date;
     readonly lastModifiedAtUtcIso: string | Date;
-    readonly parentId?: string | null | undefined;
     readonly revisionsList: ReadonlyArray<{
       readonly scope: string;
       readonly revision: number;
@@ -745,7 +748,6 @@ export type MutateDocumentMutation = {
     readonly state: NonNullable<unknown>;
     readonly createdAtUtcIso: string | Date;
     readonly lastModifiedAtUtcIso: string | Date;
-    readonly parentId?: string | null | undefined;
     readonly revisionsList: ReadonlyArray<{
       readonly scope: string;
       readonly revision: number;
@@ -778,7 +780,6 @@ export type RenameDocumentMutation = {
     readonly state: NonNullable<unknown>;
     readonly createdAtUtcIso: string | Date;
     readonly lastModifiedAtUtcIso: string | Date;
-    readonly parentId?: string | null | undefined;
     readonly revisionsList: ReadonlyArray<{
       readonly scope: string;
       readonly revision: number;
@@ -801,7 +802,6 @@ export type AddChildrenMutation = {
     readonly state: NonNullable<unknown>;
     readonly createdAtUtcIso: string | Date;
     readonly lastModifiedAtUtcIso: string | Date;
-    readonly parentId?: string | null | undefined;
     readonly revisionsList: ReadonlyArray<{
       readonly scope: string;
       readonly revision: number;
@@ -824,7 +824,6 @@ export type RemoveChildrenMutation = {
     readonly state: NonNullable<unknown>;
     readonly createdAtUtcIso: string | Date;
     readonly lastModifiedAtUtcIso: string | Date;
-    readonly parentId?: string | null | undefined;
     readonly revisionsList: ReadonlyArray<{
       readonly scope: string;
       readonly revision: number;
@@ -849,7 +848,6 @@ export type MoveChildrenMutation = {
       readonly state: NonNullable<unknown>;
       readonly createdAtUtcIso: string | Date;
       readonly lastModifiedAtUtcIso: string | Date;
-      readonly parentId?: string | null | undefined;
       readonly revisionsList: ReadonlyArray<{
         readonly scope: string;
         readonly revision: number;
@@ -863,7 +861,6 @@ export type MoveChildrenMutation = {
       readonly state: NonNullable<unknown>;
       readonly createdAtUtcIso: string | Date;
       readonly lastModifiedAtUtcIso: string | Date;
-      readonly parentId?: string | null | undefined;
       readonly revisionsList: ReadonlyArray<{
         readonly scope: string;
         readonly revision: number;
@@ -902,7 +899,6 @@ export type DocumentChangesSubscription = {
       readonly state: NonNullable<unknown>;
       readonly createdAtUtcIso: string | Date;
       readonly lastModifiedAtUtcIso: string | Date;
-      readonly parentId?: string | null | undefined;
       readonly revisionsList: ReadonlyArray<{
         readonly scope: string;
         readonly revision: number;
@@ -1013,6 +1009,10 @@ export type PollSyncEnvelopesQuery = {
         | null
         | undefined;
     }>;
+    readonly deadLetters: ReadonlyArray<{
+      readonly documentId: string;
+      readonly error: string;
+    }>;
   };
 };
 
@@ -1036,7 +1036,12 @@ export type ResolverTypeWrapper<T> = Promise<T> | T;
 export type ResolverWithResolve<TResult, TParent, TContext, TArgs> = {
   resolve: ResolverFn<TResult, TParent, TContext, TArgs>;
 };
-export type Resolver<TResult, TParent = {}, TContext = {}, TArgs = {}> =
+export type Resolver<
+  TResult,
+  TParent = Record<PropertyKey, never>,
+  TContext = Record<PropertyKey, never>,
+  TArgs = Record<PropertyKey, never>,
+> =
   | ResolverFn<TResult, TParent, TContext, TArgs>
   | ResolverWithResolve<TResult, TParent, TContext, TArgs>;
 
@@ -1100,22 +1105,29 @@ export type SubscriptionObject<
 export type SubscriptionResolver<
   TResult,
   TKey extends string,
-  TParent = {},
-  TContext = {},
-  TArgs = {},
+  TParent = Record<PropertyKey, never>,
+  TContext = Record<PropertyKey, never>,
+  TArgs = Record<PropertyKey, never>,
 > =
   | ((
       ...args: any[]
     ) => SubscriptionObject<TResult, TKey, TParent, TContext, TArgs>)
   | SubscriptionObject<TResult, TKey, TParent, TContext, TArgs>;
 
-export type TypeResolveFn<TTypes, TParent = {}, TContext = {}> = (
+export type TypeResolveFn<
+  TTypes,
+  TParent = Record<PropertyKey, never>,
+  TContext = Record<PropertyKey, never>,
+> = (
   parent: TParent,
   context: TContext,
   info: GraphQLResolveInfo,
 ) => Maybe<TTypes> | Promise<Maybe<TTypes>>;
 
-export type IsTypeOfResolverFn<T = {}, TContext = {}> = (
+export type IsTypeOfResolverFn<
+  T = Record<PropertyKey, never>,
+  TContext = Record<PropertyKey, never>,
+> = (
   obj: T,
   context: TContext,
   info: GraphQLResolveInfo,
@@ -1124,10 +1136,10 @@ export type IsTypeOfResolverFn<T = {}, TContext = {}> = (
 export type NextResolverFn<T> = () => Promise<T>;
 
 export type DirectiveResolverFn<
-  TResult = {},
-  TParent = {},
-  TContext = {},
-  TArgs = {},
+  TResult = Record<PropertyKey, never>,
+  TParent = Record<PropertyKey, never>,
+  TContext = Record<PropertyKey, never>,
+  TArgs = Record<PropertyKey, never>,
 > = (
   next: NextResolverFn<TResult>,
   parent: TParent,
@@ -1148,6 +1160,7 @@ export type ResolversTypes = ResolversObject<{
   ChannelMeta: ResolverTypeWrapper<ChannelMeta>;
   ChannelMetaInput: ChannelMetaInput;
   DateTime: ResolverTypeWrapper<Scalars["DateTime"]["output"]>;
+  DeadLetterInfo: ResolverTypeWrapper<DeadLetterInfo>;
   DocumentChangeContext: ResolverTypeWrapper<DocumentChangeContext>;
   DocumentChangeEvent: ResolverTypeWrapper<DocumentChangeEvent>;
   DocumentChangeType: DocumentChangeType;
@@ -1160,7 +1173,7 @@ export type ResolversTypes = ResolversObject<{
   JobChangeEvent: ResolverTypeWrapper<JobChangeEvent>;
   JobInfo: ResolverTypeWrapper<JobInfo>;
   MoveChildrenResult: ResolverTypeWrapper<MoveChildrenResult>;
-  Mutation: ResolverTypeWrapper<{}>;
+  Mutation: ResolverTypeWrapper<Record<PropertyKey, never>>;
   OperationContext: ResolverTypeWrapper<OperationContext>;
   OperationContextInput: OperationContextInput;
   OperationInput: OperationInput;
@@ -1172,7 +1185,7 @@ export type ResolversTypes = ResolversObject<{
   PagingInput: PagingInput;
   PollSyncEnvelopesResult: ResolverTypeWrapper<PollSyncEnvelopesResult>;
   PropagationMode: PropagationMode;
-  Query: ResolverTypeWrapper<{}>;
+  Query: ResolverTypeWrapper<Record<PropertyKey, never>>;
   ReactorOperation: ResolverTypeWrapper<ReactorOperation>;
   ReactorOperationResultPage: ResolverTypeWrapper<ReactorOperationResultPage>;
   ReactorSigner: ResolverTypeWrapper<ReactorSigner>;
@@ -1187,7 +1200,7 @@ export type ResolversTypes = ResolversObject<{
   Revision: ResolverTypeWrapper<Revision>;
   SearchFilterInput: SearchFilterInput;
   String: ResolverTypeWrapper<Scalars["String"]["output"]>;
-  Subscription: ResolverTypeWrapper<{}>;
+  Subscription: ResolverTypeWrapper<Record<PropertyKey, never>>;
   SyncEnvelope: ResolverTypeWrapper<SyncEnvelope>;
   SyncEnvelopeInput: SyncEnvelopeInput;
   SyncEnvelopeType: SyncEnvelopeType;
@@ -1207,6 +1220,7 @@ export type ResolversParentTypes = ResolversObject<{
   ChannelMeta: ChannelMeta;
   ChannelMetaInput: ChannelMetaInput;
   DateTime: Scalars["DateTime"]["output"];
+  DeadLetterInfo: DeadLetterInfo;
   DocumentChangeContext: DocumentChangeContext;
   DocumentChangeEvent: DocumentChangeEvent;
   DocumentModelGlobalState: DocumentModelGlobalState;
@@ -1218,7 +1232,7 @@ export type ResolversParentTypes = ResolversObject<{
   JobChangeEvent: JobChangeEvent;
   JobInfo: JobInfo;
   MoveChildrenResult: MoveChildrenResult;
-  Mutation: {};
+  Mutation: Record<PropertyKey, never>;
   OperationContext: OperationContext;
   OperationContextInput: OperationContextInput;
   OperationInput: OperationInput;
@@ -1229,7 +1243,7 @@ export type ResolversParentTypes = ResolversObject<{
   PHDocumentResultPage: PhDocumentResultPage;
   PagingInput: PagingInput;
   PollSyncEnvelopesResult: PollSyncEnvelopesResult;
-  Query: {};
+  Query: Record<PropertyKey, never>;
   ReactorOperation: ReactorOperation;
   ReactorOperationResultPage: ReactorOperationResultPage;
   ReactorSigner: ReactorSigner;
@@ -1244,7 +1258,7 @@ export type ResolversParentTypes = ResolversObject<{
   Revision: Revision;
   SearchFilterInput: SearchFilterInput;
   String: Scalars["String"]["output"];
-  Subscription: {};
+  Subscription: Record<PropertyKey, never>;
   SyncEnvelope: SyncEnvelope;
   SyncEnvelopeInput: SyncEnvelopeInput;
   TouchChannelInput: TouchChannelInput;
@@ -1253,8 +1267,8 @@ export type ResolversParentTypes = ResolversObject<{
 
 export type ActionResolvers<
   ContextType = Context,
-  ParentType extends
-    ResolversParentTypes["Action"] = ResolversParentTypes["Action"],
+  ParentType extends ResolversParentTypes["Action"] =
+    ResolversParentTypes["Action"],
 > = ResolversObject<{
   attachments?: Resolver<
     Maybe<ReadonlyArray<ResolversTypes["Attachment"]>>,
@@ -1271,26 +1285,24 @@ export type ActionResolvers<
   scope?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
   timestampUtcMs?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
   type?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
-  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
 export type ActionContextResolvers<
   ContextType = Context,
-  ParentType extends
-    ResolversParentTypes["ActionContext"] = ResolversParentTypes["ActionContext"],
+  ParentType extends ResolversParentTypes["ActionContext"] =
+    ResolversParentTypes["ActionContext"],
 > = ResolversObject<{
   signer?: Resolver<
     Maybe<ResolversTypes["ReactorSigner"]>,
     ParentType,
     ContextType
   >;
-  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
 export type AttachmentResolvers<
   ContextType = Context,
-  ParentType extends
-    ResolversParentTypes["Attachment"] = ResolversParentTypes["Attachment"],
+  ParentType extends ResolversParentTypes["Attachment"] =
+    ResolversParentTypes["Attachment"],
 > = ResolversObject<{
   data?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
   extension?: Resolver<
@@ -1301,37 +1313,53 @@ export type AttachmentResolvers<
   fileName?: Resolver<Maybe<ResolversTypes["String"]>, ParentType, ContextType>;
   hash?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
   mimeType?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
-  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
 export type ChannelMetaResolvers<
   ContextType = Context,
-  ParentType extends
-    ResolversParentTypes["ChannelMeta"] = ResolversParentTypes["ChannelMeta"],
+  ParentType extends ResolversParentTypes["ChannelMeta"] =
+    ResolversParentTypes["ChannelMeta"],
 > = ResolversObject<{
   id?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
-  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
-export interface DateTimeScalarConfig
-  extends GraphQLScalarTypeConfig<ResolversTypes["DateTime"], any> {
+export interface DateTimeScalarConfig extends GraphQLScalarTypeConfig<
+  ResolversTypes["DateTime"],
+  any
+> {
   name: "DateTime";
 }
 
+export type DeadLetterInfoResolvers<
+  ContextType = Context,
+  ParentType extends ResolversParentTypes["DeadLetterInfo"] =
+    ResolversParentTypes["DeadLetterInfo"],
+> = ResolversObject<{
+  branch?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
+  documentId?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
+  error?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
+  jobId?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
+  operationCount?: Resolver<ResolversTypes["Int"], ParentType, ContextType>;
+  scopes?: Resolver<
+    ReadonlyArray<ResolversTypes["String"]>,
+    ParentType,
+    ContextType
+  >;
+}>;
+
 export type DocumentChangeContextResolvers<
   ContextType = Context,
-  ParentType extends
-    ResolversParentTypes["DocumentChangeContext"] = ResolversParentTypes["DocumentChangeContext"],
+  ParentType extends ResolversParentTypes["DocumentChangeContext"] =
+    ResolversParentTypes["DocumentChangeContext"],
 > = ResolversObject<{
   childId?: Resolver<Maybe<ResolversTypes["String"]>, ParentType, ContextType>;
   parentId?: Resolver<Maybe<ResolversTypes["String"]>, ParentType, ContextType>;
-  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
 export type DocumentChangeEventResolvers<
   ContextType = Context,
-  ParentType extends
-    ResolversParentTypes["DocumentChangeEvent"] = ResolversParentTypes["DocumentChangeEvent"],
+  ParentType extends ResolversParentTypes["DocumentChangeEvent"] =
+    ResolversParentTypes["DocumentChangeEvent"],
 > = ResolversObject<{
   context?: Resolver<
     Maybe<ResolversTypes["DocumentChangeContext"]>,
@@ -1348,13 +1376,12 @@ export type DocumentChangeEventResolvers<
     ParentType,
     ContextType
   >;
-  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
 export type DocumentModelGlobalStateResolvers<
   ContextType = Context,
-  ParentType extends
-    ResolversParentTypes["DocumentModelGlobalState"] = ResolversParentTypes["DocumentModelGlobalState"],
+  ParentType extends ResolversParentTypes["DocumentModelGlobalState"] =
+    ResolversParentTypes["DocumentModelGlobalState"],
 > = ResolversObject<{
   id?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
   name?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
@@ -1369,13 +1396,12 @@ export type DocumentModelGlobalStateResolvers<
     ContextType
   >;
   version?: Resolver<Maybe<ResolversTypes["String"]>, ParentType, ContextType>;
-  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
 export type DocumentModelResultPageResolvers<
   ContextType = Context,
-  ParentType extends
-    ResolversParentTypes["DocumentModelResultPage"] = ResolversParentTypes["DocumentModelResultPage"],
+  ParentType extends ResolversParentTypes["DocumentModelResultPage"] =
+    ResolversParentTypes["DocumentModelResultPage"],
 > = ResolversObject<{
   cursor?: Resolver<Maybe<ResolversTypes["String"]>, ParentType, ContextType>;
   hasNextPage?: Resolver<ResolversTypes["Boolean"], ParentType, ContextType>;
@@ -1390,13 +1416,12 @@ export type DocumentModelResultPageResolvers<
     ContextType
   >;
   totalCount?: Resolver<ResolversTypes["Int"], ParentType, ContextType>;
-  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
 export type DocumentWithChildrenResolvers<
   ContextType = Context,
-  ParentType extends
-    ResolversParentTypes["DocumentWithChildren"] = ResolversParentTypes["DocumentWithChildren"],
+  ParentType extends ResolversParentTypes["DocumentWithChildren"] =
+    ResolversParentTypes["DocumentWithChildren"],
 > = ResolversObject<{
   childIds?: Resolver<
     ReadonlyArray<ResolversTypes["String"]>,
@@ -1404,30 +1429,30 @@ export type DocumentWithChildrenResolvers<
     ContextType
   >;
   document?: Resolver<ResolversTypes["PHDocument"], ParentType, ContextType>;
-  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
-export interface JsonObjectScalarConfig
-  extends GraphQLScalarTypeConfig<ResolversTypes["JSONObject"], any> {
+export interface JsonObjectScalarConfig extends GraphQLScalarTypeConfig<
+  ResolversTypes["JSONObject"],
+  any
+> {
   name: "JSONObject";
 }
 
 export type JobChangeEventResolvers<
   ContextType = Context,
-  ParentType extends
-    ResolversParentTypes["JobChangeEvent"] = ResolversParentTypes["JobChangeEvent"],
+  ParentType extends ResolversParentTypes["JobChangeEvent"] =
+    ResolversParentTypes["JobChangeEvent"],
 > = ResolversObject<{
   error?: Resolver<Maybe<ResolversTypes["String"]>, ParentType, ContextType>;
   jobId?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
   result?: Resolver<ResolversTypes["JSONObject"], ParentType, ContextType>;
   status?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
-  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
 export type JobInfoResolvers<
   ContextType = Context,
-  ParentType extends
-    ResolversParentTypes["JobInfo"] = ResolversParentTypes["JobInfo"],
+  ParentType extends ResolversParentTypes["JobInfo"] =
+    ResolversParentTypes["JobInfo"],
 > = ResolversObject<{
   completedAt?: Resolver<
     Maybe<ResolversTypes["DateTime"]>,
@@ -1439,23 +1464,21 @@ export type JobInfoResolvers<
   id?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
   result?: Resolver<ResolversTypes["JSONObject"], ParentType, ContextType>;
   status?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
-  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
 export type MoveChildrenResultResolvers<
   ContextType = Context,
-  ParentType extends
-    ResolversParentTypes["MoveChildrenResult"] = ResolversParentTypes["MoveChildrenResult"],
+  ParentType extends ResolversParentTypes["MoveChildrenResult"] =
+    ResolversParentTypes["MoveChildrenResult"],
 > = ResolversObject<{
   source?: Resolver<ResolversTypes["PHDocument"], ParentType, ContextType>;
   target?: Resolver<ResolversTypes["PHDocument"], ParentType, ContextType>;
-  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
 export type MutationResolvers<
   ContextType = Context,
-  ParentType extends
-    ResolversParentTypes["Mutation"] = ResolversParentTypes["Mutation"],
+  ParentType extends ResolversParentTypes["Mutation"] =
+    ResolversParentTypes["Mutation"],
 > = ResolversObject<{
   addChildren?: Resolver<
     ResolversTypes["PHDocument"],
@@ -1547,21 +1570,20 @@ export type MutationResolvers<
 
 export type OperationContextResolvers<
   ContextType = Context,
-  ParentType extends
-    ResolversParentTypes["OperationContext"] = ResolversParentTypes["OperationContext"],
+  ParentType extends ResolversParentTypes["OperationContext"] =
+    ResolversParentTypes["OperationContext"],
 > = ResolversObject<{
   branch?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
   documentId?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
   documentType?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
   ordinal?: Resolver<ResolversTypes["Int"], ParentType, ContextType>;
   scope?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
-  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
 export type OperationWithContextResolvers<
   ContextType = Context,
-  ParentType extends
-    ResolversParentTypes["OperationWithContext"] = ResolversParentTypes["OperationWithContext"],
+  ParentType extends ResolversParentTypes["OperationWithContext"] =
+    ResolversParentTypes["OperationWithContext"],
 > = ResolversObject<{
   context?: Resolver<
     ResolversTypes["OperationContext"],
@@ -1573,13 +1595,12 @@ export type OperationWithContextResolvers<
     ParentType,
     ContextType
   >;
-  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
 export type PhDocumentResolvers<
   ContextType = Context,
-  ParentType extends
-    ResolversParentTypes["PHDocument"] = ResolversParentTypes["PHDocument"],
+  ParentType extends ResolversParentTypes["PHDocument"] =
+    ResolversParentTypes["PHDocument"],
 > = ResolversObject<{
   createdAtUtcIso?: Resolver<
     ResolversTypes["DateTime"],
@@ -1600,7 +1621,6 @@ export type PhDocumentResolvers<
     ContextType,
     Partial<PhDocumentOperationsArgs>
   >;
-  parentId?: Resolver<Maybe<ResolversTypes["String"]>, ParentType, ContextType>;
   revisionsList?: Resolver<
     ReadonlyArray<ResolversTypes["Revision"]>,
     ParentType,
@@ -1608,13 +1628,12 @@ export type PhDocumentResolvers<
   >;
   slug?: Resolver<Maybe<ResolversTypes["String"]>, ParentType, ContextType>;
   state?: Resolver<ResolversTypes["JSONObject"], ParentType, ContextType>;
-  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
 export type PhDocumentResultPageResolvers<
   ContextType = Context,
-  ParentType extends
-    ResolversParentTypes["PHDocumentResultPage"] = ResolversParentTypes["PHDocumentResultPage"],
+  ParentType extends ResolversParentTypes["PHDocumentResultPage"] =
+    ResolversParentTypes["PHDocumentResultPage"],
 > = ResolversObject<{
   cursor?: Resolver<Maybe<ResolversTypes["String"]>, ParentType, ContextType>;
   hasNextPage?: Resolver<ResolversTypes["Boolean"], ParentType, ContextType>;
@@ -1629,27 +1648,30 @@ export type PhDocumentResultPageResolvers<
     ContextType
   >;
   totalCount?: Resolver<ResolversTypes["Int"], ParentType, ContextType>;
-  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
 export type PollSyncEnvelopesResultResolvers<
   ContextType = Context,
-  ParentType extends
-    ResolversParentTypes["PollSyncEnvelopesResult"] = ResolversParentTypes["PollSyncEnvelopesResult"],
+  ParentType extends ResolversParentTypes["PollSyncEnvelopesResult"] =
+    ResolversParentTypes["PollSyncEnvelopesResult"],
 > = ResolversObject<{
   ackOrdinal?: Resolver<ResolversTypes["Int"], ParentType, ContextType>;
+  deadLetters?: Resolver<
+    ReadonlyArray<ResolversTypes["DeadLetterInfo"]>,
+    ParentType,
+    ContextType
+  >;
   envelopes?: Resolver<
     ReadonlyArray<ResolversTypes["SyncEnvelope"]>,
     ParentType,
     ContextType
   >;
-  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
 export type QueryResolvers<
   ContextType = Context,
-  ParentType extends
-    ResolversParentTypes["Query"] = ResolversParentTypes["Query"],
+  ParentType extends ResolversParentTypes["Query"] =
+    ResolversParentTypes["Query"],
 > = ResolversObject<{
   document?: Resolver<
     Maybe<ResolversTypes["DocumentWithChildren"]>,
@@ -1706,8 +1728,8 @@ export type QueryResolvers<
 
 export type ReactorOperationResolvers<
   ContextType = Context,
-  ParentType extends
-    ResolversParentTypes["ReactorOperation"] = ResolversParentTypes["ReactorOperation"],
+  ParentType extends ResolversParentTypes["ReactorOperation"] =
+    ResolversParentTypes["ReactorOperation"],
 > = ResolversObject<{
   action?: Resolver<ResolversTypes["Action"], ParentType, ContextType>;
   error?: Resolver<Maybe<ResolversTypes["String"]>, ParentType, ContextType>;
@@ -1716,13 +1738,12 @@ export type ReactorOperationResolvers<
   index?: Resolver<ResolversTypes["Int"], ParentType, ContextType>;
   skip?: Resolver<ResolversTypes["Int"], ParentType, ContextType>;
   timestampUtcMs?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
-  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
 export type ReactorOperationResultPageResolvers<
   ContextType = Context,
-  ParentType extends
-    ResolversParentTypes["ReactorOperationResultPage"] = ResolversParentTypes["ReactorOperationResultPage"],
+  ParentType extends ResolversParentTypes["ReactorOperationResultPage"] =
+    ResolversParentTypes["ReactorOperationResultPage"],
 > = ResolversObject<{
   cursor?: Resolver<Maybe<ResolversTypes["String"]>, ParentType, ContextType>;
   hasNextPage?: Resolver<ResolversTypes["Boolean"], ParentType, ContextType>;
@@ -1737,13 +1758,12 @@ export type ReactorOperationResultPageResolvers<
     ContextType
   >;
   totalCount?: Resolver<ResolversTypes["Int"], ParentType, ContextType>;
-  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
 export type ReactorSignerResolvers<
   ContextType = Context,
-  ParentType extends
-    ResolversParentTypes["ReactorSigner"] = ResolversParentTypes["ReactorSigner"],
+  ParentType extends ResolversParentTypes["ReactorSigner"] =
+    ResolversParentTypes["ReactorSigner"],
 > = ResolversObject<{
   app?: Resolver<
     Maybe<ResolversTypes["ReactorSignerApp"]>,
@@ -1760,34 +1780,31 @@ export type ReactorSignerResolvers<
     ParentType,
     ContextType
   >;
-  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
 export type ReactorSignerAppResolvers<
   ContextType = Context,
-  ParentType extends
-    ResolversParentTypes["ReactorSignerApp"] = ResolversParentTypes["ReactorSignerApp"],
+  ParentType extends ResolversParentTypes["ReactorSignerApp"] =
+    ResolversParentTypes["ReactorSignerApp"],
 > = ResolversObject<{
   key?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
   name?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
-  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
 export type ReactorSignerUserResolvers<
   ContextType = Context,
-  ParentType extends
-    ResolversParentTypes["ReactorSignerUser"] = ResolversParentTypes["ReactorSignerUser"],
+  ParentType extends ResolversParentTypes["ReactorSignerUser"] =
+    ResolversParentTypes["ReactorSignerUser"],
 > = ResolversObject<{
   address?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
   chainId?: Resolver<ResolversTypes["Int"], ParentType, ContextType>;
   networkId?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
-  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
 export type RemoteCursorResolvers<
   ContextType = Context,
-  ParentType extends
-    ResolversParentTypes["RemoteCursor"] = ResolversParentTypes["RemoteCursor"],
+  ParentType extends ResolversParentTypes["RemoteCursor"] =
+    ResolversParentTypes["RemoteCursor"],
 > = ResolversObject<{
   cursorOrdinal?: Resolver<ResolversTypes["Int"], ParentType, ContextType>;
   lastSyncedAtUtcMs?: Resolver<
@@ -1796,23 +1813,21 @@ export type RemoteCursorResolvers<
     ContextType
   >;
   remoteName?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
-  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
 export type RevisionResolvers<
   ContextType = Context,
-  ParentType extends
-    ResolversParentTypes["Revision"] = ResolversParentTypes["Revision"],
+  ParentType extends ResolversParentTypes["Revision"] =
+    ResolversParentTypes["Revision"],
 > = ResolversObject<{
   revision?: Resolver<ResolversTypes["Int"], ParentType, ContextType>;
   scope?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
-  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
 export type SubscriptionResolvers<
   ContextType = Context,
-  ParentType extends
-    ResolversParentTypes["Subscription"] = ResolversParentTypes["Subscription"],
+  ParentType extends ResolversParentTypes["Subscription"] =
+    ResolversParentTypes["Subscription"],
 > = ResolversObject<{
   documentChanges?: SubscriptionResolver<
     ResolversTypes["DocumentChangeEvent"],
@@ -1832,8 +1847,8 @@ export type SubscriptionResolvers<
 
 export type SyncEnvelopeResolvers<
   ContextType = Context,
-  ParentType extends
-    ResolversParentTypes["SyncEnvelope"] = ResolversParentTypes["SyncEnvelope"],
+  ParentType extends ResolversParentTypes["SyncEnvelope"] =
+    ResolversParentTypes["SyncEnvelope"],
 > = ResolversObject<{
   channelMeta?: Resolver<
     ResolversTypes["ChannelMeta"],
@@ -1857,7 +1872,6 @@ export type SyncEnvelopeResolvers<
     ContextType
   >;
   type?: Resolver<ResolversTypes["SyncEnvelopeType"], ParentType, ContextType>;
-  __isTypeOf?: IsTypeOfResolverFn<ParentType, ContextType>;
 }>;
 
 export type Resolvers<ContextType = Context> = ResolversObject<{
@@ -1866,6 +1880,7 @@ export type Resolvers<ContextType = Context> = ResolversObject<{
   Attachment?: AttachmentResolvers<ContextType>;
   ChannelMeta?: ChannelMetaResolvers<ContextType>;
   DateTime?: GraphQLScalarType;
+  DeadLetterInfo?: DeadLetterInfoResolvers<ContextType>;
   DocumentChangeContext?: DocumentChangeContextResolvers<ContextType>;
   DocumentChangeEvent?: DocumentChangeEventResolvers<ContextType>;
   DocumentModelGlobalState?: DocumentModelGlobalStateResolvers<ContextType>;
@@ -1972,6 +1987,7 @@ export function OperationContextInputSchema(): z.ZodObject<
     branch: z.string(),
     documentId: z.string(),
     documentType: z.string(),
+    ordinal: z.number(),
     scope: z.string(),
   });
 }
@@ -2129,7 +2145,6 @@ export const PhDocumentFieldsFragmentDoc = gql`
     }
     createdAtUtcIso
     lastModifiedAtUtcIso
-    parentId
   }
 `;
 export const GetDocumentModelsDocument = gql`
@@ -2466,6 +2481,10 @@ export const PollSyncEnvelopesDocument = gql`
         dependsOn
       }
       ackOrdinal
+      deadLetters {
+        documentId
+        error
+      }
     }
   }
 `;

@@ -66,6 +66,40 @@ function createMockSyncOperation(
   } as unknown as SyncOperation;
 }
 
+function createMockPoller() {
+  let paused = false;
+  let running = true;
+  let intervalMs = 2000;
+  return {
+    start() {
+      running = true;
+    },
+    stop() {
+      running = false;
+    },
+    pause() {
+      paused = true;
+    },
+    resume() {
+      paused = false;
+    },
+    triggerNow() {},
+    isPaused() {
+      return paused;
+    },
+    isRunning() {
+      return running;
+    },
+    getIntervalMs() {
+      return intervalMs;
+    },
+    setIntervalMs(ms: number) {
+      intervalMs = ms;
+    },
+    setDelegate() {},
+  };
+}
+
 function createMockChannel(
   inboxOps: SyncOperation[],
   outboxOps: SyncOperation[],
@@ -75,6 +109,7 @@ function createMockChannel(
     inbox: createMockMailbox(inboxOps),
     outbox: createMockMailbox(outboxOps),
     deadLetter: createMockMailbox(deadLetterOps),
+    poller: createMockPoller(),
   } as unknown as IChannel;
 }
 
@@ -179,9 +214,15 @@ const mockRemotes: Remote[] = [
   },
 ];
 
+const mockRemoveRemote = async (name: string) => {
+  console.log(`Removing remote: ${name}`);
+  await Promise.resolve();
+};
+
 export const Default: Story = {
   args: {
     getRemotes: () => Promise.resolve(mockRemotes),
+    removeRemote: mockRemoveRemote,
   },
 };
 
@@ -194,6 +235,7 @@ export const EmptyRemotes: Story = {
 export const SingleRemote: Story = {
   args: {
     getRemotes: () => Promise.resolve([mockRemotes[0]]),
+    removeRemote: mockRemoveRemote,
   },
 };
 
@@ -244,5 +286,6 @@ const manyRemotes: Remote[] = Array.from({ length: 20 }, (_, i) => ({
 export const ManyRemotes: Story = {
   args: {
     getRemotes: () => Promise.resolve(manyRemotes),
+    removeRemote: mockRemoveRemote,
   },
 };

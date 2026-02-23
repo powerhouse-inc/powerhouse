@@ -1,10 +1,10 @@
 import type { DocumentModelTemplateInputs } from "@powerhousedao/codegen/file-builders";
 import { ts } from "@tmpl/core";
-import { paramCase } from "change-case";
+import { kebabCase } from "change-case";
 import type { ModuleSpecification } from "document-model";
 
 function buildModuleOperationsExports(module: ModuleSpecification) {
-  const moduleDirName = paramCase(module.name);
+  const moduleDirName = kebabCase(module.name);
   return `export * from "./${moduleDirName}/operations.js";`;
 }
 

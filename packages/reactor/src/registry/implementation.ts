@@ -10,12 +10,21 @@ import type { IDocumentModelRegistry } from "./interfaces.js";
  * Error thrown when a document model module is not found in the registry.
  */
 export class ModuleNotFoundError extends Error {
+  readonly documentType: string;
+  readonly requestedVersion: number | undefined;
+
   constructor(documentType: string, version?: number) {
     const versionSuffix = version !== undefined ? ` version ${version}` : "";
     super(
       `Document model module not found for type: ${documentType}${versionSuffix}`,
     );
     this.name = "ModuleNotFoundError";
+    this.documentType = documentType;
+    this.requestedVersion = version;
+  }
+
+  static isError(error: unknown): error is ModuleNotFoundError {
+    return Error.isError(error) && error.name === "ModuleNotFoundError";
   }
 }
 
@@ -29,6 +38,10 @@ export class DuplicateModuleError extends Error {
       `Document model module already registered for type: ${documentType}${versionSuffix}`,
     );
     this.name = "DuplicateModuleError";
+  }
+
+  static isError(error: unknown): error is DuplicateModuleError {
+    return Error.isError(error) && error.name === "DuplicateModuleError";
   }
 }
 

@@ -41,8 +41,9 @@ export type ExtractProcessorSchemaOrSelf<TProcessor> =
 export type RelationalDbProcessorClass<TSchema> =
   typeof RelationalDbProcessor<TSchema>;
 
-export interface IRelationalDbProcessor<TDatabaseSchema = unknown>
-  extends IProcessor {
+export interface IRelationalDbProcessor<
+  TDatabaseSchema = unknown,
+> extends IProcessor {
   namespace: string;
   query: IRelationalQueryBuilder<TDatabaseSchema>;
   filter: ProcessorFilter;
@@ -56,9 +57,9 @@ const IS_RELATIONAL_DB_PROCESSOR = Symbol.for("ph.IS_RELATIONAL_DB_PROCESSOR");
  * This class abstracts database initialization, migration management, and resource cleanup,
  * allowing derived classes to focus on business logic.
  */
-export abstract class RelationalDbProcessor<TDatabaseSchema = unknown>
-  implements IRelationalDbProcessor<TDatabaseSchema>
-{
+export abstract class RelationalDbProcessor<
+  TDatabaseSchema = unknown,
+> implements IRelationalDbProcessor<TDatabaseSchema> {
   constructor(
     protected _namespace: string,
     protected _filter: ProcessorFilter,

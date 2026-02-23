@@ -1,8 +1,14 @@
 import type { VetraProcessorConfigType } from "@powerhousedao/config";
 import { VETRA_PROCESSOR_CONFIG_KEY } from "@powerhousedao/config";
-import { blue, red } from "colorette";
-import type { IDocumentDriveServer } from "document-drive";
-import { setLogLevel } from "document-drive";
+import type { ILogger, IReactorClient } from "@powerhousedao/reactor";
+import { addDefaultDrive } from "@powerhousedao/switchboard/utils";
+import { blue, green, red, yellow, type Color } from "colorette";
+import {
+  childLogger,
+  setLogLevel,
+  type IDocumentDriveServer,
+} from "document-drive";
+import { createLogger } from "vite";
 import type { VetraArgs } from "../types.js";
 import { generateProjectDriveId } from "../utils.js";
 import {
@@ -20,8 +26,31 @@ const getDefaultVetraUrl = (port: number) =>
 const getDriveId = (driveUrl: string | undefined): string =>
   driveUrl?.split("/").pop() ?? generateProjectDriveId(VETRA_DRIVE_NAME);
 
+function createViteLogger(color: Color) {
+  const customLogger = createLogger("info");
+  const loggerInfo = customLogger.info.bind(customLogger);
+  customLogger.info = (msg, options) => {
+    loggerInfo(color(msg), options);
+  };
+  const loggerWarn = customLogger.warn.bind(customLogger);
+  customLogger.warn = (msg, options) => {
+    loggerWarn(yellow(msg), options);
+  };
+  const loggerError = customLogger.error.bind(customLogger);
+  customLogger.error = (msg, options) => {
+    loggerError(red(msg), options);
+  };
+
+  const loggerWarnOnce = customLogger.warnOnce.bind(customLogger);
+  customLogger.warnOnce = (msg, options) => {
+    loggerWarnOnce(yellow(msg), options);
+  };
+  return customLogger;
+}
+
 async function startVetraPreviewDrive(
-  reactor: IDocumentDriveServer,
+  reactor: IReactorClient,
+  reactorLegacy: IDocumentDriveServer,
   port: number,
   verbose?: boolean,
 ): Promise<string> {
@@ -33,6 +62,7 @@ async function startVetraPreviewDrive(
     global: {
       name: "Vetra Preview",
       icon: "https://azure-elderly-tortoise-212.mypinata.cloud/ipfs/bafkreifddkbopiyvcirf7vaqar74th424r5phlxkdxniirdyg3qgu2ajha",
+      nodes: [],
     },
     local: {
       availableOffline: true,
@@ -42,27 +72,19 @@ async function startVetraPreviewDrive(
     },
   };
 
-  try {
-    await reactor.addDrive(previewDrive);
-    if (verbose) {
-      console.log(
-        blue(`[Vetra Switchboard]: Preview drive created: ${previewDriveId}`),
-      );
-    }
-  } catch {
-    // Drive might already exist, which is fine
-    if (verbose) {
-      console.log(
-        blue(
-          `[Vetra Switchboard]: Preview drive already exists: ${previewDriveId}`,
-        ),
-      );
-    }
-  }
+  const driveUrl = await addDefaultDrive(
+    reactorLegacy,
+    reactor,
+    previewDrive,
+    port,
+  );
 
-  return `http://localhost:${port}/d/${previewDriveId}`;
+  if (verbose) {
+    console.log(blue(`Vetra Switchboard: Preview drive: ${driveUrl}`));
+  }
+  return driveUrl;
 }
-async function startLocalVetraSwitchboard(args: VetraArgs) {
+async function startLocalVetraSwitchboard(args: VetraArgs, logger?: ILogger) {
   const {
     connectPort,
     switchboardPort,
@@ -93,50 +115,62 @@ async function startLocalVetraSwitchboard(args: VetraArgs) {
   const vetraDriveId = generateProjectDriveId(VETRA_DRIVE_NAME);
 
   try {
-    const switchboard = await startSwitchboard({
-      ...args,
-      useVetraDrive: true, // Use Vetra drive instead of Powerhouse drive
-      mcp: true,
-      port: switchboardPort,
-      dev,
-      packages,
-      remoteDrives,
-      vetraDriveId,
-      disableLocalPackages,
-      debug,
-      httpsKeyFile,
-      httpsCertFile,
-      basePath: undefined,
-      keypairPath: undefined,
-      dbPath: undefined,
-      useIdentity: undefined,
-      migrate: undefined,
-      migrateStatus: undefined,
-      requireIdentity: undefined,
-    });
+    const switchboard = await startSwitchboard(
+      {
+        ...args,
+        useVetraDrive: true, // Use Vetra drive instead of Powerhouse drive
+        mcp: true,
+        port: switchboardPort,
+        dev,
+        packages,
+        remoteDrives,
+        vetraDriveId,
+        disableLocalPackages,
+        debug,
+        httpsKeyFile,
+        httpsCertFile,
+        basePath: undefined,
+        keypairPath: undefined,
+        dbPath: undefined,
+        useIdentity: undefined,
+        migrate: undefined,
+        migrateStatus: undefined,
+        requireIdentity: undefined,
+      },
+      logger,
+    );
 
     // Add preview drive (only in watch mode)
     let previewDriveUrl: string | null = null;
     if (watch) {
-      previewDriveUrl = await startVetraPreviewDrive(
-        switchboard.reactor,
-        connectPort,
-        verbose,
-      );
+      try {
+        previewDriveUrl = await startVetraPreviewDrive(
+          switchboard.reactor,
+          switchboard.legacyReactor,
+          switchboardPort,
+          verbose,
+        );
+      } catch (error) {
+        console.error(error);
+      }
     }
 
     if (verbose) {
-      console.log(blue(`[Vetra Switchboard]: Started successfully`));
+      console.log(blue(`Vetra Switchboard: Started successfully`));
       if (remoteDrive) {
         console.log(
-          blue(
-            `[Vetra Switchboard]: Syncing with remote drive: ${remoteDrive}`,
-          ),
+          blue(`Vetra Switchboard: Syncing with remote drive: ${remoteDrive}`),
         );
       }
     } else {
-      console.log(`Switchboard initialized`);
-      console.log(`   ➜ Drive URL: ${switchboard.defaultDriveUrl}`);
+      console.log();
+      console.log(
+        blue(`Vetra Switchboard: http://localhost:${switchboardPort}/graphql`),
+      );
+      console.log(blue(`   ➜ Drive URL: ${switchboard.defaultDriveUrl}`));
+      if (previewDriveUrl) {
+        console.log(blue(`   ➜ Preview Drive URL: ${previewDriveUrl}`));
+      }
     }
     return {
       driveUrl: switchboard.defaultDriveUrl || "",
@@ -145,7 +179,7 @@ async function startLocalVetraSwitchboard(args: VetraArgs) {
   } catch (error) {
     console.error(
       red(
-        `[Vetra Switchboard]: ${error instanceof Error ? error.message : String(error)}`,
+        `Vetra Switchboard: ${error instanceof Error ? error.message : String(error)}`,
       ),
     );
     throw error instanceof Error ? error : new Error(String(error));
@@ -163,7 +197,16 @@ export async function startVetra(args: VetraArgs) {
     httpsCertFile,
     httpsKeyFile,
     disableLocalPackages,
+    host,
+    open,
+    cors,
+    strictPort,
+    printUrls,
+    bindCLIShortcuts,
+    watchTimeout,
   } = args;
+
+  const switchboardLogger = childLogger(["vetra", "switchboard"]);
 
   try {
     // Set default log level to info if not already specified
@@ -172,22 +215,25 @@ export async function startVetra(args: VetraArgs) {
     }
 
     if (verbose) {
-      console.log("Starting Vetra Switchboard...");
+      switchboardLogger.info("Starting Vetra Switchboard...");
       if (remoteDrive) {
         const source = remoteDrive
           ? "command line argument"
           : "powerhouse.config.json";
-        console.log(`Using vetraUrl from ${source}: ${remoteDrive}`);
+        switchboardLogger.info(`Using vetraUrl from ${source}: ${remoteDrive}`);
       }
     }
-    const switchboardResult = await startLocalVetraSwitchboard({
-      ...args,
-      dev: true, // Vetra always runs in dev mode to load local packages
-      httpsKeyFile,
-      httpsCertFile,
-      disableLocalPackages,
-      debug,
-    });
+    const switchboardResult = await startLocalVetraSwitchboard(
+      {
+        ...args,
+        dev: true, // Vetra always runs in dev mode to load local packages
+        httpsKeyFile,
+        httpsCertFile,
+        disableLocalPackages,
+        debug,
+      },
+      switchboardLogger,
+    );
     const driveUrl: string = switchboardResult.driveUrl || remoteDrive || "";
     const previewDriveUrl = switchboardResult.previewDriveUrl;
 
@@ -215,23 +261,31 @@ export async function startVetra(args: VetraArgs) {
           : driveUrl;
         console.log(`   ➜ Connect will use drives: ${drives}`);
       }
-      await runConnectStudio({
-        ...args,
-        defaultDrivesUrl: previewDriveUrl
-          ? [driveUrl, previewDriveUrl].join(",")
-          : driveUrl,
-        drivesPreserveStrategy: "preserve-all",
-        port: connectPort,
-        disableLocalPackages,
-        debug,
-        host: false,
-        open: false,
-        cors: false,
-        strictPort: false,
-        printUrls: false,
-        bindCLIShortcuts: false,
-        watchTimeout: 300,
-      });
+      console.log();
+      console.log(green(`Vetra Connect: http://localhost:${connectPort}`));
+
+      const customViteLogger = createViteLogger(green);
+
+      await runConnectStudio(
+        {
+          ...args,
+          defaultDrivesUrl: previewDriveUrl
+            ? [driveUrl, previewDriveUrl].join(",")
+            : driveUrl,
+          drivesPreserveStrategy: "preserve-all",
+          port: connectPort,
+          disableLocalPackages,
+          debug,
+          host: host,
+          open: open,
+          cors: cors,
+          strictPort: strictPort,
+          printUrls: printUrls,
+          bindCLIShortcuts: bindCLIShortcuts,
+          watchTimeout: watchTimeout,
+        },
+        customViteLogger,
+      );
     }
   } catch (error) {
     console.error(error);

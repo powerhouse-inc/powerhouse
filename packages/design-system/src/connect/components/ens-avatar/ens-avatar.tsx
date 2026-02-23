@@ -2,7 +2,7 @@ import type { CSSProperties } from "react";
 import { useEnsAvatar, useEnsName } from "wagmi";
 
 const ImgPowerhouse = new URL(
-  "../../../../../assets/powerhouse-rounded.png",
+  "../../../../assets/powerhouse-rounded.png",
   import.meta.url,
 ).href;
 

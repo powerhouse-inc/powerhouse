@@ -8,6 +8,7 @@ import {
   applyUpgradeDocumentAction,
   createDocumentFromAction,
 } from "../executor/util.js";
+import { DocumentNotFoundError } from "../shared/errors.js";
 import type { IOperationStore } from "../storage/interfaces.js";
 import type {
   CachedDocumentMeta,
@@ -167,7 +168,7 @@ export class DocumentMetaCache implements IDocumentMetaCache {
     );
 
     if (docScopeOps.results.length === 0) {
-      throw new Error(`Document ${documentId} not found`);
+      throw new DocumentNotFoundError(documentId);
     }
 
     const createOp = docScopeOps.results[0];

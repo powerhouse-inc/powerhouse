@@ -1,9 +1,9 @@
 import { EventEmitter } from "node:events";
 import type { IEventEmitter } from "./types.js";
 
-export class NodeEventEmitter<Events extends Record<string, unknown>>
-  implements IEventEmitter<Events>
-{
+export class NodeEventEmitter<
+  Events extends Record<string, unknown>,
+> implements IEventEmitter<Events> {
   #emitter = new EventEmitter();
 
   constructor() {

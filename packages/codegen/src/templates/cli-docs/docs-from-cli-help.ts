@@ -1,5 +1,5 @@
 import type { CommandHelpInfo, HelpTopic } from "@powerhousedao/codegen";
-import { capitalCase, paramCase } from "change-case";
+import { capitalCase, kebabCase } from "change-case";
 function groupHelpTopicsByCategory(helpTopics: HelpTopic[]) {
   const helpTopicsByCategory: Record<string, HelpTopic[] | undefined> = {};
 
@@ -20,7 +20,7 @@ function makeTableOfContents(commandsHelpInfo: CommandHelpInfo[]) {
 
   for (const name of commandNames) {
     tableOfContentsEntries.push(
-      `- [${capitalCase(name)}](#${paramCase(name)})\n`,
+      `- [${capitalCase(name)}](#${kebabCase(name)})\n`,
     );
   }
 

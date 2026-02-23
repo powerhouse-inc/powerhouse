@@ -547,6 +547,133 @@ describe("skip operations", () => {
       ]);
     });
 
+    it("should handle compounded GC across multiple skip operations", () => {
+      const initialState = testCreateBaseState({ count: 0 }, { name: "" });
+
+      let document = baseCreateDocument<CountPHState>(
+        createCountDocumentState,
+        initialState,
+      );
+
+      // Phase 1: Build 6 operations (indices 0-5)
+      document = countReducer(document, increment()); // index 0
+      document = countReducer(document, increment()); // index 1
+      document = countReducer(document, increment()); // index 2
+      document = countReducer(document, increment()); // index 3
+      document = countReducer(document, increment()); // index 4
+      document = countReducer(document, increment()); // index 5
+
+      expect(document.operations.global!.length).toBe(6);
+
+      // Phase 2: skip=4 → GC removes ops 2-5, doc = [op0, op1, op6(6,4)]
+      document = countReducer(document, increment(), undefined, {
+        skip: 4,
+      });
+
+      expect(document.operations.global!.length).toBe(3);
+      expect(document.operations.global!).toMatchObject([
+        { index: 0, skip: 0 },
+        { index: 1, skip: 0 },
+        { index: 6, skip: 4 },
+      ]);
+
+      // Phase 3: skip=1 → GC removes op6, doc = [op0, op1, op7(7,1)]
+      document = countReducer(document, increment(), undefined, {
+        skip: 1,
+      });
+
+      expect(document.operations.global!.length).toBe(3);
+      expect(document.operations.global!).toMatchObject([
+        { index: 0, skip: 0 },
+        { index: 1, skip: 0 },
+        { index: 7, skip: 1 },
+      ]);
+
+      // Phase 4: Two regular ops (skip=0)
+      document = countReducer(document, increment()); // index 8
+      document = countReducer(document, increment()); // index 9
+
+      expect(document.operations.global!.length).toBe(5);
+
+      // Phase 5: skip=2 → processSkipOperation replays [op0, op1, op7(7,1)]
+      // Before the fix, this threw:
+      //   "Missing operations: expected 2 with skip 0 or equivalent, got index 7 with skip 1"
+      // because op7's skip=1 was set to bridge from op6 (now removed), not from op1.
+      document = countReducer(document, increment(), undefined, {
+        skip: 2,
+      });
+
+      expect(document.operations.global!.length).toBe(4);
+      expect(document.operations.global!).toMatchObject([
+        { index: 0, skip: 0 },
+        { index: 1, skip: 0 },
+        { index: 7, skip: 1 },
+        { index: 10, skip: 2 },
+      ]);
+      expect(document.state.global.count).toBe(4);
+    });
+
+    it("should not throw when replaying GC'd operations with index gaps from prior GC passes", () => {
+      // This test directly exercises the bug: replayOperations on operations
+      // that survived multiple GC passes where skip values no longer bridge
+      // the index gaps.
+      const initialState = testCreateBaseState({ count: 0 }, { name: "" });
+
+      let document = baseCreateDocument<CountPHState>(
+        createCountDocumentState,
+        initialState,
+      );
+
+      // Build operations, applying skip to trigger GC
+      document = countReducer(document, increment()); // index 0, skip 0
+      document = countReducer(document, increment()); // index 1, skip 0
+      document = countReducer(document, increment()); // index 2, skip 0
+      document = countReducer(document, increment()); // index 3, skip 0
+      document = countReducer(document, increment()); // index 4, skip 0
+      document = countReducer(document, increment()); // index 5, skip 0
+
+      // skip=4 → GC to [op0, op1, op6(6,4)]
+      document = countReducer(document, increment(), undefined, { skip: 4 });
+      // skip=1 → GC to [op0, op1, op7(7,1)]
+      document = countReducer(document, increment(), undefined, { skip: 1 });
+
+      // Now doc has [op0(0,0), op1(1,0), op7(7,1)]
+      // op7's skip=1 was intended to bridge from op6 (index 5 via skipUntil=5),
+      // but op6 was removed by the second GC. So there's a gap from index 1 to
+      // index 7 that skip=1 doesn't cover: 7-1=6 > 1+1=2.
+      const gcOps = garbageCollectDocumentOperations(document.operations);
+      expect(gcOps.global!.length).toBe(3);
+
+      // Without skipIndexValidation, replayOperations throws because op7's
+      // skip=1 doesn't bridge the gap from op1 (index 1) to op7 (index 7):
+      //   7-1=6 > nextIndex=2
+      expect(() =>
+        replayOperations<CountPHState>(
+          initialState,
+          gcOps,
+          baseCountReducer,
+          document.header,
+        ),
+      ).toThrow(
+        "Missing operations: expected 2 with skip 0 or equivalent, got index 7 with skip 1",
+      );
+
+      // With skipIndexValidation: true, it succeeds
+      const replayedDoc = replayOperations<CountPHState>(
+        initialState,
+        gcOps,
+        baseCountReducer,
+        document.header,
+        undefined,
+        undefined,
+        {},
+        { skipIndexValidation: true },
+      );
+
+      expect(replayedDoc.state.global.count).toBe(3);
+      expect(replayedDoc.operations.global!.length).toBe(3);
+    });
+
     it("should not process and skip operation that throws an error", () => {
       const initialState = testCreateBaseState({ count: 0 }, { name: "" });
 

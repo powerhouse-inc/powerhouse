@@ -3,8 +3,10 @@ import {
   ConnectConfirmationModal,
 } from "./confirmation-modal.js";
 
-export interface ConnectDeleteItemModalProps
-  extends Omit<ConfirmationModalProps, "onContinue" | "continueLabel"> {
+export interface ConnectDeleteItemModalProps extends Omit<
+  ConfirmationModalProps,
+  "onContinue" | "continueLabel"
+> {
   readonly onDelete: () => void;
   readonly deleteLabel: string;
 }

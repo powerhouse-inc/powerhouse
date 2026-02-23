@@ -1,4 +1,4 @@
-import { paramCase } from "change-case";
+import { kebabCase } from "change-case";
 import { copyFile, mkdir, readdir, rm } from "node:fs/promises";
 import path from "path";
 import { PURGE_AFTER_TEST } from "./config.js";
@@ -33,7 +33,7 @@ export function getTestDataDir(testDir: string, testDataDir: string) {
 }
 
 export function getTestOutDirPath(testName: string, outDirName: string) {
-  return path.join(outDirName, `test-${paramCase(testName)}`);
+  return path.join(outDirName, `test-${kebabCase(testName)}`);
 }
 
 export async function resetDirForTest(outDirName: string) {

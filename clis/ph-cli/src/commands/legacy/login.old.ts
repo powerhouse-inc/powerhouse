@@ -183,9 +183,8 @@ export const login: CommandActionType<[LoginOptions]> = async (options) => {
     ? parseInt(options.timeout, 10) * 1000
     : DEFAULT_TIMEOUT_MS;
 
-  const { getRenown, generateSessionId } = await import(
-    "../../services/auth.js"
-  );
+  const { getRenown, generateSessionId } =
+    await import("../../services/auth.js");
 
   const renown = await getRenown();
 

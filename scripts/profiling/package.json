@@ -17,10 +17,10 @@
     "graphql-request": "catalog:",
     "kysely": "catalog:",
     "kysely-pglite-dialect": "catalog:",
-    "pg": "^8.14.0"
+    "pg": "catalog:"
   },
   "devDependencies": {
     "@types/node": "catalog:",
-    "@types/pg": "^8.11.6"
+    "@types/pg": "catalog:"
   }
 }

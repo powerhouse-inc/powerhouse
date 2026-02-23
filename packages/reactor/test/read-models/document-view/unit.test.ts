@@ -812,4 +812,126 @@ describe("KyselyDocumentView Unit Tests", () => {
       await expect(view.get("doc-1")).rejects.toThrow("Database error");
     });
   });
+
+  describe("resolveSlugs", () => {
+    it("should resolve multiple slugs and filter undefined results", async () => {
+      mockDb.executeTakeFirst
+        .mockResolvedValueOnce({ documentId: "doc-1" })
+        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce({ documentId: "doc-3" });
+
+      const result = await view.resolveSlugs(["slug-1", "slug-2", "slug-3"]);
+
+      expect(result).toEqual(["doc-1", "doc-3"]);
+    });
+
+    it("should return empty array when all slugs are invalid", async () => {
+      mockDb.executeTakeFirst
+        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce(undefined);
+
+      const result = await view.resolveSlugs(["bad-slug-1", "bad-slug-2"]);
+
+      expect(result).toEqual([]);
+    });
+
+    it("should handle empty array input", async () => {
+      const result = await view.resolveSlugs([]);
+
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe("resolveIdOrSlug", () => {
+    it("should throw ambiguity error when identifier matches both id and slug for different documents", async () => {
+      mockDb.executeTakeFirst
+        .mockResolvedValueOnce({ documentId: "id-match" })
+        .mockResolvedValueOnce({ documentId: "slug-match" });
+
+      await expect(view.resolveIdOrSlug("ambiguous-id")).rejects.toThrow(
+        "Ambiguous identifier",
+      );
+    });
+
+    it("should return documentId when only id matches", async () => {
+      mockDb.executeTakeFirst
+        .mockResolvedValueOnce({ documentId: "id-match" })
+        .mockResolvedValueOnce(undefined);
+
+      const result = await view.resolveIdOrSlug("id-match");
+
+      expect(result).toBe("id-match");
+    });
+
+    it("should return documentId when only slug matches", async () => {
+      mockDb.executeTakeFirst
+        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce({ documentId: "slug-resolved-id" });
+
+      const result = await view.resolveIdOrSlug("my-slug");
+
+      expect(result).toBe("slug-resolved-id");
+    });
+
+    it("should throw when nothing matches", async () => {
+      mockDb.executeTakeFirst
+        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce(undefined);
+
+      await expect(view.resolveIdOrSlug("unknown")).rejects.toThrow(
+        "Document not found",
+      );
+    });
+
+    it("should return documentId when id and slug match the same document", async () => {
+      mockDb.executeTakeFirst
+        .mockResolvedValueOnce({ documentId: "same-doc" })
+        .mockResolvedValueOnce({ documentId: "same-doc" });
+
+      const result = await view.resolveIdOrSlug("same-doc");
+
+      expect(result).toBe("same-doc");
+    });
+  });
+
+  describe("resultingState JSON parse error", () => {
+    it("should throw when resultingState contains invalid JSON", async () => {
+      mockDb.transaction.mockReturnValue({
+        execute: vi.fn().mockImplementation(async (callback: any) => {
+          await callback(mockDb);
+        }),
+      });
+
+      const items = [
+        {
+          operation: {
+            id: "op-1",
+            index: 0,
+            skip: 0,
+            timestampUtcMs: "1000",
+            hash: "abc",
+            action: {
+              id: "action-1",
+              type: "SET_NAME",
+              input: {},
+              timestampUtcMs: "1000",
+              scope: "global",
+            },
+          },
+          context: {
+            documentId: "doc-1",
+            documentType: "test-type",
+            scope: "global",
+            branch: "main",
+            ordinal: 1,
+            resultingState: "not-json",
+          },
+        },
+      ];
+
+      await expect(view.indexOperations(items)).rejects.toThrow(
+        "Failed to parse resultingState",
+      );
+    });
+  });
 });

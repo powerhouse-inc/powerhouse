@@ -3,7 +3,19 @@ type OperationIndex = {
   skip: number;
   id: string;
   timestampUtcMs: string;
+  action?: {
+    id?: string;
+    type?: string;
+  };
 };
+
+const STRICT_ORDER_ACTION_TYPES = new Set([
+  "CREATE_DOCUMENT",
+  "DELETE_DOCUMENT",
+  "UPGRADE_DOCUMENT",
+  "ADD_RELATIONSHIP",
+  "REMOVE_RELATIONSHIP",
+]);
 
 /**
  * Sorts operations by index and skip number.
@@ -19,12 +31,15 @@ export function sortOperations<TOpIndex extends OperationIndex>(
 }
 
 /**
- * Reshuffles operations by timestamp, then original index, then ID.
+ * Reshuffles operations by timestamp, then applies deterministic tie-breaking.
  * Used for merging concurrent operations from different branches.
  *
- * When timestamps are equal, operations are sorted by their original index to preserve
- * ordering of operations created together (e.g., CREATE_DOCUMENT at index 0 must come
- * before UPGRADE_DOCUMENT at index 1). ID is used as a final tiebreaker for determinism.
+ * For strict document-structure actions (e.g., CREATE_DOCUMENT/UPGRADE_DOCUMENT),
+ * logical index (index - skip) is prioritized to preserve causal replay order.
+ *
+ * For other actions, action ID is prioritized to ensure a canonical cross-reactor order
+ * for concurrent operations that may have diverged local indices due to prior reshuffles.
+ * Logical index and operation ID are then used as deterministic tie-breakers.
  *
  * Example:
  * [0:0, 1:0, 2:0, A3:0, A4:0, A5:0] + [0:0, 1:0, 2:0, B3:0, B4:2, B5:0]
@@ -46,10 +61,29 @@ export function reshuffleByTimestamp<TOp extends OperationIndex>(
       if (timestampDiff !== 0) {
         return timestampDiff;
       }
-      const indexDiff = a.index - b.index;
-      if (indexDiff !== 0) {
-        return indexDiff;
+
+      const shouldPrioritizeLogicalIndex =
+        STRICT_ORDER_ACTION_TYPES.has(a.action?.type ?? "") ||
+        STRICT_ORDER_ACTION_TYPES.has(b.action?.type ?? "");
+      const logicalIndexDiff = a.index - a.skip - (b.index - b.skip);
+
+      if (shouldPrioritizeLogicalIndex) {
+        if (logicalIndexDiff !== 0) {
+          return logicalIndexDiff;
+        }
       }
+
+      const actionIdDiff = (a.action?.id ?? "").localeCompare(
+        b.action?.id ?? "",
+      );
+      if (actionIdDiff !== 0) {
+        return actionIdDiff;
+      }
+
+      if (!shouldPrioritizeLogicalIndex && logicalIndexDiff !== 0) {
+        return logicalIndexDiff;
+      }
+
       return a.id.localeCompare(b.id);
     })
     .map((op, i) => ({

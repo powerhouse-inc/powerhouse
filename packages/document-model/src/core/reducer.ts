@@ -321,6 +321,7 @@ function processSkipOperation<TState extends PHBaseState = PHBaseState>(
       {
         reuseOperationResultingState,
         operationResultingStateParser: resultingStateParser,
+        skipIndexValidation: true,
       },
     );
 

@@ -1,0 +1,23 @@
+{
+  "extends": "../../tsconfig.options.json",
+  "compilerOptions": {
+    "outDir": "./dist"
+  },
+  "include": [
+    "**/*"
+  ],
+  "references": [
+    {
+      "path": "../document-model"
+    },
+    {
+      "path": "../builder-tools"
+    },
+    {
+      "path": "../design-system"
+    },
+    {
+      "path": "../reactor-browser"
+    }
+  ]
+}

@@ -1,5 +1,5 @@
 // @ts-check
-const { paramCase, pascalCase, camelCase } = require("change-case");
+const { kebabCase, pascalCase, camelCase } = require("change-case");
 
 /**
  * Extract type names from a GraphQL schema.
@@ -85,8 +85,8 @@ module.exports = {
     const phDocumentTypeName = `${pascalCaseDocumentType}Document`;
     const documentTypeVariableName = `${camelCaseDocumentType}DocumentType`;
     const packageName = args.packageName;
-    const paramCaseDocumentType = paramCase(documentType);
-    const documentModelDir = `${packageName}/document-models/${paramCaseDocumentType}`;
+    const kebabCaseDocumentType = kebabCase(documentType);
+    const documentModelDir = `${packageName}/document-models/${kebabCaseDocumentType}`;
 
     const stateSchema = latestSpec.state.global.schema;
     const stateTypeNames = extractTypeNames(stateSchema);
@@ -107,7 +107,7 @@ module.exports = {
       ),
       modules: latestSpec.modules.map((m) => ({
         ...m,
-        name: paramCase(m.name),
+        name: kebabCase(m.name),
         operations: m.operations.map((op) => ({
           ...op,
           schema: applyGraphQLTypePrefixes(op.schema, pascalCaseDocumentType, stateTypeNames),

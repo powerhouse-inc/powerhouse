@@ -283,6 +283,7 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     envPrefix: ["PH_CONNECT_"],
     envDir: false,
     optimizeDeps: {
+      include: ["vite-plugin-node-polyfills/shims/process"],
       exclude: [
         "@electric-sql/pglite",
         "@electric-sql/pglite-tools",
@@ -296,11 +297,21 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
             [packageJson.name]: localPackage,
           }
         : undefined,
-      dedupe: ["react", "react-dom", "react/jsx-runtime"],
+      dedupe: [
+        "react",
+        "react-dom",
+        "react/jsx-runtime",
+        "@electric-sql/pglite",
+      ],
     },
     build: {
       minify: true,
-      sourcemap: false,
+      sourcemap: true,
+      rollupOptions: {
+        treeshake: {
+          moduleSideEffects: false,
+        },
+      },
     },
     server: {
       watch: env.PH_DISABLE_LOCAL_PACKAGE

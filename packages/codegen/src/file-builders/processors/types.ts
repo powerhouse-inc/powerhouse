@@ -5,7 +5,7 @@ export type GenerateProcessorArgs = {
   project: Project;
   rootDir: string;
   dirPath: string;
-  paramCaseName: string;
+  kebabCaseName: string;
   camelCaseName: string;
   pascalCaseName: string;
   processorsDirPath: string;

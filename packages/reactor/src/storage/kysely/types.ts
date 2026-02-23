@@ -82,6 +82,24 @@ export interface SyncCursorTable {
   updated_at: Generated<Date>;
 }
 
+/**
+ * Kysely table definition for the `sync_dead_letters` table.
+ */
+export interface SyncDeadLetterTable {
+  ordinal: Generated<number>;
+  id: string;
+  job_id: string;
+  job_dependencies: unknown;
+  remote_name: string;
+  document_id: string;
+  scopes: unknown;
+  branch: string;
+  operations: unknown;
+  error_source: string;
+  error_message: string;
+  created_at: Generated<Date>;
+}
+
 export interface Database {
   Operation: OperationTable;
   Keyframe: KeyframeTable;
@@ -89,6 +107,7 @@ export interface Database {
   operation_index_operations: OperationIndexOperationTable;
   sync_remotes: SyncRemoteTable;
   sync_cursors: SyncCursorTable;
+  sync_dead_letters: SyncDeadLetterTable;
 }
 
 export type OperationRow = Selectable<OperationTable>;
@@ -159,3 +178,6 @@ export type UpdateableSyncRemote = Updateable<SyncRemoteTable>;
 export type SyncCursorRow = Selectable<SyncCursorTable>;
 export type InsertableSyncCursor = Insertable<SyncCursorTable>;
 export type UpdateableSyncCursor = Updateable<SyncCursorTable>;
+
+export type SyncDeadLetterRow = Selectable<SyncDeadLetterTable>;
+export type InsertableSyncDeadLetter = Insertable<SyncDeadLetterTable>;

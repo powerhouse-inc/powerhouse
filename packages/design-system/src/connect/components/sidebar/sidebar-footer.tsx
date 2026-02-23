@@ -4,8 +4,9 @@ import { twMerge } from "tailwind-merge";
 import { SidebarLogin } from "./sidebar-login.js";
 import { SidebarUser } from "./sidebar-user.js";
 
-export interface ConnectSidebarFooterProps
-  extends ComponentProps<typeof SidebarFooter> {
+export interface ConnectSidebarFooterProps extends ComponentProps<
+  typeof SidebarFooter
+> {
   address: `0x${string}` | undefined;
   onClickSettings: (() => void) | undefined;
   onInspectorClick?: () => void;

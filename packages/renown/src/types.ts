@@ -88,8 +88,10 @@ export interface IProof {
   };
 }
 
-export interface IVerifiableCredential<Subject, Issuer>
-  extends IVerifiableCredentialPayload<Subject, Issuer> {
+export interface IVerifiableCredential<
+  Subject,
+  Issuer,
+> extends IVerifiableCredentialPayload<Subject, Issuer> {
   proof: IProof;
 }
 
