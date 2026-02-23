@@ -227,6 +227,20 @@ async function main(): Promise<void> {
   const sbLog = logs.forProcess("switchboard");
   sbLog.pipe(switchboardProc);
 
+  // Print switchboard output to console for diagnostics
+  switchboardProc.stdout?.on("data", (chunk: Buffer) => {
+    const text = chunk.toString().trim();
+    if (text) {
+      console.log(gray(`  [switchboard] ${text}`));
+    }
+  });
+  switchboardProc.stderr?.on("data", (chunk: Buffer) => {
+    const text = chunk.toString().trim();
+    if (text) {
+      console.error(gray(`  [switchboard] `) + red(text));
+    }
+  });
+
   // Step 2: Wait for ready
   try {
     await waitForSwitchboard(url, 30_000);
@@ -235,6 +249,9 @@ async function main(): Promise<void> {
       red("Switchboard failed to start:"),
       error instanceof Error ? error.message : error,
     );
+    if (sbState.exited) {
+      console.error(red(`  Switchboard exited with code ${sbState.exitCode}`));
+    }
     switchboardProc.kill("SIGTERM");
     logs.close();
     process.exit(1);
