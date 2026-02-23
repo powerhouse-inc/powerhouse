@@ -64,9 +64,9 @@ describe("KyselySyncDeadLetterStorage", () => {
   });
 
   describe("list", () => {
-    it("should return empty array when no dead letters exist", async () => {
-      const results = await storage.list("remote-1");
-      expect(results).toEqual([]);
+    it("should return empty results when no dead letters exist", async () => {
+      const page = await storage.list("remote-1");
+      expect(page.results).toEqual([]);
     });
 
     it("should return dead letters filtered by remote name", async () => {
@@ -82,10 +82,10 @@ describe("KyselySyncDeadLetterStorage", () => {
       await storage.add(dl1);
       await storage.add(dl2);
 
-      const results = await storage.list("remote-1");
-      expect(results).toHaveLength(1);
-      expect(results[0].id).toBe("dl-1");
-      expect(results[0].remoteName).toBe("remote-1");
+      const page = await storage.list("remote-1");
+      expect(page.results).toHaveLength(1);
+      expect(page.results[0].id).toBe("dl-1");
+      expect(page.results[0].remoteName).toBe("remote-1");
     });
 
     it("should return multiple dead letters for same remote", async () => {
@@ -95,17 +95,66 @@ describe("KyselySyncDeadLetterStorage", () => {
       await storage.add(dl1);
       await storage.add(dl2);
 
-      const results = await storage.list("remote-1");
-      expect(results).toHaveLength(2);
+      const page = await storage.list("remote-1");
+      expect(page.results).toHaveLength(2);
+    });
+
+    it("should return results ordered by ordinal DESC (newest first)", async () => {
+      await storage.add(
+        createDeadLetter({ id: "dl-a", remoteName: "remote-1" }),
+      );
+      await storage.add(
+        createDeadLetter({ id: "dl-b", remoteName: "remote-1" }),
+      );
+      await storage.add(
+        createDeadLetter({ id: "dl-c", remoteName: "remote-1" }),
+      );
+
+      const page = await storage.list("remote-1");
+      expect(page.results).toHaveLength(3);
+      // Most recently inserted should be first (DESC order)
+      expect(page.results[0].id).toBe("dl-c");
+      expect(page.results[1].id).toBe("dl-b");
+      expect(page.results[2].id).toBe("dl-a");
+    });
+
+    it("should respect the limit in PagingOptions", async () => {
+      for (let i = 0; i < 5; i++) {
+        await storage.add(
+          createDeadLetter({ id: `dl-${i}`, remoteName: "remote-1" }),
+        );
+      }
+
+      const page = await storage.list("remote-1", { cursor: "0", limit: 3 });
+      expect(page.results).toHaveLength(3);
+    });
+
+    it("should return nextCursor when there are more results", async () => {
+      for (let i = 0; i < 5; i++) {
+        await storage.add(
+          createDeadLetter({ id: `dl-${i}`, remoteName: "remote-1" }),
+        );
+      }
+
+      const page = await storage.list("remote-1", { cursor: "0", limit: 3 });
+      expect(page.results).toHaveLength(3);
+      expect(page.nextCursor).toBe("3");
+
+      const page2 = await storage.list("remote-1", {
+        cursor: page.nextCursor!,
+        limit: 3,
+      });
+      expect(page2.results).toHaveLength(2);
+      expect(page2.nextCursor).toBeUndefined();
     });
 
     it("should handle abort signal", async () => {
       const controller = new AbortController();
       controller.abort();
 
-      await expect(storage.list("remote-1", controller.signal)).rejects.toThrow(
-        "Operation aborted",
-      );
+      await expect(
+        storage.list("remote-1", undefined, controller.signal),
+      ).rejects.toThrow("Operation aborted");
     });
   });
 
@@ -114,9 +163,9 @@ describe("KyselySyncDeadLetterStorage", () => {
       const dl = createDeadLetter();
       await storage.add(dl);
 
-      const results = await storage.list("remote-1");
-      expect(results).toHaveLength(1);
-      expect(results[0]).toEqual(
+      const page = await storage.list("remote-1");
+      expect(page.results).toHaveLength(1);
+      expect(page.results[0]).toEqual(
         expect.objectContaining({
           id: "dl-1",
           jobId: "job-1",
@@ -136,8 +185,8 @@ describe("KyselySyncDeadLetterStorage", () => {
       await storage.add(dl);
       await storage.add(dl);
 
-      const results = await storage.list("remote-1");
-      expect(results).toHaveLength(1);
+      const page = await storage.list("remote-1");
+      expect(page.results).toHaveLength(1);
     });
 
     it("should preserve operations as JSON", async () => {
@@ -165,9 +214,9 @@ describe("KyselySyncDeadLetterStorage", () => {
 
       await storage.add(dl);
 
-      const results = await storage.list("remote-1");
-      expect(results[0].operations).toHaveLength(1);
-      expect(results[0].operations[0].operation.id).toBe("op-1");
+      const page = await storage.list("remote-1");
+      expect(page.results[0].operations).toHaveLength(1);
+      expect(page.results[0].operations[0].operation.id).toBe("op-1");
     });
 
     it("should handle abort signal", async () => {
@@ -187,8 +236,8 @@ describe("KyselySyncDeadLetterStorage", () => {
 
       await storage.remove("dl-1");
 
-      const results = await storage.list("remote-1");
-      expect(results).toHaveLength(0);
+      const page = await storage.list("remote-1");
+      expect(page.results).toHaveLength(0);
     });
 
     it("should not throw when removing non-existent id", async () => {
@@ -217,11 +266,11 @@ describe("KyselySyncDeadLetterStorage", () => {
 
       await storage.removeByRemote("remote-1");
 
-      const remote1Results = await storage.list("remote-1");
-      expect(remote1Results).toHaveLength(0);
+      const remote1Page = await storage.list("remote-1");
+      expect(remote1Page.results).toHaveLength(0);
 
-      const remote2Results = await storage.list("remote-2");
-      expect(remote2Results).toHaveLength(1);
+      const remote2Page = await storage.list("remote-2");
+      expect(remote2Page.results).toHaveLength(1);
     });
 
     it("should not throw when no dead letters exist for remote", async () => {
@@ -250,8 +299,8 @@ describe("KyselySyncDeadLetterStorage", () => {
 
       await remoteStorage.remove("remote-1");
 
-      const results = await storage.list("remote-1");
-      expect(results).toHaveLength(0);
+      const page = await storage.list("remote-1");
+      expect(page.results).toHaveLength(0);
     });
   });
 });

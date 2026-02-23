@@ -67,6 +67,7 @@ describe("SyncManager Integration", () => {
       operationIndex,
       mockReactor,
       eventBus,
+      100,
     );
   });
 

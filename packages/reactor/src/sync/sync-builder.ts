@@ -20,6 +20,7 @@ export class SyncBuilder {
   private remoteStorage?: ISyncRemoteStorage;
   private cursorStorage?: ISyncCursorStorage;
   private deadLetterStorage?: ISyncDeadLetterStorage;
+  private maxDeadLettersPerRemote: number = 100;
 
   withChannelFactory(factory: IChannelFactory): this {
     this.channelFactory = factory;
@@ -38,6 +39,11 @@ export class SyncBuilder {
 
   withDeadLetterStorage(storage: ISyncDeadLetterStorage): this {
     this.deadLetterStorage = storage;
+    return this;
+  }
+
+  withMaxDeadLettersPerRemote(limit: number): this {
+    this.maxDeadLettersPerRemote = limit;
     return this;
   }
 
@@ -83,6 +89,7 @@ export class SyncBuilder {
       operationIndex,
       reactor,
       eventBus,
+      this.maxDeadLettersPerRemote,
     );
 
     return {

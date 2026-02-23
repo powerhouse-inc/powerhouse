@@ -69,6 +69,7 @@ export class SyncManager implements ISyncManager {
   private failedEventUnsubscribe?: () => void;
   private readonly batchAggregator: BatchAggregator;
   private readonly syncStatusTracker: SyncStatusTracker;
+  private readonly maxDeadLettersPerRemote: number;
 
   public loadJobs: Map<string, JobInfo> = new Map();
 
@@ -81,6 +82,7 @@ export class SyncManager implements ISyncManager {
     operationIndex: IOperationIndex,
     reactor: IReactor,
     eventBus: IEventBus,
+    maxDeadLettersPerRemote: number = 100,
   ) {
     this.logger = logger;
     this.remoteStorage = remoteStorage;
@@ -90,6 +92,7 @@ export class SyncManager implements ISyncManager {
     this.operationIndex = operationIndex;
     this.reactor = reactor;
     this.eventBus = eventBus;
+    this.maxDeadLettersPerRemote = maxDeadLettersPerRemote;
     this.remotes = new Map();
     this.awaiter = new JobAwaiter(eventBus, (jobId, signal) =>
       reactor.getJobStatus(jobId, signal),
@@ -365,13 +368,25 @@ export class SyncManager implements ISyncManager {
           );
         });
       }
+
+      // Evict oldest dead letters from mailbox if over capacity
+      const items = remote.channel.deadLetter.items;
+      if (items.length > this.maxDeadLettersPerRemote) {
+        const excessCount = items.length - this.maxDeadLettersPerRemote;
+        const toEvict = items.slice(0, excessCount);
+        remote.channel.deadLetter.remove(...toEvict);
+      }
     });
   }
 
   private async loadDeadLetters(remote: Remote): Promise<void> {
     let records: DeadLetterRecord[];
     try {
-      records = await this.deadLetterStorage.list(remote.name);
+      const page = await this.deadLetterStorage.list(remote.name, {
+        cursor: "0",
+        limit: this.maxDeadLettersPerRemote,
+      });
+      records = page.results;
     } catch (error) {
       this.logger.error(
         "Failed to load dead letters for remote (@name, @error)",
@@ -384,6 +399,11 @@ export class SyncManager implements ISyncManager {
     if (records.length === 0) {
       return;
     }
+
+    // Records come in ordinal DESC order (newest first).
+    // Reverse so the Map maintains chronological insertion order (oldest first),
+    // which makes eviction (slice from the front) straightforward.
+    records.reverse();
 
     const syncOps: SyncOperation[] = [];
     for (const record of records) {

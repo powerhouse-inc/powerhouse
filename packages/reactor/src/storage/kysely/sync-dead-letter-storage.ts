@@ -1,5 +1,6 @@
 import type { OperationWithContext } from "@powerhousedao/shared/document-model";
 import type { Kysely } from "kysely";
+import type { PagingOptions, PagedResults } from "../../shared/types.js";
 import type { ChannelErrorSource } from "../../sync/types.js";
 import type { DeadLetterRecord } from "../interfaces.js";
 import type { ISyncDeadLetterStorage } from "../interfaces.js";
@@ -49,23 +50,44 @@ export class KyselySyncDeadLetterStorage implements ISyncDeadLetterStorage {
 
   async list(
     remoteName: string,
+    paging?: PagingOptions,
     signal?: AbortSignal,
-  ): Promise<DeadLetterRecord[]> {
+  ): Promise<PagedResults<DeadLetterRecord>> {
     if (signal?.aborted) {
       throw new Error("Operation aborted");
     }
+
+    const startIndex = paging?.cursor ? parseInt(paging.cursor) : 0;
+    const limit = paging?.limit || 100;
 
     const rows = await this.db
       .selectFrom("sync_dead_letters")
       .selectAll()
       .where("remote_name", "=", remoteName)
+      .orderBy("ordinal", "desc")
+      .offset(startIndex)
+      .limit(limit + 1)
       .execute();
+
+    let hasMore = false;
+    let items = rows;
+    if (paging?.limit && rows.length > limit) {
+      hasMore = true;
+      items = rows.slice(0, limit);
+    }
+
+    const nextCursor = hasMore ? String(startIndex + limit) : undefined;
+    const cursor = paging?.cursor || "0";
 
     if (signal?.aborted) {
       throw new Error("Operation aborted");
     }
 
-    return rows.map(rowToDeadLetterRecord);
+    return {
+      results: items.map(rowToDeadLetterRecord),
+      options: { cursor, limit },
+      nextCursor,
+    };
   }
 
   async add(deadLetter: DeadLetterRecord, signal?: AbortSignal): Promise<void> {

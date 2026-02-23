@@ -164,7 +164,10 @@ describe("SyncManager - Unit Tests", () => {
     };
 
     mockDeadLetterStorage = {
-      list: vi.fn().mockResolvedValue([]),
+      list: vi.fn().mockResolvedValue({
+        results: [],
+        options: { cursor: "0", limit: 100 },
+      }),
       add: vi.fn().mockResolvedValue(undefined),
       remove: vi.fn().mockResolvedValue(undefined),
       removeByRemote: vi.fn().mockResolvedValue(undefined),
@@ -3269,7 +3272,10 @@ describe("SyncManager - Unit Tests", () => {
         },
       ];
 
-      vi.mocked(mockDeadLetterStorage.list).mockResolvedValue(persistedRecords);
+      vi.mocked(mockDeadLetterStorage.list).mockResolvedValue({
+        results: persistedRecords,
+        options: { cursor: "0", limit: 100 },
+      });
 
       const remoteRecords: RemoteRecord[] = [
         {
@@ -3293,7 +3299,10 @@ describe("SyncManager - Unit Tests", () => {
 
       await syncManager.startup();
 
-      expect(mockDeadLetterStorage.list).toHaveBeenCalledWith("remote1");
+      expect(mockDeadLetterStorage.list).toHaveBeenCalledWith("remote1", {
+        cursor: "0",
+        limit: 100,
+      });
       expect(mockChannel.deadLetter.add).toHaveBeenCalledWith(
         expect.objectContaining({
           id: "persisted-dl-1",
@@ -3320,7 +3329,10 @@ describe("SyncManager - Unit Tests", () => {
         },
       ];
 
-      vi.mocked(mockDeadLetterStorage.list).mockResolvedValue(persistedRecords);
+      vi.mocked(mockDeadLetterStorage.list).mockResolvedValue({
+        results: persistedRecords,
+        options: { cursor: "0", limit: 100 },
+      });
 
       const remoteRecords: RemoteRecord[] = [
         {
@@ -3349,6 +3361,191 @@ describe("SyncManager - Unit Tests", () => {
       expect(addedSyncOp.status).toBe(SyncOperationStatus.Error);
       expect(addedSyncOp.error).toBeDefined();
       expect(addedSyncOp.error!.source).toBe(ChannelErrorSource.Channel);
+    });
+  });
+
+  describe("dead letter eviction", () => {
+    it("should evict oldest dead letters when exceeding maxDeadLettersPerRemote", async () => {
+      const maxLimit = 3;
+      const limitedSyncManager = new SyncManager(
+        new ConsoleLogger(["SyncManager"]),
+        mockRemoteStorage,
+        mockCursorStorage,
+        mockDeadLetterStorage,
+        mockChannelFactory,
+        mockOperationIndex,
+        mockReactor,
+        mockEventBus,
+        maxLimit,
+      );
+
+      const ch = createTestChannel();
+      vi.mocked(mockChannelFactory.instance).mockReturnValue(ch as any);
+      vi.mocked(mockRemoteStorage.list).mockResolvedValue([]);
+
+      await limitedSyncManager.startup();
+
+      await limitedSyncManager.add("remote-evict", "collection1", {
+        type: "internal",
+        parameters: {},
+      });
+
+      // Grab the onAdded callback
+      const onAddedCalls = vi.mocked(ch.deadLetter.onAdded).mock.calls;
+      const deadLetterCb = onAddedCalls[onAddedCalls.length - 1][0];
+
+      // Simulate 5 dead letters being added (exceeding limit of 3)
+      const syncOps: SyncOperation[] = [];
+      for (let i = 0; i < 5; i++) {
+        const syncOp = new SyncOperation(
+          `dl-${i}`,
+          `job-${i}`,
+          [],
+          "remote-evict",
+          `doc-${i}`,
+          ["global"],
+          "main",
+          [],
+        );
+        const { ChannelError } = await import("../../../src/sync/errors.js");
+        syncOp.failed(
+          new ChannelError(ChannelErrorSource.Inbox, new Error(`error-${i}`)),
+        );
+        syncOps.push(syncOp);
+      }
+
+      // Mock items to return these 5 items
+      Object.defineProperty(ch.deadLetter, "items", {
+        get: () => syncOps,
+        configurable: true,
+      });
+
+      deadLetterCb(syncOps);
+      await new Promise((r) => setTimeout(r, 10));
+
+      // Should evict oldest 2 items (5 - 3 = 2)
+      expect(ch.deadLetter.remove).toHaveBeenCalledWith(syncOps[0], syncOps[1]);
+    });
+
+    it("should not touch storage during eviction (memory-only)", async () => {
+      const maxLimit = 2;
+      const limitedSyncManager = new SyncManager(
+        new ConsoleLogger(["SyncManager"]),
+        mockRemoteStorage,
+        mockCursorStorage,
+        mockDeadLetterStorage,
+        mockChannelFactory,
+        mockOperationIndex,
+        mockReactor,
+        mockEventBus,
+        maxLimit,
+      );
+
+      const ch = createTestChannel();
+      vi.mocked(mockChannelFactory.instance).mockReturnValue(ch as any);
+      vi.mocked(mockRemoteStorage.list).mockResolvedValue([]);
+
+      await limitedSyncManager.startup();
+
+      await limitedSyncManager.add("remote-evict-2", "collection1", {
+        type: "internal",
+        parameters: {},
+      });
+
+      const onAddedCalls = vi.mocked(ch.deadLetter.onAdded).mock.calls;
+      const deadLetterCb = onAddedCalls[onAddedCalls.length - 1][0];
+
+      const syncOps: SyncOperation[] = [];
+      for (let i = 0; i < 4; i++) {
+        const syncOp = new SyncOperation(
+          `dl-${i}`,
+          `job-${i}`,
+          [],
+          "remote-evict-2",
+          `doc-${i}`,
+          ["global"],
+          "main",
+          [],
+        );
+        const { ChannelError } = await import("../../../src/sync/errors.js");
+        syncOp.failed(
+          new ChannelError(ChannelErrorSource.Inbox, new Error(`error-${i}`)),
+        );
+        syncOps.push(syncOp);
+      }
+
+      Object.defineProperty(ch.deadLetter, "items", {
+        get: () => syncOps,
+        configurable: true,
+      });
+
+      // Clear mock call counts before triggering callback
+      vi.mocked(mockDeadLetterStorage.remove).mockClear();
+
+      deadLetterCb(syncOps);
+      await new Promise((r) => setTimeout(r, 10));
+
+      // Storage remove should NOT be called - eviction is memory-only
+      expect(mockDeadLetterStorage.remove).not.toHaveBeenCalled();
+    });
+
+    it("should not evict when dead letters are within limit", async () => {
+      const maxLimit = 5;
+      const limitedSyncManager = new SyncManager(
+        new ConsoleLogger(["SyncManager"]),
+        mockRemoteStorage,
+        mockCursorStorage,
+        mockDeadLetterStorage,
+        mockChannelFactory,
+        mockOperationIndex,
+        mockReactor,
+        mockEventBus,
+        maxLimit,
+      );
+
+      const ch = createTestChannel();
+      vi.mocked(mockChannelFactory.instance).mockReturnValue(ch as any);
+      vi.mocked(mockRemoteStorage.list).mockResolvedValue([]);
+
+      await limitedSyncManager.startup();
+
+      await limitedSyncManager.add("remote-no-evict", "collection1", {
+        type: "internal",
+        parameters: {},
+      });
+
+      const onAddedCalls = vi.mocked(ch.deadLetter.onAdded).mock.calls;
+      const deadLetterCb = onAddedCalls[onAddedCalls.length - 1][0];
+
+      const syncOps: SyncOperation[] = [];
+      for (let i = 0; i < 3; i++) {
+        const syncOp = new SyncOperation(
+          `dl-${i}`,
+          `job-${i}`,
+          [],
+          "remote-no-evict",
+          `doc-${i}`,
+          ["global"],
+          "main",
+          [],
+        );
+        const { ChannelError } = await import("../../../src/sync/errors.js");
+        syncOp.failed(
+          new ChannelError(ChannelErrorSource.Inbox, new Error(`error-${i}`)),
+        );
+        syncOps.push(syncOp);
+      }
+
+      Object.defineProperty(ch.deadLetter, "items", {
+        get: () => syncOps,
+        configurable: true,
+      });
+
+      deadLetterCb(syncOps);
+      await new Promise((r) => setTimeout(r, 10));
+
+      // Should NOT call remove since 3 < 5
+      expect(ch.deadLetter.remove).not.toHaveBeenCalled();
     });
   });
 });

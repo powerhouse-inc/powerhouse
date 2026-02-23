@@ -620,13 +620,18 @@ export type DeadLetterRecord = {
  */
 export interface ISyncDeadLetterStorage {
   /**
-   * Lists all dead letters for a remote.
+   * Lists dead letters for a remote, ordered by ordinal DESC (newest first).
    *
    * @param remoteName - The name of the remote
+   * @param paging - Optional paging options (cursor + limit)
    * @param signal - Optional abort signal to cancel the request
-   * @returns The dead letter records
+   * @returns Paged dead letter records
    */
-  list(remoteName: string, signal?: AbortSignal): Promise<DeadLetterRecord[]>;
+  list(
+    remoteName: string,
+    paging?: PagingOptions,
+    signal?: AbortSignal,
+  ): Promise<PagedResults<DeadLetterRecord>>;
 
   /**
    * Adds a dead letter. Duplicate ids are silently ignored.

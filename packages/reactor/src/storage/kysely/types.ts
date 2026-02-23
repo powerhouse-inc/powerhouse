@@ -86,6 +86,7 @@ export interface SyncCursorTable {
  * Kysely table definition for the `sync_dead_letters` table.
  */
 export interface SyncDeadLetterTable {
+  ordinal: Generated<number>;
   id: string;
   job_id: string;
   job_dependencies: unknown;

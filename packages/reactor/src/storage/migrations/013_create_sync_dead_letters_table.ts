@@ -4,7 +4,8 @@ import { sql } from "kysely";
 export async function up(db: Kysely<any>): Promise<void> {
   await db.schema
     .createTable("sync_dead_letters")
-    .addColumn("id", "text", (col) => col.primaryKey())
+    .addColumn("ordinal", "serial", (col) => col.primaryKey())
+    .addColumn("id", "text", (col) => col.unique().notNull())
     .addColumn("job_id", "text", (col) => col.notNull())
     .addColumn("job_dependencies", "jsonb", (col) =>
       col.notNull().defaultTo(sql`'[]'::jsonb`),
