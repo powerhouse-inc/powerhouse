@@ -910,7 +910,13 @@ describe("KyselyDocumentView Unit Tests", () => {
             skip: 0,
             timestampUtcMs: "1000",
             hash: "abc",
-            action: { type: "SET_NAME", input: {} },
+            action: {
+              id: "action-1",
+              type: "SET_NAME",
+              input: {},
+              timestampUtcMs: "1000",
+              scope: "global",
+            },
           },
           context: {
             documentId: "doc-1",
