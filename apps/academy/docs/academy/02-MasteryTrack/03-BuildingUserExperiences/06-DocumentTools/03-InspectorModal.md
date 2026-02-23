@@ -19,18 +19,16 @@ The Inspector Modal has two tabs:
 
 To use the full Inspector Modal functionality, you need to configure these feature flags:
 
-| Feature Flag                   | Value   | Purpose                              |
-| ------------------------------ | ------- | ------------------------------------ |
-| `FEATURE_INSPECTOR_ENABLED`    | `true`  | Shows the Inspector button           |
-| `FEATURE_LEGACY_READ_ENABLED`  | `false` | Required for Remotes tab to function |
-| `FEATURE_LEGACY_WRITE_ENABLED` | `false` | Required for Remotes tab to function |
+| Feature Flag                | Value  | Purpose                    |
+| --------------------------- | ------ | -------------------------- |
+| `FEATURE_INSPECTOR_ENABLED` | `true` | Shows the Inspector button |
 
 ### Enabling via URL Parameters (Recommended)
 
 The easiest way to enable the Inspector is by adding query parameters to your Connect URL:
 
 ```
-https://connect-url.xyz/?FEATURE_INSPECTOR_ENABLED=true&FEATURE_LEGACY_READ_ENABLED=false&FEATURE_LEGACY_WRITE_ENABLED=false
+https://connect-url.xyz/?FEATURE_INSPECTOR_ENABLED=true
 ```
 
 ### Enabling via Environment Variable
@@ -40,10 +38,6 @@ For local development, you can set the environment variable before starting Conn
 ```bash
 PH_CONNECT_INSPECTOR_ENABLED=true npm run dev
 ```
-
-:::tip
-The legacy feature flags (`FEATURE_LEGACY_READ_ENABLED` and `FEATURE_LEGACY_WRITE_ENABLED`) default to `true`. To use the Remotes tab functionality, you must explicitly disable them via URL parameters.
-:::
 
 ## Accessing the Inspector Modal
 
@@ -146,13 +140,13 @@ Sync remotes are connections between your local Connect instance and remote reac
 
 The Remotes tab displays a table with all configured sync remotes:
 
-| Column        | Description                                            |
-| ------------- | ------------------------------------------------------ |
-| ID            | Unique identifier for the remote (truncated)           |
-| Name          | Human-readable name of the remote                      |
-| Collection ID | The collection this remote is associated with          |
+| Column        | Description                                              |
+| ------------- | -------------------------------------------------------- |
+| ID            | Unique identifier for the remote (truncated)             |
+| Name          | Human-readable name of the remote                        |
+| Collection ID | The collection this remote is associated with            |
 | Filter        | Configuration showing branch, document, or scope filters |
-| Channel       | "View" button to inspect the remote's channel state    |
+| Channel       | "View" button to inspect the remote's channel state      |
 
 ### Inspecting Remote Channels
 
@@ -167,13 +161,13 @@ Click the **View** button on any remote to open the Channel Inspector. The chann
 
 Operations **received from** the remote server:
 
-| Column      | Description                                          |
-| ----------- | ---------------------------------------------------- |
-| ID          | Operation identifier                                 |
-| Document ID | The document this operation affects                  |
-| Branch      | The document branch (usually "main")                 |
+| Column      | Description                                            |
+| ----------- | ------------------------------------------------------ |
+| ID          | Operation identifier                                   |
+| Document ID | The document this operation affects                    |
+| Branch      | The document branch (usually "main")                   |
 | Status      | Current status: Pending (⏳), Applied (✅), Error (❌) |
-| Ops Count   | Number of operations in this batch                   |
+| Ops Count   | Number of operations in this batch                     |
 
 #### Outbox
 
@@ -183,11 +177,11 @@ Operations **waiting to be sent** to the remote server. Shows the same columns a
 
 Operations that **failed to sync** with error information:
 
-| Column      | Description                     |
-| ----------- | ------------------------------- |
-| ID          | Operation identifier            |
-| Document ID | The document this operation affects |
-| Branch      | The document branch             |
+| Column      | Description                          |
+| ----------- | ------------------------------------ |
+| ID          | Operation identifier                 |
+| Document ID | The document this operation affects  |
+| Branch      | The document branch                  |
 | Error       | Error message explaining the failure |
 
 ## Use Cases
