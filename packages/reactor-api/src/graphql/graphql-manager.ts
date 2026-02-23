@@ -49,10 +49,7 @@ import {
   buildSubgraphSchemaModule,
   createSchema,
 } from "../utils/create-schema.js";
-import {
-  DocumentModelSubgraph,
-  DocumentModelSubgraphLegacy,
-} from "./document-model-subgraph.js";
+import { DocumentModelSubgraph } from "./document-model-subgraph.js";
 import { useServer } from "./websocket.js";
 
 class AuthenticatedDataSource extends RemoteGraphQLDataSource {
@@ -119,12 +116,10 @@ function filterLatestDocumentModelVersions(
 
 const DefaultFeatureFlags = {
   enableDocumentModelSubgraphs: true,
-  useNewDocumentModelSubgraph: false,
 };
 
 export type GraphqlManagerFeatureFlags = {
   enableDocumentModelSubgraphs?: boolean;
-  useNewDocumentModelSubgraph?: boolean;
 };
 
 export class GraphQLManager {
@@ -291,11 +286,7 @@ export class GraphQLManager {
         continue; // Skip document models without operation schemas
       }
       try {
-        const SubgraphClass = this.featureFlags.useNewDocumentModelSubgraph
-          ? DocumentModelSubgraph
-          : DocumentModelSubgraphLegacy;
-
-        const subgraphInstance = new SubgraphClass(documentModel, {
+        const subgraphInstance = new DocumentModelSubgraph(documentModel, {
           relationalDb: this.relationalDb,
           analyticsStore: this.analyticsStore,
           reactor: this.reactor,

@@ -65,11 +65,6 @@ export type StartServerOptions = {
     storageV2?: boolean;
   };
   enableDocumentModelSubgraphs?: boolean;
-  /**
-   * When true, uses the new DocumentModelSubgraph class that uses reactorClient.
-   * When false (default), uses the legacy DocumentModelSubgraphLegacy class.
-   */
-  useNewDocumentModelSubgraph?: boolean;
   logger?: ILogger;
 };
 
