@@ -224,4 +224,34 @@ export class HttpPackageLoader implements IDocumentModelLoader {
     const pattern = /^(@[a-z0-9][-a-z0-9._]*\/)?[a-z0-9][-a-z0-9._]*$/i;
     return pattern.test(name) && !name.includes("..") && name.length <= 214;
   }
+
+  /**
+   * Get list of all loaded package names.
+   */
+  getLoadedPackages(): string[] {
+    return Array.from(this.packageModulesCache.keys());
+  }
+
+  /**
+   * Get the document model modules for a specific package from cache.
+   * @param packageName - The package name
+   * @returns The cached modules or undefined if not cached
+   */
+  getPackageModules(packageName: string): DocumentModelModule[] | undefined {
+    return this.packageModulesCache.get(packageName);
+  }
+
+  /**
+   * Remove a package from all caches.
+   * @param packageName - The package name to remove
+   */
+  removeFromCache(packageName: string): void {
+    this.packageModulesCache.delete(packageName);
+    // Remove document type entries that point to this package
+    for (const [docType, pkg] of this.documentTypeCache) {
+      if (pkg === packageName) {
+        this.documentTypeCache.delete(docType);
+      }
+    }
+  }
 }

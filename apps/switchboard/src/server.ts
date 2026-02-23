@@ -17,6 +17,8 @@ import {
 } from "@powerhousedao/reactor";
 import {
   HttpPackageLoader,
+  PackageManagementService,
+  PackagesSubgraph,
   VitePackageLoader,
   createViteLogger,
   getUniqueDocumentModels,
@@ -343,7 +345,7 @@ async function initServer(
     "switchboard",
   );
 
-  const { client, driveServer } = api;
+  const { client, driveServer, graphqlManager, syncManager } = api;
 
   // Wire up dynamic model loading → subgraph generation
   if (httpLoader) {
@@ -361,6 +363,51 @@ async function initServer(
         driveServer.setDocumentModelModules([...current, model]);
       }
     });
+
+    // Create package management service for runtime package operations
+    const packageManagementService = new PackageManagementService({
+      defaultRegistryUrl: registryUrl,
+      httpLoader,
+    });
+
+    // Wire hot reload callback - merge dynamically loaded models with base models
+    packageManagementService.setOnModelsChanged((dynamicModels) => {
+      const current = driveServer.getDocumentModelModules();
+      // Get IDs of dynamically loaded models
+      const dynamicIds = new Set(
+        dynamicModels.map((m) => m.documentModel.global.id),
+      );
+      // Keep base models that aren't being replaced by dynamic ones
+      const baseModels = current.filter(
+        (m) => !dynamicIds.has(m.documentModel.global.id),
+      );
+      driveServer.setDocumentModelModules([...baseModels, ...dynamicModels]);
+    });
+
+    // Register the packages subgraph for GraphQL package management
+    const packagesSubgraph = new PackagesSubgraph({
+      reactor: driveServer,
+      reactorClient: client,
+      relationalDb: {} as ConstructorParameters<
+        typeof PackagesSubgraph
+      >[0]["relationalDb"],
+      analyticsStore: {} as ConstructorParameters<
+        typeof PackagesSubgraph
+      >[0]["analyticsStore"],
+      graphqlManager,
+      syncManager,
+      packageManagementService,
+      path: graphqlManager.getBasePath(),
+    });
+
+    void graphqlManager
+      .registerSubgraphInstance(packagesSubgraph, "graphql", false)
+      .then(() => graphqlManager.updateRouter())
+      .catch((error: unknown) =>
+        logger.error("Failed to register packages subgraph: @error", error),
+      );
+
+    logger.info("Package management service initialized");
   }
 
   // Create default drive if provided

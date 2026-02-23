@@ -382,6 +382,25 @@ export class GraphQLManager {
     return this.#addSubgraphInstance(subgraphInstance, supergraph, core);
   }
 
+  /**
+   * Register a pre-constructed subgraph instance.
+   * Use this when you need to pass custom dependencies to a subgraph.
+   */
+  async registerSubgraphInstance(
+    subgraphInstance: ISubgraph,
+    supergraph = "",
+    core = false,
+  ) {
+    return this.#addSubgraphInstance(subgraphInstance, supergraph, core);
+  }
+
+  /**
+   * Get the base path used for subgraph registration.
+   */
+  getBasePath(): string {
+    return this.path;
+  }
+
   updateRouter = debounce(this._updateRouter.bind(this), 1000);
 
   private async _updateRouter() {
