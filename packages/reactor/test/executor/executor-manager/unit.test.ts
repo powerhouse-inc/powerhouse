@@ -825,4 +825,152 @@ describe("SimpleJobExecutorManager", () => {
       ).toBe(true);
     });
   });
+
+  describe("executor throws during job execution", () => {
+    it("should catch thrown error, mark job FAILED, and emit JOB_FAILED", async () => {
+      const throwEventBus = new EventBus();
+      const throwQueue = new InMemoryQueue(
+        throwEventBus,
+        new NullDocumentModelResolver(),
+      );
+      const throwJobTracker = new InMemoryJobTracker(throwEventBus);
+
+      const mockExecutor: IJobExecutor = {
+        executeJob: vi.fn().mockRejectedValue(new Error("Runtime explosion")),
+      };
+
+      const throwManager = new SimpleJobExecutorManager(
+        () => mockExecutor,
+        throwEventBus,
+        throwQueue,
+        throwJobTracker,
+        createMockLogger(),
+        new NullDocumentModelResolver(),
+      );
+
+      const failedPromise = new Promise<JobFailedEvent>((resolve) => {
+        throwEventBus.subscribe(
+          ReactorEventTypes.JOB_FAILED,
+          (_type: number, data: JobFailedEvent) => {
+            resolve(data);
+          },
+        );
+      });
+
+      await throwManager.start(1);
+
+      const job = createTestJob({
+        id: "throw-job",
+        retryCount: 0,
+        maxRetries: 0,
+      });
+      await throwQueue.enqueue(job);
+
+      await new Promise((resolve) => setTimeout(resolve, 200));
+
+      const failedEvent = await failedPromise;
+      expect(failedEvent.jobId).toBe("throw-job");
+      expect(failedEvent.error.message).toBe("Runtime explosion");
+    });
+  });
+
+  describe("retry failure handling", () => {
+    it("should emit JOB_FAILED when queue.retryJob() throws during retry", async () => {
+      const retryEventBus = new EventBus();
+      const retryQueue = new InMemoryQueue(
+        retryEventBus,
+        new NullDocumentModelResolver(),
+      );
+      const retryJobTracker = new InMemoryJobTracker(retryEventBus);
+
+      const mockExecutor: IJobExecutor = {
+        executeJob: vi.fn().mockResolvedValue({
+          success: false,
+          error: new Error("recoverable"),
+        }),
+      };
+
+      const retryManager = new SimpleJobExecutorManager(
+        () => mockExecutor,
+        retryEventBus,
+        retryQueue,
+        retryJobTracker,
+        createMockLogger(),
+        new NullDocumentModelResolver(),
+      );
+
+      // Spy on retryJob and make it throw
+      vi.spyOn(retryQueue, "retryJob").mockRejectedValue(
+        new Error("retry queue broken"),
+      );
+
+      const failedPromise = new Promise<JobFailedEvent>((resolve) => {
+        retryEventBus.subscribe(
+          ReactorEventTypes.JOB_FAILED,
+          (_type: number, data: JobFailedEvent) => {
+            resolve(data);
+          },
+        );
+      });
+
+      await retryManager.start(1);
+
+      const job = createTestJob({
+        id: "retry-fail-job",
+        retryCount: 0,
+        maxRetries: 3,
+      });
+      await retryQueue.enqueue(job);
+
+      await new Promise((resolve) => setTimeout(resolve, 200));
+
+      const failedEvent = await failedPromise;
+      expect(failedEvent.jobId).toBe("retry-fail-job");
+      expect(retryQueue.retryJob).toHaveBeenCalled();
+    });
+  });
+
+  describe("queue check errors", () => {
+    it("should not crash when queue.hasJobs() throws", async () => {
+      const checkEventBus = new EventBus();
+      const checkQueue = new InMemoryQueue(
+        checkEventBus,
+        new NullDocumentModelResolver(),
+      );
+      const checkJobTracker = new InMemoryJobTracker(checkEventBus);
+
+      const mockExecutor: IJobExecutor = {
+        executeJob: vi.fn().mockResolvedValue({
+          success: true,
+          duration: 10,
+        }),
+      };
+
+      const checkManager = new SimpleJobExecutorManager(
+        () => mockExecutor,
+        checkEventBus,
+        checkQueue,
+        checkJobTracker,
+        createMockLogger(),
+        new NullDocumentModelResolver(),
+      );
+
+      await checkManager.start(1);
+
+      // After the manager starts, spy on hasJobs to throw
+      vi.spyOn(checkQueue, "hasJobs").mockRejectedValue(
+        new Error("hasJobs exploded"),
+      );
+
+      const job = createTestJob({ id: "check-job" });
+      await checkQueue.enqueue(job);
+
+      // Give the manager time to process
+      await new Promise((resolve) => setTimeout(resolve, 200));
+
+      // Manager should still be running (not crashed)
+      const status = checkManager.getStatus();
+      expect(status.isRunning).toBe(true);
+    });
+  });
 });

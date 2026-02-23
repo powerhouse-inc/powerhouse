@@ -3548,4 +3548,200 @@ describe("SyncManager - Unit Tests", () => {
       expect(ch.deadLetter.remove).not.toHaveBeenCalled();
     });
   });
+
+  describe("dead letter storage error resilience", () => {
+    it("should swallow deadLetterStorage.add errors and continue", async () => {
+      vi.mocked(mockDeadLetterStorage.add).mockRejectedValue(
+        new Error("DB write failed"),
+      );
+
+      await syncManager.startup();
+
+      const ch = createTestChannel();
+      vi.mocked(mockChannelFactory.instance).mockReturnValue(ch as any);
+
+      await syncManager.add("remote-add-fail", "collection1", {
+        type: "internal",
+        parameters: {},
+      });
+
+      const syncOp = new SyncOperation(
+        "dl-add-fail-1",
+        "dl-job-1",
+        [],
+        "remote-add-fail",
+        "doc1",
+        ["global"],
+        "main",
+        [
+          {
+            operation: {
+              id: "op1",
+              index: 0,
+              skip: 0,
+              hash: "h",
+              timestampUtcMs: "1000",
+              action: { type: "CREATE", scope: "global" } as any,
+            },
+            context: {
+              documentId: "doc1",
+              documentType: "test",
+              scope: "global",
+              branch: "main",
+              ordinal: 1,
+            },
+          },
+        ],
+      );
+
+      const { ChannelError } = await import("../../../src/sync/errors.js");
+      syncOp.failed(
+        new ChannelError(ChannelErrorSource.Inbox, new Error("test error")),
+      );
+
+      const onAddedCalls = vi.mocked(ch.deadLetter.onAdded).mock.calls;
+      const deadLetterCb = onAddedCalls[onAddedCalls.length - 1][0];
+
+      // Should not throw even though storage.add rejects
+      deadLetterCb([syncOp]);
+      await new Promise((r) => setTimeout(r, 50));
+
+      expect(mockDeadLetterStorage.add).toHaveBeenCalled();
+    });
+
+    it("should continue startup when deadLetterStorage.list throws", async () => {
+      vi.mocked(mockDeadLetterStorage.list).mockRejectedValue(
+        new Error("DB read failed"),
+      );
+
+      const remoteRecords: RemoteRecord[] = [
+        {
+          id: "channel1",
+          name: "remote1",
+          collectionId: "collection1",
+          channelConfig: { type: "internal", parameters: {} },
+          filter: { documentId: [], scope: [], branch: "main" },
+          options: { sinceTimestampUtcMs: "0" },
+          status: {
+            push: { state: "idle", failureCount: 0 },
+            pull: { state: "idle", failureCount: 0 },
+          },
+        },
+      ];
+
+      vi.mocked(mockRemoteStorage.list).mockResolvedValue(remoteRecords);
+
+      const ch = createTestChannel();
+      vi.mocked(mockChannelFactory.instance).mockReturnValue(ch as any);
+
+      // startup should not throw even though list fails
+      await expect(syncManager.startup()).resolves.not.toThrow();
+
+      // The dead letter mailbox should still be empty (no items loaded)
+      expect(ch.deadLetter.add).not.toHaveBeenCalled();
+    });
+
+    it("should move failed inbox items to dead letter on reactor.load error", async () => {
+      await syncManager.startup();
+
+      const channelConfig: ChannelConfig = {
+        type: "internal",
+        parameters: {},
+      };
+
+      const loadFailChannel = {
+        inbox: {
+          items: [] as any[],
+          add: vi.fn(),
+          remove: vi.fn(),
+          get: vi.fn(),
+          onAdded: vi.fn(),
+          onRemoved: vi.fn(),
+          pause: vi.fn(),
+          resume: vi.fn(),
+          isPaused: vi.fn().mockReturnValue(false),
+          flush: vi.fn(),
+        },
+        outbox: {
+          items: [] as any[],
+          add: vi.fn(),
+          remove: vi.fn(),
+          get: vi.fn(),
+          onAdded: vi.fn(),
+          onRemoved: vi.fn(),
+          pause: vi.fn(),
+          resume: vi.fn(),
+          isPaused: vi.fn().mockReturnValue(false),
+          flush: vi.fn(),
+        },
+        deadLetter: {
+          items: [] as any[],
+          add: vi.fn(),
+          remove: vi.fn(),
+          get: vi.fn(),
+          onAdded: vi.fn(),
+          onRemoved: vi.fn(),
+          pause: vi.fn(),
+          resume: vi.fn(),
+          isPaused: vi.fn().mockReturnValue(false),
+          flush: vi.fn(),
+        },
+        init: vi.fn().mockResolvedValue(undefined),
+        shutdown: vi.fn(),
+        updateCursor: vi.fn(),
+        getHealth: vi.fn(),
+        poller: {} as any,
+        config: {} as any,
+      } as any;
+
+      vi.mocked(mockChannelFactory.instance).mockReturnValue(loadFailChannel);
+
+      await syncManager.add("remote-load-fail", "collection1", channelConfig, {
+        documentId: [],
+        scope: [],
+        branch: "main",
+      });
+
+      vi.mocked(mockReactor.load).mockRejectedValueOnce(
+        new Error("Reactor load failed"),
+      );
+
+      const syncOp = new SyncOperation(
+        "inbox-fail-1",
+        "",
+        [],
+        "remote-load-fail",
+        "doc1",
+        ["global"],
+        "main",
+        [
+          {
+            operation: {
+              id: "op1",
+              index: 0,
+              skip: 0,
+              hash: "h",
+              timestampUtcMs: "1000",
+              action: { type: "CREATE", scope: "global" } as any,
+            },
+            context: {
+              documentId: "doc1",
+              documentType: "test",
+              scope: "global",
+              branch: "main",
+              ordinal: 1,
+            },
+          },
+        ],
+      );
+
+      const inboxCb = vi.mocked(loadFailChannel.inbox.onAdded).mock.calls[0][0];
+      inboxCb([syncOp]);
+
+      await new Promise((r) => setTimeout(r, 100));
+
+      expect(loadFailChannel.deadLetter.add).toHaveBeenCalledWith(syncOp);
+      expect(loadFailChannel.inbox.remove).toHaveBeenCalledWith(syncOp);
+    });
+  });
 });

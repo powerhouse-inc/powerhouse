@@ -1287,4 +1287,186 @@ describe("InMemoryQueue", () => {
       expect(d3?.job.id).toBe("job-3");
     });
   });
+
+  describe("pause and resume", () => {
+    it("should not dequeue jobs when paused", async () => {
+      const job = createTestJob({ id: "job-1" });
+      await queue.enqueue(job);
+
+      (queue as InMemoryQueue).pause();
+
+      const dequeued = await queue.dequeueNext();
+      expect(dequeued).toBeNull();
+    });
+
+    it("should report paused state", () => {
+      const q = queue as InMemoryQueue;
+
+      expect(q.paused).toBe(false);
+      q.pause();
+      expect(q.paused).toBe(true);
+      q.resume();
+      expect(q.paused).toBe(false);
+    });
+
+    it("should allow enqueuing while paused", async () => {
+      const q = queue as InMemoryQueue;
+      q.pause();
+
+      const job = createTestJob({ id: "job-1" });
+      await queue.enqueue(job);
+
+      const size = await queue.size(job.documentId, job.scope, job.branch);
+      expect(size).toBe(1);
+    });
+
+    it("should dequeue jobs after resume", async () => {
+      const q = queue as InMemoryQueue;
+      const job = createTestJob({ id: "job-1" });
+      await queue.enqueue(job);
+
+      q.pause();
+      const dequeuedWhilePaused = await queue.dequeueNext();
+      expect(dequeuedWhilePaused).toBeNull();
+
+      await q.resume();
+      const dequeuedAfterResume = await queue.dequeueNext();
+      expect(dequeuedAfterResume?.job.id).toBe("job-1");
+    });
+
+    it("should emit JOB_AVAILABLE for pending jobs on resume", async () => {
+      const realEventBus = new EventBus();
+      const realQueue = new InMemoryQueue(
+        realEventBus,
+        new NullDocumentModelResolver(),
+      );
+
+      const job = createTestJob({ id: "job-1" });
+      await realQueue.enqueue(job);
+
+      realQueue.pause();
+
+      const emitted: JobAvailableEvent[] = [];
+      realEventBus.subscribe(
+        QueueEventTypes.JOB_AVAILABLE,
+        (_type: number, data: JobAvailableEvent) => {
+          emitted.push(data);
+        },
+      );
+
+      await realQueue.resume();
+
+      expect(emitted.length).toBeGreaterThanOrEqual(1);
+      expect(emitted[emitted.length - 1].jobId).toBe("job-1");
+    });
+  });
+
+  describe("retryJob with error history", () => {
+    it("should accumulate errors in error history", async () => {
+      const job = createTestJob({
+        id: "job-1",
+        maxRetries: 3,
+        errorHistory: [],
+      });
+      await queue.enqueue(job);
+
+      const dequeued = await queue.dequeueNext();
+      expect(dequeued).not.toBeNull();
+
+      const error1 = { message: "First failure", stack: "" };
+      await queue.retryJob("job-1", error1);
+
+      const retriedHandle = await queue.dequeueNext();
+      expect(retriedHandle).not.toBeNull();
+      expect(retriedHandle!.job.errorHistory).toHaveLength(1);
+      expect(retriedHandle!.job.errorHistory[0].message).toBe("First failure");
+      expect(retriedHandle!.job.retryCount).toBe(1);
+
+      const error2 = { message: "Second failure", stack: "" };
+      await queue.retryJob("job-1", error2);
+
+      const retriedHandle2 = await queue.dequeueNext();
+      expect(retriedHandle2).not.toBeNull();
+      expect(retriedHandle2!.job.errorHistory).toHaveLength(2);
+      expect(retriedHandle2!.job.errorHistory[1].message).toBe(
+        "Second failure",
+      );
+      expect(retriedHandle2!.job.retryCount).toBe(2);
+    });
+
+    it("should no-op when retrying non-existent job", async () => {
+      await expect(
+        queue.retryJob("nonexistent", { message: "error", stack: "" }),
+      ).resolves.not.toThrow();
+    });
+  });
+
+  describe("getPendingJobs and getExecutingJobIds", () => {
+    it("should return all pending jobs across queues", async () => {
+      const q = queue as InMemoryQueue;
+      const job1 = createTestJob({ id: "job-1", documentId: "doc-1" });
+      const job2 = createTestJob({ id: "job-2", documentId: "doc-2" });
+      const job3 = createTestJob({ id: "job-3", documentId: "doc-1" });
+
+      await queue.enqueue(job1);
+      await queue.enqueue(job2);
+      await queue.enqueue(job3);
+
+      const pending = q.getPendingJobs();
+      const pendingIds = pending.map((j) => j.id).sort();
+      expect(pendingIds).toEqual(["job-1", "job-2", "job-3"]);
+    });
+
+    it("should return empty array when no jobs pending", () => {
+      const q = queue as InMemoryQueue;
+      expect(q.getPendingJobs()).toEqual([]);
+    });
+
+    it("should track executing job IDs after dequeue", async () => {
+      const q = queue as InMemoryQueue;
+      const job = createTestJob({ id: "job-1", documentId: "doc-1" });
+      await queue.enqueue(job);
+
+      await queue.dequeueNext();
+
+      const executing = q.getExecutingJobIds();
+      const docExecuting = executing.get("doc-1");
+      expect(docExecuting).toBeDefined();
+      expect(docExecuting!.has("job-1")).toBe(true);
+    });
+
+    it("should return empty map when no jobs executing", () => {
+      const q = queue as InMemoryQueue;
+      const executing = q.getExecutingJobIds();
+      expect(executing.size).toBe(0);
+    });
+
+    it("should return a copy of executing job IDs", async () => {
+      const q = queue as InMemoryQueue;
+      const job = createTestJob({ id: "job-1", documentId: "doc-1" });
+      await queue.enqueue(job);
+      await queue.dequeueNext();
+
+      const executing1 = q.getExecutingJobIds();
+      const executing2 = q.getExecutingJobIds();
+      expect(executing1).not.toBe(executing2);
+    });
+  });
+
+  describe("getJob", () => {
+    it("should return job by ID", async () => {
+      const q = queue as InMemoryQueue;
+      const job = createTestJob({ id: "job-1" });
+      await queue.enqueue(job);
+
+      const retrieved = q.getJob("job-1");
+      expect(retrieved).toBeDefined();
+      expect(retrieved!.id).toBe("job-1");
+    });
+
+    it("should return undefined for non-existent job", () => {
+      const q = queue as InMemoryQueue;
+      expect(q.getJob("nonexistent")).toBeUndefined();
+    });
+  });
 });
