@@ -173,6 +173,9 @@ jobs:
       - name: Build
         run: pnpm build-tsc
 
+      - name: Run misc build scripts
+        run: pnpm build-misc
+
       - name: Build test packages
         run: pnpm tsc --build
         working-directory: test/test-connect
