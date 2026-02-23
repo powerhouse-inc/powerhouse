@@ -13,6 +13,9 @@ import type { RemoteCursor, RemoteRecord } from "../sync/types.js";
 
 export type { PagedResults, PagingOptions } from "../shared/types.js";
 
+/**
+ * Thrown when an operation with the same identity already exists in the store.
+ */
 export class DuplicateOperationError extends Error {
   constructor(description: string) {
     super(`Duplicate operation: ${description}`);
@@ -20,6 +23,9 @@ export class DuplicateOperationError extends Error {
   }
 }
 
+/**
+ * Thrown when a concurrent write conflict is detected during an atomic apply.
+ */
 export class OptimisticLockError extends Error {
   constructor(message: string) {
     super(message);
@@ -27,6 +33,10 @@ export class OptimisticLockError extends Error {
   }
 }
 
+/**
+ * Thrown when the caller-provided revision does not match the current
+ * stored revision, indicating a stale read.
+ */
 export class RevisionMismatchError extends Error {
   constructor(expected: number, actual: number) {
     super(`Revision mismatch: expected ${expected}, got ${actual}`);
@@ -34,10 +44,19 @@ export class RevisionMismatchError extends Error {
   }
 }
 
+/**
+ * A write transaction passed to {@link IOperationStore.apply}. Accumulates
+ * operations that are committed atomically when the callback returns.
+ */
 export interface AtomicTxn {
+  /** Stages one or more operations to be written as part of this transaction. */
   addOperations(...operations: Operation[]): void;
 }
 
+/**
+ * Per-scope revision map for a document, used to reconstruct the header
+ * revision field and lastModified timestamp.
+ */
 export type DocumentRevisions = {
   /** Map of scope to operation index for that scope */
   revision: Record<string, number>;
@@ -46,7 +65,24 @@ export type DocumentRevisions = {
   latestTimestamp: string;
 };
 
+/**
+ * Append-only store for document operations. Operations are partitioned by
+ * (documentId, scope, branch) and ordered by a monotonic revision index.
+ */
 export interface IOperationStore {
+  /**
+   * Atomically appends operations for a single document/scope/branch.
+   * The provided revision must match the current head; otherwise a
+   * {@link RevisionMismatchError} is thrown.
+   *
+   * @param documentId - The document id
+   * @param documentType - The document type identifier
+   * @param scope - The operation scope (e.g. "global", "local")
+   * @param branch - The branch name
+   * @param revision - Expected current revision (optimistic lock)
+   * @param fn - Callback that stages operations via {@link AtomicTxn}
+   * @param signal - Optional abort signal to cancel the request
+   */
   apply(
     documentId: string,
     documentType: string,
@@ -57,6 +93,18 @@ export interface IOperationStore {
     signal?: AbortSignal,
   ): Promise<void>;
 
+  /**
+   * Returns operations for a document/scope/branch whose index is greater
+   * than the given revision.
+   *
+   * @param documentId - The document id
+   * @param scope - The operation scope
+   * @param branch - The branch name
+   * @param revision - Return operations after this revision index
+   * @param filter - Optional filters (action types, timestamp range)
+   * @param paging - Optional paging options for cursor-based pagination
+   * @param signal - Optional abort signal to cancel the request
+   */
   getSince(
     documentId: string,
     scope: string,
@@ -67,6 +115,15 @@ export interface IOperationStore {
     signal?: AbortSignal,
   ): Promise<PagedResults<Operation>>;
 
+  /**
+   * Returns operations across all documents whose auto-increment store id
+   * is greater than the given id. Used by read models and sync to catch up
+   * on operations they may have missed.
+   *
+   * @param id - Return operations with store id greater than this value
+   * @param paging - Optional paging options for cursor-based pagination
+   * @param signal - Optional abort signal to cancel the request
+   */
   getSinceId(
     id: number,
     paging?: PagingOptions,
@@ -110,7 +167,21 @@ export interface IOperationStore {
   ): Promise<DocumentRevisions>;
 }
 
+/**
+ * Stores periodic document snapshots (keyframes) so that document state
+ * can be reconstructed without replaying the full operation history.
+ */
 export interface IKeyframeStore {
+  /**
+   * Stores a document snapshot at a specific revision.
+   *
+   * @param documentId - The document id
+   * @param scope - The operation scope
+   * @param branch - The branch name
+   * @param revision - The operation index this snapshot corresponds to
+   * @param document - The full document state to persist
+   * @param signal - Optional abort signal to cancel the request
+   */
   putKeyframe(
     documentId: string,
     scope: string,
@@ -120,6 +191,16 @@ export interface IKeyframeStore {
     signal?: AbortSignal,
   ): Promise<void>;
 
+  /**
+   * Finds the keyframe closest to (but not exceeding) the target revision.
+   * Returns undefined if no keyframe exists for this document/scope/branch.
+   *
+   * @param documentId - The document id
+   * @param scope - The operation scope
+   * @param branch - The branch name
+   * @param targetRevision - The desired revision upper bound
+   * @param signal - Optional abort signal to cancel the request
+   */
   findNearestKeyframe(
     documentId: string,
     scope: string,
@@ -128,6 +209,16 @@ export interface IKeyframeStore {
     signal?: AbortSignal,
   ): Promise<{ revision: number; document: PHDocument } | undefined>;
 
+  /**
+   * Deletes keyframes for a document. Optionally scoped to a specific
+   * scope and/or branch.
+   *
+   * @param documentId - The document id
+   * @param scope - Optional scope filter; omit to delete across all scopes
+   * @param branch - Optional branch filter; omit to delete across all branches
+   * @param signal - Optional abort signal to cancel the request
+   * @returns The number of keyframes deleted
+   */
   deleteKeyframes(
     documentId: string,
     scope?: string,
@@ -136,16 +227,30 @@ export interface IKeyframeStore {
   ): Promise<number>;
 }
 
+/**
+ * Filters applied when reading document state from {@link IDocumentView}.
+ */
 export interface ViewFilter {
+  /** Branch to read from. Defaults to the main branch when omitted. */
   branch?: string;
+  /** Scopes to include. When omitted, all scopes are included. */
   scopes?: string[];
+  /** Exclude operations originating from this remote name. */
   excludeSourceRemote?: string;
 }
 
+/**
+ * Criteria for searching documents in storage-backed read models.
+ * All provided fields are combined with AND logic.
+ */
 export interface SearchFilter {
+  /** Filter by document type identifier. */
   documentType?: string;
+  /** Filter by parent document id. */
   parentId?: string;
+  /** Filter by arbitrary key-value identifiers stored on the document. */
   identifiers?: Record<string, any>;
+  /** When true, include soft-deleted documents in results. */
   includeDeleted?: boolean;
 }
 
@@ -164,25 +269,11 @@ export interface OperationFilter {
   sinceRevision?: number;
 }
 
-export interface DocumentSnapshot {
-  id: string;
-  documentId: string;
-  slug: string | null;
-  name: string | null;
-  scope: string;
-  branch: string;
-  content: string;
-  documentType: string;
-  lastOperationIndex: number;
-  lastOperationHash: string;
-  lastUpdatedAt: Date;
-  snapshotVersion: number;
-  identifiers: string | null;
-  metadata: string | null;
-  isDeleted: boolean;
-  deletedAt: Date | null;
-}
-
+/**
+ * Materialised read model that maintains document snapshots. Snapshots are
+ * updated by indexing operations (which must include `resultingState`) and
+ * queried with optional consistency tokens for read-after-write guarantees.
+ */
 export interface IDocumentView {
   /**
    * Initializes the view.
@@ -341,6 +432,9 @@ export interface IDocumentView {
   ): Promise<string>;
 }
 
+/**
+ * A directed relationship between two documents in the document graph.
+ */
 export type DocumentRelationship = {
   sourceId: string;
   targetId: string;
@@ -350,17 +444,29 @@ export type DocumentRelationship = {
   updatedAt: Date;
 };
 
+/**
+ * A lightweight directed edge in a {@link IDocumentGraph}.
+ */
 export type DocumentGraphEdge = {
   from: string;
   to: string;
   type: string;
 };
 
+/**
+ * A subgraph of the document relationship graph, returned by traversal
+ * queries such as {@link IDocumentIndexer.findAncestors}.
+ */
 export interface IDocumentGraph {
   nodes: string[];
   edges: DocumentGraphEdge[];
 }
 
+/**
+ * Read model that maintains a directed graph of document relationships.
+ * Relationships are created and removed by indexing operations containing
+ * ADD_RELATIONSHIP and REMOVE_RELATIONSHIP actions.
+ */
 export interface IDocumentIndexer {
   /**
    * Initializes the indexer and catches up on any missed operations.
@@ -519,6 +625,10 @@ export interface IDocumentIndexer {
   ): Promise<string[]>;
 }
 
+/**
+ * Persistent storage for sync remote configurations. Each remote represents
+ * a connection to an external system that operations can be synced with.
+ */
 export interface ISyncRemoteStorage {
   /**
    * Lists all remotes.
@@ -556,6 +666,10 @@ export interface ISyncRemoteStorage {
   remove(name: string, signal?: AbortSignal): Promise<void>;
 }
 
+/**
+ * Persistent storage for sync cursors that track inbox/outbox progress
+ * per remote. Cursors allow sync to resume from where it left off.
+ */
 export interface ISyncCursorStorage {
   /**
    * Lists all cursors for a remote.

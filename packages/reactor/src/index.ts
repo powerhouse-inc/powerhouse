@@ -144,7 +144,6 @@ export {
   type DocumentGraphEdge,
   type DocumentRelationship,
   type DocumentRevisions,
-  type DocumentSnapshot,
   type IDocumentGraph,
   type IDocumentIndexer,
   type IDocumentView,
