@@ -14,12 +14,16 @@ on:
       - "packages/document-drive/**"
       - "packages/reactor/**"
       - "test/test-connect/**"
+      - "test/test-client/**"
+      - ".github/workflows/check-pr-reactor.yml"
   pull_request:
     branches: ["main"]
     paths:
       - "packages/document-drive/**"
       - "packages/reactor/**"
       - "test/test-connect/**"
+      - "test/test-client/**"
+      - ".github/workflows/check-pr-reactor.yml"
     types: [opened, synchronize]
 
 env:
