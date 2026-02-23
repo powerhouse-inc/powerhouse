@@ -8,6 +8,7 @@ import type {
   PagedResults,
   PagingOptions,
 } from "../shared/types.js";
+import type { ChannelErrorSource } from "../sync/types.js";
 import type { RemoteCursor, RemoteRecord } from "../sync/types.js";
 
 export type { PagedResults, PagingOptions } from "../shared/types.js";
@@ -596,4 +597,58 @@ export interface ISyncCursorStorage {
    * @returns The cursor
    */
   remove(remoteName: string, signal?: AbortSignal): Promise<void>;
+}
+
+/**
+ * Serializable snapshot of a permanently failed SyncOperation.
+ */
+export type DeadLetterRecord = {
+  id: string;
+  jobId: string;
+  jobDependencies: string[];
+  remoteName: string;
+  documentId: string;
+  scopes: string[];
+  branch: string;
+  operations: OperationWithContext[];
+  errorSource: ChannelErrorSource;
+  errorMessage: string;
+};
+
+/**
+ * Persists dead-lettered sync operations so they survive reactor restarts.
+ */
+export interface ISyncDeadLetterStorage {
+  /**
+   * Lists all dead letters for a remote.
+   *
+   * @param remoteName - The name of the remote
+   * @param signal - Optional abort signal to cancel the request
+   * @returns The dead letter records
+   */
+  list(remoteName: string, signal?: AbortSignal): Promise<DeadLetterRecord[]>;
+
+  /**
+   * Adds a dead letter. Duplicate ids are silently ignored.
+   *
+   * @param deadLetter - The dead letter record to persist
+   * @param signal - Optional abort signal to cancel the request
+   */
+  add(deadLetter: DeadLetterRecord, signal?: AbortSignal): Promise<void>;
+
+  /**
+   * Removes a single dead letter by id.
+   *
+   * @param id - The dead letter id
+   * @param signal - Optional abort signal to cancel the request
+   */
+  remove(id: string, signal?: AbortSignal): Promise<void>;
+
+  /**
+   * Removes all dead letters for a remote.
+   *
+   * @param remoteName - The name of the remote
+   * @param signal - Optional abort signal to cancel the request
+   */
+  removeByRemote(remoteName: string, signal?: AbortSignal): Promise<void>;
 }

@@ -57,10 +57,12 @@ import type {
   IDocumentView,
   IOperationStore,
   ISyncCursorStorage,
+  ISyncDeadLetterStorage,
 } from "../src/storage/interfaces.js";
 import { KyselyKeyframeStore } from "../src/storage/kysely/keyframe-store.js";
 import { KyselyOperationStore } from "../src/storage/kysely/store.js";
 import { KyselySyncCursorStorage } from "../src/storage/kysely/sync-cursor-storage.js";
+import { KyselySyncDeadLetterStorage } from "../src/storage/kysely/sync-dead-letter-storage.js";
 import { KyselySyncRemoteStorage } from "../src/storage/kysely/sync-remote-storage.js";
 import type { Database as DatabaseSchema } from "../src/storage/kysely/types.js";
 import {
@@ -894,6 +896,7 @@ export async function createTestSyncStorage(): Promise<{
   db: Kysely<DatabaseSchema>;
   syncRemoteStorage: KyselySyncRemoteStorage;
   syncCursorStorage: KyselySyncCursorStorage;
+  syncDeadLetterStorage: KyselySyncDeadLetterStorage;
 }> {
   const baseDb = new Kysely<DatabaseSchema>({
     dialect: new PGliteDialect(new PGlite()),
@@ -907,8 +910,9 @@ export async function createTestSyncStorage(): Promise<{
   const db = baseDb.withSchema(REACTOR_SCHEMA);
   const syncRemoteStorage = new KyselySyncRemoteStorage(db);
   const syncCursorStorage = new KyselySyncCursorStorage(db);
+  const syncDeadLetterStorage = new KyselySyncDeadLetterStorage(db);
 
-  return { db, syncRemoteStorage, syncCursorStorage };
+  return { db, syncRemoteStorage, syncCursorStorage, syncDeadLetterStorage };
 }
 
 /**

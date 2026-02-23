@@ -10,6 +10,7 @@ import { ReactorEventTypes } from "../../../src/events/types.js";
 import { ConsoleLogger } from "../../../src/logging/console.js";
 import type {
   ISyncCursorStorage,
+  ISyncDeadLetterStorage,
   ISyncRemoteStorage,
 } from "../../../src/storage/interfaces.js";
 import type { Database } from "../../../src/storage/kysely/types.js";
@@ -27,6 +28,7 @@ describe("SyncManager Integration", () => {
   let db: Kysely<Database>;
   let syncRemoteStorage: ISyncRemoteStorage;
   let syncCursorStorage: ISyncCursorStorage;
+  let syncDeadLetterStorage: ISyncDeadLetterStorage;
   let eventBus: IEventBus;
   let operationIndex: IOperationIndex;
   let mockReactor: IReactor;
@@ -40,6 +42,7 @@ describe("SyncManager Integration", () => {
     db = storage.db;
     syncRemoteStorage = storage.syncRemoteStorage;
     syncCursorStorage = storage.syncCursorStorage;
+    syncDeadLetterStorage = storage.syncDeadLetterStorage;
 
     eventBus = new EventBus();
 
@@ -59,6 +62,7 @@ describe("SyncManager Integration", () => {
       new ConsoleLogger(["SyncManager"]),
       syncRemoteStorage,
       syncCursorStorage,
+      syncDeadLetterStorage,
       channelFactory,
       operationIndex,
       mockReactor,

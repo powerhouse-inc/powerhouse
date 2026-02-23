@@ -7,6 +7,7 @@ import { ReactorEventTypes } from "../../../src/events/types.js";
 import { ConsoleLogger } from "../../../src/logging/console.js";
 import type {
   ISyncCursorStorage,
+  ISyncDeadLetterStorage,
   ISyncRemoteStorage,
 } from "../../../src/storage/interfaces.js";
 import type {
@@ -16,7 +17,9 @@ import type {
 import { JobStatus } from "../../../src/shared/types.js";
 import { SyncManager } from "../../../src/sync/sync-manager.js";
 import { SyncOperation } from "../../../src/sync/sync-operation.js";
+import type { DeadLetterRecord } from "../../../src/storage/interfaces.js";
 import {
+  ChannelErrorSource,
   SyncOperationStatus,
   type ChannelConfig,
   type RemoteRecord,
@@ -26,6 +29,7 @@ describe("SyncManager - Unit Tests", () => {
   let syncManager: SyncManager;
   let mockRemoteStorage: ISyncRemoteStorage;
   let mockCursorStorage: ISyncCursorStorage;
+  let mockDeadLetterStorage: ISyncDeadLetterStorage;
   let mockChannelFactory: IChannelFactory;
   let mockOperationIndex: IOperationIndex;
   let mockReactor: IReactor;
@@ -159,6 +163,13 @@ describe("SyncManager - Unit Tests", () => {
       remove: vi.fn().mockResolvedValue(undefined),
     };
 
+    mockDeadLetterStorage = {
+      list: vi.fn().mockResolvedValue([]),
+      add: vi.fn().mockResolvedValue(undefined),
+      remove: vi.fn().mockResolvedValue(undefined),
+      removeByRemote: vi.fn().mockResolvedValue(undefined),
+    };
+
     mockChannelFactory = {
       instance: vi.fn().mockReturnValue(mockChannel),
     };
@@ -226,6 +237,7 @@ describe("SyncManager - Unit Tests", () => {
       new ConsoleLogger(["SyncManager"]),
       mockRemoteStorage,
       mockCursorStorage,
+      mockDeadLetterStorage,
       mockChannelFactory,
       mockOperationIndex,
       mockReactor,
@@ -3165,6 +3177,178 @@ describe("SyncManager - Unit Tests", () => {
       );
 
       expect(ch.deadLetter.add).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("dead letter persistence", () => {
+    it("should persist dead letters via deadLetterStorage.add when onAdded fires", async () => {
+      await syncManager.startup();
+
+      const channelConfig: ChannelConfig = {
+        type: "internal",
+        parameters: {},
+      };
+
+      const ch = createTestChannel();
+      vi.mocked(mockChannelFactory.instance).mockReturnValue(ch as any);
+
+      await syncManager.add("remote-dl", "collection1", channelConfig, {
+        documentId: [],
+        scope: [],
+        branch: "main",
+      });
+
+      const syncOp = new SyncOperation(
+        "dl-syncop-1",
+        "dl-job-1",
+        ["dep-1"],
+        "remote-dl",
+        "doc1",
+        ["global"],
+        "main",
+        [
+          {
+            operation: {
+              id: "dl-op1",
+              index: 0,
+              skip: 0,
+              hash: "dl-hash",
+              timestampUtcMs: "1000",
+              action: { type: "CREATE", scope: "global" } as any,
+            },
+            context: {
+              documentId: "doc1",
+              documentType: "test",
+              scope: "global",
+              branch: "main",
+              ordinal: 1,
+            },
+          },
+        ],
+      );
+
+      const { ChannelError } = await import("../../../src/sync/errors.js");
+      syncOp.failed(
+        new ChannelError(ChannelErrorSource.Inbox, new Error("test error")),
+      );
+
+      const onAddedCalls = vi.mocked(ch.deadLetter.onAdded).mock.calls;
+      const deadLetterCb = onAddedCalls[onAddedCalls.length - 1][0];
+      deadLetterCb([syncOp]);
+
+      await new Promise((r) => setTimeout(r, 10));
+
+      expect(mockDeadLetterStorage.add).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: "dl-syncop-1",
+          jobId: "dl-job-1",
+          jobDependencies: ["dep-1"],
+          remoteName: "remote-dl",
+          documentId: "doc1",
+          scopes: ["global"],
+          branch: "main",
+          errorSource: ChannelErrorSource.Inbox,
+          errorMessage: "test error",
+        }),
+      );
+    });
+
+    it("should load persisted dead letters into channel on startup", async () => {
+      const persistedRecords: DeadLetterRecord[] = [
+        {
+          id: "persisted-dl-1",
+          jobId: "persisted-job-1",
+          jobDependencies: [],
+          remoteName: "remote1",
+          documentId: "doc1",
+          scopes: ["global"],
+          branch: "main",
+          operations: [],
+          errorSource: ChannelErrorSource.Inbox,
+          errorMessage: "persisted error",
+        },
+      ];
+
+      vi.mocked(mockDeadLetterStorage.list).mockResolvedValue(persistedRecords);
+
+      const remoteRecords: RemoteRecord[] = [
+        {
+          id: "channel1",
+          name: "remote1",
+          collectionId: "collection1",
+          channelConfig: {
+            type: "internal",
+            parameters: {},
+          },
+          filter: { documentId: [], scope: [], branch: "main" },
+          options: { sinceTimestampUtcMs: "0" },
+          status: {
+            push: { state: "idle", failureCount: 0 },
+            pull: { state: "idle", failureCount: 0 },
+          },
+        },
+      ];
+
+      vi.mocked(mockRemoteStorage.list).mockResolvedValue(remoteRecords);
+
+      await syncManager.startup();
+
+      expect(mockDeadLetterStorage.list).toHaveBeenCalledWith("remote1");
+      expect(mockChannel.deadLetter.add).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: "persisted-dl-1",
+          jobId: "persisted-job-1",
+          documentId: "doc1",
+          status: SyncOperationStatus.Error,
+        }),
+      );
+    });
+
+    it("should load dead letters with Error status", async () => {
+      const persistedRecords: DeadLetterRecord[] = [
+        {
+          id: "persisted-dl-2",
+          jobId: "persisted-job-2",
+          jobDependencies: ["dep-a"],
+          remoteName: "remote1",
+          documentId: "doc2",
+          scopes: ["global"],
+          branch: "main",
+          operations: [],
+          errorSource: ChannelErrorSource.Channel,
+          errorMessage: "channel error",
+        },
+      ];
+
+      vi.mocked(mockDeadLetterStorage.list).mockResolvedValue(persistedRecords);
+
+      const remoteRecords: RemoteRecord[] = [
+        {
+          id: "channel1",
+          name: "remote1",
+          collectionId: "collection1",
+          channelConfig: {
+            type: "internal",
+            parameters: {},
+          },
+          filter: { documentId: [], scope: [], branch: "main" },
+          options: { sinceTimestampUtcMs: "0" },
+          status: {
+            push: { state: "idle", failureCount: 0 },
+            pull: { state: "idle", failureCount: 0 },
+          },
+        },
+      ];
+
+      vi.mocked(mockRemoteStorage.list).mockResolvedValue(remoteRecords);
+
+      await syncManager.startup();
+
+      const addedSyncOp = vi.mocked(mockChannel.deadLetter.add).mock
+        .calls[0][0];
+      expect(addedSyncOp.status).toBe(SyncOperationStatus.Error);
+      expect(addedSyncOp.error).toBeDefined();
+      expect(addedSyncOp.error!.source).toBe(ChannelErrorSource.Channel);
     });
   });
 });

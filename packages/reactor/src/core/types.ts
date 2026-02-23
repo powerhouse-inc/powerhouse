@@ -35,6 +35,7 @@ import type {
   IKeyframeStore,
   IOperationStore,
   ISyncCursorStorage,
+  ISyncDeadLetterStorage,
   ISyncRemoteStorage,
   OperationFilter,
 } from "../storage/interfaces.js";
@@ -397,6 +398,7 @@ export type Database = StorageDatabase &
 export interface SyncModule {
   remoteStorage: ISyncRemoteStorage;
   cursorStorage: ISyncCursorStorage;
+  deadLetterStorage: ISyncDeadLetterStorage;
   channelFactory: IChannelFactory;
   syncManager: ISyncManager;
 }
