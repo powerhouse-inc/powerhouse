@@ -107,13 +107,7 @@ function updateOperationsForAction<TDocument extends PHDocument>(
 
   const newOperation = operationFromAction(action, index, skip, context);
 
-  // Pre-allocate array with exact size to avoid resize overhead
-  const existingLen = existing?.length ?? 0;
-  const operations = new Array<Operation>(existingLen + 1);
-  for (let i = 0; i < existingLen; i++) {
-    operations[i] = existing![i];
-  }
-  operations[existingLen] = newOperation;
+  const operations = [...(existing ?? []), newOperation];
 
   return {
     ...document,
@@ -150,13 +144,7 @@ function updateOperationsForOperation<TDocument extends PHDocument>(
     context,
   );
 
-  // Pre-allocate array with exact size to avoid resize overhead
-  const existingLen = existing?.length ?? 0;
-  const operations = new Array<Operation>(existingLen + 1);
-  for (let i = 0; i < existingLen; i++) {
-    operations[i] = existing![i];
-  }
-  operations[existingLen] = newOperation;
+  const operations = [...(existing ?? []), newOperation];
 
   return {
     ...document,
