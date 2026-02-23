@@ -104,7 +104,7 @@ A token capturing operation coordinates, used for read-after-write consistency. 
 - Operation `ordinal` values come from `IOperationIndex`, not the operation store.
 - `JOB_READ_READY` fires after pre-ready read models complete; post-ready models run after that.
 - `IOperationStore.getSince` always returns operations sorted by index ascending (`ORDER BY index ASC`). Code that calls `.at(-1)` on an operations array to find the latest index relies on this invariant — do not break it.
-- `IWriteCache` stores only the last operation per scope (the write-cache slicing contract). UNDO, REDO, and PRUNE all need the full history, so the executor invalidates the cache for those action types before loading the document.
+- `IWriteCache` stores only the last operation per scope (the write-cache slicing contract). UNDO, REDO, PRUNE, and NOOP+skip all need the full history, so the executor invalidates the cache for those action types before loading the document. NOOP+skip arises during sync reshuffling in `executeLoadJob`.
 
 ## Key Components
 

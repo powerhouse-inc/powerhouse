@@ -1797,6 +1797,180 @@ describe("SimpleJobExecutor", () => {
       );
     });
 
+    it("should invalidate cache before loading for REDO actions", async () => {
+      const docId = "doc-redo-invalidation";
+      const callOrder: string[] = [];
+      mockWriteCache.invalidate = vi.fn().mockImplementation(() => {
+        callOrder.push("invalidate");
+      });
+      mockWriteCache.getState = vi.fn().mockImplementation(() => {
+        callOrder.push("getState");
+        return Promise.resolve({
+          header: {
+            id: docId,
+            documentType: "powerhouse/document-model",
+            revision: { document: 1, global: 1 },
+          },
+          operations: { document: [], global: [] },
+          state: { global: {}, local: {}, document: { isDeleted: false } },
+        });
+      });
+
+      const job: Job = {
+        kind: "mutation",
+        id: "redo-job-1",
+        documentId: docId,
+        scope: "global",
+        branch: "main",
+        actions: [
+          {
+            id: "redo-action-1",
+            type: "REDO",
+            scope: "global",
+            timestampUtcMs: "123",
+            input: {},
+          },
+        ],
+        operations: [],
+        createdAt: "123",
+        queueHint: [],
+        errorHistory: [],
+        meta: { batchId: "test", batchJobIds: ["redo-job-1"] },
+      };
+
+      await executor.executeJob(job);
+
+      expect(mockWriteCache.invalidate).toHaveBeenCalledWith(
+        docId,
+        "global",
+        "main",
+      );
+      expect(callOrder.indexOf("invalidate")).toBeLessThan(
+        callOrder.indexOf("getState"),
+      );
+    });
+
+    it("should invalidate cache before loading for NOOP+skip from load-job reshuffling", async () => {
+      const docId = "doc-noop-skip-load";
+      const callOrder: string[] = [];
+      mockWriteCache.invalidate = vi.fn().mockImplementation(() => {
+        callOrder.push("invalidate");
+      });
+      mockWriteCache.getState = vi.fn().mockImplementation(() => {
+        callOrder.push("getState");
+        return Promise.resolve({
+          header: {
+            id: docId,
+            documentType: "powerhouse/document-model",
+            revision: { document: 1, global: 1 },
+          },
+          operations: {
+            document: [
+              {
+                index: 0,
+                action: {
+                  id: "create-action-id",
+                  type: "CREATE_DOCUMENT",
+                  scope: "document",
+                  timestampUtcMs: "2024-01-01T00:00:00.000Z",
+                  input: {
+                    documentId: docId,
+                    model: "powerhouse/document-model",
+                  },
+                },
+              },
+            ],
+            global: [],
+            local: [],
+          },
+          state: { global: {}, local: {}, document: { isDeleted: false } },
+        });
+      });
+
+      // A local NOOP op from a prior reshuffle round. Its earlier timestamp
+      // ensures it sorts first in reshuffleByTimestamp, making it the first
+      // action processed — so the test does not depend on SET_NAME succeeding.
+      const localNoopOp = {
+        id: "local-noop-op-1",
+        index: 1,
+        skip: 1,
+        timestampUtcMs: "2024-01-01T00:00:00.000Z",
+        hash: "hash-noop",
+        action: {
+          id: "noop-action-id-1",
+          type: "NOOP",
+          scope: "global",
+          timestampUtcMs: "2024-01-01T00:00:00.000Z",
+          input: {},
+        },
+        resultingState: "{}",
+      };
+
+      // An incoming op arriving with a later timestamp
+      const incomingOp = {
+        id: "incoming-op-1",
+        index: 0,
+        skip: 0,
+        timestampUtcMs: "2024-01-02T00:00:00.000Z",
+        hash: "hash-incoming",
+        action: {
+          id: "incoming-action-id-1",
+          type: "SET_NAME",
+          scope: "global",
+          timestampUtcMs: "2024-01-02T00:00:00.000Z",
+          input: { name: "test" },
+        },
+        resultingState: "{}",
+      };
+
+      mockOperationStore.getRevisions = vi.fn().mockResolvedValue({
+        revision: { global: 2 },
+        latestTimestamp: "2024-01-02T00:00:00.000Z",
+      });
+      mockOperationStore.getConflicting = vi.fn().mockResolvedValue({
+        results: [localNoopOp],
+        options: { cursor: "0", limit: 1001 },
+        nextCursor: undefined,
+      });
+      mockOperationStore.getSince = vi.fn().mockResolvedValue({
+        results: [localNoopOp],
+        options: { cursor: "0", limit: 2000 },
+        nextCursor: undefined,
+      });
+
+      const job: Job = {
+        kind: "load",
+        id: "noop-skip-load-job-1",
+        documentId: docId,
+        scope: "global",
+        branch: "main",
+        actions: [],
+        operations: [incomingOp as any],
+        createdAt: "2024-01-01T00:00:00.000Z",
+        queueHint: [],
+        errorHistory: [],
+        meta: {
+          batchId: "test-noop-skip",
+          batchJobIds: ["noop-skip-load-job-1"],
+        },
+      };
+
+      await executor.executeJob(job);
+
+      // Reshuffle produces: [localNoopOp(NOOP, skip=1), incomingOp(SET_NAME, skip=0)].
+      // The NOOP+skip guard must invalidate before calling getState so the reducer
+      // receives full operation history rather than the sliced cache snapshot.
+      // Expected callOrder: ["invalidate" (NOOP guard), "getState" (NOOP), ...]
+      expect(mockWriteCache.invalidate).toHaveBeenCalledWith(
+        docId,
+        "global",
+        "main",
+      );
+      expect(callOrder.indexOf("invalidate")).toBeLessThan(
+        callOrder.indexOf("getState"),
+      );
+    });
+
     it("should not invalidate cache for regular actions", async () => {
       const job: Job = {
         kind: "mutation",

@@ -99,6 +99,7 @@ function updateOperationsForAction<TDocument extends PHDocument>(
 
   const scope = action.scope;
   const existing = document.operations[scope];
+  // Relies on ops being sorted ascending by index — see reactor CLAUDE.md invariants.
   const lastOperationIndex = existing?.at(-1)?.index ?? -1;
 
   const index = reuseLastOperationIndex
@@ -125,6 +126,7 @@ function updateOperationsForOperation<TDocument extends PHDocument>(
 ): TDocument {
   const scope = operation.action.scope;
   const existing = document.operations[scope];
+  // Relies on ops being sorted ascending by index — see reactor CLAUDE.md invariants.
   const lastOperationIndex = existing?.at(-1)?.index ?? -1;
 
   const nextIndex = reuseLastOperationIndex
