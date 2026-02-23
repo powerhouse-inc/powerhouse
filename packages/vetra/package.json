@@ -111,7 +111,6 @@
     "pm2": "^5.4.3",
     "react": "catalog:",
     "react-dom": "catalog:",
-    "shared": "workspace:*",
     "tailwindcss": "catalog:",
     "vite": "catalog:",
     "vite-plugin-node-polyfills": "catalog:",

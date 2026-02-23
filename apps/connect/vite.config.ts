@@ -20,6 +20,10 @@ export default defineConfig(({ mode }) => {
     build: {
       sourcemap: true,
       minify: true,
+      rollupOptions: {
+        // Externalize virtual paths only available in studio/dev mode
+        external: ["/index.ts", "/style.css"],
+      },
     },
     server: {
       watch: {},
