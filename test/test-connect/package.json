@@ -15,7 +15,8 @@
     "test": "vitest --run",
     "scenario:sync": "tsx src/orchestrator.ts",
     "scenario:sync:stress": "tsx src/orchestrator.ts --clients 5 --duration 120000 --mutation-interval 200",
-    "analyze": "tsx src/analyze-logs.ts"
+    "analyze": "tsx src/analyze-logs.ts",
+    "test:integration": "tsx src/run-integration.ts"
   },
   "dependencies": {
     "@powerhousedao/reactor": "workspace:*",
