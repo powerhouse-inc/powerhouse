@@ -191,8 +191,13 @@ export class KyselyWriteCache implements IWriteCache {
   /**
    * Stores a document snapshot in the cache at a specific revision.
    *
-   * Stores the document reference as-is. Callers must avoid mutating cached
-   * snapshots if they need to preserve historical revisions.
+   * The cached document is a shallow copy of the input with its operation history
+   * truncated to the last operation per scope and its clipboard cleared. This keeps
+   * memory use and copy costs constant regardless of operation count. Consumers of
+   * getState() must not rely on the full operation history being present; the only
+   * guaranteed invariant is that operations[scope].at(-1) reflects the latest
+   * operation index for each scope.
+   *
    * Updates LRU tracker and may evict least recently used stream if at capacity.
    * Asynchronously persists keyframes at configured intervals (fire-and-forget).
    *
