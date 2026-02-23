@@ -1690,6 +1690,142 @@ describe("SimpleJobExecutor", () => {
     });
   });
 
+  describe("Cache invalidation for history-dependent actions", () => {
+    it("should invalidate cache before loading for UNDO actions", async () => {
+      const docId = "doc-undo-invalidation";
+      const callOrder: string[] = [];
+      mockWriteCache.invalidate = vi.fn().mockImplementation(() => {
+        callOrder.push("invalidate");
+      });
+      mockWriteCache.getState = vi.fn().mockImplementation(() => {
+        callOrder.push("getState");
+        return Promise.resolve({
+          header: {
+            id: docId,
+            documentType: "powerhouse/document-model",
+            revision: { document: 1, global: 1 },
+          },
+          operations: { document: [], global: [] },
+          state: { global: {}, local: {}, document: { isDeleted: false } },
+        });
+      });
+
+      const job: Job = {
+        kind: "mutation",
+        id: "undo-job-1",
+        documentId: docId,
+        scope: "global",
+        branch: "main",
+        actions: [
+          {
+            id: "undo-action-1",
+            type: "UNDO",
+            scope: "global",
+            timestampUtcMs: "123",
+            input: {},
+          },
+        ],
+        operations: [],
+        createdAt: "123",
+        queueHint: [],
+        errorHistory: [],
+        meta: { batchId: "test", batchJobIds: ["undo-job-1"] },
+      };
+
+      await executor.executeJob(job);
+
+      expect(mockWriteCache.invalidate).toHaveBeenCalledWith(
+        docId,
+        "global",
+        "main",
+      );
+      expect(callOrder.indexOf("invalidate")).toBeLessThan(
+        callOrder.indexOf("getState"),
+      );
+    });
+
+    it("should invalidate cache before loading for PRUNE actions", async () => {
+      const docId = "doc-prune-invalidation";
+      const callOrder: string[] = [];
+      mockWriteCache.invalidate = vi.fn().mockImplementation(() => {
+        callOrder.push("invalidate");
+      });
+      mockWriteCache.getState = vi.fn().mockImplementation(() => {
+        callOrder.push("getState");
+        return Promise.resolve({
+          header: {
+            id: docId,
+            documentType: "powerhouse/document-model",
+            revision: { document: 1, global: 1 },
+          },
+          operations: { document: [], global: [] },
+          state: { global: {}, local: {}, document: { isDeleted: false } },
+        });
+      });
+
+      const job: Job = {
+        kind: "mutation",
+        id: "prune-job-1",
+        documentId: docId,
+        scope: "global",
+        branch: "main",
+        actions: [
+          {
+            id: "prune-action-1",
+            type: "PRUNE",
+            scope: "global",
+            timestampUtcMs: "123",
+            input: { start: 0, end: 1 },
+          },
+        ],
+        operations: [],
+        createdAt: "123",
+        queueHint: [],
+        errorHistory: [],
+        meta: { batchId: "test", batchJobIds: ["prune-job-1"] },
+      };
+
+      await executor.executeJob(job);
+
+      expect(mockWriteCache.invalidate).toHaveBeenCalledWith(
+        docId,
+        "global",
+        "main",
+      );
+      expect(callOrder.indexOf("invalidate")).toBeLessThan(
+        callOrder.indexOf("getState"),
+      );
+    });
+
+    it("should not invalidate cache for regular actions", async () => {
+      const job: Job = {
+        kind: "mutation",
+        id: "regular-job-1",
+        documentId: "doc-regular-1",
+        scope: "global",
+        branch: "main",
+        actions: [
+          {
+            id: "regular-action-1",
+            type: "SET_NAME",
+            scope: "global",
+            timestampUtcMs: "123",
+            input: { name: "New Name" },
+          },
+        ],
+        operations: [],
+        createdAt: "123",
+        queueHint: [],
+        errorHistory: [],
+        meta: { batchId: "test", batchJobIds: ["regular-job-1"] },
+      };
+
+      await executor.executeJob(job);
+
+      expect(mockWriteCache.invalidate).not.toHaveBeenCalled();
+    });
+  });
+
   describe("CREATE_DOCUMENT guarantee", () => {
     describe("CREATE_DOCUMENT scope validation", () => {
       it("should reject CREATE_DOCUMENT in non-document scope", async () => {
