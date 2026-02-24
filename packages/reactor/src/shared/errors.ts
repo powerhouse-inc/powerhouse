@@ -17,6 +17,10 @@ export class DocumentDeletedError extends Error {
 
     Error.captureStackTrace(this, DocumentDeletedError);
   }
+
+  static isError(error: unknown): error is DocumentDeletedError {
+    return Error.isError(error) && error.name === "DocumentDeletedError";
+  }
 }
 
 /**

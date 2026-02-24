@@ -227,7 +227,7 @@ export class KyselyWriteCache implements IWriteCache {
       operations: Object.fromEntries(
         Object.entries(document.operations).map(([k, ops]) => [
           k,
-          ops?.length ? [ops.at(-1)!] : [],
+          ops.length ? [ops.at(-1)!] : [],
         ]),
       ),
       clipboard: [],

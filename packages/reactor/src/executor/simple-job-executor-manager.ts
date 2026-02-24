@@ -7,7 +7,10 @@ import type { IJobExecutionHandle, Job } from "../queue/types.js";
 import { QueueEventTypes } from "../queue/types.js";
 import type { IDocumentModelResolver } from "../registry/document-model-resolver.js";
 import { ModuleNotFoundError } from "../registry/implementation.js";
-import { DocumentNotFoundError } from "../shared/errors.js";
+import {
+  DocumentDeletedError,
+  DocumentNotFoundError,
+} from "../shared/errors.js";
 import type { ErrorInfo } from "../shared/types.js";
 import type { IJobExecutor, IJobExecutorManager } from "./interfaces.js";
 import type { ExecutorManagerStatus, JobResult } from "./types.js";
@@ -224,6 +227,22 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
         existing.push(job);
         this.deferredJobs.set(docId, existing);
 
+        await this.checkForMoreJobs();
+        return;
+      }
+
+      if (result.error && DocumentDeletedError.isError(result.error)) {
+        const errorInfo = this.toErrorInfo(result.error);
+        this.jobTracker.markFailed(handle.job.id, errorInfo, handle.job);
+        this.eventBus
+          .emit(ReactorEventTypes.JOB_FAILED, {
+            jobId: handle.job.id,
+            error: result.error,
+            job: handle.job,
+          })
+          .catch(() => {});
+        handle.fail(errorInfo);
+        this.activeJobs--;
         await this.checkForMoreJobs();
         return;
       }

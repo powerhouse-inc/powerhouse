@@ -357,7 +357,7 @@ export class SyncManager implements ISyncManager {
           branch: syncOp.branch,
           operations: syncOp.operations,
           errorSource: syncOp.error?.source ?? ChannelErrorSource.None,
-          errorMessage: syncOp.error?.error?.message ?? "unknown",
+          errorMessage: syncOp.error?.error.message ?? "unknown",
         };
 
         void this.deadLetterStorage.add(record).catch((err) => {

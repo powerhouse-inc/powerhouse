@@ -19,6 +19,7 @@ import type {
   IOperationStore,
 } from "../../src/storage/interfaces.js";
 import type { Database as DatabaseSchema } from "../../src/storage/kysely/types.js";
+import { DocumentDeletedError } from "../../src/shared/errors.js";
 import {
   createMockLogger,
   createTestEventBus,
@@ -748,6 +749,84 @@ describe("SimpleJobExecutor Integration (Modern Storage)", () => {
       expect(result.error?.name).toBe("DocumentDeletedError");
       expect(result.error?.message).toContain(document.header.id);
       expect(result.error?.message).toContain("deleted");
+    });
+
+    it("should fail load job for deleted document without processing operations", async () => {
+      const document = driveDocumentModelModule.utils.createDocument();
+      await createDocumentWithCreateOperation(
+        document.header.id,
+        document.header.documentType,
+        document.state,
+      );
+
+      const deleteJob: Job = {
+        id: "delete-job",
+        kind: "mutation",
+        documentId: document.header.id,
+        scope: "document",
+        branch: "main",
+        actions: [
+          {
+            id: "delete-action",
+            type: "DELETE_DOCUMENT",
+            scope: "document",
+            timestampUtcMs: new Date().toISOString(),
+            input: { documentId: document.header.id },
+          },
+        ],
+        operations: [],
+        createdAt: new Date().toISOString(),
+        queueHint: [],
+        errorHistory: [],
+        meta: { batchId: "test", batchJobIds: ["delete-job"] },
+      };
+
+      const deleteResult = await executor.executeJob(deleteJob);
+      expect(deleteResult.success).toBe(true);
+
+      const loadJob: Job = {
+        id: "load-after-delete",
+        kind: "load",
+        documentId: document.header.id,
+        scope: "global",
+        branch: "main",
+        actions: [],
+        operations: [
+          {
+            id: "incoming-op-1",
+            index: 0,
+            timestampUtcMs: new Date().toISOString(),
+            hash: "",
+            skip: 0,
+            action: {
+              id: "incoming-action-1",
+              type: "ADD_FOLDER",
+              scope: "global",
+              timestampUtcMs: new Date().toISOString(),
+              input: {
+                id: "folder-1",
+                name: "Should Not Be Created",
+                parentFolder: null,
+              },
+            },
+          },
+        ],
+        createdAt: new Date().toISOString(),
+        queueHint: [],
+        errorHistory: [],
+        meta: {
+          batchId: "test",
+          batchJobIds: ["load-after-delete"],
+          sourceRemote: "remote-1",
+        },
+      };
+
+      const result = await executor.executeJob(loadJob);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBeDefined();
+      expect(DocumentDeletedError.isError(result.error)).toBe(true);
+      expect(result.error?.message).toContain(document.header.id);
     });
   });
 

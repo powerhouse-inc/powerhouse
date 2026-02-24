@@ -485,6 +485,24 @@ export class SimpleJobExecutor implements IJobExecutor {
       );
     }
 
+    let docMeta;
+    try {
+      docMeta = await this.documentMetaCache.getDocumentMeta(
+        job.documentId,
+        job.branch,
+      );
+    } catch {
+      // Document meta not found — continue with load (may be a new document)
+    }
+
+    if (docMeta?.state.isDeleted) {
+      return buildErrorResult(
+        job,
+        new DocumentDeletedError(job.documentId, docMeta.state.deletedAtUtcIso),
+        startTime,
+      );
+    }
+
     const scope = job.scope;
 
     let latestRevision = 0;

@@ -24,7 +24,10 @@ import {
   DocumentModelRegistry,
   ModuleNotFoundError,
 } from "../../../src/registry/implementation.js";
-import { DocumentNotFoundError } from "../../../src/shared/errors.js";
+import {
+  DocumentDeletedError,
+  DocumentNotFoundError,
+} from "../../../src/shared/errors.js";
 import type { IDocumentModelLoader } from "../../../src/registry/interfaces.js";
 import { createMockLogger, createTestJob } from "../../factories.js";
 
@@ -687,6 +690,63 @@ describe("SimpleJobExecutorManager", () => {
       // The SET_NAME job should NOT have failed permanently.
       // It should have eventually succeeded after CREATE_DOCUMENT completed.
       expect(failedJobIds).not.toContain("set-name-job");
+    });
+  });
+
+  describe("deleted document non-retryable", () => {
+    it("should not waste retries on DocumentDeletedError", async () => {
+      const deletedEventBus = new EventBus();
+      const deletedQueue = new InMemoryQueue(
+        deletedEventBus,
+        new NullDocumentModelResolver(),
+      );
+      const deletedJobTracker = new InMemoryJobTracker(deletedEventBus);
+
+      const mockExecutor: IJobExecutor = {
+        executeJob: vi.fn().mockResolvedValue({
+          success: false,
+          error: new DocumentDeletedError(
+            "deleted-doc",
+            "2024-01-01T00:00:00Z",
+          ),
+        }),
+      };
+
+      const deletedManager = new SimpleJobExecutorManager(
+        () => mockExecutor,
+        deletedEventBus,
+        deletedQueue,
+        deletedJobTracker,
+        createMockLogger(),
+        new NullDocumentModelResolver(),
+      );
+
+      const failedPromise = new Promise<JobFailedEvent>((resolve) => {
+        deletedEventBus.subscribe(
+          ReactorEventTypes.JOB_FAILED,
+          (_type: number, data: JobFailedEvent) => {
+            resolve(data);
+          },
+        );
+      });
+
+      await deletedManager.start(1);
+
+      const job = createTestJob({
+        id: "deleted-doc-job",
+        documentId: "deleted-doc",
+        retryCount: 0,
+        maxRetries: 3,
+      });
+      await deletedQueue.enqueue(job);
+
+      await new Promise((resolve) => setTimeout(resolve, 200));
+
+      expect(mockExecutor.executeJob).toHaveBeenCalledTimes(1);
+
+      const failedEvent = await failedPromise;
+      expect(failedEvent.jobId).toBe("deleted-doc-job");
+      expect(DocumentDeletedError.isError(failedEvent.error)).toBe(true);
     });
   });
 

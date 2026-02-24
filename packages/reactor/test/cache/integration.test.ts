@@ -1277,7 +1277,7 @@ describe("KyselyWriteCache Integration Tests", () => {
       const stream = cache.getStream(docId, scope, branch);
       for (const snapshot of stream?.ringBuffer.getAll() ?? []) {
         for (const ops of Object.values(snapshot.document.operations)) {
-          expect((ops ?? []).length).toBeLessThanOrEqual(1);
+          expect(ops.length).toBeLessThanOrEqual(1);
         }
       }
 

@@ -57,7 +57,6 @@ import type {
   IDocumentView,
   IOperationStore,
   ISyncCursorStorage,
-  ISyncDeadLetterStorage,
 } from "../src/storage/interfaces.js";
 import { KyselyKeyframeStore } from "../src/storage/kysely/keyframe-store.js";
 import { KyselyOperationStore } from "../src/storage/kysely/store.js";

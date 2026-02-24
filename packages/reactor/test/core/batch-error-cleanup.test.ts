@@ -90,11 +90,12 @@ describe("batch enqueue error cleanup", () => {
 
       let enqueueCount = 0;
       const removeSpy = vi.spyOn(realQueue, "remove");
-      vi.spyOn(realQueue, "enqueue").mockImplementation(async () => {
+      vi.spyOn(realQueue, "enqueue").mockImplementation((): Promise<void> => {
         enqueueCount++;
         if (enqueueCount === 2) {
-          throw new Error("Queue full");
+          return Promise.reject(new Error("Queue full"));
         }
+        return Promise.resolve();
       });
 
       const { reactor } = createReactorWithQueue(realQueue);
@@ -132,11 +133,12 @@ describe("batch enqueue error cleanup", () => {
       );
 
       let enqueueCount = 0;
-      vi.spyOn(realQueue, "enqueue").mockImplementation(async () => {
+      vi.spyOn(realQueue, "enqueue").mockImplementation((): Promise<void> => {
         enqueueCount++;
         if (enqueueCount === 2) {
-          throw new Error("Queue full");
+          return Promise.reject(new Error("Queue full"));
         }
+        return Promise.resolve();
       });
 
       const { reactor, jobTracker } = createReactorWithQueue(realQueue);
@@ -187,11 +189,12 @@ describe("batch enqueue error cleanup", () => {
       );
 
       let enqueueCount = 0;
-      vi.spyOn(realQueue, "enqueue").mockImplementation(async () => {
+      vi.spyOn(realQueue, "enqueue").mockImplementation((): Promise<void> => {
         enqueueCount++;
         if (enqueueCount === 3) {
-          throw new Error("Queue full");
+          return Promise.reject(new Error("Queue full"));
         }
+        return Promise.resolve();
       });
 
       vi.spyOn(realQueue, "remove").mockRejectedValue(
@@ -242,11 +245,12 @@ describe("batch enqueue error cleanup", () => {
 
       let enqueueCount = 0;
       const removeSpy = vi.spyOn(realQueue, "remove");
-      vi.spyOn(realQueue, "enqueue").mockImplementation(async () => {
+      vi.spyOn(realQueue, "enqueue").mockImplementation((): Promise<void> => {
         enqueueCount++;
         if (enqueueCount === 2) {
-          throw new Error("Queue full");
+          return Promise.reject(new Error("Queue full"));
         }
+        return Promise.resolve();
       });
 
       const { reactor } = createReactorWithQueue(realQueue);
@@ -284,11 +288,12 @@ describe("batch enqueue error cleanup", () => {
       );
 
       let enqueueCount = 0;
-      vi.spyOn(realQueue, "enqueue").mockImplementation(async () => {
+      vi.spyOn(realQueue, "enqueue").mockImplementation((): Promise<void> => {
         enqueueCount++;
         if (enqueueCount === 2) {
-          throw new Error("Queue full");
+          return Promise.reject(new Error("Queue full"));
         }
+        return Promise.resolve();
       });
 
       const { reactor, jobTracker } = createReactorWithQueue(realQueue);
