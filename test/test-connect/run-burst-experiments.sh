@@ -21,33 +21,41 @@ LOG_BASE="./logs"
 # Experiment matrix: (clients, mutationInterval_ms, label)
 # M ≈ 2000 / interval (generateOperations produces avg 2 ops per call)
 #
-# Prior results show:
-#   N=4,M≈20 → STABLE    N=10,M≈20 → STABLE    N=10,M≈10 → FAILED
-#   Everything N≥20 at M≈10 → FAILED
-#   Anomaly: higher M (better batching) survives where lower M fails
+# Model boundary: (N-1)*M ≈ 83  (K_STORE=12, S_max=10000, T_burst=10s)
 #
-# This matrix maps the boundary with finer granularity:
-#   - N=5..8 to find where failures start
-#   - M≈5 (int=400) and M≈15 (int=130) to map the M dimension
-#   - N=15 to fill the N=10..20 gap
+# Known results:
+#   N=8:  M≈10 pass, M≈20 fail     → need lowest fail (try M≈15)
+#   N=10: M≈5 pass,  M≈10 fail     → boundary found
+#   N=15: M≈10 fail                 → need lowest fail (try M≈5)
+#   N=20: M≈5 fail                  → need pass (try M≈3)
+#   N=30: M≈10 fail                 → need lowest fail (try M≈5) + pass (try M≈2)
+#   N=40: M≈10 fail                 → need lowest fail (try M≈5) + pass (try M≈2)
+#   N=50: M≈10 fail                 → need lowest fail (try M≈5) + pass (try M≈1.5)
+#
+# Strategy: 1 lowest-fail + 1 potential-pass per N where needed
 EXPERIMENTS=(
-  # Boundary exploration: N=5..8
-  "5   200  N5_M10"       # just above N=4 (survived), M≈10
-  "5   100  N5_M20"       # just above N=4, M≈20
-  "6   200  N6_M10"       # N=6, M≈10
-  "8   200  N8_M10"       # N=8, M≈10, approaching N=10 (failed)
-  "8   100  N8_M20"       # N=8, M≈20
+  # N=5: pass near boundary + fail above
+  "5   100  N5_M20"       # (N-1)*M = 4*20 = 80 < 83, expect PASS (near line)
+  "5   70   N5_M29"       # (N-1)*M = 4*29 = 116 > 83, expect FAIL
 
-  # M dimension at N=10 (M≈10 failed, M≈20 survived)
-  "10  400  N10_M5"       # N=10, M≈5, does lower M help?
-  "10  130  N10_M15"      # N=10, M≈15, between M=10(fail) and M=20(survive)
+  # N=10: confirm boundary
+  "10  400  N10_M5"       # (N-1)*M = 9*5 = 45 < 83, expect PASS
+  "10  200  N10_M10"      # (N-1)*M = 9*10 = 90 > 83, expect FAIL
 
-  # Fill N=10..20 gap
-  "15  200  N15_M10"      # N=15, M≈10
-  "15  100  N15_M20"      # N=15, M≈20, between N=10(survive) and N=20(fail) at M≈20
+  # N=20: find pass below M≈5(fail)
+  "20  670  N20_M3"       # (N-1)*M = 19*3 = 57 < 83, expect PASS
 
-  # Lower M at high N
-  "20  400  N20_M5"       # N=20, M≈5, does very low M save high N?
+  # N=30: lowest fail + potential pass
+  "30  400  N30_M5"       # (N-1)*M = 29*5 = 145 > 83, expect FAIL
+  "30 1000  N30_M2"       # (N-1)*M = 29*2 = 58 < 83, expect PASS
+
+  # N=40: lowest fail + potential pass
+  "40  400  N40_M5"       # (N-1)*M = 39*5 = 195 > 83, expect FAIL
+  "40 1000  N40_M2"       # (N-1)*M = 39*2 = 78 < 83, expect PASS
+
+  # N=50: lowest fail + potential pass
+  "50  400  N50_M5"       # (N-1)*M = 49*5 = 245 > 83, expect FAIL
+  "50 1300  N50_M1.5"     # (N-1)*M = 49*1.5 = 74 < 83, expect PASS
 )
 
 echo "========================================"
