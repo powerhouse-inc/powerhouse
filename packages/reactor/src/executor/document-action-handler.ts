@@ -301,6 +301,16 @@ export class DocumentActionHandler {
       return writeError;
     }
 
+    updateDocumentRevision(document, job.scope, operation.index);
+
+    this.writeCache.putState(
+      documentId,
+      job.scope,
+      job.branch,
+      operation.index,
+      document,
+    );
+
     indexTxn.write([
       {
         ...operation,
