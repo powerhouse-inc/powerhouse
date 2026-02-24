@@ -774,6 +774,7 @@ export async function initializeAndStartAPI(
     driveServer: IDocumentDriveServer;
     client: IReactorClient;
     syncManager: ISyncManager;
+    documentModelRegistry: IDocumentModelRegistry;
   }
 > {
   const {
@@ -809,12 +810,20 @@ export async function initializeAndStartAPI(
     () => clientInitializer(reactor, documentModels),
   );
 
-  // Extract client and syncManager from the module
+  // Extract client, syncManager, and registry from the module
   const reactorClient = reactorClientModule.client;
   const syncManager =
     reactorClientModule.reactorModule?.syncModule?.syncManager;
   if (!syncManager) {
     throw new Error("SyncManager not available from ReactorClientModule");
+  }
+
+  const documentModelRegistry =
+    reactorClientModule.reactorModule?.documentModelRegistry;
+  if (!documentModelRegistry) {
+    throw new Error(
+      "DocumentModelRegistry not available from ReactorClientModule",
+    );
   }
 
   const legacyReactor = options.legacyReactor ?? false;
@@ -846,5 +855,6 @@ export async function initializeAndStartAPI(
     driveServer: reactor,
     client: reactorClient,
     syncManager,
+    documentModelRegistry,
   };
 }
