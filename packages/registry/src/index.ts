@@ -1,4 +1,5 @@
-export { createRegistryRouter } from "./middleware.js";
+export { CdnCache } from "./cdn.js";
+export { createPowerhouseRouter, createPublishHook } from "./middleware.js";
 export {
   findPackagesByDocumentType,
   loadPackage,
@@ -10,5 +11,8 @@ export type {
   PowerhouseManifestApp,
   PowerhouseManifestDocumentModel,
   PowerhouseManifestEditor,
+  RegistryConfig,
   RegistryOptions,
+  S3Config,
 } from "./types.js";
+export { buildVerdaccioConfig } from "./verdaccio-config.js";

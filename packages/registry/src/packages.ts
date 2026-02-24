@@ -12,26 +12,40 @@ function readManifest(dir: string): PowerhouseManifest | null {
   }
 }
 
-export function loadPackage(
-  packagesDir: string,
-  name: string,
-): PackageInfo | null {
-  const absDir = path.resolve(packagesDir);
-  const pkgDir = path.join(absDir, name);
-  const manifest = readManifest(pkgDir);
-  if (!manifest) {
+function getLatestVersionDir(pkgDir: string): string | null {
+  let entries: fs.Dirent[];
+  try {
+    entries = fs.readdirSync(pkgDir, { withFileTypes: true });
+  } catch {
     return null;
   }
+  const versions = entries.filter((e) => e.isDirectory()).map((e) => e.name);
+  if (versions.length === 0) return null;
+  // Simple sort — latest semver-ish version last
+  versions.sort();
+  return path.join(pkgDir, versions[versions.length - 1]);
+}
+
+export function loadPackage(
+  cdnCachePath: string,
+  name: string,
+): PackageInfo | null {
+  const pkgDir = path.join(cdnCachePath, name);
+  const versionDir = getLatestVersionDir(pkgDir);
+  if (!versionDir) return null;
+
+  const manifest = readManifest(versionDir);
+  if (!manifest) return null;
+
   return {
-    // Use manifest.name as authoritative source, fallback to provided name
     name: manifest.name ?? name,
-    path: `/${name}`,
+    path: `/-/cdn/${name}`,
     manifest,
   };
 }
 
-export function scanPackages(packagesDir: string): PackageInfo[] {
-  const absDir = path.resolve(packagesDir);
+export function scanPackages(cdnCachePath: string): PackageInfo[] {
+  const absDir = path.resolve(cdnCachePath);
   const packages: PackageInfo[] = [];
 
   let entries: fs.Dirent[];
@@ -45,7 +59,6 @@ export function scanPackages(packagesDir: string): PackageInfo[] {
     if (!entry.isDirectory()) continue;
 
     if (entry.name.startsWith("@")) {
-      // Scoped package directory — scan one level deeper
       const scopeDir = path.join(absDir, entry.name);
       let scopedEntries: fs.Dirent[];
       try {
@@ -55,25 +68,29 @@ export function scanPackages(packagesDir: string): PackageInfo[] {
       }
       for (const scopedEntry of scopedEntries) {
         if (!scopedEntry.isDirectory()) continue;
-        const pkgDir = path.join(scopeDir, scopedEntry.name);
-        const manifest = readManifest(pkgDir);
-        // Use manifest.name as authoritative source, fallback to directory path
         const dirName = `${entry.name}/${scopedEntry.name}`;
-        const name = manifest?.name ?? dirName;
+        const pkgDir = path.join(scopeDir, scopedEntry.name);
+        const versionDir = getLatestVersionDir(pkgDir);
+        if (!versionDir) continue;
+        const manifest = readManifest(versionDir);
+        if (!manifest) continue;
+        const name = manifest.name ?? dirName;
         packages.push({
           name,
-          path: `/${dirName}`,
+          path: `/-/cdn/${dirName}`,
           manifest,
         });
       }
     } else {
       const pkgDir = path.join(absDir, entry.name);
-      const manifest = readManifest(pkgDir);
-      // Use manifest.name as authoritative source, fallback to directory name
-      const name = manifest?.name ?? entry.name;
+      const versionDir = getLatestVersionDir(pkgDir);
+      if (!versionDir) continue;
+      const manifest = readManifest(versionDir);
+      if (!manifest) continue;
+      const name = manifest.name ?? entry.name;
       packages.push({
         name,
-        path: `/${entry.name}`,
+        path: `/-/cdn/${entry.name}`,
         manifest,
       });
     }

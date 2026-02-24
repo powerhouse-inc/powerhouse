@@ -27,14 +27,17 @@
   "license": "ISC",
   "packageManager": "pnpm@10.18.0",
   "dependencies": {
-    "@types/serve-static": "^2.2.0",
     "express": "^5.2.1",
-    "serve-static": "^2.2.1"
+    "tar": "^7.4.3",
+    "verdaccio": "^6.1.1",
+    "verdaccio-aws-s3-storage": "^10.4.0"
   },
   "devDependencies": {
     "@types/express": "^5.0.6",
+    "@types/node": "^22.15.0",
     "@types/supertest": "^6.0.2",
     "supertest": "^7.1.0",
+    "typescript": "^5.8.3",
     "vitest": "^3.2.4"
   }
 }

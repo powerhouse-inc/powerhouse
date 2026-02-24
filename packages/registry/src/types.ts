@@ -19,6 +19,25 @@ export interface PowerhouseManifestApp {
   driveEditor?: string;
 }
 
+export interface S3Config {
+  bucket: string;
+  endpoint: string;
+  region: string;
+  accessKeyId?: string;
+  secretAccessKey?: string;
+  s3ForcePathStyle?: boolean;
+  keyPrefix?: string;
+}
+
+export interface RegistryConfig {
+  port: number;
+  storagePath: string;
+  cdnCachePath: string;
+  uplink?: string;
+  webEnabled?: boolean;
+  s3?: S3Config;
+}
+
 export interface PowerhouseManifest {
   name: string;
   description?: string;
