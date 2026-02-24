@@ -36,7 +36,7 @@ function manifestToDetails(
   };
 }
 
-const PH_PACKAGES_REGISTRY = "http://localhost:8080/";
+const PH_PACKAGES_REGISTRY = "http://localhost:4873/-/cdn/";
 
 export const ConnectPackageManager: React.FC = () => {
   const packageManager = useVetraPackageManager();

@@ -6,9 +6,9 @@ const VETRA_DIR = resolve(MONOREPO_ROOT, "packages/vetra");
 const REGISTRY_DIR = resolve(MONOREPO_ROOT, "packages/registry");
 const TEST_DIR = import.meta.dirname;
 
-const REGISTRY_PORT = 8080;
+const REGISTRY_PORT = 4873;
 const SWITCHBOARD_PORT = 4001;
-const REGISTRY_URL = `http://localhost:${REGISTRY_PORT}`;
+const REGISTRY_URL = `http://localhost:${REGISTRY_PORT}/-/cdn/`;
 const GRAPHQL_URL = `http://localhost:${SWITCHBOARD_PORT}/graphql`;
 
 const SERVER_STARTUP_TIMEOUT = 30000;
@@ -98,10 +98,9 @@ export default async function globalSetup() {
   });
   console.log("✅ Vetra build complete.");
 
-  // Step 2: Start registry server (serve from dist/packages)
+  // Step 2: Start registry server
   console.log("🌐 Starting registry server...");
-  const packagesDir = resolve(REGISTRY_DIR, "dist/packages");
-  registryProcess = spawn("node", ["dist/src/run.js", packagesDir], {
+  registryProcess = spawn("node", ["dist/src/run.js"], {
     cwd: REGISTRY_DIR,
     stdio: ["ignore", "pipe", "pipe"],
     env: { ...process.env },
@@ -114,14 +113,28 @@ export default async function globalSetup() {
     console.error(`[registry] ${data.toString().trim()}`);
   });
 
-  // Wait for registry to be ready
+  // Wait a moment for Verdaccio to initialize
+  await new Promise((resolve) => setTimeout(resolve, 3000));
+
+  // Step 3: Publish vetra to the registry
+  console.log("📤 Publishing vetra to registry...");
+  execSync(
+    `npm publish --registry http://localhost:${REGISTRY_PORT} --no-git-checks`,
+    {
+      cwd: VETRA_DIR,
+      stdio: "inherit",
+    },
+  );
+  console.log("✅ Vetra published.");
+
+  // Wait for CDN endpoint to be ready
   await waitForServer(
-    `${REGISTRY_URL}/@powerhousedao/vetra/document-models.js`,
+    `http://localhost:${REGISTRY_PORT}/-/cdn/@powerhousedao/vetra/document-models.js`,
     SERVER_STARTUP_TIMEOUT,
   );
   console.log("✅ Registry server ready.");
 
-  // Step 3: Start switchboard with registry env vars
+  // Step 4: Start switchboard with registry env vars
   console.log("⚡ Starting switchboard...");
   // Remove VITEST env var so WebSocket server loads properly
   const { VITEST, ...envWithoutVitest } = process.env;
