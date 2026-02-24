@@ -148,6 +148,9 @@ export class GraphQLManager {
     getDataSource: GetDataSourceFunction;
   } | null = null;
 
+  /** Cached document models for schema generation - updated on init and regenerate */
+  private cachedDocumentModels: DocumentModelModule[] = [];
+
   private readonly apolloLogger = childLogger([
     "reactor-api",
     "graphql-manager",
@@ -182,9 +185,15 @@ export class GraphQLManager {
     this.logger.debug(`Initializing Subgraph Manager...`);
 
     // check if Document Drive model is available
-    const models = this.reactor.getDocumentModelModules();
+    const modulesResult = await this.reactorClient.getDocumentModelModules();
+    const models = modulesResult.results;
+
+    // Cache models for schema generation
+    this.cachedDocumentModels = models;
+
     const driveModel = models.find(
-      (it) => it.documentModel.global.name === "DocumentDrive",
+      (it: DocumentModelModule) =>
+        it.documentModel.global.name === "DocumentDrive",
     );
     if (!driveModel) {
       throw new Error("DocumentDrive model required");
@@ -232,27 +241,40 @@ export class GraphQLManager {
     await this.#setupCoreSubgraphs("graphql", coreSubgraphs);
 
     if (this.featureFlags.enableDocumentModelSubgraphs) {
-      await this.#setupDocumentModelSubgraphs(
-        "graphql",
-        this.reactor.getDocumentModelModules(),
-      );
+      await this.#setupDocumentModelSubgraphs("graphql", models);
     }
-
-    this.reactor.on("documentModelModules", (documentModels) => {
-      if (this.featureFlags.enableDocumentModelSubgraphs) {
-        this.#setupDocumentModelSubgraphs("graphql", documentModels)
-          .then(() => this.updateRouter())
-          .catch((error: unknown) => this.logger.error("@error", error));
-      } else {
-        this.updateRouter().catch((error: unknown) =>
-          this.logger.error("@error", error),
-        );
-      }
-    });
 
     await this.#createApolloGateway();
 
     return this.updateRouter();
+  }
+
+  /**
+   * Regenerate document model subgraphs when models are dynamically loaded.
+   * Fetches current modules from reactor client (source of truth).
+   */
+  async regenerateDocumentModelSubgraphs(): Promise<void> {
+    if (!this.featureFlags.enableDocumentModelSubgraphs) {
+      return;
+    }
+
+    try {
+      const modulesResult = await this.reactorClient.getDocumentModelModules();
+      const models = modulesResult.results;
+
+      // Update cached models for schema generation
+      this.cachedDocumentModels = models;
+
+      await this.#setupDocumentModelSubgraphs("graphql", models);
+      await this.updateRouter();
+      this.logger.info(
+        "Regenerated document model subgraphs with @count models",
+        models.length,
+      );
+    } catch (error) {
+      this.logger.error("Failed to regenerate document model subgraphs", error);
+      throw error;
+    }
   }
 
   async #setupCoreSubgraphs(
@@ -403,6 +425,17 @@ export class GraphQLManager {
     // if auth disabled, subgraphs are available to all
 
     await this.#setupSubgraphs(this.subgraphs);
+
+    // Update Apollo Gateway's supergraph when subgraphs change
+    if (this.gatewayOptions) {
+      try {
+        const { supergraphSdl } = await this.#buildSupergrahSdl();
+        this.gatewayOptions.update(supergraphSdl);
+        this.logger.debug("Updated Apollo Gateway supergraph");
+      } catch (error) {
+        this.logger.error("Failed to update Apollo Gateway supergraph", error);
+      }
+    }
   }
 
   getAdditionalContextFields = () => {
@@ -510,7 +543,7 @@ export class GraphQLManager {
 
           // create subgraph schema
           const schema = createSchema(
-            this.reactor,
+            this.cachedDocumentModels,
             subgraph.resolvers,
             subgraph.typeDefs,
           );
@@ -614,7 +647,7 @@ export class GraphQLManager {
 
   #buildSubgraphSchemaModule(subgraph: ISubgraph) {
     return buildSubgraphSchemaModule(
-      this.reactor,
+      this.cachedDocumentModels,
       subgraph.resolvers,
       subgraph.typeDefs,
     );

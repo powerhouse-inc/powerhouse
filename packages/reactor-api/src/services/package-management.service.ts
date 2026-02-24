@@ -6,6 +6,7 @@
  * via a callback when the document model modules change.
  */
 
+import type { IDocumentModelRegistry } from "@powerhousedao/reactor";
 import { childLogger } from "document-drive";
 import type { DocumentModelModule } from "document-model";
 import type { HttpPackageLoader } from "../packages/http-loader.js";
@@ -33,6 +34,8 @@ export interface PackageManagementServiceOptions {
   defaultRegistryUrl?: string;
   /** HTTP package loader instance for loading packages from registry */
   httpLoader?: HttpPackageLoader;
+  /** Document model registry for registering/unregistering modules */
+  documentModelRegistry?: IDocumentModelRegistry;
 }
 
 /**
@@ -47,6 +50,7 @@ export class PackageManagementService {
   private readonly storage: IPackageStorage;
   private readonly defaultRegistryUrl?: string;
   private readonly httpLoader?: HttpPackageLoader;
+  private readonly documentModelRegistry?: IDocumentModelRegistry;
   private readonly logger = childLogger([
     "reactor-api",
     "package-management-service",
@@ -62,6 +66,7 @@ export class PackageManagementService {
     this.storage = options.storage ?? new InMemoryPackageStorage();
     this.defaultRegistryUrl = options.defaultRegistryUrl;
     this.httpLoader = options.httpLoader;
+    this.documentModelRegistry = options.documentModelRegistry;
   }
 
   /**
@@ -123,6 +128,11 @@ export class PackageManagementService {
     // Cache the loaded modules
     this.loadedModulesCache.set(name, models);
 
+    // Register with reactor's registry
+    if (this.documentModelRegistry) {
+      this.documentModelRegistry.registerModules(...models);
+    }
+
     this.logger.info(
       "Installed package @name with @count document models",
       name,
@@ -162,6 +172,11 @@ export class PackageManagementService {
     // Remove from http loader cache if available
     if (this.httpLoader) {
       this.httpLoader.removeFromCache(name);
+    }
+
+    // Unregister from reactor's registry
+    if (this.documentModelRegistry && existing) {
+      this.documentModelRegistry.unregisterModules(...existing.documentTypes);
     }
 
     // Trigger hot reload

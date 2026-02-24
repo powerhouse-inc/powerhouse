@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-import { register } from "node:module";
 import { httpsHooksPath } from "@powerhousedao/reactor-api";
+import { register } from "node:module";
 
 // Register HTTP/HTTPS module loader hooks for dynamic package imports
 register(httpsHooksPath, import.meta.url);
@@ -341,43 +341,27 @@ async function initServer(
     "switchboard",
   );
 
-  const { client, driveServer, graphqlManager, syncManager } = api;
+  const {
+    client,
+    driveServer,
+    graphqlManager,
+    syncManager,
+    documentModelRegistry,
+  } = api;
 
-  // Wire up dynamic model loading → subgraph generation
+  // Set up package management for runtime package operations
   if (httpLoader) {
-    httpLoader.setOnModelLoaded((model: DocumentModelModule) => {
-      const current = driveServer.getDocumentModelModules();
-      if (
-        !current.some(
-          (m) => m.documentModel.global.id === model.documentModel.global.id,
-        )
-      ) {
-        logger.info(
-          "Registering dynamically loaded model: @modelId",
-          model.documentModel.global.id,
-        );
-        driveServer.setDocumentModelModules([...current, model]);
-      }
-    });
-
     // Create package management service for runtime package operations
     const packageManagementService = new PackageManagementService({
       defaultRegistryUrl: registryUrl,
       httpLoader,
+      documentModelRegistry,
     });
 
-    // Wire hot reload callback - merge dynamically loaded models with base models
-    packageManagementService.setOnModelsChanged((dynamicModels) => {
-      const current = driveServer.getDocumentModelModules();
-      // Get IDs of dynamically loaded models
-      const dynamicIds = new Set(
-        dynamicModels.map((m) => m.documentModel.global.id),
-      );
-      // Keep base models that aren't being replaced by dynamic ones
-      const baseModels = current.filter(
-        (m) => !dynamicIds.has(m.documentModel.global.id),
-      );
-      driveServer.setDocumentModelModules([...baseModels, ...dynamicModels]);
+    // Wire hot reload callback - models already registered in registry by PackageManagementService
+    // Just trigger subgraph regeneration
+    packageManagementService.setOnModelsChanged(async () => {
+      await graphqlManager.regenerateDocumentModelSubgraphs();
     });
 
     // Register the packages subgraph for GraphQL package management
