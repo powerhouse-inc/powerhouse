@@ -636,82 +636,16 @@ def plot_queue_dynamics(N=20, M=10, X_ms=X_DEFAULT, T_burst=T_BURST_DEFAULT,
 
 def print_summary(X_ms=X_DEFAULT, T_burst=T_BURST_DEFAULT, S_max=S_MAX,
                   experiments=None):
-    """Print results for key configurations including validation cases."""
-    print("\n" + "=" * 90)
+    """Print results for key configurations and all experimental data."""
+    print("\n" + "=" * 110)
     print("BURST-LOAD CAPACITY ENVELOPE - SUMMARY")
-    print("=" * 90)
+    print("=" * 110)
     print(f"\nParameters: B={B}, T_flush={T_FLUSH*1000:.0f}ms, S_max={S_max:,}, "
           f"T_poll={T_POLL*1000:.0f}ms, RTT={RTT*1000:.0f}ms, X={X_ms:.0f}ms/op")
     print(f"Burst duration: {T_burst:.0f}s, K_store={K_STORE}")
 
-    # Build experiment lookup: (N, M_approx) -> experiment
-    exp_lookup = {}
-    if experiments:
-        for e in experiments:
-            key = (e["clients"], e["M_approx"])
-            # Keep the most recent experiment for each (N, M) combo
-            exp_lookup[key] = e
-
-    configs = [
-        # Validation cases
-        (4, 20, 8.0, 10000, "Validation: should SURVIVE"),
-        (4, 20, 8.0, 1000,  "Validation: should FAIL"),
-        # Exploration
-        (4, 20, T_burst, S_max, "N=4, M=20"),
-        (10, 10, T_burst, S_max, "N=10, M=10"),
-        (10, 20, T_burst, S_max, "N=10, M=20"),
-        (20, 10, T_burst, S_max, "N=20, M=10"),
-        (20, 20, T_burst, S_max, "N=20, M=20"),
-        (30, 10, T_burst, S_max, "N=30, M=10"),
-        (30, 20, T_burst, S_max, "N=30, M=20"),
-        (40, 10, T_burst, S_max, "N=40, M=10"),
-        (40, 20, T_burst, S_max, "N=40, M=20"),
-        (50, 10, T_burst, S_max, "N=50, M=10"),
-        (50, 20, T_burst, S_max, "N=50, M=20"),
-    ]
-
-    header = (f"{'Config':<30} {'Peak':>8} {'Ratio':>8} {'BN':>7} "
-              f"{'Drain':>7} {'Model':>10}")
-    if experiments:
-        header += f"  {'Reshuf':>6} {'RealDL':>6} {'Exp':>10} {'Match':>5}"
-    print(f"\n{header}")
-    print("-" * (len(header) + 5))
-
-    correct = 0
-    total_compared = 0
-
-    for N, M, t_burst, s_max, label in configs:
-        result = simulate_burst(N, M, X_ms, t_burst, s_max)
-        peak = result['peak_conflicts']
-        ratio = peak / s_max
-        bn = result['bottleneck']
-        drain = result['drain_time']
-        model_verdict = "SURVIVES" if result['survives'] else "FAILS"
-
-        line = (f"{label:<30} {peak:>8,.0f} {ratio:>8.2f} {bn:>7} "
-                f"{drain:>6.1f}s {model_verdict:>10}")
-
-        # Match with experimental data
-        if experiments:
-            # Find matching experiment (approximate M: 10.0 for interval=200, 20.0 for interval=100)
-            exp = exp_lookup.get((N, float(M)))
-            if exp and t_burst == T_burst and s_max == S_max:
-                reshuf = exp["reshuffle_count"]
-                real_dl = exp["real_dead_letters"]
-                exp_verdict = "STABLE" if exp["stable"] else "FAILED"
-                model_ok = (result['survives'] == exp["stable"])
-                match_str = "ok" if model_ok else "MISS"
-                if model_ok:
-                    correct += 1
-                total_compared += 1
-                line += f"  {reshuf:>6} {real_dl:>6} {exp_verdict:>10} {match_str:>5}"
-            else:
-                line += f"  {'':>6} {'':>6} {'':>10} {'':>5}"
-
-        print(line)
-
-    # Validation check
-    print(f"\n{'=' * 90}")
+    # Validation checks first
+    print(f"\n{'=' * 110}")
     print("VALIDATION CHECKS:")
     v1 = simulate_burst(4, 20, X_ms, 8.0, 10000)
     v2 = simulate_burst(4, 20, X_ms, 8.0, 1000)
@@ -724,13 +658,113 @@ def print_summary(X_ms=X_DEFAULT, T_burst=T_BURST_DEFAULT, S_max=S_MAX,
           f"{'SURVIVES' if v2['survives'] else 'FAILS'} "
           f"(peak={v2['peak_conflicts']:,.0f}) ... {v2_ok}")
 
-    if total_compared > 0:
-        print(f"\nEXPERIMENTAL ACCURACY: {correct}/{total_compared} "
-              f"({100*correct/total_compared:.0f}%) predictions match experiments")
-        if correct < total_compared:
-            print("  NOTE: Model is too optimistic — real system fails earlier than predicted.")
-            print("  Likely causes: processing overhead beyond X*ops, GC pauses, connection pooling,")
-            print("  store index scan costs scaling non-linearly with document size.")
+    if not experiments:
+        return
+
+    # Deduplicate experiments: keep most recent per (N, M) combo
+    exp_lookup = {}
+    for e in experiments:
+        key = (e["clients"], e["M_approx"])
+        exp_lookup[key] = e  # later entry overwrites earlier
+    unique_exps = sorted(exp_lookup.values(),
+                         key=lambda e: (e["clients"], e["M_approx"]))
+
+    # Classify failure modes
+    # "reshuffle" = failed with reshuffle_count > 0 (conflict-based)
+    # "infra" = failed with reshuffle_count == 0, real_dead_letters > 0 (connection/network)
+    # "mixed" = failed with both reshuffles and dead letters
+    def classify_failure(e):
+        if e["stable"]:
+            return "stable"
+        has_reshuf = e["reshuffle_count"] > 0
+        has_dl = e["real_dead_letters"] > 0
+        if has_reshuf and has_dl:
+            return "mixed"
+        if has_reshuf:
+            return "reshuffle"
+        return "infra"
+
+    header = (f"{'N':>3} {'M':>6} {'(N-1)*M':>8} {'Peak':>8} {'Ratio':>6} "
+              f"{'Model':>10}  {'Reshuf':>6} {'RealDL':>6} {'Exp':>10} "
+              f"{'FailMode':>8} {'Match':>5}")
+    print(f"\n{header}")
+    print("-" * len(header))
+
+    correct = 0
+    correct_reshuf = 0
+    total_compared = 0
+    total_reshuf = 0
+    total_infra = 0
+    correct_infra = 0
+
+    for e in unique_exps:
+        N = e["clients"]
+        M = e["M_approx"]
+        nm1_m = (N - 1) * M
+
+        result = simulate_burst(N, M, X_ms, T_burst, S_max)
+        peak = result['peak_conflicts']
+        ratio = peak / S_max
+        model_verdict = "SURVIVES" if result['survives'] else "FAILS"
+
+        reshuf = e["reshuffle_count"]
+        real_dl = e["real_dead_letters"]
+        exp_verdict = "STABLE" if e["stable"] else "FAILED"
+        fail_mode = classify_failure(e)
+
+        model_ok = (result['survives'] == e["stable"])
+        match_str = "ok" if model_ok else "MISS"
+
+        if model_ok:
+            correct += 1
+        total_compared += 1
+
+        # Track accuracy by failure mode
+        if fail_mode in ("reshuffle", "mixed"):
+            total_reshuf += 1
+            if not result['survives']:
+                correct_reshuf += 1
+        elif fail_mode == "infra":
+            total_infra += 1
+            if not result['survives']:
+                correct_infra += 1
+        else:  # stable
+            if result['survives']:
+                correct_reshuf += 1
+                correct_infra += 1
+            total_reshuf += 1
+            total_infra += 1
+
+        print(f"{N:>3} {M:>6.1f} {nm1_m:>8.0f} {peak:>8,.0f} {ratio:>6.2f} "
+              f"{model_verdict:>10}  {reshuf:>6} {real_dl:>6} {exp_verdict:>10} "
+              f"{fail_mode:>8} {match_str:>5}")
+
+    print(f"\n{'=' * 110}")
+    print(f"OVERALL ACCURACY: {correct}/{total_compared} "
+          f"({100*correct/total_compared:.0f}%)")
+    if total_reshuf > 0:
+        print(f"  vs reshuffle failures: {correct_reshuf}/{total_reshuf} "
+              f"({100*correct_reshuf/total_reshuf:.0f}%)")
+    if total_infra > 0:
+        print(f"  vs infra failures:     {correct_infra}/{total_infra} "
+              f"({100*correct_infra/total_infra:.0f}%)")
+
+    # Identify misses and patterns
+    misses = []
+    for e in unique_exps:
+        N = e["clients"]
+        M = e["M_approx"]
+        result = simulate_burst(N, M, X_ms, T_burst, S_max)
+        if result['survives'] != e["stable"]:
+            misses.append((N, M, classify_failure(e),
+                           "model=SURVIVES" if result['survives'] else "model=FAILS",
+                           e))
+
+    if misses:
+        print(f"\nMISSES ({len(misses)}):")
+        for N, M, fmode, model_dir, e in misses:
+            print(f"  N={N}, M={M:.1f}: {model_dir}, exp={'STABLE' if e['stable'] else 'FAILED'} "
+                  f"[{fmode}] reshuf={e['reshuffle_count']} dl={e['real_dead_letters']}")
 
 
 # ─── Experimental data ────────────────────────────────────────────────────────
