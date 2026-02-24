@@ -141,3 +141,95 @@ Detailed view of the feedback loop for N=5, M=10, X=25ms/op. Three panels show t
 ![Experimental Results](../reshuffle_experimental.png)
 
 Bar chart of all 6 experiment runs. Green = survived full 30s test. Red = reshuffle explosion, with bar height showing time to first failure. Annotations show X_crit, reshuffle count (R), and dead letter count (DL) for each config.
+
+---
+
+# Burst-Load Capacity Envelope Model
+
+Models whether the reactor can absorb a **short burst** of concurrent load and recover, complementing the steady-state analysis above.
+
+## How It Differs from the Steady-State Model
+
+| Aspect       | Steady-State (reshuffle-model.py) | Burst (burst-model.py)                    |
+| ------------ | --------------------------------- | ----------------------------------------- |
+| Load pattern | Continuous                        | N clients × M ops/sec for T_burst seconds |
+| Failure mode | Unbounded feedback loop           | Peak conflict count during burst+drain    |
+| Key question | "Will the queue explode?"         | "Can the system absorb and recover?"      |
+| Output       | Stability boundary (stable/not)   | Capacity envelope in (N, M) space         |
+| Perspective  | Server only                       | Dual: server AND client (worst-case wins) |
+
+## Quick Start
+
+```bash
+cd test/test-connect
+
+# Generate burst model plots (uses same .venv as reshuffle-model.py)
+.venv/bin/python3 src/burst-model.py
+
+# With custom burst duration
+.venv/bin/python3 src/burst-model.py --burst 8
+
+# With custom S_max
+.venv/bin/python3 src/burst-model.py --s-max 1000
+
+# Run burst experiments (takes a while — N up to 50)
+bash run-burst-experiments.sh
+
+# Parse and overlay
+.venv/bin/python3 src/parse-experiments.py
+.venv/bin/python3 src/burst-model.py --experimental experiments.json
+```
+
+## Post-Consolidation Parameters
+
+After shipping the inbox consolidation changes (fewer, fatter load jobs), the system handles bursts much better. Updated parameters:
+
+| Parameter               | Symbol  | Value      | Source                               |
+| ----------------------- | ------- | ---------- | ------------------------------------ |
+| Batch size threshold    | B       | 25         | `BufferedMailbox(500, 25)`           |
+| Flush timer             | T_flush | 500ms      | `BufferedMailbox(500, 25)`           |
+| Max reshuffle threshold | S_max   | **10,000** | `MAX_SKIP_THRESHOLD`                 |
+| Poll interval           | T_poll  | 2000ms     | gql-req-channel.ts                   |
+| Network RTT             | RTT     | 50ms       | assumed (localhost)                  |
+| Processing time per op  | X       | 25ms       | experimentally derived               |
+| Store amplification     | K       | 2.5        | calibrated (index entries, metadata) |
+
+## Generated Plots
+
+### Capacity Heatmap
+
+![Capacity Heatmap](../burst_capacity_heatmap.png)
+
+(N, M) grid colored by `peak_conflicts / S_max`. Green = safe headroom, red = over capacity. White dashed contour at ratio=1.0 shows the capacity boundary for a given burst duration.
+
+### Burst Time Series
+
+![Burst Time Series](../burst_timeseries.png)
+
+3-panel view (conflicts, queue depth, cumulative ops) for representative configs. Vertical dashed line marks the end of the burst phase — everything to the right is drain/recovery.
+
+### Duration Sensitivity
+
+![Duration Sensitivity](../burst_duration_sensitivity.png)
+
+Capacity boundary curves for T_burst = 5, 10, 30, 60s, plus the steady-state boundary for reference. Shows how longer bursts shrink the safe operating region. X-axis: N, Y-axis: max sustainable M.
+
+### Queue Dynamics
+
+![Queue Dynamics](../burst_queue_dynamics.png)
+
+4-panel deep-dive for one near-boundary config showing both server and client perspectives through the burst+drain cycle. Tracks conflicts, queue depth, cumulative ops, and peak/S_max ratio.
+
+## Experimental Validation
+
+| Config                           | S_max  | Model Prediction | Actual Result                           |
+| -------------------------------- | ------ | ---------------- | --------------------------------------- |
+| N=4, M≈20, T_burst=8s, drain=90s | 10,000 | SURVIVES         | Converged, 0 dead letters, 0 reshuffles |
+| N=4, M≈20, T_burst=8s, drain=90s | 1,000  | FAILS            | 4 dead letters (1 per client)           |
+
+## Scripts
+
+| Script                     | Purpose                                                |
+| -------------------------- | ------------------------------------------------------ |
+| `src/burst-model.py`       | Burst simulation + capacity envelope + plot generation |
+| `run-burst-experiments.sh` | Sparse experiment matrix for N=10..50                  |

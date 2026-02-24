@@ -26,6 +26,7 @@ DEAD_LETTER_RE = re.compile(r"\[SYNC\] DEAD LETTER:")
 EXCESSIVE_RESHUFFLE_RE = re.compile(r"Excessive reshuffle detected")
 PUSH_SUCCESS_RE = re.compile(r"PushSyncEnvelopes.*response.*200|push.*success", re.IGNORECASE)
 PUSH_FAIL_RE = re.compile(r"PushSyncEnvelopes.*response.*(4\d{2}|5\d{2})|push.*fail", re.IGNORECASE)
+SHUTDOWN_ERROR_RE = re.compile(r"socket hang up|ECONNRESET|ECONNREFUSED")
 
 
 def parse_timestamp_ms(line):
@@ -65,6 +66,8 @@ def parse_log_dir(log_path):
         "M_approx": round(m_ops_sec, 1),
         "reshuffle_events": [],
         "dead_letter_count": 0,
+        "shutdown_dead_letters": 0,
+        "real_dead_letters": 0,
         "first_reshuffle_ms": None,
         "first_dead_letter_ms": None,
         "max_reshuffle_attempt": 0,
@@ -80,42 +83,51 @@ def parse_log_dir(log_path):
             continue
 
         with open(log_path_file, errors="replace") as f:
-            for line in f:
-                ts = parse_timestamp_ms(line)
+            lines = f.readlines()
 
-                # Track first timestamp as reference
-                if ts is not None and first_timestamp is None:
-                    first_timestamp = ts
+        for i, line in enumerate(lines):
+            ts = parse_timestamp_ms(line)
 
-                # Reshuffle events
-                rm = RESHUFFLE_RE.search(line)
-                if rm:
-                    attempt = int(rm.group(1))
-                    elapsed = (ts - first_timestamp) if ts and first_timestamp else None
-                    result["reshuffle_events"].append({
-                        "attempt": attempt,
-                        "elapsed_ms": elapsed,
-                    })
-                    result["max_reshuffle_attempt"] = max(
-                        result["max_reshuffle_attempt"], attempt
-                    )
-                    if result["first_reshuffle_ms"] is None and elapsed is not None:
-                        result["first_reshuffle_ms"] = elapsed
-                    result["stable"] = False
+            # Track first timestamp as reference
+            if ts is not None and first_timestamp is None:
+                first_timestamp = ts
 
-                # Dead letters
-                if DEAD_LETTER_RE.search(line):
-                    result["dead_letter_count"] += 1
-                    elapsed = (ts - first_timestamp) if ts and first_timestamp else None
-                    if result["first_dead_letter_ms"] is None and elapsed is not None:
-                        result["first_dead_letter_ms"] = elapsed
-                    result["stable"] = False
+            # Reshuffle events
+            rm = RESHUFFLE_RE.search(line)
+            if rm:
+                attempt = int(rm.group(1))
+                elapsed = (ts - first_timestamp) if ts and first_timestamp else None
+                result["reshuffle_events"].append({
+                    "attempt": attempt,
+                    "elapsed_ms": elapsed,
+                })
+                result["max_reshuffle_attempt"] = max(
+                    result["max_reshuffle_attempt"], attempt
+                )
+                if result["first_reshuffle_ms"] is None and elapsed is not None:
+                    result["first_reshuffle_ms"] = elapsed
 
-                # Excessive reshuffle in error messages
-                if EXCESSIVE_RESHUFFLE_RE.search(line) and not rm:
-                    result["stable"] = False
+            # Dead letters — classify as shutdown vs real
+            if DEAD_LETTER_RE.search(line):
+                result["dead_letter_count"] += 1
+                elapsed = (ts - first_timestamp) if ts and first_timestamp else None
+                if result["first_dead_letter_ms"] is None and elapsed is not None:
+                    result["first_dead_letter_ms"] = elapsed
+
+                # Check next 3 lines for shutdown error indicators
+                context = "\n".join(lines[i:i + 4])
+                if SHUTDOWN_ERROR_RE.search(context):
+                    result["shutdown_dead_letters"] += 1
+                else:
+                    result["real_dead_letters"] += 1
+
+            # Excessive reshuffle in error messages
+            if EXCESSIVE_RESHUFFLE_RE.search(line) and not rm:
+                pass  # counted via switchboard.log reshuffles
 
     result["reshuffle_count"] = len(result["reshuffle_events"])
+    # Stable = no reshuffles AND no real (non-shutdown) dead letters
+    result["stable"] = (result["reshuffle_count"] == 0 and result["real_dead_letters"] == 0)
     return result
 
 
@@ -148,8 +160,8 @@ def main():
     print(f"Parsed {len(experiments)} experiments → {OUTPUT}")
     print()
     print(f"{'Dir':>24s}  {'N':>2}  {'M':>5}  {'Int':>5}  {'Stable':>7}  "
-          f"{'Reshuffles':>10}  {'DeadLetters':>11}  {'1st Fail (s)':>12}")
-    print("-" * 100)
+          f"{'Reshuf':>6}  {'RealDL':>6}  {'ShutDL':>6}  {'1st Fail (s)':>12}")
+    print("-" * 90)
 
     for e in experiments:
         first_fail = None
@@ -160,11 +172,12 @@ def main():
 
         print(f"{e['timestamp']:>24s}  {e['clients']:>2}  {e['M_approx']:>5.1f}  "
               f"{e['mutationInterval']:>5}  {'YES' if e['stable'] else 'NO':>7}  "
-              f"{e['reshuffle_count']:>10}  {e['dead_letter_count']:>11}  "
+              f"{e['reshuffle_count']:>6}  {e['real_dead_letters']:>6}  "
+              f"{e['shutdown_dead_letters']:>6}  "
               f"{first_fail or '-':>12}")
 
     print()
-    print(f"Next: .venv/bin/python3 src/reshuffle-model.py --experimental {OUTPUT}")
+    print(f"Next: .venv/bin/python3 src/burst-model.py --experimental {OUTPUT}")
 
 
 if __name__ == "__main__":
