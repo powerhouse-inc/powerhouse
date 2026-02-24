@@ -366,7 +366,6 @@ async function initServer(
 
     // Register the packages subgraph for GraphQL package management
     const packagesSubgraph = new PackagesSubgraph({
-      reactor: driveServer,
       reactorClient: client,
       relationalDb: {} as ConstructorParameters<
         typeof PackagesSubgraph

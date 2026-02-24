@@ -3,7 +3,6 @@ import type { IReactorClient, ISyncManager } from "@powerhousedao/reactor";
 import type { GraphQLManager } from "@powerhousedao/reactor-api";
 import type {
   DocumentDriveGlobalState,
-  IDocumentDriveServer,
   IRelationalDbLegacy,
 } from "document-drive";
 import type { PHDocument } from "document-model";
@@ -15,7 +14,6 @@ import type { BaseSubgraph } from "./base-subgraph.js";
 export type SubgraphClass = typeof BaseSubgraph;
 
 export type Context = {
-  driveServer: IDocumentDriveServer;
   driveId?: string;
   document?: PHDocument;
   headers: IncomingHttpHeaders;
@@ -36,15 +34,12 @@ export type ISubgraph = {
   path?: string;
   resolvers: Record<string, any>;
   typeDefs: DocumentNode;
-  reactor: IDocumentDriveServer;
   relationalDb: IRelationalDbLegacy;
   hasSubscriptions?: boolean;
   onSetup?: () => Promise<void>;
 };
 
 export type SubgraphArgs = {
-  reactor: IDocumentDriveServer;
-  // For now, this sits side-by-side with the reactor. In the future, we will want to replace one with the other.
   reactorClient: IReactorClient;
   relationalDb: IRelationalDbLegacy;
   analyticsStore: IAnalyticsStore;

@@ -6,7 +6,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/unbound-method */
 import type { IReactorClient, PagedResults } from "@powerhousedao/reactor";
-import type { IDocumentDriveServer } from "document-drive";
 import type { DocumentModelModule, PHDocument } from "document-model";
 import { GraphQLError } from "graphql";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -16,7 +15,6 @@ import type { DocumentPermissionService } from "../src/services/document-permiss
 
 describe("DocumentModelSubgraph Permission Checks", () => {
   let mockDocumentPermissionService: Partial<DocumentPermissionService>;
-  let mockReactor: Partial<IDocumentDriveServer>;
   let mockReactorClient: Partial<IReactorClient>;
   let subgraph: DocumentModelSubgraph;
 
@@ -108,16 +106,6 @@ describe("DocumentModelSubgraph Permission Checks", () => {
       canExecuteOperation: vi.fn().mockResolvedValue(false),
     };
 
-    mockReactor = {
-      getDocument: vi.fn().mockResolvedValue(mockDocument),
-      getDocuments: vi.fn().mockResolvedValue(["doc-123"]),
-      addDocument: vi.fn().mockResolvedValue(mockDocument),
-      addAction: vi.fn().mockResolvedValue({
-        status: "SUCCESS",
-        operations: [{ index: 1 }],
-      }),
-    };
-
     mockReactorClient = {
       getParents: vi.fn().mockResolvedValue({
         results: [],
@@ -140,11 +128,11 @@ describe("DocumentModelSubgraph Permission Checks", () => {
     };
 
     subgraph = new DocumentModelSubgraph(mockDocumentModel, {
-      reactor: mockReactor as IDocumentDriveServer,
       reactorClient: mockReactorClient as IReactorClient,
       documentPermissionService:
         mockDocumentPermissionService as DocumentPermissionService,
       relationalDb: {} as any,
+      analyticsStore: {} as any,
       graphqlManager: {} as any,
       syncManager: {} as any,
     } as SubgraphArgs);
@@ -881,10 +869,10 @@ describe("DocumentModelSubgraph Permission Checks", () => {
       subgraphWithoutPermService = new DocumentModelSubgraph(
         mockDocumentModel,
         {
-          reactor: mockReactor as IDocumentDriveServer,
           reactorClient: mockReactorClient as IReactorClient,
           documentPermissionService: undefined,
           relationalDb: {} as any,
+          analyticsStore: {} as any,
           graphqlManager: {} as any,
           syncManager: {} as any,
         } as SubgraphArgs,
