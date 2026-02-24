@@ -658,13 +658,28 @@ export class SyncManager implements ISyncManager {
       return;
     }
 
-    // create sync operations, each batch has a dependency on the previous one
+    // sort by (documentId, scope, ordinal) so batchOperationsByDocument
+    // groups all operations for the same document together
+    operations.sort((a, b) => {
+      if (a.context.documentId !== b.context.documentId) {
+        return a.context.documentId < b.context.documentId ? -1 : 1;
+      }
+      if (a.context.scope !== b.context.scope) {
+        return a.context.scope < b.context.scope ? -1 : 1;
+      }
+      return a.context.ordinal - b.context.ordinal;
+    });
+
     const batches = batchOperationsByDocument(operations);
 
-    let prevJobId: string | undefined;
+    // per-document dependency chain: each batch depends on the previous
+    // batch for the same documentId only, allowing independent documents
+    // to be processed in parallel
+    const lastJobByDoc = new Map<string, string>();
     const syncOps: SyncOperation[] = [];
     for (const batch of batches) {
       const jobId = crypto.randomUUID();
+      const prevJobId = lastJobByDoc.get(batch.documentId);
       const syncOp = new SyncOperation(
         crypto.randomUUID(),
         jobId,
@@ -677,8 +692,7 @@ export class SyncManager implements ISyncManager {
       );
 
       syncOps.push(syncOp);
-
-      prevJobId = jobId;
+      lastJobByDoc.set(batch.documentId, jobId);
     }
 
     remote.channel.outbox.add(...syncOps);

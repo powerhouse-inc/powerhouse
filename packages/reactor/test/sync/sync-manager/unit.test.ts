@@ -2314,10 +2314,10 @@ describe("SyncManager - Unit Tests", () => {
       await new Promise((resolve) => setTimeout(resolve, 20));
 
       expect(addedSyncOps).toHaveLength(2);
-      // First SyncOp should have no dependencies
+      // Both SyncOps target different documents (doc1, doc2) so after
+      // sorting by documentId their dependency chains are independent
       expect(addedSyncOps[0].jobDependencies).toEqual([]);
-      // Second SyncOp should depend on the first SyncOp's jobId
-      expect(addedSyncOps[1].jobDependencies).toEqual([addedSyncOps[0].jobId]);
+      expect(addedSyncOps[1].jobDependencies).toEqual([]);
     });
 
     it("should flush partial batch on JOB_FAILED", async () => {

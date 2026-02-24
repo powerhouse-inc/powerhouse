@@ -225,6 +225,7 @@ export {
   SyncStatus,
   SyncStatusTracker,
   batchOperationsByDocument,
+  consolidateSyncOperations,
   sortEnvelopesByFirstOperationTimestamp,
   trimMailboxFromAckOrdinal,
   type ChannelConfig,
