@@ -26,7 +26,6 @@ import bodyParser from "body-parser";
 import cors from "cors";
 import type {
   DocumentDriveDocument,
-  IDocumentDriveServer,
   ILogger,
   IRelationalDbLegacy,
 } from "document-drive";
@@ -160,7 +159,6 @@ export class GraphQLManager {
     private readonly app: express.Express,
     private readonly httpServer: http.Server,
     private readonly wsServer: WebSocketServer,
-    private readonly reactor: IDocumentDriveServer,
     private readonly reactorClient: IReactorClient,
     private readonly relationalDb: IRelationalDbLegacy,
     private readonly analyticsStore: IAnalyticsStore,
@@ -289,7 +287,6 @@ export class GraphQLManager {
         const subgraphInstance = new DocumentModelSubgraph(documentModel, {
           relationalDb: this.relationalDb,
           analyticsStore: this.analyticsStore,
-          reactor: this.reactor,
           reactorClient: this.reactorClient,
           graphqlManager: this,
           syncManager: this.syncManager,
@@ -353,7 +350,6 @@ export class GraphQLManager {
     const subgraphInstance = new subgraph({
       relationalDb: this.relationalDb,
       analyticsStore: this.analyticsStore,
-      reactor: this.reactor,
       reactorClient: this.reactorClient,
       graphqlManager: this,
       syncManager: this.syncManager,
@@ -401,7 +397,6 @@ export class GraphQLManager {
     const context: Context = {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       headers: connectionParams as any,
-      driveServer: this.reactor,
       db: this.relationalDb,
       ...this.getAdditionalContextFields(),
     };
@@ -663,7 +658,6 @@ export class GraphQLManager {
           Promise.resolve<Context>({
             headers: req.headers,
             driveId: req.params.drive ?? undefined,
-            driveServer: this.reactor,
             db: this.relationalDb,
             ...this.getAdditionalContextFields(),
           }),

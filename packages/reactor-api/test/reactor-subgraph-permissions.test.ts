@@ -105,10 +105,10 @@ describe("ReactorSubgraph Permission Checks", () => {
       reactorClient: mockReactorClient as IReactorClient,
       documentPermissionService:
         mockDocumentPermissionService as DocumentPermissionService,
-      reactor: {} as any,
       relationalDb: {} as any,
       analyticsStore: {} as any,
       graphqlManager: {} as any,
+      syncManager: {} as any,
     } as SubgraphArgs);
   });
 
