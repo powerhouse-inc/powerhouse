@@ -14,15 +14,25 @@ export class CdnCache {
     const version = await this.getLatestVersion(packageName);
     if (!version) return null;
 
-    const cached = path.join(this.cdnCachePath, packageName, version, filePath);
+    const versionDir = path.join(this.cdnCachePath, packageName, version);
+    const cached = path.join(versionDir, filePath);
     if (!this.isSafePath(cached)) return null;
 
     if (!fs.existsSync(cached)) {
       await this.extractTarball(packageName, version);
     }
 
-    if (!fs.existsSync(cached)) return null;
-    return cached;
+    // Check direct path first, then fall back to dist/cdn/ subdirectory
+    // (npm tarballs contain files under dist/, bun bundles go to dist/cdn/)
+    if (fs.existsSync(cached)) return cached;
+
+    const cdnPath = path.join(versionDir, "dist", "cdn", filePath);
+    if (this.isSafePath(cdnPath) && fs.existsSync(cdnPath)) return cdnPath;
+
+    const distPath = path.join(versionDir, "dist", filePath);
+    if (this.isSafePath(distPath) && fs.existsSync(distPath)) return distPath;
+
+    return null;
   }
 
   async getLatestVersion(packageName: string): Promise<string | null> {
@@ -36,7 +46,9 @@ export class CdnCache {
       const distTags = metadata["dist-tags"] as
         | Record<string, string>
         | undefined;
-      return distTags?.latest ?? null;
+      if (!distTags) return null;
+      // Prefer "latest" tag, fall back to any available tag
+      return distTags.latest ?? Object.values(distTags)[0] ?? null;
     } catch {
       return null;
     }

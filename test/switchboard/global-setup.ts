@@ -113,13 +113,37 @@ export default async function globalSetup() {
     console.error(`[registry] ${data.toString().trim()}`);
   });
 
-  // Wait a moment for Verdaccio to initialize
-  await new Promise((resolve) => setTimeout(resolve, 3000));
+  // Wait for registry to be ready
+  await waitForServer(
+    `http://localhost:${REGISTRY_PORT}/-/ping`,
+    SERVER_STARTUP_TIMEOUT,
+  );
 
-  // Step 3: Publish vetra to the registry
+  // Step 3: Create a test user and publish vetra to the registry
+  console.log("🔑 Creating test user on registry...");
+  const addUserResponse = await fetch(
+    `http://localhost:${REGISTRY_PORT}/-/user/org.couchdb.user:testuser`,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: "testuser",
+        password: "testpassword",
+      }),
+    },
+  );
+  if (!addUserResponse.ok) {
+    const text = await addUserResponse.text();
+    throw new Error(
+      `Failed to create test user: ${addUserResponse.status} ${text}`,
+    );
+  }
+  const { token } = (await addUserResponse.json()) as { token: string };
+  console.log("✅ Test user created.");
+
   console.log("📤 Publishing vetra to registry...");
   execSync(
-    `npm publish --registry http://localhost:${REGISTRY_PORT} --no-git-checks`,
+    `npm publish --registry http://localhost:${REGISTRY_PORT} --no-git-checks --tag dev --//localhost:${REGISTRY_PORT}/:_authToken=${token}`,
     {
       cwd: VETRA_DIR,
       stdio: "inherit",
