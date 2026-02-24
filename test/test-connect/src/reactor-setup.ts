@@ -20,6 +20,10 @@ export async function createReactorWithSync(
     .withChannelScheme(ChannelScheme.CONNECT)
     .withSignalHandlers();
 
+  if (config.maxSkipThreshold !== undefined) {
+    builder.withExecutorConfig({ maxSkipThreshold: config.maxSkipThreshold });
+  }
+
   if (logger) {
     builder.withLogger(logger);
   }

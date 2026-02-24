@@ -25,6 +25,8 @@ interface OrchestratorOptions {
   duration: string;
   mutationInterval: string;
   logDir: string;
+  drain: string;
+  maxSkipThreshold: string;
 }
 
 interface ChildState {
@@ -40,6 +42,7 @@ interface RunInfo {
   clients: number;
   duration: number;
   mutationInterval: number;
+  drainMs: number;
   driveId?: string;
   documentId?: string;
   logDir: string;
@@ -269,11 +272,23 @@ program
     "2000",
   )
   .option("--log-dir <path>", "Base directory for log output", "./logs")
+  .option(
+    "--drain <ms>",
+    "Time to keep clients alive after mutations stop for sync to settle",
+    "0",
+  )
+  .option(
+    "--max-skip-threshold <n>",
+    "Maximum conflicting operations before reshuffle fails (default: 1000)",
+  )
   .action(async (options: OrchestratorOptions) => {
     const port = parseInt(options.port, 10);
     const clientCount = parseInt(options.clients, 10);
     const duration = parseInt(options.duration, 10);
     const mutationInterval = parseInt(options.mutationInterval, 10);
+    const drainMs = parseInt(options.drain, 10) || 0;
+    const maxSkipThreshold =
+      parseInt(options.maxSkipThreshold, 10) || undefined;
 
     if (isNaN(port) || port <= 0) {
       console.error("Error: --port must be a positive number");
@@ -307,6 +322,7 @@ program
       clients: clientCount,
       duration,
       mutationInterval,
+      drainMs,
       logDir: runDir,
     };
 
@@ -315,6 +331,10 @@ program
     console.log(`  Clients:           ${clientCount}`);
     console.log(`  Duration:          ${duration / 1000}s`);
     console.log(`  Mutation interval: ${mutationInterval}ms`);
+    console.log(`  Drain:             ${drainMs / 1000}s`);
+    if (maxSkipThreshold !== undefined) {
+      console.log(`  Max skip threshold:${maxSkipThreshold.toLocaleString()}`);
+    }
     console.log(`  Logs:              ${runDir}`);
     console.log();
 
@@ -323,13 +343,19 @@ program
 
     const allChildren: ChildState[] = [];
 
+    const switchboardEnv: Record<string, string> = {
+      ...process.env,
+      PORT: String(port),
+    } as Record<string, string>;
+
+    if (maxSkipThreshold !== undefined) {
+      switchboardEnv.MAX_SKIP_THRESHOLD = String(maxSkipThreshold);
+    }
+
     const switchboardProc = spawn("tsx", [SWITCHBOARD_SERVER_PATH], {
       stdio: ["ignore", "pipe", "pipe"],
       cwd: switchboardDataDir,
-      env: {
-        ...process.env,
-        PORT: String(port),
-      },
+      env: switchboardEnv,
     });
 
     const sbState: ChildState = {
@@ -403,6 +429,7 @@ program
 
     for (let i = 0; i < clientCount; i++) {
       const label = `client-${i}`;
+      const stateOutputPath = path.join(runDir, `${label}-state.json`);
       const args = [
         CLI_PATH,
         "--url",
@@ -415,8 +442,16 @@ program
         String(duration),
         "--mutation-interval",
         String(mutationInterval),
+        "--drain",
+        String(drainMs),
+        "--state-output",
+        stateOutputPath,
         "--verbose",
       ];
+
+      if (maxSkipThreshold !== undefined) {
+        args.push("--max-skip-threshold", String(maxSkipThreshold));
+      }
 
       const proc = spawn("tsx", args, {
         stdio: ["ignore", "pipe", "pipe"],
@@ -452,7 +487,7 @@ program
     const startTime = Date.now();
     const heartbeat = setInterval(() => {
       const elapsed = Math.round((Date.now() - startTime) / 1000);
-      const total = Math.round(duration / 1000);
+      const total = Math.round((duration + drainMs) / 1000);
       const clientChildren = allChildren.filter((c) =>
         c.label.startsWith("client-"),
       );
@@ -508,7 +543,7 @@ program
       c.label.startsWith("client-"),
     );
     await Promise.all(
-      clientChildren.map((c) => waitForExit(c, duration + 30_000)),
+      clientChildren.map((c) => waitForExit(c, duration + drainMs + 60_000)),
     );
 
     clearInterval(heartbeat);
@@ -522,6 +557,53 @@ program
     }
 
     printSummary(allChildren, runDir);
+
+    // Check state convergence if state files were written
+    const stateFiles = clientChildren
+      .map((c) => ({
+        label: c.label,
+        path: path.join(runDir, `${c.label}-state.json`),
+      }))
+      .filter((s) => fs.existsSync(s.path));
+
+    if (stateFiles.length > 1) {
+      console.log(blue("Checking state convergence..."));
+      const states = stateFiles.map((s) => ({
+        label: s.label,
+        data: JSON.parse(fs.readFileSync(s.path, "utf-8")) as {
+          state: unknown;
+          operationCount: number;
+        },
+      }));
+
+      const refJson = JSON.stringify(states[0].data.state);
+      let converged = true;
+      for (let i = 1; i < states.length; i++) {
+        const thisJson = JSON.stringify(states[i].data.state);
+        if (thisJson !== refJson) {
+          console.log(
+            red(`  State DIVERGED: ${states[0].label} vs ${states[i].label}`),
+          );
+          converged = false;
+        }
+      }
+
+      if (converged) {
+        console.log(green("  All client states converged!"));
+      } else {
+        console.log(
+          yellow(
+            "  State divergence detected - check state JSON files for details",
+          ),
+        );
+      }
+
+      for (const s of states) {
+        console.log(gray(`  ${s.label}: ${s.data.operationCount} operations`));
+      }
+      console.log();
+    }
+
     logs.close();
 
     const crashedClients = clientChildren.filter(

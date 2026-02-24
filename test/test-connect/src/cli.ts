@@ -13,6 +13,7 @@ interface CliOptions {
   verbose: boolean;
   drain: string;
   stateOutput: string;
+  maxSkipThreshold: string;
 }
 
 const program = new Command();
@@ -36,8 +37,13 @@ program
     "0",
   )
   .option("--state-output <path>", "Path to write final document state JSON")
+  .option(
+    "--max-skip-threshold <n>",
+    "Maximum conflicting operations before reshuffle fails",
+  )
   .action(async (options: CliOptions) => {
     const drainMs = parseInt(options.drain, 10);
+    const maxSkip = parseInt(options.maxSkipThreshold, 10);
     const config: ConnectTestConfig = {
       url: options.url,
       driveId: options.driveId,
@@ -47,6 +53,7 @@ program
       verbose: options.verbose,
       drainMs: isNaN(drainMs) ? 0 : drainMs,
       stateOutput: options.stateOutput,
+      maxSkipThreshold: isNaN(maxSkip) ? undefined : maxSkip,
     };
 
     if (isNaN(config.duration) || config.duration <= 0) {

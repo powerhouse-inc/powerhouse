@@ -7,4 +7,5 @@ export interface ConnectTestConfig {
   verbose: boolean;
   drainMs?: number;
   stateOutput?: string;
+  maxSkipThreshold?: number;
 }
