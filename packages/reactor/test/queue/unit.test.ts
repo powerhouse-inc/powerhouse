@@ -1299,13 +1299,13 @@ describe("InMemoryQueue", () => {
       expect(dequeued).toBeNull();
     });
 
-    it("should report paused state", () => {
+    it("should report paused state", async () => {
       const q = queue as InMemoryQueue;
 
       expect(q.paused).toBe(false);
       q.pause();
       expect(q.paused).toBe(true);
-      q.resume();
+      await q.resume();
       expect(q.paused).toBe(false);
     });
 
