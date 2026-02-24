@@ -8,7 +8,11 @@ import type { JobWriteReadyEvent } from "../events/types.js";
 import type { PreparedBatch } from "./batch-aggregator.js";
 import type { IMailbox } from "./mailbox.js";
 import { SyncOperation } from "./sync-operation.js";
-import type { ChannelHealth, RemoteFilter } from "./types.js";
+import {
+  SyncOperationStatus,
+  type ChannelHealth,
+  type RemoteFilter,
+} from "./types.js";
 
 export type OperationBatch = {
   documentId: string;
@@ -324,10 +328,10 @@ export function consolidateSyncOperations(
       allOperations,
     );
 
-    if (first.status > 0) {
-      if (first.status >= 3) {
+    if (first.status > SyncOperationStatus.TransportPending) {
+      if (first.status >= SyncOperationStatus.Error) {
         merged.executed();
-      } else if (first.status >= 2) {
+      } else if (first.status >= SyncOperationStatus.Applied) {
         merged.transported();
       } else {
         merged.started();
