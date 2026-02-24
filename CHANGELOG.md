@@ -1,3 +1,23 @@
+## 6.0.0-dev.57 (2026-02-24)
+
+### 🚀 Features
+
+- dead letter persistent storage ([c7249bf13](https://github.com/powerhouse-inc/powerhouse/commit/c7249bf13))
+- integration test with hub/spoke ([54da03684](https://github.com/powerhouse-inc/powerhouse/commit/54da03684))
+- run sync integration test as part of reactor flow ([7dea8bf3e](https://github.com/powerhouse-inc/powerhouse/commit/7dea8bf3e))
+- the integration orchestrator should forward switchboard logs ([e0806c66a](https://github.com/powerhouse-inc/powerhouse/commit/e0806c66a))
+
+### 🩹 Fixes
+
+- build step before integration test ([0b6b48f74](https://github.com/powerhouse-inc/powerhouse/commit/0b6b48f74))
+- arg, workflow changes should trigger the workflow ([645cca08f](https://github.com/powerhouse-inc/powerhouse/commit/645cca08f))
+- switchboard needs build:misc ([916f761b8](https://github.com/powerhouse-inc/powerhouse/commit/916f761b8))
+- build fix in document-view tests ([66d7a5483](https://github.com/powerhouse-inc/powerhouse/commit/66d7a5483))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
 ## 6.0.0-dev.56 (2026-02-21)
 
 ### 🚀 Features
