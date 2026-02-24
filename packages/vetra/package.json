@@ -107,7 +107,7 @@
     "@vitejs/plugin-react": "catalog:",
     "document-drive": "workspace:*",
     "package-manager-detector": "catalog:",
-    "pm2": "^5.4.3",
+    "pm2": "^6.0.14",
     "react": "catalog:",
     "react-dom": "catalog:",
     "tailwindcss": "catalog:",

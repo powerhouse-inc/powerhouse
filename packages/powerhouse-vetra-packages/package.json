@@ -81,7 +81,7 @@
     "tailwind-merge": "catalog:",
     "thememirror": "^2.0.1",
     "uuid": "^11.1.0",
-    "validator": "^13.15.0",
+    "validator": "^13.15.22",
     "@hookform/resolvers": "^5.0.1",
     "zod": "catalog:"
   },
