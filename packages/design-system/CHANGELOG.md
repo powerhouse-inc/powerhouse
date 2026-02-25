@@ -1,3 +1,13 @@
+## 5.3.4 (2026-02-25)
+
+### 🩹 Fixes
+
+- **design-system:** fix drive icon and link in settings danger zone ([9c8d9ce30](https://github.com/powerhouse-inc/powerhouse/commit/9c8d9ce30))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 5.3.3 (2026-02-16)
 
 This was a version bump only for @powerhousedao/design-system to align it with other projects, there were no code changes.

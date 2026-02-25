@@ -1,3 +1,13 @@
+## 5.3.4 (2026-02-25)
+
+### 🩹 Fixes
+
+- **connect:** use correct translation key in ClearStorageModal ([846e4348b](https://github.com/powerhouse-inc/powerhouse/commit/846e4348b))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 5.3.3 (2026-02-16)
 
 This was a version bump only for @powerhousedao/connect to align it with other projects, there were no code changes.

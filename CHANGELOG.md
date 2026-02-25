@@ -1,3 +1,15 @@
+## 5.3.4 (2026-02-25)
+
+### 🩹 Fixes
+
+- **connect:** use correct translation key in ClearStorageModal ([846e4348b](https://github.com/powerhouse-inc/powerhouse/commit/846e4348b))
+- **design-system:** fix drive icon and link in settings danger zone ([9c8d9ce30](https://github.com/powerhouse-inc/powerhouse/commit/9c8d9ce30))
+- **reactor-api:** include global operations in GraphQL document construction ([0bf4d3d6b](https://github.com/powerhouse-inc/powerhouse/commit/0bf4d3d6b))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 5.3.3 (2026-02-16)
 
 ### 🩹 Fixes

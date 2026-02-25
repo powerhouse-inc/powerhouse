@@ -1,3 +1,7 @@
+## 5.3.4 (2026-02-25)
+
+This was a version bump only for ph-cmd to align it with other projects, there were no code changes.
+
 ## 5.3.3 (2026-02-16)
 
 ### 🩹 Fixes
