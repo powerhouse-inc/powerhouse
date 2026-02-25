@@ -14,13 +14,13 @@
       "path": "../codegen"
     },
     {
-      "path": "../document-model"
+      "path": "../config"
     },
     {
       "path": "../document-drive"
     },
     {
-      "path": "../config"
+      "path": "../document-model"
     }
   ]
 }

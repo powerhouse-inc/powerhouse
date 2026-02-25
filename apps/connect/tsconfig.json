@@ -2,46 +2,56 @@
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
     "outDir": "./lib",
-    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "lib": [
+      "ESNext",
+      "DOM",
+      "DOM.Iterable"
+    ],
     "types": [
       "node",
       "vite/client",
       "vite-plugin-svgr/client",
       "@types/wicg-file-system-access"
-    ],
+    ]
   },
-  "include": ["**/*", "src/i18n/locales/en.json", "./package.copy.json"],
-  "exclude": ["dist", "lib", "node_modules", "storybook-static"],
+  "include": [
+    "**/*",
+    "src/i18n/locales/en.json",
+    "./package.copy.json"
+  ],
+  "exclude": [
+    "dist",
+    "lib",
+    "node_modules",
+    "storybook-static"
+  ],
   "references": [
     {
-      "path": "../../packages/document-model"
-    },
-    {
-      "path": "../../packages/document-drive"
-    },
-    {
-      "path": "../../packages/design-system"
-    },
-    {
-      "path": "../../packages/common"
+      "path": "../../packages/builder-tools"
     },
     {
       "path": "../../packages/config"
     },
     {
-      "path": "../../packages/reactor-browser"
+      "path": "../../packages/design-system"
     },
     {
-      "path": "../../packages/renown"
+      "path": "../../packages/document-drive"
     },
     {
-      "path": "../../packages/builder-tools"
+      "path": "../../packages/document-model"
     },
     {
       "path": "../../packages/powerhouse-vetra-packages"
     },
     {
       "path": "../../packages/reactor"
+    },
+    {
+      "path": "../../packages/reactor-browser"
+    },
+    {
+      "path": "../../packages/renown"
     },
     {
       "path": "../../packages/shared"

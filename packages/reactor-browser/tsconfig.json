@@ -1,26 +1,32 @@
 {
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
-    "lib": ["ESNext", "dom", "dom.iterable"],
+    "lib": [
+      "ESNext",
+      "dom",
+      "dom.iterable"
+    ],
     "outDir": "./dist",
-    "types": ["@types/wicg-file-system-access", "vitest/globals"]
+    "types": [
+      "@types/wicg-file-system-access",
+      "vitest/globals"
+    ]
   },
-  "include": ["**/*"],
+  "include": [
+    "**/*"
+  ],
   "references": [
-    {
-      "path": "../document-model"
-    },
     {
       "path": "../document-drive"
     },
     {
-      "path": "../config"
-    },
-    {
-      "path": "../renown"
+      "path": "../document-model"
     },
     {
       "path": "../reactor"
+    },
+    {
+      "path": "../renown"
     }
   ]
 }

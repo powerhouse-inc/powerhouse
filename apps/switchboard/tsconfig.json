@@ -11,22 +11,22 @@
   ],
   "references": [
     {
-      "path": "../../packages/document-model"
+      "path": "../../packages/config"
     },
     {
       "path": "../../packages/document-drive"
     },
     {
-      "path": "../../packages/config"
+      "path": "../../packages/document-model"
+    },
+    {
+      "path": "../../packages/reactor"
     },
     {
       "path": "../../packages/reactor-api"
     },
     {
       "path": "../../packages/renown"
-    },
-    {
-      "path": "../../packages/reactor"
     }
   ]
 }
