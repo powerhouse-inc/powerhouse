@@ -47,6 +47,7 @@
     "@powerhousedao/config": "workspace:*",
     "@vitejs/plugin-react": "catalog:",
     "document-model": "workspace:*",
+    "@powerhousedao/shared": "workspace:*",
     "esbuild": "^0.25.5",
     "fast-glob": "^3.3.3",
     "magic-string": "^0.30.17",

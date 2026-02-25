@@ -28,6 +28,14 @@
     "./document-model/*": {
       "types": "./dist/document-model/*.d.ts",
       "default": "./dist/document-model/*.js"
+    },
+    "./connect": {
+      "types": "./dist/connect/index.d.ts",
+      "default": "./dist/connect/index.js"
+    },
+    "./connect/*": {
+      "types": "./dist/connect/*.d.ts",
+      "default": "./dist/connect/*.js"
     }
   },
   "dependencies": {
@@ -35,7 +43,8 @@
     "@sindresorhus/fnv1a": "catalog:",
     "@powerhousedao/analytics-engine-core": "catalog:",
     "mutative": "catalog:",
-    "react": "catalog:"
+    "react": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@types/react": "catalog:"
