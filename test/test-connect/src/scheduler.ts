@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import type { ReactorModule } from "@powerhousedao/reactor";
 import { ConsoleLogger } from "@powerhousedao/reactor";
 import {
@@ -96,6 +97,48 @@ export class ConnectTestScheduler {
     const durationSeconds = (Date.now() - this.startTime) / 1000;
 
     this.reporter.printSummary(stats, durationSeconds);
+
+    // Drain phase: keep reactor alive for sync to settle
+    if (this.config.drainMs && this.config.drainMs > 0) {
+      console.log(`Draining for ${this.config.drainMs}ms (sync continues)...`);
+      await new Promise((resolve) => setTimeout(resolve, this.config.drainMs));
+    }
+
+    // State dump: write final document state to file
+    if (this.config.stateOutput && this.module) {
+      try {
+        const doc = await this.module.reactor.get(this.config.documentId);
+        const opsByScope = await this.module.reactor.getOperations(
+          this.config.documentId,
+        );
+        const allOps = Object.values(opsByScope).flatMap((paged) =>
+          paged.results.filter((op) => op.skip === 0),
+        );
+
+        const stateData = {
+          documentId: this.config.documentId,
+          state: doc.state,
+          operationCount: allOps.length,
+          operations: allOps.map((op) => ({
+            id: op.id,
+            index: op.index,
+            hash: op.hash,
+            action: { type: op.action.type },
+          })),
+        };
+
+        fs.writeFileSync(
+          this.config.stateOutput,
+          JSON.stringify(stateData, null, 2),
+        );
+        console.log(`State written to ${this.config.stateOutput}`);
+      } catch (error) {
+        console.error(
+          "Failed to dump state:",
+          error instanceof Error ? error.message : error,
+        );
+      }
+    }
 
     if (this.module) {
       this.module.reactor.kill();

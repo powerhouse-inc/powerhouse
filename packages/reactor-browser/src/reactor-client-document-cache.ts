@@ -16,8 +16,6 @@ import type {
  *
  * This cache subscribes to document change events via IReactorClient.subscribe()
  * and automatically updates the cache when documents are created, updated, or deleted.
- *
- * Use this implementation when FEATURE_LEGACY_READ_ENABLED is false.
  */
 export class ReactorClientDocumentCache implements IDocumentCache {
   private documents = new Map<string, PromiseWithState<PHDocument>>();

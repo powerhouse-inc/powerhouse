@@ -694,6 +694,131 @@ describe("BufferedMailbox", () => {
     });
   });
 
+  describe("pause clears timers", () => {
+    it("should clear active addedTimer on pause", () => {
+      const mailbox = new BufferedMailbox(100, 10);
+      const callback = vi.fn();
+
+      mailbox.onAdded(callback);
+
+      mailbox.add(makeSyncOp("item1"));
+
+      mailbox.pause();
+
+      vi.advanceTimersByTime(200);
+      expect(callback).not.toHaveBeenCalled();
+    });
+
+    it("should clear active removedTimer on pause", () => {
+      const mailbox = new BufferedMailbox(100, 10);
+      const callback = vi.fn();
+
+      mailbox.onRemoved(callback);
+
+      const item = makeSyncOp("item1");
+      mailbox.add(item);
+      vi.advanceTimersByTime(100);
+
+      mailbox.remove(item);
+
+      mailbox.pause();
+
+      vi.advanceTimersByTime(200);
+      expect(callback).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("resume reschedules flush", () => {
+    it("should reschedule flush for buffered added items on resume", () => {
+      const mailbox = new BufferedMailbox(100, 10);
+      const callback = vi.fn();
+
+      mailbox.onAdded(callback);
+
+      mailbox.pause();
+      mailbox.add(makeSyncOp("item1"));
+
+      expect(callback).not.toHaveBeenCalled();
+
+      mailbox.resume();
+
+      vi.advanceTimersByTime(100);
+      expect(callback).toHaveBeenCalledTimes(1);
+    });
+
+    it("should reschedule flush for buffered removed items on resume", () => {
+      const mailbox = new BufferedMailbox(100, 10);
+      const removedCallback = vi.fn();
+
+      mailbox.onRemoved(removedCallback);
+
+      const item = makeSyncOp("item1");
+      mailbox.add(item);
+      vi.advanceTimersByTime(100);
+
+      mailbox.pause();
+      mailbox.remove(item);
+
+      expect(removedCallback).not.toHaveBeenCalled();
+
+      mailbox.resume();
+
+      vi.advanceTimersByTime(100);
+      expect(removedCallback).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("paused buffering", () => {
+    it("should buffer added items without scheduling timer when paused", () => {
+      const mailbox = new BufferedMailbox(100, 10);
+      const callback = vi.fn();
+
+      mailbox.onAdded(callback);
+
+      mailbox.pause();
+      mailbox.add(makeSyncOp("item1"));
+      mailbox.add(makeSyncOp("item2"));
+
+      vi.advanceTimersByTime(200);
+      expect(callback).not.toHaveBeenCalled();
+
+      expect(mailbox.items).toHaveLength(2);
+    });
+
+    it("should buffer removed items without scheduling timer when paused", () => {
+      const mailbox = new BufferedMailbox(100, 10);
+      const removedCallback = vi.fn();
+
+      mailbox.onRemoved(removedCallback);
+
+      const item1 = makeSyncOp("item1");
+      const item2 = makeSyncOp("item2");
+      mailbox.add(item1, item2);
+      vi.advanceTimersByTime(100);
+
+      mailbox.pause();
+      mailbox.remove(item1);
+      mailbox.remove(item2);
+
+      vi.advanceTimersByTime(200);
+      expect(removedCallback).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("isPaused", () => {
+    it("should return correct paused state", () => {
+      const mailbox = new BufferedMailbox(100, 10);
+
+      expect(mailbox.isPaused()).toBe(false);
+
+      mailbox.pause();
+      expect(mailbox.isPaused()).toBe(true);
+
+      mailbox.resume();
+      expect(mailbox.isPaused()).toBe(false);
+    });
+  });
+
   describe("multiple callbacks", () => {
     it("should trigger all registered onAdded callbacks", () => {
       const mailbox = new BufferedMailbox(100, 10);

@@ -5,4 +5,7 @@ export interface ConnectTestConfig {
   duration: number;
   mutationInterval: number;
   verbose: boolean;
+  drainMs?: number;
+  stateOutput?: string;
+  maxSkipThreshold?: number;
 }

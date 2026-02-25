@@ -98,24 +98,18 @@ function updateOperationsForAction<TDocument extends PHDocument>(
   }
 
   const scope = action.scope;
-
-  let operations: Operation[] = [];
-  if (document.operations[scope]) {
-    operations = document.operations[scope].slice();
-  }
-
-  const latestOperation = operations.sort((a, b) => a.index - b.index).at(-1);
-  const lastOperationIndex = latestOperation?.index ?? -1;
+  const existing = document.operations[scope];
+  // Relies on ops being sorted ascending by index — see reactor CLAUDE.md invariants.
+  const lastOperationIndex = existing?.at(-1)?.index ?? -1;
 
   const index = reuseLastOperationIndex
     ? lastOperationIndex
     : lastOperationIndex + 1;
 
   const newOperation = operationFromAction(action, index, skip, context);
-  operations.push(newOperation);
 
-  // adds the action to the operations history with
-  // the latest index and current timestamp
+  const operations = [...(existing ?? []), newOperation];
+
   return {
     ...document,
     operations: { ...document.operations, [scope]: operations },
@@ -131,13 +125,9 @@ function updateOperationsForOperation<TDocument extends PHDocument>(
   skipIndexValidation?: boolean,
 ): TDocument {
   const scope = operation.action.scope;
-  const scopeOperations = document.operations[scope];
-  const operations: Operation[] = scopeOperations
-    ? scopeOperations.slice()
-    : [];
-
-  const latestOperation = operations.sort((a, b) => a.index - b.index).at(-1);
-  const lastOperationIndex = latestOperation?.index ?? -1;
+  const existing = document.operations[scope];
+  // Relies on ops being sorted ascending by index — see reactor CLAUDE.md invariants.
+  const lastOperationIndex = existing?.at(-1)?.index ?? -1;
 
   const nextIndex = reuseLastOperationIndex
     ? lastOperationIndex
@@ -155,10 +145,9 @@ function updateOperationsForOperation<TDocument extends PHDocument>(
     skip,
     context,
   );
-  operations.push(newOperation);
 
-  // adds the action to the operations history with
-  // the latest index and current timestamp
+  const operations = [...(existing ?? []), newOperation];
+
   return {
     ...document,
     operations: { ...document.operations, [scope]: operations },

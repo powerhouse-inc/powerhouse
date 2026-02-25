@@ -9,6 +9,7 @@ import { SyncOperation } from "../sync-operation.js";
 import type { JwtHandler, RemoteFilter, SyncEnvelope } from "../types.js";
 import { ChannelErrorSource } from "../types.js";
 import {
+  consolidateSyncOperations,
   sortEnvelopesByFirstOperationTimestamp,
   trimMailboxFromAckOrdinal,
 } from "../utils.js";
@@ -239,9 +240,15 @@ export class GqlRequestChannel implements IChannel {
       }
     }
 
-    // add all of them to the inbox
-    if (allSyncOps.length > 0) {
-      this.inbox.add(...allSyncOps);
+    // merge SyncOps sharing the same (documentId, scope, branch) so
+    // multiple polled envelopes for one document become a single load job
+    const consolidated =
+      allSyncOps.length > 1
+        ? consolidateSyncOperations(allSyncOps)
+        : allSyncOps;
+
+    if (consolidated.length > 0) {
+      this.inbox.add(...consolidated);
     }
 
     // handle dead letters from the remote

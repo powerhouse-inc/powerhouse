@@ -1,3 +1,54 @@
+## 6.0.0-dev.58 (2026-02-25)
+
+### 🩹 Fixes
+
+- load jobs should fetch document meta to see if the document has been deleted -- also we should not retry jobs where documents were deleted ([2cab0fcb3](https://github.com/powerhouse-inc/powerhouse/commit/2cab0fcb3))
+- **executor:** update write cache after delete so double-deletion returns DocumentDeletedError ([06de40d98](https://github.com/powerhouse-inc/powerhouse/commit/06de40d98))
+- **write-cache:** address PR review feedback ([a160fe311](https://github.com/powerhouse-inc/powerhouse/commit/a160fe311))
+
+### 🔥 Performance
+
+- **write-cache:** slice operations to last-per-scope to eliminate O(n²) copies ([ac55a6131](https://github.com/powerhouse-inc/powerhouse/commit/ac55a6131))
+- **reducer:** pre-allocate operation arrays to avoid resize overhead ([1cf1c0078](https://github.com/powerhouse-inc/powerhouse/commit/1cf1c0078))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Samuel Hawksby-Robinson @Samyoul
+
+## 6.0.0-dev.57 (2026-02-24)
+
+### 🚀 Features
+
+- run sync integration test as part of reactor flow ([7dea8bf3e](https://github.com/powerhouse-inc/powerhouse/commit/7dea8bf3e))
+- dead letter persistent storage ([c7249bf13](https://github.com/powerhouse-inc/powerhouse/commit/c7249bf13))
+
+### 🩹 Fixes
+
+- build fix in document-view tests ([66d7a5483](https://github.com/powerhouse-inc/powerhouse/commit/66d7a5483))
+- switchboard needs build:misc ([916f761b8](https://github.com/powerhouse-inc/powerhouse/commit/916f761b8))
+- arg, workflow changes should trigger the workflow ([645cca08f](https://github.com/powerhouse-inc/powerhouse/commit/645cca08f))
+- build step before integration test ([0b6b48f74](https://github.com/powerhouse-inc/powerhouse/commit/0b6b48f74))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
+## 6.0.0-dev.56 (2026-02-21)
+
+### 🚀 Features
+
+- jobs that fail from document not found errors get deferred and requeued ([5232928f0](https://github.com/powerhouse-inc/powerhouse/commit/5232928f0))
+- document-model resolution fixes ([41c95c507](https://github.com/powerhouse-inc/powerhouse/commit/41c95c507))
+
+### 🩹 Fixes
+
+- whoops, properly export things for reactor-api ([2a769bda9](https://github.com/powerhouse-inc/powerhouse/commit/2a769bda9))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
 ## 6.0.0-dev.55 (2026-02-20)
 
 ### 🚀 Features

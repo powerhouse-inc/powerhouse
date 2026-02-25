@@ -3,8 +3,14 @@ import { ReactorEventTypes, type JobRunningEvent } from "../events/types.js";
 import type { IJobTracker } from "../job-tracker/interfaces.js";
 import type { ILogger } from "../logging/types.js";
 import type { IQueue } from "../queue/interfaces.js";
-import type { IJobExecutionHandle } from "../queue/types.js";
+import type { IJobExecutionHandle, Job } from "../queue/types.js";
 import { QueueEventTypes } from "../queue/types.js";
+import type { IDocumentModelResolver } from "../registry/document-model-resolver.js";
+import { ModuleNotFoundError } from "../registry/implementation.js";
+import {
+  DocumentDeletedError,
+  DocumentNotFoundError,
+} from "../shared/errors.js";
 import type { ErrorInfo } from "../shared/types.js";
 import type { IJobExecutor, IJobExecutorManager } from "./interfaces.js";
 import type { ExecutorManagerStatus, JobResult } from "./types.js";
@@ -21,6 +27,7 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
   private activeJobs = 0;
   private totalJobsProcessed = 0;
   private unsubscribe?: () => void;
+  private deferredJobs = new Map<string, Job[]>();
 
   constructor(
     private executorFactory: JobExecutorFactory,
@@ -28,6 +35,7 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
     private queue: IQueue,
     private jobTracker: IJobTracker,
     private logger: ILogger,
+    private resolver: IDocumentModelResolver,
   ) {}
 
   async start(numExecutors: number): Promise<void> {
@@ -79,6 +87,24 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
         await new Promise((resolve) => setTimeout(resolve, 100));
       }
     }
+
+    // Fail any deferred jobs that were never flushed
+    for (const [, jobs] of this.deferredJobs) {
+      for (const job of jobs) {
+        const errorInfo = this.toErrorInfo(
+          new DocumentNotFoundError(job.documentId),
+        );
+        this.jobTracker.markFailed(job.id, errorInfo, job);
+        this.eventBus
+          .emit(ReactorEventTypes.JOB_FAILED, {
+            jobId: job.id,
+            error: new DocumentNotFoundError(job.documentId),
+            job,
+          })
+          .catch(() => {});
+      }
+    }
+    this.deferredJobs.clear();
 
     this.executors = [];
     this.isRunning = false;
@@ -160,7 +186,67 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
     if (result.success) {
       handle.complete();
       this.totalJobsProcessed++;
+
+      if (this.hasCreateDocumentAction(handle.job)) {
+        await this.flushDeferredJobs(handle.job.documentId);
+      }
     } else {
+      // Attempt model recovery before exhausting retries
+      if (result.error && ModuleNotFoundError.isError(result.error)) {
+        let modelLoaded = false;
+        try {
+          await this.resolver.ensureModelLoaded(result.error.documentType);
+          modelLoaded = true;
+        } catch {
+          // Model could not be loaded, fall through to normal failure path
+        }
+
+        if (modelLoaded) {
+          const errorInfo = this.toErrorInfo(result.error);
+          try {
+            await this.queue.retryJob(handle.job.id, errorInfo);
+            this.activeJobs--;
+            await this.checkForMoreJobs();
+            return;
+          } catch {
+            // Fall through to normal failure path
+          }
+        }
+      }
+
+      // DocumentNotFoundError: defer the job instead of failing immediately.
+      // A CREATE_DOCUMENT job may arrive later and unblock it.
+      if (result.error && DocumentNotFoundError.isError(result.error)) {
+        const job = handle.job;
+
+        handle.defer();
+        this.activeJobs--;
+
+        const docId = job.documentId;
+        const existing = this.deferredJobs.get(docId) ?? [];
+        existing.push(job);
+        this.deferredJobs.set(docId, existing);
+
+        await this.checkForMoreJobs();
+        return;
+      }
+
+      if (result.error && DocumentDeletedError.isError(result.error)) {
+        const errorInfo = this.toErrorInfo(result.error);
+        this.jobTracker.markFailed(handle.job.id, errorInfo, handle.job);
+        this.eventBus
+          .emit(ReactorEventTypes.JOB_FAILED, {
+            jobId: handle.job.id,
+            error: result.error,
+            job: handle.job,
+          })
+          .catch(() => {});
+        handle.fail(errorInfo);
+        this.activeJobs--;
+        await this.checkForMoreJobs();
+        return;
+      }
+
       // Handle retry logic
       const retryCount = handle.job.retryCount || 0;
       const maxRetries = handle.job.maxRetries || 0;
@@ -182,7 +268,7 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
           this.eventBus
             .emit(ReactorEventTypes.JOB_FAILED, {
               jobId: handle.job.id,
-              error: new Error(retryErrorInfo.message),
+              error: result.error ?? new Error(retryErrorInfo.message),
               job: handle.job,
             })
             .catch(() => {});
@@ -205,7 +291,7 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
         this.eventBus
           .emit(ReactorEventTypes.JOB_FAILED, {
             jobId: handle.job.id,
-            error: new Error(fullErrorInfo.message),
+            error: result.error ?? new Error(fullErrorInfo.message),
             job: handle.job,
           })
           .catch(() => {});
@@ -271,6 +357,36 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
       message: error,
       stack: new Error().stack || "",
     };
+  }
+
+  private hasCreateDocumentAction(job: Job): boolean {
+    for (const action of job.actions) {
+      if (action.type === "CREATE_DOCUMENT") {
+        return true;
+      }
+    }
+    for (const operation of job.operations) {
+      if (operation.action.type === "CREATE_DOCUMENT") {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private async flushDeferredJobs(documentId: string): Promise<void> {
+    const jobs = this.deferredJobs.get(documentId);
+    if (!jobs || jobs.length === 0) {
+      return;
+    }
+    this.deferredJobs.delete(documentId);
+
+    for (const job of jobs) {
+      try {
+        await this.queue.enqueue(job);
+      } catch (error) {
+        this.logger.error("Error re-enqueuing deferred job: @Error", error);
+      }
+    }
   }
 
   private formatErrorHistory(

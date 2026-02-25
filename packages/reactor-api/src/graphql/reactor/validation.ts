@@ -34,7 +34,6 @@ export const PHDocumentDTO = z
     revision: z.number().int(),
     created: DateTimeDTO,
     lastModified: DateTimeDTO,
-    parentId: z.string().nullable().optional(),
   })
   .strip();
 

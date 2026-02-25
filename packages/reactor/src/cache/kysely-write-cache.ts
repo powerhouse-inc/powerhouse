@@ -191,8 +191,13 @@ export class KyselyWriteCache implements IWriteCache {
   /**
    * Stores a document snapshot in the cache at a specific revision.
    *
-   * Stores the document reference as-is. Callers must avoid mutating cached
-   * snapshots if they need to preserve historical revisions.
+   * The cached document is a shallow copy of the input with its operation history
+   * truncated to the last operation per scope and its clipboard cleared. This keeps
+   * memory use and copy costs constant regardless of operation count. Consumers of
+   * getState() must not rely on the full operation history being present; the only
+   * guaranteed invariant is that operations[scope].at(-1) reflects the latest
+   * operation index for each scope.
+   *
    * Updates LRU tracker and may evict least recently used stream if at capacity.
    * Asynchronously persists keyframes at configured intervals (fire-and-forget).
    *
@@ -213,9 +218,24 @@ export class KyselyWriteCache implements IWriteCache {
     const streamKey = this.makeStreamKey(documentId, scope, branch);
     const stream = this.getOrCreateStream(streamKey);
 
+    // Keep only the last operation per scope in the ring buffer. The reducer
+    // only needs at(-1).index to determine the next index, so carrying the
+    // full history causes O(n²) array copies across n operations. UNDO, REDO,
+    // and PRUNE bypass this by forcing a cold-miss rebuild in the job executor.
+    const slicedDocument: PHDocument = {
+      ...document,
+      operations: Object.fromEntries(
+        Object.entries(document.operations).map(([k, ops]) => [
+          k,
+          ops.length ? [ops.at(-1)!] : [],
+        ]),
+      ),
+      clipboard: [],
+    };
+
     const snapshot: CachedSnapshot = {
       revision,
-      document,
+      document: slicedDocument,
     };
 
     stream.ringBuffer.push(snapshot);
@@ -292,6 +312,8 @@ export class KyselyWriteCache implements IWriteCache {
   /**
    * Retrieves a specific stream for a document. Exposed on the implementation
    * for testing, but not on the interface.
+   *
+   * @internal
    */
   getStream(
     documentId: string,

@@ -64,6 +64,7 @@ export type {
 
 export {
   batchOperationsByDocument,
+  consolidateSyncOperations,
   createIdleHealth,
   filterOperations,
   sortEnvelopesByFirstOperationTimestamp,

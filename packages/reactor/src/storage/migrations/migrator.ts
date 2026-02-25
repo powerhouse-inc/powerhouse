@@ -15,6 +15,7 @@ import * as migration009 from "./009_create_operation_index_tables.js";
 import * as migration010 from "./010_create_sync_tables.js";
 import * as migration011 from "./011_add_cursor_type_column.js";
 import * as migration012 from "./012_add_source_remote_column.js";
+import * as migration013 from "./013_create_sync_dead_letters_table.js";
 
 const migrations = {
   "001_create_operation_table": migration001,
@@ -29,6 +30,7 @@ const migrations = {
   "010_create_sync_tables": migration010,
   "011_add_cursor_type_column": migration011,
   "012_add_source_remote_column": migration012,
+  "013_create_sync_dead_letters_table": migration013,
 };
 
 class ProgrammaticMigrationProvider implements MigrationProvider {

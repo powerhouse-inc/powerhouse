@@ -304,6 +304,19 @@ export class SimpleJobExecutor implements IJobExecutor {
       );
     }
 
+    // UNDO, REDO, PRUNE, and NOOP+skip need the full operation history to
+    // replay state correctly. The write cache stores sliced documents (last
+    // op per scope only), so invalidate before loading to force a cold-miss
+    // rebuild. NOOP+skip arises in executeLoadJob when sync reshuffling
+    // converts conflicting local ops to NOOPs.
+    if (
+      isUndoRedo(action) ||
+      action.type === "PRUNE" ||
+      (action.type === "NOOP" && skip > 0)
+    ) {
+      this.writeCache.invalidate(job.documentId, job.scope, job.branch);
+    }
+
     let document: PHDocument;
     try {
       document = await this.writeCache.getState(
@@ -468,6 +481,24 @@ export class SimpleJobExecutor implements IJobExecutor {
       return buildErrorResult(
         job,
         new Error("Load job must include at least one operation"),
+        startTime,
+      );
+    }
+
+    let docMeta;
+    try {
+      docMeta = await this.documentMetaCache.getDocumentMeta(
+        job.documentId,
+        job.branch,
+      );
+    } catch {
+      // Document meta not found — continue with load (may be a new document)
+    }
+
+    if (docMeta?.state.isDeleted) {
+      return buildErrorResult(
+        job,
+        new DocumentDeletedError(job.documentId, docMeta.state.deletedAtUtcIso),
         startTime,
       );
     }

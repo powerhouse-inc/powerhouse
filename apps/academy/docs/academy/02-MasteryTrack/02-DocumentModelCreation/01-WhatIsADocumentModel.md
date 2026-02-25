@@ -211,6 +211,7 @@ Document Models offer a range of features that can be leveraged to create sophis
 - **Version Control**: Track and compare document states over time, similar to Git.
 - **Collaboration**: Empower decentralized teams to build, modify, and share documents asynchronously.
 - **Extensibility**: Add new fields, operations, and integrations over time without rewriting logic.
+- **Schema Evolution**: Evolve document models with [versioning](/academy/MasteryTrack/DocumentModelCreation/DocumentModelVersioning)—upgrade schemas while maintaining backward compatibility with existing documents.
 
 Document Models are a powerful primitive within the Powerhouse vision, offering a flexible, structured, and efficient way to manage business logic and data.
 

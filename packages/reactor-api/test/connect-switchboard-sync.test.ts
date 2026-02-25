@@ -1,11 +1,13 @@
 import {
   ConsoleLogger,
+  DocumentModelRegistry,
   driveCollectionId,
   EventBus,
   GqlRequestChannelFactory,
   GqlResponseChannelFactory,
   InMemoryQueue,
   JobStatus,
+  NullDocumentModelResolver,
   ReactorBuilder,
   ReactorEventTypes,
   SyncBuilder,
@@ -44,8 +46,13 @@ async function setupConnectSwitchboard(): Promise<ConnectSwitchboardSetup> {
   const connectEventBus = new EventBus();
   const switchboardEventBus = new EventBus();
 
-  const connectQueue = new InMemoryQueue(connectEventBus);
-  const switchboardQueue = new InMemoryQueue(switchboardEventBus);
+  const registry = new DocumentModelRegistry();
+  registry.registerModules(
+    driveDocumentModelModule as unknown as DocumentModelModule,
+  );
+  const resolver = new NullDocumentModelResolver(registry);
+  const connectQueue = new InMemoryQueue(connectEventBus, resolver);
+  const switchboardQueue = new InMemoryQueue(switchboardEventBus, resolver);
 
   // Both reactors need to handle "gql" (for active polling) and "polling"
   // (for touchChannel-created response channels) in bidirectional sync tests.

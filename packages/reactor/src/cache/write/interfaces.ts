@@ -36,13 +36,18 @@ export interface IWriteCache {
 
   /**
    * Stores a document snapshot in the cache at the specified revision.
-   * The document will be deep copied to prevent external mutations.
+   * Implementations may truncate the stored document (e.g. strip operation
+   * history beyond the last entry per scope, clear clipboard) to bound memory
+   * and copy cost. Callers must not assume that the document returned by a
+   * subsequent getState() call will have a complete operations array; the only
+   * guaranteed invariant is that operations[scope].at(-1) holds the latest
+   * operation index for each scope present in the cached document.
    *
    * @param documentId - The document identifier
    * @param scope - Operation scope
    * @param branch - Branch name
    * @param revision - The revision this document represents
-   * @param document - The complete document to cache
+   * @param document - The document to cache
    *
    * @example
    * ```typescript

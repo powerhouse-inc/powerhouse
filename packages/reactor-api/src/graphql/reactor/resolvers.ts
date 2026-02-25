@@ -1,5 +1,6 @@
 import {
   batchOperationsByDocument,
+  consolidateSyncOperations,
   sortEnvelopesByFirstOperationTimestamp,
   SyncOperation,
   trimMailboxFromAckOrdinal,
@@ -574,6 +575,7 @@ export async function renameDocument(
     name: string;
     branch?: string | null;
   },
+  signal?: AbortSignal,
 ): Promise<ReturnType<typeof toGqlPhDocument>> {
   const branch = fromInputMaybe(args.branch);
 
@@ -583,6 +585,7 @@ export async function renameDocument(
       args.documentIdentifier,
       args.name,
       branch,
+      signal,
     );
   } catch (error) {
     throw new GraphQLError(
@@ -1014,14 +1017,18 @@ export function pushSyncEnvelopes(
   }
 
   for (const [remote, syncOps] of remoteSyncOps) {
-    const validKeys = new Set(syncOps.map((op) => op.jobId).filter(Boolean));
-    for (const syncOp of syncOps) {
+    const consolidated = consolidateSyncOperations(syncOps);
+
+    const validKeys = new Set(
+      consolidated.map((op) => op.jobId).filter(Boolean),
+    );
+    for (const syncOp of consolidated) {
       syncOp.jobDependencies = syncOp.jobDependencies.filter((dep) =>
         validKeys.has(dep),
       );
     }
 
-    remote.channel.inbox.add(...syncOps);
+    remote.channel.inbox.add(...consolidated);
   }
 
   return Promise.resolve(true);

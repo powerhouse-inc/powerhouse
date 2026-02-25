@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   CreateDocumentRequiredError,
   DocumentDeletedError,
+  DocumentNotFoundError,
   DowngradeNotSupportedError,
   InvalidSignatureError,
   UpgradeManifestNotFoundError,
@@ -45,6 +46,27 @@ describe("errors", () => {
     it("should be an instance of Error", () => {
       const error = new DocumentDeletedError("doc-123");
       expect(error).toBeInstanceOf(Error);
+    });
+
+    describe("isError", () => {
+      it("should return true for DocumentDeletedError instances", () => {
+        const error = new DocumentDeletedError("doc-123");
+        expect(DocumentDeletedError.isError(error)).toBe(true);
+      });
+
+      it("should return false for other Error types", () => {
+        expect(DocumentDeletedError.isError(new Error("generic"))).toBe(false);
+        expect(
+          DocumentDeletedError.isError(new DocumentNotFoundError("doc-123")),
+        ).toBe(false);
+      });
+
+      it("should return false for non-Error values", () => {
+        expect(DocumentDeletedError.isError(null)).toBe(false);
+        expect(DocumentDeletedError.isError(undefined)).toBe(false);
+        expect(DocumentDeletedError.isError("string")).toBe(false);
+        expect(DocumentDeletedError.isError(42)).toBe(false);
+      });
     });
   });
 

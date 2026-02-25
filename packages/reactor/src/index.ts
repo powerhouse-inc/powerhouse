@@ -125,6 +125,7 @@ export {
   DuplicateModuleError,
   InvalidModuleError,
   ModuleNotFoundError,
+  NullDocumentModelResolver,
   type IDocumentModelLoader,
   type IDocumentModelRegistry,
 } from "./registry/index.js";
@@ -143,7 +144,6 @@ export {
   type DocumentGraphEdge,
   type DocumentRelationship,
   type DocumentRevisions,
-  type DocumentSnapshot,
   type IDocumentGraph,
   type IDocumentIndexer,
   type IDocumentView,
@@ -225,6 +225,7 @@ export {
   SyncStatus,
   SyncStatusTracker,
   batchOperationsByDocument,
+  consolidateSyncOperations,
   sortEnvelopesByFirstOperationTimestamp,
   trimMailboxFromAckOrdinal,
   type ChannelConfig,

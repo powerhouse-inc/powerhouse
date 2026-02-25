@@ -1,8 +1,10 @@
 import type { OperationWithContext } from "@powerhousedao/shared/document-model";
 import { describe, expect, it } from "vitest";
+import { SyncOperation } from "../../src/sync/sync-operation.js";
 import type { RemoteFilter } from "../../src/sync/types.js";
 import {
   batchOperationsByDocument,
+  consolidateSyncOperations,
   createIdleHealth,
   filterOperations,
   sortEnvelopesByFirstOperationTimestamp,
@@ -508,5 +510,151 @@ describe("sortEnvelopesByFirstOperationTimestamp", () => {
     for (const envelope of result) {
       expect(envelope.operations).toHaveLength(0);
     }
+  });
+});
+
+describe("consolidateSyncOperations", () => {
+  function makeOp(
+    documentId: string,
+    scope: string,
+    branch: string,
+    ordinal: number,
+  ): OperationWithContext {
+    return {
+      operation: {
+        id: `op-${documentId}-${ordinal}`,
+        index: ordinal,
+        skip: 0,
+        hash: "hash",
+        timestampUtcMs: String(ordinal * 1000),
+        action: {
+          type: "TEST",
+          scope,
+          id: "a1",
+          timestampUtcMs: "0",
+          input: {},
+        },
+      } as OperationWithContext["operation"],
+      context: { documentId, documentType: "test", scope, branch, ordinal },
+    };
+  }
+
+  function makeSyncOp(
+    jobId: string,
+    documentId: string,
+    scope: string,
+    branch: string,
+    ordinals: number[],
+    deps: string[] = [],
+  ): SyncOperation {
+    const ops = ordinals.map((o) => makeOp(documentId, scope, branch, o));
+    return new SyncOperation(
+      `id-${jobId}`,
+      jobId,
+      deps,
+      "remote1",
+      documentId,
+      [scope],
+      branch,
+      ops,
+    );
+  }
+
+  it("should pass through a single SyncOperation unchanged", () => {
+    const syncOp = makeSyncOp("j1", "doc-a", "global", "main", [1, 2, 3]);
+    const result = consolidateSyncOperations([syncOp]);
+
+    expect(result).toHaveLength(1);
+    expect(result[0]).toBe(syncOp);
+  });
+
+  it("should merge SyncOperations for the same document", () => {
+    const op1 = makeSyncOp("j1", "doc-a", "global", "main", [1, 2]);
+    const op2 = makeSyncOp("j2", "doc-a", "global", "main", [3, 4]);
+    const op3 = makeSyncOp("j3", "doc-a", "global", "main", [5]);
+
+    const result = consolidateSyncOperations([op1, op2, op3]);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].jobId).toBe("j1");
+    expect(result[0].documentId).toBe("doc-a");
+    expect(result[0].operations).toHaveLength(5);
+    expect(result[0].operations.map((o) => o.context.ordinal)).toEqual([
+      1, 2, 3, 4, 5,
+    ]);
+  });
+
+  it("should keep SyncOperations for different documents separate", () => {
+    const op1 = makeSyncOp("j1", "doc-a", "global", "main", [1]);
+    const op2 = makeSyncOp("j2", "doc-b", "global", "main", [1]);
+
+    const result = consolidateSyncOperations([op1, op2]);
+
+    expect(result).toHaveLength(2);
+    expect(result[0].documentId).toBe("doc-a");
+    expect(result[1].documentId).toBe("doc-b");
+  });
+
+  it("should sort operations by ordinal within a merged group", () => {
+    const op1 = makeSyncOp("j1", "doc-a", "global", "main", [5, 3]);
+    const op2 = makeSyncOp("j2", "doc-a", "global", "main", [1, 4]);
+
+    const result = consolidateSyncOperations([op1, op2]);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].operations.map((o) => o.context.ordinal)).toEqual([
+      1, 3, 4, 5,
+    ]);
+  });
+
+  it("should remap dependencies pointing to absorbed jobIds", () => {
+    const op1 = makeSyncOp("j1", "doc-a", "global", "main", [1]);
+    const op2 = makeSyncOp("j2", "doc-a", "global", "main", [2]);
+    const op3 = makeSyncOp("j3", "doc-b", "global", "main", [1], ["j2"]);
+
+    const result = consolidateSyncOperations([op1, op2, op3]);
+
+    expect(result).toHaveLength(2);
+    // doc-a group absorbed j2 into j1
+    expect(result[0].jobId).toBe("j1");
+    // doc-b should have its dependency remapped from j2 -> j1
+    expect(result[1].jobDependencies).toEqual(["j1"]);
+  });
+
+  it("should remove self-referencing dependencies after merge", () => {
+    const op1 = makeSyncOp("j1", "doc-a", "global", "main", [1]);
+    const op2 = makeSyncOp("j2", "doc-a", "global", "main", [2], ["j1"]);
+
+    const result = consolidateSyncOperations([op1, op2]);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].jobDependencies).toEqual([]);
+  });
+
+  it("should handle empty input", () => {
+    const result = consolidateSyncOperations([]);
+    expect(result).toEqual([]);
+  });
+
+  it("should keep different scopes for same document as separate groups", () => {
+    const op1 = makeSyncOp("j1", "doc-a", "global", "main", [1]);
+    const op2 = makeSyncOp("j2", "doc-a", "document", "main", [1]);
+
+    const result = consolidateSyncOperations([op1, op2]);
+
+    expect(result).toHaveLength(2);
+    expect(result[0].scopes).toEqual(["global"]);
+    expect(result[1].scopes).toEqual(["document"]);
+  });
+
+  it("should keep different branches for same document as separate groups", () => {
+    const op1 = makeSyncOp("j1", "doc-a", "global", "main", [1]);
+    const op2 = makeSyncOp("j2", "doc-a", "global", "draft", [1]);
+
+    const result = consolidateSyncOperations([op1, op2]);
+
+    expect(result).toHaveLength(2);
+    expect(result[0].branch).toBe("main");
+    expect(result[1].branch).toBe("draft");
   });
 });

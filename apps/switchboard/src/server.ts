@@ -204,6 +204,12 @@ async function initServer(
       .withSignalHandlers()
       .withLogger(reactorLogger);
 
+    const maxSkipThreshold = parseInt(process.env.MAX_SKIP_THRESHOLD ?? "", 10);
+    if (!isNaN(maxSkipThreshold) && maxSkipThreshold > 0) {
+      builder.withExecutorConfig({ maxSkipThreshold });
+      logger.info(`Reactor maxSkipThreshold set to ${maxSkipThreshold}`);
+    }
+
     const reactorDbUrl = process.env.PH_REACTOR_DATABASE_URL;
     if (reactorDbUrl && isPostgresUrl(reactorDbUrl)) {
       const connectionString = reactorDbUrl.includes("?")

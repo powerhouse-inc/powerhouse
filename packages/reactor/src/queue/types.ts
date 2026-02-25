@@ -25,6 +25,7 @@ export interface IJobExecutionHandle {
   start(): void;
   complete(): void;
   fail(error: ErrorInfo): void;
+  defer(): void;
 }
 
 /**

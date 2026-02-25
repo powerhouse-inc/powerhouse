@@ -24,6 +24,8 @@ coverage-reports/
 playwright-report/
 test-results/
 
+__pycache__/
+
 # Identity/auth credential files
 .renown.json
 .keypair.json

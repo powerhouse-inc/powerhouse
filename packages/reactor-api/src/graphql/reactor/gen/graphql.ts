@@ -307,7 +307,6 @@ export type PhDocument = {
   readonly lastModifiedAtUtcIso: Scalars["DateTime"]["output"];
   readonly name: Scalars["String"]["output"];
   readonly operations?: Maybe<ReactorOperationResultPage>;
-  readonly parentId?: Maybe<Scalars["String"]["output"]>;
   readonly revisionsList: ReadonlyArray<Revision>;
   readonly slug?: Maybe<Scalars["String"]["output"]>;
   readonly state: Scalars["JSONObject"]["output"];
@@ -536,7 +535,6 @@ export type PhDocumentFieldsFragment = {
   readonly state: NonNullable<unknown>;
   readonly createdAtUtcIso: string | Date;
   readonly lastModifiedAtUtcIso: string | Date;
-  readonly parentId?: string | null | undefined;
   readonly revisionsList: ReadonlyArray<{
     readonly scope: string;
     readonly revision: number;
@@ -581,7 +579,6 @@ export type GetDocumentQuery = {
           readonly state: NonNullable<unknown>;
           readonly createdAtUtcIso: string | Date;
           readonly lastModifiedAtUtcIso: string | Date;
-          readonly parentId?: string | null | undefined;
           readonly revisionsList: ReadonlyArray<{
             readonly scope: string;
             readonly revision: number;
@@ -612,7 +609,6 @@ export type GetDocumentChildrenQuery = {
       readonly state: NonNullable<unknown>;
       readonly createdAtUtcIso: string | Date;
       readonly lastModifiedAtUtcIso: string | Date;
-      readonly parentId?: string | null | undefined;
       readonly revisionsList: ReadonlyArray<{
         readonly scope: string;
         readonly revision: number;
@@ -641,7 +637,6 @@ export type GetDocumentParentsQuery = {
       readonly state: NonNullable<unknown>;
       readonly createdAtUtcIso: string | Date;
       readonly lastModifiedAtUtcIso: string | Date;
-      readonly parentId?: string | null | undefined;
       readonly revisionsList: ReadonlyArray<{
         readonly scope: string;
         readonly revision: number;
@@ -670,7 +665,6 @@ export type FindDocumentsQuery = {
       readonly state: NonNullable<unknown>;
       readonly createdAtUtcIso: string | Date;
       readonly lastModifiedAtUtcIso: string | Date;
-      readonly parentId?: string | null | undefined;
       readonly revisionsList: ReadonlyArray<{
         readonly scope: string;
         readonly revision: number;
@@ -711,7 +705,6 @@ export type CreateDocumentMutation = {
     readonly state: NonNullable<unknown>;
     readonly createdAtUtcIso: string | Date;
     readonly lastModifiedAtUtcIso: string | Date;
-    readonly parentId?: string | null | undefined;
     readonly revisionsList: ReadonlyArray<{
       readonly scope: string;
       readonly revision: number;
@@ -733,7 +726,6 @@ export type CreateEmptyDocumentMutation = {
     readonly state: NonNullable<unknown>;
     readonly createdAtUtcIso: string | Date;
     readonly lastModifiedAtUtcIso: string | Date;
-    readonly parentId?: string | null | undefined;
     readonly revisionsList: ReadonlyArray<{
       readonly scope: string;
       readonly revision: number;
@@ -756,7 +748,6 @@ export type MutateDocumentMutation = {
     readonly state: NonNullable<unknown>;
     readonly createdAtUtcIso: string | Date;
     readonly lastModifiedAtUtcIso: string | Date;
-    readonly parentId?: string | null | undefined;
     readonly revisionsList: ReadonlyArray<{
       readonly scope: string;
       readonly revision: number;
@@ -789,7 +780,6 @@ export type RenameDocumentMutation = {
     readonly state: NonNullable<unknown>;
     readonly createdAtUtcIso: string | Date;
     readonly lastModifiedAtUtcIso: string | Date;
-    readonly parentId?: string | null | undefined;
     readonly revisionsList: ReadonlyArray<{
       readonly scope: string;
       readonly revision: number;
@@ -812,7 +802,6 @@ export type AddChildrenMutation = {
     readonly state: NonNullable<unknown>;
     readonly createdAtUtcIso: string | Date;
     readonly lastModifiedAtUtcIso: string | Date;
-    readonly parentId?: string | null | undefined;
     readonly revisionsList: ReadonlyArray<{
       readonly scope: string;
       readonly revision: number;
@@ -835,7 +824,6 @@ export type RemoveChildrenMutation = {
     readonly state: NonNullable<unknown>;
     readonly createdAtUtcIso: string | Date;
     readonly lastModifiedAtUtcIso: string | Date;
-    readonly parentId?: string | null | undefined;
     readonly revisionsList: ReadonlyArray<{
       readonly scope: string;
       readonly revision: number;
@@ -860,7 +848,6 @@ export type MoveChildrenMutation = {
       readonly state: NonNullable<unknown>;
       readonly createdAtUtcIso: string | Date;
       readonly lastModifiedAtUtcIso: string | Date;
-      readonly parentId?: string | null | undefined;
       readonly revisionsList: ReadonlyArray<{
         readonly scope: string;
         readonly revision: number;
@@ -874,7 +861,6 @@ export type MoveChildrenMutation = {
       readonly state: NonNullable<unknown>;
       readonly createdAtUtcIso: string | Date;
       readonly lastModifiedAtUtcIso: string | Date;
-      readonly parentId?: string | null | undefined;
       readonly revisionsList: ReadonlyArray<{
         readonly scope: string;
         readonly revision: number;
@@ -913,7 +899,6 @@ export type DocumentChangesSubscription = {
       readonly state: NonNullable<unknown>;
       readonly createdAtUtcIso: string | Date;
       readonly lastModifiedAtUtcIso: string | Date;
-      readonly parentId?: string | null | undefined;
       readonly revisionsList: ReadonlyArray<{
         readonly scope: string;
         readonly revision: number;
@@ -1636,7 +1621,6 @@ export type PhDocumentResolvers<
     ContextType,
     Partial<PhDocumentOperationsArgs>
   >;
-  parentId?: Resolver<Maybe<ResolversTypes["String"]>, ParentType, ContextType>;
   revisionsList?: Resolver<
     ReadonlyArray<ResolversTypes["Revision"]>,
     ParentType,
@@ -2161,7 +2145,6 @@ export const PhDocumentFieldsFragmentDoc = gql`
     }
     createdAtUtcIso
     lastModifiedAtUtcIso
-    parentId
   }
 `;
 export const GetDocumentModelsDocument = gql`

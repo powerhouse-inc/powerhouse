@@ -40,6 +40,7 @@ import {
   RenownBuilder,
   RenownCryptoBuilder,
 } from "@renown/sdk";
+import { DocumentChangeType } from "@powerhousedao/reactor";
 import { logger } from "document-drive";
 import type { DocumentModelModule } from "document-model";
 import { loadCommonPackage } from "./document-model.js";
@@ -184,6 +185,27 @@ export async function createReactor() {
     refreshReactorDataClient(reactorClientModule.client).catch((e) =>
       logger.error("@error", e),
     );
+  });
+
+  // Redirect when a currently-viewed document or drive is deleted remotely
+  reactorClient.subscribe({}, (event) => {
+    if (event.type !== DocumentChangeType.Deleted) return;
+    const deletedId = event.context?.childId;
+    if (!deletedId) return;
+
+    const selectedDriveId = window.ph?.selectedDriveId;
+    const selectedNodeId = window.ph?.selectedNodeId;
+
+    if (selectedDriveId && deletedId === selectedDriveId) {
+      setSelectedDrive(undefined);
+      toast("The drive you were viewing has been deleted");
+      return;
+    }
+
+    if (selectedNodeId && deletedId === selectedNodeId) {
+      setSelectedNode(undefined);
+      toast("The document you were editing has been deleted");
+    }
   });
 
   // Refresh from ReactorClient to pick up any synced drives

@@ -255,7 +255,8 @@ describe("KyselyWriteCache Integration Tests", () => {
       expect(doc5).toBeDefined();
 
       const doc5Again = await cache.getState(docId, "global", "main", 5);
-      expect(doc5Again).toEqual(doc5);
+      expect(doc5Again.state).toEqual(doc5.state);
+      expect(doc5Again.header).toEqual(doc5.header);
 
       const doc10 = await cache.getState(docId, "global", "main", 10);
       expect(doc10).toBeDefined();
@@ -753,7 +754,8 @@ describe("KyselyWriteCache Integration Tests", () => {
       expect(stream3?.ringBuffer.length).toBe(1);
 
       const doc3Again = await cache.getState(docId, scope, branch, 3);
-      expect(doc3Again).toEqual(doc3);
+      expect(doc3Again.state).toEqual(doc3.state);
+      expect(doc3Again.header).toEqual(doc3.header);
 
       const addFileActionId = generateId();
       const addFolderActionId = generateId();
@@ -1250,15 +1252,18 @@ describe("KyselyWriteCache Integration Tests", () => {
 
       const doc5a = await cache.getState(docId, scope, branch, 5);
       const doc5b = await cache.getState(docId, scope, branch, 5);
-      expect(doc5a).toEqual(doc5b);
+      expect(doc5a.state).toEqual(doc5b.state);
+      expect(doc5a.header).toEqual(doc5b.header);
 
       const doc10a = await cache.getState(docId, scope, branch, 10);
       const doc10b = await cache.getState(docId, scope, branch, 10);
-      expect(doc10a).toEqual(doc10b);
+      expect(doc10a.state).toEqual(doc10b.state);
+      expect(doc10a.header).toEqual(doc10b.header);
 
       const doc15a = await cache.getState(docId, scope, branch, 15);
       const doc15b = await cache.getState(docId, scope, branch, 15);
-      expect(doc15a).toEqual(doc15b);
+      expect(doc15a.state).toEqual(doc15b.state);
+      expect(doc15a.header).toEqual(doc15b.header);
 
       const driveDoc5 = doc5a as DocumentDriveDocument;
       const driveDoc10 = doc10a as DocumentDriveDocument;
@@ -1267,6 +1272,114 @@ describe("KyselyWriteCache Integration Tests", () => {
       expect(Object.keys(driveDoc5.state.global.nodes)).toHaveLength(5);
       expect(Object.keys(driveDoc10.state.global.nodes)).toHaveLength(10);
       expect(Object.keys(driveDoc15.state.global.nodes)).toHaveLength(15);
+
+      // Slicing contract: every cached snapshot stores at most 1 op per scope
+      const stream = cache.getStream(docId, scope, branch);
+      for (const snapshot of stream?.ringBuffer.getAll() ?? []) {
+        for (const ops of Object.values(snapshot.document.operations)) {
+          expect(ops.length).toBeLessThanOrEqual(1);
+        }
+      }
+
+      // Warm cache hit: the sliced snapshot (1 op per scope) still yields the
+      // correct next index, since the executor reads operations[scope].at(-1).index.
+      expect(getNextIndexForScope(doc15b, scope)).toBe(16);
+    });
+
+    it("should rebuild full operation history after cache invalidation", async () => {
+      const docId = "drive-doc-invalidation";
+      const docType = "powerhouse/document-drive";
+      const scope = "global";
+      const branch = "main";
+
+      const initialState = driveDocumentModelModule.utils.createState();
+
+      const createActionId = generateId();
+      const upgradeActionId = generateId();
+      await operationStore.apply(
+        docId,
+        docType,
+        "document",
+        branch,
+        0,
+        (txn) => {
+          txn.addOperations({
+            id: deriveOperationId(docId, "document", branch, createActionId),
+            index: 0,
+            skip: 0,
+            hash: "hash-doc-0",
+            timestampUtcMs: new Date().toISOString(),
+            action: {
+              id: createActionId,
+              type: "CREATE_DOCUMENT",
+              scope: "document",
+              timestampUtcMs: Date.now().toString(),
+              input: { documentId: docId, model: docType, version: 0 },
+            },
+          });
+          txn.addOperations({
+            id: deriveOperationId(docId, "document", branch, upgradeActionId),
+            index: 1,
+            skip: 0,
+            hash: "hash-doc-1",
+            timestampUtcMs: new Date().toISOString(),
+            action: {
+              id: upgradeActionId,
+              type: "UPGRADE_DOCUMENT",
+              scope: "document",
+              timestampUtcMs: Date.now().toString(),
+              input: {
+                documentId: docId,
+                model: docType,
+                fromVersion: 0,
+                toVersion: 1,
+                initialState,
+              },
+            },
+          });
+        },
+      );
+
+      await operationStore.apply(docId, docType, scope, branch, 0, (txn) => {
+        for (let i = 1; i <= 5; i++) {
+          const actionId = generateId();
+          txn.addOperations({
+            id: deriveOperationId(docId, scope, branch, actionId),
+            index: i,
+            skip: 0,
+            hash: `hash-${i}`,
+            timestampUtcMs: new Date().toISOString(),
+            action: {
+              id: actionId,
+              type: "ADD_FOLDER",
+              scope: "global",
+              timestampUtcMs: Date.now().toString(),
+              input: {
+                id: `folder-${i}`,
+                name: `Folder ${i}`,
+                parentFolder: null,
+              },
+            },
+          });
+        }
+      });
+
+      // Warm the cache
+      const cachedDoc = await cache.getState(docId, scope, branch, 5);
+      expect(
+        Object.keys((cachedDoc as DocumentDriveDocument).state.global.nodes),
+      ).toHaveLength(5);
+
+      // Cached doc should be sliced to 1 op
+      const streamBefore = cache.getStream(docId, scope, branch);
+      const snapshotBefore = streamBefore?.ringBuffer.getAll().at(-1);
+      expect((snapshotBefore?.document.operations[scope] ?? []).length).toBe(1);
+
+      // After invalidation, the next getState must cold-miss rebuild with full state
+      cache.invalidate(docId, scope, branch);
+      const rebuiltDoc = await cache.getState(docId, scope, branch, 5);
+      expect(rebuiltDoc.state).toEqual(cachedDoc.state);
+      expect(rebuiltDoc.header.revision).toEqual(cachedDoc.header.revision);
     });
   });
 });

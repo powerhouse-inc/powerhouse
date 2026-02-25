@@ -7,8 +7,12 @@ import {
 import type { JobWriteReadyEvent } from "../events/types.js";
 import type { PreparedBatch } from "./batch-aggregator.js";
 import type { IMailbox } from "./mailbox.js";
-import type { SyncOperation } from "./sync-operation.js";
-import type { ChannelHealth, RemoteFilter } from "./types.js";
+import { SyncOperation } from "./sync-operation.js";
+import {
+  SyncOperationStatus,
+  type ChannelHealth,
+  type RemoteFilter,
+} from "./types.js";
 
 export type OperationBatch = {
   documentId: string;
@@ -247,6 +251,97 @@ export function toOperationWithContext(
       ordinal: entry.ordinal ?? 0,
     },
   };
+}
+
+/**
+ * Merges SyncOperations that share the same (documentId, scope, branch) into
+ * a single SyncOperation per group. Within each group, operations are sorted
+ * by context.ordinal. The merged SyncOperation keeps the first group member's
+ * jobId; all other jobIds are remapped so external dependencies still resolve.
+ */
+export function consolidateSyncOperations(
+  syncOps: SyncOperation[],
+): SyncOperation[] {
+  if (syncOps.length <= 1) {
+    return syncOps;
+  }
+
+  type GroupKey = string;
+  const groups = new Map<
+    GroupKey,
+    { ops: SyncOperation[]; canonicalJobId: string }
+  >();
+  const jobIdRemap = new Map<string, string>();
+  const insertionOrder: GroupKey[] = [];
+
+  for (const syncOp of syncOps) {
+    const key: GroupKey = `${syncOp.documentId}|${syncOp.scopes.slice().sort().join(",")}|${syncOp.branch}`;
+
+    const existing = groups.get(key);
+    if (existing) {
+      existing.ops.push(syncOp);
+      if (syncOp.jobId && syncOp.jobId !== existing.canonicalJobId) {
+        jobIdRemap.set(syncOp.jobId, existing.canonicalJobId);
+      }
+    } else {
+      groups.set(key, { ops: [syncOp], canonicalJobId: syncOp.jobId });
+      insertionOrder.push(key);
+    }
+  }
+
+  const result: SyncOperation[] = [];
+
+  for (const key of insertionOrder) {
+    const group = groups.get(key)!;
+    const allOperations = group.ops
+      .flatMap((op) => op.operations)
+      .sort((a, b) => a.context.ordinal - b.context.ordinal);
+
+    const allDeps = new Set<string>();
+    for (const op of group.ops) {
+      for (const dep of op.jobDependencies) {
+        allDeps.add(dep);
+      }
+    }
+    allDeps.delete(group.canonicalJobId);
+    for (const op of group.ops) {
+      allDeps.delete(op.jobId);
+    }
+
+    const remappedDeps: string[] = [];
+    for (const dep of allDeps) {
+      const mapped = jobIdRemap.get(dep) ?? dep;
+      if (!remappedDeps.includes(mapped) && mapped !== group.canonicalJobId) {
+        remappedDeps.push(mapped);
+      }
+    }
+
+    const first = group.ops[0];
+    const merged = new SyncOperation(
+      first.id,
+      first.jobId,
+      remappedDeps,
+      first.remoteName,
+      first.documentId,
+      first.scopes,
+      first.branch,
+      allOperations,
+    );
+
+    if (first.status > SyncOperationStatus.TransportPending) {
+      if (first.status >= SyncOperationStatus.Error) {
+        merged.executed();
+      } else if (first.status >= SyncOperationStatus.Applied) {
+        merged.transported();
+      } else {
+        merged.started();
+      }
+    }
+
+    result.push(merged);
+  }
+
+  return result;
 }
 
 export function mergeCollectionMemberships(
