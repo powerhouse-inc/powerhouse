@@ -1,3 +1,7 @@
+## 6.0.0-staging.1 (2026-02-25)
+
+This was a version bump only for @renown/sdk to align it with other projects, there were no code changes.
+
 ## 6.0.0-dev.58 (2026-02-25)
 
 ### 🔥 Performance
