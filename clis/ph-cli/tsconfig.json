@@ -15,9 +15,6 @@
       "path": "../../apps/switchboard"
     },
     {
-      "path": "../../packages/builder-tools"
-    },
-    {
       "path": "../../packages/codegen"
     },
     {

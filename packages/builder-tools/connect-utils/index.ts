@@ -1,6 +1,5 @@
 export * from "./build.js";
 export * from "./constants.js";
-export * from "./env-config.js";
 export * from "./helpers.js";
 export * from "./preview.js";
 export * from "./studio.js";

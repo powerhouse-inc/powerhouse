@@ -17,10 +17,6 @@
     ".": {
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
-    },
-    "./browser": {
-      "import": "./dist/browser.js",
-      "types": "./dist/browser.d.ts"
     }
   },
   "sideEffects": false,
@@ -29,24 +25,23 @@
     "lint": "eslint"
   },
   "devDependencies": {
-    "@sentry/vite-plugin": "^4.3.0",
-    "@tailwindcss/vite": "catalog:",
     "@types/react": "catalog:",
-    "@vitejs/plugin-react": "catalog:",
     "react": "catalog:",
-    "tsx": "catalog:",
-    "vite": "catalog:",
-    "vite-plugin-html": "catalog:",
-    "vite-plugin-node-polyfills": "catalog:",
-    "vite-plugin-svgr": "catalog:"
+    "tsx": "catalog:"
   },
   "dependencies": {
+    "vite": "catalog:",
+    "@sentry/vite-plugin": "^4.3.0",
+    "@tailwindcss/vite": "catalog:",
+    "vite-plugin-html": "catalog:",
+    "vite-plugin-svgr": "catalog:",
     "esbuild-plugins-node-modules-polyfill": "catalog:",
     "@vitejs/plugin-basic-ssl": "catalog:",
     "vite-envs": "catalog:",
     "@powerhousedao/config": "workspace:*",
     "@vitejs/plugin-react": "catalog:",
     "document-model": "workspace:*",
+    "@powerhousedao/shared": "workspace:*",
     "esbuild": "^0.25.5",
     "fast-glob": "^3.3.3",
     "magic-string": "^0.30.17",

@@ -1,11 +1,16 @@
 import {
-  loadVite,
-  resolveConnectPublicDir,
-  resolveViteConfigPath,
-} from "@powerhousedao/builder-tools";
-import type { InlineConfig, Logger } from "vite";
+  createServer,
+  loadConfigFromFile,
+  mergeConfig,
+  type InlineConfig,
+  type Logger,
+} from "vite";
 import type { ConnectStudioArgs } from "../types.js";
 import { assignEnvVars } from "../utils/assign-env-vars.js";
+import {
+  resolveConnectPublicDir,
+  resolveViteConfigPath,
+} from "../utils/resolve-connect-dirs.js";
 
 export async function runConnectStudio(
   args: ConnectStudioArgs,
@@ -22,12 +27,11 @@ export async function runConnectStudio(
     force,
   } = args;
   assignEnvVars(args);
-  const vite = await loadVite();
   const mode = "development";
   const projectRoot = process.cwd();
 
   const viteConfigPath = resolveViteConfigPath({});
-  const userViteConfig = await vite.loadConfigFromFile(
+  const userViteConfig = await loadConfigFromFile(
     { command: "serve", mode },
     viteConfigPath,
   );
@@ -45,12 +49,12 @@ export async function runConnectStudio(
     customLogger: viteLogger,
   };
 
-  const mergedConfig = vite.mergeConfig(
+  const mergedConfig = mergeConfig(
     userViteConfig?.config ?? {},
     devServerConfig,
   );
 
-  const server = await vite.createServer(mergedConfig);
+  const server = await createServer(mergedConfig);
 
   await server.listen();
 

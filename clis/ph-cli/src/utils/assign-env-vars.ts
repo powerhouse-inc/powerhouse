@@ -1,9 +1,9 @@
-import { setConnectEnv } from "@powerhousedao/builder-tools";
 import type {
   ConnectBuildArgs,
   ConnectPreviewArgs,
   ConnectStudioArgs,
 } from "../types.js";
+import { setConnectEnv } from "@powerhousedao/shared/connect";
 
 export function assignEnvVars(
   args: ConnectBuildArgs | ConnectPreviewArgs | ConnectStudioArgs,
