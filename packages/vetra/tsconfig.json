@@ -24,13 +24,7 @@
   ],
   "references": [
     {
-      "path": "../document-model"
-    },
-    {
-      "path": "../common"
-    },
-    {
-      "path": "../design-system"
+      "path": "../../clis/ph-cli"
     },
     {
       "path": "../builder-tools"
@@ -39,31 +33,28 @@
       "path": "../codegen"
     },
     {
-      "path": "../../clis/ph-cli"
+      "path": "../common"
     },
     {
       "path": "../config"
+    },
+    {
+      "path": "../design-system"
+    },
+    {
+      "path": "../document-drive"
+    },
+    {
+      "path": "../document-model"
+    },
+    {
+      "path": "../reactor"
     },
     {
       "path": "../reactor-api"
     },
     {
       "path": "../reactor-browser"
-    },
-    {
-      "path": "../reactor-local"
-    },
-    {
-      "path": "../document-drive"
-    },
-    {
-      "path": "../../apps/connect"
-    },
-    {
-      "path": "../../apps/switchboard"
-    },
-    {
-      "path": "../reactor"
     },
     {
       "path": "../shared"

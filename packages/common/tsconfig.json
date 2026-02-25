@@ -23,22 +23,13 @@
   ],
   "references": [
     {
+      "path": "../config"
+    },
+    {
       "path": "../document-model"
     },
     {
-      "path": "../design-system"
-    },
-    {
-      "path": "../builder-tools"
-    },
-    {
-      "path": "../document-drive"
-    },
-    {
       "path": "../reactor-browser"
-    },
-    {
-      "path": "../config"
     },
     {
       "path": "../shared"

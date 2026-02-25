@@ -2,85 +2,91 @@
   "extends": "./tsconfig.options.json",
   "references": [
     {
-      "path": "./apps/academy"
+      "path": "apps/academy"
     },
     {
-      "path": "./apps/connect"
+      "path": "apps/connect"
     },
     {
-      "path": "./apps/switchboard"
+      "path": "apps/switchboard"
     },
     {
-      "path": "./clis/ph-cli"
+      "path": "clis/ph-cli"
     },
     {
-      "path": "./clis/ph-cmd"
+      "path": "clis/ph-cmd"
     },
     {
-      "path": "./packages/builder-tools"
+      "path": "packages/builder-tools"
     },
     {
-      "path": "./packages/powerhouse-vetra-packages"
+      "path": "packages/codegen"
     },
     {
-      "path": "./packages/codegen"
+      "path": "packages/common"
     },
     {
-      "path": "./packages/common"
+      "path": "packages/config"
     },
     {
-      "path": "./packages/config"
+      "path": "packages/design-system"
     },
     {
-      "path": "./packages/design-system"
+      "path": "packages/document-drive"
     },
     {
-      "path": "./packages/document-drive"
+      "path": "packages/document-model"
     },
     {
-      "path": "./packages/document-model"
+      "path": "packages/powerhouse-vetra-packages"
     },
     {
-      "path": "./packages/reactor"
+      "path": "packages/reactor-api"
     },
     {
-      "path": "./packages/reactor-api"
+      "path": "packages/reactor-browser"
     },
     {
-      "path": "./packages/reactor-browser"
+      "path": "packages/reactor-local"
     },
     {
-      "path": "./packages/reactor-local"
+      "path": "packages/reactor-mcp"
     },
     {
-      "path": "./packages/reactor-mcp"
+      "path": "packages/reactor"
     },
     {
-      "path": "./packages/renown"
+      "path": "packages/renown"
     },
     {
-      "path": "./packages/switchboard-gui"
+      "path": "packages/shared"
     },
     {
-      "path": "./packages/vetra"
+      "path": "packages/switchboard-gui"
     },
     {
-      "path": "./test/connect-e2e"
+      "path": "packages/vetra"
     },
     {
-      "path": "./test/e2e-utils"
+      "path": "test/connect-e2e"
     },
     {
-      "path": "./test/vetra-e2e"
+      "path": "test/e2e-utils"
     },
     {
-      "path": "./scripts/profiling"
+      "path": "test/test-client"
     },
     {
-      "path": "./scripts"
+      "path": "test/test-connect"
     },
     {
-      "path": "./packages/shared"
+      "path": "test/versioned-documents"
+    },
+    {
+      "path": "test/vetra-e2e"
+    },
+    {
+      "path": "scripts/profiling"
     }
   ],
   "files": []

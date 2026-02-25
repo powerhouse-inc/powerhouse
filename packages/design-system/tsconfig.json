@@ -19,19 +19,19 @@
   },
   "references": [
     {
-      "path": "../document-model"
-    },
-    {
       "path": "../config"
-    },
-    {
-      "path": "../reactor-browser"
     },
     {
       "path": "../document-drive"
     },
     {
+      "path": "../document-model"
+    },
+    {
       "path": "../reactor"
+    },
+    {
+      "path": "../reactor-browser"
     }
   ],
   "include": [
