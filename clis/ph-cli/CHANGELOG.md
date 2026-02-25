@@ -1,3 +1,13 @@
+## 6.0.0-dev.58 (2026-02-25)
+
+### 🔥 Performance
+
+- **reducer:** pre-allocate operation arrays to avoid resize overhead ([1cf1c0078](https://github.com/powerhouse-inc/powerhouse/commit/1cf1c0078))
+
+### ❤️ Thank You
+
+- Samuel Hawksby-Robinson @Samyoul
+
 ## 6.0.0-dev.57 (2026-02-24)
 
 ### 🚀 Features

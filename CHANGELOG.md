@@ -1,3 +1,30 @@
+## 6.0.0-dev.58 (2026-02-25)
+
+### 🚀 Features
+
+- add document model versioning documentation ([f32fcff3c](https://github.com/powerhouse-inc/powerhouse/commit/f32fcff3c))
+- add document model versioning documentation ([#2345](https://github.com/powerhouse-inc/powerhouse/pull/2345))
+- added ability to configure max reshuffle depth in reactor orchestrator ([94f3ae986](https://github.com/powerhouse-inc/powerhouse/commit/94f3ae986))
+
+### 🩹 Fixes
+
+- load jobs should fetch document meta to see if the document has been deleted -- also we should not retry jobs where documents were deleted ([2cab0fcb3](https://github.com/powerhouse-inc/powerhouse/commit/2cab0fcb3))
+- when a document is deleted, connect should redirect ([055708699](https://github.com/powerhouse-inc/powerhouse/commit/055708699))
+- **executor:** update write cache after delete so double-deletion returns DocumentDeletedError ([06de40d98](https://github.com/powerhouse-inc/powerhouse/commit/06de40d98))
+- **write-cache:** address PR review feedback ([a160fe311](https://github.com/powerhouse-inc/powerhouse/commit/a160fe311))
+
+### 🔥 Performance
+
+- **reducer:** pre-allocate operation arrays to avoid resize overhead ([1cf1c0078](https://github.com/powerhouse-inc/powerhouse/commit/1cf1c0078))
+- **write-cache:** slice operations to last-per-scope to eliminate O(n²) copies ([ac55a6131](https://github.com/powerhouse-inc/powerhouse/commit/ac55a6131))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- CallmeT-ty @CallmeT-ty
+- Guillermo Puente @gpuente
+- Samuel Hawksby-Robinson @Samyoul
+
 ## 6.0.0-dev.57 (2026-02-24)
 
 ### 🚀 Features
