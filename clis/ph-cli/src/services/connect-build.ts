@@ -1,22 +1,25 @@
 import {
-  loadVite,
-  resolveConnectPublicDir,
-  resolveViteConfigPath,
-} from "@powerhousedao/builder-tools";
-import type { InlineConfig } from "vite";
+  build,
+  loadConfigFromFile,
+  mergeConfig,
+  type InlineConfig,
+} from "vite";
 import type { ConnectBuildArgs } from "../types.js";
 import { assignEnvVars } from "../utils/assign-env-vars.js";
+import {
+  resolveConnectPublicDir,
+  resolveViteConfigPath,
+} from "../utils/resolve-connect-dirs.js";
 
 export async function runConnectBuild(args: ConnectBuildArgs) {
   const { connectBasePath, outDir } = args;
   const mode = "production";
   const projectRoot = process.cwd();
-  const vite = await loadVite();
   const viteConfigPath = resolveViteConfigPath({});
 
   assignEnvVars(args);
 
-  const userViteConfig = await vite.loadConfigFromFile(
+  const userViteConfig = await loadConfigFromFile(
     { command: "build", mode },
     viteConfigPath,
   );
@@ -33,10 +36,7 @@ export async function runConnectBuild(args: ConnectBuildArgs) {
     },
   };
 
-  const mergedConfig = vite.mergeConfig(
-    userViteConfig?.config ?? {},
-    buildConfig,
-  );
+  const mergedConfig = mergeConfig(userViteConfig?.config ?? {}, buildConfig);
 
-  await vite.build(mergedConfig);
+  await build(mergedConfig);
 }

@@ -19,7 +19,7 @@ import {
   normalizeBasePath,
   setConnectEnv,
   type ConnectEnv,
-} from "./env-config.js";
+} from "@powerhousedao/shared/connect";
 import {
   resolveConnectPackageJson,
   stripVersionFromPackage,

@@ -1,11 +1,15 @@
 import {
-  loadVite,
-  resolveConnectPublicDir,
-  resolveViteConfigPath,
-} from "@powerhousedao/builder-tools";
-import type { InlineConfig } from "vite";
+  loadConfigFromFile,
+  mergeConfig,
+  preview,
+  type InlineConfig,
+} from "vite";
 import type { ConnectPreviewArgs } from "../types.js";
 import { assignEnvVars } from "../utils/assign-env-vars.js";
+import {
+  resolveConnectPublicDir,
+  resolveViteConfigPath,
+} from "../utils/resolve-connect-dirs.js";
 
 export async function runConnectPreview(args: ConnectPreviewArgs) {
   const {
@@ -19,14 +23,13 @@ export async function runConnectPreview(args: ConnectPreviewArgs) {
     printUrls,
     bindCLIShortcuts,
   } = args;
-  const vite = await loadVite();
   const viteConfigPath = resolveViteConfigPath({});
   const mode = "production";
   const projectRoot = process.cwd();
 
   assignEnvVars(args);
 
-  const userViteConfig = await vite.loadConfigFromFile(
+  const userViteConfig = await loadConfigFromFile(
     { command: "build", mode },
     viteConfigPath,
   );
@@ -50,12 +53,9 @@ export async function runConnectPreview(args: ConnectPreviewArgs) {
     },
   };
 
-  const mergedConfig = vite.mergeConfig(
-    userViteConfig?.config ?? {},
-    previewConfig,
-  );
+  const mergedConfig = mergeConfig(userViteConfig?.config ?? {}, previewConfig);
 
-  const server = await vite.preview(mergedConfig);
+  const server = await preview(mergedConfig);
 
   if (printUrls) server.printUrls();
   if (bindCLIShortcuts) server.bindCLIShortcuts({ print: true });

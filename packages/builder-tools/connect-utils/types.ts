@@ -10,13 +10,6 @@ export type IConnectOptions = {
   watchTimeout?: number;
 };
 
-// Re-export types from env-config
-export type {
-  ConnectBuildEnv,
-  ConnectEnv,
-  ConnectRuntimeEnv,
-} from "./env-config.js";
-
 export type ConnectCommonOptions = {
   /* The base path where the app will be deployed. */
   base?: string;
