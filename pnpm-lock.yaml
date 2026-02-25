@@ -347,9 +347,6 @@ importers:
       '@mdx-js/react':
         specifier: ^3.0.0
         version: 3.1.1(@types/react@19.2.14)(react@19.2.4)
-      '@powerhousedao/design-system':
-        specifier: workspace:*
-        version: link:../../packages/design-system
       clsx:
         specifier: ^2.0.0
         version: 2.1.1
