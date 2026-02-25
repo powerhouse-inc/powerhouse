@@ -693,6 +693,9 @@ importers:
       '@powerhousedao/config':
         specifier: workspace:*
         version: link:../config
+      '@vitejs/plugin-basic-ssl':
+        specifier: 'catalog:'
+        version: 2.1.4(vite@7.3.1(@types/node@25.2.3)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(tsx@4.21.0)(yaml@2.8.1))
       '@vitejs/plugin-react':
         specifier: 'catalog:'
         version: 5.1.4(vite@7.3.1(@types/node@25.2.3)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(tsx@4.21.0)(yaml@2.8.1))
@@ -702,6 +705,9 @@ importers:
       esbuild:
         specifier: ^0.25.5
         version: 0.25.12
+      esbuild-plugins-node-modules-polyfill:
+        specifier: 'catalog:'
+        version: 1.8.1(esbuild@0.25.12)
       fast-glob:
         specifier: ^3.3.3
         version: 3.3.3
@@ -717,6 +723,9 @@ importers:
       resolve.exports:
         specifier: ^2.0.3
         version: 2.0.3
+      vite-envs:
+        specifier: 'catalog:'
+        version: 4.6.2
       vite-plugin-node-polyfills:
         specifier: 'catalog:'
         version: 0.25.0(rollup@4.52.5)(vite@7.3.1(@types/node@25.2.3)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(tsx@4.21.0)(yaml@2.8.1))
@@ -733,12 +742,6 @@ importers:
       '@types/react':
         specifier: 'catalog:'
         version: 19.2.14
-      '@vitejs/plugin-basic-ssl':
-        specifier: 'catalog:'
-        version: 2.1.4(vite@7.3.1(@types/node@25.2.3)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(tsx@4.21.0)(yaml@2.8.1))
-      esbuild-plugins-node-modules-polyfill:
-        specifier: 'catalog:'
-        version: 1.8.1(esbuild@0.25.12)
       react:
         specifier: 'catalog:'
         version: 19.2.4
@@ -748,9 +751,6 @@ importers:
       vite:
         specifier: 7.3.1
         version: 7.3.1(@types/node@25.2.3)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(tsx@4.21.0)(yaml@2.8.1)
-      vite-envs:
-        specifier: 'catalog:'
-        version: 4.6.2
       vite-plugin-html:
         specifier: 'catalog:'
         version: 3.2.2(vite@7.3.1(@types/node@25.2.3)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(tsx@4.21.0)(yaml@2.8.1))
