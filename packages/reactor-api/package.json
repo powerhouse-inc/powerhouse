@@ -46,7 +46,7 @@
   "license": "AGPL-3.0-only",
   "dependencies": {
     "@apollo/gateway": "^2.11.3",
-    "@apollo/server": "^5.0.0",
+    "@apollo/server": "^5.4.0",
     "@apollo/subgraph": "^2.11.3",
     "@as-integrations/express4": "^1.1.2",
     "@electric-sql/pglite": "catalog:",
