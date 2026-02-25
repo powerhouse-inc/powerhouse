@@ -2,15 +2,11 @@
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
     "outDir": "./dist",
-    "types": ["node"]
+    "types": [
+      "node"
+    ]
   },
-  "include": ["**/*"],
-  "references": [
-    {
-      "path": "../../packages/config"
-    },
-    {
-      "path": "../../packages/shared"
-    }
+  "include": [
+    "**/*"
   ]
 }

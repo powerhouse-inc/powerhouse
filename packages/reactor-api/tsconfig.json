@@ -2,18 +2,22 @@
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
     "outDir": "./dist",
-    "types": ["node"]
+    "types": [
+      "node"
+    ]
   },
-  "include": ["**/*"],
+  "include": [
+    "**/*"
+  ],
   "references": [
     {
-      "path": "../document-model"
+      "path": "../config"
     },
     {
       "path": "../document-drive"
     },
     {
-      "path": "../renown"
+      "path": "../document-model"
     },
     {
       "path": "../reactor"
@@ -22,7 +26,7 @@
       "path": "../reactor-mcp"
     },
     {
-      "path": "../config"
+      "path": "../renown"
     },
     {
       "path": "../shared"

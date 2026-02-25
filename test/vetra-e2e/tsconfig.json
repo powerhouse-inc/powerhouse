@@ -6,54 +6,37 @@
   },
   "references": [
     {
-      "path": "../e2e-utils"
-    },
-    {
-      "path": "../../packages/builder-tools"
-    },
-    {
-      "path": "../../packages/common"
-    },
-    {
-      "path": "../../packages/design-system"
-    },
-    {
-      "path": "../../packages/vetra"
-    },
-    {
-      "path": "../../packages/document-model"
-    },
-    {
-      "path": "../../packages/codegen"
-    },
-    {
-      "path": "../../packages/config"
-    },
-    {
       "path": "../../apps/connect"
     },
     {
       "path": "../../clis/ph-cli"
     },
     {
-      "path": "../../packages/reactor-api"
+      "path": "../../packages/builder-tools"
+    },
+    {
+      "path": "../../packages/design-system"
+    },
+    {
+      "path": "../../packages/document-model"
     },
     {
       "path": "../../packages/reactor-browser"
     },
     {
-      "path": "../../packages/reactor-local"
+      "path": "../../packages/vetra"
     },
     {
-      "path": "../../apps/switchboard"
-    },
-    {
-      "path": "../../packages/document-drive"
-    },
-    {
-      "path": "../../packages/shared"
+      "path": "../e2e-utils"
     }
   ],
-  "include": ["**/*", "powerhouse.manifest.json"],
-  "exclude": ["dist", "node_modules", ".ph"]
+  "include": [
+    "**/*",
+    "powerhouse.manifest.json"
+  ],
+  "exclude": [
+    "dist",
+    "node_modules",
+    ".ph"
+  ]
 }

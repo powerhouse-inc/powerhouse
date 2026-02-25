@@ -6,41 +6,29 @@
   },
   "references": [
     {
-      "path": "../e2e-utils"
-    },
-    {
-      "path": "../../packages/builder-tools"
-    },
-    {
-      "path": "../../packages/codegen"
-    },
-    {
-      "path": "../../packages/config"
-    },
-    {
       "path": "../../apps/connect"
-    },
-    {
-      "path": "../../packages/design-system"
     },
     {
       "path": "../../clis/ph-cli"
     },
     {
-      "path": "../../packages/reactor-api"
+      "path": "../../packages/builder-tools"
     },
     {
-      "path": "../../packages/reactor-browser"
-    },
-    {
-      "path": "../../packages/document-drive"
+      "path": "../../packages/design-system"
     },
     {
       "path": "../../packages/document-model"
     },
     {
-      "path": "../../packages/shared"
+      "path": "../../packages/reactor-browser"
+    },
+    {
+      "path": "../e2e-utils"
     }
   ],
-  "include": ["**/*", "powerhouse.manifest.json"]
+  "include": [
+    "**/*",
+    "powerhouse.manifest.json"
+  ]
 }
