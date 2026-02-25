@@ -86,6 +86,6 @@
     "@powerhousedao/reactor-browser": "workspace:*",
     "@powerhousedao/analytics-engine-core": "catalog:",
     "@powerhousedao/design-system": "workspace:*",
-    "document-drive": "workspace:"
+    "document-drive": "workspace:*"
   }
 }
