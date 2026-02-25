@@ -1,3 +1,13 @@
+## 6.0.0-staging.2 (2026-02-25)
+
+### 🚀 Features
+
+- use update-ts-references tool which also removes unused ones ([#2374](https://github.com/powerhouse-inc/powerhouse/pull/2374))
+
+### ❤️ Thank You
+
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.0.0-staging.1 (2026-02-25)
 
 This was a version bump only for @powerhousedao/vetra to align it with other projects, there were no code changes.

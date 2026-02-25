@@ -1,3 +1,18 @@
+## 6.0.0-staging.2 (2026-02-25)
+
+### 🚀 Features
+
+- use update-ts-references tool which also removes unused ones ([#2374](https://github.com/powerhouse-inc/powerhouse/pull/2374))
+
+### 🩹 Fixes
+
+- remove artificial paging limit -- reshuffle depth is NOT the same as query depth ([acd8e8949](https://github.com/powerhouse-inc/powerhouse/commit/acd8e8949))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.0.0-staging.1 (2026-02-25)
 
 This was a version bump only, there were no code changes.
