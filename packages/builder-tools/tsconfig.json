@@ -2,21 +2,19 @@
   "extends": "../../tsconfig.json",
   "compilerOptions": {
     "outDir": "./dist",
-    "types": ["vite/client"]
+    "types": [
+      "vite/client"
+    ]
   },
-  "include": ["**/*"],
+  "include": [
+    "**/*"
+  ],
   "references": [
     {
       "path": "../config"
     },
     {
       "path": "../document-model"
-    },
-    {
-      "path": "../design-system"
-    },
-    {
-      "path": "../reactor-browser"
     }
   ]
 }

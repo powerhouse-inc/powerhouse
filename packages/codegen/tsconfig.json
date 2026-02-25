@@ -2,24 +2,48 @@
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
     "outDir": "./dist",
-    "lib": ["ESNext", "dom", "dom.iterable"],
+    "lib": [
+      "ESNext",
+      "dom",
+      "dom.iterable"
+    ],
     "jsx": "preserve"
   },
-  "types": ["vitest/globals"],
-  "include": ["**/*"],
+  "types": [
+    "vitest/globals"
+  ],
+  "include": [
+    "**/*"
+  ],
   "exclude": [
     "dist",
     "node_modules",
-    "src/codegen/__tests__/data",
+    "src/codegen/__tests__/data"
   ],
   "references": [
-    { "path": "../document-model" },
-    { "path": "../document-drive" },
-    { "path": "../reactor-browser" },
-    { "path": "../design-system" },
-    { "path": "../common" },
-    { "path": "../config" },
-    { "path": "../reactor" },
-    { "path": "../shared" }
+    {
+      "path": "../common"
+    },
+    {
+      "path": "../config"
+    },
+    {
+      "path": "../design-system"
+    },
+    {
+      "path": "../document-drive"
+    },
+    {
+      "path": "../document-model"
+    },
+    {
+      "path": "../reactor"
+    },
+    {
+      "path": "../reactor-browser"
+    },
+    {
+      "path": "../shared"
+    }
   ]
 }

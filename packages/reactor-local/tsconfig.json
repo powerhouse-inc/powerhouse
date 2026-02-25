@@ -14,22 +14,16 @@
   ],
   "references": [
     {
+      "path": "../config"
+    },
+    {
       "path": "../document-drive"
-    },
-    {
-      "path": "../reactor-api"
-    },
-    {
-      "path": "../common"
     },
     {
       "path": "../reactor"
     },
     {
-      "path": "../document-model"
-    },
-    {
-      "path": "../config"
+      "path": "../reactor-api"
     }
   ]
 }
