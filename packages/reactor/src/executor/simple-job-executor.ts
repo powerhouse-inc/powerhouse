@@ -533,20 +533,7 @@ export class SimpleJobExecutor implements IJobExecutor {
         scope,
         job.branch,
         minIncomingTimestamp,
-        { cursor: "0", limit: this.config.maxSkipThreshold + 1 },
       );
-
-      if (conflictingResult.nextCursor !== undefined) {
-        return {
-          job,
-          success: false,
-          error: new Error(
-            `Excessive reshuffle detected: more than ${this.config.maxSkipThreshold} conflicting operations found. ` +
-              `This indicates a significant divergence between local and incoming operations.`,
-          ),
-          duration: Date.now() - startTime,
-        };
-      }
 
       conflictingOps = conflictingResult.results;
     } catch {
@@ -564,8 +551,6 @@ export class SimpleJobExecutor implements IJobExecutor {
           scope,
           job.branch,
           minConflictingIndex - 1,
-          undefined,
-          { cursor: "0", limit: this.config.maxSkipThreshold * 2 },
         );
         allOpsFromMinConflictingIndex = allOpsResult.results;
       } catch {
