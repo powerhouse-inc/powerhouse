@@ -38,16 +38,10 @@
     "test:watch": "vitest watch"
   },
   "devDependencies": {
-    "@rollup/plugin-node-resolve": "^15.2.3",
     "@types/jest": "^29.5.14",
     "@types/mime": "^4.0.0",
     "@types/node": "catalog:",
-    "@types/react": "catalog:",
-    "@types/uuid": "^10.0.0",
     "jest": "^30.0.5",
-    "playwright": "^1.46.1",
-    "react": "catalog:",
-    "rollup-plugin-polyfill-node": "^0.13.0",
     "vitest": "^3.2.4"
   },
   "dependencies": {

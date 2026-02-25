@@ -24,8 +24,7 @@
   "dependencies": {
     "colorette": "catalog:",
     "commander": "catalog:",
-    "document-model": "workspace:*",
-    "@powerhousedao/shared": "workspace:*"
+    "document-model": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "catalog:",

@@ -27,7 +27,5 @@
     "tsc": "tsc",
     "lint": "eslint"
   },
-  "dependencies": {
-    "@microsoft/api-extractor": "^7.48.1"
-  }
+  "dependencies": {}
 }

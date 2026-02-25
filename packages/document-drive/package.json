@@ -69,8 +69,6 @@
     "sqlite3": "^5.1.7"
   },
   "dependencies": {
-    "@helia/mfs": "^4.0.3",
-    "@powerhousedao/config": "workspace:*",
     "@powerhousedao/analytics-engine-core": "catalog:",
     "@prisma/client": "5.17.0",
     "@sindresorhus/fnv1a": "catalog:",
@@ -79,7 +77,6 @@
     "exponential-backoff": "^3.1.1",
     "graphql": "catalog:",
     "graphql-request": "catalog:",
-    "helia": "^5.3.0",
     "json-stringify-deterministic": "^1.0.12",
     "kysely": "catalog:",
     "localforage": "^1.10.0",
@@ -87,25 +84,18 @@
     "nanoevents": "^9.0.0",
     "object-sizeof": "^2.6.5",
     "prisma": "5.17.0",
-    "sanitize-filename": "^1.6.3",
-    "sequelize": "^6.37.2",
-    "sqlite3": "^5.1.7",
-    "uuid": "^11.0.5",
-    "zocker": "^3.0.0",
     "@powerhousedao/shared": "workspace:*",
-    "zod": "catalog:"
+    "zod": "catalog:",
+    "zocker": "catalog:"
   },
   "devDependencies": {
-    "@anatine/zod-mock": "^3.14.0",
     "@types/node": "catalog:",
-    "@types/uuid": "^9.0.8",
     "@vitest/coverage-v8": "^3.2.4",
     "copyfiles": "catalog:",
     "fake-indexeddb": "^5.0.2",
     "msw": "^2.3.1",
     "vite": "catalog:",
     "vitest": "catalog:",
-    "vitest-fetch-mock": "^0.4.5",
-    "webdriverio": "^9.0.9"
+    "vitest-fetch-mock": "^0.4.5"
   }
 }
