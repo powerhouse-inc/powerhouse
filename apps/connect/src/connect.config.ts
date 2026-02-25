@@ -1,7 +1,7 @@
 import {
   loadRuntimeEnv,
   normalizeBasePath,
-} from "@powerhousedao/builder-tools/browser";
+} from "@powerhousedao/shared/connect";
 import type {
   FullPHGlobalConfig,
   PHDocumentEditorConfig,

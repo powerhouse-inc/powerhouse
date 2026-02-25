@@ -15,8 +15,7 @@
     "node": ">=24.0.0"
   },
   "bin": {
-    "ph-cli": "dist/src/cli.js",
-    "ph-cli-legacy": "dist/src/cli.old.js"
+    "ph-cli": "dist/src/cli.js"
   },
   "files": [
     "dist"
@@ -30,13 +29,11 @@
   "scripts": {
     "tsc": "tsc",
     "lint": "eslint",
-    "generate-docs-legacy": "bun run scripts/generate-docs-legacy.ts",
     "generate-docs": "bun run scripts/generate-commands-docs.ts",
-    "build:cli": "bun generate-docs && bun generate-docs-legacy && bun copy-scripts",
+    "build:cli": "bun generate-docs && bun copy-scripts",
     "copy-scripts": "copyfiles scripts/* dist/",
     "dev": "concurrently -P 'pnpm -w run tsc --watch' 'nodemon --watch \"../..\" -e ts,tsx,js,json dist/src/cli.js -- {@}' --",
     "cli": "node ./dist/src/cli.js",
-    "cli-legacy": "node ./dist/src/cli.old.js",
     "test": "vitest --run"
   },
   "keywords": [],
