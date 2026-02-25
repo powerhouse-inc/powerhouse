@@ -17,12 +17,6 @@
       "path": "../document-model"
     },
     {
-      "path": "../design-system"
-    },
-    {
-      "path": "../reactor-browser"
-    },
-    {
       "path": "../shared"
     }
   ]

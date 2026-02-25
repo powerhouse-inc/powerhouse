@@ -12,10 +12,13 @@
   ],
   "references": [
     {
-      "path": "../../packages/common"
+      "path": "../../apps/switchboard"
     },
     {
       "path": "../../packages/codegen"
+    },
+    {
+      "path": "../../packages/common"
     },
     {
       "path": "../../packages/config"
@@ -27,16 +30,10 @@
       "path": "../../packages/document-model"
     },
     {
-      "path": "../../packages/renown"
-    },
-    {
-      "path": "../../apps/switchboard"
-    },
-    {
-      "path": "../../packages/common"
-    },
-    {
       "path": "../../packages/reactor"
+    },
+    {
+      "path": "../../packages/renown"
     },
     {
       "path": "../../packages/shared"

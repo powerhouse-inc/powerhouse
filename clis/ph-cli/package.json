@@ -33,8 +33,7 @@
     "build:cli": "bun generate-docs && bun copy-scripts",
     "copy-scripts": "copyfiles scripts/* dist/",
     "dev": "concurrently -P 'pnpm -w run tsc --watch' 'nodemon --watch \"../..\" -e ts,tsx,js,json dist/src/cli.js -- {@}' --",
-    "cli": "node ./dist/src/cli.js",
-    "test": "vitest --run"
+    "cli": "node ./dist/src/cli.js"
   },
   "keywords": [],
   "author": "",
