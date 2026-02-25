@@ -65,6 +65,11 @@ export function buildGraphQlDocument(doc: PHDocument): GqlDocument {
   const state = "global" in doc.state ? doc.state.global : {};
   const initialState =
     "global" in doc.initialState ? doc.initialState.global : {};
+  const documentOperations = doc.operations;
+  const operations =
+    documentOperations && "global" in documentOperations
+      ? documentOperations.global
+      : [];
   return {
     id: doc.header.id,
     name: doc.header.name,
@@ -72,7 +77,7 @@ export function buildGraphQlDocument(doc: PHDocument): GqlDocument {
     revision: doc.header.revision.global || 0,
     createdAtUtcIso: doc.header.createdAtUtcIso,
     lastModifiedAtUtcIso: doc.header.lastModifiedAtUtcIso,
-    operations: [],
+    operations: operations.map(buildGraphqlOperation),
     stateJSON: state as JSON,
     state,
     initialState,
