@@ -25,18 +25,16 @@
     "lint": "eslint"
   },
   "devDependencies": {
-    "@sentry/vite-plugin": "^4.3.0",
-    "@tailwindcss/vite": "catalog:",
     "@types/react": "catalog:",
-    "@vitejs/plugin-react": "catalog:",
     "react": "catalog:",
-    "tsx": "catalog:",
-    "vite": "catalog:",
-    "vite-plugin-html": "catalog:",
-    "vite-plugin-node-polyfills": "catalog:",
-    "vite-plugin-svgr": "catalog:"
+    "tsx": "catalog:"
   },
   "dependencies": {
+    "vite": "catalog:",
+    "@sentry/vite-plugin": "^4.3.0",
+    "@tailwindcss/vite": "catalog:",
+    "vite-plugin-html": "catalog:",
+    "vite-plugin-svgr": "catalog:",
     "esbuild-plugins-node-modules-polyfill": "catalog:",
     "@vitejs/plugin-basic-ssl": "catalog:",
     "vite-envs": "catalog:",

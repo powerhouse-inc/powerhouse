@@ -702,6 +702,12 @@ importers:
       '@powerhousedao/shared':
         specifier: workspace:*
         version: link:../shared
+      '@sentry/vite-plugin':
+        specifier: ^4.3.0
+        version: 4.6.0(encoding@0.1.13)
+      '@tailwindcss/vite':
+        specifier: 'catalog:'
+        version: 4.1.18(vite@7.3.1(@types/node@25.2.3)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(tsx@4.21.0)(yaml@2.8.1))
       '@vitejs/plugin-basic-ssl':
         specifier: 'catalog:'
         version: 2.1.4(vite@7.3.1(@types/node@25.2.3)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(tsx@4.21.0)(yaml@2.8.1))
@@ -732,22 +738,25 @@ importers:
       resolve.exports:
         specifier: ^2.0.3
         version: 2.0.3
+      vite:
+        specifier: 7.3.1
+        version: 7.3.1(@types/node@25.2.3)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(tsx@4.21.0)(yaml@2.8.1)
       vite-envs:
         specifier: 'catalog:'
         version: 4.6.2
+      vite-plugin-html:
+        specifier: 'catalog:'
+        version: 3.2.2(vite@7.3.1(@types/node@25.2.3)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(tsx@4.21.0)(yaml@2.8.1))
       vite-plugin-node-polyfills:
         specifier: 'catalog:'
         version: 0.25.0(rollup@4.52.5)(vite@7.3.1(@types/node@25.2.3)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(tsx@4.21.0)(yaml@2.8.1))
+      vite-plugin-svgr:
+        specifier: 'catalog:'
+        version: 4.5.0(rollup@4.52.5)(typescript@5.9.3)(vite@7.3.1(@types/node@25.2.3)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(tsx@4.21.0)(yaml@2.8.1))
       zod:
         specifier: 'catalog:'
         version: 4.3.6
     devDependencies:
-      '@sentry/vite-plugin':
-        specifier: ^4.3.0
-        version: 4.6.0(encoding@0.1.13)
-      '@tailwindcss/vite':
-        specifier: 'catalog:'
-        version: 4.1.18(vite@7.3.1(@types/node@25.2.3)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(tsx@4.21.0)(yaml@2.8.1))
       '@types/react':
         specifier: 'catalog:'
         version: 19.2.14
@@ -757,15 +766,6 @@ importers:
       tsx:
         specifier: 'catalog:'
         version: 4.21.0
-      vite:
-        specifier: 7.3.1
-        version: 7.3.1(@types/node@25.2.3)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(tsx@4.21.0)(yaml@2.8.1)
-      vite-plugin-html:
-        specifier: 'catalog:'
-        version: 3.2.2(vite@7.3.1(@types/node@25.2.3)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(tsx@4.21.0)(yaml@2.8.1))
-      vite-plugin-svgr:
-        specifier: 'catalog:'
-        version: 4.5.0(rollup@4.52.5)(typescript@5.9.3)(vite@7.3.1(@types/node@25.2.3)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(tsx@4.21.0)(yaml@2.8.1))
 
   packages/codegen:
     dependencies:
