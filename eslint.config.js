@@ -71,7 +71,7 @@ const ignoredFiles = [...normalIgnoredFiles, ...unsafeIgnoredFiles];
 const ignored = globalIgnores(ignoredFiles);
 
 /** Typescript (`.ts`) files */
-const typescriptFiles = ["**/*.ts"];
+const typescriptFiles = ["**/*.ts", "**/*.mts"];
 
 /** Typescript React (`.tsx`) files */
 const typescriptReactFiles = ["**/*.tsx"];
