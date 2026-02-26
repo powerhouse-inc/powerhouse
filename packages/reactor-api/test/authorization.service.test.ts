@@ -144,9 +144,12 @@ describe("AuthorizationService", () => {
       expect(result).toBe(true);
     });
 
-    it("should deny anonymous write even on unprotected document", async () => {
+    it("should allow anonymous write on unprotected document", async () => {
+      vi.mocked(mockPermissionService.isDocumentProtected!).mockResolvedValue(
+        false,
+      );
       const result = await service.canWrite("doc-1", undefined);
-      expect(result).toBe(false);
+      expect(result).toBe(true);
     });
 
     it("should allow authenticated write on unprotected document", async () => {
@@ -155,6 +158,14 @@ describe("AuthorizationService", () => {
       );
       const result = await service.canWrite("doc-1", "0xuser");
       expect(result).toBe(true);
+    });
+
+    it("should deny anonymous write on protected document", async () => {
+      vi.mocked(mockPermissionService.isDocumentProtected!).mockResolvedValue(
+        true,
+      );
+      const result = await service.canWrite("doc-1", undefined);
+      expect(result).toBe(false);
     });
 
     it("should deny authenticated write on protected document without grant", async () => {
@@ -344,9 +355,23 @@ describe("AuthorizationService", () => {
       expect(result).toBe(false);
     });
 
-    it("should deny anonymous for unrestricted operations", async () => {
+    it("should allow anonymous for unrestricted operations on unprotected doc", async () => {
       vi.mocked(mockPermissionService.isOperationRestricted!).mockResolvedValue(
         false,
+      );
+      vi.mocked(mockPermissionService.isDocumentProtected!).mockResolvedValue(
+        false,
+      );
+      const result = await service.canMutate("doc-1", "SET_NAME", undefined);
+      expect(result).toBe(true);
+    });
+
+    it("should deny anonymous for unrestricted operations on protected doc", async () => {
+      vi.mocked(mockPermissionService.isOperationRestricted!).mockResolvedValue(
+        false,
+      );
+      vi.mocked(mockPermissionService.isDocumentProtected!).mockResolvedValue(
+        true,
       );
       const result = await service.canMutate("doc-1", "SET_NAME", undefined);
       expect(result).toBe(false);
