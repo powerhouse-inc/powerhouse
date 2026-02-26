@@ -40,7 +40,6 @@ import { Pool } from "pg";
 import type { RedisClientType } from "redis";
 import { initRedis } from "./clients/redis.js";
 import { initFeatureFlags } from "./feature-flags.js";
-import { initProfilerFromEnv } from "./profiler.js";
 import { initRenown } from "./renown.js";
 import type { StartServerOptions, SwitchboardReactor } from "./types.js";
 import { addDefaultDrive, addRemoteDrive, isPostgresUrl } from "./utils.js";
@@ -427,15 +426,6 @@ export const startSwitchboard = async (
       2,
     ),
   );
-
-  if (process.env.PYROSCOPE_SERVER_ADDRESS) {
-    try {
-      await initProfilerFromEnv(process.env);
-    } catch (e) {
-      Sentry.captureException(e);
-      logger.error("Error starting profiler: @error", e);
-    }
-  }
 
   // Initialize Renown if identity options are provided or keypair exists
   let renown: IRenown | null = null;

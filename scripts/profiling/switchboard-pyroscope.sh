@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Run Switchboard with Pyroscope continuous profiling (no CPU profiling)
+# Run Switchboard with Pyroscope continuous profiling (wall:wall + CPU mode)
 # Usage: ./scripts/switchboard-pyroscope.sh [--mode v2|legacy] [--postgres URL] [switchboard-options...]
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -79,6 +79,8 @@ fi
 # Set up Pyroscope profiling on port 4040
 export PYROSCOPE_SERVER_ADDRESS="http://localhost:4040"
 export PYROSCOPE_APPLICATION_NAME="powerhouse-mono-switchboard"
+export PYROSCOPE_WALL_ENABLED="true"
+# CPU profiling is always enabled alongside wall:wall mode
 # Optional: Add tags for better organization
 # export PYROSCOPE_TAGS="env=development,scenario=profiling"
 
@@ -87,6 +89,7 @@ echo "Switchboard with Pyroscope Profiling"
 echo "=========================================="
 echo "Pyroscope: ${PYROSCOPE_SERVER_ADDRESS}"
 echo "Application: ${PYROSCOPE_APPLICATION_NAME}"
+echo "Profiling: wall:wall + CPU"
 echo "Storage mode: ${STORAGE_MODE_LABEL}"
 if [ -n "$STORAGE_V2" ]; then
   echo "  REACTOR_STORAGE_V2=true"
