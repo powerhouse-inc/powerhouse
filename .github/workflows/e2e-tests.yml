@@ -34,7 +34,7 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: 24
-          cache: 'pnpm'
+          cache: "pnpm"
 
       - name: Install dependencies
         run: pnpm install-ci
@@ -118,7 +118,7 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: 24
-          cache: 'pnpm'
+          cache: "pnpm"
 
       - name: Install dependencies
         run: pnpm install-ci
@@ -128,10 +128,13 @@ jobs:
 
       - name: Build typescript project
         run: pnpm tsc -b
-        working-directory: './test/vetra-e2e'
+        working-directory: "./test/vetra-e2e"
 
       - name: Run misc build scripts
         run: pnpm build-misc
+
+      - name: Run build clis
+        run: pnpm build-cli
 
       - name: Run install again after generating binaries
         run: pnpm install-ci
