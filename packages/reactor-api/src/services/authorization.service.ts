@@ -95,9 +95,8 @@ export class AuthorizationService {
    * Check if a user can write to a document.
    *
    * - Supreme admin → yes
-   * - Not authenticated → no (anonymous can never write)
-   * - Not protected → any authenticated user can write
-   * - Protected → requires WRITE/ADMIN grant (direct, group, or parent inheritance)
+   * - Not protected → anyone can write (even anonymous)
+   * - Protected → requires authentication + WRITE/ADMIN grant
    * - Owner → yes (implicit ADMIN)
    */
   async canWrite(
@@ -108,9 +107,6 @@ export class AuthorizationService {
     // Supreme admin bypasses all
     if (this.isSupremeAdmin(userAddress)) return true;
 
-    // Anonymous can never write
-    if (!userAddress) return false;
-
     // Check protection status
     const isProtected = getParentIds
       ? await this.documentPermissionService.isProtectedWithAncestors(
@@ -119,8 +115,11 @@ export class AuthorizationService {
         )
       : await this.documentPermissionService.isDocumentProtected(documentId);
 
-    // Unprotected documents are writable by any authenticated user
+    // Unprotected documents are writable by anyone (even anonymous)
     if (!isProtected) return true;
+
+    // Protected document — requires authentication
+    if (!userAddress) return false;
 
     // Owner has implicit ADMIN
     const owner =
