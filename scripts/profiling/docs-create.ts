@@ -1,14 +1,11 @@
 #!/usr/bin/env tsx
 /**
  * Script to create N documents and perform M operations on each via GraphQL API
- * Usage: tsx docs-create.ts [N] [--operations M] [--endpoint <url>] [--documentType <type>]
+ * Usage: tsx docs-create.ts [N] [--operations M] [--endpoint <url>]
  *
  * Process flow:
- *   1. Create N documents
- *   2. For each document, perform M operations
- *
- * Documents are created without drive association due to server limitations
- * with drive initialization.
+ *   1. Create N documents via DocumentModel_createEmptyDocument
+ *   2. For each document, perform M operations via individual DocumentModel_* mutations
  *
  * Pyroscope profiling:
  *   - Start Pyroscope: docker compose -f scripts/profiling/docker-compose.yml up pyroscope
@@ -16,59 +13,73 @@
  *   - View results: http://localhost:4040
  *
  * Batch mode:
- *   - Use --batch-size <N> to send N operations per mutateDocument call
- *   - Default is 1 (each operation in its own call)
- *   - Use this to measure per-call overhead vs batched execution
+ *   - Use --batch-size <N> to send N operations per GraphQL request (using aliases)
+ *   - Default is 1 (each operation in its own request)
+ *   - Use this to measure per-request overhead vs batched execution
  */
 
 import Pyroscope from "@pyroscope/nodejs";
-import { GraphQLClient, gql } from "graphql-request";
+import { GraphQLClient } from "graphql-request";
 import { execFileSync } from "node:child_process";
 import { createWriteStream, mkdirSync, type WriteStream } from "node:fs";
 import { basename, dirname, join } from "node:path";
 
 const DEFAULT_ENDPOINT = "http://localhost:4001/graphql";
 
-const CREATE_DOCUMENT = gql`
-  mutation CreateDocument($documentType: String!) {
-    createEmptyDocument(documentType: $documentType) {
-      id
-    }
-  }
-`;
-
-const RENAME_DOCUMENT = gql`
-  mutation RenameDocument($id: String!, $name: String!) {
-    renameDocument(documentIdentifier: $id, name: $name) {
-      id
-    }
-  }
-`;
-
-const MUTATE_DOCUMENT = gql`
-  mutation MutateDocument(
-    $documentIdentifier: String!
-    $actions: [JSONObject!]!
-  ) {
-    mutateDocument(documentIdentifier: $documentIdentifier, actions: $actions) {
-      id
-    }
-  }
-`;
-
-const GET_DOCUMENT_MODELS = gql`
-  query GetDocumentModels {
-    documentModels {
-      items {
-        id
-        name
-      }
-    }
-  }
-`;
+// Action configs for cycling through different operation types
+const ACTION_CONFIGS = [
+  {
+    name: "setModelName",
+    mutationName: "DocumentModel_setModelName",
+    inputType: "DocumentModel_SetModelNameInput",
+    buildInput: (docIndex: number, opIndex: number) => ({
+      name: `Model-${docIndex}-op${opIndex}`,
+    }),
+  },
+  {
+    name: "setModelDescription",
+    mutationName: "DocumentModel_setModelDescription",
+    inputType: "DocumentModel_SetModelDescriptionInput",
+    buildInput: (docIndex: number, opIndex: number) => ({
+      description: `Description for document ${docIndex}, operation ${opIndex}`,
+    }),
+  },
+  {
+    name: "setAuthorName",
+    mutationName: "DocumentModel_setAuthorName",
+    inputType: "DocumentModel_SetAuthorNameInput",
+    buildInput: (docIndex: number, opIndex: number) => ({
+      authorName: `Author-${docIndex}-op${opIndex}`,
+    }),
+  },
+  {
+    name: "setAuthorWebsite",
+    mutationName: "DocumentModel_setAuthorWebsite",
+    inputType: "DocumentModel_SetAuthorWebsiteInput",
+    buildInput: (docIndex: number, opIndex: number) => ({
+      authorWebsite: `https://example-${docIndex}-${opIndex}.com`,
+    }),
+  },
+  {
+    name: "setModelExtension",
+    mutationName: "DocumentModel_setModelExtension",
+    inputType: "DocumentModel_SetModelExtensionInput",
+    buildInput: (_docIndex: number, opIndex: number) => ({
+      extension: `.ext${opIndex}`,
+    }),
+  },
+  {
+    name: "setModelId",
+    mutationName: "DocumentModel_setModelId",
+    inputType: "DocumentModel_SetModelIdInput",
+    buildInput: (docIndex: number, opIndex: number) => ({
+      id: `org/model-${docIndex}-v${opIndex}`,
+    }),
+  },
+];
 
 interface CreateDocumentResponse {
-  createEmptyDocument: { id: string };
+  DocumentModel_createEmptyDocument: { id: string };
 }
 
 interface MemoryStats {
@@ -140,90 +151,29 @@ function formatPercentiles(p: Percentiles): string {
   return `p50: ${p.p50}ms, p90: ${p.p90}ms, p95: ${p.p95}ms, p99: ${p.p99}ms`;
 }
 
-function createOperation(
-  docIndex: number,
-  opIndex: number,
-): { operation: object; actionType: string } {
-  const operations = [
-    {
-      actionType: "SET_MODEL_NAME",
-      operation: {
-        type: "SET_MODEL_NAME",
-        input: { name: `Model-${docIndex}-op${opIndex}` },
-        scope: "global",
-      },
-    },
-    {
-      actionType: "SET_MODEL_DESCRIPTION",
-      operation: {
-        type: "SET_MODEL_DESCRIPTION",
-        input: {
-          description: `Description for document ${docIndex}, operation ${opIndex}`,
-        },
-        scope: "global",
-      },
-    },
-    {
-      actionType: "SET_AUTHOR_NAME",
-      operation: {
-        type: "SET_AUTHOR_NAME",
-        input: { authorName: `Author-${docIndex}-op${opIndex}` },
-        scope: "global",
-      },
-    },
-    {
-      actionType: "SET_AUTHOR_WEBSITE",
-      operation: {
-        type: "SET_AUTHOR_WEBSITE",
-        input: { authorWebsite: `https://example-${docIndex}-${opIndex}.com` },
-        scope: "global",
-      },
-    },
-    {
-      actionType: "SET_MODEL_EXTENSION",
-      operation: {
-        type: "SET_MODEL_EXTENSION",
-        input: { extension: `.ext${opIndex}` },
-        scope: "global",
-      },
-    },
-    {
-      actionType: "SET_MODEL_ID",
-      operation: {
-        type: "SET_MODEL_ID",
-        input: { id: `org/model-${docIndex}-v${opIndex}` },
-        scope: "global",
-      },
-    },
-  ];
-
-  return operations[opIndex % operations.length];
+// Build a single GraphQL mutation that sends batchSize operations using aliases
+function buildBatchMutation(
+  ops: Array<{ mutationName: string; inputType: string }>,
+): string {
+  const varDecls = [
+    "$docId: PHID!",
+    ...ops.map((op, i) => `$input${i}: ${op.inputType}!`),
+  ].join(", ");
+  const body = ops
+    .map(
+      (op, i) =>
+        `  op${i}: ${op.mutationName}(docId: $docId, input: $input${i}) { id }`,
+    )
+    .join("\n");
+  return `mutation BatchOps(${varDecls}) {\n${body}\n}`;
 }
 
-interface DocumentModelsResponse {
-  documentModels: { items: Array<{ id: string; name: string }> };
-}
-
-async function getDefaultDocumentType(
-  client: GraphQLClient,
-): Promise<string | null> {
-  const { documentModels } =
-    await client.request<DocumentModelsResponse>(GET_DOCUMENT_MODELS);
-  return documentModels.items[0]?.id ?? null;
-}
-
-async function createDocument(
-  client: GraphQLClient,
-  documentType: string,
-  name: string,
-): Promise<string> {
-  const { createEmptyDocument } = await client.request<CreateDocumentResponse>(
-    CREATE_DOCUMENT,
-    { documentType },
-  );
-
-  await client.request(RENAME_DOCUMENT, { id: createEmptyDocument.id, name });
-  return createEmptyDocument.id;
+async function createDocument(client: GraphQLClient): Promise<string> {
+  const { DocumentModel_createEmptyDocument } =
+    await client.request<CreateDocumentResponse>(
+      `mutation CreateDocument { DocumentModel_createEmptyDocument { id } }`,
+    );
+  return DocumentModel_createEmptyDocument.id;
 }
 
 async function performOperations(
@@ -242,26 +192,30 @@ async function performOperations(
     const batchEnd = Math.min(i + batchSize, operationCount);
     const batchCount = batchEnd - i;
 
-    // Build batch of actions
-    const actions: object[] = [];
+    // Build batch of operations
+    const batchOps: Array<{ mutationName: string; inputType: string }> = [];
     const actionTypes: string[] = [];
+    const variables: Record<string, unknown> = { docId: documentId };
+
     for (let j = i; j < batchEnd; j++) {
-      const { operation, actionType } = createOperation(docIndex, j + 1);
-      actions.push(operation);
-      actionTypes.push(actionType);
+      const config = ACTION_CONFIGS[(j + 1) % ACTION_CONFIGS.length];
+      batchOps.push({
+        mutationName: config.mutationName,
+        inputType: config.inputType,
+      });
+      actionTypes.push(config.name);
+      variables[`input${j - i}`] = config.buildInput(docIndex, j + 1);
     }
 
+    const mutation = buildBatchMutation(batchOps);
+
     const opStart = Date.now();
-    await client.request(MUTATE_DOCUMENT, {
-      documentIdentifier: documentId,
-      actions,
-    });
+    await client.request(mutation, variables);
     const batchDurationMs = Date.now() - opStart;
 
     // Calculate per-operation duration for consistent min/max tracking
     const perOpDurationMs = batchDurationMs / batchCount;
 
-    // Store per-operation durations for percentile calculations
     for (let j = 0; j < batchCount; j++) {
       durations.push(perOpDurationMs);
     }
@@ -293,7 +247,6 @@ function parseArgs(args: string[]): {
   opLoops: number;
   batchSize: number;
   endpoint: string;
-  documentType?: string;
   docIds: string[];
   verbose: boolean;
   percentiles: boolean;
@@ -307,7 +260,6 @@ function parseArgs(args: string[]): {
   let opLoops = 1;
   let batchSize = 1;
   let endpoint = DEFAULT_ENDPOINT;
-  let documentType: string | undefined;
   const docIds: string[] = [];
   let verbose = false;
   let percentiles = false;
@@ -320,8 +272,6 @@ function parseArgs(args: string[]): {
     const arg = args[i];
     if (arg === "--endpoint" && args[i + 1]) {
       endpoint = args[++i];
-    } else if (arg === "--documentType" && args[i + 1]) {
-      documentType = args[++i];
     } else if ((arg === "--operations" || arg === "-o") && args[i + 1]) {
       operations = Number(args[++i]);
     } else if ((arg === "--op-loops" || arg === "-l") && args[i + 1]) {
@@ -337,7 +287,6 @@ function parseArgs(args: string[]): {
     } else if (arg === "--show-action-types" || arg === "-a") {
       showActionTypes = true;
     } else if (arg === "--pyroscope") {
-      // Check if next arg is a server address (not another flag)
       const nextArg = args[i + 1];
       if (nextArg && !nextArg.startsWith("-")) {
         pyroscope = nextArg;
@@ -367,12 +316,11 @@ Arguments:
 Options:
   --operations, -o <M>      Number of operations per loop (default: 0)
   --op-loops, -l <L>        Number of operation loops per document (default: 1)
-  --batch-size, -b <N>      Operations per mutateDocument call (default: 1)
-                            Use higher values to measure per-call overhead
+  --batch-size, -b <N>      Operations per GraphQL request using aliases (default: 1)
+                            Use higher values to measure per-request overhead
   --doc-id, -d <id>         Use existing document(s) instead of creating new ones
                             (can be specified multiple times, skips document creation)
   --endpoint <url>          GraphQL endpoint (default: ${DEFAULT_ENDPOINT})
-  --documentType <type>     Document type for new documents (default: first available)
   --verbose, -v             Show detailed operation timings
   --percentiles, -p         Show percentile statistics (p50, p90, p95, p99) per line
   --show-action-types, -a   Show action type names in min/max timings
@@ -392,8 +340,7 @@ Examples:
   tsx docs-create.ts --doc-id abc123 -o 25 -l 100  # ops on existing document
   tsx docs-create.ts -d doc1 -d doc2 -o 10        # ops on multiple existing documents
   tsx docs-create.ts 100 --operations 10 --endpoint http://localhost:4001/graphql
-  tsx docs-create.ts 50 --documentType powerhouse/document-model -o 3
-  tsx docs-create.ts 1 -o 100 -b 10      # 10 ops per mutateDocument call (10 calls total)
+  tsx docs-create.ts 1 -o 100 -b 10      # 10 ops per GraphQL request (10 requests total)
   tsx docs-create.ts 5 -o 3 --verbose
 `);
       process.exit(0);
@@ -406,7 +353,6 @@ Examples:
     }
   }
 
-  // Validate numeric inputs
   if (count < 0) {
     console.error(`Error: Document count must be a non-negative integer.`);
     process.exit(1);
@@ -457,7 +403,6 @@ Examples:
     opLoops,
     batchSize,
     endpoint,
-    documentType,
     docIds,
     verbose,
     percentiles,
@@ -475,7 +420,6 @@ async function main() {
     opLoops,
     batchSize,
     endpoint,
-    documentType: docTypeArg,
     docIds,
     verbose,
     percentiles: showPercentiles,
@@ -486,8 +430,6 @@ async function main() {
   } = parseArgs(process.argv.slice(2));
 
   // Set up output file tee if requested
-  // console.log/warn/error write through process.stdout/stderr.write internally,
-  // so we only need to intercept at the stream level to avoid duplicate lines.
   let outputStream: WriteStream | undefined;
   let pendingLine = "";
   const origStdoutWrite = process.stdout.write.bind(process.stdout);
@@ -503,9 +445,6 @@ async function main() {
     console.log(`Writing output to: ${outputPath}`);
     outputStream = createWriteStream(outputPath);
 
-    // Buffer that simulates terminal \r behavior: carriage return resets
-    // the current line so only the final version is written to the file.
-    // Processes by line boundaries for efficiency and correct \r\n handling.
     const fileWrite = (chunk: string | Uint8Array) => {
       const text =
         typeof chunk === "string" ? chunk : new TextDecoder().decode(chunk);
@@ -515,11 +454,9 @@ async function main() {
         const part = parts[i];
 
         if (i === parts.length - 1) {
-          // Last part (no trailing \n)
           const crParts = part.split("\r");
           pendingLine = crParts[crParts.length - 1];
         } else {
-          // Has trailing \n
           const crParts = part.split("\r");
           const finalPart = crParts[crParts.length - 1];
           outputStream!.write(pendingLine + finalPart + "\n");
@@ -561,7 +498,6 @@ async function main() {
       `Command: tsx docs-create.ts ${process.argv.slice(2).join(" ")}`,
     );
 
-    // Initialize Pyroscope profiling if enabled
     if (pyroscopeServer) {
       console.log(`Initializing Pyroscope profiler at: ${pyroscopeServer}`);
       Pyroscope.init({
@@ -587,7 +523,6 @@ async function main() {
     const client = new GraphQLClient(endpoint);
     const useExistingDocs = docIds.length > 0;
 
-    // Track memory
     const initialMemory = getMemoryStats();
     console.log(`\nInitial memory: ${formatMemory(initialMemory)}`);
 
@@ -595,30 +530,16 @@ async function main() {
     let documentIds: string[];
 
     if (useExistingDocs) {
-      // Use existing documents
       documentIds = docIds;
       console.log(`\nUsing ${documentIds.length} existing document(s):`);
       documentIds.forEach((id) => console.log(`  - ${id}`));
     } else {
-      // Determine document type
-      let documentType = docTypeArg;
-      if (!documentType) {
-        const defaultType = await getDefaultDocumentType(client);
-        if (!defaultType) {
-          console.error("No document types available");
-          process.exit(1);
-        }
-        documentType = defaultType;
-        console.log(`Using document type: ${documentType}`);
-      }
-
-      // Phase 1: Create documents
       console.log(`\nPhase 1: Creating ${count} documents...`);
       const createStartTime = Date.now();
       documentIds = [];
 
       for (let i = 0; i < count; i++) {
-        const id = await createDocument(client, documentType, `doc-${i + 1}`);
+        const id = await createDocument(client);
         documentIds.push(id);
         process.stdout.write(`\r  Progress: ${i + 1}/${count}`);
       }
@@ -633,7 +554,6 @@ async function main() {
       console.log(`  Memory: ${formatMemory(phase1Memory)}`);
     }
 
-    // Phase 2: Perform operations on each document
     if (operations > 0) {
       const docCount = documentIds.length;
       const loopLabel = opLoops > 1 ? ` x ${opLoops} loops` : "";
@@ -763,7 +683,6 @@ async function main() {
       console.log(`  Memory: ${formatMemory(phase2Memory)}`);
     }
 
-    // Cleanup
     const pyroscopeFlushDelay = 10;
     const pyroscopeUntil = Math.floor(Date.now() / 1000) + pyroscopeFlushDelay;
 
@@ -772,7 +691,6 @@ async function main() {
       Pyroscope.stopCpuProfiling();
     }
 
-    // Summary
     const finalMemory = getMemoryStats();
     const totalDuration = ((Date.now() - overallStartTime) / 1000).toFixed(2);
     const heapDelta = finalMemory.heapUsed - initialMemory.heapUsed;
@@ -794,7 +712,6 @@ async function main() {
       const outputBase = `${pyroscopeTimestamp}-pyroscope`;
       console.log(`\nPyroscope URL:\n  ${analyseUrl}`);
 
-      // Wait for Pyroscope to flush profiling data
       const waitUntilMs = pyroscopeUntil * 1000;
       let remaining = Math.ceil((waitUntilMs - Date.now()) / 1000);
       if (remaining > 0) {
@@ -823,9 +740,7 @@ async function main() {
             "--output-md",
             `${outputBase}.md`,
           ],
-          {
-            stdio: "inherit",
-          },
+          { stdio: "inherit" },
         );
       } catch {
         console.error(
