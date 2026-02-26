@@ -121,9 +121,9 @@ if (TRACING_ENABLED) {
       .finally(() => process.exit(0));
   });
 } else {
-  console.debug(
-    "OpenTelemetry tracing disabled (set ENABLE_TRACING=true to enable)",
-  );
+  // console.debug(
+  //   "OpenTelemetry tracing disabled (set ENABLE_TRACING=true to enable)",
+  // );
 }
 
 // Stub exports for backwards compatibility during migration

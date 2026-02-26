@@ -15,24 +15,19 @@
     "node": ">=24.0.0"
   },
   "bin": {
-    "ph-cli": "dist/src/cli.js"
+    "ph-cli": "./dist/src/cli.js"
   },
   "files": [
     "dist"
   ],
-  "exports": {
-    ".": {
-      "types": "./dist/src/index.d.ts",
-      "default": "./dist/src/index.js"
-    }
-  },
   "scripts": {
     "tsc": "tsc",
     "lint": "eslint",
     "generate-docs": "bun run scripts/generate-commands-docs.ts",
-    "build:cli": "bun generate-docs && bun copy-scripts",
+    "build:cli": "bun run ./bundle.ts",
+    "postbuild:cli": "bun generate-docs && bun copy-scripts",
     "copy-scripts": "copyfiles scripts/* dist/",
-    "dev": "concurrently -P 'pnpm -w run tsc --watch' 'nodemon --watch \"../..\" -e ts,tsx,js,json dist/src/cli.js -- {@}' --",
+    "dev": "bun run ./src/cli.ts",
     "cli": "node ./dist/src/cli.js"
   },
   "keywords": [],
@@ -46,9 +41,7 @@
     "document-model": "workspace:*",
     "nodemon": "catalog:",
     "vitest": "catalog:",
-    "@types/bun": "catalog:"
-  },
-  "dependencies": {
+    "@types/bun": "catalog:",
     "@powerhousedao/codegen": "workspace:*",
     "@powerhousedao/common": "workspace:*",
     "@powerhousedao/config": "workspace:*",
@@ -66,5 +59,8 @@
     "ts-morph": "catalog:",
     "vite": "catalog:",
     "write-package": "catalog:"
+  },
+  "peerDependencies": {
+    "zod": ">=4.0.0"
   }
 }

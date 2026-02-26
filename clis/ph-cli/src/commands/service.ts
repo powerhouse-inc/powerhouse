@@ -1,10 +1,9 @@
 import { serviceArgs, type ServiceAction } from "@powerhousedao/common/clis";
 import { command } from "cmd-ts";
 import { execSync } from "node:child_process";
-import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import type { PackageJson } from "read-pkg";
+import { readPackageSync } from "read-pkg";
 
 export const service = command({
   name: "service",
@@ -47,10 +46,7 @@ function manageService(action: ServiceAction) {
     );
 
     // Read project name from package.json
-    const packageJsonPath = path.join(process.cwd(), "package.json");
-    const packageJson = JSON.parse(
-      fs.readFileSync(packageJsonPath, "utf-8"),
-    ) as PackageJson;
+    const packageJson = readPackageSync();
     const projectName = packageJson.name;
 
     switch (action) {

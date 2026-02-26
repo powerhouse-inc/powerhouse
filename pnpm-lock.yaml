@@ -141,9 +141,6 @@ catalogs:
     kysely-pglite-dialect:
       specifier: 1.2.0
       version: 1.2.0
-    lightningcss:
-      specifier: 1.31.1
-      version: 1.31.1
     luxon:
       specifier: 3.7.2
       version: 3.7.2
@@ -579,6 +576,10 @@ importers:
         version: 3.1.11
 
   clis/ph-cli:
+    dependencies:
+      zod:
+        specifier: '>=4.0.0'
+        version: 4.3.6
     devDependencies:
       '@powerhousedao/codegen':
         specifier: workspace:*
@@ -634,9 +635,6 @@ importers:
       kysely:
         specifier: 'catalog:'
         version: 0.28.11
-      lightningcss:
-        specifier: 'catalog:'
-        version: 1.31.1
       nodemon:
         specifier: 'catalog:'
         version: 3.1.11
@@ -2089,6 +2087,9 @@ importers:
       '@powerhousedao/design-system':
         specifier: workspace:*
         version: link:../../packages/design-system
+      zod:
+        specifier: 'catalog:'
+        version: 4.3.6
     devDependencies:
       '@electric-sql/pglite':
         specifier: 'catalog:'
@@ -2267,6 +2268,9 @@ importers:
       document-model:
         specifier: link:../../packages/document-model
         version: link:../../packages/document-model
+      zod:
+        specifier: 'catalog:'
+        version: 4.3.6
     devDependencies:
       '@electric-sql/pglite':
         specifier: 'catalog:'
@@ -32708,6 +32712,7 @@ snapshots:
       lightningcss-linux-x64-musl: 1.31.1
       lightningcss-win32-arm64-msvc: 1.31.1
       lightningcss-win32-x64-msvc: 1.31.1
+    optional: true
 
   lilconfig@3.1.3: {}
 
