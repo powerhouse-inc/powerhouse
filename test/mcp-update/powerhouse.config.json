@@ -1,0 +1,19 @@
+{
+  "documentModelsDir": "./document-models",
+  "editorsDir": "./editors",
+  "processorsDir": "./processors",
+  "subgraphsDir": "./subgraphs",
+  "studio": {
+    "port": 3000
+  },
+  "reactor": {
+    "port": 4001
+  },
+  "packages": [
+    {
+      "packageName": "@powerhousedao/vetra",
+      "version": "6.0.0-dev.59",
+      "provider": "npm"
+    }
+  ]
+}
