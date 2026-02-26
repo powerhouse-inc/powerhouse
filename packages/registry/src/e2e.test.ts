@@ -52,14 +52,11 @@ describe("registry e2e", () => {
     await killProcessOnPort(REGISTRY_PORT);
 
     // Start the registry server using compiled dist
-    registryProcess = spawn(
-      "node",
-      ["dist/src/run.js", PACKAGES_DIR, String(REGISTRY_PORT)],
-      {
-        cwd: path.resolve(__dirname, ".."),
-        stdio: ["ignore", "pipe", "pipe"],
-      },
-    );
+    registryProcess = spawn("node", ["dist/src/run.js"], {
+      cwd: path.resolve(__dirname, ".."),
+      stdio: ["ignore", "pipe", "pipe"],
+      env: { ...process.env, PORT: String(REGISTRY_PORT) },
+    });
 
     registryProcess.stdout?.on("data", (data: Buffer) => {
       console.log(`[registry] ${data.toString().trim()}`);

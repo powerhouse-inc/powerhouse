@@ -1,4 +1,5 @@
 import { spawn, execSync, type ChildProcess } from "node:child_process";
+import fs from "node:fs";
 import { resolve } from "node:path";
 
 const MONOREPO_ROOT = resolve(import.meta.dirname, "../..");
@@ -89,6 +90,12 @@ export default async function globalSetup() {
   // Clean up any stale processes from previous runs
   await killProcessOnPort(REGISTRY_PORT);
   await killProcessOnPort(SWITCHBOARD_PORT);
+
+  // Clean up registry storage from previous runs so user creation doesn't 409
+  const registryStorage = resolve(REGISTRY_DIR, "storage");
+  const registryCdnCache = resolve(REGISTRY_DIR, "cdn-cache");
+  fs.rmSync(registryStorage, { recursive: true, force: true });
+  fs.rmSync(registryCdnCache, { recursive: true, force: true });
 
   // Step 1: Build vetra package
   console.log("📦 Building vetra package...");

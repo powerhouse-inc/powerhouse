@@ -75,9 +75,8 @@ export async function createProcessorHostModule(): Promise<
 > {
   try {
     const { getDb } = await import("../pglite.db.js");
-    const { createOrGetAnalyticsStore } = await import(
-      "@powerhousedao/reactor-browser/analytics"
-    );
+    const { createOrGetAnalyticsStore } =
+      await import("@powerhousedao/reactor-browser/analytics");
     const relationalDb = await getDb();
     const analyticsStore = await createOrGetAnalyticsStore({
       databaseName: DEFAULT_ANALYTICS_PROCESSOR_DB_NAME,
