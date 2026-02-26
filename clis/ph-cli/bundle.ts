@@ -3,5 +3,5 @@ await Bun.build({
   outdir: "dist",
   target: "node",
   root: ".",
-  packages: "external",
+  external: ["vite", "@powerhousedao/switchboard", "@powerhousedao/codegen"],
 });

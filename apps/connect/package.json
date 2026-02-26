@@ -163,6 +163,7 @@
     "vite-plugin-svgr": "catalog:"
   },
   "devDependencies": {
-    "@tailwindcss/cli": "catalog:"
+    "@tailwindcss/cli": "catalog:",
+    "@types/bun": "catalog:"
   }
 }
