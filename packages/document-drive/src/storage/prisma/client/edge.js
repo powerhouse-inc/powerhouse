@@ -192,7 +192,7 @@ const config = {
       "value": "prisma-client-js"
     },
     "output": {
-      "value": "/Users/benjaminjordan/projects/powerhouse/powerhouse/packages/document-drive/src/storage/prisma/client",
+      "value": "/Users/samuel/Documents/dev/powerhouse-inc/powerhouse/packages/document-drive/src/storage/prisma/client",
       "fromEnvVar": null
     },
     "config": {
@@ -201,7 +201,7 @@ const config = {
     "binaryTargets": [
       {
         "fromEnvVar": null,
-        "value": "darwin-arm64",
+        "value": "darwin",
         "native": true
       },
       {
@@ -214,12 +214,11 @@ const config = {
       }
     ],
     "previewFeatures": [],
-    "sourceFilePath": "/Users/benjaminjordan/projects/powerhouse/powerhouse/packages/document-drive/prisma/schema.prisma",
+    "sourceFilePath": "/Users/samuel/Documents/dev/powerhouse-inc/powerhouse/packages/document-drive/prisma/schema.prisma",
     "isCustomOutput": true
   },
   "relativeEnvPaths": {
-    "rootEnvPath": null,
-    "schemaEnvPath": "../../../../.env"
+    "rootEnvPath": null
   },
   "relativePath": "../../../../prisma",
   "clientVersion": "5.17.0",
