@@ -30,7 +30,8 @@
       "Bash(git add:*)",
       "Bash(GIT_EDITOR=true git rebase:*)",
       "Bash(git:*)",
-      "Bash(GIT_SEQUENCE_EDITOR=true git rebase:*)"
+      "Bash(GIT_SEQUENCE_EDITOR=true git rebase:*)",
+      "Bash(do echo:*)"
     ],
     "deny": [],
     "ask": []

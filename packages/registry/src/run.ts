@@ -1,4 +1,5 @@
 import express from "express";
+import type { EventEmitter } from "node:events";
 import fs from "node:fs";
 import path from "node:path";
 import { runServer } from "verdaccio";
@@ -46,7 +47,9 @@ fs.mkdirSync(cdnCachePath, { recursive: true });
 const verdaccioConfig = buildVerdaccioConfig(config);
 
 async function main() {
-  const verdaccioServer = await runServer(verdaccioConfig as any);
+  // verdaccio's runServer returns Promise<any> (upstream type limitation)
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+  const verdaccioServer: EventEmitter = await runServer(verdaccioConfig as any);
   const verdaccioHandler = verdaccioServer.listeners("request")[0] as (
     ...args: unknown[]
   ) => void;

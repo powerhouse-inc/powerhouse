@@ -2,18 +2,31 @@ import { $ } from "bun";
 const registryOutdir = "../registry/dist/packages/@powerhousedao/vetra";
 const cdnOutdir = "./dist/cdn";
 
+interface ResolveArgs {
+  path: string;
+  namespace: string;
+}
+
+interface PluginBuilder {
+  onResolve(
+    options: { filter: RegExp },
+    callback: (args: ResolveArgs) => {
+      path: string;
+      namespace: string;
+      external: boolean;
+    },
+  ): void;
+}
+
 const externalizeDepsPlugin = {
   name: "externalize-deps",
-  setup(builder: any) {
-    builder.onResolve(
-      { filter: /^(react|react-dom)(?:$|\/.+)/ },
-      (args: any) => ({
-        path: args.path,
-        namespace: args.namespace,
-        external: true,
-      }),
-    );
-    builder.onResolve({ filter: /^node:.+/ }, (args: any) => ({
+  setup(builder: PluginBuilder) {
+    builder.onResolve({ filter: /^(react|react-dom)(?:$|\/.+)/ }, (args) => ({
+      path: args.path,
+      namespace: args.namespace,
+      external: true,
+    }));
+    builder.onResolve({ filter: /^node:.+/ }, (args) => ({
       path: args.path,
       namespace: args.namespace,
       external: true,
@@ -23,8 +36,8 @@ const externalizeDepsPlugin = {
 
 const externalizeNodePlugin = {
   name: "externalize-node",
-  setup(builder: any) {
-    builder.onResolve({ filter: /^node:.+/ }, (args: any) => ({
+  setup(builder: PluginBuilder) {
+    builder.onResolve({ filter: /^node:.+/ }, (args) => ({
       path: args.path,
       namespace: args.namespace,
       external: true,

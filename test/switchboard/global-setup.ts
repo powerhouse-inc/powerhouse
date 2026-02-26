@@ -113,10 +113,10 @@ export default async function globalSetup() {
     env: { ...process.env },
   });
 
-  registryProcess.stdout?.on("data", (data) => {
+  registryProcess.stdout?.on("data", (data: Buffer) => {
     console.log(`[registry] ${data.toString().trim()}`);
   });
-  registryProcess.stderr?.on("data", (data) => {
+  registryProcess.stderr?.on("data", (data: Buffer) => {
     console.error(`[registry] ${data.toString().trim()}`);
   });
 
@@ -168,7 +168,8 @@ export default async function globalSetup() {
   // Step 4: Start switchboard with registry env vars
   console.log("⚡ Starting switchboard...");
   // Remove VITEST env var so WebSocket server loads properly
-  const { VITEST, ...envWithoutVitest } = process.env;
+  const envWithoutVitest = { ...process.env };
+  delete envWithoutVitest.VITEST;
   switchboardProcess = spawn("pnpm", ["reactor"], {
     cwd: TEST_DIR,
     stdio: ["ignore", "pipe", "pipe"],
@@ -180,10 +181,10 @@ export default async function globalSetup() {
     },
   });
 
-  switchboardProcess.stdout?.on("data", (data) => {
+  switchboardProcess.stdout?.on("data", (data: Buffer) => {
     console.log(`[switchboard] ${data.toString().trim()}`);
   });
-  switchboardProcess.stderr?.on("data", (data) => {
+  switchboardProcess.stderr?.on("data", (data: Buffer) => {
     console.error(`[switchboard] ${data.toString().trim()}`);
   });
 
