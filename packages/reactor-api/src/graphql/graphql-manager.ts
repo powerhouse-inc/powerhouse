@@ -43,6 +43,7 @@ import { match, type MatchFunction, type ParamData } from "path-to-regexp";
 import type { WebSocketServer } from "ws";
 import type { AuthConfig } from "../services/auth.service.js";
 import { AuthService } from "../services/auth.service.js";
+import type { AuthorizationService } from "../services/authorization.service.js";
 import type { DocumentPermissionService } from "../services/document-permission.service.js";
 import {
   buildSubgraphSchemaModule,
@@ -174,6 +175,7 @@ export class GraphQLManager {
     private readonly documentPermissionService?: DocumentPermissionService,
     private readonly featureFlags: GraphqlManagerFeatureFlags = DefaultFeatureFlags,
     private readonly port: number = 4001,
+    private readonly authorizationService?: AuthorizationService,
   ) {
     if (this.authConfig) {
       this.authService = new AuthService(this.authConfig);
@@ -216,18 +218,6 @@ export class GraphQLManager {
           !req.auth_enabled
             ? true
             : (req.admins
-                ?.map((a) => a.toLowerCase())
-                .includes(address.toLowerCase() ?? "") ?? false),
-        isUser: (address: string) =>
-          !req.auth_enabled
-            ? true
-            : (req.users
-                ?.map((a) => a.toLowerCase())
-                .includes(address.toLowerCase() ?? "") ?? false),
-        isGuest: (address: string) =>
-          !req.auth_enabled
-            ? true
-            : (req.guests
                 ?.map((a) => a.toLowerCase())
                 .includes(address.toLowerCase() ?? "") ?? false),
       });
@@ -314,6 +304,7 @@ export class GraphQLManager {
           syncManager: this.syncManager,
           path: this.path,
           documentPermissionService: this.documentPermissionService,
+          authorizationService: this.authorizationService,
         });
 
         await this.#addSubgraphInstance(subgraphInstance, supergraph, false);
@@ -377,6 +368,7 @@ export class GraphQLManager {
       syncManager: this.syncManager,
       path: this.path,
       documentPermissionService: this.documentPermissionService,
+      authorizationService: this.authorizationService,
     });
 
     return this.#addSubgraphInstance(subgraphInstance, supergraph, core);

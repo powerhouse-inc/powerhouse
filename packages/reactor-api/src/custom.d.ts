@@ -7,7 +7,5 @@ declare namespace Express {
     };
     auth_enabled?: boolean;
     admins?: string[];
-    users?: string[];
-    guests?: string[];
   }
 }

@@ -12,7 +12,7 @@ import type {
   DocumentPermissionService,
 } from "@powerhousedao/reactor-api";
 import type { IRelationalDbLegacy } from "document-drive";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getResolvers } from "../vetra-read-model/resolvers.js";
 
 // Mock the VetraReadModelProcessorLegacy
@@ -83,15 +83,11 @@ describe("VetraReadModel Subgraph Permission Checks", () => {
   // Helper to create context with different permission levels
   const createContext = (options: {
     isAdmin?: boolean;
-    isUser?: boolean;
-    isGuest?: boolean;
     userAddress?: string;
   }): Context =>
     ({
       user: options.userAddress ? { address: options.userAddress } : undefined,
       isAdmin: vi.fn().mockReturnValue(options.isAdmin ?? false),
-      isUser: vi.fn().mockReturnValue(options.isUser ?? false),
-      isGuest: vi.fn().mockReturnValue(options.isGuest ?? false),
     }) as unknown as Context;
 
   // Setup mock query chain
@@ -121,7 +117,6 @@ describe("VetraReadModel Subgraph Permission Checks", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    delete process.env.FREE_ENTRY;
 
     // Create mock DocumentPermissionService
     mockDocumentPermissionService = {
@@ -151,10 +146,6 @@ describe("VetraReadModel Subgraph Permission Checks", () => {
     resolvers = getResolvers(mockSubgraph as BaseSubgraph);
   });
 
-  afterEach(() => {
-    delete process.env.FREE_ENTRY;
-  });
-
   describe("Query: vetraPackages", () => {
     const callVetraPackages = async (
       ctx: Context,
@@ -172,37 +163,6 @@ describe("VetraReadModel Subgraph Permission Checks", () => {
       it("should return all packages when user is global admin", async () => {
         setupMockQuery(mockPackages);
         const ctx = createContext({ isAdmin: true, userAddress: "0xadmin" });
-
-        const result = await callVetraPackages(ctx);
-
-        expect(result).toHaveLength(3);
-        expect(mockDocumentPermissionService.canRead).not.toHaveBeenCalled();
-      });
-
-      it("should return all packages when user is global user", async () => {
-        setupMockQuery(mockPackages);
-        const ctx = createContext({ isUser: true, userAddress: "0xuser" });
-
-        const result = await callVetraPackages(ctx);
-
-        expect(result).toHaveLength(3);
-        expect(mockDocumentPermissionService.canRead).not.toHaveBeenCalled();
-      });
-
-      it("should return all packages when user is global guest", async () => {
-        setupMockQuery(mockPackages);
-        const ctx = createContext({ isGuest: true, userAddress: "0xguest" });
-
-        const result = await callVetraPackages(ctx);
-
-        expect(result).toHaveLength(3);
-        expect(mockDocumentPermissionService.canRead).not.toHaveBeenCalled();
-      });
-
-      it("should return all packages when FREE_ENTRY is true", async () => {
-        process.env.FREE_ENTRY = "true";
-        setupMockQuery(mockPackages);
-        const ctx = createContext({ userAddress: "0xanyone" });
 
         const result = await callVetraPackages(ctx);
 
@@ -397,8 +357,6 @@ describe("VetraReadModel Subgraph Permission Checks", () => {
       setupMockQuery(mockPackages);
       const ctx = createContext({
         isAdmin: true,
-        isUser: true,
-        isGuest: true,
         userAddress: "0xanyone",
       });
 

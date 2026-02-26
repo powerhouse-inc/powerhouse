@@ -2,26 +2,6 @@ import type { BaseSubgraph, Context } from "@powerhousedao/reactor-api";
 import { GraphQLError } from "graphql";
 
 /**
- * Check if user has global read access (admin, user, or guest)
- */
-export function hasGlobalReadAccess(ctx: Context): boolean {
-  const isGlobalAdmin = ctx.isAdmin?.(ctx.user?.address ?? "");
-  const isGlobalUser = ctx.isUser?.(ctx.user?.address ?? "");
-  const isGlobalGuest =
-    ctx.isGuest?.(ctx.user?.address ?? "") || process.env.FREE_ENTRY === "true";
-  return !!(isGlobalAdmin || isGlobalUser || isGlobalGuest);
-}
-
-/**
- * Check if user has global write access (admin or user, not guest)
- */
-export function hasGlobalWriteAccess(ctx: Context): boolean {
-  const isGlobalAdmin = ctx.isAdmin?.(ctx.user?.address ?? "");
-  const isGlobalUser = ctx.isUser?.(ctx.user?.address ?? "");
-  return !!(isGlobalAdmin || isGlobalUser);
-}
-
-/**
  * Get the parent IDs function for hierarchical permission checks
  */
 function getParentIdsFn(subgraph: BaseSubgraph) {
@@ -36,19 +16,31 @@ function getParentIdsFn(subgraph: BaseSubgraph) {
 }
 
 /**
- * Check if user can read a document (with hierarchy)
+ * Check if user has global admin access.
+ * Legacy fallback when authorizationService is not available.
+ */
+export function hasGlobalAdminAccess(ctx: Context): boolean {
+  return !!ctx.isAdmin?.(ctx.user?.address ?? "");
+}
+
+/**
+ * Check if user can read a document (with hierarchy).
+ * Delegates to AuthorizationService when available.
  */
 export async function canReadDocument(
   subgraph: BaseSubgraph,
   documentId: string,
   ctx: Context,
 ): Promise<boolean> {
-  // Global access allows reading
-  if (hasGlobalReadAccess(ctx)) {
-    return true;
+  if (subgraph.authorizationService) {
+    return subgraph.authorizationService.canRead(
+      documentId,
+      ctx.user?.address,
+      getParentIdsFn(subgraph),
+    );
   }
-
-  // Check document-level permissions with hierarchy
+  // Legacy fallback
+  if (hasGlobalAdminAccess(ctx)) return true;
   if (subgraph.documentPermissionService) {
     return subgraph.documentPermissionService.canRead(
       documentId,
@@ -56,24 +48,27 @@ export async function canReadDocument(
       getParentIdsFn(subgraph),
     );
   }
-
   return false;
 }
 
 /**
- * Check if user can write to a document (with hierarchy)
+ * Check if user can write to a document (with hierarchy).
+ * Delegates to AuthorizationService when available.
  */
 export async function canWriteDocument(
   subgraph: BaseSubgraph,
   documentId: string,
   ctx: Context,
 ): Promise<boolean> {
-  // Global write access allows writing
-  if (hasGlobalWriteAccess(ctx)) {
-    return true;
+  if (subgraph.authorizationService) {
+    return subgraph.authorizationService.canWrite(
+      documentId,
+      ctx.user?.address,
+      getParentIdsFn(subgraph),
+    );
   }
-
-  // Check document-level permissions with hierarchy
+  // Legacy fallback
+  if (hasGlobalAdminAccess(ctx)) return true;
   if (subgraph.documentPermissionService) {
     return subgraph.documentPermissionService.canWrite(
       documentId,
@@ -81,7 +76,6 @@ export async function canWriteDocument(
       getParentIdsFn(subgraph),
     );
   }
-
   return false;
 }
 
@@ -119,7 +113,7 @@ export async function assertCanWrite(
 
 /**
  * Check if user can execute a specific operation on a document.
- * Throws an error if the operation is restricted and user lacks permission.
+ * Delegates to AuthorizationService.canMutate when available.
  */
 export async function assertCanExecuteOperation(
   subgraph: BaseSubgraph,
@@ -127,17 +121,25 @@ export async function assertCanExecuteOperation(
   operationType: string,
   ctx: Context,
 ): Promise<void> {
-  // Skip if no permission service
-  if (!subgraph.documentPermissionService) {
+  if (subgraph.authorizationService) {
+    const canMutate = await subgraph.authorizationService.canMutate(
+      documentId,
+      operationType,
+      ctx.user?.address,
+      getParentIdsFn(subgraph),
+    );
+    if (!canMutate) {
+      throw new GraphQLError(
+        `Forbidden: insufficient permissions to execute operation "${operationType}" on this document`,
+      );
+    }
     return;
   }
 
-  // Global admins bypass operation-level restrictions
-  if (ctx.isAdmin?.(ctx.user?.address ?? "")) {
-    return;
-  }
+  // Legacy fallback
+  if (!subgraph.documentPermissionService) return;
+  if (ctx.isAdmin?.(ctx.user?.address ?? "")) return;
 
-  // Check if this operation has any restrictions set
   const isRestricted =
     await subgraph.documentPermissionService.isOperationRestricted(
       documentId,
@@ -145,7 +147,6 @@ export async function assertCanExecuteOperation(
     );
 
   if (isRestricted) {
-    // Operation is restricted, check if user has permission
     const canExecute =
       await subgraph.documentPermissionService.canExecuteOperation(
         documentId,

@@ -1,26 +1,14 @@
 export { verifyAuthBearerToken } from "@renown/sdk";
 
-export function isAuthEnabledAndUserPartOfGroup(
-  req: Express.Request,
-  group: "admins" | "users" | "guests",
-) {
-  if (req.auth_enabled) {
-    return false;
+export function isAdmin(req: Express.Request): boolean {
+  if (!req.auth_enabled) {
+    return true;
   }
 
   const user = req.user;
-  if (!user) {
+  if (!user?.address) {
     return false;
   }
 
-  if (!user.address) {
-    return false;
-  }
-
-  const groupList = req[group];
-  if (!groupList) {
-    return false;
-  }
-
-  return groupList.includes(user.address);
+  return req.admins?.includes(user.address.toLowerCase()) ?? false;
 }

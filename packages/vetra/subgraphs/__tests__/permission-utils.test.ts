@@ -7,216 +7,53 @@
 import type { BaseSubgraph, Context } from "@powerhousedao/reactor-api";
 import type { DocumentPermissionService } from "@powerhousedao/reactor-api";
 import { GraphQLError } from "graphql";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   assertCanExecuteOperation,
   assertCanRead,
   assertCanWrite,
   canReadDocument,
   canWriteDocument,
-  hasGlobalReadAccess,
-  hasGlobalWriteAccess,
+  hasGlobalAdminAccess,
 } from "../permission-utils.js";
 
 describe("permission-utils", () => {
   // Helper to create context with different permission levels
   const createContext = (options: {
     isAdmin?: boolean;
-    isUser?: boolean;
-    isGuest?: boolean;
     userAddress?: string;
   }): Context =>
     ({
       user: options.userAddress ? { address: options.userAddress } : undefined,
       isAdmin: vi.fn().mockReturnValue(options.isAdmin ?? false),
-      isUser: vi.fn().mockReturnValue(options.isUser ?? false),
-      isGuest: vi.fn().mockReturnValue(options.isGuest ?? false),
     }) as unknown as Context;
 
-  describe("hasGlobalReadAccess", () => {
-    afterEach(() => {
-      delete process.env.FREE_ENTRY;
+  describe("hasGlobalAdminAccess", () => {
+    it("should return true when user is global admin", () => {
+      const ctx = createContext({ isAdmin: true, userAddress: "0xadmin" });
+
+      const result = hasGlobalAdminAccess(ctx);
+
+      expect(result).toBe(true);
+      expect(ctx.isAdmin).toHaveBeenCalledWith("0xadmin");
     });
 
-    describe("Role-based access", () => {
-      it("should return true when user is global admin", () => {
-        const ctx = createContext({ isAdmin: true, userAddress: "0xadmin" });
+    it("should return false when user is not admin", () => {
+      const ctx = createContext({ userAddress: "0xnorole" });
 
-        const result = hasGlobalReadAccess(ctx);
+      const result = hasGlobalAdminAccess(ctx);
 
-        expect(result).toBe(true);
-        expect(ctx.isAdmin).toHaveBeenCalledWith("0xadmin");
-      });
-
-      it("should return true when user is global user", () => {
-        const ctx = createContext({ isUser: true, userAddress: "0xuser" });
-
-        const result = hasGlobalReadAccess(ctx);
-
-        expect(result).toBe(true);
-        expect(ctx.isUser).toHaveBeenCalledWith("0xuser");
-      });
-
-      it("should return true when user is global guest", () => {
-        const ctx = createContext({ isGuest: true, userAddress: "0xguest" });
-
-        const result = hasGlobalReadAccess(ctx);
-
-        expect(result).toBe(true);
-        expect(ctx.isGuest).toHaveBeenCalledWith("0xguest");
-      });
-
-      it("should return false when user has no global role", () => {
-        const ctx = createContext({ userAddress: "0xnorole" });
-
-        const result = hasGlobalReadAccess(ctx);
-
-        expect(result).toBe(false);
-      });
-
-      it("should return false when user is not authenticated (no address)", () => {
-        const ctx = createContext({});
-
-        const result = hasGlobalReadAccess(ctx);
-
-        expect(result).toBe(false);
-        // Should call with empty string when no user address
-        expect(ctx.isAdmin).toHaveBeenCalledWith("");
-      });
+      expect(result).toBe(false);
     });
 
-    describe("FREE_ENTRY environment variable", () => {
-      it("should return true when FREE_ENTRY is 'true' regardless of roles", () => {
-        process.env.FREE_ENTRY = "true";
-        const ctx = createContext({ userAddress: "0xanyone" });
+    it("should return false when user is not authenticated (no address)", () => {
+      const ctx = createContext({});
 
-        const result = hasGlobalReadAccess(ctx);
+      const result = hasGlobalAdminAccess(ctx);
 
-        expect(result).toBe(true);
-      });
-
-      it("should return true when FREE_ENTRY is 'true' even without authentication", () => {
-        process.env.FREE_ENTRY = "true";
-        const ctx = createContext({});
-
-        const result = hasGlobalReadAccess(ctx);
-
-        expect(result).toBe(true);
-      });
-
-      it("should not grant access when FREE_ENTRY is 'false'", () => {
-        process.env.FREE_ENTRY = "false";
-        const ctx = createContext({ userAddress: "0xanyone" });
-
-        const result = hasGlobalReadAccess(ctx);
-
-        expect(result).toBe(false);
-      });
-
-      it("should not grant access when FREE_ENTRY is not set", () => {
-        const ctx = createContext({ userAddress: "0xanyone" });
-
-        const result = hasGlobalReadAccess(ctx);
-
-        expect(result).toBe(false);
-      });
-    });
-
-    describe("Combined roles", () => {
-      it("should return true when user has multiple roles (admin + user)", () => {
-        const ctx = createContext({
-          isAdmin: true,
-          isUser: true,
-          userAddress: "0xmultirole",
-        });
-
-        const result = hasGlobalReadAccess(ctx);
-
-        expect(result).toBe(true);
-      });
-
-      it("should return true when all roles are true (AUTH_ENABLED=false scenario)", () => {
-        const ctx = createContext({
-          isAdmin: true,
-          isUser: true,
-          isGuest: true,
-          userAddress: "0xanyone",
-        });
-
-        const result = hasGlobalReadAccess(ctx);
-
-        expect(result).toBe(true);
-      });
-    });
-  });
-
-  describe("hasGlobalWriteAccess", () => {
-    describe("Role-based access", () => {
-      it("should return true when user is global admin", () => {
-        const ctx = createContext({ isAdmin: true, userAddress: "0xadmin" });
-
-        const result = hasGlobalWriteAccess(ctx);
-
-        expect(result).toBe(true);
-      });
-
-      it("should return true when user is global user", () => {
-        const ctx = createContext({ isUser: true, userAddress: "0xuser" });
-
-        const result = hasGlobalWriteAccess(ctx);
-
-        expect(result).toBe(true);
-      });
-
-      it("should return false when user is only global guest", () => {
-        const ctx = createContext({ isGuest: true, userAddress: "0xguest" });
-
-        const result = hasGlobalWriteAccess(ctx);
-
-        expect(result).toBe(false);
-      });
-
-      it("should return false when user has no global role", () => {
-        const ctx = createContext({ userAddress: "0xnorole" });
-
-        const result = hasGlobalWriteAccess(ctx);
-
-        expect(result).toBe(false);
-      });
-
-      it("should return false when user is not authenticated", () => {
-        const ctx = createContext({});
-
-        const result = hasGlobalWriteAccess(ctx);
-
-        expect(result).toBe(false);
-      });
-    });
-
-    describe("Guest cannot write", () => {
-      it("should return false for guest even with FREE_ENTRY", () => {
-        process.env.FREE_ENTRY = "true";
-        const ctx = createContext({ isGuest: true, userAddress: "0xguest" });
-
-        const result = hasGlobalWriteAccess(ctx);
-
-        expect(result).toBe(false);
-        delete process.env.FREE_ENTRY;
-      });
-    });
-
-    describe("Combined roles", () => {
-      it("should return true when user is both guest and user (user wins)", () => {
-        const ctx = createContext({
-          isGuest: true,
-          isUser: true,
-          userAddress: "0xmixed",
-        });
-
-        const result = hasGlobalWriteAccess(ctx);
-
-        expect(result).toBe(true);
-      });
+      expect(result).toBe(false);
+      // Should call with empty string when no user address
+      expect(ctx.isAdmin).toHaveBeenCalledWith("");
     });
   });
 
@@ -245,21 +82,8 @@ describe("permission-utils", () => {
     });
 
     describe("Global access bypass", () => {
-      it("should return true immediately when user has global read access", async () => {
+      it("should return true immediately when user has global admin access", async () => {
         const ctx = createContext({ isAdmin: true, userAddress: "0xadmin" });
-
-        const result = await canReadDocument(
-          mockSubgraph as BaseSubgraph,
-          "doc-123",
-          ctx,
-        );
-
-        expect(result).toBe(true);
-        expect(mockDocumentPermissionService.canRead).not.toHaveBeenCalled();
-      });
-
-      it("should return true for guest without checking document permissions", async () => {
-        const ctx = createContext({ isGuest: true, userAddress: "0xguest" });
 
         const result = await canReadDocument(
           mockSubgraph as BaseSubgraph,
@@ -439,33 +263,6 @@ describe("permission-utils", () => {
 
         expect(result).toBe(true);
         expect(mockDocumentPermissionService.canWrite).not.toHaveBeenCalled();
-      });
-
-      it("should return true immediately when user is global user", async () => {
-        const ctx = createContext({ isUser: true, userAddress: "0xuser" });
-
-        const result = await canWriteDocument(
-          mockSubgraph as BaseSubgraph,
-          "doc-123",
-          ctx,
-        );
-
-        expect(result).toBe(true);
-        expect(mockDocumentPermissionService.canWrite).not.toHaveBeenCalled();
-      });
-
-      it("should NOT return true for global guest (guests cannot write)", async () => {
-        const ctx = createContext({ isGuest: true, userAddress: "0xguest" });
-
-        const result = await canWriteDocument(
-          mockSubgraph as BaseSubgraph,
-          "doc-123",
-          ctx,
-        );
-
-        // Guest has no global write access, so should check document permissions
-        expect(mockDocumentPermissionService.canWrite).toHaveBeenCalled();
-        expect(result).toBe(false);
       });
     });
 
@@ -659,14 +456,6 @@ describe("permission-utils", () => {
         "Forbidden: insufficient permissions to write to this document",
       );
     });
-
-    it("should throw for guest user (guests cannot write)", async () => {
-      const ctx = createContext({ isGuest: true, userAddress: "0xguest" });
-
-      await expect(
-        assertCanWrite(mockSubgraph as BaseSubgraph, "doc-123", ctx),
-      ).rejects.toThrow("Forbidden");
-    });
   });
 
   describe("assertCanExecuteOperation", () => {
@@ -832,37 +621,11 @@ describe("permission-utils", () => {
   });
 
   describe("Edge Cases", () => {
-    describe("Null/undefined context fields", () => {
-      it("hasGlobalReadAccess should handle context without isAdmin function", () => {
-        const ctx = {
-          user: { address: "0xuser" },
-          isUser: vi.fn().mockReturnValue(true),
-          isGuest: vi.fn().mockReturnValue(false),
-        } as unknown as Context;
-
-        const result = hasGlobalReadAccess(ctx);
-
-        expect(result).toBe(true);
-      });
-
-      it("hasGlobalWriteAccess should handle context without isUser function", () => {
-        const ctx = {
-          user: { address: "0xadmin" },
-          isAdmin: vi.fn().mockReturnValue(true),
-          isGuest: vi.fn().mockReturnValue(false),
-        } as unknown as Context;
-
-        const result = hasGlobalWriteAccess(ctx);
-
-        expect(result).toBe(true);
-      });
-    });
-
     describe("Empty string user address", () => {
       it("should handle empty string user address", () => {
         const ctx = createContext({ userAddress: "" });
 
-        const result = hasGlobalReadAccess(ctx);
+        const result = hasGlobalAdminAccess(ctx);
 
         expect(result).toBe(false);
         expect(ctx.isAdmin).toHaveBeenCalledWith("");

@@ -51,10 +51,8 @@ export type PowerhouseConfig = {
   };
   auth?: {
     enabled?: boolean;
-    guests: string[];
-    users: string[];
     admins: string[];
-    freeEntry?: boolean;
+    defaultProtection?: boolean;
   };
   switchboard?: {
     database?: {
@@ -93,8 +91,6 @@ export const DEFAULT_CONFIG: PowerhouseConfig = {
   logLevel: DEFAULT_LOG_LEVEL,
   auth: {
     enabled: false,
-    guests: [],
-    users: [],
     admins: [],
   },
 };

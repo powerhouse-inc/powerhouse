@@ -7,6 +7,7 @@ import type {
 import type { IDocumentDriveServer, IRelationalDbLegacy } from "document-drive";
 import type { DocumentNode } from "graphql";
 import { gql } from "graphql-tag";
+import type { AuthorizationService } from "../services/authorization.service.js";
 import type { DocumentPermissionService } from "../services/document-permission.service.js";
 
 export class BaseSubgraph implements ISubgraph {
@@ -28,6 +29,7 @@ export class BaseSubgraph implements ISubgraph {
   relationalDb: IRelationalDbLegacy;
   syncManager: ISyncManager;
   documentPermissionService?: DocumentPermissionService;
+  authorizationService?: AuthorizationService;
 
   constructor(args: SubgraphArgs) {
     this.reactor = args.reactor;
@@ -36,6 +38,7 @@ export class BaseSubgraph implements ISubgraph {
     this.relationalDb = args.relationalDb;
     this.syncManager = args.syncManager;
     this.documentPermissionService = args.documentPermissionService;
+    this.authorizationService = args.authorizationService;
     this.path = args.path ?? "";
   }
 

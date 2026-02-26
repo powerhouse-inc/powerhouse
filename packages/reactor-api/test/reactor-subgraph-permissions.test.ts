@@ -47,14 +47,10 @@ describe("ReactorSubgraph Permission Checks", () => {
   // Helper to create context with different permission levels
   const createContext = (options: {
     isAdmin?: boolean;
-    isUser?: boolean;
-    isGuest?: boolean;
     userAddress?: string;
   }) => ({
     user: options.userAddress ? { address: options.userAddress } : undefined,
     isAdmin: () => options.isAdmin ?? false,
-    isUser: () => options.isUser ?? false,
-    isGuest: () => options.isGuest ?? false,
   });
 
   beforeEach(() => {
@@ -125,24 +121,6 @@ describe("ReactorSubgraph Permission Checks", () => {
     describe("Global Role Access", () => {
       it("should allow access when user is global admin", async () => {
         const ctx = createContext({ isAdmin: true, userAddress: "0xadmin" });
-
-        const result = await callDocument(ctx);
-
-        expect(result).toBeDefined();
-        expect(mockDocumentPermissionService.canRead).not.toHaveBeenCalled();
-      });
-
-      it("should allow access when user is global user", async () => {
-        const ctx = createContext({ isUser: true, userAddress: "0xuser" });
-
-        const result = await callDocument(ctx);
-
-        expect(result).toBeDefined();
-        expect(mockDocumentPermissionService.canRead).not.toHaveBeenCalled();
-      });
-
-      it("should allow access when user is global guest", async () => {
-        const ctx = createContext({ isGuest: true, userAddress: "0xguest" });
 
         const result = await callDocument(ctx);
 
@@ -278,20 +256,6 @@ describe("ReactorSubgraph Permission Checks", () => {
         // Permission check passes, may fail later validation
         await expectPermissionPassed(callCreateDocument(ctx));
         expect(mockDocumentPermissionService.canWrite).not.toHaveBeenCalled();
-      });
-
-      it("should allow when user is global user", async () => {
-        const ctx = createContext({ isUser: true, userAddress: "0xuser" });
-
-        // Permission check passes, may fail later validation
-        await expectPermissionPassed(callCreateDocument(ctx));
-        expect(mockDocumentPermissionService.canWrite).not.toHaveBeenCalled();
-      });
-
-      it("should deny when user is only guest", async () => {
-        const ctx = createContext({ isGuest: true, userAddress: "0xguest" });
-
-        await expect(callCreateDocument(ctx)).rejects.toThrow("Forbidden");
       });
 
       it("should deny when no global access", async () => {
@@ -482,12 +446,10 @@ describe("ReactorSubgraph Permission Checks", () => {
   });
 
   describe("AUTH_ENABLED=false behavior", () => {
-    it("should allow all access when all global roles return true", async () => {
-      // When AUTH_ENABLED=false, isAdmin/isUser/isGuest all return true
+    it("should allow all access when isAdmin returns true", async () => {
+      // When AUTH_ENABLED=false, isAdmin returns true
       const ctx = createContext({
         isAdmin: true,
-        isUser: true,
-        isGuest: true,
         userAddress: "0xanyone",
       });
 
