@@ -1050,9 +1050,7 @@ export class DocumentPermissionService {
   /**
    * Get the full protection info for a document.
    */
-  async getDocumentProtection(
-    documentId: string,
-  ): Promise<{
+  async getDocumentProtection(documentId: string): Promise<{
     documentId: string;
     protected: boolean;
     ownerAddress: string | null;
