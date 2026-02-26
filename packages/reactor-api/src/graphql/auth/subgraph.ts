@@ -168,10 +168,18 @@ export class AuthSubgraph extends BaseSubgraph {
       documentProtection: async (
         _parent: unknown,
         args: { documentId: string },
+        ctx: {
+          user?: { address: string };
+        },
       ) => {
         this.logger.debug("documentProtection", args);
         if (!this.documentPermissionService) {
           throw new GraphQLError("DocumentPermissionService not available");
+        }
+        if (!ctx.user?.address) {
+          throw new GraphQLError(
+            "Authentication required to view document protection info",
+          );
         }
         try {
           return await resolvers.documentProtection(
