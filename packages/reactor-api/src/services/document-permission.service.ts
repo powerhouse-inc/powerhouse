@@ -54,6 +54,13 @@ export interface OperationGroupPermissionEntry {
 export type GetParentIdsFn = (documentId: string) => Promise<string[]>;
 
 /**
+ * Configuration for the DocumentPermissionService
+ */
+export interface DocumentPermissionConfig {
+  defaultProtection: boolean;
+}
+
+/**
  * Service for managing document-level permissions.
  *
  * Permission levels for documents:
@@ -63,15 +70,16 @@ export type GetParentIdsFn = (documentId: string) => Promise<string[]>;
  *
  * Operation permissions:
  * - Users and groups can be granted permission to execute specific operations
- *
- * Global roles (via environment variables):
- * - AUTH_ENABLED: Enables authorization checks
- * - ADMINS: Comma-separated list of admin addresses (full access)
- * - USERS: Comma-separated list of user addresses (read/write access)
- * - GUESTS: Comma-separated list of guest addresses (read access)
  */
 export class DocumentPermissionService {
-  constructor(private readonly db: Kysely<DocumentPermissionDatabase>) {}
+  readonly config: DocumentPermissionConfig;
+
+  constructor(
+    private readonly db: Kysely<DocumentPermissionDatabase>,
+    config: DocumentPermissionConfig = { defaultProtection: false },
+  ) {
+    this.config = config;
+  }
 
   // ============================================
   // User Permission Operations
@@ -892,5 +900,177 @@ export class DocumentPermissionService {
       .executeTakeFirst();
 
     return groupPermCount !== undefined && Number(groupPermCount.count) > 0;
+  }
+
+  // ============================================
+  // Document Protection
+  // ============================================
+
+  /**
+   * Check if a specific document has a protection row set to true.
+   * Falls back to `config.defaultProtection` if no row exists.
+   */
+  async isDocumentProtected(documentId: string): Promise<boolean> {
+    const row = await this.db
+      .selectFrom("DocumentProtection")
+      .select("protected")
+      .where("documentId", "=", documentId)
+      .executeTakeFirst();
+
+    if (row === undefined) {
+      return this.config.defaultProtection;
+    }
+
+    return row.protected;
+  }
+
+  /**
+   * Walk the parent chain: if the document itself or any ancestor is protected, return true.
+   */
+  async isProtected(
+    documentId: string,
+    getParentIds: GetParentIdsFn,
+  ): Promise<boolean> {
+    if (await this.isDocumentProtected(documentId)) {
+      return true;
+    }
+
+    const parentIds = await getParentIds(documentId);
+    for (const parentId of parentIds) {
+      if (await this.isProtected(parentId, getParentIds)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Upsert protection status for a document.
+   */
+  async setDocumentProtection(
+    documentId: string,
+    isProtected: boolean,
+  ): Promise<void> {
+    const now = new Date();
+
+    await this.db
+      .insertInto("DocumentProtection")
+      .values({
+        documentId,
+        protected: isProtected,
+        ownerAddress: null,
+        createdAt: now,
+        updatedAt: now,
+      })
+      .onConflict((oc) =>
+        oc.column("documentId").doUpdateSet({
+          protected: isProtected,
+          updatedAt: now,
+        }),
+      )
+      .execute();
+  }
+
+  /**
+   * Get the owner address for a document, or null if not set.
+   */
+  async getDocumentOwner(documentId: string): Promise<string | null> {
+    const row = await this.db
+      .selectFrom("DocumentProtection")
+      .select("ownerAddress")
+      .where("documentId", "=", documentId)
+      .executeTakeFirst();
+
+    return row?.ownerAddress ?? null;
+  }
+
+  /**
+   * Upsert owner address for a document.
+   */
+  async setDocumentOwner(
+    documentId: string,
+    ownerAddress: string,
+  ): Promise<void> {
+    const now = new Date();
+    const normalizedAddress = ownerAddress.toLowerCase();
+
+    await this.db
+      .insertInto("DocumentProtection")
+      .values({
+        documentId,
+        protected: this.config.defaultProtection,
+        ownerAddress: normalizedAddress,
+        createdAt: now,
+        updatedAt: now,
+      })
+      .onConflict((oc) =>
+        oc.column("documentId").doUpdateSet({
+          ownerAddress: normalizedAddress,
+          updatedAt: now,
+        }),
+      )
+      .execute();
+  }
+
+  /**
+   * Initialize protection for a newly created document.
+   * Sets protection status and grants ADMIN to the owner.
+   */
+  async initializeDocumentProtection(
+    documentId: string,
+    ownerAddress: string,
+    defaultProtection?: boolean,
+  ): Promise<void> {
+    const now = new Date();
+    const normalizedAddress = ownerAddress.toLowerCase();
+    const isProtected = defaultProtection ?? this.config.defaultProtection;
+
+    await this.db
+      .insertInto("DocumentProtection")
+      .values({
+        documentId,
+        protected: isProtected,
+        ownerAddress: normalizedAddress,
+        createdAt: now,
+        updatedAt: now,
+      })
+      .onConflict((oc) => oc.column("documentId").doNothing())
+      .execute();
+
+    // Grant ADMIN permission to the owner
+    await this.grantPermission(
+      documentId,
+      normalizedAddress,
+      "ADMIN",
+      normalizedAddress,
+    );
+  }
+
+  /**
+   * Get the full protection info for a document.
+   */
+  async getDocumentProtection(
+    documentId: string,
+  ): Promise<{
+    documentId: string;
+    protected: boolean;
+    ownerAddress: string | null;
+  }> {
+    const row = await this.db
+      .selectFrom("DocumentProtection")
+      .select(["documentId", "protected", "ownerAddress"])
+      .where("documentId", "=", documentId)
+      .executeTakeFirst();
+
+    if (!row) {
+      return {
+        documentId,
+        protected: this.config.defaultProtection,
+        ownerAddress: null,
+      };
+    }
+
+    return row;
   }
 }

@@ -57,14 +57,10 @@ describe("Permissions Integration Tests", () => {
   // Context factory
   const createContext = (options: {
     isAdmin?: boolean;
-    isUser?: boolean;
-    isGuest?: boolean;
     userAddress?: string;
   }) => ({
     user: options.userAddress ? { address: options.userAddress } : undefined,
     isAdmin: () => options.isAdmin ?? false,
-    isUser: () => options.isUser ?? false,
-    isGuest: () => options.isGuest ?? false,
   });
 
   beforeEach(async () => {
@@ -536,25 +532,7 @@ describe("Permissions Integration Tests", () => {
       expect(result).toBeDefined();
     });
 
-    it("should allow user access without document permission", async () => {
-      // No document permission granted
-      const ctx = createContext({ isUser: true, userAddress: "0xuser" });
-
-      const result = await callDocument(ctx);
-
-      expect(result).toBeDefined();
-    });
-
-    it("should allow guest read access without document permission", async () => {
-      // No document permission granted
-      const ctx = createContext({ isGuest: true, userAddress: "0xguest" });
-
-      const result = await callDocument(ctx);
-
-      expect(result).toBeDefined();
-    });
-
-    it("global role should take precedence over document permission check", async () => {
+    it("global admin should take precedence over document permission check", async () => {
       // Grant conflicting permission (just to show global role wins)
       await documentPermissionService.grantPermission(
         "doc-123",

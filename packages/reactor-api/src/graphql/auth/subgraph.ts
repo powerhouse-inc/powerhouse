@@ -164,9 +164,82 @@ export class AuthSubgraph extends BaseSubgraph {
           throw error;
         }
       },
+
+      documentProtection: async (
+        _parent: unknown,
+        args: { documentId: string },
+      ) => {
+        this.logger.debug("documentProtection", args);
+        if (!this.documentPermissionService) {
+          throw new GraphQLError("DocumentPermissionService not available");
+        }
+        try {
+          return await resolvers.documentProtection(
+            this.documentPermissionService,
+            args,
+          );
+        } catch (error) {
+          this.logger.error("Error in documentProtection:", error);
+          throw error;
+        }
+      },
     },
 
     Mutation: {
+      setDocumentProtection: async (
+        _parent: unknown,
+        args: { documentId: string; protected: boolean },
+        ctx: {
+          user?: { address: string };
+          isAdmin?: (address: string) => boolean;
+        },
+      ) => {
+        this.logger.debug("setDocumentProtection", args);
+        if (!this.documentPermissionService) {
+          throw new GraphQLError("DocumentPermissionService not available");
+        }
+        try {
+          const isGlobalAdmin = ctx.isAdmin?.(ctx.user?.address ?? "") ?? false;
+          return await resolvers.setDocumentProtection(
+            this.documentPermissionService,
+            this.authorizationService,
+            args,
+            ctx.user?.address,
+            isGlobalAdmin,
+          );
+        } catch (error) {
+          this.logger.error("Error in setDocumentProtection:", error);
+          throw error;
+        }
+      },
+
+      transferDocumentOwnership: async (
+        _parent: unknown,
+        args: { documentId: string; newOwnerAddress: string },
+        ctx: {
+          user?: { address: string };
+          isAdmin?: (address: string) => boolean;
+        },
+      ) => {
+        this.logger.debug("transferDocumentOwnership", args);
+        if (!this.documentPermissionService) {
+          throw new GraphQLError("DocumentPermissionService not available");
+        }
+        try {
+          const isGlobalAdmin = ctx.isAdmin?.(ctx.user?.address ?? "") ?? false;
+          return await resolvers.transferDocumentOwnership(
+            this.documentPermissionService,
+            this.authorizationService,
+            args,
+            ctx.user?.address,
+            isGlobalAdmin,
+          );
+        } catch (error) {
+          this.logger.error("Error in transferDocumentOwnership:", error);
+          throw error;
+        }
+      },
+
       grantDocumentPermission: async (
         _parent: unknown,
         args: { documentId: string; userAddress: string; permission: string },

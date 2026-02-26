@@ -9,6 +9,7 @@ import type {
 import type { PHDocument } from "document-model";
 import type { DocumentNode } from "graphql";
 import type { IncomingHttpHeaders } from "http";
+import type { AuthorizationService } from "../services/authorization.service.js";
 import type { DocumentPermissionService } from "../services/document-permission.service.js";
 import type { BaseSubgraph } from "./base-subgraph.js";
 
@@ -20,8 +21,6 @@ export type Context = {
   document?: PHDocument;
   headers: IncomingHttpHeaders;
   db: unknown;
-  isGuest?: (address: string) => boolean;
-  isUser?: (address: string) => boolean;
   isAdmin?: (address: string) => boolean;
   user?: {
     address: string;
@@ -29,6 +28,7 @@ export type Context = {
     networkId: string;
   };
   documentPermissionService?: DocumentPermissionService;
+  authorizationService?: AuthorizationService;
 };
 
 export type ISubgraph = {
@@ -51,6 +51,7 @@ export type SubgraphArgs = {
   graphqlManager: GraphQLManager;
   syncManager: ISyncManager;
   documentPermissionService?: DocumentPermissionService;
+  authorizationService?: AuthorizationService;
   path?: string;
 };
 

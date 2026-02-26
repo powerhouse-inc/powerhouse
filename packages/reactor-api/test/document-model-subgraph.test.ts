@@ -25,8 +25,6 @@ describe("DocumentModelSubgraph Integration Tests", () => {
     ({
       user: { address: "0xadmin" },
       isAdmin: () => true,
-      isUser: () => false,
-      isGuest: () => false,
     }) as unknown as Context;
 
   beforeEach(async () => {

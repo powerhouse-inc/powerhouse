@@ -1,7 +1,7 @@
 import type { BaseSubgraph, Context } from "@powerhousedao/reactor-api";
 import { VetraReadModelProcessorLegacy } from "../../processors/vetra-read-model/index.legacy.js";
 import type { DB } from "../../processors/vetra-read-model/schema.js";
-import { canReadDocument, hasGlobalReadAccess } from "../permission-utils.js";
+import { canReadDocument, hasGlobalAdminAccess } from "../permission-utils.js";
 
 export const getResolvers = (
   subgraph: BaseSubgraph,
@@ -56,7 +56,7 @@ export const getResolvers = (
         }));
 
         // If user doesn't have global read access, filter by document-level permissions
-        if (!hasGlobalReadAccess(ctx) && subgraph.documentPermissionService) {
+        if (!hasGlobalAdminAccess(ctx) && subgraph.documentPermissionService) {
           const filteredResults = [];
           for (const pkg of mappedResults) {
             const canRead = await canReadDocument(
