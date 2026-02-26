@@ -926,23 +926,63 @@ export class DocumentPermissionService {
 
   /**
    * Walk the parent chain: if the document itself or any ancestor is protected, return true.
+   * Collects all ancestor IDs first (with cycle detection), then batch-checks protection.
    */
-  async isProtected(
+  async isProtectedWithAncestors(
     documentId: string,
     getParentIds: GetParentIdsFn,
   ): Promise<boolean> {
-    if (await this.isDocumentProtected(documentId)) {
-      return true;
+    // Collect all IDs in the hierarchy (document + all ancestors)
+    const allIds = await this.collectAncestorIds(documentId, getParentIds);
+
+    // Batch-check protection for all IDs at once
+    if (allIds.length === 0) {
+      return this.config.defaultProtection;
     }
 
-    const parentIds = await getParentIds(documentId);
-    for (const parentId of parentIds) {
-      if (await this.isProtected(parentId, getParentIds)) {
+    const rows = await this.db
+      .selectFrom("DocumentProtection")
+      .select(["documentId", "protected"])
+      .where("documentId", "in", allIds)
+      .execute();
+
+    const protectionMap = new Map(rows.map((r) => [r.documentId, r.protected]));
+
+    for (const id of allIds) {
+      const isProtected = protectionMap.get(id);
+      // If no row exists, fall back to defaultProtection
+      if (isProtected ?? this.config.defaultProtection) {
         return true;
       }
     }
 
     return false;
+  }
+
+  /**
+   * Collect all ancestor IDs (including the document itself) with cycle detection.
+   */
+  private async collectAncestorIds(
+    documentId: string,
+    getParentIds: GetParentIdsFn,
+  ): Promise<string[]> {
+    const visited = new Set<string>();
+    const queue = [documentId];
+
+    while (queue.length > 0) {
+      const current = queue.shift()!;
+      if (visited.has(current)) continue;
+      visited.add(current);
+
+      const parentIds = await getParentIds(current);
+      for (const parentId of parentIds) {
+        if (!visited.has(parentId)) {
+          queue.push(parentId);
+        }
+      }
+    }
+
+    return Array.from(visited);
   }
 
   /**
@@ -1035,7 +1075,12 @@ export class DocumentPermissionService {
         createdAt: now,
         updatedAt: now,
       })
-      .onConflict((oc) => oc.column("documentId").doNothing())
+      .onConflict((oc) =>
+        oc.column("documentId").doUpdateSet({
+          ownerAddress: normalizedAddress,
+          updatedAt: now,
+        }),
+      )
       .execute();
 
     // Grant ADMIN permission to the owner

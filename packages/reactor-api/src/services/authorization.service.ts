@@ -60,7 +60,7 @@ export class AuthorizationService {
 
     // Check protection status (walks parent chain if getParentIds provided)
     const isProtected = getParentIds
-      ? await this.documentPermissionService.isProtected(
+      ? await this.documentPermissionService.isProtectedWithAncestors(
           documentId,
           getParentIds,
         )
@@ -113,7 +113,7 @@ export class AuthorizationService {
 
     // Check protection status
     const isProtected = getParentIds
-      ? await this.documentPermissionService.isProtected(
+      ? await this.documentPermissionService.isProtectedWithAncestors(
           documentId,
           getParentIds,
         )
@@ -200,13 +200,15 @@ export class AuthorizationService {
     return this.documentPermissionService.canExecuteOperation(
       documentId,
       operationType,
-      userAddress,
+      userAddress?.toLowerCase(),
     );
   }
 
   /**
    * Combined check for mutations: can the user write + execute the operation?
    * This enables READ-only users with operation grants to execute specific operations.
+   * For restricted operations, only the operation grant is checked (bypasses write check),
+   * allowing READ-only users with an explicit operation grant to execute that operation.
    */
   async canMutate(
     documentId: string,
@@ -230,7 +232,7 @@ export class AuthorizationService {
       return this.documentPermissionService.canExecuteOperation(
         documentId,
         operationType,
-        userAddress,
+        userAddress?.toLowerCase(),
       );
     }
 

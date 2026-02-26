@@ -11,7 +11,7 @@ describe("AuthorizationService", () => {
     vi.clearAllMocks();
     mockPermissionService = {
       isDocumentProtected: vi.fn().mockResolvedValue(false),
-      isProtected: vi.fn().mockResolvedValue(false),
+      isProtectedWithAncestors: vi.fn().mockResolvedValue(false),
       getDocumentOwner: vi.fn().mockResolvedValue(null),
       canRead: vi.fn().mockResolvedValue(false),
       canWrite: vi.fn().mockResolvedValue(false),
@@ -118,17 +118,18 @@ describe("AuthorizationService", () => {
     });
 
     it("should use hierarchy check when getParentIds is provided", async () => {
-      vi.mocked(mockPermissionService.isProtected!).mockResolvedValue(true);
+      vi.mocked(
+        mockPermissionService.isProtectedWithAncestors!,
+      ).mockResolvedValue(true);
       vi.mocked(mockPermissionService.getDocumentOwner!).mockResolvedValue(
         null,
       );
       vi.mocked(mockPermissionService.canRead!).mockResolvedValue(true);
       const result = await service.canRead("doc-1", "0xuser", getParentIds);
       expect(result).toBe(true);
-      expect(mockPermissionService.isProtected).toHaveBeenCalledWith(
-        "doc-1",
-        getParentIds,
-      );
+      expect(
+        mockPermissionService.isProtectedWithAncestors,
+      ).toHaveBeenCalledWith("doc-1", getParentIds);
       expect(mockPermissionService.canRead).toHaveBeenCalledWith(
         "doc-1",
         "0xuser",
@@ -352,10 +353,64 @@ describe("AuthorizationService", () => {
     });
   });
 
+  describe("Address normalization", () => {
+    it("should normalize address in canExecuteOperation for restricted ops", async () => {
+      vi.mocked(mockPermissionService.isOperationRestricted!).mockResolvedValue(
+        true,
+      );
+      vi.mocked(mockPermissionService.canExecuteOperation!).mockResolvedValue(
+        true,
+      );
+      await service.canExecuteOperation("doc-1", "SPECIAL_OP", "0xMixedCase");
+      expect(mockPermissionService.canExecuteOperation).toHaveBeenCalledWith(
+        "doc-1",
+        "SPECIAL_OP",
+        "0xmixedcase",
+      );
+    });
+
+    it("should normalize address in canMutate for restricted ops", async () => {
+      vi.mocked(mockPermissionService.isOperationRestricted!).mockResolvedValue(
+        true,
+      );
+      vi.mocked(mockPermissionService.canExecuteOperation!).mockResolvedValue(
+        true,
+      );
+      await service.canMutate("doc-1", "SPECIAL_OP", "0xMixedCase");
+      expect(mockPermissionService.canExecuteOperation).toHaveBeenCalledWith(
+        "doc-1",
+        "SPECIAL_OP",
+        "0xmixedcase",
+      );
+    });
+
+    it("should handle undefined address in canExecuteOperation", async () => {
+      vi.mocked(mockPermissionService.isOperationRestricted!).mockResolvedValue(
+        true,
+      );
+      vi.mocked(mockPermissionService.canExecuteOperation!).mockResolvedValue(
+        false,
+      );
+      const result = await service.canExecuteOperation(
+        "doc-1",
+        "SPECIAL_OP",
+        undefined,
+      );
+      expect(result).toBe(false);
+      expect(mockPermissionService.canExecuteOperation).toHaveBeenCalledWith(
+        "doc-1",
+        "SPECIAL_OP",
+        undefined,
+      );
+    });
+  });
+
   describe("Protection inheritance", () => {
     it("should treat document as protected when parent is protected", async () => {
       // Document itself is not protected, but parent is
-      vi.mocked(mockPermissionService.isProtected!).mockResolvedValue(true);
+      vi.mocked(
+        mockPermissionService.isProtectedWithAncestors!,
+      ).mockResolvedValue(true);
       vi.mocked(mockPermissionService.getDocumentOwner!).mockResolvedValue(
         null,
       );
@@ -363,10 +418,9 @@ describe("AuthorizationService", () => {
 
       const result = await service.canRead("doc-1", "0xuser", getParentIds);
       expect(result).toBe(false);
-      expect(mockPermissionService.isProtected).toHaveBeenCalledWith(
-        "doc-1",
-        getParentIds,
-      );
+      expect(
+        mockPermissionService.isProtectedWithAncestors,
+      ).toHaveBeenCalledWith("doc-1", getParentIds);
     });
   });
 });

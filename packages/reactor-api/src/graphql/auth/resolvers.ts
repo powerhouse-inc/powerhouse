@@ -567,7 +567,14 @@ export async function transferDocumentOwnership(
     }
   }
 
+  // Revoke old owner's explicit ADMIN grant before transferring
+  const previousOwner = await service.getDocumentOwner(args.documentId);
+  if (previousOwner) {
+    await service.revokePermission(args.documentId, previousOwner);
+  }
+
   await service.setDocumentOwner(args.documentId, args.newOwnerAddress);
+
   // Grant ADMIN to new owner
   await service.grantPermission(
     args.documentId,
@@ -575,5 +582,6 @@ export async function transferDocumentOwnership(
     "ADMIN",
     userAddress,
   );
+
   return service.getDocumentProtection(args.documentId);
 }

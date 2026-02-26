@@ -39,185 +39,21 @@ export class ReactorSubgraph extends BaseSubgraph {
   hasSubscriptions = true;
 
   /**
-   * Get the parent IDs function for hierarchical permission checks
-   */
-  private getParentIdsFn() {
-    return resolvers.createGetParentIdsFn(this.reactorClient);
-  }
-
-  /**
-   * Check if user has global admin access.
-   * Used as legacy fallback when authorizationService is not available.
-   */
-  private hasGlobalAdminAccess(ctx: Context): boolean {
-    return !!ctx.isAdmin?.(ctx.user?.address ?? "");
-  }
-
-  /**
-   * Throw an error if user cannot read the document
-   */
-  private async assertCanRead(documentId: string, ctx: Context): Promise<void> {
-    if (this.authorizationService) {
-      const canRead = await this.authorizationService.canRead(
-        documentId,
-        ctx.user?.address,
-        this.getParentIdsFn(),
-      );
-      if (!canRead) {
-        throw new GraphQLError(
-          "Forbidden: insufficient permissions to read this document",
-        );
-      }
-      return;
-    }
-    // Legacy fallback
-    if (!this.hasGlobalAdminAccess(ctx)) {
-      if (this.documentPermissionService) {
-        const canRead = await this.documentPermissionService.canRead(
-          documentId,
-          ctx.user?.address,
-          this.getParentIdsFn(),
-        );
-        if (!canRead) {
-          throw new GraphQLError(
-            "Forbidden: insufficient permissions to read this document",
-          );
-        }
-      } else {
-        throw new GraphQLError(
-          "Forbidden: insufficient permissions to read this document",
-        );
-      }
-    }
-  }
-
-  /**
-   * Check if user can read a document (returns boolean, for filtering)
-   */
-  private async canReadDocument(
-    documentId: string,
-    ctx: Context,
-  ): Promise<boolean> {
-    if (this.authorizationService) {
-      return this.authorizationService.canRead(
-        documentId,
-        ctx.user?.address,
-        this.getParentIdsFn(),
-      );
-    }
-    // Legacy fallback
-    if (this.hasGlobalAdminAccess(ctx)) return true;
-    if (this.documentPermissionService) {
-      return this.documentPermissionService.canRead(
-        documentId,
-        ctx.user?.address,
-        this.getParentIdsFn(),
-      );
-    }
-    return false;
-  }
-
-  /**
-   * Throw an error if user cannot write to the document
-   */
-  private async assertCanWrite(
-    documentId: string,
-    ctx: Context,
-  ): Promise<void> {
-    if (this.authorizationService) {
-      const canWrite = await this.authorizationService.canWrite(
-        documentId,
-        ctx.user?.address,
-        this.getParentIdsFn(),
-      );
-      if (!canWrite) {
-        throw new GraphQLError(
-          "Forbidden: insufficient permissions to write to this document",
-        );
-      }
-      return;
-    }
-    // Legacy fallback
-    if (!this.hasGlobalAdminAccess(ctx)) {
-      if (this.documentPermissionService) {
-        const canWrite = await this.documentPermissionService.canWrite(
-          documentId,
-          ctx.user?.address,
-          this.getParentIdsFn(),
-        );
-        if (!canWrite) {
-          throw new GraphQLError(
-            "Forbidden: insufficient permissions to write to this document",
-          );
-        }
-      } else {
-        throw new GraphQLError(
-          "Forbidden: insufficient permissions to write to this document",
-        );
-      }
-    }
-  }
-
-  /**
-   * Check if user can execute specific operations on a document.
-   * Uses AuthorizationService.canMutate when available, which supports
-   * READ-only users with operation grants.
+   * Check operation-level permissions for an array of actions.
+   * Delegates to base assertCanExecuteOperation for each action.
    */
   private async assertCanExecuteOperations(
     documentId: string,
     actions: readonly unknown[],
     ctx: Context,
   ): Promise<void> {
-    if (this.authorizationService) {
-      for (const action of actions) {
-        if (!action || typeof action !== "object") continue;
-        const actionObj = action as Record<string, unknown>;
-        const operationType = actionObj.type;
-        if (typeof operationType !== "string") continue;
-
-        const canMutate = await this.authorizationService.canMutate(
-          documentId,
-          operationType,
-          ctx.user?.address,
-          this.getParentIdsFn(),
-        );
-        if (!canMutate) {
-          throw new GraphQLError(
-            `Forbidden: insufficient permissions to execute operation "${operationType}" on this document`,
-          );
-        }
-      }
-      return;
-    }
-
-    // Legacy fallback
-    if (!this.documentPermissionService) return;
-    if (ctx.isAdmin?.(ctx.user?.address ?? "")) return;
-
     for (const action of actions) {
       if (!action || typeof action !== "object") continue;
       const actionObj = action as Record<string, unknown>;
       const operationType = actionObj.type;
       if (typeof operationType !== "string") continue;
 
-      const isRestricted =
-        await this.documentPermissionService.isOperationRestricted(
-          documentId,
-          operationType,
-        );
-      if (isRestricted) {
-        const canExecute =
-          await this.documentPermissionService.canExecuteOperation(
-            documentId,
-            operationType,
-            ctx.user?.address,
-          );
-        if (!canExecute) {
-          throw new GraphQLError(
-            `Forbidden: insufficient permissions to execute operation "${operationType}" on this document`,
-          );
-        }
-      }
+      await this.assertCanExecuteOperation(documentId, operationType, ctx);
     }
   }
 
@@ -493,8 +329,11 @@ export class ReactorSubgraph extends BaseSubgraph {
       mutateDocument: async (_parent, args, ctx: Context) => {
         this.logger.debug("mutateDocument(@args)", args);
         try {
-          // Resolve document and check write permission
-          await this.assertCanWrite(args.documentIdentifier, ctx);
+          // assertCanExecuteOperations uses canMutate (which combines write + operation checks)
+          // when authorizationService is available. For legacy fallback, assertCanWrite is needed.
+          if (!this.authorizationService) {
+            await this.assertCanWrite(args.documentIdentifier, ctx);
+          }
 
           // Check operation-level permissions for each action
           await this.assertCanExecuteOperations(
@@ -513,8 +352,9 @@ export class ReactorSubgraph extends BaseSubgraph {
       mutateDocumentAsync: async (_parent, args, ctx: Context) => {
         this.logger.debug("mutateDocumentAsync(@args)", args);
         try {
-          // Resolve document and check write permission
-          await this.assertCanWrite(args.documentIdentifier, ctx);
+          if (!this.authorizationService) {
+            await this.assertCanWrite(args.documentIdentifier, ctx);
+          }
 
           // Check operation-level permissions for each action
           await this.assertCanExecuteOperations(
