@@ -1,3 +1,3 @@
-export * from "./processor/index.js";
+export * from "@powerhousedao/shared/processors/drive-analytics/index";
 export * from "./useDocumentAnalytics.js";
 export * from "./useDriveAnalytics.js";

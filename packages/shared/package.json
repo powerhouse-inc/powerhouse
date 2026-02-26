@@ -39,14 +39,16 @@
     }
   },
   "dependencies": {
-    "kysely": "catalog:",
-    "@sindresorhus/fnv1a": "catalog:",
     "@powerhousedao/analytics-engine-core": "catalog:",
+    "@sindresorhus/fnv1a": "catalog:",
+    "kysely": "catalog:",
+    "luxon": "catalog:",
     "mutative": "catalog:",
     "react": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@types/luxon": "catalog:",
     "@types/react": "catalog:"
   }
 }
