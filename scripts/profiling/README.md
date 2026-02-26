@@ -37,10 +37,12 @@ Build the packages that the profiling scripts depend on. Run these from the repo
 ```bash
 pnpm --filter document-model run tsc --build
 pnpm --filter @powerhousedao/reactor run build
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/postgres" pnpm --filter document-drive run migrate
 pnpm --filter @powerhousedao/switchboard run tsc --build
 ```
 
-Rebuild after any source changes in these packages, otherwise the scripts will run against stale code.
+- `migrate` runs `prisma generate && prisma db push` — required once per fresh PostgreSQL database to create the schema. Re-run if you wipe the database.
+- Rebuild after any source changes in these packages, otherwise the scripts will run against stale code.
 
 Scripts are run with [tsx](https://github.com/privatenumber/tsx). The GraphQL-based scripts (`docs-*`) require a running switchboard instance (default: `http://localhost:4001/graphql`).
 
@@ -332,6 +334,9 @@ tsx docs-reset.ts
 
 ```bash
 docker compose -f scripts/profiling/docker-compose.yml up pyroscope postgres -d
+
+# Migrate the database schema (required once per fresh database)
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/postgres" pnpm --filter document-drive run migrate
 
 # Terminal 1: start switchboard with Pyroscope (wall:wall + CPU mode)
 ./scripts/profiling/switchboard-pyroscope.sh \
