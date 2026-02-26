@@ -126,8 +126,8 @@
   "dependencies": {
     "@electric-sql/pglite": "catalog:",
     "@electric-sql/pglite-tools": "catalog:",
-    "@openfeature/core": "^1.9.1",
-    "@openfeature/web-sdk": "^1.6.2",
+    "@openfeature/core": "1.9.1",
+    "@openfeature/web-sdk": "1.6.2",
     "@powerhousedao/builder-tools": "workspace:*",
     "@powerhousedao/config": "workspace:*",
     "@powerhousedao/design-system": "workspace:*",
