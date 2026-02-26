@@ -1,3 +1,18 @@
+## 6.0.0-dev.59 (2026-02-26)
+
+### 🚀 Features
+
+- use update-ts-references tool which also removes unused ones ([#2374](https://github.com/powerhouse-inc/powerhouse/pull/2374))
+
+### 🩹 Fixes
+
+- remove artificial paging limit -- reshuffle depth is NOT the same as query depth ([3d3706253](https://github.com/powerhouse-inc/powerhouse/commit/3d3706253))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.0.0-dev.58 (2026-02-25)
 
 ### 🚀 Features

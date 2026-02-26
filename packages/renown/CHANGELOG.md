@@ -1,3 +1,13 @@
+## 6.0.0-dev.59 (2026-02-26)
+
+### 🚀 Features
+
+- use update-ts-references tool which also removes unused ones ([#2374](https://github.com/powerhouse-inc/powerhouse/pull/2374))
+
+### ❤️ Thank You
+
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.0.0-dev.58 (2026-02-25)
 
 ### 🔥 Performance
