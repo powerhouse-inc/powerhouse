@@ -67,6 +67,7 @@
     "@powerhousedao/ph-cli": "workspace:*",
     "@powerhousedao/connect": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",
+    "@powerhousedao/switchboard": "workspace:*",
     "@types/node": "catalog:",
     "change-case": "catalog:",
     "document-model": "workspace:*",
@@ -79,6 +80,7 @@
     "@electric-sql/pglite": "catalog:"
   },
   "dependencies": {
-    "@powerhousedao/design-system": "workspace:*"
+    "@powerhousedao/design-system": "workspace:*",
+    "zod": "catalog:"
   }
 }

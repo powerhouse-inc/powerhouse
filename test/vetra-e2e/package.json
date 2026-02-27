@@ -56,7 +56,8 @@
   },
   "dependencies": {
     "@powerhousedao/design-system": "workspace:*",
-    "document-model": "workspace:*"
+    "document-model": "workspace:*",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@electric-sql/pglite": "catalog:",

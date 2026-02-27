@@ -9,6 +9,9 @@
       "path": "../../apps/connect"
     },
     {
+      "path": "../../apps/switchboard"
+    },
+    {
       "path": "../../clis/ph-cli"
     },
     {

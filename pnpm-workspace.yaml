@@ -88,3 +88,33 @@ catalog:
   "@types/luxon": 3.7.1
   "react-i18next": 16.5.4
   "graphql-tag": 2.12.6
+  lightningcss: 1.31.1
+
+allowBuilds:
+  vite: true
+  vitest: true
+  lightningcss: true
+  "@apollo/protobufjs": true
+  "@datadog/pprof": true
+  "@ipshipyard/node-datachannel": true
+  "@parcel/watcher": true
+  "@prisma/client": true
+  "@prisma/engines": true
+  "@sentry/cli": true
+  "@swc/core": true
+  "bufferutil": true
+  "core-js": true
+  "core-js-pure": true
+  "cypress": true
+  "edgedriver": true
+  "es5-ext": true
+  "esbuild": true
+  "geckodriver": true
+  "keccak": true
+  "msw": true
+  "nx": true
+  "prisma": true
+  "protobufjs": true
+  "sqlite3": true
+  "unrs-resolver": true
+  "utf-8-validate": true

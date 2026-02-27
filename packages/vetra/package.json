@@ -71,6 +71,7 @@
     "service-unstartup": "bash ./node_modules/@powerhousedao/ph-cli/dist/scripts/service-unstartup.sh"
   },
   "dependencies": {
+    "@powerhousedao/connect": "workspace:*",
     "@powerhousedao/builder-tools": "workspace:*",
     "@powerhousedao/common": "workspace:*",
     "@powerhousedao/config": "workspace:*",

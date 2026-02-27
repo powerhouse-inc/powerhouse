@@ -9,7 +9,7 @@ export function getConfig(path = "./powerhouse.config.json") {
     const userConfig = JSON.parse(configStr) as PowerhouseConfig;
     config = { ...config, ...userConfig };
   } catch {
-    console.warn("No powerhouse.config.json found, using defaults");
+    // console.warn("No powerhouse.config.json found, using defaults");
   }
 
   return config;
