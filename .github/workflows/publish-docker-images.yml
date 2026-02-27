@@ -66,9 +66,52 @@ jobs:
           tags: |
             ${{ env.REGISTRY }}/${{ github.repository }}/academy:${{ env.GITHUB_TAG }}
             ${{ env.REGISTRY }}/${{ github.repository }}/academy:${{ env.ADDITIONAL_TAG }}
-            ${{ env.HARBOR_REGISTRY }}/${{ env.HARBOR_PROJECT }}/academy:${{ env.GITHUB_TAG }}
-            ${{ env.HARBOR_REGISTRY }}/${{ env.HARBOR_PROJECT }}/academy:${{ env.ADDITIONAL_TAG }}
+            ${{ env.HARBOR_REGISTRY }}/academy/academy:${{ env.GITHUB_TAG }}
+            ${{ env.HARBOR_REGISTRY }}/academy/academy:${{ env.ADDITIONAL_TAG }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
             TAG=${{env.GITHUB_TAG}}
+
+  update-k8s-academy:
+    name: Update Academy Image in K8s Hosting
+    needs: academy
+    if: ${{ needs.academy.outputs.tag != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Determine target environments
+        id: env
+        env:
+          TAG: ${{ needs.academy.outputs.tag }}
+        run: |
+          if [[ "$TAG" == *"-dev."* ]]; then
+            echo "targets=dev" >> $GITHUB_OUTPUT
+          elif [[ "$TAG" == *"-staging."* ]]; then
+            echo "targets=staging academy" >> $GITHUB_OUTPUT
+          else
+            echo "Skipping k8s update for production tags"
+          fi
+
+      - name: Update academy image tag in k8s-hosting
+        if: ${{ steps.env.outputs.targets != '' }}
+        env:
+          TAG: ${{ needs.academy.outputs.tag }}
+          TARGETS: ${{ steps.env.outputs.targets }}
+          K8S_REPO_PAT: ${{ secrets.K8S_REPO_PAT }}
+        run: |
+          git clone "https://x-access-token:${K8S_REPO_PAT}@github.com/powerhouse-inc/powerhouse-k8s-hosting.git"
+          cd powerhouse-k8s-hosting
+
+          git config user.name "Github Actions Bot"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          for TARGET_ENV in $TARGETS; do
+            VALUES_FILE="tenants/${TARGET_ENV}/powerhouse-values.yaml"
+            # Update academy image tag (matches the line after academy's repository line)
+            sed -i '/repository: cr.vetra.io\/academy\/academy/{n;s/\(.*tag: \).*/\1'"${TAG}"'/}' "$VALUES_FILE"
+            git add "$VALUES_FILE"
+          done
+
+          git diff --cached --quiet && echo "No changes to commit" && exit 0
+          git commit -m "chore(academy): update academy image tag to ${TAG}"
+          git push
