@@ -161,11 +161,8 @@ tsx docs-create.ts -d doc1 -d doc2 -o 10
 # Batch operations (10 ops per mutateDocument call instead of 1)
 tsx docs-create.ts 1 -o 100 --batch-size 10
 
-# Custom endpoint and document type
-tsx docs-create.ts 50 --documentType powerhouse/document-model --endpoint http://localhost:4001/graphql
-
-# Enable Pyroscope profiling (profiles the client process; use switchboard-pyroscope.sh to profile the server)
-tsx docs-create.ts 1 -o 100 -l 10 --pyroscope
+# Custom endpoint
+tsx docs-create.ts 50 --endpoint http://localhost:4001/graphql
 
 # Save output to a timestamped file
 tsx docs-create.ts 5 -o 20 -l 10 -p --file
@@ -177,21 +174,19 @@ tsx docs-create.ts 5 -o 20 -l 10 -p -O results.txt
 tsx docs-create.ts 5 -o 20 --percentiles --show-action-types
 ```
 
-| Flag                  | Short | Description                                                                                                              |
-| --------------------- | ----- | ------------------------------------------------------------------------------------------------------------------------ |
-| `N` (positional)      |       | Number of documents to create (default: 10)                                                                              |
-| `--operations`        | `-o`  | Operations per loop (default: 0)                                                                                         |
-| `--op-loops`          | `-l`  | Loops per document (default: 1)                                                                                          |
-| `--batch-size`        | `-b`  | Operations per `mutateDocument` call (default: 1)                                                                        |
-| `--doc-id`            | `-d`  | Use existing document(s), can be repeated                                                                                |
-| `--endpoint`          |       | GraphQL endpoint (default: `http://localhost:4001/graphql`)                                                              |
-| `--documentType`      |       | Document type for new documents                                                                                          |
-| `--pyroscope`         |       | Enable Pyroscope profiling (optionally pass server address). Automatically runs `pyroscope-analyse.ts` after completion. |
-| `--file`              |       | Write output to a timestamped file (default name: `docs-create.txt`)                                                     |
-| `--output`            | `-O`  | Write output to a specific file (no timestamp prefix)                                                                    |
-| `--verbose`           | `-v`  | Show detailed operation timings                                                                                          |
-| `--percentiles`       | `-p`  | Show p50/p90/p95/p99 stats                                                                                               |
-| `--show-action-types` | `-a`  | Show action names in min/max timings                                                                                     |
+| Flag                  | Short | Description                                                          |
+| --------------------- | ----- | -------------------------------------------------------------------- |
+| `N` (positional)      |       | Number of documents to create (default: 10)                          |
+| `--operations`        | `-o`  | Operations per loop (default: 0)                                     |
+| `--op-loops`          | `-l`  | Loops per document (default: 1)                                      |
+| `--batch-size`        | `-b`  | Operations per `mutateDocument` call (default: 1)                    |
+| `--doc-id`            | `-d`  | Use existing document(s), can be repeated                            |
+| `--endpoint`          |       | GraphQL endpoint (default: `http://localhost:4001/graphql`)          |
+| `--file`              |       | Write output to a timestamped file (default name: `docs-create.txt`) |
+| `--output`            | `-O`  | Write output to a specific file (no timestamp prefix)                |
+| `--verbose`           | `-v`  | Show detailed operation timings                                      |
+| `--percentiles`       | `-p`  | Show p50/p90/p95/p99 stats                                           |
+| `--show-action-types` | `-a`  | Show action names in min/max timings                                 |
 
 ### `docs-count.ts` — Count documents (fast)
 
@@ -328,11 +323,8 @@ DATABASE_URL="postgresql://postgres:postgres@localhost:5432/postgres" pnpm --fil
 ./scripts/profiling/switchboard-pyroscope.sh \
   --postgres "postgresql://postgres:postgres@localhost:5432/postgres"
 
-# Terminal 2: run workload — saves report after completion
-tsx docs-create.ts 1 -o 25 -b 5 -l 100 \
-  --db "postgresql://postgres:postgres@localhost:5432/postgres" \
-  --pyroscope
-# Output: {timestamp}-pyroscope.md, {timestamp}-pyroscope-{wall,samples,cpu}.json
+# Terminal 2: run workload
+tsx docs-create.ts 1 -o 25 -b 5 -l 100
 
 # Open http://localhost:4040 to view the switchboard flame graph
 # (use service_name="powerhouse-mono-switchboard" in the query)
