@@ -670,7 +670,7 @@ async function _setupAPI(
   );
 
   if (mcpServerEnabled) {
-    await setupMcpServer(reactor, app);
+    await setupMcpServer({ client: reactorClient, syncManager }, app);
     logger.info(`MCP server available at http://localhost:${port}/mcp`);
   }
 

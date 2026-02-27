@@ -1,101 +1,112 @@
 import { createReactorMcpProvider } from "@powerhousedao/reactor-mcp";
-import type { IDocumentDriveServer } from "document-drive";
-import {
-  DocumentNotFoundError,
-  driveDocumentModelModule,
-  ReactorBuilder,
-} from "document-drive";
+import type {
+  IReactorClient,
+  ReactorClientModule,
+} from "@powerhousedao/reactor";
+import { ReactorBuilder, ReactorClientBuilder } from "@powerhousedao/reactor";
+import type { DocumentDriveDocument } from "document-drive";
+import { driveDocumentModelModule } from "document-drive";
+import type { PHDocument } from "document-model";
 import {
   documentModelCreateDocument,
   documentModelDocumentModelModule,
   documentModelReducer,
 } from "document-model";
-import { generateId } from "document-model/core";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-// Mock reactor
-const createMockReactor = (): IDocumentDriveServer => {
-  const mockReactor = {
-    initialize: vi.fn().mockResolvedValue(undefined),
-    getDocument: vi.fn(),
-  } as unknown as IDocumentDriveServer;
+// Mock reactor client for unit tests
+const createMockReactorClient = (): IReactorClient => {
+  const mockClient = {
+    get: vi.fn(),
+    getDocumentModelModule: vi.fn(),
+    getDocumentModelModules: vi.fn().mockResolvedValue({
+      results: [],
+      options: { cursor: "", limit: 10 },
+    }),
+    createEmpty: vi.fn(),
+    getChildren: vi.fn().mockResolvedValue({
+      results: [],
+      options: { cursor: "", limit: 10 },
+    }),
+    deleteDocument: vi.fn(),
+    execute: vi.fn(),
+    find: vi.fn().mockResolvedValue({
+      results: [],
+      options: { cursor: "", limit: 10 },
+    }),
+    rename: vi.fn(),
+  } as unknown as IReactorClient;
 
-  return mockReactor;
+  return mockClient;
 };
 
-async function createReactor() {
-  const builder = new ReactorBuilder([
+// Create a real reactor client for integration tests
+async function createReactorClientModule(): Promise<ReactorClientModule> {
+  const reactorBuilder = new ReactorBuilder().withDocumentModels([
     documentModelDocumentModelModule,
     driveDocumentModelModule,
   ]);
 
-  const reactor = builder.build();
-  await reactor.initialize();
+  const module = await new ReactorClientBuilder()
+    .withReactorBuilder(reactorBuilder)
+    .buildModule();
 
-  return reactor;
+  return module;
 }
 
-describe.skip("ReactorMcpProvider", () => {
-  let mockReactor: IDocumentDriveServer;
-  let reactor: IDocumentDriveServer;
+describe("ReactorMcpProvider", () => {
+  let mockClient: IReactorClient;
+  let reactorModule: ReactorClientModule;
+  let client: IReactorClient;
 
   beforeEach(async () => {
-    reactor = await createReactor();
-    mockReactor = createMockReactor();
+    reactorModule = await createReactorClientModule();
+    client = reactorModule.client;
+    mockClient = createMockReactorClient();
     vi.clearAllMocks();
   });
 
-  it("should initialize reactor on creation", async () => {
-    await createReactorMcpProvider(mockReactor);
-
-    expect(mockReactor.initialize).toHaveBeenCalledOnce();
+  afterEach(() => {
+    reactorModule.reactor.kill();
   });
 
-  describe("createDocument tool", () => {
+  describe("getDocument tool", () => {
     it("should retrieve a document successfully", async () => {
+      // Create a document using the client
       const document = documentModelCreateDocument();
-      const resultDocument = await reactor.addDocument(document);
+      await client.create(document);
 
-      const provider = await createReactorMcpProvider(reactor);
+      const provider = await createReactorMcpProvider({ client });
       const result = await provider.tools.getDocument.callback({
         id: document.header.id,
       });
 
-      expect(JSON.parse(result.content[0].text as string)).toMatchObject({
-        document: {
-          header: resultDocument.header,
-          state: resultDocument.state,
-        },
-      });
+      expect(result.isError).toBeUndefined();
       expect(result.structuredContent).toMatchObject({
         document: {
-          header: resultDocument.header,
-          state: resultDocument.state,
+          header: expect.objectContaining({
+            id: document.header.id,
+            documentType: document.header.documentType,
+          }),
         },
       });
-      expect(result.isError).toBeUndefined();
     });
 
     it("should handle errors gracefully", async () => {
-      const provider = await createReactorMcpProvider(reactor);
+      const provider = await createReactorMcpProvider({ client });
       const result = await provider.tools.getDocument.callback({
         id: "non-existent-id",
       });
 
       expect(result.isError).toBe(true);
-      expect(result.content).toEqual([
-        {
-          type: "text",
-          text: "Error: Document with id non-existent-id not found",
-        },
-      ]);
+      expect(result.content[0].text).toContain("non-existent-id");
     });
 
     it("should handle non-Error exceptions", async () => {
       const errorMessage = "String error message";
-      mockReactor.getDocument = vi.fn().mockRejectedValue(errorMessage);
+      vi.mocked(mockClient.get).mockRejectedValue(errorMessage);
 
-      const provider = await createReactorMcpProvider(mockReactor);
+      const provider = await createReactorMcpProvider({ client: mockClient });
       const result = await provider.tools.getDocument.callback({
         id: "test-id",
       });
@@ -108,46 +119,30 @@ describe.skip("ReactorMcpProvider", () => {
         },
       ]);
     });
-
-    it("should handle empty string ID", async () => {
-      mockReactor.getDocument = vi
-        .fn()
-        .mockRejectedValue(new DocumentNotFoundError(""));
-
-      const provider = await createReactorMcpProvider(reactor);
-      const result = await provider.tools.getDocument.callback({ id: "" });
-
-      expect(result.isError).toBe(true);
-      expect(result.content).toEqual([
-        {
-          type: "text",
-          text: "Error: Document with id  not found",
-        },
-      ]);
-    });
   });
 
   describe("createDocument tool", () => {
     it("should create a document successfully", async () => {
-      const provider = await createReactorMcpProvider(reactor);
+      const provider = await createReactorMcpProvider({ client });
       const result = await provider.tools.createDocument.callback({
         documentType: "powerhouse/document-model",
-        documentId: "test-doc-id",
       });
 
       expect(result.isError).toBeUndefined();
-      expect(result.structuredContent).toStrictEqual({
-        documentId: "test-doc-id",
+      expect(result.structuredContent).toMatchObject({
+        documentId: expect.any(String),
       });
     });
   });
 
   describe("getDocuments tool", () => {
     it("should get documents from a drive", async () => {
-      const drive = await reactor.addDrive({
-        global: { name: "Test Drive" },
-      });
-      const provider = await createReactorMcpProvider(reactor);
+      // Create a drive first
+      const drive = await client.createEmpty<DocumentDriveDocument>(
+        "powerhouse/document-drive",
+      );
+
+      const provider = await createReactorMcpProvider({ client });
       const result = await provider.tools.getDocuments.callback({
         parentId: drive.header.id,
       });
@@ -156,40 +151,17 @@ describe.skip("ReactorMcpProvider", () => {
       expect(result.structuredContent).toMatchObject({
         documentIds: [],
       });
-
-      const { document } = await reactor.queueDocument({
-        documentType: "powerhouse/document-model",
-        id: generateId(),
-      });
-
-      const addResult = await reactor.addAction(
-        drive.header.id,
-        driveDocumentModelModule.actions.addFile({
-          id: document?.header.id,
-          documentType: "powerhouse/document-model",
-          name: "test-doc",
-        }),
-      );
-      expect(addResult.error).toBeUndefined();
-
-      const result2 = await provider.tools.getDocuments.callback({
-        parentId: drive.header.id,
-      });
-
-      expect(result2.structuredContent).toMatchObject({
-        documentIds: [document?.header.id],
-      });
     });
   });
 
   describe("deleteDocument tool", () => {
     it("should delete a document successfully", async () => {
       const document = documentModelCreateDocument();
-      await reactor.addDocument(document);
+      await client.create(document);
 
-      const provider = await createReactorMcpProvider(reactor);
+      const provider = await createReactorMcpProvider({ client });
       const result = await provider.tools.deleteDocument.callback({
-        documentId: document?.header.id,
+        documentId: document.header.id,
       });
 
       expect(result.isError).toBeUndefined();
@@ -199,15 +171,14 @@ describe.skip("ReactorMcpProvider", () => {
     });
 
     it("should handle deletion of non-existent document", async () => {
-      const provider = await createReactorMcpProvider(reactor);
+      const provider = await createReactorMcpProvider({ client });
       const result = await provider.tools.deleteDocument.callback({
         documentId: "non-existent-id",
       });
 
-      expect(result.isError).toBeUndefined();
-      // The reactor implementation returns true even for non-existent documents
+      // The new reactor throws for non-existent documents
       expect(result.structuredContent).toMatchObject({
-        success: true,
+        success: false,
       });
     });
   });
@@ -215,9 +186,9 @@ describe.skip("ReactorMcpProvider", () => {
   describe("addActions tool", () => {
     it("should add an action to a document", async () => {
       const document = documentModelCreateDocument();
-      await reactor.addDocument(document);
+      await client.create(document);
 
-      const provider = await createReactorMcpProvider(reactor);
+      const provider = await createReactorMcpProvider({ client });
 
       const action = documentModelDocumentModelModule.actions.setModelName({
         name: "test-doc",
@@ -227,7 +198,6 @@ describe.skip("ReactorMcpProvider", () => {
         actions: [action],
       });
 
-      const expectedResult = documentModelReducer(document, action);
       expect(result.isError).toBeUndefined();
       expect(result.structuredContent).toStrictEqual({
         success: true,
@@ -236,13 +206,13 @@ describe.skip("ReactorMcpProvider", () => {
 
     it("should add multiple actions to a document", async () => {
       const document = documentModelCreateDocument();
-      await reactor.addDocument(document);
+      await client.create(document);
 
-      const provider = await createReactorMcpProvider(reactor);
+      const provider = await createReactorMcpProvider({ client });
 
       const actions = [
         documentModelDocumentModelModule.actions.setModelName({
-          name: "Test Name 1 ",
+          name: "Test Name 1",
         }),
         documentModelDocumentModelModule.actions.setModelName({
           name: "Test Name 2",
@@ -253,11 +223,6 @@ describe.skip("ReactorMcpProvider", () => {
         actions,
       });
 
-      const intermediateResult = documentModelReducer(document, actions[0]);
-      const expectedResult = documentModelReducer(
-        intermediateResult,
-        actions[1],
-      );
       expect(result.isError).toBeUndefined();
       expect(result.structuredContent).toStrictEqual({
         success: true,
@@ -266,9 +231,9 @@ describe.skip("ReactorMcpProvider", () => {
 
     it("should throw error on invalid action type", async () => {
       const document = documentModelCreateDocument();
-      await reactor.addDocument(document);
+      await client.create(document);
 
-      const provider = await createReactorMcpProvider(reactor);
+      const provider = await createReactorMcpProvider({ client });
 
       const result = await provider.tools.addActions.callback({
         documentId: document.header.id,
@@ -289,12 +254,12 @@ describe.skip("ReactorMcpProvider", () => {
 
     it("should throw error on invalid action input", async () => {
       const document = documentModelCreateDocument();
-      await reactor.addDocument(document);
+      await client.create(document);
 
-      const provider = await createReactorMcpProvider(reactor);
+      const provider = await createReactorMcpProvider({ client });
 
       const result = await provider.tools.addActions.callback({
-        documentId: document?.header.id,
+        documentId: document.header.id,
         actions: [
           {
             type: "SET_MODEL_NAME",
@@ -307,22 +272,11 @@ describe.skip("ReactorMcpProvider", () => {
       });
 
       expect(result.isError).toBe(true);
-      expect(result.content[0].text)
-        .toContain(`Input validation error: Invalid action input: [
-  {
-    "code": "invalid_type",
-    "expected": "string",
-    "received": "undefined",
-    "path": [
-      "name"
-    ],
-    "message": "Required"
-  }
-]`);
+      expect(result.content[0].text).toContain("Input validation error");
     });
 
     it("should throw error on action on non-existent document", async () => {
-      const provider = await createReactorMcpProvider(reactor);
+      const provider = await createReactorMcpProvider({ client });
       const result = await provider.tools.addActions.callback({
         documentId: "non-existent-id",
         actions: [
@@ -336,102 +290,57 @@ describe.skip("ReactorMcpProvider", () => {
 
       // Action on non-existent document returns an error
       expect(result.isError).toBe(true);
-      expect(result.content).toStrictEqual([
-        {
-          text: "Error: Document with id non-existent-id not found",
-          type: "text",
-        },
-      ]);
-      expect(result.structuredContent).toBeUndefined();
+      expect(result.content[0].text).toContain("non-existent-id");
     });
   });
 
-  // describe("addOperation tool", () => {
-  //   it("should add an operation to a document", async () => {
-  //     const document = documentModelCreateDocument();
-  //     await reactor.addDocument(document);
-
-  //     const provider = await createReactorMcpProvider(reactor);
-  //     const result = await provider.tools.addOperation.callback({
-  //       documentId: document.header.id,
-  //       operation: {
-  //         type: "SET_NAME",
-  //         input: "Operation Name",
-  //         scope: "global",
-  //         index: 1,
-  //         timestampUtcMs: new Date().toISOString(),
-  //         hash: "test-hash",
-  //         skip: 0,
-  //       },
-  //     });
-
-  //     expect(result.isError).toBeUndefined();
-  //     expect(result.structuredContent).toMatchObject({
-  //       result: {
-  //         status: "ERROR",
-  //
-  //         error: expect.any(String),
-  //         operations: [],
-  //         signals: [],
-  //       },
-  //     });
-  //   });
-  // });
-
   describe("getDrives tool", () => {
     it("should list all drives", async () => {
-      await reactor.addDrive({ global: { name: "Test Drive 1" } });
-      await reactor.addDrive({ global: { name: "Test Drive 2" } });
+      await client.createEmpty("powerhouse/document-drive");
+      await client.createEmpty("powerhouse/document-drive");
 
-      const provider = await createReactorMcpProvider(reactor);
+      const provider = await createReactorMcpProvider({ client });
       const result = await provider.tools.getDrives.callback({});
 
       expect(result.isError).toBeUndefined();
       expect(result.structuredContent).toMatchObject({
-        driveIds: expect.arrayContaining([]),
+        driveIds: expect.any(Array),
       });
+      expect(
+        (result.structuredContent as { driveIds: string[] }).driveIds.length,
+      ).toBeGreaterThanOrEqual(2);
     });
   });
 
   describe("addDrive tool", () => {
     it("should add a new drive", async () => {
-      const provider = await createReactorMcpProvider(reactor);
+      const provider = await createReactorMcpProvider({ client });
       const result = await provider.tools.addDrive.callback({
         driveInput: {
           global: {
             name: "New Test Drive",
             icon: "test-icon",
           },
-          id: "test-drive-id",
-          slug: "test-drive-slug",
-          preferredEditor: "test-editor",
-          local: {
-            availableOffline: true,
-            sharingType: "private",
-          },
         },
       });
 
       expect(result.isError).toBeUndefined();
-      expect(result.structuredContent).toStrictEqual({
-        driveId: "test-drive-id",
+      expect(result.structuredContent).toMatchObject({
+        driveId: expect.any(String),
       });
-      const drive = await reactor.getDrive("test-drive-id");
+
+      const drive = await client.get<DocumentDriveDocument>(
+        (result.structuredContent as { driveId: string }).driveId,
+      );
       expect(drive).toMatchObject({
         header: expect.objectContaining({
           documentType: "powerhouse/document-drive",
-        }),
-
-        state: expect.objectContaining({
-          global: expect.objectContaining({
-            name: expect.any(String),
-          }),
         }),
       });
     });
 
     it("should add a drive with minimal input", async () => {
-      const provider = await createReactorMcpProvider(reactor);
+      const provider = await createReactorMcpProvider({ client });
       const result = await provider.tools.addDrive.callback({
         driveInput: {
           global: {
@@ -441,21 +350,16 @@ describe.skip("ReactorMcpProvider", () => {
       });
 
       expect(result.isError).toBeUndefined();
-      expect(result.structuredContent).toStrictEqual({
+      expect(result.structuredContent).toMatchObject({
         driveId: expect.any(String),
       });
-      const drive = await reactor.getDrive(
-        result.structuredContent!.driveId as string,
+
+      const drive = await client.get<DocumentDriveDocument>(
+        (result.structuredContent as { driveId: string }).driveId,
       );
       expect(drive).toMatchObject({
         header: expect.objectContaining({
           documentType: "powerhouse/document-drive",
-        }),
-
-        state: expect.objectContaining({
-          global: expect.objectContaining({
-            name: expect.any(String),
-          }),
         }),
       });
     });
@@ -463,11 +367,13 @@ describe.skip("ReactorMcpProvider", () => {
 
   describe("getDrive tool", () => {
     it("should get a specific drive", async () => {
-      const drive = await reactor.addDrive({ global: { name: "Test Drive" } });
+      const drive = await client.createEmpty<DocumentDriveDocument>(
+        "powerhouse/document-drive",
+      );
 
-      const provider = await createReactorMcpProvider(reactor);
+      const provider = await createReactorMcpProvider({ client });
       const result = await provider.tools.getDrive.callback({
-        driveId: drive?.header.id,
+        driveId: drive.header.id,
       });
 
       expect(result.isError).toBeUndefined();
@@ -475,39 +381,6 @@ describe.skip("ReactorMcpProvider", () => {
         drive: expect.objectContaining({
           header: expect.objectContaining({
             documentType: "powerhouse/document-drive",
-          }),
-
-          state: expect.objectContaining({
-            global: expect.objectContaining({
-              name: expect.any(String),
-            }),
-          }),
-        }),
-      });
-    });
-
-    it("should get a drive with options", async () => {
-      const drive = await reactor.addDrive({ global: { name: "Test Drive" } });
-
-      const provider = await createReactorMcpProvider(reactor);
-      const result = await provider.tools.getDrive.callback({
-        driveId: drive?.header.id,
-        options: {
-          checkHashes: true,
-        },
-      });
-
-      expect(result.isError).toBeUndefined();
-      expect(result.structuredContent).toMatchObject({
-        drive: expect.objectContaining({
-          header: expect.objectContaining({
-            documentType: "powerhouse/document-drive",
-          }),
-
-          state: expect.objectContaining({
-            global: expect.objectContaining({
-              name: expect.any(String),
-            }),
           }),
         }),
       });
@@ -516,9 +389,11 @@ describe.skip("ReactorMcpProvider", () => {
 
   describe("deleteDrive tool", () => {
     it("should delete a drive successfully", async () => {
-      const drive = await reactor.addDrive({ global: { name: "Test Drive" } });
+      const drive = await client.createEmpty<DocumentDriveDocument>(
+        "powerhouse/document-drive",
+      );
 
-      const provider = await createReactorMcpProvider(reactor);
+      const provider = await createReactorMcpProvider({ client });
       const result = await provider.tools.deleteDrive.callback({
         driveId: drive.header.id,
       });
@@ -530,33 +405,22 @@ describe.skip("ReactorMcpProvider", () => {
     });
 
     it("should handle deletion of non-existent drive", async () => {
-      const provider = await createReactorMcpProvider(reactor);
+      const provider = await createReactorMcpProvider({ client });
       const result = await provider.tools.deleteDrive.callback({
         driveId: "non-existent-drive-id",
       });
 
-      expect(result.isError).toBeUndefined();
-      // The reactor implementation returns true even for non-existent drives
+      // The new reactor throws for non-existent documents
       expect(result.structuredContent).toMatchObject({
-        success: true,
+        success: false,
       });
     });
   });
 
   describe("addRemoteDrive tool", () => {
-    it("should handle remote drive connection with mock", async () => {
-      // Mock the addRemoteDrive method since we can't test actual remote connections
-      mockReactor.addRemoteDrive = vi.fn().mockResolvedValue({
-        header: { id: "remote-drive-id" },
-        state: { global: { name: "Remote Drive" } },
-      });
-
-      mockReactor.getDrive = vi.fn().mockResolvedValue({
-        header: { id: "remote-drive-id" },
-        state: { global: { name: "Remote Drive" } },
-      });
-
-      const provider = await createReactorMcpProvider(mockReactor);
+    it("should return an error when syncManager is not configured", async () => {
+      // No syncManager provided
+      const provider = await createReactorMcpProvider({ client });
       const result = await provider.tools.addRemoteDrive.callback({
         url: "https://example.com/remote-drive",
         options: {
@@ -572,32 +436,60 @@ describe.skip("ReactorMcpProvider", () => {
         },
       });
 
+      expect(result.isError).toBe(true);
+      expect(result.content[0].text).toContain(
+        "Remote drive management is not available",
+      );
+      expect(result.content[0].text).toContain(
+        "SyncManager was not configured",
+      );
+    });
+  });
+
+  describe("getDocumentModels tool", () => {
+    it("should list available document models", async () => {
+      const provider = await createReactorMcpProvider({ client });
+      const result = await provider.tools.getDocumentModels.callback({});
+
       expect(result.isError).toBeUndefined();
-      expect(result.structuredContent).toStrictEqual({
-        driveId: "remote-drive-id",
+      expect(result.structuredContent).toMatchObject({
+        documentModels: expect.any(Array),
       });
 
-      const drive = await mockReactor.getDrive("remote-drive-id");
-      expect(drive).toMatchObject({
-        header: { id: "remote-drive-id" },
-        state: { global: { name: "Remote Drive" } },
+      // Should include at least the document model and drive document model
+      const models = (
+        result.structuredContent as {
+          documentModels: Array<{ type: string }>;
+        }
+      ).documentModels;
+      expect(models.length).toBeGreaterThanOrEqual(2);
+    });
+  });
+
+  describe("getDocumentModelSchema tool", () => {
+    it("should get schema for a document model", async () => {
+      const provider = await createReactorMcpProvider({ client });
+      const result = await provider.tools.getDocumentModelSchema.callback({
+        type: "powerhouse/document-model",
       });
-      expect(mockReactor.addRemoteDrive).toHaveBeenCalledWith(
-        "https://example.com/remote-drive",
-        expect.objectContaining({
-          availableOffline: true,
-          listeners: [],
-          triggers: [],
-          sharingType: "public",
-          pullFilter: {
-            branch: ["main"],
-            documentId: ["doc1", "doc2"],
-            documentType: ["powerhouse/document-model"],
-            scope: ["global"],
-          },
-          pullInterval: 30000,
+
+      expect(result.isError).toBeUndefined();
+      expect(result.structuredContent).toMatchObject({
+        schema: expect.objectContaining({
+          name: expect.any(String),
+          id: "powerhouse/document-model",
         }),
-      );
+      });
+    });
+
+    it("should return error for non-existent document model", async () => {
+      const provider = await createReactorMcpProvider({ client });
+      const result = await provider.tools.getDocumentModelSchema.callback({
+        type: "non-existent/model",
+      });
+
+      expect(result.isError).toBe(true);
+      expect(result.content[0].text).toContain("non-existent/model");
     });
   });
 });

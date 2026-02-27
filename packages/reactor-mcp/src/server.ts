@@ -1,6 +1,11 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import type { IDocumentDriveServer } from "document-drive";
+import type { IReactorClient, ISyncManager } from "@powerhousedao/reactor";
 import { createReactorMcpProvider } from "./tools/reactor.js";
+
+export interface CreateServerOptions {
+  client: IReactorClient;
+  syncManager?: ISyncManager;
+}
 
 export const ReactorMcpInstructions = `MUST BE USED when handling documents or document-models for the Powerhouse/Vetra ecosystem.
 There are 5 main concepts to know of: 
@@ -19,8 +24,9 @@ Examples:
 `;
 
 export async function createServer(
-  reactor: IDocumentDriveServer,
+  options: CreateServerOptions,
 ): Promise<McpServer> {
+  const { client, syncManager } = options;
   const server = new McpServer(
     {
       name: "reactor-mcp-server",
@@ -60,7 +66,10 @@ export async function createServer(
     }),
   );
 
-  const reactorProvider = await createReactorMcpProvider(reactor);
+  const reactorProvider = await createReactorMcpProvider({
+    client,
+    syncManager,
+  });
 
   const { callback, ...toolSchema } = reactorProvider.tools.getDocumentModels;
   // server.registerTool("getDocumentModels", toolSchema, callback);
