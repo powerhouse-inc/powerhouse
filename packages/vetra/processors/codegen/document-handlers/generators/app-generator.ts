@@ -17,6 +17,19 @@ export class AppGenerator extends BaseDocumentGen {
   readonly supportedDocumentTypes = "powerhouse/app";
 
   /**
+   * Extract the global state from the full document state
+   */
+  private extractGlobalState(
+    strand: InternalTransmitterUpdate,
+  ): AppModuleGlobalState | undefined {
+    const fullState = strand.state as AppModulePHState | undefined;
+    if (!fullState) {
+      return undefined;
+    }
+    return fullState.global;
+  }
+
+  /**
    * Validate if this app strand should be processed
    */
   shouldProcess(strand: InternalTransmitterUpdate): boolean {
@@ -25,21 +38,21 @@ export class AppGenerator extends BaseDocumentGen {
       return false;
     }
 
-    const state = strand.state as AppModuleGlobalState;
+    const state = this.extractGlobalState(strand);
     if (!state) {
-      logger.debug(`>>> No state found for app: ${strand.documentId}`);
+      logger.debug(`No state found for app: ${strand.documentId}`);
       return false;
     }
 
     // Check if we have a valid app name and it's confirmed
     if (!state.name) {
-      logger.debug(`>>> No name found for app: ${strand.documentId}`);
+      logger.debug(`No name found for app: ${strand.documentId}`);
       return false;
     }
 
     if (state.status !== "CONFIRMED") {
       logger.debug(
-        `>>> App not confirmed: ${state.name} (status: ${state.status})`,
+        `App not confirmed: ${state.name} (status: ${state.status})`,
       );
       return false;
     }
@@ -48,7 +61,11 @@ export class AppGenerator extends BaseDocumentGen {
   }
 
   async generate(strand: InternalTransmitterUpdate): Promise<void> {
-    const state = strand.state as AppModuleGlobalState;
+    const state = this.extractGlobalState(strand);
+    if (!state) {
+      logger.error(`No state found for app: ${strand.documentId}`);
+      return;
+    }
 
     // Check if we have a valid app name and it's confirmed
     if (state.name && state.status === "CONFIRMED") {

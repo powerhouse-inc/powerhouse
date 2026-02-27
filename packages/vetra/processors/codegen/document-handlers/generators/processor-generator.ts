@@ -21,6 +21,19 @@ export class ProcessorGenerator extends BaseDocumentGen {
   readonly supportedDocumentTypes = "powerhouse/processor";
 
   /**
+   * Extract the global state from the full document state
+   */
+  private extractGlobalState(
+    strand: InternalTransmitterUpdate,
+  ): ProcessorModuleState | undefined {
+    const fullState = strand.state as ProcessorModulePHState | undefined;
+    if (!fullState) {
+      return undefined;
+    }
+    return fullState.global;
+  }
+
+  /**
    * Validate if this processor strand should be processed
    */
   shouldProcess(strand: InternalTransmitterUpdate): boolean {
@@ -29,36 +42,36 @@ export class ProcessorGenerator extends BaseDocumentGen {
       return false;
     }
 
-    const state = strand.state as ProcessorModuleState;
+    const state = this.extractGlobalState(strand);
     if (!state) {
-      logger.debug(`>>> No state found for processor: ${strand.documentId}`);
+      logger.debug(`No state found for processor: ${strand.documentId}`);
       return false;
     }
 
     // Check if we have a valid processor name, type, document types, and it's confirmed
     if (!state.name) {
-      logger.debug(`>>> No name found for processor: ${strand.documentId}`);
+      logger.debug(`No name found for processor: ${strand.documentId}`);
       return false;
     }
 
     if (!state.type) {
-      logger.debug(`>>> No type found for processor: ${state.name}`);
+      logger.debug(`No type found for processor: ${state.name}`);
       return false;
     }
 
     if (!state.documentTypes || state.documentTypes.length === 0) {
-      logger.debug(`>>> No document types found for processor: ${state.name}`);
+      logger.debug(`No document types found for processor: ${state.name}`);
       return false;
     }
 
     if (!state.processorApps || state.processorApps.length === 0) {
-      logger.debug(`>>> No processor apps found for processor: ${state.name}`);
+      logger.debug(`No processor apps found for processor: ${state.name}`);
       return false;
     }
 
     if (state.status !== "CONFIRMED") {
       logger.debug(
-        `>>> Processor not confirmed: ${state.name} (status: ${state.status})`,
+        `Processor not confirmed: ${state.name} (status: ${state.status})`,
       );
       return false;
     }
@@ -67,7 +80,11 @@ export class ProcessorGenerator extends BaseDocumentGen {
   }
 
   async generate(strand: InternalTransmitterUpdate): Promise<void> {
-    const state = strand.state as ProcessorModuleState;
+    const state = this.extractGlobalState(strand);
+    if (!state) {
+      logger.error(`No state found for processor: ${strand.documentId}`);
+      return;
+    }
 
     // Check if we have a valid processor name, type, document types, and it's confirmed
     if (
