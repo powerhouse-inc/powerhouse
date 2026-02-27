@@ -2073,6 +2073,9 @@ importers:
       '@powerhousedao/config':
         specifier: workspace:*
         version: link:../config
+      '@powerhousedao/reactor':
+        specifier: workspace:*
+        version: link:../reactor
       ai:
         specifier: 5.0.0
         version: 5.0.0(zod@4.3.6)

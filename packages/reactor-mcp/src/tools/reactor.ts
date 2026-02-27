@@ -1,10 +1,24 @@
-import type { IDocumentDriveServer } from "document-drive";
-import type { DocumentModelGlobalState } from "document-model";
+import type { IReactorClient, ISyncManager } from "@powerhousedao/reactor";
+import { driveCollectionId } from "@powerhousedao/reactor";
+import type { DocumentDriveDocument } from "document-drive";
+import type {
+  Action,
+  DocumentModelGlobalState,
+  DocumentModelModule,
+  PHDocument,
+} from "document-model";
 import { DocumentModelGlobalStateSchema } from "document-model";
 import { generateId } from "document-model/core";
 import { z } from "zod/v3";
 import type { ToolSchema, ToolWithCallback } from "./types.js";
 import { toolWithCallback, validateDocumentModelAction } from "./utils.js";
+
+const DRIVE_DOCUMENT_TYPE = "powerhouse/document-drive";
+
+export type ReactorMcpProviderOptions = {
+  client: IReactorClient;
+  syncManager?: ISyncManager;
+};
 
 export const createDocumentTool = {
   name: "createDocument",
@@ -324,51 +338,45 @@ const allTools = [
 // Inferred interface from tools
 export type ReactorMcpTools = ToolRecord<typeof allTools>;
 
-export async function createReactorMcpProvider(reactor: IDocumentDriveServer) {
-  await reactor.initialize();
+export async function createReactorMcpProvider(
+  options: ReactorMcpProviderOptions,
+) {
+  const { client, syncManager } = options;
+  // No initialization needed - client is already initialized
 
-  function getDocumentModelModule(documentType: string) {
-    const documentModels = reactor.getDocumentModelModules();
-    const documentModel = documentModels.find(
-      (model) => model.documentModel.global.id === documentType,
-    );
-    return documentModel;
+  async function getDocumentModelModule(documentType: string) {
+    return client.getDocumentModelModule(documentType);
   }
 
   const tools = {
     getDocument: toolWithCallback(getDocumentTool, async (params) => {
-      const { header, state } = await reactor.getDocument(params.id);
-      return { document: { header, state } };
+      const document = await client.get<PHDocument>(params.id);
+      return { document: { header: document.header, state: document.state } };
     }),
 
     createDocument: toolWithCallback(createDocumentTool, async (params) => {
-      // Create document input based on provided parameters
-      const createInput = {
-        documentType: params.documentType,
-        id: params.documentId ?? generateId(),
-      };
+      const documentId = params.documentId ?? generateId();
 
-      const result = await reactor.queueDocument(createInput);
-      if (result.status !== "SUCCESS") {
-        throw new Error(`${result.status}: ${result.error?.message}`);
-      }
+      // Create an empty document using the new reactor API
+      const created = await client.createEmpty(params.documentType, {});
 
-      if (!result.document?.header.id) {
-        throw new Error("Created document doesn't have an Id");
-      }
+      // If a specific ID was requested but createEmpty doesn't support it,
+      // we use the generated ID from the created document
       return {
-        documentId: result.document.header.id,
+        documentId: created.header.id,
       };
     }),
 
     getDocuments: toolWithCallback(getDocumentsTool, async (params) => {
-      const documentIds = await reactor.getDocuments(params.parentId);
+      // Use getChildren to get documents under a parent (drive)
+      const result = await client.getChildren(params.parentId);
+      const documentIds = result.results.map((doc) => doc.header.id);
       return { documentIds };
     }),
 
     deleteDocument: toolWithCallback(deleteDocumentTool, async (params) => {
       try {
-        await reactor.deleteDocument(params.documentId);
+        await client.deleteDocument(params.documentId);
         return { success: true };
       } catch {
         return { success: false };
@@ -376,8 +384,8 @@ export async function createReactorMcpProvider(reactor: IDocumentDriveServer) {
     }),
 
     addActions: toolWithCallback(addActionsTool, async (params) => {
-      const document = await reactor.getDocument(params.documentId);
-      const documentModel = getDocumentModelModule(
+      const document = await client.get<PHDocument>(params.documentId);
+      const documentModel = await getDocumentModelModule(
         document.header.documentType,
       );
       if (!documentModel) {
@@ -385,12 +393,13 @@ export async function createReactorMcpProvider(reactor: IDocumentDriveServer) {
           `Document model for document type '${document.header.documentType}' not found`,
         );
       }
-      const actions = params.actions.map((paramAction) => {
-        const action = {
+      const actions: Action[] = params.actions.map((paramAction) => {
+        const action: Action = {
           id: generateId(),
           timestampUtcMs: new Date().toISOString(),
-          ...paramAction,
+          type: paramAction.type,
           input: paramAction.input ?? {},
+          scope: paramAction.scope,
         };
         const actionValidation = validateDocumentModelAction(
           documentModel,
@@ -404,68 +413,46 @@ export async function createReactorMcpProvider(reactor: IDocumentDriveServer) {
         return action;
       });
 
-      const result = await reactor.addActions(params.documentId, actions);
+      // Execute actions on the document using the "main" branch
+      await client.execute(params.documentId, "main", actions);
 
-      if (result.status !== "SUCCESS") {
-        throw new Error(`${result.status}: ${result.error?.message}`);
-      }
-      const operationErrors = result.operations
-        .filter((operation) => operation.error !== undefined)
-        .map((operation) => ({
-          type: operation.action.type,
-          input: operation.action.input,
-          error: operation.error,
-        }));
-      if (operationErrors.length > 0) {
-        throw new Error(
-          `Some of the actions failed: ${JSON.stringify(operationErrors)}`,
-        );
-      }
       return {
         success: true,
       };
     }),
 
-    // addOperation: toolWithCallback(addOperationTool, async (params) => {
-    //   const result = await reactor.addOperation(params.documentId, {
-    //     ...params.operation,
-    //     input: params.operation.input ?? {},
-    //   });
-    //   return {
-    //     result: {
-    //       ...result,
-    //       error:
-    //         typeof result.error === "string"
-    //           ? result.error
-    //           : result.error?.message,
-    //     },
-    //   };
-    // }),
-
     // Drive operation implementations
     getDrives: toolWithCallback(getDrivesTool, async () => {
-      const driveIds = await reactor.getDrives();
+      // Find all documents of type "powerhouse/document-drive"
+      const result = await client.find({ type: DRIVE_DOCUMENT_TYPE });
+      const driveIds = result.results.map((doc: PHDocument) => doc.header.id);
       return { driveIds };
     }),
 
     addDrive: toolWithCallback(addDriveTool, async (params) => {
-      // Extract preferredEditor and create proper DriveInput
-      const { preferredEditor, ...driveInput } = params.driveInput;
-      const result = await reactor.addDrive(driveInput, preferredEditor);
-      return { driveId: result.header.id };
+      // Create an empty drive document
+      const drive = await client.createEmpty<DocumentDriveDocument>(
+        DRIVE_DOCUMENT_TYPE,
+        {},
+      );
+
+      // If name is provided, set it using an action
+      if (params.driveInput.global?.name) {
+        await client.rename(drive.header.id, params.driveInput.global.name);
+      }
+
+      return { driveId: drive.header.id };
     }),
 
     getDrive: toolWithCallback(getDriveTool, async (params) => {
-      const { header, state } = await reactor.getDrive(
-        params.driveId,
-        params.options,
-      );
-      return { drive: { header, state } };
+      const drive = await client.get<DocumentDriveDocument>(params.driveId);
+      return { drive: { header: drive.header, state: drive.state } };
     }),
 
     deleteDrive: toolWithCallback(deleteDriveTool, async (params) => {
       try {
-        await reactor.deleteDrive(params.driveId);
+        // Use CASCADE to delete the drive and all its contents
+        await client.deleteDocument(params.driveId);
         return { success: true };
       } catch {
         return { success: false };
@@ -473,32 +460,50 @@ export async function createReactorMcpProvider(reactor: IDocumentDriveServer) {
     }),
 
     addRemoteDrive: toolWithCallback(addRemoteDriveTool, async (params) => {
-      const { sharingType, pullFilter, ...restOptions } = params.options;
-      const drive = await reactor.addRemoteDrive(params.url, {
-        ...restOptions,
-        listeners: [],
-        triggers: [],
-        sharingType: sharingType ?? null,
-        ...(pullFilter && {
-          pullFilter: {
-            branch: pullFilter.branch === undefined ? [] : pullFilter.branch,
-            documentId:
-              pullFilter.documentId === undefined ? [] : pullFilter.documentId,
-            documentType:
-              pullFilter.documentType === undefined
-                ? []
-                : pullFilter.documentType,
-            scope: pullFilter.scope === undefined ? [] : pullFilter.scope,
-          },
-        }),
+      if (!syncManager) {
+        throw new Error(
+          "Remote drive management is not available. " +
+            "SyncManager was not configured for this MCP server.",
+        );
+      }
+
+      // Fetch drive info from the REST endpoint to get both id and graphqlEndpoint
+      const response = await fetch(params.url);
+      if (!response.ok) {
+        throw new Error(`Failed to resolve drive info from ${params.url}`);
+      }
+      const driveInfo = (await response.json()) as {
+        id: string;
+        graphqlEndpoint: string;
+      };
+
+      const resolvedDriveId = driveInfo.id;
+      const collectionId = driveCollectionId("main", resolvedDriveId);
+
+      // Check if remote already exists
+      const existingRemote = syncManager
+        .list()
+        .find((remote) => remote.collectionId === collectionId);
+      if (existingRemote) {
+        return { driveId: resolvedDriveId };
+      }
+
+      // Add the remote via SyncManager
+      const remoteName = `mcp-remote-${crypto.randomUUID()}`;
+      await syncManager.add(remoteName, collectionId, {
+        type: "gql",
+        parameters: {
+          url: driveInfo.graphqlEndpoint,
+        },
       });
-      return { driveId: drive.header.id };
+
+      return { driveId: resolvedDriveId };
     }),
 
-    getDocumentModels: toolWithCallback(getDocumentModelsTool, () => {
-      const documentModels = reactor.getDocumentModelModules();
+    getDocumentModels: toolWithCallback(getDocumentModelsTool, async () => {
+      const result = await client.getDocumentModelModules();
       return {
-        documentModels: documentModels.map((model) => {
+        documentModels: result.results.map((model: DocumentModelModule) => {
           const schemaGlobal = model.documentModel.global;
           return {
             name: schemaGlobal.name,
@@ -514,8 +519,8 @@ export async function createReactorMcpProvider(reactor: IDocumentDriveServer) {
 
     getDocumentModelSchema: toolWithCallback(
       getDocumentModelSchemaTool,
-      (params) => {
-        const documentModel = getDocumentModelModule(params.type);
+      async (params) => {
+        const documentModel = await getDocumentModelModule(params.type);
         const schema = documentModel?.documentModel.global;
         if (!schema) {
           throw new Error(`Document model '${params.type}' not found`);
