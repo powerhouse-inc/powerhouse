@@ -1,3 +1,19 @@
+## 6.0.0-staging.3 (2026-02-27)
+
+### 🚀 Features
+
+- add bundle step for ph cli ([#2375](https://github.com/powerhouse-inc/powerhouse/pull/2375))
+- use update-ts-references tool which also removes unused ones ([#2374](https://github.com/powerhouse-inc/powerhouse/pull/2374))
+
+### 🩹 Fixes
+
+- remove artificial paging limit -- reshuffle depth is NOT the same as query depth ([3d3706253](https://github.com/powerhouse-inc/powerhouse/commit/3d3706253))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.0.0-staging.2 (2026-02-25)
 
 ### 🚀 Features
