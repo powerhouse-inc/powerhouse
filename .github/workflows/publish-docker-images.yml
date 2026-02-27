@@ -72,3 +72,44 @@ jobs:
           cache-to: type=gha,mode=max
           build-args: |
             TAG=${{env.GITHUB_TAG}}
+
+  update-k8s-academy:
+    name: Update Academy Image in K8s Hosting
+    needs: academy
+    if: ${{ needs.academy.outputs.tag != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Determine target environment
+        id: env
+        env:
+          TAG: ${{ needs.academy.outputs.tag }}
+        run: |
+          if [[ "$TAG" == *"-dev."* ]]; then
+            echo "target=dev" >> $GITHUB_OUTPUT
+          elif [[ "$TAG" == *"-staging."* ]]; then
+            echo "target=staging" >> $GITHUB_OUTPUT
+          else
+            echo "Skipping k8s update for production tags"
+          fi
+
+      - name: Update academy image tag in k8s-hosting
+        if: ${{ steps.env.outputs.target != '' }}
+        env:
+          TAG: ${{ needs.academy.outputs.tag }}
+          TARGET_ENV: ${{ steps.env.outputs.target }}
+          K8S_REPO_PAT: ${{ secrets.K8S_REPO_PAT }}
+        run: |
+          git clone "https://x-access-token:${K8S_REPO_PAT}@github.com/powerhouse-inc/powerhouse-k8s-hosting.git"
+          cd powerhouse-k8s-hosting
+
+          VALUES_FILE="tenants/${TARGET_ENV}/powerhouse-values.yaml"
+
+          # Update academy image tag (matches the line after academy's repository line)
+          sed -i '/repository: ghcr.io\/powerhouse-inc\/powerhouse\/academy/{n;s/\(.*tag: \).*/\1'"${TAG}"'/}' "$VALUES_FILE"
+
+          git config user.name "Github Actions Bot"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add "$VALUES_FILE"
+          git diff --cached --quiet && echo "No changes to commit" && exit 0
+          git commit -m "chore(${TARGET_ENV}): update academy image tag to ${TAG}"
+          git push
