@@ -30,13 +30,13 @@ export class CodegenProcessor implements IProcessor {
   }
 
   async onOperations(operations: OperationWithContext[]): Promise<void> {
-    logger.info(">>> CodegenProcessor.onOperations()");
+    logger.info("CodegenProcessor.onOperations()");
 
     for (const { operation, context } of operations) {
       const generator = this.manager.getGenerator(context.documentType);
       if (!generator) {
         logger.debug(
-          `>>> No generator found for document type: ${context.documentType}`,
+          `No generator found for document type: ${context.documentType}`,
         );
         continue;
       }
