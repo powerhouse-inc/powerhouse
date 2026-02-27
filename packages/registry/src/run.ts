@@ -7,7 +7,7 @@ import { createPowerhouseRouter, createPublishHook } from "./middleware.js";
 import type { RegistryConfig } from "./types.js";
 import { buildVerdaccioConfig } from "./verdaccio-config.js";
 
-const port = Number(process.env.PORT || "4873");
+const port = Number(process.env.PORT || "8080");
 const storagePath = path.resolve(process.env.REGISTRY_STORAGE || "./storage");
 const cdnCachePath = path.resolve(
   process.env.REGISTRY_CDN_CACHE || "./cdn-cache",

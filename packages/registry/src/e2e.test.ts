@@ -83,7 +83,7 @@ describe("registry e2e", () => {
       const response = await fetch(`${REGISTRY_URL}/packages`);
 
       expect(response.ok).toBe(true);
-      const packages = await response.json();
+      const packages = (await response.json()) as Array<{ name: string }>;
       expect(Array.isArray(packages)).toBe(true);
     });
 
