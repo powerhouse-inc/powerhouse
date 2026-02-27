@@ -1,10 +1,9 @@
 import { spawn, type ChildProcess } from "node:child_process";
-import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { DEFAULT_PORT } from "./constants.js";
+import type { PowerhouseManifest } from "./types.js";
 
-const REGISTRY_PORT = 9876;
-const REGISTRY_URL = `http://localhost:${REGISTRY_PORT}`;
-const PACKAGES_DIR = path.resolve(__dirname, "../dist/packages");
+const REGISTRY_URL = `http://localhost:${DEFAULT_PORT}`;
 
 describe("registry e2e", () => {
   let registryProcess: ChildProcess | null = null;
@@ -49,13 +48,11 @@ describe("registry e2e", () => {
 
   beforeAll(async () => {
     // Kill any existing process on the port
-    await killProcessOnPort(REGISTRY_PORT);
+    await killProcessOnPort(DEFAULT_PORT);
 
     // Start the registry server using compiled dist
-    registryProcess = spawn("node", ["dist/src/run.js"], {
-      cwd: path.resolve(__dirname, ".."),
+    registryProcess = spawn("node", ["dist/src/cli.js"], {
       stdio: ["ignore", "pipe", "pipe"],
-      env: { ...process.env, PORT: String(REGISTRY_PORT) },
     });
 
     registryProcess.stdout?.on("data", (data: Buffer) => {
@@ -75,7 +72,7 @@ describe("registry e2e", () => {
       registryProcess.kill("SIGTERM");
       await new Promise((resolve) => setTimeout(resolve, 500));
     }
-    await killProcessOnPort(REGISTRY_PORT);
+    await killProcessOnPort(DEFAULT_PORT);
   });
 
   describe("GET /packages", () => {
@@ -104,7 +101,7 @@ describe("registry e2e", () => {
       const response = await fetch(`${REGISTRY_URL}/packages/by-document-type`);
 
       expect(response.status).toBe(400);
-      const body = await response.json();
+      const body = (await response.json()) as { error: Error };
       expect(body.error).toBe("Missing required query parameter: type");
     });
 
@@ -114,7 +111,7 @@ describe("registry e2e", () => {
       );
 
       expect(response.ok).toBe(true);
-      const packageNames = await response.json();
+      const packageNames = (await response.json()) as never[];
       expect(packageNames).toEqual([]);
     });
 
@@ -136,7 +133,7 @@ describe("registry e2e", () => {
       );
 
       expect(response.ok).toBe(true);
-      const packageNames = await response.json();
+      const packageNames = (await response.json()) as string[];
       expect(packageNames).toContain("@powerhousedao/vetra");
     });
 
@@ -146,7 +143,7 @@ describe("registry e2e", () => {
       );
 
       expect(response.ok).toBe(true);
-      const packageNames = await response.json();
+      const packageNames = (await response.json()) as string[];
       expect(Array.isArray(packageNames)).toBe(true);
     });
   });
@@ -170,7 +167,7 @@ describe("registry e2e", () => {
       );
 
       expect(response.ok).toBe(true);
-      const manifest = await response.json();
+      const manifest = (await response.json()) as PowerhouseManifest;
       expect(manifest.name).toBe("@powerhousedao/vetra");
     });
   });

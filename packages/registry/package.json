@@ -24,19 +24,20 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@powerhousedao/shared": "workspace:*",
+    "cmd-ts": "catalog:",
     "express": "^5.2.1",
+    "find-up": "^8.0.0",
     "tar": "^7.4.3",
     "verdaccio": "^6.1.1",
-    "verdaccio-aws-s3-storage": "^10.4.0",
-    "cmd-ts": "catalog:",
-    "@powerhousedao/shared": "workspace:*"
+    "verdaccio-aws-s3-storage": "^10.4.0"
   },
   "devDependencies": {
+    "@types/bun": "catalog:",
     "@types/express": "^5.0.6",
     "@types/node": "catalog:",
     "@types/supertest": "^6.0.2",
     "supertest": "^7.1.0",
-    "vitest": "catalog:",
-    "@types/bun": "catalog:"
+    "vitest": "catalog:"
   }
 }

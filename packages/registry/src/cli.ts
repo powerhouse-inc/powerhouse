@@ -10,8 +10,8 @@ import {
 } from "cmd-ts";
 import {
   DEFAULT_PORT,
-  DEFAULT_REGISTRY_CDN_CACHE,
-  DEFAULT_STORAGE_PATH,
+  DEFAULT_REGISTRY_CDN_CACHE_DIR_NAME,
+  DEFAULT_STORAGE_DIR_NAME,
 } from "./constants.js";
 import { runRegistry } from "./run.js";
 
@@ -24,17 +24,18 @@ export const registryCommand = command({
       defaultValue: () => Number(process.env.PORT) || DEFAULT_PORT,
       defaultValueIsSerializable: true,
     }),
-    storagePath: option({
-      long: "storage-path",
-      type: string,
-      defaultValue: () => process.env.REGISTRY_STORAGE || DEFAULT_STORAGE_PATH,
-      defaultValueIsSerializable: true,
-    }),
-    cdnCachePath: option({
-      long: "cdn-cache-path",
+    storageDir: option({
+      long: "storage-dir",
       type: string,
       defaultValue: () =>
-        process.env.REGISTRY_CDN_CACHE || DEFAULT_REGISTRY_CDN_CACHE,
+        process.env.REGISTRY_STORAGE || DEFAULT_STORAGE_DIR_NAME,
+      defaultValueIsSerializable: true,
+    }),
+    cdnCacheDir: option({
+      long: "cdn-cache-dir",
+      type: string,
+      defaultValue: () =>
+        process.env.REGISTRY_CDN_CACHE || DEFAULT_REGISTRY_CDN_CACHE_DIR_NAME,
       defaultValueIsSerializable: true,
     }),
     uplink: option({

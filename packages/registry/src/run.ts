@@ -1,4 +1,5 @@
 import express from "express";
+import { findUp } from "find-up";
 import type { EventEmitter } from "node:events";
 import { mkdir } from "node:fs/promises";
 import { runServer } from "verdaccio";
@@ -9,9 +10,9 @@ import { buildVerdaccioConfig } from "./verdaccio-config.js";
 export async function runRegistry(args: RegistryCommandArgs) {
   const {
     port,
-    storagePath,
+    storageDir,
+    cdnCacheDir,
     uplink,
-    cdnCachePath,
     webEnabled,
     s3AccessKeyId,
     s3Bucket,
@@ -21,6 +22,27 @@ export async function runRegistry(args: RegistryCommandArgs) {
     s3Region,
     s3SecretAccessKey,
   } = args;
+  const storagePath = await findUp(storageDir, {
+    type: "directory",
+  });
+
+  if (!storagePath) {
+    throw new Error(`Could not find storage path for dir "${storageDir}".`);
+  }
+
+  const cdnCachePath = await findUp(cdnCacheDir, {
+    type: "directory",
+  });
+
+  if (!cdnCachePath) {
+    throw new Error(`Could not find cdn cache path for dir "${cdnCacheDir}".`);
+  }
+
+  console.log({
+    storagePath,
+    cdnCachePath,
+  });
+
   const config: RegistryConfig = {
     port,
     storagePath,
