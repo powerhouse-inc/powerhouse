@@ -71,7 +71,7 @@ export async function runRegistry(args: RegistryCommandArgs) {
 
   // verdaccio's runServer returns Promise<any> (upstream type limitation)
   // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-  const verdaccioServer: EventEmitter = await runServer(verdaccioConfig as any);
+  const verdaccioServer: EventEmitter = await runServer(verdaccioConfig);
   const verdaccioHandler = verdaccioServer.listeners("request")[0] as (
     ...args: unknown[]
   ) => void;
@@ -85,7 +85,7 @@ export async function runRegistry(args: RegistryCommandArgs) {
   // Verdaccio handles everything else (npm protocol, web UI, auth)
   app.use((req, res) => verdaccioHandler(req, res));
 
-  app.listen(port, () => {
+  const server = app.listen(port, () => {
     console.log(`Powerhouse Registry running on http://localhost:${port}`);
     console.log(`  CDN:      http://localhost:${port}/-/cdn/`);
     console.log(`  Packages: http://localhost:${port}/packages`);
@@ -96,4 +96,6 @@ export async function runRegistry(args: RegistryCommandArgs) {
       console.log(`  S3:       ${config.s3.endpoint}/${config.s3.bucket}`);
     }
   });
+
+  return server;
 }

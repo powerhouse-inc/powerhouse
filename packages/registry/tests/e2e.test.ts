@@ -1,78 +1,68 @@
-import { spawn, type ChildProcess } from "node:child_process";
+import { cp, mkdir, rm } from "node:fs/promises";
+import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { DEFAULT_PORT } from "./constants.js";
-import type { PowerhouseManifest } from "./types.js";
+import {
+  DEFAULT_PORT,
+  DEFAULT_REGISTRY_CDN_CACHE_DIR_NAME,
+  DEFAULT_STORAGE_DIR_NAME,
+} from "../src/constants.js";
+import { runRegistry } from "../src/run.js";
+import type { PowerhouseManifest } from "../src/types.js";
 
 const REGISTRY_URL = `http://localhost:${DEFAULT_PORT}`;
 
 describe("registry e2e", () => {
-  let registryProcess: ChildProcess | null = null;
+  let server: Awaited<ReturnType<typeof runRegistry>>;
 
-  async function waitForServer(
-    url: string,
-    timeoutMs: number = 10000,
-  ): Promise<void> {
-    const startTime = Date.now();
-    while (Date.now() - startTime < timeoutMs) {
-      try {
-        const response = await fetch(url);
-        if (response.ok) return;
-      } catch {
-        // Server not ready yet
-      }
-      await new Promise((resolve) => setTimeout(resolve, 100));
-    }
-    throw new Error(`Server at ${url} did not start within ${timeoutMs}ms`);
-  }
-
-  async function killProcessOnPort(port: number): Promise<void> {
-    return new Promise((resolve) => {
-      const killer = spawn("lsof", ["-ti", `:${port}`]);
-      let pids = "";
-      killer.stdout.on("data", (data: Buffer) => {
-        pids += data.toString();
-      });
-      killer.on("close", () => {
-        const pidList = pids.trim().split("\n").filter(Boolean);
-        for (const pid of pidList) {
-          try {
-            process.kill(parseInt(pid, 10), "SIGKILL");
-          } catch {
-            // Process may already be dead
-          }
-        }
-        resolve();
-      });
+  async function runServer() {
+    const server = await runRegistry({
+      port: 8080,
+      storageDir: DEFAULT_STORAGE_DIR_NAME,
+      cdnCacheDir: DEFAULT_REGISTRY_CDN_CACHE_DIR_NAME,
+      uplink: undefined,
+      s3Bucket: undefined,
+      s3Endpoint: undefined,
+      s3Region: undefined,
+      s3AccessKeyId: undefined,
+      s3SecretAccessKey: undefined,
+      s3KeyPrefix: undefined,
+      s3ForcePathStyle: true,
+      webEnabled: false,
     });
+    await new Promise<void>((resolve, reject) => {
+      server.once("listening", resolve);
+      server.once("error", reject);
+    });
+    return server;
   }
+
+  const testDir = import.meta.dirname;
 
   beforeAll(async () => {
-    // Kill any existing process on the port
-    await killProcessOnPort(DEFAULT_PORT);
-
-    // Start the registry server using compiled dist
-    registryProcess = spawn("node", ["dist/src/cli.js"], {
-      stdio: ["ignore", "pipe", "pipe"],
+    await rm(path.join(testDir, "./.test-output"), {
+      recursive: true,
+      force: true,
     });
-
-    registryProcess.stdout?.on("data", (data: Buffer) => {
-      console.log(`[registry] ${data.toString().trim()}`);
+    await mkdir(path.join(testDir, "./.test-output/storage"), {
+      recursive: true,
     });
-
-    registryProcess.stderr?.on("data", (data: Buffer) => {
-      console.error(`[registry error] ${data.toString().trim()}`);
+    await mkdir(path.join(testDir, "./.test-output/cdn-cache"), {
+      recursive: true,
     });
-
-    // Wait for server to be ready
-    await waitForServer(`${REGISTRY_URL}/packages`);
+    await cp(
+      path.join(testDir, "./data/packages/"),
+      path.join(testDir, "./.test-output/packages"),
+      {
+        recursive: true,
+        force: true,
+      },
+    );
+    process.chdir(path.join(testDir, "./.test-output"));
+    server = await runServer();
   }, 30000);
 
-  afterAll(async () => {
-    if (registryProcess) {
-      registryProcess.kill("SIGTERM");
-      await new Promise((resolve) => setTimeout(resolve, 500));
-    }
-    await killProcessOnPort(DEFAULT_PORT);
+  afterAll(() => {
+    server.close();
   });
 
   describe("GET /packages", () => {
@@ -84,15 +74,12 @@ describe("registry e2e", () => {
       expect(Array.isArray(packages)).toBe(true);
     });
 
-    it("includes vetra package if built", async () => {
+    it("includes vetra package", async () => {
       const response = await fetch(`${REGISTRY_URL}/packages`);
       const packages = (await response.json()) as Array<{ name: string }>;
 
       const vetra = packages.find((p) => p.name === "@powerhousedao/vetra");
-      // This test passes if vetra is found (after build) or if packages dir is empty
-      if (packages.length > 0) {
-        expect(vetra).toBeDefined();
-      }
+      expect(vetra).toBeDefined();
     });
   });
 
@@ -115,7 +102,7 @@ describe("registry e2e", () => {
       expect(packageNames).toEqual([]);
     });
 
-    it("finds vetra package by document type if built", async () => {
+    it("finds vetra package by document type", async () => {
       // First check if vetra exists
       const packagesResponse = await fetch(`${REGISTRY_URL}/packages`);
       const packages = (await packagesResponse.json()) as Array<{
@@ -123,10 +110,7 @@ describe("registry e2e", () => {
       }>;
       const hasVetra = packages.some((p) => p.name === "@powerhousedao/vetra");
 
-      if (!hasVetra) {
-        console.log("Skipping: vetra package not built");
-        return;
-      }
+      expect(hasVetra).toBe(true);
 
       const response = await fetch(
         `${REGISTRY_URL}/packages/by-document-type?type=powerhouse/package`,
@@ -157,10 +141,7 @@ describe("registry e2e", () => {
       }>;
       const hasVetra = packages.some((p) => p.name === "@powerhousedao/vetra");
 
-      if (!hasVetra) {
-        console.log("Skipping: vetra package not built");
-        return;
-      }
+      expect(hasVetra).toBe(true);
 
       const response = await fetch(
         `${REGISTRY_URL}/@powerhousedao/vetra/powerhouse.manifest.json`,

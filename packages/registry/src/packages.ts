@@ -32,13 +32,16 @@ export function loadPackage(
 ): PackageInfo | null {
   const pkgDir = path.join(cdnCachePath, name);
   const versionDir = getLatestVersionDir(pkgDir);
-  if (!versionDir) return null;
+  const manifestDir = versionDir ?? pkgDir;
+  const manifest = readManifest(manifestDir);
 
-  const manifest = readManifest(versionDir);
-  if (!manifest) return null;
-
+  if (!manifest) {
+    console.error(
+      `Failed to find manifest for "${name}" in "${cdnCachePath}".`,
+    );
+  }
   return {
-    name: manifest.name ?? name,
+    name: manifest?.name ?? name,
     path: `/-/cdn/${name}`,
     manifest,
   };
@@ -63,7 +66,8 @@ export function scanPackages(cdnCachePath: string): PackageInfo[] {
       let scopedEntries: fs.Dirent[];
       try {
         scopedEntries = fs.readdirSync(scopeDir, { withFileTypes: true });
-      } catch {
+      } catch (error) {
+        console.log(error);
         continue;
       }
       for (const scopedEntry of scopedEntries) {
@@ -71,10 +75,9 @@ export function scanPackages(cdnCachePath: string): PackageInfo[] {
         const dirName = `${entry.name}/${scopedEntry.name}`;
         const pkgDir = path.join(scopeDir, scopedEntry.name);
         const versionDir = getLatestVersionDir(pkgDir);
-        if (!versionDir) continue;
-        const manifest = readManifest(versionDir);
-        if (!manifest) continue;
-        const name = manifest.name ?? dirName;
+        const manifestDir = versionDir ?? pkgDir;
+        const manifest = readManifest(manifestDir);
+        const name = manifest?.name ?? dirName;
         packages.push({
           name,
           path: `/-/cdn/${dirName}`,
@@ -84,10 +87,9 @@ export function scanPackages(cdnCachePath: string): PackageInfo[] {
     } else {
       const pkgDir = path.join(absDir, entry.name);
       const versionDir = getLatestVersionDir(pkgDir);
-      if (!versionDir) continue;
-      const manifest = readManifest(versionDir);
-      if (!manifest) continue;
-      const name = manifest.name ?? entry.name;
+      const manifestDir = versionDir ?? pkgDir;
+      const manifest = readManifest(manifestDir);
+      const name = manifest?.name ?? entry.name;
       packages.push({
         name,
         path: `/-/cdn/${entry.name}`,

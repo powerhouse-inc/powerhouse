@@ -6,7 +6,7 @@ export function buildVerdaccioConfig(config: RegistryConfig) {
 
   const base: Record<string, unknown> = {
     storage: config.storagePath,
-    self_path: config.storagePath,
+    self_path: "./",
     auth: {
       htpasswd: {
         file: htpasswdPath,

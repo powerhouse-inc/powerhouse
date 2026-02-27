@@ -1,5 +1,5 @@
 import { $ } from "bun";
-const registryOutdir = "../registry/package-registry/@powerhousedao/vetra";
+const registryOutdir = "../registry/cdn-cache/@powerhousedao/vetra";
 const cdnOutdir = "./cdn";
 
 interface ResolveArgs {

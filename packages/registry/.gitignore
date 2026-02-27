@@ -1,3 +1,4 @@
 storage/
 cdn-cache/
-package-registry/
+packages/
+.test-output/
