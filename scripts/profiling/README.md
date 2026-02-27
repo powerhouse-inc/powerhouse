@@ -233,27 +233,13 @@ tsx docs-reset.ts --endpoint http://localhost:4001/graphql
 
 ### `switchboard-pyroscope.sh` — Run switchboard with Pyroscope
 
-Starts the switchboard with [Pyroscope](https://pyroscope.io/) continuous profiling enabled in wall:wall + CPU mode. Pyroscope is initialized at the top level before the server starts, so the full startup is captured.
+Starts the switchboard with [Pyroscope](https://pyroscope.io/) continuous profiling enabled in wall:wall + CPU mode. Pyroscope is initialized at the top level before the server starts, so the full startup is captured. Supports selecting the runtime (Node.js or Bun) for comparison benchmarks.
 
 ```bash
 ./scripts/profiling/switchboard-pyroscope.sh
+./scripts/profiling/switchboard-pyroscope.sh --runtime bun
 ./scripts/profiling/switchboard-pyroscope.sh --mode legacy
-./scripts/profiling/switchboard-pyroscope.sh --postgres "postgresql://postgres:postgres@localhost:5432/reactor"
-```
-
-| Flag         | Short | Description                              |
-| ------------ | ----- | ---------------------------------------- |
-| `--mode`     | `-m`  | Storage mode: `v2` (default) or `legacy` |
-| `--postgres` | `-p`  | PostgreSQL database URL                  |
-
-### `switchboard-runtime.sh` — Run switchboard with different runtimes
-
-Starts the switchboard with a chosen runtime (Node.js or Bun) for comparison benchmarks.
-
-```bash
-./scripts/profiling/switchboard-runtime.sh --runtime node
-./scripts/profiling/switchboard-runtime.sh --runtime bun
-./scripts/profiling/switchboard-runtime.sh -r bun -m legacy
+./scripts/profiling/switchboard-pyroscope.sh -r bun -m legacy --postgres "postgresql://postgres:postgres@localhost:5432/reactor"
 ```
 
 | Flag         | Short | Description                              |
@@ -320,8 +306,8 @@ tsx pyroscope-analyse.ts 'http://localhost:4040/?query=...' --baseline ./1771254
 ### End-to-end switchboard benchmark
 
 ```bash
-# Terminal 1: start switchboard
-./scripts/profiling/switchboard-runtime.sh --runtime node
+# Terminal 1: start switchboard (use --runtime bun to compare runtimes)
+./scripts/profiling/switchboard-pyroscope.sh --runtime node
 
 # Terminal 2: run workload
 tsx docs-create.ts 20 -o 10 -l 5 -p
