@@ -112,20 +112,30 @@ if [ -n "$DATABASE_URL" ]; then
 fi
 
 # Set up Pyroscope profiling on port 4040
-export PYROSCOPE_SERVER_ADDRESS="http://localhost:4040"
-export PYROSCOPE_APPLICATION_NAME="powerhouse-mono-switchboard"
-export PYROSCOPE_WALL_ENABLED="true"
-# CPU profiling is always enabled alongside wall:wall mode
-# Optional: Add tags for better organization
-# export PYROSCOPE_TAGS="env=development,scenario=profiling"
+# Note: Pyroscope uses @datadog/pprof (a native addon via V8 C++ APIs) which Bun does not support.
+# See: https://github.com/oven-sh/bun/issues/20516
+PYROSCOPE_ENABLED=""
+if [ "$RUNTIME" = "node" ]; then
+  PYROSCOPE_ENABLED="true"
+  export PYROSCOPE_SERVER_ADDRESS="http://localhost:4040"
+  export PYROSCOPE_APPLICATION_NAME="powerhouse-mono-switchboard"
+  export PYROSCOPE_WALL_ENABLED="true"
+  # CPU profiling is always enabled alongside wall:wall mode
+  # Optional: Add tags for better organization
+  # export PYROSCOPE_TAGS="env=development,scenario=profiling"
+fi
 
 echo "=========================================="
 echo "Switchboard with Pyroscope Profiling"
 echo "=========================================="
 echo "Runtime: ${RUNTIME} (${RUNTIME_VERSION})"
-echo "Pyroscope: ${PYROSCOPE_SERVER_ADDRESS}"
-echo "Application: ${PYROSCOPE_APPLICATION_NAME}"
-echo "Profiling: wall:wall + CPU"
+if [ -n "$PYROSCOPE_ENABLED" ]; then
+  echo "Pyroscope: ${PYROSCOPE_SERVER_ADDRESS}"
+  echo "Application: ${PYROSCOPE_APPLICATION_NAME}"
+  echo "Profiling: wall:wall + CPU"
+else
+  echo "Pyroscope: disabled (@datadog/pprof native addon is incompatible with bun)"
+fi
 echo "Storage mode: ${STORAGE_MODE_LABEL}"
 if [ -n "$STORAGE_V2" ]; then
   echo "  REACTOR_STORAGE_V2=true"
@@ -136,11 +146,13 @@ if [ -n "$DATABASE_URL" ]; then
   echo "  PH_REACTOR_DATABASE_URL=${MASKED_URL}"
   echo "  DATABASE_URL=${MASKED_URL}"
 fi
-echo ""
-echo "Note: Make sure Pyroscope server is running on port 4040"
-echo "  Run: docker-compose -f docker-compose.pyroscope.yml up -d"
-echo "  Or: docker run -it -p 4040:4040 grafana/pyroscope:latest server"
-echo "  View UI: http://localhost:4040"
+if [ -n "$PYROSCOPE_ENABLED" ]; then
+  echo ""
+  echo "Note: Make sure Pyroscope server is running on port 4040"
+  echo "  Run: docker-compose -f docker-compose.pyroscope.yml up -d"
+  echo "  Or: docker run -it -p 4040:4040 grafana/pyroscope:latest server"
+  echo "  View UI: http://localhost:4040"
+fi
 echo ""
 echo "Press Ctrl+C to stop"
 echo "=========================================="
@@ -155,7 +167,11 @@ if [ ! -f "$SWITCHBOARD_PATH" ]; then
 fi
 
 # Run switchboard
-echo "Starting Switchboard with ${RUNTIME} and Pyroscope profiling..."
+if [ -n "$PYROSCOPE_ENABLED" ]; then
+  echo "Starting Switchboard with ${RUNTIME} and Pyroscope profiling..."
+else
+  echo "Starting Switchboard with ${RUNTIME}..."
+fi
 echo
 
 # Track the process and forward signals
