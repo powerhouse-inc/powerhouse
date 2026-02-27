@@ -1,6 +1,6 @@
 import { $ } from "bun";
-const registryOutdir = "../registry/dist/packages/@powerhousedao/vetra";
-const cdnOutdir = "./dist/cdn";
+const registryOutdir = "../registry/package-registry/@powerhousedao/vetra";
+const cdnOutdir = "./cdn";
 
 interface ResolveArgs {
   path: string;
