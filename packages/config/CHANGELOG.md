@@ -1,3 +1,13 @@
+## 6.0.0-dev.60 (2026-02-27)
+
+### 🚀 Features
+
+- per-document protection auth model ([2e538ddb8](https://github.com/powerhouse-inc/powerhouse/commit/2e538ddb8))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 6.0.0-dev.59 (2026-02-26)
 
 ### 🚀 Features
