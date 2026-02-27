@@ -7,20 +7,13 @@
  *   1. Create N documents via DocumentModel_createEmptyDocument
  *   2. For each document, perform M operations via individual DocumentModel_* mutations
  *
- * Pyroscope profiling:
- *   - Start Pyroscope: docker compose -f scripts/profiling/docker-compose.yml up pyroscope
- *   - Enable profiling: --pyroscope [server-address]
- *   - View results: http://localhost:4040
- *
  * Batch mode:
  *   - Use --batch-size <N> to send N operations per GraphQL request (using aliases)
  *   - Default is 1 (each operation in its own request)
  *   - Use this to measure per-request overhead vs batched execution
  */
 
-import Pyroscope from "@pyroscope/nodejs";
 import { GraphQLClient } from "graphql-request";
-import { execFileSync } from "node:child_process";
 import { createWriteStream, mkdirSync, type WriteStream } from "node:fs";
 import { basename, dirname, join } from "node:path";
 
@@ -251,7 +244,6 @@ function parseArgs(args: string[]): {
   verbose: boolean;
   percentiles: boolean;
   showActionTypes: boolean;
-  pyroscope: string | undefined;
   output: string | undefined;
   outputTimestamp: boolean;
 } {
@@ -264,7 +256,6 @@ function parseArgs(args: string[]): {
   let verbose = false;
   let percentiles = false;
   let showActionTypes = false;
-  let pyroscope: string | undefined = undefined;
   let output: string | undefined = undefined;
   let outputTimestamp = false;
 
@@ -286,14 +277,6 @@ function parseArgs(args: string[]): {
       percentiles = true;
     } else if (arg === "--show-action-types" || arg === "-a") {
       showActionTypes = true;
-    } else if (arg === "--pyroscope") {
-      const nextArg = args[i + 1];
-      if (nextArg && !nextArg.startsWith("-")) {
-        pyroscope = nextArg;
-        i++;
-      } else {
-        pyroscope = "http://localhost:4040";
-      }
     } else if ((arg === "--output" || arg === "-O") && args[i + 1]) {
       output = args[++i];
       outputTimestamp = false;
@@ -326,7 +309,6 @@ Options:
   --show-action-types, -a   Show action type names in min/max timings
   --file [name]             Write output to a timestamped file (default: docs-create.txt)
   --output, -O <file>       Write output to a specific file (no timestamp prefix)
-  --pyroscope [address]     Enable Pyroscope profiling (default: http://localhost:4040)
   --help, -h                Show this help message
 
 Process flow:
@@ -407,7 +389,6 @@ Examples:
     verbose,
     percentiles,
     showActionTypes,
-    pyroscope,
     output,
     outputTimestamp,
   };
@@ -424,7 +405,6 @@ async function main() {
     verbose,
     percentiles: showPercentiles,
     showActionTypes,
-    pyroscope: pyroscopeServer,
     output: outputFile,
     outputTimestamp,
   } = parseArgs(process.argv.slice(2));
@@ -497,28 +477,6 @@ async function main() {
     console.log(
       `Command: tsx docs-create.ts ${process.argv.slice(2).join(" ")}`,
     );
-
-    if (pyroscopeServer) {
-      console.log(`Initializing Pyroscope profiler at: ${pyroscopeServer}`);
-      Pyroscope.init({
-        serverAddress: pyroscopeServer,
-        appName: "docs-create-profiler",
-        wall: {
-          samplingDurationMs: 10000,
-          samplingIntervalMicros: 10000,
-          collectCpuTime: true,
-        },
-        heap: {
-          samplingIntervalBytes: 512 * 1024,
-          stackDepth: 64,
-        },
-      });
-      Pyroscope.startWallProfiling();
-      Pyroscope.startCpuProfiling();
-      console.log("  Wall and CPU profiling enabled");
-    }
-
-    const pyroscopeFrom = Math.floor(Date.now() / 1000);
 
     const client = new GraphQLClient(endpoint);
     const useExistingDocs = docIds.length > 0;
@@ -683,14 +641,6 @@ async function main() {
       console.log(`  Memory: ${formatMemory(phase2Memory)}`);
     }
 
-    const pyroscopeFlushDelay = 10;
-    const pyroscopeUntil = Math.floor(Date.now() / 1000) + pyroscopeFlushDelay;
-
-    if (pyroscopeServer) {
-      Pyroscope.stopWallProfiling();
-      Pyroscope.stopCpuProfiling();
-    }
-
     const finalMemory = getMemoryStats();
     const totalDuration = ((Date.now() - overallStartTime) / 1000).toFixed(2);
     const heapDelta = finalMemory.heapUsed - initialMemory.heapUsed;
@@ -699,56 +649,6 @@ async function main() {
     console.log(
       `Memory delta: heap: ${heapDelta >= 0 ? "+" : ""}${formatBytes(heapDelta)}, rss: ${rssDelta >= 0 ? "+" : ""}${formatBytes(rssDelta)}`,
     );
-
-    if (pyroscopeServer) {
-      const appName = "docs-create-profiler";
-      const query = encodeURIComponent(
-        `wall:wall:nanoseconds:wall:nanoseconds{service_name="${appName}"}`,
-      );
-      const analyseUrl = `${pyroscopeServer}/?query=${query}&from=${pyroscopeFrom}&until=${pyroscopeUntil}`;
-      const pyroscopeTimestamp = new Date(pyroscopeFrom * 1000)
-        .toISOString()
-        .replace(/[:.]/g, "-");
-      const outputBase = `${pyroscopeTimestamp}-pyroscope`;
-      console.log(`\nPyroscope URL:\n  ${analyseUrl}`);
-
-      const waitUntilMs = pyroscopeUntil * 1000;
-      let remaining = Math.ceil((waitUntilMs - Date.now()) / 1000);
-      if (remaining > 0) {
-        process.stdout.write(
-          `\nWaiting for Pyroscope to flush data... ${remaining}s`,
-        );
-        while (Date.now() < waitUntilMs) {
-          await new Promise((resolve) => setTimeout(resolve, 1000));
-          remaining = Math.max(0, Math.ceil((waitUntilMs - Date.now()) / 1000));
-          process.stdout.write(
-            `\rWaiting for Pyroscope to flush data... ${remaining}s `,
-          );
-        }
-        process.stdout.write("\rWaiting for Pyroscope to flush data... done\n");
-      }
-
-      console.log("\nRunning pyroscope-analyse...\n");
-      try {
-        execFileSync(
-          "tsx",
-          [
-            new URL("pyroscope-analyse.ts", import.meta.url).pathname,
-            analyseUrl,
-            "--output-json",
-            outputBase,
-            "--output-md",
-            `${outputBase}.md`,
-          ],
-          { stdio: "inherit" },
-        );
-      } catch {
-        console.error(
-          "\nPyroscope analysis failed. You can retry manually with:",
-        );
-        console.error(`  tsx pyroscope-analyse.ts '${analyseUrl}'`);
-      }
-    }
   } finally {
     if (outputStream) {
       process.stdout.write = origStdoutWrite;
