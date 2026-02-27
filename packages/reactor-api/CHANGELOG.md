@@ -1,3 +1,19 @@
+## 6.0.0-dev.60 (2026-02-27)
+
+### 🚀 Features
+
+- per-document protection auth model ([2e538ddb8](https://github.com/powerhouse-inc/powerhouse/commit/2e538ddb8))
+
+### 🩹 Fixes
+
+- allow anonymous writes on unprotected documents ([52298bf14](https://github.com/powerhouse-inc/powerhouse/commit/52298bf14))
+- address PR review feedback for auth system ([802ad744c](https://github.com/powerhouse-inc/powerhouse/commit/802ad744c))
+- prettier formatting in document-permission.service.ts ([ea01cd9a7](https://github.com/powerhouse-inc/powerhouse/commit/ea01cd9a7))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 6.0.0-dev.59 (2026-02-26)
 
 ### 🚀 Features

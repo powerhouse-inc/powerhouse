@@ -53,6 +53,7 @@ import {
 } from "./packages/package-manager.js";
 import type { AuthenticatedRequest } from "./services/auth.service.js";
 import { AuthService } from "./services/auth.service.js";
+import { AuthorizationService } from "./services/authorization.service.js";
 import { DocumentPermissionService } from "./services/document-permission.service.js";
 import { initTracing, isTracingEnabled, trace } from "./tracing.js";
 import type { API, IPackageLoader, Processor } from "./types.js";
@@ -73,10 +74,7 @@ type Options = {
   packages?: string[];
   auth?: {
     enabled: boolean;
-    guests: string[];
-    users: string[];
     admins: string[];
-    freeEntry: boolean;
   };
   https?:
     | {
@@ -173,15 +171,13 @@ async function setupGraphQLManager(
   logger: ILogger,
   auth?: {
     enabled: boolean;
-    guests: string[];
-    users: string[];
     admins: string[];
-    freeEntry: boolean;
   },
   documentPermissionService?: DocumentPermissionService,
   enableDocumentModelSubgraphs?: boolean,
   useNewDocumentModelSubgraph?: boolean,
   port?: number,
+  authorizationService?: AuthorizationService,
 ): Promise<GraphQLManager> {
   const graphqlManager = new GraphQLManager(
     config.basePath,
@@ -196,10 +192,7 @@ async function setupGraphQLManager(
     logger,
     {
       enabled: auth?.enabled ?? false,
-      guests: auth?.guests ?? [],
-      users: auth?.users ?? [],
       admins: auth?.admins ?? [],
-      freeEntry: auth?.freeEntry ?? false,
     },
     documentPermissionService,
     {
@@ -207,6 +200,7 @@ async function setupGraphQLManager(
       useNewDocumentModelSubgraph,
     },
     port,
+    authorizationService,
   );
 
   await graphqlManager.init(subgraphs.core);
@@ -323,14 +317,12 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   app: Express;
   auth: {
     enabled: boolean;
-    guests: string[];
-    users: string[];
     admins: string[];
-    freeEntry: boolean;
   };
   relationalDb: IRelationalDbLegacy;
   analyticsStore: IAnalyticsStore;
   documentPermissionService: DocumentPermissionService | undefined;
+  authorizationService: AuthorizationService | undefined;
   packages: PackageManager;
 }> {
   // Initialize OpenTelemetry tracing
@@ -343,47 +335,43 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
 
   // Setup auth configuration
   let admins: string[] = [];
-  let users: string[] = [];
-  let guests: string[] = [];
   let authEnabled = false;
-  let freeEntry = false;
   if (options.configFile) {
     const config = getConfig(options.configFile);
     admins = config.auth?.admins?.map((a) => a.toLowerCase()) ?? [];
-    users = config.auth?.users?.map((u) => u.toLowerCase()) ?? [];
-    guests = config.auth?.guests?.map((g) => g.toLowerCase()) ?? [];
     authEnabled = config.auth?.enabled ?? false;
-    freeEntry = config.auth?.freeEntry ?? false;
   } else if (options.auth) {
     admins = options.auth?.admins?.map((a) => a.toLowerCase()) ?? [];
-    users = options.auth?.users?.map((u) => u.toLowerCase()) ?? [];
-    guests = options.auth?.guests?.map((g) => g.toLowerCase()) ?? [];
     authEnabled = options.auth?.enabled ?? false;
-    freeEntry = options.auth?.freeEntry ?? false;
   }
   const {
     AUTH_ENABLED,
-    GUESTS,
-    USERS,
     ADMINS,
-    FREE_ENTRY,
+    DEFAULT_PROTECTION,
     DOCUMENT_PERMISSIONS_ENABLED,
     SKIP_CREDENTIAL_VERIFICATION,
   } = process.env;
   if (AUTH_ENABLED !== undefined) {
     authEnabled = AUTH_ENABLED === "true";
   }
-  if (GUESTS !== undefined) {
-    guests = GUESTS.split(",").map((g) => g.toLowerCase());
-  }
-  if (USERS !== undefined) {
-    users = USERS.split(",").map((u) => u.toLowerCase());
-  }
   if (ADMINS !== undefined) {
     admins = ADMINS.split(",").map((a) => a.toLowerCase());
   }
-  if (FREE_ENTRY !== undefined) {
-    freeEntry = FREE_ENTRY === "true";
+
+  let defaultProtection = false;
+  if (DEFAULT_PROTECTION !== undefined) {
+    defaultProtection = DEFAULT_PROTECTION.toLowerCase() === "true";
+  }
+
+  // Warn about deprecated env vars
+  const { USERS, GUESTS, FREE_ENTRY } = process.env;
+  if (USERS || GUESTS || FREE_ENTRY) {
+    console.warn(
+      "[DEPRECATION WARNING] The USERS, GUESTS, and FREE_ENTRY environment variables are no longer supported. " +
+        "Access control is now managed per-document via the DocumentProtection system. " +
+        "Use DEFAULT_PROTECTION=true for strict mode, or manage protection per document via the GraphQL API. " +
+        "See the auth documentation for migration guidance.",
+    );
   }
 
   let skipCredentialVerification = false;
@@ -403,10 +391,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     logger.info("Setting up Auth middleware");
     const authService = new AuthService({
       enabled: authEnabled,
-      guests,
-      users,
       admins,
-      freeEntry,
       skipCredentialVerification,
     });
 
@@ -436,8 +421,19 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     logger.info("Document permission migrations completed");
     documentPermissionService = new DocumentPermissionService(
       db as Kysely<DocumentPermissionDatabase>,
+      { defaultProtection },
     );
     logger.info("Document permission service initialized");
+  }
+
+  // Create AuthorizationService when document permission service is available
+  let authorizationService: AuthorizationService | undefined;
+  if (documentPermissionService) {
+    authorizationService = new AuthorizationService(documentPermissionService, {
+      admins,
+      defaultProtection,
+    });
+    logger.info("Authorization service initialized");
   }
 
   // Initialize package manager
@@ -456,14 +452,12 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     app,
     auth: {
       enabled: authEnabled,
-      guests,
-      users,
       admins,
-      freeEntry,
     },
     relationalDb,
     analyticsStore,
     documentPermissionService,
+    authorizationService,
     packages,
   };
 }
@@ -489,14 +483,12 @@ async function _setupAPI(
   options: Options,
   auth: {
     enabled: boolean;
-    guests: string[];
-    users: string[];
     admins: string[];
-    freeEntry: boolean;
   },
   legacyReactor: boolean,
   processorApp: ProcessorApp,
   reactorProcessorManager?: IReactorProcessorManager,
+  authorizationService?: AuthorizationService,
 ): Promise<API> {
   const module: IProcessorHostModuleLegacy = {
     relationalDb,
@@ -669,6 +661,7 @@ async function _setupAPI(
     options.enableDocumentModelSubgraphs,
     options.useNewDocumentModelSubgraph,
     port,
+    authorizationService,
   );
 
   // Set up event listeners
@@ -717,6 +710,7 @@ export async function startAPI(
     relationalDb,
     analyticsStore,
     documentPermissionService,
+    authorizationService,
     packages,
   } = await trace(
     "reactor-api.setup.infrastructure",
@@ -761,6 +755,7 @@ export async function startAPI(
     legacyReactor,
     processorApp,
     undefined, // no reactorProcessorManager in legacy mode
+    authorizationService,
   );
 }
 
@@ -799,6 +794,7 @@ export async function initializeAndStartAPI(
     relationalDb,
     analyticsStore,
     documentPermissionService,
+    authorizationService,
     packages,
   } = await trace(
     "reactor-api.setup.infrastructure",
@@ -853,6 +849,7 @@ export async function initializeAndStartAPI(
     legacyReactor,
     processorApp,
     reactorProcessorManager,
+    authorizationService,
   );
 
   return {

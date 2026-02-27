@@ -11,10 +11,7 @@ import type { NextFunction, Request, Response } from "express";
 
 export interface AuthConfig {
   enabled: boolean;
-  guests: string[];
-  users: string[];
   admins: string[];
-  freeEntry: boolean;
   cacheTtl?: number; // Cache TTL in milliseconds, defaults to 10 seconds
   skipCredentialVerification?: boolean; // Skip Renown API credential verification (useful for testing)
 }
@@ -28,9 +25,6 @@ export interface User {
 export interface AuthenticatedRequest extends Request {
   user?: User;
   admins: string[];
-  users: string[];
-  guests: string[];
-  freeEntry: boolean;
 }
 
 export class AuthService {
@@ -59,13 +53,13 @@ export class AuthService {
 
     // Set auth lists on request
     req.admins = this.config.admins;
-    req.users = this.config.users;
-    req.guests = this.config.guests;
     req.auth_enabled = this.config.enabled;
-    req.freeEntry = this.config.freeEntry;
     const token = req.headers.authorization?.split(" ")[1];
     if (!token) {
-      res.status(400).json({ error: "Missing authorization token" });
+      // Allow through without user — resolver layer enforces permissions
+      // This is critical: GraphQL queries are POST requests, so blocking
+      // unauthenticated POSTs would block all anonymous reads.
+      next();
       return;
     }
 
@@ -190,37 +184,16 @@ export class AuthService {
   }
 
   /**
-   * Check if user address is in allowed lists
-   */
-  private isUserAllowed(address: string): boolean {
-    const all = [
-      ...this.config.admins,
-      ...this.config.users,
-      ...this.config.guests,
-    ];
-    return all.includes(address.toLocaleLowerCase()) || this.config.freeEntry;
-  }
-
-  /**
    * Get additional context fields for GraphQL
    */
   getAdditionalContextFields() {
     if (!this.config.enabled) {
       return {
-        isGuest: () => true,
-        isUser: () => true,
         isAdmin: () => true,
       };
     }
 
     return {
-      isGuest: (address: string) =>
-        this.config.enabled &&
-        (this.config.freeEntry ||
-          this.config.guests?.includes(address.toLowerCase())),
-      isUser: (address: string) =>
-        this.config.enabled &&
-        this.config.users?.includes(address.toLowerCase()),
       isAdmin: (address: string) =>
         this.config.enabled &&
         this.config.admins?.includes(address.toLowerCase()),

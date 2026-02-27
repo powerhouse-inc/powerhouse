@@ -18,6 +18,14 @@ export type DocumentPermissionLevel = "READ" | "WRITE" | "ADMIN";
 /**
  * Database schema for document permissions
  */
+export interface DocumentProtectionTable {
+  documentId: string;
+  protected: boolean;
+  ownerAddress: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export interface DocumentPermissionDatabase {
   DocumentPermission: DocumentPermissionTable;
   Group: GroupTable;
@@ -25,6 +33,7 @@ export interface DocumentPermissionDatabase {
   DocumentGroupPermission: DocumentGroupPermissionTable;
   OperationUserPermission: OperationUserPermissionTable;
   OperationGroupPermission: OperationGroupPermissionTable;
+  DocumentProtection: DocumentProtectionTable;
 }
 
 export interface DocumentPermissionTable {

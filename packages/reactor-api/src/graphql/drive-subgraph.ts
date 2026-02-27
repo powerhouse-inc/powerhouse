@@ -372,23 +372,12 @@ export class DriveSubgraph extends BaseSubgraph {
         }
         const reactorDriveId = await this.getDriveIdBySlugOrId(ctx.driveId);
 
-        // Check global roles first
-        const isGlobalAdmin = ctx.isAdmin?.(ctx.user?.address ?? "");
-        const isGlobalUser = ctx.isUser?.(ctx.user?.address ?? "");
-        const isGlobalGuest =
-          ctx.isGuest?.(ctx.user?.address ?? "") ||
-          process.env.FREE_ENTRY === "true";
-
-        // If user has a global role, allow access
-        const hasGlobalAccess = isGlobalAdmin || isGlobalUser || isGlobalGuest;
-
-        // If no global access, check document-level permissions
-        if (!hasGlobalAccess && this.documentPermissionService) {
-          const canRead = await this.documentPermissionService.canReadDocument(
+        // Check read permission
+        if (this.authorizationService) {
+          const canRead = await this.authorizationService.canRead(
             reactorDriveId,
             ctx.user?.address,
           );
-
           if (!canRead) {
             this.logger.warn(
               `registerPullResponderListener rejected: user ${ctx.user?.address ?? "anonymous"} lacks read permission for drive ${reactorDriveId}`,
@@ -397,8 +386,23 @@ export class DriveSubgraph extends BaseSubgraph {
               "Forbidden: insufficient permissions to read from this drive",
             );
           }
-        } else if (!hasGlobalAccess) {
-          throw new GraphQLError("Forbidden");
+        } else {
+          // Legacy fallback
+          const isGlobalAdmin = !!ctx.isAdmin?.(ctx.user?.address ?? "");
+          if (!isGlobalAdmin && this.documentPermissionService) {
+            const canRead =
+              await this.documentPermissionService.canReadDocument(
+                reactorDriveId,
+                ctx.user?.address,
+              );
+            if (!canRead) {
+              throw new GraphQLError(
+                "Forbidden: insufficient permissions to read from this drive",
+              );
+            }
+          } else if (!isGlobalAdmin) {
+            throw new GraphQLError("Forbidden");
+          }
         }
         const driveId = await this.getDriveIdBySlugOrId(ctx.driveId);
 
@@ -457,21 +461,12 @@ export class DriveSubgraph extends BaseSubgraph {
           strandsGql,
         );
 
-        // Check global roles first (write requires admin or user, not guest)
-        const isGlobalAdmin = ctx.isAdmin?.(ctx.user?.address ?? "");
-        const isGlobalUser = ctx.isUser?.(ctx.user?.address ?? "");
-
-        // If user has global write access, allow
-        const hasGlobalWriteAccess = isGlobalAdmin || isGlobalUser;
-
-        // If no global write access, check document-level permissions
-        if (!hasGlobalWriteAccess && this.documentPermissionService) {
-          const canWrite =
-            await this.documentPermissionService.canWriteDocument(
-              driveId,
-              ctx.user?.address,
-            );
-
+        // Check write permission
+        if (this.authorizationService) {
+          const canWrite = await this.authorizationService.canWrite(
+            driveId,
+            ctx.user?.address,
+          );
           if (!canWrite) {
             this.logger.warn(
               `pushUpdates rejected: user ${ctx.user?.address ?? "anonymous"} lacks write permission for drive ${driveId}`,
@@ -480,8 +475,23 @@ export class DriveSubgraph extends BaseSubgraph {
               "Forbidden: insufficient permissions to write to this drive",
             );
           }
-        } else if (!hasGlobalWriteAccess) {
-          throw new GraphQLError("Forbidden");
+        } else {
+          // Legacy fallback
+          const isGlobalAdmin = !!ctx.isAdmin?.(ctx.user?.address ?? "");
+          if (!isGlobalAdmin && this.documentPermissionService) {
+            const canWrite =
+              await this.documentPermissionService.canWriteDocument(
+                driveId,
+                ctx.user?.address,
+              );
+            if (!canWrite) {
+              throw new GraphQLError(
+                "Forbidden: insufficient permissions to write to this drive",
+              );
+            }
+          } else if (!isGlobalAdmin) {
+            throw new GraphQLError("Forbidden");
+          }
         }
 
         // translate data types
@@ -571,31 +581,33 @@ export class DriveSubgraph extends BaseSubgraph {
           `strands(drive: ${ctx.driveId}/${driveId}, listenerId: ${listenerId}, since:${since})`,
         );
 
-        // Check global roles first
-        const isGlobalAdmin = ctx.isAdmin?.(ctx.user?.address ?? "");
-        const isGlobalUser = ctx.isUser?.(ctx.user?.address ?? "");
-        const isGlobalGuest =
-          ctx.isGuest?.(ctx.user?.address ?? "") ||
-          process.env.FREE_ENTRY === "true";
-
-        // If user has a global role, allow access
-        const hasGlobalAccess = isGlobalAdmin || isGlobalUser || isGlobalGuest;
-
-        // If no global access, check document-level permissions
-        if (!hasGlobalAccess && this.documentPermissionService) {
-          const canRead = await this.documentPermissionService.canReadDocument(
+        // Check read permission
+        if (this.authorizationService) {
+          const canRead = await this.authorizationService.canRead(
             driveId,
             ctx.user?.address,
           );
-
           if (!canRead) {
             this.logger.warn(
               `strands filtered: user ${ctx.user?.address ?? "anonymous"} lacks read permission for drive ${driveId}`,
             );
-            return []; // Return empty for drives without permission
+            return [];
           }
-        } else if (!hasGlobalAccess) {
-          return []; // Return empty if no access
+        } else {
+          // Legacy fallback
+          const isGlobalAdmin = !!ctx.isAdmin?.(ctx.user?.address ?? "");
+          if (!isGlobalAdmin && this.documentPermissionService) {
+            const canRead =
+              await this.documentPermissionService.canReadDocument(
+                driveId,
+                ctx.user?.address,
+              );
+            if (!canRead) {
+              return [];
+            }
+          } else if (!isGlobalAdmin) {
+            return [];
+          }
         }
 
         // get the requested strand updates

@@ -78,9 +78,19 @@ type OperationPermissionsInfo {
   groupPermissions: [OperationGroupPermission!]!
 }
 
+# Document protection info
+type DocumentProtectionInfo {
+  documentId: String!
+  protected: Boolean!
+  ownerAddress: String
+}
+
 type Query {
   # Get permissions for a document
   documentAccess(documentId: String!): DocumentAccessInfo!
+
+  # Get protection status for a document
+  documentProtection(documentId: String!): DocumentProtectionInfo!
 
   # Get all documents the current user has explicit access to
   userDocumentPermissions: [DocumentPermissionEntry!]!
@@ -95,13 +105,28 @@ type Query {
   userGroups(userAddress: String!): [Group!]!
 
   # Get operation permissions for a document and operation type
-  operationPermissions(documentId: String!, operationType: String!): OperationPermissionsInfo!
+  operationPermissions(
+    documentId: String!
+    operationType: String!
+  ): OperationPermissionsInfo!
 
   # Check if the current user can execute a specific operation on a document
   canExecuteOperation(documentId: String!, operationType: String!): Boolean!
 }
 
 type Mutation {
+  # Set document protection status (requires ADMIN permission or global admin)
+  setDocumentProtection(
+    documentId: String!
+    protected: Boolean!
+  ): DocumentProtectionInfo!
+
+  # Transfer document ownership (requires ADMIN permission or global admin)
+  transferDocumentOwnership(
+    documentId: String!
+    newOwnerAddress: String!
+  ): DocumentProtectionInfo!
+
   # Grant a user permission on a document (requires ADMIN permission or global admin)
   grantDocumentPermission(
     documentId: String!
@@ -110,10 +135,7 @@ type Mutation {
   ): DocumentPermissionEntry!
 
   # Revoke a user's permission on a document (requires ADMIN permission or global admin)
-  revokeDocumentPermission(
-    documentId: String!
-    userAddress: String!
-  ): Boolean!
+  revokeDocumentPermission(documentId: String!, userAddress: String!): Boolean!
 
   # --- Group Management ---
 

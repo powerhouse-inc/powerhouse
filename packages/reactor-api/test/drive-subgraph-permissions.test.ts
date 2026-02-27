@@ -13,16 +13,12 @@ describe("DriveSubgraph Permission Checks", () => {
   // Helper to create context with different permission levels
   const createContext = (options: {
     isAdmin?: boolean;
-    isUser?: boolean;
-    isGuest?: boolean;
     userAddress?: string;
     driveId?: string;
   }) => ({
     driveId: options.driveId ?? driveId,
     user: options.userAddress ? { address: options.userAddress } : undefined,
     isAdmin: () => options.isAdmin ?? false,
-    isUser: () => options.isUser ?? false,
-    isGuest: () => options.isGuest ?? false,
   });
 
   beforeEach(async () => {
@@ -70,30 +66,6 @@ describe("DriveSubgraph Permission Checks", () => {
     describe("Global Role Access", () => {
       it("should allow access when user is global admin", async () => {
         const ctx = createContext({ isAdmin: true, userAddress: "0xadmin" });
-
-        const result = await callRegisterPullResponderListener(ctx);
-
-        expect(result).toBeDefined();
-        expect(result.listenerId).toBeDefined();
-        expect(
-          mockDocumentPermissionService.canReadDocument,
-        ).not.toHaveBeenCalled();
-      });
-
-      it("should allow access when user is global user", async () => {
-        const ctx = createContext({ isUser: true, userAddress: "0xuser" });
-
-        const result = await callRegisterPullResponderListener(ctx);
-
-        expect(result).toBeDefined();
-        expect(result.listenerId).toBeDefined();
-        expect(
-          mockDocumentPermissionService.canReadDocument,
-        ).not.toHaveBeenCalled();
-      });
-
-      it("should allow access when user is global guest", async () => {
-        const ctx = createContext({ isGuest: true, userAddress: "0xguest" });
 
         const result = await callRegisterPullResponderListener(ctx);
 
@@ -173,26 +145,6 @@ describe("DriveSubgraph Permission Checks", () => {
         expect(
           mockDocumentPermissionService.canWriteDocument,
         ).not.toHaveBeenCalled();
-      });
-
-      it("should allow access when user is global user", async () => {
-        const ctx = createContext({ isUser: true, userAddress: "0xuser" });
-
-        const result = await callPushUpdates(ctx);
-
-        expect(result).toBeDefined();
-        expect(
-          mockDocumentPermissionService.canWriteDocument,
-        ).not.toHaveBeenCalled();
-      });
-
-      it("should deny access when user is only global guest (guests cannot write)", async () => {
-        vi.mocked(
-          mockDocumentPermissionService.canWriteDocument!,
-        ).mockResolvedValue(false);
-        const ctx = createContext({ isGuest: true, userAddress: "0xguest" });
-
-        await expect(callPushUpdates(ctx)).rejects.toThrow("Forbidden");
       });
     });
 
@@ -281,11 +233,9 @@ describe("DriveSubgraph Permission Checks", () => {
 
   describe("AUTH_ENABLED=false behavior", () => {
     it("should allow all access when all global roles return true", async () => {
-      // When AUTH_ENABLED=false, isAdmin/isUser/isGuest all return true
+      // When AUTH_ENABLED=false, isAdmin returns true
       const ctx = createContext({
         isAdmin: true,
-        isUser: true,
-        isGuest: true,
         userAddress: "0xanyone",
       });
 

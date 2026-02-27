@@ -17,7 +17,7 @@ export const createDriveHandlers = (
     Mutation: any;
     Sync: any;
   };
-  const context = { driveId, isUser: () => true, isAdmin: () => true };
+  const context = { driveId, isAdmin: () => true };
 
   return [
     graphql.query("getDrive", async ({ variables }) =>

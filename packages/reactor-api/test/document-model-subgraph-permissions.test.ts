@@ -9,7 +9,7 @@ import type { IReactorClient, PagedResults } from "@powerhousedao/reactor";
 import type { IDocumentDriveServer } from "document-drive";
 import type { DocumentModelModule, PHDocument } from "document-model";
 import { GraphQLError } from "graphql";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DocumentModelSubgraph } from "../src/graphql/document-model-subgraph.js";
 import type { Context, SubgraphArgs } from "../src/graphql/types.js";
 import type { DocumentPermissionService } from "../src/services/document-permission.service.js";
@@ -83,21 +83,15 @@ describe("DocumentModelSubgraph Permission Checks", () => {
 
   const createContext = (options: {
     isAdmin?: boolean;
-    isUser?: boolean;
-    isGuest?: boolean;
     userAddress?: string;
   }): Context =>
     ({
       user: options.userAddress ? { address: options.userAddress } : undefined,
       isAdmin: vi.fn().mockReturnValue(options.isAdmin ?? false),
-      isUser: vi.fn().mockReturnValue(options.isUser ?? false),
-      isGuest: vi.fn().mockReturnValue(options.isGuest ?? false),
     }) as unknown as Context;
 
   beforeEach(() => {
     vi.clearAllMocks();
-
-    delete process.env.FREE_ENTRY;
 
     mockDocumentPermissionService = {
       canRead: vi.fn().mockResolvedValue(false),
@@ -150,10 +144,6 @@ describe("DocumentModelSubgraph Permission Checks", () => {
     } as SubgraphArgs);
   });
 
-  afterEach(() => {
-    delete process.env.FREE_ENTRY;
-  });
-
   describe("Query: document", () => {
     // Updated to match new flat resolver structure (TestModel_document instead of TestModel.getDocument)
     const callGetDocument = async (ctx: Context, identifier: string) => {
@@ -162,7 +152,7 @@ describe("DocumentModelSubgraph Permission Checks", () => {
       return queryResolver(null, { identifier }, ctx);
     };
 
-    describe("Global Role Access (hasGlobalReadAccess)", () => {
+    describe("Global Admin Access", () => {
       it("should allow access when user is global admin", async () => {
         const ctx = createContext({ isAdmin: true, userAddress: "0xadmin" });
 
@@ -171,34 +161,6 @@ describe("DocumentModelSubgraph Permission Checks", () => {
         // Result is DocumentWithChildren: { document: PHDocument, childIds: string[] }
         expect(result).toBeDefined();
         expect(result.document.id).toBe("doc-123");
-        expect(mockDocumentPermissionService.canRead).not.toHaveBeenCalled();
-      });
-
-      it("should allow access when user is global user", async () => {
-        const ctx = createContext({ isUser: true, userAddress: "0xuser" });
-
-        const result = await callGetDocument(ctx, "doc-123");
-
-        expect(result).toBeDefined();
-        expect(mockDocumentPermissionService.canRead).not.toHaveBeenCalled();
-      });
-
-      it("should allow access when user is global guest", async () => {
-        const ctx = createContext({ isGuest: true, userAddress: "0xguest" });
-
-        const result = await callGetDocument(ctx, "doc-123");
-
-        expect(result).toBeDefined();
-        expect(mockDocumentPermissionService.canRead).not.toHaveBeenCalled();
-      });
-
-      it("should allow access when FREE_ENTRY is true", async () => {
-        process.env.FREE_ENTRY = "true";
-        const ctx = createContext({ userAddress: "0xanyone" });
-
-        const result = await callGetDocument(ctx, "doc-123");
-
-        expect(result).toBeDefined();
         expect(mockDocumentPermissionService.canRead).not.toHaveBeenCalled();
       });
     });
@@ -383,22 +345,6 @@ describe("DocumentModelSubgraph Permission Checks", () => {
         expect(result).toHaveLength(1);
         expect(mockDocumentPermissionService.canRead).not.toHaveBeenCalled();
       });
-
-      it("should return all documents for user", async () => {
-        const ctx = createContext({ isUser: true, userAddress: "0xuser" });
-
-        const result = await callFindDocuments(ctx, "drive-1");
-
-        expect(result).toHaveLength(1);
-      });
-
-      it("should return all documents for guest", async () => {
-        const ctx = createContext({ isGuest: true, userAddress: "0xguest" });
-
-        const result = await callFindDocuments(ctx, "drive-1");
-
-        expect(result).toHaveLength(1);
-      });
     });
 
     describe("Document Permission Filtering", () => {
@@ -486,7 +432,7 @@ describe("DocumentModelSubgraph Permission Checks", () => {
       return mutation(null, { name, parentIdentifier }, ctx);
     };
 
-    describe("Global Role Access (hasGlobalWriteAccess)", () => {
+    describe("Global Admin Access", () => {
       it("should allow creation when user is global admin", async () => {
         const ctx = createContext({ isAdmin: true, userAddress: "0xadmin" });
 
@@ -494,22 +440,6 @@ describe("DocumentModelSubgraph Permission Checks", () => {
 
         expect(result).toMatchObject({ id: "doc-123" });
         expect(mockDocumentPermissionService.canWrite).not.toHaveBeenCalled();
-      });
-
-      it("should allow creation when user is global user", async () => {
-        const ctx = createContext({ isUser: true, userAddress: "0xuser" });
-
-        const result = await callCreateDocument(ctx, "New Doc");
-
-        expect(result).toMatchObject({ id: "doc-123" });
-      });
-
-      it("should deny creation when user is only global guest", async () => {
-        const ctx = createContext({ isGuest: true, userAddress: "0xguest" });
-
-        await expect(callCreateDocument(ctx, "New Doc")).rejects.toThrow(
-          "Forbidden: insufficient permissions to create documents",
-        );
       });
     });
 
@@ -641,21 +571,6 @@ describe("DocumentModelSubgraph Permission Checks", () => {
           ]),
         });
         expect(mockDocumentPermissionService.canWrite).not.toHaveBeenCalled();
-      });
-
-      it("should allow operation for global user without permission check", async () => {
-        const ctx = createContext({ isUser: true, userAddress: "0xuser" });
-
-        const result = await callMutation(ctx, "setName", "doc-123", {
-          name: "New Name",
-        });
-
-        expect(result).toMatchObject({
-          id: "doc-123",
-          revisionsList: expect.arrayContaining([
-            expect.objectContaining({ scope: "global", revision: 2 }),
-          ]),
-        });
       });
     });
 
@@ -832,11 +747,9 @@ describe("DocumentModelSubgraph Permission Checks", () => {
   });
 
   describe("AUTH_ENABLED=false behavior", () => {
-    it("should allow all read access when all roles return true", async () => {
+    it("should allow all read access when admin role returns true", async () => {
       const ctx = createContext({
         isAdmin: true,
-        isUser: true,
-        isGuest: true,
         userAddress: "0xanyone",
       });
 
@@ -848,11 +761,9 @@ describe("DocumentModelSubgraph Permission Checks", () => {
       expect(mockDocumentPermissionService.canRead).not.toHaveBeenCalled();
     });
 
-    it("should allow all write access when admin/user roles return true", async () => {
+    it("should allow all write access when admin role returns true", async () => {
       const ctx = createContext({
         isAdmin: true,
-        isUser: true,
-        isGuest: true,
         userAddress: "0xanyone",
       });
 
@@ -926,7 +837,7 @@ describe("DocumentModelSubgraph Permission Checks", () => {
     });
 
     it("should skip operation restriction check when no permission service", async () => {
-      const ctx = createContext({ isUser: true, userAddress: "0xuser" });
+      const ctx = createContext({ isAdmin: true, userAddress: "0xadmin" });
 
       const result = await (
         subgraphWithoutPermService.resolvers.Mutation as any
@@ -950,8 +861,6 @@ describe("DocumentModelSubgraph Permission Checks", () => {
       const ctx = {
         user: { address: "" },
         isAdmin: vi.fn().mockReturnValue(false),
-        isUser: vi.fn().mockReturnValue(false),
-        isGuest: vi.fn().mockReturnValue(false),
       } as unknown as Context;
 
       const queryResolver = (subgraph.resolvers.Query as any)
