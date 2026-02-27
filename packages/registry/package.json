@@ -8,15 +8,15 @@
     "url": "https://github.com/powerhouse-inc/powerhouse"
   },
   "bin": {
-    "ph-registry": "./dist/src/run.js"
+    "ph-registry": "./dist/src/cli.js"
   },
   "files": [
     "dist"
   ],
   "sideEffects": false,
   "scripts": {
-    "start": "node ./dist/src/run.js",
-    "dev": "bun run ./src/run.ts",
+    "start": "node ./dist/src/cli.js",
+    "dev": "bun run ./src/cli.ts",
     "build:cli": "bun run ./bundle.ts",
     "test": "vitest --run"
   },
@@ -27,7 +27,9 @@
     "express": "^5.2.1",
     "tar": "^7.4.3",
     "verdaccio": "^6.1.1",
-    "verdaccio-aws-s3-storage": "^10.4.0"
+    "verdaccio-aws-s3-storage": "^10.4.0",
+    "cmd-ts": "catalog:",
+    "@powerhousedao/shared": "workspace:*"
   },
   "devDependencies": {
     "@types/express": "^5.0.6",

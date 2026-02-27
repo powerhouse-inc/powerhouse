@@ -1,3 +1,6 @@
+import type { ParsedCmdResult } from "@powerhousedao/shared/cli";
+import type { registryCommand } from "./cli.js";
+
 export interface RegistryOptions {
   packagesDir: string;
 }
@@ -59,3 +62,5 @@ export interface PackageInfo {
   path: string;
   manifest: PowerhouseManifest | null;
 }
+
+export type RegistryCommandArgs = ParsedCmdResult<typeof registryCommand>;

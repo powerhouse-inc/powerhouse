@@ -1,7 +1,4 @@
-import type {
-  getPackageManagerCommand,
-  ParsedCmdResult,
-} from "@powerhousedao/common/clis";
+import type { ParsedCmdResult } from "@powerhousedao/shared/cli";
 import type { accessToken } from "./commands/access-token.js";
 import type { build, connect, preview, studio } from "./commands/connect.js";
 import type { generate } from "./commands/generate.js";

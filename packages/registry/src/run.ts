@@ -1,52 +1,52 @@
 import express from "express";
 import type { EventEmitter } from "node:events";
-import fs from "node:fs";
-import path from "node:path";
+import { mkdir } from "node:fs/promises";
 import { runServer } from "verdaccio";
 import { createPowerhouseRouter, createPublishHook } from "./middleware.js";
-import type { RegistryConfig } from "./types.js";
+import type { RegistryCommandArgs, RegistryConfig } from "./types.js";
 import { buildVerdaccioConfig } from "./verdaccio-config.js";
 
-const port = Number(process.env.PORT || "8080");
-const storagePath = path.resolve(process.env.REGISTRY_STORAGE || "./storage");
-const cdnCachePath = path.resolve(
-  process.env.REGISTRY_CDN_CACHE || "./cdn-cache",
-);
-const uplink = process.env.REGISTRY_UPLINK;
-const webEnabled = process.env.REGISTRY_WEB !== "false";
+export async function runRegistry(args: RegistryCommandArgs) {
+  const {
+    port,
+    storagePath,
+    uplink,
+    cdnCachePath,
+    webEnabled,
+    s3AccessKeyId,
+    s3Bucket,
+    s3Endpoint,
+    s3ForcePathStyle,
+    s3KeyPrefix,
+    s3Region,
+    s3SecretAccessKey,
+  } = args;
+  const config: RegistryConfig = {
+    port,
+    storagePath,
+    cdnCachePath,
+    uplink,
+    webEnabled,
+    ...(s3Bucket &&
+      s3Endpoint &&
+      s3Region && {
+        s3: {
+          bucket: s3Bucket,
+          endpoint: s3Endpoint,
+          region: s3Region,
+          accessKeyId: s3AccessKeyId,
+          secretAccessKey: s3SecretAccessKey,
+          keyPrefix: s3KeyPrefix,
+          s3ForcePathStyle,
+        },
+      }),
+  };
+  // Ensure directories exist
+  await mkdir(storagePath, { recursive: true });
+  await mkdir(cdnCachePath, { recursive: true });
 
-const s3Bucket = process.env.S3_BUCKET;
-const s3Endpoint = process.env.S3_ENDPOINT;
-const s3Region = process.env.S3_REGION;
+  const verdaccioConfig = buildVerdaccioConfig(config);
 
-const config: RegistryConfig = {
-  port,
-  storagePath,
-  cdnCachePath,
-  uplink,
-  webEnabled,
-  ...(s3Bucket &&
-    s3Endpoint &&
-    s3Region && {
-      s3: {
-        bucket: s3Bucket,
-        endpoint: s3Endpoint,
-        region: s3Region,
-        accessKeyId: process.env.S3_ACCESS_KEY_ID,
-        secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
-        s3ForcePathStyle: process.env.S3_FORCE_PATH_STYLE !== "false",
-        keyPrefix: process.env.S3_KEY_PREFIX,
-      },
-    }),
-};
-
-// Ensure directories exist
-fs.mkdirSync(storagePath, { recursive: true });
-fs.mkdirSync(cdnCachePath, { recursive: true });
-
-const verdaccioConfig = buildVerdaccioConfig(config);
-
-async function main() {
   // verdaccio's runServer returns Promise<any> (upstream type limitation)
   // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   const verdaccioServer: EventEmitter = await runServer(verdaccioConfig as any);
@@ -75,8 +75,3 @@ async function main() {
     }
   });
 }
-
-main().catch((err) => {
-  console.error("Failed to start registry:", err);
-  process.exit(1);
-});
