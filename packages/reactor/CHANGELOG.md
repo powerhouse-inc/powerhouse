@@ -1,3 +1,14 @@
+## 6.0.0-staging.4 (2026-02-27)
+
+### 🚀 Features
+
+- **ci:** push academy to Harbor academy project and update k8s for academy namespace ([efbf8f58d](https://github.com/powerhouse-inc/powerhouse/commit/efbf8f58d))
+- **ci:** update k8s-hosting academy image tag after docker publish ([0b98b73a9](https://github.com/powerhouse-inc/powerhouse/commit/0b98b73a9))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 6.0.0-staging.3 (2026-02-27)
 
 ### 🚀 Features
