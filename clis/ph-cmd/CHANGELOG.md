@@ -1,3 +1,15 @@
+## 6.0.0-dev.61 (2026-02-27)
+
+### 🚀 Features
+
+- **ci:** update k8s-hosting academy image tag after docker publish ([0b98b73a9](https://github.com/powerhouse-inc/powerhouse/commit/0b98b73a9))
+- add bundle step for ph cli ([#2375](https://github.com/powerhouse-inc/powerhouse/pull/2375))
+
+### ❤️ Thank You
+
+- Frank
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.0.0-dev.60 (2026-02-27)
 
 This was a version bump only for ph-cmd to align it with other projects, there were no code changes.
