@@ -336,6 +336,24 @@ export class ListenerManager implements IListenerManager {
           const lastUpdated = new Date().toISOString();
           let continuationNeeded = false;
 
+          // Capture previous listenerRev per sync unit to detect non-advancing revisions
+          const previousRevs = new Map<string, number>();
+          for (const revision of listenerRevisions) {
+            const syncUnit = syncUnits.find(
+              (unit) =>
+                revision.documentId === unit.documentId &&
+                revision.scope === unit.scope &&
+                revision.branch === unit.branch,
+            );
+            if (syncUnit) {
+              const prevState = listenerState.syncUnits.get(syncUnit);
+              previousRevs.set(
+                `${revision.documentId}:${revision.scope}:${revision.branch}`,
+                prevState?.listenerRev ?? 0,
+              );
+            }
+          }
+
           for (const revision of listenerRevisions) {
             const syncUnit = syncUnits.find(
               (unit) =>
@@ -384,7 +402,35 @@ export class ListenerManager implements IListenerManager {
           for (const revision of listenerRevisions) {
             const error = revision.status === "ERROR";
             if (revision.error?.includes("Missing operations")) {
-              continuationNeeded = true;
+              const key = `${revision.documentId}:${revision.scope}:${revision.branch}`;
+              const prevRev = previousRevs.get(key) ?? 0;
+              if (revision.revision > prevRev) {
+                // Revision advanced — retry to push remaining ops
+                continuationNeeded = true;
+              } else {
+                // Non-advancing revision: remote already has these operations
+                // or cannot accept them. Retrying sends the same ops and gets
+                // the same error, causing a 500-retry storm.
+                // Advance listenerRev to the sync unit revision so future
+                // triggerUpdate calls skip these already-synced operations.
+                this.logger.warn(
+                  `"Missing operations" with non-advancing revision ` +
+                    `(${revision.revision} <= ${prevRev}) for ${key}. ` +
+                    `Advancing listenerRev to skip already-synced operations.`,
+                );
+                const syncUnit = syncUnits.find(
+                  (unit) =>
+                    revision.documentId === unit.documentId &&
+                    revision.scope === unit.scope &&
+                    revision.branch === unit.branch,
+                );
+                if (syncUnit) {
+                  listenerState.syncUnits.set(syncUnit, {
+                    lastUpdated,
+                    listenerRev: syncUnit.revision,
+                  });
+                }
+              }
             } else if (error) {
               throw new OperationError(
                 revision.status as ErrorStatus,
