@@ -80,9 +80,7 @@ export async function migrateLegacyToVersioned(
   if (await directoryExists(legacySrcReducersPath)) {
     await mkdir(v1SrcReducersPath, { recursive: true });
     await copyDirectoryFiles(legacySrcReducersPath, v1SrcReducersPath);
-    console.log(
-      `[migrate-legacy] Copied src/reducers/ → v1/src/reducers/`,
-    );
+    console.log(`[migrate-legacy] Copied src/reducers/ → v1/src/reducers/`);
   }
 
   // Copy legacy/src/tests/*.ts → v1/src/tests/ (if exists)
@@ -110,7 +108,9 @@ export async function migrateLegacyToVersioned(
     console.log(`[migrate-legacy] Copied src/utils.ts → v1/src/utils.ts`);
   }
 
-  console.log(`[migrate-legacy] Migration complete for ${documentModelDirPath}`);
+  console.log(
+    `[migrate-legacy] Migration complete for ${documentModelDirPath}`,
+  );
 }
 
 /** Copy all files (non-recursive) from srcDir to destDir */
