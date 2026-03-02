@@ -103,7 +103,7 @@ tsx reactor-direct.ts 5 -o 20 --percentiles --verbose --show-action-types
 
 Extracts profiling data from Pyroscope and generates a markdown analysis report with top functions, module breakdown, and wall vs CPU comparison tables.
 
-Typically invoked automatically by `reactor-direct.ts --pyroscope` or `docs-create.ts --pyroscope`, but can also be run standalone against any Pyroscope profile URL.
+Typically invoked automatically by `reactor-direct.ts --pyroscope`, but can also be run standalone against any Pyroscope profile URL.
 
 ```bash
 # Analyse a Pyroscope profile URL (extracts query, from, until automatically)

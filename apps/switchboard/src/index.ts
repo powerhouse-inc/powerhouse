@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import * as Sentry from "@sentry/node";
 import { config } from "./config.js";
 import { initProfilerFromEnv } from "./profiler.js";
 import { startSwitchboard } from "./server.js";
@@ -28,6 +29,7 @@ if (process.env.PYROSCOPE_SERVER_ADDRESS) {
   try {
     await initProfilerFromEnv(process.env);
   } catch (e) {
+    Sentry.captureException(e);
     console.error("Error starting profiler:", e);
   }
 }
