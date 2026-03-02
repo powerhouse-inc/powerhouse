@@ -21,10 +21,28 @@ export type ReactorMcpProviderOptions = {
 export const createDocumentTool = {
   name: "createDocument",
   description: `Create a new document.
-     Unless the user specifies otherwise, and a drive named "vetra" is available, add the document after creating it to that drive using "addActions" tool with a "ADD_FILE" action to the drive document.`,
+     Unless the user specifies otherwise, and a drive named "vetra" is available, add the document to that drive by providing the drive's ID in the "driveId" parameter.
+     When "driveId" is provided, the document is created and added to the drive atomically — no separate "addActions" call with "ADD_FILE" is needed.`,
   inputSchema: {
     documentType: z.string().describe("Type of the document to create"),
-    documentId: z.string().optional().describe("Optional ID for the document"),
+    name: z
+      .string()
+      .optional()
+      .describe(
+        "Optional name for the document. Used as both the document name and the drive node name when driveId is provided.",
+      ),
+    driveId: z
+      .string()
+      .optional()
+      .describe(
+        "Optional drive ID or slug. When provided, the document is created and added to the drive atomically.",
+      ),
+    parentFolder: z
+      .string()
+      .optional()
+      .describe(
+        "Optional folder ID within the drive to place the document in. Only used when driveId is provided.",
+      ),
   },
   outputSchema: {
     documentId: z.string().describe("ID of the created document"),
@@ -347,16 +365,27 @@ export async function createReactorMcpProvider(
     }),
 
     createDocument: toolWithCallback(createDocumentTool, async (params) => {
-      const documentId = params.documentId ?? generateId();
+      if (params.driveId) {
+        const module = await getDocumentModelModule(params.documentType);
+        if (!module) {
+          throw new Error(
+            `Document model for type '${params.documentType}' not found`,
+          );
+        }
+        const document = module.utils.createDocument();
+        if (params.name) {
+          document.header.name = params.name;
+        }
+        const created = await client.createDocumentInDrive(
+          params.driveId,
+          document,
+          params.parentFolder,
+        );
+        return { documentId: created.header.id };
+      }
 
-      // Create an empty document using the new reactor API
       const created = await client.createEmpty(params.documentType, {});
-
-      // If a specific ID was requested but createEmpty doesn't support it,
-      // we use the generated ID from the created document
-      return {
-        documentId: created.header.id,
-      };
+      return { documentId: created.header.id };
     }),
 
     getDocuments: toolWithCallback(getDocumentsTool, async (params) => {

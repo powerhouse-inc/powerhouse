@@ -11,12 +11,12 @@ export const ReactorMcpInstructions = `MUST BE USED when handling documents or d
 There are 5 main concepts to know of: 
 - Document Model: A template for creating documents. It defines the schema and allowed operations for a type of document.
 - Document: An instance of a document model. It contains actual data following the structure defined by the document model and can be changed using operations.
-- Drive: A document of type "powerhouse/document-drive" which represents a collection of documents and folders. To add documents to a drive, use the "addActions" tool with an "ADD_FILE" action.
+- Drive: A document of type "powerhouse/document-drive" which represents a collection of documents and folders. To create a document inside a drive, use the "createDocument" tool with the "driveId" parameter — this handles everything atomically. Use "addActions" with "ADD_FILE" only when adding an existing document to a drive.
 - Action: A proposed change to a document. It is a JSON object with the action name and input that defines the action to be taken on the document. Should be dispatched by calling the "addActions" tool.
 - Operation: A change done to a document. It contains the action object plus additional metadata such as the index of the operation in the document history, the timestamp it was added, the hash of the resulting document data, the number of operations skipped, and the error message if the operation failed. Actions dispatched with "addActions" get converted into an operation.
 
 When planning to add multiple actions to a document, try to reduce the number of "addActions" calls to a minimum by adding multiple actions at once.
-Unless the user specifies otherwise, and a drive with slug "vetra" is available, add newly created documents to it.
+Unless the user specifies otherwise, and a drive with slug "vetra" is available, create new documents inside it by passing its ID as the "driveId" parameter to "createDocument".
 
 Examples:
 <example>Context: User needs to create a new document model for their application. user: 'I need to create a user profile document model with fields for name, email, and preferences' assistant: 'I'll use the reactor-mcp-server to help you create this document model.' <commentary>Since the user is requesting document model creation, use the reactor-mcp-document-expert agent to ensure proper reactor-mcp tool usage.</commentary></example> <example>Context: User is building a content management system and needs create documents for certain types of document models. user: 'Can you help me create example documents for blog posts and categories document models?' assistant: 'Let me use the reactor-mcp-server to create these documents using the appropriate reactor-mcp tool calls.' <commentary>Document model creation requires the reactor-mcp-server tool calls to ensure compliance.</commentary></example>

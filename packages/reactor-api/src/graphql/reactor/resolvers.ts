@@ -22,6 +22,8 @@ import type {
   PHDocument,
 } from "document-model";
 import { GraphQLError } from "graphql";
+
+const DRIVE_DOCUMENT_TYPE = "powerhouse/document-drive";
 import type { GetParentIdsFn } from "../../services/document-permission.service.js";
 import {
   fromInputMaybe,
@@ -431,7 +433,19 @@ export async function createDocument(
 
   let result: PHDocument;
   try {
-    result = await reactorClient.create(document, parentIdentifier);
+    if (parentIdentifier) {
+      const parent = await reactorClient.get(parentIdentifier);
+      if (parent.header.documentType === DRIVE_DOCUMENT_TYPE) {
+        result = await reactorClient.createDocumentInDrive(
+          parentIdentifier,
+          document,
+        );
+      } else {
+        result = await reactorClient.create(document, parentIdentifier);
+      }
+    } else {
+      result = await reactorClient.create(document);
+    }
   } catch (error) {
     throw new GraphQLError(
       `Failed to create document: ${error instanceof Error ? error.message : "Unknown error"}`,
@@ -452,15 +466,36 @@ export async function createEmptyDocument(
   args: {
     documentType: string;
     parentIdentifier?: string | null;
+    name?: string | null;
   },
 ): Promise<ReturnType<typeof toGqlPhDocument>> {
   const parentIdentifier = fromInputMaybe(args.parentIdentifier);
+  const name = fromInputMaybe(args.name);
 
   let result: PHDocument;
   try {
-    result = await reactorClient.createEmpty(args.documentType, {
-      parentIdentifier,
-    });
+    if (parentIdentifier) {
+      const parent = await reactorClient.get(parentIdentifier);
+      if (parent.header.documentType === DRIVE_DOCUMENT_TYPE) {
+        const module = await reactorClient.getDocumentModelModule(
+          args.documentType,
+        );
+        const document = module.utils.createDocument();
+        if (name) {
+          document.header.name = name;
+        }
+        result = await reactorClient.createDocumentInDrive(
+          parentIdentifier,
+          document,
+        );
+      } else {
+        result = await reactorClient.createEmpty(args.documentType, {
+          parentIdentifier,
+        });
+      }
+    } else {
+      result = await reactorClient.createEmpty(args.documentType, {});
+    }
   } catch (error) {
     throw new GraphQLError(
       `Failed to create empty document: ${error instanceof Error ? error.message : "Unknown error"}`,

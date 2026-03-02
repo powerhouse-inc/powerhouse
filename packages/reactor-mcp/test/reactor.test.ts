@@ -36,6 +36,7 @@ const createMockReactorClient = (): IReactorClient => {
     }),
     deleteDocument: vi.fn(),
     execute: vi.fn(),
+    createDocumentInDrive: vi.fn(),
     find: vi.fn().mockResolvedValue({
       results: [],
       options: { cursor: "", limit: 10 },
@@ -138,6 +139,83 @@ describe("ReactorMcpProvider", () => {
       expect(result.structuredContent).toMatchObject({
         documentId: expect.any(String),
       });
+    });
+
+    it("should create a document in a drive when driveId is provided", async () => {
+      const drive = await client.createEmpty<DocumentDriveDocument>(
+        "powerhouse/document-drive",
+      );
+
+      const provider = await createReactorMcpProvider({ client });
+      const result = await provider.tools.createDocument.callback({
+        documentType: "powerhouse/document-model",
+        driveId: drive.header.id,
+      });
+
+      expect(result.isError).toBeUndefined();
+      expect(result.structuredContent).toMatchObject({
+        documentId: expect.any(String),
+      });
+
+      // Verify the document was created and can be retrieved
+      const documentId = (result.structuredContent as { documentId: string })
+        .documentId;
+      const doc = await client.get(documentId);
+      expect(doc).toBeDefined();
+      expect(doc.header.documentType).toBe("powerhouse/document-model");
+    });
+
+    it("should create a document in a drive with parentFolder", async () => {
+      const drive = await client.createEmpty<DocumentDriveDocument>(
+        "powerhouse/document-drive",
+      );
+
+      // Add a folder to the drive using addActions tool (properly formats actions)
+      const folderId = "test-folder-id";
+      const provider = await createReactorMcpProvider({ client });
+      await provider.tools.addActions.callback({
+        documentId: drive.header.id,
+        actions: [
+          {
+            type: "ADD_FOLDER",
+            input: { id: folderId, name: "Test Folder" },
+            scope: "global",
+          },
+        ],
+      });
+
+      const result = await provider.tools.createDocument.callback({
+        documentType: "powerhouse/document-model",
+        driveId: drive.header.id,
+        parentFolder: folderId,
+      });
+
+      expect(result.isError).toBeUndefined();
+      expect(result.structuredContent).toMatchObject({
+        documentId: expect.any(String),
+      });
+
+      // Verify the document exists
+      const documentId = (result.structuredContent as { documentId: string })
+        .documentId;
+      const doc = await client.get(documentId);
+      expect(doc).toBeDefined();
+      expect(doc.header.documentType).toBe("powerhouse/document-model");
+    });
+
+    it("should return error for unknown document type with driveId", async () => {
+      const drive = await client.createEmpty<DocumentDriveDocument>(
+        "powerhouse/document-drive",
+      );
+
+      const provider = await createReactorMcpProvider({ client });
+      const result = await provider.tools.createDocument.callback({
+        documentType: "non-existent/type",
+        driveId: drive.header.id,
+      });
+
+      expect(result.isError).toBe(true);
+      expect(getTextContent(result)).toContain("non-existent/type");
     });
   });
 
