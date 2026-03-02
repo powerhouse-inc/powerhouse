@@ -426,26 +426,28 @@ export class DocumentModelSubgraph extends BaseSubgraph {
             );
           }
 
-          // Use shared resolver function - returns PHDocument format
+          // Use shared resolver function - passes name so that
+          // createDocumentInDrive can set it on the drive node atomically
           const createdDoc = await createEmptyDocumentResolver(
             this.reactorClient,
             {
               documentType,
               parentIdentifier,
+              name,
             },
           );
 
-          if (name) {
+          // If name was provided but parent was NOT a drive (so name wasn't
+          // set during creation), apply it via SET_NAME action
+          if (name && createdDoc.name !== name) {
             const updatedDoc = await this.reactorClient.execute(
               createdDoc.id,
               "main",
               [setName(name)],
             );
-            // Use toGqlPhDocument for PHDocument format with revisionsList
             return toGqlPhDocument(updatedDoc);
           }
 
-          // Return directly - already in PHDocument format
           return createdDoc;
         },
         // Uses shared createEmptyDocumentResolver from reactor/resolvers.ts
