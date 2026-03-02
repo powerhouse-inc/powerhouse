@@ -4,13 +4,12 @@ import type {
   Resource,
   ToolAnnotations,
 } from "@modelcontextprotocol/sdk/types.js";
-import type { z, ZodRawShape } from "zod/v3";
+import type { z, ZodRawShape } from "zod";
 
 export type ExtractCallbackFromTool<T extends ToolSchema> = T extends {
   inputSchema: infer S;
 }
-  ? // @ts-expect-error TODO: fix this Type instantiation is excessively deep and possibly infinite.
-    ToolCallback<S extends ZodRawShape ? S : undefined>
+  ? ToolCallback<S extends ZodRawShape ? S : undefined>
   : ToolCallback;
 
 export type ToolWithCallback<T extends ToolSchema = ToolSchema> = T & {

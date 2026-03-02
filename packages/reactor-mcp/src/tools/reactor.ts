@@ -3,13 +3,11 @@ import { driveCollectionId } from "@powerhousedao/reactor";
 import type { DocumentDriveDocument } from "document-drive";
 import type {
   Action,
-  DocumentModelGlobalState,
   DocumentModelModule,
   PHDocument,
 } from "document-model";
-import { DocumentModelGlobalStateSchema } from "document-model";
 import { generateId } from "document-model/core";
-import { z } from "zod/v3";
+import { z } from "zod";
 import type { ToolSchema, ToolWithCallback } from "./types.js";
 import { toolWithCallback, validateDocumentModelAction } from "./utils.js";
 
@@ -40,7 +38,7 @@ export const getDocumentTool = {
     id: z.string().describe("ID of the document to retrieve"),
   },
   outputSchema: {
-    document: z.object({}).describe("The retrieved Document"),
+    document: z.unknown().describe("The retrieved Document"),
   },
 } as const satisfies ToolSchema;
 
@@ -80,7 +78,7 @@ export const addActionsTool = {
             input: z.unknown().describe("The payload of the action"),
             scope: z.string().describe("The scope of the action"),
             context: z
-              .object({})
+              .record(z.string(), z.unknown())
               .optional()
               .describe("Optional action context"), // TODO: Define context schema
           })
@@ -212,7 +210,7 @@ export const getDriveTool = {
       .describe("Optional get document options"),
   },
   outputSchema: {
-    drive: z.object({}).describe("Drive document"), // TODO: Define DocumentDriveDocument schema
+    drive: z.unknown().describe("Drive document"), // TODO: Define DocumentDriveDocument schema
   },
 } as const satisfies ToolSchema;
 
@@ -275,10 +273,6 @@ export const addRemoteDriveTool = {
   },
 } as const satisfies ToolSchema;
 
-type Properties<T> = Required<{
-  [K in keyof T]: z.ZodType<T[K]>;
-}>;
-
 export const getDocumentModelSchemaTool = {
   name: "getDocumentModelSchema",
   description: "Get the schema of a document model",
@@ -286,9 +280,7 @@ export const getDocumentModelSchemaTool = {
     type: z.string().describe("Type of the document model"),
   },
   outputSchema: {
-    schema: DocumentModelGlobalStateSchema().describe(
-      "Schema of the document model",
-    ) as unknown as z.ZodObject<Properties<DocumentModelGlobalState>>,
+    schema: z.unknown().describe("Schema of the document model"),
   },
 } as const satisfies ToolSchema;
 

@@ -12,7 +12,13 @@ import {
   documentModelDocumentModelModule,
   documentModelReducer,
 } from "document-model";
+import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+function getTextContent(result: CallToolResult, index = 0): string {
+  const content = result.content[index];
+  return content.type === "text" ? content.text : "";
+}
 
 // Mock reactor client for unit tests
 const createMockReactorClient = (): IReactorClient => {
@@ -99,7 +105,7 @@ describe("ReactorMcpProvider", () => {
       });
 
       expect(result.isError).toBe(true);
-      expect(result.content[0].text).toContain("non-existent-id");
+      expect(getTextContent(result)).toContain("non-existent-id");
     });
 
     it("should handle non-Error exceptions", async () => {
@@ -247,7 +253,7 @@ describe("ReactorMcpProvider", () => {
       });
 
       expect(result.isError).toBe(true);
-      expect(result.content[0].text).toContain(
+      expect(getTextContent(result)).toContain(
         `Operation "INVALID_ACTION" is not defined in any module of the document model`,
       );
     });
@@ -272,7 +278,7 @@ describe("ReactorMcpProvider", () => {
       });
 
       expect(result.isError).toBe(true);
-      expect(result.content[0].text).toContain("Input validation error");
+      expect(getTextContent(result)).toContain("Input validation error");
     });
 
     it("should throw error on action on non-existent document", async () => {
@@ -290,7 +296,7 @@ describe("ReactorMcpProvider", () => {
 
       // Action on non-existent document returns an error
       expect(result.isError).toBe(true);
-      expect(result.content[0].text).toContain("non-existent-id");
+      expect(getTextContent(result)).toContain("non-existent-id");
     });
   });
 
@@ -437,10 +443,10 @@ describe("ReactorMcpProvider", () => {
       });
 
       expect(result.isError).toBe(true);
-      expect(result.content[0].text).toContain(
+      expect(getTextContent(result)).toContain(
         "Remote drive management is not available",
       );
-      expect(result.content[0].text).toContain(
+      expect(getTextContent(result)).toContain(
         "SyncManager was not configured",
       );
     });
@@ -489,7 +495,7 @@ describe("ReactorMcpProvider", () => {
       });
 
       expect(result.isError).toBe(true);
-      expect(result.content[0].text).toContain("non-existent/model");
+      expect(getTextContent(result)).toContain("non-existent/model");
     });
   });
 });
