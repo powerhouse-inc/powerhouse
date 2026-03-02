@@ -1,0 +1,43 @@
+{
+  "name": "@powerhousedao/analytics-engine-browser",
+  "version": "0.6.3",
+  "license": "AGPL-3.0-only",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/powerhouse-inc/analytics-engine"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "import": "./dist/src/index.js"
+    }
+  },
+  "files": [
+    "dist/src"
+  ],
+  "scripts": {
+    "build:bundle": "bun run ./bundle.ts",
+    "dev": "pnpm tsc -b -w",
+    "test": "vitest --run ./**/*.test.ts"
+  },
+  "devDependencies": {
+    "@powerhousedao/analytics-engine-core": "workspace:*",
+    "@powerhousedao/analytics-engine-knex": "workspace:*",
+    "@electric-sql/pglite": "catalog:",
+    "date-fns": "catalog:",
+    "events": "catalog:",
+    "util": "catalog:",
+    "knex": "catalog:",
+    "luxon": "catalog:",
+    "@vitest/browser": "catalog:",
+    "@vitest/browser-playwright": "catalog:",
+    "@types/luxon": "catalog:",
+    "playwright": "catalog:",
+    "vitest": "catalog:",
+    "vite-plugin-node-polyfills": "catalog:"
+  }
+}

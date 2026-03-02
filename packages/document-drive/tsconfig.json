@@ -16,6 +16,9 @@
   ],
   "references": [
     {
+      "path": "../analytics-engine/core"
+    },
+    {
       "path": "../document-model"
     },
     {

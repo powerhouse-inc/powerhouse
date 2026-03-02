@@ -1,0 +1,39 @@
+{
+  "name": "benchmarks",
+  "private": true,
+  "version": "0.6.3",
+  "publishConfig": {
+    "access": "restricted"
+  },
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "processCache": "node ./dist/src/processor.js",
+    "ci": "node ./dist/src/wasm.js && node ./dist/src/hash-keys.js && PG_DISABLED=true node ./dist/src/query-list.js && PG_DISABLED=true node ./dist/src/series.js",
+    "benchmark": "pnpm test-wasm && pnpm test-query-list && pnpm test-series && pnpm test-hash-keys",
+    "test-wasm": "node ./dist/src/wasm.js",
+    "test-query-list": "PG_CONNECTION_STRING=postgresql://postgres:password@localhost:5555/analytics node ./dist/src/query-list.js",
+    "test-series": "PG_CONNECTION_STRING=postgresql://postgres:password@localhost:5555/analytics node ./dist/src/series.js",
+    "test-hash-keys": "node ./dist/src/hash-keys.js"
+  },
+  "dependencies": {
+    "@powerhousedao/analytics-engine-browser": "workspace:*",
+    "@powerhousedao/analytics-engine-core": "workspace:*",
+    "@powerhousedao/analytics-engine-knex": "workspace:*",
+    "@powerhousedao/analytics-engine-pg": "workspace:*",
+    "crc": "catalog:",
+    "crc-32": "catalog:",
+    "knex": "catalog:",
+    "luxon": "catalog:",
+    "pg": "catalog:",
+    "tinybench": "catalog:"
+  },
+  "devDependencies": {
+    "@tsconfig/node-lts": "catalog:",
+    "@types/luxon": "catalog:",
+    "@types/node": "catalog:"
+  }
+}

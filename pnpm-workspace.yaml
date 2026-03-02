@@ -2,17 +2,13 @@ packages:
   - "apps/*"
   - "clis/*"
   - "packages/*"
+  - "packages/analytics-engine/*"
   - "test/*"
   - "packages/reactor/test/atlas"
   - "scripts/*"
   - "!releases"
 
 catalog:
-  "@powerhousedao/analytics-engine-core": 0.6.4
-  "@powerhousedao/analytics-engine-graphql": 0.6.4
-  "@powerhousedao/analytics-engine-pg": 0.6.4
-  "@powerhousedao/analytics-engine-knex": 0.6.4
-  "@powerhousedao/analytics-engine-browser": 0.6.4
   "@powerhousedao/document-engineering": 1.40.1
   "kysely": 0.28.11
   "kysely-pglite-dialect": 1.2.0
@@ -89,6 +85,24 @@ catalog:
   "react-i18next": 16.5.4
   "graphql-tag": 2.12.6
   lightningcss: 1.31.1
+  "better-sqlite3": 12.6.2
+  "sqlite3": 5.1.7
+  "mysql": 2.18.1
+  "mysql2": 3.17.2
+  "tedious": 19.2.1
+  "pg-query-stream": 4.12.0
+  "oracledb": 6.10.0
+  "crc": 4.3.2
+  "crc-32": 1.2.2
+  "tinybench": 6.0.0
+  "@tsconfig/node-lts": 24.0.0
+  "glob": 13.0.4
+  "@vitest/browser": 4.0.18
+  "playwright": 1.58.2
+  "date-fns": 4.1.0
+  "events": 3.3.0
+  "util": 0.12.5
+  "@vitest/browser-playwright": 4.0.18
 
 allowBuilds:
   vite: true

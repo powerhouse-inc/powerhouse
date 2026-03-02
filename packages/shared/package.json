@@ -41,7 +41,7 @@
   "dependencies": {
     "kysely": "catalog:",
     "@sindresorhus/fnv1a": "catalog:",
-    "@powerhousedao/analytics-engine-core": "catalog:",
+    "@powerhousedao/analytics-engine-core": "workspace:*",
     "mutative": "catalog:",
     "react": "catalog:",
     "zod": "catalog:"
