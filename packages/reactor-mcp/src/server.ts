@@ -32,7 +32,6 @@ export async function createServer(
       name: "reactor-mcp-server",
       version: "1.0.0",
       description: ReactorMcpInstructions,
-      instructions: ReactorMcpInstructions,
     },
     {
       capabilities: {
