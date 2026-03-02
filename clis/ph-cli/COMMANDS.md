@@ -1,4 +1,4 @@
-# Powerhouse CLI Commands (6.0.0-dev.59)<br>
+# Powerhouse CLI Commands (6.0.0-dev.61)<br>
 This document provides detailed information about the available commands in the Powerhouse CLI.<br><br>
 The Powerhouse CLI (ph-cli) is a command-line interface tool that provides essential commands for managing Powerhouse projects. The tool and it's commands are fundamental for creating, building, and running Document Models as a builder in studio mode.<br>
 ## Table of Contents
@@ -132,6 +132,10 @@ Use legacy hygen codegen<br><br>
 #### Use Versioning <br>
 Allow upgrading document models with versioning.<br><br>
 **usage:** `--use-versioning`<br>
+**default**: `false`
+#### Migrate Legacy <br>
+Migrate existing legacy document model code to versioned structure. Implies --use-versioning.<br><br>
+**usage:** `--migrate-legacy`<br>
 **default**: `false`
 #### Debug <br>
 Log arguments passed to this command<br><br>

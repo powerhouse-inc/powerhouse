@@ -8,8 +8,8 @@ import {
 } from "@powerhousedao/analytics-engine-core";
 import type { UseAnalyticsQueryResult } from "@powerhousedao/reactor-browser/analytics";
 import { useAnalyticsQuery } from "@powerhousedao/reactor-browser/analytics";
+import type { NodeTarget } from "@powerhousedao/shared/processors/drive-analytics/types";
 import { DateTime } from "luxon";
-import type { NodeTarget } from "./processor/types.js";
 
 export type UseDocumentAnalyticsOptions = {
   from?: string;

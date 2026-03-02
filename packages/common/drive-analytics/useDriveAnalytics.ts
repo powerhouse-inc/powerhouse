@@ -4,8 +4,11 @@ import {
   AnalyticsPath,
 } from "@powerhousedao/analytics-engine-core";
 import { useAnalyticsQuery } from "@powerhousedao/reactor-browser/analytics";
+import type {
+  ActionType,
+  NodeTarget,
+} from "@powerhousedao/shared/processors/drive-analytics/types";
 import { DateTime } from "luxon";
-import type { ActionType, NodeTarget } from "./processor/types.js";
 
 export type UseDriveAnalyticsOptions = {
   from?: string;
