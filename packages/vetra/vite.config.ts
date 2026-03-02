@@ -8,6 +8,15 @@ export default defineConfig(({ mode }) => {
   });
 
   const additionalViteConfig: UserConfig = {
+    build: {
+      outDir: "vite-build",
+    },
+    optimizeDeps: {
+      exclude: [
+        "@electric-sql/pglite",
+        "@powerhousedao/analytics-engine-browser",
+      ],
+    },
     // add your own vite config here
     resolve: {
       conditions: [

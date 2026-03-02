@@ -24,11 +24,11 @@ export async function runConnectBuild(args: ConnectBuildArgs) {
     viteConfigPath,
   );
 
-  const connectPublicDir = resolveConnectPublicDir(projectRoot);
+  // const connectPublicDir = resolveConnectPublicDir(projectRoot);
 
   const buildConfig: InlineConfig = {
     base: connectBasePath,
-    publicDir: connectPublicDir,
+    // publicDir: connectPublicDir,
     mode,
     configFile: false,
     build: {

@@ -7,9 +7,11 @@
       "dom.iterable"
     ],
     "outDir": "./dist",
+    "emitDeclarationOnly": true,
     "types": [
       "@types/wicg-file-system-access",
-      "vitest/globals"
+      "vitest/globals",
+      "@types/bun"
     ]
   },
   "include": [

@@ -230,6 +230,7 @@ describe("GqlRequestChannel Integration", () => {
       channelId,
       remoteName,
       cursorStorage,
+      // @ts-expect-error wrong type
       createTestConfig({ fetchFn: mockFetch }),
       createMockOperationIndex(),
       pollTimer,

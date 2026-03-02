@@ -34,11 +34,11 @@ export async function runConnectPreview(args: ConnectPreviewArgs) {
     viteConfigPath,
   );
 
-  const connectPublicDir = resolveConnectPublicDir(projectRoot);
+  // const connectPublicDir = resolveConnectPublicDir(projectRoot);
 
   const previewConfig: InlineConfig = {
     base: connectBasePath,
-    publicDir: connectPublicDir,
+    // publicDir: connectPublicDir,
     mode,
     configFile: false,
     build: {

@@ -1,8 +1,9 @@
-import type { BrowserAnalyticsStoreOptions } from "@powerhousedao/analytics-engine-browser";
-import type {
-  AnalyticsQueryEngine,
-  IAnalyticsStore,
-} from "@powerhousedao/analytics-engine-core";
+import {
+  BrowserAnalyticsStore,
+  type BrowserAnalyticsStoreOptions,
+} from "@powerhousedao/analytics-engine-browser";
+import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
+import { AnalyticsQueryEngine } from "@powerhousedao/analytics-engine-core";
 import {
   QueryClient,
   QueryClientProvider,
@@ -27,13 +28,8 @@ export const analyticsStoreKey = ["analytics", "store"] as const;
 export const analyticsEngineKey = ["analytics", "store"] as const;
 
 async function createAnalyticsStore(options: CreateStoreOptions) {
-  const { BrowserAnalyticsStore } =
-    await import("@powerhousedao/analytics-engine-browser");
   const store = new BrowserAnalyticsStore(options);
   await store.init();
-
-  const { AnalyticsQueryEngine } =
-    await import("@powerhousedao/analytics-engine-core");
 
   const engine = new AnalyticsQueryEngine(store);
   return {

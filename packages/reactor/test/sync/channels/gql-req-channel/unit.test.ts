@@ -211,7 +211,7 @@ describe("GqlRequestChannel", () => {
     it("should create channel with config", () => {
       const cursorStorage = createMockCursorStorage();
       const mockFetch = createMockFetch({ pollSyncEnvelopes: [] });
-      global.fetch = mockFetch;
+      global.fetch = mockFetch as any;
 
       const channel = new GqlRequestChannel(
         createMockLogger(),
@@ -231,7 +231,7 @@ describe("GqlRequestChannel", () => {
     it("should initialize empty mailboxes", () => {
       const cursorStorage = createMockCursorStorage();
       const mockFetch = createMockFetch({ pollSyncEnvelopes: [] });
-      global.fetch = mockFetch;
+      global.fetch = mockFetch as any;
 
       const channel = new GqlRequestChannel(
         createMockLogger(),
@@ -251,7 +251,7 @@ describe("GqlRequestChannel", () => {
     it("should use default config values", () => {
       const cursorStorage = createMockCursorStorage();
       const mockFetch = createMockFetch({ pollSyncEnvelopes: [] });
-      global.fetch = mockFetch;
+      global.fetch = mockFetch as any;
 
       const channel = new GqlRequestChannel(
         createMockLogger(),
@@ -274,7 +274,7 @@ describe("GqlRequestChannel", () => {
         pollSyncEnvelopes: [],
         touchChannel: true,
       });
-      global.fetch = mockFetch;
+      global.fetch = mockFetch as any;
 
       const channel = new GqlRequestChannel(
         createMockLogger(),
@@ -313,7 +313,7 @@ describe("GqlRequestChannel", () => {
         pollSyncEnvelopes: [],
         touchChannel: true,
       });
-      global.fetch = mockFetch;
+      global.fetch = mockFetch as any;
 
       const channel = new GqlRequestChannel(
         createMockLogger(),
@@ -349,7 +349,7 @@ describe("GqlRequestChannel", () => {
         pollSyncEnvelopes: [],
         touchChannel: true,
       });
-      global.fetch = mockFetch;
+      global.fetch = mockFetch as any;
 
       const channel = new GqlRequestChannel(
         createMockLogger(),
@@ -383,7 +383,7 @@ describe("GqlRequestChannel", () => {
         pollSyncEnvelopes: [],
         touchChannel: true,
       });
-      global.fetch = mockFetch;
+      global.fetch = mockFetch as any;
 
       const jwtHandler = vi.fn().mockResolvedValue("secret-token");
 
@@ -420,7 +420,7 @@ describe("GqlRequestChannel", () => {
         pollSyncEnvelopes: [],
         touchChannel: true,
       });
-      global.fetch = mockFetch;
+      global.fetch = mockFetch as any;
 
       const jwtHandler = vi.fn().mockResolvedValue(undefined);
 
@@ -457,7 +457,7 @@ describe("GqlRequestChannel", () => {
         pollSyncEnvelopes: [],
         touchChannel: true,
       });
-      global.fetch = mockFetch;
+      global.fetch = mockFetch as any;
 
       const jwtHandler = vi.fn().mockRejectedValue(new Error("JWT error"));
 
@@ -503,7 +503,7 @@ describe("GqlRequestChannel", () => {
         pollSyncEnvelopes: [],
         ackOrdinal: 42,
       });
-      global.fetch = mockFetch;
+      global.fetch = mockFetch as any;
 
       const channel = new GqlRequestChannel(
         createMockLogger(),
@@ -537,7 +537,7 @@ describe("GqlRequestChannel", () => {
         pollSyncEnvelopes: [],
         ackOrdinal: 0,
       });
-      global.fetch = mockFetch;
+      global.fetch = mockFetch as any;
 
       const channel = new GqlRequestChannel(
         createMockLogger(),
@@ -589,7 +589,7 @@ describe("GqlRequestChannel", () => {
         pollSyncEnvelopes: [mockEnvelope],
         touchChannel: true,
       });
-      global.fetch = mockFetch;
+      global.fetch = mockFetch as any;
 
       const channel = new GqlRequestChannel(
         createMockLogger(),
@@ -625,7 +625,7 @@ describe("GqlRequestChannel", () => {
         pollSyncEnvelopes: [],
         pushSyncEnvelopes: true,
       });
-      global.fetch = mockFetch;
+      global.fetch = mockFetch as any;
 
       const channel = new GqlRequestChannel(
         createMockLogger(),
@@ -658,7 +658,7 @@ describe("GqlRequestChannel", () => {
         pollSyncEnvelopes: [],
         pushSyncEnvelopes: true,
       });
-      global.fetch = mockFetch;
+      global.fetch = mockFetch as any;
 
       const channel = new GqlRequestChannel(
         createMockLogger(),
@@ -690,7 +690,7 @@ describe("GqlRequestChannel", () => {
         pollSyncEnvelopes: [],
         pushSyncEnvelopes: true,
       });
-      global.fetch = mockFetch;
+      global.fetch = mockFetch as any;
 
       const channel = new GqlRequestChannel(
         createMockLogger(),
@@ -726,7 +726,7 @@ describe("GqlRequestChannel", () => {
             errors: [{ message: "Validation failed" }],
           }),
       });
-      global.fetch = mockFetch;
+      global.fetch = mockFetch as any;
 
       const channel = new GqlRequestChannel(
         createMockLogger(),
@@ -751,7 +751,7 @@ describe("GqlRequestChannel", () => {
     it("should retry recoverable push errors instead of dead-lettering", async () => {
       const cursorStorage = createMockCursorStorage();
       const mockFetch = vi.fn().mockRejectedValue(new Error("Network error"));
-      global.fetch = mockFetch;
+      global.fetch = mockFetch as any;
 
       const channel = new GqlRequestChannel(
         createMockLogger(),
@@ -796,7 +796,7 @@ describe("GqlRequestChannel", () => {
           json: () => Promise.resolve({ data: { touchChannel: true } }),
         })
         .mockRejectedValue(new Error("Network error"));
-      global.fetch = mockFetch;
+      global.fetch = mockFetch as any;
 
       const channel = new GqlRequestChannel(
         createMockLogger(),
@@ -833,7 +833,7 @@ describe("GqlRequestChannel", () => {
           json: () => Promise.resolve({ data: { touchChannel: true } }),
         })
         .mockRejectedValue(new Error("Network error"));
-      global.fetch = mockFetch;
+      global.fetch = mockFetch as any;
 
       const channel = new GqlRequestChannel(
         createMockLogger(),
@@ -883,7 +883,7 @@ describe("GqlRequestChannel", () => {
             }),
         });
       });
-      global.fetch = mockFetch;
+      global.fetch = mockFetch as any;
 
       const channel = new GqlRequestChannel(
         createMockLogger(),
@@ -929,7 +929,7 @@ describe("GqlRequestChannel", () => {
               errors: [{ message: "GraphQL error" }],
             }),
         });
-      global.fetch = mockFetch;
+      global.fetch = mockFetch as any;
 
       const channel = new GqlRequestChannel(
         createMockLogger(),
@@ -968,7 +968,7 @@ describe("GqlRequestChannel", () => {
           status: 500,
           statusText: "Internal Server Error",
         });
-      global.fetch = mockFetch;
+      global.fetch = mockFetch as any;
 
       const channel = new GqlRequestChannel(
         createMockLogger(),
@@ -1024,7 +1024,7 @@ describe("GqlRequestChannel", () => {
             }),
         });
       });
-      global.fetch = mockFetch;
+      global.fetch = mockFetch as any;
 
       const channel = new GqlRequestChannel(
         createMockLogger(),
@@ -1089,7 +1089,7 @@ describe("GqlRequestChannel", () => {
             }),
         });
       });
-      global.fetch = mockFetch;
+      global.fetch = mockFetch as any;
 
       const channel = new GqlRequestChannel(
         createMockLogger(),
@@ -1129,7 +1129,7 @@ describe("GqlRequestChannel", () => {
         pollSyncEnvelopes: [],
         touchChannel: true,
       });
-      global.fetch = mockFetch;
+      global.fetch = mockFetch as any;
 
       const channel = new GqlRequestChannel(
         createMockLogger(),
@@ -1162,7 +1162,7 @@ describe("GqlRequestChannel", () => {
     it("should allow shutdown with no issues", () => {
       const cursorStorage = createMockCursorStorage();
       const mockFetch = createMockFetch({ pollSyncEnvelopes: [] });
-      global.fetch = mockFetch;
+      global.fetch = mockFetch as any;
 
       const channel = new GqlRequestChannel(
         createMockLogger(),
@@ -1183,7 +1183,7 @@ describe("GqlRequestChannel", () => {
         pollSyncEnvelopes: [],
         pushSyncEnvelopes: true,
       });
-      global.fetch = mockFetch;
+      global.fetch = mockFetch as any;
 
       const channel = new GqlRequestChannel(
         createMockLogger(),
@@ -1217,7 +1217,7 @@ describe("GqlRequestChannel", () => {
         pollSyncEnvelopes: [],
         touchChannel: true,
       });
-      global.fetch = mockFetch;
+      global.fetch = mockFetch as any;
 
       const channel = new GqlRequestChannel(
         createMockLogger(),
@@ -1248,7 +1248,7 @@ describe("GqlRequestChannel", () => {
           json: () => Promise.resolve({ data: { touchChannel: true } }),
         })
         .mockRejectedValue(new Error("Network error"));
-      global.fetch = mockFetch;
+      global.fetch = mockFetch as any;
 
       const channel = new GqlRequestChannel(
         createMockLogger(),
@@ -1295,7 +1295,7 @@ describe("GqlRequestChannel", () => {
               }),
           });
         });
-      global.fetch = mockFetch;
+      global.fetch = mockFetch as any;
 
       const channel = new GqlRequestChannel(
         createMockLogger(),
@@ -1329,7 +1329,7 @@ describe("GqlRequestChannel", () => {
         pollSyncEnvelopes: [],
         pushSyncEnvelopes: true,
       });
-      global.fetch = mockFetch;
+      global.fetch = mockFetch as any;
 
       const channel = new GqlRequestChannel(
         createMockLogger(),
@@ -1368,7 +1368,7 @@ describe("GqlRequestChannel", () => {
     it("should persist inbox cursor when applied operations are removed", () => {
       const cursorStorage = createMockCursorStorage();
       const mockFetch = createMockFetch({ pollSyncEnvelopes: [] });
-      global.fetch = mockFetch;
+      global.fetch = mockFetch as any;
 
       const channel = new GqlRequestChannel(
         createMockLogger(),
@@ -1397,7 +1397,7 @@ describe("GqlRequestChannel", () => {
     it("should not persist cursor when removed operations are not applied", async () => {
       const cursorStorage = createMockCursorStorage();
       const mockFetch = createMockFetch({ pollSyncEnvelopes: [] });
-      global.fetch = mockFetch;
+      global.fetch = mockFetch as any;
 
       const channel = new GqlRequestChannel(
         createMockLogger(),
@@ -1424,7 +1424,7 @@ describe("GqlRequestChannel", () => {
         pollSyncEnvelopes: [],
         pushSyncEnvelopes: true,
       });
-      global.fetch = mockFetch;
+      global.fetch = mockFetch as any;
 
       const channel = new GqlRequestChannel(
         createMockLogger(),
@@ -1482,7 +1482,7 @@ describe("GqlRequestChannel", () => {
         pollSyncEnvelopes: [],
         touchChannel: true,
       });
-      global.fetch = mockFetch;
+      global.fetch = mockFetch as any;
 
       const channel = new GqlRequestChannel(
         createMockLogger(),
@@ -1512,7 +1512,7 @@ describe("GqlRequestChannel", () => {
         pollSyncEnvelopes: [],
         touchChannel: true,
       });
-      global.fetch = mockFetch;
+      global.fetch = mockFetch as any;
 
       const manualTimer = new ManualPollTimer();
       const channel = new GqlRequestChannel(
@@ -1548,7 +1548,7 @@ describe("GqlRequestChannel", () => {
           { documentId: "doc-2", error: "Schema validation failed" },
         ],
       });
-      global.fetch = mockFetch;
+      global.fetch = mockFetch as any;
 
       const channel = new GqlRequestChannel(
         createMockLogger(),
@@ -1577,7 +1577,7 @@ describe("GqlRequestChannel", () => {
       const mockFetch = createMockFetch({
         deadLetters: [{ documentId: "doc-1", error: "Missing operations gap" }],
       });
-      global.fetch = mockFetch;
+      global.fetch = mockFetch as any;
 
       const channel = new GqlRequestChannel(
         createMockLogger(),
@@ -1606,7 +1606,7 @@ describe("GqlRequestChannel", () => {
         deadLetters: [{ documentId: "doc-1", error: "Missing operations gap" }],
         pushSyncEnvelopes: true,
       });
-      global.fetch = mockFetch;
+      global.fetch = mockFetch as any;
 
       const channel = new GqlRequestChannel(
         createMockLogger(),
@@ -1647,7 +1647,7 @@ describe("GqlRequestChannel", () => {
       const mockFetch = createMockFetch({
         deadLetters: [],
       });
-      global.fetch = mockFetch;
+      global.fetch = mockFetch as any;
 
       const channel = new GqlRequestChannel(
         createMockLogger(),
@@ -1724,7 +1724,7 @@ describe("GqlRequestChannel", () => {
             }),
         });
       });
-      global.fetch = mockFetch;
+      global.fetch = mockFetch as any;
 
       const channel = new GqlRequestChannel(
         createMockLogger(),
@@ -1755,7 +1755,7 @@ describe("GqlRequestChannel", () => {
         pollSyncEnvelopes: [],
         touchChannel: true,
       });
-      global.fetch = mockFetch;
+      global.fetch = mockFetch as any;
 
       const manualTimer = new ManualPollTimer();
       const channel = new GqlRequestChannel(
@@ -1792,7 +1792,7 @@ describe("GqlRequestChannel", () => {
         pollSyncEnvelopes: [],
         touchChannel: true,
       });
-      global.fetch = mockFetch;
+      global.fetch = mockFetch as any;
 
       const manualTimer = new ManualPollTimer();
       const channel = new GqlRequestChannel(
@@ -1852,7 +1852,7 @@ describe("GqlRequestChannel", () => {
             }),
         });
       });
-      global.fetch = mockFetch;
+      global.fetch = mockFetch as any;
 
       const manualTimer = new ManualPollTimer();
       const channel = new GqlRequestChannel(

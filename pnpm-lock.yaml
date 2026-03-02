@@ -385,7 +385,7 @@ importers:
         version: 4.21.0
 
   apps/connect:
-    dependencies:
+    devDependencies:
       '@electric-sql/pglite':
         specifier: 'catalog:'
         version: 0.3.15
@@ -428,6 +428,12 @@ importers:
       '@sentry/react':
         specifier: ^10.17.0
         version: 10.40.0(react@19.2.4)
+      '@tailwindcss/cli':
+        specifier: 'catalog:'
+        version: 4.1.18
+      '@types/bun':
+        specifier: 'catalog:'
+        version: 1.3.9
       '@types/node':
         specifier: 'catalog:'
         version: 25.2.3
@@ -497,13 +503,9 @@ importers:
       vite-plugin-svgr:
         specifier: 'catalog:'
         version: 4.5.0(rollup@4.59.0)(typescript@5.9.3)(vite@7.3.1(@types/node@25.2.3)(jiti@2.6.1)(lightningcss@1.31.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2))
-    devDependencies:
-      '@tailwindcss/cli':
-        specifier: 'catalog:'
-        version: 4.1.18
-      '@types/bun':
-        specifier: 'catalog:'
-        version: 1.3.9
+      vite-tsconfig-paths:
+        specifier: ^6.1.1
+        version: 6.1.1(typescript@5.9.3)(vite@7.3.1(@types/node@25.2.3)(jiti@2.6.1)(lightningcss@1.31.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2))
 
   apps/switchboard:
     dependencies:
@@ -937,6 +939,9 @@ importers:
       cmd-ts:
         specifier: 'catalog:'
         version: 0.15.0
+      document-drive:
+        specifier: link:../document-drive
+        version: link:../document-drive
       package-manager-detector:
         specifier: 'catalog:'
         version: 1.6.0
@@ -1417,13 +1422,19 @@ importers:
         version: 4.1.18
 
   packages/reactor:
-    dependencies:
+    devDependencies:
       '@electric-sql/pglite':
         specifier: 'catalog:'
         version: 0.3.15
       '@powerhousedao/shared':
         specifier: 'workspace:'
         version: link:../shared
+      '@types/bun':
+        specifier: 'catalog:'
+        version: 1.3.9
+      '@vitest/coverage-v8':
+        specifier: ^3.2.4
+        version: 3.2.4(@vitest/browser@3.2.4)(vitest@3.2.4)
       document-drive:
         specifier: link:../document-drive
         version: link:../document-drive
@@ -1436,13 +1447,6 @@ importers:
       kysely-pglite-dialect:
         specifier: 'catalog:'
         version: 1.2.0(@electric-sql/pglite@0.3.15)(kysely@0.28.11)
-      uuid:
-        specifier: ^11.0.5
-        version: 11.1.0
-    devDependencies:
-      '@vitest/coverage-v8':
-        specifier: ^3.2.4
-        version: 3.2.4(@vitest/browser@3.2.4)(vitest@3.2.4)
       prettier:
         specifier: 'catalog:'
         version: 3.8.1
@@ -1452,6 +1456,9 @@ importers:
       tsx:
         specifier: 'catalog:'
         version: 4.21.0
+      uuid:
+        specifier: ^11.0.5
+        version: 11.1.0
       vitest:
         specifier: 'catalog:'
         version: 3.2.4(@types/debug@4.1.12)(@types/node@25.3.1)(@vitest/browser@3.2.4)(happy-dom@17.6.3)(jiti@2.6.1)(jsdom@24.1.3)(lightningcss@1.31.1)(msw@2.12.10(@types/node@25.3.1)(typescript@5.9.3))(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2)
@@ -1635,7 +1642,7 @@ importers:
         version: 3.2.4(@types/debug@4.1.12)(@types/node@25.2.3)(@vitest/browser@3.2.4)(happy-dom@17.6.3)(jiti@2.6.1)(jsdom@24.1.3)(lightningcss@1.31.1)(msw@2.12.10(@types/node@25.2.3)(typescript@5.9.3))(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2)
 
   packages/reactor-browser:
-    dependencies:
+    devDependencies:
       '@electric-sql/pglite':
         specifier: 'catalog:'
         version: 0.3.15
@@ -1654,6 +1661,33 @@ importers:
       '@tanstack/react-query':
         specifier: ^5.49.2
         version: 5.90.21(react@19.2.4)
+      '@types/bun':
+        specifier: 'catalog:'
+        version: 1.3.9
+      '@types/lodash.isequal':
+        specifier: ^4.5.8
+        version: 4.5.8
+      '@types/luxon':
+        specifier: ^3.6.2
+        version: 3.7.1
+      '@types/react':
+        specifier: 'catalog:'
+        version: 19.2.14
+      '@types/react-dom':
+        specifier: 'catalog:'
+        version: 19.2.3(@types/react@19.2.14)
+      '@types/slug':
+        specifier: ^5.0.9
+        version: 5.0.9
+      '@types/wicg-file-system-access':
+        specifier: ^2020.9.8
+        version: 2020.9.8
+      '@vitejs/plugin-react':
+        specifier: 'catalog:'
+        version: 5.1.4(vite@7.3.1(@types/node@25.3.1)(jiti@2.6.1)(lightningcss@1.31.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2))
+      '@vitest/browser':
+        specifier: ^3.2.4
+        version: 3.2.4(msw@2.12.10(@types/node@25.3.1)(typescript@5.9.3))(playwright@1.58.2)(vite@7.3.1(@types/node@25.3.1)(jiti@2.6.1)(lightningcss@1.31.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2))(vitest@3.2.4)
       change-case:
         specifier: 'catalog:'
         version: 5.4.4
@@ -1681,34 +1715,6 @@ importers:
       lz-string:
         specifier: ^1.5.0
         version: 1.5.0
-      slug:
-        specifier: ^11.0.0
-        version: 11.0.1
-    devDependencies:
-      '@types/lodash.isequal':
-        specifier: ^4.5.8
-        version: 4.5.8
-      '@types/luxon':
-        specifier: ^3.6.2
-        version: 3.7.1
-      '@types/react':
-        specifier: 'catalog:'
-        version: 19.2.14
-      '@types/react-dom':
-        specifier: 'catalog:'
-        version: 19.2.3(@types/react@19.2.14)
-      '@types/slug':
-        specifier: ^5.0.9
-        version: 5.0.9
-      '@types/wicg-file-system-access':
-        specifier: ^2020.9.8
-        version: 2020.9.8
-      '@vitejs/plugin-react':
-        specifier: 'catalog:'
-        version: 5.1.4(vite@7.3.1(@types/node@25.3.1)(jiti@2.6.1)(lightningcss@1.31.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2))
-      '@vitest/browser':
-        specifier: ^3.2.4
-        version: 3.2.4(msw@2.12.10(@types/node@25.3.1)(typescript@5.9.3))(playwright@1.58.2)(vite@7.3.1(@types/node@25.3.1)(jiti@2.6.1)(lightningcss@1.31.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2))(vitest@3.2.4)
       playwright:
         specifier: ^1.51.1
         version: 1.58.2
@@ -1718,6 +1724,9 @@ importers:
       react-dom:
         specifier: 'catalog:'
         version: 19.2.4(react@19.2.4)
+      slug:
+        specifier: ^11.0.0
+        version: 11.0.1
       vite:
         specifier: 'catalog:'
         version: 7.3.1(@types/node@25.3.1)(jiti@2.6.1)(lightningcss@1.31.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2)
@@ -1949,6 +1958,9 @@ importers:
 
   packages/vetra:
     dependencies:
+      '@powerhousedao/analytics-engine-browser':
+        specifier: 'catalog:'
+        version: 0.6.4
       '@powerhousedao/builder-tools':
         specifier: workspace:*
         version: link:../builder-tools
@@ -12071,6 +12083,9 @@ packages:
     resolution: {integrity: sha512-Y1zNGV+pzQdh7H39l9zgB4PJqjRNqydvdYCDG4HFXM4XuvSaQQlEc91IU1yALL8gUTDomgBAfz3XJdmUS+oo0w==}
     engines: {node: ^12.20.0 || ^14.13.1 || >=16.0.0}
 
+  globrex@0.1.2:
+    resolution: {integrity: sha512-uHJgbwAMwNFf5mLst7IWLNg14x1CkeqglJb/K3doi4dw6q2IvAAmM/Y81kevy83wP+Sst+nutFTYOGg3d1lsxg==}
+
   google-logging-utils@0.0.2:
     resolution: {integrity: sha512-NEgUnEcBiP5HrPzufUkBzJOD/Sxsco3rLNo1F1TNf7ieU8ryUzBhqba8r756CjLX7rn3fHl6iLEwPYuqpoKgQQ==}
     engines: {node: '>=14'}
@@ -17216,6 +17231,16 @@ packages:
       '@swc/wasm':
         optional: true
 
+  tsconfck@3.1.6:
+    resolution: {integrity: sha512-ks6Vjr/jEw0P1gmOVwutM3B7fWxoWBL2KRDb1JfqGVawBmO5UsvmWOQFGHBPl5yxYz4eERr19E6L7NMv+Fej4w==}
+    engines: {node: ^18 || >=20}
+    hasBin: true
+    peerDependencies:
+      typescript: ^5.0.0
+    peerDependenciesMeta:
+      typescript:
+        optional: true
+
   tsconfig-paths@4.2.0:
     resolution: {integrity: sha512-NoZ4roiN7LnbKn9QqE1amc9DJfzvZXxF4xDavcOWt1BPkdx+m+0gJuPM+S0vCe7zTJMYUP0R8pO2XMr+Y8oLIg==}
     engines: {node: '>=6'}
@@ -17695,6 +17720,11 @@ packages:
     resolution: {integrity: sha512-EiwhbMn+flg14EysbLTmZSzq8NGTxhytgK3bf4aGRF1evWLGwZiHiUJ1KZDvbxgKbMf2pG6fJWGEa3UZXOnR1g==}
     peerDependencies:
       vite: 5.x || 6.x || 7.x
+
+  vite-tsconfig-paths@6.1.1:
+    resolution: {integrity: sha512-2cihq7zliibCCZ8P9cKJrQBkfgdvcFkOOc3Y02o3GWUDLgqjWsZudaoiuOwO/gzTzy17cS5F7ZPo4bsnS4DGkg==}
+    peerDependencies:
+      vite: '*'
 
   vite@7.3.1:
     resolution: {integrity: sha512-w+N7Hifpc3gRjZ63vYBXA56dvvRlNWRczTdmCBBa+CotUzAPf5b7YMdMR/8CQoeYE5LX3W4wj6RYTgonm1b9DA==}
@@ -30792,6 +30822,8 @@ snapshots:
       merge2: 1.4.1
       slash: 4.0.0
 
+  globrex@0.1.2: {}
+
   google-logging-utils@0.0.2: {}
 
   gopd@1.2.0: {}
@@ -37215,6 +37247,10 @@ snapshots:
     optionalDependencies:
       '@swc/core': 1.11.31(@swc/helpers@0.5.19)
 
+  tsconfck@3.1.6(typescript@5.9.3):
+    optionalDependencies:
+      typescript: 5.9.3
+
   tsconfig-paths@4.2.0:
     dependencies:
       json5: 2.2.3
@@ -37815,6 +37851,16 @@ snapshots:
       source-map: 0.7.6
       stack-trace: 1.0.0-pre2
       vite: 7.3.1(@types/node@25.3.1)(jiti@2.6.1)(lightningcss@1.31.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2)
+
+  vite-tsconfig-paths@6.1.1(typescript@5.9.3)(vite@7.3.1(@types/node@25.2.3)(jiti@2.6.1)(lightningcss@1.31.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2)):
+    dependencies:
+      debug: 4.4.3(supports-color@5.5.0)
+      globrex: 0.1.2
+      tsconfck: 3.1.6(typescript@5.9.3)
+      vite: 7.3.1(@types/node@25.2.3)(jiti@2.6.1)(lightningcss@1.31.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2)
+    transitivePeerDependencies:
+      - supports-color
+      - typescript
 
   vite@7.3.1(@types/node@25.2.3)(jiti@2.6.1)(lightningcss@1.31.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2):
     dependencies:

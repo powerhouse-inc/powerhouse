@@ -77,7 +77,7 @@ describe("GqlRequestChannelFactory", () => {
     it("should create GqlChannel with valid config", async () => {
       const cursorStorage = createMockCursorStorage();
       const mockFetch = createMockFetch();
-      global.fetch = mockFetch;
+      global.fetch = mockFetch as any;
 
       const config: ChannelConfig = {
         type: "gql",
@@ -107,7 +107,7 @@ describe("GqlRequestChannelFactory", () => {
     it("should pass all optional parameters to GqlChannel", async () => {
       const cursorStorage = createMockCursorStorage();
       const mockFetch = createMockFetch();
-      global.fetch = mockFetch;
+      global.fetch = mockFetch as any;
 
       const config: ChannelConfig = {
         type: "gql",
@@ -137,7 +137,7 @@ describe("GqlRequestChannelFactory", () => {
     it("should work with minimal config (url only)", async () => {
       const cursorStorage = createMockCursorStorage();
       const mockFetch = createMockFetch();
-      global.fetch = mockFetch;
+      global.fetch = mockFetch as any;
 
       const config: ChannelConfig = {
         type: "gql",
@@ -313,7 +313,7 @@ describe("GqlRequestChannelFactory", () => {
       const cursorStorage1 = createMockCursorStorage();
       const cursorStorage2 = createMockCursorStorage();
       const mockFetch = createMockFetch();
-      global.fetch = mockFetch;
+      global.fetch = mockFetch as any;
 
       const config1: ChannelConfig = {
         type: "gql",
@@ -362,7 +362,7 @@ describe("GqlRequestChannelFactory", () => {
     it("should handle undefined optional parameters", async () => {
       const cursorStorage = createMockCursorStorage();
       const mockFetch = createMockFetch();
-      global.fetch = mockFetch;
+      global.fetch = mockFetch as any;
 
       const config: ChannelConfig = {
         type: "gql",
@@ -390,7 +390,7 @@ describe("GqlRequestChannelFactory", () => {
     it("should accept extra unrecognized parameters without error", async () => {
       const cursorStorage = createMockCursorStorage();
       const mockFetch = createMockFetch();
-      global.fetch = mockFetch;
+      global.fetch = mockFetch as any;
 
       const config: ChannelConfig = {
         type: "gql",

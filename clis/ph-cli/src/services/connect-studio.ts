@@ -36,12 +36,12 @@ export async function runConnectStudio(
     viteConfigPath,
   );
 
-  const connectPublicDir = resolveConnectPublicDir(projectRoot);
+  // const connectPublicDir = resolveConnectPublicDir(projectRoot);
 
   const devServerConfig: InlineConfig = {
     mode,
     configFile: false,
-    publicDir: connectPublicDir,
+    // publicDir: connectPublicDir,
     server: { port, host, open, cors, strictPort },
     optimizeDeps: {
       force,

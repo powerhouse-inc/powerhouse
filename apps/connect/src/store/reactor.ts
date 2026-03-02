@@ -1,11 +1,11 @@
 import { phGlobalConfigFromEnv } from "@powerhousedao/connect/config";
-import { initFeatureFlags } from "@powerhousedao/connect/feature-flags.js";
 import { toast } from "@powerhousedao/connect/services";
 import {
   addDefaultDrivesForNewReactor,
   createBrowserReactor,
   getDefaultDrivesFromEnv,
 } from "@powerhousedao/connect/utils";
+import { DocumentChangeType } from "@powerhousedao/reactor";
 import {
   addRemoteDrive,
   dropAllReactorStorage,
@@ -40,9 +40,9 @@ import {
   RenownBuilder,
   RenownCryptoBuilder,
 } from "@renown/sdk";
-import { DocumentChangeType } from "@powerhousedao/reactor";
 import { logger } from "document-drive";
 import type { DocumentModelModule } from "document-model";
+import { initFeatureFlags } from "../feature-flags.js";
 import { loadCommonPackage } from "./document-model.js";
 import {
   loadExternalPackages,

@@ -1,5 +1,6 @@
 import { lazy, Suspense } from "react";
 import { ErrorBoundary } from "../error-boundary.js";
+import { usePHModal } from "@powerhousedao/reactor-browser";
 
 const AddDriveModal = lazy(() =>
   import("./modals/AddDriveModal.js").then((m) => ({
@@ -84,7 +85,6 @@ const modalComponents = {
 } as const;
 
 export const ModalsContainer = lazy(async () => {
-  const { usePHModal } = await import("@powerhousedao/reactor-browser");
   return {
     default: () => {
       const phModal = usePHModal();

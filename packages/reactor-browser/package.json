@@ -36,13 +36,15 @@
     "tsc": "tsc",
     "lint": "eslint",
     "test:browser": "vitest --run",
-    "install:playwright": "playwright install"
+    "install:playwright": "playwright install",
+    "build:bundle": "bun run ./bundle.ts"
   },
   "devDependencies": {
     "@types/lodash.isequal": "^4.5.8",
     "@types/luxon": "^3.6.2",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
+    "@types/bun": "catalog:",
     "@types/slug": "^5.0.9",
     "@types/wicg-file-system-access": "^2020.9.8",
     "@vitejs/plugin-react": "catalog:",
@@ -52,13 +54,7 @@
     "react": "catalog:",
     "react-dom": "catalog:",
     "vitest": "catalog:",
-    "vitest-browser-react": "^1.0.1"
-  },
-  "peerDependencies": {
-    "react": ">=19.0.0",
-    "react-dom": ">=19.0.0"
-  },
-  "dependencies": {
+    "vitest-browser-react": "^1.0.1",
     "fast-deep-equal": "catalog:",
     "@electric-sql/pglite": "catalog:",
     "@powerhousedao/analytics-engine-browser": "catalog:",
@@ -75,5 +71,10 @@
     "luxon": "^3.6.1",
     "lz-string": "^1.5.0",
     "slug": "^11.0.0"
+  
+  },
+  "peerDependencies": {
+    "react": ">=19.0.0",
+    "react-dom": ">=19.0.0"
   }
 }

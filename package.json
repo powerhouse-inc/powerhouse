@@ -15,6 +15,7 @@
     "build-css": "pnpm -r --no-bail build:css",
     "build-vite": "pnpm -r --no-bail build:vite",
     "build-cli": "pnpm -r --no-bail build:cli",
+    "build-bundle": "pnpm -r --no-bail build:bundle",
     "build-storybook": "pnpm -r --no-bail run build:storybook",
     "build-all": "pnpm build-tsc && pnpm build-misc && pnpm build-css && pnpm build-vite && pnpm build-cli",
     "clean": "bunx git clean -fdX",
