@@ -38,6 +38,7 @@ export async function generateAll(args: {
   dir: string;
   useTsMorph: boolean;
   useVersioning: boolean;
+  migrateLegacy?: boolean;
   watch?: boolean;
   skipFormat?: boolean;
   verbose?: boolean;
@@ -47,6 +48,7 @@ export async function generateAll(args: {
     dir,
     useTsMorph,
     useVersioning,
+    migrateLegacy = false,
     watch = false,
     skipFormat = false,
     verbose = true,
@@ -79,6 +81,7 @@ export async function generateAll(args: {
         force,
         useTsMorph,
         useVersioning,
+        migrateLegacy,
       });
     } catch (error) {
       if (verbose) {
@@ -92,6 +95,7 @@ export async function generate(
   config: PowerhouseConfig,
   useTsMorph: boolean,
   useVersioning: boolean,
+  migrateLegacy = false,
 ) {
   const { skipFormat, watch } = config;
   await generateSchemas(config.documentModelsDir, { skipFormat, watch });
@@ -99,6 +103,7 @@ export async function generate(
     dir: config.documentModelsDir,
     useTsMorph,
     useVersioning,
+    migrateLegacy,
     skipFormat,
     watch,
   });
@@ -109,9 +114,11 @@ export async function generateFromFile(args: {
   config: PowerhouseConfig;
   useTsMorph: boolean;
   useVersioning: boolean;
+  migrateLegacy?: boolean;
   options?: CodegenOptions;
 }) {
-  const { path, config, useTsMorph, useVersioning, options } = args;
+  const { path, config, useTsMorph, useVersioning, migrateLegacy, options } =
+    args;
   // load document model spec from file
   const documentModelState = await loadDocumentModel(path);
 
@@ -121,6 +128,7 @@ export async function generateFromFile(args: {
     config,
     useTsMorph,
     useVersioning,
+    migrateLegacy,
     options,
   });
 }
@@ -143,6 +151,7 @@ export async function generateFromDocument(args: {
   config: PowerhouseConfig;
   useTsMorph: boolean;
   useVersioning: boolean;
+  migrateLegacy?: boolean;
   options?: CodegenOptions;
 }) {
   // delegate to shared generation function
@@ -154,6 +163,7 @@ type GenerateDocumentModelArgs = {
   documentModelState: DocumentModelGlobalState;
   useTsMorph: boolean;
   useVersioning: boolean;
+  migrateLegacy?: boolean;
   specifiedPackageName?: string;
   watch?: boolean;
   skipFormat?: boolean;
@@ -167,6 +177,7 @@ export async function generateDocumentModel(args: GenerateDocumentModelArgs) {
     specifiedPackageName,
     useTsMorph,
     useVersioning,
+    migrateLegacy,
     ...hygenArgs
   } = args;
   const packageJson = await readPackage();
@@ -222,6 +233,7 @@ export async function generateDocumentModel(args: GenerateDocumentModelArgs) {
       packageName,
       documentModelState,
       useVersioning,
+      migrateLegacy,
     });
   }
 }
@@ -564,6 +576,7 @@ async function generateFromDocumentModel(args: {
   config: PowerhouseConfig;
   useTsMorph: boolean;
   useVersioning: boolean;
+  migrateLegacy?: boolean;
   options?: CodegenOptions;
 }) {
   const {
@@ -571,6 +584,7 @@ async function generateFromDocumentModel(args: {
     config,
     useTsMorph,
     useVersioning,
+    migrateLegacy,
     options = {},
   } = args;
   // Derive verbose from config.logLevel if not explicitly provided
@@ -599,5 +613,6 @@ async function generateFromDocumentModel(args: {
     force,
     useTsMorph,
     useVersioning,
+    migrateLegacy,
   });
 }
