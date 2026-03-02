@@ -74,9 +74,6 @@
       "path": "test/e2e-utils"
     },
     {
-      "path": "test/switchboard"
-    },
-    {
       "path": "test/test-client"
     },
     {
