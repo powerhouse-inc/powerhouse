@@ -10,9 +10,10 @@ import {
   getPreviousVersionSourceFile,
 } from "@powerhousedao/codegen/utils";
 import { ts } from "@tmpl/core";
-import { kebabCase, pascalCase } from "change-case";
+import { camelCase, kebabCase, pascalCase } from "change-case";
 import type { ModuleSpecification } from "document-model";
 import path from "path";
+import type { SourceFile } from "ts-morph";
 import { VariableDeclarationKind } from "ts-morph";
 
 export async function makeSrcDirFiles(
@@ -121,18 +122,38 @@ async function makeReducerOperationHandlerForModule({
     throw new Error("Failed to build reducer object");
   }
 
+  // Build a lookup map from method name to operation spec to access reducer code
+  const operationsByMethodName = new Map<
+    string,
+    (typeof module.operations)[number]
+  >();
+  for (const operation of module.operations) {
+    if (operation.name) {
+      const methodName = `${camelCase(operation.name)}Operation`;
+      operationsByMethodName.set(methodName, operation);
+    }
+  }
+
   for (const name of operationsInterfaceTypeProperties) {
     if (operationsInterfaceObject.getProperty(name)) continue;
+
+    const operationSpec = operationsByMethodName.get(name);
+    const reducerCode = operationSpec?.reducer?.trim();
 
     operationsInterfaceObject.addMethod({
       name,
       parameters: [{ name: "state" }, { name: "action" }],
-      statements: [
-        `// TODO: implement ${name} reducer`,
-        ts`throw new Error("Reducer for '${name}' not implemented.")`.raw,
-      ],
+      statements: reducerCode
+        ? [reducerCode]
+        : [
+            `// TODO: implement ${name} reducer`,
+            ts`throw new Error("Reducer for '${name}' not implemented.")`.raw,
+          ],
     });
   }
+
+  // Add error imports for error classes referenced in reducer code
+  addErrorImportsForModule(sourceFile, module);
 
   await formatSourceFileWithPrettier(sourceFile);
 }
@@ -181,4 +202,63 @@ async function makeDocumentModelSrcUtilsFile({
   }
 
   await formatSourceFileWithPrettier(sourceFile);
+}
+
+function addErrorImportsForModule(
+  sourceFile: SourceFile,
+  module: ModuleSpecification,
+): void {
+  // Collect all unique errors from all operations in this module
+  const allErrors: { name: string }[] = [];
+  for (const operation of module.operations) {
+    if (Array.isArray(operation.errors)) {
+      for (const error of operation.errors) {
+        if (error.name && !allErrors.find((e) => e.name === error.name)) {
+          allErrors.push({ name: error.name });
+        }
+      }
+    }
+  }
+
+  if (allErrors.length === 0) return;
+
+  // Scan the source file content to find which error classes are actually referenced
+  const sourceFileContent = sourceFile.getFullText();
+  const usedErrors: string[] = [];
+
+  for (const error of allErrors) {
+    const errorPattern = new RegExp(`\\b${error.name}\\b`, "g");
+    if (errorPattern.test(sourceFileContent)) {
+      usedErrors.push(error.name);
+    }
+  }
+
+  if (usedErrors.length === 0) return;
+
+  const errorImportPath = `../../gen/${kebabCase(module.name)}/error.js`;
+
+  const existingErrorImport = sourceFile
+    .getImportDeclarations()
+    .find(
+      (importDecl) => importDecl.getModuleSpecifierValue() === errorImportPath,
+    );
+
+  if (existingErrorImport) {
+    const existingNamedImports = existingErrorImport
+      .getNamedImports()
+      .map((namedImport) => namedImport.getName());
+
+    const newErrorsToImport = usedErrors.filter(
+      (errorName) => !existingNamedImports.includes(errorName),
+    );
+
+    if (newErrorsToImport.length > 0) {
+      existingErrorImport.addNamedImports(newErrorsToImport);
+    }
+  } else {
+    sourceFile.addImportDeclaration({
+      namedImports: usedErrors,
+      moduleSpecifier: errorImportPath,
+    });
+  }
 }
