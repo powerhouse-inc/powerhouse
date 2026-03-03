@@ -20,7 +20,6 @@
     "dist/src"
   ],
   "scripts": {
-    "dev": "pnpm tsc -b -w",
     "build:bundle": "bun run ./bundle.ts",
     "test": "vitest --run ./**/*.test.ts"
   },

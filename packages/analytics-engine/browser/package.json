@@ -21,7 +21,6 @@
   ],
   "scripts": {
     "build:bundle": "bun run ./bundle.ts",
-    "dev": "pnpm tsc -b -w",
     "test": "vitest --run ./**/*.test.ts"
   },
   "devDependencies": {
