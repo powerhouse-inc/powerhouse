@@ -2,7 +2,6 @@
 
 :::warning Work in Progress
 This documentation is still being written and may be incomplete.
-The feature is not yet available on production.
 :::
 
 This guide explains how to configure **authorization** for the Powerhouse Reactor API. Authorization controls who can access your Reactor and what they can do.
