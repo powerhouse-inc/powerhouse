@@ -67,7 +67,7 @@ const dependenciesTemplate = (versionedDependencies: string[]) => json`
   "graphql": "^16.10.0",
   "graphql-tag": "^2.12.6",
   "zod": "^4.3.5",
-  "@electric-sql/pglite": "0.3.15",
+  "@electric-sql/pglite": "0.3.15"
 `;
 
 const devDependenciesTemplate = (versionedDevDependencies: string[]) => json`
