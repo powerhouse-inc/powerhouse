@@ -1,3 +1,13 @@
+## 6.0.0-dev.67 (2026-03-03)
+
+### 🩹 Fixes
+
+- **academy:** remove outdated production warning from authorization docs ([137a38d74](https://github.com/powerhouse-inc/powerhouse/commit/137a38d74))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 6.0.0-dev.66 (2026-03-03)
 
 ### 🚀 Features
