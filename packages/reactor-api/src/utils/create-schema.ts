@@ -6,8 +6,11 @@ import type {
 import { typeDefs as scalarsTypeDefs } from "@powerhousedao/document-engineering/graphql";
 import type { Context } from "@powerhousedao/reactor-api";
 import { camelCase, pascalCase } from "change-case";
-import { childLogger, type IDocumentDriveServer } from "document-drive";
-import type { DocumentModelGlobalState } from "document-model";
+import { childLogger } from "document-drive";
+import type {
+  DocumentModelGlobalState,
+  DocumentModelModule,
+} from "document-model";
 import { type DocumentNode, Kind, print } from "graphql";
 import { gql } from "graphql-tag";
 import { GraphQLJSONObject } from "graphql-type-json";
@@ -37,7 +40,7 @@ const stripScalarDefinitions = (doc: DocumentNode): string => {
 };
 
 export const buildSubgraphSchemaModule = (
-  documentDriveServer: IDocumentDriveServer,
+  documentModels: DocumentModelModule[],
   resolvers: GraphQLResolverMap<Context>,
   typeDefs: DocumentNode,
 ): GraphQLSchemaModule => {
@@ -47,17 +50,17 @@ export const buildSubgraphSchemaModule = (
   };
 
   return {
-    typeDefs: getDocumentModelTypeDefs(documentDriveServer, typeDefs),
+    typeDefs: getDocumentModelTypeDefs(documentModels, typeDefs),
     resolvers: newResolvers,
   };
 };
 export const createSchema = (
-  documentDriveServer: IDocumentDriveServer,
+  documentModels: DocumentModelModule[],
   resolvers: GraphQLResolverMap<Context>,
   typeDefs: DocumentNode,
 ) => {
   return buildSubgraphSchema(
-    buildSubgraphSchemaModule(documentDriveServer, resolvers, typeDefs),
+    buildSubgraphSchemaModule(documentModels, resolvers, typeDefs),
   );
 };
 
@@ -68,10 +71,9 @@ export function getDocumentModelSchemaName(
 }
 
 export const getDocumentModelTypeDefs = (
-  documentDriveServer: Pick<IDocumentDriveServer, "getDocumentModelModules">,
+  documentModels: DocumentModelModule[],
   typeDefs: DocumentNode,
 ) => {
-  const documentModels = documentDriveServer.getDocumentModelModules();
   let dmSchema = "";
 
   const addedDocumentModels = new Set<string>();
