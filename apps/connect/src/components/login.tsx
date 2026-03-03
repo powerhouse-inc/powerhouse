@@ -23,6 +23,7 @@ export const Login: React.FC = () => {
       ) : status !== "authorized" ? (
         <div className="flex flex-col items-center">
           <h2 className="mb-1 text-2xl font-semibold">Log in with</h2>
+          {/* @ts-expect-error temp classname */}
           <IconRenown className="mb-3" />
           <p className="mb-5 text-center text-lg leading-6">
             Click on the button below to start signing messages in Connect on

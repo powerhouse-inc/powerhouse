@@ -7,11 +7,8 @@ const Settings = () => {
       <div className="mb-8 flex items-center justify-between">
         <h4 className="text-3xl font-bold leading-normal">Settings</h4>
         <NavLink to="/">
-          <IconCross
-            width={24}
-            height={24}
-            className="rotate-45 fill-current"
-          />
+          {/* @ts-expect-error temp classname */}
+          <IconCross className="rotate-45 fill-current" />
         </NavLink>
       </div>
       <div className="mb-8">

@@ -30,6 +30,9 @@
       "path": "../../clis/ph-cli"
     },
     {
+      "path": "../analytics-engine/browser"
+    },
+    {
       "path": "../builder-tools"
     },
     {

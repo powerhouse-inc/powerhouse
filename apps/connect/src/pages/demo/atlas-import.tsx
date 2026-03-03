@@ -164,6 +164,7 @@ export function AtlasImport() {
                 "Retry"
               ) : loading ? (
                 <>
+                  {/* @ts-expect-error temp classname */}
                   <RefreshIcon className="animate-spin" />
                   Loading
                 </>
