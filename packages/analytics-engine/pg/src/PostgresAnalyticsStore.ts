@@ -66,13 +66,13 @@ export class PostgresAnalyticsStore extends KnexAnalyticsStore {
     this._profiler = profiler;
   }
 
-  async raw<TRecord = any>(sql: string) {
+  async raw(sql: string) {
     if (this._profiler) {
       return await this._profiler.record("QueryRaw", async () => {
-        return await this._postgres.raw<TRecord>(sql);
+        return await this._postgres.raw(sql);
       });
     }
 
-    return await this._postgres.raw<TRecord>(sql);
+    return await this._postgres.raw(sql);
   }
 }

@@ -47,7 +47,6 @@
     "package-directory": "^8.1.0",
     "@powerhousedao/shared": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",
-    "@powerhousedao/analytics-engine-core": "workspace:*",
     "luxon": "catalog:",
     "zocker": "^3.0.0",
     "document-drive": "workspace:"
