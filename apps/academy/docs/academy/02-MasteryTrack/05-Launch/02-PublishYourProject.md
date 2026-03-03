@@ -2,12 +2,13 @@
 
 :::warning
 **This guide assumes familiarity with building document models in Vetra Studio.**  
-Please start with the [**Get Started**](/academy/GetStarted/home) chapter or [**Document Model Creation**](/academy/MasteryTrack/DocumentModelCreation/SpecifyTheStateSchema) section if you are new to building document models.
+Please start with the [**Get Started**](/) chapter or [**Document Model Creation**](/academy/MasteryTrack/DocumentModelCreation/SpecifyTheStateSchema) section if you are new to building document models.
 :::
 
 This guide covers the process of **building** and **publishing** a Powerhouse package to NPM.
 
 :::info Key Concepts
+
 - **Powerhouse Package**: A collection of modules published to NPM that can be installed on a server instance or locally. Organizations build packages for specific purposes or workflows.
 - **Powerhouse Modules**: The building blocks of your package—document models, editors, processors, or scripts.
 - **Vetra Studio**: The development hub where you assemble specifications for your package. Each module is defined through specification documents that drive code generation.
@@ -77,6 +78,7 @@ ph vetra --interactive --watch
 ```
 
 This mode provides:
+
 - **Interactive confirmations** before code generation
 - **Dynamic reloading** for document-models and editors
 - **Live preview** of your changes in Vetra Studio
@@ -181,6 +183,7 @@ Follow the prompts in your terminal or browser to authenticate.
 ### 2.3. Version your package
 
 Use semantic versioning to update your package version. The `pnpm version` command will:
+
 - Update the `version` in `package.json`
 - Create a Git commit for the version change
 - Create a Git tag (e.g., `v1.0.1`)
@@ -225,9 +228,10 @@ pnpm publish --tag beta
 ```
 
 :::info Git Tags vs NPM Tags
+
 - **Git Tags**: Markers in your repository history (e.g., `v1.0.0`) created by `pnpm version`
 - **NPM Dist-Tags**: Labels pointing to published versions (`latest`, `beta`, `next`). When publishing without a tag, the version gets the `latest` tag by default.
-:::
+  :::
 
 ## 3. Installing your package
 
