@@ -48,7 +48,8 @@
   },
   "peerDependencies": {
     "document-model": "workspace:*",
-    "react": "catalog:"
+     "react": ">=19.0.0",
+    "react-dom": ">=19.0.0"
   },
   "peerDependenciesMeta": {
     "react": {

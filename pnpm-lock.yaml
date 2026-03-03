@@ -46,8 +46,8 @@ catalogs:
       specifier: 24.0.0
       version: 24.0.0
     '@types/bun':
-      specifier: 1.3.9
-      version: 1.3.9
+      specifier: 1.3.10
+      version: 1.3.10
     '@types/luxon':
       specifier: 3.7.1
       version: 3.7.1
@@ -533,7 +533,7 @@ importers:
         version: 4.1.18
       '@types/bun':
         specifier: 'catalog:'
-        version: 1.3.9
+        version: 1.3.10
 
   apps/switchboard:
     dependencies:
@@ -633,7 +633,7 @@ importers:
         version: link:../../packages/renown
       '@types/bun':
         specifier: 'catalog:'
-        version: 1.3.9
+        version: 1.3.10
       '@types/node':
         specifier: 'catalog:'
         version: 25.2.3
@@ -699,7 +699,7 @@ importers:
         version: link:../../packages/common
       '@types/bun':
         specifier: 'catalog:'
-        version: 1.3.9
+        version: 1.3.10
       chalk:
         specifier: 'catalog:'
         version: 5.6.2
@@ -735,7 +735,7 @@ importers:
         version: link:../shared
       '@types/bun':
         specifier: 'catalog:'
-        version: 1.3.9
+        version: 1.3.10
       '@types/node':
         specifier: 'catalog:'
         version: 25.2.3
@@ -793,6 +793,13 @@ importers:
         version: 25.2.3
 
   packages/analytics-engine/browser:
+    dependencies:
+      react:
+        specifier: '>=19.0.0'
+        version: 19.2.4
+      react-dom:
+        specifier: '>=19.0.0'
+        version: 19.2.4(react@19.2.4)
     devDependencies:
       '@electric-sql/pglite':
         specifier: 'catalog:'
@@ -1142,7 +1149,7 @@ importers:
         version: link:../reactor-browser
       '@types/bun':
         specifier: 'catalog:'
-        version: 1.3.9
+        version: 1.3.10
       '@types/react':
         specifier: 'catalog:'
         version: 19.2.14
@@ -1920,7 +1927,7 @@ importers:
         version: 3.2.4(@types/debug@4.1.12)(@types/node@25.2.3)(@vitest/browser@3.2.4)(happy-dom@17.6.3)(jiti@2.6.1)(jsdom@24.1.3)(lightningcss@1.31.1)(msw@2.12.10(@types/node@25.2.3)(typescript@5.9.3))(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2)
 
   packages/reactor-browser:
-    dependencies:
+    devDependencies:
       '@electric-sql/pglite':
         specifier: 'catalog:'
         version: 0.3.15
@@ -1939,6 +1946,33 @@ importers:
       '@tanstack/react-query':
         specifier: ^5.49.2
         version: 5.90.21(react@19.2.4)
+      '@types/bun':
+        specifier: 'catalog:'
+        version: 1.3.10
+      '@types/lodash.isequal':
+        specifier: ^4.5.8
+        version: 4.5.8
+      '@types/luxon':
+        specifier: ^3.6.2
+        version: 3.7.1
+      '@types/react':
+        specifier: 'catalog:'
+        version: 19.2.14
+      '@types/react-dom':
+        specifier: 'catalog:'
+        version: 19.2.3(@types/react@19.2.14)
+      '@types/slug':
+        specifier: ^5.0.9
+        version: 5.0.9
+      '@types/wicg-file-system-access':
+        specifier: ^2020.9.8
+        version: 2020.9.8
+      '@vitejs/plugin-react':
+        specifier: 'catalog:'
+        version: 5.1.4(vite@7.3.1(@types/node@25.3.1)(jiti@2.6.1)(lightningcss@1.31.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2))
+      '@vitest/browser':
+        specifier: ^3.2.4
+        version: 3.2.4(msw@2.12.10(@types/node@25.3.1)(typescript@5.9.3))(playwright@1.58.2)(vite@7.3.1(@types/node@25.3.1)(jiti@2.6.1)(lightningcss@1.31.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2))(vitest@3.2.4)
       change-case:
         specifier: 'catalog:'
         version: 5.4.4
@@ -1966,34 +2000,6 @@ importers:
       lz-string:
         specifier: ^1.5.0
         version: 1.5.0
-      slug:
-        specifier: ^11.0.0
-        version: 11.0.1
-    devDependencies:
-      '@types/lodash.isequal':
-        specifier: ^4.5.8
-        version: 4.5.8
-      '@types/luxon':
-        specifier: ^3.6.2
-        version: 3.7.1
-      '@types/react':
-        specifier: 'catalog:'
-        version: 19.2.14
-      '@types/react-dom':
-        specifier: 'catalog:'
-        version: 19.2.3(@types/react@19.2.14)
-      '@types/slug':
-        specifier: ^5.0.9
-        version: 5.0.9
-      '@types/wicg-file-system-access':
-        specifier: ^2020.9.8
-        version: 2020.9.8
-      '@vitejs/plugin-react':
-        specifier: 'catalog:'
-        version: 5.1.4(vite@7.3.1(@types/node@25.3.1)(jiti@2.6.1)(lightningcss@1.31.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2))
-      '@vitest/browser':
-        specifier: ^3.2.4
-        version: 3.2.4(msw@2.12.10(@types/node@25.3.1)(typescript@5.9.3))(playwright@1.58.2)(vite@7.3.1(@types/node@25.3.1)(jiti@2.6.1)(lightningcss@1.31.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2))(vitest@3.2.4)
       playwright:
         specifier: ^1.51.1
         version: 1.58.2
@@ -2003,6 +2009,9 @@ importers:
       react-dom:
         specifier: 'catalog:'
         version: 19.2.4(react@19.2.4)
+      slug:
+        specifier: ^11.0.0
+        version: 11.0.1
       vite:
         specifier: 'catalog:'
         version: 7.3.1(@types/node@25.3.1)(jiti@2.6.1)(lightningcss@1.31.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2)
@@ -2184,9 +2193,6 @@ importers:
       mutative:
         specifier: 'catalog:'
         version: 1.3.0
-      react:
-        specifier: 'catalog:'
-        version: 19.2.4
       zod:
         specifier: 'catalog:'
         version: 4.3.6
@@ -2197,6 +2203,9 @@ importers:
       '@types/react':
         specifier: 'catalog:'
         version: 19.2.14
+      react:
+        specifier: 'catalog:'
+        version: 19.2.4
 
   packages/switchboard-gui:
     dependencies:
@@ -2237,6 +2246,9 @@ importers:
 
   packages/vetra:
     dependencies:
+      '@electric-sql/pglite':
+        specifier: 'catalog:'
+        version: 0.3.15
       '@powerhousedao/builder-tools':
         specifier: workspace:*
         version: link:../builder-tools
@@ -2252,6 +2264,9 @@ importers:
       '@powerhousedao/design-system':
         specifier: workspace:*
         version: link:../design-system
+      '@powerhousedao/reactor-browser':
+        specifier: workspace:*
+        version: link:../reactor-browser
       '@powerhousedao/shared':
         specifier: workspace:*
         version: link:../shared
@@ -2286,9 +2301,6 @@ importers:
       '@powerhousedao/reactor-api':
         specifier: workspace:*
         version: link:../reactor-api
-      '@powerhousedao/reactor-browser':
-        specifier: workspace:*
-        version: link:../reactor-browser
       '@tailwindcss/cli':
         specifier: 'catalog:'
         version: 4.1.18
@@ -8750,8 +8762,8 @@ packages:
   '@types/bonjour@3.5.13':
     resolution: {integrity: sha512-z9fJ5Im06zvUL548KvYNecEVlA7cVDkGUi6kZusb04mpyEFKCIZJvloCcmpmLaIahDpOQGHaHmG6imtPMmPXGQ==}
 
-  '@types/bun@1.3.9':
-    resolution: {integrity: sha512-KQ571yULOdWJiMH+RIWIOZ7B2RXQGpL1YQrBtLIV3FqDcCu6FsbFUBwhdKUlCKUpS3PJDsHlJ1QKlpxoVR+xtw==}
+  '@types/bun@1.3.10':
+    resolution: {integrity: sha512-0+rlrUrOrTSskibryHbvQkDOWRJwJZqZlxrUs1u4oOoTln8+WIXBPmAuCF35SWB2z4Zl3E84Nl/D0P7803nigQ==}
 
   '@types/bunyan@1.8.11':
     resolution: {integrity: sha512-758fRH7umIMk5qt5ELmRMff4mLDlN+xyYzC+dkPTdKwbSkJFvz6xwyScrytPU0QIBbRRwbiE8/BIg8bpajerNQ==}
@@ -10166,8 +10178,8 @@ packages:
   builtin-status-codes@3.0.0:
     resolution: {integrity: sha512-HpGFw18DgFWlncDfjTa2rcQ4W88O1mC8e8yZ2AvQY5KDaktSTwo+KRf6nHK6FRI5FyRyb/5T6+TSxfP7QyGsmQ==}
 
-  bun-types@1.3.9:
-    resolution: {integrity: sha512-+UBWWOakIP4Tswh0Bt0QD0alpTY8cb5hvgiYeWCMet9YukHbzuruIEeXC2D7nMJPB12kbh8C7XJykSexEqGKJg==}
+  bun-types@1.3.10:
+    resolution: {integrity: sha512-tcpfCCl6XWo6nCVnpcVrxQ+9AYN1iqMIzgrSKYMB/fjLtV2eyAVEg7AxQJuCq/26R6HpKWykQXuSOq/21RYcbg==}
 
   bundle-name@4.1.0:
     resolution: {integrity: sha512-tjwM5exMg6BGRI+kNmTntNsvdZS1X8BFYS6tnJ2hdH0kVxM6/eVZ2xy+FqStSWvYmtfFMDLIxurorHwDKfDz5Q==}
@@ -26821,9 +26833,9 @@ snapshots:
     dependencies:
       '@types/node': 25.3.1
 
-  '@types/bun@1.3.9':
+  '@types/bun@1.3.10':
     dependencies:
-      bun-types: 1.3.9
+      bun-types: 1.3.10
 
   '@types/bunyan@1.8.11':
     dependencies:
@@ -28529,7 +28541,7 @@ snapshots:
 
   builtin-status-codes@3.0.0: {}
 
-  bun-types@1.3.9:
+  bun-types@1.3.10:
     dependencies:
       '@types/node': 25.3.1
 

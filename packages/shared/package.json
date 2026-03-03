@@ -51,11 +51,11 @@
     "@sindresorhus/fnv1a": "catalog:",
     "luxon": "catalog:",
     "mutative": "catalog:",
-    "react": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
     "@types/luxon": "catalog:",
-    "@types/react": "catalog:"
+    "@types/react": "catalog:",
+    "react": "catalog:"
   }
 }

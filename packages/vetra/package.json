@@ -83,14 +83,15 @@
     "kysely": "catalog:",
     "@powerhousedao/shared": "workspace:*",
     "zod": "catalog:",
-    "graphql-tag": "catalog:"
+    "graphql-tag": "catalog:",
+    "@powerhousedao/reactor-browser": "workspace:*",
+    "@electric-sql/pglite": "catalog:"
   },
   "devDependencies": {
     "tailwindcss": "catalog:",
     "@powerhousedao/codegen": "workspace:*",
     "@powerhousedao/ph-cli": "workspace:*",
     "@powerhousedao/reactor-api": "workspace:*",
-    "@powerhousedao/reactor-browser": "workspace:*",
     "@tailwindcss/cli": "catalog:",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.0",
