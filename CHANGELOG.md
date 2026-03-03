@@ -1,3 +1,20 @@
+## 6.0.0-dev.62 (2026-03-03)
+
+### 🚀 Features
+
+- **ci:** push academy to Harbor academy project and update k8s for academy namespace ([efbf8f58d](https://github.com/powerhouse-inc/powerhouse/commit/efbf8f58d))
+
+### 🩹 Fixes
+
+- moving analytics processors to shared and fixing them, fixing other linting errors toos ([0c8f7fe98](https://github.com/powerhouse-inc/powerhouse/commit/0c8f7fe98))
+- cherry-picked fixes ([a73630a6a](https://github.com/powerhouse-inc/powerhouse/commit/a73630a6a))
+- remove dev auth ([b081263f5](https://github.com/powerhouse-inc/powerhouse/commit/b081263f5))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Frank
+
 ## 6.0.0-dev.61 (2026-02-27)
 
 ### 🚀 Features
