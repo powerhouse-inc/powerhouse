@@ -1,0 +1,36 @@
+{
+  "name": "@powerhousedao/analytics-engine-knex",
+  "version": "6.0.0-dev.61",
+  "license": "AGPL-3.0-only",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/powerhouse-inc/analytics-engine"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "import": "./dist/src/index.js"
+    }
+  },
+  "files": [
+    "dist/src"
+  ],
+  "scripts": {
+    "build:bundle": "bun run ./bundle.ts",
+    "test": "vitest --run ./**/*.test.ts"
+  },
+  "devDependencies": {
+    "date-fns": "catalog:",
+    "knex": "catalog:",
+    "luxon": "catalog:",
+    "pg": "catalog:",
+    "@powerhousedao/analytics-engine-core": "workspace:*",
+    "@types/pg": "catalog:",
+    "vitest": "catalog:",
+    "@types/luxon": "catalog:"
+  }
+}

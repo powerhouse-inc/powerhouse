@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/reactor-api",
-  "version": "6.0.0-dev.61",
+  "version": "6.0.0-dev.62",
   "description": "",
   "type": "module",
   "repository": {
@@ -57,9 +57,9 @@
     "@opentelemetry/sdk-trace-base": "^1.29.0",
     "@opentelemetry/semantic-conventions": "^1.29.0",
     "@originjs/vite-plugin-commonjs": "^1.0.3",
-    "@powerhousedao/analytics-engine-core": "catalog:",
-    "@powerhousedao/analytics-engine-graphql": "catalog:",
-    "@powerhousedao/analytics-engine-pg": "catalog:",
+    "@powerhousedao/analytics-engine-core": "workspace:*",
+    "@powerhousedao/analytics-engine-graphql": "workspace:*",
+    "@powerhousedao/analytics-engine-pg": "workspace:*",
     "@powerhousedao/config": "workspace:*",
     "@powerhousedao/document-engineering": "catalog:",
     "@powerhousedao/reactor": "workspace:*",

@@ -1,0 +1,34 @@
+import type { IAnalyticsStore } from "../../analytics/types.js";
+import type { PHDocumentHeader } from "../../document-model/core/documents.js";
+import type { ProcessorRecord } from "../types.js";
+import { DocumentAnalyticsProcessor } from "./document-processor.js";
+import { DriveAnalyticsProcessor } from "./drive-processor.js";
+
+export const processorFactory =
+  (module: { analyticsStore: IAnalyticsStore }) =>
+  (driveHeader: PHDocumentHeader): ProcessorRecord[] => {
+    return [
+      {
+        processor: new DriveAnalyticsProcessor(module.analyticsStore),
+        filter: {
+          branch: ["main"],
+          documentId: ["*"],
+          scope: ["*"],
+          documentType: ["powerhouse/document-drive"],
+        },
+      },
+      {
+        processor: new DocumentAnalyticsProcessor(module.analyticsStore),
+        filter: {
+          branch: ["main"],
+          documentId: ["*"],
+          scope: ["*"],
+          documentType: ["*"],
+        },
+      },
+    ];
+  };
+
+export * from "./document-processor.js";
+export * from "./drive-processor.js";
+export * from "./types.js";

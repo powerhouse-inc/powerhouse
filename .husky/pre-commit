@@ -1,26 +1,39 @@
 #!/usr/bin/env bash
 
-# Files to monitor for changes
-MONITORED_FILES="clis/ph-cmd/COMMANDS.md clis/ph-cli/COMMANDS.md"
+# Files to monitor for CLI docs generation
+CLI_MONITORED_FILES="clis/ph-cmd/COMMANDS.md clis/ph-cli/COMMANDS.md"
 
-# Documentation file to update and stage
+# Files to monitor for LLM docs generation (academy markdown files)
+LLM_MONITORED_PATTERN="apps/academy/docs/.*\.md$"
+
+# Documentation files
 ACADEMY_DOCS_DIR="apps/academy"
 ACADEMY_DOC_FILE_RELATIVE_TO_ACADEMY_DIR="docs/academy/04-APIReferences/00-PowerhouseCLI.md"
 ACADEMY_DOC_FILE_FULL_PATH="$ACADEMY_DOCS_DIR/$ACADEMY_DOC_FILE_RELATIVE_TO_ACADEMY_DIR"
+LLM_DOC_FILE_FULL_PATH="$ACADEMY_DOCS_DIR/academy_LLM_docs.md"
+LLM_STATIC_FILE_FULL_PATH="$ACADEMY_DOCS_DIR/static/academy_LLM_docs.md"
 
 # Get list of staged files
 STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM)
 
-should_run_docs_generation=false
-for monitored_file in $MONITORED_FILES; do
+# Check for CLI docs generation
+should_run_cli_docs_generation=false
+for monitored_file in $CLI_MONITORED_FILES; do
   if echo "$STAGED_FILES" | grep -q "^$monitored_file$"; then
-    should_run_docs_generation=true
+    should_run_cli_docs_generation=true
     break
   fi
 done
 
-if [ "$should_run_docs_generation" = true ]; then
-  echo "Relevant CLI COMMANDS.md file changed. Generating Academy documentation..."
+# Check for LLM docs generation
+should_run_llm_docs_generation=false
+if echo "$STAGED_FILES" | grep -qE "$LLM_MONITORED_PATTERN"; then
+  should_run_llm_docs_generation=true
+fi
+
+# Generate CLI documentation if needed
+if [ "$should_run_cli_docs_generation" = true ]; then
+  echo "Relevant CLI COMMANDS.md file changed. Generating Academy CLI documentation..."
   
   original_dir=$(pwd)
   cd "$ACADEMY_DOCS_DIR" || exit 1 # cd into apps/academy from monorepo root
@@ -40,7 +53,40 @@ if [ "$should_run_docs_generation" = true ]; then
     echo "Academy CLI documentation ($ACADEMY_DOC_FILE_FULL_PATH) is already up-to-date or script failed to update it."
   fi
 else
-  echo "No relevant CLI COMMANDS.md changes detected. Skipping Academy documentation generation."
+  echo "No relevant CLI COMMANDS.md changes detected. Skipping CLI documentation generation."
+fi
+
+# Generate LLM documentation if needed
+if [ "$should_run_llm_docs_generation" = true ]; then
+  echo "Academy markdown files changed. Regenerating LLM-optimized documentation..."
+  
+  original_dir=$(pwd)
+  cd "$ACADEMY_DOCS_DIR" || exit 1 # cd into apps/academy from monorepo root
+  
+  echo "Running 'pnpm generate:llm-docs' in $(pwd)..."
+  pnpm generate:llm-docs
+  
+  cd "$original_dir" || exit 1 # cd back to monorepo root
+  
+  # Check if the LLM documentation files were modified by the script
+  git_status_output_llm=$(git status --porcelain "$LLM_DOC_FILE_FULL_PATH")
+  git_status_output_static=$(git status --porcelain "$LLM_STATIC_FILE_FULL_PATH")
+
+  if [ -n "$git_status_output_llm" ]; then
+    echo "LLM documentation ($LLM_DOC_FILE_FULL_PATH) was updated. Staging changes..."
+    git add "$LLM_DOC_FILE_FULL_PATH"
+  fi
+  
+  if [ -n "$git_status_output_static" ]; then
+    echo "Static LLM documentation ($LLM_STATIC_FILE_FULL_PATH) was updated. Staging changes..."
+    git add "$LLM_STATIC_FILE_FULL_PATH"
+  fi
+  
+  if [ -z "$git_status_output_llm" ] && [ -z "$git_status_output_static" ]; then
+    echo "LLM documentation is already up-to-date or script failed to update it."
+  fi
+else
+  echo "No academy markdown changes detected. Skipping LLM documentation generation."
 fi
 
 # Add any other root-level pre-commit checks below if needed

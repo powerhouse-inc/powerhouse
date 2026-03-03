@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/reactor-browser",
-  "version": "6.0.0-dev.61",
+  "version": "6.0.0-dev.62",
   "license": "AGPL-3.0-only",
   "type": "module",
   "repository": {
@@ -57,8 +57,8 @@
     "vitest-browser-react": "^1.0.1",
     "fast-deep-equal": "catalog:",
     "@electric-sql/pglite": "catalog:",
-    "@powerhousedao/analytics-engine-browser": "catalog:",
-    "@powerhousedao/analytics-engine-core": "catalog:",
+    "@powerhousedao/analytics-engine-browser": "workspace:*",
+    "@powerhousedao/analytics-engine-core": "workspace:*",
     "@powerhousedao/reactor": "workspace:*",
     "@renown/sdk": "workspace:*",
     "@tanstack/react-query": "^5.49.2",

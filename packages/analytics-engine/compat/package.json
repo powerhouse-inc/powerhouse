@@ -1,0 +1,31 @@
+{
+  "name": "compat",
+  "private": true,
+  "version": "6.0.0-dev.61",
+  "publishConfig": {
+    "access": "restricted"
+  },
+  "type": "module",
+  "license": "AGPL-3.0-only",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "test:pg": "PG_CONNECTION_STRING=postgresql://postgres:password@localhost:5555/analytics vitest --run ./**/*.test.ts"
+  },
+  "dependencies": {
+    "@powerhousedao/analytics-engine-browser": "workspace:*",
+    "@powerhousedao/analytics-engine-core": "workspace:*",
+    "@powerhousedao/analytics-engine-knex": "workspace:*",
+    "@powerhousedao/analytics-engine-pg": "workspace:*",
+    "knex": "catalog:",
+    "luxon": "catalog:",
+    "pg": "catalog:"
+  },
+  "devDependencies": {
+    "@tsconfig/node-lts": "catalog:",
+    "@types/luxon": "catalog:",
+    "@types/node": "catalog:",
+    "vitest": "catalog:"
+  }
+}

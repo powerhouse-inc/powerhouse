@@ -11,6 +11,15 @@
   ],
   "references": [
     {
+      "path": "../analytics-engine/core"
+    },
+    {
+      "path": "../analytics-engine/graphql"
+    },
+    {
+      "path": "../analytics-engine/pg"
+    },
+    {
       "path": "../config"
     },
     {

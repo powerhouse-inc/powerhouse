@@ -167,6 +167,9 @@ jobs:
           version: latest
           run_install: false
 
+      - name: Setup bun global install
+        uses: oven-sh/setup-bun@v2
+
       - name: Install dependencies
         run: pnpm install-ci
 
@@ -176,9 +179,8 @@ jobs:
       - name: Run misc build scripts
         run: pnpm build-misc
 
-      - name: Build test packages
-        run: pnpm tsc --build
-        working-directory: test/test-connect
+      - name: Run bundle scripts
+        run: pnpm build-bundle
 
       - name: Run sync integration test
         run: pnpm test:integration

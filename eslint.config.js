@@ -148,6 +148,7 @@ const filesWithUnsafeRules = [
   "packages/document-drive/src/queue/event.ts",
   "packages/document-model/src/document-model/custom/reducers/operation-error.ts",
   "packages/document-model/src/document-model/custom/reducers/operation-example.ts",
+  "packages/analytics-engine/**/*",
 ];
 
 /** Typescript rules that we have chosen to opt out of in general */
@@ -188,6 +189,7 @@ const typescriptRules = {
   "@typescript-eslint/no-unnecessary-type-assertion": "off",
   // our overzealous generics force us to do this
   "@typescript-eslint/no-unnecessary-type-parameters": "off",
+  "@typescript-eslint/no-base-to-string": "warn",
 };
 
 /** Rules that we explicitly enable but are violated by our codebase.

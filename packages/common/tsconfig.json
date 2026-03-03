@@ -14,7 +14,9 @@
     ]
   },
   "include": [
-    "**/*"
+    "**/*",
+    "../shared/processors/drive-analytics/index.ts",
+    "../shared/processors/drive-analytics/types.ts"
   ],
   "exclude": [
     "dist",
@@ -22,6 +24,9 @@
     "storybook-static"
   ],
   "references": [
+    {
+      "path": "../analytics-engine/core"
+    },
     {
       "path": "../config"
     },

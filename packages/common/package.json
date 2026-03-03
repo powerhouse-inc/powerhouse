@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/common",
-  "version": "6.0.0-dev.61",
+  "version": "6.0.0-dev.62",
   "license": "AGPL-3.0-only",
   "type": "module",
   "files": [
@@ -47,9 +47,10 @@
     "package-directory": "^8.1.0",
     "@powerhousedao/shared": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",
-    "@powerhousedao/analytics-engine-core": "catalog:",
+    "@powerhousedao/analytics-engine-core": "workspace:*",
     "luxon": "catalog:",
-    "zocker": "^3.0.0"
+    "zocker": "^3.0.0",
+    "document-drive": "workspace:"
   },
   "devDependencies": {
     "@powerhousedao/config": "workspace:*",

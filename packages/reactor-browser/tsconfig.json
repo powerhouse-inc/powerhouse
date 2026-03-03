@@ -19,6 +19,12 @@
   ],
   "references": [
     {
+      "path": "../analytics-engine/browser"
+    },
+    {
+      "path": "../analytics-engine/core"
+    },
+    {
       "path": "../document-drive"
     },
     {

@@ -174,5 +174,13 @@ export const generateArgs = {
     defaultValue: () => false,
     defaultValueIsSerializable: true,
   }),
+  migrateLegacy: flag({
+    type: boolean,
+    long: "migrate-legacy",
+    description:
+      "Migrate existing legacy document model code to versioned structure. Implies --use-versioning.",
+    defaultValue: () => false,
+    defaultValueIsSerializable: true,
+  }),
   ...debugArgs,
 };

@@ -37,14 +37,16 @@ export async function startGenerate(options: GenerateArgs) {
     schemaFile,
     verbose,
     force,
-    useVersioning,
+    useVersioning: useVersioningFlag,
     useHygen,
     subgraphName,
+    migrateLegacy,
   } = options;
 
   const documentModelFile =
     documentModelFilePositional ?? documentModelFileOption;
 
+  const useVersioning = useVersioningFlag || migrateLegacy;
   const useTsMorph = useVersioning || !useHygen;
   const isDragAndDropEnabled = disableDragAndDrop !== true;
   const specifiedPackageName = undefined;
@@ -114,8 +116,9 @@ export async function startGenerate(options: GenerateArgs) {
       useTsMorph,
       options,
       useVersioning,
+      migrateLegacy,
     });
   } else {
-    await generateCode(config, useTsMorph, useVersioning);
+    await generateCode(config, useTsMorph, useVersioning, migrateLegacy);
   }
 }

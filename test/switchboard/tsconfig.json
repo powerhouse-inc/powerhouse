@@ -1,0 +1,22 @@
+{
+  "extends": "../../tsconfig.options.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "resolveJsonModule": true
+  },
+  "references": [
+    {
+      "path": "../../apps/switchboard"
+    },
+    {
+      "path": "../../clis/ph-cli"
+    }
+  ],
+  "include": [
+    "**/*"
+  ],
+  "exclude": [
+    "dist",
+    "node_modules"
+  ]
+}
