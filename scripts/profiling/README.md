@@ -172,6 +172,12 @@ tsx docs-create.ts 5 -o 20 -l 10 -p -O results.txt
 
 # Show percentiles and action type names in min/max
 tsx docs-create.ts 5 -o 20 --percentiles --show-action-types
+
+# Use async mutation variants (returns job ID instead of document)
+tsx docs-create.ts 1 -o 25 --async
+
+# Async with batching
+tsx docs-create.ts 1 -o 100 -b 10 --async
 ```
 
 | Flag                  | Short | Description                                                          |
@@ -182,6 +188,7 @@ tsx docs-create.ts 5 -o 20 --percentiles --show-action-types
 | `--batch-size`        | `-b`  | Operations per `mutateDocument` call (default: 1)                    |
 | `--doc-id`            | `-d`  | Use existing document(s), can be repeated                            |
 | `--endpoint`          |       | GraphQL endpoint (default: `http://localhost:4001/graphql`)          |
+| `--async`             |       | Use `*Async` mutation variants (fire-and-forget; returns job ID)     |
 | `--file`              |       | Write output to a timestamped file (default name: `docs-create.txt`) |
 | `--output`            | `-O`  | Write output to a specific file (no timestamp prefix)                |
 | `--verbose`           | `-v`  | Show detailed operation timings                                      |
