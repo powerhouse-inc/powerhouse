@@ -1,15 +1,20 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import type { IDocumentDriveServer } from "document-drive";
+import type { IReactorClient, ISyncManager } from "@powerhousedao/reactor";
 import type { Express, Request, Response } from "express";
 import { logger } from "./logger.js";
 import { createServer } from "./server.js";
 
+export interface SetupMcpServerOptions {
+  client: IReactorClient;
+  syncManager?: ISyncManager;
+}
+
 export async function setupMcpServer(
-  reactor: IDocumentDriveServer,
+  options: SetupMcpServerOptions,
   app: Express,
 ): Promise<McpServer> {
-  const server = await createServer(reactor);
+  const server = await createServer(options);
   app.post("/mcp", (req: Request, res: Response) => {
     // In stateless mode, create a new instance of transport and server for each request
     // to ensure complete isolation. A single instance would cause request ID collisions

@@ -133,7 +133,7 @@ describe("CodegenProcessorLegacy E2E Tests", () => {
       const strand = {
         documentId: "test-doc-1",
         documentType: "powerhouse/document-editor",
-        state: validState,
+        state: { global: validState },
       } as InternalTransmitterUpdate;
 
       await processor.onStrands([strand]);
@@ -188,7 +188,7 @@ describe("CodegenProcessorLegacy E2E Tests", () => {
       const strand = {
         documentId: "test-doc-1",
         documentType: "powerhouse/document-editor",
-        state: invalidState,
+        state: { global: invalidState },
       } as InternalTransmitterUpdate;
 
       await processor.onStrands([strand]);
@@ -213,7 +213,7 @@ describe("CodegenProcessorLegacy E2E Tests", () => {
       const strand = {
         documentId: "test-doc-1",
         documentType: "powerhouse/document-editor",
-        state: invalidState,
+        state: { global: invalidState },
       } as InternalTransmitterUpdate;
 
       await processor.onStrands([strand]);
@@ -236,7 +236,7 @@ describe("CodegenProcessorLegacy E2E Tests", () => {
       const strand = {
         documentId: "test-doc-1",
         documentType: "powerhouse/document-editor",
-        state: invalidState,
+        state: { global: invalidState },
       } as InternalTransmitterUpdate;
 
       await processor.onStrands([strand]);
@@ -380,7 +380,7 @@ describe("CodegenProcessorLegacy E2E Tests", () => {
       const strand = {
         documentId: "test-doc-1",
         documentType: "powerhouse/processor",
-        state: validState,
+        state: { global: validState },
       } as InternalTransmitterUpdate;
 
       await processor.onStrands([strand]);
@@ -417,7 +417,7 @@ describe("CodegenProcessorLegacy E2E Tests", () => {
       const strand = {
         documentId: "test-doc-1",
         documentType: "powerhouse/processor",
-        state: validState,
+        state: { global: validState },
       } as InternalTransmitterUpdate;
 
       await processor.onStrands([strand]);
@@ -451,7 +451,7 @@ describe("CodegenProcessorLegacy E2E Tests", () => {
       const strand = {
         documentId: "test-doc-1",
         documentType: "powerhouse/processor",
-        state: invalidState,
+        state: { global: invalidState },
       } as InternalTransmitterUpdate;
 
       await processor.onStrands([strand]);
@@ -474,7 +474,7 @@ describe("CodegenProcessorLegacy E2E Tests", () => {
       const strand = {
         documentId: "test-doc-1",
         documentType: "powerhouse/processor",
-        state: invalidState,
+        state: { global: invalidState },
       } as InternalTransmitterUpdate;
 
       await processor.onStrands([strand]);
@@ -499,7 +499,7 @@ describe("CodegenProcessorLegacy E2E Tests", () => {
       const strand = {
         documentId: "test-doc-1",
         documentType: "powerhouse/app",
-        state: validState,
+        state: { global: validState },
       } as InternalTransmitterUpdate;
 
       await processor.onStrands([strand]);
@@ -551,7 +551,7 @@ describe("CodegenProcessorLegacy E2E Tests", () => {
       const strand = {
         documentId: "test-doc-1",
         documentType: "powerhouse/app",
-        state: validState,
+        state: { global: validState },
       } as InternalTransmitterUpdate;
 
       await processor.onStrands([strand]);
@@ -586,7 +586,7 @@ describe("CodegenProcessorLegacy E2E Tests", () => {
       const strand = {
         documentId: "test-doc-1",
         documentType: "powerhouse/app",
-        state: invalidState,
+        state: { global: invalidState },
       } as InternalTransmitterUpdate;
 
       await processor.onStrands([strand]);
@@ -610,7 +610,7 @@ describe("CodegenProcessorLegacy E2E Tests", () => {
       const strand = {
         documentId: "test-doc-1",
         documentType: "powerhouse/subgraph",
-        state: validState,
+        state: { global: validState },
       } as InternalTransmitterUpdate;
 
       await processor.onStrands([strand]);
@@ -648,7 +648,7 @@ describe("CodegenProcessorLegacy E2E Tests", () => {
       const strand = {
         documentId: "test-doc-1",
         documentType: "powerhouse/subgraph",
-        state: invalidState,
+        state: { global: invalidState },
       } as InternalTransmitterUpdate;
 
       await processor.onStrands([strand]);
@@ -751,12 +751,12 @@ describe("CodegenProcessorLegacy E2E Tests", () => {
         {
           documentId: "test-doc-1",
           documentType: "powerhouse/document-editor",
-          state: editorState,
+          state: { global: editorState },
         } as InternalTransmitterUpdate,
         {
           documentId: "test-doc-2",
           documentType: "powerhouse/subgraph",
-          state: subgraphState,
+          state: { global: subgraphState },
         } as InternalTransmitterUpdate,
       ];
 
@@ -802,12 +802,12 @@ describe("CodegenProcessorLegacy E2E Tests", () => {
         {
           documentId: "test-doc-1",
           documentType: "powerhouse/document-editor",
-          state: validEditorState,
+          state: { global: validEditorState },
         } as InternalTransmitterUpdate,
         {
           documentId: "test-doc-2",
           documentType: "powerhouse/subgraph",
-          state: invalidSubgraphState,
+          state: { global: invalidSubgraphState },
         } as InternalTransmitterUpdate,
       ];
 
@@ -848,12 +848,12 @@ describe("CodegenProcessorLegacy E2E Tests", () => {
         {
           documentId: "test-doc-1",
           documentType: "powerhouse/document-editor",
-          state: invalidEditorState,
+          state: { global: invalidEditorState },
         } as InternalTransmitterUpdate,
         {
           documentId: "test-doc-2",
           documentType: "powerhouse/subgraph",
-          state: invalidSubgraphState,
+          state: { global: invalidSubgraphState },
         } as InternalTransmitterUpdate,
       ];
 
@@ -902,7 +902,7 @@ describe("CodegenProcessorLegacy E2E Tests", () => {
       const strand = {
         documentId: "",
         documentType: "powerhouse/document-editor",
-        state: validState,
+        state: { global: validState },
       } as InternalTransmitterUpdate;
 
       await processor.onStrands([strand]);
