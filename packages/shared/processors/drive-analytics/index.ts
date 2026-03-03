@@ -1,4 +1,4 @@
-import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
+import type { IAnalyticsStore } from "../../analytics/types.js";
 import type { PHDocumentHeader } from "../../document-model/core/documents.js";
 import type { ProcessorRecord } from "../types.js";
 import { DocumentAnalyticsProcessor } from "./document-processor.js";

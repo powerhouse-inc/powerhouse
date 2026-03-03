@@ -15,6 +15,7 @@
     "@types/node": "catalog:",
     "cmd-ts": "catalog:",
     "glob": "catalog:",
-    "jiti": "2.6.1"
+    "jiti": "2.6.1",
+    "@powerhousedao/shared": "workspace:*"
   }
 }

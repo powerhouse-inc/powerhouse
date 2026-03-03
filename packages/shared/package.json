@@ -15,33 +15,40 @@
   "exports": {
     "./processors": {
       "types": "./dist/processors/index.d.ts",
-      "default": "./dist/processors/index.js"
+      "import": "./dist/processors/index.js"
     },
     "./processors/*": {
       "types": "./dist/processors/*.d.ts",
-      "default": "./dist/processors/*.js"
+      "import": "./dist/processors/*.js"
     },
     "./document-model": {
       "types": "./dist/document-model/index.d.ts",
-      "default": "./dist/document-model/index.js"
+      "import": "./dist/document-model/index.js"
     },
     "./document-model/*": {
       "types": "./dist/document-model/*.d.ts",
-      "default": "./dist/document-model/*.js"
+      "import": "./dist/document-model/*.js"
     },
     "./connect": {
       "types": "./dist/connect/index.d.ts",
-      "default": "./dist/connect/index.js"
+      "import": "./dist/connect/index.js"
     },
     "./connect/*": {
       "types": "./dist/connect/*.d.ts",
-      "default": "./dist/connect/*.js"
+      "import": "./dist/connect/*.js"
+    },
+    "./analytics": {
+      "types": "./dist/analytics/index.d.ts",
+      "import": "./dist/analytics/index.js"
+    },
+    "./analytics/*": {
+      "types": "./dist/analytics/*.d.ts",
+      "import": "./dist/analytics/*.js"
     }
   },
   "dependencies": {
     "kysely": "catalog:",
     "@sindresorhus/fnv1a": "catalog:",
-    "@powerhousedao/analytics-engine-core": "workspace:*",
     "luxon": "catalog:",
     "mutative": "catalog:",
     "react": "catalog:",
