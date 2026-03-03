@@ -12,7 +12,7 @@ export type RelationalDbWithLive<Schema> = _IRelationalDb<Schema> & {
   live: LiveNamespace;
 };
 
-export interface IRelationalDb<Schema> {
+interface IRelationalDb<Schema> {
   db: RelationalDbWithLive<Schema> | null;
   isLoading: boolean;
   error: Error | null;

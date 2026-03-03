@@ -76,7 +76,6 @@
     "@powerhousedao/common": "workspace:*",
     "@powerhousedao/config": "workspace:*",
     "@powerhousedao/design-system": "workspace:*",
-    "@powerhousedao/reactor": "workspace:*",
     "change-case": "catalog:",
     "colorette": "catalog:",
     "document-model": "workspace:*",

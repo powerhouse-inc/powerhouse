@@ -11,7 +11,7 @@ import type {
   ProcessorRecord,
   IProcessorHostModule,
   ProcessorFilter
- } from "@powerhousedao/reactor"
+ } from "@powerhousedao/reactor-browser"
 import type { PHDocumentHeader } from "document-model";
 import type { ProcessorApp } from "@powerhousedao/common";
 import { ${v.pascalCaseName}Processor } from "./index.js";

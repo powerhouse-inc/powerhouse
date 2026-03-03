@@ -4,7 +4,7 @@ import {
   type IChannel,
   type SyncOperation,
   SyncOperationStatus,
-} from "@powerhousedao/reactor";
+} from "@powerhousedao/reactor-browser";
 import { ChannelInspector } from "./channel-inspector.js";
 
 const meta: Meta<typeof ChannelInspector> = {

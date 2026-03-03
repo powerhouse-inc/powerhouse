@@ -1,5 +1,5 @@
 import { Icon } from "@powerhousedao/design-system";
-import type { Remote } from "@powerhousedao/reactor";
+import type { Remote } from "@powerhousedao/reactor-browser";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { twMerge } from "tailwind-merge";
 import { ChannelInspector } from "./components/channel-inspector.js";

@@ -1,4 +1,7 @@
-import type { IProcessor, OperationWithContext } from "@powerhousedao/reactor";
+import type {
+  IProcessor,
+  OperationWithContext,
+} from "@powerhousedao/reactor-browser";
 import type { Kysely } from "kysely";
 import type { VetraPackageState } from "../../document-models/vetra-package/gen/schema/types.js";
 import { logger } from "../codegen/logger.js";

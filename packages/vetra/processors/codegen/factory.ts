@@ -3,7 +3,7 @@ import { VETRA_PROCESSOR_CONFIG_KEY } from "@powerhousedao/config";
 import type {
   IProcessorHostModule,
   ProcessorRecord,
-} from "@powerhousedao/reactor";
+} from "@powerhousedao/reactor-browser";
 import type { PHDocumentHeader } from "document-model";
 import { CodegenProcessor } from "./index.js";
 import { logger } from "./logger.js";
