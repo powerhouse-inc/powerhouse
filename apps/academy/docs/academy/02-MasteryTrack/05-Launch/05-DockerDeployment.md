@@ -201,13 +201,12 @@ After starting, you can access:
 
 #### Authentication
 
-| Variable       | Description                                       | Default   |
-| -------------- | ------------------------------------------------- | --------- |
-| `AUTH_ENABLED` | Enable authentication                             | `"false"` |
-| `ADMINS`       | Comma-separated list of admin wallet addresses    | `""`      |
-| `USERS`        | Comma-separated list of user wallet addresses     | `""`      |
-| `GUESTS`       | Comma-separated list of guest wallet addresses    | `""`      |
-| `FREE_ENTRY`   | Allow unauthenticated access when auth is enabled | `"false"` |
+| Variable                       | Description                                                  | Default   |
+| ------------------------------ | ------------------------------------------------------------ | --------- |
+| `AUTH_ENABLED`                 | Enable authentication                                        | `"false"` |
+| `ADMINS`                       | Comma-separated list of admin wallet addresses (full access) | `""`      |
+| `DEFAULT_PROTECTION`           | Make all new documents protected by default                  | `"false"` |
+| `DOCUMENT_PERMISSIONS_ENABLED` | Enable per-document permission management                    | `"false"` |
 
 #### Error Tracking & Monitoring
 
