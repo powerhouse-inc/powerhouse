@@ -26,6 +26,7 @@ import {
   makeUpgradeManifestsFile,
 } from "../module-files.js";
 import { makeGenDirFiles } from "./gen-dir.js";
+import { migrateLegacyToVersioned } from "./migrate-legacy.js";
 import { makeRootDirFiles } from "./root-dir.js";
 import { makeSrcDirFiles } from "./src-dir.js";
 import { makeTestsDirFiles } from "./tests-dir.js";
@@ -46,7 +47,17 @@ export async function tsMorphGenerateDocumentModel({
   packageName,
   documentModelState,
   useVersioning,
+  migrateLegacy,
 }: GenerateDocumentModelArgs) {
+  if (migrateLegacy) {
+    const dmDirPath = path.join(
+      projectDir,
+      "document-models",
+      getDocumentModelDirName(documentModelState),
+    );
+    await migrateLegacyToVersioned(dmDirPath);
+  }
+
   const project = buildTsMorphProject(projectDir);
   const documentModelsSourceFilesPath = path.join(
     projectDir,

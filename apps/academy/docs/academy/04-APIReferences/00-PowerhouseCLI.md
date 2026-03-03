@@ -304,6 +304,9 @@ processors, and other components based on your document model files.
 **Use Versioning** - Allow upgrading document models with versioning. - Usage: `--use-versioning`
 
 **Default:** `false`
+**Migrate Legacy** - Migrate existing legacy document model code to versioned structure. Implies --use-versioning. - Usage: `--migrate-legacy`
+
+**Default:** `false`
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
 **Help** - show help - Usage: `--help, -h`

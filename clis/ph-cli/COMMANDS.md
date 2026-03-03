@@ -133,6 +133,10 @@ Use legacy hygen codegen<br><br>
 Allow upgrading document models with versioning.<br><br>
 **usage:** `--use-versioning`<br>
 **default**: `false`
+#### Migrate Legacy <br>
+Migrate existing legacy document model code to versioned structure. Implies --use-versioning.<br><br>
+**usage:** `--migrate-legacy`<br>
+**default**: `false`
 #### Debug <br>
 Log arguments passed to this command<br><br>
 **usage:** `--debug`<br>

@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/shared",
-  "version": "6.0.0-dev.61",
+  "version": "6.0.0-dev.62",
   "type": "module",
   "publishConfig": {
     "access": "public"
@@ -42,11 +42,13 @@
     "kysely": "catalog:",
     "@sindresorhus/fnv1a": "catalog:",
     "@powerhousedao/analytics-engine-core": "workspace:*",
+    "luxon": "catalog:",
     "mutative": "catalog:",
     "react": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@types/luxon": "catalog:",
     "@types/react": "catalog:"
   }
 }
