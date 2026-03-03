@@ -32,11 +32,11 @@
     "util": "catalog:",
     "knex": "catalog:",
     "luxon": "catalog:",
-    "@vitest/browser": "catalog:",
-    "@vitest/browser-playwright": "catalog:",
+    "@vitest/browser": "4.0.18",
+    "@vitest/browser-playwright": "4.0.18",
     "@types/luxon": "catalog:",
-    "playwright": "catalog:",
-    "vitest": "catalog:",
+    "playwright": "1.58.2",
+    "vitest": "4.0.18",
     "vite-plugin-node-polyfills": "catalog:"
   }
 }
