@@ -1,9 +1,9 @@
-import {
-  BrowserAnalyticsStore,
-  type BrowserAnalyticsStoreOptions,
-} from "@powerhousedao/analytics-engine-browser";
-import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
-import { AnalyticsQueryEngine } from "@powerhousedao/analytics-engine-core";
+import type { BrowserAnalyticsStoreOptions } from "@powerhousedao/analytics-engine-browser";
+import { BrowserAnalyticsStore } from "@powerhousedao/analytics-engine-browser";
+import type {
+  AnalyticsQueryEngine,
+  IAnalyticsStore,
+} from "@powerhousedao/analytics-engine-core";
 import {
   QueryClient,
   QueryClientProvider,

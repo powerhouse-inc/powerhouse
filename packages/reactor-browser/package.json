@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/reactor-browser",
-  "version": "6.0.0-dev.62",
+  "version": "6.0.0-dev.65",
   "license": "AGPL-3.0-only",
   "type": "module",
   "repository": {
@@ -15,26 +15,23 @@
   ],
   "exports": {
     ".": {
-      "import": "./dist/src/index.js",
-      "types": "./dist/src/index.d.ts"
+      "types": "./dist/src/index.d.ts",
+      "import": "./dist/src/index.js"
     },
     "./connect": {
       "types": "./dist/src/connect.d.ts",
-      "default": "./dist/src/connect.js"
+      "import": "./dist/src/connect.js"
     },
     "./analytics": {
       "types": "./dist/src/analytics.d.ts",
-      "default": "./dist/src/analytics.js"
-    },
-    "./analytics/hooks": {
-      "types": "./dist/src/analytics/hooks/index.d.ts",
-      "default": "./dist/src/analytics/hooks/index.js"
+      "import": "./dist/src/analytics.js"
     }
   },
   "sideEffects": false,
   "scripts": {
     "tsc": "tsc",
     "lint": "eslint",
+    "build:bundle": "bun run ./bundle.ts",
     "test:browser": "vitest --run",
     "install:playwright": "playwright install",
     "build:bundle": "bun run ./bundle.ts"
@@ -46,6 +43,7 @@
     "@types/react-dom": "catalog:",
     "@types/bun": "catalog:",
     "@types/slug": "^5.0.9",
+    "@types/bun": "catalog:",
     "@types/wicg-file-system-access": "^2020.9.8",
     "@vitejs/plugin-react": "catalog:",
     "@vitest/browser": "^3.2.4",
@@ -71,10 +69,10 @@
     "luxon": "^3.6.1",
     "lz-string": "^1.5.0",
     "slug": "^11.0.0"
-  
   },
   "peerDependencies": {
     "react": ">=19.0.0",
-    "react-dom": ">=19.0.0"
+    "react-dom": ">=19.0.0",
+    "@electric-sql/pglite": ">=0.3.0"
   }
 }

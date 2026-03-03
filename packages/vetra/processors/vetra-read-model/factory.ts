@@ -1,7 +1,7 @@
 import type {
   IProcessorHostModule,
   ProcessorRecord,
-} from "@powerhousedao/reactor";
+} from "@powerhousedao/reactor-browser";
 import type { IRelationalDbLegacy } from "document-drive";
 import type { PHDocumentHeader } from "document-model";
 import { VetraReadModelProcessor } from "./index.js";

@@ -3,4 +3,5 @@ await Bun.build({
   root: ".",
   outdir: "./dist",
   target: "browser",
+  external: ["react", "react-dom", "@electric-sql/pglite"],
 });

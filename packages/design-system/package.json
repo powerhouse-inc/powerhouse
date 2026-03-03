@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/design-system",
-  "version": "6.0.0-dev.62",
+  "version": "6.0.0-dev.65",
   "description": "",
   "files": [
     "dist",
@@ -79,7 +79,6 @@
   "homepage": "https://github.com/powerhouse-inc/design-system#readme",
   "devDependencies": {
     "@powerhousedao/config": "workspace:*",
-    "@powerhousedao/reactor": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",
     "@prettier/sync": "^0.5.2",
     "@storybook/addon-actions": "^8.6.7",

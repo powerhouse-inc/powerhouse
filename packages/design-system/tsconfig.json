@@ -28,9 +28,6 @@
       "path": "../document-model"
     },
     {
-      "path": "../reactor"
-    },
-    {
       "path": "../reactor-browser"
     }
   ],

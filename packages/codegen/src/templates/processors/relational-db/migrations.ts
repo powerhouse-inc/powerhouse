@@ -2,7 +2,7 @@ import { ts } from "@tmpl/core";
 
 export const relationalDbMigrationsTemplate = () =>
   ts`
-import type { IRelationalDb } from "@powerhousedao/reactor"
+import type { IRelationalDb } from "@powerhousedao/reactor-browser"
 
 export async function up(db: IRelationalDb<any>): Promise<void> {
   // Create table 

@@ -1,5 +1,5 @@
 import { DriveSettingsModal as ConnectDriveSettingsModal } from "@powerhousedao/design-system/connect";
-import { driveCollectionId } from "@powerhousedao/reactor";
+import { driveCollectionId } from "@powerhousedao/reactor-browser";
 import {
   closePHModal,
   renameDrive,

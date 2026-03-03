@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/vetra",
-  "version": "6.0.0-dev.62",
+  "version": "6.0.0-dev.65",
   "license": "AGPL-3.0-only",
   "type": "module",
   "repository": {
@@ -76,8 +76,6 @@
     "@powerhousedao/common": "workspace:*",
     "@powerhousedao/config": "workspace:*",
     "@powerhousedao/design-system": "workspace:*",
-    "@powerhousedao/reactor": "workspace:*",
-    "@powerhousedao/analytics-engine-browser": "workspace:*",
     "change-case": "catalog:",
     "colorette": "catalog:",
     "document-model": "workspace:*",
@@ -85,14 +83,15 @@
     "kysely": "catalog:",
     "@powerhousedao/shared": "workspace:*",
     "zod": "catalog:",
-    "graphql-tag": "catalog:"
+    "graphql-tag": "catalog:",
+    "@powerhousedao/reactor-browser": "workspace:*",
+    "@electric-sql/pglite": "catalog:"
   },
   "devDependencies": {
     "tailwindcss": "catalog:",
     "@powerhousedao/codegen": "workspace:*",
     "@powerhousedao/ph-cli": "workspace:*",
     "@powerhousedao/reactor-api": "workspace:*",
-    "@powerhousedao/reactor-browser": "workspace:*",
     "@tailwindcss/cli": "catalog:",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.0",

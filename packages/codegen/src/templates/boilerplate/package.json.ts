@@ -66,14 +66,13 @@ const dependenciesTemplate = (versionedDependencies: string[]) => json`
   "@powerhousedao/document-engineering": "1.40.1",
   "graphql": "^16.10.0",
   "graphql-tag": "^2.12.6",
-  "zod": "^4.3.5"
+  "zod": "^4.3.5",
+  "@electric-sql/pglite": "0.3.15",
 `;
 
 const devDependenciesTemplate = (versionedDevDependencies: string[]) => json`
   ${versionedDevDependencies.join(",\n")},
-  "@electric-sql/pglite": "^0.2.12",
   "@eslint/js": "^9.38.0",
-  "@powerhousedao/analytics-engine-core": "0.6.4",
   "@tailwindcss/cli": "^4.1.4",
   "@testing-library/react": "^16.3.0",
   "@types/node": "^24.9.2",

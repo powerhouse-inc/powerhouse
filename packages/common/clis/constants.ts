@@ -58,11 +58,11 @@ export const VERSIONED_DEPENDENCIES = [
 export const VERSIONED_DEV_DEPENDENCIES = [
   "@powerhousedao/config",
   "@powerhousedao/ph-cli",
-  "@powerhousedao/reactor",
   "@powerhousedao/reactor-api",
   "@powerhousedao/reactor-browser",
   "@powerhousedao/reactor-local",
   "@powerhousedao/switchboard",
   "@powerhousedao/connect",
+  "@powerhousedao/analytics-engine-core",
   "document-drive",
 ];

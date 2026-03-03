@@ -40,6 +40,7 @@ import {
   RenownBuilder,
   RenownCryptoBuilder,
 } from "@renown/sdk";
+import { DocumentChangeType } from "@powerhousedao/reactor-browser";
 import { logger } from "document-drive";
 import type { DocumentModelModule } from "document-model";
 import { initFeatureFlags } from "../feature-flags.js";

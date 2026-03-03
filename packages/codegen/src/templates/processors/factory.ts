@@ -10,7 +10,7 @@ import type {
   ProcessorRecord, 
   IProcessorHostModule, 
   ProcessorFactory,
-} from "@powerhousedao/reactor";
+} from "@powerhousedao/reactor-browser";
 import type { PHDocumentHeader } from "document-model";
 
 export const processorFactory = async (module: IProcessorHostModule) => {

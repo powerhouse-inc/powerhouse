@@ -2,7 +2,7 @@ import type {
   IProcessorHostModule,
   ProcessorFactory,
   ProcessorRecord,
-} from "@powerhousedao/reactor";
+} from "@powerhousedao/reactor-browser";
 import type { PHDocumentHeader } from "document-model";
 import { codegenProcessorFactory } from "./codegen/factory.js";
 import { vetraReadModelProcessorFactory } from "./vetra-read-model/factory.js";

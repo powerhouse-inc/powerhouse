@@ -10,7 +10,7 @@ export const analyticsFactoryTemplate = (v: {
 import type { 
   ProcessorRecord, 
   IProcessorHostModule
-} from "@powerhousedao/reactor";
+} from "@powerhousedao/reactor-browser";
 import { type PHDocumentHeader } from "document-model";
 import type { ProcessorApp } from "@powerhousedao/common";
 import { ${v.pascalCaseName}Processor } from "./index.js";

@@ -1,19 +1,7 @@
 await Bun.build({
-  entrypoints: [
-    "src/index.ts",
-    "src/connect.ts",
-    "src/analytics.ts",
-    "src/analytics/hooks/index.ts",
-  ],
+  entrypoints: ["./src/index.ts", "./src/connect.ts", "./src/analytics.ts"],
   outdir: "dist",
-  target: "browser",
   root: ".",
-  external: [
-    "@electric-sql/pglite",
-    "@powerhousedao/analytics-engine-browser",
-    "@powerhousedao/analytics-engine-core",
-    "@powerhousedao/reactor",
-    "react",
-    "react-dom",
-  ],
+  target: "browser",
+  external: ["react", "react-dom", "@electric-sql/pglite"],
 });

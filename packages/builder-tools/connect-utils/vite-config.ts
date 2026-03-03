@@ -19,7 +19,10 @@ import {
 } from "vite";
 import { createHtmlPlugin } from "vite-plugin-html";
 import svgr from "vite-plugin-svgr";
-import { stripVersionFromPackage } from "./helpers.js";
+import {
+  resolveConnectPackageJson,
+  stripVersionFromPackage,
+} from "./helpers.js";
 import type { IConnectOptions } from "./types.js";
 import { phExternalPackagesPlugin } from "./vite-plugins/ph-external-packages.js";
 
@@ -194,14 +197,6 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
   const uploadSentrySourcemaps = authToken && org && project;
 
   const plugins: PluginOption[] = [
-    // nodePolyfills({
-    //   include: ["events"],
-    //   globals: {
-    //     Buffer: false,
-    //     global: false,
-    //     process: true,
-    //   },
-    // }),
     tailwind(),
     svgr(),
     react(),
@@ -263,12 +258,7 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     envPrefix: ["PH_CONNECT_"],
     envDir: false,
     optimizeDeps: {
-      // include: ["vite-plugin-node-polyfills/shims/process"],
-      exclude: [
-        "@electric-sql/pglite",
-        // "@electric-sql/pglite-tools",
-        // "node_modules/.vite",
-      ],
+      exclude: ["@electric-sql/pglite", "@electric-sql/pglite-tools"],
     },
     plugins,
     resolve: {

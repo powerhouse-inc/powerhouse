@@ -1,4 +1,4 @@
-import type { Remote } from "@powerhousedao/reactor";
+import type { Remote } from "@powerhousedao/reactor-browser";
 import { useSync } from "@powerhousedao/reactor-browser/connect";
 import { useCallback } from "react";
 
