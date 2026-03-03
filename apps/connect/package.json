@@ -132,7 +132,6 @@
     "@powerhousedao/config": "workspace:*",
     "@powerhousedao/design-system": "workspace:*",
     "@powerhousedao/document-engineering": "catalog:",
-    "@powerhousedao/reactor": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",
     "@powerhousedao/shared": "workspace:",
     "@powerhousedao/powerhouse-vetra-packages": "workspace:*",

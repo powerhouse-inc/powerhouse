@@ -446,9 +446,6 @@ importers:
       '@powerhousedao/powerhouse-vetra-packages':
         specifier: workspace:*
         version: link:../../packages/powerhouse-vetra-packages
-      '@powerhousedao/reactor':
-        specifier: workspace:*
-        version: link:../../packages/reactor
       '@powerhousedao/reactor-browser':
         specifier: workspace:*
         version: link:../../packages/reactor-browser

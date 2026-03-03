@@ -3,7 +3,7 @@ import type {
   FilterGroup,
   SortOptions,
 } from "@powerhousedao/design-system/connect";
-import { REACTOR_SCHEMA } from "@powerhousedao/reactor";
+import { REACTOR_SCHEMA } from "@powerhousedao/reactor-browser";
 import { useDatabase, usePGlite } from "@powerhousedao/reactor-browser/connect";
 import { sql } from "kysely";
 import { useCallback } from "react";

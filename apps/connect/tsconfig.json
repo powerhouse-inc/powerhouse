@@ -46,9 +46,6 @@
       "path": "../../packages/powerhouse-vetra-packages"
     },
     {
-      "path": "../../packages/reactor"
-    },
-    {
       "path": "../../packages/reactor-browser"
     },
     {
