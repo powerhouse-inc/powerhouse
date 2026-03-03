@@ -222,7 +222,7 @@ jobs:
         run: pnpm build-vite
 
       - name: Install Playwright Browsers
-        run: pnpm exec playwright install --with-deps chromium
+        run: pnpm exec playwright install
         working-directory: packages/analytics-engine/browser
 
       - name: Run Playwright tests
