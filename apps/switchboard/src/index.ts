@@ -1,8 +1,11 @@
 #!/usr/bin/env node
 import * as Sentry from "@sentry/node";
+import { childLogger } from "document-drive";
 import { config } from "./config.js";
 import { initProfilerFromEnv } from "./profiler.js";
 import { startSwitchboard } from "./server.js";
+
+const logger = childLogger(["switchboard"]);
 
 function ensureNodeVersion(minVersion = "24") {
   const version = process.versions.node;
@@ -30,7 +33,7 @@ if (process.env.PYROSCOPE_SERVER_ADDRESS) {
     await initProfilerFromEnv(process.env);
   } catch (e) {
     Sentry.captureException(e);
-    console.error("Error starting profiler:", e);
+    logger.error("Error starting profiler: @error", e);
   }
 }
 
