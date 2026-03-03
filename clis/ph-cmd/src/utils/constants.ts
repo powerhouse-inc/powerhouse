@@ -84,6 +84,11 @@ export const PACKAGES_DEPENDENCIES = [
   "@powerhousedao/reactor-mcp",
   "@powerhousedao/switchboard-gui",
   "@powerhousedao/vetra",
+  "@powerhousedao/analytics-engine-core",
+  "@powerhousedao/analytics-engine-knex",
+  "@powerhousedao/analytics-engine-pg",
+  "@powerhousedao/analytics-engine-browser",
+  "@powerhousedao/analytics-engine-graphql",
 ] as const;
 
 export const CLIS_DEPENDENCIES = ["ph-cmd", "@powerhousedao/ph-cli"];

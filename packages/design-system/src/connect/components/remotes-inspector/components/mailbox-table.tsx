@@ -2,7 +2,7 @@ import { Icon } from "@powerhousedao/design-system";
 import {
   type SyncOperation,
   SyncOperationStatus,
-} from "@powerhousedao/reactor";
+} from "@powerhousedao/reactor-browser";
 import { useState } from "react";
 import { twMerge } from "tailwind-merge";
 import { ObjectInspectorModal } from "../../object-inspector-modal/index.js";

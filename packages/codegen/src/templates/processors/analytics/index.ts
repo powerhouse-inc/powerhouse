@@ -5,7 +5,7 @@ export const analyticsIndexTemplate = (v: { pascalCaseName: string }) =>
   ts`
 import type { AnalyticsSeriesInput, IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import { AnalyticsPath } from "@powerhousedao/analytics-engine-core";
-import type { OperationWithContext, IProcessor } from "@powerhousedao/reactor";
+import type { OperationWithContext, IProcessor } from "@powerhousedao/reactor-browser";
 
 export class ${v.pascalCaseName}Processor implements IProcessor {
   private readonly NAMESPACE = "${v.pascalCaseName}";

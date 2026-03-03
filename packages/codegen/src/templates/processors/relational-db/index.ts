@@ -4,7 +4,7 @@ const defaultNamespaceComment =
   '// Default namespace: `${this.name}_${driveId.replaceAll("-", "_")}`';
 export const relationalDbIndexTemplate = (v: { pascalCaseName: string }) =>
   ts`
-import { RelationalDbProcessor } from "@powerhousedao/reactor";
+import { RelationalDbProcessor } from "@powerhousedao/reactor-browser";
 import type { OperationWithContext } from "document-model";
 import { up } from "./migrations.js";
 import type { DB } from "./schema.js";

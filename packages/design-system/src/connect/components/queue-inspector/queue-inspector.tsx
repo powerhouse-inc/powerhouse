@@ -1,5 +1,5 @@
 import { Icon } from "@powerhousedao/design-system";
-import type { Job } from "@powerhousedao/reactor";
+import type { Job } from "@powerhousedao/reactor-browser";
 import { useCallback, useEffect, useState } from "react";
 import { twMerge } from "tailwind-merge";
 import { ObjectInspectorModal } from "../object-inspector-modal/index.js";

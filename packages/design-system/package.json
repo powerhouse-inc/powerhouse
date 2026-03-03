@@ -79,7 +79,6 @@
   "homepage": "https://github.com/powerhouse-inc/design-system#readme",
   "devDependencies": {
     "@powerhousedao/config": "workspace:*",
-    "@powerhousedao/reactor": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",
     "@prettier/sync": "^0.5.2",
     "@storybook/addon-actions": "^8.6.7",

@@ -1,5 +1,8 @@
 import { getConfig } from "@powerhousedao/config/node";
-import type { IProcessor, OperationWithContext } from "@powerhousedao/reactor";
+import type {
+  IProcessor,
+  OperationWithContext,
+} from "@powerhousedao/reactor-browser";
 import type { InternalTransmitterUpdate } from "document-drive";
 import type { DocumentCodegenManager } from "./document-handlers/document-codegen-manager.js";
 import { DocumentCodegenFactory } from "./document-handlers/index.js";

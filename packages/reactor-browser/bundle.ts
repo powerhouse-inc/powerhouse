@@ -1,7 +1,7 @@
 await Bun.build({
-  entrypoints: ["./src/index.ts"],
+  entrypoints: ["./src/index.ts", "./src/connect.ts", "./src/analytics.ts"],
+  outdir: "dist",
   root: ".",
-  outdir: "./dist",
   target: "browser",
   external: ["react", "react-dom", "@electric-sql/pglite"],
 });

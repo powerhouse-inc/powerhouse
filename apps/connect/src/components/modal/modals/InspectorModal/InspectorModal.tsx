@@ -1,5 +1,5 @@
 import { InspectorModal as ConnectInspectorModal } from "@powerhousedao/design-system/connect";
-import { REACTOR_SCHEMA } from "@powerhousedao/reactor";
+import { REACTOR_SCHEMA } from "@powerhousedao/reactor-browser";
 import { closePHModal, usePHModal } from "@powerhousedao/reactor-browser";
 import { useDbExplorer } from "./useDbExplorer.js";
 import { useQueueInspector } from "./useQueueInspector.js";

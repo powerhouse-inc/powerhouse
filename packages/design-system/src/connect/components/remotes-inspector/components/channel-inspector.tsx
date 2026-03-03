@@ -3,7 +3,7 @@ import {
   GqlRequestChannel,
   IntervalPollTimer,
   type IChannel,
-} from "@powerhousedao/reactor";
+} from "@powerhousedao/reactor-browser";
 import { useCallback, useState } from "react";
 import { type SortDirection, type SortOptions } from "../utils.js";
 import { MailboxTable, type MailboxType } from "./mailbox-table.js";

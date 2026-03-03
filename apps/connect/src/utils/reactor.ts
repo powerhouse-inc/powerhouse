@@ -7,7 +7,7 @@ import {
   type Database,
   type JwtHandler,
   type SignerConfig,
-} from "@powerhousedao/reactor";
+} from "@powerhousedao/reactor-browser";
 import {
   addRemoteDrive,
   type BrowserReactorClientModule,
