@@ -157,7 +157,7 @@ const app = command({
 
     const releaseClient = new ReleaseClient(
       {
-        projects: ["packages/*", "clis/*", "apps/*"],
+        projects: ["packages/*", "packages/analytics-engine/*", "clis/*", "apps/*"],
         projectsRelationship: "fixed",
         releaseTag: { pattern: "v{version}" },
         changelog: {
