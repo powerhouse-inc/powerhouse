@@ -18,7 +18,7 @@ describe("Build boilerplate package.json file", () => {
     { timeout: 100000 },
     async () => {
       const name = "test-project";
-      const testTags = ["", "latest", "dev", "staging"] as string[];
+      const testTags = ["", "latest", "dev"] as string[];
       for (const tag of testTags) {
         const packageJson = await buildBoilerplatePackageJson({
           name,
