@@ -37,10 +37,12 @@ Build the packages that the profiling scripts depend on. Run these from the repo
 ```bash
 pnpm --filter document-model run tsc --build
 pnpm --filter @powerhousedao/reactor run build
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/postgres" pnpm --filter document-drive run migrate
 pnpm --filter @powerhousedao/switchboard run tsc --build
 ```
 
-Rebuild after any source changes in these packages, otherwise the scripts will run against stale code.
+- `migrate` runs `prisma generate && prisma db push` — required once per fresh PostgreSQL database to create the schema. Re-run if you wipe the database.
+- Rebuild after any source changes in these packages, otherwise the scripts will run against stale code.
 
 Scripts are run with [tsx](https://github.com/privatenumber/tsx). The GraphQL-based scripts (`docs-*`) require a running switchboard instance (default: `http://localhost:4001/graphql`).
 
@@ -156,20 +158,35 @@ tsx docs-create.ts 5 --operations 10
 tsx docs-create.ts --doc-id abc123 -o 25 -l 100
 tsx docs-create.ts -d doc1 -d doc2 -o 10
 
-# Custom endpoint and document type
-tsx docs-create.ts 50 --documentType powerhouse/document-model --endpoint http://localhost:4001/graphql
+# Batch operations (10 ops per mutateDocument call instead of 1)
+tsx docs-create.ts 1 -o 100 --batch-size 10
+
+# Custom endpoint
+tsx docs-create.ts 50 --endpoint http://localhost:4001/graphql
+
+# Save output to a timestamped file
+tsx docs-create.ts 5 -o 20 -l 10 -p --file
+
+# Save output to a specific file
+tsx docs-create.ts 5 -o 20 -l 10 -p -O results.txt
+
+# Show percentiles and action type names in min/max
+tsx docs-create.ts 5 -o 20 --percentiles --show-action-types
 ```
 
-| Flag             | Short | Description                                                 |
-| ---------------- | ----- | ----------------------------------------------------------- |
-| `N` (positional) |       | Number of documents to create (default: 10)                 |
-| `--operations`   | `-o`  | Operations per loop (default: 0)                            |
-| `--op-loops`     | `-l`  | Loops per document (default: 1)                             |
-| `--doc-id`       | `-d`  | Use existing document(s), can be repeated                   |
-| `--endpoint`     |       | GraphQL endpoint (default: `http://localhost:4001/graphql`) |
-| `--documentType` |       | Document type for new documents                             |
-| `--verbose`      | `-v`  | Show detailed operation payloads                            |
-| `--percentiles`  | `-p`  | Show p50/p90/p95/p99 stats                                  |
+| Flag                  | Short | Description                                                          |
+| --------------------- | ----- | -------------------------------------------------------------------- |
+| `N` (positional)      |       | Number of documents to create (default: 10)                          |
+| `--operations`        | `-o`  | Operations per loop (default: 0)                                     |
+| `--op-loops`          | `-l`  | Loops per document (default: 1)                                      |
+| `--batch-size`        | `-b`  | Operations per `mutateDocument` call (default: 1)                    |
+| `--doc-id`            | `-d`  | Use existing document(s), can be repeated                            |
+| `--endpoint`          |       | GraphQL endpoint (default: `http://localhost:4001/graphql`)          |
+| `--file`              |       | Write output to a timestamped file (default name: `docs-create.txt`) |
+| `--output`            | `-O`  | Write output to a specific file (no timestamp prefix)                |
+| `--verbose`           | `-v`  | Show detailed operation timings                                      |
+| `--percentiles`       | `-p`  | Show p50/p90/p95/p99 stats                                           |
+| `--show-action-types` | `-a`  | Show action names in min/max timings                                 |
 
 ### `docs-count.ts` — Count documents (fast)
 
@@ -211,27 +228,13 @@ tsx docs-reset.ts --endpoint http://localhost:4001/graphql
 
 ### `switchboard-pyroscope.sh` — Run switchboard with Pyroscope
 
-Starts the switchboard with [Pyroscope](https://pyroscope.io/) continuous profiling enabled.
+Starts the switchboard with [Pyroscope](https://pyroscope.io/) continuous profiling enabled in wall:wall + CPU mode. Pyroscope is initialized at the top level before the server starts, so the full startup is captured. Supports selecting the runtime (Node.js or Bun) for comparison benchmarks.
 
 ```bash
 ./scripts/profiling/switchboard-pyroscope.sh
+./scripts/profiling/switchboard-pyroscope.sh --runtime bun
 ./scripts/profiling/switchboard-pyroscope.sh --mode legacy
-./scripts/profiling/switchboard-pyroscope.sh --postgres "postgresql://postgres:postgres@localhost:5432/reactor"
-```
-
-| Flag         | Short | Description                              |
-| ------------ | ----- | ---------------------------------------- |
-| `--mode`     | `-m`  | Storage mode: `v2` (default) or `legacy` |
-| `--postgres` | `-p`  | PostgreSQL database URL                  |
-
-### `switchboard-runtime.sh` — Run switchboard with different runtimes
-
-Starts the switchboard with a chosen runtime (Node.js or Bun) for comparison benchmarks.
-
-```bash
-./scripts/profiling/switchboard-runtime.sh --runtime node
-./scripts/profiling/switchboard-runtime.sh --runtime bun
-./scripts/profiling/switchboard-runtime.sh -r bun -m legacy
+./scripts/profiling/switchboard-pyroscope.sh -r bun -m legacy --postgres "postgresql://postgres:postgres@localhost:5432/reactor"
 ```
 
 | Flag         | Short | Description                              |
@@ -298,12 +301,31 @@ tsx pyroscope-analyse.ts 'http://localhost:4040/?query=...' --baseline ./1771254
 ### End-to-end switchboard benchmark
 
 ```bash
-# Terminal 1: start switchboard
-./scripts/profiling/switchboard-runtime.sh --runtime node
+# Terminal 1: start switchboard (use --runtime bun to compare runtimes)
+./scripts/profiling/switchboard-pyroscope.sh --runtime node
 
 # Terminal 2: run workload
 tsx docs-create.ts 20 -o 10 -l 5 -p
 
 # Cleanup
 tsx docs-reset.ts
+```
+
+### Profile switchboard end-to-end with Pyroscope
+
+```bash
+docker compose -f scripts/profiling/docker-compose.yml up pyroscope postgres -d
+
+# Migrate the database schema (required once per fresh database)
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/postgres" pnpm --filter document-drive run migrate
+
+# Terminal 1: start switchboard with Pyroscope (wall:wall + CPU mode)
+./scripts/profiling/switchboard-pyroscope.sh \
+  --postgres "postgresql://postgres:postgres@localhost:5432/postgres"
+
+# Terminal 2: run workload
+tsx docs-create.ts 1 -o 25 -b 5 -l 100
+
+# Open http://localhost:4040 to view the switchboard flame graph
+# (use service_name="powerhouse-mono-switchboard" in the query)
 ```
