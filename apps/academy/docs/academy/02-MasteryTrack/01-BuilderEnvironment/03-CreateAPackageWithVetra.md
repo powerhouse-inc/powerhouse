@@ -4,7 +4,7 @@
 **This tutorial is a summary for builders that are already familiar with building document models**.  
 It provides a summary from initial setup up to publishing a distributable package.
 
-Please start with the [**Get Started**](/academy/GetStarted/home) Chapter or [**Document Model Creation**](/academy/MasteryTrack/DocumentModelCreation/SpecifyTheStateSchema) section if you are unfamiliar with building a document model.
+Please start with the [**Get Started**](/) Chapter or [**Document Model Creation**](/academy/MasteryTrack/DocumentModelCreation/SpecifyTheStateSchema) section if you are unfamiliar with building a document model.
 :::
 
 <details>
@@ -57,17 +57,17 @@ If you are starting a new project to be packaged, this command will also prompt 
 
 When installing or using the Powerhouse CLI commands you are able to make use of the dev & staging branches. These branches contain more experimental features than the latest stable release the PH CLI uses by default. They can be used to get access to a bugfix or features under development.
 
-| Command                            | Description                                           |
-| ---------------------------------- | ----------------------------------------------------- |
-| **pnpm install -g ph-cmd** or **npm install -g ph-cmd**         | Install latest stable version                         |
-| **pnpm install -g ph-cmd@dev** or **npm install -g ph-cmd@dev**     | Install development version                           |
+| Command                                                                 | Description                                           |
+| ----------------------------------------------------------------------- | ----------------------------------------------------- |
+| **pnpm install -g ph-cmd** or **npm install -g ph-cmd**                 | Install latest stable version                         |
+| **pnpm install -g ph-cmd@dev** or **npm install -g ph-cmd@dev**         | Install development version                           |
 | **pnpm install -g ph-cmd@staging** or **npm install -g ph-cmd@staging** | Install staging version                               |
-| **ph init**                        | Use latest stable version of the boilerplate          |
-| **ph init --dev**                  | Use development version of the boilerplate            |
-| **ph init --staging**              | Use staging version of the boilerplate                |
-| **ph use**                         | Switch all dependencies to latest production versions |
-| **ph use dev**                     | Switch all dependencies to development versions       |
-| **ph use prod**                    | Switch all dependencies to production versions        |
+| **ph init**                                                             | Use latest stable version of the boilerplate          |
+| **ph init --dev**                                                       | Use development version of the boilerplate            |
+| **ph init --staging**                                                   | Use staging version of the boilerplate                |
+| **ph use**                                                              | Switch all dependencies to latest production versions |
+| **ph use dev**                                                          | Switch all dependencies to development versions       |
+| **ph use prod**                                                         | Switch all dependencies to production versions        |
 
 Please be aware that these versions can contain bugs and experimental features that aren't fully tested.
 
@@ -78,34 +78,41 @@ Please be aware that these versions can contain bugs and experimental features t
 You can launch Vetra Studio in two modes:
 
 #### Interactive Mode (Recommended for Development)
+
 ```bash
 ph vetra --interactive
 ```
+
 In interactive mode:
+
 - You'll receive confirmation prompts before any code generation
 - Changes require explicit confirmation before being processed
 - Provides better control and visibility over document changes
 
-#### Watch Mode 
+#### Watch Mode
 
 ```bash
 ph vetra --interactive --watch
 ```
+
 In watch mode:
 
-- Adding `--watch` to your command enables dynamic loading for document-models and editors in Vetra studio and switchboard. 
+- Adding `--watch` to your command enables dynamic loading for document-models and editors in Vetra studio and switchboard.
 - When enabled, the system will watch for changes in these directories and reload them dynamically.
 
 :::warning Be Aware
-When you are building your document model the code can break the Vetra Studio environment. 
+When you are building your document model the code can break the Vetra Studio environment.
 A full overview of the Vetra Studio commands can be found in the [Powerhouse CLI](/academy/APIReferences/PowerhouseCLI#vetra)
 :::
 
 #### Standard Mode
+
 ```bash
 ph vetra
 ```
+
 In standard mode:
+
 - Changes are processed automatically with 1-second debounce
 - Multiple changes are batched and processed together
 - Uses the latest document state for processing
@@ -132,12 +139,12 @@ This command typically opens Connect in your browser at `http://localhost:3000/`
 Vetra Studio integrates deeply with Claude through MCP (Model Context Protocol). This is where AI comes into the mix and you get the chance to have greater control and direction over what your LLM is coding for you.
 
 :::info Specification Driven Design & Development
-Vetra embraces **Specification Driven Design & Development** —an approach where your structured specification documents become the shared language between you and AI agents. You communicate intent through precise specs that are machine-readable and executable. 
+Vetra embraces **Specification Driven Design & Development** —an approach where your structured specification documents become the shared language between you and AI agents. You communicate intent through precise specs that are machine-readable and executable.
 
 <details>
 <summary>Explainer: Specification Driven AI</summary>
 
-In the **'Get Started'** chapter we've been making use of strict schema definition principles to communicate the intended use case of our document models. 
+In the **'Get Started'** chapter we've been making use of strict schema definition principles to communicate the intended use case of our document models.
 The **schema definition language** is not only a shared language that bridges the gap between developer, designer and analyst but also the gap between builder and AI-agent through **specification driven AI control**.
 
 - Communicate your solution and intent through a structured specification framework designed for AI collaboration.
@@ -154,14 +161,17 @@ The **schema definition language** is not only a shared language that bridges th
 - Vetra supports integration with custom remote drives, allowing users to create, share and manage documents within these drives
 
 **Document Operations:**
+
 - `createDocument` / `getDocument` / `deleteDocument` - Manage documents
 - `addActions` - Modify document state through operations
 
 **Drive Operations:**
+
 - `getDrives` / `addDrive` / `getDrive` - Manage document drives
 - `addRemoteDrive` - Connect to remote drives
 
 **Document Model Operations:**
+
 - `getDocumentModels` - List available document model types
 - `getDocumentModelSchema` - Get schema for specific models
 
@@ -171,25 +181,25 @@ A specialized AI agent that guides users through document model creation with re
 </details>
 :::
 
-
 #### 1. Start the Reactor MCP:
 
-Make sure you are in the same directory as your project. 
-Claude will automatically recognize the necessary files and MCP tools. 
+Make sure you are in the same directory as your project.
+Claude will automatically recognize the necessary files and MCP tools.
 
 ```bash
 claude
 ```
 
-Since you're interacting with an LLM it has a high capacity for interpreting your intentions. 
-Similar natural language commands will work as well. 
+Since you're interacting with an LLM it has a high capacity for interpreting your intentions.
+Similar natural language commands will work as well.
 
 ```bash
 connect to the reactor mcp
 ```
 
 #### 2. Verify MCP connection:
-- Check that the Reactor MCP is available. 
+
+- Check that the Reactor MCP is available.
 - Confirm Vetra Studio shows "Connected to Reactor MCP"
 
 ```bash
@@ -205,6 +215,7 @@ Connected to MCP successfully! I can see there's a
 ## Phase 2: Package Creation
 
 ### 2.1. Set Package Description (Required)
+
 1. Provide a name for your package
 2. Add a meaningful description
 3. Add keywords to add search terms to your package
@@ -215,14 +226,16 @@ Connected to MCP successfully! I can see there's a
 You can create document models in two ways:
 
 #### Manual Creation
+
 - Define document schema with fields and types as in the **'Get Started'** chapter
 - Create the necessary operations
 - Add the required modules to your package
 - The document model creation chapter in the Mastery track provides in depth support [here](/academy/MasteryTrack/DocumentModelCreation/SpecifyTheStateSchema)
 
-→ [Learn more about Document Models](/academy/02-MasteryTrack/02-DocumentModelCreation/01-WhatIsADocumentModel)
+→ [Learn more about Document Models](/academy/MasteryTrack/DocumentModelCreation/WhatIsADocumentModel)
 
 #### Using MCP (AI-Assisted)
+
 - Describe your package, it's functionality and your needs in natural language in great detail.
 - Claude will:
   - Generate an appropriate schema in the document model
@@ -232,8 +245,8 @@ You can create document models in two ways:
 
 - Claude will also add the necessary interface in the form of a [document editor](/academy/MasteryTrack/BuildingUserExperiences/BuildingDocumentEditors) and scaffold the [drive-app functionality](/academy/MasteryTrack/BuildingUserExperiences/BuildingADriveExplorer) when specified.
 
-→ [Learn more about Building Document Editors](/academy/02-MasteryTrack/03-BuildingUserExperiences/01-BuildingDocumentEditors)
-→ [Learn more about Building a Drive Explorer](/academy/02-MasteryTrack/03-BuildingUserExperiences/03-BuildingADriveExplorer)
+→ [Learn more about Building Document Editors](/academy/MasteryTrack/BuildingUserExperiences/BuildingDocumentEditors)
+→ [Learn more about Building a Drive Explorer](/academy/MasteryTrack/BuildingUserExperiences/BuildingADriveExplorer)
 
 <details>
 <summary>Alternatively: Use Connect</summary>
@@ -272,19 +285,21 @@ This command creates a new directory under `document-models/YourModelName/` cont
 ### 2.3. Add Document Editor (Required)
 
 #### Manual Creation
+
 - Select your target document model
 - Configure the currently limited editor properties
 - Add the editor specification to Vetra Studio drive
 - The system will generate scaffolding code
 
 #### Using MCP (AI-Assisted)
+
 - Request Claude to create an editor for your document. Do this with the help of a detailed description of the user interface, user experience and logic that you wish to generate. Make sure to reference operations from the document model to get the best results
 - Claude will:
   - Generate editor components
   - Implement necessary hooks
   - Create required UI elements
 
-→ [Learn more about Building Document Editors](/academy/02-MasteryTrack/03-BuildingUserExperiences/01-BuildingDocumentEditors)
+→ [Learn more about Building Document Editors](/academy/MasteryTrack/BuildingUserExperiences/BuildingDocumentEditors)
 
 <details>
 <summary>Alternatively: Generate command</summary>
@@ -351,14 +366,15 @@ Create a new document of your defined type. Interact with your editor, test all 
 
 </details>
 
-:::tip  Best Practices
+:::tip Best Practices
 
 **Working with MCP and Claude**
+
 1. Provide clear, specific instructions.
 2. Ask for clarifying questions to be answered before code generation.
 3. Review generated schemas before confirmation.
-4. Work in layers instead of 'one-shotting' your code. 
-5. Verify implementation details in generated code before continuing. 
+4. Work in layers instead of 'one-shotting' your code.
+5. Verify implementation details in generated code before continuing.
 6. Always double-check proposed next actions.
 
 <details>
@@ -367,6 +383,7 @@ Create a new document of your defined type. Interact with your editor, test all 
 ## Before You Start
 
 **Setup Requirements:**
+
 1. Run `ph vetra --interactive --watch` in one terminal first
 2. Start Claude in a separate terminal from your project directory
 3. Connect with: `claude` or `connect to the reactor mcp`
@@ -377,6 +394,7 @@ Create a new document of your defined type. Interact with your editor, test all 
 ### 1. Always Review Before Implementation
 
 **CRITICAL**: Claude will present a proposal before creating anything. You'll see:
+
 - Proposed document model structure (state schema, operations, modules)
 - How data will be organized
 - What actions users can perform
@@ -388,6 +406,7 @@ Create a new document of your defined type. Interact with your editor, test all 
 When describing what you need, include:
 
 **For Document Models:**
+
 - Purpose of the document (what problem does it solve?)
 - All data fields and their types (strings, numbers, dates, etc.)
 - What operations users should be able to perform
@@ -395,6 +414,7 @@ When describing what you need, include:
 - Business rules or constraints
 
 **For Document Editors:**
+
 - Which document model it's for
 - UI layout and components you want
 - User interactions and workflows
@@ -407,9 +427,9 @@ Good prompt for a document model:
 
 ```
 Create a document model for expense tracking with:
-- Each expense has: amount (number), description (text), 
+- Each expense has: amount (number), description (text),
   category (expense type), date, and receipt URL (optional)
-- Users can: add expenses, edit expense details, delete expenses, 
+- Users can: add expenses, edit expense details, delete expenses,
   and categorize by type
 - Track total amount automatically
 ```
@@ -428,6 +448,7 @@ Create an editor for the expense tracker with:
 ### 4. Work in Layers (Don't "One-Shot")
 
 Instead of asking for everything at once:
+
 - ✅ Start with the core document model
 - ✅ Test it works
 - ✅ Then add the editor
@@ -438,8 +459,9 @@ This approach catches issues early and gives you better results.
 ### 5. Interactive Mode Benefits
 
 Using `ph vetra --interactive` gives you confirmation prompts:
+
 - Schema changes
-- Operation definitions  
+- Operation definitions
 - Code generation
 
 **Review each step** before confirming - it's easier to adjust now than later.
@@ -447,6 +469,7 @@ Using `ph vetra --interactive` gives you confirmation prompts:
 ### 6. What to Expect After Implementation
 
 Claude will automatically:
+
 - Run TypeScript checks (`npm run tsc`)
 - Run linting (`npm run lint:fix`)
 - Report any errors found
@@ -457,12 +480,15 @@ You'll see confirmation when everything compiles successfully.
 ### 7. Common Issues and How to Avoid Them
 
 **Issue**: Generated model doesn't match expectations
+
 - **Solution**: Provide more detailed requirements upfront. Ask clarifying questions.
 
 **Issue**: Operations don't work as expected
+
 - **Solution**: Be explicit about all actions and their parameters. Use real-world examples.
 
 **Issue**: Editor UI doesn't look right
+
 - **Solution**: Describe the UI in detail (layout, components, interactions). Reference similar interfaces if helpful.
 
 ## Key Concepts to Know

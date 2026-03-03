@@ -1,9 +1,6 @@
 ---
 toc_max_heading_level: 3
-
-
 ---
-
 
 # Vetra Studio
 
@@ -12,15 +9,15 @@ toc_max_heading_level: 3
 Vetra Studio is the builder environment where you create, manage, and collaborate on Powerhouse packages. It consists of two main components:
 
 - **Vetra Studio Drive**: Serves as a hub for developers to access, manage & share specifications through a remote Vetra drive. It functions as the orchestration hub where you as a builder assemble all the necessary specifications for your intended use-case, software solution, or package. Each specification document corresponds to a **module** — a distinct building block of your package (such as a document model, editor, or data integration).
-- **Vetra Package Library**: Store, publish, and fork git repositories of packages in the Vetra Package Library.    
-Visit the [Vetra Package Library here](https://vetra.io/packages) 
+- **Vetra Package Library**: Store, publish, and fork git repositories of packages in the Vetra Package Library.  
+  Visit the [Vetra Package Library here](https://vetra.io/packages)
 
 :::info What is a Specification Document?
 A **specification document** is a configuration file that defines how a specific module in your package should behave. Think of it as a blueprint — it describes the structure, rules, and relationships that Powerhouse uses to generate the actual code for that module. These specification documents unlock **Specification Driven Design & Development**—enabling you to communicate your solution and intent through a structured framework designed for AI collaboration. Specs serve as a shared language that enables precise, iterative edits—turning messy intent into clean execution, and turning business needs into maintainable functionality.
 :::
 
-As Vetra Studio matures, each of these specification documents will offer an interface by which you as a builder get more control over the modules that make up your package. 
-For now, the specification documents offer you a template for code generation. 
+As Vetra Studio matures, each of these specification documents will offer an interface by which you as a builder get more control over the modules that make up your package.
+For now, the specification documents offer you a template for code generation.
 
 <figure className="image-container">
   <img
@@ -32,28 +29,30 @@ For now, the specification documents offer you a template for code generation.
 
 ### Module Categories
 
-### 1. Document Models 
+### 1. Document Models
 
 A **document model** is a structured data type that defines what information your application can store and how it can be modified. Unlike traditional databases, document models use **operations** (actions like "add item" or "update title") rather than direct data manipulation, making them ideal for collaborative and auditable applications.
 
 - **Document model specification**: Defines the structure and operations of a document model using [GraphQL SDL](https://graphql.org/learn/schema/) (Schema Definition Language), ensuring consistent data management and processing.
 
-→ [Learn more about Document Models](/academy/02-MasteryTrack/02-DocumentModelCreation/01-WhatIsADocumentModel)
+→ [Learn more about Document Models](/academy/MasteryTrack/DocumentModelCreation/WhatIsADocumentModel)
 
 ### 2. User Experiences
+
 - **Editor specification**: Outlines the interface and functionalities of a document model editor, allowing users to interact with and modify document data.
 - **Drive-app specification**: Specifies the UI and interactions for managing documents within a drive, providing tailored views and functionalities.
 
-→ [Learn more about Building Document Editors](/academy/02-MasteryTrack/03-BuildingUserExperiences/01-BuildingDocumentEditors)
-→ [Learn more about Building a Drive Explorer](/academy/02-MasteryTrack/03-BuildingUserExperiences/03-BuildingADriveExplorer)
+→ [Learn more about Building Document Editors](/academy/MasteryTrack/BuildingUserExperiences/BuildingDocumentEditors)
+→ [Learn more about Building a Drive Explorer](/academy/MasteryTrack/BuildingUserExperiences/BuildingADriveExplorer)
 
 ### 3. Data Integrations
+
 - **Subgraph specification**: Details the connections and relationships within a subgraph (a subset of your data exposed via a GraphQL API), facilitating efficient data querying and manipulation.
 - **Codegen Processor Specification**: Describes the process for automatically generating code from document model specifications, ensuring alignment with intended architecture.
 - **RelationalDb Processor Specification**: Defines how relational databases are structured and queried, supporting efficient data management and retrieval.
 
-→ [Learn more about Using Subgraphs](/academy/02-MasteryTrack/04-WorkWithData/03-UsingSubgraphs)
-→ [Learn more about Relational DB Processor](/academy/02-MasteryTrack/04-WorkWithData/05-RelationalDbProcessor)
+→ [Learn more about Using Subgraphs](/academy/MasteryTrack/WorkWithData/UsingSubgraphs)
+→ [Learn more about Relational DB Processor](/academy/MasteryTrack/WorkWithData/RelationalDbProcessor)
 
 <figure className="image-container">
   <img
@@ -74,12 +73,12 @@ The Powerhouse config includes a Vetra URL for consistent project configuration 
 
 ```typescript
 vetra: {
-    driveId: string;
-    driveUrl: string;
-};
+  driveId: string;
+  driveUrl: string;
+}
 ```
 
-Imagine you are a builder and want to work on, or continue with a set of specifications from your teammates. 
+Imagine you are a builder and want to work on, or continue with a set of specifications from your teammates.
 You could then add the specific remote Vetra drive to your Powerhouse configuration in the `powerhouse.config.json` file to get going:
 
 ```json
@@ -97,11 +96,13 @@ An example of a builder team building on the Powerhouse Vetra Ecosystem and its 
 Remote drives enable collaborative development by syncing specifications across team members.
 
 **Key Commands:**
+
 - `ph init --remote-drive <url>` - Create a NEW project connected to a remote drive
-- `ph checkout --remote-drive <url>` - Clone an EXISTING project from a remote drive  
+- `ph checkout --remote-drive <url>` - Clone an EXISTING project from a remote drive
 - `ph vetra --watch` - Start development with a preview drive for testing local changes
 
 **Workflows:**
+
 - **Project Owner**: `ph init --remote-drive` → Create GitHub repo → Push → `ph vetra --watch` to configure
 - **Collaborator**: `ph checkout --remote-drive` → `ph vetra --watch` to start developing
 
