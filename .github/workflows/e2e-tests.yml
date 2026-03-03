@@ -202,7 +202,6 @@ jobs:
 
       - name: Build typescript project
         run: pnpm tsc -b
-        working-directory: packages/analytics-engine
 
       - name: Run misc build scripts
         run: pnpm build-misc
