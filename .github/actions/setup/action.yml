@@ -26,6 +26,10 @@ runs:
       shell: bash
       run: pnpm build-tsc
 
+    - name: Run bundle scripts
+      shell: bash
+      run: pnpm build-bundle
+
     - name: Run css build scripts
       shell: bash
       run: pnpm build-css
