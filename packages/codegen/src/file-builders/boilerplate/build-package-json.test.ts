@@ -25,6 +25,7 @@ describe("Build boilerplate package.json file", () => {
           tag,
         });
         const validationResult = validate(packageJson);
+        console.log({ packageJson });
         expect(validationResult.valid).toBe(true);
       }
     },
