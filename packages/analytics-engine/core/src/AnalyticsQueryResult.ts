@@ -1,5 +1,5 @@
-import { AnalyticsPath } from "./AnalyticsPath.js";
-import { AnalyticsPeriod } from "./AnalyticsPeriod.js";
+import type { AnalyticsPath } from "./AnalyticsPath.js";
+import type { AnalyticsPeriod } from "./AnalyticsPeriod.js";
 
 export type AnalyticsQueryResultRow = {
   period: AnalyticsPeriod;

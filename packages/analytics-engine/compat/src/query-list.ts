@@ -1,7 +1,7 @@
 import * as fs from "fs";
 import { parseArgs } from "util";
 import { DateTime } from "luxon";
-import { AnalyticsGranularity } from "@powerhousedao/analytics-engine-core";
+import type { AnalyticsGranularity } from "@powerhousedao/analytics-engine-core";
 
 class ExecutionResults {
   public readonly durationMs: number;

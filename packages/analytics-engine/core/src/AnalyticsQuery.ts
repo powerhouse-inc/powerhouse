@@ -1,5 +1,5 @@
-import { DateTime } from "luxon";
-import { AnalyticsPath } from "./AnalyticsPath.js";
+import type { DateTime } from "luxon";
+import type { AnalyticsPath } from "./AnalyticsPath.js";
 
 export type AnalyticsSeriesQuery = {
   start: DateTime | null;
@@ -22,7 +22,7 @@ export type AnalyticsSeries<D = string | AnalyticsDimension> = {
   value: number;
   unit: string | null;
   fn: string;
-  params: Record<string, any> | null;
+  params: Record<string, unknown> | null;
   dimensions: Record<string, D>;
 };
 

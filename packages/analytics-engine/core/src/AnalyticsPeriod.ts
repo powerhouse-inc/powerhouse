@@ -148,10 +148,11 @@ export class AnalyticsPeriod {
         result += ((this._month as number) < 10 ? "0" : "") + this.month;
         break;
 
-      case AnalyticsPeriodType.Quarter:
+      case AnalyticsPeriodType.Quarter: {
         const firstMonth = ((this._quarter as number) - 1) * 3 + 1;
         result += ((firstMonth as number) < 10 ? "0" : "") + firstMonth;
         break;
+      }
 
       case AnalyticsPeriodType.Year:
         result += "01";

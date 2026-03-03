@@ -1,7 +1,7 @@
 import {
   AnalyticsDiscretizer,
-  type GroupedPeriodResults,
   type GroupedPeriodResult,
+  type GroupedPeriodResults,
 } from "./AnalyticsDiscretizer.js";
 import { AnalyticsPath } from "./AnalyticsPath.js";
 import {
@@ -9,12 +9,13 @@ import {
   PassthroughAnalyticsProfiler,
 } from "./AnalyticsProfiler.js";
 import {
+  type AnalyticsDimension,
   type AnalyticsQuery,
   type AnalyticsSeries,
   type AnalyticsSeriesQuery,
   type CompoundAnalyticsQuery,
-  type MultiCurrencyConversion,
   CompoundOperator,
+  type MultiCurrencyConversion,
 } from "./AnalyticsQuery.js";
 import { type IAnalyticsStore } from "./IAnalyticsStore.js";
 
@@ -263,12 +264,16 @@ export class AnalyticsQueryEngine {
   }
 
   private _applyDimensionsLods(
-    dimensionMap: Record<string, AnalyticsPath> | any,
+    dimensionMap: Record<string, string | AnalyticsDimension>,
     lods: Record<string, number | null>,
   ) {
-    const result: Record<string, string> | any = {};
+    const result: Record<string, string> = {};
     for (const [dimension, lod] of Object.entries(lods)) {
-      if (lod !== null && dimensionMap[dimension]) {
+      if (
+        lod !== null &&
+        dimensionMap[dimension] &&
+        typeof dimensionMap[dimension] !== "string"
+      ) {
         result[dimension] = dimensionMap[dimension]["path"]
           .applyLod(lod)
           .toString();

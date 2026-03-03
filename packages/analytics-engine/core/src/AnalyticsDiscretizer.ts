@@ -1,6 +1,8 @@
+import { DateTime, Interval } from "luxon";
+import { AnalyticsPath } from "./AnalyticsPath.js";
+import type { AnalyticsGranularity } from "./AnalyticsQuery.js";
 import {
   type AnalyticsDimension,
-  AnalyticsGranularity,
   type AnalyticsSeries,
 } from "./AnalyticsQuery.js";
 import {
@@ -8,7 +10,6 @@ import {
   type AnalyticsRange,
   getPeriodSeriesArray,
 } from "./AnalyticsTimeSlicer.js";
-import { DateTime, Interval } from "luxon";
 
 export const getQuarter = (date: DateTime) => {
   return Math.floor((date.month - 1) / 3) + 1;
@@ -132,19 +133,21 @@ export class AnalyticsDiscretizer {
         return `${p.start.year}/${p.start.month < 7 ? "H1" : "H2"}`;
       case "quarterly":
         return `${p.start.year}/Q${getQuarter(p.start)}`;
-      case "monthly":
+      case "monthly": {
         const month = p.start.toUTC().month;
         const formattedMonth = month < 10 ? `0${month}` : `${month}`;
         return `${p.start.year}/${formattedMonth}`;
+      }
       case "weekly":
         return `${p.start.weekYear}/W${p.start.weekNumber}`;
-      case "daily":
+      case "daily": {
         const monthD = p.start.month;
         const day = p.start.day;
         const formattedMonthD = monthD < 10 ? `0${monthD}` : `${monthD}`;
         const formattedDay = day < 10 ? `0${day}` : `${day}`;
         return `${p.start.year}/${formattedMonthD}/${formattedDay}`;
-      case "hourly":
+      }
+      case "hourly": {
         const monthH = p.start.month;
         const dayH = p.start.day;
         const hourH = p.start.hour;
@@ -152,6 +155,7 @@ export class AnalyticsDiscretizer {
         const formattedDayH = dayH < 10 ? `0${dayH}` : `${dayH}`;
         const formattedHourH = hourH < 10 ? `0${hourH}` : `${hourH}`;
         return `${p.start.year}/${formattedMonthH}/${formattedDayH}/${formattedHourH}`;
+      }
       default:
         return p.period;
     }
@@ -203,10 +207,10 @@ export class AnalyticsDiscretizer {
   ): DimensionedSeries[] {
     const result: DimensionedSeries[] = [];
     Object.keys(leaf).forEach((unit) => {
-      const metaDimensions: any = {};
+      const metaDimensions: Record<string, AnalyticsDimension> = {};
       Object.keys(dimensionValues).forEach((k) => {
         metaDimensions[k] = {
-          path: leaf[unit][0].dimensions[k],
+          path: AnalyticsPath.fromString(leaf[unit][0].dimensions[k]),
           icon: leaf[unit][0].dimensions.icon,
           label: leaf[unit][0].dimensions.label,
           description: leaf[unit][0].dimensions.description,
@@ -215,7 +219,7 @@ export class AnalyticsDiscretizer {
       result.push({
         unit,
         metric,
-        dimensions: metaDimensions as any,
+        dimensions: metaDimensions,
         series: this._discretizeSeries(leaf[unit], periods),
       });
     });
@@ -285,7 +289,7 @@ export class AnalyticsDiscretizer {
     const end = series.end;
 
     const cliff = series.params?.cliff
-      ? DateTime.fromISO(series.params.cliff!)
+      ? DateTime.fromISO(series.params.cliff as string)
       : null;
     if (now < start || (cliff && now < cliff)) {
       return 0.0;
@@ -303,7 +307,7 @@ export class AnalyticsDiscretizer {
     series: AnalyticsSeries<string>[],
     dimensions: string[],
   ): DiscretizerIndexNode {
-    const result: DiscretizerIndexNode | any = {};
+    const result: DiscretizerIndexNode = {};
     const map: DiscretizerIndexLeaf = {};
     const dimName = dimensions[0] || "";
 

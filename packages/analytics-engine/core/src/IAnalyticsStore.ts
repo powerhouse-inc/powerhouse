@@ -1,5 +1,5 @@
-import { DateTime } from "luxon";
-import { AnalyticsPath } from "./AnalyticsPath.js";
+import type { DateTime } from "luxon";
+import type { AnalyticsPath } from "./AnalyticsPath.js";
 import type {
   AnalyticsSeries,
   AnalyticsSeriesQuery,

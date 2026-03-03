@@ -1,8 +1,8 @@
+import type { AnalyticsQueryEngine } from "@powerhousedao/analytics-engine-core";
 import {
   AnalyticsGranularity,
   AnalyticsPath,
   type AnalyticsQuery,
-  AnalyticsQueryEngine,
 } from "@powerhousedao/analytics-engine-core";
 import { DateTime } from "luxon";
 

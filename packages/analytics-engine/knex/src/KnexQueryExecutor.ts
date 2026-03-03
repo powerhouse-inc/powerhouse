@@ -15,7 +15,9 @@ export class KnexQueryExecutor implements IKnexQueryExecutor {
     }
   }
 
-  async execute<T extends {}, U>(query: Knex.QueryBuilder<T, U>): Promise<any> {
+  async execute<T extends object, U>(
+    query: Knex.QueryBuilder<T, U>,
+  ): Promise<any> {
     const index = this._index++;
 
     if (this._queryLogger) {

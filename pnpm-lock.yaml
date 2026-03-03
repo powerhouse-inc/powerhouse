@@ -1191,6 +1191,9 @@ importers:
       chalk:
         specifier: 'catalog:'
         version: 5.6.2
+      document-drive:
+        specifier: link:../document-drive
+        version: link:../document-drive
       document-model:
         specifier: link:../document-model
         version: link:../document-model

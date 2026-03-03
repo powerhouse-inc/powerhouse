@@ -64,6 +64,12 @@ jobs:
       - name: Run misc build scripts
         run: pnpm build-misc
 
+      - name: Run bundle scripts
+        run: pnpm build-bundle
+
+      - name: Run bundle scripts
+        run: pnpm build-bundle
+
       - name: Run build clis
         run: pnpm build-cli
 

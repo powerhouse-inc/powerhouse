@@ -1,4 +1,4 @@
-import { PGlite } from "@electric-sql/pglite";
+import type { PGlite } from "@electric-sql/pglite";
 import { type IAnalyticsProfiler } from "@powerhousedao/analytics-engine-core";
 import type {
   IKnexQueryExecutor,

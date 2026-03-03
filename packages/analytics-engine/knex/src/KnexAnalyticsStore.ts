@@ -68,7 +68,7 @@ export class KnexAnalyticsStore implements IAnalyticsStore {
       .whereLike("source", source.toString("/%"))
       .delete();
 
-    let result = await this._executor.execute(query);
+    let result: number = await this._executor.execute(query);
 
     if (cleanUpDimensions) {
       result += await this.clearEmptyAnalyticsDimensions();
@@ -209,7 +209,7 @@ export class KnexAnalyticsStore implements IAnalyticsStore {
         unit: r.unit,
         fn: r.fn,
         params: r.params,
-        dimensions: {} as Record<string, AnalyticsDimension> | any,
+        dimensions: {} as Record<string, AnalyticsDimension>,
       };
 
       dimensions.forEach(

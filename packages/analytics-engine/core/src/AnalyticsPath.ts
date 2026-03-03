@@ -25,7 +25,7 @@ export class AnalyticsPath {
     return new AnalyticsPath(segments);
   }
 
-  public static fromJSON(json: any): AnalyticsPath {
+  public static fromJSON(json: { _v: string }): AnalyticsPath {
     const segments = json._v
       .split("/")
       .map((segment: string) => AnalyticsPathSegment.fromString(segment));

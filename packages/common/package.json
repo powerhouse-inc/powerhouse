@@ -49,7 +49,8 @@
     "@powerhousedao/reactor-browser": "workspace:*",
     "@powerhousedao/analytics-engine-core": "workspace:*",
     "luxon": "catalog:",
-    "zocker": "^3.0.0"
+    "zocker": "^3.0.0",
+    "document-drive": "workspace:"
   },
   "devDependencies": {
     "@powerhousedao/config": "workspace:*",

@@ -5,7 +5,10 @@ import {
   AnalyticsSerializerTypes,
 } from "@powerhousedao/analytics-engine-core";
 
-export function reviver(k: any, v: any) {
+export function reviver(
+  k: any,
+  v: { _t: AnalyticsSerializerTypes; _v: string },
+) {
   if (v instanceof Object && v._t === AnalyticsSerializerTypes.AnalyticsPath) {
     return AnalyticsPath.fromString(v._v);
   }

@@ -16,7 +16,7 @@ import { reviver } from "./AnalyticsSerializer.js";
 const { types } = pkg;
 types.setTypeParser(types.builtins.DATE, (value: string) => value);
 types.setTypeParser(types.builtins.JSON, (value: string) => {
-  return JSON.parse(value, reviver);
+  return JSON.parse(value, reviver) as unknown;
 });
 
 export type PostgresAnalyticsStoreOptions = {
@@ -66,13 +66,13 @@ export class PostgresAnalyticsStore extends KnexAnalyticsStore {
     this._profiler = profiler;
   }
 
-  async raw(sql: string) {
+  async raw<TRecord = any>(sql: string) {
     if (this._profiler) {
       return await this._profiler.record("QueryRaw", async () => {
-        return await this._postgres.raw(sql);
+        return await this._postgres.raw<TRecord>(sql);
       });
     }
 
-    return await this._postgres.raw(sql);
+    return await this._postgres.raw<TRecord>(sql);
   }
 }

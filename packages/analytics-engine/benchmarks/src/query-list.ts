@@ -1,9 +1,11 @@
 import fs from "fs";
 import { DateTime } from "luxon";
 import { MemoryAnalyticsStore } from "@powerhousedao/analytics-engine-browser";
-import {
+import type {
   AnalyticsGranularity,
   AnalyticsPath,
+} from "@powerhousedao/analytics-engine-core";
+import {
   AnalyticsProfiler,
   AnalyticsQueryEngine,
 } from "@powerhousedao/analytics-engine-core";

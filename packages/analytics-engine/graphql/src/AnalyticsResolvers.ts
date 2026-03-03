@@ -1,4 +1,4 @@
-import { AnalyticsModel } from "./AnalyticsModel.js";
+import type { AnalyticsModel } from "./AnalyticsModel.js";
 
 export const AnalyticsResolvers: any = {
   Query: {

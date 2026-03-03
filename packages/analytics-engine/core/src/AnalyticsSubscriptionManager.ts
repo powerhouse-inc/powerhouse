@@ -1,4 +1,4 @@
-import { AnalyticsPath } from "./AnalyticsPath.js";
+import type { AnalyticsPath } from "./AnalyticsPath.js";
 import type { AnalyticsUpdateCallback } from "./IAnalyticsStore.js";
 
 export class NotificationError extends Error {

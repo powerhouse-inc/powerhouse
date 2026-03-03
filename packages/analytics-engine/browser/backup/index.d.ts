@@ -1657,6 +1657,7 @@ declare module "wa-sqlite/src/examples/ArrayAsyncModule.js" {
      * @param {function} f
      * @returns {Promise<number>}
      */
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
     handleAsync(f: Function): Promise<number>;
   }
 }
