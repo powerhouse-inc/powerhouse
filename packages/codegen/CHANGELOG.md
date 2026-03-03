@@ -1,3 +1,14 @@
+## 6.0.1-staging.1 (2026-03-03)
+
+### 🩹 Fixes
+
+- compatibility issues with codegen and vetra ([17723c37f](https://github.com/powerhouse-inc/powerhouse/commit/17723c37f))
+- **codegen:** the lookup for file paths did not support both versions ([9edb78394](https://github.com/powerhouse-inc/powerhouse/commit/9edb78394))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
 ## 6.0.0-dev.67 (2026-03-03)
 
 This was a version bump only for @powerhousedao/codegen to align it with other projects, there were no code changes.

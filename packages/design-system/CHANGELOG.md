@@ -1,3 +1,7 @@
+## 6.0.1-staging.1 (2026-03-03)
+
+This was a version bump only for @powerhousedao/design-system to align it with other projects, there were no code changes.
+
 ## 6.0.0-dev.67 (2026-03-03)
 
 This was a version bump only for @powerhousedao/design-system to align it with other projects, there were no code changes.

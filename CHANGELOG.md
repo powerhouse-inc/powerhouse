@@ -1,3 +1,18 @@
+## 6.0.1-staging.1 (2026-03-03)
+
+### 🚀 Features
+
+- **codegen:** versioned reducers by default ([c8111a1d9](https://github.com/powerhouse-inc/powerhouse/commit/c8111a1d9))
+
+### 🩹 Fixes
+
+- compatibility issues with codegen and vetra ([17723c37f](https://github.com/powerhouse-inc/powerhouse/commit/17723c37f))
+- **codegen:** the lookup for file paths did not support both versions ([9edb78394](https://github.com/powerhouse-inc/powerhouse/commit/9edb78394))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
 ## 6.0.0-dev.67 (2026-03-03)
 
 ### 🩹 Fixes

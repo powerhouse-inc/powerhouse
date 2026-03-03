@@ -1,3 +1,13 @@
+## 6.0.1-staging.1 (2026-03-03)
+
+### 🚀 Features
+
+- **codegen:** versioned reducers by default ([c8111a1d9](https://github.com/powerhouse-inc/powerhouse/commit/c8111a1d9))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
 ## 6.0.0-dev.67 (2026-03-03)
 
 This was a version bump only for @powerhousedao/ph-cli to align it with other projects, there were no code changes.
