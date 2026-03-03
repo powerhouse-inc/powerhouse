@@ -202,9 +202,9 @@ async function performOperations(
 
     const mutation = buildBatchMutation(batchOps);
 
-    const opStart = Date.now();
+    const opStart = performance.now();
     await client.request(mutation, variables);
-    const batchDurationMs = Date.now() - opStart;
+    const batchDurationMs = performance.now() - opStart;
 
     // Calculate per-operation duration for consistent min/max tracking
     const perOpDurationMs = batchDurationMs / batchCount;
@@ -335,8 +335,10 @@ Examples:
     }
   }
 
-  if (count < 0) {
-    console.error(`Error: Document count must be a non-negative integer.`);
+  if (docIds.length === 0 && count < 1) {
+    console.error(
+      `Error: Document count must be a positive integer (>= 1) when --doc-id is not provided.`,
+    );
     process.exit(1);
   }
 
@@ -484,7 +486,7 @@ async function main() {
     const initialMemory = getMemoryStats();
     console.log(`\nInitial memory: ${formatMemory(initialMemory)}`);
 
-    const overallStartTime = Date.now();
+    const overallStartTime = performance.now();
     let documentIds: string[];
 
     if (useExistingDocs) {
@@ -493,7 +495,7 @@ async function main() {
       documentIds.forEach((id) => console.log(`  - ${id}`));
     } else {
       console.log(`\nPhase 1: Creating ${count} documents...`);
-      const createStartTime = Date.now();
+      const createStartTime = performance.now();
       documentIds = [];
 
       for (let i = 0; i < count; i++) {
@@ -502,7 +504,7 @@ async function main() {
         process.stdout.write(`\r  Progress: ${i + 1}/${count}`);
       }
 
-      const createDurationMs = Date.now() - createStartTime;
+      const createDurationMs = performance.now() - createStartTime;
       const createDuration = (createDurationMs / 1000).toFixed(2);
       const msPerDoc = (createDurationMs / count).toFixed(0);
       const phase1Memory = getMemoryStats();
@@ -520,7 +522,7 @@ async function main() {
       console.log(
         `\n${phaseLabel}: Performing ${operations} operations${loopLabel}${batchLabel} on each document...`,
       );
-      const opsStartTime = Date.now();
+      const opsStartTime = performance.now();
       const totalOps = docCount * operations * opLoops;
 
       let overallMinOp: {
@@ -542,7 +544,7 @@ async function main() {
         const docId = documentIds[i];
 
         for (let loop = 1; loop <= opLoops; loop++) {
-          const loopStartTime = Date.now();
+          const loopStartTime = performance.now();
           const loopPrefix = opLoops > 1 ? `loop ${loop}/${opLoops}: ` : "";
 
           if (verbose) {
@@ -587,7 +589,7 @@ async function main() {
             allDurations.push(...result.durations);
           }
 
-          const loopDurationMs = Date.now() - loopStartTime;
+          const loopDurationMs = performance.now() - loopStartTime;
           const loopDuration = (loopDurationMs / 1000).toFixed(2);
           const msPerOp = (loopDurationMs / operations).toFixed(0);
 
@@ -617,7 +619,7 @@ async function main() {
         }
       }
 
-      const opsDurationMs = Date.now() - opsStartTime;
+      const opsDurationMs = performance.now() - opsStartTime;
       const opsDuration = (opsDurationMs / 1000).toFixed(2);
       const avgMsPerOp = (opsDurationMs / totalOps).toFixed(0);
       const phase2Memory = getMemoryStats();
@@ -642,7 +644,10 @@ async function main() {
     }
 
     const finalMemory = getMemoryStats();
-    const totalDuration = ((Date.now() - overallStartTime) / 1000).toFixed(2);
+    const totalDuration = (
+      (performance.now() - overallStartTime) /
+      1000
+    ).toFixed(2);
     const heapDelta = finalMemory.heapUsed - initialMemory.heapUsed;
     const rssDelta = finalMemory.rss - initialMemory.rss;
     console.log(`\nDone! Total time: ${totalDuration}s`);
