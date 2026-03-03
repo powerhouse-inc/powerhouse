@@ -48,7 +48,6 @@
   },
   "peerDependencies": {
     "document-model": "workspace:*",
-    "@powerhousedao/reactor": "workspace:*",
     "react": "catalog:"
   },
   "peerDependenciesMeta": {
@@ -66,7 +65,8 @@
     "react": "catalog:",
     "react-dom": "catalog:",
     "vite": "catalog:",
-    "vitest": "catalog:"
+    "vitest": "catalog:",
+    "@powerhousedao/reactor": "workspace:*"
   },
   "dependencies": {
     "@didtools/key-did": "^1.0.0",
