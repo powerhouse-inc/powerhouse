@@ -1,4 +1,10 @@
 import { getConfig } from "@powerhousedao/config/node";
+import {
+  loadConnectEnv,
+  normalizeBasePath,
+  setConnectEnv,
+  type ConnectEnv,
+} from "@powerhousedao/shared/connect";
 import { sentryVitePlugin } from "@sentry/vite-plugin";
 import tailwind from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
@@ -12,14 +18,7 @@ import {
   type UserConfig,
 } from "vite";
 import { createHtmlPlugin } from "vite-plugin-html";
-import { nodePolyfills } from "vite-plugin-node-polyfills";
 import svgr from "vite-plugin-svgr";
-import {
-  loadConnectEnv,
-  normalizeBasePath,
-  setConnectEnv,
-  type ConnectEnv,
-} from "@powerhousedao/shared/connect";
 import {
   resolveConnectPackageJson,
   stripVersionFromPackage,
@@ -214,14 +213,6 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
   const uploadSentrySourcemaps = authToken && org && project;
 
   const plugins: PluginOption[] = [
-    nodePolyfills({
-      include: ["events"],
-      globals: {
-        Buffer: false,
-        global: false,
-        process: true,
-      },
-    }),
     tailwind(),
     svgr(),
     react(),
@@ -283,12 +274,7 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     envPrefix: ["PH_CONNECT_"],
     envDir: false,
     optimizeDeps: {
-      include: ["vite-plugin-node-polyfills/shims/process"],
-      exclude: [
-        "@electric-sql/pglite",
-        "@electric-sql/pglite-tools",
-        "node_modules/.vite",
-      ],
+      exclude: ["@electric-sql/pglite", "@electric-sql/pglite-tools"],
     },
     plugins,
     resolve: {
