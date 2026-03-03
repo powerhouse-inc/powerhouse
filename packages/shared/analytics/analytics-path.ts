@@ -1,3 +1,7 @@
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { AnalyticsSerializerTypes } from "./constants.js";
 
 export class AnalyticsPath {
@@ -25,7 +29,7 @@ export class AnalyticsPath {
     return new AnalyticsPath(segments);
   }
 
-  public static fromJSON(json: { _v: string }): AnalyticsPath {
+  public static fromJSON(json: any): AnalyticsPath {
     const segments = json._v
       .split("/")
       .map((segment: string) => AnalyticsPathSegment.fromString(segment));

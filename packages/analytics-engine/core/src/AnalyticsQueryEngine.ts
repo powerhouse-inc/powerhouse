@@ -1,7 +1,8 @@
+/* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 import {
   AnalyticsDiscretizer,
-  type GroupedPeriodResult,
   type GroupedPeriodResults,
+  type GroupedPeriodResult,
 } from "./AnalyticsDiscretizer.js";
 import { AnalyticsPath } from "./AnalyticsPath.js";
 import {
@@ -9,13 +10,12 @@ import {
   PassthroughAnalyticsProfiler,
 } from "./AnalyticsProfiler.js";
 import {
-  type AnalyticsDimension,
   type AnalyticsQuery,
   type AnalyticsSeries,
   type AnalyticsSeriesQuery,
   type CompoundAnalyticsQuery,
-  CompoundOperator,
   type MultiCurrencyConversion,
+  CompoundOperator,
 } from "./AnalyticsQuery.js";
 import { type IAnalyticsStore } from "./IAnalyticsStore.js";
 
@@ -264,16 +264,12 @@ export class AnalyticsQueryEngine {
   }
 
   private _applyDimensionsLods(
-    dimensionMap: Record<string, string | AnalyticsDimension>,
+    dimensionMap: Record<string, AnalyticsPath> | any,
     lods: Record<string, number | null>,
   ) {
-    const result: Record<string, string> = {};
+    const result: Record<string, string> | any = {};
     for (const [dimension, lod] of Object.entries(lods)) {
-      if (
-        lod !== null &&
-        dimensionMap[dimension] &&
-        typeof dimensionMap[dimension] !== "string"
-      ) {
+      if (lod !== null && dimensionMap[dimension]) {
         result[dimension] = dimensionMap[dimension]["path"]
           .applyLod(lod)
           .toString();

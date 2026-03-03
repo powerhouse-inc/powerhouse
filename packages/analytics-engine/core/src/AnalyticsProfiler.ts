@@ -86,7 +86,7 @@ export class PassthroughAnalyticsProfiler implements IAnalyticsProfiler {
     //
   }
 
-  popAndReturn(result: unknown) {
+  popAndReturn(result: any) {
     return result;
   }
 
