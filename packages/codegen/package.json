@@ -82,7 +82,6 @@
     "react-dom": "catalog:",
     "vitest": "catalog:",
     "zod": "catalog:",
-    "@powerhousedao/reactor": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",
     "@powerhousedao/analytics-engine-core": "workspace:*",
     "@powerhousedao/design-system": "workspace:*",

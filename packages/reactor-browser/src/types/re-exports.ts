@@ -2,6 +2,7 @@ export {
   GqlRequestChannel,
   IntervalPollTimer,
   SyncOperationStatus,
+  RelationalDbProcessor,
 } from "@powerhousedao/reactor";
 export type {
   IChannel,
@@ -13,6 +14,6 @@ export type {
   Remote,
   SyncOperation,
   ProcessorFactory,
-  RelationalDbProcessor,
   IRelationalDb,
+  ProcessorFilter,
 } from "@powerhousedao/reactor";
