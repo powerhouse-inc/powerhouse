@@ -64,5 +64,6 @@ export const VERSIONED_DEV_DEPENDENCIES = [
   "@powerhousedao/reactor-local",
   "@powerhousedao/switchboard",
   "@powerhousedao/connect",
+  "@powerhousedao/analytics-engine-core",
   "document-drive",
 ];
