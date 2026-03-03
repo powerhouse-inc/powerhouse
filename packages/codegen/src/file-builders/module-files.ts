@@ -179,6 +179,7 @@ export async function makeUpgradeManifestsFile(args: {
     variableName: "upgradeManifests",
     variableType: "UpgradeManifest<readonly number[]>[]",
     moduleFileName: "upgrade-manifest.ts",
+    shouldMakeLegacyIndexFile: false,
   });
 }
 
