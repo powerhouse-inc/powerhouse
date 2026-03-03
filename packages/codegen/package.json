@@ -84,7 +84,7 @@
     "zod": "catalog:",
     "@powerhousedao/reactor": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",
-    "@powerhousedao/analytics-engine-core": "catalog:",
+    "@powerhousedao/analytics-engine-core": "workspace:*",
     "@powerhousedao/design-system": "workspace:*",
     "document-drive": "workspace:*"
   }

@@ -1,0 +1,26 @@
+services:
+  database:
+    image: postgres:16.4-alpine
+    restart: always
+    volumes:
+      - .db/:/var/lib/postgresql/data
+      - ./test/scripts/:/docker-entrypoint-initdb.d
+    ports:
+      - "5555:5432"
+    environment:
+      POSTGRES_PASSWORD: password
+      POSTGRES_USER: postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 1s
+      retries: 5
+
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - 5556:8080
+    depends_on:
+      database:
+        condition: service_healthy

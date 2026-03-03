@@ -1,9 +1,9 @@
+import { DateTime } from "luxon";
+import { AnalyticsPath } from "../../analytics/analytics-path.js";
 import type {
   AnalyticsSeriesInput,
   IAnalyticsStore,
-} from "@powerhousedao/analytics-engine-core";
-import { AnalyticsPath } from "@powerhousedao/analytics-engine-core";
-import { DateTime } from "luxon";
+} from "../../analytics/types.js";
 import type { OperationWithContext } from "../../document-model/index.js";
 import type { IProcessor } from "../types.js";
 import type { ActionType, NodeTarget } from "./types.js";

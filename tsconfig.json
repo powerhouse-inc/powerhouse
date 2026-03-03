@@ -68,6 +68,27 @@
       "path": "packages/vetra"
     },
     {
+      "path": "packages/analytics-engine/benchmarks"
+    },
+    {
+      "path": "packages/analytics-engine/browser"
+    },
+    {
+      "path": "packages/analytics-engine/compat"
+    },
+    {
+      "path": "packages/analytics-engine/core"
+    },
+    {
+      "path": "packages/analytics-engine/graphql"
+    },
+    {
+      "path": "packages/analytics-engine/knex"
+    },
+    {
+      "path": "packages/analytics-engine/pg"
+    },
+    {
       "path": "test/connect-e2e"
     },
     {

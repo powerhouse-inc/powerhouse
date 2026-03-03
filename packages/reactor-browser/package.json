@@ -61,8 +61,8 @@
   "dependencies": {
     "fast-deep-equal": "catalog:",
     "@electric-sql/pglite": "catalog:",
-    "@powerhousedao/analytics-engine-browser": "catalog:",
-    "@powerhousedao/analytics-engine-core": "catalog:",
+    "@powerhousedao/analytics-engine-browser": "workspace:*",
+    "@powerhousedao/analytics-engine-core": "workspace:*",
     "@powerhousedao/reactor": "workspace:*",
     "@renown/sdk": "workspace:*",
     "@tanstack/react-query": "^5.49.2",

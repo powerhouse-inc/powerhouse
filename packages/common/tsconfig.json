@@ -14,8 +14,10 @@
     ]
   },
   "include": [
-    "**/*"
-, "../shared/processors/drive-analytics/index.ts", "../shared/processors/drive-analytics/types.ts"  ],
+    "**/*",
+    "../shared/processors/drive-analytics/index.ts",
+    "../shared/processors/drive-analytics/types.ts"
+  ],
   "exclude": [
     "dist",
     "node_modules",
@@ -23,7 +25,13 @@
   ],
   "references": [
     {
+      "path": "../analytics-engine/core"
+    },
+    {
       "path": "../config"
+    },
+    {
+      "path": "../document-drive"
     },
     {
       "path": "../document-model"

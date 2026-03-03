@@ -21,7 +21,7 @@
   },
   "targetDefaults": {},
   "release": {
-    "projects": ["packages/*", "clis/*", "apps/*"],
+    "projects": ["packages/*", "packages/analytics-engine/*", "clis/*", "apps/*"],
     "projectsRelationship": "managed",
     "version": {
       "conventionalCommits": true,
