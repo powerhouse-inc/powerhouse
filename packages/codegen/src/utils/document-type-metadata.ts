@@ -49,7 +49,6 @@ export function getDocumentTypeMetadata({
     throw new Error(`No document model dir exists for ${documentModelId}`);
   }
 
-  const documentModelDirPath = documentModelDir.getPath();
   const documentModelDirName = documentModelDir.getBaseName();
 
   const documentModelImportPath = path.join(
@@ -58,11 +57,11 @@ export function getDocumentTypeMetadata({
     documentModelDirName,
   );
 
-  const documentModelGenTypesFilePath = path.join(
-    documentModelDirPath,
-    "gen",
-    "types.ts",
-  );
+  // types.ts lives in the same gen/ directory as document-model.ts
+  // For non-versioned: <model>/gen/types.ts
+  // For versioned: <model>/v1/gen/types.ts
+  const sourceFileDir = sourceFile.getDirectoryPath();
+  const documentModelGenTypesFilePath = path.join(sourceFileDir, "types.ts");
 
   const documentModelGenTypesFile = project.getSourceFile(
     documentModelGenTypesFilePath,
