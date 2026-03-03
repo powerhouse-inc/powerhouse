@@ -17,5 +17,6 @@
     "glob": "catalog:",
     "jiti": "2.6.1",
     "@powerhousedao/shared": "workspace:*"
-  }
+  },
+  "version": "6.0.0-dev.65"
 }

@@ -1,3 +1,23 @@
+## 6.0.0-dev.65 (2026-03-03)
+
+### 🩹 Fixes
+
+- **analytics-engine:** update repository urls ([96afe4437](https://github.com/powerhouse-inc/powerhouse/commit/96afe4437))
+
+### ❤️ Thank You
+
+- ryanwolhuter @ryanwolhuter
+
+## 6.0.0-dev.64 (2026-03-03)
+
+### 🚀 Features
+
+- **codegen:** move analytics engine core to versioned dev dependencies ([a7ebd1ed5](https://github.com/powerhouse-inc/powerhouse/commit/a7ebd1ed5))
+
+### ❤️ Thank You
+
+- ryanwolhuter @ryanwolhuter
+
 ## 6.0.0-dev.62 (2026-03-03)
 
 ### 🚀 Features
