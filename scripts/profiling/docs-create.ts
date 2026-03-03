@@ -144,19 +144,23 @@ function formatPercentiles(p: Percentiles): string {
   return `p50: ${p.p50}ms, p90: ${p.p90}ms, p95: ${p.p95}ms, p99: ${p.p99}ms`;
 }
 
-// Build a single GraphQL mutation that sends batchSize operations using aliases
+// Build a single GraphQL mutation that sends batchSize operations using aliases.
+// When asyncMutate is true, the *Async variant of each mutation is used.
+// Async mutations return String! (job ID) so no selection set is included.
 function buildBatchMutation(
   ops: Array<{ mutationName: string; inputType: string }>,
+  asyncMutate: boolean,
 ): string {
   const varDecls = [
     "$docId: PHID!",
     ...ops.map((op, i) => `$input${i}: ${op.inputType}!`),
   ].join(", ");
   const body = ops
-    .map(
-      (op, i) =>
-        `  op${i}: ${op.mutationName}(docId: $docId, input: $input${i}) { id }`,
-    )
+    .map((op, i) => {
+      const name = asyncMutate ? `${op.mutationName}Async` : op.mutationName;
+      const selection = asyncMutate ? "" : " { id }";
+      return `  op${i}: ${name}(docId: $docId, input: $input${i})${selection}`;
+    })
     .join("\n");
   return `mutation BatchOps(${varDecls}) {\n${body}\n}`;
 }
@@ -175,17 +179,25 @@ async function performOperations(
   docIndex: number,
   operationCount: number,
   batchSize: number,
+  asyncMutate: boolean,
   onProgress: (opNum: number, durationMs: number, batchCount: number) => void,
 ): Promise<OperationsResult> {
   let minOp: OperationTiming | null = null;
   let maxOp: OperationTiming | null = null;
   const durations: number[] = [];
 
+  // Build all request descriptors up front
+  const requests: Array<{
+    mutation: string;
+    variables: Record<string, unknown>;
+    batchEnd: number;
+    batchCount: number;
+    actionType: string;
+  }> = [];
+
   for (let i = 0; i < operationCount; i += batchSize) {
     const batchEnd = Math.min(i + batchSize, operationCount);
     const batchCount = batchEnd - i;
-
-    // Build batch of operations
     const batchOps: Array<{ mutationName: string; inputType: string }> = [];
     const actionTypes: string[] = [];
     const variables: Record<string, unknown> = { docId: documentId };
@@ -200,25 +212,29 @@ async function performOperations(
       variables[`input${j - i}`] = config.buildInput(docIndex, j + 1);
     }
 
-    const mutation = buildBatchMutation(batchOps);
+    requests.push({
+      mutation: buildBatchMutation(batchOps, asyncMutate),
+      variables,
+      batchEnd,
+      batchCount,
+      actionType: batchCount === 1 ? actionTypes[0] : `batch(${batchCount})`,
+    });
+  }
 
+  const executeRequest = async (req: (typeof requests)[number]) => {
     const opStart = performance.now();
-    await client.request(mutation, variables);
+    await client.request(req.mutation, req.variables);
     const batchDurationMs = performance.now() - opStart;
+    const perOpDurationMs = batchDurationMs / req.batchCount;
 
-    // Calculate per-operation duration for consistent min/max tracking
-    const perOpDurationMs = batchDurationMs / batchCount;
-
-    for (let j = 0; j < batchCount; j++) {
+    for (let j = 0; j < req.batchCount; j++) {
       durations.push(perOpDurationMs);
     }
 
-    const actionType =
-      batchCount === 1 ? actionTypes[0] : `batch(${batchCount})`;
     const timing: OperationTiming = {
-      opIndex: batchEnd,
+      opIndex: req.batchEnd,
       durationMs: perOpDurationMs,
-      actionType,
+      actionType: req.actionType,
     };
 
     if (minOp === null || perOpDurationMs < minOp.durationMs) {
@@ -228,7 +244,37 @@ async function performOperations(
       maxOp = timing;
     }
 
-    onProgress(batchEnd, batchDurationMs, batchCount);
+    onProgress(req.batchEnd, batchDurationMs, req.batchCount);
+  };
+
+  if (asyncMutate) {
+    // Fire all requests consecutively without awaiting intermediate responses,
+    // filling the server queue as fast as possible. Only the final job ID is
+    // awaited to confirm the last operation was accepted.
+    const promises = requests.map((req) =>
+      client.request(req.mutation, req.variables),
+    );
+    const overallStart = performance.now();
+    await promises[promises.length - 1];
+    const totalMs = performance.now() - overallStart;
+    const perOpMs = totalMs / operationCount;
+
+    for (let i = 0; i < operationCount; i++) {
+      durations.push(perOpMs);
+    }
+    const last = requests[requests.length - 1];
+    const timing: OperationTiming = {
+      opIndex: last.batchEnd,
+      durationMs: perOpMs,
+      actionType: last.actionType,
+    };
+    minOp = timing;
+    maxOp = timing;
+    onProgress(last.batchEnd, totalMs, operationCount);
+  } else {
+    for (const req of requests) {
+      await executeRequest(req);
+    }
   }
 
   return { minOp, maxOp, durations };
@@ -241,6 +287,7 @@ function parseArgs(args: string[]): {
   batchSize: number;
   endpoint: string;
   docIds: string[];
+  asyncMutate: boolean;
   verbose: boolean;
   percentiles: boolean;
   showActionTypes: boolean;
@@ -253,6 +300,7 @@ function parseArgs(args: string[]): {
   let batchSize = 1;
   let endpoint = DEFAULT_ENDPOINT;
   const docIds: string[] = [];
+  let asyncMutate = false;
   let verbose = false;
   let percentiles = false;
   let showActionTypes = false;
@@ -271,6 +319,8 @@ function parseArgs(args: string[]): {
       batchSize = Number(args[++i]);
     } else if ((arg === "--doc-id" || arg === "-d") && args[i + 1]) {
       docIds.push(args[++i]);
+    } else if (arg === "--async") {
+      asyncMutate = true;
     } else if (arg === "--verbose" || arg === "-v") {
       verbose = true;
     } else if (arg === "--percentiles" || arg === "-p") {
@@ -304,6 +354,7 @@ Options:
   --doc-id, -d <id>         Use existing document(s) instead of creating new ones
                             (can be specified multiple times, skips document creation)
   --endpoint <url>          GraphQL endpoint (default: ${DEFAULT_ENDPOINT})
+  --async                   Use the *Async mutation variants (returns job ID, not document)
   --verbose, -v             Show detailed operation timings
   --percentiles, -p         Show percentile statistics (p50, p90, p95, p99) per line
   --show-action-types, -a   Show action type names in min/max timings
@@ -388,6 +439,7 @@ Examples:
     batchSize,
     endpoint,
     docIds,
+    asyncMutate,
     verbose,
     percentiles,
     showActionTypes,
@@ -404,6 +456,7 @@ async function main() {
     batchSize,
     endpoint,
     docIds,
+    asyncMutate,
     verbose,
     percentiles: showPercentiles,
     showActionTypes,
@@ -557,6 +610,7 @@ async function main() {
             docNum,
             operations,
             batchSize,
+            asyncMutate,
             (opNum, durationMs, batchCount) => {
               const batchInfo = batchCount > 1 ? ` (${batchCount} ops)` : "";
               if (verbose) {

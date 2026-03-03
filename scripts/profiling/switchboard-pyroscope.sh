@@ -158,6 +158,17 @@ echo "Press Ctrl+C to stop"
 echo "=========================================="
 echo
 
+# Run database migrations if a PostgreSQL URL was provided
+if [ -n "$DATABASE_URL" ]; then
+  echo "Running database migrations..."
+  if ! pnpm --filter document-drive run migrate; then
+    echo "Error: database migration failed — aborting"
+    exit 1
+  fi
+  echo "Migrations complete."
+  echo
+fi
+
 # Check if switchboard is installed
 SWITCHBOARD_PATH="${SCRIPT_DIR}/apps/switchboard/dist/src/index.js"
 if [ ! -f "$SWITCHBOARD_PATH" ]; then
