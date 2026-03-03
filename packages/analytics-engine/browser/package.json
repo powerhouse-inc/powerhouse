@@ -21,7 +21,7 @@
   ],
   "scripts": {
     "build:bundle": "bun run ./bundle.ts",
-    "test": "vitest --run ./**/*.test.ts"
+    "test:e2e": "vitest --run ./**/*.test.ts"
   },
   "devDependencies": {
     "@powerhousedao/analytics-engine-core": "workspace:*",
