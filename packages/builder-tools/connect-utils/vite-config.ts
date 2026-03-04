@@ -19,10 +19,7 @@ import {
 } from "vite";
 import { createHtmlPlugin } from "vite-plugin-html";
 import svgr from "vite-plugin-svgr";
-import {
-  resolveConnectPackageJson,
-  stripVersionFromPackage,
-} from "./helpers.js";
+import { stripVersionFromPackage } from "./helpers.js";
 import type { IConnectOptions } from "./types.js";
 import { phExternalPackagesPlugin } from "./vite-plugins/ph-external-packages.js";
 
