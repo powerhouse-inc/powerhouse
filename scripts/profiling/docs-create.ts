@@ -664,28 +664,39 @@ async function main() {
             console.log(`  [${docNum}/${docCount}] ${docId} ${loopPrefix}:`);
           }
 
-          const performFn = asyncMutate
-            ? performOperationsAsync
-            : performOperations;
-          const result = await performFn(
-            client,
-            docId,
-            docNum,
-            operations,
-            batchSize,
-            (opNum, durationMs, batchCount) => {
-              const batchInfo = batchCount > 1 ? ` (${batchCount} ops)` : "";
-              if (verbose) {
-                console.log(
-                  `    op ${opNum}/${operations}: ${durationMs}ms${batchInfo}`,
-                );
-              } else {
-                process.stdout.write(
-                  `\r  [${docNum}/${docCount}] ${docId}: ${loopPrefix}${opNum}/${operations} ops`,
-                );
-              }
-            },
-          );
+          const onProgress = (
+            opNum: number,
+            durationMs: number,
+            batchCount: number,
+          ) => {
+            const batchInfo = batchCount > 1 ? ` (${batchCount} ops)` : "";
+            if (verbose) {
+              console.log(
+                `    op ${opNum}/${operations}: ${durationMs}ms${batchInfo}`,
+              );
+            } else {
+              process.stdout.write(
+                `\r  [${docNum}/${docCount}] ${docId}: ${loopPrefix}${opNum}/${operations} ops`,
+              );
+            }
+          };
+          const result = await (asyncMutate
+            ? performOperationsAsync(
+                client,
+                docId,
+                docNum,
+                operations,
+                batchSize,
+                onProgress,
+              )
+            : performOperations(
+                client,
+                docId,
+                docNum,
+                operations,
+                batchSize,
+                onProgress,
+              ));
 
           if (
             result.minOp &&
