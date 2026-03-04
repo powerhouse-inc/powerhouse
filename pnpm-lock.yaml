@@ -2293,12 +2293,6 @@ importers:
       kysely:
         specifier: 'catalog:'
         version: 0.28.11
-      react:
-        specifier: 'catalog:'
-        version: 19.2.4
-      react-dom:
-        specifier: 'catalog:'
-        version: 19.2.4(react@19.2.4)
       zod:
         specifier: 'catalog:'
         version: 4.3.6
@@ -2336,6 +2330,12 @@ importers:
       document-drive:
         specifier: link:../document-drive
         version: link:../document-drive
+      react:
+        specifier: 'catalog:'
+        version: 19.2.4
+      react-dom:
+        specifier: 'catalog:'
+        version: 19.2.4(react@19.2.4)
       tailwindcss:
         specifier: 'catalog:'
         version: 4.1.18
