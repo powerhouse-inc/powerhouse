@@ -8,43 +8,36 @@
   ],
   "exports": {
     ".": {
-      "development": "./index.ts",
       "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
+      "import": "./dist/index.js"
     },
     "./document-models": {
-      "development": "./document-models/index.ts",
       "types": "./dist/document-models/index.d.ts",
-      "default": "./dist/document-models/index.js"
-    },
-    "./editors": {
-      "development": "./editors/index.ts",
-      "types": "./dist/editors/index.d.ts",
-      "default": "./dist/editors/index.js"
+      "import": "./dist/document-models/index.js"
     },
     "./document-models/*": {
-      "development": "./document-models/*/index.ts",
       "types": "./dist/document-models/*/index.d.ts",
-      "default": "./dist/document-models/*/index.js"
+      "import": "./dist/document-models/*/index.js"
     },
     "./editors/*": {
-      "development": "./editors/*/index.ts",
       "types": "./dist/editors/*/index.d.ts",
-      "default": "./dist/editors/*/index.js"
+      "import": "./dist/editors/*/index.js"
     },
-    "./subgraphs": {
-      "development": "./subgraphs/index.ts",
-      "types": "./dist/subgraphs/index.d.ts",
-      "default": "./dist/subgraphs/index.js"
+    "./editors": {
+      "types": "./dist/editors/index.d.ts",
+      "import": "./dist/editors/index.js"
     },
     "./processors": {
-      "development": "./processors/index.ts",
       "types": "./dist/processors/index.d.ts",
-      "default": "./dist/processors/index.js"
+      "import": "./dist/processors/index.js"
+    },
+    "./subgraphs": {
+      "types": "./dist/subgraphs/index.d.ts",
+      "import": "./dist/subgraphs/index.js"
     },
     "./manifest": {
-      "development": "./powerhouse.manifest.json",
-      "default": "./dist/powerhouse.manifest.json"
+      "types": "./dist/manifest.d.ts",
+      "import": "./dist/manifest.js"
     },
     "./style.css": "./dist/style.css"
   },

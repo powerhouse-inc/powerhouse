@@ -1,7 +1,6 @@
 await Bun.build({
   entrypoints: [
     "./src/main.tsx",
-    "./src/connect.config.ts",
     "./src/components/index.ts",
     "./src/services/index.ts",
     "./src/connect.config.ts",

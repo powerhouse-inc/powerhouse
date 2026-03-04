@@ -266,7 +266,7 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
         : undefined,
     },
     build: {
-      minify: false,
+      minify: true,
       sourcemap: true,
       rollupOptions: {
         treeshake: {

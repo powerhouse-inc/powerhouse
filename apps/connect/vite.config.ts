@@ -18,9 +18,6 @@ export default defineConfig(({ mode }) => {
       process.env.PH_DEBUG_BUILD === "true" ? analyzer() : undefined,
       tsconfigPaths(),
     ],
-    resolve: {
-      conditions: ["source", "browser", "module", "jsnext:main", "jsnext"],
-    },
     build: {
       sourcemap: true,
       minify: true,
