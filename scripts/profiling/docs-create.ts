@@ -689,10 +689,9 @@ async function main() {
                 };
                 pollPromises.push(
                   pollJobAsync(client, job).then((r) => {
-                    const loopDuration = (r.totalMs / 1000).toFixed(2);
-                    const msPerOp = (r.totalMs / job.batchCount).toFixed(0);
+                    const ms = Math.round(r.totalMs);
                     process.stdout.write(
-                      `\r  [${docNum}/${docCount}] ${docId}: req ${job.reqNum}/${totalRequests} (${loopDuration}s, ${msPerOp}ms/op)\n`,
+                      `\r  [${docNum}/${docCount}] ${docId}: op ${job.reqNum}/${totalRequests} (${ms}ms)\n`,
                     );
                     return { ...r, job };
                   }),
