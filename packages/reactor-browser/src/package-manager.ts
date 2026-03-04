@@ -37,8 +37,9 @@ function removeCSS(pkg: string) {
 async function loadExternalPackage(name: string, registryUrl: string) {
   registryUrl = registryUrl.endsWith("/") ? registryUrl : `${registryUrl}/`;
   // TODO: use version to load the correct package
+  const url = `${registryUrl}${name}/index.js`;
   const module = await (import(
-    /* @vite-ignore */ `${registryUrl}${name}`
+    /* @vite-ignore */ url
   ) as Promise<DocumentModelLib>);
   loadCSS(name, registryUrl);
   return convertLegacyLibToVetraPackage(module);
@@ -135,8 +136,8 @@ export class BrowserPackageManager implements IPackageManager {
   }
 
   #notifyPackagesChanged() {
-    const packages = this.packages;
     this.#packagesMemo = Array.from(this.#packages.values());
+    const packages = this.packages;
     this.#subscribers.forEach((handler) => {
       try {
         handler({ packages });

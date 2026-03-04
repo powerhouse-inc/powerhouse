@@ -22,9 +22,13 @@ export class CdnCache {
       await this.extractTarball(packageName, version);
     }
 
-    // Check direct path first, then fall back to dist/cdn/ subdirectory
-    // (npm tarballs contain files under dist/, bun bundles go to dist/cdn/)
+    // Check direct path first, then fall back to cdn/ and dist/cdn/ subdirectories
+    // (npm tarballs contain files under dist/, bun bundles go to cdn/)
     if (fs.existsSync(cached)) return cached;
+
+    const cdnRootPath = path.join(versionDir, "cdn", filePath);
+    if (this.isSafePath(cdnRootPath) && fs.existsSync(cdnRootPath))
+      return cdnRootPath;
 
     const cdnPath = path.join(versionDir, "dist", "cdn", filePath);
     if (this.isSafePath(cdnPath) && fs.existsSync(cdnPath)) return cdnPath;

@@ -119,6 +119,7 @@ export const connectConfig = {
   appVersionCheckInterval: env.PH_CONNECT_VERSION_CHECK_INTERVAL,
   routerBasename: PH_CONNECT_BASE_PATH,
   externalPackagesEnabled: !env.PH_CONNECT_EXTERNAL_PACKAGES_DISABLED,
+  packagesRegistry: env.PH_CONNECT_PACKAGES_REGISTRY,
   processors: {
     enabled: env.PH_CONNECT_PROCESSORS_ENABLED,
     externalProcessorsEnabled: env.PH_CONNECT_EXTERNAL_PROCESSORS_ENABLED,

@@ -40,15 +40,18 @@ function updateReactorClientDocumentModels(packages: VetraPackage[]) {
   const documentModelModules = packages
     .flatMap((pkg) => pkg.modules.documentModelModules)
     .filter((module) => module !== undefined);
-  if (documentModelModules.length > 0) {
+
+  const registry =
+    window.ph?.reactorClientModule?.reactorModule?.documentModelRegistry;
+  if (!registry || documentModelModules.length === 0) return;
+
+  // Register modules one by one to avoid a single duplicate blocking the rest
+  for (const module of documentModelModules) {
     try {
-      window.ph?.reactorClientModule?.reactorModule?.documentModelRegistry.registerModules(
-        ...documentModelModules,
-      );
+      registry.registerModules(module);
     } catch (error) {
-      // check if it's a duplicate module error
       if (DuplicateModuleError.isError(error)) {
-        return;
+        continue;
       }
       throw error;
     }

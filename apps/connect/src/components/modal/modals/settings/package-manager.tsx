@@ -8,6 +8,7 @@ import {
 } from "@powerhousedao/reactor-browser";
 import type { Manifest } from "document-model";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { connectConfig } from "../../../../connect.config.js";
 
 const LOCAL_REACTOR_VALUE = "local-reactor";
 const LOCAL_REACTOR_LABEL = "Local Reactor";
@@ -36,14 +37,14 @@ function manifestToDetails(
   };
 }
 
-const PH_PACKAGES_REGISTRY = "http://localhost:4873/-/cdn/";
+const PH_PACKAGES_REGISTRY =
+  connectConfig.packagesRegistry ?? "http://localhost:8080/-/cdn/";
 
 export const ConnectPackageManager: React.FC = () => {
   const packageManager = useVetraPackageManager();
   const vetraPackages = useVetraPackages();
   const drives = useDrives();
   const [reactor, setReactor] = useState("");
-  const [registryUrl, setRegistryUrl] = useState(PH_PACKAGES_REGISTRY);
 
   const reactorOptions = useMemo(() => {
     return drives?.reduce<
@@ -105,10 +106,15 @@ export const ConnectPackageManager: React.FC = () => {
       if (reactor !== LOCAL_REACTOR_VALUE) {
         throw new Error("Cannot install external package on a remote reactor");
       }
-      console.debug("Installing package", packageName, "from", registryUrl);
-      return packageManager?.addPackage(packageName, registryUrl);
+      console.debug(
+        "Installing package",
+        packageName,
+        "from",
+        PH_PACKAGES_REGISTRY,
+      );
+      return packageManager?.addPackage(packageName, PH_PACKAGES_REGISTRY);
     },
-    [reactor, packageManager, registryUrl],
+    [reactor, packageManager],
   );
 
   const handleUninstall = useCallback(
