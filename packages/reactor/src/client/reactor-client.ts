@@ -509,7 +509,7 @@ export class ReactorClient implements IReactorClient {
       [
         addFile({
           id: documentId,
-          name: document.header.name,
+          name: document.header.name || documentId,
           documentType: document.header.documentType,
           parentFolder,
         }),
@@ -555,7 +555,7 @@ export class ReactorClient implements IReactorClient {
     }
 
     // since we waited for the job to complete we don't need the consistency token
-    return await this.reactor.get<TDocument>(documentId);
+    return this.reactor.get<TDocument>(documentId);
   }
 
   /**

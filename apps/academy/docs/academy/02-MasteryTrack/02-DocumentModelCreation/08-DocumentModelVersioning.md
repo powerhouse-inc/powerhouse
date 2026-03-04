@@ -26,6 +26,7 @@ Document Model Versioning is a system that allows multiple versions of the same 
 Consider a simple Todo document model:
 
 **Version 1 State:**
+
 ```graphql
 type TodoState {
   todos: [Todo!]!
@@ -35,6 +36,7 @@ type TodoState {
 Now you want to add a `title` field to track the list's name:
 
 **Version 2 State:**
+
 ```graphql
 type TodoState {
   title: String
@@ -43,6 +45,7 @@ type TodoState {
 ```
 
 Without versioning, existing v1 documents would break because they don't have a `title` field. With versioning:
+
 - V1 documents continue to work with the v1 reducer
 - New documents are created with v2
 - V1 documents can be **upgraded** to v2 when needed
@@ -51,12 +54,12 @@ Without versioning, existing v1 documents would break because they don't have a 
 
 Document model versioning consists of four key components:
 
-| Component | Purpose |
-|-----------|---------|
-| **Version Folders** | Separate `v1/`, `v2/` directories containing version-specific code |
-| **DocumentModelModule** | Each version exports a module with explicit `version` number |
-| **Upgrade Manifest** | Declares supported versions and upgrade paths |
-| **Upgrade Reducer** | Transforms document state from one version to another |
+| Component               | Purpose                                                            |
+| ----------------------- | ------------------------------------------------------------------ |
+| **Version Folders**     | Separate `v1/`, `v2/` directories containing version-specific code |
+| **DocumentModelModule** | Each version exports a module with explicit `version` number       |
+| **Upgrade Manifest**    | Declares supported versions and upgrade paths                      |
+| **Upgrade Reducer**     | Transforms document state from one version to another              |
 
 ---
 
@@ -133,10 +136,10 @@ type UpgradeManifest<TVersions extends readonly number[]> = {
 
 ### Step 1: Enable Versioning in Code Generation
 
-When using the Powerhouse CLI, enable versioning with the `--use-versioning` flag:
+Versioning is enabled by default when using the Powerhouse CLI:
 
 ```bash
-ph generate TodoList.phd --use-versioning
+ph generate TodoList.phd
 ```
 
 Or when using Vetra Studio, versioning support is configured in your project settings.
@@ -148,7 +151,7 @@ Or when using Vetra Studio, versioning support is configured in your project set
 ```typescript
 // upgrades/versions.ts
 export const supportedVersions = [1, 2] as const;
-export const latestVersion = supportedVersions[1];  // 2
+export const latestVersion = supportedVersions[1]; // 2
 ```
 
 ### Step 3: Document Model Module
@@ -163,7 +166,7 @@ import { defaultBaseState } from "document-model/core";
 import { actions, documentModel, reducer, utils } from "./gen/index.js";
 
 export const Todo: DocumentModelModule<TodoPHState> = {
-  version: 1,           // Explicit version number
+  version: 1, // Explicit version number
   reducer,
   actions,
   utils,
@@ -174,7 +177,7 @@ export const Todo: DocumentModelModule<TodoPHState> = {
 ```typescript
 // v2/module.ts
 export const Todo: DocumentModelModule<TodoPHState> = {
-  version: 2,           // Different version
+  version: 2, // Different version
   reducer,
   actions,
   utils,
@@ -202,14 +205,14 @@ function upgradeReducer(
       ...document.state,
       global: {
         ...document.state.global,
-        title: "",              // Initialize the new field
+        title: "", // Initialize the new field
       },
     },
     initialState: {
       ...document.initialState,
       global: {
         ...document.initialState.global,
-        title: "",              // Also in initial state
+        title: "", // Also in initial state
       },
     },
   };
@@ -265,11 +268,11 @@ Connect automatically loads all document model versions and upgrade manifests fr
 
 ```typescript
 // Simplified view of Connect's reactor setup
-const documentModelModules = vetraPackages
-  .flatMap((pkg) => pkg.modules.documentModelModules);
+const documentModelModules = vetraPackages.flatMap(
+  (pkg) => pkg.modules.documentModelModules,
+);
 
-const upgradeManifests = vetraPackages
-  .flatMap((pkg) => pkg.upgradeManifests);
+const upgradeManifests = vetraPackages.flatMap((pkg) => pkg.upgradeManifests);
 
 const reactor = await createBrowserReactor(
   documentModelModules,
@@ -312,6 +315,7 @@ const result = await client.find({ type: "my-org/todo" });
 **Scenario:** Your Todo document needs a `title` field.
 
 **Solution:**
+
 1. Create v2 with the new field in the state schema
 2. Implement upgrade reducer that sets `title: ""`
 3. New documents get v2; existing v1 documents can be upgraded
@@ -321,6 +325,7 @@ const result = await client.find({ type: "my-org/todo" });
 **Scenario:** V1 has `ADD_TODO`, `REMOVE_TODO`. V2 adds `EDIT_TITLE`.
 
 **How it works:**
+
 - V2 module includes the new operation
 - V1 documents don't have access to `EDIT_TITLE` until upgraded
 - The upgrade manifest handles the migration
@@ -336,10 +341,13 @@ function v1StateReducer(state, action) {
     return {
       ...state,
       global: {
-        items: [...state.global.items, {
-          id: action.input.id,
-          name: action.input.name
-        }],
+        items: [
+          ...state.global.items,
+          {
+            id: action.input.id,
+            name: action.input.name,
+          },
+        ],
       },
     };
   }
@@ -351,11 +359,14 @@ function v2StateReducer(state, action) {
     return {
       ...state,
       global: {
-        items: [...state.global.items, {
-          id: action.input.id,
-          name: action.input.name,
-          addedAt: action.input.addedAt,  // New field from input
-        }],
+        items: [
+          ...state.global.items,
+          {
+            id: action.input.id,
+            name: action.input.name,
+            addedAt: action.input.addedAt, // New field from input
+          },
+        ],
       },
     };
   }
@@ -390,8 +401,8 @@ it("should upgrade v1 document to v2", () => {
 
   const v2Doc = upgradeReducer(v1Doc, {} as Action);
 
-  expect(v2Doc.state.global.title).toBe("");  // New field initialized
-  expect(v2Doc.state.global.todos).toEqual(v1Doc.state.global.todos);  // Data preserved
+  expect(v2Doc.state.global.title).toBe(""); // New field initialized
+  expect(v2Doc.state.global.todos).toEqual(v1Doc.state.global.todos); // Data preserved
 });
 ```
 
@@ -399,14 +410,14 @@ it("should upgrade v1 document to v2", () => {
 
 ## Summary
 
-| Concept | Description |
-|---------|-------------|
-| **Version Folders** | `v1/`, `v2/` directories with version-specific code |
-| **DocumentModelModule** | Exports with explicit `version` field |
-| **UpgradeTransition** | Defines how to migrate from one version to the next |
-| **UpgradeManifest** | Declares all versions and upgrade paths for a document type |
-| **Backward Compatibility** | Old documents work with their original reducers |
-| **Automatic Upgrades** | Reactor handles version detection and migration |
+| Concept                    | Description                                                 |
+| -------------------------- | ----------------------------------------------------------- |
+| **Version Folders**        | `v1/`, `v2/` directories with version-specific code         |
+| **DocumentModelModule**    | Exports with explicit `version` field                       |
+| **UpgradeTransition**      | Defines how to migrate from one version to the next         |
+| **UpgradeManifest**        | Declares all versions and upgrade paths for a document type |
+| **Backward Compatibility** | Old documents work with their original reducers             |
+| **Automatic Upgrades**     | Reactor handles version detection and migration             |
 
 Document model versioning enables your applications to evolve safely while preserving the integrity of existing data. By following these patterns, you can confidently add new features, modify schemas, and improve your document models over time.
 

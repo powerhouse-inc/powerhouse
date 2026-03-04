@@ -6,10 +6,10 @@ This article covers the **manual code generation method** using the `ph generate
 
 ## When to Use Manual Generation
 
-| Workflow | Code Generation |
-|----------|-----------------|
+| Workflow         | Code Generation                                                            |
+| ---------------- | -------------------------------------------------------------------------- |
 | **Vetra Studio** | Automatic—Vetra watches your specifications and generates code as you work |
-| **Connect** | Manual—Export a `.phd` file and run `ph generate` |
+| **Connect**      | Manual—Export a `.phd` file and run `ph generate`                          |
 
 If you're using Vetra Studio with `ph vetra --interactive`, you don't need to run any generation commands. Vetra handles everything for you, prompting for confirmation before processing changes.
 
@@ -77,10 +77,10 @@ When your document model needs to evolve over time—adding new fields, operatio
 
 ### Enabling Versioning
 
-Add the `--use-versioning` flag when generating:
+Versioning is enabled by default. Simply run:
 
 ```bash
-ph generate TodoList.phd --use-versioning
+ph generate TodoList.phd
 ```
 
 ### Versioned Folder Structure
@@ -107,12 +107,12 @@ document-models/
 
 ### Key Differences with Versioning
 
-| Standard Generation | Versioned Generation |
-|---------------------|---------------------|
+| Standard Generation             | Versioned Generation                      |
+| ------------------------------- | ----------------------------------------- |
 | Single `gen/` and `src/` folder | Separate `v1/`, `v2/` folders per version |
-| One reducer implementation | Version-specific reducers |
-| No upgrade logic | `upgrades/` folder with manifests |
-| Direct module export | Exports all versions + upgrade manifests |
+| One reducer implementation      | Version-specific reducers                 |
+| No upgrade logic                | `upgrades/` folder with manifests         |
+| Direct module export            | Exports all versions + upgrade manifests  |
 
 For comprehensive documentation on implementing versioning, including upgrade reducers and integration with Connect and Switchboard, see [Document Model Versioning](/academy/MasteryTrack/DocumentModelCreation/DocumentModelVersioning).
 
@@ -135,6 +135,7 @@ The generation process—whether automatic via Vetra or manual via `ph generate`
 When using Vetra Studio, code generation is automatic:
 
 1. **Start Vetra in Interactive Mode:**
+
    ```bash
    ph vetra --interactive
    ```
@@ -168,6 +169,7 @@ This approach is useful when working with Connect's Document Model Editor or whe
    Navigate to your Powerhouse project root and copy your `TodoList.phd` file there.
 
 2. **Run the Generator Command:**
+
    ```bash
    ph generate TodoList.phd
    ```

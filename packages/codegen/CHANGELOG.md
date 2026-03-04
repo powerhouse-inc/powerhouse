@@ -1,3 +1,34 @@
+## 6.0.0-dev.68 (2026-03-04)
+
+### 🩹 Fixes
+
+- **vetra:** remove custom subgraphs from vetra ([3a1e3b9b0](https://github.com/powerhouse-inc/powerhouse/commit/3a1e3b9b0))
+- resolve empty name causing silent ADD_FILE failure in drives ([b44ed0c1c](https://github.com/powerhouse-inc/powerhouse/commit/b44ed0c1c))
+- compatibility issues with codegen and vetra ([17723c37f](https://github.com/powerhouse-inc/powerhouse/commit/17723c37f))
+- **codegen:** the lookup for file paths did not support both versions ([9edb78394](https://github.com/powerhouse-inc/powerhouse/commit/9edb78394))
+- **reactor-mcp:** adopt new reactor client interface for MCP server ([1b8e6fb19](https://github.com/powerhouse-inc/powerhouse/commit/1b8e6fb19))
+- **codegen:** correct and expand AGENTS.md template for document model guidance ([37a3f364d](https://github.com/powerhouse-inc/powerhouse/commit/37a3f364d))
+- include operation.reducer in codegen ([bd87e2c1a](https://github.com/powerhouse-inc/powerhouse/commit/bd87e2c1a))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Guillermo Puente @gpuente
+
+## 6.0.0-dev.67 (2026-03-03)
+
+This was a version bump only for @powerhousedao/codegen to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.66 (2026-03-03)
+
+### 🚀 Features
+
+- move reactor logic from connect to reactor browser ([#2385](https://github.com/powerhouse-inc/powerhouse/pull/2385))
+
+### ❤️ Thank You
+
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.0.0-dev.65 (2026-03-03)
 
 This was a version bump only for @powerhousedao/codegen to align it with other projects, there were no code changes.

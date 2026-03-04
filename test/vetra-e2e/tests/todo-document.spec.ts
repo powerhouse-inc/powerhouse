@@ -69,6 +69,7 @@ test.use({
 });
 
 test("Create ToDoDocument Model", async ({ page }) => {
+  test.setTimeout(120_000);
   // Create and setup document
   await setupDocument(page, TEST_DOCUMENT_DATA);
 });
@@ -94,7 +95,7 @@ async function setupDocument(
   const todoDocModelDir = path.join(documentModelsDir, "to-do-document");
   const documentModelsIndex = path.join(documentModelsDir, "index.ts");
   const expectedExport =
-    'export { ToDoDocument } from "./to-do-document/module.js"';
+    'export { ToDoDocument as ToDoDocumentV1 } from "./to-do-document/v1/module.js"';
 
   // Wait for the index.ts file to contain the expected export
   // This is more reliable than just waiting for the directory to exist

@@ -16,6 +16,19 @@ export class SubgraphGenerator extends BaseDocumentGen {
   readonly supportedDocumentTypes = "powerhouse/subgraph";
 
   /**
+   * Extract the global state from the full document state
+   */
+  private extractGlobalState(
+    strand: InternalTransmitterUpdate,
+  ): SubgraphModuleState | undefined {
+    const fullState = strand.state as SubgraphModulePHState | undefined;
+    if (!fullState) {
+      return undefined;
+    }
+    return fullState.global;
+  }
+
+  /**
    * Validate if this subgraph strand should be processed
    */
   shouldProcess(strand: InternalTransmitterUpdate): boolean {
@@ -24,21 +37,21 @@ export class SubgraphGenerator extends BaseDocumentGen {
       return false;
     }
 
-    const state = strand.state as SubgraphModuleState;
+    const state = this.extractGlobalState(strand);
     if (!state) {
-      logger.debug(`>>> No state found for subgraph: ${strand.documentId}`);
+      logger.debug(`No state found for subgraph: ${strand.documentId}`);
       return false;
     }
 
     // Check if we have a valid subgraph name and it's confirmed
     if (!state.name) {
-      logger.debug(`>>> No name found for subgraph: ${strand.documentId}`);
+      logger.debug(`No name found for subgraph: ${strand.documentId}`);
       return false;
     }
 
     if (state.status !== "CONFIRMED") {
       logger.debug(
-        `>>> Subgraph not confirmed: ${state.name} (status: ${state.status})`,
+        `Subgraph not confirmed: ${state.name} (status: ${state.status})`,
       );
       return false;
     }
@@ -47,7 +60,11 @@ export class SubgraphGenerator extends BaseDocumentGen {
   }
 
   async generate(strand: InternalTransmitterUpdate): Promise<void> {
-    const state = strand.state as SubgraphModuleState;
+    const state = this.extractGlobalState(strand);
+    if (!state) {
+      logger.error(`No state found for subgraph: ${strand.documentId}`);
+      return;
+    }
 
     // Check if we have a valid subgraph name and it's confirmed
     if (state.name && state.status === "CONFIRMED") {

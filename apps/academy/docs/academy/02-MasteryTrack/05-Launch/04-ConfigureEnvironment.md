@@ -109,39 +109,37 @@ For services like the Switchboard, you can also use a `powerhouse.config.json` f
 
 ### Configuring authorization
 
-A critical aspect of your environment configuration is setting up authorization to control who can access your services and what they can do. As detailed in our dedicated [Switchboard Authorization](/academy/MasteryTrack/BuildingUserExperiences/Authorization/Authorization) guide, you can manage access using a role-based system.
+A critical aspect of your environment configuration is setting up authorization to control who can access your services and what they can do. As detailed in our dedicated [Switchboard Authorization](/academy/MasteryTrack/BuildingUserExperiences/Authorization/Authorization) guide, you can manage access using authentication, supreme admin access, and document protection.
 
 Here's a quick overview of how you can configure authorization:
 
 #### Via environment variables
 
-You can set the roles directly in your `.env` file. This is quick and easy for simple allowlists.
+You can set the authorization config directly in your `.env` file.
 
 ```bash
 # Required: Enable/disable authentication
 AUTH_ENABLED=true
 
-# Optional: Comma-separated list of guest wallet addresses
-GUESTS="0x789...,0xabc..."
-
-# Optional: Comma-separated list of regular user wallet addresses
-USERS="0xdef...,0xghi..."
-
-# Optional: Comma-separated list of admin wallet addresses
+# Optional: Comma-separated list of admin wallet addresses (full access, bypasses all checks)
 ADMINS="0x123...,0x456..."
+
+# Optional: Make all new documents protected by default (requires explicit grants)
+DEFAULT_PROTECTION=true
+
+# Optional: Enable per-document permission management
+DOCUMENT_PERMISSIONS_ENABLED=true
 ```
 
 #### Via `powerhouse.config.json`
 
-For a cleaner setup, especially with longer lists of addresses, you can define them in `powerhouse.config.json` in your project root.
+For a cleaner setup, you can define authorization in `powerhouse.config.json` in your project root.
 
 ```json
 {
   "switchboard": {
     "auth": {
       "enabled": true,
-      "guests": ["0x789...", "0xabc..."],
-      "users": ["0xdef...", "0xghi..."],
       "admins": ["0x123...", "0x456..."]
     }
   }
@@ -150,7 +148,7 @@ For a cleaner setup, especially with longer lists of addresses, you can define t
 
 Remember, if you define `AUTH_ENABLED=false` as an environment variable, it will override the `enabled: true` setting in your JSON file.
 
-For a complete understanding of how roles (Guest, User, Admin) work and the permissions they have, please refer to the full [Authorization guide](/academy/MasteryTrack/BuildingUserExperiences/Authorization/Authorization).
+For a complete understanding of how authorization (authentication, admin access, and document protection) works, please refer to the full [Authorization guide](/academy/MasteryTrack/BuildingUserExperiences/Authorization/Authorization).
 
 ## Applying your changes
 

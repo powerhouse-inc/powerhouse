@@ -4,7 +4,7 @@ import type {
   ISubgraph,
   SubgraphArgs,
 } from "@powerhousedao/reactor-api";
-import type { IDocumentDriveServer, IRelationalDbLegacy } from "document-drive";
+import type { IRelationalDbLegacy } from "document-drive";
 import type { DocumentNode } from "graphql";
 import { GraphQLError } from "graphql";
 import { gql } from "graphql-tag";
@@ -28,7 +28,6 @@ export class BaseSubgraph implements ISubgraph {
       hello: String
     }
   `;
-  reactor: IDocumentDriveServer;
   reactorClient: IReactorClient;
   graphqlManager: GraphQLManager;
   relationalDb: IRelationalDbLegacy;
@@ -37,7 +36,6 @@ export class BaseSubgraph implements ISubgraph {
   authorizationService?: AuthorizationService;
 
   constructor(args: SubgraphArgs) {
-    this.reactor = args.reactor;
     this.reactorClient = args.reactorClient;
     this.graphqlManager = args.graphqlManager;
     this.relationalDb = args.relationalDb;

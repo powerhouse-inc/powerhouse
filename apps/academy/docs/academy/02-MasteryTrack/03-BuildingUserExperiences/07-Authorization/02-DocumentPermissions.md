@@ -19,17 +19,15 @@ Within a Reactor, data is organized hierarchically:
 
 The Reactor API implements a two-layer authorization system:
 
-| Layer       | System                                                       | Purpose                                              | Scope        |
-| ----------- | ------------------------------------------------------------ | ---------------------------------------------------- | ------------ |
-| **Layer 1** | [**Global Role-Based Authorization**](./04-Authorization.md) | Controls who can access the Reactor API              | Reactor-wide |
-| **Layer 2** | **Document Permission System** (this guide)                  | Controls access to specific documents/folders/drives | Per-document |
+| Component               | System                                                     | Purpose                                              | Scope        |
+| ----------------------- | ---------------------------------------------------------- | ---------------------------------------------------- | ------------ |
+| **Auth & Admin**        | [**Authentication & Admin Access**](./04-Authorization.md) | Controls authentication and supreme admin access     | Reactor-wide |
+| **Protection & Grants** | **Document Permission System** (this guide)                | Controls access to specific documents/folders/drives | Per-document |
 
 This document permission system allows you to implement fine-grained access control—for example, you might want certain team members to have write access to a "Marketing" drive while only having read access to a "Finance" drive, even though they're both authenticated users of your Reactor.
 
-:::info Prerequisites: Global Authorization First
-Before using document permissions, you must configure [global role-based authorization](./04-Authorization.md). Users need a global role (GUEST, USER, or ADMIN) to access the Reactor API before document-level permissions are checked.
-
-**Reminder:** You can also enable `FREE_ENTRY=true` to allow any authenticated user with a valid Renown credential to access the Reactor, bypassing the need for explicit role assignments.
+:::info Prerequisites: Authentication Required
+Before using document permissions, you must configure [authentication](./04-Authorization.md) with `AUTH_ENABLED=true`. Users need a valid authentication token to access the Reactor API. Supreme admins (listed in `ADMINS`) bypass all permission checks.
 :::
 
 ## Overview
@@ -161,7 +159,7 @@ The system defines three permission levels for documents:
 
 When a user attempts to access a document, the Reactor API checks permissions in this order:
 
-1. **[Global role check](./04-Authorization.md)**: First, verify the user has a global role (ADMIN/USER/GUEST). If `AUTH_ENABLED=false`, access is granted to everyone. If `FREE_ENTRY=true`, any authenticated user with a valid Renown credential can access the Reactor
+1. **[Authentication check](./04-Authorization.md)**: First, verify the user is authenticated and check if they are a supreme admin (`ADMINS`). If `AUTH_ENABLED=false`, access is granted to everyone. Supreme admins bypass all further checks
 2. **Direct user permission**: Check if the user has explicit permission on the document
 3. **Group permission**: Check if the user belongs to a group with permission on the document
 4. **Parent inheritance**: Recursively check parent documents (folder → drive)
@@ -716,20 +714,12 @@ AUTH_ENABLED=true
 # Enable document permissions feature (requires AUTH_ENABLED=true)
 DOCUMENT_PERMISSIONS_ENABLED=true
 
-# Global admin addresses (bypass all permission checks)
+# Supreme admin addresses (bypass all permission checks)
 # These users are Reactor-wide administrators
 ADMINS="0x123...,0x456..."
 
-# Global user addresses (basic access to the Reactor)
-# These users can access the Reactor but still need document permissions
-USERS="0x789...,0xabc..."
-
-# Global guest addresses (limited read-only access)
-GUESTS="0xdef...,0xghi..."
-
-# Allow any authenticated user (free entry mode)
-# When true, any user with a valid Renown credential can access the Reactor
-FREE_ENTRY=true
+# Make all new documents protected by default (requires explicit grants for access)
+DEFAULT_PROTECTION=true
 ```
 
 ### powerhouse.config.json
@@ -740,22 +730,18 @@ Alternatively, configure authorization in your `powerhouse.config.json` file:
 {
   "auth": {
     "enabled": true,
-    "admins": ["0x123...", "0x456..."],
-    "users": ["0x789...", "0xabc..."],
-    "guests": ["0xdef...", "0xghi..."],
-    "freeEntry": false
+    "admins": ["0x123...", "0x456..."]
   }
 }
 ```
 
-:::info Two Layers of Authorization
+:::info Authorization Model
 
-- **[Global roles](./04-Authorization.md)** (`ADMINS`, `USERS`, `GUESTS`): Control who can access the Reactor API at all
-- **Document permissions** (this guide): Control who can access specific documents within the Reactor
+- **[Authentication & Admin Access](./04-Authorization.md)** (`AUTH_ENABLED`, `ADMINS`): Controls authentication and supreme admin bypass
+- **Document protection**: Determines whether a document requires explicit grants (configurable via `DEFAULT_PROTECTION` or per-document)
+- **Document permissions** (this guide): Manages fine-grained READ/WRITE/ADMIN grants on specific documents
 
-Both layers work together. A user must pass the [global role check](./04-Authorization.md) before document permissions are evaluated.
-
-**Reminder:** When `FREE_ENTRY=true` is enabled, the global role check allows any authenticated user to access the Reactor, simplifying the authorization flow for open environments.
+Users must be authenticated before document permissions are evaluated. Supreme admins (`ADMINS`) bypass all permission checks.
 :::
 
 ## Usage Examples: Company Document Access & Permissions

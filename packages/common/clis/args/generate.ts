@@ -171,7 +171,7 @@ export const generateArgs = {
     type: boolean,
     long: "use-versioning",
     description: "Allow upgrading document models with versioning.",
-    defaultValue: () => false,
+    defaultValue: () => true,
     defaultValueIsSerializable: true,
   }),
   migrateLegacy: flag({

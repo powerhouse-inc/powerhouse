@@ -97,11 +97,6 @@ type Options = {
   documentPermissionService?: DocumentPermissionService;
   enableDocumentModelSubgraphs?: boolean;
   /**
-   * When true, uses the new DocumentModelSubgraph class that uses reactorClient.
-   * When false (default), uses the legacy DocumentModelSubgraphLegacy class.
-   */
-  useNewDocumentModelSubgraph?: boolean;
-  /**
    * When true, uses the legacy ProcessorManager from document-drive and hooks up
    * the driveAdded event. When false (default), uses ProcessorManager from ReactorModule.
    */
@@ -159,7 +154,6 @@ async function setupGraphQLManager(
   app: Express,
   httpServer: http.Server,
   wsServer: WebSocketServer,
-  reactor: IDocumentDriveServer,
   client: IReactorClient,
   relationalDb: IRelationalDbLegacy,
   analyticsStore: IAnalyticsStore,
@@ -175,7 +169,6 @@ async function setupGraphQLManager(
   },
   documentPermissionService?: DocumentPermissionService,
   enableDocumentModelSubgraphs?: boolean,
-  useNewDocumentModelSubgraph?: boolean,
   port?: number,
   authorizationService?: AuthorizationService,
 ): Promise<GraphQLManager> {
@@ -184,7 +177,6 @@ async function setupGraphQLManager(
     app,
     httpServer,
     wsServer,
-    reactor,
     client,
     relationalDb,
     analyticsStore,
@@ -197,7 +189,6 @@ async function setupGraphQLManager(
     documentPermissionService,
     {
       enableDocumentModelSubgraphs,
-      useNewDocumentModelSubgraph,
     },
     port,
     authorizationService,
@@ -646,7 +637,6 @@ async function _setupAPI(
     app,
     httpServer,
     wsServer,
-    reactor,
     reactorClient,
     relationalDb,
     analyticsStore,
@@ -659,7 +649,6 @@ async function _setupAPI(
     auth,
     documentPermissionService,
     options.enableDocumentModelSubgraphs,
-    options.useNewDocumentModelSubgraph,
     port,
     authorizationService,
   );
@@ -674,7 +663,7 @@ async function _setupAPI(
   );
 
   if (mcpServerEnabled) {
-    await setupMcpServer(reactor, app);
+    await setupMcpServer({ client: reactorClient, syncManager }, app);
     logger.info(`MCP server available at http://localhost:${port}/mcp`);
   }
 

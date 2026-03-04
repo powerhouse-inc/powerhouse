@@ -1,5 +1,4 @@
 import type {
-  Context,
   GqlDocument,
   GqlDriveDocument,
   GqlOperation,
@@ -7,7 +6,6 @@ import type {
 } from "@powerhousedao/reactor-api";
 import type { DocumentDriveDocument } from "document-drive";
 import type { Operation, PHDocument } from "document-model";
-import { getDocumentModelSchemaName } from "../utils/create-schema.js";
 import { BaseSubgraph } from "./base-subgraph.js";
 
 export function isSubgraphClass(
@@ -96,45 +94,3 @@ export function buildGraphQlDriveDocument(
     initialState: doc.state.global,
   };
 }
-
-export const IDocumentGraphql = {
-  graphql: "document(id: String!): IDocument",
-  Query: {
-    document: async (
-      parent: unknown,
-      args: { id: string },
-      ctx: Context,
-    ): Promise<GqlDocument> => {
-      const doc = await ctx.driveServer.getDocument(args.id);
-      ctx.document = doc;
-      return buildGraphQlDocument(doc);
-    },
-  },
-  resolvers: {
-    IDocument: {
-      __resolveType: (obj: GqlDocument, ctx: Context) => {
-        if (obj.__typename) {
-          return obj.__typename;
-        }
-        const modules = ctx.driveServer.getDocumentModelModules();
-        const module = modules.find(
-          (module) => module.documentModel.global.id === obj.documentType,
-        );
-        if (!module) return "GqlDocument";
-        return getDocumentModelSchemaName(module.documentModel.global);
-      },
-      operations: (
-        obj: unknown,
-        { skip = 0, first = 10 }: { skip?: number; first?: number },
-        ctx: Context,
-      ) => {
-        const documentOperations = ctx.document?.operations;
-        const operations =
-          documentOperations && "global" in documentOperations
-            ? documentOperations.global
-            : [];
-        return buildGraphqlOperations(operations, skip, first);
-      },
-    },
-  },
-};

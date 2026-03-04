@@ -125,10 +125,10 @@ describe("Permissions Integration Tests", () => {
     reactorSubgraph = new ReactorSubgraph({
       reactorClient: mockReactorClient as IReactorClient,
       documentPermissionService,
-      reactor: {} as any,
       relationalDb: {} as any,
       analyticsStore: {} as any,
       graphqlManager: {} as any,
+      syncManager: {} as any,
     } as SubgraphArgs);
   });
 
