@@ -173,28 +173,22 @@ async function createDocument(client: GraphQLClient): Promise<string> {
   return DocumentModel_createEmptyDocument.id;
 }
 
-async function performOperations(
-  client: GraphQLClient,
+type RequestDescriptor = {
+  mutation: string;
+  variables: Record<string, unknown>;
+  batchEnd: number;
+  batchCount: number;
+  actionType: string;
+};
+
+function buildRequests(
   documentId: string,
   docIndex: number,
   operationCount: number,
   batchSize: number,
   asyncMutate: boolean,
-  onProgress: (opNum: number, durationMs: number, batchCount: number) => void,
-): Promise<OperationsResult> {
-  let minOp: OperationTiming | null = null;
-  let maxOp: OperationTiming | null = null;
-  const durations: number[] = [];
-
-  // Build all request descriptors up front
-  const requests: Array<{
-    mutation: string;
-    variables: Record<string, unknown>;
-    batchEnd: number;
-    batchCount: number;
-    actionType: string;
-  }> = [];
-
+): RequestDescriptor[] {
+  const requests: RequestDescriptor[] = [];
   for (let i = 0; i < operationCount; i += batchSize) {
     const batchEnd = Math.min(i + batchSize, operationCount);
     const batchCount = batchEnd - i;
@@ -220,8 +214,30 @@ async function performOperations(
       actionType: batchCount === 1 ? actionTypes[0] : `batch(${batchCount})`,
     });
   }
+  return requests;
+}
 
-  const executeRequest = async (req: (typeof requests)[number]) => {
+async function performOperations(
+  client: GraphQLClient,
+  documentId: string,
+  docIndex: number,
+  operationCount: number,
+  batchSize: number,
+  onProgress: (opNum: number, durationMs: number, batchCount: number) => void,
+): Promise<OperationsResult> {
+  let minOp: OperationTiming | null = null;
+  let maxOp: OperationTiming | null = null;
+  const durations: number[] = [];
+
+  const requests = buildRequests(
+    documentId,
+    docIndex,
+    operationCount,
+    batchSize,
+    false,
+  );
+
+  for (const req of requests) {
     const opStart = performance.now();
     await client.request(req.mutation, req.variables);
     const batchDurationMs = performance.now() - opStart;
@@ -237,47 +253,91 @@ async function performOperations(
       actionType: req.actionType,
     };
 
-    if (minOp === null || perOpDurationMs < minOp.durationMs) {
-      minOp = timing;
-    }
-    if (maxOp === null || perOpDurationMs > maxOp.durationMs) {
-      maxOp = timing;
-    }
+    if (minOp === null || perOpDurationMs < minOp.durationMs) minOp = timing;
+    if (maxOp === null || perOpDurationMs > maxOp.durationMs) maxOp = timing;
 
     onProgress(req.batchEnd, batchDurationMs, req.batchCount);
-  };
-
-  if (asyncMutate) {
-    // Fire all requests consecutively without awaiting intermediate responses,
-    // filling the server queue as fast as possible. Only the final job ID is
-    // awaited to confirm the last operation was accepted.
-    const promises = requests.map((req) =>
-      client.request(req.mutation, req.variables),
-    );
-    const overallStart = performance.now();
-    await promises[promises.length - 1];
-    const totalMs = performance.now() - overallStart;
-    const perOpMs = totalMs / operationCount;
-
-    for (let i = 0; i < operationCount; i++) {
-      durations.push(perOpMs);
-    }
-    const last = requests[requests.length - 1];
-    const timing: OperationTiming = {
-      opIndex: last.batchEnd,
-      durationMs: perOpMs,
-      actionType: last.actionType,
-    };
-    minOp = timing;
-    maxOp = timing;
-    onProgress(last.batchEnd, totalMs, operationCount);
-  } else {
-    for (const req of requests) {
-      await executeRequest(req);
-    }
   }
 
   return { minOp, maxOp, durations };
+}
+
+const JOB_STATUS_QUERY = `
+  query GetJobStatus($jobId: String!) {
+    jobStatus(jobId: $jobId) { status completedAt }
+  }
+`;
+const TERMINAL_JOB_STATUSES = new Set(["READ_MODELS_READY", "FAILED"]);
+const JOB_POLL_INTERVAL_MS = 200;
+
+interface JobStatusResponse {
+  jobStatus: { status: string; completedAt: string | null };
+}
+
+async function performOperationsAsync(
+  client: GraphQLClient,
+  documentId: string,
+  docIndex: number,
+  operationCount: number,
+  batchSize: number,
+  onProgress: (opNum: number, durationMs: number, batchCount: number) => void,
+): Promise<OperationsResult> {
+  const requests = buildRequests(
+    documentId,
+    docIndex,
+    operationCount,
+    batchSize,
+    true,
+  );
+
+  // Start timer before dispatching — captures full queue-fill + execution time
+  const overallStart = performance.now();
+
+  // Dispatch requests consecutively so the server receives them in order.
+  // Each response is { op0: jobId, op1: jobId, ... } (one ID per alias).
+  // Awaiting each response before sending the next ensures the queue order
+  // matches the dispatch order, so we can target the final job ID.
+  let lastJobId: string | undefined;
+  for (const req of requests) {
+    const result = await client.request<Record<string, string>>(
+      req.mutation,
+      req.variables,
+    );
+    const jobIds = Object.values(result);
+    lastJobId = jobIds[jobIds.length - 1];
+  }
+
+  // Poll only the final job — when it completes all preceding jobs are done
+  while (lastJobId !== undefined) {
+    await new Promise<void>((resolve) =>
+      setTimeout(resolve, JOB_POLL_INTERVAL_MS),
+    );
+    const { jobStatus } = await client.request<JobStatusResponse>(
+      JOB_STATUS_QUERY,
+      { jobId: lastJobId },
+    );
+    if (
+      TERMINAL_JOB_STATUSES.has(jobStatus.status) ||
+      jobStatus.completedAt !== null
+    ) {
+      break;
+    }
+  }
+
+  const totalMs = performance.now() - overallStart;
+  const perOpMs = totalMs / operationCount;
+
+  const durations = Array.from({ length: operationCount }, () => perOpMs);
+  const last = requests[requests.length - 1];
+  const timing: OperationTiming = {
+    opIndex: last.batchEnd,
+    durationMs: perOpMs,
+    actionType: last.actionType,
+  };
+
+  onProgress(last.batchEnd, totalMs, operationCount);
+
+  return { minOp: timing, maxOp: timing, durations };
 }
 
 function parseArgs(args: string[]): {
@@ -604,13 +664,15 @@ async function main() {
             console.log(`  [${docNum}/${docCount}] ${docId} ${loopPrefix}:`);
           }
 
-          const result = await performOperations(
+          const performFn = asyncMutate
+            ? performOperationsAsync
+            : performOperations;
+          const result = await performFn(
             client,
             docId,
             docNum,
             operations,
             batchSize,
-            asyncMutate,
             (opNum, durationMs, batchCount) => {
               const batchInfo = batchCount > 1 ? ` (${batchCount} ops)` : "";
               if (verbose) {
