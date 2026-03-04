@@ -39,9 +39,11 @@ pnpm --filter document-model run tsc --build
 pnpm --filter @powerhousedao/reactor run build
 DATABASE_URL="postgresql://postgres:postgres@localhost:5432/postgres" pnpm --filter document-drive run migrate
 pnpm --filter @powerhousedao/switchboard run tsc --build
+pnpm --filter @powerhousedao/reactor-api run build:misc
 ```
 
 - `migrate` runs `prisma generate && prisma db push` — required once per fresh PostgreSQL database to create the schema. Re-run if you wipe the database.
+- `build:misc` copies `.graphql` schema files into the reactor-api dist. Without this, the reactor subgraph (which provides `jobStatus` and other queries) fails to start silently.
 - Rebuild after any source changes in these packages, otherwise the scripts will run against stale code.
 
 Scripts are run with [tsx](https://github.com/privatenumber/tsx). The GraphQL-based scripts (`docs-*`) require a running switchboard instance (default: `http://localhost:4001/graphql`).
