@@ -59,7 +59,7 @@
     "test:editors": "vitest run editors",
     "test:processors": "vitest run processors",
     "generate": "ph-cli generate",
-    "connect": "vite",
+    "connect": "ph-cli connect",
     "reactor": "ph-cli reactor",
     "service": "ph-cli service",
     "migrate": "ph-cli migrate",
