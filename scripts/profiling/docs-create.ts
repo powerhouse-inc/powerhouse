@@ -267,7 +267,7 @@ const JOB_STATUS_QUERY = `
     jobStatus(jobId: $jobId) { status completedAt }
   }
 `;
-const TERMINAL_JOB_STATUSES = new Set(["READ_MODELS_READY", "FAILED"]);
+const TERMINAL_JOB_STATUSES = new Set(["READ_READY", "FAILED"]);
 const JOB_POLL_INTERVAL_MS = 200;
 
 interface JobStatusResponse {
