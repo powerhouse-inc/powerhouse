@@ -4,10 +4,15 @@
     "outDir": "./dist",
     "emitDeclarationOnly": true,
     "paths": {
-      "@powerhousedao/connect/config": ["./src/connect.config.ts"],
-      "@powerhousedao/connect/assets/icons/*": ["./assets/icons/*"],
-      "@powerhousedao/connect/*": ["./src/*/index.ts"],
-      "@powerhousedao/connect/package.json": ["./package.copy.json"]
+      "@powerhousedao/connect/config": [
+        "./src/connect.config.ts"
+      ],
+      "@powerhousedao/connect/assets/*": [
+        "./assets/*"
+      ],
+      "@powerhousedao/connect/*": [
+        "./src/*/index.ts"
+      ],
     },
     "lib": [
       "ESNext",
@@ -23,11 +28,10 @@
   "include": [
     "**/*",
     "src/i18n/locales/en.json",
-    "./package.copy.json"
+    "./package.json"
   ],
   "exclude": [
     "dist",
-    "lib",
     "node_modules",
     "storybook-static"
   ],

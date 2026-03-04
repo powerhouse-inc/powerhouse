@@ -5,7 +5,6 @@ import {
   createBrowserReactor,
   getDefaultDrivesFromEnv,
 } from "@powerhousedao/connect/utils";
-import { DocumentChangeType } from "@powerhousedao/reactor";
 import {
   addRemoteDrive,
   dropAllReactorStorage,

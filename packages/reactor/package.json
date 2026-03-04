@@ -51,5 +51,10 @@
     "tsx": "catalog:",
     "vitest": "catalog:",
     "@types/bun": "catalog:"
+  },
+    "peerDependencies": {
+    "@electric-sql/pglite": ">=0.3.15",
+    "document-drive": "catalog:",
+    "document-model": "catalog:"
   }
 }

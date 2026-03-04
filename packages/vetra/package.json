@@ -85,7 +85,10 @@
     "zod": "catalog:",
     "graphql-tag": "catalog:",
     "@powerhousedao/reactor-browser": "workspace:*",
-    "@electric-sql/pglite": "catalog:"
+    "@electric-sql/pglite": "catalog:",
+    "@electric-sql/pglite-tools": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:"
   },
   "devDependencies": {
     "tailwindcss": "catalog:",
@@ -101,14 +104,8 @@
     "@types/react-dom": "catalog:",
     "@vitejs/plugin-react": "catalog:",
     "document-drive": "workspace:*",
-    "react": "catalog:",
-    "react-dom": "catalog:",
     "vite": "catalog:",
     "vitest": "catalog:"
-  },
-  "peerDependencies": {
-    "react": ">=19.0.0",
-    "react-dom": ">=19.0.0"
   },
   "description": ""
 }

@@ -33,8 +33,7 @@
     "lint": "eslint",
     "build:bundle": "bun run ./bundle.ts",
     "test:browser": "vitest --run",
-    "install:playwright": "playwright install",
-    "build:bundle": "bun run ./bundle.ts"
+    "install:playwright": "playwright install"
   },
   "devDependencies": {
     "@types/lodash.isequal": "^4.5.8",
@@ -43,7 +42,6 @@
     "@types/react-dom": "catalog:",
     "@types/bun": "catalog:",
     "@types/slug": "^5.0.9",
-    "@types/bun": "catalog:",
     "@types/wicg-file-system-access": "^2020.9.8",
     "@vitejs/plugin-react": "catalog:",
     "@vitest/browser": "^3.2.4",
@@ -73,6 +71,9 @@
   "peerDependencies": {
     "react": ">=19.0.0",
     "react-dom": ">=19.0.0",
-    "@electric-sql/pglite": ">=0.3.0"
+    "@electric-sql/pglite": ">=0.3.15",
+    "document-drive": "catalog:",
+    "document-model": "catalog:",
+    "vite": ">=7.3.1"
   }
 }

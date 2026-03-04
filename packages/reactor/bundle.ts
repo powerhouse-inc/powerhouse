@@ -3,4 +3,5 @@ await Bun.build({
   outdir: "dist",
   root: ".",
   target: "browser",
+  external: ["@electric-sql/pglite", "document-drive", "document-model"],
 });

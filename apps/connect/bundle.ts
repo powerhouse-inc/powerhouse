@@ -19,8 +19,14 @@ await Bun.build({
   external: [
     "react",
     "react-dom",
-    "@powerhousedao/reactor",
     "@electric-sql/pglite",
     "@electric-sql/pglite-tools",
+    "@powerhousedao/design-system",
+    "@powerhousedao/builder-tools",
+    "@powerhousedao/common",
+    "@powerhousedao/config",
+    "document-model",
+    "document-drive",
+    "vite",
   ],
 });

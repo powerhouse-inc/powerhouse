@@ -10,22 +10,20 @@
   },
   "files": [
     "dist",
-    "lib",
     "nginx.conf",
     "nginx.sh",
     "scripts",
     "assets",
     "public",
     "heroku",
-    ".env",
-    "./src/index.css",
-    "./package.copy.json"
+    ".env"
   ],
   "exports": {
     "./main.js": {
       "types": "./dist/src/main.d.ts",
       "import": "./dist/src/main.js"
     },
+    "./assets/*": "./assets/*",
     "./style.css": "./dist/style.css"
   },
   "sideEffects": [
@@ -46,10 +44,9 @@
     "tsc": "tsc",
     "lint": "eslint",
     "test": "vitest --run",
-    "postinstall": "cp ./package.json ./package.copy.json",
     "dev": "vite dev",
-    "build:css": "pnpm exec tailwindcss -i ./src/index.css -o ./dist/style.css",
-    "build:bundle": "bun run ./bundle.ts",
+    "tailwind": "pnpm exec tailwindcss -i ./src/index.css -o ./dist/style.css",
+    "build:vite": "bun run ./bundle.ts && pnpm tailwind",
     "build:debug": "PH_DEBUG_BUILD=true vite build",
     "preview": "vite preview",
     "cy:open": "cypress open",
@@ -66,7 +63,6 @@
     "@powerhousedao/design-system": "workspace:*",
     "@powerhousedao/document-engineering": "catalog:",
     "@powerhousedao/powerhouse-vetra-packages": "workspace:*",
-    "@powerhousedao/reactor": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",
     "@powerhousedao/shared": "workspace:",
     "@renown/sdk": "workspace:*",
@@ -96,6 +92,16 @@
     "@types/bun": "catalog:",
     "vite-tsconfig-paths": "^6.1.1",
     "react": "catalog:",
-    "react-dom": "catalog:"
+    "react-dom": "catalog:",
+    "tsconfig-paths": "4.2.0"
+  },
+    "peerDependencies": {
+    "react": ">=19.0.0",
+    "react-dom": ">=19.0.0",
+    "@electric-sql/pglite": ">=0.3.15",
+    "@electric-sql/pglite-tools": ">=0.2.20",
+    "document-drive": "catalog:",
+    "document-model": "catalog:",
+    "vite": ">=7.3.1"
   }
 }
