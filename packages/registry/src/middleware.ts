@@ -1,5 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
 import { Router } from "express";
+import fs from "node:fs";
 import path from "node:path";
 import { CdnCache } from "./cdn.js";
 import {
@@ -112,7 +113,8 @@ export function createPowerhouseRouter(config: RegistryConfig): Router {
     }
 
     res.setHeader("Content-Type", getContentType(filePath));
-    res.sendFile(resolved);
+    const content = fs.readFileSync(resolved);
+    res.send(content);
   });
 
   return router;

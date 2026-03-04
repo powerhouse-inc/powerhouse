@@ -46,12 +46,9 @@ describe("registry e2e", () => {
     await mkdir(path.join(testDir, "./.test-output/storage"), {
       recursive: true,
     });
-    await mkdir(path.join(testDir, "./.test-output/cdn-cache"), {
-      recursive: true,
-    });
     await cp(
-      path.join(testDir, "./data/packages/"),
-      path.join(testDir, "./.test-output/packages"),
+      path.join(testDir, "./data/cdn-cache/"),
+      path.join(testDir, "./.test-output/cdn-cache"),
       {
         recursive: true,
         force: true,
@@ -144,7 +141,7 @@ describe("registry e2e", () => {
       expect(hasVetra).toBe(true);
 
       const response = await fetch(
-        `${REGISTRY_URL}/@powerhousedao/vetra/powerhouse.manifest.json`,
+        `${REGISTRY_URL}/-/cdn/@powerhousedao/vetra/powerhouse.manifest.json`,
       );
 
       expect(response.ok).toBe(true);

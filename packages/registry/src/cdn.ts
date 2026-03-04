@@ -11,7 +11,10 @@ export class CdnCache {
   ) {}
 
   async getFile(packageName: string, filePath: string): Promise<string | null> {
-    const version = await this.getLatestVersion(packageName);
+    // Try local CDN cache first (pre-populated or previously extracted)
+    const version =
+      this.getLatestCachedVersion(packageName) ??
+      (await this.getLatestVersion(packageName));
     if (!version) return null;
 
     const versionDir = path.join(this.cdnCachePath, packageName, version);
@@ -37,6 +40,21 @@ export class CdnCache {
     if (this.isSafePath(distPath) && fs.existsSync(distPath)) return distPath;
 
     return null;
+  }
+
+  private getLatestCachedVersion(packageName: string): string | null {
+    const pkgDir = path.join(this.cdnCachePath, packageName);
+    try {
+      const entries = fs.readdirSync(pkgDir, { withFileTypes: true });
+      const versions = entries
+        .filter((e) => e.isDirectory())
+        .map((e) => e.name);
+      if (versions.length === 0) return null;
+      versions.sort();
+      return versions[versions.length - 1];
+    } catch {
+      return null;
+    }
   }
 
   async getLatestVersion(packageName: string): Promise<string | null> {
