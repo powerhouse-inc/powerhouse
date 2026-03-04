@@ -10,5 +10,6 @@ await Bun.build({
     "document-drive",
     "document-model",
     "vite",
+    "@powerhousedao/reactor",
   ],
 });

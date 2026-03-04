@@ -23,6 +23,10 @@ await Bun.build({
     "@electric-sql/pglite-tools",
     "@powerhousedao/design-system",
     "@powerhousedao/builder-tools",
+    // TODO: it should be possible to externalize this
+    // but if we do, we get a `process` is not defined error.
+    // it seems that there is something weird in the build pipeline.
+    // "@powerhousedao/reactor-browser",
     "@powerhousedao/common",
     "@powerhousedao/config",
     "document-model",

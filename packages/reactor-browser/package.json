@@ -42,7 +42,6 @@
     "@types/react-dom": "catalog:",
     "@types/bun": "catalog:",
     "@types/slug": "^5.0.9",
-    "@types/bun": "catalog:",
     "@types/wicg-file-system-access": "^2020.9.8",
     "@vitejs/plugin-react": "catalog:",
     "@vitest/browser": "^3.2.4",

@@ -15,21 +15,19 @@
   ],
   "exports": {
     ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
     }
   },
   "sideEffects": false,
   "scripts": {
     "tsc": "tsc",
-    "lint": "eslint"
+    "lint": "eslint",
+    "build:bundle": "bun run ./bundle.ts"
   },
   "devDependencies": {
-    "@types/react": "catalog:",
-    "react": "catalog:",
-    "tsx": "catalog:"
-  },
-  "dependencies": {
+    "@types/bun": "catalog:",
+    "tsx": "catalog:",
     "vite": "catalog:",
     "@sentry/vite-plugin": "^4.3.0",
     "@tailwindcss/vite": "catalog:",
@@ -47,11 +45,6 @@
     "magic-string": "^0.30.17",
     "read-pkg": "catalog:",
     "resolve.exports": "^2.0.3",
-    "vite-plugin-node-polyfills": "catalog:",
     "zod": "catalog:"
-  },
-  "peerDependencies": {
-    "react": ">=19.0.0",
-    "react-dom": ">=19.0.0"
   }
 }
