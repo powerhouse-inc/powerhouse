@@ -1,4 +1,4 @@
-import { cp } from "node:fs/promises";
+import { cp, access } from "node:fs/promises";
 
 await Bun.build({
   entrypoints: ["./src/index.ts", "./src/cli.ts"],
@@ -7,6 +7,11 @@ await Bun.build({
   target: "node",
 });
 
-await cp("./storage/", "./dist/storage", { recursive: true, force: true });
-await cp("./cdn-cache/", "./dist/cdn-cache", { recursive: true, force: true });
-await cp("./packages/", "./dist/packages", { recursive: true, force: true });
+for (const dir of ["storage", "cdn-cache", "packages"]) {
+  try {
+    await access(`./${dir}/`);
+    await cp(`./${dir}/`, `./dist/${dir}`, { recursive: true, force: true });
+  } catch {
+    // Directory doesn't exist yet, skip copy
+  }
+}
