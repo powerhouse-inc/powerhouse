@@ -1,3 +1,30 @@
+## 6.0.0-dev.68 (2026-03-04)
+
+### 🚀 Features
+
+- migrate mcp-reactor and subgraph gen to new reactor ([#2387](https://github.com/powerhouse-inc/powerhouse/pull/2387))
+- **codegen:** versioned reducers by default ([c8111a1d9](https://github.com/powerhouse-inc/powerhouse/commit/c8111a1d9))
+
+### 🩹 Fixes
+
+- include operation.reducer in codegen ([bd87e2c1a](https://github.com/powerhouse-inc/powerhouse/commit/bd87e2c1a))
+- compatibility issues with codegen and vetra ([17723c37f](https://github.com/powerhouse-inc/powerhouse/commit/17723c37f))
+- resolve empty name causing silent ADD_FILE failure in drives ([b44ed0c1c](https://github.com/powerhouse-inc/powerhouse/commit/b44ed0c1c))
+- **codegen:** correct and expand AGENTS.md template for document model guidance ([37a3f364d](https://github.com/powerhouse-inc/powerhouse/commit/37a3f364d))
+- **codegen:** the lookup for file paths did not support both versions ([9edb78394](https://github.com/powerhouse-inc/powerhouse/commit/9edb78394))
+- **reactor-api:** remove dead sync exports from index ([efc057075](https://github.com/powerhouse-inc/powerhouse/commit/efc057075))
+- **reactor-mcp:** adopt new reactor client interface for MCP server ([1b8e6fb19](https://github.com/powerhouse-inc/powerhouse/commit/1b8e6fb19))
+- **reactor-mcp:** resolve zod v3/v4 incompatibility with MCP SDK ([65c9b1399](https://github.com/powerhouse-inc/powerhouse/commit/65c9b1399))
+- **vetra:** use childLogger tag support instead of manual color formatting ([195bd4c36](https://github.com/powerhouse-inc/powerhouse/commit/195bd4c36))
+- **vetra:** extract global state from full PHDocument in codegen generators ([6e5d851df](https://github.com/powerhouse-inc/powerhouse/commit/6e5d851df))
+- **vetra:** remove custom subgraphs from vetra ([3a1e3b9b0](https://github.com/powerhouse-inc/powerhouse/commit/3a1e3b9b0))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Guillermo Puente @gpuente
+- Guillermo Puente Sandoval @gpuente
+
 ## 6.0.0-dev.67 (2026-03-03)
 
 ### 🩹 Fixes

@@ -1,3 +1,22 @@
+## 6.0.0-dev.68 (2026-03-04)
+
+### 🚀 Features
+
+- **codegen:** versioned reducers by default ([c8111a1d9](https://github.com/powerhouse-inc/powerhouse/commit/c8111a1d9))
+
+### 🩹 Fixes
+
+- **vetra:** remove custom subgraphs from vetra ([3a1e3b9b0](https://github.com/powerhouse-inc/powerhouse/commit/3a1e3b9b0))
+- resolve empty name causing silent ADD_FILE failure in drives ([b44ed0c1c](https://github.com/powerhouse-inc/powerhouse/commit/b44ed0c1c))
+- **reactor-mcp:** adopt new reactor client interface for MCP server ([1b8e6fb19](https://github.com/powerhouse-inc/powerhouse/commit/1b8e6fb19))
+- **vetra:** extract global state from full PHDocument in codegen generators ([6e5d851df](https://github.com/powerhouse-inc/powerhouse/commit/6e5d851df))
+- **vetra:** use childLogger tag support instead of manual color formatting ([195bd4c36](https://github.com/powerhouse-inc/powerhouse/commit/195bd4c36))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Guillermo Puente @gpuente
+
 ## 6.0.0-dev.67 (2026-03-03)
 
 This was a version bump only for @powerhousedao/vetra to align it with other projects, there were no code changes.

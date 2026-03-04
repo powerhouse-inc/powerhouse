@@ -1,3 +1,16 @@
+## 6.0.0-dev.68 (2026-03-04)
+
+### 🩹 Fixes
+
+- **vetra:** remove custom subgraphs from vetra ([3a1e3b9b0](https://github.com/powerhouse-inc/powerhouse/commit/3a1e3b9b0))
+- resolve empty name causing silent ADD_FILE failure in drives ([b44ed0c1c](https://github.com/powerhouse-inc/powerhouse/commit/b44ed0c1c))
+- **reactor-mcp:** resolve zod v3/v4 incompatibility with MCP SDK ([65c9b1399](https://github.com/powerhouse-inc/powerhouse/commit/65c9b1399))
+- **reactor-mcp:** adopt new reactor client interface for MCP server ([1b8e6fb19](https://github.com/powerhouse-inc/powerhouse/commit/1b8e6fb19))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 6.0.0-dev.67 (2026-03-03)
 
 This was a version bump only for @powerhousedao/reactor-mcp to align it with other projects, there were no code changes.
