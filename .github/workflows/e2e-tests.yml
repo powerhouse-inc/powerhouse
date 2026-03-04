@@ -58,14 +58,14 @@ jobs:
       - name: Run build clis
         run: pnpm build-cli
 
-      - name: Run install again after generating binaries
-        run: pnpm install-ci
-
       - name: Run css build scripts
         run: pnpm build-css
 
       - name: Run vite build scripts
         run: pnpm build-vite
+
+      - name: Run install again after generating binaries
+        run: pnpm install-ci
 
       - name: Install Playwright Browsers
         run: pnpm exec playwright install --with-deps chromium
@@ -142,14 +142,14 @@ jobs:
       - name: Run build clis
         run: pnpm build-cli
 
-      - name: Run install again after generating binaries
-        run: pnpm install-ci
-
       - name: Run css build scripts
         run: pnpm build-css
 
       - name: Run vite build scripts
         run: pnpm build-vite
+
+      - name: Run install again after generating binaries
+        run: pnpm install-ci
 
       - name: Install Playwright Browsers
         run: pnpm exec playwright install --with-deps chromium
@@ -212,14 +212,14 @@ jobs:
       - name: Run build clis
         run: pnpm build-cli
 
-      - name: Run install again after generating binaries
-        run: pnpm install-ci
-
       - name: Run css build scripts
         run: pnpm build-css
 
       - name: Run vite build scripts
         run: pnpm build-vite
+
+      - name: Run install again after generating binaries
+        run: pnpm install-ci
 
       - name: Install Playwright Browsers
         run: pnpm exec playwright install
