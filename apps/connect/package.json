@@ -102,7 +102,6 @@
     "@electric-sql/pglite": ">=0.3.15",
     "@electric-sql/pglite-tools": ">=0.2.20",
     "document-drive": "catalog:",
-    "document-model": "catalog:",
-    "vite": ">=7.3.1"
+    "document-model": "catalog:"
   }
 }
