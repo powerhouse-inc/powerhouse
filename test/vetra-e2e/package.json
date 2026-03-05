@@ -58,39 +58,42 @@
     "test:e2e:ui": "rimraf .ph && playwright test --ui"
   },
   "dependencies": {
-    "@powerhousedao/design-system": "workspace:*",
     "document-model": "workspace:*",
+    "@powerhousedao/connect": "workspace:*",
+    "@powerhousedao/design-system": "workspace:*",
+    "@powerhousedao/common": "workspace:*",
+    "@powerhousedao/config": "workspace:*",
+    "@powerhousedao/reactor-browser": "workspace:*",
+    "@powerhousedao/shared": "workspace:*",
+    "@powerhousedao/vetra": "workspace:*",
+    "@electric-sql/pglite": "catalog:",
+    "@electric-sql/pglite-tools": "catalog:",
+    "kysely": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@electric-sql/pglite": "catalog:",
-    "@eslint/js": "^9.37.0",
-    "@playwright/test": "^1.55.0",
-    "@powerhousedao/e2e-utils": "workspace:*",
-    "@powerhousedao/ph-cli": "workspace:*",
-    "@powerhousedao/connect": "workspace:*",
-    "@powerhousedao/reactor-browser": "workspace:*",
+    "document-drive": "workspace:*",
     "@powerhousedao/builder-tools": "workspace:*",
+    "@powerhousedao/codegen": "workspace:*",
+    "@powerhousedao/ph-cli": "workspace:*",
+    "@powerhousedao/e2e-utils": "workspace:*",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "vite": "catalog:",
+    "vitest": "catalog:",
+    "@vitejs/plugin-react": "catalog:",
+    "tailwindcss": "catalog:",
     "@tailwindcss/cli": "catalog:",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
-    "eslint": "^9.37.0",
-    "eslint-plugin-react": "^7.37.5",
-    "eslint-plugin-react-hooks": "^5.2.0",
-    "globals": "^16.0.0",
     "monocart-coverage-reports": "^2.12.8",
-    "react": "catalog:",
-    "react-dom": "catalog:",
-    "typescript-eslint": "^8.46.0",
-    "vite": "catalog:",
-    "tailwindcss": "catalog:",
-    "vite-plugin-node-polyfills": "catalog:",
-    "@powerhousedao/vetra": "workspace:*"
+    "@playwright/test": "^1.55.0"
   },
   "peerDependencies": {
     "react": ">=19.0.0",
-    "react-dom": ">=19.0.0"
+    "react-dom": ">=19.0.0",
+    "@electric-sql/pglite": ">=0.3.15"
   },
   "description": ""
 }

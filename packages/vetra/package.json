@@ -48,7 +48,6 @@
     },
     "./style.css": "./dist/style.css"
   },
-  "sideEffects": false,
   "scripts": {
     "tsc": "tsc",
     "lint": "eslint",
@@ -67,40 +66,45 @@
     "service-unstartup": "bash ./node_modules/@powerhousedao/ph-cli/dist/scripts/service-unstartup.sh"
   },
   "dependencies": {
+    "document-model": "workspace:*",
     "@powerhousedao/connect": "workspace:*",
-    "@powerhousedao/builder-tools": "workspace:*",
+    "@powerhousedao/design-system": "workspace:*",
     "@powerhousedao/common": "workspace:*",
     "@powerhousedao/config": "workspace:*",
-    "@powerhousedao/design-system": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",
+    "@powerhousedao/shared": "workspace:*",
     "change-case": "catalog:",
     "colorette": "catalog:",
-    "document-model": "workspace:*",
     "graphql": "catalog:",
     "kysely": "catalog:",
-    "@powerhousedao/shared": "workspace:*",
     "zod": "catalog:",
     "graphql-tag": "catalog:",
     "@electric-sql/pglite": "catalog:",
     "@electric-sql/pglite-tools": "catalog:"
   },
   "devDependencies": {
+    "document-drive": "workspace:*",
+    "@powerhousedao/builder-tools": "workspace:*",
+    "@powerhousedao/codegen": "workspace:*",
+    "@powerhousedao/ph-cli": "workspace:*",
     "react": "catalog:",
     "react-dom": "catalog:",
     "tailwindcss": "catalog:",
-    "@powerhousedao/codegen": "workspace:*",
-    "@powerhousedao/ph-cli": "workspace:*",
     "@tailwindcss/cli": "catalog:",
+    "vite": "catalog:",
+    "vitest": "catalog:",
+    "@vitejs/plugin-react": "catalog:",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^14.6.1",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
-    "@types/react-dom": "catalog:",
-    "@vitejs/plugin-react": "catalog:",
-    "document-drive": "workspace:*",
-    "vite": "catalog:",
-    "vitest": "catalog:"
+    "@types/react-dom": "catalog:"
+  },
+  "peerDependencies": {
+    "react": ">=19.0.0",
+    "react-dom": ">=19.0.0",
+    "@electric-sql/pglite": ">=0.3.15"
   },
   "description": ""
 }
