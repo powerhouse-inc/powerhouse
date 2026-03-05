@@ -659,6 +659,7 @@ async function main() {
           // (fire-and-forget into pollPromises) so results stream to stdout as
           // each poll resolves during dispatch rather than bursting at the end.
           for (let loop = 1; loop <= opLoops; loop++) {
+            const loopDispatchStart = performance.now();
             const requests = buildRequests(
               docId,
               docNum,
@@ -703,6 +704,13 @@ async function main() {
                 );
               }
             }
+            const loopDispatchMs = Math.round(
+              performance.now() - loopDispatchStart,
+            );
+            const msPerOp = Math.round(loopDispatchMs / operations);
+            process.stdout.write(
+              `\r  [${docNum}/${docCount}] ${docId}: loop ${loop}/${opLoops} dispatched in ${loopDispatchMs}ms (${msPerOp}ms/op)\n`,
+            );
           }
 
           // Wait for any polls still in flight after dispatch completes, then aggregate
