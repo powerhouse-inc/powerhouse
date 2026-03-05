@@ -46,8 +46,8 @@ catalogs:
       specifier: 24.0.0
       version: 24.0.0
     '@types/bun':
-      specifier: 1.3.10
-      version: 1.3.10
+      specifier: 1.3.8
+      version: 1.3.8
     '@types/luxon':
       specifier: 3.7.1
       version: 3.7.1
@@ -470,7 +470,7 @@ importers:
         version: 4.1.18
       '@types/bun':
         specifier: 'catalog:'
-        version: 1.3.10
+        version: 1.3.8
       '@types/node':
         specifier: 'catalog:'
         version: 25.2.3
@@ -639,7 +639,7 @@ importers:
         version: link:../../packages/renown
       '@types/bun':
         specifier: 'catalog:'
-        version: 1.3.10
+        version: 1.3.8
       '@types/node':
         specifier: 'catalog:'
         version: 25.2.3
@@ -705,7 +705,7 @@ importers:
         version: link:../../packages/common
       '@types/bun':
         specifier: 'catalog:'
-        version: 1.3.10
+        version: 1.3.8
       chalk:
         specifier: 'catalog:'
         version: 5.6.2
@@ -741,7 +741,7 @@ importers:
         version: link:../shared
       '@types/bun':
         specifier: 'catalog:'
-        version: 1.3.10
+        version: 1.3.8
       '@types/node':
         specifier: 'catalog:'
         version: 25.2.3
@@ -1012,7 +1012,7 @@ importers:
         version: 4.1.18(vite@7.3.1(@types/node@25.3.1)(jiti@2.6.1)(lightningcss@1.31.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2))
       '@types/bun':
         specifier: 'catalog:'
-        version: 1.3.10
+        version: 1.3.8
       '@vitejs/plugin-basic-ssl':
         specifier: 'catalog:'
         version: 2.1.4(vite@7.3.1(@types/node@25.3.1)(jiti@2.6.1)(lightningcss@1.31.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2))
@@ -1142,7 +1142,7 @@ importers:
         version: link:../reactor-browser
       '@types/bun':
         specifier: 'catalog:'
-        version: 1.3.10
+        version: 1.3.8
       '@types/react':
         specifier: 'catalog:'
         version: 19.2.14
@@ -1715,7 +1715,7 @@ importers:
         version: link:../shared
       '@types/bun':
         specifier: 'catalog:'
-        version: 1.3.10
+        version: 1.3.8
       '@vitest/coverage-v8':
         specifier: ^3.2.4
         version: 3.2.4(@vitest/browser@3.2.4)(vitest@3.2.4)
@@ -1941,7 +1941,7 @@ importers:
         version: 5.90.21(react@19.2.4)
       '@types/bun':
         specifier: 'catalog:'
-        version: 1.3.10
+        version: 1.3.8
       '@types/lodash.isequal':
         specifier: ^4.5.8
         version: 4.5.8
@@ -2189,7 +2189,7 @@ importers:
     devDependencies:
       '@types/bun':
         specifier: 'catalog:'
-        version: 1.3.10
+        version: 1.3.8
       '@types/luxon':
         specifier: 'catalog:'
         version: 3.7.1
@@ -8779,8 +8779,8 @@ packages:
   '@types/bonjour@3.5.13':
     resolution: {integrity: sha512-z9fJ5Im06zvUL548KvYNecEVlA7cVDkGUi6kZusb04mpyEFKCIZJvloCcmpmLaIahDpOQGHaHmG6imtPMmPXGQ==}
 
-  '@types/bun@1.3.10':
-    resolution: {integrity: sha512-0+rlrUrOrTSskibryHbvQkDOWRJwJZqZlxrUs1u4oOoTln8+WIXBPmAuCF35SWB2z4Zl3E84Nl/D0P7803nigQ==}
+  '@types/bun@1.3.8':
+    resolution: {integrity: sha512-3LvWJ2q5GerAXYxO2mffLTqOzEu5qnhEAlh48Vnu8WQfnmSwbgagjGZV6BoHKJztENYEDn6QmVd949W4uESRJA==}
 
   '@types/bunyan@1.8.11':
     resolution: {integrity: sha512-758fRH7umIMk5qt5ELmRMff4mLDlN+xyYzC+dkPTdKwbSkJFvz6xwyScrytPU0QIBbRRwbiE8/BIg8bpajerNQ==}
@@ -10203,8 +10203,8 @@ packages:
   builtin-status-codes@3.0.0:
     resolution: {integrity: sha512-HpGFw18DgFWlncDfjTa2rcQ4W88O1mC8e8yZ2AvQY5KDaktSTwo+KRf6nHK6FRI5FyRyb/5T6+TSxfP7QyGsmQ==}
 
-  bun-types@1.3.10:
-    resolution: {integrity: sha512-tcpfCCl6XWo6nCVnpcVrxQ+9AYN1iqMIzgrSKYMB/fjLtV2eyAVEg7AxQJuCq/26R6HpKWykQXuSOq/21RYcbg==}
+  bun-types@1.3.8:
+    resolution: {integrity: sha512-fL99nxdOWvV4LqjmC+8Q9kW3M4QTtTR1eePs94v5ctGqU8OeceWrSUaRw3JYb7tU3FkMIAjkueehrHPPPGKi5Q==}
 
   bundle-name@4.1.0:
     resolution: {integrity: sha512-tjwM5exMg6BGRI+kNmTntNsvdZS1X8BFYS6tnJ2hdH0kVxM6/eVZ2xy+FqStSWvYmtfFMDLIxurorHwDKfDz5Q==}
@@ -26893,9 +26893,9 @@ snapshots:
     dependencies:
       '@types/node': 25.3.1
 
-  '@types/bun@1.3.10':
+  '@types/bun@1.3.8':
     dependencies:
-      bun-types: 1.3.10
+      bun-types: 1.3.8
 
   '@types/bunyan@1.8.11':
     dependencies:
@@ -28605,7 +28605,7 @@ snapshots:
 
   builtin-status-codes@3.0.0: {}
 
-  bun-types@1.3.10:
+  bun-types@1.3.8:
     dependencies:
       '@types/node': 25.3.1
 

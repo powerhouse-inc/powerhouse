@@ -171,8 +171,8 @@ export function AtlasImport() {
                     gradientUnits="userSpaceOnUse"
                     gradientTransform="translate(13.9994 16.0344) rotate(-89.9988) scale(16.0344 16.201)"
                   >
-                    <stop offset="0.181008" stop-color="#FFCD6B" />
-                    <stop offset="1" stop-color="#EB5EDF" />
+                    <stop offset="0.181008" stopColor="#FFCD6B" />
+                    <stop offset="1" stopColor="#EB5EDF" />
                   </radialGradient>
                   <linearGradient
                     id="paint1_linear_319_20865"

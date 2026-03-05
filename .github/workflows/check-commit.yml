@@ -4,6 +4,9 @@ concurrency:
   group: check-commit-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  BUN_RUNTIME_TRANSPILER_CACHE_PATH: "0"
+
 on:
   workflow_dispatch:
   push:
@@ -44,6 +47,8 @@ jobs:
 
       - name: Setup bun global install
         uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.8
 
       - name: Install deps (frozen lockfile)
         run: pnpm install-ci
@@ -74,8 +79,13 @@ jobs:
         run: pnpm build-vite
 
       - name: Run connect build script
-        run: bun run ./bundle.ts
+        timeout-minutes: 1
         working-directory: ./apps/connect
+        run: |
+          set -euo pipefail
+          # Hard timeout so a wedged Bun process can't hang CI forever.
+          # Exit code will be 124 on timeout.
+          timeout --kill-after=5s 1m bun run ./bundle.ts
 
       - name: Run build clis
         run: pnpm build-cli
