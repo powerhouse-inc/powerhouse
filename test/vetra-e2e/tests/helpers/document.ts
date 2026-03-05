@@ -29,6 +29,7 @@ export async function createDocument(
     name: `Add new specification ${documentType}`,
   });
   await expect(addButton).toBeVisible();
+  await addButton.isEnabled();
   await addButton.click();
 
   // Wait for the create document dialog to be visible
