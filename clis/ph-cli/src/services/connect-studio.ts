@@ -7,10 +7,7 @@ import {
 } from "vite";
 import type { ConnectStudioArgs } from "../types.js";
 import { assignEnvVars } from "../utils/assign-env-vars.js";
-import {
-  resolveConnectPublicDir,
-  resolveViteConfigPath,
-} from "../utils/resolve-connect-dirs.js";
+import { resolveViteConfigPath } from "../utils/resolve-connect-dirs.js";
 
 export async function runConnectStudio(
   args: ConnectStudioArgs,
@@ -36,12 +33,9 @@ export async function runConnectStudio(
     viteConfigPath,
   );
 
-  // const connectPublicDir = resolveConnectPublicDir(projectRoot);
-
   const devServerConfig: InlineConfig = {
     mode,
     configFile: false,
-    // publicDir: connectPublicDir,
     server: { port, host, open, cors, strictPort },
     optimizeDeps: {
       force,
