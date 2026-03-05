@@ -18,7 +18,7 @@ export async function closeDocumentFromToolbar(page: Page) {
   const closeButton = page.locator("#close-document-button");
   // Increase timeout to 2 minutes to handle slow CI environments
   await expect(closeButton).toBeVisible({ timeout: 2 * 60 * 60 * 1000 });
-  await closeButton.isEnabled();
+  await closeButton.isEnabled({ timeout: 2 * 60 * 60 * 1000 });
   await closeButton.click();
 }
 
