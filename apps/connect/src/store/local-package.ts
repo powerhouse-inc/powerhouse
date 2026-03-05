@@ -3,12 +3,15 @@ import type { DocumentModelLib } from "document-model";
 
 export async function loadLocalPackage() {
   try {
-    // @ts-expect-error /index.ts will only be resolved on studio mode
-    const module = (await import("/index.ts")) as unknown as DocumentModelLib;
-    await import("/style.css");
+    const url = "/index.ts";
+    const cssUrl = "/style.css";
+    const module = (await import(
+      /* @vite-ignore */ url
+    )) as unknown as DocumentModelLib;
+    await import(/* @vite-ignore */ cssUrl);
     return convertLegacyLibToVetraPackage(module);
   } catch (error) {
-    console.error(error);
+    console.warn(error);
     return null;
   }
 }
