@@ -8,6 +8,7 @@ import {
 import {
   addRemoteDrive,
   BrowserPackageManager,
+  convertLegacyLibToVetraPackage,
   dropAllReactorStorage,
   extractDriveSlugFromPath,
   extractNodeSlugFromPath,
@@ -106,7 +107,19 @@ export async function createReactor() {
   await packageManager.addLocalPackage("common", commonPackage);
 
   // load external packages if available
-  // TODO: load if PH_CONNECT_PACKAGES is set
+  try {
+    const { loadExternalPackages } =
+      await import("virtual:ph:external-packages");
+    const externalPackages = await loadExternalPackages();
+    for (let i = 0; i < externalPackages.length; i++) {
+      const externalPkg = externalPackages[i];
+      const vetraPackage = convertLegacyLibToVetraPackage(externalPkg);
+      const name = externalPkg.manifest?.name || `external-${i}`;
+      await packageManager.addLocalPackage(name, vetraPackage);
+    }
+  } catch (error) {
+    logger.info("No external packages to load");
+  }
 
   // load local package if available
   // TODO: load if PH_CONNECT_LOCAL_PACKAGE is set
