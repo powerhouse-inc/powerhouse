@@ -1,4 +1,4 @@
-import { join } from "path";
+import path, { join } from "path";
 import type { ModuleNode, PluginOption } from "vite";
 
 /**
@@ -11,6 +11,9 @@ function makeImportScriptFromPackages(
 ) {
   const packageImports = packages.map((pkg) => ({
     name: pkg,
+    // This is an example of how this will still work by importing
+    // the bundled package code which is output to the cdn dir
+    // js: path.join(pkg, "cdn"),
     js: pkg,
     css: pkg + "/style.css",
   }));

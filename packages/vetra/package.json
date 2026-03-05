@@ -11,7 +11,8 @@
     "access": "public"
   },
   "files": [
-    "dist"
+    "dist",
+    "cdn/index.js"
   ],
   "exports": {
     ".": {
@@ -46,12 +47,16 @@
       "types": "./dist/editors/vetra-drive-app/index.d.ts",
       "import": "./dist/editors/vetra-drive-app/index.js"
     },
+    "./cdn": {
+      "import": "./cdn/index.js"
+    },
     "./style.css": "./dist/style.css"
   },
   "scripts": {
     "tsc": "tsc",
     "lint": "eslint",
     "build:css": "pnpm exec tailwindcss -i ./style.css -o ./dist/style.css",
+    "ph-build": "bun run ./bundle.ts",
     "test": "vitest --run",
     "test:watch": "vitest",
     "test:document-models": "vitest run document-models",
@@ -99,7 +104,8 @@
     "@testing-library/user-event": "^14.6.1",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
-    "@types/react-dom": "catalog:"
+    "@types/react-dom": "catalog:",
+    "@types/bun": "catalog:"
   },
   "peerDependencies": {
     "react": ">=19.0.0",
