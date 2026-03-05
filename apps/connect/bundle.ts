@@ -8,7 +8,6 @@ await Bun.build({
     "./src/hooks/index.ts",
     "./src/i18n/index.ts",
     "./src/pages/index.ts",
-    "./src/services/index.ts",
     "./src/store/index.ts",
     "./src/utils/index.ts",
   ],
