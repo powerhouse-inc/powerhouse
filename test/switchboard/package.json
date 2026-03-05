@@ -1,0 +1,19 @@
+{
+  "name": "@powerhousedao/test-switchboard",
+  "version": "1.0.0",
+  "description": "E2E tests for RemoteDocumentController against a running switchboard",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test:e2e": "vitest --run"
+  },
+  "devDependencies": {
+    "@powerhousedao/switchboard": "workspace:*",
+    "@powerhousedao/reactor-api": "workspace:*",
+    "@powerhousedao/reactor-browser": "workspace:*",
+    "@renown/sdk": "workspace:*",
+    "document-model": "workspace:*",
+    "vitest": "catalog:"
+  }
+}

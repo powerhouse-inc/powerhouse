@@ -25,6 +25,14 @@
     "./analytics": {
       "types": "./dist/src/analytics.d.ts",
       "import": "./dist/src/analytics.js"
+    },
+    "./remote-controller": {
+      "types": "./dist/src/remote-controller/index.d.ts",
+      "import": "./dist/src/remote-controller/index.js"
+    },
+    "./graphql-client": {
+      "types": "./dist/src/graphql/client.d.ts",
+      "import": "./dist/src/graphql/client.js"
     }
   },
   "sideEffects": false,
@@ -33,9 +41,17 @@
     "lint": "eslint",
     "build:bundle": "bun run ./bundle.ts",
     "test:browser": "vitest --run",
-    "install:playwright": "playwright install"
+    "install:playwright": "playwright install",
+    "codegen": "graphql-codegen --config codegen.ts && prettier --write src/graphql/gen/*.ts && eslint --fix src/graphql/gen/*.ts --no-warn-ignored"
   },
   "devDependencies": {
+    "@graphql-codegen/cli": "catalog:",
+    "@graphql-codegen/typescript": "catalog:",
+    "@graphql-codegen/typescript-graphql-request": "catalog:",
+    "@graphql-codegen/typescript-operations": "catalog:",
+    "graphql": "catalog:",
+    "graphql-request": "catalog:",
+    "graphql-tag": "catalog:",
     "@types/lodash.isequal": "^4.5.8",
     "@types/luxon": "^3.6.2",
     "@types/react": "catalog:",

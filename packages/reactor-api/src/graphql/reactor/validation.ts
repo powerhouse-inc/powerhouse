@@ -24,6 +24,13 @@ export const DocumentModelResultPageDTO = z
   })
   .strip();
 
+export const RevisionEntryDTO = z
+  .object({
+    scope: z.string(),
+    revision: z.number().int(),
+  })
+  .strip();
+
 export const PHDocumentDTO = z
   .object({
     id: z.string(),
@@ -31,9 +38,9 @@ export const PHDocumentDTO = z
     name: z.string(),
     documentType: z.string(),
     state: JSONObjectDTO,
-    revision: z.number().int(),
-    created: DateTimeDTO,
-    lastModified: DateTimeDTO,
+    revisionsList: z.array(RevisionEntryDTO),
+    createdAtUtcIso: DateTimeDTO,
+    lastModifiedAtUtcIso: DateTimeDTO,
   })
   .strip();
 
@@ -69,6 +76,80 @@ export const JobInfoDTO = z
     error: z.string().nullable().optional(),
     createdAt: DateTimeDTO,
     completedAt: DateTimeDTO.nullable().optional(),
+  })
+  .strip();
+
+// Operation DTOs for GetDocumentOperations
+export const ActionSignerUserDTO = z
+  .object({
+    address: z.string(),
+    networkId: z.string(),
+    chainId: z.number().int(),
+  })
+  .strip();
+
+export const ActionSignerAppDTO = z
+  .object({
+    name: z.string(),
+    key: z.string(),
+  })
+  .strip();
+
+export const ActionSignerDTO = z
+  .object({
+    signatures: z.array(z.string()),
+    user: ActionSignerUserDTO.nullable().optional(),
+    app: ActionSignerAppDTO.nullable().optional(),
+  })
+  .strip();
+
+export const ActionContextDTO = z
+  .object({
+    signer: ActionSignerDTO.nullable().optional(),
+  })
+  .strip();
+
+export const AttachmentDTO = z
+  .object({
+    data: z.string(),
+    mimeType: z.string(),
+    hash: z.string(),
+    extension: z.string().nullable().optional(),
+    fileName: z.string().nullable().optional(),
+  })
+  .strip();
+
+export const OperationActionDTO = z
+  .object({
+    id: z.string(),
+    type: z.string(),
+    timestampUtcMs: z.string(),
+    input: z.unknown(),
+    scope: z.string(),
+    attachments: z.array(AttachmentDTO).nullable().optional(),
+    context: ActionContextDTO.nullable().optional(),
+  })
+  .strip();
+
+export const OperationDTO = z
+  .object({
+    index: z.number().int(),
+    timestampUtcMs: z.string(),
+    hash: z.string(),
+    skip: z.number().int(),
+    error: z.string().nullable().optional(),
+    id: z.string().nullable().optional(),
+    action: OperationActionDTO,
+  })
+  .strip();
+
+export const OperationResultPageDTO = z
+  .object({
+    items: z.array(OperationDTO),
+    totalCount: z.number().int(),
+    hasNextPage: z.boolean(),
+    hasPreviousPage: z.boolean(),
+    cursor: z.string().nullable().optional(),
   })
   .strip();
 

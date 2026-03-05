@@ -14,6 +14,14 @@ type ScreamingSnakeToCamel<S extends string> =
     ? `${Lowercase<Head>}${Capitalize<ScreamingSnakeToCamel<Tail>>}`
     : Lowercase<S>;
 
+export type DocumentChangeEvent<TState extends PHBaseState = PHBaseState> = {
+  document: PHDocument<TState>;
+};
+
+export type DocumentChangeListener<TState extends PHBaseState = PHBaseState> = (
+  event: DocumentChangeEvent<TState>,
+) => void;
+
 export type ActionMap<TAction extends Action, TReturn = void> = {
   [K in (TAction | DocumentAction)["type"] as ScreamingSnakeToCamel<K>]: (
     input: Extract<TAction | DocumentAction, { type: K }>["input"],
@@ -23,26 +31,32 @@ export type ActionMap<TAction extends Action, TReturn = void> = {
 export class PHDocumentController<
   TState extends PHBaseState,
 > implements PHDocument<TState> {
-  protected module: DocumentModelModule<TState>;
-  protected document: PHDocument<TState>;
+  readonly module: DocumentModelModule<TState>;
+  protected _document: PHDocument<TState>;
+  private listeners: DocumentChangeListener<TState>[] = [];
 
   constructor(
     module: DocumentModelModule<TState>,
     initialDocument?: PHDocument<TState>,
   ) {
     this.module = module;
-    this.document = initialDocument ?? module.utils.createDocument();
+    this._document = initialDocument ?? module.utils.createDocument();
 
     // dynamically add action methods to the controller
     for (const actionType in this.module.actions) {
       Object.defineProperty(this, actionType, {
         value: (input: unknown) => {
           const action = this.module.actions[actionType](input);
-          this.document = this.module.reducer(this.document, action);
+          this._document = this.module.reducer(this._document, action);
+          this.notifyListeners();
           return this;
         },
       });
     }
+  }
+
+  get document(): PHDocument<TState> {
+    return this._document;
   }
 
   get header(): PHDocumentHeader {
@@ -59,6 +73,21 @@ export class PHDocumentController<
   }
   get clipboard(): Operation[] {
     return this.document.clipboard;
+  }
+
+  onChange(listener: DocumentChangeListener<TState>): () => void {
+    this.listeners.push(listener);
+    return () => {
+      this.listeners = this.listeners.filter((l) => l !== listener);
+    };
+  }
+
+  private notifyListeners(): void {
+    if (this.listeners.length === 0) return;
+    const event: DocumentChangeEvent<TState> = { document: this._document };
+    for (const listener of this.listeners) {
+      listener(event);
+    }
   }
 
   static forDocumentModel<TState extends PHBaseState, TAction extends Action>(
