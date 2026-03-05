@@ -145,10 +145,10 @@ import {
  * @param name - The name to be set in the document.
  * @category Actions
  */
-export const setName = (name: string) =>
+export const setName = (name: string | { name: string }) =>
   createAction<SetNameAction>(
     "SET_NAME",
-    { name },
+    typeof name === "string" ? { name } : name,
     undefined,
     SetNameActionInputSchema,
     // TODO: THIS IS A BUG: This needs to be changed to a HEADER scope action if it's changing the header.
