@@ -1,3 +1,13 @@
+## 6.0.0-dev.69 (2026-03-05)
+
+### 🚀 Features
+
+- **document-model:** added controller class for documents ([f17432e68](https://github.com/powerhouse-inc/powerhouse/commit/f17432e68))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 6.0.0-dev.68 (2026-03-04)
 
 ### 🚀 Features
