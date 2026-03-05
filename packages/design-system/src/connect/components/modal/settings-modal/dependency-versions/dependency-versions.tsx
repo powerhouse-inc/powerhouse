@@ -14,7 +14,7 @@ const PackageJsonSchema = object({
   devDependencies: record(string(), string()).nullable(),
 })
   .refine(
-    (data) => data.dependencies != null || data.devDependencies != null,
+    (data) => data.dependencies != null && data.devDependencies != null,
     "package.json must have either dependencies or devDependencies",
   )
   .transform((data) => {

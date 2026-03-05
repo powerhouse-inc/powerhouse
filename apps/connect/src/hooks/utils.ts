@@ -1,4 +1,4 @@
-import { connectConfig } from "@powerhousedao/connect/config";
+import { packageJson } from "../utils/package-json.js";
 
 export const isMac = window.navigator.appVersion.includes("Mac");
 
@@ -37,7 +37,7 @@ const fetchLatestVersion = async () => {
 };
 
 export const isLatestVersion = async () => {
-  const currentVersion = connectConfig.appVersion;
+  const currentVersion = packageJson.version;
   const deployed = await fetchLatestVersion();
 
   if (deployed) {

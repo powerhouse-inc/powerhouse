@@ -1,9 +1,18 @@
 async function build() {
   const result = await Bun.build({
-    entrypoints: ["./src/index.ts"],
+    entrypoints: ["./index.ts"],
+    outdir: "dist",
     root: ".",
-    outdir: "./dist",
     target: "node",
+    external: [
+      "vite",
+      "document-model",
+      "vite-plugin-html",
+      "vite-plugin-svgr",
+      "@tailwindcss/vite",
+      "@vitejs/plugin-basic-ssl",
+      "@vitejs/plugin-react",
+    ],
   });
 
   if (result.success !== true) {

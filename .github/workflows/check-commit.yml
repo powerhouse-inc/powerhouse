@@ -4,6 +4,9 @@ concurrency:
   group: check-commit-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  BUN_RUNTIME_TRANSPILER_CACHE_PATH: "0"
+
 on:
   workflow_dispatch:
   push:
@@ -44,6 +47,8 @@ jobs:
 
       - name: Setup bun global install
         uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.8
 
       - name: Install deps (frozen lockfile)
         run: pnpm install-ci
@@ -67,8 +72,26 @@ jobs:
       - name: Run bundle scripts
         run: pnpm build-bundle
 
+      - name: Run css build scripts
+        run: pnpm build-css
+
+      - name: Run vite build scripts
+        run: pnpm build-vite
+
+      - name: Run connect build script
+        timeout-minutes: 1
+        working-directory: ./apps/connect
+        run: |
+          set -euo pipefail
+          # Hard timeout so a wedged Bun process can't hang CI forever.
+          # Exit code will be 124 on timeout.
+          timeout --kill-after=5s 1m bun run ./bundle.ts
+
       - name: Run build clis
         run: pnpm build-cli
+
+      - name: Run storybook build scripts
+        run: pnpm build-storybook
 
       - name: Run install again after generating binaries
         run: pnpm install-ci
@@ -88,15 +111,6 @@ jobs:
       - name: Skip test (no changed files)
         if: ${{ steps.diff.outputs.files == '' }}
         run: echo "No changed files; skipping tests."
-
-      - name: Run css build scripts
-        run: pnpm build-css
-
-      - name: Run vite build scripts
-        run: pnpm build-vite
-
-      - name: Run storybook build scripts
-        run: pnpm build-storybook
 
       - name: Run circular imports check
         run: pnpm check-circular-imports

@@ -22,11 +22,11 @@ export async function previewConnect(options: ConnectPreviewOptions = {}) {
     viteConfigPath,
   );
 
-  const connectPublicDir = resolveConnectPublicDir(options.projectRoot);
+  // const connectPublicDir = resolveConnectPublicDir(options.projectRoot);
 
   const previewConfig: InlineConfig = {
     base: options.base,
-    publicDir: connectPublicDir,
+    // publicDir: connectPublicDir,
     mode,
     configFile: false,
     build: {

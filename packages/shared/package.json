@@ -47,13 +47,14 @@
     }
   },
   "dependencies": {
-    "kysely": "catalog:",
     "@sindresorhus/fnv1a": "catalog:",
     "luxon": "catalog:",
-    "mutative": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
+    "mutative": "catalog:",
+    "kysely": "catalog:",
+    "@types/bun": "catalog:",
     "@types/luxon": "catalog:",
     "@types/react": "catalog:",
     "react": "catalog:"

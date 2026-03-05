@@ -230,7 +230,9 @@ describe("GqlRequestChannel Integration", () => {
       channelId,
       remoteName,
       cursorStorage,
-      createTestConfig({ fetchFn: mockFetch }),
+      createTestConfig({
+        fetchFn: mockFetch as unknown as typeof global.fetch,
+      }),
       createMockOperationIndex(),
       pollTimer,
     );

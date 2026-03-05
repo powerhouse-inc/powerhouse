@@ -30,6 +30,8 @@ env:
   NX_ISOLATE_PLUGINS: false
   DATABASE_URL: postgres://postgres:postgres@postgres:5432/postgres?sslmode=disable&connect_timeout=30&connection_limit=90
   REDIS_TLS_URL: redis://redis:6379
+  BUN_RUNTIME_TRANSPILER_CACHE_PATH: "0"
+
 
 jobs:
   # lint:
@@ -97,6 +99,8 @@ jobs:
 
       - name: Setup bun global install
         uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.8
 
       - name: Generate Prisma client
         run: pnpm prisma generate
@@ -169,6 +173,8 @@ jobs:
 
       - name: Setup bun global install
         uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.8
 
       - name: Install dependencies
         run: pnpm install-ci

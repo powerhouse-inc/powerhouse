@@ -1,7 +1,19 @@
 {
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
-    "outDir": "./lib",
+    "outDir": "./dist",
+    "emitDeclarationOnly": true,
+    "paths": {
+      "@powerhousedao/connect/config": [
+        "./src/connect.config.ts"
+      ],
+      "@powerhousedao/connect/assets/*": [
+        "./assets/*"
+      ],
+      "@powerhousedao/connect/*": [
+        "./src/*/index.ts"
+      ],
+    },
     "lib": [
       "ESNext",
       "DOM",
@@ -9,8 +21,6 @@
     ],
     "types": [
       "node",
-      "vite/client",
-      "vite-plugin-svgr/client",
       "@types/wicg-file-system-access",
       "@types/bun"
     ]
@@ -18,11 +28,10 @@
   "include": [
     "**/*",
     "src/i18n/locales/en.json",
-    "./package.copy.json"
+    "./package.json"
   ],
   "exclude": [
     "dist",
-    "lib",
     "node_modules",
     "storybook-static"
   ],

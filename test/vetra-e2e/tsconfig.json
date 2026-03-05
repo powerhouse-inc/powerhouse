@@ -15,13 +15,28 @@
       "path": "../../packages/builder-tools"
     },
     {
+      "path": "../../packages/codegen"
+    },
+    {
+      "path": "../../packages/common"
+    },
+    {
+      "path": "../../packages/config"
+    },
+    {
       "path": "../../packages/design-system"
+    },
+    {
+      "path": "../../packages/document-drive"
     },
     {
       "path": "../../packages/document-model"
     },
     {
       "path": "../../packages/reactor-browser"
+    },
+    {
+      "path": "../../packages/shared"
     },
     {
       "path": "../../packages/vetra"

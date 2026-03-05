@@ -2,8 +2,10 @@
   "extends": "../../tsconfig.json",
   "compilerOptions": {
     "outDir": "./dist",
+    "emitDeclarationOnly": true,
     "types": [
-      "vite/client"
+      "vite/client",
+      "@types/bun"
     ]
   },
   "include": [
