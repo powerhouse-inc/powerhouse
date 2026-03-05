@@ -20,14 +20,19 @@ export function convertLegacyLibToVetraPackage(
 ): VetraPackage {
   const id = generateId();
 
+  const publisher =
+    "publisher" in legacyLib.manifest
+      ? legacyLib.manifest.publisher
+      : undefined;
+
   const vetraPackage: VetraPackage = {
     id,
     name: legacyLib.manifest.name,
     description: legacyLib.manifest.description,
     category: legacyLib.manifest.category,
     author: {
-      name: "Powerhouse",
-      website: "https://powerhousedao.com",
+      name: publisher?.name || "",
+      website: publisher?.url || "",
     },
     modules: {
       documentModelModules: legacyLib.documentModels.map(

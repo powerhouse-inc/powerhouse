@@ -44,12 +44,23 @@
     "./analytics/*": {
       "types": "./dist/analytics/*.d.ts",
       "import": "./dist/analytics/*.js"
+    },
+    "./cli": {
+      "types": "./dist/cli/index.d.ts",
+      "default": "./dist/cli/index.js"
+    },
+    "./cli/*": {
+      "types": "./dist/cli/*.d.ts",
+      "default": "./dist/cli/*.js"
     }
   },
   "dependencies": {
     "@sindresorhus/fnv1a": "catalog:",
     "luxon": "catalog:",
-    "zod": "catalog:"
+    "mutative": "catalog:",
+    "react": "catalog:",
+    "zod": "catalog:",
+    "cmd-ts": "catalog:"
   },
   "devDependencies": {
     "mutative": "catalog:",

@@ -197,7 +197,7 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     tailwind(),
     svgr(),
     react(),
-    phExternalPackagesPlugin(phPackages, localPackage),
+    phExternalPackagesPlugin(phPackages),
     createHtmlPlugin({
       minify: false,
       inject: {

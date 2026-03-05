@@ -3,6 +3,7 @@ coverage
 node_modules
 backup-documents
 .env.local
+cdn/
 
 .ph
 projects-import.js

@@ -1,4 +1,10 @@
 #!/usr/bin/env node
+import { httpsHooksPath } from "@powerhousedao/reactor-api";
+import { register } from "node:module";
+
+// Register HTTP/HTTPS module loader hooks for dynamic package imports
+register(httpsHooksPath, import.meta.url);
+
 import { PGlite } from "@electric-sql/pglite";
 import {
   ChannelScheme,
@@ -10,6 +16,9 @@ import {
   type Database,
 } from "@powerhousedao/reactor";
 import {
+  HttpPackageLoader,
+  PackageManagementService,
+  PackagesSubgraph,
   VitePackageLoader,
   createViteLogger,
   getUniqueDocumentModels,
@@ -155,6 +164,43 @@ async function initServer(
       ? ".ph/read-storage"
       : dbPath;
 
+  // Load document models from HTTP registry if configured
+  let httpDocumentModels: DocumentModelModule[] = [];
+  const registryUrl = process.env.PH_REGISTRY_URL;
+  const registryPackages = process.env.PH_REGISTRY_PACKAGES;
+
+  // Create httpLoader in outer scope for use in initializeClient (dynamic loading)
+  let httpLoader: HttpPackageLoader | undefined;
+  if (registryUrl) {
+    httpLoader = new HttpPackageLoader({ registryUrl });
+  }
+
+  if (registryUrl && registryPackages) {
+    const packageNames = registryPackages.split(",").filter(Boolean);
+    if (packageNames.length > 0 && httpLoader) {
+      logger.info(
+        "Loading packages from HTTP registry: @packages",
+        packageNames,
+      );
+      httpDocumentModels = await httpLoader.loadPackages(packageNames, {
+        info: (msg) => logger.info(msg),
+        error: (msg, err) => logger.error("@msg: @err", msg, err),
+      });
+      logger.info(
+        "Loaded @count document models from HTTP registry",
+        httpDocumentModels.length,
+      );
+      // Log the loaded document model IDs for debugging
+      for (const model of httpDocumentModels) {
+        logger.info(
+          "  - Loaded document model: @id (@name)",
+          model.documentModel.global.id,
+          model.documentModel.global.name,
+        );
+      }
+    }
+  }
+
   const initializeDriveServer = async (
     documentModels: DocumentModelModule[],
   ) => {
@@ -163,6 +209,7 @@ async function initServer(
         documentModelDocumentModelModule,
         driveDocumentModelModule,
         ...documentModels,
+        ...httpDocumentModels,
       ]),
     )
       .withStorage(storage)
@@ -193,6 +240,7 @@ async function initServer(
           documentModelDocumentModelModule,
           driveDocumentModelModule,
           ...documentModels,
+          ...httpDocumentModels,
         ]),
       )
       .withLegacyStorage(storage)
@@ -204,6 +252,11 @@ async function initServer(
     if (!isNaN(maxSkipThreshold) && maxSkipThreshold > 0) {
       builder.withExecutorConfig({ maxSkipThreshold });
       logger.info(`Reactor maxSkipThreshold set to ${maxSkipThreshold}`);
+    }
+
+    // Enable dynamic document model loading from HTTP registry
+    if (httpLoader) {
+      builder.withDocumentModelLoader(httpLoader);
     }
 
     const reactorDbUrl = process.env.PH_REACTOR_DATABASE_URL;
@@ -287,7 +340,53 @@ async function initServer(
     "switchboard",
   );
 
-  const { client, driveServer } = api;
+  const {
+    client,
+    driveServer,
+    graphqlManager,
+    syncManager,
+    documentModelRegistry,
+  } = api;
+
+  // Set up package management for runtime package operations
+  if (httpLoader) {
+    // Create package management service for runtime package operations
+    const packageManagementService = new PackageManagementService({
+      defaultRegistryUrl: registryUrl,
+      httpLoader,
+      documentModelRegistry,
+    });
+
+    // Wire hot reload callback - models already registered in registry by PackageManagementService
+    // Just trigger subgraph regeneration
+    packageManagementService.setOnModelsChanged(async () => {
+      await graphqlManager.regenerateDocumentModelSubgraphs();
+    });
+
+    // Register the packages subgraph for GraphQL package management
+    const packagesSubgraph = new PackagesSubgraph({
+      reactorClient: client,
+      relationalDb: {} as ConstructorParameters<
+        typeof PackagesSubgraph
+      >[0]["relationalDb"],
+      analyticsStore: {} as ConstructorParameters<
+        typeof PackagesSubgraph
+      >[0]["analyticsStore"],
+      graphqlManager,
+      syncManager,
+      packageManagementService,
+      path: graphqlManager.getBasePath(),
+    });
+
+    void graphqlManager
+      .registerSubgraphInstance(packagesSubgraph, "graphql", false)
+      .then(() => graphqlManager.updateRouter())
+      .catch((error: unknown) =>
+        logger.error("Failed to register packages subgraph: @error", error),
+      );
+
+    logger.info("Package management service initialized");
+  }
 
   // Create default drive if provided
   if (options.drive) {

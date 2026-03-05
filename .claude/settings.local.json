@@ -26,7 +26,12 @@
       "Bash(wc:*)",
       "Bash(npx tsc:*)",
       "Bash(npx tsx:*)",
-      "Bash(git grep:*)"
+      "Bash(git grep:*)",
+      "Bash(git add:*)",
+      "Bash(GIT_EDITOR=true git rebase:*)",
+      "Bash(git:*)",
+      "Bash(GIT_SEQUENCE_EDITOR=true git rebase:*)",
+      "Bash(do echo:*)"
     ],
     "deny": [],
     "ask": []

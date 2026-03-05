@@ -10,7 +10,7 @@ import type { IDocumentCache } from "./documents.js";
 import type { PHModal } from "./modals.js";
 import type { TimelineItem } from "./timeline.js";
 import type { PHToastFn } from "./toast.js";
-import type { VetraPackage } from "./vetra.js";
+import type { IPackageManager } from "./vetra.js";
 
 export type BrowserReactorClientModule = ReactorClientModule & {
   pg: PGlite;
@@ -25,7 +25,7 @@ export type PHGlobal = PHGlobalConfig & {
   renown?: IRenown;
   user?: User;
   loginStatus?: LoginStatus;
-  vetraPackages?: VetraPackage[];
+  vetraPackageManager?: IPackageManager;
   drives?: DocumentDriveDocument[];
   documentCache?: IDocumentCache;
   selectedDriveId?: string;
