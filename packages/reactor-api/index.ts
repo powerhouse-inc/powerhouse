@@ -1,11 +1,15 @@
 export * from "./src/graphql/index.js";
 export * from "./src/graphql/types.js";
+export * from "./src/packages/http-loader.js";
+export { httpsHooksPath } from "./src/packages/https-hooks.mjs";
 export * from "./src/packages/import-loader.js";
 export * from "./src/packages/package-manager.js";
 export * from "./src/packages/vite-loader.js";
 export * from "./src/server.js";
 export * from "./src/services/auth.service.js";
 export * from "./src/services/document-permission.service.js";
+export * from "./src/services/package-management.service.js";
+export * from "./src/services/package-storage.js";
 export * from "./src/tracing.js";
 export * from "./src/types.js";
 export * from "./src/utils/index.js";

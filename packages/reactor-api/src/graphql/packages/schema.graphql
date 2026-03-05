@@ -1,0 +1,50 @@
+# Packages Subgraph Schema
+# Provides operations for runtime package management
+
+scalar DateTime
+
+# Information about an installed package
+type InstalledPackage {
+  # Package name (e.g., "@powerhousedao/vetra")
+  name: String!
+  # Package version if known
+  version: String
+  # Registry URL where the package was installed from
+  registryUrl: String!
+  # Timestamp when the package was installed
+  installedAt: DateTime!
+  # Document type IDs provided by this package
+  documentTypes: [String!]!
+}
+
+# Result returned after installing a package
+type InstallPackageResult {
+  # The installed package information
+  package: InstalledPackage!
+  # Number of document models loaded from the package
+  documentModelsLoaded: Int!
+}
+
+type Query {
+  # Get all installed packages
+  installedPackages: [InstalledPackage!]!
+
+  # Get information about a specific installed package
+  installedPackage(name: String!): InstalledPackage
+}
+
+type Mutation {
+  # Install a package from the registry (requires admin access)
+  installPackage(
+    # Package name (e.g., "@powerhousedao/vetra")
+    name: String!
+    # Registry URL (uses default if not provided)
+    registryUrl: String
+  ): InstallPackageResult!
+
+  # Uninstall a package (requires admin access)
+  uninstallPackage(
+    # Package name to uninstall
+    name: String!
+  ): Boolean!
+}
