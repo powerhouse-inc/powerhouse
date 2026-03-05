@@ -21,6 +21,12 @@ export default defineConfig(({ mode }) => {
     build: {
       sourcemap: true,
       minify: true,
+      rollupOptions: {
+        // Externalize virtual paths only available in studio/dev mode
+        // React is externalized so dynamically loaded CDN packages share
+        // the same React instance via the import map in index.html
+        external: ["/index.ts", "/style.css", /^react(-dom)?(\/.*)?$/],
+      },
     },
     server: {
       watch: {},

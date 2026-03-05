@@ -1,31 +1,52 @@
 import { DuplicateModuleError } from "@powerhousedao/reactor";
-import type { VetraPackage } from "../types/vetra.js";
+import { useSyncExternalStore } from "react";
+import type { IPackageManager, VetraPackage } from "../types/vetra.js";
 import { makePHEventFunctions } from "./make-ph-event-functions.js";
 
-const vetraPackageEventFunctions = makePHEventFunctions("vetraPackages");
+const vetraPackageManagerFunctions = makePHEventFunctions(
+  "vetraPackageManager",
+);
+
+export const useVetraPackageManager = vetraPackageManagerFunctions.useValue;
 
 /** Returns all of the Vetra packages loaded by the Connect instance */
-export const useVetraPackages = vetraPackageEventFunctions.useValue;
+export const useVetraPackages = () => {
+  const packageManager = useVetraPackageManager();
 
-/** Adds the Vetra packages event handler */
-export const addVetraPackagesEventHandler =
-  vetraPackageEventFunctions.addEventHandler;
+  return useSyncExternalStore(
+    (cb) => (packageManager ? packageManager.subscribe(cb) : () => {}),
+    () => packageManager?.packages ?? [],
+  );
+};
 
-/** Sets the Vetra packages for the Connect instance */
-export function setVetraPackages(vetraPackages: VetraPackage[] = []) {
-  vetraPackageEventFunctions.setValue(vetraPackages);
-  const documentModelModules = vetraPackages
+/** Adds the Vetra package manager event handler */
+export const addVetraPackageManagerEventHandler =
+  vetraPackageManagerFunctions.addEventHandler;
+
+/** Sets the Vetra package manager and registers its packages */
+export function setVetraPackageManager(packageManager: IPackageManager) {
+  vetraPackageManagerFunctions.setValue(packageManager);
+  updateReactorClientDocumentModels(packageManager.packages);
+  packageManager.subscribe(({ packages }) => {
+    updateReactorClientDocumentModels(packages);
+  });
+}
+
+function updateReactorClientDocumentModels(packages: VetraPackage[]) {
+  const documentModelModules = packages
     .flatMap((pkg) => pkg.modules.documentModelModules)
     .filter((module) => module !== undefined);
-  if (documentModelModules.length > 0) {
+
+  const registry =
+    window.ph?.reactorClientModule?.reactorModule?.documentModelRegistry;
+  if (!registry || documentModelModules.length === 0) return;
+
+  for (const module of documentModelModules) {
     try {
-      window.ph?.reactorClientModule?.reactorModule?.documentModelRegistry.registerModules(
-        ...documentModelModules,
-      );
+      registry.registerModules(module);
     } catch (error) {
-      // check if it's a duplicate module error
       if (DuplicateModuleError.isError(error)) {
-        return;
+        continue;
       }
       throw error;
     }

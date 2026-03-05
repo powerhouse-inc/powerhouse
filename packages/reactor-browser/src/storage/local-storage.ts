@@ -1,4 +1,3 @@
-import { connectConfig } from "@powerhousedao/connect/config";
 import { BaseStorage } from "./base-storage.js";
 import type { IStorage } from "./types.js";
 
@@ -20,10 +19,10 @@ const store: IStorage = {
   },
 };
 
-export class BrowserStorage<
+export class BrowserLocalStorage<
   T extends Record<string, unknown> = Record<string, unknown>,
 > extends BaseStorage<T> {
   constructor(namespace: string) {
-    super(store as IStorage<T>, `${connectConfig.routerBasename}:${namespace}`);
+    super(store as IStorage<T>, namespace);
   }
 }

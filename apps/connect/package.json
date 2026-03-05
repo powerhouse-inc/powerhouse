@@ -96,7 +96,7 @@
     "react-dom": "catalog:",
     "tsconfig-paths": "4.2.0"
   },
-    "peerDependencies": {
+  "peerDependencies": {
     "react": ">=19.0.0",
     "react-dom": ">=19.0.0",
     "@electric-sql/pglite": ">=0.3.15",
