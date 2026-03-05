@@ -89,6 +89,10 @@ jobs:
       - name: Run vite build scripts
         run: pnpm build-vite
 
+      - name: Run connect build script
+        run: bun run ./bundle.ts
+        working-directory: ./apps/connect
+
       - name: Run cli build scripts
         run: pnpm build-cli
 

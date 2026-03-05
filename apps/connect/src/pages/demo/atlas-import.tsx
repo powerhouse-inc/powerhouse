@@ -145,8 +145,8 @@ export function AtlasImport() {
                 xmlns="http://www.w3.org/2000/svg"
               >
                 <path
-                  fill-rule="evenodd"
-                  clip-rule="evenodd"
+                  fillRule="evenodd"
+                  clipRule="evenodd"
                   d="M0.05092 23.7286L0.000163347 23.9993L0 23.9995L0.207853 24.067L27.6823 24.067L27.9995 23.9995L27.9161 23.6913L14.2182 0.209032L13.9998 0L13.749 0.246353L0.05092 23.7286ZM20.9994 11.9999L7.0003 11.9999L13.9998 23.999L20.9994 11.9999Z"
                   fill="url(#paint0_radial_319_20865)"
                 />
@@ -182,8 +182,8 @@ export function AtlasImport() {
                     y2="-0.142908"
                     gradientUnits="userSpaceOnUse"
                   >
-                    <stop stop-color="#4331E9" />
-                    <stop offset="1" stop-color="#A273FF" />
+                    <stop stopColor="#4331E9" />
+                    <stop offset="1" stopColor="#A273FF" />
                   </linearGradient>
                   <linearGradient
                     id="paint2_linear_319_20865"
@@ -193,8 +193,8 @@ export function AtlasImport() {
                     y2="24"
                     gradientUnits="userSpaceOnUse"
                   >
-                    <stop stop-color="#A273FF" />
-                    <stop offset="1" stop-color="#4331E9" />
+                    <stop stopColor="#A273FF" />
+                    <stop offset="1" stopColor="#4331E9" />
                   </linearGradient>
                   <linearGradient
                     id="paint3_linear_319_20865"
@@ -204,8 +204,8 @@ export function AtlasImport() {
                     y2="-0.142908"
                     gradientUnits="userSpaceOnUse"
                   >
-                    <stop stop-color="#A273FF" />
-                    <stop offset="1" stop-color="#4331E9" />
+                    <stop stopColor="#A273FF" />
+                    <stop offset="1" stopColor="#4331E9" />
                   </linearGradient>
                 </defs>
               </svg>

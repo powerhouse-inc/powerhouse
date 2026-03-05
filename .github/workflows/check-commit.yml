@@ -67,8 +67,21 @@ jobs:
       - name: Run bundle scripts
         run: pnpm build-bundle
 
+      - name: Run css build scripts
+        run: pnpm build-css
+
+      - name: Run vite build scripts
+        run: pnpm build-vite
+
+      - name: Run connect build script
+        run: bun run ./bundle.ts
+        working-directory: ./apps/connect
+
       - name: Run build clis
         run: pnpm build-cli
+
+      - name: Run storybook build scripts
+        run: pnpm build-storybook
 
       - name: Run install again after generating binaries
         run: pnpm install-ci
@@ -88,15 +101,6 @@ jobs:
       - name: Skip test (no changed files)
         if: ${{ steps.diff.outputs.files == '' }}
         run: echo "No changed files; skipping tests."
-
-      - name: Run css build scripts
-        run: pnpm build-css
-
-      - name: Run vite build scripts
-        run: pnpm build-vite
-
-      - name: Run storybook build scripts
-        run: pnpm build-storybook
 
       - name: Run circular imports check
         run: pnpm check-circular-imports
