@@ -49,8 +49,7 @@
     "@powerhousedao/reactor-browser": "workspace:*",
     "@powerhousedao/analytics-engine-core": "workspace:*",
     "luxon": "catalog:",
-    "zocker": "^3.0.0",
-    "document-drive": "workspace:"
+    "zocker": "^3.0.0"
   },
   "devDependencies": {
     "@powerhousedao/config": "workspace:*",
@@ -60,7 +59,6 @@
     "@types/wicg-file-system-access": "^2020.9.6",
     "cmd-ts": "catalog:",
     "document-model": "workspace:*",
-    "document-drive": "workspace:*",
     "package-manager-detector": "catalog:",
     "vitest": "catalog:",
     "zod": "catalog:"

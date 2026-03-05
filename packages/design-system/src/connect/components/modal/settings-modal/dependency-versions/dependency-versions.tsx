@@ -10,14 +10,16 @@ const PH_DEPENDENCIES = [
 
 const PackageJsonSchema = object({
   version: string({ message: "Missing version field in package.json" }),
+  dependencies: record(string(), string()).nullable(),
   devDependencies: record(string(), string()).nullable(),
 })
   .refine(
-    (data) => data.devDependencies != null,
+    (data) => data.dependencies != null && data.devDependencies != null,
     "package.json must have either dependencies or devDependencies",
   )
   .transform((data) => {
     const allDependencies = {
+      ...data.dependencies,
       ...data.devDependencies,
     };
 
