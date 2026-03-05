@@ -1,4 +1,10 @@
 #!/usr/bin/env node
+import { httpsHooksPath } from "@powerhousedao/reactor-api";
+import { register } from "node:module";
+
+// Register HTTP/HTTPS module loader hooks for dynamic package imports
+register(httpsHooksPath, import.meta.url);
+
 import { PGlite } from "@electric-sql/pglite";
 import {
   ChannelScheme,
@@ -10,6 +16,9 @@ import {
   type Database,
 } from "@powerhousedao/reactor";
 import {
+  HttpPackageLoader,
+  PackageManagementService,
+  PackagesSubgraph,
   VitePackageLoader,
   createViteLogger,
   getUniqueDocumentModels,
@@ -155,6 +164,24 @@ async function initServer(
       ? ".ph/read-storage"
       : dbPath;
 
+  // HTTP registry package loading
+  let httpDocumentModels: DocumentModelModule[] = [];
+  const registryUrl = process.env.PH_REGISTRY_URL;
+  const registryPackages = process.env.PH_REGISTRY_PACKAGES;
+  let httpLoader: HttpPackageLoader | undefined;
+
+  if (registryUrl) {
+    httpLoader = new HttpPackageLoader({ registryUrl });
+  }
+
+  if (httpLoader && registryPackages) {
+    const packageNames = registryPackages.split(",").map((p) => p.trim());
+    httpDocumentModels = await httpLoader.loadPackages(packageNames, logger);
+    logger.info(
+      `Loaded ${httpDocumentModels.length} HTTP document models from ${packageNames.length} packages`,
+    );
+  }
+
   const initializeDriveServer = async (
     documentModels: DocumentModelModule[],
   ) => {
@@ -163,6 +190,7 @@ async function initServer(
         documentModelDocumentModelModule,
         driveDocumentModelModule,
         ...documentModels,
+        ...httpDocumentModels,
       ]),
     )
       .withStorage(storage)
@@ -193,6 +221,7 @@ async function initServer(
           documentModelDocumentModelModule,
           driveDocumentModelModule,
           ...documentModels,
+          ...httpDocumentModels,
         ]),
       )
       .withLegacyStorage(storage)
@@ -225,6 +254,10 @@ async function initServer(
       });
       builder.withKysely(kysely);
       logger.info("Using PGlite for reactor storage");
+    }
+
+    if (httpLoader) {
+      builder.withDocumentModelLoader(httpLoader);
     }
 
     const clientBuilder = new ReactorClientBuilder().withReactorBuilder(
@@ -287,7 +320,37 @@ async function initServer(
     "switchboard",
   );
 
-  const { client, driveServer } = api;
+  const { client, driveServer, graphqlManager, documentModelRegistry } = api;
+
+  // Wire up dynamic package management if HTTP loader is configured
+  if (httpLoader) {
+    const packageManagementService = new PackageManagementService({
+      defaultRegistryUrl: registryUrl,
+      httpLoader,
+      documentModelRegistry,
+    });
+
+    packageManagementService.setOnModelsChanged(async () => {
+      await graphqlManager.regenerateDocumentModelSubgraphs();
+    });
+
+    const packagesSubgraph = new PackagesSubgraph({
+      relationalDb: undefined as never,
+      analyticsStore: undefined as never,
+      reactorClient: client,
+      graphqlManager,
+      syncManager: api.syncManager,
+      path: graphqlManager.getBasePath(),
+      packageManagementService,
+    });
+
+    void graphqlManager
+      .registerSubgraphInstance(packagesSubgraph, "graphql", false)
+      .then(() => graphqlManager.updateRouter())
+      .catch((error: unknown) => {
+        logger.error("Failed to register packages subgraph: @error", error);
+      });
+  }
 
   // Create default drive if provided
   if (options.drive) {
