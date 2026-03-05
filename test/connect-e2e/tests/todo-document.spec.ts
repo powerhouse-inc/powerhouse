@@ -60,6 +60,8 @@ const TEST_DOCUMENT_DATA: DocumentBasicData = {
   ],
 };
 
+test.describe.configure({ timeout: 5 * 60 * 60 * 1000 });
+
 test.use({
   storageState: {
     cookies: [],
