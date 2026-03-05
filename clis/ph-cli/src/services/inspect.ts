@@ -1,4 +1,4 @@
-import type { Manifest } from "document-model";
+import type { Manifest } from "@powerhousedao/shared/document-model";
 import fs from "node:fs";
 import type { InspectArgs } from "../types.js";
 import { getProjectInfo } from "../utils.js";

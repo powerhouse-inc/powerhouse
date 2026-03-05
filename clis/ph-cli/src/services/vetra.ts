@@ -7,7 +7,7 @@ import {
   childLogger,
   setLogLevel,
   type IDocumentDriveServer,
-} from "document-drive";
+} from "@powerhousedao/reactor";
 import { createLogger } from "vite";
 import type { VetraArgs } from "../types.js";
 import { generateProjectDriveId } from "../utils.js";

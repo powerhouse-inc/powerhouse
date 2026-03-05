@@ -194,8 +194,8 @@ export { type ILogger } from "./logging/types.js";
 
 // Migrations
 export {
-  REACTOR_SCHEMA,
   getMigrationStatus,
+  REACTOR_SCHEMA,
   runMigrations,
 } from "./storage/migrations/migrator.js";
 
@@ -207,9 +207,11 @@ export {
   type ISyncRemoteStorage,
 } from "./storage/index.js";
 export {
+  batchOperationsByDocument,
   ChannelError,
   ChannelErrorSource,
   ChannelScheme,
+  consolidateSyncOperations,
   GqlRequestChannel,
   GqlRequestChannelFactory,
   GqlResponseChannel,
@@ -217,6 +219,7 @@ export {
   IntervalPollTimer,
   Mailbox,
   PollingChannelError,
+  sortEnvelopesByFirstOperationTimestamp,
   SyncBuilder,
   SyncEventTypes,
   SyncOperation,
@@ -224,9 +227,6 @@ export {
   SyncOperationStatus,
   SyncStatus,
   SyncStatusTracker,
-  batchOperationsByDocument,
-  consolidateSyncOperations,
-  sortEnvelopesByFirstOperationTimestamp,
   trimMailboxFromAckOrdinal,
   type ChannelConfig,
   type ChannelHealth,
@@ -256,8 +256,8 @@ export {
 
 // Processors
 export {
-  RelationalDbProcessor,
   createRelationalDb,
+  RelationalDbProcessor,
 } from "@powerhousedao/shared/processors";
 export type {
   IProcessor,
@@ -269,3 +269,4 @@ export type {
   ProcessorRecord,
 } from "@powerhousedao/shared/processors";
 export { ProcessorManager } from "./processors/index.js";
+export * from "./re-exports.js";
