@@ -1,11 +1,4 @@
-import type {
-  GraphQLResolveInfo,
-  GraphQLScalarType,
-  GraphQLScalarTypeConfig,
-} from "graphql";
-import type { Context } from "../../types.js";
-import * as z from "zod";
-import type { DocumentNode } from "graphql";
+import type { GraphQLClient, RequestOptions } from "graphql-request";
 import { gql } from "graphql-tag";
 export type Maybe<T> = T | null | undefined;
 export type InputMaybe<T> = T | null | undefined;
@@ -27,9 +20,7 @@ export type Incremental<T> =
   | {
       [P in keyof T]?: P extends " $fragmentName" | "__typename" ? T[P] : never;
     };
-export type RequireFields<T, K extends keyof T> = Omit<T, K> & {
-  [P in K]-?: NonNullable<T[P]>;
-};
+type GraphQLClientRequestHeaders = RequestOptions["requestHeaders"];
 /** All built-in and custom scalars, mapped to their actual values */
 export type Scalars = {
   ID: { input: string; output: string };
@@ -1090,1110 +1081,6 @@ export type PushSyncEnvelopesMutationVariables = Exact<{
 
 export type PushSyncEnvelopesMutation = { readonly pushSyncEnvelopes: boolean };
 
-export type WithIndex<TObject> = TObject & Record<string, any>;
-export type ResolversObject<TObject> = WithIndex<TObject>;
-
-export type ResolverTypeWrapper<T> = Promise<T> | T;
-
-export type ResolverWithResolve<TResult, TParent, TContext, TArgs> = {
-  resolve: ResolverFn<TResult, TParent, TContext, TArgs>;
-};
-export type Resolver<
-  TResult,
-  TParent = Record<PropertyKey, never>,
-  TContext = Record<PropertyKey, never>,
-  TArgs = Record<PropertyKey, never>,
-> =
-  | ResolverFn<TResult, TParent, TContext, TArgs>
-  | ResolverWithResolve<TResult, TParent, TContext, TArgs>;
-
-export type ResolverFn<TResult, TParent, TContext, TArgs> = (
-  parent: TParent,
-  args: TArgs,
-  context: TContext,
-  info: GraphQLResolveInfo,
-) => Promise<TResult> | TResult;
-
-export type SubscriptionSubscribeFn<TResult, TParent, TContext, TArgs> = (
-  parent: TParent,
-  args: TArgs,
-  context: TContext,
-  info: GraphQLResolveInfo,
-) => AsyncIterable<TResult> | Promise<AsyncIterable<TResult>>;
-
-export type SubscriptionResolveFn<TResult, TParent, TContext, TArgs> = (
-  parent: TParent,
-  args: TArgs,
-  context: TContext,
-  info: GraphQLResolveInfo,
-) => TResult | Promise<TResult>;
-
-export interface SubscriptionSubscriberObject<
-  TResult,
-  TKey extends string,
-  TParent,
-  TContext,
-  TArgs,
-> {
-  subscribe: SubscriptionSubscribeFn<
-    { [key in TKey]: TResult },
-    TParent,
-    TContext,
-    TArgs
-  >;
-  resolve?: SubscriptionResolveFn<
-    TResult,
-    { [key in TKey]: TResult },
-    TContext,
-    TArgs
-  >;
-}
-
-export interface SubscriptionResolverObject<TResult, TParent, TContext, TArgs> {
-  subscribe: SubscriptionSubscribeFn<any, TParent, TContext, TArgs>;
-  resolve: SubscriptionResolveFn<TResult, any, TContext, TArgs>;
-}
-
-export type SubscriptionObject<
-  TResult,
-  TKey extends string,
-  TParent,
-  TContext,
-  TArgs,
-> =
-  | SubscriptionSubscriberObject<TResult, TKey, TParent, TContext, TArgs>
-  | SubscriptionResolverObject<TResult, TParent, TContext, TArgs>;
-
-export type SubscriptionResolver<
-  TResult,
-  TKey extends string,
-  TParent = Record<PropertyKey, never>,
-  TContext = Record<PropertyKey, never>,
-  TArgs = Record<PropertyKey, never>,
-> =
-  | ((
-      ...args: any[]
-    ) => SubscriptionObject<TResult, TKey, TParent, TContext, TArgs>)
-  | SubscriptionObject<TResult, TKey, TParent, TContext, TArgs>;
-
-export type TypeResolveFn<
-  TTypes,
-  TParent = Record<PropertyKey, never>,
-  TContext = Record<PropertyKey, never>,
-> = (
-  parent: TParent,
-  context: TContext,
-  info: GraphQLResolveInfo,
-) => Maybe<TTypes> | Promise<Maybe<TTypes>>;
-
-export type IsTypeOfResolverFn<
-  T = Record<PropertyKey, never>,
-  TContext = Record<PropertyKey, never>,
-> = (
-  obj: T,
-  context: TContext,
-  info: GraphQLResolveInfo,
-) => boolean | Promise<boolean>;
-
-export type NextResolverFn<T> = () => Promise<T>;
-
-export type DirectiveResolverFn<
-  TResult = Record<PropertyKey, never>,
-  TParent = Record<PropertyKey, never>,
-  TContext = Record<PropertyKey, never>,
-  TArgs = Record<PropertyKey, never>,
-> = (
-  next: NextResolverFn<TResult>,
-  parent: TParent,
-  args: TArgs,
-  context: TContext,
-  info: GraphQLResolveInfo,
-) => TResult | Promise<TResult>;
-
-/** Mapping between all available schema types and the resolvers types */
-export type ResolversTypes = ResolversObject<{
-  Action: ResolverTypeWrapper<Action>;
-  ActionContext: ResolverTypeWrapper<ActionContext>;
-  ActionContextInput: ActionContextInput;
-  ActionInput: ActionInput;
-  Attachment: ResolverTypeWrapper<Attachment>;
-  AttachmentInput: AttachmentInput;
-  Boolean: ResolverTypeWrapper<Scalars["Boolean"]["output"]>;
-  ChannelMeta: ResolverTypeWrapper<ChannelMeta>;
-  ChannelMetaInput: ChannelMetaInput;
-  DateTime: ResolverTypeWrapper<Scalars["DateTime"]["output"]>;
-  DeadLetterInfo: ResolverTypeWrapper<DeadLetterInfo>;
-  DocumentChangeContext: ResolverTypeWrapper<DocumentChangeContext>;
-  DocumentChangeEvent: ResolverTypeWrapper<DocumentChangeEvent>;
-  DocumentChangeType: DocumentChangeType;
-  DocumentModelGlobalState: ResolverTypeWrapper<DocumentModelGlobalState>;
-  DocumentModelResultPage: ResolverTypeWrapper<DocumentModelResultPage>;
-  DocumentOperationsFilterInput: DocumentOperationsFilterInput;
-  DocumentWithChildren: ResolverTypeWrapper<DocumentWithChildren>;
-  Int: ResolverTypeWrapper<Scalars["Int"]["output"]>;
-  JSONObject: ResolverTypeWrapper<Scalars["JSONObject"]["output"]>;
-  JobChangeEvent: ResolverTypeWrapper<JobChangeEvent>;
-  JobInfo: ResolverTypeWrapper<JobInfo>;
-  MoveChildrenResult: ResolverTypeWrapper<MoveChildrenResult>;
-  Mutation: ResolverTypeWrapper<Record<PropertyKey, never>>;
-  OperationContext: ResolverTypeWrapper<OperationContext>;
-  OperationContextInput: OperationContextInput;
-  OperationInput: OperationInput;
-  OperationWithContext: ResolverTypeWrapper<OperationWithContext>;
-  OperationWithContextInput: OperationWithContextInput;
-  OperationsFilterInput: OperationsFilterInput;
-  PHDocument: ResolverTypeWrapper<PhDocument>;
-  PHDocumentResultPage: ResolverTypeWrapper<PhDocumentResultPage>;
-  PagingInput: PagingInput;
-  PollSyncEnvelopesResult: ResolverTypeWrapper<PollSyncEnvelopesResult>;
-  PropagationMode: PropagationMode;
-  Query: ResolverTypeWrapper<Record<PropertyKey, never>>;
-  ReactorOperation: ResolverTypeWrapper<ReactorOperation>;
-  ReactorOperationResultPage: ResolverTypeWrapper<ReactorOperationResultPage>;
-  ReactorSigner: ResolverTypeWrapper<ReactorSigner>;
-  ReactorSignerApp: ResolverTypeWrapper<ReactorSignerApp>;
-  ReactorSignerAppInput: ReactorSignerAppInput;
-  ReactorSignerInput: ReactorSignerInput;
-  ReactorSignerUser: ResolverTypeWrapper<ReactorSignerUser>;
-  ReactorSignerUserInput: ReactorSignerUserInput;
-  RemoteCursor: ResolverTypeWrapper<RemoteCursor>;
-  RemoteCursorInput: RemoteCursorInput;
-  RemoteFilterInput: RemoteFilterInput;
-  Revision: ResolverTypeWrapper<Revision>;
-  SearchFilterInput: SearchFilterInput;
-  String: ResolverTypeWrapper<Scalars["String"]["output"]>;
-  Subscription: ResolverTypeWrapper<Record<PropertyKey, never>>;
-  SyncEnvelope: ResolverTypeWrapper<SyncEnvelope>;
-  SyncEnvelopeInput: SyncEnvelopeInput;
-  SyncEnvelopeType: SyncEnvelopeType;
-  TouchChannelInput: TouchChannelInput;
-  ViewFilterInput: ViewFilterInput;
-}>;
-
-/** Mapping between all available schema types and the resolvers parents */
-export type ResolversParentTypes = ResolversObject<{
-  Action: Action;
-  ActionContext: ActionContext;
-  ActionContextInput: ActionContextInput;
-  ActionInput: ActionInput;
-  Attachment: Attachment;
-  AttachmentInput: AttachmentInput;
-  Boolean: Scalars["Boolean"]["output"];
-  ChannelMeta: ChannelMeta;
-  ChannelMetaInput: ChannelMetaInput;
-  DateTime: Scalars["DateTime"]["output"];
-  DeadLetterInfo: DeadLetterInfo;
-  DocumentChangeContext: DocumentChangeContext;
-  DocumentChangeEvent: DocumentChangeEvent;
-  DocumentModelGlobalState: DocumentModelGlobalState;
-  DocumentModelResultPage: DocumentModelResultPage;
-  DocumentOperationsFilterInput: DocumentOperationsFilterInput;
-  DocumentWithChildren: DocumentWithChildren;
-  Int: Scalars["Int"]["output"];
-  JSONObject: Scalars["JSONObject"]["output"];
-  JobChangeEvent: JobChangeEvent;
-  JobInfo: JobInfo;
-  MoveChildrenResult: MoveChildrenResult;
-  Mutation: Record<PropertyKey, never>;
-  OperationContext: OperationContext;
-  OperationContextInput: OperationContextInput;
-  OperationInput: OperationInput;
-  OperationWithContext: OperationWithContext;
-  OperationWithContextInput: OperationWithContextInput;
-  OperationsFilterInput: OperationsFilterInput;
-  PHDocument: PhDocument;
-  PHDocumentResultPage: PhDocumentResultPage;
-  PagingInput: PagingInput;
-  PollSyncEnvelopesResult: PollSyncEnvelopesResult;
-  Query: Record<PropertyKey, never>;
-  ReactorOperation: ReactorOperation;
-  ReactorOperationResultPage: ReactorOperationResultPage;
-  ReactorSigner: ReactorSigner;
-  ReactorSignerApp: ReactorSignerApp;
-  ReactorSignerAppInput: ReactorSignerAppInput;
-  ReactorSignerInput: ReactorSignerInput;
-  ReactorSignerUser: ReactorSignerUser;
-  ReactorSignerUserInput: ReactorSignerUserInput;
-  RemoteCursor: RemoteCursor;
-  RemoteCursorInput: RemoteCursorInput;
-  RemoteFilterInput: RemoteFilterInput;
-  Revision: Revision;
-  SearchFilterInput: SearchFilterInput;
-  String: Scalars["String"]["output"];
-  Subscription: Record<PropertyKey, never>;
-  SyncEnvelope: SyncEnvelope;
-  SyncEnvelopeInput: SyncEnvelopeInput;
-  TouchChannelInput: TouchChannelInput;
-  ViewFilterInput: ViewFilterInput;
-}>;
-
-export type ActionResolvers<
-  ContextType = Context,
-  ParentType extends ResolversParentTypes["Action"] =
-    ResolversParentTypes["Action"],
-> = ResolversObject<{
-  attachments?: Resolver<
-    Maybe<ReadonlyArray<ResolversTypes["Attachment"]>>,
-    ParentType,
-    ContextType
-  >;
-  context?: Resolver<
-    Maybe<ResolversTypes["ActionContext"]>,
-    ParentType,
-    ContextType
-  >;
-  id?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
-  input?: Resolver<ResolversTypes["JSONObject"], ParentType, ContextType>;
-  scope?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
-  timestampUtcMs?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
-  type?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
-}>;
-
-export type ActionContextResolvers<
-  ContextType = Context,
-  ParentType extends ResolversParentTypes["ActionContext"] =
-    ResolversParentTypes["ActionContext"],
-> = ResolversObject<{
-  signer?: Resolver<
-    Maybe<ResolversTypes["ReactorSigner"]>,
-    ParentType,
-    ContextType
-  >;
-}>;
-
-export type AttachmentResolvers<
-  ContextType = Context,
-  ParentType extends ResolversParentTypes["Attachment"] =
-    ResolversParentTypes["Attachment"],
-> = ResolversObject<{
-  data?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
-  extension?: Resolver<
-    Maybe<ResolversTypes["String"]>,
-    ParentType,
-    ContextType
-  >;
-  fileName?: Resolver<Maybe<ResolversTypes["String"]>, ParentType, ContextType>;
-  hash?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
-  mimeType?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
-}>;
-
-export type ChannelMetaResolvers<
-  ContextType = Context,
-  ParentType extends ResolversParentTypes["ChannelMeta"] =
-    ResolversParentTypes["ChannelMeta"],
-> = ResolversObject<{
-  id?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
-}>;
-
-export interface DateTimeScalarConfig extends GraphQLScalarTypeConfig<
-  ResolversTypes["DateTime"],
-  any
-> {
-  name: "DateTime";
-}
-
-export type DeadLetterInfoResolvers<
-  ContextType = Context,
-  ParentType extends ResolversParentTypes["DeadLetterInfo"] =
-    ResolversParentTypes["DeadLetterInfo"],
-> = ResolversObject<{
-  branch?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
-  documentId?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
-  error?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
-  jobId?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
-  operationCount?: Resolver<ResolversTypes["Int"], ParentType, ContextType>;
-  scopes?: Resolver<
-    ReadonlyArray<ResolversTypes["String"]>,
-    ParentType,
-    ContextType
-  >;
-}>;
-
-export type DocumentChangeContextResolvers<
-  ContextType = Context,
-  ParentType extends ResolversParentTypes["DocumentChangeContext"] =
-    ResolversParentTypes["DocumentChangeContext"],
-> = ResolversObject<{
-  childId?: Resolver<Maybe<ResolversTypes["String"]>, ParentType, ContextType>;
-  parentId?: Resolver<Maybe<ResolversTypes["String"]>, ParentType, ContextType>;
-}>;
-
-export type DocumentChangeEventResolvers<
-  ContextType = Context,
-  ParentType extends ResolversParentTypes["DocumentChangeEvent"] =
-    ResolversParentTypes["DocumentChangeEvent"],
-> = ResolversObject<{
-  context?: Resolver<
-    Maybe<ResolversTypes["DocumentChangeContext"]>,
-    ParentType,
-    ContextType
-  >;
-  documents?: Resolver<
-    ReadonlyArray<ResolversTypes["PHDocument"]>,
-    ParentType,
-    ContextType
-  >;
-  type?: Resolver<
-    ResolversTypes["DocumentChangeType"],
-    ParentType,
-    ContextType
-  >;
-}>;
-
-export type DocumentModelGlobalStateResolvers<
-  ContextType = Context,
-  ParentType extends ResolversParentTypes["DocumentModelGlobalState"] =
-    ResolversParentTypes["DocumentModelGlobalState"],
-> = ResolversObject<{
-  id?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
-  name?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
-  namespace?: Resolver<
-    Maybe<ResolversTypes["String"]>,
-    ParentType,
-    ContextType
-  >;
-  specification?: Resolver<
-    ResolversTypes["JSONObject"],
-    ParentType,
-    ContextType
-  >;
-  version?: Resolver<Maybe<ResolversTypes["String"]>, ParentType, ContextType>;
-}>;
-
-export type DocumentModelResultPageResolvers<
-  ContextType = Context,
-  ParentType extends ResolversParentTypes["DocumentModelResultPage"] =
-    ResolversParentTypes["DocumentModelResultPage"],
-> = ResolversObject<{
-  cursor?: Resolver<Maybe<ResolversTypes["String"]>, ParentType, ContextType>;
-  hasNextPage?: Resolver<ResolversTypes["Boolean"], ParentType, ContextType>;
-  hasPreviousPage?: Resolver<
-    ResolversTypes["Boolean"],
-    ParentType,
-    ContextType
-  >;
-  items?: Resolver<
-    ReadonlyArray<ResolversTypes["DocumentModelGlobalState"]>,
-    ParentType,
-    ContextType
-  >;
-  totalCount?: Resolver<ResolversTypes["Int"], ParentType, ContextType>;
-}>;
-
-export type DocumentWithChildrenResolvers<
-  ContextType = Context,
-  ParentType extends ResolversParentTypes["DocumentWithChildren"] =
-    ResolversParentTypes["DocumentWithChildren"],
-> = ResolversObject<{
-  childIds?: Resolver<
-    ReadonlyArray<ResolversTypes["String"]>,
-    ParentType,
-    ContextType
-  >;
-  document?: Resolver<ResolversTypes["PHDocument"], ParentType, ContextType>;
-}>;
-
-export interface JsonObjectScalarConfig extends GraphQLScalarTypeConfig<
-  ResolversTypes["JSONObject"],
-  any
-> {
-  name: "JSONObject";
-}
-
-export type JobChangeEventResolvers<
-  ContextType = Context,
-  ParentType extends ResolversParentTypes["JobChangeEvent"] =
-    ResolversParentTypes["JobChangeEvent"],
-> = ResolversObject<{
-  error?: Resolver<Maybe<ResolversTypes["String"]>, ParentType, ContextType>;
-  jobId?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
-  result?: Resolver<ResolversTypes["JSONObject"], ParentType, ContextType>;
-  status?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
-}>;
-
-export type JobInfoResolvers<
-  ContextType = Context,
-  ParentType extends ResolversParentTypes["JobInfo"] =
-    ResolversParentTypes["JobInfo"],
-> = ResolversObject<{
-  completedAt?: Resolver<
-    Maybe<ResolversTypes["DateTime"]>,
-    ParentType,
-    ContextType
-  >;
-  createdAt?: Resolver<ResolversTypes["DateTime"], ParentType, ContextType>;
-  error?: Resolver<Maybe<ResolversTypes["String"]>, ParentType, ContextType>;
-  id?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
-  result?: Resolver<ResolversTypes["JSONObject"], ParentType, ContextType>;
-  status?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
-}>;
-
-export type MoveChildrenResultResolvers<
-  ContextType = Context,
-  ParentType extends ResolversParentTypes["MoveChildrenResult"] =
-    ResolversParentTypes["MoveChildrenResult"],
-> = ResolversObject<{
-  source?: Resolver<ResolversTypes["PHDocument"], ParentType, ContextType>;
-  target?: Resolver<ResolversTypes["PHDocument"], ParentType, ContextType>;
-}>;
-
-export type MutationResolvers<
-  ContextType = Context,
-  ParentType extends ResolversParentTypes["Mutation"] =
-    ResolversParentTypes["Mutation"],
-> = ResolversObject<{
-  addChildren?: Resolver<
-    ResolversTypes["PHDocument"],
-    ParentType,
-    ContextType,
-    RequireFields<
-      MutationAddChildrenArgs,
-      "documentIdentifiers" | "parentIdentifier"
-    >
-  >;
-  createDocument?: Resolver<
-    ResolversTypes["PHDocument"],
-    ParentType,
-    ContextType,
-    RequireFields<MutationCreateDocumentArgs, "document">
-  >;
-  createEmptyDocument?: Resolver<
-    ResolversTypes["PHDocument"],
-    ParentType,
-    ContextType,
-    RequireFields<MutationCreateEmptyDocumentArgs, "documentType">
-  >;
-  deleteDocument?: Resolver<
-    ResolversTypes["Boolean"],
-    ParentType,
-    ContextType,
-    RequireFields<MutationDeleteDocumentArgs, "identifier">
-  >;
-  deleteDocuments?: Resolver<
-    ResolversTypes["Boolean"],
-    ParentType,
-    ContextType,
-    RequireFields<MutationDeleteDocumentsArgs, "identifiers">
-  >;
-  moveChildren?: Resolver<
-    ResolversTypes["MoveChildrenResult"],
-    ParentType,
-    ContextType,
-    RequireFields<
-      MutationMoveChildrenArgs,
-      | "documentIdentifiers"
-      | "sourceParentIdentifier"
-      | "targetParentIdentifier"
-    >
-  >;
-  mutateDocument?: Resolver<
-    ResolversTypes["PHDocument"],
-    ParentType,
-    ContextType,
-    RequireFields<MutationMutateDocumentArgs, "actions" | "documentIdentifier">
-  >;
-  mutateDocumentAsync?: Resolver<
-    ResolversTypes["String"],
-    ParentType,
-    ContextType,
-    RequireFields<
-      MutationMutateDocumentAsyncArgs,
-      "actions" | "documentIdentifier"
-    >
-  >;
-  pushSyncEnvelopes?: Resolver<
-    ResolversTypes["Boolean"],
-    ParentType,
-    ContextType,
-    RequireFields<MutationPushSyncEnvelopesArgs, "envelopes">
-  >;
-  removeChildren?: Resolver<
-    ResolversTypes["PHDocument"],
-    ParentType,
-    ContextType,
-    RequireFields<
-      MutationRemoveChildrenArgs,
-      "documentIdentifiers" | "parentIdentifier"
-    >
-  >;
-  renameDocument?: Resolver<
-    ResolversTypes["PHDocument"],
-    ParentType,
-    ContextType,
-    RequireFields<MutationRenameDocumentArgs, "documentIdentifier" | "name">
-  >;
-  touchChannel?: Resolver<
-    ResolversTypes["Boolean"],
-    ParentType,
-    ContextType,
-    RequireFields<MutationTouchChannelArgs, "input">
-  >;
-}>;
-
-export type OperationContextResolvers<
-  ContextType = Context,
-  ParentType extends ResolversParentTypes["OperationContext"] =
-    ResolversParentTypes["OperationContext"],
-> = ResolversObject<{
-  branch?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
-  documentId?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
-  documentType?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
-  ordinal?: Resolver<ResolversTypes["Int"], ParentType, ContextType>;
-  scope?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
-}>;
-
-export type OperationWithContextResolvers<
-  ContextType = Context,
-  ParentType extends ResolversParentTypes["OperationWithContext"] =
-    ResolversParentTypes["OperationWithContext"],
-> = ResolversObject<{
-  context?: Resolver<
-    ResolversTypes["OperationContext"],
-    ParentType,
-    ContextType
-  >;
-  operation?: Resolver<
-    ResolversTypes["ReactorOperation"],
-    ParentType,
-    ContextType
-  >;
-}>;
-
-export type PhDocumentResolvers<
-  ContextType = Context,
-  ParentType extends ResolversParentTypes["PHDocument"] =
-    ResolversParentTypes["PHDocument"],
-> = ResolversObject<{
-  createdAtUtcIso?: Resolver<
-    ResolversTypes["DateTime"],
-    ParentType,
-    ContextType
-  >;
-  documentType?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
-  id?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
-  lastModifiedAtUtcIso?: Resolver<
-    ResolversTypes["DateTime"],
-    ParentType,
-    ContextType
-  >;
-  name?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
-  operations?: Resolver<
-    Maybe<ResolversTypes["ReactorOperationResultPage"]>,
-    ParentType,
-    ContextType,
-    Partial<PhDocumentOperationsArgs>
-  >;
-  revisionsList?: Resolver<
-    ReadonlyArray<ResolversTypes["Revision"]>,
-    ParentType,
-    ContextType
-  >;
-  slug?: Resolver<Maybe<ResolversTypes["String"]>, ParentType, ContextType>;
-  state?: Resolver<ResolversTypes["JSONObject"], ParentType, ContextType>;
-}>;
-
-export type PhDocumentResultPageResolvers<
-  ContextType = Context,
-  ParentType extends ResolversParentTypes["PHDocumentResultPage"] =
-    ResolversParentTypes["PHDocumentResultPage"],
-> = ResolversObject<{
-  cursor?: Resolver<Maybe<ResolversTypes["String"]>, ParentType, ContextType>;
-  hasNextPage?: Resolver<ResolversTypes["Boolean"], ParentType, ContextType>;
-  hasPreviousPage?: Resolver<
-    ResolversTypes["Boolean"],
-    ParentType,
-    ContextType
-  >;
-  items?: Resolver<
-    ReadonlyArray<ResolversTypes["PHDocument"]>,
-    ParentType,
-    ContextType
-  >;
-  totalCount?: Resolver<ResolversTypes["Int"], ParentType, ContextType>;
-}>;
-
-export type PollSyncEnvelopesResultResolvers<
-  ContextType = Context,
-  ParentType extends ResolversParentTypes["PollSyncEnvelopesResult"] =
-    ResolversParentTypes["PollSyncEnvelopesResult"],
-> = ResolversObject<{
-  ackOrdinal?: Resolver<ResolversTypes["Int"], ParentType, ContextType>;
-  deadLetters?: Resolver<
-    ReadonlyArray<ResolversTypes["DeadLetterInfo"]>,
-    ParentType,
-    ContextType
-  >;
-  envelopes?: Resolver<
-    ReadonlyArray<ResolversTypes["SyncEnvelope"]>,
-    ParentType,
-    ContextType
-  >;
-}>;
-
-export type QueryResolvers<
-  ContextType = Context,
-  ParentType extends ResolversParentTypes["Query"] =
-    ResolversParentTypes["Query"],
-> = ResolversObject<{
-  document?: Resolver<
-    Maybe<ResolversTypes["DocumentWithChildren"]>,
-    ParentType,
-    ContextType,
-    RequireFields<QueryDocumentArgs, "identifier">
-  >;
-  documentChildren?: Resolver<
-    ResolversTypes["PHDocumentResultPage"],
-    ParentType,
-    ContextType,
-    RequireFields<QueryDocumentChildrenArgs, "parentIdentifier">
-  >;
-  documentModels?: Resolver<
-    ResolversTypes["DocumentModelResultPage"],
-    ParentType,
-    ContextType,
-    Partial<QueryDocumentModelsArgs>
-  >;
-  documentOperations?: Resolver<
-    ResolversTypes["ReactorOperationResultPage"],
-    ParentType,
-    ContextType,
-    RequireFields<QueryDocumentOperationsArgs, "filter">
-  >;
-  documentParents?: Resolver<
-    ResolversTypes["PHDocumentResultPage"],
-    ParentType,
-    ContextType,
-    RequireFields<QueryDocumentParentsArgs, "childIdentifier">
-  >;
-  findDocuments?: Resolver<
-    ResolversTypes["PHDocumentResultPage"],
-    ParentType,
-    ContextType,
-    RequireFields<QueryFindDocumentsArgs, "search">
-  >;
-  jobStatus?: Resolver<
-    Maybe<ResolversTypes["JobInfo"]>,
-    ParentType,
-    ContextType,
-    RequireFields<QueryJobStatusArgs, "jobId">
-  >;
-  pollSyncEnvelopes?: Resolver<
-    ResolversTypes["PollSyncEnvelopesResult"],
-    ParentType,
-    ContextType,
-    RequireFields<
-      QueryPollSyncEnvelopesArgs,
-      "channelId" | "outboxAck" | "outboxLatest"
-    >
-  >;
-}>;
-
-export type ReactorOperationResolvers<
-  ContextType = Context,
-  ParentType extends ResolversParentTypes["ReactorOperation"] =
-    ResolversParentTypes["ReactorOperation"],
-> = ResolversObject<{
-  action?: Resolver<ResolversTypes["Action"], ParentType, ContextType>;
-  error?: Resolver<Maybe<ResolversTypes["String"]>, ParentType, ContextType>;
-  hash?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
-  id?: Resolver<Maybe<ResolversTypes["String"]>, ParentType, ContextType>;
-  index?: Resolver<ResolversTypes["Int"], ParentType, ContextType>;
-  skip?: Resolver<ResolversTypes["Int"], ParentType, ContextType>;
-  timestampUtcMs?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
-}>;
-
-export type ReactorOperationResultPageResolvers<
-  ContextType = Context,
-  ParentType extends ResolversParentTypes["ReactorOperationResultPage"] =
-    ResolversParentTypes["ReactorOperationResultPage"],
-> = ResolversObject<{
-  cursor?: Resolver<Maybe<ResolversTypes["String"]>, ParentType, ContextType>;
-  hasNextPage?: Resolver<ResolversTypes["Boolean"], ParentType, ContextType>;
-  hasPreviousPage?: Resolver<
-    ResolversTypes["Boolean"],
-    ParentType,
-    ContextType
-  >;
-  items?: Resolver<
-    ReadonlyArray<ResolversTypes["ReactorOperation"]>,
-    ParentType,
-    ContextType
-  >;
-  totalCount?: Resolver<ResolversTypes["Int"], ParentType, ContextType>;
-}>;
-
-export type ReactorSignerResolvers<
-  ContextType = Context,
-  ParentType extends ResolversParentTypes["ReactorSigner"] =
-    ResolversParentTypes["ReactorSigner"],
-> = ResolversObject<{
-  app?: Resolver<
-    Maybe<ResolversTypes["ReactorSignerApp"]>,
-    ParentType,
-    ContextType
-  >;
-  signatures?: Resolver<
-    ReadonlyArray<ResolversTypes["String"]>,
-    ParentType,
-    ContextType
-  >;
-  user?: Resolver<
-    Maybe<ResolversTypes["ReactorSignerUser"]>,
-    ParentType,
-    ContextType
-  >;
-}>;
-
-export type ReactorSignerAppResolvers<
-  ContextType = Context,
-  ParentType extends ResolversParentTypes["ReactorSignerApp"] =
-    ResolversParentTypes["ReactorSignerApp"],
-> = ResolversObject<{
-  key?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
-  name?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
-}>;
-
-export type ReactorSignerUserResolvers<
-  ContextType = Context,
-  ParentType extends ResolversParentTypes["ReactorSignerUser"] =
-    ResolversParentTypes["ReactorSignerUser"],
-> = ResolversObject<{
-  address?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
-  chainId?: Resolver<ResolversTypes["Int"], ParentType, ContextType>;
-  networkId?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
-}>;
-
-export type RemoteCursorResolvers<
-  ContextType = Context,
-  ParentType extends ResolversParentTypes["RemoteCursor"] =
-    ResolversParentTypes["RemoteCursor"],
-> = ResolversObject<{
-  cursorOrdinal?: Resolver<ResolversTypes["Int"], ParentType, ContextType>;
-  lastSyncedAtUtcMs?: Resolver<
-    Maybe<ResolversTypes["String"]>,
-    ParentType,
-    ContextType
-  >;
-  remoteName?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
-}>;
-
-export type RevisionResolvers<
-  ContextType = Context,
-  ParentType extends ResolversParentTypes["Revision"] =
-    ResolversParentTypes["Revision"],
-> = ResolversObject<{
-  revision?: Resolver<ResolversTypes["Int"], ParentType, ContextType>;
-  scope?: Resolver<ResolversTypes["String"], ParentType, ContextType>;
-}>;
-
-export type SubscriptionResolvers<
-  ContextType = Context,
-  ParentType extends ResolversParentTypes["Subscription"] =
-    ResolversParentTypes["Subscription"],
-> = ResolversObject<{
-  documentChanges?: SubscriptionResolver<
-    ResolversTypes["DocumentChangeEvent"],
-    "documentChanges",
-    ParentType,
-    ContextType,
-    RequireFields<SubscriptionDocumentChangesArgs, "search">
-  >;
-  jobChanges?: SubscriptionResolver<
-    ResolversTypes["JobChangeEvent"],
-    "jobChanges",
-    ParentType,
-    ContextType,
-    RequireFields<SubscriptionJobChangesArgs, "jobId">
-  >;
-}>;
-
-export type SyncEnvelopeResolvers<
-  ContextType = Context,
-  ParentType extends ResolversParentTypes["SyncEnvelope"] =
-    ResolversParentTypes["SyncEnvelope"],
-> = ResolversObject<{
-  channelMeta?: Resolver<
-    ResolversTypes["ChannelMeta"],
-    ParentType,
-    ContextType
-  >;
-  cursor?: Resolver<
-    Maybe<ResolversTypes["RemoteCursor"]>,
-    ParentType,
-    ContextType
-  >;
-  dependsOn?: Resolver<
-    Maybe<ReadonlyArray<ResolversTypes["String"]>>,
-    ParentType,
-    ContextType
-  >;
-  key?: Resolver<Maybe<ResolversTypes["String"]>, ParentType, ContextType>;
-  operations?: Resolver<
-    Maybe<ReadonlyArray<ResolversTypes["OperationWithContext"]>>,
-    ParentType,
-    ContextType
-  >;
-  type?: Resolver<ResolversTypes["SyncEnvelopeType"], ParentType, ContextType>;
-}>;
-
-export type Resolvers<ContextType = Context> = ResolversObject<{
-  Action?: ActionResolvers<ContextType>;
-  ActionContext?: ActionContextResolvers<ContextType>;
-  Attachment?: AttachmentResolvers<ContextType>;
-  ChannelMeta?: ChannelMetaResolvers<ContextType>;
-  DateTime?: GraphQLScalarType;
-  DeadLetterInfo?: DeadLetterInfoResolvers<ContextType>;
-  DocumentChangeContext?: DocumentChangeContextResolvers<ContextType>;
-  DocumentChangeEvent?: DocumentChangeEventResolvers<ContextType>;
-  DocumentModelGlobalState?: DocumentModelGlobalStateResolvers<ContextType>;
-  DocumentModelResultPage?: DocumentModelResultPageResolvers<ContextType>;
-  DocumentWithChildren?: DocumentWithChildrenResolvers<ContextType>;
-  JSONObject?: GraphQLScalarType;
-  JobChangeEvent?: JobChangeEventResolvers<ContextType>;
-  JobInfo?: JobInfoResolvers<ContextType>;
-  MoveChildrenResult?: MoveChildrenResultResolvers<ContextType>;
-  Mutation?: MutationResolvers<ContextType>;
-  OperationContext?: OperationContextResolvers<ContextType>;
-  OperationWithContext?: OperationWithContextResolvers<ContextType>;
-  PHDocument?: PhDocumentResolvers<ContextType>;
-  PHDocumentResultPage?: PhDocumentResultPageResolvers<ContextType>;
-  PollSyncEnvelopesResult?: PollSyncEnvelopesResultResolvers<ContextType>;
-  Query?: QueryResolvers<ContextType>;
-  ReactorOperation?: ReactorOperationResolvers<ContextType>;
-  ReactorOperationResultPage?: ReactorOperationResultPageResolvers<ContextType>;
-  ReactorSigner?: ReactorSignerResolvers<ContextType>;
-  ReactorSignerApp?: ReactorSignerAppResolvers<ContextType>;
-  ReactorSignerUser?: ReactorSignerUserResolvers<ContextType>;
-  RemoteCursor?: RemoteCursorResolvers<ContextType>;
-  Revision?: RevisionResolvers<ContextType>;
-  Subscription?: SubscriptionResolvers<ContextType>;
-  SyncEnvelope?: SyncEnvelopeResolvers<ContextType>;
-}>;
-
-type Properties<T> = Required<{
-  [K in keyof T]: z.ZodType<T[K]>;
-}>;
-
-type definedNonNullAny = {};
-
-export const isDefinedNonNullAny = (v: any): v is definedNonNullAny =>
-  v !== undefined && v !== null;
-
-export const definedNonNullAnySchema = z
-  .any()
-  .refine((v) => isDefinedNonNullAny(v));
-
-export const DocumentChangeTypeSchema = z.enum(DocumentChangeType);
-
-export const PropagationModeSchema = z.enum(PropagationMode);
-
-export const SyncEnvelopeTypeSchema = z.enum(SyncEnvelopeType);
-
-export function ActionContextInputSchema(): z.ZodObject<
-  Properties<ActionContextInput>
-> {
-  return z.object({
-    signer: z.lazy(() => ReactorSignerInputSchema().nullish()),
-  });
-}
-
-export function ActionInputSchema(): z.ZodObject<Properties<ActionInput>> {
-  return z.object({
-    attachments: z.array(z.lazy(() => AttachmentInputSchema())).nullish(),
-    context: z.lazy(() => ActionContextInputSchema().nullish()),
-    id: z.string(),
-    input: z.custom<NonNullable<unknown>>((v) => v != null),
-    scope: z.string(),
-    timestampUtcMs: z.string(),
-    type: z.string(),
-  });
-}
-
-export function AttachmentInputSchema(): z.ZodObject<
-  Properties<AttachmentInput>
-> {
-  return z.object({
-    data: z.string(),
-    extension: z.string().nullish(),
-    fileName: z.string().nullish(),
-    hash: z.string(),
-    mimeType: z.string(),
-  });
-}
-
-export function ChannelMetaInputSchema(): z.ZodObject<
-  Properties<ChannelMetaInput>
-> {
-  return z.object({
-    id: z.string(),
-  });
-}
-
-export function DocumentOperationsFilterInputSchema(): z.ZodObject<
-  Properties<DocumentOperationsFilterInput>
-> {
-  return z.object({
-    actionTypes: z.array(z.string()).nullish(),
-    branch: z.string().nullish(),
-    scopes: z.array(z.string()).nullish(),
-    sinceRevision: z.number().nullish(),
-    timestampFrom: z.string().nullish(),
-    timestampTo: z.string().nullish(),
-  });
-}
-
-export function OperationContextInputSchema(): z.ZodObject<
-  Properties<OperationContextInput>
-> {
-  return z.object({
-    branch: z.string(),
-    documentId: z.string(),
-    documentType: z.string(),
-    ordinal: z.number(),
-    scope: z.string(),
-  });
-}
-
-export function OperationInputSchema(): z.ZodObject<
-  Properties<OperationInput>
-> {
-  return z.object({
-    action: z.lazy(() => ActionInputSchema()),
-    error: z.string().nullish(),
-    hash: z.string(),
-    id: z.string().nullish(),
-    index: z.number(),
-    skip: z.number(),
-    timestampUtcMs: z.string(),
-  });
-}
-
-export function OperationWithContextInputSchema(): z.ZodObject<
-  Properties<OperationWithContextInput>
-> {
-  return z.object({
-    context: z.lazy(() => OperationContextInputSchema()),
-    operation: z.lazy(() => OperationInputSchema()),
-  });
-}
-
-export function OperationsFilterInputSchema(): z.ZodObject<
-  Properties<OperationsFilterInput>
-> {
-  return z.object({
-    actionTypes: z.array(z.string()).nullish(),
-    branch: z.string().nullish(),
-    documentId: z.string(),
-    scopes: z.array(z.string()).nullish(),
-    sinceRevision: z.number().nullish(),
-    timestampFrom: z.string().nullish(),
-    timestampTo: z.string().nullish(),
-  });
-}
-
-export function PagingInputSchema(): z.ZodObject<Properties<PagingInput>> {
-  return z.object({
-    cursor: z.string().nullish(),
-    limit: z.number().nullish(),
-    offset: z.number().nullish(),
-  });
-}
-
-export function ReactorSignerAppInputSchema(): z.ZodObject<
-  Properties<ReactorSignerAppInput>
-> {
-  return z.object({
-    key: z.string(),
-    name: z.string(),
-  });
-}
-
-export function ReactorSignerInputSchema(): z.ZodObject<
-  Properties<ReactorSignerInput>
-> {
-  return z.object({
-    app: z.lazy(() => ReactorSignerAppInputSchema().nullish()),
-    signatures: z.array(z.string()),
-    user: z.lazy(() => ReactorSignerUserInputSchema().nullish()),
-  });
-}
-
-export function ReactorSignerUserInputSchema(): z.ZodObject<
-  Properties<ReactorSignerUserInput>
-> {
-  return z.object({
-    address: z.string(),
-    chainId: z.number(),
-    networkId: z.string(),
-  });
-}
-
-export function RemoteCursorInputSchema(): z.ZodObject<
-  Properties<RemoteCursorInput>
-> {
-  return z.object({
-    cursorOrdinal: z.number(),
-    lastSyncedAtUtcMs: z.string().nullish(),
-    remoteName: z.string(),
-  });
-}
-
-export function RemoteFilterInputSchema(): z.ZodObject<
-  Properties<RemoteFilterInput>
-> {
-  return z.object({
-    branch: z.string(),
-    documentId: z.array(z.string()),
-    scope: z.array(z.string()),
-  });
-}
-
-export function SearchFilterInputSchema(): z.ZodObject<
-  Properties<SearchFilterInput>
-> {
-  return z.object({
-    identifiers: z.array(z.string()).nullish(),
-    parentId: z.string().nullish(),
-    type: z.string().nullish(),
-  });
-}
-
-export function SyncEnvelopeInputSchema(): z.ZodObject<
-  Properties<SyncEnvelopeInput>
-> {
-  return z.object({
-    channelMeta: z.lazy(() => ChannelMetaInputSchema()),
-    cursor: z.lazy(() => RemoteCursorInputSchema().nullish()),
-    dependsOn: z.array(z.string()).nullish(),
-    key: z.string().nullish(),
-    operations: z
-      .array(z.lazy(() => OperationWithContextInputSchema()))
-      .nullish(),
-    type: SyncEnvelopeTypeSchema,
-  });
-}
-
-export function TouchChannelInputSchema(): z.ZodObject<
-  Properties<TouchChannelInput>
-> {
-  return z.object({
-    collectionId: z.string(),
-    filter: z.lazy(() => RemoteFilterInputSchema()),
-    id: z.string(),
-    name: z.string(),
-    sinceTimestampUtcMs: z.string(),
-  });
-}
-
-export function ViewFilterInputSchema(): z.ZodObject<
-  Properties<ViewFilterInput>
-> {
-  return z.object({
-    branch: z.string().nullish(),
-    scopes: z.array(z.string()).nullish(),
-  });
-}
-
 export const PhDocumentFieldsFragmentDoc = gql`
   fragment PHDocumentFields on PHDocument {
     id
@@ -2609,256 +1496,421 @@ export const PushSyncEnvelopesDocument = gql`
     pushSyncEnvelopes(envelopes: $envelopes)
   }
 `;
-export type Requester<C = {}> = <R, V>(
-  doc: DocumentNode,
-  vars?: V,
-  options?: C,
-) => Promise<R> | AsyncIterable<R>;
-export function getSdk<C>(requester: Requester<C>) {
+
+export type SdkFunctionWrapper = <T>(
+  action: (requestHeaders?: Record<string, string>) => Promise<T>,
+  operationName: string,
+  operationType?: string,
+  variables?: any,
+) => Promise<T>;
+
+const defaultWrapper: SdkFunctionWrapper = (
+  action,
+  _operationName,
+  _operationType,
+  _variables,
+) => action();
+
+export function getSdk(
+  client: GraphQLClient,
+  withWrapper: SdkFunctionWrapper = defaultWrapper,
+) {
   return {
     GetDocumentModels(
       variables?: GetDocumentModelsQueryVariables,
-      options?: C,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
     ): Promise<GetDocumentModelsQuery> {
-      return requester<GetDocumentModelsQuery, GetDocumentModelsQueryVariables>(
-        GetDocumentModelsDocument,
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<GetDocumentModelsQuery>({
+            document: GetDocumentModelsDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "GetDocumentModels",
+        "query",
         variables,
-        options,
-      ) as Promise<GetDocumentModelsQuery>;
+      );
     },
     GetDocument(
       variables: GetDocumentQueryVariables,
-      options?: C,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
     ): Promise<GetDocumentQuery> {
-      return requester<GetDocumentQuery, GetDocumentQueryVariables>(
-        GetDocumentDocument,
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<GetDocumentQuery>({
+            document: GetDocumentDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "GetDocument",
+        "query",
         variables,
-        options,
-      ) as Promise<GetDocumentQuery>;
+      );
     },
     GetDocumentChildren(
       variables: GetDocumentChildrenQueryVariables,
-      options?: C,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
     ): Promise<GetDocumentChildrenQuery> {
-      return requester<
-        GetDocumentChildrenQuery,
-        GetDocumentChildrenQueryVariables
-      >(
-        GetDocumentChildrenDocument,
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<GetDocumentChildrenQuery>({
+            document: GetDocumentChildrenDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "GetDocumentChildren",
+        "query",
         variables,
-        options,
-      ) as Promise<GetDocumentChildrenQuery>;
+      );
     },
     GetDocumentParents(
       variables: GetDocumentParentsQueryVariables,
-      options?: C,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
     ): Promise<GetDocumentParentsQuery> {
-      return requester<
-        GetDocumentParentsQuery,
-        GetDocumentParentsQueryVariables
-      >(
-        GetDocumentParentsDocument,
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<GetDocumentParentsQuery>({
+            document: GetDocumentParentsDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "GetDocumentParents",
+        "query",
         variables,
-        options,
-      ) as Promise<GetDocumentParentsQuery>;
+      );
     },
     FindDocuments(
       variables: FindDocumentsQueryVariables,
-      options?: C,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
     ): Promise<FindDocumentsQuery> {
-      return requester<FindDocumentsQuery, FindDocumentsQueryVariables>(
-        FindDocumentsDocument,
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<FindDocumentsQuery>({
+            document: FindDocumentsDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "FindDocuments",
+        "query",
         variables,
-        options,
-      ) as Promise<FindDocumentsQuery>;
+      );
     },
     GetDocumentOperations(
       variables: GetDocumentOperationsQueryVariables,
-      options?: C,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
     ): Promise<GetDocumentOperationsQuery> {
-      return requester<
-        GetDocumentOperationsQuery,
-        GetDocumentOperationsQueryVariables
-      >(
-        GetDocumentOperationsDocument,
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<GetDocumentOperationsQuery>({
+            document: GetDocumentOperationsDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "GetDocumentOperations",
+        "query",
         variables,
-        options,
-      ) as Promise<GetDocumentOperationsQuery>;
+      );
     },
     GetJobStatus(
       variables: GetJobStatusQueryVariables,
-      options?: C,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
     ): Promise<GetJobStatusQuery> {
-      return requester<GetJobStatusQuery, GetJobStatusQueryVariables>(
-        GetJobStatusDocument,
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<GetJobStatusQuery>({
+            document: GetJobStatusDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "GetJobStatus",
+        "query",
         variables,
-        options,
-      ) as Promise<GetJobStatusQuery>;
+      );
     },
     CreateDocument(
       variables: CreateDocumentMutationVariables,
-      options?: C,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
     ): Promise<CreateDocumentMutation> {
-      return requester<CreateDocumentMutation, CreateDocumentMutationVariables>(
-        CreateDocumentDocument,
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<CreateDocumentMutation>({
+            document: CreateDocumentDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "CreateDocument",
+        "mutation",
         variables,
-        options,
-      ) as Promise<CreateDocumentMutation>;
+      );
     },
     CreateEmptyDocument(
       variables: CreateEmptyDocumentMutationVariables,
-      options?: C,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
     ): Promise<CreateEmptyDocumentMutation> {
-      return requester<
-        CreateEmptyDocumentMutation,
-        CreateEmptyDocumentMutationVariables
-      >(
-        CreateEmptyDocumentDocument,
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<CreateEmptyDocumentMutation>({
+            document: CreateEmptyDocumentDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "CreateEmptyDocument",
+        "mutation",
         variables,
-        options,
-      ) as Promise<CreateEmptyDocumentMutation>;
+      );
     },
     MutateDocument(
       variables: MutateDocumentMutationVariables,
-      options?: C,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
     ): Promise<MutateDocumentMutation> {
-      return requester<MutateDocumentMutation, MutateDocumentMutationVariables>(
-        MutateDocumentDocument,
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<MutateDocumentMutation>({
+            document: MutateDocumentDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "MutateDocument",
+        "mutation",
         variables,
-        options,
-      ) as Promise<MutateDocumentMutation>;
+      );
     },
     MutateDocumentAsync(
       variables: MutateDocumentAsyncMutationVariables,
-      options?: C,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
     ): Promise<MutateDocumentAsyncMutation> {
-      return requester<
-        MutateDocumentAsyncMutation,
-        MutateDocumentAsyncMutationVariables
-      >(
-        MutateDocumentAsyncDocument,
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<MutateDocumentAsyncMutation>({
+            document: MutateDocumentAsyncDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "MutateDocumentAsync",
+        "mutation",
         variables,
-        options,
-      ) as Promise<MutateDocumentAsyncMutation>;
+      );
     },
     RenameDocument(
       variables: RenameDocumentMutationVariables,
-      options?: C,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
     ): Promise<RenameDocumentMutation> {
-      return requester<RenameDocumentMutation, RenameDocumentMutationVariables>(
-        RenameDocumentDocument,
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<RenameDocumentMutation>({
+            document: RenameDocumentDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "RenameDocument",
+        "mutation",
         variables,
-        options,
-      ) as Promise<RenameDocumentMutation>;
+      );
     },
     AddChildren(
       variables: AddChildrenMutationVariables,
-      options?: C,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
     ): Promise<AddChildrenMutation> {
-      return requester<AddChildrenMutation, AddChildrenMutationVariables>(
-        AddChildrenDocument,
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<AddChildrenMutation>({
+            document: AddChildrenDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "AddChildren",
+        "mutation",
         variables,
-        options,
-      ) as Promise<AddChildrenMutation>;
+      );
     },
     RemoveChildren(
       variables: RemoveChildrenMutationVariables,
-      options?: C,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
     ): Promise<RemoveChildrenMutation> {
-      return requester<RemoveChildrenMutation, RemoveChildrenMutationVariables>(
-        RemoveChildrenDocument,
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<RemoveChildrenMutation>({
+            document: RemoveChildrenDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "RemoveChildren",
+        "mutation",
         variables,
-        options,
-      ) as Promise<RemoveChildrenMutation>;
+      );
     },
     MoveChildren(
       variables: MoveChildrenMutationVariables,
-      options?: C,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
     ): Promise<MoveChildrenMutation> {
-      return requester<MoveChildrenMutation, MoveChildrenMutationVariables>(
-        MoveChildrenDocument,
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<MoveChildrenMutation>({
+            document: MoveChildrenDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "MoveChildren",
+        "mutation",
         variables,
-        options,
-      ) as Promise<MoveChildrenMutation>;
+      );
     },
     DeleteDocument(
       variables: DeleteDocumentMutationVariables,
-      options?: C,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
     ): Promise<DeleteDocumentMutation> {
-      return requester<DeleteDocumentMutation, DeleteDocumentMutationVariables>(
-        DeleteDocumentDocument,
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<DeleteDocumentMutation>({
+            document: DeleteDocumentDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "DeleteDocument",
+        "mutation",
         variables,
-        options,
-      ) as Promise<DeleteDocumentMutation>;
+      );
     },
     DeleteDocuments(
       variables: DeleteDocumentsMutationVariables,
-      options?: C,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
     ): Promise<DeleteDocumentsMutation> {
-      return requester<
-        DeleteDocumentsMutation,
-        DeleteDocumentsMutationVariables
-      >(
-        DeleteDocumentsDocument,
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<DeleteDocumentsMutation>({
+            document: DeleteDocumentsDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "DeleteDocuments",
+        "mutation",
         variables,
-        options,
-      ) as Promise<DeleteDocumentsMutation>;
+      );
     },
     DocumentChanges(
       variables: DocumentChangesSubscriptionVariables,
-      options?: C,
-    ): AsyncIterable<DocumentChangesSubscription> {
-      return requester<
-        DocumentChangesSubscription,
-        DocumentChangesSubscriptionVariables
-      >(
-        DocumentChangesDocument,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<DocumentChangesSubscription> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<DocumentChangesSubscription>({
+            document: DocumentChangesDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "DocumentChanges",
+        "subscription",
         variables,
-        options,
-      ) as AsyncIterable<DocumentChangesSubscription>;
+      );
     },
     JobChanges(
       variables: JobChangesSubscriptionVariables,
-      options?: C,
-    ): AsyncIterable<JobChangesSubscription> {
-      return requester<JobChangesSubscription, JobChangesSubscriptionVariables>(
-        JobChangesDocument,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<JobChangesSubscription> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<JobChangesSubscription>({
+            document: JobChangesDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "JobChanges",
+        "subscription",
         variables,
-        options,
-      ) as AsyncIterable<JobChangesSubscription>;
+      );
     },
     PollSyncEnvelopes(
       variables: PollSyncEnvelopesQueryVariables,
-      options?: C,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
     ): Promise<PollSyncEnvelopesQuery> {
-      return requester<PollSyncEnvelopesQuery, PollSyncEnvelopesQueryVariables>(
-        PollSyncEnvelopesDocument,
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<PollSyncEnvelopesQuery>({
+            document: PollSyncEnvelopesDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "PollSyncEnvelopes",
+        "query",
         variables,
-        options,
-      ) as Promise<PollSyncEnvelopesQuery>;
+      );
     },
     TouchChannel(
       variables: TouchChannelMutationVariables,
-      options?: C,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
     ): Promise<TouchChannelMutation> {
-      return requester<TouchChannelMutation, TouchChannelMutationVariables>(
-        TouchChannelDocument,
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<TouchChannelMutation>({
+            document: TouchChannelDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "TouchChannel",
+        "mutation",
         variables,
-        options,
-      ) as Promise<TouchChannelMutation>;
+      );
     },
     PushSyncEnvelopes(
       variables: PushSyncEnvelopesMutationVariables,
-      options?: C,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
     ): Promise<PushSyncEnvelopesMutation> {
-      return requester<
-        PushSyncEnvelopesMutation,
-        PushSyncEnvelopesMutationVariables
-      >(
-        PushSyncEnvelopesDocument,
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<PushSyncEnvelopesMutation>({
+            document: PushSyncEnvelopesDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "PushSyncEnvelopes",
+        "mutation",
         variables,
-        options,
-      ) as Promise<PushSyncEnvelopesMutation>;
+      );
     },
   };
 }

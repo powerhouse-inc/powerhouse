@@ -16,6 +16,7 @@ import {
   JobChangeEventDTO,
   JobInfoDTO,
   MoveChildrenResultDTO,
+  OperationResultPageDTO,
   PHDocumentDTO,
   PHDocumentResultPageDTO,
 } from "./validation.js";
@@ -59,6 +60,11 @@ const operationValidators: OperationValidators = {
   FindDocuments: (data) => {
     if (data.findDocuments) {
       PHDocumentResultPageDTO.parse(data.findDocuments as PhDocumentResultPage);
+    }
+  },
+  GetDocumentOperations: (data) => {
+    if (data.documentOperations) {
+      OperationResultPageDTO.parse(data.documentOperations);
     }
   },
   GetJobStatus: (data) => {

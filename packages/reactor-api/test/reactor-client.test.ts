@@ -1,7 +1,10 @@
 import { print } from "graphql";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createReactorGraphQLClient } from "../src/graphql/index.js";
-import { GetDocumentDocument } from "../src/graphql/reactor/gen/graphql.js";
+import {
+  GetDocumentDocument,
+  GetDocumentOperationsDocument,
+} from "../src/graphql/reactor/gen/graphql.js";
 import type { FetchLike } from "../src/graphql/reactor/requester.js";
 import { createFetchRequester } from "../src/graphql/reactor/requester.js";
 import { createValidatingRequester } from "../src/graphql/reactor/requester.with-zod.js";
@@ -126,10 +129,9 @@ describe("ReactorSDK", () => {
             name: "Test Document",
             documentType: "powerhouse/document-model",
             state: {},
-            revision: 1,
-            created: "2023-01-01T00:00:00Z",
-            lastModified: "2023-01-01T00:00:00Z",
-            parentId: null,
+            revisionsList: [{ scope: "global", revision: 1 }],
+            createdAtUtcIso: "2023-01-01T00:00:00Z",
+            lastModifiedAtUtcIso: "2023-01-01T00:00:00Z",
           },
           childIds: [],
         },
@@ -212,6 +214,107 @@ describe("ReactorSDK", () => {
 
       expect(result).toEqual(nullDocumentResponse);
     });
+
+    it("should validate successful GetDocumentOperations response", async () => {
+      const validOperationsResponse = {
+        documentOperations: {
+          items: [
+            {
+              index: 0,
+              timestampUtcMs: "1000",
+              hash: "abc123",
+              skip: 0,
+              error: null,
+              id: "op-1",
+              action: {
+                id: "action-1",
+                type: "SET_NAME",
+                timestampUtcMs: "1000",
+                input: { name: "Test" },
+                scope: "global",
+                attachments: null,
+                context: {
+                  signer: {
+                    signatures: ["a, b, c, d, e"],
+                    user: {
+                      address: "0x123",
+                      networkId: "eip155",
+                      chainId: 1,
+                    },
+                    app: { name: "test-app", key: "key-1" },
+                  },
+                },
+              },
+            },
+          ],
+          totalCount: 1,
+          hasNextPage: false,
+          hasPreviousPage: false,
+          cursor: null,
+        },
+      };
+
+      const mockResponse = {
+        ok: true,
+        json: vi.fn().mockResolvedValue({
+          data: validOperationsResponse,
+        }),
+      };
+      (mockFetch as any).mockResolvedValue(mockResponse);
+
+      const requester = createValidatingRequester(
+        "https://api.test.com/graphql",
+        mockFetch,
+      );
+
+      const result = await requester(
+        GetDocumentOperationsDocument,
+        {
+          filter: { documentId: "doc-1" },
+        },
+        {},
+      );
+
+      expect(result).toEqual(validOperationsResponse);
+    });
+
+    it("should reject malformed GetDocumentOperations response", async () => {
+      const malformedResponse = {
+        documentOperations: {
+          items: [
+            {
+              // Missing required fields: index, hash, skip, action
+              timestampUtcMs: "1000",
+            },
+          ],
+          totalCount: 1,
+          hasNextPage: false,
+          hasPreviousPage: false,
+          cursor: null,
+        },
+      };
+
+      const mockResponse = {
+        ok: true,
+        json: vi.fn().mockResolvedValue({
+          data: malformedResponse,
+        }),
+      };
+      (mockFetch as any).mockResolvedValue(mockResponse);
+
+      const requester = createValidatingRequester(
+        "https://api.test.com/graphql",
+        mockFetch,
+      );
+
+      await expect(
+        requester(
+          GetDocumentOperationsDocument,
+          { filter: { documentId: "doc-1" } },
+          {},
+        ),
+      ).rejects.toThrow();
+    });
   });
 
   describe("createReactorGraphQLClient integration", () => {
@@ -230,10 +333,9 @@ describe("ReactorSDK", () => {
             name: "Test Document",
             documentType: "powerhouse/document-model",
             state: {},
-            revision: 1,
-            created: "2023-01-01T00:00:00Z",
-            lastModified: "2023-01-01T00:00:00Z",
-            parentId: null,
+            revisionsList: [{ scope: "global", revision: 1 }],
+            createdAtUtcIso: "2023-01-01T00:00:00Z",
+            lastModifiedAtUtcIso: "2023-01-01T00:00:00Z",
           },
           childIds: [],
         },

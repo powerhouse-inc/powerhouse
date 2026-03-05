@@ -543,23 +543,32 @@ export class GraphQLManager {
           this.subgraphServers.set(subgraphPath, server);
 
           if (subgraph.hasSubscriptions) {
-            const wsDisposer = useServer(
-              {
-                schema,
-                context: async (ctx: {
-                  connectionParams?: Record<string, unknown>;
-                }) => {
-                  const connectionParams = (ctx.connectionParams ??
-                    {}) as Record<string, unknown>;
-                  return this.#createWebSocketContext(connectionParams);
+            try {
+              const wsDisposer = useServer(
+                {
+                  schema,
+                  context: async (ctx: {
+                    connectionParams?: Record<string, unknown>;
+                  }) => {
+                    const connectionParams = (ctx.connectionParams ??
+                      {}) as Record<string, unknown>;
+                    return this.#createWebSocketContext(connectionParams);
+                  },
                 },
-              },
-              this.wsServer,
-            );
-            this.subgraphWsDisposers.set(subgraphPath, wsDisposer);
-            this.logger.debug(
-              `WebSocket subscriptions enabled for ${subgraph.name}`,
-            );
+                this.wsServer,
+              );
+              this.subgraphWsDisposers.set(subgraphPath, wsDisposer);
+              this.logger.debug(
+                `WebSocket subscriptions enabled for ${subgraph.name}`,
+              );
+            } catch (error) {
+              this.logger.error(
+                "Failed to setup websocket for subgraph @name at path @path: @error",
+                subgraph.name,
+                subgraphPath,
+                error,
+              );
+            }
           }
 
           this.#setupApolloExpressMiddleware(server, subgraphPath);
