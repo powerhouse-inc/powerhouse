@@ -35,6 +35,7 @@ export * from "./document-editor/editor.js";
 export * from "./document-editor/module.js";
 export * from "./document-model/actions.js";
 export * from "./document-model/gen/actions.js";
+export * from "./document-model/gen/controller.js";
 export * from "./document-model/gen/creators.js";
 export * from "./document-model/gen/document-schema.js";
 export * from "./document-model/gen/document-type.js";

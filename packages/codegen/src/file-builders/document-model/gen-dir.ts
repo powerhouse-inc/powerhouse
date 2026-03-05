@@ -7,6 +7,7 @@ import {
   documentModelDocumentSchemaFileTemplate,
   documentModelDocumentTypeTemplate,
   documentModelGenActionsFileTemplate,
+  documentModelGenControllerFileTemplate,
   documentModelGenCreatorsFileTemplate,
   documentModelGenIndexFileTemplate,
   documentModelGenReducerFileTemplate,
@@ -42,6 +43,7 @@ export async function makeGenDirFiles(
   await makeDocumentModelGenIndexFile(fileMakerArgs);
   await makeDocumentModelGenDocumentModelFile(fileMakerArgs);
   await makeDocumentModelGenPhFactoriesFile(fileMakerArgs);
+  await makeDocumentModelGenControllerFile(fileMakerArgs);
 
   const modules = fileMakerArgs.modules;
 
@@ -183,6 +185,20 @@ async function makeDocumentModelGenPhFactoriesFile(
   const { project, genDirPath } = args;
 
   const filePath = path.join(genDirPath, "ph-factories.ts");
+
+  const { sourceFile } = getOrCreateSourceFile(project, filePath);
+
+  sourceFile.replaceWithText(template);
+  await formatSourceFileWithPrettier(sourceFile);
+}
+
+async function makeDocumentModelGenControllerFile(
+  args: DocumentModelFileMakerArgs,
+) {
+  const template = documentModelGenControllerFileTemplate(args);
+  const { project, genDirPath } = args;
+
+  const filePath = path.join(genDirPath, "controller.ts");
 
   const { sourceFile } = getOrCreateSourceFile(project, filePath);
 
