@@ -1,5 +1,3 @@
-import type { BrowserAnalyticsStore } from "@powerhousedao/analytics-engine-browser";
-import { MemoryAnalyticsStore } from "@powerhousedao/analytics-engine-browser";
 import type {
   AnalyticsDimension,
   AnalyticsQuery,
@@ -10,22 +8,22 @@ import {
   AnalyticsQueryEngine,
 } from "@powerhousedao/analytics-engine-core";
 import {
+  AnalyticsProvider,
   clearGlobal,
   getGlobal,
   setGlobal,
+  useAddSeriesValue,
+  useAnalyticsQuery,
+  useAnalyticsSeries,
+  useGetDimensions,
 } from "@powerhousedao/reactor-browser";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { DateTime } from "luxon";
 import type { PropsWithChildren } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { renderHook } from "vitest-browser-react";
-import {
-  AnalyticsProvider,
-  useAddSeriesValue,
-  useAnalyticsQuery,
-  useAnalyticsSeries,
-  useGetDimensions,
-} from "../src/analytics.js";
+import type { BrowserAnalyticsStore } from "../../analytics-engine/browser/dist/index.js";
+import { MemoryAnalyticsStore } from "../../analytics-engine/browser/dist/index.js";
 
 describe("Analytics Store", () => {
   const TEST_SOURCE = AnalyticsPath.fromString(

@@ -1,6 +1,3 @@
-import fs from "fs";
-import { DateTime } from "luxon";
-import { MemoryAnalyticsStore } from "@powerhousedao/analytics-engine-browser";
 import type {
   AnalyticsGranularity,
   AnalyticsPath,
@@ -13,6 +10,9 @@ import {
   PostgresAnalyticsStore,
   reviver,
 } from "@powerhousedao/analytics-engine-pg";
+import fs from "fs";
+import { DateTime } from "luxon";
+import { MemoryAnalyticsStore } from "@powerhousedao/analytics-engine-browser";
 
 class ExecutionResults {
   public readonly durationMs: number;

@@ -12,7 +12,6 @@
       "vite/client",
       "@storybook/types",
       "node",
-      "vite/client",
       "vitest/globals",
       "@testing-library/jest-dom"
     ]

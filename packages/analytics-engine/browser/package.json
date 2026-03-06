@@ -12,18 +12,18 @@
   "type": "module",
   "exports": {
     ".": {
-      "types": "./dist/src/index.d.ts",
-      "import": "./dist/src/index.js"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
     }
   },
   "files": [
-    "dist/src"
+    "dist"
   ],
   "scripts": {
-    "build:bundle": "bun run ./bundle.ts",
+    "build:bundle": "tsdown",
     "test:e2e": "vitest --run ./**/*.test.ts"
   },
-  "devDependencies": {
+  "dependencies": {
     "@powerhousedao/analytics-engine-core": "workspace:*",
     "@powerhousedao/analytics-engine-knex": "workspace:*",
     "@electric-sql/pglite": "catalog:",
@@ -31,16 +31,14 @@
     "events": "catalog:",
     "util": "catalog:",
     "knex": "catalog:",
-    "luxon": "catalog:",
+    "luxon": "catalog:"
+  },
+  "devDependencies": {
     "@vitest/browser": "4.0.18",
     "@vitest/browser-playwright": "4.0.18",
     "@types/luxon": "catalog:",
     "playwright": "1.58.2",
-    "vitest": "4.0.18"
-  },
-  "peerDependencies": {
-    "react": ">=19.0.0",
-    "react-dom": ">=19.0.0",
-    "@electric-sql/pglite": ">=0.3.0"
+    "vitest": "4.0.18",
+    "tsdown": "catalog:"
   }
 }

@@ -4,8 +4,7 @@
     "outDir": "./dist",
     "emitDeclarationOnly": true,
     "types": [
-      "vite/client",
-      "@types/bun"
+      "vite/client"
     ]
   },
   "include": [

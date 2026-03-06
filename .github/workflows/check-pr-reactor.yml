@@ -30,7 +30,6 @@ env:
   NX_ISOLATE_PLUGINS: false
   DATABASE_URL: postgres://postgres:postgres@postgres:5432/postgres?sslmode=disable&connect_timeout=30&connection_limit=90
   REDIS_TLS_URL: redis://redis:6379
-  BUN_RUNTIME_TRANSPILER_CACHE_PATH: "0"
 
 
 jobs:
@@ -184,6 +183,9 @@ jobs:
 
       - name: Run misc build scripts
         run: pnpm build-misc
+
+      - name: Run css build scripts
+        run: pnpm build-css
 
       - name: Run bundle scripts
         run: pnpm build-bundle

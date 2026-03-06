@@ -52,6 +52,7 @@
     "tsc": "tsc",
     "lint": "eslint",
     "build:css": "pnpm exec tailwindcss -i ./style.css -o ./dist/style.css",
+    "build:bundle": "tsdown",
     "test": "vitest --run",
     "test:watch": "vitest",
     "test:document-models": "vitest run document-models",
@@ -66,45 +67,46 @@
     "service-unstartup": "bash ./node_modules/@powerhousedao/ph-cli/dist/scripts/service-unstartup.sh"
   },
   "dependencies": {
-    "document-model": "workspace:*",
-    "@powerhousedao/connect": "workspace:*",
-    "@powerhousedao/design-system": "workspace:*",
+    "@electric-sql/pglite": "catalog:",
+    "@electric-sql/pglite-tools": "catalog:",
     "@powerhousedao/common": "workspace:*",
     "@powerhousedao/config": "workspace:*",
+    "@powerhousedao/connect": "workspace:*",
+    "@powerhousedao/design-system": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",
     "@powerhousedao/shared": "workspace:*",
     "change-case": "catalog:",
     "colorette": "catalog:",
+    "document-model": "workspace:*",
     "graphql": "catalog:",
+    "graphql-tag": "catalog:",
     "kysely": "catalog:",
     "zod": "catalog:",
-    "graphql-tag": "catalog:",
-    "@electric-sql/pglite": "catalog:",
-    "@electric-sql/pglite-tools": "catalog:"
+    "document-drive": "workspace:*"
   },
   "devDependencies": {
-    "document-drive": "workspace:*",
     "@powerhousedao/builder-tools": "workspace:*",
     "@powerhousedao/codegen": "workspace:*",
     "@powerhousedao/ph-cli": "workspace:*",
-    "react": "catalog:",
-    "react-dom": "catalog:",
-    "tailwindcss": "catalog:",
     "@tailwindcss/cli": "catalog:",
-    "vite": "catalog:",
-    "vitest": "catalog:",
-    "@vitejs/plugin-react": "catalog:",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^14.6.1",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
-    "@types/react-dom": "catalog:"
+    "@types/react-dom": "catalog:",
+    "@vitejs/plugin-react": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "tailwindcss": "catalog:",
+    "tsdown": "catalog:",
+    "vite": "catalog:",
+    "vitest": "catalog:"
   },
   "peerDependencies": {
+    "@electric-sql/pglite": ">=0.3.15",
     "react": ">=19.0.0",
-    "react-dom": ">=19.0.0",
-    "@electric-sql/pglite": ">=0.3.15"
+    "react-dom": ">=19.0.0"
   },
   "description": ""
 }

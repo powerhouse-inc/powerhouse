@@ -250,7 +250,7 @@ import {
   AnalyticsGranularity,
   AnalyticsPath,
   DateTime,
-} from "@powerhousedao/reactor-browser/analytics";
+} from "@powerhousedao/reactor-browser";
 
 function DriveUsageChart({ driveId }: { driveId: string }) {
   const { data, isLoading } = useAnalyticsQuery({
@@ -293,7 +293,7 @@ For common drive analytics queries, use the specialized `useDriveAnalytics` hook
 
 ```tsx
 import { useDriveAnalytics } from "@powerhousedao/common/drive-analytics";
-import { AnalyticsGranularity } from "@powerhousedao/reactor-browser/analytics";
+import { AnalyticsGranularity } from "@powerhousedao/reactor-browser";
 
 function DriveInsights({ driveIds }: { driveIds: string[] }) {
   const analytics = useDriveAnalytics({
@@ -332,7 +332,7 @@ For document-specific analytics queries, use the `useDocumentAnalytics` hook:
 
 ```tsx
 import { useDocumentAnalytics } from "@powerhousedao/common/drive-analytics";
-import { AnalyticsGranularity } from "@powerhousedao/reactor-browser/analytics";
+import { AnalyticsGranularity } from "@powerhousedao/reactor-browser";
 
 function DocumentInsights({
   driveId,

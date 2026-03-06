@@ -12,25 +12,30 @@
   "type": "module",
   "exports": {
     ".": {
-      "types": "./dist/src/index.d.ts",
-      "import": "./dist/src/index.js"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
     }
   },
   "files": [
-    "dist/src"
+    "dist"
   ],
   "scripts": {
     "test:pg": "PG_CONNECTION_STRING=postgresql://postgres:password@localhost:5555/analytics vitest --run ./**/*.test.ts",
-    "build:bundle": "bun run ./bundle.ts"
+    "build:bundle": "tsdown"
   },
-  "devDependencies": {
-    "@types/luxon": "catalog:",
-    "@types/node": "catalog:",
-    "@types/pg": "catalog:",
+  "dependencies": {
     "date-fns": "catalog:",
     "knex": "catalog:",
     "luxon": "catalog:",
     "pg": "catalog:",
+    "@powerhousedao/analytics-engine-core": "workspace:*",
+    "@powerhousedao/analytics-engine-knex": "workspace:*"
+  },
+  "devDependencies": {
+    "tsdown": "catalog:",
+    "@types/luxon": "catalog:",
+    "@types/node": "catalog:",
+    "@types/pg": "catalog:",
     "better-sqlite3": "catalog:",
     "sqlite3": "catalog:",
     "mysql": "catalog:",
@@ -38,8 +43,6 @@
     "tedious": "catalog:",
     "pg-query-stream": "catalog:",
     "oracledb": "catalog:",
-    "@powerhousedao/analytics-engine-core": "workspace:*",
-    "@powerhousedao/analytics-engine-knex": "workspace:*",
     "vitest": "catalog:"
   }
 }

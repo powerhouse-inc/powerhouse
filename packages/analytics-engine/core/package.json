@@ -12,15 +12,15 @@
   "type": "module",
   "exports": {
     ".": {
-      "types": "./dist/src/index.d.ts",
-      "import": "./dist/src/index.js"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
     }
   },
   "files": [
-    "dist/src"
+    "dist"
   ],
   "scripts": {
-    "build:bundle": "bun run ./bundle.ts",
+    "build:bundle": "tsdown",
     "test": "vitest --run ./**/*.test.ts"
   },
   "dependencies": {
@@ -29,6 +29,7 @@
   },
   "devDependencies": {
     "@types/luxon": "catalog:",
-    "vitest": "catalog:"
+    "vitest": "catalog:",
+    "tsdown": "catalog:"
   }
 }

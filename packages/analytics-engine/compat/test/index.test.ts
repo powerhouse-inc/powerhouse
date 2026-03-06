@@ -1,9 +1,9 @@
-import fs from "fs";
-import { DateTime } from "luxon";
 import { AnalyticsPath } from "@powerhousedao/analytics-engine-core";
 import { PostgresAnalyticsStore } from "@powerhousedao/analytics-engine-pg";
+import fs from "fs";
+import { DateTime } from "luxon";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { MemoryAnalyticsStore } from "@powerhousedao/analytics-engine-browser";
-import { afterAll, beforeAll, it, expect, describe } from "vitest";
 
 const connectionString =
   process.env.PG_CONNECTION_STRING ||

@@ -4,7 +4,6 @@
     "types": [
       "node",
       "vitest/globals",
-      "@types/bun"
     ],
     "emitDeclarationOnly": true,
     "outDir": "./dist"
@@ -24,12 +23,6 @@
     },
     {
       "path": "../../packages/config"
-    },
-    {
-      "path": "../../packages/document-drive"
-    },
-    {
-      "path": "../../packages/document-model"
     },
     {
       "path": "../../packages/reactor"

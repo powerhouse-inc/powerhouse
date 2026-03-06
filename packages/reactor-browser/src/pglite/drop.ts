@@ -19,7 +19,7 @@ END $$;
 `);
 }
 
-export async function dropAllTables(
+export async function truncateAllTables(
   pg: PGlite,
   schema: string = REACTOR_SCHEMA,
 ): Promise<void> {

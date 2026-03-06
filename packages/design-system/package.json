@@ -79,7 +79,6 @@
   "homepage": "https://github.com/powerhouse-inc/design-system#readme",
   "devDependencies": {
     "@powerhousedao/config": "workspace:*",
-    "@powerhousedao/reactor-browser": "workspace:*",
     "@prettier/sync": "^0.5.2",
     "@storybook/addon-actions": "^8.6.7",
     "@storybook/addon-docs": "^8.6.3",
@@ -113,14 +112,15 @@
     "tailwind-scrollbar": "^4.0.1",
     "tailwindcss": "catalog:",
     "vite": "catalog:",
-    "vitest": "catalog:"
+    "vitest": "catalog:",
+    "@powerhousedao/reactor-browser": "workspace:*"
+
   },
   "peerDependencies": {
     "react": ">=19.0.0",
     "react-dom": ">=19.0.0"
   },
   "dependencies": {
-    "@powerhousedao/reactor-browser": "workspace:*",
     "@radix-ui/react-checkbox": "^1.1.2",
     "@radix-ui/react-dialog": "^1.1.2",
     "@radix-ui/react-dropdown-menu": "^2.1.5",

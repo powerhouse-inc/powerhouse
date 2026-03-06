@@ -8,16 +8,17 @@
     "url": "https://github.com/powerhouse-inc/powerhouse"
   },
   "bin": {
-    "ph-registry": "./dist/src/cli.js"
+    "ph-registry": "./dist/cli.mjs"
   },
   "files": [
     "dist"
   ],
   "sideEffects": false,
   "scripts": {
-    "start": "node ./dist/src/cli.js",
-    "dev": "bun run ./src/cli.ts",
-    "build:cli": "bun run ./bundle.ts",
+    "start": "node ./dist/cli.js",
+    "dev": "bun run ./cli.ts",
+    "build:cli": "tsdown",
+    "postbuild:cli": "bun run ./copy-dirs.ts",
     "test": "vitest --run"
   },
   "keywords": [],
@@ -32,7 +33,7 @@
     "verdaccio-aws-s3-storage": "^10.4.0"
   },
   "devDependencies": {
-    "@types/bun": "catalog:",
+    "tsdown": "catalog:",
     "@types/express": "^5.0.6",
     "@types/node": "catalog:",
     "@types/supertest": "^6.0.2",

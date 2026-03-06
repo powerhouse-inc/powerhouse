@@ -15,19 +15,17 @@
   ],
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
     }
   },
   "sideEffects": false,
   "scripts": {
     "tsc": "tsc",
     "lint": "eslint",
-    "build:bundle": "bun run ./bundle.ts"
+    "build:bundle": "tsdown"
   },
-  "devDependencies": {
-    "@types/bun": "catalog:",
-    "tsx": "catalog:",
+  "dependencies": {
     "vite": "catalog:",
     "@sentry/vite-plugin": "^4.3.0",
     "@tailwindcss/vite": "catalog:",
@@ -46,5 +44,9 @@
     "read-pkg": "catalog:",
     "resolve.exports": "^2.0.3",
     "zod": "catalog:"
+  },
+  "devDependencies": {
+    "tsx": "catalog:",
+    "tsdown": "catalog:"
   }
 }

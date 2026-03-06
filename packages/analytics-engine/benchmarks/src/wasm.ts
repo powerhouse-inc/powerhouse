@@ -1,6 +1,6 @@
 import fs from "fs";
-import { MemoryAnalyticsStore } from "@powerhousedao/analytics-engine-browser";
 import { Bench } from "tinybench";
+import { MemoryAnalyticsStore } from "@powerhousedao/analytics-engine-browser";
 import { logs } from "./util.js";
 
 // first, load the data
