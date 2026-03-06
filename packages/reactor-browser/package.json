@@ -25,14 +25,6 @@
     "./analytics": {
       "types": "./dist/src/analytics.d.ts",
       "import": "./dist/src/analytics.js"
-    },
-    "./remote-controller": {
-      "types": "./dist/src/remote-controller/index.d.ts",
-      "import": "./dist/src/remote-controller/index.js"
-    },
-    "./graphql-client": {
-      "types": "./dist/src/graphql/client.d.ts",
-      "import": "./dist/src/graphql/client.js"
     }
   },
   "sideEffects": false,

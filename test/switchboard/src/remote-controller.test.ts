@@ -1,9 +1,9 @@
-import { createReactorGraphQLClient } from "@powerhousedao/reactor-api";
-import type { ConflictInfo } from "@powerhousedao/reactor-browser/remote-controller";
+import type { ConflictInfo } from "@powerhousedao/reactor-browser";
 import {
   ConflictError,
+  createClient,
   RemoteDocumentController,
-} from "@powerhousedao/reactor-browser/remote-controller";
+} from "@powerhousedao/reactor-browser";
 import {
   MemoryKeyStorage,
   RenownCryptoBuilder,
@@ -17,7 +17,7 @@ const SWITCHBOARD_URL =
 
 const DRIVE_ID = process.env.SWITCHBOARD_DRIVE_ID ?? "powerhouse";
 
-const client = createReactorGraphQLClient(SWITCHBOARD_URL);
+const client = createClient(SWITCHBOARD_URL);
 
 /** Track created document IDs for cleanup. */
 const createdDocumentIds: string[] = [];

@@ -1,12 +1,6 @@
 async function build() {
   const result = await Bun.build({
-    entrypoints: [
-      "./src/index.ts",
-      "./src/connect.ts",
-      "./src/analytics.ts",
-      "./src/remote-controller/index.ts",
-      "./src/graphql/client.ts",
-    ],
+    entrypoints: ["./src/index.ts", "./src/connect.ts", "./src/analytics.ts"],
     outdir: "dist",
     root: ".",
     target: "browser",

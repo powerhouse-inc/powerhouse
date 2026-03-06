@@ -7,8 +7,10 @@
  * Example:
  *   npx tsx src/push-todo-model.ts http://localhost:4001/graphql powerhouse
  */
-import { createReactorGraphQLClient } from "@powerhousedao/reactor-api";
-import { RemoteDocumentController } from "@powerhousedao/reactor-browser/remote-controller";
+import {
+  RemoteDocumentController,
+  createClient,
+} from "@powerhousedao/reactor-browser";
 import { DocumentModelController } from "document-model";
 
 const switchboardUrl = process.argv[2];
@@ -21,7 +23,7 @@ if (!switchboardUrl) {
   process.exit(1);
 }
 
-const client = createReactorGraphQLClient(switchboardUrl);
+const client = createClient(switchboardUrl);
 
 const controller = await RemoteDocumentController.pull(
   DocumentModelController,
