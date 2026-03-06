@@ -11,9 +11,9 @@ import { documentModelDocumentModelModule } from "document-model";
 import { Kysely, sql } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { dropAllTables } from "../src/pglite/drop.js";
+import { truncateAllTables } from "../src/pglite/drop.js";
 
-describe("dropAllTables", () => {
+describe("truncateAllTables", () => {
   let pg: PGlite;
   let db: Kysely<any>;
   let module: ReactorClientModule;
@@ -49,7 +49,7 @@ describe("dropAllTables", () => {
     `.execute(db);
     expect(Number(beforeCount.rows[0]?.count)).toBeGreaterThan(0);
 
-    await dropAllTables(pg);
+    await truncateAllTables(pg);
 
     const afterCount = await sql<{ count: number }>`
       SELECT COUNT(*) as count FROM pg_catalog.pg_tables WHERE schemaname = ${REACTOR_SCHEMA}
@@ -65,7 +65,7 @@ describe("dropAllTables", () => {
       .withReactorBuilder(reactorBuilder)
       .buildModule();
 
-    await expect(dropAllTables(pg)).resolves.not.toThrow();
+    await expect(truncateAllTables(pg)).resolves.not.toThrow();
   });
 
   it("should drop multiple tables with data", async () => {
@@ -94,7 +94,7 @@ describe("dropAllTables", () => {
     expect(tablesBefore.rows.map((r) => r.tablename)).toContain("Operation");
     expect(tablesBefore.rows.map((r) => r.tablename)).toContain("Document");
 
-    await dropAllTables(pg);
+    await truncateAllTables(pg);
 
     const tablesAfter = await sql<{ tablename: string }>`
       SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname = ${REACTOR_SCHEMA}

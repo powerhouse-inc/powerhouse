@@ -10,6 +10,7 @@ import {
   addRemoteDrive,
   BrowserPackageManager,
   convertLegacyLibToVetraPackage,
+  DocumentChangeType,
   dropAllReactorStorage,
   extractDriveSlugFromPath,
   extractNodeSlugFromPath,
@@ -35,25 +36,12 @@ import {
 } from "@powerhousedao/reactor-browser";
 import type { ProcessorFactoryBuilder } from "@powerhousedao/shared/processors";
 import {
-  addPHEventHandlers,
-  login,
-  setConnectCrypto,
-  setDefaultPHGlobalConfig,
-  setDid,
-  setDocumentCache,
-  setDrives,
-  setReactorClient,
-  setReactorClientModule,
-  setRenown,
-} from "@powerhousedao/reactor-browser";
-import {
   BrowserKeyStorage,
   RenownBuilder,
   RenownCryptoBuilder,
 } from "@renown/sdk";
-import { DocumentChangeType } from "@powerhousedao/reactor-browser";
-import type { DocumentModelModule } from "document-model";
 import { logger } from "document-drive";
+import type { DocumentModelModule } from "document-model";
 import { initFeatureFlags } from "../feature-flags.js";
 import { loadCommonPackage } from "./document-model.js";
 
