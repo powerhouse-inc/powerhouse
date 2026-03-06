@@ -1,5 +1,5 @@
 import type { Remote } from "@powerhousedao/reactor-browser";
-import { useSync } from "@powerhousedao/reactor-browser/connect";
+import { useSync } from "@powerhousedao/reactor-browser";
 import { useCallback } from "react";
 
 export function useRemotesInspector(): {

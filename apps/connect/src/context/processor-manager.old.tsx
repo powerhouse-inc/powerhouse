@@ -12,7 +12,7 @@
 //   useRelationalDb,
 //   useSetPGliteDB,
 // } from "@powerhousedao/reactor-browser";
-// import { useProcessorManager } from "@powerhousedao/reactor-browser/connect";
+// import { useProcessorManager } from "@powerhousedao/reactor-browser";
 // import type { IRelationalDb, ProcessorManager } from "document-drive";
 // import { childLogger } from "document-drive";
 // import { generateId } from "document-model/core";

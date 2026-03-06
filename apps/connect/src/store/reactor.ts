@@ -6,40 +6,38 @@ import {
   getDefaultDrivesFromEnv,
 } from "@powerhousedao/connect/utils";
 import {
+  addPHEventHandlers,
   addRemoteDrive,
+  DocumentChangeType,
   dropAllReactorStorage,
   extractDriveSlugFromPath,
   extractNodeSlugFromPath,
   getDrives,
+  login,
   ReactorClientDocumentCache,
   refreshReactorDataClient,
+  setConnectCrypto,
+  setDefaultPHGlobalConfig,
+  setDid,
+  setDocumentCache,
+  setDrives,
   setFeatures,
   setPHToast,
+  setReactorClient,
+  setReactorClientModule,
+  setRenown,
   setSelectedDrive,
   setSelectedNode,
   setVetraPackages,
   type PHToastFn,
   type VetraPackage,
 } from "@powerhousedao/reactor-browser";
-import {
-  addPHEventHandlers,
-  login,
-  setConnectCrypto,
-  setDefaultPHGlobalConfig,
-  setDid,
-  setDocumentCache,
-  setDrives,
-  setReactorClient,
-  setReactorClientModule,
-  setRenown,
-} from "@powerhousedao/reactor-browser/connect";
 import type { ProcessorFactoryBuilder } from "@powerhousedao/shared/processors";
 import {
   BrowserKeyStorage,
   RenownBuilder,
   RenownCryptoBuilder,
 } from "@renown/sdk";
-import { DocumentChangeType } from "@powerhousedao/reactor-browser";
 import { logger } from "document-drive";
 import type { DocumentModelModule } from "document-model";
 import { initFeatureFlags } from "../feature-flags.js";

@@ -14,18 +14,18 @@ import {
   getGlobal,
   setGlobal,
 } from "@powerhousedao/reactor-browser";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { DateTime } from "luxon";
-import type { PropsWithChildren } from "react";
-import { describe, expect, it, vi } from "vitest";
-import { renderHook } from "vitest-browser-react";
 import {
   AnalyticsProvider,
   useAddSeriesValue,
   useAnalyticsQuery,
   useAnalyticsSeries,
   useGetDimensions,
-} from "../src/analytics.js";
+} from "@powerhousedao/reactor-browser";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { DateTime } from "luxon";
+import type { PropsWithChildren } from "react";
+import { describe, expect, it, vi } from "vitest";
+import { renderHook } from "vitest-browser-react";
 
 describe("Analytics Store", () => {
   const TEST_SOURCE = AnalyticsPath.fromString(

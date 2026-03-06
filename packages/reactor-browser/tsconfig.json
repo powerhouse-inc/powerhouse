@@ -10,12 +10,14 @@
     "emitDeclarationOnly": true,
     "types": [
       "@types/wicg-file-system-access",
-      "vitest/globals",
-      "@types/bun"
+      "vitest/globals"
     ]
   },
   "include": [
     "**/*"
+  ],
+  "exclude": [
+    "dist", "node_modules"
   ],
   "references": [
     {

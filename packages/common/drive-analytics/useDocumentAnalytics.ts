@@ -6,8 +6,8 @@ import {
   AnalyticsGranularity,
   AnalyticsPath,
 } from "@powerhousedao/analytics-engine-core";
-import type { UseAnalyticsQueryResult } from "@powerhousedao/reactor-browser/analytics";
-import { useAnalyticsQuery } from "@powerhousedao/reactor-browser/analytics";
+import type { UseAnalyticsQueryResult } from "@powerhousedao/reactor-browser";
+import { useAnalyticsQuery } from "@powerhousedao/reactor-browser";
 import type { NodeTarget } from "@powerhousedao/shared/processors/drive-analytics/types";
 import { DateTime } from "luxon";
 

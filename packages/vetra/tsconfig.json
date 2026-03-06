@@ -1,6 +1,7 @@
 {
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
+    "emitDeclarationOnly": true,
     "paths": {
       "@powerhousedao/vetra/*": ["./*/index.ts"],
     },

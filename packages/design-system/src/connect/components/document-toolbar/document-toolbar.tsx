@@ -18,7 +18,7 @@ import { NodeInput } from "../node-input/node-input.js";
 import { useDocumentUndoRedo } from "./utils/use-document-undo-redo.js";
 
 // TODO: Remove this when timeline analytics is available
-// import { useDocumentTimeline } from "@powerhousedao/reactor-browser/analytics";
+// import { useDocumentTimeline } from "@powerhousedao/reactor-browser";
 function useDocumentTimeline(documentId?: string) {
   return [];
 }

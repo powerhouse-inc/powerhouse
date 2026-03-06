@@ -1,4 +1,4 @@
-import { createOrGetAnalyticsStore } from "@powerhousedao/reactor-browser/analytics";
+import { createOrGetAnalyticsStore } from "@powerhousedao/reactor-browser";
 import {
   DEFAULT_ANALYTICS_PROCESSOR_DB_NAME,
   type IProcessorHostModule,

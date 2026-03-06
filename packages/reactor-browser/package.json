@@ -17,14 +17,6 @@
     ".": {
       "types": "./dist/src/index.d.ts",
       "import": "./dist/src/index.js"
-    },
-    "./connect": {
-      "types": "./dist/src/connect.d.ts",
-      "import": "./dist/src/connect.js"
-    },
-    "./analytics": {
-      "types": "./dist/src/analytics.d.ts",
-      "import": "./dist/src/analytics.js"
     }
   },
   "sideEffects": false,
@@ -48,7 +40,7 @@
     "kysely-pglite-dialect": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
-        "change-case": "catalog:",
+    "change-case": "catalog:",
     "lodash.isequal": "^4.5.0",
     "luxon": "^3.6.1",
     "lz-string": "^1.5.0",
@@ -60,7 +52,6 @@
     "@types/luxon": "^3.6.2",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
-    "@types/bun": "catalog:",
     "@types/slug": "^5.0.9",
     "@types/wicg-file-system-access": "^2020.9.8",
     "@vitejs/plugin-react": "catalog:",
