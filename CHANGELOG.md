@@ -1,3 +1,23 @@
+## 6.0.0-dev.70 (2026-03-06)
+
+### 🚀 Features
+
+- add new bundling for connect ([#2390](https://github.com/powerhouse-inc/powerhouse/pull/2390))
+- **codegen:** generate controller.ts for each document model ([326bf660e](https://github.com/powerhouse-inc/powerhouse/commit/326bf660e))
+- **switchboard,reactor-api,registry:** add runtime dynamic pacage loading from HTTP registry ([37f91250e](https://github.com/powerhouse-inc/powerhouse/commit/37f91250e))
+- **switchboard,reactor-api,registry:** add runtime dynamic pacage loading from HTTP registry ([#2394](https://github.com/powerhouse-inc/powerhouse/pull/2394))
+
+### 🩹 Fixes
+
+- eslint config ([fb20b3726](https://github.com/powerhouse-inc/powerhouse/commit/fb20b3726))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Guillermo Puente @gpuente
+- Guillermo Puente Sandoval @gpuente
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.0.0-dev.69 (2026-03-05)
 
 ### 🚀 Features
