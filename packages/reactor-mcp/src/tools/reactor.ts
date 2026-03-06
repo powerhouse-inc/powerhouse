@@ -1,6 +1,4 @@
 import type { IDocumentDriveServer } from "document-drive";
-import type { DocumentModelGlobalState } from "document-model";
-import { DocumentModelGlobalStateSchema } from "document-model";
 import { generateId } from "document-model/core";
 import { z } from "zod";
 import type { ToolSchema, ToolWithCallback } from "./types.js";
@@ -26,7 +24,7 @@ export const getDocumentTool = {
     id: z.string().describe("ID of the document to retrieve"),
   },
   outputSchema: {
-    document: z.object({}).describe("The retrieved Document"),
+    document: z.record(z.unknown()).describe("The retrieved Document"),
   },
 } as const satisfies ToolSchema;
 
@@ -198,7 +196,7 @@ export const getDriveTool = {
       .describe("Optional get document options"),
   },
   outputSchema: {
-    drive: z.object({}).describe("Drive document"), // TODO: Define DocumentDriveDocument schema
+    drive: z.record(z.unknown()).describe("Drive document"), // TODO: Define DocumentDriveDocument schema
   },
 } as const satisfies ToolSchema;
 
@@ -261,10 +259,6 @@ export const addRemoteDriveTool = {
   },
 } as const satisfies ToolSchema;
 
-type Properties<T> = Required<{
-  [K in keyof T]: z.ZodType<T[K], any, T[K]>;
-}>;
-
 export const getDocumentModelSchemaTool = {
   name: "getDocumentModelSchema",
   description: "Get the schema of a document model",
@@ -272,9 +266,7 @@ export const getDocumentModelSchemaTool = {
     type: z.string().describe("Type of the document model"),
   },
   outputSchema: {
-    schema: DocumentModelGlobalStateSchema().describe(
-      "Schema of the document model",
-    ) as unknown as z.ZodObject<Properties<DocumentModelGlobalState>>,
+    schema: z.record(z.unknown()).describe("Schema of the document model"),
   },
 } as const satisfies ToolSchema;
 
