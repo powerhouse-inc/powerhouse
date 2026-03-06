@@ -25,7 +25,6 @@ export async function runConnectStudio(
   } = args;
   assignEnvVars(args);
   const mode = "development";
-  const projectRoot = process.cwd();
 
   const viteConfigPath = resolveViteConfigPath({});
   const userViteConfig = await loadConfigFromFile(
