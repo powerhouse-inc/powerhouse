@@ -774,6 +774,7 @@ export async function initializeAndStartAPI(
     driveServer: IDocumentDriveServer;
     client: IReactorClient;
     syncManager: ISyncManager;
+    documentModelRegistry: IDocumentModelRegistry;
   }
 > {
   const {
@@ -841,10 +842,19 @@ export async function initializeAndStartAPI(
     authorizationService,
   );
 
+  const documentModelRegistry =
+    reactorClientModule.reactorModule?.documentModelRegistry;
+  if (!documentModelRegistry) {
+    throw new Error(
+      "DocumentModelRegistry not available from ReactorClientModule",
+    );
+  }
+
   return {
     ...api,
     driveServer: reactor,
     client: reactorClient,
     syncManager,
+    documentModelRegistry,
   };
 }

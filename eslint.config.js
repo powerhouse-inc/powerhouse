@@ -70,8 +70,8 @@ const ignoredFiles = [...normalIgnoredFiles, ...unsafeIgnoredFiles];
 /** Global configs for eslint ignores */
 const ignored = globalIgnores(ignoredFiles);
 
-/** Typescript (`.ts`) files */
-const typescriptFiles = ["**/*.ts"];
+/** Typescript (`.ts`, `.mts`, `.cts`) files */
+const typescriptFiles = ["**/*.ts", "**/*.mts", "**/*.cts"];
 
 /** Typescript React (`.tsx`) files */
 const typescriptReactFiles = ["**/*.tsx"];
