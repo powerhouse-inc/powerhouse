@@ -103,6 +103,7 @@ catalog:
   "events": 3.3.0
   "util": 0.12.5
   "@vitest/browser-playwright": 4.0.18
+  "tsdown": 0.21.0
 
 allowBuilds:
   vite: true
@@ -131,3 +132,4 @@ allowBuilds:
   "protobufjs": true
   "unrs-resolver": true
   "utf-8-validate": true
+  

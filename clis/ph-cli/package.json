@@ -15,7 +15,7 @@
     "node": ">=24.0.0"
   },
   "bin": {
-    "ph-cli": "./dist/src/cli.js"
+    "ph-cli": "./dist/cli.mjs"
   },
   "files": [
     "dist"
@@ -24,15 +24,16 @@
     "tsc": "tsc",
     "lint": "eslint",
     "generate-docs": "bun run scripts/generate-commands-docs.ts",
-    "build:cli": "bun run ./bundle.ts",
+    "build:cli": "tsdown",
     "postbuild:cli": "bun generate-docs && bun copy-scripts",
     "copy-scripts": "copyfiles scripts/* dist/",
     "dev": "bun run ./src/cli.ts",
-    "cli": "node ./dist/src/cli.js"
+    "cli": "node ./dist/cli.mjs"
   },
   "keywords": [],
   "author": "",
-  "devDependencies": {
+  "dependencies": {
+    "vite": "catalog:",
     "@powerhousedao/codegen": "workspace:*",
     "@powerhousedao/common": "workspace:*",
     "@powerhousedao/config": "workspace:*",
@@ -40,9 +41,6 @@
     "@powerhousedao/shared": "workspace:*",
     "@powerhousedao/switchboard": "workspace:*",
     "@renown/sdk": "workspace:*",
-    "@types/bun": "catalog:",
-    "@types/node": "catalog:",
-    "@types/pg": "catalog:",
     "cmd-ts": "catalog:",
     "colorette": "catalog:",
     "kysely": "catalog:",
@@ -50,7 +48,12 @@
     "pg": "catalog:",
     "read-pkg": "catalog:",
     "ts-morph": "catalog:",
-    "vite": "catalog:",
     "write-package": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "@types/pg": "catalog:",
+    "tsdown": "catalog:",
+    "copyfiles": "catalog:"
   }
 }

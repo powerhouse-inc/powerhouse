@@ -4,7 +4,6 @@
     "types": [
       "node",
       "vitest/globals",
-      "@types/bun"
     ],
     "emitDeclarationOnly": true,
     "outDir": "./dist"
