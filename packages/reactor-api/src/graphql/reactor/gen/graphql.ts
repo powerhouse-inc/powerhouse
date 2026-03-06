@@ -673,6 +673,68 @@ export type FindDocumentsQuery = {
   };
 };
 
+export type GetDocumentOperationsQueryVariables = Exact<{
+  filter: OperationsFilterInput;
+  paging?: InputMaybe<PagingInput>;
+}>;
+
+export type GetDocumentOperationsQuery = {
+  readonly documentOperations: {
+    readonly totalCount: number;
+    readonly hasNextPage: boolean;
+    readonly hasPreviousPage: boolean;
+    readonly cursor?: string | null | undefined;
+    readonly items: ReadonlyArray<{
+      readonly index: number;
+      readonly timestampUtcMs: string;
+      readonly hash: string;
+      readonly skip: number;
+      readonly error?: string | null | undefined;
+      readonly id?: string | null | undefined;
+      readonly action: {
+        readonly id: string;
+        readonly type: string;
+        readonly timestampUtcMs: string;
+        readonly input: NonNullable<unknown>;
+        readonly scope: string;
+        readonly attachments?:
+          | ReadonlyArray<{
+              readonly data: string;
+              readonly mimeType: string;
+              readonly hash: string;
+              readonly extension?: string | null | undefined;
+              readonly fileName?: string | null | undefined;
+            }>
+          | null
+          | undefined;
+        readonly context?:
+          | {
+              readonly signer?:
+                | {
+                    readonly signatures: ReadonlyArray<string>;
+                    readonly user?:
+                      | {
+                          readonly address: string;
+                          readonly networkId: string;
+                          readonly chainId: number;
+                        }
+                      | null
+                      | undefined;
+                    readonly app?:
+                      | { readonly name: string; readonly key: string }
+                      | null
+                      | undefined;
+                  }
+                | null
+                | undefined;
+            }
+          | null
+          | undefined;
+      };
+    }>;
+  };
+};
+
 export type GetJobStatusQueryVariables = Exact<{
   jobId: Scalars["String"]["input"];
 }>;
@@ -2237,6 +2299,55 @@ export const FindDocumentsDocument = gql`
   }
   ${PhDocumentFieldsFragmentDoc}
 `;
+export const GetDocumentOperationsDocument = gql`
+  query GetDocumentOperations(
+    $filter: OperationsFilterInput!
+    $paging: PagingInput
+  ) {
+    documentOperations(filter: $filter, paging: $paging) {
+      items {
+        index
+        timestampUtcMs
+        hash
+        skip
+        error
+        id
+        action {
+          id
+          type
+          timestampUtcMs
+          input
+          scope
+          attachments {
+            data
+            mimeType
+            hash
+            extension
+            fileName
+          }
+          context {
+            signer {
+              user {
+                address
+                networkId
+                chainId
+              }
+              app {
+                name
+                key
+              }
+              signatures
+            }
+          }
+        }
+      }
+      totalCount
+      hasNextPage
+      hasPreviousPage
+      cursor
+    }
+  }
+`;
 export const GetJobStatusDocument = gql`
   query GetJobStatus($jobId: String!) {
     jobStatus(jobId: $jobId) {
@@ -2560,6 +2671,19 @@ export function getSdk<C>(requester: Requester<C>) {
         variables,
         options,
       ) as Promise<FindDocumentsQuery>;
+    },
+    GetDocumentOperations(
+      variables: GetDocumentOperationsQueryVariables,
+      options?: C,
+    ): Promise<GetDocumentOperationsQuery> {
+      return requester<
+        GetDocumentOperationsQuery,
+        GetDocumentOperationsQueryVariables
+      >(
+        GetDocumentOperationsDocument,
+        variables,
+        options,
+      ) as Promise<GetDocumentOperationsQuery>;
     },
     GetJobStatus(
       variables: GetJobStatusQueryVariables,

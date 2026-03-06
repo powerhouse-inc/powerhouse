@@ -9,7 +9,16 @@
       "path": "../../apps/switchboard"
     },
     {
-      "path": "../../clis/ph-cli"
+      "path": "../../packages/document-model"
+    },
+    {
+      "path": "../../packages/reactor-api"
+    },
+    {
+      "path": "../../packages/reactor-browser"
+    },
+    {
+      "path": "../../packages/renown"
     }
   ],
   "include": [

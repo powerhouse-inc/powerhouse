@@ -26,7 +26,8 @@
       "Bash(wc:*)",
       "Bash(npx tsc:*)",
       "Bash(npx tsx:*)",
-      "Bash(git grep:*)"
+      "Bash(git grep:*)",
+      "Bash(npx vitest:*)"
     ],
     "deny": [],
     "ask": []

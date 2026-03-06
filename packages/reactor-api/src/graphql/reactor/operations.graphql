@@ -95,6 +95,54 @@ query FindDocuments(
   }
 }
 
+query GetDocumentOperations(
+  $filter: OperationsFilterInput!
+  $paging: PagingInput
+) {
+  documentOperations(filter: $filter, paging: $paging) {
+    items {
+      index
+      timestampUtcMs
+      hash
+      skip
+      error
+      id
+      action {
+        id
+        type
+        timestampUtcMs
+        input
+        scope
+        attachments {
+          data
+          mimeType
+          hash
+          extension
+          fileName
+        }
+        context {
+          signer {
+            user {
+              address
+              networkId
+              chainId
+            }
+            app {
+              name
+              key
+            }
+            signatures
+          }
+        }
+      }
+    }
+    totalCount
+    hasNextPage
+    hasPreviousPage
+    cursor
+  }
+}
+
 query GetJobStatus($jobId: String!) {
   jobStatus(jobId: $jobId) {
     id
