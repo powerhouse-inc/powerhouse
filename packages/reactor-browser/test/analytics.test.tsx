@@ -10,12 +10,10 @@ import {
   AnalyticsQueryEngine,
 } from "@powerhousedao/analytics-engine-core";
 import {
+  AnalyticsProvider,
   clearGlobal,
   getGlobal,
   setGlobal,
-} from "@powerhousedao/reactor-browser";
-import {
-  AnalyticsProvider,
   useAddSeriesValue,
   useAnalyticsQuery,
   useAnalyticsSeries,

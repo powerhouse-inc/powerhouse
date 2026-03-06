@@ -20,7 +20,6 @@ export {
   usePHDocumentEditorConfigByKey,
   usePHDriveEditorConfigByKey,
 } from "./config/use-value-by-key.js";
-export * from "./connect.js";
 export { useDocumentById, useDocumentsByIds } from "./document-by-id.js";
 export {
   useDocument,

@@ -15,7 +15,7 @@ import type {
   SubgraphModule,
   UpgradeManifest,
 } from "document-model";
-import type { ProcessorFactoryBuilder } from "@powerhousedao/shared/processors";
+import type { ProcessorFactoryBuilder } from "../../../reactor/src/processors/index.js";
 
 export type Processors = (module: {
   analyticsStore: IAnalyticsStore;

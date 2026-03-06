@@ -25,7 +25,8 @@
     "lint": "eslint",
     "build:bundle": "tsdown",
     "test:browser": "vitest --run",
-    "install:playwright": "playwright install"
+    "install:playwright": "playwright install",
+    "codegen": "graphql-codegen --config codegen.ts && prettier --write src/graphql/gen/*.ts && eslint --fix src/graphql/gen/*.ts --no-warn-ignored"
   },
   "dependencies": {
     "@powerhousedao/reactor": "workspace:*",
@@ -48,6 +49,13 @@
     "@tanstack/react-query": "^5.49.2"
   },
   "devDependencies": {
+    "@graphql-codegen/cli": "catalog:",
+    "@graphql-codegen/typescript": "catalog:",
+    "@graphql-codegen/typescript-graphql-request": "catalog:",
+    "@graphql-codegen/typescript-operations": "catalog:",
+    "graphql": "catalog:",
+    "graphql-request": "catalog:",
+    "graphql-tag": "catalog:",
     "@types/lodash.isequal": "^4.5.8",
     "@types/luxon": "^3.6.2",
     "@types/react": "catalog:",

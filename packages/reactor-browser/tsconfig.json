@@ -16,9 +16,6 @@
   "include": [
     "**/*"
   ],
-  "exclude": [
-    "dist", "node_modules"
-  ],
   "references": [
     {
       "path": "../analytics-engine/browser"
