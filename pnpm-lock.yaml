@@ -1245,9 +1245,6 @@ importers:
 
   packages/design-system:
     dependencies:
-      '@powerhousedao/reactor-browser':
-        specifier: workspace:*
-        version: link:../reactor-browser
       '@radix-ui/react-checkbox':
         specifier: ^1.1.2
         version: 1.3.3(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -1357,6 +1354,9 @@ importers:
       '@powerhousedao/config':
         specifier: workspace:*
         version: link:../config
+      '@powerhousedao/reactor-browser':
+        specifier: workspace:*
+        version: link:../reactor-browser
       '@prettier/sync':
         specifier: ^0.5.2
         version: 0.5.5(prettier@3.8.1)

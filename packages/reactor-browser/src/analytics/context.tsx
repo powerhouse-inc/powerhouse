@@ -1,5 +1,3 @@
-import type { BrowserAnalyticsStoreOptions } from "@powerhousedao/analytics-engine-browser";
-import { BrowserAnalyticsStore } from "@powerhousedao/analytics-engine-browser";
 import type {
   AnalyticsQueryEngine,
   IAnalyticsStore,
@@ -15,6 +13,8 @@ import {
 import { childLogger } from "document-drive";
 import type { PropsWithChildren } from "react";
 import { useEffect, useMemo } from "react";
+import type { BrowserAnalyticsStoreOptions } from "@powerhousedao/analytics-engine-browser";
+import { BrowserAnalyticsStore } from "@powerhousedao/analytics-engine-browser";
 import { getGlobal, setGlobal } from "../global/core.js";
 
 const logger = childLogger(["reactor-browser", "analytics", "provider"]);

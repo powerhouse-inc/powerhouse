@@ -1,4 +1,4 @@
-import type { SignatureVerificationHandler } from "../../src/index.js";
+import type { SignatureVerificationHandler } from "@powerhousedao/reactor";
 import { deriveOperationId } from "document-model";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { IWriteCache } from "../../src/cache/write/interfaces.js";

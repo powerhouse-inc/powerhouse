@@ -1,5 +1,3 @@
-import type { BrowserAnalyticsStore } from "@powerhousedao/analytics-engine-browser";
-import { MemoryAnalyticsStore } from "@powerhousedao/analytics-engine-browser";
 import type {
   AnalyticsDimension,
   AnalyticsQuery,
@@ -24,6 +22,8 @@ import { DateTime } from "luxon";
 import type { PropsWithChildren } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { renderHook } from "vitest-browser-react";
+import type { BrowserAnalyticsStore } from "../../analytics-engine/browser/dist/index.js";
+import { MemoryAnalyticsStore } from "../../analytics-engine/browser/dist/index.js";
 
 describe("Analytics Store", () => {
   const TEST_SOURCE = AnalyticsPath.fromString(

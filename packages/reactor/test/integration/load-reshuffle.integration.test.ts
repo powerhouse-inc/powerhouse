@@ -2,7 +2,7 @@ import { driveDocumentModelModule, MemoryStorage } from "document-drive";
 import type { DocumentModelDocument } from "document-model";
 import { documentModelDocumentModelModule, setModelName } from "document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ReactorBuilder, type IReactor } from "../../src/index.js";
+import { ReactorBuilder, type IReactor } from "@powerhousedao/reactor";
 import { JobStatus, type ConsistencyToken } from "../../src/shared/types.js";
 import { createDocModelDocument } from "../factories.js";
 

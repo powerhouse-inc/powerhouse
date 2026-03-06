@@ -6,18 +6,18 @@ export {
   documentActions,
   removeRelationshipAction,
   upgradeDocumentAction,
-} from "./actions/index.js";
+} from "./src/actions/index.js";
 
 // Reactor Interface and Implementation
-export { ReactorClient } from "./client/reactor-client.js";
+export { ReactorClient } from "./src/client/reactor-client.js";
 export {
   DocumentChangeType,
   type DocumentChangeEvent,
   type IReactorClient,
-} from "./client/types.js";
-export { ReactorBuilder } from "./core/reactor-builder.js";
-export { ReactorClientBuilder } from "./core/reactor-client-builder.js";
-export { Reactor } from "./core/reactor.js";
+} from "./src/client/types.js";
+export { ReactorBuilder } from "./src/core/reactor-builder.js";
+export { ReactorClientBuilder } from "./src/core/reactor-client-builder.js";
+export { Reactor } from "./src/core/reactor.js";
 export {
   type BatchLoadRequest,
   type BatchLoadResult,
@@ -27,19 +27,19 @@ export {
   type ReactorFeatures,
   type ReactorModule,
   type SyncModule,
-} from "./core/types.js";
-export { JobAwaiter, type IJobAwaiter } from "./shared/awaiter.js";
+} from "./src/core/types.js";
+export { JobAwaiter, type IJobAwaiter } from "./src/shared/awaiter.js";
 export {
   ConsistencyTracker,
   makeConsistencyKey,
   type IConsistencyTracker,
-} from "./shared/consistency-tracker.js";
+} from "./src/shared/consistency-tracker.js";
 export {
   driveIdFromUrl,
   parseDriveUrl,
   type ParsedDriveUrl,
-} from "./shared/drive-url.js";
-export { createMutableShutdownStatus } from "./shared/factories.js";
+} from "./src/shared/drive-url.js";
+export { createMutableShutdownStatus } from "./src/shared/factories.js";
 export {
   JobStatus,
   PropagationMode,
@@ -53,24 +53,24 @@ export {
   type SearchFilter,
   type ShutdownStatus,
   type ViewFilter,
-} from "./shared/types.js";
+} from "./src/shared/types.js";
 export {
   type SignatureVerificationHandler,
   type SignerConfig,
-} from "./signer/types.js";
+} from "./src/signer/types.js";
 
 // Subscription Manager
-export { DefaultSubscriptionErrorHandler } from "./subs/default-error-handler.js";
-export { ReactorSubscriptionManager } from "./subs/react-subscription-manager.js";
+export { DefaultSubscriptionErrorHandler } from "./src/subs/default-error-handler.js";
+export { ReactorSubscriptionManager } from "./src/subs/react-subscription-manager.js";
 export {
   type IReactorSubscriptionManager,
   type ISubscriptionErrorHandler,
   type SubscriptionErrorContext,
-} from "./subs/types.js";
+} from "./src/subs/types.js";
 
 // Event Bus
-export { EventBus } from "./events/event-bus.js";
-export { type IEventBus } from "./events/interfaces.js";
+export { EventBus } from "./src/events/event-bus.js";
+export { type IEventBus } from "./src/events/interfaces.js";
 export {
   EventBusAggregateError,
   ReactorEventTypes,
@@ -80,34 +80,34 @@ export {
   type JobWriteReadyEvent,
   type JobFailedEvent as ReactorJobFailedEvent,
   type Unsubscribe,
-} from "./events/types.js";
+} from "./src/events/types.js";
 
 // Queue
-export { type IQueue } from "./queue/interfaces.js";
-export { InMemoryQueue } from "./queue/queue.js";
+export { type IQueue } from "./src/queue/interfaces.js";
+export { InMemoryQueue } from "./src/queue/queue.js";
 export {
   QueueEventTypes,
   type Job,
   type JobAvailableEvent,
-} from "./queue/types.js";
+} from "./src/queue/types.js";
 
 // Job Tracker
-export { InMemoryJobTracker } from "./job-tracker/in-memory-job-tracker.js";
-export { type IJobTracker } from "./job-tracker/interfaces.js";
+export { InMemoryJobTracker } from "./src/job-tracker/in-memory-job-tracker.js";
+export { type IJobTracker } from "./src/job-tracker/interfaces.js";
 
 // Job Executor
 export {
   type IJobExecutor,
   type IJobExecutorManager,
-} from "./executor/interfaces.js";
+} from "./src/executor/interfaces.js";
 export {
   SimpleJobExecutorManager,
   type JobExecutorFactory,
-} from "./executor/simple-job-executor-manager.js";
+} from "./src/executor/simple-job-executor-manager.js";
 export {
   SimpleJobExecutor as InMemoryJobExecutor,
   SimpleJobExecutor,
-} from "./executor/simple-job-executor.js";
+} from "./src/executor/simple-job-executor.js";
 export {
   JobExecutorEventTypes,
   type ExecutorStartedEvent,
@@ -117,7 +117,7 @@ export {
   type JobFailedEvent,
   type JobResult,
   type JobStartedEvent,
-} from "./executor/types.js";
+} from "./src/executor/types.js";
 
 // Document Model Registry
 export {
@@ -128,14 +128,14 @@ export {
   NullDocumentModelResolver,
   type IDocumentModelLoader,
   type IDocumentModelRegistry,
-} from "./registry/index.js";
+} from "./src/registry/index.js";
 
 // Storage
 export type {
   OperationContext,
   OperationWithContext,
 } from "@powerhousedao/shared/document-model";
-export type { Database } from "./core/types.js";
+export type { Database } from "./src/core/types.js";
 export {
   DuplicateOperationError,
   OptimisticLockError,
@@ -150,54 +150,54 @@ export {
   type IKeyframeStore,
   type IOperationStore,
   type OperationFilter,
-} from "./storage/interfaces.js";
-export { KyselyDocumentIndexer } from "./storage/kysely/document-indexer.js";
-export { KyselyKeyframeStore } from "./storage/kysely/keyframe-store.js";
-export { KyselyOperationStore } from "./storage/kysely/store.js";
+} from "./src/storage/interfaces.js";
+export { KyselyDocumentIndexer } from "./src/storage/kysely/document-indexer.js";
+export { KyselyKeyframeStore } from "./src/storage/kysely/keyframe-store.js";
+export { KyselyOperationStore } from "./src/storage/kysely/store.js";
 export type {
   DocumentIndexerDatabase,
   OperationTable,
   Database as StorageDatabase,
-} from "./storage/kysely/types.js";
+} from "./src/storage/kysely/types.js";
 
 // Read Models
-export { BaseReadModel } from "./read-models/base-read-model.js";
-export { ReadModelCoordinator } from "./read-models/coordinator.js";
-export { KyselyDocumentView } from "./read-models/document-view.js";
+export { BaseReadModel } from "./src/read-models/base-read-model.js";
+export { ReadModelCoordinator } from "./src/read-models/coordinator.js";
+export { KyselyDocumentView } from "./src/read-models/document-view.js";
 export {
   type IReadModel,
   type IReadModelCoordinator,
-} from "./read-models/interfaces.js";
+} from "./src/read-models/interfaces.js";
 export type {
   DocumentViewDatabase,
   InsertableDocumentSnapshot,
-} from "./read-models/types.js";
+} from "./src/read-models/types.js";
 
 // Cache
-export { KyselyWriteCache } from "./cache/kysely-write-cache.js";
+export { KyselyWriteCache } from "./src/cache/kysely-write-cache.js";
 export {
   driveCollectionId,
   type IOperationIndex,
   type OperationIndexEntry,
-} from "./cache/operation-index-types.js";
+} from "./src/cache/operation-index-types.js";
 export type {
   CachedSnapshot,
   DocumentStreamKey,
   KeyframeSnapshot,
   WriteCacheConfig,
-} from "./cache/write-cache-types.js";
-export { type IWriteCache } from "./cache/write/interfaces.js";
+} from "./src/cache/write-cache-types.js";
+export { type IWriteCache } from "./src/cache/write/interfaces.js";
 
 // Logging
-export { ConsoleLogger } from "./logging/console.js";
-export { type ILogger } from "./logging/types.js";
+export { ConsoleLogger } from "./src/logging/console.js";
+export { type ILogger } from "./src/logging/types.js";
 
 // Migrations
 export {
   getMigrationStatus,
   REACTOR_SCHEMA,
   runMigrations,
-} from "./storage/migrations/migrator.js";
+} from "./src/storage/migrations/migrator.js";
 
 // Synchronization
 export {
@@ -205,7 +205,7 @@ export {
   KyselySyncRemoteStorage,
   type ISyncCursorStorage,
   type ISyncRemoteStorage,
-} from "./storage/index.js";
+} from "./src/storage/index.js";
 export {
   batchOperationsByDocument,
   ChannelError,
@@ -252,7 +252,7 @@ export {
   type SyncPendingEvent,
   type SyncStatusChangeCallback,
   type SyncSucceededEvent,
-} from "./sync/index.js";
+} from "./src/sync/index.js";
 
 // Processors
 export {
@@ -268,5 +268,5 @@ export type {
   ProcessorFilter,
   ProcessorRecord,
 } from "@powerhousedao/shared/processors";
-export { ProcessorManager } from "./processors/index.js";
-export * from "./re-exports.js";
+export { ProcessorManager } from "./src/processors/index.js";
+export * from "./src/re-exports.js";

@@ -5,6 +5,6 @@ export default defineConfig({
   platform: "browser",
   outDir: "dist",
   clean: true,
-  dts: { build: true },
+  dts: true,
   sourcemap: true,
 });

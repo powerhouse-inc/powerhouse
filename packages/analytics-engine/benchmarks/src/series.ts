@@ -1,10 +1,10 @@
+import { AnalyticsPath } from "@powerhousedao/analytics-engine-core";
+import { PostgresAnalyticsStore } from "@powerhousedao/analytics-engine-pg";
 import fs from "fs";
 import { DateTime } from "luxon";
 import { Bench } from "tinybench";
-import { AnalyticsPath } from "@powerhousedao/analytics-engine-core";
-import { logs } from "./util.js";
-import { PostgresAnalyticsStore } from "@powerhousedao/analytics-engine-pg";
 import { MemoryAnalyticsStore } from "@powerhousedao/analytics-engine-browser";
+import { logs } from "./util.js";
 
 const isPgDisabled = process.env.PG_DISABLED === "true";
 const connectionString = process.env.PG_CONNECTION_STRING;

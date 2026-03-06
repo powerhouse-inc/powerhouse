@@ -5,6 +5,6 @@ export default defineConfig({
   platform: "neutral",
   outDir: "dist",
   clean: true,
-  dts: { build: true },
-  sourcemap: false,
+  dts: true,
+  sourcemap: true,
 });

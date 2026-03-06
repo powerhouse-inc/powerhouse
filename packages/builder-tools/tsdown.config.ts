@@ -4,7 +4,6 @@ export default defineConfig({
   entry: ["./index.mts"],
   outDir: "dist",
   clean: true,
-  dts: { build: true },
+  dts: true,
   sourcemap: true,
-  unbundle: true,
 });
