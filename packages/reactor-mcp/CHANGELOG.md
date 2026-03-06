@@ -1,3 +1,13 @@
+## 5.3.5 (2026-03-06)
+
+### 🩹 Fixes
+
+- replace z.object({}) and broken Zod casts in MCP tool output schemas with z.record(z.unknown()) ([2ce866d6e](https://github.com/powerhouse-inc/powerhouse/commit/2ce866d6e))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 5.3.4 (2026-02-25)
 
 This was a version bump only for @powerhousedao/reactor-mcp to align it with other projects, there were no code changes.

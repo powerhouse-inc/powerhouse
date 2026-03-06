@@ -1,3 +1,7 @@
+## 5.3.5 (2026-03-06)
+
+This was a version bump only for @powerhousedao/design-system to align it with other projects, there were no code changes.
+
 ## 5.3.4 (2026-02-25)
 
 ### 🩹 Fixes
