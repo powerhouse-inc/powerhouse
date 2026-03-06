@@ -123,6 +123,12 @@ const appConfigSchema = z.object({
   PH_CONNECT_DEFAULT_DRIVES_URL: z.string().optional(),
 
   /**
+   * URL of the packages registry CDN endpoint
+   * @example "http://localhost:8080/-/cdn/"
+   */
+  PH_CONNECT_PACKAGES_REGISTRY: z.string().optional(),
+
+  /**
    * Strategy for preserving drives
    */
   PH_CONNECT_DRIVES_PRESERVE_STRATEGY: z.string().optional(),
