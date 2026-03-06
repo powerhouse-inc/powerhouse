@@ -169,6 +169,7 @@ describe("RemoteClient", () => {
       expect(mockFn).toHaveBeenCalledTimes(2);
 
       // Second call should use the cursor
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       expect(mockFn.mock.calls[1][0].paging.cursor).toBe("cursor-1");
     });
   });
