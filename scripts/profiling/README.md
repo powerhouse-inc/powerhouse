@@ -39,9 +39,11 @@ pnpm --filter document-model run tsc --build
 pnpm --filter @powerhousedao/reactor run build
 DATABASE_URL="postgresql://postgres:postgres@localhost:5432/postgres" pnpm --filter document-drive run migrate
 pnpm --filter @powerhousedao/switchboard run tsc --build
+pnpm --filter @powerhousedao/reactor-api run build:misc
 ```
 
 - `migrate` runs `prisma generate && prisma db push` — required once per fresh PostgreSQL database to create the schema. Re-run if you wipe the database.
+- `build:misc` copies `.graphql` schema files into the reactor-api dist. Without this, the reactor subgraph (which provides `jobStatus` and other queries) fails to start silently.
 - Rebuild after any source changes in these packages, otherwise the scripts will run against stale code.
 
 Scripts are run with [tsx](https://github.com/privatenumber/tsx). The GraphQL-based scripts (`docs-*`) require a running switchboard instance (default: `http://localhost:4001/graphql`).
@@ -172,6 +174,12 @@ tsx docs-create.ts 5 -o 20 -l 10 -p -O results.txt
 
 # Show percentiles and action type names in min/max
 tsx docs-create.ts 5 -o 20 --percentiles --show-action-types
+
+# Use async mutation variants (returns job ID instead of document)
+tsx docs-create.ts 1 -o 25 --async
+
+# Async with batching
+tsx docs-create.ts 1 -o 100 -b 10 --async
 ```
 
 | Flag                  | Short | Description                                                          |
@@ -182,6 +190,7 @@ tsx docs-create.ts 5 -o 20 --percentiles --show-action-types
 | `--batch-size`        | `-b`  | Operations per `mutateDocument` call (default: 1)                    |
 | `--doc-id`            | `-d`  | Use existing document(s), can be repeated                            |
 | `--endpoint`          |       | GraphQL endpoint (default: `http://localhost:4001/graphql`)          |
+| `--async`             |       | Use `*Async` mutation variants (fire-and-forget; returns job ID)     |
 | `--file`              |       | Write output to a timestamped file (default name: `docs-create.txt`) |
 | `--output`            | `-O`  | Write output to a specific file (no timestamp prefix)                |
 | `--verbose`           | `-v`  | Show detailed operation timings                                      |
