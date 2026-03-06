@@ -52,7 +52,7 @@
     "tsc": "tsc",
     "lint": "eslint",
     "build:css": "pnpm exec tailwindcss -i ./style.css -o ./dist/style.css",
-    "build:cdn": "tsdown",
+    "build:cdn": "tsdown && pnpm build:css",
     "test": "vitest --run",
     "test:watch": "vitest",
     "test:document-models": "vitest run document-models",
@@ -81,7 +81,8 @@
     "graphql": "catalog:",
     "graphql-tag": "catalog:",
     "kysely": "catalog:",
-    "zod": "catalog:"
+    "zod": "catalog:",
+    "document-drive": "workspace:*"
   },
   "devDependencies": {
     "@powerhousedao/builder-tools": "workspace:*",
@@ -95,7 +96,6 @@
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "@vitejs/plugin-react": "catalog:",
-    "document-drive": "workspace:*",
     "react": "catalog:",
     "react-dom": "catalog:",
     "tailwindcss": "catalog:",

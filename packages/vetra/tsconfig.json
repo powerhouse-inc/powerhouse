@@ -1,6 +1,9 @@
 {
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
+    "paths": {
+      "@powerhousedao/vetra/*": ["./*/index.ts"],
+    },
     "outDir": "./dist",
     "types": [
       "node",
@@ -11,7 +14,6 @@
       "dom",
       "dom.iterable"
     ],
-    "sourceMap": false
   },
   "include": [
     "**/*",
@@ -19,6 +21,7 @@
   ],
   "exclude": [
     "dist",
+    "cdn",
     "node_modules",
     ".ph"
   ],

@@ -1,3 +1,4 @@
+import { usePHModal } from "@powerhousedao/reactor-browser";
 import { lazy, Suspense } from "react";
 import { ErrorBoundary } from "../error-boundary.js";
 
@@ -84,7 +85,6 @@ const modalComponents = {
 } as const;
 
 export const ModalsContainer = lazy(async () => {
-  const { usePHModal } = await import("@powerhousedao/reactor-browser");
   return {
     default: () => {
       const phModal = usePHModal();
