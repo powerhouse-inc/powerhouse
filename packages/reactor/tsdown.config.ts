@@ -6,4 +6,5 @@ export default defineConfig({
   clean: true,
   dts: { build: true },
   sourcemap: true,
+  unbundle: true,
 });

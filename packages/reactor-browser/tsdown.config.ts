@@ -6,7 +6,5 @@ export default defineConfig({
   clean: true,
   dts: { build: true },
   sourcemap: true,
-  // deps: {
-  //   neverBundle: ["react", "react-dom"],
-  // },
+  unbundle: true,
 });

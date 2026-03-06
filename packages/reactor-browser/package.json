@@ -16,15 +16,15 @@
   "exports": {
     ".": {
       "types": "./dist/src/index.d.ts",
-      "import": "./dist/index.js"
+      "import": "./dist/src/index.js"
     },
     "./connect": {
       "types": "./dist/src/connect.d.ts",
-      "import": "./dist/connect.js"
+      "import": "./dist/src/connect.js"
     },
     "./analytics": {
       "types": "./dist/src/analytics.d.ts",
-      "import": "./dist/analytics.js"
+      "import": "./dist/src/analytics.js"
     }
   },
   "sideEffects": false,

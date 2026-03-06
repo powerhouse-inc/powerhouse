@@ -33,6 +33,7 @@
   "keywords": [],
   "author": "",
   "dependencies": {
+    "tsdown": "catalog:",
     "vite": "catalog:",
     "@powerhousedao/codegen": "workspace:*",
     "@powerhousedao/common": "workspace:*",
@@ -53,7 +54,6 @@
   "devDependencies": {
     "@types/node": "catalog:",
     "@types/pg": "catalog:",
-    "tsdown": "catalog:",
     "copyfiles": "catalog:"
   }
 }
