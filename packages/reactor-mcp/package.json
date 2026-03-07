@@ -39,7 +39,7 @@
     "@powerhousedao/codegen": "workspace:*",
     "@powerhousedao/config": "workspace:*",
     "@powerhousedao/reactor": "workspace:*",
-    "ai": "5.0.0",
+    "ai": "5.0.52",
     "change-case": "catalog:",
     "document-drive": "workspace:*",
     "document-model": "workspace:*",
