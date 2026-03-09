@@ -182,20 +182,21 @@ tsx docs-create.ts 1 -o 25 --async
 tsx docs-create.ts 1 -o 100 -b 10 --async
 ```
 
-| Flag                  | Short | Description                                                          |
-| --------------------- | ----- | -------------------------------------------------------------------- |
-| `N` (positional)      |       | Number of documents to create (default: 10)                          |
-| `--operations`        | `-o`  | Operations per loop (default: 0)                                     |
-| `--op-loops`          | `-l`  | Loops per document (default: 1)                                      |
-| `--batch-size`        | `-b`  | Operations per `mutateDocument` call (default: 1)                    |
-| `--doc-id`            | `-d`  | Use existing document(s), can be repeated                            |
-| `--endpoint`          |       | GraphQL endpoint (default: `http://localhost:4001/graphql`)          |
-| `--async`             |       | Use `*Async` mutation variants (fire-and-forget; returns job ID)     |
-| `--file`              |       | Write output to a timestamped file (default name: `docs-create.txt`) |
-| `--output`            | `-O`  | Write output to a specific file (no timestamp prefix)                |
-| `--verbose`           | `-v`  | Show detailed operation timings                                      |
-| `--percentiles`       | `-p`  | Show p50/p90/p95/p99 stats                                           |
-| `--show-action-types` | `-a`  | Show action names in min/max timings                                 |
+| Flag                  | Short | Description                                                                 |
+| --------------------- | ----- | --------------------------------------------------------------------------- |
+| `N` (positional)      |       | Number of documents to create (default: 10)                                 |
+| `--operations`        | `-o`  | Operations per loop (default: 0)                                            |
+| `--op-loops`          | `-l`  | Loops per document (default: 1)                                             |
+| `--batch-size`        | `-b`  | Operations per `mutateDocument` call (default: 1)                           |
+| `--doc-id`            | `-d`  | Use existing document(s), can be repeated                                   |
+| `--endpoint`          |       | GraphQL endpoint (default: `http://localhost:4001/graphql`)                 |
+| `--async`             |       | Use `*Async` mutation variants (fire-and-forget; returns job ID)            |
+| `--async-timeout`     |       | Max ms to wait for a polled job to reach terminal status (default: `30000`) |
+| `--file`              |       | Write output to a timestamped file (default name: `docs-create.txt`)        |
+| `--output`            | `-O`  | Write output to a specific file (no timestamp prefix)                       |
+| `--verbose`           | `-v`  | Show detailed operation timings                                             |
+| `--percentiles`       | `-p`  | Show p50/p90/p95/p99 stats                                                  |
+| `--show-action-types` | `-a`  | Show action names in min/max timings                                        |
 
 ### `docs-count.ts` — Count documents (fast)
 
