@@ -1,3 +1,13 @@
+## 6.0.0-dev.72 (2026-03-09)
+
+### 🚀 Features
+
+- **renown,reactor-browser,connect:** cleanup renown integration ([fe6112c2c](https://github.com/powerhouse-inc/powerhouse/commit/fe6112c2c))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 6.0.0-dev.71 (2026-03-07)
 
 ### 🚀 Features
