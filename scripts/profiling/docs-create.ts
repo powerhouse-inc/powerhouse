@@ -287,11 +287,19 @@ interface SampledJob {
 async function pollJobAsync(
   client: GraphQLClient,
   job: SampledJob,
+  timeoutMs: number,
 ): Promise<{ result: OperationsResult; totalMs: number }> {
+  const deadline = performance.now() + timeoutMs;
   while (true) {
     await new Promise<void>((resolve) =>
       setTimeout(resolve, JOB_POLL_INTERVAL_MS),
     );
+    if (performance.now() >= deadline) {
+      process.stderr.write(
+        `\nWarning: job ${job.jobId} (req ${job.reqNum}) did not reach a terminal status within ${timeoutMs}ms — giving up.\n`,
+      );
+      break;
+    }
     const { jobStatus } = await client.request<JobStatusResponse>(
       JOB_STATUS_QUERY,
       { jobId: job.jobId },
@@ -325,6 +333,7 @@ function parseArgs(args: string[]): {
   docIds: string[];
   asyncMutate: boolean;
   asyncPollRate: number;
+  asyncTimeoutMs: number;
   verbose: boolean;
   percentiles: boolean;
   showActionTypes: boolean;
@@ -339,6 +348,7 @@ function parseArgs(args: string[]): {
   const docIds: string[] = [];
   let asyncMutate = false;
   let asyncPollRate = 100;
+  let asyncTimeoutMs = 30_000;
   let verbose = false;
   let percentiles = false;
   let showActionTypes = false;
@@ -369,6 +379,8 @@ function parseArgs(args: string[]): {
         asyncPollRate = Number(nextArg);
         i++;
       }
+    } else if (arg === "--async-timeout" && args[i + 1]) {
+      asyncTimeoutMs = Number(args[++i]);
     } else if (arg === "--verbose" || arg === "-v") {
       verbose = true;
     } else if (arg === "--percentiles" || arg === "-p") {
@@ -403,6 +415,7 @@ Options:
                             (can be specified multiple times, skips document creation)
   --endpoint <url>          GraphQL endpoint (default: ${DEFAULT_ENDPOINT})
   --async [N]               Use *Async mutation variants; poll every Nth operation (default N=100)
+  --async-timeout <ms>      Max ms to wait for a polled job to reach a terminal status (default: 30000)
   --verbose, -v             Show detailed operation timings
   --percentiles, -p         Show percentile statistics (p50, p90, p95, p99) per line
   --show-action-types, -a   Show action type names in min/max timings
@@ -462,6 +475,13 @@ Examples:
     process.exit(1);
   }
 
+  if (isNaN(asyncTimeoutMs) || asyncTimeoutMs < 1) {
+    console.error(
+      `Error: Invalid --async-timeout value: must be a positive integer (ms).`,
+    );
+    process.exit(1);
+  }
+
   if (operations === 0 && opLoops > 1) {
     console.warn(
       `Warning: --op-loops=${opLoops} has no effect when operations is 0.`,
@@ -489,6 +509,7 @@ Examples:
     docIds,
     asyncMutate,
     asyncPollRate,
+    asyncTimeoutMs,
     verbose,
     percentiles,
     showActionTypes,
@@ -507,6 +528,7 @@ async function main() {
     docIds,
     asyncMutate,
     asyncPollRate,
+    asyncTimeoutMs,
     verbose,
     percentiles: showPercentiles,
     showActionTypes,
@@ -674,7 +696,16 @@ async function main() {
                 req.mutation,
                 req.variables,
               );
-              const jobId = Object.values(result).at(-1)!;
+              // The batch mutation aliases each op; we sample the last one as
+              // representative. Validate early so polling never runs against
+              // "undefined".
+              const resultValues = Object.values(result);
+              if (resultValues.length === 0) {
+                throw new Error(
+                  `Empty mutation response for request ${globalReqNum}`,
+                );
+              }
+              const jobId = resultValues.at(-1) as string;
               if (
                 globalReqNum % asyncPollRate === 0 ||
                 globalReqNum === totalRequests
@@ -689,7 +720,7 @@ async function main() {
                   reqNum: globalReqNum,
                 };
                 pollPromises.push(
-                  pollJobAsync(client, job).then((r) => {
+                  pollJobAsync(client, job, asyncTimeoutMs).then((r) => {
                     const ms = Math.round(r.totalMs);
                     process.stdout.write(
                       `\r  [${docNum}/${docCount}] ${docId}: op ${job.reqNum}/${totalRequests} (${ms}ms)\n`,
