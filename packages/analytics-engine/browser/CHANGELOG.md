@@ -1,3 +1,19 @@
+## 6.0.0-dev.71 (2026-03-07)
+
+### 🚀 Features
+
+- **connect,reactor-browser:** add dynamic package loading from HTTP registry ([f92816782](https://github.com/powerhouse-inc/powerhouse/commit/f92816782))
+- **document-model,reactor-api,reactor-browser:** implemented remote document controller ([6299c21da](https://github.com/powerhouse-inc/powerhouse/commit/6299c21da))
+
+### 🩹 Fixes
+
+- **reactor-browser:** removed subexports ([4cda7f44c](https://github.com/powerhouse-inc/powerhouse/commit/4cda7f44c))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Guillermo Puente @gpuente
+
 ## 6.0.0-dev.70 (2026-03-06)
 
 ### 🚀 Features
