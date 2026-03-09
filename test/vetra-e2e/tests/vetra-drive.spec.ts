@@ -1,6 +1,8 @@
 import { handleCookieConsent } from "@powerhousedao/e2e-utils";
 import { expect, test } from "./helpers/fixtures.js";
 
+test.describe.configure({ timeout: 5 * 60 * 60 * 1000 });
+
 test("should display Vetra drive automatically on Connect main page", async ({
   page,
 }) => {

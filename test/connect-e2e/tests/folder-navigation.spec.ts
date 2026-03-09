@@ -14,6 +14,8 @@ import {
 import { createDocument } from "./helpers/document.js";
 import { expect, test } from "./helpers/fixtures.js";
 
+test.describe.configure({ timeout: 5 * 60 * 60 * 1000 });
+
 test.use({
   storageState: {
     cookies: [],

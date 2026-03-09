@@ -82,6 +82,7 @@
     "vite": "catalog:",
     "vitest": "catalog:",
     "@vitejs/plugin-react": "catalog:",
+    "vite-plugin-node-polyfills": "catalog:",
     "tailwindcss": "catalog:",
     "@tailwindcss/cli": "catalog:",
     "@types/node": "catalog:",
@@ -89,11 +90,6 @@
     "@types/react-dom": "catalog:",
     "monocart-coverage-reports": "^2.12.8",
     "@playwright/test": "^1.55.0"
-  },
-  "peerDependencies": {
-    "react": ">=19.0.0",
-    "react-dom": ">=19.0.0",
-    "@electric-sql/pglite": ">=0.3.15"
   },
   "description": ""
 }

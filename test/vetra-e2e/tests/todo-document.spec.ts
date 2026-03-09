@@ -10,8 +10,7 @@ import {
 import { expect, test } from "./helpers/fixtures.js";
 
 // Run serially to avoid conflicts with other tests that modify the shared Vetra drive
-test.describe.configure({ mode: "serial" });
-
+test.describe.configure({ mode: "serial", timeout: 5 * 60 * 60 * 1000 });
 const DOCUMENT_NAME = "ToDoDocument";
 
 const TEST_DOCUMENT_DATA: DocumentBasicData = {

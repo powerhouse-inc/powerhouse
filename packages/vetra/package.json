@@ -36,7 +36,7 @@
     },
     "./processors": {
       "types": "./dist/processors/index.d.ts",
-      "node": "./dist/processors/index.js"
+      "import": "./dist/processors/index.js"
     },
     "./manifest": {
       "types": "./dist/manifest.d.ts",
