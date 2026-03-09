@@ -1,5 +1,5 @@
 export function getUserPermissions() {
-  const user = window.ph?.user;
+  const user = window.ph?.renown?.user;
   const allowList = window.ph?.allowList;
   if (!allowList) {
     return {

@@ -2,7 +2,8 @@
 
 import type { CSSProperties, ReactNode } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { openRenown } from "../lib/renown/utils.js";
+import { useUser } from "../../hooks/renown.js";
+import { logout as defaultLogout, openRenown } from "../utils.js";
 import {
   CopyIcon,
   DisconnectIcon,
@@ -11,40 +12,16 @@ import {
 } from "./icons.js";
 
 const POPOVER_GAP = 8;
-const POPOVER_HEIGHT = 150; // approximate height of popover
+const POPOVER_HEIGHT = 150;
 
 export interface RenownUserButtonProps {
-  /**
-   * The user's wallet address
-   */
-  address: string;
-  /**
-   * Optional ENS name or username to display
-   */
+  address?: string;
   username?: string;
-  /**
-   * Optional avatar URL
-   */
   avatarUrl?: string;
-  /**
-   * User ID to view the profile on Renown
-   */
   userId?: string;
-  /**
-   * Callback when disconnect is requested
-   */
-  onDisconnect: (() => void) | undefined;
-  /**
-   * Custom styles for the button
-   */
+  onDisconnect?: () => void;
   style?: CSSProperties;
-  /**
-   * Custom class name
-   */
   className?: string;
-  /**
-   * Custom render function for the trigger button
-   */
   renderTrigger?: (props: {
     onMouseEnter: () => void;
     onMouseLeave: () => void;
@@ -92,13 +69,13 @@ const styles: Record<string, CSSProperties> = {
     borderRadius: "8px",
     boxShadow:
       "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
-    width: "208px", // w-52
+    width: "208px",
     zIndex: 1000,
-    color: "#111827", // text-gray-900
+    color: "#111827",
   },
   section: {
-    padding: "8px 12px", // py-2 px-3
-    borderBottom: "1px solid #e5e7eb", // divide-gray-200
+    padding: "8px 12px",
+    borderBottom: "1px solid #e5e7eb",
   },
   sectionLast: {
     padding: "8px 12px",
@@ -106,7 +83,7 @@ const styles: Record<string, CSSProperties> = {
   },
   username: {
     fontSize: "14px",
-    fontWeight: 500, // font-medium
+    fontWeight: 500,
     color: "#111827",
   },
   addressRow: {
@@ -151,61 +128,36 @@ const styles: Record<string, CSSProperties> = {
     background: "transparent",
     cursor: "pointer",
     fontSize: "14px",
-    color: "#111827", // text-gray-900
+    color: "#111827",
     textDecoration: "none",
   },
-  menuItemHover: {
-    color: "#4b5563", // hover:text-gray-600
-  },
   disconnectItem: {
-    color: "#7f1d1d", // text-red-900
-  },
-  disconnectItemHover: {
-    color: "#b91c1c", // hover:text-red-700
+    color: "#7f1d1d",
   },
 };
 
-/**
- * Truncates an Ethereum address for display
- */
 function truncateAddress(address: string): string {
   if (address.length <= 13) return address;
   return `${address.slice(0, 7)}...${address.slice(-5)}`;
 }
 
-/**
- * A user button that shows account info in a popover with options to copy address,
- * view profile, and disconnect.
- *
- * @example
- * ```tsx
- * import { RenownUserButton } from '@renown/sdk'
- *
- * function UserArea() {
- *   const handleDisconnect = () => {
- *     // Your disconnect logic
- *   }
- *   return (
- *     <RenownUserButton
- *       address="0x1234...5678"
- *       username="vitalik.eth"
- *       userId="abc123"
- *       onDisconnect={handleDisconnect}
- *     />
- *   )
- * }
- * ```
- */
 export function RenownUserButton({
-  address,
-  username,
-  avatarUrl,
-  userId,
-  onDisconnect,
+  address: addressProp,
+  username: usernameProp,
+  avatarUrl: avatarUrlProp,
+  userId: userIdProp,
+  onDisconnect: onDisconnectProp,
   style,
   className,
   renderTrigger,
 }: RenownUserButtonProps) {
+  const user = useUser();
+
+  const address = addressProp ?? user?.address ?? "";
+  const username = usernameProp ?? user?.ens?.name;
+  const avatarUrl = avatarUrlProp ?? user?.ens?.avatarUrl;
+  const userId = userIdProp ?? user?.profile?.documentId;
+  const onDisconnect = onDisconnectProp ?? (() => void defaultLogout());
   const [isOpen, setIsOpen] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const [showAbove, setShowAbove] = useState(true);
@@ -216,8 +168,7 @@ export function RenownUserButton({
     if (!wrapperRef.current) return;
     const rect = wrapperRef.current.getBoundingClientRect();
     const spaceAbove = rect.top;
-    const hasSpaceAbove = spaceAbove >= POPOVER_HEIGHT + POPOVER_GAP;
-    setShowAbove(hasSpaceAbove);
+    setShowAbove(spaceAbove >= POPOVER_HEIGHT + POPOVER_GAP);
   }, []);
 
   const handleMouseEnter = useCallback(() => {
@@ -344,8 +295,6 @@ export function RenownUserButton({
               style={{
                 ...styles.menuItem,
                 ...styles.disconnectItem,
-                cursor: onDisconnect ? "pointer" : "wait",
-                pointerEvents: onDisconnect ? "auto" : "none",
               }}
             >
               <DisconnectIcon size={14} color="#EA4335" />
