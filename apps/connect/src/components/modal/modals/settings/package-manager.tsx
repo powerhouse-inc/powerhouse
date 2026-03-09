@@ -1,127 +1,102 @@
-import { PH_PACKAGES } from "@powerhousedao/config";
-import { connectConfig } from "@powerhousedao/connect/config";
 import { PackageManager } from "@powerhousedao/design-system/connect";
+import type { PackageDetails } from "@powerhousedao/design-system/connect";
 import {
   makeVetraPackageManifest,
-  useDrives,
   useVetraPackageManager,
   useVetraPackages,
 } from "@powerhousedao/reactor-browser";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useMemo } from "react";
+import { useRegistry } from "../../../../hooks/use-registry.js";
 
-const LOCAL_REACTOR_VALUE = "local-reactor";
-const LOCAL_REACTOR_LABEL = "Local Reactor";
-
-const PH_PACKAGES_REGISTRY =
-  connectConfig.packagesRegistry ?? "http://localhost:8080/-/cdn/";
+function toPackageDetails(
+  pkg: ReturnType<typeof makeVetraPackageManifest>,
+  removable: boolean,
+): PackageDetails {
+  return {
+    id: pkg.id,
+    name: pkg.name,
+    description: pkg.description,
+    category: pkg.category,
+    publisher: pkg.author.name,
+    publisherUrl: pkg.author.website ?? "",
+    modules: Object.values(pkg.modules).flatMap((modules) =>
+      modules.map((module) => module.name),
+    ),
+    removable,
+  };
+}
 
 export const ConnectPackageManager: React.FC = () => {
   const packageManager = useVetraPackageManager();
   const vetraPackages = useVetraPackages();
-  const drives = useDrives();
-  const [reactor, setReactor] = useState("");
-
-  const reactorOptions = useMemo(() => {
-    return drives?.reduce<
-      { value: string; label: string; disabled: boolean }[]
-    >(
-      (acc, drive) => {
-        const trigger = drive.state.local.triggers.find(
-          (trigger) => trigger.data?.url,
-        );
-        if (!trigger?.data?.url) {
-          return acc;
-        }
-
-        const value = trigger.data.url;
-        const label = drive.state.global.name;
-
-        acc.push({
-          value,
-          label,
-          disabled: true,
-        });
-        return acc;
-      },
-      [
-        {
-          value: LOCAL_REACTOR_VALUE,
-          label: LOCAL_REACTOR_LABEL,
-          disabled: false,
-        },
-      ],
-    );
-  }, [drives]);
-
-  useEffect(() => {
-    setReactor((reactor) => {
-      const defaultOption = reactorOptions?.find((option) => !option.disabled);
-      if (
-        reactor &&
-        reactorOptions?.find((option) => option.value === reactor)
-      ) {
-        return reactor;
-      } else {
-        return defaultOption?.value ?? "";
-      }
-    });
-  }, [reactor, reactorOptions]);
+  const {
+    registries,
+    selectedRegistryId,
+    registryStatus,
+    effectiveRegistryUrl,
+    customRegistryUrl,
+    setSelectedRegistryId,
+    setCustomRegistryUrl,
+    fetchPackages,
+  } = useRegistry();
 
   const packagesInfo = useMemo(
     () => vetraPackages.map((pkg) => makeVetraPackageManifest(pkg)),
     [vetraPackages],
   );
 
-  const handleReactorChange = useCallback(
-    (reactor?: string) => setReactor(reactor ?? ""),
-    [],
-  );
+  const { preInstalledPackages, installedPackages } = useMemo(() => {
+    const localIds = packageManager?.localPackageIds ?? new Set<string>();
+    const preInstalled: PackageDetails[] = [];
+    const installed: PackageDetails[] = [];
+
+    for (const pkg of packagesInfo) {
+      const isLocal = localIds.has(pkg.id);
+      if (isLocal) {
+        preInstalled.push(toPackageDetails(pkg, false));
+      } else {
+        installed.push(toPackageDetails(pkg, true));
+      }
+    }
+
+    return { preInstalledPackages: preInstalled, installedPackages: installed };
+  }, [packagesInfo, packageManager]);
 
   const handleInstall = useCallback(
     (packageName: string) => {
-      if (reactor !== LOCAL_REACTOR_VALUE) {
-        throw new Error("Cannot install external package on a remote reactor");
+      if (!effectiveRegistryUrl) {
+        throw new Error("No registry selected");
       }
-      return packageManager?.addPackage(packageName, PH_PACKAGES_REGISTRY);
+      return packageManager?.addPackage(packageName, effectiveRegistryUrl);
     },
-    [reactor, packageManager],
+    [effectiveRegistryUrl, packageManager],
   );
 
   const handleUninstall = useCallback(
     (packageId: string) => {
-      if (reactor !== LOCAL_REACTOR_VALUE) {
-        throw new Error("Cannot delete external package on a remote reactor");
-      }
       const pkg = packagesInfo.find((p) => p.id === packageId);
       if (!pkg) {
         throw new Error(`Package with id ${packageId} not found`);
       }
       packageManager?.removePackage(pkg.name).catch(console.error);
     },
-    [reactor, packageManager, packagesInfo],
+    [packageManager, packagesInfo],
   );
 
   return (
     <PackageManager
       mutable={true}
-      reactorOptions={reactorOptions ?? []}
-      reactor={reactor}
-      packages={packagesInfo.map((pkg) => ({
-        id: pkg.id,
-        name: pkg.name,
-        description: pkg.description,
-        category: pkg.category,
-        publisher: pkg.author.name,
-        publisherUrl: pkg.author.website ?? "",
-        modules: Object.values(pkg.modules).flatMap((modules) =>
-          modules.map((module) => module.name),
-        ),
-        removable: true,
-      }))}
-      onReactorChange={handleReactorChange}
+      registries={registries}
+      selectedRegistryId={selectedRegistryId}
+      onRegistryChange={setSelectedRegistryId}
+      registryStatus={registryStatus}
+      customRegistryUrl={customRegistryUrl}
+      onCustomRegistryUrlChange={setCustomRegistryUrl}
+      packages={installedPackages}
+      availablePackages={preInstalledPackages}
       onInstall={handleInstall}
       onUninstall={handleUninstall}
-      packageOptions={PH_PACKAGES}
+      fetchPackages={fetchPackages}
     />
   );
 };

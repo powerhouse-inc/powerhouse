@@ -1,37 +1,39 @@
-import { useMemo } from "react";
 import { twMerge } from "tailwind-merge";
 import type { PackageManagerInputProps } from "./package-manager-input.js";
 import { PackageManagerInput } from "./package-manager-input.js";
-import type { PackageManagerListProps } from "./package-manager-list.js";
+import type {
+  PackageDetails,
+  PackageManagerListProps,
+} from "./package-manager-list.js";
 import { PackageManagerList } from "./package-manager-list.js";
-import type { PackageManagerReactorSelectProps } from "./package-manager-select.js";
-import { PackageManagerReactorSelect } from "./package-manager-select.js";
+import type { PackageManagerRegistrySelectProps } from "./package-manager-select.js";
+import { PackageManagerRegistrySelect } from "./package-manager-select.js";
 
-type Props = PackageManagerReactorSelectProps &
+type Props = PackageManagerRegistrySelectProps &
   PackageManagerInputProps &
-  PackageManagerListProps;
+  PackageManagerListProps & {
+    availablePackages?: PackageDetails[];
+  };
 
 export const PackageManager: React.FC<Props> = (props) => {
   const {
     className,
-    reactorOptions,
-    reactor,
-    onReactorChange,
+    registries,
+    selectedRegistryId,
+    onRegistryChange,
+    registryStatus,
+    customRegistryUrl,
+    onCustomRegistryUrlChange,
     onInstall,
+    fetchPackages,
     packages,
+    availablePackages,
     onUninstall,
     mutable,
-    packageOptions,
+    disabled,
     ...rest
   } = props;
 
-  const packageOptionsSet = useMemo(
-    () =>
-      packageOptions?.filter(
-        (o) => !packages.find((p) => p.name === o.packageName),
-      ),
-    [packages, packageOptions],
-  );
   return (
     <div
       {...rest}
@@ -40,20 +42,26 @@ export const PackageManager: React.FC<Props> = (props) => {
         className,
       )}
     >
-      <PackageManagerReactorSelect
-        reactor={reactor}
-        reactorOptions={reactorOptions}
-        onReactorChange={onReactorChange}
+      <PackageManagerRegistrySelect
+        registries={registries}
+        selectedRegistryId={selectedRegistryId}
+        onRegistryChange={onRegistryChange}
+        registryStatus={registryStatus}
+        customRegistryUrl={customRegistryUrl}
+        onCustomRegistryUrlChange={onCustomRegistryUrlChange}
         className="mb-4"
       />
       {mutable && (
         <PackageManagerInput
+          className="mb-4"
           onInstall={onInstall}
-          packageOptions={packageOptionsSet}
+          fetchPackages={fetchPackages}
+          disabled={disabled}
         />
       )}
       <PackageManagerList
         packages={packages}
+        availablePackages={availablePackages}
         onUninstall={onUninstall}
         mutable={mutable}
       />

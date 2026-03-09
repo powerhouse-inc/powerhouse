@@ -86,6 +86,7 @@ export type IPackageListerUnsubscribe = () => void;
 
 export interface IPackageManager {
   packages: VetraPackage[];
+  localPackageIds: Set<string>;
   addPackage(name: string, registryUrl: string): Promise<void>;
   addLocalPackage(name: string, localPackage: VetraPackage): Promise<void>;
   removePackage(name: string): Promise<void>;

@@ -5,4 +5,5 @@ export * from "./package-manager/package-manager-input.js";
 export * from "./package-manager/package-manager-list.js";
 export * from "./package-manager/package-manager-select.js";
 export * from "./package-manager/package-manager.js";
+export * from "./package-manager/types.js";
 export * from "./settings-modal.js";
