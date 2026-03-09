@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "tsc": "tsc",
-    "test-ci": "pnpm -r --no-bail --filter=!codegen --filter=!document-drive --filter=!reactor --filter=!atlas --filter=!load-test-client --filter=!scripts run test -- --silent passed-only related",
+    "test-ci": "CI=true && pnpm -r --no-bail --filter=!codegen --filter=!document-drive --filter=!reactor --filter=!atlas --filter=!load-test-client --filter=!scripts run test -- --silent passed-only related",
     "test-codegen": "pnpm --filter=codegen run test -- --silent passed-only related",
     "test-coverage": "pnpm vitest run --coverage",
     "simulate-ci-workflow": "pnpm clean && pnpm install-ci && pnpm check-ts-references && pnpm check-wrong-tsc-usage && pnpm build-tsc && pnpm build-misc && pnpm build-css && pnpm build-vite && pnpm install-ci && pnpm lint && pnpm test-ci && pnpm test-codegen && pnpm test-e2e && pnpm build-storybook && pnpm check-circular-imports",
@@ -19,7 +19,7 @@
     "build-connect": "pnpm -r --no-bail --filter=connect run build:connect",
     "build-storybook": "pnpm -r --no-bail run build:storybook",
     "build-all": "pnpm build-tsc && pnpm build-misc && pnpm build-bundle && pnpm build-css && pnpm build-vite && pnpm build-connect && pnpm build-cli",
-    "clean": "bunx git clean -fdX",
+    "clean": "bun x git clean -fdX",
     "run-release": "bun run releases/release.ts",
     "run-release-safe": "pnpm run-release --verbose --skip-publish --skip-changelog --skip-push",
     "prepare": "husky",

@@ -6,6 +6,7 @@ import { register } from "node:module";
 register(httpsHooksPath, import.meta.url);
 
 import { PGlite } from "@electric-sql/pglite";
+import { ReactorInstrumentation } from "@powerhousedao/opentelemetry-instrumentation-reactor";
 import {
   ChannelScheme,
   EventBus,
@@ -270,7 +271,12 @@ async function initServer(
 
     const module = await clientBuilder.buildModule();
 
-    // Return the full ReactorClientModule
+    if (module.reactorModule) {
+      const instrumentation = new ReactorInstrumentation(module.reactorModule);
+      instrumentation.start();
+      reactorLogger.info("Reactor metrics instrumentation started");
+    }
+
     return module;
   };
 

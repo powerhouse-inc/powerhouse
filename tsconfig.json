@@ -38,6 +38,9 @@
       "path": "packages/document-model"
     },
     {
+      "path": "packages/opentelemetry-instrumentation-reactor"
+    },
+    {
       "path": "packages/powerhouse-vetra-packages"
     },
     {

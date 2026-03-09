@@ -11,6 +11,7 @@ export type {
   ChannelConfig,
   ChannelHealth,
   ChannelMeta,
+  DeadLetterAddedEvent,
   JwtHandler,
   RemoteCursor,
   RemoteFilter,

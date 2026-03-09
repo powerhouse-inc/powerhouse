@@ -2,8 +2,10 @@
 // This file must be loaded before the application starts
 
 import { getNodeAutoInstrumentations } from "@opentelemetry/auto-instrumentations-node";
+import { OTLPMetricExporter } from "@opentelemetry/exporter-metrics-otlp-http";
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
 import { Resource } from "@opentelemetry/resources";
+import { PeriodicExportingMetricReader } from "@opentelemetry/sdk-metrics";
 import { NodeSDK } from "@opentelemetry/sdk-node";
 import { BatchSpanProcessor } from "@opentelemetry/sdk-trace-base";
 import {
@@ -19,6 +21,11 @@ const TEMPO_ENDPOINT =
 const SERVICE_NAME = process.env.OTEL_SERVICE_NAME || "reactor-api";
 const SERVICE_VERSION = process.env.npm_package_version || "unknown";
 const TENANT_ID = process.env.TENANT_ID || "default";
+const METRICS_ENDPOINT = process.env.METRICS_ENDPOINT;
+const METRICS_EXPORT_INTERVAL_MS = parseInt(
+  process.env.METRICS_EXPORT_INTERVAL_MS || "30000",
+  10,
+);
 
 // Only enable tracing if explicitly enabled or in production
 const TRACING_ENABLED =
@@ -45,10 +52,24 @@ if (TRACING_ENABLED) {
     "deployment.environment": process.env.NODE_ENV || "development",
   });
 
+  // Configure metrics exporter if endpoint is provided
+  const metricReader = METRICS_ENDPOINT
+    ? new PeriodicExportingMetricReader({
+        exporter: new OTLPMetricExporter({ url: METRICS_ENDPOINT }),
+        exportIntervalMillis: METRICS_EXPORT_INTERVAL_MS,
+      })
+    : undefined;
+
+  if (METRICS_ENDPOINT) {
+    console.log(`  Metrics endpoint: ${METRICS_ENDPOINT}`);
+    console.log(`  Metrics interval: ${METRICS_EXPORT_INTERVAL_MS}ms`);
+  }
+
   // Initialize OpenTelemetry SDK
   const sdk = new NodeSDK({
     resource,
     spanProcessors: [new BatchSpanProcessor(traceExporter)],
+    metricReader,
     instrumentations: [
       getNodeAutoInstrumentations({
         // Automatically instrument common libraries
