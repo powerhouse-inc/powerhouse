@@ -1,11 +1,14 @@
 import { DriveSettingsModal as ConnectDriveSettingsModal } from "@powerhousedao/design-system/connect";
 import {
-    closePHModal, driveCollectionId, renameDrive,
-    setDriveAvailableOffline,
-    setDriveSharingType,
-    showPHModal,
-    useDriveById,
-    usePHModal, useSyncList
+  closePHModal,
+  driveCollectionId,
+  renameDrive,
+  setDriveAvailableOffline,
+  setDriveSharingType,
+  showPHModal,
+  useDriveById,
+  usePHModal,
+  useSyncList,
 } from "@powerhousedao/reactor-browser";
 import type { DocumentDriveDocument, SharingType } from "document-drive";
 import { useMemo } from "react";

@@ -2331,6 +2331,12 @@ importers:
       '@electric-sql/pglite-tools':
         specifier: 'catalog:'
         version: 0.2.20(@electric-sql/pglite@0.3.15)
+      '@powerhousedao/builder-tools':
+        specifier: workspace:*
+        version: link:../builder-tools
+      '@powerhousedao/codegen':
+        specifier: workspace:*
+        version: link:../codegen
       '@powerhousedao/common':
         specifier: workspace:*
         version: link:../common
@@ -2343,6 +2349,9 @@ importers:
       '@powerhousedao/design-system':
         specifier: workspace:*
         version: link:../design-system
+      '@powerhousedao/ph-cli':
+        specifier: workspace:*
+        version: link:../../clis/ph-cli
       '@powerhousedao/reactor-browser':
         specifier: workspace:*
         version: link:../reactor-browser
@@ -2370,19 +2379,16 @@ importers:
       kysely:
         specifier: 'catalog:'
         version: 0.28.11
+      react:
+        specifier: 'catalog:'
+        version: 19.2.4
+      react-dom:
+        specifier: 'catalog:'
+        version: 19.2.4(react@19.2.4)
       zod:
         specifier: 'catalog:'
         version: 4.3.6
     devDependencies:
-      '@powerhousedao/builder-tools':
-        specifier: workspace:*
-        version: link:../builder-tools
-      '@powerhousedao/codegen':
-        specifier: workspace:*
-        version: link:../codegen
-      '@powerhousedao/ph-cli':
-        specifier: workspace:*
-        version: link:../../clis/ph-cli
       '@tailwindcss/cli':
         specifier: 'catalog:'
         version: 4.1.18
@@ -2407,12 +2413,6 @@ importers:
       '@vitejs/plugin-react':
         specifier: 'catalog:'
         version: 5.1.4(vite@7.3.1(@types/node@25.2.3)(jiti@2.6.1)(lightningcss@1.31.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2))
-      react:
-        specifier: 'catalog:'
-        version: 19.2.4
-      react-dom:
-        specifier: 'catalog:'
-        version: 19.2.4(react@19.2.4)
       tailwindcss:
         specifier: 'catalog:'
         version: 4.1.18

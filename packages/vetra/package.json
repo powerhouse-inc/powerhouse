@@ -36,7 +36,7 @@
     },
     "./processors": {
       "types": "./dist/processors/index.d.ts",
-      "import": "./dist/processors/index.js"
+      "node": "./dist/processors/index.js"
     },
     "./manifest": {
       "types": "./dist/manifest.d.ts",
@@ -75,6 +75,8 @@
     "@powerhousedao/design-system": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",
     "@powerhousedao/shared": "workspace:*",
+    "@powerhousedao/builder-tools": "workspace:*",
+    "@powerhousedao/ph-cli": "workspace:*",
     "change-case": "catalog:",
     "colorette": "catalog:",
     "document-model": "workspace:*",
@@ -82,12 +84,12 @@
     "graphql-tag": "catalog:",
     "kysely": "catalog:",
     "zod": "catalog:",
-    "document-drive": "workspace:*"
+    "document-drive": "workspace:*",
+    "@powerhousedao/codegen": "workspace:*",
+    "react": "catalog:",
+    "react-dom": "catalog:"
   },
   "devDependencies": {
-    "@powerhousedao/builder-tools": "workspace:*",
-    "@powerhousedao/codegen": "workspace:*",
-    "@powerhousedao/ph-cli": "workspace:*",
     "@tailwindcss/cli": "catalog:",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.0",
@@ -96,17 +98,10 @@
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "@vitejs/plugin-react": "catalog:",
-    "react": "catalog:",
-    "react-dom": "catalog:",
     "tailwindcss": "catalog:",
     "tsdown": "catalog:",
     "vite": "catalog:",
     "vitest": "catalog:"
-  },
-  "peerDependencies": {
-    "@electric-sql/pglite": ">=0.3.15",
-    "react": ">=19.0.0",
-    "react-dom": ">=19.0.0"
   },
   "description": ""
 }

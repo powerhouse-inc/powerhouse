@@ -1,21 +1,21 @@
 import { DriveIcon } from "@powerhousedao/connect/components";
 import { connectConfig } from "@powerhousedao/connect/config";
 import {
-    ConnectSidebar,
-    ConnectTooltipProvider,
-    SidebarAddDriveItem,
-    SidebarItem,
+  ConnectSidebar,
+  ConnectTooltipProvider,
+  SidebarAddDriveItem,
+  SidebarItem,
 } from "@powerhousedao/design-system/connect";
 
 import {
-    logout,
-    openRenown,
-    setSelectedDrive,
-    showPHModal,
-    useDrives,
-    useInspectorEnabled,
-    useSelectedDriveSafe,
-    useUser,
+  logout,
+  openRenown,
+  setSelectedDrive,
+  showPHModal,
+  useDrives,
+  useInspectorEnabled,
+  useSelectedDriveSafe,
+  useUser,
 } from "@powerhousedao/reactor-browser";
 import { ErrorBoundary } from "./error-boundary.js";
 

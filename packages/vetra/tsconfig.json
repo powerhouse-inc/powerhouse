@@ -2,9 +2,6 @@
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
     "emitDeclarationOnly": true,
-    "paths": {
-      "@powerhousedao/vetra/*": ["./*/index.ts"],
-    },
     "outDir": "./dist",
     "types": [
       "node",
@@ -15,6 +12,26 @@
       "dom",
       "dom.iterable"
     ],
+    "paths": {
+      "@powerhousedao/vetra/document-models": [
+        "./document-models/index.ts"
+      ],
+      "@powerhousedao/vetra/document-models/*": [
+        "./document-models/*/index.ts"
+      ],
+      "@powerhousedao/vetra/editors": [
+        "./editors/index.ts"
+      ],
+      "@powerhousedao/vetra/editors/*": [
+        "./editors/*/index.ts"
+      ],
+      "@powerhousedao/vetra/processors": [
+        "./processors/index.ts"
+      ],
+      "@powerhousedao/vetra/processors/*": [
+        "./processors/*/index.ts"
+      ]
+    }
   },
   "include": [
     "**/*",
