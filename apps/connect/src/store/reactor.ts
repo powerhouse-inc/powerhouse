@@ -9,6 +9,7 @@ import {
   addRemoteDrive,
   BrowserPackageManager,
   convertLegacyLibToVetraPackage,
+  DocumentChangeType,
   dropAllReactorStorage,
   extractDriveSlugFromPath,
   extractNodeSlugFromPath,
@@ -23,27 +24,24 @@ import {
   type PHToastFn,
   type VetraPackage,
 } from "@powerhousedao/reactor-browser";
-import type { ProcessorFactoryBuilder } from "@powerhousedao/shared/processors";
 import {
   addPHEventHandlers,
   login,
-  setConnectCrypto,
   setDefaultPHGlobalConfig,
-  setDid,
   setDocumentCache,
   setDrives,
   setReactorClient,
   setReactorClientModule,
   setRenown,
 } from "@powerhousedao/reactor-browser/connect";
+import type { ProcessorFactoryBuilder } from "@powerhousedao/shared/processors";
 import {
   BrowserKeyStorage,
   RenownBuilder,
   RenownCryptoBuilder,
 } from "@renown/sdk";
-import { DocumentChangeType } from "@powerhousedao/reactor-browser";
-import type { DocumentModelModule } from "document-model";
 import { logger } from "document-drive";
+import type { DocumentModelModule } from "document-model";
 import { initFeatureFlags } from "../feature-flags.js";
 import { loadCommonPackage } from "./document-model.js";
 
@@ -157,9 +155,8 @@ export async function createReactor() {
   const driveSlug = extractDriveSlugFromPath(path);
   const nodeSlug = extractNodeSlugFromPath(path);
 
-  // initialize user from URL parameter
-  const didFromUrl = getDidFromUrl();
-  await login(didFromUrl, renown);
+  // initialize user (automatically handles ?user= redirect from Renown portal)
+  await login(undefined, renown);
 
   const documentCache = new ReactorClientDocumentCache(
     reactorClientModule.client,
@@ -170,8 +167,6 @@ export async function createReactor() {
   setReactorClientModule(reactorClientModule);
   setReactorClient(reactorClientModule.client);
   setDocumentCache(documentCache);
-  setConnectCrypto(renownCrypto);
-  setDid(renown.did);
   setRenown(renown);
   setDrives(drives);
   setSelectedDrive(driveSlug);
@@ -260,13 +255,6 @@ export async function createReactor() {
   }
 
   window.ph.loading = false;
-}
-
-function getDidFromUrl() {
-  const searchParams = new URLSearchParams(window.location.search);
-  const didComponent = searchParams.get("user");
-  const did = didComponent ? decodeURIComponent(didComponent) : undefined;
-  return did;
 }
 
 function getDriveUrl() {

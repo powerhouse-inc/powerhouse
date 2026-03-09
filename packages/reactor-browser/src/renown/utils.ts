@@ -1,12 +1,15 @@
 import type { IRenown, User } from "@renown/sdk";
 import { logger } from "document-drive";
-import { setLoginStatus } from "../hooks/login-status.js";
-import { setUser } from "../hooks/user.js";
 import { RENOWN_CHAIN_ID, RENOWN_NETWORK_ID, RENOWN_URL } from "./constants.js";
 
-export function openRenown() {
+export function openRenown(documentId?: string) {
+  if (documentId) {
+    window.open(`${RENOWN_URL}/profile/${documentId}`, "_blank")?.focus();
+    return;
+  }
+
   const url = new URL(RENOWN_URL);
-  url.searchParams.set("connect", window.ph?.did ?? "");
+  url.searchParams.set("connect", window.ph?.renown?.did ?? "");
   url.searchParams.set("network", RENOWN_NETWORK_ID);
   url.searchParams.set("chain", RENOWN_CHAIN_ID);
 
@@ -15,6 +18,33 @@ export function openRenown() {
   window.open(url, "_self")?.focus();
 }
 
+/**
+ * Reads the `?user=` DID from the URL if present.
+ * Returns the DID and cleans up the URL parameter.
+ */
+function consumeDidFromUrl(): string | undefined {
+  if (typeof window === "undefined") return;
+
+  const urlParams = new URLSearchParams(window.location.search);
+  const userParam = urlParams.get("user");
+  if (!userParam) return;
+
+  const userDid = decodeURIComponent(userParam);
+
+  // Clean up the URL parameter
+  const cleanUrl = new URL(window.location.href);
+  cleanUrl.searchParams.delete("user");
+  window.history.replaceState({}, "", cleanUrl.toString());
+
+  return userDid;
+}
+
+/**
+ * Log in the user. Resolves the user DID from (in order):
+ * 1. Explicit `userDid` argument
+ * 2. `?user=` URL parameter (from Renown portal redirect)
+ * 3. Previously stored session in the Renown instance
+ */
 export async function login(
   userDid: string | undefined,
   renown: IRenown | undefined,
@@ -22,35 +52,27 @@ export async function login(
   if (!renown) {
     return;
   }
+
+  const did = userDid ?? consumeDidFromUrl();
+
   try {
-    setLoginStatus("checking");
     const user = renown.user;
 
-    if (user?.did && (user.did === userDid || !userDid)) {
-      setLoginStatus("authorized");
-      setUser(user);
+    if (user?.did && (user.did === did || !did)) {
       return user;
     }
 
-    if (!userDid) {
-      setLoginStatus("not-authorized");
+    if (!did) {
       return;
     }
 
-    const newUser = await renown.login(userDid);
-    setLoginStatus("authorized");
-    setUser(newUser);
-    return newUser;
+    return await renown.login(did);
   } catch (error) {
-    setLoginStatus("not-authorized");
     logger.error("@error", error);
   }
 }
 
 export async function logout() {
-  setLoginStatus("initial");
-  setUser(undefined);
-
   const renown = window.ph?.renown;
   await renown?.logout();
 

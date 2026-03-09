@@ -24,7 +24,9 @@ runs:
           BASE="$(jq -r '.before // empty' "$GITHUB_EVENT_PATH")"
           HEAD="$(jq -r '.after  // empty' "$GITHUB_EVENT_PATH")"
 
-          if [[ -z "$BASE" || -z "$HEAD" ]]; then
+          # Fall back to PR base/head if SHAs are missing or no longer exist
+          # (e.g. after a force-push/rebase, the old commits are unreachable)
+          if [[ -z "$BASE" || -z "$HEAD" ]] || ! git cat-file -e "$BASE" 2>/dev/null || ! git cat-file -e "$HEAD" 2>/dev/null; then
             BASE="${{ github.event.pull_request.base.sha }}"
             HEAD="${{ github.event.pull_request.head.sha }}"
           fi

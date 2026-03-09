@@ -2,42 +2,25 @@
 
 import type { CSSProperties, ReactNode } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { openRenown } from "../utils.js";
 import { RenownLogo, SpinnerIcon } from "./icons.js";
 import { renownShortDataUrl, renownShortHoverDataUrl } from "./image-data.js";
 
 export interface RenownLoginButtonProps {
-  /**
-   * Callback when login is requested
-   */
-  onLogin: (() => void) | undefined;
-  /**
-   * Enable dark mode styling
-   */
+  onLogin?: () => void;
   darkMode?: boolean;
-  /**
-   * Custom styles for the button
-   */
   style?: CSSProperties;
-  /**
-   * Custom class name
-   */
   className?: string;
-  /**
-   * Custom render function for the trigger button
-   */
   renderTrigger?: (props: {
     onMouseEnter: () => void;
     onMouseLeave: () => void;
     isLoading: boolean;
   }) => ReactNode;
-  /**
-   * Show a popover with connect option instead of triggering login directly
-   */
   showPopover?: boolean;
 }
 
 const POPOVER_GAP = 8;
-const POPOVER_HEIGHT = 120; // approximate height of popover
+const POPOVER_HEIGHT = 120;
 
 const styles: Record<string, CSSProperties> = {
   trigger: {
@@ -97,9 +80,6 @@ const styles: Record<string, CSSProperties> = {
     border: "1px solid #4b5563",
     color: "#f9fafb",
   },
-  connectButtonActive: {
-    opacity: 0.7,
-  },
   wrapper: {
     position: "relative",
     display: "inline-block",
@@ -113,34 +93,19 @@ const styles: Record<string, CSSProperties> = {
   },
 };
 
-/**
- * A login button with Renown branding that shows a popover with connect option.
- *
- * @example
- * ```tsx
- * import { RenownLoginButton } from '@renown/sdk'
- *
- * function LoginArea() {
- *   const handleLogin = () => {
- *     // Your login logic
- *   }
- *   return <RenownLoginButton onLogin={handleLogin} />
- * }
- * ```
- */
 export function RenownLoginButton({
-  onLogin,
+  onLogin: onLoginProp,
   darkMode = false,
   style,
   className,
   renderTrigger,
   showPopover = false,
 }: RenownLoginButtonProps) {
+  const onLogin = onLoginProp ?? (() => openRenown());
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [showAbove, setShowAbove] = useState(true);
-  const popoverRef = useRef<HTMLDivElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -148,15 +113,12 @@ export function RenownLoginButton({
     if (!wrapperRef.current) return;
     const rect = wrapperRef.current.getBoundingClientRect();
     const spaceAbove = rect.top;
-    const hasSpaceAbove = spaceAbove >= POPOVER_HEIGHT + POPOVER_GAP;
-    setShowAbove(hasSpaceAbove);
+    setShowAbove(spaceAbove >= POPOVER_HEIGHT + POPOVER_GAP);
   }, []);
 
   const handleMouseEnter = useCallback(() => {
     setIsHovered(true);
-    if (!showPopover) {
-      return;
-    }
+    if (!showPopover) return;
     if (closeTimeoutRef.current) {
       clearTimeout(closeTimeoutRef.current);
       closeTimeoutRef.current = null;
@@ -181,14 +143,12 @@ export function RenownLoginButton({
   }, []);
 
   const handleConnect = () => {
-    if (onLogin) {
-      setIsLoading(true);
-      onLogin();
-    }
+    setIsLoading(true);
+    onLogin();
   };
 
   const handleDirectClick = () => {
-    if (!showPopover && onLogin && !isLoading) {
+    if (!showPopover && !isLoading) {
       setIsLoading(true);
       onLogin();
     }
@@ -196,7 +156,7 @@ export function RenownLoginButton({
 
   const triggerStyle: CSSProperties = {
     ...styles.trigger,
-    cursor: onLogin ? "pointer" : "wait",
+    cursor: !isLoading ? "pointer" : "wait",
     ...style,
   };
 
@@ -257,7 +217,7 @@ export function RenownLoginButton({
         </button>
       )}
       {isOpen && showPopover && (
-        <div ref={popoverRef} style={popoverStyle}>
+        <div style={popoverStyle}>
           <div style={styles.popoverContent}>
             <div style={styles.logoContainer}>
               <RenownLogo width={83} height={22} color={logoColor} />
