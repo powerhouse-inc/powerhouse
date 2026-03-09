@@ -71,8 +71,6 @@
     "graphql": "catalog:",
     "graphql-request": "catalog:",
     "i18next": "^25.5.3",
-    "kysely": "catalog:",
-    "kysely-pglite-dialect": "catalog:",
     "react-error-boundary": "^4.0.11",
     "react-hotkeys-hook": "^4.6.2",
     "react-i18next": "^16.0.0",
@@ -80,7 +78,9 @@
     "tailwind-merge": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
-    "@sentry/react": "^10.17.0"
+    "@sentry/react": "^10.17.0",
+    "kysely": "catalog:",
+    "kysely-pglite-dialect": "catalog:"
   },
   "devDependencies": {
     "@types/node": "catalog:",
@@ -96,6 +96,7 @@
     "@types/bun": "catalog:",
     "vite-tsconfig-paths": "^6.1.1",
     "tsconfig-paths": "4.2.0",
-    "tsdown": "catalog:"
+    "tsdown": "catalog:",
+    "vite-plugin-node-polyfills": "catalog:"
   }
 }

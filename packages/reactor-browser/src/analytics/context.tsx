@@ -1,7 +1,7 @@
-import type {
-  AnalyticsQueryEngine,
-  IAnalyticsStore,
-} from "@powerhousedao/analytics-engine-core";
+import type { BrowserAnalyticsStoreOptions } from "@powerhousedao/analytics-engine-browser";
+import { BrowserAnalyticsStore } from "@powerhousedao/analytics-engine-browser";
+import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
+import { AnalyticsQueryEngine } from "@powerhousedao/analytics-engine-core";
 import {
   QueryClient,
   QueryClientProvider,
@@ -13,8 +13,6 @@ import {
 import { childLogger } from "document-drive";
 import type { PropsWithChildren } from "react";
 import { useEffect, useMemo } from "react";
-import type { BrowserAnalyticsStoreOptions } from "@powerhousedao/analytics-engine-browser";
-import { BrowserAnalyticsStore } from "@powerhousedao/analytics-engine-browser";
 import { getGlobal, setGlobal } from "../global/core.js";
 
 const logger = childLogger(["reactor-browser", "analytics", "provider"]);
@@ -30,9 +28,6 @@ export const analyticsEngineKey = ["analytics", "store"] as const;
 async function createAnalyticsStore(options: CreateStoreOptions) {
   const store = new BrowserAnalyticsStore(options);
   await store.init();
-
-  const { AnalyticsQueryEngine } =
-    await import("@powerhousedao/analytics-engine-core");
 
   const engine = new AnalyticsQueryEngine(store);
   return {
