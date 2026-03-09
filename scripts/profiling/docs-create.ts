@@ -288,13 +288,15 @@ async function pollJobAsync(
   client: GraphQLClient,
   job: SampledJob,
   timeoutMs: number,
-): Promise<{ result: OperationsResult; totalMs: number }> {
+): Promise<{ result: OperationsResult; totalMs: number; timedOut: boolean }> {
   const deadline = performance.now() + timeoutMs;
+  let timedOut = false;
   while (true) {
     await new Promise<void>((resolve) =>
       setTimeout(resolve, JOB_POLL_INTERVAL_MS),
     );
     if (performance.now() >= deadline) {
+      timedOut = true;
       process.stderr.write(
         `\nWarning: job ${job.jobId} (req ${job.reqNum}) did not reach a terminal status within ${timeoutMs}ms — giving up.\n`,
       );
@@ -321,7 +323,11 @@ async function pollJobAsync(
     durationMs: perOpMs,
     actionType: job.actionType,
   };
-  return { result: { minOp: timing, maxOp: timing, durations }, totalMs };
+  return {
+    result: { minOp: timing, maxOp: timing, durations },
+    totalMs,
+    timedOut,
+  };
 }
 
 function parseArgs(args: string[]): {
@@ -370,13 +376,15 @@ function parseArgs(args: string[]): {
     } else if (arg === "--async") {
       asyncMutate = true;
       const nextArg = args[i + 1];
-      if (
-        nextArg &&
-        !isNaN(Number(nextArg)) &&
-        Number(nextArg) > 0 &&
-        !nextArg.startsWith("-")
-      ) {
-        asyncPollRate = Number(nextArg);
+      if (nextArg && !nextArg.startsWith("-")) {
+        const n = Number(nextArg);
+        if (isNaN(n) || n <= 0 || !Number.isInteger(n)) {
+          console.error(
+            `Error: --async N must be a positive integer, got: ${nextArg}`,
+          );
+          process.exit(1);
+        }
+        asyncPollRate = n;
         i++;
       }
     } else if (arg === "--async-timeout" && args[i + 1]) {
@@ -663,6 +671,7 @@ async function main() {
         timing: OperationTiming;
       } | null = null;
       const allDurations: number[] = [];
+      let timedOutCount = 0;
 
       for (let i = 0; i < documentIds.length; i++) {
         const docNum = i + 1;
@@ -673,6 +682,7 @@ async function main() {
           const pollPromises: Promise<{
             result: OperationsResult;
             totalMs: number;
+            timedOut: boolean;
             job: SampledJob;
           }>[] = [];
           let globalReqNum = 0;
@@ -722,9 +732,15 @@ async function main() {
                 pollPromises.push(
                   pollJobAsync(client, job, asyncTimeoutMs).then((r) => {
                     const ms = Math.round(r.totalMs);
-                    process.stdout.write(
-                      `\r  [${docNum}/${docCount}] ${docId}: op ${job.reqNum}/${totalRequests} (${ms}ms)\n`,
-                    );
+                    if (r.timedOut) {
+                      process.stdout.write(
+                        `\r  [${docNum}/${docCount}] ${docId}: op ${job.reqNum}/${totalRequests} TIMED OUT after ${ms}ms\n`,
+                      );
+                    } else {
+                      process.stdout.write(
+                        `\r  [${docNum}/${docCount}] ${docId}: op ${job.reqNum}/${totalRequests} (${ms}ms)\n`,
+                      );
+                    }
                     return { ...r, job };
                   }),
                 );
@@ -746,7 +762,13 @@ async function main() {
 
           // Wait for any polls still in flight after dispatch completes, then aggregate
           const allPollResults = await Promise.all(pollPromises);
-          for (const { result, job } of allPollResults) {
+          for (const { result, timedOut, job } of allPollResults) {
+            // Skip timed-out jobs — their totalMs reflects the timeout cap, not
+            // real processing time, and would skew min/max and percentiles.
+            if (timedOut) {
+              timedOutCount++;
+              continue;
+            }
             if (
               result.minOp &&
               (overallMinOp === null ||
@@ -864,8 +886,10 @@ async function main() {
             ? `, min: ${overallMinOp.timing.durationMs}ms (${overallMinOp.timing.actionType}), max: ${overallMaxOp.timing.durationMs}ms (${overallMaxOp.timing.actionType})`
             : `, min: ${overallMinOp.timing.durationMs}ms, max: ${overallMaxOp.timing.durationMs}ms`
           : "";
+      const timedOutStr =
+        timedOutCount > 0 ? `, timed-out jobs: ${timedOutCount}` : "";
       console.log(
-        `  Completed ${totalOps} operations in ${opsDuration}s (avg: ${avgMsPerOp}ms/op${overallMinMax})`,
+        `  Completed ${totalOps} operations in ${opsDuration}s (avg: ${avgMsPerOp}ms/op${overallMinMax}${timedOutStr})`,
       );
       if (showPercentiles) {
         const percentiles = calculatePercentiles(allDurations);
