@@ -31,6 +31,7 @@
     "@tailwindcss/vite": "catalog:",
     "vite-plugin-html": "catalog:",
     "vite-plugin-svgr": "catalog:",
+    "vite-plugin-node-polyfills": "catalog:",
     "esbuild-plugins-node-modules-polyfill": "catalog:",
     "@vitejs/plugin-basic-ssl": "catalog:",
     "vite-envs": "catalog:",

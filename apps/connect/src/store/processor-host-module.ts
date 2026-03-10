@@ -1,17 +1,14 @@
-import { createOrGetAnalyticsStore } from "@powerhousedao/reactor-browser";
-import {
-  DEFAULT_ANALYTICS_PROCESSOR_DB_NAME,
-  type IProcessorHostModule,
-} from "@powerhousedao/shared/processors";
+import { createAnalyticsStore } from "@powerhousedao/reactor-browser";
+import { type IProcessorHostModule } from "@powerhousedao/shared/processors";
+import { getDb } from "../pglite.db.js";
 
 export async function createProcessorHostModule(): Promise<
   IProcessorHostModule | undefined
 > {
   try {
-    const { getDb } = await import("../pglite.db.js");
-    const relationalDb = await getDb();
-    const analyticsStore = await createOrGetAnalyticsStore({
-      databaseName: DEFAULT_ANALYTICS_PROCESSOR_DB_NAME,
+    const { pgLite, relationalDb } = await getDb();
+    const { store: analyticsStore } = await createAnalyticsStore({
+      pgLite,
     });
     const processorApp = "connect" as const;
     return {

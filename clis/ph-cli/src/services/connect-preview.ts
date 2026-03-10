@@ -6,7 +6,6 @@ import {
 } from "vite";
 import type { ConnectPreviewArgs } from "../types.js";
 import { assignEnvVars } from "../utils/assign-env-vars.js";
-import { resolveViteConfigPath } from "../utils/resolve-connect-dirs.js";
 
 export async function runConnectPreview(args: ConnectPreviewArgs) {
   const {
@@ -20,15 +19,9 @@ export async function runConnectPreview(args: ConnectPreviewArgs) {
     printUrls,
     bindCLIShortcuts,
   } = args;
-  const viteConfigPath = resolveViteConfigPath({});
   const mode = "production";
 
   assignEnvVars(args);
-
-  const userViteConfig = await loadConfigFromFile(
-    { command: "build", mode },
-    viteConfigPath,
-  );
 
   const previewConfig: InlineConfig = {
     base: connectBasePath,
@@ -46,9 +39,7 @@ export async function runConnectPreview(args: ConnectPreviewArgs) {
     },
   };
 
-  const mergedConfig = mergeConfig(userViteConfig?.config ?? {}, previewConfig);
-
-  const server = await preview(mergedConfig);
+  const server = await preview(previewConfig);
 
   if (printUrls) server.printUrls();
   if (bindCLIShortcuts) server.bindCLIShortcuts({ print: true });

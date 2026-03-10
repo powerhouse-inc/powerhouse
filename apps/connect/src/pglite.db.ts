@@ -9,15 +9,15 @@ export async function getDb() {
     type: "module",
   });
 
-  const pglite = await PGliteWorker.create(worker, {
+  const pgLite = await PGliteWorker.create(worker, {
     extensions: { live },
   });
 
   const kysely = new Kysely({
-    dialect: new PGliteDialect(pglite),
+    dialect: new PGliteDialect(pgLite),
   });
 
   const relationalDb = createRelationalDb(kysely);
 
-  return relationalDb;
+  return { pgLite, relationalDb };
 }

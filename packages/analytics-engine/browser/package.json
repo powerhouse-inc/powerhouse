@@ -25,13 +25,12 @@
   },
   "dependencies": {
     "@powerhousedao/analytics-engine-core": "workspace:*",
-    "@powerhousedao/analytics-engine-knex": "workspace:*",
     "@electric-sql/pglite": "catalog:",
     "date-fns": "catalog:",
     "events": "catalog:",
     "util": "catalog:",
-    "knex": "catalog:",
-    "luxon": "catalog:"
+    "luxon": "catalog:",
+    "change-case": "catalog:"
   },
   "devDependencies": {
     "@vitest/browser": "4.0.18",

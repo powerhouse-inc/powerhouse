@@ -58,7 +58,6 @@
     "@electric-sql/pglite-tools": "catalog:",
     "@openfeature/core": "1.9.1",
     "@openfeature/web-sdk": "1.6.2",
-    "@powerhousedao/builder-tools": "workspace:*",
     "@powerhousedao/config": "workspace:*",
     "@powerhousedao/design-system": "workspace:*",
     "@powerhousedao/document-engineering": "catalog:",
@@ -95,6 +94,8 @@
     "@tailwindcss/cli": "catalog:",
     "@types/bun": "catalog:",
     "vite-tsconfig-paths": "^6.1.1",
+    "@vitejs/plugin-react": "catalog:",
+    "@tailwindcss/vite": "catalog:",
     "tsconfig-paths": "4.2.0",
     "tsdown": "catalog:",
     "vite-plugin-node-polyfills": "catalog:"

@@ -1,15 +1,15 @@
 import {
   type IAnalyticsProfiler,
   PassthroughAnalyticsProfiler,
+  type SqlQueryLogger,
+  type SqlResultsLogger,
 } from "@powerhousedao/analytics-engine-core";
 import {
   KnexAnalyticsStore,
   KnexQueryExecutor,
-  type SqlQueryLogger,
-  type SqlResultsLogger,
 } from "@powerhousedao/analytics-engine-knex";
-import knexFactory from "knex";
 import type { Knex } from "knex";
+import knexFactory from "knex";
 import pkg from "pg";
 import { reviver } from "./AnalyticsSerializer.js";
 

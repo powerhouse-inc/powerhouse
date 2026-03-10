@@ -9,7 +9,6 @@ import {
   addPHEventHandlers,
   addRemoteDrive,
   BrowserPackageManager,
-  convertLegacyLibToVetraPackage,
   DocumentChangeType,
   dropAllReactorStorage,
   extractDriveSlugFromPath,
@@ -44,6 +43,8 @@ import { logger } from "document-drive";
 import type { DocumentModelModule } from "document-model";
 import { initFeatureFlags } from "../feature-flags.js";
 import { loadCommonPackage } from "./document-model.js";
+import { loadLocalPackage } from "./local-package.js";
+import { createProcessorHostModule } from "./processor-host-module.js";
 
 export async function clearReactorStorage() {
   const pg = window.ph?.reactorClientModule?.pg;
@@ -101,19 +102,10 @@ export async function createReactor() {
   const commonPackage = await loadCommonPackage();
   await packageManager.addLocalPackage("common", commonPackage);
 
-  // load external packages from virtual module if available
-  try {
-    const { loadExternalPackages } =
-      await import("virtual:ph:external-packages");
-    const externalPackages = await loadExternalPackages();
-    for (let i = 0; i < externalPackages.length; i++) {
-      const externalPkg = externalPackages[i];
-      const vetraPackage = convertLegacyLibToVetraPackage(externalPkg);
-      const name = externalPkg.manifest?.name || `external-${i}`;
-      await packageManager.addLocalPackage(name, vetraPackage);
-    }
-  } catch {
-    logger.info("No external packages to load");
+  const localPackage = await loadLocalPackage();
+
+  if (localPackage) {
+    await packageManager.addLocalPackage("local", localPackage);
   }
 
   // load packages from storage (persisted registry packages)
@@ -234,8 +226,6 @@ export async function createReactor() {
   );
 
   if (packagesWithProcessorFactories.length > 0) {
-    const { createProcessorHostModule } =
-      await import("./processor-host-module.js");
     const processorHostModule = await createProcessorHostModule();
     if (processorHostModule !== undefined) {
       await Promise.all(

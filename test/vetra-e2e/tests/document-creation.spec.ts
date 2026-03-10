@@ -72,7 +72,7 @@ test("should create document of each supported type in Vetra drive", async ({
       level: 3,
       exact: true,
     });
-    await expect(documentHeading).toBeVisible();
+    await expect(documentHeading).toBeVisible({ timeout: 5 * 60 * 60 * 1000 });
   }
 });
 

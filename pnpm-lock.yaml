@@ -437,9 +437,6 @@ importers:
       '@openfeature/web-sdk':
         specifier: 1.6.2
         version: 1.6.2(@openfeature/core@1.9.1)
-      '@powerhousedao/builder-tools':
-        specifier: workspace:*
-        version: link:../../packages/builder-tools
       '@powerhousedao/config':
         specifier: workspace:*
         version: link:../../packages/config
@@ -510,6 +507,9 @@ importers:
       '@tailwindcss/cli':
         specifier: 'catalog:'
         version: 4.1.18
+      '@tailwindcss/vite':
+        specifier: 'catalog:'
+        version: 4.1.18(vite@7.3.1(@types/node@25.2.3)(jiti@2.6.1)(lightningcss@1.31.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2))
       '@types/bun':
         specifier: 'catalog:'
         version: 1.3.8
@@ -525,6 +525,9 @@ importers:
       '@types/wicg-file-system-access':
         specifier: ^2023.10.7
         version: 2023.10.7
+      '@vitejs/plugin-react':
+        specifier: 'catalog:'
+        version: 5.1.4(vite@7.3.1(@types/node@25.2.3)(jiti@2.6.1)(lightningcss@1.31.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2))
       cypress:
         specifier: ^14.5.4
         version: 14.5.4
@@ -628,6 +631,9 @@ importers:
 
   clis/ph-cli:
     dependencies:
+      '@powerhousedao/builder-tools':
+        specifier: workspace:*
+        version: link:../../packages/builder-tools
       '@powerhousedao/codegen':
         specifier: workspace:*
         version: link:../../packages/codegen
@@ -805,18 +811,15 @@ importers:
       '@powerhousedao/analytics-engine-core':
         specifier: workspace:*
         version: link:../core
-      '@powerhousedao/analytics-engine-knex':
-        specifier: workspace:*
-        version: link:../knex
+      change-case:
+        specifier: 'catalog:'
+        version: 5.4.4
       date-fns:
         specifier: 'catalog:'
         version: 4.1.0
       events:
         specifier: 'catalog:'
         version: 3.3.0
-      knex:
-        specifier: 'catalog:'
-        version: 3.1.0(better-sqlite3@12.6.2)(mysql2@3.17.2)(mysql@2.18.1)(pg@8.18.0)(sqlite3@5.1.7)(tedious@19.2.1(@azure/core-client@1.10.1))
       luxon:
         specifier: 'catalog:'
         version: 3.7.2
@@ -923,6 +926,9 @@ importers:
       '@powerhousedao/analytics-engine-core':
         specifier: workspace:*
         version: link:../core
+      change-case:
+        specifier: 'catalog:'
+        version: 5.4.4
       date-fns:
         specifier: 'catalog:'
         version: 4.1.0
@@ -1057,6 +1063,9 @@ importers:
       vite-plugin-html:
         specifier: 'catalog:'
         version: 3.2.2(vite@7.3.1(@types/node@25.3.1)(jiti@2.6.1)(lightningcss@1.31.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2))
+      vite-plugin-node-polyfills:
+        specifier: 'catalog:'
+        version: 0.25.0(rollup@4.59.0)(vite@7.3.1(@types/node@25.3.1)(jiti@2.6.1)(lightningcss@1.31.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2))
       vite-plugin-svgr:
         specifier: 'catalog:'
         version: 4.5.0(rollup@4.59.0)(typescript@5.9.3)(vite@7.3.1(@types/node@25.3.1)(jiti@2.6.1)(lightningcss@1.31.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2))
@@ -2422,12 +2431,6 @@ importers:
       tsdown:
         specifier: 'catalog:'
         version: 0.21.0(oxc-resolver@11.19.0)(synckit@0.11.12)(typescript@5.9.3)
-      vite:
-        specifier: 'catalog:'
-        version: 7.3.1(@types/node@25.2.3)(jiti@2.6.1)(lightningcss@1.31.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2)
-      vite-plugin-node-polyfills:
-        specifier: 'catalog:'
-        version: 0.25.0(rollup@4.59.0)(vite@7.3.1(@types/node@25.2.3)(jiti@2.6.1)(lightningcss@1.31.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2))
       vitest:
         specifier: 'catalog:'
         version: 3.2.4(@types/debug@4.1.12)(@types/node@25.2.3)(@vitest/browser@3.2.4)(happy-dom@17.6.3)(jiti@2.6.1)(jsdom@24.1.3)(lightningcss@1.31.1)(msw@2.12.10(@types/node@25.2.3)(typescript@5.9.3))(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2)
@@ -27992,6 +27995,13 @@ snapshots:
       '@tailwindcss/oxide-win32-arm64-msvc': 4.1.18
       '@tailwindcss/oxide-win32-x64-msvc': 4.1.18
 
+  '@tailwindcss/vite@4.1.18(vite@7.3.1(@types/node@25.2.3)(jiti@2.6.1)(lightningcss@1.31.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2))':
+    dependencies:
+      '@tailwindcss/node': 4.1.18
+      '@tailwindcss/oxide': 4.1.18
+      tailwindcss: 4.1.18
+      vite: 7.3.1(@types/node@25.2.3)(jiti@2.6.1)(lightningcss@1.31.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2)
+
   '@tailwindcss/vite@4.1.18(vite@7.3.1(@types/node@25.3.1)(jiti@2.6.1)(lightningcss@1.31.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2))':
     dependencies:
       '@tailwindcss/node': 4.1.18
@@ -40424,6 +40434,14 @@ snapshots:
       '@rollup/plugin-inject': 5.0.5(rollup@4.59.0)
       node-stdlib-browser: 1.3.1
       vite: 7.3.1(@types/node@25.2.3)(jiti@2.6.1)(lightningcss@1.31.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2)
+    transitivePeerDependencies:
+      - rollup
+
+  vite-plugin-node-polyfills@0.25.0(rollup@4.59.0)(vite@7.3.1(@types/node@25.3.1)(jiti@2.6.1)(lightningcss@1.31.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2)):
+    dependencies:
+      '@rollup/plugin-inject': 5.0.5(rollup@4.59.0)
+      node-stdlib-browser: 1.3.1
+      vite: 7.3.1(@types/node@25.3.1)(jiti@2.6.1)(lightningcss@1.31.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2)
     transitivePeerDependencies:
       - rollup
 

@@ -28,7 +28,8 @@
     "knex": "catalog:",
     "luxon": "catalog:",
     "pg": "catalog:",
-    "@powerhousedao/analytics-engine-core": "workspace:*"
+    "@powerhousedao/analytics-engine-core": "workspace:*",
+    "change-case": "catalog:"
   },
   "devDependencies": {
     "@types/pg": "catalog:",

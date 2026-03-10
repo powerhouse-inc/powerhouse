@@ -1,11 +1,11 @@
 import type { PGlite } from "@electric-sql/pglite";
-import { type IAnalyticsProfiler } from "@powerhousedao/analytics-engine-core";
-import type {
-  IKnexQueryExecutor,
-  SqlQueryLogger,
-  SqlResultsLogger,
-} from "@powerhousedao/analytics-engine-knex";
-import type { Knex } from "knex";
+import type { PGliteWorker } from "@electric-sql/pglite/worker";
+import {
+  type IAnalyticsProfiler,
+  type ISqlExecutor,
+  type SqlQueryLogger,
+  type SqlResultsLogger,
+} from "@powerhousedao/analytics-engine-core";
 
 export const parseRawResults = (rawResults: any[]) => {
   const allValues = [];
@@ -30,9 +30,9 @@ export const parseRawResults = (rawResults: any[]) => {
   return allValues;
 };
 
-export class PGLiteQueryExecutor implements IKnexQueryExecutor {
+export class PGLiteQueryExecutor implements ISqlExecutor {
   private _index: number = 0;
-  private _sql: PGlite | null = null;
+  private _sql: PGlite | PGliteWorker | null = null;
 
   constructor(
     private readonly _profiler: IAnalyticsProfiler,
@@ -42,16 +42,15 @@ export class PGLiteQueryExecutor implements IKnexQueryExecutor {
     //
   }
 
-  init(sql: PGlite) {
+  init(sql: PGlite | PGliteWorker) {
     this._sql = sql;
   }
 
-  async execute<T extends {}, U>(query: Knex.QueryBuilder<T, U>) {
+  async execute(raw: string) {
     if (!this._sql) {
       throw new Error("PGLiteQueryExecutor not initialized");
     }
 
-    const raw = query.toString();
     const index = this._index++;
 
     if (this._queryLogger) {

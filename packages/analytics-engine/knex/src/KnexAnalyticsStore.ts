@@ -1,16 +1,16 @@
-import type { Knex } from "knex";
-import { DateTime } from "luxon";
 import {
   AnalyticsPath,
+  AnalyticsSubscriptionManager,
+  type AnalyticsDimension,
   type AnalyticsSeries,
   type AnalyticsSeriesInput,
   type AnalyticsSeriesQuery,
-  type AnalyticsDimension,
-  type IAnalyticsStore,
   type AnalyticsUpdateCallback,
-  AnalyticsSubscriptionManager,
+  type IAnalyticsStore,
 } from "@powerhousedao/analytics-engine-core";
-import { toPascalCase } from "./util.js";
+import { pascalCase } from "change-case";
+import type { Knex } from "knex";
+import { DateTime } from "luxon";
 
 type DimensionsMap = Record<string, Record<string, number[]>>;
 
@@ -147,7 +147,7 @@ export class KnexAnalyticsStore implements IAnalyticsStore {
           start: input.start.toJSDate(),
           end: input.end ? input.end.toJSDate() : null,
           source: input.source.toString("/"),
-          metric: toPascalCase(input.metric),
+          metric: pascalCase(input.metric),
           value: input.value,
           unit: input.unit || null,
           fn: input.fn || "Single",

@@ -231,7 +231,7 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     );
   }
 
-  const basePath = normalizeBasePath(env.PH_CONNECT_BASE_PATH || "/");
+  // const basePath = normalizeBasePath(env.PH_CONNECT_BASE_PATH || "/");
 
   // hide warnings unless LOG_LEVEL is set to debug
   const isDebug =
@@ -250,10 +250,8 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
   const watchTimeout = options.watchTimeout ?? env.PH_WATCH_TIMEOUT;
 
   const config: UserConfig = {
-    base: basePath,
     customLogger,
     envPrefix: ["PH_CONNECT_"],
-    envDir: false,
     optimizeDeps: {
       exclude: ["@electric-sql/pglite", "@electric-sql/pglite-tools"],
     },

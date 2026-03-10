@@ -12,18 +12,6 @@ import type { ConnectCommonOptions } from "./types.js";
 
 export const DEFAULT_CONNECT_OUTDIR = ".ph/connect-build/dist/" as const;
 
-export async function loadVite() {
-  try {
-    return await import("vite");
-  } catch (error) {
-    const viteError = new Error(
-      "Could not load 'vite'. Is it installed in your project?",
-    );
-
-    throw viteError;
-  }
-}
-
 export function commonConnectOptionsToEnv(options: ConnectCommonOptions) {
   const {
     base,

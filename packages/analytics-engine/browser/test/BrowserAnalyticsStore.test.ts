@@ -1,20 +1,23 @@
-import { DateTime } from "luxon";
+import { PGlite } from "@electric-sql/pglite";
 import {
   type AnalyticsDimension,
   AnalyticsPath,
+  defaultQueryLogger,
 } from "@powerhousedao/analytics-engine-core";
-import { MemoryAnalyticsStore } from "../src/MemoryAnalyticsStore.js";
-import { afterAll, beforeAll, it, expect } from "vitest";
-import { defaultQueryLogger } from "@powerhousedao/analytics-engine-knex";
+import { DateTime } from "luxon";
+import { afterAll, beforeAll, expect, it } from "vitest";
+import { BrowserAnalyticsStore } from "../src/BrowserAnalyticsStore.js";
 
-let store: MemoryAnalyticsStore;
+let store: BrowserAnalyticsStore;
 
 const TEST_SOURCE = AnalyticsPath.fromString(
   "test/analytics/AnalyticsStore.spec",
 );
 
 beforeAll(async () => {
-  store = new MemoryAnalyticsStore({
+  const pgLite = await PGlite.create();
+  store = new BrowserAnalyticsStore({
+    pgLite,
     queryLogger: defaultQueryLogger("memory"),
   });
   await store.init();
