@@ -5,7 +5,9 @@ import {
   type IChannel,
 } from "@powerhousedao/reactor-browser";
 import { useCallback, useState } from "react";
+import type { ConnectionStateSummary } from "../remotes-inspector.js";
 import { type SortDirection, type SortOptions } from "../utils.js";
+import { ConnectionStateBadge } from "./connection-state-badge.js";
 import { MailboxTable, type MailboxType } from "./mailbox-table.js";
 
 export type ChannelInspectorProps = {
@@ -13,13 +15,20 @@ export type ChannelInspectorProps = {
   readonly channel: IChannel;
   readonly onBack: () => void;
   readonly onRefresh?: () => void;
+  readonly connectionState?: ConnectionStateSummary;
 };
+
+function formatTimestamp(ms: number): string {
+  if (ms === 0) return "-";
+  return new Date(ms).toLocaleTimeString();
+}
 
 export function ChannelInspector({
   remoteName,
   channel,
   onBack,
   onRefresh,
+  connectionState,
 }: ChannelInspectorProps) {
   const [sorts, setSorts] = useState<
     Record<MailboxType, SortOptions | undefined>
@@ -178,6 +187,47 @@ export function ChannelInspector({
           </button>
         )}
       </div>
+
+      {connectionState && (
+        <div className="rounded border border-gray-200 bg-white p-4">
+          <h3 className="mb-3 text-sm font-semibold text-gray-900">
+            Connection State
+          </h3>
+          <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
+            <div className="flex items-center gap-2">
+              <span>State:</span>
+              <ConnectionStateBadge
+                failureCount={connectionState.failureCount}
+                state={connectionState.state}
+              />
+            </div>
+            <div>
+              Last success: {formatTimestamp(connectionState.lastSuccessUtcMs)}
+            </div>
+            <div>
+              Last failure: {formatTimestamp(connectionState.lastFailureUtcMs)}
+            </div>
+            <div>Failures: {connectionState.failureCount}</div>
+            <div>
+              Push:{" "}
+              <span
+                className={
+                  connectionState.pushBlocked
+                    ? "text-red-600"
+                    : "text-green-600"
+                }
+              >
+                {connectionState.pushBlocked ? "Blocked" : "OK"}
+              </span>
+              {connectionState.pushFailureCount > 0 && (
+                <span className="ml-1 text-red-600">
+                  ({connectionState.pushFailureCount} failures)
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {pollerControls && (
         <div className="rounded border border-gray-200 bg-white p-4">

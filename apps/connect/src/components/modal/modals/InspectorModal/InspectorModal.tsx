@@ -14,7 +14,7 @@ export const InspectorModal: React.FC = () => {
 
   const { getTables, getTableRows, getDefaultSort, onExportDb, onImportDb } =
     useDbExplorer();
-  const { getRemotes, removeRemote } = useRemotesInspector();
+  const { getRemotes, removeRemote, connectionStates } = useRemotesInspector();
   const queueInspectorProps = useQueueInspector();
   const processorsInspectorProps = useProcessorsInspector();
 
@@ -37,6 +37,7 @@ export const InspectorModal: React.FC = () => {
       remotesInspectorProps={{
         getRemotes,
         removeRemote,
+        connectionStates,
       }}
       queueInspectorProps={queueInspectorProps}
       processorsInspectorProps={processorsInspectorProps}

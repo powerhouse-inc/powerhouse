@@ -74,6 +74,30 @@ export type ChannelHealth = {
   failureCount: number;
 };
 
+export type ConnectionState =
+  | "connecting"
+  | "connected"
+  | "disconnected"
+  | "reconnecting"
+  | "error";
+
+export type ConnectionStateSnapshot = {
+  state: ConnectionState;
+  failureCount: number;
+  lastSuccessUtcMs: number;
+  lastFailureUtcMs: number;
+  pushBlocked: boolean;
+  pushFailureCount: number;
+};
+
+export type ConnectionStateChangedEvent = {
+  remoteName: string;
+  remoteId: string;
+  previous: ConnectionState;
+  current: ConnectionState;
+  snapshot: ConnectionStateSnapshot;
+};
+
 export type RemoteStatus = {
   push: ChannelHealth;
   pull: ChannelHealth;
@@ -104,6 +128,7 @@ export const SyncEventTypes = {
   SYNC_SUCCEEDED: 20002,
   SYNC_FAILED: 20003,
   DEAD_LETTER_ADDED: 20004,
+  CONNECTION_STATE_CHANGED: 20005,
 } as const;
 
 /**

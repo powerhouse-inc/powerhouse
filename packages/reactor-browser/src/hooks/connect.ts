@@ -109,6 +109,7 @@ export {
   useSync,
   useSyncList,
 } from "./reactor.js";
+export { useConnectionState, useConnectionStates } from "./connection-state.js";
 export {
   setRenown,
   useDid,

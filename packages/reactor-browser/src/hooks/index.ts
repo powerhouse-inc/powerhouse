@@ -1,4 +1,5 @@
 export { useAllowedDocumentModelModules } from "./allowed-document-model-modules.js";
+export { useConnectionState, useConnectionStates } from "./connection-state.js";
 export { useNodesInSelectedDriveOrFolder } from "./child-nodes.js";
 export {
   useAllowedDocumentTypes,

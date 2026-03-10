@@ -84,6 +84,15 @@ describe("SyncManager - Unit Tests", () => {
       deadLetter: createMockMailbox(),
       init: vi.fn().mockResolvedValue(undefined),
       shutdown: vi.fn(),
+      getConnectionState: vi.fn().mockReturnValue({
+        state: "connected",
+        failureCount: 0,
+        lastSuccessUtcMs: 0,
+        lastFailureUtcMs: 0,
+        pushBlocked: false,
+        pushFailureCount: 0,
+      }),
+      onConnectionStateChange: vi.fn().mockReturnValue(() => {}),
     };
   }
 
@@ -143,6 +152,15 @@ describe("SyncManager - Unit Tests", () => {
       deadLetter,
       init: vi.fn().mockResolvedValue(undefined),
       shutdown: vi.fn(),
+      getConnectionState: vi.fn().mockReturnValue({
+        state: "connected",
+        failureCount: 0,
+        lastSuccessUtcMs: 0,
+        lastFailureUtcMs: 0,
+        pushBlocked: false,
+        pushFailureCount: 0,
+      }),
+      onConnectionStateChange: vi.fn().mockReturnValue(() => {}),
     } as any;
 
     mockRemoteStorage = {
@@ -2443,7 +2461,15 @@ describe("SyncManager - Unit Tests", () => {
         init: vi.fn().mockResolvedValue(undefined),
         shutdown: vi.fn(),
         updateCursor: vi.fn(),
-        getHealth: vi.fn(),
+        getConnectionState: vi.fn().mockReturnValue({
+          state: "connected",
+          failureCount: 0,
+          lastSuccessUtcMs: 0,
+          lastFailureUtcMs: 0,
+          pushBlocked: false,
+          pushFailureCount: 0,
+        }),
+        onConnectionStateChange: vi.fn().mockReturnValue(() => {}),
         poller: {} as any,
         config: {} as any,
       } as any;
@@ -2601,7 +2627,15 @@ describe("SyncManager - Unit Tests", () => {
         init: vi.fn().mockResolvedValue(undefined),
         shutdown: vi.fn(),
         updateCursor: vi.fn(),
-        getHealth: vi.fn(),
+        getConnectionState: vi.fn().mockReturnValue({
+          state: "connected",
+          failureCount: 0,
+          lastSuccessUtcMs: 0,
+          lastFailureUtcMs: 0,
+          pushBlocked: false,
+          pushFailureCount: 0,
+        }),
+        onConnectionStateChange: vi.fn().mockReturnValue(() => {}),
         poller: {} as any,
         config: {} as any,
       } as any;
@@ -3013,7 +3047,15 @@ describe("SyncManager - Unit Tests", () => {
         init: vi.fn().mockResolvedValue(undefined),
         shutdown: vi.fn(),
         updateCursor: vi.fn(),
-        getHealth: vi.fn(),
+        getConnectionState: vi.fn().mockReturnValue({
+          state: "connected",
+          failureCount: 0,
+          lastSuccessUtcMs: 0,
+          lastFailureUtcMs: 0,
+          pushBlocked: false,
+          pushFailureCount: 0,
+        }),
+        onConnectionStateChange: vi.fn().mockReturnValue(() => {}),
         poller: {} as any,
         config: {} as any,
       } as any;
@@ -3689,7 +3731,15 @@ describe("SyncManager - Unit Tests", () => {
         init: vi.fn().mockResolvedValue(undefined),
         shutdown: vi.fn(),
         updateCursor: vi.fn(),
-        getHealth: vi.fn(),
+        getConnectionState: vi.fn().mockReturnValue({
+          state: "connected",
+          failureCount: 0,
+          lastSuccessUtcMs: 0,
+          lastFailureUtcMs: 0,
+          pushBlocked: false,
+          pushFailureCount: 0,
+        }),
+        onConnectionStateChange: vi.fn().mockReturnValue(() => {}),
         poller: {} as any,
         config: {} as any,
       } as any;

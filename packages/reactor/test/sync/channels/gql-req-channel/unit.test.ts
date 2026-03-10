@@ -263,8 +263,8 @@ describe("GqlRequestChannel", () => {
         createPollTimer(),
       );
 
-      const health = channel.getHealth();
-      expect(health.state).toBe("idle");
+      const health = channel.getConnectionState();
+      expect(health.state).toBe("connecting");
       expect(health.failureCount).toBe(0);
     });
 
@@ -811,12 +811,12 @@ describe("GqlRequestChannel", () => {
 
       // Wait for the immediate poll to complete and fail
       await vi.waitFor(() => {
-        expect(channel.getHealth().failureCount).toBe(1);
+        expect(channel.getConnectionState().failureCount).toBe(1);
       });
 
       await manualTimer.tick().catch(() => {});
 
-      const health = channel.getHealth();
+      const health = channel.getConnectionState();
       expect(health.failureCount).toBe(2);
       expect(health.state).toBe("error");
       await channel.shutdown();
@@ -848,12 +848,12 @@ describe("GqlRequestChannel", () => {
 
       // Wait for the immediate poll to complete (1 failure)
       await vi.waitFor(() => {
-        expect(channel.getHealth().failureCount).toBe(1);
+        expect(channel.getConnectionState().failureCount).toBe(1);
       });
 
       // Manual tick should reject (error propagated to timer)
       await expect(manualTimer.tick()).rejects.toThrow("Network error");
-      expect(channel.getHealth().failureCount).toBe(2);
+      expect(channel.getConnectionState().failureCount).toBe(2);
     });
 
     it("should reset failure count on success", async () => {
@@ -898,17 +898,17 @@ describe("GqlRequestChannel", () => {
 
       // Wait for immediate poll which fails (call 2)
       await vi.waitFor(() => {
-        expect(channel.getHealth().failureCount).toBe(1);
+        expect(channel.getConnectionState().failureCount).toBe(1);
       });
 
       // Call 3 fails
       await manualTimer.tick().catch(() => {});
-      expect(channel.getHealth().failureCount).toBe(2);
+      expect(channel.getConnectionState().failureCount).toBe(2);
 
       // Call 4 succeeds - failureCount resets
       await manualTimer.tick();
-      expect(channel.getHealth().failureCount).toBe(0);
-      expect(channel.getHealth().state).toBe("idle");
+      expect(channel.getConnectionState().failureCount).toBe(0);
+      expect(channel.getConnectionState().state).toBe("connected");
       await channel.shutdown();
     });
 
@@ -944,12 +944,12 @@ describe("GqlRequestChannel", () => {
 
       // Wait for the immediate poll to complete
       await vi.waitFor(() => {
-        expect(channel.getHealth().failureCount).toBe(1);
+        expect(channel.getConnectionState().failureCount).toBe(1);
       });
 
       // Another poll failure
       await manualTimer.tick().catch(() => {});
-      expect(channel.getHealth().failureCount).toBe(2);
+      expect(channel.getConnectionState().failureCount).toBe(2);
       await channel.shutdown();
     });
 
@@ -983,12 +983,12 @@ describe("GqlRequestChannel", () => {
 
       // Wait for the immediate poll to complete
       await vi.waitFor(() => {
-        expect(channel.getHealth().failureCount).toBe(1);
+        expect(channel.getConnectionState().failureCount).toBe(1);
       });
 
       // Another poll failure
       await manualTimer.tick().catch(() => {});
-      expect(channel.getHealth().failureCount).toBe(2);
+      expect(channel.getConnectionState().failureCount).toBe(2);
       await channel.shutdown();
     });
 
@@ -1048,7 +1048,7 @@ describe("GqlRequestChannel", () => {
       // Timer should NOT have received a rejection (poll returned, didn't throw)
       // Verify by checking that manual tick resolves (not rejects)
       await expect(manualTimer.tick()).resolves.toBeUndefined();
-      expect(channel.getHealth().failureCount).toBe(0);
+      expect(channel.getConnectionState().failureCount).toBe(0);
       await channel.shutdown();
     });
 
@@ -1115,8 +1115,8 @@ describe("GqlRequestChannel", () => {
       await vi.advanceTimersByTimeAsync(1000);
 
       // Failure count should be reset after successful recovery
-      expect(channel.getHealth().failureCount).toBe(0);
-      expect(channel.getHealth().state).toBe("idle");
+      expect(channel.getConnectionState().failureCount).toBe(0);
+      expect(channel.getConnectionState().state).toBe("connected");
 
       await channel.shutdown();
     });
@@ -1233,7 +1233,7 @@ describe("GqlRequestChannel", () => {
       const beforePoll = Date.now();
       await vi.advanceTimersByTimeAsync(5000);
 
-      const health = channel.getHealth();
+      const health = channel.getConnectionState();
       expect(health.lastSuccessUtcMs).toBeGreaterThanOrEqual(beforePoll);
       await channel.shutdown();
     });
@@ -1264,7 +1264,7 @@ describe("GqlRequestChannel", () => {
       const beforePoll = Date.now();
       await vi.advanceTimersByTimeAsync(5000);
 
-      const health = channel.getHealth();
+      const health = channel.getConnectionState();
       expect(health.lastFailureUtcMs).toBeGreaterThanOrEqual(beforePoll);
       await channel.shutdown();
     });
@@ -1309,16 +1309,16 @@ describe("GqlRequestChannel", () => {
       await channel.init();
 
       // Initial state after init: idle
-      expect(channel.getHealth().state).toBe("idle");
+      expect(channel.getConnectionState().state).toBe("connected");
 
       // After success: idle
       await vi.advanceTimersByTimeAsync(1000);
-      expect(channel.getHealth().state).toBe("idle");
+      expect(channel.getConnectionState().state).toBe("connected");
 
       // After failure: error (has failures)
       shouldFail = true;
       await vi.advanceTimersByTimeAsync(1000);
-      expect(channel.getHealth().state).toBe("error");
+      expect(channel.getConnectionState().state).toBe("error");
     });
   });
 
@@ -1877,7 +1877,7 @@ describe("GqlRequestChannel", () => {
       expect(manualTimer.isRunning()).toBe(true);
 
       await manualTimer.tick();
-      expect(channel.getHealth().failureCount).toBe(0);
+      expect(channel.getConnectionState().failureCount).toBe(0);
 
       await channel.shutdown();
     });
