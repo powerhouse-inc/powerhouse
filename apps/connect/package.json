@@ -47,6 +47,7 @@
     "dev": "vite dev",
     "build:css": "pnpm exec tailwindcss -i ./src/index.css -o ./dist/style.css",
     "build:bundle": "tsdown",
+    "postbuild:bundle": "pnpm build:css",
     "build:debug": "PH_DEBUG_BUILD=true vite build",
     "preview": "vite preview",
     "cy:open": "cypress open",

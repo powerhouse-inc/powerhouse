@@ -17,9 +17,7 @@ import {
   login,
   ReactorClientDocumentCache,
   refreshReactorDataClient,
-  setConnectCrypto,
   setDefaultPHGlobalConfig,
-  setDid,
   setDocumentCache,
   setDrives,
   setFeatures,
@@ -160,8 +158,6 @@ export async function createReactor() {
   setReactorClientModule(reactorClientModule);
   setReactorClient(reactorClientModule.client);
   setDocumentCache(documentCache);
-  setConnectCrypto(renownCrypto);
-  setDid(renown.did);
   setRenown(renown);
   setDrives(drives);
   setSelectedDrive(driveSlug);
