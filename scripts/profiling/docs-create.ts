@@ -292,9 +292,9 @@ async function pollJobAsync(
   const deadline = performance.now() + timeoutMs;
   let timedOut = false;
   while (true) {
-    await new Promise<void>((resolve) =>
-      setTimeout(resolve, JOB_POLL_INTERVAL_MS),
-    );
+    // Check deadline before sleeping so timeouts shorter than
+    // JOB_POLL_INTERVAL_MS still attempt at least one poll on the first
+    // iteration rather than timing out in the sleep.
     if (performance.now() >= deadline) {
       timedOut = true;
       process.stderr.write(
@@ -302,6 +302,9 @@ async function pollJobAsync(
       );
       break;
     }
+    await new Promise<void>((resolve) =>
+      setTimeout(resolve, JOB_POLL_INTERVAL_MS),
+    );
     const { jobStatus } = await client.request<JobStatusResponse>(
       JOB_STATUS_QUERY,
       { jobId: job.jobId },
@@ -483,7 +486,11 @@ Examples:
     process.exit(1);
   }
 
-  if (isNaN(asyncTimeoutMs) || asyncTimeoutMs < 1) {
+  if (
+    isNaN(asyncTimeoutMs) ||
+    asyncTimeoutMs < 1 ||
+    !Number.isInteger(asyncTimeoutMs)
+  ) {
     console.error(
       `Error: Invalid --async-timeout value: must be a positive integer (ms).`,
     );
@@ -500,6 +507,10 @@ Examples:
     console.warn(
       `Warning: --batch-size=${batchSize} has no effect when operations is 0.`,
     );
+  }
+
+  if (operations === 0 && asyncMutate) {
+    console.warn(`Warning: --async has no effect when operations is 0.`);
   }
 
   if (docIds.length > 0 && operations === 0) {
@@ -672,6 +683,7 @@ async function main() {
       } | null = null;
       const allDurations: number[] = [];
       let timedOutCount = 0;
+      let sampledJobCount = 0;
 
       for (let i = 0; i < documentIds.length; i++) {
         const docNum = i + 1;
@@ -715,7 +727,12 @@ async function main() {
                   `Empty mutation response for request ${globalReqNum}`,
                 );
               }
-              const jobId = resultValues.at(-1) as string;
+              const jobId = resultValues.at(-1);
+              if (typeof jobId !== "string" || jobId === "") {
+                throw new Error(
+                  `Invalid job ID in mutation response for request ${globalReqNum}: ${JSON.stringify(jobId)}`,
+                );
+              }
               if (
                 globalReqNum % asyncPollRate === 0 ||
                 globalReqNum === totalRequests
@@ -769,6 +786,7 @@ async function main() {
               timedOutCount++;
               continue;
             }
+            sampledJobCount++;
             if (
               result.minOp &&
               (overallMinOp === null ||
@@ -888,8 +906,12 @@ async function main() {
           : "";
       const timedOutStr =
         timedOutCount > 0 ? `, timed-out jobs: ${timedOutCount}` : "";
+      const sampledStr =
+        sampledJobCount > 0
+          ? ` (stats from ${sampledJobCount} sampled jobs)`
+          : "";
       console.log(
-        `  Completed ${totalOps} operations in ${opsDuration}s (avg: ${avgMsPerOp}ms/op${overallMinMax}${timedOutStr})`,
+        `  Completed ${totalOps} operations in ${opsDuration}s (avg: ${avgMsPerOp}ms/op${overallMinMax}${timedOutStr})${sampledStr}`,
       );
       if (showPercentiles) {
         const percentiles = calculatePercentiles(allDurations);
