@@ -1,10 +1,10 @@
-import type { ISigner } from "document-model";
 import { DEFAULT_RENOWN_URL } from "./constants.js";
 import { RenownCryptoSigner, type IRenownCrypto } from "./crypto/index.js";
 import { MemoryStorage } from "./storage/common.js";
 import type {
   CreateBearerTokenOptions,
   IRenown,
+  ISigner,
   LoginStatus,
   PowerhouseVerifiableCredential,
   ProfileFetcher,

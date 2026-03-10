@@ -1,2 +1,3 @@
-// Node.js-specific exports
+export * from "./common.js";
+
 export { NodeKeyStorage } from "./node-key-storage.js";

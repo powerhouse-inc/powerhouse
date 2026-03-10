@@ -5,6 +5,8 @@ import type { IRenownCrypto } from "./crypto/types.js";
 import type { IEventEmitter } from "./event/types.js";
 import type { IStorage } from "./storage/common.js";
 
+export type { ISigner };
+
 export type RenownProfile = {
   documentId: string;
   username: string | null;
