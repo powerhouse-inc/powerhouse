@@ -1,3 +1,13 @@
+## 6.0.0-dev.76 (2026-03-10)
+
+### 🩹 Fixes
+
+- **renown:** cleaned up exports ([e103574e2](https://github.com/powerhouse-inc/powerhouse/commit/e103574e2))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 6.0.0-dev.75 (2026-03-10)
 
 ### 🩹 Fixes
