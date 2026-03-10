@@ -1,11 +1,13 @@
-import type { ISigner } from "document-model";
 import { DEFAULT_RENOWN_URL } from "./constants.js";
 import { RenownCryptoSigner, type IRenownCrypto } from "./crypto/index.js";
 import { MemoryStorage } from "./storage/common.js";
 import type {
   CreateBearerTokenOptions,
   IRenown,
+  ISigner,
+  LoginStatus,
   PowerhouseVerifiableCredential,
+  ProfileFetcher,
   RenownEventEmitter,
   RenownEvents,
   RenownStorage,
@@ -24,6 +26,8 @@ export class Renown implements IRenown {
   #appName: string;
   #crypto: IRenownCrypto;
   #signer: ISigner;
+  #profileFetcher?: ProfileFetcher;
+  #status: LoginStatus = "initial";
 
   constructor(
     store: RenownStorage,
@@ -31,12 +35,14 @@ export class Renown implements IRenown {
     crypto: IRenownCrypto,
     appName: string,
     baseUrl = DEFAULT_RENOWN_URL,
+    profileFetcher?: ProfileFetcher,
   ) {
     this.#store = store;
     this.#eventEmitter = eventEmitter;
     this.#baseUrl = baseUrl;
     this.#crypto = crypto;
     this.#appName = appName;
+    this.#profileFetcher = profileFetcher;
     this.#signer = new RenownCryptoSigner(crypto, this.#appName, this.user);
 
     this.on("user", (user) => {
@@ -52,12 +58,29 @@ export class Renown implements IRenown {
     return this.#store.get("user");
   }
 
+  get status() {
+    return this.#status;
+  }
+
   get signer() {
     return this.#signer;
   }
 
+  get crypto() {
+    return this.#crypto;
+  }
+
   get did() {
     return this.#crypto.did;
+  }
+
+  get profileFetcher() {
+    return this.#profileFetcher;
+  }
+
+  #updateStatus(status: LoginStatus) {
+    this.#status = status;
+    this.#eventEmitter.emit("status", status);
   }
 
   #updateUser(user: User | undefined) {
@@ -70,6 +93,7 @@ export class Renown implements IRenown {
   }
 
   async login(userDid: string): Promise<User> {
+    this.#updateStatus("checking");
     try {
       const result = parsePkhDid(userDid);
       const credential = await this.#getCredential(
@@ -82,6 +106,16 @@ export class Renown implements IRenown {
         this.#updateUser(undefined);
         throw new Error("Credential not found");
       }
+
+      if (
+        !(
+          credential.issuer.id === userDid &&
+          credential.credentialSubject.id === this.did
+        )
+      ) {
+        throw new Error("Invalid credential");
+      }
+
       const user: User = {
         ...result,
         address: credential.issuer.ethereumAddress,
@@ -89,28 +123,42 @@ export class Renown implements IRenown {
         credential,
       };
 
-      // TODO
-      //   getEnsInfo(user.address, user.chainId)
-      //     .then((ens) => {
-      //       if (
-      //         this.user?.address === user.address &&
-      //         this.user.chainId === user.chainId
-      //       ) {
-      //         this.#updateUser({ ...this.user, ens });
-      //       }
-      //     })
-      //     .catch(logger.error);
-
       this.#updateUser(user);
+      this.#updateStatus("authorized");
+
+      // Fetch profile data in the background if a fetcher is configured
+      if (this.#profileFetcher) {
+        this.#profileFetcher(user, this.#baseUrl)
+          .then((profile) => {
+            if (
+              profile &&
+              this.user?.address === user.address &&
+              this.user.chainId === user.chainId
+            ) {
+              this.#updateUser({
+                ...this.user,
+                profile,
+                ens: {
+                  name: profile.username ?? undefined,
+                  avatarUrl: profile.userImage ?? undefined,
+                },
+              });
+            }
+          })
+          .catch(console.error);
+      }
+
       return user;
     } catch (error) {
       this.#updateUser(undefined);
+      this.#updateStatus("not-authorized");
       throw error;
     }
   }
 
   logout() {
     this.#updateUser(undefined);
+    this.#updateStatus("initial");
     return Promise.resolve();
   }
 

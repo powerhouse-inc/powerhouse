@@ -10,9 +10,8 @@ export async function signAction(action: Action, document: PHDocument) {
     document.header.documentType,
   );
   const reducer = documentModelModule.reducer;
-  const user = window.ph?.user;
-  const connectCrypto = window.ph?.connectCrypto;
-  if (!user || !connectCrypto) return action;
+  const renown = window.ph?.renown;
+  if (!renown?.user) return action;
   if (!action.context?.signer) return action;
 
   const actionSigner = action.context.signer;
@@ -21,7 +20,7 @@ export async function signAction(action: Action, document: PHDocument) {
     reducer,
     document,
     actionSigner,
-    connectCrypto.sign,
+    renown.crypto.sign,
   );
 
   // TODO: this is super dangerous and is caused by the `buildSignedAction` function returning an `Operation` instead of an `Action`
@@ -29,19 +28,18 @@ export async function signAction(action: Action, document: PHDocument) {
 }
 
 export function addActionContext(action: Action) {
-  const user = window.ph?.user;
-  const connectDid = window.ph?.did;
-  if (!user) return action;
+  const renown = window.ph?.renown;
+  if (!renown?.user) return action;
 
   const signer: ActionSigner = {
     app: {
       name: "Connect",
-      key: connectDid || "",
+      key: renown.did,
     },
     user: {
-      address: user.address,
-      networkId: user.networkId,
-      chainId: user.chainId,
+      address: renown.user.address,
+      networkId: renown.user.networkId,
+      chainId: renown.user.chainId,
     },
     signatures: [],
   };

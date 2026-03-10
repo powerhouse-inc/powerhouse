@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/reactor-api",
-  "version": "6.0.0-dev.71",
+  "version": "6.0.0-dev.77",
   "description": "",
   "type": "module",
   "repository": {
@@ -51,7 +51,9 @@
     "@as-integrations/express4": "^1.1.2",
     "@electric-sql/pglite": "catalog:",
     "@opentelemetry/auto-instrumentations-node": "^0.57.1",
+    "@opentelemetry/exporter-metrics-otlp-http": "^0.57.2",
     "@opentelemetry/exporter-trace-otlp-http": "^0.57.2",
+    "@opentelemetry/sdk-metrics": "^1.29.0",
     "@opentelemetry/resources": "^1.29.0",
     "@opentelemetry/sdk-node": "^0.57.2",
     "@opentelemetry/sdk-trace-base": "^1.29.0",

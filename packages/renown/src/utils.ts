@@ -25,6 +25,12 @@ export type ILogger = {
   error: (message: string, ...replacements: any[]) => void;
 };
 
+/**
+ * Parse a DID:pkh string to extract network, chain ID, and address information
+ * @param did - The DID string in format "did:pkh:networkId:chainId:address"
+ * @returns Parsed DID information
+ * @throws Error if the DID format is invalid
+ */
 export function parsePkhDid(did: string): PKHDid {
   const parts = did.split(":");
   if (!did.startsWith("did:pkh:") || parts.length !== 5) {

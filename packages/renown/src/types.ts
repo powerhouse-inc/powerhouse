@@ -1,19 +1,49 @@
 import type { Verifiable, VerifiedCredential } from "did-jwt-vc";
 import type { User as EditorUser, ISigner } from "document-model";
 import type { CREDENTIAL_TYPES } from "./constants.js";
+import type { IRenownCrypto } from "./crypto/types.js";
 import type { IEventEmitter } from "./event/types.js";
 import type { IStorage } from "./storage/common.js";
 
-// Internal user type for Renown SDK (includes credential)
+export type { ISigner };
+
+export type RenownProfile = {
+  documentId: string;
+  username: string | null;
+  ethAddress: string | null;
+  userImage: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+// Internal user type for Renown SDK (includes credential and profile)
 export type InternalUser = EditorUser & {
   did: string;
   credential: PowerhouseVerifiableCredential | undefined;
+  profile?: RenownProfile;
 };
 
 // Export as User for backward compatibility within the package
 export type User = InternalUser;
 
+/**
+ * Strategy function for fetching user profile data.
+ * Called after successful authentication to enrich the user object.
+ * Should return the user's Renown profile, or undefined if not available.
+ * Must not throw — return undefined on failure.
+ */
+export type ProfileFetcher = (
+  user: User,
+  baseUrl: string,
+) => Promise<RenownProfile | undefined>;
+
 export type Unsubscribe = () => void;
+
+export type LoginStatus =
+  | "initial"
+  | "checking"
+  | "authorized"
+  | "not-authorized";
 
 export type RenownStorageMap = { user: InternalUser | undefined };
 
@@ -21,6 +51,7 @@ export type RenownStorage = IStorage<RenownStorageMap>;
 
 export type RenownEvents = {
   user: User | undefined;
+  status: LoginStatus;
 };
 
 export type RenownEventEmitter = IEventEmitter<RenownEvents>;
@@ -28,10 +59,13 @@ export type RenownEventEmitter = IEventEmitter<RenownEvents>;
 export interface IRenown extends Pick<RenownEventEmitter, "on"> {
   readonly baseUrl: string;
   readonly user: User | undefined;
+  readonly status: LoginStatus;
   login: (userDid: string) => Promise<User>;
   logout: () => Promise<void>;
+  readonly crypto: IRenownCrypto;
   readonly signer: ISigner;
   readonly did: string;
+  readonly profileFetcher: ProfileFetcher | undefined;
   verifyBearerToken: (token: string) => Promise<false | VerifiedCredential>;
   getBearerToken: (
     options: CreateBearerTokenOptions,

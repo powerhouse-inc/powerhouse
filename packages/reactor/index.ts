@@ -231,6 +231,7 @@ export {
   type ChannelConfig,
   type ChannelHealth,
   type ChannelMeta,
+  type DeadLetterAddedEvent,
   type GqlChannelConfig,
   type IChannel,
   type IChannelFactory,

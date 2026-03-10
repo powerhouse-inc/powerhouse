@@ -3,7 +3,7 @@ import type {
   IReactorClient,
   ReactorClientModule,
 } from "@powerhousedao/reactor";
-import type { DID, IConnectCrypto, IRenown, User } from "@renown/sdk";
+import type { IRenown } from "@renown/sdk";
 import type { DocumentDriveDocument } from "document-drive";
 import type { PHGlobalConfig } from "./config.js";
 import type { IDocumentCache } from "./documents.js";
@@ -20,11 +20,7 @@ export type PHGlobal = PHGlobalConfig & {
   loading?: boolean;
   reactorClientModule?: BrowserReactorClientModule;
   reactorClient?: IReactorClient;
-  connectCrypto?: IConnectCrypto;
-  did?: DID;
   renown?: IRenown;
-  user?: User;
-  loginStatus?: LoginStatus;
   vetraPackageManager?: IPackageManager;
   drives?: DocumentDriveDocument[];
   documentCache?: IDocumentCache;
@@ -59,12 +55,6 @@ export type PHGlobalEventHandlerAdders = Record<
 export type SetEvent<TKey extends PHGlobalKey> = CustomEvent<{
   [key in TKey]: PHGlobal[TKey] | undefined;
 }>;
-
-export type LoginStatus =
-  | "initial"
-  | "checking"
-  | "not-authorized"
-  | "authorized";
 
 declare global {
   interface Window {

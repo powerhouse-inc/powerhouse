@@ -1,3 +1,4 @@
+export { login, logout, openRenown } from "../renown/utils.js";
 export { addPHEventHandlers } from "./add-ph-event-handlers.js";
 export {
   setAllowList,
@@ -94,12 +95,9 @@ export {
   useSetPHGlobalConfig,
 } from "./config/set-config-by-object.js";
 export { usePHGlobalConfigByKey } from "./config/use-value-by-key.js";
-export { setConnectCrypto, useConnectCrypto, useSign } from "./crypto.js";
-export { setDid, useDid } from "./did.js";
 export { setDocumentCache, useDocumentCache } from "./document-cache.js";
 export { setDrives } from "./drives.js";
 export { setLoading, useLoading } from "./loading.js";
-export { setLoginStatus, useLoginStatus } from "./login-status.js";
 export {
   setReactorClient,
   setReactorClientModule,
@@ -111,6 +109,10 @@ export {
   useSync,
   useSyncList,
 } from "./reactor.js";
-export { setRenown, useRenown } from "./renown.js";
-export { login, logout } from "../renown/utils.js";
-export { setUser, useUser } from "./user.js";
+export {
+  setRenown,
+  useDid,
+  useLoginStatus,
+  useRenown,
+  useUser,
+} from "./renown.js";

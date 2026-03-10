@@ -37,13 +37,14 @@ import {
 } from "./sync-status-tracker.js";
 import type {
   ChannelConfig,
+  DeadLetterAddedEvent,
   RemoteFilter,
   RemoteOptions,
   RemoteRecord,
   RemoteStatus,
   SyncResult,
 } from "./types.js";
-import { ChannelErrorSource } from "./types.js";
+import { ChannelErrorSource, SyncEventTypes } from "./types.js";
 import {
   batchOperationsByDocument,
   createIdleHealth,
@@ -367,6 +368,16 @@ export class SyncManager implements ISyncManager {
             err instanceof Error ? err.message : String(err),
           );
         });
+
+        void this.eventBus
+          .emit(SyncEventTypes.DEAD_LETTER_ADDED, {
+            id: record.id,
+            jobId: record.jobId,
+            remoteName: record.remoteName,
+            documentId: record.documentId,
+            errorSource: record.errorSource,
+          } satisfies DeadLetterAddedEvent)
+          .catch(() => {});
       }
 
       // Evict oldest dead letters from mailbox if over capacity
