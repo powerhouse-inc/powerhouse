@@ -1,6 +1,6 @@
 # Relational database processor
 
-In this chapter, we will implement a **Todo-List** relational database processor. This processor receives processed operations from the reactor and can use the `prevState`, `resultingState`, or data from the operations themselves to populate a database.
+In this chapter, we will implement a **Todo-List** relational database processor. This processor receives operations from the reactor and can use `resultingState` (from the operation context) or data from the operations themselves to populate a database.
 
 **What is a Relational Database Processor?**
 

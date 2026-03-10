@@ -61,6 +61,6 @@ The processor pipeline works as follows:
 - **Within a processor**: Operations arrive sorted by ordinal (chronological order)
 - **Between processors**: Processors for the same drive execute in parallel — there is no inter-processor ordering guarantee
 - **Per-document serialization**: The queue serializes execution per document, even across scopes and branches
-- **Catch-up on restart**: Processors automatically replay missed operations after a restart (tracked via `ViewState` table)
+- **Catch-up on restart**: Processors automatically replay missed operations after a restart (each processor's progress is tracked via the `ProcessorCursor` table)
 
 If you are working with the Reactor directly or need additional information regarding its architecture you can visit: https://github.com/powerhouse-inc/powerhouse/blob/main/packages/reactor/docs/ARCHITECTURE.md

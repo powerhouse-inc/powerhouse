@@ -49,11 +49,11 @@ This function appears complicated at first, but provides for great flexibility.
 
 The outside function (`(module: IProcessorHostModule) => ProcessorFactory`) will be called by the host application (`Reactor`, `Connect`, etc) a single time at initialization. This is intended to resolve external dependencies through the `module` object. In the case of this processor, you can see how the `module` object contains the `analyticsStore`.
 
-Next, for each drive created, the returned function (`(driveHeader: PHDocumentHeader): ProcessorRecord[]`) will be called. The `driveHeader` provides access to `driveHeader.id`, `driveHeader.type`, and other document header fields. Applications are free to reuse processors or pass in application-specific dependencies in to each processor.
+Next, for each drive created, the returned function (`(driveHeader: PHDocumentHeader): ProcessorRecord[]`) will be called. The `driveHeader` provides access to `driveHeader.id`, `driveHeader.documentType`, `driveHeader.name`, and other document header fields. Applications are free to reuse processors or pass in application-specific dependencies in to each processor.
 
 The `filter` parameter allows a user to tune which updates the processor receives. Usage is straightforward: each field of the filter parameter can receive one to many patterns. The array for each field describes an `OR` operator. That is, `["a", "b"]` would match `"a"` or `"b"`. However, matches across fields describe an `AND` operator. That is, an update must match on `branch` `AND` `documentId` `AND` `documentType` `AND` `scope`.
 
-Globs are accepted as input, but not regexes.
+Use `"*"` as a wildcard to match all values for a field. Exact string matching is used otherwise.
 
 ```
 {
@@ -123,9 +123,9 @@ This method receives a flat list of `OperationWithContext` items. Each item dest
   - `ordinal` — a global monotonically increasing number for cross-document ordering
 
 - **`operation`** carries the operation itself:
-  - `action` — contains `type` (the action name) and `input` (the action payload)
+  - `action` — an `Action` object with `type` (the action name), `input` (the action payload), `timestampUtcMs` (when the action was created), `id`, and `scope`
   - `index` — the operation's position in the document's history
-  - `timestampUtcMs` — when the operation was created
+  - `timestampUtcMs` — when the operation was recorded (also available on the action)
   - `hash` — hash of the resulting document data
 
 > It is best practice to batch insert all updates to the analytics system. The examples below demonstrate buffering inputs and flushing in chunks for optimal performance.
