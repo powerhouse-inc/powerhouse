@@ -2,7 +2,7 @@ FROM node:22-slim AS base
 RUN npm install -g pnpm@10.18.0
 WORKDIR /app
 
-# -- Install stage --
+# -- Install stage (prod deps only) --
 FROM base AS install
 COPY package.json ./
 # Resolve pnpm catalog: references to allow standalone install
@@ -34,6 +34,7 @@ RUN echo '{ \
   "include": ["src/**/*"] \
 }' > tsconfig.json
 RUN pnpm install
+RUN pnpm add -D typescript @types/node
 RUN pnpm exec tsc
 
 # -- Runtime stage --
