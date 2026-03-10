@@ -4,12 +4,12 @@ WORKDIR /app
 
 # -- Install stage --
 FROM base AS install
-COPY package.json ./
+COPY package.json pnpm-workspace.yaml* ./
 RUN pnpm install --prod
 
 # -- Build stage --
 FROM base AS build
-COPY package.json tsconfig.json ./
+COPY package.json pnpm-workspace.yaml* tsconfig.json ./
 COPY src/ src/
 # Inline the extended tsconfig options so tsc works without the monorepo root
 RUN echo '{ \
