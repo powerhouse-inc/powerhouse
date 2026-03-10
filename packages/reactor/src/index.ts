@@ -268,5 +268,7 @@ export type {
   ProcessorFactory,
   ProcessorFilter,
   ProcessorRecord,
+  ProcessorStatus,
+  TrackedProcessor,
 } from "@powerhousedao/shared/processors";
 export { ProcessorManager } from "./processors/index.js";

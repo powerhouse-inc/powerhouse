@@ -34,10 +34,24 @@ export interface SlugMappingTable {
   updatedAt: Generated<Date>;
 }
 
+export interface ProcessorCursorTable {
+  processorId: string;
+  factoryId: string;
+  driveId: string;
+  processorIndex: number;
+  lastOrdinal: Generated<number>;
+  status: Generated<string>;
+  lastError: string | null;
+  lastErrorTimestamp: Date | null;
+  createdAt: Generated<Date>;
+  updatedAt: Generated<Date>;
+}
+
 export interface DocumentViewDatabase {
   ViewState: ViewStateTable;
   DocumentSnapshot: DocumentSnapshotTable;
   SlugMapping: SlugMappingTable;
+  ProcessorCursor: ProcessorCursorTable;
 }
 
 export type ViewStateRow = Selectable<ViewStateTable>;
@@ -51,3 +65,7 @@ export type UpdateableDocumentSnapshot = Updateable<DocumentSnapshotTable>;
 export type SlugMappingRow = Selectable<SlugMappingTable>;
 export type InsertableSlugMapping = Insertable<SlugMappingTable>;
 export type UpdateableSlugMapping = Updateable<SlugMappingTable>;
+
+export type ProcessorCursorRow = Selectable<ProcessorCursorTable>;
+export type InsertableProcessorCursor = Insertable<ProcessorCursorTable>;
+export type UpdateableProcessorCursor = Updateable<ProcessorCursorTable>;
