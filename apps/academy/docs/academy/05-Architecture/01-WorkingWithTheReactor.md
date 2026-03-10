@@ -46,6 +46,21 @@ This modular, flexible infrastructure enables organizations to build efficient a
 In addition to the choice of storage, Reactors also have other configurations.
 
 - The **operational data** and **read models** associated with the document models inside a reactor allow to query the gathered data inside a document model or quickly visualize the crucial insights at a glance.
-- **Listeners**, which continuously listen to any changes in a document model, help us to connect additional tools such as codegenerators and scripts to the reactors and the document models it holds
+- **Processors** are components that receive operations and perform side effects — analytics tracking, relational database indexing, webhooks, and more. You register processor factories with the reactor, and it automatically creates processor instances for each drive.
 
-If you are working with the Reactor directly or need additional information regarding it's architecture you can visit:  https://github.com/powerhouse-inc/powerhouse/blob/main/packages/reactor/docs/ARCHITECTURE.md
+The processor pipeline works as follows:
+
+1. **Operations are written** — a job completes its write phase, persisting operations to storage
+2. **Pre-ready read models update** — built-in read models like `DocumentView` and `DocumentIndexer` update their state
+3. **`JOB_READ_READY` event fires** — signaling that the document is fully readable
+4. **Post-ready read models update** — the `ProcessorManager` routes matching operations to user-defined processors via `onOperations()`
+
+### Ordering guarantees
+
+- **Global ordinal**: Every operation gets a monotonically increasing `ordinal` in its `OperationContext`, enabling cross-document ordering
+- **Within a processor**: Operations arrive sorted by ordinal (chronological order)
+- **Between processors**: Processors for the same drive execute in parallel — there is no inter-processor ordering guarantee
+- **Per-document serialization**: The queue serializes execution per document, even across scopes and branches
+- **Catch-up on restart**: Processors automatically replay missed operations after a restart (tracked via `ViewState` table)
+
+If you are working with the Reactor directly or need additional information regarding its architecture you can visit: https://github.com/powerhouse-inc/powerhouse/blob/main/packages/reactor/docs/ARCHITECTURE.md

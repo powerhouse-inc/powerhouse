@@ -50,7 +50,7 @@ The migration file contains `up` and `down` functions that are called when the p
 In the migration.ts file you'll find an example of the todo table default schema:
 
 ```ts
-import { type IRelationalDb } from "document-drive/processors/types";
+import { type IRelationalDb } from "@powerhousedao/reactor-browser";
 
 export async function up(db: IRelationalDb<any>): Promise<void> {
   // Create table - this runs when the processor starts
@@ -120,19 +120,24 @@ Filters determine which document changes your processor will respond to. This is
 - **Scalability**: Distribute processing load across multiple processors
 
 ```ts
-import {
-  type ProcessorRecord,
-  type IProcessorHostModule,
-} from "document-drive/processors/types";
-import { type RelationalDbProcessorFilter } from "document-drive";
-import { TodoIndexerProcessor } from "./todo-indexer/index.js";
+import type {
+  ProcessorRecord,
+  IProcessorHostModule,
+  ProcessorFilter,
+} from "@powerhousedao/reactor-browser";
+import type { PHDocumentHeader } from "document-model";
+import type { ProcessorApp } from "@powerhousedao/common";
+import { TodoIndexerProcessor } from "./index.js";
 
 export const todoIndexerProcessorFactory =
   (module: IProcessorHostModule) =>
-  async (driveId: string): Promise<ProcessorRecord[]> => {
+  async (
+    driveHeader: PHDocumentHeader,
+    processorApp?: ProcessorApp,
+  ): Promise<ProcessorRecord[]> => {
     // Create a namespace for the processor and the provided drive id
     // Namespaces prevent data collisions between different drives
-    const namespace = TodoIndexerProcessor.getNamespace(driveId);
+    const namespace = TodoIndexerProcessor.getNamespace(driveHeader.id);
 
     // Create a namespaced db for the processor
     // This ensures each drive gets its own isolated database tables
@@ -143,7 +148,7 @@ export const todoIndexerProcessorFactory =
 
     // Create a filter for the processor
     // This determines which document changes trigger the processor
-    const filter: RelationalDbProcessorFilter = {
+    const filter: ProcessorFilter = {
       branch: ["main"], // Only process changes from the "main" branch
       documentId: ["*"], // Process changes from any document ID (* = wildcard)
       documentType: ["powerhouse/todo-list"], // Only process todo-list documents
@@ -177,27 +182,22 @@ Now implement the actual processor logic in `processors/todo-indexer/index.ts` b
 The processor has several key methods:
 
 - **`initAndUpgrade()`**: Runs once when the processor starts (perfect for running migrations)
-- **`onStrands()`**: Runs every time relevant document changes occur (this is where the main logic goes)
+- **`onOperations()`**: Runs every time relevant document changes occur (this is where the main logic goes)
 - **`onDisconnect()`**: Cleanup when the processor shuts down
 
-**What are "Strands"?**
-Strands represent a batch of operations that happened to documents. Each strand contains:
+**What is `OperationWithContext`?**
 
-- Document ID and metadata
-- Array of operations (create, update, delete, etc.)
-- Previous and resulting document states
+Processors receive a flat list of `OperationWithContext[]` items. Each item carries both the operation and its context:
+
+- **`context`**: `documentId`, `documentType`, `scope`, `branch`, `ordinal` (global ordering), and `resultingState` (JSON string of the document state after the operation)
+- **`operation`**: `action` (with `type` and `input`), `index`, `timestampUtcMs`, `hash`
 
 ```ts
-import { type IRelationalDb } from "document-drive/processors/types";
-import { RelationalDbProcessor } from "document-drive/processors/relational";
-import { type InternalTransmitterUpdate } from "document-drive";
-import type { TodoListDocument } from "../../document-models/todo-list/index.js";
+import { RelationalDbProcessor } from "@powerhousedao/reactor-browser";
+import type { OperationWithContext } from "document-model";
 
 import { up } from "./migrations.js";
-import { type DB } from "./schema.js";
-
-// Define the document type this processor handles
-type DocumentType = TodoListDocument;
+import type { DB } from "./schema.js";
 
 export class TodoIndexerProcessor extends RelationalDbProcessor<DB> {
   // Generate a unique namespace for this processor based on the drive ID
@@ -215,37 +215,29 @@ export class TodoIndexerProcessor extends RelationalDbProcessor<DB> {
 
   // Main processing logic - handles incoming document changes
   // This method is called whenever there are new document operations
-  override async onStrands(
-    strands: InternalTransmitterUpdate[],
+  override async onOperations(
+    operations: OperationWithContext[],
   ): Promise<void> {
     // Early return if no changes to process
-    if (strands.length === 0) {
+    if (operations.length === 0) {
       return;
     }
 
-    // Process each strand (batch of changes) individually
-    for (const strand of strands) {
-      // Skip strands with no operations
-      if (strand.operations.length === 0) {
-        continue;
-      }
-
-      // Process each operation within the strand
-      for (const operation of strand.operations) {
-        // Insert a record for each operation into the database
-        // This is a simple example - you might want more sophisticated logic
-        await this.relationalDb
-          .insertInto("todo")
-          .values({
-            // Create a unique task identifier combining document ID, operation index, and type
-            task: `${strand.documentId}-${operation.index}: ${operation.action.type}`,
-            status: true, // Default to completed status
-          })
-          // Handle conflicts by doing nothing if the task already exists
-          // This prevents duplicate entries if operations are replayed
-          .onConflict((oc) => oc.column("task").doNothing())
-          .execute(); // Execute the database query
-      }
+    // Process each operation
+    for (const { operation, context } of operations) {
+      // Insert a record for each operation into the database
+      // This is a simple example - you might want more sophisticated logic
+      await this.relationalDb
+        .insertInto("todo")
+        .values({
+          // Create a unique task identifier combining document ID, operation index, and type
+          task: `${context.documentId}-${operation.index}: ${operation.action.type}`,
+          status: true, // Default to completed status
+        })
+        // Handle conflicts by doing nothing if the task already exists
+        // This prevents duplicate entries if operations are replayed
+        .onConflict((oc) => oc.column("task").doNothing())
+        .execute(); // Execute the database query
     }
   }
 
@@ -253,7 +245,6 @@ export class TodoIndexerProcessor extends RelationalDbProcessor<DB> {
   // Use this for closing connections, clearing caches, etc.
   async onDisconnect() {
     // Add any cleanup logic here
-    // For example: await this.relationalDb.destroy();
   }
 }
 ```
@@ -481,8 +472,8 @@ Result:
 💡 **What Happens Next**:
 
 1. **Document Model**: Stores the operation and updates document state
-2. **Reactor**: Broadcasts the operation to all listening processors
-3. **Our Processor**: Automatically receives the operation and creates a database record
+2. **Reactor**: Packages the operation as an `OperationWithContext` (with `documentId`, `documentType`, `scope`, etc.) and routes it to matching processors via `onOperations()`
+3. **Our Processor**: Automatically receives the `OperationWithContext` and creates a database record
 4. **Database**: Now contains: `"72b73d31-4874-4b71-8cc3-289ed4cfbe2b-0: ADD_TODO_ITEM"`
 
 🔄 **Repeat this step 2-3 times** with different todo items to see multiple operations get processed. Each operation will have an incrementing revision number or index
@@ -517,7 +508,7 @@ Variables:
 ```json
 {
   "driveId": "fc29ec1b-9934-410b-8682-4731b810d441",
-  "docId": "72b73d31-4874-4b71-8cc3-289ed4cfbe2b",
+  "docId": "72b73d31-4874-4b71-8cc3-289ed4cfbe2b"
 }
 ```
 
