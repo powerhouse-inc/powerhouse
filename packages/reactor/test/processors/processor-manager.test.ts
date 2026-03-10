@@ -8,7 +8,7 @@ import type {
 import { driveDocumentModelModule } from "document-drive";
 import type { DocumentModelModule, PHDocumentHeader } from "document-model";
 import { documentModelDocumentModelModule, generateId } from "document-model";
-import { Kysely } from "kysely";
+import { Kysely, sql } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { KyselyOperationIndex } from "../../src/cache/kysely-operation-index.js";
@@ -1060,6 +1060,151 @@ describe("ProcessorManager Standalone Tests", () => {
         .where("driveId", "=", driveId)
         .execute();
       expect(cursors).toHaveLength(0);
+    });
+
+    it("should no-op when retrying an active processor", async () => {
+      const driveId = generateId();
+      const processor = createMockProcessor();
+
+      const factory: ProcessorFactory = () => [{ processor, filter: {} }];
+      await processorManager.registerFactory("retry-factory", factory);
+
+      const op = makeDriveCreateOp(driveId, 1);
+      await writeToOperationIndex(operationIndex, [op]);
+      await processorManager.indexOperations([op]);
+
+      const tracked = processorManager.get(`retry-factory:${driveId}:0`);
+      expect(tracked!.status).toBe("active");
+
+      const callCountBefore = processor.receivedOperations.length;
+
+      await tracked!.retry();
+
+      expect(tracked!.status).toBe("active");
+      expect(processor.receivedOperations.length).toBe(callCountBefore);
+    });
+
+    it("should continue processing when cursor persist fails", async () => {
+      const driveId = generateId();
+
+      const goodProcessor = createMockProcessor();
+      const goodFactory: ProcessorFactory = () => [
+        { processor: goodProcessor, filter: {} },
+      ];
+      await processorManager.registerFactory("good-factory", goodFactory);
+
+      await processorManager.indexOperations([makeDriveCreateOp(driveId, 1)]);
+
+      // Drop the ProcessorCursor table to force persist failures
+      await db.schema.dropTable("ProcessorCursor").execute();
+      await db.schema
+        .createTable("ProcessorCursor")
+        .addColumn("processorId", "text", (col) => col.primaryKey())
+        .addColumn("factoryId", "text", (col) => col.notNull())
+        .addColumn("driveId", "text", (col) => col.notNull())
+        .addColumn("processorIndex", "integer", (col) => col.notNull())
+        .addColumn("lastOrdinal", "integer", (col) => col.notNull())
+        .addColumn("status", "text", (col) => col.notNull())
+        .addColumn("lastError", "text")
+        .addColumn("lastErrorTimestamp", "timestamptz")
+        .addColumn("createdAt", "timestamptz", (col) =>
+          col.notNull().defaultTo("now()"),
+        )
+        .addColumn("updatedAt", "timestamptz", (col) =>
+          col.notNull().defaultTo("now()"),
+        )
+        .execute();
+
+      // Make the table read-only by adding a trigger that rejects inserts
+      await sql
+        .raw(
+          `CREATE FUNCTION reject_insert() RETURNS trigger AS $$
+           BEGIN RAISE EXCEPTION 'insert rejected'; END;
+           $$ LANGUAGE plpgsql`,
+        )
+        .execute(db);
+      await sql
+        .raw(
+          `CREATE TRIGGER no_insert BEFORE INSERT ON "${REACTOR_SCHEMA}"."ProcessorCursor"
+           FOR EACH ROW EXECUTE FUNCTION reject_insert()`,
+        )
+        .execute(db);
+
+      // Route more operations — safeSaveProcessorCursor should catch the error
+      const op2 = makeOp(driveId, 5);
+      await processorManager.indexOperations([op2]);
+
+      // The processor should still have received operations
+      expect(goodProcessor.receivedOperations.length).toBeGreaterThan(0);
+
+      // The PM's ViewState cursor should still advance
+      const viewState = await db
+        .selectFrom("ViewState")
+        .selectAll()
+        .where("readModelId", "=", "processor-manager")
+        .executeTakeFirst();
+      expect(viewState?.lastOrdinal).toBe(5);
+    });
+
+    it("should clean up orphaned cursor rows when factory returns fewer processors", async () => {
+      const driveId = generateId();
+
+      // Insert drive snapshot
+      await db
+        .insertInto("DocumentSnapshot")
+        .values({
+          id: generateId(),
+          documentId: driveId,
+          slug: "test-drive",
+          name: "Test Drive",
+          scope: "global",
+          branch: "main",
+          content: JSON.stringify({}),
+          documentType: DRIVE_DOCUMENT_TYPE,
+          lastOperationIndex: 0,
+          lastOperationHash: "hash-0",
+          identifiers: JSON.stringify({}),
+          metadata: JSON.stringify({}),
+        })
+        .execute();
+
+      // Register a factory that returns 3 processors
+      const processors = [
+        createMockProcessor(),
+        createMockProcessor(),
+        createMockProcessor(),
+      ];
+      const factory3: ProcessorFactory = () =>
+        processors.map((p) => ({ processor: p, filter: {} }));
+      await processorManager.registerFactory("shrink-factory", factory3);
+
+      await processorManager.indexOperations([makeDriveCreateOp(driveId, 1)]);
+
+      // Verify all 3 cursor rows exist
+      let cursors = await db
+        .selectFrom("ProcessorCursor")
+        .selectAll()
+        .where("factoryId", "=", "shrink-factory")
+        .where("driveId", "=", driveId)
+        .execute();
+      expect(cursors).toHaveLength(3);
+
+      // Re-register factory returning only 1 processor
+      const singleProcessor = createMockProcessor();
+      const factory1: ProcessorFactory = () => [
+        { processor: singleProcessor, filter: {} },
+      ];
+      await processorManager.registerFactory("shrink-factory", factory1);
+
+      // Orphaned rows for indices 1 and 2 should be gone
+      cursors = await db
+        .selectFrom("ProcessorCursor")
+        .selectAll()
+        .where("factoryId", "=", "shrink-factory")
+        .where("driveId", "=", driveId)
+        .execute();
+      expect(cursors).toHaveLength(1);
+      expect(cursors[0]!.processorIndex).toBe(0);
     });
 
     it("should skip errored processor on subsequent batches", async () => {

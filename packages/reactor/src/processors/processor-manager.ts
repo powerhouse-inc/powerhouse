@@ -259,6 +259,24 @@ export class ProcessorManager
       await this.saveProcessorCursor(tracked);
     }
 
+    // Clean up orphaned cursor rows from previous runs with more processors
+    await this.db
+      .deleteFrom("ProcessorCursor")
+      .where("factoryId", "=", identifier)
+      .where("driveId", "=", driveId)
+      .where("processorIndex", ">=", records.length)
+      .execute();
+
+    for (const [id, row] of this.cursorCache) {
+      if (
+        row.factoryId === identifier &&
+        row.driveId === driveId &&
+        row.processorIndex >= records.length
+      ) {
+        this.cursorCache.delete(id);
+      }
+    }
+
     const factoryProcessors = this.factoryToProcessors.get(identifier);
     if (factoryProcessors) {
       factoryProcessors.set(driveId, trackedList);
@@ -281,40 +299,43 @@ export class ProcessorManager
   }
 
   private async backfillProcessor(tracked: TrackedProcessor): Promise<void> {
-    const result = await this.operationIndex.getSinceOrdinal(
-      tracked.lastOrdinal,
-    );
-    if (result.results.length === 0) return;
+    let page = await this.operationIndex.getSinceOrdinal(tracked.lastOrdinal);
 
-    const matching = result.results.filter((op) =>
-      matchesFilter(op, tracked.record.filter),
-    );
+    while (page.results.length > 0) {
+      const matching = page.results.filter((op) =>
+        matchesFilter(op, tracked.record.filter),
+      );
 
-    if (matching.length > 0) {
-      try {
-        await tracked.record.processor.onOperations(matching);
-      } catch (error) {
-        tracked.status = "errored";
-        tracked.lastError =
-          error instanceof Error ? error.message : String(error);
-        tracked.lastErrorTimestamp = new Date();
-        await this.saveProcessorCursor(tracked);
-        console.error(
-          `ProcessorManager: Processor '${tracked.processorId}' failed during backfill at ordinal ${tracked.lastOrdinal}:`,
-          error,
-        );
-        return;
+      if (matching.length > 0) {
+        try {
+          await tracked.record.processor.onOperations(matching);
+        } catch (error) {
+          tracked.status = "errored";
+          tracked.lastError =
+            error instanceof Error ? error.message : String(error);
+          tracked.lastErrorTimestamp = new Date();
+          await this.safeSaveProcessorCursor(tracked);
+          console.error(
+            `ProcessorManager: Processor '${tracked.processorId}' failed during backfill at ordinal ${tracked.lastOrdinal}:`,
+            error,
+          );
+          return;
+        }
       }
-    }
 
-    const maxOrdinal = Math.max(
-      ...result.results.map((op) => op.context.ordinal),
-    );
-    tracked.lastOrdinal = maxOrdinal;
-    await this.saveProcessorCursor(tracked);
+      const maxOrdinal = Math.max(
+        ...page.results.map((op) => op.context.ordinal),
+      );
+      tracked.lastOrdinal = maxOrdinal;
+      await this.safeSaveProcessorCursor(tracked);
+
+      if (!page.next) break;
+      page = await page.next();
+    }
   }
 
   private async retryProcessor(tracked: TrackedProcessor): Promise<void> {
+    if (tracked.status !== "errored") return;
     tracked.status = "active";
     tracked.lastError = undefined;
     tracked.lastErrorTimestamp = undefined;
@@ -372,7 +393,7 @@ export class ProcessorManager
             tracked.lastError =
               error instanceof Error ? error.message : String(error);
             tracked.lastErrorTimestamp = new Date();
-            await this.saveProcessorCursor(tracked);
+            await this.safeSaveProcessorCursor(tracked);
             console.error(
               `ProcessorManager: Processor '${tracked.processorId}' failed at ordinal ${tracked.lastOrdinal}:`,
               error,
@@ -382,7 +403,7 @@ export class ProcessorManager
         }
 
         tracked.lastOrdinal = maxOrdinal;
-        await this.saveProcessorCursor(tracked);
+        await this.safeSaveProcessorCursor(tracked);
       }),
     );
   }
@@ -395,6 +416,19 @@ export class ProcessorManager
 
     for (const row of rows) {
       this.cursorCache.set(row.processorId, row);
+    }
+  }
+
+  private async safeSaveProcessorCursor(
+    tracked: TrackedProcessor,
+  ): Promise<void> {
+    try {
+      await this.saveProcessorCursor(tracked);
+    } catch (error) {
+      console.error(
+        `ProcessorManager: Failed to persist cursor for '${tracked.processorId}':`,
+        error,
+      );
     }
   }
 
@@ -437,25 +471,25 @@ export class ProcessorManager
     });
   }
 
-  private async deleteProcessorCursors(filter: {
-    factoryId?: string;
-    driveId?: string;
-  }): Promise<void> {
-    let query = this.db.deleteFrom("ProcessorCursor");
-
-    if (filter.factoryId) {
-      query = query.where("factoryId", "=", filter.factoryId);
-    }
-    if (filter.driveId) {
-      query = query.where("driveId", "=", filter.driveId);
-    }
-
-    await query.execute();
-
-    for (const [id, row] of this.cursorCache) {
-      if (filter.factoryId && row.factoryId !== filter.factoryId) continue;
-      if (filter.driveId && row.driveId !== filter.driveId) continue;
-      this.cursorCache.delete(id);
+  private async deleteProcessorCursors(
+    filter: { factoryId: string } | { driveId: string },
+  ): Promise<void> {
+    if ("factoryId" in filter) {
+      await this.db
+        .deleteFrom("ProcessorCursor")
+        .where("factoryId", "=", filter.factoryId)
+        .execute();
+      for (const [id, row] of this.cursorCache) {
+        if (row.factoryId === filter.factoryId) this.cursorCache.delete(id);
+      }
+    } else {
+      await this.db
+        .deleteFrom("ProcessorCursor")
+        .where("driveId", "=", filter.driveId)
+        .execute();
+      for (const [id, row] of this.cursorCache) {
+        if (row.driveId === filter.driveId) this.cursorCache.delete(id);
+      }
     }
   }
 }
