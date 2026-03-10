@@ -13,6 +13,7 @@ import { BaseReadModel } from "../read-models/base-read-model.js";
 import type { DocumentViewDatabase } from "../read-models/types.js";
 import type { IConsistencyTracker } from "../shared/consistency-tracker.js";
 import {
+  DRIVE_DOCUMENT_TYPE,
   createMinimalDriveHeader,
   extractDeletedDocumentId,
   extractDriveHeader,
@@ -54,6 +55,11 @@ export class ProcessorManager
       consistencyTracker,
       "processor-manager",
     );
+  }
+
+  override async init(): Promise<void> {
+    await super.init();
+    await this.discoverExistingDrives();
   }
 
   override async indexOperations(items: OperationWithContext[]): Promise<void> {
@@ -165,6 +171,19 @@ export class ProcessorManager
 
       await this.cleanupDriveProcessors(driveId);
       this.knownDriveIds.delete(driveId);
+    }
+  }
+
+  private async discoverExistingDrives(): Promise<void> {
+    const drives = await this.db
+      .selectFrom("DocumentSnapshot")
+      .select("documentId")
+      .where("documentType", "=", DRIVE_DOCUMENT_TYPE)
+      .where("isDeleted", "=", false)
+      .execute();
+
+    for (const drive of drives) {
+      this.knownDriveIds.add(drive.documentId);
     }
   }
 

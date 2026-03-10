@@ -525,6 +525,56 @@ describe("ProcessorManager Standalone Tests", () => {
       expect(viewState).toBeDefined();
       expect(viewState?.lastOrdinal).toBe(0);
     });
+
+    it("should discover existing drives from DocumentSnapshot on restart", async () => {
+      const driveId = generateId();
+
+      // Simulate a previous run: insert a drive snapshot and advance the ordinal
+      await db
+        .insertInto("DocumentSnapshot")
+        .values({
+          id: generateId(),
+          documentId: driveId,
+          slug: "test-drive",
+          name: "Test Drive",
+          scope: "global",
+          branch: "main",
+          content: JSON.stringify({}),
+          documentType: DRIVE_DOCUMENT_TYPE,
+          lastOperationIndex: 0,
+          lastOperationHash: "hash-0",
+          identifiers: JSON.stringify({}),
+          metadata: JSON.stringify({}),
+        })
+        .execute();
+
+      await db
+        .updateTable("ViewState")
+        .set({ lastOrdinal: 10 })
+        .where("readModelId", "=", "processor-manager")
+        .execute();
+
+      // Create a fresh ProcessorManager against the same DB (simulates restart)
+      const consistencyTracker = new ConsistencyTracker();
+      const restartedManager = new ProcessorManager(
+        db as unknown as Kysely<DocumentViewDatabase>,
+        operationIndex,
+        mockWriteCache,
+        consistencyTracker,
+      );
+      await restartedManager.init();
+
+      // Register a factory — it should be called for the existing drive
+      const mockFactory = createMockProcessorFactory();
+      await restartedManager.registerFactory(
+        "test-factory",
+        mockFactory.factory,
+      );
+
+      expect(mockFactory.factoryCallCount).toBe(1);
+      expect(mockFactory.lastDriveHeader?.id).toBe(driveId);
+      expect(restartedManager.getProcessorsForDrive(driveId)).toHaveLength(1);
+    });
   });
 
   describe("indexOperations", () => {
