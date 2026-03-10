@@ -54,7 +54,7 @@
   },
   "peerDependencies": {
     "@electric-sql/pglite": ">=0.3.15",
-    "document-drive": "catalog:",
-    "document-model": "catalog:"
+    "document-drive": "workspace:*",
+    "document-model": "workspace:*"
   }
 }
