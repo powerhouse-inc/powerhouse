@@ -1,4 +1,5 @@
 import { accessToken } from "./access-token.js";
+import { build } from "./build.js";
 import { connect } from "./connect.js";
 import { generate } from "./generate.js";
 import { inspect } from "./inspect.js";
@@ -15,6 +16,7 @@ export const phCliCommands = {
   generate,
   vetra,
   connect,
+  build,
   "access-token": accessToken,
   inspect,
   list,

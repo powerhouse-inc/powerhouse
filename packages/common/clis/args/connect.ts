@@ -1,12 +1,12 @@
 import { number, option, optional, string } from "cmd-ts";
-import { commonArgs, commonServerArgs } from "./common.js";
 import {
   DEFAULT_CONNECT_OUTDIR,
   DEFAULT_CONNECT_PREVIEW_PORT,
   DEFAULT_CONNECT_STUDIO_PORT,
 } from "../constants.js";
+import { commonArgs, commonServerArgs } from "./common.js";
 
-export const studioArgs = {
+export const connectStudioArgs = {
   port: option({
     type: number,
     long: "port",
@@ -18,7 +18,7 @@ export const studioArgs = {
   ...commonServerArgs,
 };
 
-export const buildArgs = {
+export const connectBuildArgs = {
   outDir: option({
     type: optional(string),
     long: "outDir",
@@ -29,7 +29,7 @@ export const buildArgs = {
   ...commonArgs,
 };
 
-export const previewArgs = {
+export const connectPreviewArgs = {
   port: option({
     type: number,
     long: "port",
@@ -49,7 +49,7 @@ export const previewArgs = {
 };
 
 export const connectArgs = {
-  ...studioArgs,
-  ...buildArgs,
-  ...previewArgs,
+  ...connectStudioArgs,
+  ...connectBuildArgs,
+  ...connectPreviewArgs,
 };

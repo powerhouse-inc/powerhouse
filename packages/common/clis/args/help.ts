@@ -1,5 +1,6 @@
 import { command } from "cmd-ts";
 import { accessTokenArgs } from "./access-token.js";
+import { debugArgs } from "./common.js";
 import { connectArgs } from "./connect.js";
 import { generateArgs } from "./generate.js";
 import { inspectArgs } from "./inspect.js";
@@ -29,6 +30,12 @@ export const phCliHelpCommands = {
     name: "connect",
     args: connectArgs,
     description: "Powerhouse Connect commands",
+    handler: () => {},
+  }),
+  build: command({
+    name: "build",
+    args: debugArgs,
+    description: "Build your project for publishing to the registry",
     handler: () => {},
   }),
   list: command({

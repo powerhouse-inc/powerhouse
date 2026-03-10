@@ -26,6 +26,10 @@ export const debugArgs = {
   }),
 };
 
+export const buildArgs = {
+  ...debugArgs,
+};
+
 export const packageManagerArgs = {
   packageManager: option({
     type: optional(oneOf(AGENTS)),

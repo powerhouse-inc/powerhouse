@@ -1,7 +1,6 @@
 import { getConfig } from "@powerhousedao/config/node";
 import {
   loadConnectEnv,
-  normalizeBasePath,
   setConnectEnv,
   type ConnectEnv,
 } from "@powerhousedao/shared/connect";
@@ -18,7 +17,6 @@ import {
   type UserConfig,
 } from "vite";
 import { createHtmlPlugin } from "vite-plugin-html";
-import svgr from "vite-plugin-svgr";
 import { stripVersionFromPackage } from "./helpers.js";
 import type { IConnectOptions } from "./types.js";
 import { phExternalPackagesPlugin } from "./vite-plugins/ph-external-packages.js";
@@ -195,7 +193,6 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
 
   const plugins: PluginOption[] = [
     tailwind(),
-    svgr(),
     react(),
     phExternalPackagesPlugin(phPackages, localPackage),
     createHtmlPlugin({

@@ -1,4 +1,8 @@
-import { buildArgs, previewArgs, studioArgs } from "@powerhousedao/common/clis";
+import {
+  connectBuildArgs,
+  connectPreviewArgs,
+  connectStudioArgs,
+} from "@powerhousedao/common/clis";
 import { command, subcommands } from "cmd-ts";
 export const studio = command({
   name: "studio",
@@ -12,7 +16,7 @@ This command:
 3. Allows you to interact with your project components
 4. Supports various configuration options for customization
 `,
-  args: studioArgs,
+  args: connectStudioArgs,
   handler: async (args) => {
     if (args.debug) {
       console.log(args);
@@ -27,7 +31,7 @@ export const build = command({
   description: `The Connect build command creates a production build with the project's local and
 external packages included
 `,
-  args: buildArgs,
+  args: connectBuildArgs,
   handler: async (args) => {
     if (args.debug) {
       console.log(args);
@@ -44,7 +48,7 @@ export const preview = command({
   description: `The Connect preview command previews a built Connect project.
 NOTE: You must run \`ph connect build\` first
 `,
-  args: previewArgs,
+  args: connectPreviewArgs,
   handler: async (args) => {
     if (args.debug) {
       console.log(args);
