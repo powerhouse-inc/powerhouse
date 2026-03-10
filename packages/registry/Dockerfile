@@ -4,13 +4,17 @@ WORKDIR /app
 
 # -- Install stage --
 FROM base AS install
-COPY package.json pnpm-workspace.yaml* ./
+COPY package.json ./
+# Resolve pnpm catalog: references to allow standalone install
+RUN sed -i 's/"catalog:"/"*"/g' package.json
 RUN pnpm install --prod
 
 # -- Build stage --
 FROM base AS build
-COPY package.json pnpm-workspace.yaml* tsconfig.json ./
+COPY package.json tsconfig.json ./
 COPY src/ src/
+# Resolve pnpm catalog: references to allow standalone install
+RUN sed -i 's/"catalog:"/"*"/g' package.json
 # Inline the extended tsconfig options so tsc works without the monorepo root
 RUN echo '{ \
   "compilerOptions": { \
