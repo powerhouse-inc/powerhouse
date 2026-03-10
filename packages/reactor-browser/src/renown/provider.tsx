@@ -1,5 +1,3 @@
-"use client";
-
 import { RenownBuilder } from "@renown/sdk";
 import { type ReactNode, useEffect, useRef } from "react";
 import { addRenownEventHandler, setRenown } from "../hooks/renown.js";

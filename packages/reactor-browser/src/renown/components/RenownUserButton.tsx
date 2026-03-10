@@ -1,5 +1,3 @@
-"use client";
-
 import type { CSSProperties, ReactNode } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useUser } from "../../hooks/renown.js";

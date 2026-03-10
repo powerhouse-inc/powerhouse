@@ -8,7 +8,7 @@ import { addRenownEventHandler, setRenown } from "../../src/hooks/renown.js";
 import { RenownAuthButton } from "../../src/renown/components/RenownAuthButton.js";
 import { RenownLoginButton } from "../../src/renown/components/RenownLoginButton.js";
 import { RenownUserButton } from "../../src/renown/components/RenownUserButton.js";
-import { RenownProvider } from "../../src/renown/RenownProvider.js";
+import { RenownProvider } from "../../src/renown/provider.js";
 
 const TEST_BASE_URL = "https://test.renown.id";
 const TEST_ADDRESS = "0x9aDdcBbaA28F7eB5f75E023F7C1Fcb13C9DFD8F7" as const;

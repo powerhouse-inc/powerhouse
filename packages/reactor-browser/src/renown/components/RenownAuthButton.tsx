@@ -1,5 +1,3 @@
-"use client";
-
 import type { User } from "@renown/sdk";
 import type React from "react";
 import { useLoginStatus, useUser } from "../../hooks/renown.js";
