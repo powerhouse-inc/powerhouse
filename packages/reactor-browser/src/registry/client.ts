@@ -42,6 +42,15 @@ export class RegistryClient {
     return data.map(mapPackageInfo);
   }
 
+  async getPackagesByDocumentType(documentType: string): Promise<string[]> {
+    const encodedType = encodeURIComponent(documentType);
+    const res = await fetch(
+      `${this.apiUrl}/packages/by-document-type?type=${encodedType}`,
+    );
+    if (!res.ok) throw new Error(`Registry error: HTTP ${res.status}`);
+    return (await res.json()) as string[];
+  }
+
   async searchPackages(query: string): Promise<RegistryPackageInfo[]> {
     const packages = await this.getPackages();
     if (!query) return packages;

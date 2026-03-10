@@ -4,9 +4,11 @@ import {
   addDefaultDrivesForNewReactor,
   createBrowserReactor,
   getDefaultDrivesFromEnv,
+  getDefaultRegistryCdnUrl,
 } from "@powerhousedao/connect/utils";
 import {
   addRemoteDrive,
+  BrowserPackageLoader,
   BrowserPackageManager,
   convertLegacyLibToVetraPackage,
   DocumentChangeType,
@@ -16,6 +18,7 @@ import {
   getDrives,
   ReactorClientDocumentCache,
   refreshReactorDataClient,
+  setBrowserPackageLoader,
   setFeatures,
   setPHToast,
   setSelectedDrive,
@@ -140,12 +143,31 @@ export async function createReactor() {
     (pkg) => pkg.upgradeManifests,
   );
 
+  // Create browser package loader for dynamic package discovery
+  const registryCdnUrl = getDefaultRegistryCdnUrl();
+  let browserPackageLoader: BrowserPackageLoader | undefined;
+  if (registryCdnUrl) {
+    browserPackageLoader = new BrowserPackageLoader(
+      packageManager,
+      registryCdnUrl,
+    );
+  }
+
   // create reactor v2 with all versions and upgrade manifests
   const reactorClientModule = await createBrowserReactor(
     documentModelModules as unknown as DocumentModelModule[],
     upgradeManifests,
     renown,
+    browserPackageLoader,
   );
+
+  // Give loader access to registry (available after reactor creation)
+  if (browserPackageLoader && reactorClientModule.reactorModule) {
+    browserPackageLoader.setDocumentModelRegistry(
+      reactorClientModule.reactorModule.documentModelRegistry,
+    );
+    setBrowserPackageLoader(browserPackageLoader);
+  }
 
   // get the drives from the reactor
   const drives = await getDrives(reactorClientModule.client);

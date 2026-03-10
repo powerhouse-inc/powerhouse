@@ -6,6 +6,7 @@ export * from "./document-model.js";
 export * from "./global/index.js";
 export * from "./graphql/client.js";
 export * from "./hooks/index.js";
+export * from "./loaders/index.js";
 export * from "./package-manager.js";
 export * from "./pglite/index.js";
 export * from "./re-exports.js";

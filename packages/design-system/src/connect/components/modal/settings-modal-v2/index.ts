@@ -1,4 +1,5 @@
 export * from "./about.js";
+export * from "./package-manager/dismissed-packages-list.js";
 export * from "./danger-zone.js";
 export * from "./default-editor.js";
 export * from "./package-manager/package-manager-input.js";
