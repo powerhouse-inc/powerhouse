@@ -1,3 +1,17 @@
+## 6.0.0-dev.75 (2026-03-10)
+
+### 🩹 Fixes
+
+- **reactor-browser:** improved renown exports ([dbaa24259](https://github.com/powerhouse-inc/powerhouse/commit/dbaa24259))
+- **registry:** copy pnpm-workspace.yaml for Docker build catalog resolution ([7407700b1](https://github.com/powerhouse-inc/powerhouse/commit/7407700b1))
+- **registry:** resolve catalog references in Dockerfile with sed ([765e8fbdd](https://github.com/powerhouse-inc/powerhouse/commit/765e8fbdd))
+- **registry:** add typescript to Docker build stage ([81604b764](https://github.com/powerhouse-inc/powerhouse/commit/81604b764))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Frank
+
 ## 6.0.0-dev.74 (2026-03-10)
 
 ### 🚀 Features

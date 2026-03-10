@@ -1,3 +1,15 @@
+## 6.0.0-dev.75 (2026-03-10)
+
+### 🩹 Fixes
+
+- **registry:** add typescript to Docker build stage ([81604b764](https://github.com/powerhouse-inc/powerhouse/commit/81604b764))
+- **registry:** resolve catalog references in Dockerfile with sed ([765e8fbdd](https://github.com/powerhouse-inc/powerhouse/commit/765e8fbdd))
+- **registry:** copy pnpm-workspace.yaml for Docker build catalog resolution ([7407700b1](https://github.com/powerhouse-inc/powerhouse/commit/7407700b1))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 6.0.0-dev.74 (2026-03-10)
 
 ### 🚀 Features
