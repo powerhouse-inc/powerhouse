@@ -1,4 +1,4 @@
-import { MemoryStorage, driveDocumentModelModule } from "document-drive";
+import { driveDocumentModelModule } from "document-drive";
 import { documentModelDocumentModelModule } from "document-model";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -25,7 +25,6 @@ type Database = StorageDatabase &
 
 describe("Relationship Operations", () => {
   let reactor: IReactor;
-  let storage: MemoryStorage;
   let db: Kysely<Database>;
   let documentIndexer: KyselyDocumentIndexer;
 
@@ -105,8 +104,6 @@ describe("Relationship Operations", () => {
   }
 
   beforeEach(async () => {
-    storage = new MemoryStorage();
-
     // Create documentIndexer that we need a reference to
     const setup = await createTestOperationStore();
     db = setup.db as unknown as Kysely<Database>;
@@ -126,7 +123,6 @@ describe("Relationship Operations", () => {
         documentModelDocumentModelModule as any,
         driveDocumentModelModule as any,
       ])
-      .withLegacyStorage(storage)
       .withReadModel(documentIndexer);
 
     reactor = await builder.build();

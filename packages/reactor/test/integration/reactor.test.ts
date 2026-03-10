@@ -1,6 +1,5 @@
 import type { DocumentDriveDocument, FileNode } from "document-drive";
 import {
-  MemoryStorage,
   addFile,
   addFolder,
   copyNode,
@@ -38,7 +37,6 @@ type Database = StorageDatabase &
 describe("Tests the Reactor with the Document Drive Document Model", () => {
   let reactor: IReactor;
   let documentIndexer: IDocumentIndexer;
-  let storage: MemoryStorage;
   let db: Kysely<Database>;
 
   async function createDocumentViaReactor(
@@ -73,8 +71,6 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
   }
 
   beforeEach(async () => {
-    storage = new MemoryStorage();
-
     // Create documentIndexer that we need a reference to
     const setup = await createTestOperationStore();
     db = setup.db as unknown as Kysely<Database>;
@@ -91,7 +87,6 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
     // Use ReactorBuilder from reactor package and pass in our documentIndexer
     const builder = new ReactorBuilder()
       .withDocumentModels([driveDocumentModelModule as any])
-      .withLegacyStorage(storage)
       .withReadModel(documentIndexer);
     // Build returns IReactor
     reactor = await builder.build();

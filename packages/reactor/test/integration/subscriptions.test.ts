@@ -1,4 +1,4 @@
-import { driveDocumentModelModule, MemoryStorage } from "document-drive";
+import { driveDocumentModelModule } from "document-drive";
 import type { DocumentModelModule, PHDocument } from "document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { DocumentChangeEvent } from "../../src/client/types.js";
@@ -18,7 +18,6 @@ import { JobStatus } from "../../src/shared/types.js";
  */
 describe("ReactorClient Subscription Integration Tests", () => {
   let module: ReactorClientModule;
-  let storage: MemoryStorage;
 
   async function waitForJobCompletion(jobId: string): Promise<void> {
     await vi.waitUntil(
@@ -34,14 +33,9 @@ describe("ReactorClient Subscription Integration Tests", () => {
   }
 
   beforeEach(async () => {
-    storage = new MemoryStorage();
-
-    const reactorBuilder = new ReactorBuilder()
-      .withDocumentModels([
-        driveDocumentModelModule as unknown as DocumentModelModule,
-      ])
-      .withLegacyStorage(storage);
-
+    const reactorBuilder = new ReactorBuilder().withDocumentModels([
+      driveDocumentModelModule as unknown as DocumentModelModule,
+    ]);
     module = await new ReactorClientBuilder()
       .withReactorBuilder(reactorBuilder)
       .buildModule();
