@@ -7,11 +7,4 @@ export interface RegistryOption {
 
 export type RegistryStatus = "idle" | "connecting" | "connected" | "error";
 
-export interface RegistryPackageInfo {
-  name: string;
-  description?: string;
-  version?: string;
-  category?: string;
-  publisher?: string;
-  publisherUrl?: string;
-}
+export type { RegistryPackageInfo } from "@powerhousedao/reactor-browser";

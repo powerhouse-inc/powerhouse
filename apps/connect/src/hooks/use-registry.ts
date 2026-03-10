@@ -1,9 +1,12 @@
 import { connectConfig } from "../connect.config.js";
 import type {
   RegistryOption,
-  RegistryPackageInfo,
   RegistryStatus,
 } from "@powerhousedao/design-system/connect";
+import {
+  RegistryClient,
+  type RegistryPackageInfo,
+} from "@powerhousedao/reactor-browser";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 const STORAGE_KEY = "ph-connect-registry-selection";
@@ -44,10 +47,6 @@ function deriveLabelFromUrl(url: string): string {
   }
 }
 
-function cdnUrlToApiUrl(cdnUrl: string): string {
-  return cdnUrl.replace(/\/-\/cdn\/?$/, "");
-}
-
 function buildRegistries(
   packagesRegistry: string | undefined,
 ): RegistryOption[] {
@@ -76,19 +75,6 @@ function buildRegistries(
   });
 
   return registries;
-}
-
-interface PackageInfoFromApi {
-  name: string;
-  manifest?: {
-    description?: string;
-    version?: string;
-    category?: string;
-    publisher?: {
-      name?: string;
-      url?: string;
-    };
-  };
 }
 
 export function useRegistry() {
@@ -123,8 +109,9 @@ export function useRegistry() {
     return selectedRegistry.url;
   }, [selectedRegistry, customRegistryUrl]);
 
-  const apiUrl = useMemo(
-    () => (effectiveRegistryUrl ? cdnUrlToApiUrl(effectiveRegistryUrl) : ""),
+  const client = useMemo(
+    () =>
+      effectiveRegistryUrl ? new RegistryClient(effectiveRegistryUrl) : null,
     [effectiveRegistryUrl],
   );
 
@@ -135,7 +122,7 @@ export function useRegistry() {
 
   // Fetch packages on registry change
   useEffect(() => {
-    if (!apiUrl) {
+    if (!client) {
       setRegistryStatus("idle");
       setAvailablePackages([]);
       return;
@@ -144,21 +131,10 @@ export function useRegistry() {
     let cancelled = false;
     setRegistryStatus("connecting");
 
-    fetch(`${apiUrl}/packages`)
-      .then((res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json() as Promise<PackageInfoFromApi[]>;
-      })
-      .then((data) => {
+    client
+      .getPackages()
+      .then((packages) => {
         if (cancelled) return;
-        const packages: RegistryPackageInfo[] = data.map((pkg) => ({
-          name: pkg.name,
-          description: pkg.manifest?.description,
-          version: pkg.manifest?.version,
-          category: pkg.manifest?.category,
-          publisher: pkg.manifest?.publisher?.name,
-          publisherUrl: pkg.manifest?.publisher?.url,
-        }));
         setAvailablePackages(packages);
         setRegistryStatus("connected");
       })
@@ -171,11 +147,11 @@ export function useRegistry() {
     return () => {
       cancelled = true;
     };
-  }, [apiUrl]);
+  }, [client]);
 
   const fetchPackages = useCallback(
     async (query: string): Promise<RegistryPackageInfo[]> => {
-      if (!apiUrl) return [];
+      if (!client) return [];
       const lowerQuery = query.toLowerCase();
       return availablePackages.filter(
         (pkg) =>
@@ -183,7 +159,7 @@ export function useRegistry() {
           pkg.description?.toLowerCase().includes(lowerQuery),
       );
     },
-    [apiUrl, availablePackages],
+    [client, availablePackages],
   );
 
   return {
