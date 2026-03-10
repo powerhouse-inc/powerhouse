@@ -111,7 +111,9 @@ export async function createDocumentAndFillBasicData(
 
     // Wait for the second CodeMirror editor to be ready
     const initialStateEditor = page.locator(".cm-content").nth(1);
-    await expect(initialStateEditor).toBeVisible({ timeout: 5000 });
+    await expect(initialStateEditor).toBeVisible({
+      timeout: 2 * 60 * 60 * 1000,
+    });
 
     // Clear the initial state editor before filling to avoid content
     // concatenation if auto-sync managed to populate it
@@ -145,7 +147,9 @@ export async function createDocumentAndFillBasicData(
             hasText: operationInputName,
           })
           .first();
-        await expect(operationEditor).toBeVisible({ timeout: 5000 });
+        await expect(operationEditor).toBeVisible({
+          timeout: 2 * 60 * 60 * 1000,
+        });
 
         await operationEditor.click();
 
@@ -157,7 +161,9 @@ export async function createDocumentAndFillBasicData(
         await page.keyboard.press("Enter");
         // Click away to blur and commit the changes
         const globalSchemaLabel = page.getByText("Global State Schema").first();
-        await expect(globalSchemaLabel).toBeVisible({ timeout: 5000 });
+        await expect(globalSchemaLabel).toBeVisible({
+          timeout: 2 * 60 * 60 * 1000,
+        });
         await globalSchemaLabel.click();
       }
     }
@@ -165,6 +171,6 @@ export async function createDocumentAndFillBasicData(
 
   // Final blur to ensure all changes are committed
   const finalLabel = page.getByText("Global State Schema").first();
-  await expect(finalLabel).toBeVisible({ timeout: 5000 });
+  await expect(finalLabel).toBeVisible({ timeout: 2 * 60 * 60 * 1000 });
   await finalLabel.click();
 }

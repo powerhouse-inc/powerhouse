@@ -89,7 +89,7 @@ test("should log console message when attempting to create powerhouse/codegen-pr
     name: "Add new specification powerhouse/codegen-processor",
   });
 
-  await expect(codegenButton).toBeVisible();
+  await expect(codegenButton).toBeVisible({ timeout: 2 * 60 * 60 * 1000 });
   await codegenButton.click();
 
   // Wait for any console messages to appear

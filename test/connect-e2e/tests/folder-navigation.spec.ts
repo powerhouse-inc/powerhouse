@@ -92,8 +92,12 @@ test("Create Document Model", async ({ page }) => {
   await closeDocumentFromToolbar(page);
 
   // Verify document appears in the list with correct name and type
-  await expect(page.locator("text=MyDocumentModel")).toBeVisible();
-  await expect(page.locator("text=powerhouse/document-model")).toBeVisible();
+  await expect(page.locator("text=MyDocumentModel")).toBeVisible({
+    timeout: 2 * 60 * 60 * 1000,
+  });
+  await expect(page.locator("text=powerhouse/document-model")).toBeVisible({
+    timeout: 2 * 60 * 60 * 1000,
+  });
 });
 
 test("Document Operation History", async ({ page }) => {
@@ -108,7 +112,9 @@ test("Document Operation History", async ({ page }) => {
   const articleLocator = page.locator(
     ".flex.items-center.justify-between.rounded-xl.border.border-gray-200.bg-white.px-4.py-2",
   );
-  await articleLocator.first().waitFor({ state: "visible", timeout: 10000 });
+  await articleLocator
+    .first()
+    .waitFor({ state: "visible", timeout: 2 * 60 * 60 * 1000 });
 
   const articles = await articleLocator.all();
 

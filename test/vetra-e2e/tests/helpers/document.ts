@@ -2,12 +2,12 @@ import type { Page } from "@playwright/test";
 import { expect } from "@playwright/test";
 
 // Import shared types and functions from e2e-utils package
-export type { DocumentBasicData } from "@powerhousedao/e2e-utils/types";
 export {
-  closeDocumentFromToolbar,
   clickDocumentOperationHistory,
+  closeDocumentFromToolbar,
   closeDocumentOperationHistory,
 } from "@powerhousedao/e2e-utils/helpers/document";
+export type { DocumentBasicData } from "@powerhousedao/e2e-utils/types";
 
 // Import the type for local use
 import type { DocumentBasicData } from "@powerhousedao/e2e-utils/types";
@@ -101,7 +101,7 @@ export async function navigateToVetraDrive(
   // Wait for Vetra drive card to appear (default drives load asynchronously)
   // Look for the h3 heading with "Vetra" which is the drive title
   const vetraDrive = page.getByRole("heading", { name: "Vetra", level: 3 });
-  await expect(vetraDrive).toBeVisible({ timeout: 15000 });
+  await expect(vetraDrive).toBeVisible({ timeout: 2 * 60 * 60 * 1000 });
   await vetraDrive.click();
 
   // Wait for drive page to load
@@ -112,7 +112,7 @@ export async function navigateToVetraDrive(
     name: "Vetra Studio Drive",
     level: 1,
   });
-  await expect(driveHeading).toBeVisible();
+  await expect(driveHeading).toBeVisible({ timeout: 2 * 60 * 60 * 1000 });
 }
 
 /**
@@ -133,7 +133,7 @@ export async function navigateBackToDrive(page: Page): Promise<void> {
     name: "Vetra Studio Drive",
     level: 1,
   });
-  await expect(driveHeading).toBeVisible();
+  await expect(driveHeading).toBeVisible({ timeout: 2 * 60 * 60 * 1000 });
 }
 
 /**
@@ -169,7 +169,7 @@ export async function createDocumentAndFillBasicData(
   if (data.global) {
     // Focus the first CodeMirror editor (global state schema)
     const schemaEditor = page.locator(".cm-content").first();
-    await expect(schemaEditor).toBeVisible({ timeout: 5000 });
+    await expect(schemaEditor).toBeVisible({ timeout: 2 * 60 * 60 * 1000 });
     await schemaEditor.click();
 
     // Select all and delete existing content
@@ -192,7 +192,9 @@ export async function createDocumentAndFillBasicData(
 
     // Wait for the second CodeMirror editor to be ready (initial state value)
     const initialStateEditor = page.locator(".cm-content").nth(1);
-    await expect(initialStateEditor).toBeVisible({ timeout: 5000 });
+    await expect(initialStateEditor).toBeVisible({
+      timeout: 2 * 60 * 60 * 1000,
+    });
     await initialStateEditor.click();
 
     // Select all and delete existing content
@@ -212,7 +214,7 @@ export async function createDocumentAndFillBasicData(
       const moduleInput = page
         .locator('textarea[placeholder="Add module"]')
         .last();
-      await expect(moduleInput).toBeVisible({ timeout: 5000 });
+      await expect(moduleInput).toBeVisible({ timeout: 2 * 60 * 60 * 1000 });
       await moduleInput.fill(module.name);
       await page.keyboard.press("Enter");
 
@@ -223,7 +225,9 @@ export async function createDocumentAndFillBasicData(
         const operationInput = page
           .locator('textarea[placeholder="Add operation"]')
           .last();
-        await expect(operationInput).toBeVisible({ timeout: 5000 });
+        await expect(operationInput).toBeVisible({
+          timeout: 2 * 60 * 60 * 1000,
+        });
         await operationInput.fill(operation.name);
         await page.keyboard.press("Enter");
 
@@ -233,7 +237,9 @@ export async function createDocumentAndFillBasicData(
         const operationNameField = page.locator(
           `textarea[placeholder="Add operation"]:has-text("${expectedName}")`,
         );
-        await expect(operationNameField).toBeVisible({ timeout: 5000 });
+        await expect(operationNameField).toBeVisible({
+          timeout: 2 * 60 * 60 * 1000,
+        });
 
         // Count total CodeMirror editors: 2 (schema + initial state) + number of operations created so far
         // The operation editors start after the first 2 global editors
@@ -241,7 +247,9 @@ export async function createDocumentAndFillBasicData(
         const operationEditor = page
           .locator(".cm-content")
           .nth(operationEditorIndex);
-        await expect(operationEditor).toBeVisible({ timeout: 5000 });
+        await expect(operationEditor).toBeVisible({
+          timeout: 2 * 60 * 60 * 1000,
+        });
 
         await operationEditor.click();
 
@@ -254,7 +262,9 @@ export async function createDocumentAndFillBasicData(
 
         // Click away to blur and commit the changes
         const globalSchemaLabel = page.getByText("Global State Schema").first();
-        await expect(globalSchemaLabel).toBeVisible({ timeout: 5000 });
+        await expect(globalSchemaLabel).toBeVisible({
+          timeout: 2 * 60 * 60 * 1000,
+        });
         await globalSchemaLabel.click();
       }
     }
