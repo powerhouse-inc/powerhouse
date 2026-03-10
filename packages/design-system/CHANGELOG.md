@@ -1,3 +1,13 @@
+## 6.0.0-dev.77 (2026-03-10)
+
+### 🩹 Fixes
+
+- **renown:** moved e2e script test to reactor-browser ([3c9b41045](https://github.com/powerhouse-inc/powerhouse/commit/3c9b41045))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 6.0.0-dev.76 (2026-03-10)
 
 This was a version bump only for @powerhousedao/design-system to align it with other projects, there were no code changes.
