@@ -21,6 +21,7 @@ import type { DocumentViewDatabase } from "../../src/read-models/types.js";
 import { ConsistencyTracker } from "../../src/shared/consistency-tracker.js";
 import { JobStatus } from "../../src/shared/types.js";
 import type { Database as StorageDatabase } from "../../src/storage/kysely/types.js";
+import { ConsoleLogger } from "../../src/logging/console.js";
 import {
   REACTOR_SCHEMA,
   runMigrations,
@@ -605,11 +606,13 @@ describe("ProcessorManager Standalone Tests", () => {
     };
 
     const consistencyTracker = new ConsistencyTracker();
+    const logger = new ConsoleLogger(["test"]);
     processorManager = new ProcessorManager(
       db as unknown as Kysely<DocumentViewDatabase>,
       operationIndex,
       mockWriteCache,
       consistencyTracker,
+      logger,
     );
 
     await processorManager.init();
@@ -659,11 +662,13 @@ describe("ProcessorManager Standalone Tests", () => {
         .execute();
 
       const consistencyTracker = new ConsistencyTracker();
+      const logger = new ConsoleLogger(["test"]);
       const restartedManager = new ProcessorManager(
         db as unknown as Kysely<DocumentViewDatabase>,
         operationIndex,
         mockWriteCache,
         consistencyTracker,
+        logger,
       );
       await restartedManager.init();
 
@@ -949,11 +954,13 @@ describe("ProcessorManager Standalone Tests", () => {
 
       // Create a fresh ProcessorManager (simulates restart)
       const consistencyTracker = new ConsistencyTracker();
+      const logger = new ConsoleLogger(["test"]);
       const restartedManager = new ProcessorManager(
         db as unknown as Kysely<DocumentViewDatabase>,
         operationIndex,
         mockWriteCache,
         consistencyTracker,
+        logger,
       );
       await restartedManager.init();
 

@@ -10,6 +10,7 @@ import type { PHDocumentHeader } from "document-model";
 import type { Kysely } from "kysely";
 import type { IOperationIndex } from "../cache/operation-index-types.js";
 import type { IWriteCache } from "../cache/write/interfaces.js";
+import type { ILogger } from "../logging/types.js";
 import { BaseReadModel } from "../read-models/base-read-model.js";
 import type {
   DocumentViewDatabase,
@@ -47,17 +48,20 @@ export class ProcessorManager
     new Map();
   private knownDriveIds: Set<string> = new Set();
   private cursorCache: Map<string, ProcessorCursorRow> = new Map();
+  private logger: ILogger;
 
   constructor(
     db: Kysely<DocumentViewDatabase>,
     operationIndex: IOperationIndex,
     writeCache: IWriteCache,
     consistencyTracker: IConsistencyTracker,
+    logger: ILogger,
   ) {
     super(db, operationIndex, writeCache, consistencyTracker, {
       readModelId: "processor-manager",
       rebuildStateOnInit: true,
     });
+    this.logger = logger;
   }
 
   override async init(): Promise<void> {
@@ -207,8 +211,10 @@ export class ProcessorManager
     try {
       records = await factory(driveHeader);
     } catch (error) {
-      console.error(
-        `ProcessorManager: Factory '${identifier}' failed for drive '${driveId}':`,
+      this.logger.error(
+        "Factory '@FactoryId' failed for drive '@DriveId': @Error",
+        identifier,
+        driveId,
         error,
       );
       return;
@@ -315,8 +321,10 @@ export class ProcessorManager
             error instanceof Error ? error.message : String(error);
           tracked.lastErrorTimestamp = new Date();
           await this.safeSaveProcessorCursor(tracked);
-          console.error(
-            `ProcessorManager: Processor '${tracked.processorId}' failed during backfill at ordinal ${tracked.lastOrdinal}:`,
+          this.logger.error(
+            "Processor '@ProcessorId' failed during backfill at ordinal @Ordinal: @Error",
+            tracked.processorId,
+            tracked.lastOrdinal,
             error,
           );
           return;
@@ -364,7 +372,7 @@ export class ProcessorManager
     try {
       await processor.onDisconnect();
     } catch (error) {
-      console.error("ProcessorManager: Error disconnecting processor:", error);
+      this.logger.error("Error disconnecting processor: @Error", error);
     }
   }
 
@@ -394,8 +402,10 @@ export class ProcessorManager
               error instanceof Error ? error.message : String(error);
             tracked.lastErrorTimestamp = new Date();
             await this.safeSaveProcessorCursor(tracked);
-            console.error(
-              `ProcessorManager: Processor '${tracked.processorId}' failed at ordinal ${tracked.lastOrdinal}:`,
+            this.logger.error(
+              "Processor '@ProcessorId' failed at ordinal @Ordinal: @Error",
+              tracked.processorId,
+              tracked.lastOrdinal,
               error,
             );
             return;
@@ -425,8 +435,9 @@ export class ProcessorManager
     try {
       await this.saveProcessorCursor(tracked);
     } catch (error) {
-      console.error(
-        `ProcessorManager: Failed to persist cursor for '${tracked.processorId}':`,
+      this.logger.error(
+        "Failed to persist cursor for '@ProcessorId': @Error",
+        tracked.processorId,
         error,
       );
     }

@@ -333,6 +333,7 @@ export class ReactorBuilder {
       operationIndex,
       writeCache,
       processorManagerConsistencyTracker,
+      this.logger!,
     );
 
     try {
