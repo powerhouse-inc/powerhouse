@@ -6,10 +6,10 @@ import {
 } from "@renown/sdk/node";
 import {
   actions,
-  type Action,
-  type DocumentModelDocument,
   documentModelDocumentModelModule,
   setName,
+  type Action,
+  type DocumentModelDocument,
   type UserActionSigner,
 } from "document-model";
 import { describe, expect, it } from "vitest";

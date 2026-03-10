@@ -42,8 +42,7 @@
   },
   "devDependencies": {
     "document-model": "workspace:*",
-    "vitest": "catalog:",
-    "@powerhousedao/reactor": "workspace:*"
+    "vitest": "catalog:"
   },
   "dependencies": {
     "@didtools/key-did": "^1.0.0",

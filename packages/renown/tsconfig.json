@@ -13,9 +13,6 @@
   "references": [
     {
       "path": "../document-model"
-    },
-    {
-      "path": "../reactor"
     }
   ]
 }

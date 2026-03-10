@@ -2223,9 +2223,6 @@ importers:
         specifier: ^5.1.0
         version: 5.1.0
     devDependencies:
-      '@powerhousedao/reactor':
-        specifier: workspace:*
-        version: link:../reactor
       document-model:
         specifier: link:../document-model
         version: link:../document-model
