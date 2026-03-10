@@ -44,6 +44,7 @@ async function loadExternalPackage(name: string, registryUrl: string) {
 export class BrowserPackageManager implements IPackageManager {
   #storage: BrowserLocalStorage<IPackagesMap>;
   #packages: Map<string, VetraPackage> = new Map();
+  #localPackageIds = new Set<string>();
   #subscribers = new Set<IPackagesListener>();
   #packagesMemo: VetraPackage[] = [];
 
@@ -73,6 +74,10 @@ export class BrowserPackageManager implements IPackageManager {
     return this.#packagesMemo;
   }
 
+  get localPackageIds(): Set<string> {
+    return new Set(this.#localPackageIds);
+  }
+
   async addPackage(name: string, registryUrl: string) {
     const module = await loadExternalPackage(name, registryUrl);
     this.#packages.set(name, module);
@@ -90,6 +95,7 @@ export class BrowserPackageManager implements IPackageManager {
 
   async addLocalPackage(name: string, localPackage: VetraPackage) {
     this.#packages.set(name, localPackage);
+    this.#localPackageIds.add(localPackage.id);
     this.#notifyPackagesChanged();
   }
 

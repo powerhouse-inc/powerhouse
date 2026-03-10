@@ -9,6 +9,7 @@ export * from "./hooks/index.js";
 export * from "./package-manager.js";
 export * from "./pglite/index.js";
 export * from "./re-exports.js";
+export * from "./registry/index.js";
 export * from "./reactor-client-document-cache.js";
 export * from "./reactor.js";
 export * from "./relational/index.js";

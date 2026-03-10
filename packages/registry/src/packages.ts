@@ -3,13 +3,20 @@ import path from "node:path";
 import type { PackageInfo, PowerhouseManifest } from "./types.js";
 
 function readManifest(dir: string): PowerhouseManifest | null {
-  const manifestPath = path.join(dir, "powerhouse.manifest.json");
-  try {
-    const raw = fs.readFileSync(manifestPath, "utf-8");
-    return JSON.parse(raw) as PowerhouseManifest;
-  } catch {
-    return null;
+  const candidates = [
+    path.join(dir, "powerhouse.manifest.json"),
+    path.join(dir, "cdn", "powerhouse.manifest.json"),
+    path.join(dir, "dist", "powerhouse.manifest.json"),
+  ];
+  for (const manifestPath of candidates) {
+    try {
+      const raw = fs.readFileSync(manifestPath, "utf-8");
+      return JSON.parse(raw) as PowerhouseManifest;
+    } catch {
+      // try next candidate
+    }
   }
+  return null;
 }
 
 function getLatestVersionDir(pkgDir: string): string | null {
