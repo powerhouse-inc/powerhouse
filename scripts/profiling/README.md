@@ -247,11 +247,11 @@ Starts the switchboard with [Pyroscope](https://pyroscope.io/) continuous profil
 ./scripts/profiling/switchboard-pyroscope.sh -r bun -m legacy --postgres "postgresql://postgres:postgres@localhost:5432/reactor"
 ```
 
-| Flag         | Short | Description                              |
-| ------------ | ----- | ---------------------------------------- |
-| `--runtime`  | `-r`  | Runtime: `node` (default) or `bun`       |
-| `--mode`     | `-m`  | Storage mode: `v2` (default) or `legacy` |
-| `--postgres` | `-p`  | PostgreSQL database URL                  |
+| Flag         | Short | Description                                                                                                                     |
+| ------------ | ----- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `--runtime`  | `-r`  | Runtime: `node` (default) or `bun`                                                                                              |
+| `--mode`     | `-m`  | Storage mode: `v2` (default) or `legacy`                                                                                        |
+| `--postgres` | `-p`  | PostgreSQL database URL; sets `DATABASE_URL` — migrations run automatically before the server starts when `DATABASE_URL` is set |
 
 ## Infrastructure
 
@@ -326,10 +326,8 @@ tsx docs-reset.ts
 ```bash
 docker compose -f scripts/profiling/docker-compose.yml up pyroscope postgres -d
 
-# Migrate the database schema (required once per fresh database)
-DATABASE_URL="postgresql://postgres:postgres@localhost:5432/postgres" pnpm --filter document-drive run migrate
-
 # Terminal 1: start switchboard with Pyroscope (wall:wall + CPU mode)
+# Migrations run automatically when --postgres is provided
 ./scripts/profiling/switchboard-pyroscope.sh \
   --postgres "postgresql://postgres:postgres@localhost:5432/postgres"
 
