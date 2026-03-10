@@ -10,8 +10,10 @@ import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
 import { v4 as uuidv4 } from "uuid";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { IOperationIndex } from "../../../src/cache/operation-index-types.js";
+import type { IWriteCache } from "../../../src/cache/write/interfaces.js";
+import type { DocumentViewDatabase } from "../../../src/read-models/types.js";
 import type { IConsistencyTracker } from "../../../src/shared/consistency-tracker.js";
-import type { IOperationStore } from "../../../src/storage/interfaces.js";
 import { KyselyDocumentIndexer } from "../../../src/storage/kysely/document-indexer.js";
 import type {
   Database,
@@ -22,14 +24,19 @@ import {
   runMigrations,
 } from "../../../src/storage/migrations/migrator.js";
 
+type CombinedDatabase = Database &
+  DocumentIndexerDatabase &
+  DocumentViewDatabase;
+
 describe("KyselyDocumentIndexer Unit Tests", () => {
-  let db: Kysely<Database & DocumentIndexerDatabase>;
+  let db: Kysely<CombinedDatabase>;
   let indexer: KyselyDocumentIndexer;
-  let mockOperationStore: IOperationStore;
+  let mockOperationIndex: IOperationIndex;
+  let mockWriteCache: IWriteCache;
   let mockConsistencyTracker: IConsistencyTracker;
 
   beforeEach(async () => {
-    const baseDb = new Kysely<Database & DocumentIndexerDatabase>({
+    const baseDb = new Kysely<CombinedDatabase>({
       dialect: new PGliteDialect(new PGlite()),
     });
 
@@ -41,27 +48,33 @@ describe("KyselyDocumentIndexer Unit Tests", () => {
 
     db = baseDb.withSchema(REACTOR_SCHEMA);
 
-    mockOperationStore = {
-      apply: vi.fn(),
-      getSince: vi.fn().mockResolvedValue({
+    mockOperationIndex = {
+      start: vi.fn(),
+      commit: vi.fn().mockResolvedValue([]),
+      find: vi.fn().mockResolvedValue({
+        results: [],
+        options: { cursor: "0", limit: 100 },
+      }),
+      get: vi.fn().mockResolvedValue({
+        results: [],
+        options: { cursor: "0", limit: 100 },
+      }),
+      getSinceOrdinal: vi.fn().mockResolvedValue({
         results: [],
         options: { cursor: "0", limit: 100 },
         nextCursor: undefined,
       }),
-      getSinceId: vi.fn().mockResolvedValue({
-        results: [],
-        options: { cursor: "0", limit: 100 },
-        nextCursor: undefined,
-      }),
-      getConflicting: vi.fn().mockResolvedValue({
-        results: [],
-        options: { cursor: "0", limit: 100 },
-        nextCursor: undefined,
-      }),
-      getRevisions: vi.fn().mockResolvedValue({
-        revision: {},
-        latestTimestamp: new Date().toISOString(),
-      }),
+      getLatestTimestampForCollection: vi.fn().mockResolvedValue(null),
+      getCollectionsForDocuments: vi.fn().mockResolvedValue({}),
+    };
+
+    mockWriteCache = {
+      getState: vi.fn().mockResolvedValue({}),
+      putState: vi.fn(),
+      invalidate: vi.fn().mockReturnValue(0),
+      clear: vi.fn(),
+      startup: vi.fn().mockResolvedValue(undefined),
+      shutdown: vi.fn().mockResolvedValue(undefined),
     };
 
     mockConsistencyTracker = {
@@ -74,7 +87,8 @@ describe("KyselyDocumentIndexer Unit Tests", () => {
 
     indexer = new KyselyDocumentIndexer(
       db,
-      mockOperationStore,
+      mockOperationIndex,
+      mockWriteCache,
       mockConsistencyTracker,
     );
     await indexer.init();
@@ -91,16 +105,17 @@ describe("KyselyDocumentIndexer Unit Tests", () => {
 
       expect(tableNames).toContain("Document");
       expect(tableNames).toContain("DocumentRelationship");
-      expect(tableNames).toContain("IndexerState");
+      expect(tableNames).toContain("ViewState");
     });
 
-    it("should initialize with lastOperationId of 0", async () => {
+    it("should initialize with lastOrdinal of 0", async () => {
       const state = await db
-        .selectFrom("IndexerState")
+        .selectFrom("ViewState")
         .selectAll()
+        .where("readModelId", "=", "document-indexer")
         .executeTakeFirst();
 
-      expect(state?.lastOperationId).toBe(0);
+      expect(state?.lastOrdinal).toBe(0);
     });
 
     it("should catch up on missed operations", async () => {
@@ -137,7 +152,7 @@ describe("KyselyDocumentIndexer Unit Tests", () => {
         },
       ];
 
-      mockOperationStore.getSinceId = vi.fn().mockResolvedValue({
+      mockOperationIndex.getSinceOrdinal = vi.fn().mockResolvedValue({
         results: operations,
         options: { cursor: "0", limit: 100 },
         nextCursor: undefined,
@@ -145,7 +160,8 @@ describe("KyselyDocumentIndexer Unit Tests", () => {
 
       const newIndexer = new KyselyDocumentIndexer(
         db,
-        mockOperationStore,
+        mockOperationIndex,
+        mockWriteCache,
         mockConsistencyTracker,
       );
       await newIndexer.init();

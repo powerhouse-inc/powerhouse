@@ -1,10 +1,13 @@
 import type { Operation, OperationWithContext } from "document-model";
 import type { Kysely } from "kysely";
 import { v4 as uuidv4 } from "uuid";
+import type { IOperationIndex } from "../../cache/operation-index-types.js";
+import type { IWriteCache } from "../../cache/write/interfaces.js";
+import { BaseReadModel } from "../../read-models/base-read-model.js";
+import type { DocumentViewDatabase } from "../../read-models/types.js";
 import { collectAllPages } from "../../shared/collect-all-pages.js";
 import type { IConsistencyTracker } from "../../shared/consistency-tracker.js";
 import type {
-  ConsistencyCoordinate,
   ConsistencyToken,
   PagedResults,
   PagingOptions,
@@ -14,7 +17,6 @@ import type {
   DocumentRelationship,
   IDocumentGraph,
   IDocumentIndexer,
-  IOperationStore,
 } from "../interfaces.js";
 import type {
   DocumentIndexerDatabase,
@@ -22,52 +24,36 @@ import type {
   Database as StorageDatabase,
 } from "./types.js";
 
-type Database = StorageDatabase & DocumentIndexerDatabase;
+export type IndexerDatabase = StorageDatabase &
+  DocumentIndexerDatabase &
+  DocumentViewDatabase;
 
-export class KyselyDocumentIndexer implements IDocumentIndexer {
-  private lastOperationId: number = 0;
+export class KyselyDocumentIndexer
+  extends BaseReadModel
+  implements IDocumentIndexer
+{
+  private _db: Kysely<IndexerDatabase>;
 
   constructor(
-    private db: Kysely<Database>,
-    private operationStore: IOperationStore,
-    private consistencyTracker: IConsistencyTracker,
-  ) {}
-
-  async init(): Promise<void> {
-    const indexerState = await this.db
-      .selectFrom("IndexerState")
-      .selectAll()
-      .executeTakeFirst();
-
-    if (indexerState) {
-      this.lastOperationId = indexerState.lastOperationId;
-
-      const missedOperations = await this.operationStore.getSinceId(
-        this.lastOperationId,
-      );
-
-      if (missedOperations.results.length > 0) {
-        await this.indexOperations(missedOperations.results);
-      }
-    } else {
-      await this.db
-        .insertInto("IndexerState")
-        .values({
-          lastOperationId: 0,
-        })
-        .execute();
-
-      const allOperations = await this.operationStore.getSinceId(0);
-      if (allOperations.results.length > 0) {
-        await this.indexOperations(allOperations.results);
-      }
-    }
+    db: Kysely<IndexerDatabase>,
+    operationIndex: IOperationIndex,
+    writeCache: IWriteCache,
+    consistencyTracker: IConsistencyTracker,
+  ) {
+    super(
+      db as unknown as Kysely<DocumentViewDatabase>,
+      operationIndex,
+      writeCache,
+      consistencyTracker,
+      { readModelId: "document-indexer", rebuildStateOnInit: false },
+    );
+    this._db = db;
   }
 
-  async indexOperations(items: OperationWithContext[]): Promise<void> {
-    if (items.length === 0) return;
-
-    await this.db.transaction().execute(async (trx) => {
+  protected override async commitOperations(
+    items: OperationWithContext[],
+  ): Promise<void> {
+    await this._db.transaction().execute(async (trx) => {
       for (const item of items) {
         const { operation } = item;
         const actionType = operation.action.type;
@@ -78,42 +64,7 @@ export class KyselyDocumentIndexer implements IDocumentIndexer {
           await this.handleRemoveRelationship(trx, operation);
         }
       }
-
-      const lastOpId = items[items.length - 1].operation.id;
-      if (lastOpId && typeof lastOpId === "number") {
-        this.lastOperationId = lastOpId;
-        await trx
-          .updateTable("IndexerState")
-          .set({
-            lastOperationId: lastOpId,
-            lastOperationTimestamp: new Date(),
-          })
-          .execute();
-      }
     });
-
-    const coordinates: ConsistencyCoordinate[] = [];
-    for (let i = 0; i < items.length; i++) {
-      const item = items[i]!;
-      coordinates.push({
-        documentId: item.context.documentId,
-        scope: item.context.scope,
-        branch: item.context.branch,
-        operationIndex: item.operation.index,
-      });
-    }
-    this.consistencyTracker.update(coordinates);
-  }
-
-  async waitForConsistency(
-    token: ConsistencyToken,
-    timeoutMs?: number,
-    signal?: AbortSignal,
-  ): Promise<void> {
-    if (token.coordinates.length === 0) {
-      return;
-    }
-    await this.consistencyTracker.waitFor(token.coordinates, timeoutMs, signal);
   }
 
   async getOutgoing(
@@ -133,7 +84,7 @@ export class KyselyDocumentIndexer implements IDocumentIndexer {
     const startIndex = paging?.cursor ? parseInt(paging.cursor) : 0;
     const limit = paging?.limit || 100;
 
-    let query = this.db
+    let query = this._db
       .selectFrom("DocumentRelationship")
       .selectAll()
       .where("sourceId", "=", documentId);
@@ -197,7 +148,7 @@ export class KyselyDocumentIndexer implements IDocumentIndexer {
     const startIndex = paging?.cursor ? parseInt(paging.cursor) : 0;
     const limit = paging?.limit || 100;
 
-    let query = this.db
+    let query = this._db
       .selectFrom("DocumentRelationship")
       .selectAll()
       .where("targetId", "=", documentId);
@@ -258,7 +209,7 @@ export class KyselyDocumentIndexer implements IDocumentIndexer {
       throw new Error("Operation aborted");
     }
 
-    let query = this.db
+    let query = this._db
       .selectFrom("DocumentRelationship")
       .select("id")
       .where("sourceId", "=", sourceId)
@@ -292,7 +243,7 @@ export class KyselyDocumentIndexer implements IDocumentIndexer {
     const startIndex = paging?.cursor ? parseInt(paging.cursor) : 0;
     const limit = paging?.limit || 100;
 
-    let query = this.db
+    let query = this._db
       .selectFrom("DocumentRelationship")
       .selectAll()
       .where((eb) =>
@@ -363,7 +314,7 @@ export class KyselyDocumentIndexer implements IDocumentIndexer {
     const startIndex = paging?.cursor ? parseInt(paging.cursor) : 0;
     const limit = paging?.limit || 100;
 
-    let query = this.db
+    let query = this._db
       .selectFrom("DocumentRelationship")
       .selectAll()
       .where("sourceId", "=", sourceId)
@@ -539,7 +490,7 @@ export class KyselyDocumentIndexer implements IDocumentIndexer {
       throw new Error("Operation aborted");
     }
 
-    const rows = await this.db
+    const rows = await this._db
       .selectFrom("DocumentRelationship")
       .select("relationshipType")
       .distinct()
@@ -549,7 +500,7 @@ export class KyselyDocumentIndexer implements IDocumentIndexer {
   }
 
   private async handleAddRelationship(
-    trx: Kysely<Database>,
+    trx: Kysely<IndexerDatabase>,
     operation: Operation,
   ): Promise<void> {
     const input = operation.action.input as {
@@ -614,7 +565,7 @@ export class KyselyDocumentIndexer implements IDocumentIndexer {
   }
 
   private async handleRemoveRelationship(
-    trx: Kysely<Database>,
+    trx: Kysely<IndexerDatabase>,
     operation: Operation,
   ): Promise<void> {
     const input = operation.action.input as {

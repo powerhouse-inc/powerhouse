@@ -33,7 +33,10 @@ import { DocumentModelRegistry } from "../registry/implementation.js";
 import type { IDocumentModelLoader } from "../registry/interfaces.js";
 import { ConsistencyTracker } from "../shared/consistency-tracker.js";
 import type { SignatureVerificationHandler } from "../signer/types.js";
-import { KyselyDocumentIndexer } from "../storage/kysely/document-indexer.js";
+import {
+  KyselyDocumentIndexer,
+  type IndexerDatabase,
+} from "../storage/kysely/document-indexer.js";
 import { KyselyKeyframeStore } from "../storage/kysely/keyframe-store.js";
 import { KyselyOperationStore } from "../storage/kysely/store.js";
 import type { Database as StorageDatabase } from "../storage/kysely/types.js";
@@ -302,9 +305,9 @@ export class ReactorBuilder {
 
     const documentIndexerConsistencyTracker = new ConsistencyTracker();
     const documentIndexer = new KyselyDocumentIndexer(
-      // @ts-expect-error - Database type is a superset that includes all required tables
-      database,
-      operationStore,
+      database as unknown as Kysely<IndexerDatabase>,
+      operationIndex,
+      writeCache,
       documentIndexerConsistencyTracker,
     );
 

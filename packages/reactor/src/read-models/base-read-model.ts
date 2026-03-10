@@ -10,10 +10,15 @@ import type {
 import type { IReadModel } from "./interfaces.js";
 import type { DocumentViewDatabase } from "./types.js";
 
+export type BaseReadModelConfig = {
+  readModelId: string;
+  rebuildStateOnInit: boolean;
+};
+
 /**
  * Base class for read models that provides catch-up/rewind functionality.
  * Handles initialization, state tracking via ViewState table, and consistency tracking.
- * Subclasses should override indexOperations() with their specific indexing logic.
+ * Subclasses override commitOperations() with their specific domain logic.
  */
 export class BaseReadModel implements IReadModel {
   protected lastOrdinal: number = 0;
@@ -23,7 +28,7 @@ export class BaseReadModel implements IReadModel {
     protected operationIndex: IOperationIndex,
     protected writeCache: IWriteCache,
     protected consistencyTracker: IConsistencyTracker,
-    protected readModelId: string,
+    protected config: BaseReadModelConfig,
   ) {}
 
   /**
@@ -39,31 +44,32 @@ export class BaseReadModel implements IReadModel {
       );
 
       if (missedOperations.results.length > 0) {
-        const opsWithState = await this.rebuildStateForOperations(
-          missedOperations.results,
-        );
-        await this.indexOperations(opsWithState);
+        const ops = this.config.rebuildStateOnInit
+          ? await this.rebuildStateForOperations(missedOperations.results)
+          : missedOperations.results;
+        await this.indexOperations(ops);
       }
     } else {
       await this.initializeState();
       const allOperations = await this.operationIndex.getSinceOrdinal(0);
 
       if (allOperations.results.length > 0) {
-        const opsWithState = await this.rebuildStateForOperations(
-          allOperations.results,
-        );
-        await this.indexOperations(opsWithState);
+        const ops = this.config.rebuildStateOnInit
+          ? await this.rebuildStateForOperations(allOperations.results)
+          : allOperations.results;
+        await this.indexOperations(ops);
       }
     }
   }
 
   /**
-   * Indexes operations into the read model.
-   * Subclasses should override this method to implement their specific indexing logic.
-   * The overriding method should call saveState() and updateConsistencyTracker() at the end.
+   * Template method: runs domain-specific commitOperations, then persists
+   * state and updates consistency tracking.
    */
   async indexOperations(items: OperationWithContext[]): Promise<void> {
     if (items.length === 0) return;
+
+    await this.commitOperations(items);
 
     await this.db.transaction().execute(async (trx) => {
       await this.saveState(trx, items);
@@ -85,6 +91,12 @@ export class BaseReadModel implements IReadModel {
     }
     await this.consistencyTracker.waitFor(token.coordinates, timeoutMs, signal);
   }
+
+  // Subclass does domain-specific work here (snapshots, relationships, processor routing, etc.).
+  protected async commitOperations(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    items: OperationWithContext[],
+  ): Promise<void> {}
 
   /**
    * Rebuilds document state for each operation using the write cache.
@@ -126,7 +138,7 @@ export class BaseReadModel implements IReadModel {
     const row = await viewStateDb
       .selectFrom("ViewState")
       .select("lastOrdinal")
-      .where("readModelId", "=", this.readModelId)
+      .where("readModelId", "=", this.config.readModelId)
       .executeTakeFirst();
 
     return row?.lastOrdinal;
@@ -140,7 +152,7 @@ export class BaseReadModel implements IReadModel {
     await viewStateDb
       .insertInto("ViewState")
       .values({
-        readModelId: this.readModelId,
+        readModelId: this.config.readModelId,
         lastOrdinal: 0,
       })
       .execute();
@@ -148,7 +160,6 @@ export class BaseReadModel implements IReadModel {
 
   /**
    * Saves the last processed ordinal to the ViewState table.
-   * Should be called at the end of indexOperations() within a transaction.
    */
   protected async saveState(
     trx: Transaction<DocumentViewDatabase>,
@@ -163,13 +174,12 @@ export class BaseReadModel implements IReadModel {
         lastOrdinal: maxOrdinal,
         lastOperationTimestamp: new Date(),
       })
-      .where("readModelId", "=", this.readModelId)
+      .where("readModelId", "=", this.config.readModelId)
       .execute();
   }
 
   /**
    * Updates the consistency tracker with the processed operations.
-   * Should be called at the end of indexOperations() after the transaction commits.
    */
   protected updateConsistencyTracker(items: OperationWithContext[]): void {
     const coordinates: ConsistencyCoordinate[] = [];

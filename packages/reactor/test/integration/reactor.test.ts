@@ -23,12 +23,15 @@ import type { DocumentViewDatabase } from "../../src/read-models/types.js";
 import { ConsistencyTracker } from "../../src/shared/consistency-tracker.js";
 import { JobStatus } from "../../src/shared/types.js";
 import type { IDocumentIndexer } from "../../src/storage/interfaces.js";
-import { KyselyDocumentIndexer } from "../../src/storage/kysely/document-indexer.js";
 import type {
   DocumentIndexerDatabase,
   Database as StorageDatabase,
 } from "../../src/storage/kysely/types.js";
-import { createMockSigner, createTestOperationStore } from "../factories.js";
+import {
+  createMockSigner,
+  createTestDocumentIndexer,
+  createTestOperationStore,
+} from "../factories.js";
 
 type Database = StorageDatabase &
   DocumentViewDatabase &
@@ -74,12 +77,10 @@ describe("Tests the Reactor with the Document Drive Document Model", () => {
     // Create documentIndexer that we need a reference to
     const setup = await createTestOperationStore();
     db = setup.db as unknown as Kysely<Database>;
-    const operationStore = setup.store;
 
     const documentIndexerConsistencyTracker = new ConsistencyTracker();
-    documentIndexer = new KyselyDocumentIndexer(
-      db as any,
-      operationStore,
+    documentIndexer = createTestDocumentIndexer(
+      db,
       documentIndexerConsistencyTracker,
     );
     await documentIndexer.init();

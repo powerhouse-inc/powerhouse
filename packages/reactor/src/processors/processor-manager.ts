@@ -6,7 +6,7 @@ import type {
   ProcessorRecord,
 } from "@powerhousedao/shared/processors";
 import type { PHDocumentHeader } from "document-model";
-import type { Kysely, Transaction } from "kysely";
+import type { Kysely } from "kysely";
 import type { IOperationIndex } from "../cache/operation-index-types.js";
 import type { IWriteCache } from "../cache/write/interfaces.js";
 import { BaseReadModel } from "../read-models/base-read-model.js";
@@ -48,13 +48,10 @@ export class ProcessorManager
     writeCache: IWriteCache,
     consistencyTracker: IConsistencyTracker,
   ) {
-    super(
-      db,
-      operationIndex,
-      writeCache,
-      consistencyTracker,
-      "processor-manager",
-    );
+    super(db, operationIndex, writeCache, consistencyTracker, {
+      readModelId: "processor-manager",
+      rebuildStateOnInit: true,
+    });
   }
 
   override async init(): Promise<void> {
@@ -62,21 +59,12 @@ export class ProcessorManager
     await this.discoverExistingDrives();
   }
 
-  override async indexOperations(items: OperationWithContext[]): Promise<void> {
-    if (items.length === 0) return;
-
+  protected override async commitOperations(
+    items: OperationWithContext[],
+  ): Promise<void> {
     await this.detectAndRegisterNewDrives(items);
     await this.detectAndCleanupDeletedDrives(items);
     await this.routeOperationsToProcessors(items);
-
-    await this.db.transaction().execute(async (trx) => {
-      await this.saveState(
-        trx as unknown as Transaction<DocumentViewDatabase>,
-        items,
-      );
-    });
-
-    this.updateConsistencyTracker(items);
   }
 
   async registerFactory(
