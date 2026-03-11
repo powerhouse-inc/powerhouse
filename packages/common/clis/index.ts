@@ -5,6 +5,7 @@ export * from "./args/generate.js";
 export * from "./args/help.js";
 export * from "./args/inspect.js";
 export * from "./args/install.js";
+export * from "./args/publish.js";
 export * from "./args/list.js";
 export * from "./args/login.js";
 export * from "./args/migrate.js";
