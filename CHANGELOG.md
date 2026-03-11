@@ -1,3 +1,13 @@
+## 6.0.0-dev.84 (2026-03-11)
+
+### 🚀 Features
+
+- **registry:** add vetra favicon to registry web UI ([fcfb8458e](https://github.com/powerhouse-inc/powerhouse/commit/fcfb8458e))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 6.0.0-dev.83 (2026-03-11)
 
 ### 🚀 Features
