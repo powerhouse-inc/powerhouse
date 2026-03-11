@@ -128,3 +128,46 @@ jobs:
           git diff --cached --quiet && echo "No changes to commit" && exit 0
           git commit -m "chore(academy): update academy image tag to ${TAG}"
           git push
+
+  update-k8s-registry:
+    name: Update Registry Image in K8s Hosting
+    needs: build
+    if: ${{ needs.build.outputs.tag != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Determine target environments
+        id: env
+        env:
+          TAG: ${{ needs.build.outputs.tag }}
+        run: |
+          if [[ "$TAG" == *"-dev."* ]]; then
+            echo "targets=dev" >> $GITHUB_OUTPUT
+          elif [[ "$TAG" == *"-staging."* ]]; then
+            echo "targets=staging" >> $GITHUB_OUTPUT
+          else
+            echo "Skipping k8s update for production tags"
+          fi
+
+      - name: Update registry image tag in k8s-hosting
+        if: ${{ steps.env.outputs.targets != '' }}
+        env:
+          TAG: ${{ needs.build.outputs.tag }}
+          TARGETS: ${{ steps.env.outputs.targets }}
+          K8S_REPO_PAT: ${{ secrets.K8S_REPO_PAT }}
+        run: |
+          git clone "https://x-access-token:${K8S_REPO_PAT}@github.com/powerhouse-inc/powerhouse-k8s-hosting.git"
+          cd powerhouse-k8s-hosting
+
+          git config user.name "Github Actions Bot"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          for TARGET_ENV in $TARGETS; do
+            VALUES_FILE="tenants/${TARGET_ENV}/powerhouse-values.yaml"
+            # Update registry image tag (matches the line after registry's repository line)
+            sed -i '/repository: cr.vetra.io\/.*\/registry/{n;s/\(.*tag: \).*/\1'"${TAG}"'/}' "$VALUES_FILE"
+            git add "$VALUES_FILE"
+          done
+
+          git diff --cached --quiet && echo "No changes to commit" && exit 0
+          git commit -m "chore(registry): update registry image tag to ${TAG}"
+          git push
