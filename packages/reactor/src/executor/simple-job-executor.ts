@@ -103,6 +103,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       branch: string;
     }> = [];
 
+    let pendingEvent: JobWriteReadyEvent | undefined;
     let result: JobResult;
     try {
       result = await this.executionScope.run(async (stores) => {
@@ -134,21 +135,12 @@ export class SimpleJobExecutor implements IJobExecutor {
                     stores,
                   )
                 : {};
-            const event: JobWriteReadyEvent = {
+            pendingEvent = {
               jobId: job.id,
               operations: loadResult.operationsWithContext,
               jobMeta: job.meta,
               collectionMemberships,
             };
-            this.eventBus
-              .emit(ReactorEventTypes.JOB_WRITE_READY, event)
-              .catch((error) => {
-                this.logger.error(
-                  "Failed to emit JOB_WRITE_READY event: @Event : @Error",
-                  event,
-                  error,
-                );
-              });
           }
           return loadResult;
         }
@@ -187,21 +179,12 @@ export class SimpleJobExecutor implements IJobExecutor {
               actionResult.operationsWithContext,
               stores,
             );
-          const event: JobWriteReadyEvent = {
+          pendingEvent = {
             jobId: job.id,
             operations: actionResult.operationsWithContext,
             jobMeta: job.meta,
             collectionMemberships,
           };
-          this.eventBus
-            .emit(ReactorEventTypes.JOB_WRITE_READY, event)
-            .catch((error) => {
-              this.logger.error(
-                "Failed to emit JOB_WRITE_READY event: @Event : @Error",
-                event,
-                error,
-              );
-            });
         }
 
         return {
@@ -217,6 +200,18 @@ export class SimpleJobExecutor implements IJobExecutor {
         this.writeCache.invalidate(entry.documentId, entry.scope, entry.branch);
       }
       throw error;
+    }
+
+    if (pendingEvent) {
+      this.eventBus
+        .emit(ReactorEventTypes.JOB_WRITE_READY, pendingEvent)
+        .catch((error) => {
+          this.logger.error(
+            "Failed to emit JOB_WRITE_READY event: @Event : @Error",
+            pendingEvent,
+            error,
+          );
+        });
     }
 
     return result;

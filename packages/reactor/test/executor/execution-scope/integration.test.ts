@@ -231,6 +231,74 @@ describe("KyselyExecutionScope Integration", () => {
       );
       expect(operations.results).toHaveLength(0);
     });
+
+    it("should roll back operation store writes when error occurs after apply", async () => {
+      const document = driveDocumentModelModule.utils.createDocument();
+      await createDocumentWithCreateOperation(
+        document.header.id,
+        document.header.documentType,
+        document.state,
+      );
+
+      const addFolderActionId = generateId();
+      const addFolderOp = {
+        id: deriveOperationId(
+          document.header.id,
+          "global",
+          "main",
+          addFolderActionId,
+        ),
+        index: 0,
+        timestampUtcMs: new Date().toISOString(),
+        hash: "",
+        skip: 0,
+        action: {
+          id: addFolderActionId,
+          type: "ADD_FOLDER",
+          scope: "global",
+          timestampUtcMs: new Date().toISOString(),
+          input: {
+            id: "folder-rollback",
+            name: "Rollback Folder",
+            parentFolder: null,
+          },
+        },
+      };
+
+      await expect(
+        scope.run(async (stores) => {
+          await stores.operationStore.apply(
+            document.header.id,
+            document.header.documentType,
+            "global",
+            "main",
+            0,
+            (txn) => {
+              txn.addOperations(addFolderOp);
+            },
+          );
+
+          // Verify the operation is visible within the transaction
+          const withinTxn = await stores.operationStore.getSince(
+            document.header.id,
+            "global",
+            "main",
+            -1,
+          );
+          expect(withinTxn.results).toHaveLength(1);
+
+          throw new Error("Simulated post-apply failure");
+        }),
+      ).rejects.toThrow("Simulated post-apply failure");
+
+      const operations = await operationStore.getSince(
+        document.header.id,
+        "global",
+        "main",
+        -1,
+      );
+      expect(operations.results).toHaveLength(0);
+    });
   });
 
   describe("Cache Miss Within Transaction", () => {

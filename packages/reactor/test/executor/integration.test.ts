@@ -18,6 +18,11 @@ import type { KyselyKeyframeStore } from "../../src/storage/kysely/keyframe-stor
 import type { KyselyOperationStore } from "../../src/storage/kysely/store.js";
 import type { Database as DatabaseSchema } from "../../src/storage/kysely/types.js";
 import { DocumentDeletedError } from "../../src/shared/errors.js";
+import type { IEventBus } from "../../src/events/interfaces.js";
+import {
+  ReactorEventTypes,
+  type JobWriteReadyEvent,
+} from "../../src/events/types.js";
 import {
   createMockLogger,
   createTestEventBus,
@@ -57,6 +62,7 @@ describe.each(scopeVariants)(
     let writeCache: KyselyWriteCache;
     let operationIndex: KyselyOperationIndex;
     let documentMetaCache: DocumentMetaCache;
+    let eventBus: IEventBus;
 
     async function createDocumentWithCreateOperation(
       documentId: string,
@@ -196,7 +202,7 @@ describe.each(scopeVariants)(
         collectionMembershipCache,
       );
 
-      const eventBus = createTestEventBus();
+      eventBus = createTestEventBus();
       executor = new SimpleJobExecutor(
         createMockLogger(),
         registry,
@@ -1049,6 +1055,275 @@ describe.each(scopeVariants)(
           (op) => op.action.type === "UPGRADE_DOCUMENT",
         );
         expect(upgradeOps.length).toBeGreaterThan(0);
+      });
+    });
+
+    describe("Event Emission", () => {
+      it("should emit JOB_WRITE_READY after successful mutation", async () => {
+        const document = driveDocumentModelModule.utils.createDocument();
+        await createDocumentWithCreateOperation(
+          document.header.id,
+          document.header.documentType,
+          document.state,
+        );
+
+        const received: JobWriteReadyEvent[] = [];
+        eventBus.subscribe<JobWriteReadyEvent>(
+          ReactorEventTypes.JOB_WRITE_READY,
+          (_type, event) => {
+            received.push(event);
+          },
+        );
+
+        const job: Job = {
+          id: "job-emit-test",
+          kind: "mutation",
+          documentId: document.header.id,
+          scope: "global",
+          branch: "main",
+          actions: [
+            {
+              id: "action-emit",
+              type: "ADD_FOLDER",
+              scope: "global",
+              timestampUtcMs: new Date().toISOString(),
+              input: {
+                id: "folder-emit",
+                name: "Emit Test Folder",
+                parentFolder: null,
+              },
+            },
+          ],
+          operations: [],
+          createdAt: new Date().toISOString(),
+          queueHint: [],
+          errorHistory: [],
+          meta: { batchId: "test", batchJobIds: ["job-emit-test"] },
+        };
+
+        const result = await executor.executeJob(job);
+        expect(result.success).toBe(true);
+
+        // emit is fire-and-forget, wait for microtasks
+        await new Promise((r) => setTimeout(r, 50));
+
+        expect(received).toHaveLength(1);
+        expect(received[0].jobId).toBe("job-emit-test");
+        expect(received[0].operations).toHaveLength(1);
+        expect(received[0].operations[0].operation.action.type).toBe(
+          "ADD_FOLDER",
+        );
+      });
+
+      it("should not emit JOB_WRITE_READY for failed job", async () => {
+        const received: JobWriteReadyEvent[] = [];
+        eventBus.subscribe<JobWriteReadyEvent>(
+          ReactorEventTypes.JOB_WRITE_READY,
+          (_type, event) => {
+            received.push(event);
+          },
+        );
+
+        const job: Job = {
+          id: "job-fail-emit",
+          kind: "mutation",
+          documentId: "non-existent-doc",
+          scope: "global",
+          branch: "main",
+          actions: [
+            {
+              id: "action-fail",
+              type: "ADD_FOLDER",
+              scope: "global",
+              timestampUtcMs: new Date().toISOString(),
+              input: {
+                id: "folder-fail",
+                name: "Should Not Emit",
+                parentFolder: null,
+              },
+            },
+          ],
+          operations: [],
+          createdAt: new Date().toISOString(),
+          queueHint: [],
+          errorHistory: [],
+          meta: { batchId: "test", batchJobIds: ["job-fail-emit"] },
+        };
+
+        const result = await executor.executeJob(job);
+        expect(result.success).toBe(false);
+
+        await new Promise((r) => setTimeout(r, 50));
+
+        expect(received).toHaveLength(0);
+      });
+
+      it("should emit JOB_WRITE_READY after successful load job", async () => {
+        const document = driveDocumentModelModule.utils.createDocument();
+        await createDocumentWithCreateOperation(
+          document.header.id,
+          document.header.documentType,
+          document.state,
+        );
+
+        const received: JobWriteReadyEvent[] = [];
+        eventBus.subscribe<JobWriteReadyEvent>(
+          ReactorEventTypes.JOB_WRITE_READY,
+          (_type, event) => {
+            received.push(event);
+          },
+        );
+
+        const actionId = generateId();
+        const loadJob: Job = {
+          id: "job-load-emit",
+          kind: "load",
+          documentId: document.header.id,
+          scope: "global",
+          branch: "main",
+          actions: [],
+          operations: [
+            {
+              id: deriveOperationId(
+                document.header.id,
+                "global",
+                "main",
+                actionId,
+              ),
+              index: 0,
+              timestampUtcMs: new Date().toISOString(),
+              hash: "",
+              skip: 0,
+              action: {
+                id: actionId,
+                type: "ADD_FOLDER",
+                scope: "global",
+                timestampUtcMs: new Date().toISOString(),
+                input: {
+                  id: "folder-load",
+                  name: "Load Emit Folder",
+                  parentFolder: null,
+                },
+              },
+            },
+          ],
+          createdAt: new Date().toISOString(),
+          queueHint: [],
+          errorHistory: [],
+          meta: {
+            batchId: "test",
+            batchJobIds: ["job-load-emit"],
+            sourceRemote: "remote-1",
+          },
+        };
+
+        const result = await executor.executeJob(loadJob);
+        expect(result.success).toBe(true);
+
+        await new Promise((r) => setTimeout(r, 50));
+
+        expect(received).toHaveLength(1);
+        expect(received[0].jobId).toBe("job-load-emit");
+        expect(received[0].operations.length).toBeGreaterThan(0);
+      });
+    });
+
+    describe("Concurrent Execution", () => {
+      it("should execute jobs for different documents concurrently with isolation", async () => {
+        const doc1 = driveDocumentModelModule.utils.createDocument();
+        const doc2 = driveDocumentModelModule.utils.createDocument();
+
+        await createDocumentWithCreateOperation(
+          doc1.header.id,
+          doc1.header.documentType,
+          doc1.state,
+        );
+        await createDocumentWithCreateOperation(
+          doc2.header.id,
+          doc2.header.documentType,
+          doc2.state,
+        );
+
+        const job1: Job = {
+          id: "concurrent-job-1",
+          kind: "mutation",
+          documentId: doc1.header.id,
+          scope: "global",
+          branch: "main",
+          actions: [
+            {
+              id: "concurrent-action-1",
+              type: "ADD_FOLDER",
+              scope: "global",
+              timestampUtcMs: new Date().toISOString(),
+              input: {
+                id: "folder-doc1",
+                name: "Doc1 Folder",
+                parentFolder: null,
+              },
+            },
+          ],
+          operations: [],
+          createdAt: new Date().toISOString(),
+          queueHint: [],
+          errorHistory: [],
+          meta: { batchId: "test", batchJobIds: ["concurrent-job-1"] },
+        };
+
+        const job2: Job = {
+          id: "concurrent-job-2",
+          kind: "mutation",
+          documentId: doc2.header.id,
+          scope: "global",
+          branch: "main",
+          actions: [
+            {
+              id: "concurrent-action-2",
+              type: "ADD_FOLDER",
+              scope: "global",
+              timestampUtcMs: new Date(Date.now() + 1).toISOString(),
+              input: {
+                id: "folder-doc2",
+                name: "Doc2 Folder",
+                parentFolder: null,
+              },
+            },
+          ],
+          operations: [],
+          createdAt: new Date(Date.now() + 1).toISOString(),
+          queueHint: [],
+          errorHistory: [],
+          meta: { batchId: "test", batchJobIds: ["concurrent-job-2"] },
+        };
+
+        const [result1, result2] = await Promise.all([
+          executor.executeJob(job1),
+          executor.executeJob(job2),
+        ]);
+
+        expect(result1.success).toBe(true);
+        expect(result2.success).toBe(true);
+
+        const ops1 = await operationStore.getSince(
+          doc1.header.id,
+          "global",
+          "main",
+          -1,
+        );
+        const ops2 = await operationStore.getSince(
+          doc2.header.id,
+          "global",
+          "main",
+          -1,
+        );
+
+        expect(ops1.results).toHaveLength(1);
+        expect(ops1.results[0].action.type).toBe("ADD_FOLDER");
+        expect((ops1.results[0].action.input as any).id).toBe("folder-doc1");
+
+        expect(ops2.results).toHaveLength(1);
+        expect(ops2.results[0].action.type).toBe("ADD_FOLDER");
+        expect((ops2.results[0].action.input as any).id).toBe("folder-doc2");
       });
     });
   },
