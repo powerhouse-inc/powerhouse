@@ -1,3 +1,13 @@
+## 6.0.0-dev.79 (2026-03-11)
+
+### 🚀 Features
+
+- **ci:** add gitops action for registry image updates ([ba91d00dd](https://github.com/powerhouse-inc/powerhouse/commit/ba91d00dd))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 6.0.0-dev.78 (2026-03-11)
 
 This was a version bump only for @powerhousedao/analytics-engine-graphql to align it with other projects, there were no code changes.
