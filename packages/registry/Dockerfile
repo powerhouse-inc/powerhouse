@@ -44,6 +44,7 @@ WORKDIR /app
 COPY --from=install /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/package.json ./package.json
+COPY static/ ./static/
 
 ENV PORT=4873
 ENV REGISTRY_STORAGE=/data/storage
