@@ -1,3 +1,13 @@
+## 6.0.0-dev.82 (2026-03-11)
+
+### 🚀 Features
+
+- **registry:** add Vetra branding to registry web UI ([8d012ff10](https://github.com/powerhouse-inc/powerhouse/commit/8d012ff10))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 6.0.0-dev.81 (2026-03-11)
 
 ### 🩹 Fixes
