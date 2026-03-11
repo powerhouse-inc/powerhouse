@@ -143,6 +143,19 @@ export class BrowserPackageManager
   async addPackage(name: string, registryUrl: string) {
     const module = await loadExternalPackage(name, registryUrl);
     this.#packages.set(name, module);
+    this.#ensureStorageEntry(name, registryUrl);
+    this.#notifyPackagesChanged();
+  }
+
+  /**
+   * Ensures a package entry exists in persistent storage without fetching it.
+   * Use this to seed packages before calling init(), which handles the actual loading.
+   */
+  ensureStoredPackage(name: string, registryUrl: string) {
+    this.#ensureStorageEntry(name, registryUrl);
+  }
+
+  #ensureStorageEntry(name: string, registryUrl: string) {
     const storedPackages = this.#storage.get("packages");
     const existingPackage = storedPackages.find((pkg) => pkg.name === name);
     if (!existingPackage) {
@@ -152,7 +165,6 @@ export class BrowserPackageManager
       existingPackage.url = registryUrl;
       this.#storage.set("packages", storedPackages);
     }
-    this.#notifyPackagesChanged();
   }
 
   async addLocalPackage(name: string, localPackage: VetraPackage) {

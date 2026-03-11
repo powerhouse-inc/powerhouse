@@ -1,4 +1,7 @@
-import type { PowerhouseConfig } from "@powerhousedao/config";
+import {
+  DEFAULT_REGISTRY_URL,
+  type PowerhouseConfig,
+} from "@powerhousedao/config";
 import type { Command } from "commander";
 import crypto from "node:crypto";
 import fs from "node:fs";
@@ -146,7 +149,7 @@ export function updatePackagesArray(
   const mappedPackages = dependencies.map((dep) => ({
     packageName: dep.name,
     version: dep.version,
-    provider: "npm" as const,
+    provider: "registry" as const,
   }));
 
   if (isInstall) {
@@ -184,6 +187,11 @@ export function updateConfigFile(
     ...config,
     packages: updatePackagesArray(config.packages, dependencies, task),
   };
+
+  // Ensure registryUrl is set when installing registry packages
+  if (task === "install" && !updatedConfig.registryUrl) {
+    updatedConfig.registryUrl = DEFAULT_REGISTRY_URL;
+  }
 
   fs.writeFileSync(configPath, JSON.stringify(updatedConfig, null, 2));
 }

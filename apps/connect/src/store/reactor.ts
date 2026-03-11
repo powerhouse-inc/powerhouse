@@ -119,7 +119,21 @@ export async function createReactor() {
     logger.info("No external packages to load");
   }
 
-  // load packages from storage (persisted registry packages)
+  // Ensure registry packages from config are in storage before init.
+  // init() will handle the actual loading from the CDN.
+  const registryPackageNamesStr = import.meta.env
+    .PH_CONNECT_REGISTRY_PACKAGE_NAMES;
+  if (registryCdnUrl && registryPackageNamesStr) {
+    const registryPackageNames = registryPackageNamesStr
+      .split(",")
+      .map((p: string) => p.trim())
+      .filter(Boolean);
+    for (const pkgName of registryPackageNames) {
+      packageManager.ensureStoredPackage(pkgName, registryCdnUrl);
+    }
+  }
+
+  // load packages from storage (persisted registry packages + config packages)
   await packageManager.init();
 
   setVetraPackageManager(packageManager);

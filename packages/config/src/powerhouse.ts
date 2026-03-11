@@ -12,7 +12,9 @@ export type LogLevel = keyof typeof LogLevels;
 export function isLogLevel(value: unknown): value is LogLevel {
   return typeof value === "string" && value in LogLevels;
 }
-export type PHPackageProvider = "npm" | "github" | "local";
+export type PHPackageProvider = "npm" | "github" | "local" | "registry";
+
+export const DEFAULT_REGISTRY_URL = "https://registry.prod.vetra.io";
 
 export type PowerhousePackage = {
   packageName: string;
@@ -66,6 +68,7 @@ export type PowerhouseConfig = {
     https: boolean;
     openBrowser?: boolean;
   };
+  registryUrl?: string;
   packages?: PowerhousePackage[];
   vetra?: {
     driveId: string;
@@ -134,5 +137,29 @@ export type VetraProcessorConfigType = {
   driveUrl: string;
   driveId: string;
 };
+
+export function resolveRegistryConfig(
+  config: PowerhouseConfig,
+  env: Record<string, string | undefined> = {},
+): {
+  registryUrl: string | undefined;
+  packageNames: string[];
+} {
+  let registryUrl = config.registryUrl;
+  let packageNames =
+    config.packages
+      ?.filter((p) => p.provider === "registry")
+      .map((p) => p.packageName) ?? [];
+
+  // Env vars override config
+  if (env.PH_REGISTRY_URL) {
+    registryUrl = env.PH_REGISTRY_URL;
+  }
+  if (env.PH_REGISTRY_PACKAGES) {
+    packageNames = env.PH_REGISTRY_PACKAGES.split(",").map((p) => p.trim());
+  }
+
+  return { registryUrl, packageNames };
+}
 
 export const VETRA_PROCESSOR_CONFIG_KEY = "VetraConfig";

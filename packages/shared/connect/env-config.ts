@@ -131,6 +131,13 @@ const appConfigSchema = z.object({
   PH_CONNECT_PACKAGES_REGISTRY: z.string().optional(),
 
   /**
+   * Comma-separated list of registry package names to load at runtime.
+   * Populated from powerhouse.config.json packages with provider "registry".
+   * @example "@powerhousedao/vetra,@powerhousedao/atlas"
+   */
+  PH_CONNECT_REGISTRY_PACKAGE_NAMES: z.string().optional(),
+
+  /**
    * Strategy for preserving drives
    */
   PH_CONNECT_DRIVES_PRESERVE_STRATEGY: z.string().optional(),

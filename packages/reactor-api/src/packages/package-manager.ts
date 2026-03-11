@@ -264,7 +264,11 @@ export class PackageManager implements IPackageManager {
 
   private getPackageNamesFromConfigFile(configFile: string) {
     const loadedConfig = getConfig(configFile);
-    return loadedConfig.packages?.map((pkg) => pkg.packageName) ?? [];
+    return (
+      loadedConfig.packages
+        ?.filter((pkg) => pkg.provider !== "registry")
+        .map((pkg) => pkg.packageName) ?? []
+    );
   }
 
   private initConfigFileWatcher(configFile: string) {

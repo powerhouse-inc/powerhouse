@@ -161,15 +161,33 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
 
   const phConfig = options.powerhouseConfig ?? getConfig(phConfigPath);
 
+  // Populate registry env vars from config if not already set by env
+  if (!env.PH_CONNECT_PACKAGES_REGISTRY && phConfig.registryUrl) {
+    env.PH_CONNECT_PACKAGES_REGISTRY = phConfig.registryUrl;
+    setConnectEnv(env);
+  }
+
+  const registryPackageNames =
+    phConfig.packages
+      ?.filter((p) => p.provider === "registry")
+      .map((p) => p.packageName) ?? [];
+  if (
+    !env.PH_CONNECT_REGISTRY_PACKAGE_NAMES &&
+    registryPackageNames.length > 0
+  ) {
+    env.PH_CONNECT_REGISTRY_PACKAGE_NAMES = registryPackageNames.join(",");
+    setConnectEnv(env);
+  }
+
   // load packages from env variable
   const phPackagesStr = env.PH_PACKAGES || "";
   const envPhPackages = phPackagesStr.split(",");
 
-  // loadPackages from config
+  // loadPackages from config (exclude registry packages — they're loaded via CDN at runtime)
   const configPhPackages =
-    phConfig.packages?.map((p) =>
-      typeof p === "string" ? p : p.packageName,
-    ) ?? [];
+    phConfig.packages
+      ?.filter((p) => typeof p === "string" || p.provider !== "registry")
+      .map((p) => (typeof p === "string" ? p : p.packageName)) ?? [];
 
   // merges env and config packages, remove empty strings, version suffixes and duplicates
   const allPackages = [

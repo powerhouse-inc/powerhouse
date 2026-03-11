@@ -6,6 +6,8 @@ import { register } from "node:module";
 register(httpsHooksPath, import.meta.url);
 
 import { PGlite } from "@electric-sql/pglite";
+import { resolveRegistryConfig } from "@powerhousedao/config";
+import { getConfig } from "@powerhousedao/config/node";
 import { ReactorInstrumentation } from "@powerhousedao/opentelemetry-instrumentation-reactor";
 import {
   ChannelScheme,
@@ -165,21 +167,30 @@ async function initServer(
       ? ".ph/read-storage"
       : dbPath;
 
-  // HTTP registry package loading
+  // HTTP registry package loading — merge config + env vars
   let httpDocumentModels: DocumentModelModule[] = [];
-  const registryUrl = process.env.PH_REGISTRY_URL;
-  const registryPackages = process.env.PH_REGISTRY_PACKAGES;
   let httpLoader: HttpPackageLoader | undefined;
+
+  const configForRegistry = getConfig(
+    options.configFile ?? path.join(process.cwd(), "powerhouse.config.json"),
+  );
+  const { registryUrl, packageNames: registryPackageNames } =
+    resolveRegistryConfig(
+      configForRegistry,
+      process.env as Record<string, string | undefined>,
+    );
 
   if (registryUrl) {
     httpLoader = new HttpPackageLoader({ registryUrl });
   }
 
-  if (httpLoader && registryPackages) {
-    const packageNames = registryPackages.split(",").map((p) => p.trim());
-    httpDocumentModels = await httpLoader.loadPackages(packageNames, logger);
+  if (httpLoader && registryPackageNames.length > 0) {
+    httpDocumentModels = await httpLoader.loadPackages(
+      registryPackageNames,
+      logger,
+    );
     logger.info(
-      `Loaded ${httpDocumentModels.length} HTTP document models from ${packageNames.length} packages`,
+      `Loaded ${httpDocumentModels.length} HTTP document models from ${registryPackageNames.length} packages`,
     );
   }
 

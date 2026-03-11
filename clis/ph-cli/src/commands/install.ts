@@ -12,14 +12,15 @@ export const install = command({
   name: "install",
   aliases: ["add", "i"],
   description: `
-The install command adds Powerhouse dependencies to your project. It handles installation
-of packages, updates configuration files, and ensures proper setup of dependencies.
+The install command adds Powerhouse dependencies to your project. By default it only
+updates powerhouse.config.json with the package as a registry dependency (no npm install).
+
+Use --local to also install the package as a node module from the registry.
 
 This command:
-1. Installs specified Powerhouse dependencies using your package manager
-2. Updates powerhouse.config.json to include the new dependencies
-3. Supports various installation options and configurations
-4. Works with npm, yarn, pnpm, and bun package managers
+1. Updates powerhouse.config.json to include the new dependencies with provider "registry"
+2. Sets registryUrl in config if not already set
+3. With --local: also installs via package manager and updates style.css
   `,
   args: installArgs,
   handler: async (args) => {
@@ -56,19 +57,7 @@ This command:
       });
     }
 
-    try {
-      console.log("installing dependencies 📦 ...");
-      const installCommand = getPowerhouseProjectInstallCommand(packageManager);
-      execSync(installCommand, {
-        stdio: "inherit",
-        cwd: projectPath,
-      });
-      console.log("Dependency installed successfully 🎉");
-    } catch (error) {
-      console.error("❌ Failed to install dependencies");
-      throw error;
-    }
-
+    // Always update config file (registry-based entry)
     if (args.debug) {
       console.log("\n>>> updateConfigFile arguments:");
       console.log(">>> dependencies", args.dependencies);
@@ -84,13 +73,30 @@ This command:
       throw error;
     }
 
-    try {
-      console.log("⚙️ Updating styles.css file...");
-      updateStylesFile(dependenciesWithVersions, projectPath);
-      console.log("Styles file updated successfully 🎉");
-    } catch (error) {
-      console.error("❌ Failed to update styles file");
-      throw error;
+    // With --local flag: also install as node module and update styles
+    if (args.local) {
+      try {
+        console.log("installing dependencies 📦 ...");
+        const installCommand =
+          getPowerhouseProjectInstallCommand(packageManager);
+        execSync(installCommand, {
+          stdio: "inherit",
+          cwd: projectPath,
+        });
+        console.log("Dependency installed successfully 🎉");
+      } catch (error) {
+        console.error("❌ Failed to install dependencies");
+        throw error;
+      }
+
+      try {
+        console.log("⚙️ Updating styles.css file...");
+        updateStylesFile(dependenciesWithVersions, projectPath);
+        console.log("Styles file updated successfully 🎉");
+      } catch (error) {
+        console.error("❌ Failed to update styles file");
+        throw error;
+      }
     }
 
     process.exit(0);

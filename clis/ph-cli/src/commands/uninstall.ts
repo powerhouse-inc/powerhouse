@@ -13,14 +13,15 @@ export const uninstall = command({
   name: "uninstall",
   aliases: ["remove"],
   description: `
-The uninstall command removes Powerhouse dependencies from your project. It handles the
-removal of packages, updates configuration files, and ensures proper cleanup.
+The uninstall command removes Powerhouse dependencies from your project. By default it only
+removes the entry from powerhouse.config.json.
+
+Use --local to also uninstall the package from node_modules and clean up style.css.
 
 This command:
-1. Uninstalls specified Powerhouse dependencies using your package manager
-2. Updates powerhouse.config.json to remove the dependencies
-3. Supports various uninstallation options and configurations
-4. Works with ${AGENTS.join(", ")} package managers
+1. Updates powerhouse.config.json to remove the dependencies
+2. With --local: also uninstalls via package manager and removes CSS imports
+3. Works with ${AGENTS.join(", ")} package managers
 `,
   args: uninstallArgs,
   handler: async (args) => {
@@ -57,20 +58,7 @@ This command:
       });
     }
 
-    try {
-      console.log("Uninstalling dependencies 📦 ...");
-      const uninstallCommand =
-        await getPowerhouseProjectUninstallCommand(packageManager);
-      execSync(uninstallCommand, {
-        stdio: "inherit",
-        cwd: projectPath,
-      });
-      console.log("Dependency uninstalled successfully 🎉");
-    } catch (error) {
-      console.error("❌ Failed to uninstall dependencies");
-      throw error;
-    }
-
+    // Always update config file
     try {
       console.log("⚙️ Updating powerhouse config file...");
       updateConfigFile(dependenciesWithVersions, projectPath, "uninstall");
@@ -80,13 +68,30 @@ This command:
       throw error;
     }
 
-    try {
-      console.log("⚙️ Updating styles.css file...");
-      removeStylesImports(dependenciesWithVersions, projectPath);
-      console.log("Styles file updated successfully 🎉");
-    } catch (error) {
-      console.error("❌ Failed to update styles file");
-      throw error;
+    // With --local flag: also uninstall from node_modules and clean styles
+    if (args.local) {
+      try {
+        console.log("Uninstalling dependencies 📦 ...");
+        const uninstallCommand =
+          await getPowerhouseProjectUninstallCommand(packageManager);
+        execSync(uninstallCommand, {
+          stdio: "inherit",
+          cwd: projectPath,
+        });
+        console.log("Dependency uninstalled successfully 🎉");
+      } catch (error) {
+        console.error("❌ Failed to uninstall dependencies");
+        throw error;
+      }
+
+      try {
+        console.log("⚙️ Updating styles.css file...");
+        removeStylesImports(dependenciesWithVersions, projectPath);
+        console.log("Styles file updated successfully 🎉");
+      } catch (error) {
+        console.error("❌ Failed to update styles file");
+        throw error;
+      }
     }
 
     process.exit(0);
