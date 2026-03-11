@@ -1,3 +1,13 @@
+## 6.0.0-dev.83 (2026-03-11)
+
+### 🚀 Features
+
+- **registry:** enable dark mode by default and use light logo ([11e7c0085](https://github.com/powerhouse-inc/powerhouse/commit/11e7c0085))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 6.0.0-dev.82 (2026-03-11)
 
 ### 🚀 Features
