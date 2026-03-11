@@ -10,7 +10,6 @@ import type { IDocumentCache } from "./documents.js";
 import type { PHModal } from "./modals.js";
 import type { TimelineItem } from "./timeline.js";
 import type { PHToastFn } from "./toast.js";
-import type { BrowserPackageLoader } from "../loaders/browser-package-loader.js";
 import type { IPackageManager } from "./vetra.js";
 
 export type BrowserReactorClientModule = ReactorClientModule & {
@@ -23,7 +22,6 @@ export type PHGlobal = PHGlobalConfig & {
   reactorClient?: IReactorClient;
   renown?: IRenown;
   vetraPackageManager?: IPackageManager;
-  browserPackageLoader?: BrowserPackageLoader;
   drives?: DocumentDriveDocument[];
   documentCache?: IDocumentCache;
   selectedDriveId?: string;

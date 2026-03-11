@@ -1,21 +1,23 @@
 import { PackageInstallModal } from "@powerhousedao/design-system/connect";
 import {
-  type BrowserPackageLoader,
-  useBrowserPackageLoader,
+  type BrowserPackageManager,
   usePendingInstallations,
+  useVetraPackageManager,
 } from "@powerhousedao/reactor-browser";
 import React, { useCallback } from "react";
 import { toast } from "../services/toast.js";
 
 export const PackageInstallPrompt: React.FC = () => {
-  const loader = useBrowserPackageLoader() as BrowserPackageLoader | undefined;
+  const packageManager = useVetraPackageManager() as
+    | BrowserPackageManager
+    | undefined;
   const pending = usePendingInstallations();
 
   const handleInstall = useCallback(
     async (packageName: string) => {
-      if (!loader) return;
+      if (!packageManager) return;
       try {
-        await loader.approveInstallation(packageName);
+        await packageManager.approveInstallation(packageName);
         toast(`Package "${packageName}" installed successfully`, {
           type: "connect-success",
         });
@@ -27,15 +29,15 @@ export const PackageInstallPrompt: React.FC = () => {
         });
       }
     },
-    [loader],
+    [packageManager],
   );
 
   const handleDismiss = useCallback(
     (packageName: string) => {
-      if (!loader) return;
-      loader.rejectInstallation(packageName);
+      if (!packageManager) return;
+      packageManager.rejectInstallation(packageName);
     },
-    [loader],
+    [packageManager],
   );
 
   if (pending.length === 0) return null;

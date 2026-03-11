@@ -4,9 +4,8 @@ import {
 } from "@powerhousedao/design-system/connect";
 import type { PackageDetails } from "@powerhousedao/design-system/connect";
 import {
-  type BrowserPackageLoader,
+  type BrowserPackageManager,
   makeVetraPackageManifest,
-  useBrowserPackageLoader,
   useDismissedPackages,
   useVetraPackageManager,
   useVetraPackages,
@@ -34,9 +33,10 @@ function toPackageDetails(
 }
 
 export const ConnectPackageManager: React.FC = () => {
-  const packageManager = useVetraPackageManager();
+  const packageManager = useVetraPackageManager() as
+    | BrowserPackageManager
+    | undefined;
   const vetraPackages = useVetraPackages();
-  const loader = useBrowserPackageLoader() as BrowserPackageLoader | undefined;
   const dismissedPackages = useDismissedPackages();
   const {
     registries,
@@ -78,7 +78,7 @@ export const ConnectPackageManager: React.FC = () => {
       }
       try {
         await packageManager?.addPackage(packageName, effectiveRegistryUrl);
-        loader?.removeDismissed(packageName);
+        packageManager?.removeDismissed(packageName);
         toast(`Package "${packageName}" installed successfully`, {
           type: "connect-success",
         });
@@ -90,7 +90,7 @@ export const ConnectPackageManager: React.FC = () => {
         });
       }
     },
-    [effectiveRegistryUrl, packageManager, loader],
+    [effectiveRegistryUrl, packageManager],
   );
 
   const handleUninstall = useCallback(
@@ -123,7 +123,7 @@ export const ConnectPackageManager: React.FC = () => {
       }
       try {
         await packageManager?.addPackage(packageName, effectiveRegistryUrl);
-        loader?.removeDismissed(packageName);
+        packageManager?.removeDismissed(packageName);
         toast(`Package "${packageName}" installed successfully`, {
           type: "connect-success",
         });
@@ -135,7 +135,7 @@ export const ConnectPackageManager: React.FC = () => {
         });
       }
     },
-    [effectiveRegistryUrl, packageManager, loader],
+    [effectiveRegistryUrl, packageManager],
   );
 
   return (
@@ -156,7 +156,7 @@ export const ConnectPackageManager: React.FC = () => {
       />
       <DismissedPackagesList
         dismissedPackages={dismissedPackages}
-        onInstall={(packageName) => void handleInstallDismissed(packageName)}
+        onInstall={handleInstallDismissed}
       />
     </div>
   );
