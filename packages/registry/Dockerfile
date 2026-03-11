@@ -52,4 +52,4 @@ ENV REGISTRY_CDN_CACHE=/data/cdn-cache
 VOLUME /data
 EXPOSE 4873
 
-CMD ["node", "dist/run.js"]
+CMD ["node", "dist/cli.js"]
