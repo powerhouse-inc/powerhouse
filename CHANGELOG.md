@@ -1,3 +1,13 @@
+## 6.0.0-dev.81 (2026-03-11)
+
+### 🩹 Fixes
+
+- **registry:** use cli.js as Docker entrypoint instead of run.js ([869e52795](https://github.com/powerhouse-inc/powerhouse/commit/869e52795))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 6.0.0-dev.80 (2026-03-11)
 
 ### 🩹 Fixes
