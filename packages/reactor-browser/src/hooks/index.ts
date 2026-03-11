@@ -1,5 +1,4 @@
 export { useAllowedDocumentModelModules } from "./allowed-document-model-modules.js";
-export { useConnectionState, useConnectionStates } from "./connection-state.js";
 export { useNodesInSelectedDriveOrFolder } from "./child-nodes.js";
 export {
   useAllowedDocumentTypes,
@@ -21,6 +20,7 @@ export {
   usePHDocumentEditorConfigByKey,
   usePHDriveEditorConfigByKey,
 } from "./config/use-value-by-key.js";
+export { useConnectionState, useConnectionStates } from "./connection-state.js";
 export { useDocumentById, useDocumentsByIds } from "./document-by-id.js";
 export {
   useDocument,
@@ -122,6 +122,8 @@ export { useGetSwitchboardLink } from "./use-get-switchboard-link.js";
 export { useOnDropFile } from "./use-on-drop-file.js";
 export { useUserPermissions } from "./user-permissions.js";
 export {
+  useDismissedPackages,
+  usePendingInstallations,
   setVetraPackageManager,
   useVetraPackageManager,
   useVetraPackages,
