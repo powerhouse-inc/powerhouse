@@ -34,6 +34,7 @@ export function buildVerdaccioConfig(config: RegistryConfig) {
       title: "Powerhouse Registry",
       logo: "/app/static/logo.svg",
       primary_color: "#38C780",
+      darkMode: true,
     },
     server: {
       keepAliveTimeout: 60,
