@@ -1,3 +1,13 @@
+## 6.0.0-dev.80 (2026-03-11)
+
+### 🩹 Fixes
+
+- **registry:** handle absolute paths for storage and cdn-cache dirs ([da85b2547](https://github.com/powerhouse-inc/powerhouse/commit/da85b2547))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 6.0.0-dev.79 (2026-03-11)
 
 ### 🚀 Features
