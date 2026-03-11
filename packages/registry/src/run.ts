@@ -2,10 +2,23 @@ import express from "express";
 import { findUp } from "find-up";
 import type { EventEmitter } from "node:events";
 import { mkdir } from "node:fs/promises";
+import path from "node:path";
 import { runServer } from "verdaccio";
 import { createPowerhouseRouter, createPublishHook } from "./middleware.js";
 import type { RegistryCommandArgs, RegistryConfig } from "./types.js";
 import { buildVerdaccioConfig } from "./verdaccio-config.js";
+
+async function resolveDir(dir: string): Promise<string> {
+  if (path.isAbsolute(dir)) {
+    await mkdir(dir, { recursive: true });
+    return dir;
+  }
+  const found = await findUp(dir, { type: "directory" });
+  if (!found) {
+    throw new Error(`Could not find directory "${dir}".`);
+  }
+  return found;
+}
 
 export async function runRegistry(args: RegistryCommandArgs) {
   const {
@@ -22,21 +35,8 @@ export async function runRegistry(args: RegistryCommandArgs) {
     s3Region,
     s3SecretAccessKey,
   } = args;
-  const storagePath = await findUp(storageDir, {
-    type: "directory",
-  });
-
-  if (!storagePath) {
-    throw new Error(`Could not find storage path for dir "${storageDir}".`);
-  }
-
-  const cdnCachePath = await findUp(cdnCacheDir, {
-    type: "directory",
-  });
-
-  if (!cdnCachePath) {
-    throw new Error(`Could not find cdn cache path for dir "${cdnCacheDir}".`);
-  }
+  const storagePath = await resolveDir(storageDir);
+  const cdnCachePath = await resolveDir(cdnCacheDir);
 
   console.log({
     storagePath,
@@ -63,7 +63,7 @@ export async function runRegistry(args: RegistryCommandArgs) {
         },
       }),
   };
-  // Ensure directories exist
+  // Ensure directories exist (for relative paths resolved via findUp)
   await mkdir(storagePath, { recursive: true });
   await mkdir(cdnCachePath, { recursive: true });
 
