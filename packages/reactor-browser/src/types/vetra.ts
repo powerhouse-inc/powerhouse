@@ -15,7 +15,7 @@ import type {
   SubgraphModule,
   UpgradeManifest,
 } from "document-model";
-import type { ProcessorFactoryBuilder } from "../../../reactor/src/processors/index.js";
+import type { ProcessorFactoryBuilder } from "../../../shared/processors/types.js";
 
 export type Processors = (module: {
   analyticsStore: IAnalyticsStore;
