@@ -82,6 +82,21 @@ export class KyselyWriteCache implements IWriteCache {
     this.lruTracker = new LRUTracker<string>();
   }
 
+  withScopedStores(
+    operationStore: IOperationStore,
+    keyframeStore: IKeyframeStore,
+  ): KyselyWriteCache {
+    const scoped = new KyselyWriteCache(
+      keyframeStore,
+      operationStore,
+      this.registry,
+      this.config,
+    );
+    scoped.streams = this.streams;
+    scoped.lruTracker = this.lruTracker;
+    return scoped;
+  }
+
   /**
    * Initializes the write cache.
    * Currently a no-op as keyframe store lifecycle is managed externally.

@@ -13,6 +13,7 @@ import { PGliteDialect } from "kysely-pglite-dialect";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, it, vi } from "vitest";
+import { CollectionMembershipCache } from "../../../src/cache/collection-membership-cache.js";
 import { DocumentMetaCache } from "../../../src/cache/document-meta-cache.js";
 import { KyselyOperationIndex } from "../../../src/cache/kysely-operation-index.js";
 import { KyselyWriteCache } from "../../../src/cache/kysely-write-cache.js";
@@ -20,6 +21,8 @@ import type { WriteCacheConfig } from "../../../src/cache/write-cache-types.js";
 import type { IWriteCache } from "../../../src/cache/write/interfaces.js";
 import { Reactor } from "../../../src/core/reactor.js";
 import { EventBus } from "../../../src/events/event-bus.js";
+import type { IExecutionScope } from "../../../src/executor/execution-scope.js";
+import { KyselyExecutionScope } from "../../../src/executor/execution-scope.js";
 import { SimpleJobExecutorManager } from "../../../src/executor/simple-job-executor-manager.js";
 import { SimpleJobExecutor } from "../../../src/executor/simple-job-executor.js";
 import { InMemoryJobTracker } from "../../../src/job-tracker/in-memory-job-tracker.js";
@@ -55,6 +58,28 @@ type Database = StorageDatabase &
   DocumentViewDatabase &
   DocumentIndexerDatabase;
 
+type ScopeVariant = {
+  name: string;
+  createScope: (
+    db: Kysely<StorageDatabase>,
+    store: KyselyOperationStore,
+    index: KyselyOperationIndex,
+    kfs: KyselyKeyframeStore,
+    wc: KyselyWriteCache,
+    dmc: DocumentMetaCache,
+    cmc: CollectionMembershipCache,
+  ) => IExecutionScope | undefined;
+};
+
+const scopeVariants: ScopeVariant[] = [
+  { name: "DefaultExecutionScope", createScope: () => undefined },
+  {
+    name: "KyselyExecutionScope",
+    createScope: (db, store, index, kfs, wc, dmc, cmc) =>
+      new KyselyExecutionScope(db, store, index, kfs, wc, dmc, cmc),
+  },
+];
+
 type ReactorTestSetup = {
   reactor: Reactor;
   driveServer: BaseDocumentDriveServer;
@@ -63,7 +88,9 @@ type ReactorTestSetup = {
   cleanup: () => Promise<void>;
 };
 
-async function createReactorSetup(): Promise<ReactorTestSetup> {
+async function createReactorSetup(
+  createScope?: ScopeVariant["createScope"],
+): Promise<ReactorTestSetup> {
   const documentModels = getDocumentModels();
   const storage = new MemoryStorage();
   const registry = new DocumentModelRegistry();
@@ -120,6 +147,20 @@ async function createReactorSetup(): Promise<ReactorTestSetup> {
   });
   await documentMetaCache.startup();
 
+  const collectionMembershipCache = new CollectionMembershipCache(
+    operationIndex,
+  );
+
+  const executionScope = createScope?.(
+    db as unknown as Kysely<StorageDatabase>,
+    operationStore,
+    operationIndex,
+    keyframeStore,
+    writeCache,
+    documentMetaCache,
+    collectionMembershipCache,
+  );
+
   const executor = new SimpleJobExecutor(
     createMockLogger(),
     registry,
@@ -128,7 +169,10 @@ async function createReactorSetup(): Promise<ReactorTestSetup> {
     writeCache,
     operationIndex,
     documentMetaCache,
+    collectionMembershipCache,
     {},
+    undefined,
+    executionScope,
   );
 
   const executorManager = new SimpleJobExecutorManager(
@@ -217,89 +261,94 @@ async function createReactorSetup(): Promise<ReactorTestSetup> {
   };
 }
 
-describe("Atlas Recorded Operations Reactor Test", () => {
-  it("should process all recorded operations without errors using Reactor", async () => {
-    const setup = await createReactorSetup();
+describe.each(scopeVariants)(
+  "Atlas Recorded Operations Reactor Test ($name)",
+  ({ createScope }) => {
+    it("should process all recorded operations without errors using Reactor", async () => {
+      const setup = await createReactorSetup(createScope);
 
-    const recordedOpsContent = readFileSync(
-      path.join(__dirname, "recorded-operations.json"),
-      "utf-8",
-    );
-    const operations: RecordedOperation[] = JSON.parse(recordedOpsContent);
-    const mutations = operations.filter((op) => op.type === "mutation");
+      const recordedOpsContent = readFileSync(
+        path.join(__dirname, "recorded-operations.json"),
+        "utf-8",
+      );
+      const operations: RecordedOperation[] = JSON.parse(recordedOpsContent);
+      const mutations = operations.filter((op) => op.type === "mutation");
 
-    console.log(`Processing ${mutations.length} mutations...`);
+      console.log(`Processing ${mutations.length} mutations...`);
 
-    for (const mutation of mutations) {
-      await processReactorMutation(mutation, setup.reactor);
-    }
+      for (const mutation of mutations) {
+        await processReactorMutation(mutation, setup.reactor);
+      }
 
-    await setup.cleanup();
-  }, 10000);
+      await setup.cleanup();
+    }, 10000);
 
-  it("should submit all mutations with queue hints and process them correctly", async () => {
-    const setup = await createReactorSetup();
+    it("should submit all mutations with queue hints and process them correctly", async () => {
+      const setup = await createReactorSetup(createScope);
 
-    const recordedOpsContent = readFileSync(
-      path.join(__dirname, "recorded-operations.json"),
-      "utf-8",
-    );
-    const operations: RecordedOperation[] = JSON.parse(recordedOpsContent);
-    const mutations = operations.filter((op) => op.type === "mutation");
+      const recordedOpsContent = readFileSync(
+        path.join(__dirname, "recorded-operations.json"),
+        "utf-8",
+      );
+      const operations: RecordedOperation[] = JSON.parse(recordedOpsContent);
+      const mutations = operations.filter((op) => op.type === "mutation");
 
-    console.log(`Submitting ${mutations.length} mutations with queue hints...`);
+      console.log(
+        `Submitting ${mutations.length} mutations with queue hints...`,
+      );
 
-    const batchResult = await submitAllMutationsWithQueueHints(
-      mutations,
-      setup.reactor,
-    );
+      const batchResult = await submitAllMutationsWithQueueHints(
+        mutations,
+        setup.reactor,
+      );
 
-    const jobIds = Object.values(batchResult.jobs).map((job) => job.id);
-    console.log(`Submitted ${jobIds.length} jobs`);
+      const jobIds = Object.values(batchResult.jobs).map((job) => job.id);
+      console.log(`Submitted ${jobIds.length} jobs`);
 
-    const waitForAllJobs = async (): Promise<void> => {
-      const timeout = 100000;
-      const interval = 100;
-      const startTime = Date.now();
+      const waitForAllJobs = async (): Promise<void> => {
+        const timeout = 100000;
+        const interval = 100;
+        const startTime = Date.now();
 
-      for (;;) {
-        const statuses = await Promise.all(
-          jobIds.map((jobId) => setup.reactor.getJobStatus(jobId)),
-        );
+        for (;;) {
+          const statuses = await Promise.all(
+            jobIds.map((jobId) => setup.reactor.getJobStatus(jobId)),
+          );
 
-        const allCompleted = statuses.every(
-          (status) => status.status === JobStatus.READ_READY,
-        );
-        const anyFailed = statuses.some(
-          (status) => status.status === JobStatus.FAILED,
-        );
-
-        if (anyFailed) {
-          const failedJobs = statuses.filter(
+          const allCompleted = statuses.every(
+            (status) => status.status === JobStatus.READ_READY,
+          );
+          const anyFailed = statuses.some(
             (status) => status.status === JobStatus.FAILED,
           );
-          throw new Error(
-            `Some jobs failed: ${failedJobs.map((job) => `${job.id}: ${job.error?.message}`).join(", ")}`,
-          );
+
+          if (anyFailed) {
+            const failedJobs = statuses.filter(
+              (status) => status.status === JobStatus.FAILED,
+            );
+            throw new Error(
+              `Some jobs failed: ${failedJobs.map((job) => `${job.id}: ${job.error?.message}`).join(", ")}`,
+            );
+          }
+
+          if (allCompleted) {
+            console.log("All jobs completed successfully");
+            return;
+          }
+
+          if (Date.now() - startTime > timeout) {
+            throw new Error("Timeout waiting for all jobs to complete");
+          }
+
+          await new Promise((resolve) => setTimeout(resolve, interval));
         }
+      };
 
-        if (allCompleted) {
-          console.log("All jobs completed successfully");
-          return;
-        }
-
-        if (Date.now() - startTime > timeout) {
-          throw new Error("Timeout waiting for all jobs to complete");
-        }
-
-        await new Promise((resolve) => setTimeout(resolve, interval));
-      }
-    };
-
-    await waitForAllJobs();
-    await setup.cleanup();
-  }, 10000);
-});
+      await waitForAllJobs();
+      await setup.cleanup();
+    }, 10000);
+  },
+);
 
 describe("Atlas Recorded Operations Base Server Test", () => {
   it("should process all recorded operations without errors using base-server", async () => {
@@ -335,143 +384,146 @@ describe("Atlas Recorded Operations Base Server Test", () => {
   }, 10000);
 });
 
-describe("Atlas Recorded Operations State Comparison Test", () => {
-  it("should produce identical final state in both Reactor and BaseDocumentDriveServer", async ({
-    expect,
-  }) => {
-    const driveIds: string[] = [];
-    const driveIds2: string[] = [];
+describe.each(scopeVariants)(
+  "Atlas Recorded Operations State Comparison Test ($name)",
+  ({ createScope }) => {
+    it("should produce identical final state in both Reactor and BaseDocumentDriveServer", async ({
+      expect,
+    }) => {
+      const driveIds: string[] = [];
+      const driveIds2: string[] = [];
 
-    const documentModels = getDocumentModels();
+      const documentModels = getDocumentModels();
 
-    // Setup reactor 1
-    const setup1 = await createReactorSetup();
+      // Setup reactor 1
+      const setup1 = await createReactorSetup(createScope);
 
-    // Setup reactor 2
-    const setup2 = await createReactorSetup();
+      // Setup reactor 2
+      const setup2 = await createReactorSetup(createScope);
 
-    // Setup reactor 3 (with batch submission via queue hints)
-    const setup3 = await createReactorSetup();
+      // Setup reactor 3 (with batch submission via queue hints)
+      const setup3 = await createReactorSetup(createScope);
 
-    // Setup base server for comparison
-    const baseServerStorage = new MemoryStorage();
-    const baseServerBuilder = new DriveReactorBuilder(
-      documentModels,
-    ).withStorage(baseServerStorage);
-    const baseServerDriveServer =
-      baseServerBuilder.build() as unknown as BaseDocumentDriveServer;
-    await baseServerDriveServer.initialize();
+      // Setup base server for comparison
+      const baseServerStorage = new MemoryStorage();
+      const baseServerBuilder = new DriveReactorBuilder(
+        documentModels,
+      ).withStorage(baseServerStorage);
+      const baseServerDriveServer =
+        baseServerBuilder.build() as unknown as BaseDocumentDriveServer;
+      await baseServerDriveServer.initialize();
 
-    const recordedOpsContent = readFileSync(
-      path.join(__dirname, "recorded-operations.json"),
-      "utf-8",
-    );
-    const operations: RecordedOperation[] = JSON.parse(recordedOpsContent);
-    const mutations = operations.filter((op) => op.type === "mutation");
+      const recordedOpsContent = readFileSync(
+        path.join(__dirname, "recorded-operations.json"),
+        "utf-8",
+      );
+      const operations: RecordedOperation[] = JSON.parse(recordedOpsContent);
+      const mutations = operations.filter((op) => op.type === "mutation");
 
-    console.log(
-      `Processing ${mutations.length} mutations through all four systems...`,
-    );
+      console.log(
+        `Processing ${mutations.length} mutations through all four systems...`,
+      );
 
-    const batchResult = await submitAllMutationsWithQueueHints(
-      mutations,
-      setup3.reactor,
-    );
-    const batchJobIds = Object.values(batchResult.jobs).map((job) => job.id);
-    console.log(
-      `Reactor 3 (batch): Submitted ${batchJobIds.length} jobs with queue hints`,
-    );
+      const batchResult = await submitAllMutationsWithQueueHints(
+        mutations,
+        setup3.reactor,
+      );
+      const batchJobIds = Object.values(batchResult.jobs).map((job) => job.id);
+      console.log(
+        `Reactor 3 (batch): Submitted ${batchJobIds.length} jobs with queue hints`,
+      );
 
-    for (const mutation of mutations) {
-      await processReactorMutation(mutation, setup1.reactor);
-      await processReactorMutation(mutation, setup2.reactor);
-      await processBaseServerMutation(mutation, baseServerDriveServer);
-    }
+      for (const mutation of mutations) {
+        await processReactorMutation(mutation, setup1.reactor);
+        await processReactorMutation(mutation, setup2.reactor);
+        await processBaseServerMutation(mutation, baseServerDriveServer);
+      }
 
-    console.log("Waiting for batch jobs to complete...");
-    const waitForBatchJobs = async (): Promise<void> => {
-      const timeout = 200000;
-      const interval = 100;
-      const startTime = Date.now();
+      console.log("Waiting for batch jobs to complete...");
+      const waitForBatchJobs = async (): Promise<void> => {
+        const timeout = 200000;
+        const interval = 100;
+        const startTime = Date.now();
 
-      for (;;) {
-        const statuses = await Promise.all(
-          batchJobIds.map((jobId) => setup3.reactor.getJobStatus(jobId)),
-        );
+        for (;;) {
+          const statuses = await Promise.all(
+            batchJobIds.map((jobId) => setup3.reactor.getJobStatus(jobId)),
+          );
 
-        const allCompleted = statuses.every(
-          (status) => status.status === JobStatus.READ_READY,
-        );
-        const anyFailed = statuses.some(
-          (status) => status.status === JobStatus.FAILED,
-        );
-
-        if (anyFailed) {
-          const failedJobs = statuses.filter(
+          const allCompleted = statuses.every(
+            (status) => status.status === JobStatus.READ_READY,
+          );
+          const anyFailed = statuses.some(
             (status) => status.status === JobStatus.FAILED,
           );
-          throw new Error(
-            `Batch jobs failed: ${failedJobs.map((job) => `${job.id}: ${job.error?.message}`).join(", ")}`,
-          );
-        }
 
-        if (allCompleted) {
-          console.log("All batch jobs completed successfully");
-          break;
-        }
+          if (anyFailed) {
+            const failedJobs = statuses.filter(
+              (status) => status.status === JobStatus.FAILED,
+            );
+            throw new Error(
+              `Batch jobs failed: ${failedJobs.map((job) => `${job.id}: ${job.error?.message}`).join(", ")}`,
+            );
+          }
 
-        if (Date.now() - startTime > timeout) {
-          throw new Error("Timeout waiting for batch jobs to complete");
-        }
+          if (allCompleted) {
+            console.log("All batch jobs completed successfully");
+            break;
+          }
 
-        await new Promise((resolve) => setTimeout(resolve, interval));
+          if (Date.now() - startTime > timeout) {
+            throw new Error("Timeout waiting for batch jobs to complete");
+          }
+
+          await new Promise((resolve) => setTimeout(resolve, interval));
+        }
+      };
+
+      await waitForBatchJobs();
+
+      console.log("All operations completed. Comparing final states...");
+
+      expect(driveIds).toEqual(driveIds2);
+
+      for (let i = 0; i < driveIds.length; i++) {
+        const driveId = driveIds[i];
+        const driveId2 = driveIds2[i];
+
+        const reactorDrive = await setup1.driveServer.getDrive(driveId);
+        const reactor2Drive = await setup2.documentView.get(driveId2);
+        const reactor3Drive = await setup3.driveServer.getDrive(driveId);
+        const baseServerDrive = await baseServerDriveServer.getDrive(driveId);
+
+        expect(reactorDrive.state).toEqual(baseServerDrive.state);
+        expect(reactor2Drive.state).toEqual(baseServerDrive.state);
+        expect(reactor3Drive.state).toEqual(baseServerDrive.state);
+
+        const fileIds = reactorDrive.state.global.nodes
+          .filter((node: unknown) => (node as { kind: string }).kind === "file")
+          .map((node: unknown) => (node as { id: string }).id);
+
+        console.log(`Drive ${driveId} has ${fileIds.length} file documents`);
+
+        for (const childId of fileIds) {
+          const reactorDoc = await setup1.storage.get(childId);
+          const reactor2Doc = await setup2.documentView.get(childId);
+          const reactor3Doc = await setup3.storage.get(childId);
+          const baseServerDoc = await baseServerStorage.get(childId);
+
+          expect(reactorDoc.state).toEqual(baseServerDoc.state);
+          expect(reactor2Doc.state).toEqual(baseServerDoc.state);
+          expect(reactor3Doc.state).toEqual(baseServerDoc.state);
+        }
       }
-    };
 
-    await waitForBatchJobs();
+      // Cleanup
+      await setup1.cleanup();
+      await setup2.cleanup();
+      await setup3.cleanup();
 
-    console.log("All operations completed. Comparing final states...");
-
-    expect(driveIds).toEqual(driveIds2);
-
-    for (let i = 0; i < driveIds.length; i++) {
-      const driveId = driveIds[i];
-      const driveId2 = driveIds2[i];
-
-      const reactorDrive = await setup1.driveServer.getDrive(driveId);
-      const reactor2Drive = await setup2.documentView.get(driveId2);
-      const reactor3Drive = await setup3.driveServer.getDrive(driveId);
-      const baseServerDrive = await baseServerDriveServer.getDrive(driveId);
-
-      expect(reactorDrive.state).toEqual(baseServerDrive.state);
-      expect(reactor2Drive.state).toEqual(baseServerDrive.state);
-      expect(reactor3Drive.state).toEqual(baseServerDrive.state);
-
-      const fileIds = reactorDrive.state.global.nodes
-        .filter((node: unknown) => (node as { kind: string }).kind === "file")
-        .map((node: unknown) => (node as { id: string }).id);
-
-      console.log(`Drive ${driveId} has ${fileIds.length} file documents`);
-
-      for (const childId of fileIds) {
-        const reactorDoc = await setup1.storage.get(childId);
-        const reactor2Doc = await setup2.documentView.get(childId);
-        const reactor3Doc = await setup3.storage.get(childId);
-        const baseServerDoc = await baseServerStorage.get(childId);
-
-        expect(reactorDoc.state).toEqual(baseServerDoc.state);
-        expect(reactor2Doc.state).toEqual(baseServerDoc.state);
-        expect(reactor3Doc.state).toEqual(baseServerDoc.state);
-      }
-    }
-
-    // Cleanup
-    await setup1.cleanup();
-    await setup2.cleanup();
-    await setup3.cleanup();
-
-    console.log(
-      "All states match between Reactor (legacy reads), Reactor (documentView reads), Reactor (batch with queue hints), and BaseDocumentDriveServer!",
-    );
-  }, 60000);
-});
+      console.log(
+        "All states match between Reactor (legacy reads), Reactor (documentView reads), Reactor (batch with queue hints), and BaseDocumentDriveServer!",
+      );
+    }, 60000);
+  },
+);

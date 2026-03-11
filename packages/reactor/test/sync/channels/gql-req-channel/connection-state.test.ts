@@ -1,19 +1,16 @@
 import type { OperationContext } from "document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { IOperationIndex } from "../../../../src/cache/operation-index-types.js";
-import type { IQueue } from "../../../../src/queue/interfaces.js";
 import type { ISyncCursorStorage } from "../../../../src/storage/interfaces.js";
 import {
   GqlRequestChannel,
   type GqlChannelConfig,
 } from "../../../../src/sync/channels/gql-req-channel.js";
-import { IntervalPollTimer } from "../../../../src/sync/channels/interval-poll-timer.js";
 import type { IPollTimer } from "../../../../src/sync/channels/poll-timer.js";
 import { SyncOperation } from "../../../../src/sync/sync-operation.js";
 import type {
   ConnectionStateSnapshot,
   RemoteFilter,
-  SyncEnvelope,
 } from "../../../../src/sync/types.js";
 import { createMockLogger } from "../../../factories.js";
 
@@ -87,11 +84,6 @@ const createMockOperationIndex = (): IOperationIndex => ({
   getLatestTimestampForCollection: vi.fn().mockResolvedValue(null),
   getCollectionsForDocuments: vi.fn().mockResolvedValue({}),
 });
-
-const createMockQueue = (): IQueue =>
-  ({
-    totalSize: vi.fn().mockResolvedValue(0),
-  }) as unknown as IQueue;
 
 const createMockOperationContext = (ordinal: number = 1): OperationContext => ({
   documentId: "doc-1",
@@ -647,7 +639,6 @@ describe("GqlRequestChannel Connection State", () => {
   });
 
   it("snapshot includes correct failure counts", async () => {
-    let pollCallCount = 0;
     const mockFetch = createMockFetch((body) => {
       if (body.query.includes("touchChannel")) {
         return {
@@ -655,7 +646,6 @@ describe("GqlRequestChannel Connection State", () => {
           json: () => Promise.resolve({ data: { touchChannel: true } }),
         };
       }
-      pollCallCount++;
       return {
         ok: false,
         json: () => Promise.resolve({}),
