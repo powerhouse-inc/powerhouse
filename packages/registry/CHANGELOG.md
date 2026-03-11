@@ -1,3 +1,13 @@
+## 6.0.0-dev.78 (2026-03-11)
+
+### 🚀 Features
+
+- replace reactor dropdown with registry selector in package manager ([c8a944a24](https://github.com/powerhouse-inc/powerhouse/commit/c8a944a24))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 6.0.0-dev.77 (2026-03-10)
 
 ### 🩹 Fixes

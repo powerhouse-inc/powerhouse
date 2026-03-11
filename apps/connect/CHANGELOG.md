@@ -1,3 +1,16 @@
+## 6.0.0-dev.78 (2026-03-11)
+
+### 🚀 Features
+
+- **reactor:** migrating channel connection status to a state machine, added hooks for this, and an inspector tab ([c64755563](https://github.com/powerhouse-inc/powerhouse/commit/c64755563))
+- **connect:** first pass at processor inspector in connect ([a59450bd1](https://github.com/powerhouse-inc/powerhouse/commit/a59450bd1))
+- replace reactor dropdown with registry selector in package manager ([c8a944a24](https://github.com/powerhouse-inc/powerhouse/commit/c8a944a24))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Guillermo Puente @gpuente
+
 ## 6.0.0-dev.77 (2026-03-10)
 
 ### 🩹 Fixes

@@ -1,3 +1,19 @@
+## 6.0.0-dev.78 (2026-03-11)
+
+### 🚀 Features
+
+- **reactor:** migrating channel connection status to a state machine, added hooks for this, and an inspector tab ([c64755563](https://github.com/powerhouse-inc/powerhouse/commit/c64755563))
+
+### 🩹 Fixes
+
+- **reactor:** guard against deleting all cursors, fix redundant backfill issue, guard against cursor killing backfill, use paging ([8303bcf64](https://github.com/powerhouse-inc/powerhouse/commit/8303bcf64))
+- **reactor:** discover existing drives on ProcessorManager restart ([07d22e79d](https://github.com/powerhouse-inc/powerhouse/commit/07d22e79d))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Frank
+
 ## 6.0.0-dev.77 (2026-03-10)
 
 ### 🩹 Fixes

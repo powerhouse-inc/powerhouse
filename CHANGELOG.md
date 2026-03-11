@@ -1,3 +1,33 @@
+## 6.0.0-dev.78 (2026-03-11)
+
+### 🚀 Features
+
+- replace reactor dropdown with registry selector in package manager ([c8a944a24](https://github.com/powerhouse-inc/powerhouse/commit/c8a944a24))
+- replace reactor dropdown with registry selector in package manager ([#2399](https://github.com/powerhouse-inc/powerhouse/pull/2399))
+- **connect:** first pass at processor inspector in connect ([a59450bd1](https://github.com/powerhouse-inc/powerhouse/commit/a59450bd1))
+- **profiling:** add --async flag to docs-create and auto-migrate in switchboard-pyroscope ([5f17e5d0f](https://github.com/powerhouse-inc/powerhouse/commit/5f17e5d0f))
+- **profiling:** two-phase async dispatch with sampled concurrent polling ([caedc847d](https://github.com/powerhouse-inc/powerhouse/commit/caedc847d))
+- **profiling:** add per-loop dispatch timing output ([55cae92d7](https://github.com/powerhouse-inc/powerhouse/commit/55cae92d7))
+- **reactor:** migrating channel connection status to a state machine, added hooks for this, and an inspector tab ([c64755563](https://github.com/powerhouse-inc/powerhouse/commit/c64755563))
+
+### 🩹 Fixes
+
+- **profiling:** fix jobStatus polling and add missing build step ([f05f614a7](https://github.com/powerhouse-inc/powerhouse/commit/f05f614a7))
+- **profiling:** correct terminal job status from READ_MODELS_READY to READ_READY ([2ea29e390](https://github.com/powerhouse-inc/powerhouse/commit/2ea29e390))
+- **profiling:** add timeout to pollJobAsync and validate mutation response ([390d54cf0](https://github.com/powerhouse-inc/powerhouse/commit/390d54cf0))
+- **profiling:** record timed-out async jobs in output and metrics ([1046858a8](https://github.com/powerhouse-inc/powerhouse/commit/1046858a8))
+- **profiling:** address six code review issues in docs-create and README ([e22a39a31](https://github.com/powerhouse-inc/powerhouse/commit/e22a39a31))
+- **reactor:** discover existing drives on ProcessorManager restart ([07d22e79d](https://github.com/powerhouse-inc/powerhouse/commit/07d22e79d))
+- **reactor:** guard against deleting all cursors, fix redundant backfill issue, guard against cursor killing backfill, use paging ([8303bcf64](https://github.com/powerhouse-inc/powerhouse/commit/8303bcf64))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Frank
+- Guillermo Puente @gpuente
+- Guillermo Puente Sandoval @gpuente
+- Samuel Hawksby-Robinson @Samyoul
+
 ## 6.0.0-dev.77 (2026-03-10)
 
 ### 🩹 Fixes
