@@ -1,7 +1,7 @@
 import { driveDocumentModelModule } from "document-drive";
 import { deriveOperationId, generateId } from "document-model/core";
 import type { Kysely } from "kysely";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CollectionMembershipCache } from "../../src/cache/collection-membership-cache.js";
 import { DocumentMetaCache } from "../../src/cache/document-meta-cache.js";
 import { KyselyOperationIndex } from "../../src/cache/kysely-operation-index.js";
@@ -1324,6 +1324,105 @@ describe.each(scopeVariants)(
         expect(ops2.results).toHaveLength(1);
         expect(ops2.results[0].action.type).toBe("ADD_FOLDER");
         expect((ops2.results[0].action.input as any).id).toBe("folder-doc2");
+      });
+    });
+
+    describe("Cache Cleanup on Rollback", () => {
+      it("should invalidate writeCache when operationIndex.commit fails", async () => {
+        const document = driveDocumentModelModule.utils.createDocument();
+        const docId = document.header.id;
+        await createDocumentWithCreateOperation(
+          docId,
+          document.header.documentType,
+          document.state,
+        );
+
+        const commitSpy = vi
+          .spyOn(KyselyOperationIndex.prototype, "commit")
+          .mockRejectedValueOnce(new Error("commit-fail"));
+
+        const job: Job = {
+          id: "rollback-job-1",
+          kind: "mutation",
+          documentId: docId,
+          scope: "global",
+          branch: "main",
+          actions: [
+            {
+              id: "rollback-action-1",
+              type: "ADD_FOLDER",
+              scope: "global",
+              timestampUtcMs: new Date().toISOString(),
+              input: {
+                id: "folder-rollback-1",
+                name: "Rollback Folder",
+                parentFolder: null,
+              },
+            },
+          ],
+          operations: [],
+          createdAt: new Date().toISOString(),
+          queueHint: [],
+          errorHistory: [],
+          meta: { batchId: "test", batchJobIds: ["rollback-job-1"] },
+        };
+
+        await expect(executor.executeJob(job)).rejects.toThrow("commit-fail");
+
+        commitSpy.mockRestore();
+
+        const stream = writeCache.getStream(docId, "global", "main");
+        expect(stream).toBeUndefined();
+      });
+
+      it("should invalidate documentMetaCache when operationIndex.commit fails", async () => {
+        const document = driveDocumentModelModule.utils.createDocument();
+        const docId = document.header.id;
+        await createDocumentWithCreateOperation(
+          docId,
+          document.header.documentType,
+          document.state,
+        );
+
+        const invalidateSpy = vi.spyOn(documentMetaCache, "invalidate");
+
+        const commitSpy = vi
+          .spyOn(KyselyOperationIndex.prototype, "commit")
+          .mockRejectedValueOnce(new Error("commit-fail"));
+
+        const job: Job = {
+          id: "rollback-job-2",
+          kind: "mutation",
+          documentId: docId,
+          scope: "global",
+          branch: "main",
+          actions: [
+            {
+              id: "rollback-action-2",
+              type: "ADD_FOLDER",
+              scope: "global",
+              timestampUtcMs: new Date().toISOString(),
+              input: {
+                id: "folder-rollback-2",
+                name: "Rollback Folder 2",
+                parentFolder: null,
+              },
+            },
+          ],
+          operations: [],
+          createdAt: new Date().toISOString(),
+          queueHint: [],
+          errorHistory: [],
+          meta: { batchId: "test", batchJobIds: ["rollback-job-2"] },
+        };
+
+        await expect(executor.executeJob(job)).rejects.toThrow("commit-fail");
+
+        commitSpy.mockRestore();
+
+        expect(invalidateSpy).toHaveBeenCalledWith(docId, "main");
+
+        invalidateSpy.mockRestore();
       });
     });
   },

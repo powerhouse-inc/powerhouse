@@ -117,16 +117,18 @@ export class SimpleJobExecutor implements IJobExecutor {
             stores,
           );
           if (loadResult.success && loadResult.operationsWithContext) {
+            for (const owc of loadResult.operationsWithContext) {
+              touchedCacheEntries.push({
+                documentId: owc.context.documentId,
+                scope: owc.context.scope,
+                branch: owc.context.branch,
+              });
+            }
+
             const ordinals = await stores.operationIndex.commit(indexTxn);
 
             for (let i = 0; i < loadResult.operationsWithContext.length; i++) {
               loadResult.operationsWithContext[i].context.ordinal = ordinals[i];
-              touchedCacheEntries.push({
-                documentId:
-                  loadResult.operationsWithContext[i].context.documentId,
-                scope: loadResult.operationsWithContext[i].context.scope,
-                branch: loadResult.operationsWithContext[i].context.branch,
-              });
             }
             const collectionMemberships =
               loadResult.operationsWithContext.length > 0
@@ -162,17 +164,21 @@ export class SimpleJobExecutor implements IJobExecutor {
           };
         }
 
+        if (actionResult.operationsWithContext.length > 0) {
+          for (const owc of actionResult.operationsWithContext) {
+            touchedCacheEntries.push({
+              documentId: owc.context.documentId,
+              scope: owc.context.scope,
+              branch: owc.context.branch,
+            });
+          }
+        }
+
         const ordinals = await stores.operationIndex.commit(indexTxn);
 
         if (actionResult.operationsWithContext.length > 0) {
           for (let i = 0; i < actionResult.operationsWithContext.length; i++) {
             actionResult.operationsWithContext[i].context.ordinal = ordinals[i];
-            touchedCacheEntries.push({
-              documentId:
-                actionResult.operationsWithContext[i].context.documentId,
-              scope: actionResult.operationsWithContext[i].context.scope,
-              branch: actionResult.operationsWithContext[i].context.branch,
-            });
           }
           const collectionMemberships =
             await this.getCollectionMembershipsForOperations(
@@ -198,6 +204,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     } catch (error) {
       for (const entry of touchedCacheEntries) {
         this.writeCache.invalidate(entry.documentId, entry.scope, entry.branch);
+        this.documentMetaCache.invalidate(entry.documentId, entry.branch);
       }
       throw error;
     }
