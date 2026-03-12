@@ -202,6 +202,13 @@ fi
 echo "Build complete."
 echo
 
+# Resolve switchboard path
+SWITCHBOARD_PATH="${SCRIPT_DIR}/apps/switchboard/dist/src/index.js"
+if [ ! -f "$SWITCHBOARD_PATH" ]; then
+  echo "Error: Switchboard not found at ${SWITCHBOARD_PATH}"
+  exit 1
+fi
+
 # Run switchboard
 if [ -n "$PYROSCOPE_ENABLED" ]; then
   echo "Starting Switchboard with ${RUNTIME} and Pyroscope profiling..."
