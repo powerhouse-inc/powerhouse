@@ -68,8 +68,6 @@
     "monocart-coverage-reports": "^2.12.8",
     "react": "catalog:",
     "react-dom": "catalog:",
-    "vite": "catalog:",
-    "vite-plugin-node-polyfills": "catalog:",
     "@electric-sql/pglite": "catalog:"
   },
   "dependencies": {

@@ -8,7 +8,6 @@ import {
 import {
   addPHEventHandlers,
   addRemoteDrive,
-  BrowserPackageManager,
   DocumentChangeType,
   dropAllReactorStorage,
   extractDriveSlugFromPath,
@@ -38,10 +37,8 @@ import {
   RenownCryptoBuilder,
 } from "@renown/sdk";
 import { logger } from "document-drive";
-import type { DocumentModelModule } from "document-model";
 import { initFeatureFlags } from "../feature-flags.js";
-import { loadCommonPackage } from "./document-model.js";
-import { loadLocalPackage } from "./local-package.js";
+import { BrowserPackageManager } from "../package-manager.js";
 import { createProcessorHostModule } from "./processor-host-module.js";
 
 export async function clearReactorStorage() {
@@ -55,7 +52,7 @@ export async function clearReactorStorage() {
   await pg.close();
 }
 
-export async function createReactor() {
+export async function createReactor(localPackage?: VetraPackage) {
   if (!window.ph) {
     window.ph = {};
   }
@@ -94,22 +91,11 @@ export async function createReactor() {
   // initialize package manager
   const packageManager = new BrowserPackageManager(
     phGlobalConfigFromEnv.routerBasename ?? "",
+    null,
   );
-
-  // add common package
-  const commonPackage = await loadCommonPackage();
-  await packageManager.addLocalPackage("common", commonPackage);
-
-  const localPackage = await loadLocalPackage();
-
-  if (localPackage) {
-    await packageManager.addLocalPackage("local", localPackage);
-  }
-
-  // load packages from storage (persisted registry packages)
-  await packageManager.init();
-
   setVetraPackageManager(packageManager);
+  await packageManager.init(localPackage);
+  await packageManager.addPackages(PH_PACKAGES ?? []);
 
   // get document models to set in the reactor (all versions)
   const documentModelModules = packageManager.packages
@@ -123,16 +109,17 @@ export async function createReactor() {
             m?.documentType === module.documentType &&
             m.version === module.version,
         ) === index,
-    );
+    )
+    .filter((d) => d !== undefined);
 
   // get upgrade manifests from packages
-  const upgradeManifests = packageManager.packages.flatMap(
-    (pkg) => pkg.upgradeManifests,
-  );
+  const upgradeManifests = packageManager.packages
+    .flatMap((pkg) => pkg.upgradeManifests)
+    .filter((u) => u !== undefined);
 
   // create reactor v2 with all versions and upgrade manifests
   const reactorClientModule = await createBrowserReactor(
-    documentModelModules as unknown as DocumentModelModule[],
+    documentModelModules,
     upgradeManifests,
     renown,
   );

@@ -8,7 +8,7 @@ export * from "./src/global/index.js";
 export * from "./src/graphql/client.js";
 export * from "./src/hooks/index.js";
 export * from "./src/pglite/index.js";
-export * from "./src/package-manager.js";
+export * from "./src/storage/index.js";
 export * from "./src/re-exports.js";
 export * from "./src/reactor-client-document-cache.js";
 export * from "./src/reactor.js";

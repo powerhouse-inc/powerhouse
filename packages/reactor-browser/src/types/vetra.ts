@@ -1,4 +1,5 @@
 import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
+import type { ProcessorFactoryBuilder } from "@powerhousedao/shared/processors";
 import type {
   IRelationalDbLegacy,
   ProcessorRecordLegacy,
@@ -15,7 +16,6 @@ import type {
   SubgraphModule,
   UpgradeManifest,
 } from "document-model";
-import type { ProcessorFactoryBuilder } from "@powerhousedao/shared/processors";
 
 export type Processors = (module: {
   analyticsStore: IAnalyticsStore;
@@ -71,7 +71,7 @@ export type VetraModules = {
 };
 
 export type VetraPackage = BaseVetraPackage<VetraModules> & {
-  upgradeManifests: UpgradeManifest<readonly number[]>[];
+  upgradeManifests: UpgradeManifest<readonly number[]>[] | undefined;
   processorFactory?: ProcessorFactoryBuilder;
 };
 
@@ -86,15 +86,7 @@ export type IPackageListerUnsubscribe = () => void;
 
 export interface IPackageManager {
   packages: VetraPackage[];
-  addPackage(name: string, registryUrl: string): Promise<void>;
-  addLocalPackage(name: string, localPackage: VetraPackage): Promise<void>;
-  removePackage(name: string): Promise<void>;
+  addPackage(packageName: string): Promise<void> | void;
+  removePackage(name: string): void;
   subscribe(handler: IPackagesListener): IPackageListerUnsubscribe;
 }
-
-export interface IPackage {
-  name: string;
-  url: string;
-}
-
-export type IPackagesMap = Record<"packages", IPackage[]>;

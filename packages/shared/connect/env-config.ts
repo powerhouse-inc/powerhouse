@@ -456,12 +456,6 @@ export interface LoadEnvOptions {
    * Environment variables from process.env (highest priority)
    */
   processEnv?: Record<string, string | undefined>;
-
-  /**
-   * Environment variables from options (medium priority)
-   */
-  optionsEnv?: Partial<ConnectEnv>;
-
   /**
    * Environment variables from .env file (lowest priority)
    */
@@ -477,14 +471,13 @@ function mergeEnvSources(
   keys: Set<string>,
   schema: z.ZodObject<z.ZodRawShape>,
 ): Record<string, unknown> {
-  const { processEnv = {}, optionsEnv = {}, fileEnv = {} } = options;
+  const { processEnv = {}, fileEnv = {} } = options;
   const merged: Record<string, unknown> = {};
 
   // Apply priority: fileEnv < optionsEnv < processEnv
   for (const key of keys) {
     const sources = [
       { name: "process.env", value: processEnv[key] },
-      { name: "options", value: (optionsEnv as Record<string, unknown>)[key] },
       { name: "fileEnv", value: fileEnv[key] },
     ];
 

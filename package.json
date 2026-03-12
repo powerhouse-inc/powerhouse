@@ -18,7 +18,7 @@
     "build-bundle": "pnpm -r --no-bail build:bundle",
     "build-storybook": "pnpm -r --no-bail run build:storybook",
     "clean": "bun x git clean -fdX",
-    "build-all": "pnpm build-tsc && pnpm build-misc && pnpm build-css && pnpm build-bundle && pnpm build-vite && pnpm build-cli",
+    "build-all": "pnpm build-tsc && pnpm build-misc && pnpm build-bundle && pnpm build-css && pnpm build-vite && pnpm build-cli",
     "run-release": "bun run releases/release.ts",
     "run-release-safe": "pnpm run-release --verbose --skip-publish --skip-changelog --skip-push",
     "prepare": "husky",

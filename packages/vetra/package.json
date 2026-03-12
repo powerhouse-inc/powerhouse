@@ -52,7 +52,7 @@
     "test:document-models": "vitest run document-models",
     "test:editors": "vitest run editors",
     "test:processors": "vitest run processors",
-    "build:bundle": "build",
+    "build:bundle": "tsdown",
     "build": "ph-cli build",
     "generate": "ph-cli generate",
     "connect": "ph-cli connect",
@@ -95,7 +95,8 @@
     "@types/react-dom": "catalog:",
     "@vitejs/plugin-react": "catalog:",
     "tailwindcss": "catalog:",
-    "vitest": "catalog:"
+    "vitest": "catalog:",
+    "tsdown": "catalog:"
   },
   "description": ""
 }

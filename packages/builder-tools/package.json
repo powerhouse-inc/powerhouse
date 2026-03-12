@@ -44,7 +44,8 @@
     "magic-string": "^0.30.17",
     "read-pkg": "catalog:",
     "resolve.exports": "^2.0.3",
-    "zod": "catalog:"
+    "zod": "catalog:",
+    "vite-tsconfig-paths": "catalog:"
   },
   "devDependencies": {
     "tsx": "catalog:",

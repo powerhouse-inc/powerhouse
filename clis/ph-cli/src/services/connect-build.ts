@@ -1,21 +1,37 @@
-import { build, type InlineConfig } from "vite";
+import { getConnectBaseViteConfig } from "@powerhousedao/builder-tools";
+import type { InlineConfig } from "vite";
+import { build, mergeConfig } from "vite";
 import type { ConnectBuildArgs } from "../types.js";
 import { assignEnvVars } from "../utils/assign-env-vars.js";
+import { runBuild } from "./build.js";
 
 export async function runConnectBuild(args: ConnectBuildArgs) {
-  const { connectBasePath, outDir } = args;
-  const mode = "production";
-
+  const { outDir, debug } = args;
   assignEnvVars(args);
 
-  const buildConfig: InlineConfig = {
-    base: connectBasePath,
+  await runBuild({
+    outDir: "dist",
+    debug,
+    clean: true,
+    dts: true,
+    sourcemap: true,
+  });
+
+  const mode = "production";
+  const dirname = process.cwd();
+
+  const baseConfig = getConnectBaseViteConfig({
     mode,
-    configFile: false,
+    dirname,
+  });
+
+  const buildConfig: InlineConfig = {
     build: {
       outDir,
     },
   };
 
-  await build(buildConfig);
+  const config = mergeConfig(baseConfig, buildConfig);
+
+  await build(config);
 }

@@ -5,6 +5,9 @@ import { analyzer } from "vite-bundle-analyzer";
 import tsconfigPaths from "vite-tsconfig-paths";
 
 export default defineConfig({
+  define: {
+    PH_PACKAGES: [],
+  },
   envPrefix: ["PH_CONNECT_"],
   optimizeDeps: {
     exclude: ["@electric-sql/pglite", "@electric-sql/pglite-tools"],

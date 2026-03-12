@@ -39,7 +39,6 @@
   ],
   "exclude": [
     "dist",
-    "cdn",
     "node_modules",
     ".ph"
   ],

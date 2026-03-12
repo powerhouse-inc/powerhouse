@@ -82,7 +82,7 @@ export const ConnectPackageManager: React.FC = () => {
       if (reactor !== LOCAL_REACTOR_VALUE) {
         throw new Error("Cannot install external package on a remote reactor");
       }
-      return packageManager?.addPackage(packageName, PH_PACKAGES_REGISTRY);
+      return packageManager?.addPackage(packageName);
     },
     [reactor, packageManager],
   );
@@ -96,7 +96,7 @@ export const ConnectPackageManager: React.FC = () => {
       if (!pkg) {
         throw new Error(`Package with id ${packageId} not found`);
       }
-      packageManager?.removePackage(pkg.name).catch(console.error);
+      packageManager?.removePackage(pkg.name);
     },
     [reactor, packageManager, packagesInfo],
   );

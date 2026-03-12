@@ -19,6 +19,10 @@
     ".env"
   ],
   "exports": {
+    ".": {
+      "types": "./dist/start-connect.d.ts",
+      "import": "./dist/start-connect.js"
+    },
     "./main.js": {
       "types": "./dist/main.d.ts",
       "import": "./dist/main.js"
@@ -28,6 +32,7 @@
   },
   "sideEffects": [
     "./dist/main.js",
+    "./dist/start-connect.js",
     "./dist/style.css"
   ],
   "license": "AGPL-3.0-only",
@@ -47,7 +52,6 @@
     "dev": "vite dev",
     "build:css": "pnpm exec tailwindcss -i ./src/index.css -o ./dist/style.css",
     "build:bundle": "tsdown",
-    "postbuild:bundle": "pnpm build:css",
     "build:debug": "PH_DEBUG_BUILD=true vite build",
     "preview": "vite preview",
     "cy:open": "cypress open",
@@ -94,10 +98,9 @@
     "vite-plugin-svgr": "catalog:",
     "@tailwindcss/cli": "catalog:",
     "@types/bun": "catalog:",
-    "vite-tsconfig-paths": "^6.1.1",
+    "vite-tsconfig-paths": "catalog:",
     "@vitejs/plugin-react": "catalog:",
     "@tailwindcss/vite": "catalog:",
-    "tsconfig-paths": "4.2.0",
     "tsdown": "catalog:",
     "vite-plugin-node-polyfills": "catalog:"
   }

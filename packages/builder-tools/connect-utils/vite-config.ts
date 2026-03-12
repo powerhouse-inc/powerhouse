@@ -1,25 +1,20 @@
+import type { PowerhouseConfig } from "@powerhousedao/config";
 import { getConfig } from "@powerhousedao/config/node";
-import {
-  loadConnectEnv,
-  setConnectEnv,
-  type ConnectEnv,
-} from "@powerhousedao/shared/connect";
+import { loadConnectEnv, setConnectEnv } from "@powerhousedao/shared/connect";
 import { sentryVitePlugin } from "@sentry/vite-plugin";
 import tailwind from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { join } from "node:path";
-import { readPackageSync } from "read-pkg";
 import {
   createLogger,
   loadEnv,
   type HtmlTagDescriptor,
+  type InlineConfig,
   type PluginOption,
-  type UserConfig,
 } from "vite";
 import { createHtmlPlugin } from "vite-plugin-html";
-import { stripVersionFromPackage } from "./helpers.js";
 import type { IConnectOptions } from "./types.js";
-import { phExternalPackagesPlugin } from "./vite-plugins/ph-external-packages.js";
+import tsconfigPaths from "vite-tsconfig-paths";
 
 export const connectClientConfig = {
   meta: [
@@ -93,20 +88,6 @@ export const connectClientConfig = {
   ],
 } as const;
 
-function viteOptionsToEnv(options: IConnectOptions) {
-  const optionsEnv: Partial<ConnectEnv> = {};
-
-  if (options.localPackage !== undefined) {
-    if (options.localPackage === false) {
-      optionsEnv.PH_DISABLE_LOCAL_PACKAGE = true;
-    } else {
-      optionsEnv.PH_LOCAL_PACKAGE = options.localPackage;
-    }
-  }
-
-  return optionsEnv;
-}
-
 function viteLogger({
   silence,
 }: {
@@ -132,26 +113,25 @@ function viteLogger({
 
   return logger;
 }
+
+function getPackageNamesFromPowerhouseConfig({ packages }: PowerhouseConfig) {
+  if (!packages) return [];
+  return packages.map((p) => p.packageName);
+}
+
 export function getConnectBaseViteConfig(options: IConnectOptions) {
   const mode = options.mode;
   const envDir = options.envDir ?? options.dirname;
   const fileEnv = loadEnv(mode, envDir, "PH_");
 
-  // Map options to env vars
-  const optionsEnv = viteOptionsToEnv(options);
-
   // Load and validate environment with priority: process.env > options > fileEnv > defaults
   const env = loadConnectEnv({
     processEnv: process.env,
-    optionsEnv,
     fileEnv,
   });
 
   // set the resolved env to process.env so it's loaded by vite
   setConnectEnv(env);
-
-  // load package.json
-  const packageJson = readPackageSync({ cwd: options.dirname });
 
   // load powerhouse config
   const phConfigPath =
@@ -159,31 +139,11 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
 
   const phConfig = options.powerhouseConfig ?? getConfig(phConfigPath);
 
-  // load packages from env variable
-  const phPackagesStr = env.PH_PACKAGES || "";
-  const envPhPackages = phPackagesStr.split(",");
+  const packagesFromConfig = getPackageNamesFromPowerhouseConfig(phConfig);
+  const phPackagesStr = env.PH_PACKAGES;
+  const envPhPackages = phPackagesStr?.split(",");
 
-  // loadPackages from config
-  const configPhPackages =
-    phConfig.packages?.map((p) =>
-      typeof p === "string" ? p : p.packageName,
-    ) ?? [];
-
-  // merges env and config packages, remove empty strings, version suffixes and duplicates
-  const allPackages = [
-    ...new Set(
-      [...envPhPackages, ...configPhPackages]
-        .map(stripVersionFromPackage)
-        .filter((p) => p.length),
-    ),
-  ];
-
-  const localPackage = !env.PH_DISABLE_LOCAL_PACKAGE
-    ? (env.PH_LOCAL_PACKAGE ?? options.dirname)
-    : undefined;
-
-  // remove duplicates and empty strings
-  const phPackages = [...new Set(allPackages.filter((p) => p.trim().length))];
+  const phPackages = envPhPackages ?? packagesFromConfig;
 
   const authToken = env.PH_SENTRY_AUTH_TOKEN;
   const org = env.PH_SENTRY_ORG;
@@ -192,9 +152,9 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
   const uploadSentrySourcemaps = authToken && org && project;
 
   const plugins: PluginOption[] = [
+    tsconfigPaths(),
     tailwind(),
     react(),
-    phExternalPackagesPlugin(phPackages, localPackage),
     createHtmlPlugin({
       minify: false,
       inject: {
@@ -228,8 +188,6 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     );
   }
 
-  // const basePath = normalizeBasePath(env.PH_CONNECT_BASE_PATH || "/");
-
   // hide warnings unless LOG_LEVEL is set to debug
   const isDebug =
     process.env.LOG_LEVEL === "debug" || env.PH_CONNECT_LOG_LEVEL === "debug";
@@ -244,51 +202,18 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
         },
       });
 
-  const watchTimeout = options.watchTimeout ?? env.PH_WATCH_TIMEOUT;
-
-  const config: UserConfig = {
+  const config: InlineConfig = {
+    configFile: false,
+    mode,
+    define: {
+      PH_PACKAGES: phPackages,
+    },
     customLogger,
     envPrefix: ["PH_CONNECT_"],
     optimizeDeps: {
       exclude: ["@electric-sql/pglite", "@electric-sql/pglite-tools"],
     },
     plugins,
-    resolve: {
-      alias: localPackage
-        ? {
-            [packageJson.name]: localPackage,
-          }
-        : undefined,
-    },
-    build: {
-      minify: true,
-      sourcemap: true,
-      rollupOptions: {
-        treeshake: {
-          moduleSideEffects: false,
-        },
-      },
-    },
-    server: {
-      watch: env.PH_DISABLE_LOCAL_PACKAGE
-        ? null
-        : {
-            ignored: [
-              "**/.ph/**",
-              "**/dist/**",
-              "**/node_modules/**",
-              "**/backup-documents/**",
-            ],
-            awaitWriteFinish: {
-              stabilityThreshold: watchTimeout,
-              pollInterval: 100,
-            },
-          },
-      fs: {
-        strict: false,
-      },
-      port: phConfig.studio?.port,
-    },
     worker: {
       format: "es",
     },

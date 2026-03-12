@@ -6,7 +6,6 @@ export type IConnectOptions = {
   dirname: string;
   envDir?: string;
   powerhouseConfig?: PowerhouseConfig;
-  localPackage?: string | false; // path to local package to be loaded.
   watchTimeout?: number;
 };
 

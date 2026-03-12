@@ -1,9 +1,12 @@
-import type {
-  getPackageManagerCommand,
-  ParsedCmdResult,
-} from "@powerhousedao/common/clis";
+import type { ParsedCmdResult } from "@powerhousedao/common/clis";
 import type { accessToken } from "./commands/access-token.js";
-import type { build, connect, preview, studio } from "./commands/connect.js";
+import type { build } from "./commands/build.js";
+import type {
+  connect,
+  build as connectBuild,
+  preview,
+  studio,
+} from "./commands/connect.js";
 import type { generate } from "./commands/generate.js";
 import type { inspect } from "./commands/inspect.js";
 import type { install } from "./commands/install.js";
@@ -21,8 +24,9 @@ export type CommandActionType<Args extends any[], Return = void> = (
 export type GenerateArgs = ParsedCmdResult<typeof generate>;
 export type VetraArgs = ParsedCmdResult<typeof vetra>;
 export type MigrateArgs = ParsedCmdResult<typeof migrate>;
+export type BuildArgs = ParsedCmdResult<typeof build>;
 export type ConnectStudioArgs = ParsedCmdResult<typeof studio>;
-export type ConnectBuildArgs = ParsedCmdResult<typeof build>;
+export type ConnectBuildArgs = ParsedCmdResult<typeof connectBuild>;
 export type ConnectPreviewArgs = ParsedCmdResult<typeof preview>;
 export type ConnectArgs = ParsedCmdResult<typeof connect>;
 export type AccessTokenArgs = ParsedCmdResult<typeof accessToken>;

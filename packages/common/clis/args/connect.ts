@@ -20,7 +20,7 @@ export const connectStudioArgs = {
 
 export const connectBuildArgs = {
   outDir: option({
-    type: optional(string),
+    type: string,
     long: "outDir",
     description: "Output directory",
     defaultValue: () => DEFAULT_CONNECT_OUTDIR,
@@ -38,7 +38,7 @@ export const connectPreviewArgs = {
     defaultValueIsSerializable: true,
   }),
   outDir: option({
-    type: optional(string),
+    type: string,
     long: "outDir",
     description: "Output directory",
     defaultValue: () => DEFAULT_CONNECT_OUTDIR,

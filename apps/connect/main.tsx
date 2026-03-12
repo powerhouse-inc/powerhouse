@@ -1,5 +1,5 @@
 import { createRoot } from "react-dom/client";
-import { AppLoader } from "./components/app-loader.js";
+import { AppLoader } from "./src/components/app-loader.js";
 
 if (!window.ph) {
   window.ph = {};

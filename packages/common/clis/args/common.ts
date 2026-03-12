@@ -27,6 +27,34 @@ export const debugArgs = {
 };
 
 export const buildArgs = {
+  outDir: option({
+    type: string,
+    long: "out-dir",
+    description: "Where to output the bundled code",
+    defaultValue: () => "dist" as const,
+    defaultValueIsSerializable: true,
+  }),
+  clean: flag({
+    type: boolean,
+    long: "clean",
+    description: "Erase the contents of the output dir when building",
+    defaultValue: () => true as const,
+    defaultValueIsSerializable: true,
+  }),
+  dts: flag({
+    type: boolean,
+    long: "dts",
+    description: "Generate type definitions for the bundled code",
+    defaultValue: () => true as const,
+    defaultValueIsSerializable: true,
+  }),
+  sourcemap: flag({
+    type: boolean,
+    long: "sourcemap",
+    description: "Generate a sourcemap for the bundled code",
+    defaultValue: () => true as const,
+    defaultValueIsSerializable: true,
+  }),
   ...debugArgs,
 };
 
