@@ -8,8 +8,13 @@ Scripts for benchmarking and profiling the Powerhouse reactor and switchboard.
 # Start PostgreSQL and Pyroscope
 docker compose -f scripts/profiling/docker-compose.yml up -d --wait
 
-# Run a profiling session (1 doc, 25 ops x 100 loops, PostgreSQL + Pyroscope)
-# Automatically runs pyroscope-analyse after completion
+# Build packages and run a profiling session (1 doc, 25 ops x 100 loops, PostgreSQL + Pyroscope)
+# Automatically builds dependencies, runs migrations, and runs pyroscope-analyse after completion
+./scripts/profiling/run-reactor-direct.sh 1 -o 25 -b 5 -l 100 \
+  --db "postgresql://postgres:postgres@localhost:5432/postgres" \
+  --pyroscope http://localhost:4040
+
+# Or run reactor-direct.ts directly if packages are already built
 tsx ./scripts/profiling/reactor-direct.ts 1 -o 25 -b 5 -l 100 \
   --db "postgresql://postgres:postgres@localhost:5432/postgres" \
   --pyroscope http://localhost:4040
@@ -236,6 +241,25 @@ tsx docs-reset.ts
 tsx docs-reset.ts --endpoint http://localhost:4001/graphql
 ```
 
+### `run-reactor-direct.sh` — Build and run reactor-direct
+
+A convenience wrapper that builds all required packages before running `reactor-direct.ts`. Use this after switching branches or when dependencies may be stale.
+
+```bash
+./scripts/profiling/run-reactor-direct.sh 1 -o 25 -b 5 -l 100 \
+  --db "postgresql://postgres:postgres@localhost:5432/postgres" \
+  --pyroscope http://localhost:4040
+```
+
+The script runs in order:
+
+1. `pnpm --filter document-model run tsc --build`
+2. `pnpm --filter @powerhousedao/reactor run build` (declarations) + `build:bundle` (JS)
+3. `DATABASE_URL=... pnpm --filter document-drive run migrate`
+4. `tsx reactor-direct.ts [your args]`
+
+All arguments are passed through to `reactor-direct.ts`. See the [`reactor-direct.ts`](#reactor-directts--direct-reactor-profiling) section for available flags.
+
 ### `switchboard-pyroscope.sh` — Run switchboard with Pyroscope
 
 Starts the switchboard with [Pyroscope](https://pyroscope.io/) continuous profiling enabled in wall:wall + CPU mode. Pyroscope is initialized at the top level before the server starts, so the full startup is captured. Supports selecting the runtime (Node.js or Bun) for comparison benchmarks.
@@ -281,6 +305,10 @@ docker compose -f scripts/profiling/docker-compose.yml up
 
 ```bash
 # In-memory (fastest, no I/O)
+# Use the wrapper on a fresh branch to build packages first:
+./scripts/profiling/run-reactor-direct.sh 10 -o 50 -l 5 -p
+
+# Or run directly if packages are already built:
 tsx reactor-direct.ts 10 -o 50 -l 5 -p
 
 # Against PostgreSQL
@@ -293,8 +321,9 @@ tsx reactor-direct.ts 10 -o 50 -l 5 -p --db "postgresql://postgres:postgres@loca
 ```bash
 docker compose -f scripts/profiling/docker-compose.yml up pyroscope postgres -d
 
-# Run profiling — automatically analyses and saves report after completion
-tsx reactor-direct.ts 1 -o 25 -b 5 -l 100 \
+# Run profiling via the wrapper (builds packages + runs migrations first)
+# Automatically analyses and saves report after completion
+./scripts/profiling/run-reactor-direct.sh 1 -o 25 -b 5 -l 100 \
   --db "postgresql://postgres:postgres@localhost:5432/postgres" \
   --pyroscope
 # Output: {timestamp}-pyroscope.md, {timestamp}-pyroscope-{wall,samples,cpu}.json
