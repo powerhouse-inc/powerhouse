@@ -105,7 +105,9 @@ Compare with docs-list.ts --count-only which paginates through all documents.
 
 async function main() {
   const { endpoint, type, verbose } = parseArgs(process.argv.slice(2));
-  const client = new GraphQLClient(endpoint, { timeout: GRAPHQL_TIMEOUT_MS });
+  const client = new GraphQLClient(endpoint, {
+    signal: AbortSignal.timeout(GRAPHQL_TIMEOUT_MS),
+  });
 
   const startTime = Date.now();
 

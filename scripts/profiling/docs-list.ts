@@ -241,7 +241,9 @@ async function main() {
   const { endpoint, type, countOnly, timing } = parseArgs(
     process.argv.slice(2),
   );
-  const client = new GraphQLClient(endpoint, { timeout: GRAPHQL_TIMEOUT_MS });
+  const client = new GraphQLClient(endpoint, {
+    signal: AbortSignal.timeout(GRAPHQL_TIMEOUT_MS),
+  });
 
   const timings: RequestTiming[] = [];
   const timingCallback = timing

@@ -629,7 +629,9 @@ async function main() {
       `Command: tsx docs-create.ts ${process.argv.slice(2).join(" ")}`,
     );
 
-    const client = new GraphQLClient(endpoint, { timeout: GRAPHQL_TIMEOUT_MS });
+    const client = new GraphQLClient(endpoint, {
+      signal: AbortSignal.timeout(GRAPHQL_TIMEOUT_MS),
+    });
     const useExistingDocs = docIds.length > 0;
 
     const initialMemory = getMemoryStats();

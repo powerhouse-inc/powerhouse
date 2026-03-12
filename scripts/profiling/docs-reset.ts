@@ -133,7 +133,9 @@ async function main() {
 
   console.log(`Endpoint: ${endpoint}\n`);
 
-  const client = new GraphQLClient(endpoint, { timeout: GRAPHQL_TIMEOUT_MS });
+  const client = new GraphQLClient(endpoint, {
+    signal: AbortSignal.timeout(GRAPHQL_TIMEOUT_MS),
+  });
   const startTime = Date.now();
 
   // Get all document IDs
