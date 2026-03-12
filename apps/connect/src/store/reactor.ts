@@ -4,6 +4,7 @@ import {
   addDefaultDrivesForNewReactor,
   createBrowserReactor,
   getDefaultDrivesFromEnv,
+  getDefaultRegistryCdnUrl,
 } from "@powerhousedao/connect/utils";
 import {
   addRemoteDrive,
@@ -93,8 +94,10 @@ export async function createReactor() {
     .build();
 
   // initialize package manager
+  const registryCdnUrl = getDefaultRegistryCdnUrl();
   const packageManager = new BrowserPackageManager(
     phGlobalConfigFromEnv.routerBasename ?? "",
+    registryCdnUrl,
   );
 
   // add common package
@@ -145,7 +148,15 @@ export async function createReactor() {
     documentModelModules as unknown as DocumentModelModule[],
     upgradeManifests,
     renown,
+    registryCdnUrl ? packageManager : undefined,
   );
+
+  // Give package manager access to registry (available after reactor creation)
+  if (reactorClientModule.reactorModule) {
+    packageManager.setDocumentModelRegistry(
+      reactorClientModule.reactorModule.documentModelRegistry,
+    );
+  }
 
   // get the drives from the reactor
   const drives = await getDrives(reactorClientModule.client);

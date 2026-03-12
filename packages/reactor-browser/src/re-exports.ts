@@ -17,6 +17,7 @@ export type {
   ConnectionStateSnapshot,
   Database,
   IChannel,
+  IDocumentModelLoader,
   IProcessor,
   IProcessorHostModule,
   IRelationalDb,

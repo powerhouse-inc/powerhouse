@@ -39,8 +39,8 @@ export type RemoteControllerOptions = {
   client: ReactorGraphQLClient;
   /** Remote document id. Omit for new documents. */
   documentId?: string;
-  /** "batch" requires explicit push(), "streaming" auto-pushes after actions. */
-  mode: "streaming" | "batch";
+  /** "batch" requires explicit push(), "streaming" auto-pushes after actions. Defaults to "batch" */
+  mode?: "batch" | "streaming";
   /** Optional signer for action signing. */
   signer?: ISigner;
   /** Branch name, defaults to "main". */

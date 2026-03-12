@@ -1,3 +1,21 @@
+## 6.0.0-dev.87 (2026-03-12)
+
+This was a version bump only for document-model to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.86 (2026-03-12)
+
+### 🚀 Features
+
+- **renown,reactor-browser:** renown integration improvements ([a65731a73](https://github.com/powerhouse-inc/powerhouse/commit/a65731a73))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 6.0.0-dev.85 (2026-03-12)
+
+This was a version bump only for document-model to align it with other projects, there were no code changes.
+
 ## 6.0.0-dev.84 (2026-03-11)
 
 This was a version bump only for document-model to align it with other projects, there were no code changes.

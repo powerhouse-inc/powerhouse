@@ -1,5 +1,10 @@
 import { DuplicateModuleError } from "@powerhousedao/reactor";
 import { useSyncExternalStore } from "react";
+import type {
+  BrowserPackageManager,
+  DismissedPackage,
+  PendingInstallation,
+} from "../package-manager.js";
 import type { IPackageManager, VetraPackage } from "../types/vetra.js";
 import { makePHEventFunctions } from "./make-ph-event-functions.js";
 
@@ -30,6 +35,28 @@ export function setVetraPackageManager(packageManager: IPackageManager) {
   packageManager.subscribe(({ packages }) => {
     updateReactorClientDocumentModels(packages);
   });
+}
+
+const EMPTY_PENDING: PendingInstallation[] = [];
+const EMPTY_DISMISSED: DismissedPackage[] = [];
+const NOOP_UNSUBSCRIBE = () => {};
+
+export function usePendingInstallations(): PendingInstallation[] {
+  const pm = useVetraPackageManager() as BrowserPackageManager | undefined;
+
+  return useSyncExternalStore(
+    (cb) => (pm ? pm.subscribePendingChanges(cb) : NOOP_UNSUBSCRIBE),
+    () => pm?.getPendingInstallations() ?? EMPTY_PENDING,
+  );
+}
+
+export function useDismissedPackages(): DismissedPackage[] {
+  const pm = useVetraPackageManager() as BrowserPackageManager | undefined;
+
+  return useSyncExternalStore(
+    (cb) => (pm ? pm.subscribePendingChanges(cb) : NOOP_UNSUBSCRIBE),
+    () => pm?.getDismissedPackages() ?? EMPTY_DISMISSED,
+  );
 }
 
 function updateReactorClientDocumentModels(packages: VetraPackage[]) {

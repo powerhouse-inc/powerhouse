@@ -1,3 +1,35 @@
+## 6.0.0-dev.87 (2026-03-12)
+
+### 🩹 Fixes
+
+- **reactor-browser:** changed remote controller mode to optional ([fc692c2ad](https://github.com/powerhouse-inc/powerhouse/commit/fc692c2ad))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 6.0.0-dev.86 (2026-03-12)
+
+### 🚀 Features
+
+- **renown,reactor-browser:** renown integration improvements ([a65731a73](https://github.com/powerhouse-inc/powerhouse/commit/a65731a73))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 6.0.0-dev.85 (2026-03-12)
+
+### 🚀 Features
+
+- auto-discover and install packages for unknown document types ([4e8fa145c](https://github.com/powerhouse-inc/powerhouse/commit/4e8fa145c))
+- auto-discover and install packages for unknown document types ([#2401](https://github.com/powerhouse-inc/powerhouse/pull/2401))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+- Guillermo Puente Sandoval @gpuente
+
 ## 6.0.0-dev.84 (2026-03-11)
 
 ### 🚀 Features

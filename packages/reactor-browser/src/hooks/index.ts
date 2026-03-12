@@ -1,5 +1,9 @@
+export {
+  useRenownAuth,
+  type RenownAuth,
+  type RenownAuthStatus,
+} from "../renown/use-renown-auth.js";
 export { useAllowedDocumentModelModules } from "./allowed-document-model-modules.js";
-export { useConnectionState, useConnectionStates } from "./connection-state.js";
 export { useNodesInSelectedDriveOrFolder } from "./child-nodes.js";
 export {
   useAllowedDocumentTypes,
@@ -21,6 +25,7 @@ export {
   usePHDocumentEditorConfigByKey,
   usePHDriveEditorConfigByKey,
 } from "./config/use-value-by-key.js";
+export { useConnectionState, useConnectionStates } from "./connection-state.js";
 export { useDocumentById, useDocumentsByIds } from "./document-by-id.js";
 export {
   useDocument,
@@ -68,6 +73,7 @@ export {
   useFolderNodesInSelectedFolder,
   useNodesInSelectedFolder,
 } from "./items-in-selected-folder.js";
+export { loading, setLoading, useLoading } from "./loading.js";
 export {
   closePHModal,
   setPHModal,
@@ -83,6 +89,13 @@ export {
   useNodeParentFolderById,
   useParentFolderForSelectedNode,
 } from "./parent-folder.js";
+export {
+  addRenownEventHandler,
+  useDid,
+  useLoginStatus,
+  useRenown,
+  useUser,
+} from "./renown.js";
 export {
   hideRevisionHistory,
   setRevisionHistoryVisible,
@@ -123,6 +136,8 @@ export { useOnDropFile } from "./use-on-drop-file.js";
 export { useUserPermissions } from "./user-permissions.js";
 export {
   setVetraPackageManager,
+  useDismissedPackages,
+  usePendingInstallations,
   useVetraPackageManager,
   useVetraPackages,
 } from "./vetra-packages.js";
