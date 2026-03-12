@@ -1,69 +1,74 @@
-import type { User } from "@renown/sdk";
-import type React from "react";
-import { useLoginStatus, useUser } from "../../hooks/renown.js";
-import { logout, openRenown } from "../utils.js";
+import type { ReactNode } from "react";
+import { type RenownAuth, useRenownAuth } from "../use-renown-auth.js";
 import { RenownLoginButton } from "./RenownLoginButton.js";
 import { RenownUserButton } from "./RenownUserButton.js";
 
-export interface RenownAuthButtonRenderProps {
-  user: User;
-  logout: () => Promise<void>;
-  openProfile: () => void;
-}
-
 export interface RenownAuthButtonProps {
   className?: string;
-  renderAuthenticated?: (props: RenownAuthButtonRenderProps) => React.ReactNode;
-  renderUnauthenticated?: (props: {
-    openRenown: () => void;
-    isLoading: boolean;
-  }) => React.ReactNode;
-  renderLoading?: () => React.ReactNode;
+  darkMode?: boolean;
+  loginContent?: ReactNode;
+  userContent?: ReactNode;
+  loadingContent?: ReactNode;
+  children?: (auth: RenownAuth) => ReactNode;
 }
 
 export function RenownAuthButton({
   className = "",
-  renderAuthenticated,
-  renderUnauthenticated,
-  renderLoading,
+  darkMode,
+  loginContent,
+  userContent,
+  loadingContent,
+  children,
 }: RenownAuthButtonProps) {
-  const user = useUser();
-  const loginStatus = useLoginStatus();
-  const isLoading = loginStatus === "checking";
+  const auth = useRenownAuth();
 
-  const openProfile = () => {
-    if (!user) return;
-    openRenown(user.profile?.documentId);
-  };
+  if (children) {
+    return <>{children(auth)}</>;
+  }
 
-  if (isLoading) {
-    if (renderLoading) {
-      return <div className={className}>{renderLoading()}</div>;
+  if (auth.status === "loading" || auth.status === "checking") {
+    if (loadingContent) {
+      return <div className={className}>{loadingContent}</div>;
     }
 
     return (
       <div className={className}>
         <div
           style={{
-            width: "40px",
-            height: "40px",
-            borderRadius: "50%",
-            backgroundColor: "#e5e7eb",
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            padding: "6px 12px",
+            borderRadius: "8px",
+            border: "1px solid #e5e7eb",
             animation: "pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
           }}
-        />
+        >
+          <div
+            style={{
+              width: "28px",
+              height: "28px",
+              borderRadius: "50%",
+              backgroundColor: "#e5e7eb",
+            }}
+          />
+          <div
+            style={{
+              width: "80px",
+              height: "14px",
+              borderRadius: "4px",
+              backgroundColor: "#e5e7eb",
+            }}
+          />
+        </div>
         <style>{`@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }`}</style>
       </div>
     );
   }
 
-  if (loginStatus === "authorized" && user) {
-    if (renderAuthenticated) {
-      return (
-        <div className={className}>
-          {renderAuthenticated({ user, logout, openProfile })}
-        </div>
-      );
+  if (auth.status === "authorized") {
+    if (userContent) {
+      return <div className={className}>{userContent}</div>;
     }
 
     return (
@@ -73,17 +78,13 @@ export function RenownAuthButton({
     );
   }
 
-  if (renderUnauthenticated) {
-    return (
-      <div className={className}>
-        {renderUnauthenticated({ openRenown: () => openRenown(), isLoading })}
-      </div>
-    );
+  if (loginContent) {
+    return <div className={className}>{loginContent}</div>;
   }
 
   return (
     <div className={className}>
-      <RenownLoginButton />
+      <RenownLoginButton darkMode={darkMode} />
     </div>
   );
 }

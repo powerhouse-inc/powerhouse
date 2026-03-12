@@ -45,12 +45,18 @@ describe("Renown on script", () => {
     );
 
     // Add SET_NAME action
-    const result = await reactorClient.execute(document.header.id, "main", [
+    await reactorClient.execute(document.header.id, "main", [
       setName("New name"),
     ]);
+    const resultOperations = await reactorClient.getOperations(
+      document.header.id,
+      {
+        scopes: ["global"],
+      },
+    );
 
     // Get action signature
-    const operation = result.operations.global[0];
+    const operation = resultOperations.results[0];
     const actionSigner = operation.action.context?.signer;
 
     expect(actionSigner?.app).toStrictEqual({

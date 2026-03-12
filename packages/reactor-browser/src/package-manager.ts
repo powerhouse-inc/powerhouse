@@ -1,10 +1,10 @@
-import type { DocumentModelLib, DocumentModelModule } from "document-model";
 import type {
   IDocumentModelLoader,
   IDocumentModelRegistry,
 } from "@powerhousedao/reactor";
-import { BrowserLocalStorage } from "./storage/local-storage.js";
+import type { DocumentModelLib, DocumentModelModule } from "document-model";
 import { RegistryClient } from "./registry/client.js";
+import { BrowserLocalStorage } from "./storage/local-storage.js";
 import type {
   IPackageListerUnsubscribe,
   IPackageManager,
@@ -73,12 +73,16 @@ function removeCSS(pkg: string) {
   }
 }
 
+// import function to prevent bundlers from breaking when parsing dynamic import
+async function runtimeImport<T>(url: string) {
+  // eslint-disable-next-line @typescript-eslint/no-implied-eval, @typescript-eslint/no-unsafe-call
+  return new Function("u", "return import(u)")(url) as Promise<T>;
+}
+
 async function loadExternalPackage(name: string, registryUrl: string) {
   registryUrl = registryUrl.endsWith("/") ? registryUrl : `${registryUrl}/`;
   const url = `${registryUrl}${name}/index.js`;
-  const module = await (import(
-    /* @vite-ignore */ url
-  ) as Promise<DocumentModelLib>);
+  const module = await runtimeImport<DocumentModelLib>(url);
   loadCSS(name, registryUrl);
   return convertLegacyLibToVetraPackage(module);
 }

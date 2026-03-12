@@ -16,11 +16,13 @@ export type BrowserReactorClientModule = ReactorClientModule & {
   pg: PGlite;
 };
 
+export type LOADING = null;
+
 export type PHGlobal = PHGlobalConfig & {
   loading?: boolean;
   reactorClientModule?: BrowserReactorClientModule;
   reactorClient?: IReactorClient;
-  renown?: IRenown;
+  renown?: IRenown | LOADING;
   vetraPackageManager?: IPackageManager;
   drives?: DocumentDriveDocument[];
   documentCache?: IDocumentCache;
