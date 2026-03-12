@@ -8,7 +8,7 @@ import { addRenownEventHandler, setRenown } from "../../src/hooks/renown.js";
 import { RenownAuthButton } from "../../src/renown/components/RenownAuthButton.js";
 import { RenownLoginButton } from "../../src/renown/components/RenownLoginButton.js";
 import { RenownUserButton } from "../../src/renown/components/RenownUserButton.js";
-import { RenownProvider } from "../../src/renown/provider.js";
+import { Renown } from "../../src/renown/renown-init.js";
 
 const TEST_BASE_URL = "https://test.renown.id";
 const TEST_ADDRESS = "0x9aDdcBbaA28F7eB5f75E023F7C1Fcb13C9DFD8F7" as const;
@@ -207,7 +207,7 @@ describe("RenownAuthButton", () => {
       .toBeVisible();
   });
 
-  it("should show user button after full login flow via RenownProvider", async () => {
+  it("should show user button after full login flow via Renown", async () => {
     mockFetchForLogin();
 
     // Simulate the ?user= URL param that triggers auto-login
@@ -216,9 +216,10 @@ describe("RenownAuthButton", () => {
     window.history.replaceState({}, "", url.toString());
 
     const screen = render(
-      <RenownProvider appName="test" baseUrl={TEST_BASE_URL}>
+      <>
+        <Renown appName="test" url={TEST_BASE_URL} />
         <RenownAuthButton />
-      </RenownProvider>,
+      </>,
     );
 
     // After login resolves, should show user button
@@ -235,9 +236,10 @@ describe("RenownAuthButton", () => {
     window.history.replaceState({}, "", url.toString());
 
     const screen = render(
-      <RenownProvider appName="test" baseUrl={TEST_BASE_URL}>
+      <>
+        <Renown appName="test" url={TEST_BASE_URL} />
         <RenownAuthButton />
-      </RenownProvider>,
+      </>,
     );
 
     // Wait for user button to appear
@@ -261,7 +263,8 @@ describe("RenownAuthButton", () => {
     window.history.replaceState({}, "", url.toString());
 
     const screen = render(
-      <RenownProvider appName="test" baseUrl={TEST_BASE_URL}>
+      <>
+        <Renown appName="test" url={TEST_BASE_URL} />
         <RenownAuthButton>
           {(auth) =>
             auth.status === "authorized" ? (
@@ -269,7 +272,7 @@ describe("RenownAuthButton", () => {
             ) : null
           }
         </RenownAuthButton>
-      </RenownProvider>,
+      </>,
     );
 
     await expect.element(screen.getByTestId("custom-auth")).toBeVisible();

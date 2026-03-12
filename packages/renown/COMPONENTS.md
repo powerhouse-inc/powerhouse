@@ -8,19 +8,40 @@ npm install @powerhousedao/reactor-browser
 
 ## Setup
 
-Wrap your app with `RenownProvider`:
+Initialize Renown using either the `<Renown>` component or the `useRenownInit` hook:
 
+**Component:**
 ```tsx
-import { RenownProvider } from "@powerhousedao/reactor-browser";
+import { Renown } from "@powerhousedao/reactor-browser";
 
 function App() {
   return (
-    <RenownProvider appName="my-app">
+    <>
+      <Renown appName="my-app" onError={(err) => console.error(err)} />
       <MyApp />
-    </RenownProvider>
+    </>
   );
 }
 ```
+
+**Hook:**
+```tsx
+import { useRenownInit } from "@powerhousedao/reactor-browser";
+
+function App() {
+  useRenownInit({ appName: "my-app" }).catch(console.error);
+  return <MyApp />;
+}
+```
+
+**Props / Options:**
+
+| Prop | Type | Description |
+|------|------|-------------|
+| `appName` | `string` | Application identifier |
+| `url` | `string?` | Renown server URL (default: `https://www.renown.id`) |
+| `namespace` | `string?` | Prefix for localStorage keys, allowing multiple apps to use Renown on the same domain without conflicts |
+| `onError` | `(error: unknown) => void` | Error handler (component only, defaults to `console.error`) |
 
 ## Components
 
