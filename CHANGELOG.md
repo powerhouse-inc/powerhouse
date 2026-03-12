@@ -1,3 +1,13 @@
+## 6.0.0-dev.87 (2026-03-12)
+
+### 🩹 Fixes
+
+- **reactor-browser:** changed remote controller mode to optional ([fc692c2ad](https://github.com/powerhouse-inc/powerhouse/commit/fc692c2ad))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 6.0.0-dev.86 (2026-03-12)
 
 ### 🚀 Features
