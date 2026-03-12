@@ -353,16 +353,66 @@ docker compose -f scripts/profiling/docker-compose.yml up otel-collector prometh
   --db "postgresql://postgres:postgres@localhost:5432/postgres" \
   --otel
 
-# Open http://localhost:9090 and query:
-#   reactor_job_total_duration_milliseconds_bucket
-#   reactor_executor_operations_generated_total
-#   reactor_queue_jobs_completed_total
-#   reactor_eventbus_events_emitted_total
-#
-# Percentile examples:
-#   histogram_quantile(0.99, rate(reactor_job_total_duration_milliseconds_bucket[2m]))
-#   histogram_quantile(0.50, rate(reactor_job_total_duration_milliseconds_bucket[2m]))
+# Open http://localhost:9090 to query metrics (use the Graph tab for time series)
 ```
+
+### Prometheus metrics reference
+
+#### Counters — use `rate(...[interval])` for per-second rates
+
+| Metric                                        | Description                           |
+| --------------------------------------------- | ------------------------------------- |
+| `reactor_queue_jobs_enqueued_total`           | Jobs added to the queue               |
+| `reactor_queue_jobs_dequeued_total`           | Jobs dequeued for execution           |
+| `reactor_queue_jobs_completed_total`          | Jobs completed (READ_READY)           |
+| `reactor_queue_jobs_failed_total`             | Jobs permanently failed               |
+| `reactor_executor_total_processed_total`      | Total jobs processed by executors     |
+| `reactor_executor_operations_generated_total` | Operations produced by executors      |
+| `reactor_eventbus_events_emitted_total`       | Events emitted on the event bus       |
+| `reactor_sync_dead_letters_added_total`       | Sync ops moved to dead letter storage |
+
+#### Gauges — instant values, useful for queue depth graphs
+
+| Metric                         | Description                    |
+| ------------------------------ | ------------------------------ |
+| `reactor_queue_depth`          | Pending jobs across all queues |
+| `reactor_queue_executing`      | Jobs currently executing       |
+| `reactor_executor_active_jobs` | Jobs currently in an executor  |
+| `reactor_sync_remotes`         | Active remote count            |
+
+#### Histograms — available with `_bucket`, `_sum`, `_count` suffixes
+
+| Metric                                          | Description                                 |
+| ----------------------------------------------- | ------------------------------------------- |
+| `reactor_executor_job_duration_milliseconds`    | Execution time: RUNNING → WRITE_READY       |
+| `reactor_job_total_duration_milliseconds`       | Full lifecycle: PENDING → READ_READY/FAILED |
+| `reactor_readmodel_index_duration_milliseconds` | Indexing time: WRITE_READY → READ_READY     |
+
+#### Example PromQL queries
+
+```promql
+# Queue depth over time (Graph tab)
+reactor_queue_depth
+
+# Throughput: completed jobs per second
+rate(reactor_queue_jobs_completed_total[1m])
+
+# Failure rate
+rate(reactor_queue_jobs_failed_total[1m])
+
+# P99 and P50 job latency
+histogram_quantile(0.99, rate(reactor_job_total_duration_milliseconds_bucket[2m]))
+histogram_quantile(0.50, rate(reactor_job_total_duration_milliseconds_bucket[2m]))
+
+# Average executor time vs read-model indexing time
+rate(reactor_executor_job_duration_milliseconds_sum[1m]) / rate(reactor_executor_job_duration_milliseconds_count[1m])
+rate(reactor_readmodel_index_duration_milliseconds_sum[1m]) / rate(reactor_readmodel_index_duration_milliseconds_count[1m])
+
+# Operations generated per second
+rate(reactor_executor_operations_generated_total[1m])
+```
+
+> **Tip:** For short benchmark runs, switch to an instant query (Table tab) since `rate()` needs at least two scrape points (scrape interval is 5s).
 
 ### Profile reactor with Pyroscope and OTel metrics
 
