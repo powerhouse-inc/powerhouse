@@ -843,13 +843,13 @@ async function main() {
       Pyroscope.stopWallProfiling();
       Pyroscope.stopCpuProfiling();
     }
+    reactor.kill();
     if (instrumentation) {
       instrumentation.stop();
     }
     if (meterProvider) {
       await meterProvider.shutdown();
     }
-    reactor.kill();
     await db.destroy();
 
     // Summary
