@@ -1,3 +1,19 @@
+## 6.0.0-dev.88 (2026-03-12)
+
+### 🚀 Features
+
+- reactor-hypercore example ([d5557973a](https://github.com/powerhouse-inc/powerhouse/commit/d5557973a))
+- **reactor:** massive refactor to write model which attempts to unify txns with execution context ([622c009c3](https://github.com/powerhouse-inc/powerhouse/commit/622c009c3))
+
+### 🩹 Fixes
+
+- **reactor:** fixed a caching issue that could occur if commit failed ([d7fd3661b](https://github.com/powerhouse-inc/powerhouse/commit/d7fd3661b))
+- **reactor:** fire event outside of txn ([7616a6f02](https://github.com/powerhouse-inc/powerhouse/commit/7616a6f02))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
 ## 6.0.0-dev.87 (2026-03-12)
 
 This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.

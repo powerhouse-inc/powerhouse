@@ -1,3 +1,15 @@
+## 6.0.0-dev.88 (2026-03-12)
+
+### 🚀 Features
+
+- **reactor-browser:** replace renown provider with basic component and useInitRenown hook ([09f995b02](https://github.com/powerhouse-inc/powerhouse/commit/09f995b02))
+- reactor-hypercore example ([d5557973a](https://github.com/powerhouse-inc/powerhouse/commit/d5557973a))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan
+
 ## 6.0.0-dev.87 (2026-03-12)
 
 ### 🩹 Fixes
