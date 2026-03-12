@@ -530,11 +530,13 @@ async function main() {
       callback?: WriteCallback,
     ): boolean => {
       fileWrite(chunk);
-      return origStdoutWrite(
-        chunk,
-        encodingOrCallback as BufferEncoding,
-        callback,
-      );
+      const encoding =
+        typeof encodingOrCallback === "string" ? encodingOrCallback : undefined;
+      const cb =
+        typeof encodingOrCallback === "function"
+          ? encodingOrCallback
+          : callback;
+      return origStdoutWrite(chunk, encoding, cb);
     };
 
     process.stderr.write = (
@@ -543,11 +545,13 @@ async function main() {
       callback?: WriteCallback,
     ): boolean => {
       fileWrite(chunk);
-      return origStderrWrite(
-        chunk,
-        encodingOrCallback as BufferEncoding,
-        callback,
-      );
+      const encoding =
+        typeof encodingOrCallback === "string" ? encodingOrCallback : undefined;
+      const cb =
+        typeof encodingOrCallback === "function"
+          ? encodingOrCallback
+          : callback;
+      return origStderrWrite(chunk, encoding, cb);
     };
   }
 

@@ -12,6 +12,7 @@
 import { GraphQLClient, gql } from "graphql-request";
 
 const DEFAULT_ENDPOINT = "http://localhost:4001/graphql";
+const GRAPHQL_TIMEOUT_MS = 30_000;
 
 // Uses totalCount for instant count
 const COUNT_DOCUMENTS = gql`
@@ -104,7 +105,7 @@ Compare with docs-list.ts --count-only which paginates through all documents.
 
 async function main() {
   const { endpoint, type, verbose } = parseArgs(process.argv.slice(2));
-  const client = new GraphQLClient(endpoint);
+  const client = new GraphQLClient(endpoint, { timeout: GRAPHQL_TIMEOUT_MS });
 
   const startTime = Date.now();
 
