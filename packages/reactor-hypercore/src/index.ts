@@ -13,9 +13,10 @@ export {
   parseOperationKey,
   pad,
   ORDINAL_COUNTER_KEY,
+  RANGE_UPPER_BOUND,
 } from "./key-encoding.js";
 export type {
   ParsedOperationKey,
-  ParsedOrdinalEntry,
   OrdinalEntry,
+  HeadEntryValue,
 } from "./key-encoding.js";

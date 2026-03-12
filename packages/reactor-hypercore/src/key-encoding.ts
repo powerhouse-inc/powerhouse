@@ -1,4 +1,8 @@
+import type { StoredOperation } from "./types.js";
+
 const PAD_WIDTH = 10;
+
+export const RANGE_UPPER_BOUND = "9".repeat(PAD_WIDTH) + "~";
 
 export function pad(n: number): string {
   return n.toString().padStart(PAD_WIDTH, "0");
@@ -19,10 +23,6 @@ export function operationPrefix(
   branch: string,
 ): string {
   return `op/${documentId}/${scope}/${branch}/`;
-}
-
-export function documentPrefix(documentId: string): string {
-  return `op/${documentId}/`;
 }
 
 export function ordinalKey(ordinal: number): string {
@@ -72,11 +72,16 @@ export function parseOperationKey(key: string): ParsedOperationKey {
   };
 }
 
-export type ParsedOrdinalEntry = {
+export type OrdinalEntry = {
   documentId: string;
+  documentType: string;
   scope: string;
   branch: string;
   index: number;
+  operation: StoredOperation;
 };
 
-export type OrdinalEntry = ParsedOrdinalEntry;
+export type HeadEntryValue = {
+  index: number;
+  latestTimestampUtcMs: string;
+};

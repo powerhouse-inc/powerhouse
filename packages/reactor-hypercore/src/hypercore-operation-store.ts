@@ -15,6 +15,7 @@ import type Hyperbee from "hyperbee";
 import { HypercoreAtomicTransaction } from "./hypercore-atomic-transaction.js";
 import {
   ORDINAL_COUNTER_KEY,
+  RANGE_UPPER_BOUND,
   duplicateKey,
   headKey,
   headPrefix,
@@ -22,14 +23,49 @@ import {
   operationPrefix,
   ordinalKey,
   ordinalPrefix,
+  pad,
 } from "./key-encoding.js";
-import type { OrdinalEntry } from "./key-encoding.js";
+import type { HeadEntryValue, OrdinalEntry } from "./key-encoding.js";
 import type { StoredOperation } from "./types.js";
 
 export class HypercoreOperationStore implements IOperationStore {
+  private applyLock: Promise<void> = Promise.resolve();
+
   constructor(private bee: Hyperbee) {}
 
   async apply(
+    documentId: string,
+    documentType: string,
+    scope: string,
+    branch: string,
+    revision: number,
+    fn: (txn: AtomicTxn) => void | Promise<void>,
+    signal?: AbortSignal,
+  ): Promise<void> {
+    const prevLock = this.applyLock;
+    let releaseLock: () => void;
+    this.applyLock = new Promise<void>((resolve) => {
+      releaseLock = resolve;
+    });
+
+    await prevLock;
+
+    try {
+      await this.executeApply(
+        documentId,
+        documentType,
+        scope,
+        branch,
+        revision,
+        fn,
+        signal,
+      );
+    } finally {
+      releaseLock!();
+    }
+  }
+
+  private async executeApply(
     documentId: string,
     documentType: string,
     scope: string,
@@ -44,7 +80,9 @@ export class HypercoreOperationStore implements IOperationStore {
 
     const hKey = headKey(documentId, scope, branch);
     const headEntry = await this.bee.get(hKey);
-    const currentRevision = headEntry ? (headEntry.value as number) : -1;
+    const currentRevision = headEntry
+      ? (headEntry.value as HeadEntryValue).index
+      : -1;
 
     if (currentRevision !== revision - 1) {
       throw new RevisionMismatchError(currentRevision + 1, revision);
@@ -80,13 +118,16 @@ export class HypercoreOperationStore implements IOperationStore {
 
     for (const op of operations) {
       const opKey = operationKey(documentId, scope, branch, op.index);
-      await batch.put(opKey, this.serializeOperation(op));
+      const serialized = this.serializeOperation(op);
+      await batch.put(opKey, serialized);
 
       const ordEntry: OrdinalEntry = {
         documentId,
+        documentType,
         scope,
         branch,
         index: op.index,
+        operation: serialized,
       };
       await batch.put(ordinalKey(nextOrdinal), ordEntry);
 
@@ -96,7 +137,11 @@ export class HypercoreOperationStore implements IOperationStore {
     }
 
     const lastOp = operations[operations.length - 1];
-    await batch.put(hKey, lastOp.index);
+    const headValue: HeadEntryValue = {
+      index: lastOp.index,
+      latestTimestampUtcMs: lastOp.timestampUtcMs,
+    };
+    await batch.put(hKey, headValue);
     await batch.put(ORDINAL_COUNTER_KEY, nextOrdinal);
 
     await batch.flush();
@@ -123,8 +168,8 @@ export class HypercoreOperationStore implements IOperationStore {
         : startIndex;
     const effectiveStart = Math.max(startIndex, cursorIndex);
 
-    const gt = prefix + (effectiveStart - 1).toString().padStart(10, "0");
-    const lt = prefix + "9999999999~";
+    const gt = prefix + pad(effectiveStart - 1);
+    const lt = prefix + RANGE_UPPER_BOUND;
     const limit = paging?.limit ? paging.limit + 1 : undefined;
 
     const items: Operation[] = [];
@@ -211,8 +256,8 @@ export class HypercoreOperationStore implements IOperationStore {
         : id;
     const effectiveId = Math.max(id, cursorValue);
 
-    const gt = ordinalPrefix() + effectiveId.toString().padStart(10, "0");
-    const lt = ordinalPrefix() + "9999999999~";
+    const gt = ordinalPrefix() + pad(effectiveId);
+    const lt = ordinalPrefix() + RANGE_UPPER_BOUND;
     const limit = paging?.limit ? paging.limit + 1 : undefined;
 
     const items: OperationWithContext[] = [];
@@ -221,24 +266,12 @@ export class HypercoreOperationStore implements IOperationStore {
     for await (const entry of stream) {
       const ordEntry = entry.value as OrdinalEntry;
       const ordinal = parseInt(entry.key.split("/")[1], 10);
-      const opKey = operationKey(
-        ordEntry.documentId,
-        ordEntry.scope,
-        ordEntry.branch,
-        ordEntry.index,
-      );
 
-      const opEntry = await this.bee.get(opKey);
-      if (!opEntry) {
-        continue;
-      }
-
-      const stored = opEntry.value as StoredOperation;
       items.push({
-        operation: this.toOperation(stored),
+        operation: this.toOperation(ordEntry.operation),
         context: {
           documentId: ordEntry.documentId,
-          documentType: stored.documentType,
+          documentType: ordEntry.documentType,
           scope: ordEntry.scope,
           branch: ordEntry.branch,
           ordinal,
@@ -295,11 +328,8 @@ export class HypercoreOperationStore implements IOperationStore {
         ? parseInt(paging.cursor, 10)
         : -1;
 
-    const gt =
-      cursorIndex >= 0
-        ? prefix + cursorIndex.toString().padStart(10, "0")
-        : prefix;
-    const lt = prefix + "9999999999~";
+    const gt = cursorIndex >= 0 ? prefix + pad(cursorIndex) : prefix;
+    const lt = prefix + RANGE_UPPER_BOUND;
 
     const stream = this.bee.createReadStream({
       gt: cursorIndex >= 0 ? gt : undefined,
@@ -377,16 +407,11 @@ export class HypercoreOperationStore implements IOperationStore {
         continue;
       }
 
-      const headIndex = entry.value as number;
-      revision[entryScope] = headIndex + 1;
+      const headValue = entry.value as HeadEntryValue;
+      revision[entryScope] = headValue.index + 1;
 
-      const opKey = operationKey(documentId, entryScope, branch, headIndex);
-      const opEntry = await this.bee.get(opKey);
-      if (opEntry) {
-        const stored = opEntry.value as StoredOperation;
-        if (stored.timestampUtcMs > latestTimestamp) {
-          latestTimestamp = stored.timestampUtcMs;
-        }
+      if (headValue.latestTimestampUtcMs > latestTimestamp) {
+        latestTimestamp = headValue.latestTimestampUtcMs;
       }
     }
 

@@ -23,7 +23,7 @@ declare module "hyperbee" {
     [Symbol.asyncIterator](): AsyncIterableIterator<HyperbeeEntry<V>>;
   }
 
-  interface HypebeeBatch {
+  interface HyperbeeBatch {
     put(key: string, value: unknown): Promise<void>;
     del(key: string): Promise<void>;
     get(key: string): Promise<HyperbeeEntry | null>;
@@ -43,7 +43,7 @@ declare module "hyperbee" {
     put(key: string, value: unknown): Promise<void>;
     get(key: string): Promise<HyperbeeEntry | null>;
     del(key: string): Promise<void>;
-    batch(): HypebeeBatch;
+    batch(): HyperbeeBatch;
 
     createReadStream(range?: RangeOptions): HyperbeeReadStream;
     peek(range?: RangeOptions): Promise<HyperbeeEntry | null>;
