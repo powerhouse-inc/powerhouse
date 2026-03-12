@@ -104,6 +104,7 @@ tsx reactor-direct.ts 5 -o 20 --percentiles --verbose --show-action-types
 | `--db`                |       | Database connection string or PGlite path                                                                                |
 | `--doc-id`            | `-d`  | Use an existing document (skips creation)                                                                                |
 | `--pyroscope`         |       | Enable Pyroscope profiling (optionally pass server address). Automatically runs `pyroscope-analyse.ts` after completion. |
+| `--otel`              |       | Enable OpenTelemetry metrics export (optionally pass OTLP endpoint, default: `http://localhost:4318`)                    |
 | `--file`              |       | Write output to a timestamped file (default name: `reactor-direct.txt`)                                                  |
 | `--output`            | `-O`  | Write output to a specific file (no timestamp prefix)                                                                    |
 | `--verbose`           | `-v`  | Show per-operation timings                                                                                               |
@@ -259,8 +260,9 @@ The script runs in order:
 
 1. `pnpm --filter document-model run tsc --build`
 2. `pnpm --filter @powerhousedao/reactor run build` (declarations) + `build:bundle` (JS)
-3. `DATABASE_URL=... pnpm --filter document-drive run migrate`
-4. `tsx reactor-direct.ts [your args]`
+3. `pnpm --filter @powerhousedao/opentelemetry-instrumentation-reactor run build`
+4. `DATABASE_URL=... pnpm --filter document-drive run migrate`
+5. `tsx reactor-direct.ts [your args]`
 
 All arguments are passed through to `reactor-direct.ts`. See the [`reactor-direct.ts`](#reactor-directts--direct-reactor-profiling) section for available flags.
 
@@ -285,23 +287,24 @@ Starts the switchboard with [Pyroscope](https://pyroscope.io/) continuous profil
 
 ### `docker-compose.yml`
 
-Provides PostgreSQL 16 and Pyroscope containers for profiling:
+Provides PostgreSQL 16, Pyroscope, an OpenTelemetry collector, and Prometheus for profiling:
 
 ```bash
-# Start PostgreSQL
-docker compose -f scripts/profiling/docker-compose.yml up postgres
+# Start all services
+docker compose -f scripts/profiling/docker-compose.yml up -d --wait
 
-# Start Pyroscope (view at http://localhost:4040)
-docker compose -f scripts/profiling/docker-compose.yml up pyroscope
-
-# Start both
-docker compose -f scripts/profiling/docker-compose.yml up
+# Start individual services
+docker compose -f scripts/profiling/docker-compose.yml up postgres -d
+docker compose -f scripts/profiling/docker-compose.yml up pyroscope -d
+docker compose -f scripts/profiling/docker-compose.yml up otel-collector prometheus -d
 ```
 
-| Service     | Port | Description                                            |
-| ----------- | ---- | ------------------------------------------------------ |
-| `postgres`  | 5432 | PostgreSQL 16 (user: `postgres`, password: `postgres`) |
-| `pyroscope` | 4040 | Grafana Pyroscope continuous profiling server          |
+| Service          | Port       | Description                                            |
+| ---------------- | ---------- | ------------------------------------------------------ |
+| `postgres`       | 5432       | PostgreSQL 16 (user: `postgres`, password: `postgres`) |
+| `pyroscope`      | 4040       | Grafana Pyroscope continuous profiling server          |
+| `otel-collector` | 4317, 4318 | OpenTelemetry collector (gRPC + HTTP OTLP receivers)   |
+| `prometheus`     | 9090       | Prometheus metrics UI                                  |
 
 ## Typical Workflows
 
@@ -339,6 +342,41 @@ tsx pyroscope-analyse.ts 'http://localhost:4040/?query=...'
 tsx pyroscope-analyse.ts 'http://localhost:4040/?query=...' --baseline ./1771254033-pyroscope
 
 # Open http://localhost:4040 to view flame graphs interactively
+```
+
+### Profile reactor with OTel metrics
+
+```bash
+docker compose -f scripts/profiling/docker-compose.yml up otel-collector prometheus postgres -d --wait
+
+./scripts/profiling/run-reactor-direct.sh 1 -o 25 -b 5 -l 2000 \
+  --db "postgresql://postgres:postgres@localhost:5432/postgres" \
+  --otel
+
+# Open http://localhost:9090 and query:
+#   reactor_job_total_duration_milliseconds_bucket
+#   reactor_executor_operations_generated_total
+#   reactor_queue_jobs_completed_total
+#   reactor_eventbus_events_emitted_total
+#
+# Percentile examples:
+#   histogram_quantile(0.99, rate(reactor_job_total_duration_milliseconds_bucket[2m]))
+#   histogram_quantile(0.50, rate(reactor_job_total_duration_milliseconds_bucket[2m]))
+```
+
+### Profile reactor with Pyroscope and OTel metrics
+
+```bash
+docker compose -f scripts/profiling/docker-compose.yml up -d --wait
+
+./scripts/profiling/run-reactor-direct.sh 1 -o 25 -b 5 -l 2000 \
+  --db "postgresql://postgres:postgres@localhost:5432/postgres" \
+  --pyroscope http://localhost:4040 \
+  --otel http://localhost:4318 \
+  --file
+
+# Flame graphs: http://localhost:4040
+# Metrics:      http://localhost:9090
 ```
 
 ### End-to-end switchboard benchmark

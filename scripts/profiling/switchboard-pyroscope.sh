@@ -161,13 +161,13 @@ echo
 # Build all required packages
 echo "Building packages..."
 
-echo "  [1/5] document-model"
+echo "  [1/6] document-model"
 if ! pnpm --filter document-model run tsc --build; then
   echo "Error: document-model build failed — aborting"
   exit 1
 fi
 
-echo "  [2/5] @powerhousedao/reactor"
+echo "  [2/6] @powerhousedao/reactor"
 if ! pnpm --filter @powerhousedao/reactor run build; then
   echo "Error: reactor build failed — aborting"
   exit 1
@@ -177,7 +177,14 @@ if ! pnpm --filter @powerhousedao/reactor run build:bundle; then
   exit 1
 fi
 
-echo "  [3/5] document-drive migrations"
+echo "  [3/6] @powerhousedao/opentelemetry-instrumentation-reactor"
+if ! pnpm --filter @powerhousedao/opentelemetry-instrumentation-reactor run build; then
+  echo "Error: opentelemetry-instrumentation-reactor build failed — aborting"
+  exit 1
+fi
+
+echo "  [4/6] document-drive migrations"
+
 if [ -n "$DATABASE_URL" ]; then
   if ! pnpm --filter document-drive run migrate; then
     echo "Error: database migration failed — aborting"
@@ -187,13 +194,13 @@ else
   echo "  (skipped — no --postgres provided)"
 fi
 
-echo "  [4/5] @powerhousedao/switchboard"
+echo "  [5/6] @powerhousedao/switchboard"
 if ! pnpm --filter @powerhousedao/switchboard run tsc --build; then
   echo "Error: switchboard build failed — aborting"
   exit 1
 fi
 
-echo "  [5/5] @powerhousedao/reactor-api"
+echo "  [6/6] @powerhousedao/reactor-api"
 if ! pnpm --filter @powerhousedao/reactor-api run build:misc; then
   echo "Error: reactor-api build:misc failed — aborting"
   exit 1

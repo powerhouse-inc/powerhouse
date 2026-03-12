@@ -23,6 +23,13 @@
  */
 
 import { PGlite } from "@electric-sql/pglite";
+import { metrics } from "@opentelemetry/api";
+import {
+  MeterProvider,
+  PeriodicExportingMetricReader,
+} from "@opentelemetry/sdk-metrics";
+import { OTLPMetricExporter } from "@opentelemetry/exporter-metrics-otlp-http";
+import { ReactorInstrumentation } from "@powerhousedao/opentelemetry-instrumentation-reactor";
 import {
   JobStatus,
   REACTOR_SCHEMA,
@@ -30,6 +37,7 @@ import {
   runMigrations,
   type Database,
   type IReactor,
+  type ReactorModule,
 } from "@powerhousedao/reactor";
 import Pyroscope from "@pyroscope/nodejs";
 import { documentModelDocumentModelModule } from "document-model";
@@ -268,6 +276,7 @@ function parseArgs(args: string[]): {
   dbPath: string | undefined;
   docId: string | undefined;
   pyroscope: string | undefined;
+  otel: string | undefined;
   output: string | undefined;
   outputTimestamp: boolean;
 } {
@@ -281,6 +290,7 @@ function parseArgs(args: string[]): {
   let dbPath: string | undefined = undefined;
   let docId: string | undefined = undefined;
   let pyroscope: string | undefined = undefined;
+  let otel: string | undefined = undefined;
   let output: string | undefined = undefined;
   let outputTimestamp = false;
 
@@ -310,6 +320,14 @@ function parseArgs(args: string[]): {
         i++;
       } else {
         pyroscope = "http://localhost:4040";
+      }
+    } else if (arg === "--otel") {
+      const nextArg = args[i + 1];
+      if (nextArg && !nextArg.startsWith("-")) {
+        otel = nextArg;
+        i++;
+      } else {
+        otel = "http://localhost:4318";
       }
     } else if ((arg === "--output" || arg === "-O") && args[i + 1]) {
       output = args[++i];
@@ -345,6 +363,8 @@ Options:
   --file [name]             Write output to a timestamped file (default: reactor-direct.txt)
   --output, -O <file>       Write output to a specific file (no timestamp prefix)
   --pyroscope [address]     Enable Pyroscope profiling (default: http://localhost:4040)
+  --otel [endpoint]         Enable OpenTelemetry metrics export (default: http://localhost:4318)
+                            Exports to OTLP HTTP collector at {endpoint}/v1/metrics
   --help, -h                Show this help message
 
 Process flow:
@@ -432,6 +452,7 @@ Examples:
     dbPath,
     docId,
     pyroscope,
+    otel,
     output,
     outputTimestamp,
   };
@@ -476,6 +497,7 @@ async function main() {
     dbPath,
     docId,
     pyroscope: pyroscopeServer,
+    otel: otelEndpoint,
     output: outputFile,
     outputTimestamp,
   } = parseArgs(process.argv.slice(2));
@@ -594,14 +616,40 @@ async function main() {
       throw new Error(`Migration failed: ${migrationResult.error.message}`);
     }
 
-    const reactor = await new ReactorBuilder()
+    const reactorModule = await new ReactorBuilder()
       .withDocumentModels([documentModelDocumentModelModule])
       .withKysely(db as Kysely<Database>)
       .withMigrationStrategy("none")
-      .build();
+      .buildModule();
+    const reactor = reactorModule.reactor;
 
     const initDuration = ((Date.now() - initStart) / 1000).toFixed(2);
     console.log(`Reactor initialized in ${initDuration}s`);
+
+    let meterProvider: MeterProvider | undefined;
+    let instrumentation: ReactorInstrumentation | undefined;
+
+    if (otelEndpoint) {
+      console.log(
+        `Initializing OpenTelemetry metrics exporter at: ${otelEndpoint}`,
+      );
+      meterProvider = new MeterProvider({
+        readers: [
+          new PeriodicExportingMetricReader({
+            exporter: new OTLPMetricExporter({
+              url: `${otelEndpoint}/v1/metrics`,
+            }),
+            exportIntervalMillis: 5_000,
+          }),
+        ],
+      });
+      metrics.setGlobalMeterProvider(meterProvider);
+      instrumentation = new ReactorInstrumentation(
+        reactorModule as ReactorModule,
+      );
+      instrumentation.start();
+      console.log("  Metrics export enabled (interval: 5s)");
+    }
 
     const initialMemory = getMemoryStats();
     console.log(`\nInitial memory: ${formatMemory(initialMemory)}`);
@@ -794,6 +842,12 @@ async function main() {
     if (pyroscopeServer) {
       Pyroscope.stopWallProfiling();
       Pyroscope.stopCpuProfiling();
+    }
+    if (instrumentation) {
+      instrumentation.stop();
+    }
+    if (meterProvider) {
+      await meterProvider.shutdown();
     }
     reactor.kill();
     await db.destroy();
