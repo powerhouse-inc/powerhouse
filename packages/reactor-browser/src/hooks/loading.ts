@@ -1,3 +1,4 @@
+import type { LOADING } from "../types/global.js";
 import { makePHEventFunctions } from "./make-ph-event-functions.js";
 
 export const {
@@ -5,3 +6,5 @@ export const {
   setValue: setLoading,
   addEventHandler: addLoadingEventHandler,
 } = makePHEventFunctions("loading");
+
+export const loading: LOADING = null;

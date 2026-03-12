@@ -3,14 +3,22 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useUser } from "../../hooks/renown.js";
 import { logout as defaultLogout, openRenown } from "../utils.js";
 import {
+  ChevronDownIcon,
   CopyIcon,
   DisconnectIcon,
-  ExternalLinkIcon,
   UserIcon,
 } from "./icons.js";
+import { Slot } from "./slot.js";
 
-const POPOVER_GAP = 8;
+const POPOVER_GAP = 4;
 const POPOVER_HEIGHT = 150;
+
+export interface RenownUserButtonMenuItem {
+  label: string;
+  icon?: ReactNode;
+  onClick: () => void;
+  style?: CSSProperties;
+}
 
 export interface RenownUserButtonProps {
   address?: string;
@@ -20,13 +28,9 @@ export interface RenownUserButtonProps {
   onDisconnect?: () => void;
   style?: CSSProperties;
   className?: string;
-  renderTrigger?: (props: {
-    onMouseEnter: () => void;
-    onMouseLeave: () => void;
-    address: string;
-    username?: string;
-    avatarUrl?: string;
-  }) => ReactNode;
+  asChild?: boolean;
+  children?: ReactNode;
+  menuItems?: RenownUserButtonMenuItem[];
 }
 
 const styles: Record<string, CSSProperties> = {
@@ -37,57 +41,89 @@ const styles: Record<string, CSSProperties> = {
   trigger: {
     display: "flex",
     alignItems: "center",
-    justifyContent: "center",
-    padding: 0,
-    border: "none",
-    background: "transparent",
+    gap: "8px",
+    padding: "6px 12px",
+    borderWidth: "1px",
+    borderStyle: "solid",
+    borderColor: "#e5e7eb",
+    backgroundColor: "#ffffff",
     cursor: "pointer",
-    borderRadius: "50%",
-    overflow: "hidden",
+    borderRadius: "8px",
+    fontSize: "12px",
+    fontWeight: 500,
+    fontFamily: "inherit",
+    color: "#111827",
+    transition: "background-color 150ms, border-color 150ms",
+  },
+  triggerHover: {
+    backgroundColor: "#f9fafb",
+    borderColor: "#9ca3af",
   },
   avatar: {
-    width: "40px",
-    height: "40px",
+    width: "28px",
+    height: "28px",
     borderRadius: "50%",
     objectFit: "cover",
+    flexShrink: 0,
   },
   avatarPlaceholder: {
-    width: "40px",
-    height: "40px",
+    width: "28px",
+    height: "28px",
     borderRadius: "50%",
-    backgroundColor: "#e5e7eb",
+    background: "linear-gradient(135deg, #8b5cf6, #3b82f6)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
+    flexShrink: 0,
+  },
+  avatarInitial: {
+    fontSize: "12px",
+    fontWeight: 700,
+    color: "#ffffff",
+    lineHeight: 1,
+  },
+  displayName: {
+    maxWidth: "120px",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  },
+  chevron: {
+    flexShrink: 0,
+    transition: "transform 150ms",
+    color: "#6b7280",
+  },
+  chevronOpen: {
+    transform: "rotate(180deg)",
   },
   popoverBase: {
     position: "absolute",
-    left: 0,
-    backgroundColor: "white",
+    right: 0,
+    backgroundColor: "#ffffff",
     borderRadius: "8px",
-    boxShadow:
-      "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
-    width: "208px",
+    boxShadow: "0 4px 12px rgba(0, 0, 0, 0.12), 0 1px 3px rgba(0, 0, 0, 0.08)",
+    width: "100%",
     zIndex: 1000,
     color: "#111827",
+    borderWidth: "1px",
+    borderStyle: "solid",
+    borderColor: "#e5e7eb",
+    overflow: "hidden",
   },
-  section: {
-    padding: "8px 12px",
+  header: {
+    padding: "12px 16px",
     borderBottom: "1px solid #e5e7eb",
   },
-  sectionLast: {
-    padding: "8px 12px",
-    borderBottom: "none",
-  },
-  username: {
+  headerUsername: {
     fontSize: "14px",
-    fontWeight: 500,
+    fontWeight: 600,
     color: "#111827",
+    margin: 0,
   },
   addressRow: {
     display: "flex",
     alignItems: "center",
-    gap: "8px",
+    gap: "4px",
     marginTop: "4px",
   },
   addressButton: {
@@ -96,19 +132,21 @@ const styles: Record<string, CSSProperties> = {
     gap: "4px",
     padding: 0,
     border: "none",
-    background: "transparent",
+    backgroundColor: "transparent",
     cursor: "pointer",
     fontSize: "12px",
-    color: "#111827",
+    color: "#6b7280",
+    fontFamily: "inherit",
     position: "relative",
     width: "100%",
   },
   copiedText: {
     fontSize: "12px",
-    color: "#111827",
+    color: "#059669",
     position: "absolute",
     left: 0,
     transition: "opacity 150ms",
+    fontWeight: 500,
   },
   addressText: {
     display: "flex",
@@ -116,21 +154,35 @@ const styles: Record<string, CSSProperties> = {
     gap: "4px",
     transition: "opacity 150ms",
   },
+  menuSection: {
+    padding: "4px 0",
+  },
   menuItem: {
     display: "flex",
     alignItems: "center",
     gap: "8px",
     width: "100%",
-    padding: 0,
+    padding: "8px 16px",
     border: "none",
-    background: "transparent",
+    backgroundColor: "transparent",
     cursor: "pointer",
     fontSize: "14px",
-    color: "#111827",
+    color: "#374151",
     textDecoration: "none",
+    fontFamily: "inherit",
+    transition: "background-color 150ms",
+  },
+  menuItemHover: {
+    backgroundColor: "#f3f4f6",
   },
   disconnectItem: {
-    color: "#7f1d1d",
+    color: "#dc2626",
+  },
+  separator: {
+    height: "1px",
+    backgroundColor: "#e5e7eb",
+    margin: 0,
+    border: "none",
   },
 };
 
@@ -147,18 +199,27 @@ export function RenownUserButton({
   onDisconnect: onDisconnectProp,
   style,
   className,
-  renderTrigger,
+  asChild = false,
+  children,
+  menuItems,
 }: RenownUserButtonProps) {
   const user = useUser();
 
   const address = addressProp ?? user?.address ?? "";
-  const username = usernameProp ?? user?.ens?.name;
-  const avatarUrl = avatarUrlProp ?? user?.ens?.avatarUrl;
+  const username = usernameProp ?? user?.profile?.username ?? user?.ens?.name;
+  const avatarUrl =
+    avatarUrlProp ?? user?.profile?.userImage ?? user?.ens?.avatarUrl;
   const userId = userIdProp ?? user?.profile?.documentId;
   const onDisconnect = onDisconnectProp ?? (() => void defaultLogout());
+  const displayName =
+    username ?? (address ? truncateAddress(address) : "Account");
+  const profileId = userId ?? address;
+
   const [isOpen, setIsOpen] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const [showAbove, setShowAbove] = useState(true);
+  const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -170,6 +231,7 @@ export function RenownUserButton({
   }, []);
 
   const handleMouseEnter = useCallback(() => {
+    setIsHovered(true);
     if (closeTimeoutRef.current) {
       clearTimeout(closeTimeoutRef.current);
       closeTimeoutRef.current = null;
@@ -181,6 +243,8 @@ export function RenownUserButton({
   const handleMouseLeave = useCallback(() => {
     closeTimeoutRef.current = setTimeout(() => {
       setIsOpen(false);
+      setIsHovered(false);
+      setHoveredItem(null);
     }, 150);
   }, []);
 
@@ -202,6 +266,39 @@ export function RenownUserButton({
     }
   }, [address]);
 
+  const triggerElement = asChild ? (
+    <Slot data-renown-state="authenticated">{children}</Slot>
+  ) : (
+    <button
+      type="button"
+      style={{
+        ...styles.trigger,
+        ...(isHovered ? styles.triggerHover : {}),
+        ...style,
+      }}
+      aria-label="Open account menu"
+      data-renown-state="authenticated"
+    >
+      {avatarUrl ? (
+        <img src={avatarUrl} alt="Avatar" style={styles.avatar} />
+      ) : (
+        <div style={styles.avatarPlaceholder}>
+          <span style={styles.avatarInitial}>
+            {(displayName || "U")[0].toUpperCase()}
+          </span>
+        </div>
+      )}
+      <span style={styles.displayName}>{displayName}</span>
+      <ChevronDownIcon
+        size={14}
+        style={{
+          ...styles.chevron,
+          ...(isOpen ? styles.chevronOpen : {}),
+        }}
+      />
+    </button>
+  );
+
   return (
     <div
       ref={wrapperRef}
@@ -210,29 +307,7 @@ export function RenownUserButton({
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      {renderTrigger ? (
-        renderTrigger({
-          onMouseEnter: handleMouseEnter,
-          onMouseLeave: handleMouseLeave,
-          address,
-          username,
-          avatarUrl,
-        })
-      ) : (
-        <button
-          type="button"
-          style={{ ...styles.trigger, ...style }}
-          aria-label="Open account menu"
-        >
-          {avatarUrl ? (
-            <img src={avatarUrl} alt="Avatar" style={styles.avatar} />
-          ) : (
-            <div style={styles.avatarPlaceholder}>
-              <UserIcon size={24} color="#9ca3af" />
-            </div>
-          )}
-        </button>
-      )}
+      {triggerElement}
       {isOpen && (
         <div
           style={{
@@ -242,61 +317,95 @@ export function RenownUserButton({
               : { top: `calc(100% + ${POPOVER_GAP}px)` }),
           }}
         >
-          <div style={styles.section}>
-            {username && <div style={styles.username}>{username}</div>}
-            <div style={styles.addressRow}>
-              <button
-                type="button"
-                onClick={copyToClipboard}
-                style={styles.addressButton}
-              >
-                <div
-                  style={{
-                    position: "relative",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "4px",
-                    width: "100%",
-                  }}
+          <div style={styles.header}>
+            {username && <div style={styles.headerUsername}>{username}</div>}
+            {address && (
+              <div style={styles.addressRow}>
+                <button
+                  type="button"
+                  onClick={() => void copyToClipboard()}
+                  style={styles.addressButton}
                 >
                   <div
-                    style={{ ...styles.addressText, opacity: isCopied ? 0 : 1 }}
+                    style={{
+                      position: "relative",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "4px",
+                      width: "100%",
+                    }}
                   >
-                    <span>{truncateAddress(address)}</span>
-                    <CopyIcon size={14} color="#9EA0A1" />
+                    <div
+                      style={{
+                        ...styles.addressText,
+                        opacity: isCopied ? 0 : 1,
+                      }}
+                    >
+                      <span>{truncateAddress(address)}</span>
+                      <CopyIcon size={12} color="#9ca3af" />
+                    </div>
+                    <div
+                      style={{
+                        ...styles.copiedText,
+                        opacity: isCopied ? 1 : 0,
+                      }}
+                    >
+                      Copied!
+                    </div>
                   </div>
-                  <div
-                    style={{ ...styles.copiedText, opacity: isCopied ? 1 : 0 }}
-                  >
-                    Copied to clipboard!
-                  </div>
-                </div>
-              </button>
-            </div>
+                </button>
+              </div>
+            )}
           </div>
-          {userId && (
-            <div style={styles.section}>
+          <div style={styles.menuSection}>
+            {profileId && (
               <button
                 type="button"
-                onClick={() => openRenown(userId)}
-                style={styles.menuItem}
+                onClick={() => openRenown(profileId)}
+                onMouseEnter={() => setHoveredItem("profile")}
+                onMouseLeave={() => setHoveredItem(null)}
+                style={{
+                  ...styles.menuItem,
+                  ...(hoveredItem === "profile" ? styles.menuItemHover : {}),
+                }}
               >
-                <ExternalLinkIcon size={14} />
-                View on Renown
+                <UserIcon size={14} color="#6b7280" />
+                View Profile
               </button>
-            </div>
-          )}
-          <div style={styles.sectionLast}>
+            )}
+            {menuItems?.map((item) => (
+              <button
+                key={item.label}
+                type="button"
+                onClick={item.onClick}
+                onMouseEnter={() => setHoveredItem(item.label)}
+                onMouseLeave={() => setHoveredItem(null)}
+                style={{
+                  ...styles.menuItem,
+                  ...(hoveredItem === item.label ? styles.menuItemHover : {}),
+                  ...item.style,
+                }}
+              >
+                {item.icon}
+                {item.label}
+              </button>
+            ))}
+          </div>
+          <hr style={styles.separator} />
+          <div style={styles.menuSection}>
             <button
               type="button"
               onClick={onDisconnect}
+              onMouseEnter={() => setHoveredItem("disconnect")}
+              onMouseLeave={() => setHoveredItem(null)}
               style={{
                 ...styles.menuItem,
                 ...styles.disconnectItem,
+                ...(hoveredItem === "disconnect" ? styles.menuItemHover : {}),
               }}
             >
-              <DisconnectIcon size={14} color="#EA4335" />
-              Disconnect
+              <DisconnectIcon size={14} color="#dc2626" />
+              Log out
             </button>
           </div>
         </div>

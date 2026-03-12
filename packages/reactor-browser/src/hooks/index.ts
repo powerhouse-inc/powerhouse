@@ -1,3 +1,8 @@
+export {
+  useRenownAuth,
+  type RenownAuth,
+  type RenownAuthStatus,
+} from "../renown/use-renown-auth.js";
 export { useAllowedDocumentModelModules } from "./allowed-document-model-modules.js";
 export { useNodesInSelectedDriveOrFolder } from "./child-nodes.js";
 export {
@@ -68,6 +73,7 @@ export {
   useFolderNodesInSelectedFolder,
   useNodesInSelectedFolder,
 } from "./items-in-selected-folder.js";
+export { loading, setLoading, useLoading } from "./loading.js";
 export {
   closePHModal,
   setPHModal,
@@ -83,6 +89,13 @@ export {
   useNodeParentFolderById,
   useParentFolderForSelectedNode,
 } from "./parent-folder.js";
+export {
+  addRenownEventHandler,
+  useDid,
+  useLoginStatus,
+  useRenown,
+  useUser,
+} from "./renown.js";
 export {
   hideRevisionHistory,
   setRevisionHistoryVisible,
@@ -122,9 +135,9 @@ export { useGetSwitchboardLink } from "./use-get-switchboard-link.js";
 export { useOnDropFile } from "./use-on-drop-file.js";
 export { useUserPermissions } from "./user-permissions.js";
 export {
+  setVetraPackageManager,
   useDismissedPackages,
   usePendingInstallations,
-  setVetraPackageManager,
   useVetraPackageManager,
   useVetraPackages,
 } from "./vetra-packages.js";

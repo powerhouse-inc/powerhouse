@@ -3,13 +3,21 @@ import { logger } from "document-drive";
 import { RENOWN_CHAIN_ID, RENOWN_NETWORK_ID, RENOWN_URL } from "./constants.js";
 
 export function openRenown(documentId?: string) {
+  const renown = window.ph?.renown;
+  let renownUrl = renown?.baseUrl;
+  if (!renownUrl) {
+    logger.warn("Renown instance not found, falling back to: ", RENOWN_URL);
+    renownUrl = RENOWN_URL;
+  }
+
   if (documentId) {
-    window.open(`${RENOWN_URL}/profile/${documentId}`, "_blank")?.focus();
+    window.open(`${renownUrl}/profile/${documentId}`, "_blank")?.focus();
     return;
   }
 
-  const url = new URL(RENOWN_URL);
-  url.searchParams.set("connect", window.ph?.renown?.did ?? "");
+  const url = new URL(renownUrl);
+  url.searchParams.set("app", renown?.did ?? "");
+  url.searchParams.set("connect", renown?.did ?? "");
   url.searchParams.set("network", RENOWN_NETWORK_ID);
   url.searchParams.set("chain", RENOWN_CHAIN_ID);
 
@@ -68,7 +76,9 @@ export async function login(
 
     return await renown.login(did);
   } catch (error) {
-    logger.error("@error", error);
+    logger.error(
+      error instanceof Error ? error.message : JSON.stringify(error),
+    );
   }
 }
 
