@@ -12,12 +12,14 @@ docker compose -f scripts/profiling/docker-compose.yml up -d --wait
 # Automatically builds dependencies, runs migrations, and runs pyroscope-analyse after completion
 ./scripts/profiling/run-reactor-direct.sh 1 -o 25 -b 5 -l 100 \
   --db "postgresql://postgres:postgres@localhost:5432/postgres" \
-  --pyroscope http://localhost:4040
+  --pyroscope http://localhost:4040 \
+  --file
 
 # Or run reactor-direct.ts directly if packages are already built
 tsx ./scripts/profiling/reactor-direct.ts 1 -o 25 -b 5 -l 100 \
   --db "postgresql://postgres:postgres@localhost:5432/postgres" \
-  --pyroscope http://localhost:4040
+  --pyroscope http://localhost:4040 \
+  --file
 
 # Or analyse an existing Pyroscope profile manually
 tsx ./scripts/profiling/pyroscope-analyse.ts 'http://localhost:4040/?query=...'
@@ -42,12 +44,14 @@ Build the packages that the profiling scripts depend on. Run these from the repo
 ```bash
 pnpm --filter document-model run tsc --build
 pnpm --filter @powerhousedao/reactor run build
+pnpm --filter @powerhousedao/reactor run build:bundle
 DATABASE_URL="postgresql://postgres:postgres@localhost:5432/postgres" pnpm --filter document-drive run migrate
 pnpm --filter @powerhousedao/switchboard run tsc --build
 pnpm --filter @powerhousedao/reactor-api run build:misc
 ```
 
 - `migrate` runs `prisma generate && prisma db push` — required once per fresh PostgreSQL database to create the schema. Re-run if you wipe the database.
+- `build:bundle` produces the JS bundle for `@powerhousedao/reactor` (the `tsc` build only emits declaration files). Required for `reactor-direct.ts` to resolve the package at runtime.
 - `build:misc` copies `.graphql` schema files into the reactor-api dist. Without this, the reactor subgraph (which provides `jobStatus` and other queries) fails to start silently.
 - Rebuild after any source changes in these packages, otherwise the scripts will run against stale code.
 
