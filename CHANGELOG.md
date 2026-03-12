@@ -1,3 +1,15 @@
+## 6.0.0-dev.85 (2026-03-12)
+
+### 🚀 Features
+
+- auto-discover and install packages for unknown document types ([4e8fa145c](https://github.com/powerhouse-inc/powerhouse/commit/4e8fa145c))
+- auto-discover and install packages for unknown document types ([#2401](https://github.com/powerhouse-inc/powerhouse/pull/2401))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+- Guillermo Puente Sandoval @gpuente
+
 ## 6.0.0-dev.84 (2026-03-11)
 
 ### 🚀 Features

@@ -1,3 +1,13 @@
+## 6.0.0-dev.85 (2026-03-12)
+
+### 🚀 Features
+
+- auto-discover and install packages for unknown document types ([4e8fa145c](https://github.com/powerhouse-inc/powerhouse/commit/4e8fa145c))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 6.0.0-dev.84 (2026-03-11)
 
 This was a version bump only for @powerhousedao/design-system to align it with other projects, there were no code changes.

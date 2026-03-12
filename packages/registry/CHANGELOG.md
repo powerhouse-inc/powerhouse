@@ -1,3 +1,7 @@
+## 6.0.0-dev.85 (2026-03-12)
+
+This was a version bump only for @powerhousedao/registry to align it with other projects, there were no code changes.
+
 ## 6.0.0-dev.84 (2026-03-11)
 
 ### 🚀 Features
