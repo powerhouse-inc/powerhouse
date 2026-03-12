@@ -15,6 +15,12 @@ export class CollectionMembershipCache implements ICollectionMembershipCache {
 
   constructor(private operationIndex: IOperationIndex) {}
 
+  withScopedIndex(operationIndex: IOperationIndex): CollectionMembershipCache {
+    const scoped = new CollectionMembershipCache(operationIndex);
+    scoped.cache = this.cache;
+    return scoped;
+  }
+
   async getCollectionsForDocuments(
     documentIds: string[],
   ): Promise<Record<string, string[]>> {

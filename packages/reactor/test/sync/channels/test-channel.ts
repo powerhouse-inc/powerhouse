@@ -89,9 +89,8 @@ export class TestChannel implements IChannel {
     };
   }
 
-  onConnectionStateChange(
-    _callback: ConnectionStateChangeCallback,
-  ): () => void {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  onConnectionStateChange(callback: ConnectionStateChangeCallback): () => void {
     return () => {};
   }
 

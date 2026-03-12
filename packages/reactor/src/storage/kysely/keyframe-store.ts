@@ -1,10 +1,22 @@
 import type { PHDocument } from "document-model";
-import type { Kysely } from "kysely";
+import type { Kysely, Transaction } from "kysely";
 import type { IKeyframeStore } from "../interfaces.js";
 import type { Database } from "./types.js";
 
 export class KyselyKeyframeStore implements IKeyframeStore {
+  private trx?: Transaction<Database>;
+
   constructor(private db: Kysely<Database>) {}
+
+  private get queryExecutor(): Kysely<Database> | Transaction<Database> {
+    return this.trx ?? this.db;
+  }
+
+  withTransaction(trx: Transaction<Database>): KyselyKeyframeStore {
+    const instance = new KyselyKeyframeStore(this.db);
+    instance.trx = trx;
+    return instance;
+  }
 
   async putKeyframe(
     documentId: string,
@@ -18,7 +30,7 @@ export class KyselyKeyframeStore implements IKeyframeStore {
       throw new Error("Operation aborted");
     }
 
-    await this.db
+    await this.queryExecutor
       .insertInto("Keyframe")
       .values({
         documentId,
@@ -47,7 +59,7 @@ export class KyselyKeyframeStore implements IKeyframeStore {
       throw new Error("Operation aborted");
     }
 
-    const row = await this.db
+    const row = await this.queryExecutor
       .selectFrom("Keyframe")
       .selectAll()
       .where("documentId", "=", documentId)
@@ -78,7 +90,7 @@ export class KyselyKeyframeStore implements IKeyframeStore {
       throw new Error("Operation aborted");
     }
 
-    let query = this.db
+    let query = this.queryExecutor
       .deleteFrom("Keyframe")
       .where("documentId", "=", documentId);
 
