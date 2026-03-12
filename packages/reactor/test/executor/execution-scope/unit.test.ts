@@ -64,6 +64,7 @@ describe("KyselyWriteCache.withScopedStores", () => {
     mockKeyframeStore = {
       putKeyframe: vi.fn().mockResolvedValue(undefined),
       findNearestKeyframe: vi.fn().mockResolvedValue(undefined),
+      listKeyframes: vi.fn().mockResolvedValue([]),
       deleteKeyframes: vi.fn().mockResolvedValue(0),
     };
     mockOperationStore = createMockOperationStore();
@@ -85,6 +86,7 @@ describe("KyselyWriteCache.withScopedStores", () => {
     const scopedKeyframeStore: IKeyframeStore = {
       putKeyframe: vi.fn().mockResolvedValue(undefined),
       findNearestKeyframe: vi.fn().mockResolvedValue(undefined),
+      listKeyframes: vi.fn().mockResolvedValue([]),
       deleteKeyframes: vi.fn().mockResolvedValue(0),
     };
     const scopedOperationStore = createMockOperationStore();
@@ -118,6 +120,7 @@ describe("KyselyWriteCache.withScopedStores", () => {
     const scopedKeyframeStore: IKeyframeStore = {
       putKeyframe: vi.fn().mockResolvedValue(undefined),
       findNearestKeyframe: vi.fn().mockResolvedValue(undefined),
+      listKeyframes: vi.fn().mockResolvedValue([]),
       deleteKeyframes: vi.fn().mockResolvedValue(0),
     };
     const scopedOperationStore = createMockOperationStore();
@@ -148,6 +151,7 @@ describe("KyselyWriteCache.withScopedStores", () => {
     const scopedKeyframeStore: IKeyframeStore = {
       putKeyframe: vi.fn().mockResolvedValue(undefined),
       findNearestKeyframe: vi.fn().mockResolvedValue(undefined),
+      listKeyframes: vi.fn().mockResolvedValue([]),
       deleteKeyframes: vi.fn().mockResolvedValue(0),
     };
 
@@ -202,6 +206,91 @@ describe("KyselyWriteCache.withScopedStores", () => {
 
     expect(scopedOperationStore.getSince).toHaveBeenCalled();
     expect(mockOperationStore.getSince).not.toHaveBeenCalled();
+  });
+});
+
+describe("KyselyWriteCache isolation", () => {
+  let originalCache: KyselyWriteCache;
+  let mockKeyframeStore: IKeyframeStore;
+  let mockOperationStore: IOperationStore;
+  let mockRegistry: IDocumentModelRegistry;
+
+  beforeEach(() => {
+    mockKeyframeStore = {
+      putKeyframe: vi.fn().mockResolvedValue(undefined),
+      findNearestKeyframe: vi.fn().mockResolvedValue(undefined),
+      listKeyframes: vi.fn().mockResolvedValue([]),
+      deleteKeyframes: vi.fn().mockResolvedValue(0),
+    };
+    mockOperationStore = createMockOperationStore();
+    mockRegistry = {
+      getModule: vi.fn(),
+      registerModules: vi.fn(),
+      getModules: vi.fn(),
+    } as unknown as IDocumentModelRegistry;
+
+    originalCache = new KyselyWriteCache(
+      mockKeyframeStore,
+      mockOperationStore,
+      mockRegistry,
+      { maxDocuments: 10, ringBufferSize: 5, keyframeInterval: 10 },
+    );
+  });
+
+  it("isolated cache does not share streams with parent", () => {
+    const doc = {
+      header: {
+        id: "doc-1",
+        documentType: "test/type",
+        revision: { global: 1 },
+      },
+      operations: { global: [{ index: 0 }] },
+      state: {},
+      clipboard: [],
+    } as any;
+
+    originalCache.putState("doc-1", "global", "main", 0, doc);
+
+    const isolated = new KyselyWriteCache(
+      mockKeyframeStore,
+      mockOperationStore,
+      mockRegistry,
+      { maxDocuments: 10, ringBufferSize: 5, keyframeInterval: 10 },
+    );
+
+    expect(isolated.getStream("doc-1", "global", "main")).toBeUndefined();
+
+    isolated.putState("doc-1", "global", "main", 1, doc);
+    const originalStream = originalCache.getStream("doc-1", "global", "main");
+    const isolatedStream = isolated.getStream("doc-1", "global", "main");
+    expect(originalStream).not.toBe(isolatedStream);
+  });
+
+  it("invalidate on isolated cache does not affect parent", () => {
+    const doc = {
+      header: {
+        id: "doc-1",
+        documentType: "test/type",
+        revision: { global: 1 },
+      },
+      operations: { global: [{ index: 0 }] },
+      state: {},
+      clipboard: [],
+    } as any;
+
+    originalCache.putState("doc-1", "global", "main", 0, doc);
+
+    const isolated = new KyselyWriteCache(
+      mockKeyframeStore,
+      mockOperationStore,
+      mockRegistry,
+      { maxDocuments: 10, ringBufferSize: 5, keyframeInterval: 10 },
+    );
+
+    isolated.invalidate("doc-1", "global", "main");
+
+    const parentStream = originalCache.getStream("doc-1", "global", "main");
+    expect(parentStream).toBeDefined();
   });
 });
 

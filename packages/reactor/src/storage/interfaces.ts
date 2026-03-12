@@ -210,6 +210,28 @@ export interface IKeyframeStore {
   ): Promise<{ revision: number; document: PHDocument } | undefined>;
 
   /**
+   * Lists all keyframes for a document, optionally filtered by scope and branch.
+   *
+   * @param documentId - The document id
+   * @param scope - Optional scope filter
+   * @param branch - Optional branch filter
+   * @param signal - Optional abort signal to cancel the request
+   */
+  listKeyframes(
+    documentId: string,
+    scope?: string,
+    branch?: string,
+    signal?: AbortSignal,
+  ): Promise<
+    Array<{
+      scope: string;
+      branch: string;
+      revision: number;
+      document: PHDocument;
+    }>
+  >;
+
+  /**
    * Deletes keyframes for a document. Optionally scoped to a specific
    * scope and/or branch.
    *

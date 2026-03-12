@@ -12,6 +12,7 @@ import {
   createCreateDocumentOperation,
   createTestOperation,
   createTestOperationStore,
+  createUpgradeDocumentOperation,
 } from "../../factories.js";
 
 function createMockOperationStore(): IOperationStore {
@@ -43,6 +44,7 @@ function createMockKeyframeStore(): IKeyframeStore {
   return {
     putKeyframe: vi.fn().mockResolvedValue(undefined),
     findNearestKeyframe: vi.fn().mockResolvedValue(undefined),
+    listKeyframes: vi.fn().mockResolvedValue([]),
     deleteKeyframes: vi.fn().mockResolvedValue(0),
   };
 }
@@ -663,6 +665,71 @@ describe("KyselyWriteCache (Partial Integration) - Cold Miss Rebuild", () => {
     await expect(
       cache.getState(docId, "global", "main", undefined, controller.signal),
     ).rejects.toThrow("Operation aborted");
+  });
+
+  it("should call getModule with correct version after UPGRADE_DOCUMENT", async () => {
+    const docId = "test-doc-version";
+    const docType = "powerhouse/document-model";
+
+    const versionAwareGetModule = vi.fn().mockReturnValue({
+      reducer: (doc: PHDocument) => doc,
+      utils: documentModelDocumentModelModule.utils,
+    });
+
+    const versionAwareRegistry: IDocumentModelRegistry = {
+      registerModules: vi.fn(),
+      unregisterModules: vi.fn(),
+      getModule: versionAwareGetModule,
+      getAllModules: vi.fn(),
+      clear: vi.fn(),
+      getSupportedVersions: vi.fn(),
+      getLatestVersion: vi.fn(),
+      registerUpgradeManifests: vi.fn(),
+      getUpgradeManifest: vi.fn(),
+      computeUpgradePath: vi.fn(),
+      getUpgradeReducer: vi.fn(),
+    };
+
+    const versionCache = new KyselyWriteCache(
+      keyframeStore,
+      operationStore,
+      versionAwareRegistry,
+      config,
+    );
+    await versionCache.startup();
+
+    await operationStore.apply(docId, docType, "document", "main", 0, (txn) => {
+      txn.addOperations(createCreateDocumentOperation(docId, docType));
+      txn.addOperations(
+        createUpgradeDocumentOperation(docId, 0, 2, {}, { index: 1 }),
+      );
+    });
+
+    const globalOps: Operation[] = [];
+    for (let i = 1; i <= 3; i++) {
+      globalOps.push(createTestOperation(docId, { index: i, skip: 0 }));
+    }
+
+    await operationStore.apply(docId, docType, "global", "main", 0, (txn) => {
+      for (const op of globalOps) {
+        txn.addOperations(op);
+      }
+    });
+
+    await versionCache.getState(docId, "global", "main");
+
+    const calls = versionAwareGetModule.mock.calls;
+    const initialCall = calls.find(
+      (c: unknown[]) => c[0] === docType && c[1] === undefined,
+    );
+    expect(initialCall).toBeDefined();
+
+    const upgradedCall = calls.find(
+      (c: unknown[]) => c[0] === docType && c[1] === 2,
+    );
+    expect(upgradedCall).toBeDefined();
+
+    await versionCache.shutdown();
   });
 });
 

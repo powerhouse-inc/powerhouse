@@ -80,6 +80,46 @@ export class KyselyKeyframeStore implements IKeyframeStore {
     };
   }
 
+  async listKeyframes(
+    documentId: string,
+    scope?: string,
+    branch?: string,
+    signal?: AbortSignal,
+  ): Promise<
+    Array<{
+      scope: string;
+      branch: string;
+      revision: number;
+      document: PHDocument;
+    }>
+  > {
+    if (signal?.aborted) {
+      throw new Error("Operation aborted");
+    }
+
+    let query = this.queryExecutor
+      .selectFrom("Keyframe")
+      .selectAll()
+      .where("documentId", "=", documentId)
+      .orderBy("revision", "asc");
+
+    if (scope !== undefined) {
+      query = query.where("scope", "=", scope);
+    }
+    if (branch !== undefined) {
+      query = query.where("branch", "=", branch);
+    }
+
+    const rows = await query.execute();
+
+    return rows.map((row) => ({
+      scope: row.scope,
+      branch: row.branch,
+      revision: row.revision,
+      document: row.document as PHDocument,
+    }));
+  }
+
   async deleteKeyframes(
     documentId: string,
     scope?: string,

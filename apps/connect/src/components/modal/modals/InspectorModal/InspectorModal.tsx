@@ -2,6 +2,7 @@ import { InspectorModal as ConnectInspectorModal } from "@powerhousedao/design-s
 import { REACTOR_SCHEMA } from "@powerhousedao/reactor-browser";
 import { closePHModal, usePHModal } from "@powerhousedao/reactor-browser";
 import { useDbExplorer } from "./useDbExplorer.js";
+import { useIntegrityInspector } from "./useIntegrityInspector.js";
 import { useProcessorsInspector } from "./useProcessorsInspector.js";
 import { useQueueInspector } from "./useQueueInspector.js";
 import { useRemotesInspector } from "./useRemotesInspector.js";
@@ -17,6 +18,7 @@ export const InspectorModal: React.FC = () => {
   const { getRemotes, removeRemote, connectionStates } = useRemotesInspector();
   const queueInspectorProps = useQueueInspector();
   const processorsInspectorProps = useProcessorsInspector();
+  const integrityInspectorProps = useIntegrityInspector();
 
   return (
     <ConnectInspectorModal
@@ -41,6 +43,7 @@ export const InspectorModal: React.FC = () => {
       }}
       queueInspectorProps={queueInspectorProps}
       processorsInspectorProps={processorsInspectorProps}
+      integrityInspectorProps={integrityInspectorProps}
     />
   );
 };

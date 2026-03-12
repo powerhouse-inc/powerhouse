@@ -276,3 +276,13 @@ export type {
   TrackedProcessor,
 } from "@powerhousedao/shared/processors";
 export { ProcessorManager } from "./processors/index.js";
+
+// Admin / Integrity
+export { DocumentIntegrityService } from "./admin/document-integrity-service.js";
+export type {
+  IDocumentIntegrityService,
+  KeyframeValidationIssue,
+  RebuildResult,
+  SnapshotValidationIssue,
+  ValidationResult,
+} from "./admin/types.js";
