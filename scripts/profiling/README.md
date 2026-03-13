@@ -366,7 +366,7 @@ docker compose -f scripts/profiling/docker-compose.yml up otel-collector prometh
 | `reactor_queue_jobs_dequeued_total`           | Jobs dequeued for execution           |
 | `reactor_queue_jobs_completed_total`          | Jobs completed (READ_READY)           |
 | `reactor_queue_jobs_failed_total`             | Jobs permanently failed               |
-| `reactor_executor_total_processed_total`      | Total jobs processed by executors     |
+| `reactor_executor_processed_total`            | Total jobs processed by executors     |
 | `reactor_executor_operations_generated_total` | Operations produced by executors      |
 | `reactor_eventbus_events_emitted_total`       | Events emitted on the event bus       |
 | `reactor_sync_dead_letters_added_total`       | Sync ops moved to dead letter storage |
@@ -376,8 +376,7 @@ docker compose -f scripts/profiling/docker-compose.yml up otel-collector prometh
 | Metric                         | Description                    |
 | ------------------------------ | ------------------------------ |
 | `reactor_queue_depth`          | Pending jobs across all queues |
-| `reactor_queue_executing`      | Jobs currently executing       |
-| `reactor_executor_active_jobs` | Jobs currently in an executor  |
+| `reactor_executor_active_jobs` | Jobs currently executing       |
 | `reactor_sync_remotes`         | Active remote count            |
 
 #### Histograms — available with `_bucket`, `_sum`, `_count` suffixes
