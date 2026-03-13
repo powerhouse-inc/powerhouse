@@ -27,10 +27,6 @@ export function createMetrics() {
       description: "Pending jobs across all queues",
       unit: "{job}",
     }),
-    queueExecuting: meter.createObservableGauge("reactor.queue.executing", {
-      description: "Jobs currently executing",
-      unit: "{job}",
-    }),
 
     // Executor metrics
     executorJobDuration: meter.createHistogram(
@@ -47,13 +43,10 @@ export function createMetrics() {
         unit: "{job}",
       },
     ),
-    executorTotalProcessed: meter.createCounter(
-      "reactor.executor.total_processed",
-      {
-        description: "Total jobs processed",
-        unit: "{job}",
-      },
-    ),
+    executorTotalProcessed: meter.createCounter("reactor.executor.processed", {
+      description: "Total jobs processed",
+      unit: "{job}",
+    }),
     executorOperationsGenerated: meter.createCounter(
       "reactor.executor.operations_generated",
       {
