@@ -4,7 +4,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
 BUILD_OTEL=false
-for arg in "$@"; do [[ "$arg" == "--otel" || "$arg" == "--otel="* ]] && BUILD_OTEL=true; done
+for arg in "$@"; do [[ "$arg" == "--otel" ]] && BUILD_OTEL=true; done
 
 TOTAL_STEPS=3
 $BUILD_OTEL && TOTAL_STEPS=4
