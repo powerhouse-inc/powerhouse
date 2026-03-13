@@ -11,6 +11,8 @@ export type {
   RemoteDocumentChangeEvent as DocumentChangeEvent,
   DocumentChangeListener,
   GetDocumentResult,
+  GetDocumentWithOperationsResult,
+  GetOperationsResult,
   IRemoteClient,
   IRemoteController,
   MergeHandler,
@@ -23,4 +25,4 @@ export type {
   SyncStatus,
   TrackedAction,
 } from "./types.js";
-export { ConflictError } from "./utils.js";
+export { ConflictError, convertRemoteOperations } from "./utils.js";

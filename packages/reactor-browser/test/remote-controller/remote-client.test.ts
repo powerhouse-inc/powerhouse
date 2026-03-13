@@ -7,6 +7,7 @@ function createMockClient(
 ): ReactorGraphQLClient {
   return {
     GetDocument: vi.fn().mockResolvedValue({ document: null }),
+    GetDocumentWithOperations: vi.fn().mockResolvedValue({ document: null }),
     GetDocumentOperations: vi.fn().mockResolvedValue({
       documentOperations: {
         items: [],
@@ -131,9 +132,12 @@ describe("RemoteClient", () => {
       const client = new RemoteClient(mock);
       const result = await client.getAllOperations("doc-1");
 
-      expect(Object.keys(result)).toEqual(["global", "local"]);
-      expect(result["global"]).toHaveLength(2);
-      expect(result["local"]).toHaveLength(1);
+      expect(Object.keys(result.operationsByScope)).toEqual([
+        "global",
+        "local",
+      ]);
+      expect(result.operationsByScope["global"]).toHaveLength(2);
+      expect(result.operationsByScope["local"]).toHaveLength(1);
     });
 
     it("paginates through multiple pages", async () => {
@@ -165,7 +169,7 @@ describe("RemoteClient", () => {
       const client = new RemoteClient(mock);
       const result = await client.getAllOperations("doc-1");
 
-      expect(result["global"]).toHaveLength(2);
+      expect(result.operationsByScope["global"]).toHaveLength(2);
       expect(mockFn).toHaveBeenCalledTimes(2);
 
       // Second call should use the cursor
