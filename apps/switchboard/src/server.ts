@@ -70,6 +70,9 @@ const REACTOR_STORAGE_V2_DEFAULT = true;
 const ENABLE_DUAL_ACTION_CREATE = "ENABLE_DUAL_ACTION_CREATE";
 const ENABLE_DUAL_ACTION_CREATE_DEFAULT = true;
 
+const DYNAMIC_MODEL_LOADING = "DYNAMIC_MODEL_LOADING";
+const DYNAMIC_MODEL_LOADING_DEFAULT = false;
+
 // Create a monolith express app for all subgraphs
 const app = express();
 
@@ -267,7 +270,7 @@ async function initServer(
       logger.info("Using PGlite for reactor storage");
     }
 
-    if (httpLoader) {
+    if (httpLoader && options.dynamicModelLoading) {
       builder.withDocumentModelLoader(httpLoader);
     }
 
@@ -473,10 +476,16 @@ export const startSwitchboard = async (
       ENABLE_DUAL_ACTION_CREATE_DEFAULT,
   );
 
+  const dynamicModelLoading = await featureFlags.getBooleanValue(
+    DYNAMIC_MODEL_LOADING,
+    options.dynamicModelLoading ?? DYNAMIC_MODEL_LOADING_DEFAULT,
+  );
+
   options.reactorOptions = {
     enableDualActionCreate,
     storageV2,
   };
+  options.dynamicModelLoading = dynamicModelLoading;
 
   const logger = options.logger ?? defaultLogger;
 
@@ -487,6 +496,7 @@ export const startSwitchboard = async (
         DOCUMENT_MODEL_SUBGRAPHS_ENABLED: enableDocumentModelSubgraphs,
         REACTOR_STORAGE_V2: storageV2,
         ENABLE_DUAL_ACTION_CREATE: enableDualActionCreate,
+        DYNAMIC_MODEL_LOADING: dynamicModelLoading,
       },
       null,
       2,
