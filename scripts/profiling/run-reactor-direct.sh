@@ -3,19 +3,28 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
+BUILD_OTEL=false
+[[ " $* " == *" --otel"* ]] && BUILD_OTEL=true
+
+TOTAL_STEPS=3
+$BUILD_OTEL && TOTAL_STEPS=4
+STEP=0
+
 echo "Building packages..."
 
-echo "  [1/4] document-model"
+STEP=$((STEP + 1)); echo "  [${STEP}/${TOTAL_STEPS}] document-model"
 pnpm --filter document-model run tsc --build
 
-echo "  [2/4] @powerhousedao/reactor"
+STEP=$((STEP + 1)); echo "  [${STEP}/${TOTAL_STEPS}] @powerhousedao/reactor"
 pnpm --filter @powerhousedao/reactor run build
 pnpm --filter @powerhousedao/reactor run build:bundle
 
-echo "  [3/4] @powerhousedao/opentelemetry-instrumentation-reactor"
-pnpm --filter @powerhousedao/opentelemetry-instrumentation-reactor run build
+if $BUILD_OTEL; then
+  STEP=$((STEP + 1)); echo "  [${STEP}/${TOTAL_STEPS}] @powerhousedao/opentelemetry-instrumentation-reactor"
+  pnpm --filter @powerhousedao/opentelemetry-instrumentation-reactor run build
+fi
 
-echo "  [4/4] Running migrations"
+STEP=$((STEP + 1)); echo "  [${STEP}/${TOTAL_STEPS}] Running migrations"
 DATABASE_URL="postgresql://postgres:postgres@localhost:5432/postgres" \
   pnpm --filter document-drive run migrate
 
