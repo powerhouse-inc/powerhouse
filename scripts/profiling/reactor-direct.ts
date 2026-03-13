@@ -37,7 +37,6 @@ import {
   runMigrations,
   type Database,
   type IReactor,
-  type ReactorModule,
 } from "@powerhousedao/reactor";
 import Pyroscope from "@pyroscope/nodejs";
 import { documentModelDocumentModelModule } from "document-model";
@@ -644,9 +643,7 @@ async function main() {
         ],
       });
       metrics.setGlobalMeterProvider(meterProvider);
-      instrumentation = new ReactorInstrumentation(
-        reactorModule as ReactorModule,
-      );
+      instrumentation = new ReactorInstrumentation(reactorModule);
       instrumentation.start();
       console.log("  Metrics export enabled (interval: 5s)");
     }
