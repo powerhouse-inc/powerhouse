@@ -199,10 +199,19 @@ export class ReactorInstrumentation {
 
     const depthCb: ObservableCallback = async (result) => {
       if (!this.metrics) return;
-      // queue.totalSize() is async (DB query). The OTel SDK expects observable
-      // callbacks to complete within the collection window; if this is slow
-      // under DB load the observation may be silently dropped for that scrape.
-      const depth = await queue.totalSize();
+      // queue.totalSize() is a DB query. If it exceeds the OTel collection
+      // window the observation is silently dropped, making the gauge appear
+      // to drop to zero under load. The timeout makes the failure explicit.
+      const TIMEOUT_MS = 2_000;
+      const depth = await Promise.race([
+        queue.totalSize(),
+        new Promise<never>((_, reject) =>
+          setTimeout(
+            () => reject(new Error("queue.totalSize() timed out")),
+            TIMEOUT_MS,
+          ),
+        ),
+      ]);
       result.observe(depth);
     };
     this.metrics.queueDepth.addCallback(depthCb);
