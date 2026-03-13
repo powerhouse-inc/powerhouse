@@ -24,24 +24,29 @@ export function assignEnvVars(
     PH_DISABLE_LOCAL_PACKAGE: disableLocalPackages,
   });
 
-  // Set registry env vars from powerhouse.config.json so Vite exposes them
-  // to the client via envPrefix before the config is loaded
+  // Resolve registry config: canonical env vars (PH_REGISTRY_URL,
+  // PH_REGISTRY_PACKAGES) take priority over powerhouse.config.json.
+  // Then translate the resolved values to PH_CONNECT_* so Vite exposes
+  // them to the browser via envPrefix.
   const configPath = join(process.cwd(), "powerhouse.config.json");
   const phConfig = getConfig(configPath);
 
-  if (phConfig.registryUrl) {
+  const registryUrl = process.env.PH_REGISTRY_URL ?? phConfig.registryUrl;
+
+  const packageNames = process.env.PH_REGISTRY_PACKAGES
+    ? process.env.PH_REGISTRY_PACKAGES.split(",").map((p) => p.trim())
+    : (phConfig.packages
+        ?.filter((p) => p.provider === "registry")
+        .map((p) => p.packageName) ?? []);
+
+  if (registryUrl) {
     setConnectEnv({
-      PH_CONNECT_PACKAGES_REGISTRY: phConfig.registryUrl,
+      PH_CONNECT_PACKAGES_REGISTRY: registryUrl,
     });
   }
-
-  const registryPackageNames =
-    phConfig.packages
-      ?.filter((p) => p.provider === "registry")
-      .map((p) => p.packageName) ?? [];
-  if (registryPackageNames.length > 0) {
+  if (packageNames.length > 0) {
     setConnectEnv({
-      PH_CONNECT_REGISTRY_PACKAGE_NAMES: registryPackageNames.join(","),
+      PH_CONNECT_REGISTRY_PACKAGE_NAMES: packageNames.join(","),
     });
   }
 }
