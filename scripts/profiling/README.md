@@ -472,3 +472,22 @@ tsx docs-create.ts 1 -o 25 -b 5 -l 100
 # Open http://localhost:4040 to view the switchboard flame graph
 # (use service_name="powerhouse-mono-switchboard" in the query)
 ```
+
+### Profile switchboard with OTel metrics
+
+```bash
+docker compose -f scripts/profiling/docker-compose.yml up otel-collector prometheus postgres -d --wait
+
+# Terminal 1: start switchboard with OTel metrics export
+./scripts/profiling/switchboard-pyroscope.sh \
+  --postgres "postgresql://postgres:postgres@localhost:5432/postgres" \
+  --otel
+
+# Terminal 2: run workload
+tsx docs-create.ts 1 -o 25 -b 5 -l 100
+
+# Open http://localhost:9090 to query metrics (Graph tab for time series)
+# Use the same PromQL queries as the reactor-direct OTel workflow above
+```
+
+Switchboard reads `OTEL_EXPORTER_OTLP_ENDPOINT` on startup. The `--otel` flag sets it to `http://localhost:4318` (or a custom endpoint). When set, switchboard initialises a `MeterProvider` and exports reactor metrics via OTLP HTTP every 5 seconds. Combine with `--runtime node` and Pyroscope for flame graphs alongside metrics.
