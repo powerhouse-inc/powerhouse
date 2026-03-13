@@ -187,7 +187,8 @@ export class ReactorInstrumentation {
     executorManager: IJobExecutorManager,
     syncModule: SyncModule | undefined,
   ): void {
-    this.metrics!.queueDepth.addCallback(async (result) => {
+    if (!this.metrics) return;
+    this.metrics.queueDepth.addCallback(async (result) => {
       if (!this.metrics) return;
       // queue.totalSize() is async (DB query). The OTel SDK expects observable
       // callbacks to complete within the collection window; if this is slow
@@ -196,13 +197,13 @@ export class ReactorInstrumentation {
       result.observe(depth);
     });
 
-    this.metrics!.executorActiveJobs.addCallback((result) => {
+    this.metrics.executorActiveJobs.addCallback((result) => {
       if (!this.metrics) return;
       const status = executorManager.getStatus();
       result.observe(status.activeJobs);
     });
 
-    this.metrics!.syncRemotes.addCallback((result) => {
+    this.metrics.syncRemotes.addCallback((result) => {
       if (!this.metrics) return;
       const count = syncModule?.syncManager.list().length ?? 0;
       result.observe(count);
