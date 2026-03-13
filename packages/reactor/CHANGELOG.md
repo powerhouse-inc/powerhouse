@@ -1,3 +1,73 @@
+## 6.0.0-dev.87 (2026-03-12)
+
+This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.86 (2026-03-12)
+
+### 🚀 Features
+
+- **renown,reactor-browser:** renown integration improvements ([a65731a73](https://github.com/powerhouse-inc/powerhouse/commit/a65731a73))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 6.0.0-dev.85 (2026-03-12)
+
+### 🚀 Features
+
+- auto-discover and install packages for unknown document types ([4e8fa145c](https://github.com/powerhouse-inc/powerhouse/commit/4e8fa145c))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
+## 6.0.0-dev.84 (2026-03-11)
+
+This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.83 (2026-03-11)
+
+This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.82 (2026-03-11)
+
+This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.81 (2026-03-11)
+
+This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.80 (2026-03-11)
+
+This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.79 (2026-03-11)
+
+### 🚀 Features
+
+- **ci:** add gitops action for registry image updates ([ba91d00dd](https://github.com/powerhouse-inc/powerhouse/commit/ba91d00dd))
+
+### ❤️ Thank You
+
+- Frank
+
+## 6.0.0-dev.78 (2026-03-11)
+
+### 🚀 Features
+
+- **reactor:** migrating channel connection status to a state machine, added hooks for this, and an inspector tab ([c64755563](https://github.com/powerhouse-inc/powerhouse/commit/c64755563))
+
+### 🩹 Fixes
+
+- **reactor:** guard against deleting all cursors, fix redundant backfill issue, guard against cursor killing backfill, use paging ([8303bcf64](https://github.com/powerhouse-inc/powerhouse/commit/8303bcf64))
+- **reactor:** discover existing drives on ProcessorManager restart ([07d22e79d](https://github.com/powerhouse-inc/powerhouse/commit/07d22e79d))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Frank
+
 ## 6.0.0-dev.77 (2026-03-10)
 
 ### 🩹 Fixes

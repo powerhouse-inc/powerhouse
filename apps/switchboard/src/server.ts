@@ -225,7 +225,6 @@ async function initServer(
           ...httpDocumentModels,
         ]),
       )
-      .withLegacyStorage(storage)
       .withChannelScheme(ChannelScheme.SWITCHBOARD)
       .withSignalHandlers()
       .withLogger(reactorLogger);

@@ -8,7 +8,7 @@ import type {
 import { driveDocumentModelModule } from "document-drive";
 import type { DocumentModelModule, PHDocumentHeader } from "document-model";
 import { documentModelDocumentModelModule, generateId } from "document-model";
-import { Kysely } from "kysely";
+import { Kysely, sql } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { KyselyOperationIndex } from "../../src/cache/kysely-operation-index.js";
@@ -21,6 +21,7 @@ import type { DocumentViewDatabase } from "../../src/read-models/types.js";
 import { ConsistencyTracker } from "../../src/shared/consistency-tracker.js";
 import { JobStatus } from "../../src/shared/types.js";
 import type { Database as StorageDatabase } from "../../src/storage/kysely/types.js";
+import { ConsoleLogger } from "../../src/logging/console.js";
 import {
   REACTOR_SCHEMA,
   runMigrations,
@@ -73,6 +74,83 @@ function createMockProcessorFactory(filter: ProcessorFilter = {}): {
     },
     get lastDriveHeader() {
       return lastDriveHeader;
+    },
+  };
+}
+
+function makeDriveCreateOp(
+  driveId: string,
+  ordinal: number,
+): OperationWithContext {
+  return {
+    operation: {
+      id: generateId(),
+      index: 0,
+      skip: 0,
+      hash: `hash-${ordinal}`,
+      timestampUtcMs: new Date().toISOString(),
+      action: {
+        id: generateId(),
+        type: "CREATE_DOCUMENT",
+        scope: "document",
+        timestampUtcMs: new Date().toISOString(),
+        input: { documentId: driveId, model: DRIVE_DOCUMENT_TYPE },
+      },
+    },
+    context: {
+      documentId: driveId,
+      documentType: DRIVE_DOCUMENT_TYPE,
+      scope: "document",
+      branch: "main",
+      ordinal,
+      resultingState: JSON.stringify({
+        header: {
+          id: driveId,
+          documentType: DRIVE_DOCUMENT_TYPE,
+          revision: {},
+          createdAtUtcIso: new Date().toISOString(),
+          lastModifiedAtUtcIso: new Date().toISOString(),
+        },
+      }),
+    },
+  };
+}
+
+function makeOp(
+  driveId: string,
+  ordinal: number,
+  overrides: Partial<{
+    actionType: string;
+    documentType: string;
+    scope: string;
+    branch: string;
+    index: number;
+  }> = {},
+): OperationWithContext {
+  return {
+    operation: {
+      id: generateId(),
+      index: overrides.index ?? ordinal,
+      skip: 0,
+      hash: `hash-${ordinal}`,
+      timestampUtcMs: new Date().toISOString(),
+      action: {
+        id: generateId(),
+        type: overrides.actionType ?? "SET_DRIVE_NAME",
+        scope: overrides.scope ?? "global",
+        timestampUtcMs: new Date().toISOString(),
+        input: { name: `Drive at ordinal ${ordinal}` },
+      },
+    },
+    context: {
+      documentId: driveId,
+      documentType: overrides.documentType ?? DRIVE_DOCUMENT_TYPE,
+      scope: overrides.scope ?? "global",
+      branch: overrides.branch ?? "main",
+      ordinal,
+      resultingState: JSON.stringify({
+        global: { name: `Drive at ordinal ${ordinal}` },
+      }),
     },
   };
 }
@@ -135,10 +213,12 @@ describe("ProcessorManager Integration Tests", () => {
       await reactorModule.reactor.create(driveDoc);
 
       await vi.waitFor(() => {
-        const processors =
-          reactorModule.processorManager.getProcessorsForDrive(driveId);
-        expect(processors).toHaveLength(1);
-        expect(processors[0].processor).toBe(processor);
+        const allProcessors = reactorModule.processorManager.getAll();
+        const driveProcessors = allProcessors.filter(
+          (p) => p.driveId === driveId,
+        );
+        expect(driveProcessors).toHaveLength(1);
+        expect(driveProcessors[0]!.record.processor).toBe(processor);
       });
     });
   });
@@ -315,7 +395,7 @@ describe("ProcessorManager Integration Tests", () => {
   });
 
   describe("Factory Lifecycle", () => {
-    it("should track registered factory identifiers", async () => {
+    it("should track registered factories via getAll", async () => {
       const { factory: factory1 } = createMockProcessorFactory();
       const { factory: factory2 } = createMockProcessorFactory();
 
@@ -328,10 +408,15 @@ describe("ProcessorManager Integration Tests", () => {
         factory2,
       );
 
-      const identifiers =
-        reactorModule.processorManager.getFactoryIdentifiers();
-      expect(identifiers).toContain("factory-1");
-      expect(identifiers).toContain("factory-2");
+      const driveDoc = driveDocumentModelModule.utils.createDocument();
+      await reactorModule.reactor.create(driveDoc);
+
+      await vi.waitFor(() => {
+        const all = reactorModule.processorManager.getAll();
+        const factoryIds = new Set(all.map((p) => p.factoryId));
+        expect(factoryIds.has("factory-1")).toBe(true);
+        expect(factoryIds.has("factory-2")).toBe(true);
+      });
     });
 
     it("should disconnect processors when factory is unregistered", async () => {
@@ -346,10 +431,11 @@ describe("ProcessorManager Integration Tests", () => {
       await reactorModule.reactor.create(driveDoc);
 
       await vi.waitFor(() => {
-        const processors = reactorModule.processorManager.getProcessorsForDrive(
-          driveDoc.header.id,
+        const all = reactorModule.processorManager.getAll();
+        const driveProcessors = all.filter(
+          (p) => p.driveId === driveDoc.header.id,
         );
-        expect(processors).toHaveLength(1);
+        expect(driveProcessors).toHaveLength(1);
       });
 
       await reactorModule.processorManager.unregisterFactory("test-factory");
@@ -358,37 +444,34 @@ describe("ProcessorManager Integration Tests", () => {
       expect(processor.onDisconnect).toHaveBeenCalled();
     });
 
-    it("should remove factory from identifiers after unregistration", async () => {
+    it("should remove factory processors after unregistration", async () => {
       const { factory } = createMockProcessorFactory();
 
       await reactorModule.processorManager.registerFactory(
         "test-factory",
         factory,
       );
-      expect(reactorModule.processorManager.getFactoryIdentifiers()).toContain(
-        "test-factory",
-      );
+
+      const driveDoc = driveDocumentModelModule.utils.createDocument();
+      await reactorModule.reactor.create(driveDoc);
+
+      await vi.waitFor(() => {
+        const allBefore = reactorModule.processorManager.getAll();
+        const factoryIds = new Set(allBefore.map((p) => p.factoryId));
+        expect(factoryIds.has("test-factory")).toBe(true);
+      });
 
       await reactorModule.processorManager.unregisterFactory("test-factory");
-      expect(
-        reactorModule.processorManager.getFactoryIdentifiers(),
-      ).not.toContain("test-factory");
+
+      const allAfter = reactorModule.processorManager.getAll();
+      const factoryIdsAfter = new Set(allAfter.map((p) => p.factoryId));
+      expect(factoryIdsAfter.has("test-factory")).toBe(false);
     });
 
     it("should create processors for existing drives when factory is registered late", async () => {
       const driveDoc = driveDocumentModelModule.utils.createDocument();
-      const driveId = driveDoc.header.id;
 
       await reactorModule.reactor.create(driveDoc);
-
-      await vi.waitFor(
-        () => {
-          const processors =
-            reactorModule.processorManager.getProcessorsForDrive(driveId);
-          return processors.length >= 0;
-        },
-        { timeout: 5000 },
-      );
 
       await new Promise((resolve) => setTimeout(resolve, 500));
 
@@ -465,6 +548,29 @@ describe("ProcessorManager Integration Tests", () => {
   });
 });
 
+async function writeToOperationIndex(
+  oi: IOperationIndex,
+  ops: OperationWithContext[],
+): Promise<void> {
+  const txn = oi.start();
+  txn.write(
+    ops.map((op) => ({
+      id: op.operation.id,
+      index: op.operation.index,
+      skip: op.operation.skip,
+      hash: op.operation.hash,
+      timestampUtcMs: op.operation.timestampUtcMs,
+      action: op.operation.action,
+      documentId: op.context.documentId,
+      documentType: op.context.documentType,
+      scope: op.context.scope,
+      branch: op.context.branch,
+      sourceRemote: "",
+    })),
+  );
+  await oi.commit(txn);
+}
+
 describe("ProcessorManager Standalone Tests", () => {
   let db: Kysely<CombinedDatabase>;
   let processorManager: ProcessorManager;
@@ -500,11 +606,13 @@ describe("ProcessorManager Standalone Tests", () => {
     };
 
     const consistencyTracker = new ConsistencyTracker();
+    const logger = new ConsoleLogger(["test"]);
     processorManager = new ProcessorManager(
       db as unknown as Kysely<DocumentViewDatabase>,
       operationIndex,
       mockWriteCache,
       consistencyTracker,
+      logger,
     );
 
     await processorManager.init();
@@ -525,6 +633,59 @@ describe("ProcessorManager Standalone Tests", () => {
       expect(viewState).toBeDefined();
       expect(viewState?.lastOrdinal).toBe(0);
     });
+
+    it("should discover existing drives from DocumentSnapshot on restart", async () => {
+      const driveId = generateId();
+
+      await db
+        .insertInto("DocumentSnapshot")
+        .values({
+          id: generateId(),
+          documentId: driveId,
+          slug: "test-drive",
+          name: "Test Drive",
+          scope: "global",
+          branch: "main",
+          content: JSON.stringify({}),
+          documentType: DRIVE_DOCUMENT_TYPE,
+          lastOperationIndex: 0,
+          lastOperationHash: "hash-0",
+          identifiers: JSON.stringify({}),
+          metadata: JSON.stringify({}),
+        })
+        .execute();
+
+      await db
+        .updateTable("ViewState")
+        .set({ lastOrdinal: 10 })
+        .where("readModelId", "=", "processor-manager")
+        .execute();
+
+      const consistencyTracker = new ConsistencyTracker();
+      const logger = new ConsoleLogger(["test"]);
+      const restartedManager = new ProcessorManager(
+        db as unknown as Kysely<DocumentViewDatabase>,
+        operationIndex,
+        mockWriteCache,
+        consistencyTracker,
+        logger,
+      );
+      await restartedManager.init();
+
+      const mockFactory = createMockProcessorFactory();
+      await restartedManager.registerFactory(
+        "test-factory",
+        mockFactory.factory,
+      );
+
+      expect(mockFactory.factoryCallCount).toBe(1);
+      expect(mockFactory.lastDriveHeader?.id).toBe(driveId);
+
+      const driveProcessors = restartedManager
+        .getAll()
+        .filter((p) => p.driveId === driveId);
+      expect(driveProcessors).toHaveLength(1);
+    });
   });
 
   describe("indexOperations", () => {
@@ -537,47 +698,16 @@ describe("ProcessorManager Standalone Tests", () => {
 
       const driveId = generateId();
       const operations: OperationWithContext[] = [
-        {
-          operation: {
-            id: generateId(),
-            index: 0,
-            skip: 0,
-            hash: "hash-0",
-            timestampUtcMs: new Date().toISOString(),
-            action: {
-              id: generateId(),
-              type: "CREATE_DOCUMENT",
-              scope: "document",
-              timestampUtcMs: new Date().toISOString(),
-              input: {
-                documentId: driveId,
-                model: DRIVE_DOCUMENT_TYPE,
-              },
-            },
-          },
-          context: {
-            documentId: driveId,
-            documentType: DRIVE_DOCUMENT_TYPE,
-            scope: "document",
-            branch: "main",
-            ordinal: 1,
-            resultingState: JSON.stringify({
-              header: {
-                id: driveId,
-                documentType: DRIVE_DOCUMENT_TYPE,
-                revision: {},
-                createdAtUtcIso: new Date().toISOString(),
-                lastModifiedAtUtcIso: new Date().toISOString(),
-              },
-            }),
-          },
-        },
+        makeDriveCreateOp(driveId, 1),
       ];
 
       await processorManager.indexOperations(operations);
 
       expect(mockFactory.factoryCallCount).toBe(1);
-      expect(processorManager.getProcessorsForDrive(driveId)).toHaveLength(1);
+      const driveProcessors = processorManager
+        .getAll()
+        .filter((p) => p.driveId === driveId);
+      expect(driveProcessors).toHaveLength(1);
     });
 
     it("should route operations to matching processors", async () => {
@@ -589,66 +719,10 @@ describe("ProcessorManager Standalone Tests", () => {
 
       await processorManager.registerFactory("test-factory", factory);
 
-      const createOp: OperationWithContext = {
-        operation: {
-          id: generateId(),
-          index: 0,
-          skip: 0,
-          hash: "hash-0",
-          timestampUtcMs: new Date().toISOString(),
-          action: {
-            id: generateId(),
-            type: "CREATE_DOCUMENT",
-            scope: "document",
-            timestampUtcMs: new Date().toISOString(),
-            input: { documentId: driveId, model: DRIVE_DOCUMENT_TYPE },
-          },
-        },
-        context: {
-          documentId: driveId,
-          documentType: DRIVE_DOCUMENT_TYPE,
-          scope: "document",
-          branch: "main",
-          ordinal: 1,
-          resultingState: JSON.stringify({
-            header: {
-              id: driveId,
-              documentType: DRIVE_DOCUMENT_TYPE,
-              revision: {},
-              createdAtUtcIso: new Date().toISOString(),
-              lastModifiedAtUtcIso: new Date().toISOString(),
-            },
-          }),
-        },
-      };
-
+      const createOp = makeDriveCreateOp(driveId, 1);
       await processorManager.indexOperations([createOp]);
 
-      const updateOp: OperationWithContext = {
-        operation: {
-          id: generateId(),
-          index: 1,
-          skip: 0,
-          hash: "hash-1",
-          timestampUtcMs: new Date().toISOString(),
-          action: {
-            id: generateId(),
-            type: "SET_DRIVE_NAME",
-            scope: "global",
-            timestampUtcMs: new Date().toISOString(),
-            input: { name: "Updated Drive" },
-          },
-        },
-        context: {
-          documentId: driveId,
-          documentType: DRIVE_DOCUMENT_TYPE,
-          scope: "global",
-          branch: "main",
-          ordinal: 2,
-          resultingState: JSON.stringify({ global: { name: "Updated Drive" } }),
-        },
-      };
-
+      const updateOp = makeOp(driveId, 2, { index: 1 });
       await processorManager.indexOperations([updateOp]);
 
       expect(processor.receivedOperations).toHaveLength(2);
@@ -657,38 +731,7 @@ describe("ProcessorManager Standalone Tests", () => {
     it("should update ViewState after processing", async () => {
       const driveId = generateId();
       const operations: OperationWithContext[] = [
-        {
-          operation: {
-            id: generateId(),
-            index: 0,
-            skip: 0,
-            hash: "hash-0",
-            timestampUtcMs: new Date().toISOString(),
-            action: {
-              id: generateId(),
-              type: "CREATE_DOCUMENT",
-              scope: "document",
-              timestampUtcMs: new Date().toISOString(),
-              input: { documentId: driveId, model: DRIVE_DOCUMENT_TYPE },
-            },
-          },
-          context: {
-            documentId: driveId,
-            documentType: DRIVE_DOCUMENT_TYPE,
-            scope: "document",
-            branch: "main",
-            ordinal: 42,
-            resultingState: JSON.stringify({
-              header: {
-                id: driveId,
-                documentType: DRIVE_DOCUMENT_TYPE,
-                revision: {},
-                createdAtUtcIso: new Date().toISOString(),
-                lastModifiedAtUtcIso: new Date().toISOString(),
-              },
-            }),
-          },
-        },
+        makeDriveCreateOp(driveId, 42),
       ];
 
       await processorManager.indexOperations(operations);
@@ -700,6 +743,503 @@ describe("ProcessorManager Standalone Tests", () => {
         .executeTakeFirst();
 
       expect(viewState?.lastOrdinal).toBe(42);
+    });
+  });
+
+  describe("Per-Processor Consistency", () => {
+    it("should persist cursor per processor", async () => {
+      const driveId = generateId();
+      const { factory } = createMockProcessorFactory();
+      await processorManager.registerFactory("test-factory", factory);
+
+      await processorManager.indexOperations([makeDriveCreateOp(driveId, 1)]);
+      await processorManager.indexOperations([makeOp(driveId, 5)]);
+
+      const cursors = await db
+        .selectFrom("ProcessorCursor")
+        .selectAll()
+        .execute();
+
+      expect(cursors).toHaveLength(1);
+      expect(cursors[0]!.processorId).toBe(`test-factory:${driveId}:0`);
+      expect(cursors[0]!.lastOrdinal).toBe(5);
+      expect(cursors[0]!.status).toBe("active");
+    });
+
+    it("should freeze cursor on error", async () => {
+      const driveId = generateId();
+      const badProcessor = createMockProcessor();
+      let callCount = 0;
+      badProcessor.onOperations = vi.fn().mockImplementation(() => {
+        callCount++;
+        if (callCount >= 2) {
+          return Promise.reject(new Error("Processor failure"));
+        }
+        return Promise.resolve();
+      });
+
+      const factory: ProcessorFactory = () => [
+        { processor: badProcessor, filter: {} },
+      ];
+      await processorManager.registerFactory("bad-factory", factory);
+
+      await processorManager.indexOperations([makeDriveCreateOp(driveId, 1)]);
+      await processorManager.indexOperations([makeOp(driveId, 5)]);
+
+      const tracked = processorManager.get(`bad-factory:${driveId}:0`);
+      expect(tracked).toBeDefined();
+      expect(tracked!.status).toBe("errored");
+      expect(tracked!.lastOrdinal).toBe(1);
+      expect(tracked!.lastError).toBe("Processor failure");
+
+      const cursor = await db
+        .selectFrom("ProcessorCursor")
+        .selectAll()
+        .where("processorId", "=", `bad-factory:${driveId}:0`)
+        .executeTakeFirst();
+
+      expect(cursor!.lastOrdinal).toBe(1);
+      expect(cursor!.status).toBe("errored");
+    });
+
+    it("should not affect other processors when one errors", async () => {
+      const driveId = generateId();
+
+      const goodProcessor = createMockProcessor();
+      const badProcessor = createMockProcessor();
+      let callCount = 0;
+      badProcessor.onOperations = vi.fn().mockImplementation(() => {
+        callCount++;
+        if (callCount >= 2) {
+          return Promise.reject(new Error("Processor failure"));
+        }
+        return Promise.resolve();
+      });
+
+      const goodFactory: ProcessorFactory = () => [
+        { processor: goodProcessor, filter: {} },
+      ];
+      const badFactory: ProcessorFactory = () => [
+        { processor: badProcessor, filter: {} },
+      ];
+
+      await processorManager.registerFactory("good-factory", goodFactory);
+      await processorManager.registerFactory("bad-factory", badFactory);
+
+      await processorManager.indexOperations([makeDriveCreateOp(driveId, 1)]);
+      await processorManager.indexOperations([makeOp(driveId, 5)]);
+
+      const good = processorManager.get(`good-factory:${driveId}:0`);
+      const bad = processorManager.get(`bad-factory:${driveId}:0`);
+
+      expect(good!.status).toBe("active");
+      expect(good!.lastOrdinal).toBe(5);
+      expect(bad!.status).toBe("errored");
+      expect(bad!.lastOrdinal).toBe(1);
+    });
+
+    it("should backfill on late registration", async () => {
+      const driveId = generateId();
+
+      // Insert a drive snapshot so the PM knows the drive exists
+      await db
+        .insertInto("DocumentSnapshot")
+        .values({
+          id: generateId(),
+          documentId: driveId,
+          slug: "test-drive",
+          name: "Test Drive",
+          scope: "global",
+          branch: "main",
+          content: JSON.stringify({}),
+          documentType: DRIVE_DOCUMENT_TYPE,
+          lastOperationIndex: 0,
+          lastOperationHash: "hash-0",
+          identifiers: JSON.stringify({}),
+          metadata: JSON.stringify({}),
+        })
+        .execute();
+
+      // Write operations to the operation index so backfill can find them
+      const ops = [
+        makeDriveCreateOp(driveId, 1),
+        makeOp(driveId, 2),
+        makeOp(driveId, 3),
+      ];
+      await writeToOperationIndex(operationIndex, ops);
+
+      // Index operations to advance the PM cursor
+      await processorManager.indexOperations([ops[0]!]);
+      await processorManager.indexOperations([ops[1]!]);
+      await processorManager.indexOperations([ops[2]!]);
+
+      // Now register a factory late — it should get backfilled
+      const { factory, processor } = createMockProcessorFactory();
+      await processorManager.registerFactory("late-factory", factory);
+
+      // The processor should have received backfill ops
+      expect(processor.receivedOperations.length).toBeGreaterThan(0);
+
+      const tracked = processorManager.get(`late-factory:${driveId}:0`);
+      expect(tracked).toBeDefined();
+      expect(tracked!.lastOrdinal).toBe(3);
+    });
+
+    it("should retry after error", async () => {
+      const driveId = generateId();
+      const processor = createMockProcessor();
+      let shouldFail = true;
+      processor.onOperations = vi.fn().mockImplementation((ops) => {
+        if (shouldFail) {
+          shouldFail = false;
+          return Promise.reject(new Error("Transient error"));
+        }
+        processor.receivedOperations.push(...ops);
+        return Promise.resolve();
+      });
+
+      const factory: ProcessorFactory = () => [{ processor, filter: {} }];
+      await processorManager.registerFactory("retry-factory", factory);
+
+      // Write to operation index so retry/backfill can find ops
+      const op = makeDriveCreateOp(driveId, 1);
+      await writeToOperationIndex(operationIndex, [op]);
+      await processorManager.indexOperations([op]);
+
+      const tracked = processorManager.get(`retry-factory:${driveId}:0`);
+      expect(tracked!.status).toBe("errored");
+
+      // Now retry
+      await tracked!.retry();
+
+      expect(tracked!.status).toBe("active");
+      expect(processor.receivedOperations.length).toBeGreaterThan(0);
+    });
+
+    it("should restore cursors from DB on restart", async () => {
+      const driveId = generateId();
+
+      // Insert drive snapshot
+      await db
+        .insertInto("DocumentSnapshot")
+        .values({
+          id: generateId(),
+          documentId: driveId,
+          slug: "test-drive",
+          name: "Test Drive",
+          scope: "global",
+          branch: "main",
+          content: JSON.stringify({}),
+          documentType: DRIVE_DOCUMENT_TYPE,
+          lastOperationIndex: 0,
+          lastOperationHash: "hash-0",
+          identifiers: JSON.stringify({}),
+          metadata: JSON.stringify({}),
+        })
+        .execute();
+
+      const { factory } = createMockProcessorFactory();
+      await processorManager.registerFactory("test-factory", factory);
+
+      await processorManager.indexOperations([makeDriveCreateOp(driveId, 1)]);
+      await processorManager.indexOperations([makeOp(driveId, 10)]);
+
+      // Verify cursor was persisted
+      const cursor = await db
+        .selectFrom("ProcessorCursor")
+        .selectAll()
+        .where("processorId", "=", `test-factory:${driveId}:0`)
+        .executeTakeFirst();
+      expect(cursor!.lastOrdinal).toBe(10);
+
+      // Create a fresh ProcessorManager (simulates restart)
+      const consistencyTracker = new ConsistencyTracker();
+      const logger = new ConsoleLogger(["test"]);
+      const restartedManager = new ProcessorManager(
+        db as unknown as Kysely<DocumentViewDatabase>,
+        operationIndex,
+        mockWriteCache,
+        consistencyTracker,
+        logger,
+      );
+      await restartedManager.init();
+
+      // Re-register the factory
+      const { factory: factory2, processor: processor2 } =
+        createMockProcessorFactory();
+      await restartedManager.registerFactory("test-factory", factory2);
+
+      // The restored cursor should be at 10
+      const restored = restartedManager.get(`test-factory:${driveId}:0`);
+      expect(restored).toBeDefined();
+      expect(restored!.lastOrdinal).toBe(10);
+
+      // The processor should NOT have received backfill since cursor is up-to-date
+      expect(processor2.receivedOperations).toHaveLength(0);
+    });
+
+    it("should support startFrom 'current'", async () => {
+      const driveId = generateId();
+
+      // Insert drive snapshot
+      await db
+        .insertInto("DocumentSnapshot")
+        .values({
+          id: generateId(),
+          documentId: driveId,
+          slug: "test-drive",
+          name: "Test Drive",
+          scope: "global",
+          branch: "main",
+          content: JSON.stringify({}),
+          documentType: DRIVE_DOCUMENT_TYPE,
+          lastOperationIndex: 0,
+          lastOperationHash: "hash-0",
+          identifiers: JSON.stringify({}),
+          metadata: JSON.stringify({}),
+        })
+        .execute();
+
+      // Index ops to advance PM cursor
+      await processorManager.indexOperations([makeDriveCreateOp(driveId, 1)]);
+      await processorManager.indexOperations([makeOp(driveId, 5)]);
+
+      // Register factory with startFrom: "current"
+      const processor = createMockProcessor();
+      const factory: ProcessorFactory = () => [
+        { processor, filter: {}, startFrom: "current" },
+      ];
+      await processorManager.registerFactory("current-factory", factory);
+
+      // Processor should NOT have been backfilled (cursor starts at PM's current ordinal)
+      expect(processor.receivedOperations).toHaveLength(0);
+
+      const tracked = processorManager.get(`current-factory:${driveId}:0`);
+      expect(tracked).toBeDefined();
+      expect(tracked!.lastOrdinal).toBe(5);
+    });
+
+    it("should delete cursors on drive cleanup", async () => {
+      const driveId = generateId();
+      const { factory } = createMockProcessorFactory();
+      await processorManager.registerFactory("test-factory", factory);
+
+      await processorManager.indexOperations([makeDriveCreateOp(driveId, 1)]);
+
+      let cursors = await db
+        .selectFrom("ProcessorCursor")
+        .selectAll()
+        .where("driveId", "=", driveId)
+        .execute();
+      expect(cursors.length).toBeGreaterThan(0);
+
+      // Simulate drive deletion
+      const deleteOp: OperationWithContext = {
+        operation: {
+          id: generateId(),
+          index: 1,
+          skip: 0,
+          hash: "hash-delete",
+          timestampUtcMs: new Date().toISOString(),
+          action: {
+            id: generateId(),
+            type: "DELETE_DOCUMENT",
+            scope: "document",
+            timestampUtcMs: new Date().toISOString(),
+            input: { documentId: driveId },
+          },
+        },
+        context: {
+          documentId: driveId,
+          documentType: DRIVE_DOCUMENT_TYPE,
+          scope: "document",
+          branch: "main",
+          ordinal: 2,
+          resultingState: JSON.stringify({}),
+        },
+      };
+
+      await processorManager.indexOperations([deleteOp]);
+
+      cursors = await db
+        .selectFrom("ProcessorCursor")
+        .selectAll()
+        .where("driveId", "=", driveId)
+        .execute();
+      expect(cursors).toHaveLength(0);
+    });
+
+    it("should no-op when retrying an active processor", async () => {
+      const driveId = generateId();
+      const processor = createMockProcessor();
+
+      const factory: ProcessorFactory = () => [{ processor, filter: {} }];
+      await processorManager.registerFactory("retry-factory", factory);
+
+      const op = makeDriveCreateOp(driveId, 1);
+      await writeToOperationIndex(operationIndex, [op]);
+      await processorManager.indexOperations([op]);
+
+      const tracked = processorManager.get(`retry-factory:${driveId}:0`);
+      expect(tracked!.status).toBe("active");
+
+      const callCountBefore = processor.receivedOperations.length;
+
+      await tracked!.retry();
+
+      expect(tracked!.status).toBe("active");
+      expect(processor.receivedOperations.length).toBe(callCountBefore);
+    });
+
+    it("should continue processing when cursor persist fails", async () => {
+      const driveId = generateId();
+
+      const goodProcessor = createMockProcessor();
+      const goodFactory: ProcessorFactory = () => [
+        { processor: goodProcessor, filter: {} },
+      ];
+      await processorManager.registerFactory("good-factory", goodFactory);
+
+      await processorManager.indexOperations([makeDriveCreateOp(driveId, 1)]);
+
+      // Drop the ProcessorCursor table to force persist failures
+      await db.schema.dropTable("ProcessorCursor").execute();
+      await db.schema
+        .createTable("ProcessorCursor")
+        .addColumn("processorId", "text", (col) => col.primaryKey())
+        .addColumn("factoryId", "text", (col) => col.notNull())
+        .addColumn("driveId", "text", (col) => col.notNull())
+        .addColumn("processorIndex", "integer", (col) => col.notNull())
+        .addColumn("lastOrdinal", "integer", (col) => col.notNull())
+        .addColumn("status", "text", (col) => col.notNull())
+        .addColumn("lastError", "text")
+        .addColumn("lastErrorTimestamp", "timestamptz")
+        .addColumn("createdAt", "timestamptz", (col) =>
+          col.notNull().defaultTo("now()"),
+        )
+        .addColumn("updatedAt", "timestamptz", (col) =>
+          col.notNull().defaultTo("now()"),
+        )
+        .execute();
+
+      // Make the table read-only by adding a trigger that rejects inserts
+      await sql
+        .raw(
+          `CREATE FUNCTION reject_insert() RETURNS trigger AS $$
+           BEGIN RAISE EXCEPTION 'insert rejected'; END;
+           $$ LANGUAGE plpgsql`,
+        )
+        .execute(db);
+      await sql
+        .raw(
+          `CREATE TRIGGER no_insert BEFORE INSERT ON "${REACTOR_SCHEMA}"."ProcessorCursor"
+           FOR EACH ROW EXECUTE FUNCTION reject_insert()`,
+        )
+        .execute(db);
+
+      // Route more operations — safeSaveProcessorCursor should catch the error
+      const op2 = makeOp(driveId, 5);
+      await processorManager.indexOperations([op2]);
+
+      // The processor should still have received operations
+      expect(goodProcessor.receivedOperations.length).toBeGreaterThan(0);
+
+      // The PM's ViewState cursor should still advance
+      const viewState = await db
+        .selectFrom("ViewState")
+        .selectAll()
+        .where("readModelId", "=", "processor-manager")
+        .executeTakeFirst();
+      expect(viewState?.lastOrdinal).toBe(5);
+    });
+
+    it("should clean up orphaned cursor rows when factory returns fewer processors", async () => {
+      const driveId = generateId();
+
+      // Insert drive snapshot
+      await db
+        .insertInto("DocumentSnapshot")
+        .values({
+          id: generateId(),
+          documentId: driveId,
+          slug: "test-drive",
+          name: "Test Drive",
+          scope: "global",
+          branch: "main",
+          content: JSON.stringify({}),
+          documentType: DRIVE_DOCUMENT_TYPE,
+          lastOperationIndex: 0,
+          lastOperationHash: "hash-0",
+          identifiers: JSON.stringify({}),
+          metadata: JSON.stringify({}),
+        })
+        .execute();
+
+      // Register a factory that returns 3 processors
+      const processors = [
+        createMockProcessor(),
+        createMockProcessor(),
+        createMockProcessor(),
+      ];
+      const factory3: ProcessorFactory = () =>
+        processors.map((p) => ({ processor: p, filter: {} }));
+      await processorManager.registerFactory("shrink-factory", factory3);
+
+      await processorManager.indexOperations([makeDriveCreateOp(driveId, 1)]);
+
+      // Verify all 3 cursor rows exist
+      let cursors = await db
+        .selectFrom("ProcessorCursor")
+        .selectAll()
+        .where("factoryId", "=", "shrink-factory")
+        .where("driveId", "=", driveId)
+        .execute();
+      expect(cursors).toHaveLength(3);
+
+      // Re-register factory returning only 1 processor
+      const singleProcessor = createMockProcessor();
+      const factory1: ProcessorFactory = () => [
+        { processor: singleProcessor, filter: {} },
+      ];
+      await processorManager.registerFactory("shrink-factory", factory1);
+
+      // Orphaned rows for indices 1 and 2 should be gone
+      cursors = await db
+        .selectFrom("ProcessorCursor")
+        .selectAll()
+        .where("factoryId", "=", "shrink-factory")
+        .where("driveId", "=", driveId)
+        .execute();
+      expect(cursors).toHaveLength(1);
+      expect(cursors[0]!.processorIndex).toBe(0);
+    });
+
+    it("should skip errored processor on subsequent batches", async () => {
+      const driveId = generateId();
+      const processor = createMockProcessor();
+      let callCount = 0;
+      processor.onOperations = vi.fn().mockImplementation(() => {
+        callCount++;
+        if (callCount === 1) {
+          return Promise.reject(new Error("First call fails"));
+        }
+        return Promise.resolve();
+      });
+
+      const factory: ProcessorFactory = () => [{ processor, filter: {} }];
+      await processorManager.registerFactory("fail-factory", factory);
+
+      // First batch: processor errors
+      await processorManager.indexOperations([makeDriveCreateOp(driveId, 1)]);
+
+      const tracked = processorManager.get(`fail-factory:${driveId}:0`);
+      expect(tracked!.status).toBe("errored");
+
+      // Second batch: processor should be skipped
+      await processorManager.indexOperations([makeOp(driveId, 2)]);
+
+      // onOperations should only have been called once (the failing first call)
+      expect(processor.onOperations).toHaveBeenCalledTimes(1);
     });
   });
 });

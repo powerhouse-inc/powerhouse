@@ -46,6 +46,7 @@ export interface IProcessor {
 export type ProcessorRecord = {
   processor: IProcessor;
   filter: ProcessorFilter;
+  startFrom?: "beginning" | "current";
 };
 
 /**
@@ -61,6 +62,21 @@ export type ProcessorFactory = (
 export type ProcessorFactoryBuilder = (
   module: IProcessorHostModule,
 ) => Promise<(driveHeader: PHDocumentHeader) => Promise<ProcessorRecord[]>>;
+
+export type ProcessorStatus = "active" | "errored";
+
+export type TrackedProcessor = {
+  processorId: string;
+  factoryId: string;
+  driveId: string;
+  processorIndex: number;
+  record: ProcessorRecord;
+  lastOrdinal: number;
+  status: ProcessorStatus;
+  lastError: string | undefined;
+  lastErrorTimestamp: Date | undefined;
+  retry: () => Promise<void>;
+};
 
 /**
  * Manages processor creation and destruction based on drive operations.
@@ -78,14 +94,14 @@ export interface IProcessorManager {
   unregisterFactory(identifier: string): Promise<void>;
 
   /**
-   * Gets all registered factory identifiers.
+   * Gets a tracked processor by its ID.
    */
-  getFactoryIdentifiers(): string[];
+  get(processorId: string): TrackedProcessor | undefined;
 
   /**
-   * Gets all processor records for a specific drive.
+   * Gets all tracked processors.
    */
-  getProcessorsForDrive(driveId: string): ProcessorRecord[];
+  getAll(): TrackedProcessor[];
 }
 
 export type ProcessorApp = (typeof PROCESSOR_APPS)[number];

@@ -37,6 +37,7 @@ import {
 } from "./sync-status-tracker.js";
 import type {
   ChannelConfig,
+  ConnectionStateChangedEvent,
   DeadLetterAddedEvent,
   RemoteFilter,
   RemoteOptions,
@@ -71,6 +72,8 @@ export class SyncManager implements ISyncManager {
   private readonly batchAggregator: BatchAggregator;
   private readonly syncStatusTracker: SyncStatusTracker;
   private readonly maxDeadLettersPerRemote: number;
+  private readonly connectionStateUnsubscribes: Map<string, () => void> =
+    new Map();
 
   public loadJobs: Map<string, JobInfo> = new Map();
 
@@ -184,6 +187,11 @@ export class SyncManager implements ISyncManager {
     this.awaiter.shutdown();
     this.syncAwaiter.shutdown();
     this.syncStatusTracker.clear();
+
+    for (const unsub of this.connectionStateUnsubscribes.values()) {
+      unsub();
+    }
+    this.connectionStateUnsubscribes.clear();
 
     const promises: Promise<void>[] = [];
     for (const remote of this.remotes.values()) {
@@ -311,6 +319,11 @@ export class SyncManager implements ISyncManager {
     await this.cursorStorage.remove(name);
 
     this.syncStatusTracker.untrackRemote(name);
+    const unsub = this.connectionStateUnsubscribes.get(name);
+    if (unsub) {
+      unsub();
+      this.connectionStateUnsubscribes.delete(name);
+    }
     this.remotes.delete(name);
   }
 
@@ -336,6 +349,19 @@ export class SyncManager implements ISyncManager {
     );
 
     this.syncStatusTracker.trackRemote(remote.name, remote.channel);
+
+    const unsubscribe = remote.channel.onConnectionStateChange((snapshot) => {
+      void this.eventBus
+        .emit(SyncEventTypes.CONNECTION_STATE_CHANGED, {
+          remoteName: remote.name,
+          remoteId: remote.id,
+          previous: snapshot.state,
+          current: snapshot.state,
+          snapshot,
+        } satisfies ConnectionStateChangedEvent)
+        .catch(() => {});
+    });
+    this.connectionStateUnsubscribes.set(remote.name, unsubscribe);
 
     remote.channel.deadLetter.onAdded((syncOps) => {
       for (const syncOp of syncOps) {

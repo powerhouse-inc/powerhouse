@@ -1,3 +1,125 @@
+## 6.0.0-dev.87 (2026-03-12)
+
+### 🩹 Fixes
+
+- **reactor-browser:** changed remote controller mode to optional ([fc692c2ad](https://github.com/powerhouse-inc/powerhouse/commit/fc692c2ad))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 6.0.0-dev.86 (2026-03-12)
+
+### 🚀 Features
+
+- **renown,reactor-browser:** renown integration improvements ([a65731a73](https://github.com/powerhouse-inc/powerhouse/commit/a65731a73))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 6.0.0-dev.85 (2026-03-12)
+
+### 🚀 Features
+
+- auto-discover and install packages for unknown document types ([4e8fa145c](https://github.com/powerhouse-inc/powerhouse/commit/4e8fa145c))
+- auto-discover and install packages for unknown document types ([#2401](https://github.com/powerhouse-inc/powerhouse/pull/2401))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+- Guillermo Puente Sandoval @gpuente
+
+## 6.0.0-dev.84 (2026-03-11)
+
+### 🚀 Features
+
+- **registry:** add vetra favicon to registry web UI ([fcfb8458e](https://github.com/powerhouse-inc/powerhouse/commit/fcfb8458e))
+
+### ❤️ Thank You
+
+- Frank
+
+## 6.0.0-dev.83 (2026-03-11)
+
+### 🚀 Features
+
+- **registry:** enable dark mode by default and use light logo ([11e7c0085](https://github.com/powerhouse-inc/powerhouse/commit/11e7c0085))
+
+### ❤️ Thank You
+
+- Frank
+
+## 6.0.0-dev.82 (2026-03-11)
+
+### 🚀 Features
+
+- **registry:** add Vetra branding to registry web UI ([8d012ff10](https://github.com/powerhouse-inc/powerhouse/commit/8d012ff10))
+
+### ❤️ Thank You
+
+- Frank
+
+## 6.0.0-dev.81 (2026-03-11)
+
+### 🩹 Fixes
+
+- **registry:** use cli.js as Docker entrypoint instead of run.js ([869e52795](https://github.com/powerhouse-inc/powerhouse/commit/869e52795))
+
+### ❤️ Thank You
+
+- Frank
+
+## 6.0.0-dev.80 (2026-03-11)
+
+### 🩹 Fixes
+
+- **registry:** handle absolute paths for storage and cdn-cache dirs ([da85b2547](https://github.com/powerhouse-inc/powerhouse/commit/da85b2547))
+
+### ❤️ Thank You
+
+- Frank
+
+## 6.0.0-dev.79 (2026-03-11)
+
+### 🚀 Features
+
+- **ci:** add gitops action for registry image updates ([ba91d00dd](https://github.com/powerhouse-inc/powerhouse/commit/ba91d00dd))
+
+### ❤️ Thank You
+
+- Frank
+
+## 6.0.0-dev.78 (2026-03-11)
+
+### 🚀 Features
+
+- replace reactor dropdown with registry selector in package manager ([c8a944a24](https://github.com/powerhouse-inc/powerhouse/commit/c8a944a24))
+- replace reactor dropdown with registry selector in package manager ([#2399](https://github.com/powerhouse-inc/powerhouse/pull/2399))
+- **connect:** first pass at processor inspector in connect ([a59450bd1](https://github.com/powerhouse-inc/powerhouse/commit/a59450bd1))
+- **profiling:** add --async flag to docs-create and auto-migrate in switchboard-pyroscope ([5f17e5d0f](https://github.com/powerhouse-inc/powerhouse/commit/5f17e5d0f))
+- **profiling:** two-phase async dispatch with sampled concurrent polling ([caedc847d](https://github.com/powerhouse-inc/powerhouse/commit/caedc847d))
+- **profiling:** add per-loop dispatch timing output ([55cae92d7](https://github.com/powerhouse-inc/powerhouse/commit/55cae92d7))
+- **reactor:** migrating channel connection status to a state machine, added hooks for this, and an inspector tab ([c64755563](https://github.com/powerhouse-inc/powerhouse/commit/c64755563))
+
+### 🩹 Fixes
+
+- **profiling:** fix jobStatus polling and add missing build step ([f05f614a7](https://github.com/powerhouse-inc/powerhouse/commit/f05f614a7))
+- **profiling:** correct terminal job status from READ_MODELS_READY to READ_READY ([2ea29e390](https://github.com/powerhouse-inc/powerhouse/commit/2ea29e390))
+- **profiling:** add timeout to pollJobAsync and validate mutation response ([390d54cf0](https://github.com/powerhouse-inc/powerhouse/commit/390d54cf0))
+- **profiling:** record timed-out async jobs in output and metrics ([1046858a8](https://github.com/powerhouse-inc/powerhouse/commit/1046858a8))
+- **profiling:** address six code review issues in docs-create and README ([e22a39a31](https://github.com/powerhouse-inc/powerhouse/commit/e22a39a31))
+- **reactor:** discover existing drives on ProcessorManager restart ([07d22e79d](https://github.com/powerhouse-inc/powerhouse/commit/07d22e79d))
+- **reactor:** guard against deleting all cursors, fix redundant backfill issue, guard against cursor killing backfill, use paging ([8303bcf64](https://github.com/powerhouse-inc/powerhouse/commit/8303bcf64))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Frank
+- Guillermo Puente @gpuente
+- Guillermo Puente Sandoval @gpuente
+- Samuel Hawksby-Robinson @Samyoul
+
 ## 6.0.0-dev.77 (2026-03-10)
 
 ### 🩹 Fixes

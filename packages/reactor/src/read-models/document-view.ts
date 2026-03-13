@@ -3,7 +3,7 @@ import type {
   PHDocument,
   PHDocumentHeader,
 } from "document-model";
-import type { Kysely, Transaction } from "kysely";
+import type { Kysely } from "kysely";
 import { v4 as uuidv4 } from "uuid";
 import type { IOperationIndex } from "../cache/operation-index-types.js";
 import type { IWriteCache } from "../cache/write/interfaces.js";
@@ -43,14 +43,14 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
       operationIndex,
       writeCache,
       consistencyTracker,
-      "document-view",
+      { readModelId: "document-view", rebuildStateOnInit: true },
     );
     this._db = db;
   }
 
-  override async indexOperations(items: OperationWithContext[]): Promise<void> {
-    if (items.length === 0) return;
-
+  protected override async commitOperations(
+    items: OperationWithContext[],
+  ): Promise<void> {
     await this._db.transaction().execute(async (trx) => {
       for (const item of items) {
         const { operation, context } = item;
@@ -208,14 +208,7 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
           }
         }
       }
-
-      await this.saveState(
-        trx as unknown as Transaction<DocumentViewDatabase>,
-        items,
-      );
     });
-
-    this.updateConsistencyTracker(items);
   }
 
   async exists(

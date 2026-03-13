@@ -9,6 +9,7 @@ export * from "./dots-loader.js";
 export * from "./drive-editor-container.js";
 export * from "./drive-icon.js";
 export * from "./editor-loader.js";
+export * from "./package-install-prompt.js";
 export * from "./editors.js";
 export * from "./footer.js";
 export * from "./reload-connect-toast.js";

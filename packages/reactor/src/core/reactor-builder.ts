@@ -1,8 +1,4 @@
 import { PGlite } from "@electric-sql/pglite";
-import type {
-  IDocumentOperationStorage,
-  IDocumentStorage,
-} from "document-drive";
 import type { DocumentModelModule, UpgradeManifest } from "document-model";
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
@@ -37,11 +33,10 @@ import { DocumentModelRegistry } from "../registry/implementation.js";
 import type { IDocumentModelLoader } from "../registry/interfaces.js";
 import { ConsistencyTracker } from "../shared/consistency-tracker.js";
 import type { SignatureVerificationHandler } from "../signer/types.js";
-import { GqlRequestChannelFactory } from "../sync/channels/gql-request-channel-factory.js";
-import { GqlResponseChannelFactory } from "../sync/channels/gql-response-channel-factory.js";
-import { ChannelScheme } from "../sync/types.js";
-import type { JwtHandler } from "../sync/types.js";
-import { KyselyDocumentIndexer } from "../storage/kysely/document-indexer.js";
+import {
+  KyselyDocumentIndexer,
+  type IndexerDatabase,
+} from "../storage/kysely/document-indexer.js";
 import { KyselyKeyframeStore } from "../storage/kysely/keyframe-store.js";
 import { KyselyOperationStore } from "../storage/kysely/store.js";
 import type { Database as StorageDatabase } from "../storage/kysely/types.js";
@@ -53,7 +48,11 @@ import type { MigrationStrategy } from "../storage/migrations/types.js";
 import { DefaultSubscriptionErrorHandler } from "../subs/default-error-handler.js";
 import { ReactorSubscriptionManager } from "../subs/react-subscription-manager.js";
 import { SubscriptionNotificationReadModel } from "../subs/subscription-notification-read-model.js";
+import { GqlRequestChannelFactory } from "../sync/channels/gql-request-channel-factory.js";
+import { GqlResponseChannelFactory } from "../sync/channels/gql-response-channel-factory.js";
 import { SyncBuilder } from "../sync/sync-builder.js";
+import type { JwtHandler } from "../sync/types.js";
+import { ChannelScheme } from "../sync/types.js";
 import { Reactor } from "./reactor.js";
 import type {
   Database,
@@ -67,7 +66,6 @@ export class ReactorBuilder {
   private logger?: ILogger;
   private documentModels: DocumentModelModule<any>[] = [];
   private upgradeManifests: UpgradeManifest<readonly number[]>[] = [];
-  private storage?: IDocumentStorage & IDocumentOperationStorage;
   private features: ReactorFeatures = { legacyStorageEnabled: false };
   private readModels: IReadModel[] = [];
   private executorManager: IJobExecutorManager | undefined;
@@ -97,13 +95,6 @@ export class ReactorBuilder {
 
   withUpgradeManifests(manifests: UpgradeManifest<readonly number[]>[]): this {
     this.upgradeManifests = manifests;
-    return this;
-  }
-
-  withLegacyStorage(
-    storage: IDocumentStorage & IDocumentOperationStorage,
-  ): this {
-    this.storage = storage;
     return this;
   }
 
@@ -314,9 +305,9 @@ export class ReactorBuilder {
 
     const documentIndexerConsistencyTracker = new ConsistencyTracker();
     const documentIndexer = new KyselyDocumentIndexer(
-      // @ts-expect-error - Database type is a superset that includes all required tables
-      database,
-      operationStore,
+      database as unknown as Kysely<IndexerDatabase>,
+      operationIndex,
+      writeCache,
       documentIndexerConsistencyTracker,
     );
 
@@ -342,6 +333,7 @@ export class ReactorBuilder {
       operationIndex,
       writeCache,
       processorManagerConsistencyTracker,
+      this.logger!,
     );
 
     try {

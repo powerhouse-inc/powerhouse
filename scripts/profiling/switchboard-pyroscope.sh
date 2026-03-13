@@ -158,11 +158,54 @@ echo "Press Ctrl+C to stop"
 echo "=========================================="
 echo
 
-# Check if switchboard is installed
+# Build all required packages
+echo "Building packages..."
+
+echo "  [1/5] document-model"
+if ! pnpm --filter document-model run tsc --build; then
+  echo "Error: document-model build failed — aborting"
+  exit 1
+fi
+
+echo "  [2/5] @powerhousedao/reactor"
+if ! pnpm --filter @powerhousedao/reactor run build; then
+  echo "Error: reactor build failed — aborting"
+  exit 1
+fi
+if ! pnpm --filter @powerhousedao/reactor run build:bundle; then
+  echo "Error: reactor bundle build failed — aborting"
+  exit 1
+fi
+
+echo "  [3/5] document-drive migrations"
+if [ -n "$DATABASE_URL" ]; then
+  if ! pnpm --filter document-drive run migrate; then
+    echo "Error: database migration failed — aborting"
+    exit 1
+  fi
+else
+  echo "  (skipped — no --postgres provided)"
+fi
+
+echo "  [4/5] @powerhousedao/switchboard"
+if ! pnpm --filter @powerhousedao/switchboard run tsc --build; then
+  echo "Error: switchboard build failed — aborting"
+  exit 1
+fi
+
+echo "  [5/5] @powerhousedao/reactor-api"
+if ! pnpm --filter @powerhousedao/reactor-api run build:misc; then
+  echo "Error: reactor-api build:misc failed — aborting"
+  exit 1
+fi
+
+echo "Build complete."
+echo
+
+# Resolve switchboard path
 SWITCHBOARD_PATH="${SCRIPT_DIR}/apps/switchboard/dist/src/index.js"
 if [ ! -f "$SWITCHBOARD_PATH" ]; then
   echo "Error: Switchboard not found at ${SWITCHBOARD_PATH}"
-  echo "Run: NODE_OPTIONS='--max-old-space-size=8192' pnpm tsc:build"
   exit 1
 fi
 

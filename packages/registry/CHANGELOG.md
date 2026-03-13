@@ -1,3 +1,91 @@
+## 6.0.0-dev.87 (2026-03-12)
+
+This was a version bump only for @powerhousedao/registry to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.86 (2026-03-12)
+
+### 🚀 Features
+
+- **renown,reactor-browser:** renown integration improvements ([a65731a73](https://github.com/powerhouse-inc/powerhouse/commit/a65731a73))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
+## 6.0.0-dev.85 (2026-03-12)
+
+This was a version bump only for @powerhousedao/registry to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.84 (2026-03-11)
+
+### 🚀 Features
+
+- **registry:** add vetra favicon to registry web UI ([fcfb8458e](https://github.com/powerhouse-inc/powerhouse/commit/fcfb8458e))
+
+### ❤️ Thank You
+
+- Frank
+
+## 6.0.0-dev.83 (2026-03-11)
+
+### 🚀 Features
+
+- **registry:** enable dark mode by default and use light logo ([11e7c0085](https://github.com/powerhouse-inc/powerhouse/commit/11e7c0085))
+
+### ❤️ Thank You
+
+- Frank
+
+## 6.0.0-dev.82 (2026-03-11)
+
+### 🚀 Features
+
+- **registry:** add Vetra branding to registry web UI ([8d012ff10](https://github.com/powerhouse-inc/powerhouse/commit/8d012ff10))
+
+### ❤️ Thank You
+
+- Frank
+
+## 6.0.0-dev.81 (2026-03-11)
+
+### 🩹 Fixes
+
+- **registry:** use cli.js as Docker entrypoint instead of run.js ([869e52795](https://github.com/powerhouse-inc/powerhouse/commit/869e52795))
+
+### ❤️ Thank You
+
+- Frank
+
+## 6.0.0-dev.80 (2026-03-11)
+
+### 🩹 Fixes
+
+- **registry:** handle absolute paths for storage and cdn-cache dirs ([da85b2547](https://github.com/powerhouse-inc/powerhouse/commit/da85b2547))
+
+### ❤️ Thank You
+
+- Frank
+
+## 6.0.0-dev.79 (2026-03-11)
+
+### 🚀 Features
+
+- **ci:** add gitops action for registry image updates ([ba91d00dd](https://github.com/powerhouse-inc/powerhouse/commit/ba91d00dd))
+
+### ❤️ Thank You
+
+- Frank
+
+## 6.0.0-dev.78 (2026-03-11)
+
+### 🚀 Features
+
+- replace reactor dropdown with registry selector in package manager ([c8a944a24](https://github.com/powerhouse-inc/powerhouse/commit/c8a944a24))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 6.0.0-dev.77 (2026-03-10)
 
 ### 🩹 Fixes

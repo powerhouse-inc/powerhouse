@@ -1,15 +1,60 @@
-export const mockReactorOptions = [
+import type { RegistryOption } from "./package-manager/types.js";
+import type { PackageDetails } from "./package-manager/package-manager-list.js";
+
+export const mockRegistryOptions: RegistryOption[] = [
   {
-    label: "Local Reactor",
-    value: "local-reactor",
+    id: "production",
+    label: "Production",
+    url: "https://registry.powerhouse.io/-/cdn/",
   },
   {
-    label: "Switchboard",
-    value: "switchboard",
+    id: "local",
+    label: "Local",
+    url: "http://localhost:8080/-/cdn/",
+  },
+  {
+    id: "custom",
+    label: "Custom",
+    url: "",
+    editable: true,
   },
 ];
 
-export const mockPackages = [
+export const mockAvailablePackages: PackageDetails[] = [
+  {
+    id: "@uniswap/lp-tools",
+    name: "LP Management Tools",
+    description:
+      "Tools for managing liquidity positions across multiple AMMs with impermanent loss tracking.",
+    category: "DeFi",
+    publisher: "@uniswap",
+    publisherUrl: "https://uniswap.org/",
+    modules: [
+      "Position Manager (Connect)",
+      "IL Calculator (Connect)",
+      "Fee Analytics (Switchboard)",
+      "Range Order Editor (Connect)",
+      "Pool Explorer (Connect)",
+    ],
+    removable: false,
+  },
+  {
+    id: "@chainlink/oracle-integrations",
+    name: "Oracle Integration Pack",
+    description:
+      "Seamless integration with Chainlink oracles for price feeds and external data.",
+    category: "Infrastructure",
+    publisher: "@chainlink",
+    publisherUrl: "https://chain.link/",
+    modules: [
+      "Price Feed Connector (Switchboard)",
+      "Data Aggregator (Switchboard)",
+    ],
+    removable: false,
+  },
+];
+
+export const mockPackages: PackageDetails[] = [
   {
     id: "@sky-ph/rwa",
     name: "RWA Reporting Package",
@@ -80,37 +125,6 @@ export const mockPackages = [
     publisher: "@compound",
     publisherUrl: "https://compound.finance/",
     modules: ["Multi-Sig Wallet (Connect)", "Budget Tracker (Connect)"],
-    removable: true,
-  },
-  {
-    id: "@uniswap/lp-tools",
-    name: "LP Management Tools",
-    description:
-      "Tools for managing liquidity positions across multiple AMMs with impermanent loss tracking.",
-    category: "DeFi",
-    publisher: "@uniswap",
-    publisherUrl: "https://uniswap.org/",
-    modules: [
-      "Position Manager (Connect)",
-      "IL Calculator (Connect)",
-      "Fee Analytics (Switchboard)",
-      "Range Order Editor (Connect)",
-      "Pool Explorer (Connect)",
-    ],
-    removable: false,
-  },
-  {
-    id: "@chainlink/oracle-integrations",
-    name: "Oracle Integration Pack",
-    description:
-      "Seamless integration with Chainlink oracles for price feeds and external data.",
-    category: "Infrastructure",
-    publisher: "@chainlink",
-    publisherUrl: "https://chain.link/",
-    modules: [
-      "Price Feed Connector (Switchboard)",
-      "Data Aggregator (Switchboard)",
-    ],
     removable: true,
   },
   {

@@ -3,10 +3,16 @@ import type { ILogger } from "../../logging/types.js";
 import type { ISyncCursorStorage } from "../../storage/interfaces.js";
 import { BufferedMailbox } from "../buffered-mailbox.js";
 import { ChannelError } from "../errors.js";
-import type { IChannel } from "../interfaces.js";
+import type { ConnectionStateChangeCallback, IChannel } from "../interfaces.js";
 import { type IMailbox, Mailbox } from "../mailbox.js";
 import { SyncOperation } from "../sync-operation.js";
-import type { JwtHandler, RemoteFilter, SyncEnvelope } from "../types.js";
+import type {
+  ConnectionState,
+  ConnectionStateSnapshot,
+  JwtHandler,
+  RemoteFilter,
+  SyncEnvelope,
+} from "../types.js";
 import { ChannelErrorSource } from "../types.js";
 import {
   consolidateSyncOperations,
@@ -65,6 +71,9 @@ export class GqlRequestChannel implements IChannel {
   private pushFailureCount: number = 0;
   private pushRetryTimer: ReturnType<typeof setTimeout> | null = null;
   private pushBlocked: boolean = false;
+  private connectionState: ConnectionState = "connecting";
+  private readonly connectionStateCallbacks: Set<ConnectionStateChangeCallback> =
+    new Set();
 
   constructor(
     private readonly logger: ILogger,
@@ -104,6 +113,7 @@ export class GqlRequestChannel implements IChannel {
         clearTimeout(this.pushRetryTimer);
         this.pushRetryTimer = null;
       }
+      this.transitionConnectionState("error");
     });
 
     // when sync ops are added to the outbox, push them to the remote
@@ -173,7 +183,27 @@ export class GqlRequestChannel implements IChannel {
       this.pushRetryTimer = null;
     }
 
+    this.transitionConnectionState("disconnected");
+
     return Promise.resolve();
+  }
+
+  getConnectionState(): ConnectionStateSnapshot {
+    return {
+      state: this.connectionState,
+      failureCount: this.failureCount,
+      lastSuccessUtcMs: this.lastSuccessUtcMs ?? 0,
+      lastFailureUtcMs: this.lastFailureUtcMs ?? 0,
+      pushBlocked: this.pushBlocked,
+      pushFailureCount: this.pushFailureCount,
+    };
+  }
+
+  onConnectionStateChange(callback: ConnectionStateChangeCallback): () => void {
+    this.connectionStateCallbacks.add(callback);
+    return () => {
+      this.connectionStateCallbacks.delete(callback);
+    };
   }
 
   /**
@@ -195,6 +225,23 @@ export class GqlRequestChannel implements IChannel {
 
     this.pollTimer.setDelegate(() => this.poll());
     this.pollTimer.start();
+    this.transitionConnectionState("connected");
+  }
+
+  private transitionConnectionState(next: ConnectionState): void {
+    if (this.connectionState === next) return;
+    this.connectionState = next;
+    const snapshot = this.getConnectionState();
+    for (const callback of this.connectionStateCallbacks) {
+      try {
+        callback(snapshot);
+      } catch (error) {
+        this.logger.error(
+          "Connection state change callback error: @Error",
+          error,
+        );
+      }
+    }
   }
 
   /**
@@ -258,6 +305,7 @@ export class GqlRequestChannel implements IChannel {
 
     this.lastSuccessUtcMs = Date.now();
     this.failureCount = 0;
+    this.transitionConnectionState("connected");
   }
 
   /**
@@ -310,12 +358,14 @@ export class GqlRequestChannel implements IChannel {
     const err = error instanceof Error ? error : new Error(String(error));
 
     if (err.message.includes("Channel not found")) {
+      this.transitionConnectionState("reconnecting");
       this.recoverFromChannelNotFound();
       return true;
     }
 
     this.failureCount++;
     this.lastFailureUtcMs = Date.now();
+    this.transitionConnectionState("error");
 
     const channelError = new ChannelError(ChannelErrorSource.Inbox, err);
 
@@ -347,6 +397,7 @@ export class GqlRequestChannel implements IChannel {
         );
         this.failureCount = 0;
         this.pollTimer.start();
+        this.transitionConnectionState("connected");
       })
       .catch((recoveryError: unknown) => {
         this.logger.error(
@@ -357,6 +408,7 @@ export class GqlRequestChannel implements IChannel {
         this.failureCount++;
         this.lastFailureUtcMs = Date.now();
         this.pollTimer.start();
+        this.transitionConnectionState("error");
       });
   }
 
@@ -530,6 +582,12 @@ export class GqlRequestChannel implements IChannel {
       .then(() => {
         this.pushBlocked = false;
         this.pushFailureCount = 0;
+        if (
+          this.connectionState === "reconnecting" ||
+          this.connectionState === "error"
+        ) {
+          this.transitionConnectionState("connected");
+        }
       })
       .catch((error) => {
         const err = error instanceof Error ? error : new Error(String(error));
@@ -542,6 +600,7 @@ export class GqlRequestChannel implements IChannel {
             this.pushFailureCount,
             err,
           );
+          this.transitionConnectionState("reconnecting");
           this.schedulePushRetry();
         } else {
           const channelError = new ChannelError(ChannelErrorSource.Outbox, err);
@@ -550,6 +609,7 @@ export class GqlRequestChannel implements IChannel {
           }
           this.deadLetter.add(...syncOps);
           this.outbox.remove(...syncOps);
+          this.transitionConnectionState("error");
         }
       });
   }
@@ -758,23 +818,6 @@ export class GqlRequestChannel implements IChannel {
     }
 
     return result.data;
-  }
-
-  /**
-   * Gets the current health status of the channel.
-   */
-  getHealth(): {
-    state: "idle" | "running" | "error";
-    lastSuccessUtcMs?: number;
-    lastFailureUtcMs?: number;
-    failureCount: number;
-  } {
-    return {
-      state: this.failureCount > 0 ? "error" : "idle",
-      lastSuccessUtcMs: this.lastSuccessUtcMs,
-      lastFailureUtcMs: this.lastFailureUtcMs,
-      failureCount: this.failureCount,
-    };
   }
 
   get poller(): IPollTimer {

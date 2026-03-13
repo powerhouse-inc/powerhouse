@@ -11,6 +11,7 @@ import {
 import {
   addRemoteDrive,
   type BrowserReactorClientModule,
+  type IDocumentModelLoader,
 } from "@powerhousedao/reactor-browser";
 import { createSignatureVerifier, type IRenown } from "@renown/sdk";
 import type { DocumentModelModule, UpgradeManifest } from "document-model";
@@ -25,6 +26,7 @@ export async function createBrowserReactor(
   documentModelModules: DocumentModelModule[],
   upgradeManifests: UpgradeManifest<readonly number[]>[],
   renown: IRenown,
+  documentModelLoader?: IDocumentModelLoader,
 ): Promise<BrowserReactorClientModule> {
   const signerConfig: SignerConfig = {
     signer: renown.signer,
@@ -57,6 +59,10 @@ export async function createBrowserReactor(
           }),
         ),
     );
+
+  if (documentModelLoader) {
+    builder.withDocumentModelLoader(documentModelLoader);
+  }
 
   const module = await builder.buildModule();
   return {

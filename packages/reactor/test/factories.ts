@@ -58,7 +58,9 @@ import type {
   IOperationStore,
   ISyncCursorStorage,
 } from "../src/storage/interfaces.js";
+import { KyselyOperationIndex } from "../src/cache/kysely-operation-index.js";
 import { KyselyKeyframeStore } from "../src/storage/kysely/keyframe-store.js";
+import { KyselyDocumentIndexer } from "../src/storage/kysely/document-indexer.js";
 import { KyselyOperationStore } from "../src/storage/kysely/store.js";
 import { KyselySyncCursorStorage } from "../src/storage/kysely/sync-cursor-storage.js";
 import { KyselySyncDeadLetterStorage } from "../src/storage/kysely/sync-dead-letter-storage.js";
@@ -127,6 +129,31 @@ export async function createTestOperationStore(): Promise<{
   const keyframeStore = new KyselyKeyframeStore(db);
 
   return { db, store, keyframeStore };
+}
+
+/**
+ * Creates a KyselyDocumentIndexer with mock operationIndex and writeCache,
+ * backed by the given Kysely db instance.
+ */
+export function createTestDocumentIndexer(
+  db: Kysely<any>,
+  consistencyTracker: any,
+): KyselyDocumentIndexer {
+  const operationIndex = new KyselyOperationIndex(db);
+  const writeCache: IWriteCache = {
+    getState: vi.fn().mockResolvedValue({}),
+    putState: vi.fn(),
+    invalidate: vi.fn().mockReturnValue(0),
+    clear: vi.fn(),
+    startup: vi.fn().mockResolvedValue(undefined),
+    shutdown: vi.fn().mockResolvedValue(undefined),
+  };
+  return new KyselyDocumentIndexer(
+    db as any,
+    operationIndex,
+    writeCache,
+    consistencyTracker,
+  );
 }
 
 /**

@@ -23,6 +23,7 @@ coverage-reports/
 .env
 playwright-report/
 test-results/
+__screenshots__/
 
 __pycache__/
 

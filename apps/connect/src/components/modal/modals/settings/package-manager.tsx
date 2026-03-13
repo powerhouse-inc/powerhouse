@@ -1,127 +1,160 @@
-import { PH_PACKAGES } from "@powerhousedao/config";
-import { connectConfig } from "@powerhousedao/connect/config";
-import { PackageManager } from "@powerhousedao/design-system/connect";
 import {
+  DismissedPackagesList,
+  PackageManager,
+} from "@powerhousedao/design-system/connect";
+import type { PackageDetails } from "@powerhousedao/design-system/connect";
+import {
+  type BrowserPackageManager,
   makeVetraPackageManifest,
-  useDrives,
+  useDismissedPackages,
   useVetraPackageManager,
   useVetraPackages,
 } from "@powerhousedao/reactor-browser";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useMemo } from "react";
+import { toast } from "../../../../services/toast.js";
+import { useRegistry } from "../../../../hooks/use-registry.js";
 
-const LOCAL_REACTOR_VALUE = "local-reactor";
-const LOCAL_REACTOR_LABEL = "Local Reactor";
-
-const PH_PACKAGES_REGISTRY =
-  connectConfig.packagesRegistry ?? "http://localhost:8080/-/cdn/";
+function toPackageDetails(
+  pkg: ReturnType<typeof makeVetraPackageManifest>,
+  removable: boolean,
+): PackageDetails {
+  return {
+    id: pkg.id,
+    name: pkg.name,
+    description: pkg.description,
+    category: pkg.category,
+    publisher: pkg.author.name,
+    publisherUrl: pkg.author.website ?? "",
+    modules: Object.values(pkg.modules).flatMap((modules) =>
+      modules.map((module) => module.name),
+    ),
+    removable,
+  };
+}
 
 export const ConnectPackageManager: React.FC = () => {
-  const packageManager = useVetraPackageManager();
+  const packageManager = useVetraPackageManager() as
+    | BrowserPackageManager
+    | undefined;
   const vetraPackages = useVetraPackages();
-  const drives = useDrives();
-  const [reactor, setReactor] = useState("");
-
-  const reactorOptions = useMemo(() => {
-    return drives?.reduce<
-      { value: string; label: string; disabled: boolean }[]
-    >(
-      (acc, drive) => {
-        const trigger = drive.state.local.triggers.find(
-          (trigger) => trigger.data?.url,
-        );
-        if (!trigger?.data?.url) {
-          return acc;
-        }
-
-        const value = trigger.data.url;
-        const label = drive.state.global.name;
-
-        acc.push({
-          value,
-          label,
-          disabled: true,
-        });
-        return acc;
-      },
-      [
-        {
-          value: LOCAL_REACTOR_VALUE,
-          label: LOCAL_REACTOR_LABEL,
-          disabled: false,
-        },
-      ],
-    );
-  }, [drives]);
-
-  useEffect(() => {
-    setReactor((reactor) => {
-      const defaultOption = reactorOptions?.find((option) => !option.disabled);
-      if (
-        reactor &&
-        reactorOptions?.find((option) => option.value === reactor)
-      ) {
-        return reactor;
-      } else {
-        return defaultOption?.value ?? "";
-      }
-    });
-  }, [reactor, reactorOptions]);
+  const dismissedPackages = useDismissedPackages();
+  const {
+    registries,
+    selectedRegistryId,
+    registryStatus,
+    effectiveRegistryUrl,
+    customRegistryUrl,
+    setSelectedRegistryId,
+    setCustomRegistryUrl,
+    fetchPackages,
+  } = useRegistry();
 
   const packagesInfo = useMemo(
     () => vetraPackages.map((pkg) => makeVetraPackageManifest(pkg)),
     [vetraPackages],
   );
 
-  const handleReactorChange = useCallback(
-    (reactor?: string) => setReactor(reactor ?? ""),
-    [],
-  );
+  const { preInstalledPackages, installedPackages } = useMemo(() => {
+    const localIds = packageManager?.localPackageIds ?? new Set<string>();
+    const preInstalled: PackageDetails[] = [];
+    const installed: PackageDetails[] = [];
+
+    for (const pkg of packagesInfo) {
+      const isLocal = localIds.has(pkg.id);
+      if (isLocal) {
+        preInstalled.push(toPackageDetails(pkg, false));
+      } else {
+        installed.push(toPackageDetails(pkg, true));
+      }
+    }
+
+    return { preInstalledPackages: preInstalled, installedPackages: installed };
+  }, [packagesInfo, packageManager]);
 
   const handleInstall = useCallback(
-    (packageName: string) => {
-      if (reactor !== LOCAL_REACTOR_VALUE) {
-        throw new Error("Cannot install external package on a remote reactor");
+    async (packageName: string) => {
+      try {
+        await packageManager?.addPackage(packageName);
+        packageManager?.removeDismissed(packageName);
+        toast(`Package "${packageName}" installed successfully`, {
+          type: "connect-success",
+        });
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Unknown error";
+        toast(`Failed to install "${packageName}": ${message}`, {
+          type: "error",
+        });
       }
-      return packageManager?.addPackage(packageName);
     },
-    [reactor, packageManager],
+    [packageManager],
   );
 
   const handleUninstall = useCallback(
-    (packageId: string) => {
-      if (reactor !== LOCAL_REACTOR_VALUE) {
-        throw new Error("Cannot delete external package on a remote reactor");
-      }
+    async (packageId: string) => {
       const pkg = packagesInfo.find((p) => p.id === packageId);
       if (!pkg) {
         throw new Error(`Package with id ${packageId} not found`);
       }
-      packageManager?.removePackage(pkg.name);
+      try {
+        await packageManager?.removePackage(pkg.name);
+        toast(`Package "${pkg.name}" uninstalled successfully`, {
+          type: "connect-success",
+        });
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Unknown error";
+        toast(`Failed to uninstall "${pkg.name}": ${message}`, {
+          type: "error",
+        });
+      }
     },
-    [reactor, packageManager, packagesInfo],
+    [packageManager, packagesInfo],
+  );
+
+  const handleInstallDismissed = useCallback(
+    async (packageName: string) => {
+      if (!effectiveRegistryUrl) {
+        toast("No registry selected", { type: "error" });
+        return;
+      }
+      try {
+        await packageManager?.addPackage(packageName, effectiveRegistryUrl);
+        packageManager?.removeDismissed(packageName);
+        toast(`Package "${packageName}" installed successfully`, {
+          type: "connect-success",
+        });
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Unknown error";
+        toast(`Failed to install "${packageName}": ${message}`, {
+          type: "error",
+        });
+      }
+    },
+    [effectiveRegistryUrl, packageManager],
   );
 
   return (
-    <PackageManager
-      mutable={true}
-      reactorOptions={reactorOptions ?? []}
-      reactor={reactor}
-      packages={packagesInfo.map((pkg) => ({
-        id: pkg.id,
-        name: pkg.name,
-        description: pkg.description,
-        category: pkg.category,
-        publisher: pkg.author.name,
-        publisherUrl: pkg.author.website ?? "",
-        modules: Object.values(pkg.modules).flatMap((modules) =>
-          modules.map((module) => module.name),
-        ),
-        removable: true,
-      }))}
-      onReactorChange={handleReactorChange}
-      onInstall={handleInstall}
-      onUninstall={handleUninstall}
-      packageOptions={PH_PACKAGES}
-    />
+    <div className="flex h-full flex-1 flex-col">
+      <PackageManager
+        mutable={true}
+        registries={registries}
+        selectedRegistryId={selectedRegistryId}
+        onRegistryChange={setSelectedRegistryId}
+        registryStatus={registryStatus}
+        customRegistryUrl={customRegistryUrl}
+        onCustomRegistryUrlChange={setCustomRegistryUrl}
+        packages={installedPackages}
+        availablePackages={preInstalledPackages}
+        onInstall={(name: string) => void handleInstall(name)}
+        onUninstall={handleUninstall}
+        fetchPackages={fetchPackages}
+      />
+      <DismissedPackagesList
+        dismissedPackages={dismissedPackages}
+        onInstall={handleInstallDismissed}
+      />
+    </div>
   );
 };

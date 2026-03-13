@@ -26,6 +26,7 @@ export default defineConfig({
         "**/*-builder.ts",
         "**/*passthrough*.ts",
         "**/migrator.ts",
+        "**/bundle.ts",
       ],
     },
     poolOptions: {

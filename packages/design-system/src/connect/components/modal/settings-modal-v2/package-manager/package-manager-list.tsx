@@ -18,6 +18,7 @@ export type PackageDetails = {
 export type PackageManagerListProps = {
   mutable: boolean;
   packages: PackageDetails[];
+  availablePackages?: PackageDetails[];
   onUninstall: (id: string) => void;
   className?: string;
 };
@@ -126,14 +127,18 @@ export const PackageManagerListItem: React.FC<PackageManagerListItemProps> = (
 export const PackageManagerList: React.FC<PackageManagerListProps> = (
   props,
 ) => {
-  const { className, packages, onUninstall, mutable, ...rest } = props;
+  const {
+    className,
+    packages,
+    availablePackages,
+    onUninstall,
+    mutable,
+    ...rest
+  } = props;
   const [maxHeight, setMaxHeight] = useState<number | undefined>();
 
   useLayoutEffect(() => {
     const calculateMaxHeight = () => {
-      // Modal has py-28 padding (7rem * 2 = 14rem = 224px)
-      // Header ~64px, reactor select ~80px, install input ~100px, margins ~48px
-      // Total offset from viewport: ~516px
       const viewportHeight = window.innerHeight;
       const availableHeight = viewportHeight - 516;
       setMaxHeight(Math.max(200, availableHeight));
@@ -152,6 +157,9 @@ export const PackageManagerList: React.FC<PackageManagerListProps> = (
     [onUninstall],
   );
 
+  const hasAvailable =
+    availablePackages !== undefined && availablePackages.length > 0;
+
   return (
     <div
       {...rest}
@@ -161,8 +169,33 @@ export const PackageManagerList: React.FC<PackageManagerListProps> = (
       )}
       style={{ maxHeight }}
     >
-      <h3 className="mb-4 font-semibold text-gray-900">Installed Packages</h3>
       <div className="flex-1 overflow-y-auto pr-2">
+        {hasAvailable && (
+          <>
+            <h3 className="mb-4 font-semibold text-gray-900">
+              Pre-installed Packages
+            </h3>
+            <ul className="flex flex-col items-stretch gap-4 pr-2">
+              {availablePackages.map((pkg) => (
+                <PackageManagerListItem
+                  key={pkg.id}
+                  package={pkg}
+                  onUninstall={handleUninstall}
+                  mutable={false}
+                />
+              ))}
+            </ul>
+          </>
+        )}
+
+        <h3
+          className={twMerge(
+            "mb-4 font-semibold text-gray-900",
+            hasAvailable && "mt-6",
+          )}
+        >
+          Installed Packages
+        </h3>
         <ul className="flex flex-col items-stretch gap-4 pr-2">
           {packages.map((pkg) => (
             <PackageManagerListItem
@@ -172,6 +205,9 @@ export const PackageManagerList: React.FC<PackageManagerListProps> = (
               mutable={mutable}
             />
           ))}
+          {packages.length === 0 && (
+            <p className="text-sm text-gray-500">No packages installed</p>
+          )}
         </ul>
       </div>
     </div>

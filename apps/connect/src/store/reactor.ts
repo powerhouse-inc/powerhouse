@@ -4,6 +4,7 @@ import {
   addDefaultDrivesForNewReactor,
   createBrowserReactor,
   getDefaultDrivesFromEnv,
+  getDefaultRegistryCdnUrl,
 } from "@powerhousedao/connect/utils";
 import {
   addPHEventHandlers,
@@ -89,9 +90,10 @@ export async function createReactor(localPackage?: VetraPackage) {
     .build();
 
   // initialize package manager
+  const registryCdnUrl = getDefaultRegistryCdnUrl();
   const packageManager = new BrowserPackageManager(
     phGlobalConfigFromEnv.routerBasename ?? "",
-    null,
+    registryCdnUrl,
   );
   setVetraPackageManager(packageManager);
   await packageManager.init(localPackage);
@@ -122,7 +124,15 @@ export async function createReactor(localPackage?: VetraPackage) {
     documentModelModules,
     upgradeManifests,
     renown,
+    registryCdnUrl ? packageManager : undefined,
   );
+
+  // Give package manager access to registry (available after reactor creation)
+  if (reactorClientModule.reactorModule) {
+    packageManager.setDocumentModelRegistry(
+      reactorClientModule.reactorModule.documentModelRegistry,
+    );
+  }
 
   // get the drives from the reactor
   const drives = await getDrives(reactorClientModule.client);

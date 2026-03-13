@@ -24,11 +24,11 @@ const tabs = [
     icon: <Icon name="PackageManager" size={12} />,
     label: "Package Manager",
     content: () => {
-      const [reactor, setReactor] = React.useState("");
+      const [registryId, setRegistryId] = React.useState("production");
       return (
         <PackageManagerWrapper
-          reactor={reactor}
-          onReactorChange={(value) => setReactor(value || "")}
+          selectedRegistryId={registryId}
+          onRegistryChange={setRegistryId}
         />
       );
     },

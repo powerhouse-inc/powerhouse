@@ -1,4 +1,4 @@
-import { driveDocumentModelModule, MemoryStorage } from "document-drive";
+import { driveDocumentModelModule } from "document-drive";
 import { documentModelDocumentModelModule, setModelName } from "document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ReactorBuilder } from "../../src/core/reactor-builder.js";
@@ -23,21 +23,16 @@ describe("Load Operation ID Preservation", () => {
   beforeEach(async () => {
     vi.useFakeTimers();
 
-    const builderA = new ReactorBuilder()
-      .withDocumentModels([
-        documentModelDocumentModelModule as any,
-        driveDocumentModelModule as any,
-      ])
-      .withLegacyStorage(new MemoryStorage());
-
+    const builderA = new ReactorBuilder().withDocumentModels([
+      documentModelDocumentModelModule as any,
+      driveDocumentModelModule as any,
+    ]);
     reactorA = await builderA.build();
 
-    const builderB = new ReactorBuilder()
-      .withDocumentModels([
-        documentModelDocumentModelModule as any,
-        driveDocumentModelModule as any,
-      ])
-      .withLegacyStorage(new MemoryStorage());
+    const builderB = new ReactorBuilder().withDocumentModels([
+      documentModelDocumentModelModule as any,
+      driveDocumentModelModule as any,
+    ]);
 
     reactorB = await builderB.build();
   });

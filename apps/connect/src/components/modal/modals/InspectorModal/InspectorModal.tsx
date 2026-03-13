@@ -2,6 +2,7 @@ import { InspectorModal as ConnectInspectorModal } from "@powerhousedao/design-s
 import { REACTOR_SCHEMA } from "@powerhousedao/reactor-browser";
 import { closePHModal, usePHModal } from "@powerhousedao/reactor-browser";
 import { useDbExplorer } from "./useDbExplorer.js";
+import { useProcessorsInspector } from "./useProcessorsInspector.js";
 import { useQueueInspector } from "./useQueueInspector.js";
 import { useRemotesInspector } from "./useRemotesInspector.js";
 
@@ -13,8 +14,9 @@ export const InspectorModal: React.FC = () => {
 
   const { getTables, getTableRows, getDefaultSort, onExportDb, onImportDb } =
     useDbExplorer();
-  const { getRemotes, removeRemote } = useRemotesInspector();
+  const { getRemotes, removeRemote, connectionStates } = useRemotesInspector();
   const queueInspectorProps = useQueueInspector();
+  const processorsInspectorProps = useProcessorsInspector();
 
   return (
     <ConnectInspectorModal
@@ -35,8 +37,10 @@ export const InspectorModal: React.FC = () => {
       remotesInspectorProps={{
         getRemotes,
         removeRemote,
+        connectionStates,
       }}
       queueInspectorProps={queueInspectorProps}
+      processorsInspectorProps={processorsInspectorProps}
     />
   );
 };

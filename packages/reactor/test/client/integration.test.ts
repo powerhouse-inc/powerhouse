@@ -13,11 +13,11 @@ import { ReactorEventTypes } from "../../src/events/types.js";
 import { ConsistencyTracker } from "../../src/shared/consistency-tracker.js";
 import { JobStatus, PropagationMode } from "../../src/shared/types.js";
 import type { IDocumentIndexer } from "../../src/storage/interfaces.js";
-import { KyselyDocumentIndexer } from "../../src/storage/kysely/document-indexer.js";
 import type { Database } from "../../src/storage/kysely/types.js";
 import {
   createDocModelDocument,
   createMockSigner,
+  createTestDocumentIndexer,
   createTestOperationStore,
 } from "../factories.js";
 
@@ -31,14 +31,12 @@ describe("ReactorClient Integration Tests", () => {
   beforeEach(async () => {
     const setup = await createTestOperationStore();
     db = setup.db as unknown as Kysely<Database>;
-    const operationStore = setup.store;
 
     eventBus = new EventBus();
 
     const documentIndexerConsistencyTracker = new ConsistencyTracker();
-    documentIndexer = new KyselyDocumentIndexer(
-      db as any,
-      operationStore,
+    documentIndexer = createTestDocumentIndexer(
+      db,
       documentIndexerConsistencyTracker,
     );
     await documentIndexer.init();
@@ -355,12 +353,10 @@ describe("ReactorClient Integration Tests", () => {
         const mockSigner = createMockSigner();
         const setup = await createTestOperationStore();
         const db = setup.db as unknown as Kysely<Database>;
-        const operationStore = setup.store;
 
         const documentIndexerConsistencyTracker = new ConsistencyTracker();
-        const testDocumentIndexer = new KyselyDocumentIndexer(
-          db as any,
-          operationStore,
+        const testDocumentIndexer = createTestDocumentIndexer(
+          db,
           documentIndexerConsistencyTracker,
         );
         await testDocumentIndexer.init();

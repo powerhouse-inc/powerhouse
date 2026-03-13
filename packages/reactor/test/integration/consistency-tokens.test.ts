@@ -1,4 +1,4 @@
-import { MemoryStorage, driveDocumentModelModule } from "document-drive";
+import { driveDocumentModelModule } from "document-drive";
 import { documentModelDocumentModelModule } from "document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ReactorBuilder } from "../../src/core/reactor-builder.js";
@@ -11,7 +11,6 @@ import { EventBus } from "../../src/events/event-bus.js";
 
 describe("Consistency Tokens with Document View", () => {
   let reactor: IReactor;
-  let storage: MemoryStorage;
   let testCoordinator: TestReadModelCoordinator;
 
   async function waitForJobCompletion(jobId: string): Promise<JobInfo> {
@@ -41,8 +40,6 @@ describe("Consistency Tokens with Document View", () => {
   }
 
   beforeEach(async () => {
-    storage = new MemoryStorage();
-
     const eventBus = new EventBus();
     testCoordinator = new TestReadModelCoordinator(eventBus);
 
@@ -52,7 +49,6 @@ describe("Consistency Tokens with Document View", () => {
         driveDocumentModelModule as any,
       ])
       .withEventBus(eventBus)
-      .withLegacyStorage(storage)
       .withReadModelCoordinator(testCoordinator);
 
     const module = await builder.buildModule();

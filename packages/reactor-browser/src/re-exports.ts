@@ -13,8 +13,11 @@ export {
   SyncOperationStatus,
 } from "@powerhousedao/reactor";
 export type {
+  ConnectionState,
+  ConnectionStateSnapshot,
   Database,
   IChannel,
+  IDocumentModelLoader,
   IProcessor,
   IProcessorHostModule,
   IRelationalDb,

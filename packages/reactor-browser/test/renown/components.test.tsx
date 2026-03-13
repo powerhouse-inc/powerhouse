@@ -123,7 +123,7 @@ describe("RenownLoginButton", () => {
     const screen = render(<RenownLoginButton onLogin={onLogin} />);
 
     await expect
-      .element(screen.getByRole("button", { name: "Login with Renown" }))
+      .element(screen.getByRole("button", { name: "Log in with Renown" }))
       .toBeVisible();
   });
 
@@ -131,20 +131,14 @@ describe("RenownLoginButton", () => {
     const onLogin = vi.fn();
     const screen = render(<RenownLoginButton onLogin={onLogin} />);
 
-    await screen.getByRole("button", { name: "Login with Renown" }).click();
+    await screen.getByRole("button", { name: "Log in with Renown" }).click();
     expect(onLogin).toHaveBeenCalledOnce();
   });
 
-  it("should show popover on hover when showPopover is true", async () => {
-    const onLogin = vi.fn();
-    const screen = render(<RenownLoginButton onLogin={onLogin} showPopover />);
+  it("should show login text", async () => {
+    const screen = render(<RenownLoginButton />);
 
-    const button = screen.getByRole("button", { name: "Open Renown Login" });
-    await button.hover();
-
-    await expect
-      .element(screen.getByRole("button", { name: "Connect" }))
-      .toBeVisible();
+    await expect.element(screen.getByText("Log in")).toBeVisible();
   });
 });
 
@@ -170,12 +164,14 @@ describe("RenownUserButton", () => {
 
     await screen.getByRole("button", { name: "Open account menu" }).hover();
 
-    await expect.element(screen.getByText("testuser")).toBeVisible();
-    // Address should be truncated
+    // Username appears in both trigger and dropdown
+    const usernameElements = screen.getByText("testuser").elements();
+    expect(usernameElements.length).toBeGreaterThanOrEqual(2);
+    // Address should be truncated in the dropdown
     await expect.element(screen.getByText("0x9aDdc...FD8F7")).toBeVisible();
   });
 
-  it("should show 'View on Renown' when userId is provided", async () => {
+  it("should show 'View Profile' when userId is provided", async () => {
     const screen = render(
       <RenownUserButton
         address={TEST_ADDRESS}
@@ -186,17 +182,17 @@ describe("RenownUserButton", () => {
 
     await screen.getByRole("button", { name: "Open account menu" }).hover();
 
-    await expect.element(screen.getByText("View on Renown")).toBeVisible();
+    await expect.element(screen.getByText("View Profile")).toBeVisible();
   });
 
-  it("should call onDisconnect when disconnect is clicked", async () => {
+  it("should call onDisconnect when log out is clicked", async () => {
     const onDisconnect = vi.fn();
     const screen = render(
       <RenownUserButton address={TEST_ADDRESS} onDisconnect={onDisconnect} />,
     );
 
     await screen.getByRole("button", { name: "Open account menu" }).hover();
-    await screen.getByText("Disconnect").click();
+    await screen.getByText("Log out").click();
 
     expect(onDisconnect).toHaveBeenCalledOnce();
   });
@@ -207,7 +203,7 @@ describe("RenownAuthButton", () => {
     const screen = render(<RenownAuthButton />);
 
     await expect
-      .element(screen.getByRole("button", { name: "Login with Renown" }))
+      .element(screen.getByRole("button", { name: "Log in with Renown" }))
       .toBeVisible();
   });
 
@@ -252,10 +248,12 @@ describe("RenownAuthButton", () => {
     // Hover to open popover and check profile data
     await screen.getByRole("button", { name: "Open account menu" }).hover();
 
-    await expect.element(screen.getByText("testuser")).toBeVisible();
+    // Username appears in both trigger and dropdown
+    const usernameElements = screen.getByText("testuser").elements();
+    expect(usernameElements.length).toBeGreaterThanOrEqual(2);
   });
 
-  it("should use custom renderAuthenticated when provided", async () => {
+  it("should use children render function for authenticated state", async () => {
     mockFetchForLogin();
 
     const url = new URL(window.location.href);
@@ -264,26 +262,32 @@ describe("RenownAuthButton", () => {
 
     const screen = render(
       <RenownProvider appName="test" baseUrl={TEST_BASE_URL}>
-        <RenownAuthButton
-          renderAuthenticated={({ user }) => (
-            <span data-testid="custom-auth">Hello {user.address}</span>
-          )}
-        />
+        <RenownAuthButton>
+          {(auth) =>
+            auth.status === "authorized" ? (
+              <span data-testid="custom-auth">Hello {auth.address}</span>
+            ) : null
+          }
+        </RenownAuthButton>
       </RenownProvider>,
     );
 
     await expect.element(screen.getByTestId("custom-auth")).toBeVisible();
   });
 
-  it("should use custom renderUnauthenticated when provided", async () => {
+  it("should use children render function for unauthenticated state", async () => {
     const screen = render(
-      <RenownAuthButton
-        renderUnauthenticated={({ openRenown }) => (
-          <button data-testid="custom-login" onClick={openRenown}>
-            Custom Login
-          </button>
-        )}
-      />,
+      <RenownAuthButton>
+        {(auth) =>
+          auth.status !== "authorized" &&
+          auth.status !== "loading" &&
+          auth.status !== "checking" ? (
+            <button data-testid="custom-login" onClick={auth.login}>
+              Custom Login
+            </button>
+          ) : null
+        }
+      </RenownAuthButton>,
     );
 
     await expect.element(screen.getByTestId("custom-login")).toBeVisible();

@@ -44,6 +44,7 @@ WORKDIR /app
 COPY --from=install /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/package.json ./package.json
+COPY static/ ./static/
 
 ENV PORT=4873
 ENV REGISTRY_STORAGE=/data/storage
@@ -52,4 +53,4 @@ ENV REGISTRY_CDN_CACHE=/data/cdn-cache
 VOLUME /data
 EXPOSE 4873
 
-CMD ["node", "dist/run.js"]
+CMD ["node", "dist/cli.js"]

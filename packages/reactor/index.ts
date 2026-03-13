@@ -231,6 +231,10 @@ export {
   type ChannelConfig,
   type ChannelHealth,
   type ChannelMeta,
+  type ConnectionState,
+  type ConnectionStateChangedEvent,
+  type ConnectionStateChangeCallback,
+  type ConnectionStateSnapshot,
   type DeadLetterAddedEvent,
   type GqlChannelConfig,
   type IChannel,
@@ -268,6 +272,8 @@ export type {
   ProcessorFactory,
   ProcessorFilter,
   ProcessorRecord,
+  ProcessorStatus,
+  TrackedProcessor,
 } from "@powerhousedao/shared/processors";
 export { ProcessorManager } from "./src/processors/index.js";
 export * from "./src/re-exports.js";

@@ -169,7 +169,8 @@ async function createReactorSetup(): Promise<ReactorTestSetup> {
   const documentIndexerConsistencyTracker = new ConsistencyTracker();
   documentIndexer = new KyselyDocumentIndexer(
     db as any,
-    operationStore,
+    operationIndex,
+    mockWriteCache,
     documentIndexerConsistencyTracker,
   );
   await documentIndexer.init();
