@@ -412,7 +412,7 @@ histogram_quantile(0.01, rate(reactor_job_total_duration_milliseconds_bucket[30s
 
 # Slowest jobs over time (P99), normalised by batch size
 # Replace 5 with your --batch-size value
-histogram_quantile(0.99, rate(reactor_job_total_duration_milliseconds_bucket[20s])) / 5
+histogram_quantile(0.99, rate(reactor_job_total_duration_milliseconds_bucket[30s])) / 5
 
 # P99 and P50 job latency
 histogram_quantile(0.99, rate(reactor_job_total_duration_milliseconds_bucket[2m]))
