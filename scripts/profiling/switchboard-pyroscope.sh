@@ -235,7 +235,11 @@ if [ ! -f "$SWITCHBOARD_PATH" ]; then
   exit 1
 fi
 
-# Export OTel endpoint for switchboard to consume
+# Export OTel endpoint for switchboard to consume.
+# TODO: switchboard initialises ReactorInstrumentation but does not set up a
+# MeterProvider or OTLP exporter, so this env var currently has no effect.
+# A follow-on PR should add MeterProvider + OTLPMetricExporter initialisation
+# to apps/switchboard/src/server.ts reading from OTEL_EXPORTER_OTLP_ENDPOINT.
 if [ -n "$OTEL_ENDPOINT" ]; then
   export OTEL_EXPORTER_OTLP_ENDPOINT="$OTEL_ENDPOINT"
 fi
