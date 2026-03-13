@@ -13,12 +13,15 @@ import type {
   SyncModule,
   Unsubscribe,
 } from "@powerhousedao/reactor";
+import type { ObservableCallback, ObservableGauge } from "@opentelemetry/api";
 import { createMetrics, type ReactorMetrics } from "./metrics.js";
 
 export class ReactorInstrumentation {
   private readonly module: ReactorModule;
   private metrics: ReactorMetrics | undefined;
   private unsubscribes: Unsubscribe[] = [];
+  private observableCallbacks: Array<[ObservableGauge, ObservableCallback]> =
+    [];
 
   private pendingTimestamps = new Map<string, number>();
   private runningTimestamps = new Map<string, number>();
@@ -46,6 +49,10 @@ export class ReactorInstrumentation {
       unsub();
     }
     this.unsubscribes = [];
+    for (const [gauge, cb] of this.observableCallbacks) {
+      gauge.removeCallback(cb);
+    }
+    this.observableCallbacks = [];
     this.pendingTimestamps.clear();
     this.runningTimestamps.clear();
     this.writeReadyTimestamps.clear();
@@ -105,6 +112,7 @@ export class ReactorInstrumentation {
             "event.type": "JOB_WRITE_READY",
           });
           this.writeReadyTimestamps.set(event.jobId, performance.now());
+          this.runningTimestamps.delete(event.jobId);
         },
       ),
     );
@@ -188,26 +196,36 @@ export class ReactorInstrumentation {
     syncModule: SyncModule | undefined,
   ): void {
     if (!this.metrics) return;
-    this.metrics.queueDepth.addCallback(async (result) => {
+
+    const depthCb: ObservableCallback = async (result) => {
       if (!this.metrics) return;
       // queue.totalSize() is async (DB query). The OTel SDK expects observable
       // callbacks to complete within the collection window; if this is slow
       // under DB load the observation may be silently dropped for that scrape.
       const depth = await queue.totalSize();
       result.observe(depth);
-    });
+    };
+    this.metrics.queueDepth.addCallback(depthCb);
+    this.observableCallbacks.push([this.metrics.queueDepth, depthCb]);
 
-    this.metrics.executorActiveJobs.addCallback((result) => {
+    const activeJobsCb: ObservableCallback = (result) => {
       if (!this.metrics) return;
       const status = executorManager.getStatus();
       result.observe(status.activeJobs);
-    });
+    };
+    this.metrics.executorActiveJobs.addCallback(activeJobsCb);
+    this.observableCallbacks.push([
+      this.metrics.executorActiveJobs,
+      activeJobsCb,
+    ]);
 
-    this.metrics.syncRemotes.addCallback((result) => {
+    const remotesCb: ObservableCallback = (result) => {
       if (!this.metrics) return;
       const count = syncModule?.syncManager.list().length ?? 0;
       result.observe(count);
-    });
+    };
+    this.metrics.syncRemotes.addCallback(remotesCb);
+    this.observableCallbacks.push([this.metrics.syncRemotes, remotesCb]);
   }
 
   private cleanup(jobId: string): void {
