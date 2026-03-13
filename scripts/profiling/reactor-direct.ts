@@ -841,11 +841,14 @@ async function main() {
       Pyroscope.stopCpuProfiling();
     }
     reactor.kill();
+    if (meterProvider) {
+      // Shutdown before instrumentation.stop() so the final collection pass
+      // captures gauge observations while this.metrics is still defined.
+      // stop() is called after to unsubscribe event-bus listeners and clear state.
+      await meterProvider.shutdown();
+    }
     if (instrumentation) {
       instrumentation.stop();
-    }
-    if (meterProvider) {
-      await meterProvider.shutdown();
     }
     await db.destroy();
 
