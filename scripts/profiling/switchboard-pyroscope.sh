@@ -11,6 +11,7 @@ RUNTIME="node"
 STORAGE_V2="true"
 STORAGE_MODE_LABEL="v2"
 DATABASE_URL=""
+OTEL_ENDPOINT=""
 
 # Parse our flags (before passing rest to switchboard)
 SWITCHBOARD_ARGS=()
@@ -62,6 +63,14 @@ while [[ $# -gt 0 ]]; do
       DATABASE_URL="$2"
       shift 2
       ;;
+    --otel)
+      OTEL_ENDPOINT="${2:-http://localhost:4318}"
+      if [ -n "${2:-}" ] && [[ "$2" != --* ]]; then
+        shift 2
+      else
+        shift 1
+      fi
+      ;;
     --help|-h)
       echo "Usage: ./scripts/profiling/switchboard-pyroscope.sh [options] [switchboard-options...]"
       echo ""
@@ -69,6 +78,7 @@ while [[ $# -gt 0 ]]; do
       echo "  --runtime, -r <node|bun>  Runtime to use (default: node)"
       echo "  --mode, -m <v2|legacy>    Storage mode: 'v2' (default) or 'legacy'"
       echo "  --postgres, -p <url>      Set PostgreSQL database URL"
+      echo "  --otel [endpoint]         Enable OpenTelemetry metrics export (default: http://localhost:4318)"
       echo "  --help, -h                Show this help message"
       echo ""
       echo "All other options are passed to switchboard."
@@ -137,6 +147,9 @@ else
   echo "Pyroscope: disabled (@datadog/pprof native addon is incompatible with bun)"
 fi
 echo "Storage mode: ${STORAGE_MODE_LABEL}"
+if [ -n "$OTEL_ENDPOINT" ]; then
+  echo "OTel endpoint: ${OTEL_ENDPOINT}"
+fi
 if [ -n "$STORAGE_V2" ]; then
   echo "  REACTOR_STORAGE_V2=true"
 fi
@@ -159,15 +172,19 @@ echo "=========================================="
 echo
 
 # Build all required packages
+TOTAL_STEPS=5
+[ -n "$OTEL_ENDPOINT" ] && TOTAL_STEPS=6
+STEP=0
+
 echo "Building packages..."
 
-echo "  [1/6] document-model"
+STEP=$((STEP + 1)); echo "  [${STEP}/${TOTAL_STEPS}] document-model"
 if ! pnpm --filter document-model run tsc --build; then
   echo "Error: document-model build failed — aborting"
   exit 1
 fi
 
-echo "  [2/6] @powerhousedao/reactor"
+STEP=$((STEP + 1)); echo "  [${STEP}/${TOTAL_STEPS}] @powerhousedao/reactor"
 if ! pnpm --filter @powerhousedao/reactor run build; then
   echo "Error: reactor build failed — aborting"
   exit 1
@@ -177,14 +194,15 @@ if ! pnpm --filter @powerhousedao/reactor run build:bundle; then
   exit 1
 fi
 
-echo "  [3/6] @powerhousedao/opentelemetry-instrumentation-reactor"
-if ! pnpm --filter @powerhousedao/opentelemetry-instrumentation-reactor run build; then
-  echo "Error: opentelemetry-instrumentation-reactor build failed — aborting"
-  exit 1
+if [ -n "$OTEL_ENDPOINT" ]; then
+  STEP=$((STEP + 1)); echo "  [${STEP}/${TOTAL_STEPS}] @powerhousedao/opentelemetry-instrumentation-reactor"
+  if ! pnpm --filter @powerhousedao/opentelemetry-instrumentation-reactor run build; then
+    echo "Error: opentelemetry-instrumentation-reactor build failed — aborting"
+    exit 1
+  fi
 fi
 
-echo "  [4/6] document-drive migrations"
-
+STEP=$((STEP + 1)); echo "  [${STEP}/${TOTAL_STEPS}] document-drive migrations"
 if [ -n "$DATABASE_URL" ]; then
   if ! pnpm --filter document-drive run migrate; then
     echo "Error: database migration failed — aborting"
@@ -194,13 +212,13 @@ else
   echo "  (skipped — no --postgres provided)"
 fi
 
-echo "  [5/6] @powerhousedao/switchboard"
+STEP=$((STEP + 1)); echo "  [${STEP}/${TOTAL_STEPS}] @powerhousedao/switchboard"
 if ! pnpm --filter @powerhousedao/switchboard run tsc --build; then
   echo "Error: switchboard build failed — aborting"
   exit 1
 fi
 
-echo "  [6/6] @powerhousedao/reactor-api"
+STEP=$((STEP + 1)); echo "  [${STEP}/${TOTAL_STEPS}] @powerhousedao/reactor-api"
 if ! pnpm --filter @powerhousedao/reactor-api run build:misc; then
   echo "Error: reactor-api build:misc failed — aborting"
   exit 1
@@ -216,9 +234,18 @@ if [ ! -f "$SWITCHBOARD_PATH" ]; then
   exit 1
 fi
 
+# Export OTel endpoint for switchboard to consume
+if [ -n "$OTEL_ENDPOINT" ]; then
+  export OTEL_EXPORTER_OTLP_ENDPOINT="$OTEL_ENDPOINT"
+fi
+
 # Run switchboard
-if [ -n "$PYROSCOPE_ENABLED" ]; then
+if [ -n "$PYROSCOPE_ENABLED" ] && [ -n "$OTEL_ENDPOINT" ]; then
+  echo "Starting Switchboard with ${RUNTIME}, Pyroscope profiling and OTel metrics..."
+elif [ -n "$PYROSCOPE_ENABLED" ]; then
   echo "Starting Switchboard with ${RUNTIME} and Pyroscope profiling..."
+elif [ -n "$OTEL_ENDPOINT" ]; then
+  echo "Starting Switchboard with ${RUNTIME} and OTel metrics..."
 else
   echo "Starting Switchboard with ${RUNTIME}..."
 fi

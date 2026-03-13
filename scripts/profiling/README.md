@@ -275,6 +275,8 @@ Starts the switchboard with [Pyroscope](https://pyroscope.io/) continuous profil
 ./scripts/profiling/switchboard-pyroscope.sh --runtime bun
 ./scripts/profiling/switchboard-pyroscope.sh --mode legacy
 ./scripts/profiling/switchboard-pyroscope.sh -r bun -m legacy --postgres "postgresql://postgres:postgres@localhost:5432/reactor"
+./scripts/profiling/switchboard-pyroscope.sh --otel
+./scripts/profiling/switchboard-pyroscope.sh --otel http://localhost:4318
 ```
 
 | Flag         | Short | Description                                                                                                                     |
@@ -282,6 +284,7 @@ Starts the switchboard with [Pyroscope](https://pyroscope.io/) continuous profil
 | `--runtime`  | `-r`  | Runtime: `node` (default) or `bun`                                                                                              |
 | `--mode`     | `-m`  | Storage mode: `v2` (default) or `legacy`                                                                                        |
 | `--postgres` | `-p`  | PostgreSQL database URL; sets `DATABASE_URL` — migrations run automatically before the server starts when `DATABASE_URL` is set |
+| `--otel`     |       | Enable OpenTelemetry metrics export (default: `http://localhost:4318`); sets `OTEL_EXPORTER_OTLP_ENDPOINT`                      |
 
 ## Infrastructure
 
