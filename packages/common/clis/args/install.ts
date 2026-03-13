@@ -1,4 +1,11 @@
-import { boolean, flag, optional, restPositionals, string } from "cmd-ts";
+import {
+  boolean,
+  flag,
+  option,
+  optional,
+  restPositionals,
+  string,
+} from "cmd-ts";
 import { debugArgs, packageManagerArgs } from "./common.js";
 
 export const installArgs = {
@@ -11,6 +18,12 @@ export const installArgs = {
     type: optional(boolean),
     long: "local",
     description: "Also install the package as a node module from the registry",
+  }),
+  registry: option({
+    type: optional(string),
+    long: "registry",
+    description:
+      "Registry URL to query and store (overrides config and environment)",
   }),
   ...packageManagerArgs,
   ...debugArgs,

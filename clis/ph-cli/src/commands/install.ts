@@ -1,3 +1,5 @@
+import { DEFAULT_REGISTRY_URL } from "@powerhousedao/config";
+import { getConfig } from "@powerhousedao/config/node";
 import {
   getPowerhouseProjectInfo,
   getPowerhouseProjectInstallCommand,
@@ -6,6 +8,7 @@ import {
 } from "@powerhousedao/common/clis";
 import { execSync } from "child_process";
 import { command } from "cmd-ts";
+import { join } from "path";
 import { updateConfigFile, updateStylesFile } from "../utils.js";
 
 export const install = command({
@@ -18,9 +21,10 @@ updates powerhouse.config.json with the package as a registry dependency (no npm
 Use --local to also install the package as a node module from the registry.
 
 This command:
-1. Updates powerhouse.config.json to include the new dependencies with provider "registry"
-2. Sets registryUrl in config if not already set
-3. With --local: also installs via package manager and updates style.css
+1. Resolves the registry URL (--registry flag > powerhouse.config.json > PH_REGISTRY_URL env > default)
+2. Queries the registry to verify the package exists and get its version
+3. Updates powerhouse.config.json to include the new dependencies with provider "registry"
+4. With --local: also installs via package manager and updates style.css
   `,
   args: installArgs,
   handler: async (args) => {
@@ -40,8 +44,22 @@ This command:
       throw new Error(`Could not find project path to install from.`);
     }
 
+    // Resolve registry URL: flag > config > env > default
+    const configPath = join(projectPath, "powerhouse.config.json");
+    const config = getConfig(configPath);
+    const registryUrl =
+      args.registry ??
+      config.registryUrl ??
+      process.env.PH_REGISTRY_URL ??
+      DEFAULT_REGISTRY_URL;
+
+    if (args.debug) {
+      console.log(">>> registryUrl", registryUrl);
+    }
+
     const dependenciesWithVersions = await makeDependenciesWithVersions(
       args.dependencies,
+      registryUrl,
     );
 
     if (args.debug) {
@@ -65,11 +83,18 @@ This command:
     }
 
     try {
-      console.log("⚙️ Updating powerhouse config file...");
-      updateConfigFile(dependenciesWithVersions, projectPath, "install");
-      console.log("Config file updated successfully 🎉");
+      console.log(
+        `Updating powerhouse config file (registry: ${registryUrl})...`,
+      );
+      updateConfigFile(
+        dependenciesWithVersions,
+        projectPath,
+        "install",
+        registryUrl,
+      );
+      console.log("Config file updated successfully");
     } catch (error) {
-      console.error("❌ Failed to update config file");
+      console.error("Failed to update config file");
       throw error;
     }
 

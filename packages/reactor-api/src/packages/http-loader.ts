@@ -24,6 +24,7 @@ type DocumentModelsExport = Record<string, DocumentModelModule>;
  */
 export class HttpPackageLoader implements IDocumentModelLoader {
   private readonly registryUrl: string;
+  private readonly cdnUrl: string;
   private readonly logger = childLogger(["reactor-api", "http-loader"]);
 
   // Cache: documentType -> packageName
@@ -42,6 +43,11 @@ export class HttpPackageLoader implements IDocumentModelLoader {
     this.registryUrl = options.registryUrl.endsWith("/")
       ? options.registryUrl
       : `${options.registryUrl}/`;
+
+    // Derive CDN URL from base registry URL
+    this.cdnUrl = this.registryUrl.includes("/-/cdn")
+      ? this.registryUrl
+      : `${this.registryUrl}-/cdn/`;
   }
 
   /**
@@ -71,7 +77,7 @@ export class HttpPackageLoader implements IDocumentModelLoader {
       throw new Error(`Invalid package name: ${packageName}`);
     }
 
-    const url = `${this.registryUrl}${packageName}/document-models.js`;
+    const url = `${this.cdnUrl}${packageName}/document-models.js`;
 
     try {
       this.logger.verbose(`Importing document-models from: ${url}`);

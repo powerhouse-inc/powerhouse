@@ -17,13 +17,21 @@ function loadPersistedState(): RegistryPersistedState | null {
   return null;
 }
 
+function toCdnUrl(baseUrl: string): string {
+  // If the URL already includes /-/cdn, return as-is
+  if (baseUrl.includes("/-/cdn")) return baseUrl;
+  const base = baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl;
+  return `${base}/-/cdn/`;
+}
+
 function getConfiguredRegistryUrls(): string[] {
   const registry = connectConfig.packagesRegistry;
   if (!registry) return [];
   return registry
     .split(",")
     .map((u) => u.trim())
-    .filter(Boolean);
+    .filter(Boolean)
+    .map(toCdnUrl);
 }
 
 export function getDefaultRegistryCdnUrl(): string | undefined {

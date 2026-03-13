@@ -170,6 +170,7 @@ export function updateConfigFile(
   dependencies: { name: string; version: string | undefined }[],
   projectPath: string,
   task: "install" | "uninstall" = "install",
+  registryUrl?: string,
 ) {
   const configPath = path.join(projectPath, POWERHOUSE_CONFIG_FILE);
 
@@ -189,8 +190,9 @@ export function updateConfigFile(
   };
 
   // Ensure registryUrl is set when installing registry packages
-  if (task === "install" && !updatedConfig.registryUrl) {
-    updatedConfig.registryUrl = DEFAULT_REGISTRY_URL;
+  if (task === "install") {
+    updatedConfig.registryUrl =
+      registryUrl ?? updatedConfig.registryUrl ?? DEFAULT_REGISTRY_URL;
   }
 
   fs.writeFileSync(configPath, JSON.stringify(updatedConfig, null, 2));
