@@ -1,7 +1,6 @@
 services:
   postgres:
     image: postgres:16-alpine
-    platform: linux/arm64/v8
     container_name: postgres16
     restart: unless-stopped
     mem_limit: 1g
