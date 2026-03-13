@@ -400,6 +400,18 @@ rate(reactor_queue_jobs_completed_total[1m])
 # Failure rate
 rate(reactor_queue_jobs_failed_total[1m])
 
+# Average ms per operation (accounts for batch size — matches script output)
+sum(rate(reactor_job_total_duration_milliseconds_sum[60s])) /
+  sum(rate(reactor_executor_operations_generated_total[60s]))
+
+# Fastest jobs over time (P1), normalised by batch size
+# Replace 5 with your --batch-size value
+histogram_quantile(0.01, rate(reactor_job_total_duration_milliseconds_bucket[30s])) / 5
+
+# Slowest jobs over time (P99), normalised by batch size
+# Replace 5 with your --batch-size value
+histogram_quantile(0.99, rate(reactor_job_total_duration_milliseconds_bucket[20s])) / 5
+
 # P99 and P50 job latency
 histogram_quantile(0.99, rate(reactor_job_total_duration_milliseconds_bucket[2m]))
 histogram_quantile(0.50, rate(reactor_job_total_duration_milliseconds_bucket[2m]))
