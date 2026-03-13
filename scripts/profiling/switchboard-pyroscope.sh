@@ -64,10 +64,11 @@ while [[ $# -gt 0 ]]; do
       shift 2
       ;;
     --otel)
-      OTEL_ENDPOINT="${2:-http://localhost:4318}"
       if [ -n "${2:-}" ] && [[ "$2" != --* ]]; then
+        OTEL_ENDPOINT="$2"
         shift 2
       else
+        OTEL_ENDPOINT="http://localhost:4318"
         shift 1
       fi
       ;;
