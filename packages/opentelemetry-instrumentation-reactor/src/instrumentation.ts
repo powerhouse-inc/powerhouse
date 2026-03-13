@@ -203,16 +203,26 @@ export class ReactorInstrumentation {
       // window the observation is silently dropped, making the gauge appear
       // to drop to zero under load. The timeout makes the failure explicit.
       const TIMEOUT_MS = 2_000;
-      const depth = await Promise.race([
-        queue.totalSize(),
-        new Promise<never>((_, reject) =>
-          setTimeout(
-            () => reject(new Error("queue.totalSize() timed out")),
-            TIMEOUT_MS,
-          ),
-        ),
-      ]);
-      result.observe(depth);
+      let timeoutId: ReturnType<typeof setTimeout> | undefined;
+      try {
+        const depth = await Promise.race([
+          queue.totalSize(),
+          new Promise<never>((_, reject) => {
+            timeoutId = setTimeout(
+              () => reject(new Error("queue.totalSize() timed out")),
+              TIMEOUT_MS,
+            );
+          }),
+        ]);
+        result.observe(depth);
+      } catch (err) {
+        console.warn(
+          "[ReactorInstrumentation] queueDepth observation failed:",
+          err,
+        );
+      } finally {
+        clearTimeout(timeoutId);
+      }
     };
     this.metrics.queueDepth.addCallback(depthCb);
     this.observableCallbacks.push([this.metrics.queueDepth, depthCb]);
