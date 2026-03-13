@@ -1,10 +1,22 @@
 import type { PHDocument } from "document-model";
-import type { Kysely } from "kysely";
+import type { Kysely, Transaction } from "kysely";
 import type { IKeyframeStore } from "../interfaces.js";
 import type { Database } from "./types.js";
 
 export class KyselyKeyframeStore implements IKeyframeStore {
+  private trx?: Transaction<Database>;
+
   constructor(private db: Kysely<Database>) {}
+
+  private get queryExecutor(): Kysely<Database> | Transaction<Database> {
+    return this.trx ?? this.db;
+  }
+
+  withTransaction(trx: Transaction<Database>): KyselyKeyframeStore {
+    const instance = new KyselyKeyframeStore(this.db);
+    instance.trx = trx;
+    return instance;
+  }
 
   async putKeyframe(
     documentId: string,
@@ -18,7 +30,7 @@ export class KyselyKeyframeStore implements IKeyframeStore {
       throw new Error("Operation aborted");
     }
 
-    await this.db
+    await this.queryExecutor
       .insertInto("Keyframe")
       .values({
         documentId,
@@ -47,7 +59,7 @@ export class KyselyKeyframeStore implements IKeyframeStore {
       throw new Error("Operation aborted");
     }
 
-    const row = await this.db
+    const row = await this.queryExecutor
       .selectFrom("Keyframe")
       .selectAll()
       .where("documentId", "=", documentId)
@@ -68,6 +80,46 @@ export class KyselyKeyframeStore implements IKeyframeStore {
     };
   }
 
+  async listKeyframes(
+    documentId: string,
+    scope?: string,
+    branch?: string,
+    signal?: AbortSignal,
+  ): Promise<
+    Array<{
+      scope: string;
+      branch: string;
+      revision: number;
+      document: PHDocument;
+    }>
+  > {
+    if (signal?.aborted) {
+      throw new Error("Operation aborted");
+    }
+
+    let query = this.queryExecutor
+      .selectFrom("Keyframe")
+      .selectAll()
+      .where("documentId", "=", documentId)
+      .orderBy("revision", "asc");
+
+    if (scope !== undefined) {
+      query = query.where("scope", "=", scope);
+    }
+    if (branch !== undefined) {
+      query = query.where("branch", "=", branch);
+    }
+
+    const rows = await query.execute();
+
+    return rows.map((row) => ({
+      scope: row.scope,
+      branch: row.branch,
+      revision: row.revision,
+      document: row.document as PHDocument,
+    }));
+  }
+
   async deleteKeyframes(
     documentId: string,
     scope?: string,
@@ -78,7 +130,7 @@ export class KyselyKeyframeStore implements IKeyframeStore {
       throw new Error("Operation aborted");
     }
 
-    let query = this.db
+    let query = this.queryExecutor
       .deleteFrom("Keyframe")
       .where("documentId", "=", documentId);
 

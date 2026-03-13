@@ -6,7 +6,7 @@
     "types": ["vitest/globals"]
   },
   "include": ["**/*"],
-  "exclude": ["dist", "node_modules", "test/atlas"],
+  "exclude": ["dist", "node_modules"],
   "references": [
     {
       "path": "../document-drive"

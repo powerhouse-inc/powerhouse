@@ -47,6 +47,7 @@ function createMockKeyframeStore(): IKeyframeStore {
   return {
     putKeyframe: vi.fn().mockResolvedValue(undefined),
     findNearestKeyframe: vi.fn().mockResolvedValue(undefined),
+    listKeyframes: vi.fn().mockResolvedValue([]),
     deleteKeyframes: vi.fn().mockResolvedValue(0),
   };
 }

@@ -1,0 +1,47 @@
+{
+  "name": "@powerhousedao/reactor-hypercore",
+  "version": "6.0.0-dev.89",
+  "description": "Hypercore-backed IOperationStore for the Powerhouse Reactor",
+  "repository": {
+    "url": "https://github.com/powerhouse-inc/powerhouse",
+    "directory": "packages/reactor-hypercore"
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "import": "./dist/src/index.js"
+    }
+  },
+  "files": [
+    "./dist/src"
+  ],
+  "scripts": {
+    "prebuild": "pnpm run clean",
+    "build": "tsc",
+    "test": "vitest run --silent=false",
+    "test:watch": "vitest",
+    "lint": "eslint",
+    "clean": "rimraf dist",
+    "clean:node_modules": "rimraf node_modules"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "AGPL-3.0-only",
+  "dependencies": {
+    "corestore": "^6.18.4",
+    "hyperbee": "^2.21.0"
+  },
+  "devDependencies": {
+    "document-model": "workspace:*",
+    "@powerhousedao/reactor": "workspace:*",
+    "vitest": "catalog:",
+    "tsx": "catalog:"
+  },
+  "peerDependencies": {
+    "document-model": "workspace:*"
+  }
+}

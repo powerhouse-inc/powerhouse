@@ -1,5 +1,5 @@
 import { type Operation, type OperationWithContext } from "document-model";
-import { sql, type Kysely } from "kysely";
+import { sql, type Kysely, type Transaction } from "kysely";
 import type { PagedResults, PagingOptions } from "../../shared/types.js";
 import {
   DuplicateOperationError,
@@ -13,7 +13,19 @@ import { AtomicTransaction } from "../txn.js";
 import type { Database, OperationRow } from "./types.js";
 
 export class KyselyOperationStore implements IOperationStore {
+  private trx?: Transaction<Database>;
+
   constructor(private db: Kysely<Database>) {}
+
+  private get queryExecutor(): Kysely<Database> | Transaction<Database> {
+    return this.trx ?? this.db;
+  }
+
+  withTransaction(trx: Transaction<Database>): KyselyOperationStore {
+    const instance = new KyselyOperationStore(this.db);
+    instance.trx = trx;
+    return instance;
+  }
 
   async apply(
     documentId: string,
@@ -24,69 +36,97 @@ export class KyselyOperationStore implements IOperationStore {
     fn: (txn: AtomicTxn) => void | Promise<void>,
     signal?: AbortSignal,
   ): Promise<void> {
-    await this.db.transaction().execute(async (trx) => {
-      // Check for abort signal
-      if (signal?.aborted) {
-        throw new Error("Operation aborted");
-      }
-
-      // Get the latest operation for this stream to verify revision
-      const latestOp = await trx
-        .selectFrom("Operation")
-        .selectAll()
-        .where("documentId", "=", documentId)
-        .where("scope", "=", scope)
-        .where("branch", "=", branch)
-        .orderBy("index", "desc")
-        .limit(1)
-        .executeTakeFirst();
-
-      // Check revision matches
-      const currentRevision = latestOp ? latestOp.index : -1;
-      if (currentRevision !== revision - 1) {
-        throw new RevisionMismatchError(currentRevision + 1, revision);
-      }
-
-      // Create atomic transaction
-      const atomicTxn = new AtomicTransaction(
+    if (this.trx) {
+      await this.executeApply(
+        this.trx,
         documentId,
         documentType,
         scope,
         branch,
         revision,
+        fn,
+        signal,
       );
-      await fn(atomicTxn);
+    } else {
+      await this.db.transaction().execute(async (trx) => {
+        await this.executeApply(
+          trx,
+          documentId,
+          documentType,
+          scope,
+          branch,
+          revision,
+          fn,
+          signal,
+        );
+      });
+    }
+  }
 
-      // Get operations and header updates
-      const operations = atomicTxn.getOperations();
+  private async executeApply(
+    trx: Transaction<Database>,
+    documentId: string,
+    documentType: string,
+    scope: string,
+    branch: string,
+    revision: number,
+    fn: (txn: AtomicTxn) => void | Promise<void>,
+    signal?: AbortSignal,
+  ): Promise<void> {
+    if (signal?.aborted) {
+      throw new Error("Operation aborted");
+    }
 
-      // Insert operations
-      if (operations.length > 0) {
-        // Set prevOpId for each operation
-        let prevOpId = latestOp?.opId || "";
-        for (const op of operations) {
-          op.prevOpId = prevOpId;
-          prevOpId = op.opId;
-        }
+    const latestOp = await trx
+      .selectFrom("Operation")
+      .selectAll()
+      .where("documentId", "=", documentId)
+      .where("scope", "=", scope)
+      .where("branch", "=", branch)
+      .orderBy("index", "desc")
+      .limit(1)
+      .executeTakeFirst();
 
-        try {
-          await trx.insertInto("Operation").values(operations).execute();
-        } catch (error: unknown) {
-          if (error instanceof Error) {
-            if (error.message.includes("unique constraint")) {
-              const op = operations[0];
-              throw new DuplicateOperationError(
-                `${op.opId} at index ${op.index} with skip ${op.skip}`,
-              );
-            }
+    const currentRevision = latestOp ? latestOp.index : -1;
+    if (currentRevision !== revision - 1) {
+      throw new RevisionMismatchError(currentRevision + 1, revision);
+    }
 
-            throw error;
+    const atomicTxn = new AtomicTransaction(
+      documentId,
+      documentType,
+      scope,
+      branch,
+      revision,
+    );
+    await fn(atomicTxn);
+
+    const operations = atomicTxn.getOperations();
+
+    if (operations.length > 0) {
+      let prevOpId = latestOp?.opId || "";
+      for (const op of operations) {
+        op.prevOpId = prevOpId;
+        prevOpId = op.opId;
+      }
+
+      try {
+        await trx.insertInto("Operation").values(operations).execute();
+      } catch (error: unknown) {
+        if (error instanceof Error) {
+          if (error.message.includes("unique constraint")) {
+            const op = operations[0];
+            throw new DuplicateOperationError(
+              `${op.opId} at index ${op.index} with skip ${op.skip}`,
+            );
           }
 
           throw error;
         }
+
+        throw error;
       }
-    });
+    }
   }
 
   async getSince(
@@ -102,7 +142,7 @@ export class KyselyOperationStore implements IOperationStore {
       throw new Error("Operation aborted");
     }
 
-    let query = this.db
+    let query = this.queryExecutor
       .selectFrom("Operation")
       .selectAll()
       .where("documentId", "=", documentId)
@@ -197,7 +237,7 @@ export class KyselyOperationStore implements IOperationStore {
       throw new Error("Operation aborted");
     }
 
-    let query = this.db
+    let query = this.queryExecutor
       .selectFrom("Operation")
       .selectAll()
       .where("id", ">", id)
@@ -260,7 +300,7 @@ export class KyselyOperationStore implements IOperationStore {
       throw new Error("Operation aborted");
     }
 
-    let query = this.db
+    let query = this.queryExecutor
       .selectFrom("Operation")
       .selectAll()
       .where("documentId", "=", documentId)
@@ -328,7 +368,7 @@ export class KyselyOperationStore implements IOperationStore {
 
     // Get the latest operation for each scope in a single query
     // Uses a subquery to find operations where the index equals the max index for that scope
-    const scopeRevisions = await this.db
+    const scopeRevisions = await this.queryExecutor
       .selectFrom("Operation as o1")
       .select(["o1.scope", "o1.index", "o1.timestampUtcMs"])
       .where("o1.documentId", "=", documentId)

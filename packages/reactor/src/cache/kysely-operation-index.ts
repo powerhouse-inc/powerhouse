@@ -1,5 +1,5 @@
 import type { OperationWithContext } from "document-model";
-import type { Kysely } from "kysely";
+import type { Kysely, Transaction } from "kysely";
 import { sql } from "kysely";
 import type { PagedResults, PagingOptions } from "../shared/types.js";
 import type { ViewFilter } from "../storage/interfaces.js";
@@ -82,7 +82,19 @@ class KyselyOperationIndexTxn implements IOperationIndexTxn {
 }
 
 export class KyselyOperationIndex implements IOperationIndex {
+  private trx?: Transaction<Database>;
+
   constructor(private db: Kysely<Database>) {}
+
+  private get queryExecutor(): Kysely<Database> | Transaction<Database> {
+    return this.trx ?? this.db;
+  }
+
+  withTransaction(trx: Transaction<Database>): KyselyOperationIndex {
+    const instance = new KyselyOperationIndex(this.db);
+    instance.trx = trx;
+    return instance;
+  }
 
   start(): IOperationIndexTxn {
     return new KyselyOperationIndexTxn();
@@ -97,100 +109,110 @@ export class KyselyOperationIndex implements IOperationIndex {
     }
 
     const kyselyTxn = txn as KyselyOperationIndexTxn;
+
+    if (this.trx) {
+      return this.executeCommit(this.trx, kyselyTxn);
+    }
+
+    let resultOrdinals: number[] = [];
+    await this.db.transaction().execute(async (trx) => {
+      resultOrdinals = await this.executeCommit(trx, kyselyTxn);
+    });
+    return resultOrdinals;
+  }
+
+  private async executeCommit(
+    trx: Transaction<Database>,
+    kyselyTxn: KyselyOperationIndexTxn,
+  ): Promise<number[]> {
     const collections = kyselyTxn.getCollections();
     const memberships = kyselyTxn.getCollectionMembershipRecords();
     const removals = kyselyTxn.getCollectionRemovals();
     const operations = kyselyTxn.getOperations();
 
-    let resultOrdinals: number[] = [];
+    if (collections.length > 0) {
+      const collectionRows: InsertableDocumentCollection[] = collections.map(
+        (collectionId) => ({
+          documentId: collectionId,
+          collectionId,
+          joinedOrdinal: BigInt(0),
+          leftOrdinal: null,
+        }),
+      );
 
-    await this.db.transaction().execute(async (trx) => {
-      if (collections.length > 0) {
-        const collectionRows: InsertableDocumentCollection[] = collections.map(
-          (collectionId) => ({
-            documentId: collectionId,
-            collectionId,
-            joinedOrdinal: BigInt(0),
-            leftOrdinal: null,
-          }),
-        );
+      await trx
+        .insertInto("document_collections")
+        .values(collectionRows)
+        .onConflict((oc) => oc.doNothing())
+        .execute();
+    }
+
+    let operationOrdinals: number[] = [];
+    if (operations.length > 0) {
+      const operationRows: InsertableOperationIndexOperation[] = operations.map(
+        (op) => ({
+          opId: op.id || "",
+          documentId: op.documentId,
+          documentType: op.documentType,
+          scope: op.scope,
+          branch: op.branch,
+          timestampUtcMs: op.timestampUtcMs,
+          index: op.index,
+          skip: op.skip,
+          hash: op.hash,
+          action: op.action as unknown,
+          sourceRemote: op.sourceRemote,
+        }),
+      );
+
+      const insertedOps = await trx
+        .insertInto("operation_index_operations")
+        .values(operationRows)
+        .returning("ordinal")
+        .execute();
+
+      operationOrdinals = insertedOps.map((row) => row.ordinal);
+    }
+
+    if (memberships.length > 0) {
+      for (const m of memberships) {
+        const ordinal = operationOrdinals[m.operationIndex];
 
         await trx
           .insertInto("document_collections")
-          .values(collectionRows)
-          .onConflict((oc) => oc.doNothing())
-          .execute();
-      }
-
-      let operationOrdinals: number[] = [];
-      if (operations.length > 0) {
-        const operationRows: InsertableOperationIndexOperation[] =
-          operations.map((op) => ({
-            opId: op.id || "",
-            documentId: op.documentId,
-            documentType: op.documentType,
-            scope: op.scope,
-            branch: op.branch,
-            timestampUtcMs: op.timestampUtcMs,
-            index: op.index,
-            skip: op.skip,
-            hash: op.hash,
-            action: op.action as unknown,
-            sourceRemote: op.sourceRemote,
-          }));
-
-        const insertedOps = await trx
-          .insertInto("operation_index_operations")
-          .values(operationRows)
-          .returning("ordinal")
-          .execute();
-
-        operationOrdinals = insertedOps.map((row) => row.ordinal);
-        resultOrdinals = operationOrdinals;
-      }
-
-      if (memberships.length > 0) {
-        for (const m of memberships) {
-          // this is guaranteed to be defined because we enforce in KyselyOperationIndexTxn
-          const ordinal = operationOrdinals[m.operationIndex];
-
-          await trx
-            .insertInto("document_collections")
-            .values({
-              documentId: m.documentId,
-              collectionId: m.collectionId,
+          .values({
+            documentId: m.documentId,
+            collectionId: m.collectionId,
+            joinedOrdinal: BigInt(ordinal),
+            leftOrdinal: null,
+          })
+          .onConflict((oc) =>
+            oc.columns(["documentId", "collectionId"]).doUpdateSet({
               joinedOrdinal: BigInt(ordinal),
               leftOrdinal: null,
-            })
-            .onConflict((oc) =>
-              oc.columns(["documentId", "collectionId"]).doUpdateSet({
-                joinedOrdinal: BigInt(ordinal),
-                leftOrdinal: null,
-              }),
-            )
-            .execute();
-        }
+            }),
+          )
+          .execute();
       }
+    }
 
-      if (removals.length > 0) {
-        for (const r of removals) {
-          // this is guaranteed to be defined because we enforce in KyselyOperationIndexTxn
-          const ordinal = operationOrdinals[r.operationIndex];
+    if (removals.length > 0) {
+      for (const r of removals) {
+        const ordinal = operationOrdinals[r.operationIndex];
 
-          await trx
-            .updateTable("document_collections")
-            .set({
-              leftOrdinal: BigInt(ordinal),
-            })
-            .where("collectionId", "=", r.collectionId)
-            .where("documentId", "=", r.documentId)
-            .where("leftOrdinal", "is", null)
-            .execute();
-        }
+        await trx
+          .updateTable("document_collections")
+          .set({
+            leftOrdinal: BigInt(ordinal),
+          })
+          .where("collectionId", "=", r.collectionId)
+          .where("documentId", "=", r.documentId)
+          .where("leftOrdinal", "is", null)
+          .execute();
       }
-    });
+    }
 
-    return resultOrdinals;
+    return operationOrdinals;
   }
 
   async find(
@@ -204,7 +226,7 @@ export class KyselyOperationIndex implements IOperationIndex {
       throw new Error("Operation aborted");
     }
 
-    let query = this.db
+    let query = this.queryExecutor
       .selectFrom("operation_index_operations as oi")
       .innerJoin("document_collections as dc", "oi.documentId", "dc.documentId")
       .selectAll("oi")
@@ -286,7 +308,7 @@ export class KyselyOperationIndex implements IOperationIndex {
       throw new Error("Operation aborted");
     }
 
-    let query = this.db
+    let query = this.queryExecutor
       .selectFrom("operation_index_operations")
       .selectAll()
       .where("documentId", "=", documentId)
@@ -348,7 +370,7 @@ export class KyselyOperationIndex implements IOperationIndex {
       throw new Error("Operation aborted");
     }
 
-    let query = this.db
+    let query = this.queryExecutor
       .selectFrom("operation_index_operations")
       .selectAll()
       .where("ordinal", ">", ordinal)
@@ -446,7 +468,7 @@ export class KyselyOperationIndex implements IOperationIndex {
       throw new Error("Operation aborted");
     }
 
-    const result = await this.db
+    const result = await this.queryExecutor
       .selectFrom("operation_index_operations as oi")
       .innerJoin("document_collections as dc", "oi.documentId", "dc.documentId")
       .select("oi.timestampUtcMs")
@@ -468,7 +490,7 @@ export class KyselyOperationIndex implements IOperationIndex {
       return {};
     }
 
-    const rows = await this.db
+    const rows = await this.queryExecutor
       .selectFrom("document_collections")
       .select(["documentId", "collectionId"])
       .where("documentId", "in", documentIds)

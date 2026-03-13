@@ -28,6 +28,7 @@ export * from "./home-screen/home-background-image.js";
 export * from "./home-screen/home-screen-add-drive-item.js";
 export * from "./home-screen/home-screen-item.js";
 export * from "./home-screen/home-screen.js";
+export * from "./integrity-inspector/index.js";
 export * from "./loading-screen/loading-screen.js";
 export * from "./modal/add-drive-modal/add-drive-modal.js";
 export * from "./modal/index.js";

@@ -10,16 +10,13 @@ import type {
   UpgradeDocumentActionInput,
   UpgradeTransition,
 } from "document-model";
-import type { ICollectionMembershipCache } from "../cache/collection-membership-cache.js";
-import type { IDocumentMetaCache } from "../cache/document-meta-cache-types.js";
 import type { IOperationIndexTxn } from "../cache/operation-index-types.js";
 import { driveCollectionId } from "../cache/operation-index-types.js";
-import type { IWriteCache } from "../cache/write/interfaces.js";
 import type { ILogger } from "../logging/types.js";
 import type { Job } from "../queue/types.js";
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";
 import { DocumentDeletedError } from "../shared/errors.js";
-import type { IOperationStore } from "../storage/interfaces.js";
+import type { ExecutionStores } from "./execution-scope.js";
 import type { JobResult } from "./types.js";
 import {
   applyDeleteDocumentAction,
@@ -34,10 +31,6 @@ import {
 
 export class DocumentActionHandler {
   constructor(
-    private writeCache: IWriteCache,
-    private operationStore: IOperationStore,
-    private documentMetaCache: IDocumentMetaCache,
-    private collectionMembershipCache: ICollectionMembershipCache,
     private registry: IDocumentModelRegistry,
     private logger: ILogger,
   ) {}
@@ -47,6 +40,7 @@ export class DocumentActionHandler {
     action: Action,
     startTime: number,
     indexTxn: IOperationIndexTxn,
+    stores: ExecutionStores,
     skip: number = 0,
     sourceRemote: string = "",
   ): Promise<
@@ -69,6 +63,7 @@ export class DocumentActionHandler {
           action,
           startTime,
           indexTxn,
+          stores,
           skip,
           sourceRemote,
         );
@@ -78,6 +73,7 @@ export class DocumentActionHandler {
           action,
           startTime,
           indexTxn,
+          stores,
           sourceRemote,
         );
       case "UPGRADE_DOCUMENT":
@@ -86,6 +82,7 @@ export class DocumentActionHandler {
           action,
           startTime,
           indexTxn,
+          stores,
           skip,
           sourceRemote,
         );
@@ -95,6 +92,7 @@ export class DocumentActionHandler {
           action,
           startTime,
           indexTxn,
+          stores,
           sourceRemote,
         );
       case "REMOVE_RELATIONSHIP":
@@ -103,6 +101,7 @@ export class DocumentActionHandler {
           action,
           startTime,
           indexTxn,
+          stores,
           sourceRemote,
         );
       default:
@@ -119,6 +118,7 @@ export class DocumentActionHandler {
     action: Action,
     startTime: number,
     indexTxn: IOperationIndexTxn,
+    stores: ExecutionStores,
     skip: number = 0,
     sourceRemote: string = "",
   ): Promise<
@@ -167,6 +167,7 @@ export class DocumentActionHandler {
       operation,
       job,
       startTime,
+      stores,
     );
     if (writeError !== null) {
       return writeError;
@@ -174,7 +175,7 @@ export class DocumentActionHandler {
 
     updateDocumentRevision(document, job.scope, operation.index);
 
-    this.writeCache.putState(
+    stores.writeCache.putState(
       document.header.id,
       job.scope,
       job.branch,
@@ -199,7 +200,7 @@ export class DocumentActionHandler {
       indexTxn.addToCollection(collectionId, document.header.id);
     }
 
-    this.documentMetaCache.putDocumentMeta(document.header.id, job.branch, {
+    stores.documentMetaCache.putDocumentMeta(document.header.id, job.branch, {
       state: document.state.document,
       documentType: document.header.documentType,
       documentScopeRevision: 1,
@@ -220,6 +221,7 @@ export class DocumentActionHandler {
     action: Action,
     startTime: number,
     indexTxn: IOperationIndexTxn,
+    stores: ExecutionStores,
     sourceRemote: string = "",
   ): Promise<
     JobResult & {
@@ -248,7 +250,7 @@ export class DocumentActionHandler {
 
     let document: PHDocument;
     try {
-      document = await this.writeCache.getState(
+      document = await stores.writeCache.getState(
         documentId,
         job.scope,
         job.branch,
@@ -296,6 +298,7 @@ export class DocumentActionHandler {
       operation,
       job,
       startTime,
+      stores,
     );
     if (writeError !== null) {
       return writeError;
@@ -303,7 +306,7 @@ export class DocumentActionHandler {
 
     updateDocumentRevision(document, job.scope, operation.index);
 
-    this.writeCache.putState(
+    stores.writeCache.putState(
       documentId,
       job.scope,
       job.branch,
@@ -322,7 +325,7 @@ export class DocumentActionHandler {
       },
     ]);
 
-    this.documentMetaCache.putDocumentMeta(documentId, job.branch, {
+    stores.documentMetaCache.putDocumentMeta(documentId, job.branch, {
       state: document.state.document,
       documentType: document.header.documentType,
       documentScopeRevision: operation.index + 1,
@@ -343,6 +346,7 @@ export class DocumentActionHandler {
     action: Action,
     startTime: number,
     indexTxn: IOperationIndexTxn,
+    stores: ExecutionStores,
     skip: number = 0,
     sourceRemote: string = "",
   ): Promise<
@@ -375,7 +379,7 @@ export class DocumentActionHandler {
 
     let document: PHDocument;
     try {
-      document = await this.writeCache.getState(
+      document = await stores.writeCache.getState(
         documentId,
         job.scope,
         job.branch,
@@ -462,6 +466,7 @@ export class DocumentActionHandler {
       operation,
       job,
       startTime,
+      stores,
     );
     if (writeError !== null) {
       return writeError;
@@ -469,7 +474,7 @@ export class DocumentActionHandler {
 
     updateDocumentRevision(document, job.scope, operation.index);
 
-    this.writeCache.putState(
+    stores.writeCache.putState(
       documentId,
       job.scope,
       job.branch,
@@ -488,7 +493,7 @@ export class DocumentActionHandler {
       },
     ]);
 
-    this.documentMetaCache.putDocumentMeta(documentId, job.branch, {
+    stores.documentMetaCache.putDocumentMeta(documentId, job.branch, {
       state: document.state.document,
       documentType: document.header.documentType,
       documentScopeRevision: operation.index + 1,
@@ -509,6 +514,7 @@ export class DocumentActionHandler {
     action: Action,
     startTime: number,
     indexTxn: IOperationIndexTxn,
+    stores: ExecutionStores,
     sourceRemote: string = "",
   ): Promise<
     JobResult & {
@@ -557,7 +563,7 @@ export class DocumentActionHandler {
 
     let sourceDoc: PHDocument;
     try {
-      sourceDoc = await this.writeCache.getState(
+      sourceDoc = await stores.writeCache.getState(
         input.sourceId,
         "document",
         job.branch,
@@ -588,6 +594,7 @@ export class DocumentActionHandler {
       operation,
       job,
       startTime,
+      stores,
     );
     if (writeError !== null) {
       return writeError;
@@ -610,7 +617,7 @@ export class DocumentActionHandler {
     };
     const resultingState = JSON.stringify(resultingStateObj);
 
-    this.writeCache.putState(
+    stores.writeCache.putState(
       input.sourceId,
       job.scope,
       job.branch,
@@ -632,10 +639,10 @@ export class DocumentActionHandler {
     if (sourceDoc.header.documentType === "powerhouse/document-drive") {
       const collectionId = driveCollectionId(job.branch, input.sourceId);
       indexTxn.addToCollection(collectionId, input.targetId);
-      this.collectionMembershipCache.invalidate(input.targetId);
+      stores.collectionMembershipCache.invalidate(input.targetId);
     }
 
-    this.documentMetaCache.putDocumentMeta(input.sourceId, job.branch, {
+    stores.documentMetaCache.putDocumentMeta(input.sourceId, job.branch, {
       state: sourceDoc.state.document,
       documentType: sourceDoc.header.documentType,
       documentScopeRevision: operation.index + 1,
@@ -656,6 +663,7 @@ export class DocumentActionHandler {
     action: Action,
     startTime: number,
     indexTxn: IOperationIndexTxn,
+    stores: ExecutionStores,
     sourceRemote: string = "",
   ): Promise<
     JobResult & {
@@ -694,7 +702,7 @@ export class DocumentActionHandler {
 
     let sourceDoc: PHDocument;
     try {
-      sourceDoc = await this.writeCache.getState(
+      sourceDoc = await stores.writeCache.getState(
         input.sourceId,
         "document",
         job.branch,
@@ -725,6 +733,7 @@ export class DocumentActionHandler {
       operation,
       job,
       startTime,
+      stores,
     );
     if (writeError !== null) {
       return writeError;
@@ -747,7 +756,7 @@ export class DocumentActionHandler {
     };
     const resultingState = JSON.stringify(resultingStateObj);
 
-    this.writeCache.putState(
+    stores.writeCache.putState(
       input.sourceId,
       job.scope,
       job.branch,
@@ -769,10 +778,10 @@ export class DocumentActionHandler {
     if (sourceDoc.header.documentType === "powerhouse/document-drive") {
       const collectionId = driveCollectionId(job.branch, input.sourceId);
       indexTxn.removeFromCollection(collectionId, input.targetId);
-      this.collectionMembershipCache.invalidate(input.targetId);
+      stores.collectionMembershipCache.invalidate(input.targetId);
     }
 
-    this.documentMetaCache.putDocumentMeta(input.sourceId, job.branch, {
+    stores.documentMetaCache.putDocumentMeta(input.sourceId, job.branch, {
       state: sourceDoc.state.document,
       documentType: sourceDoc.header.documentType,
       documentScopeRevision: operation.index + 1,
@@ -796,9 +805,10 @@ export class DocumentActionHandler {
     operation: Operation,
     job: Job,
     startTime: number,
+    stores: ExecutionStores,
   ): Promise<JobResult | null> {
     try {
-      await this.operationStore.apply(
+      await stores.operationStore.apply(
         documentId,
         documentType,
         scope,
@@ -816,7 +826,7 @@ export class DocumentActionHandler {
         error,
       );
 
-      this.writeCache.invalidate(documentId, scope, branch);
+      stores.writeCache.invalidate(documentId, scope, branch);
 
       return {
         job,

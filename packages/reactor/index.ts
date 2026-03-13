@@ -277,3 +277,11 @@ export type {
 } from "@powerhousedao/shared/processors";
 export { ProcessorManager } from "./src/processors/index.js";
 export * from "./src/re-exports.js";
+export { DocumentIntegrityService } from "./src/admin/document-integrity-service.js";
+export type {
+  IDocumentIntegrityService,
+  KeyframeValidationIssue,
+  RebuildResult,
+  SnapshotValidationIssue,
+  ValidationResult,
+} from "./src/admin/types.js";

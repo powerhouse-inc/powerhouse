@@ -1,3 +1,17 @@
+## 6.0.0-dev.89 (2026-03-13)
+
+This was a version bump only for document-model to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.88 (2026-03-12)
+
+### 🚀 Features
+
+- reactor-hypercore example ([d5557973a](https://github.com/powerhouse-inc/powerhouse/commit/d5557973a))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
 ## 6.0.0-dev.87 (2026-03-12)
 
 This was a version bump only for document-model to align it with other projects, there were no code changes.

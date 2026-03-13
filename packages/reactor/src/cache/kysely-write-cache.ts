@@ -20,6 +20,12 @@ type DocumentStream = {
   ringBuffer: RingBuffer<CachedSnapshot>;
 };
 
+function extractModuleVersion(doc: PHDocument): number | undefined {
+  const v = (doc.state as Record<string, Record<string, unknown>>).document
+    .version as number | undefined;
+  return v === 0 ? undefined : v;
+}
+
 /**
  * In-memory write cache with keyframe persistence for PHDocuments.
  *
@@ -80,6 +86,21 @@ export class KyselyWriteCache implements IWriteCache {
     };
     this.streams = new Map();
     this.lruTracker = new LRUTracker<string>();
+  }
+
+  withScopedStores(
+    operationStore: IOperationStore,
+    keyframeStore: IKeyframeStore,
+  ): KyselyWriteCache {
+    const scoped = new KyselyWriteCache(
+      keyframeStore,
+      operationStore,
+      this.registry,
+      this.config,
+    );
+    scoped.streams = this.streams;
+    scoped.lruTracker = this.lruTracker;
+    return scoped;
   }
 
   /**
@@ -405,7 +426,10 @@ export class KyselyWriteCache implements IWriteCache {
 
       document = createDocumentFromAction(documentCreateAction);
 
-      const docModule = this.registry.getModule(documentType);
+      let docModule = this.registry.getModule(
+        documentType,
+        extractModuleVersion(document),
+      );
       const docScopeOps = await this.operationStore.getSince(
         documentId,
         "document",
@@ -424,6 +448,10 @@ export class KyselyWriteCache implements IWriteCache {
         if (operation.action.type === "UPGRADE_DOCUMENT") {
           const upgradeAction = operation.action as UpgradeDocumentAction;
           document = applyUpgradeDocumentAction(document, upgradeAction);
+          docModule = this.registry.getModule(
+            documentType,
+            extractModuleVersion(document),
+          );
         } else if (operation.action.type === "DELETE_DOCUMENT") {
           applyDeleteDocumentAction(document, operation.action as never);
         } else {
@@ -437,7 +465,10 @@ export class KyselyWriteCache implements IWriteCache {
       }
     }
 
-    const module = this.registry.getModule(documentType);
+    const module = this.registry.getModule(
+      documentType,
+      extractModuleVersion(document),
+    );
     let cursor: string | undefined = undefined;
     const pageSize = 100;
     let hasMorePages: boolean;

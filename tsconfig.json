@@ -50,6 +50,9 @@
       "path": "packages/reactor-browser"
     },
     {
+      "path": "packages/reactor-hypercore"
+    },
+    {
       "path": "packages/reactor-local"
     },
     {

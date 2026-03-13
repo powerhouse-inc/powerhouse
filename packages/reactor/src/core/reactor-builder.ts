@@ -9,6 +9,10 @@ import { KyselyWriteCache } from "../cache/kysely-write-cache.js";
 import type { WriteCacheConfig } from "../cache/write-cache-types.js";
 import { EventBus } from "../events/event-bus.js";
 import type { IEventBus } from "../events/interfaces.js";
+import {
+  KyselyExecutionScope,
+  type IExecutionScope,
+} from "../executor/execution-scope.js";
 import type { IJobExecutorManager } from "../executor/interfaces.js";
 import { SimpleJobExecutorManager } from "../executor/simple-job-executor-manager.js";
 import { SimpleJobExecutor } from "../executor/simple-job-executor.js";
@@ -255,6 +259,16 @@ export class ReactorBuilder {
       operationIndex,
     );
 
+    const executionScope: IExecutionScope = new KyselyExecutionScope(
+      database as unknown as Kysely<StorageDatabase>,
+      operationStore,
+      operationIndex,
+      keyframeStore,
+      writeCache,
+      documentMetaCache,
+      collectionMembershipCache,
+    );
+
     let executorManager = this.executorManager;
     if (!executorManager) {
       executorManager = new SimpleJobExecutorManager(
@@ -270,6 +284,7 @@ export class ReactorBuilder {
             collectionMembershipCache,
             this.executorConfig,
             this.signatureVerifier,
+            executionScope,
           ),
         eventBus,
         queue,

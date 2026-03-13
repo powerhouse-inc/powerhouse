@@ -18,6 +18,7 @@ import { createWriteStream, mkdirSync, type WriteStream } from "node:fs";
 import { basename, dirname, join } from "node:path";
 
 const DEFAULT_ENDPOINT = "http://localhost:4001/graphql";
+const GRAPHQL_TIMEOUT_MS = 30_000;
 
 // Action configs for cycling through different operation types
 const ACTION_CONFIGS = [
@@ -598,11 +599,13 @@ async function main() {
       callback?: WriteCallback,
     ): boolean => {
       fileWrite(chunk);
-      return origStdoutWrite(
-        chunk,
-        encodingOrCallback as BufferEncoding,
-        callback,
-      );
+      const encoding =
+        typeof encodingOrCallback === "string" ? encodingOrCallback : undefined;
+      const cb =
+        typeof encodingOrCallback === "function"
+          ? encodingOrCallback
+          : callback;
+      return origStdoutWrite(chunk, encoding, cb);
     };
 
     process.stderr.write = (
@@ -611,11 +614,13 @@ async function main() {
       callback?: WriteCallback,
     ): boolean => {
       fileWrite(chunk);
-      return origStderrWrite(
-        chunk,
-        encodingOrCallback as BufferEncoding,
-        callback,
-      );
+      const encoding =
+        typeof encodingOrCallback === "string" ? encodingOrCallback : undefined;
+      const cb =
+        typeof encodingOrCallback === "function"
+          ? encodingOrCallback
+          : callback;
+      return origStderrWrite(chunk, encoding, cb);
     };
   }
 
@@ -624,7 +629,9 @@ async function main() {
       `Command: tsx docs-create.ts ${process.argv.slice(2).join(" ")}`,
     );
 
-    const client = new GraphQLClient(endpoint);
+    const client = new GraphQLClient(endpoint, {
+      signal: AbortSignal.timeout(GRAPHQL_TIMEOUT_MS),
+    });
     const useExistingDocs = docIds.length > 0;
 
     const initialMemory = getMemoryStats();

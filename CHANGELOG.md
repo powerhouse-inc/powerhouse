@@ -1,3 +1,36 @@
+## 6.0.0-dev.89 (2026-03-13)
+
+### 🚀 Features
+
+- **reactor:** add a DocumentIntegrityService with keyframe/snapshot validation and rebuild, a new integrity inspector UI component, and IKeyframeStore.listKeyframes/deleteKeyframes extensions ([7baebff7f](https://github.com/powerhouse-inc/powerhouse/commit/7baebff7f))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
+## 6.0.0-dev.88 (2026-03-12)
+
+### 🚀 Features
+
+- reactor-hypercore example ([d5557973a](https://github.com/powerhouse-inc/powerhouse/commit/d5557973a))
+- **reactor:** massive refactor to write model which attempts to unify txns with execution context ([622c009c3](https://github.com/powerhouse-inc/powerhouse/commit/622c009c3))
+- **reactor-browser:** replace renown provider with basic component and useInitRenown hook ([09f995b02](https://github.com/powerhouse-inc/powerhouse/commit/09f995b02))
+
+### 🩹 Fixes
+
+- restore missing SWITCHBOARD_PATH in switchboard-pyroscope.sh ([669f19e93](https://github.com/powerhouse-inc/powerhouse/commit/669f19e93))
+- resolve high priority issues in profiling scripts ([79b6675e2](https://github.com/powerhouse-inc/powerhouse/commit/79b6675e2))
+- **profiling:** fixing build issues ([5fc824143](https://github.com/powerhouse-inc/powerhouse/commit/5fc824143))
+- **reactor:** fire event outside of txn ([7616a6f02](https://github.com/powerhouse-inc/powerhouse/commit/7616a6f02))
+- **reactor:** fixed a caching issue that could occur if commit failed ([d7fd3661b](https://github.com/powerhouse-inc/powerhouse/commit/d7fd3661b))
+- **reactor-hypercore:** a range of fixes for edge cases in hypercore ([8d60c4178](https://github.com/powerhouse-inc/powerhouse/commit/8d60c4178))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan
+- Samuel Hawksby-Robinson @Samyoul
+
 ## 6.0.0-dev.87 (2026-03-12)
 
 ### 🩹 Fixes

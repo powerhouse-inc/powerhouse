@@ -1,3 +1,25 @@
+## 6.0.0-dev.89 (2026-03-13)
+
+### 🚀 Features
+
+- **reactor:** add a DocumentIntegrityService with keyframe/snapshot validation and rebuild, a new integrity inspector UI component, and IKeyframeStore.listKeyframes/deleteKeyframes extensions ([7baebff7f](https://github.com/powerhouse-inc/powerhouse/commit/7baebff7f))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
+## 6.0.0-dev.88 (2026-03-12)
+
+### 🚀 Features
+
+- **reactor-browser:** replace renown provider with basic component and useInitRenown hook ([09f995b02](https://github.com/powerhouse-inc/powerhouse/commit/09f995b02))
+- reactor-hypercore example ([d5557973a](https://github.com/powerhouse-inc/powerhouse/commit/d5557973a))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan
+
 ## 6.0.0-dev.87 (2026-03-12)
 
 ### 🩹 Fixes
