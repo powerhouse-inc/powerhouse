@@ -1,3 +1,13 @@
+## 6.0.0-dev.89 (2026-03-13)
+
+### 🚀 Features
+
+- **reactor:** add a DocumentIntegrityService with keyframe/snapshot validation and rebuild, a new integrity inspector UI component, and IKeyframeStore.listKeyframes/deleteKeyframes extensions ([7baebff7f](https://github.com/powerhouse-inc/powerhouse/commit/7baebff7f))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
 ## 6.0.0-dev.88 (2026-03-12)
 
 ### 🚀 Features
