@@ -518,6 +518,9 @@ async function main() {
     mkdirSync(dirname(outputPath), { recursive: true });
     console.log(`Writing output to: ${outputPath}`);
     outputStream = createWriteStream(outputPath);
+    outputStream.on("error", (err) => {
+      console.error(`Output file write error: ${err.message}`);
+    });
 
     // Buffer that simulates terminal \r behavior: carriage return resets
     // the current line so only the final version is written to the file.
