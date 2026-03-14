@@ -1,3 +1,32 @@
+## 6.0.0-dev.90 (2026-03-14)
+
+### 🚀 Features
+
+- add OpenTelemetry metrics support to profiling scripts ([8b4687d2b](https://github.com/powerhouse-inc/powerhouse/commit/8b4687d2b))
+- add conditional --otel flag to switchboard-pyroscope.sh ([f85c9c63d](https://github.com/powerhouse-inc/powerhouse/commit/f85c9c63d))
+- **reactor-browser:** controller fetches resulting state and operations on single query ([7165ea990](https://github.com/powerhouse-inc/powerhouse/commit/7165ea990))
+
+### 🩹 Fixes
+
+- address code review issues in opentelemetry-instrumentation-reactor ([72c751c67](https://github.com/powerhouse-inc/powerhouse/commit/72c751c67))
+- address further code review issues in profiling scripts ([8f0bc6bfb](https://github.com/powerhouse-inc/powerhouse/commit/8f0bc6bfb))
+- remove hardcoded platform from postgres service in docker-compose ([8d8ce625e](https://github.com/powerhouse-inc/powerhouse/commit/8d8ce625e))
+- use exact arg matching for --otel detection in run-reactor-direct.sh ([07ff552aa](https://github.com/powerhouse-inc/powerhouse/commit/07ff552aa))
+- align P1 and P99 PromQL window sizes in README ([26adb5068](https://github.com/powerhouse-inc/powerhouse/commit/26adb5068))
+- correct --otel argument parsing in profiling shell scripts ([829dd4f4e](https://github.com/powerhouse-inc/powerhouse/commit/829dd4f4e))
+- remove remaining non-null assertions in registerObservableGauges ([05a0df1c7](https://github.com/powerhouse-inc/powerhouse/commit/05a0df1c7))
+- reverse OTel teardown order to preserve final gauge observations ([16e10c2a8](https://github.com/powerhouse-inc/powerhouse/commit/16e10c2a8))
+- properly remove observable gauge callbacks on stop() ([35164b411](https://github.com/powerhouse-inc/powerhouse/commit/35164b411))
+- add timeout to async queueDepth observable callback ([c9d505a71](https://github.com/powerhouse-inc/powerhouse/commit/c9d505a71))
+- clear stale timeout in queueDepth observable callback ([61a89e9e0](https://github.com/powerhouse-inc/powerhouse/commit/61a89e9e0))
+- handle createWriteStream errors in reactor-direct.ts ([18ca236de](https://github.com/powerhouse-inc/powerhouse/commit/18ca236de))
+- **reactor-api:** added missing zod validator ([5c8ae345a](https://github.com/powerhouse-inc/powerhouse/commit/5c8ae345a))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Samuel Hawksby-Robinson @Samyoul
+
 ## 6.0.0-dev.89 (2026-03-13)
 
 ### 🚀 Features
