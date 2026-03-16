@@ -68,11 +68,6 @@ const operationValidators: OperationValidators = {
       PHDocumentResultPageDTO.parse(data.findDocuments as PhDocumentResultPage);
     }
   },
-  GetDocumentWithOperations: (data) => {
-    if (data.document) {
-      DocumentWithChildrenDTO.parse(data.document);
-    }
-  },
   GetDocumentOperations: (data) => {
     if (data.documentOperations) {
       OperationResultPageDTO.parse(data.documentOperations);
