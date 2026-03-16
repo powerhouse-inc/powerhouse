@@ -1,5 +1,5 @@
 {
-  "name": "versioned-documents",
+  "name": "@powerhousedao/versioned-documents",
   "version": "5.1.0-dev.26",
   "license": "AGPL-3.0-only",
   "type": "module",
@@ -46,10 +46,6 @@
       "import": "./dist/manifest.js",
       "types": "./dist/manifest.d.ts"
     },
-    "./vetra-drive-app": {
-      "import": "./dist/editors/vetra-drive-app/index.js",
-      "types": "./dist/editors/vetra-drive-app/index.d.ts"
-    },
     "./style.css": "./dist/style.css"
   },
   "sideEffects": false,
@@ -63,8 +59,9 @@
     "test:document-models": "vitest run document-models",
     "test:editors": "vitest run editors",
     "test:processors": "vitest run processors",
+    "build": "ph-cli build && pnpm build:css",
     "generate": "ph-cli generate",
-    "connect": "vite",
+    "connect": "ph-cli connect",
     "reactor": "ph-cli reactor",
     "service": "ph-cli service",
     "migrate": "ph-cli migrate",
@@ -76,27 +73,23 @@
     "@powerhousedao/common": "workspace:*",
     "@powerhousedao/design-system": "workspace:*",
     "document-model": "workspace:*",
-    "zod": "catalog:"
+    "zod": "catalog:",
+    "@powerhousedao/reactor-browser": "workspace:*",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "@powerhousedao/connect": "workspace:*"
   },
   "devDependencies": {
     "@tailwindcss/cli": "catalog:",
     "tailwindcss": "catalog:",
     "@powerhousedao/ph-cli": "workspace:*",
-    "@powerhousedao/reactor-browser": "workspace:*",
     "@testing-library/jest-dom": "^6.9.1",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "@vitejs/plugin-react": "catalog:",
-    "eslint": "^9.22.0",
-    "react": "catalog:",
-    "react-dom": "catalog:",
     "vite": "catalog:",
     "vitest": "catalog:"
-  },
-  "peerDependencies": {
-    "react": ">=19.0.0",
-    "react-dom": ">=19.0.0"
   },
   "description": ""
 }

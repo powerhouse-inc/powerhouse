@@ -1,6 +1,6 @@
 import type { Action, PHDocument, UpgradeTransition } from "document-model";
-import type { TodoPHState as StateV1 } from "versioned-documents/document-models/todo/v1";
-import type { TodoPHState as StateV2 } from "versioned-documents/document-models/todo/v2";
+import type { TodoPHState as StateV1 } from "document-models/todo/v1";
+import type { TodoPHState as StateV2 } from "document-models/todo/v2";
 
 function upgradeReducer(
   document: PHDocument<StateV1>,

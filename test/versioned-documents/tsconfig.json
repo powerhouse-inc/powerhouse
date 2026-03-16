@@ -11,7 +11,33 @@
       "dom",
       "dom.iterable"
     ],
-    "sourceMap": false
+    "sourceMap": false,
+    "paths": {
+      "document-models": [
+        "./document-models/index.ts"
+      ],
+      "document-models/*": [
+        "./document-models/*/index.ts"
+      ],
+      "editors": [
+        "./editors/index.ts"
+      ],
+      "editors/*": [
+        "./editors/*/index.ts"
+      ],
+      "processors": [
+        "./processors/index.ts"
+      ],
+      "processors/*": [
+        "./processors/*/index.ts"
+      ],
+      "subgraphs": [
+        "./subgraphs/index.ts"
+      ],
+      "subgraphs/*": [
+        "./subgraphs/*/index.ts"
+      ]
+    }
   },
   "include": [
     "**/*",
@@ -23,6 +49,9 @@
     ".ph"
   ],
   "references": [
+    {
+      "path": "../../apps/connect"
+    },
     {
       "path": "../../clis/ph-cli"
     },

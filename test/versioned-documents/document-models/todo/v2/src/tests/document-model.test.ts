@@ -7,17 +7,17 @@
  * - change it by adding new tests or modifying the existing ones
  */
 
-import { describe, it, expect } from "vitest";
 import {
-  utils,
+  assertIsTodoDocument,
+  assertIsTodoState,
   initialGlobalState,
   initialLocalState,
-  todoDocumentType,
   isTodoDocument,
-  assertIsTodoDocument,
   isTodoState,
-  assertIsTodoState,
-} from "versioned-documents/document-models/todo/v2";
+  todoDocumentType,
+  utils,
+} from "document-models/todo/v2";
+import { describe, expect, it } from "vitest";
 import { ZodError } from "zod";
 
 describe("Todo Document Model", () => {

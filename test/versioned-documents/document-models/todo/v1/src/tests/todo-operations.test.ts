@@ -9,7 +9,7 @@ import {
   updateTodo,
   UpdateTodoInputSchema,
   utils,
-} from "versioned-documents/document-models/todo/v1";
+} from "document-models/todo/v1";
 import { describe, expect, it } from "vitest";
 
 describe("TodoOperationsOperations", () => {

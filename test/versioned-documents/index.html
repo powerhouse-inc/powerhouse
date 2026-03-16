@@ -15,18 +15,11 @@
       href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap"
       rel="stylesheet"
     />
-    <style>
-      @import "tailwindcss";
-      @import "@powerhousedao/design-system/style.css";
-      @import "@powerhousedao/document-engineering/style.css";
-      @source "./node_modules/@powerhousedao/connect";
-    </style>
   </head>
   <body>
     <div id="root"></div>
-    <script type="module">
-      // initializes Connect on '<div id="root"></div>'
-      import "@powerhousedao/connect/main.js";
+    <link href="/style.css" rel="stylesheet">
+    <script type="module" src="/main.tsx">
     </script>
   </body>
 </html>

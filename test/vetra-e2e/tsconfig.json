@@ -21,7 +21,13 @@
       ],
       "test-package-vetra/processors/*": [
         "./processors/*/index.ts"
-      ]
+      ],
+      "test-package-vetra/subgraphs": [
+        "./subgraphs/index.ts"
+      ],
+      "test-package-vetra/subgraphs/*": [
+        "./subgraphs/*/index.ts"
+      ],
     }
   },
   "references": [

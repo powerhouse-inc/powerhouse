@@ -2636,12 +2636,24 @@ importers:
       '@powerhousedao/common':
         specifier: workspace:*
         version: link:../../packages/common
+      '@powerhousedao/connect':
+        specifier: workspace:*
+        version: link:../../apps/connect
       '@powerhousedao/design-system':
         specifier: workspace:*
         version: link:../../packages/design-system
+      '@powerhousedao/reactor-browser':
+        specifier: workspace:*
+        version: link:../../packages/reactor-browser
       document-model:
         specifier: link:../../packages/document-model
         version: link:../../packages/document-model
+      react:
+        specifier: 'catalog:'
+        version: 19.2.4
+      react-dom:
+        specifier: 'catalog:'
+        version: 19.2.4(react@19.2.4)
       zod:
         specifier: 'catalog:'
         version: 4.3.6
@@ -2649,9 +2661,6 @@ importers:
       '@powerhousedao/ph-cli':
         specifier: workspace:*
         version: link:../../clis/ph-cli
-      '@powerhousedao/reactor-browser':
-        specifier: workspace:*
-        version: link:../../packages/reactor-browser
       '@tailwindcss/cli':
         specifier: 'catalog:'
         version: 4.1.18
@@ -2670,15 +2679,6 @@ importers:
       '@vitejs/plugin-react':
         specifier: 'catalog:'
         version: 5.1.4(vite@7.3.1(@types/node@25.2.3)(jiti@2.6.1)(lightningcss@1.31.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2))
-      eslint:
-        specifier: ^9.22.0
-        version: 9.39.3(jiti@2.6.1)
-      react:
-        specifier: 'catalog:'
-        version: 19.2.4
-      react-dom:
-        specifier: 'catalog:'
-        version: 19.2.4(react@19.2.4)
       tailwindcss:
         specifier: 'catalog:'
         version: 4.1.18

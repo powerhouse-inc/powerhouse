@@ -11,7 +11,7 @@ import {
   updateTodo,
   UpdateTodoInputSchema,
   utils,
-} from "versioned-documents/document-models/todo/v2";
+} from "document-models/todo/v2";
 import { describe, expect, it } from "vitest";
 
 describe("TodoOperationsOperations", () => {
