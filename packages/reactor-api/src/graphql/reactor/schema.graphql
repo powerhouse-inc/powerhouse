@@ -343,6 +343,11 @@ input TouchChannelInput {
   sinceTimestampUtcMs: String!
 }
 
+type TouchChannelResult {
+  success: Boolean!
+  ackOrdinal: Int!
+}
+
 type Query {
   # Get document models for a namespace
   documentModels(
@@ -451,7 +456,7 @@ type Mutation {
   deleteDocuments(identifiers: [String!]!, propagate: PropagationMode): Boolean!
 
   # Touch (create or update) a channel for sync
-  touchChannel(input: TouchChannelInput!): Boolean!
+  touchChannel(input: TouchChannelInput!): TouchChannelResult!
 
   # Push sync envelopes to a channel
   pushSyncEnvelopes(envelopes: [SyncEnvelopeInput!]!): Boolean!

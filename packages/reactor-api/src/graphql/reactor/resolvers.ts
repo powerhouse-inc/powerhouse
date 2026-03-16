@@ -802,11 +802,14 @@ export async function touchChannel(
       sinceTimestampUtcMs: string;
     };
   },
-): Promise<boolean> {
+): Promise<{ success: boolean; ackOrdinal: number }> {
   try {
-    syncManager.getById(args.input.id);
+    const remote = syncManager.getById(args.input.id);
 
-    return true;
+    return {
+      success: true,
+      ackOrdinal: remote.channel.inbox.ackOrdinal,
+    };
   } catch {
     // getById will throw if the remote does not exist
   }
@@ -839,7 +842,7 @@ export async function touchChannel(
     );
   }
 
-  return true;
+  return { success: true, ackOrdinal: 0 };
 }
 
 /**
