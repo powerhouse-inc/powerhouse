@@ -2,6 +2,14 @@ import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
+  ssr: {
+    resolve: {
+      conditions: ["source"],
+    },
+  },
+  resolve: {
+    conditions: ["source"],
+  },
   test: {
     include: [
       "test/**/*.test.ts",

@@ -17,7 +17,13 @@ export default defineConfig({
     passWithNoTests: true,
   },
   plugins: [react()],
+  ssr: {
+    resolve: {
+      conditions: ["source"],
+    },
+  },
   resolve: {
+    conditions: ["source"],
     alias: {
       "versioned-documents": path.resolve(__dirname, "."),
     },
