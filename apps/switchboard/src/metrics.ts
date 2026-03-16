@@ -15,9 +15,9 @@ export function initMetricsFromEnv(
   const endpoint = env.OTEL_EXPORTER_OTLP_ENDPOINT;
   if (!endpoint) return undefined;
 
-  const exportIntervalMillis = env.OTEL_METRIC_EXPORT_INTERVAL
-    ? parseInt(env.OTEL_METRIC_EXPORT_INTERVAL, 10)
-    : 5_000;
+  const parsed = parseInt(env.OTEL_METRIC_EXPORT_INTERVAL ?? "", 10);
+  const exportIntervalMillis =
+    Number.isFinite(parsed) && parsed > 0 ? parsed : 5_000;
 
   logger.info(`Initializing OpenTelemetry metrics exporter at: ${endpoint}`);
   const meterProvider = new MeterProvider({
