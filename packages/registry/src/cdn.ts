@@ -5,6 +5,8 @@ import { pipeline } from "node:stream/promises";
 import { extract } from "tar";
 
 export class CdnCache {
+  #extractionLocks = new Map<string, Promise<void>>();
+
   constructor(
     private registryUrl: string,
     private cdnCachePath: string,
@@ -18,28 +20,45 @@ export class CdnCache {
     if (!version) return null;
 
     const versionDir = path.join(this.cdnCachePath, packageName, version);
-    const cached = path.join(versionDir, filePath);
-    if (!this.isSafePath(cached)) return null;
 
-    if (!fs.existsSync(cached)) {
-      await this.extractTarball(packageName, version);
-    }
+    // Check all possible paths before attempting extraction
+    const resolved = this.#resolveFile(versionDir, filePath);
+    if (resolved) return resolved;
 
+    // File not found in any location — extract tarball and try again
+    await this.#extractWithLock(packageName, version);
+
+    return this.#resolveFile(versionDir, filePath);
+  }
+
+  #resolveFile(versionDir: string, filePath: string): string | null {
     // Check direct path first, then fall back to cdn/ and dist/cdn/ subdirectories
     // (npm tarballs contain files under dist/, bun bundles go to cdn/)
-    if (fs.existsSync(cached)) return cached;
+    const candidates = [
+      path.join(versionDir, filePath),
+      path.join(versionDir, "cdn", filePath),
+      path.join(versionDir, "dist", "cdn", filePath),
+      path.join(versionDir, "dist", filePath),
+    ];
 
-    const cdnRootPath = path.join(versionDir, "cdn", filePath);
-    if (this.isSafePath(cdnRootPath) && fs.existsSync(cdnRootPath))
-      return cdnRootPath;
-
-    const cdnPath = path.join(versionDir, "dist", "cdn", filePath);
-    if (this.isSafePath(cdnPath) && fs.existsSync(cdnPath)) return cdnPath;
-
-    const distPath = path.join(versionDir, "dist", filePath);
-    if (this.isSafePath(distPath) && fs.existsSync(distPath)) return distPath;
+    for (const candidate of candidates) {
+      if (this.isSafePath(candidate) && fs.existsSync(candidate))
+        return candidate;
+    }
 
     return null;
+  }
+
+  async #extractWithLock(packageName: string, version: string): Promise<void> {
+    const key = `${packageName}@${version}`;
+    const existing = this.#extractionLocks.get(key);
+    if (existing) return existing;
+
+    const promise = this.extractTarball(packageName, version).finally(() => {
+      this.#extractionLocks.delete(key);
+    });
+    this.#extractionLocks.set(key, promise);
+    return promise;
   }
 
   private getLatestCachedVersion(packageName: string): string | null {
