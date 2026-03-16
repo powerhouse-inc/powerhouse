@@ -11,7 +11,7 @@ import type {
   DocumentModelGlobalState,
   DocumentModelModule,
 } from "document-model";
-import { type DocumentNode, Kind, print } from "graphql";
+import { type DocumentNode, Kind, parse, print } from "graphql";
 import { gql } from "graphql-tag";
 import { GraphQLJSONObject } from "graphql-type-json";
 
@@ -291,6 +291,169 @@ function extractInputTypeDefinitions(
   }
   if (matches.length === 0) return "";
   return matches.join("\n\n");
+}
+
+/**
+ * AST type node shape for recursive type conversion.
+ */
+type GraphQLTypeNode = {
+  kind: Kind;
+  name?: { value: string };
+  type?: GraphQLTypeNode;
+};
+
+/**
+ * Extract the root state type name from a scope's GraphQL schema.
+ * Uses the naming convention: {DocumentName}State for global,
+ * {DocumentName}{PascalScope}State for other scopes (e.g., DocumentDriveLocalState).
+ * Falls back to the last ObjectTypeDefinition (root types are conventionally last).
+ */
+function extractRootTypeName(
+  schema: string,
+  documentName: string,
+  scopeName: string,
+): string | null {
+  try {
+    const ast = parse(schema);
+
+    // Try conventions:
+    // 1. {DocumentName}State for global, {DocumentName}{Scope}State otherwise
+    // 2. {DocumentName}GlobalState (DocumentModel uses this variant)
+    const scopeSuffix = scopeName === "global" ? "" : pascalCase(scopeName);
+    const candidates = [
+      `${documentName}${scopeSuffix}State`,
+      `${documentName}${pascalCase(scopeName)}State`,
+    ];
+
+    let lastObjectType: string | null = null;
+    for (const def of ast.definitions) {
+      if (def.kind === Kind.OBJECT_TYPE_DEFINITION) {
+        if (candidates.includes(def.name.value)) {
+          return def.name.value;
+        }
+        lastObjectType = def.name.value;
+      }
+    }
+
+    // Fallback: last object type (root state types are defined last by convention)
+    return lastObjectType;
+  } catch {
+    // ignore parse errors
+  }
+  return null;
+}
+
+/**
+ * Convert a GraphQL output type AST node to an optional input type string.
+ * Strips non-null markers and converts object type references to Input suffix.
+ */
+function convertTypeNodeToInput(
+  typeNode: GraphQLTypeNode,
+  objectNames: Set<string>,
+  unionNames: Set<string>,
+  interfaceNames: Set<string>,
+): string {
+  if (typeNode.kind === Kind.NON_NULL_TYPE && typeNode.type) {
+    return convertTypeNodeToInput(
+      typeNode.type,
+      objectNames,
+      unionNames,
+      interfaceNames,
+    );
+  }
+  if (typeNode.kind === Kind.LIST_TYPE && typeNode.type) {
+    const inner = convertTypeNodeToInput(
+      typeNode.type,
+      objectNames,
+      unionNames,
+      interfaceNames,
+    );
+    return `[${inner}]`;
+  }
+  if (typeNode.kind === Kind.NAMED_TYPE && typeNode.name) {
+    const name = typeNode.name.value;
+    if (objectNames.has(name)) return `${name}Input`;
+    if (unionNames.has(name) || interfaceNames.has(name)) return "JSONObject";
+    return name;
+  }
+  return "JSONObject";
+}
+
+/**
+ * Generate GraphQL input type definitions from a state schema string.
+ * Converts output type definitions to input types with all fields optional.
+ * - Object type references get Input suffix
+ * - Union/interface references become JSONObject
+ * - Enums and scalars remain unchanged
+ */
+function generateStateInputTypes(
+  stateSchema: string,
+  excludeTypeNames?: Set<string>,
+): string {
+  if (!stateSchema || !stateSchema.trim()) return "";
+
+  let ast;
+  try {
+    ast = parse(stateSchema);
+  } catch {
+    return "";
+  }
+
+  const enumNames = new Set<string>();
+  const unionNames = new Set<string>();
+  const interfaceNames = new Set<string>();
+  const objectNames = new Set<string>();
+  const existingInputNames = new Set<string>();
+
+  for (const def of ast.definitions) {
+    switch (def.kind) {
+      case Kind.ENUM_TYPE_DEFINITION:
+        enumNames.add(def.name.value);
+        break;
+      case Kind.UNION_TYPE_DEFINITION:
+        unionNames.add(def.name.value);
+        break;
+      case Kind.INTERFACE_TYPE_DEFINITION:
+        interfaceNames.add(def.name.value);
+        break;
+      case Kind.OBJECT_TYPE_DEFINITION:
+        objectNames.add(def.name.value);
+        break;
+      case Kind.INPUT_OBJECT_TYPE_DEFINITION:
+        existingInputNames.add(def.name.value);
+        break;
+    }
+  }
+
+  const inputTypes: string[] = [];
+
+  for (const def of ast.definitions) {
+    if (def.kind !== Kind.OBJECT_TYPE_DEFINITION) continue;
+    // Skip if an input type with the same name already exists in the schema
+    // or in operation schemas (to avoid duplicates with moduleSchemas)
+    const inputName = `${def.name.value}Input`;
+    if (existingInputNames.has(inputName)) continue;
+    if (excludeTypeNames?.has(inputName)) continue;
+    const fields = def.fields ?? [];
+    if (fields.length === 0) continue;
+
+    const inputFields = fields.map((field) => {
+      const fieldName = field.name.value;
+      const fieldType = convertTypeNodeToInput(
+        field.type as GraphQLTypeNode,
+        objectNames,
+        unionNames,
+        interfaceNames,
+      );
+      return `  ${fieldName}: ${fieldType}`;
+    });
+
+    inputTypes.push(
+      `input ${def.name.value}Input {\n${inputFields.join("\n")}\n}`,
+    );
+  }
+
+  return inputTypes.join("\n\n");
 }
 
 /**
@@ -674,8 +837,59 @@ function generateNewApiSchema(
     }
   `;
 
+  // Generate initial state input types for each scope
+  let initialStateInputSchema = "";
+  if (specification) {
+    const scopeFields: string[] = [];
+    const generatedInputTypeParts: string[] = [];
+
+    for (const [scopeName, scopeState] of Object.entries(specification.state)) {
+      const schema = (scopeState as { schema?: string }).schema ?? "";
+      if (hasValidSchema(schema)) {
+        const rootTypeName = extractRootTypeName(
+          schema,
+          documentName,
+          scopeName,
+        );
+        if (!rootTypeName) {
+          scopeFields.push(`  ${scopeName}: JSONObject`);
+          continue;
+        }
+        const scopeInputTypes = generateStateInputTypes(
+          schema,
+          new Set(allTypeNames),
+        );
+        if (!scopeInputTypes) {
+          scopeFields.push(`  ${scopeName}: JSONObject`);
+          continue;
+        }
+        const prefixedScopeInputTypes = applyGraphQLTypePrefixes(
+          scopeInputTypes,
+          documentName,
+          allTypeNames,
+        );
+        scopeFields.push(
+          `  ${scopeName}: ${documentName}_${rootTypeName}Input`,
+        );
+        generatedInputTypeParts.push(prefixedScopeInputTypes);
+      } else {
+        scopeFields.push(`  ${scopeName}: JSONObject`);
+      }
+    }
+
+    if (scopeFields.length > 0) {
+      const inputTypeDefs = generatedInputTypeParts.join("\n\n");
+      const wrapper = `input ${documentName}_InitialStateInput {\n${scopeFields.join("\n")}\n}`;
+      initialStateInputSchema = inputTypeDefs
+        ? `${inputTypeDefs}\n\n${wrapper}`
+        : wrapper;
+    }
+  }
+
   // Mutations: sync and async versions
-  const createDocumentMutation = `${documentName}_createDocument(name: String!, parentIdentifier: String): ${documentName}MutationResult!`;
+  const createDocumentMutation = initialStateInputSchema
+    ? `${documentName}_createDocument(name: String!, parentIdentifier: String, slug: String, initialState: ${documentName}_InitialStateInput): ${documentName}MutationResult!`
+    : `${documentName}_createDocument(name: String!, parentIdentifier: String): ${documentName}MutationResult!`;
   const createEmptyDocumentMutation = `${documentName}_createEmptyDocument(parentIdentifier: String): ${documentName}MutationResult!`;
 
   const operationMutations =
@@ -750,6 +964,15 @@ function generateNewApiSchema(
     Input Types from State Schema
     """
     ${prefixedStateInputTypes}`
+        : ""
+    }
+
+    ${
+      initialStateInputSchema
+        ? `"""
+    Input Types for Initial State
+    """
+    ${initialStateInputSchema}`
         : ""
     }
 

@@ -8,6 +8,7 @@ import {
 import { BaseSubgraph } from "./base-subgraph.js";
 import { toGqlPhDocument } from "./reactor/adapters.js";
 import {
+  createDocumentWithInitialState as createDocumentWithInitialStateResolver,
   createEmptyDocument as createEmptyDocumentResolver,
   documentChildren as documentChildrenResolver,
   documentParents as documentParentsResolver,
@@ -269,13 +270,18 @@ export class DocumentModelSubgraph extends BaseSubgraph {
         },
       },
       Mutation: {
-        // Uses shared createEmptyDocumentResolver from reactor/resolvers.ts
+        // Uses shared createEmptyDocumentResolver or createDocumentWithInitialStateResolver
         [`${documentName}_createDocument`]: async (
           _: unknown,
-          args: { name: string; parentIdentifier?: string },
+          args: {
+            name: string;
+            parentIdentifier?: string;
+            slug?: string;
+            initialState?: Record<string, Record<string, unknown>>;
+          },
           ctx: Context,
         ) => {
-          const { parentIdentifier, name } = args;
+          const { parentIdentifier, name, slug, initialState } = args;
 
           if (parentIdentifier) {
             await this.assertCanWrite(parentIdentifier, ctx);
@@ -291,16 +297,19 @@ export class DocumentModelSubgraph extends BaseSubgraph {
             );
           }
 
-          // Use shared resolver function - passes name so that
-          // createDocumentInDrive can set it on the drive node atomically
-          const createdDoc = await createEmptyDocumentResolver(
-            this.reactorClient,
-            {
+          let createdDoc;
+          if (initialState) {
+            createdDoc = await createDocumentWithInitialStateResolver(
+              this.reactorClient,
+              { documentType, parentIdentifier, name, slug, initialState },
+            );
+          } else {
+            createdDoc = await createEmptyDocumentResolver(this.reactorClient, {
               documentType,
               parentIdentifier,
               name,
-            },
-          );
+            });
+          }
 
           // Auto-ownership: set creator as document owner
           if (
@@ -315,9 +324,9 @@ export class DocumentModelSubgraph extends BaseSubgraph {
             );
           }
 
-          // If name was provided but parent was NOT a drive (so name wasn't
-          // set during creation), apply it via SET_NAME action
-          if (name && createdDoc.name !== name) {
+          // Name fallback via SET_NAME (only for non-initialState path,
+          // since initialState path sets name on header before creation)
+          if (!initialState && name && createdDoc.name !== name) {
             const updatedDoc = await this.reactorClient.execute(
               createdDoc.id,
               "main",

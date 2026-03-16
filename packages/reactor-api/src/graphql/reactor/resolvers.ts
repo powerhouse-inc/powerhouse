@@ -511,6 +511,100 @@ export async function createEmptyDocument(
   }
 }
 
+export async function createDocumentWithInitialState(
+  reactorClient: IReactorClient,
+  args: {
+    documentType: string;
+    parentIdentifier?: string | null;
+    name?: string | null;
+    slug?: string | null;
+    initialState: Record<string, Record<string, unknown>>;
+  },
+): Promise<ReturnType<typeof toGqlPhDocument>> {
+  const parentIdentifier = fromInputMaybe(args.parentIdentifier);
+  const name = fromInputMaybe(args.name);
+  const slug = fromInputMaybe(args.slug);
+
+  let module: DocumentModelModule;
+  try {
+    module = await reactorClient.getDocumentModelModule(args.documentType);
+  } catch (error) {
+    throw new GraphQLError(
+      `Document model not found for type ${args.documentType}: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+  }
+
+  const document = module.utils.createDocument();
+
+  // Only merge specification-defined scopes (e.g., global, local).
+  // Protected scopes like "auth" and "document" are excluded.
+  const allowedScopes = new Set(
+    Object.keys(module.documentModel.global.specifications.at(-1)?.state ?? {}),
+  );
+  const state = document.state as Record<string, Record<string, unknown>>;
+  for (const [scope, scopeState] of Object.entries(args.initialState)) {
+    if (allowedScopes.has(scope) && scope in state) {
+      state[scope] = { ...state[scope], ...scopeState };
+    }
+  }
+
+  if (name) {
+    document.header.name = name;
+  }
+  if (slug) {
+    document.header.slug = slug;
+  }
+
+  let result: PHDocument;
+  if (parentIdentifier) {
+    let parent: PHDocument;
+    try {
+      parent = await reactorClient.get(parentIdentifier);
+    } catch (error) {
+      throw new GraphQLError(
+        `Parent document not found: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
+    }
+
+    if (parent.header.documentType === DRIVE_DOCUMENT_TYPE) {
+      try {
+        result = await reactorClient.createDocumentInDrive(
+          parentIdentifier,
+          document,
+        );
+      } catch (error) {
+        throw new GraphQLError(
+          `Failed to create document in drive: ${error instanceof Error ? error.message : "Unknown error"}`,
+        );
+      }
+    } else {
+      try {
+        result = await reactorClient.create(document, parentIdentifier);
+      } catch (error) {
+        throw new GraphQLError(
+          `Failed to create document with parent: ${error instanceof Error ? error.message : "Unknown error"}`,
+        );
+      }
+    }
+  } else {
+    try {
+      result = await reactorClient.create(document);
+    } catch (error) {
+      throw new GraphQLError(
+        `Failed to create document: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
+    }
+  }
+
+  try {
+    return toGqlPhDocument(result);
+  } catch (error) {
+    throw new GraphQLError(
+      `Failed to convert created document to GraphQL: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
+  }
+}
+
 export async function mutateDocument(
   reactorClient: IReactorClient,
   args: {
