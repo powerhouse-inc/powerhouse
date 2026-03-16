@@ -9,7 +9,7 @@ import { childLogger } from "document-drive";
 
 const logger = childLogger(["switchboard", "metrics"]);
 
-export function initMetricsFromEnv(
+export function setupMetricsFromEnv(
   env: typeof process.env,
 ): MeterProvider | undefined {
   const endpoint = env.OTEL_EXPORTER_OTLP_ENDPOINT;
@@ -21,7 +21,9 @@ export function initMetricsFromEnv(
 
   logger.info(`Initializing OpenTelemetry metrics exporter at: ${endpoint}`);
   const meterProvider = new MeterProvider({
-    resource: new Resource({ "service.name": "switchboard" }),
+    resource: new Resource({
+      "service.name": env.OTEL_SERVICE_NAME ?? "switchboard",
+    }),
     readers: [
       new PeriodicExportingMetricReader({
         exporter: new OTLPMetricExporter({

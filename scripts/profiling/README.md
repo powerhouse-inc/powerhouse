@@ -496,5 +496,6 @@ Switchboard reads the following env vars on startup:
 | ----------------------------- | ---------------------------- | --------------------------------------------------------------------------- |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | _(unset — metrics disabled)_ | OTLP HTTP endpoint. The `--otel` flag sets this to `http://localhost:4318`. |
 | `OTEL_METRIC_EXPORT_INTERVAL` | `5000`                       | Export interval in milliseconds.                                            |
+| `OTEL_SERVICE_NAME`           | `switchboard`                | Service name attached to all exported metrics.                              |
 
 Combine with `--runtime node` and Pyroscope for flame graphs alongside metrics.
