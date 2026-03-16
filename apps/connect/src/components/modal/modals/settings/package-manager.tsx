@@ -10,14 +10,16 @@ export const ConnectPackageManager: React.FC = () => {
     useRegistryPackages();
 
   async function handleInstall(packageName: string) {
-    try {
-      await packageManager?.addPackage(packageName);
+    if (!packageManager) return;
+
+    const result = await packageManager.addPackage(packageName);
+    if (result.type === "success") {
       updateRegistryPackageStatus(packageName, "registry-install");
       toast(`Package "${packageName}" installed successfully`, {
         type: "connect-success",
       });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Unknown error";
+    } else {
+      const message = result.error.message;
       toast(`Failed to install "${packageName}": ${message}`, {
         type: "error",
       });
@@ -25,8 +27,11 @@ export const ConnectPackageManager: React.FC = () => {
   }
 
   function handleUninstall(packageName: string) {
+    if (!packageManager) return;
     try {
-      packageManager?.removePackage(packageName);
+      packageManager.removePackage(packageName);
+      updateRegistryPackageStatus(packageName, "available");
+
       toast(`Package "${packageName}" uninstalled successfully`, {
         type: "connect-success",
       });
