@@ -3,7 +3,7 @@
   "compilerOptions": {
     "outDir": "./dist",
     "resolveJsonModule": true,
-        "paths": {
+    "paths": {
       "test-package-vetra/document-models": [
         "./document-models/index.ts"
       ],
@@ -57,9 +57,6 @@
     },
     {
       "path": "../../packages/shared"
-    },
-    {
-      "path": "../../packages/vetra"
     },
     {
       "path": "../e2e-utils"

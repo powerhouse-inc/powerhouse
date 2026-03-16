@@ -10,6 +10,7 @@ import {
   type IPackageListerUnsubscribe,
   type IPackageManager,
 } from "@powerhousedao/reactor-browser";
+import * as vetraVetraPackage from "@powerhousedao/vetra";
 import {
   type DocumentModelLib,
   type DocumentModelModule,
@@ -58,6 +59,8 @@ export class BrowserPackageManager implements IPackageManager {
     }
     const commonPackageWithMeta = this.#loadCommonPackage();
     this.#registerPackage(commonPackageWithMeta);
+    const vetraVetraPackageWithMeta = this.#loadVetraPackage();
+    this.#registerPackage(vetraVetraPackageWithMeta);
     if (localPackage) {
       this.#localPackage = localPackage;
       this.#registerPackage({
@@ -75,7 +78,11 @@ export class BrowserPackageManager implements IPackageManager {
 
   getPackageSource(packageName: string) {
     // check vs the constant name we use for common packages
-    if (packageName === COMMON_PACKAGE_NAME) return "common";
+    if (
+      packageName === COMMON_PACKAGE_NAME ||
+      packageName === vetraVetraPackage.manifest.name
+    )
+      return "common";
     // check if the package has the same name as the local project
     if (packageName === this.#localPackage?.name) return "project";
     const packageMeta = this.#storage.get(packageName);
@@ -171,6 +178,21 @@ export class BrowserPackageManager implements IPackageManager {
       },
       upgradeManifests: [],
     };
+    return {
+      name,
+      importUrl,
+      stylesheetUrl,
+      loadedPackage,
+    };
+  }
+
+  #loadVetraPackage(): PackageWithMeta {
+    const name = vetraVetraPackage.manifest.name;
+    const importUrl = null;
+    const stylesheetUrl = null;
+    const loadedPackage: VetraPackage = convertLegacyLibToVetraPackage(
+      vetraVetraPackage as DocumentModelLib,
+    );
     return {
       name,
       importUrl,

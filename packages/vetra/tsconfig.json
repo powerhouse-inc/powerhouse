@@ -44,9 +44,6 @@
   ],
   "references": [
     {
-      "path": "../../apps/connect"
-    },
-    {
       "path": "../../clis/ph-cli"
     },
     {

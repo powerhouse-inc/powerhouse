@@ -458,6 +458,9 @@ importers:
       '@powerhousedao/shared':
         specifier: 'workspace:'
         version: link:../../packages/shared
+      '@powerhousedao/vetra':
+        specifier: workspace:*
+        version: link:../../packages/vetra
       '@renown/sdk':
         specifier: workspace:*
         version: link:../../packages/renown
@@ -2367,9 +2370,6 @@ importers:
       '@powerhousedao/config':
         specifier: workspace:*
         version: link:../config
-      '@powerhousedao/connect':
-        specifier: workspace:*
-        version: link:../../apps/connect
       '@powerhousedao/design-system':
         specifier: workspace:*
         version: link:../design-system
@@ -2715,9 +2715,6 @@ importers:
       '@powerhousedao/shared':
         specifier: workspace:*
         version: link:../../packages/shared
-      '@powerhousedao/vetra':
-        specifier: workspace:*
-        version: link:../../packages/vetra
       document-model:
         specifier: link:../../packages/document-model
         version: link:../../packages/document-model

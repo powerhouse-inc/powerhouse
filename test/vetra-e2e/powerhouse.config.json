@@ -11,12 +11,6 @@
     "port": 4002,
     "storage": "memory"
   },
-  "packages": [
-    {
-      "packageName": "@powerhousedao/vetra",
-      "version": "latest",
-      "provider": "npm"
-    }
-  ],
+  "packages": [],
   "packageRegistryUrl": "http://localhost:8080"
 }
