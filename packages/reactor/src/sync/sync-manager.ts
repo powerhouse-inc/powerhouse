@@ -66,6 +66,7 @@ export class SyncManager implements ISyncManager {
   private readonly remotes: Map<string, Remote>;
   private readonly awaiter: JobAwaiter;
   private readonly syncAwaiter: SyncAwaiter;
+  private readonly abortController = new AbortController();
   private isShutdown: boolean;
   private eventUnsubscribe?: () => void;
   private failedEventUnsubscribe?: () => void;
@@ -172,6 +173,7 @@ export class SyncManager implements ISyncManager {
 
   shutdown(): ShutdownStatus {
     this.isShutdown = true;
+    this.abortController.abort();
     this.batchAggregator.clear();
 
     if (this.eventUnsubscribe) {
@@ -476,6 +478,8 @@ export class SyncManager implements ISyncManager {
   }
 
   private async processCompleteBatch(batch: PreparedBatch): Promise<void> {
+    if (this.isShutdown) return;
+
     // get the unique set of collection ids
     const collectionIds = [
       ...new Set(
@@ -544,10 +548,11 @@ export class SyncManager implements ISyncManager {
         syncOp.documentId,
         syncOp.branch,
         operations,
-        undefined,
+        this.abortController.signal,
         { sourceRemote: remote.name },
       );
     } catch (error) {
+      if (this.isShutdown) return;
       const err = error instanceof Error ? error : new Error(String(error));
       this.logger.error(
         "Failed to load operations from inbox (@remote, @documentId, @error)",
@@ -564,8 +569,12 @@ export class SyncManager implements ISyncManager {
 
     let completedJobInfo;
     try {
-      completedJobInfo = await this.awaiter.waitForJob(jobInfo.id);
+      completedJobInfo = await this.awaiter.waitForJob(
+        jobInfo.id,
+        this.abortController.signal,
+      );
     } catch (error) {
+      if (this.isShutdown) return;
       const err = error instanceof Error ? error : new Error(String(error));
       this.logger.error(
         "Failed to wait for job completion (@remote, @documentId, @jobId, @error)",
@@ -624,10 +633,13 @@ export class SyncManager implements ISyncManager {
 
     let result: BatchLoadResult;
     try {
-      result = await this.reactor.loadBatch(request, undefined, {
-        sourceRemote,
-      });
+      result = await this.reactor.loadBatch(
+        request,
+        this.abortController.signal,
+        { sourceRemote },
+      );
     } catch (error) {
+      if (this.isShutdown) return;
       for (const { remote, syncOp } of items) {
         const err = error instanceof Error ? error : new Error(String(error));
         syncOp.failed(new ChannelError(ChannelErrorSource.Inbox, err));
@@ -658,8 +670,12 @@ export class SyncManager implements ISyncManager {
 
       let completedJobInfo;
       try {
-        completedJobInfo = await this.awaiter.waitForJob(jobInfo.id);
+        completedJobInfo = await this.awaiter.waitForJob(
+          jobInfo.id,
+          this.abortController.signal,
+        );
       } catch (error) {
+        if (this.isShutdown) continue;
         const err = error instanceof Error ? error : new Error(String(error));
         syncOp.failed(new ChannelError(ChannelErrorSource.Inbox, err));
         remote.channel.deadLetter.add(syncOp);
@@ -743,6 +759,8 @@ export class SyncManager implements ISyncManager {
       remote.collectionId,
       ackOrdinal,
       { excludeSourceRemote: remote.name },
+      undefined,
+      this.abortController.signal,
     );
 
     let operations = results.results.map((entry) =>

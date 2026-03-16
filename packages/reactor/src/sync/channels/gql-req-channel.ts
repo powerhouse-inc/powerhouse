@@ -62,6 +62,7 @@ export class GqlRequestChannel implements IChannel {
   private readonly cursorStorage: ISyncCursorStorage;
   private readonly operationIndex: IOperationIndex;
   private readonly pollTimer: IPollTimer;
+  private readonly abortController = new AbortController();
   private isShutdown: boolean;
   private failureCount: number;
   private lastSuccessUtcMs?: number;
@@ -174,6 +175,7 @@ export class GqlRequestChannel implements IChannel {
    * Shuts down the channel and prevents further operations.
    */
   shutdown(): Promise<void> {
+    this.abortController.abort();
     this.bufferedOutbox.flush();
     this.isShutdown = true;
     this.pollTimer.stop();
@@ -360,6 +362,8 @@ export class GqlRequestChannel implements IChannel {
    * Returns true if the error was handled (caller should not rethrow).
    */
   private handlePollError(error: unknown): boolean {
+    if (this.isShutdown) return true;
+
     const err = error instanceof Error ? error : new Error(String(error));
 
     if (err.message.includes("Channel not found")) {
@@ -650,6 +654,8 @@ export class GqlRequestChannel implements IChannel {
         }
       })
       .catch((error) => {
+        if (this.isShutdown) return;
+
         const err = error instanceof Error ? error : new Error(String(error));
         const classification = this.classifyError(err);
 
@@ -852,6 +858,7 @@ export class GqlRequestChannel implements IChannel {
           query,
           variables,
         }),
+        signal: this.abortController.signal,
       });
     } catch (error) {
       throw new GraphQLRequestError(
