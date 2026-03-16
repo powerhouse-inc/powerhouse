@@ -6540,7 +6540,7 @@ The main `editor.tsx` file connects your document model to the UI components. Re
 ```typescript
 // typescript code example:
 import { generateId } from "document-model/core";
-import { useUser } from "@powerhousedao/reactor-browser";
+import { useUser } from "@powerhousedao/reactor-browser/connect";
 import { useSelectedChatRoomDocument } from "../../document-models/chat-room/hooks.js";
 import {
   addMessage,
@@ -14749,7 +14749,7 @@ import {
   AnalyticsGranularity,
   AnalyticsPath,
   DateTime,
-} from "@powerhousedao/reactor-browser";
+} from "@powerhousedao/reactor-browser/analytics";
 
 function DriveUsageChart({ driveId }: { driveId: string }) {
   const { data, isLoading } = useAnalyticsQuery({
@@ -14793,7 +14793,7 @@ For common drive analytics queries, use the specialized `useDriveAnalytics` hook
 ```tsx
 // tsx code example:
 import { useDriveAnalytics } from "@powerhousedao/common/drive-analytics";
-import { AnalyticsGranularity } from "@powerhousedao/reactor-browser";
+import { AnalyticsGranularity } from "@powerhousedao/reactor-browser/analytics";
 
 function DriveInsights({ driveIds }: { driveIds: string[] }) {
   const analytics = useDriveAnalytics({
@@ -14833,7 +14833,7 @@ For document-specific analytics queries, use the `useDocumentAnalytics` hook:
 ```tsx
 // tsx code example:
 import { useDocumentAnalytics } from "@powerhousedao/common/drive-analytics";
-import { AnalyticsGranularity } from "@powerhousedao/reactor-browser";
+import { AnalyticsGranularity } from "@powerhousedao/reactor-browser/analytics";
 
 function DocumentInsights({
   driveId,

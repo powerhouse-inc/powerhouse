@@ -267,7 +267,7 @@ The main `editor.tsx` file connects your document model to the UI components. Re
 
 ```typescript
 import { generateId } from "document-model/core";
-import { useUser } from "@powerhousedao/reactor-browser";
+import { useUser } from "@powerhousedao/reactor-browser/connect";
 import { useSelectedChatRoomDocument } from "../../document-models/chat-room/hooks.js";
 import {
   addMessage,
