@@ -1,9 +1,13 @@
 import { metrics } from "@opentelemetry/api";
 import { OTLPMetricExporter } from "@opentelemetry/exporter-metrics-otlp-http";
+import { Resource } from "@opentelemetry/resources";
 import {
   MeterProvider,
   PeriodicExportingMetricReader,
 } from "@opentelemetry/sdk-metrics";
+import { childLogger } from "document-drive";
+
+const logger = childLogger(["switchboard", "metrics"]);
 
 export function initMetricsFromEnv(
   env: typeof process.env,
@@ -11,14 +15,19 @@ export function initMetricsFromEnv(
   const endpoint = env.OTEL_EXPORTER_OTLP_ENDPOINT;
   if (!endpoint) return undefined;
 
-  console.log(`Initializing OpenTelemetry metrics exporter at: ${endpoint}`);
+  const exportIntervalMillis = env.OTEL_METRIC_EXPORT_INTERVAL
+    ? parseInt(env.OTEL_METRIC_EXPORT_INTERVAL, 10)
+    : 5_000;
+
+  logger.info(`Initializing OpenTelemetry metrics exporter at: ${endpoint}`);
   const meterProvider = new MeterProvider({
+    resource: new Resource({ "service.name": "switchboard" }),
     readers: [
       new PeriodicExportingMetricReader({
         exporter: new OTLPMetricExporter({
-          url: `${endpoint}/v1/metrics`,
+          url: `${endpoint.replace(/\/$/, "")}/v1/metrics`,
         }),
-        exportIntervalMillis: 5_000,
+        exportIntervalMillis,
       }),
     ],
   });
@@ -26,6 +35,6 @@ export function initMetricsFromEnv(
   // assigned. ReactorInstrumentation reads the global provider via
   // metrics.getMeter(), so this must be called before instrumentation.start().
   metrics.setGlobalMeterProvider(meterProvider);
-  console.log("  Metrics export enabled (interval: 5s)");
+  logger.info(`Metrics export enabled (interval: ${exportIntervalMillis}ms)`);
   return meterProvider;
 }
