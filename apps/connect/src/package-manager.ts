@@ -232,8 +232,8 @@ export class BrowserPackageManager implements IPackageManager {
     if (this.registryUrl === null) return;
     if (name === COMMON_PACKAGE_NAME || name === LOCAL_PACKAGE_NAME) return;
 
-    const importUrl = `${this.#cdnUrl}/${name}`;
-    const stylesheetUrl = `${importUrl}/style.css`;
+    const importUrl = `${this.#cdnUrl}/${name}/index.js`;
+    const stylesheetUrl = `${this.#cdnUrl}/${name}/style.css`;
     const packageWithMeta = await this.#importPackage({
       name,
       importUrl,
