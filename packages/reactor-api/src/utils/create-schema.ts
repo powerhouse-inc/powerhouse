@@ -86,25 +86,28 @@ export const getDocumentModelTypeDefs = (
       return;
     }
     addedDocumentModels.add(dmSchemaName);
+    // Use only the latest specification to avoid duplicate type definitions
+    // when multiple versions of the same document model exist
+    const latestSpec = documentModel.global.specifications.at(-1);
     let tmpDmSchema = `
-          ${documentModel.global.specifications
-            .map((specification) =>
-              specification.state.global.schema
-                .replaceAll("scalar DateTime", "")
-                .replaceAll(/input (.*?) {[\s\S]*?}/g, ""),
-            )
-            .join("\n")};
-  
-          ${documentModel.global.specifications
-            .map((specification) =>
-              specification.state.local.schema
-                .replaceAll("scalar DateTime", "")
-                .replaceAll(/input (.*?) {[\s\S]*?}/g, "")
-                .replaceAll("type AccountSnapshotLocalState", "")
-                .replaceAll("type BudgetStatementLocalState", "")
-                .replaceAll("type ScopeFrameworkLocalState", ""),
-            )
-            .join("\n")};
+          ${
+            latestSpec
+              ? latestSpec.state.global.schema
+                  .replaceAll("scalar DateTime", "")
+                  .replaceAll(/input (.*?) {[\s\S]*?}/g, "")
+              : ""
+          };
+
+          ${
+            latestSpec
+              ? latestSpec.state.local.schema
+                  .replaceAll("scalar DateTime", "")
+                  .replaceAll(/input (.*?) {[\s\S]*?}/g, "")
+                  .replaceAll("type AccountSnapshotLocalState", "")
+                  .replaceAll("type BudgetStatementLocalState", "")
+                  .replaceAll("type ScopeFrameworkLocalState", "")
+              : ""
+          };
 
     \n`;
 
