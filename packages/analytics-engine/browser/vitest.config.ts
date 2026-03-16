@@ -2,6 +2,14 @@ import { defineConfig } from "vitest/config";
 import { playwright } from "@vitest/browser-playwright";
 
 export default defineConfig({
+  ssr: {
+    resolve: {
+      conditions: ["source"],
+    },
+  },
+  resolve: {
+    conditions: ["source"],
+  },
   assetsInclude: ["*.sql"],
   test: {
     browser: {

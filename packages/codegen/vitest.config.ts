@@ -15,7 +15,13 @@ export default defineConfig({
     fileParallelism: false,
     globalSetup: "./src/codegen/__tests__/global-setup.ts",
   },
+  ssr: {
+    resolve: {
+      conditions: ["source"],
+    },
+  },
   resolve: {
+    conditions: ["source"],
     dedupe: ["graphql"],
   },
 });
