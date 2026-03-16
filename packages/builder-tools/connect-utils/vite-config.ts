@@ -166,6 +166,23 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
             ...meta,
             injectTo: "head",
           })) as HtmlTagDescriptor[]),
+          {
+            tag: "script",
+            attrs: { type: "importmap" },
+            children: JSON.stringify(
+              {
+                imports: {
+                  react: "https://esm.sh/react@19.2.0",
+                  "react/": "https://esm.sh/react@19.2.0/",
+                  "react-dom": "https://esm.sh/react-dom@19.2.0",
+                  "react-dom/": "https://esm.sh/react-dom@19.2.0/",
+                },
+              },
+              null,
+              2,
+            ),
+            injectTo: "head-prepend",
+          },
         ],
       },
     }),
@@ -216,6 +233,21 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     envPrefix: ["PH_CONNECT_"],
     optimizeDeps: {
       exclude: ["@electric-sql/pglite", "@electric-sql/pglite-tools"],
+    },
+    build: {
+      rollupOptions: {
+        // Externalize React so both Connect and dynamically loaded registry
+        // packages share the same React instance via the import map in index.html.
+        // Without this, Vite bundles React into Connect's chunks while registry
+        // packages resolve React from the import map (esm.sh), creating two
+        // separate React instances that don't share context/state.
+        external: [
+          "react",
+          "react-dom",
+          "react/jsx-runtime",
+          "react-dom/client",
+        ],
+      },
     },
     plugins,
     worker: {
