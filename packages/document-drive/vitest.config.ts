@@ -2,6 +2,14 @@ import { loadEnv } from "vite";
 import { defaultExclude, defineConfig } from "vitest/config";
 
 export default defineConfig(({ mode }) => ({
+  ssr: {
+    resolve: {
+      conditions: ["source"],
+    },
+  },
+  resolve: {
+    conditions: ["source"],
+  },
   test: {
     pool: "forks",
     environment: "node",
