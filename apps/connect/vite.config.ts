@@ -6,8 +6,12 @@ import tsconfigPaths from "vite-tsconfig-paths";
 
 export default defineConfig({
   define: {
-    PH_PACKAGES: [],
-    PH_PACKAGE_REGISTRY_URL: null,
+    PH_PACKAGES: process.env.PH_PACKAGES
+      ? JSON.stringify(process.env.PH_PACKAGES.split(",").filter(Boolean))
+      : [],
+    PH_PACKAGE_REGISTRY_URL: process.env.PH_CONNECT_PACKAGES_REGISTRY
+      ? JSON.stringify(process.env.PH_CONNECT_PACKAGES_REGISTRY)
+      : null,
   },
   envPrefix: ["PH_CONNECT_"],
   optimizeDeps: {

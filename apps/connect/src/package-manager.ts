@@ -46,11 +46,20 @@ export class BrowserPackageManager implements IPackageManager {
   #stylesheets: Map<string, HTMLLinkElement> = new Map();
   #localPackage: VetraPackage | undefined;
 
+  #cdnUrl: string | null;
+
   constructor(namespace: string, registryUrl: string | null) {
     this.#storage = new BrowserLocalStorage<PackageMeta>(
       namespace + ":PH_PACKAGES",
     );
     this.registryUrl = registryUrl;
+    this.#cdnUrl = registryUrl !== null ? this.#toCdnUrl(registryUrl) : null;
+  }
+
+  #toCdnUrl(baseUrl: string): string {
+    if (baseUrl.includes("/-/cdn")) return baseUrl;
+    const base = baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl;
+    return `${base}/-/cdn`;
   }
 
   async init(localPackage?: VetraPackage) {
@@ -223,7 +232,7 @@ export class BrowserPackageManager implements IPackageManager {
     if (this.registryUrl === null) return;
     if (name === COMMON_PACKAGE_NAME || name === LOCAL_PACKAGE_NAME) return;
 
-    const importUrl = `${this.registryUrl}/${name}`;
+    const importUrl = `${this.#cdnUrl}/${name}`;
     const stylesheetUrl = `${importUrl}/style.css`;
     const packageWithMeta = await this.#importPackage({
       name,
