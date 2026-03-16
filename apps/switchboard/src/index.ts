@@ -26,13 +26,17 @@ ensureNodeVersion("24");
 
 const meterProvider = initMetricsFromEnv(process.env);
 
-process.on("SIGINT", async () => {
+async function shutdown() {
   console.log("\nShutting down...");
-  // Flush final metrics before exit. Must precede instrumentation.stop() so
-  // the final collection pass captures gauge values while metrics are defined.
+  // Flush final metrics before exit so the final collection pass runs
+  // before the process terminates.
   await meterProvider?.shutdown().catch(() => undefined);
   process.exit(0);
-});
+}
+
+// SIGINT: Ctrl-C in development; SIGTERM: graceful shutdown in Docker/Kubernetes
+process.on("SIGINT", shutdown);
+process.on("SIGTERM", shutdown);
 
 if (process.env.PYROSCOPE_SERVER_ADDRESS) {
   try {
