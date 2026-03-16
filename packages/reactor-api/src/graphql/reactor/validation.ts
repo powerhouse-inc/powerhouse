@@ -153,6 +153,15 @@ export const OperationResultPageDTO = z
   })
   .strip();
 
+export const DocumentWithChildrenAndOperationsDTO = z
+  .object({
+    document: PHDocumentDTO.extend({
+      operations: OperationResultPageDTO.optional(),
+    }),
+    childIds: z.array(z.string()),
+  })
+  .strip();
+
 export const DocumentChangeContextDTO = z
   .object({
     parentId: z.string().nullable().optional(),

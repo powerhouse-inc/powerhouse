@@ -86,18 +86,24 @@ export function deserializeSignature(
   ];
 }
 
-/** Reconstruct a PHDocument from remote document data and operations. */
-export function buildPulledDocument(
-  remoteDoc: RemoteDocumentData,
+/** Convert remote operations to local DocumentOperations format. */
+export function convertRemoteOperations(
   operationsByScope: Record<string, RemoteOperation[]>,
-  initialDoc: PHDocument<PHBaseState>,
-  branch: string,
-): PHDocument<PHBaseState> {
+): DocumentOperations {
   const operations: DocumentOperations = {};
   for (const [scope, remoteOps] of Object.entries(operationsByScope)) {
     operations[scope] = remoteOps.map((op) => remoteOperationToLocal(op));
   }
+  return operations;
+}
 
+/** Reconstruct a PHDocument from remote document data and operations. */
+export function buildPulledDocument(
+  remoteDoc: RemoteDocumentData,
+  operations: DocumentOperations,
+  initialDoc: PHDocument<PHBaseState>,
+  branch: string,
+): PHDocument<PHBaseState> {
   return {
     header: {
       ...initialDoc.header,

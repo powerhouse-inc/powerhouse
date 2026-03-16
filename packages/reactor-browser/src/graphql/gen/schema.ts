@@ -580,6 +580,95 @@ export type GetDocumentQuery = {
     | undefined;
 };
 
+export type GetDocumentWithOperationsQueryVariables = Exact<{
+  identifier: Scalars["String"]["input"];
+  view?: InputMaybe<ViewFilterInput>;
+  operationsFilter?: InputMaybe<DocumentOperationsFilterInput>;
+  operationsPaging?: InputMaybe<PagingInput>;
+}>;
+
+export type GetDocumentWithOperationsQuery = {
+  readonly document?:
+    | {
+        readonly childIds: ReadonlyArray<string>;
+        readonly document: {
+          readonly id: string;
+          readonly slug?: string | null | undefined;
+          readonly name: string;
+          readonly documentType: string;
+          readonly state: NonNullable<unknown>;
+          readonly createdAtUtcIso: string | Date;
+          readonly lastModifiedAtUtcIso: string | Date;
+          readonly operations?:
+            | {
+                readonly totalCount: number;
+                readonly hasNextPage: boolean;
+                readonly hasPreviousPage: boolean;
+                readonly cursor?: string | null | undefined;
+                readonly items: ReadonlyArray<{
+                  readonly index: number;
+                  readonly timestampUtcMs: string;
+                  readonly hash: string;
+                  readonly skip: number;
+                  readonly error?: string | null | undefined;
+                  readonly id?: string | null | undefined;
+                  readonly action: {
+                    readonly id: string;
+                    readonly type: string;
+                    readonly timestampUtcMs: string;
+                    readonly input: NonNullable<unknown>;
+                    readonly scope: string;
+                    readonly attachments?:
+                      | ReadonlyArray<{
+                          readonly data: string;
+                          readonly mimeType: string;
+                          readonly hash: string;
+                          readonly extension?: string | null | undefined;
+                          readonly fileName?: string | null | undefined;
+                        }>
+                      | null
+                      | undefined;
+                    readonly context?:
+                      | {
+                          readonly signer?:
+                            | {
+                                readonly signatures: ReadonlyArray<string>;
+                                readonly user?:
+                                  | {
+                                      readonly address: string;
+                                      readonly networkId: string;
+                                      readonly chainId: number;
+                                    }
+                                  | null
+                                  | undefined;
+                                readonly app?:
+                                  | {
+                                      readonly name: string;
+                                      readonly key: string;
+                                    }
+                                  | null
+                                  | undefined;
+                              }
+                            | null
+                            | undefined;
+                        }
+                      | null
+                      | undefined;
+                  };
+                }>;
+              }
+            | null
+            | undefined;
+          readonly revisionsList: ReadonlyArray<{
+            readonly scope: string;
+            readonly revision: number;
+          }>;
+        };
+      }
+    | null
+    | undefined;
+};
+
 export type GetDocumentChildrenQueryVariables = Exact<{
   parentIdentifier: Scalars["String"]["input"];
   view?: InputMaybe<ViewFilterInput>;
@@ -1124,6 +1213,64 @@ export const GetDocumentDocument = gql`
   }
   ${PhDocumentFieldsFragmentDoc}
 `;
+export const GetDocumentWithOperationsDocument = gql`
+  query GetDocumentWithOperations(
+    $identifier: String!
+    $view: ViewFilterInput
+    $operationsFilter: DocumentOperationsFilterInput
+    $operationsPaging: PagingInput
+  ) {
+    document(identifier: $identifier, view: $view) {
+      document {
+        ...PHDocumentFields
+        operations(filter: $operationsFilter, paging: $operationsPaging) {
+          items {
+            index
+            timestampUtcMs
+            hash
+            skip
+            error
+            id
+            action {
+              id
+              type
+              timestampUtcMs
+              input
+              scope
+              attachments {
+                data
+                mimeType
+                hash
+                extension
+                fileName
+              }
+              context {
+                signer {
+                  user {
+                    address
+                    networkId
+                    chainId
+                  }
+                  app {
+                    name
+                    key
+                  }
+                  signatures
+                }
+              }
+            }
+          }
+          totalCount
+          hasNextPage
+          hasPreviousPage
+          cursor
+        }
+      }
+      childIds
+    }
+  }
+  ${PhDocumentFieldsFragmentDoc}
+`;
 export const GetDocumentChildrenDocument = gql`
   query GetDocumentChildren(
     $parentIdentifier: String!
@@ -1548,6 +1695,24 @@ export function getSdk(
             signal,
           }),
         "GetDocument",
+        "query",
+        variables,
+      );
+    },
+    GetDocumentWithOperations(
+      variables: GetDocumentWithOperationsQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit["signal"],
+    ): Promise<GetDocumentWithOperationsQuery> {
+      return withWrapper(
+        (wrappedRequestHeaders) =>
+          client.request<GetDocumentWithOperationsQuery>({
+            document: GetDocumentWithOperationsDocument,
+            variables,
+            requestHeaders: { ...requestHeaders, ...wrappedRequestHeaders },
+            signal,
+          }),
+        "GetDocumentWithOperations",
         "query",
         variables,
       );

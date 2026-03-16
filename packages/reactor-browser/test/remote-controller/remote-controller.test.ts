@@ -1,8 +1,10 @@
-/* eslint-disable @typescript-eslint/unbound-method */
 import { DocumentModelController } from "document-model";
 import { describe, expect, it, vi } from "vitest";
 import { RemoteDocumentController } from "../../src/remote-controller/remote-controller.js";
-import type { ReactorGraphQLClient } from "../../src/remote-controller/types.js";
+import type {
+  ReactorGraphQLClient,
+  RemoteOperation,
+} from "../../src/remote-controller/types.js";
 import { ConflictError } from "../../src/remote-controller/utils.js";
 
 /** Helper to make a document data response matching the PHDocumentFields fragment. */
@@ -28,17 +30,59 @@ function makeDocData(
   };
 }
 
-/** Create a mock GraphQL client. */
+/** Helper to wrap doc data in a GetDocumentWithOperations response. */
+function makeDocWithOpsResponse(
+  docData: ReturnType<typeof makeDocData>,
+  operations: {
+    items: RemoteOperation[];
+    cursor?: string | null;
+    hasNextPage?: boolean;
+  } = {
+    items: [],
+  },
+) {
+  return {
+    document: {
+      document: {
+        ...docData,
+        operations: {
+          items: operations.items,
+          totalCount: operations.items.length,
+          hasNextPage: operations.hasNextPage ?? false,
+          hasPreviousPage: false,
+          cursor: operations.cursor ?? null,
+        },
+      },
+      childIds: [],
+    },
+  };
+}
+
+/**
+ * Create a mock GraphQL client.
+ * If `GetDocumentWithOperations` is not explicitly provided, it is
+ * derived automatically: if `GetDocument` is overridden, its return
+ * value is extended with an empty operations page; otherwise the
+ * default doc data is used.
+ */
 function createMockClient(
   overrides: Partial<ReactorGraphQLClient> = {},
 ): ReactorGraphQLClient {
+  const defaultDoc = makeDocData();
+
+  // Build GetDocumentWithOperations from GetDocument if not explicitly set
+  const getDocWithOps =
+    overrides.GetDocumentWithOperations ??
+    vi.fn().mockResolvedValue(makeDocWithOpsResponse(defaultDoc));
+
   return {
     GetDocument: vi.fn().mockResolvedValue({
       document: {
-        document: makeDocData(),
+        document: defaultDoc,
         childIds: [],
       },
     }),
+    GetDocumentWithOperations: getDocWithOps,
     GetDocumentOperations: vi.fn().mockResolvedValue({
       documentOperations: {
         items: [],
@@ -82,7 +126,7 @@ describe("RemoteDocumentController", () => {
       expect(controller.status.documentId).toBe("doc-1");
       expect(controller.status.connected).toBe(true);
       expect(controller.status.pendingActionCount).toBe(0);
-      expect(client.GetDocument).toHaveBeenCalledTimes(1);
+      expect(client.GetDocumentWithOperations).toHaveBeenCalledTimes(1);
     });
 
     it("creates empty controller when documentId is empty", async () => {
@@ -242,8 +286,8 @@ describe("RemoteDocumentController", () => {
       controller.setName({ name: "Before Push" });
       await controller.push();
 
-      // GetDocument is called on initial pull + after push
-      expect(client.GetDocument).toHaveBeenCalledTimes(2);
+      // GetDocumentWithOperations is called on initial pull + after push
+      expect(client.GetDocumentWithOperations).toHaveBeenCalledTimes(2);
     });
   });
 
@@ -266,12 +310,11 @@ describe("RemoteDocumentController", () => {
 
     it("pulls latest state from remote", async () => {
       const client = createMockClient({
-        GetDocument: vi.fn().mockResolvedValue({
-          document: {
-            document: makeDocData({ name: "Remote Name" }),
-            childIds: [],
-          },
-        }),
+        GetDocumentWithOperations: vi
+          .fn()
+          .mockResolvedValue(
+            makeDocWithOpsResponse(makeDocData({ name: "Remote Name" })),
+          ),
       });
 
       const controller = await RemoteDocumentController.pull(
@@ -364,17 +407,16 @@ describe("RemoteDocumentController", () => {
   describe("status", () => {
     it("reports correct remote revision after pull", async () => {
       const client = createMockClient({
-        GetDocument: vi.fn().mockResolvedValue({
-          document: {
-            document: makeDocData({
+        GetDocumentWithOperations: vi.fn().mockResolvedValue(
+          makeDocWithOpsResponse(
+            makeDocData({
               revisionsList: [
                 { scope: "global", revision: 5 },
                 { scope: "local", revision: 3 },
               ],
             }),
-            childIds: [],
-          },
-        }),
+          ),
+        ),
       });
 
       const controller = await RemoteDocumentController.pull(
@@ -396,37 +438,36 @@ describe("RemoteDocumentController", () => {
   describe("conflict detection", () => {
     /** Create a client where the remote revision has advanced since pull. */
     function createConflictClient() {
-      // Initial pull sees revision 1
-      const getDocumentFn = vi
+      // GetDocumentWithOperations: initial pull sees revision 1, post-push pull sees revision 3
+      const getDocWithOps = vi
         .fn()
-        .mockResolvedValueOnce({
-          document: {
-            document: makeDocData({
+        .mockResolvedValueOnce(
+          makeDocWithOpsResponse(
+            makeDocData({
               revisionsList: [{ scope: "global", revision: 1 }],
             }),
-            childIds: [],
-          },
-        })
-        // Conflict check during push sees revision 2 (remote advanced)
-        .mockResolvedValueOnce({
-          document: {
-            document: makeDocData({
-              revisionsList: [{ scope: "global", revision: 2 }],
-            }),
-            childIds: [],
-          },
-        })
-        // Post-push pull
-        .mockResolvedValue({
-          document: {
-            document: makeDocData({
+          ),
+        )
+        .mockResolvedValue(
+          makeDocWithOpsResponse(
+            makeDocData({
               revisionsList: [{ scope: "global", revision: 3 }],
             }),
-            childIds: [],
-          },
-        });
+          ),
+        );
+
+      // GetDocument: conflict check during push sees revision 2 (remote advanced)
+      const getDocumentFn = vi.fn().mockResolvedValue({
+        document: {
+          document: makeDocData({
+            revisionsList: [{ scope: "global", revision: 2 }],
+          }),
+          childIds: [],
+        },
+      });
 
       return createMockClient({
+        GetDocumentWithOperations: getDocWithOps,
         GetDocument: getDocumentFn,
         GetDocumentOperations: vi.fn().mockResolvedValue({
           documentOperations: {
@@ -555,14 +596,13 @@ describe("RemoteDocumentController", () => {
     it("skips conflict check when remote has not changed", async () => {
       // Both pull and conflict check return same revision
       const client = createMockClient({
-        GetDocument: vi.fn().mockResolvedValue({
-          document: {
-            document: makeDocData({
+        GetDocumentWithOperations: vi.fn().mockResolvedValue(
+          makeDocWithOpsResponse(
+            makeDocData({
               revisionsList: [{ scope: "global", revision: 1 }],
             }),
-            childIds: [],
-          },
-        }),
+          ),
+        ),
       });
 
       const controller = await RemoteDocumentController.pull(
@@ -598,8 +638,9 @@ describe("RemoteDocumentController", () => {
 
       // Should push without checking
       expect(result.actionCount).toBe(1);
-      // GetDocument called only for initial pull + post-push pull (no conflict check)
-      expect(client.GetDocument).toHaveBeenCalledTimes(2);
+      // GetDocumentWithOperations called only for initial pull + post-push pull
+      // (no extra call for conflict detection since onConflict is not set)
+      expect(client.GetDocumentWithOperations).toHaveBeenCalledTimes(2);
     });
   });
 
@@ -747,6 +788,187 @@ describe("RemoteDocumentController", () => {
     });
   });
 
+  describe("cursor-based incremental fetch", () => {
+    const makeOp = (index: number) => ({
+      index,
+      timestampUtcMs: String(index * 1000),
+      hash: `hash-${index}`,
+      skip: 0,
+      error: null,
+      id: `op-${index}`,
+      action: {
+        id: `action-${index}`,
+        type: "SET_NAME",
+        timestampUtcMs: String(index * 1000),
+        input: { name: `Name ${index}` },
+        scope: "global",
+        attachments: null,
+        context: null,
+      },
+    });
+
+    it("uses cursor from first pull on subsequent pulls", async () => {
+      const getDocWithOps = vi
+        .fn<ReactorGraphQLClient["GetDocumentWithOperations"]>()
+        .mockResolvedValue(
+          makeDocWithOpsResponse(makeDocData(), {
+            items: [],
+            cursor: "cursor-after-first-pull",
+          }),
+        );
+
+      const client = createMockClient({
+        GetDocumentWithOperations: getDocWithOps,
+      });
+
+      const controller = await RemoteDocumentController.pull(
+        DocumentModelController,
+        {
+          client,
+          documentId: "doc-1",
+          mode: "batch",
+        },
+      );
+
+      // First pull: no cursor passed (operationsPaging.cursor is null)
+      expect(getDocWithOps).toHaveBeenCalledTimes(1);
+      expect(
+        getDocWithOps.mock.calls[0][0].operationsPaging?.cursor,
+      ).toBeNull();
+
+      // Second pull: should use stored cursor
+      await controller.pull();
+      expect(getDocWithOps).toHaveBeenCalledTimes(2);
+      expect(getDocWithOps.mock.calls[1][0].operationsPaging?.cursor).toBe(
+        "cursor-after-first-pull",
+      );
+    });
+
+    it("merges new operations with existing ones on incremental pull", async () => {
+      let pullCount = 0;
+      const getDocWithOps = vi
+        .fn<ReactorGraphQLClient["GetDocumentWithOperations"]>()
+        .mockImplementation(() => {
+          pullCount++;
+          if (pullCount === 1) {
+            // First pull: return doc with 2 operations
+            return Promise.resolve(
+              makeDocWithOpsResponse(
+                makeDocData({
+                  revisionsList: [{ scope: "global", revision: 2 }],
+                }),
+                { items: [makeOp(0), makeOp(1)], cursor: "cursor-1" },
+              ),
+            );
+          }
+          // Second pull (incremental): return 1 new operation
+          return Promise.resolve(
+            makeDocWithOpsResponse(
+              makeDocData({
+                revisionsList: [{ scope: "global", revision: 3 }],
+              }),
+              { items: [makeOp(2)], cursor: "cursor-2" },
+            ),
+          );
+        });
+
+      const client = createMockClient({
+        GetDocumentWithOperations: getDocWithOps,
+      });
+
+      const controller = await RemoteDocumentController.pull(
+        DocumentModelController,
+        {
+          client,
+          documentId: "doc-1",
+          mode: "batch",
+        },
+      );
+
+      // After first pull: 2 operations
+      expect(controller.operations["global"]).toHaveLength(2);
+
+      await controller.pull();
+
+      // After incremental pull: 2 existing + 1 new = 3 operations
+      expect(controller.operations["global"]).toHaveLength(3);
+      expect(getDocWithOps).toHaveBeenCalledTimes(2);
+      // Second call used the cursor
+      expect(getDocWithOps.mock.calls[1][0].operationsPaging?.cursor).toBe(
+        "cursor-1",
+      );
+    });
+
+    it("falls back to full fetch when cursor is stale", async () => {
+      let pullCount = 0;
+      const getDocWithOps = vi
+        .fn<ReactorGraphQLClient["GetDocumentWithOperations"]>()
+        .mockImplementation(() => {
+          pullCount++;
+          if (pullCount === 1) {
+            // First pull: return doc with 1 operation
+            return Promise.resolve(
+              makeDocWithOpsResponse(
+                makeDocData({
+                  revisionsList: [{ scope: "global", revision: 1 }],
+                }),
+                { items: [makeOp(0)], cursor: "stale-cursor" },
+              ),
+            );
+          }
+          // Second pull (incremental): cursor is stale, returns 0 new items
+          // Remote says revision is 3, so 1 existing + 0 new = 1 != 3
+          return Promise.resolve(
+            makeDocWithOpsResponse(
+              makeDocData({
+                revisionsList: [{ scope: "global", revision: 3 }],
+              }),
+              { items: [], cursor: null },
+            ),
+          );
+        });
+
+      // Fallback full fetch via GetDocumentOperations
+      const getDocOps = vi
+        .fn<ReactorGraphQLClient["GetDocumentOperations"]>()
+        .mockResolvedValue({
+          documentOperations: {
+            items: [makeOp(0), makeOp(1), makeOp(2)],
+            totalCount: 3,
+            hasNextPage: false,
+            hasPreviousPage: false,
+            cursor: "fresh-cursor",
+          },
+        });
+
+      const client = createMockClient({
+        GetDocumentWithOperations: getDocWithOps,
+        GetDocumentOperations: getDocOps,
+      });
+
+      const controller = await RemoteDocumentController.pull(
+        DocumentModelController,
+        {
+          client,
+          documentId: "doc-1",
+          mode: "batch",
+        },
+      );
+
+      expect(controller.operations["global"]).toHaveLength(1);
+
+      // Second pull: incremental fetch fails validation, falls back to full
+      await controller.pull();
+
+      expect(controller.operations["global"]).toHaveLength(3);
+      // GetDocumentWithOperations called twice (first pull + stale incremental)
+      expect(getDocWithOps).toHaveBeenCalledTimes(2);
+      // Fallback uses GetDocumentOperations without cursor
+      expect(getDocOps).toHaveBeenCalledTimes(1);
+      expect(getDocOps.mock.calls[0][0].paging?.cursor).toBeNull();
+    });
+  });
+
   describe("push failure recovery", () => {
     it("restores actions when MutateDocument fails", async () => {
       const client = createMockClient({
@@ -772,22 +994,12 @@ describe("RemoteDocumentController", () => {
     });
 
     it("does not restore actions when pull fails after successful push", async () => {
-      let callCount = 0;
       const client = createMockClient({
-        GetDocument: vi.fn().mockImplementation(() => {
-          callCount++;
-          if (callCount === 1) {
-            // Initial pull succeeds
-            return Promise.resolve({
-              document: {
-                document: makeDocData(),
-                childIds: [],
-              },
-            });
-          }
+        GetDocumentWithOperations: vi
+          .fn()
+          .mockResolvedValueOnce(makeDocWithOpsResponse(makeDocData()))
           // Post-push pull fails
-          return Promise.reject(new Error("Pull failed"));
-        }),
+          .mockRejectedValue(new Error("Pull failed")),
       });
 
       const controller = await RemoteDocumentController.pull(

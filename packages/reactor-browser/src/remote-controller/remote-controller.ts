@@ -26,6 +26,7 @@ import type {
 import {
   ConflictError,
   buildPulledDocument,
+  convertRemoteOperations,
   extractRevisionMap,
   hasRevisionConflict,
   screamingSnakeToCamel,
@@ -63,6 +64,7 @@ export class RemoteDocumentController<
   private readonly options: RemoteControllerOptions;
   private documentId: string;
   private remoteRevision: Record<string, number> = {};
+  private lastCursor: string | undefined;
   private pushScheduled = false;
   private pushQueue: Promise<void> = Promise.resolve();
   private listeners: DocumentChangeListener[] = [];
@@ -71,7 +73,10 @@ export class RemoteDocumentController<
     this.inner = inner;
     this.options = options;
     this.documentId = options.documentId ?? "";
-    this.remoteClient = new RemoteClient(options.client);
+    this.remoteClient = new RemoteClient(
+      options.client,
+      options.operationsPageSize,
+    );
 
     this.setupActionInterceptors();
   }
@@ -199,28 +204,13 @@ export class RemoteDocumentController<
       throw new Error("Cannot pull: no document ID set");
     }
 
-    const docResult = await this.remoteClient.getDocument(
-      this.documentId,
-      this.options.branch,
-    );
-
-    if (!docResult) {
-      throw new Error(`Document "${this.documentId}" not found on remote`);
-    }
-
-    const remoteDoc = docResult.document;
-
-    // Fetch all operations
-    const operationsByScope = await this.remoteClient.getAllOperations(
-      this.documentId,
-      this.options.branch,
-    );
+    const { remoteDoc, operations } = await this.fetchDocumentAndOperations();
 
     // Get module from inner controller
     const initialDoc = this.inner.module.utils.createDocument();
     const pulledDocument = buildPulledDocument(
       remoteDoc,
-      operationsByScope,
+      operations,
       initialDoc,
       this.options.branch ?? "main",
     );
@@ -310,7 +300,7 @@ export class RemoteDocumentController<
           // Snapshot operation counts per scope BEFORE applying
           const opCountsBefore: Record<string, number> = {};
           for (const scope in this.inner.operations) {
-            opCountsBefore[scope] = this.inner.operations[scope]?.length ?? 0;
+            opCountsBefore[scope] = this.inner.operations[scope].length;
           }
 
           // Apply locally via inner controller
@@ -360,7 +350,7 @@ export class RemoteDocumentController<
     for (const scope in ops) {
       const scopeOps = ops[scope];
       const prevCount = opCountsBefore[scope] ?? 0;
-      if (scopeOps && scopeOps.length > prevCount) {
+      if (scopeOps.length > prevCount) {
         return scopeOps[scopeOps.length - 1];
       }
     }
@@ -376,7 +366,7 @@ export class RemoteDocumentController<
     excludeOp?: Operation,
   ): Operation | undefined {
     const scopeOps = this.inner.operations[scope];
-    if (!scopeOps || scopeOps.length === 0) return undefined;
+    if (scopeOps.length === 0) return undefined;
     for (let i = scopeOps.length - 1; i >= 0; i--) {
       if (scopeOps[i] !== excludeOp) return scopeOps[i];
     }
@@ -430,8 +420,8 @@ export class RemoteDocumentController<
       ),
     );
     const remoteOperations: Record<string, RemoteOperation[]> = {};
-    for (const result of scopeResults) {
-      for (const [scope, ops] of Object.entries(result)) {
+    for (const { operationsByScope } of scopeResults) {
+      for (const [scope, ops] of Object.entries(operationsByScope)) {
         remoteOperations[scope] = ops;
       }
     }
@@ -519,6 +509,137 @@ export class RemoteDocumentController<
         },
       },
     };
+  }
+
+  /**
+   * Fetch document and operations in a single query, using the stored cursor
+   * for incremental fetches. If the first page has more results, continues
+   * paginating with follow-up queries. Falls back to a full fetch if the
+   * cursor is stale and produces a count mismatch.
+   */
+  private async fetchDocumentAndOperations(): Promise<{
+    remoteDoc: RemoteDocumentData;
+    operations: DocumentOperations;
+  }> {
+    // Fetch document + first page of operations in a single query
+    const result = await this.remoteClient.getDocumentWithOperations(
+      this.documentId,
+      this.options.branch,
+      this.lastCursor,
+    );
+
+    if (!result) {
+      throw new Error(`Document "${this.documentId}" not found on remote`);
+    }
+
+    const { document: remoteDoc, hasMoreOperations } = result;
+    let { operations: firstPage } = result;
+    const expectedRevision = extractRevisionMap(remoteDoc.revisionsList);
+
+    // If there are more pages, fetch the remaining operations
+    if (hasMoreOperations && firstPage.cursor) {
+      const remaining = await this.remoteClient.getAllOperations(
+        this.documentId,
+        this.options.branch,
+        undefined,
+        undefined,
+        firstPage.cursor,
+      );
+      // Merge first page + remaining pages
+      for (const [scope, ops] of Object.entries(remaining.operationsByScope)) {
+        (firstPage.operationsByScope[scope] ??= []).push(...ops);
+      }
+      firstPage = {
+        operationsByScope: firstPage.operationsByScope,
+        cursor: remaining.cursor,
+      };
+    }
+
+    // If this was an incremental fetch, merge with existing operations
+    if (this.lastCursor) {
+      const newOps = convertRemoteOperations(firstPage.operationsByScope);
+      const merged = this.mergeOperations(this.inner.operations, newOps);
+
+      // Validate: merged operation counts must match remote revisions
+      if (this.hasExpectedOperationCounts(merged, expectedRevision)) {
+        this.lastCursor = firstPage.cursor;
+        return { remoteDoc, operations: merged };
+      }
+
+      // Cursor was stale — do a full fetch (without cursor)
+      return this.fullFetch(remoteDoc);
+    }
+
+    this.lastCursor = firstPage.cursor;
+    return {
+      remoteDoc,
+      operations: convertRemoteOperations(firstPage.operationsByScope),
+    };
+  }
+
+  /**
+   * Full fetch fallback: fetches all operations from the beginning.
+   * Used when an incremental fetch produces a count mismatch.
+   */
+  private async fullFetch(remoteDoc: RemoteDocumentData): Promise<{
+    remoteDoc: RemoteDocumentData;
+    operations: DocumentOperations;
+  }> {
+    const { operationsByScope, cursor } =
+      await this.remoteClient.getAllOperations(
+        this.documentId,
+        this.options.branch,
+      );
+
+    this.lastCursor = cursor;
+    return {
+      remoteDoc,
+      operations: convertRemoteOperations(operationsByScope),
+    };
+  }
+
+  /**
+   * Validate that the merged operations match the expected revision per scope.
+   * Each scope's operation count should equal its revision number.
+   */
+  private hasExpectedOperationCounts(
+    operations: DocumentOperations,
+    expectedRevision: Record<string, number>,
+  ): boolean {
+    for (const [scope, revision] of Object.entries(expectedRevision)) {
+      const opCount = scope in operations ? operations[scope].length : 0;
+      if (opCount !== revision) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Merge existing local operations with newly fetched operations.
+   * Appends new operations to existing ones per scope.
+   */
+  private mergeOperations(
+    existingOps: DocumentOperations,
+    newOps: DocumentOperations,
+  ): DocumentOperations {
+    const merged: DocumentOperations = {};
+
+    // Copy existing operations
+    for (const [scope, ops] of Object.entries(existingOps)) {
+      if (ops.length > 0) {
+        merged[scope] = [...ops];
+      }
+    }
+
+    // Append new operations per scope
+    for (const [scope, ops] of Object.entries(newOps)) {
+      if (ops.length > 0) {
+        (merged[scope] ??= []).push(...ops);
+      }
+    }
+
+    return merged;
   }
 
   /** Schedule a push via microtask (for streaming mode coalescing). */

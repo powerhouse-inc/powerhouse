@@ -538,6 +538,189 @@ describe("RemoteDocumentController e2e", () => {
     }
   });
 
+  it("incremental pull fetches only new operations via cursor", async () => {
+    // Create a document and push initial actions
+    const controllerA = await RemoteDocumentController.pull(
+      DocumentModelController,
+      {
+        client,
+        mode: "batch",
+        parentIdentifier: DRIVE_ID,
+      },
+    );
+
+    controllerA.setName({ name: "Cursor Test" });
+    controllerA.setModelDescription({ description: "Initial" });
+    await controllerA.push();
+    const docId = controllerA.status.documentId;
+    createdDocumentIds.push(docId);
+
+    // Pull the document — establishes cursor
+    const controllerB = await RemoteDocumentController.pull(
+      DocumentModelController,
+      {
+        client,
+        documentId: docId,
+        mode: "batch",
+      },
+    );
+
+    const opsAfterFirstPull = controllerB.operations["global"]?.length ?? 0;
+    expect(opsAfterFirstPull).toBeGreaterThan(0);
+
+    // Controller A pushes more actions
+    controllerA.setModelDescription({ description: "Update 1" });
+    controllerA.setModelDescription({ description: "Update 2" });
+    await controllerA.push();
+
+    // Controller B pulls again — should use cursor for incremental fetch
+    await controllerB.pull();
+
+    const opsAfterSecondPull = controllerB.operations["global"]?.length ?? 0;
+    // Should have the original ops + 2 new ones
+    expect(opsAfterSecondPull).toBe(opsAfterFirstPull + 2);
+    expect(controllerB.state.global.description).toBe("Update 2");
+  });
+
+  it("multiple push-pull cycles accumulate operations correctly", async () => {
+    const controller = await RemoteDocumentController.pull(
+      DocumentModelController,
+      {
+        client,
+        mode: "batch",
+        parentIdentifier: DRIVE_ID,
+      },
+    );
+
+    // Cycle 1: push initial actions
+    controller.setName({ name: "Multi-cycle Test" });
+    controller.setModelDescription({ description: "Cycle 1" });
+    await controller.push();
+    createdDocumentIds.push(controller.status.documentId);
+
+    const opsAfterCycle1 = controller.operations["global"]?.length ?? 0;
+
+    // Cycle 2: push more actions (pull happens inside push)
+    controller.setModelDescription({ description: "Cycle 2" });
+    controller.setModelName({ name: "CycleModel" });
+    await controller.push();
+
+    const opsAfterCycle2 = controller.operations["global"]?.length ?? 0;
+    expect(opsAfterCycle2).toBe(opsAfterCycle1 + 2);
+
+    // Cycle 3: one more push
+    controller.setModelDescription({ description: "Cycle 3" });
+    await controller.push();
+
+    const opsAfterCycle3 = controller.operations["global"]?.length ?? 0;
+    expect(opsAfterCycle3).toBe(opsAfterCycle2 + 1);
+
+    // Verify final state is correct
+    expect(controller.header.name).toBe("Multi-cycle Test");
+    expect(controller.state.global.description).toBe("Cycle 3");
+    expect(controller.state.global.name).toBe("CycleModel");
+
+    // Fresh pull should have the same operation count
+    const fresh = await RemoteDocumentController.pull(DocumentModelController, {
+      client,
+      documentId: controller.status.documentId,
+      mode: "batch",
+    });
+    expect(fresh.operations["global"]?.length).toBe(opsAfterCycle3);
+  });
+
+  it("paginates through multiple pages of operations with small page size", async () => {
+    // Use a page size of 2 so that 5 operations require multiple pages
+    const controller = await RemoteDocumentController.pull(
+      DocumentModelController,
+      {
+        client,
+        mode: "batch",
+        parentIdentifier: DRIVE_ID,
+        operationsPageSize: 2,
+      },
+    );
+
+    // Push 5 actions — with pageSize=2, this requires 3 pages to fetch
+    controller.setName({ name: "Pagination Test" });
+    controller.setModelName({ name: "PageModel" });
+    controller.setModelDescription({ description: "Desc 1" });
+    controller.setModelDescription({ description: "Desc 2" });
+    controller.setModelDescription({ description: "Desc 3" });
+    await controller.push();
+    const docId = controller.status.documentId;
+    createdDocumentIds.push(docId);
+
+    // The push triggers a pull internally. Verify all ops came through.
+    const globalOps = controller.operations["global"];
+    expect(globalOps).toBeDefined();
+    // The server may add extra operations (e.g. UPGRADE_DOCUMENT),
+    // so we check at least 5 operations were fetched.
+    expect(globalOps!.length).toBeGreaterThanOrEqual(5);
+
+    // Verify final state is correct (all actions applied)
+    expect(controller.header.name).toBe("Pagination Test");
+    expect(controller.state.global.name).toBe("PageModel");
+    expect(controller.state.global.description).toBe("Desc 3");
+
+    // Fresh pull with small page size should produce the same result
+    const fresh = await RemoteDocumentController.pull(DocumentModelController, {
+      client,
+      documentId: docId,
+      mode: "batch",
+      operationsPageSize: 2,
+    });
+    expect(fresh.operations["global"]?.length).toBe(globalOps!.length);
+    expect(fresh.header.name).toBe("Pagination Test");
+    expect(fresh.state.global.description).toBe("Desc 3");
+  });
+
+  it("incremental pull with small page size fetches and merges correctly", async () => {
+    // Create a document with a small page size
+    const controllerA = await RemoteDocumentController.pull(
+      DocumentModelController,
+      {
+        client,
+        mode: "batch",
+        parentIdentifier: DRIVE_ID,
+        operationsPageSize: 2,
+      },
+    );
+
+    controllerA.setName({ name: "Incremental Page Test" });
+    controllerA.setModelDescription({ description: "Initial" });
+    await controllerA.push();
+    const docId = controllerA.status.documentId;
+    createdDocumentIds.push(docId);
+
+    // Pull with small page size — establishes cursor
+    const controllerB = await RemoteDocumentController.pull(
+      DocumentModelController,
+      {
+        client,
+        documentId: docId,
+        mode: "batch",
+        operationsPageSize: 2,
+      },
+    );
+
+    const opsAfterFirstPull = controllerB.operations["global"]?.length ?? 0;
+    expect(opsAfterFirstPull).toBeGreaterThan(0);
+
+    // Push 3 more actions from A (requires 2 pages with pageSize=2)
+    controllerA.setModelDescription({ description: "Update 1" });
+    controllerA.setModelDescription({ description: "Update 2" });
+    controllerA.setModelDescription({ description: "Update 3" });
+    await controllerA.push();
+
+    // Incremental pull from B — fetches new ops (possibly multi-page) and merges
+    await controllerB.pull();
+
+    const opsAfterSecondPull = controllerB.operations["global"]?.length ?? 0;
+    expect(opsAfterSecondPull).toBe(opsAfterFirstPull + 3);
+    expect(controllerB.state.global.description).toBe("Update 3");
+  });
+
   it("no conflict when onConflict is set but remote has not changed", async () => {
     // Controller A creates a document and pushes
     const controllerA = await RemoteDocumentController.pull(

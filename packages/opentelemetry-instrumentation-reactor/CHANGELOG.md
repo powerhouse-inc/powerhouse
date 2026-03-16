@@ -1,3 +1,17 @@
+## 6.0.0-dev.90 (2026-03-14)
+
+### 🩹 Fixes
+
+- clear stale timeout in queueDepth observable callback ([61a89e9e0](https://github.com/powerhouse-inc/powerhouse/commit/61a89e9e0))
+- add timeout to async queueDepth observable callback ([c9d505a71](https://github.com/powerhouse-inc/powerhouse/commit/c9d505a71))
+- properly remove observable gauge callbacks on stop() ([35164b411](https://github.com/powerhouse-inc/powerhouse/commit/35164b411))
+- remove remaining non-null assertions in registerObservableGauges ([05a0df1c7](https://github.com/powerhouse-inc/powerhouse/commit/05a0df1c7))
+- address code review issues in opentelemetry-instrumentation-reactor ([72c751c67](https://github.com/powerhouse-inc/powerhouse/commit/72c751c67))
+
+### ❤️ Thank You
+
+- Samuel Hawksby-Robinson @Samyoul
+
 ## 6.0.0-dev.89 (2026-03-13)
 
 This was a version bump only for @powerhousedao/opentelemetry-instrumentation-reactor to align it with other projects, there were no code changes.

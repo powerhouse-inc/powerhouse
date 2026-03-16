@@ -1,3 +1,13 @@
+## 6.0.0-dev.90 (2026-03-14)
+
+### 🚀 Features
+
+- **reactor-browser:** controller fetches resulting state and operations on single query ([7165ea990](https://github.com/powerhouse-inc/powerhouse/commit/7165ea990))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 6.0.0-dev.89 (2026-03-13)
 
 ### 🚀 Features

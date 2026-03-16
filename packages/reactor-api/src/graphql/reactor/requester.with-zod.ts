@@ -12,6 +12,7 @@ import { createFetchRequester } from "./requester.js";
 import {
   DocumentChangeEventDTO,
   DocumentModelResultPageDTO,
+  DocumentWithChildrenAndOperationsDTO,
   DocumentWithChildrenDTO,
   JobChangeEventDTO,
   JobInfoDTO,
@@ -34,6 +35,11 @@ const operationValidators: OperationValidators = {
   GetDocument: (data) => {
     if (data.document) {
       DocumentWithChildrenDTO.parse(data.document);
+    }
+  },
+  GetDocumentWithOperations: (data) => {
+    if (data.document) {
+      DocumentWithChildrenAndOperationsDTO.parse(data.document);
     }
   },
   GetDocumentModels: (data) => {

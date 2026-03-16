@@ -7,6 +7,7 @@ import type {
 import {
   ConflictError,
   buildPulledDocument,
+  convertRemoteOperations,
   deserializeSignature,
   extractRevisionMap,
   hasRevisionConflict,
@@ -289,9 +290,10 @@ describe("buildPulledDocument", () => {
       id: "remote-1",
       name: "Remote Doc",
     });
-    const ops = {
+    const remoteOps = {
       global: [makeRemoteOp({ index: 0 }), makeRemoteOp({ index: 1 })],
     };
+    const ops = convertRemoteOperations(remoteOps);
     const initial = makeInitialDoc();
 
     const result = buildPulledDocument(remoteDoc, ops, initial, "main");

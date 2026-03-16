@@ -39,6 +39,62 @@ query GetDocument($identifier: String!, $view: ViewFilterInput) {
   }
 }
 
+query GetDocumentWithOperations(
+  $identifier: String!
+  $view: ViewFilterInput
+  $operationsFilter: DocumentOperationsFilterInput
+  $operationsPaging: PagingInput
+) {
+  document(identifier: $identifier, view: $view) {
+    document {
+      ...PHDocumentFields
+      operations(filter: $operationsFilter, paging: $operationsPaging) {
+        items {
+          index
+          timestampUtcMs
+          hash
+          skip
+          error
+          id
+          action {
+            id
+            type
+            timestampUtcMs
+            input
+            scope
+            attachments {
+              data
+              mimeType
+              hash
+              extension
+              fileName
+            }
+            context {
+              signer {
+                user {
+                  address
+                  networkId
+                  chainId
+                }
+                app {
+                  name
+                  key
+                }
+                signatures
+              }
+            }
+          }
+        }
+        totalCount
+        hasNextPage
+        hasPreviousPage
+        cursor
+      }
+    }
+    childIds
+  }
+}
+
 query GetDocumentChildren(
   $parentIdentifier: String!
   $view: ViewFilterInput

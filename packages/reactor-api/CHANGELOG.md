@@ -1,3 +1,17 @@
+## 6.0.0-dev.90 (2026-03-14)
+
+### 🚀 Features
+
+- **reactor-browser:** controller fetches resulting state and operations on single query ([7165ea990](https://github.com/powerhouse-inc/powerhouse/commit/7165ea990))
+
+### 🩹 Fixes
+
+- **reactor-api:** added missing zod validator ([5c8ae345a](https://github.com/powerhouse-inc/powerhouse/commit/5c8ae345a))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 6.0.0-dev.89 (2026-03-13)
 
 This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.

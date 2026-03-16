@@ -25,6 +25,7 @@ export type RemoteOperationResultPage =
 export type ReactorGraphQLClient = Pick<
   Sdk,
   | "GetDocument"
+  | "GetDocumentWithOperations"
   | "GetDocumentOperations"
   | "MutateDocument"
   | "CreateDocument"
@@ -51,6 +52,8 @@ export type RemoteControllerOptions = {
   onConflict?: ConflictStrategy;
   /** Called when a streaming-mode push fails. If not provided, errors are silently swallowed. */
   onPushError?: (error: unknown) => void;
+  /** Number of operations to fetch per page. Defaults to 100. */
+  operationsPageSize?: number;
 };
 
 /**
@@ -111,18 +114,43 @@ export type RemoteDocumentChangeEvent = {
 /** Listener for document change events. */
 export type DocumentChangeListener = (event: RemoteDocumentChangeEvent) => void;
 
+/** Result of fetching operations, including the cursor for incremental fetches. */
+export type GetOperationsResult = {
+  operationsByScope: Record<string, RemoteOperation[]>;
+  /** Opaque cursor for resuming pagination. Undefined if there were no results. */
+  cursor: string | undefined;
+};
+
+/** Result of fetching a document together with its first page of operations. */
+export type GetDocumentWithOperationsResult = {
+  document: RemoteDocumentData;
+  childIds: ReadonlyArray<string>;
+  /** First page of operations (may need further pagination if hasNextPage is true). */
+  operations: GetOperationsResult;
+  /** True if there are more pages of operations to fetch. */
+  hasMoreOperations: boolean;
+};
+
 export interface IRemoteClient {
   getDocument(
     identifier: string,
     branch?: string,
   ): Promise<GetDocumentResult | null>;
 
+  /** Fetch document metadata and the first page of operations in a single query. */
+  getDocumentWithOperations(
+    identifier: string,
+    branch?: string,
+    operationsCursor?: string,
+  ): Promise<GetDocumentWithOperationsResult | null>;
+
   getAllOperations(
     documentId: string,
     branch?: string,
     sinceRevision?: number,
     scopes?: string[],
-  ): Promise<Record<string, RemoteOperation[]>>;
+    cursor?: string,
+  ): Promise<GetOperationsResult>;
 
   pushActions(
     documentIdentifier: string,

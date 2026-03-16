@@ -1,5 +1,7 @@
 import type {
   GetDocumentResult,
+  GetDocumentWithOperationsResult,
+  GetOperationsResult,
   IRemoteClient,
   PropagationMode,
   ReactorGraphQLClient,
@@ -10,8 +12,17 @@ import type {
 /**
  * Thin facade over the GraphQL SDK for remote document operations.
  */
+const DEFAULT_PAGE_SIZE = 100;
+
 export class RemoteClient implements IRemoteClient {
-  constructor(private readonly client: ReactorGraphQLClient) {}
+  private readonly pageSize: number;
+
+  constructor(
+    private readonly client: ReactorGraphQLClient,
+    pageSize?: number,
+  ) {
+    this.pageSize = pageSize ?? DEFAULT_PAGE_SIZE;
+  }
 
   /** Fetch a document by identifier. Returns null if not found. */
   async getDocument(
@@ -26,17 +37,63 @@ export class RemoteClient implements IRemoteClient {
   }
 
   /**
+   * Fetch a document and its first page of operations in a single query.
+   * Returns null if the document is not found.
+   */
+  async getDocumentWithOperations(
+    identifier: string,
+    branch?: string,
+    operationsCursor?: string,
+  ): Promise<GetDocumentWithOperationsResult | null> {
+    const result = await this.client.GetDocumentWithOperations({
+      identifier,
+      view: branch ? { branch } : undefined,
+      operationsPaging: {
+        limit: this.pageSize,
+        cursor: operationsCursor ?? null,
+      },
+    });
+
+    if (!result.document) return null;
+
+    const doc = result.document.document;
+    const opsPage = doc.operations;
+    const operationsByScope: Record<string, RemoteOperation[]> = {};
+
+    if (opsPage) {
+      for (const op of opsPage.items) {
+        const scope = op.action.scope;
+        (operationsByScope[scope] ??= []).push(op);
+      }
+    }
+
+    return {
+      document: doc,
+      childIds: result.document.childIds,
+      operations: {
+        operationsByScope,
+        cursor: opsPage?.cursor ?? undefined,
+      },
+      hasMoreOperations: opsPage?.hasNextPage ?? false,
+    };
+  }
+
+  /**
    * Fetch all operations for a document, paginating through all pages.
-   * Returns operations grouped by scope.
+   * Returns operations grouped by scope and the final cursor for incremental fetches.
+   *
+   * @param startCursor - If provided, resume fetching from this cursor position
+   *   (for incremental pulls after the initial fetch).
    */
   async getAllOperations(
     documentId: string,
     branch?: string,
     sinceRevision?: number,
     scopes?: string[],
-  ): Promise<Record<string, RemoteOperation[]>> {
+    startCursor?: string,
+  ): Promise<GetOperationsResult> {
     const operationsByScope: Record<string, RemoteOperation[]> = {};
-    let cursor: string | null | undefined = undefined;
+    let cursor: string | null | undefined = startCursor ?? undefined;
     let hasNextPage = true;
 
     while (hasNextPage) {
@@ -48,7 +105,7 @@ export class RemoteClient implements IRemoteClient {
           scopes: scopes ?? null,
         },
         paging: {
-          limit: 100,
+          limit: this.pageSize,
           cursor: cursor ?? null,
         },
       });
@@ -57,17 +114,17 @@ export class RemoteClient implements IRemoteClient {
 
       for (const op of page.items) {
         const scope = op.action.scope;
-        if (!operationsByScope[scope]) {
-          operationsByScope[scope] = [];
-        }
-        operationsByScope[scope].push(op);
+        (operationsByScope[scope] ??= []).push(op);
       }
 
       hasNextPage = page.hasNextPage;
       cursor = page.cursor;
     }
 
-    return operationsByScope;
+    return {
+      operationsByScope,
+      cursor: cursor ?? undefined,
+    };
   }
 
   /** Push actions to an existing document via MutateDocument. */
