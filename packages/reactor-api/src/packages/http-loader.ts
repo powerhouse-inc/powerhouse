@@ -71,7 +71,7 @@ export class HttpPackageLoader implements IDocumentModelLoader {
       throw new Error(`Invalid package name: ${packageName}`);
     }
 
-    const url = `${this.registryUrl}${packageName}/document-models.js`;
+    const url = `${this.registryUrl}-/cdn/${packageName}/document-models/index.js`;
 
     try {
       this.logger.verbose(`Importing document-models from: ${url}`);
