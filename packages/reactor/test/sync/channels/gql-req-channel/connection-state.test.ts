@@ -145,7 +145,10 @@ function successFetch() {
     if (body.query.includes("touchChannel")) {
       return {
         ok: true,
-        json: () => Promise.resolve({ data: { touchChannel: true } }),
+        json: () =>
+          Promise.resolve({
+            data: { touchChannel: { success: true, ackOrdinal: 0 } },
+          }),
       };
     }
     if (body.query.includes("pushSyncEnvelopes")) {
@@ -242,7 +245,10 @@ describe("GqlRequestChannel Connection State", () => {
       if (body.query.includes("touchChannel")) {
         return {
           ok: true,
-          json: () => Promise.resolve({ data: { touchChannel: true } }),
+          json: () =>
+            Promise.resolve({
+              data: { touchChannel: { success: true, ackOrdinal: 0 } },
+            }),
         };
       }
       callCount++;
@@ -293,7 +299,10 @@ describe("GqlRequestChannel Connection State", () => {
       if (body.query.includes("touchChannel")) {
         return {
           ok: true,
-          json: () => Promise.resolve({ data: { touchChannel: true } }),
+          json: () =>
+            Promise.resolve({
+              data: { touchChannel: { success: true, ackOrdinal: 0 } },
+            }),
         };
       }
       callCount++;
@@ -359,7 +368,10 @@ describe("GqlRequestChannel Connection State", () => {
         }
         return {
           ok: true,
-          json: () => Promise.resolve({ data: { touchChannel: true } }),
+          json: () =>
+            Promise.resolve({
+              data: { touchChannel: { success: true, ackOrdinal: 0 } },
+            }),
         };
       }
       // poll returns channel-not-found
@@ -525,7 +537,10 @@ describe("GqlRequestChannel Connection State", () => {
       if (body.query.includes("touchChannel")) {
         return {
           ok: true,
-          json: () => Promise.resolve({ data: { touchChannel: true } }),
+          json: () =>
+            Promise.resolve({
+              data: { touchChannel: { success: true, ackOrdinal: 0 } },
+            }),
         };
       }
       if (body.query.includes("pushSyncEnvelopes")) {
@@ -586,7 +601,10 @@ describe("GqlRequestChannel Connection State", () => {
       if (body.query.includes("touchChannel")) {
         return {
           ok: true,
-          json: () => Promise.resolve({ data: { touchChannel: true } }),
+          json: () =>
+            Promise.resolve({
+              data: { touchChannel: { success: true, ackOrdinal: 0 } },
+            }),
         };
       }
       if (body.query.includes("pushSyncEnvelopes")) {
@@ -643,7 +661,10 @@ describe("GqlRequestChannel Connection State", () => {
       if (body.query.includes("touchChannel")) {
         return {
           ok: true,
-          json: () => Promise.resolve({ data: { touchChannel: true } }),
+          json: () =>
+            Promise.resolve({
+              data: { touchChannel: { success: true, ackOrdinal: 0 } },
+            }),
         };
       }
       return {
@@ -671,6 +692,225 @@ describe("GqlRequestChannel Connection State", () => {
     expect(snapshot.state).toBe("error");
     expect(snapshot.failureCount).toBe(1);
     expect(snapshot.lastFailureUtcMs).toBeGreaterThan(0);
+    await channel.shutdown();
+  });
+
+  it("401 poll error stops polling and transitions to error", async () => {
+    const mockFetch = createMockFetch((body) => {
+      if (body.query.includes("touchChannel")) {
+        return {
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              data: { touchChannel: { success: true, ackOrdinal: 0 } },
+            }),
+        };
+      }
+      return {
+        ok: false,
+        status: 401,
+        statusText: "Unauthorized",
+        json: () => Promise.resolve({}),
+      };
+    });
+    global.fetch = mockFetch as unknown as typeof global.fetch;
+
+    const manualTimer = new ManualPollTimer();
+    const channel = new GqlRequestChannel(
+      createMockLogger(),
+      "channel-1",
+      "remote-1",
+      createMockCursorStorage(),
+      createTestConfig(),
+      createMockOperationIndex(),
+      manualTimer,
+    );
+
+    await channel.init();
+    await manualTimer.tick();
+
+    expect(channel.getConnectionState().state).toBe("error");
+    expect(manualTimer.isRunning()).toBe(false);
+    await channel.shutdown();
+  });
+
+  it("500 poll error allows timer retry", async () => {
+    let pollCount = 0;
+    const mockFetch = createMockFetch((body) => {
+      if (body.query.includes("touchChannel")) {
+        return {
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              data: { touchChannel: { success: true, ackOrdinal: 0 } },
+            }),
+        };
+      }
+      pollCount++;
+      if (pollCount === 1) {
+        return {
+          ok: false,
+          status: 500,
+          statusText: "Internal Server Error",
+          json: () => Promise.resolve({}),
+        };
+      }
+      return {
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            data: {
+              pollSyncEnvelopes: {
+                envelopes: [],
+                ackOrdinal: 0,
+                deadLetters: [],
+              },
+            },
+          }),
+      };
+    });
+    global.fetch = mockFetch as unknown as typeof global.fetch;
+
+    const manualTimer = new ManualPollTimer();
+    const channel = new GqlRequestChannel(
+      createMockLogger(),
+      "channel-1",
+      "remote-1",
+      createMockCursorStorage(),
+      createTestConfig(),
+      createMockOperationIndex(),
+      manualTimer,
+    );
+
+    await channel.init();
+
+    // First poll: 500 error (recoverable) - rethrown by handlePollError
+    await manualTimer.tick().catch(() => {});
+    expect(channel.getConnectionState().state).toBe("error");
+    expect(manualTimer.isRunning()).toBe(true);
+
+    // Second poll succeeds - timer is still running
+    await manualTimer.tick();
+    expect(channel.getConnectionState().state).toBe("connected");
+    await channel.shutdown();
+  });
+
+  it("recovery with auth error stops immediately", async () => {
+    let touchCount = 0;
+    const mockFetch = createMockFetch((body) => {
+      if (body.query.includes("touchChannel")) {
+        touchCount++;
+        if (touchCount > 1) {
+          return {
+            ok: false,
+            status: 403,
+            statusText: "Forbidden",
+            json: () => Promise.resolve({}),
+          };
+        }
+        return {
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              data: { touchChannel: { success: true, ackOrdinal: 0 } },
+            }),
+        };
+      }
+      return {
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            errors: [{ message: "Channel not found" }],
+          }),
+      };
+    });
+    global.fetch = mockFetch as unknown as typeof global.fetch;
+
+    const manualTimer = new ManualPollTimer();
+    const channel = new GqlRequestChannel(
+      createMockLogger(),
+      "channel-1",
+      "remote-1",
+      createMockCursorStorage(),
+      createTestConfig(),
+      createMockOperationIndex(),
+      manualTimer,
+    );
+
+    await channel.init();
+    await manualTimer.tick();
+    expect(channel.getConnectionState().state).toBe("reconnecting");
+
+    await vi.advanceTimersByTimeAsync(100);
+    expect(channel.getConnectionState().state).toBe("error");
+    // Timer should stay stopped (not restarted)
+    expect(manualTimer.isRunning()).toBe(false);
+    await channel.shutdown();
+  });
+
+  it("recovery with network error retries with backoff", async () => {
+    let touchCount = 0;
+    const mockFetch = createMockFetch((body) => {
+      if (body.query.includes("touchChannel")) {
+        touchCount++;
+        if (touchCount === 2) {
+          throw new Error("Network timeout");
+        }
+        return {
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              data: { touchChannel: { success: true, ackOrdinal: 0 } },
+            }),
+        };
+      }
+      if (body.query.includes("pollSyncEnvelopes")) {
+        return {
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              errors: [{ message: "Channel not found" }],
+            }),
+        };
+      }
+      return {
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            data: {
+              pollSyncEnvelopes: {
+                envelopes: [],
+                ackOrdinal: 0,
+                deadLetters: [],
+              },
+            },
+          }),
+      };
+    });
+    global.fetch = mockFetch as unknown as typeof global.fetch;
+
+    const manualTimer = new ManualPollTimer();
+    const channel = new GqlRequestChannel(
+      createMockLogger(),
+      "channel-1",
+      "remote-1",
+      createMockCursorStorage(),
+      createTestConfig({ retryBaseDelayMs: 100, retryMaxDelayMs: 200 }),
+      createMockOperationIndex(),
+      manualTimer,
+    );
+
+    await channel.init();
+    await manualTimer.tick();
+    expect(channel.getConnectionState().state).toBe("reconnecting");
+
+    // First recovery attempt fails with network error (recoverable)
+    await vi.advanceTimersByTimeAsync(50);
+    expect(channel.getConnectionState().state).toBe("reconnecting");
+
+    // Advance past backoff delay - second recovery attempt succeeds
+    await vi.advanceTimersByTimeAsync(500);
+    expect(channel.getConnectionState().state).toBe("connected");
     await channel.shutdown();
   });
 });

@@ -168,7 +168,10 @@ describe("GqlRequestChannel Integration", () => {
       if (body.query.includes("touchChannel")) {
         return Promise.resolve({
           ok: true,
-          json: () => Promise.resolve({ data: { touchChannel: true } }),
+          json: () =>
+            Promise.resolve({
+              data: { touchChannel: { success: true, ackOrdinal: 0 } },
+            }),
         });
       }
 
@@ -377,7 +380,10 @@ describe("GqlRequestChannel Integration", () => {
       if (body.query.includes("touchChannel")) {
         return Promise.resolve({
           ok: true,
-          json: () => Promise.resolve({ data: { touchChannel: true } }),
+          json: () =>
+            Promise.resolve({
+              data: { touchChannel: { success: true, ackOrdinal: 0 } },
+            }),
         });
       }
       return Promise.resolve({

@@ -9,6 +9,7 @@ import {
 } from "../../../../src/sync/channels/gql-req-channel.js";
 import { IntervalPollTimer } from "../../../../src/sync/channels/interval-poll-timer.js";
 import type { IPollTimer } from "../../../../src/sync/channels/poll-timer.js";
+import { GraphQLRequestError } from "../../../../src/sync/errors.js";
 import { SyncOperation } from "../../../../src/sync/sync-operation.js";
 import {
   SyncOperationStatus,
@@ -142,7 +143,10 @@ const createMockFetch = (
     if (body.query.includes("touchChannel")) {
       return Promise.resolve({
         ok: true,
-        json: () => Promise.resolve({ data: { touchChannel: true } }),
+        json: () =>
+          Promise.resolve({
+            data: { touchChannel: { success: true, ackOrdinal: 0 } },
+          }),
       });
     }
 
@@ -793,7 +797,10 @@ describe("GqlRequestChannel", () => {
         .fn()
         .mockResolvedValueOnce({
           ok: true,
-          json: () => Promise.resolve({ data: { touchChannel: true } }),
+          json: () =>
+            Promise.resolve({
+              data: { touchChannel: { success: true, ackOrdinal: 0 } },
+            }),
         })
         .mockRejectedValue(new Error("Network error"));
       global.fetch = mockFetch as unknown as typeof global.fetch;
@@ -830,7 +837,10 @@ describe("GqlRequestChannel", () => {
         .fn()
         .mockResolvedValueOnce({
           ok: true,
-          json: () => Promise.resolve({ data: { touchChannel: true } }),
+          json: () =>
+            Promise.resolve({
+              data: { touchChannel: { success: true, ackOrdinal: 0 } },
+            }),
         })
         .mockRejectedValue(new Error("Network error"));
       global.fetch = mockFetch as unknown as typeof global.fetch;
@@ -866,7 +876,10 @@ describe("GqlRequestChannel", () => {
         if (callCount === 1) {
           return Promise.resolve({
             ok: true,
-            json: () => Promise.resolve({ data: { touchChannel: true } }),
+            json: () =>
+              Promise.resolve({
+                data: { touchChannel: { success: true, ackOrdinal: 0 } },
+              }),
           });
         }
         // Call 2 (immediate poll) and call 3 fail, call 4 succeeds
@@ -912,7 +925,7 @@ describe("GqlRequestChannel", () => {
       await channel.shutdown();
     });
 
-    it("should handle GraphQL errors", async () => {
+    it("should handle GraphQL errors as unrecoverable", async () => {
       const cursorStorage = createMockCursorStorage();
       const manualTimer = new ManualPollTimer();
       // First call (touchChannel) succeeds, subsequent calls return GraphQL errors
@@ -920,7 +933,10 @@ describe("GqlRequestChannel", () => {
         .fn()
         .mockResolvedValueOnce({
           ok: true,
-          json: () => Promise.resolve({ data: { touchChannel: true } }),
+          json: () =>
+            Promise.resolve({
+              data: { touchChannel: { success: true, ackOrdinal: 0 } },
+            }),
         })
         .mockResolvedValue({
           ok: true,
@@ -947,9 +963,10 @@ describe("GqlRequestChannel", () => {
         expect(channel.getConnectionState().failureCount).toBe(1);
       });
 
-      // Another poll failure
+      // Timer is stopped for unrecoverable errors, so further ticks do nothing
       await manualTimer.tick().catch(() => {});
-      expect(channel.getConnectionState().failureCount).toBe(2);
+      expect(channel.getConnectionState().failureCount).toBe(1);
+      expect(manualTimer.isRunning()).toBe(false);
       await channel.shutdown();
     });
 
@@ -961,7 +978,10 @@ describe("GqlRequestChannel", () => {
         .fn()
         .mockResolvedValueOnce({
           ok: true,
-          json: () => Promise.resolve({ data: { touchChannel: true } }),
+          json: () =>
+            Promise.resolve({
+              data: { touchChannel: { success: true, ackOrdinal: 0 } },
+            }),
         })
         .mockResolvedValue({
           ok: false,
@@ -1001,7 +1021,10 @@ describe("GqlRequestChannel", () => {
         if (body.query.includes("touchChannel")) {
           return Promise.resolve({
             ok: true,
-            json: () => Promise.resolve({ data: { touchChannel: true } }),
+            json: () =>
+              Promise.resolve({
+                data: { touchChannel: { success: true, ackOrdinal: 0 } },
+              }),
           });
         }
         pollCount++;
@@ -1062,7 +1085,10 @@ describe("GqlRequestChannel", () => {
         if (body.query.includes("touchChannel")) {
           return Promise.resolve({
             ok: true,
-            json: () => Promise.resolve({ data: { touchChannel: true } }),
+            json: () =>
+              Promise.resolve({
+                data: { touchChannel: { success: true, ackOrdinal: 0 } },
+              }),
           });
         }
 
@@ -1118,6 +1144,196 @@ describe("GqlRequestChannel", () => {
       expect(channel.getConnectionState().failureCount).toBe(0);
       expect(channel.getConnectionState().state).toBe("connected");
 
+      await channel.shutdown();
+    });
+  });
+
+  describe("GraphQLRequestError", () => {
+    it("carries correct category and status code", () => {
+      const networkErr = new GraphQLRequestError("Network error", "network");
+      expect(networkErr.category).toBe("network");
+      expect(networkErr.statusCode).toBeUndefined();
+      expect(networkErr.name).toBe("GraphQLRequestError");
+
+      const httpErr = new GraphQLRequestError("HTTP 401", "http", 401);
+      expect(httpErr.category).toBe("http");
+      expect(httpErr.statusCode).toBe(401);
+
+      const graphqlErr = new GraphQLRequestError(
+        "Validation failed",
+        "graphql",
+      );
+      expect(graphqlErr.category).toBe("graphql");
+      expect(graphqlErr.statusCode).toBeUndefined();
+    });
+
+    it("is thrown from executeGraphQL with correct categories", async () => {
+      const cursorStorage = createMockCursorStorage();
+      const manualTimer = new ManualPollTimer();
+
+      // Network error: fetch throws on all poll attempts
+      const mockFetch = vi.fn().mockImplementation((_url, options) => {
+        const body = JSON.parse(options.body as string);
+        if (body.query.includes("touchChannel")) {
+          return Promise.resolve({
+            ok: true,
+            json: () =>
+              Promise.resolve({
+                data: { touchChannel: { success: true, ackOrdinal: 0 } },
+              }),
+          });
+        }
+        return Promise.reject(new Error("Connection refused"));
+      });
+      global.fetch = mockFetch as unknown as typeof global.fetch;
+
+      const channel = new GqlRequestChannel(
+        createMockLogger(),
+        "channel-1",
+        "remote-1",
+        cursorStorage,
+        createTestConfig(),
+        createMockOperationIndex(),
+        manualTimer,
+      );
+      await channel.init();
+
+      // Wait for the initial poll (from start()) to settle
+      await vi.waitFor(() => {
+        expect(channel.getConnectionState().failureCount).toBe(1);
+      });
+
+      try {
+        await manualTimer.tick();
+      } catch (error) {
+        expect(error).toBeInstanceOf(GraphQLRequestError);
+        expect((error as GraphQLRequestError).category).toBe("network");
+      }
+      await channel.shutdown();
+    });
+  });
+
+  describe("touchRemoteChannel", () => {
+    it("returns ackOrdinal from server response", async () => {
+      const cursorStorage = createMockCursorStorage();
+      const manualTimer = new ManualPollTimer();
+      const mockFetch = vi.fn().mockImplementation((_url, options) => {
+        const body = JSON.parse(options.body as string);
+        if (body.query.includes("touchChannel")) {
+          return Promise.resolve({
+            ok: true,
+            json: () =>
+              Promise.resolve({
+                data: { touchChannel: { success: true, ackOrdinal: 5 } },
+              }),
+          });
+        }
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              data: {
+                pollSyncEnvelopes: {
+                  envelopes: [],
+                  ackOrdinal: 0,
+                  deadLetters: [],
+                },
+              },
+            }),
+        });
+      });
+      global.fetch = mockFetch as unknown as typeof global.fetch;
+
+      const channel = new GqlRequestChannel(
+        createMockLogger(),
+        "channel-1",
+        "remote-1",
+        cursorStorage,
+        createTestConfig(),
+        createMockOperationIndex(),
+        manualTimer,
+      );
+
+      // init calls touchRemoteChannel which returns ackOrdinal
+      await channel.init();
+      expect(channel.getConnectionState().state).toBe("connected");
+
+      // Verify the touchChannel mutation requests the new fields
+      const touchCall = mockFetch.mock.calls.find(
+        (call: unknown[]) =>
+          (call[1] as RequestInit).body &&
+          ((call[1] as RequestInit).body as string).includes("touchChannel"),
+      );
+      expect(touchCall).toBeDefined();
+      const body = JSON.parse((touchCall![1] as RequestInit).body as string);
+      expect(body.query).toContain("ackOrdinal");
+      expect(body.query).toContain("success");
+      await channel.shutdown();
+    });
+  });
+
+  describe("recovery loop", () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("does not restart poll timer on recovery failure", async () => {
+      const cursorStorage = createMockCursorStorage();
+      const manualTimer = new ManualPollTimer();
+      let touchCount = 0;
+      const mockFetch = vi.fn().mockImplementation((_url, options) => {
+        const body = JSON.parse(options.body as string);
+        if (body.query.includes("touchChannel")) {
+          touchCount++;
+          if (touchCount > 1) {
+            // Recovery touch fails with network error (recoverable)
+            throw new Error("Network error");
+          }
+          return Promise.resolve({
+            ok: true,
+            json: () =>
+              Promise.resolve({
+                data: { touchChannel: { success: true, ackOrdinal: 0 } },
+              }),
+          });
+        }
+        // Poll returns channel not found
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              errors: [{ message: "Channel not found" }],
+            }),
+        });
+      });
+      global.fetch = mockFetch as unknown as typeof global.fetch;
+
+      const channel = new GqlRequestChannel(
+        createMockLogger(),
+        "channel-1",
+        "remote-1",
+        cursorStorage,
+        createTestConfig(),
+        createMockOperationIndex(),
+        manualTimer,
+      );
+      await channel.init();
+
+      // init fires: touchChannel(1) succeeds, start() auto-fires poll which
+      // returns "Channel not found", triggering recovery touchChannel(2) which
+      // fails with network error. Wait for that recovery chain to settle.
+      await vi.waitFor(() => {
+        expect(touchCount).toBeGreaterThanOrEqual(2);
+      });
+
+      // Timer should NOT have been restarted (recovery failed but is recoverable,
+      // so it schedules a retry via setTimeout, NOT pollTimer.start())
+      expect(manualTimer.isRunning()).toBe(false);
+      expect(channel.getConnectionState().state).toBe("reconnecting");
       await channel.shutdown();
     });
   });
@@ -1245,7 +1461,10 @@ describe("GqlRequestChannel", () => {
         .fn()
         .mockResolvedValueOnce({
           ok: true,
-          json: () => Promise.resolve({ data: { touchChannel: true } }),
+          json: () =>
+            Promise.resolve({
+              data: { touchChannel: { success: true, ackOrdinal: 0 } },
+            }),
         })
         .mockRejectedValue(new Error("Network error"));
       global.fetch = mockFetch as unknown as typeof global.fetch;
@@ -1282,7 +1501,10 @@ describe("GqlRequestChannel", () => {
           if (body.query.includes("touchChannel")) {
             return Promise.resolve({
               ok: true,
-              json: () => Promise.resolve({ data: { touchChannel: true } }),
+              json: () =>
+                Promise.resolve({
+                  data: { touchChannel: { success: true, ackOrdinal: 0 } },
+                }),
             });
           }
           return Promise.resolve({
@@ -1703,7 +1925,10 @@ describe("GqlRequestChannel", () => {
         if (body.query.includes("touchChannel")) {
           return Promise.resolve({
             ok: true,
-            json: () => Promise.resolve({ data: { touchChannel: true } }),
+            json: () =>
+              Promise.resolve({
+                data: { touchChannel: { success: true, ackOrdinal: 0 } },
+              }),
           });
         }
         callCount++;
@@ -1828,7 +2053,10 @@ describe("GqlRequestChannel", () => {
         if (body.query.includes("touchChannel")) {
           return Promise.resolve({
             ok: true,
-            json: () => Promise.resolve({ data: { touchChannel: true } }),
+            json: () =>
+              Promise.resolve({
+                data: { touchChannel: { success: true, ackOrdinal: 0 } },
+              }),
           });
         }
 
