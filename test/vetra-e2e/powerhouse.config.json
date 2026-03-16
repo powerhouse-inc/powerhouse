@@ -17,5 +17,6 @@
       "version": "latest",
       "provider": "npm"
     }
-  ]
+  ],
+  "packageRegistryUrl": "http://localhost:8080"
 }

@@ -210,7 +210,7 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     mode,
     define: {
       PH_PACKAGES: phPackages,
-      PH_PACKAGE_REGISTRY_URL: phPackageRegistryUrl,
+      PH_PACKAGE_REGISTRY_URL: `"${phPackageRegistryUrl}"`,
     },
     customLogger,
     envPrefix: ["PH_CONNECT_"],

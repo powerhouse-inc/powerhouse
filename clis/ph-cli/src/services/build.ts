@@ -25,6 +25,24 @@ export async function runBuild(args: BuildArgs) {
     sourcemap,
     copy: [{ from: "powerhouse.manifest.json", to: "dist" }],
     config: false,
+    deps: {
+      alwaysBundle: ["*"],
+      neverBundle: [
+        "@tailwindcss/cli",
+        "@testing-library/jest-dom",
+        "@testing-library/react",
+        "@testing-library/user-event",
+        "@types/node",
+        "@types/react",
+        "@types/react-dom",
+        "@vitejs/plugin-react",
+        "tailwindcss",
+        "vitest",
+        "tsdown",
+        "react",
+        "react-dom",
+      ],
+    },
   });
 
   const detectResult = await detect();
