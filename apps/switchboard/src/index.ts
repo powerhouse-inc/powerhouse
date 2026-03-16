@@ -2,7 +2,7 @@
 import * as Sentry from "@sentry/node";
 import { childLogger } from "document-drive";
 import { config } from "./config.js";
-import { initMetricsFromEnv } from "./metrics.js";
+import { setupMetricsFromEnv } from "./metrics.js";
 import { initProfilerFromEnv } from "./profiler.js";
 import { startSwitchboard } from "./server.js";
 
@@ -24,7 +24,7 @@ function ensureNodeVersion(minVersion = "24") {
 // Ensure minimum Node.js version
 ensureNodeVersion("24");
 
-const meterProvider = initMetricsFromEnv(process.env);
+const meterProvider = setupMetricsFromEnv(process.env);
 
 async function shutdown() {
   console.log("\nShutting down...");
