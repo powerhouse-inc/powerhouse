@@ -1,132 +1,22 @@
-import type { OperationContext } from "document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { IOperationIndex } from "../../../../src/cache/operation-index-types.js";
 import type { IQueue } from "../../../../src/queue/interfaces.js";
-import type { ISyncCursorStorage } from "../../../../src/storage/interfaces.js";
-import {
-  GqlRequestChannel,
-  type GqlChannelConfig,
-} from "../../../../src/sync/channels/gql-req-channel.js";
+import { GqlRequestChannel } from "../../../../src/sync/channels/gql-req-channel.js";
 import { IntervalPollTimer } from "../../../../src/sync/channels/interval-poll-timer.js";
 import type { IPollTimer } from "../../../../src/sync/channels/poll-timer.js";
 import { GraphQLRequestError } from "../../../../src/sync/errors.js";
-import { SyncOperation } from "../../../../src/sync/sync-operation.js";
 import {
   SyncOperationStatus,
-  type RemoteFilter,
   type SyncEnvelope,
 } from "../../../../src/sync/types.js";
-import { createMockLogger } from "../../../factories.js";
-
-/**
- * Manual poll timer for testing that allows explicit control over when polling occurs.
- */
-class ManualPollTimer implements IPollTimer {
-  private delegate: (() => Promise<void>) | undefined;
-  private running = false;
-
-  setDelegate(delegate: () => Promise<void>): void {
-    this.delegate = delegate;
-  }
-
-  start(): void {
-    this.running = true;
-    if (this.delegate) {
-      void this.delegate().catch(() => {});
-    }
-  }
-
-  stop(): void {
-    this.running = false;
-  }
-
-  async tick(): Promise<void> {
-    if (this.running && this.delegate) {
-      await this.delegate();
-    }
-  }
-
-  isRunning(): boolean {
-    return this.running;
-  }
-}
-
-const TEST_FILTER: RemoteFilter = {
-  documentId: [],
-  scope: [],
-  branch: "main",
-};
-
-const createTestConfig = (
-  overrides: Partial<GqlChannelConfig> = {},
-): GqlChannelConfig => ({
-  url: "https://example.com/graphql",
-  collectionId: "test-collection",
-  filter: TEST_FILTER,
-  retryBaseDelayMs: 1000,
-  retryMaxDelayMs: 300000,
-  ...overrides,
-});
-
-const createMockCursorStorage = (
-  remoteName = "remote-1",
-): ISyncCursorStorage => {
-  const mockGet = vi.fn();
-  mockGet.mockResolvedValue({
-    remoteName,
-    cursorType: "inbox",
-    cursorOrdinal: 0,
-  });
-  return {
-    list: vi.fn().mockResolvedValue([]),
-    get: mockGet,
-    upsert: vi.fn().mockResolvedValue(undefined),
-    remove: vi.fn().mockResolvedValue(undefined),
-  };
-};
-
-const createMockOperationContext = (ordinal: number = 1): OperationContext => ({
-  documentId: "doc-1",
-  documentType: "test/document",
-  scope: "public",
-  branch: "main",
-  ordinal,
-});
-
-const createMockSyncOperation = (
-  id: string,
-  remoteName: string,
-  ordinal: number = 0,
-): SyncOperation => {
-  return new SyncOperation(
-    id,
-    "",
-    [],
-    remoteName,
-    "doc-1",
-    ["public"],
-    "main",
-    [
-      {
-        operation: {
-          index: 0,
-          skip: 0,
-          id: "op-1",
-          timestampUtcMs: new Date().toISOString(),
-          hash: "hash-1",
-          action: {
-            type: "TEST_OP",
-            id: "action-1",
-            scope: "public",
-            timestampUtcMs: new Date().toISOString(),
-            input: {},
-          },
-        },
-        context: createMockOperationContext(ordinal),
-      },
-    ],
-  );
-};
+import {
+  ManualPollTimer,
+  createMockCursorStorage,
+  createMockLogger,
+  createMockOperationContext,
+  createMockOperationIndex,
+  createMockSyncOperation,
+  createTestConfig,
+} from "./test-helpers.js";
 
 const createMockFetch = (
   response: {
@@ -172,22 +62,6 @@ const createMockFetch = (
     });
   });
 };
-
-const createMockOperationIndex = (): IOperationIndex => ({
-  start: vi.fn(),
-  commit: vi.fn().mockResolvedValue([]),
-  find: vi
-    .fn()
-    .mockResolvedValue({ items: [], nextCursor: undefined, hasMore: false }),
-  get: vi
-    .fn()
-    .mockResolvedValue({ results: [], options: { cursor: "0", limit: 100 } }),
-  getSinceOrdinal: vi
-    .fn()
-    .mockResolvedValue({ items: [], nextCursor: undefined, hasMore: false }),
-  getLatestTimestampForCollection: vi.fn().mockResolvedValue(null),
-  getCollectionsForDocuments: vi.fn().mockResolvedValue({}),
-});
 
 const createMockQueue = (): IQueue =>
   ({
@@ -791,7 +665,7 @@ describe("GqlRequestChannel", () => {
   describe("error handling", () => {
     it("should handle network errors during poll", async () => {
       const cursorStorage = createMockCursorStorage();
-      const manualTimer = new ManualPollTimer();
+      const manualTimer = new ManualPollTimer(true);
       // First call (touchChannel) succeeds, subsequent calls (poll) fail
       const mockFetch = vi
         .fn()
@@ -831,7 +705,7 @@ describe("GqlRequestChannel", () => {
 
     it("should propagate poll errors so timer can back off", async () => {
       const cursorStorage = createMockCursorStorage();
-      const manualTimer = new ManualPollTimer();
+      const manualTimer = new ManualPollTimer(true);
       // First call (touchChannel) succeeds, subsequent calls (poll) fail
       const mockFetch = vi
         .fn()
@@ -868,7 +742,7 @@ describe("GqlRequestChannel", () => {
 
     it("should reset failure count on success", async () => {
       const cursorStorage = createMockCursorStorage();
-      const manualTimer = new ManualPollTimer();
+      const manualTimer = new ManualPollTimer(true);
       let callCount = 0;
       const mockFetch = vi.fn().mockImplementation(() => {
         callCount++;
@@ -927,7 +801,7 @@ describe("GqlRequestChannel", () => {
 
     it("should handle GraphQL errors as unrecoverable", async () => {
       const cursorStorage = createMockCursorStorage();
-      const manualTimer = new ManualPollTimer();
+      const manualTimer = new ManualPollTimer(true);
       // First call (touchChannel) succeeds, subsequent calls return GraphQL errors
       const mockFetch = vi
         .fn()
@@ -972,7 +846,7 @@ describe("GqlRequestChannel", () => {
 
     it("should handle HTTP errors", async () => {
       const cursorStorage = createMockCursorStorage();
-      const manualTimer = new ManualPollTimer();
+      const manualTimer = new ManualPollTimer(true);
       // First call (touchChannel) succeeds, subsequent calls (poll) fail with HTTP 500
       const mockFetch = vi
         .fn()
@@ -1014,7 +888,7 @@ describe("GqlRequestChannel", () => {
 
     it("should not propagate 'Channel not found' errors to timer", async () => {
       const cursorStorage = createMockCursorStorage();
-      const manualTimer = new ManualPollTimer();
+      const manualTimer = new ManualPollTimer(true);
       let pollCount = 0;
       const mockFetch = vi.fn().mockImplementation((_url, options) => {
         const body = JSON.parse(options.body as string);
@@ -1169,7 +1043,7 @@ describe("GqlRequestChannel", () => {
 
     it("is thrown from executeGraphQL with correct categories", async () => {
       const cursorStorage = createMockCursorStorage();
-      const manualTimer = new ManualPollTimer();
+      const manualTimer = new ManualPollTimer(true);
 
       // Network error: fetch throws on all poll attempts
       const mockFetch = vi.fn().mockImplementation((_url, options) => {
@@ -1216,7 +1090,7 @@ describe("GqlRequestChannel", () => {
   describe("touchRemoteChannel", () => {
     it("returns ackOrdinal from server response", async () => {
       const cursorStorage = createMockCursorStorage();
-      const manualTimer = new ManualPollTimer();
+      const manualTimer = new ManualPollTimer(true);
       const mockFetch = vi.fn().mockImplementation((_url, options) => {
         const body = JSON.parse(options.body as string);
         if (body.query.includes("touchChannel")) {
@@ -1283,7 +1157,7 @@ describe("GqlRequestChannel", () => {
 
     it("does not restart poll timer on recovery failure", async () => {
       const cursorStorage = createMockCursorStorage();
-      const manualTimer = new ManualPollTimer();
+      const manualTimer = new ManualPollTimer(true);
       let touchCount = 0;
       const mockFetch = vi.fn().mockImplementation((_url, options) => {
         const body = JSON.parse(options.body as string);
@@ -1736,7 +1610,7 @@ describe("GqlRequestChannel", () => {
       });
       global.fetch = mockFetch as unknown as typeof global.fetch;
 
-      const manualTimer = new ManualPollTimer();
+      const manualTimer = new ManualPollTimer(true);
       const channel = new GqlRequestChannel(
         createMockLogger(),
         "channel-1",
@@ -1763,7 +1637,7 @@ describe("GqlRequestChannel", () => {
   describe("remote dead letter handling", () => {
     it("should add dead letters to local deadLetter mailbox when poll returns them", async () => {
       const cursorStorage = createMockCursorStorage();
-      const manualTimer = new ManualPollTimer();
+      const manualTimer = new ManualPollTimer(true);
       const mockFetch = createMockFetch({
         deadLetters: [
           { documentId: "doc-1", error: "Missing operations gap" },
@@ -1795,7 +1669,7 @@ describe("GqlRequestChannel", () => {
 
     it("should stop poller after receiving remote dead letters", async () => {
       const cursorStorage = createMockCursorStorage();
-      const manualTimer = new ManualPollTimer();
+      const manualTimer = new ManualPollTimer(true);
       const mockFetch = createMockFetch({
         deadLetters: [{ documentId: "doc-1", error: "Missing operations gap" }],
       });
@@ -1823,7 +1697,7 @@ describe("GqlRequestChannel", () => {
 
     it("should not push new outbox items when dead letters exist", async () => {
       const cursorStorage = createMockCursorStorage();
-      const manualTimer = new ManualPollTimer();
+      const manualTimer = new ManualPollTimer(true);
       const mockFetch = createMockFetch({
         deadLetters: [{ documentId: "doc-1", error: "Missing operations gap" }],
         pushSyncEnvelopes: true,
@@ -1865,7 +1739,7 @@ describe("GqlRequestChannel", () => {
 
     it("should not create dead letter ops when deadLetters array is empty", async () => {
       const cursorStorage = createMockCursorStorage();
-      const manualTimer = new ManualPollTimer();
+      const manualTimer = new ManualPollTimer(true);
       const mockFetch = createMockFetch({
         deadLetters: [],
       });
@@ -1894,7 +1768,7 @@ describe("GqlRequestChannel", () => {
 
     it("should process envelopes before handling dead letters", async () => {
       const cursorStorage = createMockCursorStorage();
-      const manualTimer = new ManualPollTimer();
+      const manualTimer = new ManualPollTimer(true);
       const mockEnvelope: SyncEnvelope = {
         type: "operations",
         channelMeta: { id: "channel-1" },
@@ -1982,7 +1856,7 @@ describe("GqlRequestChannel", () => {
       });
       global.fetch = mockFetch as unknown as typeof global.fetch;
 
-      const manualTimer = new ManualPollTimer();
+      const manualTimer = new ManualPollTimer(true);
       const channel = new GqlRequestChannel(
         createMockLogger(),
         "channel-1",
@@ -2019,7 +1893,7 @@ describe("GqlRequestChannel", () => {
       });
       global.fetch = mockFetch as unknown as typeof global.fetch;
 
-      const manualTimer = new ManualPollTimer();
+      const manualTimer = new ManualPollTimer(true);
       const channel = new GqlRequestChannel(
         createMockLogger(),
         "channel-1",
@@ -2082,7 +1956,7 @@ describe("GqlRequestChannel", () => {
       });
       global.fetch = mockFetch as unknown as typeof global.fetch;
 
-      const manualTimer = new ManualPollTimer();
+      const manualTimer = new ManualPollTimer(true);
       const channel = new GqlRequestChannel(
         createMockLogger(),
         "channel-1",

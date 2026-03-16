@@ -621,6 +621,13 @@ export class GqlRequestChannel implements IChannel {
       touchChannel: { success: boolean; ackOrdinal: number };
     }>(mutation, variables);
 
+    if (!data.touchChannel.success) {
+      throw new GraphQLRequestError(
+        "touchChannel returned success=false",
+        "graphql",
+      );
+    }
+
     return { ackOrdinal: data.touchChannel.ackOrdinal };
   }
 

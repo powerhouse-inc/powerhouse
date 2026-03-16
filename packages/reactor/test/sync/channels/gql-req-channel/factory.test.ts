@@ -1,21 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { IOperationIndex } from "../../../../src/cache/operation-index-types.js";
 import type { IQueue } from "../../../../src/queue/interfaces.js";
 import type { ISyncCursorStorage } from "../../../../src/storage/interfaces.js";
 import { GqlRequestChannel } from "../../../../src/sync/channels/gql-req-channel.js";
 import { GqlRequestChannelFactory } from "../../../../src/sync/channels/gql-request-channel-factory.js";
-import type {
-  ChannelConfig,
-  RemoteFilter,
-} from "../../../../src/sync/types.js";
-import { createMockLogger } from "../../../factories.js";
+import type { ChannelConfig } from "../../../../src/sync/types.js";
+import {
+  TEST_FILTER,
+  createMockLogger,
+  createMockOperationIndex,
+} from "./test-helpers.js";
 
 const TEST_COLLECTION_ID = "test-collection";
-const TEST_FILTER: RemoteFilter = {
-  documentId: [],
-  scope: [],
-  branch: "main",
-};
 
 const createMockQueue = (): IQueue =>
   ({
@@ -35,22 +30,6 @@ const createMockFetch = () => {
     json: () => Promise.resolve({ data: { pollSyncEnvelopes: [] } }),
   });
 };
-
-const createMockOperationIndex = (): IOperationIndex => ({
-  start: vi.fn(),
-  commit: vi.fn().mockResolvedValue([]),
-  find: vi
-    .fn()
-    .mockResolvedValue({ items: [], nextCursor: undefined, hasMore: false }),
-  get: vi
-    .fn()
-    .mockResolvedValue({ results: [], options: { cursor: "0", limit: 100 } }),
-  getSinceOrdinal: vi
-    .fn()
-    .mockResolvedValue({ items: [], nextCursor: undefined, hasMore: false }),
-  getLatestTimestampForCollection: vi.fn().mockResolvedValue(null),
-  getCollectionsForDocuments: vi.fn().mockResolvedValue({}),
-});
 
 describe("GqlRequestChannelFactory", () => {
   let originalFetch: typeof global.fetch;

@@ -9,48 +9,19 @@ import {
   ReactorBuilder,
   SyncBuilder,
   type GqlChannelConfig,
-  type ILogger,
-  type IOperationIndex,
-  type IPollTimer,
-  type ISyncCursorStorage,
   type ISyncManager,
   type ReactorModule,
 } from "@powerhousedao/reactor";
 import { driveDocumentModelModule } from "document-drive";
 import type { DocumentModelModule } from "document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  ManualPollTimer,
+  createMockCursorStorage,
+  createMockLogger,
+  createMockOperationIndex,
+} from "../../reactor/test/sync/channels/gql-req-channel/test-helpers.js";
 import { createResolverBridge } from "./utils/gql-resolver-bridge.js";
-
-// ---------------------------------------------------------------------------
-// ManualPollTimer (non-auto-fire variant from connection-state.test.ts)
-// ---------------------------------------------------------------------------
-
-class ManualPollTimer implements IPollTimer {
-  private delegate: (() => Promise<void>) | undefined;
-  private running = false;
-
-  setDelegate(delegate: () => Promise<void>): void {
-    this.delegate = delegate;
-  }
-
-  start(): void {
-    this.running = true;
-  }
-
-  stop(): void {
-    this.running = false;
-  }
-
-  async tick(): Promise<void> {
-    if (this.running && this.delegate) {
-      await this.delegate();
-    }
-  }
-
-  isRunning(): boolean {
-    return this.running;
-  }
-}
 
 // ---------------------------------------------------------------------------
 // FaultInjector
@@ -120,55 +91,6 @@ class FaultInjector {
       return this.delegate(input, init);
     };
   }
-}
-
-// ---------------------------------------------------------------------------
-// Test helpers
-// ---------------------------------------------------------------------------
-
-function createMockLogger(): ILogger {
-  const logger: ILogger = {
-    level: "error",
-    verbose: () => {},
-    debug: () => {},
-    info: () => {},
-    warn: () => {},
-    error: () => {},
-    errorHandler: () => {},
-    child: () => logger,
-  };
-  return logger;
-}
-
-function createMockCursorStorage(): ISyncCursorStorage {
-  return {
-    list: vi.fn().mockResolvedValue([]),
-    get: vi.fn().mockResolvedValue({
-      remoteName: "remote-1",
-      cursorType: "inbox",
-      cursorOrdinal: 0,
-    }),
-    upsert: vi.fn().mockResolvedValue(undefined),
-    remove: vi.fn().mockResolvedValue(undefined),
-  };
-}
-
-function createMockOperationIndex(): IOperationIndex {
-  return {
-    start: vi.fn(),
-    commit: vi.fn().mockResolvedValue([]),
-    find: vi
-      .fn()
-      .mockResolvedValue({ items: [], nextCursor: undefined, hasMore: false }),
-    get: vi
-      .fn()
-      .mockResolvedValue({ results: [], options: { cursor: "0", limit: 100 } }),
-    getSinceOrdinal: vi
-      .fn()
-      .mockResolvedValue({ items: [], nextCursor: undefined, hasMore: false }),
-    getLatestTimestampForCollection: vi.fn().mockResolvedValue(null),
-    getCollectionsForDocuments: vi.fn().mockResolvedValue({}),
-  };
 }
 
 // ---------------------------------------------------------------------------
