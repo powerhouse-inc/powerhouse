@@ -30,13 +30,13 @@ runs:
       shell: bash
       run: pnpm build-misc
 
-    - name: Run css build scripts
-      shell: bash
-      run: pnpm build-css
-
     - name: Run bundle scripts
       shell: bash
       run: pnpm build-bundle
+
+    - name: Run css build scripts
+      shell: bash
+      run: pnpm build-css
 
     - name: Run vite build scripts
       shell: bash

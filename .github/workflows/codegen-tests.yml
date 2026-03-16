@@ -52,11 +52,11 @@ jobs:
       - name: Run misc build scripts
         run: pnpm build-misc
 
-      - name: Run css build scripts
-        run: pnpm build-css
-
       - name: Run bundle build scripts
         run: pnpm build-bundle
+
+      - name: Run css build scripts
+        run: pnpm build-css
 
       - name: Run tests
         run: pnpm test
