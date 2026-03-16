@@ -1,5 +1,6 @@
 import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import type { ProcessorFactoryBuilder } from "@powerhousedao/shared/processors";
+import type { RegistryPackageSource } from "@powerhousedao/shared/registry";
 import type {
   IRelationalDbLegacy,
   ProcessorRecordLegacy,
@@ -103,4 +104,5 @@ export interface IPackageManager extends IDocumentModelLoader {
   ): Promise<PackageManagerInstallResult[]> | PackageManagerInstallResult[];
   removePackage(name: string): void;
   subscribe(handler: IPackagesListener): IPackageListerUnsubscribe;
+  getPackageSource: (packageName: string) => RegistryPackageSource | null;
 }

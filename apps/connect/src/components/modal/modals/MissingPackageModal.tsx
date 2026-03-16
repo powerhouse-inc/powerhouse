@@ -20,7 +20,7 @@ export function ConnectMissingPackageModal() {
   async function onInstall(packageName: string) {
     const result = await packageManager?.addPackage(packageName);
     if (result?.type === "success") {
-      updateRegistryPackageStatus(packageName, "installed");
+      updateRegistryPackageStatus(packageName, "registry-install");
     }
   }
 

@@ -43,6 +43,7 @@ export class BrowserPackageManager implements IPackageManager {
   #subscribers = new Set<IPackagesListener>();
   #packagesMemo: VetraPackage[] = [];
   #stylesheets: Map<string, HTMLLinkElement> = new Map();
+  #localPackage: VetraPackage | undefined;
 
   constructor(namespace: string, registryUrl: string | null) {
     this.#storage = new BrowserLocalStorage<PackageMeta>(
@@ -58,6 +59,7 @@ export class BrowserPackageManager implements IPackageManager {
     const commonPackageWithMeta = this.#loadCommonPackage();
     this.#registerPackage(commonPackageWithMeta);
     if (localPackage) {
+      this.#localPackage = localPackage;
       this.#registerPackage({
         name: LOCAL_PACKAGE_NAME,
         stylesheetUrl: null,
@@ -69,6 +71,21 @@ export class BrowserPackageManager implements IPackageManager {
 
   get packages() {
     return this.#packagesMemo;
+  }
+
+  getPackageSource(packageName: string) {
+    // check vs the constant name we use for common packages
+    if (packageName === COMMON_PACKAGE_NAME) return "common";
+    // check if the package has the same name as the local project
+    if (packageName === this.#localPackage?.name) return "project";
+    const packageMeta = this.#storage.get(packageName);
+    // if meta does not exist the package is not installed
+    if (!packageMeta) return null;
+    // if imported from node_modules then the package is installed locally
+    if (packageMeta.importUrl === `/node_modules/${packageName}`)
+      return "local-install";
+    // all other import urls point to a registry
+    return "registry-install";
   }
 
   async addPackage(packageName: string) {
@@ -247,7 +264,11 @@ export class BrowserPackageManager implements IPackageManager {
       this.#mountStylesheet(name, stylesheetUrl);
     }
     this.#packages.set(name, loadedPackage);
-    this.#storage.set(name, { name, importUrl, stylesheetUrl });
+    this.#storage.set(name, {
+      name,
+      importUrl,
+      stylesheetUrl,
+    });
 
     this.#notifyPackagesChanged();
   }

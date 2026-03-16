@@ -12,7 +12,7 @@ export const ConnectPackageManager: React.FC = () => {
   async function handleInstall(packageName: string) {
     try {
       await packageManager?.addPackage(packageName);
-      updateRegistryPackageStatus(packageName, "installed");
+      updateRegistryPackageStatus(packageName, "registry-install");
       toast(`Package "${packageName}" installed successfully`, {
         type: "connect-success",
       });

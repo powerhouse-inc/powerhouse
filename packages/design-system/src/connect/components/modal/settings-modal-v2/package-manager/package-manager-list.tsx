@@ -49,7 +49,7 @@ export const PackageManagerListItem = (props: {
       registryPackage.status === "dismissed"
         ? installDropdownItem
         : undefined,
-      registryPackage.status === "installed"
+      registryPackage.status === "registry-install"
         ? uninstallDropdownItem
         : undefined,
     ].filter((item) => item !== undefined);
@@ -136,8 +136,11 @@ export const PackageManagerList = (props: {
 }) => {
   const { className, registryPackageList, onInstall, onUninstall } = props;
   const [maxHeight, setMaxHeight] = useState<number | undefined>();
-  const installedPackages = registryPackageList.filter(
-    (p) => p.status === "installed",
+  const locallyInstalledPackages = registryPackageList.filter(
+    (p) => p.status === "local-install",
+  );
+  const registryInstalledPackages = registryPackageList.filter(
+    (p) => p.status === "registry-install",
   );
   const availablePackages = registryPackageList.filter(
     (p) => p.status === "available",
@@ -159,7 +162,8 @@ export const PackageManagerList = (props: {
     return () => window.removeEventListener("resize", calculateMaxHeight);
   }, []);
 
-  const hasInstalled = installedPackages.length > 0;
+  const hasLocallyInstalled = locallyInstalledPackages.length > 0;
+  const hasRegistryInstalled = registryInstalledPackages.length > 0;
   const hasAvailable = availablePackages.length > 0;
   const hasDismissed = dismissedPackages.length > 0;
 
@@ -176,17 +180,31 @@ export const PackageManagerList = (props: {
           <h3 className="mb-4 font-semibold text-gray-900">
             Installed Packages
           </h3>
-          {hasInstalled ? (
-            <ul className="flex flex-col items-stretch gap-4 pr-2">
-              {installedPackages.map((pkg) => (
-                <PackageManagerListItem
-                  key={pkg.name}
-                  registryPackage={pkg}
-                  onInstall={onInstall}
-                  onUninstall={onUninstall}
-                />
-              ))}
-            </ul>
+          {hasLocallyInstalled || hasRegistryInstalled ? (
+            <div>
+              <h4>Locally installed</h4>
+              <ul className="flex flex-col items-stretch gap-4 pr-2">
+                {locallyInstalledPackages.map((pkg) => (
+                  <PackageManagerListItem
+                    key={pkg.name}
+                    registryPackage={pkg}
+                    onInstall={onInstall}
+                    onUninstall={onUninstall}
+                  />
+                ))}
+              </ul>
+              <h4>Installed from registry</h4>
+              <ul className="flex flex-col items-stretch gap-4 pr-2">
+                {registryInstalledPackages.map((pkg) => (
+                  <PackageManagerListItem
+                    key={pkg.name}
+                    registryPackage={pkg}
+                    onInstall={onInstall}
+                    onUninstall={onUninstall}
+                  />
+                ))}
+              </ul>
+            </div>
           ) : (
             <p>No packages installed.</p>
           )}

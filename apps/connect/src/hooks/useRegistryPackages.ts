@@ -8,6 +8,7 @@ import type {
   RegistryPackage,
   RegistryPackageList,
   RegistryPackageMap,
+  RegistryPackageSource,
   RegistryPackageStatus,
 } from "@powerhousedao/shared/registry";
 import { useEffect, useMemo } from "react";
@@ -29,24 +30,25 @@ export function useRegistryPackages() {
 
   useEffect(() => {
     async function refreshPackages() {
-      if (PH_PACKAGE_REGISTRY_URL === null) return;
+      if (PH_PACKAGE_REGISTRY_URL === null || !packageManager) return;
 
       const packageInfos = await getPackages(PH_PACKAGE_REGISTRY_URL);
 
       setRegistryPackagesMap((oldPackages) => {
-        const newRegistryPackages =
-          makeRegistryPackagesFromPackageInfo(packageInfos);
+        const newRegistryPackages: RegistryPackageMap = {
+          ...oldPackages,
+        };
 
-        for (const oldRegistryPackage of Object.values(oldPackages).filter(
-          (p) => p !== undefined,
-        )) {
-          const packageToUpdate = newRegistryPackages[oldRegistryPackage.name];
+        for (const packageInfo of packageInfos) {
+          const existingPackage = newRegistryPackages[packageInfo.name];
 
-          if (packageToUpdate) {
-            newRegistryPackages[packageToUpdate.name] = {
-              ...packageToUpdate,
-              status: oldRegistryPackage.status,
-            };
+          if (!existingPackage) {
+            const packageSource = packageManager.getPackageSource(
+              packageInfo.name,
+            );
+            const status = getPackageStatusFromPackageSource(packageSource);
+            newRegistryPackages[packageInfo.name] =
+              makeRegistryPackageFromPackageInfo(packageInfo, status);
           }
         }
 
@@ -58,6 +60,8 @@ export function useRegistryPackages() {
   }, []);
 
   useEffect(() => {
+    if (!packageManager) return;
+
     if (packageManagerPackages?.length) {
       for (const packageManagerPackage of packageManagerPackages) {
         setRegistryPackagesMap((existingRegistryPackages) => {
@@ -67,12 +71,15 @@ export function useRegistryPackages() {
           if (existingPackage) {
             newRegistryPackages[packageManagerPackage.name] = {
               ...existingPackage,
-              status: "installed",
             };
           } else {
+            const packageSource = packageManager.getPackageSource(
+              packageManagerPackage.name,
+            );
+            const status = getPackageStatusFromPackageSource(packageSource);
             const newRegistryPackage = makeRegistryPackageFromVetraPackage(
               packageManagerPackage,
-              "installed",
+              status,
             );
             newRegistryPackages[packageManagerPackage.name] =
               newRegistryPackage;
@@ -114,7 +121,7 @@ export function useRegistryPackages() {
 
 function makeRegistryPackageFromVetraPackage(
   vetraPackage: VetraPackage,
-  status: RegistryPackageStatus = "available",
+  status: RegistryPackageStatus,
 ): RegistryPackage {
   return {
     name: vetraPackage.name,
@@ -137,21 +144,30 @@ function makeRegistryPackageFromVetraPackage(
 
 function makeRegistryPackageFromPackageInfo(
   packageInfo: PackageInfo,
+  status: RegistryPackageStatus,
 ): RegistryPackage {
   return {
     ...packageInfo,
     documentTypes: packageInfo.manifest?.documentModels?.map((d) => d.id) ?? [],
-    status: "available" as const,
+    status,
   };
 }
 
-function makeRegistryPackagesFromPackageInfo(
-  packageInfos: PackageInfo[],
-): RegistryPackageMap {
-  const registryPackages: Record<string, RegistryPackage> = {};
-  for (const packageInfo of packageInfos) {
-    const registryPackage = makeRegistryPackageFromPackageInfo(packageInfo);
-    registryPackages[packageInfo.name] = registryPackage;
-  }
-  return registryPackages;
+function getPackageStatusFromPackageSource(
+  packageSource: RegistryPackageSource | null,
+): RegistryPackageStatus {
+  // if we check the package source for a package that came from the api and it doesn't exist yet,
+  // then we know the package is available on the api but not installed
+  if (packageSource === null) return "available";
+  // show common package, local project package and locally installed packages as "local-install"
+  if (
+    packageSource === "local-install" ||
+    packageSource === "common" ||
+    packageSource === "project"
+  )
+    return "local-install";
+  // show "registry-install" status for package source "registry-install"
+  if (packageSource === "registry-install") return "registry-install";
+  // fallback to available — we should probably do more checks here
+  return "available";
 }

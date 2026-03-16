@@ -37,7 +37,19 @@ export interface PackageInfo {
   manifest: PowerhouseManifest | null;
 }
 
-export type RegistryPackageStatus = "available" | "installed" | "dismissed";
+export type RegistryPackageStatus =
+  | "available"
+  | "local-install"
+  | "registry-install"
+  | "dismissed";
+
+export type RegistryPackageSource =
+  | "available"
+  | "local-install"
+  | "registry-install"
+  | "common"
+  | "project";
+
 export type RegistryPackage = PackageInfo & {
   status: RegistryPackageStatus;
   documentTypes: string[];
