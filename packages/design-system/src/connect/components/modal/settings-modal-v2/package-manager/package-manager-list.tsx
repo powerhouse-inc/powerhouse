@@ -1,34 +1,12 @@
 import { Icon } from "@powerhousedao/design-system";
+import type {
+  RegistryPackage,
+  RegistryPackageList,
+} from "@powerhousedao/shared/registry";
 import type { ReactNode } from "react";
-import { useCallback, useLayoutEffect, useState } from "react";
+import { useLayoutEffect, useState } from "react";
 import { twMerge } from "tailwind-merge";
 import { ConnectDropdownMenu } from "../../../dropdown-menu/dropdown-menu.js";
-
-export type PackageDetails = {
-  id: string;
-  name: string;
-  description: string;
-  category: string;
-  publisher: string;
-  publisherUrl: string;
-  modules: string[];
-  removable: boolean;
-};
-
-export type PackageManagerListProps = {
-  mutable: boolean;
-  packages: PackageDetails[];
-  availablePackages?: PackageDetails[];
-  onUninstall: (id: string) => void;
-  className?: string;
-};
-
-export type PackageManagerListItemProps = {
-  mutable: boolean;
-  package: PackageDetails;
-  onUninstall: (id: string) => void;
-  className?: string;
-};
 
 const PackageDetail: React.FC<{ label: string; value: ReactNode }> = ({
   label,
@@ -42,25 +20,42 @@ const PackageDetail: React.FC<{ label: string; value: ReactNode }> = ({
   );
 };
 
-export const PackageManagerListItem: React.FC<PackageManagerListItemProps> = (
-  props,
-) => {
-  const {
-    package: {
-      name,
-      description,
-      category,
-      publisher,
-      publisherUrl,
-      modules,
-      id,
-      removable,
-    },
-    mutable,
-    onUninstall,
-    className,
-  } = props;
+export const PackageManagerListItem = (props: {
+  registryPackage: RegistryPackage;
+  onInstall: (packageName: string) => Promise<void>;
+  onUninstall: (packageName: string) => void;
+  className?: string;
+}) => {
+  const { registryPackage, onInstall, onUninstall, className } = props;
   const [isDropdownMenuOpen, setIsDropdownMenuOpen] = useState(false);
+
+  const installDropdownItem = {
+    id: "install",
+    label: "Install",
+    icon: <Icon name="DownloadFile" />,
+    className: "text-gray-800",
+  } as const;
+
+  const uninstallDropdownItem = {
+    id: "uninstall",
+    label: "Uninstall",
+    icon: <Icon name="Trash" />,
+    className: "text-red-900",
+  } as const;
+
+  function getDropdownItems() {
+    return [
+      registryPackage.status === "available" ||
+      registryPackage.status === "dismissed"
+        ? installDropdownItem
+        : undefined,
+      registryPackage.status === "installed"
+        ? uninstallDropdownItem
+        : undefined,
+    ].filter((item) => item !== undefined);
+  }
+
+  const dropdownItems = getDropdownItems();
   return (
     <li
       className={twMerge(
@@ -68,74 +63,88 @@ export const PackageManagerListItem: React.FC<PackageManagerListItemProps> = (
         className,
       )}
     >
-      <h3 className="font-semibold text-gray-900">{name}</h3>
-      <PackageDetail label="Description" value={description} />
-      <PackageDetail label="Category" value={category} />
-      <PackageDetail label="Publisher" value={publisher} />
-      <PackageDetail
-        label="Publisher URL"
-        value={
-          <a className="underline" href={publisherUrl}>
-            {publisherUrl}
-          </a>
-        }
-      />
-      <p className="text-sm text-gray-600">Modules included:</p>
-      <ul className="list-disc pl-5">
-        {modules.map((module) => (
-          <li key={module}>
-            <span className="text-gray-600">{module}</span>
-          </li>
-        ))}
-      </ul>
-      {mutable && removable && (
-        <ConnectDropdownMenu
-          items={[
-            {
-              id: "uninstall",
-              label: "Uninstall",
-              icon: <Icon name="Trash" />,
-              className: "text-red-900",
-            },
-          ]}
-          onItemClick={(optionId) => {
-            if (optionId === "uninstall") {
-              onUninstall(id);
-            }
-          }}
-          onOpenChange={setIsDropdownMenuOpen}
-          open={isDropdownMenuOpen}
-        >
-          <button
-            className="group absolute right-3 top-3"
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsDropdownMenuOpen(true);
-            }}
-          >
-            <Icon
-              className="text-gray-600 group-hover:text-gray-900"
-              name="VerticalDots"
-            />
-          </button>
-        </ConnectDropdownMenu>
+      <h3 className="font-semibold text-gray-900">{registryPackage.name}</h3>
+      {registryPackage.manifest !== null && (
+        <>
+          <PackageDetail
+            label="Description"
+            value={registryPackage.manifest.description}
+          />
+          <PackageDetail
+            label="Category"
+            value={registryPackage.manifest.category}
+          />
+          {registryPackage.manifest.publisher?.name !== undefined && (
+            <>
+              <PackageDetail
+                label="Publisher"
+                value={registryPackage.manifest.publisher.name}
+              />
+            </>
+          )}
+          {registryPackage.manifest.publisher?.url !== undefined && (
+            <>
+              <PackageDetail
+                label="Publisher URL"
+                value={
+                  <a
+                    className="underline"
+                    href={registryPackage.manifest.publisher.url}
+                  >
+                    {registryPackage.manifest.publisher.url}
+                  </a>
+                }
+              />
+            </>
+          )}
+        </>
       )}
+      <ConnectDropdownMenu
+        items={dropdownItems}
+        onItemClick={(id) => {
+          if (id === "install") {
+            onInstall(registryPackage.name).catch(console.error);
+            return;
+          }
+          onUninstall(registryPackage.name);
+        }}
+        onOpenChange={setIsDropdownMenuOpen}
+        open={isDropdownMenuOpen}
+      >
+        <button
+          className="group absolute right-3 top-3"
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsDropdownMenuOpen(true);
+          }}
+        >
+          <Icon
+            className="text-gray-600 group-hover:text-gray-900"
+            name="VerticalDots"
+          />
+        </button>
+      </ConnectDropdownMenu>
     </li>
   );
 };
 
-export const PackageManagerList: React.FC<PackageManagerListProps> = (
-  props,
-) => {
-  const {
-    className,
-    packages,
-    availablePackages,
-    onUninstall,
-    mutable,
-    ...rest
-  } = props;
+export const PackageManagerList = (props: {
+  registryPackageList: RegistryPackageList;
+  onInstall: (packageName: string) => Promise<void>;
+  onUninstall: (packageName: string) => void;
+  className?: string;
+}) => {
+  const { className, registryPackageList, onInstall, onUninstall } = props;
   const [maxHeight, setMaxHeight] = useState<number | undefined>();
+  const installedPackages = registryPackageList.filter(
+    (p) => p.status === "installed",
+  );
+  const availablePackages = registryPackageList.filter(
+    (p) => p.status === "available",
+  );
+  const dismissedPackages = registryPackageList.filter(
+    (p) => p.status === "dismissed",
+  );
 
   useLayoutEffect(() => {
     const calculateMaxHeight = () => {
@@ -150,19 +159,12 @@ export const PackageManagerList: React.FC<PackageManagerListProps> = (
     return () => window.removeEventListener("resize", calculateMaxHeight);
   }, []);
 
-  const handleUninstall = useCallback(
-    (id: string) => {
-      onUninstall(id);
-    },
-    [onUninstall],
-  );
-
-  const hasAvailable =
-    availablePackages !== undefined && availablePackages.length > 0;
+  const hasInstalled = installedPackages.length > 0;
+  const hasAvailable = availablePackages.length > 0;
+  const hasDismissed = dismissedPackages.length > 0;
 
   return (
     <div
-      {...rest}
       className={twMerge(
         "flex flex-col items-stretch overflow-hidden",
         className,
@@ -170,45 +172,61 @@ export const PackageManagerList: React.FC<PackageManagerListProps> = (
       style={{ maxHeight }}
     >
       <div className="flex-1 overflow-y-auto pr-2">
-        {hasAvailable && (
-          <>
-            <h3 className="mb-4 font-semibold text-gray-900">
-              Pre-installed Packages
-            </h3>
+        <div className="mb-2">
+          <h3 className="mb-4 font-semibold text-gray-900">
+            Installed Packages
+          </h3>
+          {hasInstalled ? (
+            <ul className="flex flex-col items-stretch gap-4 pr-2">
+              {installedPackages.map((pkg) => (
+                <PackageManagerListItem
+                  key={pkg.name}
+                  registryPackage={pkg}
+                  onInstall={onInstall}
+                  onUninstall={onUninstall}
+                />
+              ))}
+            </ul>
+          ) : (
+            <p>No packages installed.</p>
+          )}
+        </div>
+        <div className="mb-2">
+          <h3 className="mb-4 font-semibold text-gray-900">
+            Available Packages
+          </h3>
+          {hasAvailable ? (
             <ul className="flex flex-col items-stretch gap-4 pr-2">
               {availablePackages.map((pkg) => (
                 <PackageManagerListItem
-                  key={pkg.id}
-                  package={pkg}
-                  onUninstall={handleUninstall}
-                  mutable={false}
+                  key={pkg.name}
+                  registryPackage={pkg}
+                  onInstall={onInstall}
+                  onUninstall={onUninstall}
+                />
+              ))}
+            </ul>
+          ) : (
+            <p>No packages available to install.</p>
+          )}
+        </div>
+        {hasDismissed && (
+          <>
+            <h3 className="mb-4 font-semibold text-gray-900">
+              Dismissed Packages
+            </h3>
+            <ul className="flex flex-col items-stretch gap-4 pr-2">
+              {dismissedPackages.map((pkg) => (
+                <PackageManagerListItem
+                  key={pkg.name}
+                  registryPackage={pkg}
+                  onInstall={onInstall}
+                  onUninstall={onUninstall}
                 />
               ))}
             </ul>
           </>
         )}
-
-        <h3
-          className={twMerge(
-            "mb-4 font-semibold text-gray-900",
-            hasAvailable && "mt-6",
-          )}
-        >
-          Installed Packages
-        </h3>
-        <ul className="flex flex-col items-stretch gap-4 pr-2">
-          {packages.map((pkg) => (
-            <PackageManagerListItem
-              key={pkg.id}
-              package={pkg}
-              onUninstall={handleUninstall}
-              mutable={mutable}
-            />
-          ))}
-          {packages.length === 0 && (
-            <p className="text-sm text-gray-500">No packages installed</p>
-          )}
-        </ul>
       </div>
     </div>
   );

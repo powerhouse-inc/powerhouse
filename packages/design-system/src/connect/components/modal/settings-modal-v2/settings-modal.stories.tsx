@@ -24,13 +24,7 @@ const tabs = [
     icon: <Icon name="PackageManager" size={12} />,
     label: "Package Manager",
     content: () => {
-      const [registryId, setRegistryId] = React.useState("production");
-      return (
-        <PackageManagerWrapper
-          selectedRegistryId={registryId}
-          onRegistryChange={setRegistryId}
-        />
-      );
+      return <PackageManagerWrapper />;
     },
   },
   {

@@ -16,6 +16,7 @@ import type {
   SubgraphModule,
   UpgradeManifest,
 } from "document-model";
+import type { IDocumentModelLoader } from "../re-exports.js";
 
 export type Processors = (module: {
   analyticsStore: IAnalyticsStore;
@@ -84,9 +85,22 @@ export type VetraPackageManifest = VetraPackageMeta & {
 export type IPackagesListener = (data: { packages: VetraPackage[] }) => void;
 export type IPackageListerUnsubscribe = () => void;
 
-export interface IPackageManager {
+export type PackageManagerInstallResult =
+  | {
+      type: "success";
+      package: VetraPackage;
+    }
+  | { type: "error"; error: Error };
+
+export interface IPackageManager extends IDocumentModelLoader {
+  registryUrl: string | null;
   packages: VetraPackage[];
-  addPackage(packageName: string): Promise<void> | void;
+  addPackage(
+    packageName: string,
+  ): Promise<PackageManagerInstallResult> | PackageManagerInstallResult;
+  addPackages(
+    packageNames: string[],
+  ): Promise<PackageManagerInstallResult[]> | PackageManagerInstallResult[];
   removePackage(name: string): void;
   subscribe(handler: IPackagesListener): IPackageListerUnsubscribe;
 }

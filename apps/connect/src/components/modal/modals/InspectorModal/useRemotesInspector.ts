@@ -2,10 +2,7 @@ import type {
   ConnectionStateSnapshot,
   Remote,
 } from "@powerhousedao/reactor-browser";
-import {
-  useConnectionStates,
-  useSync,
-} from "@powerhousedao/reactor-browser/connect";
+import { useConnectionStates, useSync } from "@powerhousedao/reactor-browser";
 import { useCallback } from "react";
 
 export function useRemotesInspector(): {

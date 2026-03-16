@@ -25,6 +25,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@powerhousedao/shared": "workspace:*",
     "cmd-ts": "catalog:",
     "express": "^5.2.1",
     "find-up": "^8.0.0",

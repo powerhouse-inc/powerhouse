@@ -29,27 +29,27 @@
     "codegen": "graphql-codegen --config codegen.ts && prettier --write src/graphql/gen/*.ts && eslint --fix src/graphql/gen/*.ts --no-warn-ignored"
   },
   "dependencies": {
-    "@powerhousedao/reactor": "workspace:*",
-    "@powerhousedao/shared": "workspace:*",
     "@electric-sql/pglite": "catalog:",
     "@powerhousedao/analytics-engine-browser": "workspace:*",
     "@powerhousedao/analytics-engine-core": "workspace:*",
+    "@powerhousedao/reactor": "workspace:*",
+    "@powerhousedao/shared": "workspace:*",
     "@renown/sdk": "workspace:*",
+    "@tanstack/react-query": "^5.49.2",
+    "change-case": "catalog:",
     "document-drive": "workspace:*",
     "document-model": "workspace:*",
+    "graphql": "catalog:",
+    "graphql-request": "catalog:",
+    "graphql-tag": "catalog:",
     "kysely": "catalog:",
     "kysely-pglite-dialect": "catalog:",
-    "react": "catalog:",
-    "react-dom": "catalog:",
-    "change-case": "catalog:",
     "lodash.isequal": "^4.5.0",
     "luxon": "^3.6.1",
     "lz-string": "^1.5.0",
-    "slug": "^11.0.0",
-    "@tanstack/react-query": "^5.49.2",
-    "graphql": "catalog:",
-    "graphql-request": "catalog:",
-    "graphql-tag": "catalog:"
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "slug": "^11.0.0"
   },
   "devDependencies": {
     "@graphql-codegen/cli": "catalog:",
@@ -64,11 +64,11 @@
     "@types/wicg-file-system-access": "^2020.9.8",
     "@vitejs/plugin-react": "catalog:",
     "@vitest/browser": "^3.2.4",
-    "vite": "catalog:",
-    "playwright": "^1.51.1",
-    "vitest": "catalog:",
-    "vitest-browser-react": "^1.0.1",
     "fast-deep-equal": "catalog:",
-    "tsdown": "catalog:"
+    "playwright": "^1.51.1",
+    "tsdown": "catalog:",
+    "vite": "catalog:",
+    "vitest": "catalog:",
+    "vitest-browser-react": "^1.0.1"
   }
 }

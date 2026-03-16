@@ -1,69 +1,46 @@
+import type { RegistryPackageList } from "@powerhousedao/shared/registry";
 import { twMerge } from "tailwind-merge";
-import type { PackageManagerInputProps } from "./package-manager-input.js";
 import { PackageManagerInput } from "./package-manager-input.js";
-import type {
-  PackageDetails,
-  PackageManagerListProps,
-} from "./package-manager-list.js";
 import { PackageManagerList } from "./package-manager-list.js";
-import type { PackageManagerRegistrySelectProps } from "./package-manager-select.js";
-import { PackageManagerRegistrySelect } from "./package-manager-select.js";
 
-type Props = PackageManagerRegistrySelectProps &
-  PackageManagerInputProps &
-  PackageManagerListProps & {
-    availablePackages?: PackageDetails[];
-  };
+type Props = {
+  registryPackageList: RegistryPackageList;
+  mutable: boolean;
+  onInstall: (packageName: string) => Promise<void>;
+  onUninstall: (packageName: string) => void;
+  disabled?: boolean;
+  className?: string;
+};
 
 export const PackageManager: React.FC<Props> = (props) => {
   const {
-    className,
-    registries,
-    selectedRegistryId,
-    onRegistryChange,
-    registryStatus,
-    customRegistryUrl,
-    onCustomRegistryUrlChange,
+    registryPackageList,
     onInstall,
-    fetchPackages,
-    packages,
-    availablePackages,
     onUninstall,
     mutable,
     disabled,
-    ...rest
+    className,
   } = props;
 
   return (
     <div
-      {...rest}
       className={twMerge(
         "flex h-full flex-1 flex-col rounded-lg p-3",
         className,
       )}
     >
-      <PackageManagerRegistrySelect
-        registries={registries}
-        selectedRegistryId={selectedRegistryId}
-        onRegistryChange={onRegistryChange}
-        registryStatus={registryStatus}
-        customRegistryUrl={customRegistryUrl}
-        onCustomRegistryUrlChange={onCustomRegistryUrlChange}
-        className="mb-4"
-      />
       {mutable && (
         <PackageManagerInput
           className="mb-4"
+          registryPackageList={registryPackageList}
           onInstall={onInstall}
-          fetchPackages={fetchPackages}
           disabled={disabled}
         />
       )}
       <PackageManagerList
-        packages={packages}
-        availablePackages={availablePackages}
+        registryPackageList={registryPackageList}
         onUninstall={onUninstall}
-        mutable={mutable}
+        onInstall={onInstall}
       />
     </div>
   );

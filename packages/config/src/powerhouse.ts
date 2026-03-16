@@ -71,6 +71,7 @@ export type PowerhouseConfig = {
     driveId: string;
     driveUrl: string;
   };
+  packageRegistryUrl?: string;
 };
 
 const DEFAULT_DOCUMENT_MODELS_DIR = "./document-models";

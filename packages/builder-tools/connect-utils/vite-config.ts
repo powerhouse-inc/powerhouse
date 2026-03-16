@@ -13,8 +13,8 @@ import {
   type PluginOption,
 } from "vite";
 import { createHtmlPlugin } from "vite-plugin-html";
-import type { IConnectOptions } from "./types.js";
 import tsconfigPaths from "vite-tsconfig-paths";
+import type { IConnectOptions } from "./types.js";
 
 export const connectClientConfig = {
   meta: [
@@ -145,6 +145,9 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
 
   const phPackages = envPhPackages ?? packagesFromConfig;
 
+  const phPackageRegistryUrl =
+    env.PH_CONNECT_PACKAGES_REGISTRY ?? phConfig.packageRegistryUrl ?? null;
+
   const authToken = env.PH_SENTRY_AUTH_TOKEN;
   const org = env.PH_SENTRY_ORG;
   const project = env.PH_SENTRY_PROJECT;
@@ -207,6 +210,7 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     mode,
     define: {
       PH_PACKAGES: phPackages,
+      PH_PACKAGE_REGISTRY_URL: phPackageRegistryUrl,
     },
     customLogger,
     envPrefix: ["PH_CONNECT_"],

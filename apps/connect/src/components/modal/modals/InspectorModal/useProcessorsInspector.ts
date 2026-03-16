@@ -1,5 +1,5 @@
 import type { ProcessorsInspectorProps } from "@powerhousedao/design-system/connect";
-import { useReactorClientModule } from "@powerhousedao/reactor-browser/connect";
+import { useReactorClientModule } from "@powerhousedao/reactor-browser";
 import { useCallback, useMemo } from "react";
 
 export function useProcessorsInspector(): ProcessorsInspectorProps | undefined {

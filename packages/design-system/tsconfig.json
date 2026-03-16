@@ -28,6 +28,9 @@
     },
     {
       "path": "../reactor-browser"
+    },
+    {
+      "path": "../shared"
     }
   ],
   "include": [

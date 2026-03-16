@@ -1,173 +1,165 @@
-import type { RegistryOption } from "./package-manager/types.js";
-import type { PackageDetails } from "./package-manager/package-manager-list.js";
+import type { RegistryPackage } from "@powerhousedao/shared/registry";
 
-export const mockRegistryOptions: RegistryOption[] = [
+export const mockPackages: RegistryPackage[] = [
   {
-    id: "production",
-    label: "Production",
-    url: "https://registry.powerhouse.io/-/cdn/",
+    name: "@uniswap/lp-tools",
+    documentTypes: ["@uniswap/lp-tools"],
+    path: "/stub-path",
+    status: "available",
+    manifest: {
+      name: "LP Management Tools",
+      description:
+        "Tools for managing liquidity positions across multiple AMMs with impermanent loss tracking.",
+      category: "DeFi",
+      publisher: {
+        name: "@uniswap",
+        url: "https://uniswap.org/",
+      },
+    },
   },
   {
-    id: "local",
-    label: "Local",
-    url: "http://localhost:8080/-/cdn/",
+    name: "@chainlink/oracle-integrations",
+    documentTypes: ["@chainlink/oracle-integrations"],
+    path: "/stub-path",
+    status: "available",
+    manifest: {
+      name: "Oracle Integration Pack",
+      description:
+        "Seamless integration with Chainlink oracles for price feeds and external data.",
+      category: "Infrastructure",
+      publisher: {
+        name: "@chainlink",
+        url: "https://chain.link/",
+      },
+    },
   },
   {
-    id: "custom",
-    label: "Custom",
-    url: "",
-    editable: true,
-  },
-];
-
-export const mockAvailablePackages: PackageDetails[] = [
-  {
-    id: "@uniswap/lp-tools",
-    name: "LP Management Tools",
-    description:
-      "Tools for managing liquidity positions across multiple AMMs with impermanent loss tracking.",
-    category: "DeFi",
-    publisher: "@uniswap",
-    publisherUrl: "https://uniswap.org/",
-    modules: [
-      "Position Manager (Connect)",
-      "IL Calculator (Connect)",
-      "Fee Analytics (Switchboard)",
-      "Range Order Editor (Connect)",
-      "Pool Explorer (Connect)",
-    ],
-    removable: false,
+    name: "@sky-ph/rwa",
+    documentTypes: ["@sky-ph/rwa"],
+    path: "/stub-path",
+    status: "available",
+    manifest: {
+      name: "RWA Reporting Package",
+      description:
+        "The real world assets portfolio reporting package for the sky ecosystem.",
+      category: "Finance",
+      publisher: {
+        name: "@powerhousedao",
+        url: "https://www.powerhouse.inc/",
+      },
+    },
   },
   {
-    id: "@chainlink/oracle-integrations",
-    name: "Oracle Integration Pack",
-    description:
-      "Seamless integration with Chainlink oracles for price feeds and external data.",
-    category: "Infrastructure",
-    publisher: "@chainlink",
-    publisherUrl: "https://chain.link/",
-    modules: [
-      "Price Feed Connector (Switchboard)",
-      "Data Aggregator (Switchboard)",
-    ],
-    removable: false,
-  },
-];
-
-export const mockPackages: PackageDetails[] = [
-  {
-    id: "@sky-ph/rwa",
-    name: "RWA Reporting Package",
-    description:
-      "The real world assets portfolio reporting package for the sky ecosystem.",
-    category: "Finance",
-    publisher: "@powerhousedao",
-    publisherUrl: "https://www.powerhouse.inc/",
-    modules: [
-      "Analytics Processor (Switchboard)",
-      "RWA Portfolio Report Document Model (Connect)",
-      "RWA Portfolio Report Editor (Connect)",
-    ],
-    removable: true,
+    name: "@powerhousedao/builder-tools",
+    documentTypes: ["@powerhousedao/builder-tools"],
+    path: "/stub-path",
+    status: "available",
+    manifest: {
+      name: "Builder Tooling",
+      description:
+        "The real world assets portfolio reporting package for the sky ecosystem.",
+      category: "Finance",
+      publisher: {
+        name: "@powerhousedao",
+        url: "https://www.powerhouse.inc/",
+      },
+    },
   },
   {
-    id: "@powerhousedao/builder-tools",
-    name: "Builder Tooling",
-    description:
-      "The real world assets portfolio reporting package for the sky ecosystem.",
-    category: "Finance",
-    publisher: "@powerhousedao",
-    publisherUrl: "https://www.powerhouse.inc/",
-    modules: [
-      "Analytics Processor (Switchboard)",
-      "RWA Portfolio Report Document Model (Connect)",
-      "RWA Portfolio Report Editor (Connect)",
-    ],
-    removable: true,
+    name: "@makerdao/governance-toolkit",
+    documentTypes: ["@makerdao/governance-toolkit"],
+    path: "/stub-path",
+    status: "available",
+    manifest: {
+      name: "Governance Toolkit",
+      description:
+        "A comprehensive toolkit for managing decentralized governance proposals, voting, and delegation.",
+      category: "Governance",
+      publisher: {
+        name: "@makerdao",
+        url: "https://makerdao.com/",
+      },
+    },
   },
   {
-    id: "@makerdao/governance-toolkit",
-    name: "Governance Toolkit",
-    description:
-      "A comprehensive toolkit for managing decentralized governance proposals, voting, and delegation.",
-    category: "Governance",
-    publisher: "@makerdao",
-    publisherUrl: "https://makerdao.com/",
-    modules: [
-      "Proposal Manager (Connect)",
-      "Voting Dashboard (Connect)",
-      "Delegation Tracker (Switchboard)",
-    ],
-    removable: true,
+    name: "@aave/lending-analytics",
+    documentTypes: ["@aave/lending-analytics"],
+    path: "/stub-path",
+    status: "available",
+    manifest: {
+      name: "Lending Analytics Suite",
+      description:
+        "Advanced analytics and reporting tools for DeFi lending protocols with real-time monitoring.",
+      category: "DeFi",
+      publisher: {
+        name: "@aave",
+        url: "https://aave.com/",
+      },
+    },
   },
   {
-    id: "@aave/lending-analytics",
-    name: "Lending Analytics Suite",
-    description:
-      "Advanced analytics and reporting tools for DeFi lending protocols with real-time monitoring.",
-    category: "DeFi",
-    publisher: "@aave",
-    publisherUrl: "https://aave.com/",
-    modules: [
-      "Liquidity Monitor (Switchboard)",
-      "Interest Rate Tracker (Connect)",
-      "Risk Assessment Dashboard (Connect)",
-      "Collateral Analyzer (Connect)",
-    ],
-    removable: true,
+    name: "@compound/treasury-manager",
+    documentTypes: ["@compound/treasury-manager"],
+    path: "/stub-path",
+    status: "available",
+    manifest: {
+      name: "Treasury Manager",
+      description:
+        "Streamlined treasury management for DAOs with multi-sig support and spending proposals.",
+      category: "Finance",
+      publisher: {
+        name: "@compound",
+        url: "https://compound.finance/",
+      },
+    },
   },
   {
-    id: "@compound/treasury-manager",
-    name: "Treasury Manager",
-    description:
-      "Streamlined treasury management for DAOs with multi-sig support and spending proposals.",
-    category: "Finance",
-    publisher: "@compound",
-    publisherUrl: "https://compound.finance/",
-    modules: ["Multi-Sig Wallet (Connect)", "Budget Tracker (Connect)"],
-    removable: true,
+    name: "@openzeppelin/security-suite",
+    documentTypes: ["@openzeppelin/security-suite"],
+    path: "/stub-path",
+    status: "available",
+    manifest: {
+      name: "Security Audit Suite",
+      description:
+        "Automated security scanning and vulnerability detection for smart contracts.",
+      category: "Security",
+      publisher: {
+        name: "@openzeppelin",
+        url: "https://openzeppelin.com/",
+      },
+    },
   },
   {
-    id: "@openzeppelin/security-suite",
-    name: "Security Audit Suite",
-    description:
-      "Automated security scanning and vulnerability detection for smart contracts.",
-    category: "Security",
-    publisher: "@openzeppelin",
-    publisherUrl: "https://openzeppelin.com/",
-    modules: [
-      "Contract Scanner (Connect)",
-      "Vulnerability Report Generator (Connect)",
-      "Audit Trail Logger (Switchboard)",
-    ],
-    removable: true,
+    name: "@ens/domain-manager",
+    documentTypes: ["@ens/domain-manager"],
+    path: "/stub-path",
+    status: "available",
+    manifest: {
+      name: "ENS Domain Manager",
+      description:
+        "Manage ENS domains, subdomains, and records with an intuitive interface.",
+      category: "Identity",
+      publisher: {
+        name: "@ens",
+        url: "https://ens.domains/",
+      },
+    },
   },
   {
-    id: "@ens/domain-manager",
-    name: "ENS Domain Manager",
-    description:
-      "Manage ENS domains, subdomains, and records with an intuitive interface.",
-    category: "Identity",
-    publisher: "@ens",
-    publisherUrl: "https://ens.domains/",
-    modules: ["Domain Registry (Connect)", "Record Editor (Connect)"],
-    removable: true,
-  },
-  {
-    id: "@gnosis/safe-extensions",
-    name: "Safe Extensions Pack",
-    description:
-      "Extended functionality for Gnosis Safe including batch transactions and recurring payments.",
-    category: "Wallets",
-    publisher: "@gnosis",
-    publisherUrl: "https://gnosis-safe.io/",
-    modules: [
-      "Batch Transaction Builder (Connect)",
-      "Recurring Payments (Switchboard)",
-      "Spending Limits (Connect)",
-      "Transaction History (Connect)",
-    ],
-    removable: true,
+    name: "@gnosis/safe-extensions",
+    documentTypes: ["@gnosis/safe-extensions"],
+    path: "/stub-path",
+    status: "available",
+    manifest: {
+      name: "Safe Extensions Pack",
+      description:
+        "Extended functionality for Gnosis Safe including batch transactions and recurring payments.",
+      category: "Wallets",
+      publisher: {
+        name: "@gnosis",
+        url: "https://gnosis-safe.io/",
+      },
+    },
   },
 ];
 

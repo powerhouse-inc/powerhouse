@@ -1,3 +1,5 @@
+import type { PackageInfo } from "@powerhousedao/shared/registry";
+import { getPackages, getPackagesByDocumentType } from "./fetchers.js";
 import type { RegistryPackageInfo } from "./types.js";
 
 interface PackageInfoFromApi {
@@ -17,7 +19,7 @@ function cdnUrlToApiUrl(cdnUrl: string): string {
   return cdnUrl.replace(/\/-\/cdn\/?$/, "");
 }
 
-function mapPackageInfo(pkg: PackageInfoFromApi): RegistryPackageInfo {
+function mapPackageInfo(pkg: PackageInfo): RegistryPackageInfo {
   return {
     name: pkg.name,
     description: pkg.manifest?.description,
@@ -36,19 +38,12 @@ export class RegistryClient {
   }
 
   async getPackages(): Promise<RegistryPackageInfo[]> {
-    const res = await fetch(`${this.apiUrl}/packages`);
-    if (!res.ok) throw new Error(`Registry error: HTTP ${res.status}`);
-    const data = (await res.json()) as PackageInfoFromApi[];
+    const data = await getPackages(this.apiUrl);
     return data.map(mapPackageInfo);
   }
 
   async getPackagesByDocumentType(documentType: string): Promise<string[]> {
-    const encodedType = encodeURIComponent(documentType);
-    const res = await fetch(
-      `${this.apiUrl}/packages/by-document-type?type=${encodedType}`,
-    );
-    if (!res.ok) throw new Error(`Registry error: HTTP ${res.status}`);
-    return (await res.json()) as string[];
+    return await getPackagesByDocumentType(this.apiUrl, documentType);
   }
 
   async searchPackages(query: string): Promise<RegistryPackageInfo[]> {

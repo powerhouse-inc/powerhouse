@@ -1,5 +1,6 @@
 import type {
   IPackagesListener,
+  PackageManagerInstallResult,
   VetraPackage,
 } from "@powerhousedao/reactor-browser";
 import {
@@ -9,7 +10,10 @@ import {
   type IPackageListerUnsubscribe,
   type IPackageManager,
 } from "@powerhousedao/reactor-browser";
-import { type DocumentModelLib } from "document-model";
+import {
+  type DocumentModelLib,
+  type DocumentModelModule,
+} from "document-model";
 import {
   loadDocumentModelDocumentModelModule,
   loadDriveDocumentModelModule,
@@ -33,7 +37,7 @@ const LOCAL_PACKAGE_NAME = "Local" as const;
 const COMMON_PACKAGE_NAME = "Common" as const;
 
 export class BrowserPackageManager implements IPackageManager {
-  #registryUrl: string | null;
+  registryUrl: string | null;
   #storage: BrowserLocalStorage<PackageMeta>;
   #packages: Map<string, VetraPackage> = new Map();
   #subscribers = new Set<IPackagesListener>();
@@ -44,7 +48,7 @@ export class BrowserPackageManager implements IPackageManager {
     this.#storage = new BrowserLocalStorage<PackageMeta>(
       namespace + ":PH_PACKAGES",
     );
-    this.#registryUrl = registryUrl;
+    this.registryUrl = registryUrl;
   }
 
   async init(localPackage?: VetraPackage) {
@@ -69,15 +73,29 @@ export class BrowserPackageManager implements IPackageManager {
 
   async addPackage(packageName: string) {
     const packageWithMeta = await this.#loadPackage(packageName);
-    if (!packageWithMeta) return;
+    if (!packageWithMeta)
+      return {
+        type: "error" as const,
+        error: new Error(
+          "Failed to load package. See console debug for outputs.",
+        ),
+      };
 
     this.#registerPackage(packageWithMeta);
+
+    return {
+      type: "success" as const,
+      package: packageWithMeta.loadedPackage,
+    };
   }
 
   async addPackages(packageNames: string[]) {
+    const results: PackageManagerInstallResult[] = [];
     for (const packageName of packageNames) {
-      await this.addPackage(packageName);
+      const result = await this.addPackage(packageName);
+      results.push(result);
     }
+    return results;
   }
 
   removePackage(name: string) {
@@ -92,6 +110,17 @@ export class BrowserPackageManager implements IPackageManager {
     return () => {
       this.#subscribers.delete(handler);
     };
+  }
+
+  load(documentType: string): Promise<DocumentModelModule<any>> {
+    const documentModelModule = Array.from(
+      this.#packages
+        .values()
+        .flatMap((p) => p.modules.documentModelModules ?? []),
+    ).find((m) => m.documentType === documentType);
+
+    if (documentModelModule) return Promise.resolve(documentModelModule);
+    return Promise.reject(new Error("Model not available"));
   }
 
   #loadCommonPackage(): PackageWithMeta {
@@ -152,10 +181,10 @@ export class BrowserPackageManager implements IPackageManager {
   async #loadPackageFromRegistry(
     name: string,
   ): Promise<PackageWithMeta | undefined> {
-    if (this.#registryUrl === null) return;
+    if (this.registryUrl === null) return;
     if (name === COMMON_PACKAGE_NAME || name === LOCAL_PACKAGE_NAME) return;
 
-    const importUrl = `${this.#registryUrl}/${name}`;
+    const importUrl = `${this.registryUrl}/${name}`;
     const stylesheetUrl = `${importUrl}/style.css`;
     const packageWithMeta = await this.#importPackage({
       name,
@@ -197,13 +226,13 @@ export class BrowserPackageManager implements IPackageManager {
 
     packageWithMeta = await this.#loadPackageFromNodeModules(packageName);
 
-    if (!packageWithMeta && this.#registryUrl !== null) {
+    if (!packageWithMeta && this.registryUrl !== null) {
       packageWithMeta = await this.#loadPackageFromRegistry(packageName);
     }
 
     if (!packageWithMeta) {
       console.debug(
-        `Failed to load package "${packageName}" from node_modules and package registry with url "${this.#registryUrl}".`,
+        `Failed to load package "${packageName}" from node_modules and package registry with url "${this.registryUrl}".`,
       );
       return undefined;
     }

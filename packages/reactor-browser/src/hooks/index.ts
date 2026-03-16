@@ -1,5 +1,5 @@
+export * from "../renown/use-renown-auth.js";
 export * from "./add-ph-event-handlers.js";
-export * from "../renown/use-renown-auth.js"
 export * from "./allowed-document-model-modules.js";
 export * from "./child-nodes.js";
 export * from "./config/connect.js";

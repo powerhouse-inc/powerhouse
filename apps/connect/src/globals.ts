@@ -5,6 +5,7 @@ declare global {
     documentEditorDebugTools?: DocumentEditorDebugTools;
   }
   const PH_PACKAGES: string[] | undefined;
+  const PH_PACKAGE_REGISTRY_URL: string | null;
   const MAIN_WINDOW_VITE_DEV_SERVER_URL: string;
   const MAIN_WINDOW_VITE_NAME: string;
 }

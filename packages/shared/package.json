@@ -44,6 +44,14 @@
     "./analytics/*": {
       "types": "./dist/analytics/*.d.ts",
       "import": "./dist/analytics/*.js"
+    },
+    "./registry": {
+      "types": "./dist/registry/index.d.ts",
+      "import": "./dist/registry/index.js"
+    },
+    "./registry/*": {
+      "types": "./dist/registry/*.d.ts",
+      "import": "./dist/registry/*.js"
     }
   },
   "dependencies": {
