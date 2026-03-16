@@ -168,9 +168,10 @@ function buildBatchMutation(
 
 async function createDocument(client: GraphQLClient): Promise<string> {
   const { DocumentModel_createEmptyDocument } =
-    await client.request<CreateDocumentResponse>(
-      `mutation CreateDocument { DocumentModel_createEmptyDocument { id } }`,
-    );
+    await client.request<CreateDocumentResponse>({
+      document: `mutation CreateDocument { DocumentModel_createEmptyDocument { id } }`,
+      signal: AbortSignal.timeout(GRAPHQL_TIMEOUT_MS),
+    });
   return DocumentModel_createEmptyDocument.id;
 }
 
@@ -240,7 +241,11 @@ async function performOperations(
 
   for (const req of requests) {
     const opStart = performance.now();
-    await client.request(req.mutation, req.variables);
+    await client.request({
+      document: req.mutation,
+      variables: req.variables,
+      signal: AbortSignal.timeout(GRAPHQL_TIMEOUT_MS),
+    });
     const batchDurationMs = performance.now() - opStart;
     const perOpDurationMs = batchDurationMs / req.batchCount;
 
@@ -306,10 +311,11 @@ async function pollJobAsync(
     await new Promise<void>((resolve) =>
       setTimeout(resolve, JOB_POLL_INTERVAL_MS),
     );
-    const { jobStatus } = await client.request<JobStatusResponse>(
-      JOB_STATUS_QUERY,
-      { jobId: job.jobId },
-    );
+    const { jobStatus } = await client.request<JobStatusResponse>({
+      document: JOB_STATUS_QUERY,
+      variables: { jobId: job.jobId },
+      signal: AbortSignal.timeout(GRAPHQL_TIMEOUT_MS),
+    });
     if (
       TERMINAL_JOB_STATUSES.has(jobStatus.status) ||
       jobStatus.completedAt !== null
@@ -629,9 +635,7 @@ async function main() {
       `Command: tsx docs-create.ts ${process.argv.slice(2).join(" ")}`,
     );
 
-    const client = new GraphQLClient(endpoint, {
-      signal: AbortSignal.timeout(GRAPHQL_TIMEOUT_MS),
-    });
+    const client = new GraphQLClient(endpoint);
     const useExistingDocs = docIds.length > 0;
 
     const initialMemory = getMemoryStats();
@@ -721,10 +725,11 @@ async function main() {
             for (const req of requests) {
               globalReqNum++;
               const dispatchedAt = performance.now();
-              const result = await client.request<Record<string, string>>(
-                req.mutation,
-                req.variables,
-              );
+              const result = await client.request<Record<string, string>>({
+                document: req.mutation,
+                variables: req.variables,
+                signal: AbortSignal.timeout(GRAPHQL_TIMEOUT_MS),
+              });
               // The batch mutation aliases each op; we sample the last one as
               // representative. Validate early so polling never runs against
               // "undefined".
