@@ -14,6 +14,8 @@ export async function runBuild(args: BuildArgs) {
       "editors/*/index.ts",
       "processors/index.ts",
       "processors/*/index.ts",
+      "subgraphs/index.ts",
+      "subgraphs/*/index.ts",
       "powerhouse.manifest.json",
     ],
     platform: "neutral",
@@ -21,6 +23,8 @@ export async function runBuild(args: BuildArgs) {
     clean,
     dts,
     sourcemap,
+    copy: [{ from: "powerhouse.manifest.json", to: "dist" }],
+    config: false,
   });
 
   const detectResult = await detect();
