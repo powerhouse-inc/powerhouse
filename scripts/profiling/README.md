@@ -490,4 +490,11 @@ tsx docs-create.ts 1 -o 25 -b 5 -l 100
 # Use the same PromQL queries as the reactor-direct OTel workflow above
 ```
 
-Switchboard reads `OTEL_EXPORTER_OTLP_ENDPOINT` on startup. The `--otel` flag sets it to `http://localhost:4318` (or a custom endpoint). When set, switchboard initialises a `MeterProvider` and exports reactor metrics via OTLP HTTP every 5 seconds. Combine with `--runtime node` and Pyroscope for flame graphs alongside metrics.
+Switchboard reads the following env vars on startup:
+
+| Env var                       | Default                      | Description                                                                 |
+| ----------------------------- | ---------------------------- | --------------------------------------------------------------------------- |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | _(unset — metrics disabled)_ | OTLP HTTP endpoint. The `--otel` flag sets this to `http://localhost:4318`. |
+| `OTEL_METRIC_EXPORT_INTERVAL` | `5000`                       | Export interval in milliseconds.                                            |
+
+Combine with `--runtime node` and Pyroscope for flame graphs alongside metrics.

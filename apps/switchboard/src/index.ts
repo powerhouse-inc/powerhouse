@@ -28,9 +28,12 @@ const meterProvider = initMetricsFromEnv(process.env);
 
 async function shutdown() {
   console.log("\nShutting down...");
-  // Flush final metrics before exit so the final collection pass runs
-  // before the process terminates.
-  await meterProvider?.shutdown().catch(() => undefined);
+  // Flush final metrics before exit. Races against a 5s deadline so an
+  // unresponsive OTLP endpoint cannot exhaust terminationGracePeriodSeconds.
+  await Promise.race([
+    meterProvider?.shutdown().catch(() => undefined),
+    new Promise<void>((resolve) => setTimeout(resolve, 5_000)),
+  ]);
   process.exit(0);
 }
 
