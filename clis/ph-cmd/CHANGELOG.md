@@ -1,3 +1,13 @@
+## 6.0.0-dev.92 (2026-03-17)
+
+### 🩹 Fixes
+
+- **ph-cmd:** check node version before importing commands ([55717fc06](https://github.com/powerhouse-inc/powerhouse/commit/55717fc06))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.0.0-dev.91 (2026-03-17)
 
 ### 🩹 Fixes
