@@ -1,3 +1,13 @@
+## 6.0.0-dev.93 (2026-03-17)
+
+### 🩹 Fixes
+
+- **ph-cli:** cleaner error message unless debug flag is active ([bc95a455a](https://github.com/powerhouse-inc/powerhouse/commit/bc95a455a))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.0.0-dev.92 (2026-03-17)
 
 ### 🩹 Fixes
