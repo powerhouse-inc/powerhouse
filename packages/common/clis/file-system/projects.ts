@@ -86,14 +86,20 @@ export async function getPowerhouseProjectUninstallCommand(
   return `${packageManager} ${uninstallArgs.join(" ")}`;
 }
 
-export async function makeDependenciesWithVersions(dependencies: string[]) {
+export async function makeDependenciesWithVersions(
+  dependencies: string[],
+  registryUrl?: string,
+) {
   const dependenciesWithVersions = await Promise.all(
     dependencies.map(async (dependency) => {
       const { name } = npa(dependency);
       if (!name) {
         throw new Error(`Package name for ${dependency} is invalid.`);
       }
-      const version = await fetchPackageVersionFromNpmRegistry(dependency);
+      const version = await fetchPackageVersionFromNpmRegistry(
+        dependency,
+        registryUrl,
+      );
       return {
         name,
         version,
