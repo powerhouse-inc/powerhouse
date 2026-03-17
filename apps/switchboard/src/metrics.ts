@@ -20,6 +20,11 @@ export function createMeterProviderFromEnv(env: {
   const exportIntervalMillis =
     Number.isFinite(parsed) && parsed > 0 ? parsed : 5_000;
 
+  const base = endpoint.replace(/\/$/, "");
+  const exporterUrl = base.endsWith("/v1/metrics")
+    ? base
+    : `${base}/v1/metrics`;
+
   logger.info(`Initializing OpenTelemetry metrics exporter at: ${endpoint}`);
   const meterProvider = new MeterProvider({
     resource: new Resource({
@@ -28,7 +33,7 @@ export function createMeterProviderFromEnv(env: {
     readers: [
       new PeriodicExportingMetricReader({
         exporter: new OTLPMetricExporter({
-          url: `${endpoint.replace(/\/$/, "")}/v1/metrics`,
+          url: exporterUrl,
         }),
         exportIntervalMillis,
         exportTimeoutMillis: Math.max(exportIntervalMillis - 250, 1),
