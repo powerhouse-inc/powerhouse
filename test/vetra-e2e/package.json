@@ -64,6 +64,7 @@
     "@powerhousedao/config": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",
     "@powerhousedao/shared": "workspace:*",
+    "@powerhousedao/versioned-documents": "workspace:*",
     "@electric-sql/pglite": "catalog:",
     "@electric-sql/pglite-tools": "catalog:",
     "kysely": "catalog:",

@@ -2715,6 +2715,9 @@ importers:
       '@powerhousedao/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      '@powerhousedao/versioned-documents':
+        specifier: workspace:*
+        version: link:../versioned-documents
       document-model:
         specifier: link:../../packages/document-model
         version: link:../../packages/document-model

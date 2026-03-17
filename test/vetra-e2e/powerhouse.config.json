@@ -11,6 +11,12 @@
     "port": 4002,
     "storage": "memory"
   },
-  "packages": [],
+  "packages": [
+    {
+      "packageName": "@powerhousedao/versioned-documents",
+      "version": "latest",
+      "provider": "npm"
+    }
+  ],
   "packageRegistryUrl": "http://localhost:8080"
 }

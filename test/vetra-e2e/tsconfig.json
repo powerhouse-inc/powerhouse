@@ -27,7 +27,7 @@
       ],
       "test-package-vetra/subgraphs/*": [
         "./subgraphs/*/index.ts"
-      ],
+      ]
     }
   },
   "references": [
@@ -66,6 +66,9 @@
     },
     {
       "path": "../e2e-utils"
+    },
+    {
+      "path": "../versioned-documents"
     }
   ],
   "include": [
