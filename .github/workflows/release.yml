@@ -36,6 +36,40 @@ on:
       skip_git_tag:
         type: boolean
         default: false
+  workflow_call:
+    inputs:
+      release_mode:
+        type: string
+        default: prerelease
+      dry_run:
+        type: boolean
+        default: false
+      verbose:
+        type: boolean
+        default: false
+      skip_publish:
+        type: boolean
+        default: false
+      skip_changelog:
+        type: boolean
+        default: false
+      skip_stage:
+        type: boolean
+        default: false
+      skip_commit:
+        type: boolean
+        default: false
+      skip_push:
+        type: boolean
+        default: false
+      skip_git_tag:
+        type: boolean
+        default: false
+    secrets:
+      GITHUB_TOKEN:
+        required: true
+      NPM_ACCESS_TOKEN:
+        required: true
 
 permissions:
   contents: write
@@ -65,7 +99,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
         with:
-         fetch-depth: 0
+          fetch-depth: 0
 
       - name: General setup
         uses: ./.github/actions/setup

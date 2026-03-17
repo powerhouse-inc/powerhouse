@@ -1,4 +1,4 @@
-name: Full Managed Release Workflow (Manual)
+name: "[Deprecated] Full Managed Release Workflow (Manual)"
 
 on:
   workflow_dispatch:
