@@ -29,6 +29,7 @@
   },
   "scripts": {
     "tsc": "tsc",
+    "test": "vitest run",
     "lint": "eslint",
     "build:misc": "pnpm run install-packages",
     "start": "node dist/src/index.js",
@@ -72,6 +73,7 @@
     "@types/node": "catalog:",
     "@types/pg": "catalog:",
     "concurrently": "catalog:",
-    "nodemon": "catalog:"
+    "nodemon": "catalog:",
+    "vitest": "catalog:"
   }
 }
