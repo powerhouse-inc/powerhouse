@@ -1185,6 +1185,9 @@ importers:
       chalk:
         specifier: 'catalog:'
         version: 5.6.2
+      cmd-ts:
+        specifier: 'catalog:'
+        version: 0.15.0
       document-model:
         specifier: link:../document-model
         version: link:../document-model
@@ -1206,6 +1209,12 @@ importers:
       react-dom:
         specifier: '>=19.0.0'
         version: 19.2.4(react@19.2.4)
+      read-pkg:
+        specifier: 'catalog:'
+        version: 10.1.0
+      semver:
+        specifier: 'catalog:'
+        version: 7.7.4
       zocker:
         specifier: ^3.0.0
         version: 3.0.0(zod@4.3.6)
@@ -1225,9 +1234,6 @@ importers:
       '@types/wicg-file-system-access':
         specifier: ^2020.9.6
         version: 2020.9.8
-      cmd-ts:
-        specifier: 'catalog:'
-        version: 0.15.0
       package-manager-detector:
         specifier: 'catalog:'
         version: 1.6.0
