@@ -21,8 +21,8 @@
       "types": "./dist/test/index.d.ts"
     },
     "./node": {
-      "import": "./dist/src/node.js",
-      "types": "./dist/src/node.d.ts"
+      "node": "./dist/node.mjs",
+      "types": "./dist/node.d.mts"
     }
   },
   "sideEffects": false,
@@ -31,7 +31,7 @@
     "lint": "eslint",
     "test": "vitest --run",
     "test:watch": "vitest watch",
-    "build:bundle": "tsdown"
+    "build:bundle": "bun run ./build.ts"
   },
   "devDependencies": {
     "@types/jest": "^29.5.14",
