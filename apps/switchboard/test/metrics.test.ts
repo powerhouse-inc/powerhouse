@@ -81,6 +81,16 @@ describe("createMeterProviderFromEnv", () => {
       ).not.toThrow();
     });
 
+    it("does not double-append /v1/metrics when endpoint already includes it", () => {
+      expect(() =>
+        track(
+          createMeterProviderFromEnv({
+            OTEL_EXPORTER_OTLP_ENDPOINT: "http://localhost:4318/v1/metrics",
+          }),
+        ),
+      ).not.toThrow();
+    });
+
     it("uses 5000ms export interval by default", () => {
       const provider = track(
         createMeterProviderFromEnv({
