@@ -109,14 +109,14 @@ export class GqlRequestChannel implements IChannel {
     this.outbox = this.bufferedOutbox;
     this.deadLetter = new Mailbox();
 
-    // when a dead letter is added, stop polling and cancel any pending push retry
-    this.deadLetter.onAdded(() => {
-      this.pollTimer.stop();
-      if (this.pushRetryTimer) {
-        clearTimeout(this.pushRetryTimer);
-        this.pushRetryTimer = null;
+    this.deadLetter.onAdded((syncOps) => {
+      for (const syncOp of syncOps) {
+        this.logger.warn(
+          "Dead letter added for document @DocumentId on channel @ChannelId",
+          syncOp.documentId,
+          this.channelId,
+        );
       }
-      this.transitionConnectionState("error");
     });
 
     // when sync ops are added to the outbox, push them to the remote
@@ -127,7 +127,6 @@ export class GqlRequestChannel implements IChannel {
         return;
       }
       if (this.pushBlocked) return; // ops stay in outbox, included in next retry
-      if (this.deadLetter.items.length > 0) return;
       this.attemptPush(syncOps);
     });
 
@@ -729,7 +728,6 @@ export class GqlRequestChannel implements IChannel {
     if (!this.pendingDrain) return;
     this.pendingDrain = false;
     if (this.isShutdown) return;
-    if (this.deadLetter.items.length > 0) return;
     const items = this.outbox.items;
     if (items.length === 0) return;
     this.attemptPush([...items]);

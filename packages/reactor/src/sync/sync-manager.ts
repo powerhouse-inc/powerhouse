@@ -75,6 +75,7 @@ export class SyncManager implements ISyncManager {
   private readonly maxDeadLettersPerRemote: number;
   private readonly connectionStateUnsubscribes: Map<string, () => void> =
     new Map();
+  private readonly quarantinedDocumentIds = new Set<string>();
 
   public loadJobs: Map<string, JobInfo> = new Map();
 
@@ -113,6 +114,19 @@ export class SyncManager implements ISyncManager {
   async startup(): Promise<void> {
     if (this.isShutdown) {
       throw new Error("SyncManager is already shutdown and cannot be started");
+    }
+
+    try {
+      const quarantinedIds =
+        await this.deadLetterStorage.listQuarantinedDocumentIds();
+      for (const id of quarantinedIds) {
+        this.quarantinedDocumentIds.add(id);
+      }
+    } catch (error) {
+      this.logger.error(
+        "Failed to load quarantined document IDs (@error)",
+        error instanceof Error ? error.message : String(error),
+      );
     }
 
     const remoteRecords = await this.remoteStorage.list();
@@ -376,6 +390,8 @@ export class SyncManager implements ISyncManager {
           syncOp.jobDependencies,
         );
 
+        this.quarantinedDocumentIds.add(syncOp.documentId);
+
         const record: DeadLetterRecord = {
           id: syncOp.id,
           jobId: syncOp.jobId,
@@ -516,10 +532,15 @@ export class SyncManager implements ISyncManager {
       return;
     }
 
+    const eligible = syncOps.filter(
+      (op) => !this.quarantinedDocumentIds.has(op.documentId),
+    );
+    if (eligible.length === 0) return;
+
     const keyed: SyncOperation[] = [];
     const nonKeyed: SyncOperation[] = [];
 
-    for (const syncOp of syncOps) {
+    for (const syncOp of eligible) {
       if (syncOp.jobId) {
         keyed.push(syncOp);
       } else {
@@ -706,8 +727,16 @@ export class SyncManager implements ISyncManager {
     remote: Remote,
     ackOrdinal: number,
   ): Promise<void> {
-    const operations = await this.getOperationsForRemote(remote, ackOrdinal);
+    const allOperations = await this.getOperationsForRemote(remote, ackOrdinal);
+    const maxOrdinal = allOperations.reduce(
+      (max, op) => Math.max(max, op.context.ordinal),
+      ackOrdinal,
+    );
+    const operations = allOperations.filter(
+      (op) => !this.quarantinedDocumentIds.has(op.context.documentId),
+    );
     if (operations.length === 0) {
+      remote.channel.outbox.advanceOrdinal(maxOrdinal);
       return;
     }
 
@@ -749,6 +778,7 @@ export class SyncManager implements ISyncManager {
     }
 
     remote.channel.outbox.add(...syncOps);
+    remote.channel.outbox.advanceOrdinal(maxOrdinal);
   }
 
   private async getOperationsForRemote(

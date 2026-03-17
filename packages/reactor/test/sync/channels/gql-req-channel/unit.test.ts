@@ -1697,7 +1697,7 @@ describe("GqlRequestChannel", () => {
   });
 
   describe("dead letter", () => {
-    it("should stop poller when a dead letter is added", async () => {
+    it("should not stop poller when a dead letter is added (quarantine is in SyncManager)", async () => {
       const cursorStorage = createMockCursorStorage();
       const mockFetch = createMockFetch({
         pollSyncEnvelopes: [],
@@ -1725,7 +1725,7 @@ describe("GqlRequestChannel", () => {
       const deadLetterOp = createMockSyncOperation("dead-1", "remote-1");
       channel.deadLetter.add(deadLetterOp);
 
-      expect(manualTimer.isRunning()).toBe(false);
+      expect(manualTimer.isRunning()).toBe(true);
     });
   });
 
@@ -1762,7 +1762,7 @@ describe("GqlRequestChannel", () => {
       await channel.shutdown();
     });
 
-    it("should stop poller after receiving remote dead letters", async () => {
+    it("should not stop poller after receiving remote dead letters (quarantine is in SyncManager)", async () => {
       const cursorStorage = createMockCursorStorage();
       const manualTimer = new ManualPollTimer(true);
       const mockFetch = createMockFetch({
@@ -1786,11 +1786,11 @@ describe("GqlRequestChannel", () => {
         expect(channel.deadLetter.items).toHaveLength(1);
       });
 
-      expect(manualTimer.isRunning()).toBe(false);
+      expect(manualTimer.isRunning()).toBe(true);
       await channel.shutdown();
     });
 
-    it("should not push new outbox items when dead letters exist", async () => {
+    it("should push new outbox items even when dead letters exist (quarantine is in SyncManager)", async () => {
       const cursorStorage = createMockCursorStorage();
       const manualTimer = new ManualPollTimer(true);
       const mockFetch = createMockFetch({
@@ -1822,13 +1822,12 @@ describe("GqlRequestChannel", () => {
       const job = createMockSyncOperation("job-1", "remote-1");
       channel.outbox.add(job);
 
-      await vi.advanceTimersByTimeAsync(1000);
-
-      const pushCallsAfter = mockFetch.mock.calls.filter((call) =>
-        (call[1]?.body as string).includes("pushSyncEnvelopes"),
-      ).length;
-
-      expect(pushCallsAfter).toBe(pushCallsBefore);
+      await vi.waitFor(() => {
+        const pushCallsAfter = mockFetch.mock.calls.filter((call) =>
+          (call[1]?.body as string).includes("pushSyncEnvelopes"),
+        ).length;
+        expect(pushCallsAfter).toBeGreaterThan(pushCallsBefore);
+      });
       await channel.shutdown();
     });
 
