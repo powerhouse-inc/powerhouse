@@ -93,7 +93,7 @@ export class SimpleJobExecutor implements IJobExecutor {
    * Execute a single job by applying all its actions through the appropriate reducers.
    * Actions are processed sequentially in order.
    */
-  async executeJob(job: Job): Promise<JobResult> {
+  async executeJob(job: Job, signal?: AbortSignal): Promise<JobResult> {
     const startTime = Date.now();
 
     // Track document IDs touched during execution for cache invalidation on rollback
@@ -115,6 +115,7 @@ export class SimpleJobExecutor implements IJobExecutor {
             startTime,
             indexTxn,
             stores,
+            signal,
           );
           if (loadResult.success && loadResult.operationsWithContext) {
             for (const owc of loadResult.operationsWithContext) {
@@ -125,7 +126,10 @@ export class SimpleJobExecutor implements IJobExecutor {
               });
             }
 
-            const ordinals = await stores.operationIndex.commit(indexTxn);
+            const ordinals = await stores.operationIndex.commit(
+              indexTxn,
+              signal,
+            );
 
             for (let i = 0; i < loadResult.operationsWithContext.length; i++) {
               loadResult.operationsWithContext[i].context.ordinal = ordinals[i];
@@ -153,6 +157,10 @@ export class SimpleJobExecutor implements IJobExecutor {
           startTime,
           indexTxn,
           stores,
+          undefined,
+          undefined,
+          "",
+          signal,
         );
 
         if (!actionResult.success) {
@@ -174,7 +182,7 @@ export class SimpleJobExecutor implements IJobExecutor {
           }
         }
 
-        const ordinals = await stores.operationIndex.commit(indexTxn);
+        const ordinals = await stores.operationIndex.commit(indexTxn, signal);
 
         if (actionResult.operationsWithContext.length > 0) {
           for (let i = 0; i < actionResult.operationsWithContext.length; i++) {
@@ -200,7 +208,7 @@ export class SimpleJobExecutor implements IJobExecutor {
           operationsWithContext: actionResult.operationsWithContext,
           duration: Date.now() - startTime,
         };
-      });
+      }, signal);
     } catch (error) {
       for (const entry of touchedCacheEntries) {
         this.writeCache.invalidate(entry.documentId, entry.scope, entry.branch);
@@ -245,6 +253,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     skipValues?: number[],
     sourceOperations?: (Operation | undefined)[],
     sourceRemote: string = "",
+    signal?: AbortSignal,
   ): Promise<ProcessActionsResult> {
     const generatedOperations: Operation[] = [];
     const operationsWithContext: OperationWithContext[] = [];
@@ -279,6 +288,7 @@ export class SimpleJobExecutor implements IJobExecutor {
             stores,
             skip,
             sourceRemote,
+            signal,
           )
         : await this.executeRegularAction(
             job,
@@ -289,6 +299,7 @@ export class SimpleJobExecutor implements IJobExecutor {
             skip,
             sourceOperation,
             sourceRemote,
+            signal,
           );
 
       const error = this.accumulateResultOrReturnError(
@@ -322,6 +333,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     skip: number = 0,
     sourceOperation?: Operation,
     sourceRemote: string = "",
+    signal?: AbortSignal,
   ): Promise<
     JobResult & {
       operationsWithContext?: Array<{
@@ -340,6 +352,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       docMeta = await stores.documentMetaCache.getDocumentMeta(
         job.documentId,
         job.branch,
+        signal,
       );
     } catch (error) {
       return buildErrorResult(
@@ -376,6 +389,8 @@ export class SimpleJobExecutor implements IJobExecutor {
         job.documentId,
         job.scope,
         job.branch,
+        undefined,
+        signal,
       );
     } catch (error) {
       return buildErrorResult(
@@ -460,6 +475,7 @@ export class SimpleJobExecutor implements IJobExecutor {
         (txn) => {
           txn.addOperations(newOperation);
         },
+        signal,
       );
     } catch (error) {
       this.logger.error(
@@ -530,6 +546,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     startTime: number,
     indexTxn: IOperationIndexTxn,
     stores: ExecutionStores,
+    signal?: AbortSignal,
   ): Promise<JobResult> {
     if (job.operations.length === 0) {
       return buildErrorResult(
@@ -544,6 +561,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       docMeta = await stores.documentMetaCache.getDocumentMeta(
         job.documentId,
         job.branch,
+        signal,
       );
     } catch {
       // Document meta not found -- continue with load (may be a new document)
@@ -564,6 +582,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       const revisions = await stores.operationStore.getRevisions(
         job.documentId,
         job.branch,
+        signal,
       );
       latestRevision = revisions.revision[scope] ?? 0;
     } catch {
@@ -587,6 +606,8 @@ export class SimpleJobExecutor implements IJobExecutor {
         scope,
         job.branch,
         minIncomingTimestamp,
+        undefined,
+        signal,
       );
 
       conflictingOps = conflictingResult.results;
@@ -605,6 +626,9 @@ export class SimpleJobExecutor implements IJobExecutor {
           scope,
           job.branch,
           minConflictingIndex - 1,
+          undefined,
+          undefined,
+          signal,
         );
         allOpsFromMinConflictingIndex = allOpsResult.results;
       } catch {
@@ -696,6 +720,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       skipValues,
       reshuffledOperations,
       effectiveSourceRemote,
+      signal,
     );
 
     if (!result.success) {

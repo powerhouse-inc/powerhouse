@@ -52,6 +52,84 @@ describe("DefaultExecutionScope", () => {
     expect(stores.documentMetaCache).toBe(documentMetaCache);
     expect(stores.collectionMembershipCache).toBe(collectionMembershipCache);
   });
+
+  it("should throw immediately when signal is already aborted", async () => {
+    const operationStore = createMockOperationStore();
+    const operationIndex: IOperationIndex = {
+      start: vi.fn(),
+      commit: vi.fn(),
+      find: vi.fn(),
+      get: vi.fn(),
+      getSinceOrdinal: vi.fn(),
+      getLatestTimestampForCollection: vi.fn(),
+      getCollectionsForDocuments: vi.fn(),
+    } as unknown as IOperationIndex;
+    const writeCache = {
+      getState: vi.fn(),
+      putState: vi.fn(),
+      invalidate: vi.fn(),
+      clear: vi.fn(),
+      startup: vi.fn(),
+      shutdown: vi.fn(),
+    };
+    const documentMetaCache = createMockDocumentMetaCache();
+    const collectionMembershipCache = createMockCollectionMembershipCache();
+
+    const scope = new DefaultExecutionScope(
+      operationStore,
+      operationIndex,
+      writeCache,
+      documentMetaCache,
+      collectionMembershipCache,
+    );
+
+    const controller = new AbortController();
+    controller.abort(new Error("pre-aborted"));
+
+    const fn = vi.fn().mockResolvedValue("should not run");
+
+    await expect(scope.run(fn, controller.signal)).rejects.toThrow(
+      "pre-aborted",
+    );
+    expect(fn).not.toHaveBeenCalled();
+  });
+
+  it("should not throw when signal is not aborted", async () => {
+    const operationStore = createMockOperationStore();
+    const operationIndex: IOperationIndex = {
+      start: vi.fn(),
+      commit: vi.fn(),
+      find: vi.fn(),
+      get: vi.fn(),
+      getSinceOrdinal: vi.fn(),
+      getLatestTimestampForCollection: vi.fn(),
+      getCollectionsForDocuments: vi.fn(),
+    } as unknown as IOperationIndex;
+    const writeCache = {
+      getState: vi.fn(),
+      putState: vi.fn(),
+      invalidate: vi.fn(),
+      clear: vi.fn(),
+      startup: vi.fn(),
+      shutdown: vi.fn(),
+    };
+    const documentMetaCache = createMockDocumentMetaCache();
+    const collectionMembershipCache = createMockCollectionMembershipCache();
+
+    const scope = new DefaultExecutionScope(
+      operationStore,
+      operationIndex,
+      writeCache,
+      documentMetaCache,
+      collectionMembershipCache,
+    );
+
+    const result = await scope.run(
+      () => Promise.resolve("ok"),
+      new AbortController().signal,
+    );
+    expect(result).toBe("ok");
+  });
 });
 
 describe("KyselyWriteCache.withScopedStores", () => {
