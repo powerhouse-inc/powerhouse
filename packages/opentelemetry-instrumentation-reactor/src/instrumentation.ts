@@ -81,11 +81,16 @@ export class ReactorInstrumentation {
         ReactorEventTypes.JOB_RUNNING,
         (_type, event) => {
           if (!this.metrics) return;
+          const now = performance.now();
           this.metrics.queueJobsDequeued.add(1);
           this.metrics.eventbusEventsEmitted.add(1, {
             "event.type": "JOB_RUNNING",
           });
-          this.runningTimestamps.set(event.jobId, performance.now());
+          const pendingTs = this.pendingTimestamps.get(event.jobId);
+          if (pendingTs !== undefined) {
+            this.metrics.queueWaitDuration.record(now - pendingTs);
+          }
+          this.runningTimestamps.set(event.jobId, now);
         },
       ),
     );

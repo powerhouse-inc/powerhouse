@@ -351,19 +351,38 @@ export class ReactorSubgraph extends BaseSubgraph {
 
       mutateDocumentAsync: async (_parent, args, ctx: Context) => {
         this.logger.debug("mutateDocumentAsync(@args)", args);
+        const t0 = performance.now();
         try {
           if (!this.authorizationService) {
             await this.assertCanWrite(args.documentIdentifier, ctx);
           }
 
+          const t1 = performance.now();
           // Check operation-level permissions for each action
           await this.assertCanExecuteOperations(
             args.documentIdentifier,
             args.actions,
             ctx,
           );
+          const t2 = performance.now();
 
-          return await resolvers.mutateDocumentAsync(this.reactorClient, args);
+          const result = await resolvers.mutateDocumentAsync(
+            this.reactorClient,
+            args,
+          );
+          const t3 = performance.now();
+
+          this.logger.debug(
+            "mutateDocumentAsync timing: authCheck=@authCheck ms assertOps=@assertOps ms execute=@execute ms total=@total ms",
+            {
+              authCheck: (t1 - t0).toFixed(2),
+              assertOps: (t2 - t1).toFixed(2),
+              execute: (t3 - t2).toFixed(2),
+              total: (t3 - t0).toFixed(2),
+            },
+          );
+
+          return result;
         } catch (error) {
           this.logger.error(
             "Error in mutateDocumentAsync(@args): @Error",

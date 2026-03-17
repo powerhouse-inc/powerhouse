@@ -56,6 +56,10 @@ export function createMetrics() {
     ),
 
     // Job lifecycle metrics
+    queueWaitDuration: meter.createHistogram("reactor.queue.wait.duration", {
+      description: "Queue wait time per job (PENDING to RUNNING)",
+      unit: "ms",
+    }),
     jobTotalDuration: meter.createHistogram("reactor.job.total.duration", {
       description: "Full job lifecycle (PENDING to READ_READY/FAILED)",
       unit: "ms",
