@@ -27,6 +27,7 @@ function runBuild(workspaceVersion: string) {
   const commands = [
     ["pnpm", "build-misc"],
     ["pnpm", "build-bundle"],
+    ["pnpm", "build-connect"],
     ["pnpm", "build-css"],
     ["pnpm", "build-cli"],
   ];
