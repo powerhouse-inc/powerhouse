@@ -1,3 +1,25 @@
+## 6.0.0-dev.95 (2026-03-17)
+
+### 🚀 Features
+
+- **switchboard:** add OTel metrics export via OTEL_EXPORTER_OTLP_ENDPOINT ([52f34aa1f](https://github.com/powerhouse-inc/powerhouse/commit/52f34aa1f))
+
+### 🩹 Fixes
+
+- **codegen:** added missing deps to boilerplate ([721dcb581](https://github.com/powerhouse-inc/powerhouse/commit/721dcb581))
+- **docs-create:** create AbortSignal per request instead of at construction ([53217dadc](https://github.com/powerhouse-inc/powerhouse/commit/53217dadc))
+- **reactor-api:** add missing GetDocumentWithOperations validator ([0c31c223b](https://github.com/powerhouse-inc/powerhouse/commit/0c31c223b))
+- **reactor-api:** remove duplicate GetDocumentWithOperations validator ([e9cbcce02](https://github.com/powerhouse-inc/powerhouse/commit/e9cbcce02))
+- **switchboard:** address OTel metrics review feedback ([c5ac016fc](https://github.com/powerhouse-inc/powerhouse/commit/c5ac016fc))
+- **switchboard:** address further OTel metrics review feedback ([dee185ba8](https://github.com/powerhouse-inc/powerhouse/commit/dee185ba8))
+- **switchboard:** set exportTimeoutMillis to stay under shutdown deadline ([341d88d9e](https://github.com/powerhouse-inc/powerhouse/commit/341d88d9e))
+- **switchboard:** derive exportTimeoutMillis from exportIntervalMillis ([775a77f3b](https://github.com/powerhouse-inc/powerhouse/commit/775a77f3b))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Samuel Hawksby-Robinson @Samyoul
+
 ## 6.0.0-dev.94 (2026-03-17)
 
 ### 🩹 Fixes

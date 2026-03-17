@@ -1,3 +1,21 @@
+## 6.0.0-dev.95 (2026-03-17)
+
+### 🚀 Features
+
+- **switchboard:** add OTel metrics export via OTEL_EXPORTER_OTLP_ENDPOINT ([52f34aa1f](https://github.com/powerhouse-inc/powerhouse/commit/52f34aa1f))
+
+### 🩹 Fixes
+
+- **codegen:** added missing deps to boilerplate ([721dcb581](https://github.com/powerhouse-inc/powerhouse/commit/721dcb581))
+- **reactor-api:** remove duplicate GetDocumentWithOperations validator ([e9cbcce02](https://github.com/powerhouse-inc/powerhouse/commit/e9cbcce02))
+- **reactor-api:** add missing GetDocumentWithOperations validator ([0c31c223b](https://github.com/powerhouse-inc/powerhouse/commit/0c31c223b))
+- **switchboard:** address OTel metrics review feedback ([c5ac016fc](https://github.com/powerhouse-inc/powerhouse/commit/c5ac016fc))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Samuel Hawksby-Robinson @Samyoul
+
 ## 6.0.0-dev.94 (2026-03-17)
 
 ### 🩹 Fixes
