@@ -611,6 +611,8 @@ export class SyncManager implements ISyncManager {
       return;
     }
 
+    if (this.isShutdown) return;
+
     const jobKey = `${syncOp.documentId}:${syncOp.branch}`;
     this.loadJobs.set(jobKey, completedJobInfo);
 
@@ -670,6 +672,8 @@ export class SyncManager implements ISyncManager {
       return;
     }
 
+    if (this.isShutdown) return;
+
     for (const { remote, syncOp } of items) {
       if (!(syncOp.jobId in result.jobs)) {
         this.logger.error(
@@ -696,6 +700,7 @@ export class SyncManager implements ISyncManager {
           this.abortController.signal,
         );
       } catch (error) {
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- isShutdown may change during await
         if (this.isShutdown) continue;
         const err = error instanceof Error ? error : new Error(String(error));
         syncOp.failed(new ChannelError(ChannelErrorSource.Inbox, err));
@@ -703,6 +708,9 @@ export class SyncManager implements ISyncManager {
         remote.channel.inbox.remove(syncOp);
         continue;
       }
+
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- isShutdown may change during await
+      if (this.isShutdown) return;
 
       const jobKey = `${syncOp.documentId}:${syncOp.branch}`;
       this.loadJobs.set(jobKey, completedJobInfo);
