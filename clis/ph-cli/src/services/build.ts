@@ -18,7 +18,7 @@ export async function runBuild(args: BuildArgs) {
       "subgraphs/*/index.ts",
       "powerhouse.manifest.json",
     ],
-    platform: "neutral",
+    platform: "browser",
     outDir,
     clean,
     dts,

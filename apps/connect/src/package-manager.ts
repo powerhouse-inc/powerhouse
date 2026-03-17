@@ -89,7 +89,7 @@ export class BrowserPackageManager implements IPackageManager {
     // check vs the constant name we use for common packages
     if (
       packageName === COMMON_PACKAGE_NAME ||
-      packageName === vetraVetraPackage.manifest.name
+      packageName === "@powerhousedao/vetra"
     )
       return "common";
     // check if the package has the same name as the local project

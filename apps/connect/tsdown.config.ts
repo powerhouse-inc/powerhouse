@@ -7,4 +7,7 @@ export default defineConfig({
   clean: true,
   dts: true,
   sourcemap: true,
+  deps: {
+    alwaysBundle: ["document-model"],
+  },
 });
