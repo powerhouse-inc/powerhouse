@@ -49,6 +49,7 @@ import { PGliteDialect } from "kysely-pglite-dialect";
 import path from "path";
 import { Pool } from "pg";
 import type { RedisClientType } from "redis";
+import { getConfig } from "@powerhousedao/config/node";
 import { initRedis } from "./clients/redis.js";
 import { initFeatureFlags } from "./feature-flags.js";
 import { initRenown } from "./renown.js";
@@ -176,7 +177,10 @@ async function initServer(
 
   // HTTP registry package loading
   let httpDocumentModels: DocumentModelModule[] = [];
-  const registryUrl = process.env.PH_REGISTRY_URL;
+  const configPath =
+    options.configFile ?? path.join(process.cwd(), "powerhouse.config.json");
+  const config = getConfig(configPath);
+  const registryUrl = process.env.PH_REGISTRY_URL ?? config.packageRegistryUrl;
   const registryPackages = process.env.PH_REGISTRY_PACKAGES;
   let httpLoader: HttpPackageLoader | undefined;
 
