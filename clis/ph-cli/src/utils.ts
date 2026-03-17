@@ -145,7 +145,7 @@ export function updatePackagesArray(
   const mappedPackages = dependencies.map((dep) => ({
     packageName: dep.name,
     version: dep.version,
-    provider: "npm" as const,
+    provider: "registry" as const,
   }));
 
   if (isInstall) {
