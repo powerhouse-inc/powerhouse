@@ -1,3 +1,18 @@
+## 6.0.0-dev.91 (2026-03-17)
+
+### 🚀 Features
+
+- **reactor-api:** typed initial state in create mutation ([987969f0d](https://github.com/powerhouse-inc/powerhouse/commit/987969f0d))
+
+### 🩹 Fixes
+
+- adding build-bundle to simulate-ci-workflow ([ca93d1a2b](https://github.com/powerhouse-inc/powerhouse/commit/ca93d1a2b))
+- **reactor, reactor-api:** added multiple sync recovery fixes ([9e7bfa64f](https://github.com/powerhouse-inc/powerhouse/commit/9e7bfa64f))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
 ## 6.0.0-dev.90 (2026-03-14)
 
 ### 🚀 Features

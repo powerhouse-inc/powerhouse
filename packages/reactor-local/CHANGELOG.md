@@ -1,3 +1,13 @@
+## 6.0.0-dev.91 (2026-03-17)
+
+### 🩹 Fixes
+
+- adding build-bundle to simulate-ci-workflow ([ca93d1a2b](https://github.com/powerhouse-inc/powerhouse/commit/ca93d1a2b))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
 ## 6.0.0-dev.90 (2026-03-14)
 
 This was a version bump only for @powerhousedao/reactor-local to align it with other projects, there were no code changes.
