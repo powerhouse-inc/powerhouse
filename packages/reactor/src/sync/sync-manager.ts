@@ -14,11 +14,7 @@ import {
 } from "../events/types.js";
 import type { ILogger } from "../logging/types.js";
 import { JobAwaiter } from "../shared/awaiter.js";
-import {
-  JobStatus,
-  type JobInfo,
-  type ShutdownStatus,
-} from "../shared/types.js";
+import { JobStatus, type ShutdownStatus } from "../shared/types.js";
 import type {
   DeadLetterRecord,
   ISyncCursorStorage,
@@ -76,8 +72,6 @@ export class SyncManager implements ISyncManager {
   private readonly connectionStateUnsubscribes: Map<string, () => void> =
     new Map();
   private readonly quarantinedDocumentIds = new Set<string>();
-
-  public loadJobs: Map<string, JobInfo> = new Map();
 
   constructor(
     logger: ILogger,
@@ -613,9 +607,6 @@ export class SyncManager implements ISyncManager {
 
     if (this.isShutdown) return;
 
-    const jobKey = `${syncOp.documentId}:${syncOp.branch}`;
-    this.loadJobs.set(jobKey, completedJobInfo);
-
     if (completedJobInfo.status === JobStatus.FAILED) {
       const errorMessage = completedJobInfo.error?.message || "Unknown error";
       this.logger.error(
@@ -711,9 +702,6 @@ export class SyncManager implements ISyncManager {
 
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- isShutdown may change during await
       if (this.isShutdown) return;
-
-      const jobKey = `${syncOp.documentId}:${syncOp.branch}`;
-      this.loadJobs.set(jobKey, completedJobInfo);
 
       if (completedJobInfo.status === JobStatus.FAILED) {
         const errorMessage = completedJobInfo.error?.message || "Unknown error";
