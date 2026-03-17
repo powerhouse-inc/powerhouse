@@ -63,7 +63,6 @@
     "zod": "catalog:",
     "safe-stable-stringify": "^2.4.3",
     "sha1-uint8array": "^0.10.7",
-    "jszip": "^3.10.1",
     "change-case": "catalog:",
     "mutative": "catalog:",
     "kysely": "catalog:"

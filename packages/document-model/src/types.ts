@@ -54,3 +54,11 @@ export type DocumentModelLib<TState extends PHBaseState = PHBaseState> = {
 
 export type DocumentModelDocumentModelModule =
   DocumentModelModule<DocumentModelPHState>;
+
+export type MinimalBackupData = {
+  documentId: string;
+  documentType: string;
+  branch: string;
+  state: PHBaseState;
+  name: string;
+};

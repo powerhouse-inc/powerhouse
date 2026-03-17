@@ -1,14 +1,8 @@
-import type { PHDocument } from "document-model";
-import {
-  baseMinimalSaveToFile,
-  baseSaveToFile,
-  type MinimalBackupData,
-} from "document-model/node";
+import type { MinimalBackupData, PHDocument } from "document-model";
+import { baseMinimalSaveToFile, baseSaveToFile } from "document-model/node";
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { logger } from "../../logger.js";
-
-export type { MinimalBackupData };
 
 const BACKUP_FOLDER = "backup-documents";
 

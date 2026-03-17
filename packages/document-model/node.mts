@@ -1,7 +1,4 @@
 import {
-  baseLoadFromInput,
-  createMinimalZip,
-  createZip,
   type Attachment,
   type AttachmentInput,
   type MinimalBackupData,
@@ -16,6 +13,7 @@ import { createHash } from "node:crypto";
 import fs from "node:fs";
 import https from "node:https";
 import { join } from "node:path";
+import { baseLoadFromInput, createMinimalZip, createZip } from "./src/files.js";
 
 function getFileAttributes(
   file: string,
@@ -55,94 +53,6 @@ export async function getRemoteFile(url: string): Promise<AttachmentInput> {
     ...attributes,
   };
 }
-
-/**
- * Loads a document from a ZIP file.
- *
- * @remarks
- * This function reads a ZIP file and returns the document state after
- * applying all the operations. The reducer is used to apply the operations.
- *
- * @typeParam S - The type of the state object.
- * @typeParam A - The type of the actions that can be applied to the state object.
- *
- * @param path - The path to the ZIP file.
- * @param reducer - The reducer to apply the operations to the state object.
- * @returns A promise that resolves to the document state after applying all the operations.
- * @throws An error if the initial state or the operations history is not found in the ZIP file.
- */
-export async function baseLoadFromFile<
-  TState extends PHBaseState = PHBaseState,
->(
-  path: string,
-  reducer: Reducer<TState>,
-  options?: ReplayDocumentOptions,
-): Promise<PHDocument<TState>> {
-  const file = readFileNode(path);
-  return baseLoadFromInput(file, reducer, options);
-}
-
-/**
- * Saves a document to a ZIP file.
- *
- * @remarks
- * This function creates a ZIP file containing the document's state, operations,
- * and file attachments. The file is saved to the specified path.
- *
- * @param document - The document to save to the file.
- * @param path - The path to save the file to.
- * @param extension - The extension to use for the file.
- * @returns A promise that resolves to the path of the saved file.
- */
-export async function baseSaveToFile(
-  document: PHDocument,
-  path: string,
-  extension: string,
-  name?: string,
-) {
-  // create zip file
-  const zip = createZip(document);
-  const file = await zip.generateAsync({
-    type: "uint8array",
-    streamFiles: true,
-  });
-  const fileName = name ?? document.header.name;
-  const fileExtension = extension ? `.${extension}.phd` : ".phd";
-
-  return writeFileNode(
-    path,
-    fileName.endsWith(fileExtension) ? fileName : `${fileName}${fileExtension}`,
-    file,
-  );
-}
-
-/**
- * Saves a minimal document backup to a .phd file.
- * Used when the full document is not available (e.g., in onOperations handler).
- * Creates a file with minimal header and empty operations.
- */
-export async function baseMinimalSaveToFile(
-  data: MinimalBackupData,
-  path: string,
-  extension: string,
-) {
-  const zip = createMinimalZip(data);
-  const file = await zip.generateAsync({
-    type: "uint8array",
-    streamFiles: true,
-  });
-  const fileExtension = extension ? `.${extension}.phd` : ".phd";
-
-  return writeFileNode(
-    path,
-    data.name.endsWith(fileExtension)
-      ? data.name
-      : `${data.name}${fileExtension}`,
-    file,
-  );
-}
-
-export type { MinimalBackupData };
 
 export function writeFileNode(
   path: string,
@@ -221,3 +131,89 @@ export const hashNode = (
 
   return createHash(algorithm).update(data).digest(encoding);
 };
+
+/**
+ * Loads a document from a ZIP file.
+ *
+ * @remarks
+ * This function reads a ZIP file and returns the document state after
+ * applying all the operations. The reducer is used to apply the operations.
+ *
+ * @typeParam S - The type of the state object.
+ * @typeParam A - The type of the actions that can be applied to the state object.
+ *
+ * @param path - The path to the ZIP file.
+ * @param reducer - The reducer to apply the operations to the state object.
+ * @returns A promise that resolves to the document state after applying all the operations.
+ * @throws An error if the initial state or the operations history is not found in the ZIP file.
+ */
+export async function baseLoadFromFile<
+  TState extends PHBaseState = PHBaseState,
+>(
+  path: string,
+  reducer: Reducer<TState>,
+  options?: ReplayDocumentOptions,
+): Promise<PHDocument<TState>> {
+  const file = readFileNode(path);
+  return baseLoadFromInput(file, reducer, options);
+}
+
+/**
+ * Saves a minimal document backup to a .phd file.
+ * Used when the full document is not available (e.g., in onOperations handler).
+ * Creates a file with minimal header and empty operations.
+ */
+export async function baseMinimalSaveToFile(
+  data: MinimalBackupData,
+  path: string,
+  extension: string,
+) {
+  const zip = createMinimalZip(data);
+  const file = await zip.generateAsync({
+    type: "uint8array",
+    streamFiles: true,
+  });
+  const fileExtension = extension ? `.${extension}.phd` : ".phd";
+
+  return writeFileNode(
+    path,
+    data.name.endsWith(fileExtension)
+      ? data.name
+      : `${data.name}${fileExtension}`,
+    file,
+  );
+}
+
+/**
+ * Saves a document to a ZIP file.
+ *
+ * @remarks
+ * This function creates a ZIP file containing the document's state, operations,
+ * and file attachments. The file is saved to the specified path.
+ *
+ * @param document - The document to save to the file.
+ * @param path - The path to save the file to.
+ * @param extension - The extension to use for the file.
+ * @returns A promise that resolves to the path of the saved file.
+ */
+export async function baseSaveToFile(
+  document: PHDocument,
+  path: string,
+  extension: string,
+  name?: string,
+) {
+  // create zip file
+  const zip = createZip(document);
+  const file = await zip.generateAsync({
+    type: "uint8array",
+    streamFiles: true,
+  });
+  const fileName = name ?? document.header.name;
+  const fileExtension = extension ? `.${extension}.phd` : ".phd";
+
+  return writeFileNode(
+    path,
+    fileName.endsWith(fileExtension) ? fileName : `${fileName}${fileExtension}`,
+    file,
+  );
+}

@@ -4,10 +4,12 @@ import {
   defaultBaseState,
   documentModelFileExtension,
   documentModelGlobalState,
-  documentModelLoadFromInput,
   documentModelReducer,
-  documentModelSaveToFileHandle,
 } from "@powerhousedao/shared/document-model";
+import {
+  documentModelLoadFromInput,
+  documentModelSaveToFileHandle,
+} from "./files.js";
 import {
   assertIsDocumentOfType,
   assertIsStateOfType,

@@ -46,6 +46,7 @@
     "mime": "^4.0.4",
     "mutative": "^1.0.5",
     "zod": "catalog:",
-    "tsdown": "catalog:"
+    "tsdown": "catalog:",
+    "jszip": "^3.10.1"
   }
 }
