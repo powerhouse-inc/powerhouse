@@ -307,6 +307,7 @@ export type PhDocument = {
   readonly lastModifiedAtUtcIso: Scalars["DateTime"]["output"];
   readonly name: Scalars["String"]["output"];
   readonly operations?: Maybe<ReactorOperationResultPage>;
+  readonly preferredEditor?: Maybe<Scalars["String"]["output"]>;
   readonly revisionsList: ReadonlyArray<Revision>;
   readonly slug?: Maybe<Scalars["String"]["output"]>;
   readonly state: Scalars["JSONObject"]["output"];
@@ -1783,6 +1784,11 @@ export type PhDocumentResolvers<
     ParentType,
     ContextType,
     Partial<PhDocumentOperationsArgs>
+  >;
+  preferredEditor?: Resolver<
+    Maybe<ResolversTypes["String"]>,
+    ParentType,
+    ContextType
   >;
   revisionsList?: Resolver<
     ReadonlyArray<ResolversTypes["Revision"]>,

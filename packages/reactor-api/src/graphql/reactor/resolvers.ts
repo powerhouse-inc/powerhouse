@@ -518,12 +518,14 @@ export async function createDocumentWithInitialState(
     parentIdentifier?: string | null;
     name?: string | null;
     slug?: string | null;
+    preferredEditor?: string | null;
     initialState: Record<string, Record<string, unknown>>;
   },
 ): Promise<ReturnType<typeof toGqlPhDocument>> {
   const parentIdentifier = fromInputMaybe(args.parentIdentifier);
   const name = fromInputMaybe(args.name);
   const slug = fromInputMaybe(args.slug);
+  const preferredEditor = fromInputMaybe(args.preferredEditor);
 
   let module: DocumentModelModule;
   try {
@@ -553,6 +555,9 @@ export async function createDocumentWithInitialState(
   }
   if (slug) {
     document.header.slug = slug;
+  }
+  if (preferredEditor) {
+    document.header.meta = { ...document.header.meta, preferredEditor };
   }
 
   let result: PHDocument;

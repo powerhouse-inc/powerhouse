@@ -277,11 +277,18 @@ export class DocumentModelSubgraph extends BaseSubgraph {
             name: string;
             parentIdentifier?: string;
             slug?: string;
+            preferredEditor?: string;
             initialState?: Record<string, Record<string, unknown>>;
           },
           ctx: Context,
         ) => {
-          const { parentIdentifier, name, slug, initialState } = args;
+          const {
+            parentIdentifier,
+            name,
+            slug,
+            preferredEditor,
+            initialState,
+          } = args;
 
           if (parentIdentifier) {
             await this.assertCanWrite(parentIdentifier, ctx);
@@ -298,10 +305,17 @@ export class DocumentModelSubgraph extends BaseSubgraph {
           }
 
           let createdDoc;
-          if (initialState) {
+          if (initialState || preferredEditor) {
             createdDoc = await createDocumentWithInitialStateResolver(
               this.reactorClient,
-              { documentType, parentIdentifier, name, slug, initialState },
+              {
+                documentType,
+                parentIdentifier,
+                name,
+                slug,
+                preferredEditor,
+                initialState: initialState ?? {},
+              },
             );
           } else {
             createdDoc = await createEmptyDocumentResolver(this.reactorClient, {
@@ -326,7 +340,12 @@ export class DocumentModelSubgraph extends BaseSubgraph {
 
           // Name fallback via SET_NAME (only for non-initialState path,
           // since initialState path sets name on header before creation)
-          if (!initialState && name && createdDoc.name !== name) {
+          if (
+            !initialState &&
+            !preferredEditor &&
+            name &&
+            createdDoc.name !== name
+          ) {
             const updatedDoc = await this.reactorClient.execute(
               createdDoc.id,
               "main",

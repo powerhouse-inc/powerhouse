@@ -792,6 +792,7 @@ function generateNewApiSchema(
     type ${documentName}MutationResult {
       id: String!
       slug: String
+      preferredEditor: String
       name: String!
       documentType: String!
       state: ${stateType}
@@ -888,8 +889,8 @@ function generateNewApiSchema(
 
   // Mutations: sync and async versions
   const createDocumentMutation = initialStateInputSchema
-    ? `${documentName}_createDocument(name: String!, parentIdentifier: String, slug: String, initialState: ${documentName}_InitialStateInput): ${documentName}MutationResult!`
-    : `${documentName}_createDocument(name: String!, parentIdentifier: String): ${documentName}MutationResult!`;
+    ? `${documentName}_createDocument(name: String!, parentIdentifier: String, slug: String, preferredEditor: String, initialState: ${documentName}_InitialStateInput): ${documentName}MutationResult!`
+    : `${documentName}_createDocument(name: String!, parentIdentifier: String, preferredEditor: String): ${documentName}MutationResult!`;
   const createEmptyDocumentMutation = `${documentName}_createEmptyDocument(parentIdentifier: String): ${documentName}MutationResult!`;
 
   const operationMutations =

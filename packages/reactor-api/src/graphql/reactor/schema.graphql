@@ -80,6 +80,7 @@ type Revision {
 type PHDocument {
   id: String!
   slug: String
+  preferredEditor: String
   name: String!
   documentType: String!
   state: JSONObject!
