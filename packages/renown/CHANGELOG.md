@@ -1,3 +1,13 @@
+## 6.0.0-dev.94 (2026-03-17)
+
+### 🩹 Fixes
+
+- **common:** added missing runtime dependencies ([b0f647f75](https://github.com/powerhouse-inc/powerhouse/commit/b0f647f75))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 6.0.0-dev.93 (2026-03-17)
 
 This was a version bump only for @renown/sdk to align it with other projects, there were no code changes.
