@@ -1,7 +1,4 @@
-import {
-  MeterProvider,
-  PeriodicExportingMetricReader,
-} from "@opentelemetry/sdk-metrics";
+import { MeterProvider } from "@opentelemetry/sdk-metrics";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createMeterProviderFromEnv } from "../src/metrics.js";
 
@@ -31,12 +28,15 @@ function track(provider: MeterProvider | undefined): MeterProvider | undefined {
 // These helpers access undocumented internal fields of MeterProvider and
 // PeriodicExportingMetricReader. They may break if @opentelemetry/sdk-metrics
 // renames its private state between major versions.
-function getReader(provider: MeterProvider): PeriodicExportingMetricReader {
+function getReader(provider: MeterProvider): {
+  _exportInterval: number;
+  _exportTimeout: number;
+} {
   return (
     provider as unknown as {
       _sharedState: {
         metricCollectors: Array<{
-          _metricReader: PeriodicExportingMetricReader;
+          _metricReader: { _exportInterval: number; _exportTimeout: number };
         }>;
       };
     }
