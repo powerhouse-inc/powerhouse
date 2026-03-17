@@ -1,30 +1,21 @@
 #!/usr/bin/env node
 import {
   assertNodeVersion,
-  getPowerhouseProjectInfo,
   phCliCommandNames,
 } from "@powerhousedao/common/clis";
-import { run } from "cmd-ts";
-import { execSync } from "node:child_process";
-import { resolveCommand } from "package-manager-detector";
-import { ph } from "./commands/ph.js";
 
-async function executePhCliCommand(phCliCommand: string) {
-  const forwardedArgs = process.argv.slice(3);
-  const { projectPath, packageManager } = await getPowerhouseProjectInfo();
-  const resolveExecuteLocalCommandResult = resolveCommand(
-    packageManager,
-    "execute-local",
-    ["ph-cli", phCliCommand, ...forwardedArgs],
-  );
-  if (!resolveExecuteLocalCommandResult) {
-    throw new Error(
-      `Command ${phCliCommand} is not executable by package manager ${packageManager}. Either install "@powerhousedao/ph-cli" in your local package, or run \`ph setup-globals\` to globally install the "@powerhousedao/ph-cli" package.`,
-    );
-  }
-  const { command, args } = resolveExecuteLocalCommandResult;
-  const cmd = `${command} ${args.join(" ")}`;
-  execSync(cmd, { stdio: "inherit", cwd: projectPath });
+/**
+ * ph-cli and ph-cmd are loaded lazily so that the node version is checked before
+ * any code is parsed to avoid errors on startup due to unsupported dependencies.
+ */
+
+async function runPhCliCommand(phCliCommand: string) {
+  const { executePhCliCommand } = await import("./ph-cli.js");
+  return await executePhCliCommand(phCliCommand);
+}
+async function runPhCmdCommand(args: string[]) {
+  const { run } = await import("./run.js");
+  return await run(args);
 }
 
 async function main() {
@@ -41,18 +32,29 @@ async function main() {
     // for the `connect` command
     !args.some((arg) => ["--help", "-h"].includes(arg))
   ) {
-    await executePhCliCommand("connect");
+    await runPhCliCommand("connect");
     process.exit(0);
   }
 
   // forward command to the local ph-cli installation if it exists
   if (phCliCommandNames.includes(command)) {
-    await executePhCliCommand(command);
+    await runPhCliCommand(command);
     process.exit(0);
   }
 
-  await run(ph, args);
+  await runPhCmdCommand(args);
   process.exit(0);
 }
 
-await main();
+await main().catch((error) => {
+  const isDebug = process.argv.slice(2).includes("--debug");
+  if (isDebug) {
+    throw error;
+  }
+  if (error instanceof Error) {
+    console.error(error.message);
+    process.exit(1);
+  } else {
+    throw error;
+  }
+});
