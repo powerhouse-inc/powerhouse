@@ -48,6 +48,27 @@ function getReader(provider: MeterProvider): {
   )._sharedState.metricCollectors[0]._metricReader;
 }
 
+function getExporterUrl(provider: MeterProvider): string {
+  return (
+    provider as unknown as {
+      _sharedState: {
+        metricCollectors: Array<{
+          _metricReader: {
+            _exporter: {
+              _delegate: {
+                _transport: {
+                  _transport: { _parameters: { url: string } };
+                };
+              };
+            };
+          };
+        }>;
+      };
+    }
+  )._sharedState.metricCollectors[0]._metricReader._exporter._delegate
+    ._transport._transport._parameters.url;
+}
+
 function getResourceAttributes(
   provider: MeterProvider,
 ): Record<string, unknown> {
@@ -87,13 +108,12 @@ describe("createMeterProviderFromEnv", () => {
     });
 
     it("does not double-append /v1/metrics when endpoint already includes it", () => {
-      expect(() =>
-        track(
-          createMeterProviderFromEnv({
-            OTEL_EXPORTER_OTLP_ENDPOINT: "http://localhost:4318/v1/metrics",
-          }),
-        ),
-      ).not.toThrow();
+      const provider = trackAsserted(
+        createMeterProviderFromEnv({
+          OTEL_EXPORTER_OTLP_ENDPOINT: "http://localhost:4318/v1/metrics",
+        }),
+      );
+      expect(getExporterUrl(provider)).toBe("http://localhost:4318/v1/metrics");
     });
 
     it("uses 5000ms export interval by default", () => {
