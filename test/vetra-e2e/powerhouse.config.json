@@ -14,7 +14,7 @@
   "packages": [
     {
       "packageName": "@powerhousedao/versioned-documents",
-      "version": "latest",
+      "version": "dev",
       "provider": "npm"
     }
   ],
