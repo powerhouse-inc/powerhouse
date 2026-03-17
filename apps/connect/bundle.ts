@@ -11,6 +11,7 @@ async function build() {
       "./src/pages/index.ts",
       "./src/store/index.ts",
       "./src/utils/index.ts",
+      "./src/pglite.worker.ts",
     ],
     outdir: "dist",
     target: "browser",
