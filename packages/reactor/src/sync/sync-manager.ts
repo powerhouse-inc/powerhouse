@@ -1,4 +1,3 @@
-import type { OperationWithContext } from "@powerhousedao/shared/document-model";
 import type { Operation } from "document-model";
 import type { IOperationIndex } from "../cache/operation-index-types.js";
 import type {
@@ -723,65 +722,11 @@ export class SyncManager implements ISyncManager {
     remote: Remote,
     ackOrdinal: number,
   ): Promise<void> {
-    const allOperations = await this.getOperationsForRemote(remote, ackOrdinal);
-    const maxOrdinal = allOperations.reduce(
-      (max, op) => Math.max(max, op.context.ordinal),
-      ackOrdinal,
-    );
-    const operations = allOperations.filter(
-      (op) => !this.quarantinedDocumentIds.has(op.context.documentId),
-    );
-    if (operations.length === 0) {
-      remote.channel.outbox.advanceOrdinal(maxOrdinal);
-      return;
-    }
-
-    // sort by (documentId, scope, ordinal) so batchOperationsByDocument
-    // groups all operations for the same document together
-    operations.sort((a, b) => {
-      if (a.context.documentId !== b.context.documentId) {
-        return a.context.documentId < b.context.documentId ? -1 : 1;
-      }
-      if (a.context.scope !== b.context.scope) {
-        return a.context.scope < b.context.scope ? -1 : 1;
-      }
-      return a.context.ordinal - b.context.ordinal;
-    });
-
-    const batches = batchOperationsByDocument(operations);
-
-    // per-document dependency chain: each batch depends on the previous
-    // batch for the same documentId only, allowing independent documents
-    // to be processed in parallel
+    let maxOrdinal = ackOrdinal;
     const lastJobByDoc = new Map<string, string>();
-    const syncOps: SyncOperation[] = [];
-    for (const batch of batches) {
-      const jobId = crypto.randomUUID();
-      const prevJobId = lastJobByDoc.get(batch.documentId);
-      const syncOp = new SyncOperation(
-        crypto.randomUUID(),
-        jobId,
-        prevJobId ? [prevJobId] : [],
-        remote.name,
-        batch.documentId,
-        [batch.scope],
-        batch.branch,
-        batch.operations,
-      );
+    const sinceTimestamp = remote.options.sinceTimestampUtcMs;
 
-      syncOps.push(syncOp);
-      lastJobByDoc.set(batch.documentId, jobId);
-    }
-
-    remote.channel.outbox.add(...syncOps);
-    remote.channel.outbox.advanceOrdinal(maxOrdinal);
-  }
-
-  private async getOperationsForRemote(
-    remote: Remote,
-    ackOrdinal: number,
-  ): Promise<OperationWithContext[]> {
-    const results = await this.operationIndex.find(
+    let page = await this.operationIndex.find(
       remote.collectionId,
       ackOrdinal,
       { excludeSourceRemote: remote.name },
@@ -789,19 +734,67 @@ export class SyncManager implements ISyncManager {
       this.abortController.signal,
     );
 
-    let operations = results.results.map((entry) =>
-      toOperationWithContext(entry),
-    );
+    let hasMore: boolean;
+    do {
+      for (const entry of page.results) {
+        maxOrdinal = Math.max(maxOrdinal, entry.ordinal ?? 0);
+      }
 
-    // apply the sinceTimestampUtcMs filter
-    const sinceTimestamp = remote.options.sinceTimestampUtcMs;
-    if (sinceTimestamp && sinceTimestamp !== "0") {
-      operations = operations.filter(
-        (op) => op.operation.timestampUtcMs >= sinceTimestamp,
+      let operations = page.results.map((entry) =>
+        toOperationWithContext(entry),
       );
-    }
 
-    // apply the remote filter
-    return filterOperations(operations, remote.filter);
+      if (sinceTimestamp && sinceTimestamp !== "0") {
+        operations = operations.filter(
+          (op) => op.operation.timestampUtcMs >= sinceTimestamp,
+        );
+      }
+      operations = filterOperations(operations, remote.filter);
+      operations = operations.filter(
+        (op) => !this.quarantinedDocumentIds.has(op.context.documentId),
+      );
+
+      if (operations.length > 0) {
+        operations.sort((a, b) => {
+          if (a.context.documentId !== b.context.documentId) {
+            return a.context.documentId < b.context.documentId ? -1 : 1;
+          }
+          if (a.context.scope !== b.context.scope) {
+            return a.context.scope < b.context.scope ? -1 : 1;
+          }
+          return a.context.ordinal - b.context.ordinal;
+        });
+
+        const batches = batchOperationsByDocument(operations);
+
+        const syncOps: SyncOperation[] = [];
+        for (const batch of batches) {
+          const jobId = crypto.randomUUID();
+          const prevJobId = lastJobByDoc.get(batch.documentId);
+          const syncOp = new SyncOperation(
+            crypto.randomUUID(),
+            jobId,
+            prevJobId ? [prevJobId] : [],
+            remote.name,
+            batch.documentId,
+            [batch.scope],
+            batch.branch,
+            batch.operations,
+          );
+
+          syncOps.push(syncOp);
+          lastJobByDoc.set(batch.documentId, jobId);
+        }
+
+        remote.channel.outbox.add(...syncOps);
+      }
+
+      hasMore = !!page.next;
+      if (hasMore) {
+        page = await page.next!();
+      }
+    } while (hasMore);
+
+    remote.channel.outbox.advanceOrdinal(maxOrdinal);
   }
 }

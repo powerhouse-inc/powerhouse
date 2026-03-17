@@ -108,6 +108,7 @@ describe("SyncManager - Unit Tests", () => {
       ordinal: number;
       action?: any;
     }>,
+    nextPage?: () => Promise<ReturnType<typeof createFindResult>>,
   ) {
     return {
       results: entries.map((e) => ({
@@ -131,6 +132,7 @@ describe("SyncManager - Unit Tests", () => {
         ordinal: e.ordinal,
       })),
       options: { cursor: "0", limit: 500 },
+      next: nextPage,
     };
   }
 
@@ -4267,6 +4269,172 @@ describe("SyncManager - Unit Tests", () => {
       expect(ch.outbox.add).not.toHaveBeenCalled();
       // But latestOrdinal should have advanced past the quarantined ops
       expect(ch.outbox.latestOrdinal).toBe(15);
+    });
+  });
+
+  describe("paginated backfill", () => {
+    it("should fetch all pages when backfilling operations", async () => {
+      await syncManager.startup();
+
+      const channelConfig: ChannelConfig = {
+        type: "internal",
+        parameters: {},
+      };
+
+      const page2 = createFindResult([
+        {
+          id: "op3",
+          documentId: "doc2",
+          scope: "global",
+          branch: "main",
+          ordinal: 3,
+        },
+      ]);
+
+      const page1 = createFindResult(
+        [
+          {
+            id: "op1",
+            documentId: "doc1",
+            scope: "global",
+            branch: "main",
+            ordinal: 1,
+          },
+          {
+            id: "op2",
+            documentId: "doc1",
+            scope: "global",
+            branch: "main",
+            ordinal: 2,
+          },
+        ],
+        () => Promise.resolve(page2),
+      );
+
+      vi.mocked(mockOperationIndex.find).mockResolvedValueOnce(page1);
+
+      await syncManager.add("remote-paged", "collection1", channelConfig, {
+        documentId: [],
+        scope: [],
+        branch: "main",
+      });
+
+      // outbox.add should be called twice (once per page)
+      expect(mockChannel.outbox.add).toHaveBeenCalledTimes(2);
+
+      // All 3 operations should reach the outbox
+      const allSyncOps = vi
+        .mocked(mockChannel.outbox.add)
+        .mock.calls.flatMap((args) => args);
+      const allOpIds = allSyncOps.flatMap((syncOp: any) =>
+        syncOp.operations.map((op: OperationWithContext) => op.operation.id),
+      );
+      expect(allOpIds).toContain("op1");
+      expect(allOpIds).toContain("op2");
+      expect(allOpIds).toContain("op3");
+    });
+
+    it("should maintain dependency chain across pages", async () => {
+      await syncManager.startup();
+
+      const channelConfig: ChannelConfig = {
+        type: "internal",
+        parameters: {},
+      };
+
+      const page2 = createFindResult([
+        {
+          id: "op2",
+          documentId: "doc1",
+          scope: "global",
+          branch: "main",
+          ordinal: 2,
+        },
+      ]);
+
+      const page1 = createFindResult(
+        [
+          {
+            id: "op1",
+            documentId: "doc1",
+            scope: "global",
+            branch: "main",
+            ordinal: 1,
+          },
+        ],
+        () => Promise.resolve(page2),
+      );
+
+      vi.mocked(mockOperationIndex.find).mockResolvedValueOnce(page1);
+
+      const addedSyncOps: any[] = [];
+      vi.mocked(mockChannel.outbox.add).mockImplementation(
+        (...syncOps: any[]) => {
+          addedSyncOps.push(...syncOps);
+        },
+      );
+
+      await syncManager.add("remote-deps", "collection1", channelConfig, {
+        documentId: [],
+        scope: [],
+        branch: "main",
+      });
+
+      expect(addedSyncOps).toHaveLength(2);
+      // First page SyncOp has no dependencies
+      expect(addedSyncOps[0].jobDependencies).toEqual([]);
+      // Second page SyncOp (same doc) should depend on first page's jobId
+      expect(addedSyncOps[1].jobDependencies).toEqual([addedSyncOps[0].jobId]);
+    });
+
+    it("should track maxOrdinal across all pages", async () => {
+      await syncManager.startup();
+
+      const channelConfig: ChannelConfig = {
+        type: "internal",
+        parameters: {},
+      };
+
+      const page2 = createFindResult([
+        {
+          id: "op3",
+          documentId: "doc2",
+          scope: "global",
+          branch: "main",
+          ordinal: 30,
+        },
+      ]);
+
+      const page1 = createFindResult(
+        [
+          {
+            id: "op1",
+            documentId: "doc1",
+            scope: "global",
+            branch: "main",
+            ordinal: 10,
+          },
+          {
+            id: "op2",
+            documentId: "doc1",
+            scope: "global",
+            branch: "main",
+            ordinal: 20,
+          },
+        ],
+        () => Promise.resolve(page2),
+      );
+
+      vi.mocked(mockOperationIndex.find).mockResolvedValueOnce(page1);
+
+      await syncManager.add("remote-ordinal", "collection1", channelConfig, {
+        documentId: [],
+        scope: [],
+        branch: "main",
+      });
+
+      // advanceOrdinal should be called with max ordinal from page 2
+      expect(mockChannel.outbox.advanceOrdinal).toHaveBeenCalledWith(30);
     });
   });
 });
