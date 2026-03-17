@@ -1,3 +1,22 @@
+## 6.0.0-dev.96 (2026-03-17)
+
+### 🚀 Features
+
+- **reactor-api:** added preferred editor to gql subgraph ([48db6bced](https://github.com/powerhouse-inc/powerhouse/commit/48db6bced))
+
+### 🩹 Fixes
+
+- **codegen:** use relative imports instead of barrel imports in codegen ([464aaed78](https://github.com/powerhouse-inc/powerhouse/commit/464aaed78))
+- **connect:** add pglite worker to bundle ([2d315aec9](https://github.com/powerhouse-inc/powerhouse/commit/2d315aec9))
+- **switchboard:** enforce OTel provider registration ordering via StartServerOptions ([c797fd242](https://github.com/powerhouse-inc/powerhouse/commit/c797fd242))
+- **switchboard:** avoid double /v1/metrics suffix in OTLP exporter URL ([c184093c3](https://github.com/powerhouse-inc/powerhouse/commit/c184093c3))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan
+- Samuel Hawksby-Robinson @Samyoul
+
 ## 6.0.0-dev.95 (2026-03-17)
 
 ### 🚀 Features

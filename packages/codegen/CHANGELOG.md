@@ -1,3 +1,13 @@
+## 6.0.0-dev.96 (2026-03-17)
+
+### 🩹 Fixes
+
+- **codegen:** use relative imports instead of barrel imports in codegen ([464aaed78](https://github.com/powerhouse-inc/powerhouse/commit/464aaed78))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
 ## 6.0.0-dev.95 (2026-03-17)
 
 ### 🚀 Features

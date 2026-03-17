@@ -1,3 +1,13 @@
+## 6.0.0-dev.96 (2026-03-17)
+
+### 🚀 Features
+
+- **reactor-api:** added preferred editor to gql subgraph ([48db6bced](https://github.com/powerhouse-inc/powerhouse/commit/48db6bced))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
 ## 6.0.0-dev.95 (2026-03-17)
 
 ### 🚀 Features

@@ -1,3 +1,14 @@
+## 6.0.0-dev.96 (2026-03-17)
+
+### 🩹 Fixes
+
+- **switchboard:** avoid double /v1/metrics suffix in OTLP exporter URL ([c184093c3](https://github.com/powerhouse-inc/powerhouse/commit/c184093c3))
+- **switchboard:** enforce OTel provider registration ordering via StartServerOptions ([c797fd242](https://github.com/powerhouse-inc/powerhouse/commit/c797fd242))
+
+### ❤️ Thank You
+
+- Samuel Hawksby-Robinson @Samyoul
+
 ## 6.0.0-dev.95 (2026-03-17)
 
 ### 🚀 Features

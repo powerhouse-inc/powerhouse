@@ -1,3 +1,13 @@
+## 6.0.0-dev.96 (2026-03-17)
+
+### 🩹 Fixes
+
+- **connect:** add pglite worker to bundle ([2d315aec9](https://github.com/powerhouse-inc/powerhouse/commit/2d315aec9))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 6.0.0-dev.95 (2026-03-17)
 
 ### 🚀 Features
