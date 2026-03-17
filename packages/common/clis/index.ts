@@ -8,6 +8,7 @@ export * from "./args/install.js";
 export * from "./args/list.js";
 export * from "./args/login.js";
 export * from "./args/migrate.js";
+export * from "./args/publish.js";
 export * from "./args/service.js";
 export * from "./args/switchboard.js";
 export * from "./args/uninstall.js";

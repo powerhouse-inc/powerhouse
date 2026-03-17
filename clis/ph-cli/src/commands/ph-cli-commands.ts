@@ -8,6 +8,7 @@ import { list } from "./list.js";
 import { login } from "./login.js";
 import { logout } from "./logout.js";
 import { migrate } from "./migrate.js";
+import { publish } from "./publish.js";
 import { switchboard } from "./switchboard.js";
 import { uninstall } from "./uninstall.js";
 import { vetra } from "./vetra.js";
@@ -17,6 +18,7 @@ export const phCliCommands = {
   vetra,
   connect,
   build,
+  publish,
   "access-token": accessToken,
   inspect,
   list,

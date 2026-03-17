@@ -8,6 +8,7 @@ import { installArgs } from "./install.js";
 import { listArgs } from "./list.js";
 import { loginArgs } from "./login.js";
 import { migrateArgs } from "./migrate.js";
+import { publishArgs } from "./publish.js";
 import { switchboardArgs } from "./switchboard.js";
 import { uninstallArgs } from "./uninstall.js";
 import { vetraArgs } from "./vetra.js";
@@ -36,6 +37,12 @@ export const phCliHelpCommands = {
     name: "build",
     args: debugArgs,
     description: "Build your project for publishing to the registry",
+    handler: () => {},
+  }),
+  publish: command({
+    name: "publish",
+    args: publishArgs,
+    description: "Publish a package to the Powerhouse registry",
     handler: () => {},
   }),
   list: command({
