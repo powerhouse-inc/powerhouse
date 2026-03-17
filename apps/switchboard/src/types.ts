@@ -1,7 +1,7 @@
 import type { IReactorClient } from "@powerhousedao/reactor";
 import type { IRenown } from "@renown/sdk";
 import type { DriveInput, IDocumentDriveServer, ILogger } from "document-drive";
-import type { MeterProvider } from "@opentelemetry/sdk-metrics";
+import type { MeterProvider } from "@opentelemetry/api";
 
 export type StorageOptions = {
   type: "filesystem" | "memory" | "postgres" | "browser";

@@ -14,12 +14,25 @@ vi.mock("document-drive", () => ({
   }),
 }));
 
-afterEach(() => {
+const providers: MeterProvider[] = [];
+
+afterEach(async () => {
   vi.restoreAllMocks();
+  // Await shutdown so PeriodicExportingMetricReader timers are cleared
+  await Promise.all(providers.map((p) => p.shutdown()));
+  providers.length = 0;
 });
 
+function track(provider: MeterProvider | undefined): MeterProvider | undefined {
+  if (provider) providers.push(provider);
+  return provider;
+}
+
+// These helpers access undocumented internal fields of MeterProvider and
+// PeriodicExportingMetricReader. They may break if @opentelemetry/sdk-metrics
+// renames its private state between major versions.
 function getReader(provider: MeterProvider): PeriodicExportingMetricReader {
-  const state = (
+  return (
     provider as unknown as {
       _sharedState: {
         metricCollectors: Array<{
@@ -27,19 +40,17 @@ function getReader(provider: MeterProvider): PeriodicExportingMetricReader {
         }>;
       };
     }
-  )._sharedState;
-  return state.metricCollectors[0]._metricReader;
+  )._sharedState.metricCollectors[0]._metricReader;
 }
 
 function getResourceAttributes(
   provider: MeterProvider,
 ): Record<string, unknown> {
-  const state = (
+  return (
     provider as unknown as {
       _sharedState: { resource: { attributes: Record<string, unknown> } };
     }
-  )._sharedState;
-  return state.resource.attributes;
+  )._sharedState.resource.attributes;
 }
 
 describe("createMeterProviderFromEnv", () => {
@@ -51,102 +62,106 @@ describe("createMeterProviderFromEnv", () => {
 
   describe("when OTEL_EXPORTER_OTLP_ENDPOINT is set", () => {
     it("returns a MeterProvider", () => {
-      const provider = createMeterProviderFromEnv({
-        OTEL_EXPORTER_OTLP_ENDPOINT: "http://localhost:4318",
-      });
-      expect(provider).toBeInstanceOf(MeterProvider);
-      void provider?.shutdown();
+      expect(
+        track(
+          createMeterProviderFromEnv({
+            OTEL_EXPORTER_OTLP_ENDPOINT: "http://localhost:4318",
+          }),
+        ),
+      ).toBeInstanceOf(MeterProvider);
     });
 
     it("strips trailing slash from endpoint URL without throwing", () => {
       expect(() =>
-        createMeterProviderFromEnv({
-          OTEL_EXPORTER_OTLP_ENDPOINT: "http://localhost:4318/",
-        }),
+        track(
+          createMeterProviderFromEnv({
+            OTEL_EXPORTER_OTLP_ENDPOINT: "http://localhost:4318/",
+          }),
+        ),
       ).not.toThrow();
     });
 
     it("uses 5000ms export interval by default", () => {
-      const provider = createMeterProviderFromEnv({
-        OTEL_EXPORTER_OTLP_ENDPOINT: "http://localhost:4318",
-      }) as MeterProvider;
-
+      const provider = track(
+        createMeterProviderFromEnv({
+          OTEL_EXPORTER_OTLP_ENDPOINT: "http://localhost:4318",
+        }),
+      ) as MeterProvider;
       expect(getReader(provider)._exportInterval).toBe(5000);
-      void provider.shutdown();
     });
 
     it("honours OTEL_METRIC_EXPORT_INTERVAL", () => {
-      const provider = createMeterProviderFromEnv({
-        OTEL_EXPORTER_OTLP_ENDPOINT: "http://localhost:4318",
-        OTEL_METRIC_EXPORT_INTERVAL: "2000",
-      }) as MeterProvider;
-
+      const provider = track(
+        createMeterProviderFromEnv({
+          OTEL_EXPORTER_OTLP_ENDPOINT: "http://localhost:4318",
+          OTEL_METRIC_EXPORT_INTERVAL: "2000",
+        }),
+      ) as MeterProvider;
       expect(getReader(provider)._exportInterval).toBe(2000);
-      void provider.shutdown();
     });
 
     it("falls back to 5000ms when OTEL_METRIC_EXPORT_INTERVAL is non-numeric", () => {
-      const provider = createMeterProviderFromEnv({
-        OTEL_EXPORTER_OTLP_ENDPOINT: "http://localhost:4318",
-        OTEL_METRIC_EXPORT_INTERVAL: "abc",
-      }) as MeterProvider;
-
+      const provider = track(
+        createMeterProviderFromEnv({
+          OTEL_EXPORTER_OTLP_ENDPOINT: "http://localhost:4318",
+          OTEL_METRIC_EXPORT_INTERVAL: "abc",
+        }),
+      ) as MeterProvider;
       expect(getReader(provider)._exportInterval).toBe(5000);
-      void provider.shutdown();
     });
 
     it("falls back to 5000ms when OTEL_METRIC_EXPORT_INTERVAL is zero", () => {
-      const provider = createMeterProviderFromEnv({
-        OTEL_EXPORTER_OTLP_ENDPOINT: "http://localhost:4318",
-        OTEL_METRIC_EXPORT_INTERVAL: "0",
-      }) as MeterProvider;
-
+      const provider = track(
+        createMeterProviderFromEnv({
+          OTEL_EXPORTER_OTLP_ENDPOINT: "http://localhost:4318",
+          OTEL_METRIC_EXPORT_INTERVAL: "0",
+        }),
+      ) as MeterProvider;
       expect(getReader(provider)._exportInterval).toBe(5000);
-      void provider.shutdown();
     });
 
     it("falls back to 5000ms when OTEL_METRIC_EXPORT_INTERVAL is negative", () => {
-      const provider = createMeterProviderFromEnv({
-        OTEL_EXPORTER_OTLP_ENDPOINT: "http://localhost:4318",
-        OTEL_METRIC_EXPORT_INTERVAL: "-1000",
-      }) as MeterProvider;
-
+      const provider = track(
+        createMeterProviderFromEnv({
+          OTEL_EXPORTER_OTLP_ENDPOINT: "http://localhost:4318",
+          OTEL_METRIC_EXPORT_INTERVAL: "-1000",
+        }),
+      ) as MeterProvider;
       expect(getReader(provider)._exportInterval).toBe(5000);
-      void provider.shutdown();
     });
 
     it("sets exportTimeoutMillis below exportIntervalMillis", () => {
-      const provider = createMeterProviderFromEnv({
-        OTEL_EXPORTER_OTLP_ENDPOINT: "http://localhost:4318",
-        OTEL_METRIC_EXPORT_INTERVAL: "1000",
-      }) as MeterProvider;
-
+      const provider = track(
+        createMeterProviderFromEnv({
+          OTEL_EXPORTER_OTLP_ENDPOINT: "http://localhost:4318",
+          OTEL_METRIC_EXPORT_INTERVAL: "1000",
+        }),
+      ) as MeterProvider;
       const reader = getReader(provider);
       expect(reader._exportTimeout).toBeLessThan(reader._exportInterval);
-      void provider.shutdown();
     });
 
     it("uses 'switchboard' as service name by default", () => {
-      const provider = createMeterProviderFromEnv({
-        OTEL_EXPORTER_OTLP_ENDPOINT: "http://localhost:4318",
-      }) as MeterProvider;
-
+      const provider = track(
+        createMeterProviderFromEnv({
+          OTEL_EXPORTER_OTLP_ENDPOINT: "http://localhost:4318",
+        }),
+      ) as MeterProvider;
       expect(getResourceAttributes(provider)["service.name"]).toBe(
         "switchboard",
       );
-      void provider.shutdown();
     });
 
     it("honours OTEL_SERVICE_NAME", () => {
-      const provider = createMeterProviderFromEnv({
-        OTEL_EXPORTER_OTLP_ENDPOINT: "http://localhost:4318",
-        OTEL_SERVICE_NAME: "my-switchboard",
-      }) as MeterProvider;
-
+      const provider = track(
+        createMeterProviderFromEnv({
+          OTEL_EXPORTER_OTLP_ENDPOINT: "http://localhost:4318",
+          OTEL_SERVICE_NAME: "my-switchboard",
+        }),
+      ) as MeterProvider;
       expect(getResourceAttributes(provider)["service.name"]).toBe(
         "my-switchboard",
       );
-      void provider.shutdown();
     });
   });
 });
