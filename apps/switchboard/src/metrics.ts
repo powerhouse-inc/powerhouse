@@ -30,7 +30,7 @@ export function setupMetricsFromEnv(
           url: `${endpoint.replace(/\/$/, "")}/v1/metrics`,
         }),
         exportIntervalMillis,
-        exportTimeoutMillis: 4_750, // Stay under the 5s shutdown deadline
+        exportTimeoutMillis: Math.max(exportIntervalMillis - 250, 1),
       }),
     ],
   });
