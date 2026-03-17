@@ -8,9 +8,11 @@ import { childLogger } from "document-drive";
 
 const logger = childLogger(["switchboard", "metrics"]);
 
-export function createMeterProviderFromEnv(
-  env: typeof process.env,
-): MeterProvider | undefined {
+export function createMeterProviderFromEnv(env: {
+  OTEL_EXPORTER_OTLP_ENDPOINT?: string;
+  OTEL_METRIC_EXPORT_INTERVAL?: string;
+  OTEL_SERVICE_NAME?: string;
+}): MeterProvider | undefined {
   const endpoint = env.OTEL_EXPORTER_OTLP_ENDPOINT;
   if (!endpoint) return undefined;
 

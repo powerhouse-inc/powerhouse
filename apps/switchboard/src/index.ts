@@ -24,7 +24,11 @@ function ensureNodeVersion(minVersion = "24") {
 // Ensure minimum Node.js version
 ensureNodeVersion("24");
 
-const meterProvider = createMeterProviderFromEnv(process.env);
+const meterProvider = createMeterProviderFromEnv({
+  OTEL_EXPORTER_OTLP_ENDPOINT: process.env.OTEL_EXPORTER_OTLP_ENDPOINT,
+  OTEL_METRIC_EXPORT_INTERVAL: process.env.OTEL_METRIC_EXPORT_INTERVAL,
+  OTEL_SERVICE_NAME: process.env.OTEL_SERVICE_NAME,
+});
 
 async function shutdown() {
   console.log("\nShutting down...");
