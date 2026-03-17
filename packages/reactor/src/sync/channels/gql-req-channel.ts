@@ -72,6 +72,8 @@ export class GqlRequestChannel implements IChannel {
   private pushFailureCount: number = 0;
   private pushRetryTimer: ReturnType<typeof setTimeout> | null = null;
   private pushBlocked: boolean = false;
+  private isPushing: boolean = false;
+  private pendingDrain: boolean = false;
   private connectionState: ConnectionState = "connecting";
   private readonly connectionStateCallbacks: Set<ConnectionStateChangeCallback> =
     new Set();
@@ -120,6 +122,10 @@ export class GqlRequestChannel implements IChannel {
     // when sync ops are added to the outbox, push them to the remote
     this.outbox.onAdded((syncOps) => {
       if (this.isShutdown) return;
+      if (this.isPushing) {
+        this.pendingDrain = true;
+        return;
+      }
       if (this.pushBlocked) return; // ops stay in outbox, included in next retry
       if (this.deadLetter.items.length > 0) return;
       this.attemptPush(syncOps);
@@ -642,8 +648,10 @@ export class GqlRequestChannel implements IChannel {
    * ops to deadLetter.
    */
   private attemptPush(syncOps: SyncOperation[]): void {
+    this.isPushing = true;
     this.pushSyncOperations(syncOps)
       .then(() => {
+        this.isPushing = false;
         this.pushBlocked = false;
         this.pushFailureCount = 0;
         if (
@@ -652,8 +660,11 @@ export class GqlRequestChannel implements IChannel {
         ) {
           this.transitionConnectionState("connected");
         }
+        this.drainOutbox();
       })
       .catch((error) => {
+        this.isPushing = false;
+        this.pendingDrain = false;
         if (this.isShutdown) return;
 
         const err = error instanceof Error ? error : new Error(String(error));
@@ -708,6 +719,20 @@ export class GqlRequestChannel implements IChannel {
 
       this.attemptPush([...allItems]);
     }, delay);
+  }
+
+  /**
+   * Drains pending outbox items that arrived while a push was in-flight.
+   * Server-side action.id dedup handles any overlap with the previous push.
+   */
+  private drainOutbox(): void {
+    if (!this.pendingDrain) return;
+    this.pendingDrain = false;
+    if (this.isShutdown) return;
+    if (this.deadLetter.items.length > 0) return;
+    const items = this.outbox.items;
+    if (items.length === 0) return;
+    this.attemptPush([...items]);
   }
 
   /**

@@ -660,6 +660,101 @@ describe("GqlRequestChannel", () => {
       expect(channel.outbox.items).toHaveLength(1);
       await channel.shutdown();
     }, 10000);
+
+    it("should not send concurrent push mutations when multiple flushes fire", async () => {
+      const cursorStorage = createMockCursorStorage();
+      let pushCallCount = 0;
+      let resolvePush: (() => void) | undefined;
+
+      const mockFetch = vi
+        .fn()
+        .mockImplementation((_url: string, options: RequestInit) => {
+          const body = JSON.parse(options.body as string);
+
+          if (body.query.includes("touchChannel")) {
+            return Promise.resolve({
+              ok: true,
+              json: () =>
+                Promise.resolve({
+                  data: { touchChannel: { success: true, ackOrdinal: 0 } },
+                }),
+            });
+          }
+
+          if (body.query.includes("pushSyncEnvelopes")) {
+            pushCallCount++;
+            if (pushCallCount === 1) {
+              // First push: delay resolution to keep it in-flight
+              return new Promise<unknown>((resolve) => {
+                resolvePush = () =>
+                  resolve({
+                    ok: true,
+                    json: () =>
+                      Promise.resolve({ data: { pushSyncEnvelopes: true } }),
+                  });
+              });
+            }
+            // Subsequent pushes resolve immediately
+            return Promise.resolve({
+              ok: true,
+              json: () =>
+                Promise.resolve({ data: { pushSyncEnvelopes: true } }),
+            });
+          }
+
+          return Promise.resolve({
+            ok: true,
+            json: () =>
+              Promise.resolve({
+                data: {
+                  pollSyncEnvelopes: {
+                    envelopes: [],
+                    ackOrdinal: 0,
+                    deadLetters: [],
+                  },
+                },
+              }),
+          });
+        });
+      global.fetch = mockFetch as unknown as typeof global.fetch;
+
+      const channel = new GqlRequestChannel(
+        createMockLogger(),
+        "channel-1",
+        "remote-1",
+        cursorStorage,
+        createTestConfig(),
+        createMockOperationIndex(),
+        createPollTimer(),
+      );
+
+      // Add first batch - triggers flush + push
+      const job1 = createMockSyncOperation("job-1", "remote-1", 1);
+      channel.outbox.add(job1);
+
+      // Wait for the first push to start
+      await vi.waitFor(() => {
+        expect(pushCallCount).toBe(1);
+      });
+
+      // Add second batch while first push is in-flight
+      const job2 = createMockSyncOperation("job-2", "remote-1", 2);
+      channel.outbox.add(job2);
+
+      // Advance timers to trigger flush of second batch
+      await vi.advanceTimersByTimeAsync(600);
+
+      // Still only one push call - second batch was blocked by isPushing
+      expect(pushCallCount).toBe(1);
+
+      // Complete the first push - should trigger drain for pending items
+      resolvePush!();
+      await vi.waitFor(() => {
+        expect(pushCallCount).toBe(2);
+      });
+
+      await channel.shutdown();
+    }, 10000);
   });
 
   describe("error handling", () => {
