@@ -20,7 +20,7 @@ import type { DocumentModelModule, PHDocument } from "document-model";
 import {
   garbageCollectDocumentOperations,
   replayDocument,
-} from "document-model/core";
+} from "document-model";
 import { SynchronizationUnitNotFoundError } from "./error.js";
 import { SyncUnitMap } from "./sync-unit-map.js";
 

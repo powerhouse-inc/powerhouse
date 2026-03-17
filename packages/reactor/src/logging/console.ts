@@ -1,1 +1,1 @@
-export { ConsoleLogger } from "document-model/core";
+export { ConsoleLogger } from "document-model";

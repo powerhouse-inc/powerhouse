@@ -7,11 +7,13 @@ import type {
 import {
   documentModelDocumentModelModule,
   documentModelReducer,
+  garbageCollect,
+  generateId,
   setModelExtension,
   setModelId,
   setModelName,
+  undo,
 } from "document-model";
-import { garbageCollect, generateId, undo } from "document-model/core";
 import { beforeEach, describe, expect, it, vitest } from "vitest";
 
 import type { BaseDocumentDriveServer, IOperationResult } from "document-drive";
@@ -24,7 +26,7 @@ import {
   driveDocumentModelModule,
   driveDocumentReducer,
 } from "document-drive";
-import { createPresignedHeader } from "document-model/core";
+import { createPresignedHeader } from "document-model";
 
 const mapExpectedOperations = (operations: Operation[]) =>
   operations.map((op) => {

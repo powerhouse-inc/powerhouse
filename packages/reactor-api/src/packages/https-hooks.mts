@@ -1,5 +1,5 @@
-import { get } from "node:https";
 import { get as httpGet } from "node:http";
+import { get } from "node:https";
 
 /**
  * Node.js module loader hooks that enable importing from HTTP/HTTPS URLs.
@@ -47,7 +47,7 @@ export async function resolve(
     return { url: resolved, shortCircuit: true, format: "module" };
   }
 
-  // For bare specifiers (e.g. "document-model/core") imported from HTTP modules,
+  // For bare specifiers (e.g. "document-model") imported from HTTP modules,
   // Node's default resolver fails because it can't find node_modules from an HTTP parent.
   // Fall back to resolving from the process's working directory instead.
   if (

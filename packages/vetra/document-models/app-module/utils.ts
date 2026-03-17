@@ -4,7 +4,7 @@ import { utils as genUtils } from "./gen/utils.js";
 import * as customUtils from "./src/utils.js";
 
 /** Utils for the AppModule document model */
-export const utils = {
+export const utils: DocumentModelUtils<AppModulePHState> = {
   ...genUtils,
   ...customUtils,
-} satisfies DocumentModelUtils<AppModulePHState>;
+};

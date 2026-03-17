@@ -3,7 +3,7 @@ import {
   deriveOperationId,
   generateId,
   skipHeaderOperations,
-} from "document-model/core";
+} from "document-model";
 import { describe, expect, it } from "vitest";
 
 const TEST_DOC_ID = "test-doc-id";

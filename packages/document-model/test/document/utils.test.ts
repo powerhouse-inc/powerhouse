@@ -6,7 +6,7 @@ import {
   hashBrowser,
   replayDocument,
   validateOperations,
-} from "document-model/core";
+} from "document-model";
 import { getLocalFile, hashNode } from "document-model/node";
 
 import type { CountPHState } from "document-model/test";

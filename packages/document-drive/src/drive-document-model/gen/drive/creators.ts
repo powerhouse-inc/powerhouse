@@ -16,7 +16,7 @@ import type {
   SetSharingTypeAction,
   SetSharingTypeInput,
 } from "document-drive";
-import { createAction } from "document-model/core";
+import { createAction } from "document-model";
 import {
   AddListenerInputSchema,
   AddTriggerInputSchema,

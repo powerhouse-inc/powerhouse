@@ -5,10 +5,11 @@ import type {
 } from "document-model";
 import {
   actions,
+  createPresignedHeader,
   documentModelDocumentModelModule,
   documentModelReducer,
+  generateId,
 } from "document-model";
-import { createPresignedHeader, generateId } from "document-model/core";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import type { BaseDocumentDriveServer } from "document-drive";

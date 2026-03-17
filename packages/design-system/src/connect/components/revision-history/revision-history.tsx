@@ -1,6 +1,6 @@
 import { Pagination, usePagination } from "@powerhousedao/design-system";
 import type { Operation } from "document-model";
-import { garbageCollect, sortOperations } from "document-model/core";
+import { garbageCollect, sortOperations } from "document-model";
 import { useMemo, useState } from "react";
 import { ConnectTooltipProvider } from "../tooltip/tooltip.js";
 import { Header } from "./header/header.js";

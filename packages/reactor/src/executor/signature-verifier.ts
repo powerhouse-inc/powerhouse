@@ -1,5 +1,5 @@
 import type { Action, Operation } from "document-model";
-import { deriveOperationId } from "document-model/core";
+import { deriveOperationId } from "document-model";
 import { InvalidSignatureError } from "../shared/errors.js";
 import type { SignatureVerificationHandler } from "../signer/types.js";
 

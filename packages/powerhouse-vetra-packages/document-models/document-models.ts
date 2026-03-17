@@ -1,3 +1,8 @@
-import type { DocumentModelModule } from "document-model";
+import {
+  documentModelDocumentModelModule,
+  type DocumentModelModule,
+} from "document-model";
 
-export const documentModels: DocumentModelModule<any>[] = [];
+export const documentModels: DocumentModelModule<any>[] = [
+  documentModelDocumentModelModule,
+];

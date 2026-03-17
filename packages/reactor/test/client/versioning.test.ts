@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { driveDocumentModelModule } from "document-drive";
 import type {
   Action,
   DocumentModelModule,
@@ -10,8 +10,8 @@ import {
   createPresignedHeader,
   createReducer,
   generateId,
-} from "document-model/core";
-import { driveDocumentModelModule } from "document-drive";
+} from "document-model";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { IReactorClient } from "../../src/client/types.js";
 import { ReactorBuilder } from "../../src/core/reactor-builder.js";
 import { ReactorClientBuilder } from "../../src/core/reactor-client-builder.js";

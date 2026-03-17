@@ -7,10 +7,11 @@ import {
 } from "document-drive";
 import type { DocumentModelDocument } from "document-model";
 import {
+  createPresignedHeader,
   documentModelCreateDocument,
   documentModelDocumentModelModule,
+  generateId,
 } from "document-model";
-import { createPresignedHeader, generateId } from "document-model/core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const documentModels = baseDocumentModels;

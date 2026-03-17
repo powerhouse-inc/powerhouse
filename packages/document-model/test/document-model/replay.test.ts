@@ -4,7 +4,7 @@ import {
   HashMismatchError,
   noop,
   replayDocument,
-} from "document-model/core";
+} from "document-model";
 import type { CountPHState } from "document-model/test";
 import {
   baseCountReducer,

@@ -1,4 +1,4 @@
-import { baseCreateDocument, processUndoRedo, undo } from "document-model/core";
+import { baseCreateDocument, processUndoRedo, undo } from "document-model";
 import type { CountDocument } from "document-model/test";
 import {
   countReducer,

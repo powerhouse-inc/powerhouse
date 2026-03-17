@@ -3,24 +3,23 @@ import { useUndoRedoShortcuts } from "@powerhousedao/connect/hooks";
 import { toast } from "@powerhousedao/connect/services";
 import { RevisionHistory } from "@powerhousedao/design-system/connect";
 import {
-  getRevisionFromDate,
-  setRevisionHistoryVisible,
-  showPHModal,
-  useDocumentById,
-  useDocumentModelModuleById,
-  useDocumentOperations,
-  useEditorModuleById,
-  useFallbackEditorModule,
-  useRevisionHistoryVisible,
-  useSelectedTimelineItem,
+    getRevisionFromDate,
+    setRevisionHistoryVisible,
+    showPHModal,
+    useDocumentById,
+    useDocumentModelModuleById,
+    useDocumentOperations,
+    useEditorModuleById,
+    useFallbackEditorModule,
+    useRevisionHistoryVisible,
+    useSelectedTimelineItem,
 } from "@powerhousedao/reactor-browser";
 import type { PHDocument } from "document-model";
-import { redo, undo } from "document-model/core";
+import { redo, undo } from "document-model";
 import { Suspense, useEffect, useState } from "react";
 import {
-  CenteredErrorMessage,
-  ErrorBoundary,
-  type FallbackProps,
+    CenteredErrorMessage,
+    ErrorBoundary
 } from "./error-boundary.js";
 
 type Props<TDocument extends PHDocument = PHDocument> = {

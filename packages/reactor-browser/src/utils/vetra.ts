@@ -12,8 +12,7 @@ import type {
   EditorModule,
   Manifest,
 } from "document-model";
-import { createState } from "document-model";
-import { defaultBaseState, generateId } from "document-model/core";
+import { createState, defaultBaseState, generateId } from "document-model";
 
 export function convertLegacyLibToVetraPackage(
   legacyLib: DocumentModelLib,

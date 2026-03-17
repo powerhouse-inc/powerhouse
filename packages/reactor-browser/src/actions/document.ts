@@ -22,15 +22,15 @@ import type {
   DocumentOperations,
   PHDocument,
 } from "document-model";
-import { documentModelDocumentType } from "document-model";
 import {
   baseLoadFromInput,
   baseSaveToFileHandle,
   createPresignedHeader,
   createZip,
+  documentModelDocumentType,
   generateId,
   replayDocument,
-} from "document-model/core";
+} from "document-model";
 import { UnsupportedDocumentTypeError } from "../errors.js";
 import { isDocumentTypeSupported } from "../utils/documents.js";
 import { getUserPermissions } from "../utils/user.js";

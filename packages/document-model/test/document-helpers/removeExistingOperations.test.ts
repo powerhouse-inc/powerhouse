@@ -1,10 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { Operation } from "document-model";
-import {
-  deriveOperationId,
-  removeExistingOperations,
-} from "document-model/core";
+import { deriveOperationId, removeExistingOperations } from "document-model";
 import { buildOperations, fakeAction } from "document-model/test";
 
 const TEST_DOC_ID = "test-doc-id";

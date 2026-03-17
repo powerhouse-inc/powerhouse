@@ -10,11 +10,12 @@ import {
 } from "document-drive";
 import type { DocumentModelModule } from "document-model";
 import {
+  createPresignedHeader,
   documentModelCreateDocument,
   documentModelDocumentModelModule,
+  generateId,
   setModelName,
 } from "document-model";
-import { createPresignedHeader, generateId } from "document-model/core";
 import { beforeEach, describe, expect, test, vi, vitest } from "vitest";
 
 describe("Internal Listener", () => {

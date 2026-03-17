@@ -11,10 +11,11 @@ import {
 } from "document-drive";
 import type { DocumentModelModule } from "document-model";
 import {
+  deriveOperationId,
   documentModelDocumentModelModule as DocumentModel,
   documentModelCreateDocument,
+  generateId,
 } from "document-model";
-import { deriveOperationId, generateId } from "document-model/core";
 import { createNanoEvents } from "nanoevents";
 import { describe, it } from "vitest";
 

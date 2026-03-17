@@ -68,12 +68,4 @@ export const utils: DocumentModelUtils<${v.phStateName}> = {
     },
 };
 
-export const createDocument = utils.createDocument;
-export const createState = utils.createState;
-export const saveToFileHandle = utils.saveToFileHandle;
-export const loadFromInput = utils.loadFromInput;
-export const isStateOfType = utils.isStateOfType;
-export const assertIsStateOfType = utils.assertIsStateOfType;
-export const isDocumentOfType = utils.isDocumentOfType;
-export const assertIsDocumentOfType = utils.assertIsDocumentOfType;
 `.raw;

@@ -1,5 +1,5 @@
 import type { Operation } from "document-model";
-import { deriveOperationId } from "document-model/core";
+import { deriveOperationId } from "document-model";
 import { describe, expect, it } from "vitest";
 import {
   reshuffleByTimestamp,

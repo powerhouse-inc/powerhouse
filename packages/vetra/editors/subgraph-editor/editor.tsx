@@ -1,7 +1,10 @@
 import { DocumentToolbar } from "@powerhousedao/design-system/connect";
 import { useSetPHDocumentEditorConfig } from "@powerhousedao/reactor-browser";
+import {
+  setSubgraphName,
+  setSubgraphStatus,
+} from "@powerhousedao/vetra/document-models/subgraph-module";
 import { useCallback } from "react";
-import { actions } from "../../document-models/subgraph-module/index.js";
 import { useSelectedSubgraphModuleDocument } from "../hooks/useVetraDocument.js";
 import { SubgraphEditorForm } from "./components/SubgraphEditorForm.js";
 import { editorConfig } from "./config.js";
@@ -13,13 +16,13 @@ export default function Editor() {
   const onNameChange = useCallback(
     (name: string) => {
       if (name === document.state.global.name) return;
-      dispatch(actions.setSubgraphName({ name }));
+      dispatch(setSubgraphName({ name }));
     },
     [document.state.global.name, dispatch],
   );
 
   const onConfirm = useCallback(() => {
-    dispatch(actions.setSubgraphStatus({ status: "CONFIRMED" }));
+    dispatch(setSubgraphStatus({ status: "CONFIRMED" }));
   }, [dispatch]);
 
   return (

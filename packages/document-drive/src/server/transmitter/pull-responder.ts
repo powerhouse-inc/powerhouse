@@ -21,7 +21,7 @@ import { OperationError } from "document-drive/server/error";
 import { requestGraphql } from "document-drive/utils/graphql";
 import { childLogger } from "document-drive/utils/logger";
 import { operationsToRevision } from "document-drive/utils/misc";
-import { generateId } from "document-model/core";
+import { generateId } from "document-model";
 import { gql } from "graphql-request";
 import { PULL_DRIVE_INTERVAL } from "./constants.js";
 

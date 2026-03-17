@@ -5,7 +5,15 @@ import type {
   ProcessorApps,
 } from "@powerhousedao/shared/processors";
 import { useCallback } from "react";
-import { actions } from "../../document-models/processor-module/index.js";
+import {
+  addDocumentType,
+  addProcessorApp,
+  removeDocumentType,
+  removeProcessorApp,
+  setProcessorName,
+  setProcessorStatus,
+  setProcessorType,
+} from "../../document-models/processor-module/index.js";
 import { useSelectedProcessorModuleDocument } from "../hooks/useVetraDocument.js";
 import { ProcessorEditorForm } from "./components/ProcessorEditorForm.js";
 import { editorConfig } from "./config.js";
@@ -16,13 +24,13 @@ export default function Editor() {
 
   const onConfirm = useCallback(() => {
     // Dispatch all actions at once
-    dispatch([actions.setProcessorStatus({ status: "CONFIRMED" })]);
+    dispatch([setProcessorStatus({ status: "CONFIRMED" })]);
   }, [dispatch]);
 
   const onNameChange = useCallback(
     (name: string) => {
       if (name === document.state.global.name) return;
-      dispatch(actions.setProcessorName({ name }));
+      dispatch(setProcessorName({ name }));
     },
     [document.state.global.name, dispatch],
   );
@@ -30,35 +38,35 @@ export default function Editor() {
   const onTypeChange = useCallback(
     (type: string) => {
       if (type === document.state.global.type) return;
-      dispatch(actions.setProcessorType({ type }));
+      dispatch(setProcessorType({ type }));
     },
     [document.state.global.type, dispatch],
   );
 
   const onAddDocumentType = useCallback(
     (id: string, documentType: string) => {
-      dispatch(actions.addDocumentType({ id, documentType }));
+      dispatch(addDocumentType({ id, documentType }));
     },
     [dispatch],
   );
 
   const onRemoveDocumentType = useCallback(
     (id: string) => {
-      dispatch(actions.removeDocumentType({ id }));
+      dispatch(removeDocumentType({ id }));
     },
     [dispatch],
   );
 
   const onAddProcessorApp = useCallback(
     (processorApp: ProcessorApp) => {
-      dispatch(actions.addProcessorApp({ processorApp }));
+      dispatch(addProcessorApp({ processorApp }));
     },
     [dispatch],
   );
 
   const onRemoveProcessorApp = useCallback(
     (processorApp: ProcessorApp) => {
-      dispatch(actions.removeProcessorApp({ processorApp }));
+      dispatch(removeProcessorApp({ processorApp }));
     },
     [dispatch],
   );

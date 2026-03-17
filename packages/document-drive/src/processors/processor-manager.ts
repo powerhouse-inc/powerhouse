@@ -8,7 +8,7 @@ import type {
 } from "document-drive";
 import { InternalTransmitter } from "document-drive/server/transmitter/internal";
 import { childLogger } from "document-drive/utils/logger";
-import { generateId } from "document-model/core";
+import { generateId } from "document-model";
 import { isRelationalDbProcessor } from "./relational.js";
 
 export class ProcessorManagerLegacy implements IProcessorManagerLegacy {

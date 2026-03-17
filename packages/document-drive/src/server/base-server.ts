@@ -81,7 +81,7 @@ import {
   skipHeaderOperations,
   sortOperations,
   validateHeader,
-} from "document-model/core";
+} from "document-model";
 import { ClientError } from "graphql-request";
 import type { Unsubscribe } from "nanoevents";
 import {

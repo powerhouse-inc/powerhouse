@@ -1,15 +1,15 @@
 /**
  * Factory methods for creating TodoDocument instances
  */
-import type { PHAuthState, PHDocumentState, PHBaseState } from "document-model";
-import { createBaseState, defaultBaseState } from "document-model/core";
+import type { PHAuthState, PHBaseState, PHDocumentState } from "document-model";
+import { createBaseState, defaultBaseState } from "document-model";
 import type {
   TodoDocument,
-  TodoLocalState,
   TodoGlobalState,
+  TodoLocalState,
   TodoPHState,
 } from "./types.js";
-import { createDocument } from "./utils.js";
+import { utils } from "./utils.js";
 
 export function defaultGlobalState(): TodoGlobalState {
   return { todos: [] };
@@ -70,7 +70,7 @@ export function createTodoDocument(
     local?: Partial<TodoLocalState>;
   }>,
 ): TodoDocument {
-  const document = createDocument(
+  const document = utils.createDocument(
     state
       ? createState(
           createBaseState(state.auth, state.document),

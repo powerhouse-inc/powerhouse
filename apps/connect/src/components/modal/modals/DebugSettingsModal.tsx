@@ -3,14 +3,14 @@ import { serviceWorkerManager } from "@powerhousedao/connect/utils";
 import { Icon, Modal, PowerhouseButton } from "@powerhousedao/design-system";
 import { Combobox, FormInput } from "@powerhousedao/design-system/connect";
 import {
-  addTrigger,
-  closePHModal,
-  registerNewPullResponderTrigger,
-  removeTrigger,
-  useDrives,
-  usePHModal,
+    addTrigger,
+    closePHModal,
+    registerNewPullResponderTrigger,
+    removeTrigger,
+    useDrives,
+    usePHModal,
 } from "@powerhousedao/reactor-browser";
-import { generateId } from "document-model/core";
+import { generateId } from "document-model";
 import { useEffect, useState } from "react";
 
 type ComboboxOption = {

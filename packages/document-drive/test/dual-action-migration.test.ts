@@ -9,14 +9,12 @@ import {
 } from "document-drive";
 import type { DocumentModelDocument } from "document-model";
 import {
-  documentModelCreateDocument,
-  documentModelDocumentModelModule,
-} from "document-model";
-import {
   createPresignedHeader,
   deriveOperationId,
+  documentModelCreateDocument,
+  documentModelDocumentModelModule,
   generateId,
-} from "document-model/core";
+} from "document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const documentModels = baseDocumentModels;

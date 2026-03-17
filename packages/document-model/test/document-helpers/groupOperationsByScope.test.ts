@@ -1,5 +1,5 @@
 import type { Operation } from "document-model";
-import { deriveOperationId, groupOperationsByScope } from "document-model/core";
+import { deriveOperationId, groupOperationsByScope } from "document-model";
 import { fakeAction } from "document-model/test";
 import { describe, expect, it } from "vitest";
 

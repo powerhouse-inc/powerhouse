@@ -1,5 +1,5 @@
 import type { IAnalyticsStore } from "../../analytics/types.js";
-import type { PHDocumentHeader } from "../../document-model/core/documents.js";
+import type { PHDocumentHeader } from "../../document-model/documents.js";
 import type { ProcessorRecord } from "../types.js";
 import { DocumentAnalyticsProcessor } from "./document-processor.js";
 import { DriveAnalyticsProcessor } from "./drive-processor.js";

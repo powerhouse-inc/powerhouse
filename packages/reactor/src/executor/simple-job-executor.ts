@@ -5,7 +5,7 @@ import type {
   OperationWithContext,
   PHDocument,
 } from "document-model";
-import { isUndoRedo } from "document-model/core";
+import { isUndoRedo } from "document-model";
 import type { ICollectionMembershipCache } from "../cache/collection-membership-cache.js";
 import type { IDocumentMetaCache } from "../cache/document-meta-cache-types.js";
 import type {

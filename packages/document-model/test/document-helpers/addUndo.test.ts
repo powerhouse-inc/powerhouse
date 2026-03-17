@@ -1,4 +1,4 @@
-import { addUndo, checkOperationsIntegrity } from "document-model/core";
+import { addUndo, checkOperationsIntegrity } from "document-model";
 import { describe, expect, it } from "vitest";
 import { buildOperations } from "./utils.js";
 

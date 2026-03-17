@@ -1,5 +1,5 @@
 import type { Action, Operation } from "document-model";
-import { deriveOperationId } from "document-model/core";
+import { deriveOperationId } from "document-model";
 import { describe, expect, it, vi } from "vitest";
 import { SignatureVerifier } from "../../../src/executor/signature-verifier.js";
 import { InvalidSignatureError } from "../../../src/shared/errors.js";

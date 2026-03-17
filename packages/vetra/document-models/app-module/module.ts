@@ -1,6 +1,3 @@
-import type { DocumentModelModule } from "document-model";
-import { createState } from "document-model";
-import { defaultBaseState } from "document-model/core";
 import type { AppModulePHState } from "@powerhousedao/vetra/document-models/app-module";
 import {
   actions,
@@ -8,6 +5,8 @@ import {
   reducer,
   utils,
 } from "@powerhousedao/vetra/document-models/app-module";
+import type { DocumentModelModule } from "document-model";
+import { createState, defaultBaseState } from "document-model";
 
 /** Document model module for the Todo List document type */
 export const AppModule: DocumentModelModule<AppModulePHState> = {

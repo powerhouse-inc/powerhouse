@@ -3,7 +3,7 @@ import {
   merge,
   reshuffleByTimestamp,
   reshuffleByTimestampAndIndex,
-} from "document-model/core";
+} from "document-model";
 import { describe, expect, it } from "vitest";
 import { buildOperations } from "./utils.js";
 

@@ -1,4 +1,4 @@
-import { baseCreateDocument, prune, redo, undo } from "document-model/core";
+import { baseCreateDocument, prune, redo, undo } from "document-model";
 import type { CountPHState, TestPHState } from "document-model/test";
 import {
   countReducer,

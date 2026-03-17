@@ -1,8 +1,8 @@
 export {
   ConsoleLogger,
+  childLogger,
   logger,
   setErrorHandler,
   setLogLevel,
-  childLogger,
-} from "document-model/core";
-export type { ILogger, LoggerErrorHandler } from "document-model/core";
+} from "document-model";
+export type { ILogger, LoggerErrorHandler } from "document-model";

@@ -15,7 +15,7 @@ export function documentModelModuleFileTemplate({
   const template = ts`
   import type { DocumentModelModule } from "document-model";
   import { createState } from "document-model";
-  import { defaultBaseState } from "document-model/core";
+  import { defaultBaseState } from "document-model";
   import type { ${phStateName} } from "${versionedDocumentModelPackageImportPath}";
   import {
     actions,

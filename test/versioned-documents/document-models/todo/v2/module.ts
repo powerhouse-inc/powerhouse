@@ -1,6 +1,5 @@
 import type { DocumentModelModule } from "document-model";
-import { createState } from "document-model";
-import { defaultBaseState } from "document-model/core";
+import { createState, defaultBaseState } from "document-model";
 import type { TodoPHState } from "document-models/todo/v2";
 import {
   actions,

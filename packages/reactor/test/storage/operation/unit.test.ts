@@ -1,6 +1,6 @@
 import { addFile, addFolder, deleteNode, setDriveName } from "document-drive";
 import type { Operation } from "document-model";
-import { deriveOperationId, generateId } from "document-model/core";
+import { deriveOperationId, generateId } from "document-model";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {

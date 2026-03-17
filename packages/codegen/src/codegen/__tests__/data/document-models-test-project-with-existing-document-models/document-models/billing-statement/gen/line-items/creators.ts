@@ -1,4 +1,4 @@
-import { createAction } from "document-model/core";
+import { createAction } from "document-model";
 import {
   AddLineItemInputSchema,
   EditLineItemInputSchema,

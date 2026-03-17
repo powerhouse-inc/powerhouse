@@ -26,7 +26,7 @@ import type {
   PHDocument,
   PHDocumentHeader,
 } from "document-model";
-import { actionContext, deriveOperationId } from "document-model/core";
+import { actionContext, deriveOperationId } from "document-model";
 import { backOff, type IBackOffOptions } from "exponential-backoff";
 import { resolveStorageUnitsFilter, setIntersection } from "../utils.js";
 import type { Prisma, PrismaClient } from "./client/index.js";

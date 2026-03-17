@@ -12,6 +12,9 @@
     "type": "git",
     "url": "https://github.com/powerhouse-inc/powerhouse"
   },
+  "scripts": {
+    "build:bundle": "tsdown"
+  },
   "exports": {
     "./processors": {
       "types": "./dist/processors/index.d.ts",
@@ -57,14 +60,19 @@
   "dependencies": {
     "@sindresorhus/fnv1a": "catalog:",
     "luxon": "catalog:",
-    "zod": "catalog:"
+    "zod": "catalog:",
+    "safe-stable-stringify": "^2.4.3",
+    "sha1-uint8array": "^0.10.7",
+    "jszip": "^3.10.1",
+    "change-case": "catalog:",
+    "mutative": "catalog:",
+    "kysely": "catalog:"
   },
   "devDependencies": {
-    "mutative": "catalog:",
-    "kysely": "catalog:",
     "@types/bun": "catalog:",
     "@types/luxon": "catalog:",
     "@types/react": "catalog:",
-    "react": "catalog:"
+    "react": "catalog:",
+    "tsdown": "catalog:"
   }
 }

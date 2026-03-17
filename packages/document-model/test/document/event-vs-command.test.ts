@@ -1,6 +1,6 @@
 // Command = action => should process the action and asign the index, timestamp, and hash
 // Event = operation => should keep the same operation information but execute the action input against the document
-import { baseCreateDocument, deriveOperationId } from "document-model/core";
+import { baseCreateDocument, deriveOperationId } from "document-model";
 import type { TestPHState } from "document-model/test";
 import {
   defaultPHDocumentCreateState,

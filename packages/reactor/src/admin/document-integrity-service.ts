@@ -1,5 +1,5 @@
 import type { PHDocument } from "document-model";
-import { hashDocumentStateForScope } from "document-model/core";
+import { hashDocumentStateForScope } from "document-model";
 import { KyselyWriteCache } from "../cache/kysely-write-cache.js";
 import type { IWriteCache } from "../cache/write/interfaces.js";
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";

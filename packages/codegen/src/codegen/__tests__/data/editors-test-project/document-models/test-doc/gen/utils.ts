@@ -1,21 +1,24 @@
 import type { DocumentModelUtils } from "document-model";
 import {
-  baseCreateDocument,
-  baseSaveToFileHandle,
-  baseLoadFromInput,
-  defaultBaseState,
-  generateId,
-} from "document-model/core";
-import type { TestDocGlobalState, TestDocLocalState } from "./types.js";
-import type { TestDocPHState } from "./types.js";
-import { reducer } from "./reducer.js";
-import { testDocDocumentType } from "./document-type.js";
+    baseCreateDocument,
+    baseLoadFromInput,
+    baseSaveToFileHandle,
+    defaultBaseState,
+    generateId,
+} from "document-model";
 import {
-  isTestDocDocument,
-  assertIsTestDocDocument,
-  isTestDocState,
-  assertIsTestDocState,
+    assertIsTestDocDocument,
+    assertIsTestDocState,
+    isTestDocDocument,
+    isTestDocState,
 } from "./document-schema.js";
+import { testDocDocumentType } from "./document-type.js";
+import { reducer } from "./reducer.js";
+import type {
+    TestDocGlobalState,
+    TestDocLocalState,
+    TestDocPHState,
+} from "./types.js";
 
 export const initialGlobalState: TestDocGlobalState = {
   id: 0,
@@ -64,11 +67,3 @@ export const utils: DocumentModelUtils<TestDocPHState> = {
   },
 };
 
-export const createDocument = utils.createDocument;
-export const createState = utils.createState;
-export const saveToFileHandle = utils.saveToFileHandle;
-export const loadFromInput = utils.loadFromInput;
-export const isStateOfType = utils.isStateOfType;
-export const assertIsStateOfType = utils.assertIsStateOfType;
-export const isDocumentOfType = utils.isDocumentOfType;
-export const assertIsDocumentOfType = utils.assertIsDocumentOfType;

@@ -1,24 +1,24 @@
 import type { DocumentModelUtils } from "document-model";
 import {
   baseCreateDocument,
-  baseSaveToFileHandle,
   baseLoadFromInput,
+  baseSaveToFileHandle,
   defaultBaseState,
   generateId,
-} from "document-model/core";
+} from "document-model";
+import {
+  assertIsSubgraphModuleDocument,
+  assertIsSubgraphModuleState,
+  isSubgraphModuleDocument,
+  isSubgraphModuleState,
+} from "./document-schema.js";
+import { subgraphModuleDocumentType } from "./document-type.js";
+import { reducer } from "./reducer.js";
 import type {
   SubgraphModuleGlobalState,
   SubgraphModuleLocalState,
+  SubgraphModulePHState,
 } from "./types.js";
-import type { SubgraphModulePHState } from "./types.js";
-import { reducer } from "./reducer.js";
-import { subgraphModuleDocumentType } from "./document-type.js";
-import {
-  isSubgraphModuleDocument,
-  assertIsSubgraphModuleDocument,
-  isSubgraphModuleState,
-  assertIsSubgraphModuleState,
-} from "./document-schema.js";
 
 export const initialGlobalState: SubgraphModuleGlobalState = {
   name: "",
@@ -64,12 +64,3 @@ export const utils: DocumentModelUtils<SubgraphModulePHState> = {
     return assertIsSubgraphModuleDocument(document);
   },
 };
-
-export const createDocument = utils.createDocument;
-export const createState = utils.createState;
-export const saveToFileHandle = utils.saveToFileHandle;
-export const loadFromInput = utils.loadFromInput;
-export const isStateOfType = utils.isStateOfType;
-export const assertIsStateOfType = utils.assertIsStateOfType;
-export const isDocumentOfType = utils.isDocumentOfType;
-export const assertIsDocumentOfType = utils.assertIsDocumentOfType;

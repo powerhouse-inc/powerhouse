@@ -7,7 +7,7 @@ import {
   type IRenownCrypto,
 } from "@renown/sdk/node";
 import type { Action, ISigner, Operation, Signature } from "document-model";
-import { deriveOperationId } from "document-model/core";
+import { deriveOperationId } from "document-model";
 import { beforeEach, describe, expect, it } from "vitest";
 
 const TEST_DOC_ID = "test-doc-id";

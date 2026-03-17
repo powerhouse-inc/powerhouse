@@ -1,4 +1,4 @@
-import { deriveOperationId, generateId } from "document-model/core";
+import { deriveOperationId, generateId } from "document-model";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { KyselyOperationIndex } from "../../../src/cache/kysely-operation-index.js";

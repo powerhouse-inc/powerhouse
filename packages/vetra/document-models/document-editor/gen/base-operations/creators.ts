@@ -1,20 +1,20 @@
-import { createAction } from "document-model/core";
+import { createAction } from "document-model";
 import {
-  SetEditorNameInputSchema,
   AddDocumentTypeInputSchema,
   RemoveDocumentTypeInputSchema,
+  SetEditorNameInputSchema,
   SetEditorStatusInputSchema,
 } from "../schema/zod.js";
 import type {
-  SetEditorNameInput,
   AddDocumentTypeInput,
   RemoveDocumentTypeInput,
+  SetEditorNameInput,
   SetEditorStatusInput,
 } from "../types.js";
 import type {
-  SetEditorNameAction,
   AddDocumentTypeAction,
   RemoveDocumentTypeAction,
+  SetEditorNameAction,
   SetEditorStatusAction,
 } from "./actions.js";
 

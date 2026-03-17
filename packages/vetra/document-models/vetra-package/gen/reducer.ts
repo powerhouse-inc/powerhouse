@@ -1,22 +1,22 @@
 // TODO: remove eslint-disable rules once refactor is done
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
-import type { StateReducer } from "document-model";
-import { isDocumentAction, createReducer } from "document-model/core";
+ 
+ 
 import type { VetraPackagePHState } from "@powerhousedao/vetra/document-models/vetra-package";
+import type { Reducer, StateReducer } from "document-model";
+import { createReducer, isDocumentAction } from "document-model";
 
 import { vetraPackageBaseOperationsOperations } from "../src/reducers/base-operations.js";
 
 import {
-  SetPackageNameInputSchema,
-  SetPackageDescriptionInputSchema,
-  SetPackageCategoryInputSchema,
+  AddPackageKeywordInputSchema,
+  RemovePackageKeywordInputSchema,
   SetPackageAuthorInputSchema,
   SetPackageAuthorNameInputSchema,
   SetPackageAuthorWebsiteInputSchema,
-  AddPackageKeywordInputSchema,
-  RemovePackageKeywordInputSchema,
+  SetPackageCategoryInputSchema,
+  SetPackageDescriptionInputSchema,
   SetPackageGithubUrlInputSchema,
+  SetPackageNameInputSchema,
   SetPackageNpmUrlInputSchema,
 } from "./schema/zod.js";
 
@@ -154,4 +154,5 @@ const stateReducer: StateReducer<VetraPackagePHState> = (
   }
 };
 
-export const reducer = createReducer<VetraPackagePHState>(stateReducer);
+export const reducer: Reducer<VetraPackagePHState> =
+  createReducer(stateReducer);

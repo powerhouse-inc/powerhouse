@@ -6,7 +6,7 @@ import type {
   IDocumentDriveServer,
 } from "document-drive";
 import { driveCreateDocument, driveCreateState } from "document-drive";
-import { generateId } from "document-model/core";
+import { generateId } from "document-model";
 
 export async function addDefaultDrive(
   driveServer: IDocumentDriveServer,

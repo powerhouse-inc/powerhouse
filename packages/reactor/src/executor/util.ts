@@ -13,7 +13,7 @@ import {
   createPresignedHeader,
   defaultBaseState,
   deriveOperationId,
-} from "document-model/core";
+} from "document-model";
 import type { Job } from "../queue/types.js";
 import { DowngradeNotSupportedError } from "../shared/errors.js";
 import type {

@@ -10,8 +10,7 @@ import {
   ReactorBuilder,
 } from "document-drive";
 import type { DocumentModelModule } from "document-model";
-import { documentModelDocumentModelModule } from "document-model";
-import { generateId } from "document-model/core";
+import { documentModelDocumentModelModule, generateId } from "document-model";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 type DriveInput = {

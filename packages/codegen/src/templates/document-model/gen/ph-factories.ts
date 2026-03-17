@@ -16,7 +16,7 @@ import type {
 import {
   createBaseState,
   defaultBaseState,
-} from "document-model/core";
+} from "document-model";
 import type {
   ${v.phDocumentTypeName},
   ${v.localStateName},

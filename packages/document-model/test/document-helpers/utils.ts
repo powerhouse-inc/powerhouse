@@ -1,5 +1,5 @@
 import type { Operation } from "document-model";
-import { garbageCollect, sortOperations } from "document-model/core";
+import { garbageCollect, sortOperations } from "document-model";
 import { fakeAction } from "../helpers.js";
 
 export type InputOperation = Partial<Omit<Operation, "index" | "skip">> & {

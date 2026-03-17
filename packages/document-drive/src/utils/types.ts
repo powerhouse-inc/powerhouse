@@ -10,7 +10,7 @@ import type {
 import type { Operation, PHBaseState, PHDocument } from "document-model";
 import type { GraphQLError } from "graphql";
 
-export type { ILogger, LoggerErrorHandler } from "document-model/core";
+export type { ILogger, LoggerErrorHandler } from "document-model";
 
 export type DriveState = DriveInfo &
   Pick<DocumentDriveLocalState, "availableOffline" | "sharingType"> & {

@@ -1,6 +1,6 @@
 import { PGlite } from "@electric-sql/pglite";
 import type { OperationWithContext } from "@powerhousedao/shared/document-model";
-import { generateId } from "document-model/core";
+import { generateId } from "document-model";
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";

@@ -10,7 +10,7 @@ import {
 } from "document-drive";
 import { PrismaClient } from "document-drive/storage/prisma/client";
 import type { ActionContext, Operation } from "document-model";
-import { generateId } from "document-model/core";
+import { generateId } from "document-model";
 import { beforeEach, describe, it } from "vitest";
 
 const prismaClient = new PrismaClient();

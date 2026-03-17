@@ -13,7 +13,7 @@ import { logger } from "document-drive/utils/logger";
 import { operationsToRevision } from "document-drive/utils/misc";
 import { runAsap, runAsapAsync } from "document-drive/utils/run-asap";
 import type { Action, GetDocumentOptions, PHBaseState } from "document-model";
-import { deriveOperationId } from "document-model/core";
+import { deriveOperationId } from "document-model";
 
 export class InternalTransmitter implements ITransmitter {
   protected drive: IBaseDocumentDriveServer;

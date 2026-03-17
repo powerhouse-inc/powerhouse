@@ -3,7 +3,7 @@ import {
   baseCreateDocument,
   getDocumentLastModified,
   updateHeaderRevision,
-} from "document-model/core";
+} from "document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { defaultPHDocumentCreateState, fakeOperation } from "../helpers.js";
 

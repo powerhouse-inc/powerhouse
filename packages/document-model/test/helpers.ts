@@ -7,11 +7,7 @@ import type {
   PHDocument,
   StateReducer,
 } from "document-model";
-import {
-  createAction,
-  createReducer,
-  defaultBaseState,
-} from "document-model/core";
+import { createAction, createReducer, defaultBaseState } from "document-model";
 import type { TestPHState } from "./types.js";
 
 /**

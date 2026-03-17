@@ -6,7 +6,7 @@ import {
   processUndoRedo,
   redo,
   undo,
-} from "document-model/core";
+} from "document-model";
 import type { CountAction, CountDocument } from "document-model/test";
 import {
   countReducer,

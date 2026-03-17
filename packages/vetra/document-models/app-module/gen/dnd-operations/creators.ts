@@ -1,4 +1,4 @@
-import { createAction } from "document-model/core";
+import { createAction } from "document-model";
 import { SetDragAndDropEnabledInputSchema } from "../schema/zod.js";
 import type { SetDragAndDropEnabledInput } from "../types.js";
 import type { SetDragAndDropEnabledAction } from "./actions.js";

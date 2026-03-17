@@ -9,7 +9,7 @@ import type {
   QueueEvents,
 } from "document-drive";
 import { childLogger, logger } from "document-drive/utils/logger";
-import { generateId } from "document-model/core";
+import { generateId } from "document-model";
 import type { Unsubscribe } from "nanoevents";
 import { createNanoEvents } from "nanoevents";
 import { MemoryQueue } from "./base.js";
