@@ -26,10 +26,6 @@ runs:
       shell: bash
       run: pnpm build-tsc
 
-    - name: Run misc build scripts
-      shell: bash
-      run: pnpm build-misc
-
     - name: Run bundle scripts
       shell: bash
       run: pnpm build-bundle
@@ -37,7 +33,3 @@ runs:
     - name: Run css build scripts
       shell: bash
       run: pnpm build-css
-
-    - name: Run vite build scripts
-      shell: bash
-      run: pnpm build-vite

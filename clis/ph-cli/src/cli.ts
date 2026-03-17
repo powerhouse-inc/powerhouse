@@ -25,4 +25,15 @@ async function main() {
   }
 }
 
-await main();
+await main().catch((error) => {
+  const isDebug = process.argv.slice(2).includes("--debug");
+  if (isDebug) {
+    throw error;
+  }
+  if (error instanceof Error) {
+    console.error(error.message);
+    process.exit(1);
+  } else {
+    throw error;
+  }
+});

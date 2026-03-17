@@ -440,9 +440,13 @@ describe("SyncManager - Unit Tests", () => {
 
       await syncManager.startup();
 
-      expect(mockOperationIndex.find).toHaveBeenCalledWith("collection1", 5, {
-        excludeSourceRemote: "remote1",
-      });
+      expect(mockOperationIndex.find).toHaveBeenCalledWith(
+        "collection1",
+        5,
+        { excludeSourceRemote: "remote1" },
+        undefined,
+        expect.any(AbortSignal),
+      );
       expect(startupChannel.outbox.add).toHaveBeenCalled();
     });
   });
@@ -833,9 +837,13 @@ describe("SyncManager - Unit Tests", () => {
         },
       });
 
-      expect(mockOperationIndex.find).toHaveBeenCalledWith("collection1", 0, {
-        excludeSourceRemote: "remote1",
-      });
+      expect(mockOperationIndex.find).toHaveBeenCalledWith(
+        "collection1",
+        0,
+        { excludeSourceRemote: "remote1" },
+        undefined,
+        expect.any(AbortSignal),
+      );
 
       const enqueuedOperationIds = vi
         .mocked(mockChannel.outbox.add)
@@ -954,9 +962,13 @@ describe("SyncManager - Unit Tests", () => {
         },
       });
 
-      expect(mockOperationIndex.find).toHaveBeenCalledWith("collection1", 9, {
-        excludeSourceRemote: "remote1",
-      });
+      expect(mockOperationIndex.find).toHaveBeenCalledWith(
+        "collection1",
+        9,
+        { excludeSourceRemote: "remote1" },
+        undefined,
+        expect.any(AbortSignal),
+      );
     });
 
     it("should not route operations that do not match filter", async () => {
@@ -1114,9 +1126,13 @@ describe("SyncManager - Unit Tests", () => {
         },
       });
 
-      expect(mockOperationIndex.find).toHaveBeenCalledWith("collection1", 0, {
-        excludeSourceRemote: "my-remote",
-      });
+      expect(mockOperationIndex.find).toHaveBeenCalledWith(
+        "collection1",
+        0,
+        { excludeSourceRemote: "my-remote" },
+        undefined,
+        expect.any(AbortSignal),
+      );
     });
 
     it("should ack inbox items matching batch jobIds via trimMailboxFromBatch", async () => {
@@ -1293,9 +1309,13 @@ describe("SyncManager - Unit Tests", () => {
         },
       });
 
-      expect(mockOperationIndex.find).toHaveBeenCalledWith("collection1", 5, {
-        excludeSourceRemote: "remote1",
-      });
+      expect(mockOperationIndex.find).toHaveBeenCalledWith(
+        "collection1",
+        5,
+        { excludeSourceRemote: "remote1" },
+        undefined,
+        expect.any(AbortSignal),
+      );
     });
 
     it("should fan out to multiple remotes sharing the same collection", async () => {
@@ -1374,12 +1394,20 @@ describe("SyncManager - Unit Tests", () => {
       });
 
       expect(mockOperationIndex.find).toHaveBeenCalledTimes(2);
-      expect(mockOperationIndex.find).toHaveBeenCalledWith("shared-col", 0, {
-        excludeSourceRemote: "remote-a",
-      });
-      expect(mockOperationIndex.find).toHaveBeenCalledWith("shared-col", 0, {
-        excludeSourceRemote: "remote-b",
-      });
+      expect(mockOperationIndex.find).toHaveBeenCalledWith(
+        "shared-col",
+        0,
+        { excludeSourceRemote: "remote-a" },
+        undefined,
+        expect.any(AbortSignal),
+      );
+      expect(mockOperationIndex.find).toHaveBeenCalledWith(
+        "shared-col",
+        0,
+        { excludeSourceRemote: "remote-b" },
+        undefined,
+        expect.any(AbortSignal),
+      );
       expect(ch1.outbox.add).toHaveBeenCalled();
       expect(ch2.outbox.add).toHaveBeenCalled();
     });
@@ -2574,7 +2602,7 @@ describe("SyncManager - Unit Tests", () => {
             }),
           ],
         },
-        undefined,
+        expect.any(AbortSignal),
         { sourceRemote: "remote-inbox" },
       );
     });
@@ -2695,7 +2723,7 @@ describe("SyncManager - Unit Tests", () => {
         "doc1",
         "main",
         expect.any(Array),
-        undefined,
+        expect.any(AbortSignal),
         { sourceRemote: "remote-inbox2" },
       );
     });
@@ -2982,7 +3010,7 @@ describe("SyncManager - Unit Tests", () => {
         "doc1",
         "main",
         expect.any(Array),
-        undefined,
+        expect.any(AbortSignal),
         { sourceRemote: "remote-mixed" },
       );
 
@@ -2994,7 +3022,7 @@ describe("SyncManager - Unit Tests", () => {
             expect.objectContaining({ key: "key-2", documentId: "doc2" }),
           ],
         },
-        undefined,
+        expect.any(AbortSignal),
         { sourceRemote: "remote-mixed" },
       );
     });
@@ -3217,7 +3245,7 @@ describe("SyncManager - Unit Tests", () => {
             }),
           ],
         },
-        undefined,
+        expect.any(AbortSignal),
         { sourceRemote: "remote-empty-dep" },
       );
 

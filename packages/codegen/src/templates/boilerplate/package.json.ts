@@ -73,7 +73,8 @@ const dependenciesTemplate = (versionedDependencies: string[]) => json`
 const devDependenciesTemplate = (versionedDevDependencies: string[]) => json`
   ${versionedDevDependencies.join(",\n")},
   "@eslint/js": "^9.38.0",
-  "@tailwindcss/cli": "^4.1.4",
+  "@tailwindcss/cli": "^4.1.18",
+  "@tailwindcss/vite": "4.1.18",
   "@testing-library/react": "^16.3.0",
   "@types/node": "^24.9.2",
   "@types/react": "^19.2.3",
@@ -93,6 +94,8 @@ const devDependenciesTemplate = (versionedDevDependencies: string[]) => json`
   "typescript": "^5.9.3",
   "typescript-eslint": "^8.46.2",
   "vite": "^6.2.3",
+  "vite-plugin-html": "3.2.2",
+  "vite-plugin-svgr": "4.5.0",
   "vitest": "^3.0.9"
 `;
 

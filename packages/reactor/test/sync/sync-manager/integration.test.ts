@@ -512,9 +512,13 @@ describe("SyncManager Integration", () => {
       });
 
       expect(sentEnvelopes).toHaveLength(2);
-      expect(findSpy).toHaveBeenCalledWith("collection1", 0, {
-        excludeSourceRemote: "remote1",
-      });
+      expect(findSpy).toHaveBeenCalledWith(
+        "collection1",
+        0,
+        { excludeSourceRemote: "remote1" },
+        undefined,
+        expect.any(AbortSignal),
+      );
       const sentOperationIds = sentEnvelopes.map(
         (envelope) => envelope.operations![0].operation.id,
       );
@@ -550,9 +554,13 @@ describe("SyncManager Integration", () => {
         collectionMemberships: { doc2: ["collection1"] },
       });
 
-      expect(findSpy).toHaveBeenLastCalledWith("collection1", triggerOrdinal, {
-        excludeSourceRemote: "remote1",
-      });
+      expect(findSpy).toHaveBeenLastCalledWith(
+        "collection1",
+        triggerOrdinal,
+        { excludeSourceRemote: "remote1" },
+        undefined,
+        expect.any(AbortSignal),
+      );
       expect(sentEnvelopes).toHaveLength(0);
     });
 
@@ -680,9 +688,13 @@ describe("SyncManager Integration", () => {
       });
 
       expect(sentEnvelopes).toHaveLength(2);
-      expect(findSpy).toHaveBeenLastCalledWith("collection1", 0, {
-        excludeSourceRemote: "remote1",
-      });
+      expect(findSpy).toHaveBeenLastCalledWith(
+        "collection1",
+        0,
+        { excludeSourceRemote: "remote1" },
+        undefined,
+        expect.any(AbortSignal),
+      );
       const sentOperationIds = sentEnvelopes.map(
         (envelope) => envelope.operations![0].operation.id,
       );
@@ -747,7 +759,7 @@ describe("SyncManager Integration", () => {
         "doc1",
         "main",
         [operations[0].operation],
-        undefined,
+        expect.any(AbortSignal),
         { sourceRemote: "remote1" },
       );
     });

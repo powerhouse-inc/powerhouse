@@ -432,7 +432,10 @@ query PollSyncEnvelopes(
 }
 
 mutation TouchChannel($input: TouchChannelInput!) {
-  touchChannel(input: $input)
+  touchChannel(input: $input) {
+    success
+    ackOrdinal
+  }
 }
 
 mutation PushSyncEnvelopes($envelopes: [SyncEnvelopeInput!]!) {

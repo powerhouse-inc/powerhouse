@@ -186,7 +186,7 @@ export type Mutation = {
   readonly pushSyncEnvelopes: Scalars["Boolean"]["output"];
   readonly removeChildren: PhDocument;
   readonly renameDocument: PhDocument;
-  readonly touchChannel: Scalars["Boolean"]["output"];
+  readonly touchChannel: TouchChannelResult;
 };
 
 export type MutationAddChildrenArgs = {
@@ -307,6 +307,7 @@ export type PhDocument = {
   readonly lastModifiedAtUtcIso: Scalars["DateTime"]["output"];
   readonly name: Scalars["String"]["output"];
   readonly operations?: Maybe<ReactorOperationResultPage>;
+  readonly preferredEditor?: Maybe<Scalars["String"]["output"]>;
   readonly revisionsList: ReadonlyArray<Revision>;
   readonly slug?: Maybe<Scalars["String"]["output"]>;
   readonly state: Scalars["JSONObject"]["output"];
@@ -520,6 +521,11 @@ export type TouchChannelInput = {
   readonly id: Scalars["String"]["input"];
   readonly name: Scalars["String"]["input"];
   readonly sinceTimestampUtcMs: Scalars["String"]["input"];
+};
+
+export type TouchChannelResult = {
+  readonly ackOrdinal: Scalars["Int"]["output"];
+  readonly success: Scalars["Boolean"]["output"];
 };
 
 export type ViewFilterInput = {
@@ -1171,7 +1177,12 @@ export type TouchChannelMutationVariables = Exact<{
   input: TouchChannelInput;
 }>;
 
-export type TouchChannelMutation = { readonly touchChannel: boolean };
+export type TouchChannelMutation = {
+  readonly touchChannel: {
+    readonly success: boolean;
+    readonly ackOrdinal: number;
+  };
+};
 
 export type PushSyncEnvelopesMutationVariables = Exact<{
   envelopes: ReadonlyArray<SyncEnvelopeInput>;
@@ -1356,6 +1367,7 @@ export type ResolversTypes = ResolversObject<{
   SyncEnvelopeInput: SyncEnvelopeInput;
   SyncEnvelopeType: SyncEnvelopeType;
   TouchChannelInput: TouchChannelInput;
+  TouchChannelResult: ResolverTypeWrapper<TouchChannelResult>;
   ViewFilterInput: ViewFilterInput;
 }>;
 
@@ -1413,6 +1425,7 @@ export type ResolversParentTypes = ResolversObject<{
   SyncEnvelope: SyncEnvelope;
   SyncEnvelopeInput: SyncEnvelopeInput;
   TouchChannelInput: TouchChannelInput;
+  TouchChannelResult: TouchChannelResult;
   ViewFilterInput: ViewFilterInput;
 }>;
 
@@ -1712,7 +1725,7 @@ export type MutationResolvers<
     RequireFields<MutationRenameDocumentArgs, "documentIdentifier" | "name">
   >;
   touchChannel?: Resolver<
-    ResolversTypes["Boolean"],
+    ResolversTypes["TouchChannelResult"],
     ParentType,
     ContextType,
     RequireFields<MutationTouchChannelArgs, "input">
@@ -1771,6 +1784,11 @@ export type PhDocumentResolvers<
     ParentType,
     ContextType,
     Partial<PhDocumentOperationsArgs>
+  >;
+  preferredEditor?: Resolver<
+    Maybe<ResolversTypes["String"]>,
+    ParentType,
+    ContextType
   >;
   revisionsList?: Resolver<
     ReadonlyArray<ResolversTypes["Revision"]>,
@@ -2025,6 +2043,15 @@ export type SyncEnvelopeResolvers<
   type?: Resolver<ResolversTypes["SyncEnvelopeType"], ParentType, ContextType>;
 }>;
 
+export type TouchChannelResultResolvers<
+  ContextType = Context,
+  ParentType extends ResolversParentTypes["TouchChannelResult"] =
+    ResolversParentTypes["TouchChannelResult"],
+> = ResolversObject<{
+  ackOrdinal?: Resolver<ResolversTypes["Int"], ParentType, ContextType>;
+  success?: Resolver<ResolversTypes["Boolean"], ParentType, ContextType>;
+}>;
+
 export type Resolvers<ContextType = Context> = ResolversObject<{
   Action?: ActionResolvers<ContextType>;
   ActionContext?: ActionContextResolvers<ContextType>;
@@ -2057,6 +2084,7 @@ export type Resolvers<ContextType = Context> = ResolversObject<{
   Revision?: RevisionResolvers<ContextType>;
   Subscription?: SubscriptionResolvers<ContextType>;
   SyncEnvelope?: SyncEnvelopeResolvers<ContextType>;
+  TouchChannelResult?: TouchChannelResultResolvers<ContextType>;
 }>;
 
 type Properties<T> = Required<{
@@ -2748,7 +2776,10 @@ export const PollSyncEnvelopesDocument = gql`
 `;
 export const TouchChannelDocument = gql`
   mutation TouchChannel($input: TouchChannelInput!) {
-    touchChannel(input: $input)
+    touchChannel(input: $input) {
+      success
+      ackOrdinal
+    }
   }
 `;
 export const PushSyncEnvelopesDocument = gql`

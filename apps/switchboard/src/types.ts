@@ -1,6 +1,7 @@
 import type { IReactorClient } from "@powerhousedao/reactor";
 import type { IRenown } from "@renown/sdk";
 import type { DriveInput, IDocumentDriveServer, ILogger } from "document-drive";
+import type { MeterProvider } from "@opentelemetry/api";
 
 export type StorageOptions = {
   type: "filesystem" | "memory" | "postgres" | "browser";
@@ -66,6 +67,13 @@ export type StartServerOptions = {
   };
   enableDocumentModelSubgraphs?: boolean;
   logger?: ILogger;
+  /**
+   * OpenTelemetry MeterProvider to register as the global provider before
+   * ReactorInstrumentation starts. Must be provided here rather than set
+   * externally to guarantee the registration happens before
+   * instrumentation.start() reads the global provider via metrics.getMeter().
+   */
+  meterProvider?: MeterProvider;
 };
 
 export type SwitchboardReactor = {
