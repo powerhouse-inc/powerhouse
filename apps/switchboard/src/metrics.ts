@@ -1,4 +1,3 @@
-import { metrics } from "@opentelemetry/api";
 import { OTLPMetricExporter } from "@opentelemetry/exporter-metrics-otlp-http";
 import { Resource } from "@opentelemetry/resources";
 import {
@@ -9,7 +8,7 @@ import { childLogger } from "document-drive";
 
 const logger = childLogger(["switchboard", "metrics"]);
 
-export function setupMetricsFromEnv(
+export function createMeterProviderFromEnv(
   env: typeof process.env,
 ): MeterProvider | undefined {
   const endpoint = env.OTEL_EXPORTER_OTLP_ENDPOINT;
@@ -34,10 +33,6 @@ export function setupMetricsFromEnv(
       }),
     ],
   });
-  // setGlobalMeterProvider is a one-way door — it cannot be unset once
-  // assigned. ReactorInstrumentation reads the global provider via
-  // metrics.getMeter(), so this must be called before instrumentation.start().
-  metrics.setGlobalMeterProvider(meterProvider);
   logger.info(`Metrics export enabled (interval: ${exportIntervalMillis}ms)`);
   return meterProvider;
 }

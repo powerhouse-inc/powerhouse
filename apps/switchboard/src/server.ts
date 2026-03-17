@@ -16,6 +16,7 @@ import {
   parseDriveUrl,
   type Database,
 } from "@powerhousedao/reactor";
+import { metrics } from "@opentelemetry/api";
 import {
   HttpPackageLoader,
   PackageManagementService,
@@ -137,6 +138,14 @@ async function initServer(
   options: StartServerOptions,
   renown: IRenown | null,
 ) {
+  // Register the global MeterProvider before ReactorInstrumentation is
+  // constructed. setGlobalMeterProvider is a one-way door — once set it cannot
+  // be unset — so this must happen before initializeClient calls
+  // instrumentation.start() → createMetrics() → metrics.getMeter().
+  if (options.meterProvider) {
+    metrics.setGlobalMeterProvider(options.meterProvider);
+  }
+
   const {
     dev,
     packages = [],
