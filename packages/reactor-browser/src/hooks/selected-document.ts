@@ -2,18 +2,22 @@ import type { DocumentDispatch } from "@powerhousedao/reactor-browser";
 import { isFileNode } from "@powerhousedao/shared/document-drive";
 import type { Action, PHDocument } from "@powerhousedao/shared/document-model";
 import { NoSelectedDocumentError } from "../errors.js";
+import type { DispatchFn, UseDispatchResult } from "./dispatch.js";
 import { useDocumentById } from "./document-by-id.js";
 import { useDocumentOfType } from "./document-of-type.js";
 import { useSelectedNode } from "./selected-node.js";
 
 /** Returns the selected document id */
-export function useSelectedDocumentId() {
+export function useSelectedDocumentId(): string | undefined {
   const selectedNode = useSelectedNode();
   return selectedNode && isFileNode(selectedNode) ? selectedNode.id : undefined;
 }
 
 /** Returns the selected document. */
-export function useSelectedDocument() {
+export function useSelectedDocument(): readonly [
+  PHDocument,
+  DispatchFn<Action>,
+] {
   const selectedDocumentId = useSelectedDocumentId();
   const [document, dispatch] = useDocumentById(selectedDocumentId);
   if (!document) {
@@ -23,7 +27,10 @@ export function useSelectedDocument() {
 }
 
 /** Returns the selected document. */
-export function useSelectedDocumentSafe() {
+export function useSelectedDocumentSafe(): UseDispatchResult<
+  PHDocument,
+  Action
+> {
   const selectedDocumentId = useSelectedDocumentId();
   return useDocumentById(selectedDocumentId);
 }
