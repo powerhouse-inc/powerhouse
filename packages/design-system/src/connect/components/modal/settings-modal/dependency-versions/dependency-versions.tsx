@@ -10,8 +10,8 @@ const PH_DEPENDENCIES = [
 
 const PackageJsonSchema = object({
   version: string({ message: "Missing version field in package.json" }),
-  dependencies: record(string(), string()).nullable(),
-  devDependencies: record(string(), string()).nullable(),
+  dependencies: record(string(), string()).optional(),
+  devDependencies: record(string(), string()).optional(),
 })
   .refine(
     (data) => data.dependencies != null && data.devDependencies != null,
@@ -45,12 +45,32 @@ type ValidatedPackageJson = {
 export function verifyPackageJsonFields(
   packageJson: unknown,
 ): ValidatedPackageJson | false {
-  const parsed = PackageJsonSchema.safeParse(packageJson);
-  if (!parsed.success) {
-    console.error("Package.json validation failed:", parsed.error.format());
+  try {
+    const parsed = packageJson as {
+      version?: string;
+      dependencies?: Record<string, string>;
+      devDependencies?: Record<string, string>;
+      peerDependencies?: Record<string, string>;
+    };
+    const version = parsed.version || "Missing version field in package.json";
+    const dependencies = Object.fromEntries(
+      Object.entries({
+        ...parsed.dependencies,
+        ...parsed.devDependencies,
+        ...parsed.peerDependencies,
+      }).filter(([key]) =>
+        PH_DEPENDENCIES.some((regexOrName) =>
+          typeof regexOrName === "string"
+            ? regexOrName === key
+            : regexOrName.test(key),
+        ),
+      ),
+    );
+    return { version, dependencies };
+  } catch (error) {
+    console.error(error);
     return false;
   }
-  return parsed.data;
 }
 
 type Props = {

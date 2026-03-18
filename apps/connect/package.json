@@ -23,8 +23,20 @@
       "types": "./dist/src/main.d.ts",
       "import": "./dist/src/main.js"
     },
+    "./config": {
+      "import": "./dist/src/connect.config.js",
+      "types": "./dist/src/connect.config.d.ts"
+    },
     "./assets/*": "./assets/*",
-    "./style.css": "./dist/style.css"
+    "./style.css": "./dist/style.css",
+    "./package.json": {
+      "import": "./dist/package.copy.json",
+      "types": "./dist/src/package-json.d.ts"
+    },
+    "./*": {
+      "types": "./dist/src/*/index.d.ts",
+      "import": "./dist/src/*/index.js"
+    }
   },
   "sideEffects": [
     "./dist/src/main.js",
@@ -46,7 +58,7 @@
     "test": "vitest --run",
     "dev": "vite dev",
     "build:css": "pnpm exec tailwindcss -i ./src/index.css -o ./dist/style.css",
-    "build:connect": "bun run ./bundle.ts",
+    "build:connect": "pnpm tsc && cp package.json dist/package.copy.json && pnpm build:css",
     "build:all": "pnpm build:css && pnpm build:connect",
     "build:debug": "PH_DEBUG_BUILD=true vite build",
     "preview": "vite preview",
