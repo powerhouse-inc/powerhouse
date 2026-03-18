@@ -15,7 +15,6 @@ export const tsConfigTemplate = json`
     "lib": ["ESNext", "dom", "dom.iterable"],
 
     // Other Outputs
-    "sourceMap": false,
     "declaration": true,
     "declarationMap": true,
 

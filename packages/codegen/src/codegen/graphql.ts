@@ -137,6 +137,12 @@ export async function generateTypesAndZodSchemasFromGraphql(
         config: validationSchemaConfig,
         plugins: [
           {
+            add: {
+              content:
+                "/* eslint-disable @typescript-eslint/no-empty-object-type */",
+            },
+          },
+          {
             "graphql-codegen-typescript-validation-schema":
               validationSchemaConfig,
           },
