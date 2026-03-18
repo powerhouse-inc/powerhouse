@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { object, record, string } from "zod";
 import { Disclosure } from "../../../disclosure/disclosure.js";
 
 const PH_DEPENDENCIES = [
@@ -7,35 +6,6 @@ const PH_DEPENDENCIES = [
   "document-drive",
   "document-model",
 ];
-
-const PackageJsonSchema = object({
-  version: string({ message: "Missing version field in package.json" }),
-  dependencies: record(string(), string()).optional(),
-  devDependencies: record(string(), string()).optional(),
-})
-  .refine(
-    (data) => data.dependencies != null && data.devDependencies != null,
-    "package.json must have either dependencies or devDependencies",
-  )
-  .transform((data) => {
-    const allDependencies = {
-      ...data.dependencies,
-      ...data.devDependencies,
-    };
-
-    return {
-      version: data.version,
-      dependencies: Object.fromEntries(
-        Object.entries(allDependencies).filter(([key]) =>
-          PH_DEPENDENCIES.some((regexOrName) =>
-            typeof regexOrName === "string"
-              ? regexOrName === key
-              : regexOrName.test(key),
-          ),
-        ),
-      ),
-    };
-  });
 
 type ValidatedPackageJson = {
   version: string;
