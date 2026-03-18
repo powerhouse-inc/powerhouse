@@ -161,7 +161,7 @@ export const connectBasePath = option({
   type: string,
   description: "Base path for the app",
   env: "PH_CONNECT_BASE_PATH" as const,
-  defaultValue: () => "",
+  defaultValue: () => "/",
 });
 
 export const drivesPreserveStrategy = option({
