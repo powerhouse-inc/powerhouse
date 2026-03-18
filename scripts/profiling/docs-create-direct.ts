@@ -252,7 +252,11 @@ function buildRequests(
 
     for (let j = i; j < batchEnd; j++) {
       const config = ACTION_CONFIGS[(j + 1) % ACTION_CONFIGS.length];
-      actions.push(config.buildAction(docIndex, j + 1));
+      actions.push({
+        id: crypto.randomUUID(),
+        timestampUtcMs: new Date().toISOString(),
+        ...config.buildAction(docIndex, j + 1),
+      });
       actionTypes.push(config.name);
     }
 
