@@ -17,6 +17,7 @@ import {
   indexHtmlTemplate,
   indexTsTemplate,
   licenseTemplate,
+  mainTsxTemplate,
   mcpTemplate,
   nginxConfTemplate,
   npmrcTemplate,
@@ -136,6 +137,7 @@ async function writeProjectRootFiles(args: {
   await writeFileEnsuringDir("package.json", packageJson);
   await writeFileEnsuringDir("tsconfig.json", tsConfigTemplate);
   await writeFileEnsuringDir("index.html", indexHtmlTemplate);
+  await writeFileEnsuringDir("main.tsx", mainTsxTemplate);
   await writeFileEnsuringDir("eslint.config.js", eslintConfigTemplate);
   await writeFileEnsuringDir("index.ts", indexTsTemplate);
   await writeFileEnsuringDir("style.css", styleTemplate);
