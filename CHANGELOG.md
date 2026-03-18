@@ -1,3 +1,13 @@
+## 6.0.0-dev.98 (2026-03-18)
+
+### 🩹 Fixes
+
+- **connect:** declare dependencies ([6aa6910d3](https://github.com/powerhouse-inc/powerhouse/commit/6aa6910d3))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.0.0-dev.97 (2026-03-18)
 
 ### 🚀 Features
