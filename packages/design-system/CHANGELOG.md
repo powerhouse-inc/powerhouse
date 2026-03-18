@@ -1,3 +1,14 @@
+## 6.0.0-dev.97 (2026-03-18)
+
+### 🩹 Fixes
+
+- **design-system:** removed zod dependency ([fdc7c2ef7](https://github.com/powerhouse-inc/powerhouse/commit/fdc7c2ef7))
+- **common,connect:** fix ph connect build and missing assets on dev ([667c4ef4e](https://github.com/powerhouse-inc/powerhouse/commit/667c4ef4e))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 6.0.0-dev.96 (2026-03-17)
 
 This was a version bump only for @powerhousedao/design-system to align it with other projects, there were no code changes.

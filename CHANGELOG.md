@@ -1,3 +1,23 @@
+## 6.0.0-dev.97 (2026-03-18)
+
+### 🚀 Features
+
+- **reactor:** introducing a new quarantine feature -- now instead of blocking an entire remote from updating after sync issues, we only quarantine affected documents ([6df4d4a31](https://github.com/powerhouse-inc/powerhouse/commit/6df4d4a31))
+- **reactor:** abort signals should be able to be passed all the way through the job pipeline, which also gives us job timeout ([192ff6111](https://github.com/powerhouse-inc/powerhouse/commit/192ff6111))
+
+### 🩹 Fixes
+
+- **common,connect:** fix ph connect build and missing assets on dev ([667c4ef4e](https://github.com/powerhouse-inc/powerhouse/commit/667c4ef4e))
+- **design-system:** removed zod dependency ([fdc7c2ef7](https://github.com/powerhouse-inc/powerhouse/commit/fdc7c2ef7))
+- **reactor:** gql channel should not have multiple pushes in-flight at the same time ([bdcd32a01](https://github.com/powerhouse-inc/powerhouse/commit/bdcd32a01))
+- **reactor:** removing some dead code ([4aa05f61c](https://github.com/powerhouse-inc/powerhouse/commit/4aa05f61c))
+- **reactor:** backfill should stream pages into outbox to get them all, and to prevent in-memory buildup ([fa3acba22](https://github.com/powerhouse-inc/powerhouse/commit/fa3acba22))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan
+
 ## 6.0.0-dev.96 (2026-03-17)
 
 ### 🚀 Features

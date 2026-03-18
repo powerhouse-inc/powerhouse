@@ -1,3 +1,13 @@
+## 6.0.0-dev.97 (2026-03-18)
+
+### 🩹 Fixes
+
+- **design-system:** removed zod dependency ([fdc7c2ef7](https://github.com/powerhouse-inc/powerhouse/commit/fdc7c2ef7))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 6.0.0-dev.96 (2026-03-17)
 
 This was a version bump only for @powerhousedao/vetra to align it with other projects, there were no code changes.
