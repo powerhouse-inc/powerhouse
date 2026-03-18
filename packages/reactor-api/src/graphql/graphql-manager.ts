@@ -517,14 +517,18 @@ export class GraphQLManager {
         this.logger.debug(`Setting up subgraph ${subgraph.name}`);
         const subgraphPath = this.#getSubgraphPath(subgraph, supergraph);
         try {
-          // dispose existing websocket server before starting new one
+          // Clean up existing graphql-ws protocol handlers before starting new one.
+          // We must NOT call dispose() here because it closes the underlying
+          // WebSocketServer, removing its upgrade listener from the HTTP server.
+          // Instead, we close existing clients and remove only the connection/error
+          // listeners that graphql-ws added, preserving the upgrade listener.
           const existingWsDisposer = this.subgraphWsDisposers.get(subgraphPath);
           if (existingWsDisposer) {
-            try {
-              await existingWsDisposer.dispose();
-            } catch {
-              // ignore error when disposing websocket server
+            for (const client of this.wsServer.clients) {
+              client.close(1001, "Going away");
             }
+            this.wsServer.removeAllListeners("connection");
+            this.wsServer.removeAllListeners("error");
             this.subgraphWsDisposers.delete(subgraphPath);
           }
 

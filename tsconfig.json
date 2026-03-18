@@ -113,6 +113,9 @@
       "path": "test/test-connect"
     },
     {
+      "path": "test/test-subscription"
+    },
+    {
       "path": "test/versioned-documents"
     },
     {
