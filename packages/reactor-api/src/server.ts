@@ -26,7 +26,7 @@ import {
   createRelationalDbLegacy,
   ProcessorManagerLegacy,
 } from "document-drive";
-import type { DocumentModelModule } from "document-model";
+import type { Action, DocumentModelModule } from "document-model";
 import type { Express } from "express";
 import express from "express";
 import type { Kysely } from "kysely";
@@ -622,6 +622,42 @@ async function _setupAPI(
     options.https,
     logger,
   );
+
+  // Diagnostic endpoint: bypasses Apollo/GraphQL entirely to isolate latency.
+  // POST /reactor/mutate-async
+  // Body: { documentId: string, branch?: string, actions: unknown[] }
+  // Response: { jobId: string, durationMs: number }
+  app.post("/reactor/mutate-async", express.json(), async (req, res) => {
+    const t0 = performance.now();
+    const body = req.body as {
+      documentId?: unknown;
+      branch?: unknown;
+      actions?: unknown;
+    };
+
+    if (typeof body.documentId !== "string" || !Array.isArray(body.actions)) {
+      res.status(400).json({
+        error: "documentId (string) and actions (array) are required",
+      });
+      return;
+    }
+
+    const branch = typeof body.branch === "string" ? body.branch : "main";
+
+    try {
+      const job = await reactorClient.executeAsync(
+        body.documentId,
+        branch,
+        body.actions as Action[],
+      );
+      res.json({ jobId: job.id, durationMs: performance.now() - t0 });
+    } catch (error) {
+      res.status(500).json({
+        error: error instanceof Error ? error.message : "Unknown error",
+        durationMs: performance.now() - t0,
+      });
+    }
+  });
 
   // set up subgraph manager
   const coreSubgraphs: SubgraphClass[] = DefaultCoreSubgraphs.slice();
