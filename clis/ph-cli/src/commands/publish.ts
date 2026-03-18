@@ -54,7 +54,7 @@ This command:
     }
 
     // Forward remaining args to npm publish
-    const forwardedArgs = getForwardedArgs();
+    const forwardedArgs = args.forwardedArgs;
     const cmd =
       `npm publish --registry ${registryUrl} ${forwardedArgs.join(" ")}`.trim();
 
@@ -68,23 +68,3 @@ This command:
     process.exit(0);
   },
 });
-
-export function getForwardedArgs(): string[] {
-  const argv = process.argv;
-  const publishIndex = argv.indexOf("publish");
-  if (publishIndex === -1) return [];
-
-  const rawArgs = argv.slice(publishIndex + 1);
-  const filtered: string[] = [];
-
-  for (let i = 0; i < rawArgs.length; i++) {
-    if (rawArgs[i] === "--debug") continue;
-    if (rawArgs[i] === "--registry") {
-      i++; // skip flag + value
-      continue;
-    }
-    filtered.push(rawArgs[i]!);
-  }
-
-  return filtered;
-}

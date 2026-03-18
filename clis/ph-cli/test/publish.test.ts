@@ -14,7 +14,6 @@ vi.mock("@powerhousedao/common/clis", async (importOriginal) => {
 import { getPowerhouseProjectInfo } from "@powerhousedao/common/clis";
 import { getConfig } from "@powerhousedao/config/node";
 import { execSync } from "child_process";
-import { getForwardedArgs } from "../src/commands/publish.js";
 
 const mockGetConfig = vi.mocked(getConfig);
 const mockExecSync = vi.mocked(execSync);
@@ -56,80 +55,19 @@ describe("publish", () => {
     process.env = originalEnv;
   });
 
-  describe("getForwardedArgs", () => {
-    it("should return empty array when 'publish' is not in argv", () => {
-      process.argv = ["node", "ph"];
-      expect(getForwardedArgs()).toEqual([]);
-    });
-
-    it("should return empty array when no args after 'publish'", () => {
-      process.argv = ["node", "ph", "publish"];
-      expect(getForwardedArgs()).toEqual([]);
-    });
-
-    it("should forward npm publish args", () => {
-      process.argv = [
-        "node",
-        "ph",
-        "publish",
-        "--tag",
-        "dev",
-        "--access",
-        "public",
-      ];
-      expect(getForwardedArgs()).toEqual([
-        "--tag",
-        "dev",
-        "--access",
-        "public",
-      ]);
-    });
-
-    it("should strip --debug flag", () => {
-      process.argv = ["node", "ph", "publish", "--debug", "--tag", "dev"];
-      expect(getForwardedArgs()).toEqual(["--tag", "dev"]);
-    });
-
-    it("should strip --registry and its value", () => {
-      process.argv = [
-        "node",
-        "ph",
-        "publish",
-        "--registry",
-        "http://localhost:8080",
-        "--tag",
-        "dev",
-      ];
-      expect(getForwardedArgs()).toEqual(["--tag", "dev"]);
-    });
-
-    it("should strip both --debug and --registry", () => {
-      process.argv = [
-        "node",
-        "ph",
-        "publish",
-        "--debug",
-        "--registry",
-        "http://localhost:8080",
-        "--tag",
-        "beta",
-      ];
-      expect(getForwardedArgs()).toEqual(["--tag", "beta"]);
-    });
-  });
-
   describe("handler", () => {
     // We import the handler dynamically to test it after mocks are set up
     async function runPublishHandler(args: {
       registry?: string;
       debug?: boolean;
+      forwardedArgs?: string[];
     }) {
       const { publish } = await import("../src/commands/publish.js");
 
       // Access the handler from the command object
       const handler = (publish as unknown as { handler: Function }).handler;
 
-      return handler(args);
+      return handler({ forwardedArgs: [], ...args });
     }
 
     it("should use registry URL from args when provided", async () => {
