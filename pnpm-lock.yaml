@@ -422,37 +422,12 @@ importers:
 
   apps/connect:
     dependencies:
-      document-drive:
-        specifier: link:../../packages/document-drive
-        version: link:../../packages/document-drive
-      document-model:
-        specifier: link:../../packages/document-model
-        version: link:../../packages/document-model
-    devDependencies:
-      '@electric-sql/pglite':
-        specifier: 'catalog:'
-        version: 0.3.15
-      '@electric-sql/pglite-tools':
-        specifier: 'catalog:'
-        version: 0.2.20(@electric-sql/pglite@0.3.15)
-      '@openfeature/core':
-        specifier: 1.9.1
-        version: 1.9.1
       '@openfeature/web-sdk':
         specifier: 1.6.2
         version: 1.6.2(@openfeature/core@1.9.1)
-      '@powerhousedao/builder-tools':
-        specifier: workspace:*
-        version: link:../../packages/builder-tools
-      '@powerhousedao/config':
-        specifier: workspace:*
-        version: link:../../packages/config
       '@powerhousedao/design-system':
         specifier: workspace:*
         version: link:../../packages/design-system
-      '@powerhousedao/document-engineering':
-        specifier: 'catalog:'
-        version: 1.40.1(@types/express@5.0.6)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.9.3)
       '@powerhousedao/powerhouse-vetra-packages':
         specifier: workspace:*
         version: link:../../packages/powerhouse-vetra-packages
@@ -468,6 +443,58 @@ importers:
       '@sentry/react':
         specifier: ^10.17.0
         version: 10.40.0(react@19.2.4)
+      document-drive:
+        specifier: link:../../packages/document-drive
+        version: link:../../packages/document-drive
+      document-model:
+        specifier: link:../../packages/document-model
+        version: link:../../packages/document-model
+      graphql-request:
+        specifier: 'catalog:'
+        version: 7.4.0(graphql@16.12.0)
+      i18next:
+        specifier: ^25.5.3
+        version: 25.8.13(typescript@5.9.3)
+      kysely:
+        specifier: 'catalog:'
+        version: 0.28.11
+      kysely-pglite-dialect:
+        specifier: 'catalog:'
+        version: 1.2.0(@electric-sql/pglite@0.3.15)(kysely@0.28.11)
+      react-error-boundary:
+        specifier: ^4.0.11
+        version: 4.1.2(react@19.2.4)
+      react-hotkeys-hook:
+        specifier: ^4.6.2
+        version: 4.6.2(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      react-i18next:
+        specifier: ^16.0.0
+        version: 16.5.4(i18next@25.8.13(typescript@5.9.3))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.9.3)
+      react-router-dom:
+        specifier: ^6.11.2
+        version: 6.30.3(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      tailwind-merge:
+        specifier: 'catalog:'
+        version: 3.4.0
+    devDependencies:
+      '@electric-sql/pglite':
+        specifier: 'catalog:'
+        version: 0.3.15
+      '@electric-sql/pglite-tools':
+        specifier: 'catalog:'
+        version: 0.2.20(@electric-sql/pglite@0.3.15)
+      '@openfeature/core':
+        specifier: 1.9.1
+        version: 1.9.1
+      '@powerhousedao/builder-tools':
+        specifier: workspace:*
+        version: link:../../packages/builder-tools
+      '@powerhousedao/config':
+        specifier: workspace:*
+        version: link:../../packages/config
+      '@powerhousedao/document-engineering':
+        specifier: 'catalog:'
+        version: 1.40.1(@types/express@5.0.6)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.9.3)
       '@tailwindcss/cli':
         specifier: 'catalog:'
         version: 4.1.18
@@ -492,39 +519,12 @@ importers:
       graphql:
         specifier: 'catalog:'
         version: 16.12.0
-      graphql-request:
-        specifier: 'catalog:'
-        version: 7.4.0(graphql@16.12.0)
-      i18next:
-        specifier: ^25.5.3
-        version: 25.8.13(typescript@5.9.3)
-      kysely:
-        specifier: 'catalog:'
-        version: 0.28.11
-      kysely-pglite-dialect:
-        specifier: 'catalog:'
-        version: 1.2.0(@electric-sql/pglite@0.3.15)(kysely@0.28.11)
       react:
         specifier: 'catalog:'
         version: 19.2.4
       react-dom:
         specifier: 'catalog:'
         version: 19.2.4(react@19.2.4)
-      react-error-boundary:
-        specifier: ^4.0.11
-        version: 4.1.2(react@19.2.4)
-      react-hotkeys-hook:
-        specifier: ^4.6.2
-        version: 4.6.2(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
-      react-i18next:
-        specifier: ^16.0.0
-        version: 16.5.4(i18next@25.8.13(typescript@5.9.3))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.9.3)
-      react-router-dom:
-        specifier: ^6.11.2
-        version: 6.30.3(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
-      tailwind-merge:
-        specifier: 'catalog:'
-        version: 3.4.0
       tailwindcss:
         specifier: 'catalog:'
         version: 4.1.18
