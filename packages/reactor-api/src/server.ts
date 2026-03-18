@@ -624,6 +624,43 @@ async function _setupAPI(
   );
 
   // Diagnostic endpoint: bypasses Apollo/GraphQL entirely to isolate latency.
+  // POST /reactor/mutate
+  // Body: { documentId: string, branch?: string, actions: unknown[] }
+  // Response: { durationMs: number }
+  // Calls execute() and waits for full completion (equivalent to sync GraphQL mutation).
+  app.post("/reactor/mutate", express.json(), async (req, res) => {
+    const t0 = performance.now();
+    const body = req.body as {
+      documentId?: unknown;
+      branch?: unknown;
+      actions?: unknown;
+    };
+
+    if (typeof body.documentId !== "string" || !Array.isArray(body.actions)) {
+      res.status(400).json({
+        error: "documentId (string) and actions (array) are required",
+      });
+      return;
+    }
+
+    const branch = typeof body.branch === "string" ? body.branch : "main";
+
+    try {
+      await reactorClient.execute(
+        body.documentId,
+        branch,
+        body.actions as Action[],
+      );
+      res.json({ durationMs: performance.now() - t0 });
+    } catch (error) {
+      res.status(500).json({
+        error: error instanceof Error ? error.message : "Unknown error",
+        durationMs: performance.now() - t0,
+      });
+    }
+  });
+
+  // Diagnostic endpoint: bypasses Apollo/GraphQL entirely to isolate latency.
   // POST /reactor/mutate-async
   // Body: { documentId: string, branch?: string, actions: unknown[] }
   // Response: { jobId: string, durationMs: number }

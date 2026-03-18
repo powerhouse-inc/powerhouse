@@ -3,12 +3,16 @@
  * Diagnostic variant of docs-create.ts that bypasses Apollo/GraphQL entirely.
  *
  * Documents are still created via GraphQL. Mutations are sent directly to
- * POST /reactor/mutate-async, which calls reactorClient.executeAsync() with
- * no GraphQL parsing, schema validation, or federation overhead.
+ * Express endpoints that call the reactor client with no GraphQL parsing,
+ * schema validation, or federation overhead:
  *
- * The endpoint returns { jobId, durationMs } where durationMs is the
- * server-side time inside executeAsync(). The script also records the full
- * client round-trip so both can be compared against the GraphQL path.
+ *   POST /reactor/mutate        — calls execute(), blocks until READ_READY
+ *                                 (mirrors non-async GraphQL mutation)
+ *   POST /reactor/mutate-async  — calls executeAsync(), returns jobId
+ *                                 immediately (mirrors --async GraphQL mode)
+ *
+ * --async mode derives the async endpoint from --direct-endpoint by appending
+ * "-async", so a single flag controls both.
  *
  * If client round-trip stays flat but docs-create.ts (GraphQL) grows,
  * Apollo is the bottleneck. If both grow, the bottleneck is inside the
@@ -22,7 +26,7 @@ import { createWriteStream, mkdirSync, type WriteStream } from "node:fs";
 import { basename, dirname, join } from "node:path";
 
 const DEFAULT_GRAPHQL_ENDPOINT = "http://localhost:4001/graphql";
-const DEFAULT_DIRECT_ENDPOINT = "http://localhost:4001/reactor/mutate-async";
+const DEFAULT_DIRECT_ENDPOINT = "http://localhost:4001/reactor/mutate";
 const GRAPHQL_TIMEOUT_MS = 30_000;
 
 // Mirror the same action cycle as docs-create.ts, using native action format.
@@ -83,7 +87,11 @@ interface CreateDocumentResponse {
   DocumentModel_createEmptyDocument: { id: string };
 }
 
-interface DirectMutateResponse {
+interface DirectMuteSyncResponse {
+  durationMs: number;
+}
+
+interface DirectMuteAsyncResponse {
   jobId: string;
   durationMs: number;
 }
@@ -184,13 +192,13 @@ async function createDocument(client: GraphQLClient): Promise<string> {
   return DocumentModel_createEmptyDocument.id;
 }
 
-async function sendDirectMutation(
-  directEndpoint: string,
+async function sendMutate(
+  endpoint: string,
   documentId: string,
   branch: string,
   actions: unknown[],
-): Promise<DirectMutateResponse> {
-  const res = await fetch(directEndpoint, {
+): Promise<DirectMuteSyncResponse> {
+  const res = await fetch(endpoint, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ documentId, branch, actions }),
@@ -200,7 +208,26 @@ async function sendDirectMutation(
     const body = await res.text();
     throw new Error(`HTTP ${res.status}: ${body}`);
   }
-  return res.json() as Promise<DirectMutateResponse>;
+  return res.json() as Promise<DirectMuteSyncResponse>;
+}
+
+async function sendMutateAsync(
+  endpoint: string,
+  documentId: string,
+  branch: string,
+  actions: unknown[],
+): Promise<DirectMuteAsyncResponse> {
+  const res = await fetch(endpoint, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ documentId, branch, actions }),
+    signal: AbortSignal.timeout(GRAPHQL_TIMEOUT_MS),
+  });
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`HTTP ${res.status}: ${body}`);
+  }
+  return res.json() as Promise<DirectMuteAsyncResponse>;
 }
 
 type RequestDescriptor = {
@@ -240,7 +267,7 @@ function buildRequests(
 }
 
 async function performOperations(
-  directEndpoint: string,
+  syncEndpoint: string,
   documentId: string,
   docIndex: number,
   operationCount: number,
@@ -267,8 +294,8 @@ async function performOperations(
 
   for (const req of requests) {
     const t0 = performance.now();
-    const response = await sendDirectMutation(
-      directEndpoint,
+    const response = await sendMutate(
+      syncEndpoint,
       documentId,
       branch,
       req.actions,
@@ -436,12 +463,14 @@ Options:
                             (can be specified multiple times, skips document creation)
   --endpoint <url>          GraphQL endpoint for document creation and job polling
                             (default: ${DEFAULT_GRAPHQL_ENDPOINT})
-  --direct-endpoint <url>   Direct Express endpoint for mutations
+  --direct-endpoint <url>   Sync Express endpoint: POST /reactor/mutate
                             (default: ${DEFAULT_DIRECT_ENDPOINT})
+                            The async endpoint is derived automatically by
+                            appending "-async" to this URL.
   --branch <name>           Document branch (default: main)
-  --async [N]               Poll every Nth request for E2E latency via GraphQL
-                            jobStatus (default N=100). Dispatch timing is always
-                            measured; this adds READ_READY round-trip measurement.
+  --async [N]               Use POST /reactor/mutate-async and poll every Nth
+                            request for E2E latency via GraphQL jobStatus
+                            (default N=100).
   --async-timeout <ms>      Max ms to wait for a polled job to reach a terminal
                             status (default: 30000)
   --verbose, -v             Show detailed per-request timings
@@ -641,9 +670,15 @@ async function main() {
     console.log(
       `GraphQL endpoint (doc creation / job polling): ${graphqlEndpoint}`,
     );
-    console.log(
-      `Direct endpoint  (mutations):                  ${directEndpoint}`,
-    );
+    if (asyncMutate) {
+      console.log(
+        `Direct endpoint  (mutations, async):           ${directEndpoint}-async`,
+      );
+    } else {
+      console.log(
+        `Direct endpoint  (mutations, sync):            ${directEndpoint}`,
+      );
+    }
 
     const gqlClient = new GraphQLClient(graphqlEndpoint);
     const useExistingDocs = docIds.length > 0;
@@ -735,8 +770,8 @@ async function main() {
             for (const req of requests) {
               globalReqNum++;
               const dispatchedAt = performance.now();
-              const response = await sendDirectMutation(
-                directEndpoint,
+              const response = await sendMutateAsync(
+                directEndpoint + "-async",
                 docId,
                 branch,
                 req.actions,
@@ -842,7 +877,7 @@ async function main() {
             };
 
             const result = await performOperations(
-              directEndpoint,
+              directEndpoint, // sync endpoint: /reactor/mutate
               docId,
               docNum,
               operations,
