@@ -36,6 +36,11 @@
     "install:playwright": "playwright install",
     "codegen": "graphql-codegen --config codegen.ts && prettier --write src/graphql/gen/*.ts && eslint --fix src/graphql/gen/*.ts --no-warn-ignored"
   },
+  "dependencies": {
+    "@powerhousedao/reactor": "workspace:*",
+    "document-drive": "workspace:*",
+    "document-model": "workspace:*"
+  },
   "devDependencies": {
     "@graphql-codegen/cli": "catalog:",
     "@graphql-codegen/typescript": "catalog:",
@@ -63,12 +68,9 @@
     "@electric-sql/pglite": "catalog:",
     "@powerhousedao/analytics-engine-browser": "workspace:*",
     "@powerhousedao/analytics-engine-core": "workspace:*",
-    "@powerhousedao/reactor": "workspace:*",
     "@renown/sdk": "workspace:*",
     "@tanstack/react-query": "^5.49.2",
     "change-case": "catalog:",
-    "document-drive": "workspace:*",
-    "document-model": "workspace:*",
     "kysely": "catalog:",
     "kysely-pglite-dialect": "catalog:",
     "lodash.isequal": "^4.5.0",
