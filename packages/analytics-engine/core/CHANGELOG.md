@@ -1,3 +1,18 @@
+## 6.0.0-dev.99 (2026-03-18)
+
+### 🚀 Features
+
+- **test-subscription:** adding a cli test-client for testing reactor api subscriptions ([563a8ac7d](https://github.com/powerhouse-inc/powerhouse/commit/563a8ac7d))
+
+### 🩹 Fixes
+
+- updated pnpm-lock ([c2843dc5b](https://github.com/powerhouse-inc/powerhouse/commit/c2843dc5b))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan
+
 ## 6.0.0-dev.98 (2026-03-18)
 
 ### 🩹 Fixes
