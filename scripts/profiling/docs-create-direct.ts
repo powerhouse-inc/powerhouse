@@ -8,10 +8,11 @@
  *
  * The endpoint returns { jobId, durationMs } where durationMs is the
  * server-side time inside executeAsync(). The script also records the full
- * client round-trip so both can be compared to the GraphQL path.
+ * client round-trip so both can be compared against the GraphQL path.
  *
- * If client round-trip stays flat but the GraphQL path grows, Apollo is the
- * bottleneck. If both grow, the bottleneck is inside the reactor itself.
+ * If client round-trip stays flat but docs-create.ts (GraphQL) grows,
+ * Apollo is the bottleneck. If both grow, the bottleneck is inside the
+ * reactor itself.
  *
  * Usage: tsx docs-create-direct.ts [N] [options]
  */
@@ -100,21 +101,43 @@ interface Percentiles {
   p99: number;
 }
 
+// Mirrors OperationTiming from docs-create.ts, extended with server-side timing.
 interface RequestTiming {
-  reqIndex: number;
+  opIndex: number;
   clientMs: number;
   serverMs: number;
   actionType: string;
 }
 
-interface LoopResult {
-  minClient: RequestTiming | null;
-  maxClient: RequestTiming | null;
-  minServer: RequestTiming | null;
-  maxServer: RequestTiming | null;
+// Mirrors OperationsResult from docs-create.ts, with dual timing arrays.
+interface OperationsResult {
+  minOp: RequestTiming | null;
+  maxOp: RequestTiming | null;
   clientDurations: number[];
   serverDurations: number[];
 }
+
+interface JobStatusResponse {
+  jobStatus: { status: string; completedAt: string | null };
+}
+
+interface SampledJob {
+  jobId: string;
+  dispatchedAt: number;
+  batchEnd: number;
+  batchCount: number;
+  actionType: string;
+  loopNum: number;
+  reqNum: number;
+}
+
+const JOB_STATUS_QUERY = `
+  query GetJobStatus($jobId: String!) {
+    jobStatus(jobId: $jobId) { status completedAt }
+  }
+`;
+const TERMINAL_JOB_STATUSES = new Set(["WRITE_READY", "READ_READY", "FAILED"]);
+const JOB_POLL_INTERVAL_MS = 5;
 
 function getMemoryStats(): MemoryStats {
   const mem = process.memoryUsage();
@@ -180,35 +203,21 @@ async function sendDirectMutation(
   return res.json() as Promise<DirectMutateResponse>;
 }
 
-async function performDirectOperations(
-  directEndpoint: string,
+type RequestDescriptor = {
+  actions: unknown[];
+  batchEnd: number;
+  batchCount: number;
+  actionType: string;
+};
+
+function buildRequests(
   documentId: string,
   docIndex: number,
   operationCount: number,
   batchSize: number,
-  branch: string,
-  onProgress: (
-    reqNum: number,
-    totalReqs: number,
-    clientMs: number,
-    serverMs: number,
-    batchCount: number,
-  ) => void,
-): Promise<LoopResult> {
-  const result: LoopResult = {
-    minClient: null,
-    maxClient: null,
-    minServer: null,
-    maxServer: null,
-    clientDurations: [],
-    serverDurations: [],
-  };
-
-  const totalReqs = Math.ceil(operationCount / batchSize);
-  let reqNum = 0;
-
+): RequestDescriptor[] {
+  const requests: RequestDescriptor[] = [];
   for (let i = 0; i < operationCount; i += batchSize) {
-    reqNum++;
     const batchEnd = Math.min(i + batchSize, operationCount);
     const batchCount = batchEnd - i;
     const actions: unknown[] = [];
@@ -220,54 +229,106 @@ async function performDirectOperations(
       actionTypes.push(config.name);
     }
 
-    const actionType =
-      batchCount === 1 ? actionTypes[0] : `batch(${batchCount})`;
+    requests.push({
+      actions,
+      batchEnd,
+      batchCount,
+      actionType: batchCount === 1 ? actionTypes[0] : `batch(${batchCount})`,
+    });
+  }
+  return requests;
+}
 
+async function performOperations(
+  directEndpoint: string,
+  documentId: string,
+  docIndex: number,
+  operationCount: number,
+  batchSize: number,
+  branch: string,
+  onProgress: (
+    opNum: number,
+    clientMs: number,
+    serverMs: number,
+    batchCount: number,
+  ) => void,
+): Promise<OperationsResult> {
+  let minOp: RequestTiming | null = null;
+  let maxOp: RequestTiming | null = null;
+  const clientDurations: number[] = [];
+  const serverDurations: number[] = [];
+
+  const requests = buildRequests(
+    documentId,
+    docIndex,
+    operationCount,
+    batchSize,
+  );
+
+  for (const req of requests) {
     const t0 = performance.now();
     const response = await sendDirectMutation(
       directEndpoint,
       documentId,
       branch,
-      actions,
+      req.actions,
     );
     const clientMs = performance.now() - t0;
     const serverMs = response.durationMs;
+    const perOpClientMs = clientMs / req.batchCount;
+    const perOpServerMs = serverMs / req.batchCount;
 
-    result.clientDurations.push(clientMs / batchCount);
-    result.serverDurations.push(serverMs / batchCount);
+    for (let j = 0; j < req.batchCount; j++) {
+      clientDurations.push(perOpClientMs);
+      serverDurations.push(perOpServerMs);
+    }
 
     const timing: RequestTiming = {
-      reqIndex: batchEnd,
-      clientMs: clientMs / batchCount,
-      serverMs: serverMs / batchCount,
-      actionType,
+      opIndex: req.batchEnd,
+      clientMs: perOpClientMs,
+      serverMs: perOpServerMs,
+      actionType: req.actionType,
     };
 
-    if (
-      result.minClient === null ||
-      timing.clientMs < result.minClient.clientMs
-    )
-      result.minClient = timing;
-    if (
-      result.maxClient === null ||
-      timing.clientMs > result.maxClient.clientMs
-    )
-      result.maxClient = timing;
-    if (
-      result.minServer === null ||
-      timing.serverMs < result.minServer.serverMs
-    )
-      result.minServer = timing;
-    if (
-      result.maxServer === null ||
-      timing.serverMs > result.maxServer.serverMs
-    )
-      result.maxServer = timing;
+    if (minOp === null || perOpClientMs < minOp.clientMs) minOp = timing;
+    if (maxOp === null || perOpClientMs > maxOp.clientMs) maxOp = timing;
 
-    onProgress(reqNum, totalReqs, clientMs, serverMs, batchCount);
+    onProgress(req.batchEnd, clientMs, serverMs, req.batchCount);
   }
 
-  return result;
+  return { minOp, maxOp, clientDurations, serverDurations };
+}
+
+async function pollJobAsync(
+  gqlClient: GraphQLClient,
+  job: SampledJob,
+  timeoutMs: number,
+): Promise<{ totalMs: number; timedOut: boolean }> {
+  const deadline = performance.now() + timeoutMs;
+  let timedOut = false;
+  while (true) {
+    if (performance.now() >= deadline) {
+      timedOut = true;
+      process.stderr.write(
+        `\nWarning: job ${job.jobId} (req ${job.reqNum}) did not reach a terminal status within ${timeoutMs}ms — giving up.\n`,
+      );
+      break;
+    }
+    await new Promise<void>((resolve) =>
+      setTimeout(resolve, JOB_POLL_INTERVAL_MS),
+    );
+    const { jobStatus } = await gqlClient.request<JobStatusResponse>({
+      document: JOB_STATUS_QUERY,
+      variables: { jobId: job.jobId },
+      signal: AbortSignal.timeout(GRAPHQL_TIMEOUT_MS),
+    });
+    if (
+      TERMINAL_JOB_STATUSES.has(jobStatus.status) ||
+      jobStatus.completedAt !== null
+    )
+      break;
+  }
+  return { totalMs: performance.now() - job.dispatchedAt, timedOut };
 }
 
 function parseArgs(args: string[]): {
@@ -279,8 +340,12 @@ function parseArgs(args: string[]): {
   directEndpoint: string;
   branch: string;
   docIds: string[];
+  asyncMutate: boolean;
+  asyncPollRate: number;
+  asyncTimeoutMs: number;
   verbose: boolean;
   percentiles: boolean;
+  showActionTypes: boolean;
   output: string | undefined;
   outputTimestamp: boolean;
 } {
@@ -292,8 +357,12 @@ function parseArgs(args: string[]): {
   let directEndpoint = DEFAULT_DIRECT_ENDPOINT;
   let branch = "main";
   const docIds: string[] = [];
+  let asyncMutate = false;
+  let asyncPollRate = 100;
+  let asyncTimeoutMs = 30_000;
   let verbose = false;
   let percentiles = false;
+  let showActionTypes = false;
   let output: string | undefined;
   let outputTimestamp = false;
 
@@ -313,10 +382,28 @@ function parseArgs(args: string[]): {
       batchSize = Number(args[++i]);
     } else if ((arg === "--doc-id" || arg === "-d") && args[i + 1]) {
       docIds.push(args[++i]);
+    } else if (arg === "--async") {
+      asyncMutate = true;
+      const nextArg = args[i + 1];
+      if (nextArg && !nextArg.startsWith("-")) {
+        const n = Number(nextArg);
+        if (isNaN(n) || n <= 0 || !Number.isInteger(n)) {
+          console.error(
+            `Error: --async N must be a positive integer, got: ${nextArg}`,
+          );
+          process.exit(1);
+        }
+        asyncPollRate = n;
+        i++;
+      }
+    } else if (arg === "--async-timeout" && args[i + 1]) {
+      asyncTimeoutMs = Number(args[++i]);
     } else if (arg === "--verbose" || arg === "-v") {
       verbose = true;
     } else if (arg === "--percentiles" || arg === "-p") {
       percentiles = true;
+    } else if (arg === "--show-action-types" || arg === "-a") {
+      showActionTypes = true;
     } else if ((arg === "--output" || arg === "-O") && args[i + 1]) {
       output = args[++i];
       outputTimestamp = false;
@@ -335,6 +422,7 @@ Usage: tsx docs-create-direct.ts [N] [options]
 
 Bypasses Apollo and calls POST /reactor/mutate-async directly.
 Use this to isolate whether Apollo overhead is causing latency growth.
+Documents are still created via GraphQL.
 
 Arguments:
   N                         Number of documents to create (default: 10)
@@ -343,27 +431,36 @@ Options:
   --operations, -o <M>      Number of operations per loop (default: 0)
   --op-loops, -l <L>        Number of operation loops per document (default: 1)
   --batch-size, -b <N>      Actions per direct request (default: 1)
-  --doc-id, -d <id>         Use existing document(s), skip creation
-                            (can be specified multiple times)
-  --endpoint <url>          GraphQL endpoint for document creation
+                            Use higher values to measure per-request overhead
+  --doc-id, -d <id>         Use existing document(s) instead of creating new ones
+                            (can be specified multiple times, skips document creation)
+  --endpoint <url>          GraphQL endpoint for document creation and job polling
                             (default: ${DEFAULT_GRAPHQL_ENDPOINT})
   --direct-endpoint <url>   Direct Express endpoint for mutations
                             (default: ${DEFAULT_DIRECT_ENDPOINT})
   --branch <name>           Document branch (default: main)
-  --verbose, -v             Show per-request client and server timings
-  --percentiles, -p         Show percentile statistics (p50/p90/p95/p99)
-  --file [name]             Write output to a timestamped file
-  --output, -O <file>       Write output to a specific file
+  --async [N]               Poll every Nth request for E2E latency via GraphQL
+                            jobStatus (default N=100). Dispatch timing is always
+                            measured; this adds READ_READY round-trip measurement.
+  --async-timeout <ms>      Max ms to wait for a polled job to reach a terminal
+                            status (default: 30000)
+  --verbose, -v             Show detailed per-request timings
+  --percentiles, -p         Show percentile statistics (p50, p90, p95, p99)
+  --show-action-types, -a   Show action type names in min/max timings
+  --file [name]             Write output to a timestamped file (default: docs-create-direct.txt)
+  --output, -O <file>       Write output to a specific file (no timestamp prefix)
   --help, -h                Show this help message
 
 Timings reported:
-  client ms  Full round-trip from before fetch() to after response
+  client ms  Full HTTP round-trip from before fetch() to after response
   server ms  Time inside executeAsync() as reported by the endpoint
+  async ms   Wall-clock from before dispatch to job reaching READ_READY (--async only)
 
 Examples:
   tsx docs-create-direct.ts 1 -o 25 -l 1000
+  tsx docs-create-direct.ts 1 -o 25 -l 1000 --async
   tsx docs-create-direct.ts --doc-id <id> -o 25 -l 1000
-  tsx docs-create-direct.ts 1 -o 25 -l 1000 --verbose
+  tsx docs-create-direct.ts 1 -o 25 -l 1000 --verbose --percentiles
 `);
       process.exit(0);
     } else if (!isNaN(Number(arg)) && arg.trim() !== "") {
@@ -377,28 +474,54 @@ Examples:
 
   if (docIds.length === 0 && count < 1) {
     console.error(
-      "Error: Document count must be >= 1 when --doc-id is not provided.",
+      "Error: Document count must be a positive integer (>= 1) when --doc-id is not provided.",
     );
     process.exit(1);
   }
   if (isNaN(operations) || operations < 0) {
-    console.error("Error: --operations must be a non-negative integer.");
+    console.error(
+      "Error: Invalid operations value: must be a non-negative integer.",
+    );
     process.exit(1);
   }
   if (isNaN(opLoops) || opLoops < 1) {
-    console.error("Error: --op-loops must be >= 1.");
+    console.error(
+      "Error: Invalid op-loops value: must be a positive integer (>= 1).",
+    );
     process.exit(1);
   }
   if (isNaN(batchSize) || batchSize < 1) {
-    console.error("Error: --batch-size must be >= 1.");
+    console.error(
+      "Error: Invalid batch-size value: must be a positive integer (>= 1).",
+    );
+    process.exit(1);
+  }
+  if (
+    isNaN(asyncTimeoutMs) ||
+    asyncTimeoutMs < 1 ||
+    !Number.isInteger(asyncTimeoutMs)
+  ) {
+    console.error(
+      "Error: Invalid --async-timeout value: must be a positive integer (ms).",
+    );
     process.exit(1);
   }
   if (operations === 0 && opLoops > 1) {
-    console.warn("Warning: --op-loops has no effect when operations is 0.");
+    console.warn(
+      `Warning: --op-loops=${opLoops} has no effect when operations is 0.`,
+    );
+  }
+  if (operations === 0 && batchSize > 1) {
+    console.warn(
+      `Warning: --batch-size=${batchSize} has no effect when operations is 0.`,
+    );
+  }
+  if (operations === 0 && asyncMutate) {
+    console.warn(`Warning: --async has no effect when operations is 0.`);
   }
   if (docIds.length > 0 && operations === 0) {
     console.warn(
-      "Warning: --doc-id specified but no operations to perform (use --operations).",
+      `Warning: --doc-id specified but no operations to perform (use --operations).`,
     );
   }
 
@@ -411,8 +534,12 @@ Examples:
     directEndpoint,
     branch,
     docIds,
+    asyncMutate,
+    asyncPollRate,
+    asyncTimeoutMs,
     verbose,
     percentiles,
+    showActionTypes,
     output,
     outputTimestamp,
   };
@@ -428,8 +555,12 @@ async function main() {
     directEndpoint,
     branch,
     docIds,
+    asyncMutate,
+    asyncPollRate,
+    asyncTimeoutMs,
     verbose,
     percentiles: showPercentiles,
+    showActionTypes,
     output: outputFile,
     outputTimestamp,
   } = parseArgs(process.argv.slice(2));
@@ -455,14 +586,17 @@ async function main() {
       const text =
         typeof chunk === "string" ? chunk : new TextDecoder().decode(chunk);
       const parts = text.split("\n");
+
       for (let i = 0; i < parts.length; i++) {
         const part = parts[i];
+
         if (i === parts.length - 1) {
-          pendingLine = part.split("\r").at(-1) ?? "";
+          const crParts = part.split("\r");
+          pendingLine = crParts[crParts.length - 1];
         } else {
-          outputStream!.write(
-            pendingLine + (part.split("\r").at(-1) ?? "") + "\n",
-          );
+          const crParts = part.split("\r");
+          const finalPart = crParts[crParts.length - 1];
+          outputStream!.write(pendingLine + finalPart + "\n");
           pendingLine = "";
         }
       }
@@ -504,8 +638,12 @@ async function main() {
     console.log(
       `Command: tsx docs-create-direct.ts ${process.argv.slice(2).join(" ")}`,
     );
-    console.log(`GraphQL endpoint: ${graphqlEndpoint}`);
-    console.log(`Direct endpoint:  ${directEndpoint}`);
+    console.log(
+      `GraphQL endpoint (doc creation / job polling): ${graphqlEndpoint}`,
+    );
+    console.log(
+      `Direct endpoint  (mutations):                  ${directEndpoint}`,
+    );
 
     const gqlClient = new GraphQLClient(graphqlEndpoint);
     const useExistingDocs = docIds.length > 0;
@@ -513,7 +651,7 @@ async function main() {
     const initialMemory = getMemoryStats();
     console.log(`\nInitial memory: ${formatMemory(initialMemory)}`);
 
-    const overallStart = performance.now();
+    const overallStartTime = performance.now();
     let documentIds: string[];
 
     if (useExistingDocs) {
@@ -522,18 +660,23 @@ async function main() {
       documentIds.forEach((id) => console.log(`  - ${id}`));
     } else {
       console.log(`\nPhase 1: Creating ${count} documents via GraphQL...`);
-      const createStart = performance.now();
+      const createStartTime = performance.now();
       documentIds = [];
+
       for (let i = 0; i < count; i++) {
         const id = await createDocument(gqlClient);
         documentIds.push(id);
         process.stdout.write(`\r  Progress: ${i + 1}/${count}`);
       }
-      const createMs = performance.now() - createStart;
+
+      const createDurationMs = performance.now() - createStartTime;
+      const createDuration = (createDurationMs / 1000).toFixed(2);
+      const msPerDoc = (createDurationMs / count).toFixed(0);
+      const phase1Memory = getMemoryStats();
       console.log(
-        `\n  Created ${count} documents in ${(createMs / 1000).toFixed(2)}s (avg: ${(createMs / count).toFixed(0)}ms/doc)`,
+        `\n  Created ${count} documents in ${createDuration}s (avg: ${msPerDoc}ms/doc)`,
       );
-      console.log(`  Memory: ${formatMemory(getMemoryStats())}`);
+      console.log(`  Memory: ${formatMemory(phase1Memory)}`);
     }
 
     if (operations > 0) {
@@ -544,201 +687,271 @@ async function main() {
       console.log(
         `\n${phaseLabel}: Performing ${operations} operations${loopLabel}${batchLabel} on each document (direct)...`,
       );
-
-      const opsStart = performance.now();
+      const opsStartTime = performance.now();
       const totalOps = docCount * operations * opLoops;
 
-      let overallMinClient: {
+      let overallMinOp: {
         docId: string;
         docNum: number;
         loop: number;
         timing: RequestTiming;
       } | null = null;
-      let overallMaxClient: {
+      let overallMaxOp: {
         docId: string;
         docNum: number;
         loop: number;
         timing: RequestTiming;
       } | null = null;
-      let overallMinServer: {
-        docId: string;
-        docNum: number;
-        loop: number;
-        timing: RequestTiming;
-      } | null = null;
-      let overallMaxServer: {
-        docId: string;
-        docNum: number;
-        loop: number;
-        timing: RequestTiming;
-      } | null = null;
-
       const allClientDurations: number[] = [];
       const allServerDurations: number[] = [];
+      let timedOutCount = 0;
+      let sampledJobCount = 0;
 
       for (let i = 0; i < documentIds.length; i++) {
         const docNum = i + 1;
         const docId = documentIds[i];
 
-        for (let loop = 1; loop <= opLoops; loop++) {
-          const loopStart = performance.now();
-          const loopPrefix = opLoops > 1 ? `loop ${loop}/${opLoops}: ` : "";
-          const totalReqs = Math.ceil(operations / batchSize);
+        if (asyncMutate && operations > 0) {
+          const totalRequests = opLoops * Math.ceil(operations / batchSize);
+          const pollPromises: Promise<{
+            totalMs: number;
+            timedOut: boolean;
+            job: SampledJob;
+          }>[] = [];
+          let globalReqNum = 0;
 
-          if (verbose) {
-            console.log(`  [${docNum}/${docCount}] ${docId} ${loopPrefix}:`);
+          // Dispatch sequentially; start polling each sampled job immediately
+          // (fire-and-forget into pollPromises) so results stream to stdout as
+          // each poll resolves during dispatch rather than bursting at the end.
+          for (let loop = 1; loop <= opLoops; loop++) {
+            const loopDispatchStart = performance.now();
+            const requests = buildRequests(
+              docId,
+              docNum,
+              operations,
+              batchSize,
+            );
+
+            for (const req of requests) {
+              globalReqNum++;
+              const dispatchedAt = performance.now();
+              const response = await sendDirectMutation(
+                directEndpoint,
+                docId,
+                branch,
+                req.actions,
+              );
+              const jobId = response.jobId;
+              if (!jobId) {
+                throw new Error(
+                  `Missing jobId in response for request ${globalReqNum}`,
+                );
+              }
+
+              if (
+                globalReqNum % asyncPollRate === 0 ||
+                globalReqNum === totalRequests
+              ) {
+                const job: SampledJob = {
+                  jobId,
+                  dispatchedAt,
+                  batchEnd: req.batchEnd,
+                  batchCount: req.batchCount,
+                  actionType: req.actionType,
+                  loopNum: loop,
+                  reqNum: globalReqNum,
+                };
+                pollPromises.push(
+                  pollJobAsync(gqlClient, job, asyncTimeoutMs).then((r) => {
+                    const ms = Math.round(r.totalMs);
+                    if (r.timedOut) {
+                      process.stdout.write(
+                        `\r  [${docNum}/${docCount}] ${docId}: op ${job.reqNum}/${totalRequests} TIMED OUT after ${ms}ms\n`,
+                      );
+                    } else {
+                      process.stdout.write(
+                        `\r  [${docNum}/${docCount}] ${docId}: op ${job.reqNum}/${totalRequests} (${ms}ms)\n`,
+                      );
+                    }
+                    return { ...r, job };
+                  }),
+                );
+              }
+              if (!verbose) {
+                process.stdout.write(
+                  `\r  [${docNum}/${docCount}] ${docId}: dispatching ${globalReqNum}/${totalRequests}...`,
+                );
+              }
+            }
+
+            const loopDispatchMs = Math.round(
+              performance.now() - loopDispatchStart,
+            );
+            const msPerOp = Math.round(loopDispatchMs / operations);
+            process.stdout.write(
+              `\r  [${docNum}/${docCount}] ${docId}: loop ${loop}/${opLoops} dispatched in ${loopDispatchMs}ms (${msPerOp}ms/op)\n`,
+            );
           }
 
-          const onProgress = (
-            reqNum: number,
-            _totalReqs: number,
-            clientMs: number,
-            serverMs: number,
-            batchCount: number,
-          ) => {
-            const batchInfo = batchCount > 1 ? ` (${batchCount} ops)` : "";
+          // Wait for any polls still in flight after dispatch completes, then aggregate
+          const allPollResults = await Promise.all(pollPromises);
+          for (const { totalMs, timedOut, job } of allPollResults) {
+            if (timedOut) {
+              timedOutCount++;
+              continue;
+            }
+            sampledJobCount++;
+            const perOpMs = totalMs / job.batchCount;
+            const timing: RequestTiming = {
+              opIndex: job.batchEnd,
+              clientMs: perOpMs,
+              serverMs: 0,
+              actionType: job.actionType,
+            };
+            if (overallMinOp === null || perOpMs < overallMinOp.timing.clientMs)
+              overallMinOp = { docId, docNum, loop: job.loopNum, timing };
+            if (overallMaxOp === null || perOpMs > overallMaxOp.timing.clientMs)
+              overallMaxOp = { docId, docNum, loop: job.loopNum, timing };
+            if (showPercentiles) allClientDurations.push(perOpMs);
+          }
+        } else {
+          for (let loop = 1; loop <= opLoops; loop++) {
+            const loopStartTime = performance.now();
+            const loopPrefix = opLoops > 1 ? `loop ${loop}/${opLoops}: ` : "";
+
+            if (verbose) {
+              console.log(`  [${docNum}/${docCount}] ${docId} ${loopPrefix}:`);
+            }
+
+            const onProgress = (
+              opNum: number,
+              clientMs: number,
+              serverMs: number,
+              batchCount: number,
+            ) => {
+              const batchInfo = batchCount > 1 ? ` (${batchCount} ops)` : "";
+              if (verbose) {
+                console.log(
+                  `    op ${opNum}/${operations}: client=${clientMs.toFixed(1)}ms server=${serverMs.toFixed(1)}ms${batchInfo}`,
+                );
+              } else {
+                process.stdout.write(
+                  `\r  [${docNum}/${docCount}] ${docId}: ${loopPrefix}${opNum}/${operations} ops`,
+                );
+              }
+            };
+
+            const result = await performOperations(
+              directEndpoint,
+              docId,
+              docNum,
+              operations,
+              batchSize,
+              branch,
+              onProgress,
+            );
+
+            if (
+              result.minOp &&
+              (overallMinOp === null ||
+                result.minOp.clientMs < overallMinOp.timing.clientMs)
+            ) {
+              overallMinOp = { docId, docNum, loop, timing: result.minOp };
+            }
+            if (
+              result.maxOp &&
+              (overallMaxOp === null ||
+                result.maxOp.clientMs > overallMaxOp.timing.clientMs)
+            ) {
+              overallMaxOp = { docId, docNum, loop, timing: result.maxOp };
+            }
+            if (showPercentiles) {
+              allClientDurations.push(...result.clientDurations);
+              allServerDurations.push(...result.serverDurations);
+            }
+
+            const loopDurationMs = performance.now() - loopStartTime;
+            const loopDuration = (loopDurationMs / 1000).toFixed(2);
+            const msPerOp = (loopDurationMs / operations).toFixed(0);
+
+            const minMaxClient =
+              result.minOp && result.maxOp
+                ? showActionTypes
+                  ? `, client min: ${result.minOp.clientMs.toFixed(1)}ms (${result.minOp.actionType}), max: ${result.maxOp.clientMs.toFixed(1)}ms (${result.maxOp.actionType})`
+                  : `, client min: ${result.minOp.clientMs.toFixed(1)}ms, max: ${result.maxOp.clientMs.toFixed(1)}ms`
+                : "";
+            const minMaxServer =
+              result.minOp && result.maxOp
+                ? showActionTypes
+                  ? `, server min: ${result.minOp.serverMs.toFixed(1)}ms (${result.minOp.actionType}), max: ${result.maxOp.serverMs.toFixed(1)}ms (${result.maxOp.actionType})`
+                  : `, server min: ${result.minOp.serverMs.toFixed(1)}ms, max: ${result.maxOp.serverMs.toFixed(1)}ms`
+                : "";
+
+            const loopClientPercentiles = showPercentiles
+              ? calculatePercentiles(result.clientDurations)
+              : null;
+            const loopServerPercentiles = showPercentiles
+              ? calculatePercentiles(result.serverDurations)
+              : null;
+            const percentilesStr = loopClientPercentiles
+              ? `\n      client ${formatPercentiles(loopClientPercentiles)}` +
+                (loopServerPercentiles
+                  ? `\n      server ${formatPercentiles(loopServerPercentiles)}`
+                  : "")
+              : "";
+
             if (verbose) {
               console.log(
-                `    req ${reqNum}: client=${clientMs.toFixed(1)}ms server=${serverMs.toFixed(1)}ms${batchInfo}`,
+                `    Done: ${loopDuration}s, ${msPerOp}ms/op${minMaxClient}${minMaxServer}${percentilesStr}`,
               );
             } else {
               process.stdout.write(
-                `\r  [${docNum}/${docCount}] ${docId}: ${loopPrefix}${reqNum}/${totalReqs} reqs`,
+                ` (${loopDuration}s, ${msPerOp}ms/op${minMaxClient}${minMaxServer})${percentilesStr}\n`,
               );
             }
-          };
-
-          const loopResult = await performDirectOperations(
-            directEndpoint,
-            docId,
-            docNum,
-            operations,
-            batchSize,
-            branch,
-            onProgress,
-          );
-
-          if (loopResult.minClient) {
-            if (
-              overallMinClient === null ||
-              loopResult.minClient.clientMs < overallMinClient.timing.clientMs
-            )
-              overallMinClient = {
-                docId,
-                docNum,
-                loop,
-                timing: loopResult.minClient,
-              };
-          }
-          if (loopResult.maxClient) {
-            if (
-              overallMaxClient === null ||
-              loopResult.maxClient.clientMs > overallMaxClient.timing.clientMs
-            )
-              overallMaxClient = {
-                docId,
-                docNum,
-                loop,
-                timing: loopResult.maxClient,
-              };
-          }
-          if (loopResult.minServer) {
-            if (
-              overallMinServer === null ||
-              loopResult.minServer.serverMs < overallMinServer.timing.serverMs
-            )
-              overallMinServer = {
-                docId,
-                docNum,
-                loop,
-                timing: loopResult.minServer,
-              };
-          }
-          if (loopResult.maxServer) {
-            if (
-              overallMaxServer === null ||
-              loopResult.maxServer.serverMs > overallMaxServer.timing.serverMs
-            )
-              overallMaxServer = {
-                docId,
-                docNum,
-                loop,
-                timing: loopResult.maxServer,
-              };
-          }
-
-          if (showPercentiles) {
-            allClientDurations.push(...loopResult.clientDurations);
-            allServerDurations.push(...loopResult.serverDurations);
-          }
-
-          const loopMs = performance.now() - loopStart;
-          const avgClientMs = (
-            loopResult.clientDurations.reduce((a, b) => a + b, 0) /
-            loopResult.clientDurations.length
-          ).toFixed(1);
-          const avgServerMs = (
-            loopResult.serverDurations.reduce((a, b) => a + b, 0) /
-            loopResult.serverDurations.length
-          ).toFixed(1);
-
-          const minMaxStr =
-            loopResult.minClient && loopResult.maxClient
-              ? `, client min/max: ${loopResult.minClient.clientMs.toFixed(1)}/${loopResult.maxClient.clientMs.toFixed(1)}ms`
-              : "";
-          const serverMinMaxStr =
-            loopResult.minServer && loopResult.maxServer
-              ? `, server min/max: ${loopResult.minServer.serverMs.toFixed(1)}/${loopResult.maxServer.serverMs.toFixed(1)}ms`
-              : "";
-
-          const loopPercentiles = showPercentiles
-            ? calculatePercentiles(loopResult.clientDurations)
-            : null;
-          const percentilesStr = loopPercentiles
-            ? `\n      client ${formatPercentiles(loopPercentiles)}`
-            : "";
-
-          if (verbose) {
-            console.log(
-              `    Done: ${(loopMs / 1000).toFixed(2)}s, avg client=${avgClientMs}ms/op server=${avgServerMs}ms/op${minMaxStr}${serverMinMaxStr}${percentilesStr}`,
-            );
-          } else {
-            process.stdout.write(
-              ` (${(loopMs / 1000).toFixed(2)}s, client avg=${avgClientMs}ms server avg=${avgServerMs}ms${minMaxStr})${percentilesStr}\n`,
-            );
           }
         }
       }
 
-      const opsMs = performance.now() - opsStart;
-      const avgMsPerOp = (opsMs / totalOps).toFixed(0);
-      const overallMinMaxStr =
-        overallMinClient && overallMaxClient
-          ? `, client min: ${overallMinClient.timing.clientMs.toFixed(1)}ms, max: ${overallMaxClient.timing.clientMs.toFixed(1)}ms`
+      const opsDurationMs = performance.now() - opsStartTime;
+      const opsDuration = (opsDurationMs / 1000).toFixed(2);
+      const avgMsPerOp = (opsDurationMs / totalOps).toFixed(0);
+      const phase2Memory = getMemoryStats();
+
+      const overallMinMax =
+        overallMinOp && overallMaxOp
+          ? showActionTypes
+            ? `, min: ${overallMinOp.timing.clientMs.toFixed(1)}ms (${overallMinOp.timing.actionType}), max: ${overallMaxOp.timing.clientMs.toFixed(1)}ms (${overallMaxOp.timing.actionType})`
+            : `, min: ${overallMinOp.timing.clientMs.toFixed(1)}ms, max: ${overallMaxOp.timing.clientMs.toFixed(1)}ms`
           : "";
-      const overallServerStr =
-        overallMinServer && overallMaxServer
-          ? `, server min: ${overallMinServer.timing.serverMs.toFixed(1)}ms, max: ${overallMaxServer.timing.serverMs.toFixed(1)}ms`
+      const timedOutStr =
+        timedOutCount > 0 ? `, timed-out jobs: ${timedOutCount}` : "";
+      const sampledStr =
+        sampledJobCount > 0
+          ? ` (stats from ${sampledJobCount} sampled jobs)`
           : "";
 
       console.log(
-        `  Completed ${totalOps} operations in ${(opsMs / 1000).toFixed(2)}s (avg client: ${avgMsPerOp}ms/op${overallMinMaxStr}${overallServerStr})`,
+        `  Completed ${totalOps} operations in ${opsDuration}s (avg: ${avgMsPerOp}ms/op${overallMinMax}${timedOutStr})${sampledStr}`,
       );
 
-      if (showPercentiles) {
+      if (showPercentiles && allClientDurations.length > 0) {
         const cp = calculatePercentiles(allClientDurations);
-        const sp = calculatePercentiles(allServerDurations);
         if (cp) console.log(`  Client percentiles: ${formatPercentiles(cp)}`);
-        if (sp) console.log(`  Server percentiles: ${formatPercentiles(sp)}`);
+        if (!asyncMutate && allServerDurations.length > 0) {
+          const sp = calculatePercentiles(allServerDurations);
+          if (sp) console.log(`  Server percentiles: ${formatPercentiles(sp)}`);
+        }
       }
 
-      console.log(`  Memory: ${formatMemory(getMemoryStats())}`);
+      console.log(`  Memory: ${formatMemory(phase2Memory)}`);
     }
 
     const finalMemory = getMemoryStats();
-    const totalDuration = ((performance.now() - overallStart) / 1000).toFixed(
-      2,
-    );
+    const totalDuration = (
+      (performance.now() - overallStartTime) /
+      1000
+    ).toFixed(2);
     const heapDelta = finalMemory.heapUsed - initialMemory.heapUsed;
     const rssDelta = finalMemory.rss - initialMemory.rss;
     console.log(`\nDone! Total time: ${totalDuration}s`);
@@ -749,7 +962,9 @@ async function main() {
     if (outputStream) {
       process.stdout.write = origStdoutWrite;
       process.stderr.write = origStderrWrite;
-      if (pendingLine) outputStream.write(pendingLine + "\n");
+      if (pendingLine) {
+        outputStream.write(pendingLine + "\n");
+      }
       outputStream.end();
     }
   }
