@@ -553,7 +553,7 @@ This was a version bump only for @powerhousedao/switchboard to align it with oth
 ### 🚀 Features
 
 - **design-system:** default styles tweaks and DocumentStateViewer ([c0a66720c](https://github.com/powerhouse-inc/powerhouse/commit/c0a66720c))
-- **ci:** deploy staging tenant from release/staging/* branches ([8761579e7](https://github.com/powerhouse-inc/powerhouse/commit/8761579e7))
+- **ci:** deploy staging tenant from release/staging/\* branches ([8761579e7](https://github.com/powerhouse-inc/powerhouse/commit/8761579e7))
 - **ci:** add Harbor registry to docker image publishing ([f3a2fab69](https://github.com/powerhouse-inc/powerhouse/commit/f3a2fab69))
 
 ### 🩹 Fixes
@@ -3178,7 +3178,7 @@ This was a version bump only for @powerhousedao/switchboard to align it with oth
 
 - **reactor-api:** init project ([#388](https://github.com/powerhouse-inc/powerhouse/pull/388))
 
-### ❤️  Thank You
+### ❤️ Thank You
 
 - acaldas
 
@@ -3192,7 +3192,7 @@ This was a version bump only for @powerhousedao/switchboard to align it with oth
 
 - Updated @powerhousedao/reactor-api to 1.1.0
 
-### ❤️  Thank You
+### ❤️ Thank You
 
 - acaldas
 
@@ -3206,6 +3206,6 @@ This was a version bump only for @powerhousedao/switchboard to align it with oth
 
 - Updated @powerhousedao/general-document-indexer to 1.1.0
 
-### ❤️  Thank You
+### ❤️ Thank You
 
 - acaldas

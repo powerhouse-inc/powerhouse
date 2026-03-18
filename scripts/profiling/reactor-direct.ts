@@ -23,6 +23,13 @@
  */
 
 import { PGlite } from "@electric-sql/pglite";
+import { metrics } from "@opentelemetry/api";
+import {
+  MeterProvider,
+  PeriodicExportingMetricReader,
+} from "@opentelemetry/sdk-metrics";
+import { OTLPMetricExporter } from "@opentelemetry/exporter-metrics-otlp-http";
+import { ReactorInstrumentation } from "@powerhousedao/opentelemetry-instrumentation-reactor";
 import {
   JobStatus,
   REACTOR_SCHEMA,
@@ -268,6 +275,7 @@ function parseArgs(args: string[]): {
   dbPath: string | undefined;
   docId: string | undefined;
   pyroscope: string | undefined;
+  otel: string | undefined;
   output: string | undefined;
   outputTimestamp: boolean;
 } {
@@ -281,6 +289,7 @@ function parseArgs(args: string[]): {
   let dbPath: string | undefined = undefined;
   let docId: string | undefined = undefined;
   let pyroscope: string | undefined = undefined;
+  let otel: string | undefined = undefined;
   let output: string | undefined = undefined;
   let outputTimestamp = false;
 
@@ -310,6 +319,14 @@ function parseArgs(args: string[]): {
         i++;
       } else {
         pyroscope = "http://localhost:4040";
+      }
+    } else if (arg === "--otel") {
+      const nextArg = args[i + 1];
+      if (nextArg && !nextArg.startsWith("-")) {
+        otel = nextArg;
+        i++;
+      } else {
+        otel = "http://localhost:4318";
       }
     } else if ((arg === "--output" || arg === "-O") && args[i + 1]) {
       output = args[++i];
@@ -345,6 +362,8 @@ Options:
   --file [name]             Write output to a timestamped file (default: reactor-direct.txt)
   --output, -O <file>       Write output to a specific file (no timestamp prefix)
   --pyroscope [address]     Enable Pyroscope profiling (default: http://localhost:4040)
+  --otel [endpoint]         Enable OpenTelemetry metrics export (default: http://localhost:4318)
+                            Exports to OTLP HTTP collector at {endpoint}/v1/metrics
   --help, -h                Show this help message
 
 Process flow:
@@ -432,6 +451,7 @@ Examples:
     dbPath,
     docId,
     pyroscope,
+    otel,
     output,
     outputTimestamp,
   };
@@ -476,6 +496,7 @@ async function main() {
     dbPath,
     docId,
     pyroscope: pyroscopeServer,
+    otel: otelEndpoint,
     output: outputFile,
     outputTimestamp,
   } = parseArgs(process.argv.slice(2));
@@ -497,6 +518,9 @@ async function main() {
     mkdirSync(dirname(outputPath), { recursive: true });
     console.log(`Writing output to: ${outputPath}`);
     outputStream = createWriteStream(outputPath);
+    outputStream.on("error", (err) => {
+      console.error(`Output file write error: ${err.message}`);
+    });
 
     // Buffer that simulates terminal \r behavior: carriage return resets
     // the current line so only the final version is written to the file.
@@ -530,11 +554,13 @@ async function main() {
       callback?: WriteCallback,
     ): boolean => {
       fileWrite(chunk);
-      return origStdoutWrite(
-        chunk,
-        encodingOrCallback as BufferEncoding,
-        callback,
-      );
+      const encoding =
+        typeof encodingOrCallback === "string" ? encodingOrCallback : undefined;
+      const cb =
+        typeof encodingOrCallback === "function"
+          ? encodingOrCallback
+          : callback;
+      return origStdoutWrite(chunk, encoding, cb);
     };
 
     process.stderr.write = (
@@ -543,11 +569,13 @@ async function main() {
       callback?: WriteCallback,
     ): boolean => {
       fileWrite(chunk);
-      return origStderrWrite(
-        chunk,
-        encodingOrCallback as BufferEncoding,
-        callback,
-      );
+      const encoding =
+        typeof encodingOrCallback === "string" ? encodingOrCallback : undefined;
+      const cb =
+        typeof encodingOrCallback === "function"
+          ? encodingOrCallback
+          : callback;
+      return origStderrWrite(chunk, encoding, cb);
     };
   }
 
@@ -590,14 +618,38 @@ async function main() {
       throw new Error(`Migration failed: ${migrationResult.error.message}`);
     }
 
-    const reactor = await new ReactorBuilder()
+    const reactorModule = await new ReactorBuilder()
       .withDocumentModels([documentModelDocumentModelModule])
       .withKysely(db as Kysely<Database>)
       .withMigrationStrategy("none")
-      .build();
+      .buildModule();
+    const reactor = reactorModule.reactor;
 
     const initDuration = ((Date.now() - initStart) / 1000).toFixed(2);
     console.log(`Reactor initialized in ${initDuration}s`);
+
+    let meterProvider: MeterProvider | undefined;
+    let instrumentation: ReactorInstrumentation | undefined;
+
+    if (otelEndpoint) {
+      console.log(
+        `Initializing OpenTelemetry metrics exporter at: ${otelEndpoint}`,
+      );
+      meterProvider = new MeterProvider({
+        readers: [
+          new PeriodicExportingMetricReader({
+            exporter: new OTLPMetricExporter({
+              url: `${otelEndpoint}/v1/metrics`,
+            }),
+            exportIntervalMillis: 5_000,
+          }),
+        ],
+      });
+      metrics.setGlobalMeterProvider(meterProvider);
+      instrumentation = new ReactorInstrumentation(reactorModule);
+      instrumentation.start();
+      console.log("  Metrics export enabled (interval: 5s)");
+    }
 
     const initialMemory = getMemoryStats();
     console.log(`\nInitial memory: ${formatMemory(initialMemory)}`);
@@ -792,6 +844,15 @@ async function main() {
       Pyroscope.stopCpuProfiling();
     }
     reactor.kill();
+    if (meterProvider) {
+      // Shutdown before instrumentation.stop() so the final collection pass
+      // captures gauge observations while this.metrics is still defined.
+      // stop() is called after to unsubscribe event-bus listeners and clear state.
+      await meterProvider.shutdown();
+    }
+    if (instrumentation) {
+      instrumentation.stop();
+    }
     await db.destroy();
 
     // Summary

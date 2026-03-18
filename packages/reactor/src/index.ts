@@ -231,6 +231,11 @@ export {
   type ChannelConfig,
   type ChannelHealth,
   type ChannelMeta,
+  type ConnectionState,
+  type ConnectionStateChangedEvent,
+  type ConnectionStateChangeCallback,
+  type ConnectionStateSnapshot,
+  type DeadLetterAddedEvent,
   type GqlChannelConfig,
   type IChannel,
   type IChannelFactory,
@@ -267,5 +272,17 @@ export type {
   ProcessorFactory,
   ProcessorFilter,
   ProcessorRecord,
+  ProcessorStatus,
+  TrackedProcessor,
 } from "@powerhousedao/shared/processors";
 export { ProcessorManager } from "./processors/index.js";
+
+// Admin / Integrity
+export { DocumentIntegrityService } from "./admin/document-integrity-service.js";
+export type {
+  IDocumentIntegrityService,
+  KeyframeValidationIssue,
+  RebuildResult,
+  SnapshotValidationIssue,
+  ValidationResult,
+} from "./admin/types.js";

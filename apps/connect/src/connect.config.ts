@@ -176,4 +176,5 @@ export const connectConfig = {
   },
   gaTrackingId: env.PH_CONNECT_GA_TRACKING_ID,
   phCliVersion: env.PH_CONNECT_CLI_VERSION,
+  packagesRegistry: env.PH_CONNECT_PACKAGES_REGISTRY,
 } as const;

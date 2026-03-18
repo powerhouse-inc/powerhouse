@@ -3,29 +3,27 @@ import type {
   IReactorClient,
   ReactorClientModule,
 } from "@powerhousedao/reactor";
-import type { DID, IConnectCrypto, IRenown, User } from "@renown/sdk";
+import type { IRenown } from "@renown/sdk";
 import type { DocumentDriveDocument } from "document-drive";
 import type { PHGlobalConfig } from "./config.js";
 import type { IDocumentCache } from "./documents.js";
 import type { PHModal } from "./modals.js";
 import type { TimelineItem } from "./timeline.js";
 import type { PHToastFn } from "./toast.js";
-import type { VetraPackage } from "./vetra.js";
+import type { IPackageManager } from "./vetra.js";
 
 export type BrowserReactorClientModule = ReactorClientModule & {
   pg: PGlite;
 };
 
+export type LOADING = null;
+
 export type PHGlobal = PHGlobalConfig & {
   loading?: boolean;
   reactorClientModule?: BrowserReactorClientModule;
   reactorClient?: IReactorClient;
-  connectCrypto?: IConnectCrypto;
-  did?: DID;
-  renown?: IRenown;
-  user?: User;
-  loginStatus?: LoginStatus;
-  vetraPackages?: VetraPackage[];
+  renown?: IRenown | LOADING;
+  vetraPackageManager?: IPackageManager;
   drives?: DocumentDriveDocument[];
   documentCache?: IDocumentCache;
   selectedDriveId?: string;
@@ -59,12 +57,6 @@ export type PHGlobalEventHandlerAdders = Record<
 export type SetEvent<TKey extends PHGlobalKey> = CustomEvent<{
   [key in TKey]: PHGlobal[TKey] | undefined;
 }>;
-
-export type LoginStatus =
-  | "initial"
-  | "checking"
-  | "not-authorized"
-  | "authorized";
 
 declare global {
   interface Window {

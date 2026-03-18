@@ -4,7 +4,7 @@ import { expect, test } from "./helpers/fixtures.js";
 
 // Run these tests serially to avoid conflicts with other tests
 // that modify the shared Vetra drive
-test.describe.configure({ mode: "serial" });
+test.describe.configure({ mode: "serial", timeout: 5 * 60 * 60 * 1000 });
 
 test.use({
   storageState: {

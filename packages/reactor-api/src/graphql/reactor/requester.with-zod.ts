@@ -12,10 +12,12 @@ import { createFetchRequester } from "./requester.js";
 import {
   DocumentChangeEventDTO,
   DocumentModelResultPageDTO,
+  DocumentWithChildrenAndOperationsDTO,
   DocumentWithChildrenDTO,
   JobChangeEventDTO,
   JobInfoDTO,
   MoveChildrenResultDTO,
+  OperationResultPageDTO,
   PHDocumentDTO,
   PHDocumentResultPageDTO,
 } from "./validation.js";
@@ -33,6 +35,11 @@ const operationValidators: OperationValidators = {
   GetDocument: (data) => {
     if (data.document) {
       DocumentWithChildrenDTO.parse(data.document);
+    }
+  },
+  GetDocumentWithOperations: (data) => {
+    if (data.document) {
+      DocumentWithChildrenAndOperationsDTO.parse(data.document);
     }
   },
   GetDocumentModels: (data) => {
@@ -59,6 +66,11 @@ const operationValidators: OperationValidators = {
   FindDocuments: (data) => {
     if (data.findDocuments) {
       PHDocumentResultPageDTO.parse(data.findDocuments as PhDocumentResultPage);
+    }
+  },
+  GetDocumentOperations: (data) => {
+    if (data.documentOperations) {
+      OperationResultPageDTO.parse(data.documentOperations);
     }
   },
   GetJobStatus: (data) => {

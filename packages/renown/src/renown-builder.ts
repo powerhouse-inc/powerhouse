@@ -3,7 +3,12 @@ import { DEFAULT_RENOWN_URL } from "./constants.js";
 import { RenownCryptoBuilder } from "./crypto/renown-crypto-builder.js";
 import type { IRenownCrypto, JsonWebKeyPairStorage } from "./crypto/types.js";
 import { MemoryEventEmitter } from "./event/memory.js";
-import type { RenownEventEmitter, RenownStorage } from "./types.js";
+import { fetchRenownProfile } from "./profile.js";
+import type {
+  ProfileFetcher,
+  RenownEventEmitter,
+  RenownStorage,
+} from "./types.js";
 
 export interface RenownBuilderOptions {
   appName: string;
@@ -12,6 +17,7 @@ export interface RenownBuilderOptions {
   crypto?: IRenownCrypto;
   keyPairStorage?: JsonWebKeyPairStorage;
   baseUrl?: string;
+  profileFetcher?: ProfileFetcher;
 }
 
 /**
@@ -26,6 +32,7 @@ export class BaseRenownBuilder {
   #crypto?: IRenownCrypto;
   #keyPairStorage?: JsonWebKeyPairStorage;
   #baseUrl?: string;
+  #profileFetcher?: ProfileFetcher;
 
   /**
    * @param appName - Application name used for signing context
@@ -81,6 +88,17 @@ export class BaseRenownBuilder {
   }
 
   /**
+   * Set a profile fetcher strategy for enriching user data after login.
+   * The fetcher receives the authenticated user and the base URL,
+   * and returns a RenownProfile. Called in the background after each login.
+   * Defaults to fetchRenownProfile which calls the Renown API.
+   */
+  withProfileFetcher(profileFetcher: ProfileFetcher): this {
+    this.#profileFetcher = profileFetcher;
+    return this;
+  }
+
+  /**
    * Build and initialize the Renown instance.
    * If a user is stored, attempts to re-authenticate them.
    * @throws Error if neither crypto nor keyPairStorage is provided
@@ -108,6 +126,7 @@ export class BaseRenownBuilder {
       crypto,
       this.#appName,
       baseUrl,
+      this.#profileFetcher ?? fetchRenownProfile,
     );
 
     // Re-authenticate stored user if present
@@ -142,6 +161,9 @@ export class BaseRenownBuilder {
     }
     if (options.baseUrl) {
       builder.withBaseUrl(options.baseUrl);
+    }
+    if (options.profileFetcher) {
+      builder.withProfileFetcher(options.profileFetcher);
     }
 
     return builder;

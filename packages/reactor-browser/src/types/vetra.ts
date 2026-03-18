@@ -15,7 +15,7 @@ import type {
   SubgraphModule,
   UpgradeManifest,
 } from "document-model";
-import type { ProcessorFactoryBuilder } from "../../../reactor/src/processors/index.js";
+import type { ProcessorFactoryBuilder } from "../../../shared/processors/types.js";
 
 export type Processors = (module: {
   analyticsStore: IAnalyticsStore;
@@ -80,3 +80,22 @@ export type VetraPackageManifest = VetraPackageMeta & {
     [K in keyof VetraModules]: VetraMeta[];
   };
 };
+
+export type IPackagesListener = (data: { packages: VetraPackage[] }) => void;
+export type IPackageListerUnsubscribe = () => void;
+
+export interface IPackageManager {
+  packages: VetraPackage[];
+  localPackageIds: Set<string>;
+  addPackage(name: string, registryUrl: string): Promise<void>;
+  addLocalPackage(name: string, localPackage: VetraPackage): Promise<void>;
+  removePackage(name: string): Promise<void>;
+  subscribe(handler: IPackagesListener): IPackageListerUnsubscribe;
+}
+
+export interface IPackage {
+  name: string;
+  url: string;
+}
+
+export type IPackagesMap = Record<"packages", IPackage[]>;

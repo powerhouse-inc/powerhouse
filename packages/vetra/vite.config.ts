@@ -7,19 +7,7 @@ export default defineConfig(({ mode }) => {
     dirname: import.meta.dirname,
   });
 
-  const additionalViteConfig: UserConfig = {
-    // add your own vite config here
-    resolve: {
-      conditions: [
-        "source",
-        "development",
-        "browser",
-        "module",
-        "jsnext:main",
-        "jsnext",
-      ],
-    },
-  };
+  const additionalViteConfig: UserConfig = {};
 
   const config = mergeConfig(baseConnectViteConfig, additionalViteConfig);
 

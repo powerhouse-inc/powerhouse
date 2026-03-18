@@ -1,10 +1,12 @@
 {
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
-    "outDir": "./dist"
+    "outDir": "./dist",
+    "emitDeclarationOnly": true,
+    "types": ["vitest/globals", "@types/bun"]
   },
   "include": ["**/*"],
-  "exclude": ["dist", "node_modules", "test/atlas"],
+  "exclude": ["dist", "node_modules"],
   "references": [
     {
       "path": "../document-drive"

@@ -7,6 +7,7 @@
 import { GraphQLClient, gql } from "graphql-request";
 
 const DEFAULT_ENDPOINT = "http://localhost:4001/graphql";
+const GRAPHQL_TIMEOUT_MS = 30_000;
 
 const FIND_DOCUMENTS = gql`
   query FindDocuments($search: SearchFilterInput!, $paging: PagingInput) {
@@ -124,8 +125,9 @@ async function listDocumentsForType(
         last10 = [...last10, ...items].slice(-10);
       }
 
-      hasNextPage = res.findDocuments.hasNextPage;
-      cursor = res.findDocuments.cursor ?? undefined;
+      const nextCursor = res.findDocuments.cursor ?? undefined;
+      hasNextPage = res.findDocuments.hasNextPage && nextCursor !== undefined;
+      cursor = nextCursor;
     } catch (error) {
       console.error(
         `Error fetching documents for type ${documentType}:`,
@@ -239,7 +241,9 @@ async function main() {
   const { endpoint, type, countOnly, timing } = parseArgs(
     process.argv.slice(2),
   );
-  const client = new GraphQLClient(endpoint);
+  const client = new GraphQLClient(endpoint, {
+    signal: AbortSignal.timeout(GRAPHQL_TIMEOUT_MS),
+  });
 
   const timings: RequestTiming[] = [];
   const timingCallback = timing

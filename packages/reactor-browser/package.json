@@ -33,15 +33,28 @@
     "lint": "eslint",
     "build:bundle": "bun run ./bundle.ts",
     "test:browser": "vitest --run",
-    "install:playwright": "playwright install"
+    "install:playwright": "playwright install",
+    "codegen": "graphql-codegen --config codegen.ts && prettier --write src/graphql/gen/*.ts && eslint --fix src/graphql/gen/*.ts --no-warn-ignored"
+  },
+  "dependencies": {
+    "@powerhousedao/reactor": "workspace:*",
+    "document-drive": "workspace:*",
+    "document-model": "workspace:*"
   },
   "devDependencies": {
+    "@graphql-codegen/cli": "catalog:",
+    "@graphql-codegen/typescript": "catalog:",
+    "@graphql-codegen/typescript-graphql-request": "catalog:",
+    "@graphql-codegen/typescript-operations": "catalog:",
+    "graphql": "catalog:",
+    "graphql-request": "catalog:",
+    "graphql-tag": "catalog:",
     "@types/lodash.isequal": "^4.5.8",
     "@types/luxon": "^3.6.2",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
-    "@types/slug": "^5.0.9",
     "@types/bun": "catalog:",
+    "@types/slug": "^5.0.9",
     "@types/wicg-file-system-access": "^2020.9.8",
     "@vitejs/plugin-react": "catalog:",
     "@vitest/browser": "^3.2.4",
@@ -55,12 +68,9 @@
     "@electric-sql/pglite": "catalog:",
     "@powerhousedao/analytics-engine-browser": "workspace:*",
     "@powerhousedao/analytics-engine-core": "workspace:*",
-    "@powerhousedao/reactor": "workspace:*",
     "@renown/sdk": "workspace:*",
     "@tanstack/react-query": "^5.49.2",
     "change-case": "catalog:",
-    "document-drive": "workspace:*",
-    "document-model": "workspace:*",
     "kysely": "catalog:",
     "kysely-pglite-dialect": "catalog:",
     "lodash.isequal": "^4.5.0",
@@ -71,6 +81,6 @@
   "peerDependencies": {
     "react": ">=19.0.0",
     "react-dom": ">=19.0.0",
-    "@electric-sql/pglite": ">=0.3.0"
+    "@electric-sql/pglite": ">=0.3.15"
   }
 }

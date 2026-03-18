@@ -7,6 +7,7 @@
 import { GraphQLClient, gql } from "graphql-request";
 
 const DEFAULT_ENDPOINT = "http://localhost:4001/graphql";
+const GRAPHQL_TIMEOUT_MS = 30_000;
 const BATCH_SIZE = 50;
 
 const FIND_DOCUMENTS = gql`
@@ -132,7 +133,9 @@ async function main() {
 
   console.log(`Endpoint: ${endpoint}\n`);
 
-  const client = new GraphQLClient(endpoint);
+  const client = new GraphQLClient(endpoint, {
+    signal: AbortSignal.timeout(GRAPHQL_TIMEOUT_MS),
+  });
   const startTime = Date.now();
 
   // Get all document IDs

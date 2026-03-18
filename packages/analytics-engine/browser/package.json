@@ -36,8 +36,7 @@
     "@vitest/browser-playwright": "4.0.18",
     "@types/luxon": "catalog:",
     "playwright": "1.58.2",
-    "vitest": "4.0.18",
-    "vite-plugin-node-polyfills": "catalog:"
+    "vitest": "4.0.18"
   },
   "peerDependencies": {
     "react": ">=19.0.0",

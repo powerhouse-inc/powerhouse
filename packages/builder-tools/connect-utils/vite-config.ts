@@ -19,10 +19,7 @@ import {
 } from "vite";
 import { createHtmlPlugin } from "vite-plugin-html";
 import svgr from "vite-plugin-svgr";
-import {
-  resolveConnectPackageJson,
-  stripVersionFromPackage,
-} from "./helpers.js";
+import { stripVersionFromPackage } from "./helpers.js";
 import type { IConnectOptions } from "./types.js";
 import { phExternalPackagesPlugin } from "./vite-plugins/ph-external-packages.js";
 
@@ -137,14 +134,6 @@ function viteLogger({
 
   return logger;
 }
-
-function resolveConnectVersion() {
-  const connectPackageJson = resolveConnectPackageJson();
-  return connectPackageJson && "version" in connectPackageJson
-    ? (connectPackageJson.version as string)
-    : null;
-}
-
 export function getConnectBaseViteConfig(options: IConnectOptions) {
   const mode = options.mode;
   const envDir = options.envDir ?? options.dirname;
@@ -159,14 +148,6 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     optionsEnv,
     fileEnv,
   });
-
-  // if PH_CONNECT_VERSION is unknown, try to resolve it from the package.json
-  if (env.PH_CONNECT_VERSION === "unknown") {
-    const connectVersion = resolveConnectVersion();
-    if (connectVersion) {
-      env.PH_CONNECT_VERSION = connectVersion;
-    }
-  }
 
   // set the resolved env to process.env so it's loaded by vite
   setConnectEnv(env);
@@ -283,12 +264,6 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
             [packageJson.name]: localPackage,
           }
         : undefined,
-      dedupe: [
-        "react",
-        "react-dom",
-        "react/jsx-runtime",
-        "@electric-sql/pglite",
-      ],
     },
     build: {
       minify: true,

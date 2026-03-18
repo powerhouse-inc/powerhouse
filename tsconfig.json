@@ -38,6 +38,9 @@
       "path": "packages/document-model"
     },
     {
+      "path": "packages/opentelemetry-instrumentation-reactor"
+    },
+    {
       "path": "packages/powerhouse-vetra-packages"
     },
     {
@@ -47,6 +50,9 @@
       "path": "packages/reactor-browser"
     },
     {
+      "path": "packages/reactor-hypercore"
+    },
+    {
       "path": "packages/reactor-local"
     },
     {
@@ -54,6 +60,9 @@
     },
     {
       "path": "packages/reactor"
+    },
+    {
+      "path": "packages/registry"
     },
     {
       "path": "packages/renown"
@@ -95,10 +104,16 @@
       "path": "test/e2e-utils"
     },
     {
+      "path": "test/switchboard"
+    },
+    {
       "path": "test/test-client"
     },
     {
       "path": "test/test-connect"
+    },
+    {
+      "path": "test/test-subscription"
     },
     {
       "path": "test/versioned-documents"

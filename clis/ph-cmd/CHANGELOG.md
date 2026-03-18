@@ -536,7 +536,7 @@ This was a version bump only for ph-cmd to align it with other projects, there w
 ### 🚀 Features
 
 - **design-system:** default styles tweaks and DocumentStateViewer ([c0a66720c](https://github.com/powerhouse-inc/powerhouse/commit/c0a66720c))
-- **ci:** deploy staging tenant from release/staging/* branches ([8761579e7](https://github.com/powerhouse-inc/powerhouse/commit/8761579e7))
+- **ci:** deploy staging tenant from release/staging/\* branches ([8761579e7](https://github.com/powerhouse-inc/powerhouse/commit/8761579e7))
 - **ci:** add Harbor registry to docker image publishing ([f3a2fab69](https://github.com/powerhouse-inc/powerhouse/commit/f3a2fab69))
 
 ### ❤️ Thank You
@@ -2811,7 +2811,7 @@ This was a version bump only for ph-cmd to align it with other projects, there w
 - **ph-cli:** added scope to package name ([ef18ead6](https://github.com/powerhouse-inc/powerhouse/commit/ef18ead6))
 - **ph-cli:** added base ph-cli package setup ([#404](https://github.com/powerhouse-inc/powerhouse/pull/404))
 
-### ❤️  Thank You
+### ❤️ Thank You
 
 - Guillermo Puente @gpuente
 - Guillermo Puente Sandoval @gpuente

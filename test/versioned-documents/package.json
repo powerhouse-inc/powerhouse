@@ -79,10 +79,11 @@
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@tailwindcss/cli": "catalog:",
-    "tailwindcss": "catalog:",
+    "@powerhousedao/connect": "workspace:*",
+    "@powerhousedao/document-engineering": "catalog:",
     "@powerhousedao/ph-cli": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",
+    "@tailwindcss/cli": "catalog:",
     "@testing-library/jest-dom": "^6.9.1",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
@@ -91,6 +92,7 @@
     "eslint": "^9.22.0",
     "react": "catalog:",
     "react-dom": "catalog:",
+    "tailwindcss": "catalog:",
     "vite": "catalog:",
     "vitest": "catalog:"
   },

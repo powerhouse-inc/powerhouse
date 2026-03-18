@@ -19,6 +19,7 @@ function createMockMailbox(): IMailbox {
       return 0;
     },
     init: vi.fn(),
+    advanceOrdinal: vi.fn(),
     add: vi.fn(),
     remove: vi.fn(),
     get: vi.fn(),
@@ -38,6 +39,15 @@ function createMockChannel(): IChannel {
     deadLetter: createMockMailbox(),
     init: vi.fn().mockResolvedValue(undefined),
     shutdown: vi.fn().mockResolvedValue(undefined),
+    getConnectionState: vi.fn().mockReturnValue({
+      state: "connected",
+      failureCount: 0,
+      lastSuccessUtcMs: 0,
+      lastFailureUtcMs: 0,
+      pushBlocked: false,
+      pushFailureCount: 0,
+    }),
+    onConnectionStateChange: vi.fn().mockReturnValue(() => {}),
   };
 }
 

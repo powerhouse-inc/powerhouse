@@ -1,7 +1,8 @@
 import type { ILogger } from "../../logging/types.js";
 import type { ISyncCursorStorage } from "../../storage/interfaces.js";
-import type { IChannel } from "../interfaces.js";
+import type { ConnectionStateChangeCallback, IChannel } from "../interfaces.js";
 import { Mailbox } from "../mailbox.js";
+import type { ConnectionState, ConnectionStateSnapshot } from "../types.js";
 import { getLatestAppliedOrdinal } from "./utils.js";
 
 /**
@@ -20,6 +21,9 @@ export class GqlResponseChannel implements IChannel {
   private isShutdown: boolean;
   private lastPersistedInboxOrdinal: number = 0;
   private lastPersistedOutboxOrdinal: number = 0;
+  private connectionState: ConnectionState = "connecting";
+  private readonly connectionStateCallbacks: Set<ConnectionStateChangeCallback> =
+    new Set();
 
   constructor(
     private readonly logger: ILogger,
@@ -84,7 +88,42 @@ export class GqlResponseChannel implements IChannel {
 
   shutdown(): Promise<void> {
     this.isShutdown = true;
+    this.transitionConnectionState("disconnected");
     return Promise.resolve();
+  }
+
+  getConnectionState(): ConnectionStateSnapshot {
+    return {
+      state: this.connectionState,
+      failureCount: 0,
+      lastSuccessUtcMs: 0,
+      lastFailureUtcMs: 0,
+      pushBlocked: false,
+      pushFailureCount: 0,
+    };
+  }
+
+  onConnectionStateChange(callback: ConnectionStateChangeCallback): () => void {
+    this.connectionStateCallbacks.add(callback);
+    return () => {
+      this.connectionStateCallbacks.delete(callback);
+    };
+  }
+
+  private transitionConnectionState(next: ConnectionState): void {
+    if (this.connectionState === next) return;
+    this.connectionState = next;
+    const snapshot = this.getConnectionState();
+    for (const callback of this.connectionStateCallbacks) {
+      try {
+        callback(snapshot);
+      } catch (error) {
+        this.logger.error(
+          "Connection state change callback error: @Error",
+          error,
+        );
+      }
+    }
   }
 
   async init(): Promise<void> {
@@ -98,5 +137,6 @@ export class GqlResponseChannel implements IChannel {
     this.outbox.init(outboxOrdinal);
     this.lastPersistedInboxOrdinal = inboxOrdinal;
     this.lastPersistedOutboxOrdinal = outboxOrdinal;
+    this.transitionConnectionState("connected");
   }
 }

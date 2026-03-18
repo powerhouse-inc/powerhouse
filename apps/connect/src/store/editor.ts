@@ -2,7 +2,6 @@ import {
   DocumentModelEditor,
   GenericDriveExplorer,
 } from "@powerhousedao/powerhouse-vetra-packages/editors";
-import "@powerhousedao/powerhouse-vetra-packages/editors/style.css";
 import type { VetraEditorModule } from "@powerhousedao/reactor-browser";
 import { DEFAULT_DRIVE_EDITOR_ID } from "@powerhousedao/reactor-browser";
 

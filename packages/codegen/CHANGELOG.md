@@ -568,7 +568,7 @@ This was a version bump only for @powerhousedao/codegen to align it with other p
 
 - **codegen:** updated document editor boilerplate ([141e67a94](https://github.com/powerhouse-inc/powerhouse/commit/141e67a94))
 - **design-system:** default styles tweaks and DocumentStateViewer ([c0a66720c](https://github.com/powerhouse-inc/powerhouse/commit/c0a66720c))
-- **ci:** deploy staging tenant from release/staging/* branches ([8761579e7](https://github.com/powerhouse-inc/powerhouse/commit/8761579e7))
+- **ci:** deploy staging tenant from release/staging/\* branches ([8761579e7](https://github.com/powerhouse-inc/powerhouse/commit/8761579e7))
 - **ci:** add Harbor registry to docker image publishing ([f3a2fab69](https://github.com/powerhouse-inc/powerhouse/commit/f3a2fab69))
 
 ### 🩹 Fixes
@@ -3023,7 +3023,7 @@ This was a version bump only for @powerhousedao/codegen to align it with other p
 - **ph-cli:** added base ph-cli package setup ([#404](https://github.com/powerhouse-inc/powerhouse/pull/404))
 - **switchboard-gui:** init ([#405](https://github.com/powerhouse-inc/powerhouse/pull/405))
 
-### ❤️  Thank You
+### ❤️ Thank You
 
 - frankp.eth @froid1911
 - Guillermo Puente Sandoval @gpuente
@@ -3039,7 +3039,7 @@ This was a version bump only for @powerhousedao/codegen to align it with other p
 
 - **codegen:** export create-lib methods ([#403](https://github.com/powerhouse-inc/powerhouse/pull/403))
 
-### ❤️  Thank You
+### ❤️ Thank You
 
 - acaldas @acaldas
 - Guillermo Puente Sandoval @gpuente
@@ -3055,7 +3055,7 @@ This was a version bump only for @powerhousedao/codegen to align it with other p
 
 - **document-model-libs:** added type annotation for createDocumentStory ([6c5441f3](https://github.com/powerhouse-inc/powerhouse/commit/6c5441f3))
 
-### ❤️  Thank You
+### ❤️ Thank You
 
 - acaldas @acaldas
 
@@ -3068,7 +3068,7 @@ This was a version bump only for @powerhousedao/codegen to align it with other p
 - **design-system:** create icon components in prepare install of postinstall ([f302d65f](https://github.com/powerhouse-inc/powerhouse/commit/f302d65f))
 - **design-system:** improve bundle size and tree shaking support ([ffb68cfc](https://github.com/powerhouse-inc/powerhouse/commit/ffb68cfc))
 
-### ❤️  Thank You
+### ❤️ Thank You
 
 - acaldas @acaldas
 - Guillermo Puente Sandoval @gpuente
@@ -3098,13 +3098,12 @@ This was a version bump only for @powerhousedao/codegen to align it with other p
 - **monorepo:** try frozen lockfile ([ea788885](https://github.com/powerhouse-inc/powerhouse/commit/ea788885))
 - **monorepo:** add missing dep ([28d487d7](https://github.com/powerhouse-inc/powerhouse/commit/28d487d7))
 
-### ❤️  Thank You
+### ❤️ Thank You
 
 - Guillermo Puente @gpuente
 - ryanwolhuter @ryanwolhuter
 
 ## 0.2.0 (2024-10-08)
-
 
 ### 🚀 Features
 
@@ -3112,19 +3111,17 @@ This was a version bump only for @powerhousedao/codegen to align it with other p
 
 - **codegen:** fixed editor folder name ([ae0e6e2c](https://github.com/powerhouse-inc/powerhouse/commit/ae0e6e2c))
 
-
-### ❤️  Thank You
+### ❤️ Thank You
 
 - acaldas @acaldas
-- 
-## 0.1.0 (2024-09-26)
+-
 
+## 0.1.0 (2024-09-26)
 
 ### 🚀 Features
 
 - **codegen:** initial codegen package setup ([0f67da6](https://github.com/powerhouse-inc/powerhouse/commit/0f67da6))
 
-
-### ❤️  Thank You
+### ❤️ Thank You
 
 - Guillermo Puente @gpuente

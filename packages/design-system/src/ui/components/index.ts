@@ -22,6 +22,7 @@ export * from "./input/splitted-input-diff.js";
 export * from "./json-viewer/json-viewer.js";
 export * from "./popover/popover.js";
 export * from "./radio-group-field/radio-group-field.js";
+export * from "./search-autocomplete/index.js";
 export * from "./radio-group-field/radio-group.js";
 export * from "./radio-group-field/radio.js";
 export * from "./select-field/content.js";

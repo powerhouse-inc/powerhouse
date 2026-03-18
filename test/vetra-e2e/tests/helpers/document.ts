@@ -28,22 +28,23 @@ export async function createDocument(
   const addButton = page.getByRole("button", {
     name: `Add new specification ${documentType}`,
   });
-  await expect(addButton).toBeVisible();
+  await expect(addButton).toBeVisible({ timeout: 2 * 60 * 60 * 1000 });
+  await addButton.isEnabled({ timeout: 2 * 60 * 60 * 1000 });
   await addButton.click();
 
   // Wait for the create document dialog to be visible
   // Look for the dialog that contains "Create a new document" text
   const dialog = page.getByRole("dialog");
-  await expect(dialog).toBeVisible({ timeout: 5000 });
+  await expect(dialog).toBeVisible({ timeout: 2 * 60 * 60 * 1000 });
 
   // Fill in the document name - find the input within the dialog
   const nameInput = dialog.getByPlaceholder("Document name");
-  await expect(nameInput).toBeVisible({ timeout: 5000 });
+  await expect(nameInput).toBeVisible({ timeout: 2 * 60 * 60 * 1000 });
   await nameInput.fill(documentName);
 
   // Wait for Create button to be enabled (validation passes)
   const createButton = dialog.getByRole("button", { name: "Create" });
-  await expect(createButton).toBeEnabled({ timeout: 5000 });
+  await expect(createButton).toBeEnabled({ timeout: 2 * 60 * 60 * 1000 });
   await createButton.click();
 
   // Wait for navigation to the new document

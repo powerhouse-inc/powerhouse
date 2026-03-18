@@ -23,6 +23,33 @@ function getBranchName(): string {
   return fromEnv;
 }
 
+function runBuild(workspaceVersion: string) {
+  const commands = [
+    ["pnpm", "build-misc"],
+    ["pnpm", "build-bundle"],
+    ["pnpm", "build-connect"],
+    ["pnpm", "build-css"],
+    ["pnpm", "build-cli"],
+  ];
+  for (const command of commands) {
+    try {
+      const buildResult = runCommandWithBun(command, {
+        WORKSPACE_VERSION: workspaceVersion,
+      });
+
+      if (buildResult.exitCode !== 0) {
+        throw new Error(
+          buildResult.stderr.toString().trim() ||
+            buildResult.stdout.toString().trim(),
+        );
+      }
+    } catch (error) {
+      console.error(`>>> BUILD FAILED: ${command.join(" ")} => ${error}`);
+      throw error;
+    }
+  }
+}
+
 /** Takes a branch name with the correct format, either:
  * main
  * release/[staging|production]/[semver]
@@ -157,7 +184,12 @@ const app = command({
 
     const releaseClient = new ReleaseClient(
       {
-        projects: ["packages/*", "packages/analytics-engine/*", "clis/*", "apps/*"],
+        projects: [
+          "packages/*",
+          "packages/analytics-engine/*",
+          "clis/*",
+          "apps/*",
+        ],
         projectsRelationship: "fixed",
         releaseTag: { pattern: "v{version}" },
         changelog: {
@@ -224,18 +256,7 @@ const app = command({
     if (!workspaceVersion)
       throw new Error("Expected workspaceVersion after releaseVersion run");
 
-    try {
-      const buildResult = runCommandWithBun(["pnpm", "build-cli"], {
-        WORKSPACE_VERSION: workspaceVersion,
-      });
-
-      if (buildResult.exitCode !== 0) {
-        throw new Error(">>> BUILD FAILED");
-      }
-    } catch (error) {
-      console.error("Building clis failed:");
-      throw error;
-    }
+    runBuild(workspaceVersion);
 
     if (!skipChangelog) {
       try {

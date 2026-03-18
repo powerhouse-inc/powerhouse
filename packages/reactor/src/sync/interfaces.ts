@@ -8,6 +8,7 @@ import type {
 } from "./sync-status-tracker.js";
 import type {
   ChannelConfig,
+  ConnectionStateSnapshot,
   RemoteFilter,
   RemoteOptions,
   SyncResult,
@@ -21,6 +22,10 @@ import type {
  * - outbox: Sync operations to be sent to the remote
  * - deadLetter: Sync operations that failed and cannot be retried
  */
+export type ConnectionStateChangeCallback = (
+  snapshot: ConnectionStateSnapshot,
+) => void;
+
 export interface IChannel {
   /**
    * Mailbox containing sync operations received from the remote that need to be applied locally.
@@ -51,6 +56,17 @@ export interface IChannel {
    * Shuts down the channel and prevents further operations.
    */
   shutdown(): Promise<void>;
+
+  /**
+   * Returns the current connection state snapshot.
+   */
+  getConnectionState(): ConnectionStateSnapshot;
+
+  /**
+   * Registers a callback that fires when the connection state changes.
+   * Returns an unsubscribe function.
+   */
+  onConnectionStateChange(callback: ConnectionStateChangeCallback): () => void;
 }
 
 /**

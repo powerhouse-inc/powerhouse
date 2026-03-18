@@ -17,6 +17,7 @@
       "Bash(git status:*)",
       "mcp__ide",
       "WebSearch",
+      "WebFetch",
       "WebFetch(domain:github.com)",
       "mcp__chrome-devtools",
       "Bash(grep:*)",
@@ -26,7 +27,9 @@
       "Bash(wc:*)",
       "Bash(npx tsc:*)",
       "Bash(npx tsx:*)",
-      "Bash(git grep:*)"
+      "Bash(git grep:*)",
+      "Bash(npx vitest:*)",
+      "WebFetch(domain:*)"
     ],
     "deny": [],
     "ask": []

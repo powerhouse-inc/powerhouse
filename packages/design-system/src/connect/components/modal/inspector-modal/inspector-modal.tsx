@@ -4,6 +4,14 @@ import type { ComponentPropsWithoutRef } from "react";
 import { twMerge } from "tailwind-merge";
 import { DBExplorer, type DBExplorerProps } from "../../db-explorer/index.js";
 import {
+  IntegrityInspector,
+  type IntegrityInspectorProps,
+} from "../../integrity-inspector/index.js";
+import {
+  ProcessorsInspector,
+  type ProcessorsInspectorProps,
+} from "../../processors-inspector/index.js";
+import {
   QueueInspector,
   type QueueInspectorProps,
 } from "../../queue-inspector/index.js";
@@ -24,7 +32,14 @@ export type InspectorModalProps = {
   readonly dbExplorerProps: DBExplorerProps;
   readonly remotesInspectorProps: RemotesInspectorProps;
   readonly queueInspectorProps?: QueueInspectorProps;
-  readonly defaultTab?: "Database" | "Remotes" | "Queue";
+  readonly processorsInspectorProps?: ProcessorsInspectorProps;
+  readonly integrityInspectorProps?: IntegrityInspectorProps;
+  readonly defaultTab?:
+    | "Database"
+    | "Remotes"
+    | "Queue"
+    | "Processors"
+    | "Integrity";
 };
 
 export function InspectorModal({
@@ -35,6 +50,8 @@ export function InspectorModal({
   dbExplorerProps,
   remotesInspectorProps,
   queueInspectorProps,
+  processorsInspectorProps,
+  integrityInspectorProps,
   defaultTab = "Database",
 }: InspectorModalProps) {
   return (
@@ -80,6 +97,20 @@ export function InspectorModal({
               <TabContent description="Queue inspector" label="Queue">
                 <div className="h-full">
                   <QueueInspector {...queueInspectorProps} />
+                </div>
+              </TabContent>
+            )}
+            {processorsInspectorProps && (
+              <TabContent description="Processors inspector" label="Processors">
+                <div className="h-full">
+                  <ProcessorsInspector {...processorsInspectorProps} />
+                </div>
+              </TabContent>
+            )}
+            {integrityInspectorProps && (
+              <TabContent description="Integrity inspector" label="Integrity">
+                <div className="h-full">
+                  <IntegrityInspector {...integrityInspectorProps} />
                 </div>
               </TabContent>
             )}

@@ -1,31 +1,21 @@
 {
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
-    "outDir": "./lib",
-    "lib": [
-      "ESNext",
-      "DOM",
-      "DOM.Iterable"
-    ],
-    "types": [
-      "node",
-      "vite/client",
-      "vite-plugin-svgr/client",
-      "@types/wicg-file-system-access",
-      "@types/bun"
-    ]
+    "outDir": "./dist",
+    "emitDeclarationOnly": false,
+    "paths": {
+      "@powerhousedao/connect/config": ["./src/connect.config.ts"],
+      "@powerhousedao/connect/package.json": [
+        "./src/utils/package-json.d.ts"
+      ],
+      "@powerhousedao/connect/assets/*": ["./assets/*"],
+      "@powerhousedao/connect/*": ["./src/*/index.ts"]
+    },
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "types": ["node", "@types/wicg-file-system-access", "@types/bun"]
   },
-  "include": [
-    "**/*",
-    "src/i18n/locales/en.json",
-    "./package.copy.json"
-  ],
-  "exclude": [
-    "dist",
-    "lib",
-    "node_modules",
-    "storybook-static"
-  ],
+  "include": ["**/*", "src/i18n/locales/en.json"],
+  "exclude": ["dist", "node_modules", "storybook-static"],
   "references": [
     {
       "path": "../../packages/builder-tools"

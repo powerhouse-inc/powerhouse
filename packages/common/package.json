@@ -41,6 +41,7 @@
   },
   "dependencies": {
     "chalk": "catalog:",
+    "cmd-ts": "catalog:",
     "document-model": "workspace:*",
     "graphql-request": "catalog:",
     "npm-package-arg": "catalog:",
@@ -49,8 +50,9 @@
     "@powerhousedao/reactor-browser": "workspace:*",
     "@powerhousedao/analytics-engine-core": "workspace:*",
     "luxon": "catalog:",
-    "zocker": "^3.0.0",
-    "document-drive": "workspace:"
+    "read-pkg": "catalog:",
+    "semver": "catalog:",
+    "zocker": "^3.0.0"
   },
   "devDependencies": {
     "@powerhousedao/config": "workspace:*",
@@ -58,7 +60,6 @@
     "@types/luxon": "catalog:",
     "@types/npm-package-arg": "catalog:",
     "@types/wicg-file-system-access": "^2020.9.6",
-    "cmd-ts": "catalog:",
     "document-model": "workspace:*",
     "package-manager-detector": "catalog:",
     "vitest": "catalog:",

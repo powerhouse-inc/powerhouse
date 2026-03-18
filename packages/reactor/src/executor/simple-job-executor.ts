@@ -23,6 +23,8 @@ import type { SignatureVerificationHandler } from "../signer/types.js";
 import type { IOperationStore } from "../storage/interfaces.js";
 import { reshuffleByTimestamp } from "../utils/reshuffle.js";
 import { DocumentActionHandler } from "./document-action-handler.js";
+import type { ExecutionStores, IExecutionScope } from "./execution-scope.js";
+import { DefaultExecutionScope } from "./execution-scope.js";
 import type { IJobExecutor } from "./interfaces.js";
 import { SignatureVerifier } from "./signature-verifier.js";
 import type { JobExecutorConfig, JobResult } from "./types.js";
@@ -52,6 +54,7 @@ export class SimpleJobExecutor implements IJobExecutor {
   private config: Required<JobExecutorConfig>;
   private signatureVerifierModule: SignatureVerifier;
   private documentActionHandler: DocumentActionHandler;
+  private executionScope: IExecutionScope;
 
   constructor(
     private logger: ILogger,
@@ -64,6 +67,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     private collectionMembershipCache: ICollectionMembershipCache,
     config: JobExecutorConfig,
     signatureVerifier?: SignatureVerificationHandler,
+    executionScope?: IExecutionScope,
   ) {
     this.config = {
       maxSkipThreshold: config.maxSkipThreshold ?? MAX_SKIP_THRESHOLD,
@@ -73,116 +77,169 @@ export class SimpleJobExecutor implements IJobExecutor {
       retryMaxDelayMs: config.retryMaxDelayMs ?? 5000,
     };
     this.signatureVerifierModule = new SignatureVerifier(signatureVerifier);
-    this.documentActionHandler = new DocumentActionHandler(
-      writeCache,
-      operationStore,
-      documentMetaCache,
-      collectionMembershipCache,
-      registry,
-      logger,
-    );
+    this.documentActionHandler = new DocumentActionHandler(registry, logger);
+    this.executionScope =
+      executionScope ??
+      new DefaultExecutionScope(
+        operationStore,
+        operationIndex,
+        writeCache,
+        documentMetaCache,
+        collectionMembershipCache,
+      );
   }
 
   /**
    * Execute a single job by applying all its actions through the appropriate reducers.
    * Actions are processed sequentially in order.
    */
-  async executeJob(job: Job): Promise<JobResult> {
+  async executeJob(job: Job, signal?: AbortSignal): Promise<JobResult> {
     const startTime = Date.now();
-    const indexTxn = this.operationIndex.start();
 
-    if (job.kind === "load") {
-      const result = await this.executeLoadJob(job, startTime, indexTxn);
-      if (result.success && result.operationsWithContext) {
-        const ordinals = await this.operationIndex.commit(indexTxn);
+    // Track document IDs touched during execution for cache invalidation on rollback
+    const touchedCacheEntries: Array<{
+      documentId: string;
+      scope: string;
+      branch: string;
+    }> = [];
 
-        for (let i = 0; i < result.operationsWithContext.length; i++) {
-          result.operationsWithContext[i].context.ordinal = ordinals[i];
-        }
-        const collectionMemberships =
-          result.operationsWithContext.length > 0
-            ? await this.getCollectionMembershipsForOperations(
-                result.operationsWithContext,
-              )
-            : {};
-        const event: JobWriteReadyEvent = {
-          jobId: job.id,
-          operations: result.operationsWithContext,
-          jobMeta: job.meta,
-          collectionMemberships,
-        };
-        this.eventBus
-          .emit(ReactorEventTypes.JOB_WRITE_READY, event)
-          .catch((error) => {
-            this.logger.error(
-              "Failed to emit JOB_WRITE_READY event: @Event : @Error",
-              event,
-              error,
+    let pendingEvent: JobWriteReadyEvent | undefined;
+    let result: JobResult;
+    try {
+      result = await this.executionScope.run(async (stores) => {
+        const indexTxn = stores.operationIndex.start();
+
+        if (job.kind === "load") {
+          const loadResult = await this.executeLoadJob(
+            job,
+            startTime,
+            indexTxn,
+            stores,
+            signal,
+          );
+          if (loadResult.success && loadResult.operationsWithContext) {
+            for (const owc of loadResult.operationsWithContext) {
+              touchedCacheEntries.push({
+                documentId: owc.context.documentId,
+                scope: owc.context.scope,
+                branch: owc.context.branch,
+              });
+            }
+
+            const ordinals = await stores.operationIndex.commit(
+              indexTxn,
+              signal,
             );
-          });
-      }
-      return result;
-    }
 
-    const result = await this.processActions(
-      job,
-      job.actions,
-      startTime,
-      indexTxn,
-    );
+            for (let i = 0; i < loadResult.operationsWithContext.length; i++) {
+              loadResult.operationsWithContext[i].context.ordinal = ordinals[i];
+            }
+            const collectionMemberships =
+              loadResult.operationsWithContext.length > 0
+                ? await this.getCollectionMembershipsForOperations(
+                    loadResult.operationsWithContext,
+                    stores,
+                  )
+                : {};
+            pendingEvent = {
+              jobId: job.id,
+              operations: loadResult.operationsWithContext,
+              jobMeta: job.meta,
+              collectionMemberships,
+            };
+          }
+          return loadResult;
+        }
 
-    if (!result.success) {
-      return {
-        job,
-        success: false,
-        error: result.error,
-        duration: Date.now() - startTime,
-      };
-    }
-
-    const ordinals = await this.operationIndex.commit(indexTxn);
-
-    if (result.operationsWithContext.length > 0) {
-      for (let i = 0; i < result.operationsWithContext.length; i++) {
-        result.operationsWithContext[i].context.ordinal = ordinals[i];
-      }
-      const collectionMemberships =
-        await this.getCollectionMembershipsForOperations(
-          result.operationsWithContext,
+        const actionResult = await this.processActions(
+          job,
+          job.actions,
+          startTime,
+          indexTxn,
+          stores,
+          undefined,
+          undefined,
+          "",
+          signal,
         );
-      const event: JobWriteReadyEvent = {
-        jobId: job.id,
-        operations: result.operationsWithContext,
-        jobMeta: job.meta,
-        collectionMemberships,
-      };
+
+        if (!actionResult.success) {
+          return {
+            job,
+            success: false as const,
+            error: actionResult.error,
+            duration: Date.now() - startTime,
+          };
+        }
+
+        if (actionResult.operationsWithContext.length > 0) {
+          for (const owc of actionResult.operationsWithContext) {
+            touchedCacheEntries.push({
+              documentId: owc.context.documentId,
+              scope: owc.context.scope,
+              branch: owc.context.branch,
+            });
+          }
+        }
+
+        const ordinals = await stores.operationIndex.commit(indexTxn, signal);
+
+        if (actionResult.operationsWithContext.length > 0) {
+          for (let i = 0; i < actionResult.operationsWithContext.length; i++) {
+            actionResult.operationsWithContext[i].context.ordinal = ordinals[i];
+          }
+          const collectionMemberships =
+            await this.getCollectionMembershipsForOperations(
+              actionResult.operationsWithContext,
+              stores,
+            );
+          pendingEvent = {
+            jobId: job.id,
+            operations: actionResult.operationsWithContext,
+            jobMeta: job.meta,
+            collectionMemberships,
+          };
+        }
+
+        return {
+          job,
+          success: true as const,
+          operations: actionResult.generatedOperations,
+          operationsWithContext: actionResult.operationsWithContext,
+          duration: Date.now() - startTime,
+        };
+      }, signal);
+    } catch (error) {
+      for (const entry of touchedCacheEntries) {
+        this.writeCache.invalidate(entry.documentId, entry.scope, entry.branch);
+        this.documentMetaCache.invalidate(entry.documentId, entry.branch);
+      }
+      throw error;
+    }
+
+    if (pendingEvent) {
       this.eventBus
-        .emit(ReactorEventTypes.JOB_WRITE_READY, event)
+        .emit(ReactorEventTypes.JOB_WRITE_READY, pendingEvent)
         .catch((error) => {
           this.logger.error(
             "Failed to emit JOB_WRITE_READY event: @Event : @Error",
-            event,
+            pendingEvent,
             error,
           );
         });
     }
 
-    return {
-      job,
-      success: true,
-      operations: result.generatedOperations,
-      operationsWithContext: result.operationsWithContext,
-      duration: Date.now() - startTime,
-    };
+    return result;
   }
 
   private async getCollectionMembershipsForOperations(
     operations: OperationWithContext[],
+    stores: ExecutionStores,
   ): Promise<Record<string, string[]>> {
     const documentIds = [
       ...new Set(operations.map((op) => op.context.documentId)),
     ];
-    return this.collectionMembershipCache.getCollectionsForDocuments(
+    return stores.collectionMembershipCache.getCollectionsForDocuments(
       documentIds,
     );
   }
@@ -192,9 +249,11 @@ export class SimpleJobExecutor implements IJobExecutor {
     actions: Action[],
     startTime: number,
     indexTxn: IOperationIndexTxn,
+    stores: ExecutionStores,
     skipValues?: number[],
     sourceOperations?: (Operation | undefined)[],
     sourceRemote: string = "",
+    signal?: AbortSignal,
   ): Promise<ProcessActionsResult> {
     const generatedOperations: Operation[] = [];
     const operationsWithContext: OperationWithContext[] = [];
@@ -226,17 +285,21 @@ export class SimpleJobExecutor implements IJobExecutor {
             action,
             startTime,
             indexTxn,
+            stores,
             skip,
             sourceRemote,
+            signal,
           )
         : await this.executeRegularAction(
             job,
             action,
             startTime,
             indexTxn,
+            stores,
             skip,
             sourceOperation,
             sourceRemote,
+            signal,
           );
 
       const error = this.accumulateResultOrReturnError(
@@ -266,9 +329,11 @@ export class SimpleJobExecutor implements IJobExecutor {
     action: Action,
     startTime: number,
     indexTxn: IOperationIndexTxn,
+    stores: ExecutionStores,
     skip: number = 0,
     sourceOperation?: Operation,
     sourceRemote: string = "",
+    signal?: AbortSignal,
   ): Promise<
     JobResult & {
       operationsWithContext?: Array<{
@@ -284,9 +349,10 @@ export class SimpleJobExecutor implements IJobExecutor {
   > {
     let docMeta;
     try {
-      docMeta = await this.documentMetaCache.getDocumentMeta(
+      docMeta = await stores.documentMetaCache.getDocumentMeta(
         job.documentId,
         job.branch,
+        signal,
       );
     } catch (error) {
       return buildErrorResult(
@@ -314,15 +380,17 @@ export class SimpleJobExecutor implements IJobExecutor {
       action.type === "PRUNE" ||
       (action.type === "NOOP" && skip > 0)
     ) {
-      this.writeCache.invalidate(job.documentId, job.scope, job.branch);
+      stores.writeCache.invalidate(job.documentId, job.scope, job.branch);
     }
 
     let document: PHDocument;
     try {
-      document = await this.writeCache.getState(
+      document = await stores.writeCache.getState(
         job.documentId,
         job.scope,
         job.branch,
+        undefined,
+        signal,
       );
     } catch (error) {
       return buildErrorResult(
@@ -398,7 +466,7 @@ export class SimpleJobExecutor implements IJobExecutor {
     });
 
     try {
-      await this.operationStore.apply(
+      await stores.operationStore.apply(
         job.documentId,
         document.header.documentType,
         scope,
@@ -407,6 +475,7 @@ export class SimpleJobExecutor implements IJobExecutor {
         (txn) => {
           txn.addOperations(newOperation);
         },
+        signal,
       );
     } catch (error) {
       this.logger.error(
@@ -415,7 +484,7 @@ export class SimpleJobExecutor implements IJobExecutor {
         error,
       );
 
-      this.writeCache.invalidate(job.documentId, scope, job.branch);
+      stores.writeCache.invalidate(job.documentId, scope, job.branch);
 
       return {
         job,
@@ -432,7 +501,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       [scope]: newOperation.index + 1,
     };
 
-    this.writeCache.putState(
+    stores.writeCache.putState(
       job.documentId,
       scope,
       job.branch,
@@ -476,6 +545,8 @@ export class SimpleJobExecutor implements IJobExecutor {
     job: Job,
     startTime: number,
     indexTxn: IOperationIndexTxn,
+    stores: ExecutionStores,
+    signal?: AbortSignal,
   ): Promise<JobResult> {
     if (job.operations.length === 0) {
       return buildErrorResult(
@@ -487,12 +558,13 @@ export class SimpleJobExecutor implements IJobExecutor {
 
     let docMeta;
     try {
-      docMeta = await this.documentMetaCache.getDocumentMeta(
+      docMeta = await stores.documentMetaCache.getDocumentMeta(
         job.documentId,
         job.branch,
+        signal,
       );
     } catch {
-      // Document meta not found — continue with load (may be a new document)
+      // Document meta not found -- continue with load (may be a new document)
     }
 
     if (docMeta?.state.isDeleted) {
@@ -507,9 +579,10 @@ export class SimpleJobExecutor implements IJobExecutor {
 
     let latestRevision = 0;
     try {
-      const revisions = await this.operationStore.getRevisions(
+      const revisions = await stores.operationStore.getRevisions(
         job.documentId,
         job.branch,
+        signal,
       );
       latestRevision = revisions.revision[scope] ?? 0;
     } catch {
@@ -528,11 +601,13 @@ export class SimpleJobExecutor implements IJobExecutor {
 
     let conflictingOps: Operation[] = [];
     try {
-      const conflictingResult = await this.operationStore.getConflicting(
+      const conflictingResult = await stores.operationStore.getConflicting(
         job.documentId,
         scope,
         job.branch,
         minIncomingTimestamp,
+        undefined,
+        signal,
       );
 
       conflictingOps = conflictingResult.results;
@@ -546,11 +621,14 @@ export class SimpleJobExecutor implements IJobExecutor {
         ...conflictingOps.map((op) => op.index),
       );
       try {
-        const allOpsResult = await this.operationStore.getSince(
+        const allOpsResult = await stores.operationStore.getSince(
           job.documentId,
           scope,
           job.branch,
           minConflictingIndex - 1,
+          undefined,
+          undefined,
+          signal,
         );
         allOpsFromMinConflictingIndex = allOpsResult.results;
       } catch {
@@ -638,9 +716,11 @@ export class SimpleJobExecutor implements IJobExecutor {
       actions,
       startTime,
       indexTxn,
+      stores,
       skipValues,
       reshuffledOperations,
       effectiveSourceRemote,
+      signal,
     );
 
     if (!result.success) {
@@ -652,10 +732,10 @@ export class SimpleJobExecutor implements IJobExecutor {
       };
     }
 
-    this.writeCache.invalidate(job.documentId, scope, job.branch);
+    stores.writeCache.invalidate(job.documentId, scope, job.branch);
 
     if (scope === "document") {
-      this.documentMetaCache.invalidate(job.documentId, job.branch);
+      stores.documentMetaCache.invalidate(job.documentId, job.branch);
     }
 
     return {

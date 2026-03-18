@@ -1,4 +1,8 @@
-import { Analytics, Router } from "@powerhousedao/connect/components";
+import {
+  Analytics,
+  PackageInstallPrompt,
+  Router,
+} from "@powerhousedao/connect/components";
 
 import {
   ProcessorManagerProvider,
@@ -41,6 +45,7 @@ export const App = () => {
       <WagmiContext>
         <ProcessorManagerProvider>
           <ToastContainer position="bottom-right" containerId="connect" />
+          <PackageInstallPrompt />
           <Router />
           <Analytics />
         </ProcessorManagerProvider>

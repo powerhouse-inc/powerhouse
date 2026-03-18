@@ -521,7 +521,7 @@ This was a version bump only for @powerhousedao/switchboard-gui to align it with
 ### 🚀 Features
 
 - **design-system:** default styles tweaks and DocumentStateViewer ([c0a66720c](https://github.com/powerhouse-inc/powerhouse/commit/c0a66720c))
-- **ci:** deploy staging tenant from release/staging/* branches ([8761579e7](https://github.com/powerhouse-inc/powerhouse/commit/8761579e7))
+- **ci:** deploy staging tenant from release/staging/\* branches ([8761579e7](https://github.com/powerhouse-inc/powerhouse/commit/8761579e7))
 - **ci:** add Harbor registry to docker image publishing ([f3a2fab69](https://github.com/powerhouse-inc/powerhouse/commit/f3a2fab69))
 
 ### ❤️ Thank You
@@ -3387,7 +3387,7 @@ This was a version bump only for @powerhousedao/switchboard-gui to align it with
 - **document-model-libs:** regenerate lockfile ([cf76e91d](https://github.com/powerhouse-inc/powerhouse/commit/cf76e91d))
 - **document-model-libs:** address initial QA feedback ([7513155e](https://github.com/powerhouse-inc/powerhouse/commit/7513155e))
 
-### ❤️  Thank You
+### ❤️ Thank You
 
 - ryanwolhuter @ryanwolhuter
 
@@ -3404,7 +3404,7 @@ This was a version bump only for @powerhousedao/switchboard-gui to align it with
 - bad package reference was breaking build -- also a readme update ([4121e51b](https://github.com/powerhouse-inc/powerhouse/commit/4121e51b))
 - **switchboard:** startup ([#469](https://github.com/powerhouse-inc/powerhouse/pull/469))
 
-### ❤️  Thank You
+### ❤️ Thank You
 
 - acaldas @acaldas
 - Benjamin Jordan
@@ -3416,7 +3416,7 @@ This was a version bump only for @powerhousedao/switchboard-gui to align it with
 
 - **switchboard-gui:** updated gitignore ([1fd60a3b](https://github.com/powerhouse-inc/powerhouse/commit/1fd60a3b))
 
-### ❤️  Thank You
+### ❤️ Thank You
 
 - Guillermo Puente @gpuente
 
@@ -3437,7 +3437,7 @@ This was a version bump only for @powerhousedao/switchboard-gui to align it with
 - **ph-cli:** Support for dev and generate command ([#406](https://github.com/powerhouse-inc/powerhouse/pull/406))
 - **ph-cli:** added base ph-cli package setup ([#404](https://github.com/powerhouse-inc/powerhouse/pull/404))
 
-### ❤️  Thank You
+### ❤️ Thank You
 
 - acaldas
 - Guillermo Puente Sandoval @gpuente

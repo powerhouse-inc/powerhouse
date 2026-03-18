@@ -186,7 +186,7 @@ export type Mutation = {
   readonly pushSyncEnvelopes: Scalars["Boolean"]["output"];
   readonly removeChildren: PhDocument;
   readonly renameDocument: PhDocument;
-  readonly touchChannel: Scalars["Boolean"]["output"];
+  readonly touchChannel: TouchChannelResult;
 };
 
 export type MutationAddChildrenArgs = {
@@ -307,6 +307,7 @@ export type PhDocument = {
   readonly lastModifiedAtUtcIso: Scalars["DateTime"]["output"];
   readonly name: Scalars["String"]["output"];
   readonly operations?: Maybe<ReactorOperationResultPage>;
+  readonly preferredEditor?: Maybe<Scalars["String"]["output"]>;
   readonly revisionsList: ReadonlyArray<Revision>;
   readonly slug?: Maybe<Scalars["String"]["output"]>;
   readonly state: Scalars["JSONObject"]["output"];
@@ -522,6 +523,11 @@ export type TouchChannelInput = {
   readonly sinceTimestampUtcMs: Scalars["String"]["input"];
 };
 
+export type TouchChannelResult = {
+  readonly ackOrdinal: Scalars["Int"]["output"];
+  readonly success: Scalars["Boolean"]["output"];
+};
+
 export type ViewFilterInput = {
   readonly branch?: InputMaybe<Scalars["String"]["input"]>;
   readonly scopes?: InputMaybe<ReadonlyArray<Scalars["String"]["input"]>>;
@@ -579,6 +585,95 @@ export type GetDocumentQuery = {
           readonly state: NonNullable<unknown>;
           readonly createdAtUtcIso: string | Date;
           readonly lastModifiedAtUtcIso: string | Date;
+          readonly revisionsList: ReadonlyArray<{
+            readonly scope: string;
+            readonly revision: number;
+          }>;
+        };
+      }
+    | null
+    | undefined;
+};
+
+export type GetDocumentWithOperationsQueryVariables = Exact<{
+  identifier: Scalars["String"]["input"];
+  view?: InputMaybe<ViewFilterInput>;
+  operationsFilter?: InputMaybe<DocumentOperationsFilterInput>;
+  operationsPaging?: InputMaybe<PagingInput>;
+}>;
+
+export type GetDocumentWithOperationsQuery = {
+  readonly document?:
+    | {
+        readonly childIds: ReadonlyArray<string>;
+        readonly document: {
+          readonly id: string;
+          readonly slug?: string | null | undefined;
+          readonly name: string;
+          readonly documentType: string;
+          readonly state: NonNullable<unknown>;
+          readonly createdAtUtcIso: string | Date;
+          readonly lastModifiedAtUtcIso: string | Date;
+          readonly operations?:
+            | {
+                readonly totalCount: number;
+                readonly hasNextPage: boolean;
+                readonly hasPreviousPage: boolean;
+                readonly cursor?: string | null | undefined;
+                readonly items: ReadonlyArray<{
+                  readonly index: number;
+                  readonly timestampUtcMs: string;
+                  readonly hash: string;
+                  readonly skip: number;
+                  readonly error?: string | null | undefined;
+                  readonly id?: string | null | undefined;
+                  readonly action: {
+                    readonly id: string;
+                    readonly type: string;
+                    readonly timestampUtcMs: string;
+                    readonly input: NonNullable<unknown>;
+                    readonly scope: string;
+                    readonly attachments?:
+                      | ReadonlyArray<{
+                          readonly data: string;
+                          readonly mimeType: string;
+                          readonly hash: string;
+                          readonly extension?: string | null | undefined;
+                          readonly fileName?: string | null | undefined;
+                        }>
+                      | null
+                      | undefined;
+                    readonly context?:
+                      | {
+                          readonly signer?:
+                            | {
+                                readonly signatures: ReadonlyArray<string>;
+                                readonly user?:
+                                  | {
+                                      readonly address: string;
+                                      readonly networkId: string;
+                                      readonly chainId: number;
+                                    }
+                                  | null
+                                  | undefined;
+                                readonly app?:
+                                  | {
+                                      readonly name: string;
+                                      readonly key: string;
+                                    }
+                                  | null
+                                  | undefined;
+                              }
+                            | null
+                            | undefined;
+                        }
+                      | null
+                      | undefined;
+                  };
+                }>;
+              }
+            | null
+            | undefined;
           readonly revisionsList: ReadonlyArray<{
             readonly scope: string;
             readonly revision: number;
@@ -669,6 +764,68 @@ export type FindDocumentsQuery = {
         readonly scope: string;
         readonly revision: number;
       }>;
+    }>;
+  };
+};
+
+export type GetDocumentOperationsQueryVariables = Exact<{
+  filter: OperationsFilterInput;
+  paging?: InputMaybe<PagingInput>;
+}>;
+
+export type GetDocumentOperationsQuery = {
+  readonly documentOperations: {
+    readonly totalCount: number;
+    readonly hasNextPage: boolean;
+    readonly hasPreviousPage: boolean;
+    readonly cursor?: string | null | undefined;
+    readonly items: ReadonlyArray<{
+      readonly index: number;
+      readonly timestampUtcMs: string;
+      readonly hash: string;
+      readonly skip: number;
+      readonly error?: string | null | undefined;
+      readonly id?: string | null | undefined;
+      readonly action: {
+        readonly id: string;
+        readonly type: string;
+        readonly timestampUtcMs: string;
+        readonly input: NonNullable<unknown>;
+        readonly scope: string;
+        readonly attachments?:
+          | ReadonlyArray<{
+              readonly data: string;
+              readonly mimeType: string;
+              readonly hash: string;
+              readonly extension?: string | null | undefined;
+              readonly fileName?: string | null | undefined;
+            }>
+          | null
+          | undefined;
+        readonly context?:
+          | {
+              readonly signer?:
+                | {
+                    readonly signatures: ReadonlyArray<string>;
+                    readonly user?:
+                      | {
+                          readonly address: string;
+                          readonly networkId: string;
+                          readonly chainId: number;
+                        }
+                      | null
+                      | undefined;
+                    readonly app?:
+                      | { readonly name: string; readonly key: string }
+                      | null
+                      | undefined;
+                  }
+                | null
+                | undefined;
+            }
+          | null
+          | undefined;
+      };
     }>;
   };
 };
@@ -1020,7 +1177,12 @@ export type TouchChannelMutationVariables = Exact<{
   input: TouchChannelInput;
 }>;
 
-export type TouchChannelMutation = { readonly touchChannel: boolean };
+export type TouchChannelMutation = {
+  readonly touchChannel: {
+    readonly success: boolean;
+    readonly ackOrdinal: number;
+  };
+};
 
 export type PushSyncEnvelopesMutationVariables = Exact<{
   envelopes: ReadonlyArray<SyncEnvelopeInput>;
@@ -1205,6 +1367,7 @@ export type ResolversTypes = ResolversObject<{
   SyncEnvelopeInput: SyncEnvelopeInput;
   SyncEnvelopeType: SyncEnvelopeType;
   TouchChannelInput: TouchChannelInput;
+  TouchChannelResult: ResolverTypeWrapper<TouchChannelResult>;
   ViewFilterInput: ViewFilterInput;
 }>;
 
@@ -1262,6 +1425,7 @@ export type ResolversParentTypes = ResolversObject<{
   SyncEnvelope: SyncEnvelope;
   SyncEnvelopeInput: SyncEnvelopeInput;
   TouchChannelInput: TouchChannelInput;
+  TouchChannelResult: TouchChannelResult;
   ViewFilterInput: ViewFilterInput;
 }>;
 
@@ -1561,7 +1725,7 @@ export type MutationResolvers<
     RequireFields<MutationRenameDocumentArgs, "documentIdentifier" | "name">
   >;
   touchChannel?: Resolver<
-    ResolversTypes["Boolean"],
+    ResolversTypes["TouchChannelResult"],
     ParentType,
     ContextType,
     RequireFields<MutationTouchChannelArgs, "input">
@@ -1620,6 +1784,11 @@ export type PhDocumentResolvers<
     ParentType,
     ContextType,
     Partial<PhDocumentOperationsArgs>
+  >;
+  preferredEditor?: Resolver<
+    Maybe<ResolversTypes["String"]>,
+    ParentType,
+    ContextType
   >;
   revisionsList?: Resolver<
     ReadonlyArray<ResolversTypes["Revision"]>,
@@ -1874,6 +2043,15 @@ export type SyncEnvelopeResolvers<
   type?: Resolver<ResolversTypes["SyncEnvelopeType"], ParentType, ContextType>;
 }>;
 
+export type TouchChannelResultResolvers<
+  ContextType = Context,
+  ParentType extends ResolversParentTypes["TouchChannelResult"] =
+    ResolversParentTypes["TouchChannelResult"],
+> = ResolversObject<{
+  ackOrdinal?: Resolver<ResolversTypes["Int"], ParentType, ContextType>;
+  success?: Resolver<ResolversTypes["Boolean"], ParentType, ContextType>;
+}>;
+
 export type Resolvers<ContextType = Context> = ResolversObject<{
   Action?: ActionResolvers<ContextType>;
   ActionContext?: ActionContextResolvers<ContextType>;
@@ -1906,6 +2084,7 @@ export type Resolvers<ContextType = Context> = ResolversObject<{
   Revision?: RevisionResolvers<ContextType>;
   Subscription?: SubscriptionResolvers<ContextType>;
   SyncEnvelope?: SyncEnvelopeResolvers<ContextType>;
+  TouchChannelResult?: TouchChannelResultResolvers<ContextType>;
 }>;
 
 type Properties<T> = Required<{
@@ -2175,6 +2354,64 @@ export const GetDocumentDocument = gql`
   }
   ${PhDocumentFieldsFragmentDoc}
 `;
+export const GetDocumentWithOperationsDocument = gql`
+  query GetDocumentWithOperations(
+    $identifier: String!
+    $view: ViewFilterInput
+    $operationsFilter: DocumentOperationsFilterInput
+    $operationsPaging: PagingInput
+  ) {
+    document(identifier: $identifier, view: $view) {
+      document {
+        ...PHDocumentFields
+        operations(filter: $operationsFilter, paging: $operationsPaging) {
+          items {
+            index
+            timestampUtcMs
+            hash
+            skip
+            error
+            id
+            action {
+              id
+              type
+              timestampUtcMs
+              input
+              scope
+              attachments {
+                data
+                mimeType
+                hash
+                extension
+                fileName
+              }
+              context {
+                signer {
+                  user {
+                    address
+                    networkId
+                    chainId
+                  }
+                  app {
+                    name
+                    key
+                  }
+                  signatures
+                }
+              }
+            }
+          }
+          totalCount
+          hasNextPage
+          hasPreviousPage
+          cursor
+        }
+      }
+      childIds
+    }
+  }
+  ${PhDocumentFieldsFragmentDoc}
+`;
 export const GetDocumentChildrenDocument = gql`
   query GetDocumentChildren(
     $parentIdentifier: String!
@@ -2236,6 +2473,55 @@ export const FindDocumentsDocument = gql`
     }
   }
   ${PhDocumentFieldsFragmentDoc}
+`;
+export const GetDocumentOperationsDocument = gql`
+  query GetDocumentOperations(
+    $filter: OperationsFilterInput!
+    $paging: PagingInput
+  ) {
+    documentOperations(filter: $filter, paging: $paging) {
+      items {
+        index
+        timestampUtcMs
+        hash
+        skip
+        error
+        id
+        action {
+          id
+          type
+          timestampUtcMs
+          input
+          scope
+          attachments {
+            data
+            mimeType
+            hash
+            extension
+            fileName
+          }
+          context {
+            signer {
+              user {
+                address
+                networkId
+                chainId
+              }
+              app {
+                name
+                key
+              }
+              signatures
+            }
+          }
+        }
+      }
+      totalCount
+      hasNextPage
+      hasPreviousPage
+      cursor
+    }
+  }
 `;
 export const GetJobStatusDocument = gql`
   query GetJobStatus($jobId: String!) {
@@ -2490,7 +2776,10 @@ export const PollSyncEnvelopesDocument = gql`
 `;
 export const TouchChannelDocument = gql`
   mutation TouchChannel($input: TouchChannelInput!) {
-    touchChannel(input: $input)
+    touchChannel(input: $input) {
+      success
+      ackOrdinal
+    }
   }
 `;
 export const PushSyncEnvelopesDocument = gql`
@@ -2524,6 +2813,19 @@ export function getSdk<C>(requester: Requester<C>) {
         variables,
         options,
       ) as Promise<GetDocumentQuery>;
+    },
+    GetDocumentWithOperations(
+      variables: GetDocumentWithOperationsQueryVariables,
+      options?: C,
+    ): Promise<GetDocumentWithOperationsQuery> {
+      return requester<
+        GetDocumentWithOperationsQuery,
+        GetDocumentWithOperationsQueryVariables
+      >(
+        GetDocumentWithOperationsDocument,
+        variables,
+        options,
+      ) as Promise<GetDocumentWithOperationsQuery>;
     },
     GetDocumentChildren(
       variables: GetDocumentChildrenQueryVariables,
@@ -2560,6 +2862,19 @@ export function getSdk<C>(requester: Requester<C>) {
         variables,
         options,
       ) as Promise<FindDocumentsQuery>;
+    },
+    GetDocumentOperations(
+      variables: GetDocumentOperationsQueryVariables,
+      options?: C,
+    ): Promise<GetDocumentOperationsQuery> {
+      return requester<
+        GetDocumentOperationsQuery,
+        GetDocumentOperationsQueryVariables
+      >(
+        GetDocumentOperationsDocument,
+        variables,
+        options,
+      ) as Promise<GetDocumentOperationsQuery>;
     },
     GetJobStatus(
       variables: GetJobStatusQueryVariables,

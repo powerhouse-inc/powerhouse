@@ -13,8 +13,16 @@ env:
   HARBOR_REGISTRY: cr.vetra.io
 
 jobs:
-  academy:
+  build:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: registry
+            context: ./packages/registry
+          - image: academy
+            context: ./apps/academy
     outputs:
       tag: ${{ steps.get-tag.outputs.tag }}
     steps:
@@ -28,8 +36,14 @@ jobs:
           TAG=$(git for-each-ref --sort=creatordate --format '%(tag)' refs/tags | tail -n 1)
           echo "GITHUB_TAG=$TAG" >> $GITHUB_ENV
           echo "tag=$TAG" >> $GITHUB_OUTPUT
-      - name: Set Harbor project name
-        run: echo "HARBOR_PROJECT=${GITHUB_REPOSITORY//\//-}" >> $GITHUB_ENV
+      - name: Set image paths
+        run: |
+          HARBOR_PROJECT="${GITHUB_REPOSITORY//\//-}"
+          if [ "${{ matrix.image }}" = "academy" ]; then
+            echo "HARBOR_PATH=academy/academy" >> $GITHUB_ENV
+          else
+            echo "HARBOR_PATH=${HARBOR_PROJECT}/${{ matrix.image }}" >> $GITHUB_ENV
+          fi
       - name: Determine additional tag
         run: |
           if [[ "${{ env.GITHUB_TAG }}" == *"-dev."* ]]; then
@@ -61,28 +75,27 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
-          context: ./apps/academy
+          context: ${{ matrix.context }}
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ github.repository }}/academy:${{ env.GITHUB_TAG }}
-            ${{ env.REGISTRY }}/${{ github.repository }}/academy:${{ env.ADDITIONAL_TAG }}
-            ${{ env.HARBOR_REGISTRY }}/academy/academy:${{ env.GITHUB_TAG }}
-            ${{ env.HARBOR_REGISTRY }}/academy/academy:${{ env.ADDITIONAL_TAG }}
+            ${{ env.REGISTRY }}/${{ github.repository }}/${{ matrix.image }}:${{ env.GITHUB_TAG }}
+            ${{ env.REGISTRY }}/${{ github.repository }}/${{ matrix.image }}:${{ env.ADDITIONAL_TAG }}
+            ${{ env.HARBOR_REGISTRY }}/${{ env.HARBOR_PATH }}:${{ env.GITHUB_TAG }}
+            ${{ env.HARBOR_REGISTRY }}/${{ env.HARBOR_PATH }}:${{ env.ADDITIONAL_TAG }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          build-args: |
-            TAG=${{env.GITHUB_TAG}}
+          build-args: ${{ matrix.image == 'academy' && format('TAG={0}', env.GITHUB_TAG) || '' }}
 
   update-k8s-academy:
     name: Update Academy Image in K8s Hosting
-    needs: academy
-    if: ${{ needs.academy.outputs.tag != '' }}
+    needs: build
+    if: ${{ needs.build.outputs.tag != '' }}
     runs-on: ubuntu-latest
     steps:
       - name: Determine target environments
         id: env
         env:
-          TAG: ${{ needs.academy.outputs.tag }}
+          TAG: ${{ needs.build.outputs.tag }}
         run: |
           if [[ "$TAG" == *"-dev."* ]]; then
             echo "targets=dev" >> $GITHUB_OUTPUT
@@ -95,7 +108,7 @@ jobs:
       - name: Update academy image tag in k8s-hosting
         if: ${{ steps.env.outputs.targets != '' }}
         env:
-          TAG: ${{ needs.academy.outputs.tag }}
+          TAG: ${{ needs.build.outputs.tag }}
           TARGETS: ${{ steps.env.outputs.targets }}
           K8S_REPO_PAT: ${{ secrets.K8S_REPO_PAT }}
         run: |
@@ -114,4 +127,47 @@ jobs:
 
           git diff --cached --quiet && echo "No changes to commit" && exit 0
           git commit -m "chore(academy): update academy image tag to ${TAG}"
+          git push
+
+  update-k8s-registry:
+    name: Update Registry Image in K8s Hosting
+    needs: build
+    if: ${{ needs.build.outputs.tag != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Determine target environments
+        id: env
+        env:
+          TAG: ${{ needs.build.outputs.tag }}
+        run: |
+          if [[ "$TAG" == *"-dev."* ]]; then
+            echo "targets=dev" >> $GITHUB_OUTPUT
+          elif [[ "$TAG" == *"-staging."* ]]; then
+            echo "targets=staging" >> $GITHUB_OUTPUT
+          else
+            echo "Skipping k8s update for production tags"
+          fi
+
+      - name: Update registry image tag in k8s-hosting
+        if: ${{ steps.env.outputs.targets != '' }}
+        env:
+          TAG: ${{ needs.build.outputs.tag }}
+          TARGETS: ${{ steps.env.outputs.targets }}
+          K8S_REPO_PAT: ${{ secrets.K8S_REPO_PAT }}
+        run: |
+          git clone "https://x-access-token:${K8S_REPO_PAT}@github.com/powerhouse-inc/powerhouse-k8s-hosting.git"
+          cd powerhouse-k8s-hosting
+
+          git config user.name "Github Actions Bot"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          for TARGET_ENV in $TARGETS; do
+            VALUES_FILE="tenants/${TARGET_ENV}/powerhouse-values.yaml"
+            # Update registry image tag (matches the line after registry's repository line)
+            sed -i '/repository: cr.vetra.io\/.*\/registry/{n;s/\(.*tag: \).*/\1'"${TAG}"'/}' "$VALUES_FILE"
+            git add "$VALUES_FILE"
+          done
+
+          git diff --cached --quiet && echo "No changes to commit" && exit 0
+          git commit -m "chore(registry): update registry image tag to ${TAG}"
           git push

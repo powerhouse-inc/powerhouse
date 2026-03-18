@@ -125,12 +125,7 @@ const startServer = async (
   const driveServer = reactorBuilder.build();
 
   const eventBus = new EventBus();
-  const builder = new ReactorBuilder()
-    .withEventBus(eventBus)
-    .withLegacyStorage(
-      storageImpl as unknown as IDocumentStorage & IDocumentOperationStorage,
-    );
-
+  const builder = new ReactorBuilder().withEventBus(eventBus);
   const clientModule = await new ReactorClientBuilder()
     .withReactorBuilder(builder)
     .buildModule();

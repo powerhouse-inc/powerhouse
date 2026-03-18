@@ -1,4 +1,5 @@
 export type {
+  ConnectionStateChangeCallback,
   IChannel,
   IChannelFactory,
   ISyncManager,
@@ -11,6 +12,10 @@ export type {
   ChannelConfig,
   ChannelHealth,
   ChannelMeta,
+  ConnectionState,
+  ConnectionStateChangedEvent,
+  ConnectionStateSnapshot,
+  DeadLetterAddedEvent,
   JwtHandler,
   RemoteCursor,
   RemoteFilter,

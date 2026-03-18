@@ -1,0 +1,255 @@
+import { ReactorEventTypes, SyncEventTypes } from "@powerhousedao/reactor";
+import type {
+  DeadLetterAddedEvent,
+  IEventBus,
+  IJobExecutorManager,
+  IQueue,
+  JobPendingEvent,
+  JobReadReadyEvent,
+  JobRunningEvent,
+  JobWriteReadyEvent,
+  ReactorJobFailedEvent,
+  ReactorModule,
+  SyncModule,
+  Unsubscribe,
+} from "@powerhousedao/reactor";
+import type { ObservableCallback, ObservableGauge } from "@opentelemetry/api";
+import { createMetrics, type ReactorMetrics } from "./metrics.js";
+
+export class ReactorInstrumentation {
+  private readonly module: ReactorModule;
+  private metrics: ReactorMetrics | undefined;
+  private unsubscribes: Unsubscribe[] = [];
+  private observableCallbacks: Array<[ObservableGauge, ObservableCallback]> =
+    [];
+
+  private pendingTimestamps = new Map<string, number>();
+  private runningTimestamps = new Map<string, number>();
+  private writeReadyTimestamps = new Map<string, number>();
+
+  constructor(module: ReactorModule) {
+    this.module = module;
+  }
+
+  start(): void {
+    this.metrics = createMetrics();
+    const { eventBus, queue, executorManager, syncModule } = this.module;
+
+    this.subscribeJobPending(eventBus);
+    this.subscribeJobRunning(eventBus);
+    this.subscribeJobWriteReady(eventBus);
+    this.subscribeJobReadReady(eventBus);
+    this.subscribeJobFailed(eventBus);
+    this.subscribeDeadLetterAdded(eventBus);
+    this.registerObservableGauges(queue, executorManager, syncModule);
+  }
+
+  stop(): void {
+    for (const unsub of this.unsubscribes) {
+      unsub();
+    }
+    this.unsubscribes = [];
+    for (const [gauge, cb] of this.observableCallbacks) {
+      gauge.removeCallback(cb);
+    }
+    this.observableCallbacks = [];
+    this.pendingTimestamps.clear();
+    this.runningTimestamps.clear();
+    this.writeReadyTimestamps.clear();
+    this.metrics = undefined;
+  }
+
+  private subscribeJobPending(eventBus: IEventBus): void {
+    this.unsubscribes.push(
+      eventBus.subscribe<JobPendingEvent>(
+        ReactorEventTypes.JOB_PENDING,
+        (_type, event) => {
+          if (!this.metrics) return;
+          this.metrics.queueJobsEnqueued.add(1);
+          this.metrics.eventbusEventsEmitted.add(1, {
+            "event.type": "JOB_PENDING",
+          });
+          this.pendingTimestamps.set(event.jobId, performance.now());
+        },
+      ),
+    );
+  }
+
+  private subscribeJobRunning(eventBus: IEventBus): void {
+    this.unsubscribes.push(
+      eventBus.subscribe<JobRunningEvent>(
+        ReactorEventTypes.JOB_RUNNING,
+        (_type, event) => {
+          if (!this.metrics) return;
+          this.metrics.queueJobsDequeued.add(1);
+          this.metrics.eventbusEventsEmitted.add(1, {
+            "event.type": "JOB_RUNNING",
+          });
+          this.runningTimestamps.set(event.jobId, performance.now());
+        },
+      ),
+    );
+  }
+
+  private subscribeJobWriteReady(eventBus: IEventBus): void {
+    this.unsubscribes.push(
+      eventBus.subscribe<JobWriteReadyEvent>(
+        ReactorEventTypes.JOB_WRITE_READY,
+        (_type, event) => {
+          if (!this.metrics) return;
+          const runningTs = this.runningTimestamps.get(event.jobId);
+          if (runningTs !== undefined) {
+            this.metrics.executorJobDuration.record(
+              performance.now() - runningTs,
+              { "job.success": "true" },
+            );
+          }
+          this.metrics.executorTotalProcessed.add(1, {
+            "job.success": "true",
+          });
+          this.metrics.executorOperationsGenerated.add(event.operations.length);
+          this.metrics.eventbusEventsEmitted.add(1, {
+            "event.type": "JOB_WRITE_READY",
+          });
+          this.writeReadyTimestamps.set(event.jobId, performance.now());
+          this.runningTimestamps.delete(event.jobId);
+        },
+      ),
+    );
+  }
+
+  private subscribeJobReadReady(eventBus: IEventBus): void {
+    this.unsubscribes.push(
+      eventBus.subscribe<JobReadReadyEvent>(
+        ReactorEventTypes.JOB_READ_READY,
+        (_type, event) => {
+          if (!this.metrics) return;
+          const writeReadyTs = this.writeReadyTimestamps.get(event.jobId);
+          if (writeReadyTs !== undefined) {
+            this.metrics.readmodelIndexDuration.record(
+              performance.now() - writeReadyTs,
+            );
+          }
+          const pendingTs = this.pendingTimestamps.get(event.jobId);
+          if (pendingTs !== undefined) {
+            this.metrics.jobTotalDuration.record(
+              performance.now() - pendingTs,
+              { "job.success": "true" },
+            );
+          }
+          this.metrics.queueJobsCompleted.add(1);
+          this.metrics.eventbusEventsEmitted.add(1, {
+            "event.type": "JOB_READ_READY",
+          });
+          this.cleanup(event.jobId);
+        },
+      ),
+    );
+  }
+
+  private subscribeJobFailed(eventBus: IEventBus): void {
+    this.unsubscribes.push(
+      eventBus.subscribe<ReactorJobFailedEvent>(
+        ReactorEventTypes.JOB_FAILED,
+        (_type, event) => {
+          if (!this.metrics) return;
+          this.metrics.queueJobsFailed.add(1);
+          this.metrics.executorTotalProcessed.add(1, {
+            "job.success": "false",
+          });
+          const pendingTs = this.pendingTimestamps.get(event.jobId);
+          if (pendingTs !== undefined) {
+            this.metrics.jobTotalDuration.record(
+              performance.now() - pendingTs,
+              { "job.success": "false" },
+            );
+          }
+          this.metrics.eventbusEventsEmitted.add(1, {
+            "event.type": "JOB_FAILED",
+          });
+          this.cleanup(event.jobId);
+        },
+      ),
+    );
+  }
+
+  private subscribeDeadLetterAdded(eventBus: IEventBus): void {
+    this.unsubscribes.push(
+      eventBus.subscribe<DeadLetterAddedEvent>(
+        SyncEventTypes.DEAD_LETTER_ADDED,
+        (_type, event) => {
+          if (!this.metrics) return;
+          this.metrics.syncDeadLettersAdded.add(1, {
+            "remote.name": event.remoteName,
+          });
+          this.metrics.eventbusEventsEmitted.add(1, {
+            "event.type": "DEAD_LETTER_ADDED",
+          });
+        },
+      ),
+    );
+  }
+
+  private registerObservableGauges(
+    queue: IQueue,
+    executorManager: IJobExecutorManager,
+    syncModule: SyncModule | undefined,
+  ): void {
+    if (!this.metrics) return;
+
+    const depthCb: ObservableCallback = async (result) => {
+      if (!this.metrics) return;
+      // queue.totalSize() is a DB query. If it exceeds the OTel collection
+      // window the observation is silently dropped, making the gauge appear
+      // to drop to zero under load. The timeout makes the failure explicit.
+      const TIMEOUT_MS = 2_000;
+      let timeoutId: ReturnType<typeof setTimeout> | undefined;
+      try {
+        const depth = await Promise.race([
+          queue.totalSize(),
+          new Promise<never>((_, reject) => {
+            timeoutId = setTimeout(
+              () => reject(new Error("queue.totalSize() timed out")),
+              TIMEOUT_MS,
+            );
+          }),
+        ]);
+        result.observe(depth);
+      } catch (err) {
+        console.warn(
+          "[ReactorInstrumentation] queueDepth observation failed:",
+          err,
+        );
+      } finally {
+        clearTimeout(timeoutId);
+      }
+    };
+    this.metrics.queueDepth.addCallback(depthCb);
+    this.observableCallbacks.push([this.metrics.queueDepth, depthCb]);
+
+    const activeJobsCb: ObservableCallback = (result) => {
+      if (!this.metrics) return;
+      const status = executorManager.getStatus();
+      result.observe(status.activeJobs);
+    };
+    this.metrics.executorActiveJobs.addCallback(activeJobsCb);
+    this.observableCallbacks.push([
+      this.metrics.executorActiveJobs,
+      activeJobsCb,
+    ]);
+
+    const remotesCb: ObservableCallback = (result) => {
+      if (!this.metrics) return;
+      const count = syncModule?.syncManager.list().length ?? 0;
+      result.observe(count);
+    };
+    this.metrics.syncRemotes.addCallback(remotesCb);
+    this.observableCallbacks.push([this.metrics.syncRemotes, remotesCb]);
+  }
+
+  private cleanup(jobId: string): void {
+    this.pendingTimestamps.delete(jobId);
+    this.runningTimestamps.delete(jobId);
+    this.writeReadyTimestamps.delete(jobId);
+  }
+}

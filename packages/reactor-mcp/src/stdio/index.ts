@@ -1,12 +1,8 @@
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import {
-  driveDocumentModelModule,
-  ReactorBuilder,
-  type DocumentDriveServerOptions,
-} from "document-drive";
+import { ReactorBuilder, ReactorClientBuilder } from "@powerhousedao/reactor";
+import { driveDocumentModelModule } from "document-drive";
 import type { DocumentModelModule } from "document-model";
 import { documentModelDocumentModelModule } from "document-model";
-import { generateId } from "document-model/core";
 import { initFeatureFlags } from "../feature-flags.js";
 import { logger } from "../logger.js";
 import { createServer } from "../server.js";
@@ -23,16 +19,16 @@ const baseDocumentModels: DocumentModelModule<any>[] = [
   driveDocumentModelModule,
 ];
 
-async function createReactor(
-  documentModels: DocumentModelModule[],
-  documentDriveServerOptions: DocumentDriveServerOptions,
-) {
-  const reactor = new ReactorBuilder(baseDocumentModels.concat(documentModels))
-    .withOptions(documentDriveServerOptions)
-    .build();
-  await reactor.initialize();
+async function createReactorClient(documentModels: DocumentModelModule[]) {
+  const reactorBuilder = new ReactorBuilder().withDocumentModels(
+    baseDocumentModels.concat(documentModels),
+  );
 
-  return reactor;
+  const module = await new ReactorClientBuilder()
+    .withReactorBuilder(reactorBuilder)
+    .buildModule();
+
+  return module;
 }
 
 export async function initStdioMcpServer(options?: IMcpOptions) {
@@ -63,65 +59,38 @@ export async function initStdioMcpServer(options?: IMcpOptions) {
     }
   }
 
-  // initializes reactor with loaded document models
-  const reactor = await createReactor(documentModels, {
-    featureFlags: {
-      enableDualActionCreate: true,
-    },
-  });
+  // initializes reactor client with loaded document models
+  const reactorModule = await createReactorClient(documentModels);
+  const { client, reactor, reactorModule: rModule } = reactorModule;
 
   // listens for changes in the local document models to update the reactor
-  if (documentModelsLoader) {
+  if (documentModelsLoader && rModule?.documentModelRegistry) {
     const unsubscribe = await documentModelsLoader.onDocumentModelsChange(
       (models) => {
-        reactor.setDocumentModelModules(baseDocumentModels.concat(models));
+        rModule.documentModelRegistry.registerModules(
+          ...baseDocumentModels.concat(models),
+        );
       },
     );
 
     process.on("exit", () => {
       unsubscribe();
+      reactor.kill();
     });
   }
 
-  // if a remote drive is passed then adds it to the reactor
+  // if a remote drive is passed, log a warning since remote drives
+  // are now handled at a different level (SyncManager)
   if (remoteDrive) {
-    try {
-      await reactor.addRemoteDrive(remoteDrive, {
-        sharingType: "PUBLIC",
-        availableOffline: true,
-        listeners: [
-          {
-            block: true,
-            callInfo: {
-              data: remoteDrive,
-              name: "switchboard-push",
-              transmitterType: "SwitchboardPush",
-            },
-            filter: {
-              branch: ["main"],
-              documentId: ["*"],
-              documentType: ["*"],
-              scope: ["global"],
-            },
-            label: "Switchboard Sync",
-            listenerId: generateId(),
-            system: true,
-          },
-        ],
-        triggers: [],
-      });
-    } catch (e) {
-      throw new Error(
-        `Failed to add remote drive "${remoteDrive}": ${e instanceof Error ? e.message : e}`,
-        {
-          cause: e,
-        },
-      );
-    }
+    logger.warn(
+      "Remote drive configuration via MCP is not supported in the new reactor. " +
+        "Remote drives should be configured at the server level.",
+    );
   }
 
   // starts the server
-  const server = await createServer(reactor);
+  // Note: syncManager is not available in stdio mode currently
+  const server = await createServer({ client });
 
   // starts Stdio transport
   const transport = new StdioServerTransport();

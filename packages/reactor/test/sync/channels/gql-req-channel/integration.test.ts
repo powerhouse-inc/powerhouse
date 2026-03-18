@@ -1,52 +1,19 @@
 import type { OperationContext } from "@powerhousedao/shared/document-model";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { IOperationIndex } from "../../../../src/cache/operation-index-types.js";
 import type { ISyncCursorStorage } from "../../../../src/storage/interfaces.js";
 import type { KyselySyncRemoteStorage } from "../../../../src/storage/kysely/sync-remote-storage.js";
 import type { Database } from "../../../../src/storage/kysely/types.js";
-import {
-  GqlRequestChannel,
-  type GqlChannelConfig,
-} from "../../../../src/sync/channels/gql-req-channel.js";
-import type { IPollTimer } from "../../../../src/sync/channels/poll-timer.js";
+import { GqlRequestChannel } from "../../../../src/sync/channels/gql-req-channel.js";
 import { SyncOperation } from "../../../../src/sync/sync-operation.js";
-import type {
-  RemoteFilter,
-  RemoteRecord,
-  SyncEnvelope,
-} from "../../../../src/sync/types.js";
-import { createMockLogger, createTestSyncStorage } from "../../../factories.js";
-
-class ManualPollTimer implements IPollTimer {
-  private delegate: (() => Promise<void>) | undefined;
-  private running = false;
-
-  setDelegate(delegate: () => Promise<void>): void {
-    this.delegate = delegate;
-  }
-
-  start(): void {
-    this.running = true;
-    if (this.delegate) {
-      void this.delegate();
-    }
-  }
-
-  stop(): void {
-    this.running = false;
-  }
-
-  async tick(): Promise<void> {
-    if (this.running && this.delegate) {
-      await this.delegate();
-    }
-  }
-
-  isRunning(): boolean {
-    return this.running;
-  }
-}
+import type { RemoteRecord, SyncEnvelope } from "../../../../src/sync/types.js";
+import { createTestSyncStorage } from "../../../factories.js";
+import {
+  ManualPollTimer,
+  createMockLogger,
+  createMockOperationIndex,
+  createTestConfig,
+} from "./test-helpers.js";
 
 async function waitForCursor(
   storage: ISyncCursorStorage,
@@ -68,12 +35,6 @@ async function waitForCursor(
     `Timed out waiting for cursor ${remoteName}/${cursorType} to reach ${expectedOrdinal} (got ${final.cursorOrdinal})`,
   );
 }
-
-const TEST_FILTER: RemoteFilter = {
-  documentId: [],
-  scope: [],
-  branch: "main",
-};
 
 describe("GqlRequestChannel Integration", () => {
   let db: Kysely<Database>;
@@ -125,33 +86,6 @@ describe("GqlRequestChannel Integration", () => {
     );
   };
 
-  const createMockOperationIndex = (): IOperationIndex => ({
-    start: vi.fn(),
-    commit: vi.fn().mockResolvedValue([]),
-    find: vi
-      .fn()
-      .mockResolvedValue({ items: [], nextCursor: undefined, hasMore: false }),
-    get: vi
-      .fn()
-      .mockResolvedValue({ results: [], options: { cursor: "0", limit: 100 } }),
-    getSinceOrdinal: vi
-      .fn()
-      .mockResolvedValue({ items: [], nextCursor: undefined, hasMore: false }),
-    getLatestTimestampForCollection: vi.fn().mockResolvedValue(null),
-    getCollectionsForDocuments: vi.fn().mockResolvedValue({}),
-  });
-
-  const createTestConfig = (
-    overrides: Partial<GqlChannelConfig> = {},
-  ): GqlChannelConfig => ({
-    url: "https://example.com/graphql",
-    collectionId: "test-collection",
-    filter: TEST_FILTER,
-    retryBaseDelayMs: 1000,
-    retryMaxDelayMs: 300000,
-    ...overrides,
-  });
-
   /**
    * Creates a mock fetch that handles touchChannel and pollSyncEnvelopes.
    * The poll response can be customized via pollResponse.
@@ -168,7 +102,10 @@ describe("GqlRequestChannel Integration", () => {
       if (body.query.includes("touchChannel")) {
         return Promise.resolve({
           ok: true,
-          json: () => Promise.resolve({ data: { touchChannel: true } }),
+          json: () =>
+            Promise.resolve({
+              data: { touchChannel: { success: true, ackOrdinal: 0 } },
+            }),
         });
       }
 
@@ -224,13 +161,15 @@ describe("GqlRequestChannel Integration", () => {
     mockFetch: ReturnType<typeof createMockFetch>,
     channelId: string = "channel-1",
   ): { channel: GqlRequestChannel; pollTimer: ManualPollTimer } => {
-    const pollTimer = new ManualPollTimer();
+    const pollTimer = new ManualPollTimer(true);
     const channel = new GqlRequestChannel(
       createMockLogger(),
       channelId,
       remoteName,
       cursorStorage,
-      createTestConfig({ fetchFn: mockFetch }),
+      createTestConfig({
+        fetchFn: mockFetch as unknown as typeof global.fetch,
+      }),
       createMockOperationIndex(),
       pollTimer,
     );
@@ -375,7 +314,10 @@ describe("GqlRequestChannel Integration", () => {
       if (body.query.includes("touchChannel")) {
         return Promise.resolve({
           ok: true,
-          json: () => Promise.resolve({ data: { touchChannel: true } }),
+          json: () =>
+            Promise.resolve({
+              data: { touchChannel: { success: true, ackOrdinal: 0 } },
+            }),
         });
       }
       return Promise.resolve({

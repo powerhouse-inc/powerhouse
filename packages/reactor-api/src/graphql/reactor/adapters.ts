@@ -98,6 +98,7 @@ export function toGqlPhDocument(doc: PHDocument): PhDocument {
     name: doc.header.name,
     documentType: doc.header.documentType,
     slug: doc.header.slug,
+    preferredEditor: doc.header.meta?.preferredEditor ?? null,
     createdAtUtcIso: doc.header.createdAtUtcIso,
     lastModifiedAtUtcIso: doc.header.lastModifiedAtUtcIso,
     revisionsList,

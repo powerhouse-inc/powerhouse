@@ -54,12 +54,9 @@ import {
   addIsDragAndDropEnabledEventHandler,
   addIsExternalControlsEnabledEventHandler,
 } from "./config/editor.js";
-import { addConnectCryptoEventHandler } from "./crypto.js";
-import { addDidEventHandler } from "./did.js";
 import { addDocumentCacheEventHandler } from "./document-cache.js";
 import { addDrivesEventHandler } from "./drives.js";
 import { addLoadingEventHandler } from "./loading.js";
-import { addLoginStatusEventHandler } from "./login-status.js";
 import { addModalEventHandler } from "./modals.js";
 import {
   addReactorClientEventHandler,
@@ -79,8 +76,7 @@ import {
 import { addSelectedTimelineItemEventHandler } from "./selected-timeline-item.js";
 import { addSelectedTimelineRevisionEventHandler } from "./timeline-revision.js";
 import { addToastEventHandler } from "./toast.js";
-import { addUserEventHandler } from "./user.js";
-import { addVetraPackagesEventHandler } from "./vetra-packages.js";
+import { addVetraPackageManagerEventHandler } from "./vetra-packages.js";
 
 const phGlobalEventHandlerRegisterFunctions: PHGlobalEventHandlerAdders = {
   loading: addLoadingEventHandler,
@@ -88,11 +84,7 @@ const phGlobalEventHandlerRegisterFunctions: PHGlobalEventHandlerAdders = {
   reactorClient: addReactorClientEventHandler,
   features: addFeaturesEventHandler,
   modal: addModalEventHandler,
-  connectCrypto: addConnectCryptoEventHandler,
-  did: addDidEventHandler,
   renown: addRenownEventHandler,
-  loginStatus: addLoginStatusEventHandler,
-  user: addUserEventHandler,
   drives: addDrivesEventHandler,
   documentCache: addDocumentCacheEventHandler,
   selectedDriveId: () => {
@@ -104,7 +96,7 @@ const phGlobalEventHandlerRegisterFunctions: PHGlobalEventHandlerAdders = {
     addSelectedNodeIdEventHandler();
     addSetSelectedNodeOnPopStateEventHandler();
   },
-  vetraPackages: addVetraPackagesEventHandler,
+  vetraPackageManager: addVetraPackageManagerEventHandler,
   selectedTimelineRevision: addSelectedTimelineRevisionEventHandler,
   revisionHistoryVisible: addRevisionHistoryVisibleEventHandler,
   selectedTimelineItem: addSelectedTimelineItemEventHandler,

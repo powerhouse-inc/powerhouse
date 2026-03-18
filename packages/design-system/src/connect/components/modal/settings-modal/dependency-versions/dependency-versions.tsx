@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { object, record, string } from "zod";
 import { Disclosure } from "../../../disclosure/disclosure.js";
 
 const PH_DEPENDENCIES = [
@@ -7,35 +6,6 @@ const PH_DEPENDENCIES = [
   "document-drive",
   "document-model",
 ];
-
-const PackageJsonSchema = object({
-  version: string({ message: "Missing version field in package.json" }),
-  dependencies: record(string(), string()).nullable(),
-  devDependencies: record(string(), string()).nullable(),
-})
-  .refine(
-    (data) => data.dependencies != null || data.devDependencies != null,
-    "package.json must have either dependencies or devDependencies",
-  )
-  .transform((data) => {
-    const allDependencies = {
-      ...data.dependencies,
-      ...data.devDependencies,
-    };
-
-    return {
-      version: data.version,
-      dependencies: Object.fromEntries(
-        Object.entries(allDependencies).filter(([key]) =>
-          PH_DEPENDENCIES.some((regexOrName) =>
-            typeof regexOrName === "string"
-              ? regexOrName === key
-              : regexOrName.test(key),
-          ),
-        ),
-      ),
-    };
-  });
 
 type ValidatedPackageJson = {
   version: string;
@@ -45,12 +15,32 @@ type ValidatedPackageJson = {
 export function verifyPackageJsonFields(
   packageJson: unknown,
 ): ValidatedPackageJson | false {
-  const parsed = PackageJsonSchema.safeParse(packageJson);
-  if (!parsed.success) {
-    console.error("Package.json validation failed:", parsed.error.format());
+  try {
+    const parsed = packageJson as {
+      version?: string;
+      dependencies?: Record<string, string>;
+      devDependencies?: Record<string, string>;
+      peerDependencies?: Record<string, string>;
+    };
+    const version = parsed.version || "Missing version field in package.json";
+    const dependencies = Object.fromEntries(
+      Object.entries({
+        ...parsed.dependencies,
+        ...parsed.devDependencies,
+        ...parsed.peerDependencies,
+      }).filter(([key]) =>
+        PH_DEPENDENCIES.some((regexOrName) =>
+          typeof regexOrName === "string"
+            ? regexOrName === key
+            : regexOrName.test(key),
+        ),
+      ),
+    );
+    return { version, dependencies };
+  } catch (error) {
+    console.error(error);
     return false;
   }
-  return parsed.data;
 }
 
 type Props = {

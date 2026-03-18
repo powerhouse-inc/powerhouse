@@ -2,11 +2,17 @@ import type { IOperationIndex } from "../../cache/operation-index-types.js";
 import type { ILogger } from "../../logging/types.js";
 import type { ISyncCursorStorage } from "../../storage/interfaces.js";
 import { BufferedMailbox } from "../buffered-mailbox.js";
-import { ChannelError } from "../errors.js";
-import type { IChannel } from "../interfaces.js";
+import { ChannelError, GraphQLRequestError } from "../errors.js";
+import type { ConnectionStateChangeCallback, IChannel } from "../interfaces.js";
 import { type IMailbox, Mailbox } from "../mailbox.js";
 import { SyncOperation } from "../sync-operation.js";
-import type { JwtHandler, RemoteFilter, SyncEnvelope } from "../types.js";
+import type {
+  ConnectionState,
+  ConnectionStateSnapshot,
+  JwtHandler,
+  RemoteFilter,
+  SyncEnvelope,
+} from "../types.js";
 import { ChannelErrorSource } from "../types.js";
 import {
   consolidateSyncOperations,
@@ -56,6 +62,7 @@ export class GqlRequestChannel implements IChannel {
   private readonly cursorStorage: ISyncCursorStorage;
   private readonly operationIndex: IOperationIndex;
   private readonly pollTimer: IPollTimer;
+  private readonly abortController = new AbortController();
   private isShutdown: boolean;
   private failureCount: number;
   private lastSuccessUtcMs?: number;
@@ -65,6 +72,11 @@ export class GqlRequestChannel implements IChannel {
   private pushFailureCount: number = 0;
   private pushRetryTimer: ReturnType<typeof setTimeout> | null = null;
   private pushBlocked: boolean = false;
+  private isPushing: boolean = false;
+  private pendingDrain: boolean = false;
+  private connectionState: ConnectionState = "connecting";
+  private readonly connectionStateCallbacks: Set<ConnectionStateChangeCallback> =
+    new Set();
 
   constructor(
     private readonly logger: ILogger,
@@ -97,20 +109,24 @@ export class GqlRequestChannel implements IChannel {
     this.outbox = this.bufferedOutbox;
     this.deadLetter = new Mailbox();
 
-    // when a dead letter is added, stop polling and cancel any pending push retry
-    this.deadLetter.onAdded(() => {
-      this.pollTimer.stop();
-      if (this.pushRetryTimer) {
-        clearTimeout(this.pushRetryTimer);
-        this.pushRetryTimer = null;
+    this.deadLetter.onAdded((syncOps) => {
+      for (const syncOp of syncOps) {
+        this.logger.warn(
+          "Dead letter added for document @DocumentId on channel @ChannelId",
+          syncOp.documentId,
+          this.channelId,
+        );
       }
     });
 
     // when sync ops are added to the outbox, push them to the remote
     this.outbox.onAdded((syncOps) => {
       if (this.isShutdown) return;
+      if (this.isPushing) {
+        this.pendingDrain = true;
+        return;
+      }
       if (this.pushBlocked) return; // ops stay in outbox, included in next retry
-      if (this.deadLetter.items.length > 0) return;
       this.attemptPush(syncOps);
     });
 
@@ -164,6 +180,7 @@ export class GqlRequestChannel implements IChannel {
    * Shuts down the channel and prevents further operations.
    */
   shutdown(): Promise<void> {
+    this.abortController.abort();
     this.bufferedOutbox.flush();
     this.isShutdown = true;
     this.pollTimer.stop();
@@ -173,14 +190,34 @@ export class GqlRequestChannel implements IChannel {
       this.pushRetryTimer = null;
     }
 
+    this.transitionConnectionState("disconnected");
+
     return Promise.resolve();
+  }
+
+  getConnectionState(): ConnectionStateSnapshot {
+    return {
+      state: this.connectionState,
+      failureCount: this.failureCount,
+      lastSuccessUtcMs: this.lastSuccessUtcMs ?? 0,
+      lastFailureUtcMs: this.lastFailureUtcMs ?? 0,
+      pushBlocked: this.pushBlocked,
+      pushFailureCount: this.pushFailureCount,
+    };
+  }
+
+  onConnectionStateChange(callback: ConnectionStateChangeCallback): () => void {
+    this.connectionStateCallbacks.add(callback);
+    return () => {
+      this.connectionStateCallbacks.delete(callback);
+    };
   }
 
   /**
    * Initializes the channel by registering it on the remote server and starting polling.
    */
   async init(): Promise<void> {
-    await this.touchRemoteChannel();
+    const { ackOrdinal } = await this.touchRemoteChannel();
 
     // get cursors -- these are the last acknowledged ordinals for the inbox and outbox
     const cursors = await this.cursorStorage.list(this.remoteName);
@@ -193,8 +230,29 @@ export class GqlRequestChannel implements IChannel {
     this.lastPersistedInboxOrdinal = inboxOrdinal;
     this.lastPersistedOutboxOrdinal = outboxOrdinal;
 
+    if (ackOrdinal > 0) {
+      trimMailboxFromAckOrdinal(this.outbox, ackOrdinal);
+    }
+
     this.pollTimer.setDelegate(() => this.poll());
     this.pollTimer.start();
+    this.transitionConnectionState("connected");
+  }
+
+  private transitionConnectionState(next: ConnectionState): void {
+    if (this.connectionState === next) return;
+    this.connectionState = next;
+    const snapshot = this.getConnectionState();
+    for (const callback of this.connectionStateCallbacks) {
+      try {
+        callback(snapshot);
+      } catch (error) {
+        this.logger.error(
+          "Connection state change callback error: @Error",
+          error,
+        );
+      }
+    }
   }
 
   /**
@@ -258,6 +316,7 @@ export class GqlRequestChannel implements IChannel {
 
     this.lastSuccessUtcMs = Date.now();
     this.failureCount = 0;
+    this.transitionConnectionState("connected");
   }
 
   /**
@@ -304,15 +363,21 @@ export class GqlRequestChannel implements IChannel {
   }
 
   /**
-   * Handles polling errors with exponential backoff.
+   * Handles polling errors with error classification.
+   * Returns true if the error was handled (caller should not rethrow).
    */
   private handlePollError(error: unknown): boolean {
+    if (this.isShutdown) return true;
+
     const err = error instanceof Error ? error : new Error(String(error));
 
     if (err.message.includes("Channel not found")) {
+      this.transitionConnectionState("reconnecting");
       this.recoverFromChannelNotFound();
       return true;
     }
+
+    const classification = this.classifyError(err);
 
     this.failureCount++;
     this.lastFailureUtcMs = Date.now();
@@ -320,16 +385,25 @@ export class GqlRequestChannel implements IChannel {
     const channelError = new ChannelError(ChannelErrorSource.Inbox, err);
 
     this.logger.error(
-      "GqlChannel poll error (@FailureCount): @Error",
+      "GqlChannel poll error (@FailureCount, @Classification): @Error",
       this.failureCount,
+      classification,
       channelError,
     );
 
+    if (classification === "unrecoverable") {
+      this.pollTimer.stop();
+      this.transitionConnectionState("error");
+      return true;
+    }
+
+    this.transitionConnectionState("error");
     return false;
   }
 
   /**
    * Recovers from a "Channel not found" error by re-registering and restarting polling.
+   * Self-retries with backoff instead of restarting the poll timer on failure.
    */
   private recoverFromChannelNotFound(): void {
     this.logger.info(
@@ -339,25 +413,57 @@ export class GqlRequestChannel implements IChannel {
 
     this.pollTimer.stop();
 
-    void this.touchRemoteChannel()
-      .then(() => {
-        this.logger.info(
-          "GqlChannel @ChannelId re-registered successfully",
-          this.channelId,
-        );
-        this.failureCount = 0;
-        this.pollTimer.start();
-      })
-      .catch((recoveryError: unknown) => {
-        this.logger.error(
-          "GqlChannel @ChannelId failed to re-register: @Error",
-          this.channelId,
-          recoveryError,
-        );
-        this.failureCount++;
-        this.lastFailureUtcMs = Date.now();
-        this.pollTimer.start();
-      });
+    const attemptRecovery = (attempt: number): void => {
+      if (this.isShutdown) return;
+
+      void this.touchRemoteChannel()
+        .then(({ ackOrdinal }) => {
+          this.logger.info(
+            "GqlChannel @ChannelId re-registered successfully",
+            this.channelId,
+          );
+          this.failureCount = 0;
+          if (ackOrdinal > 0) {
+            trimMailboxFromAckOrdinal(this.outbox, ackOrdinal);
+          }
+          this.pollTimer.start();
+          this.transitionConnectionState("connected");
+        })
+        .catch((recoveryError: unknown) => {
+          const err =
+            recoveryError instanceof Error
+              ? recoveryError
+              : new Error(String(recoveryError));
+          const classification = this.classifyError(err);
+
+          this.logger.error(
+            "GqlChannel @ChannelId recovery attempt @Attempt failed (@Classification): @Error",
+            this.channelId,
+            attempt,
+            classification,
+            recoveryError,
+          );
+
+          this.failureCount++;
+          this.lastFailureUtcMs = Date.now();
+
+          if (classification === "unrecoverable") {
+            this.transitionConnectionState("error");
+            return;
+          }
+
+          this.transitionConnectionState("reconnecting");
+          const delay = calculateBackoffDelay(
+            attempt,
+            this.config.retryBaseDelayMs,
+            this.config.retryMaxDelayMs,
+            Math.random(),
+          );
+          setTimeout(() => attemptRecovery(attempt + 1), delay);
+        });
+    };
+
+    attemptRecovery(1);
   }
 
   /**
@@ -482,8 +588,9 @@ export class GqlRequestChannel implements IChannel {
 
   /**
    * Registers or updates this channel on the remote server via GraphQL mutation.
+   * Returns the remote's ack ordinal so the client can trim its outbox.
    */
-  private async touchRemoteChannel(): Promise<void> {
+  private async touchRemoteChannel(): Promise<{ ackOrdinal: number }> {
     let sinceTimestampUtcMs = "0";
     try {
       const result = await this.operationIndex.getLatestTimestampForCollection(
@@ -498,7 +605,10 @@ export class GqlRequestChannel implements IChannel {
 
     const mutation = `
       mutation TouchChannel($input: TouchChannelInput!) {
-        touchChannel(input: $input)
+        touchChannel(input: $input) {
+          success
+          ackOrdinal
+        }
       }
     `;
 
@@ -516,7 +626,18 @@ export class GqlRequestChannel implements IChannel {
       },
     };
 
-    await this.executeGraphQL<{ touchChannel: boolean }>(mutation, variables);
+    const data = await this.executeGraphQL<{
+      touchChannel: { success: boolean; ackOrdinal: number };
+    }>(mutation, variables);
+
+    if (!data.touchChannel.success) {
+      throw new GraphQLRequestError(
+        "touchChannel returned success=false",
+        "graphql",
+      );
+    }
+
+    return { ackOrdinal: data.touchChannel.ackOrdinal };
   }
 
   /**
@@ -526,15 +647,29 @@ export class GqlRequestChannel implements IChannel {
    * ops to deadLetter.
    */
   private attemptPush(syncOps: SyncOperation[]): void {
+    this.isPushing = true;
     this.pushSyncOperations(syncOps)
       .then(() => {
+        this.isPushing = false;
         this.pushBlocked = false;
         this.pushFailureCount = 0;
+        if (
+          this.connectionState === "reconnecting" ||
+          this.connectionState === "error"
+        ) {
+          this.transitionConnectionState("connected");
+        }
+        this.drainOutbox();
       })
       .catch((error) => {
-        const err = error instanceof Error ? error : new Error(String(error));
+        this.isPushing = false;
+        this.pendingDrain = false;
+        if (this.isShutdown) return;
 
-        if (this.isRecoverablePushError(err)) {
+        const err = error instanceof Error ? error : new Error(String(error));
+        const classification = this.classifyError(err);
+
+        if (classification === "recoverable") {
           this.pushFailureCount++;
           this.pushBlocked = true;
           this.logger.error(
@@ -542,6 +677,7 @@ export class GqlRequestChannel implements IChannel {
             this.pushFailureCount,
             err,
           );
+          this.transitionConnectionState("reconnecting");
           this.schedulePushRetry();
         } else {
           const channelError = new ChannelError(ChannelErrorSource.Outbox, err);
@@ -550,6 +686,7 @@ export class GqlRequestChannel implements IChannel {
           }
           this.deadLetter.add(...syncOps);
           this.outbox.remove(...syncOps);
+          this.transitionConnectionState("error");
         }
       });
   }
@@ -584,13 +721,44 @@ export class GqlRequestChannel implements IChannel {
   }
 
   /**
-   * Returns true if the error is recoverable (transient network/HTTP/parse
-   * failure). Returns false for explicit GraphQL server rejections.
+   * Drains pending outbox items that arrived while a push was in-flight.
+   * Server-side action.id dedup handles any overlap with the previous push.
    */
-  private isRecoverablePushError(error: Error): boolean {
-    if (error.message.startsWith("GraphQL errors:")) return false;
-    if (error.message === "GraphQL response missing data field") return false;
-    return true;
+  private drainOutbox(): void {
+    if (!this.pendingDrain) return;
+    this.pendingDrain = false;
+    if (this.isShutdown) return;
+    const items = this.outbox.items;
+    if (items.length === 0) return;
+    this.attemptPush([...items]);
+  }
+
+  /**
+   * Classifies an error as recoverable or unrecoverable based on its type.
+   * Recoverable errors are transient and worth retrying (network, 5xx, parse).
+   * Unrecoverable errors will not self-heal (auth, client errors, GraphQL rejections).
+   */
+  private classifyError(error: Error): "recoverable" | "unrecoverable" {
+    if (!(error instanceof GraphQLRequestError)) {
+      return "recoverable";
+    }
+
+    switch (error.category) {
+      case "network":
+        return "recoverable";
+      case "http": {
+        if (error.statusCode !== undefined && error.statusCode >= 500) {
+          return "recoverable";
+        }
+        return "unrecoverable";
+      }
+      case "parse":
+        return "recoverable";
+      case "graphql":
+        return "unrecoverable";
+      case "missing-data":
+        return "unrecoverable";
+    }
   }
 
   /**
@@ -713,16 +881,20 @@ export class GqlRequestChannel implements IChannel {
           query,
           variables,
         }),
+        signal: this.abortController.signal,
       });
     } catch (error) {
-      throw new Error(
+      throw new GraphQLRequestError(
         `GraphQL request failed: ${error instanceof Error ? error.message : String(error)}`,
+        "network",
       );
     }
 
     if (!response.ok) {
-      throw new Error(
+      throw new GraphQLRequestError(
         `GraphQL request failed: ${response.status} ${response.statusText}`,
+        "http",
+        response.status,
       );
     }
 
@@ -733,8 +905,9 @@ export class GqlRequestChannel implements IChannel {
         errors?: Array<{ message: string }>;
       };
     } catch (error) {
-      throw new Error(
+      throw new GraphQLRequestError(
         `Failed to parse GraphQL response: ${error instanceof Error ? error.message : String(error)}`,
+        "parse",
       );
     }
 
@@ -748,33 +921,20 @@ export class GqlRequestChannel implements IChannel {
     );
 
     if (result.errors) {
-      throw new Error(
+      throw new GraphQLRequestError(
         `GraphQL errors: ${JSON.stringify(result.errors, null, 2)}`,
+        "graphql",
       );
     }
 
     if (!result.data) {
-      throw new Error("GraphQL response missing data field");
+      throw new GraphQLRequestError(
+        "GraphQL response missing data field",
+        "missing-data",
+      );
     }
 
     return result.data;
-  }
-
-  /**
-   * Gets the current health status of the channel.
-   */
-  getHealth(): {
-    state: "idle" | "running" | "error";
-    lastSuccessUtcMs?: number;
-    lastFailureUtcMs?: number;
-    failureCount: number;
-  } {
-    return {
-      state: this.failureCount > 0 ? "error" : "idle",
-      lastSuccessUtcMs: this.lastSuccessUtcMs,
-      lastFailureUtcMs: this.lastFailureUtcMs,
-      failureCount: this.failureCount,
-    };
   }
 
   get poller(): IPollTimer {

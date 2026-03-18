@@ -1,5 +1,5 @@
 import { useAllowList } from "./connect.js";
-import { useUser } from "./user.js";
+import { useUser } from "./renown.js";
 export function useUserPermissions() {
   const user = useUser();
   const allowList = useAllowList();

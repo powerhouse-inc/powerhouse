@@ -29,6 +29,7 @@
   },
   "scripts": {
     "tsc": "tsc",
+    "test": "vitest run",
     "lint": "eslint",
     "build:misc": "pnpm run install-packages",
     "start": "node dist/src/index.js",
@@ -48,6 +49,11 @@
     "@openfeature/env-var-provider": "^0.3.1",
     "@openfeature/server-sdk": "^1.19.0",
     "@powerhousedao/config": "workspace:*",
+    "@opentelemetry/api": "^1.9.0",
+    "@opentelemetry/exporter-metrics-otlp-http": "^0.57.2",
+    "@opentelemetry/resources": "^1.29.0",
+    "@opentelemetry/sdk-metrics": "^1.29.0",
+    "@powerhousedao/opentelemetry-instrumentation-reactor": "workspace:*",
     "@powerhousedao/reactor": "workspace:*",
     "@powerhousedao/reactor-api": "workspace:*",
     "@renown/sdk": "workspace:*",
@@ -67,6 +73,7 @@
     "@types/node": "catalog:",
     "@types/pg": "catalog:",
     "concurrently": "catalog:",
-    "nodemon": "catalog:"
+    "nodemon": "catalog:",
+    "vitest": "catalog:"
   }
 }

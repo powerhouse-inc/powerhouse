@@ -6,10 +6,7 @@ import {
 } from "vite";
 import type { ConnectPreviewArgs } from "../types.js";
 import { assignEnvVars } from "../utils/assign-env-vars.js";
-import {
-  resolveConnectPublicDir,
-  resolveViteConfigPath,
-} from "../utils/resolve-connect-dirs.js";
+import { resolveViteConfigPath } from "../utils/resolve-connect-dirs.js";
 
 export async function runConnectPreview(args: ConnectPreviewArgs) {
   const {
@@ -25,7 +22,6 @@ export async function runConnectPreview(args: ConnectPreviewArgs) {
   } = args;
   const viteConfigPath = resolveViteConfigPath({});
   const mode = "production";
-  const projectRoot = process.cwd();
 
   assignEnvVars(args);
 
@@ -34,11 +30,8 @@ export async function runConnectPreview(args: ConnectPreviewArgs) {
     viteConfigPath,
   );
 
-  const connectPublicDir = resolveConnectPublicDir(projectRoot);
-
   const previewConfig: InlineConfig = {
     base: connectBasePath,
-    publicDir: connectPublicDir,
     mode,
     configFile: false,
     build: {

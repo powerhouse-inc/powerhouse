@@ -4,10 +4,17 @@ import {
   getLatestAppliedOrdinal,
 } from "../../../src/sync/channels/utils.js";
 import { ChannelError } from "../../../src/sync/errors.js";
-import type { IChannel } from "../../../src/sync/interfaces.js";
+import type {
+  ConnectionStateChangeCallback,
+  IChannel,
+} from "../../../src/sync/interfaces.js";
 import { Mailbox } from "../../../src/sync/mailbox.js";
 import type { SyncOperation } from "../../../src/sync/sync-operation.js";
-import type { RemoteCursor, SyncEnvelope } from "../../../src/sync/types.js";
+import type {
+  ConnectionStateSnapshot,
+  RemoteCursor,
+  SyncEnvelope,
+} from "../../../src/sync/types.js";
 import { ChannelErrorSource } from "../../../src/sync/types.js";
 
 /**
@@ -69,6 +76,22 @@ export class TestChannel implements IChannel {
   shutdown(): Promise<void> {
     this.isShutdown = true;
     return Promise.resolve();
+  }
+
+  getConnectionState(): ConnectionStateSnapshot {
+    return {
+      state: "connected",
+      failureCount: 0,
+      lastSuccessUtcMs: 0,
+      lastFailureUtcMs: 0,
+      pushBlocked: false,
+      pushFailureCount: 0,
+    };
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  onConnectionStateChange(callback: ConnectionStateChangeCallback): () => void {
+    return () => {};
   }
 
   async init(): Promise<void> {}

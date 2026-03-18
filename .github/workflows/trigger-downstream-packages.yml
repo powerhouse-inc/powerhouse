@@ -48,8 +48,8 @@ jobs:
         package:
           - repo: powerhouse-inc/renown-package
             name: renown-package
-          - repo: powerhouse-inc/powerhouse-demo
-            name: powerhouse-demo
+          - repo: powerhouse-inc/clicker-game
+            name: clicker-game
     steps:
       - name: Trigger ${{ matrix.package.name }}
         uses: peter-evans/repository-dispatch@v3

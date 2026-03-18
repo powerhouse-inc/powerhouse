@@ -17,6 +17,19 @@ export class DocumentEditorGenerator extends BaseDocumentGen {
   readonly supportedDocumentTypes = "powerhouse/document-editor";
 
   /**
+   * Extract the global state from the full document state
+   */
+  private extractGlobalState(
+    strand: InternalTransmitterUpdate,
+  ): DocumentEditorState | undefined {
+    const fullState = strand.state as DocumentEditorPHState | undefined;
+    if (!fullState) {
+      return undefined;
+    }
+    return fullState.global;
+  }
+
+  /**
    * Validate if this document editor strand should be processed
    */
   shouldProcess(strand: InternalTransmitterUpdate): boolean {
@@ -25,32 +38,28 @@ export class DocumentEditorGenerator extends BaseDocumentGen {
       return false;
     }
 
-    const state = strand.state as DocumentEditorState;
+    const state = this.extractGlobalState(strand);
     if (!state) {
-      logger.debug(
-        `>>> No state found for document editor: ${strand.documentId}`,
-      );
+      logger.debug(`No state found for document editor: ${strand.documentId}`);
       return false;
     }
 
     // Check if we have a valid editor name, document types, and it's confirmed
     if (!state.name) {
-      logger.debug(
-        `>>> No name found for document editor: ${strand.documentId}`,
-      );
+      logger.debug(`No name found for document editor: ${strand.documentId}`);
       return false;
     }
 
     if (!state.documentTypes || state.documentTypes.length === 0) {
       logger.debug(
-        `>>> No document types found for document editor: ${state.name}`,
+        `No document types found for document editor: ${state.name}`,
       );
       return false;
     }
 
     if (state.status !== "CONFIRMED") {
       logger.debug(
-        `>>> Document editor not confirmed: ${state.name} (status: ${state.status})`,
+        `Document editor not confirmed: ${state.name} (status: ${state.status})`,
       );
       return false;
     }
@@ -59,7 +68,11 @@ export class DocumentEditorGenerator extends BaseDocumentGen {
   }
 
   async generate(strand: InternalTransmitterUpdate): Promise<void> {
-    const state = strand.state as DocumentEditorState;
+    const state = this.extractGlobalState(strand);
+    if (!state) {
+      logger.error(`No state found for document editor: ${strand.documentId}`);
+      return;
+    }
 
     // Validation is already done in shouldProcess, so we can proceed directly
     logger.info(`🔄 Starting editor generation for: ${state.name}`);

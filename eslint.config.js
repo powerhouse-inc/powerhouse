@@ -70,8 +70,8 @@ const ignoredFiles = [...normalIgnoredFiles, ...unsafeIgnoredFiles];
 /** Global configs for eslint ignores */
 const ignored = globalIgnores(ignoredFiles);
 
-/** Typescript (`.ts`) files */
-const typescriptFiles = ["**/*.ts"];
+/** Typescript (`.ts`, `.mts`, `.cts`) files */
+const typescriptFiles = ["**/*.ts", "**/*.mts", "**/*.cts"];
 
 /** Typescript React (`.tsx`) files */
 const typescriptReactFiles = ["**/*.tsx"];
@@ -136,7 +136,6 @@ const filesWithUnsafeRules = [
   "packages/document-drive/src/utils/graphql.ts",
   "packages/reactor/src/events/types.ts",
   "packages/reactor-api/src/packages/util.ts",
-  "packages/vetra/subgraphs/vetra-package/resolvers.ts",
   "packages/reactor-browser/src/context/read-mode.tsx",
   "packages/document-model/src/document/object.ts",
   "packages/switchboard-gui/src/components/header/header.tsx",

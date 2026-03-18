@@ -1,5 +1,12 @@
 #!/usr/bin/env node
+import { httpsHooksPath } from "@powerhousedao/reactor-api";
+import { register } from "node:module";
+
+// Register HTTP/HTTPS module loader hooks for dynamic package imports
+register(httpsHooksPath, import.meta.url);
+
 import { PGlite } from "@electric-sql/pglite";
+import { ReactorInstrumentation } from "@powerhousedao/opentelemetry-instrumentation-reactor";
 import {
   ChannelScheme,
   EventBus,
@@ -9,7 +16,11 @@ import {
   parseDriveUrl,
   type Database,
 } from "@powerhousedao/reactor";
+import { metrics } from "@opentelemetry/api";
 import {
+  HttpPackageLoader,
+  PackageManagementService,
+  PackagesSubgraph,
   VitePackageLoader,
   createViteLogger,
   getUniqueDocumentModels,
@@ -57,9 +68,6 @@ const REACTOR_STORAGE_V2_DEFAULT = true;
 
 const ENABLE_DUAL_ACTION_CREATE = "ENABLE_DUAL_ACTION_CREATE";
 const ENABLE_DUAL_ACTION_CREATE_DEFAULT = true;
-
-const USE_NEW_DOCUMENT_MODEL_SUBGRAPH = "USE_NEW_DOCUMENT_MODEL_SUBGRAPH";
-const USE_NEW_DOCUMENT_MODEL_SUBGRAPH_DEFAULT = true;
 
 // Create a monolith express app for all subgraphs
 const app = express();
@@ -130,6 +138,14 @@ async function initServer(
   options: StartServerOptions,
   renown: IRenown | null,
 ) {
+  // Register the global MeterProvider before ReactorInstrumentation is
+  // constructed. setGlobalMeterProvider is a one-way door — once set it cannot
+  // be unset — so this must happen before initializeClient calls
+  // instrumentation.start() → createMetrics() → metrics.getMeter().
+  if (options.meterProvider) {
+    metrics.setGlobalMeterProvider(options.meterProvider);
+  }
+
   const {
     dev,
     packages = [],
@@ -158,6 +174,24 @@ async function initServer(
       ? ".ph/read-storage"
       : dbPath;
 
+  // HTTP registry package loading
+  let httpDocumentModels: DocumentModelModule[] = [];
+  const registryUrl = process.env.PH_REGISTRY_URL;
+  const registryPackages = process.env.PH_REGISTRY_PACKAGES;
+  let httpLoader: HttpPackageLoader | undefined;
+
+  if (registryUrl) {
+    httpLoader = new HttpPackageLoader({ registryUrl });
+  }
+
+  if (httpLoader && registryPackages) {
+    const packageNames = registryPackages.split(",").map((p) => p.trim());
+    httpDocumentModels = await httpLoader.loadPackages(packageNames, logger);
+    logger.info(
+      `Loaded ${httpDocumentModels.length} HTTP document models from ${packageNames.length} packages`,
+    );
+  }
+
   const initializeDriveServer = async (
     documentModels: DocumentModelModule[],
   ) => {
@@ -166,6 +200,7 @@ async function initServer(
         documentModelDocumentModelModule,
         driveDocumentModelModule,
         ...documentModels,
+        ...httpDocumentModels,
       ]),
     )
       .withStorage(storage)
@@ -196,9 +231,9 @@ async function initServer(
           documentModelDocumentModelModule,
           driveDocumentModelModule,
           ...documentModels,
+          ...httpDocumentModels,
         ]),
       )
-      .withLegacyStorage(storage)
       .withChannelScheme(ChannelScheme.SWITCHBOARD)
       .withSignalHandlers()
       .withLogger(reactorLogger);
@@ -230,6 +265,10 @@ async function initServer(
       logger.info("Using PGlite for reactor storage");
     }
 
+    if (httpLoader) {
+      builder.withDocumentModelLoader(httpLoader);
+    }
+
     const clientBuilder = new ReactorClientBuilder().withReactorBuilder(
       builder,
     );
@@ -240,7 +279,12 @@ async function initServer(
 
     const module = await clientBuilder.buildModule();
 
-    // Return the full ReactorClientModule
+    if (module.reactorModule) {
+      const instrumentation = new ReactorInstrumentation(module.reactorModule);
+      instrumentation.start();
+      reactorLogger.info("Reactor metrics instrumentation started");
+    }
+
     return module;
   };
 
@@ -285,13 +329,42 @@ async function initServer(
       mcp: options.mcp ?? true,
       logger: apiLogger,
       enableDocumentModelSubgraphs: options.enableDocumentModelSubgraphs,
-      useNewDocumentModelSubgraph: options.useNewDocumentModelSubgraph,
       legacyReactor,
     },
     "switchboard",
   );
 
-  const { client, driveServer } = api;
+  const { client, driveServer, graphqlManager, documentModelRegistry } = api;
+
+  // Wire up dynamic package management if HTTP loader is configured
+  if (httpLoader) {
+    const packageManagementService = new PackageManagementService({
+      defaultRegistryUrl: registryUrl,
+      httpLoader,
+      documentModelRegistry,
+    });
+
+    packageManagementService.setOnModelsChanged(async () => {
+      await graphqlManager.regenerateDocumentModelSubgraphs();
+    });
+
+    const packagesSubgraph = new PackagesSubgraph({
+      relationalDb: undefined as never,
+      analyticsStore: undefined as never,
+      reactorClient: client,
+      graphqlManager,
+      syncManager: api.syncManager,
+      path: graphqlManager.getBasePath(),
+      packageManagementService,
+    });
+
+    void graphqlManager
+      .registerSubgraphInstance(packagesSubgraph, "graphql", false)
+      .then(() => graphqlManager.updateRouter())
+      .catch((error: unknown) => {
+        logger.error("Failed to register packages subgraph: @error", error);
+      });
+  }
 
   // Create default drive if provided
   if (options.drive) {
@@ -398,14 +471,6 @@ export const startSwitchboard = async (
       ENABLE_DUAL_ACTION_CREATE_DEFAULT,
   );
 
-  const useNewDocumentModelSubgraph = await featureFlags.getBooleanValue(
-    USE_NEW_DOCUMENT_MODEL_SUBGRAPH,
-    options.useNewDocumentModelSubgraph ??
-      USE_NEW_DOCUMENT_MODEL_SUBGRAPH_DEFAULT,
-  );
-
-  options.useNewDocumentModelSubgraph = useNewDocumentModelSubgraph;
-
   options.reactorOptions = {
     enableDualActionCreate,
     storageV2,
@@ -420,7 +485,6 @@ export const startSwitchboard = async (
         DOCUMENT_MODEL_SUBGRAPHS_ENABLED: enableDocumentModelSubgraphs,
         REACTOR_STORAGE_V2: storageV2,
         ENABLE_DUAL_ACTION_CREATE: enableDualActionCreate,
-        USE_NEW_DOCUMENT_MODEL_SUBGRAPH: useNewDocumentModelSubgraph,
       },
       null,
       2,

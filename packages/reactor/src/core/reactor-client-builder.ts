@@ -9,6 +9,7 @@ import type {
   SignatureVerificationHandler,
   SignerConfig,
 } from "../signer/types.js";
+import type { IDocumentModelLoader } from "../registry/interfaces.js";
 import type { IDocumentIndexer, IDocumentView } from "../storage/interfaces.js";
 import { DefaultSubscriptionErrorHandler } from "../subs/default-error-handler.js";
 import { ReactorSubscriptionManager } from "../subs/react-subscription-manager.js";
@@ -30,6 +31,7 @@ export class ReactorClientBuilder {
   private signatureVerifier?: SignatureVerificationHandler;
   private subscriptionManager?: IReactorSubscriptionManager;
   private jobAwaiter?: IJobAwaiter;
+  private documentModelLoader?: IDocumentModelLoader;
 
   /**
    * Sets the logger for the ReactorClient.
@@ -100,6 +102,11 @@ export class ReactorClientBuilder {
     return this;
   }
 
+  public withDocumentModelLoader(loader: IDocumentModelLoader): this {
+    this.documentModelLoader = loader;
+    return this;
+  }
+
   public async build(): Promise<ReactorClient> {
     const module = await this.buildModule();
     return module.client;
@@ -119,6 +126,9 @@ export class ReactorClientBuilder {
     if (this.reactorBuilder) {
       if (this.signatureVerifier) {
         this.reactorBuilder.withSignatureVerifier(this.signatureVerifier);
+      }
+      if (this.documentModelLoader) {
+        this.reactorBuilder.withDocumentModelLoader(this.documentModelLoader);
       }
       reactorModule = await this.reactorBuilder.buildModule();
       reactor = reactorModule.reactor;

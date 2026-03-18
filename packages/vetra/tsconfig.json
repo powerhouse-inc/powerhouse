@@ -51,9 +51,6 @@
       "path": "../document-model"
     },
     {
-      "path": "../reactor-api"
-    },
-    {
       "path": "../reactor-browser"
     },
     {

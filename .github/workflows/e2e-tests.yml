@@ -11,6 +11,7 @@ on:
 env:
   NX_ISOLATE_PLUGINS: false
   HUSKY: 0
+  BUN_RUNTIME_TRANSPILER_CACHE_PATH: "0"
 
 concurrency:
   group: e2e-tests-${{ github.workflow }}-${{ github.ref }}
@@ -41,6 +42,8 @@ jobs:
 
       - name: Setup bun global install
         uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.8
 
       - name: Install release tool dependencies
         run: bun install
@@ -58,14 +61,23 @@ jobs:
       - name: Run build clis
         run: pnpm build-cli
 
-      - name: Run install again after generating binaries
-        run: pnpm install-ci
-
       - name: Run css build scripts
         run: pnpm build-css
 
       - name: Run vite build scripts
         run: pnpm build-vite
+
+      - name: Run connect build script
+        timeout-minutes: 1
+        working-directory: ./apps/connect
+        run: |
+          set -euo pipefail
+          # Hard timeout so a wedged Bun process can't hang CI forever.
+          # Exit code will be 124 on timeout.
+          timeout --kill-after=5s 1m bun run ./bundle.ts
+
+      - name: Run install again after generating binaries
+        run: pnpm install-ci
 
       - name: Install Playwright Browsers
         run: pnpm exec playwright install --with-deps chromium
@@ -128,6 +140,8 @@ jobs:
 
       - name: Setup bun global install
         uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.8
 
       - name: Build typescript project
         run: pnpm tsc -b
@@ -142,14 +156,23 @@ jobs:
       - name: Run build clis
         run: pnpm build-cli
 
-      - name: Run install again after generating binaries
-        run: pnpm install-ci
-
       - name: Run css build scripts
         run: pnpm build-css
 
       - name: Run vite build scripts
         run: pnpm build-vite
+
+      - name: Run connect build script
+        timeout-minutes: 1
+        working-directory: ./apps/connect
+        run: |
+          set -euo pipefail
+          # Hard timeout so a wedged Bun process can't hang CI forever.
+          # Exit code will be 124 on timeout.
+          timeout --kill-after=5s 1m bun run ./bundle.ts
+
+      - name: Run install again after generating binaries
+        run: pnpm install-ci
 
       - name: Install Playwright Browsers
         run: pnpm exec playwright install --with-deps chromium
@@ -199,6 +222,8 @@ jobs:
 
       - name: Setup bun global install
         uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.8
 
       - name: Build typescript project
         run: pnpm tsc -b
@@ -212,14 +237,23 @@ jobs:
       - name: Run build clis
         run: pnpm build-cli
 
-      - name: Run install again after generating binaries
-        run: pnpm install-ci
-
       - name: Run css build scripts
         run: pnpm build-css
 
       - name: Run vite build scripts
         run: pnpm build-vite
+
+      - name: Run connect build script
+        timeout-minutes: 1
+        working-directory: ./apps/connect
+        run: |
+          set -euo pipefail
+          # Hard timeout so a wedged Bun process can't hang CI forever.
+          # Exit code will be 124 on timeout.
+          timeout --kill-after=5s 1m bun run ./bundle.ts
+
+      - name: Run install again after generating binaries
+        run: pnpm install-ci
 
       - name: Install Playwright Browsers
         run: pnpm exec playwright install

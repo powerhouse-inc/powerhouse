@@ -118,7 +118,7 @@ describe("BaseReadModel idempotency", () => {
       operationIndex,
       mockWriteCache,
       consistencyTracker,
-      READ_MODEL_ID,
+      { readModelId: READ_MODEL_ID, rebuildStateOnInit: true },
     );
 
     await spyModel.init();
@@ -160,7 +160,7 @@ describe("BaseReadModel idempotency", () => {
       operationIndex,
       mockWriteCache,
       consistencyTracker1,
-      READ_MODEL_ID,
+      { readModelId: READ_MODEL_ID, rebuildStateOnInit: true },
     );
 
     await spyModel1.init();
@@ -188,7 +188,7 @@ describe("BaseReadModel idempotency", () => {
       operationIndex,
       mockWriteCache,
       consistencyTracker2,
-      READ_MODEL_ID,
+      { readModelId: READ_MODEL_ID, rebuildStateOnInit: true },
     );
 
     await spyModel2.init();
@@ -203,7 +203,7 @@ describe("BaseReadModel idempotency", () => {
       operationIndex,
       mockWriteCache,
       consistencyTracker1,
-      READ_MODEL_ID,
+      { readModelId: READ_MODEL_ID, rebuildStateOnInit: true },
     );
 
     await spyModel1.init();
@@ -276,7 +276,7 @@ describe("BaseReadModel idempotency", () => {
       operationIndex,
       mockWriteCache,
       consistencyTracker2,
-      READ_MODEL_ID,
+      { readModelId: READ_MODEL_ID, rebuildStateOnInit: true },
     );
 
     await spyModel2.init();
@@ -303,7 +303,7 @@ describe("BaseReadModel idempotency", () => {
       operationIndex,
       mockWriteCache,
       consistencyTracker1,
-      READ_MODEL_ID,
+      { readModelId: READ_MODEL_ID, rebuildStateOnInit: true },
     );
 
     await spyModel1.init();
@@ -360,7 +360,7 @@ describe("BaseReadModel idempotency", () => {
       operationIndex,
       mockWriteCache,
       consistencyTracker2,
-      READ_MODEL_ID,
+      { readModelId: READ_MODEL_ID, rebuildStateOnInit: true },
     );
 
     await spyModel2.init();

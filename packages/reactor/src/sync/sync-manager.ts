@@ -1,4 +1,3 @@
-import type { OperationWithContext } from "@powerhousedao/shared/document-model";
 import type { Operation } from "document-model";
 import type { IOperationIndex } from "../cache/operation-index-types.js";
 import type {
@@ -14,11 +13,7 @@ import {
 } from "../events/types.js";
 import type { ILogger } from "../logging/types.js";
 import { JobAwaiter } from "../shared/awaiter.js";
-import {
-  JobStatus,
-  type JobInfo,
-  type ShutdownStatus,
-} from "../shared/types.js";
+import { JobStatus, type ShutdownStatus } from "../shared/types.js";
 import type {
   DeadLetterRecord,
   ISyncCursorStorage,
@@ -37,13 +32,15 @@ import {
 } from "./sync-status-tracker.js";
 import type {
   ChannelConfig,
+  ConnectionStateChangedEvent,
+  DeadLetterAddedEvent,
   RemoteFilter,
   RemoteOptions,
   RemoteRecord,
   RemoteStatus,
   SyncResult,
 } from "./types.js";
-import { ChannelErrorSource } from "./types.js";
+import { ChannelErrorSource, SyncEventTypes } from "./types.js";
 import {
   batchOperationsByDocument,
   createIdleHealth,
@@ -64,14 +61,16 @@ export class SyncManager implements ISyncManager {
   private readonly remotes: Map<string, Remote>;
   private readonly awaiter: JobAwaiter;
   private readonly syncAwaiter: SyncAwaiter;
+  private readonly abortController = new AbortController();
   private isShutdown: boolean;
   private eventUnsubscribe?: () => void;
   private failedEventUnsubscribe?: () => void;
   private readonly batchAggregator: BatchAggregator;
   private readonly syncStatusTracker: SyncStatusTracker;
   private readonly maxDeadLettersPerRemote: number;
-
-  public loadJobs: Map<string, JobInfo> = new Map();
+  private readonly connectionStateUnsubscribes: Map<string, () => void> =
+    new Map();
+  private readonly quarantinedDocumentIds = new Set<string>();
 
   constructor(
     logger: ILogger,
@@ -108,6 +107,19 @@ export class SyncManager implements ISyncManager {
   async startup(): Promise<void> {
     if (this.isShutdown) {
       throw new Error("SyncManager is already shutdown and cannot be started");
+    }
+
+    try {
+      const quarantinedIds =
+        await this.deadLetterStorage.listQuarantinedDocumentIds();
+      for (const id of quarantinedIds) {
+        this.quarantinedDocumentIds.add(id);
+      }
+    } catch (error) {
+      this.logger.error(
+        "Failed to load quarantined document IDs (@error)",
+        error instanceof Error ? error.message : String(error),
+      );
     }
 
     const remoteRecords = await this.remoteStorage.list();
@@ -168,6 +180,7 @@ export class SyncManager implements ISyncManager {
 
   shutdown(): ShutdownStatus {
     this.isShutdown = true;
+    this.abortController.abort();
     this.batchAggregator.clear();
 
     if (this.eventUnsubscribe) {
@@ -183,6 +196,11 @@ export class SyncManager implements ISyncManager {
     this.awaiter.shutdown();
     this.syncAwaiter.shutdown();
     this.syncStatusTracker.clear();
+
+    for (const unsub of this.connectionStateUnsubscribes.values()) {
+      unsub();
+    }
+    this.connectionStateUnsubscribes.clear();
 
     const promises: Promise<void>[] = [];
     for (const remote of this.remotes.values()) {
@@ -310,6 +328,11 @@ export class SyncManager implements ISyncManager {
     await this.cursorStorage.remove(name);
 
     this.syncStatusTracker.untrackRemote(name);
+    const unsub = this.connectionStateUnsubscribes.get(name);
+    if (unsub) {
+      unsub();
+      this.connectionStateUnsubscribes.delete(name);
+    }
     this.remotes.delete(name);
   }
 
@@ -336,6 +359,19 @@ export class SyncManager implements ISyncManager {
 
     this.syncStatusTracker.trackRemote(remote.name, remote.channel);
 
+    const unsubscribe = remote.channel.onConnectionStateChange((snapshot) => {
+      void this.eventBus
+        .emit(SyncEventTypes.CONNECTION_STATE_CHANGED, {
+          remoteName: remote.name,
+          remoteId: remote.id,
+          previous: snapshot.state,
+          current: snapshot.state,
+          snapshot,
+        } satisfies ConnectionStateChangedEvent)
+        .catch(() => {});
+    });
+    this.connectionStateUnsubscribes.set(remote.name, unsubscribe);
+
     remote.channel.deadLetter.onAdded((syncOps) => {
       for (const syncOp of syncOps) {
         this.logger.error(
@@ -346,6 +382,8 @@ export class SyncManager implements ISyncManager {
           syncOp.error?.message ?? "unknown",
           syncOp.jobDependencies,
         );
+
+        this.quarantinedDocumentIds.add(syncOp.documentId);
 
         const record: DeadLetterRecord = {
           id: syncOp.id,
@@ -367,6 +405,16 @@ export class SyncManager implements ISyncManager {
             err instanceof Error ? err.message : String(err),
           );
         });
+
+        void this.eventBus
+          .emit(SyncEventTypes.DEAD_LETTER_ADDED, {
+            id: record.id,
+            jobId: record.jobId,
+            remoteName: record.remoteName,
+            documentId: record.documentId,
+            errorSource: record.errorSource,
+          } satisfies DeadLetterAddedEvent)
+          .catch(() => {});
       }
 
       // Evict oldest dead letters from mailbox if over capacity
@@ -439,6 +487,8 @@ export class SyncManager implements ISyncManager {
   }
 
   private async processCompleteBatch(batch: PreparedBatch): Promise<void> {
+    if (this.isShutdown) return;
+
     // get the unique set of collection ids
     const collectionIds = [
       ...new Set(
@@ -475,10 +525,15 @@ export class SyncManager implements ISyncManager {
       return;
     }
 
+    const eligible = syncOps.filter(
+      (op) => !this.quarantinedDocumentIds.has(op.documentId),
+    );
+    if (eligible.length === 0) return;
+
     const keyed: SyncOperation[] = [];
     const nonKeyed: SyncOperation[] = [];
 
-    for (const syncOp of syncOps) {
+    for (const syncOp of eligible) {
       if (syncOp.jobId) {
         keyed.push(syncOp);
       } else {
@@ -507,10 +562,11 @@ export class SyncManager implements ISyncManager {
         syncOp.documentId,
         syncOp.branch,
         operations,
-        undefined,
+        this.abortController.signal,
         { sourceRemote: remote.name },
       );
     } catch (error) {
+      if (this.isShutdown) return;
       const err = error instanceof Error ? error : new Error(String(error));
       this.logger.error(
         "Failed to load operations from inbox (@remote, @documentId, @error)",
@@ -527,8 +583,12 @@ export class SyncManager implements ISyncManager {
 
     let completedJobInfo;
     try {
-      completedJobInfo = await this.awaiter.waitForJob(jobInfo.id);
+      completedJobInfo = await this.awaiter.waitForJob(
+        jobInfo.id,
+        this.abortController.signal,
+      );
     } catch (error) {
+      if (this.isShutdown) return;
       const err = error instanceof Error ? error : new Error(String(error));
       this.logger.error(
         "Failed to wait for job completion (@remote, @documentId, @jobId, @error)",
@@ -544,8 +604,7 @@ export class SyncManager implements ISyncManager {
       return;
     }
 
-    const jobKey = `${syncOp.documentId}:${syncOp.branch}`;
-    this.loadJobs.set(jobKey, completedJobInfo);
+    if (this.isShutdown) return;
 
     if (completedJobInfo.status === JobStatus.FAILED) {
       const errorMessage = completedJobInfo.error?.message || "Unknown error";
@@ -587,10 +646,13 @@ export class SyncManager implements ISyncManager {
 
     let result: BatchLoadResult;
     try {
-      result = await this.reactor.loadBatch(request, undefined, {
-        sourceRemote,
-      });
+      result = await this.reactor.loadBatch(
+        request,
+        this.abortController.signal,
+        { sourceRemote },
+      );
     } catch (error) {
+      if (this.isShutdown) return;
       for (const { remote, syncOp } of items) {
         const err = error instanceof Error ? error : new Error(String(error));
         syncOp.failed(new ChannelError(ChannelErrorSource.Inbox, err));
@@ -599,6 +661,8 @@ export class SyncManager implements ISyncManager {
       }
       return;
     }
+
+    if (this.isShutdown) return;
 
     for (const { remote, syncOp } of items) {
       if (!(syncOp.jobId in result.jobs)) {
@@ -621,8 +685,13 @@ export class SyncManager implements ISyncManager {
 
       let completedJobInfo;
       try {
-        completedJobInfo = await this.awaiter.waitForJob(jobInfo.id);
+        completedJobInfo = await this.awaiter.waitForJob(
+          jobInfo.id,
+          this.abortController.signal,
+        );
       } catch (error) {
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- isShutdown may change during await
+        if (this.isShutdown) continue;
         const err = error instanceof Error ? error : new Error(String(error));
         syncOp.failed(new ChannelError(ChannelErrorSource.Inbox, err));
         remote.channel.deadLetter.add(syncOp);
@@ -630,8 +699,8 @@ export class SyncManager implements ISyncManager {
         continue;
       }
 
-      const jobKey = `${syncOp.documentId}:${syncOp.branch}`;
-      this.loadJobs.set(jobKey, completedJobInfo);
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- isShutdown may change during await
+      if (this.isShutdown) return;
 
       if (completedJobInfo.status === JobStatus.FAILED) {
         const errorMessage = completedJobInfo.error?.message || "Unknown error";
@@ -653,74 +722,79 @@ export class SyncManager implements ISyncManager {
     remote: Remote,
     ackOrdinal: number,
   ): Promise<void> {
-    const operations = await this.getOperationsForRemote(remote, ackOrdinal);
-    if (operations.length === 0) {
-      return;
-    }
-
-    // sort by (documentId, scope, ordinal) so batchOperationsByDocument
-    // groups all operations for the same document together
-    operations.sort((a, b) => {
-      if (a.context.documentId !== b.context.documentId) {
-        return a.context.documentId < b.context.documentId ? -1 : 1;
-      }
-      if (a.context.scope !== b.context.scope) {
-        return a.context.scope < b.context.scope ? -1 : 1;
-      }
-      return a.context.ordinal - b.context.ordinal;
-    });
-
-    const batches = batchOperationsByDocument(operations);
-
-    // per-document dependency chain: each batch depends on the previous
-    // batch for the same documentId only, allowing independent documents
-    // to be processed in parallel
+    let maxOrdinal = ackOrdinal;
     const lastJobByDoc = new Map<string, string>();
-    const syncOps: SyncOperation[] = [];
-    for (const batch of batches) {
-      const jobId = crypto.randomUUID();
-      const prevJobId = lastJobByDoc.get(batch.documentId);
-      const syncOp = new SyncOperation(
-        crypto.randomUUID(),
-        jobId,
-        prevJobId ? [prevJobId] : [],
-        remote.name,
-        batch.documentId,
-        [batch.scope],
-        batch.branch,
-        batch.operations,
-      );
+    const sinceTimestamp = remote.options.sinceTimestampUtcMs;
 
-      syncOps.push(syncOp);
-      lastJobByDoc.set(batch.documentId, jobId);
-    }
-
-    remote.channel.outbox.add(...syncOps);
-  }
-
-  private async getOperationsForRemote(
-    remote: Remote,
-    ackOrdinal: number,
-  ): Promise<OperationWithContext[]> {
-    const results = await this.operationIndex.find(
+    let page = await this.operationIndex.find(
       remote.collectionId,
       ackOrdinal,
       { excludeSourceRemote: remote.name },
+      undefined,
+      this.abortController.signal,
     );
 
-    let operations = results.results.map((entry) =>
-      toOperationWithContext(entry),
-    );
+    let hasMore: boolean;
+    do {
+      for (const entry of page.results) {
+        maxOrdinal = Math.max(maxOrdinal, entry.ordinal ?? 0);
+      }
 
-    // apply the sinceTimestampUtcMs filter
-    const sinceTimestamp = remote.options.sinceTimestampUtcMs;
-    if (sinceTimestamp && sinceTimestamp !== "0") {
-      operations = operations.filter(
-        (op) => op.operation.timestampUtcMs >= sinceTimestamp,
+      let operations = page.results.map((entry) =>
+        toOperationWithContext(entry),
       );
-    }
 
-    // apply the remote filter
-    return filterOperations(operations, remote.filter);
+      if (sinceTimestamp && sinceTimestamp !== "0") {
+        operations = operations.filter(
+          (op) => op.operation.timestampUtcMs >= sinceTimestamp,
+        );
+      }
+      operations = filterOperations(operations, remote.filter);
+      operations = operations.filter(
+        (op) => !this.quarantinedDocumentIds.has(op.context.documentId),
+      );
+
+      if (operations.length > 0) {
+        operations.sort((a, b) => {
+          if (a.context.documentId !== b.context.documentId) {
+            return a.context.documentId < b.context.documentId ? -1 : 1;
+          }
+          if (a.context.scope !== b.context.scope) {
+            return a.context.scope < b.context.scope ? -1 : 1;
+          }
+          return a.context.ordinal - b.context.ordinal;
+        });
+
+        const batches = batchOperationsByDocument(operations);
+
+        const syncOps: SyncOperation[] = [];
+        for (const batch of batches) {
+          const jobId = crypto.randomUUID();
+          const prevJobId = lastJobByDoc.get(batch.documentId);
+          const syncOp = new SyncOperation(
+            crypto.randomUUID(),
+            jobId,
+            prevJobId ? [prevJobId] : [],
+            remote.name,
+            batch.documentId,
+            [batch.scope],
+            batch.branch,
+            batch.operations,
+          );
+
+          syncOps.push(syncOp);
+          lastJobByDoc.set(batch.documentId, jobId);
+        }
+
+        remote.channel.outbox.add(...syncOps);
+      }
+
+      hasMore = !!page.next;
+      if (hasMore) {
+        page = await page.next!();
+      }
+    } while (hasMore);
+
+    remote.channel.outbox.advanceOrdinal(maxOrdinal);
   }
 }

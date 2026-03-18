@@ -3,6 +3,7 @@ import type { Remote } from "@powerhousedao/reactor-browser";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { twMerge } from "tailwind-merge";
 import { ChannelInspector } from "./components/channel-inspector.js";
+import { ConnectionStateBadge } from "./components/connection-state-badge.js";
 import { SortIcon } from "./components/sort-icon.js";
 import {
   type ColumnDef,
@@ -11,14 +12,25 @@ import {
   truncateId,
 } from "./utils.js";
 
+export type ConnectionStateSummary = {
+  state: string;
+  failureCount: number;
+  lastSuccessUtcMs: number;
+  lastFailureUtcMs: number;
+  pushBlocked: boolean;
+  pushFailureCount: number;
+};
+
 export type RemotesInspectorProps = {
   readonly getRemotes: () => Promise<Remote[]>;
   readonly removeRemote?: (name: string) => Promise<void>;
+  readonly connectionStates?: ReadonlyMap<string, ConnectionStateSummary>;
 };
 
 const BASE_COLUMNS: ColumnDef[] = [
   { key: "id", label: "ID", width: "120px" },
   { key: "name", label: "Name", width: "150px" },
+  { key: "status", label: "Status", width: "120px" },
   { key: "collectionId", label: "Collection ID", width: "200px" },
   { key: "filter", label: "Filter", width: "200px" },
   { key: "channel", label: "Channel", width: "100px" },
@@ -87,6 +99,7 @@ function sortRemotes(
 export function RemotesInspector({
   getRemotes,
   removeRemote,
+  connectionStates,
 }: RemotesInspectorProps) {
   const [remotes, setRemotes] = useState<Remote[]>([]);
   const [loading, setLoading] = useState(true);
@@ -118,7 +131,12 @@ export function RemotesInspector({
   }, [loadRemotes, selectedRemote, remotes]);
 
   const handleSort = (columnKey: string) => {
-    if (columnKey === "channel" || columnKey === "actions") return;
+    if (
+      columnKey === "channel" ||
+      columnKey === "actions" ||
+      columnKey === "status"
+    )
+      return;
 
     const newDirection: SortDirection =
       sort?.column === columnKey && sort.direction === "asc" ? "desc" : "asc";
@@ -150,6 +168,7 @@ export function RemotesInspector({
     return (
       <ChannelInspector
         channel={selectedRemote.channel}
+        connectionState={connectionStates?.get(selectedRemote.name)}
         onBack={handleBack}
         onRefresh={() => void handleRefresh()}
         remoteName={selectedRemote.name}
@@ -184,7 +203,9 @@ export function RemotesInspector({
                 const isActive = sort?.column === column.key;
                 const sortDirection = isActive ? sort.direction : "asc";
                 const isSortable =
-                  column.key !== "channel" && column.key !== "actions";
+                  column.key !== "channel" &&
+                  column.key !== "actions" &&
+                  column.key !== "status";
 
                 return (
                   <th
@@ -243,6 +264,18 @@ export function RemotesInspector({
                     <span className="block truncate" title={remote.name}>
                       {remote.name}
                     </span>
+                  </td>
+                  <td className="border-l border-gray-300 px-3 py-2">
+                    {connectionStates?.get(remote.name) ? (
+                      <ConnectionStateBadge
+                        failureCount={
+                          connectionStates.get(remote.name)!.failureCount
+                        }
+                        state={connectionStates.get(remote.name)!.state}
+                      />
+                    ) : (
+                      <span className="text-xs text-gray-400">-</span>
+                    )}
                   </td>
                   <td className="border-l border-gray-300 px-3 py-2 text-xs text-gray-900">
                     <span

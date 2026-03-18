@@ -1,0 +1,42 @@
+{
+  "name": "@powerhousedao/opentelemetry-instrumentation-reactor",
+  "version": "6.0.0-dev.99",
+  "description": "OpenTelemetry instrumentation for @powerhousedao/reactor",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/powerhouse-inc/powerhouse",
+    "directory": "packages/opentelemetry-instrumentation-reactor"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "import": "./dist/src/index.js"
+    }
+  },
+  "files": [
+    "./dist/src"
+  ],
+  "scripts": {
+    "tsc": "tsc",
+    "build": "tsc",
+    "lint": "eslint"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "opentelemetry",
+    "instrumentation",
+    "reactor",
+    "metrics"
+  ],
+  "author": "",
+  "license": "AGPL-3.0-only",
+  "dependencies": {
+    "@opentelemetry/api": "^1.9.0"
+  },
+  "peerDependencies": {
+    "@powerhousedao/reactor": "workspace:"
+  }
+}
