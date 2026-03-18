@@ -208,6 +208,58 @@ tsx docs-create.ts 1 -o 100 -b 10 --async
 | `--percentiles`       | `-p`  | Show p50/p90/p95/p99 stats                                                  |
 | `--show-action-types` | `-a`  | Show action names in min/max timings                                        |
 
+### `docs-create-direct.ts` — Create documents bypassing Apollo/GraphQL
+
+A diagnostic variant of `docs-create.ts` that bypasses Apollo entirely. Documents are created via GraphQL, but mutations are sent directly to Express endpoints that call the reactor client with no GraphQL parsing, schema validation, or federation overhead.
+
+Use this to isolate whether observed latency growth originates inside the reactor or inside the Apollo/GraphQL stack:
+
+- If client round-trip stays flat here but grows with `docs-create.ts` → Apollo is the bottleneck.
+- If both grow → the bottleneck is inside the reactor itself.
+
+```bash
+# Basic run: 1 doc, 25 operations x 1000 loops
+tsx docs-create-direct.ts 1 -o 25 -l 1000
+
+# Async mode (fire-and-forget; polls jobStatus for E2E latency)
+tsx docs-create-direct.ts 1 -o 25 -l 1000 --async
+
+# Target an existing document
+tsx docs-create-direct.ts --doc-id abc123 -o 25 -l 100
+
+# Custom endpoints
+tsx docs-create-direct.ts 1 -o 25 --endpoint http://localhost:4001/graphql \
+  --direct-endpoint http://localhost:4001/reactor/mutate
+
+# Save output to a timestamped file
+tsx docs-create-direct.ts 1 -o 25 -l 100 --file
+
+# Show percentiles and action type names
+tsx docs-create-direct.ts 1 -o 25 -l 100 --percentiles --show-action-types
+```
+
+| Flag                  | Short | Description                                                                         |
+| --------------------- | ----- | ----------------------------------------------------------------------------------- |
+| `N` (positional)      |       | Number of documents to create (default: 1)                                          |
+| `--operations`        | `-o`  | Operations per loop (default: 0)                                                    |
+| `--op-loops`          | `-l`  | Loops per document (default: 1)                                                     |
+| `--batch-size`        | `-b`  | Operations per request (default: 1)                                                 |
+| `--doc-id`            | `-d`  | Use existing document(s), can be repeated                                           |
+| `--endpoint`          |       | GraphQL endpoint for document creation (default: `http://localhost:4001/graphql`)   |
+| `--direct-endpoint`   |       | Express sync endpoint (default: `http://localhost:4001/reactor/mutate`)             |
+| `--async`             |       | Use async endpoint; returns jobId immediately and polls `jobStatus` for E2E latency |
+| `--async-timeout`     |       | Max ms to wait for a polled job to reach terminal status (default: `30000`)         |
+| `--file`              |       | Write output to a timestamped file (default name: `docs-create-direct.txt`)         |
+| `--output`            | `-O`  | Write output to a specific file (no timestamp prefix)                               |
+| `--verbose`           | `-v`  | Show detailed per-operation timings                                                 |
+| `--percentiles`       | `-p`  | Show p50/p90/p95/p99 stats                                                          |
+| `--show-action-types` | `-a`  | Show action names in min/max timings                                                |
+
+The script uses two Express endpoints added to the reactor-api server:
+
+- `POST /reactor/mutate` — calls `execute()`, blocks until READ_READY (sync, mirrors non-async GraphQL mutation)
+- `POST /reactor/mutate-async` — calls `executeAsync()`, returns `{ jobId }` immediately (used by `--async`)
+
 ### `docs-count.ts` — Count documents (fast)
 
 Counts documents using the `totalCount` GraphQL field (single request per type).
@@ -386,6 +438,7 @@ docker compose -f scripts/profiling/docker-compose.yml up otel-collector prometh
 
 | Metric                                          | Description                                 |
 | ----------------------------------------------- | ------------------------------------------- |
+| `reactor_queue_wait_duration_milliseconds`      | Queue wait: PENDING → RUNNING               |
 | `reactor_executor_job_duration_milliseconds`    | Execution time: RUNNING → WRITE_READY       |
 | `reactor_job_total_duration_milliseconds`       | Full lifecycle: PENDING → READ_READY/FAILED |
 | `reactor_readmodel_index_duration_milliseconds` | Indexing time: WRITE_READY → READ_READY     |
@@ -418,6 +471,9 @@ histogram_quantile(0.99, rate(reactor_job_total_duration_milliseconds_bucket[30s
 histogram_quantile(0.99, rate(reactor_job_total_duration_milliseconds_bucket[2m]))
 histogram_quantile(0.50, rate(reactor_job_total_duration_milliseconds_bucket[2m]))
 
+# Average queue wait time (PENDING to RUNNING) — confirms or rules out queue-depth regressions
+rate(reactor_queue_wait_duration_milliseconds_sum[1m]) / rate(reactor_queue_wait_duration_milliseconds_count[1m])
+
 # Average executor time vs read-model indexing time
 rate(reactor_executor_job_duration_milliseconds_sum[1m]) / rate(reactor_executor_job_duration_milliseconds_count[1m])
 rate(reactor_readmodel_index_duration_milliseconds_sum[1m]) / rate(reactor_readmodel_index_duration_milliseconds_count[1m])
@@ -442,6 +498,28 @@ docker compose -f scripts/profiling/docker-compose.yml up -d --wait
 # Flame graphs: http://localhost:4040
 # Metrics:      http://localhost:9090
 ```
+
+### Isolate Apollo/GraphQL overhead vs reactor overhead
+
+Run both `docs-create.ts` and `docs-create-direct.ts` against the same switchboard to attribute latency growth to the correct layer:
+
+```bash
+# Terminal 1: start switchboard
+./scripts/profiling/switchboard-pyroscope.sh \
+  --postgres "postgresql://postgres:postgres@localhost:5432/postgres"
+
+# Terminal 2: GraphQL path (via Apollo)
+tsx docs-create.ts 1 -o 25 -l 1000 --async -p
+
+# Terminal 3: direct Express path (bypasses Apollo)
+tsx docs-create-direct.ts 1 -o 25 -l 1000 --async -p
+
+# Cleanup
+tsx docs-reset.ts
+```
+
+If `docs-create.ts` latency grows but `docs-create-direct.ts` stays flat → Apollo/GraphQL is the bottleneck.
+If both grow at the same rate → the bottleneck is inside the reactor.
 
 ### End-to-end switchboard benchmark
 

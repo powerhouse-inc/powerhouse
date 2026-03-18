@@ -31,9 +31,10 @@ which use UCUM (Unified Code for Units of Measure). Curly-brace annotations like
 
 ## Job Lifecycle (`reactor.job.*`)
 
-| Name                         | Type      | Unit | Description                                       | Attributes                 |
-| ---------------------------- | --------- | ---- | ------------------------------------------------- | -------------------------- |
-| `reactor.job.total.duration` | Histogram | `ms` | Full job lifecycle (PENDING to READ_READY/FAILED) | `job.success` (true/false) |
+| Name                          | Type      | Unit | Description                                       | Attributes                 |
+| ----------------------------- | --------- | ---- | ------------------------------------------------- | -------------------------- |
+| `reactor.queue.wait.duration` | Histogram | `ms` | Queue wait time per job (PENDING to RUNNING)      |                            |
+| `reactor.job.total.duration`  | Histogram | `ms` | Full job lifecycle (PENDING to READ_READY/FAILED) | `job.success` (true/false) |
 
 ## Read Models (`reactor.readmodel.*`)
 
@@ -59,7 +60,7 @@ which use UCUM (Unified Code for Units of Measure). Curly-brace annotations like
 | Event               | Code  | Metrics Recorded                                                                                                |
 | ------------------- | ----- | --------------------------------------------------------------------------------------------------------------- |
 | `JOB_PENDING`       | 10001 | `queue.jobs.enqueued`, `eventbus.events.emitted`                                                                |
-| `JOB_RUNNING`       | 10002 | `queue.jobs.dequeued`, `eventbus.events.emitted`                                                                |
+| `JOB_RUNNING`       | 10002 | `queue.jobs.dequeued`, `queue.wait.duration`, `eventbus.events.emitted`                                         |
 | `JOB_WRITE_READY`   | 10003 | `executor.job.duration`, `executor.total_processed`, `executor.operations_generated`, `eventbus.events.emitted` |
 | `JOB_READ_READY`    | 10004 | `readmodel.index.duration`, `job.total.duration`, `queue.jobs.completed`, `eventbus.events.emitted`             |
 | `JOB_FAILED`        | 10005 | `queue.jobs.failed`, `executor.total_processed`, `job.total.duration`, `eventbus.events.emitted`                |
