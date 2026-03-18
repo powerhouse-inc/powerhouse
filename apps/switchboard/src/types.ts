@@ -66,6 +66,12 @@ export type StartServerOptions = {
     storageV2?: boolean;
   };
   enableDocumentModelSubgraphs?: boolean;
+  /**
+   * When true, enables dynamic loading of document models from the registry
+   * when an unknown document type is encountered during sync.
+   * Disabled by default — enable with DYNAMIC_MODEL_LOADING=true env var.
+   */
+  dynamicModelLoading?: boolean;
   logger?: ILogger;
   /**
    * OpenTelemetry MeterProvider to register as the global provider before
