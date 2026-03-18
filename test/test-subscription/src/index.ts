@@ -25,7 +25,7 @@ if (hasFlag("help")) {
 
 Options:
   --url <url>      WebSocket URL (default: ws://localhost:4001/graphql/subscriptions)
-  --type <type>    Filter documentChanges by document type (default: powerhouse/document-drive)
+  --type <type>    Filter documentChanges by document type
   --parent-id <id> Filter documentChanges by parent document (drive) ID
   --job-id <id>    Also subscribe to jobChanges for a specific job
   --auth <token>   Bearer token for authentication
