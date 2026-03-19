@@ -5,17 +5,17 @@
  * for the reactor subgraph's documentChanges subscription.
  */
 import {
-  createClient as createWsClient,
-  type ExecutionResult,
-} from "graphql-ws";
-import { createClient as createSseClient } from "graphql-sse";
-import {
   createClient,
   RemoteDocumentController,
 } from "@powerhousedao/reactor-browser";
 import { DocumentModelController } from "document-model";
-import WebSocket from "ws";
+import { createClient as createSseClient } from "graphql-sse";
+import {
+  createClient as createWsClient,
+  type ExecutionResult,
+} from "graphql-ws";
 import { afterAll, describe, expect, it } from "vitest";
+import WebSocket from "ws";
 
 interface DocumentChangesData {
   documentChanges: {
@@ -63,7 +63,10 @@ const DOCUMENT_CHANGES_QUERY = `
 function wsSubscribe(
   wsClient: ReturnType<typeof createWsClient>,
   variables: Record<string, unknown>,
-): { promise: Promise<DocumentChangesData["documentChanges"]>; cancel: () => void } {
+): {
+  promise: Promise<DocumentChangesData["documentChanges"]>;
+  cancel: () => void;
+} {
   let cancelTimeout: () => void;
   let unsubscribe: () => void;
 
@@ -86,7 +89,7 @@ function wsSubscribe(
           },
           error: (err: unknown) => {
             clearTimeout(timeout);
-            reject(err);
+            reject(err as Error);
           },
           complete: () => {
             clearTimeout(timeout);
@@ -110,7 +113,10 @@ function wsSubscribe(
 function sseSubscribe(
   sseClient: ReturnType<typeof createSseClient>,
   variables: Record<string, unknown>,
-): { promise: Promise<DocumentChangesData["documentChanges"]>; cancel: () => void } {
+): {
+  promise: Promise<DocumentChangesData["documentChanges"]>;
+  cancel: () => void;
+} {
   let cancelTimeout: () => void;
   let unsubscribe: () => void;
 
@@ -135,7 +141,7 @@ function sseSubscribe(
           error: (err: unknown) => {
             clearTimeout(timeout);
             unsubscribe?.();
-            reject(err);
+            reject(err as Error);
           },
           complete: () => {
             clearTimeout(timeout);
@@ -201,9 +207,7 @@ describe("Subscription e2e", () => {
         expect(event).toBeDefined();
         expect(event.type).toBe("CREATED");
         expect(event.documents).toEqual(
-          expect.arrayContaining([
-            expect.objectContaining({ id: docId }),
-          ]),
+          expect.arrayContaining([expect.objectContaining({ id: docId })]),
         );
       } finally {
         sub.cancel();
@@ -256,9 +260,7 @@ describe("Subscription e2e", () => {
         expect(event).toBeDefined();
         expect(event.type).toBe("CREATED");
         expect(event.documents).toEqual(
-          expect.arrayContaining([
-            expect.objectContaining({ id: docId }),
-          ]),
+          expect.arrayContaining([expect.objectContaining({ id: docId })]),
         );
       } finally {
         sub.cancel();

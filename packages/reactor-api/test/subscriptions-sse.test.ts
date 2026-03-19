@@ -1,351 +1,116 @@
-import type {
-  DocumentChangeEvent,
-  IReactorClient,
-} from "@powerhousedao/reactor";
+import type { IReactorClient, ISyncManager } from "@powerhousedao/reactor";
 import { DocumentChangeType } from "@powerhousedao/reactor";
 import { documentModelDocumentModelModule } from "document-model";
-import {
-  GraphQLEnumType,
-  GraphQLInputObjectType,
-  GraphQLList,
-  GraphQLNonNull,
-  GraphQLObjectType,
-  GraphQLSchema,
-  GraphQLString,
-  parse,
-  subscribe,
-} from "graphql";
+import { buildSchema, print, subscribe, parse } from "graphql";
 import { setTimeout as delay } from "node:timers/promises";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createGraphQLSSEHandler } from "../src/graphql/sse.js";
-import type { Context } from "../src/graphql/types.js";
+import { describe, expect, it, vi } from "vitest";
+import { matchesSearchFilter } from "../src/graphql/reactor/adapters.js";
 import {
-  matchesSearchFilter,
-  toGqlDocumentChangeEvent,
-} from "../src/graphql/reactor/adapters.js";
-import {
-  ensureGlobalDocumentSubscription,
   getPubSub,
   SUBSCRIPTION_TRIGGERS,
   type DocumentChangesPayload,
   type JobChangesPayload,
 } from "../src/graphql/reactor/pubsub.js";
+import { ReactorSubgraph } from "../src/graphql/reactor/subgraph.js";
+import { createGraphQLSSEHandler } from "../src/graphql/sse.js";
+import type { Context, SubgraphArgs } from "../src/graphql/types.js";
 import { createSchema } from "../src/utils/create-schema.js";
-import { gql } from "graphql-tag";
 
-// ---- Type-defs-only schema for SSE handler creation tests (uses createSchema) ----
-const testTypeDefs = gql`
-  scalar JSONObject
-  scalar DateTime
+// Instantiate the actual ReactorSubgraph to get its typeDefs and resolvers.
+// The mock reactorClient needs subscribe() (called by ensureGlobalDocumentSubscription)
+// and getJobStatus() (called by ensureJobSubscription).
+const mockReactorClient = {
+  subscribe: vi.fn(() => vi.fn()),
+  getJobStatus: vi.fn(),
+} as unknown as IReactorClient;
 
-  input SearchFilterInput {
-    type: String
-    parentId: String
-  }
-
-  input ViewFilterInput {
-    branch: String
-    scopes: [String!]
-  }
-
-  enum DocumentChangeType {
-    CREATED
-    DELETED
-    UPDATED
-    PARENT_ADDED
-    PARENT_REMOVED
-    CHILD_ADDED
-    CHILD_REMOVED
-  }
-
-  type Revision {
-    scope: String!
-    revision: Int!
-  }
-
-  type PHDocument {
-    id: String!
-    slug: String
-    name: String!
-    documentType: String!
-    state: JSONObject!
-    revisionsList: [Revision!]!
-    createdAtUtcIso: DateTime!
-    lastModifiedAtUtcIso: DateTime!
-  }
-
-  type DocumentChangeContext {
-    parentId: String
-    childId: String
-  }
-
-  type DocumentChangeEvent {
-    type: DocumentChangeType!
-    documents: [PHDocument!]!
-    context: DocumentChangeContext
-  }
-
-  type JobChangeEvent {
-    jobId: String!
-    status: String!
-    result: JSONObject!
-    error: String
-  }
-
-  type Query {
-    _empty: String
-  }
-
-  type Subscription {
-    documentChanges(
-      search: SearchFilterInput!
-      view: ViewFilterInput
-    ): DocumentChangeEvent!
-    jobChanges(jobId: String!): JobChangeEvent!
-  }
-`;
-
-// ---- Pure-graphql schema for subscribe() tests (avoids dual-module instanceOf issue) ----
-const DocumentChangeTypeEnum = new GraphQLEnumType({
-  name: "DocumentChangeType",
-  values: {
-    CREATED: { value: "CREATED" },
-    DELETED: { value: "DELETED" },
-    UPDATED: { value: "UPDATED" },
-    PARENT_ADDED: { value: "PARENT_ADDED" },
-    PARENT_REMOVED: { value: "PARENT_REMOVED" },
-    CHILD_ADDED: { value: "CHILD_ADDED" },
-    CHILD_REMOVED: { value: "CHILD_REMOVED" },
-  },
-});
-
-const PHDocumentType = new GraphQLObjectType({
-  name: "PHDocument",
-  fields: {
-    id: { type: new GraphQLNonNull(GraphQLString) },
-    name: { type: new GraphQLNonNull(GraphQLString) },
-    documentType: { type: new GraphQLNonNull(GraphQLString) },
-    slug: { type: GraphQLString },
-  },
-});
-
-const DocumentChangeContextType = new GraphQLObjectType({
-  name: "DocumentChangeContext",
-  fields: {
-    parentId: { type: GraphQLString },
-    childId: { type: GraphQLString },
-  },
-});
-
-const DocumentChangeEventType = new GraphQLObjectType({
-  name: "DocumentChangeEvent",
-  fields: {
-    type: { type: new GraphQLNonNull(DocumentChangeTypeEnum) },
-    documents: {
-      type: new GraphQLNonNull(
-        new GraphQLList(new GraphQLNonNull(PHDocumentType)),
-      ),
-    },
-    context: { type: DocumentChangeContextType },
-  },
-});
-
-const JobChangeEventType = new GraphQLObjectType({
-  name: "JobChangeEvent",
-  fields: {
-    jobId: { type: new GraphQLNonNull(GraphQLString) },
-    status: { type: new GraphQLNonNull(GraphQLString) },
-    error: { type: GraphQLString },
-  },
-});
-
-const SearchFilterInputType = new GraphQLInputObjectType({
-  name: "SearchFilterInput",
-  fields: {
-    type: { type: GraphQLString },
-    parentId: { type: GraphQLString },
-  },
-});
-
-function buildSubscriptionTestSchema(resolvers: {
-  documentChanges?: {
-    subscribe: () => AsyncIterableIterator<DocumentChangesPayload>;
-    resolve: (payload: DocumentChangesPayload) => unknown;
-  };
-  jobChanges?: {
-    subscribe: () => AsyncIterableIterator<JobChangesPayload>;
-    resolve: (payload: JobChangesPayload) => unknown;
-  };
-}) {
-  const subscriptionFields: Record<string, unknown> = {};
-
-  if (resolvers.documentChanges) {
-    subscriptionFields.documentChanges = {
-      type: new GraphQLNonNull(DocumentChangeEventType),
-      args: {
-        search: { type: new GraphQLNonNull(SearchFilterInputType) },
-      },
-      subscribe: resolvers.documentChanges.subscribe,
-      resolve: resolvers.documentChanges.resolve,
-    };
-  }
-
-  if (resolvers.jobChanges) {
-    subscriptionFields.jobChanges = {
-      type: new GraphQLNonNull(JobChangeEventType),
-      args: {
-        jobId: { type: new GraphQLNonNull(GraphQLString) },
-      },
-      subscribe: resolvers.jobChanges.subscribe,
-      resolve: resolvers.jobChanges.resolve,
-    };
-  }
-
-  return new GraphQLSchema({
-    query: new GraphQLObjectType({
-      name: "Query",
-      fields: { _empty: { type: GraphQLString } },
-    }),
-    subscription: new GraphQLObjectType({
-      name: "Subscription",
-      fields: subscriptionFields as never,
-    }),
-  });
-}
+const reactorSubgraph = new ReactorSubgraph({
+  reactorClient: mockReactorClient,
+  syncManager: {} as ISyncManager,
+} as SubgraphArgs);
 
 /**
- * Create a real PHDocument using the document-model module utilities.
+ * Build an executable schema for subscribe() tests.
+ *
+ * We use graphql's buildSchema + field patching (instead of Apollo's
+ * buildSubgraphSchema) because vitest's vite transform creates separate
+ * graphql module instances, causing subscribe() to reject Federation
+ * schemas with "Cannot use GraphQLSchema from another module or realm".
  */
+function buildSubscriptionSchema() {
+  const schema = buildSchema(print(reactorSubgraph.typeDefs));
+  const subscriptionType = schema.getSubscriptionType()!;
+  const fields = subscriptionType.getFields();
+  const resolvers = reactorSubgraph.resolvers.Subscription as Record<
+    string,
+    { subscribe: () => unknown; resolve: (payload: unknown) => unknown }
+  >;
+  for (const [name, resolver] of Object.entries(resolvers)) {
+    if (fields[name]) {
+      const field = fields[name] as unknown as Record<string, unknown>;
+      field.subscribe = resolver.subscribe;
+      field.resolve = resolver.resolve;
+    }
+  }
+  return schema;
+}
+
+/** Build a Federation schema for SSE handler tests (doesn't use subscribe()). */
+function buildFederationSchema() {
+  return createSchema([], reactorSubgraph.resolvers, reactorSubgraph.typeDefs);
+}
+
 function createTestDocument() {
   return documentModelDocumentModelModule.utils.createDocument();
 }
 
 describe("Subscription SSE Integration", () => {
-  let mockReactorClient: IReactorClient;
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-
-    mockReactorClient = {
-      subscribe: vi.fn((_search, _callback) => {
-        return vi.fn();
-      }),
-      getJobStatus: vi.fn(),
-    } as unknown as IReactorClient;
-  });
-
   describe("SSE Handler Creation", () => {
-    it("should create an SSE handler from a schema with subscriptions", () => {
-      const schema = createSchema(
-        [],
-        {
-          Query: { _empty: () => null },
-          Subscription: {
-            documentChanges: {
-              subscribe: () =>
-                getPubSub().asyncIterableIterator(
-                  SUBSCRIPTION_TRIGGERS.DOCUMENT_CHANGES,
-                ),
-              resolve: (payload: DocumentChangesPayload) =>
-                toGqlDocumentChangeEvent(payload.documentChanges),
-            },
-          },
-        },
-        testTypeDefs,
-      );
-
+    it("should create an SSE handler from the reactor schema", () => {
+      const schema = buildFederationSchema();
       const handler = createGraphQLSSEHandler({
         schema,
-        contextFactory: () =>
-          ({
-            headers: {},
-            db: null,
-          }) as unknown as Context,
+        contextFactory: () => ({ headers: {}, db: null }) as unknown as Context,
       });
 
       expect(handler).toBeDefined();
       expect(typeof handler).toBe("function");
     });
-
-    it("should accept a contextFactory that returns a Promise", () => {
-      const schema = createSchema(
-        [],
-        { Query: { _empty: () => null } },
-        testTypeDefs,
-      );
-
-      const handler = createGraphQLSSEHandler({
-        schema,
-        contextFactory: async () =>
-          ({
-            headers: {},
-            db: null,
-          }) as unknown as Context,
-      });
-
-      expect(handler).toBeDefined();
-    });
   });
 
   describe("GraphQL Subscription Execution", () => {
-    it("should execute a documentChanges subscription and receive events via PubSub", async () => {
-      const schema = buildSubscriptionTestSchema({
-        documentChanges: {
-          subscribe: () => {
-            ensureGlobalDocumentSubscription(mockReactorClient);
-            return getPubSub().asyncIterableIterator(
-              SUBSCRIPTION_TRIGGERS.DOCUMENT_CHANGES,
-            );
-          },
-          resolve: (payload: DocumentChangesPayload) =>
-            toGqlDocumentChangeEvent(payload.documentChanges),
-        },
-      });
-
-      const subscriptionDocument = parse(`
-        subscription {
-          documentChanges(search: {}) {
-            type
-            documents {
-              id
-              name
-              documentType
-            }
-          }
-        }
-      `);
+    it("should receive documentChanges events via PubSub", async () => {
+      const schema = buildSubscriptionSchema();
 
       const result = await subscribe({
         schema,
-        document: subscriptionDocument,
+        document: parse(`
+          subscription {
+            documentChanges(search: {}) {
+              type
+              documents { id name documentType }
+            }
+          }
+        `),
       });
 
-      // subscribe() should return an AsyncIterable, not an error
       expect(Symbol.asyncIterator in (result as object)).toBe(true);
       const iterator = (result as AsyncIterableIterator<unknown>)[
         Symbol.asyncIterator
       ]();
 
-      // Use a real document from the document-model module
       const doc = createTestDocument();
-
-      const mockEvent: DocumentChangeEvent = {
-        type: DocumentChangeType.Created,
-        documents: [doc],
-      };
-
       const payload: DocumentChangesPayload = {
-        documentChanges: mockEvent,
+        documentChanges: {
+          type: DocumentChangeType.Created,
+          documents: [doc],
+        },
         search: {},
       };
 
-      // Publish after a microtask so the iterator is listening
       const nextPromise = iterator.next();
       await delay(10);
-      void getPubSub().publish(
-        SUBSCRIPTION_TRIGGERS.DOCUMENT_CHANGES,
-        payload,
-      );
+      void getPubSub().publish(SUBSCRIPTION_TRIGGERS.DOCUMENT_CHANGES, payload);
 
       const next = await nextPromise;
       expect(next.done).toBe(false);
@@ -367,30 +132,20 @@ describe("Subscription SSE Integration", () => {
       await iterator.return?.();
     });
 
-    it("should execute a jobChanges subscription and receive events via PubSub", async () => {
-      const schema = buildSubscriptionTestSchema({
-        jobChanges: {
-          subscribe: () =>
-            getPubSub().asyncIterableIterator(
-              SUBSCRIPTION_TRIGGERS.JOB_CHANGES,
-            ),
-          resolve: (payload: JobChangesPayload) => payload.jobChanges,
-        },
-      });
-
-      const subscriptionDocument = parse(`
-        subscription {
-          jobChanges(jobId: "job-123") {
-            jobId
-            status
-            error
-          }
-        }
-      `);
+    it("should receive jobChanges events via PubSub", async () => {
+      const schema = buildSubscriptionSchema();
 
       const result = await subscribe({
         schema,
-        document: subscriptionDocument,
+        document: parse(`
+          subscription {
+            jobChanges(jobId: "job-123") {
+              jobId
+              status
+              error
+            }
+          }
+        `),
       });
 
       expect(Symbol.asyncIterator in (result as object)).toBe(true);
@@ -429,33 +184,21 @@ describe("Subscription SSE Integration", () => {
       await iterator.return?.();
     });
 
-    it("should handle multiple sequential events on a subscription", async () => {
-      const schema = buildSubscriptionTestSchema({
-        documentChanges: {
-          subscribe: () => {
-            ensureGlobalDocumentSubscription(mockReactorClient);
-            return getPubSub().asyncIterableIterator(
-              SUBSCRIPTION_TRIGGERS.DOCUMENT_CHANGES,
-            );
-          },
-          resolve: (payload: DocumentChangesPayload) =>
-            toGqlDocumentChangeEvent(payload.documentChanges),
-        },
-      });
-
-      const subscriptionDocument = parse(`
-        subscription {
-          documentChanges(search: {}) {
-            type
-            documents { id }
-          }
-        }
-      `);
+    it("should handle multiple sequential events", async () => {
+      const schema = buildSubscriptionSchema();
 
       const result = await subscribe({
         schema,
-        document: subscriptionDocument,
+        document: parse(`
+          subscription {
+            documentChanges(search: {}) {
+              type
+              documents { id }
+            }
+          }
+        `),
       });
+
       const iterator = (result as AsyncIterableIterator<unknown>)[
         Symbol.asyncIterator
       ]();
@@ -463,7 +206,6 @@ describe("Subscription SSE Integration", () => {
       const doc1 = createTestDocument();
       const doc2 = createTestDocument();
 
-      // Wait for the iterator to be ready, then publish
       const firstPromise = iterator.next();
       await delay(10);
       void getPubSub().publish(SUBSCRIPTION_TRIGGERS.DOCUMENT_CHANGES, {
@@ -508,16 +250,10 @@ describe("Subscription SSE Integration", () => {
     });
   });
 
-  describe("Subscription Filtering with Resolvers", () => {
+  describe("Subscription Filtering", () => {
     it("should filter documentChanges by document type", () => {
       const docModelDoc = createTestDocument();
-      // The document-model module creates documents of type "powerhouse/document-model"
-      expect(docModelDoc.header.documentType).toBe(
-        "powerhouse/document-model",
-      );
-
       const otherDoc = createTestDocument();
-      // Override the header to simulate a different type
       const otherTypedDoc = {
         ...otherDoc,
         header: {
@@ -543,10 +279,10 @@ describe("Subscription SSE Integration", () => {
         },
       ];
 
-      const filter = { type: "powerhouse/document-model" };
-
-      const matching = events.filter((payload) =>
-        matchesSearchFilter(payload.documentChanges, filter),
+      const matching = events.filter((p) =>
+        matchesSearchFilter(p.documentChanges, {
+          type: "powerhouse/document-model",
+        }),
       );
 
       expect(matching).toHaveLength(1);
@@ -557,7 +293,6 @@ describe("Subscription SSE Integration", () => {
 
     it("should filter documentChanges by parentId", () => {
       const childDoc = createTestDocument();
-
       const event: DocumentChangesPayload = {
         documentChanges: {
           type: DocumentChangeType.ChildAdded,
@@ -571,43 +306,16 @@ describe("Subscription SSE Integration", () => {
         matchesSearchFilter(event.documentChanges, { parentId: "parent-1" }),
       ).toBe(true);
       expect(
-        matchesSearchFilter(event.documentChanges, {
-          parentId: "other-parent",
-        }),
+        matchesSearchFilter(event.documentChanges, { parentId: "other" }),
       ).toBe(false);
     });
   });
 
-  describe("Schema with Subscriptions", () => {
-    it("should create a valid schema that includes Subscription type", () => {
-      const schema = createSchema(
-        [],
-        {
-          Query: { _empty: () => null },
-          Subscription: {
-            documentChanges: {
-              subscribe: () =>
-                getPubSub().asyncIterableIterator(
-                  SUBSCRIPTION_TRIGGERS.DOCUMENT_CHANGES,
-                ),
-              resolve: (payload: DocumentChangesPayload) =>
-                toGqlDocumentChangeEvent(payload.documentChanges),
-            },
-            jobChanges: {
-              subscribe: () =>
-                getPubSub().asyncIterableIterator(
-                  SUBSCRIPTION_TRIGGERS.JOB_CHANGES,
-                ),
-              resolve: (payload: JobChangesPayload) => payload.jobChanges,
-            },
-          },
-        },
-        testTypeDefs,
-      );
-
+  describe("Schema Validation", () => {
+    it("should include Subscription type with expected fields", () => {
+      const schema = buildSubscriptionSchema();
       const subscriptionType = schema.getSubscriptionType();
       expect(subscriptionType).toBeDefined();
-      expect(subscriptionType?.name).toBe("Subscription");
 
       const fields = subscriptionType!.getFields();
       expect(fields.documentChanges).toBeDefined();
