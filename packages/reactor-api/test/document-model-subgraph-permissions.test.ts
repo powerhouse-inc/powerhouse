@@ -409,6 +409,94 @@ describe("DocumentModelSubgraph Permission Checks", () => {
     });
   });
 
+  describe("Query: documents (get all)", () => {
+    const callDocuments = async (
+      ctx: Context,
+      paging?: { limit?: number; offset?: number; cursor?: string },
+    ) => {
+      const queryResolver = (subgraph.resolvers.Query as any)
+        ?.TestModel_documents;
+      return queryResolver(null, { paging }, ctx);
+    };
+
+    describe("Global Role Access", () => {
+      it("should return all documents for admin", async () => {
+        const ctx = createContext({ isAdmin: true, userAddress: "0xadmin" });
+
+        const result = await callDocuments(ctx, { limit: 10 });
+
+        expect(result.items).toHaveLength(1);
+        expect(mockDocumentPermissionService.canRead).not.toHaveBeenCalled();
+      });
+    });
+
+    describe("Document Permission Filtering", () => {
+      beforeEach(() => {
+        const docs = [
+          createMockDocument("doc-1", "Doc 1"),
+          createMockDocument("doc-2", "Doc 2"),
+          createMockDocument("doc-3", "Doc 3"),
+        ];
+        mockReactorClient.find = vi.fn().mockResolvedValue({
+          results: docs,
+          options: { limit: 10, cursor: "" },
+        } as PagedResults<PHDocument>);
+      });
+
+      it("should filter documents based on permissions when no global access", async () => {
+        vi.mocked(mockDocumentPermissionService.canRead!).mockImplementation(
+          async (docId) => docId === "doc-1" || docId === "doc-3",
+        );
+        const ctx = createContext({ userAddress: "0xpartial" });
+
+        const result = await callDocuments(ctx, { limit: 10 });
+
+        expect(result.items).toHaveLength(2);
+        expect(result.items.map((d: any) => d.id).sort()).toEqual([
+          "doc-1",
+          "doc-3",
+        ]);
+      });
+
+      it("should return empty array when user has no document permissions", async () => {
+        vi.mocked(mockDocumentPermissionService.canRead!).mockResolvedValue(
+          false,
+        );
+        const ctx = createContext({ userAddress: "0xnopermissions" });
+
+        const result = await callDocuments(ctx, { limit: 10 });
+
+        expect(result.items).toHaveLength(0);
+      });
+    });
+
+    describe("reactorClient integration", () => {
+      it("should use reactorClient.find with type filter and no parentId", async () => {
+        const ctx = createContext({ isAdmin: true, userAddress: "0xadmin" });
+
+        await callDocuments(ctx, { limit: 10 });
+
+        expect(mockReactorClient.find).toHaveBeenCalledWith(
+          expect.objectContaining({
+            type: "powerhouse/test-model",
+          }),
+          undefined,
+          expect.objectContaining({
+            limit: 10,
+          }),
+        );
+      });
+
+      it("should work without paging argument", async () => {
+        const ctx = createContext({ isAdmin: true, userAddress: "0xadmin" });
+
+        const result = await callDocuments(ctx);
+
+        expect(result.items).toHaveLength(1);
+      });
+    });
+  });
+
   describe("Mutation: createDocument", () => {
     const callCreateDocument = async (
       ctx: Context,

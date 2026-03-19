@@ -166,6 +166,43 @@ export class DocumentModelSubgraph extends BaseSubgraph {
           return result;
         },
 
+        // Flat query: Get all documents of this type (paged)
+        [`${documentName}_documents`]: async (
+          _: unknown,
+          args: {
+            paging?: { limit?: number; offset?: number; cursor?: string };
+          },
+          ctx: Context,
+        ) => {
+          const { paging } = args;
+
+          const result = await findDocumentsResolver(this.reactorClient, {
+            search: { type: documentType },
+            paging,
+          });
+
+          // Filter by permission if needed
+          if (
+            !this.hasGlobalAdminAccess(ctx) &&
+            this.documentPermissionService
+          ) {
+            const filteredItems = [];
+            for (const item of result.items) {
+              const canRead = await this.canReadDocument(item.id, ctx);
+              if (canRead) {
+                filteredItems.push(item);
+              }
+            }
+            return {
+              ...result,
+              items: filteredItems,
+              totalCount: filteredItems.length,
+            };
+          }
+
+          return result;
+        },
+
         // Flat query: Find documents by search criteria (type is built-in)
         // Uses shared findDocumentsResolver from reactor/resolvers.ts
         [`${documentName}_findDocuments`]: async (
