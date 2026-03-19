@@ -1,9 +1,9 @@
-import { getConfig } from "@powerhousedao/config/node";
 import { boolean, flag, number, option, optional, string } from "cmd-ts";
 import {
   DEFAULT_SWITCHBOARD_PORT,
   DEFAULT_VETRA_CONNECT_PORT,
 } from "../constants.js";
+import { getConfig } from "../file-system/get-config.js";
 import {
   commonArgs,
   commonServerArgs,

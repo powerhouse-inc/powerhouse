@@ -1,28 +1,31 @@
-import type { Operation, OperationWithContext } from "@powerhousedao/shared/document-model";
+import type {
+  Operation,
+  OperationWithContext,
+} from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import type { IOperationIndex } from "../cache/operation-index-types.js";
 import type {
-    BatchLoadRequest,
-    BatchLoadResult,
-    IReactor,
+  BatchLoadRequest,
+  BatchLoadResult,
+  IReactor,
 } from "../core/types.js";
 import type { IEventBus } from "../events/interfaces.js";
 import {
-    ReactorEventTypes,
-    type JobFailedEvent,
-    type JobWriteReadyEvent,
+  ReactorEventTypes,
+  type JobFailedEvent,
+  type JobWriteReadyEvent,
 } from "../events/types.js";
 import { JobAwaiter } from "../shared/awaiter.js";
 import {
-    JobStatus,
-    type JobInfo,
-    type ShutdownStatus,
+  JobStatus,
+  type JobInfo,
+  type ShutdownStatus,
 } from "../shared/types.js";
 import type {
-    DeadLetterRecord,
-    ISyncCursorStorage,
-    ISyncDeadLetterStorage,
-    ISyncRemoteStorage,
+  DeadLetterRecord,
+  ISyncCursorStorage,
+  ISyncDeadLetterStorage,
+  ISyncRemoteStorage,
 } from "../storage/interfaces.js";
 import { BatchAggregator, type PreparedBatch } from "./batch-aggregator.js";
 import { ChannelError } from "./errors.js";
@@ -30,27 +33,27 @@ import type { IChannelFactory, ISyncManager, Remote } from "./interfaces.js";
 import { SyncAwaiter } from "./sync-awaiter.js";
 import { SyncOperation } from "./sync-operation.js";
 import {
-    SyncStatusTracker,
-    type SyncStatus,
-    type SyncStatusChangeCallback,
+  SyncStatusTracker,
+  type SyncStatus,
+  type SyncStatusChangeCallback,
 } from "./sync-status-tracker.js";
 import type {
-    ChannelConfig,
-    ConnectionStateChangedEvent,
-    DeadLetterAddedEvent,
-    RemoteFilter,
-    RemoteOptions,
-    RemoteRecord,
-    RemoteStatus,
-    SyncResult,
+  ChannelConfig,
+  ConnectionStateChangedEvent,
+  DeadLetterAddedEvent,
+  RemoteFilter,
+  RemoteOptions,
+  RemoteRecord,
+  RemoteStatus,
+  SyncResult,
 } from "./types.js";
 import { ChannelErrorSource, SyncEventTypes } from "./types.js";
 import {
-    batchOperationsByDocument,
-    createIdleHealth,
-    filterOperations,
-    toOperationWithContext,
-    trimMailboxFromBatch,
+  batchOperationsByDocument,
+  createIdleHealth,
+  filterOperations,
+  toOperationWithContext,
+  trimMailboxFromBatch,
 } from "./utils.js";
 
 export class SyncManager implements ISyncManager {

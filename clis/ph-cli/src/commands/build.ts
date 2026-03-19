@@ -1,4 +1,4 @@
-import { buildArgs } from "@powerhousedao/common/clis";
+import { buildArgs } from "@powerhousedao/shared/clis";
 import { command } from "cmd-ts";
 import { runBuild } from "../services/build.js";
 

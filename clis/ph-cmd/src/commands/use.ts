@@ -4,7 +4,7 @@ import {
   logVersionUpdate,
   parsePackageVersion,
   runCmd,
-} from "@powerhousedao/common/clis";
+} from "@powerhousedao/shared/clis";
 import { ALL_POWERHOUSE_DEPENDENCIES } from "@powerhousedao/shared/constants";
 import chalk from "chalk";
 import {

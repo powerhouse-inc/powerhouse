@@ -6,7 +6,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/unbound-method */
 import type { IReactorClient, PagedResults } from "@powerhousedao/reactor";
-import type { DocumentModelModule, PHDocument } from "@powerhousedao/shared/document-model";
+import type {
+  DocumentModelModule,
+  PHDocument,
+} from "@powerhousedao/shared/document-model";
 import { GraphQLError } from "graphql";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DocumentModelSubgraph } from "../src/graphql/document-model-subgraph.js";

@@ -6,7 +6,10 @@ import {
   utils,
 } from "@powerhousedao/vetra/document-models/subgraph-module";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
-import { createState, defaultBaseState } from "@powerhousedao/shared/document-model";
+import {
+  createState,
+  defaultBaseState,
+} from "@powerhousedao/shared/document-model";
 
 /** Document model module for the Todo List document type */
 export const SubgraphModule: DocumentModelModule<SubgraphModulePHState> = {

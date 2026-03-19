@@ -1,8 +1,8 @@
 import type { Operation } from "@powerhousedao/shared/document-model";
 import {
-    deriveOperationId,
-    generateId,
-    skipHeaderOperations,
+  deriveOperationId,
+  generateId,
+  skipHeaderOperations,
 } from "@powerhousedao/shared/document-model";
 import { describe, expect, it } from "vitest";
 

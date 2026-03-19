@@ -3,12 +3,12 @@ import { BrowserAnalyticsStore } from "@powerhousedao/analytics-engine-browser";
 import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import { AnalyticsQueryEngine } from "@powerhousedao/analytics-engine-core";
 import {
-    QueryClient,
-    QueryClientProvider,
-    useMutation,
-    useQuery,
-    useQueryClient,
-    useSuspenseQuery,
+  QueryClient,
+  QueryClientProvider,
+  useMutation,
+  useQuery,
+  useQueryClient,
+  useSuspenseQuery,
 } from "@tanstack/react-query";
 import { childLogger } from "document-model";
 import type { PropsWithChildren } from "react";

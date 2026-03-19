@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import {
-    attachBranch,
-    checkCleanedOperationsIntegrity,
-    merge,
-    precedes,
-    reshuffleByTimestamp,
+  attachBranch,
+  checkCleanedOperationsIntegrity,
+  merge,
+  precedes,
+  reshuffleByTimestamp,
 } from "@powerhousedao/shared/document-model";
 import { buildOperations } from "./utils.js";
 

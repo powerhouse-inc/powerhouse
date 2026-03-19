@@ -1,5 +1,8 @@
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
-import type { DocumentModelModule, PHDocument } from "@powerhousedao/shared/document-model";
+import type {
+  DocumentModelModule,
+  PHDocument,
+} from "@powerhousedao/shared/document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { DocumentChangeEvent } from "../../src/client/types.js";
 import { ReactorBuilder } from "../../src/core/reactor-builder.js";

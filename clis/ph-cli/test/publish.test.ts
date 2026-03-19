@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("child_process");
 vi.mock("@powerhousedao/config/node");
-vi.mock("@powerhousedao/common/clis", async (importOriginal) => {
+vi.mock("@powerhousedao/shared/clis", async (importOriginal) => {
   const actual: Record<string, unknown> = await importOriginal();
   return {
     ...actual,
@@ -11,8 +11,8 @@ vi.mock("@powerhousedao/common/clis", async (importOriginal) => {
   };
 });
 
-import { getPowerhouseProjectInfo } from "@powerhousedao/common/clis";
 import { getConfig } from "@powerhousedao/config/node";
+import { getPowerhouseProjectInfo } from "@powerhousedao/shared/clis";
 import { execSync } from "child_process";
 import { getForwardedArgs } from "../src/commands/publish.js";
 
@@ -127,7 +127,9 @@ describe("publish", () => {
       const { publish } = await import("../src/commands/publish.js");
 
       // Access the handler from the command object
-      const handler = (publish as unknown as { handler: Function }).handler;
+      const handler = (
+        publish as unknown as { handler: (_args: typeof args) => void }
+      ).handler;
 
       return handler(args);
     }

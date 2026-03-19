@@ -1,13 +1,18 @@
-import { baseCreateDocument, prune, redo, undo } from "@powerhousedao/shared/document-model";
+import {
+  baseCreateDocument,
+  prune,
+  redo,
+  undo,
+} from "@powerhousedao/shared/document-model";
 import type { CountPHState, TestPHState } from "document-model/test";
 import {
-    countReducer,
-    createCountDocumentState,
-    createCountState,
-    defaultPHDocumentCreateState,
-    fakeAction,
-    setLocalName,
-    wrappedEmptyReducer,
+  countReducer,
+  createCountDocumentState,
+  createCountState,
+  defaultPHDocumentCreateState,
+  fakeAction,
+  setLocalName,
+  wrappedEmptyReducer,
 } from "document-model/test";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 

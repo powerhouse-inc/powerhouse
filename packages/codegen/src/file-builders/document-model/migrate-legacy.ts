@@ -1,4 +1,4 @@
-import { directoryExists, fileExists } from "@powerhousedao/common/clis";
+import { directoryExists, fileExists } from "@powerhousedao/shared/clis";
 import { copyFile, mkdir, readdir, rename } from "node:fs/promises";
 import path from "path";
 

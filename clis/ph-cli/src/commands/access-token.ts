@@ -2,7 +2,7 @@ import {
   accessTokenArgs,
   DEFAULT_EXPIRY_SECONDS,
   SECONDS_IN_DAY,
-} from "@powerhousedao/common/clis";
+} from "@powerhousedao/shared/clis";
 import { command } from "cmd-ts";
 
 export const accessToken = command({

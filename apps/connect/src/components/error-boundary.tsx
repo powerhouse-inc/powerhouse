@@ -1,8 +1,8 @@
 import { childLogger } from "document-model";
 import type { ReactNode } from "react";
 import {
-    ErrorBoundary as ReactErrorBoundary,
-    type FallbackProps,
+  ErrorBoundary as ReactErrorBoundary,
+  type FallbackProps,
 } from "react-error-boundary";
 
 const logger = childLogger(["Connect"]);
@@ -196,4 +196,3 @@ export function ErrorBoundary(props: ErrorBoundaryProps) {
 
 export { CenteredErrorMessage, DetailedFallback, TextFallback };
 export type { FallbackProps };
-

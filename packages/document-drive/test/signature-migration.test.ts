@@ -11,7 +11,10 @@ import {
   migrateLegacyOperationSignature,
 } from "document-drive";
 import { PrismaClient } from "document-drive/storage/prisma/client";
-import type { ActionContext, Operation } from "@powerhousedao/shared/document-model";
+import type {
+  ActionContext,
+  Operation,
+} from "@powerhousedao/shared/document-model";
 import { generateId } from "@powerhousedao/shared/document-model";
 import { beforeEach, describe, it } from "vitest";
 

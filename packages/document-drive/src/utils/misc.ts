@@ -4,7 +4,11 @@ import {
 } from "@powerhousedao/shared/document-drive";
 import { pascalCase } from "change-case";
 import type { ListenerRevision } from "document-drive";
-import type { DocumentOperations, Operation, PHDocument } from "@powerhousedao/shared/document-model";
+import type {
+  DocumentOperations,
+  Operation,
+  PHDocument,
+} from "@powerhousedao/shared/document-model";
 import { OperationError } from "server";
 
 export function isDocumentDrive(

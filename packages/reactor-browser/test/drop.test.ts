@@ -1,10 +1,10 @@
 import { PGlite } from "@electric-sql/pglite";
 import {
-    REACTOR_SCHEMA,
-    ReactorBuilder,
-    ReactorClientBuilder,
-    type Database,
-    type ReactorClientModule,
+  REACTOR_SCHEMA,
+  ReactorBuilder,
+  ReactorClientBuilder,
+  type Database,
+  type ReactorClientModule,
 } from "@powerhousedao/reactor";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import { documentModelDocumentModelModule } from "document-model";

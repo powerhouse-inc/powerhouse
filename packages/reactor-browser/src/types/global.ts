@@ -1,7 +1,7 @@
 import type { PGlite } from "@electric-sql/pglite";
 import type {
-    IReactorClient,
-    ReactorClientModule,
+  IReactorClient,
+  ReactorClientModule,
 } from "@powerhousedao/reactor";
 import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
 import type { IRenown } from "@renown/sdk";

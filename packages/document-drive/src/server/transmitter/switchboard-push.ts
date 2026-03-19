@@ -1,10 +1,10 @@
 import type {
-    GraphQLResult,
-    IListenerManager,
-    ITransmitter,
-    ListenerRevision,
-    StrandUpdate,
-    StrandUpdateSource,
+  GraphQLResult,
+  IListenerManager,
+  ITransmitter,
+  ListenerRevision,
+  StrandUpdate,
+  StrandUpdateSource,
 } from "document-drive";
 import { childLogger } from "document-model";
 import { gql } from "graphql-request";

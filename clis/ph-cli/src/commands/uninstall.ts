@@ -3,7 +3,7 @@ import {
   getPowerhouseProjectUninstallCommand,
   makeDependenciesWithVersions,
   uninstallArgs,
-} from "@powerhousedao/common/clis";
+} from "@powerhousedao/shared/clis";
 import { execSync } from "child_process";
 import { command } from "cmd-ts";
 import { AGENTS } from "package-manager-detector";

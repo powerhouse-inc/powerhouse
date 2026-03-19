@@ -1,4 +1,7 @@
-import type { PHDocument, PHBaseState } from "@powerhousedao/shared/document-model";
+import type {
+  PHDocument,
+  PHBaseState,
+} from "@powerhousedao/shared/document-model";
 import type { TodoAction } from "./actions.js";
 import type { TodoState as TodoGlobalState } from "./schema/types.js";
 

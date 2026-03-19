@@ -1,5 +1,8 @@
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
-import { createState, defaultBaseState } from "@powerhousedao/shared/document-model";
+import {
+  createState,
+  defaultBaseState,
+} from "@powerhousedao/shared/document-model";
 import type { TodoPHState } from "document-models/todo/v1";
 import {
   actions,

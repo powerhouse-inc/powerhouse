@@ -2,6 +2,8 @@ import type {
   PartialPowerhouseManifest,
   PowerhouseManifest,
 } from "@powerhousedao/config";
+import { fileExists } from "@powerhousedao/shared/clis";
+import { readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import {
   afterAll,
@@ -25,8 +27,6 @@ import {
   purgeDirAfterTest,
   resetDirForTest,
 } from "./utils.js";
-import { readFile, rm, writeFile } from "node:fs/promises";
-import { fileExists } from "@powerhousedao/common/clis";
 
 describe("generateManifest", () => {
   const testDir = import.meta.dirname;

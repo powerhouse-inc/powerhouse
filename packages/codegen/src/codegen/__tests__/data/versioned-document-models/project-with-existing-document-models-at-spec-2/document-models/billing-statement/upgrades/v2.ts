@@ -1,4 +1,8 @@
-import type { Action, PHDocument, UpgradeTransition } from "@powerhousedao/shared/document-model";
+import type {
+  Action,
+  PHDocument,
+  UpgradeTransition,
+} from "@powerhousedao/shared/document-model";
 import type { BillingStatementPHState as StateV1 } from "test/document-models/billing-statement/v1";
 import type { BillingStatementPHState as StateV2 } from "test/document-models/billing-statement/v2";
 

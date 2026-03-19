@@ -6,15 +6,15 @@ import {
   tsMorphGenerateDriveEditor,
 } from "@powerhousedao/codegen/file-builders";
 import { buildTsMorphProject } from "@powerhousedao/codegen/utils";
-import { fileExists } from "@powerhousedao/common/clis";
 import type {
   PartialPowerhouseManifest,
   PowerhouseConfig,
   PowerhouseManifest,
 } from "@powerhousedao/config";
+import { fileExists } from "@powerhousedao/shared/clis";
+import type { DocumentModelGlobalState } from "@powerhousedao/shared/document-model";
 import type { ProcessorApps } from "@powerhousedao/shared/processors";
 import { kebabCase } from "change-case";
-import type { DocumentModelGlobalState } from "@powerhousedao/shared/document-model";
 import fs from "node:fs";
 import { readdir } from "node:fs/promises";
 import path, { join } from "node:path";

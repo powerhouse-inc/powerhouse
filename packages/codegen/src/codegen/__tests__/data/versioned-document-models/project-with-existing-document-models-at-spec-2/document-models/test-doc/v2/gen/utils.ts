@@ -1,23 +1,23 @@
 import type { DocumentModelUtils } from "@powerhousedao/shared/document-model";
 import {
-    baseCreateDocument,
-    baseLoadFromInput,
-    baseSaveToFileHandle,
-    defaultBaseState,
-    generateId,
+  baseCreateDocument,
+  baseLoadFromInput,
+  baseSaveToFileHandle,
+  defaultBaseState,
+  generateId,
 } from "@powerhousedao/shared/document-model";
 import {
-    assertIsTestDocDocument,
-    assertIsTestDocState,
-    isTestDocDocument,
-    isTestDocState,
+  assertIsTestDocDocument,
+  assertIsTestDocState,
+  isTestDocDocument,
+  isTestDocState,
 } from "./document-schema.js";
 import { testDocDocumentType } from "./document-type.js";
 import { reducer } from "./reducer.js";
 import type {
-    TestDocGlobalState,
-    TestDocLocalState,
-    TestDocPHState,
+  TestDocGlobalState,
+  TestDocLocalState,
+  TestDocPHState,
 } from "./types.js";
 
 export const initialGlobalState: TestDocGlobalState = {
@@ -66,4 +66,3 @@ export const utils: DocumentModelUtils<TestDocPHState> = {
     return assertIsTestDocDocument(document);
   },
 };
-

@@ -1,11 +1,14 @@
 // Command = action => should process the action and asign the index, timestamp, and hash
 // Event = operation => should keep the same operation information but execute the action input against the document
-import { baseCreateDocument, deriveOperationId } from "@powerhousedao/shared/document-model";
+import {
+  baseCreateDocument,
+  deriveOperationId,
+} from "@powerhousedao/shared/document-model";
 import type { TestPHState } from "document-model/test";
 import {
-    defaultPHDocumentCreateState,
-    fakeAction,
-    wrappedEmptyReducer,
+  defaultPHDocumentCreateState,
+  fakeAction,
+  wrappedEmptyReducer,
 } from "document-model/test";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 

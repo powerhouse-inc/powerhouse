@@ -9,17 +9,17 @@ import type { IReactor } from "../../../src/core/types.js";
 import { EventBus } from "../../../src/events/event-bus.js";
 import type { IEventBus } from "../../../src/events/interfaces.js";
 import type {
-    ISyncCursorStorage,
-    ISyncDeadLetterStorage,
-    ISyncRemoteStorage,
+  ISyncCursorStorage,
+  ISyncDeadLetterStorage,
+  ISyncRemoteStorage,
 } from "../../../src/storage/interfaces.js";
 import type { Database } from "../../../src/storage/kysely/types.js";
 import type { IChannelFactory } from "../../../src/sync/interfaces.js";
 import { SyncManager } from "../../../src/sync/sync-manager.js";
 import type { ChannelConfig, SyncEnvelope } from "../../../src/sync/types.js";
 import {
-    createTestChannelFactory,
-    createTestSyncStorage,
+  createTestChannelFactory,
+  createTestSyncStorage,
 } from "../../factories.js";
 
 describe("SyncManager Backfill", () => {

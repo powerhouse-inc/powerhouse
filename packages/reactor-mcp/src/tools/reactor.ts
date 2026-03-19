@@ -1,7 +1,11 @@
 import type { IReactorClient, ISyncManager } from "@powerhousedao/reactor";
 import { driveCollectionId } from "@powerhousedao/reactor";
 import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
-import type { Action, DocumentModelModule, PHDocument } from "@powerhousedao/shared/document-model";
+import type {
+  Action,
+  DocumentModelModule,
+  PHDocument,
+} from "@powerhousedao/shared/document-model";
 import { generateId } from "@powerhousedao/shared/document-model";
 import { z } from "zod";
 import type { ToolSchema, ToolWithCallback } from "./types.js";

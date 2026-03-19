@@ -1,10 +1,14 @@
-import { baseCreateDocument, processUndoRedo, undo } from "@powerhousedao/shared/document-model";
+import {
+  baseCreateDocument,
+  processUndoRedo,
+  undo,
+} from "@powerhousedao/shared/document-model";
 import type { CountDocument } from "document-model/test";
 import {
-    countReducer,
-    createCountDocumentState,
-    increment,
-    testCreateBaseState,
+  countReducer,
+  createCountDocumentState,
+  increment,
+  testCreateBaseState,
 } from "document-model/test";
 import { beforeEach, describe, expect, it } from "vitest";
 

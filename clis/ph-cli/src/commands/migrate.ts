@@ -1,4 +1,4 @@
-import { migrateArgs } from "@powerhousedao/common/clis";
+import { migrateArgs } from "@powerhousedao/shared/clis";
 import { command } from "cmd-ts";
 
 export const migrate = command({

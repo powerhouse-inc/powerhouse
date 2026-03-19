@@ -1,4 +1,3 @@
-import { getConfig } from "@powerhousedao/config/node";
 import {
   array,
   boolean,
@@ -17,6 +16,7 @@ import {
   DRIVES_PRESERVE_STRATEGIES,
   LOG_LEVELS,
 } from "../constants.js";
+import { getConfig } from "../file-system/get-config.js";
 
 export const debugArgs = {
   debug: flag({

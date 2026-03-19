@@ -6,7 +6,11 @@ import type {
   StrandUpdate,
   SynchronizationUnitId,
 } from "document-drive";
-import type { DocumentOperations, Operation, PHDocument } from "@powerhousedao/shared/document-model";
+import type {
+  DocumentOperations,
+  Operation,
+  PHDocument,
+} from "@powerhousedao/shared/document-model";
 
 export function buildRevisionsFilter(
   strands: StrandUpdate[],

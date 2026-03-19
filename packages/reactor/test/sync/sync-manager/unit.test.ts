@@ -7,22 +7,22 @@ import type { IEventBus } from "../../../src/events/interfaces.js";
 import { ReactorEventTypes } from "../../../src/events/types.js";
 import { JobStatus } from "../../../src/shared/types.js";
 import type {
-    DeadLetterRecord,
-    ISyncCursorStorage,
-    ISyncDeadLetterStorage,
-    ISyncRemoteStorage,
+  DeadLetterRecord,
+  ISyncCursorStorage,
+  ISyncDeadLetterStorage,
+  ISyncRemoteStorage,
 } from "../../../src/storage/interfaces.js";
 import type {
-    IChannel,
-    IChannelFactory,
+  IChannel,
+  IChannelFactory,
 } from "../../../src/sync/interfaces.js";
 import { SyncManager } from "../../../src/sync/sync-manager.js";
 import { SyncOperation } from "../../../src/sync/sync-operation.js";
 import {
-    ChannelErrorSource,
-    SyncOperationStatus,
-    type ChannelConfig,
-    type RemoteRecord,
+  ChannelErrorSource,
+  SyncOperationStatus,
+  type ChannelConfig,
+  type RemoteRecord,
 } from "../../../src/sync/types.js";
 
 describe("SyncManager - Unit Tests", () => {

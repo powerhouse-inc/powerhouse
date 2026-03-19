@@ -1,4 +1,4 @@
-import { serviceArgs, type ServiceAction } from "@powerhousedao/common/clis";
+import { serviceArgs, type ServiceAction } from "@powerhousedao/shared/clis";
 import { command } from "cmd-ts";
 import { execSync } from "node:child_process";
 import path from "node:path";

@@ -18,7 +18,13 @@ export const DRIVES_PRESERVE_STRATEGIES = [
   "preserve-by-url-and-detach",
 ] as const;
 
-export const LOG_LEVELS = ["debug", "info", "warn", "error"] as const;
+export const LOG_LEVELS = [
+  "debug",
+  "info",
+  "warn",
+  "error",
+  "verbose",
+] as const;
 
 export const DEFAULT_TIMEOUT = 300 as const;
 

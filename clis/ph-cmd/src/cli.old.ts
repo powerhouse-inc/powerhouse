@@ -2,7 +2,7 @@
 import {
   assertNodeVersion,
   MINIMUM_NODE_VERSION,
-} from "@powerhousedao/common/clis";
+} from "@powerhousedao/shared/clis";
 import { run } from "cmd-ts";
 import { Command } from "commander";
 import { forwardCommand } from "./commands/forward.js";

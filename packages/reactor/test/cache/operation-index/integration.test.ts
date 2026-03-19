@@ -1,4 +1,7 @@
-import { deriveOperationId, generateId } from "@powerhousedao/shared/document-model";
+import {
+  deriveOperationId,
+  generateId,
+} from "@powerhousedao/shared/document-model";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { KyselyOperationIndex } from "../../../src/cache/kysely-operation-index.js";

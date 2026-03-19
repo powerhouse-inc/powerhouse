@@ -17,6 +17,7 @@ export * from "./constants.js";
 export * from "./file-system/dependencies.js";
 export * from "./file-system/directory-exists.js";
 export * from "./file-system/file-exists.js";
+export * from "./file-system/get-config.js";
 export * from "./file-system/projects.js";
 export * from "./file-system/run-cmd.js";
 export * from "./file-system/spawn-async.js";

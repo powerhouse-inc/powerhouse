@@ -1,5 +1,8 @@
 import type { Operation } from "@powerhousedao/shared/document-model";
-import { deriveOperationId, groupOperationsByScope } from "@powerhousedao/shared/document-model";
+import {
+  deriveOperationId,
+  groupOperationsByScope,
+} from "@powerhousedao/shared/document-model";
 import { fakeAction } from "document-model/test";
 import { describe, expect, it } from "vitest";
 

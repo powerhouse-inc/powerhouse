@@ -1,4 +1,4 @@
-import { switchboardArgs } from "@powerhousedao/common/clis";
+import { switchboardArgs } from "@powerhousedao/shared/clis";
 import { command } from "cmd-ts";
 
 export const switchboard = command({

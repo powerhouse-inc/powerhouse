@@ -3,7 +3,7 @@ import {
   directoryExists,
   logVersionUpdate,
   runCmd,
-} from "@powerhousedao/common/clis";
+} from "@powerhousedao/shared/clis";
 import {
   ALL_POWERHOUSE_DEPENDENCIES,
   APPS_DEPENDENCIES,

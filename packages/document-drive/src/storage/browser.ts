@@ -1,30 +1,33 @@
 import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
-import type { Operation, PHDocument } from "@powerhousedao/shared/document-model";
 import type {
-    IDocumentAdminStorage,
-    IDocumentStorage,
-    IDriveOperationStorage,
-    IStorageUnit,
-    IStorageUnitFilter,
-    SynchronizationUnitQuery,
+  Operation,
+  PHDocument,
+} from "@powerhousedao/shared/document-model";
+import type {
+  IDocumentAdminStorage,
+  IDocumentStorage,
+  IDriveOperationStorage,
+  IStorageUnit,
+  IStorageUnitFilter,
+  SynchronizationUnitQuery,
 } from "document-drive";
 import { childLogger } from "document-model";
 import LocalForage from "localforage";
 import {
-    DocumentAlreadyExistsError,
-    DocumentAlreadyExistsReason,
-    DocumentNotFoundError,
+  DocumentAlreadyExistsError,
+  DocumentAlreadyExistsReason,
+  DocumentNotFoundError,
 } from "server";
 import {
-    AbortError,
-    mergeOperations,
-    migrateDocumentOperationSignatures,
-    operationsToRevision,
+  AbortError,
+  mergeOperations,
+  migrateDocumentOperationSignatures,
+  operationsToRevision,
 } from "utils";
 import {
-    resolveStorageUnitsFilter,
-    setIntersection,
-    setUnion,
+  resolveStorageUnitsFilter,
+  setIntersection,
+  setUnion,
 } from "./utils.js";
 
 // Interface for drive manifest that tracks document IDs in a drive

@@ -2,7 +2,7 @@
 import {
   assertNodeVersion,
   phCliCommandNames,
-} from "@powerhousedao/common/clis";
+} from "@powerhousedao/shared/clis";
 
 /**
  * ph-cli and ph-cmd are loaded lazily so that the node version is checked before

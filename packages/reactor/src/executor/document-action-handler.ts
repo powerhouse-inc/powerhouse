@@ -1,14 +1,14 @@
 import type {
-    Action,
-    AddRelationshipActionInput,
-    CreateDocumentAction,
-    DeleteDocumentActionInput,
-    Operation,
-    PHDocument,
-    RemoveRelationshipActionInput,
-    UpgradeDocumentAction,
-    UpgradeDocumentActionInput,
-    UpgradeTransition,
+  Action,
+  AddRelationshipActionInput,
+  CreateDocumentAction,
+  DeleteDocumentActionInput,
+  Operation,
+  PHDocument,
+  RemoveRelationshipActionInput,
+  UpgradeDocumentAction,
+  UpgradeDocumentActionInput,
+  UpgradeTransition,
 } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import type { IOperationIndexTxn } from "../cache/operation-index-types.js";
@@ -19,14 +19,14 @@ import { DocumentDeletedError } from "../shared/errors.js";
 import type { ExecutionStores } from "./execution-scope.js";
 import type { JobResult } from "./types.js";
 import {
-    applyDeleteDocumentAction,
-    applyUpgradeDocumentAction,
-    buildErrorResult,
-    buildSuccessResult,
-    createDocumentFromAction,
-    createOperation,
-    getNextIndexForScope,
-    updateDocumentRevision,
+  applyDeleteDocumentAction,
+  applyUpgradeDocumentAction,
+  buildErrorResult,
+  buildSuccessResult,
+  createDocumentFromAction,
+  createOperation,
+  getNextIndexForScope,
+  updateDocumentRevision,
 } from "./util.js";
 
 export class DocumentActionHandler {

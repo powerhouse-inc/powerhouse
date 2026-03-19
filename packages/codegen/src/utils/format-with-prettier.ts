@@ -1,4 +1,4 @@
-import { spawnAsync } from "@powerhousedao/common/clis";
+import { spawnAsync } from "@powerhousedao/shared/clis";
 import { format } from "prettier";
 import type { SourceFile } from "ts-morph";
 

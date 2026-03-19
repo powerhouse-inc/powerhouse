@@ -7,6 +7,7 @@ export default defineConfig({
     "document-model/index.ts",
     "processors/index.ts",
     "registry/index.ts",
+    "clis/index.ts",
     "constants.ts",
   ],
   outDir: "dist",

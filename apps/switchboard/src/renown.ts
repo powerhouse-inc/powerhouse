@@ -1,9 +1,9 @@
 import {
-    DEFAULT_RENOWN_URL,
-    NodeKeyStorage,
-    RenownBuilder,
-    RenownCryptoBuilder,
-    type IRenown,
+  DEFAULT_RENOWN_URL,
+  NodeKeyStorage,
+  RenownBuilder,
+  RenownCryptoBuilder,
+  type IRenown,
 } from "@renown/sdk/node";
 import { childLogger } from "document-model";
 

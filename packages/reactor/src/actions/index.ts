@@ -6,7 +6,10 @@ import type {
   RemoveRelationshipActionInput,
   UpgradeDocumentActionInput,
 } from "@powerhousedao/shared/document-model";
-import { actions as documentActions, generateId } from "@powerhousedao/shared/document-model";
+import {
+  actions as documentActions,
+  generateId,
+} from "@powerhousedao/shared/document-model";
 
 export { documentActions };
 

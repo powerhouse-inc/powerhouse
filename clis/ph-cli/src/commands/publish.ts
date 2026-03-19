@@ -3,7 +3,7 @@ import { getConfig } from "@powerhousedao/config/node";
 import {
   getPowerhouseProjectInfo,
   publishArgs,
-} from "@powerhousedao/common/clis";
+} from "@powerhousedao/shared/clis";
 import { execSync } from "child_process";
 import { command } from "cmd-ts";
 import { join } from "path";

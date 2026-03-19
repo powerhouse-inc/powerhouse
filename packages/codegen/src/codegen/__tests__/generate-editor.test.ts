@@ -1,5 +1,5 @@
-import { directoryExists, fileExists } from "@powerhousedao/common/clis";
 import { type PowerhouseConfig } from "@powerhousedao/config";
+import { directoryExists, fileExists } from "@powerhousedao/shared/clis";
 import { readFile, rm } from "node:fs/promises";
 import path from "node:path";
 import {

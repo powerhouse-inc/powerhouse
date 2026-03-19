@@ -2,8 +2,8 @@ import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import { ReactorBuilder } from "document-drive";
 import {
-    documentModelCreateDocument,
-    documentModelDocumentModelModule,
+  documentModelCreateDocument,
+  documentModelDocumentModelModule,
 } from "document-model";
 import { describe, test } from "vitest";
 

@@ -1,4 +1,7 @@
-import type { Operation, PHDocument } from "@powerhousedao/shared/document-model";
+import type {
+  Operation,
+  PHDocument,
+} from "@powerhousedao/shared/document-model";
 
 export class DocumentEditorDebugTools {
   private document: PHDocument | undefined;

@@ -1,11 +1,14 @@
 import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
-import type { Operation, PHDocument } from "@powerhousedao/shared/document-model";
 import type {
-    IDocumentStorage,
-    IDriveOperationStorage,
-    IStorageUnit,
-    IStorageUnitFilter,
-    SynchronizationUnitQuery,
+  Operation,
+  PHDocument,
+} from "@powerhousedao/shared/document-model";
+import type {
+  IDocumentStorage,
+  IDriveOperationStorage,
+  IStorageUnit,
+  IStorageUnitFilter,
+  SynchronizationUnitQuery,
 } from "document-drive";
 import { childLogger } from "document-model";
 import { existsSync, mkdirSync } from "fs";
@@ -13,19 +16,19 @@ import fs from "fs/promises";
 import stringify from "json-stringify-deterministic";
 import path from "path";
 import {
-    DocumentAlreadyExistsError,
-    DocumentAlreadyExistsReason,
-    DocumentNotFoundError,
+  DocumentAlreadyExistsError,
+  DocumentAlreadyExistsReason,
+  DocumentNotFoundError,
 } from "server";
 import { AbortError, mergeOperations, operationsToRevision } from "utils";
 import {
-    decodeDocumentIdFromPath,
-    encodeDocumentIdForPath,
+  decodeDocumentIdFromPath,
+  encodeDocumentIdForPath,
 } from "./path-encoding.js";
 import {
-    resolveStorageUnitsFilter,
-    setIntersection,
-    setUnion,
+  resolveStorageUnitsFilter,
+  setIntersection,
+  setUnion,
 } from "./utils.js";
 
 // Interface for drive manifest that tracks document IDs in a drive

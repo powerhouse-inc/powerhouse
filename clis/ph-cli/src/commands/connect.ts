@@ -2,7 +2,7 @@ import {
   connectBuildArgs,
   connectPreviewArgs,
   connectStudioArgs,
-} from "@powerhousedao/common/clis";
+} from "@powerhousedao/shared/clis";
 import { command, subcommands } from "cmd-ts";
 export const studio = command({
   name: "studio",

@@ -4,9 +4,9 @@ import type { IOperationIndex } from "../cache/operation-index-types.js";
 import type { IReactor, SyncModule } from "../core/types.js";
 import type { IEventBus } from "../events/interfaces.js";
 import type {
-    ISyncCursorStorage,
-    ISyncDeadLetterStorage,
-    ISyncRemoteStorage,
+  ISyncCursorStorage,
+  ISyncDeadLetterStorage,
+  ISyncRemoteStorage,
 } from "../storage/interfaces.js";
 import { KyselySyncCursorStorage } from "../storage/kysely/sync-cursor-storage.js";
 import { KyselySyncDeadLetterStorage } from "../storage/kysely/sync-dead-letter-storage.js";

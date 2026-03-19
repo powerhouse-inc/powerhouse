@@ -1,5 +1,8 @@
 import type { Verifiable, VerifiedCredential } from "did-jwt-vc";
-import type { User as EditorUser, ISigner } from "@powerhousedao/shared/document-model";
+import type {
+  User as EditorUser,
+  ISigner,
+} from "@powerhousedao/shared/document-model";
 import type { CREDENTIAL_TYPES } from "./constants.js";
 import type { IRenownCrypto } from "./crypto/types.js";
 import type { IEventEmitter } from "./event/types.js";

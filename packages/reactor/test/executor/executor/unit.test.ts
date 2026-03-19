@@ -7,12 +7,12 @@ import type { IDocumentModelRegistry } from "../../../src/registry/interfaces.js
 import { DocumentNotFoundError } from "../../../src/shared/errors.js";
 import type { IOperationStore } from "../../../src/storage/interfaces.js";
 import {
-    createMockCollectionMembershipCache,
-    createMockDocumentMetaCache,
-    createMockLogger,
-    createMockOperationStore,
-    createTestEventBus,
-    createTestRegistry,
+  createMockCollectionMembershipCache,
+  createMockDocumentMetaCache,
+  createMockLogger,
+  createMockOperationStore,
+  createTestEventBus,
+  createTestRegistry,
 } from "../../factories.js";
 
 describe("SimpleJobExecutor", () => {

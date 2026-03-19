@@ -1,18 +1,18 @@
 import type { Action, Operation } from "@powerhousedao/shared/document-model";
 import {
-    baseCreateDocument,
-    deriveOperationId,
-    noop,
-    processUndoRedo,
-    redo,
-    undo,
+  baseCreateDocument,
+  deriveOperationId,
+  noop,
+  processUndoRedo,
+  redo,
+  undo,
 } from "@powerhousedao/shared/document-model";
 import type { CountAction, CountDocument } from "document-model/test";
 import {
-    countReducer,
-    createCountDocumentState,
-    increment,
-    testCreateBaseState,
+  countReducer,
+  createCountDocumentState,
+  increment,
+  testCreateBaseState,
 } from "document-model/test";
 import { beforeEach, describe, expect, it } from "vitest";
 

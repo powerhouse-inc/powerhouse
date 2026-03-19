@@ -1,9 +1,14 @@
 // TODO: remove eslint-disable rules once refactor is done
- 
- 
+
 import type { SubgraphModulePHState } from "@powerhousedao/vetra/document-models/subgraph-module";
-import type { Reducer, StateReducer } from "@powerhousedao/shared/document-model";
-import { createReducer, isDocumentAction } from "@powerhousedao/shared/document-model";
+import type {
+  Reducer,
+  StateReducer,
+} from "@powerhousedao/shared/document-model";
+import {
+  createReducer,
+  isDocumentAction,
+} from "@powerhousedao/shared/document-model";
 
 import { subgraphModuleBaseOperationsOperations } from "../src/reducers/base-operations.js";
 

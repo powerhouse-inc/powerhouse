@@ -1,7 +1,7 @@
 import type {
-    ConflictResolution,
-    DocumentTypeIcon,
-    FileUploadProgress,
+  ConflictResolution,
+  DocumentTypeIcon,
+  FileUploadProgress,
 } from "@powerhousedao/reactor-browser";
 import type { Node } from "@powerhousedao/shared/document-drive";
 import type { UploadFileItemProps } from "../upload-file-item/upload-file-item.js";

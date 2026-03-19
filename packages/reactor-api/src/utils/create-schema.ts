@@ -1,13 +1,13 @@
 import { buildSubgraphSchema } from "@apollo/subgraph";
 import type {
-    GraphQLResolverMap,
-    GraphQLSchemaModule,
+  GraphQLResolverMap,
+  GraphQLSchemaModule,
 } from "@apollo/subgraph/dist/schema-helper/resolverMap.js";
 import { typeDefs as scalarsTypeDefs } from "@powerhousedao/document-engineering/graphql";
 import type { Context } from "@powerhousedao/reactor-api";
 import type {
-    DocumentModelGlobalState,
-    DocumentModelModule,
+  DocumentModelGlobalState,
+  DocumentModelModule,
 } from "@powerhousedao/shared/document-model";
 import { camelCase, pascalCase } from "change-case";
 import { childLogger } from "document-model";

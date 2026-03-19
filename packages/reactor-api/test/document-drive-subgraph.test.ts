@@ -6,8 +6,8 @@ import { print } from "graphql";
 import { beforeEach, describe, expect, it } from "vitest";
 import { DocumentModelSubgraph } from "../src/graphql/document-model-subgraph.js";
 import {
-    generateDocumentModelSchema,
-    getDocumentModelSchemaName,
+  generateDocumentModelSchema,
+  getDocumentModelSchemaName,
 } from "../src/utils/create-schema.js";
 
 /**

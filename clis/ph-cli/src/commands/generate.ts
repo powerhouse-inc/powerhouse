@@ -1,4 +1,4 @@
-import { generateArgs } from "@powerhousedao/common/clis";
+import { generateArgs } from "@powerhousedao/shared/clis";
 import { command } from "cmd-ts";
 
 export const generate = command({

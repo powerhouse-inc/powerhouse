@@ -5,24 +5,24 @@
 
 import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
 import {
-    addFile,
-    AddFileInputSchema,
-    addFolder,
-    AddFolderInputSchema,
-    copyNode,
-    CopyNodeInputSchema,
-    deleteNode,
-    DeleteNodeInputSchema,
-    driveCreateDocument,
-    driveDocumentReducer,
-    FileNodeSchema,
-    moveNode,
-    MoveNodeInputSchema,
-    NodeSchema,
-    updateFile,
-    UpdateFileInputSchema,
-    updateNode,
-    UpdateNodeInputSchema,
+  addFile,
+  AddFileInputSchema,
+  addFolder,
+  AddFolderInputSchema,
+  copyNode,
+  CopyNodeInputSchema,
+  deleteNode,
+  DeleteNodeInputSchema,
+  driveCreateDocument,
+  driveDocumentReducer,
+  FileNodeSchema,
+  moveNode,
+  MoveNodeInputSchema,
+  NodeSchema,
+  updateFile,
+  UpdateFileInputSchema,
+  updateNode,
+  UpdateNodeInputSchema,
 } from "document-drive";
 import { beforeEach, describe, expect, it } from "vitest";
 import { generateMock } from "./generate-mock.js";
@@ -68,7 +68,7 @@ describe("Node Operations", () => {
       addFile(thirdInput),
     );
     const nodeNames = thirdUpdatedDocument.state.global.nodes.map(
-      (node: any) => node.name,
+      (node) => node.name,
     );
     expect(new Set(nodeNames).size).toBe(nodeNames.length);
     expect(nodeNames[0]).toBe("test");
@@ -98,7 +98,7 @@ describe("Node Operations", () => {
       addFile(thirdInput),
     );
     const nodeNames = thirdUpdatedDocument.state.global.nodes.map(
-      (node: any) => node.name,
+      (node) => node.name,
     );
     expect(new Set(nodeNames).size).toBe(nodeNames.length);
     expect(nodeNames[0]).toBe("test");
@@ -140,7 +140,7 @@ describe("Node Operations", () => {
       addFolder(thirdInput),
     );
     const nodeNames = thirdUpdatedDocument.state.global.nodes.map(
-      (node: any) => node.name,
+      (node) => node.name,
     );
     expect(new Set(nodeNames).size).toBe(nodeNames.length);
     expect(nodeNames[0]).toBe("test");
@@ -171,7 +171,7 @@ describe("Node Operations", () => {
       addFolder(thirdInput),
     );
     const nodeNames = thirdUpdatedDocument.state.global.nodes.map(
-      (node: any) => node.name,
+      (node) => node.name,
     );
     expect(new Set(nodeNames).size).toBe(nodeNames.length);
     expect(nodeNames[0]).toBe("test");
@@ -219,7 +219,7 @@ describe("Node Operations", () => {
     const updatedDocument = driveDocumentReducer(document, updateFile(input));
 
     const nodeNames = updatedDocument.state.global.nodes.map(
-      (node: any) => node.name,
+      (node) => node.name,
     );
     expect(new Set(nodeNames).size).toBe(nodeNames.length);
     expect(nodeNames[0]).toBe(existingFile1.name);
@@ -250,7 +250,7 @@ describe("Node Operations", () => {
     const updatedDocument = driveDocumentReducer(document, updateNode(input));
 
     const nodeNames = updatedDocument.state.global.nodes.map(
-      (node: any) => node.name,
+      (node) => node.name,
     );
     expect(new Set(nodeNames).size).toBe(nodeNames.length);
     expect(nodeNames[0]).toBe(existingNode1.name);
@@ -322,7 +322,7 @@ describe("Node Operations", () => {
     const updatedDocument = driveDocumentReducer(document, copyNode(input));
 
     const nodeNames = updatedDocument.state.global.nodes.map(
-      (node: any) => node.name,
+      (node) => node.name,
     );
     expect(new Set(nodeNames).size).toBe(nodeNames.length);
     expect(nodeNames[0]).toBe(existingNode.name);
@@ -339,7 +339,7 @@ describe("Node Operations", () => {
     const updatedDocument = driveDocumentReducer(document, copyNode(input));
 
     const nodeNames = updatedDocument.state.global.nodes.map(
-      (node: any) => node.name,
+      (node) => node.name,
     );
     expect(new Set(nodeNames).size).toBe(nodeNames.length);
     expect(nodeNames[0]).toBe(existingNode.name);
@@ -355,7 +355,7 @@ describe("Node Operations", () => {
     const updatedDocument = driveDocumentReducer(document, copyNode(input));
 
     const nodeNames = updatedDocument.state.global.nodes.map(
-      (node: any) => node.name,
+      (node) => node.name,
     );
     expect(new Set(nodeNames).size).toBe(nodeNames.length);
     expect(nodeNames[0]).toBe(existingNode.name);
@@ -394,7 +394,7 @@ describe("Node Operations", () => {
     const updatedDocument = driveDocumentReducer(document, moveNode(input));
 
     const nodeNames = updatedDocument.state.global.nodes.map(
-      (node: any) => node.name,
+      (node) => node.name,
     );
     expect(new Set(nodeNames).size).toBe(nodeNames.length);
     expect(nodeNames[0]).toBe("test");
@@ -413,7 +413,7 @@ describe("Node Operations", () => {
     const updatedDocument = driveDocumentReducer(document, moveNode(input));
 
     const nodeNames = updatedDocument.state.global.nodes.map(
-      (node: any) => node.name,
+      (node) => node.name,
     );
     expect(new Set(nodeNames).size).toBe(nodeNames.length);
     expect(nodeNames[0]).toBe("test");

@@ -5,7 +5,7 @@ import {
   packageManagerArgs,
   parsePackageManager,
   parseTag,
-} from "@powerhousedao/common/clis";
+} from "@powerhousedao/shared/clis";
 import chalk from "chalk";
 import { kebabCase } from "change-case";
 import {

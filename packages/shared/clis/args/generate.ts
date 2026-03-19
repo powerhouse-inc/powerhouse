@@ -1,8 +1,3 @@
-import type {
-  ProcessorApp,
-  ProcessorApps,
-} from "@powerhousedao/shared/processors";
-import { PROCESSOR_APPS } from "@powerhousedao/shared/processors";
 import type { Type } from "cmd-ts";
 import {
   array,
@@ -15,9 +10,10 @@ import {
   positional,
   string,
 } from "cmd-ts";
+import { PROCESSOR_APPS } from "processors";
 import { debugArgs, useHygen } from "./common.js";
 
-const ProcessorAppType: Type<string[], ProcessorApps> = {
+const ProcessorAppType: Type<string[], ("connect" | "switchboard")[]> = {
   from(processorApps) {
     if (processorApps.length === 0) {
       throw new Error(
@@ -30,12 +26,14 @@ const ProcessorAppType: Type<string[], ProcessorApps> = {
       );
     }
     const allowed = new Set(PROCESSOR_APPS);
-    if (!processorApps.every((p) => allowed.has(p as ProcessorApp))) {
+    if (
+      !processorApps.every((p) => allowed.has(p as "connect" | "switchboard"))
+    ) {
       throw new Error(
         `Processor apps can only be "connect" and/or "switchboard".`,
       );
     }
-    return Promise.resolve(processorApps as ProcessorApps);
+    return Promise.resolve(processorApps as ("connect" | "switchboard")[]);
   },
 };
 

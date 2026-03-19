@@ -5,7 +5,7 @@ import {
   packageManagerArgs,
   parsePackageManager,
   runCmd,
-} from "@powerhousedao/common/clis";
+} from "@powerhousedao/shared/clis";
 import { command, option, optional, positional, string } from "cmd-ts";
 import { getPackageManagerFromLockfile } from "../utils/package-manager.js";
 import { getPackageDocument } from "../utils/validate-remote-drive-checkout.js";

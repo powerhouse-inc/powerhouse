@@ -2,7 +2,10 @@
  * Test factory methods for creating DocumentDriveDocument instances with custom state
  */
 
-import type { DocumentDriveDocument, Node } from "@powerhousedao/shared/document-drive";
+import type {
+  DocumentDriveDocument,
+  Node,
+} from "@powerhousedao/shared/document-drive";
 import { driveCreateDocument } from "document-drive";
 
 /**

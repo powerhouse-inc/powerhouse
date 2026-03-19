@@ -1,9 +1,9 @@
 import type { FileUploadProgressCallback } from "@powerhousedao/reactor-browser";
 import type {
-    Action,
-    DocumentOperations,
-    Operation,
-    PHDocument,
+  Action,
+  DocumentOperations,
+  Operation,
+  PHDocument,
 } from "@powerhousedao/shared/document-model";
 import { logger } from "document-model";
 

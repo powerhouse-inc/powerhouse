@@ -1,26 +1,26 @@
 import { isLogLevel } from "@powerhousedao/config";
 import {
-    EventBus,
-    ReactorBuilder,
-    ReactorClientBuilder,
+  EventBus,
+  ReactorBuilder,
+  ReactorClientBuilder,
 } from "@powerhousedao/reactor";
 import {
-    VitePackageLoader,
-    startAPI,
-    startViteServer,
+  VitePackageLoader,
+  startAPI,
+  startViteServer,
 } from "@powerhousedao/reactor-api";
 import type { DefaultRemoteDriveInput } from "document-drive";
 import {
-    InMemoryCache,
-    ReactorBuilder as LegacyReactorBuilder,
+  InMemoryCache,
+  ReactorBuilder as LegacyReactorBuilder,
 } from "document-drive";
 import { logger } from "document-model";
 import dotenv from "dotenv";
 import path from "node:path";
 import type {
-    LocalReactor,
-    RemoteDriveInputSimple,
-    StartServerOptions,
+  LocalReactor,
+  RemoteDriveInputSimple,
+  StartServerOptions,
 } from "./types.js";
 import { DefaultStartServerOptions } from "./types.js";
 import { addDefaultDrive, createStorage } from "./util.js";

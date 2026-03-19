@@ -1,4 +1,4 @@
-import { parsePackageManager } from "@powerhousedao/common/clis";
+import { parsePackageManager } from "@powerhousedao/shared/clis";
 import type { Command } from "commander";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";

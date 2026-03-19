@@ -1,26 +1,26 @@
 import {
-    DriveEditorContainer,
-    DriveIcon,
+  DriveEditorContainer,
+  DriveIcon,
 } from "@powerhousedao/connect/components";
 import {
-    connectConfig,
-    defaultPHDocumentEditorConfig,
-    defaultPHDriveEditorConfig,
+  connectConfig,
+  defaultPHDocumentEditorConfig,
+  defaultPHDriveEditorConfig,
 } from "@powerhousedao/connect/config";
 import {
-    HomeScreen,
-    HomeScreenAddDriveItem,
-    HomeScreenItem,
+  HomeScreen,
+  HomeScreenAddDriveItem,
+  HomeScreenItem,
 } from "@powerhousedao/design-system/connect";
 import {
-    setPHDocumentEditorConfig,
-    setPHDriveEditorConfig,
-    setSelectedDrive,
-    useDriveEditorModuleById,
-    useDrives,
-    useSelectedDocumentId,
-    useSelectedDriveSafe,
-    useSelectedFolder,
+  setPHDocumentEditorConfig,
+  setPHDriveEditorConfig,
+  setSelectedDrive,
+  useDriveEditorModuleById,
+  useDrives,
+  useSelectedDocumentId,
+  useSelectedDriveSafe,
+  useSelectedFolder,
 } from "@powerhousedao/reactor-browser";
 import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
 import { useEffect } from "react";

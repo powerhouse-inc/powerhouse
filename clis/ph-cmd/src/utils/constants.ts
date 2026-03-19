@@ -1,4 +1,4 @@
-import { PH_BIN } from "@powerhousedao/common/clis";
+import { PH_BIN } from "@powerhousedao/shared/clis";
 
 export const PH_BIN_PATH = process.argv[1];
 export const PH_CLI_COMMANDS = [

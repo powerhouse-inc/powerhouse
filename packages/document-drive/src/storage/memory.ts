@@ -1,24 +1,27 @@
 import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
-import type { Operation, PHDocument } from "@powerhousedao/shared/document-model";
 import type {
-    IDocumentAdminStorage,
-    IDocumentStorage,
-    IDriveOperationStorage,
-    IStorageUnit,
-    IStorageUnitFilter,
-    SynchronizationUnitQuery,
+  Operation,
+  PHDocument,
+} from "@powerhousedao/shared/document-model";
+import type {
+  IDocumentAdminStorage,
+  IDocumentStorage,
+  IDriveOperationStorage,
+  IStorageUnit,
+  IStorageUnitFilter,
+  SynchronizationUnitQuery,
 } from "document-drive";
 import { childLogger } from "document-model";
 import {
-    DocumentAlreadyExistsError,
-    DocumentAlreadyExistsReason,
-    DocumentNotFoundError,
+  DocumentAlreadyExistsError,
+  DocumentAlreadyExistsReason,
+  DocumentNotFoundError,
 } from "server";
 import { AbortError, mergeOperations, operationsToRevision } from "utils";
 import {
-    resolveStorageUnitsFilter,
-    setIntersection,
-    setUnion,
+  resolveStorageUnitsFilter,
+  setIntersection,
+  setUnion,
 } from "./utils.js";
 
 type DriveManifest = {

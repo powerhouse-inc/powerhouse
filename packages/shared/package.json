@@ -67,15 +67,24 @@
     "./constants": {
       "types": "./dist/constants.d.ts",
       "import": "./dist/constants.js"
+    },
+    "./clis": {
+      "types": "./dist/clis/index.d.ts",
+      "import": "./dist/clis/index.js"
     }
   },
   "dependencies": {
     "@sindresorhus/fnv1a": "catalog:",
+    "chalk": "catalog:",
     "change-case": "catalog:",
+    "cmd-ts": "catalog:",
     "jszip": "^3.10.1",
     "kysely": "catalog:",
     "luxon": "catalog:",
     "mutative": "catalog:",
+    "npm-package-arg": "catalog:",
+    "package-directory": "^8.2.0",
+    "package-manager-detector": "catalog:",
     "safe-stable-stringify": "^2.4.3",
     "sha1-uint8array": "^0.10.7",
     "zocker": "catalog:",
@@ -84,6 +93,7 @@
   "devDependencies": {
     "@types/bun": "catalog:",
     "@types/luxon": "catalog:",
+    "@types/npm-package-arg": "catalog:",
     "@types/react": "catalog:",
     "react": "catalog:",
     "tsdown": "catalog:"

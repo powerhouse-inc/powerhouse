@@ -1,23 +1,23 @@
 import {
-    baseCreateDocument,
-    createReducer,
-    deriveOperationId,
-    generateId,
-    hashBrowser,
-    replayDocument,
-    validateOperations,
+  baseCreateDocument,
+  createReducer,
+  deriveOperationId,
+  generateId,
+  hashBrowser,
+  replayDocument,
+  validateOperations,
 } from "@powerhousedao/shared/document-model";
 import { getLocalFile, hashNode } from "document-model/node";
 
 import type { CountPHState } from "document-model/test";
 import {
-    countReducer,
-    createCountDocumentState,
-    fakeAction,
-    increment,
-    mutableCountReducer,
-    setLocalName,
-    testCreateBaseState,
+  countReducer,
+  createCountDocumentState,
+  fakeAction,
+  increment,
+  mutableCountReducer,
+  setLocalName,
+  testCreateBaseState,
 } from "document-model/test";
 import fs from "fs";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";

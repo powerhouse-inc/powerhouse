@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { assertNodeVersion } from "@powerhousedao/common/clis";
+import { assertNodeVersion } from "@powerhousedao/shared/clis";
 import { run } from "cmd-ts";
 import { phCliHelp } from "./commands/ph-cli-help.js";
 import { phCli } from "./commands/ph-cli.js";

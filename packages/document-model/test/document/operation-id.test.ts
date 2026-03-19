@@ -1,15 +1,15 @@
 import {
-    baseCreateDocument,
-    garbageCollectDocumentOperations,
-    replayOperations,
+  baseCreateDocument,
+  garbageCollectDocumentOperations,
+  replayOperations,
 } from "@powerhousedao/shared/document-model";
 import type { CountDocument, CountPHState } from "document-model/test";
 import {
-    baseCountReducer,
-    countReducer,
-    createCountDocumentState,
-    increment,
-    testCreateBaseState,
+  baseCountReducer,
+  countReducer,
+  createCountDocumentState,
+  increment,
+  testCreateBaseState,
 } from "document-model/test";
 import { beforeEach, describe, expect, it } from "vitest";
 

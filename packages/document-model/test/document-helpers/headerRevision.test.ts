@@ -1,8 +1,8 @@
 import type { Operation } from "@powerhousedao/shared/document-model";
 import {
-    baseCreateDocument,
-    getDocumentLastModified,
-    updateHeaderRevision,
+  baseCreateDocument,
+  getDocumentLastModified,
+  updateHeaderRevision,
 } from "@powerhousedao/shared/document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { defaultPHDocumentCreateState, fakeOperation } from "../helpers.js";

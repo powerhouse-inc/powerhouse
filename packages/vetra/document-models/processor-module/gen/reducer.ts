@@ -1,8 +1,14 @@
 // TODO: remove eslint-disable rules once refactor is done
 
 import type { ProcessorModulePHState } from "@powerhousedao/vetra/document-models/processor-module";
-import type { Reducer, StateReducer } from "@powerhousedao/shared/document-model";
-import { createReducer, isDocumentAction } from "@powerhousedao/shared/document-model";
+import type {
+  Reducer,
+  StateReducer,
+} from "@powerhousedao/shared/document-model";
+import {
+  createReducer,
+  isDocumentAction,
+} from "@powerhousedao/shared/document-model";
 
 import { processorModuleBaseOperationsOperations } from "../src/reducers/base-operations.js";
 

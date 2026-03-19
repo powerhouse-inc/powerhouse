@@ -1,13 +1,13 @@
 import { Icon } from "@powerhousedao/design-system";
 import {
-    exportDocument,
-    setSelectedNode,
-    setSelectedTimelineItem,
-    showRevisionHistory,
-    useGetSwitchboardLink,
-    useNodeActions,
-    useNodeParentFolderById,
-    useSelectedDocumentSafe,
+  exportDocument,
+  setSelectedNode,
+  setSelectedTimelineItem,
+  showRevisionHistory,
+  useGetSwitchboardLink,
+  useNodeActions,
+  useNodeParentFolderById,
+  useSelectedDocumentSafe,
 } from "@powerhousedao/reactor-browser";
 import type { Node } from "@powerhousedao/shared/document-drive";
 import type { PHDocument } from "@powerhousedao/shared/document-model";

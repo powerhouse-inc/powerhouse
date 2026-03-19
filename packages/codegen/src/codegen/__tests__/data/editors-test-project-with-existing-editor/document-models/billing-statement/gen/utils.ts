@@ -1,23 +1,23 @@
 import type { DocumentModelUtils } from "@powerhousedao/shared/document-model";
 import {
-    baseCreateDocument,
-    baseLoadFromInput,
-    baseSaveToFileHandle,
-    defaultBaseState,
-    generateId,
+  baseCreateDocument,
+  baseLoadFromInput,
+  baseSaveToFileHandle,
+  defaultBaseState,
+  generateId,
 } from "@powerhousedao/shared/document-model";
 import {
-    assertIsBillingStatementDocument,
-    assertIsBillingStatementState,
-    isBillingStatementDocument,
-    isBillingStatementState,
+  assertIsBillingStatementDocument,
+  assertIsBillingStatementState,
+  isBillingStatementDocument,
+  isBillingStatementState,
 } from "./document-schema.js";
 import { billingStatementDocumentType } from "./document-type.js";
 import { reducer } from "./reducer.js";
 import type {
-    BillingStatementGlobalState,
-    BillingStatementLocalState,
-    BillingStatementPHState,
+  BillingStatementGlobalState,
+  BillingStatementLocalState,
+  BillingStatementPHState,
 } from "./types.js";
 
 export const initialGlobalState: BillingStatementGlobalState = {
@@ -71,4 +71,3 @@ export const utils: DocumentModelUtils<BillingStatementPHState> = {
     return assertIsBillingStatementDocument(document);
   },
 };
-

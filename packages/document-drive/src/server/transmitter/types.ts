@@ -9,7 +9,11 @@ import type {
   OperationUpdate,
   StrandUpdate,
 } from "document-drive";
-import type { Operation, PHBaseState, PHDocument } from "@powerhousedao/shared/document-model";
+import type {
+  Operation,
+  PHBaseState,
+  PHDocument,
+} from "@powerhousedao/shared/document-model";
 
 export type StrandUpdateSource =
   | {

@@ -5,7 +5,7 @@ import {
   POWERHOUSE_GLOBAL_DIR,
   parsePackageManager,
   parseTag,
-} from "@powerhousedao/common/clis";
+} from "@powerhousedao/shared/clis";
 import { existsSync, readFileSync, writeFileSync } from "fs";
 import path from "path";
 import { PH_BIN_PATH, PH_GLOBAL_PACKAGE_NAME } from "./constants.js";

@@ -1,4 +1,7 @@
-import type { DocumentModelModule, DocumentModelPHState } from "@powerhousedao/shared/document-model";
+import type {
+  DocumentModelModule,
+  DocumentModelPHState,
+} from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule } from "document-model";
 
 export const baseDocumentModelsMap: Record<

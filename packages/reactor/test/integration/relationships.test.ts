@@ -11,13 +11,13 @@ import { JobStatus } from "../../src/shared/types.js";
 import type { DocumentRelationship } from "../../src/storage/interfaces.js";
 import type { KyselyDocumentIndexer } from "../../src/storage/kysely/document-indexer.js";
 import type {
-    DocumentIndexerDatabase,
-    Database as StorageDatabase,
+  DocumentIndexerDatabase,
+  Database as StorageDatabase,
 } from "../../src/storage/kysely/types.js";
 import {
-    createDocModelDocument,
-    createTestDocumentIndexer,
-    createTestOperationStore,
+  createDocModelDocument,
+  createTestDocumentIndexer,
+  createTestOperationStore,
 } from "../factories.js";
 
 type Database = StorageDatabase &

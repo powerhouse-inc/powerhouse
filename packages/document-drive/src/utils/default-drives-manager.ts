@@ -1,14 +1,14 @@
 import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
 import type {
-    DefaultRemoteDriveInfo,
-    DocumentDriveServerOptions,
-    IBaseDocumentDriveServer,
-    IDefaultDrivesManager,
-    IReadModeDriveServer,
-    IServerDelegateDrivesManager,
-    RemoteDriveAccessLevel,
-    RemoveDriveStrategy,
-    RemoveOldRemoteDrivesOption,
+  DefaultRemoteDriveInfo,
+  DocumentDriveServerOptions,
+  IBaseDocumentDriveServer,
+  IDefaultDrivesManager,
+  IReadModeDriveServer,
+  IServerDelegateDrivesManager,
+  RemoteDriveAccessLevel,
+  RemoveDriveStrategy,
+  RemoveOldRemoteDrivesOption,
 } from "document-drive";
 import { logger } from "document-model";
 import { requestPublicDriveWithTokenFromReactor } from "../utils/graphql.js";

@@ -6,7 +6,7 @@ import {
   type Operation,
   type PHBaseState,
   type PHDocument,
-  type Reducer
+  type Reducer,
 } from "@powerhousedao/shared/document-model";
 import type {
   BaseDocumentDriveServer,

@@ -1,7 +1,13 @@
 // TODO: remove eslint-disable rules once refactor is done
 
-import type { Reducer, StateReducer } from "@powerhousedao/shared/document-model";
-import { createReducer, isDocumentAction } from "@powerhousedao/shared/document-model";
+import type {
+  Reducer,
+  StateReducer,
+} from "@powerhousedao/shared/document-model";
+import {
+  createReducer,
+  isDocumentAction,
+} from "@powerhousedao/shared/document-model";
 import type { TodoPHState } from "document-models/todo/v2";
 
 import { todoTodoOperationsOperations } from "../src/reducers/todo-operations.js";

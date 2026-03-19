@@ -1,4 +1,4 @@
-import type { ParsedCmdResult } from "@powerhousedao/common/clis";
+import type { ParsedCmdResult } from "@powerhousedao/shared/clis";
 import type { accessToken } from "./commands/access-token.js";
 import type { build } from "./commands/build.js";
 import type {

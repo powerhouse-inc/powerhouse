@@ -1,4 +1,7 @@
-import type { DocumentModelModule, UpgradeManifest } from "@powerhousedao/shared/document-model";
+import type {
+  DocumentModelModule,
+  UpgradeManifest,
+} from "@powerhousedao/shared/document-model";
 
 export const VERSIONED_DOC_TYPE = "test/versioned-doc";
 
