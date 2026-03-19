@@ -1,7 +1,6 @@
 packages:
   - "apps/*"
   - "clis/*"
-  - "examples/*"
   - "packages/*"
   - "packages/analytics-engine/*"
   - "test/*"

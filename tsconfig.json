@@ -17,9 +17,6 @@
       "path": "clis/ph-cmd"
     },
     {
-      "path": "examples/discord-webhook-processor"
-    },
-    {
       "path": "packages/builder-tools"
     },
     {
@@ -126,9 +123,6 @@
     },
     {
       "path": "scripts/profiling"
-    },
-    {
-      "path": "examples/discord-webhook-processor"
     }
   ],
   "files": []
