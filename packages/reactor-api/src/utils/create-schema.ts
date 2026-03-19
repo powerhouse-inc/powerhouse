@@ -64,6 +64,15 @@ export const createSchema = (
   );
 };
 
+/**
+ * Create a merged GraphQL schema from multiple subgraph modules.
+ * Uses buildSubgraphSchema's array overload to combine type definitions
+ * and resolvers from multiple subgraphs into a single executable schema.
+ */
+export const createMergedSchema = (modules: GraphQLSchemaModule[]) => {
+  return buildSubgraphSchema(modules);
+};
+
 export function getDocumentModelSchemaName(
   documentModel: DocumentModelGlobalState,
 ) {
@@ -821,23 +830,23 @@ function generateNewApiSchema(
     }
   `;
 
-  // Flat queries (not nested) - prefixed input types to avoid conflicts
+  // Queries nested under ${documentName} namespace
   const queries = `
-    type Query {
+    type ${documentName}Queries {
       """Get a specific ${documentName} document by identifier"""
-      ${documentName}_document(identifier: String!, view: ${documentName}_ViewFilterInput): ${documentName}_DocumentWithChildren
+      document(identifier: String!, view: ${documentName}_ViewFilterInput): ${documentName}_DocumentWithChildren
 
       """Get all ${documentName} documents (paged)"""
       ${documentName}_documents(paging: ${documentName}_PagingInput): ${documentName}_DocumentResultPage!
 
       """Find ${documentName} documents by search criteria"""
-      ${documentName}_findDocuments(search: ${documentName}_SearchFilterInput!, view: ${documentName}_ViewFilterInput, paging: ${documentName}_PagingInput): ${documentName}_DocumentResultPage!
+      findDocuments(search: ${documentName}_SearchFilterInput!, view: ${documentName}_ViewFilterInput, paging: ${documentName}_PagingInput): ${documentName}_DocumentResultPage!
 
       """Get children of a ${documentName} document"""
-      ${documentName}_documentChildren(parentIdentifier: String!, view: ${documentName}_ViewFilterInput, paging: ${documentName}_PagingInput): ${documentName}_DocumentResultPage!
+      documentChildren(parentIdentifier: String!, view: ${documentName}_ViewFilterInput, paging: ${documentName}_PagingInput): ${documentName}_DocumentResultPage!
 
       """Get parents of a ${documentName} document"""
-      ${documentName}_documentParents(childIdentifier: String!, view: ${documentName}_ViewFilterInput, paging: ${documentName}_PagingInput): ${documentName}_DocumentResultPage!
+      documentParents(childIdentifier: String!, view: ${documentName}_ViewFilterInput, paging: ${documentName}_PagingInput): ${documentName}_DocumentResultPage!
     }
   `;
 
@@ -890,11 +899,11 @@ function generateNewApiSchema(
     }
   }
 
-  // Mutations: sync and async versions
+  // Mutations nested under ${documentName} namespace
   const createDocumentMutation = initialStateInputSchema
-    ? `${documentName}_createDocument(name: String!, parentIdentifier: String, slug: String, preferredEditor: String, initialState: ${documentName}_InitialStateInput): ${documentName}MutationResult!`
-    : `${documentName}_createDocument(name: String!, parentIdentifier: String, preferredEditor: String): ${documentName}MutationResult!`;
-  const createEmptyDocumentMutation = `${documentName}_createEmptyDocument(parentIdentifier: String): ${documentName}MutationResult!`;
+    ? `createDocument(name: String!, parentIdentifier: String, slug: String, preferredEditor: String, initialState: ${documentName}_InitialStateInput): ${documentName}MutationResult!`
+    : `createDocument(name: String!, parentIdentifier: String, preferredEditor: String): ${documentName}MutationResult!`;
+  const createEmptyDocumentMutation = `createEmptyDocument(parentIdentifier: String): ${documentName}MutationResult!`;
 
   const operationMutations =
     specification?.modules
@@ -903,9 +912,9 @@ function generateNewApiSchema(
           .filter((op) => op.name && hasValidSchema(op.schema))
           .flatMap((op) => [
             // Sync mutation
-            `${documentName}_${camelCase(op.name!)}(docId: PHID!, input: ${documentName}_${pascalCase(op.name!)}Input!): ${documentName}MutationResult!`,
+            `${camelCase(op.name!)}(docId: PHID!, input: ${documentName}_${pascalCase(op.name!)}Input!): ${documentName}MutationResult!`,
             // Async mutation
-            `${documentName}_${camelCase(op.name!)}Async(docId: PHID!, input: ${documentName}_${pascalCase(op.name!)}Input!): String!`,
+            `${camelCase(op.name!)}Async(docId: PHID!, input: ${documentName}_${pascalCase(op.name!)}Input!): String!`,
           ]),
       )
       .join("\n        ") ?? "";
@@ -955,11 +964,19 @@ function generateNewApiSchema(
     """
     Mutations: ${documentName}
     """
-    type Mutation {
+    type ${documentName}Mutations {
         ${createDocumentMutation}
         ${createEmptyDocumentMutation}
 
         ${operationMutations}
+    }
+
+    type Query {
+      ${documentName}: ${documentName}Queries!
+    }
+
+    type Mutation {
+      ${documentName}: ${documentName}Mutations!
     }
 
     ${
