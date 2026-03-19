@@ -1,5 +1,3 @@
-import type { PowerhouseConfig } from "./clis/types.js";
-
 export const PACKAGES_DEPENDENCIES = [
   "@powerhousedao/builder-tools",
   "@powerhousedao/codegen",
@@ -41,25 +39,3 @@ export const ALL_POWERHOUSE_DEPENDENCIES = [
   ...CLIS_DEPENDENCIES,
   ...APPS_DEPENDENCIES,
 ];
-
-const DEFAULT_DOCUMENT_MODELS_DIR = "./document-models";
-const DEFAULT_EDITORS_DIR = "./editors";
-const DEFAULT_PROCESSORS_DIR = "./processors";
-const DEFAULT_SUBGRAPHS_DIR = "./subgraphs";
-const DEFAULT_IMPORT_SCRIPTS_DIR = "./scripts";
-const DEFAULT_SKIP_FORMAT = false;
-const DEFAULT_LOG_LEVEL = "info";
-
-export const DEFAULT_CONFIG: PowerhouseConfig = {
-  documentModelsDir: DEFAULT_DOCUMENT_MODELS_DIR,
-  editorsDir: DEFAULT_EDITORS_DIR,
-  processorsDir: DEFAULT_PROCESSORS_DIR,
-  subgraphsDir: DEFAULT_SUBGRAPHS_DIR,
-  importScriptsDir: DEFAULT_IMPORT_SCRIPTS_DIR,
-  skipFormat: DEFAULT_SKIP_FORMAT,
-  logLevel: DEFAULT_LOG_LEVEL,
-  auth: {
-    enabled: false,
-    admins: [],
-  },
-};

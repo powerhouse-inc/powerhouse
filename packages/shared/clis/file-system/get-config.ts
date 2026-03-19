@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { DEFAULT_CONFIG } from "../../constants.js";
+import { DEFAULT_CONFIG } from "../constants.js";
 import type { PowerhouseConfig } from "../types.js";
 
 export function getConfig(path = "./powerhouse.config.json") {

@@ -21,7 +21,7 @@ export type { PowerhouseConfig };
 
 export const DEFAULT_REGISTRY_URL = "https://registry.prod.vetra.io";
 
-export { DEFAULT_CONFIG } from "@powerhousedao/shared/constants";
+export { DEFAULT_CONFIG } from "@powerhousedao/shared/clis";
 
 export type Module = {
   id: string;
