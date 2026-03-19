@@ -775,14 +775,14 @@ show help<br><br>
 
 ## Install
 
-The install command adds Powerhouse dependencies to your project. It handles installation
-of packages, updates configuration files, and ensures proper setup of dependencies.
+The install command adds Powerhouse dependencies to your project. It installs packages
+from the Powerhouse registry by default and updates configuration files.
 
 This command:
-1. Installs specified Powerhouse dependencies using your package manager
-2. Updates powerhouse.config.json to include the new dependencies
-3. Supports various installation options and configurations
-4. Works with npm, yarn, pnpm, and bun package managers
+1. Resolves the registry URL (--registry flag > powerhouse.config.json > PH_REGISTRY_URL env > default)
+2. Installs the package using your package manager with the resolved registry
+3. Updates powerhouse.config.json to include the new dependencies
+4. Updates style.css with CSS imports if applicable
   
 ### arguments
 #### Dependencies *[required]*<br>
@@ -791,6 +791,10 @@ Names of the dependencies to install<br><br>
 
 
 ### options
+#### Registry <br>
+Registry URL to install from (overrides config and environment)<br><br>
+**usage:** `--registry <str>`<br>
+
 #### Package Manager <br>
 Specify the package manager to use for your project. Can be one of: `npm`, `pnpm`, `yarn`, or `bun`. Defaults to your environment package manager.<br><br>
 **usage:** `--package-manager, -p <value>`<br>

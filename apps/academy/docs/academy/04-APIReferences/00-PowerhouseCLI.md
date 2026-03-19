@@ -832,14 +832,14 @@ the CLI to act on behalf of your Ethereum identity for authenticated operations.
 
 ## Install
 
-The install command adds Powerhouse dependencies to your project. It handles installation
-of packages, updates configuration files, and ensures proper setup of dependencies.
+The install command adds Powerhouse dependencies to your project. It installs packages
+from the Powerhouse registry by default and updates configuration files.
 
 **What it does:**
-- 1. Installs specified Powerhouse dependencies using your package manager
-- 2. Updates powerhouse.config.json to include the new dependencies
-- 3. Supports various installation options and configurations
-- 4. Works with npm, yarn, pnpm, and bun package managers
+- 1. Resolves the registry URL (--registry flag > powerhouse.config.json > PH_REGISTRY_URL env > default)
+- 2. Installs the package using your package manager with the resolved registry
+- 3. Updates powerhouse.config.json to include the new dependencies
+- 4. Updates style.css with CSS imports if applicable
   
 
 
@@ -855,6 +855,8 @@ of packages, updates configuration files, and ensures proper setup of dependenci
 
 
 ### Options
+**Registry** - Registry URL to install from (overrides config and environment) - Usage: `--registry <str>`
+
 **Package Manager** - Specify the package manager to use for your project. Can be one of: `npm`, `pnpm`, `yarn`, or `bun`. Defaults to your environment package manager. - Usage: `--package-manager, -p <value>`
 
 
