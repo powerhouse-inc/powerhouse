@@ -46,9 +46,11 @@ import type { AuthorizationService } from "../services/authorization.service.js"
 import type { DocumentPermissionService } from "../services/document-permission.service.js";
 import {
   buildSubgraphSchemaModule,
+  createMergedSchema,
   createSchema,
 } from "../utils/create-schema.js";
 import { DocumentModelSubgraph } from "./document-model-subgraph.js";
+import { createGraphQLSSEHandler } from "./sse.js";
 import { useServer } from "./websocket.js";
 
 class AuthenticatedDataSource extends RemoteGraphQLDataSource {
@@ -424,6 +426,11 @@ export class GraphQLManager {
         this.logger.error("Failed to update Apollo Gateway supergraph", error);
       }
     }
+
+    // Refresh the supergraph-level SSE handler so it picks up
+    // any newly registered subscription-enabled subgraphs.
+    const superGraphPath = path.join(this.path, "graphql");
+    this.#setupSupergraphSSE(superGraphPath);
   }
 
   getAdditionalContextFields = () => {
@@ -573,6 +580,23 @@ export class GraphQLManager {
                 error,
               );
             }
+
+            // Set up SSE (Server-Sent Events) transport alongside WebSocket.
+            // Clients can use SSE by sending POST requests with
+            // Accept: text/event-stream to the /stream sub-path.
+            try {
+              this.#setupSSEHandler(schema, subgraphPath);
+              this.logger.debug(
+                `SSE subscriptions enabled for ${subgraph.name}`,
+              );
+            } catch (error) {
+              this.logger.error(
+                "Failed to setup SSE for subgraph @name at path @path: @error",
+                subgraph.name,
+                subgraphPath,
+                error,
+              );
+            }
           }
 
           this.#setupApolloExpressMiddleware(server, subgraphPath);
@@ -709,11 +733,43 @@ export class GraphQLManager {
     const superGraphPath = path.join(this.path, "graphql");
     this.#setupApolloExpressMiddleware(this.coreApolloServer, superGraphPath);
 
+    // Set up SSE subscriptions at the supergraph level (/graphql/stream).
+    // Build a subscription schema from all subgraphs that define subscriptions.
+    this.#setupSupergraphSSE(superGraphPath);
+
     if (!this.initialized) {
       this.logger.info(`Registered ${superGraphPath} supergraph `);
       this.initialized = true;
     }
     return;
+  }
+
+  /**
+   * Set up an SSE subscription endpoint at the supergraph level.
+   * Merges the schemas of all subscription-enabled subgraphs so that
+   * clients can subscribe at /graphql/stream without knowing individual
+   * subgraph paths.
+   */
+  #setupSupergraphSSE(superGraphPath: string) {
+    const allSubgraphs = this.#getAllSubgraphs();
+
+    const modules = Array.from(allSubgraphs.values())
+      .filter((subgraph) => subgraph.hasSubscriptions)
+      .map((subgraph) => this.#buildSubgraphSchemaModule(subgraph));
+
+    if (modules.length === 0) {
+      return;
+    }
+
+    try {
+      const mergedSchema = createMergedSchema(modules);
+      this.#setupSSEHandler(mergedSchema, superGraphPath);
+      this.logger.debug(
+        `SSE subscriptions enabled at supergraph level (merged from ${modules.length} subgraph(s))`,
+      );
+    } catch (error) {
+      this.logger.error("Failed to setup supergraph SSE: @error", error);
+    }
   }
 
   #setupApolloExpressMiddleware(server: ApolloServer<Context>, path: string) {
@@ -728,6 +784,32 @@ export class GraphQLManager {
           }),
       }),
       matcher: match(path),
+    });
+  }
+
+  /**
+   * Set up a GraphQL-over-SSE handler at `<basePath>/stream`.
+   *
+   * Clients subscribe by sending a POST with `Accept: text/event-stream`
+   * to the `/stream` sub-path. Authentication is handled by the normal
+   * Express middleware (Authorization header), unlike WebSocket which
+   * needs its own connectionParams-based auth.
+   */
+  #setupSSEHandler(schema: GraphQLSchema, basePath: string) {
+    const ssePath = basePath + "/stream";
+    const sseHandler = createGraphQLSSEHandler({
+      schema,
+      contextFactory: (req) => ({
+        headers: req.headers,
+        driveId: req.params?.drive ?? undefined,
+        db: this.relationalDb,
+        ...this.getAdditionalContextFields(),
+      }),
+    });
+
+    this.subgraphHandlers.set(ssePath, {
+      handler: sseHandler,
+      matcher: match(ssePath),
     });
   }
 }
