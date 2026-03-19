@@ -1,4 +1,3 @@
-import type { GraphQLResolverMap } from "@apollo/subgraph/dist/schema-helper/resolverMap.js";
 import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import { AnalyticsQueryEngine } from "@powerhousedao/analytics-engine-core";
 import {
@@ -19,7 +18,7 @@ export class AnalyticsSubgraph extends BaseSubgraph {
     ${typedefs}
   `;
 
-  resolvers = AnalyticsResolvers as GraphQLResolverMap<Context>;
+  resolvers = AnalyticsResolvers as Record<string, unknown>;
 
   constructor(args: SubgraphArgs) {
     super(args);

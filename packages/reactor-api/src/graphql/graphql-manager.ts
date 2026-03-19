@@ -1,20 +1,5 @@
-import type {
-  GetDataSourceFunction,
-  GraphQLDataSourceProcessOptions,
-  ServiceDefinition,
-  SubgraphHealthCheckFunction,
-  SupergraphSdlUpdateFunction,
-} from "@apollo/gateway";
-import {
-  ApolloGateway,
-  LocalCompose,
-  RemoteGraphQLDataSource,
-} from "@apollo/gateway";
-import { ApolloServer } from "@apollo/server";
-import { ApolloServerPluginInlineTraceDisabled } from "@apollo/server/plugin/disabled";
-import { ApolloServerPluginDrainHttpServer } from "@apollo/server/plugin/drainHttpServer";
-import { ApolloServerPluginLandingPageLocalDefault } from "@apollo/server/plugin/landingPage/default";
-import { expressMiddleware } from "@as-integrations/express4";
+import { mergeSchemas } from "@graphql-tools/schema";
+import { createYoga } from "graphql-yoga";
 import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import type { IReactorClient, ISyncManager } from "@powerhousedao/reactor";
 import type {
@@ -37,7 +22,6 @@ import { Router } from "express";
 import type { GraphQLSchema } from "graphql";
 import type http from "node:http";
 import path from "node:path";
-import { setTimeout } from "node:timers/promises";
 import { match, type MatchFunction, type ParamData } from "path-to-regexp";
 import type { WebSocketServer } from "ws";
 import type { AuthConfig } from "../services/auth.service.js";
@@ -50,18 +34,6 @@ import {
 } from "../utils/create-schema.js";
 import { DocumentModelSubgraph } from "./document-model-subgraph.js";
 import { useServer } from "./websocket.js";
-
-class AuthenticatedDataSource extends RemoteGraphQLDataSource {
-  willSendRequest(options: GraphQLDataSourceProcessOptions) {
-    const { authorization } = options.context.headers as {
-      authorization: string;
-    };
-    // console.log("context", options.context.headers.authorization);
-    if (authorization && options?.request.http) {
-      options.request.http.headers.set("authorization", authorization);
-    }
-  }
-}
 
 const DOCUMENT_MODELS_TO_EXCLUDE: string[] = [];
 
@@ -129,8 +101,6 @@ export class GraphQLManager {
   private readonly subgraphs = new Map<string, ISubgraph[]>();
   private authService: AuthService | null = null;
 
-  private coreApolloServer: ApolloServer<Context> | null = null;
-  private readonly subgraphServers = new Map<string, ApolloServer<Context>>();
   private readonly subgraphHandlers = new Map<
     string,
     {
@@ -142,20 +112,9 @@ export class GraphQLManager {
     string,
     { dispose: () => void | Promise<void> }
   >();
-  private gatewayOptions: {
-    update: SupergraphSdlUpdateFunction;
-    healthCheck: SubgraphHealthCheckFunction;
-    getDataSource: GetDataSourceFunction;
-  } | null = null;
 
   /** Cached document models for schema generation - updated on init and regenerate */
   private cachedDocumentModels: DocumentModelModule[] = [];
-
-  private readonly apolloLogger = childLogger([
-    "reactor-api",
-    "graphql-manager",
-    "apollo",
-  ]);
 
   constructor(
     private readonly path: string,
@@ -232,7 +191,7 @@ export class GraphQLManager {
       await this.#setupDocumentModelSubgraphs("graphql", models);
     }
 
-    await this.#createApolloGateway();
+    await this.#setupSupergraph();
 
     return this.updateRouter();
   }
@@ -414,15 +373,12 @@ export class GraphQLManager {
 
     await this.#setupSubgraphs(this.subgraphs);
 
-    // Update Apollo Gateway's supergraph when subgraphs change
-    if (this.gatewayOptions) {
-      try {
-        const { supergraphSdl } = await this.#buildSupergrahSdl();
-        this.gatewayOptions.update(supergraphSdl);
-        this.logger.debug("Updated Apollo Gateway supergraph");
-      } catch (error) {
-        this.logger.error("Failed to update Apollo Gateway supergraph", error);
-      }
+    // Rebuild the merged supergraph when subgraphs change
+    try {
+      this.#buildMergedSupergraph();
+      this.logger.debug("Rebuilt merged supergraph");
+    } catch (error) {
+      this.logger.error("Failed to rebuild merged supergraph", error);
     }
   }
 
@@ -482,29 +438,21 @@ export class GraphQLManager {
     });
   }
 
-  async #createApolloServer(schema: GraphQLSchema) {
-    const server = new ApolloServer<Context>({
+  #createYogaServer(schema: GraphQLSchema) {
+    const relationalDb = this.relationalDb;
+    const getFields = this.getAdditionalContextFields.bind(this);
+    return createYoga<Record<string, unknown>>({
       schema,
-      logger: this.apolloLogger,
-      introspection: true,
-      plugins: [
-        ApolloServerPluginInlineTraceDisabled(),
-        ApolloServerPluginLandingPageLocalDefault(),
-      ],
+      graphiql: true,
+      logging: false,
+      context: ({ req }: { req?: express.Request }) =>
+        Promise.resolve({
+          headers: req?.headers ?? {},
+          driveId: req?.params?.drive,
+          db: relationalDb,
+          ...getFields(),
+        }),
     });
-    server.startInBackgroundHandlingStartupErrorsByLoggingAndFailingAllRequests();
-    await this.#waitForServer(server);
-    return server;
-  }
-
-  async #waitForServer(server: ApolloServer<Context>): Promise<boolean> {
-    try {
-      server.assertStarted("waitForServer");
-      return true;
-    } catch {
-      await setTimeout(100);
-      return this.#waitForServer(server);
-    }
   }
 
   #getSubgraphPath(subgraph: ISubgraph, supergraph: string) {
@@ -535,12 +483,7 @@ export class GraphQLManager {
             subgraph.typeDefs,
           );
 
-          // create and start apollo server
-          const existingServer = this.subgraphServers.get(subgraphPath);
-          const server =
-            existingServer || (await this.#createApolloServer(schema));
-
-          this.subgraphServers.set(subgraphPath, server);
+          const server = this.#createYogaServer(schema);
 
           if (subgraph.hasSubscriptions) {
             try {
@@ -571,7 +514,7 @@ export class GraphQLManager {
             }
           }
 
-          this.#setupApolloExpressMiddleware(server, subgraphPath);
+          this.#setupYogaExpressMiddleware(server, subgraphPath);
         } catch (error) {
           this.logger.error(
             "Failed to setup subgraph @name at path @path: @error",
@@ -641,89 +584,71 @@ export class GraphQLManager {
     this.logger.info(`Registered REST endpoint: GET ${routePath}`);
   }
 
-  #buildSubgraphSchemaModule(subgraph: ISubgraph) {
-    return buildSubgraphSchemaModule(
-      this.cachedDocumentModels,
-      subgraph.resolvers,
-      subgraph.typeDefs,
-    );
-  }
-
-  async #buildSupergrahSdl() {
-    if (!this.gatewayOptions) {
-      throw new Error("Gateway is not ready");
-    }
+  #buildMergedSchema(): GraphQLSchema {
     const subgraphs = this.#getAllSubgraphs();
-
-    const herokuOrLocal = process.env.HEROKU_APP_DEFAULT_DOMAIN_NAME
-      ? `https://${process.env.HEROKU_APP_DEFAULT_DOMAIN_NAME}`
-      : `http://localhost:${this.port}`;
-
-    const serviceList: ServiceDefinition[] = Array.from(
-      subgraphs.entries(),
-    ).map(([path, subgraph]) => ({
-      name: path.replace("/", ":"),
-      typeDefs: this.#buildSubgraphSchemaModule(subgraph).typeDefs,
-      url: `${herokuOrLocal}${path}`,
-    }));
-
-    const localCompose = new LocalCompose({
-      localServiceList: serviceList,
-    });
-    return await localCompose.initialize(this.gatewayOptions!);
+    const schemas = Array.from(subgraphs.values()).map((subgraph) =>
+      createSchema(
+        this.cachedDocumentModels,
+        subgraph.resolvers,
+        subgraph.typeDefs,
+      ),
+    );
+    if (schemas.length === 0) {
+      throw new Error("No subgraph schemas available to merge");
+    }
+    return mergeSchemas({ schemas });
   }
 
-  async #createApolloGateway() {
-    const gateway = new ApolloGateway({
-      supergraphSdl: async (options) => {
-        this.gatewayOptions = options;
-        return await this.#buildSupergrahSdl();
-      },
-      buildService: (serviceConfig) => {
-        return new AuthenticatedDataSource(serviceConfig);
-      },
-    });
+  #makeYogaHandler(
+    yoga: ReturnType<typeof createYoga<Record<string, unknown>>>,
+  ): express.RequestHandler {
+    return (req, res, next) => {
+      Promise.resolve(
+        yoga.handleNodeRequestAndResponse(req, res, { req, res }),
+      ).catch((err: unknown) => next(err));
+    };
+  }
 
-    if (this.coreApolloServer) {
-      throw new Error("Supergrah server is already running");
-    }
-
-    this.coreApolloServer = new ApolloServer<Context>({
-      gateway,
-      logger: this.apolloLogger,
-      introspection: true,
-      plugins: [
-        ApolloServerPluginDrainHttpServer({ httpServer: this.httpServer }),
-        ApolloServerPluginInlineTraceDisabled(),
-        ApolloServerPluginLandingPageLocalDefault(),
-      ],
-    });
-
-    await this.coreApolloServer.start();
-    await this.#waitForServer(this.coreApolloServer);
-
+  #buildMergedSupergraph() {
     const superGraphPath = path.join(this.path, "graphql");
-    this.#setupApolloExpressMiddleware(this.coreApolloServer, superGraphPath);
+    const mergedSchema = this.#buildMergedSchema();
+    const relationalDb = this.relationalDb;
+    const getFields = this.getAdditionalContextFields.bind(this);
+    const yoga = createYoga<Record<string, unknown>>({
+      schema: mergedSchema,
+      graphiql: true,
+      logging: false,
+      graphqlEndpoint: superGraphPath,
+      context: ({ req }: { req?: express.Request }) =>
+        Promise.resolve({
+          headers: req?.headers ?? {},
+          driveId: req?.params?.drive,
+          db: relationalDb,
+          ...getFields(),
+        }),
+    });
+    this.subgraphHandlers.set(superGraphPath, {
+      handler: this.#makeYogaHandler(yoga),
+      matcher: match(superGraphPath + "/:rest*", { end: false }),
+    });
 
     if (!this.initialized) {
-      this.logger.info(`Registered ${superGraphPath} supergraph `);
+      this.logger.info(`Registered ${superGraphPath} supergraph`);
       this.initialized = true;
     }
-    return;
   }
 
-  #setupApolloExpressMiddleware(server: ApolloServer<Context>, path: string) {
-    this.subgraphHandlers.set(path, {
-      handler: expressMiddleware(server, {
-        context: ({ req }) =>
-          Promise.resolve<Context>({
-            headers: req.headers,
-            driveId: req.params.drive ?? undefined,
-            db: this.relationalDb,
-            ...this.getAdditionalContextFields(),
-          }),
-      }),
-      matcher: match(path),
+  async #setupSupergraph() {
+    this.#buildMergedSupergraph();
+  }
+
+  #setupYogaExpressMiddleware(
+    yoga: ReturnType<typeof createYoga<Record<string, unknown>>>,
+    yogaPath: string,
+  ) {
+    this.subgraphHandlers.set(yogaPath, {
+      handler: this.#makeYogaHandler(yoga),
+      matcher: match(yogaPath),
     });
   }
 }

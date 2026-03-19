@@ -45,10 +45,9 @@
   "author": "",
   "license": "AGPL-3.0-only",
   "dependencies": {
-    "@apollo/gateway": "^2.11.3",
-    "@apollo/server": "^5.0.0",
-    "@apollo/subgraph": "^2.11.3",
-    "@as-integrations/express4": "^1.1.2",
+    "@graphql-tools/schema": "catalog:",
+    "@graphql-tools/utils": "catalog:",
+    "graphql-yoga": "catalog:",
     "@electric-sql/pglite": "catalog:",
     "@opentelemetry/auto-instrumentations-node": "^0.57.1",
     "@opentelemetry/exporter-metrics-otlp-http": "^0.57.2",

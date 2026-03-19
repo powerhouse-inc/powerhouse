@@ -1,8 +1,4 @@
-import { buildSubgraphSchema } from "@apollo/subgraph";
-import type {
-  GraphQLResolverMap,
-  GraphQLSchemaModule,
-} from "@apollo/subgraph/dist/schema-helper/resolverMap.js";
+import { makeExecutableSchema } from "@graphql-tools/schema";
 import { typeDefs as scalarsTypeDefs } from "@powerhousedao/document-engineering/graphql";
 import type { Context } from "@powerhousedao/reactor-api";
 import { camelCase, pascalCase } from "change-case";
@@ -41,9 +37,9 @@ const stripScalarDefinitions = (doc: DocumentNode): string => {
 
 export const buildSubgraphSchemaModule = (
   documentModels: DocumentModelModule[],
-  resolvers: GraphQLResolverMap<Context>,
+  resolvers: Record<string, unknown>,
   typeDefs: DocumentNode,
-): GraphQLSchemaModule => {
+): { typeDefs: DocumentNode; resolvers: Record<string, unknown> } => {
   const newResolvers = {
     ...resolvers,
     JSONObject: GraphQLJSONObject,
@@ -54,14 +50,18 @@ export const buildSubgraphSchemaModule = (
     resolvers: newResolvers,
   };
 };
+
 export const createSchema = (
   documentModels: DocumentModelModule[],
-  resolvers: GraphQLResolverMap<Context>,
+  resolvers: Record<string, unknown>,
   typeDefs: DocumentNode,
 ) => {
-  return buildSubgraphSchema(
-    buildSubgraphSchemaModule(documentModels, resolvers, typeDefs),
-  );
+  const module = buildSubgraphSchemaModule(documentModels, resolvers, typeDefs);
+  return makeExecutableSchema({
+    typeDefs: module.typeDefs,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    resolvers: module.resolvers as any,
+  });
 };
 
 export function getDocumentModelSchemaName(
