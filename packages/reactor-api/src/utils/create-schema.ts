@@ -51,6 +51,15 @@ export const buildSubgraphSchemaModule = (
   };
 };
 
+// Minimal base SDL so that `extend type Query/Mutation/Subscription` in
+// individual subgraph schemas doesn't cause "type not defined" errors when
+// building a standalone schema (e.g. for WebSocket subscription setup).
+const BASE_TYPES_SDL = gql`
+  type Query
+  type Mutation
+  type Subscription
+`;
+
 export const createSchema = (
   documentModels: DocumentModelModule[],
   resolvers: Record<string, unknown>,
@@ -58,7 +67,7 @@ export const createSchema = (
 ) => {
   const module = buildSubgraphSchemaModule(documentModels, resolvers, typeDefs);
   return makeExecutableSchema({
-    typeDefs: module.typeDefs,
+    typeDefs: [BASE_TYPES_SDL, module.typeDefs],
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolvers: module.resolvers as any,
   });

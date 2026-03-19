@@ -1,4 +1,4 @@
-import { mergeSchemas } from "@graphql-tools/schema";
+import { makeExecutableSchema } from "@graphql-tools/schema";
 import { createYoga } from "graphql-yoga";
 import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import type { IReactorClient, ISyncManager } from "@powerhousedao/reactor";
@@ -19,7 +19,7 @@ import type { DocumentModelModule } from "document-model";
 import type express from "express";
 import type { IRouter } from "express";
 import { Router } from "express";
-import type { GraphQLSchema } from "graphql";
+import type { DocumentNode, GraphQLSchema } from "graphql";
 import type http from "node:http";
 import path from "node:path";
 import { match, type MatchFunction, type ParamData } from "path-to-regexp";
@@ -586,17 +586,25 @@ export class GraphQLManager {
 
   #buildMergedSchema(): GraphQLSchema {
     const subgraphs = this.#getAllSubgraphs();
-    const schemas = Array.from(subgraphs.values()).map((subgraph) =>
-      createSchema(
+    if (subgraphs.size === 0) {
+      throw new Error("No subgraph schemas available to merge");
+    }
+    const allTypeDefs: DocumentNode[] = [];
+    const allResolvers: Record<string, unknown>[] = [];
+    for (const subgraph of subgraphs.values()) {
+      const mod = buildSubgraphSchemaModule(
         this.cachedDocumentModels,
         subgraph.resolvers,
         subgraph.typeDefs,
-      ),
-    );
-    if (schemas.length === 0) {
-      throw new Error("No subgraph schemas available to merge");
+      );
+      allTypeDefs.push(mod.typeDefs);
+      allResolvers.push(mod.resolvers);
     }
-    return mergeSchemas({ schemas });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return makeExecutableSchema({
+      typeDefs: allTypeDefs,
+      resolvers: allResolvers as any,
+    });
   }
 
   #makeYogaHandler(
