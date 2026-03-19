@@ -24,8 +24,8 @@ coverage-reports/
 playwright-report/
 test-results/
 __screenshots__/
-
 __pycache__/
+hotseat.json
 
 # Identity/auth credential files
 .renown.json
