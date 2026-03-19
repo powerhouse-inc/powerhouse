@@ -75,13 +75,21 @@ export class ApolloGatewayAdapter implements IGatewayAdapter<Context> {
     this.#servers.length = 0;
   }
 
-  async #waitForServer(server: ApolloServer<Context>): Promise<boolean> {
+  async #waitForServer(
+    server: ApolloServer<Context>,
+    attempts = 0,
+  ): Promise<boolean> {
     try {
       server.assertStarted("waitForServer");
       return true;
-    } catch {
+    } catch (err) {
+      if (attempts >= 100) {
+        throw new Error(
+          `Apollo server did not start after ${attempts} attempts: ${String(err)}`,
+        );
+      }
       await setTimeout(100);
-      return this.#waitForServer(server);
+      return this.#waitForServer(server, attempts + 1);
     }
   }
 }
