@@ -195,7 +195,9 @@ describe("Subscription e2e", () => {
         webSocketImpl: WebSocket,
       });
 
-      const sub = wsSubscribe(wsClient, { search: {} });
+      const sub = wsSubscribe(wsClient, {
+        search: { type: "powerhouse/document-model" },
+      });
 
       try {
         // Give the subscription a moment to connect
@@ -249,7 +251,9 @@ describe("Subscription e2e", () => {
     it("receives documentChanges event when a document is created", async () => {
       const sseClient = createSseClient({ url: SSE_URL });
 
-      const sub = sseSubscribe(sseClient, { search: {} });
+      const sub = sseSubscribe(sseClient, {
+        search: { type: "powerhouse/document-model" },
+      });
 
       try {
         await new Promise((r) => setTimeout(r, 500));

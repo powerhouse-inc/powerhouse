@@ -95,25 +95,22 @@ export const getDocumentModelTypeDefs = (
       return;
     }
     addedDocumentModels.add(dmSchemaName);
+    // Use only the latest specification to avoid duplicate type definitions
+    // when a document model has multiple versions (e.g. v1, v2).
+    const latestSpec = documentModel.global.specifications.at(-1);
+    const globalSchema = latestSpec?.state.global.schema ?? "";
+    const localSchema = latestSpec?.state.local.schema ?? "";
     let tmpDmSchema = `
-          ${documentModel.global.specifications
-            .map((specification) =>
-              specification.state.global.schema
-                .replaceAll("scalar DateTime", "")
-                .replaceAll(/input (.*?) {[\s\S]*?}/g, ""),
-            )
-            .join("\n")};
-  
-          ${documentModel.global.specifications
-            .map((specification) =>
-              specification.state.local.schema
-                .replaceAll("scalar DateTime", "")
-                .replaceAll(/input (.*?) {[\s\S]*?}/g, "")
-                .replaceAll("type AccountSnapshotLocalState", "")
-                .replaceAll("type BudgetStatementLocalState", "")
-                .replaceAll("type ScopeFrameworkLocalState", ""),
-            )
-            .join("\n")};
+          ${globalSchema
+            .replaceAll("scalar DateTime", "")
+            .replaceAll(/input (.*?) {[\s\S]*?}/g, "")};
+
+          ${localSchema
+            .replaceAll("scalar DateTime", "")
+            .replaceAll(/input (.*?) {[\s\S]*?}/g, "")
+            .replaceAll("type AccountSnapshotLocalState", "")
+            .replaceAll("type BudgetStatementLocalState", "")
+            .replaceAll("type ScopeFrameworkLocalState", "")};
 
     \n`;
 
@@ -707,9 +704,6 @@ function generateLegacyApiSchema(
  * Note: State schema types are NOT included here because they are already defined
  * in getDocumentModelTypeDefs() which is used during schema composition.
  * Including them here would cause duplicate type definitions.
- *
- * Special case: DocumentModel type doesn't have a typed state defined in
- * getDocumentModelTypeDefs(), so we use JSONObject for its state field.
  */
 function generateNewApiSchema(
   documentName: string,
