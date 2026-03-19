@@ -7,6 +7,10 @@ import {
 } from "../utils/create-schema.js";
 import { BaseSubgraph } from "./base-subgraph.js";
 import { toGqlPhDocument } from "./reactor/adapters.js";
+import type {
+  PhDocument,
+  PhDocumentResultPage,
+} from "./reactor/gen/graphql.js";
 import {
   createDocumentWithInitialState as createDocumentWithInitialStateResolver,
   createEmptyDocument as createEmptyDocumentResolver,
@@ -15,10 +19,6 @@ import {
   document as documentResolver,
   findDocuments as findDocumentsResolver,
 } from "./reactor/resolvers.js";
-import type {
-  PhDocument,
-  PhDocumentResultPage,
-} from "./reactor/gen/graphql.js";
 import type { Context, SubgraphArgs } from "./types.js";
 
 /** A resolver function that lives inside a document-model subgraph. */
@@ -279,10 +279,8 @@ export class DocumentModelSubgraph extends BaseSubgraph {
 
           return result;
         },
-
-<<<<<<< HEAD
         // Flat query: Get all documents of this type (paged)
-        [`${documentName}_documents`]: async (
+        documents: async (
           _: unknown,
           args: {
             paging?: { limit?: number; offset?: number; cursor?: string };
@@ -317,14 +315,9 @@ export class DocumentModelSubgraph extends BaseSubgraph {
 
           return result;
         },
-
         // Flat query: Find documents by search criteria (type is built-in)
         // Uses shared findDocumentsResolver from reactor/resolvers.ts
-        [`${documentName}_findDocuments`]: async (
-=======
-        // Find documents by search criteria (type is built-in)
         findDocuments: async (
->>>>>>> 3d99ada7f (feat(reactor-api): namespace document model queries and mutations)
           _: unknown,
           args: {
             search: { parentId?: string; identifiers?: string[] };
