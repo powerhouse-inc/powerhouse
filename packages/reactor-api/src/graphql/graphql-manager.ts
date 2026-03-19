@@ -147,6 +147,7 @@ export class GraphQLManager {
 
   private readonly gatewayAdapter: IGatewayAdapter<Context>;
   private readonly httpAdapter: IHttpAdapter;
+  private readonly subgraphHandlerCache = new Map<string, FetchHandler>();
 
   constructor(
     private readonly path: string,
@@ -344,7 +345,12 @@ export class GraphQLManager {
       }
     }
 
-    return this.#setupSubgraphs(this.coreSubgraphsMap);
+    // Document model subgraph instances are added to this.subgraphs above.
+    // Their handlers are wired in _updateRouter() → #setupSubgraphs(this.subgraphs),
+    // which is called at the end of init() via updateRouter(). We intentionally do
+    // NOT call #setupSubgraphs(this.coreSubgraphsMap) here — doing so would
+    // create duplicate Apollo servers for the same core-subgraph schemas, which
+    // in the new IGatewayAdapter architecture hangs #waitForServer and blocks init().
   }
 
   async #addSubgraphInstance(
@@ -526,29 +532,29 @@ export class GraphQLManager {
         this.logger.debug(`Setting up subgraph ${subgraph.name}`);
         const subgraphPath = this.#getSubgraphPath(subgraph, supergraph);
         try {
-          // Clean up existing graphql-ws protocol handlers before starting new one.
-          const existingWsDisposer = this.subgraphWsDisposers.get(subgraphPath);
-          if (existingWsDisposer) {
-            for (const client of this.wsServer.clients) {
-              client.close(1001, "Going away");
-            }
-            this.wsServer.removeAllListeners("connection");
-            this.wsServer.removeAllListeners("error");
-            this.subgraphWsDisposers.delete(subgraphPath);
+          // Skip if handler already cached — subgraphs are deduplicated by name
+          // in #addSubgraphInstance, so a cached path means the schema is unchanged.
+          // This prevents unbounded schema/server creation across repeated
+          // _updateRouter() calls.
+          if (this.subgraphHandlerCache.has(subgraphPath)) {
+            this.httpAdapter.mount(
+              subgraphPath,
+              this.subgraphHandlerCache.get(subgraphPath)!,
+            );
+            continue;
           }
 
-          // Create subgraph schema
           const schema = createSchema(
             this.cachedDocumentModels,
             subgraph.resolvers,
             subgraph.typeDefs,
           );
 
-          // Create handler via gateway adapter and mount via http adapter
           const fetchHandler = await this.gatewayAdapter.createHandler(
             schema,
             this.#makeContextFactory(),
           );
+          this.subgraphHandlerCache.set(subgraphPath, fetchHandler);
           this.httpAdapter.mount(subgraphPath, fetchHandler);
 
           if (subgraph.hasSubscriptions) {

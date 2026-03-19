@@ -14,18 +14,6 @@ export class ExpressHttpAdapter implements IHttpAdapter {
 
   constructor(router: express.Router) {
     this.#router = router;
-
-    // Single catch-all dispatcher for all prefix-matched handlers.
-    // Registered first so it runs before exact-path handlers added via mount().
-    this.#router.use((req, res, next) => {
-      for (const { handler, matcher } of this.#handlers.values()) {
-        if (matcher(req.originalUrl)) {
-          this.#serveFetchHandler(handler, req, res, next);
-          return;
-        }
-      }
-      next();
-    });
   }
 
   setupMiddleware({
@@ -40,6 +28,17 @@ export class ExpressHttpAdapter implements IHttpAdapter {
     this.#router.use(
       bodyParser.urlencoded({ extended: true, limit: bodyLimit }),
     );
+
+    // Dispatcher registered AFTER bodyParser so req.body is populated when it fires.
+    this.#router.use((req, res, next) => {
+      for (const { handler, matcher } of this.#handlers.values()) {
+        if (matcher(req.path)) {
+          this.#serveFetchHandler(handler, req, res, next);
+          return;
+        }
+      }
+      next();
+    });
   }
 
   mount(
@@ -55,7 +54,7 @@ export class ExpressHttpAdapter implements IHttpAdapter {
       // Prefix match — stored in the internal dispatch map
       this.#handlers.set(path, {
         handler,
-        matcher: match(path, { end: false }),
+        matcher: match(path),
       });
     }
   }
