@@ -1,3 +1,7 @@
+## 6.0.0-dev.100 (2026-03-19)
+
+This was a version bump only, there were no code changes.
+
 ## 6.0.0-dev.99 (2026-03-18)
 
 ### 🚀 Features
