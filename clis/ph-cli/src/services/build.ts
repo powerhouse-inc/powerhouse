@@ -1,7 +1,13 @@
+import { ALL_POWERHOUSE_DEPENDENCIES } from "@powerhousedao/shared/constants";
 import { execSync } from "node:child_process";
 import { detect, resolveCommand } from "package-manager-detector";
 import { build as tsdownBuild } from "tsdown";
 import type { BuildArgs } from "../types.js";
+
+function makePowerhouseNeverBundleList() {
+  const withTrailingSlash = ALL_POWERHOUSE_DEPENDENCIES.map((d) => `${d}/`);
+  return [...ALL_POWERHOUSE_DEPENDENCIES, ...withTrailingSlash];
+}
 
 export async function runBuild(args: BuildArgs) {
   const { outDir, clean, dts, sourcemap } = args;
@@ -28,6 +34,7 @@ export async function runBuild(args: BuildArgs) {
     deps: {
       alwaysBundle: ["*"],
       neverBundle: [
+        ...makePowerhouseNeverBundleList(),
         "@tailwindcss/cli",
         "@testing-library/jest-dom",
         "@testing-library/react",

@@ -1,3 +1,5 @@
+import type { Action } from "../../../document-model/actions.js";
+import type { SignalDispatch } from "../../../document-model/types.js";
 import type {
   AddFileInput,
   AddFolderInput,
@@ -7,8 +9,7 @@ import type {
   MoveNodeInput,
   UpdateFileInput,
   UpdateNodeInput,
-} from "document-drive";
-import type { Action, SignalDispatch } from "document-model";
+} from "../types.js";
 
 export type AddFileAction = Action & { type: "ADD_FILE"; input: AddFileInput };
 export type AddFolderAction = Action & {

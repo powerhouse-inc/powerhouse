@@ -1,4 +1,4 @@
-import type { ILogger } from "../../logging/types.js";
+import type { ILogger } from "document-model";
 import type { ISyncCursorStorage } from "../../storage/interfaces.js";
 import type { ConnectionStateChangeCallback, IChannel } from "../interfaces.js";
 import { Mailbox } from "../mailbox.js";

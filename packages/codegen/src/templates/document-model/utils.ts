@@ -6,7 +6,7 @@ export const documentModelUtilsTemplate = ({
   pascalCaseDocumentType,
 }: DocumentModelVariableNames) =>
   ts`
-import type { DocumentModelUtils } from "document-model";
+import type { DocumentModelUtils } from "@powerhousedao/shared/document-model";
 import type { ${phStateName} } from "./gen/types.js";
 import { utils as genUtils } from "./gen/utils.js";
 import * as customUtils from "./src/utils.js";

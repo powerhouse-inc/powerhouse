@@ -1,4 +1,4 @@
-import type { Action, DocumentAction, PHDocument } from "document-model";
+import type { Action, DocumentAction, PHDocument } from "@powerhousedao/shared/document-model";
 
 export type DocumentDispatch<TAction extends Action> = (
   actionOrActions:

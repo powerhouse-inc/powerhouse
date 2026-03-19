@@ -1,11 +1,11 @@
-import type { DocumentModelUtils } from "document-model";
+import type { DocumentModelUtils } from "@powerhousedao/shared/document-model";
 import {
   baseCreateDocument,
   baseLoadFromInput,
   baseSaveToFileHandle,
   defaultBaseState,
   generateId,
-} from "document-model";
+} from "@powerhousedao/shared/document-model";
 import {
   assertIsDocumentEditorDocument,
   assertIsDocumentEditorState,

@@ -1,4 +1,4 @@
-import type { ModuleSpecification } from "document-model";
+import type { ModuleSpecification } from "@powerhousedao/shared/document-model";
 import { lazy, Suspense, useCallback } from "react";
 import type { DocumentActionHandlers } from "../types/documents.js";
 import { isEmptyOperationSchema } from "../utils/helpers.js";

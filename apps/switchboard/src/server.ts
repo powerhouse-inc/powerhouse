@@ -6,6 +6,8 @@ import { register } from "node:module";
 register(httpsHooksPath, import.meta.url);
 
 import { PGlite } from "@electric-sql/pglite";
+import { metrics } from "@opentelemetry/api";
+import { getConfig } from "@powerhousedao/config/node";
 import { ReactorInstrumentation } from "@powerhousedao/opentelemetry-instrumentation-reactor";
 import {
   ChannelScheme,
@@ -16,7 +18,6 @@ import {
   parseDriveUrl,
   type Database,
 } from "@powerhousedao/reactor";
-import { metrics } from "@opentelemetry/api";
 import {
   HttpPackageLoader,
   PackageManagementService,
@@ -27,6 +28,8 @@ import {
   initializeAndStartAPI,
   startViteServer,
 } from "@powerhousedao/reactor-api";
+import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
+import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import { type IRenown } from "@renown/sdk";
 import * as Sentry from "@sentry/node";
 import type { ICache, IDocumentDriveServer } from "document-drive";
@@ -34,14 +37,11 @@ import {
   DocumentAlreadyExistsError,
   InMemoryCache,
   ReactorBuilder as LegacyReactorBuilder,
-  childLogger,
-  driveDocumentModelModule,
 } from "document-drive";
-import { RedisCache } from "document-drive/cache/redis";
+import { RedisCache } from "document-drive/cache";
 import { FilesystemStorage } from "document-drive/storage/filesystem";
 import { PrismaStorageFactory } from "document-drive/storage/prisma";
-import type { DocumentModelModule } from "document-model";
-import { documentModelDocumentModelModule } from "document-model";
+import { childLogger, documentModelDocumentModelModule } from "document-model";
 import dotenv from "dotenv";
 import express from "express";
 import { Kysely, PostgresDialect } from "kysely";
@@ -49,7 +49,6 @@ import { PGliteDialect } from "kysely-pglite-dialect";
 import path from "path";
 import { Pool } from "pg";
 import type { RedisClientType } from "redis";
-import { getConfig } from "@powerhousedao/config/node";
 import { initRedis } from "./clients/redis.js";
 import { initFeatureFlags } from "./feature-flags.js";
 import { initRenown } from "./renown.js";

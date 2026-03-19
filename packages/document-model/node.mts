@@ -1,4 +1,7 @@
 import {
+  baseLoadFromInput,
+  createMinimalZip,
+  createZip,
   type Attachment,
   type AttachmentInput,
   type MinimalBackupData,
@@ -6,14 +9,13 @@ import {
   type PHDocument,
   type Reducer,
   type ReplayDocumentOptions,
-} from "document-model";
+} from "@powerhousedao/shared/document-model";
 import mime from "mime/lite";
 import type { BinaryLike } from "node:crypto";
 import { createHash } from "node:crypto";
 import fs from "node:fs";
 import https from "node:https";
 import { join } from "node:path";
-import { baseLoadFromInput, createMinimalZip, createZip } from "./src/files.js";
 
 function getFileAttributes(
   file: string,

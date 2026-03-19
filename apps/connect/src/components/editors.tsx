@@ -14,8 +14,8 @@ import {
     useRevisionHistoryVisible,
     useSelectedTimelineItem,
 } from "@powerhousedao/reactor-browser";
-import type { PHDocument } from "document-model";
-import { redo, undo } from "document-model";
+import type { PHDocument } from "@powerhousedao/shared/document-model";
+import { redo, undo } from "@powerhousedao/shared/document-model";
 import { Suspense, useEffect, useState } from "react";
 import {
     CenteredErrorMessage,

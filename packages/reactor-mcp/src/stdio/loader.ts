@@ -1,5 +1,5 @@
-import { childLogger } from "document-drive";
-import type { DocumentModelModule } from "document-model";
+import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
+import { childLogger } from "document-model";
 import { access } from "node:fs/promises";
 import path from "node:path";
 import type { ViteDevServer } from "vite";

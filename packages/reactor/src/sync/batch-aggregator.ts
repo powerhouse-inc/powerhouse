@@ -1,5 +1,5 @@
+import type { ILogger } from "document-model";
 import type { JobFailedEvent, JobWriteReadyEvent } from "../events/types.js";
-import type { ILogger } from "../logging/types.js";
 import { mergeCollectionMemberships } from "./utils.js";
 
 export type PreparedBatch = {

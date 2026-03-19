@@ -1,4 +1,4 @@
-import type { PHBaseState, PHDocument } from "document-model";
+import type { PHBaseState, PHDocument } from "@powerhousedao/shared/document-model";
 import { describe, expect, it } from "vitest";
 import type {
   RemoteDocumentData,

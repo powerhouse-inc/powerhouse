@@ -12,7 +12,7 @@
 //   RemoteDriveOptions,
 // } from "document-drive";
 // import { logger, ReadDriveNotFoundError } from "document-drive";
-// import type { PHDocument } from "document-model";
+// import type { PHDocument } from "@powerhousedao/shared/document-model";
 // import isEqual from "fast-deep-equal";
 // import type { FC, ReactNode } from "react";
 // import { createContext, useContext, useEffect, useMemo, useState } from "react";

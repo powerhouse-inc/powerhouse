@@ -1,4 +1,4 @@
-import { childLogger } from "document-drive";
+import { childLogger } from "document-model";
 
 const baseLogger = childLogger(["Vetra"]);
 

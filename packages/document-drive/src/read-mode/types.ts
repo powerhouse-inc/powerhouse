@@ -1,9 +1,11 @@
 import type {
   DocumentDriveDocument,
+  ListenerFilter,
+} from "@powerhousedao/shared/document-drive";
+import type {
   DocumentDriveServerMixin,
   DocumentModelNotFoundError,
   DriveInfo,
-  ListenerFilter,
   ReadDocumentNotFoundError,
   ReadDriveNotFoundError,
   ReadDriveSlugNotFoundError,
@@ -13,7 +15,7 @@ import type {
   DocumentModelModule,
   PHBaseState,
   PHDocument,
-} from "document-model";
+} from "@powerhousedao/shared/document-model";
 
 export type ReadModeDriveServerMixin =
   DocumentDriveServerMixin<IReadModeDriveServer>;

@@ -1,6 +1,7 @@
-import type { DocumentDriveDocument, ICache } from "document-drive";
-import { childLogger } from "document-drive/utils/logger";
-import type { PHDocument } from "document-model";
+import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
+import type { PHDocument } from "@powerhousedao/shared/document-model";
+import type { ICache } from "document-drive";
+import { childLogger } from "document-model";
 import type { RedisClientType } from "redis";
 import { trimResultingState } from "./util.js";
 

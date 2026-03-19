@@ -1,17 +1,17 @@
 import { ReactorBuilder, ReactorClientBuilder } from "@powerhousedao/reactor";
 import {
-  MemoryKeyStorage,
-  RenownCryptoBuilder,
-  RenownCryptoSigner,
-} from "@renown/sdk/node";
-import {
   actions,
-  documentModelDocumentModelModule,
   setName,
   type Action,
   type DocumentModelDocument,
   type UserActionSigner,
-} from "document-model";
+} from "@powerhousedao/shared/document-model";
+import {
+  MemoryKeyStorage,
+  RenownCryptoBuilder,
+  RenownCryptoSigner,
+} from "@renown/sdk/node";
+import { documentModelDocumentModelModule } from "document-model";
 import { describe, expect, it } from "vitest";
 
 describe("Renown on script", () => {

@@ -1,15 +1,16 @@
-import { actions, documentModelDocumentModelModule } from "document-model";
-import type {
-  Action,
-  AppActionSigner,
-  ISigner,
-  Signature,
-  UserActionSigner,
-} from "document-model";
+import {
+  actions,
+  type Action,
+  type AppActionSigner,
+  type ISigner,
+  type Signature,
+  type UserActionSigner,
+} from "@powerhousedao/shared/document-model";
+import { documentModelDocumentModelModule } from "document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ReactorClientBuilder } from "../../src/core/reactor-client-builder.js";
-import { ReactorBuilder } from "../../src/core/reactor-builder.js";
 import type { IReactorClient } from "../../src/client/types.js";
+import { ReactorBuilder } from "../../src/core/reactor-builder.js";
+import { ReactorClientBuilder } from "../../src/core/reactor-client-builder.js";
 import type { IReactor } from "../../src/core/types.js";
 
 function createTestSigner(name: string, publicKey: string): ISigner {

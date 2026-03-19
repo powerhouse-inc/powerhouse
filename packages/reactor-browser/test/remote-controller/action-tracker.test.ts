@@ -1,4 +1,4 @@
-import type { Action } from "document-model";
+import type { Action } from "@powerhousedao/shared/document-model";
 import { describe, expect, it } from "vitest";
 import { ActionTracker } from "../../src/remote-controller/action-tracker.js";
 

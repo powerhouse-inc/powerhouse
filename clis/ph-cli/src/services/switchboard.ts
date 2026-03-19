@@ -3,7 +3,7 @@ import type {
   StartServerOptions,
 } from "@powerhousedao/switchboard/server";
 import { startSwitchboard as startSwitchboardServer } from "@powerhousedao/switchboard/server";
-import type { ILogger } from "@powerhousedao/reactor";
+import type { ILogger } from "document-model";
 import path from "node:path";
 import type { SwitchboardArgs } from "../types.js";
 

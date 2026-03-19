@@ -1,7 +1,7 @@
 import { Breadcrumbs } from "@powerhousedao/design-system/connect";
 import { useDrop } from "@powerhousedao/design-system/connect";
 import { useSetPHDriveEditorConfig } from "@powerhousedao/reactor-browser";
-import type { EditorProps } from "document-model";
+import type { EditorProps } from "@powerhousedao/shared/document-model";
 import { CreateDocument } from "./components/create-document.js";
 import FolderView from "./components/folder-view.js";
 import { DriveLayout } from "./components/layout.js";

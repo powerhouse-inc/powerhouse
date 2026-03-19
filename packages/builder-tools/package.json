@@ -26,29 +26,30 @@
     "build:bundle": "tsdown"
   },
   "dependencies": {
-    "vite": "catalog:",
+    "@powerhousedao/config": "workspace:*",
+    "@powerhousedao/shared": "workspace:*",
     "@sentry/vite-plugin": "^4.3.0",
     "@tailwindcss/vite": "catalog:",
-    "vite-plugin-html": "catalog:",
-    "vite-plugin-svgr": "catalog:",
-    "vite-plugin-node-polyfills": "catalog:",
-    "esbuild-plugins-node-modules-polyfill": "catalog:",
     "@vitejs/plugin-basic-ssl": "catalog:",
-    "vite-envs": "catalog:",
-    "@powerhousedao/config": "workspace:*",
     "@vitejs/plugin-react": "catalog:",
     "document-model": "workspace:*",
-    "@powerhousedao/shared": "workspace:*",
     "esbuild": "^0.25.5",
+    "esbuild-plugins-node-modules-polyfill": "catalog:",
     "fast-glob": "^3.3.3",
+    "identify-monorepo-root": "^1.0.9",
     "magic-string": "^0.30.17",
     "read-pkg": "catalog:",
     "resolve.exports": "^2.0.3",
-    "zod": "catalog:",
-    "vite-tsconfig-paths": "catalog:"
+    "vite": "catalog:",
+    "vite-envs": "catalog:",
+    "vite-plugin-html": "catalog:",
+    "vite-plugin-node-polyfills": "catalog:",
+    "vite-plugin-svgr": "catalog:",
+    "vite-tsconfig-paths": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
-    "tsx": "catalog:",
-    "tsdown": "catalog:"
+    "tsdown": "catalog:",
+    "tsx": "catalog:"
   }
 }

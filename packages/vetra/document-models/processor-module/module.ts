@@ -5,8 +5,8 @@ import {
   reducer,
   utils,
 } from "@powerhousedao/vetra/document-models/processor-module";
-import type { DocumentModelModule } from "document-model";
-import { createState, defaultBaseState } from "document-model";
+import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
+import { createState, defaultBaseState } from "@powerhousedao/shared/document-model";
 
 /** Document model module for the Todo List document type */
 export const ProcessorModule: DocumentModelModule<ProcessorModulePHState> = {

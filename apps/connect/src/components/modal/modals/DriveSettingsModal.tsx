@@ -10,7 +10,8 @@ import {
   usePHModal,
   useSyncList,
 } from "@powerhousedao/reactor-browser";
-import type { DocumentDriveDocument, SharingType } from "document-drive";
+import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
+import type { SharingType } from "document-drive";
 import { useMemo } from "react";
 
 export function DriveSettingsModal() {

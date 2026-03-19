@@ -1,7 +1,7 @@
 import type {
   DocumentDriveAction,
   DocumentDriveDocument,
-} from "document-drive";
+} from "@powerhousedao/shared/document-drive";
 import type { DocumentDispatch } from "../types/documents.js";
 import { useDispatch } from "./dispatch.js";
 import { useDrives } from "./drives.js";

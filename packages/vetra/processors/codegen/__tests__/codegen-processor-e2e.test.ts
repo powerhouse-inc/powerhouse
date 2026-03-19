@@ -3,7 +3,7 @@ import type {
   PowerhouseManifest,
 } from "@powerhousedao/config";
 import type { InternalTransmitterUpdate } from "document-drive";
-import type { DocumentModelGlobalState } from "document-model";
+import type { DocumentModelGlobalState } from "@powerhousedao/shared/document-model";
 import path from "path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppModuleGlobalState } from "../../../document-models/app-module/index.js";

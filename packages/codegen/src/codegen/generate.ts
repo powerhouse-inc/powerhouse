@@ -14,7 +14,7 @@ import type {
 } from "@powerhousedao/config";
 import type { ProcessorApps } from "@powerhousedao/shared/processors";
 import { kebabCase } from "change-case";
-import type { DocumentModelGlobalState } from "document-model";
+import type { DocumentModelGlobalState } from "@powerhousedao/shared/document-model";
 import fs from "node:fs";
 import { readdir } from "node:fs/promises";
 import path, { join } from "node:path";

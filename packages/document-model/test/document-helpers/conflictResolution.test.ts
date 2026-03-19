@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  attachBranch,
-  checkCleanedOperationsIntegrity,
-  merge,
-  precedes,
-  reshuffleByTimestamp,
-} from "document-model";
+    attachBranch,
+    checkCleanedOperationsIntegrity,
+    merge,
+    precedes,
+    reshuffleByTimestamp,
+} from "@powerhousedao/shared/document-model";
 import { buildOperations } from "./utils.js";
 
 describe("Conflict resolution", () => {

@@ -32,6 +32,14 @@
       "types": "./dist/document-model/*.d.ts",
       "import": "./dist/document-model/*.js"
     },
+    "./document-drive": {
+      "types": "./dist/document-drive/index.d.ts",
+      "import": "./dist/document-drive/index.js"
+    },
+    "./document-drive/*": {
+      "types": "./dist/document-drive/*.d.ts",
+      "import": "./dist/document-drive/*.js"
+    },
     "./connect": {
       "types": "./dist/connect/index.d.ts",
       "import": "./dist/connect/index.js"
@@ -55,17 +63,23 @@
     "./registry/*": {
       "types": "./dist/registry/*.d.ts",
       "import": "./dist/registry/*.js"
+    },
+    "./constants": {
+      "types": "./dist/constants.d.ts",
+      "import": "./dist/constants.js"
     }
   },
   "dependencies": {
     "@sindresorhus/fnv1a": "catalog:",
+    "change-case": "catalog:",
+    "jszip": "^3.10.1",
+    "kysely": "catalog:",
     "luxon": "catalog:",
-    "zod": "catalog:",
+    "mutative": "catalog:",
     "safe-stable-stringify": "^2.4.3",
     "sha1-uint8array": "^0.10.7",
-    "change-case": "catalog:",
-    "mutative": "catalog:",
-    "kysely": "catalog:"
+    "zocker": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@types/bun": "catalog:",

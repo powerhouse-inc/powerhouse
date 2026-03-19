@@ -1,3 +1,4 @@
+import { generateId } from "@powerhousedao/shared/document-model";
 import type {
   IDocumentDriveServer,
   IListenerManager,
@@ -6,9 +7,8 @@ import type {
   ProcessorRecordLegacy,
   ServerListener,
 } from "document-drive";
-import { InternalTransmitter } from "document-drive/server/transmitter/internal";
-import { childLogger } from "document-drive/utils/logger";
-import { generateId } from "document-model";
+import { childLogger } from "document-model";
+import { InternalTransmitter } from "server";
 import { isRelationalDbProcessor } from "./relational.js";
 
 export class ProcessorManagerLegacy implements IProcessorManagerLegacy {

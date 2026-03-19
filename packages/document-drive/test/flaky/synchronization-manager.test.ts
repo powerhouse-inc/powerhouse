@@ -9,7 +9,7 @@ import InMemoryCache, {
   expectUTCTimestamp,
   expectUUID,
 } from "document-drive";
-import { DocumentModelModule, Operation, generateId } from "document-model";
+import { DocumentModelModule, Operation, generateId } from "@powerhousedao/shared/document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 describe("Synchronization Units", () => {

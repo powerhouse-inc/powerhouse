@@ -2,12 +2,12 @@ import type {
   DocumentModelDocument,
   PHDocument,
   ValidationError,
-} from "document-model";
+} from "@powerhousedao/shared/document-model";
 import {
   validateInitialState,
   validateModules,
   validateStateSchemaName,
-} from "document-model";
+} from "@powerhousedao/shared/document-model";
 
 export const validateDocument = (document: PHDocument) => {
   const errors: ValidationError[] = [];

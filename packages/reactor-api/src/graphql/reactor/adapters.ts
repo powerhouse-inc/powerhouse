@@ -11,7 +11,7 @@ import type {
   DocumentModelPHState,
   Operation,
   PHDocument,
-} from "document-model";
+} from "@powerhousedao/shared/document-model";
 import { GraphQLError } from "graphql";
 import type {
   DocumentModelResultPage,

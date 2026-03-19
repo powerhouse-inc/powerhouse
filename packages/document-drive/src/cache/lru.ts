@@ -1,5 +1,5 @@
 import type { ICacheStorage, LRUCacheStorageOptions } from "document-drive";
-import { childLogger } from "document-drive/utils/logger";
+import { childLogger } from "document-model";
 import type { LRUCache } from "lru-cache";
 import { LRUCache as BaseLRUCache } from "lru-cache";
 import sizeof from "object-sizeof";

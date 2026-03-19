@@ -1,5 +1,9 @@
-import type { FileNode, FolderNode, Node } from "document-drive";
-import type { PHDocument } from "document-model";
+import type {
+  FileNode,
+  FolderNode,
+  Node,
+} from "@powerhousedao/shared/document-drive";
+import type { PHDocument } from "@powerhousedao/shared/document-model";
 import { isFileNodeKind, isFolderNodeKind } from "../utils/nodes.js";
 import {
   useDocumentsInSelectedDrive,

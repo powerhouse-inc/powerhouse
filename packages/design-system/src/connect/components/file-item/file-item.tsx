@@ -8,7 +8,8 @@ import {
   useSelectedDriveSafe,
   useUserPermissions,
 } from "@powerhousedao/reactor-browser";
-import { getDriveSharingType, type FileNode } from "document-drive";
+import type { FileNode } from "@powerhousedao/shared/document-drive";
+import { getDriveSharingType } from "document-drive";
 import { useState } from "react";
 import { twMerge } from "tailwind-merge";
 import { defaultNodeOptions, nodeOptionsMap } from "../../constants/options.js";

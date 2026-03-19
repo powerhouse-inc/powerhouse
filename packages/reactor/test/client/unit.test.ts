@@ -3,7 +3,7 @@ import type {
   DocumentModelModule,
   ISigner,
   PHDocument,
-} from "document-model";
+} from "@powerhousedao/shared/document-model";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ReactorClient } from "../../src/client/reactor-client.js";
 import type { IReactorClient } from "../../src/client/types.js";

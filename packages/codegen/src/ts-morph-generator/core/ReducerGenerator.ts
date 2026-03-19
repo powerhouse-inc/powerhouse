@@ -1,5 +1,5 @@
 import { camelCase, kebabCase, pascalCase } from "change-case";
-import type { OperationErrorSpecification } from "document-model";
+import type { OperationErrorSpecification } from "@powerhousedao/shared/document-model";
 import type {
   MethodDeclaration,
   ObjectLiteralExpression,

@@ -4,7 +4,7 @@ import type {
   IProcessorHostModule,
   ProcessorRecord,
 } from "@powerhousedao/reactor-browser";
-import type { PHDocumentHeader } from "document-model";
+import type { PHDocumentHeader } from "@powerhousedao/shared/document-model";
 import { CodegenProcessor } from "./index.js";
 import { logger } from "./logger.js";
 

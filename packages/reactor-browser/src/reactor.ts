@@ -1,9 +1,9 @@
 import type { IReactorClient } from "@powerhousedao/reactor";
+import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
 import type { IRenown } from "@renown/sdk";
 import { BrowserKeyStorage, RenownCryptoBuilder } from "@renown/sdk";
 import {
   type DefaultRemoteDriveInput,
-  type DocumentDriveDocument,
   type DocumentDriveServerOptions,
   type IDocumentDriveServer,
 } from "document-drive";

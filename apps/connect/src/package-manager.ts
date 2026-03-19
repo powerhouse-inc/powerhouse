@@ -14,7 +14,7 @@ import * as vetraVetraPackage from "@powerhousedao/vetra";
 import {
   type DocumentModelLib,
   type DocumentModelModule,
-} from "document-model";
+} from "@powerhousedao/shared/document-model";
 import {
   loadDocumentModelDocumentModelModule,
   loadDriveDocumentModelModule,

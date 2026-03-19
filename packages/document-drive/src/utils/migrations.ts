@@ -3,7 +3,7 @@ import type {
   Operation,
   PHDocument,
   Signature,
-} from "document-model";
+} from "@powerhousedao/shared/document-model";
 
 export function migrateDocumentOperationSignatures(
   document: PHDocument,

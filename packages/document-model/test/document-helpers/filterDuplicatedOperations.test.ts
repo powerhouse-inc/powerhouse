@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { filterDuplicatedOperations } from "document-model";
+import { filterDuplicatedOperations } from "@powerhousedao/shared/document-model";
 import { buildOperations } from "./utils.js";
 
 describe("filterDuplicatedOperations", () => {

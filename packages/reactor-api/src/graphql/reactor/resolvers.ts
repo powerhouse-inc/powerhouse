@@ -20,7 +20,7 @@ import type {
   DocumentModelModule,
   Operation,
   PHDocument,
-} from "document-model";
+} from "@powerhousedao/shared/document-model";
 import { GraphQLError } from "graphql";
 
 const DRIVE_DOCUMENT_TYPE = "powerhouse/document-drive";

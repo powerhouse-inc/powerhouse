@@ -1,15 +1,15 @@
 import type {
-  ConflictResolution,
-  FileUploadProgress,
+    ConflictResolution,
+    FileUploadProgress,
 } from "@powerhousedao/reactor-browser";
-import type { Node } from "document-drive";
+import type { Node } from "@powerhousedao/shared/document-drive";
 import { useCallback, useEffect, useReducer } from "react";
 import {
-  type OnAddFileWithProgress,
-  type UploadTracker,
-  formatFileSize,
-  generateId,
-  mapProgressStageToStatus,
+    type OnAddFileWithProgress,
+    type UploadTracker,
+    formatFileSize,
+    generateId,
+    mapProgressStageToStatus,
 } from "./utils.js";
 
 // State type

@@ -19,7 +19,7 @@
 //   type Operation,
 //   type PHDocument,
 //   type PHDocumentHeader,
-// } from "document-model";
+// } from "@powerhousedao/shared/document-model";
 // import type { Helia } from "helia";
 // import stringify from "json-stringify-deterministic";
 

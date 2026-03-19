@@ -1,7 +1,6 @@
 import {
   addModule,
   addOperation,
-  documentModelCreateDocument,
   documentModelReducer,
   getAllOperationNames,
   isReservedOperationName,
@@ -18,7 +17,8 @@ import {
   type ModuleSpecification,
   type OperationSpecification,
   type ValidationError,
-} from "document-model";
+} from "@powerhousedao/shared/document-model";
+import { documentModelCreateDocument } from "document-model";
 import { beforeEach, describe, expect, it } from "vitest";
 
 describe("DocumentModel Validation Error", () => {

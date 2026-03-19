@@ -1,4 +1,4 @@
-import type { Action } from "document-model";
+import type { Action } from "@powerhousedao/shared/document-model";
 import type { TestDocument } from "../types.js";
 
 let folderCounter = 0;

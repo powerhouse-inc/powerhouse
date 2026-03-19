@@ -1,7 +1,7 @@
 import type {
   DocumentModelGlobalState,
   ModuleSpecification,
-} from "document-model";
+} from "@powerhousedao/shared/document-model";
 import fs from "fs/promises";
 import { Project } from "ts-morph";
 import { DeclarationManager } from "../utilities/DeclarationManager.js";

@@ -1,6 +1,6 @@
 import { Icon } from "@powerhousedao/design-system";
 import { driveCollectionId, useSyncList } from "@powerhousedao/reactor-browser";
-import type { DocumentDriveDocument } from "document-drive";
+import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
 import { useMemo } from "react";
 
 export function DriveIcon({

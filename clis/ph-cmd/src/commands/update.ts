@@ -5,12 +5,12 @@ import {
   parsePackageVersion,
   runCmd,
 } from "@powerhousedao/common/clis";
+import { ALL_POWERHOUSE_DEPENDENCIES } from "@powerhousedao/shared/constants";
 import chalk from "chalk";
 import { boolean, command, flag, optional } from "cmd-ts";
 import { detect } from "package-manager-detector/detect";
 import { readPackage } from "read-pkg";
 import { writePackage } from "write-package";
-import { ALL_POWERHOUSE_DEPENDENCIES } from "../utils/constants.js";
 
 export const update = command({
   name: "update",

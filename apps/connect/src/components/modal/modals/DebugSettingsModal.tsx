@@ -10,7 +10,7 @@ import {
     useDrives,
     usePHModal,
 } from "@powerhousedao/reactor-browser";
-import { generateId } from "document-model";
+import { generateId } from "@powerhousedao/shared/document-model";
 import { useEffect, useState } from "react";
 
 type ComboboxOption = {

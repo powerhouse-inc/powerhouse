@@ -1,4 +1,4 @@
-import { createAction } from "document-model";
+import { createAction } from "@powerhousedao/shared/document-model";
 import {
   AddTodoInputSchema,
   RemoveTodoInputSchema,

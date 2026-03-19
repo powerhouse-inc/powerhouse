@@ -5,8 +5,8 @@ import type {
 } from "@powerhousedao/reactor";
 import { ReactorBuilder, ReactorClientBuilder } from "@powerhousedao/reactor";
 import { createReactorMcpProvider } from "@powerhousedao/reactor-mcp";
-import type { DocumentDriveDocument } from "document-drive";
-import { driveDocumentModelModule } from "document-drive";
+import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
+import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import {
   documentModelCreateDocument,
   documentModelDocumentModelModule,

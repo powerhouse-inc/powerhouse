@@ -1,5 +1,5 @@
+import type { ILogger } from "document-model";
 import type { IOperationIndex } from "../../cache/operation-index-types.js";
-import type { ILogger } from "../../logging/types.js";
 import type { IQueue } from "../../queue/interfaces.js";
 import type { ISyncCursorStorage } from "../../storage/interfaces.js";
 import type { IChannel, IChannelFactory } from "../interfaces.js";

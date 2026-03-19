@@ -1,11 +1,10 @@
-import type { IReactorClient, PagedResults } from "@powerhousedao/reactor";
 import {
-  documentModelDocumentModelModule,
   type Action,
   type DocumentModelModule,
   type PHDocument,
-} from "document-model";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+} from "@powerhousedao/shared/document-model";
+import { documentModelDocumentModelModule } from "document-model";
+import { describe, expect, it, vi } from "vitest";
 import * as adapters from "../src/graphql/reactor/adapters.js";
 
 const createTestDocument = (): PHDocument => {

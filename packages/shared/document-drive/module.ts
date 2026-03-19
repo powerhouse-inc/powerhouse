@@ -1,4 +1,4 @@
-import { createState, defaultBaseState } from "document-model";
+import { createState, defaultBaseState } from "../document-model/state.js";
 import { driveDocumentFileExtension } from "./constants.js";
 import * as actions from "./gen/creators.js";
 import { driveDocumentModel } from "./gen/document-model.js";

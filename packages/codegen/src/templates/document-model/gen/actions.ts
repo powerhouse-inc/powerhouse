@@ -1,7 +1,7 @@
 import type { DocumentModelTemplateInputs } from "@powerhousedao/codegen/file-builders";
 import { ts } from "@tmpl/core";
 import { kebabCase, pascalCase } from "change-case";
-import type { ModuleSpecification } from "document-model";
+import type { ModuleSpecification } from "@powerhousedao/shared/document-model";
 
 function makeModuleActionsTypeImport(
   module: ModuleSpecification,

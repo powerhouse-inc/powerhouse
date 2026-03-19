@@ -45,6 +45,7 @@
     "vitest": "catalog:"
   },
   "dependencies": {
+    "@powerhousedao/shared": "workspace:*",
     "@didtools/key-did": "^1.0.0",
     "did-jwt": "^8.0.18",
     "did-jwt-vc": "^4.0.12",

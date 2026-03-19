@@ -1,5 +1,5 @@
 import { useDocumentById } from "@powerhousedao/reactor-browser";
-import { redo, undo } from "document-model";
+import { redo, undo } from "@powerhousedao/shared/document-model";
 
 export function useDocumentUndoRedo(documentId?: string) {
   const [document, dispatch] = useDocumentById(documentId);

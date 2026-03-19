@@ -3,7 +3,7 @@ import type {
   JobFailedEvent,
   JobWriteReadyEvent,
 } from "../../../src/events/types.js";
-import type { ILogger } from "../../../src/logging/types.js";
+import type { ILogger } from "document-model";
 import {
   BatchAggregator,
   type PreparedBatch,

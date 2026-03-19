@@ -5,13 +5,9 @@
  * Run with: npx tsx create-versioned-todo.ts
  */
 
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
 import {
   addModule,
   addOperation,
-  documentModelCreateDocument,
   documentModelReducer,
   generateId,
   releaseNewVersion,
@@ -25,8 +21,12 @@ import {
   setOperationReducer,
   setOperationSchema,
   setStateSchema,
-} from "document-model";
+} from "@powerhousedao/shared/document-model";
+import { documentModelCreateDocument } from "document-model";
 import { baseSaveToFile } from "document-model/node";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

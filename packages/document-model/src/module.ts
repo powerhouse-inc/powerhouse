@@ -1,15 +1,14 @@
+import type { DocumentModelDocumentModelModule } from "@powerhousedao/shared/document-model";
 import {
   actions,
   createState,
   defaultBaseState,
   documentModelFileExtension,
   documentModelGlobalState,
-  documentModelReducer,
-} from "@powerhousedao/shared/document-model";
-import {
   documentModelLoadFromInput,
+  documentModelReducer,
   documentModelSaveToFileHandle,
-} from "./files.js";
+} from "@powerhousedao/shared/document-model";
 import {
   assertIsDocumentOfType,
   assertIsStateOfType,
@@ -18,7 +17,6 @@ import {
   isDocumentOfType,
   isStateOfType,
 } from "./state.js";
-import type { DocumentModelDocumentModelModule } from "./types.js";
 
 const utils = {
   fileExtension: documentModelFileExtension,

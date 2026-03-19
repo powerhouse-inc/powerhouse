@@ -4,7 +4,7 @@ import {
   useSelectedDocumentOfType,
   useSelectedDrive,
 } from "@powerhousedao/reactor-browser";
-import { isFileNode } from "document-drive";
+import { isFileNode } from "@powerhousedao/shared/document-drive";
 import type {
   AppModuleAction,
   AppModuleDocument,

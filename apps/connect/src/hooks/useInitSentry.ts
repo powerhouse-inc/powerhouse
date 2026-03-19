@@ -2,13 +2,13 @@ import { connectConfig } from "@powerhousedao/connect/config";
 
 import type { BrowserOptions } from "@sentry/react";
 
-import { childLogger } from "document-drive";
+import { childLogger } from "document-model";
 import React, { useEffect } from "react";
 import {
-  createRoutesFromChildren,
-  matchRoutes,
-  useLocation,
-  useNavigationType,
+    createRoutesFromChildren,
+    matchRoutes,
+    useLocation,
+    useNavigationType,
 } from "react-router-dom";
 import { useAcceptedCookies } from "./useAcceptedCookies.js";
 

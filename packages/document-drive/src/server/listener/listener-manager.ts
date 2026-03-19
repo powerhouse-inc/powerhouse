@@ -1,22 +1,22 @@
+import type { ListenerFilter } from "@powerhousedao/shared/document-drive";
 import type {
-  DriveUpdateErrorHandler,
-  ErrorStatus,
-  GetStrandsOptions,
-  IListenerManager,
-  ISynchronizationManager,
-  ListenerFilter,
-  ListenerManagerOptions,
-  ListenerState,
-  ListenerUpdate,
-  OperationUpdate,
-  ServerListener,
-  StrandUpdate,
-  StrandUpdateSource,
-  SynchronizationUnit,
-  SynchronizationUnitId,
-  SyncronizationUnitState,
+    DriveUpdateErrorHandler,
+    ErrorStatus,
+    GetStrandsOptions,
+    IListenerManager,
+    ISynchronizationManager,
+    ListenerManagerOptions,
+    ListenerState,
+    ListenerUpdate,
+    OperationUpdate,
+    ServerListener,
+    StrandUpdate,
+    StrandUpdateSource,
+    SynchronizationUnit,
+    SynchronizationUnitId,
+    SyncronizationUnitState,
 } from "document-drive";
-import { childLogger } from "document-drive/utils/logger";
+import { childLogger } from "document-model";
 import { OperationError } from "../error.js";
 import { SyncUnitMap } from "../sync-unit-map.js";
 import { DefaultListenerManagerOptions } from "./constants.js";

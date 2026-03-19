@@ -6,5 +6,5 @@ export {
   createTestDocument,
 } from "./operations/generator.js";
 export { TestScheduler } from "./scheduler/scheduler.js";
-export type { Action } from "document-model";
+export type { Action } from "@powerhousedao/shared/document-model";
 export * from "./types.js";

@@ -1,6 +1,6 @@
+import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
 import { useArgs } from "@storybook/preview-api";
 import type { Meta, StoryObj } from "@storybook/react";
-import type { DocumentDriveDocument } from "document-drive";
 import { useCallback } from "react";
 import { DangerZone } from "./danger-zone.js";
 

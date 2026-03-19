@@ -1,15 +1,15 @@
-import type { ISigner } from "document-model";
+import type { ISigner } from "@powerhousedao/shared/document-model";
+import type { ILogger } from "document-model";
+import { ConsoleLogger } from "document-model";
 import { ReactorClient } from "../client/reactor-client.js";
 import type { IEventBus } from "../events/interfaces.js";
-import { ConsoleLogger } from "../logging/console.js";
-import type { ILogger } from "../logging/types.js";
+import type { IDocumentModelLoader } from "../registry/interfaces.js";
 import { JobAwaiter, type IJobAwaiter } from "../shared/awaiter.js";
 import { PassthroughSigner } from "../signer/passthrough-signer.js";
 import type {
   SignatureVerificationHandler,
   SignerConfig,
 } from "../signer/types.js";
-import type { IDocumentModelLoader } from "../registry/interfaces.js";
 import type { IDocumentIndexer, IDocumentView } from "../storage/interfaces.js";
 import { DefaultSubscriptionErrorHandler } from "../subs/default-error-handler.js";
 import { ReactorSubscriptionManager } from "../subs/react-subscription-manager.js";

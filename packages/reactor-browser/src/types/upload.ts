@@ -1,4 +1,4 @@
-import type { FileNode } from "document-drive";
+import type { FileNode } from "@powerhousedao/shared/document-drive";
 
 export type DocumentTypeIcon =
   | "analytics-processor"

@@ -10,7 +10,7 @@ import {
   GraphQLClient,
   DOCUMENT_MODEL_TYPE,
 } from "@powerhousedao/load-test-client";
-import type { Action } from "document-model";
+import type { Action } from "@powerhousedao/shared/document-model";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const CLI_PATH = path.resolve(__dirname, "cli.ts");

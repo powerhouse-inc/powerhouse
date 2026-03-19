@@ -1,4 +1,4 @@
-import type { ISigner, SignatureVerificationHandler } from "document-model";
+import type { ISigner, SignatureVerificationHandler } from "@powerhousedao/shared/document-model";
 
 export type { SignatureVerificationHandler };
 

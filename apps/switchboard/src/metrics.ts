@@ -1,10 +1,10 @@
 import { OTLPMetricExporter } from "@opentelemetry/exporter-metrics-otlp-http";
 import { Resource } from "@opentelemetry/resources";
 import {
-  MeterProvider,
-  PeriodicExportingMetricReader,
+    MeterProvider,
+    PeriodicExportingMetricReader,
 } from "@opentelemetry/sdk-metrics";
-import { childLogger } from "document-drive";
+import { childLogger } from "document-model";
 
 const logger = childLogger(["switchboard", "metrics"]);
 

@@ -4,7 +4,10 @@ import type {
   DocumentTypeIcon,
   FileUploadProgressCallback,
 } from "@powerhousedao/reactor-browser";
-import type { DocumentDriveDocument, Node } from "document-drive";
+import type {
+  DocumentDriveDocument,
+  Node,
+} from "@powerhousedao/shared/document-drive";
 import {
   addFolder as baseAddFolder,
   copyNode as baseCopyNode,
@@ -14,14 +17,13 @@ import {
   handleTargetNameCollisions,
   isFileNode,
   isFolderNode,
-  logger,
   updateNode,
-} from "document-drive";
+} from "@powerhousedao/shared/document-drive";
 import type {
   DocumentModelModule,
   DocumentOperations,
   PHDocument,
-} from "document-model";
+} from "@powerhousedao/shared/document-model";
 import {
   baseLoadFromInput,
   baseSaveToFileHandle,
@@ -30,7 +32,8 @@ import {
   documentModelDocumentType,
   generateId,
   replayDocument,
-} from "document-model";
+} from "@powerhousedao/shared/document-model";
+import { logger } from "document-model";
 import { UnsupportedDocumentTypeError } from "../errors.js";
 import { isDocumentTypeSupported } from "../utils/documents.js";
 import { getUserPermissions } from "../utils/user.js";

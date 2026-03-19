@@ -1,16 +1,16 @@
 import { Icon } from "@powerhousedao/design-system";
 import {
-  exportDocument,
-  setSelectedNode,
-  setSelectedTimelineItem,
-  showRevisionHistory,
-  useGetSwitchboardLink,
-  useNodeActions,
-  useNodeParentFolderById,
-  useSelectedDocumentSafe,
+    exportDocument,
+    setSelectedNode,
+    setSelectedTimelineItem,
+    showRevisionHistory,
+    useGetSwitchboardLink,
+    useNodeActions,
+    useNodeParentFolderById,
+    useSelectedDocumentSafe,
 } from "@powerhousedao/reactor-browser";
-import type { Node } from "document-drive";
-import type { PHDocument } from "document-model";
+import type { Node } from "@powerhousedao/shared/document-drive";
+import type { PHDocument } from "@powerhousedao/shared/document-model";
 import { useEffect, useState, type ComponentPropsWithoutRef } from "react";
 import { twMerge } from "tailwind-merge";
 import { DocumentTimeline } from "../document-timeline/document-timeline.js";

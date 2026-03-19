@@ -1,5 +1,5 @@
-import type { Action, Operation } from "document-model";
-import { deriveOperationId } from "document-model";
+import type { Action, Operation } from "@powerhousedao/shared/document-model";
+import { deriveOperationId } from "@powerhousedao/shared/document-model";
 import { InvalidSignatureError } from "../shared/errors.js";
 import type { SignatureVerificationHandler } from "../signer/types.js";
 

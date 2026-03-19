@@ -1,18 +1,18 @@
-import type { Operation, PHDocument } from "document-model";
+import type { Operation, PHDocument } from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { KyselyWriteCache } from "../../../src/cache/kysely-write-cache.js";
 import type { WriteCacheConfig } from "../../../src/cache/write-cache-types.js";
 import type { IDocumentModelRegistry } from "../../../src/registry/interfaces.js";
 import type {
-  IKeyframeStore,
-  IOperationStore,
+    IKeyframeStore,
+    IOperationStore,
 } from "../../../src/storage/interfaces.js";
 import {
-  createCreateDocumentOperation,
-  createTestOperation,
-  createTestOperationStore,
-  createUpgradeDocumentOperation,
+    createCreateDocumentOperation,
+    createTestOperation,
+    createTestOperationStore,
+    createUpgradeDocumentOperation,
 } from "../../factories.js";
 
 function createMockOperationStore(): IOperationStore {

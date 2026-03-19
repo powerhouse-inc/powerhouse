@@ -2,7 +2,7 @@ import {
   useDocumentsInSelectedDrive,
   useSupportedDocumentTypesInReactor,
 } from "@powerhousedao/reactor-browser";
-import type { DocumentModelDocument, PHDocument } from "document-model";
+import type { DocumentModelDocument, PHDocument } from "@powerhousedao/shared/document-model";
 
 function isDocumentModelDocument(
   document: PHDocument,

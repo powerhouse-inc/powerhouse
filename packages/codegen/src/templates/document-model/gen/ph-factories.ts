@@ -12,11 +12,11 @@ import type {
   PHAuthState,
   PHDocumentState,
   PHBaseState,
-} from "document-model";
+} from "@powerhousedao/shared/document-model";
 import {
   createBaseState,
   defaultBaseState,
-} from "document-model";
+} from "@powerhousedao/shared/document-model";
 import type {
   ${v.phDocumentTypeName},
   ${v.localStateName},

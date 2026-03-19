@@ -3,9 +3,8 @@ import type {
   DocumentModelDocument,
   DocumentModelModule,
   Operation,
-} from "document-model";
+} from "@powerhousedao/shared/document-model";
 import {
-  documentModelDocumentModelModule,
   documentModelReducer,
   garbageCollect,
   generateId,
@@ -13,20 +12,23 @@ import {
   setModelId,
   setModelName,
   undo,
-} from "document-model";
+} from "@powerhousedao/shared/document-model";
 import { beforeEach, describe, expect, it, vitest } from "vitest";
 
+import {
+  addFile,
+  driveDocumentModelModule,
+  driveDocumentReducer,
+} from "@powerhousedao/shared/document-drive";
+import { createPresignedHeader } from "@powerhousedao/shared/document-model";
 import type { BaseDocumentDriveServer, IOperationResult } from "document-drive";
 import {
   BasicClient,
   ReactorBuilder,
-  addFile,
   buildOperation,
   buildOperations,
-  driveDocumentModelModule,
-  driveDocumentReducer,
 } from "document-drive";
-import { createPresignedHeader } from "document-model";
+import { documentModelDocumentModelModule } from "document-model";
 
 const mapExpectedOperations = (operations: Operation[]) =>
   operations.map((op) => {

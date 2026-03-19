@@ -1,4 +1,4 @@
-import type { FolderNode } from "document-drive";
+import type { FolderNode } from "@powerhousedao/shared/document-drive";
 import { isFolderNodeKind } from "../utils/nodes.js";
 import { useSelectedNode } from "./selected-node.js";
 

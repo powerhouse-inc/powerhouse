@@ -1,5 +1,5 @@
-import type { Operation } from "document-model";
-import { deriveOperationId } from "document-model";
+import type { Operation } from "@powerhousedao/shared/document-model";
+import { deriveOperationId } from "@powerhousedao/shared/document-model";
 import { describe, expect, it } from "vitest";
 import {
   reshuffleByTimestamp,

@@ -1,35 +1,35 @@
 import type {
-  Action,
-  ActionSigner,
-  ISigner,
-  PHDocument,
-  Reducer,
-  ReducerOptions,
-  SignalDispatch,
-  Signature,
-  SigningParameters,
-} from "document-model";
+    Action,
+    ActionSigner,
+    ISigner,
+    PHDocument,
+    Reducer,
+    ReducerOptions,
+    SignalDispatch,
+    Signature,
+    SigningParameters,
+} from "@powerhousedao/shared/document-model";
 import {
-  ab2hex,
-  actionSigner,
-  baseCreateDocument,
-  buildOperationSignatureMessage,
-  buildOperationSignatureParams,
-  buildSignedAction,
-  generateId,
-  hashDocumentStateForScope,
-  hex2ab,
-  sign,
-  verify,
-  verifyOperationSignature,
-} from "document-model";
+    ab2hex,
+    actionSigner,
+    baseCreateDocument,
+    buildOperationSignatureMessage,
+    buildOperationSignatureParams,
+    buildSignedAction,
+    generateId,
+    hashDocumentStateForScope,
+    hex2ab,
+    sign,
+    verify,
+    verifyOperationSignature,
+} from "@powerhousedao/shared/document-model";
 import type { CountPHState } from "document-model/test";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import {
-  countReducer,
-  createCountDocumentState,
-  createCountState,
-  increment,
+    countReducer,
+    createCountDocumentState,
+    createCountState,
+    increment,
 } from "../helpers.js";
 
 /**

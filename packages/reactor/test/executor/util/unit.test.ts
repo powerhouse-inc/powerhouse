@@ -1,7 +1,7 @@
 import type {
   CreateDocumentAction,
   DocumentModelPHState,
-} from "document-model";
+} from "@powerhousedao/shared/document-model";
 import { describe, expect, it } from "vitest";
 import {
   applyDeleteDocumentAction,

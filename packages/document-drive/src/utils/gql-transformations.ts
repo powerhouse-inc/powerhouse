@@ -1,5 +1,5 @@
-import type { DocumentDriveDocument } from "document-drive";
-import type { Operation, PHDocument, PHDocumentHeader } from "document-model";
+import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
+import type { Operation, PHDocument, PHDocumentHeader } from "@powerhousedao/shared/document-model";
 
 type ResponseForDrive = {
   id: string;

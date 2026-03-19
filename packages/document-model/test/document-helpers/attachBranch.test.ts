@@ -1,4 +1,4 @@
-import { attachBranch, checkCleanedOperationsIntegrity } from "document-model";
+import { attachBranch, checkCleanedOperationsIntegrity } from "@powerhousedao/shared/document-model";
 import { describe, expect, it } from "vitest";
 import { buildOperations } from "./utils.js";
 

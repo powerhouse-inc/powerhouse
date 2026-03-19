@@ -1,5 +1,6 @@
-import type { Reducer, StateReducer } from "document-model";
-import { createReducer, isDocumentAction } from "document-model";
+import { isDocumentAction } from "../../document-model/documents.js";
+import { createReducer } from "../../document-model/reducer.js";
+import type { Reducer, StateReducer } from "../../document-model/types.js";
 import { driveReducer } from "../src/reducers/drive.js";
 import { nodeReducer } from "../src/reducers/node.js";
 import {

@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import type { FileNode } from "document-drive";
+import type { FileNode } from "@powerhousedao/shared/document-drive";
 import { documentTypes } from "../../constants/documents.js";
 import { FileItem } from "./file-item.js";
 

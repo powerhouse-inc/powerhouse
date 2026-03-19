@@ -1,6 +1,6 @@
 import type { PHModal } from "@powerhousedao/reactor-browser";
+import type { Node } from "@powerhousedao/shared/document-drive";
 import { makePHEventFunctions } from "./make-ph-event-functions.js";
-import type { Node } from "document-drive";
 
 const modalEventFunctions = makePHEventFunctions("modal");
 

@@ -1,4 +1,5 @@
-import type { Operation } from "document-model";
+import type { Operation } from "@powerhousedao/shared/document-model";
+import { ConsoleLogger } from "document-model";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { KyselyOperationIndex } from "../../../src/cache/kysely-operation-index.js";
@@ -7,19 +8,18 @@ import { driveCollectionId } from "../../../src/cache/operation-index-types.js";
 import type { IReactor } from "../../../src/core/types.js";
 import { EventBus } from "../../../src/events/event-bus.js";
 import type { IEventBus } from "../../../src/events/interfaces.js";
-import { ConsoleLogger } from "../../../src/logging/console.js";
 import type {
-  ISyncCursorStorage,
-  ISyncDeadLetterStorage,
-  ISyncRemoteStorage,
+    ISyncCursorStorage,
+    ISyncDeadLetterStorage,
+    ISyncRemoteStorage,
 } from "../../../src/storage/interfaces.js";
 import type { Database } from "../../../src/storage/kysely/types.js";
 import type { IChannelFactory } from "../../../src/sync/interfaces.js";
 import { SyncManager } from "../../../src/sync/sync-manager.js";
 import type { ChannelConfig, SyncEnvelope } from "../../../src/sync/types.js";
 import {
-  createTestChannelFactory,
-  createTestSyncStorage,
+    createTestChannelFactory,
+    createTestSyncStorage,
 } from "../../factories.js";
 
 describe("SyncManager Backfill", () => {

@@ -1,11 +1,11 @@
 import {
   addModule,
-  documentModelCreateDocument,
   documentModelReducer,
   releaseNewVersion,
   setStateSchema,
   type DocumentModelPHState,
-} from "document-model";
+} from "@powerhousedao/shared/document-model";
+import { documentModelCreateDocument } from "document-model";
 import { beforeEach, describe, expect, it } from "vitest";
 
 describe("Document Model Versioning", () => {

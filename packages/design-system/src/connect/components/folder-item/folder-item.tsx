@@ -6,7 +6,7 @@ import {
   useNodeActions,
   useUserPermissions,
 } from "@powerhousedao/reactor-browser";
-import type { FolderNode } from "document-drive";
+import type { FolderNode } from "@powerhousedao/shared/document-drive";
 import { useState } from "react";
 import { twMerge } from "tailwind-merge";
 import { defaultNodeOptions, nodeOptionsMap } from "../../constants/options.js";

@@ -1,5 +1,5 @@
 import { camelCase, kebabCase } from "change-case";
-import { setName, type DocumentModelModule } from "document-model";
+import { setName, type DocumentModelModule } from "@powerhousedao/shared/document-model";
 import { GraphQLError, Kind, parse } from "graphql";
 import {
   generateDocumentModelSchema,

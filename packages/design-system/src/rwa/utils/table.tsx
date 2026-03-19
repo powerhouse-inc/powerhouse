@@ -1,4 +1,4 @@
-import type { InputMaybe } from "document-model";
+import type { InputMaybe } from "@powerhousedao/shared/document-model";
 import { FormattedNumber } from "../components/formatted-number.js";
 import {
   assetTransactionSignByTransactionType,

@@ -1,6 +1,7 @@
 import type { PowerhouseConfig } from "@powerhousedao/config";
 import { getConfig } from "@powerhousedao/config/node";
 import { loadConnectEnv, setConnectEnv } from "@powerhousedao/shared/connect";
+import { PACKAGES_DEPENDENCIES } from "@powerhousedao/shared/constants";
 import { sentryVitePlugin } from "@sentry/vite-plugin";
 import tailwind from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
@@ -16,8 +17,19 @@ import { createHtmlPlugin } from "vite-plugin-html";
 import tsconfigPaths from "vite-tsconfig-paths";
 import type { IConnectOptions } from "./types.js";
 
+const isLocalDev = true;
+const esmShUrl = isLocalDev ? "http://localhost:8080" : "https://esm.sh";
+
 export const connectClientConfig = {
   meta: [
+    {
+      tag: "meta",
+      attrs: {
+        "http-equiv": "Content-Security-Policy",
+        content:
+          "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://esm.sh http://localhost:8080; object-src 'none'; base-uri 'self';",
+      },
+    },
     {
       tag: "meta",
       attrs: {
@@ -154,6 +166,13 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
   const release = env.PH_CONNECT_SENTRY_RELEASE || env.PH_CONNECT_VERSION;
   const uploadSentrySourcemaps = authToken && org && project;
 
+  const powerhouseImportMap: Record<string, string> = {};
+
+  for (const name of PACKAGES_DEPENDENCIES) {
+    powerhouseImportMap[name] = `${esmShUrl}/${name}@dev`;
+    powerhouseImportMap[`${name}/`] = `${esmShUrl}/${name}@dev/`;
+  }
+
   const plugins: PluginOption[] = [
     tsconfigPaths(),
     tailwind(),
@@ -176,6 +195,7 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
                   "react/": "https://esm.sh/react@19.2.0/",
                   "react-dom": "https://esm.sh/react-dom@19.2.0",
                   "react-dom/": "https://esm.sh/react-dom@19.2.0/",
+                  ...powerhouseImportMap,
                 },
               },
               null,
@@ -246,6 +266,8 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
           "react-dom",
           "react/jsx-runtime",
           "react-dom/client",
+          ...PACKAGES_DEPENDENCIES,
+          ...PACKAGES_DEPENDENCIES.map((n) => `${n}/`),
         ],
       },
     },

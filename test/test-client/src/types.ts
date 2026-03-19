@@ -1,6 +1,3 @@
-// Re-export the Action type from document-model
-export type { Action } from "document-model";
-
 // Config types for the load test CLI
 export interface LoadTestConfig {
   url: string;

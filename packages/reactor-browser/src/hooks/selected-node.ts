@@ -1,11 +1,11 @@
-import type { Node } from "document-drive";
+import type { Node } from "@powerhousedao/shared/document-drive";
 import {
-  createUrlWithPreservedParams,
-  extractDriveSlugFromPath,
-  extractNodeIdFromSlug,
-  extractNodeSlugFromPath,
-  makeNodeSlug,
-  resolveUrlPathname,
+    createUrlWithPreservedParams,
+    extractDriveSlugFromPath,
+    extractNodeIdFromSlug,
+    extractNodeSlugFromPath,
+    makeNodeSlug,
+    resolveUrlPathname,
 } from "../utils/url.js";
 import { useNodesInSelectedDrive } from "./items-in-selected-drive.js";
 import { makePHEventFunctions } from "./make-ph-event-functions.js";

@@ -1,8 +1,6 @@
-import type {
-  DocumentDriveDocument,
-  SynchronizationUnitQuery,
-} from "document-drive";
-import type { Operation, PHDocument } from "document-model";
+import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
+import type { SynchronizationUnitQuery } from "document-drive";
+import type { Operation, PHDocument } from "@powerhousedao/shared/document-model";
 
 export type IStorageUnit = {
   /** The id of the document. If '*' then select all. */

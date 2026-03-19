@@ -1,6 +1,9 @@
-import { logger } from "document-drive";
-import type { Action, ActionSigner, PHDocument } from "document-model";
-import { buildSignedAction } from "document-model";
+import type { Action, PHDocument } from "@powerhousedao/shared/document-model";
+import {
+  buildSignedAction,
+  type ActionSigner,
+} from "@powerhousedao/shared/document-model";
+import { logger } from "document-model";
 
 export async function signAction(action: Action, document: PHDocument) {
   const reactor = window.ph?.reactorClient;

@@ -2,6 +2,7 @@ import {
   type Action,
   type DocumentAction,
   type DocumentModelAction,
+  type DocumentModelModule,
   type DocumentModelPHState,
   type DocumentOperations,
   type Operation,
@@ -10,7 +11,6 @@ import {
   type PHDocumentHeader,
 } from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule } from "./module.js";
-import type { DocumentModelModule } from "./types.js";
 
 type ScreamingSnakeToCamel<S extends string> =
   S extends `${infer Head}_${infer Tail}`

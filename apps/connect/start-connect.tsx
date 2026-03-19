@@ -1,5 +1,5 @@
 import { convertLegacyLibToVetraPackage } from "@powerhousedao/reactor-browser";
-import type { DocumentModelLib } from "document-model";
+import type { DocumentModelLib } from "@powerhousedao/shared/document-model";
 import { createRoot } from "react-dom/client";
 import { AppLoader } from "./src/components/index.js";
 

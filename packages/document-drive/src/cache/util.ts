@@ -1,4 +1,4 @@
-import type { DocumentOperations, PHDocument } from "document-model";
+import type { DocumentOperations, PHDocument } from "@powerhousedao/shared/document-model";
 
 // Deletes the resulting state on all operations in a document.
 // NOTE: THE RESULT IS THE CACHES MUTATE DOCUMENTS

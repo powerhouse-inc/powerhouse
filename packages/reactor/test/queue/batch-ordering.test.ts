@@ -4,7 +4,7 @@ import { InMemoryQueue } from "../../src/queue/queue.js";
 import type { Job } from "../../src/queue/types.js";
 import { NullDocumentModelResolver } from "../../src/registry/document-model-resolver.js";
 import { v4 as uuidv4 } from "uuid";
-import type { Action } from "document-model";
+import type { Action } from "@powerhousedao/shared/document-model";
 
 describe("Batch mutation queue ordering", () => {
   let queue: InMemoryQueue;

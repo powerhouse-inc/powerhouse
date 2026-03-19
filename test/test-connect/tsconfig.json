@@ -21,6 +21,9 @@
       "path": "../../packages/reactor"
     },
     {
+      "path": "../../packages/shared"
+    },
+    {
       "path": "../test-client"
     }
   ]

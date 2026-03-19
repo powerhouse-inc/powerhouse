@@ -1,4 +1,4 @@
-import { type Operation, type OperationWithContext } from "document-model";
+import { type Operation, type OperationWithContext } from "@powerhousedao/shared/document-model";
 import { sql, type Kysely, type Transaction } from "kysely";
 import type { PagedResults, PagingOptions } from "../../shared/types.js";
 import {

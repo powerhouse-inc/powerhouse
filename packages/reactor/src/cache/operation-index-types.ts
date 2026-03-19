@@ -1,4 +1,4 @@
-import type { Operation, OperationWithContext } from "document-model";
+import type { Operation, OperationWithContext } from "@powerhousedao/shared/document-model";
 import type { Generated, Insertable, Selectable, Updateable } from "kysely";
 import type { PagedResults, PagingOptions } from "../shared/types.js";
 import type { ViewFilter } from "../storage/interfaces.js";

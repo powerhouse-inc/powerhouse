@@ -1,18 +1,17 @@
-import {
-  DocumentAlreadyExistsError,
-  logger,
-  MemoryStorage,
-} from "document-drive";
-
 import type {
-  DriveInput,
-  ICache,
-  IDocumentDriveServer,
-  IDriveOperationStorage,
+    DriveInput,
+    ICache,
+    IDocumentDriveServer,
+    IDriveOperationStorage,
 } from "document-drive";
-import { BrowserStorage } from "document-drive";
+import {
+    BrowserStorage,
+    DocumentAlreadyExistsError,
+    MemoryStorage,
+} from "document-drive";
 import { FilesystemStorage } from "document-drive/storage/filesystem";
 import { PrismaStorageFactory } from "document-drive/storage/prisma";
+import { logger } from "document-model";
 import type { StorageOptions } from "./types.js";
 
 export const createStorage = (

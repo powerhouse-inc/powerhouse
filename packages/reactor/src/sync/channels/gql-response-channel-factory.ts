@@ -1,4 +1,4 @@
-import type { ILogger } from "../../logging/types.js";
+import type { ILogger } from "document-model";
 import type { ISyncCursorStorage } from "../../storage/interfaces.js";
 import type { IChannel, IChannelFactory } from "../interfaces.js";
 import type { ChannelConfig } from "../types.js";

@@ -1,6 +1,10 @@
 import { PGlite } from "@electric-sql/pglite";
-import { addFile, addFolder, setDriveName } from "document-drive";
-import { generateId } from "document-model";
+import {
+  addFile,
+  addFolder,
+  setDriveName,
+} from "@powerhousedao/shared/document-drive";
+import { generateId } from "@powerhousedao/shared/document-model";
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";

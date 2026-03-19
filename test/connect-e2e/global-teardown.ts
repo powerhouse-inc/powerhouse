@@ -34,7 +34,7 @@ async function globalTeardown() {
       );
       fs.writeFileSync(
         path.join(documentModelsDir, "document-models.ts"),
-        'import type { DocumentModelModule } from "document-model";\n\nexport const documentModels: DocumentModelModule<any>[] = [];\n',
+        'import type { DocumentModelModule } from "@powerhousedao/shared/document-model";\n\nexport const documentModels: DocumentModelModule<any>[] = [];\n',
       );
     }
 
@@ -60,7 +60,7 @@ async function globalTeardown() {
       fs.writeFileSync(path.join(editorsDir, "index.ts"), "export {};\n");
       fs.writeFileSync(
         path.join(editorsDir, "editors.ts"),
-        'import type { EditorModule } from "document-model";\n\nexport const editors: EditorModule[] = [];\n',
+        'import type { EditorModule } from "@powerhousedao/shared/document-model";\n\nexport const editors: EditorModule[] = [];\n',
       );
     }
 

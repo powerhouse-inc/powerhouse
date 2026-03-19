@@ -1,3 +1,4 @@
+import { InMemoryCache } from "cache";
 import type {
   DocumentDriveServerOptions,
   ICache,
@@ -10,10 +11,9 @@ import type {
   ISynchronizationManager,
   ITransmitterFactory,
 } from "document-drive";
-import { InMemoryCache } from "document-drive/cache/memory";
-import { EventQueueManager } from "document-drive/queue/event";
-import { MemoryStorage } from "document-drive/storage/memory";
-import type { DocumentModelModule } from "document-model";
+import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
+import { EventQueueManager } from "queue";
+import { MemoryStorage } from "storage/memory";
 import { DocumentDriveServer } from "./base-server.js";
 import { DefaultEventEmitter } from "./event-emitter.js";
 import { DefaultListenerManagerOptions } from "./listener/constants.js";

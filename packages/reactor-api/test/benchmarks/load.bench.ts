@@ -7,7 +7,7 @@
 //   generateUUID,
 //   MemoryStorage,
 // } from "document-drive";
-// import { DocumentModelModule } from "document-model";
+// import { DocumentModelModule } from "@powerhousedao/shared/document-model";
 
 // import { bench, describe } from "vitest";
 

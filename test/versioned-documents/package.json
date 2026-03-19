@@ -71,6 +71,7 @@
   "dependencies": {
     "@powerhousedao/builder-tools": "workspace:*",
     "@powerhousedao/common": "workspace:*",
+    "@powerhousedao/shared": "workspace:*",
     "@powerhousedao/design-system": "workspace:*",
     "document-model": "workspace:*",
     "zod": "catalog:",

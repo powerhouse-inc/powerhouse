@@ -1,13 +1,13 @@
 import type { SubgraphArgs } from "@powerhousedao/reactor-api";
 import { testSetupReactor } from "@powerhousedao/reactor-api/test";
-import { driveDocumentModelModule } from "document-drive";
-import type { DocumentModelModule } from "document-model";
+import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
+import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import { print } from "graphql";
 import { beforeEach, describe, expect, it } from "vitest";
 import { DocumentModelSubgraph } from "../src/graphql/document-model-subgraph.js";
 import {
-  generateDocumentModelSchema,
-  getDocumentModelSchemaName,
+    generateDocumentModelSchema,
+    getDocumentModelSchemaName,
 } from "../src/utils/create-schema.js";
 
 /**

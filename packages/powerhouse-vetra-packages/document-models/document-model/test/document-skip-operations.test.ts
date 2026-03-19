@@ -4,7 +4,7 @@ import {
   mapSkippedOperations,
   replayOperations,
   setName,
-} from "document-model";
+} from "@powerhousedao/shared/document-model";
 import {
   baseCountReducer,
   countReducer,

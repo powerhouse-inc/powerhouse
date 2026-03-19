@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { split } from "document-model";
+import { split } from "@powerhousedao/shared/document-model";
 import { buildOperation, buildOperations } from "./utils.js";
 
 describe("split", () => {

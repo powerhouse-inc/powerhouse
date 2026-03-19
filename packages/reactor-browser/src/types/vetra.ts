@@ -16,7 +16,7 @@ import type {
   Reducer,
   SubgraphModule,
   UpgradeManifest,
-} from "document-model";
+} from "@powerhousedao/shared/document-model";
 import type { IDocumentModelLoader } from "../re-exports.js";
 
 export type Processors = (module: {

@@ -1,5 +1,5 @@
 import { captureException } from "@sentry/react";
-import { setErrorHandler } from "document-drive";
+import { setErrorHandler } from "document-model";
 
 function captureSentryException(...data: any[]) {
   let error: unknown;

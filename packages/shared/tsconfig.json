@@ -4,7 +4,45 @@
   "compilerOptions": {
     // output transpiled code in the dist file relative to this package's root
     "outDir": "./dist",
-    "emitDeclarationOnly": true
+    "emitDeclarationOnly": true,
+    "paths": {
+      "analytics": [
+        "./analytics/index.ts"
+      ],
+      "analytics/*": [
+        "./analytics/*"
+      ],
+      "connect": [
+        "./connect/index.ts"
+      ],
+      "connect/*": [
+        "./connect/*"
+      ],
+      "document-drive": [
+        "./document-drive/index.ts"
+      ],
+      "document-drive/*": [
+        "./document-drive/*"
+      ],
+      "document-model": [
+        "./document-model/index.ts"
+      ],
+      "document-model/*": [
+        "./document-model/*"
+      ],
+      "processors": [
+        "./processors/index.ts"
+      ],
+      "processors/*": [
+        "./processors/*"
+      ],
+      "registry": [
+        "./registry/index.ts"
+      ],
+      "registry/*": [
+        "./registry/*"
+      ],
+    }
   },
   // include all files in this package's root
   "include": [

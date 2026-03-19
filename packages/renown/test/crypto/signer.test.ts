@@ -1,5 +1,8 @@
-import type { Action, Operation, Signature } from "document-model";
-import { deriveOperationId } from "document-model";
+import type { Action, Signature } from "@powerhousedao/shared/document-model";
+import {
+  deriveOperationId,
+  type Operation,
+} from "@powerhousedao/shared/document-model";
 import { beforeEach, describe, expect, it } from "vitest";
 import {
   MemoryKeyStorage,

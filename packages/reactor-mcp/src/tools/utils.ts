@@ -1,6 +1,6 @@
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { camelCase } from "change-case";
-import type { Action, DocumentModelModule, Operation } from "document-model";
+import type { Action, DocumentModelModule, Operation } from "@powerhousedao/shared/document-model";
 import type { z } from "zod";
 import type { ResolveZodSchema, ToolSchema } from "./types.js";
 

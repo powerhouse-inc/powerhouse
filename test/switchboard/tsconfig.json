@@ -19,6 +19,9 @@
     },
     {
       "path": "../../packages/renown"
+    },
+    {
+      "path": "../../packages/shared"
     }
   ],
   "include": [

@@ -1,4 +1,5 @@
 import type { Draft } from "mutative";
+import type { ProcessorFactoryBuilder } from "processors";
 import type { FC, ReactNode } from "react";
 import type { Action, Attachment, AttachmentRef } from "./actions.js";
 import type { PHDocument } from "./documents.js";
@@ -10,6 +11,7 @@ import type {
   UserActionSigner,
 } from "./signatures.js";
 import type { PHBaseState } from "./state.js";
+import type { UpgradeManifest } from "./upgrades.js";
 
 export type State = {
   examples: CodeExample[];
@@ -1680,3 +1682,47 @@ export type CreateDocument<TState extends PHBaseState = PHBaseState> = (
   initialState?: Partial<TState>,
   createState?: CreateState<TState>,
 ) => PHDocument<TState>;
+
+export type MinimalBackupData = {
+  documentId: string;
+  documentType: string;
+  branch: string;
+  state: PHBaseState;
+  name: string;
+};
+
+export type DocumentModelUtils<TState extends PHBaseState = PHBaseState> = {
+  fileExtension: string;
+  createState: CreateState<TState>;
+  createDocument: CreateDocument<TState>;
+  loadFromInput: LoadFromInput<TState>;
+  saveToFileHandle: SaveToFileHandle;
+  isStateOfType: IsStateOfType<TState>;
+  assertIsStateOfType: AssertIsStateOfType<TState>;
+  isDocumentOfType: IsDocumentOfType<TState>;
+  assertIsDocumentOfType: AssertIsDocumentOfType<TState>;
+};
+
+export type Actions = Record<string, (...args: any[]) => Action>;
+
+export type DocumentModelModule<TState extends PHBaseState = PHBaseState> = {
+  /** optional version field, should be made required */
+  version?: number;
+  reducer: Reducer<TState>;
+  actions: Actions;
+  utils: DocumentModelUtils<TState>;
+  documentModel: DocumentModelPHState;
+};
+
+export type DocumentModelLib<TState extends PHBaseState = PHBaseState> = {
+  manifest: Manifest;
+  documentModels: DocumentModelModule<TState>[];
+  editors: EditorModule[];
+  subgraphs: SubgraphModule[];
+  importScripts: ImportScriptModule[];
+  upgradeManifests: UpgradeManifest<readonly number[]>[] | undefined;
+  processorFactory: ProcessorFactoryBuilder;
+};
+
+export type DocumentModelDocumentModelModule =
+  DocumentModelModule<DocumentModelPHState>;

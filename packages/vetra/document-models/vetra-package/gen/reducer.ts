@@ -2,8 +2,8 @@
  
  
 import type { VetraPackagePHState } from "@powerhousedao/vetra/document-models/vetra-package";
-import type { Reducer, StateReducer } from "document-model";
-import { createReducer, isDocumentAction } from "document-model";
+import type { Reducer, StateReducer } from "@powerhousedao/shared/document-model";
+import { createReducer, isDocumentAction } from "@powerhousedao/shared/document-model";
 
 import { vetraPackageBaseOperationsOperations } from "../src/reducers/base-operations.js";
 

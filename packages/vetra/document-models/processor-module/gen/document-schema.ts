@@ -1,7 +1,7 @@
 import {
   BaseDocumentHeaderSchema,
   BaseDocumentStateSchema,
-} from "document-model";
+} from "@powerhousedao/shared/document-model";
 import { z } from "zod";
 import { processorModuleDocumentType } from "./document-type.js";
 import { ProcessorModuleStateSchema } from "./schema/zod.js";

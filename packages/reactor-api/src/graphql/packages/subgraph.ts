@@ -1,4 +1,4 @@
-import { ConsoleLogger } from "@powerhousedao/reactor";
+import { ConsoleLogger } from "document-model";
 import fs from "fs";
 import { gql } from "graphql-tag";
 import path from "path";
@@ -6,8 +6,8 @@ import { fileURLToPath } from "url";
 import type { PackageManagementService } from "../../services/package-management.service.js";
 import { BaseSubgraph } from "../base-subgraph.js";
 import type { SubgraphArgs } from "../types.js";
-import * as resolvers from "./resolvers.js";
 import type { PackageResolverContext } from "./resolvers.js";
+import * as resolvers from "./resolvers.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

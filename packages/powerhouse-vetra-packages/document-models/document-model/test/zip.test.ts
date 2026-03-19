@@ -1,12 +1,12 @@
-import type { DocumentModelPHState } from "document-model";
+import type { DocumentModelPHState } from "@powerhousedao/shared/document-model";
 import {
-  documentModelCreateDocument,
   documentModelReducer,
   setModelDescription,
   setModelId,
   setModelName,
   undo,
-} from "document-model";
+} from "@powerhousedao/shared/document-model";
+import { documentModelCreateDocument } from "document-model";
 import { baseLoadFromFile, baseSaveToFile } from "document-model/node";
 import fs from "fs";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";

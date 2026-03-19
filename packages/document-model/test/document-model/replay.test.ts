@@ -1,16 +1,16 @@
-import type { PHDocument } from "document-model";
+import type { PHDocument } from "@powerhousedao/shared/document-model";
 import {
-  createReducer,
-  HashMismatchError,
-  noop,
-  replayDocument,
-} from "document-model";
+    createReducer,
+    HashMismatchError,
+    noop,
+    replayDocument,
+} from "@powerhousedao/shared/document-model";
 import type { CountPHState } from "document-model/test";
 import {
-  baseCountReducer,
-  countReducer,
-  createCountState,
-  increment,
+    baseCountReducer,
+    countReducer,
+    createCountState,
+    increment,
 } from "document-model/test";
 
 describe("DocumentModel Replay", () => {

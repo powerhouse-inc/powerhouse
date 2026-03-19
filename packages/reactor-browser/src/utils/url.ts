@@ -1,4 +1,7 @@
-import type { DocumentDriveDocument, Node } from "document-drive";
+import type {
+  DocumentDriveDocument,
+  Node,
+} from "@powerhousedao/shared/document-drive";
 import slug from "slug";
 
 // Returns url with base path plus provided path

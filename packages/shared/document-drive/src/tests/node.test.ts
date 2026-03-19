@@ -3,26 +3,26 @@
  * - change it by adding new tests or modifying the existing ones
  */
 
-import type { DocumentDriveDocument } from "document-drive";
+import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
 import {
-  addFile,
-  AddFileInputSchema,
-  addFolder,
-  AddFolderInputSchema,
-  copyNode,
-  CopyNodeInputSchema,
-  driveCreateDocument,
-  deleteNode,
-  DeleteNodeInputSchema,
-  driveDocumentReducer,
-  FileNodeSchema,
-  moveNode,
-  MoveNodeInputSchema,
-  NodeSchema,
-  updateFile,
-  UpdateFileInputSchema,
-  updateNode,
-  UpdateNodeInputSchema,
+    addFile,
+    AddFileInputSchema,
+    addFolder,
+    AddFolderInputSchema,
+    copyNode,
+    CopyNodeInputSchema,
+    deleteNode,
+    DeleteNodeInputSchema,
+    driveCreateDocument,
+    driveDocumentReducer,
+    FileNodeSchema,
+    moveNode,
+    MoveNodeInputSchema,
+    NodeSchema,
+    updateFile,
+    UpdateFileInputSchema,
+    updateNode,
+    UpdateNodeInputSchema,
 } from "document-drive";
 import { beforeEach, describe, expect, it } from "vitest";
 import { generateMock } from "./generate-mock.js";

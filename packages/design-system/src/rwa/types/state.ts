@@ -1,4 +1,4 @@
-import type { Maybe, Scalars } from "document-model";
+import type { Maybe, Scalars } from "@powerhousedao/shared/document-model";
 import type {
   allGroupTransactionTypes,
   assetGroupTransactions,

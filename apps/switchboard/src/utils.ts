@@ -1,12 +1,15 @@
 import type { IReactorClient } from "@powerhousedao/reactor";
+import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
+import {
+  driveCreateDocument,
+  driveCreateState,
+} from "@powerhousedao/shared/document-drive";
 import type {
   BaseDocumentDriveServer,
-  DocumentDriveDocument,
   DriveInput,
   IDocumentDriveServer,
 } from "document-drive";
-import { driveCreateDocument, driveCreateState } from "document-drive";
-import { generateId } from "document-model";
+import { generateId } from "@powerhousedao/shared/document-model";
 
 export async function addDefaultDrive(
   driveServer: IDocumentDriveServer,

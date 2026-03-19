@@ -1,12 +1,11 @@
+import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
+import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import { ReactorBuilder } from "document-drive";
-import type { DocumentModelModule } from "document-model";
-import { describe, test } from "vitest";
-
-import { driveDocumentModelModule } from "document-drive";
 import {
-  documentModelCreateDocument,
-  documentModelDocumentModelModule,
+    documentModelCreateDocument,
+    documentModelDocumentModelModule,
 } from "document-model";
+import { describe, test } from "vitest";
 
 describe("Internal Listener", () => {
   const documentModels = [

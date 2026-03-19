@@ -1,4 +1,4 @@
-import { generateId, type Action } from "document-model";
+import { generateId, type Action } from "@powerhousedao/shared/document-model";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { type OperationFilter } from "../../src/storage/interfaces.js";

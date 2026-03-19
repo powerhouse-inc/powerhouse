@@ -5,7 +5,7 @@ export {
   deleteDocumentAction,
   documentActions,
   removeRelationshipAction,
-  upgradeDocumentAction,
+  upgradeDocumentAction
 } from "./src/actions/index.js";
 
 // Reactor Interface and Implementation
@@ -13,7 +13,7 @@ export { ReactorClient } from "./src/client/reactor-client.js";
 export {
   DocumentChangeType,
   type DocumentChangeEvent,
-  type IReactorClient,
+  type IReactorClient
 } from "./src/client/types.js";
 export { ReactorBuilder } from "./src/core/reactor-builder.js";
 export { ReactorClientBuilder } from "./src/core/reactor-client-builder.js";
@@ -26,18 +26,18 @@ export {
   type ReactorClientModule,
   type ReactorFeatures,
   type ReactorModule,
-  type SyncModule,
+  type SyncModule
 } from "./src/core/types.js";
 export { JobAwaiter, type IJobAwaiter } from "./src/shared/awaiter.js";
 export {
   ConsistencyTracker,
   makeConsistencyKey,
-  type IConsistencyTracker,
+  type IConsistencyTracker
 } from "./src/shared/consistency-tracker.js";
 export {
   driveIdFromUrl,
   parseDriveUrl,
-  type ParsedDriveUrl,
+  type ParsedDriveUrl
 } from "./src/shared/drive-url.js";
 export { createMutableShutdownStatus } from "./src/shared/factories.js";
 export {
@@ -52,11 +52,11 @@ export {
   type PagingOptions,
   type SearchFilter,
   type ShutdownStatus,
-  type ViewFilter,
+  type ViewFilter
 } from "./src/shared/types.js";
 export {
   type SignatureVerificationHandler,
-  type SignerConfig,
+  type SignerConfig
 } from "./src/signer/types.js";
 
 // Subscription Manager
@@ -65,7 +65,7 @@ export { ReactorSubscriptionManager } from "./src/subs/react-subscription-manage
 export {
   type IReactorSubscriptionManager,
   type ISubscriptionErrorHandler,
-  type SubscriptionErrorContext,
+  type SubscriptionErrorContext
 } from "./src/subs/types.js";
 
 // Event Bus
@@ -79,7 +79,7 @@ export {
   type JobRunningEvent,
   type JobWriteReadyEvent,
   type JobFailedEvent as ReactorJobFailedEvent,
-  type Unsubscribe,
+  type Unsubscribe
 } from "./src/events/types.js";
 
 // Queue
@@ -88,7 +88,7 @@ export { InMemoryQueue } from "./src/queue/queue.js";
 export {
   QueueEventTypes,
   type Job,
-  type JobAvailableEvent,
+  type JobAvailableEvent
 } from "./src/queue/types.js";
 
 // Job Tracker
@@ -98,15 +98,15 @@ export { type IJobTracker } from "./src/job-tracker/interfaces.js";
 // Job Executor
 export {
   type IJobExecutor,
-  type IJobExecutorManager,
+  type IJobExecutorManager
 } from "./src/executor/interfaces.js";
 export {
   SimpleJobExecutorManager,
-  type JobExecutorFactory,
+  type JobExecutorFactory
 } from "./src/executor/simple-job-executor-manager.js";
 export {
   SimpleJobExecutor as InMemoryJobExecutor,
-  SimpleJobExecutor,
+  SimpleJobExecutor
 } from "./src/executor/simple-job-executor.js";
 export {
   JobExecutorEventTypes,
@@ -116,7 +116,7 @@ export {
   type JobExecutorConfig,
   type JobFailedEvent,
   type JobResult,
-  type JobStartedEvent,
+  type JobStartedEvent
 } from "./src/executor/types.js";
 
 // Document Model Registry
@@ -127,13 +127,13 @@ export {
   ModuleNotFoundError,
   NullDocumentModelResolver,
   type IDocumentModelLoader,
-  type IDocumentModelRegistry,
+  type IDocumentModelRegistry
 } from "./src/registry/index.js";
 
 // Storage
 export type {
   OperationContext,
-  OperationWithContext,
+  OperationWithContext
 } from "@powerhousedao/shared/document-model";
 export type { Database } from "./src/core/types.js";
 export {
@@ -149,7 +149,7 @@ export {
   type IDocumentView,
   type IKeyframeStore,
   type IOperationStore,
-  type OperationFilter,
+  type OperationFilter
 } from "./src/storage/interfaces.js";
 export { KyselyDocumentIndexer } from "./src/storage/kysely/document-indexer.js";
 export { KyselyKeyframeStore } from "./src/storage/kysely/keyframe-store.js";
@@ -157,7 +157,7 @@ export { KyselyOperationStore } from "./src/storage/kysely/store.js";
 export type {
   DocumentIndexerDatabase,
   OperationTable,
-  Database as StorageDatabase,
+  Database as StorageDatabase
 } from "./src/storage/kysely/types.js";
 
 // Read Models
@@ -166,11 +166,11 @@ export { ReadModelCoordinator } from "./src/read-models/coordinator.js";
 export { KyselyDocumentView } from "./src/read-models/document-view.js";
 export {
   type IReadModel,
-  type IReadModelCoordinator,
+  type IReadModelCoordinator
 } from "./src/read-models/interfaces.js";
 export type {
   DocumentViewDatabase,
-  InsertableDocumentSnapshot,
+  InsertableDocumentSnapshot
 } from "./src/read-models/types.js";
 
 // Cache
@@ -178,25 +178,21 @@ export { KyselyWriteCache } from "./src/cache/kysely-write-cache.js";
 export {
   driveCollectionId,
   type IOperationIndex,
-  type OperationIndexEntry,
+  type OperationIndexEntry
 } from "./src/cache/operation-index-types.js";
 export type {
   CachedSnapshot,
   DocumentStreamKey,
   KeyframeSnapshot,
-  WriteCacheConfig,
+  WriteCacheConfig
 } from "./src/cache/write-cache-types.js";
 export { type IWriteCache } from "./src/cache/write/interfaces.js";
-
-// Logging
-export { ConsoleLogger } from "./src/logging/console.js";
-export { type ILogger } from "./src/logging/types.js";
 
 // Migrations
 export {
   getMigrationStatus,
   REACTOR_SCHEMA,
-  runMigrations,
+  runMigrations
 } from "./src/storage/migrations/migrator.js";
 
 // Synchronization
@@ -204,7 +200,7 @@ export {
   KyselySyncCursorStorage,
   KyselySyncRemoteStorage,
   type ISyncCursorStorage,
-  type ISyncRemoteStorage,
+  type ISyncRemoteStorage
 } from "./src/storage/index.js";
 export {
   batchOperationsByDocument,
@@ -256,13 +252,13 @@ export {
   type SyncOperationErrorType,
   type SyncPendingEvent,
   type SyncStatusChangeCallback,
-  type SyncSucceededEvent,
+  type SyncSucceededEvent
 } from "./src/sync/index.js";
 
 // Processors
 export {
   createRelationalDb,
-  RelationalDbProcessor,
+  RelationalDbProcessor
 } from "@powerhousedao/shared/processors";
 export type {
   IProcessor,
@@ -273,7 +269,7 @@ export type {
   ProcessorFilter,
   ProcessorRecord,
   ProcessorStatus,
-  TrackedProcessor,
+  TrackedProcessor
 } from "@powerhousedao/shared/processors";
 export { DocumentIntegrityService } from "./src/admin/document-integrity-service.js";
 export type {
@@ -281,7 +277,8 @@ export type {
   KeyframeValidationIssue,
   RebuildResult,
   SnapshotValidationIssue,
-  ValidationResult,
+  ValidationResult
 } from "./src/admin/types.js";
 export { ProcessorManager } from "./src/processors/index.js";
 export * from "./src/re-exports.js";
+

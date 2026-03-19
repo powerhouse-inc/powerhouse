@@ -4,8 +4,9 @@ import type {
   Operation,
   OperationWithContext,
   PHDocument,
-} from "document-model";
-import { isUndoRedo } from "document-model";
+} from "@powerhousedao/shared/document-model";
+import { isUndoRedo } from "@powerhousedao/shared/document-model";
+import type { ILogger } from "document-model";
 import type { ICollectionMembershipCache } from "../cache/collection-membership-cache.js";
 import type { IDocumentMetaCache } from "../cache/document-meta-cache-types.js";
 import type {
@@ -15,7 +16,6 @@ import type {
 import type { IWriteCache } from "../cache/write/interfaces.js";
 import type { IEventBus } from "../events/interfaces.js";
 import { ReactorEventTypes, type JobWriteReadyEvent } from "../events/types.js";
-import type { ILogger } from "../logging/types.js";
 import type { Job } from "../queue/types.js";
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";
 import { DocumentDeletedError } from "../shared/errors.js";

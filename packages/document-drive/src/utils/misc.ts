@@ -1,8 +1,11 @@
+import {
+  driveDocumentType,
+  type DocumentDriveDocument,
+} from "@powerhousedao/shared/document-drive";
 import { pascalCase } from "change-case";
-import type { DocumentDriveDocument, ListenerRevision } from "document-drive";
-import { driveDocumentType } from "document-drive/drive-document-model";
-import { OperationError } from "document-drive/server/error";
-import type { DocumentOperations, Operation, PHDocument } from "document-model";
+import type { ListenerRevision } from "document-drive";
+import type { DocumentOperations, Operation, PHDocument } from "@powerhousedao/shared/document-model";
+import { OperationError } from "server";
 
 export function isDocumentDrive(
   document: PHDocument,

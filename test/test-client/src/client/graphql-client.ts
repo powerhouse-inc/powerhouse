@@ -1,4 +1,4 @@
-import type { Action } from "document-model";
+import type { Action } from "@powerhousedao/shared/document-model";
 import type { DriveInfo, PhDocument } from "../types.js";
 import {
   CREATE_EMPTY_DOCUMENT_MUTATION,

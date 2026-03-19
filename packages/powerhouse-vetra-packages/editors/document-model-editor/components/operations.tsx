@@ -1,5 +1,5 @@
 import { OperationForm } from "./operation-form.js";
-import type { ModuleSpecification } from "document-model";
+import type { ModuleSpecification } from "@powerhousedao/shared/document-model";
 import { useCallback, useId, useState } from "react";
 import { Operation } from "./operation.js";
 

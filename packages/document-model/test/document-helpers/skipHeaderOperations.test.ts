@@ -1,9 +1,9 @@
-import type { Operation } from "document-model";
+import type { Operation } from "@powerhousedao/shared/document-model";
 import {
-  deriveOperationId,
-  generateId,
-  skipHeaderOperations,
-} from "document-model";
+    deriveOperationId,
+    generateId,
+    skipHeaderOperations,
+} from "@powerhousedao/shared/document-model";
 import { describe, expect, it } from "vitest";
 
 const TEST_DOC_ID = "test-doc-id";

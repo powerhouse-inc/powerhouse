@@ -1,10 +1,10 @@
 import type { VetraDocumentModelModule } from "@powerhousedao/reactor-browser";
-import { driveDocumentModelModule } from "document-drive";
+import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import {
   createState,
   defaultBaseState,
-  documentModelDocumentModelModule,
-} from "document-model";
+} from "@powerhousedao/shared/document-model";
+import { documentModelDocumentModelModule } from "document-model";
 
 export function loadDocumentModelDocumentModelModule() {
   const global = documentModelDocumentModelModule.documentModel.global;

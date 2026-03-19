@@ -1,4 +1,4 @@
-import type { PHDocument, PHBaseState } from "document-model";
+import type { PHDocument, PHBaseState } from "@powerhousedao/shared/document-model";
 import type { BillingStatementAction } from "./actions.js";
 import type { BillingStatementState as BillingStatementGlobalState } from "./schema/types.js";
 

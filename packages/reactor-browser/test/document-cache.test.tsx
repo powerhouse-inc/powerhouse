@@ -1,13 +1,7 @@
-import {
-  driveDocumentModelModule,
-  ReactorBuilder,
-  type IDocumentDriveServer,
-} from "document-drive";
-import {
-  documentModelDocumentModelModule,
-  setName,
-  type PHDocument,
-} from "document-model";
+import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
+import { setName, type PHDocument } from "@powerhousedao/shared/document-model";
+import { ReactorBuilder, type IDocumentDriveServer } from "document-drive";
+import { documentModelDocumentModelModule } from "document-model";
 import { describe, expect, it, vi } from "vitest";
 import {
   addPromiseState,

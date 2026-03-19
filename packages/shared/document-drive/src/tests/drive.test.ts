@@ -3,16 +3,16 @@
  * - change it by adding new tests or modifying the existing ones
  */
 
-import type { DocumentDriveDocument } from "document-drive";
+import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
 import {
-  driveCreateDocument,
-  driveDocumentReducer,
-  setAvailableOffline,
-  SetAvailableOfflineInputSchema,
-  setDriveName,
-  SetDriveNameInputSchema,
-  setSharingType,
-  SetSharingTypeInputSchema,
+    driveCreateDocument,
+    driveDocumentReducer,
+    setAvailableOffline,
+    SetAvailableOfflineInputSchema,
+    setDriveName,
+    SetDriveNameInputSchema,
+    setSharingType,
+    SetSharingTypeInputSchema,
 } from "document-drive";
 import { beforeEach, describe, expect, it } from "vitest";
 import { generateMock } from "./generate-mock.js";

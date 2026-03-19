@@ -1,4 +1,7 @@
-import type { OperationWithContext } from "@powerhousedao/shared/document-model";
+import type {
+  OperationWithContext,
+  PHDocumentHeader,
+} from "@powerhousedao/shared/document-model";
 import type {
   IProcessor,
   IProcessorManager,
@@ -6,11 +9,10 @@ import type {
   ProcessorRecord,
   TrackedProcessor,
 } from "@powerhousedao/shared/processors";
-import type { PHDocumentHeader } from "document-model";
+import type { ILogger } from "document-model";
 import type { Kysely } from "kysely";
 import type { IOperationIndex } from "../cache/operation-index-types.js";
 import type { IWriteCache } from "../cache/write/interfaces.js";
-import type { ILogger } from "../logging/types.js";
 import { BaseReadModel } from "../read-models/base-read-model.js";
 import type {
   DocumentViewDatabase,

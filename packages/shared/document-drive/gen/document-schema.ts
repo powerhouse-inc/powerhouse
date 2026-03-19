@@ -1,8 +1,8 @@
+import { z } from "zod";
 import {
   BaseDocumentHeaderSchema,
   BaseDocumentStateSchema,
-} from "document-model";
-import { z } from "zod";
+} from "../../document-model/document-schema.js";
 import { driveDocumentType } from "./document-type.js";
 import {
   DocumentDriveLocalStateSchema,

@@ -5,7 +5,7 @@ import {
   redo,
   setName,
   undo,
-} from "document-model";
+} from "@powerhousedao/shared/document-model";
 import type { CountPHState } from "document-model/test";
 import {
   countReducer,

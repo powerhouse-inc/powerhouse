@@ -2,7 +2,7 @@ import { pascalCase } from "change-case";
 import type {
   OperationErrorSpecification,
   ModuleSpecification,
-} from "document-model";
+} from "@powerhousedao/shared/document-model";
 import { useCallback, useRef } from "react";
 import { TextField } from "./text-field.js";
 

@@ -5,8 +5,7 @@ import {
   type Provider,
   type ResolutionDetails,
 } from "@openfeature/web-sdk";
-import type { ILogger } from "document-drive";
-import { logger, setLogLevel } from "document-drive";
+import { logger, setLogLevel, type ILogger } from "document-model";
 import { connectConfig } from "./connect.config.js";
 
 /**

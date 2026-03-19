@@ -1,17 +1,17 @@
+import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
 import type {
-  DefaultRemoteDriveInfo,
-  DocumentDriveDocument,
-  DocumentDriveServerOptions,
-  IBaseDocumentDriveServer,
-  IDefaultDrivesManager,
-  IReadModeDriveServer,
-  IServerDelegateDrivesManager,
-  RemoteDriveAccessLevel,
-  RemoveDriveStrategy,
-  RemoveOldRemoteDrivesOption,
+    DefaultRemoteDriveInfo,
+    DocumentDriveServerOptions,
+    IBaseDocumentDriveServer,
+    IDefaultDrivesManager,
+    IReadModeDriveServer,
+    IServerDelegateDrivesManager,
+    RemoteDriveAccessLevel,
+    RemoveDriveStrategy,
+    RemoveOldRemoteDrivesOption,
 } from "document-drive";
+import { logger } from "document-model";
 import { requestPublicDriveWithTokenFromReactor } from "../utils/graphql.js";
-import { logger } from "../utils/logger.js";
 
 function isReadModeDriveServer(obj: unknown): obj is IReadModeDriveServer {
   return typeof (obj as IReadModeDriveServer).getReadDrives === "function";

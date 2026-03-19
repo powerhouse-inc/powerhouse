@@ -4,7 +4,7 @@ import InMemoryCache, {
   PrismaStorage,
   ReactorBuilder,
 } from "document-drive";
-import { DocumentModelModule } from "document-model";
+import { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import { beforeAll, describe, it } from "vitest";
 
 const prismaClient = new PrismaClient();

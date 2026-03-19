@@ -1,5 +1,11 @@
+import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
+import {
+  garbageCollectDocumentOperations,
+  replayDocument,
+  type DocumentModelModule,
+  type PHDocument,
+} from "@powerhousedao/shared/document-model";
 import type {
-  DocumentDriveDocument,
   GetStrandsOptions,
   ICache,
   IDocumentStorage,
@@ -14,13 +20,8 @@ import type {
   SyncStatus,
   SyncUnitStatusObject,
 } from "document-drive";
-import { childLogger } from "document-drive/utils/logger";
-import { isBefore, operationsToRevision } from "document-drive/utils/misc";
-import type { DocumentModelModule, PHDocument } from "document-model";
-import {
-  garbageCollectDocumentOperations,
-  replayDocument,
-} from "document-model";
+import { childLogger } from "document-model";
+import { isBefore, operationsToRevision } from "utils";
 import { SynchronizationUnitNotFoundError } from "./error.js";
 import { SyncUnitMap } from "./sync-unit-map.js";
 

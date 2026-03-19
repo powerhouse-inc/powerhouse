@@ -16,3 +16,5 @@ projects-import.js
 
 # Test artifacts
 downloads/
+storage/
+htpasswd

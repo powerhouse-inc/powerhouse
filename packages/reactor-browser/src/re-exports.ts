@@ -1,6 +1,5 @@
 export {
   ChannelScheme,
-  ConsoleLogger,
   DocumentChangeType,
   DocumentIntegrityService,
   driveCollectionId,

@@ -3,7 +3,7 @@ import type {
   UpgradeManifest,
   UpgradeReducer,
   UpgradeTransition,
-} from "document-model";
+} from "@powerhousedao/shared/document-model";
 import type { IDocumentModelRegistry } from "./interfaces.js";
 
 /**

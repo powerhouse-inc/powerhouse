@@ -1,9 +1,9 @@
-import type { DocumentModelDocument } from "document-model";
+import type { DocumentModelDocument } from "@powerhousedao/shared/document-model";
 import {
   deriveOperationId,
-  documentModelDocumentModelModule,
   generateId,
-} from "document-model";
+} from "@powerhousedao/shared/document-model";
+import { documentModelDocumentModelModule } from "document-model";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { CollectionMembershipCache } from "../../src/cache/collection-membership-cache.js";

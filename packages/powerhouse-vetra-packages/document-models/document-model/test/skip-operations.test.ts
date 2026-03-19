@@ -1,5 +1,4 @@
 import {
-  documentModelCreateDocument,
   documentModelReducer,
   documentModelStateReducer,
   garbageCollectDocumentOperations,
@@ -11,7 +10,8 @@ import {
   setModelId,
   setModelName,
   type DocumentModelPHState,
-} from "document-model";
+} from "@powerhousedao/shared/document-model";
+import { documentModelCreateDocument } from "document-model";
 import { describe, expect, it } from "vitest";
 
 describe("Document Operations", () => {

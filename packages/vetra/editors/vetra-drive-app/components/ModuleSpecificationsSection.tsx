@@ -1,4 +1,4 @@
-import type { FileNode } from "document-drive";
+import type { FileNode } from "@powerhousedao/shared/document-drive";
 import React from "react";
 import { DataIntegrationsColumn } from "./DataIntegrationsColumn.js";
 import { DocumentModelsColumn } from "./DocumentModelsColumn.js";

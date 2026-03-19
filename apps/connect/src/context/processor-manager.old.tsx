@@ -14,8 +14,8 @@
 // } from "@powerhousedao/reactor-browser";
 // import { useProcessorManager } from "@powerhousedao/reactor-browser";
 // import type { IRelationalDb, ProcessorManager } from "document-drive";
-// import { childLogger } from "document-drive";
-// import { generateId } from "document-model";
+// import { childLogger } from "document-model";
+// import { generateId } from "@powerhousedao/shared/document-model";
 // import type { PropsWithChildren } from "react";
 // import { useEffect, useRef } from "react";
 

@@ -1,5 +1,5 @@
 import type { ErrorStatus, SynchronizationUnitId } from "document-drive";
-import type { Operation } from "document-model";
+import type { Operation } from "@powerhousedao/shared/document-model";
 
 export class DocumentModelNotFoundError extends Error {
   constructor(

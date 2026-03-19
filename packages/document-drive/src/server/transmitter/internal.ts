@@ -1,4 +1,10 @@
 import type {
+  Action,
+  GetDocumentOptions,
+  PHBaseState,
+} from "@powerhousedao/shared/document-model";
+import { deriveOperationId } from "@powerhousedao/shared/document-model";
+import type {
   IBaseDocumentDriveServer,
   IDocumentDriveServer,
   IProcessorLegacy,
@@ -9,11 +15,8 @@ import type {
   StrandUpdate,
   StrandUpdateSource,
 } from "document-drive";
-import { logger } from "document-drive/utils/logger";
-import { operationsToRevision } from "document-drive/utils/misc";
-import { runAsap, runAsapAsync } from "document-drive/utils/run-asap";
-import type { Action, GetDocumentOptions, PHBaseState } from "document-model";
-import { deriveOperationId } from "document-model";
+import { logger } from "document-model";
+import { operationsToRevision, runAsap, runAsapAsync } from "utils";
 
 export class InternalTransmitter implements ITransmitter {
   protected drive: IBaseDocumentDriveServer;

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { sortOperations } from "document-model";
+import { sortOperations } from "@powerhousedao/shared/document-model";
 import { buildOperations } from "./utils.js";
 
 describe("sortOperations", () => {

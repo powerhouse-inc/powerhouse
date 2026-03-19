@@ -1,14 +1,17 @@
 import type { VetraProcessorConfigType } from "@powerhousedao/config";
 import { VETRA_PROCESSOR_CONFIG_KEY } from "@powerhousedao/config";
-import type { ILogger, IReactorClient } from "@powerhousedao/reactor";
+import type {
+  IDocumentDriveServer,
+  IReactorClient,
+} from "@powerhousedao/reactor";
 import { addDefaultDrive } from "@powerhousedao/switchboard/utils";
+import type { ILogger } from "document-model";
 import { blue, green, red, yellow, type Color } from "colorette";
+import { createLogger } from "vite";
 import {
   childLogger,
   setLogLevel,
-  type IDocumentDriveServer,
-} from "@powerhousedao/reactor";
-import { createLogger } from "vite";
+} from "../../../../packages/document-model/src/logger.js";
 import type { VetraArgs } from "../types.js";
 import { generateProjectDriveId } from "../utils.js";
 import {

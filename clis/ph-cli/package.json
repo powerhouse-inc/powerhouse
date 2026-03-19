@@ -36,6 +36,7 @@
     "tsdown": "catalog:",
     "vite": "catalog:",
     "@powerhousedao/codegen": "workspace:*",
+    "document-model": "workspace:*",
     "@powerhousedao/common": "workspace:*",
     "@powerhousedao/config": "workspace:*",
     "@powerhousedao/reactor": "workspace:*",

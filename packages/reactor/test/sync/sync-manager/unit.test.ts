@@ -1,28 +1,28 @@
-import type { OperationWithContext } from "document-model";
+import type { OperationWithContext } from "@powerhousedao/shared/document-model";
+import { ConsoleLogger } from "document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { IOperationIndex } from "../../../src/cache/operation-index-types.js";
 import type { IReactor } from "../../../src/core/types.js";
 import type { IEventBus } from "../../../src/events/interfaces.js";
 import { ReactorEventTypes } from "../../../src/events/types.js";
-import { ConsoleLogger } from "../../../src/logging/console.js";
+import { JobStatus } from "../../../src/shared/types.js";
 import type {
-  ISyncCursorStorage,
-  ISyncDeadLetterStorage,
-  ISyncRemoteStorage,
+    DeadLetterRecord,
+    ISyncCursorStorage,
+    ISyncDeadLetterStorage,
+    ISyncRemoteStorage,
 } from "../../../src/storage/interfaces.js";
 import type {
-  IChannel,
-  IChannelFactory,
+    IChannel,
+    IChannelFactory,
 } from "../../../src/sync/interfaces.js";
-import { JobStatus } from "../../../src/shared/types.js";
 import { SyncManager } from "../../../src/sync/sync-manager.js";
 import { SyncOperation } from "../../../src/sync/sync-operation.js";
-import type { DeadLetterRecord } from "../../../src/storage/interfaces.js";
 import {
-  ChannelErrorSource,
-  SyncOperationStatus,
-  type ChannelConfig,
-  type RemoteRecord,
+    ChannelErrorSource,
+    SyncOperationStatus,
+    type ChannelConfig,
+    type RemoteRecord,
 } from "../../../src/sync/types.js";
 
 describe("SyncManager - Unit Tests", () => {

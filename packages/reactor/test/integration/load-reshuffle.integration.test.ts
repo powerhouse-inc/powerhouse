@@ -1,6 +1,9 @@
-import { driveDocumentModelModule } from "document-drive";
-import type { DocumentModelDocument } from "document-model";
-import { documentModelDocumentModelModule, setModelName } from "document-model";
+import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
+import {
+  setModelName,
+  type DocumentModelDocument,
+} from "@powerhousedao/shared/document-model";
+import { documentModelDocumentModelModule } from "document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ReactorBuilder } from "../../src/core/reactor-builder.js";
 import type { IReactor } from "../../src/core/types.js";

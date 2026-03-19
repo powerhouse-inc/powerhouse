@@ -6,7 +6,7 @@ import type {
   Signature,
   SignatureVerificationHandler,
   UserActionSigner,
-} from "document-model";
+} from "@powerhousedao/shared/document-model";
 import type { IRenownCrypto } from "./index.js";
 
 export class InvalidSignatureError extends Error {

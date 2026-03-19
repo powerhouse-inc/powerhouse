@@ -1,4 +1,4 @@
-import type { DocumentModelModule } from "document-model";
+import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DocumentModelResolver } from "../../src/registry/document-model-resolver.js";
 import { DocumentModelRegistry } from "../../src/registry/implementation.js";

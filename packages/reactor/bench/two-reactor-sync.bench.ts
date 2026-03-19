@@ -1,4 +1,4 @@
-import { driveDocumentModelModule } from "document-drive";
+import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import { Bench } from "tinybench";
 import { ReactorBuilder } from "../src/core/reactor-builder.js";
 import type { IReactor, ReactorModule } from "../src/core/types.js";

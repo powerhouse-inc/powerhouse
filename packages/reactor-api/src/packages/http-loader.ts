@@ -1,6 +1,6 @@
-import { childLogger } from "document-drive";
-import type { DocumentModelModule } from "document-model";
 import type { IDocumentModelLoader } from "@powerhousedao/reactor";
+import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
+import { childLogger } from "document-model";
 
 export interface HttpPackageLoaderOptions {
   registryUrl: string;

@@ -1,9 +1,9 @@
-import type { Action, Operation } from "document-model";
+import type { Action, Operation } from "@powerhousedao/shared/document-model";
 import {
   deriveOperationId,
-  documentModelDocumentModelModule,
   generateId,
-} from "document-model";
+} from "@powerhousedao/shared/document-model";
+import { documentModelDocumentModelModule } from "document-model";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { IDocumentMetaCache } from "../../../src/cache/document-meta-cache-types.js";

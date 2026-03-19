@@ -11,7 +11,7 @@ import {
 } from "@powerhousedao/codegen/utils";
 import { ts } from "@tmpl/core";
 import { camelCase, kebabCase, pascalCase } from "change-case";
-import type { ModuleSpecification } from "document-model";
+import type { ModuleSpecification } from "@powerhousedao/shared/document-model";
 import path from "path";
 import type { SourceFile } from "ts-morph";
 import { VariableDeclarationKind } from "ts-morph";

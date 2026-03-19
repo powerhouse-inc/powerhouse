@@ -3,7 +3,7 @@ import {
   type ProcessorRecordLegacy,
   type RelationalDbProcessorFilterLegacy,
 } from "document-drive";
-import { type PHDocumentHeader } from "document-model";
+import { type PHDocumentHeader } from "@powerhousedao/shared/document-model";
 import { VetraReadModelProcessorLegacy } from "./index.legacy.js";
 
 export const vetraReadModelProcessorFactoryLegacy =

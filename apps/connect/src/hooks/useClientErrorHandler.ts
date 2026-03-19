@@ -1,15 +1,16 @@
 import {
-  addRemoteDrive,
-  addTrigger,
-  getDriveIdBySlug,
-  registerNewPullResponderTrigger,
-  removeTrigger,
-  renameDrive,
-  setDriveSharingType,
-  useDrives,
+    addRemoteDrive,
+    addTrigger,
+    getDriveIdBySlug,
+    registerNewPullResponderTrigger,
+    removeTrigger,
+    renameDrive,
+    setDriveSharingType,
+    useDrives,
 } from "@powerhousedao/reactor-browser";
-import type { PullResponderTrigger, Trigger } from "document-drive";
-import { logger } from "document-drive";
+import type { Trigger } from "@powerhousedao/shared/document-drive";
+import type { PullResponderTrigger } from "document-drive";
+import { logger } from "document-model";
 import { useCallback, useMemo, useRef, useState } from "react";
 
 export type ClientErrorHandler = {

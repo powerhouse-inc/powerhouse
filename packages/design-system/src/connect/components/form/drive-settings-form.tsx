@@ -1,5 +1,6 @@
 import { Icon, PowerhouseButton } from "@powerhousedao/design-system";
-import type { DocumentDriveDocument, SharingType } from "document-drive";
+import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
+import type { SharingType } from "document-drive";
 import { useState } from "react";
 import type { SubmitHandler } from "react-hook-form";
 import { useForm } from "react-hook-form";

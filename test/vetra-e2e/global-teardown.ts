@@ -108,7 +108,7 @@ async function globalTeardown() {
     resetBaseStateFiles(
       documentModelsDir,
       "document-models.ts",
-      'import type { DocumentModelModule } from "document-model";\n\nexport const documentModels: DocumentModelModule<any>[] = [];\n',
+      'import type { DocumentModelModule } from "@powerhousedao/shared/document-model";\n\nexport const documentModels: DocumentModelModule<any>[] = [];\n',
     );
     console.log("✅ Cleaned up document-models folder");
 
@@ -117,7 +117,7 @@ async function globalTeardown() {
     resetBaseStateFiles(
       editorsDir,
       "editors.ts",
-      'import type { EditorModule } from "document-model";\n\nexport const editors: EditorModule[] = [];\n',
+      'import type { EditorModule } from "@powerhousedao/shared/document-model";\n\nexport const editors: EditorModule[] = [];\n',
     );
     console.log("✅ Cleaned up editors folder");
 

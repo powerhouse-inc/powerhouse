@@ -1,4 +1,4 @@
-import type { Operation, OperationWithContext } from "document-model";
+import type { Operation, OperationWithContext } from "@powerhousedao/shared/document-model";
 import type { Kysely } from "kysely";
 import { v4 as uuidv4 } from "uuid";
 import type { IOperationIndex } from "../../cache/operation-index-types.js";

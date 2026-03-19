@@ -1,4 +1,4 @@
-import type { Operation } from "document-model";
+import type { Operation } from "@powerhousedao/shared/document-model";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useReactorClient } from "./reactor.js";
 

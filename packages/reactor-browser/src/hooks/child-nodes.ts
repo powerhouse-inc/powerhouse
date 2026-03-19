@@ -1,4 +1,4 @@
-import type { Node } from "document-drive";
+import type { Node } from "@powerhousedao/shared/document-drive";
 import { sortNodesByName } from "../utils/nodes.js";
 import { useNodesInSelectedDrive } from "./items-in-selected-drive.js";
 import { useSelectedFolder } from "./selected-folder.js";

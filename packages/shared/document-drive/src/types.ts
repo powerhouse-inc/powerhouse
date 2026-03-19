@@ -1,4 +1,4 @@
-import type { Node } from "document-drive";
+import type { Node } from "@powerhousedao/shared/document-drive";
 
 export type GenerateNodesCopySrc = {
   srcId: Node["id"];

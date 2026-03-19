@@ -1,7 +1,16 @@
 {
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
-    "outDir": "./dist"
+    "outDir": "./dist",
+    "paths": {
+      "cache": ["./src/cache/index.ts"],
+      "utils": ["./src/utils/index.ts"],
+      "processors": ["./src/processors/index.ts"],
+      "queue": ["./src/queue/index.ts"],
+      "server": ["./src/server/index.ts"],
+      "read-mode": ["./src/read-mode/index.ts"],
+      "storage/*": ["./src/storage/*.js"]
+    }
   },
   "include": [
     "**/*",

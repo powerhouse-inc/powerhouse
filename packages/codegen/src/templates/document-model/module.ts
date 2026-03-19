@@ -11,8 +11,8 @@ export function documentModelModuleFileTemplate({
   version,
 }: DocumentModelModuleFileTemplateArgs) {
   const template = ts`
-  import type { DocumentModelModule } from "document-model";
-  import { createState, defaultBaseState } from "document-model";
+  import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
+  import { createState, defaultBaseState } from "@powerhousedao/shared/document-model";
   import type { ${phStateName} } from "./gen/types.js";
   import { documentModel } from "./gen/document-model.js";
   import { reducer } from "./gen/reducer.js";

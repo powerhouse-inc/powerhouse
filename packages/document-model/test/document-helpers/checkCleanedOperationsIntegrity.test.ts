@@ -1,8 +1,8 @@
 import {
-  checkCleanedOperationsIntegrity,
-  IntegrityIssueSubType,
-  IntegrityIssueType,
-} from "document-model";
+    checkCleanedOperationsIntegrity,
+    IntegrityIssueSubType,
+    IntegrityIssueType,
+} from "@powerhousedao/shared/document-model";
 import { describe, expect, it } from "vitest";
 import { buildOperations } from "./utils.js";
 

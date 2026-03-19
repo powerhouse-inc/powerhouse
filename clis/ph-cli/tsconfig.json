@@ -28,6 +28,9 @@
       "path": "../../packages/config"
     },
     {
+      "path": "../../packages/document-model"
+    },
+    {
       "path": "../../packages/reactor"
     },
     {

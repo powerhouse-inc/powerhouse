@@ -1,4 +1,4 @@
-import type { ModuleSpecification as TModule } from "document-model";
+import type { ModuleSpecification as TModule } from "@powerhousedao/shared/document-model";
 import { ModuleForm } from "./module-form.js";
 import { Operations } from "./operations.js";
 type Props = {

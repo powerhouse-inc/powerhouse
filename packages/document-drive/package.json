@@ -13,13 +13,13 @@
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
     },
-    "./*": {
-      "import": "./dist/src/*.js",
-      "types": "./dist/src/*.d.ts"
+    "./utils": {
+      "types": "./dist/src/utils/index.d.ts",
+      "import": "./dist/src/utils/index.js"
     },
-    "./drive-document-model": {
-      "import": "./dist/src/drive-document-model/index.js",
-      "types": "./dist/src/drive-document-model/index.d.ts"
+    "./cache": {
+      "types": "./dist/src/cache/index.d.ts",
+      "import": "./dist/src/cache/index.js"
     },
     "./storage/filesystem": {
       "import": "./dist/src/storage/filesystem.js",
@@ -70,6 +70,7 @@
   },
   "dependencies": {
     "@powerhousedao/analytics-engine-core": "workspace:*",
+    "@powerhousedao/shared": "workspace:*",
     "@prisma/client": "5.17.0",
     "@sindresorhus/fnv1a": "catalog:",
     "change-case": "catalog:",
@@ -84,9 +85,8 @@
     "nanoevents": "^9.0.0",
     "object-sizeof": "^2.6.5",
     "prisma": "5.17.0",
-    "@powerhousedao/shared": "workspace:*",
-    "zod": "catalog:",
-    "zocker": "catalog:"
+    "zocker": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@types/node": "catalog:",
@@ -94,6 +94,7 @@
     "copyfiles": "catalog:",
     "fake-indexeddb": "^5.0.2",
     "msw": "^2.3.1",
+    "tsdown": "catalog:",
     "vite": "catalog:",
     "vitest": "catalog:",
     "vitest-fetch-mock": "^0.4.5"

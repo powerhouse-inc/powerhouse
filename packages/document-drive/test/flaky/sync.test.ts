@@ -16,7 +16,7 @@ import {
   DocumentModelGlobalState,
   DocumentModelModule,
   Operation,
-} from "document-model";
+} from "@powerhousedao/shared/document-model";
 import { graphql } from "graphql";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";

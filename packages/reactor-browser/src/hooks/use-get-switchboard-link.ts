@@ -1,5 +1,5 @@
 import { driveCollectionId, GqlRequestChannel } from "@powerhousedao/reactor";
-import type { PHDocument } from "document-model";
+import type { PHDocument } from "@powerhousedao/shared/document-model";
 import { useMemo } from "react";
 import { buildDocumentSubgraphUrl } from "../utils/index.js";
 import { useRenown, useSyncList, useUser } from "./connect.js";

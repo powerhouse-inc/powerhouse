@@ -1,4 +1,4 @@
-import type { Operation } from "document-model";
+import type { Operation } from "@powerhousedao/shared/document-model";
 import type { Day, Revision, Signature, Skip } from "./types.js";
 
 export function makeRows(operations: Operation[]) {

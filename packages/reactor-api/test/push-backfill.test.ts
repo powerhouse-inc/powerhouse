@@ -1,5 +1,4 @@
 import {
-  ConsoleLogger,
   DocumentModelRegistry,
   driveCollectionId,
   EventBus,
@@ -19,8 +18,9 @@ import {
   type JobReadReadyEvent,
   type ReactorModule,
 } from "@powerhousedao/reactor";
-import { driveDocumentModelModule } from "document-drive";
-import type { DocumentModelModule } from "document-model";
+import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
+import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
+import { ConsoleLogger } from "document-model";
 import { afterEach, describe, expect, it } from "vitest";
 import { createResolverBridge } from "./utils/gql-resolver-bridge.js";
 

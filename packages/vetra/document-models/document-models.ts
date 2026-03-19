@@ -1,4 +1,4 @@
-import type { DocumentModelModule } from "document-model";
+import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import { AppModule } from "./app-module/module.js";
 import { DocumentEditor } from "./document-editor/module.js";
 import { ProcessorModule } from "./processor-module/module.js";

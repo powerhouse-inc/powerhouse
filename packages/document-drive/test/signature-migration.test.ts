@@ -1,16 +1,18 @@
-import type { DocumentDriveDocument } from "document-drive";
+import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
 import {
   addFile,
+  driveCreateDocument,
+  driveDocumentReducer,
+} from "@powerhousedao/shared/document-drive";
+import {
   BrowserStorage,
   buildOperation,
   createBaseState,
-  driveCreateDocument,
-  driveDocumentReducer,
   migrateLegacyOperationSignature,
 } from "document-drive";
 import { PrismaClient } from "document-drive/storage/prisma/client";
-import type { ActionContext, Operation } from "document-model";
-import { generateId } from "document-model";
+import type { ActionContext, Operation } from "@powerhousedao/shared/document-model";
+import { generateId } from "@powerhousedao/shared/document-model";
 import { beforeEach, describe, it } from "vitest";
 
 const prismaClient = new PrismaClient();

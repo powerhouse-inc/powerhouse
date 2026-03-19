@@ -2,7 +2,7 @@ import type { DocumentDispatch } from "@powerhousedao/reactor-browser";
 import type {
   DocumentDriveAction,
   DocumentDriveDocument,
-} from "document-drive";
+} from "@powerhousedao/shared/document-drive";
 import {
   createUrlWithPreservedParams,
   extractDriveIdFromPath,

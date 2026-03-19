@@ -7,7 +7,7 @@ import type { InternalTransmitterUpdate } from "document-drive";
 import type {
   DocumentModelGlobalState,
   DocumentModelPHState,
-} from "document-model";
+} from "@powerhousedao/shared/document-model";
 import { logger } from "../../logger.js";
 import { BaseDocumentGen } from "../base-document-gen.js";
 import { USE_TS_MORPH, USE_VERSIONING } from "./constants.js";

@@ -11,8 +11,8 @@ import type {
   DocumentModelModule,
   EditorModule,
   Manifest,
-} from "document-model";
-import { createState, defaultBaseState, generateId } from "document-model";
+} from "@powerhousedao/shared/document-model";
+import { createState, defaultBaseState, generateId } from "@powerhousedao/shared/document-model";
 
 export function convertLegacyLibToVetraPackage(
   legacyLib: DocumentModelLib,

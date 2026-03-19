@@ -1,4 +1,4 @@
-import type { SubgraphModule } from "document-model";
+import type { SubgraphModule } from "@powerhousedao/shared/document-model";
 import { useVetraPackages } from "./vetra-packages.js";
 
 export function useSubgraphModules(): SubgraphModule[] | undefined {

@@ -5,7 +5,7 @@ import type {
   PHBaseState,
   PHDocument,
   PHDocumentHeader,
-} from "document-model";
+} from "@powerhousedao/shared/document-model";
 import type {
   GetDocumentOperationsQuery,
   PhDocumentFieldsFragment,

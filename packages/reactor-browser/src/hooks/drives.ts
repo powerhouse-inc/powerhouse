@@ -1,4 +1,4 @@
-import type { DocumentDriveDocument } from "document-drive";
+import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
 import type { SetPHGlobalValue, UsePHGlobalValue } from "../types/global.js";
 import { makePHEventFunctions } from "./make-ph-event-functions.js";
 

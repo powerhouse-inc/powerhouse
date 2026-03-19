@@ -1,21 +1,4 @@
-import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
-import type {
-  DocumentDriveDocument,
-  ICache,
-  IDocumentStorage,
-  IDriveOperationStorage,
-  IStorageUnit,
-  IStorageUnitFilter,
-  SynchronizationUnitQuery,
-} from "document-drive";
-import {
-  ConflictOperationError,
-  DocumentAlreadyExistsError,
-  DocumentAlreadyExistsReason,
-  DocumentNotFoundError,
-} from "document-drive/server/error";
-import { AbortError } from "document-drive/utils/errors";
-import { childLogger, logger } from "document-drive/utils/logger";
+import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
 import type {
   Action,
   AttachmentInput,
@@ -25,9 +8,26 @@ import type {
   PHBaseState,
   PHDocument,
   PHDocumentHeader,
-} from "document-model";
-import { actionContext, deriveOperationId } from "document-model";
+} from "@powerhousedao/shared/document-model";
+import { actionContext, deriveOperationId } from "@powerhousedao/shared/document-model";
+import { PrismaClientKnownRequestError } from "@prisma/client/runtime/library";
+import type {
+  ICache,
+  IDocumentStorage,
+  IDriveOperationStorage,
+  IStorageUnit,
+  IStorageUnitFilter,
+  SynchronizationUnitQuery,
+} from "document-drive";
+import { childLogger, logger } from "document-model";
 import { backOff, type IBackOffOptions } from "exponential-backoff";
+import {
+  ConflictOperationError,
+  DocumentAlreadyExistsError,
+  DocumentAlreadyExistsReason,
+  DocumentNotFoundError,
+} from "server";
+import { AbortError } from "utils";
 import { resolveStorageUnitsFilter, setIntersection } from "../utils.js";
 import type { Prisma, PrismaClient } from "./client/index.js";
 

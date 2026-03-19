@@ -1,10 +1,10 @@
 import type { SubgraphClass } from "@powerhousedao/reactor-api";
+import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import type {
-  IProcessorHostModuleLegacy,
-  ProcessorFactoryLegacy,
+    IProcessorHostModuleLegacy,
+    ProcessorFactoryLegacy,
 } from "document-drive";
-import { childLogger } from "document-drive";
-import type { DocumentModelModule } from "document-model";
+import { childLogger } from "document-model";
 import { execSync } from "node:child_process";
 import path from "node:path";
 import { cwd } from "node:process";

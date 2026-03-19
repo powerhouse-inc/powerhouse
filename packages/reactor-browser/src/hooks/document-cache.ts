@@ -1,4 +1,4 @@
-import type { PHDocument } from "document-model";
+import type { PHDocument } from "@powerhousedao/shared/document-model";
 import { use, useCallback, useSyncExternalStore } from "react";
 import { readPromiseState } from "../document-cache.js";
 import type { IDocumentCache } from "../types/documents.js";

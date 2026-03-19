@@ -7,7 +7,7 @@ import {
   setName,
   type Action,
   type CreateChildDocumentInput,
-} from "document-model";
+} from "@powerhousedao/shared/document-model";
 import type { CountPHState, TestPHState } from "document-model/test";
 import {
   countReducer,

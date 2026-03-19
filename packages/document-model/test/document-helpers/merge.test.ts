@@ -1,9 +1,9 @@
 import {
-  checkCleanedOperationsIntegrity,
-  merge,
-  reshuffleByTimestamp,
-  reshuffleByTimestampAndIndex,
-} from "document-model";
+    checkCleanedOperationsIntegrity,
+    merge,
+    reshuffleByTimestamp,
+    reshuffleByTimestampAndIndex,
+} from "@powerhousedao/shared/document-model";
 import { describe, expect, it } from "vitest";
 import { buildOperations } from "./utils.js";
 

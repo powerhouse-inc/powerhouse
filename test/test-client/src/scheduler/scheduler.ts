@@ -1,4 +1,4 @@
-import type { Action } from "document-model";
+import type { Action } from "@powerhousedao/shared/document-model";
 import { GraphQLClient } from "../client/graphql-client.js";
 import { MetricsCollector } from "../metrics/collector.js";
 import { Reporter } from "../metrics/reporter.js";

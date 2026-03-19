@@ -1,7 +1,5 @@
-import {
-  driveDocumentModelModule,
-  generateDocumentStateQueryFields,
-} from "document-drive";
+import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
+import { generateDocumentStateQueryFields } from "document-drive";
 import { describe, it } from "vitest";
 
 describe("Graphql methods", () => {

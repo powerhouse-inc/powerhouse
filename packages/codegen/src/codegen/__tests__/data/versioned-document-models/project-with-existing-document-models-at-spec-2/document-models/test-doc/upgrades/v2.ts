@@ -1,4 +1,4 @@
-import type { Action, PHDocument, UpgradeTransition } from "document-model";
+import type { Action, PHDocument, UpgradeTransition } from "@powerhousedao/shared/document-model";
 import type { TestDocPHState as StateV1 } from "test/document-models/test-doc/v1";
 import type { TestDocPHState as StateV2 } from "test/document-models/test-doc/v2";
 

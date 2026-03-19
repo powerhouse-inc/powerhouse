@@ -1,5 +1,10 @@
 import { PGlite } from "@electric-sql/pglite";
-import type { DocumentModelModule, UpgradeManifest } from "document-model";
+import type {
+  DocumentModelModule,
+  UpgradeManifest,
+} from "@powerhousedao/shared/document-model";
+import type { ILogger } from "document-model";
+import { ConsoleLogger } from "document-model";
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
 import { CollectionMembershipCache } from "../cache/collection-membership-cache.js";
@@ -18,8 +23,6 @@ import { SimpleJobExecutorManager } from "../executor/simple-job-executor-manage
 import { SimpleJobExecutor } from "../executor/simple-job-executor.js";
 import type { JobExecutorConfig } from "../executor/types.js";
 import { InMemoryJobTracker } from "../job-tracker/in-memory-job-tracker.js";
-import { ConsoleLogger } from "../logging/console.js";
-import type { ILogger } from "../logging/types.js";
 import { ProcessorManager } from "../processors/processor-manager.js";
 import type { IQueue } from "../queue/interfaces.js";
 import { InMemoryQueue } from "../queue/queue.js";

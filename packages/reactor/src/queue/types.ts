@@ -1,4 +1,4 @@
-import type { Action, Operation } from "document-model";
+import type { Action, Operation } from "@powerhousedao/shared/document-model";
 import type { ErrorInfo, JobMeta } from "../shared/types.js";
 
 export type JobKind = "mutation" | "load";

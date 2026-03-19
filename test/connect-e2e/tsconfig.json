@@ -47,6 +47,9 @@
       "path": "../../packages/reactor-browser"
     },
     {
+      "path": "../../packages/shared"
+    },
+    {
       "path": "../e2e-utils"
     }
   ],

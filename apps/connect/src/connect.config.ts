@@ -1,14 +1,15 @@
 import {
+  setLogLevel,
+  type FullPHGlobalConfig,
+  type PHDocumentEditorConfig,
+  type PHDriveEditorConfig,
+  type PHGlobalConfig,
+} from "@powerhousedao/reactor-browser";
+import {
   loadRuntimeEnv,
   normalizeBasePath,
 } from "@powerhousedao/shared/connect";
-import type {
-  FullPHGlobalConfig,
-  PHDocumentEditorConfig,
-  PHDriveEditorConfig,
-  PHGlobalConfig,
-} from "@powerhousedao/reactor-browser";
-import { logger, setLogLevel } from "document-drive";
+import { logger } from "document-model";
 
 // Load environment variables with validation and defaults
 export const env = loadRuntimeEnv({

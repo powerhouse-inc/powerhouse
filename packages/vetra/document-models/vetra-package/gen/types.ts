@@ -1,4 +1,4 @@
-import type { PHDocument, PHBaseState } from "document-model";
+import type { PHDocument, PHBaseState } from "@powerhousedao/shared/document-model";
 import type { VetraPackageAction } from "./actions.js";
 import type { VetraPackageState as VetraPackageGlobalState } from "./schema/types.js";
 

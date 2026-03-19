@@ -1,4 +1,4 @@
-import type { PHDocument, PHBaseState } from "document-model";
+import type { PHDocument, PHBaseState } from "@powerhousedao/shared/document-model";
 import type { DocumentEditorAction } from "./actions.js";
 import type { DocumentEditorState as DocumentEditorGlobalState } from "./schema/types.js";
 

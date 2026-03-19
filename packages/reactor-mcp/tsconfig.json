@@ -24,6 +24,9 @@
     },
     {
       "path": "../reactor"
+    },
+    {
+      "path": "../shared"
     }
   ]
 }

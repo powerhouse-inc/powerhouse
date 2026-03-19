@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import * as Sentry from "@sentry/node";
-import { childLogger } from "document-drive";
+import { childLogger } from "document-model";
 import { config } from "./config.js";
 import { createMeterProviderFromEnv } from "./metrics.js";
 import { initProfilerFromEnv } from "./profiler.js";
