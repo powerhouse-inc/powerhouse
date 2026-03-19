@@ -1,6 +1,7 @@
 export * from "./analytics-subgraph.js";
 export * from "./auth/index.js";
 export * from "./base-subgraph.js";
+export * from "./gateway/types.js";
 export * from "./graphql-manager.js";
 export * from "./packages/index.js";
 export * from "./playground.js";
