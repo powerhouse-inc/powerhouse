@@ -36,7 +36,8 @@
     "test": "vitest --run",
     "bench": "vitest bench",
     "codegen": "graphql-codegen --config codegen.ts && prettier --write src/graphql/reactor/gen/*.ts && eslint --fix src/graphql/reactor/gen/*.ts --no-warn-ignored",
-    "codegen:watch": "graphql-codegen --config codegen.ts --watch"
+    "codegen:watch": "graphql-codegen --config codegen.ts --watch",
+    "dev": "tsx src/dev.ts"
   },
   "publishConfig": {
     "access": "public"
@@ -53,8 +54,8 @@
     "@opentelemetry/auto-instrumentations-node": "^0.57.1",
     "@opentelemetry/exporter-metrics-otlp-http": "^0.57.2",
     "@opentelemetry/exporter-trace-otlp-http": "^0.57.2",
-    "@opentelemetry/sdk-metrics": "^1.29.0",
     "@opentelemetry/resources": "^1.29.0",
+    "@opentelemetry/sdk-metrics": "^1.29.0",
     "@opentelemetry/sdk-node": "^0.57.2",
     "@opentelemetry/sdk-trace-base": "^1.29.0",
     "@opentelemetry/semantic-conventions": "^1.29.0",
@@ -66,6 +67,7 @@
     "@powerhousedao/document-engineering": "catalog:",
     "@powerhousedao/reactor": "workspace:*",
     "@powerhousedao/reactor-mcp": "workspace:*",
+    "@powerhousedao/shared": "workspace:*",
     "@renown/sdk": "workspace:*",
     "body-parser": "^1.20.3",
     "change-case": "catalog:",
@@ -76,9 +78,10 @@
     "dotenv": "^16.4.5",
     "express": "^4.21.1",
     "graphql": "catalog:",
+    "graphql-sse": "catalog:",
     "graphql-subscriptions": "^3.0.0",
     "graphql-type-json": "^0.3.2",
-    "graphql-ws": "^6.0.6",
+    "graphql-ws": "catalog:",
     "knex": "catalog:",
     "knex-pglite": "catalog:",
     "kysely": "catalog:",
@@ -87,7 +90,6 @@
     "pg": "catalog:",
     "read-pkg": "catalog:",
     "ws": "^8.18.3",
-    "@powerhousedao/shared": "workspace:*",
     "zod": "catalog:"
   },
   "devDependencies": {
