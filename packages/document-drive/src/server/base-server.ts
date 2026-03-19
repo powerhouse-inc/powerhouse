@@ -52,7 +52,7 @@ import { ClientError } from "graphql-request";
 import type { Unsubscribe } from "nanoevents";
 import { isActionJob, isDocumentJob, isOperationJob } from "queue";
 import { ReadModeServer } from "read-mode";
-import type { IDocumentStorage, IDriveOperationStorage } from "storage/types";
+import type { IDocumentStorage, IDriveOperationStorage } from "storage";
 import {
   DefaultDrivesManager,
   isDocumentDrive,

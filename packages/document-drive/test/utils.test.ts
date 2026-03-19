@@ -8,7 +8,7 @@ import {
   isAfterRevision,
   isAtRevision,
 } from "document-drive";
-import { runAsapAsync, useSetTimeout } from "document-drive/run-asap";
+import { runAsapAsync, useSetTimeout } from "document-drive";
 import { setModelName } from "@powerhousedao/shared/document-model";
 import { describe, expect, it } from "vitest";
 

@@ -39,7 +39,7 @@ import {
 } from "document-model";
 import fs from "node:fs/promises";
 import path from "node:path";
-import { FilesystemStorage } from "storage/filesystem";
+import { FilesystemStorage } from "storage/filesystem.mjs";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
 
 const documentModels = baseDocumentModels;
@@ -61,6 +61,7 @@ const storageLayers = [
       return storage;
     },
   ],
+  // @ts-expect-error it's prisma
   ["PrismaStorage", async () => new PrismaStorage(prismaClient, cache)],
 ] as unknown as [
   string,

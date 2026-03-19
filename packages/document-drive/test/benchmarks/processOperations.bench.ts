@@ -15,7 +15,7 @@ import {
   usePostMessage,
   useSetImmediate,
   useSetTimeout,
-} from "document-drive/run-asap";
+} from "document-drive";
 import { documentModelDocumentModelModule } from "document-model";
 import { bench, type BenchOptions, describe, vi } from "vitest";
 import GetDrive from "./getDrive.json" with { type: "json" };

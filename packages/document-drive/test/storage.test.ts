@@ -10,8 +10,8 @@ import type {
   IDocumentStorage,
 } from "document-drive";
 import { BrowserStorage, InMemoryCache, MemoryStorage } from "document-drive";
-import { FilesystemStorage } from "document-drive/storage/filesystem";
-import { PrismaStorage } from "document-drive/storage/prisma";
+import { FilesystemStorage } from "storage/filesystem.mjs";
+import { PrismaStorage } from "storage/prisma";
 import { PrismaClient } from "document-drive/storage/prisma/client";
 import { documentModelCreateDocument } from "document-model";
 import { existsSync, rmSync } from "fs";

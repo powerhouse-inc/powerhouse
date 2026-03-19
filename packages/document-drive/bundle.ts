@@ -16,10 +16,6 @@ await build({
   },
   outDir: "dist",
   platform: "node",
-  copy: [
-    { from: "./prisma/schema.prisma", to: "./dist/prisma/schema.prisma" },
-    { from: "./src/storage/prisma/client", to: "./dist/storage/prisma/client" },
-  ],
   dts: true,
   sourcemap: true,
 });

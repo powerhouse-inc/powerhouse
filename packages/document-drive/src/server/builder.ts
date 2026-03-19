@@ -13,7 +13,7 @@ import type {
 } from "document-drive";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import { EventQueueManager } from "queue";
-import { MemoryStorage } from "storage/memory";
+import { MemoryStorage } from "storage";
 import { DocumentDriveServer } from "./base-server.js";
 import { DefaultEventEmitter } from "./event-emitter.js";
 import { DefaultListenerManagerOptions } from "./listener/constants.js";

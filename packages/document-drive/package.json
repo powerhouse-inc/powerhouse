@@ -14,7 +14,7 @@
       "types": "./dist/index.d.ts"
     },
     "./storage/filesystem": {
-      "import": "./dist/storage/filesystem.mjs",
+      "import": "./dist/stora`ge/filesystem.mjs",
       "types": "./dist/storage/filesystem.d.mts"
     },
     "./storage/prisma": {
@@ -22,12 +22,14 @@
       "types": "./dist/storage/prisma.d.mts"
     },
     "./storage/prisma/client": {
-      "import": "./dist/storage/prisma/client/default.js",
-      "types": "./dist/storage/prisma/client/default.d.ts"
+      "import": "./src/storage/prisma/client/default.js",
+      "types": "./src/storage/prisma/client/default.d.ts"
     }
   },
   "files": [
-    "./dist"
+    "./dist",
+    "./prisma/schema.prisma",
+    "./src/storage/prisma/client"
   ],
   "sideEffects": false,
   "scripts": {

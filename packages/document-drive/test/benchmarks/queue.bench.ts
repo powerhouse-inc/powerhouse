@@ -12,7 +12,7 @@ import type { IQueueManager } from "document-drive";
 import { documentModelDocumentModelModule } from "document-model";
 import { EventQueueManager } from "queue";
 import { ReactorBuilder } from "server";
-import { MemoryStorage } from "storage/memory";
+import { MemoryStorage } from "storage";
 import { buildOperations } from "utils";
 import type { BenchOptions } from "vitest";
 import { bench, describe } from "vitest";
