@@ -1,10 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unsafe-return */
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/unbound-method */
 import type { IReactorClient, PagedResults } from "@powerhousedao/reactor";
 import type { DocumentModelModule, PHDocument } from "document-model";
 import { GraphQLError } from "graphql";
@@ -43,9 +36,12 @@ describe("DocumentModelSubgraph Permission Checks", () => {
       },
     },
     actions: {
-      setName: vi.fn((input: any) => ({ type: "SET_NAME", input })),
-      setValue: vi.fn((input: any) => ({ type: "SET_VALUE", input })),
-      restrictedOp: vi.fn((input: any) => ({ type: "RESTRICTED_OP", input })),
+      setName: vi.fn((input: unknown) => ({ type: "SET_NAME", input })),
+      setValue: vi.fn((input: unknown) => ({ type: "SET_VALUE", input })),
+      restrictedOp: vi.fn((input: unknown) => ({
+        type: "RESTRICTED_OP",
+        input,
+      })),
     },
     reducer: vi.fn(),
   } as unknown as DocumentModelModule;
@@ -125,18 +121,16 @@ describe("DocumentModelSubgraph Permission Checks", () => {
       reactorClient: mockReactorClient as IReactorClient,
       documentPermissionService:
         mockDocumentPermissionService as DocumentPermissionService,
-      relationalDb: {} as any,
-      analyticsStore: {} as any,
-      graphqlManager: {} as any,
-      syncManager: {} as any,
+      relationalDb: {} as SubgraphArgs["relationalDb"],
+      analyticsStore: {} as SubgraphArgs["analyticsStore"],
+      graphqlManager: {} as SubgraphArgs["graphqlManager"],
+      syncManager: {} as SubgraphArgs["syncManager"],
     } as SubgraphArgs);
   });
 
   describe("Query: document", () => {
-    // Updated to match new flat resolver structure (TestModel_document instead of TestModel.getDocument)
     const callGetDocument = async (ctx: Context, identifier: string) => {
-      const queryResolver = (subgraph.resolvers.Query as any)
-        ?.TestModel_document;
+      const queryResolver = subgraph.queryResolvers.document;
       return queryResolver(null, { identifier }, ctx);
     };
 
@@ -146,7 +140,6 @@ describe("DocumentModelSubgraph Permission Checks", () => {
 
         const result = await callGetDocument(ctx, "doc-123");
 
-        // Result is DocumentWithChildren: { document: PHDocument, childIds: string[] }
         expect(result).toBeDefined();
         expect(result.document.id).toBe("doc-123");
         expect(mockDocumentPermissionService.canRead).not.toHaveBeenCalled();
@@ -202,21 +195,6 @@ describe("DocumentModelSubgraph Permission Checks", () => {
         );
       });
 
-      // Note: Drive validation is no longer part of document query in new API
-      // Documents are retrieved directly by identifier, parentId filtering is done via findDocuments
-      it.skip("should verify document is in specified drive when driveId provided", async () => {
-        mockReactorClient.find = vi.fn().mockResolvedValue({
-          results: [],
-          options: { limit: 10, cursor: "" },
-        } as PagedResults<PHDocument>);
-        const ctx = createContext({ isAdmin: true, userAddress: "0xadmin" });
-
-        // This test is no longer applicable - drive filtering is done via findDocuments
-        await expect(callGetDocument(ctx, "doc-123")).rejects.toThrow(
-          "is not part of",
-        );
-      });
-
       it("should throw error if document type does not match", async () => {
         const wrongTypeDoc = {
           ...mockDocument,
@@ -246,9 +224,9 @@ describe("DocumentModelSubgraph Permission Checks", () => {
           | ((docId: string) => Promise<string[]>)
           | null = null;
         vi.mocked(mockDocumentPermissionService.canRead!).mockImplementation(
-          async (_docId, _user, getParentsFn) => {
+          (_docId, _user, getParentsFn) => {
             capturedGetParentsFn = getParentsFn;
-            return true;
+            return Promise.resolve(true);
           },
         );
 
@@ -269,9 +247,9 @@ describe("DocumentModelSubgraph Permission Checks", () => {
           | ((docId: string) => Promise<string[]>)
           | null = null;
         vi.mocked(mockDocumentPermissionService.canRead!).mockImplementation(
-          async (_docId, _user, getParentsFn) => {
+          (_docId, _user, getParentsFn) => {
             capturedGetParentsFn = getParentsFn;
-            return true;
+            return Promise.resolve(true);
           },
         );
 
@@ -284,25 +262,11 @@ describe("DocumentModelSubgraph Permission Checks", () => {
     });
 
     describe("reactorClient integration", () => {
-      // Note: Drive filtering is now done via findDocuments, not document query
-      it.skip("should use reactorClient.find to check document in drive", async () => {
-        const ctx = createContext({ isAdmin: true, userAddress: "0xadmin" });
-
-        await callGetDocument(ctx, "doc-123");
-
-        // This test is no longer applicable - drive filtering is done via findDocuments
-        expect(mockReactorClient.find).toHaveBeenCalledWith({
-          parentId: "drive-1",
-          ids: ["doc-123"],
-        });
-      });
-
       it("should use reactorClient.get to fetch document", async () => {
         const ctx = createContext({ isAdmin: true, userAddress: "0xadmin" });
 
         await callGetDocument(ctx, "doc-123");
 
-        // The shared resolver calls get with identifier and optional view
         expect(mockReactorClient.get).toHaveBeenCalledWith(
           "doc-123",
           undefined,
@@ -312,10 +276,8 @@ describe("DocumentModelSubgraph Permission Checks", () => {
   });
 
   describe("Query: findDocuments", () => {
-    // Updated to match new flat resolver structure (TestModel_findDocuments)
     const callFindDocuments = async (ctx: Context, parentId?: string) => {
-      const queryResolver = (subgraph.resolvers.Query as any)
-        ?.TestModel_findDocuments;
+      const queryResolver = subgraph.queryResolvers.findDocuments;
       const result = await queryResolver(
         null,
         { search: { parentId }, paging: { limit: 10 } },
@@ -350,20 +312,25 @@ describe("DocumentModelSubgraph Permission Checks", () => {
 
       it("should filter documents based on permissions when no global access", async () => {
         vi.mocked(mockDocumentPermissionService.canRead!).mockImplementation(
-          async (docId) =>
-            docId === "drive-1" || docId === "doc-1" || docId === "doc-3",
+          (docId) =>
+            Promise.resolve(
+              docId === "drive-1" || docId === "doc-1" || docId === "doc-3",
+            ),
         );
         const ctx = createContext({ userAddress: "0xpartial" });
 
         const result = await callFindDocuments(ctx, "drive-1");
 
         expect(result).toHaveLength(2);
-        expect(result.map((d: any) => d.id).sort()).toEqual(["doc-1", "doc-3"]);
+        expect(result.map((d: { id: string }) => d.id).sort()).toEqual([
+          "doc-1",
+          "doc-3",
+        ]);
       });
 
       it("should return empty array when user has no document permissions", async () => {
         vi.mocked(mockDocumentPermissionService.canRead!).mockImplementation(
-          async (docId) => docId === "drive-1",
+          (docId) => Promise.resolve(docId === "drive-1"),
         );
         const ctx = createContext({ userAddress: "0xnopermissions" });
 
@@ -374,15 +341,12 @@ describe("DocumentModelSubgraph Permission Checks", () => {
     });
 
     describe("Permission filtering", () => {
-      // Note: In the new API, findDocuments filters results based on individual document permissions
-      // rather than checking drive permission first
-      it("should filter documents when user has no global access", async () => {
+      it("should filter out all documents when user has no permissions", async () => {
         vi.mocked(mockDocumentPermissionService.canRead!).mockResolvedValue(
           false,
         );
         const ctx = createContext({ userAddress: "0xunpermitted" });
 
-        // With no permissions, all documents should be filtered out
         const result = await callFindDocuments(ctx, "drive-1");
         expect(result).toHaveLength(0);
       });
@@ -394,7 +358,6 @@ describe("DocumentModelSubgraph Permission Checks", () => {
 
         await callFindDocuments(ctx, "drive-1");
 
-        // The shared resolver now uses find with these parameters - first call includes type filter
         expect(mockReactorClient.find).toHaveBeenCalledWith(
           expect.objectContaining({
             type: "powerhouse/test-model",
@@ -503,8 +466,7 @@ describe("DocumentModelSubgraph Permission Checks", () => {
       name: string,
       parentIdentifier?: string,
     ) => {
-      const mutation = (subgraph.resolvers.Mutation as any)
-        ?.TestModel_createDocument;
+      const mutation = subgraph.mutationResolvers.createDocument;
       return mutation(null, { name, parentIdentifier }, ctx);
     };
 
@@ -549,7 +511,7 @@ describe("DocumentModelSubgraph Permission Checks", () => {
     });
 
     describe("Without parentIdentifier", () => {
-      it("should check global write access when no parentIdentifier", async () => {
+      it("should deny when user lacks global admin access", async () => {
         const ctx = createContext({ userAddress: "0xnoglobal" });
 
         await expect(callCreateDocument(ctx, "New Doc")).rejects.toThrow(
@@ -600,10 +562,8 @@ describe("DocumentModelSubgraph Permission Checks", () => {
       docId: string,
       input: unknown,
     ) => {
-      const mutation = (subgraph.resolvers.Mutation as any)?.[
-        `TestModel_${operationName}`
-      ];
-      return mutation(null, { docId, input }, ctx);
+      const mutation = subgraph.mutationResolvers[operationName];
+      return await mutation(null, { docId, input }, ctx);
     };
 
     describe("Write Permission Check", () => {
@@ -644,7 +604,7 @@ describe("DocumentModelSubgraph Permission Checks", () => {
           id: "doc-123",
           revisionsList: expect.arrayContaining([
             expect.objectContaining({ scope: "global", revision: 2 }),
-          ]),
+          ]) as unknown[],
         });
         expect(mockDocumentPermissionService.canWrite).not.toHaveBeenCalled();
       });
@@ -684,7 +644,7 @@ describe("DocumentModelSubgraph Permission Checks", () => {
           id: "doc-123",
           revisionsList: expect.arrayContaining([
             expect.objectContaining({ scope: "global", revision: 2 }),
-          ]),
+          ]) as unknown[],
         });
         expect(
           mockDocumentPermissionService.canExecuteOperation,
@@ -711,7 +671,7 @@ describe("DocumentModelSubgraph Permission Checks", () => {
           id: "doc-123",
           revisionsList: expect.arrayContaining([
             expect.objectContaining({ scope: "global", revision: 2 }),
-          ]),
+          ]) as unknown[],
         });
         expect(
           mockDocumentPermissionService.canExecuteOperation,
@@ -805,7 +765,7 @@ describe("DocumentModelSubgraph Permission Checks", () => {
           id: "doc-123",
           revisionsList: expect.arrayContaining([
             expect.objectContaining({ scope: "global", revision: 42 }),
-          ]),
+          ]) as unknown[],
         });
       });
 
@@ -824,13 +784,9 @@ describe("DocumentModelSubgraph Permission Checks", () => {
 
   describe("AUTH_ENABLED=false behavior", () => {
     it("should allow all read access when admin role returns true", async () => {
-      const ctx = createContext({
-        isAdmin: true,
-        userAddress: "0xanyone",
-      });
+      const ctx = createContext({ isAdmin: true, userAddress: "0xanyone" });
 
-      const queryResolver = (subgraph.resolvers.Query as any)
-        ?.TestModel_document;
+      const queryResolver = subgraph.queryResolvers.document;
       const result = await queryResolver(null, { identifier: "doc-123" }, ctx);
 
       expect(result).toBeDefined();
@@ -838,14 +794,9 @@ describe("DocumentModelSubgraph Permission Checks", () => {
     });
 
     it("should allow all write access when admin role returns true", async () => {
-      const ctx = createContext({
-        isAdmin: true,
-        userAddress: "0xanyone",
-      });
+      const ctx = createContext({ isAdmin: true, userAddress: "0xanyone" });
 
-      const result = await (
-        subgraph.resolvers.Mutation as any
-      )?.TestModel_setName(
+      const result = await subgraph.mutationResolvers.setName(
         null,
         { docId: "doc-123", input: { name: "New" } },
         ctx,
@@ -855,7 +806,7 @@ describe("DocumentModelSubgraph Permission Checks", () => {
         id: "doc-123",
         revisionsList: expect.arrayContaining([
           expect.objectContaining({ scope: "global", revision: 2 }),
-        ]),
+        ]) as unknown[],
       });
       expect(mockDocumentPermissionService.canWrite).not.toHaveBeenCalled();
     });
@@ -870,18 +821,17 @@ describe("DocumentModelSubgraph Permission Checks", () => {
         {
           reactorClient: mockReactorClient as IReactorClient,
           documentPermissionService: undefined,
-          relationalDb: {} as any,
-          analyticsStore: {} as any,
-          graphqlManager: {} as any,
-          syncManager: {} as any,
+          relationalDb: {} as SubgraphArgs["relationalDb"],
+          analyticsStore: {} as SubgraphArgs["analyticsStore"],
+          graphqlManager: {} as SubgraphArgs["graphqlManager"],
+          syncManager: {} as SubgraphArgs["syncManager"],
         } as SubgraphArgs,
       );
     });
 
     it("should deny read access when no permission service and no global access", async () => {
       const ctx = createContext({ userAddress: "0xuser" });
-      const queryResolver = (subgraphWithoutPermService.resolvers.Query as any)
-        ?.TestModel_document;
+      const queryResolver = subgraphWithoutPermService.queryResolvers.document;
 
       await expect(
         queryResolver(null, { identifier: "doc-123" }, ctx),
@@ -892,9 +842,7 @@ describe("DocumentModelSubgraph Permission Checks", () => {
       const ctx = createContext({ userAddress: "0xuser" });
 
       await expect(
-        (
-          subgraphWithoutPermService.resolvers.Mutation as any
-        )?.TestModel_setName(
+        subgraphWithoutPermService.mutationResolvers.setName(
           null,
           { docId: "doc-123", input: { name: "New" } },
           ctx,
@@ -904,8 +852,7 @@ describe("DocumentModelSubgraph Permission Checks", () => {
 
     it("should allow access with global roles even without permission service", async () => {
       const ctx = createContext({ isAdmin: true, userAddress: "0xadmin" });
-      const queryResolver = (subgraphWithoutPermService.resolvers.Query as any)
-        ?.TestModel_document;
+      const queryResolver = subgraphWithoutPermService.queryResolvers.document;
 
       const result = await queryResolver(null, { identifier: "doc-123" }, ctx);
 
@@ -915,9 +862,7 @@ describe("DocumentModelSubgraph Permission Checks", () => {
     it("should skip operation restriction check when no permission service", async () => {
       const ctx = createContext({ isAdmin: true, userAddress: "0xadmin" });
 
-      const result = await (
-        subgraphWithoutPermService.resolvers.Mutation as any
-      )?.TestModel_setName(
+      const result = await subgraphWithoutPermService.mutationResolvers.setName(
         null,
         { docId: "doc-123", input: { name: "New" } },
         ctx,
@@ -927,7 +872,7 @@ describe("DocumentModelSubgraph Permission Checks", () => {
         id: "doc-123",
         revisionsList: expect.arrayContaining([
           expect.objectContaining({ scope: "global", revision: 2 }),
-        ]),
+        ]) as unknown[],
       });
     });
   });
@@ -939,8 +884,7 @@ describe("DocumentModelSubgraph Permission Checks", () => {
         isAdmin: vi.fn().mockReturnValue(false),
       } as unknown as Context;
 
-      const queryResolver = (subgraph.resolvers.Query as any)
-        ?.TestModel_document;
+      const queryResolver = subgraph.queryResolvers.document;
 
       await expect(
         queryResolver(null, { identifier: "doc-123" }, ctx),
@@ -961,7 +905,7 @@ describe("DocumentModelSubgraph Permission Checks", () => {
       ).mockResolvedValue(true);
       const ctx = createContext({ userAddress: "0xuser" });
 
-      await (subgraph.resolvers.Mutation as any)?.TestModel_setValue(
+      await subgraph.mutationResolvers.setValue(
         null,
         { docId: "doc-123", input: { value: 42 } },
         ctx,

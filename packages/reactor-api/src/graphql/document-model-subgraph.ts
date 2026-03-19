@@ -15,13 +15,108 @@ import {
   document as documentResolver,
   findDocuments as findDocumentsResolver,
 } from "./reactor/resolvers.js";
+import type {
+  PhDocument,
+  PhDocumentResultPage,
+} from "./reactor/gen/graphql.js";
 import type { Context, SubgraphArgs } from "./types.js";
+
+/** A resolver function that lives inside a document-model subgraph. */
+
+export type DocumentModelResolverFn = (...args: any[]) => unknown;
+
+/**
+ * A resolver map for a single GraphQL type in a document-model subgraph.
+ * Each key is a field name (or `__resolveType` for unions) and each value
+ * is a resolver function.
+ */
+export type DocumentModelResolverMap = Record<string, DocumentModelResolverFn>;
+
+/** View filter shared across query resolvers. */
+type ViewArg = { branch?: string; scopes?: string[] };
+
+/** Paging argument shared across query resolvers. */
+type PagingArg = { limit?: number; offset?: number; cursor?: string };
+
+/**
+ * Known query resolvers generated for every document model.
+ * `TDocument` is the GQL representation of the document (defaults to `PhDocument`).
+ */
+export interface DocumentModelQueryResolvers<
+  TDocument extends PhDocument = PhDocument,
+> {
+  document: (
+    parent: unknown,
+    args: { identifier: string; view?: ViewArg },
+    ctx: Context,
+  ) => Promise<{ document: TDocument; childIds: string[] }>;
+  findDocuments: (
+    parent: unknown,
+    args: {
+      search: { parentId?: string; identifiers?: string[] };
+      view?: ViewArg;
+      paging?: PagingArg;
+    },
+    ctx: Context,
+  ) => Promise<PhDocumentResultPage>;
+  documentChildren: (
+    parent: unknown,
+    args: { parentIdentifier: string; view?: ViewArg; paging?: PagingArg },
+    ctx: Context,
+  ) => Promise<PhDocumentResultPage>;
+  documentParents: (
+    parent: unknown,
+    args: { childIdentifier: string; view?: ViewArg; paging?: PagingArg },
+    ctx: Context,
+  ) => Promise<PhDocumentResultPage>;
+}
+
+/**
+ * Known mutation resolvers generated for every document model.
+ * `TDocument` is the GQL representation of the document (defaults to `PhDocument`).
+ * Operations specific to each model are captured by the index signature.
+ */
+export interface DocumentModelMutationResolvers<
+  TDocument extends PhDocument = PhDocument,
+> {
+  createDocument: (
+    parent: unknown,
+    args: {
+      name: string;
+      parentIdentifier?: string;
+      slug?: string;
+      preferredEditor?: string;
+      initialState?: Record<string, Record<string, unknown>>;
+    },
+    ctx: Context,
+  ) => Promise<TDocument>;
+  createEmptyDocument: (
+    parent: unknown,
+    args: { parentIdentifier?: string },
+    ctx: Context,
+  ) => Promise<TDocument>;
+  /** Dynamic operation resolvers (sync and async variants). */
+  [operationName: string]: DocumentModelResolverFn;
+}
+
+/** The resolvers that a `DocumentModelSubgraph` exposes. */
+export interface DocumentModelSubgraphResolvers<
+  TDocument extends PhDocument = PhDocument,
+> {
+  Query: DocumentModelResolverMap;
+  Mutation: DocumentModelResolverMap;
+  [namespaceKey: string]:
+    | DocumentModelResolverMap
+    | DocumentModelQueryResolvers<TDocument>
+    | DocumentModelMutationResolvers<TDocument>;
+}
 
 /**
  * New document model subgraph that uses reactorClient instead of legacy reactor.
  * This class auto-generates GraphQL queries and mutations for a document model.
  */
 export class DocumentModelSubgraph extends BaseSubgraph {
+  declare resolvers: DocumentModelSubgraphResolvers;
   private documentModel: DocumentModelModule;
 
   constructor(documentModel: DocumentModelModule, args: SubgraphArgs) {
@@ -35,12 +130,32 @@ export class DocumentModelSubgraph extends BaseSubgraph {
     this.resolvers = this.generateResolvers();
   }
 
+  /** Returns the typed query resolvers for this document model. */
+  get queryResolvers(): DocumentModelQueryResolvers {
+    const documentName = getDocumentModelSchemaName(
+      this.documentModel.documentModel.global,
+    );
+    return this.resolvers[
+      `${documentName}Queries`
+    ] as DocumentModelQueryResolvers;
+  }
+
+  /** Returns the typed mutation resolvers for this document model. */
+  get mutationResolvers(): DocumentModelMutationResolvers {
+    const documentName = getDocumentModelSchemaName(
+      this.documentModel.documentModel.global,
+    );
+    return this.resolvers[
+      `${documentName}Mutations`
+    ] as DocumentModelMutationResolvers;
+  }
+
   /**
    * Generate __resolveType functions for union types found in the document model schema.
    * Parses the state schema to find union definitions and their member types,
    * then uses unique field presence to discriminate between member types at runtime.
    */
-  private generateUnionResolvers(): Record<string, unknown> {
+  private generateUnionResolvers(): Record<string, DocumentModelResolverMap> {
     const documentName = getDocumentModelSchemaName(
       this.documentModel.documentModel.global,
     );
@@ -72,7 +187,7 @@ export class DocumentModelSubgraph extends BaseSubgraph {
       }
     }
 
-    const resolvers: Record<string, unknown> = {};
+    const resolvers: Record<string, DocumentModelResolverMap> = {};
 
     for (const def of ast.definitions) {
       if (def.kind !== Kind.UNION_TYPE_DEFINITION) continue;
@@ -115,7 +230,7 @@ export class DocumentModelSubgraph extends BaseSubgraph {
    * Generate resolvers for this document model using reactorClient
    * Uses flat queries (not nested) consistent with ReactorSubgraph patterns
    */
-  private generateResolvers(): Record<string, unknown> {
+  private generateResolvers(): DocumentModelSubgraphResolvers {
     const documentType = this.documentModel.documentModel.global.id;
     const documentName = getDocumentModelSchemaName(
       this.documentModel.documentModel.global,
@@ -130,9 +245,12 @@ export class DocumentModelSubgraph extends BaseSubgraph {
     return {
       ...this.generateUnionResolvers(),
       Query: {
-        // Flat query: Get a specific document by identifier
-        // Uses shared documentResolver from reactor/resolvers.ts
-        [`${documentName}_document`]: async (
+        // Namespace resolver: returns empty object so nested field resolvers can run
+        [documentName]: () => ({}),
+      },
+      [`${documentName}Queries`]: {
+        // Get a specific document by identifier
+        document: async (
           _: unknown,
           args: {
             identifier: string;
@@ -146,26 +264,23 @@ export class DocumentModelSubgraph extends BaseSubgraph {
             throw new GraphQLError("Document identifier is required");
           }
 
-          // Use shared resolver function
           const result = await documentResolver(this.reactorClient, {
             identifier,
             view,
           });
 
-          // Validate document type
           if (result.document.documentType !== documentType) {
             throw new GraphQLError(
               `Document with id ${identifier} is not of type ${documentType}`,
             );
           }
 
-          // Check permissions
           await this.assertCanRead(result.document.id, ctx);
 
-          // Return shared resolver result directly (matches PHDocument format)
           return result;
         },
 
+<<<<<<< HEAD
         // Flat query: Get all documents of this type (paged)
         [`${documentName}_documents`]: async (
           _: unknown,
@@ -206,6 +321,10 @@ export class DocumentModelSubgraph extends BaseSubgraph {
         // Flat query: Find documents by search criteria (type is built-in)
         // Uses shared findDocumentsResolver from reactor/resolvers.ts
         [`${documentName}_findDocuments`]: async (
+=======
+        // Find documents by search criteria (type is built-in)
+        findDocuments: async (
+>>>>>>> 3d99ada7f (feat(reactor-api): namespace document model queries and mutations)
           _: unknown,
           args: {
             search: { parentId?: string; identifiers?: string[] };
@@ -216,17 +335,15 @@ export class DocumentModelSubgraph extends BaseSubgraph {
         ) => {
           const { search, view, paging } = args;
 
-          // Use shared resolver function with built-in type filter
           const result = await findDocumentsResolver(this.reactorClient, {
             search: {
-              type: documentType, // Type is built-in for this document model subgraph
+              type: documentType,
               parentId: search.parentId,
             },
             view,
             paging,
           });
 
-          // Filter by permission if needed
           if (
             !this.hasGlobalAdminAccess(ctx) &&
             this.documentPermissionService
@@ -245,13 +362,11 @@ export class DocumentModelSubgraph extends BaseSubgraph {
             };
           }
 
-          // Return shared resolver result directly (matches PHDocument format)
           return result;
         },
 
-        // Flat query: Get children of a document (filtered by this document type)
-        // Uses shared documentChildrenResolver from reactor/resolvers.ts
-        [`${documentName}_documentChildren`]: async (
+        // Get children of a document (filtered by this document type)
+        documentChildren: async (
           _: unknown,
           args: {
             parentIdentifier: string;
@@ -264,14 +379,12 @@ export class DocumentModelSubgraph extends BaseSubgraph {
 
           await this.assertCanRead(parentIdentifier, ctx);
 
-          // Use shared resolver function
           const result = await documentChildrenResolver(this.reactorClient, {
             parentIdentifier,
             view,
             paging,
           });
 
-          // Filter children by this document type
           const filteredItems = result.items.filter(
             (item) => item.documentType === documentType,
           );
@@ -283,9 +396,8 @@ export class DocumentModelSubgraph extends BaseSubgraph {
           };
         },
 
-        // Flat query: Get parents of a document
-        // Uses shared documentParentsResolver from reactor/resolvers.ts
-        [`${documentName}_documentParents`]: async (
+        // Get parents of a document
+        documentParents: async (
           _: unknown,
           args: {
             childIdentifier: string;
@@ -298,7 +410,6 @@ export class DocumentModelSubgraph extends BaseSubgraph {
 
           await this.assertCanRead(childIdentifier, ctx);
 
-          // Use shared resolver function - return directly
           return documentParentsResolver(this.reactorClient, {
             childIdentifier,
             view,
@@ -307,8 +418,11 @@ export class DocumentModelSubgraph extends BaseSubgraph {
         },
       },
       Mutation: {
-        // Uses shared createEmptyDocumentResolver or createDocumentWithInitialStateResolver
-        [`${documentName}_createDocument`]: async (
+        // Namespace resolver: returns empty object so nested field resolvers can run
+        [documentName]: () => ({}),
+      },
+      [`${documentName}Mutations`]: {
+        createDocument: async (
           _: unknown,
           args: {
             name: string;
@@ -393,8 +507,7 @@ export class DocumentModelSubgraph extends BaseSubgraph {
 
           return createdDoc;
         },
-        // Uses shared createEmptyDocumentResolver from reactor/resolvers.ts
-        [`${documentName}_createEmptyDocument`]: async (
+        createEmptyDocument: async (
           _: unknown,
           args: { parentIdentifier?: string },
           ctx: Context,
@@ -415,7 +528,6 @@ export class DocumentModelSubgraph extends BaseSubgraph {
             );
           }
 
-          // Use shared resolver function - returns PHDocument format directly
           const result = await createEmptyDocumentResolver(this.reactorClient, {
             documentType,
             parentIdentifier,
@@ -433,97 +545,87 @@ export class DocumentModelSubgraph extends BaseSubgraph {
           return result;
         },
         // Generate sync and async mutations for each operation
-        ...operations.reduce(
-          (mutations, op) => {
-            // Sync mutation
-            mutations[`${documentName}_${camelCase(op.name!)}`] = async (
-              _: unknown,
-              args: { docId: string; input: unknown },
-              ctx: Context,
-            ) => {
-              const { docId, input } = args;
+        ...operations.reduce((mutations, op) => {
+          // Sync mutation
+          mutations[camelCase(op.name!)] = async (
+            _: unknown,
+            args: { docId: string; input: unknown },
+            ctx: Context,
+          ) => {
+            const { docId, input } = args;
 
-              // assertCanExecuteOperation uses canMutate (write + operation) when
-              // authorizationService is available. Legacy fallback needs separate write check.
-              if (!this.authorizationService) {
-                await this.assertCanWrite(docId, ctx);
-              }
-              await this.assertCanExecuteOperation(docId, op.name!, ctx);
+            if (!this.authorizationService) {
+              await this.assertCanWrite(docId, ctx);
+            }
+            await this.assertCanExecuteOperation(docId, op.name!, ctx);
 
-              const doc = await this.reactorClient.get(docId);
-              if (doc.header.documentType !== documentType) {
-                throw new GraphQLError(
-                  `Document with id ${docId} is not of type ${documentType}`,
-                );
-              }
+            const doc = await this.reactorClient.get(docId);
+            if (doc.header.documentType !== documentType) {
+              throw new GraphQLError(
+                `Document with id ${docId} is not of type ${documentType}`,
+              );
+            }
 
-              const action = this.documentModel.actions[camelCase(op.name!)];
-              if (!action) {
-                throw new GraphQLError(`Action ${op.name} not found`);
-              }
+            const action = this.documentModel.actions[camelCase(op.name!)];
+            if (!action) {
+              throw new GraphQLError(`Action ${op.name} not found`);
+            }
 
-              try {
-                const updatedDoc = await this.reactorClient.execute(
-                  docId,
-                  "main",
-                  [action(input)],
-                );
-                // Use toGqlPhDocument for PHDocument format with revisionsList
-                return toGqlPhDocument(updatedDoc);
-              } catch (error) {
-                throw new GraphQLError(
-                  error instanceof Error
-                    ? error.message
-                    : `Failed to ${op.name}`,
-                );
-              }
-            };
+            try {
+              const updatedDoc = await this.reactorClient.execute(
+                docId,
+                "main",
+                [action(input)],
+              );
+              return toGqlPhDocument(updatedDoc);
+            } catch (error) {
+              throw new GraphQLError(
+                error instanceof Error ? error.message : `Failed to ${op.name}`,
+              );
+            }
+          };
 
-            // Async mutation - returns job ID
-            mutations[`${documentName}_${camelCase(op.name!)}Async`] = async (
-              _: unknown,
-              args: { docId: string; input: unknown },
-              ctx: Context,
-            ) => {
-              const { docId, input } = args;
+          // Async mutation - returns job ID
+          mutations[`${camelCase(op.name!)}Async`] = async (
+            _: unknown,
+            args: { docId: string; input: unknown },
+            ctx: Context,
+          ) => {
+            const { docId, input } = args;
 
-              if (!this.authorizationService) {
-                await this.assertCanWrite(docId, ctx);
-              }
-              await this.assertCanExecuteOperation(docId, op.name!, ctx);
+            if (!this.authorizationService) {
+              await this.assertCanWrite(docId, ctx);
+            }
+            await this.assertCanExecuteOperation(docId, op.name!, ctx);
 
-              const doc = await this.reactorClient.get(docId);
-              if (doc.header.documentType !== documentType) {
-                throw new GraphQLError(
-                  `Document with id ${docId} is not of type ${documentType}`,
-                );
-              }
+            const doc = await this.reactorClient.get(docId);
+            if (doc.header.documentType !== documentType) {
+              throw new GraphQLError(
+                `Document with id ${docId} is not of type ${documentType}`,
+              );
+            }
 
-              const action = this.documentModel.actions[camelCase(op.name!)];
-              if (!action) {
-                throw new GraphQLError(`Action ${op.name} not found`);
-              }
+            const action = this.documentModel.actions[camelCase(op.name!)];
+            if (!action) {
+              throw new GraphQLError(`Action ${op.name} not found`);
+            }
 
-              try {
-                const jobInfo = await this.reactorClient.executeAsync(
-                  docId,
-                  "main",
-                  [action(input)],
-                );
-                return jobInfo.id;
-              } catch (error) {
-                throw new GraphQLError(
-                  error instanceof Error
-                    ? error.message
-                    : `Failed to ${op.name}`,
-                );
-              }
-            };
+            try {
+              const jobInfo = await this.reactorClient.executeAsync(
+                docId,
+                "main",
+                [action(input)],
+              );
+              return jobInfo.id;
+            } catch (error) {
+              throw new GraphQLError(
+                error instanceof Error ? error.message : `Failed to ${op.name}`,
+              );
+            }
+          };
 
-            return mutations;
-          },
-          {} as Record<string, unknown>,
-        ),
+          return mutations;
+        }, {} as DocumentModelResolverMap),
       },
     };
   }
