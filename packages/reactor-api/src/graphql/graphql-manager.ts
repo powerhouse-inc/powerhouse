@@ -604,16 +604,21 @@ export class GraphQLManager {
     return makeExecutableSchema({
       typeDefs: allTypeDefs,
       resolvers: allResolvers as any,
+      resolverValidationOptions: { requireResolversToMatchSchema: "ignore" },
     });
   }
 
   #makeYogaHandler(
     yoga: ReturnType<typeof createYoga<Record<string, unknown>>>,
   ): express.RequestHandler {
+    // Use yoga.requestListener which properly chains handleNodeRequestAndResponse
+    // with sendNodeResponse. Calling handleNodeRequestAndResponse alone returns
+    // a Fetch API Response object but does not write it to the Node.js response,
+    // causing the client to hang.
     return (req, res, next) => {
-      Promise.resolve(
-        yoga.handleNodeRequestAndResponse(req, res, { req, res }),
-      ).catch((err: unknown) => next(err));
+      Promise.resolve(yoga.requestListener(req, res)).catch((err: unknown) =>
+        next(err),
+      );
     };
   }
 
@@ -637,7 +642,7 @@ export class GraphQLManager {
     });
     this.subgraphHandlers.set(superGraphPath, {
       handler: this.#makeYogaHandler(yoga),
-      matcher: match(superGraphPath + "/:rest*", { end: false }),
+      matcher: match(superGraphPath, { end: false }),
     });
 
     if (!this.initialized) {

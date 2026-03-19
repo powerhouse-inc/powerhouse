@@ -70,6 +70,7 @@ export const createSchema = (
     typeDefs: [BASE_TYPES_SDL, module.typeDefs],
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolvers: module.resolvers as any,
+    resolverValidationOptions: { requireResolversToMatchSchema: "ignore" },
   });
 };
 
