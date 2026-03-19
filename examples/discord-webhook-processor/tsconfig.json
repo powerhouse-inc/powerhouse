@@ -1,0 +1,9 @@
+{
+  "extends": "../../tsconfig.options.json",
+  "compilerOptions": {
+    "types": ["node"],
+    "outDir": "./dist"
+  },
+  "include": ["**/*.ts"],
+  "references": [{ "path": "../../packages/shared" }]
+}
