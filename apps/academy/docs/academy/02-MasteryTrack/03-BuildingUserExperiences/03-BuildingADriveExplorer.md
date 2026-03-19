@@ -267,7 +267,8 @@ This is the main component of our Drive-app. It fetches all `powerhouse/todo-lis
 
 ```typescript
 import { useCallback, useState, useRef, useEffect, useMemo } from "react";
-import type { FileNode, GetDocumentOptions, Node } from "document-drive";
+import type { FileNode, Node } from "document-drive";
+import type { GetDocumentOptions } from "@powerhousedao/shared/document-model";
 import { EditorContainer, EditorContainerProps } from "./EditorContainer.js";
 import type { DocumentModelModule } from "document-model";
 import { CreateDocumentModal } from "@powerhousedao/design-system";

@@ -294,12 +294,12 @@ Open `./subgraphs/todo/resolvers.ts` and configure the resolvers:
 
 ```ts
 // subgraphs/search-todos/resolvers.ts
-import { type ISubgraph } from "@powerhousedao/reactor-api";
+import type { BaseSubgraph } from "@powerhousedao/reactor-api";
 import { type TodoListDocument } from "../../document-models/todo-list/index.js";
 import { TodoIndexerProcessor } from "../../processors/todo-indexer/index.js";
 
-export const getResolvers = (subgraph: ISubgraph) => {
-  const reactor = subgraph.reactor;
+export const getResolvers = (subgraph: BaseSubgraph) => {
+  const reactorClient = subgraph.reactorClient;
   const relationalDb = subgraph.relationalDb;
 
   return {
