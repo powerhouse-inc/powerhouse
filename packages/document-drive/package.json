@@ -13,45 +13,28 @@
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
     },
-    "./utils": {
-      "types": "./dist/src/utils/index.d.ts",
-      "import": "./dist/src/utils/index.js"
-    },
-    "./cache": {
-      "types": "./dist/src/cache/index.d.ts",
-      "import": "./dist/src/cache/index.js"
-    },
     "./storage/filesystem": {
-      "import": "./dist/src/storage/filesystem.js",
-      "types": "./dist/src/storage/filesystem.d.ts"
-    },
-    "./storage/ipfs": {
-      "import": "./dist/src/storage/ipfs.js",
-      "types": "./dist/src/storage/ipfs.d.ts"
+      "import": "./dist/storage/filesystem.mjs",
+      "types": "./dist/storage/filesystem.d.mts"
     },
     "./storage/prisma": {
-      "import": "./dist/src/storage/prisma/index.js",
-      "types": "./dist/src/storage/prisma/index.d.ts"
+      "import": "./dist/storage/prisma.mjs",
+      "types": "./dist/storage/prisma.d.mts"
     },
     "./storage/prisma/client": {
-      "import": "./src/storage/prisma/client/default.js",
-      "types": "./src/storage/prisma/client/default.d.ts"
-    },
-    "./run-asap": {
-      "import": "./dist/src/utils/run-asap.js",
-      "types": "./dist/src/utils/run-asap.d.ts"
+      "import": "./dist/storage/prisma/client/default.js",
+      "types": "./dist/storage/prisma/client/default.d.ts"
     }
   },
   "files": [
-    "./dist",
-    "./src/storage/prisma/client",
-    "./prisma/schema.prisma"
+    "./dist"
   ],
   "sideEffects": false,
   "scripts": {
     "tsc": "tsc",
     "lint": "eslint",
     "build:misc": "pnpm run copy-prisma",
+    "build:bundle": "tsx ./bundle.ts",
     "release": "semantic-release",
     "test:legacy": "vitest run --coverage --exclude \"test/flaky/**\"",
     "test:flaky": "vitest run --coverage test/flaky",
@@ -61,14 +44,10 @@
     "copy-prisma": "copyfiles prisma/schema.prisma dist/ && copyfiles 'src/storage/prisma/client/**/*' dist/",
     "prisma-generate": "prisma generate --no-hints && pnpm copy-prisma"
   },
-  "optionalDependencies": {
-    "@prisma/client": "5.17.0",
-    "localforage": "^1.10.0",
+  "dependencies": {
     "redis": "^4.6.15",
     "sequelize": "^6.37.3",
-    "sqlite3": "^5.1.7"
-  },
-  "dependencies": {
+    "sqlite3": "^5.1.7",
     "@powerhousedao/analytics-engine-core": "workspace:*",
     "@powerhousedao/shared": "workspace:*",
     "@prisma/client": "5.17.0",
@@ -86,17 +65,18 @@
     "object-sizeof": "^2.6.5",
     "prisma": "5.17.0",
     "zocker": "catalog:",
-    "zod": "catalog:"
+    "zod": "catalog:",
+    "vite": "catalog:",
+    "vitest": "catalog:",
+    "vitest-fetch-mock": "^0.4.5",
+    "fake-indexeddb": "^5.0.2",
+    "msw": "^2.3.1"
   },
   "devDependencies": {
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "^3.2.4",
     "copyfiles": "catalog:",
-    "fake-indexeddb": "^5.0.2",
-    "msw": "^2.3.1",
     "tsdown": "catalog:",
-    "vite": "catalog:",
-    "vitest": "catalog:",
-    "vitest-fetch-mock": "^0.4.5"
+    "tsx": "catalog:"
   }
 }

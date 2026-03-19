@@ -6,7 +6,7 @@ import type {
   Operation,
   PHDocument,
 } from "@powerhousedao/shared/document-model";
-import { AbortError } from "document-drive/utils";
+import { AbortError } from "document-drive";
 import type { ILogger } from "document-model";
 import { v4 as uuidv4 } from "uuid";
 import {
