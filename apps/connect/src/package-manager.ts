@@ -10,11 +10,11 @@ import {
   type IPackageListerUnsubscribe,
   type IPackageManager,
 } from "@powerhousedao/reactor-browser";
-import * as vetraVetraPackage from "@powerhousedao/vetra";
 import {
   type DocumentModelLib,
   type DocumentModelModule,
 } from "@powerhousedao/shared/document-model";
+import * as vetraVetraPackage from "@powerhousedao/vetra";
 import {
   loadDocumentModelDocumentModelModule,
   loadDriveDocumentModelModule,
@@ -213,6 +213,8 @@ export class BrowserPackageManager implements IPackageManager {
   async #loadPackageFromNodeModules(
     name: string,
   ): Promise<PackageWithMeta | undefined> {
+    if (import.meta.env.PROD) return;
+
     if (name === COMMON_PACKAGE_NAME || name === LOCAL_PACKAGE_NAME) return;
     const importUrl = `/node_modules/${name}/index.js`;
     const stylesheetUrl = `/node_modules/${name}/style.css`;
