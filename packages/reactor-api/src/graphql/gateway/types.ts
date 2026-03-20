@@ -3,10 +3,9 @@ import type { GraphQLSchema } from "graphql";
 import type http from "node:http";
 import type { WebSocketServer } from "ws";
 
-// Framework-agnostic context factory — receives Fetch API Request + matched URL params
+// Framework-agnostic context factory - receives the Fetch API Request for the current operation
 export type GatewayContextFactory<TContext = unknown> = (
   request: Request,
-  params: Record<string, string>,
 ) => Promise<TContext>;
 
 export type WsContextFactory<TContext = unknown> = (
@@ -15,7 +14,7 @@ export type WsContextFactory<TContext = unknown> = (
 
 export type WsDisposer = { dispose: () => void | Promise<void> };
 
-// A Fetch API handler — framework agnostic
+// A Fetch API handler - framework agnostic
 export type FetchHandler = (request: Request) => Promise<Response>;
 
 export interface IGatewayAdapter<TContext = unknown> {
@@ -50,8 +49,9 @@ export interface IHttpAdapter {
 
   /**
    * Mount a Fetch API handler.
-   * - exact = false (default): prefix match — handler receives all sub-paths.
-   * - exact = true: only matches this exact path.
+   * - exact = false (default): exact path match via internal dispatch map.
+   * - exact = true: prefix match - handler also receives all sub-paths
+   *   (uses framework router.use() semantics).
    */
   mount(
     path: string,

@@ -75,28 +75,22 @@ export class ApolloGatewayAdapter implements IGatewayAdapter<Context> {
     this.#servers.length = 0;
   }
 
-  async #waitForServer(
-    server: ApolloServer<Context>,
-    attempts = 0,
-  ): Promise<boolean> {
-    try {
-      server.assertStarted("waitForServer");
-      return true;
-    } catch (err) {
-      if (attempts >= 100) {
-        throw new Error(
-          `Apollo server did not start after ${attempts} attempts: ${String(err)}`,
-        );
+  async #waitForServer(server: ApolloServer<Context>): Promise<void> {
+    for (let attempt = 0; attempt < 100; attempt++) {
+      try {
+        server.assertStarted("waitForServer");
+        return;
+      } catch {
+        await setTimeout(100);
       }
-      await setTimeout(100);
-      return this.#waitForServer(server, attempts + 1);
     }
+    throw new Error(`Apollo server did not start after 100 attempts`);
   }
 }
 
 /**
  * Wrap an existing ApolloServer as a Fetch API handler.
- * Does not manage server lifecycle — caller is responsible for start/stop.
+ * Does not manage server lifecycle; caller is responsible for start/stop.
  */
 export function createApolloFetchHandler(
   server: ApolloServer<Context>,
@@ -123,7 +117,7 @@ export function createApolloFetchHandler(
         search: url.search,
         body,
       },
-      context: () => contextFactory(request, {}),
+      context: () => contextFactory(request),
     });
 
     const responseHeaders = new Headers();

@@ -144,7 +144,7 @@ describe("createApolloFetchHandler – request conversion", () => {
     );
 
     // The context factory is invoked lazily via the context() callback passed
-    // to executeHTTPGraphQLRequest — call it now to trigger the factory.
+    // to executeHTTPGraphQLRequest - call it now to trigger the factory.
     const [{ context }] = executeHTTPGraphQLRequest.mock.calls[0];
     await context();
 
@@ -155,7 +155,7 @@ describe("createApolloFetchHandler – request conversion", () => {
     const { server } = makeMockServer();
     const handler = createApolloFetchHandler(server, noopCtx);
 
-    // POST with no body — body parse catches the error and passes undefined
+    // POST with no body - body parse catches the error and passes undefined
     await expect(
       handler(new Request("http://localhost/graphql", { method: "POST" })),
     ).resolves.toBeInstanceOf(Response);
@@ -258,7 +258,7 @@ describe("createApolloFetchHandler – context factory", () => {
     await handler(makeReq());
 
     // The context factory is called lazily inside executeHTTPGraphQLRequest's
-    // context() callback — trigger it by calling the context fn directly.
+    // context() callback - trigger it by calling the context fn directly.
     const calls = (server.executeHTTPGraphQLRequest as ReturnType<typeof vi.fn>)
       .mock.calls;
     for (const [{ context }] of calls) {
