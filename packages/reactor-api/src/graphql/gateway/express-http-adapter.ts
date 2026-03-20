@@ -2,6 +2,7 @@ import bodyParser from "body-parser";
 import cors from "cors";
 import type { CorsOptions } from "cors";
 import type express from "express";
+import { Router } from "express";
 import type { IRouter } from "express";
 import { match, type MatchFunction, type ParamData } from "path-to-regexp";
 import type { FetchHandler, IHttpAdapter } from "./types.js";
@@ -126,4 +127,12 @@ export class ExpressHttpAdapter implements IHttpAdapter {
       })
       .catch(next);
   }
+}
+
+export function createExpressHttpAdapter(): {
+  adapter: IHttpAdapter;
+  middleware: IRouter;
+} {
+  const router = Router();
+  return { adapter: new ExpressHttpAdapter(router), middleware: router };
 }
