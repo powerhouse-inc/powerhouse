@@ -11,6 +11,7 @@
 
 import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import type { IReactorClient, ISyncManager } from "@powerhousedao/reactor";
+import type * as DocumentDrive from "document-drive";
 import type { ILogger, IRelationalDbLegacy } from "document-drive";
 import type { DocumentModelModule } from "document-model";
 import type http from "node:http";
@@ -28,7 +29,7 @@ import type { Context } from "../src/graphql/types.js";
 // Partially mock document-drive so responseForDrive is controllable while
 // keeping debounce and other utilities working normally.
 vi.mock("document-drive", async (importOriginal) => {
-  const real = await importOriginal<typeof import("document-drive")>();
+  const real = await importOriginal<typeof DocumentDrive>();
   return {
     ...real,
     responseForDrive: vi.fn((_doc: unknown, endpoint: string) => ({

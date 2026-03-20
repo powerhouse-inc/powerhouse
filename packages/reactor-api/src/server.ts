@@ -11,6 +11,7 @@ import type {
   ProcessorRecord as ReactorProcessorRecord,
 } from "@powerhousedao/reactor";
 import { setupMcpServer } from "@powerhousedao/reactor-mcp";
+import type { Express } from "express";
 import type {
   IDocumentDriveServer,
   IProcessorHostModuleLegacy,
@@ -66,7 +67,7 @@ import {
 const defaultLogger = childLogger(["reactor-api", "server"]);
 
 type Options = {
-  express?: import("express").Express;
+  express?: Express;
   port?: number;
   dbPath: string | undefined;
   client?: PGlite | typeof Pool | undefined;
@@ -578,7 +579,7 @@ async function _setupAPI(
     // TODO: decouple reactor-mcp from Express
     await setupMcpServer(
       { client: reactorClient, syncManager },
-      httpAdapter.handle as import("express").Express,
+      httpAdapter.handle as Express,
     );
     logger.info(`MCP server available at http://localhost:${port}/mcp`);
   }

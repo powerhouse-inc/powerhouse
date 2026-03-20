@@ -1,3 +1,4 @@
+import type { Express } from "express";
 import type { ILogger } from "document-drive";
 import type { Context } from "../types.js";
 import { ApolloGatewayAdapter } from "./adapter-gateway-apollo.js";
@@ -27,8 +28,6 @@ export function createHttpAdapter(
 ): HttpAdapterSetup {
   switch (type) {
     case "express":
-      return createExpressHttpAdapter(
-        existingApp as import("express").Express | undefined,
-      );
+      return createExpressHttpAdapter(existingApp as Express | undefined);
   }
 }
