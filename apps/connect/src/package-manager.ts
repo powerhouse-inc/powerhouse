@@ -214,8 +214,8 @@ export class BrowserPackageManager implements IPackageManager {
     name: string,
   ): Promise<PackageWithMeta | undefined> {
     if (name === COMMON_PACKAGE_NAME || name === LOCAL_PACKAGE_NAME) return;
-    const importUrl = `/node_modules/${name}`;
-    const stylesheetUrl = `${importUrl}/style.css`;
+    const importUrl = `/node_modules/${name}/index.js`;
+    const stylesheetUrl = `/node_modules/${name}/style.css`;
 
     const packageWithMeta = await this.#importPackage({
       name,

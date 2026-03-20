@@ -16,6 +16,7 @@ await build({
   },
   outDir: "dist",
   platform: "node",
+  clean: false,
   dts: true,
   sourcemap: true,
 });

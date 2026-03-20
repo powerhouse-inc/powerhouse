@@ -12,11 +12,7 @@
     "storage": "memory"
   },
   "packages": [
-    {
-      "packageName": "@powerhousedao/versioned-documents",
-      "version": "dev",
-      "provider": "npm"
-    }
+   
   ],
   "packageRegistryUrl": "http://localhost:8080"
 }
