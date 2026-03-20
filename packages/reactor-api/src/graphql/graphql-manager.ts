@@ -19,6 +19,10 @@ import { match } from "path-to-regexp";
 import type { WebSocketServer } from "ws";
 import type { AuthConfig } from "../services/auth.service.js";
 import { AuthService } from "../services/auth.service.js";
+import {
+  getAuthContext,
+  type AuthFetchMiddleware,
+} from "./gateway/auth-middleware.js";
 import type { AuthorizationService } from "../services/authorization.service.js";
 import type { DocumentPermissionService } from "../services/document-permission.service.js";
 import {
@@ -101,6 +105,7 @@ export class GraphQLManager {
   private authService: AuthService | null = null;
 
   private readonly subgraphWsDisposers = new Map<string, WsDisposer>();
+  #authMiddleware: AuthFetchMiddleware | undefined;
 
   /** Cached document models for schema generation - updated on init and regenerate */
   private cachedDocumentModels: DocumentModelModule[] = [];
@@ -131,13 +136,14 @@ export class GraphQLManager {
 
     if (this.authConfig) {
       this.authService = new AuthService(this.authConfig);
-      this.setAdditionalContextFields(
-        this.authService.getAdditionalContextFields(),
-      );
     }
   }
 
-  async init(coreSubgraphs: SubgraphClass[]) {
+  async init(
+    coreSubgraphs: SubgraphClass[],
+    authMiddleware?: AuthFetchMiddleware,
+  ) {
+    this.#authMiddleware = authMiddleware;
     this.logger.debug(`Initializing Subgraph Manager...`);
 
     // check if Document Drive model is available
@@ -426,13 +432,21 @@ export class GraphQLManager {
 
   #makeContextFactory(): GatewayContextFactory<Context> {
     return (request: Request): Promise<Context> => {
+      const authCtx = getAuthContext(request);
       const headers: IncomingHttpHeaders = {};
-      request.headers.forEach((value, key) => {
-        headers[key] = value;
+      request.headers.forEach((v, k) => {
+        headers[k] = v;
       });
       return Promise.resolve<Context>({
         headers,
         db: this.relationalDb,
+        user: authCtx?.user,
+        isAdmin: authCtx
+          ? (addr) =>
+              !authCtx.auth_enabled
+                ? true
+                : authCtx.admins.includes(addr.toLowerCase())
+          : () => true,
         ...this.getAdditionalContextFields(),
       });
     };
@@ -499,10 +513,13 @@ export class GraphQLManager {
             subgraph.typeDefs,
           );
 
-          const fetchHandler = await this.gatewayAdapter.createHandler(
+          const rawHandler = await this.gatewayAdapter.createHandler(
             schema,
             this.#makeContextFactory(),
           );
+          const fetchHandler = this.#authMiddleware
+            ? this.#authMiddleware(rawHandler)
+            : rawHandler;
           this.subgraphHandlerCache.set(subgraphPath, fetchHandler);
           this.httpAdapter.mount(subgraphPath, fetchHandler);
 
@@ -597,12 +614,15 @@ export class GraphQLManager {
 
   async #createSupergraphGateway() {
     const superGraphPath = path.join(this.path, "graphql");
-    const fetchHandler: FetchHandler =
+    const rawHandler: FetchHandler =
       await this.gatewayAdapter.createSupergraphHandler(
         () => this.#getSubgraphDefinitions(),
         this.httpServer,
         this.#makeContextFactory(),
       );
+    const fetchHandler = this.#authMiddleware
+      ? this.#authMiddleware(rawHandler)
+      : rawHandler;
     this.httpAdapter.mount(superGraphPath, fetchHandler);
 
     // Set up SSE subscriptions at the supergraph level (/graphql/stream).

@@ -3,6 +3,11 @@ import type { DocumentNode, GraphQLSchema } from "graphql";
 import type http from "node:http";
 import type { WebSocketServer } from "ws";
 
+export type TlsOptions =
+  | { keyPath: string; certPath: string }
+  | { cert: Buffer | string; key: Buffer | string }
+  | true;
+
 // Framework-agnostic context factory - receives the Fetch API Request for the current operation
 export type GatewayContextFactory<TContext = unknown> = (
   request: Request,
@@ -98,4 +103,22 @@ export interface IHttpAdapter {
 
   /** Add a middleware that runs before all registered routes. */
   use(middleware: unknown): void;
+
+  /**
+   * Register a GET route that returns a Fetch Response (for health, explorer, etc.).
+   * Registered directly on the underlying framework app, bypassing the sub-router.
+   */
+  getRoute(
+    path: string,
+    handler: (request: Request) => Response | Promise<Response>,
+  ): void;
+
+  /**
+   * Start listening on the given port. Returns the underlying http.Server
+   * so callers can attach WebSocket servers.
+   */
+  listen(port: number, tls?: TlsOptions): Promise<http.Server>;
+
+  /** The raw framework handle (e.g. Express app). Cast as needed at call sites. */
+  readonly handle: unknown;
 }

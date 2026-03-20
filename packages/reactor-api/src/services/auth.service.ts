@@ -7,7 +7,11 @@ type VerifiedCredential =
   Awaited<ReturnType<typeof verifyAuthBearerToken>> extends false | infer T
     ? T
     : never;
-import type { NextFunction, Request, Response } from "express";
+import type {
+  NextFunction,
+  Request as ExpressRequest,
+  Response as ExpressResponse,
+} from "express";
 
 export interface AuthConfig {
   enabled: boolean;
@@ -22,9 +26,16 @@ export interface User {
   networkId: string;
 }
 
-export interface AuthenticatedRequest extends Request {
+export interface AuthContext {
   user?: User;
   admins: string[];
+  auth_enabled: boolean;
+}
+
+export interface AuthenticatedRequest extends ExpressRequest {
+  user?: User;
+  admins: string[];
+  auth_enabled?: boolean;
 }
 
 export class AuthService {
@@ -39,7 +50,7 @@ export class AuthService {
    */
   async authenticate(
     req: AuthenticatedRequest,
-    res: Response,
+    res: ExpressResponse,
     next: NextFunction,
   ): Promise<void> {
     if (
@@ -103,6 +114,62 @@ export class AuthService {
       next();
     } catch {
       res.status(401).json({ error: "Authentication failed" });
+    }
+  }
+
+  async authenticateRequest(
+    request: globalThis.Request,
+  ): Promise<AuthContext | globalThis.Response> {
+    if (!this.config.enabled) {
+      return { user: undefined, admins: [], auth_enabled: false };
+    }
+    const method = request.method;
+    if (method === "OPTIONS" || method === "GET") {
+      return {
+        user: undefined,
+        admins: this.config.admins,
+        auth_enabled: true,
+      };
+    }
+    const token = request.headers.get("authorization")?.split(" ")[1];
+    if (!token) {
+      return {
+        user: undefined,
+        admins: this.config.admins,
+        auth_enabled: true,
+      };
+    }
+    try {
+      const verified = await this.verifyToken(token);
+      if (!verified) {
+        return new Response(JSON.stringify({ error: "Verification failed" }), {
+          status: 401,
+        });
+      }
+      const user = this.extractUserFromVerification(verified);
+      if (!user) {
+        return new Response(JSON.stringify({ error: "Missing credentials" }), {
+          status: 401,
+        });
+      }
+      if (!this.config.skipCredentialVerification) {
+        const credentialExists = await this.verifyCredentialExists(
+          user.address,
+          user.chainId,
+          verified.issuer,
+        );
+        if (!credentialExists) {
+          return new Response(
+            JSON.stringify({ error: "Credentials no longer valid" }),
+            { status: 401 },
+          );
+        }
+      }
+      return { user, admins: this.config.admins, auth_enabled: true };
+    } catch {
+      return new Response(JSON.stringify({ error: "Authentication failed" }), {
+        status: 401,
+      });
     }
   }
 
