@@ -18,12 +18,15 @@
 
 import { buildSubgraphSchema } from "@apollo/subgraph";
 import { gql } from "graphql-tag";
-import type { GraphQLSchema } from "graphql";
+import type { DocumentNode, GraphQLSchema } from "graphql";
+import type { IncomingMessage, ServerResponse } from "node:http";
 import { createServer } from "node:http";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type {
+  FetchHandler,
   GatewayContextFactory,
   IGatewayAdapter,
+  SubgraphDefinition,
 } from "../../src/graphql/gateway/types.js";
 import type { Context } from "../../src/graphql/types.js";
 
@@ -111,6 +114,13 @@ export function runGatewayAdapterContractTests(
       await h.adapter.start(httpServer.server);
       await h.adapter.createHandler(makeSchema(), noopCtx);
       await h.adapter.createHandler(makeSchema(), noopCtx);
+      await expect(h.adapter.stop()).resolves.toBeUndefined();
+    });
+
+    it("stop() is safe to call multiple times", async () => {
+      await h.adapter.start(httpServer.server);
+      await h.adapter.createHandler(makeSchema(), noopCtx);
+      await h.adapter.stop();
       await expect(h.adapter.stop()).resolves.toBeUndefined();
     });
   });
@@ -223,6 +233,224 @@ export function runGatewayAdapterContractTests(
       expect(bodyB.data.hello).toBe("from-b");
     });
   });
+
+  // ── createSupergraphHandler + updateSupergraph ────────────────────────────
+  //
+  // These tests require real HTTP subgraph servers because the federation
+  // gateway uses RemoteGraphQLDataSource to route requests by URL.
+  //
+  // Helper: wrap a FetchHandler in a real Node HTTP server so the gateway
+  // can reach it via a localhost URL.
+  async function serveHandler(handler: FetchHandler) {
+    const server = createServer(
+      async (nodeReq: IncomingMessage, nodeRes: ServerResponse) => {
+        const chunks: Buffer[] = [];
+        for await (const chunk of nodeReq as AsyncIterable<Buffer>) {
+          chunks.push(chunk);
+        }
+        const body = Buffer.concat(chunks);
+        const url = `http://127.0.0.1${nodeReq.url ?? "/"}`;
+        const fetchReq = new Request(url, {
+          method: nodeReq.method ?? "GET",
+          headers: nodeReq.headers as Record<string, string>,
+          ...(body.length > 0 ? { body } : {}),
+        });
+        try {
+          const fetchRes = await handler(fetchReq);
+          nodeRes.statusCode = fetchRes.status;
+          fetchRes.headers.forEach((value, key) =>
+            nodeRes.setHeader(key, value),
+          );
+          nodeRes.end(await fetchRes.text());
+        } catch {
+          nodeRes.statusCode = 500;
+          nodeRes.end("Internal server error");
+        }
+      },
+    );
+    await new Promise<void>((resolve) =>
+      server.listen(0, "127.0.0.1", resolve),
+    );
+    const { port } = server.address() as { port: number };
+    return {
+      url: `http://127.0.0.1:${port}`,
+      close: () =>
+        new Promise<void>((resolve) => server.close(() => resolve())),
+    };
+  }
+
+  describe(`IGatewayAdapter contract (${adapterName}) – createSupergraphHandler`, () => {
+    let h: GatewayAdapterHarness;
+    let httpServer: ReturnType<typeof makeHttpServer>;
+    const subServers: Array<{ close: () => Promise<void> }> = [];
+
+    beforeEach(async () => {
+      h = await createHarness();
+      httpServer = makeHttpServer();
+      await h.adapter.start(httpServer.server);
+    });
+    afterEach(async () => {
+      await Promise.all(subServers.map((s) => s.close()));
+      subServers.length = 0;
+      await httpServer.close();
+      await h.close();
+    });
+
+    // Spin up a real HTTP subgraph server backed by the adapter's createHandler.
+    async function makeSubServer(
+      fieldName = "hello",
+      returnValue = "world",
+    ): Promise<SubgraphDefinition> {
+      const typeDefs: DocumentNode = gql`
+        type Query {
+          ${fieldName}: String
+        }
+      `;
+      const schema: GraphQLSchema = buildSubgraphSchema({
+        typeDefs,
+        resolvers: { Query: { [fieldName]: () => returnValue } },
+      });
+      const handler = await h.adapter.createHandler(schema, noopCtx);
+      const sub = await serveHandler(handler);
+      subServers.push(sub);
+      return { name: fieldName, typeDefs, url: sub.url };
+    }
+
+    it("returns a callable FetchHandler", async () => {
+      const sub = await makeSubServer();
+      const handler = await h.adapter.createSupergraphHandler(
+        () => [sub],
+        httpServer.server,
+        noopCtx,
+      );
+      expect(typeof handler).toBe("function");
+    });
+
+    it("the supergraph handler executes a federated query", async () => {
+      const sub = await makeSubServer("hello", "world");
+      const handler = await h.adapter.createSupergraphHandler(
+        () => [sub],
+        httpServer.server,
+        noopCtx,
+      );
+
+      const res = await handler(
+        new Request("http://localhost/graphql", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ query: "{ hello }" }),
+        }),
+      );
+
+      expect(res).toBeInstanceOf(Response);
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as { data: { hello: string } };
+      expect(body.data.hello).toBe("world");
+    });
+
+    it("the supergraph handler passes context factory the Fetch Request", async () => {
+      let capturedRequest: Request | undefined;
+      const ctxFactory: GatewayContextFactory<Context> = async (req) => {
+        capturedRequest = req;
+        return { headers: {}, db: null };
+      };
+
+      const sub = await makeSubServer();
+      const handler = await h.adapter.createSupergraphHandler(
+        () => [sub],
+        httpServer.server,
+        ctxFactory,
+      );
+
+      await handler(
+        new Request("http://localhost/graphql", {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            "x-token": "test-value",
+          },
+          body: JSON.stringify({ query: "{ hello }" }),
+        }),
+      );
+
+      expect(capturedRequest?.headers.get("x-token")).toBe("test-value");
+    });
+
+    it("calling createSupergraphHandler() twice throws", async () => {
+      const sub = await makeSubServer();
+      await h.adapter.createSupergraphHandler(
+        () => [sub],
+        httpServer.server,
+        noopCtx,
+      );
+      await expect(
+        h.adapter.createSupergraphHandler(
+          () => [sub],
+          httpServer.server,
+          noopCtx,
+        ),
+      ).rejects.toThrow();
+    });
+
+    it("stop() after createSupergraphHandler() resolves without throwing", async () => {
+      const sub = await makeSubServer();
+      await h.adapter.createSupergraphHandler(
+        () => [sub],
+        httpServer.server,
+        noopCtx,
+      );
+      await expect(h.adapter.stop()).resolves.toBeUndefined();
+    });
+  });
+
+  // ── updateSupergraph ───────────────────────────────────────────────────────
+
+  describe(`IGatewayAdapter contract (${adapterName}) – updateSupergraph`, () => {
+    let h: GatewayAdapterHarness;
+    let httpServer: ReturnType<typeof makeHttpServer>;
+    const subServers: Array<{ close: () => Promise<void> }> = [];
+
+    beforeEach(async () => {
+      h = await createHarness();
+      httpServer = makeHttpServer();
+      await h.adapter.start(httpServer.server);
+    });
+    afterEach(async () => {
+      await Promise.all(subServers.map((s) => s.close()));
+      subServers.length = 0;
+      await httpServer.close();
+      await h.close();
+    });
+
+    it("updateSupergraph() is a no-op before createSupergraphHandler()", async () => {
+      await expect(h.adapter.updateSupergraph()).resolves.toBeUndefined();
+    });
+
+    it("updateSupergraph() resolves after createSupergraphHandler()", async () => {
+      const typeDefs: DocumentNode = gql`
+        type Query {
+          hello: String
+        }
+      `;
+      const schema: GraphQLSchema = buildSubgraphSchema({
+        typeDefs,
+        resolvers: { Query: { hello: () => "world" } },
+      });
+      const handler = await h.adapter.createHandler(schema, noopCtx);
+      const sub = await serveHandler(handler);
+      subServers.push(sub);
+
+      await h.adapter.createSupergraphHandler(
+        () => [{ name: "hello", typeDefs, url: sub.url }],
+        httpServer.server,
+        noopCtx,
+      );
+
+      await expect(h.adapter.updateSupergraph()).resolves.toBeUndefined();
+    });
+  });
+
+  // ── lifecycle (stop after createSupergraphHandler) ─────────────────────────
 
   // ── attachWebSocket ────────────────────────────────────────────────────────
   // Skipped in the Vitest environment because graphql-ws/use/ws is blocked by

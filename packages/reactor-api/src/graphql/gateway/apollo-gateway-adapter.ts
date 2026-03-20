@@ -1,5 +1,18 @@
+import type {
+  GetDataSourceFunction,
+  GraphQLDataSourceProcessOptions,
+  ServiceDefinition,
+  SubgraphHealthCheckFunction,
+  SupergraphSdlUpdateFunction,
+} from "@apollo/gateway";
+import {
+  ApolloGateway,
+  LocalCompose,
+  RemoteGraphQLDataSource,
+} from "@apollo/gateway";
 import { ApolloServer, HeaderMap } from "@apollo/server";
 import { ApolloServerPluginInlineTraceDisabled } from "@apollo/server/plugin/disabled";
+import { ApolloServerPluginDrainHttpServer } from "@apollo/server/plugin/drainHttpServer";
 import { ApolloServerPluginLandingPageLocalDefault } from "@apollo/server/plugin/landingPage/default";
 import type { ILogger } from "document-drive";
 import type { GraphQLSchema } from "graphql";
@@ -11,13 +24,34 @@ import type {
   FetchHandler,
   GatewayContextFactory,
   IGatewayAdapter,
+  SubgraphDefinition,
   WsContextFactory,
   WsDisposer,
 } from "./types.js";
 
+// Forwards the incoming authorization header to federated subgraph requests.
+class AuthenticatedDataSource extends RemoteGraphQLDataSource {
+  willSendRequest(options: GraphQLDataSourceProcessOptions) {
+    const { authorization } = options.context.headers as {
+      authorization: string;
+    };
+    if (authorization && options?.request.http) {
+      options.request.http.headers.set("authorization", authorization);
+    }
+  }
+}
+
 export class ApolloGatewayAdapter implements IGatewayAdapter<Context> {
   readonly #logger: ILogger;
   readonly #servers: ApolloServer<Context>[] = [];
+
+  #supergraphServer: ApolloServer<Context> | null = null;
+  #gatewayOptions: {
+    update: SupergraphSdlUpdateFunction;
+    healthCheck: SubgraphHealthCheckFunction;
+    getDataSource: GetDataSourceFunction;
+  } | null = null;
+  #getSubgraphs: (() => SubgraphDefinition[]) | null = null;
 
   constructor(logger: ILogger) {
     this.#logger = logger;
@@ -46,6 +80,63 @@ export class ApolloGatewayAdapter implements IGatewayAdapter<Context> {
     return createApolloFetchHandler(server, contextFactory);
   }
 
+  async createSupergraphHandler(
+    getSubgraphs: () => SubgraphDefinition[],
+    httpServer: http.Server,
+    contextFactory: GatewayContextFactory<Context>,
+  ): Promise<FetchHandler> {
+    if (this.#supergraphServer) {
+      throw new Error("Supergraph server is already running");
+    }
+
+    this.#getSubgraphs = getSubgraphs;
+
+    const gateway = new ApolloGateway({
+      supergraphSdl: async (options) => {
+        this.#gatewayOptions = options;
+        return await this.#buildSupergraphSdl();
+      },
+      buildService: (serviceConfig) =>
+        new AuthenticatedDataSource(serviceConfig),
+    });
+
+    this.#supergraphServer = new ApolloServer<Context>({
+      gateway,
+      logger: this.#logger,
+      introspection: true,
+      plugins: [
+        ApolloServerPluginDrainHttpServer({ httpServer }),
+        ApolloServerPluginInlineTraceDisabled(),
+        ApolloServerPluginLandingPageLocalDefault(),
+      ],
+    });
+
+    await this.#supergraphServer.start();
+    return createApolloFetchHandler(this.#supergraphServer, contextFactory);
+  }
+
+  async updateSupergraph(): Promise<void> {
+    if (!this.#gatewayOptions || !this.#getSubgraphs) {
+      // Not yet initialized - no-op.
+      return;
+    }
+    const { supergraphSdl } = await this.#buildSupergraphSdl();
+    this.#gatewayOptions.update(supergraphSdl);
+  }
+
+  async #buildSupergraphSdl() {
+    if (!this.#gatewayOptions || !this.#getSubgraphs) {
+      throw new Error("Gateway is not ready");
+    }
+    const serviceList: ServiceDefinition[] = this.#getSubgraphs().map((s) => ({
+      name: s.name,
+      typeDefs: s.typeDefs,
+      url: s.url,
+    }));
+    const localCompose = new LocalCompose({ localServiceList: serviceList });
+    return localCompose.initialize(this.#gatewayOptions);
+  }
+
   attachWebSocket(
     wsServer: WebSocketServer,
     schema: GraphQLSchema,
@@ -71,6 +162,13 @@ export class ApolloGatewayAdapter implements IGatewayAdapter<Context> {
   async stop(): Promise<void> {
     await Promise.all(this.#servers.map((s) => s.stop()));
     this.#servers.length = 0;
+
+    if (this.#supergraphServer) {
+      await this.#supergraphServer.stop();
+      this.#supergraphServer = null;
+    }
+    this.#gatewayOptions = null;
+    this.#getSubgraphs = null;
   }
 }
 
