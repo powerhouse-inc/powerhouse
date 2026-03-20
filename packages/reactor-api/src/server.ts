@@ -43,6 +43,7 @@ import { childLogger, type ILogger } from "document-model";
 import { config, DefaultCoreSubgraphs } from "./config.js";
 import { AuthSubgraph } from "./graphql/auth/subgraph.js";
 import { GraphQLManager } from "./graphql/graphql-manager.js";
+import { ExpressHttpAdapter } from "./graphql/gateway/express-http-adapter.js";
 import { renderGraphqlPlayground } from "./graphql/playground.js";
 import { ReactorSubgraph } from "./graphql/reactor/subgraph.js";
 import type { SubgraphClass } from "./graphql/types.js";
@@ -165,9 +166,11 @@ async function setupGraphQLManager(
   port?: number,
   authorizationService?: AuthorizationService,
 ): Promise<GraphQLManager> {
+  const router = express.Router();
+  const httpAdapter = new ExpressHttpAdapter(router);
+
   const graphqlManager = new GraphQLManager(
     config.basePath,
-    app,
     httpServer,
     wsServer,
     client,
@@ -175,6 +178,7 @@ async function setupGraphQLManager(
     analyticsStore,
     syncManager,
     logger,
+    httpAdapter,
     {
       enabled: auth?.enabled ?? false,
       admins: auth?.admins ?? [],
@@ -196,6 +200,21 @@ async function setupGraphQLManager(
   }
 
   await graphqlManager.updateRouter();
+
+  // Mount the router on the app after init so all handlers are registered.
+  // Inject auth context fields from the Express request into GraphQL context.
+  app.use("/", (req, res, next) => {
+    graphqlManager.setAdditionalContextFields({
+      user: req.user,
+      isAdmin: (address: string) =>
+        !req.auth_enabled
+          ? true
+          : (req.admins
+              ?.map((a) => a.toLowerCase())
+              .includes(address.toLowerCase() ?? "") ?? false),
+    });
+    router(req, res, next);
+  });
 
   return graphqlManager;
 }
