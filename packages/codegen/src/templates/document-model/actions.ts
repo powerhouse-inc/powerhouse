@@ -46,7 +46,7 @@ export const documentModelRootActionsFileTemplate = (
   v: DocumentModelTemplateInputs,
 ) =>
   ts`
-import { baseActions } from "@powerhousedao/shared/document-model";
+import { baseActions } from "document-model";
 ${buildModuleActionsImports(v.modules, v.camelCaseDocumentType)}
 
 /** Actions for the ${v.pascalCaseDocumentType} document model */

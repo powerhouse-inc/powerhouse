@@ -5,7 +5,7 @@ export const documentModelGenUtilsTemplate = (v: DocumentModelTemplateInputs) =>
   ts`
 import type {
     DocumentModelUtils,
-} from "@powerhousedao/shared/document-model";
+} from "document-model";
 import {
     baseCreateDocument,
     baseSaveToFileHandle,
