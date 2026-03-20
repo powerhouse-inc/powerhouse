@@ -160,6 +160,7 @@ async function setupGraphQLManager(
     syncManager,
     logger,
     httpAdapter,
+    createGatewayAdapter("apollo", logger),
     {
       enabled: auth?.enabled ?? false,
       admins: auth?.admins ?? [],
@@ -170,7 +171,6 @@ async function setupGraphQLManager(
     },
     port,
     authorizationService,
-    createGatewayAdapter("apollo", logger),
   );
 
   await graphqlManager.init(subgraphs.core, authFetchMiddleware);
@@ -357,13 +357,12 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   httpAdapter.getRoute("/health", () => new Response("OK", { status: 200 }));
 
   // Explorer route
-  httpAdapter.getRoute(`${config.basePath}/explorer/:endpoint?`, (request) => {
+  const explorerPrefix = `${config.basePath}/explorer`;
+  httpAdapter.getRoute(`${explorerPrefix}/:endpoint?`, (request) => {
     const url = new URL(request.url);
-    const lastSegment = url.pathname.split("/").pop() ?? "";
-    const endpoint =
-      lastSegment === "explorer" || lastSegment === ""
-        ? "/graphql"
-        : `/${lastSegment}`;
+    // Strip the prefix to find the optional :endpoint segment
+    const suffix = url.pathname.slice(explorerPrefix.length).replace(/^\//, "");
+    const endpoint = suffix ? `/${suffix}` : "/graphql";
     const query = url.searchParams.get("query") ?? undefined;
     return new Response(renderGraphqlPlayground(endpoint, query), {
       headers: { "Content-Type": "text/html" },

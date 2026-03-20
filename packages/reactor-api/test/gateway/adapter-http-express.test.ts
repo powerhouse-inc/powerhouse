@@ -1,4 +1,3 @@
-import express from "express";
 import { ExpressHttpAdapter } from "../../src/graphql/gateway/adapter-http-express.js";
 import {
   runHttpAdapterContractTests,
@@ -8,8 +7,7 @@ import {
 // ─── Express harness factory ─────────────────────────────────────────────────
 
 async function createExpressHarness(): Promise<HttpAdapterHarness> {
-  const app = express();
-  const adapter = new ExpressHttpAdapter(app);
+  const adapter = new ExpressHttpAdapter();
   adapter.setupMiddleware({});
 
   const httpServer = await adapter.listen(0);
@@ -22,9 +20,6 @@ async function createExpressHarness(): Promise<HttpAdapterHarness> {
       new Promise<void>((resolve, reject) =>
         httpServer.close((err) => (err ? reject(err) : resolve())),
       ),
-    respondWithJson: (res, data) => {
-      (res as express.Response).json(data);
-    },
   };
 }
 

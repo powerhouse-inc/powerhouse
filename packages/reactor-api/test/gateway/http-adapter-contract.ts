@@ -30,12 +30,6 @@ export type HttpAdapterHarness = {
   url: string;
   /** Shut down the server and release the port. */
   close: () => Promise<void>;
-  /**
-   * Write a 200 JSON response to the framework-native response object
-   * received in a get() handler. Adapters differ here (express.Response,
-   * FastifyReply, etc.), so the harness provides the implementation.
-   */
-  respondWithJson: (res: unknown, data: unknown) => void;
 };
 
 export type HttpAdapterHarnessFactory = () => Promise<HttpAdapterHarness>;
@@ -67,6 +61,47 @@ export function runHttpAdapterContractTests(
   adapterName: string,
   createHarness: HttpAdapterHarnessFactory,
 ): void {
+  // ── getRoute() ─────────────────────────────────────────────────────────────
+
+  describe(`IHttpAdapter contract (${adapterName}) – getRoute()`, () => {
+    let h: HttpAdapterHarness;
+
+    beforeEach(async () => {
+      h = await createHarness();
+    });
+    afterEach(async () => {
+      await h.close();
+    });
+
+    it("serves a GET request registered with getRoute()", async () => {
+      h.adapter.getRoute("/health", () => new Response("OK", { status: 200 }));
+
+      const res = await fetch(`${h.url}/health`);
+      expect(res.status).toBe(200);
+      expect(await res.text()).toBe("OK");
+    });
+
+    it("passes query-string parameters through to the handler", async () => {
+      h.adapter.getRoute("/search", (req) => {
+        const q = new URL(req.url).searchParams.get("q") ?? "";
+        return new Response(q, { status: 200 });
+      });
+
+      const res = await fetch(`${h.url}/search?q=hello`);
+      expect(await res.text()).toBe("hello");
+    });
+
+    it("writes handler response headers to the HTTP response", async () => {
+      h.adapter.getRoute(
+        "/meta",
+        () => new Response("ok", { headers: { "x-test": "value" } }),
+      );
+
+      const res = await fetch(`${h.url}/meta`);
+      expect(res.headers.get("x-test")).toBe("value");
+    });
+  });
+
   // ── routing ────────────────────────────────────────────────────────────────
 
   describe(`IHttpAdapter contract (${adapterName}) – routing`, () => {
@@ -273,43 +308,6 @@ export function runHttpAdapterContractTests(
         body: "{}",
       });
       expect(res.status).toBe(500);
-    });
-  });
-
-  // ── get() REST endpoint ────────────────────────────────────────────────────
-
-  describe(`IHttpAdapter contract (${adapterName}) – get()`, () => {
-    let h: HttpAdapterHarness;
-
-    beforeEach(async () => {
-      h = await createHarness();
-    });
-    afterEach(async () => {
-      await h.close();
-    });
-
-    it("registers a GET route and passes URL params to the handler", async () => {
-      const handler = vi.fn(
-        (_params: Record<string, string>, _req: unknown, res: unknown) => {
-          h.respondWithJson(res, { ok: true });
-        },
-      );
-      h.adapter.get("/d/:driveId", handler);
-
-      const res = await fetch(`${h.url}/d/my-drive-123`);
-      expect(res.status).toBe(200);
-      expect(handler).toHaveBeenCalledOnce();
-      const [params] = handler.mock.calls[0];
-      expect(params.driveId).toBe("my-drive-123");
-    });
-
-    it("GET route does not respond to POST requests", async () => {
-      h.adapter.get("/d/:driveId", (_params, _req, res) => {
-        h.respondWithJson(res, { ok: true });
-      });
-
-      const res = await fetch(`${h.url}/d/some-drive`, { method: "POST" });
-      expect(res.status).not.toBe(200);
     });
   });
 }

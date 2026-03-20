@@ -47,6 +47,7 @@ export class AuthService {
 
   /**
    * Middleware function to authenticate requests
+   * @deprecated Use {@link authenticateRequest} with the Fetch API instead.
    */
   async authenticate(
     req: AuthenticatedRequest,

@@ -1,11 +1,11 @@
 import type { AuthContext, AuthService } from "../../services/auth.service.js";
 import type { FetchHandler } from "./types.js";
 
-export type { AuthContext };
 export type AuthFetchMiddleware = (handler: FetchHandler) => FetchHandler;
 
 const authContextMap = new WeakMap<globalThis.Request, AuthContext>();
 
+/** Internal — only `graphql-manager.ts` should call this. */
 export function getAuthContext(
   request: globalThis.Request,
 ): AuthContext | undefined {
