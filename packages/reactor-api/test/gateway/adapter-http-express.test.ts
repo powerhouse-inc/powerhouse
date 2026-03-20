@@ -1,5 +1,5 @@
 import express from "express";
-import { ExpressHttpAdapter } from "../../src/graphql/gateway/express-http-adapter.js";
+import { ExpressHttpAdapter } from "../../src/graphql/gateway/adapter-http-express.js";
 import {
   runHttpAdapterContractTests,
   type HttpAdapterHarness,
