@@ -113,6 +113,7 @@ function makeMockHttpAdapter() {
       mounts.set(p, h);
     }),
     getRoute: vi.fn(),
+    mountRawMiddleware: vi.fn(),
     listen: vi.fn().mockResolvedValue({}),
     handle: {},
   };
