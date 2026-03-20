@@ -1,5 +1,5 @@
 import type { CorsOptions } from "cors";
-import type { GraphQLSchema } from "graphql";
+import type { DocumentNode, GraphQLSchema } from "graphql";
 import type http from "node:http";
 import type { WebSocketServer } from "ws";
 
@@ -17,6 +17,16 @@ export type WsDisposer = { dispose: () => void | Promise<void> };
 // A Fetch API handler - framework agnostic
 export type FetchHandler = (request: Request) => Promise<Response>;
 
+/**
+ * A framework-agnostic description of a federated subgraph service.
+ * Used by IGatewayAdapter.createSupergraphHandler() to compose the supergraph SDL.
+ */
+export type SubgraphDefinition = {
+  name: string;
+  typeDefs: DocumentNode;
+  url: string;
+};
+
 export interface IGatewayAdapter<TContext = unknown> {
   /** One-time startup. */
   start(httpServer: http.Server): Promise<void>;
@@ -29,6 +39,23 @@ export interface IGatewayAdapter<TContext = unknown> {
     schema: GraphQLSchema,
     contextFactory: GatewayContextFactory<TContext>,
   ): Promise<FetchHandler>;
+
+  /**
+   * Create a federation gateway handler that composes all subgraphs into a supergraph.
+   * getSubgraphs is called eagerly (during setup) and again on every updateSupergraph() call.
+   */
+  createSupergraphHandler(
+    getSubgraphs: () => SubgraphDefinition[],
+    httpServer: http.Server,
+    contextFactory: GatewayContextFactory<TContext>,
+  ): Promise<FetchHandler>;
+
+  /**
+   * Recompose the supergraph SDL from the current subgraph list and push the update
+   * to the running federation gateway. No-op if createSupergraphHandler() has not
+   * been called yet.
+   */
+  updateSupergraph(): Promise<void>;
 
   /** Attach WebSocket subscriptions. Returns a disposer. */
   attachWebSocket(

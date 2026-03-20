@@ -1,19 +1,3 @@
-import type {
-  GetDataSourceFunction,
-  GraphQLDataSourceProcessOptions,
-  ServiceDefinition,
-  SubgraphHealthCheckFunction,
-  SupergraphSdlUpdateFunction,
-} from "@apollo/gateway";
-import {
-  ApolloGateway,
-  LocalCompose,
-  RemoteGraphQLDataSource,
-} from "@apollo/gateway";
-import { ApolloServer } from "@apollo/server";
-import { ApolloServerPluginInlineTraceDisabled } from "@apollo/server/plugin/disabled";
-import { ApolloServerPluginDrainHttpServer } from "@apollo/server/plugin/drainHttpServer";
-import { ApolloServerPluginLandingPageLocalDefault } from "@apollo/server/plugin/landingPage/default";
 import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import type { IReactorClient, ISyncManager } from "@powerhousedao/reactor";
 import type {
@@ -30,7 +14,6 @@ import { debounce, responseForDrive } from "document-drive";
 import type { DocumentModelModule } from "document-model";
 import type express from "express";
 import { Router } from "express";
-import type { GraphQLSchema } from "graphql";
 import type { IncomingHttpHeaders } from "http";
 import type http from "node:http";
 import path from "node:path";
@@ -47,29 +30,16 @@ import {
 import { DocumentModelSubgraph } from "./document-model-subgraph.js";
 import { createGraphQLSSEHandler } from "./sse.js";
 import { useServer } from "./websocket.js";
-import {
-  ApolloGatewayAdapter,
-  createApolloFetchHandler,
-} from "./gateway/apollo-gateway-adapter.js";
+import { ApolloGatewayAdapter } from "./gateway/apollo-gateway-adapter.js";
 import { ExpressHttpAdapter } from "./gateway/express-http-adapter.js";
 import type {
   FetchHandler,
   GatewayContextFactory,
   IGatewayAdapter,
   IHttpAdapter,
+  SubgraphDefinition,
   WsDisposer,
 } from "./gateway/types.js";
-
-class AuthenticatedDataSource extends RemoteGraphQLDataSource {
-  willSendRequest(options: GraphQLDataSourceProcessOptions) {
-    const { authorization } = options.context.headers as {
-      authorization: string;
-    };
-    if (authorization && options?.request.http) {
-      options.request.http.headers.set("authorization", authorization);
-    }
-  }
-}
 
 const DOCUMENT_MODELS_TO_EXCLUDE: string[] = [];
 
@@ -134,13 +104,7 @@ export class GraphQLManager {
   private readonly subgraphs = new Map<string, ISubgraph[]>();
   private authService: AuthService | null = null;
 
-  private coreApolloServer: ApolloServer<Context> | null = null;
   private readonly subgraphWsDisposers = new Map<string, WsDisposer>();
-  private gatewayOptions: {
-    update: SupergraphSdlUpdateFunction;
-    healthCheck: SubgraphHealthCheckFunction;
-    getDataSource: GetDataSourceFunction;
-  } | null = null;
 
   /** Cached document models for schema generation - updated on init and regenerate */
   private cachedDocumentModels: DocumentModelModule[] = [];
@@ -254,7 +218,7 @@ export class GraphQLManager {
       await this.#setupDocumentModelSubgraphs("graphql", models);
     }
 
-    await this.#createApolloGateway();
+    await this.#createSupergraphGateway();
 
     return this.updateRouter();
   }
@@ -431,14 +395,11 @@ export class GraphQLManager {
 
     await this.#setupSubgraphs(this.subgraphs);
 
-    if (this.gatewayOptions) {
-      try {
-        const { supergraphSdl } = await this.#buildSupergrahSdl();
-        this.gatewayOptions.update(supergraphSdl);
-        this.logger.debug("Updated Apollo Gateway supergraph");
-      } catch (error) {
-        this.logger.error("Failed to update Apollo Gateway supergraph", error);
-      }
+    try {
+      await this.gatewayAdapter.updateSupergraph();
+      this.logger.debug("Updated Apollo Gateway supergraph");
+    } catch (error) {
+      this.logger.error("Failed to update Apollo Gateway supergraph", error);
     }
 
     // Refresh the supergraph-level SSE handler so it picks up
@@ -520,15 +481,8 @@ export class GraphQLManager {
     }
     this.subgraphWsDisposers.clear();
 
-    // Stop per-subgraph Apollo servers managed by the gateway adapter.
+    // Stop all Apollo servers (per-subgraph + federation gateway) via the adapter.
     await this.gatewayAdapter.stop();
-
-    // Stop the federation gateway server explicitly. It also drains via
-    // ApolloServerPluginDrainHttpServer when the HTTP server closes, but
-    // explicit is better.
-    if (this.coreApolloServer) {
-      await this.coreApolloServer.stop();
-    }
 
     return new Promise((resolve) => {
       this.wsServer.close(() => {
@@ -645,67 +599,28 @@ export class GraphQLManager {
     );
   }
 
-  async #buildSupergrahSdl() {
-    if (!this.gatewayOptions) {
-      throw new Error("Gateway is not ready");
-    }
+  #getSubgraphDefinitions(): SubgraphDefinition[] {
     const subgraphs = this.#getAllSubgraphs();
 
     const herokuOrLocal = process.env.HEROKU_APP_DEFAULT_DOMAIN_NAME
       ? `https://${process.env.HEROKU_APP_DEFAULT_DOMAIN_NAME}`
       : `http://localhost:${this.port}`;
 
-    const serviceList: ServiceDefinition[] = Array.from(
-      subgraphs.entries(),
-    ).map(([subgraphPath, subgraph]) => ({
+    return Array.from(subgraphs.entries()).map(([subgraphPath, subgraph]) => ({
       name: subgraphPath.replace("/", ":"),
       typeDefs: this.#buildSubgraphSchemaModule(subgraph).typeDefs,
       url: `${herokuOrLocal}${subgraphPath}`,
     }));
-
-    const localCompose = new LocalCompose({
-      localServiceList: serviceList,
-    });
-    return await localCompose.initialize(this.gatewayOptions!);
   }
 
-  async #createApolloGateway() {
-    const gateway = new ApolloGateway({
-      supergraphSdl: async (options) => {
-        this.gatewayOptions = options;
-        return await this.#buildSupergrahSdl();
-      },
-      buildService: (serviceConfig) => {
-        return new AuthenticatedDataSource(serviceConfig);
-      },
-    });
-
-    if (this.coreApolloServer) {
-      throw new Error("Supergrah server is already running");
-    }
-
-    this.coreApolloServer = new ApolloServer<Context>({
-      gateway,
-      logger: this.logger,
-      introspection: true,
-      plugins: [
-        ApolloServerPluginDrainHttpServer({ httpServer: this.httpServer }),
-        ApolloServerPluginInlineTraceDisabled(),
-        ApolloServerPluginLandingPageLocalDefault(),
-      ],
-    });
-
-    await this.coreApolloServer.start();
-
+  async #createSupergraphGateway() {
     const superGraphPath = path.join(this.path, "graphql");
-    // The federation gateway server has its own lifecycle: it is started above
-    // with await and drained via ApolloServerPluginDrainHttpServer. We wrap it
-    // directly rather than going through gatewayAdapter.createHandler(), which
-    // would register it in the adapter's stop() bookkeeping (wrong lifecycle).
-    const fetchHandler: FetchHandler = createApolloFetchHandler(
-      this.coreApolloServer,
-      this.#makeContextFactory(),
-    );
+    const fetchHandler: FetchHandler =
+      await this.gatewayAdapter.createSupergraphHandler(
+        () => this.#getSubgraphDefinitions(),
+        this.httpServer,
+        this.#makeContextFactory(),
+      );
     this.httpAdapter.mount(superGraphPath, fetchHandler);
 
     // Set up SSE subscriptions at the supergraph level (/graphql/stream).
