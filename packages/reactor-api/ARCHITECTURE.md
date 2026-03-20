@@ -20,13 +20,14 @@ types that the rest of the system speaks.
 src/graphql/gateway/types.ts
 ```
 
-| Method                        | Purpose                                                                                                                                                                                                                      |
-| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `setupMiddleware(config)`     | Install CORS and body-parser. Called once during init.                                                                                                                                                                       |
-| `mount(path, handler, opts?)` | Register a `FetchHandler` at a path. `exact: false` (default) is an exact-path match stored in an internal dispatch map; `exact: true` is a prefix match (router `.use()` semantics).                                        |
-| `getRoute(path, handler)`     | Register a read-only GET route directly on the underlying app (used for `/health`, `/explorer`).                                                                                                                             |
-| `listen(port, tls?)`          | Start the HTTP server. Returns the `http.Server` so callers can attach WebSocket servers. Supports three TLS modes: `true` (devcert), `{ keyPath, certPath }` (files), `{ cert, key }` (in-memory buffers).                  |
-| `handle`                      | Read-only escape hatch returning the raw framework object (e.g. the Express `app`). Necessary for framework-specific integrations (Vite dev server middleware, SSE handlers) that have no framework-agnostic equivalent yet. |
+| Method                           | Purpose                                                                                                                                                                                                                       |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `setupMiddleware(config)`        | Install CORS and body-parser. Called once during init.                                                                                                                                                                        |
+| `mount(path, handler, opts?)`    | Register a `FetchHandler` at a path. `exact: false` (default) is an exact-path match stored in an internal dispatch map; `exact: true` is a prefix match (router `.use()` semantics).                                         |
+| `getRoute(path, handler)`        | Register a read-only GET route directly on the underlying app (used for `/health`, `/explorer`).                                                                                                                              |
+| `mountRawMiddleware(middleware)` | Mount a raw Connect/Express-compatible middleware function (e.g. the Vite dev server). The cast to the framework's native type is contained inside the adapter implementation; call sites need no framework-specific imports. |
+| `listen(port, tls?)`             | Start the HTTP server. Returns the `http.Server` so callers can attach WebSocket servers. Supports three TLS modes: `true` (devcert), `{ keyPath, certPath }` (files), `{ cert, key }` (in-memory buffers).                   |
+| `handle`                         | Read-only escape hatch returning the raw framework object (e.g. the Express `app`). Use only for integrations that have no framework-agnostic equivalent yet (e.g. Express-specific SSE handlers with a path argument).       |
 
 ### `IGatewayAdapter<TContext>`: GraphQL execution
 
@@ -209,6 +210,7 @@ upstream (`GraphQLManager`, `server.ts`, subgraphs) works against the interfaces
    - `setupMiddleware`: install `@fastify/cors` and body parsing
    - `mount`: register a Fastify route that converts `FastifyRequest` to a Fetch `Request`, calls the handler, and writes the Fetch `Response` back to `FastifyReply`
    - `getRoute`: register a GET route on the Fastify instance
+   - `mountRawMiddleware`: use `@fastify/middie` to mount the Connect-compatible middleware function
    - `listen`: call `fastify.listen({ port })` and return the underlying `http.Server` via `fastify.server`
    - `handle`: return the Fastify instance
 
