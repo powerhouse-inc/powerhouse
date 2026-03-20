@@ -1,3 +1,16 @@
+## 6.0.0-dev.102 (2026-03-20)
+
+### 🩹 Fixes
+
+- update workflow to use refname for tag in case it is not annotated, and provide a clear error message when there is no tag ([269758716](https://github.com/powerhouse-inc/powerhouse/commit/269758716))
+- **reactor:** fix issue where deleted docs were still being returned -- document-view should store isdeleted across all scopes ([709b4917c](https://github.com/powerhouse-inc/powerhouse/commit/709b4917c))
+- **builder-tools,reactor-browser:** bundling fixes ([59dfd75b6](https://github.com/powerhouse-inc/powerhouse/commit/59dfd75b6))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan
+
 ## 6.0.0-dev.101 (2026-03-20)
 
 ### 🚀 Features
