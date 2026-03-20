@@ -1,7 +1,7 @@
 import type { ILogger } from "document-drive";
 import type { Context } from "../types.js";
-import { ApolloGatewayAdapter } from "./apollo-gateway-adapter.js";
-import { createExpressHttpAdapter } from "./express-http-adapter.js";
+import { ApolloGatewayAdapter } from "./adapter-gateway-apollo.js";
+import { createExpressHttpAdapter } from "./adapter-http-express.js";
 import type { IGatewayAdapter, IHttpAdapter } from "./types.js";
 
 export type GatewayAdapterType = "apollo";

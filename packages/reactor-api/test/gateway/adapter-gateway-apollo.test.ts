@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   ApolloGatewayAdapter,
   createApolloFetchHandler,
-} from "../../src/graphql/gateway/apollo-gateway-adapter.js";
+} from "../../src/graphql/gateway/adapter-gateway-apollo.js";
 import type { GatewayContextFactory } from "../../src/graphql/gateway/types.js";
 import type { Context } from "../../src/graphql/types.js";
 import {
