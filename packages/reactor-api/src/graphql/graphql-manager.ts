@@ -348,7 +348,7 @@ export class GraphQLManager {
     // Document model subgraph instances are added to this.subgraphs above.
     // Their handlers are wired in _updateRouter() → #setupSubgraphs(this.subgraphs),
     // which is called at the end of init() via updateRouter(). We intentionally do
-    // NOT call #setupSubgraphs(this.coreSubgraphsMap) here — doing so would
+    // NOT call #setupSubgraphs(this.coreSubgraphsMap) here - doing so would
     // create duplicate Apollo servers for the same core-subgraph schemas, which
     // in the new IGatewayAdapter architecture hangs #waitForServer and blocks init().
   }
@@ -513,7 +513,23 @@ export class GraphQLManager {
 
   async shutdown(): Promise<void> {
     this.logger.info("Shutting down GraphQL Manager");
+
+    // Dispose per-subgraph WebSocket handlers before closing the WS server.
+    for (const disposer of this.subgraphWsDisposers.values()) {
+      await disposer.dispose();
+    }
+    this.subgraphWsDisposers.clear();
+
+    // Stop per-subgraph Apollo servers managed by the gateway adapter.
     await this.gatewayAdapter.stop();
+
+    // Stop the federation gateway server explicitly. It also drains via
+    // ApolloServerPluginDrainHttpServer when the HTTP server closes, but
+    // explicit is better.
+    if (this.coreApolloServer) {
+      await this.coreApolloServer.stop();
+    }
+
     return new Promise((resolve) => {
       this.wsServer.close(() => {
         this.logger.info("WebSocket server closed");
@@ -532,15 +548,12 @@ export class GraphQLManager {
         this.logger.debug(`Setting up subgraph ${subgraph.name}`);
         const subgraphPath = this.#getSubgraphPath(subgraph, supergraph);
         try {
-          // Skip if handler already cached — subgraphs are deduplicated by name
+          // Skip if handler already cached - subgraphs are deduplicated by name
           // in #addSubgraphInstance, so a cached path means the schema is unchanged.
           // This prevents unbounded schema/server creation across repeated
-          // _updateRouter() calls.
+          // _updateRouter() calls. The handler was already mounted on first setup,
+          // so no re-mount is needed.
           if (this.subgraphHandlerCache.has(subgraphPath)) {
-            this.httpAdapter.mount(
-              subgraphPath,
-              this.subgraphHandlerCache.get(subgraphPath)!,
-            );
             continue;
           }
 
@@ -685,6 +698,10 @@ export class GraphQLManager {
     await this.coreApolloServer.start();
 
     const superGraphPath = path.join(this.path, "graphql");
+    // The federation gateway server has its own lifecycle: it is started above
+    // with await and drained via ApolloServerPluginDrainHttpServer. We wrap it
+    // directly rather than going through gatewayAdapter.createHandler(), which
+    // would register it in the adapter's stop() bookkeeping (wrong lifecycle).
     const fetchHandler: FetchHandler = createApolloFetchHandler(
       this.coreApolloServer,
       this.#makeContextFactory(),

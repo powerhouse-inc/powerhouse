@@ -51,7 +51,7 @@ export class ExpressHttpAdapter implements IHttpAdapter {
         this.#serveFetchHandler(handler, req, res, next),
       );
     } else {
-      // Prefix match — stored in the internal dispatch map
+      // Exact match - stored in the internal dispatch map
       this.#handlers.set(path, {
         handler,
         matcher: match(path),
