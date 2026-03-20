@@ -50,6 +50,7 @@
   },
   "devDependencies": {
     "tsdown": "catalog:",
-    "tsx": "catalog:"
+    "tsx": "catalog:",
+    "vite-import-maps": "^0.2.1"
   }
 }

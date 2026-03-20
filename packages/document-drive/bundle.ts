@@ -11,11 +11,13 @@ await build({
 
 await build({
   entry: {
+    "cache/redis": "./src/cache/redis.mts",
     "storage/filesystem": "./src/storage/filesystem.mts",
-    "storage/prisma": "./src/storage/prisma/index.mts",
+    "storage/prisma/index": "./src/storage/prisma/index.mts",
   },
   outDir: "dist",
   platform: "node",
+  clean: false,
   dts: true,
   sourcemap: true,
 });

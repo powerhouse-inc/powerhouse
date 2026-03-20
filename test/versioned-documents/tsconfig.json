@@ -64,6 +64,9 @@
       "path": "../../packages/design-system"
     },
     {
+      "path": "../../packages/document-drive"
+    },
+    {
       "path": "../../packages/document-model"
     },
     {

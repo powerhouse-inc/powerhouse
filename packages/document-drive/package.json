@@ -13,13 +13,17 @@
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
     },
+    "./cache/redis": {
+      "import": "./dist/cache/redis.mjs",
+      "types": "./dist/cache/redis.d.mts"
+    },
     "./storage/filesystem": {
-      "import": "./dist/stora`ge/filesystem.mjs",
+      "import": "./dist/storage/filesystem.mjs",
       "types": "./dist/storage/filesystem.d.mts"
     },
     "./storage/prisma": {
-      "import": "./dist/storage/prisma.mjs",
-      "types": "./dist/storage/prisma.d.mts"
+      "import": "./dist/storage/prisma/index.mjs",
+      "types": "./dist/storage/prisma/index.d.mts"
     },
     "./storage/prisma/client": {
       "import": "./src/storage/prisma/client/default.js",

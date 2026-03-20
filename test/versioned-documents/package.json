@@ -71,24 +71,25 @@
   "dependencies": {
     "@powerhousedao/builder-tools": "workspace:*",
     "@powerhousedao/common": "workspace:*",
-    "@powerhousedao/shared": "workspace:*",
+    "@powerhousedao/connect": "workspace:*",
     "@powerhousedao/design-system": "workspace:*",
-    "document-model": "workspace:*",
-    "zod": "catalog:",
     "@powerhousedao/reactor-browser": "workspace:*",
+    "@powerhousedao/shared": "workspace:*",
+    "document-drive": "workspace:*",
+    "document-model": "workspace:*",
     "react": "catalog:",
     "react-dom": "catalog:",
-    "@powerhousedao/connect": "workspace:*"
+    "zod": "catalog:"
   },
   "devDependencies": {
-    "@tailwindcss/cli": "catalog:",
-    "tailwindcss": "catalog:",
     "@powerhousedao/ph-cli": "workspace:*",
+    "@tailwindcss/cli": "catalog:",
     "@testing-library/jest-dom": "^6.9.1",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "@vitejs/plugin-react": "catalog:",
+    "tailwindcss": "catalog:",
     "vite": "catalog:",
     "vitest": "catalog:"
   },

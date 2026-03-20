@@ -1,7 +1,6 @@
 import type { PowerhouseConfig } from "@powerhousedao/config";
 import { getConfig } from "@powerhousedao/config/node";
 import { loadConnectEnv, setConnectEnv } from "@powerhousedao/shared/connect";
-import { PACKAGES_DEPENDENCIES } from "@powerhousedao/shared/constants";
 import { sentryVitePlugin } from "@sentry/vite-plugin";
 import tailwind from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
@@ -9,25 +8,51 @@ import { join } from "node:path";
 import {
   createLogger,
   loadEnv,
-  type HtmlTagDescriptor,
   type InlineConfig,
   type PluginOption,
 } from "vite";
+import { viteImportMaps } from "vite-import-maps";
 import { createHtmlPlugin } from "vite-plugin-html";
 import tsconfigPaths from "vite-tsconfig-paths";
 import type { IConnectOptions } from "./types.js";
 
-const isLocalDev = true;
-const esmShUrl = isLocalDev ? "http://localhost:8080" : "https://esm.sh";
+/**
+ * Vite plugin that fixes vite-import-maps shared chunks for CJS packages.
+ * `export * from "react"` doesn't re-export named exports from CJS modules,
+ * so we intercept the virtual chunk and provide explicit named re-exports.
+ */
+function cjsNamedExportsPlugin(): PluginOption {
+  const VIRTUAL_PREFIX = "\0virtual:import-map-chunk";
+  const CJS_REEXPORTS: Record<string, string> = {
+    react: `export { Children, Component, Fragment, Profiler, PureComponent, StrictMode, Suspense, cloneElement, createContext, createElement, createRef, forwardRef, isValidElement, lazy, memo, startTransition, use, useCallback, useContext, useDebugValue, useDeferredValue, useEffect, useId, useImperativeHandle, useInsertionEffect, useLayoutEffect, useMemo, useReducer, useRef, useState, useSyncExternalStore, useTransition, version } from "react";\nexport { default } from "react";`,
+    "react-dom": `export { createPortal, flushSync, findDOMNode, hydrate, render, unmountComponentAtNode, version } from "react-dom";\nexport { default } from "react-dom";`,
+    "react_jsx-runtime": `export { jsx, jsxs, Fragment } from "react/jsx-runtime";\nexport { default } from "react/jsx-runtime";`,
+    "react-dom_client": `export { createRoot, hydrateRoot } from "react-dom/client";\nexport { default } from "react-dom/client";`,
+  };
 
-export const connectClientConfig = {
-  meta: [
+  return {
+    name: "cjs-named-exports-fix",
+    enforce: "pre",
+    load(id) {
+      if (!id.startsWith(VIRTUAL_PREFIX)) return;
+      const chunkName = id.slice(VIRTUAL_PREFIX.length + 1);
+      if (chunkName in CJS_REEXPORTS) {
+        return {
+          code: CJS_REEXPORTS[chunkName],
+          moduleSideEffects: "no-treeshake",
+        };
+      }
+    },
+  };
+}
+
+export function getConnectMetaTags(registryUrl: string | null = null) {
+  return [
     {
       tag: "meta",
       attrs: {
         "http-equiv": "Content-Security-Policy",
-        content:
-          "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://esm.sh http://localhost:8080; object-src 'none'; base-uri 'self';",
+        content: `script-src 'self' 'unsafe-inline' 'unsafe-eval' ${registryUrl || ""} ; object-src 'none'; base-uri 'self';`,
       },
     },
     {
@@ -97,8 +122,8 @@ export const connectClientConfig = {
           "Navigate your organisation’s toughest operational challenges and steer your contributors to success with Connect. A navigation, collaboration and reporting tool for decentralised and open organisation.",
       },
     },
-  ],
-} as const;
+  ] as const;
+}
 
 function viteLogger({
   silence,
@@ -166,44 +191,83 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
   const release = env.PH_CONNECT_SENTRY_RELEASE || env.PH_CONNECT_VERSION;
   const uploadSentrySourcemaps = authToken && org && project;
 
-  const powerhouseImportMap: Record<string, string> = {};
-
-  for (const name of PACKAGES_DEPENDENCIES) {
-    powerhouseImportMap[name] = `${esmShUrl}/${name}@dev`;
-    powerhouseImportMap[`${name}/`] = `${esmShUrl}/${name}@dev/`;
-  }
+  // Curated list of shared dependencies exposed via import map so that
+  // dynamically loaded registry packages resolve them from the host.
+  // Only packages actually imported at runtime in the browser belong here.
+  // Packages with only subpath exports (e.g. @powerhousedao/shared) need
+  // each subpath listed explicitly using the { name, entry } form.
+  const sharedImports: Array<string | { name: string; entry: string }> = [
+    "react",
+    "react-dom",
+    "react/jsx-runtime",
+    "react-dom/client",
+    "document-model",
+    "document-drive",
+    "@powerhousedao/common",
+    {
+      name: "@powerhousedao/common/utils",
+      entry: "@powerhousedao/common/utils",
+    },
+    "@powerhousedao/design-system",
+    {
+      name: "@powerhousedao/design-system/connect",
+      entry: "@powerhousedao/design-system/connect",
+    },
+    "@powerhousedao/reactor-browser",
+    {
+      name: "@powerhousedao/shared/processors",
+      entry: "@powerhousedao/shared/processors",
+    },
+    {
+      name: "@powerhousedao/shared/document-model",
+      entry: "@powerhousedao/shared/document-model",
+    },
+    {
+      name: "@powerhousedao/shared/document-drive",
+      entry: "@powerhousedao/shared/document-drive",
+    },
+    {
+      name: "@powerhousedao/shared/connect",
+      entry: "@powerhousedao/shared/connect",
+    },
+    {
+      name: "@powerhousedao/shared/registry",
+      entry: "@powerhousedao/shared/registry",
+    },
+    {
+      name: "@powerhousedao/shared/constants",
+      entry: "@powerhousedao/shared/constants",
+    },
+  ];
 
   const plugins: PluginOption[] = [
+    cjsNamedExportsPlugin(),
     tsconfigPaths(),
     tailwind(),
     react(),
+    viteImportMaps({
+      imports: sharedImports,
+      modulesOutDir: "shared",
+      importMapHtmlTransformer(importMap) {
+        if (!importMap.imports) return importMap;
+        const imports = Object.fromEntries(
+          Object.entries(importMap.imports).map(
+            ([key, value]: [string, string]) => [
+              key,
+              value.startsWith("./") ? value.slice(1) : value,
+            ],
+          ),
+        );
+        return { ...importMap, imports };
+      },
+    }),
     createHtmlPlugin({
       minify: false,
       inject: {
-        tags: [
-          ...(connectClientConfig.meta.map((meta) => ({
-            ...meta,
-            injectTo: "head",
-          })) as HtmlTagDescriptor[]),
-          {
-            tag: "script",
-            attrs: { type: "importmap" },
-            children: JSON.stringify(
-              {
-                imports: {
-                  react: "https://esm.sh/react@19.2.0",
-                  "react/": "https://esm.sh/react@19.2.0/",
-                  "react-dom": "https://esm.sh/react-dom@19.2.0",
-                  "react-dom/": "https://esm.sh/react-dom@19.2.0/",
-                  ...powerhouseImportMap,
-                },
-              },
-              null,
-              2,
-            ),
-            injectTo: "head-prepend",
-          },
-        ],
+        tags: getConnectMetaTags(phPackageRegistryUrl).map((meta) => ({
+          ...meta,
+          injectTo: "head",
+        })),
       },
     }),
   ] as const;
@@ -253,23 +317,6 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     envPrefix: ["PH_CONNECT_"],
     optimizeDeps: {
       exclude: ["@electric-sql/pglite", "@electric-sql/pglite-tools"],
-    },
-    build: {
-      rollupOptions: {
-        // Externalize React so both Connect and dynamically loaded registry
-        // packages share the same React instance via the import map in index.html.
-        // Without this, Vite bundles React into Connect's chunks while registry
-        // packages resolve React from the import map (esm.sh), creating two
-        // separate React instances that don't share context/state.
-        external: [
-          "react",
-          "react-dom",
-          "react/jsx-runtime",
-          "react-dom/client",
-          ...PACKAGES_DEPENDENCIES,
-          ...PACKAGES_DEPENDENCIES.map((n) => `${n}/`),
-        ],
-      },
     },
     plugins,
     worker: {

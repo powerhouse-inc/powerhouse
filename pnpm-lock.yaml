@@ -1121,6 +1121,9 @@ importers:
       tsx:
         specifier: 'catalog:'
         version: 4.21.0
+      vite-import-maps:
+        specifier: ^0.2.1
+        version: 0.2.1(rolldown@1.0.0-rc.9)(rollup@4.59.0)(vite@7.3.1(@types/node@25.3.1)(jiti@2.6.1)(lightningcss@1.31.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2))
 
   packages/codegen:
     dependencies:
@@ -2756,6 +2759,9 @@ importers:
       '@powerhousedao/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      document-drive:
+        specifier: link:../../packages/document-drive
+        version: link:../../packages/document-drive
       document-model:
         specifier: link:../../packages/document-model
         version: link:../../packages/document-model
@@ -20095,6 +20101,20 @@ packages:
   vite-envs@4.6.2:
     resolution: {integrity: sha512-g/yUtA4ef/5Ndf0a7Dz237yAmBZRuF0UY+4/lxoiGopjzJEcTGgwAbGOGrJSCEYqlBahhiWafEoTImOkGJHu+g==}
     hasBin: true
+
+  vite-import-maps@0.2.1:
+    resolution: {integrity: sha512-qDHxRPgwAVt04EaaqITKplPky3LXduIGODymWJx3uRwQwPdIOPDadGSBShW1LaA9Uo+Z+AUDC0sqbUEn5szccw==}
+    peerDependencies:
+      rolldown: '>=1.0.0-rc.0'
+      rollup: '>=4.0.0'
+      vite: '>=6.0.0'
+    peerDependenciesMeta:
+      rolldown:
+        optional: true
+      rollup:
+        optional: true
+      vite:
+        optional: true
 
   vite-node@3.2.4:
     resolution: {integrity: sha512-EbKSKh+bh1E1IFxeO0pg1n4dvoOTt0UDiXMd/qn++r98+jPO1xtJilvXldeuQ8giIB5IkpjCgMleHMNEsGH6pg==}
@@ -43349,6 +43369,12 @@ snapshots:
   vite-bundle-analyzer@1.3.6: {}
 
   vite-envs@4.6.2: {}
+
+  vite-import-maps@0.2.1(rolldown@1.0.0-rc.9)(rollup@4.59.0)(vite@7.3.1(@types/node@25.3.1)(jiti@2.6.1)(lightningcss@1.31.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2)):
+    optionalDependencies:
+      rolldown: 1.0.0-rc.9
+      rollup: 4.59.0
+      vite: 7.3.1(@types/node@25.3.1)(jiti@2.6.1)(lightningcss@1.31.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2)
 
   vite-node@3.2.4(@types/node@25.2.3)(jiti@2.6.1)(lightningcss@1.31.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2):
     dependencies:

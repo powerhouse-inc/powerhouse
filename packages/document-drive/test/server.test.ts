@@ -61,7 +61,6 @@ const storageLayers = [
       return storage;
     },
   ],
-  // @ts-expect-error it's prisma
   ["PrismaStorage", async () => new PrismaStorage(prismaClient, cache)],
 ] as unknown as [
   string,

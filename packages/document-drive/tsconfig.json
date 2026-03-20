@@ -12,8 +12,14 @@
       "storage": ["./src/storage/index.ts"],
       "storage/filesystem": ["./src/storage/filesystem.mts"],
       "storage/prisma": ["./src/storage/prisma/index.mts"],
-      "storage/prisma/client": ["./src/storage/prisma/client/default.js"],
-      "storage/*": ["./src/storage/*"]
+      "storage/prisma/client": ["./src/storage/prisma/client/default.d.ts"],
+      "storage/*": ["./src/storage/*"],
+      "document-drive": ["./src/index.ts"],
+      "document-drive/storage/filesystem": ["./src/storage/filesystem.mts"],
+      "document-drive/storage/prisma": ["./src/storage/prisma/index.mts"],
+      "document-drive/storage/prisma/client": [
+        "./src/storage/prisma/client/default.d.ts"
+      ]
     }
   },
   "include": [
@@ -21,12 +27,7 @@
     "test/benchmarks/getDrive.json",
     "test/benchmarks/strands.small.json"
   ],
-  "exclude": [
-    "dist",
-    "node_modules",
-    "coverage",
-    "test/flaky/**"
-  ],
+  "exclude": ["dist", "node_modules", "coverage", "test/flaky/**"],
   "references": [
     {
       "path": "../analytics-engine/core"
