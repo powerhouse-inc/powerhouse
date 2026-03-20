@@ -12,12 +12,10 @@ import type {
 } from "document-drive";
 import { debounce, responseForDrive } from "document-drive";
 import type { DocumentModelModule } from "document-model";
-import type express from "express";
-import type { IRouter } from "express";
-import { Router } from "express";
 import type { IncomingHttpHeaders } from "http";
 import type http from "node:http";
 import path from "node:path";
+import { match } from "path-to-regexp";
 import type { WebSocketServer } from "ws";
 import type { AuthConfig } from "../services/auth.service.js";
 import { AuthService } from "../services/auth.service.js";
@@ -32,7 +30,6 @@ import { DocumentModelSubgraph } from "./document-model-subgraph.js";
 import { createGraphQLSSEHandler } from "./sse.js";
 import { useServer } from "./websocket.js";
 import { ApolloGatewayAdapter } from "./gateway/apollo-gateway-adapter.js";
-import { ExpressHttpAdapter } from "./gateway/express-http-adapter.js";
 import type {
   FetchHandler,
   GatewayContextFactory,
@@ -99,7 +96,6 @@ export type GraphqlManagerFeatureFlags = {
 
 export class GraphQLManager {
   private initialized = false;
-  private readonly router: IRouter;
   private coreSubgraphsMap = new Map<string, ISubgraph[]>();
   private contextFields: Record<string, any> = {};
   private readonly subgraphs = new Map<string, ISubgraph[]>();
@@ -111,12 +107,10 @@ export class GraphQLManager {
   private cachedDocumentModels: DocumentModelModule[] = [];
 
   private readonly gatewayAdapter: IGatewayAdapter<Context>;
-  private readonly httpAdapter: IHttpAdapter;
   private readonly subgraphHandlerCache = new Map<string, FetchHandler>();
 
   constructor(
     private readonly path: string,
-    private readonly app: express.Express,
     private readonly httpServer: http.Server,
     private readonly wsServer: WebSocketServer,
     private readonly reactorClient: IReactorClient,
@@ -124,18 +118,16 @@ export class GraphQLManager {
     private readonly analyticsStore: IAnalyticsStore,
     private readonly syncManager: ISyncManager,
     private readonly logger: ILogger,
+    private readonly httpAdapter: IHttpAdapter,
     private readonly authConfig?: AuthConfig,
     private readonly documentPermissionService?: DocumentPermissionService,
     private readonly featureFlags: GraphqlManagerFeatureFlags = DefaultFeatureFlags,
     private readonly port: number = 4001,
     private readonly authorizationService?: AuthorizationService,
     gatewayAdapter?: IGatewayAdapter<Context>,
-    httpAdapter?: IHttpAdapter,
   ) {
-    this.router = Router();
     this.gatewayAdapter =
       gatewayAdapter ?? new ApolloGatewayAdapter(this.logger);
-    this.httpAdapter = httpAdapter ?? new ExpressHttpAdapter(this.router);
 
     if (this.authConfig) {
       this.authService = new AuthService(this.authConfig);
@@ -167,48 +159,37 @@ export class GraphQLManager {
 
     this.httpAdapter.setupMiddleware({ bodyLimit: "50mb" });
 
-    // Mount the adapter's router on the Express app, injecting auth context fields
-    this.app.use("/", (req, res, next) => {
-      this.setAdditionalContextFields({
-        user: req.user,
-        isAdmin: (address: string) =>
-          !req.auth_enabled
-            ? true
-            : (req.admins
-                ?.map((a) => a.toLowerCase())
-                .includes(address.toLowerCase() ?? "") ?? false),
-      });
-      this.router(req, res, next);
-    });
-
-    // Register REST endpoint for drive info
+    // Register REST endpoint for drive info as a framework-agnostic FetchHandler.
     const driveRoutePath = path.join(this.path, "d/:drive");
-    this.httpAdapter.get(driveRoutePath, (params, req, res) => {
-      const expressReq = req as express.Request;
-      const expressRes = res as express.Response;
-      const driveIdOrSlug = (params as Record<string, string>).drive;
+    const driveMatcher = match<{ drive: string }>(driveRoutePath);
+    this.httpAdapter.mount(driveRoutePath, async (request: Request) => {
+      const url = new URL(request.url);
+      const matched = driveMatcher(url.pathname);
+      const driveIdOrSlug = matched ? matched.params.drive : undefined;
 
       if (!driveIdOrSlug) {
-        expressRes.status(400).json({ error: "Drive ID or slug is required" });
-        return;
+        return Response.json(
+          { error: "Drive ID or slug is required" },
+          { status: 400 },
+        );
       }
 
-      (async () => {
+      try {
         const driveDoc =
           await this.reactorClient.get<DocumentDriveDocument>(driveIdOrSlug);
 
-        const forwardedProto = expressReq.get("x-forwarded-proto");
-        const protocol = (forwardedProto ?? expressReq.protocol) + ":";
-        const host = expressReq.get("host") ?? "";
+        const forwardedProto = request.headers.get("x-forwarded-proto");
+        const protocol =
+          (forwardedProto ?? url.protocol.replace(":", "")) + ":";
+        const host = request.headers.get("host") ?? "";
         const basePath = this.path === "/" ? "" : this.path;
         const graphqlEndpoint = `${protocol}//${host}${basePath}/graphql/r`;
 
-        const driveInfo = responseForDrive(driveDoc, graphqlEndpoint);
-        expressRes.json(driveInfo);
-      })().catch((error: unknown) => {
+        return Response.json(responseForDrive(driveDoc, graphqlEndpoint));
+      } catch (error: unknown) {
         this.logger.debug(`Drive not found: ${driveIdOrSlug}`, error);
-        expressRes.status(404).json({ error: "Drive not found" });
-      });
+        return Response.json({ error: "Drive not found" }, { status: 404 });
+      }
     });
 
     this.logger.info(`Registered REST endpoint: GET ${driveRoutePath}`);
