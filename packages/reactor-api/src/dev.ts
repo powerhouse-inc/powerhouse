@@ -18,33 +18,14 @@ import {
   ReactorBuilder,
   ReactorClientBuilder,
 } from "@powerhousedao/reactor";
-import {
-  DocumentAlreadyExistsError,
-  InMemoryCache,
-  ReactorBuilder as LegacyReactorBuilder,
-  logger,
-  MemoryStorage,
-} from "document-drive";
+import { logger } from "document-drive";
+import type { DocumentModelModule } from "document-model";
 import dotenv from "dotenv";
-import { startAPI } from "./server.js";
+import { initializeAndStartAPI } from "./server.js";
 
 dotenv.config();
 
 const DEFAULT_PORT = 4001;
-const DEFAULT_DRIVE = {
-  id: "powerhouse",
-  slug: "powerhouse",
-  global: {
-    name: "Powerhouse",
-    icon: "https://ipfs.io/ipfs/QmcaTDBYn8X2psGaXe7iQ6qd8q6oqHLgxvMX9yXf7f9uP7",
-  },
-  local: {
-    availableOffline: true,
-    listeners: [],
-    sharingType: "public" as const,
-    triggers: [],
-  },
-};
 
 async function main() {
   process.setMaxListeners(0);
@@ -54,58 +35,19 @@ async function main() {
 
   process.env.LOG_LEVEL = process.env.LOG_LEVEL || "info";
 
-  // Build legacy drive server with in-memory storage
-  const cache = new InMemoryCache();
-  const storage = new MemoryStorage();
-  const driveServer = new LegacyReactorBuilder([])
-    .withCache(cache)
-    .withStorage(storage)
-    .withOptions({
-      featureFlags: {
-        enableDualActionCreate: true,
-      },
-    })
-    .build();
+  const initializeClient = async (documentModels: DocumentModelModule[]) => {
+    const eventBus = new EventBus();
+    const builder = new ReactorBuilder()
+      .withEventBus(eventBus)
+      .withDocumentModels(documentModels)
+      .withChannelScheme(ChannelScheme.SWITCHBOARD);
 
-  // Build reactor client
-  const eventBus = new EventBus();
-  const builder = new ReactorBuilder()
-    .withEventBus(eventBus)
-    .withChannelScheme(ChannelScheme.SWITCHBOARD);
-  const clientModule = await new ReactorClientBuilder()
-    .withReactorBuilder(builder)
-    .buildModule();
-
-  const client = clientModule.client;
-  const syncManager = clientModule.reactorModule?.syncModule?.syncManager;
-  if (!syncManager) {
-    throw new Error("SyncManager not available from ReactorClientBuilder");
-  }
-
-  const registry = clientModule.reactorModule?.documentModelRegistry;
-  if (!registry) {
-    throw new Error(
-      "DocumentModelRegistry not available from ReactorClientBuilder",
-    );
-  }
-
-  // Initialize drive server and add a default drive
-  await driveServer.initialize();
-
-  try {
-    await driveServer.addDrive(DEFAULT_DRIVE);
-  } catch (e) {
-    if (!(e instanceof DocumentAlreadyExistsError)) {
-      throw e;
-    }
-  }
+    return new ReactorClientBuilder().withReactorBuilder(builder).buildModule();
+  };
 
   // Start the API
-  await startAPI(
-    driveServer,
-    client,
-    registry,
-    syncManager,
+  await initializeAndStartAPI(
+    initializeClient,
     {
       port,
       dbPath,
@@ -115,12 +57,9 @@ async function main() {
     "switchboard",
   );
 
-  const driveUrl = `http://localhost:${port}/d/${DEFAULT_DRIVE.id}`;
-
   logger.info(`  Reactor API running:`);
   logger.info(`    GraphQL:      http://localhost:${port}/graphql`);
   logger.info(`    Explorer:     http://localhost:${port}/explorer`);
-  logger.info(`    Drive:        ${driveUrl}`);
   logger.info(`    Health:       http://localhost:${port}/health`);
   logger.info(`    MCP:          http://localhost:${port}/mcp`);
 }

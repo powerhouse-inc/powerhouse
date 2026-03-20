@@ -56,14 +56,12 @@ export interface IPackageManager {
 }
 
 export type IPackageLoaderOptions = {
-  legacyReactor?: boolean;
   logger?: ILogger;
 };
 
 export type IPackageManagerOptions = {
   packages?: string[];
   configFile?: string;
-  legacyReactor?: boolean;
 };
 
 export interface PackageConfig {

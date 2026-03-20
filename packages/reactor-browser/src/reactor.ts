@@ -1,11 +1,9 @@
 import type { IReactorClient } from "@powerhousedao/reactor";
-import type { IRenown } from "@renown/sdk";
 import { BrowserKeyStorage, RenownCryptoBuilder } from "@renown/sdk";
 import {
   type DefaultRemoteDriveInput,
   type DocumentDriveDocument,
   type DocumentDriveServerOptions,
-  type IDocumentDriveServer,
 } from "document-drive";
 import { setDrives } from "./hooks/drives.js";
 import { getDrives } from "./utils/drives.js";
@@ -151,35 +149,6 @@ function createDebouncedRefreshReactorDataClient(
 export const refreshReactorData = createDebouncedRefreshReactorData();
 export const refreshReactorDataClient =
   createDebouncedRefreshReactorDataClient();
-
-export async function initLegacyReactor(
-  legacyReactor: IDocumentDriveServer,
-  renown: IRenown | undefined,
-) {
-  await initJwtHandler(legacyReactor, renown);
-  const errors = await legacyReactor.initialize();
-  const error = errors?.at(0);
-  if (error) {
-    throw error;
-  }
-}
-
-async function initJwtHandler(
-  legacyReactor: IDocumentDriveServer,
-  renown: IRenown | undefined,
-) {
-  const user = renown?.user;
-  if (!renown || !user) {
-    return;
-  }
-
-  legacyReactor.setGenerateJwtHandler(async (driveUrl) => {
-    return renown.getBearerToken({
-      expiresIn: 10,
-      aud: driveUrl,
-    });
-  });
-}
 
 /**
  * @deprecated Use {@link initRenownCrypto} instead

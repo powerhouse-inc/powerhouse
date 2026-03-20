@@ -13,19 +13,12 @@ import type {
 import { setupMcpServer } from "@powerhousedao/reactor-mcp";
 import devcert from "devcert";
 import type {
-  DocumentDriveDocument,
-  IDocumentDriveServer,
   ILogger,
   IProcessorHostModuleLegacy,
-  IProcessorManagerLegacy,
   IRelationalDbLegacy,
   ProcessorFactoryLegacy,
 } from "document-drive";
-import {
-  childLogger,
-  createRelationalDbLegacy,
-  ProcessorManagerLegacy,
-} from "document-drive";
+import { childLogger, createRelationalDbLegacy } from "document-drive";
 import type { DocumentModelModule } from "document-model";
 import type { Express } from "express";
 import express from "express";
@@ -47,10 +40,7 @@ import { ReactorSubgraph } from "./graphql/reactor/subgraph.js";
 import type { SubgraphClass } from "./graphql/types.js";
 import { runMigrations } from "./migrations/index.js";
 import { ImportPackageLoader } from "./packages/import-loader.js";
-import {
-  getUniqueDocumentModels,
-  PackageManager,
-} from "./packages/package-manager.js";
+import { PackageManager } from "./packages/package-manager.js";
 import type { AuthenticatedRequest } from "./services/auth.service.js";
 import { AuthService } from "./services/auth.service.js";
 import { AuthorizationService } from "./services/authorization.service.js";
@@ -96,11 +86,6 @@ type Options = {
    */
   documentPermissionService?: DocumentPermissionService;
   enableDocumentModelSubgraphs?: boolean;
-  /**
-   * When true, uses the legacy ProcessorManager from document-drive and hooks up
-   * the driveAdded event. When false (default), uses ProcessorManager from ReactorModule.
-   */
-  legacyReactor?: boolean;
   logger?: ILogger;
 };
 
@@ -212,13 +197,11 @@ async function setupGraphQLManager(
  */
 function setupEventListeners(
   pkgManager: PackageManager,
-  reactor: IDocumentDriveServer,
   graphqlManager: GraphQLManager,
-  processorManager: IProcessorManagerLegacy,
+  reactorProcessorManager: IReactorProcessorManager,
   module: IProcessorHostModuleLegacy,
 ): void {
-  pkgManager.onDocumentModelsChange(async (documentModels) => {
-    reactor.setDocumentModelModules(Object.values(documentModels).flat());
+  pkgManager.onDocumentModelsChange(async () => {
     await graphqlManager.updateRouter();
   });
 
@@ -233,16 +216,39 @@ function setupEventListeners(
 
   pkgManager.onProcessorsChange(async (processors) => {
     for (const [packageName, fns] of processors) {
-      await processorManager.unregisterFactory(packageName);
+      await reactorProcessorManager.unregisterFactory(packageName);
 
       const factories = fns.map((fn) => fn(module));
 
-      await processorManager.registerFactory(packageName, async (driveHeader) =>
-        (
-          await Promise.all(
-            factories.map((factory) => Promise.resolve(factory(driveHeader))),
-          )
-        ).flat(),
+      const validFactories = factories.filter(
+        (factory): factory is ProcessorFactoryLegacy =>
+          factory !== null && typeof factory === "function",
+      );
+
+      if (!validFactories.length) {
+        continue;
+      }
+
+      await reactorProcessorManager.registerFactory(
+        packageName,
+        async (driveHeader) =>
+          (
+            await Promise.all(
+              validFactories.map(async (factory) => {
+                try {
+                  const result = await factory(driveHeader);
+                  return result as unknown as ReactorProcessorRecord[];
+                } catch (e) {
+                  const logger = defaultLogger;
+                  logger.error(
+                    `Error creating processor for drive ${driveHeader.id}:`,
+                    e,
+                  );
+                  return [];
+                }
+              }),
+            )
+          ).flat(),
       );
     }
   });
@@ -428,9 +434,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   }
 
   // Initialize package manager
-  const legacyReactor = options.legacyReactor ?? false;
-  const packageLoader =
-    options.packageLoader ?? new ImportPackageLoader({ legacyReactor });
+  const packageLoader = options.packageLoader ?? new ImportPackageLoader();
   const loaders: IPackageLoader[] = [packageLoader];
 
   const packages = new PackageManager(loaders, {
@@ -457,9 +461,9 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
  * Private helper function containing common setup logic for API initialization
  */
 async function _setupAPI(
-  reactor: IDocumentDriveServer,
   reactorClient: IReactorClient,
   syncManager: ISyncManager,
+  reactorProcessorManager: IReactorProcessorManager,
   app: Express,
   port: number,
   packages: PackageManager,
@@ -476,9 +480,7 @@ async function _setupAPI(
     enabled: boolean;
     admins: string[];
   },
-  legacyReactor: boolean,
   processorApp: ProcessorApp,
-  reactorProcessorManager?: IReactorProcessorManager,
   authorizationService?: AuthorizationService,
 ): Promise<API> {
   const module: IProcessorHostModuleLegacy = {
@@ -492,44 +494,44 @@ async function _setupAPI(
   const logger = options.logger ?? defaultLogger;
 
   // initialize processors
-  let processorManager: IProcessorManagerLegacy;
+  for (const [packageName, fns] of [
+    ...processors.entries(),
+    ...Object.entries(options.processors ?? {}),
+  ]) {
+    const factories = fns.map((fn) => {
+      try {
+        return fn(module);
+      } catch (e) {
+        logger.error(
+          `Error initializing processor factory for package ${packageName}:`,
+          e,
+        );
 
-  if (legacyReactor) {
-    // LEGACY PATH - use document-drive ProcessorManager
-    processorManager = new ProcessorManagerLegacy(reactor.listeners, reactor);
-
-    for (const [packageName, fns] of [
-      ...processors.entries(),
-      ...Object.entries(options.processors ?? {}),
-    ]) {
-      const factories = fns.map((fn) => {
-        try {
-          return fn(module);
-        } catch (e) {
-          logger.error(
-            `Error initializing processor factory for package ${packageName}:`,
-            e,
-          );
-
-          return null;
-        }
-      });
-
-      const validFactories = factories.filter(
-        (factory): factory is ProcessorFactoryLegacy =>
-          factory !== null && typeof factory === "function",
-      );
-
-      if (!validFactories.length) {
-        continue;
+        return null;
       }
+    });
 
-      await processorManager.registerFactory(packageName, async (driveHeader) =>
+    const validFactories = factories.filter(
+      (factory): factory is ProcessorFactoryLegacy =>
+        factory !== null && typeof factory === "function",
+    );
+
+    if (!validFactories.length) {
+      continue;
+    }
+
+    // Register with the reactor ProcessorManager
+    // Cast the results to ReactorProcessorRecord since the loaded factories
+    // implement the reactor interface
+    await reactorProcessorManager.registerFactory(
+      packageName,
+      async (driveHeader) =>
         (
           await Promise.all(
             validFactories.map(async (factory) => {
               try {
-                return await factory(driveHeader);
+                const result = await factory(driveHeader);
+                return result as unknown as ReactorProcessorRecord[];
               } catch (e) {
                 logger.error(
                   `Error creating processor for drive ${driveHeader.id}:`,
@@ -541,78 +543,7 @@ async function _setupAPI(
             }),
           )
         ).flat(),
-      );
-    }
-
-    // hook up processor manager to drive added event
-    reactor.on("driveAdded", async (drive: DocumentDriveDocument) => {
-      await processorManager.registerDrive(drive.header.id);
-    });
-  } else {
-    // NEW REACTOR PATH - use ProcessorManager from ReactorModule
-    if (!reactorProcessorManager) {
-      throw new Error("ProcessorManager not available from ReactorModule");
-    }
-
-    // Create a wrapper that adapts the legacy-style ProcessorManager interface
-    // to track processors for the API response
-    processorManager = new ProcessorManagerLegacy(reactor.listeners, reactor);
-
-    for (const [packageName, fns] of [
-      ...processors.entries(),
-      ...Object.entries(options.processors ?? {}),
-    ]) {
-      const factories = fns.map((fn) => {
-        try {
-          return fn(module);
-        } catch (e) {
-          logger.error(
-            `Error initializing processor factory for package ${packageName}:`,
-            e,
-          );
-
-          return null;
-        }
-      });
-
-      // Filter and cast to the reactor types
-      // When legacyReactor=false, PackageLoader loads processorFactory which
-      // returns factories implementing reactor's IProcessor interface
-      const validFactories = factories.filter(
-        (factory): factory is ProcessorFactoryLegacy =>
-          factory !== null && typeof factory === "function",
-      );
-
-      if (!validFactories.length) {
-        continue;
-      }
-
-      // Register with the new reactor ProcessorManager
-      // Cast the results to ReactorProcessorRecord since the loaded factories
-      // implement the new reactor interface when legacyReactor=false
-      await reactorProcessorManager.registerFactory(
-        packageName,
-        async (driveHeader) =>
-          (
-            await Promise.all(
-              validFactories.map(async (factory) => {
-                try {
-                  const result = await factory(driveHeader);
-                  return result as unknown as ReactorProcessorRecord[];
-                } catch (e) {
-                  logger.error(
-                    `Error creating processor for drive ${driveHeader.id}:`,
-                    e,
-                  );
-
-                  return [];
-                }
-              }),
-            )
-          ).flat(),
-      );
-    }
-    // No driveAdded event listener needed - ProcessorManager is a read model
+    );
   }
 
   // Start the server
@@ -656,9 +587,8 @@ async function _setupAPI(
   // Set up event listeners
   setupEventListeners(
     packages,
-    reactor,
     graphqlManager,
-    processorManager,
+    reactorProcessorManager,
     module,
   );
 
@@ -670,108 +600,28 @@ async function _setupAPI(
   return {
     app,
     graphqlManager,
-    processorManager,
     packages,
   };
 }
 
 /**
- * Starts the API server with pre-initialized drive server and client instances.
+ * Initializes and starts the API server using an initializer function.
+ * This function first loads packages to get document models, then calls the initializer function
+ * to create the reactor client module with the appropriate dependencies.
  *
- * @param driveServer - An already-initialized document drive server instance.
- * @param client - An already-initialized reactor client instance.
+ * @param clientInitializer - Initializer function that creates the reactor client module with document models.
  * @param options - Additional options for server configuration.
  *
- * @returns The API server components.
- */
-export async function startAPI(
-  driveServer: IDocumentDriveServer,
-  client: IReactorClient,
-  registry: IDocumentModelRegistry,
-  syncManager: ISyncManager,
-  options: Options,
-  processorApp: ProcessorApp,
-): Promise<API> {
-  const {
-    port,
-    app,
-    auth,
-    relationalDb,
-    analyticsStore,
-    documentPermissionService,
-    authorizationService,
-    packages,
-  } = await trace(
-    "reactor-api.setup.infrastructure",
-    { tags: { "resource.name": "infrastructure" } },
-    () => _setupCommonInfrastructure(options),
-  );
-
-  const { documentModels, processors, subgraphs } = await trace(
-    "reactor-api.packages.init",
-    { tags: { "resource.name": "packages" } },
-    () => packages.init(),
-  );
-
-  // pass to legacy reactor
-  driveServer.setDocumentModelModules(
-    getUniqueDocumentModels([
-      ...driveServer.getDocumentModelModules(),
-      ...documentModels,
-    ]),
-  );
-
-  // pass to registry
-  registry.registerModules(...documentModels);
-
-  // startAPI always uses legacy reactor since it doesn't have ReactorClientModule
-  const legacyReactor = true;
-
-  return _setupAPI(
-    driveServer,
-    client,
-    syncManager,
-    app,
-    port,
-    packages,
-    relationalDb,
-    analyticsStore,
-    documentPermissionService,
-    processors,
-    subgraphs,
-    options,
-    auth,
-    legacyReactor,
-    processorApp,
-    undefined, // no reactorProcessorManager in legacy mode
-    authorizationService,
-  );
-}
-
-/**
- * Initializes and starts the API server using initializer functions.
- * This function first loads packages to get document models, then calls the initializer functions
- * to create the drive server and client instances with the appropriate dependencies.
- *
- * @param driveServerInitializer - Initializer function that creates the document drive server with document models.
- * @param clientInitializer - Initializer function that creates the reactor client module with the drive server.
- * @param options - Additional options for server configuration.
- *
- * @returns The API server components along with the created drive server and client instances.
+ * @returns The API server components along with the created client instances.
  */
 export async function initializeAndStartAPI(
-  driveServerInitializer: (
-    documentModelModules: DocumentModelModule[],
-  ) => Promise<IDocumentDriveServer>,
   clientInitializer: (
-    driveServer: IDocumentDriveServer,
     documentModels: DocumentModelModule[],
   ) => Promise<ReactorClientModule>,
   options: Options,
   processorApp: ProcessorApp,
 ): Promise<
   API & {
-    driveServer: IDocumentDriveServer;
     client: IReactorClient;
     syncManager: ISyncManager;
     documentModelRegistry: IDocumentModelRegistry;
@@ -798,16 +648,10 @@ export async function initializeAndStartAPI(
     () => packages.init(),
   );
 
-  const reactor = await trace(
-    "reactor-api.drive-server.init",
-    { tags: { "resource.name": "drive-server" } },
-    () => driveServerInitializer(documentModels),
-  );
-
   const reactorClientModule = await trace(
     "reactor-api.reactor-client.init",
     { tags: { "resource.name": "reactor-client" } },
-    () => clientInitializer(reactor, documentModels),
+    () => clientInitializer(documentModels),
   );
 
   // Extract client and syncManager from the module
@@ -818,14 +662,16 @@ export async function initializeAndStartAPI(
     throw new Error("SyncManager not available from ReactorClientModule");
   }
 
-  const legacyReactor = options.legacyReactor ?? false;
   const reactorProcessorManager =
     reactorClientModule.reactorModule?.processorManager;
+  if (!reactorProcessorManager) {
+    throw new Error("ProcessorManager not available from ReactorClientModule");
+  }
 
   const api = await _setupAPI(
-    reactor,
     reactorClient,
     syncManager,
+    reactorProcessorManager,
     app,
     port,
     packages,
@@ -836,9 +682,7 @@ export async function initializeAndStartAPI(
     subgraphs,
     options,
     auth,
-    legacyReactor,
     processorApp,
-    reactorProcessorManager,
     authorizationService,
   );
 
@@ -852,7 +696,6 @@ export async function initializeAndStartAPI(
 
   return {
     ...api,
-    driveServer: reactor,
     client: reactorClient,
     syncManager,
     documentModelRegistry,
