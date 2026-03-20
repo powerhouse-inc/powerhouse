@@ -12,6 +12,7 @@ import type {
 } from "document-drive";
 import { debounce, responseForDrive } from "document-drive";
 import type { DocumentModelModule } from "document-model";
+import type { GraphQLSchema } from "graphql";
 import type { IncomingHttpHeaders } from "http";
 import type http from "node:http";
 import path from "node:path";
@@ -679,9 +680,10 @@ export class GraphQLManager {
       }),
     });
 
-    this.subgraphHandlers.set(ssePath, {
-      handler: sseHandler,
-      matcher: match(ssePath),
-    });
+    // SSE handler is Express-specific; mount directly on the underlying app.
+    // TODO: replace sse.ts with a Fetch API handler so this can use httpAdapter.mount()
+    (
+      this.httpAdapter.handle as { use: (path: string, h: unknown) => void }
+    ).use(ssePath, sseHandler);
   }
 }

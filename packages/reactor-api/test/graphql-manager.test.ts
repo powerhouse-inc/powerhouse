@@ -623,6 +623,7 @@ describe("GraphQLManager", () => {
         typeDefs: (await import("graphql-tag")).gql`type Query { hi: String }`,
         resolvers: {},
         relationalDb: {} as IRelationalDbLegacy,
+        reactorClient: {} as IReactorClient,
       };
 
       await manager.registerSubgraphInstance(sub, "graphql");
@@ -645,6 +646,7 @@ describe("GraphQLManager", () => {
         typeDefs: (await import("graphql-tag")).gql`type Query { hi: String }`,
         resolvers: {},
         relationalDb: {} as IRelationalDbLegacy,
+        reactorClient: {} as IReactorClient,
         onSetup,
       };
 
@@ -666,6 +668,7 @@ describe("GraphQLManager", () => {
         typeDefs: (await import("graphql-tag")).gql`type Query { hi: String }`,
         resolvers: {},
         relationalDb: {} as IRelationalDbLegacy,
+        reactorClient: {} as IReactorClient,
       };
 
       await manager.registerSubgraphInstance(sub, "graphql");
