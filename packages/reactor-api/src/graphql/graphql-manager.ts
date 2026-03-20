@@ -110,7 +110,6 @@ export class GraphQLManager {
   /** Cached document models for schema generation - updated on init and regenerate */
   private cachedDocumentModels: DocumentModelModule[] = [];
 
-  private readonly gatewayAdapter: IGatewayAdapter<Context>;
   private readonly subgraphHandlerCache = new Map<string, FetchHandler>();
 
   constructor(
@@ -123,17 +122,13 @@ export class GraphQLManager {
     private readonly syncManager: ISyncManager,
     private readonly logger: ILogger,
     private readonly httpAdapter: IHttpAdapter,
+    private readonly gatewayAdapter: IGatewayAdapter<Context>,
     private readonly authConfig?: AuthConfig,
     private readonly documentPermissionService?: DocumentPermissionService,
     private readonly featureFlags: GraphqlManagerFeatureFlags = DefaultFeatureFlags,
     private readonly port: number = 4001,
     private readonly authorizationService?: AuthorizationService,
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    gatewayAdapter?: IGatewayAdapter<Context>,
   ) {
-    // Always provided — optional only to satisfy TS ordering (follows optional params)
-    this.gatewayAdapter = gatewayAdapter!;
-
     if (this.authConfig) {
       this.authService = new AuthService(this.authConfig);
     }
@@ -440,6 +435,7 @@ export class GraphQLManager {
       return Promise.resolve<Context>({
         headers,
         db: this.relationalDb,
+        ...this.getAdditionalContextFields(),
         user: authCtx?.user,
         isAdmin: authCtx
           ? (addr) =>
@@ -447,7 +443,6 @@ export class GraphQLManager {
                 ? true
                 : authCtx.admins.includes(addr.toLowerCase())
           : () => true,
-        ...this.getAdditionalContextFields(),
       });
     };
   }

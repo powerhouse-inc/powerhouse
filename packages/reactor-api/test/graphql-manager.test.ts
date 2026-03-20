@@ -18,12 +18,17 @@ import type http from "node:http";
 import type { WebSocketServer } from "ws";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { GraphQLManager } from "../src/graphql/graphql-manager.js";
+import {
+  createAuthFetchMiddleware,
+  getAuthContext,
+} from "../src/graphql/gateway/auth-middleware.js";
 import type {
   FetchHandler,
   IGatewayAdapter,
   IHttpAdapter,
   WsDisposer,
 } from "../src/graphql/gateway/types.js";
+import type { AuthContext, AuthService } from "../src/services/auth.service.js";
 import type { Context } from "../src/graphql/types.js";
 
 // Partially mock document-drive so responseForDrive is controllable while
@@ -107,8 +112,6 @@ function makeMockHttpAdapter() {
     mount: vi.fn((p: string, h: FetchHandler) => {
       mounts.set(p, h);
     }),
-    get: vi.fn(),
-    use: vi.fn(),
     getRoute: vi.fn(),
     listen: vi.fn().mockResolvedValue({}),
     handle: {},
@@ -141,6 +144,7 @@ function makeHarness(options: HarnessOptions = {}) {
     {} as ISyncManager,
     silentLogger,
     httpAdapter,
+    gatewayAdapter,
     undefined, // authConfig
     undefined, // documentPermissionService
     {
@@ -149,7 +153,6 @@ function makeHarness(options: HarnessOptions = {}) {
     },
     4001,
     undefined, // authorizationService
-    gatewayAdapter,
   );
 
   return {
@@ -399,6 +402,176 @@ describe("GraphQLManager", () => {
       )) as Record<string, unknown>;
 
       expect(ctx["customField"]).toBe("custom-value");
+    });
+
+    it("isAdmin always returns true when no AuthContext is present (auth disabled)", async () => {
+      const { manager, gatewayAdapter } = makeHarness();
+      await initAndFlush(manager);
+
+      const [, , contextFactory] =
+        gatewayAdapter.createSupergraphHandler.mock.calls[0];
+      const ctx = await contextFactory(new Request("http://localhost/graphql"));
+
+      expect(ctx.isAdmin("0xanyone")).toBe(true);
+    });
+
+    it("populates user from the WeakMap AuthContext when present", async () => {
+      const { manager, gatewayAdapter } = makeHarness();
+      await initAndFlush(manager);
+
+      const [, , contextFactory] =
+        gatewayAdapter.createSupergraphHandler.mock.calls[0];
+
+      const req = new Request("http://localhost/graphql");
+      // Simulate the auth middleware having run and set context for this request
+      const mockService = {
+        authenticateRequest: vi.fn().mockResolvedValue({
+          user: { address: "0xabc", chainId: 1, networkId: "eip155" },
+          admins: ["0xadmin"],
+          auth_enabled: true,
+        } satisfies AuthContext),
+      } as unknown as AuthService;
+      const middleware = createAuthFetchMiddleware(mockService);
+      await middleware(async () => new Response("ok"))(req);
+
+      const ctx = await contextFactory(req);
+
+      expect(ctx.user).toEqual({
+        address: "0xabc",
+        chainId: 1,
+        networkId: "eip155",
+      });
+    });
+
+    it("isAdmin checks the admins list from the AuthContext when auth_enabled=true", async () => {
+      const { manager, gatewayAdapter } = makeHarness();
+      await initAndFlush(manager);
+
+      const [, , contextFactory] =
+        gatewayAdapter.createSupergraphHandler.mock.calls[0];
+
+      const req = new Request("http://localhost/graphql");
+      const mockService = {
+        authenticateRequest: vi.fn().mockResolvedValue({
+          user: undefined,
+          admins: ["0xadmin"],
+          auth_enabled: true,
+        } satisfies AuthContext),
+      } as unknown as AuthService;
+      await createAuthFetchMiddleware(mockService)(
+        async () => new Response("ok"),
+      )(req);
+
+      const ctx = await contextFactory(req);
+
+      expect(ctx.isAdmin("0xadmin")).toBe(true);
+      expect(ctx.isAdmin("0xnotadmin")).toBe(false);
+    });
+
+    it("isAdmin always returns true when auth_enabled=false in the AuthContext", async () => {
+      const { manager, gatewayAdapter } = makeHarness();
+      await initAndFlush(manager);
+
+      const [, , contextFactory] =
+        gatewayAdapter.createSupergraphHandler.mock.calls[0];
+
+      const req = new Request("http://localhost/graphql");
+      const mockService = {
+        authenticateRequest: vi.fn().mockResolvedValue({
+          user: undefined,
+          admins: [],
+          auth_enabled: false,
+        } satisfies AuthContext),
+      } as unknown as AuthService;
+      await createAuthFetchMiddleware(mockService)(
+        async () => new Response("ok"),
+      )(req);
+
+      const ctx = await contextFactory(req);
+
+      expect(ctx.isAdmin("0xanyone")).toBe(true);
+    });
+
+    it("auth fields (user, isAdmin) win over additionalContextFields with the same key", async () => {
+      const { manager, gatewayAdapter } = makeHarness();
+      // Deliberately set conflicting keys via setAdditionalContextFields
+      manager.setAdditionalContextFields({
+        user: { address: "0xoverridden" },
+        isAdmin: () => false,
+      });
+      await initAndFlush(manager);
+
+      const [, , contextFactory] =
+        gatewayAdapter.createSupergraphHandler.mock.calls[0];
+
+      const req = new Request("http://localhost/graphql");
+      const expectedUser = {
+        address: "0xreal",
+        chainId: 1,
+        networkId: "eip155",
+      };
+      const mockService = {
+        authenticateRequest: vi.fn().mockResolvedValue({
+          user: expectedUser,
+          admins: ["0xadmin"],
+          auth_enabled: true,
+        } satisfies AuthContext),
+      } as unknown as AuthService;
+      await createAuthFetchMiddleware(mockService)(
+        async () => new Response("ok"),
+      )(req);
+
+      const ctx = await contextFactory(req);
+
+      // The auth-derived user should win over the one set via setAdditionalContextFields
+      expect(ctx.user).toEqual(expectedUser);
+      // The auth-derived isAdmin should win too
+      expect(ctx.isAdmin("0xadmin")).toBe(true);
+    });
+  });
+
+  // ── authMiddleware wrapping ─────────────────────────────────────────────────
+
+  describe("init() with authMiddleware", () => {
+    it("wraps the supergraph handler through the auth middleware", async () => {
+      const { manager, gatewayAdapter, mounts } = makeHarness();
+
+      const intercepted: globalThis.Request[] = [];
+      const authMiddleware =
+        (next: FetchHandler): FetchHandler =>
+        async (req: Request) => {
+          intercepted.push(req);
+          return next(req);
+        };
+
+      const initPromise = manager.init([], authMiddleware);
+      await vi.runAllTimersAsync();
+      await initPromise;
+
+      // Invoke the mounted supergraph handler
+      const handler = mounts.get("/graphql");
+      expect(handler).toBeDefined();
+      const req = new Request("http://localhost/graphql");
+      await handler!(req);
+
+      // The auth middleware should have intercepted the call
+      expect(intercepted).toContain(req);
+      // And the gateway adapter's handler should still have been called
+      expect(
+        gatewayAdapter.createSupergraphHandler.mock.results[0]
+          .value as Promise<FetchHandler>,
+      ).toBeDefined();
+    });
+
+    it("does not wrap handlers when no authMiddleware is provided", async () => {
+      const { manager, mounts } = makeHarness();
+      await initAndFlush(manager);
+
+      // The handler should be mounted and callable without going through any wrapper
+      const handler = mounts.get("/graphql");
+      expect(handler).toBeDefined();
+      const res = await handler!(new Request("http://localhost/graphql"));
+      expect(res.status).toBe(200);
     });
   });
 

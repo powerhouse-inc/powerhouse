@@ -91,19 +91,6 @@ export interface IHttpAdapter {
     options?: { exact?: boolean },
   ): void;
 
-  /** Register a REST GET endpoint. Handler receives matched URL params. */
-  get(
-    path: string,
-    handler: (
-      params: Record<string, string>,
-      req: unknown,
-      res: unknown,
-    ) => void | Promise<void>,
-  ): void;
-
-  /** Add a middleware that runs before all registered routes. */
-  use(middleware: unknown): void;
-
   /**
    * Register a GET route that returns a Fetch Response (for health, explorer, etc.).
    * Registered directly on the underlying framework app, bypassing the sub-router.

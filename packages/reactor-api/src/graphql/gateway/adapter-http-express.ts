@@ -7,7 +7,7 @@ import { Router } from "express";
 import expressLib from "express";
 import type { IRouter } from "express";
 import fs from "node:fs";
-import type http from "node:http";
+import http from "node:http";
 import https from "node:https";
 import path from "node:path";
 import { match, type MatchFunction, type ParamData } from "path-to-regexp";
@@ -74,23 +74,6 @@ export class ExpressHttpAdapter implements IHttpAdapter {
     }
   }
 
-  get(
-    path: string,
-    handler: (
-      params: Record<string, string>,
-      req: unknown,
-      res: unknown,
-    ) => void | Promise<void>,
-  ): void {
-    this.#router.get(path, (req, res) => {
-      void handler(req.params as Record<string, string>, req, res);
-    });
-  }
-
-  use(middleware: unknown): void {
-    this.#router.use(middleware as express.RequestHandler);
-  }
-
   getRoute(
     routePath: string,
     handler: (request: Request) => Response | Promise<Response>,
@@ -123,6 +106,8 @@ export class ExpressHttpAdapter implements IHttpAdapter {
   }
 
   async listen(port: number, tls?: TlsOptions): Promise<http.Server> {
+    let server: http.Server;
+
     if (tls === true) {
       const { cert, key } = (await devcert.certificateFor("localhost")) as {
         cert: Buffer;
@@ -131,30 +116,29 @@ export class ExpressHttpAdapter implements IHttpAdapter {
       if (!cert || !key) {
         throw new Error("Invalid certificate generated");
       }
-      const httpServer = https.createServer({ cert, key }, this.#app);
-      httpServer.listen(port);
-      return httpServer;
+      server = https.createServer({ cert, key }, this.#app);
     } else if (tls && "keyPath" in tls) {
       const currentDir = process.cwd();
-      const httpServer = https.createServer(
+      server = https.createServer(
         {
           key: fs.readFileSync(path.join(currentDir, tls.keyPath)),
           cert: fs.readFileSync(path.join(currentDir, tls.certPath)),
         },
         this.#app,
       );
-      httpServer.listen(port);
-      return httpServer;
     } else if (tls && "cert" in tls) {
-      const httpServer = https.createServer(
-        { cert: tls.cert, key: tls.key },
-        this.#app,
-      );
-      httpServer.listen(port);
-      return httpServer;
+      server = https.createServer({ cert: tls.cert, key: tls.key }, this.#app);
     } else {
-      return this.#app.listen(port);
+      server = http.createServer(this.#app);
     }
+
+    return new Promise<http.Server>((resolve, reject) => {
+      server.once("error", reject);
+      server.listen(port, () => {
+        server.off("error", reject);
+        resolve(server);
+      });
+    });
   }
 
   #serveFetchHandler(
