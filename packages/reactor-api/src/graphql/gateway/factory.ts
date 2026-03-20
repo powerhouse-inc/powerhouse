@@ -19,12 +19,16 @@ export function createGatewayAdapter(
 
 export type HttpAdapterSetup = {
   adapter: IHttpAdapter;
-  middleware: unknown;
 };
 
-export function createHttpAdapter(type: HttpAdapterType): HttpAdapterSetup {
+export function createHttpAdapter(
+  type: HttpAdapterType,
+  existingApp?: unknown,
+): HttpAdapterSetup {
   switch (type) {
     case "express":
-      return createExpressHttpAdapter();
+      return createExpressHttpAdapter(
+        existingApp as import("express").Express | undefined,
+      );
   }
 }

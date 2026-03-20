@@ -10,7 +10,7 @@ import type {
   IRelationalDbLegacy,
   ProcessorFactoryLegacy,
 } from "document-drive";
-import type { Express } from "express";
+import type { IHttpAdapter } from "./graphql/gateway/types.js";
 import type { IPackageManager } from "./packages/types.js";
 export type {
   IPackageLoader,
@@ -18,7 +18,7 @@ export type {
 } from "./packages/types.js";
 
 export type API = {
-  app: Express;
+  app: IHttpAdapter;
   graphqlManager: GraphQLManager;
   packages: IPackageManager;
 };

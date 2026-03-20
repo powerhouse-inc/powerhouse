@@ -11,8 +11,6 @@ import type {
   ProcessorRecord as ReactorProcessorRecord,
 } from "@powerhousedao/reactor";
 import { setupMcpServer } from "@powerhousedao/reactor-mcp";
-import { type DocumentModelModule } from "@powerhousedao/shared/document-model";
-import devcert from "devcert";
 import type {
   IDocumentDriveServer,
   IProcessorHostModuleLegacy,
@@ -23,14 +21,10 @@ import {
   createRelationalDbLegacy,
   ProcessorManagerLegacy,
 } from "document-drive";
-import type { Express } from "express";
-import express from "express";
+import type { DocumentModelModule } from "document-model";
 import type { Kysely } from "kysely";
-import fs from "node:fs";
 import type http from "node:http";
-import https from "node:https";
 import path from "node:path";
-import type { TlsOptions } from "node:tls";
 import type { Pool } from "pg";
 import { WebSocketServer } from "ws";
 // Import tracing - initializes OpenTelemetry and provides stub functions for backwards compatibility
@@ -44,16 +38,20 @@ import { config, DefaultCoreSubgraphs } from "./config.js";
 import { AuthSubgraph } from "./graphql/auth/subgraph.js";
 import { GraphQLManager } from "./graphql/graphql-manager.js";
 import {
+  createAuthFetchMiddleware,
+  type AuthFetchMiddleware,
+} from "./graphql/gateway/auth-middleware.js";
+import {
   createGatewayAdapter,
   createHttpAdapter,
 } from "./graphql/gateway/factory.js";
+import type { IHttpAdapter, TlsOptions } from "./graphql/gateway/types.js";
 import { renderGraphqlPlayground } from "./graphql/playground.js";
 import { ReactorSubgraph } from "./graphql/reactor/subgraph.js";
 import type { SubgraphClass } from "./graphql/types.js";
 import { runMigrations } from "./migrations/index.js";
 import { ImportPackageLoader } from "./packages/import-loader.js";
 import { PackageManager } from "./packages/package-manager.js";
-import type { AuthenticatedRequest } from "./services/auth.service.js";
 import { AuthService } from "./services/auth.service.js";
 import { AuthorizationService } from "./services/authorization.service.js";
 import { DocumentPermissionService } from "./services/document-permission.service.js";
@@ -68,7 +66,7 @@ import {
 const defaultLogger = childLogger(["reactor-api", "server"]);
 
 type Options = {
-  express?: Express;
+  express?: import("express").Express;
   port?: number;
   dbPath: string | undefined;
   client?: PGlite | typeof Pool | undefined;
@@ -102,25 +100,6 @@ type Options = {
 };
 
 const DEFAULT_PORT = 4000;
-/**
- * Sets up the Express app with necessary routes
- */
-function setupGraphQlExplorer(router: express.Router): void {
-  router.get("/explorer/:endpoint?", (req, res) => {
-    res.setHeader("Content-Type", "text/html");
-    const endpoint =
-      req.params.endpoint !== undefined
-        ? `/${req.params.endpoint}`
-        : "/graphql";
-
-    const { query } = req.query;
-    if (query && typeof query !== "string") {
-      throw new Error("Invalid query");
-    }
-
-    res.send(renderGraphqlPlayground(endpoint, query));
-  });
-}
 
 /**
  * Initializes the database and analytics store
@@ -148,7 +127,8 @@ async function initializeDatabaseAndAnalytics(
  * Sets up the subgraph manager and registers subgraphs
  */
 async function setupGraphQLManager(
-  app: Express,
+  httpAdapter: IHttpAdapter,
+  authFetchMiddleware: AuthFetchMiddleware | undefined,
   httpServer: http.Server,
   wsServer: WebSocketServer,
   client: IReactorClient,
@@ -169,9 +149,6 @@ async function setupGraphQLManager(
   port?: number,
   authorizationService?: AuthorizationService,
 ): Promise<GraphQLManager> {
-  const { adapter: httpAdapter, middleware: httpMiddleware } =
-    createHttpAdapter("express");
-
   const graphqlManager = new GraphQLManager(
     config.basePath,
     httpServer,
@@ -195,7 +172,7 @@ async function setupGraphQLManager(
     createGatewayAdapter("apollo", logger),
   );
 
-  await graphqlManager.init(subgraphs.core);
+  await graphqlManager.init(subgraphs.core, authFetchMiddleware);
 
   for (const [, collection] of subgraphs.extended.entries()) {
     for (const subgraph of collection) {
@@ -204,21 +181,6 @@ async function setupGraphQLManager(
   }
 
   await graphqlManager.updateRouter();
-
-  // Mount the router on the app after init so all handlers are registered.
-  // Inject auth context fields from the Express request into GraphQL context.
-  app.use("/", (req, res, next) => {
-    graphqlManager.setAdditionalContextFields({
-      user: req.user,
-      isAdmin: (address: string) =>
-        !req.auth_enabled
-          ? true
-          : (req.admins
-              ?.map((a) => a.toLowerCase())
-              .includes(address.toLowerCase() ?? "") ?? false),
-    });
-    (httpMiddleware as express.RequestHandler)(req, res, next);
-  });
 
   return graphqlManager;
 }
@@ -289,42 +251,19 @@ function setupEventListeners(
  * Starts the server (HTTP or HTTPS) and attaches WebSocket server
  */
 async function startServer(
-  app: Express,
+  httpAdapter: IHttpAdapter,
   port: number,
   httpsOptions: Options["https"],
   logger: ILogger,
 ): Promise<{ httpServer: http.Server; wsServer: WebSocketServer }> {
-  let httpServer: http.Server;
+  const tls: TlsOptions | undefined =
+    httpsOptions === true
+      ? true
+      : typeof httpsOptions === "object"
+        ? { keyPath: httpsOptions.keyPath, certPath: httpsOptions.certPath }
+        : undefined;
 
-  if (httpsOptions) {
-    const currentDir = process.cwd();
-
-    if (typeof httpsOptions === "object") {
-      httpServer = https.createServer(
-        {
-          key: fs.readFileSync(path.join(currentDir, httpsOptions.keyPath)),
-          cert: fs.readFileSync(path.join(currentDir, httpsOptions.certPath)),
-        },
-        app,
-      );
-    } else {
-      try {
-        const { cert, key } = (await devcert.certificateFor(
-          "localhost",
-        )) as TlsOptions;
-        if (!cert || !key) {
-          throw new Error("Invalid certificate generated");
-        }
-        httpServer = https.createServer({ cert, key }, app);
-      } catch (err) {
-        console.error("Failed to get HTTPS certificate:", err);
-        throw new Error("Failed to start HTTPS server");
-      }
-    }
-    httpServer.listen(port);
-  } else {
-    httpServer = app.listen(port);
-  }
+  const httpServer = await httpAdapter.listen(port, tls);
 
   const wsServer = new WebSocketServer({
     server: httpServer,
@@ -342,7 +281,8 @@ async function startServer(
  */
 async function _setupCommonInfrastructure(options: Options): Promise<{
   port: number;
-  app: Express;
+  httpAdapter: IHttpAdapter;
+  authFetchMiddleware: AuthFetchMiddleware | undefined;
   auth: {
     enabled: boolean;
     admins: string[];
@@ -359,7 +299,10 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   }
 
   const port = options.port ?? DEFAULT_PORT;
-  const app = options.express ?? express();
+  const { adapter: httpAdapter } = createHttpAdapter(
+    "express",
+    options.express,
+  );
 
   // Setup auth configuration
   let admins: string[] = [];
@@ -407,14 +350,27 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     skipCredentialVerification = SKIP_CREDENTIAL_VERIFICATION === "true";
   }
 
-  // Health check endpoint (before auth middleware)
-  app.get("/health", (_req, res) => {
-    res.status(200).send("OK");
-  });
-
   const logger = options.logger ?? defaultLogger;
 
-  // add auth middleware if auth is enabled
+  // Health check endpoint (registered directly on adapter, before auth)
+  httpAdapter.getRoute("/health", () => new Response("OK", { status: 200 }));
+
+  // Explorer route
+  httpAdapter.getRoute(`${config.basePath}/explorer/:endpoint?`, (request) => {
+    const url = new URL(request.url);
+    const lastSegment = url.pathname.split("/").pop() ?? "";
+    const endpoint =
+      lastSegment === "explorer" || lastSegment === ""
+        ? "/graphql"
+        : `/${lastSegment}`;
+    const query = url.searchParams.get("query") ?? undefined;
+    return new Response(renderGraphqlPlayground(endpoint, query), {
+      headers: { "Content-Type": "text/html" },
+    });
+  });
+
+  // Create auth fetch middleware if auth is enabled
+  let authFetchMiddleware: AuthFetchMiddleware | undefined;
   if (authEnabled) {
     logger.info("Setting up Auth middleware");
     const authService = new AuthService({
@@ -422,16 +378,8 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
       admins,
       skipCredentialVerification,
     });
-
-    // Apply auth middleware to all routes including GraphQL
-    app.use((req, res, next) => {
-      authService.authenticate(req as AuthenticatedRequest, res, next);
-    });
+    authFetchMiddleware = createAuthFetchMiddleware(authService);
   }
-
-  const defaultRouter = express.Router();
-  setupGraphQlExplorer(defaultRouter);
-  app.use(config.basePath, defaultRouter);
 
   // Initialize database and analytics store
   const { relationalDb, analyticsStore } = await trace(
@@ -475,7 +423,8 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
 
   return {
     port,
-    app,
+    httpAdapter,
+    authFetchMiddleware,
     auth: {
       enabled: authEnabled,
       admins,
@@ -495,7 +444,8 @@ async function _setupAPI(
   reactorClient: IReactorClient,
   syncManager: ISyncManager,
   reactorProcessorManager: IReactorProcessorManager,
-  app: Express,
+  httpAdapter: IHttpAdapter,
+  authFetchMiddleware: AuthFetchMiddleware | undefined,
   port: number,
   packages: PackageManager,
   relationalDb: IRelationalDbLegacy,
@@ -579,7 +529,7 @@ async function _setupAPI(
 
   // Start the server
   const { httpServer, wsServer } = await startServer(
-    app,
+    httpAdapter,
     port,
     options.https,
     logger,
@@ -596,7 +546,8 @@ async function _setupAPI(
   }
 
   const graphqlManager = await setupGraphQLManager(
-    app,
+    httpAdapter,
+    authFetchMiddleware,
     httpServer,
     wsServer,
     reactorClient,
@@ -624,12 +575,16 @@ async function _setupAPI(
   );
 
   if (mcpServerEnabled) {
-    await setupMcpServer({ client: reactorClient, syncManager }, app);
+    // TODO: decouple reactor-mcp from Express
+    await setupMcpServer(
+      { client: reactorClient, syncManager },
+      httpAdapter.handle as import("express").Express,
+    );
     logger.info(`MCP server available at http://localhost:${port}/mcp`);
   }
 
   return {
-    app,
+    app: httpAdapter,
     graphqlManager,
     packages,
   };
@@ -660,7 +615,8 @@ export async function initializeAndStartAPI(
 > {
   const {
     port,
-    app,
+    httpAdapter,
+    authFetchMiddleware,
     auth,
     relationalDb,
     analyticsStore,
@@ -703,7 +659,8 @@ export async function initializeAndStartAPI(
     reactorClient,
     syncManager,
     reactorProcessorManager,
-    app,
+    httpAdapter,
+    authFetchMiddleware,
     port,
     packages,
     relationalDb,

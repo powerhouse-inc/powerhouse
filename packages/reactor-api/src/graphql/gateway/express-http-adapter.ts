@@ -1,21 +1,34 @@
 import bodyParser from "body-parser";
 import cors from "cors";
 import type { CorsOptions } from "cors";
+import devcert from "devcert";
 import type express from "express";
 import { Router } from "express";
+import expressLib from "express";
 import type { IRouter } from "express";
+import fs from "node:fs";
+import type http from "node:http";
+import https from "node:https";
+import path from "node:path";
 import { match, type MatchFunction, type ParamData } from "path-to-regexp";
-import type { FetchHandler, IHttpAdapter } from "./types.js";
+import type { FetchHandler, IHttpAdapter, TlsOptions } from "./types.js";
 
 export class ExpressHttpAdapter implements IHttpAdapter {
+  readonly #app: ReturnType<typeof expressLib>;
   readonly #router: IRouter;
   readonly #handlers = new Map<
     string,
     { handler: FetchHandler; matcher: MatchFunction<ParamData> }
   >();
 
-  constructor(router: IRouter) {
-    this.#router = router;
+  constructor(existingApp?: ReturnType<typeof expressLib>) {
+    this.#app = existingApp ?? expressLib();
+    this.#router = Router();
+    this.#app.use(this.#router);
+  }
+
+  get handle(): unknown {
+    return this.#app;
   }
 
   setupMiddleware({
@@ -78,6 +91,72 @@ export class ExpressHttpAdapter implements IHttpAdapter {
     this.#router.use(middleware as express.RequestHandler);
   }
 
+  getRoute(
+    routePath: string,
+    handler: (request: Request) => Response | Promise<Response>,
+  ): void {
+    this.#app.get(routePath, (req, res) => {
+      const protocol = req.protocol;
+      const host = req.get("host") ?? "localhost";
+      const url = `${protocol}://${host}${req.originalUrl}`;
+      const headers = new Headers();
+      for (const [key, value] of Object.entries(req.headers)) {
+        if (typeof value === "string") {
+          headers.set(key, value);
+        } else if (Array.isArray(value)) {
+          headers.set(key, value.join(", "));
+        }
+      }
+      const fetchRequest = new Request(url, { method: "GET", headers });
+      Promise.resolve(handler(fetchRequest))
+        .then(async (response) => {
+          res.status(response.status);
+          response.headers.forEach((value, key) => {
+            res.setHeader(key, value);
+          });
+          res.send(await response.text());
+        })
+        .catch((err: unknown) => {
+          res.status(500).send(String(err));
+        });
+    });
+  }
+
+  async listen(port: number, tls?: TlsOptions): Promise<http.Server> {
+    if (tls === true) {
+      const { cert, key } = (await devcert.certificateFor("localhost")) as {
+        cert: Buffer;
+        key: Buffer;
+      };
+      if (!cert || !key) {
+        throw new Error("Invalid certificate generated");
+      }
+      const httpServer = https.createServer({ cert, key }, this.#app);
+      httpServer.listen(port);
+      return httpServer;
+    } else if (tls && "keyPath" in tls) {
+      const currentDir = process.cwd();
+      const httpServer = https.createServer(
+        {
+          key: fs.readFileSync(path.join(currentDir, tls.keyPath)),
+          cert: fs.readFileSync(path.join(currentDir, tls.certPath)),
+        },
+        this.#app,
+      );
+      httpServer.listen(port);
+      return httpServer;
+    } else if (tls && "cert" in tls) {
+      const httpServer = https.createServer(
+        { cert: tls.cert, key: tls.key },
+        this.#app,
+      );
+      httpServer.listen(port);
+      return httpServer;
+    } else {
+      return this.#app.listen(port);
+    }
+  }
+
   #serveFetchHandler(
     handler: FetchHandler,
     req: express.Request,
@@ -129,10 +208,8 @@ export class ExpressHttpAdapter implements IHttpAdapter {
   }
 }
 
-export function createExpressHttpAdapter(): {
-  adapter: IHttpAdapter;
-  middleware: IRouter;
-} {
-  const router = Router();
-  return { adapter: new ExpressHttpAdapter(router), middleware: router };
+export function createExpressHttpAdapter(
+  existingApp?: ReturnType<typeof expressLib>,
+): { adapter: IHttpAdapter } {
+  return { adapter: new ExpressHttpAdapter(existingApp) };
 }

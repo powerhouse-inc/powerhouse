@@ -108,6 +108,9 @@ function makeMockHttpAdapter() {
     }),
     get: vi.fn(),
     use: vi.fn(),
+    getRoute: vi.fn(),
+    listen: vi.fn().mockResolvedValue({}),
+    handle: {},
   };
   return { adapter, mounts };
 }
