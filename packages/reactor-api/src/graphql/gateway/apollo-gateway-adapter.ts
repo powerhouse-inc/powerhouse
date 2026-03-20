@@ -4,7 +4,6 @@ import { ApolloServerPluginLandingPageLocalDefault } from "@apollo/server/plugin
 import type { ILogger } from "document-drive";
 import type { GraphQLSchema } from "graphql";
 import type http from "node:http";
-import { setTimeout } from "node:timers/promises";
 import type { WebSocketServer } from "ws";
 import type { Context } from "../types.js";
 import { useServer } from "../websocket.js";
@@ -42,8 +41,7 @@ export class ApolloGatewayAdapter implements IGatewayAdapter<Context> {
         ApolloServerPluginLandingPageLocalDefault(),
       ],
     });
-    server.startInBackgroundHandlingStartupErrorsByLoggingAndFailingAllRequests();
-    await this.#waitForServer(server);
+    await server.start();
     this.#servers.push(server);
     return createApolloFetchHandler(server, contextFactory);
   }
@@ -73,18 +71,6 @@ export class ApolloGatewayAdapter implements IGatewayAdapter<Context> {
   async stop(): Promise<void> {
     await Promise.all(this.#servers.map((s) => s.stop()));
     this.#servers.length = 0;
-  }
-
-  async #waitForServer(server: ApolloServer<Context>): Promise<void> {
-    for (let attempt = 0; attempt < 100; attempt++) {
-      try {
-        server.assertStarted("waitForServer");
-        return;
-      } catch {
-        await setTimeout(100);
-      }
-    }
-    throw new Error(`Apollo server did not start after 100 attempts`);
   }
 }
 

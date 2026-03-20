@@ -1,8 +1,15 @@
-import { ApolloServer } from "@apollo/server";
+import type { ApolloServer } from "@apollo/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createApolloFetchHandler } from "../../src/graphql/gateway/apollo-gateway-adapter.js";
+import {
+  ApolloGatewayAdapter,
+  createApolloFetchHandler,
+} from "../../src/graphql/gateway/apollo-gateway-adapter.js";
 import type { GatewayContextFactory } from "../../src/graphql/gateway/types.js";
 import type { Context } from "../../src/graphql/types.js";
+import {
+  runGatewayAdapterContractTests,
+  type GatewayAdapterHarness,
+} from "./gateway-adapter-contract.js";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -11,6 +18,18 @@ const noopCtx: GatewayContextFactory<Context> = async () => ({
   headers: {},
   db: null,
 });
+
+/** A stub ILogger that satisfies the interface without printing anything. */
+const silentLogger = {
+  level: "error" as const,
+  verbose: vi.fn(),
+  debug: vi.fn(),
+  info: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+  errorHandler: vi.fn(),
+  child: () => silentLogger,
+};
 
 type ApolloHttpResult = Awaited<
   ReturnType<ApolloServer<Context>["executeHTTPGraphQLRequest"]>
@@ -39,9 +58,22 @@ function makeMockServer(result: ApolloHttpResult = makeApolloResult()) {
   };
 }
 
+// ─── run the shared contract suite against ApolloGatewayAdapter ──────────────
+
+runGatewayAdapterContractTests(
+  "ApolloGatewayAdapter",
+  async (): Promise<GatewayAdapterHarness> => {
+    const adapter = new ApolloGatewayAdapter(silentLogger);
+    return {
+      adapter,
+      close: () => adapter.stop(),
+    };
+  },
+);
+
 // ─── createApolloFetchHandler – request conversion ───────────────────────────
 
-describe("createApolloFetchHandler – request conversion", () => {
+describe("createApolloFetchHandler - request conversion", () => {
   it("passes the request method to executeHTTPGraphQLRequest", async () => {
     const { server, executeHTTPGraphQLRequest } = makeMockServer();
     const handler = createApolloFetchHandler(server, noopCtx);
@@ -162,9 +194,9 @@ describe("createApolloFetchHandler – request conversion", () => {
   });
 });
 
-// ─── createApolloFetchHandler – response conversion ──────────────────────────
+// ─── createApolloFetchHandler - response conversion ──────────────────────────
 
-describe("createApolloFetchHandler – response conversion", () => {
+describe("createApolloFetchHandler - response conversion", () => {
   it("returns the Apollo response status as the Fetch Response status", async () => {
     const { server } = makeMockServer(makeApolloResult({ status: 400 }));
     const handler = createApolloFetchHandler(server, noopCtx);
@@ -236,9 +268,9 @@ describe("createApolloFetchHandler – response conversion", () => {
   });
 });
 
-// ─── createApolloFetchHandler – context factory invocation ───────────────────
+// ─── createApolloFetchHandler - context factory ───────────────────────────────
 
-describe("createApolloFetchHandler – context factory", () => {
+describe("createApolloFetchHandler - context factory", () => {
   it("calls the context factory once per request", async () => {
     const ctxFactory = vi.fn().mockResolvedValue({ headers: {}, db: null });
     const { server } = makeMockServer();
