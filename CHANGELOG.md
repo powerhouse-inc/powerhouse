@@ -1,3 +1,21 @@
+## 6.0.0-dev.101 (2026-03-20)
+
+### 🚀 Features
+
+- **examples:** add Discord webhook processor example ([fc09a4d66](https://github.com/powerhouse-inc/powerhouse/commit/fc09a4d66))
+- **reactor-api:** documents subgraph call ([2efd5e899](https://github.com/powerhouse-inc/powerhouse/commit/2efd5e899))
+- **shared:** add full-text search processor for document indexing ([48ffbff4f](https://github.com/powerhouse-inc/powerhouse/commit/48ffbff4f))
+
+### 🩹 Fixes
+
+- **ph-cli:** suppress misleading npm fallback warning when using --pnpm flag ([100603968](https://github.com/powerhouse-inc/powerhouse/commit/100603968))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 4.6
+- Guillermo Puente @gpuente
+
 ## 6.0.0-dev.100 (2026-03-19)
 
 This was a version bump only, there were no code changes.

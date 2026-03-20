@@ -1,3 +1,19 @@
+## 6.0.0-dev.101 (2026-03-20)
+
+### 🚀 Features
+
+- **examples:** add Discord webhook processor example ([fc09a4d66](https://github.com/powerhouse-inc/powerhouse/commit/fc09a4d66))
+
+### 🩹 Fixes
+
+- **ph-cli:** suppress misleading npm fallback warning when using --pnpm flag ([100603968](https://github.com/powerhouse-inc/powerhouse/commit/100603968))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 4.6
+- Guillermo Puente @gpuente
+
 ## 6.0.0-dev.100 (2026-03-19)
 
 This was a version bump only for @powerhousedao/common to align it with other projects, there were no code changes.

@@ -1,3 +1,15 @@
+## 6.0.0-dev.101 (2026-03-20)
+
+### 🚀 Features
+
+- **examples:** add Discord webhook processor example ([fc09a4d66](https://github.com/powerhouse-inc/powerhouse/commit/fc09a4d66))
+- **shared:** add full-text search processor for document indexing ([48ffbff4f](https://github.com/powerhouse-inc/powerhouse/commit/48ffbff4f))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 4.6
+
 ## 6.0.0-dev.100 (2026-03-19)
 
 This was a version bump only for @powerhousedao/shared to align it with other projects, there were no code changes.

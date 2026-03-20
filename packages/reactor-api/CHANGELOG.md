@@ -1,3 +1,15 @@
+## 6.0.0-dev.101 (2026-03-20)
+
+### 🚀 Features
+
+- **reactor-api:** documents subgraph call ([2efd5e899](https://github.com/powerhouse-inc/powerhouse/commit/2efd5e899))
+- **examples:** add Discord webhook processor example ([fc09a4d66](https://github.com/powerhouse-inc/powerhouse/commit/fc09a4d66))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 4.6
+
 ## 6.0.0-dev.100 (2026-03-19)
 
 This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
