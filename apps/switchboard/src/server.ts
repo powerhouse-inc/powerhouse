@@ -286,7 +286,7 @@ async function initServer(
 
   // add vite middleware after express app is initialized if applicable
   if (vite) {
-    api.app.use(vite.middlewares);
+    (api.app.handle as ReturnType<typeof express>).use(vite.middlewares);
   }
 
   // Connect to remote drives AFTER packages are loaded
