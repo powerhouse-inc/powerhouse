@@ -31,6 +31,11 @@ export class ExpressHttpAdapter implements IHttpAdapter {
     return this.#app;
   }
 
+  mountRawMiddleware(middleware: unknown): void {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    this.#app.use(middleware as any);
+  }
+
   setupMiddleware({
     corsOptions,
     bodyLimit = "50mb",

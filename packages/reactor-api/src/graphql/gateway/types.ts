@@ -106,6 +106,13 @@ export interface IHttpAdapter {
    */
   listen(port: number, tls?: TlsOptions): Promise<http.Server>;
 
+  /**
+   * Mount a raw Connect/Express-compatible middleware function (e.g. Vite dev
+   * server middleware). The implementation is adapter-specific; for Express this
+   * is equivalent to `app.use(middleware)`.
+   */
+  mountRawMiddleware(middleware: unknown): void;
+
   /** The raw framework handle (e.g. Express app). Cast as needed at call sites. */
   readonly handle: unknown;
 }

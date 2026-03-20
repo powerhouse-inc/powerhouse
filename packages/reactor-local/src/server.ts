@@ -132,9 +132,7 @@ const startServer = async (
 
   // add vite middleware after express app is initialized if applicable
   if (vite) {
-    (api.app.handle as { use: (middleware: unknown) => void }).use(
-      vite.middlewares,
-    );
+    api.app.mountRawMiddleware(vite.middlewares);
   }
 
   // Conditionally add a default drive
