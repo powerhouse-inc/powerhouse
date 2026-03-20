@@ -2,9 +2,14 @@ import bodyParser from "body-parser";
 import cors from "cors";
 import type { CorsOptions } from "cors";
 import type express from "express";
+import { Router } from "express";
 import type { IRouter } from "express";
 import { match, type MatchFunction, type ParamData } from "path-to-regexp";
-import type { FetchHandler, IHttpAdapter } from "./types.js";
+import type {
+  FetchHandler,
+  IHttpAdapter,
+  IHttpAdapterFactory,
+} from "./types.js";
 
 export class ExpressHttpAdapter implements IHttpAdapter {
   readonly #router: IRouter;
@@ -125,5 +130,22 @@ export class ExpressHttpAdapter implements IHttpAdapter {
         res.send(responseBody);
       })
       .catch(next);
+  }
+}
+
+/**
+ * Factory for `ExpressHttpAdapter`. Owns the underlying `express.Router` so
+ * that callers can access it via `middleware` for mounting in `app.use()`.
+ */
+export class ExpressHttpAdapterFactory implements IHttpAdapterFactory {
+  readonly #router: IRouter = Router();
+
+  create(): IHttpAdapter {
+    return new ExpressHttpAdapter(this.#router);
+  }
+
+  /** The Express router to mount in `app.use()`. */
+  get middleware(): IRouter {
+    return this.#router;
   }
 }
