@@ -33,7 +33,6 @@ import type {
   FetchHandler,
   GatewayContextFactory,
   IGatewayAdapter,
-  IGatewayAdapterFactory,
   IHttpAdapter,
   SubgraphDefinition,
   WsDisposer,
@@ -124,12 +123,11 @@ export class GraphQLManager {
     private readonly featureFlags: GraphqlManagerFeatureFlags = DefaultFeatureFlags,
     private readonly port: number = 4001,
     private readonly authorizationService?: AuthorizationService,
-    gatewayAdapterFactory?: IGatewayAdapterFactory<Context>,
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    gatewayAdapter?: IGatewayAdapter<Context>,
   ) {
-    if (!gatewayAdapterFactory) {
-      throw new TypeError("GraphQLManager: gatewayAdapterFactory is required");
-    }
-    this.gatewayAdapter = gatewayAdapterFactory.create();
+    // Always provided — optional only to satisfy TS ordering (follows optional params)
+    this.gatewayAdapter = gatewayAdapter!;
 
     if (this.authConfig) {
       this.authService = new AuthService(this.authConfig);

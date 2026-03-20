@@ -67,14 +67,6 @@ export interface IGatewayAdapter<TContext = unknown> {
   stop(): Promise<void>;
 }
 
-export interface IGatewayAdapterFactory<TContext = unknown> {
-  create(): IGatewayAdapter<TContext>;
-}
-
-export interface IHttpAdapterFactory {
-  create(): IHttpAdapter;
-}
-
 export interface IHttpAdapter {
   /** Set up CORS and body-parser equivalent middleware. */
   setupMiddleware(config: {

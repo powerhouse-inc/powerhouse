@@ -24,7 +24,6 @@ import type {
   FetchHandler,
   GatewayContextFactory,
   IGatewayAdapter,
-  IGatewayAdapterFactory,
   SubgraphDefinition,
   WsContextFactory,
   WsDisposer,
@@ -226,12 +225,4 @@ export function createApolloFetchHandler(
       headers: responseHeaders,
     });
   };
-}
-
-export class ApolloGatewayAdapterFactory implements IGatewayAdapterFactory<Context> {
-  constructor(private readonly logger: ILogger) {}
-
-  create(): IGatewayAdapter<Context> {
-    return new ApolloGatewayAdapter(this.logger);
-  }
 }
