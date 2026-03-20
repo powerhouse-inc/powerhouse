@@ -2,17 +2,18 @@ import bodyParser from "body-parser";
 import cors from "cors";
 import type { CorsOptions } from "cors";
 import type express from "express";
+import type { IRouter } from "express";
 import { match, type MatchFunction, type ParamData } from "path-to-regexp";
 import type { FetchHandler, IHttpAdapter } from "./types.js";
 
 export class ExpressHttpAdapter implements IHttpAdapter {
-  readonly #router: express.Router;
+  readonly #router: IRouter;
   readonly #handlers = new Map<
     string,
     { handler: FetchHandler; matcher: MatchFunction<ParamData> }
   >();
 
-  constructor(router: express.Router) {
+  constructor(router: IRouter) {
     this.#router = router;
   }
 
