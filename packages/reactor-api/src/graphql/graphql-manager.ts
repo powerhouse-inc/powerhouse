@@ -13,6 +13,7 @@ import type {
 import { debounce, responseForDrive } from "document-drive";
 import type { DocumentModelModule } from "document-model";
 import type express from "express";
+import type { IRouter } from "express";
 import { Router } from "express";
 import type { IncomingHttpHeaders } from "http";
 import type http from "node:http";
@@ -98,7 +99,7 @@ export type GraphqlManagerFeatureFlags = {
 
 export class GraphQLManager {
   private initialized = false;
-  private readonly router: express.Router;
+  private readonly router: IRouter;
   private coreSubgraphsMap = new Map<string, ISubgraph[]>();
   private contextFields: Record<string, any> = {};
   private readonly subgraphs = new Map<string, ISubgraph[]>();
