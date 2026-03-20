@@ -43,7 +43,8 @@ import { childLogger, type ILogger } from "document-model";
 import { config, DefaultCoreSubgraphs } from "./config.js";
 import { AuthSubgraph } from "./graphql/auth/subgraph.js";
 import { GraphQLManager } from "./graphql/graphql-manager.js";
-import { ExpressHttpAdapter } from "./graphql/gateway/express-http-adapter.js";
+import { ApolloGatewayAdapterFactory } from "./graphql/gateway/apollo-gateway-adapter.js";
+import { ExpressHttpAdapterFactory } from "./graphql/gateway/express-http-adapter.js";
 import { renderGraphqlPlayground } from "./graphql/playground.js";
 import { ReactorSubgraph } from "./graphql/reactor/subgraph.js";
 import type { SubgraphClass } from "./graphql/types.js";
@@ -166,8 +167,8 @@ async function setupGraphQLManager(
   port?: number,
   authorizationService?: AuthorizationService,
 ): Promise<GraphQLManager> {
-  const router = express.Router();
-  const httpAdapter = new ExpressHttpAdapter(router);
+  const httpAdapterFactory = new ExpressHttpAdapterFactory();
+  const httpAdapter = httpAdapterFactory.create();
 
   const graphqlManager = new GraphQLManager(
     config.basePath,
@@ -189,6 +190,7 @@ async function setupGraphQLManager(
     },
     port,
     authorizationService,
+    new ApolloGatewayAdapterFactory(logger),
   );
 
   await graphqlManager.init(subgraphs.core);
@@ -213,7 +215,7 @@ async function setupGraphQLManager(
               ?.map((a) => a.toLowerCase())
               .includes(address.toLowerCase() ?? "") ?? false),
     });
-    router(req, res, next);
+    httpAdapterFactory.middleware(req, res, next);
   });
 
   return graphqlManager;

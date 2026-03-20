@@ -20,6 +20,7 @@ import { GraphQLManager } from "../src/graphql/graphql-manager.js";
 import type {
   FetchHandler,
   IGatewayAdapter,
+  IGatewayAdapterFactory,
   IHttpAdapter,
   WsDisposer,
 } from "../src/graphql/gateway/types.js";
@@ -121,6 +122,9 @@ type HarnessOptions = {
 function makeHarness(options: HarnessOptions = {}) {
   const { adapter: httpAdapter, mounts } = makeMockHttpAdapter();
   const gatewayAdapter = makeMockGatewayAdapter();
+  const gatewayAdapterFactory: IGatewayAdapterFactory<Context> = {
+    create: () => gatewayAdapter,
+  };
   const reactorClient = options.reactorClient ?? makeMockReactorClient();
   const httpServer = {} as http.Server;
   const wsServer = {
@@ -145,7 +149,7 @@ function makeHarness(options: HarnessOptions = {}) {
     },
     4001,
     undefined, // authorizationService
-    gatewayAdapter,
+    gatewayAdapterFactory,
   );
 
   return {

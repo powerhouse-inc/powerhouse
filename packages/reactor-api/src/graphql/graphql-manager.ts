@@ -29,11 +29,11 @@ import {
 import { DocumentModelSubgraph } from "./document-model-subgraph.js";
 import { createGraphQLSSEHandler } from "./sse.js";
 import { useServer } from "./websocket.js";
-import { ApolloGatewayAdapter } from "./gateway/apollo-gateway-adapter.js";
 import type {
   FetchHandler,
   GatewayContextFactory,
   IGatewayAdapter,
+  IGatewayAdapterFactory,
   IHttpAdapter,
   SubgraphDefinition,
   WsDisposer,
@@ -124,10 +124,12 @@ export class GraphQLManager {
     private readonly featureFlags: GraphqlManagerFeatureFlags = DefaultFeatureFlags,
     private readonly port: number = 4001,
     private readonly authorizationService?: AuthorizationService,
-    gatewayAdapter?: IGatewayAdapter<Context>,
+    gatewayAdapterFactory?: IGatewayAdapterFactory<Context>,
   ) {
-    this.gatewayAdapter =
-      gatewayAdapter ?? new ApolloGatewayAdapter(this.logger);
+    if (!gatewayAdapterFactory) {
+      throw new TypeError("GraphQLManager: gatewayAdapterFactory is required");
+    }
+    this.gatewayAdapter = gatewayAdapterFactory.create();
 
     if (this.authConfig) {
       this.authService = new AuthService(this.authConfig);
