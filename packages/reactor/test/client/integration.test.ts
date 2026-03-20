@@ -1,4 +1,5 @@
 import { driveDocumentModelModule } from "document-drive";
+import { addFile } from "document-drive/drive-document-model/gen/node/creators";
 import { actions, documentModelDocumentModelModule } from "document-model";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -693,6 +694,92 @@ describe("ReactorClient Integration Tests", () => {
         await expect(client.get("cascade-great-grandchild")).rejects.toThrow(
           "Document not found",
         );
+      });
+
+      it("should remove document from all containing drives on delete", async () => {
+        const drive1 = driveDocumentModelModule.utils.createDocument();
+        const drive2 = driveDocumentModelModule.utils.createDocument();
+        await client.create(drive1);
+        await client.create(drive2);
+
+        const doc = documentModelDocumentModelModule.utils.createDocument();
+        doc.header.name = "Shared Doc";
+        await client.createDocumentInDrive(drive1.header.id, doc);
+
+        await client.addChildren(drive2.header.id, [doc.header.id]);
+        const drive2Actions = [
+          addFile({
+            id: doc.header.id,
+            name: doc.header.name || doc.header.id,
+            documentType: doc.header.documentType,
+          }),
+        ];
+        await client.execute(drive2.header.id, "main", drive2Actions);
+
+        const drive2Before = await client.get(drive2.header.id);
+        const nodesBefore = (drive2Before.state as any).global.nodes || [];
+        expect(
+          nodesBefore.find((n: any) => n.id === doc.header.id),
+        ).toBeDefined();
+
+        await client.deleteDocument(doc.header.id);
+
+        const drive1After = await client.get(drive1.header.id);
+        const drive1Nodes = (drive1After.state as any).global.nodes || [];
+        expect(
+          drive1Nodes.find((n: any) => n.id === doc.header.id),
+        ).toBeUndefined();
+
+        const drive2After = await client.get(drive2.header.id);
+        const drive2Nodes = (drive2After.state as any).global.nodes || [];
+        expect(
+          drive2Nodes.find((n: any) => n.id === doc.header.id),
+        ).toBeUndefined();
+      });
+
+      it("should remove descendants from all drives on cascade delete", async () => {
+        const drive1 = driveDocumentModelModule.utils.createDocument();
+        const drive2 = driveDocumentModelModule.utils.createDocument();
+        await client.create(drive1);
+        await client.create(drive2);
+
+        const parent = documentModelDocumentModelModule.utils.createDocument();
+        parent.header.name = "Parent";
+        await client.createDocumentInDrive(drive1.header.id, parent);
+
+        const child = documentModelDocumentModelModule.utils.createDocument();
+        child.header.name = "Child";
+        await client.create(child, parent.header.id);
+
+        await client.addChildren(drive2.header.id, [child.header.id]);
+        const drive2Actions = [
+          addFile({
+            id: child.header.id,
+            name: child.header.name || child.header.id,
+            documentType: child.header.documentType,
+          }),
+        ];
+        await client.execute(drive2.header.id, "main", drive2Actions);
+
+        const drive2Before = await client.get(drive2.header.id);
+        const nodesBefore = (drive2Before.state as any).global.nodes || [];
+        expect(
+          nodesBefore.find((n: any) => n.id === child.header.id),
+        ).toBeDefined();
+
+        await client.deleteDocument(parent.header.id, PropagationMode.Cascade);
+
+        const drive1After = await client.get(drive1.header.id);
+        const drive1Nodes = (drive1After.state as any).global.nodes || [];
+        expect(
+          drive1Nodes.find((n: any) => n.id === parent.header.id),
+        ).toBeUndefined();
+
+        const drive2After = await client.get(drive2.header.id);
+        const drive2Nodes = (drive2After.state as any).global.nodes || [];
+        expect(
+          drive2Nodes.find((n: any) => n.id === child.header.id),
+        ).toBeUndefined();
       });
     });
 
