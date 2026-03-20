@@ -377,9 +377,9 @@ describe("DocumentModelSubgraph Permission Checks", () => {
       ctx: Context,
       paging?: { limit?: number; offset?: number; cursor?: string },
     ) => {
-      const queryResolver = (subgraph.resolvers.Query as any)
-        ?.TestModel_documents;
-      return queryResolver(null, { paging }, ctx);
+      const queryResolver = subgraph.queryResolvers.documents;
+      const result = await queryResolver(null, { paging }, ctx);
+      return result;
     };
 
     describe("Global Role Access", () => {
@@ -415,7 +415,7 @@ describe("DocumentModelSubgraph Permission Checks", () => {
         const result = await callDocuments(ctx, { limit: 10 });
 
         expect(result.items).toHaveLength(2);
-        expect(result.items.map((d: any) => d.id).sort()).toEqual([
+        expect(result.items.map((d) => d.id).sort()).toEqual([
           "doc-1",
           "doc-3",
         ]);

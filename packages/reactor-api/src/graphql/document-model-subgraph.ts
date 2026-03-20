@@ -50,6 +50,11 @@ export interface DocumentModelQueryResolvers<
     args: { identifier: string; view?: ViewArg },
     ctx: Context,
   ) => Promise<{ document: TDocument; childIds: string[] }>;
+  documents: (
+    parent: unknown,
+    args: { paging?: PagingArg },
+    ctx: Context,
+  ) => Promise<{ items: TDocument[] }>;
   findDocuments: (
     parent: unknown,
     args: {
