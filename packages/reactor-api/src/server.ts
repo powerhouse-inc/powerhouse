@@ -217,7 +217,7 @@ async function setupGraphQLManager(
               ?.map((a) => a.toLowerCase())
               .includes(address.toLowerCase() ?? "") ?? false),
     });
-    httpMiddleware(req, res, next);
+    (httpMiddleware as express.RequestHandler)(req, res, next);
   });
 
   return graphqlManager;
