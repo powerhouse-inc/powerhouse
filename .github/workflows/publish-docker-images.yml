@@ -33,9 +33,15 @@ jobs:
       - name: Set last tag
         id: get-tag
         run: |
-          TAG=$(git for-each-ref --sort=creatordate --format '%(tag)' refs/tags | tail -n 1)
+          TAG=$(git for-each-ref --sort=creatordate --format '%(refname:short)' refs/tags | tail -n 1)
           echo "GITHUB_TAG=$TAG" >> $GITHUB_ENV
           echo "tag=$TAG" >> $GITHUB_OUTPUT
+      - name: Validate tag
+        run: |
+          if [ -z "${{ env.GITHUB_TAG }}" ]; then
+            echo "::error::No tags found — cannot build Docker image without a version tag"
+            exit 1
+          fi
       - name: Set image paths
         run: |
           HARBOR_PROJECT="${GITHUB_REPOSITORY//\//-}"
@@ -79,9 +85,9 @@ jobs:
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ github.repository }}/${{ matrix.image }}:${{ env.GITHUB_TAG }}
-            ${{ env.REGISTRY }}/${{ github.repository }}/${{ matrix.image }}:${{ env.ADDITIONAL_TAG }}
             ${{ env.HARBOR_REGISTRY }}/${{ env.HARBOR_PATH }}:${{ env.GITHUB_TAG }}
-            ${{ env.HARBOR_REGISTRY }}/${{ env.HARBOR_PATH }}:${{ env.ADDITIONAL_TAG }}
+            ${{ env.ADDITIONAL_TAG != '' && format('{0}/{1}/{2}:{3}', env.REGISTRY, github.repository, matrix.image, env.ADDITIONAL_TAG) || '' }}
+            ${{ env.ADDITIONAL_TAG != '' && format('{0}/{1}:{2}', env.HARBOR_REGISTRY, env.HARBOR_PATH, env.ADDITIONAL_TAG) || '' }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: ${{ matrix.image == 'academy' && format('TAG={0}', env.GITHUB_TAG) || '' }}
