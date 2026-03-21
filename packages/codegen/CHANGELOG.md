@@ -1,3 +1,15 @@
+## 6.0.0-dev.103 (2026-03-21)
+
+### 🩹 Fixes
+
+- **reactor:** temporary fix for deleting documents and cleaning up all edges too -- very costly ([8a15a0604](https://github.com/powerhouse-inc/powerhouse/commit/8a15a0604))
+- **reactor-api,codegen:** added namespace to custom subgraph and fixed loading of document models with multiple versions ([b68cd8972](https://github.com/powerhouse-inc/powerhouse/commit/b68cd8972))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan
+
 ## 6.0.0-dev.102 (2026-03-20)
 
 ### 🩹 Fixes
