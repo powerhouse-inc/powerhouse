@@ -1,3 +1,7 @@
+## 6.0.0-dev.104 (2026-03-22)
+
+This was a version bump only for @renown/sdk to align it with other projects, there were no code changes.
+
 ## 6.0.0-dev.103 (2026-03-21)
 
 ### 🩹 Fixes
