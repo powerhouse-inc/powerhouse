@@ -12,25 +12,29 @@
   "type": "module",
   "exports": {
     ".": {
-      "types": "./dist/src/index.d.ts",
-      "import": "./dist/src/index.js"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
     }
   },
   "files": [
-    "dist/src"
+    "dist"
   ],
   "scripts": {
-    "build:bundle": "bun run ./bundle.ts",
+    "build:bundle": "tsdown",
     "test": "vitest --run ./**/*.test.ts"
   },
-  "devDependencies": {
+  "dependencies": {
     "date-fns": "catalog:",
     "knex": "catalog:",
     "luxon": "catalog:",
     "pg": "catalog:",
     "@powerhousedao/analytics-engine-core": "workspace:*",
+    "change-case": "catalog:"
+  },
+  "devDependencies": {
     "@types/pg": "catalog:",
     "vitest": "catalog:",
-    "@types/luxon": "catalog:"
+    "@types/luxon": "catalog:",
+    "tsdown": "catalog:"
   }
 }

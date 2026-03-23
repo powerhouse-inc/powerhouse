@@ -1,4 +1,7 @@
-import type { Operation, OperationWithContext } from "document-model";
+import type {
+  Operation,
+  OperationWithContext,
+} from "@powerhousedao/shared/document-model";
 import type {
   AtomicTxn,
   DocumentRevisions,

@@ -1,4 +1,4 @@
-import type { PHDocumentState } from "document-model";
+import type { PHDocumentState } from "@powerhousedao/shared/document-model";
 
 /**
  * Configuration options for the document metadata cache.

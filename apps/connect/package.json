@@ -19,27 +19,20 @@
     ".env"
   ],
   "exports": {
-    "./main.js": {
-      "types": "./dist/src/main.d.ts",
-      "import": "./dist/src/main.js"
+    ".": {
+      "types": "./dist/start-connect.d.ts",
+      "import": "./dist/start-connect.js"
     },
-    "./config": {
-      "import": "./dist/src/connect.config.js",
-      "types": "./dist/src/connect.config.d.ts"
+    "./main.js": {
+      "types": "./dist/main.d.ts",
+      "import": "./dist/main.js"
     },
     "./assets/*": "./assets/*",
-    "./style.css": "./dist/style.css",
-    "./package.json": {
-      "import": "./dist/package.copy.json",
-      "types": "./dist/src/package-json.d.ts"
-    },
-    "./*": {
-      "types": "./dist/src/*/index.d.ts",
-      "import": "./dist/src/*/index.js"
-    }
+    "./style.css": "./dist/style.css"
   },
   "sideEffects": [
-    "./dist/src/main.js",
+    "./dist/main.js",
+    "./dist/start-connect.js",
     "./dist/style.css"
   ],
   "license": "AGPL-3.0-only",
@@ -57,9 +50,8 @@
     "lint": "eslint",
     "test": "vitest --run",
     "dev": "vite dev",
-    "build:css": "pnpm exec tailwindcss -i ./src/index.css -o ./dist/style.css",
-    "build:connect": "pnpm tsc && cp package.json dist/package.copy.json && pnpm build:css",
-    "build:all": "pnpm build:css && pnpm build:connect",
+    "build:css": "pnpm exec tailwindcss -i ./style.css -o ./dist/style.css",
+    "build:bundle": "tsdown",
     "build:debug": "PH_DEBUG_BUILD=true vite build",
     "preview": "vite preview",
     "cy:open": "cypress open",
@@ -67,55 +59,51 @@
     "docker:run": "docker run -it -p 4000:4000 -v $(realpath ../../../monorepo):/monorepo -v $(pwd)/nginx.conf:/etc/nginx/nginx.conf.template -e PH_USE_LOCAL=true -e PH_CONNECT_BASE_PATH=/develop/powerhouse/connect -e PORT=4000 connect-test-dev"
   },
   "dependencies": {
+    "@electric-sql/pglite": "catalog:",
+    "@electric-sql/pglite-tools": "catalog:",
+    "@openfeature/core": "1.9.1",
     "@openfeature/web-sdk": "1.6.2",
+    "@powerhousedao/config": "workspace:*",
     "@powerhousedao/design-system": "workspace:*",
     "@powerhousedao/powerhouse-vetra-packages": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",
     "@powerhousedao/shared": "workspace:",
+    "@powerhousedao/vetra": "workspace:*",
+    "@powerhousedao/document-engineering": "catalog:",
     "@renown/sdk": "workspace:*",
     "@sentry/react": "^10.17.0",
+    "document-drive": "workspace:*",
+    "document-model": "workspace:*",
+    "graphql": "catalog:",
     "graphql-request": "catalog:",
     "i18next": "^25.5.3",
     "kysely": "catalog:",
     "kysely-pglite-dialect": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
     "react-error-boundary": "^4.0.11",
     "react-hotkeys-hook": "^4.6.2",
     "react-i18next": "^16.0.0",
     "react-router-dom": "^6.11.2",
-    "tailwind-merge": "catalog:"
+    "tailwind-merge": "catalog:",
+    "usehooks-ts": "^3.1.1"
   },
   "devDependencies": {
-    "@electric-sql/pglite": "catalog:",
-    "@electric-sql/pglite-tools": "catalog:",
-    "@openfeature/core": "1.9.1",
-    "@powerhousedao/builder-tools": "workspace:*",
-    "@powerhousedao/config": "workspace:*",
-    "@powerhousedao/document-engineering": "catalog:",
+    "@tailwindcss/cli": "catalog:",
+    "@tailwindcss/vite": "catalog:",
+    "@types/bun": "catalog:",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "@types/wicg-file-system-access": "^2023.10.7",
-    "@types/bun": "catalog:",
+    "@vitejs/plugin-react": "catalog:",
     "cypress": "^14.5.4",
-    "document-drive": "workspace:*",
-    "document-model": "workspace:*",
-    "graphql": "catalog:",
-    "react": "catalog:",
-    "react-dom": "catalog:",
     "tailwindcss": "catalog:",
-    "@tailwindcss/cli": "catalog:",
+    "tsdown": "catalog:",
     "vite": "catalog:",
     "vite-bundle-analyzer": "^1.3.6",
+    "vite-plugin-node-polyfills": "catalog:",
     "vite-plugin-svgr": "catalog:",
-    "vite-tsconfig-paths": "^6.1.1",
-    "tsconfig-paths": "4.2.0"
-  },
-  "peerDependencies": {
-    "react": ">=19.0.0",
-    "react-dom": ">=19.0.0",
-    "@electric-sql/pglite": ">=0.3.15",
-    "@electric-sql/pglite-tools": ">=0.2.20",
-    "document-drive": "workspace:*",
-    "document-model": "workspace:*"
+    "vite-tsconfig-paths": "catalog:"
   }
 }

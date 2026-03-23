@@ -15,7 +15,7 @@
     "node": ">=24.0.0"
   },
   "bin": {
-    "ph-cli": "./dist/src/cli.js"
+    "ph-cli": "./dist/cli.mjs"
   },
   "files": [
     "dist"
@@ -24,40 +24,38 @@
     "tsc": "tsc",
     "lint": "eslint",
     "generate-docs": "bun run scripts/generate-commands-docs.ts",
-    "build:cli": "bun run ./bundle.ts",
+    "build:cli": "tsdown",
     "postbuild:cli": "bun generate-docs && bun copy-scripts",
     "copy-scripts": "copyfiles scripts/* dist/",
     "dev": "bun run ./src/cli.ts",
-    "cli": "node ./dist/src/cli.js"
+    "cli": "node ./dist/cli.mjs"
   },
   "keywords": [],
   "author": "",
-  "devDependencies": {
-    "@types/node": "catalog:",
-    "@types/pg": "catalog:",
-    "concurrently": "catalog:",
-    "copyfiles": "catalog:",
-    "document-drive": "workspace:*",
-    "document-model": "workspace:*",
-    "nodemon": "catalog:",
-    "vitest": "catalog:",
-    "@types/bun": "catalog:",
+  "dependencies": {
+    "tsdown": "catalog:",
+    "vite": "catalog:",
     "@powerhousedao/codegen": "workspace:*",
+    "document-model": "workspace:*",
     "@powerhousedao/common": "workspace:*",
     "@powerhousedao/config": "workspace:*",
     "@powerhousedao/reactor": "workspace:*",
-    "@powerhousedao/switchboard": "workspace:*",
     "@powerhousedao/shared": "workspace:*",
+    "@powerhousedao/switchboard": "workspace:*",
+    "@powerhousedao/builder-tools": "workspace:*",
     "@renown/sdk": "workspace:*",
     "cmd-ts": "catalog:",
     "colorette": "catalog:",
-    "commander": "catalog:",
     "kysely": "catalog:",
-    "pg": "catalog:",
     "package-manager-detector": "catalog:",
+    "pg": "catalog:",
     "read-pkg": "catalog:",
     "ts-morph": "catalog:",
-    "vite": "catalog:",
     "write-package": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "@types/pg": "catalog:",
+    "copyfiles": "catalog:"
   }
 }

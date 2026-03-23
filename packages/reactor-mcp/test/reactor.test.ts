@@ -1,18 +1,16 @@
-import { createReactorMcpProvider } from "@powerhousedao/reactor-mcp";
+import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import type {
   IReactorClient,
   ReactorClientModule,
 } from "@powerhousedao/reactor";
 import { ReactorBuilder, ReactorClientBuilder } from "@powerhousedao/reactor";
-import type { DocumentDriveDocument } from "document-drive";
-import { driveDocumentModelModule } from "document-drive";
-import type { PHDocument } from "document-model";
+import { createReactorMcpProvider } from "@powerhousedao/reactor-mcp";
+import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
+import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import {
   documentModelCreateDocument,
   documentModelDocumentModelModule,
-  documentModelReducer,
 } from "document-model";
-import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 function getTextContent(result: CallToolResult, index = 0): string {

@@ -1,7 +1,7 @@
+import type { ILogger } from "document-model";
 import type { IEventBus } from "../events/interfaces.js";
 import { ReactorEventTypes, type JobRunningEvent } from "../events/types.js";
 import type { IJobTracker } from "../job-tracker/interfaces.js";
-import type { ILogger } from "../logging/types.js";
 import type { IQueue } from "../queue/interfaces.js";
 import type { IJobExecutionHandle, Job } from "../queue/types.js";
 import { QueueEventTypes } from "../queue/types.js";

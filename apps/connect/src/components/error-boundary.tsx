@@ -1,4 +1,4 @@
-import { childLogger } from "document-drive";
+import { childLogger } from "document-model";
 import type { ReactNode } from "react";
 import {
   ErrorBoundary as ReactErrorBoundary,

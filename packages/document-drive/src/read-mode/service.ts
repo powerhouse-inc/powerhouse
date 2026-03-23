@@ -1,26 +1,23 @@
+import {
+  driveDocumentModelModule,
+  driveDocumentType,
+  type DocumentDrivePHState,
+} from "@powerhousedao/shared/document-drive";
 import type {
-  DocumentDrivePHState,
   GetDocumentModelModule,
   IReadModeDriveService,
   ReadDrive,
   ReadDriveContext,
   ReadDriveOptions,
 } from "document-drive";
-import {
-  driveDocumentModelModule,
-  driveDocumentType,
-} from "document-drive/drive-document-model";
-import { DocumentModelNotFoundError } from "document-drive/server/error";
-import {
-  fetchDocument,
-  requestPublicDrive,
-} from "document-drive/utils/graphql";
 import type {
   DocumentModelModule,
   PHBaseState,
   PHDocument,
-} from "document-model";
+} from "@powerhousedao/shared/document-model";
 import type { GraphQLError } from "graphql";
+import { DocumentModelNotFoundError } from "server";
+import { fetchDocument, requestPublicDrive } from "utils";
 import {
   ReadDocumentNotFoundError,
   ReadDriveError,

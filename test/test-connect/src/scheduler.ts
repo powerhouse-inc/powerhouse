@@ -1,17 +1,17 @@
-import fs from "node:fs";
-import type { ReactorModule } from "@powerhousedao/reactor";
-import { ConsoleLogger } from "@powerhousedao/reactor";
-import {
-  MetricsCollector,
-  Reporter,
-  generateOperations,
-  createTestDocument,
-  DOCUMENT_MODEL_TYPE,
-} from "@powerhousedao/load-test-client";
 import type {
   OperationResult,
   TestDocument,
 } from "@powerhousedao/load-test-client";
+import {
+  createTestDocument,
+  DOCUMENT_MODEL_TYPE,
+  generateOperations,
+  MetricsCollector,
+  Reporter,
+} from "@powerhousedao/load-test-client";
+import type { ReactorModule } from "@powerhousedao/reactor";
+import { ConsoleLogger } from "document-model";
+import fs from "node:fs";
 import { createReactorWithSync, waitForDocument } from "./reactor-setup.js";
 import type { ConnectTestConfig } from "./types.js";
 

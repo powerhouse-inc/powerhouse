@@ -3,7 +3,7 @@ import type {
   Operation,
   PHBaseState,
   PHDocument,
-} from "document-model";
+} from "@powerhousedao/shared/document-model";
 import type {
   ConflictInfo,
   RemoteDocumentData,

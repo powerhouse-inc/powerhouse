@@ -1,5 +1,8 @@
-import { driveDocumentModelModule } from "document-drive";
-import { deriveOperationId, generateId } from "document-model/core";
+import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
+import {
+  deriveOperationId,
+  generateId,
+} from "@powerhousedao/shared/document-model";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { CollectionMembershipCache } from "../../../src/cache/collection-membership-cache.js";

@@ -1,18 +1,20 @@
 import type {
   DocumentDriveAction,
   DocumentDriveDocument,
-} from "document-drive";
+} from "@powerhousedao/shared/document-drive";
 import {
   addFolder,
   driveDocumentModelModule,
   driveDocumentReducer,
-  MemoryStorage,
-  ReactorBuilder,
   setAvailableOffline,
-} from "document-drive";
-import type { DocumentModelModule, Operation } from "document-model";
+} from "@powerhousedao/shared/document-drive";
+import {
+  generateId,
+  type DocumentModelModule,
+  type Operation,
+} from "@powerhousedao/shared/document-model";
+import { MemoryStorage, ReactorBuilder } from "document-drive";
 import { documentModelDocumentModelModule } from "document-model";
-import { generateId } from "document-model/core";
 import { beforeEach, describe, expect, it } from "vitest";
 
 function buildOperation(

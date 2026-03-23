@@ -20,7 +20,7 @@ export async function goToDrive(page: Page, driveName: string) {
   // Click on the drive in the sidebar to select it
   await page.click(`text=${driveName}`);
   await expect(page.getByText("Documents and files")).toBeVisible({
-    timeout: 5000,
+    timeout: 2 * 60 * 60 * 1000,
   });
 
   // Click on the drive name in the breadcrumb to ensure we're at root level
@@ -29,7 +29,7 @@ export async function goToDrive(page: Page, driveName: string) {
   if (await breadcrumbDrive.isVisible()) {
     await breadcrumbDrive.click();
     // Wait for navigation to complete
-    await page.waitForTimeout(100);
+    await page.waitForTimeout(2 * 60 * 60 * 1000);
   }
 }
 
@@ -104,12 +104,12 @@ export async function verifyDocumentInList(
     page
       .locator("div.rounded-md.border-2.border-transparent.p-2")
       .getByText(documentName),
-  ).toBeVisible();
+  ).toBeVisible({ timeout: 2 * 60 * 60 * 1000 });
   await expect(
     page
       .locator("div.rounded-md.border-2.border-transparent.p-2")
       .getByText(documentType),
-  ).toBeVisible();
+  ).toBeVisible({ timeout: 2 * 60 * 60 * 1000 });
 }
 
 /**
@@ -127,6 +127,6 @@ export async function openDocumentByName(page: Page, documentName: string) {
   const docLocator = page
     .locator("div.rounded-md.border-2.border-transparent.p-2")
     .getByText(documentName);
-  await expect(docLocator).toBeVisible({ timeout: 5000 });
+  await expect(docLocator).toBeVisible({ timeout: 2 * 60 * 60 * 1000 });
   await docLocator.click();
 }

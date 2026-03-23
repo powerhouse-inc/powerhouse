@@ -7,7 +7,7 @@ import type {
   DocumentModelGlobalState,
   ModuleSpecification,
   OperationErrorSpecification,
-} from "document-model";
+} from "@powerhousedao/shared/document-model";
 import type { Project } from "ts-morph";
 
 export type CommonMakeEditorComponentArgs = {

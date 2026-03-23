@@ -3,7 +3,12 @@ import {
   directoryExists,
   logVersionUpdate,
   runCmd,
-} from "@powerhousedao/common/clis";
+} from "@powerhousedao/shared/clis";
+import {
+  ALL_POWERHOUSE_DEPENDENCIES,
+  APPS_DEPENDENCIES,
+  CLIS_DEPENDENCIES,
+} from "@powerhousedao/shared/constants";
 import chalk from "chalk";
 import {
   boolean,
@@ -18,11 +23,6 @@ import {
 import path from "path";
 import { readPackage } from "read-pkg";
 import { writePackage } from "write-package";
-import {
-  ALL_POWERHOUSE_DEPENDENCIES,
-  APPS_DEPENDENCIES,
-  CLIS_DEPENDENCIES,
-} from "../utils/constants.js";
 
 export const useLocal = command({
   name: "use-local",

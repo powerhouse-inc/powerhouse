@@ -2,9 +2,16 @@ import {
   useDocumentTypesInSelectedDrive,
   useSupportedDocumentTypesInReactor,
 } from "@powerhousedao/reactor-browser";
+import {
+  addDocumentType,
+  removeDocumentType,
+  setAppName,
+  setAppStatus,
+  setDocumentTypes,
+  setDragAndDropEnabled,
+} from "@powerhousedao/vetra/document-models/app-module";
 import { useCallback, useEffect, useState } from "react";
 import { useSelectedAppModuleDocument } from "../../../document-models/app-module/hooks.js";
-import { actions } from "../../../document-models/app-module/index.js";
 import { StatusPill } from "../../components/index.js";
 import { useDebounce } from "../../hooks/index.js";
 
@@ -18,7 +25,7 @@ export const AppEditorForm = () => {
   const status = document.state.global.status;
   const isDragAndDropEnabled = document.state.global.isDragAndDropEnabled;
   const allowedDocumentTypes = document.state.global.allowedDocumentTypes;
-  const [appName, setAppName] = useState(documentName);
+  const [appName, handleSetAppName] = useState(documentName);
   const [isConfirmed, setIsConfirmed] = useState(status === "CONFIRMED");
   const documentTypesInSelectedDrive = useDocumentTypesInSelectedDrive();
   const supportedDocumentTypesInReactor = useSupportedDocumentTypesInReactor();
@@ -32,7 +39,7 @@ export const AppEditorForm = () => {
     (name: string) => {
       if (name === documentName) return;
       console.log("onNameChange", name);
-      dispatch(actions.setAppName({ name }));
+      dispatch(setAppName({ name }));
     },
     [documentName],
   );
@@ -40,12 +47,12 @@ export const AppEditorForm = () => {
   useDebounce(appName, onNameChange, 300);
 
   const onConfirm = () => {
-    dispatch(actions.setAppStatus({ status: "CONFIRMED" }));
+    dispatch(setAppStatus({ status: "CONFIRMED" }));
   };
 
   const onDragAndDropToggle = (enabled: boolean) => {
     if (enabled === isDragAndDropEnabled) return;
-    dispatch(actions.setDragAndDropEnabled({ enabled }));
+    dispatch(setDragAndDropEnabled({ enabled }));
   };
 
   // Reset confirmation state if status changes back to DRAFT
@@ -68,14 +75,14 @@ export const AppEditorForm = () => {
   const handleAddDocumentType = (documentType: string) => {
     if (!documentType || selectedDocumentTypes.includes(documentType)) return;
     setSelectedDocumentTypes([...selectedDocumentTypes, documentType]);
-    dispatch(actions.addDocumentType({ documentType }));
+    dispatch(addDocumentType({ documentType }));
   };
 
   const handleRemoveDocumentType = (documentType: string) => {
     setSelectedDocumentTypes(
       selectedDocumentTypes.filter((dt) => dt !== documentType),
     );
-    dispatch(actions.removeDocumentType({ documentType }));
+    dispatch(removeDocumentType({ documentType }));
   };
 
   const handleAddAllDocumentTypesInDrive = () => {
@@ -86,7 +93,7 @@ export const AppEditorForm = () => {
       ]),
     ];
     setSelectedDocumentTypes(newDocumentTypes);
-    dispatch(actions.setDocumentTypes({ documentTypes: newDocumentTypes }));
+    dispatch(setDocumentTypes({ documentTypes: newDocumentTypes }));
   };
 
   const handleAddAllDocumentTypesInReactor = () => {
@@ -97,12 +104,12 @@ export const AppEditorForm = () => {
       ]),
     ];
     setSelectedDocumentTypes(newDocumentTypes);
-    dispatch(actions.setDocumentTypes({ documentTypes: newDocumentTypes }));
+    dispatch(setDocumentTypes({ documentTypes: newDocumentTypes }));
   };
 
   const handleAllowAnyDocumentType = () => {
     setSelectedDocumentTypes([]);
-    dispatch(actions.setDocumentTypes({ documentTypes: [] }));
+    dispatch(setDocumentTypes({ documentTypes: [] }));
   };
 
   const handleDocumentTypeSelection = (selectedValue: string) => {
@@ -139,7 +146,7 @@ export const AppEditorForm = () => {
           id="app-name"
           type="text"
           value={appName}
-          onChange={(e) => setAppName(e.target.value)}
+          onChange={(e) => handleSetAppName(e.target.value)}
           disabled={isReadOnly}
           className={`w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 ${
             isReadOnly ? "cursor-not-allowed bg-gray-100" : ""

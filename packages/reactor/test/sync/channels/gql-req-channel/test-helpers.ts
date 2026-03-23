@@ -1,4 +1,4 @@
-import type { OperationContext } from "document-model";
+import type { OperationContext } from "@powerhousedao/shared/document-model";
 import { vi } from "vitest";
 import type { IOperationIndex } from "../../../../src/cache/operation-index-types.js";
 import type { ISyncCursorStorage } from "../../../../src/storage/interfaces.js";

@@ -5,7 +5,7 @@ import { createRelationalDbLegacy } from "document-drive";
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
 import { useMemo } from "react";
-import { usePGliteDB } from "../../pglite/hooks/usePGlite.js";
+import { usePGliteDB } from "../../pglite/usePGlite.js";
 
 // Type for Relational DB instance enhanced with live capabilities
 export type RelationalDbWithLive<Schema> = _IRelationalDb<Schema> & {

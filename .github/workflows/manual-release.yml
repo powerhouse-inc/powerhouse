@@ -25,7 +25,6 @@ env:
   VERSION: ${{ inputs.version }}
   TAG: ${{ inputs.tag ||  'dev'  }}
   DRYRUN: ${{ inputs.dry-run }}
-  BUN_RUNTIME_TRANSPILER_CACHE_PATH: "0"
 
 jobs:
   build-and-publish:
@@ -81,15 +80,6 @@ jobs:
 
       - name: Run vite build scripts
         run: pnpm build-cli
-
-      - name: Run connect build script
-        timeout-minutes: 1
-        working-directory: ./apps/connect
-        run: |
-          set -euo pipefail
-          # Hard timeout so a wedged Bun process can't hang CI forever.
-          # Exit code will be 124 on timeout.
-          timeout --kill-after=5s 1m bun run ./bundle.ts
 
       - name: Run install again after generating binaries
         run: pnpm install-ci

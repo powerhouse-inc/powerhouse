@@ -1,24 +1,24 @@
-import type { DocumentModelUtils } from "document-model";
+import type { DocumentModelUtils } from "@powerhousedao/shared/document-model";
 import {
   baseCreateDocument,
-  baseSaveToFileHandle,
   baseLoadFromInput,
+  baseSaveToFileHandle,
   defaultBaseState,
   generateId,
-} from "document-model/core";
+} from "@powerhousedao/shared/document-model";
+import {
+  assertIsVetraPackageDocument,
+  assertIsVetraPackageState,
+  isVetraPackageDocument,
+  isVetraPackageState,
+} from "./document-schema.js";
+import { vetraPackageDocumentType } from "./document-type.js";
+import { reducer } from "./reducer.js";
 import type {
   VetraPackageGlobalState,
   VetraPackageLocalState,
+  VetraPackagePHState,
 } from "./types.js";
-import type { VetraPackagePHState } from "./types.js";
-import { reducer } from "./reducer.js";
-import { vetraPackageDocumentType } from "./document-type.js";
-import {
-  isVetraPackageDocument,
-  assertIsVetraPackageDocument,
-  isVetraPackageState,
-  assertIsVetraPackageState,
-} from "./document-schema.js";
 
 export const initialGlobalState: VetraPackageGlobalState = {
   name: null,
@@ -72,12 +72,3 @@ export const utils: DocumentModelUtils<VetraPackagePHState> = {
     return assertIsVetraPackageDocument(document);
   },
 };
-
-export const createDocument = utils.createDocument;
-export const createState = utils.createState;
-export const saveToFileHandle = utils.saveToFileHandle;
-export const loadFromInput = utils.loadFromInput;
-export const isStateOfType = utils.isStateOfType;
-export const assertIsStateOfType = utils.assertIsStateOfType;
-export const isDocumentOfType = utils.isDocumentOfType;
-export const assertIsDocumentOfType = utils.assertIsDocumentOfType;

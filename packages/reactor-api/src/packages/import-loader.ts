@@ -1,10 +1,10 @@
 import type { SubgraphClass } from "@powerhousedao/reactor-api";
+import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import type {
   IProcessorHostModuleLegacy,
   ProcessorFactoryLegacy,
 } from "document-drive";
-import { childLogger } from "document-drive";
-import type { DocumentModelModule } from "document-model";
+import { childLogger } from "document-model";
 import type { IPackageLoader } from "../types.js";
 import {
   loadDocumentModels as loadDocumentModelsUtil,

@@ -6,8 +6,13 @@ import {
   type IRenown,
   type IRenownCrypto,
 } from "@renown/sdk/node";
-import type { Action, ISigner, Operation, Signature } from "document-model";
-import { deriveOperationId } from "document-model/core";
+import type {
+  Action,
+  ISigner,
+  Operation,
+  Signature,
+} from "@powerhousedao/shared/document-model";
+import { deriveOperationId } from "@powerhousedao/shared/document-model";
 import { beforeEach, describe, expect, it } from "vitest";
 
 const TEST_DOC_ID = "test-doc-id";

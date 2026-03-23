@@ -9,6 +9,7 @@ packages:
   - "!releases"
 
 catalog:
+  "vite-tsconfig-paths": 6.1.1
   "@powerhousedao/document-engineering": 1.40.1
   "kysely": 0.28.11
   "kysely-pglite-dialect": 1.2.0
@@ -107,6 +108,7 @@ catalog:
   "events": 3.3.0
   "util": 0.12.5
   "@vitest/browser-playwright": 4.0.18
+  "tsdown": 0.21.0
 
 allowBuilds:
   vite: true

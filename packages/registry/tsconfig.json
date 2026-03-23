@@ -2,9 +2,23 @@
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
     "outDir": "./dist",
-    "types": ["node", "@types/bun"],
+    "types": [
+      "node"
+    ],
     "emitDeclarationOnly": true
   },
-  "include": ["**/*"],
-  "exclude": ["dist", "node_modules", "storage", "cdn-cache"]
+  "include": [
+    "**/*"
+  ],
+  "exclude": [
+    "dist",
+    "node_modules",
+    "storage",
+    "cdn-cache"
+  ],
+  "references": [
+    {
+      "path": "../shared"
+    }
+  ]
 }

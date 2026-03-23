@@ -4,47 +4,42 @@ import {
   addDefaultDrivesForNewReactor,
   createBrowserReactor,
   getDefaultDrivesFromEnv,
-  getDefaultRegistryCdnUrl,
 } from "@powerhousedao/connect/utils";
 import {
+  addPHEventHandlers,
   addRemoteDrive,
-  BrowserPackageManager,
-  convertLegacyLibToVetraPackage,
   DocumentChangeType,
   dropAllReactorStorage,
   extractDriveSlugFromPath,
   extractNodeSlugFromPath,
   getDrives,
+  login,
   ReactorClientDocumentCache,
   refreshReactorDataClient,
+  setDefaultPHGlobalConfig,
+  setDocumentCache,
+  setDrives,
   setFeatures,
   setPHToast,
+  setReactorClient,
+  setReactorClientModule,
+  setRenown,
   setSelectedDrive,
   setSelectedNode,
   setVetraPackageManager,
   type PHToastFn,
   type VetraPackage,
 } from "@powerhousedao/reactor-browser";
-import {
-  addPHEventHandlers,
-  login,
-  setDefaultPHGlobalConfig,
-  setDocumentCache,
-  setDrives,
-  setReactorClient,
-  setReactorClientModule,
-  setRenown,
-} from "@powerhousedao/reactor-browser/connect";
 import type { ProcessorFactoryBuilder } from "@powerhousedao/shared/processors";
 import {
   BrowserKeyStorage,
   RenownBuilder,
   RenownCryptoBuilder,
 } from "@renown/sdk";
-import { logger } from "document-drive";
-import type { DocumentModelModule } from "document-model";
+import { logger } from "document-model";
 import { initFeatureFlags } from "../feature-flags.js";
-import { loadCommonPackage } from "./document-model.js";
+import { BrowserPackageManager } from "../package-manager.js";
+import { createProcessorHostModule } from "./processor-host-module.js";
 
 export async function clearReactorStorage() {
   const pg = window.ph?.reactorClientModule?.pg;
@@ -57,7 +52,7 @@ export async function clearReactorStorage() {
   await pg.close();
 }
 
-export async function createReactor() {
+export async function createReactor(localPackage?: VetraPackage) {
   if (!window.ph) {
     window.ph = {};
   }
@@ -94,35 +89,13 @@ export async function createReactor() {
     .build();
 
   // initialize package manager
-  const registryCdnUrl = getDefaultRegistryCdnUrl();
   const packageManager = new BrowserPackageManager(
     phGlobalConfigFromEnv.routerBasename ?? "",
-    registryCdnUrl,
+    PH_PACKAGE_REGISTRY_URL,
   );
-
-  // add common package
-  const commonPackage = await loadCommonPackage();
-  await packageManager.addLocalPackage("common", commonPackage);
-
-  // load external packages from virtual module if available
-  try {
-    const { loadExternalPackages } =
-      await import("virtual:ph:external-packages");
-    const externalPackages = await loadExternalPackages();
-    for (let i = 0; i < externalPackages.length; i++) {
-      const externalPkg = externalPackages[i];
-      const vetraPackage = convertLegacyLibToVetraPackage(externalPkg);
-      const name = externalPkg.manifest?.name || `external-${i}`;
-      await packageManager.addLocalPackage(name, vetraPackage);
-    }
-  } catch {
-    logger.info("No external packages to load");
-  }
-
-  // load packages from storage (persisted registry packages)
-  await packageManager.init();
-
   setVetraPackageManager(packageManager);
+  await packageManager.init(localPackage);
+  await packageManager.addPackages(PH_PACKAGES ?? []);
 
   // get document models to set in the reactor (all versions)
   const documentModelModules = packageManager.packages
@@ -136,27 +109,20 @@ export async function createReactor() {
             m?.documentType === module.documentType &&
             m.version === module.version,
         ) === index,
-    );
+    )
+    .filter((d) => d !== undefined);
 
   // get upgrade manifests from packages
-  const upgradeManifests = packageManager.packages.flatMap(
-    (pkg) => pkg.upgradeManifests,
-  );
+  const upgradeManifests = packageManager.packages
+    .flatMap((pkg) => pkg.upgradeManifests)
+    .filter((u) => u !== undefined);
 
   // create reactor v2 with all versions and upgrade manifests
   const reactorClientModule = await createBrowserReactor(
-    documentModelModules as unknown as DocumentModelModule[],
+    documentModelModules,
     upgradeManifests,
     renown,
-    registryCdnUrl ? packageManager : undefined,
   );
-
-  // Give package manager access to registry (available after reactor creation)
-  if (reactorClientModule.reactorModule) {
-    packageManager.setDocumentModelRegistry(
-      reactorClientModule.reactorModule.documentModelRegistry,
-    );
-  }
 
   // get the drives from the reactor
   const drives = await getDrives(reactorClientModule.client);
@@ -166,8 +132,9 @@ export async function createReactor() {
   const driveSlug = extractDriveSlugFromPath(path);
   const nodeSlug = extractNodeSlugFromPath(path);
 
-  // initialize user (automatically handles ?user= redirect from Renown portal)
-  await login(undefined, renown);
+  // initialize user from URL parameter
+  const didFromUrl = getDidFromUrl();
+  await login(didFromUrl, renown);
 
   const documentCache = new ReactorClientDocumentCache(
     reactorClientModule.client,
@@ -242,8 +209,6 @@ export async function createReactor() {
   );
 
   if (packagesWithProcessorFactories.length > 0) {
-    const { createProcessorHostModule } =
-      await import("./processor-host-module.js");
     const processorHostModule = await createProcessorHostModule();
     if (processorHostModule !== undefined) {
       await Promise.all(
@@ -266,6 +231,13 @@ export async function createReactor() {
   }
 
   window.ph.loading = false;
+}
+
+function getDidFromUrl() {
+  const searchParams = new URLSearchParams(window.location.search);
+  const didComponent = searchParams.get("user");
+  const did = didComponent ? decodeURIComponent(didComponent) : undefined;
+  return did;
 }
 
 function getDriveUrl() {

@@ -1,17 +1,12 @@
-import type {
-  VetraDocumentModelModule,
-  VetraPackage,
-} from "@powerhousedao/reactor-browser";
-import { COMMON_PACKAGE_ID } from "@powerhousedao/reactor-browser";
-import { driveDocumentModelModule } from "document-drive";
-import { createState, documentModelDocumentModelModule } from "document-model";
-import { defaultBaseState } from "document-model/core";
+import type { VetraDocumentModelModule } from "@powerhousedao/reactor-browser";
+import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import {
-  loadDocumentModelEditor,
-  loadGenericDriveExplorerEditorModule,
-} from "./editor.js";
+  createState,
+  defaultBaseState,
+} from "@powerhousedao/shared/document-model";
+import { documentModelDocumentModelModule } from "document-model";
 
-async function loadDocumentModelDocumentModelModule(): Promise<VetraDocumentModelModule> {
+export function loadDocumentModelDocumentModelModule() {
   const global = documentModelDocumentModelModule.documentModel.global;
   const name = global.name;
   const documentType = global.id;
@@ -35,7 +30,7 @@ async function loadDocumentModelDocumentModelModule(): Promise<VetraDocumentMode
   return vetraDocumentModelModule;
 }
 
-async function loadDriveDocumentModelModule(): Promise<VetraDocumentModelModule> {
+export function loadDriveDocumentModelModule() {
   const global = driveDocumentModelModule.documentModel.global;
   const name = global.name;
   const documentType = global.id;
@@ -57,35 +52,4 @@ async function loadDriveDocumentModelModule(): Promise<VetraDocumentModelModule>
     documentModel: createState(defaultBaseState(), global),
   };
   return vetraDocumentModelModule;
-}
-
-export async function loadCommonPackage(): Promise<VetraPackage> {
-  const documentModelDocumentModelModule =
-    await loadDocumentModelDocumentModelModule();
-  const driveDocumentModelModule = await loadDriveDocumentModelModule();
-  const documentModelEditorModule = loadDocumentModelEditor();
-  const genericDriveExplorerEditorModule =
-    loadGenericDriveExplorerEditorModule();
-  const vetraPackage: VetraPackage = {
-    id: COMMON_PACKAGE_ID,
-    name: "Common",
-    description: "Common",
-    category: "Common",
-    author: {
-      name: "Powerhouse",
-      website: "https://powerhousedao.com",
-    },
-    modules: {
-      documentModelModules: [
-        documentModelDocumentModelModule,
-        driveDocumentModelModule,
-      ],
-      editorModules: [
-        documentModelEditorModule,
-        genericDriveExplorerEditorModule,
-      ],
-    },
-    upgradeManifests: [],
-  };
-  return vetraPackage;
 }

@@ -7,7 +7,7 @@ export const upgradeTransitionTemplate = (v: {
   phStateName: string;
 }) =>
   ts`
-import type { Action, PHDocument, UpgradeTransition } from "document-model";
+import type { Action, PHDocument, UpgradeTransition } from "@powerhousedao/shared/document-model";
 import type { ${v.phStateName} as StateV${v.previousVersion} } from "${v.documentModelPackageImportPath}/v${v.previousVersion}";
 import type { ${v.phStateName} as StateV${v.version} } from "${v.documentModelPackageImportPath}/v${v.version}";
 

@@ -68,7 +68,7 @@ function useAnalyticsMutationWrapper<TVariables, TData>(
     mutationFn: async (value: TVariables) => {
       let store: IAnalyticsStore | null = null;
       try {
-        store = await getAnalyticsStore(storeOptions);
+        store = await getAnalyticsStore();
       } catch (e) {
         console.error(e);
       }

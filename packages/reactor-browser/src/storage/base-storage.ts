@@ -1,27 +1,22 @@
-import type { IStorage } from "./types.js";
+export abstract class BaseStorage<V> implements Iterable<[string, V]> {
+  abstract get(key: string): V | undefined;
+  abstract set(key: string, value: V): void;
+  abstract delete(key: string): boolean;
+  abstract has(key: string): boolean;
+  abstract clear(): void;
+  abstract entries(): IterableIterator<[string, V]>;
+  abstract keys(): IterableIterator<string>;
+  abstract values(): IterableIterator<V>;
 
-export class BaseStorage<
-  T extends Record<string, unknown> = Record<string, unknown>,
-> implements IStorage<T> {
-  #store: IStorage<T>;
-  #namespace: string;
-
-  protected constructor(store: IStorage<T>, namespace: string) {
-    this.#store = store;
-    this.#namespace = namespace;
+  [Symbol.iterator](): IterableIterator<[string, V]> {
+    return this.entries();
   }
 
-  #buildKey<Key extends keyof T>(key: Key): Key {
-    return `${this.#namespace}:${key.toString()}` as Key;
-  }
-
-  get<Key extends keyof T>(key: Key): T[Key] {
-    return this.#store.get(this.#buildKey(key));
-  }
-  set<Key extends keyof T>(key: Key, value?: T[Key]): void {
-    return this.#store.set(this.#buildKey(key), value);
-  }
-  delete<Key extends keyof T>(key: Key): void {
-    return this.#store.delete(this.#buildKey(key));
+  forEach(
+    callback: (value: V, key: string, storage: BaseStorage<V>) => void,
+  ): void {
+    for (const [key, value] of this) {
+      callback(value, key, this);
+    }
   }
 }

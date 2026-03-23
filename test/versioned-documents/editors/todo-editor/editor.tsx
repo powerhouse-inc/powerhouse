@@ -1,5 +1,5 @@
 import { DocumentToolbar } from "@powerhousedao/design-system/connect";
-import { useSelectedTodoDocument } from "versioned-documents/document-models/todo";
+import { useSelectedTodoDocument } from "document-models/todo";
 
 export default function Editor() {
   const [document] = useSelectedTodoDocument();

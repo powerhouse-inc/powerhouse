@@ -1,4 +1,8 @@
-import type { Operation, OperationWithContext } from "document-model";
+import type {
+  Operation,
+  OperationWithContext,
+} from "@powerhousedao/shared/document-model";
+import { ConsoleLogger } from "document-model";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { KyselyOperationIndex } from "../../../src/cache/kysely-operation-index.js";
@@ -7,7 +11,6 @@ import type { IReactor } from "../../../src/core/types.js";
 import { EventBus } from "../../../src/events/event-bus.js";
 import type { IEventBus } from "../../../src/events/interfaces.js";
 import { ReactorEventTypes } from "../../../src/events/types.js";
-import { ConsoleLogger } from "../../../src/logging/console.js";
 import type {
   ISyncCursorStorage,
   ISyncDeadLetterStorage,

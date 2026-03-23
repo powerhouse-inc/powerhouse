@@ -3,5 +3,12 @@
   "compilerOptions": {
     "outDir": "./dist"
   },
-  "include": ["**/*"]
+  "include": [
+    "**/*"
+  ],
+  "references": [
+    {
+      "path": "../shared"
+    }
+  ]
 }

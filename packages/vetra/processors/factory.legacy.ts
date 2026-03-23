@@ -8,7 +8,7 @@ import type {
   ProcessorFactoryLegacy,
   ProcessorRecordLegacy,
 } from "document-drive";
-import type { PHDocumentHeader } from "document-model";
+import type { PHDocumentHeader } from "@powerhousedao/shared/document-model";
 
 import { codegenProcessorFactoryLegacy } from "./codegen/factory.legacy.js";
 

@@ -1,15 +1,22 @@
 /**
  * Factory methods for creating VetraPackageDocument instances
  */
-import type { PHAuthState, PHDocumentState, PHBaseState } from "document-model";
-import { createBaseState, defaultBaseState } from "document-model/core";
+import type {
+  PHAuthState,
+  PHBaseState,
+  PHDocumentState,
+} from "@powerhousedao/shared/document-model";
+import {
+  createBaseState,
+  defaultBaseState,
+} from "@powerhousedao/shared/document-model";
 import type {
   VetraPackageDocument,
-  VetraPackageLocalState,
   VetraPackageGlobalState,
+  VetraPackageLocalState,
   VetraPackagePHState,
 } from "./types.js";
-import { createDocument } from "./utils.js";
+import { utils } from "./utils.js";
 
 export function defaultGlobalState(): VetraPackageGlobalState {
   return {
@@ -81,7 +88,7 @@ export function createVetraPackageDocument(
     local?: Partial<VetraPackageLocalState>;
   }>,
 ): VetraPackageDocument {
-  const document = createDocument(
+  const document = utils.createDocument(
     state
       ? createState(
           createBaseState(state.auth, state.document),

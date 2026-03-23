@@ -1,21 +1,12 @@
 import type {
-  BaseDocumentDriveServer,
   DocumentDriveAction,
   DocumentDriveDocument,
   DocumentDriveLocalState,
-  DriveInfo,
-  IDefaultDrivesManager,
-  IReadModeDriveServer,
-  ITransmitter,
   LegacyAddFileAction,
   ListenerCallInfo,
   ListenerFilter,
-  OperationError,
-  RunAsap,
-  StrandUpdateSource,
-  SynchronizationUnitNotFoundError,
   Trigger,
-} from "document-drive";
+} from "@powerhousedao/shared/document-drive";
 import type {
   Action,
   ActionContext,
@@ -26,8 +17,20 @@ import type {
   PHDocumentMeta,
   ReducerOptions,
   SignalResult,
-} from "document-model";
+} from "@powerhousedao/shared/document-model";
 import type { Unsubscribe } from "nanoevents";
+import type { IReadModeDriveServer } from "../read-mode/types.js";
+import type {
+  DriveInfo,
+  IDefaultDrivesManager,
+  RunAsap,
+} from "../utils/types.js";
+import type { BaseDocumentDriveServer } from "./base-server.js";
+import type {
+  OperationError,
+  SynchronizationUnitNotFoundError,
+} from "./error.js";
+import type { ITransmitter, StrandUpdateSource } from "./transmitter/types.js";
 
 export type Constructor<T = object> = new (...args: any[]) => T;
 

@@ -1,4 +1,4 @@
-import type { DocumentModelGlobalState } from "document-model";
+import type { DocumentModelGlobalState } from "@powerhousedao/shared/document-model";
 
 /**
  * Validation result for DocumentModelGlobalState code generation requirements

@@ -1,11 +1,12 @@
-import { DateTime } from "luxon";
 import {
   type AnalyticsDimension,
   AnalyticsPath,
 } from "@powerhousedao/analytics-engine-core";
-import { BrowserAnalyticsStore } from "../src/BrowserAnalyticsStore.js";
+import { DateTime } from "luxon";
 
-import { afterAll, beforeAll, it, expect, describe } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { BrowserAnalyticsStore } from "../src/BrowserAnalyticsStore.js";
+import { createFsPglite } from "../src/utils.js";
 
 const TEST_SOURCE = AnalyticsPath.fromString(
   "test/analytics/AnalyticsStore.spec",
@@ -30,8 +31,10 @@ describe("IDB VFS", () => {
   it("should persist records on disk", { timeout: 10000000 }, async () => {
     // first, delete db
     await deleteIdbDb(dbName);
-
-    const store = new BrowserAnalyticsStore({ databaseName: dbName });
+    const pgLite1 = await createFsPglite(dbName);
+    const store = new BrowserAnalyticsStore({
+      pgLite: pgLite1,
+    });
     await store.init();
     await store.addSeriesValues([
       {
@@ -92,7 +95,10 @@ describe("IDB VFS", () => {
       },
     });
 
-    const newStore = new BrowserAnalyticsStore({ databaseName: dbName });
+    const pgLite2 = await createFsPglite(dbName);
+    const newStore = new BrowserAnalyticsStore({
+      pgLite: pgLite2,
+    });
     await newStore.init();
 
     const results = await newStore.getMatchingSeries({
@@ -133,8 +139,9 @@ describe("IDB VFS", () => {
     // delete existing db
     await deleteIdbDb("analytics.db.huge");
 
+    const pgLite = await createFsPglite("analytics.db.huge");
     const store = new BrowserAnalyticsStore({
-      databaseName: "analytics.db.huge",
+      pgLite,
     });
     await store.init();
 

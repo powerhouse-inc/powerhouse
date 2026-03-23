@@ -1,6 +1,8 @@
 import type { IntegrityInspectorProps } from "@powerhousedao/design-system/connect";
-import { DocumentIntegrityService } from "@powerhousedao/reactor-browser";
-import { useReactorClientModule } from "@powerhousedao/reactor-browser/connect";
+import {
+  DocumentIntegrityService,
+  useReactorClientModule,
+} from "@powerhousedao/reactor-browser";
 import { useCallback, useMemo } from "react";
 
 export function useIntegrityInspector(): IntegrityInspectorProps | undefined {

@@ -1,4 +1,3 @@
-import { AbortError } from "document-drive/utils/errors";
 import type {
   Action,
   CreateDocumentActionInput,
@@ -6,7 +5,9 @@ import type {
   ISigner,
   Operation,
   PHDocument,
-} from "document-model";
+} from "@powerhousedao/shared/document-model";
+import { AbortError } from "document-drive";
+import type { ILogger } from "document-model";
 import { v4 as uuidv4 } from "uuid";
 import {
   addRelationshipAction,
@@ -23,7 +24,6 @@ import {
 } from "../events/types.js";
 import type { IJobExecutorManager } from "../executor/interfaces.js";
 import type { IJobTracker } from "../job-tracker/interfaces.js";
-import type { ILogger } from "../logging/types.js";
 import type { IQueue } from "../queue/interfaces.js";
 import type { Job } from "../queue/types.js";
 import type { IReadModelCoordinator } from "../read-models/interfaces.js";

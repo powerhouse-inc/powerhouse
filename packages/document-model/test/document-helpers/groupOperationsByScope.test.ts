@@ -1,7 +1,10 @@
-import type { Operation } from "document-model";
-import { deriveOperationId, groupOperationsByScope } from "document-model/core";
-import { fakeAction } from "document-model/test";
+import type { Operation } from "@powerhousedao/shared/document-model";
+import {
+  deriveOperationId,
+  groupOperationsByScope,
+} from "@powerhousedao/shared/document-model";
 import { describe, expect, it } from "vitest";
+import { fakeAction } from "../helpers.js";
 
 const TEST_DOC_ID = "test-doc-id";
 const TEST_BRANCH = "main";

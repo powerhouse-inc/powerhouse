@@ -9,8 +9,8 @@ import {
   useNodeParentFolderById,
   useSelectedDocumentSafe,
 } from "@powerhousedao/reactor-browser";
-import type { Node } from "document-drive";
-import type { PHDocument } from "document-model";
+import type { Node } from "@powerhousedao/shared/document-drive";
+import type { PHDocument } from "@powerhousedao/shared/document-model";
 import { useEffect, useState, type ComponentPropsWithoutRef } from "react";
 import { twMerge } from "tailwind-merge";
 import { DocumentTimeline } from "../document-timeline/document-timeline.js";
@@ -18,7 +18,7 @@ import { NodeInput } from "../node-input/node-input.js";
 import { useDocumentUndoRedo } from "./utils/use-document-undo-redo.js";
 
 // TODO: Remove this when timeline analytics is available
-// import { useDocumentTimeline } from "@powerhousedao/reactor-browser/analytics";
+// import { useDocumentTimeline } from "@powerhousedao/reactor-browser";
 function useDocumentTimeline(documentId?: string) {
   return [];
 }

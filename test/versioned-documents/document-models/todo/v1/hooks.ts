@@ -1,14 +1,11 @@
 import type { DocumentDispatch } from "@powerhousedao/reactor-browser";
 import {
+  useDocumentById,
   useDocumentsInSelectedDrive,
   useDocumentsInSelectedFolder,
-  useDocumentById,
   useSelectedDocument,
 } from "@powerhousedao/reactor-browser";
-import type {
-  TodoDocument,
-  TodoAction,
-} from "versioned-documents/document-models/todo/v1";
+import type { TodoAction, TodoDocument } from "document-models/todo/v1";
 import { isTodoDocument } from "./gen/document-schema.js";
 
 /** Hook to get a Todo document by its id */

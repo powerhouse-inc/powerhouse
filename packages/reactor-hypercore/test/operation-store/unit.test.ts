@@ -1,5 +1,5 @@
-import type { Operation } from "document-model";
-import { generateId } from "document-model";
+import type { Operation } from "@powerhousedao/shared/document-model";
+import { generateId } from "@powerhousedao/shared/document-model";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   DuplicateOperationError,

@@ -1,5 +1,4 @@
 import {
-  ConsoleLogger,
   DocumentModelRegistry,
   EventBus,
   GqlRequestChannelFactory,
@@ -14,8 +13,13 @@ import {
   type ISyncManager,
   type ReactorModule,
 } from "@powerhousedao/reactor";
-import { driveDocumentModelModule } from "document-drive";
-import type { Action, DocumentModelModule, PHDocument } from "document-model";
+import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
+import type {
+  Action,
+  DocumentModelModule,
+  PHDocument,
+} from "@powerhousedao/shared/document-model";
+import { ConsoleLogger } from "document-model";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createResolverBridge } from "./utils/gql-resolver-bridge.js";
 

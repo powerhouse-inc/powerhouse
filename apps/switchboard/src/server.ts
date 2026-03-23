@@ -6,6 +6,8 @@ import { register } from "node:module";
 register(httpsHooksPath, import.meta.url);
 
 import { PGlite } from "@electric-sql/pglite";
+import { metrics } from "@opentelemetry/api";
+import { getConfig } from "@powerhousedao/config/node";
 import { ReactorInstrumentation } from "@powerhousedao/opentelemetry-instrumentation-reactor";
 import {
   ChannelScheme,
@@ -16,7 +18,6 @@ import {
   parseDriveUrl,
   type Database,
 } from "@powerhousedao/reactor";
-import { metrics } from "@opentelemetry/api";
 import {
   HttpPackageLoader,
   PackageManagementService,
@@ -27,11 +28,11 @@ import {
   initializeAndStartAPI,
   startViteServer,
 } from "@powerhousedao/reactor-api";
+import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
+import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import { type IRenown } from "@renown/sdk";
 import * as Sentry from "@sentry/node";
-import { childLogger, driveDocumentModelModule } from "document-drive";
-import type { DocumentModelModule } from "document-model";
-import { documentModelDocumentModelModule } from "document-model";
+import { childLogger, documentModelDocumentModelModule } from "document-model";
 import dotenv from "dotenv";
 import express from "express";
 import { Kysely, PostgresDialect } from "kysely";
@@ -111,7 +112,10 @@ async function initServer(
 
   // HTTP registry package loading
   let httpDocumentModels: DocumentModelModule[] = [];
-  const registryUrl = process.env.PH_REGISTRY_URL;
+  const configPath =
+    options.configFile ?? path.join(process.cwd(), "powerhouse.config.json");
+  const config = getConfig(configPath);
+  const registryUrl = process.env.PH_REGISTRY_URL ?? config.packageRegistryUrl;
   const registryPackages = process.env.PH_REGISTRY_PACKAGES;
   let httpLoader: HttpPackageLoader | undefined;
 

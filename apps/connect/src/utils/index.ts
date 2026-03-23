@@ -7,6 +7,5 @@ export * from "./openUrl.js";
 export * from "./package-json.js";
 export * from "./path.js";
 export * from "./reactor.js";
-export * from "./registry-url.js";
 export * from "./registerServiceWorker.js";
 export * from "./slug.js";

@@ -4,7 +4,7 @@ import type {
   Operation,
   PHDocument,
   Signature,
-} from "document-model";
+} from "@powerhousedao/shared/document-model";
 import { v4 as uuidv4 } from "uuid";
 import type { ErrorInfo, JobMeta, PagedResults } from "../shared/types.js";
 

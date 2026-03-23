@@ -1,7 +1,5 @@
 export * from "./cache/index.js";
 export * from "./cache/types.js";
-export * from "./drive-document-model/index.js";
-export * from "./drive-document-model/types.js";
 export * from "./processors/index.js";
 export * from "./processors/types.js";
 export * from "./queue/index.js";

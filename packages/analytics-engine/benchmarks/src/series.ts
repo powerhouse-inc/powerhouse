@@ -1,10 +1,13 @@
+import {
+  BrowserAnalyticsStore,
+  createFsPglite,
+} from "@powerhousedao/analytics-engine-browser";
+import { AnalyticsPath } from "@powerhousedao/analytics-engine-core";
+import { PostgresAnalyticsStore } from "@powerhousedao/analytics-engine-pg";
 import fs from "fs";
 import { DateTime } from "luxon";
 import { Bench } from "tinybench";
-import { AnalyticsPath } from "@powerhousedao/analytics-engine-core";
 import { logs } from "./util.js";
-import { PostgresAnalyticsStore } from "@powerhousedao/analytics-engine-pg";
-import { MemoryAnalyticsStore } from "@powerhousedao/analytics-engine-browser";
 
 const isPgDisabled = process.env.PG_DISABLED === "true";
 const connectionString = process.env.PG_CONNECTION_STRING;
@@ -22,7 +25,8 @@ if (postgres) {
 }
 
 const sqlHuge = fs.readFileSync("./data/dump-huge.sql", "utf-8");
-const memory = new MemoryAnalyticsStore();
+const pgLite = await createFsPglite(`test-db-${Date.now().toString()}`);
+const memory = new BrowserAnalyticsStore({ pgLite });
 await memory.init();
 await memory.raw(sqlHuge);
 

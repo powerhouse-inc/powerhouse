@@ -1,4 +1,4 @@
-import type { PHDocument } from "document-model";
+import type { PHDocument } from "@powerhousedao/shared/document-model";
 import type { Kysely, Transaction } from "kysely";
 import type { IKeyframeStore } from "../interfaces.js";
 import type { Database } from "./types.js";

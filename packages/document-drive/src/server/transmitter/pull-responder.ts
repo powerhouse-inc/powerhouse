@@ -1,12 +1,15 @@
 import type {
+  ListenerFilter,
+  Trigger,
+} from "@powerhousedao/shared/document-drive";
+import { generateId } from "@powerhousedao/shared/document-model";
+import type {
   CancelPullLoop,
   GetStrandsOptions,
   GraphQLResult,
   IListenerManager,
-  ILogger,
   IOperationResult,
   IPullResponderTransmitter,
-  ListenerFilter,
   ListenerRevision,
   ListenerRevisionWithError,
   PullResponderTrigger,
@@ -15,14 +18,11 @@ import type {
   ServerListener,
   StrandUpdate,
   StrandUpdateSource,
-  Trigger,
 } from "document-drive";
-import { OperationError } from "document-drive/server/error";
-import { requestGraphql } from "document-drive/utils/graphql";
-import { childLogger } from "document-drive/utils/logger";
-import { operationsToRevision } from "document-drive/utils/misc";
-import { generateId } from "document-model/core";
+import { childLogger, type ILogger } from "document-model";
 import { gql } from "graphql-request";
+import { OperationError } from "server";
+import { operationsToRevision, requestGraphql } from "utils";
 import { PULL_DRIVE_INTERVAL } from "./constants.js";
 
 const MAX_REVISIONS_PER_ACK = 100;

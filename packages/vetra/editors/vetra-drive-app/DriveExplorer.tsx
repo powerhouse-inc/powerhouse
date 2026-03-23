@@ -1,4 +1,4 @@
-import type { FileNode } from "document-drive";
+import type { FileNode } from "@powerhousedao/shared/document-drive";
 import type React from "react";
 import { DriveHeader } from "./components/DriveHeader.js";
 import { ModuleSpecificationsSection } from "./components/ModuleSpecificationsSection.js";

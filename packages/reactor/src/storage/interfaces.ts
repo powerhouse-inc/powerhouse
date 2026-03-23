@@ -2,7 +2,7 @@ import type {
   Operation,
   OperationWithContext,
   PHDocument,
-} from "document-model";
+} from "@powerhousedao/shared/document-model";
 import type {
   ConsistencyToken,
   PagedResults,

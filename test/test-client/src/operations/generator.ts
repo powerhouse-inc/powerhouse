@@ -1,4 +1,4 @@
-import type { Action } from "document-model";
+import type { Action } from "@powerhousedao/shared/document-model";
 import type { TestDocument } from "../types.js";
 import { MAX_OPS_PER_CALL, MIN_OPS_PER_CALL } from "../types.js";
 import { generateDocumentModelOperation } from "./document-model-ops.js";

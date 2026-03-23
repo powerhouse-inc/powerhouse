@@ -1,10 +1,10 @@
+import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
 import type {
-  DocumentDriveDocument,
   ICache,
   ICacheStorage,
   ICacheStorageManager,
 } from "document-drive";
-import type { PHDocument } from "document-model";
+import type { PHDocument } from "@powerhousedao/shared/document-model";
 import { trimResultingState } from "./util.js";
 
 export class CacheStorageManager implements ICacheStorageManager {

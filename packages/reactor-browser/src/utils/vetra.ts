@@ -11,9 +11,12 @@ import type {
   DocumentModelModule,
   EditorModule,
   Manifest,
-} from "document-model";
-import { createState } from "document-model";
-import { defaultBaseState, generateId } from "document-model/core";
+} from "@powerhousedao/shared/document-model";
+import {
+  createState,
+  defaultBaseState,
+  generateId,
+} from "@powerhousedao/shared/document-model";
 
 export function convertLegacyLibToVetraPackage(
   legacyLib: DocumentModelLib,
@@ -40,7 +43,7 @@ export function convertLegacyLibToVetraPackage(
         ),
       ),
     },
-    upgradeManifests: legacyLib.upgradeManifests,
+    upgradeManifests: legacyLib.upgradeManifests ?? [],
     processorFactory: legacyLib.processorFactory,
   };
   return vetraPackage;

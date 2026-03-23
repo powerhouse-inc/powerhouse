@@ -8,12 +8,12 @@ import type {
   PHDocument,
   UpgradeDocumentAction,
   UpgradeTransition,
-} from "document-model";
+} from "@powerhousedao/shared/document-model";
 import {
   createPresignedHeader,
   defaultBaseState,
   deriveOperationId,
-} from "document-model/core";
+} from "@powerhousedao/shared/document-model";
 import type { Job } from "../queue/types.js";
 import { DowngradeNotSupportedError } from "../shared/errors.js";
 import type {

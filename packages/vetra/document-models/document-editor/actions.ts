@@ -1,6 +1,9 @@
-import { baseActions } from "document-model";
+import {
+  baseActions,
+  type Actions,
+} from "@powerhousedao/shared/document-model";
 import { baseOperationsActions } from "./gen/creators.js";
 
 /** Actions for the DocumentEditor document model */
 
-export const actions = { ...baseActions, ...baseOperationsActions };
+export const actions: Actions = { ...baseActions, ...baseOperationsActions };

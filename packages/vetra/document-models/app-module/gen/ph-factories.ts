@@ -1,15 +1,22 @@
 /**
  * Factory methods for creating AppModuleDocument instances
  */
-import type { PHAuthState, PHDocumentState, PHBaseState } from "document-model";
-import { createBaseState, defaultBaseState } from "document-model/core";
+import type {
+  PHAuthState,
+  PHBaseState,
+  PHDocumentState,
+} from "@powerhousedao/shared/document-model";
+import {
+  createBaseState,
+  defaultBaseState,
+} from "@powerhousedao/shared/document-model";
 import type {
   AppModuleDocument,
-  AppModuleLocalState,
   AppModuleGlobalState,
+  AppModuleLocalState,
   AppModulePHState,
 } from "./types.js";
-import { createDocument } from "./utils.js";
+import { utils } from "./utils.js";
 
 export function defaultGlobalState(): AppModuleGlobalState {
   return {
@@ -75,7 +82,7 @@ export function createAppModuleDocument(
     local?: Partial<AppModuleLocalState>;
   }>,
 ): AppModuleDocument {
-  const document = createDocument(
+  const document = utils.createDocument(
     state
       ? createState(
           createBaseState(state.auth, state.document),

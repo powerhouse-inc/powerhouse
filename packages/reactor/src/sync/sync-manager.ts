@@ -1,4 +1,8 @@
-import type { Operation } from "document-model";
+import type {
+  Operation,
+  OperationWithContext,
+} from "@powerhousedao/shared/document-model";
+import type { ILogger } from "document-model";
 import type { IOperationIndex } from "../cache/operation-index-types.js";
 import type {
   BatchLoadRequest,
@@ -11,7 +15,6 @@ import {
   type JobFailedEvent,
   type JobWriteReadyEvent,
 } from "../events/types.js";
-import type { ILogger } from "../logging/types.js";
 import { JobAwaiter } from "../shared/awaiter.js";
 import { JobStatus, type ShutdownStatus } from "../shared/types.js";
 import type {

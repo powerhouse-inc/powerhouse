@@ -1,20 +1,25 @@
 // TODO: remove eslint-disable rules once refactor is done
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
-import type { StateReducer } from "document-model";
-import { isDocumentAction, createReducer } from "document-model/core";
+
 import type { ProcessorModulePHState } from "@powerhousedao/vetra/document-models/processor-module";
+import type {
+  Reducer,
+  StateReducer,
+} from "@powerhousedao/shared/document-model";
+import {
+  createReducer,
+  isDocumentAction,
+} from "@powerhousedao/shared/document-model";
 
 import { processorModuleBaseOperationsOperations } from "../src/reducers/base-operations.js";
 
 import {
-  SetProcessorNameInputSchema,
-  SetProcessorTypeInputSchema,
   AddDocumentTypeInputSchema,
-  RemoveDocumentTypeInputSchema,
   AddProcessorAppInputSchema,
+  RemoveDocumentTypeInputSchema,
   RemoveProcessorAppInputSchema,
+  SetProcessorNameInputSchema,
   SetProcessorStatusInputSchema,
+  SetProcessorTypeInputSchema,
 } from "./schema/zod.js";
 
 const stateReducer: StateReducer<ProcessorModulePHState> = (
@@ -115,4 +120,5 @@ const stateReducer: StateReducer<ProcessorModulePHState> = (
   }
 };
 
-export const reducer = createReducer<ProcessorModulePHState>(stateReducer);
+export const reducer: Reducer<ProcessorModulePHState> =
+  createReducer(stateReducer);

@@ -1,7 +1,7 @@
 import { Icon } from "@powerhousedao/design-system";
+import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
 import type { Meta, StoryObj } from "@storybook/react";
 import { fn } from "@storybook/test";
-import type { DocumentDriveDocument } from "document-drive";
 import type { ComponentPropsWithoutRef } from "react";
 import { WagmiContext } from "../../context/WagmiContext.js";
 import { ConnectTooltipProvider } from "../tooltip/tooltip.js";

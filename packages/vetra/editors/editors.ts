@@ -1,4 +1,4 @@
-import type { EditorModule } from "document-model";
+import type { EditorModule } from "@powerhousedao/shared/document-model";
 import { AppEditor } from "./app-editor/module.js";
 import { DocumentEditor } from "./document-editor/module.js";
 import { ProcessorEditor } from "./processor-editor/module.js";

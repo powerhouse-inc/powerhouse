@@ -1,14 +1,12 @@
-import { DateTime } from "luxon";
 import {
   type AnalyticsDimension,
   AnalyticsPath,
-} from "@powerhousedao/analytics-engine-core";
-import { PostgresAnalyticsStore } from "../src/PostgresAnalyticsStore.js";
-import { afterAll, beforeAll, it, expect } from "vitest";
-import {
   defaultQueryLogger,
   defaultResultsLogger,
-} from "@powerhousedao/analytics-engine-knex";
+} from "@powerhousedao/analytics-engine-core";
+import { DateTime } from "luxon";
+import { afterAll, beforeAll, expect, it } from "vitest";
+import { PostgresAnalyticsStore } from "../src/PostgresAnalyticsStore.js";
 
 const connectionString = process.env.PG_CONNECTION_STRING;
 if (!connectionString) {

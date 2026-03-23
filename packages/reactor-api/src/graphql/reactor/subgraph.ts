@@ -1,4 +1,4 @@
-import { ConsoleLogger } from "@powerhousedao/reactor";
+import { ConsoleLogger } from "document-model";
 import fs from "fs";
 import { GraphQLError } from "graphql";
 import { withFilter } from "graphql-subscriptions";

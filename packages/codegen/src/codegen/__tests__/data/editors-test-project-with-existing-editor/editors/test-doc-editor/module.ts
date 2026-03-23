@@ -1,4 +1,4 @@
-import type { EditorModule } from "document-model";
+import type { EditorModule } from "@powerhousedao/shared/document-model";
 import { lazy } from "react";
 
 /** Document editor module for the Todo List document type */

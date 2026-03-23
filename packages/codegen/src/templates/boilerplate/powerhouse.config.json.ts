@@ -1,4 +1,4 @@
-import { parsePackageVersion } from "@powerhousedao/common/clis";
+import { parsePackageVersion } from "@powerhousedao/shared/clis";
 import { json } from "@tmpl/core";
 
 const vetraPackageTemplate = (packageVersion: string) =>

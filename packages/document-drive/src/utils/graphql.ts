@@ -1,3 +1,9 @@
+import type {
+  DocumentModelGlobalState,
+  DocumentModelModule,
+  PHBaseState,
+  PHDocument,
+} from "@powerhousedao/shared/document-model";
 import { pascalCase } from "change-case";
 import type {
   DocumentGraphQLResult,
@@ -5,12 +11,7 @@ import type {
   GraphQLResult,
   IBaseDocumentDriveServer,
 } from "document-drive";
-import type {
-  DocumentModelGlobalState,
-  DocumentModelModule,
-  PHBaseState,
-  PHDocument,
-} from "document-model";
+import { logger } from "document-model";
 import type {
   BuildSchemaOptions,
   GraphQLOutputType,
@@ -26,7 +27,6 @@ import {
   buildSchema,
 } from "graphql";
 import { GraphQLClient, gql } from "graphql-request";
-import { logger } from "./logger.js";
 
 export { gql } from "graphql-request";
 
@@ -272,6 +272,7 @@ export async function fetchDocument<TState extends PHBaseState = PHBaseState>(
     initialState: result.document.initialState,
     /** @ts-expect-error TODO: fix this */
     operations: {
+      /** @ts-expect-error TODO: fix this */
       global: result.document.operations.map(({ inputText, ...o }) => ({
         ...o,
         error: o.error ?? undefined,

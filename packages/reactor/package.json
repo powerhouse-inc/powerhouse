@@ -9,17 +9,15 @@
   "type": "module",
   "exports": {
     ".": {
-      "types": "./dist/src/index.d.ts",
-      "import": "./dist/src/index.js"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
     }
   },
   "files": [
-    "./dist/src"
+    "dist"
   ],
   "scripts": {
-    "prebuild": "pnpm run clean",
-    "build": "tsc",
-    "build:bundle": "bun run ./bundle.ts",
+    "build:bundle": "tsdown",
     "test": "vitest run --coverage --printConsoleTrace=true --silent=false",
     "test:watch": "vitest --coverage",
     "lint": "eslint",
@@ -37,24 +35,24 @@
   "keywords": [],
   "author": "",
   "license": "AGPL-3.0-only",
-  "devDependencies": {
-    "@powerhousedao/shared": "workspace:",
-    "@electric-sql/pglite": "catalog:",
-    "document-drive": "workspace:*",
-    "document-model": "workspace:*",
+  "dependencies": {
+    "uuid": "^11.0.5",
     "kysely": "catalog:",
     "kysely-pglite-dialect": "catalog:",
-    "uuid": "^11.0.5",
+    "@electric-sql/pglite": "catalog:",
+    "@sindresorhus/fnv1a": "catalog:",
+    "@powerhousedao/shared": "workspace:",
+    "document-drive": "workspace:*",
+    "document-model": "workspace:*"
+  },
+  "devDependencies": {
     "@vitest/coverage-v8": "^3.2.4",
     "prettier": "catalog:",
     "tinybench": "^2.9.0",
     "tsx": "catalog:",
     "vitest": "catalog:",
-    "@types/bun": "catalog:"
-  },
-  "peerDependencies": {
-    "@electric-sql/pglite": ">=0.3.15",
-    "document-drive": "workspace:*",
-    "document-model": "workspace:*"
+    "@types/bun": "catalog:",
+    "tsdown": "catalog:",
+    "vite-tsconfig-paths": "catalog:"
   }
 }

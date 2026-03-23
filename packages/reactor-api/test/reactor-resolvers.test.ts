@@ -3,12 +3,12 @@ import {
   ReactorClientBuilder,
   type ReactorClientModule,
 } from "@powerhousedao/reactor";
-import { driveDocumentModelModule } from "document-drive";
+import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import {
-  documentModelDocumentModelModule,
   type DocumentModelModule,
   type PHDocument,
-} from "document-model";
+} from "@powerhousedao/shared/document-model";
+import { documentModelDocumentModelModule } from "document-model";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import * as resolvers from "../src/graphql/reactor/resolvers.js";
 

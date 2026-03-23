@@ -6,7 +6,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { Command } from "commander";
 import { bold, blue, green, red, gray, yellow } from "colorette";
-import type { Action } from "document-model";
+import type { Action } from "@powerhousedao/shared/document-model";
 import {
   GraphQLClient,
   DOCUMENT_MODEL_TYPE,

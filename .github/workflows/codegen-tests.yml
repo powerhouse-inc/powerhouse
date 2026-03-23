@@ -1,9 +1,5 @@
 name: Codegen Tests
 
-env:
-  BUN_RUNTIME_TRANSPILER_CACHE_PATH: "0"
-
-
 concurrency:
   group: codegen-tests-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -52,6 +48,12 @@ jobs:
 
       - name: Build typescript project
         run: pnpm build-tsc
+
+      - name: Run misc build scripts
+        run: pnpm build-misc
+
+      - name: Run bundle build scripts
+        run: pnpm build-bundle
 
       - name: Run css build scripts
         run: pnpm build-css

@@ -1,4 +1,4 @@
-import type { Operation } from "document-model";
+import type { Operation } from "@powerhousedao/shared/document-model";
 import { v4 as uuidv4 } from "uuid";
 import { type AtomicTxn as IAtomicTxn } from "./interfaces.js";
 import type { InsertableOperation } from "./kysely/types.js";

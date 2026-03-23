@@ -1,5 +1,8 @@
+import {
+  BrowserAnalyticsStore,
+  createFsPglite,
+} from "@powerhousedao/analytics-engine-browser";
 import fs from "fs";
-import { MemoryAnalyticsStore } from "@powerhousedao/analytics-engine-browser";
 import { Bench } from "tinybench";
 import { logs } from "./util.js";
 
@@ -7,8 +10,7 @@ import { logs } from "./util.js";
 const sqlSmall = fs.readFileSync("./data/dump-small.sql", "utf-8");
 const sqlHuge = fs.readFileSync("./data/dump-huge.sql", "utf-8");
 
-let store: MemoryAnalyticsStore;
-
+let store: BrowserAnalyticsStore;
 const bench = new Bench({
   time: 500,
   warmup: true,
@@ -20,9 +22,10 @@ bench
   .add(
     "Init",
     async () => {
-      const initStore = new MemoryAnalyticsStore();
+      const pgLite = await createFsPglite(`test-db-${Date.now().toString()}`);
+      const initStore = new BrowserAnalyticsStore({ pgLite });
       await initStore.init();
-      initStore.destroy();
+      await initStore.destroy();
     },
     logs("Init"),
   )
@@ -33,11 +36,12 @@ bench
     },
     logs("Insert (100 records)", {
       beforeEach: async () => {
-        store = new MemoryAnalyticsStore();
+        const pgLite = await createFsPglite(`test-db-${Date.now().toString()}`);
+        store = new BrowserAnalyticsStore({ pgLite });
         await store.init();
       },
-      afterEach: () => {
-        store.destroy();
+      afterEach: async () => {
+        await store.destroy();
       },
     }),
   )
@@ -48,11 +52,12 @@ bench
     },
     logs("Insert (200k records)", {
       beforeEach: async () => {
-        store = new MemoryAnalyticsStore();
+        const pgLite = await createFsPglite(`test-db-${Date.now().toString()}`);
+        store = new BrowserAnalyticsStore({ pgLite });
         await store.init();
       },
-      afterEach: () => {
-        store.destroy();
+      afterEach: async () => {
+        await store.destroy();
       },
     }),
   )
@@ -63,12 +68,13 @@ bench
     },
     logs("Select Distinct", {
       beforeAll: async () => {
-        store = new MemoryAnalyticsStore();
+        const pgLite = await createFsPglite(`test-db-${Date.now().toString()}`);
+        store = new BrowserAnalyticsStore({ pgLite });
         await store.init();
         await store.raw(sqlHuge);
       },
-      afterAll: () => {
-        store.destroy();
+      afterAll: async () => {
+        await store.destroy();
       },
     }),
   );

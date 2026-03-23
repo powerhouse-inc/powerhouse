@@ -3,10 +3,6 @@
   "compilerOptions": {
     "outDir": "./dist",
     "emitDeclarationOnly": true,
-    "types": [
-      "vite/client",
-      "@types/bun"
-    ]
   },
   "include": [
     "**/*"

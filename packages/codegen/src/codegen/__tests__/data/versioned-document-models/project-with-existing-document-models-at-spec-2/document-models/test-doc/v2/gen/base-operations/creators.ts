@@ -1,12 +1,12 @@
-import { createAction } from "document-model/core";
+import { createAction } from "@powerhousedao/shared/document-model";
 import {
-  SetTestIdInputSchema,
   SetTestIdButDifferentInputSchema,
+  SetTestIdInputSchema,
   SetTestNameInputSchema,
 } from "../schema/zod.js";
 import type {
-  SetTestIdInput,
   SetTestIdButDifferentInput,
+  SetTestIdInput,
   SetTestNameInput,
 } from "../types.js";
 import type {

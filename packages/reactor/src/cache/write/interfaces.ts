@@ -1,4 +1,4 @@
-import type { PHDocument } from "document-model";
+import type { PHDocument } from "@powerhousedao/shared/document-model";
 
 /**
  * IWriteCache is a write-side projection that optimizes document state retrieval

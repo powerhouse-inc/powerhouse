@@ -27,5 +27,7 @@
     "tsc": "tsc",
     "lint": "eslint"
   },
-  "dependencies": {}
+  "dependencies": {
+    "@powerhousedao/shared": "workspace:*"
+  }
 }

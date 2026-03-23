@@ -2,7 +2,7 @@ import type {
   ConflictResolution,
   FileUploadProgress,
 } from "@powerhousedao/reactor-browser";
-import type { Node } from "document-drive";
+import type { Node } from "@powerhousedao/shared/document-drive";
 import { useCallback, useEffect, useReducer } from "react";
 import {
   type OnAddFileWithProgress,

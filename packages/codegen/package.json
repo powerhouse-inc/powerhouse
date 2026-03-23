@@ -85,6 +85,7 @@
     "@powerhousedao/reactor-browser": "workspace:*",
     "@powerhousedao/analytics-engine-core": "workspace:*",
     "@powerhousedao/design-system": "workspace:*",
-    "document-drive": "workspace:*"
+    "document-drive": "workspace:*",
+    "vite-tsconfig-paths": "catalog:"
   }
 }

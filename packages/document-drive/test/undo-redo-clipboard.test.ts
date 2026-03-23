@@ -1,25 +1,27 @@
+import {
+  addFile,
+  driveDocumentModelModule,
+  driveDocumentReducer,
+} from "@powerhousedao/shared/document-drive";
 import type {
   DocumentModelDocument,
   DocumentModelModule,
   Operation,
-} from "document-model";
+} from "@powerhousedao/shared/document-model";
 import {
   actions,
-  documentModelDocumentModelModule,
+  createPresignedHeader,
   documentModelReducer,
-} from "document-model";
-import { createPresignedHeader, generateId } from "document-model/core";
-import { beforeEach, describe, expect, it } from "vitest";
-
+  generateId,
+} from "@powerhousedao/shared/document-model";
 import type { BaseDocumentDriveServer } from "document-drive";
 import {
-  addFile,
   buildOperation,
   buildOperationAndDocument,
-  driveDocumentModelModule,
-  driveDocumentReducer,
   ReactorBuilder,
 } from "document-drive";
+import { documentModelDocumentModelModule } from "document-model";
+import { beforeEach, describe, expect, it } from "vitest";
 
 describe("Undo/Redo with clipboard operations", () => {
   const documentModels = [

@@ -1,7 +1,10 @@
 // TODO: remove eslint-disable rules once refactor is done
 
-import type { StateReducer } from "document-model";
-import { isDocumentAction, createReducer } from "document-model/core";
+import type { StateReducer } from "@powerhousedao/shared/document-model";
+import {
+  createReducer,
+  isDocumentAction,
+} from "@powerhousedao/shared/document-model";
 import type { TestDocPHState } from "test/document-models/test-doc/v1";
 
 import { testDocBaseOperationsOperations } from "../src/reducers/base-operations.js";

@@ -9,10 +9,10 @@ import type {
   UpgradeDocumentAction,
   UpgradeDocumentActionInput,
   UpgradeTransition,
-} from "document-model";
+} from "@powerhousedao/shared/document-model";
+import type { ILogger } from "document-model";
 import type { IOperationIndexTxn } from "../cache/operation-index-types.js";
 import { driveCollectionId } from "../cache/operation-index-types.js";
-import type { ILogger } from "../logging/types.js";
 import type { Job } from "../queue/types.js";
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";
 import { DocumentDeletedError } from "../shared/errors.js";

@@ -1,11 +1,11 @@
 import type { FileUploadProgressCallback } from "@powerhousedao/reactor-browser";
-import { logger } from "document-drive";
 import type {
   Action,
   DocumentOperations,
   Operation,
   PHDocument,
-} from "document-model";
+} from "@powerhousedao/shared/document-model";
+import { logger } from "document-model";
 
 export async function queueActions(
   document: PHDocument | undefined,

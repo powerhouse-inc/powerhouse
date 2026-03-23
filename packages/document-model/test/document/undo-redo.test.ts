@@ -1,4 +1,4 @@
-import type { Action, Operation } from "document-model";
+import type { Action, Operation } from "@powerhousedao/shared/document-model";
 import {
   baseCreateDocument,
   deriveOperationId,
@@ -6,15 +6,15 @@ import {
   processUndoRedo,
   redo,
   undo,
-} from "document-model/core";
-import type { CountAction, CountDocument } from "document-model/test";
+} from "@powerhousedao/shared/document-model";
+import { beforeEach, describe, expect, it } from "vitest";
+import type { CountAction, CountDocument } from "../helpers.js";
 import {
   countReducer,
   createCountDocumentState,
   increment,
   testCreateBaseState,
-} from "document-model/test";
-import { beforeEach, describe, expect, it } from "vitest";
+} from "../helpers.js";
 
 describe("UNDO/REDO", () => {
   let document: CountDocument;

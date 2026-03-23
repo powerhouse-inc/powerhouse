@@ -1,5 +1,5 @@
-import type { SignatureVerificationHandler } from "../../src/index.js";
-import { deriveOperationId } from "document-model";
+import type { SignatureVerificationHandler } from "@powerhousedao/reactor";
+import { deriveOperationId } from "@powerhousedao/shared/document-model";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { IWriteCache } from "../../src/cache/write/interfaces.js";
 import { SimpleJobExecutor } from "../../src/executor/simple-job-executor.js";

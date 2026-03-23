@@ -4,7 +4,8 @@ import {
   logVersionUpdate,
   parsePackageVersion,
   runCmd,
-} from "@powerhousedao/common/clis";
+} from "@powerhousedao/shared/clis";
+import { ALL_POWERHOUSE_DEPENDENCIES } from "@powerhousedao/shared/constants";
 import chalk from "chalk";
 import {
   boolean,
@@ -21,7 +22,6 @@ import { detect } from "package-manager-detector/detect";
 import { readPackage } from "read-pkg";
 import { clean, valid } from "semver";
 import { writePackage } from "write-package";
-import { ALL_POWERHOUSE_DEPENDENCIES } from "../utils/constants.js";
 
 export const use = command({
   name: "use",

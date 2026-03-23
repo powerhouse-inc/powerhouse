@@ -1,20 +1,21 @@
 import { PGlite } from "@electric-sql/pglite";
 import {
+  addRemoteDrive,
   ChannelScheme,
-  ConsoleLogger,
   ReactorBuilder,
   ReactorClientBuilder,
+  type BrowserReactorClientModule,
   type Database,
+  type IDocumentModelLoader,
   type JwtHandler,
   type SignerConfig,
 } from "@powerhousedao/reactor-browser";
-import {
-  addRemoteDrive,
-  type BrowserReactorClientModule,
-  type IDocumentModelLoader,
-} from "@powerhousedao/reactor-browser";
+import type {
+  DocumentModelModule,
+  UpgradeManifest,
+} from "@powerhousedao/shared/document-model";
 import { createSignatureVerifier, type IRenown } from "@renown/sdk";
-import type { DocumentModelModule, UpgradeManifest } from "document-model";
+import { ConsoleLogger } from "document-model";
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
 

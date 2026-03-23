@@ -1,4 +1,4 @@
-import { type SignalDispatch } from "document-model";
+import { type SignalDispatch } from "@powerhousedao/shared/document-model";
 import type { SetDragAndDropEnabledAction } from "./actions.js";
 import type { AppModuleState } from "../types.js";
 

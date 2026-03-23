@@ -3,7 +3,7 @@ import type {
   IReactorClient,
 } from "@powerhousedao/reactor";
 import { DocumentChangeType } from "@powerhousedao/reactor";
-import type { PHDocument } from "document-model";
+import type { PHDocument } from "@powerhousedao/shared/document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   matchesJobFilter,

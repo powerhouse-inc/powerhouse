@@ -1,4 +1,6 @@
 import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
+import type { ProcessorFactoryBuilder } from "@powerhousedao/shared/processors";
+import type { RegistryPackageSource } from "@powerhousedao/shared/registry";
 import type {
   IRelationalDbLegacy,
   ProcessorRecordLegacy,
@@ -14,8 +16,8 @@ import type {
   Reducer,
   SubgraphModule,
   UpgradeManifest,
-} from "document-model";
-import type { ProcessorFactoryBuilder } from "../../../shared/processors/types.js";
+} from "@powerhousedao/shared/document-model";
+import type { IDocumentModelLoader } from "../re-exports.js";
 
 export type Processors = (module: {
   analyticsStore: IAnalyticsStore;
@@ -71,7 +73,7 @@ export type VetraModules = {
 };
 
 export type VetraPackage = BaseVetraPackage<VetraModules> & {
-  upgradeManifests: UpgradeManifest<readonly number[]>[];
+  upgradeManifests: UpgradeManifest<readonly number[]>[] | undefined;
   processorFactory?: ProcessorFactoryBuilder;
 };
 
@@ -84,18 +86,23 @@ export type VetraPackageManifest = VetraPackageMeta & {
 export type IPackagesListener = (data: { packages: VetraPackage[] }) => void;
 export type IPackageListerUnsubscribe = () => void;
 
-export interface IPackageManager {
+export type PackageManagerInstallResult =
+  | {
+      type: "success";
+      package: VetraPackage;
+    }
+  | { type: "error"; error: Error };
+
+export interface IPackageManager extends IDocumentModelLoader {
+  registryUrl: string | null;
   packages: VetraPackage[];
-  localPackageIds: Set<string>;
-  addPackage(name: string, registryUrl: string): Promise<void>;
-  addLocalPackage(name: string, localPackage: VetraPackage): Promise<void>;
-  removePackage(name: string): Promise<void>;
+  addPackage(
+    packageName: string,
+  ): Promise<PackageManagerInstallResult> | PackageManagerInstallResult;
+  addPackages(
+    packageNames: string[],
+  ): Promise<PackageManagerInstallResult[]> | PackageManagerInstallResult[];
+  removePackage(name: string): void;
   subscribe(handler: IPackagesListener): IPackageListerUnsubscribe;
+  getPackageSource: (packageName: string) => RegistryPackageSource | null;
 }
-
-export interface IPackage {
-  name: string;
-  url: string;
-}
-
-export type IPackagesMap = Record<"packages", IPackage[]>;

@@ -1,4 +1,4 @@
-import { inspectArgs } from "@powerhousedao/common/clis";
+import { inspectArgs } from "@powerhousedao/shared/clis";
 import { command } from "cmd-ts";
 
 export const inspect = command({

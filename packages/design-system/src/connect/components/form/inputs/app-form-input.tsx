@@ -1,5 +1,5 @@
 import { Icon } from "@powerhousedao/design-system";
-import type { App } from "document-model";
+import type { App } from "@powerhousedao/shared/document-model";
 import type { ComponentPropsWithRef } from "react";
 import type { Control, Path } from "react-hook-form";
 import { Controller } from "react-hook-form";

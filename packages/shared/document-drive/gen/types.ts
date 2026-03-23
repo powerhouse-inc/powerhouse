@@ -1,0 +1,36 @@
+import type { Scalars } from "document-model";
+import type { Action } from "../../document-model/actions.js";
+import type { PHDocument } from "../../document-model/documents.js";
+import type {
+  AddFileInput,
+  DocumentDriveDriveAction,
+  DocumentDriveNodeAction,
+  DocumentDrivePHState,
+  InputMaybe,
+} from "../types.js";
+
+export * from "./drive/types.js";
+export * from "./node/types.js";
+export * from "./schema/types.js";
+
+export type DocumentDriveAction =
+  | DocumentDriveNodeAction
+  | DocumentDriveDriveAction;
+
+export type DocumentDriveDocument = PHDocument<DocumentDrivePHState>;
+
+export type LegacySynchronizationUnit = {
+  branch: Scalars["String"]["output"];
+  scope: Scalars["String"]["output"];
+  syncId: Scalars["ID"]["output"];
+};
+
+export type LegacyAddFileInput = AddFileInput & {
+  document?: InputMaybe<PHDocument>;
+  synchronizationUnits: Array<LegacySynchronizationUnit>;
+};
+
+export type LegacyAddFileAction = Action & {
+  type: "ADD_FILE";
+  input: LegacyAddFileInput;
+};

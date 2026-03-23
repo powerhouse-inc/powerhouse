@@ -146,6 +146,23 @@ export function createPublishHook(config: RegistryConfig) {
           const packageName = decodeURIComponent(urlPath);
           console.log(`[registry] Invalidating CDN cache for ${packageName}`);
           cdn.invalidate(packageName);
+          // Extract tarball immediately so /packages lists the package right away
+          cdn
+            .getLatestVersion(packageName)
+            .then((version) => {
+              if (version) {
+                console.log(
+                  `[registry] Extracting ${packageName}@${version} to CDN cache`,
+                );
+                return cdn.extractTarball(packageName, version);
+              }
+            })
+            .catch((err) => {
+              console.error(
+                `[registry] Failed to extract ${packageName} to CDN cache:`,
+                err,
+              );
+            });
         }
       }
       return originalEnd(chunk, encoding as BufferEncoding, cb);

@@ -2,13 +2,13 @@ import type {
   ActionFromOperation,
   DocumentModelDocumentTypeMetadata,
 } from "@powerhousedao/codegen";
-import { camelCase, kebabCase, pascalCase } from "change-case";
 import type {
   DocumentModelGlobalState,
   ModuleSpecification,
   OperationErrorSpecification,
   OperationSpecification,
-} from "document-model";
+} from "@powerhousedao/shared/document-model";
+import { camelCase, kebabCase, pascalCase } from "change-case";
 
 export function getEditorVariableNames({
   documentModelDocumentTypeName,

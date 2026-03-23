@@ -1,24 +1,24 @@
-import type { DocumentModelUtils } from "document-model";
+import type { DocumentModelUtils } from "@powerhousedao/shared/document-model";
 import {
   baseCreateDocument,
-  baseSaveToFileHandle,
   baseLoadFromInput,
+  baseSaveToFileHandle,
   defaultBaseState,
   generateId,
-} from "document-model/core";
+} from "@powerhousedao/shared/document-model";
+import {
+  assertIsBillingStatementDocument,
+  assertIsBillingStatementState,
+  isBillingStatementDocument,
+  isBillingStatementState,
+} from "./document-schema.js";
+import { billingStatementDocumentType } from "./document-type.js";
+import { reducer } from "./reducer.js";
 import type {
   BillingStatementGlobalState,
   BillingStatementLocalState,
+  BillingStatementPHState,
 } from "./types.js";
-import type { BillingStatementPHState } from "./types.js";
-import { reducer } from "./reducer.js";
-import { billingStatementDocumentType } from "./document-type.js";
-import {
-  isBillingStatementDocument,
-  assertIsBillingStatementDocument,
-  isBillingStatementState,
-  assertIsBillingStatementState,
-} from "./document-schema.js";
 
 export const initialGlobalState: BillingStatementGlobalState = {
   contributor: "",
@@ -71,12 +71,3 @@ export const utils: DocumentModelUtils<BillingStatementPHState> = {
     return assertIsBillingStatementDocument(document);
   },
 };
-
-export const createDocument = utils.createDocument;
-export const createState = utils.createState;
-export const saveToFileHandle = utils.saveToFileHandle;
-export const loadFromInput = utils.loadFromInput;
-export const isStateOfType = utils.isStateOfType;
-export const assertIsStateOfType = utils.assertIsStateOfType;
-export const isDocumentOfType = utils.isDocumentOfType;
-export const assertIsDocumentOfType = utils.assertIsDocumentOfType;

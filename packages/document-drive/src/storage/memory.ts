@@ -1,5 +1,9 @@
+import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
 import type {
-  DocumentDriveDocument,
+  Operation,
+  PHDocument,
+} from "@powerhousedao/shared/document-model";
+import type {
   IDocumentAdminStorage,
   IDocumentStorage,
   IDriveOperationStorage,
@@ -7,18 +11,13 @@ import type {
   IStorageUnitFilter,
   SynchronizationUnitQuery,
 } from "document-drive";
+import { childLogger } from "document-model";
 import {
   DocumentAlreadyExistsError,
   DocumentAlreadyExistsReason,
   DocumentNotFoundError,
-} from "document-drive/server/error";
-import { AbortError } from "document-drive/utils/errors";
-import { childLogger } from "document-drive/utils/logger";
-import {
-  mergeOperations,
-  operationsToRevision,
-} from "document-drive/utils/misc";
-import type { Operation, PHDocument } from "document-model";
+} from "server";
+import { AbortError, mergeOperations, operationsToRevision } from "utils";
 import {
   resolveStorageUnitsFilter,
   setIntersection,

@@ -1,9 +1,14 @@
 // TODO: remove eslint-disable rules once refactor is done
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
-import type { StateReducer } from "document-model";
-import { isDocumentAction, createReducer } from "document-model/core";
+
 import type { SubgraphModulePHState } from "@powerhousedao/vetra/document-models/subgraph-module";
+import type {
+  Reducer,
+  StateReducer,
+} from "@powerhousedao/shared/document-model";
+import {
+  createReducer,
+  isDocumentAction,
+} from "@powerhousedao/shared/document-model";
 
 import { subgraphModuleBaseOperationsOperations } from "../src/reducers/base-operations.js";
 
@@ -50,4 +55,5 @@ const stateReducer: StateReducer<SubgraphModulePHState> = (
   }
 };
 
-export const reducer = createReducer<SubgraphModulePHState>(stateReducer);
+export const reducer: Reducer<SubgraphModulePHState> =
+  createReducer(stateReducer);

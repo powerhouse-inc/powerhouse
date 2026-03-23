@@ -1,5 +1,5 @@
+import type { ILogger } from "document-model";
 import type { IOperationIndex } from "../../cache/operation-index-types.js";
-import type { ILogger } from "../../logging/types.js";
 import type { ISyncCursorStorage } from "../../storage/interfaces.js";
 import { BufferedMailbox } from "../buffered-mailbox.js";
 import { ChannelError, GraphQLRequestError } from "../errors.js";

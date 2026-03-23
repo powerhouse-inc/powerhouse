@@ -1,16 +1,17 @@
 import { DriveSettingsModal as ConnectDriveSettingsModal } from "@powerhousedao/design-system/connect";
-import { driveCollectionId } from "@powerhousedao/reactor-browser";
 import {
   closePHModal,
+  driveCollectionId,
   renameDrive,
   setDriveAvailableOffline,
   setDriveSharingType,
   showPHModal,
   useDriveById,
   usePHModal,
+  useSyncList,
 } from "@powerhousedao/reactor-browser";
-import { useSyncList } from "@powerhousedao/reactor-browser/connect";
-import type { DocumentDriveDocument, SharingType } from "document-drive";
+import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
+import type { SharingType } from "document-drive";
 import { useMemo } from "react";
 
 export function DriveSettingsModal() {

@@ -1,6 +1,6 @@
 import { Icon } from "@powerhousedao/design-system";
+import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
 import type { Meta, StoryObj } from "@storybook/react";
-import type { DocumentDriveDocument } from "document-drive";
 import React from "react";
 // @ts-expect-error - json file needs { with: "json" } but storybook doesn't support it
 import mockPackageJson from "../../../utils/mocks/mock-package-json.json";
@@ -24,13 +24,7 @@ const tabs = [
     icon: <Icon name="PackageManager" size={12} />,
     label: "Package Manager",
     content: () => {
-      const [registryId, setRegistryId] = React.useState("production");
-      return (
-        <PackageManagerWrapper
-          selectedRegistryId={registryId}
-          onRegistryChange={setRegistryId}
-        />
-      );
+      return <PackageManagerWrapper />;
     },
   },
   {

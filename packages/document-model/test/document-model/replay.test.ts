@@ -1,17 +1,17 @@
-import type { PHDocument } from "document-model";
+import type { PHDocument } from "@powerhousedao/shared/document-model";
 import {
   createReducer,
   HashMismatchError,
   noop,
   replayDocument,
-} from "document-model/core";
-import type { CountPHState } from "document-model/test";
+} from "@powerhousedao/shared/document-model";
+import type { CountPHState } from "../helpers.js";
 import {
   baseCountReducer,
   countReducer,
   createCountState,
   increment,
-} from "document-model/test";
+} from "../helpers.js";
 
 describe("DocumentModel Replay", () => {
   const initialState = createCountState();

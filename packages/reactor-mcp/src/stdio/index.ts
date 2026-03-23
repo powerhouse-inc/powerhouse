@@ -1,7 +1,7 @@
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { ReactorBuilder, ReactorClientBuilder } from "@powerhousedao/reactor";
-import { driveDocumentModelModule } from "document-drive";
-import type { DocumentModelModule } from "document-model";
+import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
+import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import { initFeatureFlags } from "../feature-flags.js";
 import { logger } from "../logger.js";

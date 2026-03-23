@@ -3,7 +3,7 @@ import type {
   ProcessorRecord,
 } from "@powerhousedao/reactor-browser";
 import type { IRelationalDbLegacy } from "document-drive";
-import type { PHDocumentHeader } from "document-model";
+import type { PHDocumentHeader } from "@powerhousedao/shared/document-model";
 import { VetraReadModelProcessor } from "./index.js";
 import { up } from "./migrations.js";
 import type { DB } from "./schema.js";

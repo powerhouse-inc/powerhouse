@@ -13,29 +13,25 @@
   "type": "module",
   "exports": {
     ".": {
-      "import": "./dist/src/index.js",
-      "types": "./dist/src/index.d.ts"
-    },
-    "./core": {
-      "import": "./dist/src/core/index.js",
-      "types": "./dist/src/core/index.d.ts"
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
     },
     "./test": {
       "import": "./dist/test/index.js",
       "types": "./dist/test/index.d.ts"
     },
     "./node": {
-      "import": "./dist/src/core/node.js",
-      "types": "./dist/src/core/node.d.ts"
+      "node": "./dist/node.mjs",
+      "types": "./dist/node.d.mts"
     }
   },
-  "types": "./dist/src/index.d.ts",
   "sideEffects": false,
   "scripts": {
     "tsc": "tsc",
     "lint": "eslint",
     "test": "vitest --run",
-    "test:watch": "vitest watch"
+    "test:watch": "vitest watch",
+    "build:bundle": "tsx ./build.ts"
   },
   "devDependencies": {
     "@types/jest": "^29.5.14",
@@ -47,11 +43,11 @@
   "dependencies": {
     "@powerhousedao/shared": "workspace:*",
     "change-case": "catalog:",
-    "jszip": "^3.10.1",
     "mime": "^4.0.4",
     "mutative": "^1.0.5",
-    "safe-stable-stringify": "^2.4.3",
-    "sha1-uint8array": "^0.10.7",
-    "zod": "catalog:"
+    "zod": "catalog:",
+    "tsdown": "catalog:",
+    "jszip": "^3.10.1",
+    "tsx": "catalog:"
   }
 }

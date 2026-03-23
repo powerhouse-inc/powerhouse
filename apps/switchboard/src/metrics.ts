@@ -4,7 +4,7 @@ import {
   MeterProvider,
   PeriodicExportingMetricReader,
 } from "@opentelemetry/sdk-metrics";
-import { childLogger } from "document-drive";
+import { childLogger } from "document-model";
 
 const logger = childLogger(["switchboard", "metrics"]);
 

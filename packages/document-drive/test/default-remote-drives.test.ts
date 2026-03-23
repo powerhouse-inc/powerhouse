@@ -1,17 +1,16 @@
+import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
+import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
+import {
+  generateId,
+  type DocumentModelModule,
+} from "@powerhousedao/shared/document-model";
 import type {
   DefaultRemoteDriveInput,
-  DocumentDriveDocument,
   DocumentDriveServerOptions,
   DriveInfo,
 } from "document-drive";
-import {
-  driveDocumentModelModule,
-  MemoryStorage,
-  ReactorBuilder,
-} from "document-drive";
-import type { DocumentModelModule } from "document-model";
+import { MemoryStorage, ReactorBuilder } from "document-drive";
 import { documentModelDocumentModelModule } from "document-model";
-import { generateId } from "document-model/core";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 type DriveInput = {

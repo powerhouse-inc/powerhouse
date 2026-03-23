@@ -1,30 +1,30 @@
-import { createAction } from "document-model/core";
+import { createAction } from "@powerhousedao/shared/document-model";
 import {
-  SetProcessorNameInputSchema,
-  SetProcessorTypeInputSchema,
   AddDocumentTypeInputSchema,
-  RemoveDocumentTypeInputSchema,
   AddProcessorAppInputSchema,
+  RemoveDocumentTypeInputSchema,
   RemoveProcessorAppInputSchema,
+  SetProcessorNameInputSchema,
   SetProcessorStatusInputSchema,
+  SetProcessorTypeInputSchema,
 } from "../schema/zod.js";
 import type {
-  SetProcessorNameInput,
-  SetProcessorTypeInput,
   AddDocumentTypeInput,
-  RemoveDocumentTypeInput,
   AddProcessorAppInput,
+  RemoveDocumentTypeInput,
   RemoveProcessorAppInput,
+  SetProcessorNameInput,
   SetProcessorStatusInput,
+  SetProcessorTypeInput,
 } from "../types.js";
 import type {
-  SetProcessorNameAction,
-  SetProcessorTypeAction,
   AddDocumentTypeAction,
-  RemoveDocumentTypeAction,
   AddProcessorAppAction,
+  RemoveDocumentTypeAction,
   RemoveProcessorAppAction,
+  SetProcessorNameAction,
   SetProcessorStatusAction,
+  SetProcessorTypeAction,
 } from "./actions.js";
 
 export const setProcessorName = (input: SetProcessorNameInput) =>

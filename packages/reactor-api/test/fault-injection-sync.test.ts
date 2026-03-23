@@ -1,5 +1,4 @@
 import {
-  ConsoleLogger,
   DocumentModelRegistry,
   EventBus,
   GqlRequestChannel,
@@ -12,8 +11,9 @@ import {
   type ISyncManager,
   type ReactorModule,
 } from "@powerhousedao/reactor";
-import { driveDocumentModelModule } from "document-drive";
-import type { DocumentModelModule } from "document-model";
+import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
+import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
+import { ConsoleLogger } from "document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   ManualPollTimer,

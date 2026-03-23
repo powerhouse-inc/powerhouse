@@ -1,5 +1,5 @@
 import type { IDocumentDriveServer } from "document-drive";
-import type { PHDocument } from "document-model";
+import type { PHDocument } from "@powerhousedao/shared/document-model";
 import type {
   FulfilledPromise,
   IDocumentCache,

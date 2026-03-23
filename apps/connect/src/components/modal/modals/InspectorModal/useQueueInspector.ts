@@ -2,8 +2,11 @@ import type {
   QueueInspectorProps,
   QueueState,
 } from "@powerhousedao/design-system/connect";
-import { InMemoryQueue, type Job } from "@powerhousedao/reactor-browser";
-import { useReactorClientModule } from "@powerhousedao/reactor-browser/connect";
+import {
+  InMemoryQueue,
+  useReactorClientModule,
+  type Job,
+} from "@powerhousedao/reactor-browser";
 import { useCallback, useMemo } from "react";
 
 export function useQueueInspector(): QueueInspectorProps | undefined {

@@ -2,24 +2,40 @@
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
     "outDir": "./dist",
-    "emitDeclarationOnly": false,
+    "emitDeclarationOnly": true,
     "paths": {
-      "@powerhousedao/connect/config": ["./src/connect.config.ts"],
-      "@powerhousedao/connect/package.json": [
-        "./src/utils/package-json.d.ts"
+      "@powerhousedao/connect/config": [
+        "./src/connect.config.ts"
       ],
-      "@powerhousedao/connect/assets/*": ["./assets/*"],
-      "@powerhousedao/connect/*": ["./src/*/index.ts"]
+      "@powerhousedao/connect/assets/*": [
+        "./assets/*"
+      ],
+      "@powerhousedao/connect/*": [
+        "./src/*/index.ts"
+      ]
     },
-    "lib": ["ESNext", "DOM", "DOM.Iterable"],
-    "types": ["node", "@types/wicg-file-system-access", "@types/bun"]
+    "lib": [
+      "ESNext",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "types": [
+      "node",
+      "@types/wicg-file-system-access",
+      "@types/bun"
+    ]
   },
-  "include": ["**/*", "src/i18n/locales/en.json"],
-  "exclude": ["dist", "node_modules", "storybook-static"],
+  "include": [
+    "**/*",
+    "src/i18n/locales/en.json",
+    "./package.json"
+  ],
+  "exclude": [
+    "dist",
+    "node_modules",
+    "storybook-static"
+  ],
   "references": [
-    {
-      "path": "../../packages/builder-tools"
-    },
     {
       "path": "../../packages/config"
     },
@@ -43,6 +59,9 @@
     },
     {
       "path": "../../packages/shared"
+    },
+    {
+      "path": "../../packages/vetra"
     }
   ]
 }

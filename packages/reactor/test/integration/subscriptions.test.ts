@@ -1,9 +1,12 @@
-import { driveDocumentModelModule } from "document-drive";
-import type { DocumentModelModule, PHDocument } from "document-model";
+import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
+import type {
+  DocumentModelModule,
+  PHDocument,
+} from "@powerhousedao/shared/document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { DocumentChangeEvent } from "../../src/client/types.js";
-import { ReactorClientBuilder } from "../../src/core/reactor-client-builder.js";
 import { ReactorBuilder } from "../../src/core/reactor-builder.js";
+import { ReactorClientBuilder } from "../../src/core/reactor-client-builder.js";
 import type { ReactorClientModule } from "../../src/core/types.js";
 import { JobStatus } from "../../src/shared/types.js";
 

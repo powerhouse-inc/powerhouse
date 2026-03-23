@@ -1,13 +1,20 @@
 import { PGlite } from "@electric-sql/pglite";
-import type { OperationWithContext } from "@powerhousedao/shared/document-model";
+import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
+import {
+  generateId,
+  type DocumentModelModule,
+  type OperationWithContext,
+  type PHDocumentHeader,
+} from "@powerhousedao/shared/document-model";
 import type {
   IProcessor,
   ProcessorFactory,
   ProcessorFilter,
 } from "@powerhousedao/shared/processors";
-import { driveDocumentModelModule } from "document-drive";
-import type { DocumentModelModule, PHDocumentHeader } from "document-model";
-import { documentModelDocumentModelModule, generateId } from "document-model";
+import {
+  ConsoleLogger,
+  documentModelDocumentModelModule,
+} from "document-model";
 import { Kysely, sql } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -21,7 +28,6 @@ import type { DocumentViewDatabase } from "../../src/read-models/types.js";
 import { ConsistencyTracker } from "../../src/shared/consistency-tracker.js";
 import { JobStatus } from "../../src/shared/types.js";
 import type { Database as StorageDatabase } from "../../src/storage/kysely/types.js";
-import { ConsoleLogger } from "../../src/logging/console.js";
 import {
   REACTOR_SCHEMA,
   runMigrations,

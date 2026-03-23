@@ -1,6 +1,6 @@
 {
-  "name": "versioned-documents",
-  "description": "versioned-documents",
+  "name": "@powerhousedao/versioned-documents",
+  "description": "Versioned documents test package",
   "category": "",
   "publisher": {
     "name": "@powerhousedao",
@@ -8,15 +8,15 @@
   },
   "documentModels": [
     {
-      "id": "powerhouse/package",
-      "name": "Vetra Package"
+      "id": "test/todo",
+      "name": "Todo"
     }
   ],
   "editors": [
     {
-      "id": "vetra-package-editor",
-      "name": "Vetra Package Editor",
-      "documentTypes": ["powerhouse/package"]
+      "id": "todo-editor",
+      "name": "Todo Editor",
+      "documentTypes": ["test/todo"]
     }
   ],
   "apps": [],

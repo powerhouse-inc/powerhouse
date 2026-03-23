@@ -1,6 +1,6 @@
 import type { IDocumentModelRegistry } from "@powerhousedao/reactor";
-import { childLogger } from "document-drive";
-import type { DocumentModelModule } from "document-model";
+import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
+import { childLogger } from "document-model";
 import type { HttpPackageLoader } from "../packages/http-loader.js";
 import {
   InMemoryPackageStorage,

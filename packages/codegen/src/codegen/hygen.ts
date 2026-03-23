@@ -2,7 +2,7 @@ import { makeEditorsModulesFile } from "@powerhousedao/codegen/file-builders";
 import { buildTsMorphProject } from "@powerhousedao/codegen/utils";
 import type { PowerhouseConfig } from "@powerhousedao/config";
 import { pascalCase } from "change-case";
-import type { DocumentModelGlobalState } from "document-model";
+import type { DocumentModelGlobalState } from "@powerhousedao/shared/document-model";
 import { Logger, runner } from "hygen";
 import { createRequire } from "node:module";
 import path from "node:path";

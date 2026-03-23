@@ -7,7 +7,7 @@ import {
   showPHModal,
   usePHModal,
 } from "@powerhousedao/reactor-browser";
-import { childLogger } from "document-drive";
+import { childLogger } from "document-model";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 

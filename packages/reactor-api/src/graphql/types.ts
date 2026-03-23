@@ -1,11 +1,9 @@
 import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import type { IReactorClient, ISyncManager } from "@powerhousedao/reactor";
 import type { GraphQLManager } from "@powerhousedao/reactor-api";
-import type {
-  DocumentDriveGlobalState,
-  IRelationalDbLegacy,
-} from "document-drive";
-import type { PHDocument } from "document-model";
+import type { DocumentDriveGlobalState } from "@powerhousedao/shared/document-drive";
+import type { IRelationalDbLegacy } from "document-drive";
+import type { PHDocument } from "@powerhousedao/shared/document-model";
 import type { DocumentNode } from "graphql";
 import type { IncomingHttpHeaders } from "http";
 import type { AuthorizationService } from "../services/authorization.service.js";

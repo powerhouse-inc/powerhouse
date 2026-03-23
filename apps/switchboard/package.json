@@ -55,6 +55,7 @@
     "@opentelemetry/sdk-metrics": "^1.29.0",
     "@powerhousedao/opentelemetry-instrumentation-reactor": "workspace:*",
     "@powerhousedao/reactor": "workspace:*",
+    "@powerhousedao/shared": "workspace:*",
     "@powerhousedao/reactor-api": "workspace:*",
     "@renown/sdk": "workspace:*",
     "@pyroscope/nodejs": "^0.4.5",

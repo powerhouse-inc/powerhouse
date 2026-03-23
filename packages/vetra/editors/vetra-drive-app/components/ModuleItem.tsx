@@ -4,7 +4,7 @@ import {
   ConnectDropdownMenu,
   nodeOptionsMap,
 } from "@powerhousedao/design-system/connect";
-import type { FileNode } from "document-drive";
+import type { FileNode } from "@powerhousedao/shared/document-drive";
 import React, { useState } from "react";
 import { DOCUMENT_TYPES } from "../document-types.js";
 import { AddNewIcon } from "../icons/AddNewIcon.js";

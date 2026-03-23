@@ -1,4 +1,4 @@
-import { generateId } from "document-model";
+import { generateId } from "@powerhousedao/shared/document-model";
 import { describe, expect, it, vi } from "vitest";
 import { Mailbox, MailboxAggregateError } from "../../../src/sync/mailbox.js";
 import { SyncOperation } from "../../../src/sync/sync-operation.js";

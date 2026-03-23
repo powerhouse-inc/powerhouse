@@ -1,10 +1,7 @@
 import type { IReactorClient } from "@powerhousedao/reactor";
 import { SyncStatus } from "@powerhousedao/reactor";
-import type {
-  DocumentDriveDocument,
-  SharingType,
-  SyncStatus as UISyncStatus,
-} from "document-drive";
+import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
+import type { SharingType, SyncStatus as UISyncStatus } from "document-drive";
 
 const syncStatusToUI: Record<SyncStatus, UISyncStatus> = {
   [SyncStatus.Synced]: "SUCCESS",

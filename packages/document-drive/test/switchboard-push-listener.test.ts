@@ -1,22 +1,23 @@
+import {
+  addFile,
+  driveDocumentModelModule,
+} from "@powerhousedao/shared/document-drive";
+import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
+import { generateId, setModelName } from "@powerhousedao/shared/document-model";
 import type {
   ListenerRevision,
   ServerListener,
   StrandUpdate,
 } from "document-drive";
 import {
-  addFile,
-  driveDocumentModelModule,
   expectUTCTimestamp,
   ReactorBuilder,
   SwitchboardPushTransmitter,
 } from "document-drive";
-import type { DocumentModelModule } from "document-model";
 import {
   documentModelCreateDocument,
   documentModelDocumentModelModule,
-  setModelName,
 } from "document-model";
-import { generateId } from "document-model/core";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 vi.mock(import("graphql-request"), async (importOriginal) => {

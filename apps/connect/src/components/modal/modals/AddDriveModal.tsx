@@ -11,8 +11,9 @@ import {
   setSelectedDrive,
   useDriveEditorModules,
   usePHModal,
+  useRenown,
+  useUser,
 } from "@powerhousedao/reactor-browser";
-import { useRenown, useUser } from "@powerhousedao/reactor-browser/connect";
 import { requestPublicDriveFromReactor } from "document-drive";
 import { t } from "i18next";
 

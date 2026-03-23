@@ -2,7 +2,7 @@ import type {
   CreateDocumentAction,
   PHDocument,
   UpgradeDocumentAction,
-} from "document-model";
+} from "@powerhousedao/shared/document-model";
 import {
   applyDeleteDocumentAction,
   applyUpgradeDocumentAction,

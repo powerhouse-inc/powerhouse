@@ -3,7 +3,7 @@ import {
   generateId,
   type Action,
   type Operation,
-} from "document-model";
+} from "@powerhousedao/shared/document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { DocumentMetaCacheConfig } from "../../src/cache/document-meta-cache-types.js";
 import { DocumentMetaCache } from "../../src/cache/document-meta-cache.js";

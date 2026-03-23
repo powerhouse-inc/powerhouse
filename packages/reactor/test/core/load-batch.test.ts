@@ -1,4 +1,4 @@
-import type { Action, Operation } from "document-model";
+import type { Action, Operation } from "@powerhousedao/shared/document-model";
 import { v4 as uuidv4 } from "uuid";
 import { describe, expect, it } from "vitest";
 import { Reactor } from "../../src/core/reactor.js";

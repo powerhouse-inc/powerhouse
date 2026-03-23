@@ -1,5 +1,5 @@
 import { Icon, Modal, PowerhouseButton } from "@powerhousedao/design-system";
-import { isValidName } from "document-drive";
+import { isValidName } from "@powerhousedao/shared/document-drive";
 import type { ComponentPropsWithoutRef } from "react";
 import { useCallback, useState } from "react";
 import { twMerge } from "tailwind-merge";

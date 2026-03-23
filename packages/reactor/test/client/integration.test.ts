@@ -1,6 +1,9 @@
-import { driveDocumentModelModule } from "document-drive";
-import { addFile } from "document-drive/drive-document-model/gen/node/creators";
-import { actions, documentModelDocumentModelModule } from "document-model";
+import {
+  driveDocumentModelModule,
+  addFile,
+} from "@powerhousedao/shared/document-drive";
+import { actions } from "@powerhousedao/shared/document-model";
+import { documentModelDocumentModelModule } from "document-model";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { IReactorClient } from "../../src/client/types.js";

@@ -1,3 +1,4 @@
+import type { PHBaseState } from "@powerhousedao/shared/document-model";
 import type {
   DocumentDriveServerConstructor,
   IReadModeDriveServer,
@@ -8,8 +9,7 @@ import type {
   ReadDriveSlugNotFoundError,
   RemoteDriveOptions,
 } from "document-drive";
-import type { PHBaseState } from "document-model";
-import { logger } from "document-drive/utils/logger";
+import { logger } from "document-model";
 import { ReadModeService } from "./service.js";
 
 export function ReadModeServer(

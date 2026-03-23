@@ -1,6 +1,6 @@
 import { Icon } from "@powerhousedao/design-system";
 import { setSelectedNode } from "@powerhousedao/reactor-browser";
-import type { Node } from "document-drive";
+import type { Node } from "@powerhousedao/shared/document-drive";
 import {
   type ComponentPropsWithoutRef,
   type ReactNode,

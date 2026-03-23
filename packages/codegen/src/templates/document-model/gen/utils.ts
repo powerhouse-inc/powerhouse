@@ -5,14 +5,14 @@ export const documentModelGenUtilsTemplate = (v: DocumentModelTemplateInputs) =>
   ts`
 import type {
     DocumentModelUtils,
-} from "document-model";
+} from "@powerhousedao/shared/document-model";
 import { 
     baseCreateDocument,
     baseSaveToFileHandle,
     baseLoadFromInput,
     defaultBaseState,
     generateId,
- } from 'document-model/core';
+ } from "document-model";
 import type { 
   ${v.globalStateName},
   ${v.localStateName}
@@ -68,12 +68,4 @@ export const utils: DocumentModelUtils<${v.phStateName}> = {
     },
 };
 
-export const createDocument = utils.createDocument;
-export const createState = utils.createState;
-export const saveToFileHandle = utils.saveToFileHandle;
-export const loadFromInput = utils.loadFromInput;
-export const isStateOfType = utils.isStateOfType;
-export const assertIsStateOfType = utils.assertIsStateOfType;
-export const isDocumentOfType = utils.isDocumentOfType;
-export const assertIsDocumentOfType = utils.assertIsDocumentOfType;
 `.raw;

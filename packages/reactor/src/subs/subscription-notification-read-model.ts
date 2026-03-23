@@ -1,4 +1,4 @@
-import type { OperationWithContext } from "document-model";
+import type { OperationWithContext } from "@powerhousedao/shared/document-model";
 import type { IReadModel } from "../read-models/interfaces.js";
 import { RelationshipChangeType } from "../shared/types.js";
 import type { IDocumentView } from "../storage/interfaces.js";

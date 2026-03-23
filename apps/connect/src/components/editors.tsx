@@ -14,14 +14,10 @@ import {
   useRevisionHistoryVisible,
   useSelectedTimelineItem,
 } from "@powerhousedao/reactor-browser";
-import type { PHDocument } from "document-model";
-import { redo, undo } from "document-model/core";
+import type { PHDocument } from "@powerhousedao/shared/document-model";
+import { redo, undo } from "@powerhousedao/shared/document-model";
 import { Suspense, useEffect, useState } from "react";
-import {
-  CenteredErrorMessage,
-  ErrorBoundary,
-  type FallbackProps,
-} from "./error-boundary.js";
+import { CenteredErrorMessage, ErrorBoundary } from "./error-boundary.js";
 
 type Props<TDocument extends PHDocument = PHDocument> = {
   document: TDocument;

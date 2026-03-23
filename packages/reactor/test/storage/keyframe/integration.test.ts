@@ -1,4 +1,4 @@
-import type { PHDocument } from "document-model";
+import type { PHDocument } from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { KyselyKeyframeStore } from "../../../src/storage/kysely/keyframe-store.js";

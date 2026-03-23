@@ -5,7 +5,7 @@ import {
 import type {
   DocumentModelAction,
   DocumentModelDocument,
-} from "document-model";
+} from "@powerhousedao/shared/document-model";
 
 export function useDocumentModelDocument(
   documentId: string | undefined | null,

@@ -22,7 +22,7 @@ import {
   useSelectedDriveSafe,
   useSelectedFolder,
 } from "@powerhousedao/reactor-browser";
-import type { DocumentDriveDocument } from "document-drive";
+import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
 import { useEffect } from "react";
 
 export function Content() {

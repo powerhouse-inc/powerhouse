@@ -2,7 +2,27 @@
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
     "outDir": "./dist",
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "paths": {
+      "connect-e2e/document-models": [
+        "./document-models/index.ts"
+      ],
+      "connect-e2e/document-models/*": [
+        "./document-models/*/index.ts"
+      ],
+      "connect-e2e/editors": [
+        "./editors/index.ts"
+      ],
+      "connect-e2e/editors/*": [
+        "./editors/*/index.ts"
+      ],
+      "connect-e2e/processors": [
+        "./processors/index.ts"
+      ],
+      "connect-e2e/processors/*": [
+        "./processors/*/index.ts"
+      ]
+    }
   },
   "references": [
     {
@@ -25,6 +45,9 @@
     },
     {
       "path": "../../packages/reactor-browser"
+    },
+    {
+      "path": "../../packages/shared"
     },
     {
       "path": "../e2e-utils"

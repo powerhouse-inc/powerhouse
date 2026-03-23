@@ -3,7 +3,7 @@
   "compilerOptions": {
     "outDir": "./dist",
     "emitDeclarationOnly": true,
-    "types": ["vitest/globals", "@types/bun"]
+    "types": ["vitest/globals"]
   },
   "include": ["**/*"],
   "exclude": ["dist", "node_modules"],

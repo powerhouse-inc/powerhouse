@@ -1,4 +1,4 @@
-import { PH_BIN } from "@powerhousedao/common/clis";
+import { PH_BIN } from "@powerhousedao/shared/clis";
 
 export const PH_BIN_PATH = process.argv[1];
 export const PH_CLI_COMMANDS = [
@@ -68,37 +68,3 @@ export const packageManagers = {
     installDepsCommand: "npm install",
   },
 } as const;
-
-export const PACKAGES_DEPENDENCIES = [
-  "@powerhousedao/builder-tools",
-  "@powerhousedao/codegen",
-  "@powerhousedao/common",
-  "@powerhousedao/config",
-  "@powerhousedao/design-system",
-  "document-drive",
-  "document-model",
-  "@powerhousedao/reactor",
-  "@powerhousedao/reactor-api",
-  "@powerhousedao/reactor-browser",
-  "@powerhousedao/reactor-local",
-  "@powerhousedao/reactor-mcp",
-  "@powerhousedao/switchboard-gui",
-  "@powerhousedao/vetra",
-  "@powerhousedao/analytics-engine-core",
-  "@powerhousedao/analytics-engine-knex",
-  "@powerhousedao/analytics-engine-pg",
-  "@powerhousedao/analytics-engine-browser",
-  "@powerhousedao/analytics-engine-graphql",
-] as const;
-
-export const CLIS_DEPENDENCIES = ["ph-cmd", "@powerhousedao/ph-cli"];
-export const APPS_DEPENDENCIES = [
-  "@powerhousedao/connect",
-  "@powerhousedao/switchboard",
-];
-
-export const ALL_POWERHOUSE_DEPENDENCIES = [
-  ...PACKAGES_DEPENDENCIES,
-  ...CLIS_DEPENDENCIES,
-  ...APPS_DEPENDENCIES,
-];

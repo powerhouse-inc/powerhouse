@@ -1,4 +1,4 @@
-import type { ModuleSpecification } from "document-model";
+import type { ModuleSpecification } from "@powerhousedao/shared/document-model";
 import { toLowercaseSnakeCase } from "../schemas/inputs.js";
 import { TextField } from "./text-field.js";
 

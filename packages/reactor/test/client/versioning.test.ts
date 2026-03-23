@@ -1,17 +1,17 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import type {
   Action,
   DocumentModelModule,
   PHBaseState,
   PHDocument,
   UpgradeManifest,
-} from "document-model";
+} from "@powerhousedao/shared/document-model";
 import {
   createPresignedHeader,
   createReducer,
   generateId,
-} from "document-model/core";
-import { driveDocumentModelModule } from "document-drive";
+} from "@powerhousedao/shared/document-model";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { IReactorClient } from "../../src/client/types.js";
 import { ReactorBuilder } from "../../src/core/reactor-builder.js";
 import { ReactorClientBuilder } from "../../src/core/reactor-client-builder.js";

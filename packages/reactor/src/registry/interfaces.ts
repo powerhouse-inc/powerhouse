@@ -3,7 +3,7 @@ import type {
   UpgradeManifest,
   UpgradeReducer,
   UpgradeTransition,
-} from "document-model";
+} from "@powerhousedao/shared/document-model";
 
 /**
  * Loader that can asynchronously resolve and return a document model module

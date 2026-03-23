@@ -1,4 +1,4 @@
-import type { ISigner, Signature } from "document-model";
+import type { ISigner, Signature } from "@powerhousedao/shared/document-model";
 
 /**
  * A no-op signer that returns empty values for all methods.

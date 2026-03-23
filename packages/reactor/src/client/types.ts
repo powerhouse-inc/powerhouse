@@ -3,7 +3,7 @@ import type {
   DocumentModelModule,
   Operation,
   PHDocument,
-} from "document-model";
+} from "@powerhousedao/shared/document-model";
 
 import type { BatchLoadRequest, BatchLoadResult } from "../core/types.js";
 import type {

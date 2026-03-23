@@ -1,7 +1,7 @@
 import {
   POWERHOUSE_CONFIG_FILE,
   POWERHOUSE_GLOBAL_DIR,
-} from "@powerhousedao/common/clis";
+} from "@powerhousedao/shared/clis";
 import { execSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import path, { dirname } from "node:path";

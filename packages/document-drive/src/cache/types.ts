@@ -1,5 +1,5 @@
-import type { DocumentDriveDocument } from "document-drive";
-import type { PHDocument } from "document-model";
+import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
+import type { PHDocument } from "@powerhousedao/shared/document-model";
 
 export interface IDocumentCache {}
 

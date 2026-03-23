@@ -1,4 +1,7 @@
-import type { PHDocument, PHBaseState } from "document-model";
+import type {
+  PHDocument,
+  PHBaseState,
+} from "@powerhousedao/shared/document-model";
 import type { SubgraphModuleAction } from "./actions.js";
 import type { SubgraphModuleState as SubgraphModuleGlobalState } from "./schema/types.js";
 

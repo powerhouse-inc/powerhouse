@@ -1,21 +1,24 @@
-import type { DocumentModelUtils } from "document-model";
+import type { DocumentModelUtils } from "@powerhousedao/shared/document-model";
 import {
   baseCreateDocument,
-  baseSaveToFileHandle,
   baseLoadFromInput,
+  baseSaveToFileHandle,
   defaultBaseState,
   generateId,
-} from "document-model/core";
-import type { AppModuleGlobalState, AppModuleLocalState } from "./types.js";
-import type { AppModulePHState } from "./types.js";
-import { reducer } from "./reducer.js";
-import { appModuleDocumentType } from "./document-type.js";
+} from "@powerhousedao/shared/document-model";
 import {
-  isAppModuleDocument,
   assertIsAppModuleDocument,
-  isAppModuleState,
   assertIsAppModuleState,
+  isAppModuleDocument,
+  isAppModuleState,
 } from "./document-schema.js";
+import { appModuleDocumentType } from "./document-type.js";
+import { reducer } from "./reducer.js";
+import type {
+  AppModuleGlobalState,
+  AppModuleLocalState,
+  AppModulePHState,
+} from "./types.js";
 
 export const initialGlobalState: AppModuleGlobalState = {
   name: "",
@@ -63,12 +66,3 @@ export const utils: DocumentModelUtils<AppModulePHState> = {
     return assertIsAppModuleDocument(document);
   },
 };
-
-export const createDocument = utils.createDocument;
-export const createState = utils.createState;
-export const saveToFileHandle = utils.saveToFileHandle;
-export const loadFromInput = utils.loadFromInput;
-export const isStateOfType = utils.isStateOfType;
-export const assertIsStateOfType = utils.assertIsStateOfType;
-export const isDocumentOfType = utils.isDocumentOfType;
-export const assertIsDocumentOfType = utils.assertIsDocumentOfType;

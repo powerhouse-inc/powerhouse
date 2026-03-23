@@ -22,7 +22,6 @@ import type {
 } from "ts-morph";
 import { Project, SyntaxKind } from "ts-morph";
 import { writePackage } from "write-package";
-import { generate } from "../commands/generate.js";
 import type { GenerateArgs, MigrateArgs } from "../types.js";
 import { startGenerate } from "./generate.js";
 

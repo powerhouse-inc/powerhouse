@@ -1,4 +1,4 @@
-import type { DocumentModelGlobalState } from "document-model";
+import type { DocumentModelGlobalState } from "@powerhousedao/shared/document-model";
 
 export const documentModel: DocumentModelGlobalState = {
   id: "powerhouse/app",

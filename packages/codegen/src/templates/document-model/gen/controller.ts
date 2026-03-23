@@ -5,7 +5,7 @@ export const documentModelGenControllerFileTemplate = (
   v: DocumentModelTemplateInputs,
 ) =>
   ts`
-import { PHDocumentController } from "document-model/core";
+import { PHDocumentController } from "document-model";
 import { ${v.pascalCaseDocumentType} } from "../module.js";
 import type { ${v.actionTypeName}, ${v.phStateName} } from "./types.js";
 

@@ -1,5 +1,11 @@
-import type { FileNode, FolderNode } from "document-drive";
-import type { DocumentModelDocument, PHDocument } from "document-model";
+import type {
+  FileNode,
+  FolderNode,
+} from "@powerhousedao/shared/document-drive";
+import type {
+  DocumentModelDocument,
+  PHDocument,
+} from "@powerhousedao/shared/document-model";
 import { isFileNodeKind, isFolderNodeKind } from "../utils/nodes.js";
 import { useDocumentsByIds } from "./document-by-id.js";
 import { useSelectedDriveSafe } from "./selected-drive.js";

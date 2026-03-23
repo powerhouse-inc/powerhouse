@@ -15,8 +15,8 @@ import {
   useDrives,
   useInspectorEnabled,
   useSelectedDriveSafe,
+  useUser,
 } from "@powerhousedao/reactor-browser";
-import { useUser } from "@powerhousedao/reactor-browser/connect";
 import { ErrorBoundary } from "./error-boundary.js";
 
 export function Sidebar() {

@@ -1,7 +1,4 @@
-import {
-  addFile,
-  deleteNode,
-} from "document-drive/drive-document-model/gen/node/creators";
+import { addFile, deleteNode } from "@powerhousedao/shared/document-drive";
 import type {
   Action,
   CreateDocumentActionInput,
@@ -9,8 +6,9 @@ import type {
   ISigner,
   Operation,
   PHDocument,
-} from "document-model";
-import { actions } from "document-model";
+} from "@powerhousedao/shared/document-model";
+import { actions } from "@powerhousedao/shared/document-model";
+import type { ILogger } from "document-model";
 import {
   addRelationshipAction,
   createDocumentAction,
@@ -24,7 +22,6 @@ import type {
   IReactor,
 } from "../core/types.js";
 import { getSharedActionScope, signActions } from "../core/utils.js";
-import type { ILogger } from "../logging/types.js";
 import { type IJobAwaiter } from "../shared/awaiter.js";
 import {
   JobStatus,

@@ -4,7 +4,7 @@ import type {
   Operation,
   PHBaseState,
   PHDocumentHeader,
-} from "document-model";
+} from "@powerhousedao/shared/document-model";
 import type { Unsubscribe } from "nanoevents";
 
 export interface BaseJob {

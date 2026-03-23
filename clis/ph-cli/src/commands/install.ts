@@ -3,7 +3,7 @@ import {
   getPowerhouseProjectInstallCommand,
   installArgs,
   makeDependenciesWithVersions,
-} from "@powerhousedao/common/clis";
+} from "@powerhousedao/shared/clis";
 import { execSync } from "child_process";
 import { command } from "cmd-ts";
 import { updateConfigFile, updateStylesFile } from "../utils.js";

@@ -9,7 +9,7 @@ import type {
   DocumentModelGlobalState,
   DocumentSpecification,
   ModuleSpecification,
-} from "document-model";
+} from "@powerhousedao/shared/document-model";
 import type { ValidationSchemaPluginConfig } from "graphql-codegen-typescript-validation-schema";
 import fs from "node:fs/promises";
 import path from "node:path";

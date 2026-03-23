@@ -1,15 +1,22 @@
 /**
  * Factory methods for creating ProcessorModuleDocument instances
  */
-import type { PHAuthState, PHDocumentState, PHBaseState } from "document-model";
-import { createBaseState, defaultBaseState } from "document-model/core";
+import type {
+  PHAuthState,
+  PHBaseState,
+  PHDocumentState,
+} from "@powerhousedao/shared/document-model";
+import {
+  createBaseState,
+  defaultBaseState,
+} from "@powerhousedao/shared/document-model";
 import type {
   ProcessorModuleDocument,
-  ProcessorModuleLocalState,
   ProcessorModuleGlobalState,
+  ProcessorModuleLocalState,
   ProcessorModulePHState,
 } from "./types.js";
-import { createDocument } from "./utils.js";
+import { utils } from "./utils.js";
 
 export function defaultGlobalState(): ProcessorModuleGlobalState {
   return {
@@ -76,7 +83,7 @@ export function createProcessorModuleDocument(
     local?: Partial<ProcessorModuleLocalState>;
   }>,
 ): ProcessorModuleDocument {
-  const document = createDocument(
+  const document = utils.createDocument(
     state
       ? createState(
           createBaseState(state.auth, state.document),

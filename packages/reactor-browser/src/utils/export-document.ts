@@ -1,4 +1,4 @@
-import type { PHDocument } from "document-model";
+import type { PHDocument } from "@powerhousedao/shared/document-model";
 import { exportFile } from "../actions/document.js";
 import { showPHModal } from "../hooks/modals.js";
 import { validateDocument } from "./validate-document.js";

@@ -4,9 +4,9 @@ import type {
   Operation,
   PHBaseState,
   PHDocument,
-  PHDocumentController,
   PHDocumentHeader,
-} from "document-model";
+} from "@powerhousedao/shared/document-model";
+import type { PHDocumentController } from "document-model";
 import { ActionTracker } from "./action-tracker.js";
 import { RemoteClient } from "./remote-client.js";
 import type {

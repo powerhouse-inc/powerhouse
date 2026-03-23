@@ -3,7 +3,7 @@ import {
   DocumentModelNotFoundError,
   DocumentNotFoundError,
 } from "document-drive";
-import type { Action, PHDocument } from "document-model";
+import type { Action, PHDocument } from "@powerhousedao/shared/document-model";
 import { DocumentTypeMismatchError } from "../errors.js";
 import { useDocumentById } from "./document-by-id.js";
 import { useDocumentModelModuleById } from "./document-model-modules.js";

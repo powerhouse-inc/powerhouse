@@ -186,7 +186,7 @@ import {
   DateTime,
   type AnalyticsSeriesInput,
   type IAnalyticsStore,
-} from "@powerhousedao/reactor-browser/analytics";
+} from "@powerhousedao/reactor-browser";
 ```
 
 ---

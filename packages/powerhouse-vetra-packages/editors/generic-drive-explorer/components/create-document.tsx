@@ -7,7 +7,7 @@ import {
 import type {
   DocumentModelGlobalState,
   DocumentModelModule,
-} from "document-model";
+} from "@powerhousedao/shared/document-model";
 
 function getDocumentSpec(doc: DocumentModelModule): DocumentModelGlobalState {
   return doc.documentModel.global;

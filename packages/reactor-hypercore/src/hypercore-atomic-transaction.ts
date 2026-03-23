@@ -1,4 +1,4 @@
-import type { Operation } from "document-model";
+import type { Operation } from "@powerhousedao/shared/document-model";
 import type { AtomicTxn } from "@powerhousedao/reactor";
 import type { StoredOperation } from "./types.js";
 

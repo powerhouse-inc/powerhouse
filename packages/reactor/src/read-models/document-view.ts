@@ -2,7 +2,7 @@ import type {
   OperationWithContext,
   PHDocument,
   PHDocumentHeader,
-} from "document-model";
+} from "@powerhousedao/shared/document-model";
 import type { Kysely } from "kysely";
 import { v4 as uuidv4 } from "uuid";
 import type { IOperationIndex } from "../cache/operation-index-types.js";

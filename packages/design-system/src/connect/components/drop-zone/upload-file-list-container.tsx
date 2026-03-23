@@ -1,4 +1,4 @@
-import type { Node } from "document-drive";
+import type { Node } from "@powerhousedao/shared/document-drive";
 import { type ComponentPropsWithoutRef } from "react";
 import { twMerge } from "tailwind-merge";
 import { UploadFileList } from "../upload-file-list/upload-file-list.js";

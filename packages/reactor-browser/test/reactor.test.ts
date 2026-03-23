@@ -1,3 +1,4 @@
+import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import type { IDocumentDriveServer } from "document-drive";
 import {
   BrowserStorage,
@@ -6,7 +7,6 @@ import {
   ReactorBuilder,
   type DocumentDriveServerOptions,
 } from "document-drive";
-import type { DocumentModelModule } from "document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import { describe, expect, it } from "vitest";
 

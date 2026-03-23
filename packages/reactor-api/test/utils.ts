@@ -1,5 +1,6 @@
-import { ReactorBuilder, driveDocumentModelModule } from "document-drive";
-import type { PHDocument } from "document-model";
+import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
+import type { PHDocument } from "@powerhousedao/shared/document-model";
+import { ReactorBuilder } from "document-drive";
 import { documentModelDocumentModelModule } from "document-model";
 import type { ExpectStatic } from "vitest";
 

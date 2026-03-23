@@ -1,4 +1,4 @@
-import { phCliHelpCommands } from "@powerhousedao/common/clis";
+import { phCliHelpCommands } from "@powerhousedao/shared/clis";
 import { subcommands } from "cmd-ts";
 import { getVersion } from "../get-version.js";
 import { PH_CLI_DESCRIPTION } from "../utils/constants.js";

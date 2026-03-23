@@ -15,38 +15,40 @@
     "node": ">=24.0.0"
   },
   "bin": {
-    "ph": "./build/cli.js",
-    "ph-legacy": "./build/cli.old.js"
+    "ph": "./dist/cli.mjs"
   },
   "files": [
-    "build"
+    "dist"
   ],
   "scripts": {
     "tsc": "tsc",
     "lint": "eslint",
-    "generate-docs-legacy": "tsx scripts/generate-docs-legacy.ts",
-    "generate-docs": "node ./build/generate-commands-docs.js",
-    "build:cli": "bun run ./bundle.ts",
-    "postbuild:cli": "bun generate-docs && bun generate-docs-legacy",
-    "dev": "tsx src/cli.ts",
-    "cli": "node build/cli.js",
+    "generate-docs": "node ./dist/generate-commands-docs.mjs",
+    "build:cli": "tsdown",
+    "postbuild:cli": "bun generate-docs",
+    "dev": "bun run ./src/cli.ts",
+    "cli": "node ./dist/cli.mjs",
     "test": "vitest --run",
     "test:watch": "vitest watch"
   },
   "keywords": [],
   "author": "",
-  "devDependencies": {
+  "dependencies": {
     "@powerhousedao/codegen": "workspace:*",
     "@powerhousedao/common": "workspace:*",
-    "@types/bun": "catalog:",
+    "@powerhousedao/shared": "workspace:*",
     "chalk": "catalog:",
     "change-case": "catalog:",
     "cmd-ts": "catalog:",
-    "commander": "catalog:",
     "enquirer": "catalog:",
     "package-manager-detector": "catalog:",
     "read-pkg": "catalog:",
+    "write-package": "catalog:",
+    "semver": "catalog:"
+  },
+  "devDependencies": {
+    "tsdown": "catalog:",
     "vitest": "catalog:",
-    "write-package": "catalog:"
+    "commander": "catalog:"
   }
 }

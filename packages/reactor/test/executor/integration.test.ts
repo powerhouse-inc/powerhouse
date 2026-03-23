@@ -1,5 +1,8 @@
-import { driveDocumentModelModule } from "document-drive";
-import { deriveOperationId, generateId } from "document-model/core";
+import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
+import {
+  deriveOperationId,
+  generateId,
+} from "@powerhousedao/shared/document-model";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CollectionMembershipCache } from "../../src/cache/collection-membership-cache.js";
@@ -8,21 +11,21 @@ import { KyselyOperationIndex } from "../../src/cache/kysely-operation-index.js"
 import { KyselyWriteCache } from "../../src/cache/kysely-write-cache.js";
 import { driveCollectionId } from "../../src/cache/operation-index-types.js";
 import type { WriteCacheConfig } from "../../src/cache/write-cache-types.js";
+import type { IEventBus } from "../../src/events/interfaces.js";
+import {
+  ReactorEventTypes,
+  type JobWriteReadyEvent,
+} from "../../src/events/types.js";
 import type { IExecutionScope } from "../../src/executor/execution-scope.js";
 import { KyselyExecutionScope } from "../../src/executor/execution-scope.js";
 import { SimpleJobExecutor } from "../../src/executor/simple-job-executor.js";
 import type { Job } from "../../src/queue/types.js";
 import { DocumentModelRegistry } from "../../src/registry/implementation.js";
 import type { IDocumentModelRegistry } from "../../src/registry/interfaces.js";
+import { DocumentDeletedError } from "../../src/shared/errors.js";
 import type { KyselyKeyframeStore } from "../../src/storage/kysely/keyframe-store.js";
 import type { KyselyOperationStore } from "../../src/storage/kysely/store.js";
 import type { Database as DatabaseSchema } from "../../src/storage/kysely/types.js";
-import { DocumentDeletedError } from "../../src/shared/errors.js";
-import type { IEventBus } from "../../src/events/interfaces.js";
-import {
-  ReactorEventTypes,
-  type JobWriteReadyEvent,
-} from "../../src/events/types.js";
 import {
   createMockLogger,
   createTestEventBus,

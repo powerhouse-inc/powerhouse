@@ -12,6 +12,7 @@
     "@powerhousedao/switchboard": "workspace:*",
     "@powerhousedao/reactor-api": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",
+    "@powerhousedao/shared": "workspace:*",
     "@renown/sdk": "workspace:*",
     "document-model": "workspace:*",
     "graphql-ws": "catalog:",

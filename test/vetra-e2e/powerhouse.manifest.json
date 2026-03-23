@@ -1,10 +1,10 @@
 {
-    "name": "",
-    "description": "",
-    "category": "",
+    "name": "@powerhousedao/vetra-e2e",
+    "description": "Test project for Vetra used as a project dependency.",
+    "category": "testing",
     "publisher": {
-        "name": "",
-        "url": ""
+        "name": "@powerhousedao",
+        "url": "https://powerhouse.inc"
     },
     "documentModels": [],
     "editors": [],

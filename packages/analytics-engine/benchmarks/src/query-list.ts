@@ -1,6 +1,7 @@
-import fs from "fs";
-import { DateTime } from "luxon";
-import { MemoryAnalyticsStore } from "@powerhousedao/analytics-engine-browser";
+import {
+  BrowserAnalyticsStore,
+  createFsPglite,
+} from "@powerhousedao/analytics-engine-browser";
 import type {
   AnalyticsGranularity,
   AnalyticsPath,
@@ -13,6 +14,8 @@ import {
   PostgresAnalyticsStore,
   reviver,
 } from "@powerhousedao/analytics-engine-pg";
+import fs from "fs";
+import { DateTime } from "luxon";
 
 class ExecutionResults {
   public readonly durationMs: number;
@@ -130,7 +133,9 @@ const pgProfiler = isPgDisabled
     );
 
 // stores
-const memory: MemoryAnalyticsStore = new MemoryAnalyticsStore({
+const pgLite = await createFsPglite(`test-db-${Date.now().toString()}`);
+const memory: BrowserAnalyticsStore = new BrowserAnalyticsStore({
+  pgLite,
   profiler: memoryProfiler,
 });
 await memory.init();

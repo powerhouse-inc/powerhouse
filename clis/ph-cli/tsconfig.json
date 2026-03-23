@@ -3,8 +3,7 @@
   "compilerOptions": {
     "types": [
       "node",
-      "vitest/globals",
-      "@types/bun"
+      "vitest/globals"
     ],
     "emitDeclarationOnly": true,
     "outDir": "./dist"
@@ -17,6 +16,9 @@
       "path": "../../apps/switchboard"
     },
     {
+      "path": "../../packages/builder-tools"
+    },
+    {
       "path": "../../packages/codegen"
     },
     {
@@ -24,9 +26,6 @@
     },
     {
       "path": "../../packages/config"
-    },
-    {
-      "path": "../../packages/document-drive"
     },
     {
       "path": "../../packages/document-model"

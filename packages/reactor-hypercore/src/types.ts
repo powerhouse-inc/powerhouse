@@ -1,4 +1,4 @@
-import type { Operation } from "document-model";
+import type { Operation } from "@powerhousedao/shared/document-model";
 
 export type StoredOperation = Operation & {
   documentId: string;

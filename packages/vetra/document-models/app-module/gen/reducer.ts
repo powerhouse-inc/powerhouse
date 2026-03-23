@@ -1,18 +1,23 @@
 // TODO: remove eslint-disable rules once refactor is done
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
-import type { StateReducer } from "document-model";
-import { isDocumentAction, createReducer } from "document-model/core";
+
 import type { AppModulePHState } from "@powerhousedao/vetra/document-models/app-module";
+import type {
+  Reducer,
+  StateReducer,
+} from "@powerhousedao/shared/document-model";
+import {
+  createReducer,
+  isDocumentAction,
+} from "@powerhousedao/shared/document-model";
 
 import { appModuleBaseOperationsOperations } from "../src/reducers/base-operations.js";
 import { appModuleDndOperationsOperations } from "../src/reducers/dnd-operations.js";
 
 import {
-  SetAppNameInputSchema,
-  SetAppStatusInputSchema,
   AddDocumentTypeInputSchema,
   RemoveDocumentTypeInputSchema,
+  SetAppNameInputSchema,
+  SetAppStatusInputSchema,
   SetDocumentTypesInputSchema,
   SetDragAndDropEnabledInputSchema,
 } from "./schema/zod.js";
@@ -103,4 +108,4 @@ const stateReducer: StateReducer<AppModulePHState> = (
   }
 };
 
-export const reducer = createReducer<AppModulePHState>(stateReducer);
+export const reducer: Reducer<AppModulePHState> = createReducer(stateReducer);

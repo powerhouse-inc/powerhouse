@@ -8,7 +8,7 @@
 //   ListenerFilter,
 //   ReactorBuilder,
 // } from "document-drive";
-// import { DocumentModelModule, PHDocument } from "document-model";
+// import { DocumentModelModule, PHDocument } from "@powerhousedao/shared/document-model";
 
 // import { beforeAll, bench, describe } from "vitest";
 

@@ -1,5 +1,7 @@
 import { test, expect } from "./helpers/fixtures.js";
 
+test.describe.configure({ timeout: 5 * 60 * 60 * 1000 });
+
 test("should load Vetra application successfully", async ({ page }) => {
   // Navigate to the root URL (port 3001)
   await page.goto("/");

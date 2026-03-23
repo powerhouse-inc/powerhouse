@@ -1,15 +1,16 @@
-import { DateTime } from "luxon";
-import { afterAll, beforeAll, describe, it, expect } from "vitest";
+import { PGlite } from "@electric-sql/pglite";
 import {
+  AnalyticsGranularity,
   AnalyticsPath,
   AnalyticsQueryEngine,
-  AnalyticsGranularity,
   type AnalyticsQuery,
   type GroupedPeriodResults,
 } from "@powerhousedao/analytics-engine-core";
-import { MemoryAnalyticsStore } from "../src/MemoryAnalyticsStore.js";
+import { DateTime } from "luxon";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { BrowserAnalyticsStore } from "../src/BrowserAnalyticsStore.js";
 
-let store: MemoryAnalyticsStore;
+let store: BrowserAnalyticsStore;
 let engine: AnalyticsQueryEngine;
 
 const TEST_SOURCE = AnalyticsPath.fromString("test/analytics/Integration.spec");
@@ -42,7 +43,8 @@ const getResultsForGranularity = async (
 };
 
 beforeAll(async () => {
-  store = new MemoryAnalyticsStore();
+  const pgLite = await PGlite.create();
+  store = new BrowserAnalyticsStore({ pgLite });
   await store.init();
 
   engine = new AnalyticsQueryEngine(store);

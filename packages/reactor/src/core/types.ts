@@ -4,7 +4,7 @@ import type {
   ISigner,
   Operation,
   PHDocument,
-} from "document-model";
+} from "@powerhousedao/shared/document-model";
 import type { Kysely } from "kysely";
 
 import type { IProcessorManager } from "@powerhousedao/shared/processors";

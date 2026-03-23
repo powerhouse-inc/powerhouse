@@ -15,7 +15,8 @@ async function resolveDir(dir: string): Promise<string> {
   }
   const found = await findUp(dir, { type: "directory" });
   if (!found) {
-    throw new Error(`Could not find directory "${dir}".`);
+    await mkdir(dir, { recursive: true });
+    return dir;
   }
   return found;
 }

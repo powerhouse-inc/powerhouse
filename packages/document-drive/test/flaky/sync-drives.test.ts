@@ -27,7 +27,7 @@ import {
   Operation,
   documentModelDocumentModelModule,
   generateId,
-} from "document-model";
+} from "@powerhousedao/shared/document-model";
 import stringify from "json-stringify-deterministic";
 import { GraphQLQuery, HttpResponse, graphql } from "msw";
 import { setupServer } from "msw/node";

@@ -3,18 +3,23 @@ import {
   addFolder,
   driveDocumentModelModule as DocumentDrive,
   driveDocumentReducer,
+} from "@powerhousedao/shared/document-drive";
+import {
+  deriveOperationId,
+  generateId,
+  type DocumentModelModule,
+} from "@powerhousedao/shared/document-model";
+import {
   fakeAction,
   InMemoryCache,
   MemoryStorage,
   SynchronizationManager,
   SynchronizationUnitNotFoundError,
 } from "document-drive";
-import type { DocumentModelModule } from "document-model";
 import {
   documentModelDocumentModelModule as DocumentModel,
   documentModelCreateDocument,
 } from "document-model";
-import { deriveOperationId, generateId } from "document-model/core";
 import { createNanoEvents } from "nanoevents";
 import { describe, it } from "vitest";
 

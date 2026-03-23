@@ -1,4 +1,5 @@
-import type { Operation } from "document-model";
+import type { Operation } from "@powerhousedao/shared/document-model";
+import { ConsoleLogger } from "document-model";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { KyselyOperationIndex } from "../../../src/cache/kysely-operation-index.js";
@@ -7,7 +8,6 @@ import { driveCollectionId } from "../../../src/cache/operation-index-types.js";
 import type { IReactor } from "../../../src/core/types.js";
 import { EventBus } from "../../../src/events/event-bus.js";
 import type { IEventBus } from "../../../src/events/interfaces.js";
-import { ConsoleLogger } from "../../../src/logging/console.js";
 import type {
   ISyncCursorStorage,
   ISyncDeadLetterStorage,

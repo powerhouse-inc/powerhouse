@@ -1,4 +1,4 @@
-import { baseActions } from "document-model";
+import { baseActions } from "@powerhousedao/shared/document-model";
 import {
   generalActions,
   lineItemsActions,

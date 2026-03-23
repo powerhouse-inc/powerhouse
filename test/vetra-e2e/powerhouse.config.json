@@ -12,10 +12,7 @@
     "storage": "memory"
   },
   "packages": [
-    {
-      "packageName": "@powerhousedao/vetra",
-      "version": "latest",
-      "provider": "npm"
-    }
-  ]
+   
+  ],
+  "packageRegistryUrl": "http://localhost:8080"
 }

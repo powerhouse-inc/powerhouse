@@ -1,16 +1,19 @@
-import fs from "fs";
-import { DateTime } from "luxon";
+import {
+  BrowserAnalyticsStore,
+  createFsPglite,
+} from "@powerhousedao/analytics-engine-browser";
 import { AnalyticsPath } from "@powerhousedao/analytics-engine-core";
 import { PostgresAnalyticsStore } from "@powerhousedao/analytics-engine-pg";
-import { MemoryAnalyticsStore } from "@powerhousedao/analytics-engine-browser";
-import { afterAll, beforeAll, it, expect, describe } from "vitest";
+import fs from "fs";
+import { DateTime } from "luxon";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 const connectionString =
   process.env.PG_CONNECTION_STRING ||
   "postgresql://postgres:password@localhost:5555/analytics";
 
 let postgres: PostgresAnalyticsStore;
-let memory: MemoryAnalyticsStore;
+let memory: BrowserAnalyticsStore;
 
 beforeAll(async () => {
   // read dump
@@ -18,8 +21,9 @@ beforeAll(async () => {
 
   // initialize stores
   postgres = new PostgresAnalyticsStore({ connectionString });
+  const pgLite = await createFsPglite("compat-test-db");
 
-  memory = new MemoryAnalyticsStore();
+  memory = new BrowserAnalyticsStore({ pgLite });
   await memory.init();
   await memory.raw(sqlHuge);
 });

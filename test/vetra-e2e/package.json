@@ -44,14 +44,13 @@
   "scripts": {
     "lint": "eslint . --cache",
     "lint:fix": "eslint . --fix --cache",
-    "build:css": "pnpm exec tailwindcss -i ./style.css -o ./dist/style.css",
-    "build:css:watch": "pnpm exec tailwindcss -i ./style.css -o ./dist/style.css --watch",
     "typecheck": "tsc --noEmit",
     "generate": "ph-cli generate",
     "connect": "ph-cli connect",
     "reactor": "ph-cli reactor",
     "vetra": "ph-cli vetra",
     "service": "ph-cli service",
+    "build": "ph-cli build",
     "service-startup": "bash ./node_modules/@powerhousedao/ph-cli/dist/scripts/service-startup.sh",
     "service-unstartup": "bash ./node_modules/@powerhousedao/ph-cli/dist/scripts/service-unstartup.sh",
     "test:e2e": "rimraf .ph && playwright test",
@@ -65,7 +64,7 @@
     "@powerhousedao/config": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",
     "@powerhousedao/shared": "workspace:*",
-    "@powerhousedao/vetra": "workspace:*",
+    "@powerhousedao/versioned-documents": "workspace:*",
     "@electric-sql/pglite": "catalog:",
     "@electric-sql/pglite-tools": "catalog:",
     "kysely": "catalog:",
@@ -79,9 +78,7 @@
     "@powerhousedao/e2e-utils": "workspace:*",
     "react": "catalog:",
     "react-dom": "catalog:",
-    "vite": "catalog:",
     "vitest": "catalog:",
-    "@vitejs/plugin-react": "catalog:",
     "tailwindcss": "catalog:",
     "@tailwindcss/cli": "catalog:",
     "@types/node": "catalog:",
@@ -89,11 +86,6 @@
     "@types/react-dom": "catalog:",
     "monocart-coverage-reports": "^2.12.8",
     "@playwright/test": "^1.55.0"
-  },
-  "peerDependencies": {
-    "react": ">=19.0.0",
-    "react-dom": ">=19.0.0",
-    "@electric-sql/pglite": ">=0.3.15"
   },
   "description": ""
 }

@@ -1,13 +1,15 @@
 import {
-  buildDocumentRevisionsFilter,
   driveCreateDocument,
   driveDocumentReducer,
+} from "@powerhousedao/shared/document-drive";
+import {
+  buildDocumentRevisionsFilter,
   filterOperationsByRevision,
   isAfterRevision,
   isAtRevision,
 } from "document-drive";
-import { runAsapAsync, useSetTimeout } from "document-drive/run-asap";
-import { setModelName } from "document-model";
+import { runAsapAsync, useSetTimeout } from "document-drive";
+import { setModelName } from "@powerhousedao/shared/document-model";
 import { describe, expect, it } from "vitest";
 
 describe("utils", () => {

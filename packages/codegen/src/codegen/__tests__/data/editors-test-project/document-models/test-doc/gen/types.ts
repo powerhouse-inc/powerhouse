@@ -1,4 +1,7 @@
-import type { PHDocument, PHBaseState } from "document-model";
+import type {
+  PHDocument,
+  PHBaseState,
+} from "@powerhousedao/shared/document-model";
 import type { TestDocAction } from "./actions.js";
 import type { TestDocState as TestDocGlobalState } from "./schema/types.js";
 

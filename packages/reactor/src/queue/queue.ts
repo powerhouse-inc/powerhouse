@@ -1,4 +1,4 @@
-import type { CreateDocumentActionInput } from "document-model";
+import type { CreateDocumentActionInput } from "@powerhousedao/shared/document-model";
 import type { IEventBus } from "../events/interfaces.js";
 import { ReactorEventTypes } from "../events/types.js";
 import type { IDocumentModelResolver } from "../registry/document-model-resolver.js";

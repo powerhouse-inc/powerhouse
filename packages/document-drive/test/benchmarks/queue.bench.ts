@@ -1,16 +1,19 @@
-import type { IQueueManager } from "document-drive";
 import {
   addFolder,
   driveCreateDocument,
   driveDocumentModelModule,
-} from "document-drive/drive-document-model";
-import { EventQueueManager } from "document-drive/queue/event";
-import { ReactorBuilder } from "document-drive/server/builder";
-import { MemoryStorage } from "document-drive/storage/memory";
-import { buildOperations } from "document-drive/utils/test";
-import type { DocumentModelModule } from "document-model";
+} from "@powerhousedao/shared/document-drive";
+import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
+import {
+  createPresignedHeader,
+  generateId,
+} from "@powerhousedao/shared/document-model";
+import type { IQueueManager } from "document-drive";
 import { documentModelDocumentModelModule } from "document-model";
-import { createPresignedHeader, generateId } from "document-model/core";
+import { EventQueueManager } from "queue";
+import { ReactorBuilder } from "server";
+import { MemoryStorage } from "storage";
+import { buildOperations } from "utils";
 import type { BenchOptions } from "vitest";
 import { bench, describe } from "vitest";
 

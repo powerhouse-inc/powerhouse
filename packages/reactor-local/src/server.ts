@@ -12,8 +12,7 @@ import {
   startViteServer,
 } from "@powerhousedao/reactor-api";
 import type { DefaultRemoteDriveInput } from "document-drive";
-import { logger } from "document-drive";
-import type { DocumentModelModule } from "document-model";
+import { logger, type DocumentModelModule } from "document-model";
 import dotenv from "dotenv";
 import path from "node:path";
 import type {

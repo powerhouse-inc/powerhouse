@@ -11,15 +11,18 @@ import type {
   ProcessorRecord as ReactorProcessorRecord,
 } from "@powerhousedao/reactor";
 import { setupMcpServer } from "@powerhousedao/reactor-mcp";
+import { type DocumentModelModule } from "@powerhousedao/shared/document-model";
 import devcert from "devcert";
 import type {
-  ILogger,
+  IDocumentDriveServer,
   IProcessorHostModuleLegacy,
   IRelationalDbLegacy,
   ProcessorFactoryLegacy,
 } from "document-drive";
-import { childLogger, createRelationalDbLegacy } from "document-drive";
-import type { DocumentModelModule } from "document-model";
+import {
+  createRelationalDbLegacy,
+  ProcessorManagerLegacy,
+} from "document-drive";
 import type { Express } from "express";
 import express from "express";
 import type { Kysely } from "kysely";
@@ -31,7 +34,9 @@ import type { TlsOptions } from "node:tls";
 import type { Pool } from "pg";
 import { WebSocketServer } from "ws";
 // Import tracing - initializes OpenTelemetry and provides stub functions for backwards compatibility
+import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
 import type { ProcessorApp } from "@powerhousedao/shared/processors";
+import { childLogger, type ILogger } from "document-model";
 import { config, DefaultCoreSubgraphs } from "./config.js";
 import { AuthSubgraph } from "./graphql/auth/subgraph.js";
 import { GraphQLManager } from "./graphql/graphql-manager.js";

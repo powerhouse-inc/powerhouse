@@ -1,3 +1,4 @@
+import { usePHModal } from "@powerhousedao/reactor-browser";
 import { lazy, Suspense } from "react";
 import { ErrorBoundary } from "../error-boundary.js";
 
@@ -66,7 +67,11 @@ const InspectorModal = lazy(() =>
     default: m.InspectorModal,
   })),
 );
-
+const MissingPackageModal = lazy(() =>
+  import("./modals/MissingPackageModal.js").then((m) => ({
+    default: m.ConnectMissingPackageModal,
+  })),
+);
 const modalComponents = {
   addDrive: AddDriveModal,
   clearStorage: ClearStorageModal,
@@ -81,10 +86,10 @@ const modalComponents = {
   inspector: InspectorModal,
   settings: SettingsModal,
   upgradeDrive: UpgradeDriveModal,
+  missingPackage: MissingPackageModal,
 } as const;
 
 export const ModalsContainer = lazy(async () => {
-  const { usePHModal } = await import("@powerhousedao/reactor-browser");
   return {
     default: () => {
       const phModal = usePHModal();

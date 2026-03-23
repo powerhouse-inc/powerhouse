@@ -7,8 +7,8 @@ import {
   useSelectedDrive,
   useSetPHDriveEditorConfig,
 } from "@powerhousedao/reactor-browser";
-import type { FileNode } from "document-drive";
-import type { EditorProps } from "document-model";
+import type { FileNode } from "@powerhousedao/shared/document-drive";
+import type { EditorProps } from "@powerhousedao/shared/document-model";
 import { useCallback } from "react";
 import { editorConfig } from "./config.js";
 import { DOCUMENT_TYPES } from "./document-types.js";

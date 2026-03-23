@@ -1,30 +1,34 @@
+import type { PowerhouseConfig } from "@powerhousedao/config";
 import { getConfig } from "@powerhousedao/config/node";
-import {
-  loadConnectEnv,
-  normalizeBasePath,
-  setConnectEnv,
-  type ConnectEnv,
-} from "@powerhousedao/shared/connect";
+import { loadConnectEnv, setConnectEnv } from "@powerhousedao/shared/connect";
 import { sentryVitePlugin } from "@sentry/vite-plugin";
 import tailwind from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { join } from "node:path";
-import { readPackageSync } from "read-pkg";
 import {
   createLogger,
   loadEnv,
   type HtmlTagDescriptor,
+  type InlineConfig,
   type PluginOption,
-  type UserConfig,
 } from "vite";
 import { createHtmlPlugin } from "vite-plugin-html";
-import svgr from "vite-plugin-svgr";
-import { stripVersionFromPackage } from "./helpers.js";
+import tsconfigPaths from "vite-tsconfig-paths";
 import type { IConnectOptions } from "./types.js";
-import { phExternalPackagesPlugin } from "./vite-plugins/ph-external-packages.js";
+
+const isLocalDev = true;
+const esmShUrl = isLocalDev ? "http://localhost:8080" : "https://esm.sh";
 
 export const connectClientConfig = {
   meta: [
+    {
+      tag: "meta",
+      attrs: {
+        "http-equiv": "Content-Security-Policy",
+        content:
+          "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://esm.sh http://localhost:8080; object-src 'none'; base-uri 'self';",
+      },
+    },
     {
       tag: "meta",
       attrs: {
@@ -95,20 +99,6 @@ export const connectClientConfig = {
   ],
 } as const;
 
-function viteOptionsToEnv(options: IConnectOptions) {
-  const optionsEnv: Partial<ConnectEnv> = {};
-
-  if (options.localPackage !== undefined) {
-    if (options.localPackage === false) {
-      optionsEnv.PH_DISABLE_LOCAL_PACKAGE = true;
-    } else {
-      optionsEnv.PH_LOCAL_PACKAGE = options.localPackage;
-    }
-  }
-
-  return optionsEnv;
-}
-
 function viteLogger({
   silence,
 }: {
@@ -134,26 +124,25 @@ function viteLogger({
 
   return logger;
 }
+
+function getPackageNamesFromPowerhouseConfig({ packages }: PowerhouseConfig) {
+  if (!packages) return [];
+  return packages.map((p) => p.packageName);
+}
+
 export function getConnectBaseViteConfig(options: IConnectOptions) {
   const mode = options.mode;
   const envDir = options.envDir ?? options.dirname;
   const fileEnv = loadEnv(mode, envDir, "PH_");
 
-  // Map options to env vars
-  const optionsEnv = viteOptionsToEnv(options);
-
   // Load and validate environment with priority: process.env > options > fileEnv > defaults
   const env = loadConnectEnv({
     processEnv: process.env,
-    optionsEnv,
     fileEnv,
   });
 
   // set the resolved env to process.env so it's loaded by vite
   setConnectEnv(env);
-
-  // load package.json
-  const packageJson = readPackageSync({ cwd: options.dirname });
 
   // load powerhouse config
   const phConfigPath =
@@ -161,31 +150,14 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
 
   const phConfig = options.powerhouseConfig ?? getConfig(phConfigPath);
 
-  // load packages from env variable
-  const phPackagesStr = env.PH_PACKAGES || "";
-  const envPhPackages = phPackagesStr.split(",");
+  const packagesFromConfig = getPackageNamesFromPowerhouseConfig(phConfig);
+  const phPackagesStr = env.PH_PACKAGES;
+  const envPhPackages = phPackagesStr?.split(",");
 
-  // loadPackages from config
-  const configPhPackages =
-    phConfig.packages?.map((p) =>
-      typeof p === "string" ? p : p.packageName,
-    ) ?? [];
+  const phPackages = envPhPackages ?? packagesFromConfig;
 
-  // merges env and config packages, remove empty strings, version suffixes and duplicates
-  const allPackages = [
-    ...new Set(
-      [...envPhPackages, ...configPhPackages]
-        .map(stripVersionFromPackage)
-        .filter((p) => p.length),
-    ),
-  ];
-
-  const localPackage = !env.PH_DISABLE_LOCAL_PACKAGE
-    ? (env.PH_LOCAL_PACKAGE ?? options.dirname)
-    : undefined;
-
-  // remove duplicates and empty strings
-  const phPackages = [...new Set(allPackages.filter((p) => p.trim().length))];
+  const phPackageRegistryUrl =
+    env.PH_CONNECT_PACKAGES_REGISTRY ?? phConfig.packageRegistryUrl ?? null;
 
   const authToken = env.PH_SENTRY_AUTH_TOKEN;
   const org = env.PH_SENTRY_ORG;
@@ -194,10 +166,9 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
   const uploadSentrySourcemaps = authToken && org && project;
 
   const plugins: PluginOption[] = [
+    tsconfigPaths(),
     tailwind(),
-    svgr(),
     react(),
-    phExternalPackagesPlugin(phPackages, localPackage),
     createHtmlPlugin({
       minify: false,
       inject: {
@@ -206,6 +177,23 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
             ...meta,
             injectTo: "head",
           })) as HtmlTagDescriptor[]),
+          {
+            tag: "script",
+            attrs: { type: "importmap" },
+            children: JSON.stringify(
+              {
+                imports: {
+                  react: "https://esm.sh/react@19.2.0",
+                  "react/": "https://esm.sh/react@19.2.0/",
+                  "react-dom": "https://esm.sh/react-dom@19.2.0",
+                  "react-dom/": "https://esm.sh/react-dom@19.2.0/",
+                },
+              },
+              null,
+              2,
+            ),
+            injectTo: "head-prepend",
+          },
         ],
       },
     }),
@@ -231,8 +219,6 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     );
   }
 
-  const basePath = normalizeBasePath(env.PH_CONNECT_BASE_PATH || "/");
-
   // hide warnings unless LOG_LEVEL is set to debug
   const isDebug =
     process.env.LOG_LEVEL === "debug" || env.PH_CONNECT_LOG_LEVEL === "debug";
@@ -247,53 +233,34 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
         },
       });
 
-  const watchTimeout = options.watchTimeout ?? env.PH_WATCH_TIMEOUT;
-
-  const config: UserConfig = {
-    base: basePath,
+  const config: InlineConfig = {
+    configFile: false,
+    mode,
+    define: {
+      PH_PACKAGES: phPackages,
+      PH_PACKAGE_REGISTRY_URL: `"${phPackageRegistryUrl}"`,
+    },
     customLogger,
     envPrefix: ["PH_CONNECT_"],
-    envDir: false,
     optimizeDeps: {
       exclude: ["@electric-sql/pglite", "@electric-sql/pglite-tools"],
     },
-    plugins,
-    resolve: {
-      alias: localPackage
-        ? {
-            [packageJson.name]: localPackage,
-          }
-        : undefined,
-    },
     build: {
-      minify: true,
-      sourcemap: true,
       rollupOptions: {
-        treeshake: {
-          moduleSideEffects: false,
-        },
+        // Externalize React so both Connect and dynamically loaded registry
+        // packages share the same React instance via the import map in index.html.
+        // Without this, Vite bundles React into Connect's chunks while registry
+        // packages resolve React from the import map (esm.sh), creating two
+        // separate React instances that don't share context/state.
+        external: [
+          "react",
+          "react-dom",
+          "react/jsx-runtime",
+          "react-dom/client",
+        ],
       },
     },
-    server: {
-      watch: env.PH_DISABLE_LOCAL_PACKAGE
-        ? null
-        : {
-            ignored: [
-              "**/.ph/**",
-              "**/dist/**",
-              "**/node_modules/**",
-              "**/backup-documents/**",
-            ],
-            awaitWriteFinish: {
-              stabilityThreshold: watchTimeout,
-              pollInterval: 100,
-            },
-          },
-      fs: {
-        strict: false,
-      },
-      port: phConfig.studio?.port,
-    },
+    plugins,
     worker: {
       format: "es",
     },

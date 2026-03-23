@@ -38,27 +38,20 @@
       "types": "./dist/processors/index.d.ts",
       "import": "./dist/processors/index.js"
     },
-    "./manifest": {
-      "types": "./dist/manifest.d.ts",
-      "import": "./dist/manifest.js"
-    },
-    "./vetra-drive-app": {
-      "types": "./dist/editors/vetra-drive-app/index.d.ts",
-      "import": "./dist/editors/vetra-drive-app/index.js"
-    },
+    "./manifest": "./dist/powerhouse.manifest.json",
     "./style.css": "./dist/style.css"
   },
   "scripts": {
     "tsc": "tsc",
     "lint": "eslint",
-    "build:css": "pnpm exec tailwindcss -i ./style.css -o ./dist/style.css",
     "test": "vitest --run",
     "test:watch": "vitest",
     "test:document-models": "vitest run document-models",
     "test:editors": "vitest run editors",
     "test:processors": "vitest run processors",
+    "build:bundle": "tsdown",
+    "build:css": "pnpm exec tailwindcss -i ./style.css -o ./dist/style.css",
     "generate": "ph-cli generate",
-    "connect": "ph-cli connect",
     "reactor": "ph-cli reactor",
     "service": "ph-cli service",
     "migrate": "ph-cli migrate",
@@ -66,45 +59,39 @@
     "service-unstartup": "bash ./node_modules/@powerhousedao/ph-cli/dist/scripts/service-unstartup.sh"
   },
   "dependencies": {
-    "document-model": "workspace:*",
-    "@powerhousedao/connect": "workspace:*",
-    "@powerhousedao/design-system": "workspace:*",
+    "@electric-sql/pglite": "catalog:",
+    "@electric-sql/pglite-tools": "catalog:",
     "@powerhousedao/common": "workspace:*",
     "@powerhousedao/config": "workspace:*",
+    "@powerhousedao/design-system": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",
     "@powerhousedao/shared": "workspace:*",
+    "@powerhousedao/builder-tools": "workspace:*",
+    "@powerhousedao/ph-cli": "workspace:*",
     "change-case": "catalog:",
     "colorette": "catalog:",
+    "document-model": "workspace:*",
     "graphql": "catalog:",
+    "graphql-tag": "catalog:",
     "kysely": "catalog:",
     "zod": "catalog:",
-    "graphql-tag": "catalog:",
-    "@electric-sql/pglite": "catalog:",
-    "@electric-sql/pglite-tools": "catalog:"
+    "document-drive": "workspace:*",
+    "@powerhousedao/codegen": "workspace:*",
+    "react": "catalog:",
+    "react-dom": "catalog:"
   },
   "devDependencies": {
-    "document-drive": "workspace:*",
-    "@powerhousedao/builder-tools": "workspace:*",
-    "@powerhousedao/codegen": "workspace:*",
-    "@powerhousedao/ph-cli": "workspace:*",
-    "react": "catalog:",
-    "react-dom": "catalog:",
-    "tailwindcss": "catalog:",
     "@tailwindcss/cli": "catalog:",
-    "vite": "catalog:",
-    "vitest": "catalog:",
-    "@vitejs/plugin-react": "catalog:",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^14.6.1",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
-    "@types/react-dom": "catalog:"
-  },
-  "peerDependencies": {
-    "react": ">=19.0.0",
-    "react-dom": ">=19.0.0",
-    "@electric-sql/pglite": ">=0.3.15"
+    "@types/react-dom": "catalog:",
+    "@vitejs/plugin-react": "catalog:",
+    "tailwindcss": "catalog:",
+    "vitest": "catalog:",
+    "tsdown": "catalog:"
   },
   "description": ""
 }

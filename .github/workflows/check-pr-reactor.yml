@@ -30,7 +30,6 @@ env:
   NX_ISOLATE_PLUGINS: false
   DATABASE_URL: postgres://postgres:postgres@postgres:5432/postgres?sslmode=disable&connect_timeout=30&connection_limit=90
   REDIS_TLS_URL: redis://redis:6379
-  BUN_RUNTIME_TRANSPILER_CACHE_PATH: "0"
 
 
 jobs:
@@ -114,8 +113,11 @@ jobs:
         run: pnpm prisma db push
         working-directory: packages/document-drive
 
-      - name: Build
+      - name: Build typescript project
         run: pnpm build-tsc
+
+      - name: Run bundlers
+        run: pnpm build-bundle
 
       - name: Lint
         run: pnpm lint
@@ -143,8 +145,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install-ci
 
-      - name: Build
+      - name: Build typescript
         run: pnpm build-tsc
+
+      - name: Build bundlers
+        run: pnpm build-bundle
 
       - name: Lint
         run: pnpm lint
@@ -187,6 +192,9 @@ jobs:
 
       - name: Run bundle scripts
         run: pnpm build-bundle
+
+      - name: Run css build scripts
+        run: pnpm build-css
 
       - name: Run sync integration test
         run: pnpm test:integration

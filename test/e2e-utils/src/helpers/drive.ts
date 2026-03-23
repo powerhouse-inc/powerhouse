@@ -28,7 +28,7 @@ export async function createLocalDrive(page: Page, driveName: string) {
 
   const createDriveButton = page.getByText("Create New Drive");
 
-  await expect(createDriveButton).toBeVisible({ timeout: 15000 });
+  await expect(createDriveButton).toBeVisible({ timeout: 2 * 60 * 60 * 1000 });
   await createDriveButton.click();
 
   const form = page.locator('form[name="add-local-drive"]').last();

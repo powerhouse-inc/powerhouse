@@ -5,7 +5,7 @@ import {
   useNodesInSelectedDriveOrFolder,
 } from "@powerhousedao/reactor-browser";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import type { FileNode } from "document-drive";
+import type { FileNode } from "@powerhousedao/shared/document-drive";
 import React, { useRef } from "react";
 
 const GAP = 8;

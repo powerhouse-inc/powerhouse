@@ -3,7 +3,7 @@ import type {
   UpgradeManifest,
   UpgradeReducer,
   UpgradeTransition,
-} from "document-model";
+} from "@powerhousedao/shared/document-model";
 import type { IDocumentModelRegistry } from "./interfaces.js";
 
 /**
@@ -233,15 +233,21 @@ export class DocumentModelRegistry implements IDocumentModelRegistry {
   }
 
   registerUpgradeManifests(
-    ...manifests: UpgradeManifest<readonly number[]>[]
+    ...manifestsToRegister: UpgradeManifest<readonly number[]>[]
   ): void {
-    for (const manifest of manifests) {
-      for (let i = 0; i < this.manifests.length; i++) {
-        if (this.manifests[i].documentType === manifest.documentType) {
-          throw new DuplicateManifestError(manifest.documentType);
+    for (const manifestToRegister of manifestsToRegister) {
+      for (const registeredManifest of this.manifests) {
+        const registeredManifestDocumentType = registeredManifest.documentType;
+        const manifestToRegisterDocumentType = manifestToRegister.documentType;
+
+        if (!registeredManifestDocumentType || !manifestToRegisterDocumentType)
+          continue;
+
+        if (registeredManifestDocumentType === manifestToRegisterDocumentType) {
+          throw new DuplicateManifestError(manifestToRegisterDocumentType);
         }
       }
-      this.manifests.push(manifest);
+      this.manifests.push(manifestToRegister);
     }
   }
 

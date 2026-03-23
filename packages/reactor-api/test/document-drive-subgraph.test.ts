@@ -1,7 +1,7 @@
 import type { SubgraphArgs } from "@powerhousedao/reactor-api";
 import { testSetupReactor } from "@powerhousedao/reactor-api/test";
-import { driveDocumentModelModule } from "document-drive";
-import type { DocumentModelModule } from "document-model";
+import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
+import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import { Kind, print } from "graphql";
 import { parse } from "graphql";
 import { beforeEach, describe, expect, it } from "vitest";

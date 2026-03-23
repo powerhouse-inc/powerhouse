@@ -22,15 +22,13 @@ import type {
   ISubgraph,
   SubgraphClass,
 } from "@powerhousedao/reactor-api";
+import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
+import { type DocumentModelModule } from "@powerhousedao/shared/document-model";
 import bodyParser from "body-parser";
 import cors from "cors";
-import type {
-  DocumentDriveDocument,
-  ILogger,
-  IRelationalDbLegacy,
-} from "document-drive";
-import { childLogger, debounce, responseForDrive } from "document-drive";
-import type { DocumentModelModule } from "document-model";
+import type { IRelationalDbLegacy } from "document-drive";
+import { debounce, responseForDrive } from "document-drive";
+import { childLogger, type ILogger } from "document-model";
 import type express from "express";
 import type { IRouter } from "express";
 import { Router } from "express";

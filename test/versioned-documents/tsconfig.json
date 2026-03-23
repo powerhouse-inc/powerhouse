@@ -11,7 +11,32 @@
       "dom",
       "dom.iterable"
     ],
-    "sourceMap": false
+    "paths": {
+      "document-models": [
+        "./document-models/index.ts"
+      ],
+      "document-models/*": [
+        "./document-models/*/index.ts"
+      ],
+      "editors": [
+        "./editors/index.ts"
+      ],
+      "editors/*": [
+        "./editors/*/index.ts"
+      ],
+      "processors": [
+        "./processors/index.ts"
+      ],
+      "processors/*": [
+        "./processors/*/index.ts"
+      ],
+      "subgraphs": [
+        "./subgraphs/index.ts"
+      ],
+      "subgraphs/*": [
+        "./subgraphs/*/index.ts"
+      ]
+    }
   },
   "include": [
     "**/*",
@@ -43,6 +68,9 @@
     },
     {
       "path": "../../packages/reactor-browser"
+    },
+    {
+      "path": "../../packages/shared"
     }
   ]
 }

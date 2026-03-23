@@ -1,5 +1,5 @@
 import type { IRenown, User } from "@renown/sdk";
-import { logger } from "document-drive";
+import { logger } from "document-model";
 import { RENOWN_CHAIN_ID, RENOWN_NETWORK_ID, RENOWN_URL } from "./constants.js";
 
 export function openRenown(documentId?: string) {

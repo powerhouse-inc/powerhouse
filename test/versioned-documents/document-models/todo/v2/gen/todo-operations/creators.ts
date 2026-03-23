@@ -1,21 +1,21 @@
-import { createAction } from "document-model/core";
+import { createAction } from "@powerhousedao/shared/document-model";
 import {
   AddTodoInputSchema,
+  EditTitleInputSchema,
   RemoveTodoInputSchema,
   UpdateTodoInputSchema,
-  EditTitleInputSchema,
 } from "../schema/zod.js";
 import type {
   AddTodoInput,
+  EditTitleInput,
   RemoveTodoInput,
   UpdateTodoInput,
-  EditTitleInput,
 } from "../types.js";
 import type {
   AddTodoAction,
+  EditTitleAction,
   RemoveTodoAction,
   UpdateTodoAction,
-  EditTitleAction,
 } from "./actions.js";
 
 export const addTodo = (input: AddTodoInput) =>

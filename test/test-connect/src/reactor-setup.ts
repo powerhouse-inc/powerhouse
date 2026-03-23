@@ -1,11 +1,11 @@
-import type { ILogger, ReactorModule } from "@powerhousedao/reactor";
 import {
   ChannelScheme,
   driveCollectionId,
   ReactorBuilder,
+  type ReactorModule,
 } from "@powerhousedao/reactor";
-import { driveDocumentModelModule } from "document-drive";
-import { documentModelDocumentModelModule } from "document-model";
+import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
+import { documentModelDocumentModelModule, type ILogger } from "document-model";
 import type { ConnectTestConfig } from "./types.js";
 
 export async function createReactorWithSync(

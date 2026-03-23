@@ -1,8 +1,8 @@
+import type { ILogger } from "document-model";
 import type { Kysely } from "kysely";
 import type { IOperationIndex } from "../cache/operation-index-types.js";
 import type { IReactor, SyncModule } from "../core/types.js";
 import type { IEventBus } from "../events/interfaces.js";
-import type { ILogger } from "../logging/types.js";
 import type {
   ISyncCursorStorage,
   ISyncDeadLetterStorage,

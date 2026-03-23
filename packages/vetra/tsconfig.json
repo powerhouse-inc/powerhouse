@@ -1,6 +1,7 @@
 {
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
+    "emitDeclarationOnly": true,
     "outDir": "./dist",
     "types": [
       "node",
@@ -11,7 +12,26 @@
       "dom",
       "dom.iterable"
     ],
-    "sourceMap": false
+    "paths": {
+      "@powerhousedao/vetra/document-models": [
+        "./document-models/index.ts"
+      ],
+      "@powerhousedao/vetra/document-models/*": [
+        "./document-models/*/index.ts"
+      ],
+      "@powerhousedao/vetra/editors": [
+        "./editors/index.ts"
+      ],
+      "@powerhousedao/vetra/editors/*": [
+        "./editors/*/index.ts"
+      ],
+      "@powerhousedao/vetra/processors": [
+        "./processors/index.ts"
+      ],
+      "@powerhousedao/vetra/processors/*": [
+        "./processors/*/index.ts"
+      ]
+    }
   },
   "include": [
     "**/*",
@@ -23,9 +43,6 @@
     ".ph"
   ],
   "references": [
-    {
-      "path": "../../apps/connect"
-    },
     {
       "path": "../../clis/ph-cli"
     },

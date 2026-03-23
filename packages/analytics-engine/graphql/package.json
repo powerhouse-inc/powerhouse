@@ -12,21 +12,24 @@
   "type": "module",
   "exports": {
     ".": {
-      "types": "./dist/src/index.d.ts",
-      "import": "./dist/src/index.js"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
     }
   },
   "files": [
-    "dist/src"
+    "dist"
   ],
   "scripts": {
     "test": "vitest --run ./**/*.test.ts",
-    "build:bundle": "bun run ./bundle.ts"
+    "build:bundle": "tsdown"
+  },
+  "dependencies": {
+    "luxon": "catalog:",
+    "@powerhousedao/analytics-engine-core": "workspace:*"
   },
   "devDependencies": {
     "vitest": "catalog:",
     "@types/luxon": "catalog:",
-    "luxon": "catalog:",
-    "@powerhousedao/analytics-engine-core": "workspace:*"
+    "tsdown": "catalog:"
   }
 }

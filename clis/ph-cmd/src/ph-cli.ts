@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { getPowerhouseProjectInfo } from "@powerhousedao/common/clis";
+import { getPowerhouseProjectInfo } from "@powerhousedao/shared/clis";
 import { execSync } from "node:child_process";
 import { resolveCommand } from "package-manager-detector";
 

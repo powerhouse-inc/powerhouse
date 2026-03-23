@@ -1,3 +1,8 @@
+import type { DocumentModelDocument } from "@powerhousedao/shared/document-model";
+import {
+  createPresignedHeader,
+  generateId,
+} from "@powerhousedao/shared/document-model";
 import type { IDocumentStorage, IDriveOperationStorage } from "document-drive";
 import {
   InMemoryCache,
@@ -5,12 +10,10 @@ import {
   ReactorBuilder,
   baseDocumentModels,
 } from "document-drive";
-import type { DocumentModelDocument } from "document-model";
 import {
   documentModelCreateDocument,
   documentModelDocumentModelModule,
 } from "document-model";
-import { createPresignedHeader, generateId } from "document-model/core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const documentModels = baseDocumentModels;

@@ -1,9 +1,9 @@
-import type { Operation } from "document-model";
+import type { Operation } from "@powerhousedao/shared/document-model";
 import {
   deriveOperationId,
-  documentModelDocumentModelModule,
   generateId,
-} from "document-model";
+} from "@powerhousedao/shared/document-model";
+import { documentModelDocumentModelModule } from "document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { KyselyWriteCache } from "../../../src/cache/kysely-write-cache.js";
 import type { WriteCacheConfig } from "../../../src/cache/write-cache-types.js";

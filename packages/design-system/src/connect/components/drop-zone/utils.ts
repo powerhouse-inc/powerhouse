@@ -3,7 +3,7 @@ import type {
   DocumentTypeIcon,
   FileUploadProgress,
 } from "@powerhousedao/reactor-browser";
-import type { Node } from "document-drive";
+import type { Node } from "@powerhousedao/shared/document-drive";
 import type { UploadFileItemProps } from "../upload-file-item/upload-file-item.js";
 
 // Upload tracking types

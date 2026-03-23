@@ -1,5 +1,8 @@
-import type { Operation } from "document-model";
-import { garbageCollect, sortOperations } from "document-model/core";
+import type { Operation } from "@powerhousedao/shared/document-model";
+import {
+  garbageCollect,
+  sortOperations,
+} from "@powerhousedao/shared/document-model";
 import { fakeAction } from "../helpers.js";
 
 export type InputOperation = Partial<Omit<Operation, "index" | "skip">> & {

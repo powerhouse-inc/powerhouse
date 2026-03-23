@@ -1,5 +1,5 @@
 import { Icon, PowerhouseButton } from "@powerhousedao/design-system";
-import type { DocumentDriveDocument } from "document-drive";
+import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
 import { useState } from "react";
 import { DriveNameInput } from "./drive-name-input.js";
 

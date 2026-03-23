@@ -4,7 +4,7 @@ import type {
   IProcessorHostModuleLegacy,
   ProcessorRecordLegacy,
 } from "document-drive";
-import type { PHDocumentHeader } from "document-model";
+import type { PHDocumentHeader } from "@powerhousedao/shared/document-model";
 import { CodegenProcessorLegacy } from "./index.legacy.js";
 import { logger } from "./logger.js";
 

@@ -1,18 +1,18 @@
 import { driveCollectionId } from "@powerhousedao/reactor";
-import type {
-  DocumentDriveDocument,
-  DriveInput,
-  PullResponderTrigger,
-  RemoteDriveOptions,
-  SharingType,
-  Trigger,
-} from "document-drive";
 import {
   driveCreateDocument,
   setAvailableOffline,
   setSharingType,
+  type DocumentDriveDocument,
+  type Trigger,
+} from "@powerhousedao/shared/document-drive";
+import type {
+  DriveInput,
+  PullResponderTrigger,
+  RemoteDriveOptions,
+  SharingType,
 } from "document-drive";
-import type { PHDocument } from "document-model";
+import type { PHDocument } from "@powerhousedao/shared/document-model";
 import { getUserPermissions } from "../utils/user.js";
 
 export async function addDrive(input: DriveInput, preferredEditor?: string) {

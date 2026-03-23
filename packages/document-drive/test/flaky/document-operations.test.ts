@@ -16,7 +16,7 @@ import {
   Operation,
   setModelName,
   setStateSchema,
-} from "document-model";
+} from "@powerhousedao/shared/document-model";
 import { beforeEach, describe, expect, it } from "vitest";
 
 describe("Document operations", () => {

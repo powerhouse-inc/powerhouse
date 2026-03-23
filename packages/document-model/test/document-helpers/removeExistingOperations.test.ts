@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import type { Operation } from "document-model";
+import type { Operation } from "@powerhousedao/shared/document-model";
 import {
   deriveOperationId,
   removeExistingOperations,
-} from "document-model/core";
-import { buildOperations, fakeAction } from "document-model/test";
+} from "@powerhousedao/shared/document-model";
+import { fakeAction } from "../helpers.js";
+import { buildOperations } from "./utils.js";
 
 const TEST_DOC_ID = "test-doc-id";
 const TEST_BRANCH = "main";

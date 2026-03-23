@@ -1,13 +1,19 @@
 import type {
-  GetStrandsOptions,
   ListenerFilter,
+  PullResponderTriggerData,
+  Trigger,
+} from "@powerhousedao/shared/document-drive";
+import type {
+  GetStrandsOptions,
   ListenerRevision,
   OperationUpdate,
-  PullResponderTriggerData,
   StrandUpdate,
-  Trigger,
 } from "document-drive";
-import type { Operation, PHBaseState, PHDocument } from "document-model";
+import type {
+  Operation,
+  PHBaseState,
+  PHDocument,
+} from "@powerhousedao/shared/document-model";
 
 export type StrandUpdateSource =
   | {

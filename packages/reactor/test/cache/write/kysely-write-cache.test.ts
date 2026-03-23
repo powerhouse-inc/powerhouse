@@ -1,4 +1,7 @@
-import type { Operation, PHDocument } from "document-model";
+import type {
+  Operation,
+  PHDocument,
+} from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { KyselyWriteCache } from "../../../src/cache/kysely-write-cache.js";

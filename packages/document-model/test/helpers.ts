@@ -1,4 +1,3 @@
-import { randomUUID } from "crypto";
 import type {
   Action,
   CreateState,
@@ -6,12 +5,13 @@ import type {
   PHBaseState,
   PHDocument,
   StateReducer,
-} from "document-model";
+} from "@powerhousedao/shared/document-model";
 import {
   createAction,
   createReducer,
   defaultBaseState,
-} from "document-model/core";
+} from "@powerhousedao/shared/document-model";
+import { randomUUID } from "crypto";
 import type { TestPHState } from "./types.js";
 
 /**

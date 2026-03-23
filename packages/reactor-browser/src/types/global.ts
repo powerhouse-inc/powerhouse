@@ -3,8 +3,8 @@ import type {
   IReactorClient,
   ReactorClientModule,
 } from "@powerhousedao/reactor";
+import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
 import type { IRenown } from "@renown/sdk";
-import type { DocumentDriveDocument } from "document-drive";
 import type { PHGlobalConfig } from "./config.js";
 import type { IDocumentCache } from "./documents.js";
 import type { PHModal } from "./modals.js";

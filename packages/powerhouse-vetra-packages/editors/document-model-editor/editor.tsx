@@ -4,6 +4,7 @@ import {
   useSetPHDocumentEditorConfig,
 } from "@powerhousedao/reactor-browser";
 import { pascalCase } from "change-case";
+import { generateId } from "@powerhousedao/shared/document-model";
 import {
   addModule,
   addOperation,
@@ -24,8 +25,7 @@ import {
   setOperationName,
   setOperationSchema,
   setStateSchema,
-} from "document-model";
-import { generateId } from "document-model/core";
+} from "@powerhousedao/shared/document-model";
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { Divider } from "./components/divider.js";
 import ModelMetadata from "./components/model-metadata-form.js";

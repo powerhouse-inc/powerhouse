@@ -1,4 +1,4 @@
-import type { Action, Signature } from "document-model";
+import type { Action, Signature } from "@powerhousedao/shared/document-model";
 import { describe, expect, it } from "vitest";
 import { signAction, signActions } from "../../src/core/utils.js";
 import { createMockSigner, createTestAction } from "../factories.js";

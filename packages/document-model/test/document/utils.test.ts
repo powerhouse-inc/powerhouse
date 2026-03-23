@@ -6,10 +6,11 @@ import {
   hashBrowser,
   replayDocument,
   validateOperations,
-} from "document-model/core";
-import { getLocalFile, hashNode } from "document-model/node";
-
-import type { CountPHState } from "document-model/test";
+} from "@powerhousedao/shared/document-model";
+import fs from "fs";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { getLocalFile, hashNode } from "../../node.mjs";
+import type { CountPHState } from "../helpers.js";
 import {
   countReducer,
   createCountDocumentState,
@@ -18,9 +19,7 @@ import {
   mutableCountReducer,
   setLocalName,
   testCreateBaseState,
-} from "document-model/test";
-import fs from "fs";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+} from "../helpers.js";
 
 describe("Base utils", () => {
   const tempDir = "./test/document/temp/utils/";

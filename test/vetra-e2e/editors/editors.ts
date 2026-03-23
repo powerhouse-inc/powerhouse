@@ -1,3 +1,3 @@
-import type { EditorModule } from "document-model";
+import type { EditorModule } from "@powerhousedao/shared/document-model";
 
 export const editors: EditorModule[] = [];

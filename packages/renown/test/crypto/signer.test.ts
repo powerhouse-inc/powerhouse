@@ -1,16 +1,19 @@
+import type { Action, Signature } from "@powerhousedao/shared/document-model";
+import {
+  deriveOperationId,
+  type Operation,
+} from "@powerhousedao/shared/document-model";
+import { beforeEach, describe, expect, it } from "vitest";
 import {
   MemoryKeyStorage,
   RenownCryptoBuilder,
   RenownCryptoSigner,
   createSignatureVerifier,
-  parseSignatureHashField,
   extractResultingHashFromSignature,
+  parseSignatureHashField,
   signatureHasResultingHash,
   type IRenownCrypto,
 } from "../../src/crypto/index.js";
-import type { Action, Operation, Signature } from "document-model";
-import { deriveOperationId } from "document-model/core";
-import { beforeEach, describe, expect, it } from "vitest";
 
 const TEST_DOC_ID = "test-doc-id";
 const TEST_BRANCH = "main";

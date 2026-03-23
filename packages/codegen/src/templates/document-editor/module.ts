@@ -7,7 +7,7 @@ export const documentEditorModuleFileTemplate = (v: {
   documentTypes: string;
 }) =>
   tsx`
-import type { EditorModule } from "document-model";
+import type { EditorModule } from "@powerhousedao/shared/document-model";
 import { lazy } from "react";
 
 /** Document editor module for the "${v.documentTypes}" document type */

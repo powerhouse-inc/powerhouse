@@ -1,5 +1,8 @@
-import type { BrowserAnalyticsStore } from "@powerhousedao/analytics-engine-browser";
-import { MemoryAnalyticsStore } from "@powerhousedao/analytics-engine-browser";
+import { PGlite } from "@electric-sql/pglite";
+import {
+  BrowserAnalyticsStore,
+  createFsPglite,
+} from "@powerhousedao/analytics-engine-browser";
 import type {
   AnalyticsDimension,
   AnalyticsQuery,
@@ -10,29 +13,27 @@ import {
   AnalyticsQueryEngine,
 } from "@powerhousedao/analytics-engine-core";
 import {
+  AnalyticsProvider,
   clearGlobal,
   getGlobal,
   setGlobal,
+  useAddSeriesValue,
+  useAnalyticsQuery,
+  useAnalyticsSeries,
+  useGetDimensions,
 } from "@powerhousedao/reactor-browser";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { DateTime } from "luxon";
 import type { PropsWithChildren } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { renderHook } from "vitest-browser-react";
-import {
-  AnalyticsProvider,
-  useAddSeriesValue,
-  useAnalyticsQuery,
-  useAnalyticsSeries,
-  useGetDimensions,
-} from "../src/analytics.js";
 
 describe("Analytics Store", () => {
   const TEST_SOURCE = AnalyticsPath.fromString(
     "test/analytics/AnalyticsStore.spec",
   );
 
-  function createWrapper() {
+  async function createWrapper() {
     const queryClient = new QueryClient({
       defaultOptions: {
         queries: {
@@ -41,13 +42,14 @@ describe("Analytics Store", () => {
       },
     });
 
-    const store = new MemoryAnalyticsStore();
     const databaseName = Date.now().toString();
+    const pgLite = await createFsPglite(databaseName);
+    const store = new BrowserAnalyticsStore({ pgLite });
     setGlobal(
       "analytics",
       store.init().then(() => {
         const engine = new AnalyticsQueryEngine(store);
-        return { store, engine, options: { databaseName } };
+        return { store, engine, options: { databaseName, pgLite } };
       }),
     );
 
@@ -76,7 +78,7 @@ describe("Analytics Store", () => {
   });
 
   it("should add and query analytics data", async () => {
-    const wrapper = createWrapper();
+    const wrapper = await createWrapper();
 
     const { result: addResult, act } = renderHook(() => useAddSeriesValue(), {
       wrapper,
@@ -199,10 +201,11 @@ describe("Analytics Store", () => {
   });
 
   it("should execute analytics query", async () => {
-    const store = new MemoryAnalyticsStore();
+    const pgLite = await PGlite.create();
+    const store = new BrowserAnalyticsStore({ pgLite });
     await store.init();
     const engine = new AnalyticsQueryEngine(store);
-    const wrapper = createWrapper();
+    const wrapper = await createWrapper();
 
     // Add test data
     const { result: addResult } = renderHook(() => useAddSeriesValue(), {
@@ -246,10 +249,12 @@ describe("Analytics Store", () => {
   });
 
   it("should get dimensions", async () => {
-    const store = new MemoryAnalyticsStore();
+    const pgLite = await PGlite.create();
+
+    const store = new BrowserAnalyticsStore({ pgLite });
     await store.init();
 
-    const wrapper = createWrapper();
+    const wrapper = await createWrapper();
 
     // Add test data
     const { result: addResult } = renderHook(() => useAddSeriesValue(), {
@@ -277,7 +282,8 @@ describe("Analytics Store", () => {
   });
 
   it("should be notified when query data changes", async () => {
-    const store = new MemoryAnalyticsStore();
+    const pgLite = await PGlite.create();
+    const store = new BrowserAnalyticsStore({ pgLite });
     await store.init();
 
     const basePath = AnalyticsPath.fromString("atlas/legacy/core-units");
@@ -322,10 +328,11 @@ describe("Analytics Store", () => {
   });
 
   it("should refetch analytics query when data changes", async () => {
-    const store = new MemoryAnalyticsStore();
+    const pgLite = await PGlite.create();
+    const store = new BrowserAnalyticsStore({ pgLite });
     await store.init();
     const engine = new AnalyticsQueryEngine(store);
-    const wrapper = createWrapper();
+    const wrapper = await createWrapper();
 
     const query: AnalyticsQuery = {
       start: DateTime.now().minus({ days: 1 }),

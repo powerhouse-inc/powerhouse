@@ -1,11 +1,11 @@
 import type { SearchAutocompleteOption } from "@powerhousedao/design-system/ui";
 import { SearchAutocomplete } from "@powerhousedao/design-system/ui";
-import { useCallback, useMemo } from "react";
-import type { RegistryPackageInfo } from "./types.js";
+import type { RegistryPackageList } from "@powerhousedao/shared/registry";
+import { useCallback } from "react";
 
 export type PackageManagerInputProps = {
-  onInstall: (packageName: string) => void | Promise<void>;
-  fetchPackages?: (query: string) => Promise<RegistryPackageInfo[]>;
+  registryPackageList: RegistryPackageList;
+  onInstall: (packageName: string) => Promise<void>;
   disabled?: boolean;
   className?: string;
 };
@@ -13,20 +13,27 @@ export type PackageManagerInputProps = {
 export const PackageManagerInput: React.FC<PackageManagerInputProps> = (
   props,
 ) => {
-  const { onInstall, fetchPackages, disabled, className } = props;
+  const { registryPackageList, onInstall, disabled, className } = props;
 
-  const fetchOptions = useMemo(() => {
-    if (!fetchPackages) return undefined;
-    return async (query: string): Promise<SearchAutocompleteOption[]> => {
-      const packages = await fetchPackages(query);
-      return packages.map((pkg) => ({
-        value: pkg.name,
-        label: pkg.name,
-        description: pkg.description,
-        meta: pkg.publisher,
-      }));
-    };
-  }, [fetchPackages]);
+  const fetchOptions = async (
+    query: string,
+  ): Promise<SearchAutocompleteOption[]> =>
+    Promise.resolve(
+      registryPackageList
+        .filter(
+          (pkg) =>
+            pkg.name.toLowerCase().includes(query.toLowerCase()) ||
+            pkg.manifest?.description
+              ?.toLowerCase()
+              .includes(query.toLowerCase()),
+        )
+        .map((pkg) => ({
+          value: pkg.name,
+          label: pkg.name,
+          description: pkg.manifest?.description,
+          meta: pkg.manifest?.publisher?.name,
+        })),
+    );
 
   const handleSelect = useCallback(
     (value: string) => {

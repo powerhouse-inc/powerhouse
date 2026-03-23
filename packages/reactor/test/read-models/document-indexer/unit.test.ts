@@ -5,7 +5,7 @@ import type {
   OperationContext,
   OperationWithContext,
   RemoveRelationshipAction,
-} from "document-model";
+} from "@powerhousedao/shared/document-model";
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
 import { v4 as uuidv4 } from "uuid";

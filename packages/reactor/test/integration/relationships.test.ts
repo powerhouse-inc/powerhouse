@@ -1,4 +1,4 @@
-import { driveDocumentModelModule } from "document-drive";
+import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import { documentModelDocumentModelModule } from "document-model";
 import type { Kysely } from "kysely";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";

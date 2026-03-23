@@ -1,18 +1,18 @@
+import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
+import {
+  generateId,
+  type Action,
+  type DocumentModelModule,
+  type Operation,
+  type PHBaseState,
+  type PHDocument,
+  type Reducer,
+} from "@powerhousedao/shared/document-model";
 import type {
   BaseDocumentDriveServer,
   IDocumentDriveServer,
 } from "document-drive";
-import { driveDocumentModelModule } from "document-drive/drive-document-model";
-import type {
-  Action,
-  DocumentModelModule,
-  Operation,
-  PHBaseState,
-  PHDocument,
-  Reducer,
-} from "document-model";
 import { documentModelDocumentModelModule } from "document-model";
-import { generateId } from "document-model/core";
 import type { ExpectStatic } from "vitest";
 
 export const baseDocumentModels = [

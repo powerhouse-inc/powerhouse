@@ -1,4 +1,8 @@
-import type { FileNode, FolderNode, Node } from "document-drive";
+import type {
+  FileNode,
+  FolderNode,
+  Node,
+} from "@powerhousedao/shared/document-drive";
 
 /** Sorts nodes by name. */
 export function sortNodesByName<T extends Node>(nodes: T[]) {

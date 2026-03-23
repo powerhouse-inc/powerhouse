@@ -1,7 +1,17 @@
 import { DocumentToolbar } from "@powerhousedao/design-system/connect";
 import { useSetPHDocumentEditorConfig } from "@powerhousedao/reactor-browser";
 import { useCallback } from "react";
-import { actions } from "../../document-models/vetra-package/index.js";
+import {
+  addPackageKeyword,
+  removePackageKeyword,
+  setPackageAuthorName,
+  setPackageAuthorWebsite,
+  setPackageCategory,
+  setPackageDescription,
+  setPackageGithubUrl,
+  setPackageName,
+  setPackageNpmUrl,
+} from "../../document-models/vetra-package/index.js";
 import { useSelectedDriveVetraPackage } from "../hooks/useVetraDocument.js";
 import { MetaForm } from "./components/MetaForm.js";
 import { editorConfig } from "./config.js";
@@ -20,7 +30,7 @@ export default function Editor(props: EditorProps) {
       if (!document.state.global.name && !name) return;
       if (name === document.state.global.name) return;
 
-      dispatch(actions.setPackageName({ name }));
+      dispatch(setPackageName({ name }));
     },
     [document.state.global.name],
   );
@@ -30,7 +40,7 @@ export default function Editor(props: EditorProps) {
       if (!document.state.global.description && !description) return;
       if (description === document.state.global.description) return;
 
-      dispatch(actions.setPackageDescription({ description }));
+      dispatch(setPackageDescription({ description }));
     },
     [document.state.global.description],
   );
@@ -40,7 +50,7 @@ export default function Editor(props: EditorProps) {
       if (!document.state.global.category && !category) return;
       if (category === document.state.global.category) return;
 
-      dispatch(actions.setPackageCategory({ category }));
+      dispatch(setPackageCategory({ category }));
     },
     [document.state.global.category],
   );
@@ -50,7 +60,7 @@ export default function Editor(props: EditorProps) {
       if (!document.state.global.author.name && !name) return;
       if (name === document.state.global.author.name) return;
 
-      dispatch(actions.setPackageAuthorName({ name }));
+      dispatch(setPackageAuthorName({ name }));
     },
     [document.state.global.author.name],
   );
@@ -60,7 +70,7 @@ export default function Editor(props: EditorProps) {
       if (!document.state.global.author.website && !website) return;
       if (website === document.state.global.author.website) return;
 
-      dispatch(actions.setPackageAuthorWebsite({ website }));
+      dispatch(setPackageAuthorWebsite({ website }));
     },
     [document.state.global.author.website],
   );
@@ -70,7 +80,7 @@ export default function Editor(props: EditorProps) {
       if (!document.state.global.githubUrl && !url) return;
       if (url === document.state.global.githubUrl) return;
 
-      dispatch(actions.setPackageGithubUrl({ url }));
+      dispatch(setPackageGithubUrl({ url }));
     },
     [document.state.global.githubUrl],
   );
@@ -80,17 +90,17 @@ export default function Editor(props: EditorProps) {
       if (!document.state.global.npmUrl && !url) return;
       if (url === document.state.global.npmUrl) return;
 
-      dispatch(actions.setPackageNpmUrl({ url }));
+      dispatch(setPackageNpmUrl({ url }));
     },
     [document.state.global.npmUrl],
   );
 
   const onAddKeyword = useCallback((keyword: { id: string; label: string }) => {
-    dispatch(actions.addPackageKeyword(keyword));
+    dispatch(addPackageKeyword(keyword));
   }, []);
 
   const onRemoveKeyword = useCallback((id: string) => {
-    dispatch(actions.removePackageKeyword({ id }));
+    dispatch(removePackageKeyword({ id }));
   }, []);
 
   return (

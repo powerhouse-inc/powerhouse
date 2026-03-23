@@ -12,18 +12,18 @@ import type {
   PHAuthState,
   PHDocumentState,
   PHBaseState,
-} from "document-model";
+} from "@powerhousedao/shared/document-model";
 import {
   createBaseState,
   defaultBaseState,
-} from "document-model/core";
+} from "@powerhousedao/shared/document-model";
 import type {
   ${v.phDocumentTypeName},
   ${v.localStateName},
   ${v.globalStateName},
   ${v.phStateName},
 } from "./types.js";
-import { createDocument } from "./utils.js";
+import { utils } from "./utils.js";
 
 export function defaultGlobalState(): ${v.globalStateName} {
   return ${v.initialGlobalState};
@@ -84,7 +84,7 @@ export function create${v.phDocumentTypeName}(
     local?: Partial<${v.localStateName}>;
   }>,
 ): ${v.phDocumentTypeName} {
-  const document = createDocument(
+  const document = utils.createDocument(
     state ? createState(
       createBaseState(state.auth, state.document),
       state.global,

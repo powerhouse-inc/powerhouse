@@ -1,4 +1,4 @@
-import type { ImportScriptModule } from "document-model";
+import type { ImportScriptModule } from "@powerhousedao/shared/document-model";
 import { useVetraPackages } from "./vetra-packages.js";
 
 export function useImportScriptModules(): ImportScriptModule[] | undefined {

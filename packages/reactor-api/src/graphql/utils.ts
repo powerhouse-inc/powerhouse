@@ -4,8 +4,11 @@ import type {
   GqlOperation,
   SubgraphClass,
 } from "@powerhousedao/reactor-api";
-import type { DocumentDriveDocument } from "document-drive";
-import type { Operation, PHDocument } from "document-model";
+import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
+import type {
+  Operation,
+  PHDocument,
+} from "@powerhousedao/shared/document-model";
 import { BaseSubgraph } from "./base-subgraph.js";
 
 export function isSubgraphClass(

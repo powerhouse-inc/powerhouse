@@ -5,7 +5,7 @@ import {
   showPHModal,
   useDrives,
 } from "@powerhousedao/reactor-browser";
-import type { DocumentDriveDocument } from "document-drive";
+import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
 
 export const DangerZone: React.FC = () => {
   const drives = useDrives();

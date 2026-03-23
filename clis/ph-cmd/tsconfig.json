@@ -1,7 +1,8 @@
 {
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
-    "outDir": "./dist"
+    "outDir": "./dist",
+    "emitDeclarationOnly": true
   },
   "include": [
     "**/*"
@@ -12,6 +13,9 @@
     },
     {
       "path": "../../packages/common"
+    },
+    {
+      "path": "../../packages/shared"
     }
   ]
 }

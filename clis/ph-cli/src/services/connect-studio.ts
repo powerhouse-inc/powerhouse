@@ -1,54 +1,33 @@
-import {
-  createServer,
-  loadConfigFromFile,
-  mergeConfig,
-  type InlineConfig,
-  type Logger,
-} from "vite";
+import { getConnectBaseViteConfig } from "@powerhousedao/builder-tools";
+import type { InlineConfig, Logger } from "vite";
+import { createServer, mergeConfig } from "vite";
 import type { ConnectStudioArgs } from "../types.js";
 import { assignEnvVars } from "../utils/assign-env-vars.js";
-import { resolveViteConfigPath } from "../utils/resolve-connect-dirs.js";
 
 export async function runConnectStudio(
   args: ConnectStudioArgs,
-  viteLogger?: Logger,
+  customLogger?: Logger,
 ) {
-  const {
-    port,
-    host,
-    open,
-    cors,
-    strictPort,
-    printUrls,
-    bindCLIShortcuts,
-    force,
-  } = args;
+  const { port, host, open, cors, strictPort, printUrls, bindCLIShortcuts } =
+    args;
   assignEnvVars(args);
   const mode = "development";
-  const projectRoot = process.cwd();
 
-  const viteConfigPath = resolveViteConfigPath({});
-  const userViteConfig = await loadConfigFromFile(
-    { command: "serve", mode },
-    viteConfigPath,
-  );
+  const dirname = process.cwd();
+
+  const baseConfig = getConnectBaseViteConfig({
+    mode,
+    dirname,
+  });
 
   const devServerConfig: InlineConfig = {
-    mode,
-    configFile: false,
     server: { port, host, open, cors, strictPort },
-    optimizeDeps: {
-      force,
-    },
-    customLogger: viteLogger,
+    customLogger,
   };
 
-  const mergedConfig = mergeConfig(
-    userViteConfig?.config ?? {},
-    devServerConfig,
-  );
+  const config = mergeConfig(baseConfig, devServerConfig);
 
-  const server = await createServer(mergedConfig);
+  const server = await createServer(config);
 
   await server.listen();
 

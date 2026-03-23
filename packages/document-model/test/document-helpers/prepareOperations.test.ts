@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { prepareOperations } from "document-model/core";
+import { prepareOperations } from "@powerhousedao/shared/document-model";
 import { buildOperations } from "./utils.js";
 
 describe("prepareOperations", () => {

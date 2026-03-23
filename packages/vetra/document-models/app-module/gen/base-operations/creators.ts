@@ -1,23 +1,23 @@
-import { createAction } from "document-model/core";
+import { createAction } from "@powerhousedao/shared/document-model";
 import {
-  SetAppNameInputSchema,
-  SetAppStatusInputSchema,
   AddDocumentTypeInputSchema,
   RemoveDocumentTypeInputSchema,
+  SetAppNameInputSchema,
+  SetAppStatusInputSchema,
   SetDocumentTypesInputSchema,
 } from "../schema/zod.js";
 import type {
-  SetAppNameInput,
-  SetAppStatusInput,
   AddDocumentTypeInput,
   RemoveDocumentTypeInput,
+  SetAppNameInput,
+  SetAppStatusInput,
   SetDocumentTypesInput,
 } from "../types.js";
 import type {
-  SetAppNameAction,
-  SetAppStatusAction,
   AddDocumentTypeAction,
   RemoveDocumentTypeAction,
+  SetAppNameAction,
+  SetAppStatusAction,
   SetDocumentTypesAction,
 } from "./actions.js";
 

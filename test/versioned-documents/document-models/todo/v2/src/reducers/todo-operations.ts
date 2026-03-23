@@ -1,4 +1,4 @@
-import type { TodoTodoOperationsOperations } from "versioned-documents/document-models/todo/v2";
+import type { TodoTodoOperationsOperations } from "document-models/todo/v2";
 
 export const todoTodoOperationsOperations: TodoTodoOperationsOperations = {
   addTodoOperation(state, action) {

@@ -2,8 +2,8 @@ import { pascalCase } from "change-case";
 import type {
   DocumentModelDocument,
   DocumentModelGlobalState,
-} from "document-model";
-import { documentModelReducer } from "document-model";
+} from "@powerhousedao/shared/document-model";
+import { documentModelReducer } from "@powerhousedao/shared/document-model";
 import { baseLoadFromFile } from "document-model/node";
 import fs from "node:fs";
 import { readFile } from "node:fs/promises";

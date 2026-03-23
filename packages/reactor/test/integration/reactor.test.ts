@@ -1,4 +1,7 @@
-import type { DocumentDriveDocument, FileNode } from "document-drive";
+import type {
+  DocumentDriveDocument,
+  FileNode,
+} from "@powerhousedao/shared/document-drive";
 import {
   addFile,
   addFolder,
@@ -12,8 +15,8 @@ import {
   setSharingType,
   updateFile,
   updateNode,
-} from "document-drive";
-import { generateId } from "document-model/core";
+} from "@powerhousedao/shared/document-drive";
+import { generateId } from "@powerhousedao/shared/document-model";
 import type { Kysely } from "kysely";
 import { v4 as uuidv4 } from "uuid";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";

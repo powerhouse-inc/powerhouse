@@ -2,11 +2,14 @@ import { DocumentToolbar } from "@powerhousedao/design-system/connect";
 import { useSetPHDocumentEditorConfig } from "@powerhousedao/reactor-browser";
 import { useCallback } from "react";
 import { useSelectedDocumentEditorDocument } from "../../document-models/document-editor/hooks.js";
-import type {
-  AddDocumentTypeInput,
-  RemoveDocumentTypeInput,
+import {
+  addDocumentType,
+  removeDocumentType,
+  setEditorName,
+  setEditorStatus,
+  type AddDocumentTypeInput,
+  type RemoveDocumentTypeInput,
 } from "../../document-models/document-editor/index.js";
-import { actions } from "../../document-models/document-editor/index.js";
 import { DocumentEditorForm } from "./components/DocumentEditorForm.js";
 import { editorConfig } from "./config.js";
 
@@ -19,27 +22,27 @@ export default function Editor() {
       if (!document.state.global.name && !name) return;
       if (name === document.state.global.name) return;
 
-      dispatch(actions.setEditorName({ name }));
+      dispatch(setEditorName({ name }));
     },
     [document.state.global.name, dispatch],
   );
 
   const onAddDocumentType = useCallback(
     (input: AddDocumentTypeInput) => {
-      dispatch(actions.addDocumentType(input));
+      dispatch(addDocumentType(input));
     },
     [dispatch],
   );
 
   const onRemoveDocumentType = useCallback(
     (input: RemoveDocumentTypeInput) => {
-      dispatch(actions.removeDocumentType(input));
+      dispatch(removeDocumentType(input));
     },
     [dispatch],
   );
 
   const onConfirm = useCallback(() => {
-    dispatch(actions.setEditorStatus({ status: "CONFIRMED" }));
+    dispatch(setEditorStatus({ status: "CONFIRMED" }));
   }, [dispatch]);
 
   return (

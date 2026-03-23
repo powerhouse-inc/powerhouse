@@ -1,5 +1,5 @@
 import { addDays } from "date-fns";
-import type { Operation } from "document-model";
+import type { Operation } from "@powerhousedao/shared/document-model";
 import type { SignatureArray } from "./types.js";
 
 export const mockSignature: SignatureArray = [

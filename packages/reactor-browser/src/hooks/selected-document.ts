@@ -1,6 +1,6 @@
 import type { DocumentDispatch } from "@powerhousedao/reactor-browser";
-import { isFileNode } from "document-drive";
-import type { Action, PHDocument } from "document-model";
+import { isFileNode } from "@powerhousedao/shared/document-drive";
+import type { Action, PHDocument } from "@powerhousedao/shared/document-model";
 import { NoSelectedDocumentError } from "../errors.js";
 import { useDocumentById } from "./document-by-id.js";
 import { useDocumentOfType } from "./document-of-type.js";

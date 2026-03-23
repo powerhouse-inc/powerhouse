@@ -1,6 +1,6 @@
 import { VETRA_PROCESSOR_CONFIG_KEY } from "@powerhousedao/config";
 import type { IProcessorHostModule } from "@powerhousedao/reactor-browser";
-import type { PHDocumentHeader } from "document-model";
+import type { PHDocumentHeader } from "@powerhousedao/shared/document-model";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { codegenProcessorFactory } from "../factory.js";
 

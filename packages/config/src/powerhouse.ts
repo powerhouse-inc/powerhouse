@@ -12,88 +12,16 @@ export type LogLevel = keyof typeof LogLevels;
 export function isLogLevel(value: unknown): value is LogLevel {
   return typeof value === "string" && value in LogLevels;
 }
-export type PHPackageProvider = "npm" | "github" | "local";
+import type { PowerhouseConfig } from "@powerhousedao/shared/clis";
+export type {
+  PHPackageProvider,
+  PowerhousePackage,
+} from "@powerhousedao/shared/clis";
+export type { PowerhouseConfig };
 
-export type PowerhousePackage = {
-  packageName: string;
-  version?: string;
-  provider?: PHPackageProvider;
-  url?: string;
-};
+export const DEFAULT_REGISTRY_URL = "https://registry.prod.vetra.io";
 
-export type PowerhouseConfig = {
-  // required
-  logLevel: LogLevel;
-  documentModelsDir: string;
-  editorsDir: string;
-  processorsDir: string;
-  subgraphsDir: string;
-  importScriptsDir: string;
-  skipFormat: boolean;
-
-  // optional
-  interactive?: boolean;
-  watch?: boolean;
-  reactor?: {
-    port?: number;
-    https?:
-      | undefined
-      | boolean
-      | {
-          keyPath: string;
-          certPath: string;
-        };
-    storage?: {
-      type: "filesystem" | "memory" | "postgres" | "browser";
-      filesystemPath?: string;
-      postgresUrl?: string;
-    };
-  };
-  auth?: {
-    enabled?: boolean;
-    admins: string[];
-    defaultProtection?: boolean;
-  };
-  switchboard?: {
-    database?: {
-      url?: string;
-    };
-    port?: number;
-  };
-  studio?: {
-    port?: number;
-    host?: string;
-    https: boolean;
-    openBrowser?: boolean;
-  };
-  packages?: PowerhousePackage[];
-  vetra?: {
-    driveId: string;
-    driveUrl: string;
-  };
-};
-
-const DEFAULT_DOCUMENT_MODELS_DIR = "./document-models";
-const DEFAULT_EDITORS_DIR = "./editors";
-const DEFAULT_PROCESSORS_DIR = "./processors";
-const DEFAULT_SUBGRAPHS_DIR = "./subgraphs";
-const DEFAULT_IMPORT_SCRIPTS_DIR = "./scripts";
-const DEFAULT_SKIP_FORMAT = false;
-const DEFAULT_LOG_LEVEL = "info";
-
-export const DEFAULT_CONFIG: PowerhouseConfig = {
-  documentModelsDir: DEFAULT_DOCUMENT_MODELS_DIR,
-  editorsDir: DEFAULT_EDITORS_DIR,
-  processorsDir: DEFAULT_PROCESSORS_DIR,
-  subgraphsDir: DEFAULT_SUBGRAPHS_DIR,
-  importScriptsDir: DEFAULT_IMPORT_SCRIPTS_DIR,
-  skipFormat: DEFAULT_SKIP_FORMAT,
-  logLevel: DEFAULT_LOG_LEVEL,
-  auth: {
-    enabled: false,
-    admins: [],
-  },
-};
+export { DEFAULT_CONFIG } from "@powerhousedao/shared/clis";
 
 export type Module = {
   id: string;
@@ -134,5 +62,29 @@ export type VetraProcessorConfigType = {
   driveUrl: string;
   driveId: string;
 };
+
+export function resolveRegistryConfig(
+  config: PowerhouseConfig,
+  env: Record<string, string | undefined> = {},
+): {
+  registryUrl: string | undefined;
+  packageNames: string[];
+} {
+  let registryUrl = config.packageRegistryUrl;
+  let packageNames =
+    config.packages
+      ?.filter((p) => p.provider === "registry")
+      .map((p) => p.packageName) ?? [];
+
+  // Env vars override config
+  if (env.PH_REGISTRY_URL) {
+    registryUrl = env.PH_REGISTRY_URL;
+  }
+  if (env.PH_REGISTRY_PACKAGES) {
+    packageNames = env.PH_REGISTRY_PACKAGES.split(",").map((p) => p.trim());
+  }
+
+  return { registryUrl, packageNames };
+}
 
 export const VETRA_PROCESSOR_CONFIG_KEY = "VetraConfig";

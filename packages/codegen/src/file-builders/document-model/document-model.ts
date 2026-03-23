@@ -14,9 +14,9 @@ import {
   getInitialStates,
   getOrCreateSourceFile,
 } from "@powerhousedao/codegen/utils";
-import { directoryExists, fileExists } from "@powerhousedao/common/clis";
+import { directoryExists, fileExists } from "@powerhousedao/shared/clis";
+import type { DocumentModelGlobalState } from "@powerhousedao/shared/document-model";
 import { kebabCase } from "change-case";
-import type { DocumentModelGlobalState } from "document-model";
 import { copyFile, mkdir, readdir, writeFile } from "node:fs/promises";
 import path from "path";
 import { type Project } from "ts-morph";
