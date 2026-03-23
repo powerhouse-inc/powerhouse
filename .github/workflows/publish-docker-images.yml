@@ -133,8 +133,11 @@ jobs:
 
           git diff --cached --quiet && echo "No changes to commit" && exit 0
           git commit -m "chore(academy): update academy image tag to ${TAG}"
-          git pull --rebase origin main
-          git push
+          for i in 1 2 3; do
+            git pull --rebase origin main && git push && break
+            echo "Push attempt $i failed, retrying..."
+            sleep 5
+          done
 
   update-k8s-registry:
     name: Update Registry Image in K8s Hosting
@@ -177,5 +180,8 @@ jobs:
 
           git diff --cached --quiet && echo "No changes to commit" && exit 0
           git commit -m "chore(registry): update registry image tag to ${TAG}"
-          git pull --rebase origin main
-          git push
+          for i in 1 2 3; do
+            git pull --rebase origin main && git push && break
+            echo "Push attempt $i failed, retrying..."
+            sleep 5
+          done
