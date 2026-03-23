@@ -29,6 +29,7 @@ This document contains all documentation comments for the hooks exported from `p
 - [Timeline Revision](#timeline-revision)
 - [Use Get Switchboard Link](#use-get-switchboard-link)
 - [Vetra Packages](#vetra-packages)
+- [Registry Client](./src/registry/README.md)
 
 ---
 
@@ -503,4 +504,3 @@ Gets the value of an item in the global document config for a given key.
 
 Strongly typed, inferred from type definition for the key.
 
----

@@ -90,6 +90,13 @@ export const registryCommand = command({
       defaultValue: () => process.env.REGISTRY_WEB !== "false",
       defaultValueIsSerializable: true,
     }),
+    webhooks: option({
+      long: "webhook",
+      type: optional(string),
+      description: "Comma-separated webhook URLs to notify on publish",
+      defaultValue: () => process.env.REGISTRY_WEBHOOKS,
+      defaultValueIsSerializable: true,
+    }),
   },
   handler: async (args) => {
     console.log(args);

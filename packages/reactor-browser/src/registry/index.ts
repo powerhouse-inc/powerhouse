@@ -1,3 +1,3 @@
 export { RegistryClient } from "./client.js";
 export * from "./fetchers.js";
-export type { RegistryPackageInfo } from "./types.js";
+export type { PublishEvent, RegistryPackageInfo } from "./types.js";

@@ -1,19 +1,6 @@
 import type { PackageInfo } from "@powerhousedao/shared/registry";
 import { getPackages, getPackagesByDocumentType } from "./fetchers.js";
-import type { RegistryPackageInfo } from "./types.js";
-
-interface PackageInfoFromApi {
-  name: string;
-  manifest?: {
-    description?: string;
-    version?: string;
-    category?: string;
-    publisher?: {
-      name?: string;
-      url?: string;
-    };
-  };
-}
+import type { PublishEvent, RegistryPackageInfo } from "./types.js";
 
 function cdnUrlToApiUrl(cdnUrl: string): string {
   return cdnUrl.replace(/\/-\/cdn\/?$/, "");
@@ -55,5 +42,18 @@ export class RegistryClient {
         pkg.name.toLowerCase().includes(lowerQuery) ||
         pkg.description?.toLowerCase().includes(lowerQuery),
     );
+  }
+
+  onPublish(callback: (event: PublishEvent) => void): () => void {
+    const eventSource = new EventSource(`${this.apiUrl}/-/events`);
+
+    eventSource.addEventListener("publish", (e: MessageEvent<string>) => {
+      const data = JSON.parse(e.data) as PublishEvent;
+      callback(data);
+    });
+
+    return () => {
+      eventSource.close();
+    };
   }
 }
