@@ -1,5 +1,5 @@
 import type { Express } from "express";
-import type { ILogger } from "document-drive";
+import type { ILogger } from "document-model";
 import type { Context } from "../types.js";
 import { ApolloGatewayAdapter } from "./adapter-gateway-apollo.js";
 import { createExpressHttpAdapter } from "./adapter-http-express.js";
