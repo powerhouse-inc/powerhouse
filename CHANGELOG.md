@@ -1,3 +1,7 @@
+## 6.0.0-dev.105 (2026-03-23)
+
+This was a version bump only, there were no code changes.
+
 ## 6.0.0-dev.104 (2026-03-22)
 
 This was a version bump only, there were no code changes.
