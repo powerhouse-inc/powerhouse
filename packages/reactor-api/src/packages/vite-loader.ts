@@ -10,6 +10,7 @@ import path from "node:path";
 import { readPackage } from "read-pkg";
 import type { Logger, ViteDevServer } from "vite";
 import { createLogger, createServer } from "vite";
+import tsconfigPaths from "vite-tsconfig-paths";
 import { isSubgraphClass } from "../graphql/utils.js";
 import type {
   ISubscribablePackageLoader,
@@ -247,6 +248,7 @@ export async function startViteServer(root: string, logger?: Logger) {
       },
     },
     plugins: [
+      tsconfigPaths(),
       viteCommonjs(),
       {
         name: "suppress-hmr",

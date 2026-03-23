@@ -108,6 +108,7 @@
     "graphql-tag": "catalog:",
     "msw": "^2.7.3",
     "vite": "catalog:",
+    "vite-tsconfig-paths": "catalog:",
     "vitest": "catalog:"
   }
 }

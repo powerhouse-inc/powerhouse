@@ -8,9 +8,20 @@ import { dispatchActions } from "../actions/dispatch.js";
  * @param document - The document to dispatch actions to.
  * @returns A tuple containing the document and a dispatch function.
  */
+export type DispatchFn<TAction> = (
+  actionOrActions: TAction[] | TAction | undefined,
+  onErrors?: (errors: Error[]) => void,
+  onSuccess?: (result: PHDocument) => void,
+) => void;
+
+export type UseDispatchResult<TDocument, TAction> = readonly [
+  TDocument | undefined,
+  DispatchFn<TAction>,
+];
+
 export function useDispatch<TDocument = PHDocument, TAction = Action>(
   document: TDocument | undefined,
-) {
+): UseDispatchResult<TDocument, TAction> {
   /**
    * Dispatches actions to the document.
    * @param actionOrActions - The action or actions to dispatch.

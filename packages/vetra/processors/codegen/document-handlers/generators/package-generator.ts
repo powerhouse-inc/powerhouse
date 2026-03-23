@@ -15,6 +15,19 @@ export class PackageGenerator extends BaseDocumentGen {
   readonly supportedDocumentTypes = "powerhouse/package";
 
   /**
+   * Extract the global state from the full document state
+   */
+  private extractGlobalState(
+    strand: InternalTransmitterUpdate,
+  ): VetraPackageState | undefined {
+    const fullState = strand.state as VetraPackagePHState | undefined;
+    if (!fullState) {
+      return undefined;
+    }
+    return fullState.global;
+  }
+
+  /**
    * Validate if this package strand should be processed
    */
   shouldProcess(strand: InternalTransmitterUpdate): boolean {
@@ -23,7 +36,7 @@ export class PackageGenerator extends BaseDocumentGen {
       return false;
     }
 
-    const state = strand.state as VetraPackageState;
+    const state = this.extractGlobalState(strand);
     if (!state) {
       logger.debug(`>>> No state found for package: ${strand.documentId}`);
       return false;
@@ -33,7 +46,13 @@ export class PackageGenerator extends BaseDocumentGen {
   }
 
   async generate(strand: InternalTransmitterUpdate): Promise<void> {
-    const state = strand.state as VetraPackageState;
+    const state = this.extractGlobalState(strand);
+    if (!state) {
+      logger.error(
+        `❌ No global state found for package: ${strand.documentId}`,
+      );
+      return;
+    }
 
     logger.info("🔄 Generating manifest for package");
     generateManifest(

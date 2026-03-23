@@ -1,9 +1,11 @@
 import type { Action, PHDocument } from "@powerhousedao/shared/document-model";
-import { useDispatch } from "./dispatch.js";
+import { useDispatch, type UseDispatchResult } from "./dispatch.js";
 import { useDocument, useDocuments } from "./document-cache.js";
 
 /** Returns a document by id. */
-export function useDocumentById(id: string | null | undefined) {
+export function useDocumentById(
+  id: string | null | undefined,
+): UseDispatchResult<PHDocument, Action> {
   const document = useDocument(id);
   const [, dispatch] = useDispatch<PHDocument, Action>(document);
   return [document, dispatch] as const;

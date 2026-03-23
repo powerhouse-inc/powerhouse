@@ -29,13 +29,13 @@
       "path": "../../apps/connect"
     },
     {
-      "path": "../../apps/switchboard"
-    },
-    {
       "path": "../../clis/ph-cli"
     },
     {
       "path": "../../packages/builder-tools"
+    },
+    {
+      "path": "../../packages/common"
     },
     {
       "path": "../../packages/design-system"

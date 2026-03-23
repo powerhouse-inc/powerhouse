@@ -19,8 +19,8 @@ import {
 } from "@powerhousedao/shared/document-model";
 import type {
   ${v.phDocumentTypeName},
-  ${v.localStateName},
   ${v.globalStateName},
+  ${v.localStateName},
   ${v.phStateName},
 } from "./types.js";
 import { utils } from "./utils.js";

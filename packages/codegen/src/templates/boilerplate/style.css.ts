@@ -3,6 +3,7 @@ import { css } from "@tmpl/core";
 export const styleTemplate = css`
   @import "tailwindcss";
   @import "@powerhousedao/design-system/theme.css";
+  @import "@powerhousedao/connect/style.css";
 
   @theme {
     /* You can customize the theme by overriding the theme variables here */

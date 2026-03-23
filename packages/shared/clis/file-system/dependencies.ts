@@ -24,14 +24,15 @@ export async function fetchNpmVersionFromRegistryForTag(
 
 export async function fetchPackageVersionFromNpmRegistry(
   packageSpecifier: string,
+  registryUrl?: string,
 ) {
   const failedFetchErrorMessage = `Failed to fetch version from npm registry for ${packageSpecifier}.`;
   try {
-    const version = await spawnAsync("npm", [
-      "view",
-      packageSpecifier,
-      "version",
-    ]);
+    const args = ["view", packageSpecifier, "version"];
+    if (registryUrl) {
+      args.push("--registry", registryUrl);
+    }
+    const version = await spawnAsync("npm", args);
     return version;
   } catch (e) {
     console.error(failedFetchErrorMessage);

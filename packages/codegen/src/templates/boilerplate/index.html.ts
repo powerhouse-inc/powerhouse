@@ -20,12 +20,7 @@ export const indexHtmlTemplate = html`<!DOCTYPE html>
     </head>
     <body>
       <div id="root"></div>
-      <script type="module">
-        // imports Connect CSS styles
-        import "@powerhousedao/connect/style.css";
-
-        // initializes Connect on '<div id="root"></div>'
-        import "@powerhousedao/connect/main.js";
-      </script>
+      <link href="/style.css" rel="stylesheet" />
+      <script type="module" src="/main.tsx"></script>
     </body>
   </html> `.raw;

@@ -130,10 +130,9 @@ export const documentModelGenReducerFileTemplate = (
   v: DocumentModelTemplateInputs,
 ) =>
   ts`
-// TODO: remove eslint-disable rules once refactor is done
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
-import type { StateReducer } from "@powerhousedao/shared/document-model";
+import type { Reducer, StateReducer } from "@powerhousedao/shared/document-model";
 import { isDocumentAction, createReducer } from "@powerhousedao/shared/document-model";
 import type { ${v.phStateName} } from "${v.versionedDocumentModelPackageImportPath}";
 
@@ -153,5 +152,5 @@ const stateReducer: StateReducer<${v.phStateName}> =
         }
     }
 
-export const reducer = createReducer<${v.phStateName}>(stateReducer);
+export const reducer: Reducer<${v.phStateName}> = createReducer(stateReducer);
 `.raw;

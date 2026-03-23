@@ -5,7 +5,7 @@ export const documentModelGenUtilsTemplate = (v: DocumentModelTemplateInputs) =>
   ts`
 import type {
     DocumentModelUtils,
-} from "@powerhousedao/shared/document-model";
+} from "document-model";
 import { 
     baseCreateDocument,
     baseSaveToFileHandle,
@@ -13,19 +13,15 @@ import {
     defaultBaseState,
     generateId,
  } from "document-model";
-import type { 
-  ${v.globalStateName},
-  ${v.localStateName}
-} from './types.js';
-import type { ${v.phStateName} } from './types.js';
 import { reducer } from './reducer.js';
 import { ${v.documentTypeVariableName} } from "./document-type.js";
 import {
-  ${v.isPhDocumentOfTypeFunctionName},
   ${v.assertIsPhDocumentOfTypeFunctionName},
-  ${v.isPhStateOfTypeFunctionName},
   ${v.assertIsPhStateOfTypeFunctionName},
+  ${v.isPhDocumentOfTypeFunctionName},
+  ${v.isPhStateOfTypeFunctionName},
 } from "./document-schema.js";
+import type { ${v.globalStateName}, ${v.localStateName}, ${v.phStateName} } from './types.js';
 
 export const initialGlobalState: ${v.globalStateName} = ${v.initialGlobalState};
 export const initialLocalState: ${v.localStateName} = ${v.initialLocalState};
@@ -67,5 +63,4 @@ export const utils: DocumentModelUtils<${v.phStateName}> = {
         return ${v.assertIsPhDocumentOfTypeFunctionName}(document);
     },
 };
-
 `.raw;

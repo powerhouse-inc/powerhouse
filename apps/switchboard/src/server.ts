@@ -175,7 +175,7 @@ async function initServer(
       logger.info("Using PGlite for reactor storage");
     }
 
-    if (httpLoader) {
+    if (httpLoader && options.dynamicModelLoading) {
       builder.withDocumentModelLoader(httpLoader);
     }
 

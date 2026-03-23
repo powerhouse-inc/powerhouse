@@ -45,6 +45,7 @@
     "tsc": "tsc",
     "lint": "eslint",
     "connect": "ph-cli connect",
+    "build": "ph-cli build",
     "reactor": "ph-cli reactor",
     "generate": "ph-cli generate",
     "test:e2e": "playwright test",
@@ -53,26 +54,34 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "devDependencies": {
-    "@playwright/test": "^1.41.2",
+    "dependencies": {
     "@powerhousedao/builder-tools": "workspace:*",
-    "@powerhousedao/e2e-utils": "workspace:*",
-    "@powerhousedao/ph-cli": "workspace:*",
-    "@powerhousedao/connect": "workspace:*",
+    "@powerhousedao/common": "workspace:*",
     "@powerhousedao/shared": "workspace:*",
-    "@powerhousedao/reactor-browser": "workspace:*",
-    "@powerhousedao/switchboard": "workspace:*",
-    "@types/node": "catalog:",
-    "change-case": "catalog:",
+    "@powerhousedao/design-system": "workspace:*",
     "document-model": "workspace:*",
+    "zod": "catalog:",
     "jszip": "^3.10.1",
-    "monocart-coverage-reports": "^2.12.8",
+    "change-case": "catalog:",
+    "@powerhousedao/reactor-browser": "workspace:*",
     "react": "catalog:",
     "react-dom": "catalog:",
-    "@electric-sql/pglite": "catalog:"
+    "@powerhousedao/connect": "workspace:*"
   },
-  "dependencies": {
-    "@powerhousedao/design-system": "workspace:*",
-    "zod": "catalog:"
+  "devDependencies": {
+    "monocart-coverage-reports": "^2.12.8",
+    "@powerhousedao/e2e-utils": "workspace:*",
+    "@tailwindcss/cli": "catalog:",
+    "tailwindcss": "catalog:",
+    "@powerhousedao/ph-cli": "workspace:*",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "@vitejs/plugin-react": "catalog:",
+    "vite": "catalog:",
+    "vitest": "catalog:",
+    "vite-tsconfig-paths": "catalog:",
+    "@playwright/test": "^1.41.2"
   }
 }

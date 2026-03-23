@@ -33,8 +33,13 @@ export function getVariableDeclarationByTypeName(
   sourceFile: SourceFile,
   typeName: string,
 ) {
-  const declaration = sourceFile.getVariableDeclaration((declaration) =>
-    declaration.getType().getText().includes(typeName),
-  );
+  const declaration = sourceFile.getVariableDeclaration((declaration) => {
+    // First try matching the type annotation text (more reliable when types
+    // can't be fully resolved, e.g. in external projects with linked deps)
+    const typeAnnotation = declaration.getTypeNode()?.getText() ?? "";
+    if (typeAnnotation.includes(typeName)) return true;
+    // Fall back to resolved type text
+    return declaration.getType().getText().includes(typeName);
+  });
   return declaration;
 }
