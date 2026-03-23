@@ -5,13 +5,13 @@ import {
   noop,
   replayDocument,
 } from "@powerhousedao/shared/document-model";
-import type { CountPHState } from "document-model/test";
+import type { CountPHState } from "../helpers.js";
 import {
   baseCountReducer,
   countReducer,
   createCountState,
   increment,
-} from "document-model/test";
+} from "../helpers.js";
 
 describe("DocumentModel Replay", () => {
   const initialState = createCountState();

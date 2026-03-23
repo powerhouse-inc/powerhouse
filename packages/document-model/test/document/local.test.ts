@@ -4,7 +4,8 @@ import {
   redo,
   undo,
 } from "@powerhousedao/shared/document-model";
-import type { CountPHState, TestPHState } from "document-model/test";
+import { beforeAll, describe, expect, it, vi } from "vitest";
+import type { CountPHState } from "../helpers.js";
 import {
   countReducer,
   createCountDocumentState,
@@ -13,8 +14,8 @@ import {
   fakeAction,
   setLocalName,
   wrappedEmptyReducer,
-} from "document-model/test";
-import { beforeAll, describe, expect, it, vi } from "vitest";
+} from "../helpers.js";
+import type { TestPHState } from "../types.js";
 
 describe("Local reducer", () => {
   beforeAll(() => {

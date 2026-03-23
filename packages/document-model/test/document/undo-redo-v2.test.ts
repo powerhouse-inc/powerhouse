@@ -3,14 +3,14 @@ import {
   processUndoRedo,
   undo,
 } from "@powerhousedao/shared/document-model";
-import type { CountDocument } from "document-model/test";
+import { beforeEach, describe, expect, it } from "vitest";
 import {
+  type CountDocument,
   countReducer,
   createCountDocumentState,
   increment,
   testCreateBaseState,
-} from "document-model/test";
-import { beforeEach, describe, expect, it } from "vitest";
+} from "../helpers.js";
 
 describe("UNDO/REDO with protocolVersion: 2", () => {
   let document: CountDocument;

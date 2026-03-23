@@ -5,7 +5,8 @@ import {
   deriveOperationId,
   removeExistingOperations,
 } from "@powerhousedao/shared/document-model";
-import { buildOperations, fakeAction } from "document-model/test";
+import { fakeAction } from "../helpers.js";
+import { buildOperations } from "./utils.js";
 
 const TEST_DOC_ID = "test-doc-id";
 const TEST_BRANCH = "main";

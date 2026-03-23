@@ -3,8 +3,8 @@ import {
   deriveOperationId,
   groupOperationsByScope,
 } from "@powerhousedao/shared/document-model";
-import { fakeAction } from "document-model/test";
 import { describe, expect, it } from "vitest";
+import { fakeAction } from "../helpers.js";
 
 const TEST_DOC_ID = "test-doc-id";
 const TEST_BRANCH = "main";

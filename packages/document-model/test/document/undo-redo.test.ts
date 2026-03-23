@@ -7,14 +7,14 @@ import {
   redo,
   undo,
 } from "@powerhousedao/shared/document-model";
-import type { CountAction, CountDocument } from "document-model/test";
+import { beforeEach, describe, expect, it } from "vitest";
+import type { CountAction, CountDocument } from "../helpers.js";
 import {
   countReducer,
   createCountDocumentState,
   increment,
   testCreateBaseState,
-} from "document-model/test";
-import { beforeEach, describe, expect, it } from "vitest";
+} from "../helpers.js";
 
 describe("UNDO/REDO", () => {
   let document: CountDocument;
