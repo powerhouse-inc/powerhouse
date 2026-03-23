@@ -1653,6 +1653,9 @@ importers:
       tsdown:
         specifier: 'catalog:'
         version: 0.21.0(oxc-resolver@11.19.0)(synckit@0.11.12)(typescript@5.9.3)
+      tsx:
+        specifier: 'catalog:'
+        version: 4.21.0
       zod:
         specifier: 'catalog:'
         version: 4.3.6

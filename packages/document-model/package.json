@@ -31,7 +31,7 @@
     "lint": "eslint",
     "test": "vitest --run",
     "test:watch": "vitest watch",
-    "build:bundle": "bun run ./build.ts"
+    "build:bundle": "tsx ./build.ts"
   },
   "devDependencies": {
     "@types/jest": "^29.5.14",
@@ -47,6 +47,7 @@
     "mutative": "^1.0.5",
     "zod": "catalog:",
     "tsdown": "catalog:",
-    "jszip": "^3.10.1"
+    "jszip": "^3.10.1",
+    "tsx": "catalog:"
   }
 }
