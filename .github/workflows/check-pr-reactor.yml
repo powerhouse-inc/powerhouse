@@ -113,8 +113,11 @@ jobs:
         run: pnpm prisma db push
         working-directory: packages/document-drive
 
-      - name: Build
+      - name: Build typescript project
         run: pnpm build-tsc
+
+      - name: Run bundlers
+        run: pnpm build-bundle
 
       - name: Lint
         run: pnpm lint
@@ -142,8 +145,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install-ci
 
-      - name: Build
+      - name: Build typescript
         run: pnpm build-tsc
+
+      - name: Build bundlers
+        run: pnpm build-bundle
 
       - name: Lint
         run: pnpm lint
