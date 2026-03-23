@@ -1,3 +1,13 @@
+## 5.3.6 (2026-03-23)
+
+### 🩹 Fixes
+
+- **reactor-mcp:** trigger release ([f097ea371](https://github.com/powerhouse-inc/powerhouse/commit/f097ea371))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 5.3.5 (2026-03-06)
 
 ### 🩹 Fixes

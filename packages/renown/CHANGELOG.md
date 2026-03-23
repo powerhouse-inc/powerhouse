@@ -1,3 +1,7 @@
+## 5.3.6 (2026-03-23)
+
+This was a version bump only for @renown/sdk to align it with other projects, there were no code changes.
+
 ## 5.3.5 (2026-03-06)
 
 This was a version bump only for @renown/sdk to align it with other projects, there were no code changes.
