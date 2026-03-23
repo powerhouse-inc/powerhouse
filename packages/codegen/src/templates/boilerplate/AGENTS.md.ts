@@ -109,6 +109,7 @@ Only **after** the codegen has produced the boilerplate files, proceed with the 
 - Use TypeScript for type safety, avoid using any and type casting
 - Always check for type and lint errors after creating or modifying the editor
 - **CRITICAL**: After creating a new editor, verify that \`editors/editors.ts\` includes the new editor module. The codegen should update this file automatically, but if it doesn't, manually add the import and include the editor in the \`editors\` array. Without this registration, Connect won't find an editor for the document type. Example:
+
   ~~~typescript
   import type { EditorModule } from "document-model";
   import { TodoListEditor } from "./todo-list-editor/module.js";

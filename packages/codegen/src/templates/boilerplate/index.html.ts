@@ -20,8 +20,7 @@ export const indexHtmlTemplate = html`<!DOCTYPE html>
     </head>
     <body>
       <div id="root"></div>
-      <link href="/style.css" rel="stylesheet">
-      <script type="module" src="/main.tsx">
-      </script>
+      <link href="/style.css" rel="stylesheet" />
+      <script type="module" src="/main.tsx"></script>
     </body>
   </html> `.raw;
