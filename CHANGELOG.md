@@ -1,3 +1,13 @@
+## 6.0.0-dev.107 (2026-03-23)
+
+### 🩹 Fixes
+
+- **registry:** use dev tag for workspace deps in Docker build ([c740af183](https://github.com/powerhouse-inc/powerhouse/commit/c740af183))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 6.0.0-dev.106 (2026-03-23)
 
 ### 🚀 Features
