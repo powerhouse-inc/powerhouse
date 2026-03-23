@@ -2,7 +2,6 @@ import type { DocumentModelTemplateInputs } from "@powerhousedao/codegen/file-bu
 import { ts } from "@tmpl/core";
 import { camelCase } from "change-case";
 import type { ModuleSpecification } from "@powerhousedao/shared/document-model";
-import type { ModuleSpecification } from "@powerhousedao/shared/document-model";
 
 function buildModuleActionsName(
   module: ModuleSpecification,

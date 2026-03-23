@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("child_process");
 vi.mock("@powerhousedao/config/node");
-vi.mock("@powerhousedao/common/clis", async (importOriginal) => {
+vi.mock("@powerhousedao/shared/clis", async (importOriginal) => {
   const actual: Record<string, unknown> = await importOriginal();
   return {
     ...actual,
@@ -23,9 +23,10 @@ vi.mock("../src/utils.js", async (importOriginal) => {
 import {
   getPowerhouseProjectInfo,
   makeDependenciesWithVersions,
-} from "@powerhousedao/common/clis";
+} from "@powerhousedao/shared/clis";
 import { getConfig } from "@powerhousedao/config/node";
 import { execSync } from "child_process";
+import type { InstallArgs } from "../src/types.js";
 
 const mockGetConfig = vi.mocked(getConfig);
 const mockExecSync = vi.mocked(execSync);
@@ -75,14 +76,14 @@ describe("install", () => {
     debug?: boolean;
   }) {
     const { install } = await import("../src/commands/install.js");
-    const handler = (install as unknown as { handler: Function }).handler;
+    const handler = install.handler;
 
     const exitSpy = vi
       .spyOn(process, "exit")
       .mockImplementation(() => undefined as never);
 
     try {
-      await handler(args);
+      await handler(args as InstallArgs);
     } finally {
       exitSpy.mockRestore();
     }

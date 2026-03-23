@@ -1,7 +1,7 @@
-import type { Request as SSERequest } from "graphql-sse";
-import { createHandler } from "graphql-sse/lib/use/express";
 import type { Request as ExpressRequest } from "express";
 import type { GraphQLSchema } from "graphql";
+import type { Request as SSERequest } from "graphql-sse";
+import { createHandler } from "graphql-sse/lib/use/express";
 import type { Context } from "./types.js";
 
 /**

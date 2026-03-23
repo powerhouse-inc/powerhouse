@@ -1,6 +1,6 @@
 import { DEFAULT_REGISTRY_URL } from "@powerhousedao/config";
-import { getConfig } from "@powerhousedao/config/node";
 import {
+  getConfig,
   getPowerhouseProjectInfo,
   getPowerhouseProjectInstallCommand,
   installArgs,
