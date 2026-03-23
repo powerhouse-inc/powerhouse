@@ -10,9 +10,10 @@ import type {
   GetDocumentOperationsQuery,
   PhDocumentFieldsFragment,
   PropagationMode,
-  Sdk,
 } from "../graphql/gen/schema.js";
+import type { ReactorGraphQLClient } from "../graphql/types.js";
 export { PropagationMode } from "../graphql/gen/schema.js";
+export type { ReactorGraphQLClient } from "../graphql/types.js";
 
 export type RemoteDocumentData = PhDocumentFieldsFragment;
 
@@ -21,17 +22,6 @@ export type RemoteOperation =
 
 export type RemoteOperationResultPage =
   GetDocumentOperationsQuery["documentOperations"];
-
-export type ReactorGraphQLClient = Pick<
-  Sdk,
-  | "GetDocument"
-  | "GetDocumentWithOperations"
-  | "GetDocumentOperations"
-  | "MutateDocument"
-  | "CreateDocument"
-  | "CreateEmptyDocument"
-  | "DeleteDocument"
->;
 
 /**
  * Options for creating a RemoteDocumentController.
@@ -114,21 +104,16 @@ export type RemoteDocumentChangeEvent = {
 /** Listener for document change events. */
 export type DocumentChangeListener = (event: RemoteDocumentChangeEvent) => void;
 
-/** Result of fetching operations, including the cursor for incremental fetches. */
+/** Result of fetching operations. */
 export type GetOperationsResult = {
   operationsByScope: Record<string, RemoteOperation[]>;
-  /** Opaque cursor for resuming pagination. Undefined if there were no results. */
-  cursor: string | undefined;
 };
 
-/** Result of fetching a document together with its first page of operations. */
+/** Result of fetching a document together with its operations. */
 export type GetDocumentWithOperationsResult = {
   document: RemoteDocumentData;
   childIds: ReadonlyArray<string>;
-  /** First page of operations (may need further pagination if hasNextPage is true). */
   operations: GetOperationsResult;
-  /** True if there are more pages of operations to fetch. */
-  hasMoreOperations: boolean;
 };
 
 export interface IRemoteClient {
@@ -137,19 +122,19 @@ export interface IRemoteClient {
     branch?: string,
   ): Promise<GetDocumentResult | null>;
 
-  /** Fetch document metadata and the first page of operations in a single query. */
+  /** Fetch document metadata and operations in a single call. */
   getDocumentWithOperations(
     identifier: string,
     branch?: string,
-    operationsCursor?: string,
+    sinceRevision?: Record<string, number>,
+    scopes?: string[],
   ): Promise<GetDocumentWithOperationsResult | null>;
 
   getAllOperations(
     documentId: string,
     branch?: string,
-    sinceRevision?: number,
+    sinceRevision?: Record<string, number>,
     scopes?: string[],
-    cursor?: string,
   ): Promise<GetOperationsResult>;
 
   pushActions(
