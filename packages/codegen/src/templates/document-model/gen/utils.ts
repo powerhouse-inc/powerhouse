@@ -12,7 +12,7 @@ import {
     baseLoadFromInput,
     defaultBaseState,
     generateId,
- } from 'document-model/core';
+ } from "document-model";
 import type { 
   ${v.globalStateName},
   ${v.localStateName}
