@@ -1,5 +1,4 @@
 import { PGlite } from "@electric-sql/pglite";
-import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import type {
   Action,
   DocumentModelModule,
@@ -13,11 +12,9 @@ import {
   generateId,
 } from "@powerhousedao/shared/document-model";
 import type {
-  BaseDocumentDriveServer,
   IDocumentOperationStorage,
   IDocumentStorage,
 } from "document-drive";
-import { MemoryStorage, ReactorBuilder } from "document-drive";
 import type { ILogger } from "document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import { Kysely } from "kysely";
@@ -31,14 +28,11 @@ import type {
 } from "../src/cache/document-meta-cache-types.js";
 import { KyselyOperationIndex } from "../src/cache/kysely-operation-index.js";
 import type { IWriteCache } from "../src/cache/write/interfaces.js";
-import { Reactor } from "../src/core/reactor.js";
 import type { ReactorFeatures } from "../src/core/types.js";
 import { EventBus } from "../src/events/event-bus.js";
 import type { IEventBus } from "../src/events/interfaces.js";
 import type { IJobExecutor } from "../src/executor/interfaces.js";
 import { SimpleJobExecutorManager } from "../src/executor/simple-job-executor-manager.js";
-import { SimpleJobExecutor } from "../src/executor/simple-job-executor.js";
-import type { JobExecutorConfig } from "../src/executor/types.js";
 import { InMemoryJobTracker } from "../src/job-tracker/in-memory-job-tracker.js";
 import type { IJobTracker } from "../src/job-tracker/interfaces.js";
 import type { IQueue } from "../src/queue/interfaces.js";
@@ -597,124 +591,6 @@ export function createMockReadModelCoordinator(
     start: vi.fn(),
     stop: vi.fn(),
     ...overrides,
-  };
-}
-
-/**
- * Factory for creating a complete test reactor setup
- */
-export async function createTestLegacyReactorSetup(
-  documentModels: DocumentModelModule<any>[] = [
-    documentModelDocumentModelModule,
-    driveDocumentModelModule,
-  ],
-  executorConfig?: JobExecutorConfig,
-) {
-  const storage = new MemoryStorage();
-  const eventBus = new EventBus();
-  const queue = new InMemoryQueue(eventBus, new NullDocumentModelResolver());
-  const jobTracker = new InMemoryJobTracker(eventBus);
-
-  // Create real drive server
-  const builder = new ReactorBuilder(documentModels).withStorage(storage);
-  const driveServer = builder.build() as unknown as BaseDocumentDriveServer;
-  await driveServer.initialize();
-
-  // Create registry and register modules
-  const registry = new DocumentModelRegistry();
-  registry.registerModules(documentModelDocumentModelModule);
-
-  // Create mock operation store for testing
-  const operationStore = createMockOperationStore();
-
-  // Create mock write cache
-  const mockWriteCache: IWriteCache = {
-    getState: vi.fn().mockImplementation(async (docId: string) => {
-      return await storage.get(docId);
-    }),
-    putState: vi.fn(),
-    invalidate: vi.fn(),
-    clear: vi.fn(),
-    startup: vi.fn(),
-    shutdown: vi.fn(),
-  };
-
-  // Create mock operation index
-  const mockOperationIndex: any = {
-    start: vi.fn().mockReturnValue({
-      createCollection: vi.fn(),
-      addToCollection: vi.fn(),
-      removeFromCollection: vi.fn(),
-      write: vi.fn(),
-    }),
-    commit: vi.fn().mockResolvedValue([]),
-    find: vi.fn().mockResolvedValue({ items: [], total: 0 }),
-  };
-
-  // Create mock document meta cache
-  const mockDocumentMetaCache = createMockDocumentMetaCache();
-
-  // Create mock collection membership cache
-  const mockCollectionMembershipCache = createMockCollectionMembershipCache();
-
-  // Create job executor with event bus
-  const jobExecutor = new SimpleJobExecutor(
-    createMockLogger(),
-    registry,
-    operationStore,
-    eventBus,
-    mockWriteCache,
-    mockOperationIndex,
-    mockDocumentMetaCache,
-    mockCollectionMembershipCache,
-    executorConfig ?? {},
-    undefined,
-  );
-
-  // Create executor manager
-  const executorManager = new SimpleJobExecutorManager(
-    () => jobExecutor,
-    eventBus,
-    queue,
-    jobTracker,
-    createMockLogger(),
-    new NullDocumentModelResolver(),
-  );
-
-  // Create mock read model coordinator
-  const readModelCoordinator = createMockReadModelCoordinator();
-
-  // Create mock dependencies for new Reactor constructor parameters
-  const features = createMockReactorFeatures();
-  const documentView = createMockDocumentView();
-  const documentIndexer = createMockDocumentIndexer();
-
-  // Create reactor
-  const reactor = new Reactor(
-    createMockLogger(),
-    registry,
-    queue,
-    jobTracker,
-    readModelCoordinator,
-    features,
-    documentView,
-    documentIndexer,
-    operationStore,
-    eventBus,
-    executorManager,
-  );
-
-  return {
-    reactor,
-    driveServer,
-    storage,
-    eventBus,
-    queue,
-    jobTracker,
-    jobExecutor,
-    executorManager,
-    registry,
-    operationStore,
   };
 }
 

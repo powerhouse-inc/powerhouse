@@ -5,7 +5,3 @@ export class AbortError extends Error {
     this.name = "AbortError";
   }
 }
-
-export const isAbortError = (error: unknown): boolean => {
-  return error instanceof AbortError;
-};

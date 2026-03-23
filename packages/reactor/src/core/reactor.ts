@@ -6,7 +6,6 @@ import type {
   Operation,
   PHDocument,
 } from "@powerhousedao/shared/document-model";
-import { AbortError } from "document-drive";
 import type { ILogger } from "document-model";
 import { v4 as uuidv4 } from "uuid";
 import {
@@ -47,13 +46,14 @@ import type {
   IOperationStore,
   OperationFilter,
 } from "../storage/interfaces.js";
-import type {
-  BatchExecutionRequest,
-  BatchExecutionResult,
-  BatchLoadRequest,
-  BatchLoadResult,
-  IReactor,
-  ReactorFeatures,
+import {
+  AbortError,
+  type BatchExecutionRequest,
+  type BatchExecutionResult,
+  type BatchLoadRequest,
+  type BatchLoadResult,
+  type IReactor,
+  type ReactorFeatures,
 } from "./types.js";
 import {
   buildSingleJobMeta,

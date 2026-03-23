@@ -46,6 +46,18 @@ import type {
 import type { IReactorSubscriptionManager } from "../subs/types.js";
 import type { IChannelFactory, ISyncManager } from "../sync/interfaces.js";
 
+export class AbortError extends Error {
+  constructor(message?: string) {
+    super(message || "Aborted");
+
+    this.name = "AbortError";
+  }
+}
+
+export const isAbortError = (error: unknown): boolean => {
+  return error instanceof AbortError;
+};
+
 /**
  * A single mutation job within a batch request.
  */

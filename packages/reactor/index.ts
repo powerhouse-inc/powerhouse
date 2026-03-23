@@ -280,4 +280,3 @@ export type {
   ValidationResult,
 } from "./src/admin/types.js";
 export { ProcessorManager } from "./src/processors/index.js";
-export * from "./src/re-exports.js";
