@@ -67,7 +67,6 @@
     "@powerhousedao/reactor-browser": "workspace:*",
     "@powerhousedao/shared": "workspace:*",
     "@powerhousedao/builder-tools": "workspace:*",
-    "@powerhousedao/ph-cli": "workspace:*",
     "change-case": "catalog:",
     "colorette": "catalog:",
     "document-model": "workspace:*",

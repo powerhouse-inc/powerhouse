@@ -30,6 +30,8 @@ import {
 } from "@powerhousedao/reactor-api";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
+import { documentModels as vetraDocumentModels } from "@powerhousedao/vetra";
+import { processorFactory as vetraProcessorFactory } from "@powerhousedao/vetra/processors";
 import { type IRenown } from "@renown/sdk";
 import * as Sentry from "@sentry/node";
 import { childLogger, documentModelDocumentModelModule } from "document-model";
@@ -140,6 +142,7 @@ async function initServer(
         getUniqueDocumentModels([
           documentModelDocumentModelModule,
           driveDocumentModelModule,
+          ...vetraDocumentModels,
           ...documentModels,
           ...httpDocumentModels,
         ]),
@@ -227,6 +230,9 @@ async function initServer(
       packageLoader,
       packages: packages,
       processorConfig: options.processorConfig,
+      processors: {
+        "@powerhousedao/vetra": [vetraProcessorFactory],
+      },
       configFile:
         options.configFile ??
         path.join(process.cwd(), "powerhouse.config.json"),

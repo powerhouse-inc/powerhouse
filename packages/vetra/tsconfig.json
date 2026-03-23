@@ -44,9 +44,6 @@
   ],
   "references": [
     {
-      "path": "../../clis/ph-cli"
-    },
-    {
       "path": "../builder-tools"
     },
     {

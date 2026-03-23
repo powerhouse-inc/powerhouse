@@ -2,7 +2,6 @@ import type { Page } from "@playwright/test";
 import fs from "fs";
 import path from "path";
 import type { DocumentBasicData } from "@powerhousedao/e2e-utils/types";
-import { closeDocumentFromToolbar } from "@powerhousedao/e2e-utils";
 import {
   createDocumentAndFillBasicData,
   navigateToVetraDrive,
@@ -122,5 +121,7 @@ async function setupDocument(
   // in commit d705e0c5f. Subgraphs are now generated separately via
   // the powerhouse/subgraph document type.
 
-  await closeDocumentFromToolbar(page);
+  // Note: closeDocumentFromToolbar is intentionally skipped here because
+  // codegen file writes trigger Vite full page reloads, which wipe the
+  // app state and make the close button unavailable.
 }

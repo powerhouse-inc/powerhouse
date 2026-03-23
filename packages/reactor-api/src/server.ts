@@ -35,7 +35,10 @@ import type { Pool } from "pg";
 import { WebSocketServer } from "ws";
 // Import tracing - initializes OpenTelemetry and provides stub functions for backwards compatibility
 import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
-import type { ProcessorApp } from "@powerhousedao/shared/processors";
+import type {
+  IProcessorHostModule,
+  ProcessorApp,
+} from "@powerhousedao/shared/processors";
 import { childLogger, type ILogger } from "document-model";
 import { config, DefaultCoreSubgraphs } from "./config.js";
 import { AuthSubgraph } from "./graphql/auth/subgraph.js";
@@ -488,12 +491,12 @@ async function _setupAPI(
   processorApp: ProcessorApp,
   authorizationService?: AuthorizationService,
 ): Promise<API> {
-  const module: IProcessorHostModuleLegacy = {
+  const module = {
     relationalDb,
     analyticsStore,
     processorApp,
     config: options.processorConfig,
-  };
+  } as IProcessorHostModuleLegacy & IProcessorHostModule;
   const mcpServerEnabled = options.mcp ?? true;
 
   const logger = options.logger ?? defaultLogger;
