@@ -17,8 +17,6 @@
     "dist"
   ],
   "scripts": {
-    "prebuild": "pnpm run clean",
-    "build": "tsc",
     "build:bundle": "tsdown",
     "test": "vitest run --coverage --printConsoleTrace=true --silent=false",
     "test:watch": "vitest --coverage",
@@ -54,6 +52,7 @@
     "tsx": "catalog:",
     "vitest": "catalog:",
     "@types/bun": "catalog:",
-    "tsdown": "catalog:"
+    "tsdown": "catalog:",
+    "vite-tsconfig-paths": "catalog:"
   }
 }
