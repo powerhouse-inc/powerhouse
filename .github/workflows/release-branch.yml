@@ -100,6 +100,7 @@ jobs:
   publish-docker:
     name: Build and Publish Docker Images
     needs: release
+    if: ${{ inputs.dry_run != true }}
     uses: "./.github/workflows/publish-docker-images.yml"
     secrets: inherit
 
