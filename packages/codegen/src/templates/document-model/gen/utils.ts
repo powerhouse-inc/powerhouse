@@ -6,13 +6,20 @@ export const documentModelGenUtilsTemplate = (v: DocumentModelTemplateInputs) =>
 import type {
     DocumentModelUtils,
 } from "document-model";
-import {
+import { 
     baseCreateDocument,
     baseSaveToFileHandle,
     baseLoadFromInput,
     defaultBaseState,
     generateId,
- } from 'document-model';
+ } from "document-model";
+import type { 
+  ${v.globalStateName},
+  ${v.localStateName}
+} from './types.js';
+import type { ${v.phStateName} } from './types.js';
+import { reducer } from './reducer.js';
+import { ${v.documentTypeVariableName} } from "./document-type.js";
 import {
   ${v.assertIsPhDocumentOfTypeFunctionName},
   ${v.assertIsPhStateOfTypeFunctionName},
@@ -63,6 +70,4 @@ export const utils: DocumentModelUtils<${v.phStateName}> = {
         return ${v.assertIsPhDocumentOfTypeFunctionName}(document);
     },
 };
-
-
 `.raw;

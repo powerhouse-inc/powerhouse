@@ -97,7 +97,7 @@ export const documentModelOperationsModuleCreatorsFileTemplate = (
 ) =>
   ts`
 
-import { ${makeDocumentModelTypeImports(v.actions)} } from 'document-model';
+import { ${makeDocumentModelTypeImports(v.actions)} } from "document-model";
 import {
 ${makeActionInputSchemaImports(v.actions)}
 } from '../schema/zod.js';

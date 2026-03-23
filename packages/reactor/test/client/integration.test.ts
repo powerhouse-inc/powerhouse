@@ -1,4 +1,7 @@
-import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
+import {
+  addFile,
+  driveDocumentModelModule,
+} from "@powerhousedao/shared/document-drive";
 import { actions } from "@powerhousedao/shared/document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import type { Kysely } from "kysely";
@@ -641,8 +644,9 @@ describe("ReactorClient Integration Tests", () => {
 
         await client.deleteDocument("delete-test-1");
 
-        const result = await client.get("delete-test-1");
-        expect(result.initialState.document.isDeleted).toBe(true);
+        await expect(client.get("delete-test-1")).rejects.toThrow(
+          "Document not found",
+        );
       });
 
       it("should delete with propagation mode", async () => {
@@ -672,30 +676,113 @@ describe("ReactorClient Integration Tests", () => {
 
         await client.deleteDocument("cascade-root", PropagationMode.Cascade);
 
-        const rootResult = await client.get("cascade-root");
-        expect(rootResult.initialState.document.isDeleted).toBe(true);
-
-        const child1Result = await client.get("cascade-child-1");
-        expect(child1Result.initialState.document.isDeleted).toBe(true);
-
-        const child2Result = await client.get("cascade-child-2");
-        expect(child2Result.initialState.document.isDeleted).toBe(true);
-
-        const grandchild1Result = await client.get("cascade-grandchild-1");
-        expect(grandchild1Result.initialState.document.isDeleted).toBe(true);
-
-        const grandchild2Result = await client.get("cascade-grandchild-2");
-        expect(grandchild2Result.initialState.document.isDeleted).toBe(true);
-
-        const grandchild3Result = await client.get("cascade-grandchild-3");
-        expect(grandchild3Result.initialState.document.isDeleted).toBe(true);
-
-        const greatGrandchildResult = await client.get(
-          "cascade-great-grandchild",
+        await expect(client.get("cascade-root")).rejects.toThrow(
+          "Document not found",
         );
-        expect(greatGrandchildResult.initialState.document.isDeleted).toBe(
-          true,
+        await expect(client.get("cascade-child-1")).rejects.toThrow(
+          "Document not found",
         );
+        await expect(client.get("cascade-child-2")).rejects.toThrow(
+          "Document not found",
+        );
+        await expect(client.get("cascade-grandchild-1")).rejects.toThrow(
+          "Document not found",
+        );
+        await expect(client.get("cascade-grandchild-2")).rejects.toThrow(
+          "Document not found",
+        );
+        await expect(client.get("cascade-grandchild-3")).rejects.toThrow(
+          "Document not found",
+        );
+        await expect(client.get("cascade-great-grandchild")).rejects.toThrow(
+          "Document not found",
+        );
+      });
+
+      it("should remove document from all containing drives on delete", async () => {
+        const drive1 = driveDocumentModelModule.utils.createDocument();
+        const drive2 = driveDocumentModelModule.utils.createDocument();
+        await client.create(drive1);
+        await client.create(drive2);
+
+        const doc = documentModelDocumentModelModule.utils.createDocument();
+        doc.header.name = "Shared Doc";
+        await client.createDocumentInDrive(drive1.header.id, doc);
+
+        await client.addChildren(drive2.header.id, [doc.header.id]);
+        const drive2Actions = [
+          addFile({
+            id: doc.header.id,
+            name: doc.header.name || doc.header.id,
+            documentType: doc.header.documentType,
+          }),
+        ];
+        await client.execute(drive2.header.id, "main", drive2Actions);
+
+        const drive2Before = await client.get(drive2.header.id);
+        const nodesBefore = (drive2Before.state as any).global.nodes || [];
+        expect(
+          nodesBefore.find((n: any) => n.id === doc.header.id),
+        ).toBeDefined();
+
+        await client.deleteDocument(doc.header.id);
+
+        const drive1After = await client.get(drive1.header.id);
+        const drive1Nodes = (drive1After.state as any).global.nodes || [];
+        expect(
+          drive1Nodes.find((n: any) => n.id === doc.header.id),
+        ).toBeUndefined();
+
+        const drive2After = await client.get(drive2.header.id);
+        const drive2Nodes = (drive2After.state as any).global.nodes || [];
+        expect(
+          drive2Nodes.find((n: any) => n.id === doc.header.id),
+        ).toBeUndefined();
+      });
+
+      it("should remove descendants from all drives on cascade delete", async () => {
+        const drive1 = driveDocumentModelModule.utils.createDocument();
+        const drive2 = driveDocumentModelModule.utils.createDocument();
+        await client.create(drive1);
+        await client.create(drive2);
+
+        const parent = documentModelDocumentModelModule.utils.createDocument();
+        parent.header.name = "Parent";
+        await client.createDocumentInDrive(drive1.header.id, parent);
+
+        const child = documentModelDocumentModelModule.utils.createDocument();
+        child.header.name = "Child";
+        await client.create(child, parent.header.id);
+
+        await client.addChildren(drive2.header.id, [child.header.id]);
+        const drive2Actions = [
+          addFile({
+            id: child.header.id,
+            name: child.header.name || child.header.id,
+            documentType: child.header.documentType,
+          }),
+        ];
+        await client.execute(drive2.header.id, "main", drive2Actions);
+
+        const drive2Before = await client.get(drive2.header.id);
+        const nodesBefore = (drive2Before.state as any).global.nodes || [];
+        expect(
+          nodesBefore.find((n: any) => n.id === child.header.id),
+        ).toBeDefined();
+
+        await client.deleteDocument(parent.header.id, PropagationMode.Cascade);
+
+        const drive1After = await client.get(drive1.header.id);
+        const drive1Nodes = (drive1After.state as any).global.nodes || [];
+        expect(
+          drive1Nodes.find((n: any) => n.id === parent.header.id),
+        ).toBeUndefined();
+
+        const drive2After = await client.get(drive2.header.id);
+        const drive2Nodes = (drive2After.state as any).global.nodes || [];
+        expect(
+          drive2Nodes.find((n: any) => n.id === child.header.id),
+        ).toBeUndefined();
       });
     });
 
@@ -711,15 +798,15 @@ describe("ReactorClient Integration Tests", () => {
 
         await client.deleteDocuments(["delete-multi-1", "delete-multi-2"]);
 
-        const doc1Result = await client.get("delete-multi-1");
-        expect(doc1Result.initialState.document.isDeleted).toBe(true);
-
-        const doc2Result = await client.get("delete-multi-2");
-        expect(doc2Result.initialState.document.isDeleted).toBe(true);
+        await expect(client.get("delete-multi-1")).rejects.toThrow(
+          "Document not found",
+        );
+        await expect(client.get("delete-multi-2")).rejects.toThrow(
+          "Document not found",
+        );
 
         const doc3Result = await client.get("delete-multi-3");
         expect(doc3Result.header.id).toBe("delete-multi-3");
-        expect(doc3Result.initialState.document.isDeleted || false).toBe(false);
       });
 
       it("should delete with propagation mode", async () => {
@@ -738,17 +825,18 @@ describe("ReactorClient Integration Tests", () => {
           PropagationMode.Cascade,
         );
 
-        const parent1Result = await client.get("delete-multi-parent-1");
-        expect(parent1Result.initialState.document.isDeleted).toBe(true);
-
-        const parent2Result = await client.get("delete-multi-parent-2");
-        expect(parent2Result.initialState.document.isDeleted).toBe(true);
-
-        const child1Result = await client.get("delete-multi-child-1");
-        expect(child1Result.initialState.document.isDeleted).toBe(true);
-
-        const child2Result = await client.get("delete-multi-child-2");
-        expect(child2Result.initialState.document.isDeleted).toBe(true);
+        await expect(client.get("delete-multi-parent-1")).rejects.toThrow(
+          "Document not found",
+        );
+        await expect(client.get("delete-multi-parent-2")).rejects.toThrow(
+          "Document not found",
+        );
+        await expect(client.get("delete-multi-child-1")).rejects.toThrow(
+          "Document not found",
+        );
+        await expect(client.get("delete-multi-child-2")).rejects.toThrow(
+          "Document not found",
+        );
       });
     });
   });

@@ -3,15 +3,16 @@ import {
   garbageCollectDocumentOperations,
   replayOperations,
 } from "@powerhousedao/shared/document-model";
-import type { CountDocument, CountPHState } from "document-model/test";
+import { beforeEach, describe, expect, it } from "vitest";
+import type { CountPHState } from "../helpers.js";
 import {
   baseCountReducer,
+  type CountDocument,
   countReducer,
   createCountDocumentState,
   increment,
   testCreateBaseState,
-} from "document-model/test";
-import { beforeEach, describe, expect, it } from "vitest";
+} from "../helpers.js";
 
 describe("Document Operation ID", () => {
   let document: CountDocument;

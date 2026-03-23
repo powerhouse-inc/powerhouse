@@ -792,4 +792,12 @@ export interface ISyncDeadLetterStorage {
    * @param signal - Optional abort signal to cancel the request
    */
   removeByRemote(remoteName: string, signal?: AbortSignal): Promise<void>;
+
+  /**
+   * Returns distinct document IDs that have any dead letter record across all remotes.
+   * Used to populate the quarantine set on startup.
+   *
+   * @param signal - Optional abort signal to cancel the request
+   */
+  listQuarantinedDocumentIds(signal?: AbortSignal): Promise<string[]>;
 }

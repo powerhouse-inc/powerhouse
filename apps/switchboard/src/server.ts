@@ -32,15 +32,6 @@ import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import { type IRenown } from "@renown/sdk";
 import * as Sentry from "@sentry/node";
-import type { ICache, IDocumentDriveServer } from "document-drive";
-import {
-  DocumentAlreadyExistsError,
-  InMemoryCache,
-  ReactorBuilder as LegacyReactorBuilder,
-} from "document-drive";
-import { RedisCache } from "document-drive";
-import { FilesystemStorage } from "document-drive/storage/filesystem";
-import { PrismaStorageFactory } from "document-drive/storage/prisma";
 import { childLogger, documentModelDocumentModelModule } from "document-model";
 import dotenv from "dotenv";
 import express from "express";
@@ -53,7 +44,7 @@ import { initRedis } from "./clients/redis.js";
 import { initFeatureFlags } from "./feature-flags.js";
 import { initRenown } from "./renown.js";
 import type { StartServerOptions, SwitchboardReactor } from "./types.js";
-import { addDefaultDrive, addRemoteDrive, isPostgresUrl } from "./utils.js";
+import { addDefaultDrive, isPostgresUrl } from "./utils.js";
 
 const defaultLogger = childLogger(["switchboard"]);
 
@@ -62,15 +53,6 @@ dotenv.config();
 // Feature flag constants
 const DOCUMENT_MODEL_SUBGRAPHS_ENABLED = "DOCUMENT_MODEL_SUBGRAPHS_ENABLED";
 const DOCUMENT_MODEL_SUBGRAPHS_ENABLED_DEFAULT = true;
-
-const REACTOR_STORAGE_V2 = "REACTOR_STORAGE_V2";
-const REACTOR_STORAGE_V2_DEFAULT = true;
-
-const ENABLE_DUAL_ACTION_CREATE = "ENABLE_DUAL_ACTION_CREATE";
-const ENABLE_DUAL_ACTION_CREATE_DEFAULT = true;
-
-const DYNAMIC_MODEL_LOADING = "DYNAMIC_MODEL_LOADING";
-const DYNAMIC_MODEL_LOADING_DEFAULT = false;
 
 // Create a monolith express app for all subgraphs
 const app = express();
@@ -89,52 +71,6 @@ if (process.env.SENTRY_DSN) {
 }
 
 const DEFAULT_PORT = process.env.PORT ? Number(process.env.PORT) : 4001;
-
-async function initPrismaStorage(connectionString: string, cache: ICache) {
-  try {
-    const prismaFactory = new PrismaStorageFactory(connectionString, cache);
-    await prismaFactory.checkConnection();
-    return prismaFactory.build();
-  } catch (e) {
-    const prismaConnectError = "Can't reach database server at";
-    if (e instanceof Error && e.message.includes(prismaConnectError)) {
-      const dbUrl = connectionString;
-      const safeUrl = `${dbUrl.slice(0, dbUrl.indexOf(":") + 1)}{...}${dbUrl.slice(dbUrl.indexOf("@"), dbUrl.lastIndexOf("?"))}`;
-      defaultLogger.warn("Can't reach database server at '@safeUrl'", safeUrl);
-    } else {
-      defaultLogger.error("@error", e);
-    }
-    throw e;
-  }
-}
-
-async function initReactorStorage(
-  cache: ICache,
-  dbPath: string = "./.ph/drive-storage",
-) {
-  const isPostgres = isPostgresUrl(dbPath);
-
-  try {
-    if (isPostgres) {
-      const connectionString =
-        dbPath.includes("amazonaws") && !dbPath.includes("sslmode=no-verify")
-          ? dbPath + "?sslmode=no-verify"
-          : dbPath;
-
-      const storage = await initPrismaStorage(connectionString, cache);
-      return { storage, storagePath: dbPath };
-    }
-  } catch {
-    defaultLogger.warn("Falling back to filesystem storage");
-  }
-
-  // if url was postgres and connection failed, fallback to filesystem on default path
-  const filesystemPath = isPostgres ? "./.ph/drive-storage" : dbPath;
-  return {
-    storage: new FilesystemStorage(path.join(process.cwd(), filesystemPath)),
-    storagePath: filesystemPath,
-  };
-}
 
 async function initServer(
   serverPort: number,
@@ -168,14 +104,11 @@ async function initServer(
       logger.error("@error", e);
     }
   }
-  const cache = redis ? new RedisCache(redis) : new InMemoryCache();
-  const { storage, storagePath } = await initReactorStorage(cache, dbPath);
+
   // if dbPath is not configured, or it was a postgres url but the connection failed,
   // use default path for read model storage
   const readModelPath =
-    !dbPath || (isPostgresUrl(dbPath) && dbPath !== storagePath)
-      ? ".ph/read-storage"
-      : dbPath;
+    !dbPath || isPostgresUrl(dbPath) ? ".ph/read-storage" : dbPath;
 
   // HTTP registry package loading
   let httpDocumentModels: DocumentModelModule[] = [];
@@ -198,37 +131,8 @@ async function initServer(
     );
   }
 
-  const initializeDriveServer = async (
-    documentModels: DocumentModelModule[],
-  ) => {
-    const driveServer = new LegacyReactorBuilder(
-      getUniqueDocumentModels([
-        documentModelDocumentModelModule,
-        driveDocumentModelModule,
-        ...documentModels,
-        ...httpDocumentModels,
-      ]),
-    )
-      .withStorage(storage)
-      .withCache(cache)
-      .withOptions({
-        featureFlags: {
-          enableDualActionCreate:
-            options.reactorOptions?.enableDualActionCreate ?? false,
-        },
-      })
-      .build();
-
-    // init drive server
-    await driveServer.initialize();
-    return driveServer;
-  };
-
   const reactorLogger = logger.child(["reactor"]);
-  const initializeClient = async (
-    driveServer: IDocumentDriveServer,
-    documentModels: DocumentModelModule[],
-  ) => {
+  const initializeClient = async (documentModels: DocumentModelModule[]) => {
     const eventBus = new EventBus();
     const builder = new ReactorBuilder()
       .withEventBus(eventBus)
@@ -309,17 +213,11 @@ async function initServer(
     packages.push(basePath);
   }
 
-  // storageV2=true means use new reactor (NOT legacy)
-  const legacyReactor = !options.reactorOptions?.storageV2;
-
-  // create loader with legacyReactor option
-  const packageLoader = vite
-    ? VitePackageLoader.build(vite, { legacyReactor })
-    : undefined;
+  // create loader
+  const packageLoader = vite ? VitePackageLoader.build(vite) : undefined;
 
   const apiLogger = logger.child(["reactor-api"]);
   const api = await initializeAndStartAPI(
-    initializeDriveServer,
     initializeClient,
     {
       express: app,
@@ -335,12 +233,11 @@ async function initServer(
       mcp: options.mcp ?? true,
       logger: apiLogger,
       enableDocumentModelSubgraphs: options.enableDocumentModelSubgraphs,
-      legacyReactor,
     },
     "switchboard",
   );
 
-  const { client, driveServer, graphqlManager, documentModelRegistry } = api;
+  const { client, graphqlManager, documentModelRegistry } = api;
 
   // Wire up dynamic package management if HTTP loader is configured
   if (httpLoader) {
@@ -378,12 +275,7 @@ async function initServer(
       throw new Error("Cannot create default drive without Renown identity");
     }
 
-    defaultDriveUrl = await addDefaultDrive(
-      driveServer,
-      client,
-      options.drive,
-      serverPort,
-    );
+    defaultDriveUrl = await addDefaultDrive(client, options.drive, serverPort);
   }
 
   // add vite middleware after express app is initialized if applicable
@@ -397,28 +289,20 @@ async function initServer(
       let driveId: string | undefined;
 
       try {
-        if (legacyReactor) {
-          // Use legacy reactor's addRemoteDrive
-          const remoteDrive = await addRemoteDrive(driveServer, remoteDriveUrl);
-          driveId = remoteDrive.header.id;
-        } else {
-          // Use new reactor's sync manager
-          const { syncManager } = api;
-          const parsed = parseDriveUrl(remoteDriveUrl);
-          driveId = parsed.driveId;
-          const remoteName = `remote-drive-${driveId}-${crypto.randomUUID()}`;
-          await syncManager.add(
-            remoteName,
-            driveCollectionId("main", driveId),
-            {
-              type: "gql",
-              parameters: { url: parsed.graphqlEndpoint },
-            },
-          );
-        }
+        const { syncManager } = api;
+        const parsed = parseDriveUrl(remoteDriveUrl);
+        driveId = parsed.driveId;
+        const remoteName = `remote-drive-${driveId}-${crypto.randomUUID()}`;
+        await syncManager.add(remoteName, driveCollectionId("main", driveId), {
+          type: "gql",
+          parameters: { url: parsed.graphqlEndpoint },
+        });
         logger.debug("Remote drive @remoteDriveUrl synced", remoteDriveUrl);
       } catch (error) {
-        if (error instanceof DocumentAlreadyExistsError) {
+        if (
+          error instanceof Error &&
+          error.message.includes("already exists")
+        ) {
           logger.debug(
             "Remote drive already added: @remoteDriveUrl",
             remoteDriveUrl,
@@ -445,7 +329,6 @@ async function initServer(
     defaultDriveUrl,
     api,
     reactor: client,
-    legacyReactor: driveServer,
     renown,
   };
 }
@@ -466,28 +349,6 @@ export const startSwitchboard = async (
 
   options.enableDocumentModelSubgraphs = enableDocumentModelSubgraphs;
 
-  const storageV2 = await featureFlags.getBooleanValue(
-    REACTOR_STORAGE_V2,
-    options.reactorOptions?.storageV2 ?? REACTOR_STORAGE_V2_DEFAULT,
-  );
-
-  const enableDualActionCreate = await featureFlags.getBooleanValue(
-    ENABLE_DUAL_ACTION_CREATE,
-    options.reactorOptions?.enableDualActionCreate ??
-      ENABLE_DUAL_ACTION_CREATE_DEFAULT,
-  );
-
-  const dynamicModelLoading = await featureFlags.getBooleanValue(
-    DYNAMIC_MODEL_LOADING,
-    options.dynamicModelLoading ?? DYNAMIC_MODEL_LOADING_DEFAULT,
-  );
-
-  options.reactorOptions = {
-    enableDualActionCreate,
-    storageV2,
-  };
-  options.dynamicModelLoading = dynamicModelLoading;
-
   const logger = options.logger ?? defaultLogger;
 
   logger.info(
@@ -495,9 +356,6 @@ export const startSwitchboard = async (
     JSON.stringify(
       {
         DOCUMENT_MODEL_SUBGRAPHS_ENABLED: enableDocumentModelSubgraphs,
-        REACTOR_STORAGE_V2: storageV2,
-        ENABLE_DUAL_ACTION_CREATE: enableDualActionCreate,
-        DYNAMIC_MODEL_LOADING: dynamicModelLoading,
       },
       null,
       2,

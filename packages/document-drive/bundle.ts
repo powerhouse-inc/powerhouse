@@ -4,8 +4,8 @@ await build({
   entry: "index.ts",
   outDir: "dist",
   platform: "neutral",
-  clean: false,
-  dts: false,
+  clean: true,
+  dts: true,
   sourcemap: true,
 });
 
@@ -17,11 +17,6 @@ await build({
   outDir: "dist",
   platform: "node",
   clean: false,
-  dts: false,
+  dts: true,
   sourcemap: true,
-  external: [
-    "@prisma/client",
-    "@prisma/client/runtime/library",
-    /\.\/client\/index\.js$/,
-  ],
 });

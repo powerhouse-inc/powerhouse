@@ -244,7 +244,7 @@ describe("GqlRequestChannel Connection State", () => {
     await channel.shutdown();
   });
 
-  it("transitions to error on dead letter added", async () => {
+  it("stays connected when dead letter is added (quarantine is in SyncManager)", async () => {
     global.fetch = successFetch() as unknown as typeof global.fetch;
     const manualTimer = new ManualPollTimer();
 
@@ -263,7 +263,7 @@ describe("GqlRequestChannel Connection State", () => {
 
     const syncOp = createMockSyncOperation("op-1", "remote-1", 1);
     channel.deadLetter.add(syncOp);
-    expect(channel.getConnectionState().state).toBe("error");
+    expect(channel.getConnectionState().state).toBe("connected");
     await channel.shutdown();
   });
 

@@ -12,7 +12,6 @@ import type {
 import { generateId } from "@powerhousedao/shared/document-model";
 
 export async function addDefaultDrive(
-  driveServer: IDocumentDriveServer,
   client: IReactorClient,
   drive: DriveInput,
   serverPort: number,
@@ -76,46 +75,9 @@ export async function addDefaultDrive(
     }
   }
 
-  // YIKES: this is a backward compatibility hack to emit a drive added event
-  // This should be removed once we are not supporting legacy write operations.
-  (driveServer as unknown as BaseDocumentDriveServer).eventEmitter.emit(
-    "driveAdded",
-    document as DocumentDriveDocument,
-  );
-
   return `http://localhost:${serverPort}/d/${driveId}`;
 }
 
 export function isPostgresUrl(url: string) {
   return url.startsWith("postgresql") || url.startsWith("postgres");
-}
-
-export async function addRemoteDrive(
-  driveServer: IDocumentDriveServer,
-  remoteDriveUrl: string,
-): Promise<DocumentDriveDocument> {
-  return await driveServer.addRemoteDrive(remoteDriveUrl, {
-    availableOffline: true,
-    sharingType: "public",
-    listeners: [
-      {
-        block: true,
-        callInfo: {
-          data: remoteDriveUrl,
-          name: "switchboard-push",
-          transmitterType: "SwitchboardPush",
-        },
-        filter: {
-          branch: ["main"],
-          documentId: ["*"],
-          documentType: ["*"],
-          scope: ["global"],
-        },
-        label: "Switchboard Sync",
-        listenerId: generateId(),
-        system: true,
-      },
-    ],
-    triggers: [],
-  });
 }

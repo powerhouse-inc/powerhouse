@@ -30,6 +30,10 @@ export class BufferedMailbox implements IMailbox {
     this._ack = this._latestOrdinal = ackOrdinal;
   }
 
+  advanceOrdinal(ordinal: number): void {
+    this._latestOrdinal = Math.max(this._latestOrdinal, ordinal);
+  }
+
   get items(): ReadonlyArray<SyncOperation> {
     return Array.from(this.itemsMap.values());
   }

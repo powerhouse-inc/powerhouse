@@ -1,6 +1,6 @@
 {
   "name": "document-drive",
-  "version": "6.0.0-dev.96",
+  "version": "6.0.0-dev.105",
   "license": "AGPL-3.0-only",
   "type": "module",
   "types": "./dist/index.d.ts",
@@ -15,11 +15,11 @@
     },
     "./storage/filesystem": {
       "import": "./dist/storage/filesystem.mjs",
-      "types": "./dist/src/storage/filesystem.d.mts"
+      "types": "./dist/storage/filesystem.d.mts"
     },
     "./storage/prisma": {
       "import": "./dist/storage/prisma.mjs",
-      "types": "./dist/src/storage/prisma/index.d.mts"
+      "types": "./dist/storage/prisma.d.mts"
     },
     "./storage/prisma/client": {
       "import": "./src/storage/prisma/client/default.js",

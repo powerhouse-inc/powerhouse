@@ -64,6 +64,15 @@ export const createSchema = (
   );
 };
 
+/**
+ * Create a merged GraphQL schema from multiple subgraph modules.
+ * Uses buildSubgraphSchema's array overload to combine type definitions
+ * and resolvers from multiple subgraphs into a single executable schema.
+ */
+export const createMergedSchema = (modules: GraphQLSchemaModule[]) => {
+  return buildSubgraphSchema(modules);
+};
+
 export function getDocumentModelSchemaName(
   documentModel: DocumentModelGlobalState,
 ) {
@@ -87,27 +96,21 @@ export const getDocumentModelTypeDefs = (
     }
     addedDocumentModels.add(dmSchemaName);
     // Use only the latest specification to avoid duplicate type definitions
-    // when multiple versions of the same document model exist
+    // when a document model has multiple versions (e.g. v1, v2).
     const latestSpec = documentModel.global.specifications.at(-1);
+    const globalSchema = latestSpec?.state.global.schema ?? "";
+    const localSchema = latestSpec?.state.local.schema ?? "";
     let tmpDmSchema = `
-          ${
-            latestSpec
-              ? latestSpec.state.global.schema
-                  .replaceAll("scalar DateTime", "")
-                  .replaceAll(/input (.*?) {[\s\S]*?}/g, "")
-              : ""
-          };
+          ${globalSchema
+            .replaceAll("scalar DateTime", "")
+            .replaceAll(/input (.*?) {[\s\S]*?}/g, "")};
 
-          ${
-            latestSpec
-              ? latestSpec.state.local.schema
-                  .replaceAll("scalar DateTime", "")
-                  .replaceAll(/input (.*?) {[\s\S]*?}/g, "")
-                  .replaceAll("type AccountSnapshotLocalState", "")
-                  .replaceAll("type BudgetStatementLocalState", "")
-                  .replaceAll("type ScopeFrameworkLocalState", "")
-              : ""
-          };
+          ${localSchema
+            .replaceAll("scalar DateTime", "")
+            .replaceAll(/input (.*?) {[\s\S]*?}/g, "")
+            .replaceAll("type AccountSnapshotLocalState", "")
+            .replaceAll("type BudgetStatementLocalState", "")
+            .replaceAll("type ScopeFrameworkLocalState", "")};
 
     \n`;
 
@@ -701,9 +704,6 @@ function generateLegacyApiSchema(
  * Note: State schema types are NOT included here because they are already defined
  * in getDocumentModelTypeDefs() which is used during schema composition.
  * Including them here would cause duplicate type definitions.
- *
- * Special case: DocumentModel type doesn't have a typed state defined in
- * getDocumentModelTypeDefs(), so we use JSONObject for its state field.
  */
 function generateNewApiSchema(
   documentName: string,
@@ -824,20 +824,23 @@ function generateNewApiSchema(
     }
   `;
 
-  // Flat queries (not nested) - prefixed input types to avoid conflicts
+  // Queries nested under ${documentName} namespace
   const queries = `
-    type Query {
+    type ${documentName}Queries {
       """Get a specific ${documentName} document by identifier"""
-      ${documentName}_document(identifier: String!, view: ${documentName}_ViewFilterInput): ${documentName}_DocumentWithChildren
+      document(identifier: String!, view: ${documentName}_ViewFilterInput): ${documentName}_DocumentWithChildren
+
+      """Get all ${documentName} documents (paged)"""
+      ${documentName}_documents(paging: ${documentName}_PagingInput): ${documentName}_DocumentResultPage!
 
       """Find ${documentName} documents by search criteria"""
-      ${documentName}_findDocuments(search: ${documentName}_SearchFilterInput!, view: ${documentName}_ViewFilterInput, paging: ${documentName}_PagingInput): ${documentName}_DocumentResultPage!
+      findDocuments(search: ${documentName}_SearchFilterInput!, view: ${documentName}_ViewFilterInput, paging: ${documentName}_PagingInput): ${documentName}_DocumentResultPage!
 
       """Get children of a ${documentName} document"""
-      ${documentName}_documentChildren(parentIdentifier: String!, view: ${documentName}_ViewFilterInput, paging: ${documentName}_PagingInput): ${documentName}_DocumentResultPage!
+      documentChildren(parentIdentifier: String!, view: ${documentName}_ViewFilterInput, paging: ${documentName}_PagingInput): ${documentName}_DocumentResultPage!
 
       """Get parents of a ${documentName} document"""
-      ${documentName}_documentParents(childIdentifier: String!, view: ${documentName}_ViewFilterInput, paging: ${documentName}_PagingInput): ${documentName}_DocumentResultPage!
+      documentParents(childIdentifier: String!, view: ${documentName}_ViewFilterInput, paging: ${documentName}_PagingInput): ${documentName}_DocumentResultPage!
     }
   `;
 
@@ -890,11 +893,11 @@ function generateNewApiSchema(
     }
   }
 
-  // Mutations: sync and async versions
+  // Mutations nested under ${documentName} namespace
   const createDocumentMutation = initialStateInputSchema
-    ? `${documentName}_createDocument(name: String!, parentIdentifier: String, slug: String, preferredEditor: String, initialState: ${documentName}_InitialStateInput): ${documentName}MutationResult!`
-    : `${documentName}_createDocument(name: String!, parentIdentifier: String, preferredEditor: String): ${documentName}MutationResult!`;
-  const createEmptyDocumentMutation = `${documentName}_createEmptyDocument(parentIdentifier: String): ${documentName}MutationResult!`;
+    ? `createDocument(name: String!, parentIdentifier: String, slug: String, preferredEditor: String, initialState: ${documentName}_InitialStateInput): ${documentName}MutationResult!`
+    : `createDocument(name: String!, parentIdentifier: String, preferredEditor: String): ${documentName}MutationResult!`;
+  const createEmptyDocumentMutation = `createEmptyDocument(parentIdentifier: String): ${documentName}MutationResult!`;
 
   const operationMutations =
     specification?.modules
@@ -903,9 +906,9 @@ function generateNewApiSchema(
           .filter((op) => op.name && hasValidSchema(op.schema))
           .flatMap((op) => [
             // Sync mutation
-            `${documentName}_${camelCase(op.name!)}(docId: PHID!, input: ${documentName}_${pascalCase(op.name!)}Input!): ${documentName}MutationResult!`,
+            `${camelCase(op.name!)}(docId: PHID!, input: ${documentName}_${pascalCase(op.name!)}Input!): ${documentName}MutationResult!`,
             // Async mutation
-            `${documentName}_${camelCase(op.name!)}Async(docId: PHID!, input: ${documentName}_${pascalCase(op.name!)}Input!): String!`,
+            `${camelCase(op.name!)}Async(docId: PHID!, input: ${documentName}_${pascalCase(op.name!)}Input!): String!`,
           ]),
       )
       .join("\n        ") ?? "";
@@ -955,11 +958,19 @@ function generateNewApiSchema(
     """
     Mutations: ${documentName}
     """
-    type Mutation {
+    type ${documentName}Mutations {
         ${createDocumentMutation}
         ${createEmptyDocumentMutation}
 
         ${operationMutations}
+    }
+
+    type Query {
+      ${documentName}: ${documentName}Queries!
+    }
+
+    type Mutation {
+      ${documentName}: ${documentName}Mutations!
     }
 
     ${

@@ -4,13 +4,13 @@ import {
   baseCreateDocument,
   deriveOperationId,
 } from "@powerhousedao/shared/document-model";
-import type { TestPHState } from "document-model/test";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 import {
   defaultPHDocumentCreateState,
   fakeAction,
   wrappedEmptyReducer,
-} from "document-model/test";
-import { beforeAll, describe, expect, it, vi } from "vitest";
+} from "../helpers.js";
+import type { TestPHState } from "../types.js";
 
 describe("Event", () => {
   beforeAll(() => {

@@ -1,3 +1,15 @@
+/**
+ * Pinned CDN versions for GraphiQL playground dependencies.
+ * Using pinned versions avoids unpkg.com redirect issues that can
+ * trigger CORS errors in the browser.
+ */
+const CDN_VERSIONS = {
+  react: "18.3.1",
+  reactDom: "18.3.1",
+  graphiql: "3.8.3",
+  pluginExplorer: "4.0.0",
+};
+
 export function renderGraphqlPlayground(
   url: string,
   query?: string,
@@ -14,34 +26,30 @@ export function renderGraphqlPlayground(
             width: 100%;
             overflow: hidden;
           }
-    
+
           #graphiql {
             height: 100vh;
           }
         </style>
         <script
-          crossorigin
-          src="https://unpkg.com/react@18/umd/react.production.min.js"
+          src="https://unpkg.com/react@${CDN_VERSIONS.react}/umd/react.production.min.js"
         ></script>
         <script
-          crossorigin
-          src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"
+          src="https://unpkg.com/react-dom@${CDN_VERSIONS.reactDom}/umd/react-dom.production.min.js"
         ></script>
         <script
-          src="https://unpkg.com/graphiql/graphiql.min.js"
-          type="application/javascript"
+          src="https://unpkg.com/graphiql@${CDN_VERSIONS.graphiql}/graphiql.min.js"
         ></script>
-        <link rel="stylesheet" href="https://unpkg.com/graphiql/graphiql.min.css" />
+        <link rel="stylesheet" href="https://unpkg.com/graphiql@${CDN_VERSIONS.graphiql}/graphiql.min.css" />
         <script
-          src="https://unpkg.com/@graphiql/plugin-explorer/dist/index.umd.js"
-          crossorigin
+          src="https://unpkg.com/@graphiql/plugin-explorer@${CDN_VERSIONS.pluginExplorer}/dist/index.umd.js"
         ></script>
         <link
           rel="stylesheet"
-          href="https://unpkg.com/@graphiql/plugin-explorer/dist/style.css"
+          href="https://unpkg.com/@graphiql/plugin-explorer@${CDN_VERSIONS.pluginExplorer}/dist/style.css"
         />
       </head>
-    
+
       <body>
         <div id="graphiql">Loading...</div>
         <script>

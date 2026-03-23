@@ -7,10 +7,14 @@ import type { DocumentNode } from "graphql";
 
 export const schema: DocumentNode = gql`
 """
-Subgraph definition
+<%= h.changeCase.pascal(subgraph) %> Queries
 """
-type Query {
+type <%= h.changeCase.pascal(subgraph) %>Queries {
     example(driveId: String!): String
+}
+
+type Query {
+    <%= h.changeCase.camel(subgraph) %>: <%= h.changeCase.pascal(subgraph) %>Queries!
 }
 
 `

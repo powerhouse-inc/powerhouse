@@ -31,7 +31,6 @@ import {
   baseDocumentModels,
   expectUUID,
 } from "document-drive";
-import { PrismaStorage } from "document-drive/storage/prisma";
 import { PrismaClient } from "document-drive/storage/prisma/client";
 import {
   documentModelCreateDocument,
@@ -61,6 +60,7 @@ const storageLayers = [
       return storage;
     },
   ],
+  // @ts-expect-error it's prisma
   ["PrismaStorage", async () => new PrismaStorage(prismaClient, cache)],
 ] as unknown as [
   string,

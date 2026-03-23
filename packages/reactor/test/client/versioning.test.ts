@@ -482,11 +482,9 @@ describe("ReactorClient Versioning Integration Tests", () => {
 
       await client.deleteDocument(doc.header.id);
 
-      const retrieved = await client.get(doc.header.id);
-      expect(
-        (retrieved.state as { document?: { isDeleted?: boolean } }).document
-          ?.isDeleted,
-      ).toBe(true);
+      await expect(client.get(doc.header.id)).rejects.toThrow(
+        "Document not found",
+      );
     });
 
     it("should delete a v2 document", async () => {
@@ -496,11 +494,9 @@ describe("ReactorClient Versioning Integration Tests", () => {
 
       await client.deleteDocument(doc.header.id);
 
-      const retrieved = await client.get(doc.header.id);
-      expect(
-        (retrieved.state as { document?: { isDeleted?: boolean } }).document
-          ?.isDeleted,
-      ).toBe(true);
+      await expect(client.get(doc.header.id)).rejects.toThrow(
+        "Document not found",
+      );
     });
   });
 

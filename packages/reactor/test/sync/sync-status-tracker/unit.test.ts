@@ -19,6 +19,7 @@ function createMockMailbox(): IMailbox {
       return 0;
     },
     init: vi.fn(),
+    advanceOrdinal: vi.fn(),
     add: vi.fn(),
     remove: vi.fn(),
     get: vi.fn(),

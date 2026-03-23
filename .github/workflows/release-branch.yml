@@ -88,14 +88,14 @@ jobs:
         run: |
           pnpm run run-release -- \
           --release-mode="${{ inputs.release_mode || 'prerelease' }}" \
-          --dry-run="${{ inputs.dry_run }}" \
-          --verbose="${{ inputs.verbose }}" \
-          --skip-publish="${{ inputs.skip_publish }}" \
-          --skip-changelog="${{ inputs.skip_changelog }}" \
-          --skip-stage="${{ inputs.skip_stage }}" \
-          --skip-commit="${{ inputs.skip_commit }}" \
-          --skip-push="${{ inputs.skip_push }}" \
-          --skip-git-tag="${{ inputs.skip_git_tag }}"
+          --dry-run="${{ inputs.dry_run == true }}" \
+          --verbose="${{ inputs.verbose == true }}" \
+          --skip-publish="${{ inputs.skip_publish == true }}" \
+          --skip-changelog="${{ inputs.skip_changelog == true }}" \
+          --skip-stage="${{ inputs.skip_stage == true }}" \
+          --skip-commit="${{ inputs.skip_commit == true }}" \
+          --skip-push="${{ inputs.skip_push == true }}" \
+          --skip-git-tag="${{ inputs.skip_git_tag == true }}"
 
   publish-docker:
     name: Build and Publish Docker Images

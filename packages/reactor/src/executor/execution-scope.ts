@@ -21,7 +21,10 @@ export interface ExecutionStores {
 }
 
 export interface IExecutionScope {
-  run<T>(fn: (stores: ExecutionStores) => Promise<T>): Promise<T>;
+  run<T>(
+    fn: (stores: ExecutionStores) => Promise<T>,
+    signal?: AbortSignal,
+  ): Promise<T>;
 }
 
 export class DefaultExecutionScope implements IExecutionScope {
@@ -33,7 +36,11 @@ export class DefaultExecutionScope implements IExecutionScope {
     private collectionMembershipCache: ICollectionMembershipCache,
   ) {}
 
-  async run<T>(fn: (stores: ExecutionStores) => Promise<T>): Promise<T> {
+  async run<T>(
+    fn: (stores: ExecutionStores) => Promise<T>,
+    signal?: AbortSignal,
+  ): Promise<T> {
+    signal?.throwIfAborted();
     return fn({
       operationStore: this.operationStore,
       operationIndex: this.operationIndex,
@@ -55,7 +62,11 @@ export class KyselyExecutionScope implements IExecutionScope {
     private collectionMembershipCache: CollectionMembershipCache,
   ) {}
 
-  async run<T>(fn: (stores: ExecutionStores) => Promise<T>): Promise<T> {
+  async run<T>(
+    fn: (stores: ExecutionStores) => Promise<T>,
+    signal?: AbortSignal,
+  ): Promise<T> {
+    signal?.throwIfAborted();
     return this.db.transaction().execute(async (trx: Transaction<Database>) => {
       const scopedOperationStore = this.operationStore.withTransaction(trx);
       const scopedOperationIndex = this.operationIndex.withTransaction(trx);

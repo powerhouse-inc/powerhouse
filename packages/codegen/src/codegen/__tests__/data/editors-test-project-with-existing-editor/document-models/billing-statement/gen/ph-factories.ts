@@ -16,7 +16,7 @@ import type {
   BillingStatementLocalState,
   BillingStatementPHState,
 } from "./types.js";
-import { createDocument } from "./utils.js";
+import { utils } from "./utils.js";
 
 export function defaultGlobalState(): BillingStatementGlobalState {
   return {
@@ -87,7 +87,7 @@ export function createBillingStatementDocument(
     local?: Partial<BillingStatementLocalState>;
   }>,
 ): BillingStatementDocument {
-  const document = createDocument(
+  const document = utils.createDocument(
     state
       ? createState(
           createBaseState(state.auth, state.document),

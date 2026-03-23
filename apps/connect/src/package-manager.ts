@@ -250,9 +250,7 @@ export class BrowserPackageManager implements IPackageManager {
     if (importUrl === null) return;
 
     try {
-      const importedPackage = (await import(
-        /* @vite-ignore */ importUrl
-      )) as DocumentModelLib;
+      const importedPackage = (await import(importUrl)) as DocumentModelLib;
       const loadedPackage = convertLegacyLibToVetraPackage(importedPackage);
 
       return {

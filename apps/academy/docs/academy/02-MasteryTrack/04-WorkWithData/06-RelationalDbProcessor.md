@@ -9,6 +9,14 @@ A relational database processor is a specialized component that listens to docum
 - **Analytics and Reporting**: Running complex SQL queries on your document data
 - **Integration**: Connecting with existing business intelligence tools
 
+:::tip Prerequisites
+This tutorial builds on the plain processor concepts covered in [Building a Processor](/academy/MasteryTrack/WorkWithData/BuildingAProcessor). If you are new to processors, start there first.
+:::
+
+:::info Import paths
+The code examples below import from `@powerhousedao/reactor-browser`, which re-exports all reactor types for convenience in browser environments (editors, drive-apps, subgraphs). If you are working outside the browser — for example in a standalone Node.js script, CLI tool, or server-side processor — import directly from `@powerhousedao/reactor`.
+:::
+
 ## Generate the Processor
 
 To generate a relational database processor, run the following command:
@@ -294,12 +302,12 @@ Open `./subgraphs/todo/resolvers.ts` and configure the resolvers:
 
 ```ts
 // subgraphs/search-todos/resolvers.ts
-import { type ISubgraph } from "@powerhousedao/reactor-api";
+import type { BaseSubgraph } from "@powerhousedao/reactor-api";
 import { type TodoListDocument } from "../../document-models/todo-list/index.js";
 import { TodoIndexerProcessor } from "../../processors/todo-indexer/index.js";
 
-export const getResolvers = (subgraph: ISubgraph) => {
-  const reactor = subgraph.reactor;
+export const getResolvers = (subgraph: BaseSubgraph) => {
+  const reactorClient = subgraph.reactorClient;
   const relationalDb = subgraph.relationalDb;
 
   return {

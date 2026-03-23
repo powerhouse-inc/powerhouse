@@ -2,6 +2,7 @@ import type { DocumentModelTemplateInputs } from "@powerhousedao/codegen/file-bu
 import { ts } from "@tmpl/core";
 import { camelCase } from "change-case";
 import type { ModuleSpecification } from "@powerhousedao/shared/document-model";
+import type { ModuleSpecification } from "@powerhousedao/shared/document-model";
 
 function buildModuleActionsName(
   module: ModuleSpecification,
@@ -46,7 +47,7 @@ export const documentModelRootActionsFileTemplate = (
   v: DocumentModelTemplateInputs,
 ) =>
   ts`
-import { baseActions } from "document-model";
+import { baseActions } from "@powerhousedao/shared/document-model";
 ${buildModuleActionsImports(v.modules, v.camelCaseDocumentType)}
 
 /** Actions for the ${v.pascalCaseDocumentType} document model */

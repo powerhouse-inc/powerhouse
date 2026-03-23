@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/codegen",
-  "version": "6.0.0-dev.96",
+  "version": "6.0.0-dev.105",
   "license": "AGPL-3.0-only",
   "private": false,
   "type": "module",
@@ -85,6 +85,7 @@
     "@powerhousedao/reactor-browser": "workspace:*",
     "@powerhousedao/analytics-engine-core": "workspace:*",
     "@powerhousedao/design-system": "workspace:*",
-    "document-drive": "workspace:*"
+    "document-drive": "workspace:*",
+    "vite-tsconfig-paths": "catalog:"
   }
 }

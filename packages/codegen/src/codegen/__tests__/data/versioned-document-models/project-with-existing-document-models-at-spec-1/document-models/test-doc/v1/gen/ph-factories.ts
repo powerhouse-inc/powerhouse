@@ -16,7 +16,7 @@ import type {
   TestDocLocalState,
   TestDocPHState,
 } from "./types.js";
-import { createDocument } from "./utils.js";
+import { utils } from "./utils.js";
 
 export function defaultGlobalState(): TestDocGlobalState {
   return {
@@ -82,7 +82,7 @@ export function createTestDocDocument(
     local?: Partial<TestDocLocalState>;
   }>,
 ): TestDocDocument {
-  const document = createDocument(
+  const document = utils.createDocument(
     state
       ? createState(
           createBaseState(state.auth, state.document),

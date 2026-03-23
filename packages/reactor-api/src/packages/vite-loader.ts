@@ -13,7 +13,6 @@ import { createLogger, createServer } from "vite";
 import tsconfigPaths from "vite-tsconfig-paths";
 import { isSubgraphClass } from "../graphql/utils.js";
 import type {
-  IPackageLoaderOptions,
   ISubscribablePackageLoader,
   ISubscriptionOptions,
 } from "./types.js";
@@ -31,17 +30,15 @@ export function createViteLogger(logger: ILogger, prefix = "") {
 
 export class VitePackageLoader implements ISubscribablePackageLoader {
   private readonly logger = childLogger(["reactor-api", "vite-loader"]);
-  private readonly legacyReactor: boolean;
 
   private readonly vite: ViteDevServer;
 
-  static build(vite: ViteDevServer, options?: IPackageLoaderOptions) {
-    return new VitePackageLoader(vite, options);
+  static build(vite: ViteDevServer) {
+    return new VitePackageLoader(vite);
   }
 
-  constructor(vite: ViteDevServer, options?: IPackageLoaderOptions) {
+  constructor(vite: ViteDevServer) {
     this.vite = vite;
-    this.legacyReactor = options?.legacyReactor ?? false;
   }
 
   private getDocumentModelsPath(identifier: string): string {
@@ -139,37 +136,19 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
     try {
       const pkgModule = await this.vite.ssrLoadModule(fullPath);
 
-      // Choose factory based on constructor option
-      const factoryName = this.legacyReactor
-        ? "processorFactoryLegacy"
-        : "processorFactory";
       const factory = (
         pkgModule as Record<
           string,
           | ((module: IProcessorHostModuleLegacy) => ProcessorFactoryLegacy)
           | undefined
         >
-      )?.[factoryName];
+      )?.processorFactory;
 
       if (factory && typeof factory === "function") {
         this.logger.verbose(
-          `  ➜  Loaded Processor Factory (${factoryName}) from: ${identifier}`,
+          `  ➜  Loaded Processor Factory from: ${identifier}`,
         );
         return factory as (
-          module: IProcessorHostModuleLegacy,
-        ) => ProcessorFactoryLegacy;
-      }
-
-      // Fallback: if legacy requested but not found, try default (backwards compat)
-      if (
-        this.legacyReactor &&
-        pkgModule?.processorFactory &&
-        typeof pkgModule.processorFactory === "function"
-      ) {
-        this.logger.verbose(
-          `  ➜  Loaded Processor Factory (fallback to processorFactory) from: ${identifier}`,
-        );
-        return pkgModule.processorFactory as (
           module: IProcessorHostModuleLegacy,
         ) => ProcessorFactoryLegacy;
       }

@@ -1,3 +1,111 @@
+## 6.0.0-dev.105 (2026-03-23)
+
+This was a version bump only, there were no code changes.
+
+## 6.0.0-dev.104 (2026-03-22)
+
+This was a version bump only, there were no code changes.
+
+## 6.0.0-dev.103 (2026-03-21)
+
+### 🚀 Features
+
+- **reactor-api:** namespace document model queries and mutations ([a0d50a226](https://github.com/powerhouse-inc/powerhouse/commit/a0d50a226))
+- **reactor-api:** add SSE subscription transport alongside WebSocket ([40fdeee89](https://github.com/powerhouse-inc/powerhouse/commit/40fdeee89))
+- **reactor-api:** add dev script for local development ([ec29e40ee](https://github.com/powerhouse-inc/powerhouse/commit/ec29e40ee))
+
+### 🩹 Fixes
+
+- **reactor:** temporary fix for deleting documents and cleaning up all edges too -- very costly ([8a15a0604](https://github.com/powerhouse-inc/powerhouse/commit/8a15a0604))
+- **reactor-api,codegen:** added namespace to custom subgraph and fixed loading of document models with multiple versions ([b68cd8972](https://github.com/powerhouse-inc/powerhouse/commit/b68cd8972))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan
+- Claude Opus 4.6 (1M context)
+
+## 6.0.0-dev.102 (2026-03-20)
+
+### 🩹 Fixes
+
+- update workflow to use refname for tag in case it is not annotated, and provide a clear error message when there is no tag ([269758716](https://github.com/powerhouse-inc/powerhouse/commit/269758716))
+- **builder-tools,reactor-browser:** bundling fixes ([59dfd75b6](https://github.com/powerhouse-inc/powerhouse/commit/59dfd75b6))
+- **reactor:** fix issue where deleted docs were still being returned -- document-view should store isdeleted across all scopes ([709b4917c](https://github.com/powerhouse-inc/powerhouse/commit/709b4917c))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan
+
+## 6.0.0-dev.101 (2026-03-20)
+
+### 🚀 Features
+
+- **examples:** add Discord webhook processor example ([fc09a4d66](https://github.com/powerhouse-inc/powerhouse/commit/fc09a4d66))
+- **reactor-api:** documents subgraph call ([2efd5e899](https://github.com/powerhouse-inc/powerhouse/commit/2efd5e899))
+- **shared:** add full-text search processor for document indexing ([48ffbff4f](https://github.com/powerhouse-inc/powerhouse/commit/48ffbff4f))
+
+### 🩹 Fixes
+
+- **ph-cli:** suppress misleading npm fallback warning when using --pnpm flag ([100603968](https://github.com/powerhouse-inc/powerhouse/commit/100603968))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 4.6
+- Guillermo Puente @gpuente
+
+## 6.0.0-dev.100 (2026-03-19)
+
+This was a version bump only, there were no code changes.
+
+## 6.0.0-dev.99 (2026-03-18)
+
+### 🚀 Features
+
+- **test-subscription:** adding a cli test-client for testing reactor api subscriptions ([563a8ac7d](https://github.com/powerhouse-inc/powerhouse/commit/563a8ac7d))
+
+### 🩹 Fixes
+
+- updated pnpm-lock ([c2843dc5b](https://github.com/powerhouse-inc/powerhouse/commit/c2843dc5b))
+- **reactor-browser:** added missing dependency declarations ([c8705d324](https://github.com/powerhouse-inc/powerhouse/commit/c8705d324))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+
+## 6.0.0-dev.98 (2026-03-18)
+
+### 🩹 Fixes
+
+- **connect:** declare dependencies ([6aa6910d3](https://github.com/powerhouse-inc/powerhouse/commit/6aa6910d3))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.97 (2026-03-18)
+
+### 🚀 Features
+
+- **reactor:** introducing a new quarantine feature -- now instead of blocking an entire remote from updating after sync issues, we only quarantine affected documents ([6df4d4a31](https://github.com/powerhouse-inc/powerhouse/commit/6df4d4a31))
+- **reactor:** abort signals should be able to be passed all the way through the job pipeline, which also gives us job timeout ([192ff6111](https://github.com/powerhouse-inc/powerhouse/commit/192ff6111))
+
+### 🩹 Fixes
+
+- **common,connect:** fix ph connect build and missing assets on dev ([667c4ef4e](https://github.com/powerhouse-inc/powerhouse/commit/667c4ef4e))
+- **design-system:** removed zod dependency ([fdc7c2ef7](https://github.com/powerhouse-inc/powerhouse/commit/fdc7c2ef7))
+- **reactor:** gql channel should not have multiple pushes in-flight at the same time ([bdcd32a01](https://github.com/powerhouse-inc/powerhouse/commit/bdcd32a01))
+- **reactor:** removing some dead code ([4aa05f61c](https://github.com/powerhouse-inc/powerhouse/commit/4aa05f61c))
+- **reactor:** backfill should stream pages into outbox to get them all, and to prevent in-memory buildup ([fa3acba22](https://github.com/powerhouse-inc/powerhouse/commit/fa3acba22))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan
+
 ## 6.0.0-dev.96 (2026-03-17)
 
 ### 🚀 Features

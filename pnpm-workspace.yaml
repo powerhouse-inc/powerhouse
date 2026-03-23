@@ -85,6 +85,10 @@ catalog:
   "@types/luxon": 3.7.1
   "react-i18next": 16.5.4
   "graphql-tag": 2.12.6
+  "graphql-ws": 6.0.7
+  "graphql-sse": 2.6.0
+  "ws": 8.19.0
+  "@types/ws": 8.18.1
   lightningcss: 1.31.1
   "better-sqlite3": 12.6.2
   "sqlite3": 5.1.7
@@ -133,4 +137,3 @@ allowBuilds:
   "protobufjs": true
   "unrs-resolver": true
   "utf-8-validate": true
-  

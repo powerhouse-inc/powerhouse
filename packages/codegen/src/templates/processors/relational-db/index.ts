@@ -5,7 +5,7 @@ const defaultNamespaceComment =
 export const relationalDbIndexTemplate = (v: { pascalCaseName: string }) =>
   ts`
 import { RelationalDbProcessor } from "@powerhousedao/reactor-browser";
-import type { OperationWithContext } from "document-model";
+import type { OperationWithContext } from "@powerhousedao/shared/document-model";
 import { up } from "./migrations.js";
 import type { DB } from "./schema.js";
 

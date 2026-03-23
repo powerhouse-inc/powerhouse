@@ -82,10 +82,10 @@ export async function createOrUpdateUpgradeManifestFile(args: {
     sourceFile,
     "UpgradeManifest",
   )?.getVariableStatementOrThrow();
-  const objectLiteral = getObjectLiteral(upgradeManifestStatement)!;
-  const upgradesProperty = objectLiteral.getPropertyOrThrow("upgrades");
+  const objectLiteral = getObjectLiteral(upgradeManifestStatement);
+  const upgradesProperty = objectLiteral?.getProperty("upgrades");
   const upgrades = buildUpgrades(specVersions);
-  upgradesProperty.replaceWithText(upgrades);
+  upgradesProperty?.replaceWithText(upgrades);
   await formatSourceFileWithPrettier(sourceFile);
 }
 

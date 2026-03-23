@@ -1,5 +1,4 @@
 import type { Action, PHDocument } from "@powerhousedao/shared/document-model";
-import type { UseDispatchResult } from "./dispatch.js";
 import { useDispatch } from "./dispatch.js";
 import { useDocument, useDocuments } from "./document-cache.js";
 

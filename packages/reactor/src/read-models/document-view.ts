@@ -75,6 +75,31 @@ export class KyselyDocumentView extends BaseReadModel implements IDocumentView {
         }
 
         const operationType = operation.action.type;
+
+        if (operationType === "DELETE_DOCUMENT") {
+          const now = new Date();
+          await trx
+            .updateTable("DocumentSnapshot")
+            .set({
+              isDeleted: true,
+              deletedAt: now,
+              lastOperationIndex: index,
+              lastOperationHash: hash,
+              lastUpdatedAt: now,
+            })
+            .where("documentId", "=", documentId)
+            .where("branch", "=", branch)
+            .execute();
+
+          await trx
+            .deleteFrom("SlugMapping")
+            .where("documentId", "=", documentId)
+            .where("branch", "=", branch)
+            .execute();
+
+          continue;
+        }
+
         let scopesToIndex: Array<[string, unknown]>;
 
         if (operationType === "CREATE_DOCUMENT") {

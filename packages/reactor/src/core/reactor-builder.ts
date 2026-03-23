@@ -294,6 +294,7 @@ export class ReactorBuilder {
         jobTracker,
         this.logger,
         resolver,
+        this.executorConfig.jobTimeoutMs,
       );
     }
 
