@@ -13,11 +13,6 @@ import {
     defaultBaseState,
     generateId,
  } from "document-model";
-import type { 
-  ${v.globalStateName},
-  ${v.localStateName}
-} from './types.js';
-import type { ${v.phStateName} } from './types.js';
 import { reducer } from './reducer.js';
 import { ${v.documentTypeVariableName} } from "./document-type.js";
 import {
@@ -26,8 +21,6 @@ import {
   ${v.isPhDocumentOfTypeFunctionName},
   ${v.isPhStateOfTypeFunctionName},
 } from "./document-schema.js";
-import { ${v.documentTypeVariableName} } from "./document-type.js";
-import { reducer } from './reducer.js';
 import type { ${v.globalStateName}, ${v.localStateName}, ${v.phStateName} } from './types.js';
 
 export const initialGlobalState: ${v.globalStateName} = ${v.initialGlobalState};

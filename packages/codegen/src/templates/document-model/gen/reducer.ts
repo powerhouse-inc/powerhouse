@@ -132,7 +132,7 @@ export const documentModelGenReducerFileTemplate = (
   ts`
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
-import type { StateReducer } from "@powerhousedao/shared/document-model";
+import type { Reducer, StateReducer } from "@powerhousedao/shared/document-model";
 import { isDocumentAction, createReducer } from "@powerhousedao/shared/document-model";
 import type { ${v.phStateName} } from "${v.versionedDocumentModelPackageImportPath}";
 

@@ -10,7 +10,6 @@ export const documentModelPhFactoriesFileTemplate = (
  */
 import type {
   PHAuthState,
-  PHBaseState,
   PHDocumentState,
   PHBaseState,
 } from "@powerhousedao/shared/document-model";
