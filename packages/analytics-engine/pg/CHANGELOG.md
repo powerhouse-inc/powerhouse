@@ -1,3 +1,19 @@
+## 6.0.0-dev.106 (2026-03-23)
+
+### 🚀 Features
+
+- add ph build command 2 ([#2415](https://github.com/powerhouse-inc/powerhouse/pull/2415))
+
+### 🩹 Fixes
+
+- **release:** remove stale build-connect step, now covered by build-bundle ([e00eed45a](https://github.com/powerhouse-inc/powerhouse/commit/e00eed45a))
+- add git pull --rebase before push in k8s update jobs to avoid race conditions ([fa7af726f](https://github.com/powerhouse-inc/powerhouse/commit/fa7af726f))
+
+### ❤️ Thank You
+
+- Frank
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.0.0-dev.105 (2026-03-23)
 
 This was a version bump only for @powerhousedao/analytics-engine-pg to align it with other projects, there were no code changes.

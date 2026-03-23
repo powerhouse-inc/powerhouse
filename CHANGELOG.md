@@ -1,3 +1,23 @@
+## 6.0.0-dev.106 (2026-03-23)
+
+### 🚀 Features
+
+- add ph build command 2 ([#2415](https://github.com/powerhouse-inc/powerhouse/pull/2415))
+- **registry:** add publish notifications via SSE and webhooks ([782cc0b85](https://github.com/powerhouse-inc/powerhouse/commit/782cc0b85))
+
+### 🩹 Fixes
+
+- add git pull --rebase before push in k8s update jobs to avoid race conditions ([fa7af726f](https://github.com/powerhouse-inc/powerhouse/commit/fa7af726f))
+- **registry:** resolve workspace:* deps in Dockerfile for standalone install ([a4670f563](https://github.com/powerhouse-inc/powerhouse/commit/a4670f563))
+- **release:** remove stale build-connect step, now covered by build-bundle ([e00eed45a](https://github.com/powerhouse-inc/powerhouse/commit/e00eed45a))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Claude Opus 4.6 (1M context)
+- Frank
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.0.0-dev.105 (2026-03-23)
 
 This was a version bump only, there were no code changes.

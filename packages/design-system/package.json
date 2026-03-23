@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/design-system",
-  "version": "6.0.0-dev.105",
+  "version": "6.0.0-dev.106",
   "description": "",
   "files": [
     "dist",
@@ -114,7 +114,6 @@
     "vite": "catalog:",
     "vitest": "catalog:",
     "@powerhousedao/reactor-browser": "workspace:*"
-
   },
   "peerDependencies": {
     "react": ">=19.0.0",
