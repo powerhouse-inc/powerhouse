@@ -5,6 +5,9 @@ import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import { runServer } from "verdaccio";
 import { createPowerhouseRouter, createPublishHook } from "./middleware.js";
+import { NotificationManager } from "./notifications/manager.js";
+import { SSEChannel } from "./notifications/sse.js";
+import { WebhookChannel } from "./notifications/webhook.js";
 import type { RegistryCommandArgs, RegistryConfig } from "./types.js";
 import { buildVerdaccioConfig } from "./verdaccio-config.js";
 
@@ -28,6 +31,7 @@ export async function runRegistry(args: RegistryCommandArgs) {
     cdnCacheDir,
     uplink,
     webEnabled,
+    webhooks,
     s3AccessKeyId,
     s3Bucket,
     s3Endpoint,
@@ -44,12 +48,21 @@ export async function runRegistry(args: RegistryCommandArgs) {
     cdnCachePath,
   });
 
+  const webhookConfigs = webhooks
+    ?.split(",")
+    .map((url) => url.trim())
+    .filter(Boolean)
+    .map((endpoint) => ({ endpoint }));
+
   const config: RegistryConfig = {
     port,
     storagePath,
     cdnCachePath,
     uplink,
     webEnabled,
+    ...(webhookConfigs?.length && {
+      notify: { webhooks: webhookConfigs },
+    }),
     ...(s3Bucket &&
       s3Endpoint &&
       s3Region && {
@@ -79,9 +92,13 @@ export async function runRegistry(args: RegistryCommandArgs) {
 
   const app = express();
 
+  const sseChannel = new SSEChannel();
+  const webhookChannel = new WebhookChannel(config.storagePath, config.notify);
+  const notifications = new NotificationManager([sseChannel, webhookChannel]);
+
   // Our routes take priority over Verdaccio
-  app.use(createPowerhouseRouter(config));
-  app.use(createPublishHook(config));
+  app.use(createPowerhouseRouter(config, sseChannel, webhookChannel));
+  app.use(createPublishHook(config, notifications));
 
   // Verdaccio handles everything else (npm protocol, web UI, auth)
   app.use((req, res) => verdaccioHandler(req, res));

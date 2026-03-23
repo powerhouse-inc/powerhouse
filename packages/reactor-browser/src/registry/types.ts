@@ -6,3 +6,8 @@ export interface RegistryPackageInfo {
   publisher?: string;
   publisherUrl?: string;
 }
+
+export interface PublishEvent {
+  packageName: string;
+  version: string | null;
+}

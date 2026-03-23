@@ -1,8 +1,15 @@
-import type { NextFunction, Request, Response } from "express";
+import express, {
+  type NextFunction,
+  type Request,
+  type Response,
+} from "express";
 import { Router } from "express";
 import fs from "node:fs";
 import path from "node:path";
 import { CdnCache } from "./cdn.js";
+import type { NotificationChannel } from "./notifications/types.js";
+import type { SSEChannel } from "./notifications/sse.js";
+import type { WebhookChannel } from "./notifications/webhook.js";
 import {
   findPackagesByDocumentType,
   loadPackage,
@@ -26,7 +33,11 @@ function getContentType(filePath: string): string {
   return MIME_TYPES[ext] ?? "application/octet-stream";
 }
 
-export function createPowerhouseRouter(config: RegistryConfig): Router {
+export function createPowerhouseRouter(
+  config: RegistryConfig,
+  sse: SSEChannel,
+  webhooks: WebhookChannel,
+): Router {
   const cdn = new CdnCache(
     `http://localhost:${config.port}`,
     config.cdnCachePath,
@@ -38,6 +49,47 @@ export function createPowerhouseRouter(config: RegistryConfig): Router {
     res.setHeader("Access-Control-Allow-Origin", "*");
     next();
   });
+
+  // SSE endpoint for publish notifications
+  router.get("/-/events", (_req: Request, res: Response) => {
+    sse.addClient(res);
+  });
+
+  // Webhook management
+  router.get("/-/webhooks", (_req: Request, res: Response) => {
+    res.json(webhooks.getWebhooks());
+  });
+
+  router.post("/-/webhooks", express.json(), (req: Request, res: Response) => {
+    const { endpoint, headers } = req.body as {
+      endpoint?: string;
+      headers?: Record<string, string>;
+    };
+    if (!endpoint) {
+      res.status(400).json({ error: "Missing required field: endpoint" });
+      return;
+    }
+    webhooks.addWebhook({ endpoint, headers });
+    res.status(201).json({ endpoint, headers });
+  });
+
+  router.delete(
+    "/-/webhooks",
+    express.json(),
+    (req: Request, res: Response) => {
+      const { endpoint } = req.body as { endpoint?: string };
+      if (!endpoint) {
+        res.status(400).json({ error: "Missing required field: endpoint" });
+        return;
+      }
+      const removed = webhooks.removeWebhook(endpoint);
+      if (!removed) {
+        res.status(404).json({ error: "Webhook not found" });
+        return;
+      }
+      res.status(204).end();
+    },
+  );
 
   // Package listing API
   router.get("/packages", (req: Request, res: Response) => {
@@ -120,7 +172,10 @@ export function createPowerhouseRouter(config: RegistryConfig): Router {
   return router;
 }
 
-export function createPublishHook(config: RegistryConfig) {
+export function createPublishHook(
+  config: RegistryConfig,
+  notifications: NotificationChannel,
+) {
   const cdn = new CdnCache(
     `http://localhost:${config.port}`,
     config.cdnCachePath,
@@ -154,8 +209,14 @@ export function createPublishHook(config: RegistryConfig) {
                 console.log(
                   `[registry] Extracting ${packageName}@${version} to CDN cache`,
                 );
-                return cdn.extractTarball(packageName, version);
+                return cdn
+                  .extractTarball(packageName, version)
+                  .then(() => version);
               }
+              return null;
+            })
+            .then((version) => {
+              notifications.notifyPublish({ packageName, version });
             })
             .catch((err) => {
               console.error(

@@ -20,6 +20,17 @@ export interface S3Config {
   keyPrefix?: string;
 }
 
+export interface WebhookConfig {
+  /** Webhook URL to POST to */
+  endpoint: string;
+  /** Custom headers to include in the request */
+  headers?: Record<string, string>;
+}
+
+export interface NotifyConfig {
+  webhooks?: WebhookConfig[];
+}
+
 export interface RegistryConfig {
   port: number;
   storagePath: string;
@@ -27,6 +38,7 @@ export interface RegistryConfig {
   uplink?: string;
   webEnabled?: boolean;
   s3?: S3Config;
+  notify?: NotifyConfig;
 }
 
 export interface RegistryCommandArgs {
@@ -42,4 +54,5 @@ export interface RegistryCommandArgs {
   s3KeyPrefix?: string;
   s3ForcePathStyle: boolean;
   webEnabled: boolean;
+  webhooks?: string;
 }
