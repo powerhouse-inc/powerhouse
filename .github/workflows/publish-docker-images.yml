@@ -104,7 +104,7 @@ jobs:
           TAG: ${{ needs.build.outputs.tag }}
         run: |
           if [[ "$TAG" == *"-dev."* ]]; then
-            echo "targets=dev" >> $GITHUB_OUTPUT
+            echo "targets=dev academy" >> $GITHUB_OUTPUT
           elif [[ "$TAG" == *"-staging."* ]]; then
             echo "targets=staging academy" >> $GITHUB_OUTPUT
           else
