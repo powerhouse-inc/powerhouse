@@ -143,4 +143,22 @@ export class KyselySyncDeadLetterStorage implements ISyncDeadLetterStorage {
       throw new Error("Operation aborted");
     }
   }
+
+  async listQuarantinedDocumentIds(signal?: AbortSignal): Promise<string[]> {
+    if (signal?.aborted) {
+      throw new Error("Operation aborted");
+    }
+
+    const rows = await this.db
+      .selectFrom("sync_dead_letters")
+      .select("document_id")
+      .distinct()
+      .execute();
+
+    if (signal?.aborted) {
+      throw new Error("Operation aborted");
+    }
+
+    return rows.map((row) => row.document_id);
+  }
 }

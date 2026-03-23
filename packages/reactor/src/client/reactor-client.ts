@@ -1,4 +1,4 @@
-import { addFile } from "@powerhousedao/shared/document-drive";
+import { addFile, deleteNode } from "@powerhousedao/shared/document-drive";
 import type {
   Action,
   CreateDocumentActionInput,
@@ -12,6 +12,7 @@ import type { ILogger } from "document-model";
 import {
   addRelationshipAction,
   createDocumentAction,
+  removeRelationshipAction,
   upgradeDocumentAction,
 } from "../actions/index.js";
 import type {
@@ -863,6 +864,12 @@ export class ReactorClient implements IReactorClient {
       }
 
       for (const descendantId of descendants) {
+        const removalJobs = await this.removeFromAllParents(
+          descendantId,
+          signal,
+        );
+        jobs.push(...removalJobs);
+
         const jobInfo = await this.reactor.deleteDocument(
           descendantId,
           this.signer,
@@ -871,6 +878,9 @@ export class ReactorClient implements IReactorClient {
         jobs.push(jobInfo);
       }
     }
+
+    const removalJobs = await this.removeFromAllParents(identifier, signal);
+    jobs.push(...removalJobs);
 
     const jobInfo = await this.reactor.deleteDocument(
       identifier,
@@ -1007,5 +1017,90 @@ export class ReactorClient implements IReactorClient {
       unsubscribeUpdated();
       unsubscribeRelationship();
     };
+  }
+
+  private async removeFromAllParents(
+    documentId: string,
+    signal?: AbortSignal,
+  ): Promise<JobInfo[]> {
+    const incoming = await this.documentIndexer.getIncoming(
+      documentId,
+      undefined,
+      undefined,
+      undefined,
+      signal,
+    );
+
+    const jobs: JobInfo[] = [];
+
+    for (const rel of incoming.results) {
+      const parentId = rel.sourceId;
+
+      let parentDoc: PHDocument;
+      try {
+        parentDoc = await this.reactor.get(
+          parentId,
+          undefined,
+          undefined,
+          signal,
+        );
+      } catch {
+        continue;
+      }
+
+      const isDrive =
+        parentDoc.header.documentType === "powerhouse/document-drive";
+
+      const relationshipActions: Action[] = await signActions(
+        [removeRelationshipAction(parentId, documentId, rel.relationshipType)],
+        this.signer,
+        signal,
+      );
+
+      if (isDrive) {
+        const driveActions: Action[] = await signActions(
+          [deleteNode({ id: documentId })],
+          this.signer,
+          signal,
+        );
+
+        const batchResult = await this.reactor.executeBatch(
+          {
+            jobs: [
+              {
+                key: "relationship",
+                documentId: parentId,
+                scope: getSharedActionScope(relationshipActions),
+                branch: "main",
+                actions: relationshipActions,
+                dependsOn: [],
+              },
+              {
+                key: "drive",
+                documentId: parentId,
+                scope: getSharedActionScope(driveActions),
+                branch: "main",
+                actions: driveActions,
+                dependsOn: ["relationship"],
+              },
+            ],
+          },
+          signal,
+        );
+
+        jobs.push(...Object.values(batchResult.jobs));
+      } else {
+        const jobInfo = await this.reactor.removeChildren(
+          parentId,
+          [documentId],
+          "main",
+          this.signer,
+          signal,
+        );
+        jobs.push(jobInfo);
+      }
+    }
+
+    return jobs;
   }
 }

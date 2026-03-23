@@ -53,19 +53,6 @@ export type StartServerOptions = {
   mcp?: boolean;
   processorConfig?: Map<string, unknown>;
   disableLocalPackages?: boolean;
-  reactorOptions?: {
-    /**
-     * When true, both legacy and new reactors will use CREATE/UPDATE operation
-     * flow for new documents.
-     */
-    enableDualActionCreate?: boolean;
-
-    /**
-     * When true, the new Reactor uses only the new Kysely-based storage
-     * instead of the legacy document-drive storage.
-     */
-    storageV2?: boolean;
-  };
   enableDocumentModelSubgraphs?: boolean;
   logger?: ILogger;
   /**
@@ -80,7 +67,6 @@ export type StartServerOptions = {
 export type SwitchboardReactor = {
   defaultDriveUrl: string | undefined;
   reactor: IReactorClient;
-  legacyReactor: IDocumentDriveServer;
   /** The Renown instance if identity was initialized */
   renown: IRenown | null;
 };

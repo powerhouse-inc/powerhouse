@@ -11,7 +11,7 @@ export interface IJobExecutor {
    * @param job - The job to execute
    * @returns Promise that resolves to the job result
    */
-  executeJob(job: Job): Promise<JobResult>;
+  executeJob(job: Job, signal?: AbortSignal): Promise<JobResult>;
 }
 
 /**

@@ -32,6 +32,7 @@ export type ISubgraph = {
   path?: string;
   resolvers: Record<string, any>;
   typeDefs: DocumentNode;
+  reactorClient: IReactorClient;
   relationalDb: IRelationalDbLegacy;
   hasSubscriptions?: boolean;
   onSetup?: () => Promise<void>;

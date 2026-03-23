@@ -29,6 +29,8 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
   private unsubscribe?: () => void;
   private deferredJobs = new Map<string, Job[]>();
 
+  private jobTimeoutMs: number;
+
   constructor(
     private executorFactory: JobExecutorFactory,
     private eventBus: IEventBus,
@@ -36,7 +38,10 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
     private jobTracker: IJobTracker,
     private logger: ILogger,
     private resolver: IDocumentModelResolver,
-  ) {}
+    jobTimeoutMs: number = 30_000,
+  ) {
+    this.jobTimeoutMs = jobTimeoutMs;
+  }
 
   async start(numExecutors: number): Promise<void> {
     if (this.isRunning) {
@@ -157,10 +162,26 @@ export class SimpleJobExecutorManager implements IJobExecutorManager {
     const executorIndex = this.totalJobsProcessed % this.executors.length;
     const executor = this.executors[executorIndex];
 
-    // execute the job
+    // execute the job with a timeout signal; race ensures the timeout fires
+    // even if the executor hangs on a call that does not check the signal
+    const signal = AbortSignal.timeout(this.jobTimeoutMs);
+    const toError = (reason: unknown): Error =>
+      reason instanceof Error ? reason : new Error(String(reason));
+    const abortPromise = new Promise<never>((_, reject) => {
+      if (signal.aborted) {
+        reject(toError(signal.reason));
+        return;
+      }
+      signal.addEventListener("abort", () => reject(toError(signal.reason)), {
+        once: true,
+      });
+    });
     let result: JobResult;
     try {
-      result = await executor.executeJob(handle.job);
+      result = await Promise.race([
+        executor.executeJob(handle.job, signal),
+        abortPromise,
+      ]);
     } catch (error) {
       const errorInfo = this.toErrorInfo(
         error instanceof Error ? error : String(error),

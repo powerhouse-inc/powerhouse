@@ -189,8 +189,11 @@ describe("SimpleJobExecutorManager", () => {
       // Give the manager time to process
       await new Promise((resolve) => setTimeout(resolve, 100));
 
-      // Check that the executor was called
-      expect(mockExecutors[0].executeJob).toHaveBeenCalledWith(job);
+      // Check that the executor was called with the job and an AbortSignal
+      expect(mockExecutors[0].executeJob).toHaveBeenCalledWith(
+        job,
+        expect.any(AbortSignal),
+      );
     });
 
     it("should call start() on the job execution handle", async () => {
@@ -987,6 +990,129 @@ describe("SimpleJobExecutorManager", () => {
       const failedEvent = await failedPromise;
       expect(failedEvent.jobId).toBe("retry-fail-job");
       expect(retryQueue.retryJob).toHaveBeenCalled();
+    });
+  });
+
+  describe("job timeout", () => {
+    it("should fail job when execution exceeds timeout", async () => {
+      const timeoutEventBus = new EventBus();
+      const timeoutQueue = new InMemoryQueue(
+        timeoutEventBus,
+        new NullDocumentModelResolver(),
+      );
+      const timeoutJobTracker = new InMemoryJobTracker(timeoutEventBus);
+
+      const mockExecutor: IJobExecutor = {
+        executeJob: vi.fn().mockImplementation(
+          () => new Promise(() => {}), // never resolves
+        ),
+      };
+
+      const timeoutManager = new SimpleJobExecutorManager(
+        () => mockExecutor,
+        timeoutEventBus,
+        timeoutQueue,
+        timeoutJobTracker,
+        createMockLogger(),
+        new NullDocumentModelResolver(),
+        50, // 50ms timeout
+      );
+
+      const failedPromise = new Promise<JobFailedEvent>((resolve) => {
+        timeoutEventBus.subscribe(
+          ReactorEventTypes.JOB_FAILED,
+          (_type: number, data: JobFailedEvent) => {
+            resolve(data);
+          },
+        );
+      });
+
+      await timeoutManager.start(1);
+
+      const job = createTestJob({
+        id: "timeout-job",
+        retryCount: 0,
+        maxRetries: 0,
+      });
+      await timeoutQueue.enqueue(job);
+
+      const failedEvent = await failedPromise;
+      expect(failedEvent.jobId).toBe("timeout-job");
+    });
+
+    it("should complete normally when within timeout", async () => {
+      const normalEventBus = new EventBus();
+      const normalQueue = new InMemoryQueue(
+        normalEventBus,
+        new NullDocumentModelResolver(),
+      );
+      const normalJobTracker = new InMemoryJobTracker(normalEventBus);
+
+      const mockExecutor: IJobExecutor = {
+        executeJob: vi.fn().mockResolvedValue({
+          success: true,
+          duration: 10,
+        }),
+      };
+
+      const normalManager = new SimpleJobExecutorManager(
+        () => mockExecutor,
+        normalEventBus,
+        normalQueue,
+        normalJobTracker,
+        createMockLogger(),
+        new NullDocumentModelResolver(),
+        5000, // 5s timeout — plenty of time
+      );
+
+      await normalManager.start(1);
+
+      const job = createTestJob({ id: "fast-job" });
+      await normalQueue.enqueue(job);
+
+      await new Promise((resolve) => setTimeout(resolve, 200));
+
+      expect(mockExecutor.executeJob).toHaveBeenCalledTimes(1);
+      const status = normalManager.getStatus();
+      expect(status.totalJobsProcessed).toBe(1);
+    });
+
+    it("should pass AbortSignal to executor", async () => {
+      const signalEventBus = new EventBus();
+      const signalQueue = new InMemoryQueue(
+        signalEventBus,
+        new NullDocumentModelResolver(),
+      );
+      const signalJobTracker = new InMemoryJobTracker(signalEventBus);
+
+      const mockExecutor: IJobExecutor = {
+        executeJob: vi.fn().mockResolvedValue({
+          success: true,
+          duration: 10,
+        }),
+      };
+
+      const signalManager = new SimpleJobExecutorManager(
+        () => mockExecutor,
+        signalEventBus,
+        signalQueue,
+        signalJobTracker,
+        createMockLogger(),
+        new NullDocumentModelResolver(),
+        30_000,
+      );
+
+      await signalManager.start(1);
+
+      const job = createTestJob({ id: "signal-job" });
+      await signalQueue.enqueue(job);
+
+      await new Promise((resolve) => setTimeout(resolve, 200));
+
+      expect(mockExecutor.executeJob).toHaveBeenCalledWith(
+        expect.objectContaining({ id: "signal-job" }),
+        expect.any(AbortSignal),
+      );
     });
   });
 

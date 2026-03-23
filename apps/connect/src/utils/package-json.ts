@@ -1,2 +1,2 @@
-import packageJson from "../../package.json" with { type: "json" };
+import packageJson from "@powerhousedao/connect/package.json";
 export { packageJson };

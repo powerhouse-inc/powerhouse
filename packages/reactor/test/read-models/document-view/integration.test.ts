@@ -2113,4 +2113,184 @@ describe("KyselyDocumentView", () => {
       });
     });
   });
+
+  describe("DELETE_DOCUMENT", () => {
+    const branch = "main";
+    const documentType = "powerhouse/document-model";
+
+    async function createDocumentInView(documentId: string, slug?: string) {
+      const headerState = {
+        id: documentId,
+        documentType,
+        slug: slug || documentId,
+        name: "Test Document",
+      };
+
+      const resultingState = JSON.stringify({
+        header: headerState,
+        document: { isDeleted: false },
+      });
+
+      await view.indexOperations([
+        {
+          operation: createTestOperation(documentId, {
+            index: 0,
+            action: {
+              id: generateId(),
+              type: "CREATE_DOCUMENT",
+              scope: "document",
+              input: {},
+            } as any,
+          }),
+          context: {
+            documentId,
+            documentType,
+            scope: "header",
+            branch,
+            resultingState,
+            ordinal: 1,
+          },
+        },
+        {
+          operation: createTestOperation(documentId, {
+            index: 0,
+            action: {
+              id: generateId(),
+              type: "CREATE_DOCUMENT",
+              scope: "document",
+              input: {},
+            } as any,
+          }),
+          context: {
+            documentId,
+            documentType,
+            scope: "document",
+            branch,
+            resultingState,
+            ordinal: 2,
+          },
+        },
+      ]);
+    }
+
+    async function deleteDocumentInView(documentId: string) {
+      const deletedAt = new Date().toISOString();
+      const resultingState = JSON.stringify({
+        header: {
+          id: documentId,
+          documentType,
+        },
+        document: {
+          isDeleted: true,
+          deletedAtUtcIso: deletedAt,
+        },
+      });
+
+      await view.indexOperations([
+        {
+          operation: createTestOperation(documentId, {
+            index: 1,
+            hash: "delete-hash",
+            action: {
+              id: generateId(),
+              type: "DELETE_DOCUMENT",
+              scope: "document",
+              input: { documentId },
+            } as any,
+          }),
+          context: {
+            documentId,
+            documentType,
+            scope: "document",
+            branch,
+            resultingState,
+            ordinal: 3,
+          },
+        },
+      ]);
+    }
+
+    beforeEach(async () => {
+      await view.init();
+    });
+
+    it("should mark all scope rows as deleted", async () => {
+      const documentId = generateId();
+      await createDocumentInView(documentId);
+      await deleteDocumentInView(documentId);
+
+      const snapshots = await db
+        .selectFrom("DocumentSnapshot")
+        .selectAll()
+        .where("documentId", "=", documentId)
+        .execute();
+
+      expect(snapshots.length).toBeGreaterThan(0);
+      for (const snapshot of snapshots) {
+        expect(snapshot.isDeleted).toBe(true);
+        expect(snapshot.deletedAt).not.toBeNull();
+      }
+    });
+
+    it("get() should throw for deleted document", async () => {
+      const documentId = generateId();
+      await createDocumentInView(documentId);
+      await deleteDocumentInView(documentId);
+
+      await expect(view.get(documentId)).rejects.toThrow(
+        `Document not found: ${documentId}`,
+      );
+    });
+
+    it("exists() should return false for deleted document", async () => {
+      const documentId = generateId();
+      await createDocumentInView(documentId);
+      await deleteDocumentInView(documentId);
+
+      const result = await view.exists([documentId]);
+      expect(result).toEqual([false]);
+    });
+
+    it("findByType() should not include deleted document", async () => {
+      const docId1 = generateId();
+      const docId2 = generateId();
+      await createDocumentInView(docId1);
+      await createDocumentInView(docId2);
+      await deleteDocumentInView(docId1);
+
+      const result = await view.findByType(documentType);
+
+      const returnedIds = result.results.map((d) => d.header.id);
+      expect(returnedIds).not.toContain(docId1);
+      expect(returnedIds).toContain(docId2);
+    });
+
+    it("resolveSlug() should return undefined for deleted document", async () => {
+      const documentId = generateId();
+      const slug = "delete-me-slug";
+      await createDocumentInView(documentId, slug);
+
+      const resolvedBefore = await view.resolveSlug(slug, { branch });
+      expect(resolvedBefore).toBe(documentId);
+
+      await deleteDocumentInView(documentId);
+
+      const resolvedAfter = await view.resolveSlug(slug, { branch });
+      expect(resolvedAfter).toBeUndefined();
+    });
+
+    it("resolveIdOrSlug() should throw for deleted document", async () => {
+      const documentId = generateId();
+      const slug = "deleted-slug";
+      await createDocumentInView(documentId, slug);
+      await deleteDocumentInView(documentId);
+
+      await expect(view.resolveIdOrSlug(documentId)).rejects.toThrow(
+        `Document not found: ${documentId}`,
+      );
+      await expect(view.resolveIdOrSlug(slug)).rejects.toThrow(
+        `Document not found: ${slug}`,
+      );
+    });
+  });
 });

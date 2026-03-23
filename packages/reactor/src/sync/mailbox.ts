@@ -27,6 +27,7 @@ export interface IMailbox {
 
   // sync op management
   init(ackOrdinal: number): void;
+  advanceOrdinal(ordinal: number): void;
   get(id: string): SyncOperation | undefined;
   add(...items: SyncOperation[]): void;
   remove(...items: SyncOperation[]): void;
@@ -68,6 +69,10 @@ export class Mailbox implements IMailbox {
 
   init(ackOrdinal: number) {
     this._ack = this._latestOrdinal = ackOrdinal;
+  }
+
+  advanceOrdinal(ordinal: number): void {
+    this._latestOrdinal = Math.max(this._latestOrdinal, ordinal);
   }
 
   get items(): ReadonlyArray<SyncOperation> {

@@ -4,6 +4,8 @@ import type {
   IProcessorHostModuleLegacy,
   ProcessorFactoryLegacy,
 } from "document-drive";
+import type { DocumentModelModule } from "document-model";
+import type { IPackageLoader } from "../types.js";
 import { childLogger } from "document-model";
 import type { IPackageLoader, IPackageLoaderOptions } from "../types.js";
 import {
@@ -17,11 +19,6 @@ import {
  */
 export class ImportPackageLoader implements IPackageLoader {
   private readonly logger = childLogger(["reactor-api", "import-loader"]);
-  private readonly legacyReactor: boolean;
-
-  constructor(options?: IPackageLoaderOptions) {
-    this.legacyReactor = options?.legacyReactor ?? false;
-  }
 
   async loadDocumentModels(identifier: string): Promise<DocumentModelModule[]> {
     this.logger.verbose("Loading document models from package:", identifier);
@@ -69,29 +66,11 @@ export class ImportPackageLoader implements IPackageLoader {
 
     const pkgModule = await loadProcessorsUtil(identifier);
 
-    // Choose factory based on constructor option
-    const factoryName = this.legacyReactor
-      ? "processorFactoryLegacy"
-      : "processorFactory";
-    const factory = pkgModule?.[factoryName];
+    const factory = pkgModule?.processorFactory;
 
     if (factory && typeof factory === "function") {
-      this.logger.verbose(
-        `  ➜  Loaded Processor Factory (${factoryName}) from: ${identifier}`,
-      );
+      this.logger.verbose(`  ➜  Loaded Processor Factory from: ${identifier}`);
       return factory;
-    }
-
-    // Fallback: if legacy requested but not found, try default (backwards compat)
-    if (
-      this.legacyReactor &&
-      pkgModule?.processorFactory &&
-      typeof pkgModule.processorFactory === "function"
-    ) {
-      this.logger.verbose(
-        `  ➜  Loaded Processor Factory (fallback to processorFactory) from: ${identifier}`,
-      );
-      return pkgModule.processorFactory;
     }
 
     this.logger.verbose(`  ➜  No Processor Factory found: ${identifier}`);

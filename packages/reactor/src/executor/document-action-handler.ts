@@ -43,6 +43,7 @@ export class DocumentActionHandler {
     stores: ExecutionStores,
     skip: number = 0,
     sourceRemote: string = "",
+    signal?: AbortSignal,
   ): Promise<
     JobResult & {
       operationsWithContext?: Array<{
@@ -66,6 +67,7 @@ export class DocumentActionHandler {
           stores,
           skip,
           sourceRemote,
+          signal,
         );
       case "DELETE_DOCUMENT":
         return this.executeDelete(
@@ -75,6 +77,7 @@ export class DocumentActionHandler {
           indexTxn,
           stores,
           sourceRemote,
+          signal,
         );
       case "UPGRADE_DOCUMENT":
         return this.executeUpgrade(
@@ -85,6 +88,7 @@ export class DocumentActionHandler {
           stores,
           skip,
           sourceRemote,
+          signal,
         );
       case "ADD_RELATIONSHIP":
         return this.executeAddRelationship(
@@ -94,6 +98,7 @@ export class DocumentActionHandler {
           indexTxn,
           stores,
           sourceRemote,
+          signal,
         );
       case "REMOVE_RELATIONSHIP":
         return this.executeRemoveRelationship(
@@ -103,6 +108,7 @@ export class DocumentActionHandler {
           indexTxn,
           stores,
           sourceRemote,
+          signal,
         );
       default:
         return buildErrorResult(
@@ -121,6 +127,7 @@ export class DocumentActionHandler {
     stores: ExecutionStores,
     skip: number = 0,
     sourceRemote: string = "",
+    signal?: AbortSignal,
   ): Promise<
     JobResult & {
       operationsWithContext?: Array<{
@@ -168,6 +175,7 @@ export class DocumentActionHandler {
       job,
       startTime,
       stores,
+      signal,
     );
     if (writeError !== null) {
       return writeError;
@@ -223,6 +231,7 @@ export class DocumentActionHandler {
     indexTxn: IOperationIndexTxn,
     stores: ExecutionStores,
     sourceRemote: string = "",
+    signal?: AbortSignal,
   ): Promise<
     JobResult & {
       operationsWithContext?: Array<{
@@ -254,6 +263,8 @@ export class DocumentActionHandler {
         documentId,
         job.scope,
         job.branch,
+        undefined,
+        signal,
       );
     } catch (error) {
       return buildErrorResult(
@@ -299,6 +310,7 @@ export class DocumentActionHandler {
       job,
       startTime,
       stores,
+      signal,
     );
     if (writeError !== null) {
       return writeError;
@@ -349,6 +361,7 @@ export class DocumentActionHandler {
     stores: ExecutionStores,
     skip: number = 0,
     sourceRemote: string = "",
+    signal?: AbortSignal,
   ): Promise<
     JobResult & {
       operationsWithContext?: Array<{
@@ -383,6 +396,8 @@ export class DocumentActionHandler {
         documentId,
         job.scope,
         job.branch,
+        undefined,
+        signal,
       );
     } catch (error) {
       return buildErrorResult(
@@ -467,6 +482,7 @@ export class DocumentActionHandler {
       job,
       startTime,
       stores,
+      signal,
     );
     if (writeError !== null) {
       return writeError;
@@ -516,6 +532,7 @@ export class DocumentActionHandler {
     indexTxn: IOperationIndexTxn,
     stores: ExecutionStores,
     sourceRemote: string = "",
+    signal?: AbortSignal,
   ): Promise<
     JobResult & {
       operationsWithContext?: Array<{
@@ -567,6 +584,8 @@ export class DocumentActionHandler {
         input.sourceId,
         "document",
         job.branch,
+        undefined,
+        signal,
       );
     } catch (error) {
       return buildErrorResult(
@@ -595,6 +614,7 @@ export class DocumentActionHandler {
       job,
       startTime,
       stores,
+      signal,
     );
     if (writeError !== null) {
       return writeError;
@@ -665,6 +685,7 @@ export class DocumentActionHandler {
     indexTxn: IOperationIndexTxn,
     stores: ExecutionStores,
     sourceRemote: string = "",
+    signal?: AbortSignal,
   ): Promise<
     JobResult & {
       operationsWithContext?: Array<{
@@ -706,6 +727,8 @@ export class DocumentActionHandler {
         input.sourceId,
         "document",
         job.branch,
+        undefined,
+        signal,
       );
     } catch (error) {
       return buildErrorResult(
@@ -734,6 +757,7 @@ export class DocumentActionHandler {
       job,
       startTime,
       stores,
+      signal,
     );
     if (writeError !== null) {
       return writeError;
@@ -806,6 +830,7 @@ export class DocumentActionHandler {
     job: Job,
     startTime: number,
     stores: ExecutionStores,
+    signal?: AbortSignal,
   ): Promise<JobResult | null> {
     try {
       await stores.operationStore.apply(
@@ -817,6 +842,7 @@ export class DocumentActionHandler {
         (txn) => {
           txn.addOperations(operation);
         },
+        signal,
       );
       return null;
     } catch (error) {

@@ -66,6 +66,9 @@ describe("SyncManager - Unit Tests", () => {
           }
         }
       }),
+      advanceOrdinal: vi.fn((ordinal: number) => {
+        _latestOrdinal = Math.max(_latestOrdinal, ordinal);
+      }),
       remove: vi.fn(),
       get: vi.fn(),
       onAdded: vi.fn(),
@@ -105,6 +108,7 @@ describe("SyncManager - Unit Tests", () => {
       ordinal: number;
       action?: any;
     }>,
+    nextPage?: () => Promise<ReturnType<typeof createFindResult>>,
   ) {
     return {
       results: entries.map((e) => ({
@@ -128,6 +132,7 @@ describe("SyncManager - Unit Tests", () => {
         ordinal: e.ordinal,
       })),
       options: { cursor: "0", limit: 500 },
+      next: nextPage,
     };
   }
 
@@ -189,6 +194,7 @@ describe("SyncManager - Unit Tests", () => {
       add: vi.fn().mockResolvedValue(undefined),
       remove: vi.fn().mockResolvedValue(undefined),
       removeByRemote: vi.fn().mockResolvedValue(undefined),
+      listQuarantinedDocumentIds: vi.fn().mockResolvedValue([]),
     };
 
     mockChannelFactory = {
@@ -2461,6 +2467,7 @@ describe("SyncManager - Unit Tests", () => {
           resume: vi.fn(),
           isPaused: vi.fn().mockReturnValue(false),
           flush: vi.fn(),
+          advanceOrdinal: vi.fn(),
         },
         outbox: {
           items: [] as any[],
@@ -2473,6 +2480,7 @@ describe("SyncManager - Unit Tests", () => {
           resume: vi.fn(),
           isPaused: vi.fn().mockReturnValue(false),
           flush: vi.fn(),
+          advanceOrdinal: vi.fn(),
         },
         deadLetter: {
           items: [] as any[],
@@ -2485,6 +2493,7 @@ describe("SyncManager - Unit Tests", () => {
           resume: vi.fn(),
           isPaused: vi.fn().mockReturnValue(false),
           flush: vi.fn(),
+          advanceOrdinal: vi.fn(),
         },
         init: vi.fn().mockResolvedValue(undefined),
         shutdown: vi.fn(),
@@ -2627,6 +2636,7 @@ describe("SyncManager - Unit Tests", () => {
           resume: vi.fn(),
           isPaused: vi.fn().mockReturnValue(false),
           flush: vi.fn(),
+          advanceOrdinal: vi.fn(),
         },
         outbox: {
           items: [] as any[],
@@ -2639,6 +2649,7 @@ describe("SyncManager - Unit Tests", () => {
           resume: vi.fn(),
           isPaused: vi.fn().mockReturnValue(false),
           flush: vi.fn(),
+          advanceOrdinal: vi.fn(),
         },
         deadLetter: {
           items: [] as any[],
@@ -2651,6 +2662,7 @@ describe("SyncManager - Unit Tests", () => {
           resume: vi.fn(),
           isPaused: vi.fn().mockReturnValue(false),
           flush: vi.fn(),
+          advanceOrdinal: vi.fn(),
         },
         init: vi.fn().mockResolvedValue(undefined),
         shutdown: vi.fn(),
@@ -3047,6 +3059,7 @@ describe("SyncManager - Unit Tests", () => {
           resume: vi.fn(),
           isPaused: vi.fn().mockReturnValue(false),
           flush: vi.fn(),
+          advanceOrdinal: vi.fn(),
         },
         outbox: {
           items: [] as any[],
@@ -3059,6 +3072,7 @@ describe("SyncManager - Unit Tests", () => {
           resume: vi.fn(),
           isPaused: vi.fn().mockReturnValue(false),
           flush: vi.fn(),
+          advanceOrdinal: vi.fn(),
         },
         deadLetter: {
           items: [] as any[],
@@ -3071,6 +3085,7 @@ describe("SyncManager - Unit Tests", () => {
           resume: vi.fn(),
           isPaused: vi.fn().mockReturnValue(false),
           flush: vi.fn(),
+          advanceOrdinal: vi.fn(),
         },
         init: vi.fn().mockResolvedValue(undefined),
         shutdown: vi.fn(),
@@ -3731,6 +3746,7 @@ describe("SyncManager - Unit Tests", () => {
           resume: vi.fn(),
           isPaused: vi.fn().mockReturnValue(false),
           flush: vi.fn(),
+          advanceOrdinal: vi.fn(),
         },
         outbox: {
           items: [] as any[],
@@ -3743,6 +3759,7 @@ describe("SyncManager - Unit Tests", () => {
           resume: vi.fn(),
           isPaused: vi.fn().mockReturnValue(false),
           flush: vi.fn(),
+          advanceOrdinal: vi.fn(),
         },
         deadLetter: {
           items: [] as any[],
@@ -3755,6 +3772,7 @@ describe("SyncManager - Unit Tests", () => {
           resume: vi.fn(),
           isPaused: vi.fn().mockReturnValue(false),
           flush: vi.fn(),
+          advanceOrdinal: vi.fn(),
         },
         init: vi.fn().mockResolvedValue(undefined),
         shutdown: vi.fn(),
@@ -3820,6 +3838,603 @@ describe("SyncManager - Unit Tests", () => {
 
       expect(loadFailChannel.deadLetter.add).toHaveBeenCalledWith(syncOp);
       expect(loadFailChannel.inbox.remove).toHaveBeenCalledWith(syncOp);
+    });
+  });
+
+  describe("per-document quarantine", () => {
+    it("should quarantine document IDs when dead letters are added", async () => {
+      await syncManager.startup();
+
+      const remote = await syncManager.add("remote-quarantine", "col1", {
+        type: "internal",
+        parameters: {},
+      } as ChannelConfig);
+
+      const ch = remote.channel;
+      const onAddedCalls = vi.mocked(ch.deadLetter.onAdded).mock.calls;
+      const deadLetterCb = onAddedCalls[onAddedCalls.length - 1][0];
+
+      const syncOp = new SyncOperation(
+        "dl-1",
+        "job-1",
+        [],
+        "remote-quarantine",
+        "quarantined-doc",
+        ["global"],
+        "main",
+        [],
+      );
+      syncOp.failed(
+        new (await import("../../../src/sync/errors.js")).ChannelError(
+          ChannelErrorSource.Inbox,
+          new Error("test error"),
+        ),
+      );
+
+      deadLetterCb([syncOp]);
+
+      // Now set up outbox: operations for the quarantined doc should be filtered
+      vi.mocked(mockOperationIndex.find).mockResolvedValueOnce(
+        createFindResult([
+          {
+            id: "op-1",
+            documentId: "quarantined-doc",
+            scope: "global",
+            branch: "main",
+            ordinal: 10,
+          },
+          {
+            id: "op-2",
+            documentId: "healthy-doc",
+            scope: "global",
+            branch: "main",
+            ordinal: 11,
+          },
+        ]),
+      );
+
+      vi.mocked(
+        mockOperationIndex.getCollectionsForDocuments,
+      ).mockResolvedValue({
+        "quarantined-doc": ["col1"],
+        "healthy-doc": ["col1"],
+      });
+
+      // Trigger updateOutbox via a write-ready event
+      await emitWriteReady({
+        jobId: "j1",
+        operations: [
+          {
+            operation: {
+              index: 0,
+              skip: 0,
+              id: "op-2",
+              hash: "h",
+              timestampUtcMs: "1000",
+              action: { type: "CREATE", scope: "global" },
+            },
+            context: {
+              documentId: "healthy-doc",
+              documentType: "test",
+              scope: "global",
+              branch: "main",
+              ordinal: 11,
+            },
+          },
+        ],
+        collectionMemberships: {
+          "healthy-doc": ["col1"],
+          "quarantined-doc": ["col1"],
+        },
+        jobMeta: { batchId: "batch-1", batchJobIds: ["j1"] },
+      });
+
+      // Only healthy-doc should be in outbox (quarantined-doc filtered out)
+      const addedOps = vi.mocked(ch.outbox.add).mock.calls.flat();
+      const outboxDocIds = addedOps.map((op: SyncOperation) => op.documentId);
+      expect(outboxDocIds).toContain("healthy-doc");
+      expect(outboxDocIds).not.toContain("quarantined-doc");
+    });
+
+    it("should filter quarantined docs in handleInboxAdded", async () => {
+      await syncManager.startup();
+
+      const remote = await syncManager.add("remote-inbox-quarantine", "col1", {
+        type: "internal",
+        parameters: {},
+      } as ChannelConfig);
+
+      const ch = remote.channel;
+
+      // First, add a dead letter to quarantine "quarantined-doc"
+      const onAddedCalls = vi.mocked(ch.deadLetter.onAdded).mock.calls;
+      const deadLetterCb = onAddedCalls[onAddedCalls.length - 1][0];
+
+      const dlOp = new SyncOperation(
+        "dl-1",
+        "job-1",
+        [],
+        "remote-inbox-quarantine",
+        "quarantined-doc",
+        ["global"],
+        "main",
+        [],
+      );
+      dlOp.failed(
+        new (await import("../../../src/sync/errors.js")).ChannelError(
+          ChannelErrorSource.Inbox,
+          new Error("test error"),
+        ),
+      );
+      deadLetterCb([dlOp]);
+
+      // Now trigger inbox with a quarantined and a healthy doc
+      const inboxCb = vi.mocked(ch.inbox.onAdded).mock.calls[0][0];
+
+      const quarantinedInbox = new SyncOperation(
+        "inbox-1",
+        "",
+        [],
+        "remote-inbox-quarantine",
+        "quarantined-doc",
+        ["global"],
+        "main",
+        [
+          {
+            operation: {
+              index: 0,
+              skip: 0,
+              id: "op-q",
+              hash: "h",
+              timestampUtcMs: "1000",
+              action: { type: "CREATE", scope: "global" } as any,
+            },
+            context: {
+              documentId: "quarantined-doc",
+              documentType: "test",
+              scope: "global",
+              branch: "main",
+              ordinal: 1,
+            },
+          },
+        ],
+      );
+
+      const healthyInbox = new SyncOperation(
+        "inbox-2",
+        "",
+        [],
+        "remote-inbox-quarantine",
+        "healthy-doc",
+        ["global"],
+        "main",
+        [
+          {
+            operation: {
+              index: 0,
+              skip: 0,
+              id: "op-h",
+              hash: "h",
+              timestampUtcMs: "1000",
+              action: { type: "CREATE", scope: "global" } as any,
+            },
+            context: {
+              documentId: "healthy-doc",
+              documentType: "test",
+              scope: "global",
+              branch: "main",
+              ordinal: 1,
+            },
+          },
+        ],
+      );
+
+      inboxCb([quarantinedInbox, healthyInbox]);
+
+      await new Promise((r) => setTimeout(r, 100));
+
+      // Only the healthy doc should have been loaded
+      expect(mockReactor.load).toHaveBeenCalledTimes(1);
+      expect(mockReactor.load).toHaveBeenCalledWith(
+        "healthy-doc",
+        expect.anything(),
+        expect.anything(),
+        expect.anything(),
+        expect.anything(),
+      );
+    });
+
+    it("should share quarantine across all remotes", async () => {
+      await syncManager.startup();
+
+      const remote1 = await syncManager.add("remote-share-1", "col1", {
+        type: "internal",
+        parameters: {},
+      } as ChannelConfig);
+
+      // Create a second channel mock for the second remote
+      const channel2 = createTestChannel();
+      vi.mocked(mockChannelFactory.instance).mockReturnValueOnce(
+        channel2 as any,
+      );
+
+      const remote2 = await syncManager.add("remote-share-2", "col1", {
+        type: "internal",
+        parameters: {},
+      } as ChannelConfig);
+
+      // Quarantine a doc via remote1's dead letter
+      const ch1 = remote1.channel;
+      const dlCb1 = vi.mocked(ch1.deadLetter.onAdded).mock.calls[
+        vi.mocked(ch1.deadLetter.onAdded).mock.calls.length - 1
+      ][0];
+
+      const dlOp = new SyncOperation(
+        "dl-shared",
+        "job-shared",
+        [],
+        "remote-share-1",
+        "shared-quarantine-doc",
+        ["global"],
+        "main",
+        [],
+      );
+      dlOp.failed(
+        new (await import("../../../src/sync/errors.js")).ChannelError(
+          ChannelErrorSource.Inbox,
+          new Error("test error"),
+        ),
+      );
+      dlCb1([dlOp]);
+
+      // Now trigger inbox on remote2 with the quarantined doc
+      const ch2 = remote2.channel;
+      const inboxCb2 = vi.mocked(ch2.inbox.onAdded).mock.calls[0][0];
+
+      const quarantinedInbox = new SyncOperation(
+        "inbox-shared",
+        "",
+        [],
+        "remote-share-2",
+        "shared-quarantine-doc",
+        ["global"],
+        "main",
+        [
+          {
+            operation: {
+              index: 0,
+              skip: 0,
+              id: "op-shared",
+              hash: "h",
+              timestampUtcMs: "1000",
+              action: { type: "CREATE", scope: "global" } as any,
+            },
+            context: {
+              documentId: "shared-quarantine-doc",
+              documentType: "test",
+              scope: "global",
+              branch: "main",
+              ordinal: 1,
+            },
+          },
+        ],
+      );
+
+      inboxCb2([quarantinedInbox]);
+      await new Promise((r) => setTimeout(r, 100));
+
+      // Should NOT have loaded the quarantined doc
+      expect(mockReactor.load).not.toHaveBeenCalledWith(
+        "shared-quarantine-doc",
+        expect.anything(),
+        expect.anything(),
+        expect.anything(),
+        expect.anything(),
+      );
+    });
+
+    it("should populate quarantine set from storage on startup", async () => {
+      vi.mocked(
+        mockDeadLetterStorage.listQuarantinedDocumentIds,
+      ).mockResolvedValue(["persisted-quarantine-doc"]);
+
+      await syncManager.startup();
+
+      const remote = await syncManager.add("remote-startup-q", "col1", {
+        type: "internal",
+        parameters: {},
+      } as ChannelConfig);
+
+      // Trigger inbox with the quarantined doc
+      const ch = remote.channel;
+      const inboxCb = vi.mocked(ch.inbox.onAdded).mock.calls[0][0];
+
+      const quarantinedInbox = new SyncOperation(
+        "inbox-startup",
+        "",
+        [],
+        "remote-startup-q",
+        "persisted-quarantine-doc",
+        ["global"],
+        "main",
+        [
+          {
+            operation: {
+              index: 0,
+              skip: 0,
+              id: "op-startup",
+              hash: "h",
+              timestampUtcMs: "1000",
+              action: { type: "CREATE", scope: "global" } as any,
+            },
+            context: {
+              documentId: "persisted-quarantine-doc",
+              documentType: "test",
+              scope: "global",
+              branch: "main",
+              ordinal: 1,
+            },
+          },
+        ],
+      );
+
+      inboxCb([quarantinedInbox]);
+      await new Promise((r) => setTimeout(r, 100));
+
+      // Should NOT have loaded the quarantined doc
+      expect(mockReactor.load).not.toHaveBeenCalled();
+    });
+
+    it("should advance outbox ordinal past quarantined-only operations", async () => {
+      await syncManager.startup();
+
+      const remote = await syncManager.add("remote-advance", "col1", {
+        type: "internal",
+        parameters: {},
+      } as ChannelConfig);
+
+      const ch = remote.channel;
+
+      // Quarantine a doc
+      const dlCb = vi.mocked(ch.deadLetter.onAdded).mock.calls[
+        vi.mocked(ch.deadLetter.onAdded).mock.calls.length - 1
+      ][0];
+
+      const dlOp = new SyncOperation(
+        "dl-adv",
+        "job-adv",
+        [],
+        "remote-advance",
+        "quarantined-doc",
+        ["global"],
+        "main",
+        [],
+      );
+      dlOp.failed(
+        new (await import("../../../src/sync/errors.js")).ChannelError(
+          ChannelErrorSource.Inbox,
+          new Error("test error"),
+        ),
+      );
+      dlCb([dlOp]);
+
+      // Mock index to return only quarantined-doc ops at ordinal 15
+      vi.mocked(mockOperationIndex.find).mockResolvedValueOnce(
+        createFindResult([
+          {
+            id: "op-q1",
+            documentId: "quarantined-doc",
+            scope: "global",
+            branch: "main",
+            ordinal: 15,
+          },
+        ]),
+      );
+
+      vi.mocked(
+        mockOperationIndex.getCollectionsForDocuments,
+      ).mockResolvedValue({
+        "quarantined-doc": ["col1"],
+      });
+
+      // Clear any prior outbox.add calls from backfill
+      vi.mocked(ch.outbox.add).mockClear();
+
+      await emitWriteReady({
+        jobId: "j-adv",
+        operations: [
+          {
+            operation: {
+              index: 0,
+              skip: 0,
+              id: "op-q1",
+              hash: "h",
+              timestampUtcMs: "1000",
+              action: { type: "CREATE", scope: "global" },
+            },
+            context: {
+              documentId: "quarantined-doc",
+              documentType: "test",
+              scope: "global",
+              branch: "main",
+              ordinal: 15,
+            },
+          },
+        ],
+        collectionMemberships: { "quarantined-doc": ["col1"] },
+        jobMeta: { batchId: "batch-adv", batchJobIds: ["j-adv"] },
+      });
+
+      // outbox.add should NOT have been called (all ops quarantined)
+      expect(ch.outbox.add).not.toHaveBeenCalled();
+      // But latestOrdinal should have advanced past the quarantined ops
+      expect(ch.outbox.latestOrdinal).toBe(15);
+    });
+  });
+
+  describe("paginated backfill", () => {
+    it("should fetch all pages when backfilling operations", async () => {
+      await syncManager.startup();
+
+      const channelConfig: ChannelConfig = {
+        type: "internal",
+        parameters: {},
+      };
+
+      const page2 = createFindResult([
+        {
+          id: "op3",
+          documentId: "doc2",
+          scope: "global",
+          branch: "main",
+          ordinal: 3,
+        },
+      ]);
+
+      const page1 = createFindResult(
+        [
+          {
+            id: "op1",
+            documentId: "doc1",
+            scope: "global",
+            branch: "main",
+            ordinal: 1,
+          },
+          {
+            id: "op2",
+            documentId: "doc1",
+            scope: "global",
+            branch: "main",
+            ordinal: 2,
+          },
+        ],
+        () => Promise.resolve(page2),
+      );
+
+      vi.mocked(mockOperationIndex.find).mockResolvedValueOnce(page1);
+
+      await syncManager.add("remote-paged", "collection1", channelConfig, {
+        documentId: [],
+        scope: [],
+        branch: "main",
+      });
+
+      // outbox.add should be called twice (once per page)
+      expect(mockChannel.outbox.add).toHaveBeenCalledTimes(2);
+
+      // All 3 operations should reach the outbox
+      const allSyncOps = vi
+        .mocked(mockChannel.outbox.add)
+        .mock.calls.flatMap((args) => args);
+      const allOpIds = allSyncOps.flatMap((syncOp: any) =>
+        syncOp.operations.map((op: OperationWithContext) => op.operation.id),
+      );
+      expect(allOpIds).toContain("op1");
+      expect(allOpIds).toContain("op2");
+      expect(allOpIds).toContain("op3");
+    });
+
+    it("should maintain dependency chain across pages", async () => {
+      await syncManager.startup();
+
+      const channelConfig: ChannelConfig = {
+        type: "internal",
+        parameters: {},
+      };
+
+      const page2 = createFindResult([
+        {
+          id: "op2",
+          documentId: "doc1",
+          scope: "global",
+          branch: "main",
+          ordinal: 2,
+        },
+      ]);
+
+      const page1 = createFindResult(
+        [
+          {
+            id: "op1",
+            documentId: "doc1",
+            scope: "global",
+            branch: "main",
+            ordinal: 1,
+          },
+        ],
+        () => Promise.resolve(page2),
+      );
+
+      vi.mocked(mockOperationIndex.find).mockResolvedValueOnce(page1);
+
+      const addedSyncOps: any[] = [];
+      vi.mocked(mockChannel.outbox.add).mockImplementation(
+        (...syncOps: any[]) => {
+          addedSyncOps.push(...syncOps);
+        },
+      );
+
+      await syncManager.add("remote-deps", "collection1", channelConfig, {
+        documentId: [],
+        scope: [],
+        branch: "main",
+      });
+
+      expect(addedSyncOps).toHaveLength(2);
+      // First page SyncOp has no dependencies
+      expect(addedSyncOps[0].jobDependencies).toEqual([]);
+      // Second page SyncOp (same doc) should depend on first page's jobId
+      expect(addedSyncOps[1].jobDependencies).toEqual([addedSyncOps[0].jobId]);
+    });
+
+    it("should track maxOrdinal across all pages", async () => {
+      await syncManager.startup();
+
+      const channelConfig: ChannelConfig = {
+        type: "internal",
+        parameters: {},
+      };
+
+      const page2 = createFindResult([
+        {
+          id: "op3",
+          documentId: "doc2",
+          scope: "global",
+          branch: "main",
+          ordinal: 30,
+        },
+      ]);
+
+      const page1 = createFindResult(
+        [
+          {
+            id: "op1",
+            documentId: "doc1",
+            scope: "global",
+            branch: "main",
+            ordinal: 10,
+          },
+          {
+            id: "op2",
+            documentId: "doc1",
+            scope: "global",
+            branch: "main",
+            ordinal: 20,
+          },
+        ],
+        () => Promise.resolve(page2),
+      );
+
+      vi.mocked(mockOperationIndex.find).mockResolvedValueOnce(page1);
+
+      await syncManager.add("remote-ordinal", "collection1", channelConfig, {
+        documentId: [],
+        scope: [],
+        branch: "main",
+      });
+
+      // advanceOrdinal should be called with max ordinal from page 2
+      expect(mockChannel.outbox.advanceOrdinal).toHaveBeenCalledWith(30);
     });
   });
 });

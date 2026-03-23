@@ -105,13 +105,14 @@ export const createMockSyncOperation = (
   id: string,
   remoteName: string,
   ordinal: number = 0,
+  documentId: string = "doc-1",
 ): SyncOperation => {
   return new SyncOperation(
     id,
     "",
     [],
     remoteName,
-    "doc-1",
+    documentId,
     ["public"],
     "main",
     [
@@ -130,7 +131,7 @@ export const createMockSyncOperation = (
             input: {},
           },
         },
-        context: createMockOperationContext(ordinal),
+        context: { ...createMockOperationContext(ordinal), documentId },
       },
     ],
   );

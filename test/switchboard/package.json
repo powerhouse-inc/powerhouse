@@ -15,6 +15,10 @@
     "@powerhousedao/shared": "workspace:*",
     "@renown/sdk": "workspace:*",
     "document-model": "workspace:*",
+    "graphql-ws": "catalog:",
+    "graphql-sse": "catalog:",
+    "ws": "catalog:",
+    "@types/ws": "catalog:",
     "vitest": "catalog:"
   }
 }

@@ -11,7 +11,7 @@ import { createLogger } from "vite";
 import {
   childLogger,
   setLogLevel,
-} from "../../../../packages/document-model/src/logger.js";
+} from "document-model";
 import type { VetraArgs } from "../types.js";
 import { generateProjectDriveId } from "../utils.js";
 import {
@@ -53,7 +53,6 @@ function createViteLogger(color: Color) {
 
 async function startVetraPreviewDrive(
   reactor: IReactorClient,
-  reactorLegacy: IDocumentDriveServer,
   port: number,
   verbose?: boolean,
 ): Promise<string> {
@@ -75,12 +74,7 @@ async function startVetraPreviewDrive(
     },
   };
 
-  const driveUrl = await addDefaultDrive(
-    reactorLegacy,
-    reactor,
-    previewDrive,
-    port,
-  );
+  const driveUrl = await addDefaultDrive(reactor, previewDrive, port);
 
   if (verbose) {
     console.log(blue(`Vetra Switchboard: Preview drive: ${driveUrl}`));
@@ -149,7 +143,6 @@ async function startLocalVetraSwitchboard(args: VetraArgs, logger?: ILogger) {
       try {
         previewDriveUrl = await startVetraPreviewDrive(
           switchboard.reactor,
-          switchboard.legacyReactor,
           switchboardPort,
           verbose,
         );

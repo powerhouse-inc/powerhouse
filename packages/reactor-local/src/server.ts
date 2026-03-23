@@ -3,10 +3,12 @@ import {
   EventBus,
   ReactorBuilder,
   ReactorClientBuilder,
+  driveCollectionId,
+  parseDriveUrl,
 } from "@powerhousedao/reactor";
 import {
   VitePackageLoader,
-  startAPI,
+  initializeAndStartAPI,
   startViteServer,
 } from "@powerhousedao/reactor-api";
 import type { DefaultRemoteDriveInput } from "document-drive";
@@ -23,7 +25,6 @@ import type {
   StartServerOptions,
 } from "./types.js";
 import { DefaultStartServerOptions } from "./types.js";
-import { addDefaultDrive, createStorage } from "./util.js";
 
 dotenv.config();
 
@@ -106,54 +107,21 @@ const startServer = async (
     packages.push(basePath);
   }
 
-  // create document drive server with all available document models & storage
-  const cache = new InMemoryCache();
-  const storageImpl = createStorage(storage, cache);
-  const reactorBuilder = new LegacyReactorBuilder([])
-    .withCache(cache)
-    .withStorage(storageImpl)
-    .withOptions({
-      featureFlags: {
-        enableDualActionCreate: true,
-      },
-    });
+  const initializeClient = async (documentModels: DocumentModelModule[]) => {
+    const eventBus = new EventBus();
+    const builder = new ReactorBuilder()
+      .withEventBus(eventBus)
+      .withDocumentModels(documentModels);
 
-  const driveServer = reactorBuilder.build();
-
-  const eventBus = new EventBus();
-  const builder = new ReactorBuilder().withEventBus(eventBus);
-  const clientModule = await new ReactorClientBuilder()
-    .withReactorBuilder(builder)
-    .buildModule();
-
-  const client = clientModule.client;
-  const syncManager = clientModule.reactorModule?.syncModule?.syncManager;
-  if (!syncManager) {
-    throw new Error("SyncManager not available from ReactorClientBuilder");
-  }
-
-  const registry = clientModule.reactorModule?.documentModelRegistry;
-  if (!registry) {
-    throw new Error(
-      "DocumentModelRegistry not available from ReactorClientBuilder",
-    );
-  }
-
-  // init drive server + conditionally add a default drive
-  await driveServer.initialize();
-  const driveUrl = options?.disableDefaultDrive
-    ? null
-    : await addDefaultDrive(driveServer, drive, serverPort);
+    return new ReactorClientBuilder().withReactorBuilder(builder).buildModule();
+  };
 
   // create loader
   const packageLoader = vite ? VitePackageLoader.build(vite) : undefined;
 
   // start api
-  const api = await startAPI(
-    driveServer,
-    client,
-    registry,
-    syncManager,
+  const api = await initializeAndStartAPI(
+    initializeClient,
     {
       port: serverPort,
       dbPath,
@@ -162,9 +130,6 @@ const startServer = async (
       configFile,
       packages,
       mcp,
-      // processors: {
-      //   "ph/common/drive-analytics": [DriveAnalyticsProcessorFactory],
-      // },
     },
     "switchboard",
   );
@@ -174,13 +139,72 @@ const startServer = async (
     api.app.use(vite.middlewares);
   }
 
+  // Conditionally add a default drive
+  let driveUrl: string | null = null;
+  if (!options?.disableDefaultDrive) {
+    let driveId = drive.id;
+    if (!driveId || driveId.length === 0) {
+      driveId = drive.slug;
+    }
+    if (!driveId || driveId.length === 0) {
+      throw new Error("Invalid Drive Id");
+    }
+
+    try {
+      const { driveCreateDocument, driveCreateState } =
+        await import("document-drive");
+      const { global } = driveCreateState();
+      const document = driveCreateDocument({
+        global: {
+          ...global,
+          name: drive.global.name,
+          icon: drive.global.icon ?? global.icon,
+        },
+        local: {
+          availableOffline: drive.local?.availableOffline ?? false,
+          sharingType: drive.local?.sharingType ?? "public",
+          listeners: drive.local?.listeners ?? [],
+          triggers: drive.local?.triggers ?? [],
+        },
+      });
+
+      if (drive.id && drive.id.length > 0) {
+        document.header.id = drive.id;
+      }
+      if (drive.slug && drive.slug.length > 0) {
+        document.header.slug = drive.slug;
+      }
+      if (drive.global.name) {
+        document.header.name = drive.global.name;
+      }
+
+      await api.client.create(document);
+    } catch (e) {
+      const errorMessage = e instanceof Error ? e.message : String(e);
+      if (!errorMessage.includes("already exists")) {
+        throw e;
+      }
+    }
+
+    driveUrl = `http://localhost:${serverPort}/d/${driveId}`;
+  }
+
   // Add remote drives after full initialization (including PackageManager)
   if (remoteDrives.length > 0) {
     const processedRemoteDrives = remoteDrives.map(normalizeRemoteDriveInput);
 
     for (const remoteDrive of processedRemoteDrives) {
       try {
-        await driveServer.addRemoteDrive(remoteDrive.url, remoteDrive.options);
+        const parsed = parseDriveUrl(remoteDrive.url);
+        const remoteName = `remote-drive-${parsed.driveId}-${crypto.randomUUID()}`;
+        await api.syncManager.add(
+          remoteName,
+          driveCollectionId("main", parsed.driveId),
+          {
+            type: "gql",
+            parameters: { url: parsed.graphqlEndpoint },
+          },
+        );
       } catch (error) {
         logger.error(
           `  ➜  Failed to connect to remote drive ${remoteDrive.url}:`,
@@ -208,7 +232,6 @@ const startServer = async (
       }
       return path.join(storage.filesystemPath, driveId, `${documentId}.json`);
     },
-    server: driveServer,
   };
 };
 

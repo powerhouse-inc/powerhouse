@@ -2,6 +2,10 @@
 
 An Analytics Processor is an object that can track analytics for operations and state changes on a set of document models. These analytics can be used to generate bespoke dashboards and reports, specific to the type or implementation of the document model.
 
+:::info Import paths
+The code examples below import from `@powerhousedao/reactor-browser`, which re-exports all reactor types for convenience in browser environments (editors, drive-apps, subgraphs). If you are working outside the browser — for example in a standalone Node.js script, CLI tool, or server-side processor — import directly from `@powerhousedao/reactor`.
+:::
+
 ## Generating an analytics processor with the CLI
 
 The `ph-cli` utility can be used to generate the scaffolding for an Analytics Processor.

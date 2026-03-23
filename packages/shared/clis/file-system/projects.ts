@@ -105,6 +105,7 @@ export async function makeDependenciesWithVersions(dependencies: string[]) {
 
 export async function getPowerhouseProjectInfo(
   args?: Partial<PackageManagerArgs>,
+  options?: { silent?: boolean },
 ) {
   const localProjectPath = await getLocalPowerhouseProjectDirPath();
   const globalProjectPath = await getGlobalPowerhouseProjectDirPath();
@@ -124,7 +125,11 @@ export async function getPowerhouseProjectInfo(
     );
   }
 
-  if (!packageManagerFromArgs && !packageManagerFromProject) {
+  if (
+    !packageManagerFromArgs &&
+    !packageManagerFromProject &&
+    !options?.silent
+  ) {
     console.warn(
       "No package manager specified or detected, falling back to `npm`...",
     );

@@ -81,8 +81,8 @@
     "@powerhousedao/connect": "workspace:*"
   },
   "devDependencies": {
-    "@tailwindcss/cli": "catalog:",
-    "tailwindcss": "catalog:",
+    "@powerhousedao/connect": "workspace:*",
+    "@powerhousedao/document-engineering": "catalog:",
     "@powerhousedao/ph-cli": "workspace:*",
     "@testing-library/jest-dom": "^6.9.1",
     "@types/node": "catalog:",
