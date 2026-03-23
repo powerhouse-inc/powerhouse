@@ -29,7 +29,8 @@
       "Bash(npx tsx:*)",
       "Bash(git grep:*)",
       "Bash(npx vitest:*)",
-      "WebFetch(domain:*)"
+      "WebFetch(domain:*)",
+      "Bash(git stash:*)"
     ],
     "deny": [],
     "ask": []

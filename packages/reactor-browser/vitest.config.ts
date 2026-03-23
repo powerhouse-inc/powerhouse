@@ -1,4 +1,5 @@
 import react from "@vitejs/plugin-react";
+import { playwright } from "@vitest/browser-playwright";
 import { defaultExclude, defineConfig } from "vitest/config";
 
 export default defineConfig({
@@ -17,7 +18,7 @@ export default defineConfig({
           globals: true,
           environment: "happy-dom",
           browser: {
-            provider: "playwright",
+            provider: playwright(),
             enabled: true,
             headless: true,
             instances: [{ browser: "chromium" }],

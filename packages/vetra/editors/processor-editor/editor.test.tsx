@@ -18,7 +18,8 @@ vi.mock("../hooks/useAvailableDocumentTypes.js", () => ({
 }));
 
 describe("ProcessorModule Editor", () => {
-  let mockDispatch: ReturnType<typeof vi.fn>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let mockDispatch: (...args: any[]) => any;
   const document = utils.createDocument();
 
   beforeEach(() => {

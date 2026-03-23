@@ -38,7 +38,7 @@ import {
   InMemoryCache,
   ReactorBuilder as LegacyReactorBuilder,
 } from "document-drive";
-import { RedisCache } from "document-drive";
+import { RedisCache } from "document-drive/cache/redis";
 import { FilesystemStorage } from "document-drive/storage/filesystem";
 import { PrismaStorageFactory } from "document-drive/storage/prisma";
 import { childLogger, documentModelDocumentModelModule } from "document-model";
