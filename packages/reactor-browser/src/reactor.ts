@@ -1,65 +1,11 @@
 import type { IReactorClient } from "@powerhousedao/reactor";
-import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
-import type { IRenown } from "@renown/sdk";
+import { type DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
 import { BrowserKeyStorage, RenownCryptoBuilder } from "@renown/sdk";
-import {
-  type DefaultRemoteDriveInput,
-  type DocumentDriveServerOptions,
-} from "document-drive";
 import { setDrives } from "./hooks/drives.js";
 import { getDrives } from "./utils/drives.js";
 
 export type ReactorDefaultDrivesConfig = {
   defaultDrivesUrl?: string[];
-};
-
-export const getReactorDefaultDrivesConfig = (
-  config: ReactorDefaultDrivesConfig = {},
-): Pick<DocumentDriveServerOptions, "defaultDrives"> => {
-  const defaultDrivesUrl = config.defaultDrivesUrl || [];
-
-  const remoteDrives: DefaultRemoteDriveInput[] = defaultDrivesUrl.map(
-    (driveUrl) => ({
-      url: driveUrl,
-      options: {
-        sharingType: "PUBLIC",
-        availableOffline: true,
-        listeners: [
-          {
-            block: true,
-            callInfo: {
-              data: driveUrl,
-              name: "switchboard-push",
-              transmitterType: "SwitchboardPush",
-            },
-            filter: {
-              branch: ["main"],
-              documentId: ["*"],
-              documentType: ["*"],
-              scope: ["global"],
-            },
-            label: "Switchboard Sync",
-            listenerId: "1",
-            system: true,
-          },
-        ],
-        triggers: [],
-      },
-    }),
-  );
-
-  return {
-    defaultDrives: {
-      remoteDrives,
-      removeOldRemoteDrives:
-        defaultDrivesUrl.length > 0
-          ? {
-              strategy: "preserve-by-url-and-detach",
-              urls: defaultDrivesUrl,
-            }
-          : { strategy: "preserve-all" },
-    },
-  };
 };
 
 export type RefreshReactorDataConfig = {
