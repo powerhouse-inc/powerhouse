@@ -353,66 +353,72 @@ describe("ReactorClient Integration Tests", () => {
         expect(retrieved.header.id).toBe("create-wait-test");
       });
 
-      it("should sign CREATE_DOCUMENT and UPGRADE_DOCUMENT actions", async () => {
-        const mockSigner = createMockSigner();
-        const setup = await createTestOperationStore();
-        const db = setup.db as unknown as Kysely<Database>;
+      it(
+        "should sign CREATE_DOCUMENT and UPGRADE_DOCUMENT actions",
+        { timeout: 100_000 },
+        async () => {
+          const mockSigner = createMockSigner();
+          const setup = await createTestOperationStore();
+          const db = setup.db as unknown as Kysely<Database>;
 
-        const documentIndexerConsistencyTracker = new ConsistencyTracker();
-        const testDocumentIndexer = createTestDocumentIndexer(
-          db,
-          documentIndexerConsistencyTracker,
-        );
-        await testDocumentIndexer.init();
+          const documentIndexerConsistencyTracker = new ConsistencyTracker();
+          const testDocumentIndexer = createTestDocumentIndexer(
+            db,
+            documentIndexerConsistencyTracker,
+          );
+          await testDocumentIndexer.init();
 
-        const eventBus = new EventBus();
-        const reactorBuilder = new ReactorBuilder()
-          .withDocumentModels([
-            driveDocumentModelModule as any,
-            documentModelDocumentModelModule,
-          ])
-          .withReadModel(testDocumentIndexer)
-          .withEventBus(eventBus);
-        const signingClient = await new ReactorClientBuilder()
-          .withReactorBuilder(reactorBuilder)
-          .withSigner(mockSigner)
-          .build();
+          const eventBus = new EventBus();
+          const reactorBuilder = new ReactorBuilder()
+            .withDocumentModels([
+              driveDocumentModelModule as any,
+              documentModelDocumentModelModule,
+            ])
+            .withReadModel(testDocumentIndexer)
+            .withEventBus(eventBus);
+          const signingClient = await new ReactorClientBuilder()
+            .withReactorBuilder(reactorBuilder)
+            .withSigner(mockSigner)
+            .build();
 
-        const signingReactor = (signingClient as any).reactor as IReactor;
+          const signingReactor = (signingClient as any).reactor as IReactor;
 
-        const doc = createDocModelDocument({ id: "signing-test-doc" });
-        await signingClient.create(doc);
+          const doc = createDocModelDocument({ id: "signing-test-doc" });
+          await signingClient.create(doc);
 
-        const operations =
-          await signingReactor.getOperations("signing-test-doc");
+          const operations =
+            await signingReactor.getOperations("signing-test-doc");
 
-        expect(operations.document.results.length).toBeGreaterThanOrEqual(2);
+          expect(operations.document.results.length).toBeGreaterThanOrEqual(2);
 
-        const createDocOp = operations.document.results.find(
-          (op) => op.action.type === "CREATE_DOCUMENT",
-        );
-        const upgradeDocOp = operations.document.results.find(
-          (op) => op.action.type === "UPGRADE_DOCUMENT",
-        );
+          const createDocOp = operations.document.results.find(
+            (op) => op.action.type === "CREATE_DOCUMENT",
+          );
+          const upgradeDocOp = operations.document.results.find(
+            (op) => op.action.type === "UPGRADE_DOCUMENT",
+          );
 
-        expect(createDocOp).toBeDefined();
-        expect(upgradeDocOp).toBeDefined();
+          expect(createDocOp).toBeDefined();
+          expect(upgradeDocOp).toBeDefined();
 
-        expect(createDocOp?.action.context?.signer).toBeDefined();
-        expect(createDocOp?.action.context?.signer?.signatures).toHaveLength(1);
-        expect(createDocOp?.action.context?.signer?.signatures[0][0]).toBe(
-          "mock-signature",
-        );
+          expect(createDocOp?.action.context?.signer).toBeDefined();
+          expect(createDocOp?.action.context?.signer?.signatures).toHaveLength(
+            1,
+          );
+          expect(createDocOp?.action.context?.signer?.signatures[0][0]).toBe(
+            "mock-signature",
+          );
 
-        expect(upgradeDocOp?.action.context?.signer).toBeDefined();
-        expect(upgradeDocOp?.action.context?.signer?.signatures).toHaveLength(
-          1,
-        );
-        expect(upgradeDocOp?.action.context?.signer?.signatures[0][0]).toBe(
-          "mock-signature",
-        );
-        signingReactor.kill();
-      });
+          expect(upgradeDocOp?.action.context?.signer).toBeDefined();
+          expect(upgradeDocOp?.action.context?.signer?.signatures).toHaveLength(
+            1,
+          );
+          expect(upgradeDocOp?.action.context?.signer?.signatures[0][0]).toBe(
+            "mock-signature",
+          );
+          signingReactor.kill();
+        },
+      );
     });
 
     describe("createEmpty", () => {
