@@ -36,8 +36,8 @@ This command:
     const config = getConfig(configPath);
     const registryUrl =
       args.registry ??
-      config.packageRegistryUrl ??
       process.env.PH_REGISTRY_URL ??
+      config.packageRegistryUrl ??
       DEFAULT_REGISTRY_URL;
 
     if (args.debug) {
