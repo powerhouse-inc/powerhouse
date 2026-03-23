@@ -7,6 +7,7 @@ import type {
   ReactorGraphQLClient,
   RemoteDocumentData,
   RemoteOperation,
+  RemoteOperationResultPage,
 } from "./types.js";
 
 /**
@@ -37,20 +38,40 @@ export class RemoteClient implements IRemoteClient {
   }
 
   /**
-   * Fetch a document and its first page of operations in a single query.
-   * Returns null if the document is not found.
+   * Fetch a document and its operations.
+   *
+   * When scopes are provided and BatchGetDocumentWithOperations is available,
+   * fetches the document and per-scope operations in a single HTTP request.
+   * Otherwise falls back to GetDocumentWithOperations for the first page,
+   * then paginates remaining operations per scope.
    */
   async getDocumentWithOperations(
     identifier: string,
     branch?: string,
-    operationsCursor?: string,
+    sinceRevision?: Record<string, number>,
+    scopes?: string[],
   ): Promise<GetDocumentWithOperationsResult | null> {
+    // Fast path: batch document + per-scope operations in one request
+    if (
+      this.client.BatchGetDocumentWithOperations &&
+      scopes &&
+      scopes.length > 0
+    ) {
+      return this.batchGetDocumentWithOperations(
+        identifier,
+        branch,
+        sinceRevision,
+        scopes,
+      );
+    }
+
+    // Standard path: GetDocumentWithOperations + paginate if needed
     const result = await this.client.GetDocumentWithOperations({
       identifier,
       view: branch ? { branch } : undefined,
       operationsPaging: {
         limit: this.pageSize,
-        cursor: operationsCursor ?? null,
+        cursor: null,
       },
     });
 
@@ -62,38 +83,211 @@ export class RemoteClient implements IRemoteClient {
 
     if (opsPage) {
       for (const op of opsPage.items) {
-        const scope = op.action.scope;
-        (operationsByScope[scope] ??= []).push(op);
+        (operationsByScope[op.action.scope] ??= []).push(op);
       }
     }
+
+    // Check if we have all expected operations by comparing against revisionsList
+    const expectedTotal = doc.revisionsList.reduce(
+      (sum, r) => sum + r.revision,
+      0,
+    );
+    const fetchedTotal = opsPage?.items.length ?? 0;
+
+    if (fetchedTotal >= expectedTotal) {
+      return {
+        document: doc,
+        childIds: result.document.childIds,
+        operations: { operationsByScope },
+      };
+    }
+
+    // Missing operations — fetch all per scope
+    const allScopes = doc.revisionsList.map((r) => r.scope);
+    const allOps = await this.getAllOperations(
+      doc.id,
+      branch,
+      sinceRevision,
+      allScopes,
+    );
 
     return {
       document: doc,
       childIds: result.document.childIds,
-      operations: {
-        operationsByScope,
-        cursor: opsPage?.cursor ?? undefined,
-      },
-      hasMoreOperations: opsPage?.hasNextPage ?? false,
+      operations: allOps,
+    };
+  }
+
+  /**
+   * Fetch document + per-scope operations in a single HTTP request
+   * via BatchGetDocumentWithOperations, then paginate any remaining pages.
+   */
+  private async batchGetDocumentWithOperations(
+    identifier: string,
+    branch: string | undefined,
+    sinceRevision: Record<string, number> | undefined,
+    scopes: string[],
+  ): Promise<GetDocumentWithOperationsResult | null> {
+    const view = branch ? { branch } : undefined;
+    const filters = scopes.map((scope) => ({
+      documentId: identifier,
+      branch: branch ?? null,
+      sinceRevision: sinceRevision?.[scope] ?? 0,
+      scopes: [scope],
+    }));
+    const pagings = scopes.map(() => ({
+      limit: this.pageSize,
+      cursor: null as string | null,
+    }));
+
+    const result = await this.client.BatchGetDocumentWithOperations!(
+      identifier,
+      view,
+      filters,
+      pagings,
+    );
+
+    if (!result.document) return null;
+
+    const operationsByScope: Record<string, RemoteOperation[]> = {};
+    let pending: {
+      scope: string;
+      filter: (typeof filters)[0];
+      cursor: string;
+    }[] = [];
+
+    for (let i = 0; i < scopes.length; i++) {
+      const page = result.operations[i];
+      for (const op of page.items) {
+        (operationsByScope[op.action.scope] ??= []).push(op);
+      }
+      if (page.hasNextPage && page.cursor) {
+        pending.push({
+          scope: scopes[i],
+          filter: filters[i],
+          cursor: page.cursor,
+        });
+      }
+    }
+
+    // Continue pagination for scopes with more pages
+    while (pending.length > 0) {
+      const pages = await this.fetchOperationPages(
+        pending.map((p) => p.filter),
+        pending.map((p) => ({ limit: this.pageSize, cursor: p.cursor })),
+      );
+
+      const nextPending: typeof pending = [];
+      for (let i = 0; i < pending.length; i++) {
+        const page = pages[i];
+        for (const op of page.items) {
+          (operationsByScope[op.action.scope] ??= []).push(op);
+        }
+        if (page.hasNextPage && page.cursor) {
+          nextPending.push({ ...pending[i], cursor: page.cursor });
+        }
+      }
+      pending = nextPending;
+    }
+
+    return {
+      document: result.document.document,
+      childIds: result.document.childIds,
+      operations: { operationsByScope },
     };
   }
 
   /**
    * Fetch all operations for a document, paginating through all pages.
-   * Returns operations grouped by scope and the final cursor for incremental fetches.
-   *
-   * @param startCursor - If provided, resume fetching from this cursor position
-   *   (for incremental pulls after the initial fetch).
+   * Each scope is queried individually because the API only returns
+   * pagination cursors for single-scope queries.
    */
   async getAllOperations(
     documentId: string,
     branch?: string,
-    sinceRevision?: number,
+    sinceRevision?: Record<string, number>,
     scopes?: string[],
-    startCursor?: string,
+  ): Promise<GetOperationsResult> {
+    // When scopes are specified, query each scope in parallel.
+    // Uses a single composed request per pagination round when available.
+    if (scopes && scopes.length > 0) {
+      const operationsByScope: Record<string, RemoteOperation[]> = {};
+
+      // Tracks scopes still being paginated, each with its own filter and cursor
+      let pending = scopes.map((scope) => ({
+        scope,
+        filter: {
+          documentId,
+          branch: branch ?? null,
+          sinceRevision: sinceRevision?.[scope] ?? 0,
+          scopes: [scope],
+        },
+        cursor: null as string | null,
+      }));
+
+      while (pending.length > 0) {
+        const pages = await this.fetchOperationPages(
+          pending.map((p) => p.filter),
+          pending.map((p) => ({ limit: this.pageSize, cursor: p.cursor })),
+        );
+
+        const nextPending: typeof pending = [];
+
+        for (let i = 0; i < pending.length; i++) {
+          const page = pages[i];
+          for (const op of page.items) {
+            (operationsByScope[op.action.scope] ??= []).push(op);
+          }
+          if (page.hasNextPage && page.cursor) {
+            nextPending.push({ ...pending[i], cursor: page.cursor });
+          }
+        }
+
+        pending = nextPending;
+      }
+
+      return { operationsByScope };
+    }
+
+    // No scopes specified — single query for all scopes (no per-scope sinceRevision)
+    return this.fetchOperationsForScope(documentId, branch);
+  }
+
+  /**
+   * Fetch one page of operations per filter.
+   * Uses the composed query (single HTTP request) when available,
+   * otherwise falls back to parallel individual requests.
+   */
+  private async fetchOperationPages(
+    filters: Parameters<
+      ReactorGraphQLClient["GetDocumentOperations"]
+    >[0]["filter"][],
+    pagings: Parameters<
+      ReactorGraphQLClient["GetDocumentOperations"]
+    >[0]["paging"][],
+  ): Promise<RemoteOperationResultPage[]> {
+    if (this.client.BatchGetDocumentOperations) {
+      return this.client.BatchGetDocumentOperations(filters, pagings);
+    }
+
+    return Promise.all(
+      filters.map((filter, i) =>
+        this.client
+          .GetDocumentOperations({ filter, paging: pagings[i] })
+          .then((r) => r.documentOperations),
+      ),
+    );
+  }
+
+  /** Fetch all pages of operations for a single scope (or all scopes if none specified). */
+  private async fetchOperationsForScope(
+    documentId: string,
+    branch?: string,
+    sinceRevision?: number,
+    scope?: string,
   ): Promise<GetOperationsResult> {
     const operationsByScope: Record<string, RemoteOperation[]> = {};
-    let cursor: string | null | undefined = startCursor ?? undefined;
+    let cursor: string | null | undefined;
     let hasNextPage = true;
 
     while (hasNextPage) {
@@ -102,7 +296,7 @@ export class RemoteClient implements IRemoteClient {
           documentId,
           branch: branch ?? null,
           sinceRevision: sinceRevision ?? 0,
-          scopes: scopes ?? null,
+          scopes: scope ? [scope] : null,
         },
         paging: {
           limit: this.pageSize,
@@ -113,18 +307,15 @@ export class RemoteClient implements IRemoteClient {
       const page = result.documentOperations;
 
       for (const op of page.items) {
-        const scope = op.action.scope;
-        (operationsByScope[scope] ??= []).push(op);
+        const s = op.action.scope;
+        (operationsByScope[s] ??= []).push(op);
       }
 
       hasNextPage = page.hasNextPage;
       cursor = page.cursor;
     }
 
-    return {
-      operationsByScope,
-      cursor: cursor ?? undefined,
-    };
+    return { operationsByScope };
   }
 
   /** Push actions to an existing document via MutateDocument. */

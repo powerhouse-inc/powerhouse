@@ -1,5 +1,11 @@
 import { DocumentModelController } from "document-model";
 import { describe, expect, it, vi } from "vitest";
+import type {
+  GetDocumentOperationsQuery,
+  GetDocumentQuery,
+  PagingInput,
+  ViewFilterInput,
+} from "../../src/graphql/gen/schema.js";
 import { RemoteDocumentController } from "../../src/remote-controller/remote-controller.js";
 import type {
   ReactorGraphQLClient,
@@ -75,15 +81,18 @@ function createMockClient(
     overrides.GetDocumentWithOperations ??
     vi.fn().mockResolvedValue(makeDocWithOpsResponse(defaultDoc));
 
-  return {
-    GetDocument: vi.fn().mockResolvedValue({
+  const getDocument =
+    overrides.GetDocument ??
+    vi.fn().mockResolvedValue({
       document: {
         document: defaultDoc,
         childIds: [],
       },
-    }),
-    GetDocumentWithOperations: getDocWithOps,
-    GetDocumentOperations: vi.fn().mockResolvedValue({
+    });
+
+  const getDocOps =
+    overrides.GetDocumentOperations ??
+    vi.fn().mockResolvedValue({
       documentOperations: {
         items: [],
         totalCount: 0,
@@ -91,7 +100,42 @@ function createMockClient(
         hasPreviousPage: false,
         cursor: null,
       },
-    }),
+    });
+
+  // Default BatchGetDocumentWithOperations: delegates to GetDocument + GetDocumentOperations
+  const batchGetDocWithOps =
+    overrides.BatchGetDocumentWithOperations ??
+    vi
+      .fn()
+      .mockImplementation(
+        async (
+          identifier: string,
+          view: unknown,
+          filters: { documentId: string }[],
+          pagings: unknown[],
+        ) => {
+          const docResult = (await getDocument({
+            identifier,
+            view: view as ViewFilterInput,
+          })) as GetDocumentQuery;
+          const operations = await Promise.all(
+            filters.map((filter, i) =>
+              (
+                getDocOps({
+                  filter,
+                  paging: pagings[i] as PagingInput,
+                }) as Promise<GetDocumentOperationsQuery>
+              ).then((r) => r.documentOperations),
+            ),
+          );
+          return { document: docResult.document, operations };
+        },
+      );
+
+  return {
+    GetDocument: getDocument,
+    GetDocumentWithOperations: getDocWithOps,
+    GetDocumentOperations: getDocOps,
     MutateDocument: vi.fn().mockResolvedValue({
       mutateDocument: makeDocData({
         revisionsList: [{ scope: "global", revision: 1 }],
@@ -106,6 +150,8 @@ function createMockClient(
     DeleteDocument: vi.fn().mockResolvedValue({
       deleteDocument: true,
     }),
+    BatchGetDocumentOperations: overrides.BatchGetDocumentOperations,
+    BatchGetDocumentWithOperations: batchGetDocWithOps,
     ...overrides,
   };
 }
@@ -286,8 +332,10 @@ describe("RemoteDocumentController", () => {
       controller.setName({ name: "Before Push" });
       await controller.push();
 
-      // GetDocumentWithOperations is called on initial pull + after push
-      expect(client.GetDocumentWithOperations).toHaveBeenCalledTimes(2);
+      // GetDocumentWithOperations for initial pull;
+      // post-push incremental pull uses BatchGetDocumentWithOperations
+      expect(client.GetDocumentWithOperations).toHaveBeenCalledTimes(1);
+      expect(client.BatchGetDocumentWithOperations).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -638,9 +686,10 @@ describe("RemoteDocumentController", () => {
 
       // Should push without checking
       expect(result.actionCount).toBe(1);
-      // GetDocumentWithOperations called only for initial pull + post-push pull
-      // (no extra call for conflict detection since onConflict is not set)
-      expect(client.GetDocumentWithOperations).toHaveBeenCalledTimes(2);
+      // GetDocumentWithOperations called only for initial pull;
+      // post-push incremental pull uses BatchGetDocumentWithOperations
+      expect(client.GetDocumentWithOperations).toHaveBeenCalledTimes(1);
+      expect(client.BatchGetDocumentWithOperations).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -788,7 +837,7 @@ describe("RemoteDocumentController", () => {
     });
   });
 
-  describe("cursor-based incremental fetch", () => {
+  describe("incremental fetch via sinceRevision", () => {
     const makeOp = (index: number) => ({
       index,
       timestampUtcMs: String(index * 1000),
@@ -807,19 +856,8 @@ describe("RemoteDocumentController", () => {
       },
     });
 
-    it("uses cursor from first pull on subsequent pulls", async () => {
-      const getDocWithOps = vi
-        .fn<ReactorGraphQLClient["GetDocumentWithOperations"]>()
-        .mockResolvedValue(
-          makeDocWithOpsResponse(makeDocData(), {
-            items: [],
-            cursor: "cursor-after-first-pull",
-          }),
-        );
-
-      const client = createMockClient({
-        GetDocumentWithOperations: getDocWithOps,
-      });
+    it("uses BatchGetDocumentWithOperations on subsequent pulls", async () => {
+      const client = createMockClient();
 
       const controller = await RemoteDocumentController.pull(
         DocumentModelController,
@@ -830,50 +868,54 @@ describe("RemoteDocumentController", () => {
         },
       );
 
-      // First pull: no cursor passed (operationsPaging.cursor is null)
-      expect(getDocWithOps).toHaveBeenCalledTimes(1);
-      expect(
-        getDocWithOps.mock.calls[0][0].operationsPaging?.cursor,
-      ).toBeNull();
+      // First pull uses GetDocumentWithOperations
+      expect(client.GetDocumentWithOperations).toHaveBeenCalledTimes(1);
+      expect(client.BatchGetDocumentWithOperations).toHaveBeenCalledTimes(0);
 
-      // Second pull: should use stored cursor
+      // Second pull uses BatchGetDocumentWithOperations (incremental path)
       await controller.pull();
-      expect(getDocWithOps).toHaveBeenCalledTimes(2);
-      expect(getDocWithOps.mock.calls[1][0].operationsPaging?.cursor).toBe(
-        "cursor-after-first-pull",
-      );
+      expect(client.GetDocumentWithOperations).toHaveBeenCalledTimes(1);
+      expect(client.BatchGetDocumentWithOperations).toHaveBeenCalledTimes(1);
     });
 
     it("merges new operations with existing ones on incremental pull", async () => {
-      let pullCount = 0;
-      const getDocWithOps = vi
-        .fn<ReactorGraphQLClient["GetDocumentWithOperations"]>()
-        .mockImplementation(() => {
-          pullCount++;
-          if (pullCount === 1) {
-            // First pull: return doc with 2 operations
-            return Promise.resolve(
-              makeDocWithOpsResponse(
-                makeDocData({
-                  revisionsList: [{ scope: "global", revision: 2 }],
-                }),
-                { items: [makeOp(0), makeOp(1)], cursor: "cursor-1" },
-              ),
-            );
-          }
-          // Second pull (incremental): return 1 new operation
-          return Promise.resolve(
-            makeDocWithOpsResponse(
-              makeDocData({
-                revisionsList: [{ scope: "global", revision: 3 }],
-              }),
-              { items: [makeOp(2)], cursor: "cursor-2" },
-            ),
-          );
+      // GetDocumentOperations returns ops filtered by sinceRevision
+      const getDocOps = vi
+        .fn<ReactorGraphQLClient["GetDocumentOperations"]>()
+        .mockImplementation((args) => {
+          const since = args.filter?.sinceRevision ?? 0;
+          const allOps = [makeOp(0), makeOp(1), makeOp(2)];
+          const filtered = allOps.filter((op) => op.index >= since);
+          return Promise.resolve({
+            documentOperations: {
+              items: filtered,
+              totalCount: filtered.length,
+              hasNextPage: false,
+              hasPreviousPage: false,
+              cursor: null,
+            },
+          });
         });
 
       const client = createMockClient({
-        GetDocumentWithOperations: getDocWithOps,
+        GetDocumentWithOperations: vi.fn().mockResolvedValue(
+          makeDocWithOpsResponse(
+            makeDocData({
+              revisionsList: [{ scope: "global", revision: 2 }],
+            }),
+            { items: [makeOp(0), makeOp(1)] },
+          ),
+        ),
+        // Incremental pull: BatchGetDocumentWithOperations delegates to GetDocument + GetDocumentOperations
+        GetDocument: vi.fn().mockResolvedValue({
+          document: {
+            document: makeDocData({
+              revisionsList: [{ scope: "global", revision: 3 }],
+            }),
+            childIds: [],
+          },
+        }),
+        GetDocumentOperations: getDocOps,
       });
 
       const controller = await RemoteDocumentController.pull(
@@ -892,57 +934,59 @@ describe("RemoteDocumentController", () => {
 
       // After incremental pull: 2 existing + 1 new = 3 operations
       expect(controller.operations["global"]).toHaveLength(3);
-      expect(getDocWithOps).toHaveBeenCalledTimes(2);
-      // Second call used the cursor
-      expect(getDocWithOps.mock.calls[1][0].operationsPaging?.cursor).toBe(
-        "cursor-1",
-      );
+      // BatchGetDocumentWithOperations delegates to GetDocumentOperations per scope
+      expect(getDocOps).toHaveBeenCalledTimes(1);
     });
 
-    it("falls back to full fetch when cursor is stale", async () => {
-      let pullCount = 0;
-      const getDocWithOps = vi
-        .fn<ReactorGraphQLClient["GetDocumentWithOperations"]>()
-        .mockImplementation(() => {
-          pullCount++;
-          if (pullCount === 1) {
-            // First pull: return doc with 1 operation
-            return Promise.resolve(
-              makeDocWithOpsResponse(
-                makeDocData({
-                  revisionsList: [{ scope: "global", revision: 1 }],
-                }),
-                { items: [makeOp(0)], cursor: "stale-cursor" },
-              ),
-            );
-          }
-          // Second pull (incremental): cursor is stale, returns 0 new items
-          // Remote says revision is 3, so 1 existing + 0 new = 1 != 3
-          return Promise.resolve(
-            makeDocWithOpsResponse(
-              makeDocData({
-                revisionsList: [{ scope: "global", revision: 3 }],
-              }),
-              { items: [], cursor: null },
-            ),
-          );
-        });
-
-      // Fallback full fetch via GetDocumentOperations
+    it("falls back to full fetch when incremental merge produces count mismatch", async () => {
+      let getDocOpsCallCount = 0;
       const getDocOps = vi
         .fn<ReactorGraphQLClient["GetDocumentOperations"]>()
-        .mockResolvedValue({
-          documentOperations: {
-            items: [makeOp(0), makeOp(1), makeOp(2)],
-            totalCount: 3,
-            hasNextPage: false,
-            hasPreviousPage: false,
-            cursor: "fresh-cursor",
-          },
+        .mockImplementation(() => {
+          getDocOpsCallCount++;
+          if (getDocOpsCallCount === 1) {
+            // Incremental fetch returns 0 new ops (simulating data loss)
+            // Merge: 1 existing + 0 new = 1 ≠ 3 → mismatch → fallback
+            return Promise.resolve({
+              documentOperations: {
+                items: [],
+                totalCount: 0,
+                hasNextPage: false,
+                hasPreviousPage: false,
+                cursor: null,
+              },
+            });
+          }
+          // Fallback full fetch returns all 3 ops
+          return Promise.resolve({
+            documentOperations: {
+              items: [makeOp(0), makeOp(1), makeOp(2)],
+              totalCount: 3,
+              hasNextPage: false,
+              hasPreviousPage: false,
+              cursor: null,
+            },
+          });
         });
 
       const client = createMockClient({
-        GetDocumentWithOperations: getDocWithOps,
+        GetDocumentWithOperations: vi.fn().mockResolvedValue(
+          makeDocWithOpsResponse(
+            makeDocData({
+              revisionsList: [{ scope: "global", revision: 1 }],
+            }),
+            { items: [makeOp(0)] },
+          ),
+        ),
+        // Incremental pull: revision jumped to 3
+        GetDocument: vi.fn().mockResolvedValue({
+          document: {
+            document: makeDocData({
+              revisionsList: [{ scope: "global", revision: 3 }],
+            }),
+            childIds: [],
+          },
+        }),
         GetDocumentOperations: getDocOps,
       });
 
@@ -957,15 +1001,12 @@ describe("RemoteDocumentController", () => {
 
       expect(controller.operations["global"]).toHaveLength(1);
 
-      // Second pull: incremental fetch fails validation, falls back to full
+      // Second pull: incremental fails validation, falls back to full fetch
       await controller.pull();
 
       expect(controller.operations["global"]).toHaveLength(3);
-      // GetDocumentWithOperations called twice (first pull + stale incremental)
-      expect(getDocWithOps).toHaveBeenCalledTimes(2);
-      // Fallback uses GetDocumentOperations without cursor
-      expect(getDocOps).toHaveBeenCalledTimes(1);
-      expect(getDocOps.mock.calls[0][0].paging?.cursor).toBeNull();
+      // GetDocumentOperations called twice: once for incremental, once for fallback
+      expect(getDocOps).toHaveBeenCalledTimes(2);
     });
   });
 
@@ -995,11 +1036,8 @@ describe("RemoteDocumentController", () => {
 
     it("does not restore actions when pull fails after successful push", async () => {
       const client = createMockClient({
-        GetDocumentWithOperations: vi
-          .fn()
-          .mockResolvedValueOnce(makeDocWithOpsResponse(makeDocData()))
-          // Post-push pull fails
-          .mockRejectedValue(new Error("Pull failed")),
+        // Post-push incremental pull uses GetDocument — make it fail
+        GetDocument: vi.fn().mockRejectedValue(new Error("Pull failed")),
       });
 
       const controller = await RemoteDocumentController.pull(
