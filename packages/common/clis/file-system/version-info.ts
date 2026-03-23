@@ -21,7 +21,7 @@ export async function getPhCliVersionInfo() {
   To create a global project, run \`ph setup-globals\`.
 `.trim();
   const { projectPath, packageManager, isGlobal } =
-    await getPowerhouseProjectInfo();
+    await getPowerhouseProjectInfo(undefined, { silent: true });
   if (!projectPath) {
     return noProjectWarningMessage;
   }

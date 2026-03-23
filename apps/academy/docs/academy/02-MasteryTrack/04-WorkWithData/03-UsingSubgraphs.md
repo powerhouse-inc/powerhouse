@@ -56,7 +56,7 @@ Loaded templates: /projects/powerhouse/powerhouse/packages/codegen/dist/src/code
        FORCED: ./subgraphs/search-todos/schema.ts
 ```
 
-After generating the subgraph, build your project with a build step. 
+After generating the subgraph, build your project with a build step.
 
 ```bash title="Build your project"
 pnpm build
@@ -110,31 +110,30 @@ export const schema: DocumentNode = gql`
 
 ```typescript
 // subgraphs/search-todos/resolvers.ts
-import { type ISubgraph } from "@powerhousedao/reactor-api";
+import type { BaseSubgraph } from "@powerhousedao/reactor-api";
 import { type TodoListDocument } from "todo-tutorial/document-models/todo-list";
 
-export const getResolvers = (subgraph: ISubgraph) => {
-  const reactor = subgraph.reactor;
+export const getResolvers = (subgraph: BaseSubgraph) => {
+  const reactorClient = subgraph.reactorClient;
 
   return {
     Query: {
       searchTodos: async (
         parent: unknown,
-        args: { driveId: string; searchTerm: string }
+        args: { driveId: string; searchTerm: string },
       ) => {
-        const documents = await reactor.getDocuments(args.driveId);
+        const children = await reactorClient.getChildren(args.driveId);
         const todoItems: string[] = [];
-        for (const docId of documents) {
-          const doc: TodoListDocument = await reactor.getDocument(docId);
+        for (const doc of children.results) {
           if (doc.header.documentType !== "powerhouse/todo-list") {
             continue;
           }
-
-          const amountEntries = doc.state.global.items.filter((e) =>
-            e.text.includes(args.searchTerm)
+          const todoDoc = doc as TodoListDocument;
+          const amountEntries = todoDoc.state.global.items.filter((e) =>
+            e.text.includes(args.searchTerm),
           ).length;
           if (amountEntries > 0) {
-            todoItems.push(docId);
+            todoItems.push(doc.header.id);
           }
         }
         return todoItems;
@@ -278,6 +277,7 @@ The supergraph allows you to both query & mutate data from the same endpoint.
    ```
 
    Variables:
+
    ```json
    {
      "name": "My Test To-do List",
@@ -290,12 +290,17 @@ The supergraph allows you to both query & mutate data from the same endpoint.
 2. Add some items to your to-do list using the `TodoList_addTodoItem` mutation:
 
    ```graphql
-   mutation AddTodoItem($docId: PHID, $driveId: String, $input: TodoList_AddTodoItemInput) {
+   mutation AddTodoItem(
+     $docId: PHID
+     $driveId: String
+     $input: TodoList_AddTodoItemInput
+   ) {
      TodoList_addTodoItem(docId: $docId, driveId: $driveId, input: $input)
    }
    ```
 
    Variables:
+
    ```json
    {
      "docId": "abc123",
@@ -329,6 +334,7 @@ The supergraph allows you to both query & mutate data from the same endpoint.
    ```
 
    Variables:
+
    ```json
    {
      "docId": "abc123",
@@ -345,6 +351,7 @@ The supergraph allows you to both query & mutate data from the same endpoint.
    ```
 
    Variables:
+
    ```json
    {
      "driveId": "powerhouse",

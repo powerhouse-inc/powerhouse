@@ -14,7 +14,10 @@
 ## Software Components
 
 - **Model Context Protocol (MCP)** – A standardized protocol that enables AI agents and external tools to interact with systems through structured operations. Powerhouse uses MCP to provide AI access to document management capabilities.
-- **Reactor** – A storage node for Powerhouse documents and files with multiple storage adapters (local, cloud, decentralized).
+- **Reactor** – A storage node for Powerhouse documents and files with multiple storage adapters (local, cloud, decentralized). Reactors process mutations as jobs, emit events, and coordinate read models and processors.
+- **IReactorClient** – The primary programmatic interface for interacting with a reactor. Provides Promise-based methods for reading, creating, updating, deleting, and subscribing to documents. See the [IReactorClient API Reference](/academy/APIReferences/ReactorClient).
+- **Job (Reactor Job)** – A unit of work in the reactor's queue. Each mutation (e.g., executing actions on a document) becomes a job that moves through statuses: PENDING, RUNNING, WRITE_READY, READ_READY, or FAILED.
+- **ProcessorManager** – The reactor component that routes operations to user-defined processors. After a job reaches READ_READY, the ProcessorManager matches operations against each processor's filter and calls `onOperations()` on matching processors.
 - **Reactor-MCP** – A Model Context Protocol server for the Powerhouse ecosystem that provides AI agents and tools with structured access to document model operations, serving as a bridge between AI systems and Powerhouse document management infrastructure.
 - **Powerhouse Switchboard** – A scalable API service that aggregates and processes document data.
 - **Powerhouse Fusion** – A platform front-end that hosts the public marketplace for SNO interactions.
@@ -54,6 +57,8 @@
 - **Pure Functions (for Reducers)** – Principle that document model reducers must be pure (output depends only on input, no side effects) for predictable state transitions.
 - **Reducers (Document Model Reducers)** – Functions implementing a Document Model's logic; for each operation, a reducer takes current state and an action, returning new state.
 - **Replay Events** – The process of re-applying recorded events from a document's Event History to reconstruct or restore its state, a core capability of Event Sourcing.
+- **Scope** – A partition of a document's operation history. Operations are grouped by scope (e.g., `"global"`, `"local"`), allowing independent histories on the same document. Global scope contains shared state; local scope contains user-specific state.
+- **Branch** – A named fork of a document's operation history, enabling draft/published workflows. Operations are isolated per branch. The default branch is `"main"`.
 - **State (Global State in Document Model)** – The primary, persisted, shared data of a document instance, managed by its reducers.
 - **State Schema** – The component of a Document Model that defines the structure of the document, including its fields, data types, and validation rules, typically using a GraphQL-like syntax. It serves as a blueprint for how data is stored and validated.
 - **Strands** – A single synchronization channel that connects exactly one unit of synchronization to another, with all four parameters (drive_url, doc_id, scope, branch) set to fixed values. This allows synchronization between two distinct points of instances of a document or document drive.

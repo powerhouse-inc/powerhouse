@@ -901,8 +901,12 @@ export function createMockDocumentIndexer(): IDocumentIndexer {
     init: vi.fn().mockResolvedValue(undefined),
     indexOperations: vi.fn().mockResolvedValue(undefined),
     waitForConsistency: vi.fn().mockResolvedValue(undefined),
-    getOutgoing: vi.fn().mockResolvedValue([]),
-    getIncoming: vi.fn().mockResolvedValue([]),
+    getOutgoing: vi
+      .fn()
+      .mockResolvedValue({ results: [], options: { cursor: "0", limit: 100 } }),
+    getIncoming: vi
+      .fn()
+      .mockResolvedValue({ results: [], options: { cursor: "0", limit: 100 } }),
     hasRelationship: vi.fn().mockResolvedValue(false),
     getUndirectedRelationships: vi.fn().mockResolvedValue([]),
     getDirectedRelationships: vi.fn().mockResolvedValue([]),

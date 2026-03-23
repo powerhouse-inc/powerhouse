@@ -69,6 +69,9 @@ catalogs:
     '@types/react-dom':
       specifier: 19.2.3
       version: 19.2.3
+    '@types/ws':
+      specifier: 8.18.1
+      version: 8.18.1
     '@vitejs/plugin-basic-ssl':
       specifier: 2.1.4
       version: 2.1.4
@@ -132,9 +135,15 @@ catalogs:
     graphql-request:
       specifier: 7.4.0
       version: 7.4.0
+    graphql-sse:
+      specifier: 2.6.0
+      version: 2.6.0
     graphql-tag:
       specifier: 2.12.6
       version: 2.12.6
+    graphql-ws:
+      specifier: 6.0.7
+      version: 6.0.7
     knex:
       specifier: 3.1.0
       version: 3.1.0
@@ -246,6 +255,9 @@ catalogs:
     write-package:
       specifier: 7.2.0
       version: 7.2.0
+    ws:
+      specifier: 8.19.0
+      version: 8.19.0
     zocker:
       specifier: 3.0.0
       version: 3.0.0
@@ -1018,6 +1030,28 @@ importers:
         version: 3.2.4(@types/debug@4.1.12)(@types/node@25.2.3)(@vitest/browser@3.2.4)(happy-dom@17.6.3)(jiti@2.6.1)(jsdom@24.1.3)(lightningcss@1.31.1)(msw@2.12.10(@types/node@25.2.3)(typescript@5.9.3))(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2)
 
   packages/builder-tools:
+    dependencies:
+      '@tailwindcss/vite':
+        specifier: 'catalog:'
+        version: 4.1.18(vite@7.3.1(@types/node@25.3.1)(jiti@2.6.1)(lightningcss@1.31.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2))
+      '@vitejs/plugin-basic-ssl':
+        specifier: 'catalog:'
+        version: 2.1.4(vite@7.3.1(@types/node@25.3.1)(jiti@2.6.1)(lightningcss@1.31.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2))
+      '@vitejs/plugin-react':
+        specifier: 'catalog:'
+        version: 5.1.4(vite@7.3.1(@types/node@25.3.1)(jiti@2.6.1)(lightningcss@1.31.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2))
+      document-model:
+        specifier: link:../document-model
+        version: link:../document-model
+      vite:
+        specifier: 'catalog:'
+        version: 7.3.1(@types/node@25.3.1)(jiti@2.6.1)(lightningcss@1.31.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2)
+      vite-plugin-html:
+        specifier: 'catalog:'
+        version: 3.2.2(vite@7.3.1(@types/node@25.3.1)(jiti@2.6.1)(lightningcss@1.31.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2))
+      vite-plugin-svgr:
+        specifier: 'catalog:'
+        version: 4.5.0(rollup@4.59.0)(typescript@5.9.3)(vite@7.3.1(@types/node@25.3.1)(jiti@2.6.1)(lightningcss@1.31.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2))
     devDependencies:
       '@powerhousedao/config':
         specifier: workspace:*
@@ -1028,21 +1062,9 @@ importers:
       '@sentry/vite-plugin':
         specifier: ^4.3.0
         version: 4.9.1(encoding@0.1.13)
-      '@tailwindcss/vite':
-        specifier: 'catalog:'
-        version: 4.1.18(vite@7.3.1(@types/node@25.3.1)(jiti@2.6.1)(lightningcss@1.31.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2))
       '@types/bun':
         specifier: 'catalog:'
         version: 1.3.8
-      '@vitejs/plugin-basic-ssl':
-        specifier: 'catalog:'
-        version: 2.1.4(vite@7.3.1(@types/node@25.3.1)(jiti@2.6.1)(lightningcss@1.31.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2))
-      '@vitejs/plugin-react':
-        specifier: 'catalog:'
-        version: 5.1.4(vite@7.3.1(@types/node@25.3.1)(jiti@2.6.1)(lightningcss@1.31.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2))
-      document-model:
-        specifier: link:../document-model
-        version: link:../document-model
       esbuild:
         specifier: ^0.25.5
         version: 0.25.12
@@ -1064,18 +1086,9 @@ importers:
       tsx:
         specifier: 'catalog:'
         version: 4.21.0
-      vite:
-        specifier: 'catalog:'
-        version: 7.3.1(@types/node@25.3.1)(jiti@2.6.1)(lightningcss@1.31.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2)
       vite-envs:
         specifier: 'catalog:'
         version: 4.6.2
-      vite-plugin-html:
-        specifier: 'catalog:'
-        version: 3.2.2(vite@7.3.1(@types/node@25.3.1)(jiti@2.6.1)(lightningcss@1.31.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2))
-      vite-plugin-svgr:
-        specifier: 'catalog:'
-        version: 4.5.0(rollup@4.59.0)(typescript@5.9.3)(vite@7.3.1(@types/node@25.3.1)(jiti@2.6.1)(lightningcss@1.31.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2))
       zod:
         specifier: 'catalog:'
         version: 4.3.6
@@ -1872,6 +1885,9 @@ importers:
       graphql:
         specifier: 'catalog:'
         version: 16.12.0
+      graphql-sse:
+        specifier: 'catalog:'
+        version: 2.6.0(graphql@16.12.0)
       graphql-subscriptions:
         specifier: ^3.0.0
         version: 3.0.0(graphql@16.12.0)
@@ -1879,7 +1895,7 @@ importers:
         specifier: ^0.3.2
         version: 0.3.2(graphql@16.12.0)
       graphql-ws:
-        specifier: ^6.0.6
+        specifier: 'catalog:'
         version: 6.0.7(graphql@16.12.0)(ws@8.19.0)
       knex:
         specifier: 'catalog:'
@@ -2115,6 +2131,9 @@ importers:
       document-drive:
         specifier: link:../document-drive
         version: link:../document-drive
+      document-model:
+        specifier: link:../document-model
+        version: link:../document-model
       dotenv:
         specifier: ^16.4.5
         version: 16.6.1
@@ -2550,12 +2569,24 @@ importers:
       '@renown/sdk':
         specifier: workspace:*
         version: link:../../packages/renown
+      '@types/ws':
+        specifier: 'catalog:'
+        version: 8.18.1
       document-model:
         specifier: link:../../packages/document-model
         version: link:../../packages/document-model
+      graphql-sse:
+        specifier: 'catalog:'
+        version: 2.6.0(graphql@16.12.0)
+      graphql-ws:
+        specifier: 'catalog:'
+        version: 6.0.7(graphql@16.12.0)(ws@8.19.0)
       vitest:
         specifier: 'catalog:'
         version: 3.2.4(@types/debug@4.1.12)(@types/node@25.3.1)(@vitest/browser@3.2.4)(happy-dom@17.6.3)(jiti@2.6.1)(jsdom@24.1.3)(lightningcss@1.31.1)(msw@2.12.10(@types/node@25.3.1)(typescript@5.9.3))(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2)
+      ws:
+        specifier: 'catalog:'
+        version: 8.19.0
 
   test/test-client:
     dependencies:
@@ -2609,28 +2640,6 @@ importers:
       vitest:
         specifier: 'catalog:'
         version: 3.2.4(@types/debug@4.1.12)(@types/node@25.2.3)(@vitest/browser@3.2.4)(happy-dom@17.6.3)(jiti@2.6.1)(jsdom@24.1.3)(lightningcss@1.31.1)(msw@2.12.10(@types/node@25.2.3)(typescript@5.9.3))(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2)
-
-  test/test-subscription:
-    dependencies:
-      graphql:
-        specifier: ^16.12.0
-        version: 16.12.0
-      graphql-ws:
-        specifier: ^6.0.7
-        version: 6.0.7(graphql@16.12.0)(ws@8.19.0)
-      ws:
-        specifier: ^8.19.0
-        version: 8.19.0
-    devDependencies:
-      '@types/node':
-        specifier: 'catalog:'
-        version: 25.2.3
-      '@types/ws':
-        specifier: ^8.18.1
-        version: 8.18.1
-      tsx:
-        specifier: 'catalog:'
-        version: 4.21.0
 
   test/versioned-documents:
     dependencies:
@@ -12868,6 +12877,12 @@ packages:
     resolution: {integrity: sha512-xfr+zFb/QYbs4l4ty0dltqiXIp07U6sl+tOKAb0t50/EnQek6CVVBLjETXi+FghElytvgaAWtIOt3EV7zLzIAQ==}
     peerDependencies:
       graphql: 14 - 16
+
+  graphql-sse@2.6.0:
+    resolution: {integrity: sha512-BXT5Rjv9UFunjQsmN9WWEIq+TFNhgYibgwo1xkXLxzguQVyOd6paJ4v5DlL9K5QplS0w74bhF+aUiqaGXZBaug==}
+    engines: {node: '>=12'}
+    peerDependencies:
+      graphql: '>=0.11 <=16'
 
   graphql-subscriptions@3.0.0:
     resolution: {integrity: sha512-kZCdevgmzDjGAOqH7GlDmQXYAkuHoKpMlJrqF40HMPhUhM5ZWSFSxCwD/nSi6AkaijmMfsFhoJRGJ27UseCvRA==}
@@ -32861,6 +32876,10 @@ snapshots:
   graphql-request@7.4.0(graphql@16.12.0):
     dependencies:
       '@graphql-typed-document-node/core': 3.2.0(graphql@16.12.0)
+      graphql: 16.12.0
+
+  graphql-sse@2.6.0(graphql@16.12.0):
+    dependencies:
       graphql: 16.12.0
 
   graphql-subscriptions@3.0.0(graphql@16.12.0):
