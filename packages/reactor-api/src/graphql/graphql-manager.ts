@@ -7,11 +7,10 @@ import type {
 } from "@powerhousedao/reactor-api";
 import type {
   DocumentDriveDocument,
-  ILogger,
   IRelationalDbLegacy,
 } from "document-drive";
 import { debounce, responseForDrive } from "document-drive";
-import type { DocumentModelModule } from "document-model";
+import type { DocumentModelModule, ILogger } from "document-model";
 import type { GraphQLSchema } from "graphql";
 import type { IncomingHttpHeaders } from "http";
 import type http from "node:http";

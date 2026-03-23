@@ -12,7 +12,8 @@
 import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import type { IReactorClient, ISyncManager } from "@powerhousedao/reactor";
 import type * as DocumentDrive from "document-drive";
-import type { ILogger, IRelationalDbLegacy } from "document-drive";
+import type { IRelationalDbLegacy } from "document-drive";
+import type { ILogger } from "document-model";
 import type { DocumentModelModule } from "document-model";
 import type http from "node:http";
 import type { WebSocketServer } from "ws";

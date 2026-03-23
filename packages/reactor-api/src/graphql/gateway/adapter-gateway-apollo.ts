@@ -14,7 +14,7 @@ import { ApolloServer, HeaderMap } from "@apollo/server";
 import { ApolloServerPluginInlineTraceDisabled } from "@apollo/server/plugin/disabled";
 import { ApolloServerPluginDrainHttpServer } from "@apollo/server/plugin/drainHttpServer";
 import { ApolloServerPluginLandingPageLocalDefault } from "@apollo/server/plugin/landingPage/default";
-import type { ILogger } from "document-drive";
+import type { ILogger } from "document-model";
 import type { GraphQLSchema } from "graphql";
 import type http from "node:http";
 import type { WebSocketServer } from "ws";
