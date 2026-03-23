@@ -18,8 +18,8 @@ import {
   ReactorBuilder,
   ReactorClientBuilder,
 } from "@powerhousedao/reactor";
-import { logger } from "document-drive";
 import type { DocumentModelModule } from "document-model";
+import { logger } from "document-model";
 import dotenv from "dotenv";
 import { initializeAndStartAPI } from "./server.js";
 

@@ -31,7 +31,6 @@ import {
   baseDocumentModels,
   expectUUID,
 } from "document-drive";
-import { PrismaStorage } from "document-drive/storage/prisma";
 import { PrismaClient } from "document-drive/storage/prisma/client";
 import {
   documentModelCreateDocument,

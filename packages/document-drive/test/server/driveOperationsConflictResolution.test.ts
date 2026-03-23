@@ -24,12 +24,12 @@ import {
   MemoryStorage,
   ReactorBuilder,
 } from "document-drive";
-import { FilesystemStorage } from "document-drive/storage/filesystem";
-import { PrismaStorage } from "document-drive/storage/prisma";
 import { PrismaClient } from "document-drive/storage/prisma/client";
 import { documentModelDocumentModelModule } from "document-model";
 import { existsSync, rmSync } from "fs";
 import path from "path";
+import { FilesystemStorage } from "storage/filesystem";
+import { PrismaStorage } from "storage/prisma";
 import { beforeEach, describe, expect, it } from "vitest";
 
 function sortNodes(nodes: Node[]) {

@@ -28,15 +28,7 @@
       "import": "./dist/main.js"
     },
     "./assets/*": "./assets/*",
-    "./style.css": "./dist/style.css",
-    "./package.json": {
-      "import": "./dist/package.copy.json",
-      "types": "./dist/src/package-json.d.ts"
-    },
-    "./*": {
-      "types": "./dist/src/*/index.d.ts",
-      "import": "./dist/src/*/index.js"
-    }
+    "./style.css": "./dist/style.css"
   },
   "sideEffects": [
     "./dist/main.js",
@@ -77,6 +69,7 @@
     "@powerhousedao/reactor-browser": "workspace:*",
     "@powerhousedao/shared": "workspace:",
     "@powerhousedao/vetra": "workspace:*",
+    "@powerhousedao/document-engineering": "catalog:",
     "@renown/sdk": "workspace:*",
     "@sentry/react": "^10.17.0",
     "document-drive": "workspace:*",

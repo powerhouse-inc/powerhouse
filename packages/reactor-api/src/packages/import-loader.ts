@@ -4,10 +4,8 @@ import type {
   IProcessorHostModuleLegacy,
   ProcessorFactoryLegacy,
 } from "document-drive";
-import type { DocumentModelModule } from "document-model";
-import type { IPackageLoader } from "../types.js";
 import { childLogger } from "document-model";
-import type { IPackageLoader, IPackageLoaderOptions } from "../types.js";
+import type { IPackageLoader } from "../types.js";
 import {
   loadDocumentModels as loadDocumentModelsUtil,
   loadProcessors as loadProcessorsUtil,
