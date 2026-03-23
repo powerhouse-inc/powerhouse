@@ -1,11 +1,11 @@
 import { generateManifest } from "@powerhousedao/codegen";
-import type { InternalTransmitterUpdate } from "document-drive";
 import type {
   VetraPackagePHState,
   VetraPackageState,
 } from "../../../../document-models/vetra-package/index.js";
 import { logger } from "../../logger.js";
 import { BaseDocumentGen } from "../base-document-gen.js";
+import type { CodegenInput } from "../types.js";
 import { minimalBackupDocument } from "./utils.js";
 
 /**
@@ -17,23 +17,23 @@ export class PackageGenerator extends BaseDocumentGen {
   /**
    * Validate if this package strand should be processed
    */
-  shouldProcess(strand: InternalTransmitterUpdate): boolean {
+  shouldProcess(input: CodegenInput): boolean {
     // First run base validation
-    if (!super.shouldProcess(strand)) {
+    if (!super.shouldProcess(input)) {
       return false;
     }
 
-    const state = strand.state as VetraPackageState;
-    if (!state) {
-      logger.debug(`>>> No state found for package: ${strand.documentId}`);
+    if (!input.state) {
+      logger.debug(`>>> No state found for package: ${input.documentId}`);
       return false;
     }
 
     return true;
   }
 
-  async generate(strand: InternalTransmitterUpdate): Promise<void> {
-    const state = strand.state as VetraPackageState;
+  async generate(input: CodegenInput): Promise<void> {
+    const fullState = input.state as VetraPackagePHState;
+    const state = fullState as unknown as VetraPackageState;
 
     logger.info("🔄 Generating manifest for package");
     generateManifest(
@@ -53,10 +53,10 @@ export class PackageGenerator extends BaseDocumentGen {
     // Backup the document
     await minimalBackupDocument(
       {
-        documentId: strand.documentId,
-        documentType: strand.documentType,
-        branch: strand.branch,
-        state: strand.state as VetraPackagePHState,
+        documentId: input.documentId,
+        documentType: input.documentType,
+        branch: input.branch,
+        state: fullState,
         name: "vetra-package",
       },
       this.config.CURRENT_WORKING_DIR,

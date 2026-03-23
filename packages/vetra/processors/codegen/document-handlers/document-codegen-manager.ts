@@ -1,9 +1,8 @@
-import type { InternalTransmitterUpdate } from "document-drive";
 import type { QueuedStrand } from "../interactive-manager.js";
 import { InteractiveManager } from "../interactive-manager.js";
 import { logger } from "../logger.js";
 import type { BaseDocumentGen } from "./base-document-gen.js";
-import type { Config } from "./types.js";
+import type { CodegenInput, Config } from "./types.js";
 
 const DEFAULT_DEBOUNCE_TIME = 3000; // 3 seconds
 
@@ -90,7 +89,7 @@ export class DocumentCodegenManager {
    * Route a document to the appropriate generator and handle the generation
    * Handles both interactive and non-interactive modes with queue-based processing
    */
-  async routeAndGenerate(strand: InternalTransmitterUpdate): Promise<void> {
+  async routeAndGenerate(strand: CodegenInput): Promise<void> {
     const documentType = strand.documentType;
 
     if (!documentType) {
@@ -228,9 +227,7 @@ export class DocumentCodegenManager {
   /**
    * Process a single strand (used internally by processQueuedStrands)
    */
-  private async processStrand(
-    strand: InternalTransmitterUpdate,
-  ): Promise<void> {
+  private async processStrand(strand: CodegenInput): Promise<void> {
     const documentType = strand.documentType;
     const generator = this.getGenerator(documentType);
 

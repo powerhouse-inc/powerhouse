@@ -3,8 +3,8 @@ import type {
   PHDocument,
 } from "@powerhousedao/shared/document-model";
 import { baseMinimalSaveToFile, baseSaveToFile } from "document-model/node";
-import { mkdir } from "node:fs/promises";
-import { join } from "node:path";
+import { mkdir } from "fs/promises";
+import { join } from "path";
 import { logger } from "../../logger.js";
 
 const BACKUP_FOLDER = "backup-documents";

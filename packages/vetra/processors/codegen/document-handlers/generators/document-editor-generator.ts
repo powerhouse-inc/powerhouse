@@ -1,12 +1,12 @@
 import { generateEditor, generateManifest } from "@powerhousedao/codegen";
 import { kebabCase } from "change-case";
-import type { InternalTransmitterUpdate } from "document-drive";
 import type {
   DocumentEditorPHState,
   DocumentEditorState,
 } from "../../../../document-models/document-editor/index.js";
 import { logger } from "../../logger.js";
 import { BaseDocumentGen } from "../base-document-gen.js";
+import type { CodegenInput } from "../types.js";
 import { USE_TS_MORPH } from "./constants.js";
 import { minimalBackupDocument } from "./utils.js";
 
@@ -17,36 +17,36 @@ export class DocumentEditorGenerator extends BaseDocumentGen {
   readonly supportedDocumentTypes = "powerhouse/document-editor";
 
   /**
-   * Extract the global state from the full document state
+   * Parse and extract the global state from the serialized state string
    */
   private extractGlobalState(
-    strand: InternalTransmitterUpdate,
+    input: CodegenInput,
   ): DocumentEditorState | undefined {
-    const fullState = strand.state as DocumentEditorPHState | undefined;
-    if (!fullState) {
+    if (!input.state) {
       return undefined;
     }
+    const fullState = input.state as DocumentEditorPHState;
     return fullState.global;
   }
 
   /**
    * Validate if this document editor strand should be processed
    */
-  shouldProcess(strand: InternalTransmitterUpdate): boolean {
+  shouldProcess(input: CodegenInput): boolean {
     // First run base validation
-    if (!super.shouldProcess(strand)) {
+    if (!super.shouldProcess(input)) {
       return false;
     }
 
-    const state = this.extractGlobalState(strand);
+    const state = this.extractGlobalState(input);
     if (!state) {
-      logger.debug(`No state found for document editor: ${strand.documentId}`);
+      logger.debug(`No state found for document editor: ${input.documentId}`);
       return false;
     }
 
     // Check if we have a valid editor name, document types, and it's confirmed
     if (!state.name) {
-      logger.debug(`No name found for document editor: ${strand.documentId}`);
+      logger.debug(`No name found for document editor: ${input.documentId}`);
       return false;
     }
 
@@ -67,10 +67,10 @@ export class DocumentEditorGenerator extends BaseDocumentGen {
     return true;
   }
 
-  async generate(strand: InternalTransmitterUpdate): Promise<void> {
-    const state = this.extractGlobalState(strand);
+  async generate(input: CodegenInput): Promise<void> {
+    const state = this.extractGlobalState(input);
     if (!state) {
-      logger.error(`No state found for document editor: ${strand.documentId}`);
+      logger.error(`No state found for document editor: ${input.documentId}`);
       return;
     }
 
@@ -127,12 +127,13 @@ export class DocumentEditorGenerator extends BaseDocumentGen {
       }
 
       // Backup the document
+      const fullState = input.state as DocumentEditorPHState;
       await minimalBackupDocument(
         {
-          documentId: strand.documentId,
-          documentType: strand.documentType,
-          branch: strand.branch,
-          state: strand.state as DocumentEditorPHState,
+          documentId: input.documentId,
+          documentType: input.documentType,
+          branch: input.branch,
+          state: fullState,
           name: state.name,
         },
         this.config.CURRENT_WORKING_DIR,

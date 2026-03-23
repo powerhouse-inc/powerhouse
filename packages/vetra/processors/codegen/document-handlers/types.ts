@@ -1,9 +1,16 @@
 import type { PowerhouseConfig } from "@powerhousedao/config";
-import type { InternalTransmitterUpdate } from "document-drive";
+
+export type CodegenInput = {
+  documentId: string;
+  documentType: string;
+  scope: string;
+  branch: string;
+  state?: unknown;
+};
 
 export interface DocumentHandler {
   documentType: string;
-  handle: (strand: InternalTransmitterUpdate) => Promise<void>;
+  handle: (input: CodegenInput) => Promise<void>;
 }
 
 export interface Config {

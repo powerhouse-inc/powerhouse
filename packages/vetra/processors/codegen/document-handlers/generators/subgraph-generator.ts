@@ -1,12 +1,12 @@
 import { generateManifest, generateSubgraph } from "@powerhousedao/codegen";
 import { kebabCase } from "change-case";
-import type { InternalTransmitterUpdate } from "document-drive";
 import type {
   SubgraphModulePHState,
   SubgraphModuleState,
 } from "../../../../document-models/subgraph-module/index.js";
 import { logger } from "../../logger.js";
 import { BaseDocumentGen } from "../base-document-gen.js";
+import type { CodegenInput } from "../types.js";
 import { minimalBackupDocument } from "./utils.js";
 
 /**
@@ -16,36 +16,36 @@ export class SubgraphGenerator extends BaseDocumentGen {
   readonly supportedDocumentTypes = "powerhouse/subgraph";
 
   /**
-   * Extract the global state from the full document state
+   * Parse and extract the global state from the serialized state string
    */
   private extractGlobalState(
-    strand: InternalTransmitterUpdate,
+    input: CodegenInput,
   ): SubgraphModuleState | undefined {
-    const fullState = strand.state as SubgraphModulePHState | undefined;
-    if (!fullState) {
+    if (!input.state) {
       return undefined;
     }
+    const fullState = input.state as SubgraphModulePHState;
     return fullState.global;
   }
 
   /**
    * Validate if this subgraph strand should be processed
    */
-  shouldProcess(strand: InternalTransmitterUpdate): boolean {
+  shouldProcess(input: CodegenInput): boolean {
     // First run base validation
-    if (!super.shouldProcess(strand)) {
+    if (!super.shouldProcess(input)) {
       return false;
     }
 
-    const state = this.extractGlobalState(strand);
+    const state = this.extractGlobalState(input);
     if (!state) {
-      logger.debug(`No state found for subgraph: ${strand.documentId}`);
+      logger.debug(`No state found for subgraph: ${input.documentId}`);
       return false;
     }
 
     // Check if we have a valid subgraph name and it's confirmed
     if (!state.name) {
-      logger.debug(`No name found for subgraph: ${strand.documentId}`);
+      logger.debug(`No name found for subgraph: ${input.documentId}`);
       return false;
     }
 
@@ -59,10 +59,10 @@ export class SubgraphGenerator extends BaseDocumentGen {
     return true;
   }
 
-  async generate(strand: InternalTransmitterUpdate): Promise<void> {
-    const state = this.extractGlobalState(strand);
+  async generate(input: CodegenInput): Promise<void> {
+    const state = this.extractGlobalState(input);
     if (!state) {
-      logger.error(`No state found for subgraph: ${strand.documentId}`);
+      logger.error(`No state found for subgraph: ${input.documentId}`);
       return;
     }
 
@@ -109,12 +109,13 @@ export class SubgraphGenerator extends BaseDocumentGen {
         }
 
         // Backup the document
+        const fullState = input.state as SubgraphModulePHState;
         await minimalBackupDocument(
           {
-            documentId: strand.documentId,
-            documentType: strand.documentType,
-            branch: strand.branch,
-            state: strand.state as SubgraphModulePHState,
+            documentId: input.documentId,
+            documentType: input.documentType,
+            branch: input.branch,
+            state: fullState,
             name: state.name,
           },
           this.config.CURRENT_WORKING_DIR,

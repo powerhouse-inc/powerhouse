@@ -2,10 +2,9 @@ import type {
   PowerhouseConfig,
   PowerhouseManifest,
 } from "@powerhousedao/config";
-import type { InternalTransmitterUpdate } from "document-drive";
 import type { DocumentModelGlobalState } from "@powerhousedao/shared/document-model";
-import path from "path";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { OperationWithContext } from "@powerhousedao/reactor-browser";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppModuleGlobalState } from "../../../document-models/app-module/index.js";
 import type { DocumentEditorState } from "../../../document-models/document-editor/index.js";
 import type { ProcessorModuleState } from "../../../document-models/processor-module/index.js";
@@ -15,7 +14,7 @@ import {
   USE_TS_MORPH,
   USE_VERSIONING,
 } from "../document-handlers/generators/constants.js";
-import { CodegenProcessorLegacy } from "../index.legacy.js";
+import { CodegenProcessor } from "../index.js";
 
 const defaultManifest: PowerhouseManifest = {
   name: "",
@@ -36,11 +35,33 @@ function mockGetPHConfig(): PowerhouseConfig {
   return {
     logLevel: "verbose",
     skipFormat: true,
-    documentModelsDir: path.join(process.cwd(), "document-models"),
-    editorsDir: path.join(process.cwd(), "editors"),
-    processorsDir: path.join(process.cwd(), "processors"),
-    subgraphsDir: path.join(process.cwd(), "subgraphs"),
-    importScriptsDir: path.join(process.cwd(), "import-scripts"),
+    documentModelsDir: `${process.cwd()}/document-models`,
+    editorsDir: `${process.cwd()}/editors`,
+    processorsDir: `${process.cwd()}/processors`,
+    subgraphsDir: `${process.cwd()}/subgraphs`,
+    importScriptsDir: `${process.cwd()}/import-scripts`,
+  };
+}
+
+/**
+ * Helper to create an OperationWithContext from test data.
+ * The operation field is stubbed since CodegenProcessor only uses context.
+ */
+function makeOperation(
+  documentId: string,
+  documentType: string,
+  state: unknown,
+): OperationWithContext {
+  return {
+    operation: {} as OperationWithContext["operation"],
+    context: {
+      documentId,
+      documentType,
+      scope: "global",
+      branch: "main",
+      resultingState: state != null ? JSON.stringify(state) : undefined,
+      ordinal: 1,
+    },
   };
 }
 
@@ -76,8 +97,8 @@ vi.mock("../logger.js", () => ({
   },
 }));
 
-describe("CodegenProcessorLegacy E2E Tests", () => {
-  let processor: CodegenProcessorLegacy;
+describe("CodegenProcessor E2E Tests", () => {
+  let processor: CodegenProcessor;
   let mockConfig: { PH_CONFIG: PowerhouseConfig; CURRENT_WORKING_DIR: string };
 
   beforeEach(async () => {
@@ -92,7 +113,7 @@ describe("CodegenProcessorLegacy E2E Tests", () => {
     };
 
     // Create a REAL processor instance (not mocked)
-    processor = new CodegenProcessorLegacy();
+    processor = new CodegenProcessor();
 
     // Reset all codegen function mocks to resolve successfully
     const codegen = await import("@powerhousedao/codegen");
@@ -130,13 +151,11 @@ describe("CodegenProcessorLegacy E2E Tests", () => {
         status: "CONFIRMED",
       };
 
-      const strand = {
-        documentId: "test-doc-1",
-        documentType: "powerhouse/document-editor",
-        state: { global: validState },
-      } as InternalTransmitterUpdate;
+      const op = makeOperation("test-doc-1", "powerhouse/document-editor", {
+        global: validState,
+      });
 
-      await processor.onStrands([strand]);
+      await processor.onOperations([op]);
       // Advance timers to trigger debounced generation
       await vi.runAllTimersAsync();
 
@@ -185,13 +204,11 @@ describe("CodegenProcessorLegacy E2E Tests", () => {
         status: "CONFIRMED",
       };
 
-      const strand = {
-        documentId: "test-doc-1",
-        documentType: "powerhouse/document-editor",
-        state: { global: invalidState },
-      } as InternalTransmitterUpdate;
+      const op = makeOperation("test-doc-1", "powerhouse/document-editor", {
+        global: invalidState,
+      });
 
-      await processor.onStrands([strand]);
+      await processor.onOperations([op]);
       await vi.runAllTimersAsync();
 
       expect(generateEditor).not.toHaveBeenCalled();
@@ -210,13 +227,11 @@ describe("CodegenProcessorLegacy E2E Tests", () => {
         status: "DRAFT",
       };
 
-      const strand = {
-        documentId: "test-doc-1",
-        documentType: "powerhouse/document-editor",
-        state: { global: invalidState },
-      } as InternalTransmitterUpdate;
+      const op = makeOperation("test-doc-1", "powerhouse/document-editor", {
+        global: invalidState,
+      });
 
-      await processor.onStrands([strand]);
+      await processor.onOperations([op]);
       await vi.runAllTimersAsync();
 
       expect(generateEditor).not.toHaveBeenCalled();
@@ -233,13 +248,11 @@ describe("CodegenProcessorLegacy E2E Tests", () => {
         status: "CONFIRMED",
       };
 
-      const strand = {
-        documentId: "test-doc-1",
-        documentType: "powerhouse/document-editor",
-        state: { global: invalidState },
-      } as InternalTransmitterUpdate;
+      const op = makeOperation("test-doc-1", "powerhouse/document-editor", {
+        global: invalidState,
+      });
 
-      await processor.onStrands([strand]);
+      await processor.onOperations([op]);
       await vi.runAllTimersAsync();
 
       expect(generateEditor).not.toHaveBeenCalled();
@@ -257,13 +270,11 @@ describe("CodegenProcessorLegacy E2E Tests", () => {
         name: "Test Model",
       } as DocumentModelGlobalState;
 
-      const strand = {
-        documentId: "test-doc-1",
-        documentType: "powerhouse/document-model",
-        state: { global: validState },
-      } as InternalTransmitterUpdate;
+      const op = makeOperation("test-doc-1", "powerhouse/document-model", {
+        global: validState,
+      });
 
-      await processor.onStrands([strand]);
+      await processor.onOperations([op]);
       await vi.runAllTimersAsync();
       const generateFromDocumentArgs: Parameters<typeof generateFromDocument> =
         [
@@ -309,13 +320,11 @@ describe("CodegenProcessorLegacy E2E Tests", () => {
         id: "test-model-id",
       } as DocumentModelGlobalState;
 
-      const strand = {
-        documentId: "test-doc-1",
-        documentType: "powerhouse/document-model",
-        state: { global: invalidState },
-      } as InternalTransmitterUpdate;
+      const op = makeOperation("test-doc-1", "powerhouse/document-model", {
+        global: invalidState,
+      });
 
-      await processor.onStrands([strand]);
+      await processor.onOperations([op]);
       await vi.runAllTimersAsync();
 
       expect(generateFromDocument).not.toHaveBeenCalled();
@@ -346,13 +355,11 @@ describe("CodegenProcessorLegacy E2E Tests", () => {
         specifications: [],
       };
 
-      const strand = {
-        documentId: "test-doc-1",
-        documentType: "powerhouse/document-model",
-        state: { global: validState },
-      } as InternalTransmitterUpdate;
+      const op = makeOperation("test-doc-1", "powerhouse/document-model", {
+        global: validState,
+      });
 
-      await processor.onStrands([strand]);
+      await processor.onOperations([op]);
       await vi.runAllTimersAsync();
 
       expect(generateFromDocument).toHaveBeenCalled();
@@ -377,13 +384,11 @@ describe("CodegenProcessorLegacy E2E Tests", () => {
         processorApps: ["connect"],
       };
 
-      const strand = {
-        documentId: "test-doc-1",
-        documentType: "powerhouse/processor",
-        state: { global: validState },
-      } as InternalTransmitterUpdate;
+      const op = makeOperation("test-doc-1", "powerhouse/processor", {
+        global: validState,
+      });
 
-      await processor.onStrands([strand]);
+      await processor.onOperations([op]);
       await vi.runAllTimersAsync();
 
       expect(generateProcessor).toHaveBeenCalledWith<
@@ -414,13 +419,11 @@ describe("CodegenProcessorLegacy E2E Tests", () => {
         processorApps: ["switchboard"],
       };
 
-      const strand = {
-        documentId: "test-doc-1",
-        documentType: "powerhouse/processor",
-        state: { global: validState },
-      } as InternalTransmitterUpdate;
+      const op = makeOperation("test-doc-1", "powerhouse/processor", {
+        global: validState,
+      });
 
-      await processor.onStrands([strand]);
+      await processor.onOperations([op]);
       await vi.runAllTimersAsync();
 
       expect(generateProcessor).toHaveBeenCalledWith<
@@ -448,13 +451,11 @@ describe("CodegenProcessorLegacy E2E Tests", () => {
         processorApps: ["connect"],
       };
 
-      const strand = {
-        documentId: "test-doc-1",
-        documentType: "powerhouse/processor",
-        state: { global: invalidState },
-      } as InternalTransmitterUpdate;
+      const op = makeOperation("test-doc-1", "powerhouse/processor", {
+        global: invalidState,
+      });
 
-      await processor.onStrands([strand]);
+      await processor.onOperations([op]);
       await vi.runAllTimersAsync();
 
       expect(generateProcessor).not.toHaveBeenCalled();
@@ -471,13 +472,11 @@ describe("CodegenProcessorLegacy E2E Tests", () => {
         processorApps: ["connect"],
       };
 
-      const strand = {
-        documentId: "test-doc-1",
-        documentType: "powerhouse/processor",
-        state: { global: invalidState },
-      } as InternalTransmitterUpdate;
+      const op = makeOperation("test-doc-1", "powerhouse/processor", {
+        global: invalidState,
+      });
 
-      await processor.onStrands([strand]);
+      await processor.onOperations([op]);
       await vi.runAllTimersAsync();
 
       expect(generateProcessor).not.toHaveBeenCalled();
@@ -496,13 +495,11 @@ describe("CodegenProcessorLegacy E2E Tests", () => {
         allowedDocumentTypes: [],
       };
 
-      const strand = {
-        documentId: "test-doc-1",
-        documentType: "powerhouse/app",
-        state: { global: validState },
-      } as InternalTransmitterUpdate;
+      const op = makeOperation("test-doc-1", "powerhouse/app", {
+        global: validState,
+      });
 
-      await processor.onStrands([strand]);
+      await processor.onOperations([op]);
       await vi.runAllTimersAsync();
 
       const generateDriveEditorArgs: Parameters<typeof generateDriveEditor> = [
@@ -548,13 +545,11 @@ describe("CodegenProcessorLegacy E2E Tests", () => {
         ],
       };
 
-      const strand = {
-        documentId: "test-doc-1",
-        documentType: "powerhouse/app",
-        state: { global: validState },
-      } as InternalTransmitterUpdate;
+      const op = makeOperation("test-doc-1", "powerhouse/app", {
+        global: validState,
+      });
 
-      await processor.onStrands([strand]);
+      await processor.onOperations([op]);
       await vi.runAllTimersAsync();
 
       expect(generateDriveEditor).toHaveBeenCalledWith({
@@ -583,13 +578,11 @@ describe("CodegenProcessorLegacy E2E Tests", () => {
         allowedDocumentTypes: [],
       };
 
-      const strand = {
-        documentId: "test-doc-1",
-        documentType: "powerhouse/app",
-        state: { global: invalidState },
-      } as InternalTransmitterUpdate;
+      const op = makeOperation("test-doc-1", "powerhouse/app", {
+        global: invalidState,
+      });
 
-      await processor.onStrands([strand]);
+      await processor.onOperations([op]);
       await vi.runAllTimersAsync();
 
       expect(generateDriveEditor).not.toHaveBeenCalled();
@@ -607,13 +600,11 @@ describe("CodegenProcessorLegacy E2E Tests", () => {
         status: "CONFIRMED",
       };
 
-      const strand = {
-        documentId: "test-doc-1",
-        documentType: "powerhouse/subgraph",
-        state: { global: validState },
-      } as InternalTransmitterUpdate;
+      const op = makeOperation("test-doc-1", "powerhouse/subgraph", {
+        global: validState,
+      });
 
-      await processor.onStrands([strand]);
+      await processor.onOperations([op]);
       await vi.runAllTimersAsync();
 
       expect(generateSubgraph).toHaveBeenCalledWith(
@@ -645,13 +636,11 @@ describe("CodegenProcessorLegacy E2E Tests", () => {
         status: "DRAFT",
       };
 
-      const strand = {
-        documentId: "test-doc-1",
-        documentType: "powerhouse/subgraph",
-        state: { global: invalidState },
-      } as InternalTransmitterUpdate;
+      const op = makeOperation("test-doc-1", "powerhouse/subgraph", {
+        global: invalidState,
+      });
 
-      await processor.onStrands([strand]);
+      await processor.onOperations([op]);
       await vi.runAllTimersAsync();
 
       expect(generateSubgraph).not.toHaveBeenCalled();
@@ -673,13 +662,9 @@ describe("CodegenProcessorLegacy E2E Tests", () => {
         },
       } as VetraPackageState;
 
-      const strand = {
-        documentId: "test-doc-1",
-        documentType: "powerhouse/package",
-        state: validState,
-      } as InternalTransmitterUpdate;
+      const op = makeOperation("test-doc-1", "powerhouse/package", validState);
 
-      await processor.onStrands([strand]);
+      await processor.onOperations([op]);
       await vi.runAllTimersAsync();
 
       expect(generateManifest).toHaveBeenCalledWith(
@@ -705,13 +690,13 @@ describe("CodegenProcessorLegacy E2E Tests", () => {
         description: "A test package",
       } as VetraPackageState;
 
-      const strand = {
-        documentId: "test-doc-1",
-        documentType: "powerhouse/package",
-        state: stateWithoutAuthor,
-      } as InternalTransmitterUpdate;
+      const op = makeOperation(
+        "test-doc-1",
+        "powerhouse/package",
+        stateWithoutAuthor,
+      );
 
-      await processor.onStrands([strand]);
+      await processor.onOperations([op]);
       await vi.runAllTimersAsync();
 
       expect(generateManifest).toHaveBeenCalledWith(
@@ -747,20 +732,16 @@ describe("CodegenProcessorLegacy E2E Tests", () => {
         status: "CONFIRMED",
       };
 
-      const strands = [
-        {
-          documentId: "test-doc-1",
-          documentType: "powerhouse/document-editor",
-          state: { global: editorState },
-        } as InternalTransmitterUpdate,
-        {
-          documentId: "test-doc-2",
-          documentType: "powerhouse/subgraph",
-          state: { global: subgraphState },
-        } as InternalTransmitterUpdate,
+      const ops = [
+        makeOperation("test-doc-1", "powerhouse/document-editor", {
+          global: editorState,
+        }),
+        makeOperation("test-doc-2", "powerhouse/subgraph", {
+          global: subgraphState,
+        }),
       ];
 
-      await processor.onStrands(strands);
+      await processor.onOperations(ops);
       await vi.runAllTimersAsync();
 
       expect(generateEditor).toHaveBeenCalledWith({
@@ -798,20 +779,16 @@ describe("CodegenProcessorLegacy E2E Tests", () => {
         status: "DRAFT", // Invalid - should be skipped
       };
 
-      const strands = [
-        {
-          documentId: "test-doc-1",
-          documentType: "powerhouse/document-editor",
-          state: { global: validEditorState },
-        } as InternalTransmitterUpdate,
-        {
-          documentId: "test-doc-2",
-          documentType: "powerhouse/subgraph",
-          state: { global: invalidSubgraphState },
-        } as InternalTransmitterUpdate,
+      const ops = [
+        makeOperation("test-doc-1", "powerhouse/document-editor", {
+          global: validEditorState,
+        }),
+        makeOperation("test-doc-2", "powerhouse/subgraph", {
+          global: invalidSubgraphState,
+        }),
       ];
 
-      await processor.onStrands(strands);
+      await processor.onOperations(ops);
       await vi.runAllTimersAsync();
 
       // Valid strand should be processed
@@ -844,20 +821,16 @@ describe("CodegenProcessorLegacy E2E Tests", () => {
         status: "DRAFT", // Invalid - draft status
       };
 
-      const strands = [
-        {
-          documentId: "test-doc-1",
-          documentType: "powerhouse/document-editor",
-          state: { global: invalidEditorState },
-        } as InternalTransmitterUpdate,
-        {
-          documentId: "test-doc-2",
-          documentType: "powerhouse/subgraph",
-          state: { global: invalidSubgraphState },
-        } as InternalTransmitterUpdate,
+      const ops = [
+        makeOperation("test-doc-1", "powerhouse/document-editor", {
+          global: invalidEditorState,
+        }),
+        makeOperation("test-doc-2", "powerhouse/subgraph", {
+          global: invalidSubgraphState,
+        }),
       ];
 
-      await processor.onStrands(strands);
+      await processor.onOperations(ops);
       await vi.runAllTimersAsync();
 
       // No strands should be processed
@@ -872,13 +845,11 @@ describe("CodegenProcessorLegacy E2E Tests", () => {
       const { generateEditor, generateProcessor, generateManifest } =
         await import("@powerhousedao/codegen");
 
-      const strand = {
-        documentId: "test-doc-1",
-        documentType: "unsupported/document-type",
-        state: { name: "Test" },
-      } as InternalTransmitterUpdate;
+      const op = makeOperation("test-doc-1", "unsupported/document-type", {
+        name: "Test",
+      });
 
-      await processor.onStrands([strand]);
+      await processor.onOperations([op]);
       await vi.runAllTimersAsync();
 
       // No codegen functions should be called for unsupported types
@@ -899,13 +870,11 @@ describe("CodegenProcessorLegacy E2E Tests", () => {
         status: "CONFIRMED",
       };
 
-      const strand = {
-        documentId: "",
-        documentType: "powerhouse/document-editor",
-        state: { global: validState },
-      } as InternalTransmitterUpdate;
+      const op = makeOperation("", "powerhouse/document-editor", {
+        global: validState,
+      });
 
-      await processor.onStrands([strand]);
+      await processor.onOperations([op]);
       await vi.runAllTimersAsync();
 
       // Should not process strand with empty documentId
@@ -917,13 +886,13 @@ describe("CodegenProcessorLegacy E2E Tests", () => {
       const { generateEditor, generateManifest } =
         await import("@powerhousedao/codegen");
 
-      const strand = {
-        documentId: "test-doc-1",
-        documentType: "powerhouse/document-editor",
-        state: undefined,
-      } as InternalTransmitterUpdate;
+      const op = makeOperation(
+        "test-doc-1",
+        "powerhouse/document-editor",
+        null,
+      );
 
-      await processor.onStrands([strand]);
+      await processor.onOperations([op]);
       await vi.runAllTimersAsync();
 
       // Should not process strand with undefined state
@@ -949,19 +918,20 @@ describe("CodegenProcessorLegacy E2E Tests", () => {
         name: "Test Package 2",
       };
 
-      const firstStrand = {
-        documentId: "test-doc-1",
-        documentType: "powerhouse/package",
-        state: firstState,
-      } as InternalTransmitterUpdate;
+      const firstOp = makeOperation(
+        "test-doc-1",
+        "powerhouse/package",
+        firstState,
+      );
 
-      const secondStrand = {
-        ...firstStrand,
-        state: secondState,
-      };
+      const secondOp = makeOperation(
+        "test-doc-1",
+        "powerhouse/package",
+        secondState,
+      );
 
-      await processor.onStrands([firstStrand]);
-      await processor.onStrands([secondStrand]);
+      await processor.onOperations([firstOp]);
+      await processor.onOperations([secondOp]);
 
       await vi.runAllTimersAsync();
 

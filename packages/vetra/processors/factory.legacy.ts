@@ -10,17 +10,12 @@ import type {
 } from "document-drive";
 import type { PHDocumentHeader } from "@powerhousedao/shared/document-model";
 
-import { codegenProcessorFactoryLegacy } from "./codegen/factory.legacy.js";
-
 export const processorFactoryLegacy = (module: IProcessorHostModuleLegacy) => {
   // Initialize all processor factories once with the module
   const factories: Array<ProcessorFactoryLegacy> = [];
 
   // Add all processor factories
   factories.push(vetraReadModelProcessorFactoryLegacy(module));
-
-  // Add other processors here as they are generated
-  factories.push(codegenProcessorFactoryLegacy(module));
 
   // Return the inner function that will be called for each drive
   return async (driveHeader: PHDocumentHeader) => {
