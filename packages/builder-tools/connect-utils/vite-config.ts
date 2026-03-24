@@ -7,6 +7,7 @@ import react from "@vitejs/plugin-react";
 import { join } from "node:path";
 import {
   createLogger,
+  esmExternalRequirePlugin,
   loadEnv,
   type HtmlTagDescriptor,
   type InlineConfig,
@@ -252,50 +253,20 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     optimizeDeps: {
       exclude: ["@electric-sql/pglite", "@electric-sql/pglite-tools"],
     },
-    build: {
-      rolldownOptions: {
-        // Externalize React so both Connect and dynamically loaded registry
-        // packages share the same React instance via the import map in index.html.
-        // Without this, Vite bundles React into Connect's chunks while registry
-        // packages resolve React from the import map (esm.sh), creating two
-        // separate React instances that don't share context/state.
-        external: reactExternal,
-      },
-    },
     plugins: [
       ...plugins,
+      // Externalize React so both Connect and dynamically loaded registry
+      // packages share the same React instance via the import map in index.html.
+      // Without this, Vite bundles React into Connect's chunks while registry
+      // packages resolve React from the import map (esm.sh), creating two
+      // separate React instances that don't share context/state.
+      //
       // In Vite 8 (Rolldown), require() calls for external modules are preserved
-      // in the output. This causes runtime errors in browsers where require()
-      // doesn't exist. This plugin patches the Rolldown CJS runtime helper chunk
-      // to resolve externalized React packages from ESM imports instead of throwing.
-      {
-        name: "patch-cjs-require-for-externals",
-        enforce: "post" as const,
-        generateBundle(_options, bundle) {
-          for (const [, chunk] of Object.entries(bundle)) {
-            if (chunk.type !== "chunk" || !chunk.code) continue;
-            if (!chunk.code.includes("rolldown.rs/in-depth/bundling-cjs")) {
-              continue;
-            }
-            const imports = [
-              'import * as __ext_react from "react";',
-              'import * as __ext_react_dom from "react-dom";',
-              'import * as __ext_jsx from "react/jsx-runtime";',
-              'import * as __ext_client from "react-dom/client";',
-            ].join("");
-            const shimMap =
-              'var __extMap={"react":__ext_react,"react-dom":__ext_react_dom,' +
-              '"react/jsx-runtime":__ext_jsx,"react-dom/client":__ext_client};';
-            chunk.code =
-              imports +
-              shimMap +
-              chunk.code.replace(
-                "throw Error('Calling `require`",
-                "if(__extMap[e])return __extMap[e];throw Error('Calling `require`",
-              );
-          }
-        },
-      },
+      // as-is, which fails in browsers. esmExternalRequirePlugin handles both
+      // externalization AND converting require() to import statements.
+      // NOTE: Do NOT also list these in build.rolldownOptions.external — overlapping
+      // entries prevent the plugin from transforming require() calls.
+      esmExternalRequirePlugin({ external: reactExternal }),
     ],
     worker: {
       format: "es",
