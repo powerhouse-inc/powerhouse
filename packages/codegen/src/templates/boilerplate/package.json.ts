@@ -85,7 +85,8 @@ const devDependenciesTemplate = (versionedDevDependencies: string[]) => json`
   "typescript": "^5.9.3",
   "typescript-eslint": "^8.46.2",
   "vitest": "4.1.1",
-  "@vitejs/plugin-react": "6.0.1"
+  "@vitejs/plugin-react": "6.0.1",
+  "vite-tsconfig-paths": "6.1.1"
 `;
 
 export const packageJsonTemplate = (

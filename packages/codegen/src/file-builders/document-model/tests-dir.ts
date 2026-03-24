@@ -1,14 +1,14 @@
 import type { DocumentModelFileMakerArgs } from "@powerhousedao/codegen";
 import { getDocumentModelOperationsModuleVariableNames } from "@powerhousedao/codegen/name-builders";
 import {
-    documentModelTestFileTemplate,
-    makeActionImportNames,
-    makeTestCaseForAction,
+  documentModelTestFileTemplate,
+  makeActionImportNames,
+  makeTestCaseForAction,
 } from "@powerhousedao/codegen/templates";
 import {
-    formatSourceFileWithPrettier,
-    getOrCreateSourceFile,
-    getPreviousVersionSourceFile,
+  formatSourceFileWithPrettier,
+  getOrCreateSourceFile,
+  getPreviousVersionSourceFile,
 } from "@powerhousedao/codegen/utils";
 import type { ModuleSpecification } from "@powerhousedao/shared/document-model";
 import { ts } from "@tmpl/core";

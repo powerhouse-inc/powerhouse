@@ -74,6 +74,7 @@
     }
   },
   "dependencies": {
+    "write-package": "catalog:",
     "@sindresorhus/fnv1a": "catalog:",
     "chalk": "catalog:",
     "change-case": "catalog:",

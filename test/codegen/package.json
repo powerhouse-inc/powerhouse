@@ -1,0 +1,50 @@
+{
+  "name": "test-codegen",
+  "version": "5.1.0-dev.26",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/powerhouse-inc/powerhouse"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "regenerate-test-projects": "tsx ./regenerate-test-projects.ts",
+    "test:bun": "bun test --timeout 1000000",
+    "test": "pnpm test:bun generate-boilerplate.test.ts"
+  },
+  "dependencies": {
+    "graphql-codegen-typescript-validation-schema": "catalog:",
+    "@graphql-codegen/add": "6.0.0",
+    "@graphql-codegen/cli": "catalog:",
+    "@graphql-codegen/typescript": "catalog:",
+    "ts-morph": "catalog:",
+    "@types/bun": "catalog:",
+    "find-up": "^8.0.0",
+    "zod": "catalog:",
+    "@powerhousedao/codegen": "workspace:*",
+    "@powerhousedao/connect": "workspace:*",
+    "document-model": "workspace:*",
+    "@powerhousedao/analytics-engine-core": "workspace:*",
+    "@powerhousedao/design-system": "workspace:*",
+    "@powerhousedao/reactor-browser": "workspace:*",
+    "document-drive": "workspace:*",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "@vitejs/plugin-react": "catalog:",
+    "vitest": "catalog:",
+    "vite-tsconfig-paths": "catalog:",
+    "tsx": "catalog:",
+    "read-pkg": "catalog:",
+    "write-package": "catalog:"
+  },
+  "description": ""
+}

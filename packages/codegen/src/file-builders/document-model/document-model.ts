@@ -84,7 +84,6 @@ export async function tsMorphGenerateDocumentModel({
   project.addSourceFilesAtPaths(documentModelsSourceFilesPath);
 
   const documentModelPackageImportPath = path.join(
-    packageName,
     "document-models",
     documentModelDirName,
   );

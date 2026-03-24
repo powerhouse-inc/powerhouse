@@ -45,6 +45,8 @@ type CreateProjectArgs = {
   tag?: string;
   version?: string;
   remoteDrive?: string;
+  skipGitInit?: boolean;
+  skipInstall?: boolean;
 };
 export async function createProject({
   name,
@@ -52,6 +54,8 @@ export async function createProject({
   tag,
   version,
   remoteDrive,
+  skipGitInit,
+  skipInstall,
 }: CreateProjectArgs) {
   const appPath = path.join(process.cwd(), name);
 
@@ -75,11 +79,13 @@ export async function createProject({
     process.chdir(appPath);
     console.log(chalk.green(`✅ Project directory created\n`));
 
-    // Create a .gitignore file, then initialize the git repository
-    console.log(chalk.blue(`▶️ Initializing git repository...\n`));
     await writeFileEnsuringDir(".gitignore", gitIgnoreTemplate);
-    runCmd(`git init`);
-    console.log(chalk.green(`\n✅ Git repository initialized\n`));
+    if (!skipGitInit) {
+      // Create a .gitignore file, then initialize the git repository
+      console.log(chalk.blue(`▶️ Initializing git repository...\n`));
+      runCmd(`git init`);
+      console.log(chalk.green(`\n✅ Git repository initialized\n`));
+    }
 
     // Write the boilerplate files for the project
     console.log(chalk.blue(`▶️ Creating project boilerplate files...\n`));
@@ -89,14 +95,16 @@ export async function createProject({
     await writeCIFiles();
     console.log(chalk.green(`✅ Project boilerplate files created\n`));
 
-    // Install the project dependencies with the specified package manager
-    console.log(
-      chalk.blue(
-        `▶️ Installing project dependencies with ${packageManager}...\n`,
-      ),
-    );
-    runCmd(`${packageManager} install`);
-    console.log(chalk.green(`\n✅ Project dependencies installed\n`));
+    if (!skipInstall) {
+      // Install the project dependencies with the specified package manager
+      console.log(
+        chalk.blue(
+          `▶️ Installing project dependencies with ${packageManager}...\n`,
+        ),
+      );
+      runCmd(`${packageManager} install`);
+      console.log(chalk.green(`\n✅ Project dependencies installed\n`));
+    }
 
     // Use the installed version of `prettier` to format the generated code
     console.log(chalk.blue(`▶️ Formatting boilerplate project files...\n`));
@@ -141,7 +149,6 @@ async function writeProjectRootFiles(args: {
   await writeFileEnsuringDir("eslint.config.js", eslintConfigTemplate);
   await writeFileEnsuringDir("index.ts", indexTsTemplate);
   await writeFileEnsuringDir("style.css", styleTemplate);
-  await writeFileEnsuringDir("vite.config.ts", viteConfigTemplate);
   await writeFileEnsuringDir("vitest.config.ts", vitestConfigTemplate);
 }
 

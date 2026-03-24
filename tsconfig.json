@@ -98,6 +98,9 @@
       "path": "packages/analytics-engine/pg"
     },
     {
+      "path": "test/codegen"
+    },
+    {
       "path": "test/e2e-utils"
     },
     {

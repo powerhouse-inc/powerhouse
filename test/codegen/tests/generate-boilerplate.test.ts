@@ -1,11 +1,11 @@
+import { createProject } from "@powerhousedao/codegen";
 import { $ } from "bun";
 import { describe, test } from "bun:test";
 import { mkdir, rm } from "fs/promises";
 import path from "path";
-import { createProject } from "../create-lib/create-project.js";
+import process from "process";
 
-const testsDir = import.meta.dirname;
-const testOutputDir = path.join(testsDir, ".test-output");
+const testOutputDir = path.join(process.cwd(), "test-output");
 const parentOutDirName = "generate-boilerplate";
 const outDir = path.join(testOutputDir, parentOutDirName);
 
@@ -21,6 +21,6 @@ describe("generate boilerplate", () => {
       tag: "dev",
     });
     const generatedProjectDir = path.join(outDir, name);
-    await $`bun run --cwd ${generatedProjectDir} tsc`;
+    await $`bun run --cwd ${generatedProjectDir} tsc --noEmit`;
   });
 });

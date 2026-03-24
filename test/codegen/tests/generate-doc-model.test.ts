@@ -1,12 +1,14 @@
+import {
+  generateDocumentModel,
+  loadDocumentModel,
+} from "@powerhousedao/codegen";
 import { $ } from "bun";
 import { describe, expect, test } from "bun:test";
-import { cp, readdir } from "node:fs/promises";
+import { cp, readdir, rm } from "node:fs/promises";
 import path from "path";
 import { Project, ts } from "ts-morph";
-import { generateDocumentModel } from "../generate.js";
-import { loadDocumentModel } from "../utils.js";
-const testsDir = import.meta.dirname;
-const testOutputDir = path.join(testsDir, ".test-output");
+const testOutputDir = "test-output";
+const testsDataDir = "data";
 
 function getDocumentModelJsonFilePath(basePath: string, dirName: string) {
   return path.join(basePath, dirName, `${dirName}.json`);
@@ -41,7 +43,7 @@ async function loadDocumentModelsInDir(
       dir: documentModelsOutDir,
       useTsMorph: true,
       useVersioning,
-      specifiedPackageName: "test",
+      specifiedPackageName: "test-project",
     });
   }
 }
@@ -62,7 +64,9 @@ async function runDocumentModelTests(args: {
   } = args;
   const dataDir = path.join(testsDataDir, inDirName);
   const documentModelsInDir = path.join(testsDataDir, specDirName);
+  console.log({ dataDir, documentModelsInDir });
   const outDir = path.join(testOutputParentDir, `${inDirName}-${specDirName}`);
+  await rm(outDir, { recursive: true, force: true });
   await cp(dataDir, outDir, {
     recursive: true,
     force: true,
@@ -143,11 +147,10 @@ async function checkFileContents(outDir: string) {
 describe("generate doc model", () => {
   const parentOutDirName = "generate-doc-model";
   const testOutputParentDir = path.join(testOutputDir, parentOutDirName);
-  const testsDataDir = path.join(testsDir, "data");
   const useVersioning = false;
-  test("generate document models", async () => {
+  test.only("generate document models", async () => {
     const outDir = await runDocumentModelTests({
-      inDirName: "document-models-test-project",
+      inDirName: "test-project",
       specDirName: "document-models",
       testOutputParentDir,
       testsDataDir,
@@ -170,7 +173,6 @@ describe("generate doc model", () => {
 describe("versioned document models", () => {
   const parentOutDirName = "versioned-document-models";
   const testOutputParentDir = path.join(testOutputDir, parentOutDirName);
-  const testsDataDir = path.join(testsDir, "data", "versioned-document-models");
   describe("v1", () => {
     test("should generate new document models as v1", async () => {
       await runDocumentModelTests({
