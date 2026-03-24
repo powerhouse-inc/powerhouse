@@ -1,8 +1,8 @@
-import type { Action } from "@powerhousedao/shared/document-model";
+import type { Action } from "document-model";
 import type {
-  SetTestIdInput,
-  SetTestIdButDifferentInput,
-  SetTestNameInput,
+    SetTestIdButDifferentInput,
+    SetTestIdInput,
+    SetTestNameInput,
 } from "../types.js";
 
 export type SetTestIdAction = Action & {

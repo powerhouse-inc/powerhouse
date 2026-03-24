@@ -1,10 +1,10 @@
 // TODO: remove eslint-disable rules once refactor is done
 
-import type { StateReducer } from "@powerhousedao/shared/document-model";
+import type { StateReducer } from "document-model";
 import {
-  createReducer,
-  isDocumentAction,
-} from "@powerhousedao/shared/document-model";
+    createReducer,
+    isDocumentAction,
+} from "document-model";
 import type { BillingStatementPHState } from "test/document-models/billing-statement/v2";
 
 import { billingStatementGeneralOperations } from "../src/reducers/general.js";
@@ -12,13 +12,13 @@ import { billingStatementLineItemsOperations } from "../src/reducers/line-items.
 import { billingStatementTagsOperations } from "../src/reducers/tags.js";
 
 import {
-  AddLineItemInputSchema,
-  EditBillingStatementInputSchema,
-  EditBillingStatementTestInputSchema,
-  EditContributorInputSchema,
-  EditLineItemInputSchema,
-  EditLineItemTagInputSchema,
-  EditStatusInputSchema,
+    AddLineItemInputSchema,
+    EditBillingStatementInputSchema,
+    EditBillingStatementTestInputSchema,
+    EditContributorInputSchema,
+    EditLineItemInputSchema,
+    EditLineItemTagInputSchema,
+    EditStatusInputSchema,
 } from "./schema/zod.js";
 
 const stateReducer: StateReducer<BillingStatementPHState> = (

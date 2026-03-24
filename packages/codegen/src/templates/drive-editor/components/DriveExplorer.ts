@@ -1,7 +1,7 @@
 import { tsx } from "@tmpl/core";
 
 export const driveExplorerFileTemplate = tsx`
-import type { EditorProps } from "@powerhousedao/shared/document-model";
+import type { EditorProps } from "document-model";
 import { FolderTree } from "./FolderTree.js";
 import { DriveContents } from "./DriveContents.js";
 

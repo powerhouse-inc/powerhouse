@@ -1,6 +1,6 @@
-import { type SignalDispatch } from "@powerhousedao/shared/document-model";
-import type { SetTestIdAction, SetTestNameAction } from "./actions.js";
+import { type SignalDispatch } from "document-model";
 import type { TestDocState } from "../types.js";
+import type { SetTestIdAction, SetTestNameAction } from "./actions.js";
 
 export interface TestDocBaseOperationsOperations {
   setTestIdOperation: (

@@ -1,18 +1,18 @@
-import { createAction } from "@powerhousedao/shared/document-model";
+import { createAction } from "document-model";
 import {
-  SetTestIdButDifferentInputSchema,
-  SetTestIdInputSchema,
-  SetTestNameInputSchema,
+    SetTestIdButDifferentInputSchema,
+    SetTestIdInputSchema,
+    SetTestNameInputSchema,
 } from "../schema/zod.js";
 import type {
-  SetTestIdButDifferentInput,
-  SetTestIdInput,
-  SetTestNameInput,
+    SetTestIdButDifferentInput,
+    SetTestIdInput,
+    SetTestNameInput,
 } from "../types.js";
 import type {
-  SetTestIdAction,
-  SetTestIdButDifferentAction,
-  SetTestNameAction,
+    SetTestIdAction,
+    SetTestIdButDifferentAction,
+    SetTestNameAction,
 } from "./actions.js";
 
 export const setTestId = (input: SetTestIdInput) =>

@@ -1,18 +1,18 @@
-import { createAction } from "@powerhousedao/shared/document-model";
+import { createAction } from "document-model";
 import {
-  EditBillingStatementInputSchema,
-  EditContributorInputSchema,
-  EditStatusInputSchema,
+    EditBillingStatementInputSchema,
+    EditContributorInputSchema,
+    EditStatusInputSchema,
 } from "../schema/zod.js";
 import type {
-  EditBillingStatementInput,
-  EditContributorInput,
-  EditStatusInput,
+    EditBillingStatementInput,
+    EditContributorInput,
+    EditStatusInput,
 } from "../types.js";
 import type {
-  EditBillingStatementAction,
-  EditContributorAction,
-  EditStatusAction,
+    EditBillingStatementAction,
+    EditContributorAction,
+    EditStatusAction,
 } from "./actions.js";
 
 export const editBillingStatement = (input: EditBillingStatementInput) =>

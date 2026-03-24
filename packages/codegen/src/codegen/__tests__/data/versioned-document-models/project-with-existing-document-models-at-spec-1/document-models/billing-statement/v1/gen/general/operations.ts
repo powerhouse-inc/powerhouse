@@ -1,10 +1,10 @@
-import { type SignalDispatch } from "@powerhousedao/shared/document-model";
-import type {
-  EditBillingStatementAction,
-  EditContributorAction,
-  EditStatusAction,
-} from "./actions.js";
+import { type SignalDispatch } from "document-model";
 import type { BillingStatementState } from "../types.js";
+import type {
+    EditBillingStatementAction,
+    EditContributorAction,
+    EditStatusAction,
+} from "./actions.js";
 
 export interface BillingStatementGeneralOperations {
   editBillingStatementOperation: (

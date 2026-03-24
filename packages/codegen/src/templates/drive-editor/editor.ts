@@ -3,7 +3,7 @@ import { tsx } from "@tmpl/core";
 export const driveEditorEditorFileTemplate = () =>
   tsx`
 import { useSetPHDriveEditorConfig } from "@powerhousedao/reactor-browser";
-import type { EditorProps } from "@powerhousedao/shared/document-model";
+import type { EditorProps } from "document-model";
 import { DriveExplorer } from "./components/DriveExplorer.js";
 import { editorConfig } from "./config.js";
 

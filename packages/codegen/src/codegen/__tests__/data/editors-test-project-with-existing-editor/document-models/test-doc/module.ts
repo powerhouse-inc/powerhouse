@@ -1,8 +1,8 @@
-import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
+import type { DocumentModelModule } from "document-model";
 import {
-  createState,
-  defaultBaseState,
-} from "@powerhousedao/shared/document-model";
+    createState,
+    defaultBaseState,
+} from "document-model";
 import type { TestDocPHState } from "./index.js";
 import { actions, documentModel, reducer, utils } from "./index.js";
 

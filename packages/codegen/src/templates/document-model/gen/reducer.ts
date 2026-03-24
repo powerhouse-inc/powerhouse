@@ -4,7 +4,7 @@ import { camelCase, constantCase, kebabCase, pascalCase } from "change-case";
 import type {
   ModuleSpecification,
   OperationSpecification,
-} from "@powerhousedao/shared/document-model";
+} from "document-model";
 
 function makePascalCaseOperationName(operation: OperationSpecification) {
   if (!operation.name) {
@@ -132,8 +132,8 @@ export const documentModelGenReducerFileTemplate = (
   ts`
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
-import type { Reducer, StateReducer } from "@powerhousedao/shared/document-model";
-import { isDocumentAction, createReducer } from "@powerhousedao/shared/document-model";
+import type { Reducer, StateReducer } from "document-model";
+import { isDocumentAction, createReducer } from "document-model";
 import type { ${v.phStateName} } from "${v.versionedDocumentModelPackageImportPath}";
 
 ${makeModulesOperationsImports(v.modules, v.camelCaseDocumentType)}

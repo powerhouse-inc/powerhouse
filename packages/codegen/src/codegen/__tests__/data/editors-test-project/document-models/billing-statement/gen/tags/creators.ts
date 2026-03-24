@@ -1,4 +1,4 @@
-import { createAction } from "@powerhousedao/shared/document-model";
+import { createAction } from "document-model";
 import { EditLineItemTagInputSchema } from "../schema/zod.js";
 import type { EditLineItemTagInput } from "../types.js";
 import type { EditLineItemTagAction } from "./actions.js";

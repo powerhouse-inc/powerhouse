@@ -1,7 +1,7 @@
 import { ts } from "@tmpl/core";
 
 export const upgradeManifestsTemplate = ts`
-import type { UpgradeManifest } from "@powerhousedao/shared/document-model";
+import type { UpgradeManifest } from "document-model";
 
 export const upgradeManifests: UpgradeManifest<readonly number[]>[] = [];
 `.raw;

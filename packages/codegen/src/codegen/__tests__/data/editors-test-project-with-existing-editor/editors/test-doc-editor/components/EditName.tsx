@@ -1,4 +1,4 @@
-import { setName } from "@powerhousedao/shared/document-model";
+import { setName } from "document-model";
 import type { FormEventHandler, MouseEventHandler } from "react";
 import { useState } from "react";
 import { useSelectedTestDocDocument } from "test/document-models/test-doc";

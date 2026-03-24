@@ -1,8 +1,8 @@
-import { baseActions } from "@powerhousedao/shared/document-model";
+import { baseActions } from "document-model";
 import {
-  generalActions,
-  lineItemsActions,
-  tagsActions,
+    generalActions,
+    lineItemsActions,
+    tagsActions,
 } from "./gen/creators.js";
 
 /** Actions for the BillingStatement document model */

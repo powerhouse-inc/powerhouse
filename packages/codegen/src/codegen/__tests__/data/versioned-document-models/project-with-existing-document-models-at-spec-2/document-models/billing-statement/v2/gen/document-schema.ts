@@ -1,13 +1,13 @@
 import {
-  BaseDocumentHeaderSchema,
-  BaseDocumentStateSchema,
-} from "@powerhousedao/shared/document-model";
+    BaseDocumentHeaderSchema,
+    BaseDocumentStateSchema,
+} from "document-model";
 import { z } from "zod";
 import { billingStatementDocumentType } from "./document-type.js";
 import { BillingStatementStateSchema } from "./schema/zod.js";
 import type {
-  BillingStatementDocument,
-  BillingStatementPHState,
+    BillingStatementDocument,
+    BillingStatementPHState,
 } from "./types.js";
 
 /** Schema for validating the header object of a BillingStatement document */

@@ -1,4 +1,4 @@
-import type { UpgradeManifest } from "@powerhousedao/shared/document-model";
+import type { UpgradeManifest } from "document-model";
 import { latestVersion, supportedVersions } from "./versions.js";
 
 export const billingStatementUpgradeManifest: UpgradeManifest<

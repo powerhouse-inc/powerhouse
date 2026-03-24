@@ -1,9 +1,9 @@
-import type { Action } from "@powerhousedao/shared/document-model";
+import type { Action } from "document-model";
 import type {
-  EditBillingStatementTestInput,
-  EditBillingStatementInput,
-  EditContributorInput,
-  EditStatusInput,
+    EditBillingStatementInput,
+    EditBillingStatementTestInput,
+    EditContributorInput,
+    EditStatusInput,
 } from "../types.js";
 
 export type EditBillingStatementTestAction = Action & {

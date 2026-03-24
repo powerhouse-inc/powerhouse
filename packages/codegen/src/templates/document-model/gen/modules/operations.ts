@@ -1,11 +1,11 @@
 import type {
-  ActionFromOperation,
-  DocumentModelTemplateInputsWithModule,
+    ActionFromOperation,
+    DocumentModelTemplateInputsWithModule,
 } from "@powerhousedao/codegen";
+import { getActionTypeName } from "@powerhousedao/codegen/name-builders";
 import { ts } from "@tmpl/core";
 import { camelCase, pascalCase } from "change-case";
-import type { ModuleSpecification } from "@powerhousedao/shared/document-model";
-import { getActionTypeName } from "@powerhousedao/codegen/name-builders";
+import type { ModuleSpecification } from "document-model";
 
 function getActionTypeNames(actions: ActionFromOperation[]) {
   return actions.map(getActionTypeName);

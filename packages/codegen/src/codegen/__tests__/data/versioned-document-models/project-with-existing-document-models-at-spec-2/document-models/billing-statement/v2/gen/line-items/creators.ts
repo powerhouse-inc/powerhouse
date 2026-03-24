@@ -1,7 +1,7 @@
-import { createAction } from "@powerhousedao/shared/document-model";
+import { createAction } from "document-model";
 import {
-  AddLineItemInputSchema,
-  EditLineItemInputSchema,
+    AddLineItemInputSchema,
+    EditLineItemInputSchema,
 } from "../schema/zod.js";
 import type { AddLineItemInput, EditLineItemInput } from "../types.js";
 import type { AddLineItemAction, EditLineItemAction } from "./actions.js";

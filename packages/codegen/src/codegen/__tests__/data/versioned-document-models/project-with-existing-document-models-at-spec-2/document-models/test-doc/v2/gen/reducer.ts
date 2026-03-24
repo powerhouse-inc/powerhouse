@@ -1,18 +1,18 @@
 // TODO: remove eslint-disable rules once refactor is done
 
-import type { StateReducer } from "@powerhousedao/shared/document-model";
+import type { StateReducer } from "document-model";
 import {
-  createReducer,
-  isDocumentAction,
-} from "@powerhousedao/shared/document-model";
+    createReducer,
+    isDocumentAction,
+} from "document-model";
 import type { TestDocPHState } from "test/document-models/test-doc/v2";
 
 import { testDocBaseOperationsOperations } from "../src/reducers/base-operations.js";
 
 import {
-  SetTestIdButDifferentInputSchema,
-  SetTestIdInputSchema,
-  SetTestNameInputSchema,
+    SetTestIdButDifferentInputSchema,
+    SetTestIdInputSchema,
+    SetTestNameInputSchema,
 } from "./schema/zod.js";
 
 const stateReducer: StateReducer<TestDocPHState> = (
