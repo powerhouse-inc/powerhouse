@@ -1,9 +1,6 @@
 import { Analytics, Router } from "@powerhousedao/connect/components";
 
-import {
-  ProcessorManagerProvider,
-  SentryProvider,
-} from "@powerhousedao/connect/context";
+import { SentryProvider } from "@powerhousedao/connect/context";
 import {
   DocumentEditorDebugTools,
   serviceWorkerManager,
@@ -39,11 +36,9 @@ export const App = () => {
   return (
     <SentryProvider>
       <WagmiContext>
-        <ProcessorManagerProvider>
-          <ToastContainer position="bottom-right" containerId="connect" />
-          <Router />
-          <Analytics />
-        </ProcessorManagerProvider>
+        <ToastContainer position="bottom-right" containerId="connect" />
+        <Router />
+        <Analytics />
       </WagmiContext>
     </SentryProvider>
   );
