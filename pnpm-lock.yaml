@@ -1950,9 +1950,6 @@ importers:
       devcert:
         specifier: ^1.2.2
         version: 1.2.3
-      document-drive:
-        specifier: link:../document-drive
-        version: link:../document-drive
       document-model:
         specifier: link:../document-model
         version: link:../document-model
@@ -2183,9 +2180,6 @@ importers:
       corestore:
         specifier: ^6.18.4
         version: 6.18.4(bare-events@2.8.2)(bare-url@2.3.2)
-      document-model:
-        specifier: link:../document-model
-        version: link:../document-model
       hyperbee:
         specifier: ^2.21.0
         version: 2.27.3
@@ -2193,6 +2187,9 @@ importers:
       '@powerhousedao/reactor':
         specifier: workspace:*
         version: link:../reactor
+      document-model:
+        specifier: link:../document-model
+        version: link:../document-model
       tsx:
         specifier: 'catalog:'
         version: 4.21.0
