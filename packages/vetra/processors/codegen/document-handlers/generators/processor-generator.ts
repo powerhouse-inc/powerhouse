@@ -11,7 +11,6 @@ import type {
 import { logger } from "../../logger.js";
 import { BaseDocumentGen } from "../base-document-gen.js";
 import type { CodegenInput } from "../types.js";
-import { USE_TS_MORPH } from "./constants.js";
 import { minimalBackupDocument } from "./utils.js";
 
 /**
@@ -125,7 +124,6 @@ export class ProcessorGenerator extends BaseDocumentGen {
           processorType,
           documentTypes,
           skipFormat: this.config.PH_CONFIG.skipFormat,
-          useTsMorph: USE_TS_MORPH,
           processorApps,
         });
 

@@ -25,13 +25,13 @@ import { writePackage } from "write-package";
 import type { GenerateArgs, MigrateArgs } from "../types.js";
 import { startGenerate } from "./generate.js";
 
-export async function startMigrate({ useHygen = false }: MigrateArgs) {
+export async function startMigrate(_args: MigrateArgs) {
   await migratePackageJson();
   await migrateTsConfig();
   await migrateIndexHtml();
   await migrateCIFiles();
-  await runGenerateOnAllDocumentModels(useHygen);
-  await runGenerateOnAllEditors(useHygen);
+  await runGenerateOnAllDocumentModels();
+  await runGenerateOnAllEditors();
   const project = new Project({
     tsConfigFilePath: path.resolve("tsconfig.json"),
     compilerOptions: {
@@ -263,14 +263,12 @@ function fixImports(project: Project) {
 }
 
 /** Run the generate command on all document models */
-async function runGenerateOnAllDocumentModels(useHygen: boolean) {
-  await startGenerate({
-    useHygen,
-  } as GenerateArgs);
+async function runGenerateOnAllDocumentModels() {
+  await startGenerate({} as GenerateArgs);
 }
 
 /** Run the generate command on all editors */
-async function runGenerateOnAllEditors(useHygen: boolean) {
+async function runGenerateOnAllEditors() {
   const editorsPath = path.join(process.cwd(), "editors");
   const dirs = (await readdir(editorsPath, { withFileTypes: true }))
     .filter((entry) => entry.isDirectory())
@@ -304,7 +302,6 @@ async function runGenerateOnAllEditors(useHygen: boolean) {
         driveEditorId: id,
         driveEditorDirName: dir,
         allowedDocumentTypes,
-        useHygen,
       } as GenerateArgs;
       await startGenerate(args);
     } else {
@@ -313,7 +310,6 @@ async function runGenerateOnAllEditors(useHygen: boolean) {
         editorId: id,
         editorDirName: dir,
         documentType: documentTypes?.[0],
-        useHygen,
       } as GenerateArgs;
       await startGenerate(args);
     }

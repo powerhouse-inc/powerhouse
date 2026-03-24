@@ -10,7 +10,7 @@ import type {
 import { logger } from "../../logger.js";
 import { BaseDocumentGen } from "../base-document-gen.js";
 import type { CodegenInput } from "../types.js";
-import { USE_TS_MORPH, USE_VERSIONING } from "./constants.js";
+import { USE_VERSIONING } from "./constants.js";
 import { minimalBackupDocument } from "./utils.js";
 
 /**
@@ -84,7 +84,6 @@ export class DocumentModelGenerator extends BaseDocumentGen {
       await generateFromDocument({
         documentModelState: globalState,
         config: this.config.PH_CONFIG,
-        useTsMorph: USE_TS_MORPH,
         useVersioning: USE_VERSIONING,
       });
       logger.info(

@@ -11,7 +11,6 @@ import {
   it,
   type TestContext,
 } from "vitest";
-import { USE_TS_MORPH } from "./config.js";
 import {
   EDITORS_TEST_PROJECT,
   EDITORS_TEST_PROJECT_WITH_EXISTING_EDITOR,
@@ -80,7 +79,6 @@ describe("generateDriveEditor", () => {
         driveEditorName: name,
         driveEditorId: "AtlasDriveExplorer",
         allowedDocumentTypes: ["powerhouse/test-doc"],
-        useTsMorph: USE_TS_MORPH,
         specifiedPackageName: undefined,
         driveEditorDirName: undefined,
         isDragAndDropEnabled: true,
@@ -202,7 +200,6 @@ describe("generateDriveEditor", () => {
       await generateDriveEditor({
         ...config,
         driveEditorName: name,
-        useTsMorph: USE_TS_MORPH,
         driveEditorId: undefined,
         specifiedPackageName: undefined,
         driveEditorDirName: undefined,
@@ -237,7 +234,6 @@ describe("generateDriveEditor", () => {
         driveEditorName: name,
         driveEditorId: "AtlasDriveExplorer",
         allowedDocumentTypes: ["powerhouse/test-doc"],
-        useTsMorph: USE_TS_MORPH,
         specifiedPackageName: undefined,
         driveEditorDirName: undefined,
         isDragAndDropEnabled: true,
@@ -265,7 +261,6 @@ describe("generateDriveEditor", () => {
       await generateDriveEditor({
         ...config,
         driveEditorName: name,
-        useTsMorph: USE_TS_MORPH,
         allowedDocumentTypes: [],
         driveEditorId: undefined,
         specifiedPackageName: undefined,

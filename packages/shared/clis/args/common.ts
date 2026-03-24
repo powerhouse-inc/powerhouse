@@ -268,11 +268,3 @@ export const commonServerArgs = {
     env: "PH_WATCH_TIMEOUT" as const,
   }),
 };
-
-export const useHygen = flag({
-  type: boolean,
-  long: "use-hygen",
-  description: "Use legacy hygen codegen",
-  defaultValue: () => false,
-  defaultValueIsSerializable: true,
-});

@@ -7,7 +7,6 @@ import { kebabCase } from "change-case";
 import { logger } from "../../logger.js";
 import { BaseDocumentGen } from "../base-document-gen.js";
 import type { CodegenInput } from "../types.js";
-import { USE_TS_MORPH } from "./constants.js";
 import { minimalBackupDocument } from "./utils.js";
 
 /**
@@ -80,7 +79,6 @@ export class AppGenerator extends BaseDocumentGen {
           driveEditorId: appId,
           allowedDocumentTypes: state.allowedDocumentTypes ?? [],
           isDragAndDropEnabled: state.isDragAndDropEnabled,
-          useTsMorph: USE_TS_MORPH,
         });
 
         logger.info(

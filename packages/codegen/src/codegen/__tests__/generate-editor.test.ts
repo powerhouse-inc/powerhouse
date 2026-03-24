@@ -11,7 +11,6 @@ import {
   type TestContext,
 } from "vitest";
 import { generateEditor } from "../index.js";
-import { USE_TS_MORPH } from "./config.js";
 import {
   EDITORS_TEST_PROJECT,
   EDITORS_TEST_PROJECT_WITH_EXISTING_EDITOR,
@@ -80,7 +79,6 @@ describe("generateEditor", () => {
         documentTypes: ["powerhouse/test-doc"],
         editorId: "test-document-model-editor",
         specifiedPackageName: TEST_PACKAGE_NAME,
-        useTsMorph: USE_TS_MORPH,
       });
 
       const editorsDir = path.join(testOutDirPath, "editors");
@@ -136,7 +134,6 @@ describe("generateEditor", () => {
         documentTypes: ["powerhouse/test-doc"],
         editorId: "test-document-model-editor-two",
         specifiedPackageName: TEST_PACKAGE_NAME,
-        useTsMorph: USE_TS_MORPH,
         editorDirName: undefined,
       });
       const editorsDir = path.join(testOutDirPath, "editors");
@@ -170,7 +167,6 @@ describe("generateEditor", () => {
         documentTypes: ["powerhouse/test-doc"],
         editorId: "test-doc-editor-2",
         specifiedPackageName: TEST_PACKAGE_NAME,
-        useTsMorph: USE_TS_MORPH,
         editorDirName: undefined,
       });
       await compile(testOutDirPath);

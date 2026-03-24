@@ -39,7 +39,6 @@ async function loadDocumentModelsInDir(
     await generateDocumentModel({
       documentModelState,
       dir: documentModelsOutDir,
-      useTsMorph: true,
       useVersioning,
       specifiedPackageName: "test",
     });
