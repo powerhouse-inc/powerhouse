@@ -1,12 +1,12 @@
-import { generateMock } from "@powerhousedao/common/utils";
+import { generateMock } from "document-model";
 import {
-  isTestDocDocument,
-  reducer,
-  setTestId,
-  SetTestIdInputSchema,
-  setTestName,
-  SetTestNameInputSchema,
-  utils,
+    isTestDocDocument,
+    reducer,
+    setTestId,
+    SetTestIdInputSchema,
+    setTestName,
+    SetTestNameInputSchema,
+    utils,
 } from "test/document-models/test-doc/v1";
 import { describe, expect, it } from "vitest";
 

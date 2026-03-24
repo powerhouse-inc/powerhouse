@@ -1,16 +1,16 @@
-import type { DocumentModelUtils } from "@powerhousedao/shared/document-model";
+import type { DocumentModelUtils } from "document-model";
 import {
-  baseCreateDocument,
-  baseLoadFromInput,
-  baseSaveToFileHandle,
-  defaultBaseState,
-  generateId,
-} from "@powerhousedao/shared/document-model";
+    baseCreateDocument,
+    baseLoadFromInput,
+    baseSaveToFileHandle,
+    defaultBaseState,
+    generateId,
+} from "document-model";
 import {
-  assertIsTodoDocument,
-  assertIsTodoState,
-  isTodoDocument,
-  isTodoState,
+    assertIsTodoDocument,
+    assertIsTodoState,
+    isTodoDocument,
+    isTodoState,
 } from "./document-schema.js";
 import { todoDocumentType } from "./document-type.js";
 import { reducer } from "./reducer.js";

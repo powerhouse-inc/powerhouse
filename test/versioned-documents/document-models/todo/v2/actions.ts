@@ -1,7 +1,7 @@
 import {
-  baseActions,
-  type Actions,
-} from "@powerhousedao/shared/document-model";
+    baseActions,
+    type Actions,
+} from "document-model";
 import { todoOperationsActions } from "./gen/creators.js";
 
 /** Actions for the Todo document model */

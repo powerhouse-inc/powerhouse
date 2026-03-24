@@ -1,8 +1,8 @@
 import type {
-  Action,
-  PHDocument,
-  UpgradeTransition,
-} from "@powerhousedao/shared/document-model";
+    Action,
+    PHDocument,
+    UpgradeTransition,
+} from "document-model";
 import type { TodoPHState as StateV1 } from "document-models/todo/v1";
 import type { TodoPHState as StateV2 } from "document-models/todo/v2";
 

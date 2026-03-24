@@ -1,7 +1,7 @@
 import type {
-  PHDocument,
-  PHBaseState,
-} from "@powerhousedao/shared/document-model";
+    PHBaseState,
+    PHDocument,
+} from "document-model";
 import type { TodoAction } from "./actions.js";
 import type { TodoState as TodoGlobalState } from "./schema/types.js";
 
@@ -16,9 +16,9 @@ type TodoDocument = PHDocument<TodoPHState>;
 export * from "./schema/types.js";
 
 export type {
-  TodoGlobalState,
-  TodoLocalState,
-  TodoPHState,
-  TodoAction,
-  TodoDocument,
+    TodoAction,
+    TodoDocument, TodoGlobalState,
+    TodoLocalState,
+    TodoPHState
 };
+

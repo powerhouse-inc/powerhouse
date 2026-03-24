@@ -2,19 +2,19 @@
  * Factory methods for creating TodoDocument instances
  */
 import type {
-  PHAuthState,
-  PHBaseState,
-  PHDocumentState,
-} from "@powerhousedao/shared/document-model";
+    PHAuthState,
+    PHBaseState,
+    PHDocumentState,
+} from "document-model";
 import {
-  createBaseState,
-  defaultBaseState,
-} from "@powerhousedao/shared/document-model";
+    createBaseState,
+    defaultBaseState,
+} from "document-model";
 import type {
-  TodoDocument,
-  TodoGlobalState,
-  TodoLocalState,
-  TodoPHState,
+    TodoDocument,
+    TodoGlobalState,
+    TodoLocalState,
+    TodoPHState,
 } from "./types.js";
 import { utils } from "./utils.js";
 

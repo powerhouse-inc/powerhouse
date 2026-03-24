@@ -3,15 +3,15 @@
  * - change it by adding new tests or modifying the existing ones
  */
 
-import { generateMock } from "@powerhousedao/common/utils";
+import { generateMock } from "document-model";
 import {
-  addLineItem,
-  AddLineItemInputSchema,
-  editLineItem,
-  EditLineItemInputSchema,
-  isBillingStatementDocument,
-  reducer,
-  utils,
+    addLineItem,
+    AddLineItemInputSchema,
+    editLineItem,
+    EditLineItemInputSchema,
+    isBillingStatementDocument,
+    reducer,
+    utils,
 } from "test/document-models/billing-statement";
 import { describe, expect, it } from "vitest";
 

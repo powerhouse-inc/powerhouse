@@ -1,14 +1,14 @@
-import { generateMock } from "@powerhousedao/common/utils";
+import { generateMock } from "document-model";
 import {
-  editBillingStatement,
-  EditBillingStatementInputSchema,
-  editContributor,
-  EditContributorInputSchema,
-  editStatus,
-  EditStatusInputSchema,
-  isBillingStatementDocument,
-  reducer,
-  utils,
+    editBillingStatement,
+    EditBillingStatementInputSchema,
+    editContributor,
+    EditContributorInputSchema,
+    editStatus,
+    EditStatusInputSchema,
+    isBillingStatementDocument,
+    reducer,
+    utils,
 } from "test/document-models/billing-statement/v1";
 import { describe, expect, it } from "vitest";
 
