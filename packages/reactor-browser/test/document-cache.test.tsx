@@ -28,18 +28,21 @@ function createMockClient(initialDocuments: PHDocument[] = []) {
 
   let subscribeCallback: ((event: DocumentChangeEvent) => void) | null = null;
 
+  const getMock = vi.fn((id: string) => {
+    const doc = documents.get(id);
+    if (doc) return Promise.resolve(doc);
+    return Promise.reject(new Error(`Document not found: ${id}`));
+  });
+  const subscribeMock = vi.fn(
+    (_search: any, callback: (event: DocumentChangeEvent) => void) => {
+      subscribeCallback = callback;
+      return vi.fn(); // unsubscribe
+    },
+  );
+
   const client = {
-    get: vi.fn((id: string) => {
-      const doc = documents.get(id);
-      if (doc) return Promise.resolve(doc);
-      return Promise.reject(new Error(`Document not found: ${id}`));
-    }),
-    subscribe: vi.fn(
-      (_search: any, callback: (event: DocumentChangeEvent) => void) => {
-        subscribeCallback = callback;
-        return vi.fn(); // unsubscribe
-      },
-    ),
+    get: getMock,
+    subscribe: subscribeMock,
   } as unknown as IReactorClient;
 
   function emitEvent(event: DocumentChangeEvent) {
@@ -54,7 +57,15 @@ function createMockClient(initialDocuments: PHDocument[] = []) {
     documents.delete(id);
   }
 
-  return { client, documents, emitEvent, updateDocument, deleteDocument };
+  return {
+    client,
+    getMock,
+    subscribeMock,
+    documents,
+    emitEvent,
+    updateDocument,
+    deleteDocument,
+  };
 }
 
 function createDeferred<T>() {
@@ -219,18 +230,18 @@ describe("DocumentCache class", () => {
   describe("get method", () => {
     it("should call client.get when getting document", async () => {
       const doc = createMockDocument("test");
-      const { client } = createMockClient([doc]);
+      const { client, getMock } = createMockClient([doc]);
       const cache = new DocumentCache(client);
 
       const documentP = cache.get("test");
 
-      expect(client.get).toHaveBeenCalledWith("test");
+      expect(getMock).toHaveBeenCalledWith("test");
       await expect(documentP).resolves.toEqual(doc);
     });
 
     it("should deduplicate requests while promise is pending", async () => {
       const doc = createMockDocument("test");
-      const { client } = createMockClient([doc]);
+      const { client, getMock } = createMockClient([doc]);
       const cache = new DocumentCache(client);
 
       const promise1 = cache.get("test");
@@ -239,7 +250,7 @@ describe("DocumentCache class", () => {
 
       expect(promise1).toBe(promise2);
       expect(promise2).toBe(promise3);
-      expect(client.get).toHaveBeenCalledTimes(1);
+      expect(getMock).toHaveBeenCalledTimes(1);
 
       const [result1, result2, result3] = await Promise.all([
         promise1,
@@ -252,7 +263,7 @@ describe("DocumentCache class", () => {
 
     it("should return cached fulfilled promise when refetch is false", async () => {
       const doc = createMockDocument("test");
-      const { client } = createMockClient([doc]);
+      const { client, getMock } = createMockClient([doc]);
       const cache = new DocumentCache(client);
 
       const promise1 = cache.get("test");
@@ -261,12 +272,12 @@ describe("DocumentCache class", () => {
       const promise2 = cache.get("test", false);
 
       expect(promise1).toBe(promise2);
-      expect(client.get).toHaveBeenCalledTimes(1);
+      expect(getMock).toHaveBeenCalledTimes(1);
     });
 
     it("should refetch when refetch is true even for fulfilled promise", async () => {
       const doc = createMockDocument("test");
-      const { client } = createMockClient([doc]);
+      const { client, getMock } = createMockClient([doc]);
       const cache = new DocumentCache(client);
 
       const promise1 = cache.get("test");
@@ -279,7 +290,7 @@ describe("DocumentCache class", () => {
       const promise2 = cache.get("test", true);
 
       expect(promise1).not.toBe(promise2);
-      expect(client.get).toHaveBeenCalledTimes(2);
+      expect(getMock).toHaveBeenCalledTimes(2);
     });
 
     it("should handle non-existent document", async () => {
@@ -649,7 +660,9 @@ describe("DocumentCache class", () => {
   describe("stale-while-revalidate behavior", () => {
     it("should return stale data while refetch is triggered by Updated event", async () => {
       const doc = createMockDocument("test", "Original Name");
-      const { client, emitEvent, updateDocument } = createMockClient([doc]);
+      const { client, getMock, emitEvent, updateDocument } = createMockClient([
+        doc,
+      ]);
       const cache = new DocumentCache(client);
 
       // Get document initially and track state
@@ -665,7 +678,7 @@ describe("DocumentCache class", () => {
 
       // Prepare a deferred promise for the refetch so we can control timing
       const deferred = createDeferred<PHDocument>();
-      vi.mocked(client.get).mockReturnValueOnce(deferred.promise);
+      getMock.mockReturnValueOnce(deferred.promise);
 
       // Update mock store and emit event
       const updatedDoc = createMockDocument("test", "Updated Name");
