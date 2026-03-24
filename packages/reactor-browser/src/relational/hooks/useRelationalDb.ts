@@ -1,18 +1,18 @@
 import type { PGlite } from "@electric-sql/pglite";
 import type { LiveNamespace, PGliteWithLive } from "@electric-sql/pglite/live";
-import type { IRelationalDbLegacy as _IRelationalDb } from "document-drive";
-import { createRelationalDbLegacy } from "document-drive";
+import { createRelationalDb } from "@powerhousedao/reactor";
+import type { IRelationalDb as IRelationalDbCore } from "@powerhousedao/shared/processors";
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
 import { useMemo } from "react";
 import { usePGliteDB } from "../../pglite/usePGlite.js";
 
 // Type for Relational DB instance enhanced with live capabilities
-export type RelationalDbWithLive<Schema> = _IRelationalDb<Schema> & {
+export type RelationalDbWithLive<Schema> = IRelationalDbCore<Schema> & {
   live: LiveNamespace;
 };
 
-interface IRelationalDb<Schema> {
+interface IRelationalDbState<Schema> {
   db: RelationalDbWithLive<Schema> | null;
   isLoading: boolean;
   error: Error | null;
@@ -25,19 +25,20 @@ function createRelationalDbWithLive<Schema>(
   const baseDb = new Kysely<Schema>({
     dialect: new PGliteDialect(pgliteInstance as unknown as PGlite),
   });
-  const relationalDb = createRelationalDbLegacy(baseDb);
+  const relationalDb = createRelationalDb(baseDb);
 
   // Inject the live namespace with proper typing
-  const relationalDBWithLive = relationalDb as RelationalDbWithLive<Schema>;
+  const relationalDBWithLive =
+    relationalDb as unknown as RelationalDbWithLive<Schema>;
   relationalDBWithLive.live = pgliteInstance.live;
 
   return relationalDBWithLive;
 }
 
-export const useRelationalDb = <Schema>() => {
+export const useRelationalDb = <Schema>(): IRelationalDbState<Schema> => {
   const pglite = usePGliteDB();
 
-  const relationalDb = useMemo<IRelationalDb<Schema>>(() => {
+  const relationalDb = useMemo<IRelationalDbState<Schema>>(() => {
     if (!pglite.db || pglite.isLoading || pglite.error) {
       return {
         db: null,

@@ -1,5 +1,8 @@
 import { MemoryStorage, ReactorBuilder, reducer } from "document-drive";
-import { DocumentModelGlobalState, DocumentModelModule } from "@powerhousedao/shared/document-model";
+import {
+  DocumentModelGlobalState,
+  DocumentModelModule,
+} from "@powerhousedao/shared/document-model";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
 
 const SWITCHBOARD_URL = process.env.SWITCHBOARD_URL ?? "http://localhost:3000/";

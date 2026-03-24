@@ -1,8 +1,8 @@
 import type { LiveQueryResults } from "@electric-sql/pglite/live";
 import type {
-  IRelationalQueryBuilderLegacy,
-  RelationalDbProcessorClassLegacy,
-} from "document-drive";
+  IRelationalQueryBuilder,
+  RelationalDbProcessorClass,
+} from "@powerhousedao/shared/processors";
 import { useEffect, useRef, useState } from "react";
 import { useRelationalDb } from "./useRelationalDb.js";
 
@@ -38,10 +38,10 @@ type LiveQueryType = {
 };
 
 export function useRelationalQuery<Schema, T = unknown, TParams = undefined>(
-  ProcessorClass: RelationalDbProcessorClassLegacy<Schema>,
+  ProcessorClass: RelationalDbProcessorClass<Schema>,
   driveId: string,
   queryCallback: (
-    db: IRelationalQueryBuilderLegacy<Schema>,
+    db: IRelationalQueryBuilder<Schema>,
     parameters?: TParams,
   ) => QueryCallbackReturnType,
   parameters?: TParams,
@@ -53,7 +53,7 @@ export function useRelationalQuery<Schema, T = unknown, TParams = undefined>(
   const retryCount = useRef(0);
   const retryTimeoutRef = useRef<NodeJS.Timeout>(null);
 
-  const relationalDb = useRelationalDb<any>();
+  const relationalDb = useRelationalDb<Schema>();
 
   const executeLiveQuery = async (
     sql: string,
@@ -100,9 +100,8 @@ export function useRelationalQuery<Schema, T = unknown, TParams = undefined>(
       return;
     }
 
-    // Use processor's query method to get namespaced database
-    const namespace = ProcessorClass.getNamespace(driveId);
-    const db = relationalDb.db.queryNamespace<Schema>(namespace);
+    // Use the processor helper to obtain a typed namespaced query builder
+    const db = ProcessorClass.query(driveId, relationalDb.db);
 
     const compiledQuery = queryCallback(db, parameters);
     const { sql, parameters: queryParameters } = compiledQuery;

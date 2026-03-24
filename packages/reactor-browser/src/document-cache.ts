@@ -1,4 +1,8 @@
-import type { IDocumentDriveServer } from "document-drive";
+import {
+  DocumentChangeType,
+  type DocumentChangeEvent,
+  type IReactorClient,
+} from "@powerhousedao/reactor";
 import type { PHDocument } from "@powerhousedao/shared/document-model";
 import type {
   FulfilledPromise,
@@ -38,6 +42,12 @@ export function readPromiseState<T>(
   return "status" in promise ? promise : { status: "pending" };
 }
 
+/**
+ * Document cache implementation that uses the new ReactorClient API.
+ *
+ * This cache subscribes to document change events via IReactorClient.subscribe()
+ * and automatically updates the cache when documents are created, updated, or deleted.
+ */
 export class DocumentCache implements IDocumentCache {
   private documents = new Map<string, PromiseWithState<PHDocument>>();
   private batchPromises = new Map<
@@ -45,26 +55,48 @@ export class DocumentCache implements IDocumentCache {
     { promises: Promise<PHDocument>[]; promise: Promise<PHDocument[]> }
   >();
   private listeners = new Map<string, (() => void)[]>();
+  private unsubscribe: (() => void) | null = null;
 
-  constructor(private reactor: IDocumentDriveServer) {
-    reactor.on("documentDeleted", (documentId) => {
-      const listeners = this.listeners.get(documentId);
-      this.documents.delete(documentId);
-      // Invalidate any batch that includes this document
-      this.#invalidateBatchesContaining(documentId);
-      if (listeners) {
-        listeners.forEach((listener) => listener());
-      }
-      this.listeners.delete(documentId);
-    });
-    reactor.on("operationsAdded", (documentId) => {
-      if (this.documents.has(documentId)) {
-        this.#updateDocument(documentId).catch(console.warn);
-      }
+  constructor(private client: IReactorClient) {
+    this.unsubscribe = client.subscribe({}, (event: DocumentChangeEvent) => {
+      this.handleDocumentChange(event);
     });
   }
 
-  #invalidateBatchesContaining(documentId: string) {
+  private handleDocumentChange(event: DocumentChangeEvent): void {
+    if (event.type === DocumentChangeType.Deleted) {
+      const documentId = event.context?.childId;
+      if (documentId) {
+        this.handleDocumentDeleted(documentId);
+      }
+    } else if (event.type === DocumentChangeType.Updated) {
+      for (const doc of event.documents) {
+        this.handleDocumentUpdated(doc.header.id).catch(console.warn);
+      }
+    }
+  }
+
+  private handleDocumentDeleted(documentId: string): void {
+    const listeners = this.listeners.get(documentId);
+    this.documents.delete(documentId);
+    this.invalidateBatchesContaining(documentId);
+    if (listeners) {
+      listeners.forEach((listener) => listener());
+    }
+    this.listeners.delete(documentId);
+  }
+
+  private async handleDocumentUpdated(documentId: string): Promise<void> {
+    if (this.documents.has(documentId)) {
+      await this.get(documentId, true);
+      const listeners = this.listeners.get(documentId);
+      if (listeners) {
+        listeners.forEach((listener) => listener());
+      }
+    }
+  }
+
+  private invalidateBatchesContaining(documentId: string): void {
     for (const key of this.batchPromises.keys()) {
       if (key.split(",").includes(documentId)) {
         this.batchPromises.delete(key);
@@ -72,22 +104,9 @@ export class DocumentCache implements IDocumentCache {
     }
   }
 
-  async #updateDocument(documentId: string) {
-    // Only updates listeners when document refetch is completed.
-    // Listeners use stale data while refetch is in progress.
-    const result = this.get(documentId, true);
-
-    await result;
-    const listeners = this.listeners.get(documentId);
-    if (listeners) {
-      listeners.forEach((listener) => listener());
-    }
-  }
-
   get(id: string, refetch?: boolean): Promise<PHDocument> {
     const currentData = this.documents.get(id);
     if (currentData) {
-      // If pending then deduplicate requests
       if (currentData.status === "pending") {
         return currentData;
       }
@@ -96,8 +115,7 @@ export class DocumentCache implements IDocumentCache {
       }
     }
 
-    const documentPromise = this.reactor.getDocument(id);
-
+    const documentPromise = this.client.get(id);
     this.documents.set(id, addPromiseState(documentPromise));
     return documentPromise;
   }
@@ -106,14 +124,9 @@ export class DocumentCache implements IDocumentCache {
     const key = ids.join(",");
     const cached = this.batchPromises.get(key);
 
-    // Check if any documents have been removed from cache (deleted)
-    // This must be done BEFORE calling get() which would re-add them
     const hasDeletedDocuments = ids.some((id) => !this.documents.has(id));
-
-    // Get current individual promises
     const currentPromises = ids.map((id) => this.get(id));
 
-    // If documents were deleted, don't return stale data - let it fail
     if (hasDeletedDocuments) {
       const batchPromise = Promise.all(currentPromises);
       this.batchPromises.set(key, {
@@ -123,7 +136,6 @@ export class DocumentCache implements IDocumentCache {
       return batchPromise;
     }
 
-    // Check if we have a valid cached batch (same underlying promises)
     if (cached) {
       const samePromises = currentPromises.every(
         (p, i) => p === cached.promises[i],
@@ -133,15 +145,12 @@ export class DocumentCache implements IDocumentCache {
       }
     }
 
-    // Check the state of all individual promises
     const states = currentPromises.map((p) =>
       readPromiseState(p as PromiseWithState<PHDocument>),
     );
     const allFulfilled = states.every((s) => s.status === "fulfilled");
 
     if (allFulfilled) {
-      // All promises are fulfilled - create a pre-resolved batch promise
-      // with status already set to avoid suspending in use()
       const values = states.map(
         (s) => (s as { status: "fulfilled"; value: PHDocument }).value,
       );
@@ -158,12 +167,10 @@ export class DocumentCache implements IDocumentCache {
       return batchPromise;
     }
 
-    // Some promises are pending (refetch in progress) - return stale data if available
     if (cached) {
       return cached.promise;
     }
 
-    // Initial load - create new batch promise
     const batchPromise = Promise.all(currentPromises);
     this.batchPromises.set(key, {
       promises: currentPromises,
@@ -174,18 +181,28 @@ export class DocumentCache implements IDocumentCache {
 
   subscribe(id: string | string[], callback: () => void): () => void {
     const ids = Array.isArray(id) ? id : [id];
-    for (const id of ids) {
-      const listeners = this.listeners.get(id) ?? [];
-      this.listeners.set(id, [...listeners, callback]);
+    for (const docId of ids) {
+      const listeners = this.listeners.get(docId) ?? [];
+      this.listeners.set(docId, [...listeners, callback]);
     }
     return () => {
-      for (const id of ids) {
-        const listeners = this.listeners.get(id) ?? [];
+      for (const docId of ids) {
+        const listeners = this.listeners.get(docId) ?? [];
         this.listeners.set(
-          id,
+          docId,
           listeners.filter((listener) => listener !== callback),
         );
       }
     };
+  }
+
+  /**
+   * Disposes of the cache and unsubscribes from document change events.
+   */
+  dispose(): void {
+    if (this.unsubscribe) {
+      this.unsubscribe();
+      this.unsubscribe = null;
+    }
   }
 }

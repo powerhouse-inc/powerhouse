@@ -37,7 +37,6 @@
     "@renown/sdk": "workspace:*",
     "@tanstack/react-query": "^5.49.2",
     "change-case": "catalog:",
-    "document-drive": "workspace:*",
     "document-model": "workspace:*",
     "graphql": "catalog:",
     "graphql-request": "catalog:",

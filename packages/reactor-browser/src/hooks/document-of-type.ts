@@ -1,8 +1,5 @@
+import { ModuleNotFoundError } from "@powerhousedao/reactor";
 import type { DocumentDispatch } from "@powerhousedao/reactor-browser";
-import {
-  DocumentModelNotFoundError,
-  DocumentNotFoundError,
-} from "document-drive";
 import type { Action, PHDocument } from "@powerhousedao/shared/document-model";
 import { DocumentTypeMismatchError } from "../errors.js";
 import { useDocumentById } from "./document-by-id.js";
@@ -22,10 +19,10 @@ export function useDocumentOfType<
   if (!documentId || !documentType) return [];
 
   if (!document) {
-    throw new DocumentNotFoundError(documentId);
+    throw new Error(`Document not found: ${documentId}`);
   }
   if (!documentModelModule) {
-    throw new DocumentModelNotFoundError(documentType);
+    throw new ModuleNotFoundError(documentType);
   }
 
   if (document.header.documentType !== documentType) {

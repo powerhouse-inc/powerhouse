@@ -22,7 +22,9 @@ const packages = await client.getPackages();
 Returns package names that contain the specified document type.
 
 ```ts
-const names = await client.getPackagesByDocumentType("powerhouse/document-model");
+const names = await client.getPackagesByDocumentType(
+  "powerhouse/document-model",
+);
 ```
 
 ## `searchPackages`

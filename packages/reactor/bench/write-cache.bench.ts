@@ -1,5 +1,9 @@
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
-import { deriveOperationId, generateId, type PHDocument } from "@powerhousedao/shared/document-model";
+import {
+  deriveOperationId,
+  generateId,
+  type PHDocument,
+} from "@powerhousedao/shared/document-model";
 import { afterEach, bench, describe } from "vitest";
 import { KyselyWriteCache } from "../src/cache/kysely-write-cache.js";
 import type { WriteCacheConfig } from "../src/cache/write-cache-types.js";

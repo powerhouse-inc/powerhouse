@@ -1,10 +1,4 @@
 import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
-import type { ProcessorFactoryBuilder } from "@powerhousedao/shared/processors";
-import type { RegistryPackageSource } from "@powerhousedao/shared/registry";
-import type {
-  IRelationalDbLegacy,
-  ProcessorRecordLegacy,
-} from "document-drive";
 import type {
   Action,
   Author,
@@ -17,12 +11,18 @@ import type {
   SubgraphModule,
   UpgradeManifest,
 } from "@powerhousedao/shared/document-model";
+import type {
+  IRelationalDb,
+  ProcessorFactoryBuilder,
+  ProcessorRecord,
+} from "@powerhousedao/shared/processors";
+import type { RegistryPackageSource } from "@powerhousedao/shared/registry";
 import type { IDocumentModelLoader } from "../re-exports.js";
 
 export type Processors = (module: {
   analyticsStore: IAnalyticsStore;
-  relationalDb: IRelationalDbLegacy;
-}) => (driveHeader: PHDocumentHeader) => ProcessorRecordLegacy[];
+  relationalDb: IRelationalDb;
+}) => (driveHeader: PHDocumentHeader) => ProcessorRecord[];
 
 export type VetraMeta = {
   id: string;

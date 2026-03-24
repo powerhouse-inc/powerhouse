@@ -16,7 +16,7 @@ function extractTypeNames(schema) {
       .replaceAll("union ", "")
       .replaceAll("interface ", "")
       .replaceAll("input ", "")
-      .trim()
+      .trim(),
   );
 }
 
@@ -101,16 +101,17 @@ module.exports = {
       subgraph: args.subgraph,
       documentTypeId: documentModel.id,
       documentType: documentModel.name,
-      schema: applyGraphQLTypePrefixes(
-        stateSchema,
-        pascalCaseDocumentType
-      ),
+      schema: applyGraphQLTypePrefixes(stateSchema, pascalCaseDocumentType),
       modules: latestSpec.modules.map((m) => ({
         ...m,
         name: kebabCase(m.name),
         operations: m.operations.map((op) => ({
           ...op,
-          schema: applyGraphQLTypePrefixes(op.schema, pascalCaseDocumentType, stateTypeNames),
+          schema: applyGraphQLTypePrefixes(
+            op.schema,
+            pascalCaseDocumentType,
+            stateTypeNames,
+          ),
         })),
       })),
     };
