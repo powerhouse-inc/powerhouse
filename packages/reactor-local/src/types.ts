@@ -1,8 +1,13 @@
 import type { LogLevel } from "@powerhousedao/config";
-import type { DefaultRemoteDriveInput, DriveInput } from "document-drive";
+import type { DriveInput } from "@powerhousedao/shared/document-drive";
 import path from "node:path";
 
-export type RemoteDriveInputSimple = string | DefaultRemoteDriveInput;
+export type RemoteDriveInput = {
+  url: string;
+  options?: Record<string, unknown>;
+};
+
+export type RemoteDriveInputSimple = string | RemoteDriveInput;
 
 export type StorageOptions = {
   type: "filesystem" | "memory" | "postgres" | "browser";

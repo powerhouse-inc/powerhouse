@@ -2,16 +2,19 @@
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
     "outDir": "./dist",
-    "lib": ["ESNext"],
-    "types": ["node"]
+    "lib": [
+      "ESNext"
+    ],
+    "types": [
+      "node"
+    ]
   },
-  "include": ["**/*"],
+  "include": [
+    "**/*"
+  ],
   "references": [
     {
       "path": "../config"
-    },
-    {
-      "path": "../document-drive"
     },
     {
       "path": "../document-model"
@@ -21,6 +24,9 @@
     },
     {
       "path": "../reactor-api"
+    },
+    {
+      "path": "../shared"
     }
   ]
 }

@@ -24,9 +24,9 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@powerhousedao/shared": "workspace:*",
     "@powerhousedao/reactor": "workspace:*",
     "@powerhousedao/reactor-api": "workspace:*",
-    "document-drive": "workspace:*",
     "document-model": "workspace:*",
     "dotenv": "^16.4.5",
     "@openfeature/env-var-provider": "^0.3.1",
