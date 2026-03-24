@@ -61,12 +61,10 @@ Give the editor the name `chat-room-editor` and select the correct document mode
 You'll see that the terminal in which you are running Vetra mentions
 
 ```
-ℹ [Vetra] 🔄 Starting editor generation for: chat-room-editor                                        15:18:16
-                                                                                                     15:18:16
-Loaded templates: node_modules/.pnpm/@powerhousedao+codegen@5.0.12_kx2q3zvshbbgwl7sikydpz6mre/node_modules/@powerhousedao/codegen/dist/src/codegen/.hygen/templates
-       added: editors/chat-room-editor/components/EditName.tsx                                       15:18:16
-       added: editors/chat-room-editor/editor.tsx                                                    15:18:16
-       FORCED: editors/chat-room-editor/module.ts                                                    15:18:16
+ℹ [Vetra] 🔄 Starting editor generation for: chat-room-editor
+       added: editors/chat-room-editor/components/EditName.tsx
+       added: editors/chat-room-editor/editor.tsx
+       FORCED: editors/chat-room-editor/module.ts
 ℹ [Vetra] ✅ Editor generation completed successfully for: chat-room-editor
 ```
 
