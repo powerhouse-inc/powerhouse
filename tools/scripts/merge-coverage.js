@@ -1,6 +1,6 @@
 // @ts-check
 import { CoverageReport } from "monocart-coverage-reports";
-const inputDir = ["./coverage/raw", "./test/connect-e2e/coverage/raw"];
+const inputDir = ["./coverage/raw"];
 
 /**
  * @typedef {import("monocart-coverage-reports").CoverageReportOptions} CoverageReportOptions

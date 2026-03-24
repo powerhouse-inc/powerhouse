@@ -98,9 +98,6 @@
       "path": "packages/analytics-engine/pg"
     },
     {
-      "path": "test/connect-e2e"
-    },
-    {
       "path": "test/e2e-utils"
     },
     {

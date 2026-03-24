@@ -25,7 +25,7 @@
     "check-circular-imports": "dpdm -T ./**/* --no-tree --no-warning --exit-code circular:1",
     "check-ts-references": "pnpm update-ts-references --check",
     "check-wrong-tsc-usage": "tsx scripts/check-wrong-tsc-usage.ts",
-    "test-e2e": "pnpm --filter=test-package-vetra --filter=connect-e2e run test:e2e",
+    "test-e2e": "pnpm --filter=test-package-vetra run test:e2e",
     "knip": "knip",
     "postinstall": "pnpm update-ts-references"
   },
