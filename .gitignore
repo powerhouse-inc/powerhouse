@@ -26,6 +26,7 @@ test-results/
 __screenshots__/
 __pycache__/
 hotseat.json
+.hotseat
 
 # Identity/auth credential files
 .renown.json

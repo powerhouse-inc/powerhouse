@@ -6,4 +6,4 @@ export { DocumentCodegenManager } from "./document-codegen-manager.js";
 export * from "./generators/index.js";
 
 // Types
-export type { Config, DocumentHandler } from "./types.js";
+export type { CodegenInput, Config, DocumentHandler } from "./types.js";

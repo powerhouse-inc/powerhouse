@@ -1,6 +1,7 @@
 import type {
   DocumentDriveAction,
   DocumentDriveDocument,
+  DriveInput,
   LegacyAddFileAction,
 } from "@powerhousedao/shared/document-drive";
 import {
@@ -86,7 +87,6 @@ import type {
   CreateDocumentInput,
   DocumentDriveServerOptions,
   DriveEvents,
-  DriveInput,
   DriveOperationResult,
   IBaseDocumentDriveServer,
   IEventEmitter,

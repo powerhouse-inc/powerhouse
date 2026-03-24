@@ -1,7 +1,10 @@
+import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import type { Operation } from "@powerhousedao/shared/document-model";
+import { documentModelDocumentModelModule } from "document-model";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { IWriteCache } from "../../src/cache/write/interfaces.js";
-import type { Reactor } from "../../src/core/reactor.js";
+import { ReactorBuilder } from "../../src/core/reactor-builder.js";
+import type { IReactor } from "../../src/core/types.js";
 import { SimpleJobExecutor } from "../../src/executor/simple-job-executor.js";
 import type { IQueue } from "../../src/queue/interfaces.js";
 import type { IDocumentModelRegistry } from "../../src/registry/interfaces.js";
@@ -13,7 +16,6 @@ import {
   createMockLogger,
   createMockOperationStore,
   createTestAction,
-  createTestLegacyReactorSetup,
   createTestOperation,
 } from "../factories.js";
 
@@ -166,13 +168,17 @@ describe("SimpleJobExecutor load jobs", () => {
 });
 
 describe("Reactor.load", () => {
-  let reactor: Reactor;
+  let reactor: IReactor;
   let queue: IQueue;
 
   beforeEach(async () => {
-    const setup = await createTestLegacyReactorSetup();
-    reactor = setup.reactor;
-    queue = setup.queue;
+    const builder = new ReactorBuilder().withDocumentModels([
+      documentModelDocumentModelModule,
+      driveDocumentModelModule,
+    ]);
+    const module = await builder.buildModule();
+    reactor = module.reactor;
+    queue = module.queue;
   });
 
   it("enqueues a load job with normalized metadata", async () => {

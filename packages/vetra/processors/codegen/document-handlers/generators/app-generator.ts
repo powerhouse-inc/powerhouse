@@ -4,9 +4,9 @@ import type {
   AppModulePHState,
 } from "@powerhousedao/vetra/document-models/app-module";
 import { kebabCase } from "change-case";
-import type { InternalTransmitterUpdate } from "document-drive";
 import { logger } from "../../logger.js";
 import { BaseDocumentGen } from "../base-document-gen.js";
+import type { CodegenInput } from "../types.js";
 import { USE_TS_MORPH } from "./constants.js";
 import { minimalBackupDocument } from "./utils.js";
 
@@ -17,36 +17,36 @@ export class AppGenerator extends BaseDocumentGen {
   readonly supportedDocumentTypes = "powerhouse/app";
 
   /**
-   * Extract the global state from the full document state
+   * Parse and extract the global state from the serialized state string
    */
   private extractGlobalState(
-    strand: InternalTransmitterUpdate,
+    input: CodegenInput,
   ): AppModuleGlobalState | undefined {
-    const fullState = strand.state as AppModulePHState | undefined;
-    if (!fullState) {
+    if (!input.state) {
       return undefined;
     }
+    const fullState = input.state as AppModulePHState;
     return fullState.global;
   }
 
   /**
    * Validate if this app strand should be processed
    */
-  shouldProcess(strand: InternalTransmitterUpdate): boolean {
+  shouldProcess(input: CodegenInput): boolean {
     // First run base validation
-    if (!super.shouldProcess(strand)) {
+    if (!super.shouldProcess(input)) {
       return false;
     }
 
-    const state = this.extractGlobalState(strand);
+    const state = this.extractGlobalState(input);
     if (!state) {
-      logger.debug(`No state found for app: ${strand.documentId}`);
+      logger.debug(`No state found for app: ${input.documentId}`);
       return false;
     }
 
     // Check if we have a valid app name and it's confirmed
     if (!state.name) {
-      logger.debug(`No name found for app: ${strand.documentId}`);
+      logger.debug(`No name found for app: ${input.documentId}`);
       return false;
     }
 
@@ -60,10 +60,10 @@ export class AppGenerator extends BaseDocumentGen {
     return true;
   }
 
-  async generate(strand: InternalTransmitterUpdate): Promise<void> {
-    const state = this.extractGlobalState(strand);
+  async generate(input: CodegenInput): Promise<void> {
+    const state = this.extractGlobalState(input);
     if (!state) {
-      logger.error(`No state found for app: ${strand.documentId}`);
+      logger.error(`No state found for app: ${input.documentId}`);
       return;
     }
 
@@ -118,12 +118,13 @@ export class AppGenerator extends BaseDocumentGen {
         }
 
         // Backup the document
+        const fullState = input.state as AppModulePHState;
         await minimalBackupDocument(
           {
-            documentId: strand.documentId,
-            documentType: strand.documentType,
-            branch: strand.branch,
-            state: strand.state as AppModulePHState,
+            documentId: input.documentId,
+            documentType: input.documentType,
+            branch: input.branch,
+            state: fullState,
             name: state.name,
           },
           this.config.CURRENT_WORKING_DIR,

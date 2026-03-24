@@ -161,7 +161,7 @@ export async function createReactor(localPackage?: VetraPackage) {
   const remoteUrl = getDriveUrl();
   if (remoteUrl) {
     try {
-      await addRemoteDrive(remoteUrl, {});
+      await addRemoteDrive(remoteUrl);
     } catch (error) {
       console.error(`Failed to add remote drive from ${remoteUrl}:`, error);
     }

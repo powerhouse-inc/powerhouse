@@ -1,9 +1,9 @@
-import type { InternalTransmitterUpdate } from "document-drive";
 import { createInterface } from "readline";
+import type { CodegenInput } from "./document-handlers/types.js";
 import { logger } from "./logger.js";
 
 export interface QueuedStrand {
-  strand: InternalTransmitterUpdate;
+  strand: CodegenInput;
   timestamp: number;
 }
 
@@ -27,7 +27,7 @@ export class InteractiveManager {
   /**
    * Add a strand to the queue, replacing any existing strand for the same document
    */
-  public queueStrand(strand: InternalTransmitterUpdate): void {
+  public queueStrand(strand: CodegenInput): void {
     const documentKey = this.getDocumentKey(
       strand.documentType,
       strand.documentId,

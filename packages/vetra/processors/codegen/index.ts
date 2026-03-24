@@ -3,9 +3,9 @@ import type {
   IProcessor,
   OperationWithContext,
 } from "@powerhousedao/reactor-browser";
-import type { InternalTransmitterUpdate } from "document-drive";
 import type { DocumentCodegenManager } from "./document-handlers/document-codegen-manager.js";
 import { DocumentCodegenFactory } from "./document-handlers/index.js";
+import type { CodegenInput } from "./document-handlers/types.js";
 import { logger } from "./logger.js";
 
 const PH_CONFIG = getConfig();
@@ -35,7 +35,7 @@ export class CodegenProcessor implements IProcessor {
   async onOperations(operations: OperationWithContext[]): Promise<void> {
     logger.info("CodegenProcessor.onOperations()");
 
-    for (const { operation, context } of operations) {
+    for (const { context } of operations) {
       const generator = this.manager.getGenerator(context.documentType);
       if (!generator) {
         logger.debug(
@@ -44,23 +44,19 @@ export class CodegenProcessor implements IProcessor {
         continue;
       }
 
-      // Create strand-like object for generator (using existing generator interface)
-      // Cast to InternalTransmitterUpdate since generators only use a subset of fields
-      const strand = {
+      const input: CodegenInput = {
         documentId: context.documentId,
         documentType: context.documentType,
         scope: context.scope,
         branch: context.branch,
-        driveId: "", // Not available in new format
-        operations: [operation],
         state: context.resultingState
-          ? (JSON.parse(context.resultingState) as unknown)
+          ? JSON.parse(context.resultingState)
           : undefined,
-      } as InternalTransmitterUpdate;
+      };
 
-      const shouldProcess = generator.shouldProcess(strand);
+      const shouldProcess = generator.shouldProcess(input);
       if (shouldProcess) {
-        await this.manager.routeAndGenerate(strand);
+        await this.manager.routeAndGenerate(input);
       }
     }
   }
