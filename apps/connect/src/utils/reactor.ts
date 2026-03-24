@@ -93,7 +93,7 @@ export async function addDefaultDrivesForNewReactor(
 ): Promise<void> {
   for (const url of defaultDriveUrls) {
     try {
-      await addRemoteDrive(url, {});
+      await addRemoteDrive(url);
     } catch (error) {
       console.error(`Failed to add default drive ${url}:`, error);
     }

@@ -2,6 +2,7 @@ import type {
   DocumentDriveAction,
   DocumentDriveDocument,
   DocumentDriveLocalState,
+  DriveInput,
   LegacyAddFileAction,
   ListenerCallInfo,
   ListenerFilter,
@@ -37,17 +38,6 @@ export type Constructor<T = object> = new (...args: any[]) => T;
 // Mixin type that returns a type extending both the base class and the interface
 export type Mixin<T extends Constructor, I> = T &
   Constructor<InstanceType<T> & I>;
-
-export type DriveInput = {
-  global: {
-    name: string;
-    icon?: string | null;
-  };
-  id?: string;
-  slug?: string;
-  preferredEditor?: string;
-  local?: Partial<DocumentDriveLocalState>;
-};
 
 export type RemoteDriveAccessLevel = "READ" | "WRITE";
 
@@ -789,8 +779,6 @@ export interface ISynchronizationManager {
 
   getCombinedSyncUnitStatus(syncUnitStatus: SyncUnitStatusObject): SyncStatus;
 }
-
-export type SharingType = "LOCAL" | "CLOUD" | "PUBLIC";
 
 export type DocumentDriveServerConstructor =
   Constructor<BaseDocumentDriveServer>;

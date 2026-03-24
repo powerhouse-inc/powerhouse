@@ -70,30 +70,7 @@ export function AtlasImport() {
       console.log("Adding remote drive:", driveId);
       const driveUrl = `${reactorUrl}d/${driveId}`;
       try {
-        const addedDrive = await addRemoteDrive(driveUrl, {
-          sharingType: "PUBLIC",
-          availableOffline: true,
-          listeners: [
-            {
-              block: true,
-              callInfo: {
-                data: driveUrl,
-                name: "switchboard-push",
-                transmitterType: "SwitchboardPush",
-              },
-              filter: {
-                branch: ["main"],
-                documentId: ["*"],
-                documentType: ["*"],
-                scope: ["global"],
-              },
-              label: "Switchboard Sync",
-              listenerId: "1",
-              system: true,
-            },
-          ],
-          triggers: [],
-        });
+        const addedDrive = await addRemoteDrive(driveUrl);
         status.current = "done";
         console.log("Added remote drive:", addedDrive);
         setTimeout(() => {
