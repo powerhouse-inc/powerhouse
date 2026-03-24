@@ -36,6 +36,21 @@ export class ExpressHttpAdapter implements IHttpAdapter {
     this.#app.use(middleware as any);
   }
 
+  mountNodeRoute(
+    method: "DELETE" | "GET" | "POST",
+    path: string,
+    handler: (
+      req: http.IncomingMessage,
+      res: http.ServerResponse,
+      body?: unknown,
+    ) => void,
+  ): void {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (this.#app as any)[method.toLowerCase()](path, (req: any, res: any) =>
+      handler(req, res, req.body),
+    );
+  }
+
   setupMiddleware({
     corsOptions,
     bodyLimit = "50mb",

@@ -105,6 +105,7 @@ function makeMockHttpAdapter() {
     }),
     getRoute: vi.fn(),
     mountRawMiddleware: vi.fn(),
+    mountNodeRoute: vi.fn(),
     listen: vi.fn().mockResolvedValue({}),
     handle: {},
   };

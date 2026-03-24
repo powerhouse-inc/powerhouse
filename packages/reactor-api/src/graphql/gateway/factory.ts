@@ -1,4 +1,3 @@
-import type { Express } from "express";
 import type { ILogger } from "document-model";
 import type { Context } from "../types.js";
 import { ApolloGatewayAdapter } from "./adapter-gateway-apollo.js";
@@ -22,12 +21,9 @@ export type HttpAdapterSetup = {
   adapter: IHttpAdapter;
 };
 
-export function createHttpAdapter(
-  type: HttpAdapterType,
-  existingApp?: unknown,
-): HttpAdapterSetup {
+export function createHttpAdapter(type: HttpAdapterType): HttpAdapterSetup {
   switch (type) {
     case "express":
-      return createExpressHttpAdapter(existingApp as Express | undefined);
+      return createExpressHttpAdapter();
   }
 }

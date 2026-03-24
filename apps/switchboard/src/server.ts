@@ -36,7 +36,6 @@ import { type IRenown } from "@renown/sdk";
 import * as Sentry from "@sentry/node";
 import { childLogger, documentModelDocumentModelModule } from "document-model";
 import dotenv from "dotenv";
-import express from "express";
 import { Kysely, PostgresDialect } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
 import path from "path";
@@ -56,9 +55,6 @@ dotenv.config();
 const DOCUMENT_MODEL_SUBGRAPHS_ENABLED = "DOCUMENT_MODEL_SUBGRAPHS_ENABLED";
 const DOCUMENT_MODEL_SUBGRAPHS_ENABLED_DEFAULT = true;
 
-// Create a monolith express app for all subgraphs
-const app = express();
-
 if (process.env.SENTRY_DSN) {
   defaultLogger.info(
     "Initialized Sentry with env: @env",
@@ -68,8 +64,6 @@ if (process.env.SENTRY_DSN) {
     dsn: process.env.SENTRY_DSN,
     environment: process.env.SENTRY_ENV,
   });
-
-  Sentry.setupExpressErrorHandler(app);
 }
 
 const DEFAULT_PORT = process.env.PORT ? Number(process.env.PORT) : 4001;
@@ -221,7 +215,6 @@ async function initServer(
   const api = await initializeAndStartAPI(
     initializeClient,
     {
-      express: app,
       port: serverPort,
       dbPath: readModelPath,
       https: options.https,
@@ -240,6 +233,15 @@ async function initServer(
     },
     "switchboard",
   );
+
+  if (process.env.SENTRY_DSN) {
+    // Register Sentry error handler after all routes are established.
+    // api.app.handle is the underlying Express app — Sentry requires access to it
+    // to attach its error-capturing middleware.
+    // api.app is ExpressHttpAdapter; handle is the underlying Express app.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    Sentry.setupExpressErrorHandler(api.app.handle as any);
+  }
 
   const { client, graphqlManager, documentModelRegistry } = api;
 
