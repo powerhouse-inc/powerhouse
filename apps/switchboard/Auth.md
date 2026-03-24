@@ -7,18 +7,21 @@ The Powerhouse authentication system is a sophisticated, decentralized identity 
 ## What It's Capable Of
 
 ### 🔐 **Decentralized Identity Management**
+
 - **DID (Decentralized Identifier) Creation**: Generates unique, self-sovereign identifiers based on Ethereum addresses
 - **Verifiable Credentials**: Uses W3C Verifiable Credentials standard for cryptographic proof of identity
 - **Wallet Integration**: Seamless integration with Ethereum wallets and other Web3 providers
 - **Privacy Preservation**: Users can maintain pseudonymous identities while building reputation
 
 ### 🎭 **Role-Based Access Control (RBAC)**
+
 - **Three-Tier System**: Guests, Users, and Admins with different permission levels
 - **Flexible Configuration**: Easy setup through environment variables or configuration files
 - **Granular Permissions**: Fine-grained control over what each role can access
 - **Dynamic Role Assignment**: Roles can be updated without restarting the system
 
 ### 🔒 **Advanced Security Features**
+
 - **Challenge-Response Authentication**: Cryptographic proof of wallet ownership
 - **JWT Token Management**: Secure session handling with automatic expiration
 - **Credential Verification**: Real-time validation against the Renown API
@@ -26,6 +29,7 @@ The Powerhouse authentication system is a sophisticated, decentralized identity 
 - **Session Management**: Multiple active sessions with individual controls
 
 ### 🌐 **Cross-Platform Compatibility**
+
 - **GraphQL Integration**: Native GraphQL support with authentication middleware
 - **REST API Support**: Standard HTTP authentication headers
 - **Multi-Origin Support**: Configurable CORS and origin restrictions
@@ -49,13 +53,14 @@ The system uses the **Renown** service to create and manage decentralized identi
 ```typescript
 // DID Format: did:pkh:eip155:1:0x1234...
 interface PKHDid {
-  networkId: string;    // Network identifier (e.g., "mainnet")
-  chainId: number;      // Blockchain chain ID (e.g., 1 for Ethereum mainnet)
+  networkId: string; // Network identifier (e.g., "mainnet")
+  chainId: number; // Blockchain chain ID (e.g., 1 for Ethereum mainnet)
   address: `0x${string}`; // Ethereum wallet address
 }
 ```
 
 **Key Benefits:**
+
 - **Self-Sovereign**: Users control their own identity without central authority
 - **Portable**: Identity can be used across different applications
 - **Verifiable**: Cryptographic proof of ownership and authenticity
@@ -78,6 +83,7 @@ const token = await solveChallenge(challenge.nonce, signature);
 ```
 
 **Security Features:**
+
 - **Nonce-based**: Prevents replay attacks
 - **Cryptographic Proof**: Verifies wallet ownership
 - **Time-limited**: Challenges expire quickly
@@ -96,13 +102,14 @@ interface VerifiableCredential {
     networkId: string;
     address: string;
   };
-  issuer: string;        // DID of the credential issuer
-  issuanceDate: string;  // When credential was created
-  proof: object;         // Cryptographic proof of authenticity
+  issuer: string; // DID of the credential issuer
+  issuanceDate: string; // When credential was created
+  proof: object; // Cryptographic proof of authenticity
 }
 ```
 
 **Verification Process:**
+
 1. **Token Decoding**: Extract credential information from JWT
 2. **Credential Validation**: Verify against W3C standards
 3. **Issuer Verification**: Check credential issuer authenticity
@@ -116,13 +123,14 @@ The system implements a three-tier role system with configurable permissions:
 ```typescript
 interface AuthConfig {
   enabled: boolean;
-  guests: string[];    // Array of wallet addresses
-  users: string[];     // Array of wallet addresses  
-  admins: string[];    // Array of wallet addresses
+  guests: string[]; // Array of wallet addresses
+  users: string[]; // Array of wallet addresses
+  admins: string[]; // Array of wallet addresses
 }
 ```
 
 **Permission Levels:**
+
 - **Guests**: Read-only access to public data
 - **Users**: Standard access to most endpoints and operations
 - **Admins**: Full access including administrative functions
@@ -146,6 +154,7 @@ interface Session {
 ```
 
 **Session Features:**
+
 - **Multiple Sessions**: Users can have several active sessions
 - **Custom Names**: Human-readable session identifiers
 - **Expiration Control**: Configurable session lifetimes
@@ -157,6 +166,7 @@ interface Session {
 ### 1. **Basic Configuration**
 
 #### Environment Variables Method
+
 ```bash
 # Enable authentication
 export AUTH_ENABLED=true
@@ -168,6 +178,7 @@ export ADMINS="0x111,0x222,0x333"
 ```
 
 #### Configuration File Method
+
 ```json
 {
   "auth": {
@@ -182,6 +193,7 @@ export ADMINS="0x111,0x222,0x333"
 ### 2. **Frontend Integration**
 
 #### Using the useAuth Hook
+
 ```typescript
 import useAuth from '../hooks/useAuth';
 
@@ -190,7 +202,7 @@ function LoginComponent() {
 
   if (!isAuthorized) {
     return (
-      <button 
+      <button
         onClick={signIn}
         className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded"
       >
@@ -209,14 +221,15 @@ function LoginComponent() {
 ```
 
 #### Session Management
+
 ```typescript
 const { createSession, revokeSession, sessions } = useAuth();
 
 // Create a new session
 const token = await createSession(
-  "My API Token",           // Session name
-  3600,                     // Expiry in seconds (1 hour)
-  "https://myapp.com"       // Allowed origin
+  "My API Token", // Session name
+  3600, // Expiry in seconds (1 hour)
+  "https://myapp.com", // Allowed origin
 );
 
 // Revoke a session
@@ -226,14 +239,15 @@ await revokeSession(sessionId);
 ### 3. **Backend Integration**
 
 #### Express Middleware Setup
+
 ```typescript
-import { AuthService } from '@powerhousedao/reactor-api';
+import { AuthService } from "@powerhousedao/reactor-api";
 
 const authService = new AuthService({
   enabled: true,
-  guests: ['0x789', '0xabc'],
-  users: ['0x123', '0x456'],
-  admins: ['0x111', '0x222']
+  guests: ["0x789", "0xabc"],
+  users: ["0x123", "0x456"],
+  admins: ["0x111", "0x222"],
 });
 
 // Apply to all routes
@@ -242,10 +256,10 @@ app.use(async (req, res, next) => {
 });
 
 // Access user info in route handlers
-app.post('/api/data', (req, res) => {
-  const user = req.user;        // Authenticated user object
+app.post("/api/data", (req, res) => {
+  const user = req.user; // Authenticated user object
   const isAdmin = req.admins.includes(user.address);
-  
+
   if (isAdmin) {
     // Admin-only operations
   }
@@ -253,18 +267,20 @@ app.post('/api/data', (req, res) => {
 ```
 
 #### GraphQL Context Integration
+
 ```typescript
 const graphqlManager = new GraphQLManager(/* config */);
 
 // Add auth context fields
 graphqlManager.setAdditionalContextFields(
-  authService.getAdditionalContextFields()
+  authService.getAdditionalContextFields(),
 );
 ```
 
 ### 4. **API Authentication**
 
 #### HTTP Headers
+
 ```bash
 # Include JWT token in Authorization header
 curl -H "Authorization: Bearer <your-jwt-token>" \
@@ -272,6 +288,7 @@ curl -H "Authorization: Bearer <your-jwt-token>" \
 ```
 
 #### GraphQL Queries
+
 ```typescript
 // Apollo Client with auth link
 const authLink = setContext((_, { headers }) => ({
@@ -290,23 +307,25 @@ const client = new ApolloClient({
 ### 5. **Advanced Features**
 
 #### Custom Session Creation
+
 ```typescript
 // Create a long-lived API token
 const apiToken = await createSession(
   "API Integration Token",
-  86400 * 30,  // 30 days
-  "*"          // Allow all origins
+  86400 * 30, // 30 days
+  "*", // Allow all origins
 );
 
 // Create a restricted session
 const restrictedToken = await createSession(
   "Mobile App Token",
-  86400 * 7,   // 7 days
-  "https://mobile.myapp.com"  // Restrict to mobile app
+  86400 * 7, // 7 days
+  "https://mobile.myapp.com", // Restrict to mobile app
 );
 ```
 
 #### Role-Based Route Protection
+
 ```typescript
 // Middleware for admin-only routes
 const requireAdmin = (req, res, next) => {
@@ -316,7 +335,7 @@ const requireAdmin = (req, res, next) => {
   next();
 };
 
-app.post('/admin/users', requireAdmin, (req, res) => {
+app.post("/admin/users", requireAdmin, (req, res) => {
   // Admin-only user management
 });
 ```
@@ -367,7 +386,7 @@ Enable detailed logging for troubleshooting:
 // Enable verbose logging
 const authService = new AuthService({
   enabled: true,
-  debug: true,  // Enable debug logging
+  debug: true, // Enable debug logging
   // ... other config
 });
 ```
@@ -393,4 +412,3 @@ The Powerhouse authentication system provides a robust, secure, and flexible fou
 Whether you're building a simple web app or a complex enterprise system, the authentication system scales to meet your needs while maintaining the highest security standards. The decentralized nature ensures user privacy and control, while the role-based system provides the administrative oversight needed for production applications.
 
 For more information and advanced usage examples, refer to the Powerhouse documentation and community resources.
-

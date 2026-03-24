@@ -1,11 +1,7 @@
 import type { SubgraphClass } from "@powerhousedao/reactor-api";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
-import type {
-  IProcessorHostModuleLegacy,
-  ProcessorFactoryLegacy,
-} from "document-drive";
 import { childLogger } from "document-model";
-import type { IPackageLoader } from "../types.js";
+import type { IPackageLoader, ProcessorFactoryBuilder } from "../types.js";
 import {
   loadDocumentModels as loadDocumentModelsUtil,
   loadProcessors as loadProcessorsUtil,
@@ -57,9 +53,7 @@ export class ImportPackageLoader implements IPackageLoader {
 
   async loadProcessors(
     identifier: string,
-  ): Promise<
-    ((module: IProcessorHostModuleLegacy) => ProcessorFactoryLegacy) | null
-  > {
+  ): Promise<ProcessorFactoryBuilder | null> {
     this.logger.verbose("Loading processors from package:", identifier);
 
     const pkgModule = await loadProcessorsUtil(identifier);

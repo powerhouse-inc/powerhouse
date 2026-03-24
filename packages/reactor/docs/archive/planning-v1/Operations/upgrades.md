@@ -56,9 +56,9 @@ Input schema:
 
 ```ts
 type CreateDocumentAction = {
-  type: 'CREATE_DOCUMENT';
-  model: string;           // e.g., 'ph/todo'
-  version: string;         // '0' (initial state, not yet upgraded)
+  type: "CREATE_DOCUMENT";
+  model: string; // e.g., 'ph/todo'
+  version: string; // '0' (initial state, not yet upgraded)
   signing: SignedHeaderParameters;
 };
 ```
@@ -76,13 +76,14 @@ type SignedHeaderParameters = {
 ```
 
 **Execution (by `IReactor`)**:
-  1. Validate model exists and that the runtime can execute this action with the referenced model version.
-  2. Verify signature:
-     - Ensure `signing.documentType === model`.
-     - Verify signature using the payload `{ documentType: signing.documentType, createdAtUtcIso: signing.createdAtUtcIso, nonce: signing.nonce }`, the `signing.signature`, and a signer constructed from `signing.publicKey` (equivalent to `validateHeader`). Reject the action if invalid.
-     - Enforce `documentId === signing.signature` to keep the storage identifier consistent with the signed header id.
-  3. Persist a new document with a default `PHBaseState` (no model-specific fields yet). Populate the `header` scope from the provided values:
-  4. Set initial revision to 0.
+
+1. Validate model exists and that the runtime can execute this action with the referenced model version.
+2. Verify signature:
+   - Ensure `signing.documentType === model`.
+   - Verify signature using the payload `{ documentType: signing.documentType, createdAtUtcIso: signing.createdAtUtcIso, nonce: signing.nonce }`, the `signing.signature`, and a signer constructed from `signing.publicKey` (equivalent to `validateHeader`). Reject the action if invalid.
+   - Enforce `documentId === signing.signature` to keep the storage identifier consistent with the signed header id.
+3. Persist a new document with a default `PHBaseState` (no model-specific fields yet). Populate the `header` scope from the provided values:
+4. Set initial revision to 0.
 
 **Resulting `Operation`**: A `CREATE_DOCUMENT` operation that acts as the base document record. No user/model fields beyond `PHBaseState` are written by this action.
 
@@ -94,7 +95,7 @@ Input schema:
 
 ```ts
 type UpgradeDocumentAction = {
-  type: 'UPGRADE_DOCUMENT';
+  type: "UPGRADE_DOCUMENT";
   model: string;
   fromVersion: string;
   toVersion: string;
@@ -104,14 +105,15 @@ type UpgradeDocumentAction = {
 ```
 
 **Execution (by `IReactor`)**:
-  1. Resolve supported versions for the `model` via `getDocumentModels()` and ensure `toVersion` and `fromVersion` are supported (in the case of version `"0"`, the document has just been created and has only `PHBaseState`).
-  2. Compute an upgrade plan:
-     - If `fromVersion == toVersion`: no-op, return success without emitting state changes.
-     - If `fromVersion` is `"0"` (first upgrade): initialize model-specific state using the `initialState` field.
-     - If `toVersion` is greater than `fromVersion`: apply a sequence of `UpgradeReducer`s for each version between `fromVersion` and `toVersion`.
-     - If `toVersion` is less than `fromVersion`: capture an operation error.
-  3. Apply the changes to the `document` scope with the `toVersion`.
-  4. Emit a single `UPGRADE_DOCUMENT` operation that captures the version transition and the state delta.
+
+1. Resolve supported versions for the `model` via `getDocumentModels()` and ensure `toVersion` and `fromVersion` are supported (in the case of version `"0"`, the document has just been created and has only `PHBaseState`).
+2. Compute an upgrade plan:
+   - If `fromVersion == toVersion`: no-op, return success without emitting state changes.
+   - If `fromVersion` is `"0"` (first upgrade): initialize model-specific state using the `initialState` field.
+   - If `toVersion` is greater than `fromVersion`: apply a sequence of `UpgradeReducer`s for each version between `fromVersion` and `toVersion`.
+   - If `toVersion` is less than `fromVersion`: capture an operation error.
+3. Apply the changes to the `document` scope with the `toVersion`.
+4. Emit a single `UPGRADE_DOCUMENT` operation that captures the version transition and the state delta.
 
 ---
 
@@ -185,6 +187,7 @@ Document model packages use subpath exports to allow consumers to import specifi
 ```
 
 **Import patterns:**
+
 - `import * from 'my-doc/v1'` - Import specific version
 - `import * from 'my-doc/v2'` - Import specific version
 - `import * from 'my-doc/latest'` - Alias to newest version
@@ -220,8 +223,8 @@ export type UpgradeTransition = {
 export type UpgradeManifest = {
   documentType: string;
   latestVersion: ModelVersion;
-  supportedVersions: ModelVersion[];  // e.g., [1, 2, 3]
-  upgrades: Map<string, UpgradeTransition>;  // key: "1->2", "2->3"
+  supportedVersions: ModelVersion[]; // e.g., [1, 2, 3]
+  upgrades: Map<string, UpgradeTransition>; // key: "1->2", "2->3"
 };
 ```
 
@@ -231,13 +234,13 @@ Package authors use the `UpgradeManifestBuilder` to construct their manifest:
 
 ```typescript
 // reducers/index.ts
-import { UpgradeManifestBuilder } from 'document-model';
-import { upgradeV1ToV2 } from './v1-to-v2.js';
-import { upgradeV2ToV3 } from './v2-to-v3.js';
+import { UpgradeManifestBuilder } from "document-model";
+import { upgradeV1ToV2 } from "./v1-to-v2.js";
+import { upgradeV2ToV3 } from "./v2-to-v3.js";
 
-export const upgradeManifest = new UpgradeManifestBuilder('ph/todo')
-  .addUpgrade(1, 2, upgradeV1ToV2, 'Add priority field to items')
-  .addUpgrade(2, 3, upgradeV2ToV3, 'Add tags support')
+export const upgradeManifest = new UpgradeManifestBuilder("ph/todo")
+  .addUpgrade(1, 2, upgradeV1ToV2, "Add priority field to items")
+  .addUpgrade(2, 3, upgradeV2ToV3, "Add tags support")
   .build();
 ```
 
@@ -253,11 +256,14 @@ Each upgrade reducer file (`reducers/v1-to-v2.ts`, `reducers/v2-to-v3.ts`, etc.)
 
 ```typescript
 // reducers/v1-to-v2.ts
-import type { UpgradeReducer } from 'document-model';
-import type { TodoPHState as V1State } from '../v1/types.js';
-import type { TodoPHState as V2State } from '../v2/types.js';
+import type { UpgradeReducer } from "document-model";
+import type { TodoPHState as V1State } from "../v1/types.js";
+import type { TodoPHState as V2State } from "../v2/types.js";
 
-export const upgradeV1ToV2: UpgradeReducer<V1State, V2State> = (document, action) => {
+export const upgradeV1ToV2: UpgradeReducer<V1State, V2State> = (
+  document,
+  action,
+) => {
   const v1State = document.state;
 
   return {
@@ -266,11 +272,11 @@ export const upgradeV1ToV2: UpgradeReducer<V1State, V2State> = (document, action
       ...v1State,
       global: {
         title: v1State.global.title,
-        description: '',  // New field with default value
-        items: v1State.global.items.map(item => ({
+        description: "", // New field with default value
+        items: v1State.global.items.map((item) => ({
           ...item,
           createdAt: new Date().toISOString(),
-          priority: 'medium',
+          priority: "medium",
         })),
       },
     },

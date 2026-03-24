@@ -77,31 +77,31 @@ Update your `updateTodoOperation` to be like so:
 
 ```typescript
 export const todoListTodosOperations: TodoListTodosOperations = {
-    addTodoItemOperation(state, action) {
-      state.items.push({
-        id: action.input.id,
-        text: action.input.text,
-        checked: false,
-      });
-    },
-    // removed-start
-    updateTodoItemOperation(state, action) {
-        // TODO: Implement "updateTodoItemOperation" reducer
-        throw new Error('Reducer "updateTodoItemOperation" not yet implemented');
-    },
-    // removed-end
-    // added-start
-    updateTodoItemOperation(state, action) {
-      const item = state.items.find((item) => item.id === action.input.id);
-      if (!item) return state;
-      item.text = action.input.text ?? item.text;
-      item.checked = action.input.checked ?? item.checked;
-    },
-    // added-end
-    deleteTodoItemOperation(state, action) {
-        // TODO: Implement "deleteTodoItemOperation" reducer
-        throw new Error('Reducer "deleteTodoItemOperation" not yet implemented');
-    }
+  addTodoItemOperation(state, action) {
+    state.items.push({
+      id: action.input.id,
+      text: action.input.text,
+      checked: false,
+    });
+  },
+  // removed-start
+  updateTodoItemOperation(state, action) {
+    // TODO: Implement "updateTodoItemOperation" reducer
+    throw new Error('Reducer "updateTodoItemOperation" not yet implemented');
+  },
+  // removed-end
+  // added-start
+  updateTodoItemOperation(state, action) {
+    const item = state.items.find((item) => item.id === action.input.id);
+    if (!item) return state;
+    item.text = action.input.text ?? item.text;
+    item.checked = action.input.checked ?? item.checked;
+  },
+  // added-end
+  deleteTodoItemOperation(state, action) {
+    // TODO: Implement "deleteTodoItemOperation" reducer
+    throw new Error('Reducer "deleteTodoItemOperation" not yet implemented');
+  },
 };
 ```
 
@@ -159,7 +159,6 @@ export const todoListTodosOperations: TodoListTodosOperations = {
     state.items = state.items.filter((item) => item.id !== action.input.id);
   },
 };
-
 ```
 
 ## Check your work
@@ -167,16 +166,16 @@ export const todoListTodosOperations: TodoListTodosOperations = {
 To make sure all works as expected, we should:
 
 - check types
-run: `pnpm tsc`
+  run: `pnpm tsc`
 
 - check linting
-run: `pnpm lint`
+  run: `pnpm lint`
 
 - check tests
-run: `pnpm test`
+  run: `pnpm test`
 
 - make sure your code matches the code in the completed step branch
-run: `git diff your-branch-name step-2-complete-implemented-todo-list-document-model-reducer-operation-handlers`
+  run: `git diff your-branch-name step-2-complete-implemented-todo-list-document-model-reducer-operation-handlers`
 
 ### Up next: tests for our new operation handlers
 

@@ -1,28 +1,16 @@
 {
   "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "types": [
-      "node",
-      "vitest/globals",
-      "@types/wicg-file-system-access"
-    ],
+    "types": ["node", "vitest/globals", "@types/wicg-file-system-access"],
     "outDir": "./dist",
-    "lib": [
-      "ESNext",
-      "dom",
-      "dom.iterable"
-    ]
+    "lib": ["ESNext", "dom", "dom.iterable"]
   },
   "include": [
     "**/*",
     "../shared/processors/drive-analytics/index.ts",
     "../shared/processors/drive-analytics/types.ts"
   ],
-  "exclude": [
-    "dist",
-    "node_modules",
-    "storybook-static"
-  ],
+  "exclude": ["dist", "node_modules", "storybook-static"],
   "references": [
     {
       "path": "../analytics-engine/core"

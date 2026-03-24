@@ -5,6 +5,7 @@
 **All guarantees in job execution are scope-specific.** When the job executor calls `getState(docId, "global", branch)`, there is **no contract guaranteeing** that `document.state.document` (the document scope state) will be current or even present. This is a cross-scope dependency that the write cache architecture doesn't explicitly handle.
 
 The document scope contains critical metadata needed during job execution:
+
 - `version` - needed for multi-version document models
 - `isDeleted` / `deletedAtUtcIso` - needed to validate document is not deleted
 - `hash` - needed for operation verification
@@ -12,6 +13,7 @@ The document scope contains critical metadata needed during job execution:
 ### Root Cause
 
 The write cache and keyframes are scope-specific (`{documentId}:{scope}:{branch}`). When loading state for a non-document scope:
+
 - Keyframes contain the document state at the time they were stored (may be stale)
 - Cached snapshots contain document state at the time they were cached (may be stale)
 - Even cold miss rebuilds fetch document scope ops as an implementation detail, not a guaranteed contract
@@ -19,6 +21,7 @@ The write cache and keyframes are scope-specific (`{documentId}:{scope}:{branch}
 ### Example Scenarios
 
 **Scenario 1: Stale cache after document scope modification**
+
 1. CREATE_DOCUMENT + UPGRADE_DOCUMENT (version 1) executed in document scope
 2. Some global scope operations executed, keyframe stored for global scope
 3. Another UPGRADE_DOCUMENT (version 2) executed in document scope
@@ -26,6 +29,7 @@ The write cache and keyframes are scope-specific (`{documentId}:{scope}:{branch}
 5. Job executor checks version and gets wrong value
 
 **Scenario 2: Stale isDeleted flag**
+
 1. Create document + UPGRADE_DOCUMENT
 2. Apply global scope operation, cache result with putState
 3. Apply DELETE_DOCUMENT in document scope
@@ -33,6 +37,7 @@ The write cache and keyframes are scope-specific (`{documentId}:{scope}:{branch}
 5. Job executor doesn't know document was deleted
 
 **Scenario 3: Reshuffling with UPGRADE_DOCUMENT**
+
 1. UPGRADE_DOCUMENT executed (sets version to 2) at revision N
 2. New operation A arrives with **earlier timestamp** than UPGRADE_DOCUMENT
 3. Operation A needs to be applied at revision N-1 (before UPGRADE_DOCUMENT), then UPGRADE_DOCUMENT reapplied
@@ -85,6 +90,7 @@ Key format: `{documentId}:{branch}` (no scope since this is always document scop
 ### Rebuild Logic
 
 **`getDocumentMeta()` (latest):**
+
 1. Check cache - return if hit
 2. On miss: Fetch all document scope operations via `operationStore.getSince(documentId, "document", branch, -1)`
 3. Find CREATE_DOCUMENT to get document type
@@ -96,6 +102,7 @@ Key format: `{documentId}:{branch}` (no scope since this is always document scop
 6. Cache and return result
 
 **`rebuildAtRevision(targetRevision)` (historical):**
+
 1. Fetch document scope operations via `operationStore.getSince(documentId, "document", branch, -1)`
 2. Find CREATE_DOCUMENT to get document type
 3. Apply UPGRADE_DOCUMENT and DELETE_DOCUMENT operations **only up to targetRevision**
@@ -123,13 +130,13 @@ The `PHDocumentState` type contains the document scope metadata:
 ```typescript
 // From document-model package
 export type PHDocumentState = {
-  version: number;        // Document version (starts at 0)
+  version: number; // Document version (starts at 0)
   hash: {
-    algorithm: string;    // Hash algorithm (e.g., "sha1")
-    encoding: string;     // Hash encoding (e.g., "base64")
+    algorithm: string; // Hash algorithm (e.g., "sha1")
+    encoding: string; // Hash encoding (e.g., "base64")
   };
-  isDeleted?: boolean;          // True if document was deleted
-  deletedAtUtcIso?: string;     // ISO timestamp of deletion
+  isDeleted?: boolean; // True if document was deleted
+  deletedAtUtcIso?: string; // ISO timestamp of deletion
 };
 ```
 
@@ -140,6 +147,7 @@ Note: Document versions start at `0`. The version is updated via UPGRADE_DOCUMEN
 **SimpleJobExecutor constructor** - accepts `IDocumentMetaCache` parameter
 
 **After CREATE_DOCUMENT:**
+
 ```typescript
 this.documentMetaCache.putDocumentMeta(documentId, job.branch, {
   state: document.state.document,
@@ -149,6 +157,7 @@ this.documentMetaCache.putDocumentMeta(documentId, job.branch, {
 ```
 
 **After UPGRADE_DOCUMENT:**
+
 ```typescript
 this.documentMetaCache.putDocumentMeta(documentId, job.branch, {
   state: updatedDocument.state.document,
@@ -158,6 +167,7 @@ this.documentMetaCache.putDocumentMeta(documentId, job.branch, {
 ```
 
 **After DELETE_DOCUMENT:**
+
 ```typescript
 this.documentMetaCache.putDocumentMeta(documentId, job.branch, {
   state: updatedDocument.state.document, // includes isDeleted: true
@@ -167,23 +177,31 @@ this.documentMetaCache.putDocumentMeta(documentId, job.branch, {
 ```
 
 **Before processing regular actions (isDeleted check):**
+
 ```typescript
-const docMeta = await this.documentMetaCache.getDocumentMeta(job.documentId, job.branch);
+const docMeta = await this.documentMetaCache.getDocumentMeta(
+  job.documentId,
+  job.branch,
+);
 if (docMeta.state.isDeleted) {
   return {
     success: false,
-    error: new DocumentDeletedError(job.documentId, docMeta.state.deletedAtUtcIso),
+    error: new DocumentDeletedError(
+      job.documentId,
+      docMeta.state.deletedAtUtcIso,
+    ),
     // ...
   };
 }
 ```
 
 **During reshuffling:**
+
 ```typescript
 const historicalMeta = await this.documentMetaCache.rebuildAtRevision(
   documentId,
   branch,
-  targetRevision
+  targetRevision,
 );
 // Use historicalMeta.state.version when applying operations at that revision
 ```
@@ -191,6 +209,7 @@ const historicalMeta = await this.documentMetaCache.rebuildAtRevision(
 ### Dependency Injection
 
 The `DocumentMetaCache` requires `IOperationStore` for cache miss rebuilds. It is constructed alongside `KyselyWriteCache` and injected into:
+
 - `SimpleJobExecutor` (for eager updates and metadata access)
 
 ```typescript
@@ -218,5 +237,5 @@ const executor = new SimpleJobExecutor(
 
 ### Links
 
-* [Interface](./document-meta-cache-interface.md) - TypeScript interface
-* [Write Cache](./write-cache.md) - Related scope-specific caching system
+- [Interface](./document-meta-cache-interface.md) - TypeScript interface
+- [Write Cache](./write-cache.md) - Related scope-specific caching system

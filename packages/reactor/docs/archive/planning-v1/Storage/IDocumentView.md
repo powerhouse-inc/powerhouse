@@ -77,7 +77,7 @@ The `IDocumentView` implements soft delete semantics for deleted documents:
 class DocumentDeletedError extends Error {
   constructor(
     public documentId: string,
-    public deletedAt: Date | null
+    public deletedAt: Date | null,
   ) {
     super(`Document ${documentId} was deleted at ${deletedAt?.toISOString()}`);
     this.name = "DocumentDeletedError";
@@ -94,14 +94,23 @@ All read methods accept an optional `consistencyToken` parameter to provide read
 3. This ensures the query will see all effects of the write operations that produced the token
 
 **Usage Pattern:**
+
 ```typescript
 const queuedJob = await reactor.mutate(documentId, "main", operations);
 const completedJob = await reactor.getJobStatus(queuedJob.id); // poll until READ_MODELS_READY
-const doc = await documentView.get(documentId, view, completedJob.consistencyToken);
+const doc = await documentView.get(
+  documentId,
+  view,
+  completedJob.consistencyToken,
+);
 
 const loadQueued = await reactor.load(documentId, "main", importedOperations);
 const loadCompleted = await reactor.getJobStatus(loadQueued.id); // same wait
-const loadedDoc = await documentView.get(documentId, view, loadCompleted.consistencyToken);
+const loadedDoc = await documentView.get(
+  documentId,
+  view,
+  loadCompleted.consistencyToken,
+);
 ```
 
 This pattern guarantees that the read will see the effects of the write, even if the view is catching up asynchronously.
@@ -274,7 +283,7 @@ type SearchFilter = {
    * Set to true for audit/admin tools that need to see deleted documents.
    */
   includeDeleted?: boolean;
-}
+};
 ```
 
 ### Schema

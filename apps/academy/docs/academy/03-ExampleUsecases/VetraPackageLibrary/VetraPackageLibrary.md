@@ -4,7 +4,6 @@ title: Vetra Package Library
 
 Packages of documents are a core structuring mechanism in the Vetra framework, allowing developers to group and manage related document efficiently. These packages serve as modular collections of document specifications and modules, ensuring consistency, scalability, and reusability across different applications.
 
-
 ### Example packages
 
 - **Finance Package** – A set of documents or apps handling invoices, payments, budgets, and financial reporting.
@@ -15,6 +14,6 @@ Packages of documents are a core structuring mechanism in the Vetra framework, a
 
 ---
 
-The Vetra package library is your best source to explore packages built by different builder teams on the Powerhouse Vetra platform. Through the packages you'll find the GitHub repository with the source code of each package.   
+The Vetra package library is your best source to explore packages built by different builder teams on the Powerhouse Vetra platform. Through the packages you'll find the GitHub repository with the source code of each package.
 
 You can get access to the [package library here.](https://vetra.io/packages)

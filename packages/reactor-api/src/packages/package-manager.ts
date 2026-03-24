@@ -1,11 +1,11 @@
 import { getConfig } from "@powerhousedao/config/node";
-import type { SubgraphClass } from "@powerhousedao/reactor-api";
+import type {
+  Processor,
+  ProcessorFactoryBuilder,
+  SubgraphClass,
+} from "@powerhousedao/reactor-api";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
-import type {
-  IProcessorHostModuleLegacy,
-  ProcessorFactoryLegacy,
-} from "document-drive";
 import { childLogger, documentModelDocumentModelModule } from "document-model";
 import EventEmitter from "node:events";
 import type { StatWatcher } from "node:fs";
@@ -18,6 +18,7 @@ import type {
   PackageManagerResult,
 } from "./types.js";
 import { debounce } from "./util.js";
+
 export function getUniqueDocumentModels(
   ...documentModels: DocumentModelModule<any>[][]
 ): DocumentModelModule[] {
@@ -38,21 +39,13 @@ export class PackageManager implements IPackageManager {
 
   private docModelsMap = new Map<string, DocumentModelModule[]>();
   private subgraphsMap = new Map<string, SubgraphClass[]>();
-  private processorMap = new Map<
-    string,
-    ((module: IProcessorHostModuleLegacy) => ProcessorFactoryLegacy)[]
-  >();
+  private processorMap = new Map<string, Processor>();
   private configWatcher: StatWatcher | undefined;
   private debouncedUpdateCallbacks = new Map<string, () => void>();
   private eventEmitter = new EventEmitter<{
     documentModelsChange: [Record<string, DocumentModelModule[]>];
     subgraphsChange: [Map<string, SubgraphClass[]>];
-    processorsChange: [
-      Map<
-        string,
-        ((module: IProcessorHostModuleLegacy) => ProcessorFactoryLegacy)[]
-      >,
-    ];
+    processorsChange: [Map<string, Processor>];
   }>();
 
   constructor(
@@ -176,25 +169,15 @@ export class PackageManager implements IPackageManager {
 
   private async loadProcessors(
     packages: string[],
-  ): Promise<
-    Map<
-      string,
-      ((module: IProcessorHostModuleLegacy) => ProcessorFactoryLegacy)[]
-    >
-  > {
+  ): Promise<Map<string, Processor>> {
     this.logger.debug(
       `Loading processors from packages: ${packages.join(", ")}`,
     );
 
-    const processorsMap = new Map<
-      string,
-      ((module: IProcessorHostModuleLegacy) => ProcessorFactoryLegacy)[]
-    >();
+    const processorsMap = new Map<string, Processor>();
 
     for (const pkg of packages) {
-      const allProcessors: ((
-        module: IProcessorHostModuleLegacy,
-      ) => ProcessorFactoryLegacy)[] = [];
+      const allProcessors: ProcessorFactoryBuilder[] = [];
 
       for (const loader of this.loaders) {
         try {
@@ -310,12 +293,7 @@ export class PackageManager implements IPackageManager {
     this.eventEmitter.emit("subgraphsChange", subgraphsMap);
   }
 
-  private updateProcessorsMap(
-    processorsMap: Map<
-      string,
-      ((module: IProcessorHostModuleLegacy) => ProcessorFactoryLegacy)[]
-    >,
-  ) {
+  private updateProcessorsMap(processorsMap: Map<string, Processor>) {
     const oldPackages = Array.from(this.processorMap.keys());
     const newPackages = Array.from(processorsMap.keys());
     oldPackages
@@ -341,12 +319,7 @@ export class PackageManager implements IPackageManager {
   }
 
   onProcessorsChange(
-    handler: (
-      processors: Map<
-        string,
-        ((module: IProcessorHostModuleLegacy) => ProcessorFactoryLegacy)[]
-      >,
-    ) => void,
+    handler: (processors: Map<string, Processor>) => void,
   ): void {
     this.eventEmitter.on("processorsChange", handler);
   }

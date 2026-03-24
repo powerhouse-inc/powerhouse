@@ -21,12 +21,7 @@
     "test/benchmarks/getDrive.json",
     "test/benchmarks/strands.small.json"
   ],
-  "exclude": [
-    "dist",
-    "node_modules",
-    "coverage",
-    "test/flaky/**"
-  ],
+  "exclude": ["dist", "node_modules", "coverage", "test/flaky/**"],
   "references": [
     {
       "path": "../analytics-engine/core"

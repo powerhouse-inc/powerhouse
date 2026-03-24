@@ -11,28 +11,19 @@ import type {
   ProcessorRecord as ReactorProcessorRecord,
 } from "@powerhousedao/reactor";
 import { setupMcpServer } from "@powerhousedao/reactor-mcp";
+import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import type { Express } from "express";
-import type {
-  IDocumentDriveServer,
-  IProcessorHostModuleLegacy,
-  IRelationalDbLegacy,
-  ProcessorFactoryLegacy,
-} from "document-drive";
-import {
-  createRelationalDbLegacy,
-  ProcessorManagerLegacy,
-} from "document-drive";
-import type { DocumentModelModule } from "document-model";
 import type { Kysely } from "kysely";
 import type http from "node:http";
 import path from "node:path";
 import type { Pool } from "pg";
 import { WebSocketServer } from "ws";
 // Import tracing - initializes OpenTelemetry and provides stub functions for backwards compatibility
-import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
-import type {
-  IProcessorHostModule,
-  ProcessorApp,
+import {
+  createRelationalDb,
+  type IProcessorHostModule,
+  type IRelationalDb,
+  type ProcessorApp,
 } from "@powerhousedao/shared/processors";
 import { childLogger, type ILogger } from "document-model";
 import { config, DefaultCoreSubgraphs } from "./config.js";
@@ -57,7 +48,13 @@ import { AuthService } from "./services/auth.service.js";
 import { AuthorizationService } from "./services/authorization.service.js";
 import { DocumentPermissionService } from "./services/document-permission.service.js";
 import { initTracing, isTracingEnabled, trace } from "./tracing.js";
-import type { API, IPackageLoader, Processor } from "./types.js";
+import type {
+  API,
+  IPackageLoader,
+  Processor,
+  ProcessorDriveFactory,
+  ProcessorFactoryBuilder,
+} from "./types.js";
 import {
   getDbClient,
   initAnalyticsStoreSql,
@@ -85,7 +82,7 @@ type Options = {
     | boolean
     | undefined;
   packageLoader?: IPackageLoader;
-  processors?: Record<string, Processor>;
+  processors?: Record<string, ProcessorInitializer[]>;
   mcp?: boolean;
   processorConfig?: Map<string, unknown>;
   /**
@@ -100,6 +97,8 @@ type Options = {
   logger?: ILogger;
 };
 
+type ProcessorInitializer = ProcessorFactoryBuilder;
+
 const DEFAULT_PORT = 4000;
 
 /**
@@ -108,11 +107,11 @@ const DEFAULT_PORT = 4000;
 async function initializeDatabaseAndAnalytics(
   dbPath: string | undefined,
 ): Promise<{
-  relationalDb: IRelationalDbLegacy;
+  relationalDb: IRelationalDb;
   analyticsStore: IAnalyticsStore;
 }> {
   const { db, knex } = getDbClient(dbPath);
-  const relationalDb = createRelationalDbLegacy<unknown>(db);
+  const relationalDb = createRelationalDb<unknown>(db);
   const analyticsStore = new PostgresAnalyticsStore({
     knex,
   });
@@ -133,7 +132,7 @@ async function setupGraphQLManager(
   httpServer: http.Server,
   wsServer: WebSocketServer,
   client: IReactorClient,
-  relationalDb: IRelationalDbLegacy,
+  relationalDb: IRelationalDb,
   analyticsStore: IAnalyticsStore,
   syncManager: ISyncManager,
   subgraphs: {
@@ -193,7 +192,7 @@ function setupEventListeners(
   pkgManager: PackageManager,
   graphqlManager: GraphQLManager,
   reactorProcessorManager: IReactorProcessorManager,
-  module: IProcessorHostModuleLegacy,
+  module: IProcessorHostModule,
 ): void {
   pkgManager.onDocumentModelsChange(async () => {
     await graphqlManager.updateRouter();
@@ -214,12 +213,12 @@ function setupEventListeners(
 
       const factories = fns.map((fn) => fn(module));
 
-      const validFactories = factories.filter(
-        (factory): factory is ProcessorFactoryLegacy =>
+      const validBuilders = factories.filter(
+        (factory): factory is ProcessorDriveFactory =>
           factory !== null && typeof factory === "function",
       );
 
-      if (!validFactories.length) {
+      if (!validBuilders.length) {
         continue;
       }
 
@@ -228,9 +227,9 @@ function setupEventListeners(
         async (driveHeader) =>
           (
             await Promise.all(
-              validFactories.map(async (factory) => {
+              validBuilders.map(async (driveFactory) => {
                 try {
-                  const result = await factory(driveHeader);
+                  const result = await driveFactory(driveHeader);
                   return result as unknown as ReactorProcessorRecord[];
                 } catch (e) {
                   const logger = defaultLogger;
@@ -288,7 +287,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     enabled: boolean;
     admins: string[];
   };
-  relationalDb: IRelationalDbLegacy;
+  relationalDb: IRelationalDb;
   analyticsStore: IAnalyticsStore;
   documentPermissionService: DocumentPermissionService | undefined;
   authorizationService: AuthorizationService | undefined;
@@ -448,13 +447,10 @@ async function _setupAPI(
   authFetchMiddleware: AuthFetchMiddleware | undefined,
   port: number,
   packages: PackageManager,
-  relationalDb: IRelationalDbLegacy,
+  relationalDb: IRelationalDb,
   analyticsStore: IAnalyticsStore,
   documentPermissionService: DocumentPermissionService | undefined,
-  processors: Map<
-    string,
-    ((module: IProcessorHostModuleLegacy) => ProcessorFactoryLegacy)[]
-  >,
+  processors: Map<string, Processor>,
   subgraphs: Map<string, SubgraphClass[]>,
   options: Options,
   auth: {
@@ -469,16 +465,22 @@ async function _setupAPI(
     analyticsStore,
     processorApp,
     config: options.processorConfig,
-  } as IProcessorHostModuleLegacy & IProcessorHostModule;
+  } as IProcessorHostModule;
   const mcpServerEnabled = options.mcp ?? true;
 
   const logger = options.logger ?? defaultLogger;
 
   // initialize processors
-  for (const [packageName, fns] of [
+  const configuredProcessorEntries = Object.entries(
+    options.processors ?? {},
+  ) as [string, ProcessorInitializer[]][];
+
+  const processorEntries = [
     ...processors.entries(),
-    ...Object.entries(options.processors ?? {}),
-  ]) {
+    ...configuredProcessorEntries,
+  ] as [string, ProcessorInitializer[]][];
+
+  for (const [packageName, fns] of processorEntries) {
     const factories = fns.map((fn) => {
       try {
         return fn(module);
@@ -493,7 +495,7 @@ async function _setupAPI(
     });
 
     const validFactories = factories.filter(
-      (factory): factory is ProcessorFactoryLegacy =>
+      (factory): factory is ProcessorDriveFactory =>
         factory !== null && typeof factory === "function",
     );
 
@@ -509,9 +511,9 @@ async function _setupAPI(
       async (driveHeader) =>
         (
           await Promise.all(
-            validFactories.map(async (factory) => {
+            validFactories.map(async (driveFactory) => {
               try {
-                const result = await factory(driveHeader);
+                const result = await driveFactory(driveHeader);
                 return result as unknown as ReactorProcessorRecord[];
               } catch (e) {
                 logger.error(

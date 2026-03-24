@@ -1,22 +1,24 @@
 import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
-import type { IReactorClient, ISyncManager } from "@powerhousedao/reactor";
+import type {
+  IReactorClient,
+  IRelationalDb,
+  ISyncManager,
+} from "@powerhousedao/reactor";
 import type {
   Context,
   ISubgraph,
   SubgraphClass,
 } from "@powerhousedao/reactor-api";
-import type {
-  DocumentDriveDocument,
-  IRelationalDbLegacy,
-} from "document-drive";
-import { debounce, responseForDrive } from "document-drive";
-import type { DocumentModelModule, ILogger } from "document-model";
+import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
+import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
+import type { ILogger } from "document-model";
 import type { GraphQLSchema } from "graphql";
 import type { IncomingHttpHeaders } from "http";
 import type http from "node:http";
 import path from "node:path";
 import { match } from "path-to-regexp";
 import type { WebSocketServer } from "ws";
+import { debounce } from "../packages/util.js";
 import type { AuthConfig } from "../services/auth.service.js";
 import { AuthService } from "../services/auth.service.js";
 import {
@@ -117,7 +119,7 @@ export class GraphQLManager {
     private readonly httpServer: http.Server,
     private readonly wsServer: WebSocketServer,
     private readonly reactorClient: IReactorClient,
-    private readonly relationalDb: IRelationalDbLegacy,
+    private readonly relationalDb: IRelationalDb,
     private readonly analyticsStore: IAnalyticsStore,
     private readonly syncManager: ISyncManager,
     private readonly logger: ILogger,
@@ -186,7 +188,14 @@ export class GraphQLManager {
         const basePath = this.path === "/" ? "" : this.path;
         const graphqlEndpoint = `${protocol}//${host}${basePath}/graphql/r`;
 
-        return Response.json(responseForDrive(driveDoc, graphqlEndpoint));
+        return Response.json({
+          id: driveDoc.header.id,
+          slug: driveDoc.header.slug,
+          meta: driveDoc.header.meta,
+          name: driveDoc.state.global.name,
+          icon: driveDoc.state.global.icon ?? undefined,
+          ...(graphqlEndpoint && { graphqlEndpoint }),
+        });
       } catch (error: unknown) {
         this.logger.debug(`Drive not found: ${driveIdOrSlug}`, error);
         return Response.json({ error: "Drive not found" }, { status: 404 });

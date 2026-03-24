@@ -121,9 +121,14 @@ Let's walk through the typical workflow for using a component from the document-
     - Review the visual examples and interactive demo.
     - Examine the "Usage" snippet and the **Props table** to understand the basic implementation and available configuration options (`name`, `value`, `onChange`, etc.).
 3.  **Import the Component:** In your code editor, open the relevant file (e.g., `editors/todo-list-editor/components/Checkbox.tsx`). Add an import statement at the top to bring the component into your file's scope:
+
     ```typescript
-    import { Form, BooleanField } from "@powerhousedao/document-engineering/scalars";
+    import {
+      Form,
+      BooleanField,
+    } from "@powerhousedao/document-engineering/scalars";
     ```
+
     This line instructs the build process to locate the `Form` and `BooleanField` components within the installed `@powerhousedao/document-engineering/scalars` package and make them available for use.
 
     :::info Form Wrapper Required
@@ -133,6 +138,7 @@ Let's walk through the typical workflow for using a component from the document-
 4.  **Use and Configure the Component:** Place the component tag in your JSX where needed. Use the information from Storybook (usage snippet and props table) as a guide, but adapt the props to your specific requirements:
 
     **Step 4a: Create a reusable Checkbox component**
+
     ```typescript
     // editors/todo-list-editor/components/Checkbox.tsx
     import { Form, BooleanField } from "@powerhousedao/document-engineering/scalars";
@@ -157,6 +163,7 @@ Let's walk through the typical workflow for using a component from the document-
     ```
 
     **Step 4b: Use it in your Todo component with the document model hook**
+
     ```typescript
     // editors/todo-list-editor/components/Todo.tsx
     import { useSelectedTodoListDocument, updateTodoItem } from "todo-tutorial/document-models/todo-list";

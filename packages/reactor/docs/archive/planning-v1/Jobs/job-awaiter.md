@@ -37,21 +37,23 @@ The JobAwaiter tracks jobs through multiple states that align with operation eve
 ### State Transitions
 
 **Successful Execution**:
+
 ```
 PENDING → RUNNING → WRITE_COMPLETED → READ_MODELS_READY
 ```
 
 **Failed Execution**:
+
 ```
 PENDING → RUNNING → FAILED
 ```
 
 ### Event Alignment
 
-| Job Status | Triggering Event | Emitted By | Description |
-|------------|-----------------|------------|-------------|
-| `PENDING` | Job queued | `IQueue` | Initial state when job created |
-| `RUNNING` | Job started | `IJobExecutor` | Execution begins |
-| `WRITE_COMPLETED` | `OPERATION_WRITTEN` (10001) | `IJobExecutor` | Operations persisted to store |
-| `READ_MODELS_READY` | `OPERATIONS_READY` (10002) | `IReadModelCoordinator` | Read models indexed, queries will see data |
-| `FAILED` | `JOB_FAILED` (10003) | `IJobExecutor` | Unrecoverable error occurred |
+| Job Status          | Triggering Event            | Emitted By              | Description                                |
+| ------------------- | --------------------------- | ----------------------- | ------------------------------------------ |
+| `PENDING`           | Job queued                  | `IQueue`                | Initial state when job created             |
+| `RUNNING`           | Job started                 | `IJobExecutor`          | Execution begins                           |
+| `WRITE_COMPLETED`   | `OPERATION_WRITTEN` (10001) | `IJobExecutor`          | Operations persisted to store              |
+| `READ_MODELS_READY` | `OPERATIONS_READY` (10002)  | `IReadModelCoordinator` | Read models indexed, queries will see data |
+| `FAILED`            | `JOB_FAILED` (10003)        | `IJobExecutor`          | Unrecoverable error occurred               |

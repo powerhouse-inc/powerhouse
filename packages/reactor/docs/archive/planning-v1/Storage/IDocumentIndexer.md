@@ -62,10 +62,16 @@ All query methods accept an optional `consistencyToken` parameter to provide rea
 3. This ensures the query will see all effects of the write operations that produced the token
 
 **Usage Pattern:**
+
 ```typescript
 const queuedJob = await reactor.addChildren(parentId, childIds);
 const completedJob = await reactor.getJobStatus(queuedJob.id); // ensure READ_MODELS_READY
-const path = await documentIndexer.findPath(parentId, childId, undefined, completedJob.consistencyToken);
+const path = await documentIndexer.findPath(
+  parentId,
+  childId,
+  undefined,
+  completedJob.consistencyToken,
+);
 
 const loadQueued = await reactor.load(parentId, "main", importedOperations);
 const loadCompleted = await reactor.getJobStatus(loadQueued.id);

@@ -24,6 +24,7 @@ git show tutorial/step-4-implement-tests-for-todos-operations:document-models/to
 ### Visual comparison with GitHub Desktop
 
 After committing your work, compare visually:
+
 1. **Branch** menu → **"Compare to Branch..."**
 2. Select `tutorial/step-4-implement-tests-for-todos-operations`
 3. Review differences in the visual interface
@@ -76,15 +77,17 @@ describe("Todos Operations", () => {
     // At the start a document will have 0 operations, so after applying this action
     // there should now be one operation
     expect(updatedDocument.operations.global).toHaveLength(1);
-    
+
     // The operation added to the list should correspond to the correct action type
-    expect(updatedDocument.operations.global[0].action.type).toBe("ADD_TODO_ITEM");
+    expect(updatedDocument.operations.global[0].action.type).toBe(
+      "ADD_TODO_ITEM",
+    );
   });
-  
+
   it("should handle updateTodoItem operation", () => {
     // ... boilerplate test
   });
-  
+
   it("should handle deleteTodoItem operation", () => {
     // ... boilerplate test
   });
@@ -109,8 +112,12 @@ it("should handle addTodoItem operation", () => {
   expect(isTodoListDocument(updatedDocument)).toBe(true);
 
   expect(updatedDocument.operations.global).toHaveLength(1);
-  expect(updatedDocument.operations.global[0].action.type).toBe("ADD_TODO_ITEM");
-  expect(updatedDocument.operations.global[0].action.input).toStrictEqual(input);
+  expect(updatedDocument.operations.global[0].action.type).toBe(
+    "ADD_TODO_ITEM",
+  );
+  expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
+    input,
+  );
   expect(updatedDocument.operations.global[0].index).toEqual(0);
 });
 ```
@@ -141,7 +148,7 @@ it("should handle updateTodoItem operation to update text", () => {
 
   // We also need to generate a mock input for the update operation we are testing
   const input: UpdateTodoItemInput = generateMock(UpdateTodoItemInputSchema());
-  
+
   // Since the mocks are generated with random values, we need to set the `id`
   // on our mock input to match the `id` of the existing mock item
   input.id = mockItem.id;
@@ -154,7 +161,7 @@ it("should handle updateTodoItem operation to update text", () => {
   // We are only testing updating the text here, so we want the checked field
   // on the input to be undefined, i.e. it should not change anything on the existing item
   input.checked = undefined;
-  
+
   // We can pass a different initial state to the `createDocument` utility,
   // so in this case we pass in an `items` array with our existing item already in it
   const document = utils.createDocument({
@@ -171,8 +178,10 @@ it("should handle updateTodoItem operation to update text", () => {
 
   // There should now be one operation in the operations list
   expect(updatedDocument.operations.global).toHaveLength(1);
-  expect(updatedDocument.operations.global[0].action.type).toBe("UPDATE_TODO_ITEM");
-  
+  expect(updatedDocument.operations.global[0].action.type).toBe(
+    "UPDATE_TODO_ITEM",
+  );
+
   // Find the updated item in the items list by its `id`
   const updatedItem = updatedDocument.state.global.items.find(
     (item) => item.id === input.id,
@@ -195,7 +204,7 @@ it("should handle updateTodoItem operation to update checked", () => {
 
   // Generate a mock input
   const input: UpdateTodoItemInput = generateMock(UpdateTodoItemInputSchema());
-  
+
   // Set the mock input's `id` to the mock item's `id`
   input.id = mockItem.id;
 
@@ -206,7 +215,7 @@ it("should handle updateTodoItem operation to update checked", () => {
 
   // Leave the `text` field unchanged
   input.text = undefined;
-  
+
   // Create a document with the existing item in it
   const document = utils.createDocument({
     global: {
@@ -254,15 +263,19 @@ it("should handle deleteTodoItem operation", () => {
   const input: DeleteTodoItemInput = generateMock(DeleteTodoItemInputSchema());
   input.id = mockItem.id;
   // added-end
-  
+
   const updatedDocument = reducer(document, deleteTodoItem(input));
   expect(isTodoListDocument(updatedDocument)).toBe(true);
 
   expect(updatedDocument.operations.global).toHaveLength(1);
-  expect(updatedDocument.operations.global[0].action.type).toBe("DELETE_TODO_ITEM");
-  expect(updatedDocument.operations.global[0].action.input).toStrictEqual(input);
+  expect(updatedDocument.operations.global[0].action.type).toBe(
+    "DELETE_TODO_ITEM",
+  );
+  expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
+    input,
+  );
   expect(updatedDocument.operations.global[0].index).toEqual(0);
-  
+
   // added-start
   // Verify the item was actually removed
   const updatedItems = updatedDocument.state.global.items;
@@ -308,19 +321,25 @@ describe("Todos Operations", () => {
     expect(isTodoListDocument(updatedDocument)).toBe(true);
 
     expect(updatedDocument.operations.global).toHaveLength(1);
-    expect(updatedDocument.operations.global[0].action.type).toBe("ADD_TODO_ITEM");
-    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(input);
+    expect(updatedDocument.operations.global[0].action.type).toBe(
+      "ADD_TODO_ITEM",
+    );
+    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
+      input,
+    );
     expect(updatedDocument.operations.global[0].index).toEqual(0);
   });
 
   it("should handle updateTodoItem operation to update text", () => {
     const mockItem = generateMock(TodoItemSchema());
-    const input: UpdateTodoItemInput = generateMock(UpdateTodoItemInputSchema());
+    const input: UpdateTodoItemInput = generateMock(
+      UpdateTodoItemInputSchema(),
+    );
     input.id = mockItem.id;
     const newText = "new text";
     input.text = newText;
     input.checked = undefined;
-    
+
     const document = utils.createDocument({
       global: {
         items: [mockItem],
@@ -331,8 +350,10 @@ describe("Todos Operations", () => {
     expect(isTodoListDocument(updatedDocument)).toBe(true);
 
     expect(updatedDocument.operations.global).toHaveLength(1);
-    expect(updatedDocument.operations.global[0].action.type).toBe("UPDATE_TODO_ITEM");
-    
+    expect(updatedDocument.operations.global[0].action.type).toBe(
+      "UPDATE_TODO_ITEM",
+    );
+
     const updatedItem = updatedDocument.state.global.items.find(
       (item) => item.id === input.id,
     );
@@ -342,12 +363,14 @@ describe("Todos Operations", () => {
 
   it("should handle updateTodoItem operation to update checked", () => {
     const mockItem = generateMock(TodoItemSchema());
-    const input: UpdateTodoItemInput = generateMock(UpdateTodoItemInputSchema());
+    const input: UpdateTodoItemInput = generateMock(
+      UpdateTodoItemInputSchema(),
+    );
     input.id = mockItem.id;
     const newChecked = !mockItem.checked;
     input.checked = newChecked;
     input.text = undefined;
-    
+
     const document = utils.createDocument({
       global: {
         items: [mockItem],
@@ -371,16 +394,20 @@ describe("Todos Operations", () => {
         items: [mockItem],
       },
     });
-    
-    const input: DeleteTodoItemInput = generateMock(DeleteTodoItemInputSchema());
+
+    const input: DeleteTodoItemInput = generateMock(
+      DeleteTodoItemInputSchema(),
+    );
     input.id = mockItem.id;
-    
+
     const updatedDocument = reducer(document, deleteTodoItem(input));
     expect(isTodoListDocument(updatedDocument)).toBe(true);
 
     expect(updatedDocument.operations.global).toHaveLength(1);
-    expect(updatedDocument.operations.global[0].action.type).toBe("DELETE_TODO_ITEM");
-    
+    expect(updatedDocument.operations.global[0].action.type).toBe(
+      "DELETE_TODO_ITEM",
+    );
+
     const updatedItems = updatedDocument.state.global.items;
     expect(updatedItems).toHaveLength(0);
   });
@@ -421,5 +448,4 @@ Expected test output:
 
 ## Up next: Building the editor
 
-In the next chapter, you'll learn how to implement a user interface (editor) for your document model so you can interact with it visually. 
-
+In the next chapter, you'll learn how to implement a user interface (editor) for your document model so you can interact with it visually.

@@ -45,7 +45,7 @@ Notes:
 
 ```
 Command Overview:
-  The init command creates a new Powerhouse project with optimal defaults. It sets up a fully 
+  The init command creates a new Powerhouse project with optimal defaults. It sets up a fully
   configured project structure with all necessary dependencies, configurations, and boilerplate.
 
   This command:
@@ -56,23 +56,23 @@ Command Overview:
 
 Arguments:
   [project-name]        Optional. Name of the project to create. If not provided,
-                        you'll be prompted to provide a name, or the current directory 
+                        you'll be prompted to provide a name, or the current directory
                         will be used if in interactive mode.
 
 Options:
   -p, --project         Specify the name of the project to create.
-                        
+
   -i, --interactive     Run the command in interactive mode, which will guide you
                         through the project setup with customizable options.
-  
+
   -t, --tag             Version of the Powerhouse dependencies to use. Defaults to "main"
-                        
+
   --dev                 Use the "development" version.
-                        
+
   --staging             Use the "staging" version.
 
   -b, --branch          Specify custom boilerplate branch to use.
-                        
+
   --package-manager     Override the auto-detected package manager with the specified one.
 
 Project Structure:
@@ -96,7 +96,7 @@ Examples:
 
 ```
 Command Overview:
-  The setup-globals command initializes a new Powerhouse project with the necessary global 
+  The setup-globals command initializes a new Powerhouse project with the necessary global
   configuration. It helps you set up a project quickly with proper defaults and dependencies.
 
   This command:
@@ -111,16 +111,16 @@ Arguments:
 
 Options:
   -p, --project         Specify the name of the project to create.
-                        
+
   -i, --interactive     Run the command in interactive mode, which will guide you
                         through the setup process with questions and prompts.
-                        
+
   -v, --version         Specify the development version to use. Defaults to "main".
-                        
+
   --dev                 Use the "development" version of the boilerplate.
-                        
+
   --staging             Use the "staging" version of the boilerplate.
-                        
+
   --package-manager     Override the auto-detected package manager with the specified one.
 
 Project Structure:
@@ -144,7 +144,7 @@ Examples:
 Command Overview:
   The update command helps you manage and update Powerhouse dependencies in your project. It provides
   an efficient way to keep your project up-to-date with the latest versions of Powerhouse packages.
-  
+
   This command:
   1. Updates all Powerhouse dependencies based on the semver ranges specified in your package.json
   2. Can force update all dependencies to a specific environment version (dev, prod, latest)
@@ -156,15 +156,15 @@ Options:
                         Valid environments: dev, prod, latest.
                         - dev: Uses @dev tag for all dependencies
                         - prod/latest: Uses @latest tag for all dependencies
-                        
+
   --package-manager     Override the auto-detected package manager with the specified one.
-                        
+
   --debug               Show additional logs while executing the command.
 
 Special Cases:
   - Local Dependencies: If you have dependencies linked from a local monorepo (using file: or link:
     protocols), the command will detect the monorepo root, build affected packages, then update.
-  
+
   - No Dependencies: If no Powerhouse dependencies are found in your project, the command will
     display a message and exit without making changes.
 
@@ -236,4 +236,4 @@ Examples:
 
 ---
 
-*This document was automatically generated from the help text in the codebase.*
+_This document was automatically generated from the help text in the codebase._

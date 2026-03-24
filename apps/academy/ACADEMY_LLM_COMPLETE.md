@@ -3,12 +3,12 @@
 > **LLM-Optimized Documentation**  
 > Generated: 2026-02-27T18:42:49.745Z  
 > Total Documents: 95  
-> Purpose: Comprehensive reference for AI systems  
+> Purpose: Comprehensive reference for AI systems
 
 ## Table of Contents
 
-
 ### Book of Powerhouse
+
 - [**Part 1: Powerhouse General Framework and Open-Source Capitalism**](#part-1-powerhouse-general-framework-and-open-source-capitalism)
 - [**Part 5: Powerhouse Platforms – Decentralized Operations and Builder**](#part-5-powerhouse-platforms-decentralized-operations-and-builder)
 - [Overview](#overview)
@@ -17,6 +17,7 @@
 - [Part 4: Scalable Network Organizations (SNOs)](#part-4-scalable-network-organizations-snos)
 
 ### Miscellaneous
+
 - [Analytics processors](#analytics-processors)
 - [API Reference](#api-reference)
 - [Authentication Guide](#authentication-guide)
@@ -119,14 +120,12 @@ This documentation is organized into the following categories:
 
 ---
 
-
 # Book of Powerhouse
-
 
 ## **Part 1: Powerhouse General Framework and Open-Source Capitalism** {#part-1-powerhouse-general-framework-and-open-source-capitalism}
 
 **Source:** `bookofpowerhouse/02-GeneralFrameworkAndPhilosophy.md`  
-**Category:** Book of Powerhouse  
+**Category:** Book of Powerhouse
 
 Powerhouse emerged in the wake of Ethereum’s DAO movement, which began gaining momentum after the collapse of _The DAO_ in 2016. This turning point spurred the creation of blockchain-enabled organizations capable of operating without centralized corporate structures. Over the years, governance systems and decentralized operational tools have advanced, paving the way for the next generation of organizations across chains like Solana, Ethereum Layer 2 solutions, and beyond. Powerhouse aims to advance these principles and build large, global organizations around networks.
 
@@ -164,11 +163,10 @@ This is what makes Powerhouse unique: it’s not just about running decentralize
 
 ---
 
-
 ## **Part 5: Powerhouse Platforms – Decentralized Operations and Builder** {#part-5-powerhouse-platforms-decentralized-operations-and-builder}
 
 **Source:** `bookofpowerhouse/06-SNOsInActionAndPlatformEconomies.md`  
-**Category:** Book of Powerhouse  
+**Category:** Book of Powerhouse
 
 ## **Introduction**
 
@@ -212,11 +210,10 @@ Powerhouse is not simply offering software; it is building the operating system 
 
 ---
 
-
 ## Overview {#overview}
 
 **Source:** `bookofpowerhouse/01-Overview.md`  
-**Category:** Book of Powerhouse  
+**Category:** Book of Powerhouse
 
 Powerhouse is an initiative at the intersection of software development, legal innovation, and new business models for open-source projects. These elements form a common vision for reimagining how software is created, funded, and sustained. While each component has its own purpose, they are deeply interconnected and designed to support one another.
 
@@ -248,11 +245,10 @@ Book of Powerhouse Outline:
 
 ---
 
-
 ## Part 2: Powerhouse Software Architecture {#part-2-powerhouse-software-architecture}
 
 **Source:** `bookofpowerhouse/03-PowerhouseSoftwareArchitecture.md`  
-**Category:** Book of Powerhouse  
+**Category:** Book of Powerhouse
 
 Powerhouse’s software architecture is designed to empower scalable, decentralized organizations with a modular, layered approach. It uses document models as the core unit that used across three layers:
 
@@ -291,11 +287,10 @@ Powerhouse’s software architecture is designed to empower scalable, decentrali
 
 ---
 
-
 ## Part 3: Development Approaches {#part-3-development-approaches}
 
 **Source:** `bookofpowerhouse/04-DevelopmentApproaches.md`  
-**Category:** Book of Powerhouse  
+**Category:** Book of Powerhouse
 
 Powerhouse’s development approaches are designed to enable efficient, scalable, and innovative solutions for decentralized organizations. By drawing from blockchain principles, adopting Model-Driven Development (MDD), leveraging dynamic document models, and employing a Rapid Application Development (RAD) process, Powerhouse provides a comprehensive framework to address the unique challenges of decentralized systems.
 
@@ -318,7 +313,6 @@ These methodologies enhance collaboration, streamline workflows, and accelerate 
     - MDD enables cross-functional collaboration by using **abstract models** as blueprints for workflows, data, and system behaviors—similar to how GraphQL schemas unify API design. These models ensure alignment across teams, enable early validation, and support seamless system evolution. **Meta-models** extend this by automating code generation, documentation, and workflow updates, reducing manual effort and ensuring consistency.
     - RAD accelerates development by eliminating backend complexity and leveraging **automated code generation**. Pre-built frameworks and reusable components let developers focus on UI/UX without managing backend logic. An **event-driven architecture** handles state and data sync, while document models serve as a **source of truth**, ensuring APIs, data structures, and front-end scaffolding stay in sync. Developers can rapidly iterate on tailored user experiences—akin to “swapping skins” in a game—without disrupting core functionality.
 
-
 ### CQRS (Command Query Responsibility Segregation)
 
     - CQRS, or Command Query Responsibility Segregation, is a key design principle in Powerhouse’s software architecture. It separates the responsibilities of handling write operations (commands) and read operations (queries) into distinct models, optimizing both for their specific purposes.
@@ -330,7 +324,6 @@ These methodologies enhance collaboration, streamline workflows, and accelerate 
         2. **Maintainability**: By isolating business logic (commands) from query logic, developers can iterate on one without affecting the other, ensuring the system evolves efficiently.
         3. **Flexibility**: Powerhouse supports multiple types of read models—such as relational databases, full-text search, and analytics—each tailored to specific organizational needs.
 
-
 ### Event-driven Architectures (EDA)
 
     - Event-Driven Architecture (EDA) is a foundational element of Powerhouse’s software philosophy, designed to create responsive, scalable systems that support asynchronous workflows. In EDA, events represent meaningful changes or actions, such as “Document Updated” or “Contributor Added,” and these events trigger reactions across the system in real time.
@@ -339,11 +332,10 @@ These methodologies enhance collaboration, streamline workflows, and accelerate 
 
 ---
 
-
 ## Part 4: Scalable Network Organizations (SNOs) {#part-4-scalable-network-organizations-snos}
 
 **Source:** `bookofpowerhouse/05-SNOsandANewModelForOSSandPublicGoods.md`  
-**Category:** Book of Powerhouse  
+**Category:** Book of Powerhouse
 
 Decentralized Autonomous Organizations (DAOs) once promised to revolutionize global collaboration by enabling decentralized governance, transparent decision-making, and equitable ownership. However, the reality has often fallen short. DAOs have struggled with legal ambiguity, resource allocation inefficiencies, and broken incentive structures. These challenges have stifled their ability to scale and compete with centralized organizations.
 
@@ -383,14 +375,12 @@ Legal structures are crucial for the success of SNOs, providing clarity, complia
 
 ---
 
-
 # Miscellaneous
-
 
 ## Analytics processors {#analytics-processors}
 
 **Source:** `academy/02-MasteryTrack/04-WorkWithData/_04-analytics-processor.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 An Analytics Processor is an object that can track analytics for operations and state changes on a set of document models. These analytics can be used to generate bespoke dashboards and reports, specific to the type or implementation of the document model.
 
@@ -1044,16 +1034,14 @@ Now that we have designed out our data, we can open up `line-item-processor/inde
 
 ```ts
 // ts code example:
-
 ```
 
 ---
 
-
 ## API Reference {#api-reference}
 
 **Source:** `academy/04-APIReferences/renown-sdk/02-APIReference.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 Complete API reference for the Renown SDK.
 
@@ -1077,27 +1065,28 @@ Central authentication provider that automatically initializes the Renown SDK.
 ```typescript
 // typescript code example:
 interface RenownUserProviderProps {
-  children: React.ReactNode
-  renownUrl?: string
-  networkId?: string
-  chainId?: string
-  loadingComponent?: React.ReactNode
-  errorComponent?: (error: Error, retry: () => void) => React.ReactNode
+  children: React.ReactNode;
+  renownUrl?: string;
+  networkId?: string;
+  chainId?: string;
+  loadingComponent?: React.ReactNode;
+  errorComponent?: (error: Error, retry: () => void) => React.ReactNode;
 }
 ```
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `children` | `React.ReactNode` | - | **Required.** Child components |
-| `renownUrl` | `string` | `'https://www.renown.id'` | Renown service URL |
-| `networkId` | `string` | `'eip155'` | Network identifier |
-| `chainId` | `string` | `'1'` | Chain identifier |
-| `loadingComponent` | `React.ReactNode` | undefined | Custom loading UI during initialization |
-| `errorComponent` | `(error, retry) => ReactNode` | undefined | Custom error UI if initialization fails |
+| Prop               | Type                          | Default                   | Description                             |
+| ------------------ | ----------------------------- | ------------------------- | --------------------------------------- |
+| `children`         | `React.ReactNode`             | -                         | **Required.** Child components          |
+| `renownUrl`        | `string`                      | `'https://www.renown.id'` | Renown service URL                      |
+| `networkId`        | `string`                      | `'eip155'`                | Network identifier                      |
+| `chainId`          | `string`                      | `'1'`                     | Chain identifier                        |
+| `loadingComponent` | `React.ReactNode`             | undefined                 | Custom loading UI during initialization |
+| `errorComponent`   | `(error, retry) => ReactNode` | undefined                 | Custom error UI if initialization fails |
 
 #### Example
 
 **Basic usage (auto-initializes with defaults):**
+
 ```typescript
 // typescript code example:
 <RenownUserProvider>
@@ -1106,6 +1095,7 @@ interface RenownUserProviderProps {
 ```
 
 **With custom configuration:**
+
 ```typescript
 // typescript code example:
 <RenownUserProvider
@@ -1152,27 +1142,30 @@ Smart button component that adapts based on authentication state.
 ```typescript
 // typescript code example:
 interface RenownAuthButtonProps {
-  className?: string
-  profileBaseUrl?: string
-  renderAuthenticated?: (props: RenownAuthButtonRenderProps) => React.ReactNode
-  renderUnauthenticated?: (props: { openRenown: () => void; isLoading: boolean }) => React.ReactNode
-  renderLoading?: () => React.ReactNode
-  showUsername?: boolean
-  showLogoutButton?: boolean
-  logoutButtonText?: string
+  className?: string;
+  profileBaseUrl?: string;
+  renderAuthenticated?: (props: RenownAuthButtonRenderProps) => React.ReactNode;
+  renderUnauthenticated?: (props: {
+    openRenown: () => void;
+    isLoading: boolean;
+  }) => React.ReactNode;
+  renderLoading?: () => React.ReactNode;
+  showUsername?: boolean;
+  showLogoutButton?: boolean;
+  logoutButtonText?: string;
 }
 ```
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `className` | `string` | `""` | Custom CSS class |
-| `profileBaseUrl` | `string` | `"https://www.renown.id/profile"` | Base URL for profile |
-| `renderAuthenticated` | `function` | Default renderer | Custom authenticated state |
-| `renderUnauthenticated` | `function` | Default renderer | Custom unauthenticated state |
-| `renderLoading` | `function` | Default renderer | Custom loading state |
-| `showUsername` | `boolean` | `true` | Show username next to avatar |
-| `showLogoutButton` | `boolean` | `false` | Show logout button |
-| `logoutButtonText` | `string` | `"Logout"` | Logout button text |
+| Prop                    | Type       | Default                           | Description                  |
+| ----------------------- | ---------- | --------------------------------- | ---------------------------- |
+| `className`             | `string`   | `""`                              | Custom CSS class             |
+| `profileBaseUrl`        | `string`   | `"https://www.renown.id/profile"` | Base URL for profile         |
+| `renderAuthenticated`   | `function` | Default renderer                  | Custom authenticated state   |
+| `renderUnauthenticated` | `function` | Default renderer                  | Custom unauthenticated state |
+| `renderLoading`         | `function` | Default renderer                  | Custom loading state         |
+| `showUsername`          | `boolean`  | `true`                            | Show username next to avatar |
+| `showLogoutButton`      | `boolean`  | `false`                           | Show logout button           |
+| `logoutButtonText`      | `string`   | `"Logout"`                        | Logout button text           |
 
 #### Example
 
@@ -1208,27 +1201,27 @@ A login button with Renown branding. By default, clicking the button triggers lo
 ```typescript
 // typescript code example:
 interface RenownLoginButtonProps {
-  onLogin: (() => void) | undefined
-  darkMode?: boolean
-  style?: CSSProperties
-  className?: string
+  onLogin: (() => void) | undefined;
+  darkMode?: boolean;
+  style?: CSSProperties;
+  className?: string;
   renderTrigger?: (props: {
-    onMouseEnter: () => void
-    onMouseLeave: () => void
-    isLoading: boolean
-  }) => ReactNode
-  showPopover?: boolean
+    onMouseEnter: () => void;
+    onMouseLeave: () => void;
+    isLoading: boolean;
+  }) => ReactNode;
+  showPopover?: boolean;
 }
 ```
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `onLogin` | `() => void \| undefined` | - | Callback when login is requested |
-| `darkMode` | `boolean` | `false` | Enable dark mode styling |
-| `style` | `CSSProperties` | - | Custom styles for the button |
-| `className` | `string` | - | Custom class name |
-| `renderTrigger` | `function` | - | Custom render function for the trigger button |
-| `showPopover` | `boolean` | `false` | Show a popover with connect option instead of triggering login directly |
+| Prop            | Type                      | Default | Description                                                             |
+| --------------- | ------------------------- | ------- | ----------------------------------------------------------------------- |
+| `onLogin`       | `() => void \| undefined` | -       | Callback when login is requested                                        |
+| `darkMode`      | `boolean`                 | `false` | Enable dark mode styling                                                |
+| `style`         | `CSSProperties`           | -       | Custom styles for the button                                            |
+| `className`     | `string`                  | -       | Custom class name                                                       |
+| `renderTrigger` | `function`                | -       | Custom render function for the trigger button                           |
+| `showPopover`   | `boolean`                 | `false` | Show a popover with connect option instead of triggering login directly |
 
 #### Example
 
@@ -1269,29 +1262,29 @@ Access authentication state and methods.
 ```typescript
 // typescript code example:
 interface RenownUserContextValue {
-  user: User | null
-  loginStatus: LoginStatus
-  isLoading: boolean
-  isInitialized: boolean
-  login: (userDid?: string) => Promise<void>
-  logout: () => Promise<void>
-  openRenown: () => void
-  connectCrypto: IConnectCrypto | null
-  renown: IRenown | null
+  user: User | null;
+  loginStatus: LoginStatus;
+  isLoading: boolean;
+  isInitialized: boolean;
+  login: (userDid?: string) => Promise<void>;
+  logout: () => Promise<void>;
+  openRenown: () => void;
+  connectCrypto: IConnectCrypto | null;
+  renown: IRenown | null;
 }
 ```
 
-| Property | Type | Description |
-|----------|------|-------------|
-| `user` | `User \| null` | Current authenticated user or null |
-| `loginStatus` | `LoginStatus` | Current authentication status |
-| `isLoading` | `boolean` | Whether an auth operation is in progress |
-| `isInitialized` | `boolean` | Whether the auth system has initialized |
-| `login` | `function` | Authenticate with optional DID |
-| `logout` | `function` | Log out current user |
-| `openRenown` | `function` | Open Renown authentication portal |
+| Property        | Type                     | Description                                         |
+| --------------- | ------------------------ | --------------------------------------------------- |
+| `user`          | `User \| null`           | Current authenticated user or null                  |
+| `loginStatus`   | `LoginStatus`            | Current authentication status                       |
+| `isLoading`     | `boolean`                | Whether an auth operation is in progress            |
+| `isInitialized` | `boolean`                | Whether the auth system has initialized             |
+| `login`         | `function`               | Authenticate with optional DID                      |
+| `logout`        | `function`               | Log out current user                                |
+| `openRenown`    | `function`               | Open Renown authentication portal                   |
 | `connectCrypto` | `IConnectCrypto \| null` | ConnectCrypto instance for cryptographic operations |
-| `renown` | `IRenown \| null` | Renown SDK instance |
+| `renown`        | `IRenown \| null`        | Renown SDK instance                                 |
 
 #### Example
 
@@ -1338,17 +1331,17 @@ Initialize the Renown SDK.
 function initRenown(
   did: string,
   networkId: string,
-  renownUrl: string
-): Promise<IRenown>
+  renownUrl: string,
+): Promise<IRenown>;
 ```
 
 #### Parameters
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `did` | `string` | Decentralized identifier (DID) |
+| Parameter   | Type     | Description                         |
+| ----------- | -------- | ----------------------------------- |
+| `did`       | `string` | Decentralized identifier (DID)      |
 | `networkId` | `string` | Network identifier (e.g., 'eip155') |
-| `renownUrl` | `string` | Renown service URL |
+| `renownUrl` | `string` | Renown service URL                  |
 
 #### Returns
 
@@ -1358,13 +1351,13 @@ function initRenown(
 
 ```typescript
 // typescript code example:
-import { initRenown } from '@renown/sdk'
+import { initRenown } from "@renown/sdk";
 
 const renown = await initRenown(
-  'did:pkh:eip155:1:0x123...',
-  'eip155',
-  'https://www.renown.id'
-)
+  "did:pkh:eip155:1:0x123...",
+  "eip155",
+  "https://www.renown.id",
+);
 ```
 
 ---
@@ -1380,17 +1373,17 @@ Authenticate a user with Renown.
 function login(
   userDid: string | undefined,
   renown: IRenown | undefined,
-  connectCrypto: IConnectCrypto | undefined
-): Promise<User | undefined>
+  connectCrypto: IConnectCrypto | undefined,
+): Promise<User | undefined>;
 ```
 
 #### Parameters
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `userDid` | `string \| undefined` | User's DID to authenticate |
-| `renown` | `IRenown \| undefined` | Renown instance |
-| `connectCrypto` | `IConnectCrypto \| undefined` | ConnectCrypto instance |
+| Parameter       | Type                          | Description                |
+| --------------- | ----------------------------- | -------------------------- |
+| `userDid`       | `string \| undefined`         | User's DID to authenticate |
+| `renown`        | `IRenown \| undefined`        | Renown instance            |
+| `connectCrypto` | `IConnectCrypto \| undefined` | ConnectCrypto instance     |
 
 #### Returns
 
@@ -1406,13 +1399,13 @@ function login(
 
 ```typescript
 // typescript code example:
-import { login } from '@renown/sdk'
+import { login } from "@renown/sdk";
 
 const user = await login(
-  'did:pkh:eip155:1:0x123...',
+  "did:pkh:eip155:1:0x123...",
   window.renown,
-  window.connectCrypto
-)
+  window.connectCrypto,
+);
 ```
 
 ---
@@ -1425,7 +1418,7 @@ Log out the current user.
 
 ```typescript
 // typescript code example:
-function logout(): Promise<void>
+function logout(): Promise<void>;
 ```
 
 #### Returns
@@ -1442,9 +1435,9 @@ function logout(): Promise<void>
 
 ```typescript
 // typescript code example:
-import { logout } from '@renown/sdk'
+import { logout } from "@renown/sdk";
 
-await logout()
+await logout();
 ```
 
 ---
@@ -1457,7 +1450,7 @@ Open the Renown authentication portal.
 
 ```typescript
 // typescript code example:
-function openRenown(): void
+function openRenown(): void;
 ```
 
 #### Returns
@@ -1499,7 +1492,7 @@ Process authentication redirect from Renown.
 
 ```typescript
 // typescript code example:
-function handleRenownReturn(): Promise<void>
+function handleRenownReturn(): Promise<void>;
 ```
 
 #### Returns
@@ -1517,12 +1510,12 @@ function handleRenownReturn(): Promise<void>
 
 ```typescript
 // typescript code example:
-import { handleRenownReturn } from '@renown/sdk'
+import { handleRenownReturn } from "@renown/sdk";
 
 // Called automatically by UserProvider
 useEffect(() => {
-  handleRenownReturn()
-}, [])
+  handleRenownReturn();
+}, []);
 ```
 
 ---
@@ -1535,14 +1528,14 @@ Fetch user profile data from Renown API.
 
 ```typescript
 // typescript code example:
-function fetchProfileDataForUser(user: User): Promise<User>
+function fetchProfileDataForUser(user: User): Promise<User>;
 ```
 
 #### Parameters
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `user` | `User` | User object to enrich with profile data |
+| Parameter | Type   | Description                             |
+| --------- | ------ | --------------------------------------- |
+| `user`    | `User` | User object to enrich with profile data |
 
 #### Returns
 
@@ -1559,11 +1552,11 @@ function fetchProfileDataForUser(user: User): Promise<User>
 
 ```typescript
 // typescript code example:
-import { fetchProfileDataForUser } from '@renown/sdk'
+import { fetchProfileDataForUser } from "@renown/sdk";
 
-const userWithProfile = await fetchProfileDataForUser(user)
-console.log(userWithProfile.name) // Display name
-console.log(userWithProfile.avatar) // Avatar URL
+const userWithProfile = await fetchProfileDataForUser(user);
+console.log(userWithProfile.name); // Display name
+console.log(userWithProfile.avatar); // Avatar URL
 ```
 
 ---
@@ -1576,7 +1569,7 @@ Restore authentication from stored session.
 
 ```typescript
 // typescript code example:
-function reauthenticateFromSession(): Promise<User | null>
+function reauthenticateFromSession(): Promise<User | null>;
 ```
 
 #### Returns
@@ -1594,11 +1587,11 @@ function reauthenticateFromSession(): Promise<User | null>
 
 ```typescript
 // typescript code example:
-import { reauthenticateFromSession } from '@renown/sdk'
+import { reauthenticateFromSession } from "@renown/sdk";
 
-const user = await reauthenticateFromSession()
+const user = await reauthenticateFromSession();
 if (user) {
-  console.log('Session restored for:', user.did)
+  console.log("Session restored for:", user.did);
 }
 ```
 
@@ -1612,14 +1605,14 @@ Extract Ethereum address from a DID.
 
 ```typescript
 // typescript code example:
-function extractEthAddressFromDid(did: string): string | null
+function extractEthAddressFromDid(did: string): string | null;
 ```
 
 #### Parameters
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `did` | `string` | DID string (e.g., 'did:pkh:eip155:1:0x123...') |
+| Parameter | Type     | Description                                    |
+| --------- | -------- | ---------------------------------------------- |
+| `did`     | `string` | DID string (e.g., 'did:pkh:eip155:1:0x123...') |
 
 #### Returns
 
@@ -1629,10 +1622,10 @@ function extractEthAddressFromDid(did: string): string | null
 
 ```typescript
 // typescript code example:
-import { extractEthAddressFromDid } from '@renown/sdk'
+import { extractEthAddressFromDid } from "@renown/sdk";
 
-const address = extractEthAddressFromDid('did:pkh:eip155:1:0x1234...')
-console.log(address) // '0x1234...'
+const address = extractEthAddressFromDid("did:pkh:eip155:1:0x1234...");
+console.log(address); // '0x1234...'
 ```
 
 ---
@@ -1646,12 +1639,12 @@ Represents an authenticated user.
 ```typescript
 // typescript code example:
 interface User {
-  did: string          // Decentralized identifier
-  address: string      // Ethereum address
-  name?: string        // Display name from profile
-  email?: string       // Email address
-  avatar?: string      // Avatar image URL
-  ethAddress?: string  // Ethereum address (duplicate of address)
+  did: string; // Decentralized identifier
+  address: string; // Ethereum address
+  name?: string; // Display name from profile
+  email?: string; // Email address
+  avatar?: string; // Avatar image URL
+  ethAddress?: string; // Ethereum address (duplicate of address)
 }
 ```
 
@@ -1664,10 +1657,10 @@ Authentication status enumeration.
 ```typescript
 // typescript code example:
 type LoginStatus =
-  | 'initial'           // Not yet checked
-  | 'checking'          // Currently checking auth
-  | 'authorized'        // User is authenticated
-  | 'not-authorized'    // User is not authenticated
+  | "initial" // Not yet checked
+  | "checking" // Currently checking auth
+  | "authorized" // User is authenticated
+  | "not-authorized"; // User is not authenticated
 ```
 
 ---
@@ -1679,15 +1672,15 @@ Type for the authentication context value.
 ```typescript
 // typescript code example:
 interface RenownUserContextValue {
-  user: User | null
-  loginStatus: LoginStatus
-  isLoading: boolean
-  isInitialized: boolean
-  login: (userDid?: string) => Promise<void>
-  logout: () => Promise<void>
-  openRenown: () => void
-  connectCrypto: IConnectCrypto | null
-  renown: IRenown | null
+  user: User | null;
+  loginStatus: LoginStatus;
+  isLoading: boolean;
+  isInitialized: boolean;
+  login: (userDid?: string) => Promise<void>;
+  logout: () => Promise<void>;
+  openRenown: () => void;
+  connectCrypto: IConnectCrypto | null;
+  renown: IRenown | null;
 }
 ```
 
@@ -1700,10 +1693,10 @@ Interface for the Renown instance.
 ```typescript
 // typescript code example:
 interface IRenown {
-  user: User | undefined | (() => Promise<User | undefined>)
-  login: (did: string) => Promise<User | undefined>
-  logout: () => Promise<void>
-  on: (event: string, handler: Function) => Unsubscribe
+  user: User | undefined | (() => Promise<User | undefined>);
+  login: (did: string) => Promise<User | undefined>;
+  logout: () => Promise<void>;
+  on: (event: string, handler: Function) => Unsubscribe;
 }
 ```
 
@@ -1716,7 +1709,7 @@ Interface for the ConnectCrypto instance.
 ```typescript
 // typescript code example:
 interface IConnectCrypto {
-  did: () => Promise<string>
+  did: () => Promise<string>;
   // Additional methods...
 }
 ```
@@ -1738,8 +1731,8 @@ constructor(keyStorage: IKeyStorage)
 
 #### Parameters
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
+| Parameter    | Type          | Description                |
+| ------------ | ------------- | -------------------------- |
 | `keyStorage` | `IKeyStorage` | Key storage implementation |
 
 #### Methods
@@ -1756,11 +1749,12 @@ async did(): Promise<string>
 **Returns:** `Promise<string>` - The DID
 
 **Example:**
+
 ```typescript
 // typescript code example:
-const connectCrypto = new ConnectCrypto(new BrowserKeyStorage())
-const did = await connectCrypto.did()
-console.log(did) // 'did:pkh:eip155:1:0x...'
+const connectCrypto = new ConnectCrypto(new BrowserKeyStorage());
+const did = await connectCrypto.did();
+console.log(did); // 'did:pkh:eip155:1:0x...'
 ```
 
 ---
@@ -1773,17 +1767,17 @@ Browser-based key storage using IndexedDB.
 
 ```typescript
 // typescript code example:
-constructor()
+constructor();
 ```
 
 #### Usage
 
 ```typescript
 // typescript code example:
-import { BrowserKeyStorage, ConnectCrypto } from '@renown/sdk'
+import { BrowserKeyStorage, ConnectCrypto } from "@renown/sdk";
 
-const keyStorage = new BrowserKeyStorage()
-const connectCrypto = new ConnectCrypto(keyStorage)
+const keyStorage = new BrowserKeyStorage();
+const connectCrypto = new ConnectCrypto(keyStorage);
 ```
 
 ---
@@ -1809,14 +1803,15 @@ static setUserData(data: {
 ```
 
 **Example:**
+
 ```typescript
 // typescript code example:
 SessionStorageManager.setUserData({
   user: currentUser,
   userDid: currentUser.did,
-  loginStatus: 'authorized',
-  timestamp: Date.now()
-})
+  loginStatus: "authorized",
+  timestamp: Date.now(),
+});
 ```
 
 ##### `getUserData()`
@@ -1836,11 +1831,12 @@ static getUserData(): {
 **Returns:** Session data or null
 
 **Example:**
+
 ```typescript
 // typescript code example:
-const session = SessionStorageManager.getUserData()
+const session = SessionStorageManager.getUserData();
 if (session) {
-  console.log('Found session for:', session.user.did)
+  console.log("Found session for:", session.user.did);
 }
 ```
 
@@ -1854,9 +1850,10 @@ static clearUserData(): void
 ```
 
 **Example:**
+
 ```typescript
 // typescript code example:
-SessionStorageManager.clearUserData()
+SessionStorageManager.clearUserData();
 ```
 
 ##### `isUserDataValid()`
@@ -1876,9 +1873,10 @@ static isUserDataValid(data: {
 **Returns:** `boolean` - Whether session is valid
 
 **Example:**
+
 ```typescript
 // typescript code example:
-const data = SessionStorageManager.getUserData()
+const data = SessionStorageManager.getUserData();
 if (data && SessionStorageManager.isUserDataValid(data)) {
   // Session is valid
 }
@@ -1905,7 +1903,7 @@ Default Renown service URL.
 
 ```typescript
 // typescript code example:
-const RENOWN_URL: string = 'https://www.renown.id'
+const RENOWN_URL: string = "https://www.renown.id";
 ```
 
 ---
@@ -1916,7 +1914,7 @@ Default network identifier.
 
 ```typescript
 // typescript code example:
-const RENOWN_NETWORK_ID: string = 'eip155'
+const RENOWN_NETWORK_ID: string = "eip155";
 ```
 
 ---
@@ -1927,7 +1925,7 @@ Default chain identifier.
 
 ```typescript
 // typescript code example:
-const RENOWN_CHAIN_ID: string = '1'
+const RENOWN_CHAIN_ID: string = "1";
 ```
 
 ---
@@ -1940,12 +1938,14 @@ The SDK extends the global `Window` interface:
 // typescript code example:
 declare global {
   interface Window {
-    renown?: IRenown
-    connectCrypto?: IConnectCrypto
+    renown?: IRenown;
+    connectCrypto?: IConnectCrypto;
     reactor?: {
-      setGenerateJwtHandler: (handler: (driveUrl: string) => Promise<string>) => void
-      removeJwtHandler: () => void
-    }
+      setGenerateJwtHandler: (
+        handler: (driveUrl: string) => Promise<string>,
+      ) => void;
+      removeJwtHandler: () => void;
+    };
   }
 }
 ```
@@ -1955,10 +1955,11 @@ declare global {
 Global Renown instance after initialization.
 
 **Usage:**
+
 ```typescript
 // typescript code example:
 if (window.renown) {
-  const user = await window.renown.login('did:pkh:...')
+  const user = await window.renown.login("did:pkh:...");
 }
 ```
 
@@ -1967,10 +1968,11 @@ if (window.renown) {
 Global ConnectCrypto instance after initialization.
 
 **Usage:**
+
 ```typescript
 // typescript code example:
 if (window.connectCrypto) {
-  const did = await window.connectCrypto.did()
+  const did = await window.connectCrypto.did();
 }
 ```
 
@@ -2002,10 +2004,10 @@ if (window.connectCrypto) {
 ```typescript
 // typescript code example:
 // ✅ Valid
-'did:pkh:eip155:1:0x1234567890123456789012345678901234567890'
+"did:pkh:eip155:1:0x1234567890123456789012345678901234567890";
 
 // ❌ Invalid
-'did:1234567890123456789012345678901234567890'
+"did:1234567890123456789012345678901234567890";
 ```
 
 #### `Renown or ConnectCrypto not available`
@@ -2047,7 +2049,7 @@ import type {
   RenownUserContextValue,
   IRenown,
   IConnectCrypto,
-} from '@renown/sdk'
+} from "@renown/sdk";
 ```
 
 ---
@@ -2055,9 +2057,9 @@ import type {
 ## Version Compatibility
 
 | SDK Version | React Version | TypeScript Version |
-|-------------|---------------|-------------------|
-| 5.x | 18.x - 19.x | 4.5+ |
-| 4.x | 18.x | 4.5+ |
+| ----------- | ------------- | ------------------ |
+| 5.x         | 18.x - 19.x   | 4.5+               |
+| 4.x         | 18.x          | 4.5+               |
 
 ---
 
@@ -2067,11 +2069,10 @@ import type {
 
 ---
 
-
 ## Authentication Guide {#authentication-guide}
 
 **Source:** `academy/04-APIReferences/renown-sdk/01-Authentication.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 Comprehensive guide to implementing authentication with the Renown SDK.
 
@@ -2416,47 +2417,47 @@ export function Navigation() {
 
 ```typescript
 // typescript code example:
-'use client'
+"use client";
 
-import { useUser } from '@renown/sdk'
-import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { toast } from 'react-hot-toast'
+import { useUser } from "@renown/sdk";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "react-hot-toast";
 
 export function AuthStateListener() {
-  const { user, loginStatus } = useUser()
-  const router = useRouter()
+  const { user, loginStatus } = useUser();
+  const router = useRouter();
 
   useEffect(() => {
-    if (loginStatus === 'authorized' && user) {
+    if (loginStatus === "authorized" && user) {
       // User just logged in
-      toast.success(`Welcome back, ${user.name || 'User'}!`)
+      toast.success(`Welcome back, ${user.name || "User"}!`);
 
       // Track analytics
       analytics.identify(user.did, {
         name: user.name,
         ethAddress: user.ethAddress,
-      })
+      });
 
       // Redirect to dashboard
-      router.push('/dashboard')
+      router.push("/dashboard");
     }
-  }, [loginStatus, user, router])
+  }, [loginStatus, user, router]);
 
   useEffect(() => {
-    if (loginStatus === 'not-authorized') {
+    if (loginStatus === "not-authorized") {
       // User logged out
-      toast.info('You have been logged out')
+      toast.info("You have been logged out");
 
       // Clear analytics
-      analytics.reset()
+      analytics.reset();
 
       // Redirect to home
-      router.push('/')
+      router.push("/");
     }
-  }, [loginStatus, router])
+  }, [loginStatus, router]);
 
-  return null // This is a listener component
+  return null; // This is a listener component
 }
 ```
 
@@ -2464,23 +2465,23 @@ export function AuthStateListener() {
 
 ```typescript
 // typescript code example:
-'use client'
+"use client";
 
-import { useUser as useRenownAuth } from '@renown/sdk'
-import { useEffect, useState } from 'react'
+import { useUser as useRenownAuth } from "@renown/sdk";
+import { useEffect, useState } from "react";
 
 interface ExtendedAuthState {
-  user: User | null
-  isAuthenticated: boolean
-  isLoading: boolean
-  hasCompletedProfile: boolean
-  login: () => void
-  logout: () => Promise<void>
+  user: User | null;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  hasCompletedProfile: boolean;
+  login: () => void;
+  logout: () => Promise<void>;
 }
 
 export function useUser(): ExtendedAuthState {
-  const auth = useRenownAuth()
-  const [hasCompletedProfile, setHasCompletedProfile] = useState(false)
+  const auth = useRenownAuth();
+  const [hasCompletedProfile, setHasCompletedProfile] = useState(false);
 
   useEffect(() => {
     if (auth.user) {
@@ -2489,21 +2490,21 @@ export function useUser(): ExtendedAuthState {
         auth.user.name &&
         auth.user.avatar &&
         auth.user.email
-      )
-      setHasCompletedProfile(isComplete)
+      );
+      setHasCompletedProfile(isComplete);
     } else {
-      setHasCompletedProfile(false)
+      setHasCompletedProfile(false);
     }
-  }, [auth.user])
+  }, [auth.user]);
 
   return {
     user: auth.user,
-    isAuthenticated: auth.loginStatus === 'authorized',
+    isAuthenticated: auth.loginStatus === "authorized",
     isLoading: auth.isLoading,
     hasCompletedProfile,
     login: auth.openRenown,
     logout: auth.logout,
-  }
+  };
 }
 ```
 
@@ -2572,17 +2573,17 @@ Always validate DIDs before processing:
 // typescript code example:
 function isValidDID(did: string): boolean {
   // Must start with did:pkh:
-  if (!did.startsWith('did:pkh:')) return false
+  if (!did.startsWith("did:pkh:")) return false;
 
   // Must have correct number of parts
-  const parts = did.split(':')
-  if (parts.length !== 5) return false
+  const parts = did.split(":");
+  if (parts.length !== 5) return false;
 
   // Validate ethereum address format
-  const address = parts[4]
-  if (!address.match(/^0x[a-fA-F0-9]{40}$/)) return false
+  const address = parts[4];
+  if (!address.match(/^0x[a-fA-F0-9]{40}$/)) return false;
 
-  return true
+  return true;
 }
 ```
 
@@ -2592,10 +2593,10 @@ Always use HTTPS for Renown URLs:
 
 ```typescript
 // typescript code example:
-const RENOWN_URL = process.env.NEXT_PUBLIC_RENOWN_URL
+const RENOWN_URL = process.env.NEXT_PUBLIC_RENOWN_URL;
 
-if (RENOWN_URL && !RENOWN_URL.startsWith('https://')) {
-  console.warn('WARNING: Renown URL should use HTTPS')
+if (RENOWN_URL && !RENOWN_URL.startsWith("https://")) {
+  console.warn("WARNING: Renown URL should use HTTPS");
 }
 ```
 
@@ -2605,12 +2606,12 @@ Implement session timeout for security:
 
 ```typescript
 // typescript code example:
-const SESSION_TIMEOUT = 24 * 60 * 60 * 1000 // 24 hours
+const SESSION_TIMEOUT = 24 * 60 * 60 * 1000; // 24 hours
 
 function isSessionValid(timestamp: number): boolean {
-  const now = Date.now()
-  const age = now - timestamp
-  return age < SESSION_TIMEOUT
+  const now = Date.now();
+  const age = now - timestamp;
+  return age < SESSION_TIMEOUT;
 }
 ```
 
@@ -2622,21 +2623,21 @@ function isSessionValid(timestamp: number): boolean {
 // typescript code example:
 // Server-side API route
 export async function GET(request: Request) {
-  const authHeader = request.headers.get('authorization')
+  const authHeader = request.headers.get("authorization");
 
   if (!authHeader) {
-    return new Response('Unauthorized', { status: 401 })
+    return new Response("Unauthorized", { status: 401 });
   }
 
   // Verify the JWT/credential with Renown
-  const isValid = await verifyRenownCredential(authHeader)
+  const isValid = await verifyRenownCredential(authHeader);
 
   if (!isValid) {
-    return new Response('Invalid credentials', { status: 403 })
+    return new Response("Invalid credentials", { status: 403 });
   }
 
   // Proceed with authorized request
-  return Response.json({ data: 'Protected data' })
+  return Response.json({ data: "Protected data" });
 }
 ```
 
@@ -2689,15 +2690,15 @@ Clean up subscriptions and listeners:
 useEffect(() => {
   const handleAuthChange = () => {
     // Handle auth changes
-  }
+  };
 
   // Subscribe to auth events
-  const unsubscribe = subscribeToAuthEvents(handleAuthChange)
+  const unsubscribe = subscribeToAuthEvents(handleAuthChange);
 
   return () => {
-    unsubscribe() // Cleanup
-  }
-}, [])
+    unsubscribe(); // Cleanup
+  };
+}, []);
 ```
 
 ### 4. Error Boundaries
@@ -2724,10 +2725,10 @@ Wrap auth components in error boundaries:
 ```typescript
 // typescript code example:
 // ❌ Wrong
-const user = window.renown?.user
+const user = window.renown?.user;
 
 // ✅ Correct
-const { user } = useUser()
+const { user } = useUser();
 ```
 
 ### Issue: Session not persisting
@@ -2739,9 +2740,9 @@ const { user } = useUser()
 ```typescript
 // typescript code example:
 try {
-  SessionStorageManager.setUserData(data)
+  SessionStorageManager.setUserData(data);
 } catch (error) {
-  console.warn('SessionStorage not available:', error)
+  console.warn("SessionStorage not available:", error);
   // Fallback to in-memory storage
 }
 ```
@@ -2756,10 +2757,10 @@ try {
 // typescript code example:
 const handleLogin = useCallback(
   debounce(() => {
-    openRenown()
+    openRenown();
   }, 1000),
-  [openRenown]
-)
+  [openRenown],
+);
 ```
 
 ## Next Steps
@@ -2768,11 +2769,10 @@ const handleLogin = useCallback(
 
 ---
 
-
 ## Authorization Hooks Specification {#authorization-hooks-specification}
 
 **Source:** `academy/02-MasteryTrack/03-BuildingUserExperiences/07-Authorization/_AuthorizationHooksSpecification.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 WARNING: AI Exploration for Discussion with the team. Not for live publication.
 
@@ -2783,6 +2783,7 @@ This document specifies the React hooks needed to integrate the Powerhouse autho
 **Current State:** The authorization system is fully implemented in the Reactor API with GraphQL queries and mutations, but there are no React hooks to consume this functionality in frontend applications.
 
 **Gap:** Frontend developers need React hooks that:
+
 - Expose the current user's authentication state and role
 - Check document-level permissions efficiently
 - Enable permission-aware UI rendering
@@ -2797,6 +2798,7 @@ This document specifies the React hooks needed to integrate the Powerhouse autho
 ### 1. Separation of Concerns
 
 Authorization hooks should follow the existing architectural patterns:
+
 - **Data hooks** (`useCurrentUser`, `useDocumentPermission`): Read authorization state
 - **Action hooks** (`useGrantPermission`, `useRevokePermission`): Modify permissions
 - **Composite hooks** (`useSelectedDocumentWithPermission`): Combine authorization with existing functionality
@@ -2804,6 +2806,7 @@ Authorization hooks should follow the existing architectural patterns:
 ### 2. Integration with Reactor
 
 All authorization data should flow through the Reactor, just like document and drive data:
+
 - The Reactor already manages GraphQL connections to the Reactor API
 - Authorization state should be cached and synchronized like document state
 - Hooks should subscribe to authorization changes via the Reactor's observable pattern
@@ -2833,17 +2836,20 @@ Returns the currently authenticated user's information.
 
 ```typescript
 // typescript code example:
-function useCurrentUser(): {
-  address: string;           // Ethereum address
-  did?: string;              // Decentralized Identifier
-  isAuthenticated: boolean;  // True if user has valid token
-  globalRole: 'ADMIN' | 'USER' | 'GUEST' | undefined;
-} | undefined
+function useCurrentUser():
+  | {
+      address: string; // Ethereum address
+      did?: string; // Decentralized Identifier
+      isAuthenticated: boolean; // True if user has valid token
+      globalRole: "ADMIN" | "USER" | "GUEST" | undefined;
+    }
+  | undefined;
 ```
 
 **Returns:** User information object, or `undefined` if not authenticated.
 
 **Implementation notes:**
+
 - Should extract user info from the bearer token stored in the Reactor
 - Subscribe to auth state changes (login/logout events)
 - Should validate token expiry and update state when token expires
@@ -2852,18 +2858,20 @@ function useCurrentUser(): {
 
 ```tsx
 // tsx code example:
-import { useCurrentUser } from '@powerhousedao/reactor-browser';
+import { useCurrentUser } from "@powerhousedao/reactor-browser";
 
 function UserProfileBadge() {
   const user = useCurrentUser();
-  
+
   if (!user) {
     return <LoginPrompt />;
   }
-  
+
   return (
     <div>
-      <span>{user.address.slice(0, 6)}...{user.address.slice(-4)}</span>
+      <span>
+        {user.address.slice(0, 6)}...{user.address.slice(-4)}
+      </span>
       <Badge>{user.globalRole}</Badge>
     </div>
   );
@@ -2878,7 +2886,7 @@ Returns whether the user is currently authenticated.
 
 ```typescript
 // typescript code example:
-function useIsAuthenticated(): boolean
+function useIsAuthenticated(): boolean;
 ```
 
 **Returns:** `true` if user has valid authentication token, `false` otherwise.
@@ -2889,11 +2897,11 @@ function useIsAuthenticated(): boolean
 // tsx code example:
 function ProtectedRoute() {
   const isAuthenticated = useIsAuthenticated();
-  
+
   if (!isAuthenticated) {
     return <Navigate to="/login" />;
   }
-  
+
   return <Outlet />;
 }
 ```
@@ -2906,12 +2914,11 @@ Checks if the current user has a specific global role or higher.
 
 ```typescript
 // typescript code example:
-function useHasGlobalRole(
-  role: 'ADMIN' | 'USER' | 'GUEST'
-): boolean
+function useHasGlobalRole(role: "ADMIN" | "USER" | "GUEST"): boolean;
 ```
 
 **Parameters:**
+
 - `role` — The minimum required global role
 
 **Returns:** `true` if user has the specified role or higher (ADMIN > USER > GUEST).
@@ -2921,12 +2928,12 @@ function useHasGlobalRole(
 ```tsx
 // tsx code example:
 function AdminPanel() {
-  const isAdmin = useHasGlobalRole('ADMIN');
-  
+  const isAdmin = useHasGlobalRole("ADMIN");
+
   if (!isAdmin) {
     return <AccessDenied />;
   }
-  
+
   return <AdminDashboard />;
 }
 ```
@@ -2941,23 +2948,25 @@ Returns the current user's permission level for a specific document.
 
 ```typescript
 // typescript code example:
-function useDocumentPermission(
-  documentId: string | null | undefined
-): {
-  permission: 'ADMIN' | 'WRITE' | 'READ' | undefined;
-  isLoading: boolean;
-  error?: Error;
-  source: 'direct' | 'group' | 'inherited' | 'none';
-  refresh: () => Promise<void>;
-} | undefined
+function useDocumentPermission(documentId: string | null | undefined):
+  | {
+      permission: "ADMIN" | "WRITE" | "READ" | undefined;
+      isLoading: boolean;
+      error?: Error;
+      source: "direct" | "group" | "inherited" | "none";
+      refresh: () => Promise<void>;
+    }
+  | undefined;
 ```
 
 **Parameters:**
+
 - `documentId` — The document ID to check permissions for, or `null`/`undefined` to skip
 
 **Returns:** Permission information object, or `undefined` if documentId is null/undefined.
 
 **Fields:**
+
 - `permission` — The user's permission level, or `undefined` if no permission
 - `isLoading` — True while permission check is in progress
 - `error` — Any error that occurred during permission check
@@ -2965,6 +2974,7 @@ function useDocumentPermission(
 - `refresh` — Function to force refresh the permission from the server
 
 **Implementation notes:**
+
 - Should check permission cache first, then query GraphQL if not cached
 - Should handle permission inheritance (check parent folders/drives)
 - Should check both direct user permissions and group permissions
@@ -2974,22 +2984,18 @@ function useDocumentPermission(
 
 ```tsx
 // tsx code example:
-import { useDocumentPermission } from '@powerhousedao/reactor-browser';
+import { useDocumentPermission } from "@powerhousedao/reactor-browser";
 
 function DocumentEditor({ documentId }: { documentId: string }) {
   const { permission, isLoading } = useDocumentPermission(documentId);
-  
+
   if (isLoading) {
     return <LoadingSpinner />;
   }
-  
-  const canEdit = permission === 'WRITE' || permission === 'ADMIN';
-  
-  return (
-    <div>
-      {canEdit ? <EditableDocument /> : <ReadOnlyDocument />}
-    </div>
-  );
+
+  const canEdit = permission === "WRITE" || permission === "ADMIN";
+
+  return <div>{canEdit ? <EditableDocument /> : <ReadOnlyDocument />}</div>;
 }
 ```
 
@@ -3001,12 +3007,11 @@ Checks if the current user can read a document.
 
 ```typescript
 // typescript code example:
-function useCanRead(
-  documentId: string | null | undefined
-): boolean
+function useCanRead(documentId: string | null | undefined): boolean;
 ```
 
 **Parameters:**
+
 - `documentId` — The document ID to check
 
 **Returns:** `true` if user has READ, WRITE, or ADMIN permission.
@@ -3019,12 +3024,11 @@ Checks if the current user can write to a document.
 
 ```typescript
 // typescript code example:
-function useCanWrite(
-  documentId: string | null | undefined
-): boolean
+function useCanWrite(documentId: string | null | undefined): boolean;
 ```
 
 **Parameters:**
+
 - `documentId` — The document ID to check
 
 **Returns:** `true` if user has WRITE or ADMIN permission.
@@ -3037,12 +3041,11 @@ Checks if the current user can administer a document (manage permissions).
 
 ```typescript
 // typescript code example:
-function useCanAdmin(
-  documentId: string | null | undefined
-): boolean
+function useCanAdmin(documentId: string | null | undefined): boolean;
 ```
 
 **Parameters:**
+
 - `documentId` — The document ID to check
 
 **Returns:** `true` if user has ADMIN permission.
@@ -3054,7 +3057,7 @@ function useCanAdmin(
 function DocumentToolbar({ documentId }: { documentId: string }) {
   const canWrite = useCanWrite(documentId);
   const canAdmin = useCanAdmin(documentId);
-  
+
   return (
     <Toolbar>
       {canWrite && (
@@ -3079,17 +3082,19 @@ Checks if the current user can execute a specific operation on a document.
 // typescript code example:
 function useCanExecuteOperation(
   documentId: string | null | undefined,
-  operationType: string | null | undefined
-): boolean
+  operationType: string | null | undefined,
+): boolean;
 ```
 
 **Parameters:**
+
 - `documentId` — The document ID to check
 - `operationType` — The operation type (e.g., "DELETE_NODE", "ADD_FOLDER")
 
 **Returns:** `true` if user has permission to execute the operation.
 
 **Implementation notes:**
+
 - Should check if operation permissions are configured for the document
 - If no operation-specific permissions exist, fall back to document permission level
 - Should cache operation permission checks
@@ -3099,9 +3104,9 @@ function useCanExecuteOperation(
 ```tsx
 // tsx code example:
 function NodeContextMenu({ node, documentId }: Props) {
-  const canDelete = useCanExecuteOperation(documentId, 'DELETE_NODE');
-  const canRename = useCanExecuteOperation(documentId, 'RENAME_NODE');
-  
+  const canDelete = useCanExecuteOperation(documentId, "DELETE_NODE");
+  const canRename = useCanExecuteOperation(documentId, "RENAME_NODE");
+
   return (
     <Menu>
       {canRename && <MenuItem>Rename</MenuItem>}
@@ -3119,29 +3124,30 @@ Returns detailed access information for a document, including all users and grou
 
 ```typescript
 // typescript code example:
-function useDocumentAccess(
-  documentId: string | null | undefined
-): {
-  documentId: string;
-  userPermissions: Array<{
-    userAddress: string;
-    permission: 'ADMIN' | 'WRITE' | 'READ';
-    grantedBy: string;
-    createdAt: string;
-  }>;
-  groupPermissions: Array<{
-    groupId: number;
-    groupName: string;
-    permission: 'ADMIN' | 'WRITE' | 'READ';
-    grantedBy: string;
-  }>;
-  isLoading: boolean;
-  error?: Error;
-  refresh: () => Promise<void>;
-} | undefined
+function useDocumentAccess(documentId: string | null | undefined):
+  | {
+      documentId: string;
+      userPermissions: Array<{
+        userAddress: string;
+        permission: "ADMIN" | "WRITE" | "READ";
+        grantedBy: string;
+        createdAt: string;
+      }>;
+      groupPermissions: Array<{
+        groupId: number;
+        groupName: string;
+        permission: "ADMIN" | "WRITE" | "READ";
+        grantedBy: string;
+      }>;
+      isLoading: boolean;
+      error?: Error;
+      refresh: () => Promise<void>;
+    }
+  | undefined;
 ```
 
 **Parameters:**
+
 - `documentId` — The document ID to get access information for
 
 **Returns:** Detailed access information, or `undefined` if documentId is null/undefined.
@@ -3155,20 +3161,20 @@ function useDocumentAccess(
 function PermissionsManager({ documentId }: { documentId: string }) {
   const access = useDocumentAccess(documentId);
   const canAdmin = useCanAdmin(documentId);
-  
+
   if (!canAdmin) {
     return <AccessDenied />;
   }
-  
+
   if (!access || access.isLoading) {
     return <LoadingSpinner />;
   }
-  
+
   return (
     <div>
       <h2>User Permissions</h2>
       <PermissionsList permissions={access.userPermissions} />
-      
+
       <h2>Group Permissions</h2>
       <GroupPermissionsList permissions={access.groupPermissions} />
     </div>
@@ -3184,12 +3190,14 @@ Returns all documents the current user has explicit permissions for.
 
 ```typescript
 // typescript code example:
-function useUserDocumentPermissions(): Array<{
-  documentId: string;
-  permission: 'ADMIN' | 'WRITE' | 'READ';
-  grantedBy: string;
-  createdAt: string;
-}> | undefined
+function useUserDocumentPermissions():
+  | Array<{
+      documentId: string;
+      permission: "ADMIN" | "WRITE" | "READ";
+      grantedBy: string;
+      createdAt: string;
+    }>
+  | undefined;
 ```
 
 **Returns:** Array of documents with their permission levels.
@@ -3206,12 +3214,14 @@ Returns all groups the current user belongs to.
 
 ```typescript
 // typescript code example:
-function useUserGroups(): Array<{
-  id: number;
-  name: string;
-  description?: string;
-  memberCount?: number;
-}> | undefined
+function useUserGroups():
+  | Array<{
+      id: number;
+      name: string;
+      description?: string;
+      memberCount?: number;
+    }>
+  | undefined;
 ```
 
 **Returns:** Array of groups, or `undefined` if not loaded.
@@ -3222,15 +3232,15 @@ function useUserGroups(): Array<{
 // tsx code example:
 function UserGroupsBadge() {
   const groups = useUserGroups();
-  
+
   if (!groups || groups.length === 0) {
     return null;
   }
-  
+
   return (
     <div>
       <span>Member of: </span>
-      {groups.map(group => (
+      {groups.map((group) => (
         <Badge key={group.id}>{group.name}</Badge>
       ))}
     </div>
@@ -3246,17 +3256,19 @@ Returns all groups (admin only).
 
 ```typescript
 // typescript code example:
-function useGroups(): {
-  groups: Array<{
-    id: number;
-    name: string;
-    description?: string;
-    members: string[];
-  }>;
-  isLoading: boolean;
-  error?: Error;
-  refresh: () => Promise<void>;
-} | undefined
+function useGroups():
+  | {
+      groups: Array<{
+        id: number;
+        name: string;
+        description?: string;
+        members: string[];
+      }>;
+      isLoading: boolean;
+      error?: Error;
+      refresh: () => Promise<void>;
+    }
+  | undefined;
 ```
 
 **Returns:** All groups with member lists, or `undefined` if user doesn't have admin access.
@@ -3271,10 +3283,11 @@ Checks if the current user is a member of a specific group.
 
 ```typescript
 // typescript code example:
-function useIsInGroup(groupId: number | null | undefined): boolean
+function useIsInGroup(groupId: number | null | undefined): boolean;
 ```
 
 **Parameters:**
+
 - `groupId` — The group ID to check membership for
 
 **Returns:** `true` if user is a member of the group.
@@ -3292,8 +3305,8 @@ Returns a function to grant document permission to a user.
 function useGrantDocumentPermission(): (
   documentId: string,
   userAddress: string,
-  permission: 'ADMIN' | 'WRITE' | 'READ'
-) => Promise<void>
+  permission: "ADMIN" | "WRITE" | "READ",
+) => Promise<void>;
 ```
 
 **Returns:** An async function that grants permission.
@@ -3306,27 +3319,27 @@ function useGrantDocumentPermission(): (
 // tsx code example:
 function GrantPermissionForm({ documentId }: { documentId: string }) {
   const grantPermission = useGrantDocumentPermission();
-  const [userAddress, setUserAddress] = useState('');
-  const [level, setLevel] = useState<'READ' | 'WRITE' | 'ADMIN'>('READ');
-  
+  const [userAddress, setUserAddress] = useState("");
+  const [level, setLevel] = useState<"READ" | "WRITE" | "ADMIN">("READ");
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       await grantPermission(documentId, userAddress, level);
-      alert('Permission granted successfully');
+      alert("Permission granted successfully");
     } catch (error) {
       alert(`Failed: ${error.message}`);
     }
   };
-  
+
   return (
     <form onSubmit={handleSubmit}>
-      <input 
-        value={userAddress} 
-        onChange={e => setUserAddress(e.target.value)}
+      <input
+        value={userAddress}
+        onChange={(e) => setUserAddress(e.target.value)}
         placeholder="User address"
       />
-      <select value={level} onChange={e => setLevel(e.target.value)}>
+      <select value={level} onChange={(e) => setLevel(e.target.value)}>
         <option value="READ">Read</option>
         <option value="WRITE">Write</option>
         <option value="ADMIN">Admin</option>
@@ -3347,8 +3360,8 @@ Returns a function to revoke document permission from a user.
 // typescript code example:
 function useRevokeDocumentPermission(): (
   documentId: string,
-  userAddress: string
-) => Promise<void>
+  userAddress: string,
+) => Promise<void>;
 ```
 
 **Returns:** An async function that revokes permission.
@@ -3366,8 +3379,8 @@ Returns a function to grant document permission to a group.
 function useGrantGroupPermission(): (
   documentId: string,
   groupId: number,
-  permission: 'ADMIN' | 'WRITE' | 'READ'
-) => Promise<void>
+  permission: "ADMIN" | "WRITE" | "READ",
+) => Promise<void>;
 ```
 
 ---
@@ -3380,8 +3393,8 @@ Returns a function to revoke document permission from a group.
 // typescript code example:
 function useRevokeGroupPermission(): (
   documentId: string,
-  groupId: number
-) => Promise<void>
+  groupId: number,
+) => Promise<void>;
 ```
 
 ---
@@ -3394,8 +3407,8 @@ Returns a function to create a new group.
 // typescript code example:
 function useCreateGroup(): (
   name: string,
-  description?: string
-) => Promise<{ id: number; name: string; description?: string }>
+  description?: string,
+) => Promise<{ id: number; name: string; description?: string }>;
 ```
 
 **Returns:** An async function that creates a group and returns the created group.
@@ -3412,8 +3425,8 @@ Returns a function to add a user to a group.
 // typescript code example:
 function useAddUserToGroup(): (
   groupId: number,
-  userAddress: string
-) => Promise<void>
+  userAddress: string,
+) => Promise<void>;
 ```
 
 ---
@@ -3426,8 +3439,8 @@ Returns a function to remove a user from a group.
 // typescript code example:
 function useRemoveUserFromGroup(): (
   groupId: number,
-  userAddress: string
-) => Promise<void>
+  userAddress: string,
+) => Promise<void>;
 ```
 
 ---
@@ -3441,8 +3454,8 @@ Returns a function to grant operation-specific permission.
 function useGrantOperationPermission(): (
   documentId: string,
   operationType: string,
-  userAddress: string
-) => Promise<void>
+  userAddress: string,
+) => Promise<void>;
 ```
 
 ---
@@ -3456,8 +3469,8 @@ Returns a function to revoke operation-specific permission.
 function useRevokeOperationPermission(): (
   documentId: string,
   operationType: string,
-  userAddress: string
-) => Promise<void>
+  userAddress: string,
+) => Promise<void>;
 ```
 
 ---
@@ -3478,13 +3491,13 @@ function useSelectedDocumentWithPermission(): readonly [
   document: PHDocument | undefined,
   dispatch: DocumentDispatch,
   permission: {
-    level: 'ADMIN' | 'WRITE' | 'READ' | undefined;
+    level: "ADMIN" | "WRITE" | "READ" | undefined;
     canRead: boolean;
     canWrite: boolean;
     canAdmin: boolean;
     isLoading: boolean;
-  }
-]
+  },
+];
 ```
 
 **Returns:** A tuple `[document, dispatch, permission]`.
@@ -3495,21 +3508,21 @@ function useSelectedDocumentWithPermission(): readonly [
 // tsx code example:
 function SmartDocumentEditor() {
   const [document, dispatch, permission] = useSelectedDocumentWithPermission();
-  
+
   if (!document) {
     return <NoDocumentSelected />;
   }
-  
+
   if (permission.isLoading) {
     return <LoadingPermissions />;
   }
-  
+
   if (!permission.canRead) {
     return <AccessDenied />;
   }
-  
+
   return (
-    <DocumentView 
+    <DocumentView
       document={document}
       dispatch={dispatch}
       readOnly={!permission.canWrite}
@@ -3527,17 +3540,17 @@ Extends `useDocumentById` to include permission information.
 ```typescript
 // typescript code example:
 function useDocumentByIdWithPermission(
-  id: string | null | undefined
+  id: string | null | undefined,
 ): readonly [
   document: PHDocument | undefined,
   dispatch: DocumentDispatch,
   permission: {
-    level: 'ADMIN' | 'WRITE' | 'READ' | undefined;
+    level: "ADMIN" | "WRITE" | "READ" | undefined;
     canRead: boolean;
     canWrite: boolean;
     canAdmin: boolean;
-  }
-]
+  },
+];
 ```
 
 ---
@@ -3550,11 +3563,12 @@ Returns documents filtered by minimum permission level.
 // typescript code example:
 function useDocumentsWithPermission(
   documentIds: string[],
-  minPermission: 'READ' | 'WRITE' | 'ADMIN'
-): PHDocument[]
+  minPermission: "READ" | "WRITE" | "ADMIN",
+): PHDocument[];
 ```
 
 **Parameters:**
+
 - `documentIds` — Array of document IDs to check
 - `minPermission` — Minimum required permission level
 
@@ -3566,11 +3580,11 @@ function useDocumentsWithPermission(
 // tsx code example:
 function EditableDocumentsList() {
   const allDocumentIds = useAllDocumentIds();
-  const editableDocs = useDocumentsWithPermission(allDocumentIds, 'WRITE');
-  
+  const editableDocs = useDocumentsWithPermission(allDocumentIds, "WRITE");
+
   return (
     <ul>
-      {editableDocs.map(doc => (
+      {editableDocs.map((doc) => (
         <li key={doc.header.id}>
           {doc.name} <EditIcon />
         </li>
@@ -3589,11 +3603,12 @@ Returns nodes in the selected drive filtered by permission.
 ```typescript
 // typescript code example:
 function useFilteredNodesInSelectedDrive(
-  minPermission?: 'READ' | 'WRITE' | 'ADMIN'
-): Node[] | undefined
+  minPermission?: "READ" | "WRITE" | "ADMIN",
+): Node[] | undefined;
 ```
 
 **Parameters:**
+
 - `minPermission` — Optional minimum permission filter
 
 **Returns:** Array of nodes the user has access to.
@@ -3609,8 +3624,14 @@ Extends `useNodeActions` to automatically check permissions before executing act
 ```typescript
 // typescript code example:
 function useNodeActionsWithPermissionChecks(): {
-  onAddFile: (file: File, parent: Node | undefined) => Promise<Node | undefined>;
-  onAddFolder: (name: string, parent: Node | undefined) => Promise<Node | undefined>;
+  onAddFile: (
+    file: File,
+    parent: Node | undefined,
+  ) => Promise<Node | undefined>;
+  onAddFolder: (
+    name: string,
+    parent: Node | undefined,
+  ) => Promise<Node | undefined>;
   onRenameNode: (newName: string, node: Node) => Promise<Node | undefined>;
   onCopyNode: (src: Node, target: Node | undefined) => Promise<void>;
   onMoveNode: (src: Node, target: Node | undefined) => Promise<void>;
@@ -3625,10 +3646,11 @@ function useNodeActionsWithPermissionChecks(): {
     canMove: boolean;
     canDelete: boolean;
   };
-}
+};
 ```
 
 **Returns:** Enhanced node actions that:
+
 - Check permissions before executing
 - Throw clear errors if user lacks permission
 - Include a `permissions` object indicating what actions are available
@@ -3638,20 +3660,19 @@ function useNodeActionsWithPermissionChecks(): {
 ```tsx
 // tsx code example:
 function DriveToolbar() {
-  const { onAddFolder, onDeleteNode, permissions } = useNodeActionsWithPermissionChecks();
+  const { onAddFolder, onDeleteNode, permissions } =
+    useNodeActionsWithPermissionChecks();
   const selectedNode = useSelectedNode();
-  
+
   return (
     <Toolbar>
       {permissions.canAddFolder && (
-        <button onClick={() => onAddFolder('New Folder', undefined)}>
+        <button onClick={() => onAddFolder("New Folder", undefined)}>
           New Folder
         </button>
       )}
       {permissions.canDelete && selectedNode && (
-        <button onClick={() => onDeleteNode(selectedNode)}>
-          Delete
-        </button>
+        <button onClick={() => onDeleteNode(selectedNode)}>Delete</button>
       )}
     </Toolbar>
   );
@@ -3670,15 +3691,16 @@ A component that conditionally renders children based on permission checks.
 // tsx code example:
 interface RequirePermissionProps {
   documentId: string;
-  permission: 'READ' | 'WRITE' | 'ADMIN';
+  permission: "READ" | "WRITE" | "ADMIN";
   fallback?: React.ReactNode;
   children: React.ReactNode;
 }
 
-function RequirePermission(props: RequirePermissionProps): JSX.Element
+function RequirePermission(props: RequirePermissionProps): JSX.Element;
 ```
 
 **Props:**
+
 - `documentId` — The document to check permissions for
 - `permission` — The required permission level
 - `fallback` — Optional element to render if permission check fails
@@ -3688,8 +3710,8 @@ function RequirePermission(props: RequirePermissionProps): JSX.Element
 
 ```tsx
 // tsx code example:
-<RequirePermission 
-  documentId={documentId} 
+<RequirePermission
+  documentId={documentId}
   permission="WRITE"
   fallback={<ReadOnlyBanner />}
 >
@@ -3706,12 +3728,12 @@ A component that conditionally renders based on global role.
 ```tsx
 // tsx code example:
 interface RequireGlobalRoleProps {
-  role: 'ADMIN' | 'USER' | 'GUEST';
+  role: "ADMIN" | "USER" | "GUEST";
   fallback?: React.ReactNode;
   children: React.ReactNode;
 }
 
-function RequireGlobalRole(props: RequireGlobalRoleProps): JSX.Element
+function RequireGlobalRole(props: RequireGlobalRoleProps): JSX.Element;
 ```
 
 ---
@@ -3727,7 +3749,7 @@ interface RequireAuthenticationProps {
   children: React.ReactNode;
 }
 
-function RequireAuthentication(props: RequireAuthenticationProps): JSX.Element
+function RequireAuthentication(props: RequireAuthenticationProps): JSX.Element;
 ```
 
 **Example:**
@@ -3750,11 +3772,11 @@ A context provider that pre-fetches and caches permission data for descendants.
 ```tsx
 // tsx code example:
 interface PermissionProviderProps {
-  documentIds?: string[];  // Optional: documents to pre-fetch permissions for
+  documentIds?: string[]; // Optional: documents to pre-fetch permissions for
   children: React.ReactNode;
 }
 
-function PermissionProvider(props: PermissionProviderProps): JSX.Element
+function PermissionProvider(props: PermissionProviderProps): JSX.Element;
 ```
 
 **Usage:** Wrap your app or a section of your app to optimize permission checks.
@@ -3767,6 +3789,7 @@ function PermissionProvider(props: PermissionProviderProps): JSX.Element
 ```
 
 **Implementation notes:**
+
 - Should batch fetch permissions for all specified documents on mount
 - Should subscribe to permission changes and update cache
 - Should provide cached permission data to descendant hooks
@@ -3781,6 +3804,7 @@ function PermissionProvider(props: PermissionProviderProps): JSX.Element
 All authorization hooks should use GraphQL queries/mutations from the Auth subgraph:
 
 **Queries:**
+
 - `documentAccess(documentId: String!)`
 - `userDocumentPermissions`
 - `groups`
@@ -3788,6 +3812,7 @@ All authorization hooks should use GraphQL queries/mutations from the Auth subgr
 - `canExecuteOperation(documentId: String!, operationType: String!)`
 
 **Mutations:**
+
 - `grantDocumentPermission(documentId, userAddress, permission)`
 - `revokeDocumentPermission(documentId, userAddress)`
 - `grantGroupPermission(documentId, groupId, permission)`
@@ -3798,32 +3823,37 @@ All authorization hooks should use GraphQL queries/mutations from the Auth subgr
 ### 2. Caching Strategy
 
 **Permission Cache Structure:**
+
 ```typescript
 // typescript code example:
 interface PermissionCache {
   // User's permissions by document ID
-  userPermissions: Map<string, {
-    permission: 'ADMIN' | 'WRITE' | 'READ' | undefined;
-    source: 'direct' | 'group' | 'inherited';
-    timestamp: number;
-    ttl: number;
-  }>;
-  
+  userPermissions: Map<
+    string,
+    {
+      permission: "ADMIN" | "WRITE" | "READ" | undefined;
+      source: "direct" | "group" | "inherited";
+      timestamp: number;
+      ttl: number;
+    }
+  >;
+
   // Document access info (for admins)
   documentAccess: Map<string, DocumentAccessInfo>;
-  
+
   // User's groups
   userGroups: Array<Group> | undefined;
-  
+
   // All groups (for admins)
   allGroups: Array<Group> | undefined;
-  
+
   // Operation permissions by document
   operationPermissions: Map<string, Map<string, boolean>>;
 }
 ```
 
 **Cache Invalidation:**
+
 - Invalidate on permission mutations (grant/revoke)
 - Set TTL for permission checks (e.g., 5 minutes)
 - Provide manual refresh functions
@@ -3832,6 +3862,7 @@ interface PermissionCache {
 ### 3. Error States
 
 Hooks should distinguish between:
+
 - **Loading**: Permission check in progress
 - **No access**: User definitely doesn't have permission
 - **Error**: Permission check failed (network error, etc.)
@@ -3840,6 +3871,7 @@ Hooks should distinguish between:
 ### 4. Optimistic Updates
 
 When granting/revoking permissions:
+
 - Update local cache immediately (optimistic)
 - Show success state to user
 - Revert if mutation fails
@@ -3848,6 +3880,7 @@ When granting/revoking permissions:
 ### 5. Batch Operations
 
 When checking permissions for multiple documents:
+
 ```typescript
 // typescript code example:
 // Bad: Multiple sequential queries
@@ -3862,6 +3895,7 @@ const permissions = await checkPermissions(documentIds);
 ### 6. React Concurrent Mode
 
 Hooks should be compatible with React 18+ concurrent features:
+
 - Use `useTransition` for non-urgent permission updates
 - Support Suspense for permission loading states
 - Avoid tearing in concurrent renders
@@ -3869,6 +3903,7 @@ Hooks should be compatible with React 18+ concurrent features:
 ### 7. TypeScript Support
 
 All hooks should have full TypeScript support:
+
 - Generic type parameters where appropriate
 - Discriminated unions for loading/error states
 - Strict null checks for optional parameters
@@ -3876,6 +3911,7 @@ All hooks should have full TypeScript support:
 ### 8. Testing
 
 Each hook should have:
+
 - Unit tests with mocked Reactor
 - Integration tests with real GraphQL queries
 - Tests for error cases and edge conditions
@@ -3886,28 +3922,33 @@ Each hook should have:
 ## Migration Path
 
 ### Phase 1: Core Hooks (MVP)
+
 - `useCurrentUser`
 - `useIsAuthenticated`
 - `useDocumentPermission`
 - `useCanRead`, `useCanWrite`, `useCanAdmin`
 
 ### Phase 2: Permission Actions
+
 - `useGrantDocumentPermission`
 - `useRevokeDocumentPermission`
 - `useDocumentAccess`
 
 ### Phase 3: Group Management
+
 - `useUserGroups`
 - `useGroups`
 - `useCreateGroup`
 - `useAddUserToGroup`
 
 ### Phase 4: Integration
+
 - `useSelectedDocumentWithPermission`
 - `useNodeActionsWithPermissionChecks`
 - `useFilteredNodesInSelectedDrive`
 
 ### Phase 5: Advanced Features
+
 - `RequirePermission` component
 - `PermissionProvider` context
 - Operation-level permission hooks
@@ -3925,7 +3966,7 @@ function DocumentCard({ documentId }: Props) {
   const [document] = useDocumentById(documentId);
   const canWrite = useCanWrite(documentId);
   const canAdmin = useCanAdmin(documentId);
-  
+
   return (
     <Card>
       <CardHeader>{document?.name}</CardHeader>
@@ -3949,14 +3990,17 @@ function DocumentCard({ documentId }: Props) {
 function usePermissionAwareDispatch(documentId: string) {
   const [document, dispatch] = useDocumentById(documentId);
   const { permission, canWrite } = useDocumentPermission(documentId);
-  
-  const safeDispatch = useCallback((action: Action) => {
-    if (!canWrite) {
-      throw new Error('You do not have permission to edit this document');
-    }
-    dispatch(action);
-  }, [canWrite, dispatch]);
-  
+
+  const safeDispatch = useCallback(
+    (action: Action) => {
+      if (!canWrite) {
+        throw new Error("You do not have permission to edit this document");
+      }
+      dispatch(action);
+    },
+    [canWrite, dispatch],
+  );
+
   return [document, safeDispatch, permission] as const;
 }
 ```
@@ -3968,29 +4012,24 @@ function usePermissionAwareDispatch(documentId: string) {
 function DocumentEditor({ documentId }: Props) {
   const [document] = useDocumentById(documentId);
   const { permission, isLoading, error } = useDocumentPermission(documentId);
-  
+
   // Show loading state while checking permissions
   if (isLoading) {
     return <PermissionLoadingSpinner />;
   }
-  
+
   // Show error if permission check failed
   if (error) {
     return <PermissionError error={error} />;
   }
-  
+
   // Show access denied if no read permission
   if (!permission?.canRead) {
     return <AccessDenied documentId={documentId} />;
   }
-  
+
   // Render editor (read-only if no write permission)
-  return (
-    <Editor 
-      document={document}
-      readOnly={!permission.canWrite}
-    />
-  );
+  return <Editor document={document} readOnly={!permission.canWrite} />;
 }
 ```
 
@@ -3999,8 +4038,9 @@ function DocumentEditor({ documentId }: Props) {
 ```tsx
 // tsx code example:
 function DocumentExplorer() {
-  const documentIds = useFileNodesInSelectedDrive()?.map(n => n.documentId) ?? [];
-  
+  const documentIds =
+    useFileNodesInSelectedDrive()?.map((n) => n.documentId) ?? [];
+
   // Wrap in PermissionProvider to prefetch all permissions
   return (
     <PermissionProvider documentIds={documentIds}>
@@ -4013,7 +4053,7 @@ function DocumentGrid({ documentIds }: Props) {
   // These hooks will use cached permissions from PermissionProvider
   return (
     <div className="grid">
-      {documentIds.map(id => (
+      {documentIds.map((id) => (
         <DocumentCard key={id} documentId={id} />
       ))}
     </div>
@@ -4029,22 +4069,22 @@ function GrantPermissionButton({ documentId, userAddress }: Props) {
   const grantPermission = useGrantDocumentPermission();
   const { refresh } = useDocumentAccess(documentId);
   const [isPending, startTransition] = useTransition();
-  
+
   const handleGrant = () => {
     startTransition(async () => {
       try {
-        await grantPermission(documentId, userAddress, 'WRITE');
+        await grantPermission(documentId, userAddress, "WRITE");
         await refresh(); // Refresh to show new permission
-        toast.success('Permission granted');
+        toast.success("Permission granted");
       } catch (error) {
         toast.error(`Failed: ${error.message}`);
       }
     });
   };
-  
+
   return (
     <button onClick={handleGrant} disabled={isPending}>
-      {isPending ? 'Granting...' : 'Grant Write Access'}
+      {isPending ? "Granting..." : "Grant Write Access"}
     </button>
   );
 }
@@ -4120,16 +4160,14 @@ This specification is a living document. If you're implementing these hooks or u
 
 ---
 
-
 ## Benchmarks {#benchmarks}
 
 **Source:** `academy/02-MasteryTrack/04-WorkWithData/_06-Analytics Engine/typescript/benchmarks.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 ---
-sidebar_position: 102
----
 
+## sidebar_position: 102
 
 Due to the performance-sensitive nature of metrics collection, we include a [suite of benchmarks](https://github.com/powerhouse-inc/analytics-engine/tree/main/benchmarks) that compare the various analytics store implementations. These are run every publish and stored in the associated [GitHub action history](https://github.com/powerhouse-inc/analytics-engine/actions/runs/12123429624/job/33798972072).
 
@@ -4155,16 +4193,14 @@ In [this benchmark](https://github.com/powerhouse-inc/analytics-engine/blob/main
 
 ---
 
-
 ## Best practices {#best-practices}
 
 **Source:** `academy/02-MasteryTrack/04-WorkWithData/_06-Analytics Engine/best-practices.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 ---
-sidebar_position: 1000
----
 
+## sidebar_position: 1000
 
 ### GraphQL
 
@@ -4224,16 +4260,14 @@ For example: Looking at the dimension section in the filter options: To see avai
 
 ---
 
-
 ## Browser store {#browser-store}
 
 **Source:** `academy/02-MasteryTrack/04-WorkWithData/_06-Analytics Engine/typescript/browser.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 ---
-sidebar_position: 2
----
 
+## sidebar_position: 2
 
 The `BrowserAnalyticsStore` is an `IAnalyticsStore` implementation that sits on top of [`MemoryAnalyticsStore`](#memory) but adds an `IndexedDB` plugin for persistence.
 
@@ -4314,18 +4348,16 @@ window.indexedDB.deleteDatabase("my-analytics");
 
 ---
 
-
 ## Build a Drive-app {#build-a-drive-app}
 
 **Source:** `academy/02-MasteryTrack/03-BuildingUserExperiences/03-BuildingADriveExplorer.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 **Drive-apps** enhance how contributors and organizations interact with document models.
 They create an 'app-like' experience by providing a **custom interface** for exploring and interacting with the contents of a drive.
 **💡 TIP:** What is a Drive-app?
 A Drive-app offers a tailored application designed around its document models.
 Think of a Drive-app as a specialized lens—it offers **different ways to visualize, organize, and interact with** the data stored within a drive, making it more intuitive and efficient for specific use cases.
-
 
 ### Drive-apps are purpose-built
 
@@ -4419,6 +4451,7 @@ If not, you can follow the shortened guide below to prepare your project for thi
 ### 3. Generate a document editor:
 
 In Vetra Studio, create an Editor specification:
+
 1. Click **"Add new specification"** in the Editors section
 2. Select the **TodoList** document model
 3. Name your editor `TodoList`
@@ -4446,7 +4479,6 @@ You can also start by running Connect locally with `ph connect` instead of Vetra
 </details>
 
 </details>
-
 
 ## Generate the Drive-app
 
@@ -4529,8 +4561,9 @@ rm -rf editors/todo-list-drive-explorer/components/FolderTree.tsx
      This file defines the TypeScript type `ToDoState`. It specifies the shape of todo-list document data within the Drive-app, combining the document's revision information with its global state. This ensures that our components work with a predictable and strongly-typed data structure.
 
      ```typescript
+
 // typescript code example:
-     import type { TodoListDocument } from "todo-tutorial/document-models/todo-list";
+import type { TodoListDocument } from "todo-tutorial/document-models/todo-list";
 
       export type TodoState = {
          documentType: string;
@@ -4550,8 +4583,9 @@ rm -rf editors/todo-list-drive-explorer/components/FolderTree.tsx
      This is a simple React component that renders a visual progress bar. It takes a `value` and `max` number to calculate the percentage of completed tasks. It also displays the percentage and has a special state for when there are no tasks.
 
      ```tsx
+
 // tsx code example:
-      import type { FC } from 'react';
+import type { FC } from 'react';
 
       interface ProgressBarProps {
       value: number;
@@ -4951,11 +4985,10 @@ The Powerhouse platform provides the tools. It's time to start building!
 
 ---
 
-
 ## Build a to-do list editor {#build-a-to-do-list-editor}
 
 **Source:** `academy/01-GetStarted/05-BuildToDoListEditor.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 **💡 TIP:** Tutorial Repository
 📦 **Reference Code**:
@@ -4969,7 +5002,6 @@ This tutorial covers two steps:
 2. **Step 6**: Building a complete, interactive UI with components for adding, editing, and deleting todos
 
 Compare implementations: `git diff step-5-generate-todo-list-document-editor step-6-add-basic-todo-editor-ui-components`
-
 
 <details>
 <summary>📖 How to use this tutorial</summary>
@@ -5063,7 +5095,6 @@ The editor structure we'll build includes:
 **💡 TIP:**
 The tutorial repository (step-6) includes additional components like `TodoListName`, `CloseButton`, and `UndoRedoButtons`. We'll focus on the core components here, but you can explore the complete implementation using the git commands shown above.
 
-
 ## Adding the Document Toolbar
 
 The `DocumentToolbar` component provides essential document operations like saving, sharing, and navigation. To add it to your document editor, simply import it from the design system and place it at the top of your editor component. The toolbar automatically connects to the currently selected document and provides all standard document actions. For more details, see the [DocumentToolbar documentation] (see: 02-MasteryTrack/03-BuildingUserExperiences/06-DocumentTools/00-DocumentToolbar.mdx).
@@ -5135,7 +5166,6 @@ The `useSelectedTodoListDocument` hook is generated by the Powerhouse CLI. It pr
 
 This hook connects your React components to the document model's state and operations.
 
-
 **💡 TIP:** Understanding state.global
 You'll notice we access `state.global.items`. Document state in Powerhouse is organized into scopes:
 
@@ -5143,7 +5173,6 @@ You'll notice we access `state.global.items`. Document state in Powerhouse is or
 - **Local scope** (`state.local`): For edge cases where data should only exist on the local device and not sync.
 
 In the future, an **authorization scope** will be added for permission-controlled data. For most use cases, you'll work exclusively with `state.global`.
-
 
 ### Step 3: Create the AddTodo form component
 
@@ -5459,7 +5488,6 @@ Click on it to create a new todo-list document.
 **ℹ️ INFO:** Live Development
 The editor will update dynamically as you make changes, so you can experiment with styling and functionality while seeing your results appear in Vetra Studio in real-time.
 
-
 **Try it out:**
 
 1. Add some todo items using the input form
@@ -5526,7 +5554,6 @@ In Connect, you should be able to:
 - Add, edit, and delete todo items
 - Check/uncheck items to mark them complete
 
-
 ## Key concepts learned
 
 In this tutorial you've learned:
@@ -5550,11 +5577,10 @@ You will learn:
 
 ---
 
-
 ## Build document editors {#build-document-editors}
 
 **Source:** `academy/02-MasteryTrack/03-BuildingUserExperiences/01-BuildingDocumentEditors.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 ## Build with React on Powerhouse
 
@@ -5623,51 +5649,53 @@ You have several options for styling your editor components:
 2.  **Tailwind CSS**: Connect Studio comes with Tailwind CSS integrated. You can directly use Tailwind utility classes in your JSX for rapid and consistent styling without writing separate CSS files.
     _Example (from the TodoList Editor):_
 
-    ```typescript
-// typescript code example:
+        ```typescript
+
+    // typescript code example:
     <div className="container mx-auto p-4 max-w-md">
-        <h1 className="text-2xl font-bold mb-4">TodoList</h1>
-        {/* ... more Tailwind styled elements */}
+    <h1 className="text-2xl font-bold mb-4">TodoList</h1>
+    {/_ ... more Tailwind styled elements _/}
     </div>
     ```
 
 3.  **Custom CSS Files**: You can import traditional CSS files (`.css`) to apply custom styles or integrate existing style libraries.
     _Create an `editor.css` file in your editor's directory:_
 
-    ```css
-// css code example:
-    /* editors/your-editor/editor.css */
+        ```css
+
+    // css code example:
+    /_ editors/your-editor/editor.css _/
     .editor-container {
-      padding: 1rem;
-      border: 1px solid #ccc;
+    padding: 1rem;
+    border: 1px solid #ccc;
     }
     .editor-title {
-      color: navy;
-      font-size: 1.8rem;
+    color: navy;
+    font-size: 1.8rem;
     }
     ```
 
-    _Import and use it in your `editor.tsx`:_
+        _Import and use it in your `editor.tsx`:_
 
-    ```typescript
-// typescript code example:
+        ```typescript
+
+    // typescript code example:
     import './editor.css'; // Import the CSS file
 
-    export default function Editor(props: IProps) {
-        return (
-            <div className="editor-container">
-                <h1 className="editor-title">My Document Title</h1>
-                {/* ... */}
-            </div>
-        );
-    }
-    ```
+        export default function Editor(props: IProps) {
+            return (
+                <div className="editor-container">
+                    <h1 className="editor-title">My Document Title</h1>
+                    {/* ... */}
+                </div>
+            );
+        }
+        ```
 
 Choose the method or combination of methods that best suits your project needs and team preferences. Vetra Studio (`ph vetra --watch`) or Connect (`ph connect`) will allow you to see your styles applied in real-time.
 
 **💡 TIP:** Advanced Styling: Connect Container Customization
 When your editor runs inside Connect, it's wrapped in container elements that you can target for advanced styling. See [CSS Customization for Connect Integration](/academy/MasteryTrack/BuildingUserExperiences/CSSCustomization) to learn how to customize `#document-editor-container` and `#document-editor-context`.
-
 
 **⚠️ WARNING:** **Best practices for consistent reliable styles**
 
@@ -5720,7 +5748,6 @@ The **hook-based approach** uses `useSelectedTodoListDocument` — a React hook 
 
 **💡 TIP:** Full React Hooks Reference
 Powerhouse provides many more hooks beyond the document-specific ones. See the complete [React Hooks API Reference](/academy/APIReferences/ReactHooks) for all available hooks.
-
 
 ```typescript
 // typescript code example:
@@ -5933,16 +5960,16 @@ Storybook allows you to:
 ### Using components
 
 1.  **Import**: Add an import statement at the top of your editor file:
-    ```typescript
+    `typescript
 // typescript code example:
     import {
       Checkbox,
       StringField,
       Form,
     } from "@powerhousedao/document-engineering/scalars";
-    ```
+    `
 2.  **Implement**: Use the component in your JSX, configuring it with props:
-    ```typescript
+    `typescript
 // typescript code example:
     // Example using StringField for an input
     <Form onSubmit={() => { /* Handle submission */ }}>
@@ -5953,7 +5980,7 @@ Storybook allows you to:
         onChange={(e) => setTaskText(e.target.value)}
       />
     </Form>
-    ```
+    `
 
 <details>
 <summary>Tutorial: Implementing the TodoList Editor</summary>
@@ -6167,7 +6194,6 @@ export function Todo({ todo }: Props) {
 **ℹ️ INFO:** Advanced Feature
 If you implemented the advanced version with statistics tracking, you can add a stats component to display the todo counts.
 
-
 ```typescript
 // typescript code example:
 // Add to TodoList.tsx
@@ -6229,7 +6255,6 @@ In Vetra Studio, you'll be able to create and test your **TodoList** documents. 
 **💡 TIP:** Vetra Studio as your dynamic development environment
 The editor will update dynamically, so you can play around with your editor styling while seeing your results appear in Vetra Studio.
 
-
 <details>
 <summary>Alternatively: Test with Connect</summary>
 
@@ -6263,21 +6288,20 @@ Imagine you have many TodoLists sitting in a drive. A custom Drive-app will allo
 
 ---
 
-
 ## Build the ChatRoom editor {#build-the-chatroom-editor}
 
 **Source:** `academy/03-ExampleUsecases/Chatroom/05-ImplementChatroomEditor.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 **💡 TIP:** Tutorial Repository
 📦 **Reference Code**: [chatroom-demo](https://github.com/powerhouse-inc/chatroom-demo)
 
 This tutorial covers building the ChatRoom editor:
+
 1. **Editor Scaffolding**: Generating the editor template with `ph generate --editor`
 2. **Component Implementation**: Building a complete, interactive chat UI with components
 
 Explore the complete implementation in the `editors/chat-room-editor/` directory.
-
 
 <details>
 <summary>📖 How to use this tutorial</summary>
@@ -6311,6 +6335,7 @@ git show tutorial/main:editors/chat-room-editor/components/ChatRoom/ChatRoom.tsx
 ### Visual comparison with GitHub Desktop
 
 After committing your editor code:
+
 1. **Branch** menu → **"Compare to Branch..."**
 2. Select `tutorial/main`
 3. See all your custom components vs. the reference implementation
@@ -6325,9 +6350,10 @@ In this chapter we will continue with the interface or editor implementation of 
 
 Go back to Vetra Studio, if you need to relaunch Vetra, launch it with `Vetra --watch` so it loads all existing local documents. Click the **'Add new specification'** button in the User Experiences column under **'Editors'**. This will create an editor template for your document model.
 
-Give the editor the name `chat-room-editor` and select the correct document model. In our case that's the `powerhouse/chat-room`. 
+Give the editor the name `chat-room-editor` and select the correct document model. In our case that's the `powerhouse/chat-room`.
 
-You'll see that the terminal in which you are running Vetra mentions 
+You'll see that the terminal in which you are running Vetra mentions
+
 ```
 ℹ [Vetra] 🔄 Starting editor generation for: chat-room-editor                                        15:18:16
                                                                                                      15:18:16
@@ -6335,8 +6361,8 @@ Loaded templates: node_modules/.pnpm/@powerhousedao+codegen@5.0.12_kx2q3zvshbbgw
        added: editors/chat-room-editor/components/EditName.tsx                                       15:18:16
        added: editors/chat-room-editor/editor.tsx                                                    15:18:16
        FORCED: editors/chat-room-editor/module.ts                                                    15:18:16
-ℹ [Vetra] ✅ Editor generation completed successfully for: chat-room-editor    
-````
+ℹ [Vetra] ✅ Editor generation completed successfully for: chat-room-editor
+```
 
 Once complete, you'll have a new directory structure:
 
@@ -6409,16 +6435,16 @@ Download the repository of the chatroom-demo as a zip file from https://github.c
 
 Here's what each component does:
 
-| Component | Purpose |
-|-----------|---------|
-| `Avatar` | Displays a user avatar image or a deterministic emoji based on the username |
-| `ChatRoom` | Main container that orchestrates the header, messages list, and input field |
-| `Header` | Shows the chat title and description with inline editing capability |
-| `EditableLabel` | Reusable component for inline text editing with edit/cancel icons |
-| `Message` | Renders a single message bubble with styling based on the sender |
-| `MessageItem` | Wraps `Message` with `Avatar` and adds a reaction dropdown menu |
-| `Reaction` | Displays an emoji reaction with a count of users who reacted |
-| `TextInput` | Input field for composing and sending new messages |
+| Component       | Purpose                                                                     |
+| --------------- | --------------------------------------------------------------------------- |
+| `Avatar`        | Displays a user avatar image or a deterministic emoji based on the username |
+| `ChatRoom`      | Main container that orchestrates the header, messages list, and input field |
+| `Header`        | Shows the chat title and description with inline editing capability         |
+| `EditableLabel` | Reusable component for inline text editing with edit/cancel icons           |
+| `Message`       | Renders a single message bubble with styling based on the sender            |
+| `MessageItem`   | Wraps `Message` with `Avatar` and adds a reaction dropdown menu             |
+| `Reaction`      | Displays an emoji reaction with a count of users who reacted                |
+| `TextInput`     | Input field for composing and sending new messages                          |
 
 ### The utils.ts file
 
@@ -6439,10 +6465,46 @@ import type {
 } from "../../document-models/chat-room/gen/schema/types.js";
 
 const emojis = [
-  "😀", "😂", "🤣", "😍", "😎", "😊", "🙃", "😇", "🤔", "🥳",
-  "🤯", "🤗", "😱", "👻", "🎃", "🐱", "🐶", "🐹", "🦊", "🐻",
-  "🐼", "🐨", "🐯", "🦁", "🐸", "🐵", "🐔", "🐧", "🐦", "🐤",
-  "🐝", "🐞", "🐟", "🐬", "🐳", "🦋", "🌺", "🌸", "🌼", "🍀",
+  "😀",
+  "😂",
+  "🤣",
+  "😍",
+  "😎",
+  "😊",
+  "🙃",
+  "😇",
+  "🤔",
+  "🥳",
+  "🤯",
+  "🤗",
+  "😱",
+  "👻",
+  "🎃",
+  "🐱",
+  "🐶",
+  "🐹",
+  "🦊",
+  "🐻",
+  "🐼",
+  "🐨",
+  "🐯",
+  "🦁",
+  "🐸",
+  "🐵",
+  "🐔",
+  "🐧",
+  "🐦",
+  "🐤",
+  "🐝",
+  "🐞",
+  "🐟",
+  "🐬",
+  "🐳",
+  "🦋",
+  "🌺",
+  "🌸",
+  "🌼",
+  "🍀",
 ];
 
 export function getEmojiFromString(input: string): string {
@@ -6697,11 +6759,11 @@ export default function Editor() {
 
 **ℹ️ INFO:** Key Concept: useSelectedChatRoomDocument hook
 The `useSelectedChatRoomDocument` hook is generated by the Powerhouse CLI. It provides:
+
 1. The current document state (`document`)
 2. A dispatch function to send actions to the reducer
 
 This hook connects your React components to the document model's state and operations.
-
 
 ## Key components explained
 
@@ -6776,7 +6838,7 @@ export const EditableLabel: React.FC<EditableLabelProps> = ({
 
   // Toggle between read mode (displaying text) and write mode (input field)
   // Press Enter to submit, Escape to cancel
-  
+
   return (
     <div onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}>
       {isEditing ? (
@@ -6804,10 +6866,10 @@ In Vetra Studio, in the bottom right corner you'll find a new Document Model tha
 **⚠️ WARNING:** Authentication Required
 A warning will prompt you to login before you can send messages. Login with an Ethereum address via Renown to start sending messages.
 
-
 ![Chatroom Editor] (see: images/ChatRoomTest.gif)
 
 **Try it out:**
+
 1. Create a new ChatRoom document
 2. Login with your Ethereum wallet
 3. Send messages using the input field
@@ -6849,11 +6911,10 @@ In this tutorial you've learned:
 
 ---
 
-
 ## CLI Identity & Authentication {#cli-identity-authentication}
 
 **Source:** `academy/04-APIReferences/renown-sdk/03-CLIIdentity.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 This guide covers how to authenticate the Powerhouse CLI with your Ethereum identity and use that identity in the Switchboard for authenticated operations with remote services.
 
@@ -7196,16 +7257,14 @@ async function getBearerToken(
 
 ---
 
-
 ## Compatibility {#compatibility}
 
 **Source:** `academy/02-MasteryTrack/04-WorkWithData/_06-Analytics Engine/typescript/compatibility.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 ---
-sidebar_position: 101
----
 
+## sidebar_position: 101
 
 This guide is intended for making high level decisions about which storage systems to use in which contexts. These stores have not been tested across thousands of browser or serverside runtime versions.
 
@@ -7218,11 +7277,10 @@ This guide is intended for making high level decisions about which storage syste
 
 ---
 
-
 ## Configure a drive {#configure-a-drive}
 
 **Source:** `academy/02-MasteryTrack/04-WorkWithData/01-ConfiguringDrives.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 A drive in Powerhouse is a container for documents and data. It's a place where you can organize and store your documents and share them with others. This guide walks you through configuring and managing drives in your Powerhouse environment.
 
@@ -7254,7 +7312,6 @@ Remote drives in Powerhouse allow you to connect to and work with data stored in
 Reactors can be configured for local storage, centralized cloud storage, or a decentralized storage network.
 
 A reactor allows you to store multiple documents and host **drives** and Drive-apps with different organizational purposes, users, access rights, and more.
-
 
 A drive uses a reactor and its underlying storage layer. A reactor is the low-level component that enables the synchronization of documents and drives.
 
@@ -7388,11 +7445,10 @@ Enjoy!
 
 ---
 
-
 ## Configure your environment {#configure-your-environment}
 
 **Source:** `academy/02-MasteryTrack/05-Launch/04-ConfigureEnvironment.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 After successfully setting up your server and installing the Powerhouse services using the `ph service setup` command as described in the [Setup Environment] (see: 03-SetupEnvironment.md) guide, the next crucial step is to configure your environment. Proper configuration ensures that your Powerhouse Connect and Switchboard instances behave exactly as you need them to for your specific application.
 
@@ -7403,7 +7459,6 @@ Powerhouse offers two primary methods for configuration:
 
 **⚠️ WARNING:**
 A key principle to remember is that **environment variables will always override values set in configuration files**. This allows for flexible setups, where you can have default configurations in a file and override them for different environments (development, staging, production) using environment variables.
-
 
 This guide will walk you through both methods and provide details on common configuration options, including setting up authorization.
 
@@ -7417,23 +7472,23 @@ If you're on your cloud server, you can create and edit the `.env` file directly
 
 1.  Navigate to your project directory: `cd <your-project-name>`
 2.  Open the `.env` file with a text editor like `vim` or `nano`:
-    ```bash
+    `bash
 // bash code example:
     vim .env
-    ```
+    `
 3.  Add your configuration variables, one per line, in the `KEY="VALUE"` format.
-    ```env
+    `env
 // env code example:
     # Example for Connect
     PH_CONNECT_STUDIO_MODE="true"
     PH_CONNECT_DISABLE_ADD_DRIVE="true"
-    ```
+    `
 4.  Save the file and exit the editor (in `vim`, press `Esc`, then type `:wq` and press `Enter`).
 5.  For the changes to take effect, you must restart the Powerhouse services:
-    ```bash
+    `bash
 // bash code example:
     ph service restart
-    ```
+    `
 
 ### Common environment variables for Connect
 
@@ -7571,16 +7626,14 @@ Configuring your environment is a key step to tailor the Powerhouse platform to 
 
 ---
 
-
 ## Cookbook {#cookbook}
 
 **Source:** `academy/07-Cookbook.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 ---
-toc_max_heading_level: 2
----
 
+## toc_max_heading_level: 2
 
 ## Powerhouse CLI recipes
 
@@ -8919,7 +8972,7 @@ If you're developing packages:
 2. Test thoroughly
 3. Publish the updated package to npm:
    ```bash
-// bash code example:
+   // bash code example:
    pnpm build
    npm publish
    ```
@@ -10044,11 +10097,10 @@ yarn cache clean --force
 
 ---
 
-
 ## Create a new chatroom project {#create-a-new-chatroom-project}
 
 **Source:** `academy/03-ExampleUsecases/Chatroom/02-CreateNewPowerhouseProject.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 **💡 TIP:** Tutorial Repository
 📦 **Reference Code**: [chatroom-demo](https://github.com/powerhouse-inc/chatroom-demo)
@@ -10070,7 +10122,7 @@ This tutorial is designed for you to **build your own project from scratch** whi
 1. **Create your project** following the tutorial:
 
    ```bash
-// bash code example:
+   // bash code example:
    mkdir ph-projects
    cd ph-projects
    ph init
@@ -10081,14 +10133,14 @@ This tutorial is designed for you to **build your own project from scratch** whi
 2. **Add the tutorial repository as a remote** to access reference code:
 
    ```bash
-// bash code example:
+   // bash code example:
    git remote add tutorial https://github.com/powerhouse-inc/chatroom-demo.git
    git fetch tutorial --prune
    ```
 
 3. **Create your own branch** to keep your work organized:
    ```bash
-// bash code example:
+   // bash code example:
    git checkout -b my-chatroom-project
    ```
 
@@ -10139,16 +10191,16 @@ If you need help with installing the prerequisites you can visit our page [prere
 2. Optionally, create a folder first to keep your Powerhouse projects:
 
    ```bash
-// bash code example:
+   // bash code example:
    mkdir ph-projects
    cd ph-projects
    ```
 
 3. Ensure you're in the correct directory before running the `ph init` command.  
-   In the terminal, you will be asked to enter the project name. Fill in the project name and press Enter.
+    In the terminal, you will be asked to enter the project name. Fill in the project name and press Enter.
 
    ```bash
-// bash code example:
+   // bash code example:
    you@yourmachine:~/ph-projects % ph init
 
    ? What is the project name? ‣ ChatRoom
@@ -10229,7 +10281,6 @@ A new browser window will open and you will see the Connect application. If it d
 If your local drive is not present, navigate to Settings in the bottom left corner. Settings > Danger Zone > Clear Storage.
 Clear the storage of your localhost application as it might have an old session cached.
 
-
 Move into your local drive.  
 Create a new document model by clicking the `DocumentModel` button, found in the 'New Document' section at the bottom of the page. Name your document `ChatRoom` (PascalCase, no spaces or hyphens).
 
@@ -10250,11 +10301,10 @@ In the next tutorial, you will learn how to design your document model and expor
 
 ---
 
-
 ## Create a new to-do list document {#create-a-new-to-do-list-document}
 
 **Source:** `academy/01-GetStarted/01-CreateNewPowerhouseProject.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 **💡 TIP:** Tutorial Repository
 📦 **Reference Code**: [step-1-initialize-with-ph-init](https://github.com/powerhouse-inc/todo-tutorial/tree/step-1-initialize-with-ph-init)
@@ -10293,7 +10343,7 @@ This tutorial is designed for you to **build your own project from scratch** whi
 1. **Create your project** following the tutorial:
 
    ```bash
-// bash code example:
+   // bash code example:
    mkdir ph-projects
    cd ph-projects
    ph init
@@ -10304,14 +10354,14 @@ This tutorial is designed for you to **build your own project from scratch** whi
 2. **Add the tutorial repository as a remote** to access reference branches:
 
    ```bash
-// bash code example:
+   // bash code example:
    git remote add tutorial https://github.com/powerhouse-inc/todo-tutorial.git
    git fetch tutorial --prune
    ```
 
 3. **Create your own branch** to keep your work organized:
    ```bash
-// bash code example:
+   // bash code example:
    git checkout -b my-todo-project
    ```
 
@@ -10340,7 +10390,7 @@ For a more visual comparison, use GitHub Desktop:
 1. **First, make your initial commit** (GitHub Desktop won't show your branch until you have at least one commit):
 
    ```bash
-// bash code example:
+   // bash code example:
    git add .
    git commit -m "Initial project setup"
    ```
@@ -10386,16 +10436,16 @@ ph init
 2. Optionally, create a folder first to keep your Powerhouse projects:
 
    ```bash
-// bash code example:
+   // bash code example:
    mkdir ph-projects
    cd ph-projects
    ```
 
 3. Ensure you're in the correct directory before running the `ph init` command.  
-   In the terminal, you will be asked to enter the project name. Fill in the project name and press Enter.
+    In the terminal, you will be asked to enter the project name. Fill in the project name and press Enter.
 
    ````bash
-// bash code example:
+   // bash code example:
     you@yourmachine:~/ph-projects % ph init
 
     ? What is the project name? ‣ todo-tutorial
@@ -10422,15 +10472,16 @@ Once in the project directory, run the `ph vetra --watch` command to start a Vet
 **ℹ️ INFO:** What is a Reactor?
 You'll notice "reactor-api" in the terminal output. A **Reactor** is the Powerhouse back-end service that hosts your drives, handles document synchronization, and provides the GraphQL API. When you run `ph vetra --watch`, a local Reactor starts automatically to power your development environment.
 
-
     ```bash
+
 // bash code example:
-    ph vetra --watch
-    ```
+ph vetra --watch
+```
 
 The host application for Vetra Studio will start and you will see the following output:
 
     ```bash
+
 // bash code example:
 
 ℹ [reactor-api] [package-manager] Loading packages: @powerhousedao/vetra 14:44:19
@@ -10452,17 +10503,18 @@ Switchboard initialized 14:44:24
 Port 3000 is in use, trying another one... 14:44:24
 ➜ Local: http://localhost:3000/ 14:44:24
 ➜ Network: use --host to expose 14:44:24
-➜ press h + enter to show help  
- ```
+➜ press h + enter to show help
+
+````
 
 A new browser window will open when visiting localhost and you will see the Vetra Studio Drive
 
 <figure className="image-container">
-  <img
-    src={require("./images/VetraStudioDrive.png").default}
-    alt="Vetra Studio Drive"
-  />
-  <figcaption>The Vetra Studio Drive, a builder app that collects all of the specification of a package.</figcaption>
+ <img
+   src={require("./images/VetraStudioDrive.png").default}
+   alt="Vetra Studio Drive"
+ />
+ <figcaption>The Vetra Studio Drive, a builder app that collects all of the specification of a package.</figcaption>
 </figure>
 
 Create a new document model by clicking the Document Models 'Add new specification' button. Name your document TodoList (PascalCase, no spaces or hyphens). If you've followed the steps correctly, you'll have an empty TodoList document where you can define the 'Document Specifications' in the next step.
@@ -10477,19 +10529,19 @@ The `ph connect` command is a legacy feature. We recommend using `ph vetra --wat
 Once in the project directory, run the `ph connect` command to start a local instance of the Connect application. This allows you to start your document model specification document.
 Run the following command to start the Connect application:
 
-    ```bash
+   ```bash
 // bash code example:
-    ph connect
-    ```
+   ph connect
+   ```
 
 The Connect application will start and you will see the following output:
 
-    ```bash
+   ```bash
 // bash code example:
-      ➜  Local:   http://localhost:3000/
-      ➜  Network: http://192.168.5.110:3000/
-      ➜  press h + enter to show help
-    ```
+     ➜  Local:   http://localhost:3000/
+     ➜  Network: http://192.168.5.110:3000/
+     ➜  press h + enter to show help
+   ```
 
 A new browser window will open and you will see the Connect application. If it doesn't open automatically, you can open it manually by navigating to `http://localhost:3000/` in your browser. You will see your local drive and a button to create a new drive.
 
@@ -10498,8 +10550,8 @@ If you local drive is not present navigate into Settings in the bottom left corn
 Clear the storage of your localhost application as it might has an old session cached.
 
 
-4. Move into your local drive.  
-   Create a new document model by clicking the `DocumentModel` button, found in the 'New Document' section at the bottom of the page. Name your document `TodoList` (PascalCase, no spaces or hyphens).
+4. Move into your local drive.
+  Create a new document model by clicking the `DocumentModel` button, found in the 'New Document' section at the bottom of the page. Name your document `TodoList` (PascalCase, no spaces or hyphens).
 
 If you've followed the steps correctly, you'll have an empty `TodoList` document where you can define the **'Document Specifications'**.
 
@@ -10528,7 +10580,7 @@ git ls-tree -r --name-only tutorial/step-1-initialize-with-ph-init
 
 # View a specific config file from step-1
 git show tutorial/step-1-initialize-with-ph-init:package.json
-```
+````
 
 ## Up next
 
@@ -10536,18 +10588,16 @@ In the next tutorials, you will learn how to specify, add code and build an edit
 
 ---
 
-
 ## Create a package with Vetra {#create-a-package-with-vetra}
 
 **Source:** `academy/02-MasteryTrack/01-BuilderEnvironment/03-CreateAPackageWithVetra.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 **⚠️ WARNING:**
 **This tutorial is a summary for builders that are already familiar with building document models**.  
 It provides a summary from initial setup up to publishing a distributable package.
 
 Please start with the [**Get Started**](/academy/GetStarted/home) Chapter or [**Document Model Creation**](/academy/MasteryTrack/DocumentModelCreation/SpecifyTheStateSchema) section if you are unfamiliar with building a document model.
-
 
 <details>
 <summary>Key commands that you'll use in this flow</summary>
@@ -10585,7 +10635,6 @@ npm install -g ph-cmd
 **ℹ️ INFO:** **Prerequisites**
 See the [Prerequisites](/academy/MasteryTrack/BuilderEnvironment/Prerequisites) guide for detailed installation instructions for Node.js 24, package managers (pnpm or npm), and Git if you haven't set them up yet.
 
-
 ### 1.2. Initialize your project environment
 
 Before creating a specific project, or if you're setting up your environment for the first time, initialize the Powerhouse environment. This command prepares your local setup, including a local Reactor configuration.
@@ -10602,17 +10651,17 @@ If you are starting a new project to be packaged, this command will also prompt 
 
 When installing or using the Powerhouse CLI commands you are able to make use of the dev & staging branches. These branches contain more experimental features than the latest stable release the PH CLI uses by default. They can be used to get access to a bugfix or features under development.
 
-| Command                            | Description                                           |
-| ---------------------------------- | ----------------------------------------------------- |
-| **pnpm install -g ph-cmd** or **npm install -g ph-cmd**         | Install latest stable version                         |
-| **pnpm install -g ph-cmd@dev** or **npm install -g ph-cmd@dev**     | Install development version                           |
+| Command                                                                 | Description                                           |
+| ----------------------------------------------------------------------- | ----------------------------------------------------- |
+| **pnpm install -g ph-cmd** or **npm install -g ph-cmd**                 | Install latest stable version                         |
+| **pnpm install -g ph-cmd@dev** or **npm install -g ph-cmd@dev**         | Install development version                           |
 | **pnpm install -g ph-cmd@staging** or **npm install -g ph-cmd@staging** | Install staging version                               |
-| **ph init**                        | Use latest stable version of the boilerplate          |
-| **ph init --dev**                  | Use development version of the boilerplate            |
-| **ph init --staging**              | Use staging version of the boilerplate                |
-| **ph use**                         | Switch all dependencies to latest production versions |
-| **ph use dev**                     | Switch all dependencies to development versions       |
-| **ph use prod**                    | Switch all dependencies to production versions        |
+| **ph init**                                                             | Use latest stable version of the boilerplate          |
+| **ph init --dev**                                                       | Use development version of the boilerplate            |
+| **ph init --staging**                                                   | Use staging version of the boilerplate                |
+| **ph use**                                                              | Switch all dependencies to latest production versions |
+| **ph use dev**                                                          | Switch all dependencies to development versions       |
+| **ph use prod**                                                         | Switch all dependencies to production versions        |
 
 Please be aware that these versions can contain bugs and experimental features that aren't fully tested.
 
@@ -10623,37 +10672,43 @@ Please be aware that these versions can contain bugs and experimental features t
 You can launch Vetra Studio in two modes:
 
 #### Interactive Mode (Recommended for Development)
+
 ```bash
 // bash code example:
 ph vetra --interactive
 ```
+
 In interactive mode:
+
 - You'll receive confirmation prompts before any code generation
 - Changes require explicit confirmation before being processed
 - Provides better control and visibility over document changes
 
-#### Watch Mode 
+#### Watch Mode
 
 ```bash
 // bash code example:
 ph vetra --interactive --watch
 ```
+
 In watch mode:
 
-- Adding `--watch` to your command enables dynamic loading for document-models and editors in Vetra studio and switchboard. 
+- Adding `--watch` to your command enables dynamic loading for document-models and editors in Vetra studio and switchboard.
 - When enabled, the system will watch for changes in these directories and reload them dynamically.
 
 **⚠️ WARNING:** Be Aware
-When you are building your document model the code can break the Vetra Studio environment. 
+When you are building your document model the code can break the Vetra Studio environment.
 A full overview of the Vetra Studio commands can be found in the [Powerhouse CLI](/academy/APIReferences/PowerhouseCLI#vetra)
 
-
 #### Standard Mode
+
 ```bash
 // bash code example:
 ph vetra
 ```
+
 In standard mode:
+
 - Changes are processed automatically with 1-second debounce
 - Multiple changes are batched and processed together
 - Uses the latest document state for processing
@@ -10673,7 +10728,6 @@ This command typically opens Connect in your browser at `http://localhost:3000/`
 **ℹ️ INFO:**
 **Powerhouse Reactors** are essential nodes in the Powerhouse network. They store documents, manage versions, resolve conflicts, and verify document operation histories by rerunning them. Reactors can be configured for local storage (as in Studio Mode), centralized cloud storage, or decentralized storage networks.
 
-
 </details>
 
 ### 1.4. Launch Claude with Reactor-MCP
@@ -10681,12 +10735,12 @@ This command typically opens Connect in your browser at `http://localhost:3000/`
 Vetra Studio integrates deeply with Claude through MCP (Model Context Protocol). This is where AI comes into the mix and you get the chance to have greater control and direction over what your LLM is coding for you.
 
 **ℹ️ INFO:** Specification Driven Design & Development
-Vetra embraces **Specification Driven Design & Development** —an approach where your structured specification documents become the shared language between you and AI agents. You communicate intent through precise specs that are machine-readable and executable. 
+Vetra embraces **Specification Driven Design & Development** —an approach where your structured specification documents become the shared language between you and AI agents. You communicate intent through precise specs that are machine-readable and executable.
 
 <details>
 <summary>Explainer: Specification Driven AI</summary>
 
-In the **'Get Started'** chapter we've been making use of strict schema definition principles to communicate the intended use case of our document models. 
+In the **'Get Started'** chapter we've been making use of strict schema definition principles to communicate the intended use case of our document models.
 The **schema definition language** is not only a shared language that bridges the gap between developer, designer and analyst but also the gap between builder and AI-agent through **specification driven AI control**.
 
 - Communicate your solution and intent through a structured specification framework designed for AI collaboration.
@@ -10703,14 +10757,17 @@ The **schema definition language** is not only a shared language that bridges th
 - Vetra supports integration with custom remote drives, allowing users to create, share and manage documents within these drives
 
 **Document Operations:**
+
 - `createDocument` / `getDocument` / `deleteDocument` - Manage documents
 - `addActions` - Modify document state through operations
 
 **Drive Operations:**
+
 - `getDrives` / `addDrive` / `getDrive` - Manage document drives
 - `addRemoteDrive` - Connect to remote drives
 
 **Document Model Operations:**
+
 - `getDocumentModels` - List available document model types
 - `getDocumentModelSchema` - Get schema for specific models
 
@@ -10719,19 +10776,18 @@ A specialized AI agent that guides users through document model creation with re
 
 </details>
 
-
 #### 1. Start the Reactor MCP:
 
-Make sure you are in the same directory as your project. 
-Claude will automatically recognize the necessary files and MCP tools. 
+Make sure you are in the same directory as your project.
+Claude will automatically recognize the necessary files and MCP tools.
 
 ```bash
 // bash code example:
 claude
 ```
 
-Since you're interacting with an LLM it has a high capacity for interpreting your intentions. 
-Similar natural language commands will work as well. 
+Since you're interacting with an LLM it has a high capacity for interpreting your intentions.
+Similar natural language commands will work as well.
 
 ```bash
 // bash code example:
@@ -10739,7 +10795,8 @@ connect to the reactor mcp
 ```
 
 #### 2. Verify MCP connection:
-- Check that the Reactor MCP is available. 
+
+- Check that the Reactor MCP is available.
 - Confirm Vetra Studio shows "Connected to Reactor MCP"
 
 ```bash
@@ -10756,6 +10813,7 @@ Connected to MCP successfully! I can see there's a
 ## Phase 2: Package Creation
 
 ### 2.1. Set Package Description (Required)
+
 1. Provide a name for your package
 2. Add a meaningful description
 3. Add keywords to add search terms to your package
@@ -10766,6 +10824,7 @@ Connected to MCP successfully! I can see there's a
 You can create document models in two ways:
 
 #### Manual Creation
+
 - Define document schema with fields and types as in the **'Get Started'** chapter
 - Create the necessary operations
 - Add the required modules to your package
@@ -10774,6 +10833,7 @@ You can create document models in two ways:
 → [Learn more about Document Models](/academy/02-MasteryTrack/02-DocumentModelCreation/01-WhatIsADocumentModel)
 
 #### Using MCP (AI-Assisted)
+
 - Describe your package, it's functionality and your needs in natural language in great detail.
 - Claude will:
   - Generate an appropriate schema in the document model
@@ -10824,12 +10884,14 @@ This command creates a new directory under `document-models/YourModelName/` cont
 ### 2.3. Add Document Editor (Required)
 
 #### Manual Creation
+
 - Select your target document model
 - Configure the currently limited editor properties
 - Add the editor specification to Vetra Studio drive
 - The system will generate scaffolding code
 
 #### Using MCP (AI-Assisted)
+
 - Request Claude to create an editor for your document. Do this with the help of a detailed description of the user interface, user experience and logic that you wish to generate. Make sure to reference operations from the document model to get the best results
 - Claude will:
   - Generate editor components
@@ -10907,14 +10969,15 @@ Create a new document of your defined type. Interact with your editor, test all 
 
 </details>
 
-**💡 TIP:**  Best Practices
+**💡 TIP:** Best Practices
 
 **Working with MCP and Claude**
+
 1. Provide clear, specific instructions.
 2. Ask for clarifying questions to be answered before code generation.
 3. Review generated schemas before confirmation.
-4. Work in layers instead of 'one-shotting' your code. 
-5. Verify implementation details in generated code before continuing. 
+4. Work in layers instead of 'one-shotting' your code.
+5. Verify implementation details in generated code before continuing.
 6. Always double-check proposed next actions.
 
 <details>
@@ -10923,6 +10986,7 @@ Create a new document of your defined type. Interact with your editor, test all 
 ## Before You Start
 
 **Setup Requirements:**
+
 1. Run `ph vetra --interactive --watch` in one terminal first
 2. Start Claude in a separate terminal from your project directory
 3. Connect with: `claude` or `connect to the reactor mcp`
@@ -10933,6 +10997,7 @@ Create a new document of your defined type. Interact with your editor, test all 
 ### 1. Always Review Before Implementation
 
 **CRITICAL**: Claude will present a proposal before creating anything. You'll see:
+
 - Proposed document model structure (state schema, operations, modules)
 - How data will be organized
 - What actions users can perform
@@ -10944,6 +11009,7 @@ Create a new document of your defined type. Interact with your editor, test all 
 When describing what you need, include:
 
 **For Document Models:**
+
 - Purpose of the document (what problem does it solve?)
 - All data fields and their types (strings, numbers, dates, etc.)
 - What operations users should be able to perform
@@ -10951,6 +11017,7 @@ When describing what you need, include:
 - Business rules or constraints
 
 **For Document Editors:**
+
 - Which document model it's for
 - UI layout and components you want
 - User interactions and workflows
@@ -10963,9 +11030,9 @@ Good prompt for a document model:
 
 ```
 Create a document model for expense tracking with:
-- Each expense has: amount (number), description (text), 
+- Each expense has: amount (number), description (text),
   category (expense type), date, and receipt URL (optional)
-- Users can: add expenses, edit expense details, delete expenses, 
+- Users can: add expenses, edit expense details, delete expenses,
   and categorize by type
 - Track total amount automatically
 ```
@@ -10984,6 +11051,7 @@ Create an editor for the expense tracker with:
 ### 4. Work in Layers (Don't "One-Shot")
 
 Instead of asking for everything at once:
+
 - ✅ Start with the core document model
 - ✅ Test it works
 - ✅ Then add the editor
@@ -10994,8 +11062,9 @@ This approach catches issues early and gives you better results.
 ### 5. Interactive Mode Benefits
 
 Using `ph vetra --interactive` gives you confirmation prompts:
+
 - Schema changes
-- Operation definitions  
+- Operation definitions
 - Code generation
 
 **Review each step** before confirming - it's easier to adjust now than later.
@@ -11003,6 +11072,7 @@ Using `ph vetra --interactive` gives you confirmation prompts:
 ### 6. What to Expect After Implementation
 
 Claude will automatically:
+
 - Run TypeScript checks (`npm run tsc`)
 - Run linting (`npm run lint:fix`)
 - Report any errors found
@@ -11013,12 +11083,15 @@ You'll see confirmation when everything compiles successfully.
 ### 7. Common Issues and How to Avoid Them
 
 **Issue**: Generated model doesn't match expectations
+
 - **Solution**: Provide more detailed requirements upfront. Ask clarifying questions.
 
 **Issue**: Operations don't work as expected
+
 - **Solution**: Be explicit about all actions and their parameters. Use real-world examples.
 
 **Issue**: Editor UI doesn't look right
+
 - **Solution**: Describe the UI in detail (layout, components, interactions). Reference similar interfaces if helpful.
 
 ## Key Concepts to Know
@@ -11059,7 +11132,6 @@ You'll see confirmation when everything compiles successfully.
 
 </details>
 
-
 ## Phase 4: Packaging and publishing
 
 Once your document model and editor are implemented and tested, you can package them for distribution. A Powerhouse Package is a modular unit that can group document models, editors, scripts, and processors.
@@ -11084,7 +11156,7 @@ Navigate to the `package.json` file in your project root. This file is crucial f
 - **`main`**: The entry point of your package (e.g., `index.js` or `dist/index.js`).
 - **`publishConfig`**: For scoped packages intended to be public, add:
   ```json
-// json code example:
+  // json code example:
   "publishConfig": {
     "access": "public"
   }
@@ -11185,18 +11257,19 @@ To share your package with others or deploy it to different environments, publis
 1.  **Login to NPM:**
     If you haven't already, log into your NPM account. It's recommended to use an organization-specific NPM account (e.g., `yourorg-ph`).
 
-    ```bash
-// bash code example:
+        ```bash
+
+    // bash code example:
     npm login
     ```
 
-    Follow the prompts in your terminal or browser.
+        Follow the prompts in your terminal or browser.
 
 2.  **Publish the package:**
-    ```bash
+    `bash
 // bash code example:
     npm publish
-    ```
+    `
     If your package is scoped and public, NPM will use the `publishConfig` from your `package.json`. If not set there, you might need `npm publish --access public`.
 
 ### 4.7. Using your published package
@@ -11214,11 +11287,10 @@ Congratulations! You've successfully created, packaged, and published a Powerhou
 
 ---
 
-
 ## Create new Powerhouse project {#create-new-powerhouse-project}
 
 **Source:** `academy/02-MasteryTrack/04-WorkWithData/_ARCHIVE-AnalyticsProcessorTutorial/_02-CreateNewPowerhouseProject.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 Before we start diving into the tutorial, lets have a quick look at all the steps we'll go through.
 
@@ -11253,7 +11325,6 @@ cd ph-projects
 
 This essentially opens that folder and places you in it.
 
-
 Once you've navigated to the directory where you want to create the new project and in your terminal, run the following command:
 
 ```bash
@@ -11283,11 +11354,10 @@ Great! You've created a new powerhouse project, let's move on to the next step.
 
 ---
 
-
 ## CSS Customization for Connect Integration {#css-customization-for-connect-integration}
 
 **Source:** `academy/02-MasteryTrack/03-BuildingUserExperiences/04-CSSCustomization.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 When your editor runs inside Connect, it's rendered within a specific container hierarchy. Understanding this structure allows you to customize your editor's appearance to match your application's design requirements.
 
@@ -11339,14 +11409,12 @@ export function Editor() {
 **💡 TIP:**
 Using `height: "100%"` ensures your editor fills the available vertical space within Connect's container hierarchy.
 
-
 ### Method 2: CSS File with Container Selectors
 
 For more complex customizations or when you need to override Connect's default container styles, you can target the container IDs directly in a CSS file:
 
 **🚨 DANGER:** Affects All Editors
 Targeting container IDs directly will apply styles to **ALL** editors in your Connect application. For editor-specific styling, use [Method 3: Scoped Styling with Data Attributes](#method-3-scoped-styling-with-data-attributes) instead.
-
 
 ```css
 // css code example:
@@ -11376,7 +11444,6 @@ Remember to import styles in your `styles.css` file rather than directly in `.ts
 /* styles.css */
 @import "./editors/my-editor/editor.css";
 ```
-
 
 ### Method 3: Scoped Styling with Data Attributes
 
@@ -11429,7 +11496,6 @@ export const MyEditor: EditorModule = {
 
 **💡 TIP:** Runtime Inspection
 You can inspect the `data-editor` and `data-document-type` attributes in your browser's developer tools when editing a document to find the exact values for your target editor.
-
 
 ## Reference Implementation: Vetra Drive App
 
@@ -11579,11 +11645,10 @@ export function Editor() {
 
 ---
 
-
 ## Database schema {#database-schema}
 
 **Source:** `academy/02-MasteryTrack/04-WorkWithData/_06-Analytics Engine/typescript/schema.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 ![untitled] (see: images/dbs.png)
 _Database table structures for the analytics engine._
@@ -11600,11 +11665,10 @@ The `postgres` package, on the other hand, [contains an init script](https://git
 
 ---
 
-
 ## Docker deployment guide {#docker-deployment-guide}
 
 **Source:** `academy/02-MasteryTrack/05-Launch/05-DockerDeployment.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 ## Introduction
 
@@ -11622,7 +11686,6 @@ This guide covers **Docker-based deployment**. If you prefer **traditional VM/se
 
 **Choose Docker if:** You want the fastest path to production, prefer containerized workflows, or are deploying to cloud platforms.
 **Choose Direct Installation if:** You need maximum performance, want full control, or are setting up a dedicated server.
-
 
 ## Available Docker Images
 
@@ -12025,15 +12088,13 @@ docker push my-registry/my-connect:latest
 
 ---
 
-
 ## Document Model Versioning {#document-model-versioning}
 
 **Source:** `academy/02-MasteryTrack/02-DocumentModelCreation/08-DocumentModelVersioning.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 **💡 TIP:**
 This chapter covers **advanced document model versioning**—a system for evolving document schemas and operations while maintaining backward compatibility with existing documents. This is essential when your document models need to change over time in production environments.
-
 
 ## Why Versioning?
 
@@ -12047,7 +12108,6 @@ Document models in Powerhouse are **event-sourced**. Once a document is created 
 **ℹ️ INFO:** **Definition: What is Document Model Versioning?**
 Document Model Versioning is a system that allows multiple versions of the same document model to coexist. Each version has its own schema, operations, and reducers. Documents created with older versions continue to work with their original reducers, while new documents use the latest version. Upgrade manifests define how to migrate documents between versions.
 
-
 ---
 
 ## How Versioning Works
@@ -12057,6 +12117,7 @@ Document Model Versioning is a system that allows multiple versions of the same 
 Consider a simple Todo document model:
 
 **Version 1 State:**
+
 ```graphql
 // graphql code example:
 type TodoState {
@@ -12067,6 +12128,7 @@ type TodoState {
 Now you want to add a `title` field to track the list's name:
 
 **Version 2 State:**
+
 ```graphql
 // graphql code example:
 type TodoState {
@@ -12076,6 +12138,7 @@ type TodoState {
 ```
 
 Without versioning, existing v1 documents would break because they don't have a `title` field. With versioning:
+
 - V1 documents continue to work with the v1 reducer
 - New documents are created with v2
 - V1 documents can be **upgraded** to v2 when needed
@@ -12084,12 +12147,12 @@ Without versioning, existing v1 documents would break because they don't have a 
 
 Document model versioning consists of four key components:
 
-| Component | Purpose |
-|-----------|---------|
-| **Version Folders** | Separate `v1/`, `v2/` directories containing version-specific code |
-| **DocumentModelModule** | Each version exports a module with explicit `version` number |
-| **Upgrade Manifest** | Declares supported versions and upgrade paths |
-| **Upgrade Reducer** | Transforms document state from one version to another |
+| Component               | Purpose                                                            |
+| ----------------------- | ------------------------------------------------------------------ |
+| **Version Folders**     | Separate `v1/`, `v2/` directories containing version-specific code |
+| **DocumentModelModule** | Each version exports a module with explicit `version` number       |
+| **Upgrade Manifest**    | Declares supported versions and upgrade paths                      |
+| **Upgrade Reducer**     | Transforms document state from one version to another              |
 
 ---
 
@@ -12185,7 +12248,7 @@ Or when using Vetra Studio, versioning support is configured in your project set
 // typescript code example:
 // upgrades/versions.ts
 export const supportedVersions = [1, 2] as const;
-export const latestVersion = supportedVersions[1];  // 2
+export const latestVersion = supportedVersions[1]; // 2
 ```
 
 ### Step 3: Document Model Module
@@ -12201,7 +12264,7 @@ import { defaultBaseState } from "document-model/core";
 import { actions, documentModel, reducer, utils } from "./gen/index.js";
 
 export const Todo: DocumentModelModule<TodoPHState> = {
-  version: 1,           // Explicit version number
+  version: 1, // Explicit version number
   reducer,
   actions,
   utils,
@@ -12213,7 +12276,7 @@ export const Todo: DocumentModelModule<TodoPHState> = {
 // typescript code example:
 // v2/module.ts
 export const Todo: DocumentModelModule<TodoPHState> = {
-  version: 2,           // Different version
+  version: 2, // Different version
   reducer,
   actions,
   utils,
@@ -12242,14 +12305,14 @@ function upgradeReducer(
       ...document.state,
       global: {
         ...document.state.global,
-        title: "",              // Initialize the new field
+        title: "", // Initialize the new field
       },
     },
     initialState: {
       ...document.initialState,
       global: {
         ...document.initialState.global,
-        title: "",              // Also in initial state
+        title: "", // Also in initial state
       },
     },
   };
@@ -12308,11 +12371,11 @@ Connect automatically loads all document model versions and upgrade manifests fr
 ```typescript
 // typescript code example:
 // Simplified view of Connect's reactor setup
-const documentModelModules = vetraPackages
-  .flatMap((pkg) => pkg.modules.documentModelModules);
+const documentModelModules = vetraPackages.flatMap(
+  (pkg) => pkg.modules.documentModelModules,
+);
 
-const upgradeManifests = vetraPackages
-  .flatMap((pkg) => pkg.upgradeManifests);
+const upgradeManifests = vetraPackages.flatMap((pkg) => pkg.upgradeManifests);
 
 const reactor = await createBrowserReactor(
   documentModelModules,
@@ -12357,6 +12420,7 @@ const result = await client.find({ type: "my-org/todo" });
 **Scenario:** Your Todo document needs a `title` field.
 
 **Solution:**
+
 1. Create v2 with the new field in the state schema
 2. Implement upgrade reducer that sets `title: ""`
 3. New documents get v2; existing v1 documents can be upgraded
@@ -12366,6 +12430,7 @@ const result = await client.find({ type: "my-org/todo" });
 **Scenario:** V1 has `ADD_TODO`, `REMOVE_TODO`. V2 adds `EDIT_TITLE`.
 
 **How it works:**
+
 - V2 module includes the new operation
 - V1 documents don't have access to `EDIT_TITLE` until upgraded
 - The upgrade manifest handles the migration
@@ -12382,10 +12447,13 @@ function v1StateReducer(state, action) {
     return {
       ...state,
       global: {
-        items: [...state.global.items, {
-          id: action.input.id,
-          name: action.input.name
-        }],
+        items: [
+          ...state.global.items,
+          {
+            id: action.input.id,
+            name: action.input.name,
+          },
+        ],
       },
     };
   }
@@ -12397,11 +12465,14 @@ function v2StateReducer(state, action) {
     return {
       ...state,
       global: {
-        items: [...state.global.items, {
-          id: action.input.id,
-          name: action.input.name,
-          addedAt: action.input.addedAt,  // New field from input
-        }],
+        items: [
+          ...state.global.items,
+          {
+            id: action.input.id,
+            name: action.input.name,
+            addedAt: action.input.addedAt, // New field from input
+          },
+        ],
       },
     };
   }
@@ -12437,8 +12508,8 @@ it("should upgrade v1 document to v2", () => {
 
   const v2Doc = upgradeReducer(v1Doc, {} as Action);
 
-  expect(v2Doc.state.global.title).toBe("");  // New field initialized
-  expect(v2Doc.state.global.todos).toEqual(v1Doc.state.global.todos);  // Data preserved
+  expect(v2Doc.state.global.title).toBe(""); // New field initialized
+  expect(v2Doc.state.global.todos).toEqual(v1Doc.state.global.todos); // Data preserved
 });
 ```
 
@@ -12446,14 +12517,14 @@ it("should upgrade v1 document to v2", () => {
 
 ## Summary
 
-| Concept | Description |
-|---------|-------------|
-| **Version Folders** | `v1/`, `v2/` directories with version-specific code |
-| **DocumentModelModule** | Exports with explicit `version` field |
-| **UpgradeTransition** | Defines how to migrate from one version to the next |
-| **UpgradeManifest** | Declares all versions and upgrade paths for a document type |
-| **Backward Compatibility** | Old documents work with their original reducers |
-| **Automatic Upgrades** | Reactor handles version detection and migration |
+| Concept                    | Description                                                 |
+| -------------------------- | ----------------------------------------------------------- |
+| **Version Folders**        | `v1/`, `v2/` directories with version-specific code         |
+| **DocumentModelModule**    | Exports with explicit `version` field                       |
+| **UpgradeTransition**      | Defines how to migrate from one version to the next         |
+| **UpgradeManifest**        | Declares all versions and upgrade paths for a document type |
+| **Backward Compatibility** | Old documents work with their original reducers             |
+| **Automatic Upgrades**     | Reactor handles version detection and migration             |
 
 Document model versioning enables your applications to evolve safely while preserving the integrity of existing data. By following these patterns, you can confidently add new features, modify schemas, and improve your document models over time.
 
@@ -12467,16 +12538,14 @@ Document model versioning enables your applications to evolve safely while prese
 
 ---
 
-
 ## Document Permission System {#document-permission-system}
 
 **Source:** `academy/02-MasteryTrack/03-BuildingUserExperiences/07-Authorization/02-DocumentPermissions.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 **⚠️ WARNING:** Work in Progress
 This documentation is still being written and may be incomplete.
 The feature is not yet available on production.
-
 
 ## Introduction
 
@@ -12492,10 +12561,10 @@ Within a Reactor, data is organized hierarchically:
 
 The Reactor API implements a two-layer authorization system:
 
-| Layer       | System                                                       | Purpose                                              | Scope        |
-| ----------- | ------------------------------------------------------------ | ---------------------------------------------------- | ------------ |
+| Layer       | System                                                           | Purpose                                              | Scope        |
+| ----------- | ---------------------------------------------------------------- | ---------------------------------------------------- | ------------ |
 | **Layer 1** | [**Global Role-Based Authorization**] (see: 04-Authorization.md) | Controls who can access the Reactor API              | Reactor-wide |
-| **Layer 2** | **Document Permission System** (this guide)                  | Controls access to specific documents/folders/drives | Per-document |
+| **Layer 2** | **Document Permission System** (this guide)                      | Controls access to specific documents/folders/drives | Per-document |
 
 This document permission system allows you to implement fine-grained access control—for example, you might want certain team members to have write access to a "Marketing" drive while only having read access to a "Finance" drive, even though they're both authenticated users of your Reactor.
 
@@ -12503,7 +12572,6 @@ This document permission system allows you to implement fine-grained access cont
 Before using document permissions, you must configure [global role-based authorization] (see: 04-Authorization.md). Users need a global role (GUEST, USER, or ADMIN) to access the Reactor API before document-level permissions are checked.
 
 **Reminder:** You can also enable `FREE_ENTRY=true` to allow any authenticated user with a valid Renown credential to access the Reactor, bypassing the need for explicit role assignments.
-
 
 ## Overview
 
@@ -12591,7 +12659,7 @@ Here's the complete flow to set up and use document permissions:
 1. **Start the Reactor with auth enabled**:
 
    ```bash
-// bash code example:
+   // bash code example:
    # Set environment variables
    export AUTH_ENABLED=true
    export DOCUMENT_PERMISSIONS_ENABLED=true
@@ -12603,7 +12671,7 @@ Here's the complete flow to set up and use document permissions:
 2. **Authenticate as a user**:
 
    ```bash
-// bash code example:
+   // bash code example:
    # Login via Renown
    ph login
 
@@ -12677,7 +12745,6 @@ The Reactor API stores permission data in a relational database using six tables
 
 **ℹ️ INFO:**
 These tables are automatically created by database migrations when you enable `DOCUMENT_PERMISSIONS_ENABLED=true`. You don't need to create them manually.
-
 
 <details>
 <summary><strong>Useful Queries</strong></summary>
@@ -12821,7 +12888,6 @@ For document drives specifically, the following operation permissions are availa
 
 **ℹ️ INFO:** Operation Permissions vs Document Permissions
 These operation permissions provide fine-grained control over specific actions within a document drive, separate from the general document permission levels (READ, WRITE, ADMIN). Note that renaming a document is not part of the WRITE permission on the document itself—it's an `UPDATE_NODE` operation on the drive document. If you need to set operation permissions for documents with different document models, familiarize yourself with the available operations of the installed document model package.
-
 
 </details>
 
@@ -13265,7 +13331,6 @@ Alternatively, configure authorization in your `powerhouse.config.json` file:
 Both layers work together. A user must pass the [global role check] (see: 04-Authorization.md) before document permissions are evaluated.
 
 **Reminder:** When `FREE_ENTRY=true` is enabled, the global role check allows any authenticated user to access the Reactor, simplifying the authorization flow for open environments.
-
 
 ## Usage Examples: Company Document Access & Permissions
 
@@ -14178,7 +14243,6 @@ curl -X POST http://localhost:4001/graphql \
 **💡 TIP:** User Identification
 Permissions are tied to **Ethereum addresses** (e.g., `0x123...`), not usernames. When granting permissions, use the user's Ethereum address as shown in their Renown profile or obtained from `ph login --status`.
 
-
 ## Best Practices
 
 1. **Use groups for team access**: Instead of granting individual permissions, create groups and assign permissions to groups
@@ -14217,11 +14281,10 @@ Ensure database migrations have run:
 
 ---
 
-
 ## Document-Engineering {#document-engineering}
 
 **Source:** `academy/06-ComponentLibrary/00-DocumentEngineering.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 The reusable components in the Document-Engineering system are a set of of front-end components based on graphQL scalars.
 Powerhouse also has a set of custom scalars that are not part of the graphQL standard but are specific to the web3 ecosystem.
@@ -14252,7 +14315,6 @@ Understanding the relationship between document editors and viewers is crucial f
 
 **💡 TIP:** Component Behavior in Different Contexts
 The same component that will be used in a document viewer will have a **disabled state** (not allowed to edit documents). Document editors precede document viewers - you would start by creating a document editor and then, if needed, decide which viewer format is useful.
-
 
 ## Scalars vs. General UI Components
 
@@ -14305,7 +14367,6 @@ Purpose-specific container for other components like lists of other components, 
 **ℹ️ INFO:** Component Library Philosophy
 The Powerhouse team is building a Component library with a wide range of components embedding best UX practices & key functionality. This library establishes standards and best practices for building documents while fast-tracking the building process through facilitation of the most basic & useful component types.
 
-
 ## Component Behavior & UX Principles
 
 Besides the ability to input data, components have another crucial utility: they describe the mechanism of user interaction through implementing a defined set of behavior rules.
@@ -14344,79 +14405,81 @@ Let's walk through the typical workflow for using a component from the document-
     - Review the visual examples and interactive demo.
     - Examine the "Usage" snippet and the **Props table** to understand the basic implementation and available configuration options (`name`, `value`, `onChange`, etc.).
 3.  **Import the Component:** In your code editor, open the relevant file (e.g., `editors/todo-list-editor/components/Checkbox.tsx`). Add an import statement at the top to bring the component into your file's scope:
-    ```typescript
+    `typescript
 // typescript code example:
     import { Form, BooleanField } from "@powerhousedao/document-engineering/scalars";
-    ```
+    `
     This line instructs the build process to locate the `Form` and `BooleanField` components within the installed `@powerhousedao/document-engineering/scalars` package and make them available for use.
 
-    :::info Form Wrapper Required
-    Scalar components like `BooleanField` must be wrapped in a `Form` component from the same package. This provides built-in validation and form state management.
-    :::
+        :::info Form Wrapper Required
+        Scalar components like `BooleanField` must be wrapped in a `Form` component from the same package. This provides built-in validation and form state management.
+        :::
 
 4.  **Use and Configure the Component:** Place the component tag in your JSX where needed. Use the information from Storybook (usage snippet and props table) as a guide, but adapt the props to your specific requirements:
 
-    **Step 4a: Create a reusable Checkbox component**
-    ```typescript
-// typescript code example:
+        **Step 4a: Create a reusable Checkbox component**
+        ```typescript
+
+    // typescript code example:
     // editors/todo-list-editor/components/Checkbox.tsx
     import { Form, BooleanField } from "@powerhousedao/document-engineering/scalars";
 
-    interface CheckboxProps {
-      value: boolean;
-      onChange: (value: boolean) => void;
-    }
+        interface CheckboxProps {
+          value: boolean;
+          onChange: (value: boolean) => void;
+        }
 
-    export const Checkbox = ({ value, onChange }: CheckboxProps) => {
-      return (
-        <Form onSubmit={() => {}}>
-          <BooleanField
-            name="checked"
-            description="Mark as complete"
-            value={value}
-            onChange={onChange}
-          />
-        </Form>
-      );
-    };
-    ```
+        export const Checkbox = ({ value, onChange }: CheckboxProps) => {
+          return (
+            <Form onSubmit={() => {}}>
+              <BooleanField
+                name="checked"
+                description="Mark as complete"
+                value={value}
+                onChange={onChange}
+              />
+            </Form>
+          );
+        };
+        ```
 
-    **Step 4b: Use it in your Todo component with the document model hook**
-    ```typescript
-// typescript code example:
+        **Step 4b: Use it in your Todo component with the document model hook**
+        ```typescript
+
+    // typescript code example:
     // editors/todo-list-editor/components/Todo.tsx
     import { useSelectedTodoListDocument, updateTodoItem } from "todo-tutorial/document-models/todo-list";
     import type { TodoItem } from "todo-tutorial/document-models/todo-list";
     import { Checkbox } from "./Checkbox.js";
 
-    type Props = { todo: TodoItem };
+        type Props = { todo: TodoItem };
 
-    export function Todo({ todo }: Props) {
-      // Use the hook to get dispatch function
-      const [todoList, dispatch] = useSelectedTodoListDocument();
+        export function Todo({ todo }: Props) {
+          // Use the hook to get dispatch function
+          const [todoList, dispatch] = useSelectedTodoListDocument();
 
-      if (!todoList) return null;
+          if (!todoList) return null;
 
-      return (
-        <div className="flex items-center gap-2">
-          <Checkbox
-            value={todo.checked}
-            onChange={() => {
-              dispatch(updateTodoItem({
-                id: todo.id,
-                checked: !todo.checked,
-              }));
-            }}
-          />
-          <span className={todo.checked ? "line-through" : ""}>
-            {todo.text}
-          </span>
-        </div>
-      );
-    }
-    ```
+          return (
+            <div className="flex items-center gap-2">
+              <Checkbox
+                value={todo.checked}
+                onChange={() => {
+                  dispatch(updateTodoItem({
+                    id: todo.id,
+                    checked: !todo.checked,
+                  }));
+                }}
+              />
+              <span className={todo.checked ? "line-through" : ""}>
+                {todo.text}
+              </span>
+            </div>
+          );
+        }
+        ```
 
-    You configure the component's appearance and behavior by passing the appropriate values to its props. Note the use of the `useSelectedTodoListDocument` hook to access the dispatch function.
+        You configure the component's appearance and behavior by passing the appropriate values to its props. Note the use of the `useSelectedTodoListDocument` hook to access the dispatch function.
 
 5.  **Test and Refine:** Run your application (e.g., using `ph connect`) to see the component in context. Verify its appearance and functionality.
 
@@ -14483,11 +14546,10 @@ You can learn how to do so in our guide on [Creating Custom Scalars](/academy/Co
 
 ---
 
-
 ## Drive analytics {#drive-analytics}
 
 **Source:** `academy/04-APIReferences/_07-DriveAnalyticsHooks.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 Drive Analytics provides automated monitoring and insights into document drive operations within Powerhouse applications. This system tracks user interactions, document modifications, and drive activity to help developers understand usage patterns and system performance.
 
@@ -15008,18 +15070,16 @@ export function ReactorAnalyticsProvider({ children }: PropsWithChildren) {
 
 ---
 
-
 ## Example: Todo-demo-package {#example-todo-demo-package}
 
 **Source:** `academy/02-MasteryTrack/02-DocumentModelCreation/07-ExampleToDoListRepository.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 **ℹ️ INFO:**
 
 The Todo-demo is maintained by the Powerhouse Team and serves as a reference for testing and introducing new features. It will be continuously updated alongside the accompanying documentation.
 
 https://github.com/powerhouse-inc/todo-demo
-
 
 There are several ways to explore this package:
 
@@ -15029,6 +15089,7 @@ The Todo-demo and repository are your main reference points during the Mastery T
 Follow the steps in the "Mastery Track – Document Model Creation" chapters to build along with the examples.
 
 Key patterns used in the repository:
+
 - **Naming convention**: `TodoList`, `TodoItem`, `TodoListState` (one word, PascalCase)
 - **Document type**: `powerhouse/todo-list`
 - **Module name**: `todos`
@@ -15079,22 +15140,21 @@ ph install @powerhousedao/todo-demo
 
 ## Comparing Get Started vs Mastery Track
 
-| Aspect | Get Started | Mastery Track (Advanced) |
-|--------|-------------|--------------------------|
-| Schema | Basic `items` array only | Includes `stats` object for tracking |
-| Reducer complexity | Simple CRUD operations | Includes statistics updates |
-| Editor | Component-based with hooks | Same approach + stats display |
-| Tests | Basic operation tests | Includes stats verification tests |
+| Aspect             | Get Started                | Mastery Track (Advanced)             |
+| ------------------ | -------------------------- | ------------------------------------ |
+| Schema             | Basic `items` array only   | Includes `stats` object for tracking |
+| Reducer complexity | Simple CRUD operations     | Includes statistics updates          |
+| Editor             | Component-based with hooks | Same approach + stats display        |
+| Tests              | Basic operation tests      | Includes stats verification tests    |
 
 Both approaches use the same naming conventions and patterns — the Mastery Track simply extends the foundation with additional features to demonstrate more advanced concepts.
 
 ---
 
-
 ## Generate the reactor and analytics processor {#generate-the-reactor-and-analytics-processor}
 
 **Source:** `academy/02-MasteryTrack/04-WorkWithData/_ARCHIVE-AnalyticsProcessorTutorial/_03-GenerateAnAnalyticsProcessor.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 ### Launch the reactor
 
@@ -15151,7 +15211,6 @@ An RWA document model helps an arranger for Sky (previously MakerDAO) to accurat
 In the case of Sky these real world assets are used to back the Sky/MakerDAO stablecoin.
 Let's pretend we're an arranger and we want to track the value of a new RWA asset and analyze the total value of the assetclass on a monthly basis.
 Aside from setting up an analytics processor you'll now also become familiar with how the RWA reporting workflow is captured in a document model.
-
 
 We'll run through the following scenario: 1. Add the Asset "T-Bill 4565446" with CUSIP : TB4565446, maturity 01/12/2024. So we have a new asset to track and work with in the document model. 2. Make a "principal draw" of $10,000,000 on May 1. We're simulating an arranger borrowing $10,000,000 from Sky to purchase the asset. 3. Make a purchase of 2,500,000 TB4565446 bills for $2,490,000 on May 15. 4. Make a purchase of 2,000,000 TB4565446 bills for $1,995,000 on June 15. 5. Make a sale of 4,000,000 TB4565446 bills for $4,000,000 on July 1. 6. Verify that the document data is correctly entered. 7. Inspect the document history.
 
@@ -15268,16 +15327,14 @@ Now let's move on to the next step where we'll update the analytics processor co
 
 ---
 
-
 ## Getting started {#getting-started}
 
 **Source:** `academy/02-MasteryTrack/04-WorkWithData/_06-Analytics Engine/intro.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 ---
-sidebar_position: 0
----
 
+## sidebar_position: 0
 
 ## Introduction
 
@@ -15425,11 +15482,10 @@ Next steps depend on use case.
 
 ---
 
-
 ## Glossary {#glossary}
 
 **Source:** `academy/08-Glossary.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 ## General Terms
 
@@ -15529,16 +15585,14 @@ Next steps depend on use case.
 
 ---
 
-
 ## GraphQL API {#graphql-api}
 
 **Source:** `academy/02-MasteryTrack/04-WorkWithData/_06-Analytics Engine/graphql/index.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 ---
-sidebar_position: 3
----
 
+## sidebar_position: 3
 
 A basic understanding of GraphQL is helpful to understand this document, as we use concepts and vocabulary from the broader ecosystem. For a good primer on the subject, see the [Introduction to GraphQL](https://graphql.org/learn/).
 
@@ -15693,11 +15747,10 @@ Usually, error messages are explicit and easy to understand what is wrong, below
 
 ---
 
-
 ## Implement document model tests {#implement-document-model-tests}
 
 **Source:** `academy/02-MasteryTrack/02-DocumentModelCreation/06-ImplementDocumentModelTests.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 ## Ensuring robustness and reliability
 
@@ -15754,19 +15807,25 @@ describe("Todos Operations", () => {
 
     // Verify the operation was recorded
     expect(updatedDocument.operations.global).toHaveLength(1);
-    expect(updatedDocument.operations.global[0].action.type).toBe("ADD_TODO_ITEM");
-    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(input);
+    expect(updatedDocument.operations.global[0].action.type).toBe(
+      "ADD_TODO_ITEM",
+    );
+    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
+      input,
+    );
     expect(updatedDocument.operations.global[0].index).toEqual(0);
   });
 
   it("should handle updateTodoItem operation to update text", () => {
     const mockItem = generateMock(TodoItemSchema());
-    const input: UpdateTodoItemInput = generateMock(UpdateTodoItemInputSchema());
+    const input: UpdateTodoItemInput = generateMock(
+      UpdateTodoItemInputSchema(),
+    );
     input.id = mockItem.id;
     const newText = "new text";
     input.text = newText;
     input.checked = undefined;
-    
+
     const document = utils.createDocument({
       global: {
         items: [mockItem],
@@ -15778,8 +15837,10 @@ describe("Todos Operations", () => {
 
     // Verify the operation was recorded
     expect(updatedDocument.operations.global).toHaveLength(1);
-    expect(updatedDocument.operations.global[0].action.type).toBe("UPDATE_TODO_ITEM");
-    
+    expect(updatedDocument.operations.global[0].action.type).toBe(
+      "UPDATE_TODO_ITEM",
+    );
+
     // Verify the state was updated correctly
     const updatedItem = updatedDocument.state.global.items.find(
       (item) => item.id === input.id,
@@ -15790,12 +15851,14 @@ describe("Todos Operations", () => {
 
   it("should handle updateTodoItem operation to update checked", () => {
     const mockItem = generateMock(TodoItemSchema());
-    const input: UpdateTodoItemInput = generateMock(UpdateTodoItemInputSchema());
+    const input: UpdateTodoItemInput = generateMock(
+      UpdateTodoItemInputSchema(),
+    );
     input.id = mockItem.id;
     const newChecked = !mockItem.checked;
     input.checked = newChecked;
     input.text = undefined;
-    
+
     const document = utils.createDocument({
       global: {
         items: [mockItem],
@@ -15819,17 +15882,21 @@ describe("Todos Operations", () => {
         items: [mockItem],
       },
     });
-    
-    const input: DeleteTodoItemInput = generateMock(DeleteTodoItemInputSchema());
+
+    const input: DeleteTodoItemInput = generateMock(
+      DeleteTodoItemInputSchema(),
+    );
     input.id = mockItem.id;
-    
+
     const updatedDocument = reducer(document, deleteTodoItem(input));
     expect(isTodoListDocument(updatedDocument)).toBe(true);
 
     // Verify the operation was recorded
     expect(updatedDocument.operations.global).toHaveLength(1);
-    expect(updatedDocument.operations.global[0].action.type).toBe("DELETE_TODO_ITEM");
-    
+    expect(updatedDocument.operations.global[0].action.type).toBe(
+      "DELETE_TODO_ITEM",
+    );
+
     // Verify the item was removed from state
     const updatedItems = updatedDocument.state.global.items;
     expect(updatedItems).toHaveLength(0);
@@ -15841,7 +15908,6 @@ describe("Todos Operations", () => {
 
 **ℹ️ INFO:** Advanced Feature
 If you implemented the advanced version with statistics tracking, add these additional tests to verify the stats are updated correctly.
-
 
 ```typescript
 // typescript code example:
@@ -15860,15 +15926,15 @@ describe("Todos Operations with Stats", () => {
 
   it("should update stats when checking a todo item", () => {
     const document = utils.createDocument();
-    
+
     // Add an item first
     const addedDocument = reducer(document, addTodoItem({ text: "Buy milk" }));
     const itemId = addedDocument.state.global.items[0].id;
-    
+
     // Now check it
     const updatedDocument = reducer(
       addedDocument,
-      updateTodoItem({ id: itemId, checked: true })
+      updateTodoItem({ id: itemId, checked: true }),
     );
 
     expect(updatedDocument.state.global.stats.total).toBe(1);
@@ -15878,15 +15944,15 @@ describe("Todos Operations with Stats", () => {
 
   it("should update stats when deleting an unchecked todo item", () => {
     const document = utils.createDocument();
-    
+
     // Add an item
     const addedDocument = reducer(document, addTodoItem({ text: "Buy milk" }));
     const itemId = addedDocument.state.global.items[0].id;
-    
+
     // Delete it
     const updatedDocument = reducer(
       addedDocument,
-      deleteTodoItem({ id: itemId })
+      deleteTodoItem({ id: itemId }),
     );
 
     expect(updatedDocument.state.global.items).toHaveLength(0);
@@ -15897,19 +15963,19 @@ describe("Todos Operations with Stats", () => {
 
   it("should update stats when deleting a checked todo item", () => {
     const document = utils.createDocument();
-    
+
     // Add and check an item
     const addedDocument = reducer(document, addTodoItem({ text: "Buy milk" }));
     const itemId = addedDocument.state.global.items[0].id;
     const checkedDocument = reducer(
       addedDocument,
-      updateTodoItem({ id: itemId, checked: true })
+      updateTodoItem({ id: itemId, checked: true }),
     );
-    
+
     // Delete it
     const updatedDocument = reducer(
       checkedDocument,
-      deleteTodoItem({ id: itemId })
+      deleteTodoItem({ id: itemId }),
     );
 
     expect(updatedDocument.state.global.items).toHaveLength(0);
@@ -15972,11 +16038,10 @@ For a complete, working example, you can always have a look at the [Example Todo
 
 ---
 
-
 ## Implement document reducers {#implement-document-reducers}
 
 **Source:** `academy/02-MasteryTrack/02-DocumentModelCreation/05-ImplementDocumentReducers.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 ## The heart of document logic
 
@@ -15994,7 +16059,7 @@ Before diving into the specifics of writing reducers, let's recall the preceding
 
 This generated reducer file is our starting point. It will contain function stubs or an object structure expecting your reducer implementations, all typed according to your schema.
 
-## What is a reducer? 
+## What is a reducer?
 
 ### The core principles
 
@@ -16020,7 +16085,7 @@ Let's break down its components and principles:
     - **Never Mutate `currentState`**: You must never directly modify the `currentState` object or any of its nested properties.
     - **Always Return a New Object for Changes**: If the state changes, you must create and return a brand new object. If the state does not change, you return the original `currentState` object.
     - This is fundamental to Powerhouse's event sourcing architecture, enabling time travel, efficient change detection, and a clear audit trail.
-    
+
     :::tip Powerhouse uses Immer.js
     Powerhouse uses **Immer.js** under the hood, which means you can write code that _looks like_ it's mutating the state directly (e.g., `state.items.push(...)`), but Immer ensures it results in an immutable update. This gives you the best of both worlds: readable code and immutable state.
     :::
@@ -16030,28 +16095,29 @@ Let's break down its components and principles:
 4.  **Delegation to specific operation handlers**:
     While you can write one large reducer that uses a `switch` statement or `if/else if` blocks based on `action.type`, Powerhouse's generated code typically encourages a more modular approach. You'll often implement a separate function for each operation, which are then combined into a main reducer object or map. The `ph generate` command usually sets up this structure for you. For example, in your `document-models/todo-list/src/reducers/todos.ts`, you'll find an object structure like this:
 
-    ```typescript
-// typescript code example:
+        ```typescript
+
+    // typescript code example:
     import type { TodoListTodosOperations } from "todo-tutorial/document-models/todo-list";
 
-    export const todoListTodosOperations: TodoListTodosOperations = {
-      addTodoItemOperation(state, action) {
-        // Your logic for ADD_TODO_ITEM
-      },
-      updateTodoItemOperation(state, action) {
-        // Your logic for UPDATE_TODO_ITEM
-      },
-      deleteTodoItemOperation(state, action) {
-        // Your logic for DELETE_TODO_ITEM
-      },
-    };
-    ```
+        export const todoListTodosOperations: TodoListTodosOperations = {
+          addTodoItemOperation(state, action) {
+            // Your logic for ADD_TODO_ITEM
+          },
+          updateTodoItemOperation(state, action) {
+            // Your logic for UPDATE_TODO_ITEM
+          },
+          deleteTodoItemOperation(state, action) {
+            // Your logic for DELETE_TODO_ITEM
+          },
+        };
+        ```
 
-    The `TodoListTodosOperations` type is generated by Powerhouse and ensures your reducer object correctly implements all defined operations. The `state` and `action` parameters within these methods will also be strongly typed based on your schema.
+        The `TodoListTodosOperations` type is generated by Powerhouse and ensures your reducer object correctly implements all defined operations. The `state` and `action` parameters within these methods will also be strongly typed based on your schema.
 
 ## Implementing reducer logic: A practical guide
 
-Let's use our familiar `TodoList` example to illustrate common patterns. 
+Let's use our familiar `TodoList` example to illustrate common patterns.
 
 ### Basic implementation (matching Get Started)
 
@@ -16066,23 +16132,23 @@ export const todoListTodosOperations: TodoListTodosOperations = {
   addTodoItemOperation(state, action) {
     // Generate a unique ID for the new todo item
     const id = generateId();
-    
+
     // Add the new item to the state (Immer handles immutability)
     state.items.push({ ...action.input, id, checked: false });
   },
-  
+
   updateTodoItemOperation(state, action) {
     // Find the item to update by its ID
     const item = state.items.find((item) => item.id === action.input.id);
-    
+
     // Return early if item not found
     if (!item) return;
-    
+
     // Update only the fields that are provided (partial update)
     item.text = action.input.text ?? item.text;
     item.checked = action.input.checked ?? item.checked;
   },
-  
+
   deleteTodoItemOperation(state, action) {
     // Filter out the item with the matching ID
     state.items = state.items.filter((item) => item.id !== action.input.id);
@@ -16093,12 +16159,10 @@ export const todoListTodosOperations: TodoListTodosOperations = {
 **ℹ️ INFO:** Key Pattern: ID Generation
 Notice that `addTodoItemOperation` uses `generateId()` from `document-model/core` to create a unique ID. This is the recommended pattern — the ID is generated in the reducer, not passed from the UI. This ensures consistent, unique IDs across all operations.
 
-
 ### Advanced implementation (with statistics tracking)
 
 **ℹ️ INFO:** Advanced Feature
 This section extends the basic reducers with statistics tracking, matching the advanced schema from the previous section. This demonstrates how to update computed/derived state alongside your primary data.
-
 
 For the advanced version with `stats`, we need to update the statistics whenever items are added, updated, or deleted:
 
@@ -16111,7 +16175,7 @@ export const todoListTodosOperations: TodoListTodosOperations = {
   addTodoItemOperation(state, action) {
     // Generate a unique ID for the new todo item
     const id = generateId();
-    
+
     // Update statistics
     state.stats.total += 1;
     state.stats.unchecked += 1;
@@ -16138,7 +16202,10 @@ export const todoListTodosOperations: TodoListTodosOperations = {
     }
 
     // Handle checked status changes and update stats
-    if (action.input.checked !== undefined && action.input.checked !== item.checked) {
+    if (
+      action.input.checked !== undefined &&
+      action.input.checked !== item.checked
+    ) {
       if (action.input.checked) {
         state.stats.unchecked -= 1;
         state.stats.checked += 1;
@@ -16193,7 +16260,7 @@ addTodoItemOperation(state, action) {
 updateTodoItemOperation(state, action) {
   const item = state.items.find((item) => item.id === action.input.id);
   if (!item) return;
-  
+
   item.text = action.input.text ?? item.text;
   item.checked = action.input.checked ?? item.checked;
 }
@@ -16267,15 +16334,15 @@ export const todoListTodosOperations: TodoListTodosOperations = {
     const id = generateId();
     state.items.push({ ...action.input, id, checked: false });
   },
-  
+
   updateTodoItemOperation(state, action) {
     const item = state.items.find((item) => item.id === action.input.id);
     if (!item) return;
-    
+
     item.text = action.input.text ?? item.text;
     item.checked = action.input.checked ?? item.checked;
   },
-  
+
   deleteTodoItemOperation(state, action) {
     state.items = state.items.filter((item) => item.id !== action.input.id);
   },
@@ -16292,7 +16359,7 @@ import type { TodoListTodosOperations } from "todo-tutorial/document-models/todo
 export const todoListTodosOperations: TodoListTodosOperations = {
   addTodoItemOperation(state, action) {
     const id = generateId();
-    
+
     state.stats.total += 1;
     state.stats.unchecked += 1;
 
@@ -16313,7 +16380,10 @@ export const todoListTodosOperations: TodoListTodosOperations = {
       item.text = action.input.text;
     }
 
-    if (action.input.checked !== undefined && action.input.checked !== item.checked) {
+    if (
+      action.input.checked !== undefined &&
+      action.input.checked !== item.checked
+    ) {
       if (action.input.checked) {
         state.stats.unchecked -= 1;
         state.stats.checked += 1;
@@ -16361,17 +16431,15 @@ With your reducers implemented, your document model is now functionally complete
 
 ---
 
-
 ## Implement the document model reducers {#implement-the-document-model-reducers}
 
 **Source:** `academy/01-GetStarted/03-ImplementOperationReducers.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 **💡 TIP:** Tutorial Repository
 📦 **Reference Code**: [step-3-implement-reducer-operation-handlers](https://github.com/powerhouse-inc/todo-tutorial/tree/step-3-implement-reducer-operation-handlers)
 
 This step focuses on implementing the reducer logic for add, update, and delete operations.
-
 
 <details>
 <summary>📖 How to use this tutorial</summary>
@@ -16392,6 +16460,7 @@ git show tutorial/step-3-implement-reducer-operation-handlers:document-models/to
 ### Visual comparison with GitHub Desktop
 
 After committing your work, compare visually:
+
 1. **Branch** menu → **"Compare to Branch..."**
 2. Select `tutorial/step-3-implement-reducer-operation-handlers`
 3. Review differences in the visual interface
@@ -16419,7 +16488,6 @@ Reducers are a core concept in Powerhouse document models. They implement the st
 
 **Connection to schema definition language (SDL)**: The reducers directly implement the operations you defined in your SDL. Remember how we defined `AddTodoItemInput`, `UpdateTodoItemInput`, and `DeleteTodoItemInput` in our schema?  
 The reducers provide the actual implementation of what happens when those operations are performed.
-
 
 ## Explore the generated reducer file
 
@@ -16489,6 +16557,7 @@ export const todoListTodosOperations: TodoListTodosOperations = {
 ```
 
 **What's happening here:**
+
 - We generate a unique ID using `generateId()` from `document-model/core`
 - We push a new item to the `items` array with the input text, new ID, and `checked: false`
 - Under the hood, Powerhouse uses Immer.js, so this "mutation" is actually immutable
@@ -16516,6 +16585,7 @@ Replace the boilerplate `updateTodoItemOperation`:
 ```
 
 **What's happening here:**
+
 - We find the item by its ID
 - We return early if the item is not found
 - We use nullish coalescing (`??`) to only update fields that are provided
@@ -16540,6 +16610,7 @@ Replace the boilerplate `deleteTodoItemOperation`:
 ```
 
 **What's happening here:**
+
 - We filter out the item with the matching ID
 - This creates a new array without the deleted item
 
@@ -16560,14 +16631,14 @@ export const todoListTodosOperations: TodoListTodosOperations = {
     const id = generateId();
     state.items.push({ ...action.input, id, checked: false });
   },
-  
+
   updateTodoItemOperation(state, action) {
     const item = state.items.find((item) => item.id === action.input.id);
     if (!item) return;
     item.text = action.input.text ?? item.text;
     item.checked = action.input.checked ?? item.checked;
   },
-  
+
   deleteTodoItemOperation(state, action) {
     state.items = state.items.filter((item) => item.id !== action.input.id);
   },
@@ -16592,28 +16663,26 @@ pnpm lint
 git diff tutorial/step-3-implement-reducer-operation-handlers -- document-models/todo-list/src/reducers/
 ```
 
-
 ## Up next: Writing tests
 
 In the next chapter, you'll write comprehensive tests to verify your reducer implementations work correctly.
 
 ---
 
-
 ## Implement the document model reducers {#implement-the-document-model-reducers}
 
 **Source:** `academy/03-ExampleUsecases/Chatroom/04-ImplementOperationReducers.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 **💡 TIP:** Tutorial Repository
 📦 **Reference Code**: [chatroom-demo](https://github.com/powerhouse-inc/chatroom-demo)
 
 This tutorial covers two key implementations:
+
 1. **Reducers**: Implementing the reducer logic for all ChatRoom operations
 2. **Tests**: Writing comprehensive tests for the reducers
 
 You can view the exact implementation in the repository's `document-models/chat-room/src/` directory.
-
 
 <details>
 <summary>📖 How to use this tutorial</summary>
@@ -16649,6 +16718,7 @@ git show tutorial/main:document-models/chat-room/src/tests/messages.test.ts
 ### Visual comparison with GitHub Desktop
 
 After committing your work, compare visually:
+
 1. **Branch** menu → **"Compare to Branch..."**
 2. Select `tutorial/main`
 3. Review differences in the visual interface
@@ -16681,7 +16751,6 @@ Reducers are a core concept in Powerhouse document models. They implement the st
 **ℹ️ INFO:**
 **Connection to schema definition language (SDL)**: The reducers directly implement the operations you defined in your SDL. Remember how we defined `AddMessageInput`, `AddEmojiReactionInput`, `RemoveEmojiReactionInput`, `EditChatNameInput`, and `EditChatDescriptionInput` in our schema?  
 The reducers provide the actual implementation of what happens when those operations are performed.
-
 
 To import the document model specification into your Powerhouse project, you can either:
 
@@ -16720,18 +16789,20 @@ Open the `messages.ts` file and you should see the scaffolding code that needs t
 import type { ChatRoomMessagesOperations } from "@powerhousedao/chatroom-package/document-models/chat-room";
 
 export const chatRoomMessagesOperations: ChatRoomMessagesOperations = {
-    addMessageOperation(state, action) {
-        // TODO: Implement "addMessageOperation" reducer
-        throw new Error('Reducer "addMessageOperation" not yet implemented');
-    },
-    addEmojiReactionOperation(state, action) {
-        // TODO: Implement "addEmojiReactionOperation" reducer
-        throw new Error('Reducer "addEmojiReactionOperation" not yet implemented');
-    },
-    removeEmojiReactionOperation(state, action) {
-        // TODO: Implement "removeEmojiReactionOperation" reducer
-        throw new Error('Reducer "removeEmojiReactionOperation" not yet implemented');
-    }
+  addMessageOperation(state, action) {
+    // TODO: Implement "addMessageOperation" reducer
+    throw new Error('Reducer "addMessageOperation" not yet implemented');
+  },
+  addEmojiReactionOperation(state, action) {
+    // TODO: Implement "addEmojiReactionOperation" reducer
+    throw new Error('Reducer "addEmojiReactionOperation" not yet implemented');
+  },
+  removeEmojiReactionOperation(state, action) {
+    // TODO: Implement "removeEmojiReactionOperation" reducer
+    throw new Error(
+      'Reducer "removeEmojiReactionOperation" not yet implemented',
+    );
+  },
 };
 ```
 
@@ -16827,10 +16898,10 @@ export const chatRoomMessagesOperations: ChatRoomMessagesOperations = {
       }
     }
   },
-    senderOperation(state, action) {
-        // TODO: Implement "senderOperation" reducer
-        throw new Error('Reducer "senderOperation" not yet implemented');
-    }
+  senderOperation(state, action) {
+    // TODO: Implement "senderOperation" reducer
+    throw new Error('Reducer "senderOperation" not yet implemented');
+  },
 };
 ```
 
@@ -17099,11 +17170,10 @@ Continue to the next section to learn how to implement the document model editor
 
 ---
 
-
 ## Inspector Modal {#inspector-modal}
 
 **Source:** `academy/02-MasteryTrack/03-BuildingUserExperiences/06-DocumentTools/03-InspectorModal.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 The Inspector Modal is a development and debugging tool in Connect that provides visibility into the internal state of your application. It allows you to inspect the local database and monitor sync operations with remote servers.
 
@@ -17220,7 +17290,6 @@ This export contains the full database schema and all data, which can be useful 
 **⚠️ WARNING:** **Data Replacement Warning**
 Importing a database will **replace ALL existing data** in your local Connect instance. This action cannot be undone.
 
-
 To import a database:
 
 1. Click the **Import DB** button in the sidebar
@@ -17302,16 +17371,14 @@ The Inspector Modal is helpful for:
 
 ---
 
-
 ## Integration {#integration}
 
 **Source:** `academy/02-MasteryTrack/04-WorkWithData/_06-Analytics Engine/graphql/integration.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 ---
-sidebar_position: 1
----
 
+## sidebar_position: 1
 
 The `analytics-engine-graphql` module provides types and resolvers needed for a fully-functional GraphQL Server API. This library has no dependencies on any particular server but has been tested using [Apollo Server 3 and 4](https://www.apollographql.com/docs/apollo-server).
 
@@ -17403,16 +17470,14 @@ await new Promise<void>((resolve) => httpServer.listen(options, resolve));
 
 ---
 
-
 ## Memory store {#memory-store}
 
 **Source:** `academy/02-MasteryTrack/04-WorkWithData/_06-Analytics Engine/typescript/memory.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 ---
-sidebar_position: 1
----
 
+## sidebar_position: 1
 
 The `MemoryAnalyticsStore` is an `IAnalyticsStore` implementation that uses a an in-memory database as its storage mechanism. Under the hood, we load a WASM build of Postgres, called [PGlite](https://pglite.dev/).
 
@@ -17488,11 +17553,10 @@ await store.init();
 
 ---
 
-
 ## Operations history {#operations-history}
 
 **Source:** `academy/02-MasteryTrack/03-BuildingUserExperiences/06-DocumentTools/01-OperationHistory.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 ## What is a document model?
 
@@ -17558,7 +17622,6 @@ You can also view the committer's address for each revision, supporting full tra
 
 ![Committer Address Popup] (see: images/committer-address-popup.png)
 
-
 **⚠️ WARNING:** Work in Progress
 This remainder of this documentation is still being written and may be incomplete.
 
@@ -17570,15 +17633,13 @@ This remainder of this documentation is still being written and may be incomplet
 
 ---
 
-
 ## PHDocument Migration Guide {#phdocument-migration-guide}
 
 **Source:** `academy/04-APIReferences/05-PHDocumentMigrationGuide.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 **💡 TIP:**
 This guide covers the **breaking changes** introduced in Powerhouse v4.0.0 related to PHDocument structure changes. If you're upgrading from v3.2.0 or earlier, **this migration is required** and document models must be regenerated.
-
 
 ## Overview
 
@@ -17834,7 +17895,6 @@ query GetDocument($id: ID!) {
 **💡 TIP:**
 **GraphQL Backward Compatibility:** The GraphQL API maintains backward compatibility through response transformation. Your existing queries will continue to work without changes. However, when working with the raw document objects in your application code, you'll need to use the new header structure.
 
-
 </details>
 
 ## Common Migration Issues and Solutions
@@ -17936,16 +17996,14 @@ _This migration guide covers the major changes in v4.0.0. For additional technic
 
 ---
 
-
 ## Postgres store {#postgres-store}
 
 **Source:** `academy/02-MasteryTrack/04-WorkWithData/_06-Analytics Engine/typescript/pg.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 ---
-sidebar_position: 3
----
 
+## sidebar_position: 3
 
 The `PostgresAnalyticsStore` is an `IAnalyticsStore` implementation that leverages a Postgres database. It requires some APIs that do not run in a browser, and is intended for server-side applications.
 
@@ -18011,11 +18069,10 @@ const results = store.raw(`select distinct unit from "AnalyticsSeries"`);
 
 ---
 
-
 ## Powerhouse Architecture {#powerhouse-architecture}
 
 **Source:** `academy/05-Architecture/00-PowerhouseArchitecture.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 **Vetra is part of the Powerhouse Ecosystem** and acts as the builder platform for creating an independent, open-source and decentralized back-end for any SaaS, ERP, CMS or CRM needs.
 
@@ -18062,6 +18119,7 @@ The Powerhouse ecosystem makes use of 4 core host applications that together for
 The host applications sync their documents with one another through **Reactors**. A reactor is a node within any Powerhouse network responsible for storing documents, resolving conflicts, and verifying document event histories.
 
 Reactors can be configured for:
+
 - **Local Storage** – For offline or on-device access.
 - **Cloud Storage** – For centralized, scalable data management.
 - **Decentralized Storage** – Such as Ceramic or IPFS for distributed storage.
@@ -18079,11 +18137,10 @@ With the help of these host applications, Powerhouse is launching 2 platforms th
 
 ---
 
-
 ## Powerhouse CLI {#powerhouse-cli}
 
 **Source:** `academy/04-APIReferences/00-PowerhouseCLI.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 ### Installing the Powerhouse CLI
 
@@ -18100,18 +18157,18 @@ The Powerhouse CLI (`ph-cmd`) is a command-line interface tool that provides ess
 pnpm install -g ph-cmd
 ```
 
-
 <!-- AUTO-GENERATED-CLI-COMMANDS-START -->
 <!-- This content is automatically generated. Do not edit directly. -->
+
 ## Quick Reference
 
-| Command | Description | Example |
-|---------|-------------|---------|
-| `ph init` | Initialize a new project | `ph init my-project --pnpm` |
-| `ph use` | Switch to a release version | `ph use staging` |
-| `ph update` | Update dependencies to latest | `ph update` |
-| `ph setup-globals` | Initialize global project | `ph setup-globals my-globals` |
-| `ph use-local` | Use local monorepo dependencies | `ph use-local ../powerhouse` |
+| Command            | Description                     | Example                       |
+| ------------------ | ------------------------------- | ----------------------------- |
+| `ph init`          | Initialize a new project        | `ph init my-project --pnpm`   |
+| `ph use`           | Switch to a release version     | `ph use staging`              |
+| `ph update`        | Update dependencies to latest   | `ph update`                   |
+| `ph setup-globals` | Initialize global project       | `ph setup-globals my-globals` |
+| `ph use-local`     | Use local monorepo dependencies | `ph use-local ../powerhouse`  |
 
 ---
 
@@ -18123,20 +18180,20 @@ pnpm install -g ph-cmd
 - [Setup Globals](#setup-globals)
 - [Use Local](#use-local)
 
-
 ## Init
+
 Initialize a new project
 
-
 ---
 
 ## Parameters
 
 ### Arguments
+
 **Name** - The name of your project. A new directory will be created in your current directory with this name. - Usage: `[name]`
 
-
 ### Options
+
 **Name** - The name of your project. A new directory will be created in your current directory with this name. - Usage: `--name, -n <str>`
 
 **Package Manager** - Specify the package manager to use for your project. Can be one of: `npm`, `pnpm`, `yarn`, or `bun`. Defaults to your environment package manager. - Usage: `--package-manager, -p <value>`
@@ -18147,8 +18204,8 @@ Initialize a new project
 
 **Remote Drive** - Remote drive identifier. - Usage: `--remote-drive, -r <str>`
 
-
 ### Flags
+
 **Npm** - Use 'npm' as package manager - Usage: `--npm`
 
 **Pnpm** - Use 'pnpm' as package manager - Usage: `--pnpm`
@@ -18164,59 +18221,59 @@ Initialize a new project
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
 **Help** - show help - Usage: `--help, -h`
-
 
 ## Use
-Specify the release version of Powerhouse dependencies to use.
 
+Specify the release version of Powerhouse dependencies to use.
 
 ---
 
 ## Parameters
 
 ### Arguments
+
 **Tag** - Specify the release tag to use for your project. Can be one of: "latest", "staging", or "dev". - Usage: `[tag]`
 
-
 ### Options
+
 **Tag** - Specify the release tag to use for your project. Can be one of: "latest", "staging", or "dev". - Usage: `--tag, -t <value>`
 
 **Version** - Specify the exact semver release version to use for your project. - Usage: `--version, -v <str>`
 
-
 ### Flags
+
 **Skip Install** - Skip running `install` with your package manager - Usage: `--skip-install, -s`
 
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
 **Help** - show help - Usage: `--help, -h`
-
 
 ## Update
+
 Update your powerhouse dependencies to their latest tagged version
 
-
 ### Flags
+
 **Skip Install** - Skip running `install` with your package manager - Usage: `--skip-install, -s`
 
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
 **Help** - show help - Usage: `--help, -h`
 
-
 ## Setup Globals
-Initialize a new global project
 
+Initialize a new global project
 
 ---
 
 ## Parameters
 
 ### Arguments
+
 **Name** - The name of your project. A new directory will be created in your current directory with this name. - Usage: `[name]`
 
-
 ### Options
+
 **Name** - The name of your project. A new directory will be created in your current directory with this name. - Usage: `--name, -n <str>`
 
 **Package Manager** - Specify the package manager to use for your project. Can be one of: `npm`, `pnpm`, `yarn`, or `bun`. Defaults to your environment package manager. - Usage: `--package-manager, -p <value>`
@@ -18227,8 +18284,8 @@ Initialize a new global project
 
 **Remote Drive** - Remote drive identifier. - Usage: `--remote-drive, -r <str>`
 
-
 ### Flags
+
 **Npm** - Use 'npm' as package manager - Usage: `--npm`
 
 **Pnpm** - Use 'pnpm' as package manager - Usage: `--pnpm`
@@ -18245,24 +18302,24 @@ Initialize a new global project
 
 **Help** - show help - Usage: `--help, -h`
 
-
 ## Use Local
-Use your local `powerhouse` monorepo dependencies the current project.
 
+Use your local `powerhouse` monorepo dependencies the current project.
 
 ---
 
 ## Parameters
 
 ### Arguments
+
 **Monorepo Path** - Path to your local powerhouse monorepo relative to this project - Usage: `[monorepo path]`
 
-
 ### Options
+
 **Path** - Path to your local powerhouse monorepo relative to this project - Usage: `--path, -p <str>`
 
-
 ### Flags
+
 **Skip Install** - Skip running `install` with `pnpm` - Usage: `--skip-install, -s`
 
 **Debug** - Log arguments passed to this command - Usage: `--debug`
@@ -18286,28 +18343,28 @@ Use your local `powerhouse` monorepo dependencies the current project.
 - [Install](#install)
 - [Uninstall](#uninstall)
 
-
 ## Generate
 
-The generate command creates code from document models. It helps you build editors, 
+The generate command creates code from document models. It helps you build editors,
 processors, and other components based on your document model files.
 
 **What it does:**
+
 - 1. Reads document model definitions
 - 2. Generates code for specified components (editors, processors, etc.)
 - 3. Supports customization of output and generation options
 - 4. Can watch files for changes and regenerate code automatically
-
 
 ---
 
 ## Parameters
 
 ### Arguments
+
 **Document Model File Path** - Path to the document model file. - Usage: `[document model file path]`
 
-
 ### Options
+
 **File** - Path to the document model file. - Usage: `--file <str>`
 
 **Editor** - Editor name. - Usage: `--editor <str>`
@@ -18344,8 +18401,8 @@ processors, and other components based on your document model files.
 
 **Schema File** - Path to the output file. Defaults to './schema.ts' - Usage: `--schema-file <str>`
 
-
 ### Flags
+
 **Disable Drag And Drop** - Disable drag and drop in the generated drive editor. - Usage: `--disable-drag-and-drop`
 
 **Force** - Overwrite operation reducers. - Usage: `--force, -f`
@@ -18366,21 +18423,21 @@ processors, and other components based on your document model files.
 
 **Help** - show help - Usage: `--help, -h`
 
-
 ## Vetra
 
 The vetra command sets up a Vetra development environment for working with Vetra projects.
-It starts a Vetra Switchboard and optionally Connect Studio, enabling document collaboration 
+It starts a Vetra Switchboard and optionally Connect Studio, enabling document collaboration
 and real-time processing with a "Vetra" drive or connection to remote drives.
 
 **What it does:**
+
 - 1. Starts a Vetra Switchboard with a "Vetra" drive for document storage
 - 2. Optionally connects to remote drives instead of creating a local drive
 - 3. Starts Connect Studio pointing to the Switchboard for user interaction (unless disabled)
 - 4. Enables real-time updates, collaboration, and code generation
 
-
 ### Options
+
 **Switchboard Port** - port to use for the Vetra Switchboard - Usage: `--switchboard-port <number>`
 
 **Connect Port** - port to use for the Vetra Connect - Usage: `--connect-port <number>`
@@ -18418,8 +18475,8 @@ and real-time processing with a "Vetra" drive or connection to remote drives.
 
 **Remote Drives** - Specify remote drive URLs to use - Usage: `--remote-drives <str>`
 
-
 ### Flags
+
 **Watch** - Enable dynamic loading for document-models and editors in connect-studio and switchboard - Usage: `--watch, -w`
 
 **Default:** `false`
@@ -18459,23 +18516,25 @@ and real-time processing with a "Vetra" drive or connection to remote drives.
 
 **Help** - show help - Usage: `--help, -h`
 
-
 ## Connect
+
 Powerhouse Connect commands. Use with `studio`, `build` or `preview`. Defaults to `studio` if not specified.
 
 ## Connect Studio
+
 The studio command starts the Connect Studio, a development environment for building
 and testing Powerhouse applications. It provides a visual interface for working with
 your project.
 
 **What it does:**
+
 - 1. Starts a local Connect Studio server
 - 2. Provides a web interface for development
 - 3. Allows you to interact with your project components
 - 4. Supports various configuration options for customization
 
-
 ### Options
+
 **Port** - Port to run the dev server on. - Usage: `--port <number>`
 
 **Default:** `3000`
@@ -18504,8 +18563,8 @@ your project.
 **Environment:** `PH_WATCH_TIMEOUT`
 **Default:** `300`
 
-
 ### Flags
+
 **Ignore Local** - Do not load local packages from this project - Usage: `--ignore-local`
 
 **Environment:** `PH_DISABLE_LOCAL_PACKAGE`
@@ -18529,13 +18588,13 @@ your project.
 **Default:** `true`
 **Help** - show help - Usage: `--help, -h`
 
-
 ## Connect Build
+
 The Connect build command creates a production build with the project's local and
 external packages included
 
-
 ### Options
+
 **Out Dir** - Output directory - Usage: `--outDir <str>`
 
 **Default:** `.ph/connect-build/dist/`
@@ -18560,8 +18619,8 @@ external packages included
 **Environment:** `PH_CONNECT_DRIVES_PRESERVE_STRATEGY`
 **Default:** `preserve-by-url-and-detach`
 
-
 ### Flags
+
 **Ignore Local** - Do not load local packages from this project - Usage: `--ignore-local`
 
 **Environment:** `PH_DISABLE_LOCAL_PACKAGE`
@@ -18571,13 +18630,13 @@ external packages included
 
 **Help** - show help - Usage: `--help, -h`
 
-
 ## Connect Preview
+
 The Connect preview command previews a built Connect project.
 NOTE: You must run `ph connect build` first
 
-
 ### Options
+
 **Port** - Port to run the preview server on. - Usage: `--port <number>`
 
 **Default:** `4173`
@@ -18609,8 +18668,8 @@ NOTE: You must run `ph connect build` first
 **Environment:** `PH_WATCH_TIMEOUT`
 **Default:** `300`
 
-
 ### Flags
+
 **Ignore Local** - Do not load local packages from this project - Usage: `--ignore-local`
 
 **Environment:** `PH_DISABLE_LOCAL_PACKAGE`
@@ -18634,68 +18693,71 @@ NOTE: You must run `ph connect build` first
 **Default:** `true`
 **Help** - show help - Usage: `--help, -h`
 
-
 ## Access Token
 
 The access-token command generates a bearer token for API authentication. This token
 can be used to authenticate requests to Powerhouse APIs like reactor-api (Switchboard).
 
 **What it does:**
+
 - 1. Uses your CLI's cryptographic identity (DID) to sign a verifiable credential
 - 2. Creates a JWT bearer token with configurable expiration
 - 3. Outputs the token to stdout (info to stderr) for easy piping
 
 Prerequisites:
-  You must have a cryptographic identity. Run 'ph login' first to:
-  - Generate a keypair (stored in .ph/.keypair.json)
-  - Optionally link your Ethereum address (stored in .ph/.renown.json)
+You must have a cryptographic identity. Run 'ph login' first to:
+
+- Generate a keypair (stored in .ph/.keypair.json)
+- Optionally link your Ethereum address (stored in .ph/.renown.json)
 
 Token Details:
-  The generated token is a JWT (JSON Web Token) containing:
-  - Issuer (iss): Your CLI's DID (did:key:...)
-  - Subject (sub): Your CLI's DID
-  - Credential Subject: Chain ID, network ID, and address (if authenticated)
-  - Expiration (exp): Based on --expiry option
-  - Audience (aud): If --audience is specified
+The generated token is a JWT (JSON Web Token) containing:
+
+- Issuer (iss): Your CLI's DID (did:key:...)
+- Subject (sub): Your CLI's DID
+- Credential Subject: Chain ID, network ID, and address (if authenticated)
+- Expiration (exp): Based on --expiry option
+- Audience (aud): If --audience is specified
 
 Output:
+
 - Token information (DID, address, expiry) is printed to stderr
 - The token itself is printed to stdout for easy piping/copying
 
 This allows you to use the command in scripts:
-  TOKEN=$(ph access-token)
-  curl -H "Authorization: Bearer $TOKEN" http://localhost:4001/graphql
+TOKEN=$(ph access-token)
+curl -H "Authorization: Bearer $TOKEN" http://localhost:4001/graphql
 
 Usage with APIs:
-  Generate token and use with curl
-  TOKEN=$(ph access-token --expiry 1d)
-  curl -X POST http://localhost:4001/graphql \
-    -H "Content-Type: application/json" \
-    -H "Authorization: Bearer $TOKEN" \
-    -d '\{"query": "\{ drives \{ id name \} \}"\}'
+Generate token and use with curl
+TOKEN=$(ph access-token --expiry 1d)
+curl -X POST http://localhost:4001/graphql \
+ -H "Content-Type: application/json" \
+ -H "Authorization: Bearer $TOKEN" \
+ -d '\{"query": "\{ drives \{ id name \} \}"\}'
 
-  Export as environment variable
-  export PH_ACCESS_TOKEN=$(ph access-token)
+Export as environment variable
+export PH_ACCESS_TOKEN=$(ph access-token)
 
 Notes:
-  - Tokens are self-signed using your CLI's private key
-  - No network request is made; tokens are generated locally
-  - The recipient API must trust your CLI's DID to accept the token
-  - For reactor-api, ensure AUTH_ENABLED=true to require authentication
 
+- Tokens are self-signed using your CLI's private key
+- No network request is made; tokens are generated locally
+- The recipient API must trust your CLI's DID to accept the token
+- For reactor-api, ensure AUTH_ENABLED=true to require authentication
 
 ### Options
+
 **Expiry** - Token expiry duration. Supports: "7d" (days), "24h" (hours), "3600" or "3600s" (seconds) - Usage: `--expiry <str>`
 
 **Default:** `7d`
 **Audience** - Target audience URL for the token - Usage: `--audience <str>`
 
-
 ### Flags
+
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
 **Help** - show help - Usage: `--help, -h`
-
 
 ## Inspect
 
@@ -18704,25 +18766,25 @@ It helps you understand the structure, dependencies, and configuration of packag
 your project.
 
 **What it does:**
+
 - 1. Analyzes the specified package
 - 2. Retrieves detailed information about its structure and configuration
 - 3. Displays package metadata, dependencies, and other relevant information
 - 4. Helps troubleshoot package-related issues
-
 
 ---
 
 ## Parameters
 
 ### Arguments
-**Package Name *[required]*** - The name of the package to inspect - Usage: `<package-name>`
 
+**Package Name _[required]_** - The name of the package to inspect - Usage: `<package-name>`
 
 ### Flags
+
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
 **Help** - show help - Usage: `--help, -h`
-
 
 ## List
 
@@ -18730,30 +18792,30 @@ The list command displays information about installed Powerhouse packages in you
 It reads the powerhouse.config.json file and shows the packages that are currently installed.
 
 **What it does:**
+
 - 1. Examines your project configuration
 - 2. Lists all installed Powerhouse packages
 - 3. Provides a clear overview of your project's dependencies
 - 4. Helps you manage and track your Powerhouse components
 
-
 ### Flags
+
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
 **Help** - show help - Usage: `--help, -h`
 
-
 ## Migrate
+
 Run migrations
 
-
 ### Flags
+
 **Use Hygen** - Use legacy hygen codegen - Usage: `--use-hygen`
 
 **Default:** `false`
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
 **Help** - show help - Usage: `--help, -h`
-
 
 ## Switchboard
 
@@ -18762,14 +18824,15 @@ processing engine for Powerhouse projects. It provides the infrastructure for do
 models, processors, and real-time updates.
 
 **What it does:**
+
 - 1. Starts a local switchboard server
 - 2. Loads document models and processors
 - 3. Provides an API for document operations
 - 4. Enables real-time document processing
 - 5. Can authenticate with remote services using your identity from 'ph login'
 
-
 ### Flags
+
 **Https** - Use https - Usage: `--https`
 
 **Dev** - enable development mode to load local packages - Usage: `--dev`
@@ -18795,8 +18858,8 @@ models, processors, and real-time updates.
 **Default:** `false`
 **Help** - show help - Usage: `--help, -h`
 
-
 ### Options
+
 **Https Key File** - path to the ssl key file - Usage: `--https-key-file <str>`
 
 **Https Cert File** - path to the ssl cert file - Usage: `--https-cert-file <str>`
@@ -18818,21 +18881,20 @@ models, processors, and real-time updates.
 **Default:** `vetra`
 **Db Path** - path to the database - Usage: `--db-path <str>`
 
-
 ## Login
 
 The login command authenticates you with Renown using your Ethereum wallet. This enables
 the CLI to act on behalf of your Ethereum identity for authenticated operations.
 
 **What it does:**
+
 - 1. Generates or loads a cryptographic identity (DID) for the CLI
 - 2. Opens your browser to the Renown authentication page
 - 3. You authorize the CLI's DID to act on behalf of your Ethereum address
 - 4. Stores the credentials locally in .ph/.renown.json
-  
-
 
 ### Options
+
 **Renown Url** - Renown server URL. - Usage: `--renown-url <str>`
 
 **Environment:** `PH_CONNECT_RENOWN_URL`
@@ -18841,8 +18903,8 @@ the CLI to act on behalf of your Ethereum identity for authenticated operations.
 
 **Default:** `300`
 
-
 ### Flags
+
 **Logout** - Sign out and clear stored credentials - Usage: `--logout`
 
 **Status** - Show current authentication status - Usage: `--status`
@@ -18853,33 +18915,32 @@ the CLI to act on behalf of your Ethereum identity for authenticated operations.
 
 **Help** - show help - Usage: `--help, -h`
 
-
 ## Install
 
 The install command adds Powerhouse dependencies to your project. It handles installation
 of packages, updates configuration files, and ensures proper setup of dependencies.
 
 **What it does:**
+
 - 1. Installs specified Powerhouse dependencies using your package manager
 - 2. Updates powerhouse.config.json to include the new dependencies
 - 3. Supports various installation options and configurations
 - 4. Works with npm, yarn, pnpm, and bun package managers
-  
-
 
 ---
 
 ## Parameters
 
 ### Arguments
-**Dependencies *[required]*** - Names of the dependencies to install - Usage: `[...dependencies]`
 
+**Dependencies _[required]_** - Names of the dependencies to install - Usage: `[...dependencies]`
 
 ### Options
+
 **Package Manager** - Specify the package manager to use for your project. Can be one of: `npm`, `pnpm`, `yarn`, or `bun`. Defaults to your environment package manager. - Usage: `--package-manager, -p <value>`
 
-
 ### Flags
+
 **Npm** - Use 'npm' as package manager - Usage: `--npm`
 
 **Pnpm** - Use 'pnpm' as package manager - Usage: `--pnpm`
@@ -18891,7 +18952,6 @@ of packages, updates configuration files, and ensures proper setup of dependenci
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
 **Help** - show help - Usage: `--help, -h`
-
 
 ## Uninstall
 
@@ -18899,25 +18959,26 @@ The uninstall command removes Powerhouse dependencies from your project. It hand
 removal of packages, updates configuration files, and ensures proper cleanup.
 
 **What it does:**
+
 - 1. Uninstalls specified Powerhouse dependencies using your package manager
 - 2. Updates powerhouse.config.json to remove the dependencies
 - 3. Supports various uninstallation options and configurations
 - 4. Works with npm, yarn, yarn@berry, pnpm, pnpm@6, bun, deno package managers
-
 
 ---
 
 ## Parameters
 
 ### Arguments
-**Dependencies *[required]*** - Names of the dependencies to uninstall - Usage: `[...dependencies]`
 
+**Dependencies _[required]_** - Names of the dependencies to uninstall - Usage: `[...dependencies]`
 
 ### Options
+
 **Package Manager** - Specify the package manager to use for your project. Can be one of: `npm`, `pnpm`, `yarn`, or `bun`. Defaults to your environment package manager. - Usage: `--package-manager, -p <value>`
 
-
 ### Flags
+
 **Npm** - Use 'npm' as package manager - Usage: `--npm`
 
 **Pnpm** - Use 'pnpm' as package manager - Usage: `--pnpm`
@@ -18929,15 +18990,15 @@ removal of packages, updates configuration files, and ensures proper cleanup.
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
 **Help** - show help - Usage: `--help, -h`
+
 <!-- AUTO-GENERATED-CLI-COMMANDS-END -->
 
 ---
 
-
 ## Powerhouse v5.3.0 🚀 {#powerhouse-v530}
 
 **Source:** `academy/ReleaseNotes/v5.3.0.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 ## ✨ Highlights
 
@@ -19068,17 +19129,15 @@ Coming soon to **https://academy.vetra.io**
 
 ---
 
-
 ## Prerequisites {#prerequisites}
 
 **Source:** `academy/02-MasteryTrack/01-BuilderEnvironment/01-Prerequisites.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 Let's set up your machine to start building your first Document Model. Don't worry if this is your first time setting up a development environment - we'll guide you through each step!
 
 **ℹ️ INFO:**
 If you've already set up **Git, Node.js 24, and a package manager (pnpm or npm)**, your most important step is to install the **Powerhouse CLI** with the command: `pnpm install -g ph-cmd` or `npm install -g ph-cmd`. A global install is recommended if you want to use the command from any directory as a power user. The Powerhouse CLI is used to create, build, and run your Document Models and gives you direct access to a series of Powerhouse Builder Tools. Move to the end of this page to [verify your installation.](#verify-installation)
-
 
 ---
 
@@ -19114,7 +19173,6 @@ Once WSL is set up, you can follow the **Linux (Ubuntu/Debian)** instructions be
 **💡 TIP:**
 Using WSL provides a consistent development experience that matches most production environments and online tutorials. You can still use VS Code on Windows — it integrates seamlessly with WSL through the [Remote - WSL extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-wsl).
 
-
 For more details, see the official [WSL installation guide](https://learn.microsoft.com/en-us/windows/wsl/install).
 
 ---
@@ -19132,7 +19190,7 @@ Node.js 24 is a tool that lets us run our application. Let's install it step by 
    - In the PowerShell window, type this command and press Enter:
 
    ```powershell
-// powershell code example:
+   // powershell code example:
    Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
    ```
 
@@ -19150,7 +19208,7 @@ Node.js 24 is a tool that lets us run our application. Let's install it step by 
    - For pnpm (recommended), type this command and press Enter:
 
    ```powershell
-// powershell code example:
+   // powershell code example:
    npm install -g pnpm
    ```
 
@@ -19161,7 +19219,7 @@ Node.js 24 is a tool that lets us run our application. Let's install it step by 
    - Type these commands one at a time and press Enter after each:
 
    ```powershell
-// powershell code example:
+   // powershell code example:
    node --version
    pnpm --version
    # or
@@ -19179,7 +19237,7 @@ Node.js 24 is a tool that lets us run our application. Let's install it step by 
    - Copy and paste this command into Terminal and press Enter:
 
    ```bash
-// bash code example:
+   // bash code example:
    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
    ```
 
@@ -19189,14 +19247,14 @@ Node.js 24 is a tool that lets us run our application. Let's install it step by 
    - In the same Terminal window, type this command and press Enter:
 
    ```bash
-// bash code example:
+   // bash code example:
    brew install node@24
    ```
 
    - Then, optionally install pnpm (npm comes with Node.js):
 
    ```bash
-// bash code example:
+   // bash code example:
    brew install pnpm
    ```
 
@@ -19204,7 +19262,7 @@ Node.js 24 is a tool that lets us run our application. Let's install it step by 
    - In Terminal, type these commands one at a time and press Enter after each:
 
    ```bash
-// bash code example:
+   // bash code example:
    node --version
    pnpm --version
    # or
@@ -19222,14 +19280,14 @@ Node.js 24 is a tool that lets us run our application. Let's install it step by 
 2. **Update Package List:**
 
    ```bash
-// bash code example:
+   // bash code example:
    sudo apt update
    ```
 
 3. **Install Node.js 24 and optionally pnpm:**
 
    ```bash
-// bash code example:
+   // bash code example:
    sudo apt install nodejs
    # Optionally install pnpm (npm comes with Node.js)
    sudo apt install pnpm
@@ -19239,7 +19297,7 @@ Node.js 24 is a tool that lets us run our application. Let's install it step by 
    - Type these commands one at a time and press Enter after each:
 
    ```bash
-// bash code example:
+   // bash code example:
    node --version
    pnpm --version
    # or
@@ -19280,27 +19338,27 @@ VS Code is the editor we'll use to write our code. Here's how to install it:
 1. Open Terminal (Ctrl + Alt + T)
 2. First, update the packages list:
    ```bash
-// bash code example:
+   // bash code example:
    sudo apt update
    ```
 3. Install the dependencies needed to add Microsoft's repository:
    ```bash
-// bash code example:
+   // bash code example:
    sudo apt install software-properties-common apt-transport-https wget
    ```
 4. Import Microsoft's GPG key:
    ```bash
-// bash code example:
+   // bash code example:
    wget -q https://packages.microsoft.com/keys/microsoft.asc -O- | sudo apt-key add -
    ```
 5. Add the VS Code repository:
    ```bash
-// bash code example:
+   // bash code example:
    sudo add-apt-repository "deb [arch=amd64] https://packages.microsoft.com/repos/vscode stable main"
    ```
 6. Install VS Code:
    ```bash
-// bash code example:
+   // bash code example:
    sudo apt install code
    ```
 7. Once installed, you can launch VS Code by:
@@ -19317,7 +19375,7 @@ VS Code is the editor we'll use to write our code. Here's how to install it:
 4. Run the installer and use the recommended settings
 5. Verify installation by opening PowerShell:
    ```powershell
-// powershell code example:
+   // powershell code example:
    git --version
    ```
 
@@ -19325,12 +19383,12 @@ VS Code is the editor we'll use to write our code. Here's how to install it:
 
 1. Install using Homebrew:
    ```bash
-// bash code example:
+   // bash code example:
    brew install git
    ```
 2. Verify installation:
    ```bash
-// bash code example:
+   // bash code example:
    git --version
    ```
 
@@ -19338,17 +19396,17 @@ VS Code is the editor we'll use to write our code. Here's how to install it:
 
 1. Update package list:
    ```bash
-// bash code example:
+   // bash code example:
    sudo apt update
    ```
 2. Install Git:
    ```bash
-// bash code example:
+   // bash code example:
    sudo apt install git
    ```
 3. Verify installation:
    ```bash
-// bash code example:
+   // bash code example:
    git --version
    ```
 
@@ -19498,37 +19556,34 @@ PH CLI is not available, please run `ph setup-globals` to generate the default g
 
 ---
 
-
 ## Processors {#processors}
 
 **Source:** `academy/02-MasteryTrack/04-WorkWithData/_06-Analytics Engine/use-cases/processors.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 See the [Analytics Processor documentation] (see: ../04-analytics-processor.md) for a thorough walkthrough of using the analytics system inside of a reactor processor to track metrics around document model operations.
 
 ---
 
-
 ## Publish your package {#publish-your-package}
 
 **Source:** `academy/02-MasteryTrack/05-Launch/02-PublishYourProject.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 **⚠️ WARNING:**
 **This guide assumes familiarity with building document models in Vetra Studio.**  
 Please start with the [**Get Started**](/academy/GetStarted/home) chapter or [**Document Model Creation**](/academy/MasteryTrack/DocumentModelCreation/SpecifyTheStateSchema) section if you are new to building document models.
 
-
 This guide covers the process of **building** and **publishing** a Powerhouse package to NPM.
 
 **ℹ️ INFO:** Key Concepts
+
 - **Powerhouse Package**: A collection of modules published to NPM that can be installed on a server instance or locally. Organizations build packages for specific purposes or workflows.
 - **Powerhouse Modules**: The building blocks of your package—document models, editors, processors, or scripts.
 - **Vetra Studio**: The development hub where you assemble specifications for your package. Each module is defined through specification documents that drive code generation.
 - **Powerhouse Drive-apps**: Customized drive interfaces that enhance document functionality and workflows within a drive.
 
 ![Key Concepts](images/keyconcepts.png)
-
 
 ## 1. Building your project
 
@@ -19594,6 +19649,7 @@ ph vetra --interactive --watch
 ```
 
 This mode provides:
+
 - **Interactive confirmations** before code generation
 - **Dynamic reloading** for document-models and editors
 - **Live preview** of your changes in Vetra Studio
@@ -19705,6 +19761,7 @@ Follow the prompts in your terminal or browser to authenticate.
 ### 2.3. Version your package
 
 Use semantic versioning to update your package version. The `pnpm version` command will:
+
 - Update the `version` in `package.json`
 - Create a Git commit for the version change
 - Create a Git tag (e.g., `v1.0.1`)
@@ -19754,9 +19811,9 @@ pnpm publish --tag beta
 ```
 
 **ℹ️ INFO:** Git Tags vs NPM Tags
+
 - **Git Tags**: Markers in your repository history (e.g., `v1.0.0`) created by `pnpm version`
 - **NPM Dist-Tags**: Labels pointing to published versions (`latest`, `beta`, `next`). When publishing without a tag, the version gets the `latest` tag by default.
-
 
 ## 3. Installing your package
 
@@ -19784,11 +19841,10 @@ A visual package manager is planned for Connect's settings, allowing installatio
 
 ---
 
-
 ## Querying a document with GraphQL {#querying-a-document-with-graphql}
 
 **Source:** `academy/02-MasteryTrack/04-WorkWithData/_06-Analytics Engine/GraphQL References/QueryingADocumentWithGraphQL.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 ## Overview
 
@@ -19997,7 +20053,6 @@ _An example of registering a listener and receiving a listenerId back._
 **ℹ️ INFO:**
 A strand in this scenario can be understood as a list of operations that has been applied to the RWA portfolio or any other document. As a query variable you'll want to add the received listenerId from the previous step together with the pullstrands query below
 
-
 ```graphql title="Pullstrands query"
 query pullStrands($listenerId: ID, $since: Date) {
   system {
@@ -20038,16 +20093,14 @@ A "strand" within the context of Powerhouse's Document Synchronization Protocol 
 
 ---
 
-
 ## React Hooks {#react-hooks}
 
 **Source:** `academy/04-APIReferences/01-ReactHooks.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 ---
-toc_max_heading_level: 2
----
 
+## toc_max_heading_level: 2
 
 This page provides a reference for the hooks available in `@powerhousedao/reactor-browser`. These hooks are intended to be used by editors (including drive editors) which will be rendered inside Powerhouse host-applications such as Connect, Switchboard, Fusion or a Vetra Studio Drive.
 
@@ -20098,11 +20151,12 @@ Many hooks return a `dispatch` function for modifying documents. The dispatch fu
 // typescript code example:
 function dispatch(
   actionOrActions: Action | Action[] | undefined,
-  onErrors?: (errors: Error[]) => void
-): void
+  onErrors?: (errors: Error[]) => void,
+): void;
 ```
 
 **Parameters:**
+
 - `actionOrActions` — The action or array of actions to dispatch to the document
 - `onErrors` — Optional callback invoked with any errors that occurred during action execution
 
@@ -20110,20 +20164,20 @@ function dispatch(
 
 ## Quick Reference
 
-| Category | Hooks |
-|----------|-------|
-| **Selected Document** | `useSelectedDocument`, `useSelectedDocumentSafe`, `useSelectedDocumentId`, `useSelectedDocumentOfType` |
-| **Document by ID** | `useDocumentById`, `useDocumentsByIds`, `useDocumentOfType` |
-| **Document Cache** | `useDocumentCache`, `useDocument`, `useDocuments`, `useGetDocument`, `useGetDocuments`, `useGetDocumentAsync` |
-| **Drives** | `useDrives`, `useSelectedDrive`, `useSelectedDriveSafe`, `useSelectedDriveId` |
-| **Nodes & Folders** | `useSelectedNode`, `useSelectedFolder`, `useNodeById`, `useNodePathById` |
-| **Items in Drive** | `useNodesInSelectedDrive`, `useFileNodesInSelectedDrive`, `useFolderNodesInSelectedDrive`, `useDocumentsInSelectedDrive` |
-| **Items in Folder** | `useNodesInSelectedFolder`, `useFileNodesInSelectedFolder`, `useFolderNodesInSelectedFolder`, `useDocumentsInSelectedFolder` |
-| **Node Actions** | `useNodeActions` |
-| **Modals** | `usePHModal`, `showPHModal`, `closePHModal`, `showCreateDocumentModal`, `showDeleteNodeModal` |
-| **Revision History** | `useRevisionHistoryVisible`, `showRevisionHistory`, `hideRevisionHistory` |
-| **Timeline** | `useSelectedTimelineItem`, `useSelectedTimelineRevision` |
-| **Config** | `useAllowedDocumentTypes`, `useIsDragAndDropEnabled`, `useIsExternalControlsEnabled` |
+| Category              | Hooks                                                                                                                        |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| **Selected Document** | `useSelectedDocument`, `useSelectedDocumentSafe`, `useSelectedDocumentId`, `useSelectedDocumentOfType`                       |
+| **Document by ID**    | `useDocumentById`, `useDocumentsByIds`, `useDocumentOfType`                                                                  |
+| **Document Cache**    | `useDocumentCache`, `useDocument`, `useDocuments`, `useGetDocument`, `useGetDocuments`, `useGetDocumentAsync`                |
+| **Drives**            | `useDrives`, `useSelectedDrive`, `useSelectedDriveSafe`, `useSelectedDriveId`                                                |
+| **Nodes & Folders**   | `useSelectedNode`, `useSelectedFolder`, `useNodeById`, `useNodePathById`                                                     |
+| **Items in Drive**    | `useNodesInSelectedDrive`, `useFileNodesInSelectedDrive`, `useFolderNodesInSelectedDrive`, `useDocumentsInSelectedDrive`     |
+| **Items in Folder**   | `useNodesInSelectedFolder`, `useFileNodesInSelectedFolder`, `useFolderNodesInSelectedFolder`, `useDocumentsInSelectedFolder` |
+| **Node Actions**      | `useNodeActions`                                                                                                             |
+| **Modals**            | `usePHModal`, `showPHModal`, `closePHModal`, `showCreateDocumentModal`, `showDeleteNodeModal`                                |
+| **Revision History**  | `useRevisionHistoryVisible`, `showRevisionHistory`, `hideRevisionHistory`                                                    |
+| **Timeline**          | `useSelectedTimelineItem`, `useSelectedTimelineRevision`                                                                     |
+| **Config**            | `useAllowedDocumentTypes`, `useIsDragAndDropEnabled`, `useIsExternalControlsEnabled`                                         |
 
 ---
 
@@ -20135,7 +20189,7 @@ Returns the ID of the currently selected document.
 
 ```typescript
 // typescript code example:
-function useSelectedDocumentId(): string | undefined
+function useSelectedDocumentId(): string | undefined;
 ```
 
 **Returns:** The selected document's ID, or `undefined` if no file node is selected.
@@ -20150,11 +20204,15 @@ Returns the selected document along with a dispatch function. Throws error if no
 // typescript code example:
 function useSelectedDocument(): readonly [
   PHDocument,
-  (actionOrActions: Action | Action[] | undefined, onErrors?: (errors: Error[]) => void) => void
-]
+  (
+    actionOrActions: Action | Action[] | undefined,
+    onErrors?: (errors: Error[]) => void,
+  ) => void,
+];
 ```
 
 **Returns:** A tuple `[document, dispatch]` where:
+
 - `document` — The selected document
 - `dispatch` — A function to dispatch actions to the document
 
@@ -20162,7 +20220,7 @@ function useSelectedDocument(): readonly [
 
 ```tsx
 // tsx code example:
-import { useSelectedDocument } from '@powerhousedao/reactor-browser';
+import { useSelectedDocument } from "@powerhousedao/reactor-browser";
 
 function DocumentViewer() {
   const [document, dispatch] = useSelectedDocument();
@@ -20182,7 +20240,7 @@ function DocumentViewer() {
 
 **See also:** [`useSelectedDocumentSafe`](#useselecteddocumentsafe), [`useSelectedDocumentOfType`](#useselecteddocumentoftype), [`useDocumentById`](#usedocumentbyid)
 
-------
+---
 
 ### `useSelectedDocumentSafe`
 
@@ -20192,22 +20250,27 @@ Returns the selected document along with a dispatch function or undefined is no 
 // typescript code example:
 function useSelectedDocumentSafe(): readonly [
   PHDocument | undefined,
-  (actionOrActions: Action | Action[] | undefined, onErrors?: (errors: Error[]) => void) => void
-]
+  (
+    actionOrActions: Action | Action[] | undefined,
+    onErrors?: (errors: Error[]) => void,
+  ) => void,
+];
 ```
 
 **Returns:** A tuple `[document, dispatch]` where:
+
 - `document` — The selected document, or `undefined` if none selected
 - `dispatch` — A function to dispatch actions to the document
 
 **Throws:**
+
 - `NoSelectedDocumentError` — When no document is selected
 
 **Example:**
 
 ```tsx
 // tsx code example:
-import { useSelectedDocument } from '@powerhousedao/reactor-browser';
+import { useSelectedDocument } from "@powerhousedao/reactor-browser";
 
 function DocumentViewer() {
   const [document, dispatch] = useSelectedDocument();
@@ -20235,19 +20298,22 @@ Returns the selected document of a specific type along with a dispatch function.
 
 ```typescript
 // typescript code example:
-function useSelectedDocumentOfType<TDocument extends PHDocument, TAction extends Action>(
-  documentType: string
-): [TDocument, DocumentDispatch<TAction>]
+function useSelectedDocumentOfType<
+  TDocument extends PHDocument,
+  TAction extends Action,
+>(documentType: string): [TDocument, DocumentDispatch<TAction>];
 
-function useSelectedDocumentOfType(documentType: null | undefined): never[]
+function useSelectedDocumentOfType(documentType: null | undefined): never[];
 ```
 
 **Parameters:**
+
 - `documentType` — The expected document type string (e.g., `"powerhouse/budget-statement"`)
 
 **Returns:** A tuple `[document, dispatch]` with the document typed as `TDocument`.
 
 **Throws:**
+
 - `NoSelectedDocumentError` — When no document is selected
 - `DocumentTypeMismatchError` - When selected document has different document type than the one provided
 
@@ -20255,19 +20321,18 @@ function useSelectedDocumentOfType(documentType: null | undefined): never[]
 
 ```tsx
 // tsx code example:
-import { useSelectedDocumentOfType } from '@powerhousedao/reactor-browser';
-import type { BudgetStatementDocument, BudgetStatementAction } from './types';
+import { useSelectedDocumentOfType } from "@powerhousedao/reactor-browser";
+import type { BudgetStatementDocument, BudgetStatementAction } from "./types";
 
 function BudgetEditor() {
   const [document, dispatch] = useSelectedDocumentOfType<
     BudgetStatementDocument,
     BudgetStatementAction
-  >('powerhouse/budget-statement');
+  >("powerhouse/budget-statement");
 
   const handleUpdate = () => {
-    dispatch(
-      { type: 'UPDATE_BUDGET', input: { amount: 1000 } },
-      (errors) => console.error('Failed:', errors)
+    dispatch({ type: "UPDATE_BUDGET", input: { amount: 1000 } }, (errors) =>
+      console.error("Failed:", errors),
     );
   };
 
@@ -20286,14 +20351,22 @@ Returns a document by ID along with a dispatch function.
 ```typescript
 // typescript code example:
 function useDocumentById(
-  id: string | null | undefined
-): readonly [PHDocument | undefined, (actionOrActions: Action | Action[] | undefined, onErrors?: (errors: Error[]) => void) => void]
+  id: string | null | undefined,
+): readonly [
+  PHDocument | undefined,
+  (
+    actionOrActions: Action | Action[] | undefined,
+    onErrors?: (errors: Error[]) => void,
+  ) => void,
+];
 ```
 
 **Parameters:**
+
 - `id` — The document ID to retrieve, or `null`/`undefined` to skip retrieval
 
 **Returns:** A tuple `[document, dispatch]` where:
+
 - `document` — The document if found, or `undefined`
 - `dispatch` — A function to dispatch actions to the document
 
@@ -20301,7 +20374,7 @@ function useDocumentById(
 
 ```tsx
 // tsx code example:
-import { useDocumentById } from '@powerhousedao/reactor-browser';
+import { useDocumentById } from "@powerhousedao/reactor-browser";
 
 function DocumentCard({ documentId }: { documentId: string }) {
   const [document, dispatch] = useDocumentById(documentId);
@@ -20322,10 +20395,11 @@ Returns multiple documents by their IDs.
 
 ```typescript
 // typescript code example:
-function useDocumentsByIds(ids: string[] | null | undefined): PHDocument[]
+function useDocumentsByIds(ids: string[] | null | undefined): PHDocument[];
 ```
 
 **Parameters:**
+
 - `ids` — Array of document IDs to retrieve, or `null`/`undefined` to skip
 
 **Returns:** An array of documents. Returns an empty array if `ids` is `null`/`undefined`.
@@ -20338,17 +20412,22 @@ Returns a document of a specific type. Throws an error if the document has a dif
 
 ```typescript
 // typescript code example:
-function useDocumentOfType<TDocument extends PHDocument, TAction extends Action>(
+function useDocumentOfType<
+  TDocument extends PHDocument,
+  TAction extends Action,
+>(
   documentId: string | null | undefined,
-  documentType: string | null | undefined
-): [TDocument, DocumentDispatch<TAction>] | never[]
+  documentType: string | null | undefined,
+): [TDocument, DocumentDispatch<TAction>] | never[];
 ```
 
 **Parameters:**
+
 - `documentId` — The document ID to retrieve
 - `documentType` — The expected document type
 
 **Throws:**
+
 - `DocumentNotFoundError` — When the document doesn't exist
 - `DocumentModelNotFoundError` — When the document model isn't registered
 - `DocumentTypeMismatchError` — When the document type doesn't match
@@ -20363,7 +20442,7 @@ Returns the document cache containing all documents in the reactor.
 
 ```typescript
 // typescript code example:
-function useDocumentCache(): IDocumentCache | undefined
+function useDocumentCache(): IDocumentCache | undefined;
 ```
 
 ---
@@ -20374,10 +20453,11 @@ Retrieves a document from the reactor and subscribes to changes using React Susp
 
 ```typescript
 // typescript code example:
-function useDocument(id: string | null | undefined): PHDocument | undefined
+function useDocument(id: string | null | undefined): PHDocument | undefined;
 ```
 
 **Parameters:**
+
 - `id` — The document ID to retrieve, or `null`/`undefined` to skip retrieval
 
 **Returns:** The document if found, or `undefined` if `id` is `null`/`undefined`.
@@ -20390,10 +20470,11 @@ Retrieves multiple documents from the reactor using React Suspense. This hook wi
 
 ```typescript
 // typescript code example:
-function useDocuments(ids: string[] | null | undefined): PHDocument[]
+function useDocuments(ids: string[] | null | undefined): PHDocument[];
 ```
 
 **Parameters:**
+
 - `ids` — Array of document IDs to retrieve, or `null`/`undefined` to skip retrieval
 
 **Returns:** An array of documents. Returns an empty array if `ids` is `null`/`undefined`.
@@ -20406,7 +20487,7 @@ Returns a function to retrieve a document from the cache. The returned function 
 
 ```typescript
 // typescript code example:
-function useGetDocument(): (id: string) => Promise<PHDocument>
+function useGetDocument(): (id: string) => Promise<PHDocument>;
 ```
 
 **Returns:** A function that takes a document ID and returns a Promise of the document.
@@ -20415,17 +20496,17 @@ function useGetDocument(): (id: string) => Promise<PHDocument>
 
 ```tsx
 // tsx code example:
-import { useGetDocument } from '@powerhousedao/reactor-browser';
+import { useGetDocument } from "@powerhousedao/reactor-browser";
 
 function DocumentFetcher() {
   const getDocument = useGetDocument();
 
   const handleFetch = async (id: string) => {
     const document = await getDocument(id);
-    console.log('Fetched document:', document.name);
+    console.log("Fetched document:", document.name);
   };
 
-  return <button onClick={() => handleFetch('doc-123')}>Fetch Document</button>;
+  return <button onClick={() => handleFetch("doc-123")}>Fetch Document</button>;
 }
 ```
 
@@ -20437,7 +20518,7 @@ Returns a function to retrieve multiple documents from the cache. The returned f
 
 ```typescript
 // typescript code example:
-function useGetDocuments(): (ids: string[]) => Promise<PHDocument[]>
+function useGetDocuments(): (ids: string[]) => Promise<PHDocument[]>;
 ```
 
 **Returns:** A function that takes an array of document IDs and returns a Promise of the documents.
@@ -20456,13 +20537,15 @@ function useGetDocumentAsync(id: string | null | undefined): {
   isPending: boolean;
   error: Error | undefined;
   reload: (() => Promise<PHDocument>) | undefined;
-}
+};
 ```
 
 **Parameters:**
+
 - `id` — The document ID to retrieve, or `null`/`undefined` to skip retrieval
 
 **Returns:** An object containing:
+
 - `status` — `"initial"` | `"pending"` | `"success"` | `"error"`
 - `data` — The document if successfully loaded
 - `isPending` — Boolean indicating if the document is currently loading
@@ -20473,16 +20556,16 @@ function useGetDocumentAsync(id: string | null | undefined): {
 
 ```tsx
 // tsx code example:
-import { useGetDocumentAsync } from '@powerhousedao/reactor-browser';
+import { useGetDocumentAsync } from "@powerhousedao/reactor-browser";
 
 function AsyncDocumentLoader({ id }: { id: string }) {
   const { status, data, isPending, error, reload } = useGetDocumentAsync(id);
 
-  if (status === 'initial' || isPending) {
+  if (status === "initial" || isPending) {
     return <p>Loading...</p>;
   }
 
-  if (status === 'error') {
+  if (status === "error") {
     return (
       <div>
         <p>Error: {error?.message}</p>
@@ -20505,14 +20588,14 @@ Returns all drives in the reactor.
 
 ```typescript
 // typescript code example:
-function useDrives(): DocumentDriveDocument[] | undefined
+function useDrives(): DocumentDriveDocument[] | undefined;
 ```
 
 **Example:**
 
 ```tsx
 // tsx code example:
-import { useDrives } from '@powerhousedao/reactor-browser';
+import { useDrives } from "@powerhousedao/reactor-browser";
 
 function DriveList() {
   const drives = useDrives();
@@ -20535,7 +20618,7 @@ Returns the ID of the currently selected drive.
 
 ```typescript
 // typescript code example:
-function useSelectedDriveId(): string | undefined
+function useSelectedDriveId(): string | undefined;
 ```
 
 ---
@@ -20546,7 +20629,10 @@ Returns the selected drive along with a dispatch function. **Throws an error if 
 
 ```typescript
 // typescript code example:
-function useSelectedDrive(): [DocumentDriveDocument, DocumentDispatch<DocumentDriveAction>]
+function useSelectedDrive(): [
+  DocumentDriveDocument,
+  DocumentDispatch<DocumentDriveAction>,
+];
 ```
 
 **Returns:** A tuple `[drive, dispatch]`.
@@ -20563,9 +20649,9 @@ Returns the selected drive, or `undefined` if no drive is selected. Use this whe
 
 ```typescript
 // typescript code example:
-function useSelectedDriveSafe(): 
+function useSelectedDriveSafe():
   | [DocumentDriveDocument, DocumentDispatch<DocumentDriveAction>]
-  | readonly [undefined, undefined]
+  | readonly [undefined, undefined];
 ```
 
 **Returns:** A tuple `[drive, dispatch]` or `[undefined, undefined]` if no drive is selected.
@@ -20574,7 +20660,7 @@ function useSelectedDriveSafe():
 
 ```tsx
 // tsx code example:
-import { useSelectedDriveSafe } from '@powerhousedao/reactor-browser';
+import { useSelectedDriveSafe } from "@powerhousedao/reactor-browser";
 
 function DriveHeader() {
   const [drive, dispatch] = useSelectedDriveSafe();
@@ -20595,10 +20681,13 @@ Sets the selected drive and updates the URL.
 
 ```typescript
 // typescript code example:
-function setSelectedDrive(driveOrDriveSlug: string | DocumentDriveDocument | undefined): void
+function setSelectedDrive(
+  driveOrDriveSlug: string | DocumentDriveDocument | undefined,
+): void;
 ```
 
 **Parameters:**
+
 - `driveOrDriveSlug` — The drive object, drive slug string, or `undefined` to deselect
 
 ---
@@ -20611,7 +20700,7 @@ Returns the currently selected node (file or folder).
 
 ```typescript
 // typescript code example:
-function useSelectedNode(): Node | undefined
+function useSelectedNode(): Node | undefined;
 ```
 
 ---
@@ -20622,10 +20711,11 @@ Sets the selected node and updates the URL.
 
 ```typescript
 // typescript code example:
-function setSelectedNode(nodeOrNodeSlug: Node | string | undefined): void
+function setSelectedNode(nodeOrNodeSlug: Node | string | undefined): void;
 ```
 
 **Parameters:**
+
 - `nodeOrNodeSlug` — The node object, node slug string, or `undefined` to deselect
 
 ---
@@ -20636,7 +20726,7 @@ Returns the selected folder. Returns `undefined` if the selected node is not a f
 
 ```typescript
 // typescript code example:
-function useSelectedFolder(): FolderNode | undefined
+function useSelectedFolder(): FolderNode | undefined;
 ```
 
 ---
@@ -20647,10 +20737,11 @@ Returns a node in the selected drive by ID.
 
 ```typescript
 // typescript code example:
-function useNodeById(id: string | null | undefined): Node | undefined
+function useNodeById(id: string | null | undefined): Node | undefined;
 ```
 
 **Parameters:**
+
 - `id` — The node ID to find
 
 ---
@@ -20661,10 +20752,11 @@ Returns the path (array of ancestor nodes) to a node in the selected drive.
 
 ```typescript
 // typescript code example:
-function useNodePathById(id: string | null | undefined): Node[]
+function useNodePathById(id: string | null | undefined): Node[];
 ```
 
 **Parameters:**
+
 - `id` — The node ID to get the path for
 
 **Returns:** An array of nodes from root to the target node. Returns an empty array if the node is not found.
@@ -20677,7 +20769,7 @@ Returns the path to the currently selected node.
 
 ```typescript
 // typescript code example:
-function useSelectedNodePath(): Node[]
+function useSelectedNodePath(): Node[];
 ```
 
 ---
@@ -20690,7 +20782,7 @@ Returns all nodes (files and folders) in the selected drive.
 
 ```typescript
 // typescript code example:
-function useNodesInSelectedDrive(): Node[] | undefined
+function useNodesInSelectedDrive(): Node[] | undefined;
 ```
 
 ---
@@ -20701,7 +20793,7 @@ Returns only the file nodes in the selected drive.
 
 ```typescript
 // typescript code example:
-function useFileNodesInSelectedDrive(): FileNode[] | undefined
+function useFileNodesInSelectedDrive(): FileNode[] | undefined;
 ```
 
 ---
@@ -20712,7 +20804,7 @@ Returns only the folder nodes in the selected drive.
 
 ```typescript
 // typescript code example:
-function useFolderNodesInSelectedDrive(): FolderNode[] | undefined
+function useFolderNodesInSelectedDrive(): FolderNode[] | undefined;
 ```
 
 ---
@@ -20723,7 +20815,7 @@ Returns all documents in the selected drive.
 
 ```typescript
 // typescript code example:
-function useDocumentsInSelectedDrive(): PHDocument[] | undefined
+function useDocumentsInSelectedDrive(): PHDocument[] | undefined;
 ```
 
 ---
@@ -20734,7 +20826,7 @@ Returns the document types supported by the selected drive, as defined by the do
 
 ```typescript
 // typescript code example:
-function useDocumentTypesInSelectedDrive(): string[] | undefined
+function useDocumentTypesInSelectedDrive(): string[] | undefined;
 ```
 
 ---
@@ -20745,7 +20837,7 @@ Returns the child nodes for the selected drive or folder. If a folder is selecte
 
 ```typescript
 // typescript code example:
-function useNodesInSelectedDriveOrFolder(): Node[]
+function useNodesInSelectedDriveOrFolder(): Node[];
 ```
 
 **Returns:** An array of nodes, sorted by name. Returns an empty array if no drive is selected.
@@ -20760,7 +20852,7 @@ Returns all nodes in the selected folder.
 
 ```typescript
 // typescript code example:
-function useNodesInSelectedFolder(): Node[] | undefined
+function useNodesInSelectedFolder(): Node[] | undefined;
 ```
 
 ---
@@ -20771,7 +20863,7 @@ Returns only the file nodes in the selected folder.
 
 ```typescript
 // typescript code example:
-function useFileNodesInSelectedFolder(): FileNode[] | undefined
+function useFileNodesInSelectedFolder(): FileNode[] | undefined;
 ```
 
 ---
@@ -20782,7 +20874,7 @@ Returns only the folder nodes in the selected folder.
 
 ```typescript
 // typescript code example:
-function useFolderNodesInSelectedFolder(): FolderNode[] | undefined
+function useFolderNodesInSelectedFolder(): FolderNode[] | undefined;
 ```
 
 ---
@@ -20793,7 +20885,7 @@ Returns the documents in the selected folder.
 
 ```typescript
 // typescript code example:
-function useDocumentsInSelectedFolder(): PHDocument[] | undefined
+function useDocumentsInSelectedFolder(): PHDocument[] | undefined;
 ```
 
 ---
@@ -20807,39 +20899,50 @@ Returns a set of functions for performing file and folder operations in the sele
 ```typescript
 // typescript code example:
 function useNodeActions(): {
-  onAddFile: (file: File, parent: Node | undefined) => Promise<Node | undefined>;
-  onAddFolder: (name: string, parent: Node | undefined) => Promise<Node | undefined>;
+  onAddFile: (
+    file: File,
+    parent: Node | undefined,
+  ) => Promise<Node | undefined>;
+  onAddFolder: (
+    name: string,
+    parent: Node | undefined,
+  ) => Promise<Node | undefined>;
   onRenameNode: (newName: string, node: Node) => Promise<Node | undefined>;
   onCopyNode: (src: Node, target: Node | undefined) => Promise<void>;
   onMoveNode: (src: Node, target: Node | undefined) => Promise<void>;
   onDuplicateNode: (src: Node) => Promise<void>;
   onAddAndSelectNewFolder: (name: string) => Promise<void>;
-}
+};
 ```
 
 **Returned Functions:**
 
-| Function | Description |
-|----------|-------------|
-| `onAddFile(file, parent)` | Adds a file to the drive under the specified parent folder |
-| `onAddFolder(name, parent)` | Creates a new folder under the specified parent |
-| `onRenameNode(newName, node)` | Renames a node |
-| `onCopyNode(src, target)` | Copies a node to a target folder |
-| `onMoveNode(src, target)` | Moves a node to a target folder |
-| `onDuplicateNode(src)` | Duplicates a node in the current folder |
-| `onAddAndSelectNewFolder(name)` | Creates a new folder and selects it |
+| Function                        | Description                                                |
+| ------------------------------- | ---------------------------------------------------------- |
+| `onAddFile(file, parent)`       | Adds a file to the drive under the specified parent folder |
+| `onAddFolder(name, parent)`     | Creates a new folder under the specified parent            |
+| `onRenameNode(newName, node)`   | Renames a node                                             |
+| `onCopyNode(src, target)`       | Copies a node to a target folder                           |
+| `onMoveNode(src, target)`       | Moves a node to a target folder                            |
+| `onDuplicateNode(src)`          | Duplicates a node in the current folder                    |
+| `onAddAndSelectNewFolder(name)` | Creates a new folder and selects it                        |
 
 **Example:**
 
 ```tsx
 // tsx code example:
-import { useNodeActions, useSelectedFolder } from '@powerhousedao/reactor-browser';
+import {
+  useNodeActions,
+  useSelectedFolder,
+} from "@powerhousedao/reactor-browser";
 
 function FileUploader() {
   const { onAddFile, onAddFolder } = useNodeActions();
   const selectedFolder = useSelectedFolder();
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const file = event.target.files?.[0];
     if (file) {
       await onAddFile(file, selectedFolder);
@@ -20847,7 +20950,7 @@ function FileUploader() {
   };
 
   const handleCreateFolder = async () => {
-    await onAddFolder('New Folder', selectedFolder);
+    await onAddFolder("New Folder", selectedFolder);
   };
 
   return (
@@ -20869,7 +20972,7 @@ Returns the currently displayed modal.
 
 ```typescript
 // typescript code example:
-function usePHModal(): PHModal | undefined
+function usePHModal(): PHModal | undefined;
 ```
 
 **Modal Types:**
@@ -20900,7 +21003,7 @@ Shows a modal.
 
 ```typescript
 // typescript code example:
-function showPHModal(modal: PHModal): void
+function showPHModal(modal: PHModal): void;
 ```
 
 ---
@@ -20911,7 +21014,7 @@ Closes the currently displayed modal.
 
 ```typescript
 // typescript code example:
-function closePHModal(): void
+function closePHModal(): void;
 ```
 
 ---
@@ -20922,18 +21025,20 @@ Shows the create document modal for a specific document type.
 
 ```typescript
 // typescript code example:
-function showCreateDocumentModal(documentType: string): void
+function showCreateDocumentModal(documentType: string): void;
 ```
 
 **Example:**
 
 ```tsx
 // tsx code example:
-import { showCreateDocumentModal } from '@powerhousedao/reactor-browser';
+import { showCreateDocumentModal } from "@powerhousedao/reactor-browser";
 
 function CreateButton() {
   return (
-    <button onClick={() => showCreateDocumentModal('powerhouse/budget-statement')}>
+    <button
+      onClick={() => showCreateDocumentModal("powerhouse/budget-statement")}
+    >
       Create Budget Statement
     </button>
   );
@@ -20948,10 +21053,11 @@ Shows the delete confirmation modal for a node.
 
 ```typescript
 // typescript code example:
-function showDeleteNodeModal(nodeOrId: Node | string): void
+function showDeleteNodeModal(nodeOrId: Node | string): void;
 ```
 
 **Parameters:**
+
 - `nodeOrId` — The node object or node ID to delete
 
 ---
@@ -20964,7 +21070,7 @@ Returns whether the revision history panel is visible.
 
 ```typescript
 // typescript code example:
-function useRevisionHistoryVisible(): boolean | undefined
+function useRevisionHistoryVisible(): boolean | undefined;
 ```
 
 ---
@@ -20975,7 +21081,7 @@ Shows the revision history panel.
 
 ```typescript
 // typescript code example:
-function showRevisionHistory(): void
+function showRevisionHistory(): void;
 ```
 
 ---
@@ -20986,7 +21092,7 @@ Hides the revision history panel.
 
 ```typescript
 // typescript code example:
-function hideRevisionHistory(): void
+function hideRevisionHistory(): void;
 ```
 
 ---
@@ -20999,7 +21105,7 @@ Returns the selected timeline item.
 
 ```typescript
 // typescript code example:
-function useSelectedTimelineItem(): TimelineItem | null | undefined
+function useSelectedTimelineItem(): TimelineItem | null | undefined;
 ```
 
 **Timeline Item Types:**
@@ -21041,7 +21147,7 @@ Sets the selected timeline item.
 
 ```typescript
 // typescript code example:
-function setSelectedTimelineItem(item: TimelineItem | null | undefined): void
+function setSelectedTimelineItem(item: TimelineItem | null | undefined): void;
 ```
 
 ---
@@ -21052,7 +21158,7 @@ Returns the selected timeline revision.
 
 ```typescript
 // typescript code example:
-function useSelectedTimelineRevision(): string | number | null | undefined
+function useSelectedTimelineRevision(): string | number | null | undefined;
 ```
 
 ---
@@ -21063,7 +21169,9 @@ Sets the selected timeline revision.
 
 ```typescript
 // typescript code example:
-function setSelectedTimelineRevision(revision: string | number | null | undefined): void
+function setSelectedTimelineRevision(
+  revision: string | number | null | undefined,
+): void;
 ```
 
 ---
@@ -21076,7 +21184,7 @@ Returns the document types a drive editor supports. Uses `allowedDocumentTypes` 
 
 ```typescript
 // typescript code example:
-function useDocumentTypes(): string[] | undefined
+function useDocumentTypes(): string[] | undefined;
 ```
 
 ---
@@ -21087,7 +21195,7 @@ Returns the supported document types for the reactor, derived from the registere
 
 ```typescript
 // typescript code example:
-function useSupportedDocumentTypesInReactor(): string[] | undefined
+function useSupportedDocumentTypesInReactor(): string[] | undefined;
 ```
 
 ---
@@ -21100,7 +21208,7 @@ Returns all Vetra packages loaded by the Connect instance.
 
 ```typescript
 // typescript code example:
-function useVetraPackages(): VetraPackage[] | undefined
+function useVetraPackages(): VetraPackage[] | undefined;
 ```
 
 **VetraPackage Type:**
@@ -21131,7 +21239,7 @@ Sets the Vetra packages for the Connect instance.
 
 ```typescript
 // typescript code example:
-function setVetraPackages(vetraPackages: VetraPackage[] | undefined): void
+function setVetraPackages(vetraPackages: VetraPackage[] | undefined): void;
 ```
 
 ---
@@ -21146,10 +21254,13 @@ The returned function generates a fresh bearer token and builds the switchboard 
 
 ```typescript
 // typescript code example:
-function useGetSwitchboardLink(document: PHDocument | undefined): (() => Promise<string>) | null
+function useGetSwitchboardLink(
+  document: PHDocument | undefined,
+): (() => Promise<string>) | null;
 ```
 
 **Parameters:**
+
 - `document` — The document to create a switchboard URL generator for
 
 **Returns:** An async function that returns the switchboard URL, or `null` if not applicable.
@@ -21158,7 +21269,10 @@ function useGetSwitchboardLink(document: PHDocument | undefined): (() => Promise
 
 ```tsx
 // tsx code example:
-import { useGetSwitchboardLink, useSelectedDocument } from '@powerhousedao/reactor-browser';
+import {
+  useGetSwitchboardLink,
+  useSelectedDocument,
+} from "@powerhousedao/reactor-browser";
 
 function SwitchboardButton() {
   const [document] = useSelectedDocument();
@@ -21170,7 +21284,7 @@ function SwitchboardButton() {
 
   const handleClick = async () => {
     const url = await getSwitchboardLink();
-    window.open(url, '_blank');
+    window.open(url, "_blank");
   };
 
   return <button onClick={handleClick}>Open in Switchboard</button>;
@@ -21187,7 +21301,7 @@ Gets whether external controls are enabled for a given editor.
 
 ```typescript
 // typescript code example:
-function useIsExternalControlsEnabled(): boolean | undefined
+function useIsExternalControlsEnabled(): boolean | undefined;
 ```
 
 ---
@@ -21198,7 +21312,7 @@ Sets whether external controls are enabled for a given editor.
 
 ```typescript
 // typescript code example:
-function setIsExternalControlsEnabled(enabled: boolean | undefined): void
+function setIsExternalControlsEnabled(enabled: boolean | undefined): void;
 ```
 
 ---
@@ -21209,7 +21323,7 @@ Gets whether drag and drop is enabled for a given drive editor.
 
 ```typescript
 // typescript code example:
-function useIsDragAndDropEnabled(): boolean | undefined
+function useIsDragAndDropEnabled(): boolean | undefined;
 ```
 
 ---
@@ -21220,7 +21334,7 @@ Sets whether drag and drop is enabled for a given drive editor.
 
 ```typescript
 // typescript code example:
-function setIsDragAndDropEnabled(enabled: boolean | undefined): void
+function setIsDragAndDropEnabled(enabled: boolean | undefined): void;
 ```
 
 ---
@@ -21231,7 +21345,7 @@ Defines the document types a drive supports. Defaults to all document types regi
 
 ```typescript
 // typescript code example:
-function useAllowedDocumentTypes(): string[] | undefined
+function useAllowedDocumentTypes(): string[] | undefined;
 ```
 
 ---
@@ -21242,7 +21356,7 @@ Sets the allowed document types for a given drive editor.
 
 ```typescript
 // typescript code example:
-function setAllowedDocumentTypes(types: string[] | undefined): void
+function setAllowedDocumentTypes(types: string[] | undefined): void;
 ```
 
 ---
@@ -21255,10 +21369,11 @@ Sets the global drive editor config. Pass in a partial object of the config to s
 
 ```typescript
 // typescript code example:
-function setPHDriveEditorConfig(config: Partial<PHDriveEditorConfig>): void
+function setPHDriveEditorConfig(config: Partial<PHDriveEditorConfig>): void;
 ```
 
 **Config Options:**
+
 - `allowedDocumentTypes` — Array of allowed document type strings
 - `isDragAndDropEnabled` — Whether drag and drop is enabled
 
@@ -21270,10 +21385,13 @@ Sets the global document editor config. Pass in a partial object of the config t
 
 ```typescript
 // typescript code example:
-function setPHDocumentEditorConfig(config: Partial<PHDocumentEditorConfig>): void
+function setPHDocumentEditorConfig(
+  config: Partial<PHDocumentEditorConfig>,
+): void;
 ```
 
 **Config Options:**
+
 - `isExternalControlsEnabled` — Whether external controls are enabled
 
 ---
@@ -21284,19 +21402,19 @@ Wrapper hook that automatically sets the global drive editor config when the com
 
 ```typescript
 // typescript code example:
-function useSetPHDriveEditorConfig(config: Partial<PHDriveEditorConfig>): void
+function useSetPHDriveEditorConfig(config: Partial<PHDriveEditorConfig>): void;
 ```
 
 **Example:**
 
 ```tsx
 // tsx code example:
-import { useSetPHDriveEditorConfig } from '@powerhousedao/reactor-browser';
+import { useSetPHDriveEditorConfig } from "@powerhousedao/reactor-browser";
 
 function MyDriveEditor() {
   useSetPHDriveEditorConfig({
     isDragAndDropEnabled: true,
-    allowedDocumentTypes: ['powerhouse/budget-statement', 'powerhouse/invoice'],
+    allowedDocumentTypes: ["powerhouse/budget-statement", "powerhouse/invoice"],
   });
 
   return <div>{/* editor content */}</div>;
@@ -21311,7 +21429,9 @@ Wrapper hook that automatically sets the global document editor config when the 
 
 ```typescript
 // typescript code example:
-function useSetPHDocumentEditorConfig(config: Partial<PHDocumentEditorConfig>): void
+function useSetPHDocumentEditorConfig(
+  config: Partial<PHDocumentEditorConfig>,
+): void;
 ```
 
 ---
@@ -21325,8 +21445,8 @@ Gets the value of an item in the global drive config for a given key. Strongly t
 ```typescript
 // typescript code example:
 function usePHDriveEditorConfigByKey<TKey extends PHDriveEditorConfigKey>(
-  key: TKey
-): PHDriveEditorConfig[TKey]
+  key: TKey,
+): PHDriveEditorConfig[TKey];
 ```
 
 ---
@@ -21338,22 +21458,20 @@ Gets the value of an item in the global document config for a given key. Strongl
 ```typescript
 // typescript code example:
 function usePHDocumentEditorConfigByKey<TKey extends PHDocumentEditorConfigKey>(
-  key: TKey
-): PHDocumentEditorConfig[TKey]
+  key: TKey,
+): PHDocumentEditorConfig[TKey];
 ```
 
 ---
 
-
 ## Reactor API Authorization {#reactor-api-authorization}
 
 **Source:** `academy/02-MasteryTrack/03-BuildingUserExperiences/07-Authorization/04-Authorization.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 **⚠️ WARNING:** Work in Progress
 This documentation is still being written and may be incomplete.
-The feature is not yet available on production. 
-
+The feature is not yet available on production.
 
 This guide explains how to configure **global role-based authorization** for the Powerhouse Reactor API. This is the first layer of access control that determines who can access your Reactor at all.
 
@@ -21365,15 +21483,15 @@ The **Reactor API** is the API interface to a Powerhouse **Reactor**—a storage
 
 The Reactor API implements a two-layer authorization system:
 
-| Layer | System | Purpose | Scope |
-|-------|--------|---------|-------|
-| **Layer 1** | **Global Role-Based Authorization** (this guide) | Controls who can access the Reactor API | Reactor-wide |
+| Layer       | System                                                        | Purpose                                              | Scope        |
+| ----------- | ------------------------------------------------------------- | ---------------------------------------------------- | ------------ |
+| **Layer 1** | **Global Role-Based Authorization** (this guide)              | Controls who can access the Reactor API              | Reactor-wide |
 | **Layer 2** | [Document Permission System] (see: 02-DocumentPermissions.md) | Controls access to specific documents/folders/drives | Per-document |
 
 **💡 TIP:** Which system should I use?
+
 - Use **global roles** (this guide) for simple setups where all authenticated users should have similar access
 - Add **[document permissions] (see: 02-DocumentPermissions.md)** when you need fine-grained control over specific documents, folders, or drives
-
 
 ## Prerequisites
 
@@ -21412,6 +21530,7 @@ FREE_ENTRY=true
 ```
 
 **Important notes:**
+
 - Use full Ethereum addresses (e.g., `0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb`)
 - **FREE_ENTRY=true**: When enabled, any user with a valid Renown credential can access the Reactor as a USER
 - **FREE_ENTRY=false** (default): Only addresses in ADMINS, USERS, or GUESTS lists can access
@@ -21439,27 +21558,30 @@ The global authorization system implements three distinct roles, each with diffe
 
 ### Role Definitions
 
-| Role | Access Level | Typical Use Case |
-|------|-------------|------------------|
-| **GUEST** | Read-only | External stakeholders who need to view data |
-| **USER** | Standard operations | Regular contributors who create and edit documents |
-| **ADMIN** | Full access | System administrators who manage the Reactor |
+| Role      | Access Level        | Typical Use Case                                   |
+| --------- | ------------------- | -------------------------------------------------- |
+| **GUEST** | Read-only           | External stakeholders who need to view data        |
+| **USER**  | Standard operations | Regular contributors who create and edit documents |
+| **ADMIN** | Full access         | System administrators who manage the Reactor       |
 
 ### Role Details
 
 #### 1. Guests (GUESTS)
+
 - **Access**: Limited, read-only access to specific endpoints
 - **Can**: View public data, read documents they have permission for
 - **Cannot**: Perform write operations, create drives
 - **Example**: External auditors viewing budget documents
 
-#### 2. Users (USERS)  
+#### 2. Users (USERS)
+
 - **Access**: Standard access to most endpoints
 - **Can**: Create and edit documents, perform regular operations
 - **Cannot**: Access administrative functions, manage global settings
 - **Example**: Team members collaborating on projects
 
 #### 3. Admins (ADMINS)
+
 - **Access**: Full access to all endpoints and operations
 - **Can**: Manage drives, configure the Reactor, grant permissions
 - **Cannot**: Nothing - full access
@@ -21467,11 +21589,11 @@ The global authorization system implements three distinct roles, each with diffe
 
 **ℹ️ INFO:** Global Roles vs Document Permissions
 These global roles grant **baseline access** to the Reactor API. To control access to specific documents:
+
 1. Users must first have a global role (GUEST, USER, or ADMIN)
 2. Then apply [document-level permissions] (see: 02-DocumentPermissions.md) for fine-grained control
 
 **Example**: A USER role can access the API, but document permissions determine if they can read/write specific documents.
-
 
 ## Docker configuration
 
@@ -21519,9 +21641,9 @@ Is FREE_ENTRY=true?
 5. **Document permissions** (if enabled): After passing global auth, check [document-level permissions] (see: 02-DocumentPermissions.md)
 
 **💡 TIP:** Authentication vs Authorization
+
 - **Authentication** ([Renown flow] (see: 01-RenownAuthenticationFlow.md)): Proves who you are (`ph login`)
 - **Authorization** (this guide): Determines what you can access (role-based)
-
 
 ## Common Scenarios
 
@@ -21585,6 +21707,7 @@ Common issues and solutions:
 **Problem**: User has valid token but cannot access the Reactor
 
 **Solutions**:
+
 1. Verify user's Ethereum address is in ADMINS, USERS, or GUESTS lists
 2. Check if `FREE_ENTRY=true` is set (allows any authenticated user)
 3. Confirm `AUTH_ENABLED=true` is set correctly
@@ -21595,6 +21718,7 @@ Common issues and solutions:
 **Problem**: Request is rejected before reaching authorization
 
 **Solutions**:
+
 1. User needs to authenticate: `ph login`
 2. Generate valid bearer token: `ph access-token`
 3. Include token in request header: `Authorization: Bearer <token>`
@@ -21605,6 +21729,7 @@ Common issues and solutions:
 **Problem**: Changed configuration but nothing happens
 
 **Solutions**:
+
 1. Restart the Reactor after configuration changes
 2. Check environment variables are set in the correct shell/environment
 3. Verify `powerhouse.config.json` syntax is valid JSON
@@ -21628,16 +21753,14 @@ The address is shown in the authentication status output.
 
 ---
 
-
 ## Relational Database {#relational-database}
 
 **Source:** `academy/04-APIReferences/04-RelationalDatabase.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 ---
-toc_max_heading_level: 2
----
 
+## toc_max_heading_level: 2
 
 This page covers the relational database tools available in Powerhouse applications, providing type-safe database operations with real-time updates through PGlite integration.
 
@@ -22508,11 +22631,10 @@ function BetterComponent({ user }) {
 
 ---
 
-
 ## Relational database processor {#relational-database-processor}
 
 **Source:** `academy/02-MasteryTrack/04-WorkWithData/05-RelationalDbProcessor.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 In this chapter, we will implement a **Todo-List** relational database processor. This processor receives processed operations from the reactor and can use the `prevState`, `resultingState`, or data from the operations themselves to populate a database.
 
@@ -22879,7 +23001,7 @@ The Powerhouse supergraph for any given remote drive or reactor can be found und
 - Start the reactor:
 
   ```bash
-// bash code example:
+  // bash code example:
   ph reactor
   ```
 
@@ -23051,7 +23173,7 @@ Variables:
 // json code example:
 {
   "driveId": "fc29ec1b-9934-410b-8682-4731b810d441",
-  "docId": "72b73d31-4874-4b71-8cc3-289ed4cfbe2b",
+  "docId": "72b73d31-4874-4b71-8cc3-289ed4cfbe2b"
 }
 ```
 
@@ -23234,11 +23356,10 @@ This pattern is commonly used for:
 
 ---
 
-
 ## Release Notes {#release-notes}
 
 **Source:** `academy/ReleaseNotes/index.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 Welcome to the Powerhouse release notes! This page contains the complete changelog of all Powerhouse releases, providing you with detailed information about new features, improvements, bug fixes, and breaking changes.
 
@@ -24263,11 +24384,10 @@ Thank you ❤️
 
 ---
 
-
 ## Renown authentication flow {#renown-authentication-flow}
 
 **Source:** `academy/02-MasteryTrack/03-BuildingUserExperiences/07-Authorization/01-RenownAuthenticationFlow.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 The Renown login flow leverages decentralized identity (DID) creation and the Ceramic network for credential storage and verification, ensuring secure and verifiable actions within decentralized organizations. Below is a detailed breakdown of the process, aimed at developers integrating the Renown, Connect, and Switchboard components.
 
@@ -24320,7 +24440,7 @@ Renown is designed to address the challenge of trust within DAOs, where contribu
 - The request includes critical metadata such as the user's Ethereum address, the DID, the signed operation, and other parameters required for validation.
 
   ```json
-// json code example:
+  // json code example:
   {
     "signerAddress": "0x1234...",
     "hash": "did:key:2be4x...",
@@ -24348,11 +24468,10 @@ This flow ensures that all actions within the Powerhouse ecosystem are secure, t
 
 ---
 
-
 ## Renown SDK {#renown-sdk}
 
 **Source:** `academy/04-APIReferences/renown-sdk/00-Overview.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 A comprehensive SDK for integrating Renown authentication and user profile management into your React applications.
 
@@ -24491,6 +24610,7 @@ User profile data is automatically fetched from the Renown API after successful 
 ### UI Component
 
 The SDK provides a ready-to-use component:
+
 - **RenownAuthButton** - Smart component that adapts to auth state (shows login button or user info)
 
 This component is optional - you can build your own UI using the `useUser` hook.
@@ -24683,17 +24803,15 @@ AGPL-3.0-only
 
 ---
 
-
 ## Setup builder environment {#setup-builder-environment}
 
 **Source:** `academy/02-MasteryTrack/04-WorkWithData/_ARCHIVE-AnalyticsProcessorTutorial/_01-SetupBuilderEnvironment.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 Let's set up your computer to start with any of the Powerhouse Connect tutorials. Don't worry if this is your first time setting up a development environment - we'll guide you through each step!
 
 **⚠️ WARNING:**
 If you've already setup git, node, and npm, your most important step is to install the Powerhouse CLI with the command `npm install ph-cmd`. A global install is recommended if you want to use the command from any directory as a power user. The Powerhouse CLI is used to create, build, and run your Document Models and give you direct access to a series of Powerhouse ecosystem tools.
-
 
 ## Table of contents
 
@@ -24730,7 +24848,7 @@ Node.js 24 is a tool that lets us run our application. Let's install it step by 
    - In the PowerShell window, type this command and press Enter:
 
    ```powershell
-// powershell code example:
+   // powershell code example:
    Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
    ```
 
@@ -24748,7 +24866,7 @@ Node.js 24 is a tool that lets us run our application. Let's install it step by 
    - Type these commands one at a time and press Enter after each:
 
    ```powershell
-// powershell code example:
+   // powershell code example:
    node --version
    pnpm --version
    ```
@@ -24764,7 +24882,7 @@ Node.js 24 is a tool that lets us run our application. Let's install it step by 
    - Copy and paste this command into Terminal and press Enter:
 
    ```bash
-// bash code example:
+   // bash code example:
    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
    ```
 
@@ -24774,7 +24892,7 @@ Node.js 24 is a tool that lets us run our application. Let's install it step by 
    - In the same Terminal window, type this command and press Enter:
 
    ```bash
-// bash code example:
+   // bash code example:
    brew install node
    ```
 
@@ -24782,7 +24900,7 @@ Node.js 24 is a tool that lets us run our application. Let's install it step by 
    - In Terminal, type these commands one at a time and press Enter after each:
 
    ```bash
-// bash code example:
+   // bash code example:
    node --version
    pnpm --version
    ```
@@ -24798,14 +24916,14 @@ Node.js 24 is a tool that lets us run our application. Let's install it step by 
 2. **Update Package List:**
 
    ```bash
-// bash code example:
+   // bash code example:
    sudo apt update
    ```
 
 3. **Install Node.js 24 and npm:**
 
    ```bash
-// bash code example:
+   // bash code example:
    sudo apt install nodejs npm
    ```
 
@@ -24813,7 +24931,7 @@ Node.js 24 is a tool that lets us run our application. Let's install it step by 
    - Type these commands one at a time and press Enter after each:
 
    ```bash
-// bash code example:
+   // bash code example:
    node --version
    pnpm --version
    ```
@@ -24852,27 +24970,27 @@ VS Code is the editor we'll use to write our code. Here's how to install it:
 1. Open Terminal (Ctrl + Alt + T)
 2. First, update the packages list:
    ```bash
-// bash code example:
+   // bash code example:
    sudo apt update
    ```
 3. Install the dependencies needed to add Microsoft's repository:
    ```bash
-// bash code example:
+   // bash code example:
    sudo apt install software-properties-common apt-transport-https wget
    ```
 4. Import Microsoft's GPG key:
    ```bash
-// bash code example:
+   // bash code example:
    wget -q https://packages.microsoft.com/keys/microsoft.asc -O- | sudo apt-key add -
    ```
 5. Add the VS Code repository:
    ```bash
-// bash code example:
+   // bash code example:
    sudo add-apt-repository "deb [arch=amd64] https://packages.microsoft.com/repos/vscode stable main"
    ```
 6. Install VS Code:
    ```bash
-// bash code example:
+   // bash code example:
    sudo apt install code
    ```
 7. Once installed, you can launch VS Code by:
@@ -24889,7 +25007,7 @@ VS Code is the editor we'll use to write our code. Here's how to install it:
 4. Run the installer and use the recommended settings
 5. Verify installation by opening PowerShell:
    ```powershell
-// powershell code example:
+   // powershell code example:
    git --version
    ```
 
@@ -24897,12 +25015,12 @@ VS Code is the editor we'll use to write our code. Here's how to install it:
 
 1. Install using Homebrew:
    ```bash
-// bash code example:
+   // bash code example:
    brew install git
    ```
 2. Verify installation:
    ```bash
-// bash code example:
+   // bash code example:
    git --version
    ```
 
@@ -24910,17 +25028,17 @@ VS Code is the editor we'll use to write our code. Here's how to install it:
 
 1. Update package list:
    ```bash
-// bash code example:
+   // bash code example:
    sudo apt update
    ```
 2. Install Git:
    ```bash
-// bash code example:
+   // bash code example:
    sudo apt install git
    ```
 3. Verify installation:
    ```bash
-// bash code example:
+   // bash code example:
    git --version
    ```
 
@@ -24951,11 +25069,10 @@ You should see version numbers displayed for all commands. You're now ready to s
 
 ---
 
-
 ## Setup your environment {#setup-your-environment}
 
 **Source:** `academy/02-MasteryTrack/05-Launch/03-SetupEnvironment.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 ## Introduction
 
@@ -24967,7 +25084,6 @@ This guide covers **VM/server-based deployment** with direct installation. If yo
 
 **Choose Docker if:** You want the fastest path to production, prefer containerized workflows, or are deploying to cloud platforms.
 **Choose Direct Installation if:** You need maximum performance, want full control, or are setting up a dedicated server.
-
 
 ## Prerequisites
 
@@ -25038,7 +25154,7 @@ To log in via SSH:
 2. Use one of these commands:
 
    ```bash
-// bash code example:
+   // bash code example:
    # If using password authentication
    ssh root@YOUR_DROPLET_IP
 
@@ -25131,7 +25247,7 @@ Now your Droplet is running! Now you can continue with the Powerhouse tutorial o
 1. Use DNS lookup tools to verify your records:
 
    ```bash
-// bash code example:
+   // bash code example:
    dig +short yourdomain.com
    dig +short www.yourdomain.com
    dig +short connect.yourdomain.com
@@ -25169,7 +25285,6 @@ This tutorial will guide you through the process of assigning a static IP (Elast
 
 **⚠️ WARNING:**
 Make sure to keep your key pair file (.pem) secure and never share it. Without it, you won't be able to access your instance. Also, consider setting up AWS IAM roles and policies for better security management.
-
 
 ## Part 1: Assigning a static IP to EC2 instance
 
@@ -25273,7 +25388,7 @@ Make sure to keep your key pair file (.pem) secure and never share it. Without i
 1. Use DNS lookup tools to verify your records:
 
    ```bash
-// bash code example:
+   // bash code example:
    dig +short yourdomain.com
    dig +short www.yourdomain.com
    dig +short connect.yourdomain.com
@@ -25294,26 +25409,29 @@ The `install` script provides a streamlined way to install the Powerhouse CLI to
 
 1.  Run the setup script:
 
-    ```bash
-// bash code example:
+        ```bash
+
+    // bash code example:
     curl -fsSL https://apps.powerhouse.io/install | bash # for macOS, Linux, and WSL
     ```
 
 2.  After installation, source your shell configuration:
 
-    ```bash
-// bash code example:
-    source ~/.bashrc  # or source ~/.zshrc if using zsh
+        ```bash
+
+    // bash code example:
+    source ~/.bashrc # or source ~/.zshrc if using zsh
     ```
 
 3.  Verify that the Powerhouse CLI is ready to be installed in the next step:
 
-    ```bash
-// bash code example:
+        ```bash
+
+    // bash code example:
     ph --version
     ```
 
-    You will see that `ph-cli` is not yet installed. This is expected, as it will be installed by the service setup command.
+        You will see that `ph-cli` is not yet installed. This is expected, as it will be installed by the service setup command.
 
 4.  Create a project with `ph-init <projectname>`.
 
@@ -25338,7 +25456,6 @@ It installs and configures **Nginx** as a reverse proxy, sets up SSL certificate
 It also installs **PM2** for process management and starts your services with the appropriate configuration based on your SSL choice.
 The Nginx configuration includes optimizations for **WebSocket connections**, static file serving, and security headers.
 PM2 is configured to automatically restart services if they crash and to start them on system boot.
-
 
 The setup command will prompt you for the following information:
 
@@ -25515,11 +25632,10 @@ If you encounter issues or need assistance, there are several resources availabl
 
 ---
 
-
 ## Sky dashboard {#sky-dashboard}
 
 **Source:** `academy/02-MasteryTrack/04-WorkWithData/_06-Analytics Engine/use-cases/maker.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 All consumable data for the Sky ecosystem is available through GraphQL API, which allows you to only fetch the data you require.
 
@@ -26164,11 +26280,10 @@ query Analytics($filter: AnalyticsFilter) {
 
 ---
 
-
 ## Specify document operations {#specify-document-operations}
 
 **Source:** `academy/02-MasteryTrack/02-DocumentModelCreation/03-SpecifyDocumentOperations.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 In the previous section, we defined the state schema for our document model. Now, we turn our attention to a critical aspect of document model creation: **specifying document operations**. These operations are the heart of your document's behavior, dictating how its state can be modified.
 
@@ -26216,7 +26331,6 @@ These `input` types are not just abstract definitions; they are the **specificat
 
 **💡 TIP:** ID Generation
 Notice that `AddTodoItemInput` only requires `text` — not an `id`. This is because the ID is generated automatically in the reducer using `generateId()` from `document-model/core`. This ensures unique, consistent IDs and follows the pattern used in the [todo-demo repository](https://github.com/powerhouse-inc/todo-demo).
-
 
 Vetra Studio uses these GraphQL input types when you define operations within a module (e.g., the `todos` module with operations `ADD_TODO_ITEM`, `UPDATE_TODO_ITEM`, `DELETE_TODO_ITEM`).
 
@@ -26303,45 +26417,39 @@ Assuming you have already defined the state schema for the `TodoList` as covered
     - Type `todos` into the field and press Enter.
 
 2.  **Add the `ADD_TODO_ITEM` Operation:**
-    A new field, `Add operation`, will appear under your new module.
-    - Type `ADD_TODO_ITEM` into this field and press Enter.
-    - An editor will appear for the operation's input type. You need to define the data required for this operation. Paste the following GraphQL `input` definition into the editor:
+    A new field, `Add operation`, will appear under your new module. - Type `ADD_TODO_ITEM` into this field and press Enter. - An editor will appear for the operation's input type. You need to define the data required for this operation. Paste the following GraphQL `input` definition into the editor:
 
-    ```graphql
-// graphql code example:
-    # Defines a GraphQL input type for adding a new to-do item
+        ```graphql
+
+    // graphql code example: # Defines a GraphQL input type for adding a new to-do item
     input AddTodoItemInput {
-      text: String!
+    text: String!
     }
     ```
 
-    :::info
-    Notice we don't include `id` in the input — the reducer will generate it automatically using `generateId()` from `document-model/core`.
-    :::
+        :::info
+        Notice we don't include `id` in the input — the reducer will generate it automatically using `generateId()` from `document-model/core`.
+        :::
 
-3.  **Add the `UPDATE_TODO_ITEM` Operation:**
-    - In the `Add operation` field again, type `UPDATE_TODO_ITEM` and press Enter.
-    - Paste the corresponding `input` definition into its editor:
+3.  **Add the `UPDATE_TODO_ITEM` Operation:** - In the `Add operation` field again, type `UPDATE_TODO_ITEM` and press Enter. - Paste the corresponding `input` definition into its editor:
 
-    ```graphql
-// graphql code example:
-    # Defines a GraphQL input type for updating a to-do item
+        ```graphql
+
+    // graphql code example: # Defines a GraphQL input type for updating a to-do item
     input UpdateTodoItemInput {
-      id: OID!
-      text: String
-      checked: Boolean
+    id: OID!
+    text: String
+    checked: Boolean
     }
     ```
 
-4.  **Add the `DELETE_TODO_ITEM` Operation:**
-    - Finally, type `DELETE_TODO_ITEM` in the `Add operation` field and press Enter.
-    - Paste its `input` definition:
+4.  **Add the `DELETE_TODO_ITEM` Operation:** - Finally, type `DELETE_TODO_ITEM` in the `Add operation` field and press Enter. - Paste its `input` definition:
 
-    ```graphql
-// graphql code example:
-    # Defines a GraphQL input type for deleting a to-do item
+        ```graphql
+
+    // graphql code example: # Defines a GraphQL input type for deleting a to-do item
     input DeleteTodoItemInput {
-      id: OID!
+    id: OID!
     }
     ```
 
@@ -26362,45 +26470,39 @@ Assuming you have already defined the state schema for the `TodoList` as covered
     - Type `todos` into the field and press Enter.
 
 2.  **Add the `ADD_TODO_ITEM` Operation:**
-    A new field, `Add operation`, will appear under your new module.
-    - Type `ADD_TODO_ITEM` into this field and press Enter.
-    - An editor will appear for the operation's input type. You need to define the data required for this operation. Paste the following GraphQL `input` definition into the editor:
+    A new field, `Add operation`, will appear under your new module. - Type `ADD_TODO_ITEM` into this field and press Enter. - An editor will appear for the operation's input type. You need to define the data required for this operation. Paste the following GraphQL `input` definition into the editor:
 
-    ```graphql
-// graphql code example:
-    # Defines a GraphQL input type for adding a new to-do item
+        ```graphql
+
+    // graphql code example: # Defines a GraphQL input type for adding a new to-do item
     input AddTodoItemInput {
-      text: String!
+    text: String!
     }
     ```
 
-    :::info
-    Notice we don't include `id` in the input — the reducer will generate it automatically using `generateId()` from `document-model/core`.
-    :::
+        :::info
+        Notice we don't include `id` in the input — the reducer will generate it automatically using `generateId()` from `document-model/core`.
+        :::
 
-3.  **Add the `UPDATE_TODO_ITEM` Operation:**
-    - In the `Add operation` field again, type `UPDATE_TODO_ITEM` and press Enter.
-    - Paste the corresponding `input` definition into its editor:
+3.  **Add the `UPDATE_TODO_ITEM` Operation:** - In the `Add operation` field again, type `UPDATE_TODO_ITEM` and press Enter. - Paste the corresponding `input` definition into its editor:
 
-    ```graphql
-// graphql code example:
-    # Defines a GraphQL input type for updating a to-do item
+        ```graphql
+
+    // graphql code example: # Defines a GraphQL input type for updating a to-do item
     input UpdateTodoItemInput {
-      id: OID!
-      text: String
-      checked: Boolean
+    id: OID!
+    text: String
+    checked: Boolean
     }
     ```
 
-4.  **Add the `DELETE_TODO_ITEM` Operation:**
-    - Finally, type `DELETE_TODO_ITEM` in the `Add operation` field and press Enter.
-    - Paste its `input` definition:
+4.  **Add the `DELETE_TODO_ITEM` Operation:** - Finally, type `DELETE_TODO_ITEM` in the `Add operation` field and press Enter. - Paste its `input` definition:
 
-    ```graphql
-// graphql code example:
-    # Defines a GraphQL input type for deleting a to-do item
+        ```graphql
+
+    // graphql code example: # Defines a GraphQL input type for deleting a to-do item
     input DeleteTodoItemInput {
-      id: OID!
+    id: OID!
     }
     ```
 
@@ -26419,17 +26521,15 @@ In the next section, we will dive deeper into the implementation of the reducer 
 
 ---
 
-
 ## Specify the state schema {#specify-the-state-schema}
 
 **Source:** `academy/02-MasteryTrack/02-DocumentModelCreation/02-SpecifyTheStateSchema.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 The state schema is the backbone of your document model. It defines the structure, data types, and relationships of the information your document will hold. In Powerhouse, we use the **GraphQL Schema Definition Language (SDL)** to define this schema. A well-defined state schema is crucial for ensuring data integrity, consistency, and for enabling powerful querying and manipulation capabilities.
 
 **💡 TIP:** Specification Driven Design
 Your state schema is more than just a data structure—it's a **specification** that enables **Specification Driven Design & Development**. This schema becomes a machine-readable blueprint that AI agents can interpret and execute, enabling precise collaboration between you and AI throughout the development process.
-
 
 ## Core concepts
 
@@ -26458,7 +26558,6 @@ In addition to these standard types, the Powerhouse Document-Engineering system 
 
 **💡 TIP:** Custom Scalar: OID
 Powerhouse provides the `OID` (Object ID) scalar type, which is a custom scalar specifically designed for unique identifiers in document models. It provides automatic ID generation capabilities when used with the `generateId()` function from the document-model core library.
-
 
 ### Lists and non-null
 
@@ -26495,7 +26594,6 @@ type TodoItem {
 **ℹ️ INFO:** Advanced Feature
 In this Mastery Track, we'll extend the basic schema with a `stats` field to demonstrate how you can add computed statistics to your document model. This is an **optional enhancement** that builds on the foundation from Get Started.
 
-
 ```graphql
 // graphql code example:
 # The state of our TodoList (advanced version with stats)
@@ -26526,14 +26624,14 @@ type TodoListStats {
     - `[TodoItem!]`: This signifies that `items` is a list of `TodoItem` objects.
     - `TodoItem!`: The `!` after `TodoItem` means that no item in the list can be null. Each entry must be a valid `TodoItem`.
     - The final `!` after `[TodoItem!]` means that the `items` list itself cannot be null. It can be an empty list `[]`, but it cannot be absent.
-  - `stats: TodoListStats!` *(advanced)*: Holds aggregated statistics about the to-do items.
+  - `stats: TodoListStats!` _(advanced)_: Holds aggregated statistics about the to-do items.
 
 - **`TodoItem` type**:
   - `id: OID!`: Each `TodoItem` has a unique identifier using Powerhouse's custom `OID` scalar. This is crucial for referencing specific items, for example, when updating or deleting them.
   - `text: String!`: The textual description of the to-do item. It cannot be null, ensuring every to-do has a description.
   - `checked: Boolean!`: Indicates whether the to-do item is completed. It defaults to a boolean value (true or false) and cannot be null.
 
-- **`TodoListStats` type** *(advanced)*: This type holds the summary statistics for the to-do list.
+- **`TodoListStats` type** _(advanced)_: This type holds the summary statistics for the to-do list.
   - `total: Int!`: The total count of all to-do items. This field must be an integer and cannot be null.
   - `checked: Int!`: The number of to-do items that are marked as completed. This must be an integer and cannot be null.
   - `unchecked: Int!`: The number of to-do items that are still pending. This also must be an integer and cannot be null.
@@ -26574,32 +26672,30 @@ Now that you understand the concepts behind the state schema, let's put it into 
     - **Name**: Give your document model a descriptive name: `TodoList`. **Pay close attention to capitalization, as it influences our code generation.**
     - **Document Type**: In the 'Document Type' field, enter a unique identifier for this document type: `powerhouse/todo-list`.
 
-3.  **Specify the State Schema**:
-    - In the code editor provided, you'll see a template for a GraphQL schema.
-    - Replace the entire content of the editor with the advanced `TodoList` schema we've designed in this chapter:
+3.  **Specify the State Schema**: - In the code editor provided, you'll see a template for a GraphQL schema. - Replace the entire content of the editor with the advanced `TodoList` schema we've designed in this chapter:
 
-    ```graphql
-// graphql code example:
-    # The state of our TodoList (advanced version with stats)
+        ```graphql
+
+    // graphql code example: # The state of our TodoList (advanced version with stats)
     type TodoListState {
-      items: [TodoItem!]!
-      stats: TodoListStats!
+    items: [TodoItem!]!
+    stats: TodoListStats!
     }
 
-    # A single to-do item
-    type TodoItem {
-      id: OID!
-      text: String!
-      checked: Boolean!
-    }
-    
-    # The statistics on our to-do's (advanced feature)
-    type TodoListStats {
-      total: Int!
-      checked: Int!
-      unchecked: Int!
-    }
-    ```
+        # A single to-do item
+        type TodoItem {
+          id: OID!
+          text: String!
+          checked: Boolean!
+        }
+
+        # The statistics on our to-do's (advanced feature)
+        type TodoListStats {
+          total: Int!
+          checked: Int!
+          unchecked: Int!
+        }
+        ```
 
 4.  **Sync Schema and View Initial State**:
     - After pasting the schema, click the **'Sync with schema'** button.
@@ -26629,32 +26725,30 @@ By completing these steps, you have successfully specified the data structure fo
     - **Name**: Give your document model a descriptive name: `TodoList`. **Pay close attention to capitalization, as it influences our code generation.**
     - **Document Type**: In the 'Document Type' field, enter a unique identifier for this document type: `powerhouse/todo-list`.
 
-3.  **Specify the State Schema**:
-    - In the code editor provided, you'll see a template for a GraphQL schema.
-    - Replace the entire content of the editor with the advanced `TodoList` schema we've designed in this chapter:
+3.  **Specify the State Schema**: - In the code editor provided, you'll see a template for a GraphQL schema. - Replace the entire content of the editor with the advanced `TodoList` schema we've designed in this chapter:
 
-    ```graphql
-// graphql code example:
-    # The state of our TodoList (advanced version with stats)
+        ```graphql
+
+    // graphql code example: # The state of our TodoList (advanced version with stats)
     type TodoListState {
-      items: [TodoItem!]!
-      stats: TodoListStats!
+    items: [TodoItem!]!
+    stats: TodoListStats!
     }
 
-    # A single to-do item
-    type TodoItem {
-      id: OID!
-      text: String!
-      checked: Boolean!
-    }
-    
-    # The statistics on our to-do's (advanced feature)
-    type TodoListStats {
-      total: Int!
-      checked: Int!
-      unchecked: Int!
-    }
-    ```
+        # A single to-do item
+        type TodoItem {
+          id: OID!
+          text: String!
+          checked: Boolean!
+        }
+
+        # The statistics on our to-do's (advanced feature)
+        type TodoListStats {
+          total: Int!
+          checked: Int!
+          unchecked: Int!
+        }
+        ```
 
 4.  **Sync Schema and View Initial State**:
     - After pasting the schema, click the **'Sync with schema'** button.
@@ -26670,17 +26764,16 @@ For a complete, working example, you can always have a look at the [Example Todo
 
 ---
 
-
 ## Step 0 - get the starter code {#step-0-get-the-starter-code}
 
 **Source:** `academy/03-ExampleUsecases/TodoList/00-GetTheStarterCode.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 Normally you would initialize a new powerhouse project by running `ph init` with your project name. But since this is a tutorial, we want to provide branches with the final code for each step.
 
-Just for the tutorial, please instead make a fork of [this repository](https://github.com/powerhouse-inc/todo-tutorial). 
+Just for the tutorial, please instead make a fork of [this repository](https://github.com/powerhouse-inc/todo-tutorial).
 
-*NOTE:* please _uncheck_ the checkbox that says "copy the main branch only" when making your fork — we want to keep the other branches for each step.
+_NOTE:_ please _uncheck_ the checkbox that says "copy the main branch only" when making your fork — we want to keep the other branches for each step.
 
 Once you have your fork, clone it to your machine with `git clone`, the GitHub desktop app or the GitHub cli.
 
@@ -26694,25 +26787,24 @@ Each step in this tutorial has two branches associated with it. One is the start
 
 To compare your branch, either do `git diff my-branch step-complete-branch` or use the "compare with branch" option in the GitHub desktop app.
 
-Finally, run `pnpm install` to install the project dependencies. 
+Finally, run `pnpm install` to install the project dependencies.
 
 Now we're ready to get started.
 
 ---
 
-
 ## Step 1 - Generate the `TodoList` document model {#step-1-generate-the-todolist-document-model}
 
 **Source:** `academy/03-ExampleUsecases/TodoList/01-GenerateTodoListDocumentModel.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 ## Overview
 
 This tutorial guides you through creating a simplified version of a 'Powerhouse project' for a **To-do List**.  
-A Powerhouse project primarily consists of a document model and its editor. 
-As your projects use-case expands you can add data-integrations or a specific drive-app as seen in the demo package. 
+A Powerhouse project primarily consists of a document model and its editor.
+As your projects use-case expands you can add data-integrations or a specific drive-app as seen in the demo package.
 
-For todays purpose, you'll be using Connect, our user-centric collaboration tool and Vetra Studio, the builder tooling through which developers can access and manage specifications of your project. 
+For todays purpose, you'll be using Connect, our user-centric collaboration tool and Vetra Studio, the builder tooling through which developers can access and manage specifications of your project.
 
 ## Develop a single document model in Connect
 
@@ -26720,25 +26812,26 @@ Once in the project directory, run the `pnpm connect` command to start a local i
 Run the following command to start the Connect application:
 
     ```bash
+
 // bash code example:
-    pnpm connect
-    ```
+pnpm connect
+```
 
 The Connect application will start and you will see the following output:
 
     ```bash
+
 // bash code example:
-      ➜  Local:   http://localhost:3000/
-      ➜  Network: http://192.168.5.110:3000/
-      ➜  press h + enter to show help
-    ```
+➜ Local: http://localhost:3000/
+➜ Network: http://192.168.5.110:3000/
+➜ press h + enter to show help
+```
 
 A new browser window will open and you will see the Connect application. If it doesn't open automatically, you can open it manually by navigating to `http://localhost:3000/` in your browser. You will see your local drive and a button to create a new drive.
 
-**💡 TIP:** 
+**💡 TIP:**
 If you local drive is not present navigate into Settings in the bottom left corner. Settings > Danger Zone > Clear Storage.
 Clear the storage of your localhost application as it might has an old session cached.
-
 
 1. To create a new local drive, click the "Create New Drive" icon. In the "Drive Name" field, enter a name for your drive (we will use "local" as the name). For "Drive App", select "Generic drive explorer" and for "Location", choose "Local". Then click the "Create new drive" button at the bottom of the modal.
 
@@ -26764,7 +26857,6 @@ Below, you can see the SDL for the `TodoList` document model.
 **ℹ️ INFO:**
 This schema defines the **data structure** of the document model and the types involved in its operations, which are detailed further as input types.
 Documents in Powerhouse leverage **event sourcing principles**, where every state transition is represented by an operation. GraphQL input types describe operations, ensuring that user intents are captured effectively. These operations detail the parameters needed for state transitions. The use of GraphQL aligns these transitions with explicit, validated, and reproducible commands.
-
 
 ## The document model state schema
 
@@ -26892,7 +26984,7 @@ Once you have added all the input operations, click the `Export` button at the t
 
 With our newly created document model, we can run the codegen to generate the rest of the code for it.
 
-To run the codegen, you use the `generate` command with a path to the file you just exported. 
+To run the codegen, you use the `generate` command with a path to the file you just exported.
 
 ```bash
 // bash code example:
@@ -26915,16 +27007,16 @@ This will overwrite your generated code with code that is identical to the branc
 To make sure all works as expected, we should:
 
 - check types
-run: `pnpm tsc`
+  run: `pnpm tsc`
 
 - check linting
-run: `pnpm lint`
+  run: `pnpm lint`
 
 - check tests
-run: `pnpm test`
+  run: `pnpm test`
 
 - make sure your code matches the code in the completed step branch
-run: `git diff your-branch-name step-1-complete-generated-todo-list-document-model`
+  run: `git diff your-branch-name step-1-complete-generated-todo-list-document-model`
 
 ### Up next: reducers and operations
 
@@ -26932,11 +27024,10 @@ Up next, you'll learn how to implement the runtime logic and components that wil
 
 ---
 
-
 ## Step 1: Create Custom Scalars {#step-1-create-custom-scalars}
 
 **Source:** `academy/06-ComponentLibrary/02-CreateCustomScalars.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 This tutorial provides step-by-step instructions for creating custom scalars & components, and to contributing to the document-engineering project.
 The github repo for the Document-Engineering can be found [here](https://github.com/powerhouse-inc/document-engineering/tree/main)
@@ -27349,11 +27440,10 @@ export const schema = z.string().datetime();
 
 ---
 
-
 ## Step 2 — Implement the `TodoList` document model reducer operation handlers {#step-2-implement-the-todolist-document-model-reducer-operation-handlers}
 
 **Source:** `academy/03-ExampleUsecases/TodoList/02-ImplementTodoListDocumentModelReducerOperationHandlers.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 ## Adding the logic for handling operations with reducers
 
@@ -27435,31 +27525,31 @@ Update your `updateTodoOperation` to be like so:
 ```typescript
 // typescript code example:
 export const todoListTodosOperations: TodoListTodosOperations = {
-    addTodoItemOperation(state, action) {
-      state.items.push({
-        id: action.input.id,
-        text: action.input.text,
-        checked: false,
-      });
-    },
-    // removed-start
-    updateTodoItemOperation(state, action) {
-        // TODO: Implement "updateTodoItemOperation" reducer
-        throw new Error('Reducer "updateTodoItemOperation" not yet implemented');
-    },
-    // removed-end
-    // added-start
-    updateTodoItemOperation(state, action) {
-      const item = state.items.find((item) => item.id === action.input.id);
-      if (!item) return state;
-      item.text = action.input.text ?? item.text;
-      item.checked = action.input.checked ?? item.checked;
-    },
-    // added-end
-    deleteTodoItemOperation(state, action) {
-        // TODO: Implement "deleteTodoItemOperation" reducer
-        throw new Error('Reducer "deleteTodoItemOperation" not yet implemented');
-    }
+  addTodoItemOperation(state, action) {
+    state.items.push({
+      id: action.input.id,
+      text: action.input.text,
+      checked: false,
+    });
+  },
+  // removed-start
+  updateTodoItemOperation(state, action) {
+    // TODO: Implement "updateTodoItemOperation" reducer
+    throw new Error('Reducer "updateTodoItemOperation" not yet implemented');
+  },
+  // removed-end
+  // added-start
+  updateTodoItemOperation(state, action) {
+    const item = state.items.find((item) => item.id === action.input.id);
+    if (!item) return state;
+    item.text = action.input.text ?? item.text;
+    item.checked = action.input.checked ?? item.checked;
+  },
+  // added-end
+  deleteTodoItemOperation(state, action) {
+    // TODO: Implement "deleteTodoItemOperation" reducer
+    throw new Error('Reducer "deleteTodoItemOperation" not yet implemented');
+  },
 };
 ```
 
@@ -27519,7 +27609,6 @@ export const todoListTodosOperations: TodoListTodosOperations = {
     state.items = state.items.filter((item) => item.id !== action.input.id);
   },
 };
-
 ```
 
 ## Check your work
@@ -27527,16 +27616,16 @@ export const todoListTodosOperations: TodoListTodosOperations = {
 To make sure all works as expected, we should:
 
 - check types
-run: `pnpm tsc`
+  run: `pnpm tsc`
 
 - check linting
-run: `pnpm lint`
+  run: `pnpm lint`
 
 - check tests
-run: `pnpm test`
+  run: `pnpm test`
 
 - make sure your code matches the code in the completed step branch
-run: `git diff your-branch-name step-2-complete-implemented-todo-list-document-model-reducer-operation-handlers`
+  run: `git diff your-branch-name step-2-complete-implemented-todo-list-document-model-reducer-operation-handlers`
 
 ### Up next: tests for our new operation handlers
 
@@ -27544,11 +27633,10 @@ Up next, you'll implement some custom tests to check the behavior of our new cod
 
 ---
 
-
 ## Step 2 — Implement the `TodoList` document model reducer operation handlers {#step-2-implement-the-todolist-document-model-reducer-operation-handlers}
 
 **Source:** `academy/10-TodoListTutorial/02-ImplementTodoListDocumentModelReducerOperationHandlers.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 ## Adding the logic for handling operations with reducers
 
@@ -27627,28 +27715,28 @@ Update your `updateTodoOperation` to be like so:
 ```typescript
 // typescript code example:
 export const todoListTodosOperations: TodoListTodosOperations = {
-    addTodoItemOperation(state, action) {
-      const id = generateId();
-      state.items.push({ ...action.input, id, checked: false });
-    },
-    // removed-start
-    updateTodoItemOperation(state, action) {
-        // TODO: Implement "updateTodoItemOperation" reducer
-        throw new Error('Reducer "updateTodoItemOperation" not yet implemented');
-    },
-    // removed-end
-    // added-start
-    updateTodoItemOperation(state, action) {
-      const item = state.items.find((item) => item.id === action.input.id);
-      if (!item) return;
-      item.text = action.input.text ?? item.text;
-      item.checked = action.input.checked ?? item.checked;
-    },
-    // added-end
-    deleteTodoItemOperation(state, action) {
-        // TODO: Implement "deleteTodoItemOperation" reducer
-        throw new Error('Reducer "deleteTodoItemOperation" not yet implemented');
-    }
+  addTodoItemOperation(state, action) {
+    const id = generateId();
+    state.items.push({ ...action.input, id, checked: false });
+  },
+  // removed-start
+  updateTodoItemOperation(state, action) {
+    // TODO: Implement "updateTodoItemOperation" reducer
+    throw new Error('Reducer "updateTodoItemOperation" not yet implemented');
+  },
+  // removed-end
+  // added-start
+  updateTodoItemOperation(state, action) {
+    const item = state.items.find((item) => item.id === action.input.id);
+    if (!item) return;
+    item.text = action.input.text ?? item.text;
+    item.checked = action.input.checked ?? item.checked;
+  },
+  // added-end
+  deleteTodoItemOperation(state, action) {
+    // TODO: Implement "deleteTodoItemOperation" reducer
+    throw new Error('Reducer "deleteTodoItemOperation" not yet implemented');
+  },
 };
 ```
 
@@ -27710,16 +27798,16 @@ export const todoListTodosOperations: TodoListTodosOperations = {
 To make sure all works as expected, we should:
 
 - check types
-run: `pnpm tsc`
+  run: `pnpm tsc`
 
 - check linting
-run: `pnpm lint`
+  run: `pnpm lint`
 
 - check tests
-run: `pnpm test`
+  run: `pnpm test`
 
 - make sure your code matches the code in the completed step branch
-run: `git diff your-branch-name step-2-complete-implemented-todo-list-document-model-reducer-operation-handlers`
+  run: `git diff your-branch-name step-2-complete-implemented-todo-list-document-model-reducer-operation-handlers`
 
 ### Up next: tests for our new operation handlers
 
@@ -27727,11 +27815,10 @@ Up next, you'll implement some custom tests to check the behavior of our new cod
 
 ---
 
-
 ## Step 2: Integrate Your Scalar into a React Component {#step-2-integrate-your-scalar-into-a-react-component}
 
 **Source:** `academy/06-ComponentLibrary/03-IntegrateIntoAReactComponent.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 This guide explains how to use a custom scalar (created as described in the previous step) within a React component. You'll learn how to leverage the scalar's validation schema for form input, display errors, and ensure a seamless user experience.
 
@@ -27863,11 +27950,10 @@ Replace `EthereumAddress` with your scalar component as needed.
 
 ---
 
-
 ## Step 3 — Adding our own tests for the document model actions {#step-3-adding-our-own-tests-for-the-document-model-actions}
 
 **Source:** `academy/03-ExampleUsecases/TodoList/03-AddTestsForTodoListActions.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 Similarly to the operation handler logic, when you add a new module to your document model, we generate some boilerplate tests for your code.
 
@@ -27978,71 +28064,69 @@ Let's test that the text of a todo item is updated correctly first. Put this cod
 
 ```ts
 // ts code example:
-  it("should handle updateTodoItem operation to update text", () => {
-    // we need there to already be a todo item in the document,
-    // since we want to test updating an existing document
-    const mockItem = generateMock(UpdateTodoItemInputSchema());
+it("should handle updateTodoItem operation to update text", () => {
+  // we need there to already be a todo item in the document,
+  // since we want to test updating an existing document
+  const mockItem = generateMock(UpdateTodoItemInputSchema());
 
-    // we also need to generate a mock input for the update operation we are testing
-    const input: UpdateTodoItemInput = generateMock(
-      UpdateTodoItemInputSchema(),
-    );
+  // we also need to generate a mock input for the update operation we are testing
+  const input: UpdateTodoItemInput = generateMock(UpdateTodoItemInputSchema());
 
-    // since the mocks are generated with random values, we need to set the `id` on our mock input
-    // to match the `id` of the existing mock input
-    input.id = mockItem.id;
+  // since the mocks are generated with random values, we need to set the `id` on our mock input
+  // to match the `id` of the existing mock input
+  input.id = mockItem.id;
 
-    // we want to easily check if the item's text was updated to be our new value,
-    // so we assign a variable and use that for the mock input's text field
-    const newText = "new text";
-    input.text = newText;
+  // we want to easily check if the item's text was updated to be our new value,
+  // so we assign a variable and use that for the mock input's text field
+  const newText = "new text";
+  input.text = newText;
 
-    // we are only testing updating the text here, so we want the checked field on the input
-    // to be undefined, i.e. it should not change anything on the existing item
-    input.checked = undefined;
+  // we are only testing updating the text here, so we want the checked field on the input
+  // to be undefined, i.e. it should not change anything on the existing item
+  input.checked = undefined;
 
-    // we can pass a different initial state to the `createDocument` utility,
-    // so in this case we pass in an `items` array with our existing item already in it
-    const document = utils.createDocument({
-      global: {
-        items: [mockItem as TodoItem],
-      },
-    });
-
-    /* The following checks are copied from the boilerplate */
-
-    // create an updated document by applying the reducer with the action and input
-    const updatedDocument = reducer(document, updateTodoItem(input));
-
-    // there should now be one operation in the operations list
-    expect(updatedDocument.operations.global).toHaveLength(1);
-
-    // the operation applied should correspond to an action of the correct type
-    expect(updatedDocument.operations.global[0].action.type).toBe(
-      "UPDATE_TODO_ITEM",
-    );
-
-    // the operation applied should have used the correct input
-    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
-      input,
-    );
-
-    // the operation applied should be the first operation in the list
-    expect(updatedDocument.operations.global[0].index).toEqual(0);
-
-    /* The following checks are unique to this test case */
-
-    // find the updated item in the items list by its `id`
-    const updatedItem = updatedDocument.state.global.items.find(
-      (item) => item.id === input.id,
-    );
-
-    // the item's text should now be updated to be our new text
-    expect(updatedItem?.text).toBe(newText);
-
-    // the item's `checked` field should be unchanged.
-    expect(updatedItem?.checked).toBe(mockItem.checked);
+  // we can pass a different initial state to the `createDocument` utility,
+  // so in this case we pass in an `items` array with our existing item already in it
+  const document = utils.createDocument({
+    global: {
+      items: [mockItem as TodoItem],
+    },
   });
+
+  /* The following checks are copied from the boilerplate */
+
+  // create an updated document by applying the reducer with the action and input
+  const updatedDocument = reducer(document, updateTodoItem(input));
+
+  // there should now be one operation in the operations list
+  expect(updatedDocument.operations.global).toHaveLength(1);
+
+  // the operation applied should correspond to an action of the correct type
+  expect(updatedDocument.operations.global[0].action.type).toBe(
+    "UPDATE_TODO_ITEM",
+  );
+
+  // the operation applied should have used the correct input
+  expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
+    input,
+  );
+
+  // the operation applied should be the first operation in the list
+  expect(updatedDocument.operations.global[0].index).toEqual(0);
+
+  /* The following checks are unique to this test case */
+
+  // find the updated item in the items list by its `id`
+  const updatedItem = updatedDocument.state.global.items.find(
+    (item) => item.id === input.id,
+  );
+
+  // the item's text should now be updated to be our new text
+  expect(updatedItem?.text).toBe(newText);
+
+  // the item's `checked` field should be unchanged.
+  expect(updatedItem?.checked).toBe(mockItem.checked);
+});
 ```
 
 #### Check your work
@@ -28057,67 +28141,65 @@ Add this code below the test case we just added:
 
 ```ts
 // ts code example:
-  it("should handle updateTodoItem operation to update checked", () => {
-    // generate a mock existing item
-    const mockItem = generateMock(UpdateTodoItemInputSchema());
+it("should handle updateTodoItem operation to update checked", () => {
+  // generate a mock existing item
+  const mockItem = generateMock(UpdateTodoItemInputSchema());
 
-    // generate a mock input
-    const input: UpdateTodoItemInput = generateMock(
-      UpdateTodoItemInputSchema(),
-    );
+  // generate a mock input
+  const input: UpdateTodoItemInput = generateMock(UpdateTodoItemInputSchema());
 
-    // set the mock input's `id` to the mock item's `id`
-    input.id = mockItem.id;
+  // set the mock input's `id` to the mock item's `id`
+  input.id = mockItem.id;
 
-    // we want the new `checked` field value to be the opposite of the randomly generated value from the mock
-    const newChecked = !mockItem.checked;
-    input.checked = newChecked;
+  // we want the new `checked` field value to be the opposite of the randomly generated value from the mock
+  const newChecked = !mockItem.checked;
+  input.checked = newChecked;
 
-    // leave the `text` field unchanged
-    input.text = undefined;
+  // leave the `text` field unchanged
+  input.text = undefined;
 
-    // create a document with the existing item in it
-    const document = utils.createDocument({
-      global: {
-        items: [mockItem as TodoItem],
-      },
-    });
-
-    // apply the reducer with the action and the mock input
-    const updatedDocument = reducer(document, updateTodoItem(input));
-
-    /* The following checks are copied from the boilerplate */
-
-    // check your operations
-    expect(updatedDocument.operations.global).toHaveLength(1);
-
-    // check the operation's action type
-    expect(updatedDocument.operations.global[0].action.type).toBe(
-      "UPDATE_TODO_ITEM",
-    );
-
-    // check the operation's input
-    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
-      input,
-    );
-
-    // check the operation's index
-    expect(updatedDocument.operations.global[0].index).toEqual(0);
-
-    /* The following checks are unique to this test case */
-
-    // get the updated item by it's `id`
-    const updatedItem = updatedDocument.state.global.items.find(
-      (item) => item.id === input.id,
-    );
-
-    // the item's `text` field should remain unchanged
-    expect(updatedItem?.text).toBe(mockItem.text);
-
-    // the item's `checked` field should be updated to our new checked value
-    expect(updatedItem?.checked).toBe(newChecked);
+  // create a document with the existing item in it
+  const document = utils.createDocument({
+    global: {
+      items: [mockItem as TodoItem],
+    },
   });
-  ```
+
+  // apply the reducer with the action and the mock input
+  const updatedDocument = reducer(document, updateTodoItem(input));
+
+  /* The following checks are copied from the boilerplate */
+
+  // check your operations
+  expect(updatedDocument.operations.global).toHaveLength(1);
+
+  // check the operation's action type
+  expect(updatedDocument.operations.global[0].action.type).toBe(
+    "UPDATE_TODO_ITEM",
+  );
+
+  // check the operation's input
+  expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
+    input,
+  );
+
+  // check the operation's index
+  expect(updatedDocument.operations.global[0].index).toEqual(0);
+
+  /* The following checks are unique to this test case */
+
+  // get the updated item by it's `id`
+  const updatedItem = updatedDocument.state.global.items.find(
+    (item) => item.id === input.id,
+  );
+
+  // the item's `text` field should remain unchanged
+  expect(updatedItem?.text).toBe(mockItem.text);
+
+  // the item's `checked` field should be updated to our new checked value
+  expect(updatedItem?.checked).toBe(newChecked);
+});
+```
 
 #### Check your work
 
@@ -28131,33 +28213,33 @@ Update the `deleteTodoItem` operation test case to also create an existing item 
 
 ```typescript
 // typescript code example:
-  it("should handle deleteTodoItem operation", () => {
-    // generate a mock existing item
-    const mockItem = generateMock(UpdateTodoItemInputSchema());
+it("should handle deleteTodoItem operation", () => {
+  // generate a mock existing item
+  const mockItem = generateMock(UpdateTodoItemInputSchema());
 
-    const document = utils.createDocument({
-      global: {
-        items: [mockItem as TodoItem],
-      },
-    });
-
-    const input = generateMock(DeleteTodoItemInputSchema());
-    input.id = mockItem.id;
-
-    const updatedDocument = reducer(document, deleteTodoItem(input));
-
-    expect(updatedDocument.operations.global).toHaveLength(1);
-    expect(updatedDocument.operations.global[0].action.type).toBe(
-      "DELETE_TODO_ITEM",
-    );
-    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
-      input,
-    );
-    expect(updatedDocument.operations.global[0].index).toEqual(0);
-
-    const updatedItems = updatedDocument.state.global.items;
-    expect(updatedItems).toHaveLength(0);
+  const document = utils.createDocument({
+    global: {
+      items: [mockItem as TodoItem],
+    },
   });
+
+  const input = generateMock(DeleteTodoItemInputSchema());
+  input.id = mockItem.id;
+
+  const updatedDocument = reducer(document, deleteTodoItem(input));
+
+  expect(updatedDocument.operations.global).toHaveLength(1);
+  expect(updatedDocument.operations.global[0].action.type).toBe(
+    "DELETE_TODO_ITEM",
+  );
+  expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
+    input,
+  );
+  expect(updatedDocument.operations.global[0].index).toEqual(0);
+
+  const updatedItems = updatedDocument.state.global.items;
+  expect(updatedItems).toHaveLength(0);
+});
 ```
 
 #### Check your work
@@ -28376,7 +28458,6 @@ describe("TodosOperations", () => {
     expect(updatedItems).toHaveLength(0);
   });
 });
-
 ```
 
 ## Check your work
@@ -28384,16 +28465,16 @@ describe("TodosOperations", () => {
 To make sure all works as expected, we should:
 
 - check types
-run: `pnpm tsc`
+  run: `pnpm tsc`
 
 - check linting
-run: `pnpm lint`
+  run: `pnpm lint`
 
 - check tests
-run: `pnpm test`
+  run: `pnpm test`
 
 - make sure your code matches the code in the completed step branch
-run: `git diff your-branch-name step-3-complete-implemented-tests-for-todo-operations`
+  run: `git diff your-branch-name step-3-complete-implemented-tests-for-todo-operations`
 
 ### Up next: generating an editor for our `TodoList` documents
 
@@ -28401,11 +28482,10 @@ Up next, we'll generate a boilerplate document editor for our `TodoList` documen
 
 ---
 
-
 ## Step 3 — Adding our own tests for the document model actions {#step-3-adding-our-own-tests-for-the-document-model-actions}
 
 **Source:** `academy/10-TodoListTutorial/03-AddTestsForTodoListActions.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 Similarly to the operation handler logic, when you add a new module to your document model, we generate some boilerplate tests for your code.
 
@@ -28516,74 +28596,72 @@ Let's test that the text of a todo item is updated correctly first. Put this cod
 
 ```ts
 // ts code example:
-  it("should handle updateTodoItem operation to update text", () => {
-    // we need there to already be a todo item in the document, 
-    // since we want to test updating an existing document
-    const mockItem = generateMock(TodoItemSchema());
+it("should handle updateTodoItem operation to update text", () => {
+  // we need there to already be a todo item in the document,
+  // since we want to test updating an existing document
+  const mockItem = generateMock(TodoItemSchema());
 
-    // we also need to generate a mock input for the update operation we are testing
-    const input: UpdateTodoItemInput = generateMock(
-      UpdateTodoItemInputSchema(),
-    );
+  // we also need to generate a mock input for the update operation we are testing
+  const input: UpdateTodoItemInput = generateMock(UpdateTodoItemInputSchema());
 
-    // since the mocks are generated with random values, we need to set the `id` on our mock input 
-    // to match the `id` of the existing mock input
-    input.id = mockItem.id;
+  // since the mocks are generated with random values, we need to set the `id` on our mock input
+  // to match the `id` of the existing mock input
+  input.id = mockItem.id;
 
-    // we want to easily check if the item's text was updated to be our new value, 
-    // so we assign a variable and use that for the mock input's text field
-    const newText = "new text";
-    input.text = newText;
+  // we want to easily check if the item's text was updated to be our new value,
+  // so we assign a variable and use that for the mock input's text field
+  const newText = "new text";
+  input.text = newText;
 
-    // we are only testing updating the text here, so we want the checked field on the input
-    // to be undefined, i.e. it should not change anything on the existing item
-    input.checked = undefined;
+  // we are only testing updating the text here, so we want the checked field on the input
+  // to be undefined, i.e. it should not change anything on the existing item
+  input.checked = undefined;
 
-    // we can pass a different initial state to the `createDocument` utility,
-    // so in this case we pass in an `items` array with our existing item already in it
-    const document = utils.createDocument({
-      global: {
-        items: [mockItem],
-      },
-    });
-
-    /* The following checks are copied from the boilerplate */
-
-    // create an updated document by applying the reducer with the action and input
-    const updatedDocument = reducer(document, updateTodoItem(input));
-
-    // use our validator to check that the document conforms to the document model schema
-    expect(isTodoListDocument(updatedDocument)).toBe(true);
-
-    // there should now be one operation in the operations list
-    expect(updatedDocument.operations.global).toHaveLength(1);
-
-    // the operation applied should correspond to an action of the correct type
-    expect(updatedDocument.operations.global[0].action.type).toBe(
-      "UPDATE_TODO_ITEM",
-    );
-
-    // the operation applied should have used the correct input
-    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
-      input,
-    );
-
-    // the operation applied should be the first operation in the list
-    expect(updatedDocument.operations.global[0].index).toEqual(0);
-
-    /* The following checks are unique to this test case */
-
-    // find the updated item in the items list by its `id`
-    const updatedItem = updatedDocument.state.global.items.find(
-      (item) => item.id === input.id,
-    );
-
-    // the item's text should now be updated to be our new text
-    expect(updatedItem?.text).toBe(newText);
-
-    // the item's `checked` field should be unchanged.
-    expect(updatedItem?.checked).toBe(mockItem.checked);
+  // we can pass a different initial state to the `createDocument` utility,
+  // so in this case we pass in an `items` array with our existing item already in it
+  const document = utils.createDocument({
+    global: {
+      items: [mockItem],
+    },
   });
+
+  /* The following checks are copied from the boilerplate */
+
+  // create an updated document by applying the reducer with the action and input
+  const updatedDocument = reducer(document, updateTodoItem(input));
+
+  // use our validator to check that the document conforms to the document model schema
+  expect(isTodoListDocument(updatedDocument)).toBe(true);
+
+  // there should now be one operation in the operations list
+  expect(updatedDocument.operations.global).toHaveLength(1);
+
+  // the operation applied should correspond to an action of the correct type
+  expect(updatedDocument.operations.global[0].action.type).toBe(
+    "UPDATE_TODO_ITEM",
+  );
+
+  // the operation applied should have used the correct input
+  expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
+    input,
+  );
+
+  // the operation applied should be the first operation in the list
+  expect(updatedDocument.operations.global[0].index).toEqual(0);
+
+  /* The following checks are unique to this test case */
+
+  // find the updated item in the items list by its `id`
+  const updatedItem = updatedDocument.state.global.items.find(
+    (item) => item.id === input.id,
+  );
+
+  // the item's text should now be updated to be our new text
+  expect(updatedItem?.text).toBe(newText);
+
+  // the item's `checked` field should be unchanged.
+  expect(updatedItem?.checked).toBe(mockItem.checked);
+});
 ```
 
 #### Check your work
@@ -28598,70 +28676,68 @@ Add this code below the test case we just added:
 
 ```ts
 // ts code example:
-  it("should handle updateTodoItem operation to update checked", () => {
-    // generate a mock existing item
-    const mockItem = generateMock(TodoItemSchema());
+it("should handle updateTodoItem operation to update checked", () => {
+  // generate a mock existing item
+  const mockItem = generateMock(TodoItemSchema());
 
-    // generate a mock input
-    const input: UpdateTodoItemInput = generateMock(
-      UpdateTodoItemInputSchema(),
-    );
+  // generate a mock input
+  const input: UpdateTodoItemInput = generateMock(UpdateTodoItemInputSchema());
 
-    // set the mock input's `id` to the mock item's `id`
-    input.id = mockItem.id;
-    
-    // we want the new `checked` field value to be the opposite of the randomly generated value from the mock
-    const newChecked = !mockItem.checked;
-    input.checked = newChecked;
+  // set the mock input's `id` to the mock item's `id`
+  input.id = mockItem.id;
 
-    // leave the `text` field unchanged
-    input.text = undefined;
+  // we want the new `checked` field value to be the opposite of the randomly generated value from the mock
+  const newChecked = !mockItem.checked;
+  input.checked = newChecked;
 
-    // create a document with the existing item in it
-    const document = utils.createDocument({
-      global: {
-        items: [mockItem],
-      },
-    });
+  // leave the `text` field unchanged
+  input.text = undefined;
 
-    // apply the reducer with the action and the mock input
-    const updatedDocument = reducer(document, updateTodoItem(input));
-
-    /* The following checks are copied from the boilerplate */
-
-    // validate your document
-    expect(isTodoListDocument(updatedDocument)).toBe(true);
-
-   // check your operations
-    expect(updatedDocument.operations.global).toHaveLength(1);
-
-    // check the operation's action type
-    expect(updatedDocument.operations.global[0].action.type).toBe(
-      "UPDATE_TODO_ITEM",
-    );
-
-    // check the operation's input
-    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
-      input,
-    );
-
-    // check the operation's index
-    expect(updatedDocument.operations.global[0].index).toEqual(0);
-
-    /* The following checks are unique to this test case */
-
-    // get the updated item by it's `id`
-    const updatedItem = updatedDocument.state.global.items.find(
-      (item) => item.id === input.id,
-    );
-
-    // the item's `text` field should remain unchanged
-    expect(updatedItem?.text).toBe(mockItem.text);
-
-    // the item's `checked` field should be updated to our new checked value
-    expect(updatedItem?.checked).toBe(newChecked);
+  // create a document with the existing item in it
+  const document = utils.createDocument({
+    global: {
+      items: [mockItem],
+    },
   });
-  ```
+
+  // apply the reducer with the action and the mock input
+  const updatedDocument = reducer(document, updateTodoItem(input));
+
+  /* The following checks are copied from the boilerplate */
+
+  // validate your document
+  expect(isTodoListDocument(updatedDocument)).toBe(true);
+
+  // check your operations
+  expect(updatedDocument.operations.global).toHaveLength(1);
+
+  // check the operation's action type
+  expect(updatedDocument.operations.global[0].action.type).toBe(
+    "UPDATE_TODO_ITEM",
+  );
+
+  // check the operation's input
+  expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
+    input,
+  );
+
+  // check the operation's index
+  expect(updatedDocument.operations.global[0].index).toEqual(0);
+
+  /* The following checks are unique to this test case */
+
+  // get the updated item by it's `id`
+  const updatedItem = updatedDocument.state.global.items.find(
+    (item) => item.id === input.id,
+  );
+
+  // the item's `text` field should remain unchanged
+  expect(updatedItem?.text).toBe(mockItem.text);
+
+  // the item's `checked` field should be updated to our new checked value
+  expect(updatedItem?.checked).toBe(newChecked);
+});
+```
 
 #### Check your work
 
@@ -28675,39 +28751,37 @@ Update the `deleteTodoItem` operation test case to also create an existing item 
 
 ```typescript
 // typescript code example:
-  it("should handle deleteTodoItem operation", () => {
-    // removed-start
-    const document = utils.createDocument();
-    const input = generateMock(DeleteTodoItemInputSchema());
-    // removed-end
-    // added-start
-    const mockItem = generateMock(TodoItemSchema());
-    const document = utils.createDocument({
-      global: {
-        items: [mockItem],
-      },
-    });
-    const input: DeleteTodoItemInput = generateMock(
-      DeleteTodoItemInputSchema(),
-    );
-    input.id = mockItem.id;
-    // added-end
-    const updatedDocument = reducer(document, deleteTodoItem(input));
-    expect(isTodoListDocument(updatedDocument)).toBe(true);
-
-    expect(updatedDocument.operations.global).toHaveLength(1);
-    expect(updatedDocument.operations.global[0].action.type).toBe(
-      "DELETE_TODO_ITEM",
-    );
-    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
-      input,
-    );
-    expect(updatedDocument.operations.global[0].index).toEqual(0);
-    // added-start
-    const updatedItems = updatedDocument.state.global.items;
-    expect(updatedItems).toHaveLength(0);
-    // added-end
+it("should handle deleteTodoItem operation", () => {
+  // removed-start
+  const document = utils.createDocument();
+  const input = generateMock(DeleteTodoItemInputSchema());
+  // removed-end
+  // added-start
+  const mockItem = generateMock(TodoItemSchema());
+  const document = utils.createDocument({
+    global: {
+      items: [mockItem],
+    },
   });
+  const input: DeleteTodoItemInput = generateMock(DeleteTodoItemInputSchema());
+  input.id = mockItem.id;
+  // added-end
+  const updatedDocument = reducer(document, deleteTodoItem(input));
+  expect(isTodoListDocument(updatedDocument)).toBe(true);
+
+  expect(updatedDocument.operations.global).toHaveLength(1);
+  expect(updatedDocument.operations.global[0].action.type).toBe(
+    "DELETE_TODO_ITEM",
+  );
+  expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
+    input,
+  );
+  expect(updatedDocument.operations.global[0].index).toEqual(0);
+  // added-start
+  const updatedItems = updatedDocument.state.global.items;
+  expect(updatedItems).toHaveLength(0);
+  // added-end
+});
 ```
 
 #### Check your work
@@ -28859,16 +28933,16 @@ describe("Todos Operations", () => {
 To make sure all works as expected, we should:
 
 - check types
-run: `pnpm tsc`
+  run: `pnpm tsc`
 
 - check linting
-run: `pnpm lint`
+  run: `pnpm lint`
 
 - check tests
-run: `pnpm test`
+  run: `pnpm test`
 
 - make sure your code matches the code in the completed step branch
-run: `git diff your-branch-name step-3-complete-implemented-tests-for-todo-operations`
+  run: `git diff your-branch-name step-3-complete-implemented-tests-for-todo-operations`
 
 ### Up next: generating an editor for our `TodoList` documents
 
@@ -28876,11 +28950,10 @@ Up next, we'll generate a boilerplate document editor for our `TodoList` documen
 
 ---
 
-
 ## Step 4 — Generating a document model editor for `TodoList` documents {#step-4-generating-a-document-model-editor-for-todolist-documents}
 
 **Source:** `academy/03-ExampleUsecases/TodoList/04-GenerateTodoListDocumentEditor.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 ## Generate the editor template
 
@@ -28904,24 +28977,24 @@ editors/todo-list-editor/
 └── module.ts                 # Editor module export (do not change this)
 ```
 
- ## Check your work
+## Check your work
 
 To make sure all works as expected, we should:
 
 - check types
-run: `pnpm tsc`
+  run: `pnpm tsc`
 
 - check linting
-run: `pnpm lint`
+  run: `pnpm lint`
 
 - check tests
-run: `pnpm test`
+  run: `pnpm test`
 
 - test in connect
-run: `pnpm connect` — you should now be able to create a `TodoList` type document and open it. You will see the generic `EditName` component in the document
+  run: `pnpm connect` — you should now be able to create a `TodoList` type document and open it. You will see the generic `EditName` component in the document
 
 - make sure your code matches the code in the completed step branch
-run: `git diff your-branch-name step-4-complete-generated-todo-list-document-editor`
+  run: `git diff your-branch-name step-4-complete-generated-todo-list-document-editor`
 
 ## Up next: adding UI components for updating our `TodoList` documents
 
@@ -28929,11 +29002,10 @@ Next, we will add some UI components to create, read, update, and delete data in
 
 ---
 
-
 ## Step 5 — Implement `TodoList` document editor UI components {#step-5-implement-todolist-document-editor-ui-components}
 
 **Source:** `academy/03-ExampleUsecases/TodoList/05-ImplementTodoListDocumentEditorUIComponents.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 Out of the box, we have a component for updating our `TodoList` documents' names, but we would like to create, read, update, and delete all of the data in our documents.
 
@@ -29347,11 +29419,10 @@ Next, we will generate a special kind of editor called a "drive editor" which we
 
 ---
 
-
 ## Step 5 — Implement `TodoList` document editor UI components {#step-5-implement-todolist-document-editor-ui-components}
 
 **Source:** `academy/10-TodoListTutorial/05-ImplementTodoListDocumentEditorUIComponents.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 Out of the box, we have a component for updating our `TodoList` documents' names, but we would like to create, read, update, and delete all of the data in our documents.
 
@@ -29783,13 +29854,12 @@ Next, we will generate a special kind of editor called a "drive editor" which we
 
 ---
 
-
 ## Step 6 - Generate the custom drive editor for managing our `TodoList` documents {#step-6-generate-the-custom-drive-editor-for-managing-our-todolist-documents}
 
 **Source:** `academy/03-ExampleUsecases/TodoList/06-GenerateTodoDriveExplorer.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
-in Connect, a "drive" is just a document with the type "powerhouse/drive", which is specifically created for containing and managing other documents. 
+in Connect, a "drive" is just a document with the type "powerhouse/drive", which is specifically created for containing and managing other documents.
 
 A "drive editor" is just an editor that specifically works on documents with the type "powerhouse/document-drive".
 
@@ -29828,24 +29898,24 @@ editors
 │   │   └── module.ts                     # module export for the editor (do not change this)
 ```
 
- ## Check your work
+## Check your work
 
 To make sure all works as expected, we should:
 
 - check types
-run: `pnpm tsc`
+  run: `pnpm tsc`
 
 - check linting
-run: `pnpm lint`
+  run: `pnpm lint`
 
 - check tests
-run: `pnpm test`
+  run: `pnpm test`
 
 - test in connect
-run: `pnpm connect` — you should now be able to create a new drive with the type "TodoDriveApp" and use it the same as you would the "Generic Drive Explorer", except it should only allow you to create `TodoList` type documents.
+  run: `pnpm connect` — you should now be able to create a new drive with the type "TodoDriveApp" and use it the same as you would the "Generic Drive Explorer", except it should only allow you to create `TodoList` type documents.
 
 - make sure your code matches the code in the completed step branch
-run: `git diff your-branch-name step-6-complete-generated-todo-drive-explorer`
+  run: `git diff your-branch-name step-6-complete-generated-todo-drive-explorer`
 
 ## Up next: adding a shared component for showing stats about todos in both our `TodoListEditor` and `TodoDriveExplorer`
 
@@ -29853,11 +29923,10 @@ Next, we will add a UI component that is useful in both of our different editors
 
 ---
 
-
 ## Step 7 - Add shared component for showing TodoList stats {#step-7-add-shared-component-for-showing-todolist-stats}
 
 **Source:** `academy/03-ExampleUsecases/TodoList/07-AddSharedComponentForShowingTodoListStats.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 So far we've been creating components that live in the same directories as the editors that use them. But sometimes we want to use the same component across multiple editors.
 
@@ -29865,7 +29934,7 @@ Let's create a component for showing statistics about our todos. We'd like this 
 
 ## Creating the `<Stats />` component
 
-Create a new directory at `editors/components` and create two new files inside it: 
+Create a new directory at `editors/components` and create two new files inside it:
 
 `editors/components/Stats.tsx` with this content:
 
@@ -29993,7 +30062,7 @@ The index file lets us use a nice neat import path like `todo-tutorial/editors/c
 
 Don't be too concerned with the math and time related code you see here — those are just implementation details.
 
-## Using the  `<Stats />` component in our `TodoListEditor`
+## Using the `<Stats />` component in our `TodoListEditor`
 
 Now let's use the `<Stats />` component in our `<TodoList />` component `editors/todo-list-editor/components/TodoList.tsx`:
 
@@ -30022,7 +30091,7 @@ export function TodoList() {
   // added-end
 
   return (
-    <div className="flex flex-col items-center px-4 py-8 gap-6">
+    <div className="flex flex-col items-center gap-6 px-4 py-8">
       // added-start
       <Stats
         todos={todos}
@@ -30035,7 +30104,6 @@ export function TodoList() {
     </div>
   );
 }
-
 ```
 
 With this, you will now see statistics about the todo items in a todo list document.
@@ -30222,38 +30290,37 @@ function FolderStats() {
 
 With this update, you can now see the statistics for the todo lists and todo items for the selected drive, folder or document depending on which you select.
 
- ## Check your work
+## Check your work
 
 To make sure all works as expected, we should:
 
 - check types
-run: `pnpm tsc`
+  run: `pnpm tsc`
 
 - check linting
-run: `pnpm lint`
+  run: `pnpm lint`
 
 - check tests
-run: `pnpm test`
+  run: `pnpm test`
 
 - test in connect
-run: `pnpm connect` — you should now be able to see the `<Stats />` component showing the data for your drives, folder and documents.
+  run: `pnpm connect` — you should now be able to see the `<Stats />` component showing the data for your drives, folder and documents.
 
 - make sure your code matches the code in the completed step branch
-run: `git diff step-7-complete-added-shared-component-for-showing-todo-list-stats`
+  run: `git diff step-7-complete-added-shared-component-for-showing-todo-list-stats`
 
 ## The end
 
-Congratulations! You now have a working `TodoList` document model, and editor for those documents, and a drive editor for managing those documents. This will make a good starting point for creating your own new implementations. 
+Congratulations! You now have a working `TodoList` document model, and editor for those documents, and a drive editor for managing those documents. This will make a good starting point for creating your own new implementations.
 
 We're excited to see what you build!
 
 ---
 
-
 ## Step 7 - Add shared component for showing TodoList stats {#step-7-add-shared-component-for-showing-todolist-stats}
 
 **Source:** `academy/10-TodoListTutorial/07-AddSharedComponentForShowingTodoListStats.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 So far we've been creating components that live in the same directories as the editors that use them. But sometimes we want to use the same component across multiple editors.
 
@@ -30261,7 +30328,7 @@ Let's create a component for showing statistics about our todos. We'd like this 
 
 ## Creating the `<Stats />` component
 
-Create a new directory at `editors/components` and create two new files inside it: 
+Create a new directory at `editors/components` and create two new files inside it:
 
 `editors/components/Stats.tsx` with this content:
 
@@ -30381,7 +30448,7 @@ The index file lets us use a nice neat import path like `todo-tutorial/editors/c
 
 Don't be too concerned with the math and time related code you see here — those are just implementation details.
 
-## Using the  `<Stats />` component in our `TodoListEditor`
+## Using the `<Stats />` component in our `TodoListEditor`
 
 Now let's use the `<Stats />` component in our `<TodoList />` component:
 
@@ -30492,7 +30559,7 @@ export function DriveContents() {
 +   const [selectedDrive] = useSelectedDrive();
 +   const driveCreatedAt = selectedDrive.header.createdAtUtcIso;
 +   const driveLastModified = selectedDrive.header.lastModifiedAtUtcIso;
-+ 
++
 +   return (
 +     <Stats
 +       todos={allTodos}
@@ -30502,7 +30569,7 @@ export function DriveContents() {
 +     />
 +   );
 + }
-+ 
++
 + /** Shows the statistics for the selected folder */
 + function FolderStats() {
 +   const todoListDocumentsInSelectedFolder =
@@ -30510,7 +30577,7 @@ export function DriveContents() {
 +   const allTodos = getAllTodoItemsFromTodoLists(
 +     todoListDocumentsInSelectedFolder,
 +   );
-+ 
++
 +   return (
 +     <Stats
 +       todos={allTodos}
@@ -30604,43 +30671,41 @@ function FolderStats() {
 
 With this update, you can now see the statistics for the todo lists and todo items for the selected drive, folder or document depending on which you select.
 
- ## Check your work
+## Check your work
 
 To make sure all works as expected, we should:
 
 - check types
-run: `pnpm tsc`
+  run: `pnpm tsc`
 
 - check linting
-run: `pnpm lint`
+  run: `pnpm lint`
 
 - check tests
-run: `pnpm test`
+  run: `pnpm test`
 
 - test in connect
-run: `pnpm connect` — you should now be able to see the `<Stats />` component showing the data for your drives, folder and documents.
+  run: `pnpm connect` — you should now be able to see the `<Stats />` component showing the data for your drives, folder and documents.
 
 - make sure your code matches the code in the completed step branch
-run: `git diff step-7-complete-added-shared-component-for-showing-todo-list-stats`
+  run: `git diff step-7-complete-added-shared-component-for-showing-todo-list-stats`
 
 ## The end
 
-Congratulations! You now have a working `TodoList` document model, and editor for those documents, and a drive editor for managing those documents. This will make a good starting point for creating your own new implementations. 
+Congratulations! You now have a working `TodoList` document model, and editor for those documents, and a drive editor for managing those documents. This will make a good starting point for creating your own new implementations.
 
 We're excited to see what you build!
 
 ---
 
-
 ## Typescript API {#typescript-api}
 
 **Source:** `academy/02-MasteryTrack/04-WorkWithData/_06-Analytics Engine/typescript/index.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 ---
-sidebar_position: 2
----
 
+## sidebar_position: 2
 
 ## Overview
 
@@ -30883,11 +30948,10 @@ Multiple storage implementations are provided, each with comprehensive documenta
 
 ---
 
-
 ## Update the analytics processor {#update-the-analytics-processor}
 
 **Source:** `academy/02-MasteryTrack/04-WorkWithData/_ARCHIVE-AnalyticsProcessorTutorial/_04-UpdateAnalyticsProcessor.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 Now let's implement our custom analytics processor code to calculate the total value of the asset class on a monthly basis.
 You will likely already be in the desired directory, but if not, navigate to the project directory and open it.
@@ -31117,26 +31181,23 @@ Enjoy!
 
 ---
 
-
 ## Use cases {#use-cases}
 
 **Source:** `academy/02-MasteryTrack/04-WorkWithData/_06-Analytics Engine/use-cases/index.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 ---
-sidebar_position: 4
----
 
+## sidebar_position: 4
 
 This section covers various real-world use cases.
 
 ---
 
-
 ## Use the Document Model Generator {#use-the-document-model-generator}
 
 **Source:** `academy/02-MasteryTrack/02-DocumentModelCreation/04-UseTheDocumentModelGenerator.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 When building document models with **Vetra Studio**, code generation happens automatically. As you add and update specification documents in your Vetra Studio Drive, Vetra monitors your changes and generates the necessary scaffolding in real-time. You'll receive updates directly in your terminal as Vetra processes your specifications.
 
@@ -31144,10 +31205,10 @@ This article covers the **manual code generation method** using the `ph generate
 
 ## When to Use Manual Generation
 
-| Workflow | Code Generation |
-|----------|-----------------|
+| Workflow         | Code Generation                                                            |
+| ---------------- | -------------------------------------------------------------------------- |
 | **Vetra Studio** | Automatic—Vetra watches your specifications and generates code as you work |
-| **Connect** | Manual—Export a `.phd` file and run `ph generate` |
+| **Connect**      | Manual—Export a `.phd` file and run `ph generate`                          |
 
 If you're using Vetra Studio with `ph vetra --interactive`, you don't need to run any generation commands. Vetra handles everything for you, prompting for confirmation before processing changes.
 
@@ -31248,12 +31309,12 @@ document-models/
 
 ### Key Differences with Versioning
 
-| Standard Generation | Versioned Generation |
-|---------------------|---------------------|
+| Standard Generation             | Versioned Generation                      |
+| ------------------------------- | ----------------------------------------- |
 | Single `gen/` and `src/` folder | Separate `v1/`, `v2/` folders per version |
-| One reducer implementation | Version-specific reducers |
-| No upgrade logic | `upgrades/` folder with manifests |
-| Direct module export | Exports all versions + upgrade manifests |
+| One reducer implementation      | Version-specific reducers                 |
+| No upgrade logic                | `upgrades/` folder with manifests         |
+| Direct module export            | Exports all versions + upgrade manifests  |
 
 For comprehensive documentation on implementing versioning, including upgrade reducers and integration with Connect and Switchboard, see [Document Model Versioning](/academy/MasteryTrack/DocumentModelCreation/DocumentModelVersioning).
 
@@ -31276,8 +31337,9 @@ The generation process—whether automatic via Vetra or manual via `ph generate`
 When using Vetra Studio, code generation is automatic:
 
 1. **Start Vetra in Interactive Mode:**
+
    ```bash
-// bash code example:
+   // bash code example:
    ph vetra --interactive
    ```
 
@@ -31310,8 +31372,9 @@ This approach is useful when working with Connect's Document Model Editor or whe
    Navigate to your Powerhouse project root and copy your `TodoList.phd` file there.
 
 2. **Run the Generator Command:**
+
    ```bash
-// bash code example:
+   // bash code example:
    ph generate TodoList.phd
    ```
 
@@ -31331,11 +31394,10 @@ Subsequently, write unit tests for your reducers to ensure they behave correctly
 
 ---
 
-
 ## Using subgraphs {#using-subgraphs}
 
 **Source:** `academy/02-MasteryTrack/04-WorkWithData/03-UsingSubgraphs.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 This tutorial will demonstrate how to create and customize a subgraph using our to-do list project as an example.
 Let's start with the basics and gradually add more complex features and functionality.
@@ -31393,7 +31455,7 @@ Loaded templates: /projects/powerhouse/powerhouse/packages/codegen/dist/src/code
        FORCED: ./subgraphs/search-todos/schema.ts
 ```
 
-After generating the subgraph, build your project with a build step. 
+After generating the subgraph, build your project with a build step.
 
 ```bash title="Build your project"
 pnpm build
@@ -31459,7 +31521,7 @@ export const getResolvers = (subgraph: ISubgraph) => {
     Query: {
       searchTodos: async (
         parent: unknown,
-        args: { driveId: string; searchTerm: string }
+        args: { driveId: string; searchTerm: string },
       ) => {
         const documents = await reactor.getDocuments(args.driveId);
         const todoItems: string[] = [];
@@ -31470,7 +31532,7 @@ export const getResolvers = (subgraph: ISubgraph) => {
           }
 
           const amountEntries = doc.state.global.items.filter((e) =>
-            e.text.includes(args.searchTerm)
+            e.text.includes(args.searchTerm),
           ).length;
           if (amountEntries > 0) {
             todoItems.push(docId);
@@ -31575,7 +31637,6 @@ This demonstrates the real-time synchronization between the document model and t
 **💡 TIP:**
 Since you've gotten this far we'll explain a bit more in depth how the GraphQL API or Gateway works!
 
-
 ## 4. Working with the GraphQL Gateway
 
 The GraphQL Gateway is a GraphQL schema that combines multiple underlying GraphQL APIs, known as subgraphs, into a single, unified graph. This architecture allows different teams to work independently on their respective services (subgraphs) while providing a single entry point for clients or users to query all available data.
@@ -31600,7 +31661,7 @@ The Powerhouse supergraph for any given remote drive or reactor can be found und
 - Start the reactor:
 
   ```bash
-// bash code example:
+  // bash code example:
   ph reactor
   ```
 
@@ -31617,15 +31678,16 @@ The supergraph allows you to both query & mutate data from the same endpoint.
 1. Create a todo document in the `powerhouse` drive using the `TodoList_createDocument` mutation:
 
    ```graphql
-// graphql code example:
+   // graphql code example:
    mutation CreateTodoList($name: String!, $driveId: String) {
      TodoList_createDocument(name: $name, driveId: $driveId)
    }
    ```
 
    Variables:
+
    ```json
-// json code example:
+   // json code example:
    {
      "name": "My Test To-do List",
      "driveId": "powerhouse"
@@ -31637,15 +31699,16 @@ The supergraph allows you to both query & mutate data from the same endpoint.
 2. Add some items to your to-do list using the `TodoList_addTodoItem` mutation:
 
    ```graphql
-// graphql code example:
+   // graphql code example:
    mutation AddTodoItem($docId: PHID, $driveId: String, $input: TodoList_AddTodoItemInput) {
      TodoList_addTodoItem(docId: $docId, driveId: $driveId, input: $input)
    }
    ```
 
    Variables:
+
    ```json
-// json code example:
+   // json code example:
    {
      "docId": "abc123",
      "driveId": "powerhouse",
@@ -31660,7 +31723,7 @@ The supergraph allows you to both query & mutate data from the same endpoint.
 3. Query the document state using the `getDocument` query:
 
    ```graphql
-// graphql code example:
+   // graphql code example:
    query GetTodoList($docId: PHID!, $driveId: PHID) {
      TodoList {
        getDocument(docId: $docId, driveId: $driveId) {
@@ -31679,8 +31742,9 @@ The supergraph allows you to both query & mutate data from the same endpoint.
    ```
 
    Variables:
+
    ```json
-// json code example:
+   // json code example:
    {
      "docId": "abc123",
      "driveId": "powerhouse"
@@ -31690,15 +31754,16 @@ The supergraph allows you to both query & mutate data from the same endpoint.
 4. Use the `searchTodos` subgraph query to search for items across your to-do lists:
 
    ```graphql
-// graphql code example:
+   // graphql code example:
    query SearchTodos($driveId: String!, $searchTerm: String!) {
      searchTodos(driveId: $driveId, searchTerm: $searchTerm)
    }
    ```
 
    Variables:
+
    ```json
-// json code example:
+   // json code example:
    {
      "driveId": "powerhouse",
      "searchTerm": "supergraph"
@@ -31742,16 +31807,14 @@ Bridge Processors and Subgraphs — Currently, there's a gap in how processors a
 
 ---
 
-
 ## Utilities {#utilities}
 
 **Source:** `academy/02-MasteryTrack/04-WorkWithData/_06-Analytics Engine/typescript/utilities.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 ---
-sidebar_position: 100
----
 
+## sidebar_position: 100
 
 This section describes various utility objects.
 
@@ -31862,11 +31925,10 @@ profiler.recordSync("d", myFuncC); // my-system.c
 
 ---
 
-
 ## Vetra Remote Drive {#vetra-remote-drive}
 
 **Source:** `academy/04-APIReferences/06-VetraRemoteDrive.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 These commands enable collaborative development using Vetra remote drives. Instead of working with local drives only, you can connect your Powerhouse project to a remote drive that syncs across team members.
 
@@ -31884,7 +31946,7 @@ These commands enable collaborative development using Vetra remote drives. Inste
 2. Creates a standard Powerhouse project from the boilerplate
 3. Adds Vetra configuration to `powerhouse.config.json`:
    ```json
-// json code example:
+   // json code example:
    {
      "vetra": {
        "driveId": "abc123",
@@ -31894,12 +31956,14 @@ These commands enable collaborative development using Vetra remote drives. Inste
    ```
 
 **Usage:**
+
 ```bash
 // bash code example:
 ph init my-project --remote-drive https://vetra.example.com/d/abc123
 ```
 
 **After initialization:**
+
 - Create a GitHub repository
 - Commit and push your code
 - Run `ph vetra` to configure the GitHub URL in the remote drive
@@ -31920,12 +31984,14 @@ ph init my-project --remote-drive https://vetra.example.com/d/abc123
 4. The project is already configured to use the remote drive
 
 **Usage:**
+
 ```bash
 // bash code example:
 ph checkout --remote-drive https://vetra.example.com/d/abc123
 ```
 
 **Requirements:**
+
 - The remote drive must have a GitHub URL configured (done during `ph vetra` after init)
 
 ---
@@ -31944,11 +32010,13 @@ ph checkout --remote-drive https://vetra.example.com/d/abc123
 4. Starts Connect Studio pointing to the drive(s)
 
 **With `--watch` flag:**
+
 - Creates a second "Vetra Preview" drive for testing local changes
 - Dynamically loads your local document models and editors
 - Main drive stays stable, preview drive for experimentation
 
 **Usage:**
+
 ```bash
 // bash code example:
 # Basic usage (uses config from powerhouse.config.json)
@@ -31965,6 +32033,7 @@ ph vetra --disable-connect
 ```
 
 **Key options:**
+
 - `--watch` - Enable dynamic loading and create preview drive
 - `--remote-drive <url>` - Specify remote drive URL
 - `--switchboard-port <port>` - Custom Switchboard port (default: 4001)
@@ -32019,15 +32088,18 @@ ph vetra --watch
 ## Key Concepts
 
 **Remote Drive vs Local Drive:**
+
 - Without remote drive: `ph vetra` creates a local drive on your machine only
 - With remote drive: `ph vetra` connects to a shared drive that syncs across team members
 
 **When to use each command:**
+
 - Use `ph init --remote-drive` when starting a NEW project (no GitHub URL configured in drive yet)
 - Use `ph checkout --remote-drive` when joining an EXISTING project (GitHub URL already configured)
 - Use `ph vetra --watch` to start development after either init or checkout
 
 **Preview Drive (`--watch` mode):**
+
 - Main "Vetra" drive: syncs with remote, contains stable package configuration
 - "Vetra Preview" drive: created locally with `--watch`, for testing local document models
 - Without `--watch`: safer, prevents untested code from affecting Connect
@@ -32035,33 +32107,30 @@ ph vetra --watch
 
 ---
 
-
 ## Vetra Studio {#vetra-studio}
 
 **Source:** `academy/02-MasteryTrack/01-BuilderEnvironment/02-VetraStudio.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 ---
+
 toc_max_heading_level: 3
 
-
 ---
-
 
 ## Introducing Vetra Studio
 
 Vetra Studio is the builder environment where you create, manage, and collaborate on Powerhouse packages. It consists of two main components:
 
 - **Vetra Studio Drive**: Serves as a hub for developers to access, manage & share specifications through a remote Vetra drive. It functions as the orchestration hub where you as a builder assemble all the necessary specifications for your intended use-case, software solution, or package. Each specification document corresponds to a **module** — a distinct building block of your package (such as a document model, editor, or data integration).
-- **Vetra Package Library**: Store, publish, and fork git repositories of packages in the Vetra Package Library.    
-Visit the [Vetra Package Library here](https://vetra.io/packages) 
+- **Vetra Package Library**: Store, publish, and fork git repositories of packages in the Vetra Package Library.  
+  Visit the [Vetra Package Library here](https://vetra.io/packages)
 
 **ℹ️ INFO:** What is a Specification Document?
 A **specification document** is a configuration file that defines how a specific module in your package should behave. Think of it as a blueprint — it describes the structure, rules, and relationships that Powerhouse uses to generate the actual code for that module. These specification documents unlock **Specification Driven Design & Development**—enabling you to communicate your solution and intent through a structured framework designed for AI collaboration. Specs serve as a shared language that enables precise, iterative edits—turning messy intent into clean execution, and turning business needs into maintainable functionality.
 
-
-As Vetra Studio matures, each of these specification documents will offer an interface by which you as a builder get more control over the modules that make up your package. 
-For now, the specification documents offer you a template for code generation. 
+As Vetra Studio matures, each of these specification documents will offer an interface by which you as a builder get more control over the modules that make up your package.
+For now, the specification documents offer you a template for code generation.
 
 <figure className="image-container">
   <img
@@ -32073,7 +32142,7 @@ For now, the specification documents offer you a template for code generation.
 
 ### Module Categories
 
-### 1. Document Models 
+### 1. Document Models
 
 A **document model** is a structured data type that defines what information your application can store and how it can be modified. Unlike traditional databases, document models use **operations** (actions like "add item" or "update title") rather than direct data manipulation, making them ideal for collaborative and auditable applications.
 
@@ -32082,6 +32151,7 @@ A **document model** is a structured data type that defines what information you
 → [Learn more about Document Models](/academy/02-MasteryTrack/02-DocumentModelCreation/01-WhatIsADocumentModel)
 
 ### 2. User Experiences
+
 - **Editor specification**: Outlines the interface and functionalities of a document model editor, allowing users to interact with and modify document data.
 - **Drive-app specification**: Specifies the UI and interactions for managing documents within a drive, providing tailored views and functionalities.
 
@@ -32089,6 +32159,7 @@ A **document model** is a structured data type that defines what information you
 → [Learn more about Building a Drive Explorer](/academy/02-MasteryTrack/03-BuildingUserExperiences/03-BuildingADriveExplorer)
 
 ### 3. Data Integrations
+
 - **Subgraph specification**: Details the connections and relationships within a subgraph (a subset of your data exposed via a GraphQL API), facilitating efficient data querying and manipulation.
 - **Codegen Processor Specification**: Describes the process for automatically generating code from document model specifications, ensuring alignment with intended architecture.
 - **RelationalDb Processor Specification**: Defines how relational databases are structured and queried, supporting efficient data management and retrieval.
@@ -32116,12 +32187,12 @@ The Powerhouse config includes a Vetra URL for consistent project configuration 
 ```typescript
 // typescript code example:
 vetra: {
-    driveId: string;
-    driveUrl: string;
-};
+  driveId: string;
+  driveUrl: string;
+}
 ```
 
-Imagine you are a builder and want to work on, or continue with a set of specifications from your teammates. 
+Imagine you are a builder and want to work on, or continue with a set of specifications from your teammates.
 You could then add the specific remote Vetra drive to your Powerhouse configuration in the `powerhouse.config.json` file to get going:
 
 ```json
@@ -32140,11 +32211,13 @@ An example of a builder team building on the Powerhouse Vetra Ecosystem and its 
 Remote drives enable collaborative development by syncing specifications across team members.
 
 **Key Commands:**
+
 - `ph init --remote-drive <url>` - Create a NEW project connected to a remote drive
-- `ph checkout --remote-drive <url>` - Clone an EXISTING project from a remote drive  
+- `ph checkout --remote-drive <url>` - Clone an EXISTING project from a remote drive
 - `ph vetra --watch` - Start development with a preview drive for testing local changes
 
 **Workflows:**
+
 - **Project Owner**: `ph init --remote-drive` → Create GitHub repo → Push → `ph vetra --watch` to configure
 - **Collaborator**: `ph checkout --remote-drive` → `ph vetra --watch` to start developing
 
@@ -32162,18 +32235,16 @@ The preview drive allows you to safely test changes before they affect the share
 
 ---
 
-
 ## VetraPackageLibrary {#vetrapackagelibrary}
 
 **Source:** `academy/03-ExampleUsecases/VetraPackageLibrary/VetraPackageLibrary.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 ---
-title: Vetra Package Library
----
+
+## title: Vetra Package Library
 
 Packages of documents are a core structuring mechanism in the Vetra framework, allowing developers to group and manage related document efficiently. These packages serve as modular collections of document specifications and modules, ensuring consistency, scalability, and reusability across different applications.
-
 
 ### Example packages
 
@@ -32185,17 +32256,16 @@ Packages of documents are a core structuring mechanism in the Vetra framework, a
 
 ---
 
-The Vetra package library is your best source to explore packages built by different builder teams on the Powerhouse Vetra platform. Through the packages you'll find the GitHub repository with the source code of each package.   
+The Vetra package library is your best source to explore packages built by different builder teams on the Powerhouse Vetra platform. Through the packages you'll find the GitHub repository with the source code of each package.
 
 You can get access to the [package library here.](https://vetra.io/packages)
 
 ---
 
-
 ## What is a document model? {#what-is-a-document-model}
 
 **Source:** `academy/02-MasteryTrack/02-DocumentModelCreation/01-WhatIsADocumentModel.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 **💡 TIP:**
 This chapter on **Document Model Creation** will help you with an in-depth practical understanding while building an **advanced to-do list** document model.
@@ -32204,12 +32274,10 @@ If you have completed the [Get Started](/academy/GetStarted/CreateNewPowerhouseP
 
 Although not required, completing the Get Started tutorial first is highly recommended as it provides a hands-on foundation for the concepts explored in depth here.
 
-
 **ℹ️ INFO:** **Definition: What is a Document Model?**
 A Document Model is a programmable document structure that defines how data is stored, changed, and interpreted in a decentralized system. It acts like a living blueprint—capturing state, tracking changes, and enabling interaction through defined operations.
 
 For instance, an invoice document model might define fields like _issuer_, _lineItems_, and _status_, with operations such as _AddLineItem_ and _MarkAsPaid_.
-
 
 Document models are central to **Specification Driven Design & Development**—an approach where you communicate your solution and intent through structured specification documents. These specs are machine-readable and executable, serving as a shared language between developers, designers, and AI agents. This enables precise, iterative development and lays the groundwork for AI-assisted workflows.
 
@@ -32424,11 +32492,10 @@ In the next chapters, we'll teach you how to build a To-do List document model w
 
 ---
 
-
 ## Working with the Reactor {#working-with-the-reactor}
 
 **Source:** `academy/05-Architecture/01-WorkingWithTheReactor.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 **💡 TIP:**
 Document models are the common design pattern that is used for all documents and files.  
@@ -32438,7 +32505,6 @@ DocSync is a decentralized synchronization protocol that is storage agnostic.
 But who is doing the syncing?
 
 We call these participants **Reactors**.
-
 
 ### Powerhouse Reactors
 
@@ -32457,7 +32523,6 @@ Powerhouse Reactors are the nodes in the network that store documents, resolve c
 
 **💡 TIP:**
 The DocSync protocol _sends updates from one reactor to another_ - **smashing document operations into one another** - to ensure all data is synced.
-
 
 A **reactor** is responsible for storing data and resolving merge conflicts.  
 Editing data and submitting new operations must be done through Powerhouse's native applications (Connect, Switchboard, Fusion). Each instance of these applications contains a Reactor that is responsible for storing data and syncing data through DocSync. In other words, Powerhouse applications are how Reactors can be accessed, manipulated, steered, visualized and modified. A local Connect desktop application's reactor can therefore sync with the Reactor of a remote drive (e.g. Switchboard instance).
@@ -32478,21 +32543,19 @@ In addition to the choice of storage, Reactors also have other configurations.
 - The **operational data** and **read models** associated with the document models inside a reactor allow to query the gathered data inside a document model or quickly visualize the crucial insights at a glance.
 - **Listeners**, which continuously listen to any changes in a document model, help us to connect additional tools such as codegenerators and scripts to the reactors and the document models it holds
 
-If you are working with the Reactor directly or need additional information regarding it's architecture you can visit:  https://github.com/powerhouse-inc/powerhouse/blob/main/packages/reactor/docs/ARCHITECTURE.md
+If you are working with the Reactor directly or need additional information regarding it's architecture you can visit: https://github.com/powerhouse-inc/powerhouse/blob/main/packages/reactor/docs/ARCHITECTURE.md
 
 ---
-
 
 ## Write document model tests {#write-document-model-tests}
 
 **Source:** `academy/01-GetStarted/04-WriteDocumentModelTests.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 **💡 TIP:** Tutorial Repository
 📦 **Reference Code**: [step-4-implement-tests-for-todos-operations](https://github.com/powerhouse-inc/todo-tutorial/tree/step-4-implement-tests-for-todos-operations)
 
 This step focuses on writing comprehensive tests for the reducers you implemented in the previous step.
-
 
 <details>
 <summary>📖 How to use this tutorial</summary>
@@ -32513,6 +32576,7 @@ git show tutorial/step-4-implement-tests-for-todos-operations:document-models/to
 ### Visual comparison with GitHub Desktop
 
 After committing your work, compare visually:
+
 1. **Branch** menu → **"Compare to Branch..."**
 2. Select `tutorial/step-4-implement-tests-for-todos-operations`
 3. Review differences in the visual interface
@@ -32566,15 +32630,17 @@ describe("Todos Operations", () => {
     // At the start a document will have 0 operations, so after applying this action
     // there should now be one operation
     expect(updatedDocument.operations.global).toHaveLength(1);
-    
+
     // The operation added to the list should correspond to the correct action type
-    expect(updatedDocument.operations.global[0].action.type).toBe("ADD_TODO_ITEM");
+    expect(updatedDocument.operations.global[0].action.type).toBe(
+      "ADD_TODO_ITEM",
+    );
   });
-  
+
   it("should handle updateTodoItem operation", () => {
     // ... boilerplate test
   });
-  
+
   it("should handle deleteTodoItem operation", () => {
     // ... boilerplate test
   });
@@ -32600,8 +32666,12 @@ it("should handle addTodoItem operation", () => {
   expect(isTodoListDocument(updatedDocument)).toBe(true);
 
   expect(updatedDocument.operations.global).toHaveLength(1);
-  expect(updatedDocument.operations.global[0].action.type).toBe("ADD_TODO_ITEM");
-  expect(updatedDocument.operations.global[0].action.input).toStrictEqual(input);
+  expect(updatedDocument.operations.global[0].action.type).toBe(
+    "ADD_TODO_ITEM",
+  );
+  expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
+    input,
+  );
   expect(updatedDocument.operations.global[0].index).toEqual(0);
 });
 ```
@@ -32634,7 +32704,7 @@ it("should handle updateTodoItem operation to update text", () => {
 
   // We also need to generate a mock input for the update operation we are testing
   const input: UpdateTodoItemInput = generateMock(UpdateTodoItemInputSchema());
-  
+
   // Since the mocks are generated with random values, we need to set the `id`
   // on our mock input to match the `id` of the existing mock item
   input.id = mockItem.id;
@@ -32647,7 +32717,7 @@ it("should handle updateTodoItem operation to update text", () => {
   // We are only testing updating the text here, so we want the checked field
   // on the input to be undefined, i.e. it should not change anything on the existing item
   input.checked = undefined;
-  
+
   // We can pass a different initial state to the `createDocument` utility,
   // so in this case we pass in an `items` array with our existing item already in it
   const document = utils.createDocument({
@@ -32664,8 +32734,10 @@ it("should handle updateTodoItem operation to update text", () => {
 
   // There should now be one operation in the operations list
   expect(updatedDocument.operations.global).toHaveLength(1);
-  expect(updatedDocument.operations.global[0].action.type).toBe("UPDATE_TODO_ITEM");
-  
+  expect(updatedDocument.operations.global[0].action.type).toBe(
+    "UPDATE_TODO_ITEM",
+  );
+
   // Find the updated item in the items list by its `id`
   const updatedItem = updatedDocument.state.global.items.find(
     (item) => item.id === input.id,
@@ -32689,7 +32761,7 @@ it("should handle updateTodoItem operation to update checked", () => {
 
   // Generate a mock input
   const input: UpdateTodoItemInput = generateMock(UpdateTodoItemInputSchema());
-  
+
   // Set the mock input's `id` to the mock item's `id`
   input.id = mockItem.id;
 
@@ -32700,7 +32772,7 @@ it("should handle updateTodoItem operation to update checked", () => {
 
   // Leave the `text` field unchanged
   input.text = undefined;
-  
+
   // Create a document with the existing item in it
   const document = utils.createDocument({
     global: {
@@ -32749,15 +32821,19 @@ it("should handle deleteTodoItem operation", () => {
   const input: DeleteTodoItemInput = generateMock(DeleteTodoItemInputSchema());
   input.id = mockItem.id;
   // added-end
-  
+
   const updatedDocument = reducer(document, deleteTodoItem(input));
   expect(isTodoListDocument(updatedDocument)).toBe(true);
 
   expect(updatedDocument.operations.global).toHaveLength(1);
-  expect(updatedDocument.operations.global[0].action.type).toBe("DELETE_TODO_ITEM");
-  expect(updatedDocument.operations.global[0].action.input).toStrictEqual(input);
+  expect(updatedDocument.operations.global[0].action.type).toBe(
+    "DELETE_TODO_ITEM",
+  );
+  expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
+    input,
+  );
   expect(updatedDocument.operations.global[0].index).toEqual(0);
-  
+
   // added-start
   // Verify the item was actually removed
   const updatedItems = updatedDocument.state.global.items;
@@ -32804,19 +32880,25 @@ describe("Todos Operations", () => {
     expect(isTodoListDocument(updatedDocument)).toBe(true);
 
     expect(updatedDocument.operations.global).toHaveLength(1);
-    expect(updatedDocument.operations.global[0].action.type).toBe("ADD_TODO_ITEM");
-    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(input);
+    expect(updatedDocument.operations.global[0].action.type).toBe(
+      "ADD_TODO_ITEM",
+    );
+    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
+      input,
+    );
     expect(updatedDocument.operations.global[0].index).toEqual(0);
   });
 
   it("should handle updateTodoItem operation to update text", () => {
     const mockItem = generateMock(TodoItemSchema());
-    const input: UpdateTodoItemInput = generateMock(UpdateTodoItemInputSchema());
+    const input: UpdateTodoItemInput = generateMock(
+      UpdateTodoItemInputSchema(),
+    );
     input.id = mockItem.id;
     const newText = "new text";
     input.text = newText;
     input.checked = undefined;
-    
+
     const document = utils.createDocument({
       global: {
         items: [mockItem],
@@ -32827,8 +32909,10 @@ describe("Todos Operations", () => {
     expect(isTodoListDocument(updatedDocument)).toBe(true);
 
     expect(updatedDocument.operations.global).toHaveLength(1);
-    expect(updatedDocument.operations.global[0].action.type).toBe("UPDATE_TODO_ITEM");
-    
+    expect(updatedDocument.operations.global[0].action.type).toBe(
+      "UPDATE_TODO_ITEM",
+    );
+
     const updatedItem = updatedDocument.state.global.items.find(
       (item) => item.id === input.id,
     );
@@ -32838,12 +32922,14 @@ describe("Todos Operations", () => {
 
   it("should handle updateTodoItem operation to update checked", () => {
     const mockItem = generateMock(TodoItemSchema());
-    const input: UpdateTodoItemInput = generateMock(UpdateTodoItemInputSchema());
+    const input: UpdateTodoItemInput = generateMock(
+      UpdateTodoItemInputSchema(),
+    );
     input.id = mockItem.id;
     const newChecked = !mockItem.checked;
     input.checked = newChecked;
     input.text = undefined;
-    
+
     const document = utils.createDocument({
       global: {
         items: [mockItem],
@@ -32867,16 +32953,20 @@ describe("Todos Operations", () => {
         items: [mockItem],
       },
     });
-    
-    const input: DeleteTodoItemInput = generateMock(DeleteTodoItemInputSchema());
+
+    const input: DeleteTodoItemInput = generateMock(
+      DeleteTodoItemInputSchema(),
+    );
     input.id = mockItem.id;
-    
+
     const updatedDocument = reducer(document, deleteTodoItem(input));
     expect(isTodoListDocument(updatedDocument)).toBe(true);
 
     expect(updatedDocument.operations.global).toHaveLength(1);
-    expect(updatedDocument.operations.global[0].action.type).toBe("DELETE_TODO_ITEM");
-    
+    expect(updatedDocument.operations.global[0].action.type).toBe(
+      "DELETE_TODO_ITEM",
+    );
+
     const updatedItems = updatedDocument.state.global.items;
     expect(updatedItems).toHaveLength(0);
   });
@@ -32915,27 +33005,25 @@ Expected test output:
       Tests  7 passed (7)
 ```
 
-
 ## Up next: Building the editor
 
 In the next chapter, you'll learn how to implement a user interface (editor) for your document model so you can interact with it visually.
 
 ---
 
-
 ## Write the document specification {#write-the-document-specification}
 
 **Source:** `academy/01-GetStarted/02-DefineToDoListDocumentModel.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 **💡 TIP:** Tutorial Repository
 📦 **Reference Code**: [step-2-generate-todo-list-document-model](https://github.com/powerhouse-inc/todo-tutorial/tree/step-2-generate-todo-list-document-model)
 
 This tutorial step has a corresponding branch. After completing this step, your project will have a generated document model with:
+
 - Document model specification files (`todo-list.json`, `schema.graphql`)
 - Auto-generated TypeScript types and action creators
 - Reducer scaffolding ready for implementation
-
 
 <details>
 <summary>📖 How to use this tutorial</summary>
@@ -32971,6 +33059,7 @@ git show tutorial/step-2-generate-todo-list-document-model:document-models/todo-
 ### Visual comparison with GitHub Desktop
 
 After making a commit, use GitHub Desktop for visual diff:
+
 1. **Branch** menu → **"Compare to Branch..."**
 2. Select `tutorial/step-2-generate-todo-list-document-model`
 3. Review all file differences in the visual interface
@@ -32992,7 +33081,6 @@ This schema defines the **data structure** of the document model and the types i
 Documents in Powerhouse leverage **event sourcing principles**, where every state transition is represented by an operation. GraphQL input types describe operations, ensuring that user intents are captured effectively. These operations detail the parameters needed for state transitions. The use of GraphQL aligns these transitions with explicit, validated, and reproducible commands.
 
 This is the essence of **Specification Driven Design & Development**: your schema serves as a machine-readable specification that both humans and AI agents can understand and execute—turning your intent into precise, maintainable functionality.
-
 
 <details>
 <summary>State schema of our simplified TodoList</summary>
@@ -33046,30 +33134,31 @@ input DeleteTodoItemInput {
 
 ### The steps below show you how to do this:
 
-1. In Vetra Studio, click on **'document model'** to open the document model specification editor.
-2. Name your document model `TodoList` (PascalCase, no spaces or hyphens) in the Connect application. **Pay close attention to capitalization, as it influences code generation.**
-3. You'll be presented with a form to fill in metadata about the document model. Fill in the details in the respective fields.
+1.  In Vetra Studio, click on **'document model'** to open the document model specification editor.
+2.  Name your document model `TodoList` (PascalCase, no spaces or hyphens) in the Connect application. **Pay close attention to capitalization, as it influences code generation.**
+3.  You'll be presented with a form to fill in metadata about the document model. Fill in the details in the respective fields.
 
     In the **Document Type** field, type `powerhouse/todo-list` (lowercase with hyphen). This defines the new type of document that will be created with this document model specification.
 
     ![TodoList Document Model Form Metadata] (see: images/DocumentModelHeader.png)
 
-4. In the code editor, you can see the SDL for the document model. Replace the existing SDL template with the SDL defined in the [State Schema](#state-schema) section. Only copy and paste the types, leaving the inputs for the next step. You can, however, already press the 'Sync with schema' button to set the initial state of your document model specification based on your Schema Definition Language.
-5. Below the editor, find the input field `Add module`. You'll use this to create and name a module for organizing your input operations. In this case, we will name the module `todos`. Press enter.
-6. Now there is a new field, called `Add operation`. Here you will have to add each input operation to the module, one by one.
-7. Inside the `Add operation` field, type `ADD_TODO_ITEM` and press enter. A small editor will appear underneath it, with an empty input type that you have to fill. Copy the first input type from the [Operations Schema](#operations-schema) section and paste it in the editor. The editor should look like this:
+4.  In the code editor, you can see the SDL for the document model. Replace the existing SDL template with the SDL defined in the [State Schema](#state-schema) section. Only copy and paste the types, leaving the inputs for the next step. You can, however, already press the 'Sync with schema' button to set the initial state of your document model specification based on your Schema Definition Language.
+5.  Below the editor, find the input field `Add module`. You'll use this to create and name a module for organizing your input operations. In this case, we will name the module `todos`. Press enter.
+6.  Now there is a new field, called `Add operation`. Here you will have to add each input operation to the module, one by one.
+7.  Inside the `Add operation` field, type `ADD_TODO_ITEM` and press enter. A small editor will appear underneath it, with an empty input type that you have to fill. Copy the first input type from the [Operations Schema](#operations-schema) section and paste it in the editor. The editor should look like this:
 
-    ```graphql
-// graphql code example:
+        ```graphql
+
+    // graphql code example:
     input AddTodoItemInput {
-        text: String!
+    text: String!
     }
     ```
 
-8. Repeat the process from step 7 for the other input operations: `UPDATE_TODO_ITEM` and `DELETE_TODO_ITEM`. You may have noticed that you only need to add the name of the operation (e.g., `UPDATE_TODO_ITEM`, `DELETE_TODO_ITEM`) without the `Input` suffix. It will then be generated once you press enter.
+8.  Repeat the process from step 7 for the other input operations: `UPDATE_TODO_ITEM` and `DELETE_TODO_ITEM`. You may have noticed that you only need to add the name of the operation (e.g., `UPDATE_TODO_ITEM`, `DELETE_TODO_ITEM`) without the `Input` suffix. It will then be generated once you press enter.
 
-9. In the meantime Vetra has been keeping an eye on your inputs and started code generation in your directory.
-In your terminal you will also find any validation errors that help you to identify missing specifications. 
+9.  In the meantime Vetra has been keeping an eye on your inputs and started code generation in your directory.
+    In your terminal you will also find any validation errors that help you to identify missing specifications.
 
 Check below screenshot for the complete implementation:
 
@@ -33078,11 +33167,13 @@ Check below screenshot for the complete implementation:
 ## Verify your document model generation
 
 If you have been watching the terminal in your IDE you will see that Vetra has been tracking your changes and scaffolding your directory.
-It will mention: 
+It will mention:
+
 ```
-ℹ [Vetra] Document model TodoList is valid, proceeding with code generation  
+ℹ [Vetra] Document model TodoList is valid, proceeding with code generation
 ```
- Your project should have the following structure in `document-models/todo-list/`:
+
+Your project should have the following structure in `document-models/todo-list/`:
 
 ```
 document-models/todo-list/
@@ -33118,27 +33209,25 @@ pnpm lint
 git diff tutorial/step-2-generate-todo-list-document-model -- document-models/todo-list/
 ```
 
-
 ### Up next: reducers
 
 Up next, you'll learn how to implement the runtime logic and components that will use the `TodoList` document model specification you've just created and exported.
 
 ---
 
-
 ## Write the document specification {#write-the-document-specification}
 
 **Source:** `academy/03-ExampleUsecases/Chatroom/03-DefineChatroomDocumentModel.md`  
-**Category:** Miscellaneous  
+**Category:** Miscellaneous
 
 **💡 TIP:** Tutorial Repository
 📦 **Reference Code**: [chatroom-demo](https://github.com/powerhouse-inc/chatroom-demo)
 
 This tutorial step has a corresponding implementation in the repository. After completing this step, your project will have a document model specification with:
+
 - Document model specification files (`chat-room.json`, `schema.graphql`)
 - Auto-generated TypeScript types and action creators
 - Reducer scaffolding ready for implementation
-
 
 <details>
 <summary>📖 How to use this tutorial</summary>
@@ -33161,6 +33250,7 @@ git show tutorial/main:document-models/chat-room/schema.graphql
 ### Visual comparison with GitHub Desktop
 
 After making a commit, use GitHub Desktop for visual diff:
+
 1. **Branch** menu → **"Compare to Branch..."**
 2. Select `tutorial/main`
 3. Review all file differences in the visual interface
@@ -33189,7 +33279,6 @@ We use the **GraphQL Schema Definition Language** (SDL) to define the schema for
 
 **ℹ️ INFO:**
 This schema defines the **data structure** of the document model and the types involved in its operations. Documents in Powerhouse leverage **event sourcing principles**, where every state transition is represented by an operation. GraphQL input types describe operations, ensuring that user intents are captured effectively.
-
 
 <details>
 <summary>State schema of our ChatRoom</summary>
@@ -33309,15 +33398,15 @@ To define the document model, you need to open the document model editor in Vetr
 4. Verify that your **Global State Initial Value** looks like this:
 
    ```json
-// json code example:
-    {
-      "ID": "",
-      "name": "",
-      "description": null,
-      "createdAt": null,
-      "createdBy": null,
-      "messages": []
-    }
+   // json code example:
+   {
+     "ID": "",
+     "name": "",
+     "description": null,
+     "createdAt": null,
+     "createdBy": null,
+     "messages": []
+   }
    ```
 
 5. Below the editor, find the input field `Add module`. Create the first module for message-related operations. Name the module `messages`. Press enter.
@@ -33327,7 +33416,7 @@ To define the document model, you need to open the document model editor in Vetr
 7. Inside the `Add operation` field, type `ADD_MESSAGE` and press enter. A small editor will appear underneath with an empty input type that you need to fill. Copy the `AddMessageInput` and `SenderInput` from the **Messages Module** section and paste them in the editor:
 
    ```graphql
-// graphql code example:
+   // graphql code example:
    input AddMessageInput {
      messageId: OID!
      sender: SenderInput!
@@ -33404,7 +33493,6 @@ In the next step, you'll learn how to implement the runtime logic that will use 
 
 ---
 
-
 ---
 
 ## Documentation Metadata
@@ -33412,14 +33500,14 @@ In the next step, you'll learn how to implement the runtime logic that will use 
 **Source Repository:** Powerhouse Academy  
 **Last Generated:** 2026-02-27T18:42:49.750Z  
 **Total Sections:** 95  
-**Categories:** Book of Powerhouse, Miscellaneous  
+**Categories:** Book of Powerhouse, Miscellaneous
 
 **LLM Optimization Features:**
+
 - ✅ Structured headings and hierarchy
-- ✅ Table of contents with internal links  
+- ✅ Table of contents with internal links
 - ✅ Category-based organization
 - ✅ Code examples with syntax highlighting
 - ✅ Cross-references and relationships
 - ✅ Comprehensive API documentation
 - ✅ Tutorial sequences and workflows
-

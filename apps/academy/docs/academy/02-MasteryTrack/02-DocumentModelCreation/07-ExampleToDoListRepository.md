@@ -15,6 +15,7 @@ The Todo-demo and repository are your main reference points during the Mastery T
 Follow the steps in the "Mastery Track – Document Model Creation" chapters to build along with the examples.
 
 Key patterns used in the repository:
+
 - **Naming convention**: `TodoList`, `TodoItem`, `TodoListState` (one word, PascalCase)
 - **Document type**: `powerhouse/todo-list`
 - **Module name**: `todos`
@@ -62,11 +63,11 @@ ph install @powerhousedao/todo-demo
 
 ## Comparing Get Started vs Mastery Track
 
-| Aspect | Get Started | Mastery Track (Advanced) |
-|--------|-------------|--------------------------|
-| Schema | Basic `items` array only | Includes `stats` object for tracking |
-| Reducer complexity | Simple CRUD operations | Includes statistics updates |
-| Editor | Component-based with hooks | Same approach + stats display |
-| Tests | Basic operation tests | Includes stats verification tests |
+| Aspect             | Get Started                | Mastery Track (Advanced)             |
+| ------------------ | -------------------------- | ------------------------------------ |
+| Schema             | Basic `items` array only   | Includes `stats` object for tracking |
+| Reducer complexity | Simple CRUD operations     | Includes statistics updates          |
+| Editor             | Component-based with hooks | Same approach + stats display        |
+| Tests              | Basic operation tests      | Includes stats verification tests    |
 
 Both approaches use the same naming conventions and patterns — the Mastery Track simply extends the foundation with additional features to demonstrate more advanced concepts.

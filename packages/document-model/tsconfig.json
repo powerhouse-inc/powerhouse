@@ -4,7 +4,7 @@
     "outDir": "./dist",
     "emitDeclarationOnly": true,
     "types": ["node", "vitest/globals", "jest"],
-    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "lib": ["ESNext", "DOM", "DOM.Iterable"]
   },
   "include": ["**/*"],
   "references": [

@@ -54,17 +54,20 @@ The document metadata cache provides an explicit cross-scope contract for access
 ### Links
 
 #### IOperationIndex
-* [Interface](interface.md) - TypeScript interface for the operation index
-* [Schema](schema.md) - Database schema for the operation index
-* [Overview](operation-index.md) - Detailed architectural overview
+
+- [Interface](interface.md) - TypeScript interface for the operation index
+- [Schema](schema.md) - Database schema for the operation index
+- [Overview](operation-index.md) - Detailed architectural overview
 
 #### IWriteCache
-* [Interface](write-cache-interface.md) - TypeScript interface for the write cache
-* [Overview](write-cache.md) - Detailed architectural overview
+
+- [Interface](write-cache-interface.md) - TypeScript interface for the write cache
+- [Overview](write-cache.md) - Detailed architectural overview
 
 #### IDocumentMetaCache
-* [Interface](document-meta-cache-interface.md) - TypeScript interface for the document metadata cache
-* [Overview](document-meta-cache.md) - Detailed architectural overview
+
+- [Interface](document-meta-cache-interface.md) - TypeScript interface for the document metadata cache
+- [Overview](document-meta-cache.md) - Detailed architectural overview
 
 ### Integration in Reactor Flow
 

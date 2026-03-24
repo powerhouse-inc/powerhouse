@@ -101,19 +101,31 @@ interface AtomicTxn {
 ### Usage
 
 ```tsx
-await operations.apply(documentId, documentType, scope, branch, revision, async (txn) => {
-  // get current state to pass to reducers
-  const currentState = await readModel.get(documentId, scope, branch, revision);
-  const { operations } = await applyReducers(currentState);
+await operations.apply(
+  documentId,
+  documentType,
+  scope,
+  branch,
+  revision,
+  async (txn) => {
+    // get current state to pass to reducers
+    const currentState = await readModel.get(
+      documentId,
+      scope,
+      branch,
+      revision,
+    );
+    const { operations } = await applyReducers(currentState);
 
-  // add new operations
-  txn.addOperations(...operations);
-});
+    // add new operations
+    txn.addOperations(...operations);
+  },
+);
 
 // Get revision map and latest timestamp efficiently
 const { revision, latestTimestamp } = await operations.getRevisions(
   documentId,
-  branch
+  branch,
 );
 // revision = { header: 5, document: 3, global: 10, local: 7 }
 // latestTimestamp = "2025-01-15T10:30:00.000Z"
@@ -125,20 +137,17 @@ const firstPage = await operations.getSince(
   documentId,
   scope,
   branch,
-  0,  // Start from beginning
-  { cursor: "", limit: 100 }
+  0, // Start from beginning
+  { cursor: "", limit: 100 },
 );
 // firstPage.results = [operation 0, operation 1, ..., operation 99]
 // firstPage.nextCursor = "opaque-cursor-string"
 
 // Get next page using cursor
-const secondPage = await operations.getSince(
-  documentId,
-  scope,
-  branch,
-  0,
-  { cursor: firstPage.nextCursor!, limit: 100 }
-);
+const secondPage = await operations.getSince(documentId, scope, branch, 0, {
+  cursor: firstPage.nextCursor!,
+  limit: 100,
+});
 
 // Or use the convenience function
 const secondPageAlt = await firstPage.next!();
@@ -148,8 +157,8 @@ const sinceRev50 = await operations.getSince(
   documentId,
   scope,
   branch,
-  50,  // Start from revision 50
-  { cursor: "", limit: 100 }
+  50, // Start from revision 50
+  { cursor: "", limit: 100 },
 );
 
 // Get all operations without paging (omit paging parameter)
@@ -157,7 +166,7 @@ const allOperations = await operations.getSince(
   documentId,
   scope,
   branch,
-  0  // Start from beginning
+  0, // Start from beginning
 );
 ```
 

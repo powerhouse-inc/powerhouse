@@ -132,6 +132,7 @@ User profile data is automatically fetched from the Renown API after successful 
 ### UI Component
 
 The SDK provides a ready-to-use component:
+
 - **RenownAuthButton** - Smart component that adapts to auth state (shows login button or user info)
 
 This component is optional - you can build your own UI using the `useUser` hook.

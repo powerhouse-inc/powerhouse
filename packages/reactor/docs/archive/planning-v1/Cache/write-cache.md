@@ -19,11 +19,13 @@ When a job executor needs to apply operations to a document, it must first obtai
 For documents with hundreds or thousands of operations, this becomes prohibitively expensive. The `IWriteCache` solves this by caching recent snapshots:
 
 **Before execution:**
+
 1. Call `getState()` with documentId, documentType, scope, branch, and target revision
 2. Cache handles retrieval (returning cached document or rebuilding on miss using registry's reducer)
 3. Executor receives complete PHDocument ready to use
 
 **After execution:**
+
 1. Call `putState()` to store the resulting PHDocument
 2. Cache stores document snapshot in ring buffer for future use
 3. Next execution can start from this cached document
@@ -118,13 +120,14 @@ flowchart TD
 1. **Job starts**: Executor receives job with actions to apply
 
 2. **Request document from cache**:
+
    ```tsx
    const document = await writeCache.getState(
      documentId,
      documentType,
      scope,
      branch,
-     targetRevision  // Optional - omit for latest
+     targetRevision, // Optional - omit for latest
    );
    ```
 
@@ -165,6 +168,7 @@ flowchart TD
    - Produce updated PHDocument
 
 5. **Store resulting document**:
+
    ```tsx
    writeCache.putState(
      documentId,
@@ -172,9 +176,10 @@ flowchart TD
      scope,
      branch,
      finalRevision,
-     updatedDocument
+     updatedDocument,
    );
    ```
+
    - Adds snapshot to ring buffer
    - Updates LRU tracking
    - Evicts oldest snapshot in ring buffer if full
@@ -419,7 +424,7 @@ class RingBuffer<T> {
     }
     return [
       ...this.buffer.slice(this.head),
-      ...this.buffer.slice(0, this.head)
+      ...this.buffer.slice(0, this.head),
     ];
   }
 }
@@ -427,7 +432,7 @@ class RingBuffer<T> {
 
 ### Links
 
-* [Interface](./write-cache-interface.md) - TypeScript interface definitions
-* [Job Executor](../Jobs/index.md) - Primary consumer of the write cache
-* [IOperationStore](../Storage/IOperationStore.md) - Fallback when cache misses
-* [IDocumentView](../Storage/IDocumentView.md) - Complementary read-path cache
+- [Interface](./write-cache-interface.md) - TypeScript interface definitions
+- [Job Executor](../Jobs/index.md) - Primary consumer of the write cache
+- [IOperationStore](../Storage/IOperationStore.md) - Fallback when cache misses
+- [IDocumentView](../Storage/IDocumentView.md) - Complementary read-path cache

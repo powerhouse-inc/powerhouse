@@ -52,11 +52,12 @@ Many hooks return a `dispatch` function for modifying documents. The dispatch fu
 ```typescript
 function dispatch(
   actionOrActions: Action | Action[] | undefined,
-  onErrors?: (errors: Error[]) => void
-): void
+  onErrors?: (errors: Error[]) => void,
+): void;
 ```
 
 **Parameters:**
+
 - `actionOrActions` — The action or array of actions to dispatch to the document
 - `onErrors` — Optional callback invoked with any errors that occurred during action execution
 
@@ -64,20 +65,20 @@ function dispatch(
 
 ## Quick Reference
 
-| Category | Hooks |
-|----------|-------|
-| **Selected Document** | `useSelectedDocument`, `useSelectedDocumentSafe`, `useSelectedDocumentId`, `useSelectedDocumentOfType` |
-| **Document by ID** | `useDocumentById`, `useDocumentsByIds`, `useDocumentOfType` |
-| **Document Cache** | `useDocumentCache`, `useDocument`, `useDocuments`, `useGetDocument`, `useGetDocuments`, `useGetDocumentAsync` |
-| **Drives** | `useDrives`, `useSelectedDrive`, `useSelectedDriveSafe`, `useSelectedDriveId` |
-| **Nodes & Folders** | `useSelectedNode`, `useSelectedFolder`, `useNodeById`, `useNodePathById` |
-| **Items in Drive** | `useNodesInSelectedDrive`, `useFileNodesInSelectedDrive`, `useFolderNodesInSelectedDrive`, `useDocumentsInSelectedDrive` |
-| **Items in Folder** | `useNodesInSelectedFolder`, `useFileNodesInSelectedFolder`, `useFolderNodesInSelectedFolder`, `useDocumentsInSelectedFolder` |
-| **Node Actions** | `useNodeActions` |
-| **Modals** | `usePHModal`, `showPHModal`, `closePHModal`, `showCreateDocumentModal`, `showDeleteNodeModal` |
-| **Revision History** | `useRevisionHistoryVisible`, `showRevisionHistory`, `hideRevisionHistory` |
-| **Timeline** | `useSelectedTimelineItem`, `useSelectedTimelineRevision` |
-| **Config** | `useAllowedDocumentTypes`, `useIsDragAndDropEnabled`, `useIsExternalControlsEnabled` |
+| Category              | Hooks                                                                                                                        |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| **Selected Document** | `useSelectedDocument`, `useSelectedDocumentSafe`, `useSelectedDocumentId`, `useSelectedDocumentOfType`                       |
+| **Document by ID**    | `useDocumentById`, `useDocumentsByIds`, `useDocumentOfType`                                                                  |
+| **Document Cache**    | `useDocumentCache`, `useDocument`, `useDocuments`, `useGetDocument`, `useGetDocuments`, `useGetDocumentAsync`                |
+| **Drives**            | `useDrives`, `useSelectedDrive`, `useSelectedDriveSafe`, `useSelectedDriveId`                                                |
+| **Nodes & Folders**   | `useSelectedNode`, `useSelectedFolder`, `useNodeById`, `useNodePathById`                                                     |
+| **Items in Drive**    | `useNodesInSelectedDrive`, `useFileNodesInSelectedDrive`, `useFolderNodesInSelectedDrive`, `useDocumentsInSelectedDrive`     |
+| **Items in Folder**   | `useNodesInSelectedFolder`, `useFileNodesInSelectedFolder`, `useFolderNodesInSelectedFolder`, `useDocumentsInSelectedFolder` |
+| **Node Actions**      | `useNodeActions`                                                                                                             |
+| **Modals**            | `usePHModal`, `showPHModal`, `closePHModal`, `showCreateDocumentModal`, `showDeleteNodeModal`                                |
+| **Revision History**  | `useRevisionHistoryVisible`, `showRevisionHistory`, `hideRevisionHistory`                                                    |
+| **Timeline**          | `useSelectedTimelineItem`, `useSelectedTimelineRevision`                                                                     |
+| **Config**            | `useAllowedDocumentTypes`, `useIsDragAndDropEnabled`, `useIsExternalControlsEnabled`                                         |
 
 ---
 
@@ -88,7 +89,7 @@ function dispatch(
 Returns the ID of the currently selected document.
 
 ```typescript
-function useSelectedDocumentId(): string | undefined
+function useSelectedDocumentId(): string | undefined;
 ```
 
 **Returns:** The selected document's ID, or `undefined` if no file node is selected.
@@ -102,18 +103,22 @@ Returns the selected document along with a dispatch function. Throws error if no
 ```typescript
 function useSelectedDocument(): readonly [
   PHDocument,
-  (actionOrActions: Action | Action[] | undefined, onErrors?: (errors: Error[]) => void) => void
-]
+  (
+    actionOrActions: Action | Action[] | undefined,
+    onErrors?: (errors: Error[]) => void,
+  ) => void,
+];
 ```
 
 **Returns:** A tuple `[document, dispatch]` where:
+
 - `document` — The selected document
 - `dispatch` — A function to dispatch actions to the document
 
 **Example:**
 
 ```tsx
-import { useSelectedDocument } from '@powerhousedao/reactor-browser';
+import { useSelectedDocument } from "@powerhousedao/reactor-browser";
 
 function DocumentViewer() {
   const [document, dispatch] = useSelectedDocument();
@@ -133,7 +138,7 @@ function DocumentViewer() {
 
 **See also:** [`useSelectedDocumentSafe`](#useselecteddocumentsafe), [`useSelectedDocumentOfType`](#useselecteddocumentoftype), [`useDocumentById`](#usedocumentbyid)
 
-------
+---
 
 ### `useSelectedDocumentSafe`
 
@@ -142,21 +147,26 @@ Returns the selected document along with a dispatch function or undefined is no 
 ```typescript
 function useSelectedDocumentSafe(): readonly [
   PHDocument | undefined,
-  (actionOrActions: Action | Action[] | undefined, onErrors?: (errors: Error[]) => void) => void
-]
+  (
+    actionOrActions: Action | Action[] | undefined,
+    onErrors?: (errors: Error[]) => void,
+  ) => void,
+];
 ```
 
 **Returns:** A tuple `[document, dispatch]` where:
+
 - `document` — The selected document, or `undefined` if none selected
 - `dispatch` — A function to dispatch actions to the document
 
 **Throws:**
+
 - `NoSelectedDocumentError` — When no document is selected
 
 **Example:**
 
 ```tsx
-import { useSelectedDocument } from '@powerhousedao/reactor-browser';
+import { useSelectedDocument } from "@powerhousedao/reactor-browser";
 
 function DocumentViewer() {
   const [document, dispatch] = useSelectedDocument();
@@ -183,38 +193,40 @@ function DocumentViewer() {
 Returns the selected document of a specific type along with a dispatch function. Throws an error if the found document has a different type.
 
 ```typescript
-function useSelectedDocumentOfType<TDocument extends PHDocument, TAction extends Action>(
-  documentType: string
-): [TDocument, DocumentDispatch<TAction>]
+function useSelectedDocumentOfType<
+  TDocument extends PHDocument,
+  TAction extends Action,
+>(documentType: string): [TDocument, DocumentDispatch<TAction>];
 
-function useSelectedDocumentOfType(documentType: null | undefined): never[]
+function useSelectedDocumentOfType(documentType: null | undefined): never[];
 ```
 
 **Parameters:**
+
 - `documentType` — The expected document type string (e.g., `"powerhouse/budget-statement"`)
 
 **Returns:** A tuple `[document, dispatch]` with the document typed as `TDocument`.
 
 **Throws:**
+
 - `NoSelectedDocumentError` — When no document is selected
 - `DocumentTypeMismatchError` - When selected document has different document type than the one provided
 
 **Example:**
 
 ```tsx
-import { useSelectedDocumentOfType } from '@powerhousedao/reactor-browser';
-import type { BudgetStatementDocument, BudgetStatementAction } from './types';
+import { useSelectedDocumentOfType } from "@powerhousedao/reactor-browser";
+import type { BudgetStatementDocument, BudgetStatementAction } from "./types";
 
 function BudgetEditor() {
   const [document, dispatch] = useSelectedDocumentOfType<
     BudgetStatementDocument,
     BudgetStatementAction
-  >('powerhouse/budget-statement');
+  >("powerhouse/budget-statement");
 
   const handleUpdate = () => {
-    dispatch(
-      { type: 'UPDATE_BUDGET', input: { amount: 1000 } },
-      (errors) => console.error('Failed:', errors)
+    dispatch({ type: "UPDATE_BUDGET", input: { amount: 1000 } }, (errors) =>
+      console.error("Failed:", errors),
     );
   };
 
@@ -232,21 +244,29 @@ Returns a document by ID along with a dispatch function.
 
 ```typescript
 function useDocumentById(
-  id: string | null | undefined
-): readonly [PHDocument | undefined, (actionOrActions: Action | Action[] | undefined, onErrors?: (errors: Error[]) => void) => void]
+  id: string | null | undefined,
+): readonly [
+  PHDocument | undefined,
+  (
+    actionOrActions: Action | Action[] | undefined,
+    onErrors?: (errors: Error[]) => void,
+  ) => void,
+];
 ```
 
 **Parameters:**
+
 - `id` — The document ID to retrieve, or `null`/`undefined` to skip retrieval
 
 **Returns:** A tuple `[document, dispatch]` where:
+
 - `document` — The document if found, or `undefined`
 - `dispatch` — A function to dispatch actions to the document
 
 **Example:**
 
 ```tsx
-import { useDocumentById } from '@powerhousedao/reactor-browser';
+import { useDocumentById } from "@powerhousedao/reactor-browser";
 
 function DocumentCard({ documentId }: { documentId: string }) {
   const [document, dispatch] = useDocumentById(documentId);
@@ -266,10 +286,11 @@ function DocumentCard({ documentId }: { documentId: string }) {
 Returns multiple documents by their IDs.
 
 ```typescript
-function useDocumentsByIds(ids: string[] | null | undefined): PHDocument[]
+function useDocumentsByIds(ids: string[] | null | undefined): PHDocument[];
 ```
 
 **Parameters:**
+
 - `ids` — Array of document IDs to retrieve, or `null`/`undefined` to skip
 
 **Returns:** An array of documents. Returns an empty array if `ids` is `null`/`undefined`.
@@ -281,17 +302,22 @@ function useDocumentsByIds(ids: string[] | null | undefined): PHDocument[]
 Returns a document of a specific type. Throws an error if the document has a different type.
 
 ```typescript
-function useDocumentOfType<TDocument extends PHDocument, TAction extends Action>(
+function useDocumentOfType<
+  TDocument extends PHDocument,
+  TAction extends Action,
+>(
   documentId: string | null | undefined,
-  documentType: string | null | undefined
-): [TDocument, DocumentDispatch<TAction>] | never[]
+  documentType: string | null | undefined,
+): [TDocument, DocumentDispatch<TAction>] | never[];
 ```
 
 **Parameters:**
+
 - `documentId` — The document ID to retrieve
 - `documentType` — The expected document type
 
 **Throws:**
+
 - `DocumentNotFoundError` — When the document doesn't exist
 - `DocumentModelNotFoundError` — When the document model isn't registered
 - `DocumentTypeMismatchError` — When the document type doesn't match
@@ -305,7 +331,7 @@ function useDocumentOfType<TDocument extends PHDocument, TAction extends Action>
 Returns the document cache containing all documents in the reactor.
 
 ```typescript
-function useDocumentCache(): IDocumentCache | undefined
+function useDocumentCache(): IDocumentCache | undefined;
 ```
 
 ---
@@ -315,10 +341,11 @@ function useDocumentCache(): IDocumentCache | undefined
 Retrieves a document from the reactor and subscribes to changes using React Suspense. This hook will suspend rendering while the document is loading.
 
 ```typescript
-function useDocument(id: string | null | undefined): PHDocument | undefined
+function useDocument(id: string | null | undefined): PHDocument | undefined;
 ```
 
 **Parameters:**
+
 - `id` — The document ID to retrieve, or `null`/`undefined` to skip retrieval
 
 **Returns:** The document if found, or `undefined` if `id` is `null`/`undefined`.
@@ -330,10 +357,11 @@ function useDocument(id: string | null | undefined): PHDocument | undefined
 Retrieves multiple documents from the reactor using React Suspense. This hook will suspend rendering while any of the documents are loading.
 
 ```typescript
-function useDocuments(ids: string[] | null | undefined): PHDocument[]
+function useDocuments(ids: string[] | null | undefined): PHDocument[];
 ```
 
 **Parameters:**
+
 - `ids` — Array of document IDs to retrieve, or `null`/`undefined` to skip retrieval
 
 **Returns:** An array of documents. Returns an empty array if `ids` is `null`/`undefined`.
@@ -345,7 +373,7 @@ function useDocuments(ids: string[] | null | undefined): PHDocument[]
 Returns a function to retrieve a document from the cache. The returned function fetches and returns a document by ID.
 
 ```typescript
-function useGetDocument(): (id: string) => Promise<PHDocument>
+function useGetDocument(): (id: string) => Promise<PHDocument>;
 ```
 
 **Returns:** A function that takes a document ID and returns a Promise of the document.
@@ -353,17 +381,17 @@ function useGetDocument(): (id: string) => Promise<PHDocument>
 **Example:**
 
 ```tsx
-import { useGetDocument } from '@powerhousedao/reactor-browser';
+import { useGetDocument } from "@powerhousedao/reactor-browser";
 
 function DocumentFetcher() {
   const getDocument = useGetDocument();
 
   const handleFetch = async (id: string) => {
     const document = await getDocument(id);
-    console.log('Fetched document:', document.name);
+    console.log("Fetched document:", document.name);
   };
 
-  return <button onClick={() => handleFetch('doc-123')}>Fetch Document</button>;
+  return <button onClick={() => handleFetch("doc-123")}>Fetch Document</button>;
 }
 ```
 
@@ -374,7 +402,7 @@ function DocumentFetcher() {
 Returns a function to retrieve multiple documents from the cache. The returned function fetches and returns documents by their IDs.
 
 ```typescript
-function useGetDocuments(): (ids: string[]) => Promise<PHDocument[]>
+function useGetDocuments(): (ids: string[]) => Promise<PHDocument[]>;
 ```
 
 **Returns:** A function that takes an array of document IDs and returns a Promise of the documents.
@@ -392,13 +420,15 @@ function useGetDocumentAsync(id: string | null | undefined): {
   isPending: boolean;
   error: Error | undefined;
   reload: (() => Promise<PHDocument>) | undefined;
-}
+};
 ```
 
 **Parameters:**
+
 - `id` — The document ID to retrieve, or `null`/`undefined` to skip retrieval
 
 **Returns:** An object containing:
+
 - `status` — `"initial"` | `"pending"` | `"success"` | `"error"`
 - `data` — The document if successfully loaded
 - `isPending` — Boolean indicating if the document is currently loading
@@ -408,16 +438,16 @@ function useGetDocumentAsync(id: string | null | undefined): {
 **Example:**
 
 ```tsx
-import { useGetDocumentAsync } from '@powerhousedao/reactor-browser';
+import { useGetDocumentAsync } from "@powerhousedao/reactor-browser";
 
 function AsyncDocumentLoader({ id }: { id: string }) {
   const { status, data, isPending, error, reload } = useGetDocumentAsync(id);
 
-  if (status === 'initial' || isPending) {
+  if (status === "initial" || isPending) {
     return <p>Loading...</p>;
   }
 
-  if (status === 'error') {
+  if (status === "error") {
     return (
       <div>
         <p>Error: {error?.message}</p>
@@ -439,13 +469,13 @@ function AsyncDocumentLoader({ id }: { id: string }) {
 Returns all drives in the reactor.
 
 ```typescript
-function useDrives(): DocumentDriveDocument[] | undefined
+function useDrives(): DocumentDriveDocument[] | undefined;
 ```
 
 **Example:**
 
 ```tsx
-import { useDrives } from '@powerhousedao/reactor-browser';
+import { useDrives } from "@powerhousedao/reactor-browser";
 
 function DriveList() {
   const drives = useDrives();
@@ -467,7 +497,7 @@ function DriveList() {
 Returns the ID of the currently selected drive.
 
 ```typescript
-function useSelectedDriveId(): string | undefined
+function useSelectedDriveId(): string | undefined;
 ```
 
 ---
@@ -477,7 +507,10 @@ function useSelectedDriveId(): string | undefined
 Returns the selected drive along with a dispatch function. **Throws an error if no drive is selected.**
 
 ```typescript
-function useSelectedDrive(): [DocumentDriveDocument, DocumentDispatch<DocumentDriveAction>]
+function useSelectedDrive(): [
+  DocumentDriveDocument,
+  DocumentDispatch<DocumentDriveAction>,
+];
 ```
 
 **Returns:** A tuple `[drive, dispatch]`.
@@ -493,9 +526,9 @@ function useSelectedDrive(): [DocumentDriveDocument, DocumentDispatch<DocumentDr
 Returns the selected drive, or `undefined` if no drive is selected. Use this when you need to handle the "no drive selected" case gracefully.
 
 ```typescript
-function useSelectedDriveSafe(): 
+function useSelectedDriveSafe():
   | [DocumentDriveDocument, DocumentDispatch<DocumentDriveAction>]
-  | readonly [undefined, undefined]
+  | readonly [undefined, undefined];
 ```
 
 **Returns:** A tuple `[drive, dispatch]` or `[undefined, undefined]` if no drive is selected.
@@ -503,7 +536,7 @@ function useSelectedDriveSafe():
 **Example:**
 
 ```tsx
-import { useSelectedDriveSafe } from '@powerhousedao/reactor-browser';
+import { useSelectedDriveSafe } from "@powerhousedao/reactor-browser";
 
 function DriveHeader() {
   const [drive, dispatch] = useSelectedDriveSafe();
@@ -523,10 +556,13 @@ function DriveHeader() {
 Sets the selected drive and updates the URL.
 
 ```typescript
-function setSelectedDrive(driveOrDriveSlug: string | DocumentDriveDocument | undefined): void
+function setSelectedDrive(
+  driveOrDriveSlug: string | DocumentDriveDocument | undefined,
+): void;
 ```
 
 **Parameters:**
+
 - `driveOrDriveSlug` — The drive object, drive slug string, or `undefined` to deselect
 
 ---
@@ -538,7 +574,7 @@ function setSelectedDrive(driveOrDriveSlug: string | DocumentDriveDocument | und
 Returns the currently selected node (file or folder).
 
 ```typescript
-function useSelectedNode(): Node | undefined
+function useSelectedNode(): Node | undefined;
 ```
 
 ---
@@ -548,10 +584,11 @@ function useSelectedNode(): Node | undefined
 Sets the selected node and updates the URL.
 
 ```typescript
-function setSelectedNode(nodeOrNodeSlug: Node | string | undefined): void
+function setSelectedNode(nodeOrNodeSlug: Node | string | undefined): void;
 ```
 
 **Parameters:**
+
 - `nodeOrNodeSlug` — The node object, node slug string, or `undefined` to deselect
 
 ---
@@ -561,7 +598,7 @@ function setSelectedNode(nodeOrNodeSlug: Node | string | undefined): void
 Returns the selected folder. Returns `undefined` if the selected node is not a folder.
 
 ```typescript
-function useSelectedFolder(): FolderNode | undefined
+function useSelectedFolder(): FolderNode | undefined;
 ```
 
 ---
@@ -571,10 +608,11 @@ function useSelectedFolder(): FolderNode | undefined
 Returns a node in the selected drive by ID.
 
 ```typescript
-function useNodeById(id: string | null | undefined): Node | undefined
+function useNodeById(id: string | null | undefined): Node | undefined;
 ```
 
 **Parameters:**
+
 - `id` — The node ID to find
 
 ---
@@ -584,10 +622,11 @@ function useNodeById(id: string | null | undefined): Node | undefined
 Returns the path (array of ancestor nodes) to a node in the selected drive.
 
 ```typescript
-function useNodePathById(id: string | null | undefined): Node[]
+function useNodePathById(id: string | null | undefined): Node[];
 ```
 
 **Parameters:**
+
 - `id` — The node ID to get the path for
 
 **Returns:** An array of nodes from root to the target node. Returns an empty array if the node is not found.
@@ -599,7 +638,7 @@ function useNodePathById(id: string | null | undefined): Node[]
 Returns the path to the currently selected node.
 
 ```typescript
-function useSelectedNodePath(): Node[]
+function useSelectedNodePath(): Node[];
 ```
 
 ---
@@ -611,7 +650,7 @@ function useSelectedNodePath(): Node[]
 Returns all nodes (files and folders) in the selected drive.
 
 ```typescript
-function useNodesInSelectedDrive(): Node[] | undefined
+function useNodesInSelectedDrive(): Node[] | undefined;
 ```
 
 ---
@@ -621,7 +660,7 @@ function useNodesInSelectedDrive(): Node[] | undefined
 Returns only the file nodes in the selected drive.
 
 ```typescript
-function useFileNodesInSelectedDrive(): FileNode[] | undefined
+function useFileNodesInSelectedDrive(): FileNode[] | undefined;
 ```
 
 ---
@@ -631,7 +670,7 @@ function useFileNodesInSelectedDrive(): FileNode[] | undefined
 Returns only the folder nodes in the selected drive.
 
 ```typescript
-function useFolderNodesInSelectedDrive(): FolderNode[] | undefined
+function useFolderNodesInSelectedDrive(): FolderNode[] | undefined;
 ```
 
 ---
@@ -641,7 +680,7 @@ function useFolderNodesInSelectedDrive(): FolderNode[] | undefined
 Returns all documents in the selected drive.
 
 ```typescript
-function useDocumentsInSelectedDrive(): PHDocument[] | undefined
+function useDocumentsInSelectedDrive(): PHDocument[] | undefined;
 ```
 
 ---
@@ -651,7 +690,7 @@ function useDocumentsInSelectedDrive(): PHDocument[] | undefined
 Returns the document types supported by the selected drive, as defined by the document model documents present in the drive.
 
 ```typescript
-function useDocumentTypesInSelectedDrive(): string[] | undefined
+function useDocumentTypesInSelectedDrive(): string[] | undefined;
 ```
 
 ---
@@ -661,7 +700,7 @@ function useDocumentTypesInSelectedDrive(): string[] | undefined
 Returns the child nodes for the selected drive or folder. If a folder is selected, returns its children. Otherwise, returns the root-level nodes of the drive.
 
 ```typescript
-function useNodesInSelectedDriveOrFolder(): Node[]
+function useNodesInSelectedDriveOrFolder(): Node[];
 ```
 
 **Returns:** An array of nodes, sorted by name. Returns an empty array if no drive is selected.
@@ -675,7 +714,7 @@ function useNodesInSelectedDriveOrFolder(): Node[]
 Returns all nodes in the selected folder.
 
 ```typescript
-function useNodesInSelectedFolder(): Node[] | undefined
+function useNodesInSelectedFolder(): Node[] | undefined;
 ```
 
 ---
@@ -685,7 +724,7 @@ function useNodesInSelectedFolder(): Node[] | undefined
 Returns only the file nodes in the selected folder.
 
 ```typescript
-function useFileNodesInSelectedFolder(): FileNode[] | undefined
+function useFileNodesInSelectedFolder(): FileNode[] | undefined;
 ```
 
 ---
@@ -695,7 +734,7 @@ function useFileNodesInSelectedFolder(): FileNode[] | undefined
 Returns only the folder nodes in the selected folder.
 
 ```typescript
-function useFolderNodesInSelectedFolder(): FolderNode[] | undefined
+function useFolderNodesInSelectedFolder(): FolderNode[] | undefined;
 ```
 
 ---
@@ -705,7 +744,7 @@ function useFolderNodesInSelectedFolder(): FolderNode[] | undefined
 Returns the documents in the selected folder.
 
 ```typescript
-function useDocumentsInSelectedFolder(): PHDocument[] | undefined
+function useDocumentsInSelectedFolder(): PHDocument[] | undefined;
 ```
 
 ---
@@ -718,38 +757,49 @@ Returns a set of functions for performing file and folder operations in the sele
 
 ```typescript
 function useNodeActions(): {
-  onAddFile: (file: File, parent: Node | undefined) => Promise<Node | undefined>;
-  onAddFolder: (name: string, parent: Node | undefined) => Promise<Node | undefined>;
+  onAddFile: (
+    file: File,
+    parent: Node | undefined,
+  ) => Promise<Node | undefined>;
+  onAddFolder: (
+    name: string,
+    parent: Node | undefined,
+  ) => Promise<Node | undefined>;
   onRenameNode: (newName: string, node: Node) => Promise<Node | undefined>;
   onCopyNode: (src: Node, target: Node | undefined) => Promise<void>;
   onMoveNode: (src: Node, target: Node | undefined) => Promise<void>;
   onDuplicateNode: (src: Node) => Promise<void>;
   onAddAndSelectNewFolder: (name: string) => Promise<void>;
-}
+};
 ```
 
 **Returned Functions:**
 
-| Function | Description |
-|----------|-------------|
-| `onAddFile(file, parent)` | Adds a file to the drive under the specified parent folder |
-| `onAddFolder(name, parent)` | Creates a new folder under the specified parent |
-| `onRenameNode(newName, node)` | Renames a node |
-| `onCopyNode(src, target)` | Copies a node to a target folder |
-| `onMoveNode(src, target)` | Moves a node to a target folder |
-| `onDuplicateNode(src)` | Duplicates a node in the current folder |
-| `onAddAndSelectNewFolder(name)` | Creates a new folder and selects it |
+| Function                        | Description                                                |
+| ------------------------------- | ---------------------------------------------------------- |
+| `onAddFile(file, parent)`       | Adds a file to the drive under the specified parent folder |
+| `onAddFolder(name, parent)`     | Creates a new folder under the specified parent            |
+| `onRenameNode(newName, node)`   | Renames a node                                             |
+| `onCopyNode(src, target)`       | Copies a node to a target folder                           |
+| `onMoveNode(src, target)`       | Moves a node to a target folder                            |
+| `onDuplicateNode(src)`          | Duplicates a node in the current folder                    |
+| `onAddAndSelectNewFolder(name)` | Creates a new folder and selects it                        |
 
 **Example:**
 
 ```tsx
-import { useNodeActions, useSelectedFolder } from '@powerhousedao/reactor-browser';
+import {
+  useNodeActions,
+  useSelectedFolder,
+} from "@powerhousedao/reactor-browser";
 
 function FileUploader() {
   const { onAddFile, onAddFolder } = useNodeActions();
   const selectedFolder = useSelectedFolder();
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const file = event.target.files?.[0];
     if (file) {
       await onAddFile(file, selectedFolder);
@@ -757,7 +807,7 @@ function FileUploader() {
   };
 
   const handleCreateFolder = async () => {
-    await onAddFolder('New Folder', selectedFolder);
+    await onAddFolder("New Folder", selectedFolder);
   };
 
   return (
@@ -778,7 +828,7 @@ function FileUploader() {
 Returns the currently displayed modal.
 
 ```typescript
-function usePHModal(): PHModal | undefined
+function usePHModal(): PHModal | undefined;
 ```
 
 **Modal Types:**
@@ -807,7 +857,7 @@ type PHModal =
 Shows a modal.
 
 ```typescript
-function showPHModal(modal: PHModal): void
+function showPHModal(modal: PHModal): void;
 ```
 
 ---
@@ -817,7 +867,7 @@ function showPHModal(modal: PHModal): void
 Closes the currently displayed modal.
 
 ```typescript
-function closePHModal(): void
+function closePHModal(): void;
 ```
 
 ---
@@ -827,17 +877,19 @@ function closePHModal(): void
 Shows the create document modal for a specific document type.
 
 ```typescript
-function showCreateDocumentModal(documentType: string): void
+function showCreateDocumentModal(documentType: string): void;
 ```
 
 **Example:**
 
 ```tsx
-import { showCreateDocumentModal } from '@powerhousedao/reactor-browser';
+import { showCreateDocumentModal } from "@powerhousedao/reactor-browser";
 
 function CreateButton() {
   return (
-    <button onClick={() => showCreateDocumentModal('powerhouse/budget-statement')}>
+    <button
+      onClick={() => showCreateDocumentModal("powerhouse/budget-statement")}
+    >
       Create Budget Statement
     </button>
   );
@@ -851,10 +903,11 @@ function CreateButton() {
 Shows the delete confirmation modal for a node.
 
 ```typescript
-function showDeleteNodeModal(nodeOrId: Node | string): void
+function showDeleteNodeModal(nodeOrId: Node | string): void;
 ```
 
 **Parameters:**
+
 - `nodeOrId` — The node object or node ID to delete
 
 ---
@@ -866,7 +919,7 @@ function showDeleteNodeModal(nodeOrId: Node | string): void
 Returns whether the revision history panel is visible.
 
 ```typescript
-function useRevisionHistoryVisible(): boolean | undefined
+function useRevisionHistoryVisible(): boolean | undefined;
 ```
 
 ---
@@ -876,7 +929,7 @@ function useRevisionHistoryVisible(): boolean | undefined
 Shows the revision history panel.
 
 ```typescript
-function showRevisionHistory(): void
+function showRevisionHistory(): void;
 ```
 
 ---
@@ -886,7 +939,7 @@ function showRevisionHistory(): void
 Hides the revision history panel.
 
 ```typescript
-function hideRevisionHistory(): void
+function hideRevisionHistory(): void;
 ```
 
 ---
@@ -898,7 +951,7 @@ function hideRevisionHistory(): void
 Returns the selected timeline item.
 
 ```typescript
-function useSelectedTimelineItem(): TimelineItem | null | undefined
+function useSelectedTimelineItem(): TimelineItem | null | undefined;
 ```
 
 **Timeline Item Types:**
@@ -938,7 +991,7 @@ type TimelineItem = TimelineBarItem | TimelineDividerItem;
 Sets the selected timeline item.
 
 ```typescript
-function setSelectedTimelineItem(item: TimelineItem | null | undefined): void
+function setSelectedTimelineItem(item: TimelineItem | null | undefined): void;
 ```
 
 ---
@@ -948,7 +1001,7 @@ function setSelectedTimelineItem(item: TimelineItem | null | undefined): void
 Returns the selected timeline revision.
 
 ```typescript
-function useSelectedTimelineRevision(): string | number | null | undefined
+function useSelectedTimelineRevision(): string | number | null | undefined;
 ```
 
 ---
@@ -958,7 +1011,9 @@ function useSelectedTimelineRevision(): string | number | null | undefined
 Sets the selected timeline revision.
 
 ```typescript
-function setSelectedTimelineRevision(revision: string | number | null | undefined): void
+function setSelectedTimelineRevision(
+  revision: string | number | null | undefined,
+): void;
 ```
 
 ---
@@ -970,7 +1025,7 @@ function setSelectedTimelineRevision(revision: string | number | null | undefine
 Returns the document types a drive editor supports. Uses `allowedDocumentTypes` config if set, otherwise falls back to all supported document types from the reactor.
 
 ```typescript
-function useDocumentTypes(): string[] | undefined
+function useDocumentTypes(): string[] | undefined;
 ```
 
 ---
@@ -980,7 +1035,7 @@ function useDocumentTypes(): string[] | undefined
 Returns the supported document types for the reactor, derived from the registered document model modules.
 
 ```typescript
-function useSupportedDocumentTypesInReactor(): string[] | undefined
+function useSupportedDocumentTypesInReactor(): string[] | undefined;
 ```
 
 ---
@@ -992,7 +1047,7 @@ function useSupportedDocumentTypesInReactor(): string[] | undefined
 Returns all Vetra packages loaded by the Connect instance.
 
 ```typescript
-function useVetraPackages(): VetraPackage[] | undefined
+function useVetraPackages(): VetraPackage[] | undefined;
 ```
 
 **VetraPackage Type:**
@@ -1021,7 +1076,7 @@ type VetraPackage = {
 Sets the Vetra packages for the Connect instance.
 
 ```typescript
-function setVetraPackages(vetraPackages: VetraPackage[] | undefined): void
+function setVetraPackages(vetraPackages: VetraPackage[] | undefined): void;
 ```
 
 ---
@@ -1035,10 +1090,13 @@ Hook that returns a function to generate a document's switchboard URL. Only retu
 The returned function generates a fresh bearer token and builds the switchboard URL with authentication when called.
 
 ```typescript
-function useGetSwitchboardLink(document: PHDocument | undefined): (() => Promise<string>) | null
+function useGetSwitchboardLink(
+  document: PHDocument | undefined,
+): (() => Promise<string>) | null;
 ```
 
 **Parameters:**
+
 - `document` — The document to create a switchboard URL generator for
 
 **Returns:** An async function that returns the switchboard URL, or `null` if not applicable.
@@ -1046,7 +1104,10 @@ function useGetSwitchboardLink(document: PHDocument | undefined): (() => Promise
 **Example:**
 
 ```tsx
-import { useGetSwitchboardLink, useSelectedDocument } from '@powerhousedao/reactor-browser';
+import {
+  useGetSwitchboardLink,
+  useSelectedDocument,
+} from "@powerhousedao/reactor-browser";
 
 function SwitchboardButton() {
   const [document] = useSelectedDocument();
@@ -1058,7 +1119,7 @@ function SwitchboardButton() {
 
   const handleClick = async () => {
     const url = await getSwitchboardLink();
-    window.open(url, '_blank');
+    window.open(url, "_blank");
   };
 
   return <button onClick={handleClick}>Open in Switchboard</button>;
@@ -1074,7 +1135,7 @@ function SwitchboardButton() {
 Gets whether external controls are enabled for a given editor.
 
 ```typescript
-function useIsExternalControlsEnabled(): boolean | undefined
+function useIsExternalControlsEnabled(): boolean | undefined;
 ```
 
 ---
@@ -1084,7 +1145,7 @@ function useIsExternalControlsEnabled(): boolean | undefined
 Sets whether external controls are enabled for a given editor.
 
 ```typescript
-function setIsExternalControlsEnabled(enabled: boolean | undefined): void
+function setIsExternalControlsEnabled(enabled: boolean | undefined): void;
 ```
 
 ---
@@ -1094,7 +1155,7 @@ function setIsExternalControlsEnabled(enabled: boolean | undefined): void
 Gets whether drag and drop is enabled for a given drive editor.
 
 ```typescript
-function useIsDragAndDropEnabled(): boolean | undefined
+function useIsDragAndDropEnabled(): boolean | undefined;
 ```
 
 ---
@@ -1104,7 +1165,7 @@ function useIsDragAndDropEnabled(): boolean | undefined
 Sets whether drag and drop is enabled for a given drive editor.
 
 ```typescript
-function setIsDragAndDropEnabled(enabled: boolean | undefined): void
+function setIsDragAndDropEnabled(enabled: boolean | undefined): void;
 ```
 
 ---
@@ -1114,7 +1175,7 @@ function setIsDragAndDropEnabled(enabled: boolean | undefined): void
 Defines the document types a drive supports. Defaults to all document types registered in the reactor.
 
 ```typescript
-function useAllowedDocumentTypes(): string[] | undefined
+function useAllowedDocumentTypes(): string[] | undefined;
 ```
 
 ---
@@ -1124,7 +1185,7 @@ function useAllowedDocumentTypes(): string[] | undefined
 Sets the allowed document types for a given drive editor.
 
 ```typescript
-function setAllowedDocumentTypes(types: string[] | undefined): void
+function setAllowedDocumentTypes(types: string[] | undefined): void;
 ```
 
 ---
@@ -1136,10 +1197,11 @@ function setAllowedDocumentTypes(types: string[] | undefined): void
 Sets the global drive editor config. Pass in a partial object of the config to set.
 
 ```typescript
-function setPHDriveEditorConfig(config: Partial<PHDriveEditorConfig>): void
+function setPHDriveEditorConfig(config: Partial<PHDriveEditorConfig>): void;
 ```
 
 **Config Options:**
+
 - `allowedDocumentTypes` — Array of allowed document type strings
 - `isDragAndDropEnabled` — Whether drag and drop is enabled
 
@@ -1150,10 +1212,13 @@ function setPHDriveEditorConfig(config: Partial<PHDriveEditorConfig>): void
 Sets the global document editor config. Pass in a partial object of the config to set.
 
 ```typescript
-function setPHDocumentEditorConfig(config: Partial<PHDocumentEditorConfig>): void
+function setPHDocumentEditorConfig(
+  config: Partial<PHDocumentEditorConfig>,
+): void;
 ```
 
 **Config Options:**
+
 - `isExternalControlsEnabled` — Whether external controls are enabled
 
 ---
@@ -1163,18 +1228,18 @@ function setPHDocumentEditorConfig(config: Partial<PHDocumentEditorConfig>): voi
 Wrapper hook that automatically sets the global drive editor config when the component mounts.
 
 ```typescript
-function useSetPHDriveEditorConfig(config: Partial<PHDriveEditorConfig>): void
+function useSetPHDriveEditorConfig(config: Partial<PHDriveEditorConfig>): void;
 ```
 
 **Example:**
 
 ```tsx
-import { useSetPHDriveEditorConfig } from '@powerhousedao/reactor-browser';
+import { useSetPHDriveEditorConfig } from "@powerhousedao/reactor-browser";
 
 function MyDriveEditor() {
   useSetPHDriveEditorConfig({
     isDragAndDropEnabled: true,
-    allowedDocumentTypes: ['powerhouse/budget-statement', 'powerhouse/invoice'],
+    allowedDocumentTypes: ["powerhouse/budget-statement", "powerhouse/invoice"],
   });
 
   return <div>{/* editor content */}</div>;
@@ -1188,7 +1253,9 @@ function MyDriveEditor() {
 Wrapper hook that automatically sets the global document editor config when the component mounts.
 
 ```typescript
-function useSetPHDocumentEditorConfig(config: Partial<PHDocumentEditorConfig>): void
+function useSetPHDocumentEditorConfig(
+  config: Partial<PHDocumentEditorConfig>,
+): void;
 ```
 
 ---
@@ -1201,8 +1268,8 @@ Gets the value of an item in the global drive config for a given key. Strongly t
 
 ```typescript
 function usePHDriveEditorConfigByKey<TKey extends PHDriveEditorConfigKey>(
-  key: TKey
-): PHDriveEditorConfig[TKey]
+  key: TKey,
+): PHDriveEditorConfig[TKey];
 ```
 
 ---
@@ -1213,6 +1280,6 @@ Gets the value of an item in the global document config for a given key. Strongl
 
 ```typescript
 function usePHDocumentEditorConfigByKey<TKey extends PHDocumentEditorConfigKey>(
-  key: TKey
-): PHDocumentEditorConfig[TKey]
+  key: TKey,
+): PHDocumentEditorConfig[TKey];
 ```

@@ -54,19 +54,25 @@ describe("Todos Operations", () => {
 
     // Verify the operation was recorded
     expect(updatedDocument.operations.global).toHaveLength(1);
-    expect(updatedDocument.operations.global[0].action.type).toBe("ADD_TODO_ITEM");
-    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(input);
+    expect(updatedDocument.operations.global[0].action.type).toBe(
+      "ADD_TODO_ITEM",
+    );
+    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
+      input,
+    );
     expect(updatedDocument.operations.global[0].index).toEqual(0);
   });
 
   it("should handle updateTodoItem operation to update text", () => {
     const mockItem = generateMock(TodoItemSchema());
-    const input: UpdateTodoItemInput = generateMock(UpdateTodoItemInputSchema());
+    const input: UpdateTodoItemInput = generateMock(
+      UpdateTodoItemInputSchema(),
+    );
     input.id = mockItem.id;
     const newText = "new text";
     input.text = newText;
     input.checked = undefined;
-    
+
     const document = utils.createDocument({
       global: {
         items: [mockItem],
@@ -78,8 +84,10 @@ describe("Todos Operations", () => {
 
     // Verify the operation was recorded
     expect(updatedDocument.operations.global).toHaveLength(1);
-    expect(updatedDocument.operations.global[0].action.type).toBe("UPDATE_TODO_ITEM");
-    
+    expect(updatedDocument.operations.global[0].action.type).toBe(
+      "UPDATE_TODO_ITEM",
+    );
+
     // Verify the state was updated correctly
     const updatedItem = updatedDocument.state.global.items.find(
       (item) => item.id === input.id,
@@ -90,12 +98,14 @@ describe("Todos Operations", () => {
 
   it("should handle updateTodoItem operation to update checked", () => {
     const mockItem = generateMock(TodoItemSchema());
-    const input: UpdateTodoItemInput = generateMock(UpdateTodoItemInputSchema());
+    const input: UpdateTodoItemInput = generateMock(
+      UpdateTodoItemInputSchema(),
+    );
     input.id = mockItem.id;
     const newChecked = !mockItem.checked;
     input.checked = newChecked;
     input.text = undefined;
-    
+
     const document = utils.createDocument({
       global: {
         items: [mockItem],
@@ -119,17 +129,21 @@ describe("Todos Operations", () => {
         items: [mockItem],
       },
     });
-    
-    const input: DeleteTodoItemInput = generateMock(DeleteTodoItemInputSchema());
+
+    const input: DeleteTodoItemInput = generateMock(
+      DeleteTodoItemInputSchema(),
+    );
     input.id = mockItem.id;
-    
+
     const updatedDocument = reducer(document, deleteTodoItem(input));
     expect(isTodoListDocument(updatedDocument)).toBe(true);
 
     // Verify the operation was recorded
     expect(updatedDocument.operations.global).toHaveLength(1);
-    expect(updatedDocument.operations.global[0].action.type).toBe("DELETE_TODO_ITEM");
-    
+    expect(updatedDocument.operations.global[0].action.type).toBe(
+      "DELETE_TODO_ITEM",
+    );
+
     // Verify the item was removed from state
     const updatedItems = updatedDocument.state.global.items;
     expect(updatedItems).toHaveLength(0);
@@ -159,15 +173,15 @@ describe("Todos Operations with Stats", () => {
 
   it("should update stats when checking a todo item", () => {
     const document = utils.createDocument();
-    
+
     // Add an item first
     const addedDocument = reducer(document, addTodoItem({ text: "Buy milk" }));
     const itemId = addedDocument.state.global.items[0].id;
-    
+
     // Now check it
     const updatedDocument = reducer(
       addedDocument,
-      updateTodoItem({ id: itemId, checked: true })
+      updateTodoItem({ id: itemId, checked: true }),
     );
 
     expect(updatedDocument.state.global.stats.total).toBe(1);
@@ -177,15 +191,15 @@ describe("Todos Operations with Stats", () => {
 
   it("should update stats when deleting an unchecked todo item", () => {
     const document = utils.createDocument();
-    
+
     // Add an item
     const addedDocument = reducer(document, addTodoItem({ text: "Buy milk" }));
     const itemId = addedDocument.state.global.items[0].id;
-    
+
     // Delete it
     const updatedDocument = reducer(
       addedDocument,
-      deleteTodoItem({ id: itemId })
+      deleteTodoItem({ id: itemId }),
     );
 
     expect(updatedDocument.state.global.items).toHaveLength(0);
@@ -196,19 +210,19 @@ describe("Todos Operations with Stats", () => {
 
   it("should update stats when deleting a checked todo item", () => {
     const document = utils.createDocument();
-    
+
     // Add and check an item
     const addedDocument = reducer(document, addTodoItem({ text: "Buy milk" }));
     const itemId = addedDocument.state.global.items[0].id;
     const checkedDocument = reducer(
       addedDocument,
-      updateTodoItem({ id: itemId, checked: true })
+      updateTodoItem({ id: itemId, checked: true }),
     );
-    
+
     // Delete it
     const updatedDocument = reducer(
       checkedDocument,
-      deleteTodoItem({ id: itemId })
+      deleteTodoItem({ id: itemId }),
     );
 
     expect(updatedDocument.state.global.items).toHaveLength(0);

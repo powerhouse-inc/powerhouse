@@ -3,35 +3,17 @@
   "compilerOptions": {
     "outDir": "./dist",
     "paths": {
-      "document-models": [
-        "./document-models/index.ts"
-      ],
-      "document-models/*": [
-        "./document-models/*/index.ts"
-      ],
-      "editors": [
-        "./editors/index.ts"
-      ],
-      "editors/*": [
-        "./editors/*/index.ts"
-      ],
-      "processors": [
-        "./processors/index.ts"
-      ],
-      "processors/*": [
-        "./processors/*/index.ts"
-      ],
-      "subgraphs": [
-        "./subgraphs/index.ts"
-      ],
-      "subgraphs/*": [
-        "./subgraphs/*/index.ts"
-      ]
+      "document-models": ["./document-models/index.ts"],
+      "document-models/*": ["./document-models/*/index.ts"],
+      "editors": ["./editors/index.ts"],
+      "editors/*": ["./editors/*/index.ts"],
+      "processors": ["./processors/index.ts"],
+      "processors/*": ["./processors/*/index.ts"],
+      "subgraphs": ["./subgraphs/index.ts"],
+      "subgraphs/*": ["./subgraphs/*/index.ts"]
     }
   },
-  "include": [
-    "**/*"
-  ],
+  "include": ["**/*"],
   "references": [
     {
       "path": "../design-system"

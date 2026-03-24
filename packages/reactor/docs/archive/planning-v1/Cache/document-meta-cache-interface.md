@@ -51,7 +51,7 @@ export interface IDocumentMetaCache {
   getDocumentMeta(
     documentId: string,
     branch: string,
-    signal?: AbortSignal
+    signal?: AbortSignal,
   ): Promise<CachedDocumentMeta>;
 
   /**
@@ -71,7 +71,7 @@ export interface IDocumentMetaCache {
     documentId: string,
     branch: string,
     targetRevision: number,
-    signal?: AbortSignal
+    signal?: AbortSignal,
   ): Promise<CachedDocumentMeta>;
 
   /**
@@ -85,7 +85,7 @@ export interface IDocumentMetaCache {
   putDocumentMeta(
     documentId: string,
     branch: string,
-    meta: CachedDocumentMeta
+    meta: CachedDocumentMeta,
   ): void;
 
   /**
@@ -152,16 +152,24 @@ metaCache.putDocumentMeta(documentId, branch, {
 
 // After DELETE_DOCUMENT operation
 metaCache.putDocumentMeta(documentId, branch, {
-  state: { ...document.state.document, isDeleted: true, deletedAtUtcIso: timestamp },
+  state: {
+    ...document.state.document,
+    isDeleted: true,
+    deletedAtUtcIso: timestamp,
+  },
   documentType: document.header.documentType,
   documentScopeRevision: operation.index + 1,
 });
 
 // During reshuffling: Get historical document state at specific revision
-const historicalMeta = await metaCache.rebuildAtRevision(documentId, branch, targetRevision);
+const historicalMeta = await metaCache.rebuildAtRevision(
+  documentId,
+  branch,
+  targetRevision,
+);
 ```
 
 ### Links
 
-* [Overview](./document-meta-cache.md) - Detailed architectural overview
-* [Write Cache Interface](./write-cache-interface.md) - Related scope-specific caching system
+- [Overview](./document-meta-cache.md) - Detailed architectural overview
+- [Write Cache Interface](./write-cache-interface.md) - Related scope-specific caching system

@@ -1,10 +1,13 @@
-import type { IReactorClient, ISyncManager } from "@powerhousedao/reactor";
+import type {
+  IReactorClient,
+  IRelationalDb,
+  ISyncManager,
+} from "@powerhousedao/reactor";
 import type {
   GraphQLManager,
   ISubgraph,
   SubgraphArgs,
 } from "@powerhousedao/reactor-api";
-import type { IRelationalDbLegacy } from "document-drive";
 import type { DocumentNode } from "graphql";
 import { GraphQLError } from "graphql";
 import { gql } from "graphql-tag";
@@ -30,7 +33,7 @@ export class BaseSubgraph implements ISubgraph {
   `;
   reactorClient: IReactorClient;
   graphqlManager: GraphQLManager;
-  relationalDb: IRelationalDbLegacy;
+  relationalDb: IRelationalDb;
   syncManager: ISyncManager;
   documentPermissionService?: DocumentPermissionService;
   authorizationService?: AuthorizationService;

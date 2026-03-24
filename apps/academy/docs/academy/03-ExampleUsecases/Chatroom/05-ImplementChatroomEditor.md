@@ -4,6 +4,7 @@
 📦 **Reference Code**: [chatroom-demo](https://github.com/powerhouse-inc/chatroom-demo)
 
 This tutorial covers building the ChatRoom editor:
+
 1. **Editor Scaffolding**: Generating the editor template with `ph generate --editor`
 2. **Component Implementation**: Building a complete, interactive chat UI with components
 
@@ -40,6 +41,7 @@ git show tutorial/main:editors/chat-room-editor/components/ChatRoom/ChatRoom.tsx
 ### Visual comparison with GitHub Desktop
 
 After committing your editor code:
+
 1. **Branch** menu → **"Compare to Branch..."**
 2. Select `tutorial/main`
 3. See all your custom components vs. the reference implementation
@@ -54,9 +56,10 @@ In this chapter we will continue with the interface or editor implementation of 
 
 Go back to Vetra Studio, if you need to relaunch Vetra, launch it with `Vetra --watch` so it loads all existing local documents. Click the **'Add new specification'** button in the User Experiences column under **'Editors'**. This will create an editor template for your document model.
 
-Give the editor the name `chat-room-editor` and select the correct document model. In our case that's the `powerhouse/chat-room`. 
+Give the editor the name `chat-room-editor` and select the correct document model. In our case that's the `powerhouse/chat-room`.
 
-You'll see that the terminal in which you are running Vetra mentions 
+You'll see that the terminal in which you are running Vetra mentions
+
 ```
 ℹ [Vetra] 🔄 Starting editor generation for: chat-room-editor                                        15:18:16
                                                                                                      15:18:16
@@ -64,8 +67,8 @@ Loaded templates: node_modules/.pnpm/@powerhousedao+codegen@5.0.12_kx2q3zvshbbgw
        added: editors/chat-room-editor/components/EditName.tsx                                       15:18:16
        added: editors/chat-room-editor/editor.tsx                                                    15:18:16
        FORCED: editors/chat-room-editor/module.ts                                                    15:18:16
-ℹ [Vetra] ✅ Editor generation completed successfully for: chat-room-editor    
-````
+ℹ [Vetra] ✅ Editor generation completed successfully for: chat-room-editor
+```
 
 Once complete, you'll have a new directory structure:
 
@@ -138,16 +141,16 @@ Download the repository of the chatroom-demo as a zip file from https://github.c
 
 Here's what each component does:
 
-| Component | Purpose |
-|-----------|---------|
-| `Avatar` | Displays a user avatar image or a deterministic emoji based on the username |
-| `ChatRoom` | Main container that orchestrates the header, messages list, and input field |
-| `Header` | Shows the chat title and description with inline editing capability |
-| `EditableLabel` | Reusable component for inline text editing with edit/cancel icons |
-| `Message` | Renders a single message bubble with styling based on the sender |
-| `MessageItem` | Wraps `Message` with `Avatar` and adds a reaction dropdown menu |
-| `Reaction` | Displays an emoji reaction with a count of users who reacted |
-| `TextInput` | Input field for composing and sending new messages |
+| Component       | Purpose                                                                     |
+| --------------- | --------------------------------------------------------------------------- |
+| `Avatar`        | Displays a user avatar image or a deterministic emoji based on the username |
+| `ChatRoom`      | Main container that orchestrates the header, messages list, and input field |
+| `Header`        | Shows the chat title and description with inline editing capability         |
+| `EditableLabel` | Reusable component for inline text editing with edit/cancel icons           |
+| `Message`       | Renders a single message bubble with styling based on the sender            |
+| `MessageItem`   | Wraps `Message` with `Avatar` and adds a reaction dropdown menu             |
+| `Reaction`      | Displays an emoji reaction with a count of users who reacted                |
+| `TextInput`     | Input field for composing and sending new messages                          |
 
 ### The utils.ts file
 
@@ -167,10 +170,46 @@ import type {
 } from "../../document-models/chat-room/gen/schema/types.js";
 
 const emojis = [
-  "😀", "😂", "🤣", "😍", "😎", "😊", "🙃", "😇", "🤔", "🥳",
-  "🤯", "🤗", "😱", "👻", "🎃", "🐱", "🐶", "🐹", "🦊", "🐻",
-  "🐼", "🐨", "🐯", "🦁", "🐸", "🐵", "🐔", "🐧", "🐦", "🐤",
-  "🐝", "🐞", "🐟", "🐬", "🐳", "🦋", "🌺", "🌸", "🌼", "🍀",
+  "😀",
+  "😂",
+  "🤣",
+  "😍",
+  "😎",
+  "😊",
+  "🙃",
+  "😇",
+  "🤔",
+  "🥳",
+  "🤯",
+  "🤗",
+  "😱",
+  "👻",
+  "🎃",
+  "🐱",
+  "🐶",
+  "🐹",
+  "🦊",
+  "🐻",
+  "🐼",
+  "🐨",
+  "🐯",
+  "🦁",
+  "🐸",
+  "🐵",
+  "🐔",
+  "🐧",
+  "🐦",
+  "🐤",
+  "🐝",
+  "🐞",
+  "🐟",
+  "🐬",
+  "🐳",
+  "🦋",
+  "🌺",
+  "🌸",
+  "🌼",
+  "🍀",
 ];
 
 export function getEmojiFromString(input: string): string {
@@ -424,6 +463,7 @@ export default function Editor() {
 
 :::info Key Concept: useSelectedChatRoomDocument hook
 The `useSelectedChatRoomDocument` hook is generated by the Powerhouse CLI. It provides:
+
 1. The current document state (`document`)
 2. A dispatch function to send actions to the reducer
 
@@ -501,7 +541,7 @@ export const EditableLabel: React.FC<EditableLabelProps> = ({
 
   // Toggle between read mode (displaying text) and write mode (input field)
   // Press Enter to submit, Escape to cancel
-  
+
   return (
     <div onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}>
       {isEditing ? (
@@ -532,6 +572,7 @@ A warning will prompt you to login before you can send messages. Login with an E
 ![Chatroom Editor](./images/ChatRoomTest.gif)
 
 **Try it out:**
+
 1. Create a new ChatRoom document
 2. Login with your Ethereum wallet
 3. Send messages using the input field

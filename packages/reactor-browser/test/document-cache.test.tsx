@@ -13,7 +13,7 @@ import {
 import type {
   FulfilledPromise,
   PromiseWithState,
-  RejectedPromise
+  RejectedPromise,
 } from "../src/types/documents.js";
 
 function createMockDocument(id: string, name = "Test Document"): PHDocument {

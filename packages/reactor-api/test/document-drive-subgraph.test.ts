@@ -1,9 +1,8 @@
+import { ReactorBuilder, ReactorClientBuilder } from "@powerhousedao/reactor";
 import type { SubgraphArgs } from "@powerhousedao/reactor-api";
-import { testSetupReactor } from "@powerhousedao/reactor-api/test";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
-import { Kind, print } from "graphql";
-import { parse } from "graphql";
+import { Kind, parse, print } from "graphql";
 import { beforeEach, describe, expect, it } from "vitest";
 import {
   DocumentModelSubgraph,
@@ -190,16 +189,16 @@ describe("Document-Drive Subgraph", () => {
   });
 
   describe("DocumentModelSubgraph resolver generation", () => {
-    let reactor: Awaited<ReturnType<typeof testSetupReactor>>["reactor"];
     let subgraph: DocumentModelSubgraph;
 
     beforeEach(async () => {
-      const setup = await testSetupReactor();
-      reactor = setup.reactor;
+      const builder = new ReactorClientBuilder().withReactorBuilder(
+        new ReactorBuilder().withDocumentModels([driveModule]),
+      );
+      const reactorClient = await builder.build();
 
       subgraph = new DocumentModelSubgraph(driveModule, {
-        reactor,
-        reactorClient: undefined,
+        reactorClient,
         documentPermissionService: undefined,
         relationalDb: {} as SubgraphArgs["relationalDb"],
         graphqlManager: {} as SubgraphArgs["graphqlManager"],
@@ -279,16 +278,16 @@ describe("Document-Drive Subgraph", () => {
   });
 
   describe("union type resolvers", () => {
-    let reactor: Awaited<ReturnType<typeof testSetupReactor>>["reactor"];
     let subgraph: DocumentModelSubgraph;
 
     beforeEach(async () => {
-      const setup = await testSetupReactor();
-      reactor = setup.reactor;
+      const builder = new ReactorClientBuilder().withReactorBuilder(
+        new ReactorBuilder().withDocumentModels([driveModule]),
+      );
+      const reactorClient = await builder.build();
 
       subgraph = new DocumentModelSubgraph(driveModule, {
-        reactor,
-        reactorClient: undefined,
+        reactorClient,
         documentPermissionService: undefined,
         relationalDb: {} as SubgraphArgs["relationalDb"],
         graphqlManager: {} as SubgraphArgs["graphqlManager"],

@@ -21,24 +21,24 @@ editors/todo-list-editor/
 └── module.ts                 # Editor module export (do not change this)
 ```
 
- ## Check your work
+## Check your work
 
 To make sure all works as expected, we should:
 
 - check types
-run: `pnpm tsc`
+  run: `pnpm tsc`
 
 - check linting
-run: `pnpm lint`
+  run: `pnpm lint`
 
 - check tests
-run: `pnpm test`
+  run: `pnpm test`
 
 - test in connect
-run: `pnpm connect` — you should now be able to create a `TodoList` type document and open it. You will see the generic `EditName` component in the document
+  run: `pnpm connect` — you should now be able to create a `TodoList` type document and open it. You will see the generic `EditName` component in the document
 
 - make sure your code matches the code in the completed step branch
-run: `git diff your-branch-name step-4-complete-generated-todo-list-document-editor`
+  run: `git diff your-branch-name step-4-complete-generated-todo-list-document-editor`
 
 ## Up next: adding UI components for updating our `TodoList` documents
 

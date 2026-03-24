@@ -11,6 +11,7 @@ npm install @powerhousedao/reactor-browser
 Initialize Renown using either the `<Renown>` component or the `useRenownInit` hook:
 
 **Component:**
+
 ```tsx
 import { Renown } from "@powerhousedao/reactor-browser";
 
@@ -25,6 +26,7 @@ function App() {
 ```
 
 **Hook:**
+
 ```tsx
 import { useRenownInit } from "@powerhousedao/reactor-browser";
 
@@ -36,12 +38,12 @@ function App() {
 
 **Props / Options:**
 
-| Prop | Type | Description |
-|------|------|-------------|
-| `appName` | `string` | Application identifier |
-| `url` | `string?` | Renown server URL (default: `https://www.renown.id`) |
-| `namespace` | `string?` | Prefix for localStorage keys, allowing multiple apps to use Renown on the same domain without conflicts |
-| `onError` | `(error: unknown) => void` | Error handler (component only, defaults to `console.error`) |
+| Prop        | Type                       | Description                                                                                             |
+| ----------- | -------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `appName`   | `string`                   | Application identifier                                                                                  |
+| `url`       | `string?`                  | Renown server URL (default: `https://www.renown.id`)                                                    |
+| `namespace` | `string?`                  | Prefix for localStorage keys, allowing multiple apps to use Renown on the same domain without conflicts |
+| `onError`   | `(error: unknown) => void` | Error handler (component only, defaults to `console.error`)                                             |
 
 ## Components
 
@@ -50,13 +52,15 @@ function App() {
 Smart button that adapts to auth state. Three levels of customization:
 
 **Zero-config:**
+
 ```tsx
 import { RenownAuthButton } from "@powerhousedao/reactor-browser";
 
-<RenownAuthButton />
+<RenownAuthButton />;
 ```
 
 **Slot overrides** (partial customization):
+
 ```tsx
 <RenownAuthButton
   loginContent={<span>Connect Wallet</span>}
@@ -65,10 +69,12 @@ import { RenownAuthButton } from "@powerhousedao/reactor-browser";
 ```
 
 **Headless** (full customization via render function):
+
 ```tsx
 <RenownAuthButton>
   {(auth) => {
-    if (auth.status === "loading" || auth.status === "checking") return <Spinner />;
+    if (auth.status === "loading" || auth.status === "checking")
+      return <Spinner />;
     if (auth.status !== "authorized") {
       return <button onClick={auth.login}>Sign In</button>;
     }
@@ -148,19 +154,19 @@ function MyAuth() {
 
 **Returns `RenownAuth`:**
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `status` | `"initial" \| "checking" \| "authorized" \| "not-authorized" \| "loading" \| undefined` | Current auth state |
-| `user` | `User \| undefined` | Full user object |
-| `address` | `string \| undefined` | Ethereum address |
-| `ensName` | `string \| undefined` | ENS name |
-| `avatarUrl` | `string \| undefined` | Avatar URL |
-| `profileId` | `string \| undefined` | Renown profile document ID |
-| `displayName` | `string \| undefined` | ENS name or username |
-| `displayAddress` | `string \| undefined` | Truncated address (0x1234...5678) |
-| `login` | `() => void` | Opens Renown portal |
-| `logout` | `() => Promise<void>` | Logs out |
-| `openProfile` | `() => void` | Opens Renown profile page |
+| Field            | Type                                                                                    | Description                       |
+| ---------------- | --------------------------------------------------------------------------------------- | --------------------------------- |
+| `status`         | `"initial" \| "checking" \| "authorized" \| "not-authorized" \| "loading" \| undefined` | Current auth state                |
+| `user`           | `User \| undefined`                                                                     | Full user object                  |
+| `address`        | `string \| undefined`                                                                   | Ethereum address                  |
+| `ensName`        | `string \| undefined`                                                                   | ENS name                          |
+| `avatarUrl`      | `string \| undefined`                                                                   | Avatar URL                        |
+| `profileId`      | `string \| undefined`                                                                   | Renown profile document ID        |
+| `displayName`    | `string \| undefined`                                                                   | ENS name or username              |
+| `displayAddress` | `string \| undefined`                                                                   | Truncated address (0x1234...5678) |
+| `login`          | `() => void`                                                                            | Opens Renown portal               |
+| `logout`         | `() => Promise<void>`                                                                   | Logs out                          |
+| `openProfile`    | `() => void`                                                                            | Opens Renown profile page         |
 
 ## Integrating with shadcn/ui
 
@@ -169,8 +175,12 @@ import { RenownAuthButton } from "@powerhousedao/reactor-browser";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
-  DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
 function AuthButton() {
@@ -178,7 +188,11 @@ function AuthButton() {
     <RenownAuthButton>
       {(auth) => {
         if (auth.status === "loading" || auth.status === "checking") {
-          return <Button variant="ghost" disabled>Loading...</Button>;
+          return (
+            <Button variant="ghost" disabled>
+              Loading...
+            </Button>
+          );
         }
         if (auth.status !== "authorized") {
           return <Button onClick={auth.login}>Sign In</Button>;
@@ -186,7 +200,10 @@ function AuthButton() {
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+              <Button
+                variant="ghost"
+                className="relative h-10 w-10 rounded-full"
+              >
                 <Avatar>
                   <AvatarImage src={auth.avatarUrl} />
                   <AvatarFallback>
@@ -198,7 +215,9 @@ function AuthButton() {
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>{auth.displayName}</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={auth.openProfile}>Profile</DropdownMenuItem>
+              <DropdownMenuItem onClick={auth.openProfile}>
+                Profile
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={auth.logout}>Log out</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

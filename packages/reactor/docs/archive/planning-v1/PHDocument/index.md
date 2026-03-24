@@ -133,10 +133,7 @@ type PHBaseState = {
 };
 
 //
-const state = createState(
-  prevState,
-  { myScope: { foo: 4 } },
-);
+const state = createState(prevState, { myScope: { foo: 4 } });
 ```
 
 Custom document types extend the `PHDocument` type:

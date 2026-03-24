@@ -71,7 +71,7 @@
 - **connect:** use explicit index.js import from registry url ([037ddcdeb](https://github.com/powerhouse-inc/powerhouse/commit/037ddcdeb))
 - **connect:** suppress Vite warning for dynamic package imports ([bbb465eb9](https://github.com/powerhouse-inc/powerhouse/commit/bbb465eb9))
 - **connect,vetra:** move vite plugin node polyfills to specific packages ([e3b0fa37b](https://github.com/powerhouse-inc/powerhouse/commit/e3b0fa37b))
-- **document-drive:** fix tsc build and prisma ESM __dirname error ([f0c252d96](https://github.com/powerhouse-inc/powerhouse/commit/f0c252d96))
+- **document-drive:** fix tsc build and prisma ESM \_\_dirname error ([f0c252d96](https://github.com/powerhouse-inc/powerhouse/commit/f0c252d96))
 - **ph-cli:** allow ph publish to forward extra flags to npm publish ([86e75367d](https://github.com/powerhouse-inc/powerhouse/commit/86e75367d))
 - **reactor-api:** resolve relative and bare imports from CDN-loaded modules ([ebbd0aafb](https://github.com/powerhouse-inc/powerhouse/commit/ebbd0aafb))
 - **reactor-api:** use only latest specification in GraphQL schema generation ([10d906243](https://github.com/powerhouse-inc/powerhouse/commit/10d906243))
@@ -109,7 +109,7 @@
 ### 🩹 Fixes
 
 - add git pull --rebase before push in k8s update jobs to avoid race conditions ([fa7af726f](https://github.com/powerhouse-inc/powerhouse/commit/fa7af726f))
-- **registry:** resolve workspace:* deps in Dockerfile for standalone install ([a4670f563](https://github.com/powerhouse-inc/powerhouse/commit/a4670f563))
+- **registry:** resolve workspace:\* deps in Dockerfile for standalone install ([a4670f563](https://github.com/powerhouse-inc/powerhouse/commit/a4670f563))
 - **release:** remove stale build-connect step, now covered by build-bundle ([e00eed45a](https://github.com/powerhouse-inc/powerhouse/commit/e00eed45a))
 
 ### ❤️ Thank You
@@ -1068,7 +1068,7 @@ This was a version bump only, there were no code changes.
 - **reactor:** update drive info handling to include graphqlEndpoint in responses and streamline drive URL parsing ([7d40dda03](https://github.com/powerhouse-inc/powerhouse/commit/7d40dda03))
 - **reactor,codegen:** handle processor apps in cli ([#2319](https://github.com/powerhouse-inc/powerhouse/pull/2319))
 - **reactor-api:** add REST endpoint for drive info retrieval ([81034a7ae](https://github.com/powerhouse-inc/powerhouse/commit/81034a7ae))
-- **reactor-api:** generate document-drive subgraph with union resolvers and  invalid op filtering ([2998d9500](https://github.com/powerhouse-inc/powerhouse/commit/2998d9500))
+- **reactor-api:** generate document-drive subgraph with union resolvers and invalid op filtering ([2998d9500](https://github.com/powerhouse-inc/powerhouse/commit/2998d9500))
 - **reactor-api:** remove SystemSubgraph and related tests, update DefaultCoreSubgraphs ([e4412d6f7](https://github.com/powerhouse-inc/powerhouse/commit/e4412d6f7))
 
 ### 🩹 Fixes
@@ -1662,7 +1662,7 @@ This was a version bump only, there were no code changes.
 ### 🚀 Features
 
 - **ci:** add Harbor registry to docker image publishing ([f3a2fab69](https://github.com/powerhouse-inc/powerhouse/commit/f3a2fab69))
-- **ci:** deploy staging tenant from release/staging/* branches ([8761579e7](https://github.com/powerhouse-inc/powerhouse/commit/8761579e7))
+- **ci:** deploy staging tenant from release/staging/\* branches ([8761579e7](https://github.com/powerhouse-inc/powerhouse/commit/8761579e7))
 - **codegen:** updated document editor boilerplate ([141e67a94](https://github.com/powerhouse-inc/powerhouse/commit/141e67a94))
 - **design-system:** default styles tweaks and DocumentStateViewer ([c0a66720c](https://github.com/powerhouse-inc/powerhouse/commit/c0a66720c))
 - **design-system:** clean up document-state-viewer ([12d7f3645](https://github.com/powerhouse-inc/powerhouse/commit/12d7f3645))

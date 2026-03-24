@@ -30,29 +30,30 @@ Deletion metadata is stored in the document's state:
 type PHDocumentState = {
   // ... other document scope fields
   isDeleted?: boolean;
-  deletedAtUtcIso?: string;      // ISO timestamp
-  deletedBy?: string;             // Optional: who deleted it
-  deletionReason?: string;        // Optional: why it was deleted
-}
+  deletedAtUtcIso?: string; // ISO timestamp
+  deletedBy?: string; // Optional: who deleted it
+  deletionReason?: string; // Optional: why it was deleted
+};
 ```
 
 The DELETE_DOCUMENT operation updates this state in the document scope, just like any other operation.
 
 ### Query Behavior with Deleted Documents
 
-| Method | Deleted Document Behavior | Return Value |
-|--------|---------------------------|--------------|
-| `exists([id])` | Treated as non-existent | `[false]` |
-| `get(id)` | Throws error | `DocumentDeletedError` with metadata |
-| `getBySlug(slug)` | Throws error | `DocumentDeletedError` with metadata |
-| `getMany([ids])` | Skipped in results | `[null]` for deleted docs |
-| `getHeader(id)` | Throws error | `DocumentDeletedError` with metadata |
-| `find({ ...filter })` | Excluded by default | Empty/partial results |
-| `find({ ...filter, includeDeleted: true })` | Included with flag | Full results |
+| Method                                      | Deleted Document Behavior | Return Value                         |
+| ------------------------------------------- | ------------------------- | ------------------------------------ |
+| `exists([id])`                              | Treated as non-existent   | `[false]`                            |
+| `get(id)`                                   | Throws error              | `DocumentDeletedError` with metadata |
+| `getBySlug(slug)`                           | Throws error              | `DocumentDeletedError` with metadata |
+| `getMany([ids])`                            | Skipped in results        | `[null]` for deleted docs            |
+| `getHeader(id)`                             | Throws error              | `DocumentDeletedError` with metadata |
+| `find({ ...filter })`                       | Excluded by default       | Empty/partial results                |
+| `find({ ...filter, includeDeleted: true })` | Included with flag        | Full results                         |
 
 ### Operation Ordering and Reshuffling
 
 **Key Principle**: By the time operations reach read models (IDocumentView), they have already been:
+
 - Verified by the job executor
 - Reshuffled based on timestamps (not indices)
 - Assigned final index and skip values
@@ -70,11 +71,11 @@ Example operation stream after write-side reshuffling:
 [
   { index: 0, skip: 0, type: "CREATE_DOCUMENT" },
   { index: 1, skip: 0, type: "UPDATE_FIELD" },
-  { index: 2, skip: 1, type: "UPDATE_FIELD" },   // Reshuffled earlier (skip=1)
-  { index: 3, skip: 0, type: "UPDATE_FIELD" },   // Reshuffled from later
+  { index: 2, skip: 1, type: "UPDATE_FIELD" }, // Reshuffled earlier (skip=1)
+  { index: 3, skip: 0, type: "UPDATE_FIELD" }, // Reshuffled from later
   { index: 4, skip: 0, type: "DELETE_DOCUMENT" }, // Deletion
   // Operations after this point would have been rejected at write time
-]
+];
 ```
 
 **Note**: Operations arrive at read models with final `index` and `skip` values already calculated. Read models don't recalculate these.
@@ -132,6 +133,7 @@ async indexOperations(items: OperationWithContext[]): Promise<void> {
 ```
 
 **Key Points**:
+
 - No deletion boundary checking (already done on write side)
 - No skipping of operations (invalid operations never reach read model)
 - Just apply operations to update document state
@@ -179,8 +181,8 @@ interface DocumentSnapshotTable {
   // ... existing fields
 
   // Soft delete fields derived from document state
-  isDeleted: boolean;                    // From document.state.document.isDeleted
-  deletedAtUtcIso: string | null;       // From document.state.document.deletedAtUtcIso
+  isDeleted: boolean; // From document.state.document.isDeleted
+  deletedAtUtcIso: string | null; // From document.state.document.deletedAtUtcIso
 }
 ```
 
@@ -188,8 +190,8 @@ The `isDeleted` and `deletedAtUtcIso` fields are **derived from the document's o
 
 ### Links
 
-* [Operations Index](mdc:index.md)
-* [Jobs Reshuffle](mdc:../Jobs/reshuffle.md)
-* [PHDocument](mdc:../PHDocument/index.md)
-* [IOperationStore](mdc:../Storage/IOperationStore.md)
-* [IDocumentView](mdc:../Storage/IDocumentView.md)
+- [Operations Index](mdc:index.md)
+- [Jobs Reshuffle](mdc:../Jobs/reshuffle.md)
+- [PHDocument](mdc:../PHDocument/index.md)
+- [IOperationStore](mdc:../Storage/IOperationStore.md)
+- [IDocumentView](mdc:../Storage/IDocumentView.md)

@@ -66,7 +66,7 @@ GqlChannel is configured via `ChannelConfig.parameters`:
   parameters: {
     // Required
     url: "https://remote-reactor.example.com/graphql",
-    
+
     // Optional
     authToken: "bearer-token",           // Auth token for remote
     pollIntervalMs: 5000,                // Polling interval (default: 5000)
@@ -117,18 +117,18 @@ GqlChannel uses cursor-based polling to efficiently sync only new operations:
 async poll() {
   const cursor = await cursorStorage.get(remoteName);
   const cursorOrdinal = cursor?.cursorOrdinal ?? 0;
-  
+
   const envelopes = await query(`
     pollSyncEnvelopes(
       channelId: "${channelId}",
       cursorOrdinal: ${cursorOrdinal}
     )
   `);
-  
+
   for (const envelope of envelopes) {
     inbox.add(envelopeToSyncOperation(envelope));
   }
-  
+
   scheduleNextPoll();
 }
 ```
@@ -164,11 +164,13 @@ retryDelayMs = min(maxDelay, baseDelay * 2^failureCount + jitter)
 ```
 
 **Default values:**
+
 - `baseDelay`: 1000ms
 - `maxDelay`: 300000ms (5 minutes)
 - `maxFailures`: 5
 
 **Behavior:**
+
 - Failures increment `failureCount`
 - Success resets `failureCount` to 0
 - After `maxFailures` consecutive failures, polling stops
@@ -199,6 +201,7 @@ Operations that fail permanently move to `deadLetter` mailbox:
 ### Authorization
 
 Server-side resolvers should:
+
 - Verify auth tokens
 - Check permissions for channel access
 - Validate channel ownership
@@ -219,16 +222,11 @@ See [GraphQL Schema Documentation](../GraphQL/index.md#synchronization-operation
 
 ```graphql
 type Query {
-  pollSyncEnvelopes(
-    channelId: String!
-    cursorOrdinal: Int!
-  ): [SyncEnvelope!]!
+  pollSyncEnvelopes(channelId: String!, cursorOrdinal: Int!): [SyncEnvelope!]!
 }
 
 type Mutation {
-  pushSyncEnvelope(
-    envelope: SyncEnvelopeInput!
-  ): Boolean!
+  pushSyncEnvelope(envelope: SyncEnvelopeInput!): Boolean!
 }
 ```
 
@@ -244,14 +242,14 @@ GqlChannel integrates seamlessly with `ISyncManager`:
 
 ## Comparison with InternalChannel
 
-| Feature | InternalChannel | GqlChannel |
-|---------|----------------|------------|
-| **Transport** | Direct function call | HTTP/GraphQL |
-| **Latency** | Microseconds | Milliseconds to seconds |
-| **Network** | In-process only | Across network |
-| **Use Case** | Testing, same process | Production, distributed |
-| **Reliability** | 100% | Network dependent |
-| **Security** | N/A | HTTPS + auth tokens |
+| Feature         | InternalChannel       | GqlChannel              |
+| --------------- | --------------------- | ----------------------- |
+| **Transport**   | Direct function call  | HTTP/GraphQL            |
+| **Latency**     | Microseconds          | Milliseconds to seconds |
+| **Network**     | In-process only       | Across network          |
+| **Use Case**    | Testing, same process | Production, distributed |
+| **Reliability** | 100%                  | Network dependent       |
+| **Security**    | N/A                   | HTTPS + auth tokens     |
 
 ## Future Enhancements
 
@@ -266,11 +264,13 @@ type Subscription {
 ```
 
 Benefits:
+
 - Near real-time sync
 - Lower bandwidth (no polling)
 - Better user experience
 
 Challenges:
+
 - Requires WebSocket support
 - More complex connection management
 - Firewall compatibility
@@ -287,6 +287,7 @@ parameters: {
 ```
 
 Benefits:
+
 - Reduced bandwidth
 - Faster transmission
 - Lower costs
@@ -297,11 +298,12 @@ Allow single GqlChannel to handle multiple remotes:
 
 ```typescript
 parameters: {
-  remoteNames: ["remote1", "remote2", "remote3"]
+  remoteNames: ["remote1", "remote2", "remote3"];
 }
 ```
 
 Benefits:
+
 - Fewer network connections
 - Better resource utilization
 - Simplified configuration
@@ -315,17 +317,17 @@ describe("GqlChannel", () => {
   it("should poll remote for operations", async () => {
     const mockFetch = vi.fn().mockResolvedValue(mockResponse);
     global.fetch = mockFetch;
-    
+
     const channel = new GqlChannel(/*...*/);
-    
+
     // Wait for poll
     await vi.advanceTimersByTime(5000);
-    
+
     expect(mockFetch).toHaveBeenCalledWith(
       "https://remote.example.com/graphql",
       expect.objectContaining({
-        method: "POST"
-      })
+        method: "POST",
+      }),
     );
   });
 });
@@ -339,12 +341,12 @@ Test two reactors syncing via GqlChannel:
 it("should sync operations between reactors", async () => {
   const reactor1 = await buildReactor1WithGqlChannel();
   const reactor2 = await buildReactor2WithGqlChannel();
-  
+
   const doc = await reactor1.create(/*...*/);
-  
+
   // Wait for sync
   await waitForOperationsReady(reactor2.eventBus);
-  
+
   const syncedDoc = await reactor2.get(doc.id);
   expect(syncedDoc).toEqual(doc);
 });
@@ -357,4 +359,3 @@ it("should sync operations between reactors", async () => {
 - [InternalChannel](../../src/sync/channels/internal-channel.ts)
 - [GqlChannel Implementation](../../src/sync/channels/gql-channel.ts)
 - [GqlChannelFactory Implementation](../../src/sync/channels/gql-channel-factory.ts)
-

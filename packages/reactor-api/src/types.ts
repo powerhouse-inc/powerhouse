@@ -1,15 +1,11 @@
 import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
 import type { GraphQLManager } from "@powerhousedao/reactor-api";
-import type {
-  IProcessorHostModule,
-  ProcessorRecord,
-} from "@powerhousedao/shared/processors";
 import type { PHDocumentHeader } from "@powerhousedao/shared/document-model";
 import type {
-  IProcessorHostModuleLegacy,
-  IRelationalDbLegacy,
-  ProcessorFactoryLegacy,
-} from "document-drive";
+  IProcessorHostModule,
+  IRelationalDb,
+  ProcessorRecord,
+} from "@powerhousedao/shared/processors";
 import type { IHttpAdapter } from "./graphql/gateway/types.js";
 import type { IPackageManager } from "./packages/types.js";
 export type {
@@ -25,20 +21,21 @@ export type API = {
 
 export type ReactorModule = {
   analyticsStore: IAnalyticsStore;
-  relationalDb: IRelationalDbLegacy;
+  relationalDb: IRelationalDb;
 };
 
-export type ProcessorFactoryBuilderLegacy = (
-  module: IProcessorHostModuleLegacy,
-) => ProcessorFactoryLegacy;
-
-export type ProcessorFactoryBuilder = (
-  module: IProcessorHostModule,
-) => (
+/** Per-drive factory after the host `module` has been applied once. */
+export type ProcessorDriveFactory = (
   driveHeader: PHDocumentHeader,
 ) => ProcessorRecord[] | Promise<ProcessorRecord[]>;
 
-export type Processor = (
-  | ProcessorFactoryBuilderLegacy
-  | ProcessorFactoryBuilder
-)[];
+/**
+ * Builds a per-drive factory from the host module (e.g. vetra `processorFactory`).
+ * Shape: `(module) => (driveHeader) => ...`
+ */
+export type ProcessorFactoryBuilder = (
+  module: IProcessorHostModule,
+) => ProcessorDriveFactory;
+
+/** Multiple initializers per package name (e.g. Switchboard `processors` option). */
+export type Processor = ProcessorFactoryBuilder[];

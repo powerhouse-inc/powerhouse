@@ -45,7 +45,7 @@
                   "template": ""
                 },
                 {
-                  "id": "empty-error-2", 
+                  "id": "empty-error-2",
                   "name": "EmptyValue",
                   "code": "",
                   "description": "Value cannot be empty",

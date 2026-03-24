@@ -4,9 +4,7 @@
     "outDir": "./dist",
     "emitDeclarationOnly": true
   },
-  "include": [
-    "**/*"
-  ],
+  "include": ["**/*"],
   "references": [
     {
       "path": "../../packages/codegen"

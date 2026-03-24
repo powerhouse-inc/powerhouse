@@ -3,7 +3,8 @@
 ```tsx
 const reactor: IReactor = getReactor();
 const signer: ISigner = getSigner();
-const subscriptionManager: IReactorSubscriptionManager = getSubscriptionManager();
+const subscriptionManager: IReactorSubscriptionManager =
+  getSubscriptionManager();
 
 const client: IReactorClient = new ReactorClientBuilder()
   .withReactor(reactor)
