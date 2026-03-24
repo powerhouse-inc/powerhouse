@@ -482,9 +482,6 @@ importers:
       '@sentry/react':
         specifier: ^10.17.0
         version: 10.40.0(react@19.2.4)
-      document-drive:
-        specifier: link:../../packages/document-drive
-        version: link:../../packages/document-drive
       document-model:
         specifier: link:../../packages/document-model
         version: link:../../packages/document-model

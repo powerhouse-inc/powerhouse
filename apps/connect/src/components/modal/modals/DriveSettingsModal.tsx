@@ -11,7 +11,7 @@ import {
   useSyncList,
 } from "@powerhousedao/reactor-browser";
 import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
-import type { SharingType } from "document-drive";
+import type { SharingType } from "@powerhousedao/shared/document-drive";
 import { useMemo } from "react";
 
 export function DriveSettingsModal() {

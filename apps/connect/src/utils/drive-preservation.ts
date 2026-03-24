@@ -1,5 +1,9 @@
 import { connectConfig } from "@powerhousedao/connect/config";
-import type { DocumentDriveServerOptions } from "document-drive";
+
+type RemoveOldRemoteDrivesOption =
+  | { strategy: "preserve-all" }
+  | { strategy: "preserve-by-id"; ids: string[] }
+  | { strategy: "preserve-by-url-and-detach"; urls: string[] };
 
 /**
  * Supported drive preservation strategies
@@ -38,9 +42,7 @@ export const getDrivePreservationStrategy = (): SupportedStrategy => {
  */
 export const createRemoveOldRemoteDrivesConfig = (
   defaultDrivesUrl: string[],
-): NonNullable<
-  DocumentDriveServerOptions["defaultDrives"]
->["removeOldRemoteDrives"] => {
+): RemoveOldRemoteDrivesOption => {
   if (defaultDrivesUrl.length === 0) {
     return { strategy: "preserve-all" };
   }

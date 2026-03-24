@@ -72,7 +72,6 @@
     "@powerhousedao/document-engineering": "catalog:",
     "@renown/sdk": "workspace:*",
     "@sentry/react": "^10.17.0",
-    "document-drive": "workspace:*",
     "document-model": "workspace:*",
     "graphql": "catalog:",
     "graphql-request": "catalog:",
