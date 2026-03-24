@@ -1,21 +1,23 @@
 import type {
-  AddListenerAction,
   AddListenerInput,
-  AddTriggerAction,
   AddTriggerInput,
-  RemoveListenerAction,
   RemoveListenerInput,
-  RemoveTriggerAction,
   RemoveTriggerInput,
-  SetAvailableOfflineAction,
   SetAvailableOfflineInput,
-  SetDriveIconAction,
   SetDriveIconInput,
-  SetDriveNameAction,
   SetDriveNameInput,
-  SetSharingTypeAction,
   SetSharingTypeInput,
-} from "document-drive";
+} from "../schema/types.js";
+import type {
+  AddListenerAction,
+  AddTriggerAction,
+  RemoveListenerAction,
+  RemoveTriggerAction,
+  SetAvailableOfflineAction,
+  SetDriveIconAction,
+  SetDriveNameAction,
+  SetSharingTypeAction,
+} from "./actions.js";
 import { createAction } from "document-model";
 import {
   AddListenerInputSchema,

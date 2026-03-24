@@ -1,21 +1,22 @@
 import type {
-  AddFileAction,
   AddFileInput,
-  AddFolderAction,
   AddFolderInput,
-  CopyNodeAction,
   CopyNodeInput,
-  DeleteNodeAction,
   DeleteNodeInput,
-  LegacyAddFileAction,
-  LegacyAddFileInput,
-  MoveNodeAction,
   MoveNodeInput,
-  UpdateFileAction,
   UpdateFileInput,
-  UpdateNodeAction,
   UpdateNodeInput,
-} from "document-drive";
+} from "../schema/types.js";
+import type { LegacyAddFileAction, LegacyAddFileInput } from "../types.js";
+import type {
+  AddFileAction,
+  AddFolderAction,
+  CopyNodeAction,
+  DeleteNodeAction,
+  MoveNodeAction,
+  UpdateFileAction,
+  UpdateNodeAction,
+} from "./actions.js";
 import { createAction } from "document-model";
 import {
   AddFileInputSchema,

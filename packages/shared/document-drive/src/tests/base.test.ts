@@ -1,12 +1,11 @@
 import {
-  addFolder,
-  deleteNode,
-  driveCreateDocument,
-  driveDocumentReducer,
   setAvailableOffline,
   setDriveName,
   setSharingType,
-} from "document-drive";
+} from "../../gen/drive/creators.js";
+import { addFolder, deleteNode } from "../../gen/node/creators.js";
+import { driveDocumentReducer } from "../../gen/reducer.js";
+import { driveCreateDocument } from "../../gen/utils.js";
 import { describe, expect, it } from "vitest";
 describe("DocumentDrive Class", () => {
   it("should rename drive", () => {

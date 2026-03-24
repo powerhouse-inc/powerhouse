@@ -42,7 +42,6 @@
     "@electric-sql/pglite": "catalog:",
     "@sindresorhus/fnv1a": "catalog:",
     "@powerhousedao/shared": "workspace:",
-    "document-drive": "workspace:*",
     "document-model": "workspace:*"
   },
   "devDependencies": {

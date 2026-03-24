@@ -11,10 +11,6 @@ import {
   deriveOperationId,
   generateId,
 } from "@powerhousedao/shared/document-model";
-import type {
-  IDocumentOperationStorage,
-  IDocumentStorage,
-} from "document-drive";
 import type { ILogger } from "document-model";
 import { documentModelDocumentModelModule } from "document-model";
 import { Kysely } from "kysely";
@@ -451,43 +447,6 @@ export function createMockJobExecutor(
     executeJob: vi.fn().mockResolvedValue({ success: true }),
     ...overrides,
   };
-}
-
-/**
- * Factory for creating mock IDocumentStorage
- */
-export function createMockDocumentStorage(
-  overrides: Partial<IDocumentStorage> = {},
-): IDocumentStorage {
-  return {
-    get: vi.fn().mockResolvedValue({
-      header: {
-        id: "doc-1",
-        documentType: "powerhouse/document-model",
-      },
-      operations: { global: [] },
-      state: {},
-    }),
-    set: vi.fn().mockResolvedValue(undefined),
-    delete: vi.fn().mockResolvedValue(undefined),
-    exists: vi.fn().mockResolvedValue(false),
-    getChildren: vi.fn().mockResolvedValue([]),
-    findByType: vi.fn().mockResolvedValue([]),
-    resolveIds: vi.fn().mockResolvedValue([]),
-    ...overrides,
-  } as unknown as IDocumentStorage;
-}
-
-/**
- * Factory for creating mock IDocumentOperationStorage
- */
-export function createMockOperationStorage(
-  overrides: Partial<IDocumentOperationStorage> = {},
-): IDocumentOperationStorage {
-  return {
-    addDocumentOperations: vi.fn().mockResolvedValue(undefined),
-    ...overrides,
-  } as unknown as IDocumentOperationStorage;
 }
 
 /**

@@ -5,15 +5,17 @@
 
 import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
 import {
-  driveCreateDocument,
-  driveDocumentReducer,
   setAvailableOffline,
-  SetAvailableOfflineInputSchema,
   setDriveName,
-  SetDriveNameInputSchema,
   setSharingType,
+} from "../../gen/drive/creators.js";
+import { driveDocumentReducer } from "../../gen/reducer.js";
+import {
+  SetAvailableOfflineInputSchema,
+  SetDriveNameInputSchema,
   SetSharingTypeInputSchema,
-} from "document-drive";
+} from "../../gen/schema/zod.js";
+import { driveCreateDocument } from "../../gen/utils.js";
 import { beforeEach, describe, expect, it } from "vitest";
 import { generateMock } from "./generate-mock.js";
 

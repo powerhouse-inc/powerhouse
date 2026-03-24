@@ -4,11 +4,8 @@
  * - delete the file and run the code generator again to have it reset
  */
 
-import type {
-  DocumentDriveDriveOperations,
-  Listener,
-  Trigger,
-} from "document-drive";
+import type { Listener, Trigger } from "../../gen/schema/types.js";
+import type { DocumentDriveDriveOperations } from "../../gen/drive/actions.js";
 
 export const driveReducer: DocumentDriveDriveOperations = {
   setDriveNameOperation(state, action, dispatch) {

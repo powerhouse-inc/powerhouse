@@ -31,7 +31,11 @@
       "Bash(npx vitest:*)",
       "WebFetch(domain:*)",
       "Bash(git fetch:*)",
-      "Bash(npx eslint:*)"
+      "Bash(npx eslint:*)",
+      "Bash(for file:*)",
+      "Bash(do echo:*)",
+      "Read(//Users/benjaminjordan/projects/powerhouse/powerhouse/**)",
+      "Bash(done)"
     ],
     "deny": [],
     "ask": []

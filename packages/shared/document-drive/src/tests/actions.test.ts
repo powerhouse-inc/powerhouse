@@ -1,10 +1,6 @@
-import {
-  addFolder,
-  copyNode,
-  driveCreateDocument,
-  driveDocumentReducer,
-  moveNode,
-} from "document-drive";
+import { addFolder, copyNode, moveNode } from "../../gen/node/creators.js";
+import { driveDocumentReducer } from "../../gen/reducer.js";
+import { driveCreateDocument } from "../../gen/utils.js";
 import { generateId } from "document-model";
 import { beforeEach, describe, expect, it } from "vitest";
 

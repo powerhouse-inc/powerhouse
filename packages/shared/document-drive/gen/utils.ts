@@ -1,8 +1,8 @@
 import type {
   DocumentDriveGlobalState,
   DocumentDriveLocalState,
-  DocumentDrivePHState,
-} from "document-drive";
+} from "./schema/types.js";
+import type { DocumentDrivePHState } from "./types.js";
 import type {
   AssertIsDocumentOfType,
   AssertIsStateOfType,

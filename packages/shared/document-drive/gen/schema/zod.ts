@@ -28,7 +28,7 @@ import type {
   TriggerInput,
   UpdateFileInput,
   UpdateNodeInput,
-} from "document-drive";
+} from "./types.js";
 import { z } from "zod";
 
 type Properties<T> = Required<{

@@ -1,7 +1,7 @@
 import type {
   DocumentDriveGlobalState,
   DocumentDriveLocalState,
-} from "document-drive";
+} from "./gen/schema/types.js";
 import type { DocumentModelModule, PHBaseState } from "document-model";
 
 export * from "./gen/types.js";

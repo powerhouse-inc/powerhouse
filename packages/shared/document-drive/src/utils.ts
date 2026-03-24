@@ -2,10 +2,12 @@ import type {
   CopyNodeInput,
   FileNode,
   FolderNode,
+  Node,
+} from "../gen/schema/types.js";
+import type {
   GenerateNodesCopyIdGenerator,
   GenerateNodesCopySrc,
-  Node,
-} from "document-drive";
+} from "./types.js";
 
 export function isFileNode(node: Node): node is FileNode {
   return node.kind === "file";

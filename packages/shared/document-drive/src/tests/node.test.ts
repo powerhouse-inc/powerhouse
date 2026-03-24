@@ -6,24 +6,26 @@
 import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
 import {
   addFile,
-  AddFileInputSchema,
   addFolder,
-  AddFolderInputSchema,
   copyNode,
-  CopyNodeInputSchema,
   deleteNode,
-  DeleteNodeInputSchema,
-  driveCreateDocument,
-  driveDocumentReducer,
-  FileNodeSchema,
   moveNode,
+  updateFile,
+  updateNode,
+} from "../../gen/node/creators.js";
+import { driveDocumentReducer } from "../../gen/reducer.js";
+import {
+  AddFileInputSchema,
+  AddFolderInputSchema,
+  CopyNodeInputSchema,
+  DeleteNodeInputSchema,
+  FileNodeSchema,
   MoveNodeInputSchema,
   NodeSchema,
-  updateFile,
   UpdateFileInputSchema,
-  updateNode,
   UpdateNodeInputSchema,
-} from "document-drive";
+} from "../../gen/schema/zod.js";
+import { driveCreateDocument } from "../../gen/utils.js";
 import { beforeEach, describe, expect, it } from "vitest";
 import { generateMock } from "./generate-mock.js";
 import { createDocumentWithNodes } from "./test-factories.js";
