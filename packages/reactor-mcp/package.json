@@ -42,7 +42,6 @@
     "@powerhousedao/reactor": "workspace:*",
     "ai": "5.0.0",
     "change-case": "catalog:",
-    "document-drive": "workspace:*",
     "document-model": "workspace:*",
     "express": "^4.21.1",
     "vite": "catalog:",

@@ -74,7 +74,6 @@
     "graphql-tag": "catalog:",
     "kysely": "catalog:",
     "zod": "catalog:",
-    "document-drive": "workspace:*",
     "@powerhousedao/codegen": "workspace:*",
     "react": "catalog:",
     "react-dom": "catalog:"

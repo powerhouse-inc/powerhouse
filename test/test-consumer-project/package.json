@@ -42,7 +42,6 @@
     "@powerhousedao/ph-cli": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",
     "@powerhousedao/reactor-local": "workspace:*",
-    "document-drive": "workspace:*",
     "react": "catalog:",
     "react-dom": "catalog:",
     "tailwindcss": "catalog:",

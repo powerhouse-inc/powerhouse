@@ -3,45 +3,21 @@
   "compilerOptions": {
     "emitDeclarationOnly": true,
     "outDir": "./dist",
-    "types": [
-      "node",
-      "vitest/globals"
-    ],
-    "lib": [
-      "ESNext",
-      "dom",
-      "dom.iterable"
-    ],
+    "types": ["node", "vitest/globals"],
+    "lib": ["ESNext", "dom", "dom.iterable"],
     "paths": {
-      "@powerhousedao/vetra/document-models": [
-        "./document-models/index.ts"
-      ],
+      "@powerhousedao/vetra/document-models": ["./document-models/index.ts"],
       "@powerhousedao/vetra/document-models/*": [
         "./document-models/*/index.ts"
       ],
-      "@powerhousedao/vetra/editors": [
-        "./editors/index.ts"
-      ],
-      "@powerhousedao/vetra/editors/*": [
-        "./editors/*/index.ts"
-      ],
-      "@powerhousedao/vetra/processors": [
-        "./processors/index.ts"
-      ],
-      "@powerhousedao/vetra/processors/*": [
-        "./processors/*/index.ts"
-      ]
+      "@powerhousedao/vetra/editors": ["./editors/index.ts"],
+      "@powerhousedao/vetra/editors/*": ["./editors/*/index.ts"],
+      "@powerhousedao/vetra/processors": ["./processors/index.ts"],
+      "@powerhousedao/vetra/processors/*": ["./processors/*/index.ts"]
     }
   },
-  "include": [
-    "**/*",
-    "./powerhouse.manifest.json"
-  ],
-  "exclude": [
-    "dist",
-    "node_modules",
-    ".ph"
-  ],
+  "include": ["**/*", "./powerhouse.manifest.json"],
+  "exclude": ["dist", "node_modules", ".ph"],
   "references": [
     {
       "path": "../builder-tools"
@@ -57,9 +33,6 @@
     },
     {
       "path": "../design-system"
-    },
-    {
-      "path": "../document-drive"
     },
     {
       "path": "../document-model"

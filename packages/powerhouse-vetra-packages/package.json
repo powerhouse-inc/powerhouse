@@ -78,7 +78,6 @@
     "clsx": "^2.1.1",
     "cm6-graphql": "^0.2.1",
     "document-model": "workspace:*",
-    "document-drive": "workspace:*",
     "graphql": "catalog:",
     "react-hook-form": "^7.56.1",
     "tailwind-merge": "catalog:",

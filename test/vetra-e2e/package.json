@@ -71,7 +71,6 @@
     "zod": "catalog:"
   },
   "devDependencies": {
-    "document-drive": "workspace:*",
     "@powerhousedao/builder-tools": "workspace:*",
     "@powerhousedao/codegen": "workspace:*",
     "@powerhousedao/ph-cli": "workspace:*",
