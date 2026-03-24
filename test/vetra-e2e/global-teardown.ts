@@ -137,6 +137,32 @@ async function globalTeardown() {
     removeDirectory(path.join(vetraE2ERoot, "downloads"));
     console.log("✅ Removed downloads directory");
 
+    // Clean up registry artifacts
+    removeDirectory(path.join(vetraE2ERoot, ".registry-storage"));
+    removeDirectory(path.join(vetraE2ERoot, ".registry-cdn-cache"));
+    console.log("✅ Removed registry storage directories");
+
+    // Remove build output
+    removeDirectory(path.join(vetraE2ERoot, "dist"));
+    console.log("✅ Removed dist directory");
+
+    // Remove .npmrc (created for registry auth during tests)
+    const npmrcPath = path.join(vetraE2ERoot, ".npmrc");
+    if (fs.existsSync(npmrcPath)) {
+      fs.rmSync(npmrcPath, { force: true });
+    }
+    console.log("✅ Removed .npmrc");
+
+    // Clean up consumer project build artifacts (the project itself stays)
+    const consumerProjectPath = path.join(
+      vetraE2ERoot,
+      "..",
+      "test-consumer-project",
+    );
+    removeDirectory(path.join(consumerProjectPath, ".ph"));
+    removeDirectory(path.join(consumerProjectPath, "dist"));
+    console.log("✅ Cleaned consumer project build artifacts");
+
     // Reset manifest to empty state
     const manifestPath = path.join(vetraE2ERoot, "powerhouse.manifest.json");
     resetManifest(manifestPath);

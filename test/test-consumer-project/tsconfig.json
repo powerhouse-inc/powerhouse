@@ -1,0 +1,68 @@
+{
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": ".",
+    "module": "nodenext",
+    "target": "esnext",
+    "types": [
+      "node"
+    ],
+    "lib": [
+      "ESNext",
+      "dom",
+      "dom.iterable"
+    ],
+    "declaration": true,
+    "declarationMap": true,
+    "strict": true,
+    "jsx": "react-jsx",
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "skipLibCheck": true
+  },
+  "include": [
+    "**/*",
+    "./powerhouse.manifest.json"
+  ],
+  "exclude": [
+    "dist",
+    "node_modules",
+    ".ph"
+  ],
+  "references": [
+    {
+      "path": "../../apps/connect"
+    },
+    {
+      "path": "../../clis/ph-cli"
+    },
+    {
+      "path": "../../packages/builder-tools"
+    },
+    {
+      "path": "../../packages/common"
+    },
+    {
+      "path": "../../packages/config"
+    },
+    {
+      "path": "../../packages/design-system"
+    },
+    {
+      "path": "../../packages/document-drive"
+    },
+    {
+      "path": "../../packages/document-model"
+    },
+    {
+      "path": "../../packages/reactor-browser"
+    },
+    {
+      "path": "../../packages/reactor-local"
+    },
+    {
+      "path": "../../packages/shared"
+    }
+  ]
+}

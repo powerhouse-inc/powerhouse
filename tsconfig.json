@@ -113,6 +113,9 @@
       "path": "test/test-connect"
     },
     {
+      "path": "test/test-consumer-project"
+    },
+    {
       "path": "test/versioned-documents"
     },
     {

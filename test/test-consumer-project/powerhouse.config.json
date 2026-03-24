@@ -1,0 +1,15 @@
+{
+  "documentModelsDir": "./document-models",
+  "editorsDir": "./editors",
+  "processorsDir": "./processors",
+  "subgraphsDir": "./subgraphs",
+  "studio": {
+    "port": 5556
+  },
+  "reactor": {
+    "port": 5557,
+    "storage": "memory"
+  },
+  "packages": [],
+  "packageRegistryUrl": "http://localhost:8080"
+}

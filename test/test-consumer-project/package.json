@@ -1,0 +1,61 @@
+{
+  "name": "test-consumer-project",
+  "version": "1.0.0",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "files": [
+    "/dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./document-models": {
+      "types": "./dist/document-models/index.d.ts",
+      "import": "./dist/document-models/index.js"
+    },
+    "./editors": {
+      "types": "./dist/editors/index.d.ts",
+      "import": "./dist/editors/index.js"
+    },
+    "./manifest": "./dist/powerhouse.manifest.json",
+    "./style.css": "./dist/style.css"
+  },
+  "scripts": {
+    "build": "ph-cli build",
+    "connect:build": "ph-cli connect build",
+    "connect:preview": "ph-cli connect preview"
+  },
+  "dependencies": {
+    "document-model": "workspace:*",
+    "@powerhousedao/common": "workspace:*",
+    "@powerhousedao/design-system": "workspace:*",
+    "@powerhousedao/shared": "workspace:*",
+    "@powerhousedao/builder-tools": "workspace:*",
+    "@electric-sql/pglite": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@powerhousedao/connect": "workspace:*",
+    "@powerhousedao/config": "workspace:*",
+    "@powerhousedao/ph-cli": "workspace:*",
+    "@powerhousedao/reactor-browser": "workspace:*",
+    "@powerhousedao/reactor-local": "workspace:*",
+    "document-drive": "workspace:*",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "tailwindcss": "catalog:",
+    "@tailwindcss/cli": "catalog:",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "vite": "catalog:",
+    "@vitejs/plugin-react": "catalog:",
+    "vite-plugin-node-polyfills": "catalog:",
+    "vite-plugin-html": "catalog:",
+    "vite-plugin-svgr": "catalog:",
+    "typescript": "^5.9.3"
+  },
+  "description": ""
+}
