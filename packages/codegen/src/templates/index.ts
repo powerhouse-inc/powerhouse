@@ -78,3 +78,4 @@ export * from "./processors/relational-db/factory.js";
 export * from "./processors/relational-db/index.js";
 export * from "./processors/relational-db/migrations.js";
 export * from "./processors/relational-db/schema.js";
+export * from "./subgraphs/index.js";

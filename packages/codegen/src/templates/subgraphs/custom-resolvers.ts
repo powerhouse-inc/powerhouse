@@ -1,7 +1,10 @@
----
-to: "<%= rootDir %>/<%= h.changeCase.param(subgraph) %>/resolvers.ts"
-unless_exists: true
----
+import { ts } from "@tmpl/core";
+
+export const customSubgraphResolversTemplate = (v: {
+  pascalCaseName: string;
+  camelCaseName: string;
+}) =>
+  ts`
 import { type ISubgraph } from "@powerhousedao/reactor-api";
 
 export const getResolvers = (subgraph: ISubgraph): Record<string, unknown> => {
@@ -9,12 +12,13 @@ export const getResolvers = (subgraph: ISubgraph): Record<string, unknown> => {
 
   return ({
     Query: {
-      <%= h.changeCase.camel(subgraph) %>: () => ({}), // namespace resolver for nested queries
+      ${v.camelCaseName}: () => ({}), // namespace resolver for nested queries
     },
-    <%= h.changeCase.pascal(subgraph) %>Queries: {
+    ${v.pascalCaseName}Queries: {
       example: async (parent: unknown, args: { driveId: string }) => {
         return "example";
       },
     },
   });
 };
+`.raw;

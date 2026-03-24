@@ -1227,9 +1227,6 @@ importers:
       '@types/react-dom':
         specifier: 'catalog:'
         version: 19.2.3(@types/react@19.2.14)
-      document-drive:
-        specifier: link:../document-drive
-        version: link:../document-drive
       react:
         specifier: 'catalog:'
         version: 19.2.4

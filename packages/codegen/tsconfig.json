@@ -2,12 +2,24 @@
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
     "outDir": "./dist",
-    "lib": ["ESNext", "dom", "dom.iterable"],
+    "lib": [
+      "ESNext",
+      "dom",
+      "dom.iterable"
+    ],
     "jsx": "preserve"
   },
-  "types": ["vitest/globals"],
-  "include": ["**/*"],
-  "exclude": ["dist", "node_modules", "src/codegen/__tests__/data"],
+  "types": [
+    "vitest/globals"
+  ],
+  "include": [
+    "**/*"
+  ],
+  "exclude": [
+    "dist",
+    "node_modules",
+    "src/codegen/__tests__/data"
+  ],
   "references": [
     {
       "path": "../analytics-engine/core"
@@ -20,9 +32,6 @@
     },
     {
       "path": "../design-system"
-    },
-    {
-      "path": "../document-drive"
     },
     {
       "path": "../document-model"

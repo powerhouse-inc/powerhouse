@@ -9,3 +9,4 @@ export * from "./ts-morph-project.js";
 export * from "./unsafe-utils.js";
 export * from "./validation.js";
 export * from "./mock.js";
+export * from "./graphql-type-prefixes.js";

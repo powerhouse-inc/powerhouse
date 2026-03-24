@@ -5,6 +5,7 @@ export * from "./drive-editor.js";
 export * from "./editor-common.js";
 export * from "./index-files.js";
 export * from "./module-files.js";
+export * from "./subgraph.js";
 export * from "./subgraphs.js";
 export type * from "./types.js";
 export * from "./clis/generate-cli-docs.js";

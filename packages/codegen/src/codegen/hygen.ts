@@ -1,14 +1,12 @@
 import { makeEditorsModulesFile } from "@powerhousedao/codegen/file-builders";
 import { buildTsMorphProject } from "@powerhousedao/codegen/utils";
-import type { PowerhouseConfig } from "@powerhousedao/config";
 import { pascalCase } from "change-case";
 import type { DocumentModelGlobalState } from "@powerhousedao/shared/document-model";
 import { Logger, runner } from "hygen";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { readPackage } from "read-pkg";
-import type { CodegenOptions, DocumentTypesMap } from "./types.js";
+import type { DocumentTypesMap } from "./types.js";
 
 const require = createRequire(import.meta.url);
 
@@ -206,90 +204,6 @@ export async function hygenGenerateProcessor(
       outDir,
       "--document-types",
       documentTypes.join(","),
-    ],
-    { skipFormat, verbose },
-  );
-}
-
-export async function hygenGenerateSubgraph(
-  name: string,
-  documentModel: DocumentModelGlobalState | null,
-  config?: PowerhouseConfig & CodegenOptions,
-) {
-  const dir = config?.subgraphsDir || "";
-  const packageName = await readPackage().then((pkg) => pkg.name);
-  const skipFormat = config?.skipFormat || false;
-  const verbose = config?.verbose || false;
-  const params = [
-    "powerhouse",
-    `generate-subgraph`,
-    "--name",
-    name,
-    "--pascalName",
-    pascalCase(name),
-    "--root-dir",
-    dir,
-    "--package-name",
-    packageName,
-  ];
-
-  if (documentModel) {
-    params.push("--loadFromFile", "1");
-  }
-
-  // Generate the singular files for the document model logic
-  await run(params, { skipFormat, verbose });
-
-  if (documentModel) {
-    // Generate the GraphQL mutation schemas
-    await run(
-      [
-        "powerhouse",
-        "generate-document-model-subgraph",
-        "--subgraph",
-        name,
-        "--document-model",
-        JSON.stringify(documentModel),
-        "--root-dir",
-        dir,
-        "--package-name",
-        packageName,
-      ],
-      { skipFormat, verbose },
-    );
-  } else {
-    await run(
-      [
-        "powerhouse",
-        "generate-custom-subgraph",
-        "--subgraph",
-        name,
-        "--root-dir",
-        dir,
-        "--package-name",
-        packageName,
-      ],
-      { skipFormat, verbose },
-    );
-  }
-}
-
-export async function hygenGenerateImportScript(
-  name: string,
-  dir: string,
-  { skipFormat = false, verbose = true } = {},
-) {
-  // Generate the singular files for the document model logic
-  await run(
-    [
-      "powerhouse",
-      `generate-import-script`,
-      "--name",
-      name,
-      "--pascalName",
-      pascalCase(name),
-      "--root-dir",
-      dir,
     ],
     { skipFormat, verbose },
   );

@@ -4,6 +4,7 @@ import {
   tsMorphGenerateDocumentEditor,
   tsMorphGenerateDocumentModel,
   tsMorphGenerateDriveEditor,
+  tsMorphGenerateSubgraph,
 } from "@powerhousedao/codegen/file-builders";
 import { buildTsMorphProject } from "@powerhousedao/codegen/utils";
 import type {
@@ -27,9 +28,7 @@ import {
   hygenGenerateDocumentModel,
   hygenGenerateDriveEditor,
   hygenGenerateEditor,
-  hygenGenerateImportScript,
   hygenGenerateProcessor,
-  hygenGenerateSubgraph,
 } from "./hygen.js";
 import type { CodegenOptions } from "./types.js";
 import { getDocumentTypesMap, loadDocumentModel } from "./utils.js";
@@ -400,9 +399,15 @@ export async function generateSubgraphFromDocumentModel(
   name: string,
   documentModel: DocumentModelGlobalState,
   config: PowerhouseConfig,
-  options: CodegenOptions = {},
+  _options: CodegenOptions = {},
 ) {
-  await hygenGenerateSubgraph(name, documentModel, { ...config, ...options });
+  const packageName = await readPackage().then((pkg) => pkg.name);
+  await tsMorphGenerateSubgraph({
+    subgraphsDir: config.subgraphsDir,
+    subgraphName: name,
+    packageName,
+    documentModel,
+  });
   await makeSubgraphsIndexFile({
     projectDir: path.dirname(config.subgraphsDir),
   });
@@ -412,14 +417,17 @@ export async function generateSubgraph(
   name: string,
   file: string | null,
   config: PowerhouseConfig,
-  options: CodegenOptions = {},
+  _options: CodegenOptions = {},
 ) {
   const documentModelState =
     file !== null ? await loadDocumentModel(file) : null;
+  const packageName = await readPackage().then((pkg) => pkg.name);
 
-  await hygenGenerateSubgraph(name, documentModelState, {
-    ...config,
-    ...options,
+  await tsMorphGenerateSubgraph({
+    subgraphsDir: config.subgraphsDir,
+    subgraphName: name,
+    packageName,
+    documentModel: documentModelState,
   });
   await makeSubgraphsIndexFile({
     projectDir: path.dirname(config.subgraphsDir),
@@ -462,12 +470,12 @@ export async function generateProcessor(args: {
 }
 
 export async function generateImportScript(
-  name: string,
-  config: PowerhouseConfig,
+  _name: string,
+  _config: PowerhouseConfig,
 ) {
-  return hygenGenerateImportScript(name, config.importScriptsDir, {
-    skipFormat: config.skipFormat,
-  });
+  throw new Error(
+    "Import script generation has been removed. The document-drive server APIs it depended on have been deprecated.",
+  );
 }
 
 const defaultManifest: PowerhouseManifest = {
