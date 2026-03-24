@@ -1,4 +1,10 @@
-import type { SyncStatus } from "document-drive";
+type SyncStatus =
+  | "INITIAL_SYNC"
+  | "SYNCING"
+  | "SUCCESS"
+  | "CONFLICT"
+  | "MISSING"
+  | "ERROR";
 
 export type FileStatus = { path: string; status?: SyncStatus };
 

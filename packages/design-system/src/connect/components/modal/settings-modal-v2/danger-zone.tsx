@@ -1,7 +1,24 @@
 import { cn, Icon } from "@powerhousedao/design-system";
-import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
+import type {
+  DocumentDriveDocument,
+  SharingType,
+} from "@powerhousedao/shared/document-drive";
 import { capitalCase } from "change-case";
-import { getDriveSharingType } from "document-drive";
+
+function getDriveSharingType(drive: DocumentDriveDocument): SharingType {
+  if (typeof drive !== "object") return "LOCAL";
+  const isReadDrive = "readContext" in drive;
+  const { sharingType: _sharingType } = !isReadDrive
+    ? drive.state.local
+    : { sharingType: "PUBLIC" };
+  const __sharingType = _sharingType?.toUpperCase();
+  const validTypes: string[] = ["LOCAL", "CLOUD", "PUBLIC"];
+  return !__sharingType ||
+    __sharingType === "PRIVATE" ||
+    !validTypes.includes(__sharingType)
+    ? "LOCAL"
+    : (__sharingType as SharingType);
+}
 import { useState } from "react";
 import { ConnectDropdownMenu } from "../../dropdown-menu/dropdown-menu.js";
 

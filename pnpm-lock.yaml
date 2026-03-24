@@ -1393,9 +1393,6 @@ importers:
       diff:
         specifier: ^7.0.0
         version: 7.0.0
-      document-drive:
-        specifier: link:../document-drive
-        version: link:../document-drive
       document-model:
         specifier: link:../document-model
         version: link:../document-model

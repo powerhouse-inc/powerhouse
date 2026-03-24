@@ -1,6 +1,6 @@
 import type { DivProps } from "@powerhousedao/design-system";
 import { Icon, Modal } from "@powerhousedao/design-system";
-import type { SharingType } from "document-drive";
+import type { SharingType } from "@powerhousedao/shared/document-drive";
 import type { ComponentPropsWithoutRef } from "react";
 import { twMerge } from "tailwind-merge";
 import { Divider } from "../divider/divider.js";
