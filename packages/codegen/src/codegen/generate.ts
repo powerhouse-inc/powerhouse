@@ -171,6 +171,94 @@ export async function generateDocumentModel(args: GenerateDocumentModelArgs) {
     useVersioning,
     migrateLegacy,
   });
+  ensurePackageExportsWildcards();
+  ensureTsconfigPaths(packageName);
+}
+
+const requiredWildcardExports: Record<string, Record<string, string>> = {
+  "./document-models/*": {
+    types: "./dist/document-models/*/index.d.ts",
+    import: "./dist/document-models/*/index.js",
+  },
+  "./editors/*": {
+    types: "./dist/editors/*/index.d.ts",
+    import: "./dist/editors/*/index.js",
+  },
+};
+
+/**
+ * Ensures that the project's package.json exports field contains the
+ * wildcard subpath patterns required for deep imports like
+ * "package-name/document-models/my-doc" to resolve correctly.
+ */
+function ensurePackageExportsWildcards(projectRoot?: string) {
+  const rootDir = projectRoot || process.cwd();
+  const packageJsonPath = join(rootDir, "package.json");
+
+  if (!fs.existsSync(packageJsonPath)) return;
+
+  const raw = fs.readFileSync(packageJsonPath, "utf-8");
+  const packageJson = JSON.parse(raw) as Record<string, unknown>;
+  const exports = packageJson.exports as Record<string, unknown> | undefined;
+
+  if (!exports) return;
+
+  let modified = false;
+  for (const [key, value] of Object.entries(requiredWildcardExports)) {
+    if (!exports[key]) {
+      exports[key] = value;
+      modified = true;
+    }
+  }
+
+  if (modified) {
+    fs.writeFileSync(
+      packageJsonPath,
+      JSON.stringify(packageJson, null, 2) + "\n",
+    );
+  }
+}
+
+/**
+ * Ensures that the project's tsconfig.json has paths mappings for
+ * self-referencing imports, which are needed by vite-tsconfig-paths
+ * to resolve imports like "package-name/document-models/my-doc"
+ * to source files during dev mode.
+ */
+function ensureTsconfigPaths(packageName: string, projectRoot?: string) {
+  const rootDir = projectRoot || process.cwd();
+  const tsconfigPath = join(rootDir, "tsconfig.json");
+
+  if (!fs.existsSync(tsconfigPath)) return;
+
+  const raw = fs.readFileSync(tsconfigPath, "utf-8");
+  const tsconfig = JSON.parse(raw) as Record<string, unknown>;
+  const compilerOptions = (tsconfig.compilerOptions ?? {}) as Record<
+    string,
+    unknown
+  >;
+  const paths = (compilerOptions.paths ?? {}) as Record<string, string[]>;
+
+  const requiredPaths: Record<string, string[]> = {
+    [`${packageName}/document-models`]: ["./document-models/index.ts"],
+    [`${packageName}/document-models/*`]: ["./document-models/*/index.ts"],
+    [`${packageName}/editors`]: ["./editors/index.ts"],
+    [`${packageName}/editors/*`]: ["./editors/*/index.ts"],
+  };
+
+  let modified = false;
+  for (const [key, value] of Object.entries(requiredPaths)) {
+    if (!paths[key]) {
+      paths[key] = value;
+      modified = true;
+    }
+  }
+
+  if (modified) {
+    compilerOptions.paths = paths;
+    tsconfig.compilerOptions = compilerOptions;
+    fs.writeFileSync(tsconfigPath, JSON.stringify(tsconfig, null, 2) + "\n");
+  }
 }
 
 function findZodDependencyInPackageJson(
@@ -236,6 +324,8 @@ export async function generateEditor(args: GenerateEditorArgs) {
     editorName,
     editorId,
   });
+  ensurePackageExportsWildcards();
+  ensureTsconfigPaths(packageName);
 }
 
 export async function generateDriveEditor(options: {
