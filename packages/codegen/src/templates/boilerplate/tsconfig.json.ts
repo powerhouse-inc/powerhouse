@@ -7,6 +7,33 @@ export const tsConfigTemplate = json`
     // File Layout
     "outDir": "./dist",
     "rootDir": ".",
+    // paths for easy access to project modules
+    "paths": {
+      "document-models": [
+        "./document-models/index.ts"
+      ],
+      "document-models/*": [
+        "./document-models/*/index.ts"
+      ],
+      "editors": [
+        "./editors/index.ts"
+      ],
+      "editors/*": [
+        "./editors/*/index.ts"
+      ],
+      "processors": [
+        "./processors/index.ts"
+      ],
+      "processors/*": [
+        "./processors/*/index.ts"
+      ],
+      "subgraphs": [
+        "./subgraphs/index.ts"
+      ],
+      "subgraphs/*": [
+        "./subgraphs/*/index.ts"
+      ]
+    },
     // Environment Settings
     // See also https://aka.ms/tsconfig/module
     "module": "nodenext",
@@ -40,6 +67,6 @@ export const tsConfigTemplate = json`
     "skipLibCheck": true
   },
   "include": ["**/*", "./powerhouse.manifest.json"],
-  "exclude": ["dist", "node_modules", ".ph", "vitest.config.ts"]
+  "exclude": ["dist", "node_modules", ".ph"]
 }
 `.raw;

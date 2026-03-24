@@ -55,23 +55,15 @@ export const HOME_DIR = homedir();
 export const POWERHOUSE_GLOBAL_DIR = join(HOME_DIR, PH_GLOBAL_DIR_NAME);
 
 export const VERSIONED_DEPENDENCIES = [
-  "@powerhousedao/common",
-  "@powerhousedao/design-system",
-  "@powerhousedao/vetra",
-  "@powerhousedao/builder-tools",
   "document-model",
+  "@powerhousedao/design-system",
+  "@powerhousedao/reactor-browser",
+  "@powerhousedao/connect",
 ];
 
 export const VERSIONED_DEV_DEPENDENCIES = [
-  "@powerhousedao/config",
   "@powerhousedao/ph-cli",
-  "@powerhousedao/reactor-api",
-  "@powerhousedao/reactor-browser",
-  "@powerhousedao/reactor-local",
-  "@powerhousedao/switchboard",
-  "@powerhousedao/connect",
   "@powerhousedao/analytics-engine-core",
-  "document-drive",
 ];
 
 const DEFAULT_DOCUMENT_MODELS_DIR = "./document-models";
