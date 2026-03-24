@@ -30,11 +30,7 @@ export default defineConfig({
         "**/tsdown.config.ts",
       ],
     },
-    poolOptions: {
-      forks: {
-        maxForks: 6,
-      },
-    },
+    maxWorkers: 6,
   },
   plugins: [tsconfigPaths()],
 });

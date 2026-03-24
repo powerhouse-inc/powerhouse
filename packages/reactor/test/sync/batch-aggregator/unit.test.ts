@@ -1,3 +1,4 @@
+import type { Mock } from "vitest";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type {
   JobFailedEvent,
@@ -11,7 +12,7 @@ import {
 
 describe("BatchAggregator", () => {
   let logger: ILogger;
-  let onBatchReady: ReturnType<typeof vi.fn>;
+  let onBatchReady: Mock;
   let aggregator: BatchAggregator;
 
   const makeWriteReadyEvent = (

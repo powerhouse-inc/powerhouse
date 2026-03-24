@@ -6,9 +6,9 @@ import { codegenProcessorFactory } from "../factory.js";
 
 // Mock CodegenProcessor to avoid file operations
 vi.mock("../index.js", () => ({
-  CodegenProcessor: vi.fn(() => ({
-    onStrands: vi.fn(),
-  })),
+  CodegenProcessor: vi.fn(function () {
+    return { onStrands: vi.fn() };
+  }),
 }));
 
 describe("Codegen Processor Factory - Drive Filtering", () => {

@@ -46,13 +46,21 @@ export async function startRegistry(
     console.error(`[registry:err] ${data.toString().trim()}`);
   });
 
-  // Wait for the registry to be ready by polling the port
+  // Wait for the registry to be ready by polling a registry-specific endpoint
   const maxWaitMs = 30_000;
   const startTime = Date.now();
   while (Date.now() - startTime < maxWaitMs) {
+    // Check if the child process has exited (e.g. port conflict)
+    if (child.exitCode !== null) {
+      throw new Error(
+        `Registry process exited with code ${child.exitCode}. ` +
+          `Port ${REGISTRY_PORT} may already be in use.`,
+      );
+    }
     try {
-      const res = await fetch(REGISTRY_URL);
-      if (res.ok || res.status < 500) {
+      // Use /-/ping which is a Verdaccio-specific endpoint
+      const res = await fetch(`${REGISTRY_URL}/-/ping`);
+      if (res.ok) {
         console.log("Registry is ready on port", REGISTRY_PORT);
         return child;
       }
