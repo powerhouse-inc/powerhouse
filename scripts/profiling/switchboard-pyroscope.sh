@@ -173,8 +173,8 @@ echo "=========================================="
 echo
 
 # Build all required packages
-TOTAL_STEPS=6
-[ -n "$OTEL_ENDPOINT" ] && TOTAL_STEPS=7
+TOTAL_STEPS=7
+[ -n "$OTEL_ENDPOINT" ] && TOTAL_STEPS=8
 STEP=0
 
 echo "Building packages..."
@@ -211,6 +211,16 @@ if [ -n "$DATABASE_URL" ]; then
   fi
 else
   echo "  (skipped — no --postgres provided)"
+fi
+
+STEP=$((STEP + 1)); echo "  [${STEP}/${TOTAL_STEPS}] @powerhousedao/vetra"
+if ! pnpm --filter @powerhousedao/vetra run tsc --build; then
+  echo "Error: vetra tsc build failed — aborting"
+  exit 1
+fi
+if ! pnpm --filter @powerhousedao/vetra run build:bundle; then
+  echo "Error: vetra bundle build failed — aborting"
+  exit 1
 fi
 
 STEP=$((STEP + 1)); echo "  [${STEP}/${TOTAL_STEPS}] @powerhousedao/switchboard"
