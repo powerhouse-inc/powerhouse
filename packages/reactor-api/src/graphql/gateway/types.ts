@@ -113,6 +113,24 @@ export interface IHttpAdapter {
    */
   mountRawMiddleware(middleware: unknown): void;
 
+  /**
+   * Register a method-specific route handler using Node.js core HTTP types.
+   * Use this when a Fetch API FetchHandler is not possible (e.g. streaming
+   * protocols that require direct access to IncomingMessage/ServerResponse).
+   *
+   * The req/res objects are `http.IncomingMessage`/`http.ServerResponse`
+   * (Express Request/Response are compatible subtypes).
+   */
+  mountNodeRoute(
+    method: "DELETE" | "GET" | "POST",
+    path: string,
+    handler: (
+      req: http.IncomingMessage,
+      res: http.ServerResponse,
+      body?: unknown,
+    ) => void,
+  ): void;
+
   /** The raw framework handle (e.g. Express app). Cast as needed at call sites. */
   readonly handle: unknown;
 }

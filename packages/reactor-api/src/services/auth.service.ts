@@ -7,12 +7,6 @@ type VerifiedCredential =
   Awaited<ReturnType<typeof verifyAuthBearerToken>> extends false | infer T
     ? T
     : never;
-import type {
-  NextFunction,
-  Request as ExpressRequest,
-  Response as ExpressResponse,
-} from "express";
-
 export interface AuthConfig {
   enabled: boolean;
   admins: string[];
@@ -32,90 +26,11 @@ export interface AuthContext {
   auth_enabled: boolean;
 }
 
-export interface AuthenticatedRequest extends ExpressRequest {
-  user?: User;
-  admins: string[];
-  auth_enabled?: boolean;
-}
-
 export class AuthService {
   private readonly config: AuthConfig;
 
   constructor(config: AuthConfig) {
     this.config = config;
-  }
-
-  /**
-   * Middleware function to authenticate requests
-   * @deprecated Use {@link authenticateRequest} with the Fetch API instead.
-   */
-  async authenticate(
-    req: AuthenticatedRequest,
-    res: ExpressResponse,
-    next: NextFunction,
-  ): Promise<void> {
-    if (
-      !this.config.enabled ||
-      req.method === "OPTIONS" ||
-      req.method === "GET"
-    ) {
-      next();
-      return;
-    }
-
-    // Set auth lists on request
-    req.admins = this.config.admins;
-    req.auth_enabled = this.config.enabled;
-    const token = req.headers.authorization?.split(" ")[1];
-    if (!token) {
-      // Allow through without user — resolver layer enforces permissions
-      // This is critical: GraphQL queries are POST requests, so blocking
-      // unauthenticated POSTs would block all anonymous reads.
-      next();
-      return;
-    }
-
-    try {
-      const verified = await this.verifyToken(token);
-
-      if (!verified) {
-        res.status(401).json({ error: "Verification failed" });
-        return;
-      }
-
-      const user = this.extractUserFromVerification(verified);
-      if (!user) {
-        res.status(401).json({ error: "Missing credentials" });
-        return;
-      }
-
-      // Verify that the credentials still exist on the Renown API
-      // This can be skipped via config (useful for testing or when Renown API is unavailable)
-      if (!this.config.skipCredentialVerification) {
-        const credentialExists = await this.verifyCredentialExists(
-          user.address,
-          user.chainId,
-          verified.issuer,
-        );
-        if (!credentialExists) {
-          res.status(401).json({ error: "Credentials no longer valid" });
-          return;
-        }
-      }
-
-      req.user = user;
-
-      // Note: We no longer block users here based on global allowed lists.
-      // The resolver layer handles authorization based on:
-      // 1. Global roles (admin/user/guest) for unrestricted access
-      // 2. Document-level permissions (direct or via groups) for specific documents
-      // This allows users who have document-specific permissions (e.g., via groups)
-      // to access those documents even if they're not in the global allowed lists.
-
-      next();
-    } catch {
-      res.status(401).json({ error: "Authentication failed" });
-    }
   }
 
   async authenticateRequest(
