@@ -11,6 +11,7 @@ const outDir = path.join(testOutputDir, parentOutDirName);
 
 describe("generate boilerplate", () => {
   test("should generate correct boilerplate", async () => {
+    const originalDir = process.cwd();
     const name = "test-boilerplate-project";
     await rm(outDir, { recursive: true, force: true });
     await mkdir(outDir, { recursive: true });
@@ -20,6 +21,7 @@ describe("generate boilerplate", () => {
       packageManager: "bun",
       tag: "dev",
     });
+    process.chdir(originalDir);
     const generatedProjectDir = path.join(outDir, name);
     await $`bun run --cwd ${generatedProjectDir} tsc --noEmit`;
   });

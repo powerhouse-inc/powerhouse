@@ -17,7 +17,7 @@
   "scripts": {
     "regenerate-test-projects": "tsx ./regenerate-test-projects.ts",
     "test:bun": "bun test --timeout 1000000",
-    "test": "pnpm test:bun generate-boilerplate.test.ts"
+    "test": "pnpm test:bun ./tests/*.test.ts"
   },
   "dependencies": {
     "graphql-codegen-typescript-validation-schema": "catalog:",
@@ -29,6 +29,9 @@
     "find-up": "^8.0.0",
     "zod": "catalog:",
     "@powerhousedao/codegen": "workspace:*",
+    "@powerhousedao/shared": "workspace:*",
+    "@powerhousedao/config": "workspace:*",
+    "@powerhousedao/common": "workspace:*",
     "@powerhousedao/connect": "workspace:*",
     "document-model": "workspace:*",
     "@powerhousedao/analytics-engine-core": "workspace:*",

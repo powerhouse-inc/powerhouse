@@ -12,7 +12,12 @@
   "include": [
     "**/*"
   ],
-  "exclude": ["dist", "node_modules", "data", "test-output"],
+  "exclude": [
+    "dist",
+    "node_modules",
+    "data",
+    "test-output"
+  ],
   // add monorepo package paths here
   // whenever you add "workspace:*" to this package's package.json, also add the path here
   "references": [
@@ -26,6 +31,12 @@
       "path": "../../packages/codegen"
     },
     {
+      "path": "../../packages/common"
+    },
+    {
+      "path": "../../packages/config"
+    },
+    {
       "path": "../../packages/design-system"
     },
     {
@@ -36,6 +47,9 @@
     },
     {
       "path": "../../packages/reactor-browser"
+    },
+    {
+      "path": "../../packages/shared"
     }
   ]
 }

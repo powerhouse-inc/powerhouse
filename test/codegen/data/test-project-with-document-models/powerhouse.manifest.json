@@ -1,0 +1,14 @@
+{
+  "name": "test-project",
+  "description": "",
+  "category": "",
+  "publisher": {
+    "name": "",
+    "url": ""
+  },
+  "documentModels": [],
+  "editors": [],
+  "apps": [],
+  "subgraphs": [],
+  "importScripts": []
+}

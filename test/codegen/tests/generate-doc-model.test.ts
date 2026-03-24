@@ -1,52 +1,11 @@
-import {
-  generateDocumentModel,
-  loadDocumentModel,
-} from "@powerhousedao/codegen";
 import { $ } from "bun";
 import { describe, expect, test } from "bun:test";
-import { cp, readdir, rm } from "node:fs/promises";
+import { cp, rm } from "node:fs/promises";
 import path from "path";
 import { Project, ts } from "ts-morph";
-const testOutputDir = "test-output";
-const testsDataDir = "data";
-
-function getDocumentModelJsonFilePath(basePath: string, dirName: string) {
-  return path.join(basePath, dirName, `${dirName}.json`);
-}
-
-async function loadDocumentModelsInDir(
-  documentModelsInDir: string,
-  testOutDir: string,
-  useVersioning = true,
-) {
-  const documentModelsOutDir = path.join(testOutDir, "document-models");
-  const documentModelDirs = (
-    await readdir(documentModelsInDir, {
-      withFileTypes: true,
-    })
-  )
-    .filter((value) => value.isDirectory())
-    .map((value) => value.name);
-
-  const documentModelStates = await Promise.all(
-    documentModelDirs.map(
-      async (dirName) =>
-        await loadDocumentModel(
-          getDocumentModelJsonFilePath(documentModelsInDir, dirName),
-        ),
-    ),
-  );
-
-  for (const documentModelState of documentModelStates) {
-    await generateDocumentModel({
-      documentModelState,
-      dir: documentModelsOutDir,
-      useTsMorph: true,
-      useVersioning,
-      specifiedPackageName: "test-project",
-    });
-  }
-}
+import { loadDocumentModelsInDir } from "../utils.js";
+const testOutputDir = path.join(process.cwd(), "test-output");
+const testsDataDir = path.join(process.cwd(), "data");
 
 async function runDocumentModelTests(args: {
   testsDataDir: string;
@@ -148,7 +107,7 @@ describe("generate doc model", () => {
   const parentOutDirName = "generate-doc-model";
   const testOutputParentDir = path.join(testOutputDir, parentOutDirName);
   const useVersioning = false;
-  test.only("generate document models", async () => {
+  test("generate document models", async () => {
     const outDir = await runDocumentModelTests({
       inDirName: "test-project",
       specDirName: "document-models",
@@ -160,7 +119,7 @@ describe("generate doc model", () => {
   });
   test("generate document models in existing project", async () => {
     const outDir = await runDocumentModelTests({
-      inDirName: "document-models-test-project-with-existing-document-models",
+      inDirName: "test-project-with-document-models",
       specDirName: "document-models",
       testOutputParentDir,
       testsDataDir,
@@ -176,7 +135,7 @@ describe("versioned document models", () => {
   describe("v1", () => {
     test("should generate new document models as v1", async () => {
       await runDocumentModelTests({
-        inDirName: "empty-project",
+        inDirName: "test-project",
         specDirName: "spec-version-1",
         testOutputParentDir,
         testsDataDir,
@@ -184,7 +143,7 @@ describe("versioned document models", () => {
     });
     test("should persist existing reducers, tests, utils, and custom files when generating for the same spec version", async () => {
       await runDocumentModelTests({
-        inDirName: "project-with-existing-document-models-at-spec-1",
+        inDirName: "with-document-models-at-spec-1",
         specDirName: "spec-version-1-with-more-operations",
         testOutputParentDir,
         testsDataDir,
@@ -194,7 +153,7 @@ describe("versioned document models", () => {
   describe("v2", () => {
     test("should handle generating document models as v2", async () => {
       const testOutDir = await runDocumentModelTests({
-        inDirName: "empty-project",
+        inDirName: "test-project",
         specDirName: "spec-version-2",
         testOutputParentDir,
         testsDataDir,
@@ -223,7 +182,7 @@ describe("versioned document models", () => {
     });
     test("should persist existing reducers, tests, utils, and custom files when generating a new spec version", async () => {
       await runDocumentModelTests({
-        inDirName: "project-with-existing-document-models-at-spec-1",
+        inDirName: "with-document-models-at-spec-1",
         specDirName: "spec-version-2",
         testOutputParentDir,
         testsDataDir,
@@ -246,7 +205,7 @@ describe("versioned document models", () => {
   describe("v3", () => {
     test("should handle generating document models as v3", async () => {
       await runDocumentModelTests({
-        inDirName: "empty-project",
+        inDirName: "test-project",
         specDirName: "spec-version-3",
         testOutputParentDir,
         testsDataDir,
@@ -255,7 +214,7 @@ describe("versioned document models", () => {
 
     test("should persist existing reducers, tests, utils, and custom files when generating a new spec version", async () => {
       await runDocumentModelTests({
-        inDirName: "project-with-existing-document-models-at-spec-2",
+        inDirName: "with-document-models-at-spec-2",
         specDirName: "spec-version-3",
         testOutputParentDir,
         testsDataDir,
@@ -266,7 +225,7 @@ describe("versioned document models", () => {
       expect(
         async () =>
           await runDocumentModelTests({
-            inDirName: "project-with-existing-document-models-at-spec-2",
+            inDirName: "with-document-models-at-spec-2",
             specDirName: "spec-version-3-with-state-changes",
             testOutputParentDir,
             testsDataDir,
