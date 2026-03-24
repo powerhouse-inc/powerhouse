@@ -1,3 +1,25 @@
+## 6.0.0-dev.109 (2026-03-24)
+
+### 🚀 Features
+
+- **vetra-e2e:** add editor creation, registry publish, and consumer install e2e tests ([a215a7d7e](https://github.com/powerhouse-inc/powerhouse/commit/a215a7d7e))
+
+### 🩹 Fixes
+
+- updating graphql-manager tests ([f79860625](https://github.com/powerhouse-inc/powerhouse/commit/f79860625))
+- **reactor-api:** move ILogger import from document-drive to document-model ([50b9e0130](https://github.com/powerhouse-inc/powerhouse/commit/50b9e0130))
+- **reactor-api:** restore GraphQLSchema import and SSE handler mount post-rebase ([e800547ef](https://github.com/powerhouse-inc/powerhouse/commit/e800547ef))
+- **reactor-api:** replace inline import() type annotations with top-level import type ([7f26efab7](https://github.com/powerhouse-inc/powerhouse/commit/7f26efab7))
+- **reactor-api:** address code review findings ([4790bdf6f](https://github.com/powerhouse-inc/powerhouse/commit/4790bdf6f))
+- **reactor-api:** fix OOM and routing bugs in gateway/http adapters ([b11f2d8fb](https://github.com/powerhouse-inc/powerhouse/commit/b11f2d8fb))
+- lockfile ([292187fae](https://github.com/powerhouse-inc/powerhouse/commit/292187fae))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Guillermo Puente @gpuente
+- Samuel Hawksby-Robinson @Samyoul
+
 ## 6.0.0-dev.108 (2026-03-24)
 
 ### 🚀 Features

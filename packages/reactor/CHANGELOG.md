@@ -1,3 +1,20 @@
+## 6.0.0-dev.109 (2026-03-24)
+
+### 🚀 Features
+
+- **vetra-e2e:** add editor creation, registry publish, and consumer install e2e tests ([a215a7d7e](https://github.com/powerhouse-inc/powerhouse/commit/a215a7d7e))
+
+### 🩹 Fixes
+
+- lockfile ([292187fae](https://github.com/powerhouse-inc/powerhouse/commit/292187fae))
+- **reactor:** return cursor when single scope is requested on getOperations ([b7c6a6c33](https://github.com/powerhouse-inc/powerhouse/commit/b7c6a6c33))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan
+- Guillermo Puente @gpuente
+
 ## 6.0.0-dev.108 (2026-03-24)
 
 ### 🚀 Features

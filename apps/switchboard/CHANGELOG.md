@@ -1,3 +1,22 @@
+## 6.0.0-dev.109 (2026-03-24)
+
+### 🚀 Features
+
+- **vetra-e2e:** add editor creation, registry publish, and consumer install e2e tests ([a215a7d7e](https://github.com/powerhouse-inc/powerhouse/commit/a215a7d7e))
+
+### 🩹 Fixes
+
+- **switchboard:** use DATABASE_URL for read model storage instead of PGlite ([fabdf4e96](https://github.com/powerhouse-inc/powerhouse/commit/fabdf4e96))
+- **switchboard:** cast api.app.handle to Express for Vite middleware mount ([87197a864](https://github.com/powerhouse-inc/powerhouse/commit/87197a864))
+- lockfile ([292187fae](https://github.com/powerhouse-inc/powerhouse/commit/292187fae))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Frank
+- Guillermo Puente @gpuente
+- Samuel Hawksby-Robinson @Samyoul
+
 ## 6.0.0-dev.108 (2026-03-24)
 
 ### 🚀 Features

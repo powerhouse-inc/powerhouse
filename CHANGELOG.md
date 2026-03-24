@@ -1,3 +1,36 @@
+## 6.0.0-dev.109 (2026-03-24)
+
+### 🚀 Features
+
+- **reactor-browser:** use single batch query when pulling operations on remote controller ([2a6e89831](https://github.com/powerhouse-inc/powerhouse/commit/2a6e89831))
+- **vetra-e2e:** add editor creation, registry publish, and consumer install e2e tests ([a215a7d7e](https://github.com/powerhouse-inc/powerhouse/commit/a215a7d7e))
+
+### 🩹 Fixes
+
+- lockfile ([292187fae](https://github.com/powerhouse-inc/powerhouse/commit/292187fae))
+- updating graphql-manager tests ([f79860625](https://github.com/powerhouse-inc/powerhouse/commit/f79860625))
+- **profiling:** update docs-create.ts for namespaced DocumentModel mutations ([d5476da28](https://github.com/powerhouse-inc/powerhouse/commit/d5476da28))
+- **profiling:** rebuild document-drive bundle after switchboard tsc ([678e9bf4a](https://github.com/powerhouse-inc/powerhouse/commit/678e9bf4a))
+- **profiling:** add vetra build step to switchboard-pyroscope.sh ([654e30d02](https://github.com/powerhouse-inc/powerhouse/commit/654e30d02))
+- **reactor:** return cursor when single scope is requested on getOperations ([b7c6a6c33](https://github.com/powerhouse-inc/powerhouse/commit/b7c6a6c33))
+- **reactor-api:** fix OOM and routing bugs in gateway/http adapters ([b11f2d8fb](https://github.com/powerhouse-inc/powerhouse/commit/b11f2d8fb))
+- **reactor-api:** address code review findings ([4790bdf6f](https://github.com/powerhouse-inc/powerhouse/commit/4790bdf6f))
+- **reactor-api:** replace inline import() type annotations with top-level import type ([7f26efab7](https://github.com/powerhouse-inc/powerhouse/commit/7f26efab7))
+- **reactor-api:** restore GraphQLSchema import and SSE handler mount post-rebase ([e800547ef](https://github.com/powerhouse-inc/powerhouse/commit/e800547ef))
+- **reactor-api:** move ILogger import from document-drive to document-model ([50b9e0130](https://github.com/powerhouse-inc/powerhouse/commit/50b9e0130))
+- **reactor-api:** remove custom.d.ts and utils/auth.ts that were incorrectly re-added ([1dbbab89f](https://github.com/powerhouse-inc/powerhouse/commit/1dbbab89f))
+- **reactor-local:** cast api.app.handle for Vite middleware mount ([9e9a016f4](https://github.com/powerhouse-inc/powerhouse/commit/9e9a016f4))
+- **switchboard:** cast api.app.handle to Express for Vite middleware mount ([87197a864](https://github.com/powerhouse-inc/powerhouse/commit/87197a864))
+- **switchboard:** use DATABASE_URL for read model storage instead of PGlite ([fabdf4e96](https://github.com/powerhouse-inc/powerhouse/commit/fabdf4e96))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan
+- Frank
+- Guillermo Puente @gpuente
+- Samuel Hawksby-Robinson @Samyoul
+
 ## 6.0.0-dev.108 (2026-03-24)
 
 ### 🚀 Features
