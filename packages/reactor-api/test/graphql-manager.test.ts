@@ -10,39 +10,26 @@
  */
 
 import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
-import type { IReactorClient, ISyncManager } from "@powerhousedao/reactor";
-import type * as DocumentDrive from "document-drive";
-import type { IRelationalDbLegacy } from "document-drive";
+import type {
+  IReactorClient,
+  IRelationalDb,
+  ISyncManager,
+} from "@powerhousedao/reactor";
+import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
-import type { DocumentModelModule } from "document-model";
 import type http from "node:http";
-import type { WebSocketServer } from "ws";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { GraphQLManager } from "../src/graphql/graphql-manager.js";
-import {
-  createAuthFetchMiddleware,
-  getAuthContext,
-} from "../src/graphql/gateway/auth-middleware.js";
+import type { WebSocketServer } from "ws";
+import { createAuthFetchMiddleware } from "../src/graphql/gateway/auth-middleware.js";
 import type {
   FetchHandler,
   IGatewayAdapter,
   IHttpAdapter,
   WsDisposer,
 } from "../src/graphql/gateway/types.js";
-import type { AuthContext, AuthService } from "../src/services/auth.service.js";
+import { GraphQLManager } from "../src/graphql/graphql-manager.js";
 import type { Context } from "../src/graphql/types.js";
-
-// Partially mock document-drive so responseForDrive is controllable while
-// keeping debounce and other utilities working normally.
-vi.mock("document-drive", async (importOriginal) => {
-  const real = await importOriginal<typeof DocumentDrive>();
-  return {
-    ...real,
-    responseForDrive: vi.fn((_doc: unknown, endpoint: string) => ({
-      graphqlEndpoint: endpoint,
-    })),
-  };
-});
+import type { AuthContext, AuthService } from "../src/services/auth.service.js";
 
 // ── shared fixtures ──────────────────────────────────────────────────────────
 
@@ -77,7 +64,10 @@ function makeMockReactorClient(
     getDocumentModelModules: vi
       .fn()
       .mockResolvedValue({ results: [makeDriveModule()] }),
-    get: vi.fn().mockResolvedValue({ header: { id: "drive-1" }, state: {} }),
+    get: vi.fn().mockResolvedValue({
+      header: { id: "drive-1", slug: "my-drive", meta: {} },
+      state: { global: { name: "Test Drive", icon: null } },
+    }),
     ...overrides,
   } as unknown as IReactorClient;
 }
@@ -141,7 +131,7 @@ function makeHarness(options: HarnessOptions = {}) {
     httpServer,
     wsServer,
     reactorClient,
-    {} as IRelationalDbLegacy,
+    {} as IRelationalDb,
     {} as IAnalyticsStore,
     {} as ISyncManager,
     silentLogger,
@@ -623,7 +613,7 @@ describe("GraphQLManager", () => {
         name: "my-subgraph",
         typeDefs: (await import("graphql-tag")).gql`type Query { hi: String }`,
         resolvers: {},
-        relationalDb: {} as IRelationalDbLegacy,
+        relationalDb: {} as IRelationalDb,
         reactorClient: {} as IReactorClient,
       };
 
@@ -646,7 +636,7 @@ describe("GraphQLManager", () => {
         name: "unique-sub",
         typeDefs: (await import("graphql-tag")).gql`type Query { hi: String }`,
         resolvers: {},
-        relationalDb: {} as IRelationalDbLegacy,
+        relationalDb: {} as IRelationalDb,
         reactorClient: {} as IReactorClient,
         onSetup,
       };
@@ -668,7 +658,7 @@ describe("GraphQLManager", () => {
         name: "cached-sub",
         typeDefs: (await import("graphql-tag")).gql`type Query { hi: String }`,
         resolvers: {},
-        relationalDb: {} as IRelationalDbLegacy,
+        relationalDb: {} as IRelationalDb,
         reactorClient: {} as IReactorClient,
       };
 
