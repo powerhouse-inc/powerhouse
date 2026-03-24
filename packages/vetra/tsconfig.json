@@ -20,9 +20,6 @@
   "exclude": ["dist", "node_modules", ".ph"],
   "references": [
     {
-      "path": "../../apps/connect"
-    },
-    {
       "path": "../builder-tools"
     },
     {

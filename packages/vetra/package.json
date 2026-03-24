@@ -76,8 +76,7 @@
     "zod": "catalog:",
     "@powerhousedao/codegen": "workspace:*",
     "react": "catalog:",
-    "react-dom": "catalog:",
-    "@powerhousedao/connect": "workspace:*"
+    "react-dom": "catalog:"
   },
   "devDependencies": {
     "@tailwindcss/cli": "catalog:",

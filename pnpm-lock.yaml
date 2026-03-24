@@ -287,6 +287,9 @@ importers:
 
   .:
     dependencies:
+      '@powerhousedao/connect':
+        specifier: workspace:*
+        version: link:apps/connect
       fast-glob:
         specifier: ^3.3.3
         version: 3.3.3
@@ -2343,9 +2346,6 @@ importers:
       '@powerhousedao/config':
         specifier: workspace:*
         version: link:../config
-      '@powerhousedao/connect':
-        specifier: workspace:*
-        version: link:../../apps/connect
       '@powerhousedao/design-system':
         specifier: workspace:*
         version: link:../design-system
