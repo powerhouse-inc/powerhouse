@@ -2343,6 +2343,9 @@ importers:
       '@powerhousedao/config':
         specifier: workspace:*
         version: link:../config
+      '@powerhousedao/connect':
+        specifier: workspace:*
+        version: link:../../apps/connect
       '@powerhousedao/design-system':
         specifier: workspace:*
         version: link:../design-system
