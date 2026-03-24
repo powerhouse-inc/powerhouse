@@ -31,8 +31,7 @@
       "Bash(npx vitest:*)",
       "WebFetch(domain:*)",
       "Bash(git fetch:*)",
-      "Bash(git rebase:*)",
-      "Bash(git stash:*)"
+      "Bash(npx eslint:*)"
     ],
     "deny": [],
     "ask": []

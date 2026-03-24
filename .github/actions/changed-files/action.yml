@@ -1,5 +1,5 @@
 name: Changed files (for vitest related)
-description: Outputs a space-separated list of changed files for PR/push/workflow_dispatch. For PR synchronize, uses the last push range.
+description: Outputs a space-separated list of changed files for PR/push/workflow_dispatch. For PRs, diffs the entire PR against the base branch.
 
 outputs:
   files:
@@ -20,18 +20,7 @@ runs:
         BASE=""
         HEAD=""
 
-        if [[ "$EVENT_NAME" == "pull_request" && "$PR_ACTION" == "synchronize" ]]; then
-          BASE="$(jq -r '.before // empty' "$GITHUB_EVENT_PATH")"
-          HEAD="$(jq -r '.after  // empty' "$GITHUB_EVENT_PATH")"
-
-          # Fall back to PR base/head if SHAs are missing or no longer exist
-          # (e.g. after a force-push/rebase, the old commits are unreachable)
-          if [[ -z "$BASE" || -z "$HEAD" ]] || ! git cat-file -e "$BASE" 2>/dev/null || ! git cat-file -e "$HEAD" 2>/dev/null; then
-            BASE="${{ github.event.pull_request.base.sha }}"
-            HEAD="${{ github.event.pull_request.head.sha }}"
-          fi
-
-        elif [[ "$EVENT_NAME" == "pull_request" ]]; then
+        if [[ "$EVENT_NAME" == "pull_request" ]]; then
           BASE="${{ github.event.pull_request.base.sha }}"
           HEAD="${{ github.event.pull_request.head.sha }}"
 
