@@ -2,15 +2,16 @@
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
     "outDir": "./dist",
-    "lib": ["ESNext"]
+    "lib": [
+      "ESNext"
+    ]
   },
-  "include": ["**/*"],
+  "include": [
+    "**/*"
+  ],
   "references": [
     {
       "path": "../../packages/config"
-    },
-    {
-      "path": "../../packages/document-drive"
     },
     {
       "path": "../../packages/document-model"

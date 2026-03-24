@@ -1,7 +1,7 @@
 import type { MeterProvider } from "@opentelemetry/api";
 import type { IReactorClient } from "@powerhousedao/reactor";
 import type { IRenown } from "@renown/sdk";
-import type { DriveInput, IDocumentDriveServer } from "document-drive";
+import type { DriveInput } from "@powerhousedao/shared/document-drive";
 import type { ILogger } from "document-model";
 
 export type StorageOptions = {

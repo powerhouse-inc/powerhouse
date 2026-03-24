@@ -627,9 +627,6 @@ importers:
       '@sentry/node':
         specifier: ^9.6.1
         version: 9.47.1
-      document-drive:
-        specifier: link:../../packages/document-drive
-        version: link:../../packages/document-drive
       document-model:
         specifier: link:../../packages/document-model
         version: link:../../packages/document-model
