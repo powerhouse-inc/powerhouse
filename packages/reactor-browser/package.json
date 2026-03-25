@@ -65,7 +65,7 @@
     "@vitest/browser": "catalog:",
     "@vitest/browser-playwright": "catalog:",
     "fast-deep-equal": "catalog:",
-    "playwright": "^1.51.1",
+    "playwright": "catalog:",
     "tsdown": "catalog:",
     "vite": "catalog:",
     "vitest": "catalog:",

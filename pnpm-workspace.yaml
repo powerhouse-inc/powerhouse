@@ -108,6 +108,8 @@ catalog:
   "events": 3.3.0
   "util": 0.12.5
   "@vitest/browser-playwright": 4.1.1
+  "@vitest/coverage-v8": 4.1.1
+  "@preact/preset-vite": 2.10.5
   "tsdown": 0.21.0
 
 allowBuilds:

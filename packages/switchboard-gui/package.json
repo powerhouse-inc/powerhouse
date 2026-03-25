@@ -27,7 +27,7 @@
     "zustand": "5.0.0-rc.2"
   },
   "devDependencies": {
-    "@preact/preset-vite": "^2.10.5",
+    "@preact/preset-vite": "catalog:",
     "@tailwindcss/vite": "catalog:",
     "vite": "catalog:"
   }

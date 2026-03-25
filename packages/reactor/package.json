@@ -45,7 +45,7 @@
     "document-model": "workspace:*"
   },
   "devDependencies": {
-    "@vitest/coverage-v8": "^4.1.1",
+    "@vitest/coverage-v8": "catalog:",
     "prettier": "catalog:",
     "tinybench": "^2.9.0",
     "tsx": "catalog:",
