@@ -236,9 +236,8 @@ async function initServer(
 
   if (process.env.SENTRY_DSN) {
     // Register Sentry error handler after all routes are established.
-    // api.app.handle is the underlying Express app — Sentry requires access to it
+    // api.app.handle is the underlying Express app — Sentry requires it
     // to attach its error-capturing middleware.
-    // api.app is ExpressHttpAdapter; handle is the underlying Express app.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     Sentry.setupExpressErrorHandler(api.app.handle as any);
   }
