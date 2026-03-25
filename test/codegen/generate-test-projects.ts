@@ -99,7 +99,6 @@ export async function generateTestProjects() {
     editorId: "existing-document-editor",
     editorName: "ExistingDocumentEditor",
     documentTypes: ["powerhouse/test-doc"],
-    useTsMorph: true,
     skipFormat: false,
     specifiedPackageName: undefined,
     editorDirName: undefined,
@@ -110,7 +109,6 @@ export async function generateTestProjects() {
     allowedDocumentTypes: ["powerhouse/test-doc"],
     specifiedPackageName: undefined,
     driveEditorDirName: undefined,
-    useTsMorph: true,
     isDragAndDropEnabled: true,
     skipFormat: false,
   });

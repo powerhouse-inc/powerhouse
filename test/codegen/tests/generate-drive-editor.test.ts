@@ -34,7 +34,6 @@ describe("generateDriveEditor", () => {
     allowedDocumentTypes,
     specifiedPackageName: undefined,
     driveEditorDirName: undefined,
-    useTsMorph: true,
     isDragAndDropEnabled: true,
     skipFormat: false,
   };

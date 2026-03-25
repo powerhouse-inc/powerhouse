@@ -10,5 +10,4 @@ export default defineConfig({
   ],
   outDir: "dist",
   platform: "node",
-  copy: [{ from: "src/codegen/.hygen", to: "dist/codegen/.hygen" }],
 });

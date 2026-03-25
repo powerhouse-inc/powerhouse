@@ -31,7 +31,6 @@ describe("generateEditor", () => {
     editorName,
     editorId,
     documentTypes,
-    useTsMorph: true,
     skipFormat: false,
     specifiedPackageName: undefined,
     editorDirName: undefined,
