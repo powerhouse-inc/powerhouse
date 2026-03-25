@@ -1,3 +1,13 @@
+## 6.0.0-dev.110 (2026-03-25)
+
+### 🩹 Fixes
+
+- **codegen:** whoops, dangling reference to a removed package ([2a662d764](https://github.com/powerhouse-inc/powerhouse/commit/2a662d764))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
 ## 6.0.0-dev.109 (2026-03-24)
 
 ### 🚀 Features
