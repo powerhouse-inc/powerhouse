@@ -131,6 +131,14 @@ export interface IHttpAdapter {
     ) => void,
   ): void;
 
+  /**
+   * Register framework-specific Sentry error-capturing middleware after all routes
+   * are mounted. Each adapter calls the Sentry setup function appropriate for its
+   * framework (e.g. setupExpressErrorHandler, setupFastifyErrorHandler).
+   * No-op if Sentry is not relevant for the adapter.
+   */
+  setupSentryErrorHandler(sentry: object): void;
+
   /** The raw framework handle (e.g. Express app). Cast as needed at call sites. */
   readonly handle: unknown;
 }
