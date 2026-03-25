@@ -51,7 +51,19 @@ function makeDriveModule(): DocumentModelModule {
       global: {
         name: "DocumentDrive",
         id: "powerhouse/document-drive",
-        specifications: [{ version: 1, modules: [] }],
+        specifications: [
+          {
+            version: 1,
+            modules: [],
+            // Provide a minimal state schema so buildSubgraphSchemaModule can
+            // generate the DocumentDrive_DocumentDriveState type that is
+            // referenced by the DocumentDrive type definition.
+            state: {
+              global: { schema: "type DocumentDriveState { name: String }" },
+              local: { schema: "" },
+            },
+          },
+        ],
       },
     },
   } as unknown as DocumentModelModule;
@@ -520,6 +532,108 @@ describe("GraphQLManager", () => {
       expect(ctx.user).toEqual(expectedUser);
       // The auth-derived isAdmin should win too
       expect(ctx.isAdmin("0xadmin")).toBe(true);
+    });
+  });
+
+  // ── SSE handler ────────────────────────────────────────────────────────────
+
+  /**
+   * Register a minimal subscription-enabled subgraph on the manager.
+   * Required because #setupSupergraphSSE only mounts the SSE handler when
+   * at least one subgraph declares hasSubscriptions = true.
+   */
+  async function registerSubscriptionSubgraph(manager: GraphQLManager) {
+    const { gql } = await import("graphql-tag");
+    await manager.registerSubgraphInstance(
+      {
+        name: "test-subscription-sub",
+        hasSubscriptions: true,
+        typeDefs: gql`
+          type Query {
+            _placeholder: Boolean
+          }
+          type Subscription {
+            ping: String
+          }
+        `,
+        resolvers: {
+          Subscription: {
+            ping: {
+              subscribe: async function* () {
+                yield { ping: "pong" };
+              },
+              resolve: (v: unknown) => (v as { ping: string }).ping,
+            },
+          },
+        },
+        relationalDb: {} as IRelationalDb,
+        reactorClient: {} as IReactorClient,
+      },
+      "graphql",
+    );
+  }
+
+  describe("SSE handler", () => {
+    it("mounts the SSE handler at {basePath}/graphql/stream", async () => {
+      const { manager, httpAdapter } = makeHarness({ path: "/" });
+      await registerSubscriptionSubgraph(manager);
+      await initAndFlush(manager);
+
+      expect(httpAdapter.mount).toHaveBeenCalledWith(
+        "/graphql/stream",
+        expect.any(Function),
+        { exact: true },
+      );
+    });
+
+    it("respects a non-root base path for the SSE mount", async () => {
+      const { manager, httpAdapter } = makeHarness({ path: "/api/v1" });
+      await registerSubscriptionSubgraph(manager);
+      await initAndFlush(manager);
+
+      expect(httpAdapter.mount).toHaveBeenCalledWith(
+        "/api/v1/graphql/stream",
+        expect.any(Function),
+        { exact: true },
+      );
+    });
+
+    it("wraps the SSE handler through auth middleware", async () => {
+      const { manager, mounts } = makeHarness();
+      await registerSubscriptionSubgraph(manager);
+
+      const intercepted: globalThis.Request[] = [];
+      const authMiddleware =
+        (next: FetchHandler): FetchHandler =>
+        async (req: Request) => {
+          intercepted.push(req);
+          return next(req);
+        };
+
+      const initPromise = manager.init([], authMiddleware);
+      await vi.runAllTimersAsync();
+      await initPromise;
+
+      const handler = mounts.get("/graphql/stream");
+      expect(handler).toBeDefined();
+      const req = new Request("http://localhost/graphql/stream");
+      await handler!(req);
+
+      expect(intercepted).toContain(req);
+    });
+
+    it("does not wrap the SSE handler when no authMiddleware is provided", async () => {
+      const { manager, mounts } = makeHarness();
+      await registerSubscriptionSubgraph(manager);
+      await initAndFlush(manager);
+
+      const handler = mounts.get("/graphql/stream");
+      expect(handler).toBeDefined();
+      // Handler should be callable and return a response without wrapping
+      const res = await handler!(
+        new Request("http://localhost/graphql/stream"),
+      );
+      expect(res).toBeInstanceOf(Response);
     });
   });
 
