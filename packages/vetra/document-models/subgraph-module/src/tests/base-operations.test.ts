@@ -5,17 +5,17 @@
 
 import { generateMock } from "@powerhousedao/shared/document-model";
 import type {
-    SetSubgraphNameInput,
-    SubgraphModuleDocument,
+  SetSubgraphNameInput,
+  SubgraphModuleDocument,
 } from "@powerhousedao/vetra/document-models/subgraph-module";
 import {
-    isSubgraphModuleDocument,
-    reducer,
-    setSubgraphName,
-    SetSubgraphNameInputSchema,
-    setSubgraphStatus,
-    SetSubgraphStatusInputSchema,
-    utils,
+  isSubgraphModuleDocument,
+  reducer,
+  setSubgraphName,
+  SetSubgraphNameInputSchema,
+  setSubgraphStatus,
+  SetSubgraphStatusInputSchema,
+  utils,
 } from "@powerhousedao/vetra/document-models/subgraph-module";
 import { beforeEach, describe, expect, it } from "vitest";
 

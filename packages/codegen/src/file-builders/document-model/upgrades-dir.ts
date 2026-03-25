@@ -1,14 +1,11 @@
 import path from "path";
-import {
-    upgradeManifestTemplate,
-    upgradeTransitionTemplate,
-} from "templates";
+import { upgradeManifestTemplate, upgradeTransitionTemplate } from "templates";
 import { VariableDeclarationKind, type Project } from "ts-morph";
 import {
-    formatSourceFileWithPrettier,
-    getObjectLiteral,
-    getOrCreateSourceFile,
-    getVariableDeclarationByTypeName,
+  formatSourceFileWithPrettier,
+  getObjectLiteral,
+  getOrCreateSourceFile,
+  getVariableDeclarationByTypeName,
 } from "utils";
 
 type MakeUpgradeFileArgs = {

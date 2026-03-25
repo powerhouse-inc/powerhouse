@@ -1,7 +1,7 @@
 import {
-    makeVersionedDependencies,
-    VERSIONED_DEPENDENCIES,
-    VERSIONED_DEV_DEPENDENCIES,
+  makeVersionedDependencies,
+  VERSIONED_DEPENDENCIES,
+  VERSIONED_DEV_DEPENDENCIES,
 } from "@powerhousedao/shared/clis";
 import { packageJsonTemplate } from "templates";
 

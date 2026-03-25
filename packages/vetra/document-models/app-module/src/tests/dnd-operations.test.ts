@@ -5,14 +5,14 @@
 
 import { generateMock } from "@powerhousedao/shared/document-model";
 import type {
-    AppModuleDocument,
-    SetDragAndDropEnabledInput,
+  AppModuleDocument,
+  SetDragAndDropEnabledInput,
 } from "@powerhousedao/vetra/document-models/app-module";
 import {
-    reducer,
-    setDragAndDropEnabled,
-    SetDragAndDropEnabledInputSchema,
-    utils,
+  reducer,
+  setDragAndDropEnabled,
+  SetDragAndDropEnabledInputSchema,
+  utils,
 } from "@powerhousedao/vetra/document-models/app-module";
 import { beforeEach, describe, expect, it } from "vitest";
 

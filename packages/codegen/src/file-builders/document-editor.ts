@@ -1,17 +1,17 @@
 import type {
-    CommonGenerateEditorArgs,
-    EditorVariableNames,
+  CommonGenerateEditorArgs,
+  EditorVariableNames,
 } from "@powerhousedao/codegen";
 import { getEditorVariableNames } from "name-builders";
 import path from "path";
 import { documentEditorEditorFileTemplate } from "templates";
 import type { Project } from "ts-morph";
 import {
-    buildTsMorphProject,
-    ensureDirectoriesExist,
-    formatSourceFileWithPrettier,
-    getDocumentTypeMetadata,
-    getOrCreateSourceFile,
+  buildTsMorphProject,
+  ensureDirectoriesExist,
+  formatSourceFileWithPrettier,
+  getDocumentTypeMetadata,
+  getOrCreateSourceFile,
 } from "utils";
 import { makeEditorModuleFile } from "./editor-common.js";
 import { makeEditorsModulesFile } from "./module-files.js";

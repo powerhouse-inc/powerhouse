@@ -5,25 +5,25 @@
 
 import { generateMock } from "@powerhousedao/shared/document-model";
 import type {
-    AddDocumentTypeInput,
-    AppModuleDocument,
-    SetAppNameInput,
-    SetAppStatusInput,
+  AddDocumentTypeInput,
+  AppModuleDocument,
+  SetAppNameInput,
+  SetAppStatusInput,
 } from "@powerhousedao/vetra/document-models/app-module";
 import {
-    addDocumentType,
-    AddDocumentTypeInputSchema,
-    isAppModuleDocument,
-    reducer,
-    removeDocumentType,
-    RemoveDocumentTypeInputSchema,
-    setAppName,
-    SetAppNameInputSchema,
-    setAppStatus,
-    SetAppStatusInputSchema,
-    setDocumentTypes,
-    SetDocumentTypesInputSchema,
-    utils,
+  addDocumentType,
+  AddDocumentTypeInputSchema,
+  isAppModuleDocument,
+  reducer,
+  removeDocumentType,
+  RemoveDocumentTypeInputSchema,
+  setAppName,
+  SetAppNameInputSchema,
+  setAppStatus,
+  SetAppStatusInputSchema,
+  setDocumentTypes,
+  SetDocumentTypesInputSchema,
+  utils,
 } from "@powerhousedao/vetra/document-models/app-module";
 import { beforeEach, describe, expect, it } from "vitest";
 

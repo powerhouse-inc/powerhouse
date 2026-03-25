@@ -25,7 +25,8 @@ const normalIgnoredFiles = [
   "commitlint.config.cjs",
   // test artifacts
   "**/.out/",
-  "**/.test-output/",
+  "**/test-output/",
+  "**/test-projects/",
   "**/flaky/",
   "apps/connect/lib/",
   "clis/ph-cli/src/commands/migrations/templates",

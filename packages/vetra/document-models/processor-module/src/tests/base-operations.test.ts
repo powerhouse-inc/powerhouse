@@ -5,27 +5,27 @@
 
 import { generateMock } from "@powerhousedao/shared/document-model";
 import type {
-    AddDocumentTypeInput,
-    ProcessorModuleDocument,
-    SetProcessorNameInput,
-    SetProcessorTypeInput,
+  AddDocumentTypeInput,
+  ProcessorModuleDocument,
+  SetProcessorNameInput,
+  SetProcessorTypeInput,
 } from "@powerhousedao/vetra/document-models/processor-module";
 import {
-    addDocumentType,
-    AddDocumentTypeInputSchema,
-    addProcessorApp,
-    isProcessorModuleDocument,
-    reducer,
-    removeDocumentType,
-    RemoveDocumentTypeInputSchema,
-    removeProcessorApp,
-    setProcessorName,
-    SetProcessorNameInputSchema,
-    setProcessorStatus,
-    SetProcessorStatusInputSchema,
-    setProcessorType,
-    SetProcessorTypeInputSchema,
-    utils,
+  addDocumentType,
+  AddDocumentTypeInputSchema,
+  addProcessorApp,
+  isProcessorModuleDocument,
+  reducer,
+  removeDocumentType,
+  RemoveDocumentTypeInputSchema,
+  removeProcessorApp,
+  setProcessorName,
+  SetProcessorNameInputSchema,
+  setProcessorStatus,
+  SetProcessorStatusInputSchema,
+  setProcessorType,
+  SetProcessorTypeInputSchema,
+  utils,
 } from "@powerhousedao/vetra/document-models/processor-module";
 import { beforeEach, describe, expect, it } from "vitest";
 

@@ -8,6 +8,10 @@ import {
   ImportManager,
   ReducerGenerator,
 } from "@powerhousedao/codegen";
+import type {
+  DocumentModelGlobalState,
+  ModuleSpecification,
+} from "@powerhousedao/shared";
 import { beforeEach, describe, expect, it } from "bun:test";
 import { camelCase, kebabCase, pascalCase } from "change-case";
 import { Project } from "ts-morph";
@@ -100,8 +104,8 @@ describe("ReducerGenerator Integration", () => {
       const context: GenerationContext = {
         rootDir: "/test",
         packageName: "test",
-        docModel: { name: "TestDoc" } as any,
-        module: { name: "testModule" } as any,
+        docModel: { name: "TestDoc" } as DocumentModelGlobalState,
+        module: { name: "testModule" } as ModuleSpecification,
         project,
         operations,
         forceUpdate: false,
@@ -170,8 +174,8 @@ describe("ReducerGenerator Integration", () => {
       const context: GenerationContext = {
         rootDir: "/test",
         packageName: "test",
-        docModel: { name: "MyDoc" } as any,
-        module: { name: "myModule" } as any,
+        docModel: { name: "MyDoc" } as DocumentModelGlobalState,
+        module: { name: "myModule" } as ModuleSpecification,
         project,
         operations: initialOperations,
         forceUpdate: false,
@@ -230,8 +234,8 @@ describe("ReducerGenerator Integration", () => {
       const context: GenerationContext = {
         rootDir: "/test",
         packageName: "test",
-        docModel: { name: "TestDoc" } as any,
-        module: { name: "firstModule" } as any,
+        docModel: { name: "TestDoc" } as DocumentModelGlobalState,
+        module: { name: "firstModule" } as ModuleSpecification,
         project,
         operations: [
           {
@@ -292,8 +296,8 @@ describe("ReducerGenerator Integration", () => {
       const context: GenerationContext = {
         rootDir: "/test",
         packageName: "test",
-        docModel: { name: "TestDoc" } as any,
-        module: { name: "emptyModule" } as any,
+        docModel: { name: "TestDoc" } as DocumentModelGlobalState,
+        module: { name: "emptyModule" } as ModuleSpecification,
         project,
         operations: [], // No operations
         forceUpdate: false,
@@ -330,8 +334,8 @@ describe("ReducerGenerator Integration", () => {
       const context: GenerationContext = {
         rootDir: "/test",
         packageName: "test",
-        docModel: { name: "test_doc_name" } as any,
-        module: { name: "test_module_name" } as any,
+        docModel: { name: "test_doc_name" } as DocumentModelGlobalState,
+        module: { name: "test_module_name" } as ModuleSpecification,
         project,
         operations,
         forceUpdate: false,
@@ -406,8 +410,8 @@ describe("ReducerGenerator Integration", () => {
       const context: GenerationContext = {
         rootDir: "/test",
         packageName: "test",
-        docModel: { name: "TestDoc" } as any,
-        module: { name: "testModule" } as any,
+        docModel: { name: "TestDoc" } as DocumentModelGlobalState,
+        module: { name: "testModule" } as ModuleSpecification,
         project,
         operations,
         forceUpdate: false,
@@ -449,8 +453,8 @@ describe("ReducerGenerator Integration", () => {
       const context: GenerationContext = {
         rootDir: "/test",
         packageName: "test",
-        docModel: { name: "TestDoc" } as any,
-        module: { name: "testModule" } as any,
+        docModel: { name: "TestDoc" } as DocumentModelGlobalState,
+        module: { name: "testModule" } as ModuleSpecification,
         project,
         operations,
         forceUpdate: false,
@@ -494,8 +498,8 @@ describe("ReducerGenerator Integration", () => {
       const context: GenerationContext = {
         rootDir: "/test",
         packageName: "test",
-        docModel: { name: "TestDoc" } as any,
-        module: { name: "testModule" } as any,
+        docModel: { name: "TestDoc" } as DocumentModelGlobalState,
+        module: { name: "testModule" } as ModuleSpecification,
         project,
         operations: initialOperations,
         forceUpdate: false,
@@ -571,8 +575,8 @@ describe("ReducerGenerator Integration", () => {
       const context: GenerationContext = {
         rootDir: "/test",
         packageName: "test",
-        docModel: { name: "TestDoc" } as any,
-        module: { name: "testModule" } as any,
+        docModel: { name: "TestDoc" } as DocumentModelGlobalState,
+        module: { name: "testModule" } as ModuleSpecification,
         project,
         operations: initialOperations,
         forceUpdate: false,

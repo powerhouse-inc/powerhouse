@@ -1,18 +1,18 @@
 import { createAction } from "document-model";
 import {
-    AddTodoInputSchema,
-    RemoveTodoInputSchema,
-    UpdateTodoInputSchema,
+  AddTodoInputSchema,
+  RemoveTodoInputSchema,
+  UpdateTodoInputSchema,
 } from "../schema/zod.js";
 import type {
-    AddTodoInput,
-    RemoveTodoInput,
-    UpdateTodoInput,
+  AddTodoInput,
+  RemoveTodoInput,
+  UpdateTodoInput,
 } from "../types.js";
 import type {
-    AddTodoAction,
-    RemoveTodoAction,
-    UpdateTodoAction,
+  AddTodoAction,
+  RemoveTodoAction,
+  UpdateTodoAction,
 } from "./actions.js";
 
 export const addTodo = (input: AddTodoInput) =>

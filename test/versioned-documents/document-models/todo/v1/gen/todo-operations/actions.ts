@@ -1,8 +1,8 @@
 import type { Action } from "document-model";
 import type {
-    AddTodoInput,
-    RemoveTodoInput,
-    UpdateTodoInput,
+  AddTodoInput,
+  RemoveTodoInput,
+  UpdateTodoInput,
 } from "../types.js";
 
 export type AddTodoAction = Action & { type: "ADD_TODO"; input: AddTodoInput };

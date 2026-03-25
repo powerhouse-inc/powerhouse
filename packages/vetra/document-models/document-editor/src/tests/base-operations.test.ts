@@ -5,23 +5,23 @@
 
 import { generateMock } from "@powerhousedao/shared/document-model";
 import type {
-    AddDocumentTypeInput,
-    DocumentEditorDocument,
-    SetEditorNameInput,
-    SetEditorStatusInput,
+  AddDocumentTypeInput,
+  DocumentEditorDocument,
+  SetEditorNameInput,
+  SetEditorStatusInput,
 } from "@powerhousedao/vetra/document-models/document-editor";
 import {
-    addDocumentType,
-    AddDocumentTypeInputSchema,
-    isDocumentEditorDocument,
-    reducer,
-    removeDocumentType,
-    RemoveDocumentTypeInputSchema,
-    setEditorName,
-    SetEditorNameInputSchema,
-    setEditorStatus,
-    SetEditorStatusInputSchema,
-    utils,
+  addDocumentType,
+  AddDocumentTypeInputSchema,
+  isDocumentEditorDocument,
+  reducer,
+  removeDocumentType,
+  RemoveDocumentTypeInputSchema,
+  setEditorName,
+  SetEditorNameInputSchema,
+  setEditorStatus,
+  SetEditorStatusInputSchema,
+  utils,
 } from "@powerhousedao/vetra/document-models/document-editor";
 import { beforeEach, describe, expect, it } from "vitest";
 

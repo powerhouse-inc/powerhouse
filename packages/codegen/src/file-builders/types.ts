@@ -1,12 +1,12 @@
 import type {
-    DocumentModelGlobalState,
-    ModuleSpecification,
-    OperationErrorSpecification,
+  DocumentModelGlobalState,
+  ModuleSpecification,
+  OperationErrorSpecification,
 } from "@powerhousedao/shared/document-model";
 import type {
-    getDocumentModelOperationsModuleVariableNames,
-    getDocumentModelVariableNames,
-    getEditorVariableNames,
+  getDocumentModelOperationsModuleVariableNames,
+  getDocumentModelVariableNames,
+  getEditorVariableNames,
 } from "name-builders";
 import type { Project } from "ts-morph";
 

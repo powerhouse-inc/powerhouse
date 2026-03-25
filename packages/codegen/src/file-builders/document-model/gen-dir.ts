@@ -1,32 +1,32 @@
 import { kebabCase, pascalCase } from "change-case";
 import type {
-    DocumentModelFileMakerArgs,
-    DocumentModelTemplateInputsWithModule,
+  DocumentModelFileMakerArgs,
+  DocumentModelTemplateInputsWithModule,
 } from "file-builders";
 import { getDocumentModelOperationsModuleVariableNames } from "name-builders";
 import path from "path";
 import {
-    documentModelDocumentSchemaFileTemplate,
-    documentModelDocumentTypeTemplate,
-    documentModelGenActionsFileTemplate,
-    documentModelGenControllerFileTemplate,
-    documentModelGenCreatorsFileTemplate,
-    documentModelGenIndexFileTemplate,
-    documentModelGenReducerFileTemplate,
-    documentModelGenTypesTemplate,
-    documentModelGenUtilsTemplate,
-    documentModelOperationModuleActionsFileTemplate,
-    documentModelOperationsModuleCreatorsFileTemplate,
-    documentModelOperationsModuleErrorFileTemplate,
-    documentModelOperationsModuleOperationsFileTemplate,
-    documentModelPhFactoriesFileTemplate,
-    documentModelSchemaIndexTemplate,
+  documentModelDocumentSchemaFileTemplate,
+  documentModelDocumentTypeTemplate,
+  documentModelGenActionsFileTemplate,
+  documentModelGenControllerFileTemplate,
+  documentModelGenCreatorsFileTemplate,
+  documentModelGenIndexFileTemplate,
+  documentModelGenReducerFileTemplate,
+  documentModelGenTypesTemplate,
+  documentModelGenUtilsTemplate,
+  documentModelOperationModuleActionsFileTemplate,
+  documentModelOperationsModuleCreatorsFileTemplate,
+  documentModelOperationsModuleErrorFileTemplate,
+  documentModelOperationsModuleOperationsFileTemplate,
+  documentModelPhFactoriesFileTemplate,
+  documentModelSchemaIndexTemplate,
 } from "templates";
 import { VariableDeclarationKind } from "ts-morph";
 import {
-    buildObjectLiteral,
-    formatSourceFileWithPrettier,
-    getOrCreateSourceFile,
+  buildObjectLiteral,
+  formatSourceFileWithPrettier,
+  getOrCreateSourceFile,
 } from "utils";
 
 export async function makeGenDirFiles(

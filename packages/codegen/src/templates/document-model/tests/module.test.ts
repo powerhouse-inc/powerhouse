@@ -2,8 +2,8 @@ import type { ModuleSpecification } from "@powerhousedao/shared";
 import { ts } from "@tmpl/core";
 import { camelCase, constantCase, pascalCase } from "change-case";
 import type {
-    ActionFromOperation,
-    DocumentModelTemplateInputsWithModule,
+  ActionFromOperation,
+  DocumentModelTemplateInputsWithModule,
 } from "file-builders";
 
 function makeModuleOperationsTypeName(module: ModuleSpecification) {

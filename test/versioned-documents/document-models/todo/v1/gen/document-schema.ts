@@ -1,6 +1,6 @@
 import {
-    BaseDocumentHeaderSchema,
-    BaseDocumentStateSchema,
+  BaseDocumentHeaderSchema,
+  BaseDocumentStateSchema,
 } from "document-model";
 import { z } from "zod";
 import { todoDocumentType } from "./document-type.js";

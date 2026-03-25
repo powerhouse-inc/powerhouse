@@ -5,15 +5,15 @@ import { camelCase, kebabCase, pascalCase } from "change-case";
 import { getDocumentModelOperationsModuleVariableNames } from "name-builders";
 import path from "path";
 import {
-    documentModelTestFileTemplate,
-    makeActionImportNames,
-    makeTestCaseForAction,
+  documentModelTestFileTemplate,
+  makeActionImportNames,
+  makeTestCaseForAction,
 } from "templates";
 import { SyntaxKind } from "ts-morph";
 import {
-    formatSourceFileWithPrettier,
-    getOrCreateSourceFile,
-    getPreviousVersionSourceFile,
+  formatSourceFileWithPrettier,
+  getOrCreateSourceFile,
+  getPreviousVersionSourceFile,
 } from "utils";
 
 export async function makeTestsDirFiles(

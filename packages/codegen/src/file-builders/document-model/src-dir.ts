@@ -4,16 +4,16 @@ import { ts } from "@tmpl/core";
 import { camelCase, kebabCase, pascalCase } from "change-case";
 import path from "path";
 import {
-    documentModelSrcIndexFileTemplate,
-    documentModelSrcUtilsTemplate,
+  documentModelSrcIndexFileTemplate,
+  documentModelSrcUtilsTemplate,
 } from "templates";
 import type { SourceFile } from "ts-morph";
 import { VariableDeclarationKind } from "ts-morph";
 import {
-    formatSourceFileWithPrettier,
-    getObjectLiteral,
-    getOrCreateSourceFile,
-    getPreviousVersionSourceFile,
+  formatSourceFileWithPrettier,
+  getObjectLiteral,
+  getOrCreateSourceFile,
+  getPreviousVersionSourceFile,
 } from "utils";
 
 export async function makeSrcDirFiles(

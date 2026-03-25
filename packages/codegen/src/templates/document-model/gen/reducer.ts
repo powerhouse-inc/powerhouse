@@ -1,6 +1,6 @@
 import type {
-    ModuleSpecification,
-    OperationSpecification,
+  ModuleSpecification,
+  OperationSpecification,
 } from "@powerhousedao/shared";
 import { ts } from "@tmpl/core";
 import { camelCase, constantCase, kebabCase, pascalCase } from "change-case";

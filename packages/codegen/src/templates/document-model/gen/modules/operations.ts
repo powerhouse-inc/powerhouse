@@ -1,6 +1,6 @@
 import type {
-    ActionFromOperation,
-    DocumentModelTemplateInputsWithModule,
+  ActionFromOperation,
+  DocumentModelTemplateInputsWithModule,
 } from "@powerhousedao/codegen";
 import type { ModuleSpecification } from "@powerhousedao/shared";
 import { ts } from "@tmpl/core";

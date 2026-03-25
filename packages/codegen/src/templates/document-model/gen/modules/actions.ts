@@ -1,10 +1,10 @@
 import type { ActionFromOperation } from "@powerhousedao/codegen";
 import { ts } from "@tmpl/core";
 import {
-    getActionInputName,
-    getActionInputTypeNames,
-    getActionType,
-    getActionTypeName,
+  getActionInputName,
+  getActionInputTypeNames,
+  getActionType,
+  getActionTypeName,
 } from "name-builders";
 
 function getActionTypeExport(action: ActionFromOperation) {

@@ -1,13 +1,7 @@
 import path from "path";
-import {
-    analyticsFactoryTemplate,
-    analyticsIndexTemplate,
-} from "templates";
+import { analyticsFactoryTemplate, analyticsIndexTemplate } from "templates";
 import type { Project } from "ts-morph";
-import {
-    formatSourceFileWithPrettier,
-    getOrCreateSourceFile,
-} from "utils";
+import { formatSourceFileWithPrettier, getOrCreateSourceFile } from "utils";
 import type { GenerateProcessorArgs } from "./types.js";
 
 export async function tsMorphGenerateAnalyticsProcessor(

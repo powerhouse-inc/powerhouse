@@ -6,22 +6,22 @@
  */
 
 import {
-    addModule,
-    addOperation,
-    documentModelCreateDocument,
-    documentModelReducer,
-    generateId,
-    releaseNewVersion,
-    setAuthorName,
-    setAuthorWebsite,
-    setInitialState,
-    setModelDescription,
-    setModelExtension,
-    setModelId,
-    setModelName,
-    setOperationReducer,
-    setOperationSchema,
-    setStateSchema,
+  addModule,
+  addOperation,
+  documentModelCreateDocument,
+  documentModelReducer,
+  generateId,
+  releaseNewVersion,
+  setAuthorName,
+  setAuthorWebsite,
+  setInitialState,
+  setModelDescription,
+  setModelExtension,
+  setModelId,
+  setModelName,
+  setOperationReducer,
+  setOperationSchema,
+  setStateSchema,
 } from "document-model";
 import { baseSaveToFile } from "document-model/node";
 import fs from "fs";
