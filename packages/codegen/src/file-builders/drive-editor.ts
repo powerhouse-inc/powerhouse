@@ -1,4 +1,5 @@
 import type { CommonGenerateEditorArgs } from "@powerhousedao/codegen";
+import path from "path";
 import {
   createDocumentFileTemplate,
   driveEditorConfigFileTemplate,
@@ -10,15 +11,14 @@ import {
   driveExplorerNavigationBreadcrumbsFileTemplate,
   emptyStateFileTemplate,
   folderTreeFileTemplate,
-} from "@powerhousedao/codegen/templates";
+} from "templates";
+import { type Project } from "ts-morph";
 import {
   buildTsMorphProject,
   ensureDirectoriesExist,
   formatSourceFileWithPrettier,
   getOrCreateSourceFile,
-} from "@powerhousedao/codegen/utils";
-import path from "path";
-import { type Project } from "ts-morph";
+} from "utils";
 import { makeEditorModuleFile } from "./editor-common.js";
 import { makeEditorsModulesFile } from "./module-files.js";
 

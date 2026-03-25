@@ -3,7 +3,7 @@
  * - change it by adding new tests or modifying the existing ones
  */
 
-import { generateMock } from "@powerhousedao/common/utils";
+import { generateMock } from "@powerhousedao/shared/document-model";
 import type {
   AddDocumentTypeInput,
   DocumentEditorDocument,

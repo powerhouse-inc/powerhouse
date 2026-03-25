@@ -1,8 +1,8 @@
-import { documentEditorModuleFileTemplate } from "@powerhousedao/codegen/templates";
 import { pascalCase } from "change-case";
 import path from "path";
+import { documentEditorModuleFileTemplate } from "templates";
 import type { Project } from "ts-morph";
-import { getOrCreateSourceFile } from "@powerhousedao/codegen/utils";
+import { getOrCreateSourceFile } from "utils";
 
 type MakeEditorModuleFileArgs = {
   project: Project;

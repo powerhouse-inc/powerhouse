@@ -2,42 +2,25 @@
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
     "outDir": "./dist",
+    "emitDeclarationOnly": true,
     "lib": [
       "ESNext",
       "dom",
       "dom.iterable"
     ],
-    "jsx": "preserve"
+    "paths": {
+      "templates": ["./src/templates/index.mts"],
+      "file-builders": ["./src/file-builders/index.mts"],
+      "name-builders": ["./src/name-builders/index.mts"],
+      "utils": ["./src/utils/index.mts"],
+    }
   },
-  "types": [
-    "vitest/globals"
-  ],
   "include": [
     "**/*"
   ],
-  "exclude": [
-    "dist",
-    "node_modules",
-    "src/codegen/__tests__/data"
-  ],
   "references": [
     {
-      "path": "../analytics-engine/core"
-    },
-    {
-      "path": "../common"
-    },
-    {
-      "path": "../config"
-    },
-    {
-      "path": "../design-system"
-    },
-    {
       "path": "../document-model"
-    },
-    {
-      "path": "../reactor-browser"
     },
     {
       "path": "../shared"

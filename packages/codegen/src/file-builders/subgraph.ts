@@ -5,13 +5,13 @@ import {
   documentModelSubgraphSchemaTemplate,
   subgraphIndexFileTemplate,
   subgraphLibFileTemplate,
-} from "@powerhousedao/codegen/templates";
+} from "templates";
 import {
   applyGraphQLTypePrefixes,
   extractTypeNames,
   formatSourceFileWithPrettier,
   getOrCreateSourceFile,
-} from "@powerhousedao/codegen/utils";
+} from "utils";
 import type { DocumentModelGlobalState } from "@powerhousedao/shared/document-model";
 import { camelCase, kebabCase, pascalCase } from "change-case";
 import { existsSync } from "fs";

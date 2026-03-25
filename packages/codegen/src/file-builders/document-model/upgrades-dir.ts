@@ -1,15 +1,12 @@
-import {
-  upgradeManifestTemplate,
-  upgradeTransitionTemplate,
-} from "@powerhousedao/codegen/templates";
+import path from "path";
+import { upgradeManifestTemplate, upgradeTransitionTemplate } from "templates";
+import { VariableDeclarationKind, type Project } from "ts-morph";
 import {
   formatSourceFileWithPrettier,
   getObjectLiteral,
   getOrCreateSourceFile,
   getVariableDeclarationByTypeName,
-} from "@powerhousedao/codegen/utils";
-import path from "path";
-import { VariableDeclarationKind, type Project } from "ts-morph";
+} from "utils";
 
 type MakeUpgradeFileArgs = {
   project: Project;

@@ -42,18 +42,16 @@ const exportsTemplate = json`
 `;
 
 const scriptsTemplate = json`
-  "build": "npm run tsc && npm run tailwind",
   "test": "vitest run",
   "test:watch": "vitest",
   "lint": "eslint --config eslint.config.js --cache --cache-strategy content",
   "lint:fix": "npm run lint -- --fix",
   "tsc": "tsc",
   "tsc:watch": "tsc --watch",
-  "tailwind": "npx @tailwindcss/cli -i ./style.css -o ./dist/style.css",
-  "prepublishOnly": "npm run build",
   "check-circular-imports": "npx dpdm -T ./index.ts",
   "generate": "ph-cli generate",
   "connect": "ph-cli connect",
+  "build": "ph-cli build",
   "reactor": "ph-cli reactor",
   "service": "ph-cli service",
   "vetra": "ph-cli vetra",
@@ -67,36 +65,28 @@ const dependenciesTemplate = (versionedDependencies: string[]) => json`
   "graphql": "^16.10.0",
   "graphql-tag": "^2.12.6",
   "zod": "^4.3.5",
-  "@electric-sql/pglite": "0.3.15"
+  "react": "^19.2.3",
+  "react-dom": "^19.2.3"
 `;
 
 const devDependenciesTemplate = (versionedDevDependencies: string[]) => json`
   ${versionedDevDependencies.join(",\n")},
   "@eslint/js": "^9.38.0",
   "@tailwindcss/cli": "^4.1.18",
-  "@tailwindcss/vite": "4.1.18",
-  "@testing-library/react": "^16.3.0",
   "@types/node": "^24.9.2",
   "@types/react": "^19.2.3",
-  "@vitejs/plugin-react": "^5.1.0",
   "eslint": "^9.38.0",
-  "vite-plugin-node-polyfills": "^0.24.0",
   "eslint-plugin-react": "^7.37.5",
   "eslint-plugin-react-hooks": "^7.0.1",
   "eslint-config-prettier": "^10.1.8",
   "eslint-plugin-prettier": "^5.5.4",
   "globals": "^16.4.0",
-  "package-manager-detector": "^0.2.8",
-  "pm2": "^5.4.3",
-  "react": "^19.2.3",
-  "react-dom": "^19.2.3",
   "tailwindcss": "^4.1.16",
   "typescript": "^5.9.3",
   "typescript-eslint": "^8.46.2",
-  "vite": "^6.2.3",
-  "vite-plugin-html": "3.2.2",
-  "vite-plugin-svgr": "4.5.0",
-  "vitest": "^3.0.9"
+  "vitest": "4.1.1",
+  "@vitejs/plugin-react": "6.0.1",
+  "vite-tsconfig-paths": "6.1.1"
 `;
 
 export const packageJsonTemplate = (
@@ -124,10 +114,6 @@ export const packageJsonTemplate = (
   },
   "devDependencies": {
     ${devDependenciesTemplate(versionedDevDependencies)}
-  },
-  "peerDependencies": {
-    "react": ">=19.0.0",
-    "react-dom": ">=19.0.0"
   }
 }
 `.raw;

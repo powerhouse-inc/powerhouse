@@ -1,9 +1,9 @@
-import type { Action } from "@powerhousedao/shared/document-model";
+import type { Action } from "document-model";
 import type {
   AddTodoInput,
+  EditTitleInput,
   RemoveTodoInput,
   UpdateTodoInput,
-  EditTitleInput,
 } from "../types.js";
 
 export type AddTodoAction = Action & { type: "ADD_TODO"; input: AddTodoInput };

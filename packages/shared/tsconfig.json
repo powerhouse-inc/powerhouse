@@ -6,18 +6,44 @@
     "outDir": "./dist",
     "emitDeclarationOnly": true,
     "paths": {
-      "analytics": ["./analytics/index.ts"],
-      "analytics/*": ["./analytics/*"],
-      "connect": ["./connect/index.ts"],
-      "connect/*": ["./connect/*"],
-      "document-drive": ["./document-drive/index.ts"],
-      "document-drive/*": ["./document-drive/*"],
-      "document-model": ["./document-model/index.ts"],
-      "document-model/*": ["./document-model/*"],
-      "processors": ["./processors/index.ts"],
-      "processors/*": ["./processors/*"],
-      "registry": ["./registry/index.ts"],
-      "registry/*": ["./registry/*"]
+      "types": ["./types.ts"],
+      "constants": ["./constants.ts"],
+      "analytics": [
+        "./analytics/index.ts"
+      ],
+      "analytics/*": [
+        "./analytics/*"
+      ],
+      "connect": [
+        "./connect/index.ts"
+      ],
+      "connect/*": [
+        "./connect/*"
+      ],
+      "document-drive": [
+        "./document-drive/index.ts"
+      ],
+      "document-drive/*": [
+        "./document-drive/*"
+      ],
+      "document-model": [
+        "./document-model/index.ts"
+      ],
+      "document-model/*": [
+        "./document-model/*"
+      ],
+      "processors": [
+        "./processors/index.ts"
+      ],
+      "processors/*": [
+        "./processors/*"
+      ],
+      "registry": [
+        "./registry/index.ts"
+      ],
+      "registry/*": [
+        "./registry/*"
+      ],
     }
   },
   // include all files in this package's root

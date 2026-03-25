@@ -5,7 +5,7 @@ import {
   getActionInputTypeNames,
   getActionType,
   getActionTypeName,
-} from "@powerhousedao/codegen/name-builders";
+} from "name-builders";
 
 function getActionTypeExport(action: ActionFromOperation) {
   const baseActionTypeName = action.hasAttachment

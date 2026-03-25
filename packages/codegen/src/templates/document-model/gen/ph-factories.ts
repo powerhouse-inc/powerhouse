@@ -1,5 +1,5 @@
-import type { DocumentModelTemplateInputs } from "@powerhousedao/codegen/file-builders";
 import { ts } from "@tmpl/core";
+import type { DocumentModelTemplateInputs } from "file-builders";
 
 export const documentModelPhFactoriesFileTemplate = (
   v: DocumentModelTemplateInputs,
@@ -12,11 +12,11 @@ import type {
   PHAuthState,
   PHDocumentState,
   PHBaseState,
-} from "@powerhousedao/shared/document-model";
+} from "document-model";
 import {
   createBaseState,
   defaultBaseState,
-} from "@powerhousedao/shared/document-model";
+} from "document-model";
 import type {
   ${v.phDocumentTypeName},
   ${v.globalStateName},

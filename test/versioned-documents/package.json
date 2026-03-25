@@ -59,7 +59,7 @@
     "test:document-models": "vitest run document-models",
     "test:editors": "vitest run editors",
     "test:processors": "vitest run processors",
-    "build": "ph-cli build && pnpm build:css",
+    "build": "ph-cli build",
     "generate": "ph-cli generate",
     "connect": "ph-cli connect",
     "reactor": "ph-cli reactor",
@@ -69,27 +69,23 @@
     "service-unstartup": "bash ./node_modules/@powerhousedao/ph-cli/dist/scripts/service-unstartup.sh"
   },
   "dependencies": {
-    "@powerhousedao/builder-tools": "workspace:*",
-    "@powerhousedao/common": "workspace:*",
-    "@powerhousedao/shared": "workspace:*",
-    "@powerhousedao/design-system": "workspace:*",
     "document-model": "workspace:*",
-    "zod": "catalog:",
+    "@powerhousedao/design-system": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",
+    "@powerhousedao/connect": "workspace:*",
     "react": "catalog:",
     "react-dom": "catalog:",
-    "@powerhousedao/connect": "workspace:*"
+    "zod": "catalog:"
   },
   "devDependencies": {
+    "@powerhousedao/ph-cli": "workspace:*",
     "@tailwindcss/cli": "catalog:",
     "tailwindcss": "catalog:",
-    "@powerhousedao/ph-cli": "workspace:*",
     "@testing-library/jest-dom": "^6.9.1",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "@vitejs/plugin-react": "catalog:",
-    "vite": "catalog:",
     "vitest": "catalog:",
     "vite-tsconfig-paths": "catalog:"
   },

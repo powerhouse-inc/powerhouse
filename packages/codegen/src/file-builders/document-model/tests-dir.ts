@@ -1,20 +1,20 @@
 import type { DocumentModelFileMakerArgs } from "@powerhousedao/codegen";
-import { getDocumentModelOperationsModuleVariableNames } from "@powerhousedao/codegen/name-builders";
+import type { ModuleSpecification } from "@powerhousedao/shared/document-model";
+import { ts } from "@tmpl/core";
+import { camelCase, kebabCase, pascalCase } from "change-case";
+import { getDocumentModelOperationsModuleVariableNames } from "name-builders";
+import path from "path";
 import {
   documentModelTestFileTemplate,
   makeActionImportNames,
   makeTestCaseForAction,
-} from "@powerhousedao/codegen/templates";
+} from "templates";
+import { SyntaxKind } from "ts-morph";
 import {
   formatSourceFileWithPrettier,
   getOrCreateSourceFile,
   getPreviousVersionSourceFile,
-} from "@powerhousedao/codegen/utils";
-import { ts } from "@tmpl/core";
-import { camelCase, kebabCase, pascalCase } from "change-case";
-import type { ModuleSpecification } from "@powerhousedao/shared/document-model";
-import path from "path";
-import { SyntaxKind } from "ts-morph";
+} from "utils";
 
 export async function makeTestsDirFiles(
   fileMakerArgs: DocumentModelFileMakerArgs,
@@ -64,7 +64,7 @@ async function makeOperationModuleTestFile(
     } else {
       sourceFile.replaceWithText(
         ts`
-        import { generateMock } from "@powerhousedao/common/utils";
+        import { generateMock } from "document-model";
         import { describe, expect, it } from "vitest";
 
         describe("${moduleOperationsTypeName}", () => {

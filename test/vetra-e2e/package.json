@@ -19,13 +19,13 @@
       "types": "./dist/document-models/*/index.d.ts",
       "import": "./dist/document-models/*/index.js"
     },
-    "./editors/*": {
-      "types": "./dist/editors/*/index.d.ts",
-      "import": "./dist/editors/*/index.js"
-    },
     "./editors": {
       "types": "./dist/editors/index.d.ts",
       "import": "./dist/editors/index.js"
+    },
+    "./editors/*": {
+      "types": "./dist/editors/*/index.d.ts",
+      "import": "./dist/editors/*/index.js"
     },
     "./processors": {
       "types": "./dist/processors/index.d.ts",
@@ -59,24 +59,16 @@
   "dependencies": {
     "document-model": "workspace:*",
     "@powerhousedao/connect": "workspace:*",
-    "@powerhousedao/design-system": "workspace:*",
-    "@powerhousedao/common": "workspace:*",
-    "@powerhousedao/config": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",
-    "@powerhousedao/shared": "workspace:*",
+    "@powerhousedao/design-system": "workspace:*",
     "@powerhousedao/versioned-documents": "workspace:*",
-    "@electric-sql/pglite": "catalog:",
-    "@electric-sql/pglite-tools": "catalog:",
-    "kysely": "catalog:",
-    "zod": "catalog:"
+    "zod": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:"
   },
   "devDependencies": {
-    "@powerhousedao/builder-tools": "workspace:*",
-    "@powerhousedao/codegen": "workspace:*",
     "@powerhousedao/ph-cli": "workspace:*",
     "@powerhousedao/e2e-utils": "workspace:*",
-    "react": "catalog:",
-    "react-dom": "catalog:",
     "vitest": "catalog:",
     "tailwindcss": "catalog:",
     "@tailwindcss/cli": "catalog:",
@@ -84,8 +76,8 @@
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "monocart-coverage-reports": "^2.12.8",
-    "@powerhousedao/registry": "workspace:*",
-    "@playwright/test": "^1.55.0"
+    "@playwright/test": "^1.55.0",
+    "@powerhousedao/registry": "workspace:*"
   },
   "description": ""
 }

@@ -3,19 +3,13 @@ import { ts } from "@tmpl/core";
 export const vitestConfigTemplate = ts`
 import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
-import packageJson from "./package.json" with { type: "json" };
-import { join } from "node:path";
+import tsconfigPaths from "vite-tsconfig-paths";
 
 export default defineConfig({
   test: {
     globals: true,
   },
-  plugins: [react()],
-  resolve: {
-    alias: {
-      [packageJson.name]: join(import.meta.dirname),
-    },
-  },
+  plugins: [tsconfigPaths(), react()],
 });
 
 `;

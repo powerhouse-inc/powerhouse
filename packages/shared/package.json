@@ -16,6 +16,10 @@
     "build:bundle": "tsx ./bundle.ts"
   },
   "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
     "./processors": {
       "types": "./dist/processors/index.d.ts",
       "import": "./dist/processors/index.js"
@@ -74,6 +78,7 @@
     }
   },
   "dependencies": {
+    "write-package": "catalog:",
     "@sindresorhus/fnv1a": "catalog:",
     "chalk": "catalog:",
     "change-case": "catalog:",

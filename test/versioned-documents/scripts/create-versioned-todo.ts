@@ -8,6 +8,7 @@
 import {
   addModule,
   addOperation,
+  documentModelCreateDocument,
   documentModelReducer,
   generateId,
   releaseNewVersion,
@@ -21,8 +22,7 @@ import {
   setOperationReducer,
   setOperationSchema,
   setStateSchema,
-} from "@powerhousedao/shared/document-model";
-import { documentModelCreateDocument } from "document-model";
+} from "document-model";
 import { baseSaveToFile } from "document-model/node";
 import fs from "fs";
 import path from "path";

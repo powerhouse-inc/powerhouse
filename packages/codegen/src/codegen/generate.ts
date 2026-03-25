@@ -7,10 +7,9 @@ import {
 } from "@powerhousedao/codegen/file-builders";
 import type {
   PartialPowerhouseManifest,
-  PowerhouseConfig,
   PowerhouseManifest,
-} from "@powerhousedao/config";
-import { fileExists } from "@powerhousedao/shared/clis";
+} from "@powerhousedao/shared";
+import { fileExists, type PowerhouseConfig } from "@powerhousedao/shared/clis";
 import type { DocumentModelGlobalState } from "@powerhousedao/shared/document-model";
 import type { ProcessorApps } from "@powerhousedao/shared/processors";
 import { kebabCase } from "change-case";

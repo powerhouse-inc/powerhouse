@@ -22,5 +22,6 @@ export * from "./file-system/projects.js";
 export * from "./file-system/run-cmd.js";
 export * from "./file-system/spawn-async.js";
 export * from "./file-system/version-info.js";
+export * from "./services/use-local.js";
 export type * from "./types.js";
 export * from "./utils.js";

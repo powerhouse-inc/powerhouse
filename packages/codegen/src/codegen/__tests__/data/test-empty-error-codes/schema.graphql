@@ -1,7 +1,0 @@
-type TestState {
-  value: String!
-}
-
-input SetValueInput {
-  value: String!
-}

@@ -3,23 +3,23 @@ import type {
   DocumentModelVariableNames,
   GenerateDocumentModelArgs,
 } from "@powerhousedao/codegen";
+import { directoryExists, fileExists } from "@powerhousedao/shared/clis";
+import type { DocumentModelGlobalState } from "@powerhousedao/shared/document-model";
+import { kebabCase } from "change-case";
 import {
   getDocumentModelDirName,
   getDocumentModelVariableNames,
-} from "@powerhousedao/codegen/name-builders";
+} from "name-builders";
+import { copyFile, mkdir, readdir, writeFile } from "node:fs/promises";
+import path from "path";
+import { type Project } from "ts-morph";
 import {
   buildTsMorphProject,
   ensureDirectoriesExist,
   formatSourceFileWithPrettier,
   getInitialStates,
   getOrCreateSourceFile,
-} from "@powerhousedao/codegen/utils";
-import { directoryExists, fileExists } from "@powerhousedao/shared/clis";
-import type { DocumentModelGlobalState } from "@powerhousedao/shared/document-model";
-import { kebabCase } from "change-case";
-import { copyFile, mkdir, readdir, writeFile } from "node:fs/promises";
-import path from "path";
-import { type Project } from "ts-morph";
+} from "utils";
 import { generateDocumentModelZodSchemas } from "../../codegen/graphql.js";
 import {
   makeDocumentModelModulesFile,
@@ -84,7 +84,6 @@ export async function tsMorphGenerateDocumentModel({
   project.addSourceFilesAtPaths(documentModelsSourceFilesPath);
 
   const documentModelPackageImportPath = path.join(
-    packageName,
     "document-models",
     documentModelDirName,
   );

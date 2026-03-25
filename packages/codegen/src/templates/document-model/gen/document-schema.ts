@@ -1,5 +1,5 @@
-import type { DocumentModelTemplateInputs } from "@powerhousedao/codegen/file-builders";
 import { ts } from "@tmpl/core";
+import type { DocumentModelTemplateInputs } from "file-builders";
 
 export const documentModelDocumentSchemaFileTemplate = (
   v: DocumentModelTemplateInputs,
@@ -8,7 +8,7 @@ export const documentModelDocumentSchemaFileTemplate = (
 import {
   BaseDocumentHeaderSchema,
   BaseDocumentStateSchema,
-} from "@powerhousedao/shared/document-model";
+} from "document-model";
 import { z } from "zod";
 import { ${v.documentTypeVariableName} } from "./document-type.js";
 import { ${v.stateSchemaName} } from "./schema/zod.js";

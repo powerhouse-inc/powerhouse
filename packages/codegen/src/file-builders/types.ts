@@ -1,13 +1,13 @@
 import type {
-  getDocumentModelOperationsModuleVariableNames,
-  getDocumentModelVariableNames,
-  getEditorVariableNames,
-} from "@powerhousedao/codegen/name-builders";
-import type {
   DocumentModelGlobalState,
   ModuleSpecification,
   OperationErrorSpecification,
 } from "@powerhousedao/shared/document-model";
+import type {
+  getDocumentModelOperationsModuleVariableNames,
+  getDocumentModelVariableNames,
+  getEditorVariableNames,
+} from "name-builders";
 import type { Project } from "ts-morph";
 
 export type CommonMakeEditorComponentArgs = {

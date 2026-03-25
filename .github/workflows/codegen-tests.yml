@@ -59,8 +59,8 @@ jobs:
         run: pnpm build-css
 
       - name: Run tests
-        run: pnpm test
-        working-directory: packages/codegen
+        run: pnpm test:codegen
+        working-directory: test/codegen
 
   notify-discord:
     if: failure() && github.event_name != 'pull_request'

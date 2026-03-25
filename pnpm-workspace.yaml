@@ -3,8 +3,8 @@ packages:
   - "clis/*"
   - "packages/*"
   - "packages/analytics-engine/*"
-  - "test/*"
   - "packages/reactor/test/atlas"
+  - "test/*"
   - "scripts/*"
   - "!releases"
 

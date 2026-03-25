@@ -1,20 +1,17 @@
-import {
-  processorsFactoryTemplate,
-  processorsIndexTemplate,
-} from "@powerhousedao/codegen/templates";
-import {
-  buildTsMorphProject,
-  ensureDirectoriesExist,
-  formatSourceFileWithPrettier,
-  getOrCreateSourceFile,
-} from "@powerhousedao/codegen/utils";
 import type {
   ProcessorApp,
   ProcessorApps,
 } from "@powerhousedao/shared/processors";
 import { camelCase, kebabCase, pascalCase } from "change-case";
 import path from "path";
+import { processorsFactoryTemplate, processorsIndexTemplate } from "templates";
 import { ts, type Project } from "ts-morph";
+import {
+  buildTsMorphProject,
+  ensureDirectoriesExist,
+  formatSourceFileWithPrettier,
+  getOrCreateSourceFile,
+} from "utils";
 import { tsMorphGenerateAnalyticsProcessor } from "./analytics.js";
 import { tsMorphGenerateRelationalDbProcessor } from "./relational-db.js";
 

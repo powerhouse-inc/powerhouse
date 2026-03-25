@@ -55,12 +55,6 @@
       "path": "../../clis/ph-cli"
     },
     {
-      "path": "../../packages/builder-tools"
-    },
-    {
-      "path": "../../packages/common"
-    },
-    {
       "path": "../../packages/design-system"
     },
     {
@@ -68,9 +62,6 @@
     },
     {
       "path": "../../packages/reactor-browser"
-    },
-    {
-      "path": "../../packages/shared"
     }
   ]
 }

@@ -1,13 +1,13 @@
 import type { Scalars } from "document-model";
-import type { Action } from "../../document-model/actions.js";
-import type { PHDocument } from "../../document-model/documents.js";
+import type { Action } from "document-model";
+import type { PHDocument } from "document-model";
 import type {
   AddFileInput,
   DocumentDriveDriveAction,
   DocumentDriveNodeAction,
   DocumentDrivePHState,
   InputMaybe,
-} from "../types.js";
+} from "types";
 
 export * from "./drive/types.js";
 export * from "./node/types.js";

@@ -11,7 +11,7 @@ import type {
   IProcessorHostModule, 
   ProcessorFactory,
 } from "@powerhousedao/reactor-browser";
-import type { PHDocumentHeader } from "@powerhousedao/shared/document-model";
+import type { PHDocumentHeader } from "document-model";
 
 export const processorFactory = async (module: IProcessorHostModule) => {
   const factories: ProcessorFactory[] = [];

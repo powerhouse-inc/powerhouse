@@ -1,11 +1,11 @@
-import { type SignalDispatch } from "@powerhousedao/shared/document-model";
+import { type SignalDispatch } from "document-model";
+import type { TodoState } from "../types.js";
 import type {
   AddTodoAction,
+  EditTitleAction,
   RemoveTodoAction,
   UpdateTodoAction,
-  EditTitleAction,
 } from "./actions.js";
-import type { TodoState } from "../types.js";
 
 export interface TodoTodoOperationsOperations {
   addTodoOperation: (

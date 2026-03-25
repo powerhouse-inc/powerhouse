@@ -1,10 +1,10 @@
+import type { ModuleSpecification } from "@powerhousedao/shared";
+import { ts } from "@tmpl/core";
+import { camelCase, constantCase, pascalCase } from "change-case";
 import type {
   ActionFromOperation,
   DocumentModelTemplateInputsWithModule,
-} from "@powerhousedao/codegen/file-builders";
-import { ts } from "@tmpl/core";
-import { camelCase, constantCase, pascalCase } from "change-case";
-import type { ModuleSpecification } from "@powerhousedao/shared/document-model";
+} from "file-builders";
 
 function makeModuleOperationsTypeName(module: ModuleSpecification) {
   const pascalCaseModuleName = pascalCase(module.name);

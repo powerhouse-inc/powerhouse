@@ -1,8 +1,10 @@
+import { kebabCase, pascalCase } from "change-case";
 import type {
   DocumentModelFileMakerArgs,
   DocumentModelTemplateInputsWithModule,
-} from "@powerhousedao/codegen/file-builders";
-import { getDocumentModelOperationsModuleVariableNames } from "@powerhousedao/codegen/name-builders";
+} from "file-builders";
+import { getDocumentModelOperationsModuleVariableNames } from "name-builders";
+import path from "path";
 import {
   documentModelDocumentSchemaFileTemplate,
   documentModelDocumentTypeTemplate,
@@ -19,15 +21,13 @@ import {
   documentModelOperationsModuleOperationsFileTemplate,
   documentModelPhFactoriesFileTemplate,
   documentModelSchemaIndexTemplate,
-} from "@powerhousedao/codegen/templates";
+} from "templates";
+import { VariableDeclarationKind } from "ts-morph";
 import {
   buildObjectLiteral,
   formatSourceFileWithPrettier,
   getOrCreateSourceFile,
-} from "@powerhousedao/codegen/utils";
-import { kebabCase, pascalCase } from "change-case";
-import path from "path";
-import { VariableDeclarationKind } from "ts-morph";
+} from "utils";
 
 export async function makeGenDirFiles(
   fileMakerArgs: DocumentModelFileMakerArgs,
