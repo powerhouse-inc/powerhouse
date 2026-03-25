@@ -15,9 +15,9 @@
   ],
   "sideEffects": false,
   "scripts": {
-    "generate-test-projects": "tsx ./generate-test-projects.ts",
-    "test:bun": "bun test --timeout 1000000",
-    "test": "pnpm test:bun ./tests/*.test.ts"
+    "generate-test-projects": "tsx ./generate-test-projects-script.ts",
+    "test": "bun test --timeout 1000000 --preload ./setup.ts ./tests/*.test.ts",
+    "test:nogenerate": "bun test --timeout 1000000 ./tests/*.test.ts"
   },
   "dependencies": {
     "graphql-codegen-typescript-validation-schema": "catalog:",

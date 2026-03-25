@@ -27,89 +27,92 @@ import {
 
 const dataDir = join(process.cwd(), DATA);
 const testProjectsDir = join(process.cwd(), TEST_PROJECTS);
-await rmForce(testProjectsDir);
-await mkdirRecursive(testProjectsDir);
-process.chdir(testProjectsDir);
 const cwd = process.cwd();
 
-await createProject({
-  name: NEW_PROJECT,
-  packageManager: "pnpm",
-  skipGitInit: true,
-  skipInstall: true,
-});
+export async function generateTestProjects() {
+  await rmForce(testProjectsDir);
+  await mkdirRecursive(testProjectsDir);
+  process.chdir(testProjectsDir);
 
-const packageJson = await readPackage();
-packageJson.dependencies = {};
-packageJson.devDependencies = {};
-packageJson.peerDependencies = {};
-packageJson.optionalDependencies = {};
-await writePackage(packageJson);
+  await createProject({
+    name: NEW_PROJECT,
+    packageManager: "pnpm",
+    skipGitInit: true,
+    skipInstall: true,
+  });
 
-await rmForce(WITH_DOCUMENT_MODELS);
+  const packageJson = await readPackage();
+  packageJson.dependencies = {};
+  packageJson.devDependencies = {};
+  packageJson.peerDependencies = {};
+  packageJson.optionalDependencies = {};
+  await writePackage(packageJson);
 
-await cpForce(
-  join(testProjectsDir, NEW_PROJECT),
-  join(testProjectsDir, WITH_DOCUMENT_MODELS),
-);
+  await rmForce(WITH_DOCUMENT_MODELS);
 
-await loadDocumentModelsInDir(
-  join(dataDir, DOCUMENT_MODELS),
-  join(testProjectsDir, WITH_DOCUMENT_MODELS),
-  false,
-);
+  await cpForce(
+    join(testProjectsDir, NEW_PROJECT),
+    join(testProjectsDir, WITH_DOCUMENT_MODELS),
+  );
 
-await rmForce(WITH_DOCUMENT_MODELS_SPEC_1);
+  await loadDocumentModelsInDir(
+    join(dataDir, DOCUMENT_MODELS),
+    join(testProjectsDir, WITH_DOCUMENT_MODELS),
+    false,
+  );
 
-await cpForce(
-  join(testProjectsDir, NEW_PROJECT),
-  join(testProjectsDir, WITH_DOCUMENT_MODELS_SPEC_1),
-);
+  await rmForce(WITH_DOCUMENT_MODELS_SPEC_1);
 
-await loadDocumentModelsInDir(
-  join(dataDir, SPEC_VERSION_1),
-  join(testProjectsDir, WITH_DOCUMENT_MODELS_SPEC_1),
-  true,
-);
+  await cpForce(
+    join(testProjectsDir, NEW_PROJECT),
+    join(testProjectsDir, WITH_DOCUMENT_MODELS_SPEC_1),
+  );
 
-await rmForce(WITH_DOCUMENT_MODELS_SPEC_2);
+  await loadDocumentModelsInDir(
+    join(dataDir, SPEC_VERSION_1),
+    join(testProjectsDir, WITH_DOCUMENT_MODELS_SPEC_1),
+    true,
+  );
 
-await cpForce(
-  join(testProjectsDir, NEW_PROJECT),
-  join(testProjectsDir, WITH_DOCUMENT_MODELS_SPEC_2),
-);
+  await rmForce(WITH_DOCUMENT_MODELS_SPEC_2);
 
-await loadDocumentModelsInDir(
-  join(dataDir, SPEC_VERSION_2),
-  join(testProjectsDir, WITH_DOCUMENT_MODELS_SPEC_2),
-  true,
-);
+  await cpForce(
+    join(testProjectsDir, NEW_PROJECT),
+    join(testProjectsDir, WITH_DOCUMENT_MODELS_SPEC_2),
+  );
 
-await rmForce(WITH_EDITORS);
+  await loadDocumentModelsInDir(
+    join(dataDir, SPEC_VERSION_2),
+    join(testProjectsDir, WITH_DOCUMENT_MODELS_SPEC_2),
+    true,
+  );
 
-await cpForce(
-  join(testProjectsDir, WITH_DOCUMENT_MODELS),
-  join(testProjectsDir, WITH_EDITORS),
-);
+  await rmForce(WITH_EDITORS);
 
-process.chdir(join(testProjectsDir, WITH_EDITORS));
-await generateEditor({
-  editorId: "existing-document-editor",
-  editorName: "ExistingDocumentEditor",
-  documentTypes: ["powerhouse/test-doc"],
-  useTsMorph: true,
-  skipFormat: false,
-  specifiedPackageName: undefined,
-  editorDirName: undefined,
-});
-await generateDriveEditor({
-  driveEditorId: "existing-drive-editor",
-  driveEditorName: "ExistingDriveEditor",
-  allowedDocumentTypes: ["powerhouse/test-doc"],
-  specifiedPackageName: undefined,
-  driveEditorDirName: undefined,
-  useTsMorph: true,
-  isDragAndDropEnabled: true,
-  skipFormat: false,
-});
-process.chdir(cwd);
+  await cpForce(
+    join(testProjectsDir, WITH_DOCUMENT_MODELS),
+    join(testProjectsDir, WITH_EDITORS),
+  );
+
+  process.chdir(join(testProjectsDir, WITH_EDITORS));
+  await generateEditor({
+    editorId: "existing-document-editor",
+    editorName: "ExistingDocumentEditor",
+    documentTypes: ["powerhouse/test-doc"],
+    useTsMorph: true,
+    skipFormat: false,
+    specifiedPackageName: undefined,
+    editorDirName: undefined,
+  });
+  await generateDriveEditor({
+    driveEditorId: "existing-drive-editor",
+    driveEditorName: "ExistingDriveEditor",
+    allowedDocumentTypes: ["powerhouse/test-doc"],
+    specifiedPackageName: undefined,
+    driveEditorDirName: undefined,
+    useTsMorph: true,
+    isDragAndDropEnabled: true,
+    skipFormat: false,
+  });
+  process.chdir(cwd);
+}
