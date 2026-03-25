@@ -14,7 +14,6 @@ import {
   type PluginOption,
 } from "vite";
 import { createHtmlPlugin } from "vite-plugin-html";
-import tsconfigPaths from "vite-tsconfig-paths";
 import type { IConnectOptions } from "./types.js";
 
 const isLocalDev = true;
@@ -167,7 +166,6 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
   const uploadSentrySourcemaps = authToken && org && project;
 
   const plugins: PluginOption[] = [
-    tsconfigPaths(),
     tailwind(),
     react(),
     createHtmlPlugin({
@@ -244,6 +242,9 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
   const config: InlineConfig = {
     configFile: false,
     mode,
+    resolve: {
+      tsconfigPaths: true,
+    },
     define: {
       PH_PACKAGES: phPackages,
       PH_PACKAGE_REGISTRY_URL: `"${phPackageRegistryUrl}"`,

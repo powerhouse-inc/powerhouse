@@ -1,8 +1,10 @@
 import react from "@vitejs/plugin-react";
-import tsconfigPaths from "vite-tsconfig-paths";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
+  resolve: {
+    tsconfigPaths: true,
+  },
   test: {
     include: [
       "test/**/*.test.ts",
@@ -16,5 +18,5 @@ export default defineConfig({
     setupFiles: ["./setupTests.ts"],
     passWithNoTests: true,
   },
-  plugins: [tsconfigPaths(), react()],
+  plugins: [react()],
 });
