@@ -830,11 +830,8 @@ function generateNewApiSchema(
       """Get a specific ${documentName} document by identifier"""
       document(identifier: String!, view: ${documentName}_ViewFilterInput): ${documentName}_DocumentWithChildren
 
-      """Get all ${documentName} documents (paged)"""
-      ${documentName}_documents(paging: ${documentName}_PagingInput): ${documentName}_DocumentResultPage!
-
       """Find ${documentName} documents by search criteria"""
-      findDocuments(search: ${documentName}_SearchFilterInput!, view: ${documentName}_ViewFilterInput, paging: ${documentName}_PagingInput): ${documentName}_DocumentResultPage!
+      findDocuments(search: ${documentName}_SearchFilterInput, view: ${documentName}_ViewFilterInput, paging: ${documentName}_PagingInput): ${documentName}_DocumentResultPage!
 
       """Get children of a ${documentName} document"""
       documentChildren(parentIdentifier: String!, view: ${documentName}_ViewFilterInput, paging: ${documentName}_PagingInput): ${documentName}_DocumentResultPage!
