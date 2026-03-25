@@ -237,7 +237,7 @@ async function initServer(
   if (process.env.SENTRY_DSN) {
     // Register Sentry error handler after all routes are established.
     // The adapter calls the framework-specific Sentry setup internally.
-    api.app.setupSentryErrorHandler(Sentry);
+    api.httpAdapter.setupSentryErrorHandler(Sentry);
   }
 
   const { client, graphqlManager, documentModelRegistry } = api;
@@ -283,7 +283,7 @@ async function initServer(
 
   // add vite middleware after express app is initialized if applicable
   if (vite) {
-    api.app.mountRawMiddleware(vite.middlewares);
+    api.httpAdapter.mountRawMiddleware(vite.middlewares);
   }
 
   // Connect to remote drives AFTER packages are loaded
