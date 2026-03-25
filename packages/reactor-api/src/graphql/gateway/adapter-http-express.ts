@@ -27,6 +27,13 @@ export class ExpressHttpAdapter implements IHttpAdapter {
     this.#app.use(this.#router);
   }
 
+  setupSentryErrorHandler(sentry: object): void {
+    const s = sentry as {
+      setupExpressErrorHandler(app: ReturnType<typeof expressLib>): void;
+    };
+    s.setupExpressErrorHandler(this.#app);
+  }
+
   get handle(): unknown {
     return this.#app;
   }

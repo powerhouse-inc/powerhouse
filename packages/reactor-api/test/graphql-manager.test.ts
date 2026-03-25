@@ -119,6 +119,7 @@ function makeMockHttpAdapter() {
     mountRawMiddleware: vi.fn(),
     mountNodeRoute: vi.fn(),
     listen: vi.fn().mockResolvedValue({}),
+    setupSentryErrorHandler: vi.fn(),
     handle: {},
   };
   return { adapter, mounts };
