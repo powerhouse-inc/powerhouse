@@ -6,7 +6,7 @@ import type {
   DocumentModelModule,
   PHDocument,
 } from "@powerhousedao/shared/document-model";
-import { generateId } from "@powerhousedao/shared/document-model";
+import { createAction } from "@powerhousedao/shared/document-model";
 import { z } from "zod";
 import type { ToolSchema, ToolWithCallback } from "./types.js";
 import { toolWithCallback, validateDocumentModelAction } from "./utils.js";
@@ -415,13 +415,13 @@ export async function createReactorMcpProvider(
         );
       }
       const actions: Action[] = params.actions.map((paramAction) => {
-        const action: Action = {
-          id: generateId(),
-          timestampUtcMs: new Date().toISOString(),
-          type: paramAction.type,
-          input: paramAction.input ?? {},
-          scope: paramAction.scope,
-        };
+        const action: Action = createAction(
+          paramAction.type,
+          paramAction.input ?? {},
+          undefined,
+          undefined,
+          paramAction.scope,
+        );
         const actionValidation = validateDocumentModelAction(
           documentModel,
           action,
