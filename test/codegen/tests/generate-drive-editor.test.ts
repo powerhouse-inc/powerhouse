@@ -5,18 +5,20 @@ import { afterAll, describe, expect, it } from "bun:test";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import {
-  DATA,
   TEST_OUTPUT,
+  TEST_PROJECTS,
   WITH_DOCUMENT_MODELS,
   WITH_EDITORS,
 } from "../constants.js";
-import { cpForce, rmForce } from "../utils.js";
+import { cpForce, mkdirRecursive, rmForce } from "../utils.js";
 
 type GenerateDriveEditorOptions = Parameters<typeof generateDriveEditor>[0];
 
 const cwd = process.cwd();
-const parentOutDir = join(cwd, TEST_OUTPUT);
-const dataDir = join(cwd, DATA);
+const parentOutDir = join(cwd, TEST_OUTPUT, "generate-drive-editor");
+const testProjectsDir = join(cwd, TEST_PROJECTS);
+await rmForce(parentOutDir);
+await mkdirRecursive(parentOutDir);
 
 describe("generateDriveEditor", () => {
   afterAll(() => {
@@ -40,7 +42,7 @@ describe("generateDriveEditor", () => {
   it("should generate a drive editor with the correct files and content", async () => {
     const outDir = join(parentOutDir, "generate-new-drive-editor");
     await rmForce(outDir);
-    await cpForce(join(dataDir, WITH_DOCUMENT_MODELS), outDir);
+    await cpForce(join(testProjectsDir, WITH_DOCUMENT_MODELS), outDir);
     process.chdir(outDir);
     await generateDriveEditor({
       ...options,
@@ -146,7 +148,7 @@ describe("generateDriveEditor", () => {
 
   it("should append new exports to existing editors.ts file", async () => {
     const outDir = join(parentOutDir, "append-exports-to-existing-editors");
-    await cpForce(join(dataDir, WITH_EDITORS), outDir);
+    await cpForce(join(testProjectsDir, WITH_EDITORS), outDir);
     process.chdir(outDir);
     await generateDriveEditor({
       ...options,

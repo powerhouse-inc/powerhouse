@@ -7,12 +7,12 @@ import { fileExists } from "@powerhousedao/shared/clis";
 import { describe, expect, it } from "bun:test";
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { DATA, TEST_OUTPUT, TEST_PROJECT } from "../constants.js";
+import { NEW_PROJECT, TEST_OUTPUT, TEST_PROJECTS } from "../constants.js";
 import { cpForce, mkdirRecursive, rmForce } from "../utils.js";
 
-const testOutputDir = join(process.cwd(), TEST_OUTPUT);
-const testDataDir = join(process.cwd(), DATA);
-const testOutputParentDir = join(testOutputDir, "generate-manifest");
+const parentOutDir = join(process.cwd(), TEST_OUTPUT);
+const testProjectsDir = join(process.cwd(), TEST_PROJECTS);
+const testOutputParentDir = join(parentOutDir, "generate-manifest");
 await rmForce(testOutputParentDir);
 await mkdirRecursive(testOutputParentDir);
 
@@ -54,7 +54,7 @@ describe("generateManifest", () => {
       "update-existing-manifest",
     );
     await cpForce(
-      join(testDataDir, TEST_PROJECT, "powerhouse.manifest.json"),
+      join(testProjectsDir, NEW_PROJECT, "powerhouse.manifest.json"),
       join(testOutDirPath, "powerhouse.manifest.json"),
     );
     const manifestPath = generateManifest(updateData, testOutDirPath);
@@ -83,7 +83,7 @@ describe("generateManifest", () => {
       "update-publisher-partially",
     );
     await cpForce(
-      join(testDataDir, TEST_PROJECT, "powerhouse.manifest.json"),
+      join(testProjectsDir, NEW_PROJECT, "powerhouse.manifest.json"),
       join(testOutDirPath, "powerhouse.manifest.json"),
     );
     const manifestPath = generateManifest(updateData, testOutDirPath);
@@ -165,7 +165,7 @@ describe("generateManifest", () => {
 
     const testOutDirPath = join(testOutputParentDir, "validate-json-structure");
     await cpForce(
-      join(testDataDir, TEST_PROJECT, "powerhouse.manifest.json"),
+      join(testProjectsDir, NEW_PROJECT, "powerhouse.manifest.json"),
       join(testOutDirPath, "powerhouse.manifest.json"),
     );
     const manifestPath = generateManifest(manifestData, testOutDirPath);

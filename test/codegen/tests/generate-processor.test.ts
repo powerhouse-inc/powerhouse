@@ -3,11 +3,14 @@ import type { ProcessorApps } from "@powerhousedao/shared/processors";
 import { $ } from "bun";
 import { describe, it } from "bun:test";
 import { join } from "path";
-import { DATA, TEST_OUTPUT, TEST_PROJECT } from "../constants.js";
-import { cpForce } from "../utils.js";
+import { NEW_PROJECT, TEST_OUTPUT, TEST_PROJECTS } from "../constants.js";
+import { cpForce, mkdirRecursive, rmForce } from "../utils.js";
 
-const dataDir = join(process.cwd(), DATA);
 const parentOutDir = join(process.cwd(), TEST_OUTPUT);
+const testProjectDir = join(process.cwd(), TEST_PROJECTS);
+await rmForce(parentOutDir);
+await mkdirRecursive(parentOutDir);
+
 type ProcessorTestsInput = {
   processorName: string;
   processorType: "analytics" | "relationalDb";
@@ -22,7 +25,7 @@ async function runProcessorTests(args: {
 
   const outDir = join(parentOutDir, outDirName);
 
-  await cpForce(join(dataDir, TEST_PROJECT), outDir);
+  await cpForce(join(testProjectDir, NEW_PROJECT), outDir);
 
   for (const input of inputs) {
     await generateProcessor({

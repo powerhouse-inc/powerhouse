@@ -1,5 +1,6 @@
-export const TEST_PROJECT = "test-project";
+export const TEST_PROJECTS = "test-projects";
 export const TEST_OUTPUT = "test-output";
+export const NEW_PROJECT = "new-project";
 
 export const DATA = "data";
 

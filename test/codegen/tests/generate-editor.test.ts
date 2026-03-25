@@ -5,17 +5,18 @@ import { afterAll, describe, expect, it } from "bun:test";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import {
-  DATA,
   TEST_OUTPUT,
+  TEST_PROJECTS,
   WITH_DOCUMENT_MODELS,
   WITH_EDITORS,
 } from "../constants.js";
-import { cpForce } from "../utils.js";
+import { cpForce, mkdirRecursive, rmForce } from "../utils.js";
 
 const cwd = process.cwd();
-const parentOutDir = join(cwd, TEST_OUTPUT);
-const dataDir = join(cwd, DATA);
-
+const parentOutDir = join(cwd, TEST_OUTPUT, "generate-editor");
+const testProjectsDir = join(cwd, TEST_PROJECTS);
+await rmForce(parentOutDir);
+await mkdirRecursive(parentOutDir);
 type GenerateEditorOptions = Parameters<typeof generateEditor>[0];
 
 describe("generateEditor", () => {
@@ -38,7 +39,7 @@ describe("generateEditor", () => {
   it("should generate a Document Model editor", async () => {
     const outDir = join(parentOutDir, "generate-editor");
 
-    await cpForce(join(dataDir, WITH_DOCUMENT_MODELS), outDir);
+    await cpForce(join(testProjectsDir, WITH_DOCUMENT_MODELS), outDir);
     process.chdir(outDir);
     await generateEditor({
       ...options,
@@ -77,7 +78,7 @@ describe("generateEditor", () => {
 
   it("should append new exports to existing editors.ts file", async () => {
     const outDir = join(parentOutDir, "append-to-existing-editors");
-    await cpForce(join(dataDir, WITH_EDITORS), outDir);
+    await cpForce(join(testProjectsDir, WITH_EDITORS), outDir);
     process.chdir(outDir);
     await generateEditor({
       ...options,

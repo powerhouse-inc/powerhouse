@@ -15,8 +15,8 @@
   "exclude": [
     "dist",
     "node_modules",
-    "data",
-    "test-output"
+    "test-output",
+    "test-projects"
   ],
   // add monorepo package paths here
   // whenever you add "workspace:*" to this package's package.json, also add the path here

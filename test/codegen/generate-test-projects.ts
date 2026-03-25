@@ -9,24 +9,31 @@ import { writePackage } from "write-package";
 import {
   DATA,
   DOCUMENT_MODELS,
+  NEW_PROJECT,
   SPEC_VERSION_1,
   SPEC_VERSION_2,
-  TEST_PROJECT,
+  TEST_PROJECTS,
   WITH_DOCUMENT_MODELS,
   WITH_DOCUMENT_MODELS_SPEC_1,
   WITH_DOCUMENT_MODELS_SPEC_2,
   WITH_EDITORS,
 } from "./constants.js";
-import { cpForce, loadDocumentModelsInDir, rmForce } from "./utils.js";
+import {
+  cpForce,
+  loadDocumentModelsInDir,
+  mkdirRecursive,
+  rmForce,
+} from "./utils.js";
 
 const dataDir = join(process.cwd(), DATA);
-
-process.chdir(dataDir);
-
-await rmForce(TEST_PROJECT);
+const testProjectsDir = join(process.cwd(), TEST_PROJECTS);
+await rmForce(testProjectsDir);
+await mkdirRecursive(testProjectsDir);
+process.chdir(testProjectsDir);
+const cwd = process.cwd();
 
 await createProject({
-  name: TEST_PROJECT,
+  name: NEW_PROJECT,
   packageManager: "pnpm",
   skipGitInit: true,
   skipInstall: true,
@@ -41,47 +48,51 @@ await writePackage(packageJson);
 
 await rmForce(WITH_DOCUMENT_MODELS);
 
-await cpForce(join(dataDir, TEST_PROJECT), join(dataDir, WITH_DOCUMENT_MODELS));
+await cpForce(
+  join(testProjectsDir, NEW_PROJECT),
+  join(testProjectsDir, WITH_DOCUMENT_MODELS),
+);
 
 await loadDocumentModelsInDir(
   join(dataDir, DOCUMENT_MODELS),
-  join(dataDir, WITH_DOCUMENT_MODELS),
+  join(testProjectsDir, WITH_DOCUMENT_MODELS),
   false,
 );
 
 await rmForce(WITH_DOCUMENT_MODELS_SPEC_1);
 
 await cpForce(
-  join(dataDir, TEST_PROJECT),
-  join(dataDir, WITH_DOCUMENT_MODELS_SPEC_1),
+  join(testProjectsDir, NEW_PROJECT),
+  join(testProjectsDir, WITH_DOCUMENT_MODELS_SPEC_1),
 );
 
 await loadDocumentModelsInDir(
   join(dataDir, SPEC_VERSION_1),
-  join(dataDir, WITH_DOCUMENT_MODELS_SPEC_1),
+  join(testProjectsDir, WITH_DOCUMENT_MODELS_SPEC_1),
   true,
 );
 
 await rmForce(WITH_DOCUMENT_MODELS_SPEC_2);
 
 await cpForce(
-  join(dataDir, TEST_PROJECT),
-  join(dataDir, WITH_DOCUMENT_MODELS_SPEC_2),
+  join(testProjectsDir, NEW_PROJECT),
+  join(testProjectsDir, WITH_DOCUMENT_MODELS_SPEC_2),
 );
 
 await loadDocumentModelsInDir(
   join(dataDir, SPEC_VERSION_2),
-  join(dataDir, WITH_DOCUMENT_MODELS_SPEC_2),
+  join(testProjectsDir, WITH_DOCUMENT_MODELS_SPEC_2),
   true,
 );
 
 await rmForce(WITH_EDITORS);
 
-await cpForce(join(dataDir, WITH_DOCUMENT_MODELS), join(dataDir, WITH_EDITORS));
+await cpForce(
+  join(testProjectsDir, WITH_DOCUMENT_MODELS),
+  join(testProjectsDir, WITH_EDITORS),
+);
 
-const cwd = process.cwd();
-
-process.chdir(join(dataDir, WITH_EDITORS));
+process.chdir(join(testProjectsDir, WITH_EDITORS));
 await generateEditor({
   editorId: "existing-document-editor",
   editorName: "ExistingDocumentEditor",
