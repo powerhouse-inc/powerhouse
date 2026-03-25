@@ -68,7 +68,7 @@ You can also add a new remote drive to your Connect environment programmatically
   `bash
 ph reactor
 `
-- The GraphQL endpoint of your instance. For example, for the staging environment, use: `https://staging.switchboard.phd/graphql/system` (this is a supergraph gateway. Read more about [subgraphs and supergraphs here](/academy/MasteryTrack/WorkWithData/UsingSubgraphs).
+- The GraphQL endpoint of your instance. For example, for the staging environment, use: `https://staging.switchboard.phd/graphql` (this is a supergraph gateway. Read more about [subgraphs and supergraphs here](/academy/MasteryTrack/WorkWithData/UsingSubgraphs).
 - Appropriate permissions to perform mutations.
   :::
 
@@ -79,53 +79,62 @@ ph reactor
 
 ### 1. **Navigate to the GraphQL Playground or use a GraphQL client**
 
-- Open [https://switchboard.phd/graphql/system](https://switchboard.phd/graphql/system) in your browser, or use a tool like [GraphQL Playground](https://www.apollographql.com/docs/apollo-server/testing/graphql-playground/).
+- Open [https://switchboard.phd/graphql](https://switchboard.phd/graphql) in your browser, or use a tool like [GraphQL Playground](https://www.apollographql.com/docs/apollo-server/testing/graphql-playground/).
 
 ### 2. **Prepare the Mutation**
 
-- Use the following mutation to create a new drive:
+- Use the following mutation to create a new drive. Since a drive is itself a document of type `DocumentDrive`, you use the `DocumentDrive` mutation namespace:
 
 ```graphql title="Create Drive Mutation"
-mutation Mutation(
-  $name: String!
-  $icon: String
-  $addDriveId: String
-  $slug: String
-) {
-  addDrive(name: $name, icon: $icon, id: $addDriveId, slug: $slug) {
-    icon
-    id
-    name
-    slug
+mutation CreateDrive($name: String!, $slug: String) {
+  DocumentDrive {
+    createDocument(name: $name, slug: $slug) {
+      id
+      name
+      slug
+      documentType
+      state {
+        global {
+          name
+          icon
+        }
+      }
+    }
   }
 }
 ```
 
-- These are the example variables, feel free to change these as you like and add a different name or logo for your drive:
+- These are the example variables, feel free to change these as you like:
 
 ```json title="Example Variables"
 {
   "name": "AcademyTest",
-  "icon": "https://static.thenounproject.com/png/3009860-200.png",
-  "addDriveId": null,
   "slug": null
 }
 ```
 
-- You can also provide a custom `id` or `slug` if needed.
+- You can also provide a custom `slug` if needed.
 
 ### 3. **Execute the Mutation**
 
-- Run the mutation. On success, you will receive a response containing the new drive's `icon`, `id`, `name`, and `slug`:
+- Run the mutation. On success, you will receive a response containing the new drive's details:
 
 ```json title="Successful Response"
 {
   "data": {
-    "addDrive": {
-      "icon": "https://static.thenounproject.com/png/3009860-200.png",
-      "id": "6461580b-d317-4596-942d-f6b3d1bfc8fd",
-      "name": "AcademyTest",
-      "slug": "6461580b-d317-4596-942d-f6b3d1bfc8fd"
+    "DocumentDrive": {
+      "createDocument": {
+        "id": "6461580b-d317-4596-942d-f6b3d1bfc8fd",
+        "name": "AcademyTest",
+        "slug": "6461580b-d317-4596-942d-f6b3d1bfc8fd",
+        "documentType": "powerhouse/document-drive",
+        "state": {
+          "global": {
+            "name": "AcademyTest",
+            "icon": null
+          }
+        }
+      }
     }
   }
 }

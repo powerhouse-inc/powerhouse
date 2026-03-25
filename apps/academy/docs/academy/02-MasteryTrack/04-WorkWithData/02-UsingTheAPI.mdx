@@ -172,7 +172,7 @@ mutation {
 
 Powerhouse structures its data into **subgraphs**, which are modular GraphQL services that connect to the Reactor (Powerhouse's core data infrastructure) or Data Stores fueled by data from processors. Each subgraph has its own SDL, ensuring modularity and flexibility while working within the ecosystem.
 
-**Fetching data from the Reactor:** Powerhouse uses GraphQL to expose system-level data, such as drives, users, and operational records through the **System Subgraph**, which allows querying of drives, stored files and folders.
+**Fetching data from the Reactor:** Powerhouse uses GraphQL to expose system-level data, such as drives, users, and operational records through the **Reactor Subgraph**, which allows querying of drives, stored files and folders.
 
 **Operational data stores:** Custom subgraphs can be created to store and retrieve operational data in real time. For example, a subgraph can track file uploads and expose this data via GraphQL queries.
 
@@ -300,7 +300,7 @@ Copy this ID to use it in the Switchboard API.
   </figcaption>
 </figure>
 
-When you navigate to your Switchboard endpoint by adding **`/graphql/system`** to the end of your URL. (e.g., http://localhost:4001/graphql/system, https://switchboard.phd/graphql/system, or add it to a custom domain), you can use this document ID to query the state of your document.
+When you navigate to your Switchboard endpoint by adding **`/graphql`** to the end of your URL (e.g., http://localhost:4001/graphql, https://switchboard.phd/graphql, or add it to a custom domain), you can use this document ID to query the state of your document.
 The documentation on the left-hand side of the Apollo Sandbox will show you all the different fields that are available to query.
 
 <figure className="image-container">
@@ -317,7 +317,7 @@ The documentation on the left-hand side of the Apollo Sandbox will show you all 
 ### Option 3: Search for your document ID via GraphQL
 
 **Alternatively**, we can use our Reactor URL and endpoint to figure out the document ID.
-e.g., http://localhost:4001/graphql/system, https://switchboard.phd/graphql/system or your custom https://switchboard.domain/graphql/system
+e.g., http://localhost:4001/graphql, https://switchboard.phd/graphql, or your custom https://switchboard.domain/graphql
 
 We can find out the ID of our document by querying the drive for its documents.
 Since we only have one document in our drive, this query will return the ID of our to-do list document.
@@ -325,20 +325,25 @@ Since we only have one document in our drive, this query will return the ID of o
 ```graphQL title="Document ID Query"
 query Query {
   ToDoList {
-    getDocuments {
-      id
-      name
-      documentType
-      revision
-      created
-      lastModified
+    ToDoList_documents {
+      items {
+        id
+        name
+        documentType
+        revisionsList {
+          scope
+          revision
+        }
+        createdAtUtcIso
+        lastModifiedAtUtcIso
+      }
     }
   }
 }
 ```
 
-This example query is structured to request all documents of type `ToDoList` from the drive.
-It extracts common metadata fields such as **id**, **name**, **documentType**, **revision**, **created**, and **lastModified**.
+This example query is structured to request all documents of type `ToDoList`.
+It extracts common metadata fields such as **id**, **name**, **documentType**, **revisionsList**, **createdAtUtcIso**, and **lastModifiedAtUtcIso**.
 
 ### Get the state of the document
 
@@ -347,24 +352,31 @@ Once you've found your document via any of the three options above, you'll be ab
 In the previous step, we queried for document metadata. Now let's query for the actual content of the document state.
 
 ```graphql title="Get the Document state"
-query getDocument($documentId: PHID!, $driveId: String) {
+query getDocument($identifier: String!) {
   ToDoList {
-    getDocument(docId: $documentId, driveId: $driveId) {
-      id
-      created
-      lastModified
-      name
-      revision
-      state {
-        items {
-          id
-          text
-          checked
+    document(identifier: $identifier) {
+      document {
+        id
+        name
+        createdAtUtcIso
+        lastModifiedAtUtcIso
+        revisionsList {
+          scope
+          revision
         }
-        stats {
-          total
-          checked
-          unchecked
+        state {
+          global {
+            items {
+              id
+              text
+              checked
+            }
+            stats {
+              total
+              checked
+              unchecked
+            }
+          }
         }
       }
     }
@@ -372,10 +384,9 @@ query getDocument($documentId: PHID!, $driveId: String) {
 }
 ```
 
-```graphql title="Example variables"
+```json title="Example variables"
 {
-  "documentId": "03eb6780-f1d7-438c-84a0-6d93dfb8f6af", // or replace this with your specific doc ID
-  "driveId": "powerhouse" // or replace this with your specific driveId
+  "identifier": "03eb6780-f1d7-438c-84a0-6d93dfb8f6af"
 }
 ```
 
@@ -406,12 +417,21 @@ To use this mutation, you need to provide the `docId` of the to-do list you want
 Here is an example of how to structure the mutation:
 
 ```graphql title="example-add-mutation"
-mutation Mutation($docId: PHID, $input: ToDoList_AddTodoItemInput) {
-  ToDoList_addTodoItem(docId: $docId, input: $input)
+mutation AddTodoItem($docId: PHID!, $input: ToDoList_AddTodoItemInput!) {
+  ToDoList {
+    addTodoItem(docId: $docId, input: $input) {
+      id
+      name
+      revisionsList {
+        scope
+        revision
+      }
+    }
+  }
 }
 ```
 
-```graphql title="example-variables"
+```json title="example-variables"
 {
   "docId": "03eb6780-f1d7-438c-84a0-6d93dfb8f6af",
   "input": {
@@ -421,9 +441,9 @@ mutation Mutation($docId: PHID, $input: ToDoList_AddTodoItemInput) {
 }
 ```
 
-Replace the example `docId` with the actual ID of your document. You can get this ID by querying the drive as we did before.
+Replace the example `docId` with the actual ID of your document. You can get this ID by querying as we did before.
 
-When you execute this mutation in Apollo Studio, it will add the new item to your to-do list. The response will return the number of to-do's on your list.
+When you execute this mutation in Apollo Studio, it will add the new item to your to-do list. The response will return the updated document with its new revision.
 
 ### Deleting a to-do item
 
@@ -434,12 +454,21 @@ The document model provides a `DELETE_TODO_ITEM` operation, which corresponds to
 Here's how you can use it:
 
 ```graphql title="example-delete-mutation"
-mutation Mutation($docId: PHID, $input: ToDoList_DeleteTodoItemInput) {
-  ToDoList_deleteTodoItem(docId: $docId, input: $input)
+mutation DeleteTodoItem($docId: PHID!, $input: ToDoList_DeleteTodoItemInput!) {
+  ToDoList {
+    deleteTodoItem(docId: $docId, input: $input) {
+      id
+      name
+      revisionsList {
+        scope
+        revision
+      }
+    }
+  }
 }
 ```
 
-```graphql title="example-variables"
+```json title="example-variables"
 {
   "docId": "03eb6780-f1d7-438c-84a0-6d93dfb8f6af",
   "input": {
@@ -456,7 +485,7 @@ After executing this mutation, the specified to-do item will be removed from you
 
 After performing a write mutation, you can verify that the change was successful in a couple of ways:
 
-1.  **Query the document state again:** Rerun the `getDocument` query from earlier in this tutorial. You should see the new item in the list or the deleted item removed.
+1.  **Query the document state again:** Rerun the `document` query from earlier in this tutorial. You should see the new item in the list or the deleted item removed.
 2.  **Check the Operation History:** The operation history in Connect will show the new `ADD_TODO_ITEM` or `DELETE_TODO_ITEM` operation, along with who performed it and when. This provides a complete audit trail of all changes to the document.
 
 ### Summary

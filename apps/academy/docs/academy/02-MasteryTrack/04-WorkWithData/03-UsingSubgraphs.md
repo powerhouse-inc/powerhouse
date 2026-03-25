@@ -70,11 +70,13 @@ If we now run `ph reactor` we will see the new subgraph being registered during 
 ```
 Initializing Subgraph Manager...
 > Registered /graphql/auth subgraph.
-> Registered /graphql/system subgraph.
+> Registered /graphql/r subgraph.
 > Registered /graphql/analytics subgraph.
 > Registered /d/:drive subgraph.
 > Updating router
 > Registered /graphql supergraph
+> Registered /graphql/document-drive subgraph.
+> Registered /graphql/to-do-list subgraph.
 > **Registered /graphql/search-todos subgraph.**
 > Updating router
 > Registered /graphql supergraph
@@ -195,14 +197,18 @@ You should get a list of the document Ids which contain the search term "Test".
 If you want to see the full state of your document use this query.
 
 ```graphql
-query GetDocument($docId: PHID!) {
-  TodoList {
-    getDocument(docId: $docId) {
-      state {
-        items {
-          checked
-          id
-          text
+query GetDocument($identifier: String!) {
+  ToDoList {
+    document(identifier: $identifier) {
+      document {
+        state {
+          global {
+            items {
+              checked
+              id
+              text
+            }
+          }
         }
       }
     }
@@ -263,11 +269,16 @@ The supergraph allows you to both query & mutate data from the same endpoint.
 
 **Example: Using the supergraph with to-do list documents**
 
-1. Create a todo document in the `powerhouse` drive using the `TodoList_createDocument` mutation:
+1. Create a todo document in the `powerhouse` drive using the `ToDoList` `createDocument` mutation:
 
    ```graphql
-   mutation CreateTodoList($name: String!, $driveId: String) {
-     TodoList_createDocument(name: $name, driveId: $driveId)
+   mutation CreateTodoList($name: String!, $parentIdentifier: String) {
+     ToDoList {
+       createDocument(name: $name, parentIdentifier: $parentIdentifier) {
+         id
+         name
+       }
+     }
    }
    ```
 
@@ -276,52 +287,23 @@ The supergraph allows you to both query & mutate data from the same endpoint.
    ```json
    {
      "name": "My Test To-do List",
-     "driveId": "powerhouse"
+     "parentIdentifier": "powerhouse"
    }
    ```
 
-   This returns the document ID (e.g., `"abc123"`). Save this ID for the next steps.
+   This returns the document with its ID (e.g., `"abc123"`). Save this ID for the next steps.
 
-2. Add some items to your to-do list using the `TodoList_addTodoItem` mutation:
+2. Add some items to your to-do list using the `addTodoItem` mutation:
 
    ```graphql
-   mutation AddTodoItem(
-     $docId: PHID
-     $driveId: String
-     $input: TodoList_AddTodoItemInput
-   ) {
-     TodoList_addTodoItem(docId: $docId, driveId: $driveId, input: $input)
-   }
-   ```
-
-   Variables:
-
-   ```json
-   {
-     "docId": "abc123",
-     "driveId": "powerhouse",
-     "input": {
-       "text": "Learn about supergraphs"
-     }
-   }
-   ```
-
-   This returns the new revision number.
-
-3. Query the document state using the `getDocument` query:
-
-   ```graphql
-   query GetTodoList($docId: PHID!, $driveId: PHID) {
-     TodoList {
-       getDocument(docId: $docId, driveId: $driveId) {
+   mutation AddTodoItem($docId: PHID!, $input: ToDoList_AddTodoItemInput!) {
+     ToDoList {
+       addTodoItem(docId: $docId, input: $input) {
          id
          name
-         state {
-           items {
-             id
-             text
-             checked
-           }
+         revisionsList {
+           scope
+           revision
          }
        }
      }
@@ -333,7 +315,43 @@ The supergraph allows you to both query & mutate data from the same endpoint.
    ```json
    {
      "docId": "abc123",
-     "driveId": "powerhouse"
+     "input": {
+       "text": "Learn about supergraphs"
+     }
+   }
+   ```
+
+   This returns the updated document with its new revision.
+
+3. Query the document state using the `document` query:
+
+   ```graphql
+   query GetTodoList($identifier: String!) {
+     ToDoList {
+       document(identifier: $identifier) {
+         document {
+           id
+           name
+           state {
+             global {
+               items {
+                 id
+                 text
+                 checked
+               }
+             }
+           }
+         }
+       }
+     }
+   }
+   ```
+
+   Variables:
+
+   ```json
+   {
+     "identifier": "abc123"
    }
    ```
 
