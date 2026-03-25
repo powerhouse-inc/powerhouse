@@ -4,6 +4,7 @@
 📦 **Reference Code**: [chatroom-demo](https://github.com/powerhouse-inc/chatroom-demo)
 
 This tutorial covers two key implementations:
+
 1. **Reducers**: Implementing the reducer logic for all ChatRoom operations
 2. **Tests**: Writing comprehensive tests for the reducers
 
@@ -42,6 +43,7 @@ git show tutorial/main:document-models/chat-room/src/tests/messages.test.ts
 ### Visual comparison with GitHub Desktop
 
 After committing your work, compare visually:
+
 1. **Branch** menu → **"Compare to Branch..."**
 2. Select `tutorial/main`
 3. Review differences in the visual interface
@@ -110,18 +112,20 @@ Open the `messages.ts` file and you should see the scaffolding code that needs t
 import type { ChatRoomMessagesOperations } from "@powerhousedao/chatroom-package/document-models/chat-room";
 
 export const chatRoomMessagesOperations: ChatRoomMessagesOperations = {
-    addMessageOperation(state, action) {
-        // TODO: Implement "addMessageOperation" reducer
-        throw new Error('Reducer "addMessageOperation" not yet implemented');
-    },
-    addEmojiReactionOperation(state, action) {
-        // TODO: Implement "addEmojiReactionOperation" reducer
-        throw new Error('Reducer "addEmojiReactionOperation" not yet implemented');
-    },
-    removeEmojiReactionOperation(state, action) {
-        // TODO: Implement "removeEmojiReactionOperation" reducer
-        throw new Error('Reducer "removeEmojiReactionOperation" not yet implemented');
-    }
+  addMessageOperation(state, action) {
+    // TODO: Implement "addMessageOperation" reducer
+    throw new Error('Reducer "addMessageOperation" not yet implemented');
+  },
+  addEmojiReactionOperation(state, action) {
+    // TODO: Implement "addEmojiReactionOperation" reducer
+    throw new Error('Reducer "addEmojiReactionOperation" not yet implemented');
+  },
+  removeEmojiReactionOperation(state, action) {
+    // TODO: Implement "removeEmojiReactionOperation" reducer
+    throw new Error(
+      'Reducer "removeEmojiReactionOperation" not yet implemented',
+    );
+  },
 };
 ```
 
@@ -216,10 +220,10 @@ export const chatRoomMessagesOperations: ChatRoomMessagesOperations = {
       }
     }
   },
-    senderOperation(state, action) {
-        // TODO: Implement "senderOperation" reducer
-        throw new Error('Reducer "senderOperation" not yet implemented');
-    }
+  senderOperation(state, action) {
+    // TODO: Implement "senderOperation" reducer
+    throw new Error('Reducer "senderOperation" not yet implemented');
+  },
 };
 ```
 

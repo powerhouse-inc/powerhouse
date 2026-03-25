@@ -39,7 +39,6 @@
     "@powerhousedao/analytics-engine-core": "workspace:*",
     "@powerhousedao/design-system": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",
-    "document-drive": "workspace:*",
     "@testing-library/jest-dom": "^6.9.1",
     "@types/node": "catalog:",
     "@types/react": "catalog:",

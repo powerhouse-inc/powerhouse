@@ -24,6 +24,7 @@ git show tutorial/step-3-implement-reducer-operation-handlers:document-models/to
 ### Visual comparison with GitHub Desktop
 
 After committing your work, compare visually:
+
 1. **Branch** menu → **"Compare to Branch..."**
 2. Select `tutorial/step-3-implement-reducer-operation-handlers`
 3. Review differences in the visual interface
@@ -117,6 +118,7 @@ export const todoListTodosOperations: TodoListTodosOperations = {
 ```
 
 **What's happening here:**
+
 - We generate a unique ID using `generateId()` from `document-model/core`
 - We push a new item to the `items` array with the input text, new ID, and `checked: false`
 - Under the hood, Powerhouse uses Immer.js, so this "mutation" is actually immutable
@@ -143,6 +145,7 @@ Replace the boilerplate `updateTodoItemOperation`:
 ```
 
 **What's happening here:**
+
 - We find the item by its ID
 - We return early if the item is not found
 - We use nullish coalescing (`??`) to only update fields that are provided
@@ -166,6 +169,7 @@ Replace the boilerplate `deleteTodoItemOperation`:
 ```
 
 **What's happening here:**
+
 - We filter out the item with the matching ID
 - This creates a new array without the deleted item
 
@@ -185,14 +189,14 @@ export const todoListTodosOperations: TodoListTodosOperations = {
     const id = generateId();
     state.items.push({ ...action.input, id, checked: false });
   },
-  
+
   updateTodoItemOperation(state, action) {
     const item = state.items.find((item) => item.id === action.input.id);
     if (!item) return;
     item.text = action.input.text ?? item.text;
     item.checked = action.input.checked ?? item.checked;
   },
-  
+
   deleteTodoItemOperation(state, action) {
     state.items = state.items.filter((item) => item.id !== action.input.id);
   },

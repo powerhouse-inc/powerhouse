@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/powerhouse-vetra-packages",
-  "version": "6.0.0-dev.108",
+  "version": "6.0.0-dev.111",
   "description": "",
   "keywords": [],
   "author": "",
@@ -78,7 +78,6 @@
     "clsx": "^2.1.1",
     "cm6-graphql": "^0.2.1",
     "document-model": "workspace:*",
-    "document-drive": "workspace:*",
     "graphql": "catalog:",
     "react-hook-form": "^7.56.1",
     "tailwind-merge": "catalog:",

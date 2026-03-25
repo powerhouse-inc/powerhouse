@@ -4,10 +4,11 @@
 📦 **Reference Code**: [chatroom-demo](https://github.com/powerhouse-inc/chatroom-demo)
 
 This tutorial step has a corresponding implementation in the repository. After completing this step, your project will have a document model specification with:
+
 - Document model specification files (`chat-room.json`, `schema.graphql`)
 - Auto-generated TypeScript types and action creators
 - Reducer scaffolding ready for implementation
-:::
+  :::
 
 <details>
 <summary>📖 How to use this tutorial</summary>
@@ -29,6 +30,7 @@ git show tutorial/main:document-models/chat-room/schema.graphql
 ### Visual comparison with GitHub Desktop
 
 After making a commit, use GitHub Desktop for visual diff:
+
 1. **Branch** menu → **"Compare to Branch..."**
 2. Select `tutorial/main`
 3. Review all file differences in the visual interface
@@ -173,14 +175,14 @@ To define the document model, you need to open the document model editor in Vetr
 4. Verify that your **Global State Initial Value** looks like this:
 
    ```json
-    {
-      "ID": "",
-      "name": "",
-      "description": null,
-      "createdAt": null,
-      "createdBy": null,
-      "messages": []
-    }
+   {
+     "ID": "",
+     "name": "",
+     "description": null,
+     "createdAt": null,
+     "createdBy": null,
+     "messages": []
+   }
    ```
 
 5. Below the editor, find the input field `Add module`. Create the first module for message-related operations. Name the module `messages`. Press enter.

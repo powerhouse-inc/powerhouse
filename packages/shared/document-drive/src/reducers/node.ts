@@ -4,7 +4,8 @@
  * - delete the file and run the code generator again to have it reset
  */
 
-import type { DocumentDriveNodeOperations, FileNode } from "document-drive";
+import type { FileNode } from "../../gen/schema/types.js";
+import type { DocumentDriveNodeOperations } from "../../gen/node/actions.js";
 import {
   getDescendants,
   handleTargetNameCollisions,

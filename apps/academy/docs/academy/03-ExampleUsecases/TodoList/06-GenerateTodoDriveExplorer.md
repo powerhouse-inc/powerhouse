@@ -1,6 +1,6 @@
 # Step 6 - Generate the custom drive editor for managing our `TodoList` documents
 
-in Connect, a "drive" is just a document with the type "powerhouse/drive", which is specifically created for containing and managing other documents. 
+in Connect, a "drive" is just a document with the type "powerhouse/drive", which is specifically created for containing and managing other documents.
 
 A "drive editor" is just an editor that specifically works on documents with the type "powerhouse/document-drive".
 
@@ -37,24 +37,24 @@ editors
 │   │   └── module.ts                     # module export for the editor (do not change this)
 ```
 
- ## Check your work
+## Check your work
 
 To make sure all works as expected, we should:
 
 - check types
-run: `pnpm tsc`
+  run: `pnpm tsc`
 
 - check linting
-run: `pnpm lint`
+  run: `pnpm lint`
 
 - check tests
-run: `pnpm test`
+  run: `pnpm test`
 
 - test in connect
-run: `pnpm connect` — you should now be able to create a new drive with the type "TodoDriveApp" and use it the same as you would the "Generic Drive Explorer", except it should only allow you to create `TodoList` type documents.
+  run: `pnpm connect` — you should now be able to create a new drive with the type "TodoDriveApp" and use it the same as you would the "Generic Drive Explorer", except it should only allow you to create `TodoList` type documents.
 
 - make sure your code matches the code in the completed step branch
-run: `git diff your-branch-name step-6-complete-generated-todo-drive-explorer`
+  run: `git diff your-branch-name step-6-complete-generated-todo-drive-explorer`
 
 ## Up next: adding a shared component for showing stats about todos in both our `TodoListEditor` and `TodoDriveExplorer`
 

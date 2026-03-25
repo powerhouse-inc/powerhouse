@@ -298,9 +298,6 @@ processors, and other components based on your document model files.
 
 **Skip Format** - Skip formatting the generated code. - Usage: `--skip-format, -sf`
 
-**Use Hygen** - Use legacy hygen codegen - Usage: `--use-hygen`
-
-**Default:** `false`
 **Use Versioning** - Allow upgrading document models with versioning. - Usage: `--use-versioning`
 
 **Default:** `true`
@@ -717,9 +714,6 @@ Run migrations
 
 
 ### Flags
-**Use Hygen** - Use legacy hygen codegen - Usage: `--use-hygen`
-
-**Default:** `false`
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
 **Help** - show help - Usage: `--help, -h`

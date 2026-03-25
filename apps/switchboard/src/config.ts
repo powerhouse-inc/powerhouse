@@ -2,7 +2,7 @@ import dotenv from "dotenv";
 dotenv.config();
 
 import { getConfig } from "@powerhousedao/config/node";
-import type { DriveInput } from "document-drive";
+import type { DriveInput } from "@powerhousedao/shared/document-drive";
 const phConfig = getConfig();
 const { switchboard } = phConfig;
 interface Config {

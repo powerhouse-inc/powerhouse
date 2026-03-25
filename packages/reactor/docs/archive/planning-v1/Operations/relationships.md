@@ -31,10 +31,10 @@ The system supports typed relationships to enable different relationship semanti
 
 ```typescript
 type RelationshipType =
-  | "child"       // Source-target "child" hierarchy (e.g., drive contains documents)
-  | "reference"   // Weak reference (e.g., document links to another)
-  | "dependency"  // Strong dependency (e.g., document requires another)
-  | string;       // Custom relationship types
+  | "child" // Source-target "child" hierarchy (e.g., drive contains documents)
+  | "reference" // Weak reference (e.g., document links to another)
+  | "dependency" // Strong dependency (e.g., document requires another)
+  | string; // Custom relationship types
 ```
 
 **Default**: `"child"` is the primary relationship type for document hierarchies.
@@ -47,9 +47,9 @@ Establishes a directed relationship from a source document to a target document.
 
 ```typescript
 type AddRelationshipActionInput = {
-  sourceId: string;           // Source document ID
-  targetId: string;           // Target document ID
-  relationshipType: string;   // Type of relationship (default: "child")
+  sourceId: string; // Source document ID
+  targetId: string; // Target document ID
+  relationshipType: string; // Type of relationship (default: "child")
   metadata?: Record<string, unknown>; // Optional relationship metadata
 };
 ```
@@ -100,9 +100,9 @@ Removes a directed relationship from a source document to a target document.
 
 ```typescript
 type RemoveRelationshipActionInput = {
-  sourceId: string;           // Source document ID
-  targetId: string;           // Target document ID
-  relationshipType: string;   // Type of relationship to remove (default: "child")
+  sourceId: string; // Source document ID
+  targetId: string; // Target document ID
+  relationshipType: string; // Type of relationship to remove (default: "child")
 };
 ```
 
@@ -149,6 +149,7 @@ IDocumentIndexer is a read model that builds a graph index of document relations
 The document indexer receives `(operation, context)` envelopes from the event bus. For relationship operations the context contains `documentId = sourceId` and `scope = "document"`.
 
 **ADD_RELATIONSHIP Processing:**
+
 1. Extract `sourceId`, `targetId`, and `relationshipType` from the operation input
 2. Create or update `DocumentRelationship` record in the graph store
 3. Store metadata and timestamp from operation
@@ -156,6 +157,7 @@ The document indexer receives `(operation, context)` envelopes from the event bu
 5. Update indexes for efficient querying by `sourceId` and `targetId`
 
 **REMOVE_RELATIONSHIP Processing:**
+
 1. Extract `sourceId`, `targetId`, and `relationshipType` from the operation input
 2. Delete `DocumentRelationship` record matching the tuple
 3. If relationship does not exist, operation is a no-op (idempotent)
@@ -165,6 +167,7 @@ The document indexer receives `(operation, context)` envelopes from the event bu
 Applications query relationships through IDocumentIndexer interface:
 
 **Available Query Methods:**
+
 - `getOutgoing(documentId, types)` - Get all relationships where the document is the source
 - `getIncoming(documentId, types)` - Get all relationships where the document is the target
 - `hasRelationship(sourceId, targetId, types)` - Check if relationship exists
@@ -173,6 +176,7 @@ Applications query relationships through IDocumentIndexer interface:
 - `findAncestors(documentId, types)` - Get ancestor graph
 
 **Example Usage:**
+
 - Query all targets for a source drive: `getOutgoing(driveId, ["child"])`
 - Query all sources for a document: `getIncoming(docId, ["child"])`
 - Check if drive contains document: `hasRelationship(driveId, docId, ["child"])`
@@ -184,6 +188,7 @@ See [IDocumentIndexer](../Storage/IDocumentIndexer.md) for full interface specif
 The `addChildren()` method should create ADD_RELATIONSHIP actions and submit them against the source document stream (the public API retains parent/child naming):
 
 **Behavior:**
+
 - Maps each `childId` to an ADD_RELATIONSHIP action
 - All actions target the source documentId as provided to `mutate`
 - Uses `scope = "document"` and `relationshipType = "child"`
@@ -196,6 +201,7 @@ The `addChildren()` method should create ADD_RELATIONSHIP actions and submit the
 The `removeChildren()` method should create REMOVE_RELATIONSHIP actions and submit them against the source document stream (the public API retains parent/child naming):
 
 **Behavior:**
+
 - Maps each `childId` to a REMOVE_RELATIONSHIP action
 - All actions target the source documentId as provided to `mutate`
 - Uses `scope = "document"` and `relationshipType = "child"`
@@ -210,6 +216,7 @@ Relationship operations do not use the write cache. Even though they live in the
 #### Imperative Handlers Within Document Streams
 
 Unlike regular document operations, relationship operations do NOT:
+
 - Go through document model reducers
 - Build up relationship state inside the document snapshot
 - Require cached state to be read or written
@@ -227,6 +234,7 @@ When the job executor processes these operations:
 5. **Event emission**: Event bus notifies read models of the new operation
 
 **No cache involvement:**
+
 - No call to `writeCache.getState()` to load previous relationship state
 - No call to `writeCache.putState()` to store resulting state
 - Relationship graph is maintained directly by IDocumentIndexer
@@ -234,6 +242,7 @@ When the job executor processes these operations:
 #### Individual Document Caches Unaffected
 
 Adding or removing relationships does NOT invalidate document caches:
+
 - Document state (global, local, document scopes) is independent of relationship graph
 - Documents continue using cached state normally
 - No coordination needed between relationship operations and document caches
@@ -245,6 +254,7 @@ The IOperationIndex is written to synchronously during job execution (not asynch
 #### Collection Updates During Job Execution
 
 When the job executor processes ADD_RELATIONSHIP with `relationshipType = "child"`:
+
 1. **Extract collection ID** from the source document
    - If the source is a drive: `collectionId = "drive.${sourceId}"`
 2. **Add child to collection** in `document_collections` table:
@@ -256,6 +266,7 @@ When the job executor processes ADD_RELATIONSHIP with `relationshipType = "child
 3. **Index operation** in `operation_index_operations` table with `documentId = sourceId`
 
 When the job executor processes REMOVE_RELATIONSHIP:
+
 1. **Child remains in collection**
    - Collections are cumulative (documents that have EVER been in a drive)
    - Removal does not delete from `document_collections`
@@ -264,6 +275,7 @@ When the job executor processes REMOVE_RELATIONSHIP:
 #### Listener Impact
 
 Listeners filtering on `driveId` receive document-stream operations affecting that drive's collection:
+
 - ADD_RELATIONSHIP operations notify listeners of new children
 - REMOVE_RELATIONSHIP operations notify listeners of removed children
 - Listeners can maintain their own relationship state or query IDocumentIndexer
@@ -271,6 +283,7 @@ Listeners filtering on `driveId` receive document-stream operations affecting th
 #### Performance Considerations
 
 Relationship operations are relatively infrequent compared to document operations:
+
 - Adding a child: 1 relationship operation + 1 collection insert
 - Removing a child: 1 relationship operation (no collection delete)
 - No document cache invalidation overhead
@@ -280,13 +293,13 @@ Relationship operations are relatively infrequent compared to document operation
 
 It is critical to understand the separation between relationships and document state:
 
-| Concern | Relationship Operations | Document State (e.g., FileNode) |
-|---------|------------------------|--------------------------------|
-| **What** | Graph edges between documents | Document-specific metadata |
-| **Where** | Stored in source document stream, indexed by IDocumentIndexer | Stored inside document scope state |
-| **Purpose** | Enable queries, traversal, relationship metadata | Store file/folder structure, names, types |
-| **Example** | `ADD_RELATIONSHIP(drive-123, doc-456, "child")` | `ADD_FILE({ id: "doc-456", name: "Report.txt", parentFolder: "folder-1" })` |
-| **Query** | `getOutgoing(driveId)` returns `childIds` | `driveDoc.state.global.nodes` contains FileNode |
+| Concern     | Relationship Operations                                       | Document State (e.g., FileNode)                                             |
+| ----------- | ------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| **What**    | Graph edges between documents                                 | Document-specific metadata                                                  |
+| **Where**   | Stored in source document stream, indexed by IDocumentIndexer | Stored inside document scope state                                          |
+| **Purpose** | Enable queries, traversal, relationship metadata              | Store file/folder structure, names, types                                   |
+| **Example** | `ADD_RELATIONSHIP(drive-123, doc-456, "child")`               | `ADD_FILE({ id: "doc-456", name: "Report.txt", parentFolder: "folder-1" })` |
+| **Query**   | `getOutgoing(driveId)` returns `childIds`                     | `driveDoc.state.global.nodes` contains FileNode                             |
 
 **Key Point**: A drive's FileNode array is independent of the relationship graph. ADD_FILE adds a FileNode; ADD_RELATIONSHIP creates a queryable source-target edge of type "child".
 
@@ -306,8 +319,8 @@ When a document is deleted:
 ```typescript
 deleteDocument({
   documentId: "source-123",
-  propagate: "cascade"
-})
+  propagate: "cascade",
+});
 ```
 
 This would create both DELETE_DOCUMENT and REMOVE_RELATIONSHIP operations in a single transaction, all within the source document stream.

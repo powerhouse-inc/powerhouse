@@ -1,6 +1,6 @@
-import { type IRelationalDbLegacy } from "document-drive";
+import type { IRelationalDb } from "@powerhousedao/shared/processors";
 
-export async function up(db: IRelationalDbLegacy<any>): Promise<void> {
+export async function up(db: IRelationalDb<any>): Promise<void> {
   // Create vetra_package table to store VetraPackage document state
   await db.schema
     .createTable("vetra_package")
@@ -52,7 +52,7 @@ export async function up(db: IRelationalDbLegacy<any>): Promise<void> {
     .execute();
 }
 
-export async function down(db: IRelationalDbLegacy<any>): Promise<void> {
+export async function down(db: IRelationalDb<any>): Promise<void> {
   // Drop indexes first
   await db.schema.dropIndex("idx_vetra_package_category").ifExists().execute();
   await db.schema.dropIndex("idx_vetra_package_name").ifExists().execute();

@@ -11,50 +11,50 @@ import type {
   ProcessorRecord as ReactorProcessorRecord,
 } from "@powerhousedao/reactor";
 import { setupMcpServer } from "@powerhousedao/reactor-mcp";
-import { type DocumentModelModule } from "@powerhousedao/shared/document-model";
-import devcert from "devcert";
-import type {
-  IDocumentDriveServer,
-  IProcessorHostModuleLegacy,
-  IRelationalDbLegacy,
-  ProcessorFactoryLegacy,
-} from "document-drive";
-import {
-  createRelationalDbLegacy,
-  ProcessorManagerLegacy,
-} from "document-drive";
+import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import type { Express } from "express";
-import express from "express";
 import type { Kysely } from "kysely";
-import fs from "node:fs";
 import type http from "node:http";
-import https from "node:https";
 import path from "node:path";
-import type { TlsOptions } from "node:tls";
 import type { Pool } from "pg";
 import { WebSocketServer } from "ws";
 // Import tracing - initializes OpenTelemetry and provides stub functions for backwards compatibility
-import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
-import type {
-  IProcessorHostModule,
-  ProcessorApp,
+import {
+  createRelationalDb,
+  type IProcessorHostModule,
+  type IRelationalDb,
+  type ProcessorApp,
 } from "@powerhousedao/shared/processors";
 import { childLogger, type ILogger } from "document-model";
 import { config, DefaultCoreSubgraphs } from "./config.js";
 import { AuthSubgraph } from "./graphql/auth/subgraph.js";
 import { GraphQLManager } from "./graphql/graphql-manager.js";
+import {
+  createAuthFetchMiddleware,
+  type AuthFetchMiddleware,
+} from "./graphql/gateway/auth-middleware.js";
+import {
+  createGatewayAdapter,
+  createHttpAdapter,
+} from "./graphql/gateway/factory.js";
+import type { IHttpAdapter, TlsOptions } from "./graphql/gateway/types.js";
 import { renderGraphqlPlayground } from "./graphql/playground.js";
 import { ReactorSubgraph } from "./graphql/reactor/subgraph.js";
 import type { SubgraphClass } from "./graphql/types.js";
 import { runMigrations } from "./migrations/index.js";
 import { ImportPackageLoader } from "./packages/import-loader.js";
 import { PackageManager } from "./packages/package-manager.js";
-import type { AuthenticatedRequest } from "./services/auth.service.js";
 import { AuthService } from "./services/auth.service.js";
 import { AuthorizationService } from "./services/authorization.service.js";
 import { DocumentPermissionService } from "./services/document-permission.service.js";
 import { initTracing, isTracingEnabled, trace } from "./tracing.js";
-import type { API, IPackageLoader, Processor } from "./types.js";
+import type {
+  API,
+  IPackageLoader,
+  Processor,
+  ProcessorDriveFactory,
+  ProcessorFactoryBuilder,
+} from "./types.js";
 import {
   getDbClient,
   initAnalyticsStoreSql,
@@ -82,7 +82,7 @@ type Options = {
     | boolean
     | undefined;
   packageLoader?: IPackageLoader;
-  processors?: Record<string, Processor>;
+  processors?: Record<string, ProcessorInitializer[]>;
   mcp?: boolean;
   processorConfig?: Map<string, unknown>;
   /**
@@ -97,26 +97,9 @@ type Options = {
   logger?: ILogger;
 };
 
+type ProcessorInitializer = ProcessorFactoryBuilder;
+
 const DEFAULT_PORT = 4000;
-/**
- * Sets up the Express app with necessary routes
- */
-function setupGraphQlExplorer(router: express.Router): void {
-  router.get("/explorer/:endpoint?", (req, res) => {
-    res.setHeader("Content-Type", "text/html");
-    const endpoint =
-      req.params.endpoint !== undefined
-        ? `/${req.params.endpoint}`
-        : "/graphql";
-
-    const { query } = req.query;
-    if (query && typeof query !== "string") {
-      throw new Error("Invalid query");
-    }
-
-    res.send(renderGraphqlPlayground(endpoint, query));
-  });
-}
 
 /**
  * Initializes the database and analytics store
@@ -124,11 +107,11 @@ function setupGraphQlExplorer(router: express.Router): void {
 async function initializeDatabaseAndAnalytics(
   dbPath: string | undefined,
 ): Promise<{
-  relationalDb: IRelationalDbLegacy;
+  relationalDb: IRelationalDb;
   analyticsStore: IAnalyticsStore;
 }> {
   const { db, knex } = getDbClient(dbPath);
-  const relationalDb = createRelationalDbLegacy<unknown>(db);
+  const relationalDb = createRelationalDb<unknown>(db);
   const analyticsStore = new PostgresAnalyticsStore({
     knex,
   });
@@ -144,11 +127,12 @@ async function initializeDatabaseAndAnalytics(
  * Sets up the subgraph manager and registers subgraphs
  */
 async function setupGraphQLManager(
-  app: Express,
+  httpAdapter: IHttpAdapter,
+  authFetchMiddleware: AuthFetchMiddleware | undefined,
   httpServer: http.Server,
   wsServer: WebSocketServer,
   client: IReactorClient,
-  relationalDb: IRelationalDbLegacy,
+  relationalDb: IRelationalDb,
   analyticsStore: IAnalyticsStore,
   syncManager: ISyncManager,
   subgraphs: {
@@ -167,7 +151,6 @@ async function setupGraphQLManager(
 ): Promise<GraphQLManager> {
   const graphqlManager = new GraphQLManager(
     config.basePath,
-    app,
     httpServer,
     wsServer,
     client,
@@ -175,6 +158,8 @@ async function setupGraphQLManager(
     analyticsStore,
     syncManager,
     logger,
+    httpAdapter,
+    createGatewayAdapter("apollo", logger),
     {
       enabled: auth?.enabled ?? false,
       admins: auth?.admins ?? [],
@@ -187,7 +172,7 @@ async function setupGraphQLManager(
     authorizationService,
   );
 
-  await graphqlManager.init(subgraphs.core);
+  await graphqlManager.init(subgraphs.core, authFetchMiddleware);
 
   for (const [, collection] of subgraphs.extended.entries()) {
     for (const subgraph of collection) {
@@ -207,7 +192,7 @@ function setupEventListeners(
   pkgManager: PackageManager,
   graphqlManager: GraphQLManager,
   reactorProcessorManager: IReactorProcessorManager,
-  module: IProcessorHostModuleLegacy,
+  module: IProcessorHostModule,
 ): void {
   pkgManager.onDocumentModelsChange(async () => {
     await graphqlManager.updateRouter();
@@ -228,12 +213,12 @@ function setupEventListeners(
 
       const factories = fns.map((fn) => fn(module));
 
-      const validFactories = factories.filter(
-        (factory): factory is ProcessorFactoryLegacy =>
+      const validBuilders = factories.filter(
+        (factory): factory is ProcessorDriveFactory =>
           factory !== null && typeof factory === "function",
       );
 
-      if (!validFactories.length) {
+      if (!validBuilders.length) {
         continue;
       }
 
@@ -242,9 +227,9 @@ function setupEventListeners(
         async (driveHeader) =>
           (
             await Promise.all(
-              validFactories.map(async (factory) => {
+              validBuilders.map(async (driveFactory) => {
                 try {
-                  const result = await factory(driveHeader);
+                  const result = await driveFactory(driveHeader);
                   return result as unknown as ReactorProcessorRecord[];
                 } catch (e) {
                   const logger = defaultLogger;
@@ -266,42 +251,19 @@ function setupEventListeners(
  * Starts the server (HTTP or HTTPS) and attaches WebSocket server
  */
 async function startServer(
-  app: Express,
+  httpAdapter: IHttpAdapter,
   port: number,
   httpsOptions: Options["https"],
   logger: ILogger,
 ): Promise<{ httpServer: http.Server; wsServer: WebSocketServer }> {
-  let httpServer: http.Server;
+  const tls: TlsOptions | undefined =
+    httpsOptions === true
+      ? true
+      : typeof httpsOptions === "object"
+        ? { keyPath: httpsOptions.keyPath, certPath: httpsOptions.certPath }
+        : undefined;
 
-  if (httpsOptions) {
-    const currentDir = process.cwd();
-
-    if (typeof httpsOptions === "object") {
-      httpServer = https.createServer(
-        {
-          key: fs.readFileSync(path.join(currentDir, httpsOptions.keyPath)),
-          cert: fs.readFileSync(path.join(currentDir, httpsOptions.certPath)),
-        },
-        app,
-      );
-    } else {
-      try {
-        const { cert, key } = (await devcert.certificateFor(
-          "localhost",
-        )) as TlsOptions;
-        if (!cert || !key) {
-          throw new Error("Invalid certificate generated");
-        }
-        httpServer = https.createServer({ cert, key }, app);
-      } catch (err) {
-        console.error("Failed to get HTTPS certificate:", err);
-        throw new Error("Failed to start HTTPS server");
-      }
-    }
-    httpServer.listen(port);
-  } else {
-    httpServer = app.listen(port);
-  }
+  const httpServer = await httpAdapter.listen(port, tls);
 
   const wsServer = new WebSocketServer({
     server: httpServer,
@@ -319,12 +281,13 @@ async function startServer(
  */
 async function _setupCommonInfrastructure(options: Options): Promise<{
   port: number;
-  app: Express;
+  httpAdapter: IHttpAdapter;
+  authFetchMiddleware: AuthFetchMiddleware | undefined;
   auth: {
     enabled: boolean;
     admins: string[];
   };
-  relationalDb: IRelationalDbLegacy;
+  relationalDb: IRelationalDb;
   analyticsStore: IAnalyticsStore;
   documentPermissionService: DocumentPermissionService | undefined;
   authorizationService: AuthorizationService | undefined;
@@ -336,7 +299,10 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   }
 
   const port = options.port ?? DEFAULT_PORT;
-  const app = options.express ?? express();
+  const { adapter: httpAdapter } = createHttpAdapter(
+    "express",
+    options.express,
+  );
 
   // Setup auth configuration
   let admins: string[] = [];
@@ -384,14 +350,26 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     skipCredentialVerification = SKIP_CREDENTIAL_VERIFICATION === "true";
   }
 
-  // Health check endpoint (before auth middleware)
-  app.get("/health", (_req, res) => {
-    res.status(200).send("OK");
-  });
-
   const logger = options.logger ?? defaultLogger;
 
-  // add auth middleware if auth is enabled
+  // Health check endpoint (registered directly on adapter, before auth)
+  httpAdapter.getRoute("/health", () => new Response("OK", { status: 200 }));
+
+  // Explorer route
+  const explorerPrefix = `${config.basePath}/explorer`;
+  httpAdapter.getRoute(`${explorerPrefix}/:endpoint?`, (request) => {
+    const url = new URL(request.url);
+    // Strip the prefix to find the optional :endpoint segment
+    const suffix = url.pathname.slice(explorerPrefix.length).replace(/^\//, "");
+    const endpoint = suffix ? `/${suffix}` : "/graphql";
+    const query = url.searchParams.get("query") ?? undefined;
+    return new Response(renderGraphqlPlayground(endpoint, query), {
+      headers: { "Content-Type": "text/html" },
+    });
+  });
+
+  // Create auth fetch middleware if auth is enabled
+  let authFetchMiddleware: AuthFetchMiddleware | undefined;
   if (authEnabled) {
     logger.info("Setting up Auth middleware");
     const authService = new AuthService({
@@ -399,16 +377,8 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
       admins,
       skipCredentialVerification,
     });
-
-    // Apply auth middleware to all routes including GraphQL
-    app.use((req, res, next) => {
-      authService.authenticate(req as AuthenticatedRequest, res, next);
-    });
+    authFetchMiddleware = createAuthFetchMiddleware(authService);
   }
-
-  const defaultRouter = express.Router();
-  setupGraphQlExplorer(defaultRouter);
-  app.use(config.basePath, defaultRouter);
 
   // Initialize database and analytics store
   const { relationalDb, analyticsStore } = await trace(
@@ -452,7 +422,8 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
 
   return {
     port,
-    app,
+    httpAdapter,
+    authFetchMiddleware,
     auth: {
       enabled: authEnabled,
       admins,
@@ -472,16 +443,14 @@ async function _setupAPI(
   reactorClient: IReactorClient,
   syncManager: ISyncManager,
   reactorProcessorManager: IReactorProcessorManager,
-  app: Express,
+  httpAdapter: IHttpAdapter,
+  authFetchMiddleware: AuthFetchMiddleware | undefined,
   port: number,
   packages: PackageManager,
-  relationalDb: IRelationalDbLegacy,
+  relationalDb: IRelationalDb,
   analyticsStore: IAnalyticsStore,
   documentPermissionService: DocumentPermissionService | undefined,
-  processors: Map<
-    string,
-    ((module: IProcessorHostModuleLegacy) => ProcessorFactoryLegacy)[]
-  >,
+  processors: Map<string, Processor>,
   subgraphs: Map<string, SubgraphClass[]>,
   options: Options,
   auth: {
@@ -496,16 +465,22 @@ async function _setupAPI(
     analyticsStore,
     processorApp,
     config: options.processorConfig,
-  } as IProcessorHostModuleLegacy & IProcessorHostModule;
+  } as IProcessorHostModule;
   const mcpServerEnabled = options.mcp ?? true;
 
   const logger = options.logger ?? defaultLogger;
 
   // initialize processors
-  for (const [packageName, fns] of [
+  const configuredProcessorEntries = Object.entries(
+    options.processors ?? {},
+  ) as [string, ProcessorInitializer[]][];
+
+  const processorEntries = [
     ...processors.entries(),
-    ...Object.entries(options.processors ?? {}),
-  ]) {
+    ...configuredProcessorEntries,
+  ] as [string, ProcessorInitializer[]][];
+
+  for (const [packageName, fns] of processorEntries) {
     const factories = fns.map((fn) => {
       try {
         return fn(module);
@@ -520,7 +495,7 @@ async function _setupAPI(
     });
 
     const validFactories = factories.filter(
-      (factory): factory is ProcessorFactoryLegacy =>
+      (factory): factory is ProcessorDriveFactory =>
         factory !== null && typeof factory === "function",
     );
 
@@ -536,9 +511,9 @@ async function _setupAPI(
       async (driveHeader) =>
         (
           await Promise.all(
-            validFactories.map(async (factory) => {
+            validFactories.map(async (driveFactory) => {
               try {
-                const result = await factory(driveHeader);
+                const result = await driveFactory(driveHeader);
                 return result as unknown as ReactorProcessorRecord[];
               } catch (e) {
                 logger.error(
@@ -556,7 +531,7 @@ async function _setupAPI(
 
   // Start the server
   const { httpServer, wsServer } = await startServer(
-    app,
+    httpAdapter,
     port,
     options.https,
     logger,
@@ -573,7 +548,8 @@ async function _setupAPI(
   }
 
   const graphqlManager = await setupGraphQLManager(
-    app,
+    httpAdapter,
+    authFetchMiddleware,
     httpServer,
     wsServer,
     reactorClient,
@@ -601,12 +577,16 @@ async function _setupAPI(
   );
 
   if (mcpServerEnabled) {
-    await setupMcpServer({ client: reactorClient, syncManager }, app);
+    // TODO: decouple reactor-mcp from Express
+    await setupMcpServer(
+      { client: reactorClient, syncManager },
+      httpAdapter.handle as Express,
+    );
     logger.info(`MCP server available at http://localhost:${port}/mcp`);
   }
 
   return {
-    app,
+    app: httpAdapter,
     graphqlManager,
     packages,
   };
@@ -637,7 +617,8 @@ export async function initializeAndStartAPI(
 > {
   const {
     port,
-    app,
+    httpAdapter,
+    authFetchMiddleware,
     auth,
     relationalDb,
     analyticsStore,
@@ -680,7 +661,8 @@ export async function initializeAndStartAPI(
     reactorClient,
     syncManager,
     reactorProcessorManager,
-    app,
+    httpAdapter,
+    authFetchMiddleware,
     port,
     packages,
     relationalDb,

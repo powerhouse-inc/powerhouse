@@ -50,6 +50,7 @@ The system currently has two read models:
 **Emitted by**: `SimpleJobExecutor.executeJob()` (line 106)
 
 **Payload**:
+
 ```typescript
 type OperationWrittenEvent = {
   operations: OperationWithContext[];
@@ -57,6 +58,7 @@ type OperationWrittenEvent = {
 ```
 
 **Subscribers**:
+
 - `SyncManager` - Routes operations to remote instances
 - `ReadModelCoordinator` - Updates all read models
 
@@ -67,6 +69,7 @@ type OperationWrittenEvent = {
 **Emitted by**: `ReadModelCoordinator.handleOperationWritten()` (after `Promise.all()` completes)
 
 **Payload**:
+
 ```typescript
 type OperationsReadyEvent = {
   operations: OperationWithContext[];
@@ -74,11 +77,13 @@ type OperationsReadyEvent = {
 ```
 
 **Guarantees**:
+
 - All read models have completed `indexOperations()`
 - All consistency trackers have been updated
 - Queries without consistency tokens will see the updated data
 
 **Use Cases**:
+
 - **Test synchronization**: Wait for read models to be ready before assertions
 - **Observability**: Measure read model update latency
 - **Event-driven workflows**: Trigger downstream processes after data is queryable
@@ -239,11 +244,12 @@ const completed = await awaiter.waitForJob(jobInfo.id);
 const result = await reactor.get(
   documentId,
   undefined,
-  completed.consistencyToken,  // <-- Token ensures consistency
+  completed.consistencyToken, // <-- Token ensures consistency
 );
 ```
 
 **Benefits**:
+
 - Works across network boundaries
 - Handles distributed read model lag
 - Precise control over which operations must be visible
@@ -262,12 +268,14 @@ const result = await reactor.get(documentId);
 ```
 
 **Benefits**:
+
 - Simpler than consistency tokens (no need to track jobs)
 - Event-driven (natural async/await pattern)
 - Deterministic (know exactly when read models are done)
 - Better test performance (no polling)
 
 **Limitations**:
+
 - Only works within same process (requires shared EventBus)
 - Coarser granularity (all operations ready, not specific subset)
 - Not suitable for production where read models may lag indefinitely

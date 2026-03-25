@@ -4,14 +4,9 @@ import {
   setAvailableOffline,
   setSharingType,
   type DocumentDriveDocument,
-  type Trigger,
+  type DriveInput,
+  type SharingType,
 } from "@powerhousedao/shared/document-drive";
-import type {
-  DriveInput,
-  PullResponderTrigger,
-  RemoteDriveOptions,
-  SharingType,
-} from "document-drive";
 import type { PHDocument } from "@powerhousedao/shared/document-model";
 import { getUserPermissions } from "../utils/user.js";
 
@@ -41,11 +36,7 @@ export async function addDrive(input: DriveInput, preferredEditor?: string) {
   return await reactorClient.create<DocumentDriveDocument>(driveDoc);
 }
 
-export async function addRemoteDrive(
-  url: string,
-  options: RemoteDriveOptions | Record<string, never>,
-  driveId?: string,
-) {
+export async function addRemoteDrive(url: string, driveId?: string) {
   const reactorClient = window.ph?.reactorClient;
   if (!reactorClient) {
     throw new Error("ReactorClient not initialized");
@@ -152,26 +143,4 @@ export async function setDriveSharingType(
   return await reactorClient.execute(driveId, "main", [
     setSharingType({ type: sharingType }),
   ]);
-}
-
-// @deprecated
-export async function removeTrigger(driveId: string, triggerId: string) {
-  // Legacy -- to be removed.
-  return;
-}
-
-// @deprecated
-export async function registerNewPullResponderTrigger(
-  driveId: string,
-  url: string,
-  options: Pick<RemoteDriveOptions, "pullFilter" | "pullInterval">,
-): Promise<PullResponderTrigger | undefined> {
-  // Legacy -- to be removed.
-  return undefined;
-}
-
-// @deprecated
-export async function addTrigger(driveId: string, trigger: Trigger) {
-  // Legacy -- to be removed.
-  return;
 }

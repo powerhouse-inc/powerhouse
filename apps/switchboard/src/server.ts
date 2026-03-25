@@ -107,10 +107,8 @@ async function initServer(
     }
   }
 
-  // if dbPath is not configured, or it was a postgres url but the connection failed,
-  // use default path for read model storage
-  const readModelPath =
-    !dbPath || isPostgresUrl(dbPath) ? ".ph/read-storage" : dbPath;
+  // use postgres url for read model storage if available, otherwise use local PGlite path
+  const readModelPath = dbPath || ".ph/read-storage";
 
   // HTTP registry package loading
   let httpDocumentModels: DocumentModelModule[] = [];
@@ -286,7 +284,7 @@ async function initServer(
 
   // add vite middleware after express app is initialized if applicable
   if (vite) {
-    api.app.use(vite.middlewares);
+    api.app.mountRawMiddleware(vite.middlewares);
   }
 
   // Connect to remote drives AFTER packages are loaded

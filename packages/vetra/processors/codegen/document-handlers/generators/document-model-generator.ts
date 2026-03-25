@@ -3,14 +3,14 @@ import {
   generateManifest,
   validateDocumentModelState,
 } from "@powerhousedao/codegen";
-import type { InternalTransmitterUpdate } from "document-drive";
 import type {
   DocumentModelGlobalState,
   DocumentModelPHState,
 } from "@powerhousedao/shared/document-model";
 import { logger } from "../../logger.js";
 import { BaseDocumentGen } from "../base-document-gen.js";
-import { USE_TS_MORPH, USE_VERSIONING } from "./constants.js";
+import type { CodegenInput } from "../types.js";
+import { USE_VERSIONING } from "./constants.js";
 import { minimalBackupDocument } from "./utils.js";
 
 /**
@@ -20,34 +20,32 @@ export class DocumentModelGenerator extends BaseDocumentGen {
   readonly supportedDocumentTypes = "powerhouse/document-model";
 
   /**
-   * Extract the global state from the full document state
+   * Parse and extract the global state from the serialized state string
    */
   private extractGlobalState(
-    strand: InternalTransmitterUpdate,
+    input: CodegenInput,
   ): DocumentModelGlobalState | undefined {
-    const fullState = strand.state as DocumentModelPHState | undefined;
-    if (!fullState) {
+    if (!input.state) {
       return undefined;
     }
-    // The state is the full document state with {auth, document, local, global, header}
-    // We need the global property which contains the DocumentModelGlobalState
+    const fullState = input.state as DocumentModelPHState;
     return fullState.global;
   }
 
   /**
    * Validate if this document model strand should be processed
    */
-  shouldProcess(strand: InternalTransmitterUpdate): boolean {
+  shouldProcess(input: CodegenInput): boolean {
     // First run base validation
-    if (!super.shouldProcess(strand)) {
+    if (!super.shouldProcess(input)) {
       return false;
     }
 
     // Extract the global state from the full document state
-    const globalState = this.extractGlobalState(strand);
+    const globalState = this.extractGlobalState(input);
     if (!globalState) {
       logger.debug(
-        `>>> No global state found for document model: ${strand.documentId}`,
+        `>>> No global state found for document model: ${input.documentId}`,
       );
       return false;
     }
@@ -58,7 +56,7 @@ export class DocumentModelGenerator extends BaseDocumentGen {
         .map((error) => `  - ${error}`)
         .join("\n");
       logger.info(
-        `⚠️  Skipped code generation for '${globalState.name || strand.documentId}' due to validation errors:\n${errorList}`,
+        `⚠️  Skipped code generation for '${globalState.name || input.documentId}' due to validation errors:\n${errorList}`,
       );
       return false;
     }
@@ -70,11 +68,11 @@ export class DocumentModelGenerator extends BaseDocumentGen {
     return true;
   }
 
-  async generate(strand: InternalTransmitterUpdate): Promise<void> {
-    const globalState = this.extractGlobalState(strand);
+  async generate(input: CodegenInput): Promise<void> {
+    const globalState = this.extractGlobalState(input);
     if (!globalState) {
       logger.error(
-        `❌ No global state found for document model: ${strand.documentId}`,
+        `❌ No global state found for document model: ${input.documentId}`,
       );
       return;
     }
@@ -86,7 +84,6 @@ export class DocumentModelGenerator extends BaseDocumentGen {
       await generateFromDocument({
         documentModelState: globalState,
         config: this.config.PH_CONFIG,
-        useTsMorph: USE_TS_MORPH,
         useVersioning: USE_VERSIONING,
       });
       logger.info(
@@ -123,13 +120,14 @@ export class DocumentModelGenerator extends BaseDocumentGen {
       }
 
       // Backup the document
+      const fullState = input.state as DocumentModelPHState;
       const extension = globalState.extension?.replace(/^\.+|\.+$/g, "") || "";
       await minimalBackupDocument(
         {
-          documentId: strand.documentId,
-          documentType: strand.documentType,
-          branch: strand.branch,
-          state: strand.state as DocumentModelPHState,
+          documentId: input.documentId,
+          documentType: input.documentType,
+          branch: input.branch,
+          state: fullState,
           name: globalState.name,
         },
         this.config.CURRENT_WORKING_DIR,

@@ -46,12 +46,7 @@ ph generate --subgraph search-todos
 ```
 
 ```bash title="Expected Output"
-Loaded templates: /projects/powerhouse/powerhouse/packages/codegen/dist/src/codegen/.hygen/templates
        FORCED: ./subgraphs/search-todos/index.ts
-     skipped: ./subgraphs/index.ts
-      inject: ./subgraphs/index.ts
-
-Loaded templates: /projects/powerhouse/powerhouse/packages/codegen/dist/src/codegen/.hygen/templates
        FORCED: ./subgraphs/search-todos/resolvers.ts
        FORCED: ./subgraphs/search-todos/schema.ts
 ```

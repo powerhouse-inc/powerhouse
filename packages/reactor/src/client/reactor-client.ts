@@ -174,8 +174,10 @@ export class ReactorClient implements IReactorClient {
       signal,
     );
 
+    const scopeEntries = Object.values(operationsByScope);
+
     const allOperations: Operation[] = [];
-    for (const scopeResults of Object.values(operationsByScope)) {
+    for (const scopeResults of scopeEntries) {
       allOperations.push(...scopeResults.results);
     }
 
@@ -183,9 +185,14 @@ export class ReactorClient implements IReactorClient {
 
     const effectivePaging = paging || { cursor: "0", limit: 100 };
 
+    // Cursor is only valid for single-scope results
+    const nextCursor =
+      scopeEntries.length === 1 ? scopeEntries[0].nextCursor : undefined;
+
     return {
       results: allOperations,
       options: effectivePaging,
+      nextCursor,
     };
   }
 

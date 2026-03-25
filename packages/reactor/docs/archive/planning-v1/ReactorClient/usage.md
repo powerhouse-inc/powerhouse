@@ -5,7 +5,8 @@
 ```tsx
 const reactor: IReactor = getReactor();
 const signer: ISigner = getSigner();
-const subscriptionManager: IReactorSubscriptionManager = getSubscriptionManager();
+const subscriptionManager: IReactorSubscriptionManager =
+  getSubscriptionManager();
 
 // Use the builder pattern to create a ReactorClient with all required dependencies
 const client: IReactorClient = new ReactorClientBuilder()

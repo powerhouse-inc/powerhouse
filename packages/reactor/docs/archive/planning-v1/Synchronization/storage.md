@@ -70,23 +70,23 @@ CREATE INDEX idx_sync_remotes_collection ON sync_remotes(collection_id);
 
 **Field Descriptions:**
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `name` | TEXT | Unique identifier for this remote (e.g., "drive-a-to-b") |
-| `collection_id` | TEXT | Collection this remote tracks (typically from `driveCollectionId()`) |
-| `channel_type` | TEXT | Channel implementation type (e.g., "internal", "gql") |
-| `channel_parameters` | JSONB | Channel-specific configuration (URLs, auth tokens, etc.) |
-| `filter_document_ids` | JSONB | Optional array of documentIds to filter |
-| `filter_scopes` | JSONB | Optional array of scopes to filter |
-| `filter_branch` | TEXT | Branch to synchronize |
-| `push_state` | TEXT | Health state: "idle", "running", or "error" |
-| `push_last_success_utc_ms` | BIGINT | Timestamp of last successful push |
-| `push_last_failure_utc_ms` | BIGINT | Timestamp of last failed push |
-| `push_failure_count` | INTEGER | Consecutive push failure count |
-| `pull_state` | TEXT | Health state: "idle", "running", or "error" |
-| `pull_last_success_utc_ms` | BIGINT | Timestamp of last successful pull |
-| `pull_last_failure_utc_ms` | BIGINT | Timestamp of last failed pull |
-| `pull_failure_count` | INTEGER | Consecutive pull failure count |
+| Field                      | Type    | Description                                                          |
+| -------------------------- | ------- | -------------------------------------------------------------------- |
+| `name`                     | TEXT    | Unique identifier for this remote (e.g., "drive-a-to-b")             |
+| `collection_id`            | TEXT    | Collection this remote tracks (typically from `driveCollectionId()`) |
+| `channel_type`             | TEXT    | Channel implementation type (e.g., "internal", "gql")                |
+| `channel_parameters`       | JSONB   | Channel-specific configuration (URLs, auth tokens, etc.)             |
+| `filter_document_ids`      | JSONB   | Optional array of documentIds to filter                              |
+| `filter_scopes`            | JSONB   | Optional array of scopes to filter                                   |
+| `filter_branch`            | TEXT    | Branch to synchronize                                                |
+| `push_state`               | TEXT    | Health state: "idle", "running", or "error"                          |
+| `push_last_success_utc_ms` | BIGINT  | Timestamp of last successful push                                    |
+| `push_last_failure_utc_ms` | BIGINT  | Timestamp of last failed push                                        |
+| `push_failure_count`       | INTEGER | Consecutive push failure count                                       |
+| `pull_state`               | TEXT    | Health state: "idle", "running", or "error"                          |
+| `pull_last_success_utc_ms` | BIGINT  | Timestamp of last successful pull                                    |
+| `pull_last_failure_utc_ms` | BIGINT  | Timestamp of last failed pull                                        |
+| `pull_failure_count`       | INTEGER | Consecutive pull failure count                                       |
 
 **Design Notes:**
 
@@ -120,11 +120,11 @@ CREATE INDEX idx_sync_cursors_ordinal ON sync_cursors(cursor_ordinal);
 
 **Field Descriptions:**
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `remote_name` | TEXT | References sync_remotes.name |
-| `cursor_ordinal` | BIGINT | Last processed ordinal (exclusive) from operation_index_operations |
-| `last_synced_at_utc_ms` | BIGINT | Timestamp of last successful sync |
+| Field                   | Type   | Description                                                        |
+| ----------------------- | ------ | ------------------------------------------------------------------ |
+| `remote_name`           | TEXT   | References sync_remotes.name                                       |
+| `cursor_ordinal`        | BIGINT | Last processed ordinal (exclusive) from operation_index_operations |
+| `last_synced_at_utc_ms` | BIGINT | Timestamp of last successful sync                                  |
 
 **Design Notes:**
 
@@ -212,10 +212,7 @@ export class KyselySyncRemoteStorage implements ISyncRemoteStorage {
     }
 
     // Query all remotes
-    const rows = await this.db
-      .selectFrom("sync_remotes")
-      .selectAll()
-      .execute();
+    const rows = await this.db.selectFrom("sync_remotes").selectAll().execute();
 
     // Transform rows to RemoteRecord
     return rows.map(rowToRemoteRecord);
@@ -254,7 +251,7 @@ export class KyselySyncRemoteStorage implements ISyncRemoteStorage {
           oc.column("name").doUpdateSet({
             ...insertable,
             updatedAt: sql`NOW()`,
-          })
+          }),
         )
         .execute();
     });
@@ -266,10 +263,7 @@ export class KyselySyncRemoteStorage implements ISyncRemoteStorage {
     }
 
     await this.db.transaction().execute(async (trx) => {
-      await trx
-        .deleteFrom("sync_remotes")
-        .where("name", "=", name)
-        .execute();
+      await trx.deleteFrom("sync_remotes").where("name", "=", name).execute();
     });
   }
 }
@@ -292,7 +286,10 @@ Implementation of `ISyncCursorStorage` using Kysely.
 export class KyselySyncCursorStorage implements ISyncCursorStorage {
   constructor(private db: Kysely<Database>) {}
 
-  async list(remoteName: string, signal?: AbortSignal): Promise<RemoteCursor[]> {
+  async list(
+    remoteName: string,
+    signal?: AbortSignal,
+  ): Promise<RemoteCursor[]> {
     if (signal?.aborted) {
       throw new Error("Operation aborted");
     }
@@ -342,7 +339,7 @@ export class KyselySyncCursorStorage implements ISyncCursorStorage {
           oc.column("remoteName").doUpdateSet({
             ...insertable,
             updatedAt: sql`NOW()`,
-          })
+          }),
         )
         .execute();
     });
@@ -486,30 +483,30 @@ export async function up(db: Kysely<any>): Promise<void> {
     .addColumn("collection_id", "text", (col) => col.notNull())
     .addColumn("channel_type", "text", (col) => col.notNull())
     .addColumn("channel_parameters", "jsonb", (col) =>
-      col.notNull().defaultTo(sql`'{}'::jsonb`)
+      col.notNull().defaultTo(sql`'{}'::jsonb`),
     )
     .addColumn("filter_document_ids", "jsonb")
     .addColumn("filter_scopes", "jsonb")
     .addColumn("filter_branch", "text", (col) =>
-      col.notNull().defaultTo("main")
+      col.notNull().defaultTo("main"),
     )
     .addColumn("push_state", "text", (col) => col.notNull().defaultTo("idle"))
     .addColumn("push_last_success_utc_ms", "bigint")
     .addColumn("push_last_failure_utc_ms", "bigint")
     .addColumn("push_failure_count", "integer", (col) =>
-      col.notNull().defaultTo(0)
+      col.notNull().defaultTo(0),
     )
     .addColumn("pull_state", "text", (col) => col.notNull().defaultTo("idle"))
     .addColumn("pull_last_success_utc_ms", "bigint")
     .addColumn("pull_last_failure_utc_ms", "bigint")
     .addColumn("pull_failure_count", "integer", (col) =>
-      col.notNull().defaultTo(0)
+      col.notNull().defaultTo(0),
     )
     .addColumn("created_at", "timestamptz", (col) =>
-      col.notNull().defaultTo(sql`NOW()`)
+      col.notNull().defaultTo(sql`NOW()`),
     )
     .addColumn("updated_at", "timestamptz", (col) =>
-      col.notNull().defaultTo(sql`NOW()`)
+      col.notNull().defaultTo(sql`NOW()`),
     )
     .execute();
 
@@ -525,14 +522,14 @@ export async function up(db: Kysely<any>): Promise<void> {
     .addColumn("cursor_ordinal", "bigint", (col) => col.notNull().defaultTo(0))
     .addColumn("last_synced_at_utc_ms", "bigint")
     .addColumn("updated_at", "timestamptz", (col) =>
-      col.notNull().defaultTo(sql`NOW()`)
+      col.notNull().defaultTo(sql`NOW()`),
     )
     .addForeignKeyConstraint(
       "fk_sync_cursors_remote_name",
       ["remote_name"],
       "sync_remotes",
       ["name"],
-      (cb) => cb.onDelete("cascade")
+      (cb) => cb.onDelete("cascade"),
     )
     .execute();
 

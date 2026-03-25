@@ -99,14 +99,14 @@ type TodoListStats {
     - `[TodoItem!]`: This signifies that `items` is a list of `TodoItem` objects.
     - `TodoItem!`: The `!` after `TodoItem` means that no item in the list can be null. Each entry must be a valid `TodoItem`.
     - The final `!` after `[TodoItem!]` means that the `items` list itself cannot be null. It can be an empty list `[]`, but it cannot be absent.
-  - `stats: TodoListStats!` *(advanced)*: Holds aggregated statistics about the to-do items.
+  - `stats: TodoListStats!` _(advanced)_: Holds aggregated statistics about the to-do items.
 
 - **`TodoItem` type**:
   - `id: OID!`: Each `TodoItem` has a unique identifier using Powerhouse's custom `OID` scalar. This is crucial for referencing specific items, for example, when updating or deleting them.
   - `text: String!`: The textual description of the to-do item. It cannot be null, ensuring every to-do has a description.
   - `checked: Boolean!`: Indicates whether the to-do item is completed. It defaults to a boolean value (true or false) and cannot be null.
 
-- **`TodoListStats` type** *(advanced)*: This type holds the summary statistics for the to-do list.
+- **`TodoListStats` type** _(advanced)_: This type holds the summary statistics for the to-do list.
   - `total: Int!`: The total count of all to-do items. This field must be an integer and cannot be null.
   - `checked: Int!`: The number of to-do items that are marked as completed. This must be an integer and cannot be null.
   - `unchecked: Int!`: The number of to-do items that are still pending. This also must be an integer and cannot be null.
@@ -164,7 +164,7 @@ Now that you understand the concepts behind the state schema, let's put it into 
       text: String!
       checked: Boolean!
     }
-    
+
     # The statistics on our to-do's (advanced feature)
     type TodoListStats {
       total: Int!
@@ -218,7 +218,7 @@ By completing these steps, you have successfully specified the data structure fo
       text: String!
       checked: Boolean!
     }
-    
+
     # The statistics on our to-do's (advanced feature)
     type TodoListStats {
       total: Int!

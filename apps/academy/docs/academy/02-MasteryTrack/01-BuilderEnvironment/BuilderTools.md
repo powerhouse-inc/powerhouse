@@ -40,17 +40,17 @@ This tool will be fundamental on your journey when creating, building, and runni
 
 When installing or using the Powerhouse CLI commands you are able to make use of the dev & staging branches. These branches contain more experimental features then the latest stable release the PH CLI uses by default. They can be used to get access to a bugfix or features under development.
 
-| Command                            | Description                                           |
-| ---------------------------------- | ----------------------------------------------------- |
-| **pnpm install -g ph-cmd** or **npm install -g ph-cmd **         | Install latest stable version                         |
-| **pnpm install -g ph-cmd@dev** or **npm install -g ph-cmd@dev**     | Install development version                           |
+| Command                                                                 | Description                                           |
+| ----------------------------------------------------------------------- | ----------------------------------------------------- |
+| **pnpm install -g ph-cmd** or **npm install -g ph-cmd **                | Install latest stable version                         |
+| **pnpm install -g ph-cmd@dev** or **npm install -g ph-cmd@dev**         | Install development version                           |
 | **pnpm install -g ph-cmd@staging** or **npm install -g ph-cmd@staging** | Install staging version                               |
-| **ph init**                        | Use latest stable version of the boilerplate          |
-| **ph init --dev**                  | Use development version of the boilerplate            |
-| **ph init --staging**              | Use staging version of the boilerplate                |
-| **ph use**                         | Switch all dependencies to latest production versions |
-| **ph use dev**                     | Switch all dependencies to development versions       |
-| **ph use prod**                    | Switch all dependencies to production versions        |
+| **ph init**                                                             | Use latest stable version of the boilerplate          |
+| **ph init --dev**                                                       | Use development version of the boilerplate            |
+| **ph init --staging**                                                   | Use staging version of the boilerplate                |
+| **ph use**                                                              | Switch all dependencies to latest production versions |
+| **ph use dev**                                                          | Switch all dependencies to development versions       |
+| **ph use prod**                                                         | Switch all dependencies to production versions        |
 
 Please be aware that these versions can contain bugs and experimental features that aren't fully tested.
 
@@ -84,7 +84,7 @@ rm -rf ~/.ph
 # For the latest stable version
 pnpm install -g ph-cmd
 # or with npm
-npm install -g ph-cmd 
+npm install -g ph-cmd
 
 # For the staging version
 pnpm install -g ph-cmd@staging

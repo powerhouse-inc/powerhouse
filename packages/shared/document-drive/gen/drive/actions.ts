@@ -9,7 +9,7 @@ import type {
   SetDriveIconInput,
   SetDriveNameInput,
   SetSharingTypeInput,
-} from "document-drive";
+} from "../schema/types.js";
 import type { Action, SignalDispatch } from "document-model";
 
 export type SetDriveNameAction = Action & {

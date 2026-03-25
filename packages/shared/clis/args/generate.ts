@@ -11,7 +11,7 @@ import {
   string,
 } from "cmd-ts";
 import { PROCESSOR_APPS } from "processors";
-import { debugArgs, useHygen } from "./common.js";
+import { debugArgs } from "./common.js";
 
 const ProcessorAppType: Type<string[], ("connect" | "switchboard")[]> = {
   from(processorApps) {
@@ -164,7 +164,6 @@ export const generateArgs = {
     short: "sf",
     description: "Skip formatting the generated code.",
   }),
-  useHygen,
   useVersioning: flag({
     type: boolean,
     long: "use-versioning",

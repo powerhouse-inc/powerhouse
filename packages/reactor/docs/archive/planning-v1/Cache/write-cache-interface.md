@@ -2,9 +2,9 @@
 
 ```tsx
 // Import from other interfaces
-import type { IOperationStore } from '../Storage/IOperationStore';
-import type { IDocumentModelRegistry } from '../Registry/IDocumentModelRegistry';
-import type { PHDocument } from 'document-model';
+import type { IOperationStore } from "../Storage/IOperationStore";
+import type { IDocumentModelRegistry } from "../Registry/IDocumentModelRegistry";
+import type { PHDocument } from "document-model";
 
 /**
  * Configuration options for the write cache
@@ -51,7 +51,7 @@ export interface IWriteCache {
     scope: string,
     branch: string,
     targetRevision?: number,
-    signal?: AbortSignal
+    signal?: AbortSignal,
   ): Promise<PHDocument>;
 
   /**
@@ -74,7 +74,7 @@ export interface IWriteCache {
     scope: string,
     branch: string,
     revision: number,
-    document: PHDocument
+    document: PHDocument,
   ): void;
 
   /**
@@ -112,14 +112,14 @@ export interface IWriteCache {
 ```tsx
 // Initialize cache with configuration and dependencies
 const cache = new KyselyWriteCache(
-  keyframeStore,     // IKeyframeStore for persisting/retrieving keyframes
-  operationStore,    // IOperationStore for loading operations on cache miss
-  registry,          // IDocumentModelRegistry for accessing reducers on cache miss
+  keyframeStore, // IKeyframeStore for persisting/retrieving keyframes
+  operationStore, // IOperationStore for loading operations on cache miss
+  registry, // IDocumentModelRegistry for accessing reducers on cache miss
   {
-    maxDocuments: 1000,    // Cache up to 1000 document streams
-    ringBufferSize: 10,    // Keep 10 snapshots per document stream
-    keyframeInterval: 10   // Persist keyframe every 10 revisions
-  }
+    maxDocuments: 1000, // Cache up to 1000 document streams
+    ringBufferSize: 10, // Keep 10 snapshots per document stream
+    keyframeInterval: 10, // Persist keyframe every 10 revisions
+  },
 );
 
 await cache.startup();
@@ -130,7 +130,7 @@ const document = await cache.getState(
   documentType,
   scope,
   branch,
-  targetRevision  // Optional - omit to get latest
+  targetRevision, // Optional - omit to get latest
 );
 
 // Apply operations starting from cached document
@@ -138,19 +138,26 @@ const module = registry.getModule(documentType);
 const updatedDocument = module.reducer(document, action);
 
 // Store the resulting document in cache for future executions
-cache.putState(documentId, documentType, scope, branch, finalRevision, updatedDocument);
+cache.putState(
+  documentId,
+  documentType,
+  scope,
+  branch,
+  finalRevision,
+  updatedDocument,
+);
 
 // Invalidate cache when document is deleted or significant changes occur
 cache.invalidate(documentId);
 
 // Or invalidate specific scope
-cache.invalidate(documentId, 'global');
+cache.invalidate(documentId, "global");
 
 // Or invalidate specific stream
-cache.invalidate(documentId, 'global', 'main');
+cache.invalidate(documentId, "global", "main");
 ```
 
 ### Links
 
-* [Overview](./write-cache.md) - Detailed architectural overview
-* [Operation Index](./operation-index.md) - Related indexing system for operations
+- [Overview](./write-cache.md) - Detailed architectural overview
+- [Operation Index](./operation-index.md) - Related indexing system for operations

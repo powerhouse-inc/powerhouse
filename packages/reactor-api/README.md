@@ -49,6 +49,12 @@ Manages document models, subgraphs, and processors through a flexible loading sy
 
 Handles GraphQL operations, subgraph management, and schema composition using Apollo Server.
 
+The GraphQL and HTTP layers are decoupled behind `IGatewayAdapter` and `IHttpAdapter`
+interfaces, making it straightforward to swap the underlying HTTP framework or GraphQL
+engine without touching application logic. See
+[ARCHITECTURE.md](ARCHITECTURE.md) for a full
+explanation of the interfaces, auth threading pattern, and how to add new adapters.
+
 ### Processor Manager
 
 Manages document processors and their lifecycle, including registration and event handling.

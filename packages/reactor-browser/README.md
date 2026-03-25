@@ -81,6 +81,7 @@ Retrieves a document from the reactor and subscribes to changes using React Susp
 This hook will suspend rendering while the document is loading.
 
 **Parameters:**
+
 - `id` - The document ID to retrieve, or null/undefined to skip retrieval
 
 **Returns:** The document if found, or undefined if id is null/undefined
@@ -91,6 +92,7 @@ Retrieves multiple documents from the reactor using React Suspense.
 This hook will suspend rendering while any of the documents are loading.
 
 **Parameters:**
+
 - `ids` - Array of document IDs to retrieve, or null/undefined to skip retrieval
 
 **Returns:** An array of documents if found, or empty array if ids is null/undefined
@@ -115,9 +117,11 @@ Retrieves a document from the reactor without suspending rendering.
 Returns the current state of the document loading operation.
 
 **Parameters:**
+
 - `id` - The document ID to retrieve, or null/undefined to skip retrieval
 
 **Returns:** An object containing:
+
 - `status`: "initial" | "pending" | "success" | "error"
 - `data`: The document if successfully loaded
 - `isPending`: Boolean indicating if the document is currently loading
@@ -393,6 +397,7 @@ The returned function generates a fresh bearer token and builds the switchboard 
 with authentication when called.
 
 **Parameters:**
+
 - `document` - The document to create a switchboard URL generator for
 
 **Returns:** An async function that returns the switchboard URL, or null if not applicable
@@ -414,7 +419,6 @@ Adds the Vetra packages event handler.
 Sets the Vetra packages for the Connect instance.
 
 ---
-
 
 ## Config: Editor
 
@@ -503,4 +507,3 @@ Strongly typed, inferred from type definition for the key.
 Gets the value of an item in the global document config for a given key.
 
 Strongly typed, inferred from type definition for the key.
-

@@ -185,17 +185,18 @@ Switchboard initialized 14:44:24
 Port 3000 is in use, trying another one... 14:44:24
 ➜ Local: http://localhost:3000/ 14:44:24
 ➜ Network: use --host to expose 14:44:24
-➜ press h + enter to show help  
- ```
+➜ press h + enter to show help
+
+````
 
 A new browser window will open when visiting localhost and you will see the Vetra Studio Drive
 
 <figure className="image-container">
-  <img
-    src={require("./images/VetraStudioDrive.png").default}
-    alt="Vetra Studio Drive"
-  />
-  <figcaption>The Vetra Studio Drive, a builder app that collects all of the specification of a package.</figcaption>
+ <img
+   src={require("./images/VetraStudioDrive.png").default}
+   alt="Vetra Studio Drive"
+ />
+ <figcaption>The Vetra Studio Drive, a builder app that collects all of the specification of a package.</figcaption>
 </figure>
 
 Create a new document model by clicking the Document Models 'Add new specification' button. Name your document TodoList (PascalCase, no spaces or hyphens). If you've followed the steps correctly, you'll have an empty TodoList document where you can define the 'Document Specifications' in the next step.
@@ -210,17 +211,17 @@ The `ph connect` command is a legacy feature. We recommend using `ph vetra --wat
 Once in the project directory, run the `ph connect` command to start a local instance of the Connect application. This allows you to start your document model specification document.
 Run the following command to start the Connect application:
 
-    ```bash
-    ph connect
-    ```
+   ```bash
+   ph connect
+   ```
 
 The Connect application will start and you will see the following output:
 
-    ```bash
-      ➜  Local:   http://localhost:3000/
-      ➜  Network: http://192.168.5.110:3000/
-      ➜  press h + enter to show help
-    ```
+   ```bash
+     ➜  Local:   http://localhost:3000/
+     ➜  Network: http://192.168.5.110:3000/
+     ➜  press h + enter to show help
+   ```
 
 A new browser window will open and you will see the Connect application. If it doesn't open automatically, you can open it manually by navigating to `http://localhost:3000/` in your browser. You will see your local drive and a button to create a new drive.
 
@@ -229,8 +230,8 @@ If you local drive is not present navigate into Settings in the bottom left corn
 Clear the storage of your localhost application as it might has an old session cached.
 :::
 
-4. Move into your local drive.  
-   Create a new document model by clicking the `DocumentModel` button, found in the 'New Document' section at the bottom of the page. Name your document `TodoList` (PascalCase, no spaces or hyphens).
+4. Move into your local drive.
+  Create a new document model by clicking the `DocumentModel` button, found in the 'New Document' section at the bottom of the page. Name your document `TodoList` (PascalCase, no spaces or hyphens).
 
 If you've followed the steps correctly, you'll have an empty `TodoList` document where you can define the **'Document Specifications'**.
 
@@ -258,7 +259,7 @@ git ls-tree -r --name-only tutorial/step-1-initialize-with-ph-init
 
 # View a specific config file from step-1
 git show tutorial/step-1-initialize-with-ph-init:package.json
-```
+````
 
 ## Up next
 

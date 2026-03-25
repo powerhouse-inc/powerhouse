@@ -8,13 +8,13 @@ import {
 import {
   addPHEventHandlers,
   addRemoteDrive,
+  DocumentCache,
   DocumentChangeType,
   dropAllReactorStorage,
   extractDriveSlugFromPath,
   extractNodeSlugFromPath,
   getDrives,
   login,
-  ReactorClientDocumentCache,
   refreshReactorDataClient,
   setDefaultPHGlobalConfig,
   setDocumentCache,
@@ -136,9 +136,7 @@ export async function createReactor(localPackage?: VetraPackage) {
   const didFromUrl = getDidFromUrl();
   await login(didFromUrl, renown);
 
-  const documentCache = new ReactorClientDocumentCache(
-    reactorClientModule.client,
-  );
+  const documentCache = new DocumentCache(reactorClientModule.client);
 
   // dispatch the events to set the values in the window object
   setDefaultPHGlobalConfig(phGlobalConfigFromEnv);
@@ -161,7 +159,7 @@ export async function createReactor(localPackage?: VetraPackage) {
   const remoteUrl = getDriveUrl();
   if (remoteUrl) {
     try {
-      await addRemoteDrive(remoteUrl, {});
+      await addRemoteDrive(remoteUrl);
     } catch (error) {
       console.error(`Failed to add remote drive from ${remoteUrl}:`, error);
     }

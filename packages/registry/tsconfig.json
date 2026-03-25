@@ -2,20 +2,11 @@
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
     "outDir": "./dist",
-    "types": [
-      "node"
-    ],
+    "types": ["node"],
     "emitDeclarationOnly": true
   },
-  "include": [
-    "**/*"
-  ],
-  "exclude": [
-    "dist",
-    "node_modules",
-    "storage",
-    "cdn-cache"
-  ],
+  "include": ["**/*"],
+  "exclude": ["dist", "node_modules", "storage", "cdn-cache"],
   "references": [
     {
       "path": "../shared"

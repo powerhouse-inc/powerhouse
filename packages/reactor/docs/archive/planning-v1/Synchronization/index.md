@@ -44,6 +44,7 @@ At the synchronization layer, we add routing metadata to determine where operati
 Where **remote** is synchronization-layer metadata (not part of the storage identity) that specifies the destination or source reactor instance.
 
 **Key properties:**
+
 - Operations within a stream are **append-only** with monotonically increasing indices
 - Each operation carries a **state hash** for verification
 - Operations may be **skipped or undone** through the skip parameter mechanism
@@ -71,6 +72,7 @@ Or more explicitly:
 Where `remote₁` and `remote₂` identify the source and destination reactor instances.
 
 **Properties:**
+
 - All synchronization behavior (conflict detection, cursor tracking, ACK/NACK) is defined at strand granularity
 - A strand maps operations from a single storage stream `(documentId, scope, branch)` in the source `IOperationStore` to the destination `IOperationStore`
 - The remote identifiers determine routing but are not part of the operation stream identity in storage
@@ -93,6 +95,7 @@ Or more explicitly:
 ```
 
 **Thread types:**
+
 - **Single-document thread:** `documentId₁ = documentId₂` (default, most common)
 - **Cross-document thread:** `documentId₁ ≠ documentId₂` (for templates or copies)
 - **Complete thread:** Synchronizes all scopes and branches of a document (leads to identical document instances)
@@ -116,6 +119,7 @@ Or more explicitly:
 ```
 
 **Cable types:**
+
 - **Complete cable:** Synchronizes all documents, scopes, and branches (leads to identical drive instances)
 - **Partial cable:** Synchronizes a filtered subset (e.g., only public documents, only specific document types)
 
@@ -142,7 +146,7 @@ const txn = index.start();
 
 if (documentType === "powerhouse/document-drive") {
   // the driveCollectionId helper is defined in src/cache/operation-index-types.ts
-  collectionId = driveCollectionId(branch, documentId)
+  collectionId = driveCollectionId(branch, documentId);
   txn.createCollection(collectionId);
 }
 
@@ -182,6 +186,7 @@ This means that when specifying remotes (described later), there will be a 1:1 c
 Now that we have an understanding of strands/threads/cables and collections, we can describe the high level synchronization sequence.
 
 **Requisites:**
+
 - There is one `IChannel` per `(remote, collectionId)` tuple.
 - The `ISyncManager` is responsible for mapping operations to appropriate channels. It does this by reading meta information on `OperationWithContext`.
 - Each `IChannel` is responsible for managing and storing its own cursor.
@@ -198,6 +203,7 @@ The `SyncEnvelope` object (defined below), contains a `type` field that indicate
 **Example:** A user checks a box in a document model editor, which applies some action, like `SET_FLAG`.
 
 **Flow:**
+
 ```mermaid
 sequenceDiagram
   participant LocalBus as Event Bus (Local)
@@ -228,6 +234,7 @@ sequenceDiagram
 **Example:** A reactor is offline for a period of time and needs to catch up.
 
 **Flow:**
+
 ```mermaid
 sequenceDiagram
   participant LocalLoad as IReactor (Local)
@@ -313,7 +320,7 @@ sequenceDiagram
   Note over ChannelA,ReactorA: Apply B Operations to A
   ChannelA->>SyncMgrA: channel.inbox.onAdded()
   SyncMgrA<<->>ReactorA: load(documentId, branch, Operation[])
-  SyncMgrA->>ChannelA: channel.inbox.remove()  
+  SyncMgrA->>ChannelA: channel.inbox.remove()
 
   Note over ChannelB,ReactorB: Apply A Operations to B
   ChannelB->>SyncMgrB: channel.inbox.onAdded()
@@ -389,6 +396,7 @@ type Remote = {
 ```
 
 **Remote semantics:**
+
 - Remotes are 1:1 with collections
 - Remotes may have additional filtering logic on them through `RemoteFilter`
 
@@ -398,13 +406,14 @@ A cursor tracks progress through a collection. This object is passed back and fo
 
 ```typescript
 type RemoteCursor = {
-  remoteName: string;         // Which remote owns this cursor
-  cursorOrdinal: number;      // Last processed ordinal (exclusive)
+  remoteName: string; // Which remote owns this cursor
+  cursorOrdinal: number; // Last processed ordinal (exclusive)
   lastSyncedAtUtcMs?: number; // Timestamp of last sync (which may have been push or pull)
 };
 ```
 
 **Cursor semantics:**
+
 - Cursors are **exclusive** — the next query starts at `cursorOrdinal + 1`
 - Cursors are **per-remote**
 
@@ -621,6 +630,7 @@ stateDiagram-v2
 ```
 
 **State transitions:**
+
 - `Unknown` → `TransportPending`: Sync operation entered channel, transport layer activated
 - `TransportPending` → `ExecutionPending`: Sync operation sent, queued for execution
 - `ExecutionPending` → `Applied`: Sync operation executed successfully, operations appended to history
@@ -668,10 +678,10 @@ Errors are categorized by **source** and **type**:
 
 ```typescript
 enum ChannelErrorSource {
-  None = "none",         // Error origin unknown
-  Channel = "channel",   // Transport/network error
-  Inbox = "inbox",       // Error applying received operations
-  Outbox = "outbox"      // Error sending operations
+  None = "none", // Error origin unknown
+  Channel = "channel", // Transport/network error
+  Inbox = "inbox", // Error applying received operations
+  Outbox = "outbox", // Error sending operations
 }
 
 type JobErrorType =
@@ -685,29 +695,32 @@ type JobErrorType =
 
 ### Error Handling Matrix
 
-| Error Type | Source: Inbox | Source: Outbox | Source: Channel |
-|---|---|---|---|
-| **SIGNATURE_INVALID** | Mark remote invalid, disable remote | Mark remote invalid, disable remote | N/A |
-| **HASH_MISMATCH** | Create branch, reapply operation, push to remote | Discard sync operation (remote handles) | N/A |
-| **LIBRARY_ERROR** | Create branch, reapply operation, push to remote | Discard sync operation (remote handles) | N/A |
-| **MISSING_OPERATIONS** | Discard sync operation | Pull missing operations, resend | N/A |
-| **EXCESSIVE_SHUFFLE** | Pull latest, rebase, re-queue as new sync operation | Notify remote to rebase | N/A |
-| **GRACEFUL_ABORT** | Discard, catch up next cycle | Discard, catch up next cycle | Discard, catch up next cycle |
-| **Transport Failure** | N/A | N/A | Retry with backoff, then disable |
+| Error Type             | Source: Inbox                                       | Source: Outbox                          | Source: Channel                  |
+| ---------------------- | --------------------------------------------------- | --------------------------------------- | -------------------------------- |
+| **SIGNATURE_INVALID**  | Mark remote invalid, disable remote                 | Mark remote invalid, disable remote     | N/A                              |
+| **HASH_MISMATCH**      | Create branch, reapply operation, push to remote    | Discard sync operation (remote handles) | N/A                              |
+| **LIBRARY_ERROR**      | Create branch, reapply operation, push to remote    | Discard sync operation (remote handles) | N/A                              |
+| **MISSING_OPERATIONS** | Discard sync operation                              | Pull missing operations, resend         | N/A                              |
+| **EXCESSIVE_SHUFFLE**  | Pull latest, rebase, re-queue as new sync operation | Notify remote to rebase                 | N/A                              |
+| **GRACEFUL_ABORT**     | Discard, catch up next cycle                        | Discard, catch up next cycle            | Discard, catch up next cycle     |
+| **Transport Failure**  | N/A                                                 | N/A                                     | Retry with backoff, then disable |
 
 ### Retry Policy
 
 **Exponential backoff with jitter:**
+
 ```
 retryDelayMs = min(maxDelay, baseDelay * 2^failureCount + jitter)
 ```
 
 **Default values:**
+
 - `baseDelay` = 1000ms
 - `maxDelay` = 300000ms (5 minutes)
 - `maxRetries` = 5
 
 **Failure threshold:**
+
 - After 5 consecutive failures, remote is marked as `error` state
 - User intervention required to re-enable (or automatic re-enable after health check)
 
@@ -728,6 +741,7 @@ type RemoteStatus = {
 ```
 
 **State transitions:**
+
 - `idle` → `running`: Sync operation started
 - `running` → `idle`: Sync operation succeeded
 - `running` → `error`: Sync operation failed after retries exhausted
@@ -754,7 +768,7 @@ type ChannelConfig = {
    * Parameters for the channel.
    */
   parameters: Record<string, any>;
-}
+};
 
 interface ISynchronizationManager {
   /**
@@ -932,12 +946,17 @@ interface ISyncCursorStorage {
 **Transport:** Direct function call (no network)
 
 **Example:**
+
 ```typescript
 const channel = new InternalChannel();
 channel.inbox.onAdded(async (handle) => {
   // pass to reactor to load
-  const job = await reactor.load(handle.documentId, handle.branch, handle.operations);
-  
+  const job = await reactor.load(
+    handle.documentId,
+    handle.branch,
+    handle.operations,
+  );
+
   // elided: wait for job completion
 
   // update handle
@@ -965,6 +984,7 @@ channel.inbox.onAdded(async (handle) => {
 **Transport:** HTTP/GraphQL with polling
 
 **Features:**
+
 - Cursor-based incremental sync
 - Exponential backoff retry strategy
 - Authentication via bearer tokens
@@ -996,4 +1016,3 @@ const channel = factory.instance(
 ```
 
 For detailed documentation, see [GqlChannel Documentation](./gql-channel.md).
-

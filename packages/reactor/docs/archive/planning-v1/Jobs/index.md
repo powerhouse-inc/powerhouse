@@ -58,15 +58,16 @@ Jobs transition through multiple states that align with operation events:
 
 ```typescript
 enum JobStatus {
-  PENDING = "PENDING",                    // Job queued, not started
-  RUNNING = "RUNNING",                     // Job execution started
-  WRITE_COMPLETED = "WRITE_COMPLETED",     // Operations written (OPERATION_WRITTEN event)
+  PENDING = "PENDING", // Job queued, not started
+  RUNNING = "RUNNING", // Job execution started
+  WRITE_COMPLETED = "WRITE_COMPLETED", // Operations written (OPERATION_WRITTEN event)
   READ_MODELS_READY = "READ_MODELS_READY", // Read models indexed (OPERATIONS_READY event)
-  FAILED = "FAILED",                       // Job failed (JOB_FAILED event)
+  FAILED = "FAILED", // Job failed (JOB_FAILED event)
 }
 ```
 
 **State Transitions**:
+
 - Successful: `PENDING` → `RUNNING` → `WRITE_COMPLETED` → `READ_MODELS_READY`
 - Failed: `PENDING` → `RUNNING` → `FAILED`
 

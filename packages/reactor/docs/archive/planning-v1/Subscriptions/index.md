@@ -11,16 +11,19 @@
 ### Key Features
 
 #### Error Handling
+
 - **Required Error Handler**: The `ReactorSubscriptionManager` constructor requires an `ISubscriptionErrorHandler` to handle subscription callback errors.
 - **Default Implementation**: A `DefaultSubscriptionErrorHandler` is provided that re-throws errors with enhanced context.
 - **Custom Handlers**: Implement custom error handlers for logging, monitoring, or recovery strategies.
 
 #### Guaranteed Delivery
+
 - If a subscription callback throws an error, it doesn't affect other subscriptions.
 - All subscribers are notified even if some fail.
 - Errors are handled through the error handler with detailed context.
 
 #### Subscription Management
+
 - Each subscription method returns an unsubscribe function for easy cleanup.
 - Subscriptions can be filtered using `SearchFilter` and `ViewFilter` parameters.
 - Supports multiple subscriptions to the same event type.

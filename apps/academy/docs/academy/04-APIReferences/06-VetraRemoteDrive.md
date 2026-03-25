@@ -25,11 +25,13 @@ These commands enable collaborative development using Vetra remote drives. Inste
    ```
 
 **Usage:**
+
 ```bash
 ph init my-project --remote-drive https://vetra.example.com/d/abc123
 ```
 
 **After initialization:**
+
 - Create a GitHub repository
 - Commit and push your code
 - Run `ph vetra` to configure the GitHub URL in the remote drive
@@ -50,11 +52,13 @@ ph init my-project --remote-drive https://vetra.example.com/d/abc123
 4. The project is already configured to use the remote drive
 
 **Usage:**
+
 ```bash
 ph checkout --remote-drive https://vetra.example.com/d/abc123
 ```
 
 **Requirements:**
+
 - The remote drive must have a GitHub URL configured (done during `ph vetra` after init)
 
 ---
@@ -73,11 +77,13 @@ ph checkout --remote-drive https://vetra.example.com/d/abc123
 4. Starts Connect Studio pointing to the drive(s)
 
 **With `--watch` flag:**
+
 - Creates a second "Vetra Preview" drive for testing local changes
 - Dynamically loads your local document models and editors
 - Main drive stays stable, preview drive for experimentation
 
 **Usage:**
+
 ```bash
 # Basic usage (uses config from powerhouse.config.json)
 ph vetra
@@ -93,6 +99,7 @@ ph vetra --disable-connect
 ```
 
 **Key options:**
+
 - `--watch` - Enable dynamic loading and create preview drive
 - `--remote-drive <url>` - Specify remote drive URL
 - `--switchboard-port <port>` - Custom Switchboard port (default: 4001)
@@ -145,15 +152,18 @@ ph vetra --watch
 ## Key Concepts
 
 **Remote Drive vs Local Drive:**
+
 - Without remote drive: `ph vetra` creates a local drive on your machine only
 - With remote drive: `ph vetra` connects to a shared drive that syncs across team members
 
 **When to use each command:**
+
 - Use `ph init --remote-drive` when starting a NEW project (no GitHub URL configured in drive yet)
 - Use `ph checkout --remote-drive` when joining an EXISTING project (GitHub URL already configured)
 - Use `ph vetra --watch` to start development after either init or checkout
 
 **Preview Drive (`--watch` mode):**
+
 - Main "Vetra" drive: syncs with remote, contains stable package configuration
 - "Vetra Preview" drive: created locally with `--watch`, for testing local document models
 - Without `--watch`: safer, prevents untested code from affecting Connect

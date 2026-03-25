@@ -162,6 +162,7 @@ function MyComponent({ docId }: { docId: string }) {
 ```
 
 Returns:
+
 - `status`: `"initial" | "pending" | "success" | "error"`
 - `data`: The document (when successful)
 - `error`: Error object (when failed)
@@ -215,11 +216,13 @@ Tests are split across two files:
 ### `test/document-cache.test.tsx`
 
 Tests for the `DocumentCache` class directly:
+
 - Verifies `reactor.getDocument` is called when getting a document
 
 ### `test/hooks/document-cache.test.tsx`
 
 Tests for the React hooks:
+
 - `useDocumentCache`: Cache instance access and updates
 - `useDocument`: Single document retrieval, updates on operations, deletion handling
 - `useDocuments`: Batch retrieval, updates when one document changes, deletion handling

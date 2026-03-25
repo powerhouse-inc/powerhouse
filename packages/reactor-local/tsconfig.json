@@ -17,9 +17,6 @@
       "path": "../config"
     },
     {
-      "path": "../document-drive"
-    },
-    {
       "path": "../document-model"
     },
     {
@@ -27,6 +24,9 @@
     },
     {
       "path": "../reactor-api"
+    },
+    {
+      "path": "../shared"
     }
   ]
 }

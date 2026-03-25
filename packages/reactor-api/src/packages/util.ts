@@ -1,9 +1,9 @@
-import type { SubgraphClass } from "@powerhousedao/reactor-api";
-import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
+import type { IProcessorHostModule } from "@powerhousedao/reactor";
 import type {
-  IProcessorHostModuleLegacy,
-  ProcessorFactoryLegacy,
-} from "document-drive";
+  ProcessorFactoryBuilder,
+  SubgraphClass,
+} from "@powerhousedao/reactor-api";
+import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import { childLogger } from "document-model";
 import { execSync } from "node:child_process";
 import path from "node:path";
@@ -14,12 +14,8 @@ import { resolveLinkedPackage } from "./import-resolver.js";
 type DocumentModelsExport = Record<string, DocumentModelModule>;
 type SubgraphsExport = Record<string, Record<string, SubgraphClass>>;
 type ProcessorsExport = {
-  processorFactory?: (
-    module: IProcessorHostModuleLegacy,
-  ) => ProcessorFactoryLegacy;
-  processorFactoryLegacy?: (
-    module: IProcessorHostModuleLegacy,
-  ) => ProcessorFactoryLegacy;
+  processorFactory?: ProcessorFactoryBuilder;
+  processorFactoryLegacy?: ProcessorFactoryBuilder;
 };
 
 const logger = childLogger(["reactor-api", "packages/util"]);

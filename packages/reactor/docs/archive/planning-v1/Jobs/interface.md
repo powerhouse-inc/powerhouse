@@ -258,7 +258,11 @@ export interface IJobExecutorManager {
 export interface IJobTracker {
   registerJob(jobInfo: JobInfo): void;
   markRunning(jobId: string): void;
-  markCompleted(jobId: string, result: any, consistencyToken: ConsistencyToken): void;
+  markCompleted(
+    jobId: string,
+    result: any,
+    consistencyToken: ConsistencyToken,
+  ): void;
   markFailed(jobId: string, error: ErrorInfo): void;
   getJobStatus(jobId: string): JobInfo | null;
 }

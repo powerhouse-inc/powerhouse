@@ -6,7 +6,7 @@ import type {
   DocumentDriveDocument,
   Node,
 } from "@powerhousedao/shared/document-drive";
-import { driveCreateDocument } from "document-drive";
+import { driveCreateDocument } from "../../gen/utils.js";
 
 /**
  * Creates a DocumentDriveDocument with custom nodes in the global state

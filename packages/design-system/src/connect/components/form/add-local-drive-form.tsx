@@ -1,5 +1,5 @@
 import { PowerhouseButton } from "@powerhousedao/design-system";
-import type { SharingType } from "document-drive";
+import type { SharingType } from "@powerhousedao/shared/document-drive";
 import type { App } from "@powerhousedao/shared/document-model";
 import type { SubmitHandler } from "react-hook-form";
 import { useForm } from "react-hook-form";

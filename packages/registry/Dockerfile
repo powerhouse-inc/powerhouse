@@ -28,6 +28,7 @@ RUN echo '{ \
     "isolatedModules": true, \
     "skipLibCheck": true, \
     "moduleDetection": "force", \
+    "rootDir": "./src", \
     "outDir": "./dist", \
     "types": ["node"] \
   }, \

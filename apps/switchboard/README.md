@@ -50,6 +50,7 @@ docker compose -f packages/reactor/docker-compose.yml up -d
 ```
 
 This starts:
+
 - PostgreSQL on port `5433` (mapped from container port 5432)
 - Adminer (database UI) on port `8080`
 
@@ -94,22 +95,21 @@ pnpm add -g @powerhousedao/switchboard
 
 ## 🏃‍♂️ Quick Start
 
-
 ## ⚙️ Configuration
 
 ### Environment Variables
 
-| Variable                     | Description                        | Default               |
-| ---------------------------- | ---------------------------------- | --------------------- |
-| `PORT`                       | Server port                        | `4001`                |
-| `DATABASE_URL`               | Database connection string         | `./.ph/drive-storage` |
-| `PH_REACTOR_DATABASE_URL`    | PostgreSQL URL (takes precedence)  | -                     |
-| `REDIS_URL`                  | Redis connection URL               | -                     |
-| `REDIS_TLS_URL`              | Redis TLS connection URL           | -                     |
-| `SENTRY_DSN`                 | Sentry DSN for error tracking      | -                     |
-| `SENTRY_ENV`                 | Sentry environment                 | -                     |
-| `PYROSCOPE_SERVER_ADDRESS`   | Pyroscope server address           | -                     |
-| `FEATURE_REACTORV2_ENABLED`  | Enable Reactor v2 subgraph feature | `false`               |
+| Variable                    | Description                        | Default               |
+| --------------------------- | ---------------------------------- | --------------------- |
+| `PORT`                      | Server port                        | `4001`                |
+| `DATABASE_URL`              | Database connection string         | `./.ph/drive-storage` |
+| `PH_REACTOR_DATABASE_URL`   | PostgreSQL URL (takes precedence)  | -                     |
+| `REDIS_URL`                 | Redis connection URL               | -                     |
+| `REDIS_TLS_URL`             | Redis TLS connection URL           | -                     |
+| `SENTRY_DSN`                | Sentry DSN for error tracking      | -                     |
+| `SENTRY_ENV`                | Sentry environment                 | -                     |
+| `PYROSCOPE_SERVER_ADDRESS`  | Pyroscope server address           | -                     |
+| `FEATURE_REACTORV2_ENABLED` | Enable Reactor v2 subgraph feature | `false`               |
 
 ### Authentication Configuration
 
@@ -245,6 +245,7 @@ ph switchboard --db-path postgresql://user:pass@localhost:5432/db --migrate-stat
 #### Environment Variables for Migrations
 
 The migration commands check for a PostgreSQL URL in this order:
+
 1. `PH_REACTOR_DATABASE_URL`
 2. `DATABASE_URL`
 3. Config file (`powerhouse.config.json` -> `switchboard.database.url`)

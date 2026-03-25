@@ -47,7 +47,5 @@
     }
   },
   // include all files in this package's root
-  "include": [
-    "**/*"
-  ]
+  "include": ["**/*"]
 }

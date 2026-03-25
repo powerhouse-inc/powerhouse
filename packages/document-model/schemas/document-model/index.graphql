@@ -82,14 +82,20 @@ type Mutation {
   setModelName(input: SetModelNameInput!): DocumentModelGlobalState!
   setModelId(input: SetModelIdInput!): DocumentModelGlobalState!
   setModelExtension(input: SetModelExtensionInput!): DocumentModelGlobalState!
-  setModelDescription(input: SetModelDescriptionInput!): DocumentModelGlobalState!
+  setModelDescription(
+    input: SetModelDescriptionInput!
+  ): DocumentModelGlobalState!
   setAuthorName(input: SetAuthorNameInput!): DocumentModelGlobalState!
   setAuthorWebsite(input: SetAuthorWebsiteInput!): DocumentModelGlobalState!
 
   # Document Model Versioning
   addChangeLogItemInput(input: AddChangeLogItemInput): DocumentModelGlobalState!
-  updateChangeLogItemInput(input: UpdateChangeLogItemInput): DocumentModelGlobalState!
-  deleteChangeLogItemInput(input: DeleteChangeLogItemInput): DocumentModelGlobalState!
+  updateChangeLogItemInput(
+    input: UpdateChangeLogItemInput
+  ): DocumentModelGlobalState!
+  deleteChangeLogItemInput(
+    input: DeleteChangeLogItemInput
+  ): DocumentModelGlobalState!
   reorderChangeLogItemsInput(
     input: ReorderChangeLogItemsInput
   ): DocumentModelGlobalState!
@@ -101,12 +107,16 @@ type Mutation {
   addStateExample(input: AddStateExampleInput!): DocumentModelGlobalState!
   updateStateExample(input: UpdateStateExampleInput!): DocumentModelGlobalState!
   deleteStateExample(input: DeleteStateExampleInput!): DocumentModelGlobalState!
-  reorderStateExamples(input: ReorderStateExamplesInput!): DocumentModelGlobalState!
+  reorderStateExamples(
+    input: ReorderStateExamplesInput!
+  ): DocumentModelGlobalState!
 
   # Modules
   addModule(input: AddModuleInput!): DocumentModelGlobalState!
   setModuleName(input: SetModuleNameInput!): DocumentModelGlobalState!
-  setModuleDescription(input: SetModuleDescriptionInput!): DocumentModelGlobalState!
+  setModuleDescription(
+    input: SetModuleDescriptionInput!
+  ): DocumentModelGlobalState!
   deleteModule(input: DeleteModuleInput!): DocumentModelGlobalState!
   reorderModules(input: ReorderModulesInput!): DocumentModelGlobalState!
 
@@ -117,8 +127,12 @@ type Mutation {
   setOperationDescription(
     input: SetOperationDescriptionInput!
   ): DocumentModelGlobalState!
-  setOperationTemplate(input: SetOperationTemplateInput!): DocumentModelGlobalState!
-  setOperationReducer(input: SetOperationReducerInput!): DocumentModelGlobalState!
+  setOperationTemplate(
+    input: SetOperationTemplateInput!
+  ): DocumentModelGlobalState!
+  setOperationReducer(
+    input: SetOperationReducerInput!
+  ): DocumentModelGlobalState!
   moveOperation(input: MoveOperationInput!): DocumentModelGlobalState!
   deleteOperation(input: DeleteOperationInput!): DocumentModelGlobalState!
   reorderModuleOperations(
@@ -127,21 +141,29 @@ type Mutation {
 
   # Operation Errors
   addOperationError(input: AddOperationErrorInput!): DocumentModelGlobalState!
-  setOperationErrorCode(input: SetOperationErrorCodeInput!): DocumentModelGlobalState!
-  setOperationErrorName(input: SetOperationErrorNameInput!): DocumentModelGlobalState!
+  setOperationErrorCode(
+    input: SetOperationErrorCodeInput!
+  ): DocumentModelGlobalState!
+  setOperationErrorName(
+    input: SetOperationErrorNameInput!
+  ): DocumentModelGlobalState!
   setOperationErrorDescription(
     input: SetOperationErrorDescriptionInput!
   ): DocumentModelGlobalState!
   setOperationErrorTemplate(
     input: SetOperationErrorTemplateInput!
   ): DocumentModelGlobalState!
-  deleteOperationError(input: DeleteOperationErrorInput!): DocumentModelGlobalState!
+  deleteOperationError(
+    input: DeleteOperationErrorInput!
+  ): DocumentModelGlobalState!
   reorderOperationErrors(
     input: ReorderOperationErrorsInput!
   ): DocumentModelGlobalState!
 
   # Operation Examples
-  addOperationExample(input: AddOperationExampleInput!): DocumentModelGlobalState!
+  addOperationExample(
+    input: AddOperationExampleInput!
+  ): DocumentModelGlobalState!
   updateOperationExample(
     input: UpdateOperationExampleInput!
   ): DocumentModelGlobalState!

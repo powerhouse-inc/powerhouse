@@ -1,7 +1,4 @@
-import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import type { PHDocument } from "@powerhousedao/shared/document-model";
-import { ReactorBuilder } from "document-drive";
-import { documentModelDocumentModelModule } from "document-model";
 import type { ExpectStatic } from "vitest";
 
 export function expectUTCTimestamp(expect: ExpectStatic): unknown {
@@ -22,13 +19,4 @@ export function getDocumentScopeIndexes(document: PHDocument) {
     }),
     {} as Record<string, number>,
   );
-}
-
-export async function testSetupReactor() {
-  const reactor = new ReactorBuilder([
-    documentModelDocumentModelModule,
-    driveDocumentModelModule,
-  ]).build();
-  await reactor.initialize();
-  return { reactor, listenerManager: reactor.listeners };
 }

@@ -22,7 +22,6 @@
     "@powerhousedao/reactor": "workspace:*",
     "@powerhousedao/load-test-client": "workspace:*",
     "document-model": "workspace:*",
-    "document-drive": "workspace:*",
     "@powerhousedao/shared": "workspace:*",
     "colorette": "catalog:",
     "commander": "catalog:"

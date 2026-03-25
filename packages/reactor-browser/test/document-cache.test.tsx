@@ -1,7 +1,9 @@
-import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
-import { setName, type PHDocument } from "@powerhousedao/shared/document-model";
-import { ReactorBuilder, type IDocumentDriveServer } from "document-drive";
-import { documentModelDocumentModelModule } from "document-model";
+import {
+  DocumentChangeType,
+  type DocumentChangeEvent,
+  type IReactorClient,
+} from "@powerhousedao/reactor";
+import type { PHDocument } from "@powerhousedao/shared/document-model";
 import { describe, expect, it, vi } from "vitest";
 import {
   addPromiseState,
@@ -10,33 +12,70 @@ import {
 } from "../src/document-cache.js";
 import type {
   FulfilledPromise,
-  IDocumentCache,
   PromiseWithState,
   RejectedPromise,
 } from "../src/types/documents.js";
 
 function createMockDocument(id: string, name = "Test Document"): PHDocument {
-  const document = documentModelDocumentModelModule.utils.createDocument();
-  document.header.id = id;
-  document.header.name = name;
-  return document;
+  return { header: { id, name } } as unknown as PHDocument;
 }
 
-async function createDocumentCache(
-  documents: PHDocument[] = [],
-): Promise<{ reactor: IDocumentDriveServer; cache: IDocumentCache }> {
-  const legacyReactor = new ReactorBuilder([
-    driveDocumentModelModule,
-    documentModelDocumentModelModule,
-  ]).build();
-
-  for (const document of documents) {
-    await legacyReactor.addDocument(document);
+function createMockClient(initialDocuments: PHDocument[] = []) {
+  const documents = new Map<string, PHDocument>();
+  for (const doc of initialDocuments) {
+    documents.set(doc.header.id, doc);
   }
+
+  let subscribeCallback: ((event: DocumentChangeEvent) => void) | null = null;
+
+  const getMock = vi.fn((id: string) => {
+    const doc = documents.get(id);
+    if (doc) return Promise.resolve(doc);
+    return Promise.reject(new Error(`Document not found: ${id}`));
+  });
+  const subscribeMock = vi.fn(
+    (_search: any, callback: (event: DocumentChangeEvent) => void) => {
+      subscribeCallback = callback;
+      return vi.fn(); // unsubscribe
+    },
+  );
+
+  const client = {
+    get: getMock,
+    subscribe: subscribeMock,
+  } as unknown as IReactorClient;
+
+  function emitEvent(event: DocumentChangeEvent) {
+    subscribeCallback?.(event);
+  }
+
+  function updateDocument(id: string, doc: PHDocument) {
+    documents.set(id, doc);
+  }
+
+  function deleteDocument(id: string) {
+    documents.delete(id);
+  }
+
   return {
-    reactor: legacyReactor,
-    cache: new DocumentCache(legacyReactor),
+    client,
+    getMock,
+    subscribeMock,
+    documents,
+    emitEvent,
+    updateDocument,
+    deleteDocument,
   };
+}
+
+function createDeferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
 }
 
 describe("readPromiseState", () => {
@@ -189,20 +228,21 @@ describe("readPromiseState", () => {
 
 describe("DocumentCache class", () => {
   describe("get method", () => {
-    it("should call reactor.getDocument when getting document", async () => {
+    it("should call client.get when getting document", async () => {
       const doc = createMockDocument("test");
-      const { reactor, cache } = await createDocumentCache([doc]);
-      const spy = vi.spyOn(reactor, "getDocument");
+      const { client, getMock } = createMockClient([doc]);
+      const cache = new DocumentCache(client);
+
       const documentP = cache.get("test");
 
-      expect(spy).toHaveBeenCalledWith("test");
+      expect(getMock).toHaveBeenCalledWith("test");
       await expect(documentP).resolves.toEqual(doc);
     });
 
     it("should deduplicate requests while promise is pending", async () => {
       const doc = createMockDocument("test");
-      const { reactor, cache } = await createDocumentCache([doc]);
-      const spy = vi.spyOn(reactor, "getDocument");
+      const { client, getMock } = createMockClient([doc]);
+      const cache = new DocumentCache(client);
 
       const promise1 = cache.get("test");
       const promise2 = cache.get("test");
@@ -210,7 +250,7 @@ describe("DocumentCache class", () => {
 
       expect(promise1).toBe(promise2);
       expect(promise2).toBe(promise3);
-      expect(spy).toHaveBeenCalledTimes(1);
+      expect(getMock).toHaveBeenCalledTimes(1);
 
       const [result1, result2, result3] = await Promise.all([
         promise1,
@@ -223,8 +263,8 @@ describe("DocumentCache class", () => {
 
     it("should return cached fulfilled promise when refetch is false", async () => {
       const doc = createMockDocument("test");
-      const { reactor, cache } = await createDocumentCache([doc]);
-      const spy = vi.spyOn(reactor, "getDocument");
+      const { client, getMock } = createMockClient([doc]);
+      const cache = new DocumentCache(client);
 
       const promise1 = cache.get("test");
       await promise1;
@@ -232,13 +272,13 @@ describe("DocumentCache class", () => {
       const promise2 = cache.get("test", false);
 
       expect(promise1).toBe(promise2);
-      expect(spy).toHaveBeenCalledTimes(1);
+      expect(getMock).toHaveBeenCalledTimes(1);
     });
 
     it("should refetch when refetch is true even for fulfilled promise", async () => {
       const doc = createMockDocument("test");
-      const { reactor, cache } = await createDocumentCache([doc]);
-      const spy = vi.spyOn(reactor, "getDocument");
+      const { client, getMock } = createMockClient([doc]);
+      const cache = new DocumentCache(client);
 
       const promise1 = cache.get("test");
       // Initialize state tracking before awaiting
@@ -250,11 +290,12 @@ describe("DocumentCache class", () => {
       const promise2 = cache.get("test", true);
 
       expect(promise1).not.toBe(promise2);
-      expect(spy).toHaveBeenCalledTimes(2);
+      expect(getMock).toHaveBeenCalledTimes(2);
     });
 
     it("should handle non-existent document", async () => {
-      const { cache } = await createDocumentCache([]);
+      const { client } = createMockClient([]);
+      const cache = new DocumentCache(client);
 
       // Suppress unhandled rejection from readPromiseState's re-throw
       const handler = (e: PromiseRejectionEvent) => {
@@ -275,7 +316,8 @@ describe("DocumentCache class", () => {
     it("should return a promise that resolves to an array of documents", async () => {
       const doc1 = createMockDocument("doc-1", "Document 1");
       const doc2 = createMockDocument("doc-2", "Document 2");
-      const { cache } = await createDocumentCache([doc1, doc2]);
+      const { client } = createMockClient([doc1, doc2]);
+      const cache = new DocumentCache(client);
 
       const docs = await cache.getBatch(["doc-1", "doc-2"]);
 
@@ -287,7 +329,8 @@ describe("DocumentCache class", () => {
     it("should cache batch promises by key", async () => {
       const doc1 = createMockDocument("doc-1");
       const doc2 = createMockDocument("doc-2");
-      const { cache } = await createDocumentCache([doc1, doc2]);
+      const { client } = createMockClient([doc1, doc2]);
+      const cache = new DocumentCache(client);
 
       const promise1 = cache.getBatch(["doc-1", "doc-2"]);
       await promise1;
@@ -299,7 +342,8 @@ describe("DocumentCache class", () => {
     it("should return different batch for different id order", async () => {
       const doc1 = createMockDocument("doc-1");
       const doc2 = createMockDocument("doc-2");
-      const { cache } = await createDocumentCache([doc1, doc2]);
+      const { client } = createMockClient([doc1, doc2]);
+      const cache = new DocumentCache(client);
 
       const promise1 = cache.getBatch(["doc-1", "doc-2"]);
       await promise1;
@@ -311,7 +355,8 @@ describe("DocumentCache class", () => {
     it("should create pre-resolved batch when all promises are fulfilled", async () => {
       const doc1 = createMockDocument("doc-1");
       const doc2 = createMockDocument("doc-2");
-      const { cache } = await createDocumentCache([doc1, doc2]);
+      const { client } = createMockClient([doc1, doc2]);
+      const cache = new DocumentCache(client);
 
       // Fetch individual documents and initialize state tracking
       const p1 = cache.get("doc-1");
@@ -338,7 +383,8 @@ describe("DocumentCache class", () => {
     });
 
     it("should return empty batch for empty ids array", async () => {
-      const { cache } = await createDocumentCache([]);
+      const { client } = createMockClient([]);
+      const cache = new DocumentCache(client);
 
       const docs = await cache.getBatch([]);
 
@@ -347,7 +393,8 @@ describe("DocumentCache class", () => {
 
     it("should reject when one document does not exist", async () => {
       const doc1 = createMockDocument("doc-1");
-      const { cache } = await createDocumentCache([doc1]);
+      const { client } = createMockClient([doc1]);
+      const cache = new DocumentCache(client);
 
       // Suppress unhandled rejection from readPromiseState's re-throw
       const handler = (e: PromiseRejectionEvent) => {
@@ -366,7 +413,11 @@ describe("DocumentCache class", () => {
     it("should not return stale data when a document has been deleted", async () => {
       const doc1 = createMockDocument("doc-1", "Document 1");
       const doc2 = createMockDocument("doc-2", "Document 2");
-      const { reactor, cache } = await createDocumentCache([doc1, doc2]);
+      const { client, emitEvent, deleteDocument } = createMockClient([
+        doc1,
+        doc2,
+      ]);
+      const cache = new DocumentCache(client);
 
       // Suppress unhandled rejection from readPromiseState's re-throw
       const handler = (e: PromiseRejectionEvent) => {
@@ -380,8 +431,13 @@ describe("DocumentCache class", () => {
       expect(initialBatch[0].header.name).toBe("Document 1");
       expect(initialBatch[1].header.name).toBe("Document 2");
 
-      // Delete one document (this triggers documentDeleted event which removes it from cache)
-      await reactor.deleteDocument(doc2.header.id);
+      // Delete one document from mock store and emit deletion event
+      deleteDocument("doc-2");
+      emitEvent({
+        type: DocumentChangeType.Deleted,
+        documents: [],
+        context: { childId: "doc-2" },
+      });
 
       // Subsequent batch request should detect the deletion and create a new batch
       // that will fail (not return stale data)
@@ -396,7 +452,12 @@ describe("DocumentCache class", () => {
       const doc1 = createMockDocument("doc-1", "Document 1");
       const doc2 = createMockDocument("doc-2", "Document 2");
       const doc3 = createMockDocument("doc-3", "Document 3");
-      const { reactor, cache } = await createDocumentCache([doc1, doc2, doc3]);
+      const { client, emitEvent, deleteDocument } = createMockClient([
+        doc1,
+        doc2,
+        doc3,
+      ]);
+      const cache = new DocumentCache(client);
 
       // Suppress unhandled rejection from readPromiseState's re-throw
       const handler = (e: PromiseRejectionEvent) => {
@@ -413,8 +474,13 @@ describe("DocumentCache class", () => {
       expect(cache.getBatch(["doc-1", "doc-2"])).toBe(batch1);
       expect(cache.getBatch(["doc-2", "doc-3"])).toBe(batch2);
 
-      // Delete doc-2 (should invalidate both batches that contain it)
-      await reactor.deleteDocument(doc2.header.id);
+      // Delete doc-2 from mock store and emit event
+      deleteDocument("doc-2");
+      emitEvent({
+        type: DocumentChangeType.Deleted,
+        documents: [],
+        context: { childId: "doc-2" },
+      });
 
       // Batch that only contained doc-1 and doc-3 should still work
       const batch3 = cache.getBatch(["doc-1", "doc-3"]);
@@ -435,9 +501,10 @@ describe("DocumentCache class", () => {
   });
 
   describe("subscribe method", () => {
-    it("should add listener for single id", async () => {
+    it("should add listener for single id", () => {
       const doc = createMockDocument("test");
-      const { cache } = await createDocumentCache([doc]);
+      const { client } = createMockClient([doc]);
+      const cache = new DocumentCache(client);
       const callback = vi.fn();
 
       cache.subscribe("test", callback);
@@ -446,10 +513,11 @@ describe("DocumentCache class", () => {
       expect(callback).not.toHaveBeenCalled();
     });
 
-    it("should add listener for multiple ids", async () => {
+    it("should add listener for multiple ids", () => {
       const doc1 = createMockDocument("doc-1");
       const doc2 = createMockDocument("doc-2");
-      const { cache } = await createDocumentCache([doc1, doc2]);
+      const { client } = createMockClient([doc1, doc2]);
+      const cache = new DocumentCache(client);
       const callback = vi.fn();
 
       cache.subscribe(["doc-1", "doc-2"], callback);
@@ -458,9 +526,10 @@ describe("DocumentCache class", () => {
       expect(callback).not.toHaveBeenCalled();
     });
 
-    it("should return unsubscribe function", async () => {
+    it("should return unsubscribe function", () => {
       const doc = createMockDocument("test");
-      const { cache } = await createDocumentCache([doc]);
+      const { client } = createMockClient([doc]);
+      const cache = new DocumentCache(client);
       const callback = vi.fn();
 
       const unsubscribe = cache.subscribe("test", callback);
@@ -468,9 +537,10 @@ describe("DocumentCache class", () => {
       expect(typeof unsubscribe).toBe("function");
     });
 
-    it("should allow multiple subscriptions to same id", async () => {
+    it("should allow multiple subscriptions to same id", () => {
       const doc = createMockDocument("test");
-      const { cache } = await createDocumentCache([doc]);
+      const { client } = createMockClient([doc]);
+      const cache = new DocumentCache(client);
       const callback1 = vi.fn();
       const callback2 = vi.fn();
 
@@ -484,9 +554,10 @@ describe("DocumentCache class", () => {
   });
 
   describe("event handling", () => {
-    it("should notify listeners when operationsAdded event is emitted", async () => {
+    it("should notify listeners when Updated event is emitted", async () => {
       const doc = createMockDocument("test", "Original Name");
-      const { reactor, cache } = await createDocumentCache([doc]);
+      const { client, emitEvent, updateDocument } = createMockClient([doc]);
+      const cache = new DocumentCache(client);
       const callback = vi.fn();
 
       // First, get the document to add it to the cache
@@ -495,32 +566,54 @@ describe("DocumentCache class", () => {
       // Subscribe to changes
       cache.subscribe("test", callback);
 
-      // Add an operation to trigger the event
-      await reactor.addAction(doc.header.id, setName("Updated Name"));
+      // Update document in mock store and emit event
+      const updatedDoc = createMockDocument("test", "Updated Name");
+      updateDocument("test", updatedDoc);
+      emitEvent({
+        type: DocumentChangeType.Updated,
+        documents: [updatedDoc],
+      });
 
-      // Wait for the callback to be called
+      // Wait for the async handler to complete
       await vi.waitFor(() => {
         expect(callback).toHaveBeenCalled();
       });
     });
 
-    it("should remove document from cache when documentDeleted event is emitted", async () => {
+    it("should remove document from cache when Deleted event is emitted", async () => {
       const doc = createMockDocument("test");
-      const { reactor, cache } = await createDocumentCache([doc]);
+      const { client, emitEvent, deleteDocument } = createMockClient([doc]);
+      const cache = new DocumentCache(client);
+
+      // Suppress unhandled rejection from readPromiseState's re-throw
+      const handler = (e: PromiseRejectionEvent) => {
+        if ((e.reason as Error)?.message?.includes("test")) e.preventDefault();
+      };
+      window.addEventListener("unhandledrejection", handler);
 
       // Get the document to add it to cache
       await cache.get("test");
 
-      // Delete the document
-      await reactor.deleteDocument(doc.header.id);
+      // Delete from mock store and emit event
+      deleteDocument("test");
+      emitEvent({
+        type: DocumentChangeType.Deleted,
+        documents: [],
+        context: { childId: "test" },
+      });
 
       // Trying to get the deleted document should fail
       await expect(cache.get("test")).rejects.toThrow();
+
+      // Wait for async re-throw from readPromiseState
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      window.removeEventListener("unhandledrejection", handler);
     });
 
-    it("should notify listeners when documentDeleted event is emitted", async () => {
+    it("should notify listeners when Deleted event is emitted", async () => {
       const doc = createMockDocument("test");
-      const { reactor, cache } = await createDocumentCache([doc]);
+      const { client, emitEvent, deleteDocument } = createMockClient([doc]);
+      const cache = new DocumentCache(client);
       const callback = vi.fn();
 
       // Get the document to add it to cache
@@ -529,23 +622,32 @@ describe("DocumentCache class", () => {
       // Subscribe to changes
       cache.subscribe("test", callback);
 
-      // Delete the document
-      await reactor.deleteDocument(doc.header.id);
+      // Delete from mock store and emit event
+      deleteDocument("test");
+      emitEvent({
+        type: DocumentChangeType.Deleted,
+        documents: [],
+        context: { childId: "test" },
+      });
 
-      // Callback should be called
+      // Callback should be called synchronously
       expect(callback).toHaveBeenCalled();
     });
 
-    it("should not notify listeners for documents not in cache on operationsAdded", async () => {
+    it("should not notify listeners for documents not in cache on Updated", async () => {
       const doc = createMockDocument("test");
-      const { reactor, cache } = await createDocumentCache([doc]);
+      const { client, emitEvent } = createMockClient([doc]);
+      const cache = new DocumentCache(client);
       const callback = vi.fn();
 
       // Subscribe without getting the document first
       cache.subscribe("test", callback);
 
-      // Add an operation
-      await reactor.addAction(doc.header.id, setName("Updated Name"));
+      // Emit an Updated event
+      emitEvent({
+        type: DocumentChangeType.Updated,
+        documents: [doc],
+      });
 
       // Wait a bit to ensure no callback is triggered
       await new Promise((resolve) => setTimeout(resolve, 100));
@@ -556,9 +658,12 @@ describe("DocumentCache class", () => {
   });
 
   describe("stale-while-revalidate behavior", () => {
-    it("should return stale data while refetch is triggered by operationsAdded", async () => {
+    it("should return stale data while refetch is triggered by Updated event", async () => {
       const doc = createMockDocument("test", "Original Name");
-      const { reactor, cache } = await createDocumentCache([doc]);
+      const { client, getMock, emitEvent, updateDocument } = createMockClient([
+        doc,
+      ]);
+      const cache = new DocumentCache(client);
 
       // Get document initially and track state
       const initialPromise = cache.get("test");
@@ -568,34 +673,51 @@ describe("DocumentCache class", () => {
       // Allow microtask to update promise status to "fulfilled"
       await new Promise((resolve) => setTimeout(resolve, 0));
 
-      // Trigger update which will refetch
-      const actionPromise = reactor.addAction(
-        doc.header.id,
-        setName("Updated Name"),
-      );
-
-      // While update is being processed, get() should still return the old data
+      // Before event, cache returns the initial promise
       expect(cache.get("test")).toBe(initialPromise);
 
-      await actionPromise;
+      // Prepare a deferred promise for the refetch so we can control timing
+      const deferred = createDeferred<PHDocument>();
+      getMock.mockReturnValueOnce(deferred.promise);
 
-      // After operationsAdded completes, get() should return the updated data
-      expect(cache.get("test")).not.toBe(initialPromise);
-      const updatedDoc = await cache.get("test");
-      expect(updatedDoc.header.name).toBe("Updated Name");
+      // Update mock store and emit event
+      const updatedDoc = createMockDocument("test", "Updated Name");
+      updateDocument("test", updatedDoc);
+      emitEvent({
+        type: DocumentChangeType.Updated,
+        documents: [updatedDoc],
+      });
+
+      // After event, cache.get("test") returns the new pending refetch promise
+      const refetchPromise = cache.get("test");
+      expect(refetchPromise).not.toBe(initialPromise);
+
+      // Resolve the deferred with the updated document
+      deferred.resolve(updatedDoc);
+      const resolvedDoc = await refetchPromise;
+      expect(resolvedDoc.header.name).toBe("Updated Name");
     });
 
     it("should return stale batch data while refetch is in progress", async () => {
       const doc1 = createMockDocument("doc-1", "Doc 1");
       const doc2 = createMockDocument("doc-2", "Doc 2");
-      const { reactor, cache } = await createDocumentCache([doc1, doc2]);
+      const { client, emitEvent, updateDocument } = createMockClient([
+        doc1,
+        doc2,
+      ]);
+      const cache = new DocumentCache(client);
 
       // Get initial batch
       const initialBatch = await cache.getBatch(["doc-1", "doc-2"]);
       expect(initialBatch[0].header.name).toBe("Doc 1");
 
-      // Trigger update which starts a refetch
-      await reactor.addAction(doc1.header.id, setName("Updated Doc 1"));
+      // Update doc1 in mock store and emit event
+      const updatedDoc1 = createMockDocument("doc-1", "Updated Doc 1");
+      updateDocument("doc-1", updatedDoc1);
+      emitEvent({
+        type: DocumentChangeType.Updated,
+        documents: [updatedDoc1],
+      });
 
       // During refetch, getBatch should still return data (possibly stale)
       const duringRefetchBatch = await cache.getBatch(["doc-1", "doc-2"]);

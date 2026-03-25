@@ -21,6 +21,7 @@ const renown = await new RenownBuilder("my-app")
 ```
 
 **Builder methods:**
+
 - `withBaseUrl(url)` — Renown server URL (default: `https://www.renown.id`)
 - `withStorage(storage)` — Custom user data persistence (default: in-memory)
 - `withEventEmitter(emitter)` — Custom event emitter for state changes

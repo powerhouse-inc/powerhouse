@@ -6,13 +6,13 @@ Allow `IOperationIndex` collections to expose **all operations for documents whi
 
 ## Design Overview
 
-| Concern | Current Behaviour | Planned Behaviour |
-| --- | --- | --- |
-| Membership storage | `document_collections(documentId, collectionId)` with `ON CONFLICT DO NOTHING` | Extend row with `joinedOrdinal BIGINT` and `leftOrdinal BIGINT NULL` (or timestamp equivalent) |
-| ADD_RELATIONSHIP | Inserts membership row once and never edits it | Insert (or ensure) row with `joinedOrdinal = op.ordinal`, `leftOrdinal = NULL` |
-| REMOVE_RELATIONSHIP | No-op for collections, so membership never ends | Update membership row to set `leftOrdinal = op.ordinal` (if not already set) |
-| `find(collectionId, cursor, …)` | Simple join on `collectionId`, includes every historical member forever | Add predicates so only operations with `joinedOrdinal ≤ ordinal < leftOrdinal (or NULL)` are returned |
-| “Ever attached” queries | Implicit because rows never delete | Explicit: `document_collections` rows retain both ordinals, so callers can derive history |
+| Concern                         | Current Behaviour                                                              | Planned Behaviour                                                                                     |
+| ------------------------------- | ------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
+| Membership storage              | `document_collections(documentId, collectionId)` with `ON CONFLICT DO NOTHING` | Extend row with `joinedOrdinal BIGINT` and `leftOrdinal BIGINT NULL` (or timestamp equivalent)        |
+| ADD_RELATIONSHIP                | Inserts membership row once and never edits it                                 | Insert (or ensure) row with `joinedOrdinal = op.ordinal`, `leftOrdinal = NULL`                        |
+| REMOVE_RELATIONSHIP             | No-op for collections, so membership never ends                                | Update membership row to set `leftOrdinal = op.ordinal` (if not already set)                          |
+| `find(collectionId, cursor, …)` | Simple join on `collectionId`, includes every historical member forever        | Add predicates so only operations with `joinedOrdinal ≤ ordinal < leftOrdinal (or NULL)` are returned |
+| “Ever attached” queries         | Implicit because rows never delete                                             | Explicit: `document_collections` rows retain both ordinals, so callers can derive history             |
 
 ## Schema Changes
 
@@ -28,6 +28,7 @@ CREATE INDEX idx_doc_collections_collection_range
 ```
 
 Backfill strategy:
+
 1. Determine the lowest ordinal currently written per document, set that as `joinedOrdinal`.
 2. Leave `leftOrdinal = NULL` for all existing rows so behaviour stays the same until removals happen with the new code.
 

@@ -1,9 +1,9 @@
-import type { SubgraphClass } from "@powerhousedao/reactor-api";
-import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
+import type { IProcessorHostModule } from "@powerhousedao/reactor";
 import type {
-  IProcessorHostModuleLegacy,
-  ProcessorFactoryLegacy,
-} from "document-drive";
+  ProcessorFactoryBuilder,
+  SubgraphClass,
+} from "@powerhousedao/reactor-api";
+import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 
 export interface IPackageLoader {
@@ -18,9 +18,7 @@ export interface IPackageLoader {
   loadProcessors(
     identifier: string,
     immediate?: boolean,
-  ): Promise<
-    ((module: IProcessorHostModuleLegacy) => ProcessorFactoryLegacy) | null
-  >;
+  ): Promise<ProcessorFactoryBuilder | null>;
 }
 
 export interface ISubscriptionOptions {
@@ -40,11 +38,7 @@ export interface ISubscribablePackageLoader extends IPackageLoader {
   ): () => void;
   onProcessorsChange?(
     identifier: string,
-    handler: (
-      processors:
-        | ((module: IProcessorHostModuleLegacy) => ProcessorFactoryLegacy)
-        | null,
-    ) => void,
+    handler: (processors: ProcessorFactoryBuilder | null) => void,
     options?: ISubscriptionOptions,
   ): () => void;
 }
@@ -75,8 +69,5 @@ export interface PowerhouseConfig {
 export type PackageManagerResult = {
   documentModels: DocumentModelModule[];
   subgraphs: Map<string, SubgraphClass[]>;
-  processors: Map<
-    string,
-    ((module: IProcessorHostModuleLegacy) => ProcessorFactoryLegacy)[]
-  >;
+  processors: Map<string, ProcessorFactoryBuilder[]>;
 };

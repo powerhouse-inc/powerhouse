@@ -9,10 +9,7 @@ export {
 export {
   addDrive,
   addRemoteDrive,
-  addTrigger,
   deleteDrive,
-  registerNewPullResponderTrigger,
-  removeTrigger,
   renameDrive,
   setDriveAvailableOffline,
   setDriveSharingType,

@@ -16,7 +16,7 @@ Before diving into the specifics of writing reducers, let's recall the preceding
 
 This generated reducer file is our starting point. It will contain function stubs or an object structure expecting your reducer implementations, all typed according to your schema.
 
-## What is a reducer? 
+## What is a reducer?
 
 ### The core principles
 
@@ -42,7 +42,7 @@ Let's break down its components and principles:
     - **Never Mutate `currentState`**: You must never directly modify the `currentState` object or any of its nested properties.
     - **Always Return a New Object for Changes**: If the state changes, you must create and return a brand new object. If the state does not change, you return the original `currentState` object.
     - This is fundamental to Powerhouse's event sourcing architecture, enabling time travel, efficient change detection, and a clear audit trail.
-    
+
     :::tip Powerhouse uses Immer.js
     Powerhouse uses **Immer.js** under the hood, which means you can write code that _looks like_ it's mutating the state directly (e.g., `state.items.push(...)`), but Immer ensures it results in an immutable update. This gives you the best of both worlds: readable code and immutable state.
     :::
@@ -72,7 +72,7 @@ Let's break down its components and principles:
 
 ## Implementing reducer logic: A practical guide
 
-Let's use our familiar `TodoList` example to illustrate common patterns. 
+Let's use our familiar `TodoList` example to illustrate common patterns.
 
 ### Basic implementation (matching Get Started)
 
@@ -86,23 +86,23 @@ export const todoListTodosOperations: TodoListTodosOperations = {
   addTodoItemOperation(state, action) {
     // Generate a unique ID for the new todo item
     const id = generateId();
-    
+
     // Add the new item to the state (Immer handles immutability)
     state.items.push({ ...action.input, id, checked: false });
   },
-  
+
   updateTodoItemOperation(state, action) {
     // Find the item to update by its ID
     const item = state.items.find((item) => item.id === action.input.id);
-    
+
     // Return early if item not found
     if (!item) return;
-    
+
     // Update only the fields that are provided (partial update)
     item.text = action.input.text ?? item.text;
     item.checked = action.input.checked ?? item.checked;
   },
-  
+
   deleteTodoItemOperation(state, action) {
     // Filter out the item with the matching ID
     state.items = state.items.filter((item) => item.id !== action.input.id);
@@ -130,7 +130,7 @@ export const todoListTodosOperations: TodoListTodosOperations = {
   addTodoItemOperation(state, action) {
     // Generate a unique ID for the new todo item
     const id = generateId();
-    
+
     // Update statistics
     state.stats.total += 1;
     state.stats.unchecked += 1;
@@ -157,7 +157,10 @@ export const todoListTodosOperations: TodoListTodosOperations = {
     }
 
     // Handle checked status changes and update stats
-    if (action.input.checked !== undefined && action.input.checked !== item.checked) {
+    if (
+      action.input.checked !== undefined &&
+      action.input.checked !== item.checked
+    ) {
       if (action.input.checked) {
         state.stats.unchecked -= 1;
         state.stats.checked += 1;
@@ -210,7 +213,7 @@ addTodoItemOperation(state, action) {
 updateTodoItemOperation(state, action) {
   const item = state.items.find((item) => item.id === action.input.id);
   if (!item) return;
-  
+
   item.text = action.input.text ?? item.text;
   item.checked = action.input.checked ?? item.checked;
 }
@@ -281,15 +284,15 @@ export const todoListTodosOperations: TodoListTodosOperations = {
     const id = generateId();
     state.items.push({ ...action.input, id, checked: false });
   },
-  
+
   updateTodoItemOperation(state, action) {
     const item = state.items.find((item) => item.id === action.input.id);
     if (!item) return;
-    
+
     item.text = action.input.text ?? item.text;
     item.checked = action.input.checked ?? item.checked;
   },
-  
+
   deleteTodoItemOperation(state, action) {
     state.items = state.items.filter((item) => item.id !== action.input.id);
   },
@@ -305,7 +308,7 @@ import type { TodoListTodosOperations } from "todo-tutorial/document-models/todo
 export const todoListTodosOperations: TodoListTodosOperations = {
   addTodoItemOperation(state, action) {
     const id = generateId();
-    
+
     state.stats.total += 1;
     state.stats.unchecked += 1;
 
@@ -326,7 +329,10 @@ export const todoListTodosOperations: TodoListTodosOperations = {
       item.text = action.input.text;
     }
 
-    if (action.input.checked !== undefined && action.input.checked !== item.checked) {
+    if (
+      action.input.checked !== undefined &&
+      action.input.checked !== item.checked
+    ) {
       if (action.input.checked) {
         state.stats.unchecked -= 1;
         state.stats.checked += 1;

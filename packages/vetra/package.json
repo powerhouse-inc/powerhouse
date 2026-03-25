@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/vetra",
-  "version": "6.0.0-dev.108",
+  "version": "6.0.0-dev.111",
   "license": "AGPL-3.0-only",
   "type": "module",
   "repository": {
@@ -74,7 +74,6 @@
     "graphql-tag": "catalog:",
     "kysely": "catalog:",
     "zod": "catalog:",
-    "document-drive": "workspace:*",
     "@powerhousedao/codegen": "workspace:*",
     "react": "catalog:",
     "react-dom": "catalog:"

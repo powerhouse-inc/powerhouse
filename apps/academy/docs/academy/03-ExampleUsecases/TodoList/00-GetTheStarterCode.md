@@ -2,9 +2,9 @@
 
 Normally you would initialize a new powerhouse project by running `ph init` with your project name. But since this is a tutorial, we want to provide branches with the final code for each step.
 
-Just for the tutorial, please instead make a fork of [this repository](https://github.com/powerhouse-inc/todo-tutorial). 
+Just for the tutorial, please instead make a fork of [this repository](https://github.com/powerhouse-inc/todo-tutorial).
 
-*NOTE:* please _uncheck_ the checkbox that says "copy the main branch only" when making your fork — we want to keep the other branches for each step.
+_NOTE:_ please _uncheck_ the checkbox that says "copy the main branch only" when making your fork — we want to keep the other branches for each step.
 
 Once you have your fork, clone it to your machine with `git clone`, the GitHub desktop app or the GitHub cli.
 
@@ -18,7 +18,6 @@ Each step in this tutorial has two branches associated with it. One is the start
 
 To compare your branch, either do `git diff my-branch step-complete-branch` or use the "compare with branch" option in the GitHub desktop app.
 
-Finally, run `pnpm install` to install the project dependencies. 
+Finally, run `pnpm install` to install the project dependencies.
 
 Now we're ready to get started.
-

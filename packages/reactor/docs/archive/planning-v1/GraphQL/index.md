@@ -688,6 +688,7 @@ query PollSyncEnvelopes($channelId: String!, $cursorOrdinal: Int!) {
 ```
 
 **Variables:**
+
 ```json
 {
   "channelId": "550e8400-e29b-41d4-a716-446655440000",
@@ -696,6 +697,7 @@ query PollSyncEnvelopes($channelId: String!, $cursorOrdinal: Int!) {
 ```
 
 **Response:**
+
 ```json
 {
   "data": {
@@ -714,7 +716,9 @@ query PollSyncEnvelopes($channelId: String!, $cursorOrdinal: Int!) {
               "skip": 0,
               "error": null,
               "id": "op-123",
-              "action": { /* action data */ }
+              "action": {
+                /* action data */
+              }
             },
             "context": {
               "documentId": "doc-456",
@@ -746,6 +750,7 @@ mutation PushSyncEnvelope($envelope: SyncEnvelopeInput!) {
 ```
 
 **Variables:**
+
 ```json
 {
   "envelope": {
@@ -761,7 +766,9 @@ mutation PushSyncEnvelope($envelope: SyncEnvelopeInput!) {
           "hash": "def456...",
           "skip": 0,
           "id": "op-124",
-          "action": { /* action data */ }
+          "action": {
+            /* action data */
+          }
         },
         "context": {
           "documentId": "doc-456",
@@ -776,6 +783,7 @@ mutation PushSyncEnvelope($envelope: SyncEnvelopeInput!) {
 ```
 
 **Response:**
+
 ```json
 {
   "data": {
@@ -797,6 +805,7 @@ These operations are automatically used by `GqlChannel` for network synchronizat
 The resolver functions require integration with the reactor package's `IOperationStore` and `ISyncManager`. Current implementation in reactor-api includes stub resolvers that document the required integration points.
 
 For full implementation details, see:
+
 - [Synchronization Specification](../Synchronization/index.md)
 - [GqlChannel Implementation](../Synchronization/gql-channel.md)
 - [Resolver Source Code](../../../../reactor-api/src/graphql/reactor/resolvers.ts)

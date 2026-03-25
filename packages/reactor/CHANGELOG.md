@@ -1,3 +1,28 @@
+## 6.0.0-dev.111 (2026-03-25)
+
+This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.110 (2026-03-25)
+
+This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.109 (2026-03-24)
+
+### 🚀 Features
+
+- **vetra-e2e:** add editor creation, registry publish, and consumer install e2e tests ([a215a7d7e](https://github.com/powerhouse-inc/powerhouse/commit/a215a7d7e))
+
+### 🩹 Fixes
+
+- lockfile ([292187fae](https://github.com/powerhouse-inc/powerhouse/commit/292187fae))
+- **reactor:** return cursor when single scope is requested on getOperations ([b7c6a6c33](https://github.com/powerhouse-inc/powerhouse/commit/b7c6a6c33))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Benjamin Jordan
+- Guillermo Puente @gpuente
+
 ## 6.0.0-dev.108 (2026-03-24)
 
 ### 🚀 Features
@@ -31,7 +56,7 @@
 - long test ([687e70c1e](https://github.com/powerhouse-inc/powerhouse/commit/687e70c1e))
 - codegen tests ([b857b8ab6](https://github.com/powerhouse-inc/powerhouse/commit/b857b8ab6))
 - **reactor-api:** resolve tsconfig path aliases in switchboard's Vite SSR loader ([dd812a933](https://github.com/powerhouse-inc/powerhouse/commit/dd812a933))
-- **document-drive:** fix tsc build and prisma ESM __dirname error ([f0c252d96](https://github.com/powerhouse-inc/powerhouse/commit/f0c252d96))
+- **document-drive:** fix tsc build and prisma ESM \_\_dirname error ([f0c252d96](https://github.com/powerhouse-inc/powerhouse/commit/f0c252d96))
 - stop mixing node and browser code ([9d5513533](https://github.com/powerhouse-inc/powerhouse/commit/9d5513533))
 - always build css after bundle ([36dca2c95](https://github.com/powerhouse-inc/powerhouse/commit/36dca2c95))
 - always build css after bundling ([565d11dca](https://github.com/powerhouse-inc/powerhouse/commit/565d11dca))
@@ -1110,7 +1135,7 @@ This was a version bump only for @powerhousedao/reactor to align it with other p
 ### 🚀 Features
 
 - **design-system:** default styles tweaks and DocumentStateViewer ([c0a66720c](https://github.com/powerhouse-inc/powerhouse/commit/c0a66720c))
-- **ci:** deploy staging tenant from release/staging/* branches ([8761579e7](https://github.com/powerhouse-inc/powerhouse/commit/8761579e7))
+- **ci:** deploy staging tenant from release/staging/\* branches ([8761579e7](https://github.com/powerhouse-inc/powerhouse/commit/8761579e7))
 - **ci:** add Harbor registry to docker image publishing ([f3a2fab69](https://github.com/powerhouse-inc/powerhouse/commit/f3a2fab69))
 
 ### ❤️ Thank You

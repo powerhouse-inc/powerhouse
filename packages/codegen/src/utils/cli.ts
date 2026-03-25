@@ -1,7 +1,4 @@
 import arg from "arg";
-import enquirer from "enquirer";
-
-const { prompt } = enquirer;
 
 export const configSpec = {
   "--document-models": String,
@@ -52,26 +49,4 @@ export function parseConfig(argv: string[]) {
   }
 
   return config;
-}
-
-type DefaultDirectories = {
-  documentModelsDir: string;
-  editorsDir: string;
-};
-
-export async function promptDirectories(defaultDirs: DefaultDirectories) {
-  return prompt<DefaultDirectories>([
-    {
-      type: "input",
-      name: "documentModelsDir",
-      message: "Where to place the Document Models?",
-      initial: defaultDirs.documentModelsDir,
-    },
-    {
-      type: "input",
-      name: "editorsDir",
-      message: "Where to place the Editors?",
-      initial: defaultDirs.editorsDir,
-    },
-  ]);
 }

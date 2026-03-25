@@ -14,8 +14,18 @@ import {
   useRenown,
   useUser,
 } from "@powerhousedao/reactor-browser";
-import { requestPublicDriveFromReactor } from "document-drive";
 import { t } from "i18next";
+
+async function requestPublicDriveFromReactor(
+  url: string,
+  headers?: Record<string, string>,
+): Promise<{ id: string; name: string }> {
+  const response = await fetch(url, { headers: headers ?? {} });
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}`);
+  }
+  return (await response.json()) as { id: string; name: string };
+}
 
 export function AddDriveModal() {
   const phModal = usePHModal();
@@ -60,7 +70,7 @@ export function AddDriveModal() {
 
   const onAddRemoteDrive = async (data: AddRemoteDriveInput) => {
     try {
-      const driveId = await addRemoteDrive(data.url, {}, data.id);
+      const driveId = await addRemoteDrive(data.url, data.id);
 
       toast(t("notifications.addDriveSuccess"), {
         type: "connect-success",

@@ -31,6 +31,7 @@ This guide covers the following types of breaking changes:
 - **Type 4**: Dependency Breaking Changes (upgrading major dependencies, runtime requirements)
 
 Each type has a dedicated checklist covering:
+
 1. **Planning Phase** - Evaluating necessity and impact
 2. **Implementation Phase** - Building the change with backward compatibility
 3. **Documentation Phase** - Creating migration guides and updating docs
@@ -78,6 +79,7 @@ We follow [Semantic Versioning 2.0.0](https://semver.org/) strictly:
 ## Type 1 Checklist: API Breaking Changes
 
 API breaking changes include:
+
 - Changing function signatures (parameters or return types)
 - Removing functions, classes, or exports
 - Renaming public APIs
@@ -95,12 +97,14 @@ API breaking changes include:
 
 - [ ] **Implement new API**: Build and test the new interface
 - [ ] **Add deprecation to old API**:
+
 ```typescript
 /**
-   * @deprecated Since v5.0.0. Use {@link newFunction} instead.
-   * This will be removed in v6.0.0.
-   */
-  ```
+ * @deprecated Since v5.0.0. Use {@link newFunction} instead.
+ * This will be removed in v6.0.0.
+ */
+```
+
 - [ ] **Add runtime warnings**: Use `logger.warn()` (not `console`)
 - [ ] **Delegate old to new**: If possible, have deprecated API call new API internally
 - [ ] **Write tests**: Test both old and new APIs, verify delegation
@@ -133,6 +137,7 @@ API breaking changes include:
 ## Type 2 Checklist: Data Breaking Changes
 
 Data breaking changes include:
+
 - Modifying a storage system's data structure
 - Changing a storage system's schema (requiring an alter, create, drop, etc.)
 
@@ -148,9 +153,15 @@ Data breaking changes include:
 ### Implementation Phase
 
 - [ ] **Add schema versioning**: Include / increment version in data structure
+
 ```typescript
-  { header: { schemaVersion: "5.0.0" } }
-  ```
+{
+  header: {
+    schemaVersion: "5.0.0";
+  }
+}
+```
+
 - [ ] **Create migration function**: Implement transformation logic
 - [ ] **Make migration idempotent**: Safe to run multiple times
 - [ ] **Add validation**: Use Zod/JSON Schema to validate migrated data
@@ -196,6 +207,7 @@ Data breaking changes include:
 ## Type 3 Checklist: Behavioral Breaking Changes
 
 Behavioral breaking changes include:
+
 - Changing how an API works without changing its signature
 - Modifying default values or behaviors
 - Changing error handling or validation rules
@@ -256,6 +268,7 @@ Behavioral breaking changes include:
 ## Type 4 Checklist: Dependency Breaking Changes
 
 Dependency breaking changes include:
+
 - Upgrading major dependencies (e.g., React 17 → 18)
 - Removing deprecated dependencies
 - Changing peer dependency requirements
@@ -314,6 +327,7 @@ Dependency breaking changes include:
 Feature flags allow you to deploy breaking changes while controlling exposure:
 
 **When to use:**
+
 - High-risk or uncertain changes
 - Need real-world testing before full rollout
 - Want ability to quickly roll back
@@ -362,6 +376,7 @@ FEATURE_NEW_PROCESSOR_FACTORY=false
 ```
 
 **Lifecycle:**
+
 1. **Alpha** (v5.0.0-alpha): Add flag, default `false`, opt-in only
 2. **Beta** (v5.0.0-beta): Internal testing, gather feedback
 3. **RC** (v5.0.0-rc): Gradual rollout, increase percentage
@@ -369,6 +384,7 @@ FEATURE_NEW_PROCESSOR_FACTORY=false
 5. **Next Major** (v6.0.0): Remove flag, only new behavior remains
 
 **Best practices:**
+
 - **Keep flags short-lived**: Remove flags in next major version after feature is stable
 - **Naming convention**: Use `FEATURE_<NAME>_ENABLED` pattern for environment variables
 - **Default to false**: New breaking changes should default to `false` until proven stable
@@ -381,6 +397,7 @@ FEATURE_NEW_PROCESSOR_FACTORY=false
 ### Data Migrations
 
 TODO: Add comprehensive data migration strategies including:
+
 - Schema versioning best practices
 - Migration function patterns
 - Registry and orchestration
@@ -440,6 +457,7 @@ docs/migrations/
 ```
 
 Include:
+
 - Overview of all breaking changes in the version
 - Detailed migration steps with code examples
 - Common pitfalls and how to avoid them
@@ -449,6 +467,7 @@ Include:
 ### 5. README Updates
 
 Update package README files to:
+
 - Reflect new API usage in examples
 - Update installation instructions if needed
 - Link to migration guides for breaking changes

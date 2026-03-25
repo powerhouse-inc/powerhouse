@@ -1,5 +1,4 @@
-import type { InternalTransmitterUpdate } from "document-drive";
-import type { Config } from "./types.js";
+import type { CodegenInput, Config } from "./types.js";
 
 /**
  * Abstract base class for document generators
@@ -18,7 +17,7 @@ export abstract class BaseDocumentGen {
    * Generate code for the given document
    * Must be implemented by each specific document generator
    */
-  abstract generate(strand: InternalTransmitterUpdate): Promise<void>;
+  abstract generate(strand: CodegenInput): Promise<void>;
 
   /**
    * Check if this generator supports the given document type
@@ -44,7 +43,7 @@ export abstract class BaseDocumentGen {
    * Validate if this strand should be processed
    * Override this method in specific generators to add custom validation logic
    */
-  shouldProcess(strand: InternalTransmitterUpdate): boolean {
+  shouldProcess(strand: CodegenInput): boolean {
     // Basic validation: ensure strand has required properties
     if (!strand.documentId || !strand.documentType) {
       return false;

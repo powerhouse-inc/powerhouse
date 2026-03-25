@@ -3,10 +3,10 @@
 ## Overview
 
 This tutorial guides you through creating a simplified version of a 'Powerhouse project' for a **To-do List**.  
-A Powerhouse project primarily consists of a document model and its editor. 
-As your projects use-case expands you can add data-integrations or a specific drive-app as seen in the demo package. 
+A Powerhouse project primarily consists of a document model and its editor.
+As your projects use-case expands you can add data-integrations or a specific drive-app as seen in the demo package.
 
-For todays purpose, you'll be using Connect, our user-centric collaboration tool and Vetra Studio, the builder tooling through which developers can access and manage specifications of your project. 
+For todays purpose, you'll be using Connect, our user-centric collaboration tool and Vetra Studio, the builder tooling through which developers can access and manage specifications of your project.
 
 ## Develop a single document model in Connect
 
@@ -27,7 +27,7 @@ The Connect application will start and you will see the following output:
 
 A new browser window will open and you will see the Connect application. If it doesn't open automatically, you can open it manually by navigating to `http://localhost:3000/` in your browser. You will see your local drive and a button to create a new drive.
 
-:::tip 
+:::tip
 If you local drive is not present navigate into Settings in the bottom left corner. Settings > Danger Zone > Clear Storage.
 Clear the storage of your localhost application as it might has an old session cached.
 :::
@@ -177,7 +177,7 @@ Once you have added all the input operations, click the `Export` button at the t
 
 With our newly created document model, we can run the codegen to generate the rest of the code for it.
 
-To run the codegen, you use the `generate` command with a path to the file you just exported. 
+To run the codegen, you use the `generate` command with a path to the file you just exported.
 
 ```bash
 pnpm generate ./todo-list.phd
@@ -198,16 +198,16 @@ This will overwrite your generated code with code that is identical to the branc
 To make sure all works as expected, we should:
 
 - check types
-run: `pnpm tsc`
+  run: `pnpm tsc`
 
 - check linting
-run: `pnpm lint`
+  run: `pnpm lint`
 
 - check tests
-run: `pnpm test`
+  run: `pnpm test`
 
 - make sure your code matches the code in the completed step branch
-run: `git diff your-branch-name step-1-complete-generated-todo-list-document-model`
+  run: `git diff your-branch-name step-1-complete-generated-todo-list-document-model`
 
 ### Up next: reducers and operations
 

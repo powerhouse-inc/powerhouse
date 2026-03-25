@@ -40,7 +40,7 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: 24
-          cache: 'pnpm'
+          cache: "pnpm"
 
       - name: Setup bun global install
         uses: oven-sh/setup-bun@v2
@@ -86,7 +86,7 @@ jobs:
 
       - name: Run eslint
         if: ${{ steps.diff.outputs.files != '' }}
-        run: NODE_OPTIONS=--max-old-space-size=8192 pnpm eslint --config eslint.config.js --quiet ${{ steps.diff.outputs.files }}
+        run: NODE_OPTIONS=--max-old-space-size=8192 pnpm eslint --config eslint.config.js --quiet --no-error-on-unmatched-pattern ${{ steps.diff.outputs.files }}
 
       - name: Skip lint (no changed files)
         if: ${{ steps.diff.outputs.files == '' }}

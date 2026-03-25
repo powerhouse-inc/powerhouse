@@ -1,10 +1,9 @@
 import { viteCommonjs } from "@originjs/vite-plugin-commonjs";
-import type { SubgraphClass } from "@powerhousedao/reactor-api";
-import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import type {
-  IProcessorHostModuleLegacy,
-  ProcessorFactoryLegacy,
-} from "document-drive";
+  ProcessorFactoryBuilder,
+  SubgraphClass,
+} from "@powerhousedao/reactor-api";
+import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import { childLogger, type ILogger } from "document-model";
 import path from "node:path";
 import { readPackage } from "read-pkg";
@@ -126,9 +125,7 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
 
   async loadProcessors(
     identifier: string,
-  ): Promise<
-    ((module: IProcessorHostModuleLegacy) => ProcessorFactoryLegacy) | null
-  > {
+  ): Promise<ProcessorFactoryBuilder | null> {
     const fullPath = this.getProcessorsPath(identifier);
 
     this.logger.verbose("Loading processors from", fullPath);
@@ -137,20 +134,14 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
       const pkgModule = await this.vite.ssrLoadModule(fullPath);
 
       const factory = (
-        pkgModule as Record<
-          string,
-          | ((module: IProcessorHostModuleLegacy) => ProcessorFactoryLegacy)
-          | undefined
-        >
+        pkgModule as Record<string, ProcessorFactoryBuilder | undefined>
       )?.processorFactory;
 
       if (factory && typeof factory === "function") {
         this.logger.verbose(
           `  ➜  Loaded Processor Factory from: ${identifier}`,
         );
-        return factory as (
-          module: IProcessorHostModuleLegacy,
-        ) => ProcessorFactoryLegacy;
+        return factory;
       }
     } catch (e) {
       this.logger.debug(
@@ -206,11 +197,7 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
 
   onProcessorsChange(
     identifier: string,
-    handler: (
-      processors:
-        | ((module: IProcessorHostModuleLegacy) => ProcessorFactoryLegacy)
-        | null,
-    ) => void,
+    handler: (processors: ProcessorFactoryBuilder | null) => void,
     options?: ISubscriptionOptions,
   ): () => void {
     const processorsPath = this.getProcessorsPath(identifier);

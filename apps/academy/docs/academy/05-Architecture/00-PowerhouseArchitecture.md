@@ -45,6 +45,7 @@ The Powerhouse ecosystem makes use of 4 core host applications that together for
 The host applications sync their documents with one another through **Reactors**. A reactor is a node within any Powerhouse network responsible for storing documents, resolving conflicts, and verifying document event histories.
 
 Reactors can be configured for:
+
 - **Local Storage** – For offline or on-device access.
 - **Cloud Storage** – For centralized, scalable data management.
 - **Decentralized Storage** – Such as Ceramic or IPFS for distributed storage.
@@ -58,4 +59,4 @@ The documents within the network react to one another through the **DocSync** pr
 With the help of these host applications, Powerhouse is launching 2 platforms that demonstrate the infrastructure that can be built with the Powerhouse tech-stack:
 
 - [**Vetra Builder Platform**](https://vetra.io/): Sovereign infrastructure for scalable network organizations—local first, built to scale.
-- [**Achra Decentralized Operations Platform**](https://achra.com/): Where open organizations can procure and purchase services. 
+- [**Achra Decentralized Operations Platform**](https://achra.com/): Where open organizations can procure and purchase services.

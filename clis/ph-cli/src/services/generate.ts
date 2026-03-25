@@ -38,7 +38,6 @@ export async function startGenerate(options: GenerateArgs) {
     verbose,
     force,
     useVersioning: useVersioningFlag,
-    useHygen,
     subgraphName,
     migrateLegacy,
   } = options;
@@ -47,7 +46,6 @@ export async function startGenerate(options: GenerateArgs) {
     documentModelFilePositional ?? documentModelFileOption;
 
   const useVersioning = useVersioningFlag || migrateLegacy;
-  const useTsMorph = useVersioning || !useHygen;
   const isDragAndDropEnabled = disableDragAndDrop !== true;
   const specifiedPackageName = undefined;
   const filePath = Array.isArray(documentModelFile)
@@ -73,7 +71,6 @@ export async function startGenerate(options: GenerateArgs) {
       editorId,
       editorDirName,
       documentTypes: [documentTypeToUse],
-      useTsMorph,
       skipFormat,
       specifiedPackageName,
     });
@@ -84,7 +81,6 @@ export async function startGenerate(options: GenerateArgs) {
       driveEditorDirName,
       allowedDocumentTypes,
       isDragAndDropEnabled,
-      useTsMorph,
       skipFormat,
       specifiedPackageName,
     });
@@ -93,7 +89,6 @@ export async function startGenerate(options: GenerateArgs) {
       processorName,
       processorType,
       skipFormat,
-      useTsMorph,
       processorApps,
       documentTypes: [documentTypeToUse].filter((t) => t !== undefined),
     });
@@ -113,12 +108,11 @@ export async function startGenerate(options: GenerateArgs) {
     await generateFromFile({
       path: filePath,
       config,
-      useTsMorph,
       options,
       useVersioning,
       migrateLegacy,
     });
   } else {
-    await generateCode(config, useTsMorph, useVersioning, migrateLegacy);
+    await generateCode(config, useVersioning, migrateLegacy);
   }
 }

@@ -7,35 +7,33 @@ import type { DocumentModelGlobalState } from "@powerhousedao/shared/document-mo
 import type { ProcessorApps } from "@powerhousedao/shared/processors";
 import { kebabCase } from "change-case";
 import {
-  makeDocumentModelModulesFile,
   makeSubgraphsIndexFile,
   tsMorphGenerateDocumentEditor,
   tsMorphGenerateDocumentModel,
   tsMorphGenerateDriveEditor,
-  tsMorphGenerateProcessor,
-} from "file-builders";
+  tsMorphGenerateSubgraph,
+} from "@powerhousedao/codegen/file-builders";
+import type {
+  PartialPowerhouseManifest,
+  PowerhouseConfig,
+  PowerhouseManifest,
+} from "@powerhousedao/config";
+import { fileExists } from "@powerhousedao/shared/clis";
+import type { DocumentModelGlobalState } from "@powerhousedao/shared/document-model";
+import type { ProcessorApps } from "@powerhousedao/shared/processors";
+import { kebabCase } from "change-case";
 import fs from "node:fs";
 import { readdir } from "node:fs/promises";
 import path, { join } from "node:path";
 import { readPackage, type NormalizedPackageJson } from "read-pkg";
 import semver from "semver";
-import { buildTsMorphProject } from "utils";
-import { TSMorphCodeGenerator } from "../ts-morph-generator/core/TSMorphCodeGenerator.js";
-import { generateDocumentModelZodSchemas, generateSchemas } from "./graphql.js";
-import {
-  hygenGenerateDocumentModel,
-  hygenGenerateDriveEditor,
-  hygenGenerateEditor,
-  hygenGenerateImportScript,
-  hygenGenerateProcessor,
-  hygenGenerateSubgraph,
-} from "./hygen.js";
+import { tsMorphGenerateProcessor } from "../file-builders/processors/processor.js";
+import { generateSchemas } from "./graphql.js";
 import type { CodegenOptions } from "./types.js";
-import { getDocumentTypesMap, loadDocumentModel } from "./utils.js";
+import { loadDocumentModel } from "./utils.js";
 
 export async function generateAll(args: {
   dir: string;
-  useTsMorph: boolean;
   useVersioning: boolean;
   migrateLegacy?: boolean;
   watch?: boolean;
@@ -45,7 +43,6 @@ export async function generateAll(args: {
 }) {
   const {
     dir,
-    useTsMorph,
     useVersioning,
     migrateLegacy = false,
     watch = false,
@@ -78,7 +75,6 @@ export async function generateAll(args: {
         skipFormat,
         verbose,
         force,
-        useTsMorph,
         useVersioning,
         migrateLegacy,
       });
@@ -92,7 +88,6 @@ export async function generateAll(args: {
 
 export async function generate(
   config: PowerhouseConfig,
-  useTsMorph: boolean,
   useVersioning: boolean,
   migrateLegacy = false,
 ) {
@@ -100,7 +95,6 @@ export async function generate(
   await generateSchemas(config.documentModelsDir, { skipFormat, watch });
   await generateAll({
     dir: config.documentModelsDir,
-    useTsMorph,
     useVersioning,
     migrateLegacy,
     skipFormat,
@@ -111,13 +105,11 @@ export async function generate(
 export async function generateFromFile(args: {
   path: string;
   config: PowerhouseConfig;
-  useTsMorph: boolean;
   useVersioning: boolean;
   migrateLegacy?: boolean;
   options?: CodegenOptions;
 }) {
-  const { path, config, useTsMorph, useVersioning, migrateLegacy, options } =
-    args;
+  const { path, config, useVersioning, migrateLegacy, options } = args;
   // load document model spec from file
   const documentModelState = await loadDocumentModel(path);
 
@@ -125,7 +117,6 @@ export async function generateFromFile(args: {
   await generateFromDocumentModel({
     documentModelState,
     config,
-    useTsMorph,
     useVersioning,
     migrateLegacy,
     options,
@@ -148,7 +139,6 @@ export async function generateFromFile(args: {
 export async function generateFromDocument(args: {
   documentModelState: DocumentModelGlobalState;
   config: PowerhouseConfig;
-  useTsMorph: boolean;
   useVersioning: boolean;
   migrateLegacy?: boolean;
   options?: CodegenOptions;
@@ -160,7 +150,6 @@ export async function generateFromDocument(args: {
 type GenerateDocumentModelArgs = {
   dir: string;
   documentModelState: DocumentModelGlobalState;
-  useTsMorph: boolean;
   useVersioning: boolean;
   migrateLegacy?: boolean;
   specifiedPackageName?: string;
@@ -174,10 +163,8 @@ export async function generateDocumentModel(args: GenerateDocumentModelArgs) {
     dir,
     documentModelState,
     specifiedPackageName,
-    useTsMorph,
     useVersioning,
     migrateLegacy,
-    ...hygenArgs
   } = args;
   const packageJson = await readPackage();
   const packageNameFromPackageJson = packageJson.name;
@@ -186,55 +173,13 @@ export async function generateDocumentModel(args: GenerateDocumentModelArgs) {
   ensureZodVersionIsSufficient(zodSemverString);
 
   const projectDir = path.dirname(dir);
-  if (!useTsMorph) {
-    await hygenGenerateDocumentModel(
-      documentModelState,
-      dir,
-      packageName,
-      hygenArgs,
-    );
-    const specification =
-      documentModelState.specifications[
-        documentModelState.specifications.length - 1
-      ];
-
-    const documentModelsDirPath = path.join(projectDir, "document-models");
-    const documentModelDirPath = path.join(
-      documentModelsDirPath,
-      kebabCase(documentModelState.name),
-    );
-
-    await generateDocumentModelZodSchemas({
-      documentModelDirPath,
-      specification,
-    });
-
-    const generator = new TSMorphCodeGenerator(
-      projectDir,
-      [documentModelState],
-      packageName,
-      {
-        directories: { documentModelDir: "document-models" },
-        forceUpdate: true,
-      },
-    );
-
-    await generator.generateReducers();
-
-    const project = buildTsMorphProject(projectDir);
-    await makeDocumentModelModulesFile({
-      project,
-      projectDir,
-    });
-  } else {
-    await tsMorphGenerateDocumentModel({
-      projectDir,
-      packageName,
-      documentModelState,
-      useVersioning,
-      migrateLegacy,
-    });
-  }
+  await tsMorphGenerateDocumentModel({
+    projectDir,
+    packageName,
+    documentModelState,
+    useVersioning,
+    migrateLegacy,
+  });
 }
 
 function findZodDependencyInPackageJson(
@@ -263,9 +208,8 @@ function ensureZodVersionIsSufficient(zodSemverString: string | undefined) {
 type GenerateEditorArgs = {
   editorName: string;
   documentTypes: string[];
-  useTsMorph: boolean;
-  skipFormat: boolean | undefined;
-  editorId: string | undefined;
+  skipFormat?: boolean;
+  editorId?: string;
   editorDirName?: string;
   specifiedPackageName?: string;
 };
@@ -273,42 +217,10 @@ export async function generateEditor(args: GenerateEditorArgs) {
   const {
     editorName,
     documentTypes,
-    useTsMorph,
-    skipFormat,
     editorId: editorIdArg,
     specifiedPackageName,
     editorDirName,
   } = args;
-
-  if (!useTsMorph) {
-    const pathOrigin = "../../";
-
-    const documentTypesMap = getDocumentTypesMap("document-models", pathOrigin);
-
-    const invalidType = documentTypes.find(
-      (type) => !Object.keys(documentTypesMap).includes(type),
-    );
-    if (invalidType) {
-      throw new Error(
-        `Document model for ${invalidType} not found. Make sure the document model is available in the document-models directory (\`document-models\`) and has been properly generated.`,
-      );
-    }
-    const packageNameFromPackageJson = await readPackage().then(
-      (pkg) => pkg.name,
-    );
-    const packageName = specifiedPackageName || packageNameFromPackageJson;
-    return hygenGenerateEditor({
-      name: editorName,
-      documentTypes,
-      documentTypesMap,
-      dir: "editors",
-      documentModelsDir: "document-models",
-      packageName,
-      skipFormat,
-      editorId: args.editorId,
-      editorDirName,
-    });
-  }
 
   const packageNameFromPackageJson = await readPackage().then(
     (pkg) => pkg.name,
@@ -337,23 +249,20 @@ export async function generateEditor(args: GenerateEditorArgs) {
 
 export async function generateDriveEditor(options: {
   driveEditorName: string;
-  useTsMorph: boolean;
-  skipFormat: boolean | undefined;
-  driveEditorId: string | undefined;
-  allowedDocumentTypes: string[] | undefined;
-  isDragAndDropEnabled: boolean | undefined;
+  skipFormat?: boolean;
+  driveEditorId?: string;
+  allowedDocumentTypes?: string[];
+  isDragAndDropEnabled?: boolean;
   driveEditorDirName?: string;
   specifiedPackageName?: string;
 }) {
   const {
     driveEditorName,
-    skipFormat,
     driveEditorId,
     allowedDocumentTypes,
     isDragAndDropEnabled,
     driveEditorDirName,
     specifiedPackageName,
-    useTsMorph,
   } = options;
   const dir = "editors";
 
@@ -363,26 +272,6 @@ export async function generateDriveEditor(options: {
   const packageName = specifiedPackageName || packageNameFromPackageJson;
 
   const projectDir = path.dirname(dir);
-
-  if (!useTsMorph) {
-    const {
-      driveEditorName,
-      driveEditorId,
-      allowedDocumentTypes,
-      isDragAndDropEnabled,
-      driveEditorDirName,
-    } = options;
-    const name = driveEditorName;
-    return hygenGenerateDriveEditor({
-      name,
-      dir,
-      appId: driveEditorId ?? kebabCase(name),
-      allowedDocumentTypes: allowedDocumentTypes?.join(","),
-      isDragAndDropEnabled: isDragAndDropEnabled ?? true,
-      skipFormat,
-      driveEditorDirName,
-    });
-  }
 
   await tsMorphGenerateDriveEditor({
     projectDir,
@@ -399,9 +288,15 @@ export async function generateSubgraphFromDocumentModel(
   name: string,
   documentModel: DocumentModelGlobalState,
   config: PowerhouseConfig,
-  options: CodegenOptions = {},
+  _options: CodegenOptions = {},
 ) {
-  await hygenGenerateSubgraph(name, documentModel, { ...config, ...options });
+  const packageName = await readPackage().then((pkg) => pkg.name);
+  await tsMorphGenerateSubgraph({
+    subgraphsDir: config.subgraphsDir,
+    subgraphName: name,
+    packageName,
+    documentModel,
+  });
   await makeSubgraphsIndexFile({
     projectDir: path.dirname(config.subgraphsDir),
   });
@@ -411,14 +306,17 @@ export async function generateSubgraph(
   name: string,
   file: string | null,
   config: PowerhouseConfig,
-  options: CodegenOptions = {},
+  _options: CodegenOptions = {},
 ) {
   const documentModelState =
     file !== null ? await loadDocumentModel(file) : null;
+  const packageName = await readPackage().then((pkg) => pkg.name);
 
-  await hygenGenerateSubgraph(name, documentModelState, {
-    ...config,
-    ...options,
+  await tsMorphGenerateSubgraph({
+    subgraphsDir: config.subgraphsDir,
+    subgraphName: name,
+    packageName,
+    documentModel: documentModelState,
   });
   await makeSubgraphsIndexFile({
     projectDir: path.dirname(config.subgraphsDir),
@@ -431,42 +329,22 @@ export async function generateProcessor(args: {
   processorApps: ProcessorApps;
   documentTypes: string[];
   skipFormat?: boolean;
-  useTsMorph?: boolean;
   rootDir?: string;
 }) {
-  const {
-    processorName,
-    processorType,
-    documentTypes,
-    skipFormat,
-    useTsMorph,
-    rootDir = process.cwd(),
-  } = args;
-  if (useTsMorph) {
-    return await tsMorphGenerateProcessor({
-      rootDir,
-      ...args,
-    });
-  }
-
-  return hygenGenerateProcessor(
-    processorName,
-    documentTypes,
-    "processors",
-    processorType,
-    {
-      skipFormat,
-    },
-  );
+  const { rootDir = process.cwd() } = args;
+  return await tsMorphGenerateProcessor({
+    rootDir,
+    ...args,
+  });
 }
 
 export async function generateImportScript(
-  name: string,
-  config: PowerhouseConfig,
+  _name: string,
+  _config: PowerhouseConfig,
 ) {
-  return hygenGenerateImportScript(name, config.importScriptsDir, {
-    skipFormat: config.skipFormat,
-  });
+  throw new Error(
+    "Import script generation has been removed. The document-drive server APIs it depended on have been deprecated.",
+  );
 }
 
 const defaultManifest: PowerhouseManifest = {
@@ -573,7 +451,6 @@ export function generateManifest(
 async function generateFromDocumentModel(args: {
   documentModelState: DocumentModelGlobalState;
   config: PowerhouseConfig;
-  useTsMorph: boolean;
   useVersioning: boolean;
   migrateLegacy?: boolean;
   options?: CodegenOptions;
@@ -581,13 +458,10 @@ async function generateFromDocumentModel(args: {
   const {
     documentModelState,
     config,
-    useTsMorph,
     useVersioning,
     migrateLegacy,
     options = {},
   } = args;
-  // Derive verbose from config.logLevel if not explicitly provided
-  // Show hygen logs for verbose, debug, and info levels (default behavior before ts-morph)
   const {
     verbose = config.logLevel === "verbose" ||
       config.logLevel === "debug" ||
@@ -610,7 +484,6 @@ async function generateFromDocumentModel(args: {
     skipFormat: config.skipFormat,
     verbose,
     force,
-    useTsMorph,
     useVersioning,
     migrateLegacy,
   });

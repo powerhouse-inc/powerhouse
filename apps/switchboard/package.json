@@ -1,7 +1,7 @@
 {
   "name": "@powerhousedao/switchboard",
   "type": "module",
-  "version": "6.0.0-dev.108",
+  "version": "6.0.0-dev.111",
   "main": "dist/src/index.js",
   "exports": {
     ".": {
@@ -61,7 +61,6 @@
     "@renown/sdk": "workspace:*",
     "@pyroscope/nodejs": "^0.4.5",
     "@sentry/node": "^9.6.1",
-    "document-drive": "workspace:*",
     "document-model": "workspace:*",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",

@@ -3,7 +3,6 @@ export * from "./useCheckLatestVersion.js";
 export * from "./useClientErrorHandler.js";
 export * from "./useCookieBanner.js";
 export * from "./useInitSentry.js";
-export * from "./useNodeActions.js";
 export * from "./useRegistryPackages.js";
 export * from "./useUndoRedoShortcuts.js";
 export * from "./useWindowSize.js";

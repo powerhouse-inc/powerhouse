@@ -6,7 +6,7 @@ Let's create a component for showing statistics about our todos. We'd like this 
 
 ## Creating the `<Stats />` component
 
-Create a new directory at `editors/components` and create two new files inside it: 
+Create a new directory at `editors/components` and create two new files inside it:
 
 `editors/components/Stats.tsx` with this content:
 
@@ -132,7 +132,7 @@ The index file lets us use a nice neat import path like `todo-tutorial/editors/c
 
 Don't be too concerned with the math and time related code you see here — those are just implementation details.
 
-## Using the  `<Stats />` component in our `TodoListEditor`
+## Using the `<Stats />` component in our `TodoListEditor`
 
 Now let's use the `<Stats />` component in our `<TodoList />` component `editors/todo-list-editor/components/TodoList.tsx`:
 
@@ -160,7 +160,7 @@ export function TodoList() {
   // added-end
 
   return (
-    <div className="flex flex-col items-center px-4 py-8 gap-6">
+    <div className="flex flex-col items-center gap-6 px-4 py-8">
       // added-start
       <Stats
         todos={todos}
@@ -173,7 +173,6 @@ export function TodoList() {
     </div>
   );
 }
-
 ```
 
 With this, you will now see statistics about the todo items in a todo list document.
@@ -358,27 +357,27 @@ function FolderStats() {
 
 With this update, you can now see the statistics for the todo lists and todo items for the selected drive, folder or document depending on which you select.
 
- ## Check your work
+## Check your work
 
 To make sure all works as expected, we should:
 
 - check types
-run: `pnpm tsc`
+  run: `pnpm tsc`
 
 - check linting
-run: `pnpm lint`
+  run: `pnpm lint`
 
 - check tests
-run: `pnpm test`
+  run: `pnpm test`
 
 - test in connect
-run: `pnpm connect` — you should now be able to see the `<Stats />` component showing the data for your drives, folder and documents.
+  run: `pnpm connect` — you should now be able to see the `<Stats />` component showing the data for your drives, folder and documents.
 
 - make sure your code matches the code in the completed step branch
-run: `git diff step-7-complete-added-shared-component-for-showing-todo-list-stats`
+  run: `git diff step-7-complete-added-shared-component-for-showing-todo-list-stats`
 
 ## The end
 
-Congratulations! You now have a working `TodoList` document model, and editor for those documents, and a drive editor for managing those documents. This will make a good starting point for creating your own new implementations. 
+Congratulations! You now have a working `TodoList` document model, and editor for those documents, and a drive editor for managing those documents. This will make a good starting point for creating your own new implementations.
 
 We're excited to see what you build!

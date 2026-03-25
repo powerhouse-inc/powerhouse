@@ -9,6 +9,7 @@ This document specifies the React hooks needed to integrate the Powerhouse autho
 **Current State:** The authorization system is fully implemented in the Reactor API with GraphQL queries and mutations, but there are no React hooks to consume this functionality in frontend applications.
 
 **Gap:** Frontend developers need React hooks that:
+
 - Expose the current user's authentication state and role
 - Check document-level permissions efficiently
 - Enable permission-aware UI rendering
@@ -23,6 +24,7 @@ This document specifies the React hooks needed to integrate the Powerhouse autho
 ### 1. Separation of Concerns
 
 Authorization hooks should follow the existing architectural patterns:
+
 - **Data hooks** (`useCurrentUser`, `useDocumentPermission`): Read authorization state
 - **Action hooks** (`useGrantPermission`, `useRevokePermission`): Modify permissions
 - **Composite hooks** (`useSelectedDocumentWithPermission`): Combine authorization with existing functionality
@@ -30,6 +32,7 @@ Authorization hooks should follow the existing architectural patterns:
 ### 2. Integration with Reactor
 
 All authorization data should flow through the Reactor, just like document and drive data:
+
 - The Reactor already manages GraphQL connections to the Reactor API
 - Authorization state should be cached and synchronized like document state
 - Hooks should subscribe to authorization changes via the Reactor's observable pattern
@@ -58,17 +61,20 @@ All authorization data should flow through the Reactor, just like document and d
 Returns the currently authenticated user's information.
 
 ```typescript
-function useCurrentUser(): {
-  address: string;           // Ethereum address
-  did?: string;              // Decentralized Identifier
-  isAuthenticated: boolean;  // True if user has valid token
-  globalRole: 'ADMIN' | 'USER' | 'GUEST' | undefined;
-} | undefined
+function useCurrentUser():
+  | {
+      address: string; // Ethereum address
+      did?: string; // Decentralized Identifier
+      isAuthenticated: boolean; // True if user has valid token
+      globalRole: "ADMIN" | "USER" | "GUEST" | undefined;
+    }
+  | undefined;
 ```
 
 **Returns:** User information object, or `undefined` if not authenticated.
 
 **Implementation notes:**
+
 - Should extract user info from the bearer token stored in the Reactor
 - Subscribe to auth state changes (login/logout events)
 - Should validate token expiry and update state when token expires
@@ -76,18 +82,20 @@ function useCurrentUser(): {
 **Example:**
 
 ```tsx
-import { useCurrentUser } from '@powerhousedao/reactor-browser';
+import { useCurrentUser } from "@powerhousedao/reactor-browser";
 
 function UserProfileBadge() {
   const user = useCurrentUser();
-  
+
   if (!user) {
     return <LoginPrompt />;
   }
-  
+
   return (
     <div>
-      <span>{user.address.slice(0, 6)}...{user.address.slice(-4)}</span>
+      <span>
+        {user.address.slice(0, 6)}...{user.address.slice(-4)}
+      </span>
       <Badge>{user.globalRole}</Badge>
     </div>
   );
@@ -101,7 +109,7 @@ function UserProfileBadge() {
 Returns whether the user is currently authenticated.
 
 ```typescript
-function useIsAuthenticated(): boolean
+function useIsAuthenticated(): boolean;
 ```
 
 **Returns:** `true` if user has valid authentication token, `false` otherwise.
@@ -111,11 +119,11 @@ function useIsAuthenticated(): boolean
 ```tsx
 function ProtectedRoute() {
   const isAuthenticated = useIsAuthenticated();
-  
+
   if (!isAuthenticated) {
     return <Navigate to="/login" />;
   }
-  
+
   return <Outlet />;
 }
 ```
@@ -127,12 +135,11 @@ function ProtectedRoute() {
 Checks if the current user has a specific global role or higher.
 
 ```typescript
-function useHasGlobalRole(
-  role: 'ADMIN' | 'USER' | 'GUEST'
-): boolean
+function useHasGlobalRole(role: "ADMIN" | "USER" | "GUEST"): boolean;
 ```
 
 **Parameters:**
+
 - `role` — The minimum required global role
 
 **Returns:** `true` if user has the specified role or higher (ADMIN > USER > GUEST).
@@ -141,12 +148,12 @@ function useHasGlobalRole(
 
 ```tsx
 function AdminPanel() {
-  const isAdmin = useHasGlobalRole('ADMIN');
-  
+  const isAdmin = useHasGlobalRole("ADMIN");
+
   if (!isAdmin) {
     return <AccessDenied />;
   }
-  
+
   return <AdminDashboard />;
 }
 ```
@@ -160,23 +167,25 @@ function AdminPanel() {
 Returns the current user's permission level for a specific document.
 
 ```typescript
-function useDocumentPermission(
-  documentId: string | null | undefined
-): {
-  permission: 'ADMIN' | 'WRITE' | 'READ' | undefined;
-  isLoading: boolean;
-  error?: Error;
-  source: 'direct' | 'group' | 'inherited' | 'none';
-  refresh: () => Promise<void>;
-} | undefined
+function useDocumentPermission(documentId: string | null | undefined):
+  | {
+      permission: "ADMIN" | "WRITE" | "READ" | undefined;
+      isLoading: boolean;
+      error?: Error;
+      source: "direct" | "group" | "inherited" | "none";
+      refresh: () => Promise<void>;
+    }
+  | undefined;
 ```
 
 **Parameters:**
+
 - `documentId` — The document ID to check permissions for, or `null`/`undefined` to skip
 
 **Returns:** Permission information object, or `undefined` if documentId is null/undefined.
 
 **Fields:**
+
 - `permission` — The user's permission level, or `undefined` if no permission
 - `isLoading` — True while permission check is in progress
 - `error` — Any error that occurred during permission check
@@ -184,6 +193,7 @@ function useDocumentPermission(
 - `refresh` — Function to force refresh the permission from the server
 
 **Implementation notes:**
+
 - Should check permission cache first, then query GraphQL if not cached
 - Should handle permission inheritance (check parent folders/drives)
 - Should check both direct user permissions and group permissions
@@ -192,22 +202,18 @@ function useDocumentPermission(
 **Example:**
 
 ```tsx
-import { useDocumentPermission } from '@powerhousedao/reactor-browser';
+import { useDocumentPermission } from "@powerhousedao/reactor-browser";
 
 function DocumentEditor({ documentId }: { documentId: string }) {
   const { permission, isLoading } = useDocumentPermission(documentId);
-  
+
   if (isLoading) {
     return <LoadingSpinner />;
   }
-  
-  const canEdit = permission === 'WRITE' || permission === 'ADMIN';
-  
-  return (
-    <div>
-      {canEdit ? <EditableDocument /> : <ReadOnlyDocument />}
-    </div>
-  );
+
+  const canEdit = permission === "WRITE" || permission === "ADMIN";
+
+  return <div>{canEdit ? <EditableDocument /> : <ReadOnlyDocument />}</div>;
 }
 ```
 
@@ -218,12 +224,11 @@ function DocumentEditor({ documentId }: { documentId: string }) {
 Checks if the current user can read a document.
 
 ```typescript
-function useCanRead(
-  documentId: string | null | undefined
-): boolean
+function useCanRead(documentId: string | null | undefined): boolean;
 ```
 
 **Parameters:**
+
 - `documentId` — The document ID to check
 
 **Returns:** `true` if user has READ, WRITE, or ADMIN permission.
@@ -235,12 +240,11 @@ function useCanRead(
 Checks if the current user can write to a document.
 
 ```typescript
-function useCanWrite(
-  documentId: string | null | undefined
-): boolean
+function useCanWrite(documentId: string | null | undefined): boolean;
 ```
 
 **Parameters:**
+
 - `documentId` — The document ID to check
 
 **Returns:** `true` if user has WRITE or ADMIN permission.
@@ -252,12 +256,11 @@ function useCanWrite(
 Checks if the current user can administer a document (manage permissions).
 
 ```typescript
-function useCanAdmin(
-  documentId: string | null | undefined
-): boolean
+function useCanAdmin(documentId: string | null | undefined): boolean;
 ```
 
 **Parameters:**
+
 - `documentId` — The document ID to check
 
 **Returns:** `true` if user has ADMIN permission.
@@ -268,7 +271,7 @@ function useCanAdmin(
 function DocumentToolbar({ documentId }: { documentId: string }) {
   const canWrite = useCanWrite(documentId);
   const canAdmin = useCanAdmin(documentId);
-  
+
   return (
     <Toolbar>
       {canWrite && (
@@ -292,17 +295,19 @@ Checks if the current user can execute a specific operation on a document.
 ```typescript
 function useCanExecuteOperation(
   documentId: string | null | undefined,
-  operationType: string | null | undefined
-): boolean
+  operationType: string | null | undefined,
+): boolean;
 ```
 
 **Parameters:**
+
 - `documentId` — The document ID to check
 - `operationType` — The operation type (e.g., "DELETE_NODE", "ADD_FOLDER")
 
 **Returns:** `true` if user has permission to execute the operation.
 
 **Implementation notes:**
+
 - Should check if operation permissions are configured for the document
 - If no operation-specific permissions exist, fall back to document permission level
 - Should cache operation permission checks
@@ -311,9 +316,9 @@ function useCanExecuteOperation(
 
 ```tsx
 function NodeContextMenu({ node, documentId }: Props) {
-  const canDelete = useCanExecuteOperation(documentId, 'DELETE_NODE');
-  const canRename = useCanExecuteOperation(documentId, 'RENAME_NODE');
-  
+  const canDelete = useCanExecuteOperation(documentId, "DELETE_NODE");
+  const canRename = useCanExecuteOperation(documentId, "RENAME_NODE");
+
   return (
     <Menu>
       {canRename && <MenuItem>Rename</MenuItem>}
@@ -330,29 +335,30 @@ function NodeContextMenu({ node, documentId }: Props) {
 Returns detailed access information for a document, including all users and groups with permissions.
 
 ```typescript
-function useDocumentAccess(
-  documentId: string | null | undefined
-): {
-  documentId: string;
-  userPermissions: Array<{
-    userAddress: string;
-    permission: 'ADMIN' | 'WRITE' | 'READ';
-    grantedBy: string;
-    createdAt: string;
-  }>;
-  groupPermissions: Array<{
-    groupId: number;
-    groupName: string;
-    permission: 'ADMIN' | 'WRITE' | 'READ';
-    grantedBy: string;
-  }>;
-  isLoading: boolean;
-  error?: Error;
-  refresh: () => Promise<void>;
-} | undefined
+function useDocumentAccess(documentId: string | null | undefined):
+  | {
+      documentId: string;
+      userPermissions: Array<{
+        userAddress: string;
+        permission: "ADMIN" | "WRITE" | "READ";
+        grantedBy: string;
+        createdAt: string;
+      }>;
+      groupPermissions: Array<{
+        groupId: number;
+        groupName: string;
+        permission: "ADMIN" | "WRITE" | "READ";
+        grantedBy: string;
+      }>;
+      isLoading: boolean;
+      error?: Error;
+      refresh: () => Promise<void>;
+    }
+  | undefined;
 ```
 
 **Parameters:**
+
 - `documentId` — The document ID to get access information for
 
 **Returns:** Detailed access information, or `undefined` if documentId is null/undefined.
@@ -365,20 +371,20 @@ function useDocumentAccess(
 function PermissionsManager({ documentId }: { documentId: string }) {
   const access = useDocumentAccess(documentId);
   const canAdmin = useCanAdmin(documentId);
-  
+
   if (!canAdmin) {
     return <AccessDenied />;
   }
-  
+
   if (!access || access.isLoading) {
     return <LoadingSpinner />;
   }
-  
+
   return (
     <div>
       <h2>User Permissions</h2>
       <PermissionsList permissions={access.userPermissions} />
-      
+
       <h2>Group Permissions</h2>
       <GroupPermissionsList permissions={access.groupPermissions} />
     </div>
@@ -393,12 +399,14 @@ function PermissionsManager({ documentId }: { documentId: string }) {
 Returns all documents the current user has explicit permissions for.
 
 ```typescript
-function useUserDocumentPermissions(): Array<{
-  documentId: string;
-  permission: 'ADMIN' | 'WRITE' | 'READ';
-  grantedBy: string;
-  createdAt: string;
-}> | undefined
+function useUserDocumentPermissions():
+  | Array<{
+      documentId: string;
+      permission: "ADMIN" | "WRITE" | "READ";
+      grantedBy: string;
+      createdAt: string;
+    }>
+  | undefined;
 ```
 
 **Returns:** Array of documents with their permission levels.
@@ -414,12 +422,14 @@ function useUserDocumentPermissions(): Array<{
 Returns all groups the current user belongs to.
 
 ```typescript
-function useUserGroups(): Array<{
-  id: number;
-  name: string;
-  description?: string;
-  memberCount?: number;
-}> | undefined
+function useUserGroups():
+  | Array<{
+      id: number;
+      name: string;
+      description?: string;
+      memberCount?: number;
+    }>
+  | undefined;
 ```
 
 **Returns:** Array of groups, or `undefined` if not loaded.
@@ -429,15 +439,15 @@ function useUserGroups(): Array<{
 ```tsx
 function UserGroupsBadge() {
   const groups = useUserGroups();
-  
+
   if (!groups || groups.length === 0) {
     return null;
   }
-  
+
   return (
     <div>
       <span>Member of: </span>
-      {groups.map(group => (
+      {groups.map((group) => (
         <Badge key={group.id}>{group.name}</Badge>
       ))}
     </div>
@@ -452,17 +462,19 @@ function UserGroupsBadge() {
 Returns all groups (admin only).
 
 ```typescript
-function useGroups(): {
-  groups: Array<{
-    id: number;
-    name: string;
-    description?: string;
-    members: string[];
-  }>;
-  isLoading: boolean;
-  error?: Error;
-  refresh: () => Promise<void>;
-} | undefined
+function useGroups():
+  | {
+      groups: Array<{
+        id: number;
+        name: string;
+        description?: string;
+        members: string[];
+      }>;
+      isLoading: boolean;
+      error?: Error;
+      refresh: () => Promise<void>;
+    }
+  | undefined;
 ```
 
 **Returns:** All groups with member lists, or `undefined` if user doesn't have admin access.
@@ -476,10 +488,11 @@ function useGroups(): {
 Checks if the current user is a member of a specific group.
 
 ```typescript
-function useIsInGroup(groupId: number | null | undefined): boolean
+function useIsInGroup(groupId: number | null | undefined): boolean;
 ```
 
 **Parameters:**
+
 - `groupId` — The group ID to check membership for
 
 **Returns:** `true` if user is a member of the group.
@@ -496,8 +509,8 @@ Returns a function to grant document permission to a user.
 function useGrantDocumentPermission(): (
   documentId: string,
   userAddress: string,
-  permission: 'ADMIN' | 'WRITE' | 'READ'
-) => Promise<void>
+  permission: "ADMIN" | "WRITE" | "READ",
+) => Promise<void>;
 ```
 
 **Returns:** An async function that grants permission.
@@ -509,27 +522,27 @@ function useGrantDocumentPermission(): (
 ```tsx
 function GrantPermissionForm({ documentId }: { documentId: string }) {
   const grantPermission = useGrantDocumentPermission();
-  const [userAddress, setUserAddress] = useState('');
-  const [level, setLevel] = useState<'READ' | 'WRITE' | 'ADMIN'>('READ');
-  
+  const [userAddress, setUserAddress] = useState("");
+  const [level, setLevel] = useState<"READ" | "WRITE" | "ADMIN">("READ");
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       await grantPermission(documentId, userAddress, level);
-      alert('Permission granted successfully');
+      alert("Permission granted successfully");
     } catch (error) {
       alert(`Failed: ${error.message}`);
     }
   };
-  
+
   return (
     <form onSubmit={handleSubmit}>
-      <input 
-        value={userAddress} 
-        onChange={e => setUserAddress(e.target.value)}
+      <input
+        value={userAddress}
+        onChange={(e) => setUserAddress(e.target.value)}
         placeholder="User address"
       />
-      <select value={level} onChange={e => setLevel(e.target.value)}>
+      <select value={level} onChange={(e) => setLevel(e.target.value)}>
         <option value="READ">Read</option>
         <option value="WRITE">Write</option>
         <option value="ADMIN">Admin</option>
@@ -549,8 +562,8 @@ Returns a function to revoke document permission from a user.
 ```typescript
 function useRevokeDocumentPermission(): (
   documentId: string,
-  userAddress: string
-) => Promise<void>
+  userAddress: string,
+) => Promise<void>;
 ```
 
 **Returns:** An async function that revokes permission.
@@ -567,8 +580,8 @@ Returns a function to grant document permission to a group.
 function useGrantGroupPermission(): (
   documentId: string,
   groupId: number,
-  permission: 'ADMIN' | 'WRITE' | 'READ'
-) => Promise<void>
+  permission: "ADMIN" | "WRITE" | "READ",
+) => Promise<void>;
 ```
 
 ---
@@ -580,8 +593,8 @@ Returns a function to revoke document permission from a group.
 ```typescript
 function useRevokeGroupPermission(): (
   documentId: string,
-  groupId: number
-) => Promise<void>
+  groupId: number,
+) => Promise<void>;
 ```
 
 ---
@@ -593,8 +606,8 @@ Returns a function to create a new group.
 ```typescript
 function useCreateGroup(): (
   name: string,
-  description?: string
-) => Promise<{ id: number; name: string; description?: string }>
+  description?: string,
+) => Promise<{ id: number; name: string; description?: string }>;
 ```
 
 **Returns:** An async function that creates a group and returns the created group.
@@ -610,8 +623,8 @@ Returns a function to add a user to a group.
 ```typescript
 function useAddUserToGroup(): (
   groupId: number,
-  userAddress: string
-) => Promise<void>
+  userAddress: string,
+) => Promise<void>;
 ```
 
 ---
@@ -623,8 +636,8 @@ Returns a function to remove a user from a group.
 ```typescript
 function useRemoveUserFromGroup(): (
   groupId: number,
-  userAddress: string
-) => Promise<void>
+  userAddress: string,
+) => Promise<void>;
 ```
 
 ---
@@ -637,8 +650,8 @@ Returns a function to grant operation-specific permission.
 function useGrantOperationPermission(): (
   documentId: string,
   operationType: string,
-  userAddress: string
-) => Promise<void>
+  userAddress: string,
+) => Promise<void>;
 ```
 
 ---
@@ -651,8 +664,8 @@ Returns a function to revoke operation-specific permission.
 function useRevokeOperationPermission(): (
   documentId: string,
   operationType: string,
-  userAddress: string
-) => Promise<void>
+  userAddress: string,
+) => Promise<void>;
 ```
 
 ---
@@ -672,13 +685,13 @@ function useSelectedDocumentWithPermission(): readonly [
   document: PHDocument | undefined,
   dispatch: DocumentDispatch,
   permission: {
-    level: 'ADMIN' | 'WRITE' | 'READ' | undefined;
+    level: "ADMIN" | "WRITE" | "READ" | undefined;
     canRead: boolean;
     canWrite: boolean;
     canAdmin: boolean;
     isLoading: boolean;
-  }
-]
+  },
+];
 ```
 
 **Returns:** A tuple `[document, dispatch, permission]`.
@@ -688,21 +701,21 @@ function useSelectedDocumentWithPermission(): readonly [
 ```tsx
 function SmartDocumentEditor() {
   const [document, dispatch, permission] = useSelectedDocumentWithPermission();
-  
+
   if (!document) {
     return <NoDocumentSelected />;
   }
-  
+
   if (permission.isLoading) {
     return <LoadingPermissions />;
   }
-  
+
   if (!permission.canRead) {
     return <AccessDenied />;
   }
-  
+
   return (
-    <DocumentView 
+    <DocumentView
       document={document}
       dispatch={dispatch}
       readOnly={!permission.canWrite}
@@ -719,17 +732,17 @@ Extends `useDocumentById` to include permission information.
 
 ```typescript
 function useDocumentByIdWithPermission(
-  id: string | null | undefined
+  id: string | null | undefined,
 ): readonly [
   document: PHDocument | undefined,
   dispatch: DocumentDispatch,
   permission: {
-    level: 'ADMIN' | 'WRITE' | 'READ' | undefined;
+    level: "ADMIN" | "WRITE" | "READ" | undefined;
     canRead: boolean;
     canWrite: boolean;
     canAdmin: boolean;
-  }
-]
+  },
+];
 ```
 
 ---
@@ -741,11 +754,12 @@ Returns documents filtered by minimum permission level.
 ```typescript
 function useDocumentsWithPermission(
   documentIds: string[],
-  minPermission: 'READ' | 'WRITE' | 'ADMIN'
-): PHDocument[]
+  minPermission: "READ" | "WRITE" | "ADMIN",
+): PHDocument[];
 ```
 
 **Parameters:**
+
 - `documentIds` — Array of document IDs to check
 - `minPermission` — Minimum required permission level
 
@@ -756,11 +770,11 @@ function useDocumentsWithPermission(
 ```tsx
 function EditableDocumentsList() {
   const allDocumentIds = useAllDocumentIds();
-  const editableDocs = useDocumentsWithPermission(allDocumentIds, 'WRITE');
-  
+  const editableDocs = useDocumentsWithPermission(allDocumentIds, "WRITE");
+
   return (
     <ul>
-      {editableDocs.map(doc => (
+      {editableDocs.map((doc) => (
         <li key={doc.header.id}>
           {doc.name} <EditIcon />
         </li>
@@ -778,11 +792,12 @@ Returns nodes in the selected drive filtered by permission.
 
 ```typescript
 function useFilteredNodesInSelectedDrive(
-  minPermission?: 'READ' | 'WRITE' | 'ADMIN'
-): Node[] | undefined
+  minPermission?: "READ" | "WRITE" | "ADMIN",
+): Node[] | undefined;
 ```
 
 **Parameters:**
+
 - `minPermission` — Optional minimum permission filter
 
 **Returns:** Array of nodes the user has access to.
@@ -797,8 +812,14 @@ Extends `useNodeActions` to automatically check permissions before executing act
 
 ```typescript
 function useNodeActionsWithPermissionChecks(): {
-  onAddFile: (file: File, parent: Node | undefined) => Promise<Node | undefined>;
-  onAddFolder: (name: string, parent: Node | undefined) => Promise<Node | undefined>;
+  onAddFile: (
+    file: File,
+    parent: Node | undefined,
+  ) => Promise<Node | undefined>;
+  onAddFolder: (
+    name: string,
+    parent: Node | undefined,
+  ) => Promise<Node | undefined>;
   onRenameNode: (newName: string, node: Node) => Promise<Node | undefined>;
   onCopyNode: (src: Node, target: Node | undefined) => Promise<void>;
   onMoveNode: (src: Node, target: Node | undefined) => Promise<void>;
@@ -813,10 +834,11 @@ function useNodeActionsWithPermissionChecks(): {
     canMove: boolean;
     canDelete: boolean;
   };
-}
+};
 ```
 
 **Returns:** Enhanced node actions that:
+
 - Check permissions before executing
 - Throw clear errors if user lacks permission
 - Include a `permissions` object indicating what actions are available
@@ -825,20 +847,19 @@ function useNodeActionsWithPermissionChecks(): {
 
 ```tsx
 function DriveToolbar() {
-  const { onAddFolder, onDeleteNode, permissions } = useNodeActionsWithPermissionChecks();
+  const { onAddFolder, onDeleteNode, permissions } =
+    useNodeActionsWithPermissionChecks();
   const selectedNode = useSelectedNode();
-  
+
   return (
     <Toolbar>
       {permissions.canAddFolder && (
-        <button onClick={() => onAddFolder('New Folder', undefined)}>
+        <button onClick={() => onAddFolder("New Folder", undefined)}>
           New Folder
         </button>
       )}
       {permissions.canDelete && selectedNode && (
-        <button onClick={() => onDeleteNode(selectedNode)}>
-          Delete
-        </button>
+        <button onClick={() => onDeleteNode(selectedNode)}>Delete</button>
       )}
     </Toolbar>
   );
@@ -856,15 +877,16 @@ A component that conditionally renders children based on permission checks.
 ```tsx
 interface RequirePermissionProps {
   documentId: string;
-  permission: 'READ' | 'WRITE' | 'ADMIN';
+  permission: "READ" | "WRITE" | "ADMIN";
   fallback?: React.ReactNode;
   children: React.ReactNode;
 }
 
-function RequirePermission(props: RequirePermissionProps): JSX.Element
+function RequirePermission(props: RequirePermissionProps): JSX.Element;
 ```
 
 **Props:**
+
 - `documentId` — The document to check permissions for
 - `permission` — The required permission level
 - `fallback` — Optional element to render if permission check fails
@@ -873,8 +895,8 @@ function RequirePermission(props: RequirePermissionProps): JSX.Element
 **Example:**
 
 ```tsx
-<RequirePermission 
-  documentId={documentId} 
+<RequirePermission
+  documentId={documentId}
   permission="WRITE"
   fallback={<ReadOnlyBanner />}
 >
@@ -890,12 +912,12 @@ A component that conditionally renders based on global role.
 
 ```tsx
 interface RequireGlobalRoleProps {
-  role: 'ADMIN' | 'USER' | 'GUEST';
+  role: "ADMIN" | "USER" | "GUEST";
   fallback?: React.ReactNode;
   children: React.ReactNode;
 }
 
-function RequireGlobalRole(props: RequireGlobalRoleProps): JSX.Element
+function RequireGlobalRole(props: RequireGlobalRoleProps): JSX.Element;
 ```
 
 ---
@@ -910,7 +932,7 @@ interface RequireAuthenticationProps {
   children: React.ReactNode;
 }
 
-function RequireAuthentication(props: RequireAuthenticationProps): JSX.Element
+function RequireAuthentication(props: RequireAuthenticationProps): JSX.Element;
 ```
 
 **Example:**
@@ -931,11 +953,11 @@ A context provider that pre-fetches and caches permission data for descendants.
 
 ```tsx
 interface PermissionProviderProps {
-  documentIds?: string[];  // Optional: documents to pre-fetch permissions for
+  documentIds?: string[]; // Optional: documents to pre-fetch permissions for
   children: React.ReactNode;
 }
 
-function PermissionProvider(props: PermissionProviderProps): JSX.Element
+function PermissionProvider(props: PermissionProviderProps): JSX.Element;
 ```
 
 **Usage:** Wrap your app or a section of your app to optimize permission checks.
@@ -947,6 +969,7 @@ function PermissionProvider(props: PermissionProviderProps): JSX.Element
 ```
 
 **Implementation notes:**
+
 - Should batch fetch permissions for all specified documents on mount
 - Should subscribe to permission changes and update cache
 - Should provide cached permission data to descendant hooks
@@ -961,6 +984,7 @@ function PermissionProvider(props: PermissionProviderProps): JSX.Element
 All authorization hooks should use GraphQL queries/mutations from the Auth subgraph:
 
 **Queries:**
+
 - `documentAccess(documentId: String!)`
 - `userDocumentPermissions`
 - `groups`
@@ -968,6 +992,7 @@ All authorization hooks should use GraphQL queries/mutations from the Auth subgr
 - `canExecuteOperation(documentId: String!, operationType: String!)`
 
 **Mutations:**
+
 - `grantDocumentPermission(documentId, userAddress, permission)`
 - `revokeDocumentPermission(documentId, userAddress)`
 - `grantGroupPermission(documentId, groupId, permission)`
@@ -978,31 +1003,36 @@ All authorization hooks should use GraphQL queries/mutations from the Auth subgr
 ### 2. Caching Strategy
 
 **Permission Cache Structure:**
+
 ```typescript
 interface PermissionCache {
   // User's permissions by document ID
-  userPermissions: Map<string, {
-    permission: 'ADMIN' | 'WRITE' | 'READ' | undefined;
-    source: 'direct' | 'group' | 'inherited';
-    timestamp: number;
-    ttl: number;
-  }>;
-  
+  userPermissions: Map<
+    string,
+    {
+      permission: "ADMIN" | "WRITE" | "READ" | undefined;
+      source: "direct" | "group" | "inherited";
+      timestamp: number;
+      ttl: number;
+    }
+  >;
+
   // Document access info (for admins)
   documentAccess: Map<string, DocumentAccessInfo>;
-  
+
   // User's groups
   userGroups: Array<Group> | undefined;
-  
+
   // All groups (for admins)
   allGroups: Array<Group> | undefined;
-  
+
   // Operation permissions by document
   operationPermissions: Map<string, Map<string, boolean>>;
 }
 ```
 
 **Cache Invalidation:**
+
 - Invalidate on permission mutations (grant/revoke)
 - Set TTL for permission checks (e.g., 5 minutes)
 - Provide manual refresh functions
@@ -1011,6 +1041,7 @@ interface PermissionCache {
 ### 3. Error States
 
 Hooks should distinguish between:
+
 - **Loading**: Permission check in progress
 - **No access**: User definitely doesn't have permission
 - **Error**: Permission check failed (network error, etc.)
@@ -1019,6 +1050,7 @@ Hooks should distinguish between:
 ### 4. Optimistic Updates
 
 When granting/revoking permissions:
+
 - Update local cache immediately (optimistic)
 - Show success state to user
 - Revert if mutation fails
@@ -1027,6 +1059,7 @@ When granting/revoking permissions:
 ### 5. Batch Operations
 
 When checking permissions for multiple documents:
+
 ```typescript
 // Bad: Multiple sequential queries
 for (const docId of documentIds) {
@@ -1040,6 +1073,7 @@ const permissions = await checkPermissions(documentIds);
 ### 6. React Concurrent Mode
 
 Hooks should be compatible with React 18+ concurrent features:
+
 - Use `useTransition` for non-urgent permission updates
 - Support Suspense for permission loading states
 - Avoid tearing in concurrent renders
@@ -1047,6 +1081,7 @@ Hooks should be compatible with React 18+ concurrent features:
 ### 7. TypeScript Support
 
 All hooks should have full TypeScript support:
+
 - Generic type parameters where appropriate
 - Discriminated unions for loading/error states
 - Strict null checks for optional parameters
@@ -1054,6 +1089,7 @@ All hooks should have full TypeScript support:
 ### 8. Testing
 
 Each hook should have:
+
 - Unit tests with mocked Reactor
 - Integration tests with real GraphQL queries
 - Tests for error cases and edge conditions
@@ -1064,28 +1100,33 @@ Each hook should have:
 ## Migration Path
 
 ### Phase 1: Core Hooks (MVP)
+
 - `useCurrentUser`
 - `useIsAuthenticated`
 - `useDocumentPermission`
 - `useCanRead`, `useCanWrite`, `useCanAdmin`
 
 ### Phase 2: Permission Actions
+
 - `useGrantDocumentPermission`
 - `useRevokeDocumentPermission`
 - `useDocumentAccess`
 
 ### Phase 3: Group Management
+
 - `useUserGroups`
 - `useGroups`
 - `useCreateGroup`
 - `useAddUserToGroup`
 
 ### Phase 4: Integration
+
 - `useSelectedDocumentWithPermission`
 - `useNodeActionsWithPermissionChecks`
 - `useFilteredNodesInSelectedDrive`
 
 ### Phase 5: Advanced Features
+
 - `RequirePermission` component
 - `PermissionProvider` context
 - Operation-level permission hooks
@@ -1102,7 +1143,7 @@ function DocumentCard({ documentId }: Props) {
   const [document] = useDocumentById(documentId);
   const canWrite = useCanWrite(documentId);
   const canAdmin = useCanAdmin(documentId);
-  
+
   return (
     <Card>
       <CardHeader>{document?.name}</CardHeader>
@@ -1125,14 +1166,17 @@ function DocumentCard({ documentId }: Props) {
 function usePermissionAwareDispatch(documentId: string) {
   const [document, dispatch] = useDocumentById(documentId);
   const { permission, canWrite } = useDocumentPermission(documentId);
-  
-  const safeDispatch = useCallback((action: Action) => {
-    if (!canWrite) {
-      throw new Error('You do not have permission to edit this document');
-    }
-    dispatch(action);
-  }, [canWrite, dispatch]);
-  
+
+  const safeDispatch = useCallback(
+    (action: Action) => {
+      if (!canWrite) {
+        throw new Error("You do not have permission to edit this document");
+      }
+      dispatch(action);
+    },
+    [canWrite, dispatch],
+  );
+
   return [document, safeDispatch, permission] as const;
 }
 ```
@@ -1143,29 +1187,24 @@ function usePermissionAwareDispatch(documentId: string) {
 function DocumentEditor({ documentId }: Props) {
   const [document] = useDocumentById(documentId);
   const { permission, isLoading, error } = useDocumentPermission(documentId);
-  
+
   // Show loading state while checking permissions
   if (isLoading) {
     return <PermissionLoadingSpinner />;
   }
-  
+
   // Show error if permission check failed
   if (error) {
     return <PermissionError error={error} />;
   }
-  
+
   // Show access denied if no read permission
   if (!permission?.canRead) {
     return <AccessDenied documentId={documentId} />;
   }
-  
+
   // Render editor (read-only if no write permission)
-  return (
-    <Editor 
-      document={document}
-      readOnly={!permission.canWrite}
-    />
-  );
+  return <Editor document={document} readOnly={!permission.canWrite} />;
 }
 ```
 
@@ -1173,8 +1212,9 @@ function DocumentEditor({ documentId }: Props) {
 
 ```tsx
 function DocumentExplorer() {
-  const documentIds = useFileNodesInSelectedDrive()?.map(n => n.documentId) ?? [];
-  
+  const documentIds =
+    useFileNodesInSelectedDrive()?.map((n) => n.documentId) ?? [];
+
   // Wrap in PermissionProvider to prefetch all permissions
   return (
     <PermissionProvider documentIds={documentIds}>
@@ -1187,7 +1227,7 @@ function DocumentGrid({ documentIds }: Props) {
   // These hooks will use cached permissions from PermissionProvider
   return (
     <div className="grid">
-      {documentIds.map(id => (
+      {documentIds.map((id) => (
         <DocumentCard key={id} documentId={id} />
       ))}
     </div>
@@ -1202,22 +1242,22 @@ function GrantPermissionButton({ documentId, userAddress }: Props) {
   const grantPermission = useGrantDocumentPermission();
   const { refresh } = useDocumentAccess(documentId);
   const [isPending, startTransition] = useTransition();
-  
+
   const handleGrant = () => {
     startTransition(async () => {
       try {
-        await grantPermission(documentId, userAddress, 'WRITE');
+        await grantPermission(documentId, userAddress, "WRITE");
         await refresh(); // Refresh to show new permission
-        toast.success('Permission granted');
+        toast.success("Permission granted");
       } catch (error) {
         toast.error(`Failed: ${error.message}`);
       }
     });
   };
-  
+
   return (
     <button onClick={handleGrant} disabled={isPending}>
-      {isPending ? 'Granting...' : 'Grant Write Access'}
+      {isPending ? "Granting..." : "Grant Write Access"}
     </button>
   );
 }
@@ -1290,4 +1330,3 @@ This specification is a living document. If you're implementing these hooks or u
 **Last Updated:** January 2026  
 **Status:** Draft Specification  
 **Next Review:** After MVP implementation
-

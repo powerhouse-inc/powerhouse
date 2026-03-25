@@ -1,3 +1,33 @@
+## 6.0.0-dev.111 (2026-03-25)
+
+This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.110 (2026-03-25)
+
+This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.109 (2026-03-24)
+
+### 🚀 Features
+
+- **vetra-e2e:** add editor creation, registry publish, and consumer install e2e tests ([a215a7d7e](https://github.com/powerhouse-inc/powerhouse/commit/a215a7d7e))
+
+### 🩹 Fixes
+
+- updating graphql-manager tests ([f79860625](https://github.com/powerhouse-inc/powerhouse/commit/f79860625))
+- **reactor-api:** move ILogger import from document-drive to document-model ([50b9e0130](https://github.com/powerhouse-inc/powerhouse/commit/50b9e0130))
+- **reactor-api:** restore GraphQLSchema import and SSE handler mount post-rebase ([e800547ef](https://github.com/powerhouse-inc/powerhouse/commit/e800547ef))
+- **reactor-api:** replace inline import() type annotations with top-level import type ([7f26efab7](https://github.com/powerhouse-inc/powerhouse/commit/7f26efab7))
+- **reactor-api:** address code review findings ([4790bdf6f](https://github.com/powerhouse-inc/powerhouse/commit/4790bdf6f))
+- **reactor-api:** fix OOM and routing bugs in gateway/http adapters ([b11f2d8fb](https://github.com/powerhouse-inc/powerhouse/commit/b11f2d8fb))
+- lockfile ([292187fae](https://github.com/powerhouse-inc/powerhouse/commit/292187fae))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Guillermo Puente @gpuente
+- Samuel Hawksby-Robinson @Samyoul
+
 ## 6.0.0-dev.108 (2026-03-24)
 
 ### 🚀 Features
@@ -31,7 +61,7 @@
 - codegen tests ([b857b8ab6](https://github.com/powerhouse-inc/powerhouse/commit/b857b8ab6))
 - merge bugs ([9867902b7](https://github.com/powerhouse-inc/powerhouse/commit/9867902b7))
 - **reactor-api:** resolve tsconfig path aliases in switchboard's Vite SSR loader ([dd812a933](https://github.com/powerhouse-inc/powerhouse/commit/dd812a933))
-- **document-drive:** fix tsc build and prisma ESM __dirname error ([f0c252d96](https://github.com/powerhouse-inc/powerhouse/commit/f0c252d96))
+- **document-drive:** fix tsc build and prisma ESM \_\_dirname error ([f0c252d96](https://github.com/powerhouse-inc/powerhouse/commit/f0c252d96))
 - stop mixing node and browser code ([9d5513533](https://github.com/powerhouse-inc/powerhouse/commit/9d5513533))
 - **reactor-api:** use only latest specification in GraphQL schema generation ([10d906243](https://github.com/powerhouse-inc/powerhouse/commit/10d906243))
 - **reactor-api:** resolve relative and bare imports from CDN-loaded modules ([ebbd0aafb](https://github.com/powerhouse-inc/powerhouse/commit/ebbd0aafb))
@@ -695,7 +725,7 @@ This was a version bump only for @powerhousedao/reactor-api to align it with oth
 - enable ADD_LISTENER and ADD_TRIGGER GraphQL mutations with proper input types ([58a911c4f](https://github.com/powerhouse-inc/powerhouse/commit/58a911c4f))
 - **reactor:** update drive info handling to include graphqlEndpoint in responses and streamline drive URL parsing ([7d40dda03](https://github.com/powerhouse-inc/powerhouse/commit/7d40dda03))
 - **reactor-api:** remove SystemSubgraph and related tests, update DefaultCoreSubgraphs ([e4412d6f7](https://github.com/powerhouse-inc/powerhouse/commit/e4412d6f7))
-- **reactor-api:** generate document-drive subgraph with union resolvers and  invalid op filtering ([2998d9500](https://github.com/powerhouse-inc/powerhouse/commit/2998d9500))
+- **reactor-api:** generate document-drive subgraph with union resolvers and invalid op filtering ([2998d9500](https://github.com/powerhouse-inc/powerhouse/commit/2998d9500))
 - **reactor-api:** add REST endpoint for drive info retrieval ([81034a7ae](https://github.com/powerhouse-inc/powerhouse/commit/81034a7ae))
 - **reactor,codegen:** handle processor apps in cli ([#2319](https://github.com/powerhouse-inc/powerhouse/pull/2319))
 
@@ -1064,7 +1094,7 @@ This was a version bump only for @powerhousedao/reactor-api to align it with oth
 ### 🚀 Features
 
 - **design-system:** default styles tweaks and DocumentStateViewer ([c0a66720c](https://github.com/powerhouse-inc/powerhouse/commit/c0a66720c))
-- **ci:** deploy staging tenant from release/staging/* branches ([8761579e7](https://github.com/powerhouse-inc/powerhouse/commit/8761579e7))
+- **ci:** deploy staging tenant from release/staging/\* branches ([8761579e7](https://github.com/powerhouse-inc/powerhouse/commit/8761579e7))
 - **ci:** add Harbor registry to docker image publishing ([f3a2fab69](https://github.com/powerhouse-inc/powerhouse/commit/f3a2fab69))
 
 ### ❤️ Thank You
@@ -3529,7 +3559,7 @@ This was a version bump only for @powerhousedao/reactor-api to align it with oth
 - **reactor-api:** added access public ([0481de9e](https://github.com/powerhouse-inc/powerhouse/commit/0481de9e))
 - **reactor-api:** init project ([#388](https://github.com/powerhouse-inc/powerhouse/pull/388))
 
-### ❤️  Thank You
+### ❤️ Thank You
 
 - acaldas
 - Guillermo Puente @gpuente
@@ -3540,6 +3570,6 @@ This was a version bump only for @powerhousedao/reactor-api to align it with oth
 
 - **reactor-api:** init project ([#388](https://github.com/powerhouse-inc/powerhouse/pull/388))
 
-### ❤️  Thank You
+### ❤️ Thank You
 
 - acaldas

@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/reactor-browser",
-  "version": "6.0.0-dev.108",
+  "version": "6.0.0-dev.111",
   "license": "AGPL-3.0-only",
   "type": "module",
   "repository": {
@@ -37,7 +37,6 @@
     "@renown/sdk": "workspace:*",
     "@tanstack/react-query": "^5.49.2",
     "change-case": "catalog:",
-    "document-drive": "workspace:*",
     "document-model": "workspace:*",
     "graphql": "catalog:",
     "graphql-request": "catalog:",

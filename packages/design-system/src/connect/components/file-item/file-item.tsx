@@ -8,8 +8,26 @@ import {
   useSelectedDriveSafe,
   useUserPermissions,
 } from "@powerhousedao/reactor-browser";
-import type { FileNode } from "@powerhousedao/shared/document-drive";
-import { getDriveSharingType } from "document-drive";
+import type {
+  DocumentDriveDocument,
+  FileNode,
+  SharingType,
+} from "@powerhousedao/shared/document-drive";
+
+function getDriveSharingType(drive: DocumentDriveDocument): SharingType {
+  if (typeof drive !== "object") return "LOCAL";
+  const isReadDrive = "readContext" in drive;
+  const { sharingType: _sharingType } = !isReadDrive
+    ? drive.state.local
+    : { sharingType: "PUBLIC" };
+  const __sharingType = _sharingType?.toUpperCase();
+  const validTypes: string[] = ["LOCAL", "CLOUD", "PUBLIC"];
+  return !__sharingType ||
+    __sharingType === "PRIVATE" ||
+    !validTypes.includes(__sharingType)
+    ? "LOCAL"
+    : (__sharingType as SharingType);
+}
 import { useState } from "react";
 import { twMerge } from "tailwind-merge";
 import { defaultNodeOptions, nodeOptionsMap } from "../../constants/options.js";

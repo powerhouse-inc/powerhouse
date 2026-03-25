@@ -5,6 +5,7 @@ This directory contains formal specifications for the Reactor synchronization pr
 ## Overview
 
 The specifications model the core synchronization protocol at a high level of abstraction, focusing on:
+
 - **Eventual consistency** between distributed reactor instances
 - **Conflict resolution correctness** (reshuffle algorithm)
 - **Safety properties** (operation uniqueness, stream monotonicity, cursor monotonicity)
@@ -22,11 +23,11 @@ The specifications model the core synchronization protocol at a high level of ab
 
 The current specification is configured for Phase 1 validation with conservative bounds:
 
-| Parameter | Value | Rationale |
-|-----------|-------|-----------|
-| Reactors | 2 (r1, r2) | Minimal distributed setup |
-| Documents | 1 (doc1) | Single document sync scenario |
-| Max Operations | 3 per reactor | Small state space for quick verification |
+| Parameter        | Value         | Rationale                                    |
+| ---------------- | ------------- | -------------------------------------------- |
+| Reactors         | 2 (r1, r2)    | Minimal distributed setup                    |
+| Documents        | 1 (doc1)      | Single document sync scenario                |
+| Max Operations   | 3 per reactor | Small state space for quick verification     |
 | State Constraint | nextOpId <= 5 | Limits total operations to bound state space |
 
 **Actual runtime:** ~11 seconds (357,574 distinct states explored)
@@ -41,6 +42,7 @@ You need the TLA+ toolbox installed to verify these specifications:
 
 1. **TLA+ Toolbox** (GUI): Download from https://github.com/tlaplus/tlaplus/releases
 2. **Command-line TLC**:
+
    ```bash
    # macOS with Homebrew
    brew install tlaplus
@@ -61,11 +63,13 @@ cd packages/reactor/specs/tla
 ```
 
 The script automatically:
+
 - Uses optimized garbage collection settings
 - Runs with 4 worker threads (configurable via `TLC_WORKERS` env var)
 - Provides clear output formatting
 
 To customize the number of workers:
+
 ```bash
 TLC_WORKERS=8 ./check.sh
 ```
@@ -122,6 +126,7 @@ Finished in XXs at (date/time)
 ```
 
 This means:
+
 - ✅ All invariants held in every state explored
 - ✅ All temporal properties were satisfied
 - ✅ The sync protocol is correct for this bounded model
@@ -144,6 +149,7 @@ This provides a **counterexample** - a sequence of states showing how the proper
 ### Deadlock Detection
 
 If TLC reports a deadlock, it means the system reached a state where no actions are enabled (but the system hasn't reached a valid terminal state). This could indicate:
+
 - A bug in the action definitions
 - Missing fairness assumptions
 - An actual protocol deadlock scenario
@@ -181,12 +187,14 @@ This is a **bounded model** with limitations:
 ## Future Phases
 
 ### Phase 2: Medium Model (Not Yet Implemented)
+
 - 2 reactors, 2 documents, 5 operations max
 - Verify multi-document scenarios
 - Test more complex conflict patterns
 - Expected runtime: 10-30 minutes
 
 ### Phase 3: Stress Testing (Not Yet Implemented)
+
 - 3 reactors (if tractable), complex conflicts
 - Network partition scenarios
 - Expected runtime: 1-2 hours
@@ -213,6 +221,7 @@ This is a **bounded model** with limitations:
 ### Reshuffle Algorithm
 
 The specification includes a simplified reshuffle algorithm that:
+
 1. Detects conflicts (divergent streams)
 2. Merges all operations from both reactors
 3. Sorts merged operations by timestamp (deterministic ordering)
@@ -222,25 +231,27 @@ This models the core behavior from `packages/reactor/src/utils/reshuffle.ts` at 
 
 ## Mapping to Implementation
 
-| TLA+ Concept | Implementation |
-|--------------|----------------|
-| `streams` | `IOperationStore` (per document/scope/branch) |
-| `channels.inbox` | `SyncOperation` with state `ExecutionPending` |
-| `channels.outbox` | `SyncOperation` with state `TransportPending` |
-| `cursors` | `ISyncCursorStorage` (remote cursors) |
-| `LocalWrite` | Job execution → operation write |
+| TLA+ Concept         | Implementation                                  |
+| -------------------- | ----------------------------------------------- |
+| `streams`            | `IOperationStore` (per document/scope/branch)   |
+| `channels.inbox`     | `SyncOperation` with state `ExecutionPending`   |
+| `channels.outbox`    | `SyncOperation` with state `TransportPending`   |
+| `cursors`            | `ISyncCursorStorage` (remote cursors)           |
+| `LocalWrite`         | Job execution → operation write                 |
 | `TransportOperation` | `IChannel.send()` → remote `IChannel.receive()` |
-| `ApplyFromInbox` | `SyncManager.handleIncomingOperations()` |
-| `PerformReshuffle` | `reshuffleByTimestamp()` |
+| `ApplyFromInbox`     | `SyncManager.handleIncomingOperations()`        |
+| `PerformReshuffle`   | `reshuffleByTimestamp()`                        |
 
 ## References
 
 ### TLA+ Resources
+
 - [TLA+ Website](https://lamport.azurewebsites.net/tla/tla.html)
 - [Learn TLA+](https://learntlaplus.com/)
 - [TLA+ Video Course](https://lamport.azurewebsites.net/video/videos.html)
 
 ### Reactor Documentation
+
 - Sync spec: `docs/planning/Synchronization/index.md`
 - Storage spec: `docs/planning/Synchronization/storage.md`
 - Reshuffle spec: `docs/planning/Jobs/reshuffle.md`
@@ -258,6 +269,7 @@ To extend or modify these specifications:
 ## Questions or Issues
 
 If you find bugs in the specification or have questions:
+
 - Check the TLA+ documentation for syntax/semantic questions
 - Review the implementation in `packages/reactor/src/sync/`
 - Open an issue or discuss with the team
@@ -268,14 +280,14 @@ If you find bugs in the specification or have questions:
 
 **Last Verification Run**: 2025-11-14
 
-| Metric | Value |
-|--------|-------|
-| States Generated | 1,806,603 |
-| Distinct States | 357,574 |
-| Max Depth | 42 |
-| Runtime | 11 seconds |
-| Safety Properties | ✅ All Passed |
-| Liveness Properties | ⚠️  Not checked (disabled in Phase 1) |
+| Metric              | Value                                |
+| ------------------- | ------------------------------------ |
+| States Generated    | 1,806,603                            |
+| Distinct States     | 357,574                              |
+| Max Depth           | 42                                   |
+| Runtime             | 11 seconds                           |
+| Safety Properties   | ✅ All Passed                        |
+| Liveness Properties | ⚠️ Not checked (disabled in Phase 1) |
 
 **Status**: ✅ Phase 1 Complete - All safety properties verified
 

@@ -1,8 +1,11 @@
 import type { IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
-import type { IReactorClient, ISyncManager } from "@powerhousedao/reactor";
+import type {
+  IReactorClient,
+  IRelationalDb,
+  ISyncManager,
+} from "@powerhousedao/reactor";
 import type { GraphQLManager } from "@powerhousedao/reactor-api";
 import type { DocumentDriveGlobalState } from "@powerhousedao/shared/document-drive";
-import type { IRelationalDbLegacy } from "document-drive";
 import type { PHDocument } from "@powerhousedao/shared/document-model";
 import type { DocumentNode } from "graphql";
 import type { IncomingHttpHeaders } from "http";
@@ -33,14 +36,14 @@ export type ISubgraph = {
   resolvers: Record<string, any>;
   typeDefs: DocumentNode;
   reactorClient: IReactorClient;
-  relationalDb: IRelationalDbLegacy;
+  relationalDb: IRelationalDb;
   hasSubscriptions?: boolean;
   onSetup?: () => Promise<void>;
 };
 
 export type SubgraphArgs = {
   reactorClient: IReactorClient;
-  relationalDb: IRelationalDbLegacy;
+  relationalDb: IRelationalDb;
   analyticsStore: IAnalyticsStore;
   graphqlManager: GraphQLManager;
   syncManager: ISyncManager;

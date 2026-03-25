@@ -11,60 +11,31 @@ import {
   initializeAndStartAPI,
   startViteServer,
 } from "@powerhousedao/reactor-api";
-import type { DefaultRemoteDriveInput } from "document-drive";
+import {
+  driveCreateDocument,
+  driveCreateState,
+} from "@powerhousedao/shared/document-drive";
 import { logger, type DocumentModelModule } from "document-model";
 import dotenv from "dotenv";
 import path from "node:path";
 import type {
   LocalReactor,
+  RemoteDriveInput,
   RemoteDriveInputSimple,
   StartServerOptions,
 } from "./types.js";
 import { DefaultStartServerOptions } from "./types.js";
 
-dotenv.config();
-
-/**
- * Normalizes remote drive input to DefaultRemoteDriveInput format.
- * If a string URL is provided, it uses Connect-compatible defaults.
- */
 function normalizeRemoteDriveInput(
   input: RemoteDriveInputSimple,
-): DefaultRemoteDriveInput {
+): RemoteDriveInput {
   if (typeof input === "string") {
-    // URL-only input, use Connect-compatible defaults
-    return {
-      url: input,
-      options: {
-        sharingType: "public",
-        availableOffline: true,
-        listeners: [
-          {
-            block: true,
-            callInfo: {
-              data: input,
-              name: "switchboard-push",
-              transmitterType: "SwitchboardPush",
-            },
-            filter: {
-              branch: ["main"],
-              documentId: ["*"],
-              documentType: ["*"],
-              scope: ["global"],
-            },
-            label: "Switchboard Sync",
-            listenerId: "1",
-            system: true,
-          },
-        ],
-        triggers: [],
-      },
-    };
+    return { url: input };
   }
-
-  // Already a complete configuration, return as-is
   return input;
 }
+
+dotenv.config();
 
 const startServer = async (
   options?: StartServerOptions,
@@ -73,8 +44,8 @@ const startServer = async (
   const {
     port,
     storage,
-    drive,
     dev,
+    drive,
     dbPath,
     packages = [],
     configFile,
@@ -132,7 +103,7 @@ const startServer = async (
 
   // add vite middleware after express app is initialized if applicable
   if (vite) {
-    api.app.use(vite.middlewares);
+    api.app.mountRawMiddleware(vite.middlewares);
   }
 
   // Conditionally add a default drive
@@ -147,8 +118,6 @@ const startServer = async (
     }
 
     try {
-      const { driveCreateDocument, driveCreateState } =
-        await import("document-drive");
       const { global } = driveCreateState();
       const document = driveCreateDocument({
         global: {

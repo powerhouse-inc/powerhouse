@@ -4,8 +4,8 @@
  * Usage: tsx docs-create.ts [N] [--operations M] [--endpoint <url>]
  *
  * Process flow:
- *   1. Create N documents via DocumentModel_createEmptyDocument
- *   2. For each document, perform M operations via individual DocumentModel_* mutations
+ *   1. Create N documents via DocumentModel.createEmptyDocument
+ *   2. For each document, perform M operations via individual DocumentModel.* mutations
  *
  * Batch mode:
  *   - Use --batch-size <N> to send N operations per GraphQL request (using aliases)
@@ -24,7 +24,7 @@ const GRAPHQL_TIMEOUT_MS = 30_000;
 const ACTION_CONFIGS = [
   {
     name: "setModelName",
-    mutationName: "DocumentModel_setModelName",
+    mutationName: "setModelName",
     inputType: "DocumentModel_SetModelNameInput",
     buildInput: (docIndex: number, opIndex: number) => ({
       name: `Model-${docIndex}-op${opIndex}`,
@@ -32,7 +32,7 @@ const ACTION_CONFIGS = [
   },
   {
     name: "setModelDescription",
-    mutationName: "DocumentModel_setModelDescription",
+    mutationName: "setModelDescription",
     inputType: "DocumentModel_SetModelDescriptionInput",
     buildInput: (docIndex: number, opIndex: number) => ({
       description: `Description for document ${docIndex}, operation ${opIndex}`,
@@ -40,7 +40,7 @@ const ACTION_CONFIGS = [
   },
   {
     name: "setAuthorName",
-    mutationName: "DocumentModel_setAuthorName",
+    mutationName: "setAuthorName",
     inputType: "DocumentModel_SetAuthorNameInput",
     buildInput: (docIndex: number, opIndex: number) => ({
       authorName: `Author-${docIndex}-op${opIndex}`,
@@ -48,7 +48,7 @@ const ACTION_CONFIGS = [
   },
   {
     name: "setAuthorWebsite",
-    mutationName: "DocumentModel_setAuthorWebsite",
+    mutationName: "setAuthorWebsite",
     inputType: "DocumentModel_SetAuthorWebsiteInput",
     buildInput: (docIndex: number, opIndex: number) => ({
       authorWebsite: `https://example-${docIndex}-${opIndex}.com`,
@@ -56,7 +56,7 @@ const ACTION_CONFIGS = [
   },
   {
     name: "setModelExtension",
-    mutationName: "DocumentModel_setModelExtension",
+    mutationName: "setModelExtension",
     inputType: "DocumentModel_SetModelExtensionInput",
     buildInput: (_docIndex: number, opIndex: number) => ({
       extension: `.ext${opIndex}`,
@@ -64,7 +64,7 @@ const ACTION_CONFIGS = [
   },
   {
     name: "setModelId",
-    mutationName: "DocumentModel_setModelId",
+    mutationName: "setModelId",
     inputType: "DocumentModel_SetModelIdInput",
     buildInput: (docIndex: number, opIndex: number) => ({
       id: `org/model-${docIndex}-v${opIndex}`,
@@ -73,7 +73,7 @@ const ACTION_CONFIGS = [
 ];
 
 interface CreateDocumentResponse {
-  DocumentModel_createEmptyDocument: { id: string };
+  DocumentModel: { createEmptyDocument: { id: string } };
 }
 
 interface MemoryStats {
@@ -160,19 +160,18 @@ function buildBatchMutation(
     .map((op, i) => {
       const name = asyncMutate ? `${op.mutationName}Async` : op.mutationName;
       const selection = asyncMutate ? "" : " { id }";
-      return `  op${i}: ${name}(docId: $docId, input: $input${i})${selection}`;
+      return `    op${i}: ${name}(docId: $docId, input: $input${i})${selection}`;
     })
     .join("\n");
-  return `mutation BatchOps(${varDecls}) {\n${body}\n}`;
+  return `mutation BatchOps(${varDecls}) {\n  DocumentModel {\n${body}\n  }\n}`;
 }
 
 async function createDocument(client: GraphQLClient): Promise<string> {
-  const { DocumentModel_createEmptyDocument } =
-    await client.request<CreateDocumentResponse>({
-      document: `mutation CreateDocument { DocumentModel_createEmptyDocument { id } }`,
-      signal: AbortSignal.timeout(GRAPHQL_TIMEOUT_MS),
-    });
-  return DocumentModel_createEmptyDocument.id;
+  const { DocumentModel } = await client.request<CreateDocumentResponse>({
+    document: `mutation CreateDocument { DocumentModel { createEmptyDocument { id } } }`,
+    signal: AbortSignal.timeout(GRAPHQL_TIMEOUT_MS),
+  });
+  return DocumentModel.createEmptyDocument.id;
 }
 
 type RequestDescriptor = {
@@ -725,15 +724,17 @@ async function main() {
             for (const req of requests) {
               globalReqNum++;
               const dispatchedAt = performance.now();
-              const result = await client.request<Record<string, string>>({
+              const result = await client.request<{
+                DocumentModel: Record<string, string>;
+              }>({
                 document: req.mutation,
                 variables: req.variables,
                 signal: AbortSignal.timeout(GRAPHQL_TIMEOUT_MS),
               });
-              // The batch mutation aliases each op; we sample the last one as
-              // representative. Validate early so polling never runs against
-              // "undefined".
-              const resultValues = Object.values(result);
+              // The batch mutation aliases each op under DocumentModel { ... };
+              // we sample the last one as representative. Validate early so
+              // polling never runs against "undefined".
+              const resultValues = Object.values(result.DocumentModel);
               if (resultValues.length === 0) {
                 throw new Error(
                   `Empty mutation response for request ${globalReqNum}`,

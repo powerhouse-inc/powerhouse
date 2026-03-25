@@ -30,7 +30,6 @@ async function runProcessorTests(args: {
   for (const input of inputs) {
     await generateProcessor({
       ...input,
-      useTsMorph: true,
       rootDir: outDir,
     });
   }

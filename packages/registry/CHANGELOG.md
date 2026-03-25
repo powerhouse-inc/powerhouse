@@ -1,3 +1,32 @@
+## 6.0.0-dev.111 (2026-03-25)
+
+### 🩹 Fixes
+
+- **registry:** add rootDir to Dockerfile tsconfig to fix TS5011 ([848c98a7b](https://github.com/powerhouse-inc/powerhouse/commit/848c98a7b))
+
+### ❤️ Thank You
+
+- Frank
+
+## 6.0.0-dev.110 (2026-03-25)
+
+This was a version bump only for @powerhousedao/registry to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.109 (2026-03-24)
+
+### 🚀 Features
+
+- **vetra-e2e:** add editor creation, registry publish, and consumer install e2e tests ([a215a7d7e](https://github.com/powerhouse-inc/powerhouse/commit/a215a7d7e))
+
+### 🩹 Fixes
+
+- lockfile ([292187fae](https://github.com/powerhouse-inc/powerhouse/commit/292187fae))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Guillermo Puente @gpuente
+
 ## 6.0.0-dev.108 (2026-03-24)
 
 ### 🚀 Features
@@ -32,7 +61,7 @@
 - deps ([cbb8c5da9](https://github.com/powerhouse-inc/powerhouse/commit/cbb8c5da9))
 - codegen tests ([b857b8ab6](https://github.com/powerhouse-inc/powerhouse/commit/b857b8ab6))
 - **reactor-api:** resolve tsconfig path aliases in switchboard's Vite SSR loader ([dd812a933](https://github.com/powerhouse-inc/powerhouse/commit/dd812a933))
-- **document-drive:** fix tsc build and prisma ESM __dirname error ([f0c252d96](https://github.com/powerhouse-inc/powerhouse/commit/f0c252d96))
+- **document-drive:** fix tsc build and prisma ESM \_\_dirname error ([f0c252d96](https://github.com/powerhouse-inc/powerhouse/commit/f0c252d96))
 - stop mixing node and browser code ([9d5513533](https://github.com/powerhouse-inc/powerhouse/commit/9d5513533))
 - uplink in registry ([94552a93a](https://github.com/powerhouse-inc/powerhouse/commit/94552a93a))
 - **registry:** check all fallback paths before extraction and prevent concurrent extractions ([e857b174b](https://github.com/powerhouse-inc/powerhouse/commit/e857b174b))
@@ -72,7 +101,7 @@
 ### 🩹 Fixes
 
 - **release:** remove stale build-connect step, now covered by build-bundle ([e00eed45a](https://github.com/powerhouse-inc/powerhouse/commit/e00eed45a))
-- **registry:** resolve workspace:* deps in Dockerfile for standalone install ([a4670f563](https://github.com/powerhouse-inc/powerhouse/commit/a4670f563))
+- **registry:** resolve workspace:\* deps in Dockerfile for standalone install ([a4670f563](https://github.com/powerhouse-inc/powerhouse/commit/a4670f563))
 - add git pull --rebase before push in k8s update jobs to avoid race conditions ([fa7af726f](https://github.com/powerhouse-inc/powerhouse/commit/fa7af726f))
 
 ### ❤️ Thank You

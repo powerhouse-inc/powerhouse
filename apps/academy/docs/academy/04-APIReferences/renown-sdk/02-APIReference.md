@@ -21,27 +21,28 @@ Central authentication provider that automatically initializes the Renown SDK.
 
 ```typescript
 interface RenownUserProviderProps {
-  children: React.ReactNode
-  renownUrl?: string
-  networkId?: string
-  chainId?: string
-  loadingComponent?: React.ReactNode
-  errorComponent?: (error: Error, retry: () => void) => React.ReactNode
+  children: React.ReactNode;
+  renownUrl?: string;
+  networkId?: string;
+  chainId?: string;
+  loadingComponent?: React.ReactNode;
+  errorComponent?: (error: Error, retry: () => void) => React.ReactNode;
 }
 ```
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `children` | `React.ReactNode` | - | **Required.** Child components |
-| `renownUrl` | `string` | `'https://www.renown.id'` | Renown service URL |
-| `networkId` | `string` | `'eip155'` | Network identifier |
-| `chainId` | `string` | `'1'` | Chain identifier |
-| `loadingComponent` | `React.ReactNode` | undefined | Custom loading UI during initialization |
-| `errorComponent` | `(error, retry) => ReactNode` | undefined | Custom error UI if initialization fails |
+| Prop               | Type                          | Default                   | Description                             |
+| ------------------ | ----------------------------- | ------------------------- | --------------------------------------- |
+| `children`         | `React.ReactNode`             | -                         | **Required.** Child components          |
+| `renownUrl`        | `string`                      | `'https://www.renown.id'` | Renown service URL                      |
+| `networkId`        | `string`                      | `'eip155'`                | Network identifier                      |
+| `chainId`          | `string`                      | `'1'`                     | Chain identifier                        |
+| `loadingComponent` | `React.ReactNode`             | undefined                 | Custom loading UI during initialization |
+| `errorComponent`   | `(error, retry) => ReactNode` | undefined                 | Custom error UI if initialization fails |
 
 #### Example
 
 **Basic usage (auto-initializes with defaults):**
+
 ```typescript
 <RenownUserProvider>
   <App />
@@ -49,6 +50,7 @@ interface RenownUserProviderProps {
 ```
 
 **With custom configuration:**
+
 ```typescript
 <RenownUserProvider
   renownUrl={process.env.NEXT_PUBLIC_RENOWN_URL}
@@ -93,27 +95,30 @@ Smart button component that adapts based on authentication state.
 
 ```typescript
 interface RenownAuthButtonProps {
-  className?: string
-  profileBaseUrl?: string
-  renderAuthenticated?: (props: RenownAuthButtonRenderProps) => React.ReactNode
-  renderUnauthenticated?: (props: { openRenown: () => void; isLoading: boolean }) => React.ReactNode
-  renderLoading?: () => React.ReactNode
-  showUsername?: boolean
-  showLogoutButton?: boolean
-  logoutButtonText?: string
+  className?: string;
+  profileBaseUrl?: string;
+  renderAuthenticated?: (props: RenownAuthButtonRenderProps) => React.ReactNode;
+  renderUnauthenticated?: (props: {
+    openRenown: () => void;
+    isLoading: boolean;
+  }) => React.ReactNode;
+  renderLoading?: () => React.ReactNode;
+  showUsername?: boolean;
+  showLogoutButton?: boolean;
+  logoutButtonText?: string;
 }
 ```
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `className` | `string` | `""` | Custom CSS class |
-| `profileBaseUrl` | `string` | `"https://www.renown.id/profile"` | Base URL for profile |
-| `renderAuthenticated` | `function` | Default renderer | Custom authenticated state |
-| `renderUnauthenticated` | `function` | Default renderer | Custom unauthenticated state |
-| `renderLoading` | `function` | Default renderer | Custom loading state |
-| `showUsername` | `boolean` | `true` | Show username next to avatar |
-| `showLogoutButton` | `boolean` | `false` | Show logout button |
-| `logoutButtonText` | `string` | `"Logout"` | Logout button text |
+| Prop                    | Type       | Default                           | Description                  |
+| ----------------------- | ---------- | --------------------------------- | ---------------------------- |
+| `className`             | `string`   | `""`                              | Custom CSS class             |
+| `profileBaseUrl`        | `string`   | `"https://www.renown.id/profile"` | Base URL for profile         |
+| `renderAuthenticated`   | `function` | Default renderer                  | Custom authenticated state   |
+| `renderUnauthenticated` | `function` | Default renderer                  | Custom unauthenticated state |
+| `renderLoading`         | `function` | Default renderer                  | Custom loading state         |
+| `showUsername`          | `boolean`  | `true`                            | Show username next to avatar |
+| `showLogoutButton`      | `boolean`  | `false`                           | Show logout button           |
+| `logoutButtonText`      | `string`   | `"Logout"`                        | Logout button text           |
 
 #### Example
 
@@ -147,27 +152,27 @@ A login button with Renown branding. By default, clicking the button triggers lo
 
 ```typescript
 interface RenownLoginButtonProps {
-  onLogin: (() => void) | undefined
-  darkMode?: boolean
-  style?: CSSProperties
-  className?: string
+  onLogin: (() => void) | undefined;
+  darkMode?: boolean;
+  style?: CSSProperties;
+  className?: string;
   renderTrigger?: (props: {
-    onMouseEnter: () => void
-    onMouseLeave: () => void
-    isLoading: boolean
-  }) => ReactNode
-  showPopover?: boolean
+    onMouseEnter: () => void;
+    onMouseLeave: () => void;
+    isLoading: boolean;
+  }) => ReactNode;
+  showPopover?: boolean;
 }
 ```
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `onLogin` | `() => void \| undefined` | - | Callback when login is requested |
-| `darkMode` | `boolean` | `false` | Enable dark mode styling |
-| `style` | `CSSProperties` | - | Custom styles for the button |
-| `className` | `string` | - | Custom class name |
-| `renderTrigger` | `function` | - | Custom render function for the trigger button |
-| `showPopover` | `boolean` | `false` | Show a popover with connect option instead of triggering login directly |
+| Prop            | Type                      | Default | Description                                                             |
+| --------------- | ------------------------- | ------- | ----------------------------------------------------------------------- |
+| `onLogin`       | `() => void \| undefined` | -       | Callback when login is requested                                        |
+| `darkMode`      | `boolean`                 | `false` | Enable dark mode styling                                                |
+| `style`         | `CSSProperties`           | -       | Custom styles for the button                                            |
+| `className`     | `string`                  | -       | Custom class name                                                       |
+| `renderTrigger` | `function`                | -       | Custom render function for the trigger button                           |
+| `showPopover`   | `boolean`                 | `false` | Show a popover with connect option instead of triggering login directly |
 
 #### Example
 
@@ -206,29 +211,29 @@ Access authentication state and methods.
 
 ```typescript
 interface RenownUserContextValue {
-  user: User | null
-  loginStatus: LoginStatus
-  isLoading: boolean
-  isInitialized: boolean
-  login: (userDid?: string) => Promise<void>
-  logout: () => Promise<void>
-  openRenown: () => void
-  connectCrypto: IConnectCrypto | null
-  renown: IRenown | null
+  user: User | null;
+  loginStatus: LoginStatus;
+  isLoading: boolean;
+  isInitialized: boolean;
+  login: (userDid?: string) => Promise<void>;
+  logout: () => Promise<void>;
+  openRenown: () => void;
+  connectCrypto: IConnectCrypto | null;
+  renown: IRenown | null;
 }
 ```
 
-| Property | Type | Description |
-|----------|------|-------------|
-| `user` | `User \| null` | Current authenticated user or null |
-| `loginStatus` | `LoginStatus` | Current authentication status |
-| `isLoading` | `boolean` | Whether an auth operation is in progress |
-| `isInitialized` | `boolean` | Whether the auth system has initialized |
-| `login` | `function` | Authenticate with optional DID |
-| `logout` | `function` | Log out current user |
-| `openRenown` | `function` | Open Renown authentication portal |
+| Property        | Type                     | Description                                         |
+| --------------- | ------------------------ | --------------------------------------------------- |
+| `user`          | `User \| null`           | Current authenticated user or null                  |
+| `loginStatus`   | `LoginStatus`            | Current authentication status                       |
+| `isLoading`     | `boolean`                | Whether an auth operation is in progress            |
+| `isInitialized` | `boolean`                | Whether the auth system has initialized             |
+| `login`         | `function`               | Authenticate with optional DID                      |
+| `logout`        | `function`               | Log out current user                                |
+| `openRenown`    | `function`               | Open Renown authentication portal                   |
 | `connectCrypto` | `IConnectCrypto \| null` | ConnectCrypto instance for cryptographic operations |
-| `renown` | `IRenown \| null` | Renown SDK instance |
+| `renown`        | `IRenown \| null`        | Renown SDK instance                                 |
 
 #### Example
 
@@ -273,17 +278,17 @@ Initialize the Renown SDK.
 function initRenown(
   did: string,
   networkId: string,
-  renownUrl: string
-): Promise<IRenown>
+  renownUrl: string,
+): Promise<IRenown>;
 ```
 
 #### Parameters
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `did` | `string` | Decentralized identifier (DID) |
+| Parameter   | Type     | Description                         |
+| ----------- | -------- | ----------------------------------- |
+| `did`       | `string` | Decentralized identifier (DID)      |
 | `networkId` | `string` | Network identifier (e.g., 'eip155') |
-| `renownUrl` | `string` | Renown service URL |
+| `renownUrl` | `string` | Renown service URL                  |
 
 #### Returns
 
@@ -292,13 +297,13 @@ function initRenown(
 #### Example
 
 ```typescript
-import { initRenown } from '@renown/sdk'
+import { initRenown } from "@renown/sdk";
 
 const renown = await initRenown(
-  'did:pkh:eip155:1:0x123...',
-  'eip155',
-  'https://www.renown.id'
-)
+  "did:pkh:eip155:1:0x123...",
+  "eip155",
+  "https://www.renown.id",
+);
 ```
 
 ---
@@ -313,17 +318,17 @@ Authenticate a user with Renown.
 function login(
   userDid: string | undefined,
   renown: IRenown | undefined,
-  connectCrypto: IConnectCrypto | undefined
-): Promise<User | undefined>
+  connectCrypto: IConnectCrypto | undefined,
+): Promise<User | undefined>;
 ```
 
 #### Parameters
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `userDid` | `string \| undefined` | User's DID to authenticate |
-| `renown` | `IRenown \| undefined` | Renown instance |
-| `connectCrypto` | `IConnectCrypto \| undefined` | ConnectCrypto instance |
+| Parameter       | Type                          | Description                |
+| --------------- | ----------------------------- | -------------------------- |
+| `userDid`       | `string \| undefined`         | User's DID to authenticate |
+| `renown`        | `IRenown \| undefined`        | Renown instance            |
+| `connectCrypto` | `IConnectCrypto \| undefined` | ConnectCrypto instance     |
 
 #### Returns
 
@@ -338,13 +343,13 @@ function login(
 #### Example
 
 ```typescript
-import { login } from '@renown/sdk'
+import { login } from "@renown/sdk";
 
 const user = await login(
-  'did:pkh:eip155:1:0x123...',
+  "did:pkh:eip155:1:0x123...",
   window.renown,
-  window.connectCrypto
-)
+  window.connectCrypto,
+);
 ```
 
 ---
@@ -356,7 +361,7 @@ Log out the current user.
 #### Signature
 
 ```typescript
-function logout(): Promise<void>
+function logout(): Promise<void>;
 ```
 
 #### Returns
@@ -372,9 +377,9 @@ function logout(): Promise<void>
 #### Example
 
 ```typescript
-import { logout } from '@renown/sdk'
+import { logout } from "@renown/sdk";
 
-await logout()
+await logout();
 ```
 
 ---
@@ -386,7 +391,7 @@ Open the Renown authentication portal.
 #### Signature
 
 ```typescript
-function openRenown(): void
+function openRenown(): void;
 ```
 
 #### Returns
@@ -426,7 +431,7 @@ Process authentication redirect from Renown.
 #### Signature
 
 ```typescript
-function handleRenownReturn(): Promise<void>
+function handleRenownReturn(): Promise<void>;
 ```
 
 #### Returns
@@ -443,12 +448,12 @@ function handleRenownReturn(): Promise<void>
 #### Example
 
 ```typescript
-import { handleRenownReturn } from '@renown/sdk'
+import { handleRenownReturn } from "@renown/sdk";
 
 // Called automatically by UserProvider
 useEffect(() => {
-  handleRenownReturn()
-}, [])
+  handleRenownReturn();
+}, []);
 ```
 
 ---
@@ -460,14 +465,14 @@ Fetch user profile data from Renown API.
 #### Signature
 
 ```typescript
-function fetchProfileDataForUser(user: User): Promise<User>
+function fetchProfileDataForUser(user: User): Promise<User>;
 ```
 
 #### Parameters
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `user` | `User` | User object to enrich with profile data |
+| Parameter | Type   | Description                             |
+| --------- | ------ | --------------------------------------- |
+| `user`    | `User` | User object to enrich with profile data |
 
 #### Returns
 
@@ -483,11 +488,11 @@ function fetchProfileDataForUser(user: User): Promise<User>
 #### Example
 
 ```typescript
-import { fetchProfileDataForUser } from '@renown/sdk'
+import { fetchProfileDataForUser } from "@renown/sdk";
 
-const userWithProfile = await fetchProfileDataForUser(user)
-console.log(userWithProfile.name) // Display name
-console.log(userWithProfile.avatar) // Avatar URL
+const userWithProfile = await fetchProfileDataForUser(user);
+console.log(userWithProfile.name); // Display name
+console.log(userWithProfile.avatar); // Avatar URL
 ```
 
 ---
@@ -499,7 +504,7 @@ Restore authentication from stored session.
 #### Signature
 
 ```typescript
-function reauthenticateFromSession(): Promise<User | null>
+function reauthenticateFromSession(): Promise<User | null>;
 ```
 
 #### Returns
@@ -516,11 +521,11 @@ function reauthenticateFromSession(): Promise<User | null>
 #### Example
 
 ```typescript
-import { reauthenticateFromSession } from '@renown/sdk'
+import { reauthenticateFromSession } from "@renown/sdk";
 
-const user = await reauthenticateFromSession()
+const user = await reauthenticateFromSession();
 if (user) {
-  console.log('Session restored for:', user.did)
+  console.log("Session restored for:", user.did);
 }
 ```
 
@@ -533,14 +538,14 @@ Extract Ethereum address from a DID.
 #### Signature
 
 ```typescript
-function extractEthAddressFromDid(did: string): string | null
+function extractEthAddressFromDid(did: string): string | null;
 ```
 
 #### Parameters
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `did` | `string` | DID string (e.g., 'did:pkh:eip155:1:0x123...') |
+| Parameter | Type     | Description                                    |
+| --------- | -------- | ---------------------------------------------- |
+| `did`     | `string` | DID string (e.g., 'did:pkh:eip155:1:0x123...') |
 
 #### Returns
 
@@ -549,10 +554,10 @@ function extractEthAddressFromDid(did: string): string | null
 #### Example
 
 ```typescript
-import { extractEthAddressFromDid } from '@renown/sdk'
+import { extractEthAddressFromDid } from "@renown/sdk";
 
-const address = extractEthAddressFromDid('did:pkh:eip155:1:0x1234...')
-console.log(address) // '0x1234...'
+const address = extractEthAddressFromDid("did:pkh:eip155:1:0x1234...");
+console.log(address); // '0x1234...'
 ```
 
 ---
@@ -565,12 +570,12 @@ Represents an authenticated user.
 
 ```typescript
 interface User {
-  did: string          // Decentralized identifier
-  address: string      // Ethereum address
-  name?: string        // Display name from profile
-  email?: string       // Email address
-  avatar?: string      // Avatar image URL
-  ethAddress?: string  // Ethereum address (duplicate of address)
+  did: string; // Decentralized identifier
+  address: string; // Ethereum address
+  name?: string; // Display name from profile
+  email?: string; // Email address
+  avatar?: string; // Avatar image URL
+  ethAddress?: string; // Ethereum address (duplicate of address)
 }
 ```
 
@@ -582,10 +587,10 @@ Authentication status enumeration.
 
 ```typescript
 type LoginStatus =
-  | 'initial'           // Not yet checked
-  | 'checking'          // Currently checking auth
-  | 'authorized'        // User is authenticated
-  | 'not-authorized'    // User is not authenticated
+  | "initial" // Not yet checked
+  | "checking" // Currently checking auth
+  | "authorized" // User is authenticated
+  | "not-authorized"; // User is not authenticated
 ```
 
 ---
@@ -596,15 +601,15 @@ Type for the authentication context value.
 
 ```typescript
 interface RenownUserContextValue {
-  user: User | null
-  loginStatus: LoginStatus
-  isLoading: boolean
-  isInitialized: boolean
-  login: (userDid?: string) => Promise<void>
-  logout: () => Promise<void>
-  openRenown: () => void
-  connectCrypto: IConnectCrypto | null
-  renown: IRenown | null
+  user: User | null;
+  loginStatus: LoginStatus;
+  isLoading: boolean;
+  isInitialized: boolean;
+  login: (userDid?: string) => Promise<void>;
+  logout: () => Promise<void>;
+  openRenown: () => void;
+  connectCrypto: IConnectCrypto | null;
+  renown: IRenown | null;
 }
 ```
 
@@ -616,10 +621,10 @@ Interface for the Renown instance.
 
 ```typescript
 interface IRenown {
-  user: User | undefined | (() => Promise<User | undefined>)
-  login: (did: string) => Promise<User | undefined>
-  logout: () => Promise<void>
-  on: (event: string, handler: Function) => Unsubscribe
+  user: User | undefined | (() => Promise<User | undefined>);
+  login: (did: string) => Promise<User | undefined>;
+  logout: () => Promise<void>;
+  on: (event: string, handler: Function) => Unsubscribe;
 }
 ```
 
@@ -631,7 +636,7 @@ Interface for the ConnectCrypto instance.
 
 ```typescript
 interface IConnectCrypto {
-  did: () => Promise<string>
+  did: () => Promise<string>;
   // Additional methods...
 }
 ```
@@ -652,8 +657,8 @@ constructor(keyStorage: IKeyStorage)
 
 #### Parameters
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
+| Parameter    | Type          | Description                |
+| ------------ | ------------- | -------------------------- |
 | `keyStorage` | `IKeyStorage` | Key storage implementation |
 
 #### Methods
@@ -669,10 +674,11 @@ async did(): Promise<string>
 **Returns:** `Promise<string>` - The DID
 
 **Example:**
+
 ```typescript
-const connectCrypto = new ConnectCrypto(new BrowserKeyStorage())
-const did = await connectCrypto.did()
-console.log(did) // 'did:pkh:eip155:1:0x...'
+const connectCrypto = new ConnectCrypto(new BrowserKeyStorage());
+const did = await connectCrypto.did();
+console.log(did); // 'did:pkh:eip155:1:0x...'
 ```
 
 ---
@@ -684,16 +690,16 @@ Browser-based key storage using IndexedDB.
 #### Constructor
 
 ```typescript
-constructor()
+constructor();
 ```
 
 #### Usage
 
 ```typescript
-import { BrowserKeyStorage, ConnectCrypto } from '@renown/sdk'
+import { BrowserKeyStorage, ConnectCrypto } from "@renown/sdk";
 
-const keyStorage = new BrowserKeyStorage()
-const connectCrypto = new ConnectCrypto(keyStorage)
+const keyStorage = new BrowserKeyStorage();
+const connectCrypto = new ConnectCrypto(keyStorage);
 ```
 
 ---
@@ -718,13 +724,14 @@ static setUserData(data: {
 ```
 
 **Example:**
+
 ```typescript
 SessionStorageManager.setUserData({
   user: currentUser,
   userDid: currentUser.did,
-  loginStatus: 'authorized',
-  timestamp: Date.now()
-})
+  loginStatus: "authorized",
+  timestamp: Date.now(),
+});
 ```
 
 ##### `getUserData()`
@@ -743,10 +750,11 @@ static getUserData(): {
 **Returns:** Session data or null
 
 **Example:**
+
 ```typescript
-const session = SessionStorageManager.getUserData()
+const session = SessionStorageManager.getUserData();
 if (session) {
-  console.log('Found session for:', session.user.did)
+  console.log("Found session for:", session.user.did);
 }
 ```
 
@@ -759,8 +767,9 @@ static clearUserData(): void
 ```
 
 **Example:**
+
 ```typescript
-SessionStorageManager.clearUserData()
+SessionStorageManager.clearUserData();
 ```
 
 ##### `isUserDataValid()`
@@ -779,8 +788,9 @@ static isUserDataValid(data: {
 **Returns:** `boolean` - Whether session is valid
 
 **Example:**
+
 ```typescript
-const data = SessionStorageManager.getUserData()
+const data = SessionStorageManager.getUserData();
 if (data && SessionStorageManager.isUserDataValid(data)) {
   // Session is valid
 }
@@ -805,7 +815,7 @@ static getStoredUserDid(): string | null
 Default Renown service URL.
 
 ```typescript
-const RENOWN_URL: string = 'https://www.renown.id'
+const RENOWN_URL: string = "https://www.renown.id";
 ```
 
 ---
@@ -815,7 +825,7 @@ const RENOWN_URL: string = 'https://www.renown.id'
 Default network identifier.
 
 ```typescript
-const RENOWN_NETWORK_ID: string = 'eip155'
+const RENOWN_NETWORK_ID: string = "eip155";
 ```
 
 ---
@@ -825,7 +835,7 @@ const RENOWN_NETWORK_ID: string = 'eip155'
 Default chain identifier.
 
 ```typescript
-const RENOWN_CHAIN_ID: string = '1'
+const RENOWN_CHAIN_ID: string = "1";
 ```
 
 ---
@@ -837,12 +847,14 @@ The SDK extends the global `Window` interface:
 ```typescript
 declare global {
   interface Window {
-    renown?: IRenown
-    connectCrypto?: IConnectCrypto
+    renown?: IRenown;
+    connectCrypto?: IConnectCrypto;
     reactor?: {
-      setGenerateJwtHandler: (handler: (driveUrl: string) => Promise<string>) => void
-      removeJwtHandler: () => void
-    }
+      setGenerateJwtHandler: (
+        handler: (driveUrl: string) => Promise<string>,
+      ) => void;
+      removeJwtHandler: () => void;
+    };
   }
 }
 ```
@@ -852,9 +864,10 @@ declare global {
 Global Renown instance after initialization.
 
 **Usage:**
+
 ```typescript
 if (window.renown) {
-  const user = await window.renown.login('did:pkh:...')
+  const user = await window.renown.login("did:pkh:...");
 }
 ```
 
@@ -863,9 +876,10 @@ if (window.renown) {
 Global ConnectCrypto instance after initialization.
 
 **Usage:**
+
 ```typescript
 if (window.connectCrypto) {
-  const did = await window.connectCrypto.did()
+  const did = await window.connectCrypto.did();
 }
 ```
 
@@ -895,10 +909,10 @@ if (window.connectCrypto) {
 
 ```typescript
 // ✅ Valid
-'did:pkh:eip155:1:0x1234567890123456789012345678901234567890'
+"did:pkh:eip155:1:0x1234567890123456789012345678901234567890";
 
 // ❌ Invalid
-'did:1234567890123456789012345678901234567890'
+"did:1234567890123456789012345678901234567890";
 ```
 
 #### `Renown or ConnectCrypto not available`
@@ -938,7 +952,7 @@ import type {
   RenownUserContextValue,
   IRenown,
   IConnectCrypto,
-} from '@renown/sdk'
+} from "@renown/sdk";
 ```
 
 ---
@@ -946,9 +960,9 @@ import type {
 ## Version Compatibility
 
 | SDK Version | React Version | TypeScript Version |
-|-------------|---------------|-------------------|
-| 5.x | 18.x - 19.x | 4.5+ |
-| 4.x | 18.x | 4.5+ |
+| ----------- | ------------- | ------------------ |
+| 5.x         | 18.x - 19.x   | 4.5+               |
+| 4.x         | 18.x          | 4.5+               |
 
 ---
 

@@ -1,7 +1,7 @@
 {
   "name": "@powerhousedao/reactor-local",
   "type": "module",
-  "version": "6.0.0-dev.108",
+  "version": "6.0.0-dev.111",
   "main": "dist/server.js",
   "repository": {
     "type": "git",
@@ -24,9 +24,9 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@powerhousedao/shared": "workspace:*",
     "@powerhousedao/reactor": "workspace:*",
     "@powerhousedao/reactor-api": "workspace:*",
-    "document-drive": "workspace:*",
     "document-model": "workspace:*",
     "dotenv": "^16.4.5",
     "@openfeature/env-var-provider": "^0.3.1",

@@ -334,70 +334,70 @@ export function Navigation() {
 ### Auth State Listener
 
 ```typescript
-'use client'
+"use client";
 
-import { useUser } from '@renown/sdk'
-import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { toast } from 'react-hot-toast'
+import { useUser } from "@renown/sdk";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "react-hot-toast";
 
 export function AuthStateListener() {
-  const { user, loginStatus } = useUser()
-  const router = useRouter()
+  const { user, loginStatus } = useUser();
+  const router = useRouter();
 
   useEffect(() => {
-    if (loginStatus === 'authorized' && user) {
+    if (loginStatus === "authorized" && user) {
       // User just logged in
-      toast.success(`Welcome back, ${user.name || 'User'}!`)
+      toast.success(`Welcome back, ${user.name || "User"}!`);
 
       // Track analytics
       analytics.identify(user.did, {
         name: user.name,
         ethAddress: user.ethAddress,
-      })
+      });
 
       // Redirect to dashboard
-      router.push('/dashboard')
+      router.push("/dashboard");
     }
-  }, [loginStatus, user, router])
+  }, [loginStatus, user, router]);
 
   useEffect(() => {
-    if (loginStatus === 'not-authorized') {
+    if (loginStatus === "not-authorized") {
       // User logged out
-      toast.info('You have been logged out')
+      toast.info("You have been logged out");
 
       // Clear analytics
-      analytics.reset()
+      analytics.reset();
 
       // Redirect to home
-      router.push('/')
+      router.push("/");
     }
-  }, [loginStatus, router])
+  }, [loginStatus, router]);
 
-  return null // This is a listener component
+  return null; // This is a listener component
 }
 ```
 
 ### Custom Auth Hook with Additional Logic
 
 ```typescript
-'use client'
+"use client";
 
-import { useUser as useRenownAuth } from '@renown/sdk'
-import { useEffect, useState } from 'react'
+import { useUser as useRenownAuth } from "@renown/sdk";
+import { useEffect, useState } from "react";
 
 interface ExtendedAuthState {
-  user: User | null
-  isAuthenticated: boolean
-  isLoading: boolean
-  hasCompletedProfile: boolean
-  login: () => void
-  logout: () => Promise<void>
+  user: User | null;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  hasCompletedProfile: boolean;
+  login: () => void;
+  logout: () => Promise<void>;
 }
 
 export function useUser(): ExtendedAuthState {
-  const auth = useRenownAuth()
-  const [hasCompletedProfile, setHasCompletedProfile] = useState(false)
+  const auth = useRenownAuth();
+  const [hasCompletedProfile, setHasCompletedProfile] = useState(false);
 
   useEffect(() => {
     if (auth.user) {
@@ -406,21 +406,21 @@ export function useUser(): ExtendedAuthState {
         auth.user.name &&
         auth.user.avatar &&
         auth.user.email
-      )
-      setHasCompletedProfile(isComplete)
+      );
+      setHasCompletedProfile(isComplete);
     } else {
-      setHasCompletedProfile(false)
+      setHasCompletedProfile(false);
     }
-  }, [auth.user])
+  }, [auth.user]);
 
   return {
     user: auth.user,
-    isAuthenticated: auth.loginStatus === 'authorized',
+    isAuthenticated: auth.loginStatus === "authorized",
     isLoading: auth.isLoading,
     hasCompletedProfile,
     login: auth.openRenown,
     logout: auth.logout,
-  }
+  };
 }
 ```
 
@@ -487,17 +487,17 @@ Always validate DIDs before processing:
 ```typescript
 function isValidDID(did: string): boolean {
   // Must start with did:pkh:
-  if (!did.startsWith('did:pkh:')) return false
+  if (!did.startsWith("did:pkh:")) return false;
 
   // Must have correct number of parts
-  const parts = did.split(':')
-  if (parts.length !== 5) return false
+  const parts = did.split(":");
+  if (parts.length !== 5) return false;
 
   // Validate ethereum address format
-  const address = parts[4]
-  if (!address.match(/^0x[a-fA-F0-9]{40}$/)) return false
+  const address = parts[4];
+  if (!address.match(/^0x[a-fA-F0-9]{40}$/)) return false;
 
-  return true
+  return true;
 }
 ```
 
@@ -506,10 +506,10 @@ function isValidDID(did: string): boolean {
 Always use HTTPS for Renown URLs:
 
 ```typescript
-const RENOWN_URL = process.env.NEXT_PUBLIC_RENOWN_URL
+const RENOWN_URL = process.env.NEXT_PUBLIC_RENOWN_URL;
 
-if (RENOWN_URL && !RENOWN_URL.startsWith('https://')) {
-  console.warn('WARNING: Renown URL should use HTTPS')
+if (RENOWN_URL && !RENOWN_URL.startsWith("https://")) {
+  console.warn("WARNING: Renown URL should use HTTPS");
 }
 ```
 
@@ -518,12 +518,12 @@ if (RENOWN_URL && !RENOWN_URL.startsWith('https://')) {
 Implement session timeout for security:
 
 ```typescript
-const SESSION_TIMEOUT = 24 * 60 * 60 * 1000 // 24 hours
+const SESSION_TIMEOUT = 24 * 60 * 60 * 1000; // 24 hours
 
 function isSessionValid(timestamp: number): boolean {
-  const now = Date.now()
-  const age = now - timestamp
-  return age < SESSION_TIMEOUT
+  const now = Date.now();
+  const age = now - timestamp;
+  return age < SESSION_TIMEOUT;
 }
 ```
 
@@ -534,21 +534,21 @@ function isSessionValid(timestamp: number): boolean {
 ```typescript
 // Server-side API route
 export async function GET(request: Request) {
-  const authHeader = request.headers.get('authorization')
+  const authHeader = request.headers.get("authorization");
 
   if (!authHeader) {
-    return new Response('Unauthorized', { status: 401 })
+    return new Response("Unauthorized", { status: 401 });
   }
 
   // Verify the JWT/credential with Renown
-  const isValid = await verifyRenownCredential(authHeader)
+  const isValid = await verifyRenownCredential(authHeader);
 
   if (!isValid) {
-    return new Response('Invalid credentials', { status: 403 })
+    return new Response("Invalid credentials", { status: 403 });
   }
 
   // Proceed with authorized request
-  return Response.json({ data: 'Protected data' })
+  return Response.json({ data: "Protected data" });
 }
 ```
 
@@ -598,15 +598,15 @@ Clean up subscriptions and listeners:
 useEffect(() => {
   const handleAuthChange = () => {
     // Handle auth changes
-  }
+  };
 
   // Subscribe to auth events
-  const unsubscribe = subscribeToAuthEvents(handleAuthChange)
+  const unsubscribe = subscribeToAuthEvents(handleAuthChange);
 
   return () => {
-    unsubscribe() // Cleanup
-  }
-}, [])
+    unsubscribe(); // Cleanup
+  };
+}, []);
 ```
 
 ### 4. Error Boundaries
@@ -631,10 +631,10 @@ Wrap auth components in error boundaries:
 
 ```typescript
 // ❌ Wrong
-const user = window.renown?.user
+const user = window.renown?.user;
 
 // ✅ Correct
-const { user } = useUser()
+const { user } = useUser();
 ```
 
 ### Issue: Session not persisting
@@ -645,9 +645,9 @@ const { user } = useUser()
 
 ```typescript
 try {
-  SessionStorageManager.setUserData(data)
+  SessionStorageManager.setUserData(data);
 } catch (error) {
-  console.warn('SessionStorage not available:', error)
+  console.warn("SessionStorage not available:", error);
   // Fallback to in-memory storage
 }
 ```
@@ -661,10 +661,10 @@ try {
 ```typescript
 const handleLogin = useCallback(
   debounce(() => {
-    openRenown()
+    openRenown();
   }, 1000),
-  [openRenown]
-)
+  [openRenown],
+);
 ```
 
 ## Next Steps

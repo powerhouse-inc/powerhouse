@@ -4,11 +4,7 @@ import {
   driveCreateDocument,
   driveCreateState,
 } from "@powerhousedao/shared/document-drive";
-import type {
-  BaseDocumentDriveServer,
-  DriveInput,
-  IDocumentDriveServer,
-} from "document-drive";
+import type { DriveInput } from "@powerhousedao/shared/document-drive";
 import { generateId } from "@powerhousedao/shared/document-model";
 
 export async function addDefaultDrive(

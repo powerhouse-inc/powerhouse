@@ -23,10 +23,18 @@ export interface IOperationIndexTxn {
   createCollection(collectionId: string): void;
 
   /** Adds a document to an existing collection (via relationship operations) */
-  addToCollection(collectionId: string, documentId: string, ordinal: number): void;
+  addToCollection(
+    collectionId: string,
+    documentId: string,
+    ordinal: number,
+  ): void;
 
   /** Removes a document from a collection (via relationship operations) */
-  removeFromCollection(collectionId: string, documentId: string, ordinal: number): void;
+  removeFromCollection(
+    collectionId: string,
+    documentId: string,
+    ordinal: number,
+  ): void;
 
   /** Writes operation rows to the index */
   write(operations: OperationIndexEntry[]): void;
@@ -39,10 +47,7 @@ export interface IOperationIndex {
   /**
    * Commits a transaction.
    */
-  commit(
-    txn: IOperationIndexTxn,
-    signal?: AbortSignal,
-  ): Promise<void>;
+  commit(txn: IOperationIndexTxn, signal?: AbortSignal): Promise<void>;
 
   /**
    * Streams operations for a collection.
@@ -61,44 +66,44 @@ export interface IOperationIndex {
 
 ```tsx
 const operation: Operation = /* reducer output */ {
-  opId: 'op-1',
-  documentId: 'doc-1',
-  branch: 'main',
-  scope: 'document',
+  opId: "op-1",
+  documentId: "doc-1",
+  branch: "main",
+  scope: "document",
   index: 1,
   timestampUtcMs: Date.now(),
-  action: { type: 'CREATE_DOCUMENT', input: {} },
+  action: { type: "CREATE_DOCUMENT", input: {} },
   skip: 0,
 };
 
 // Writing to the operation index
 const txn = operationIndex.start();
-txn.createCollection('collection.doc-123');
+txn.createCollection("collection.doc-123");
 
 txn.write([
   {
-    documentId: 'doc-1',
-    documentType: 'budget',
-    branch: 'main',
-    scope: 'document',
+    documentId: "doc-1",
+    documentType: "budget",
+    branch: "main",
+    scope: "document",
     operation,
   },
 ]);
 
-txn.addToCollection('collection.doc-123', 'doc-1', 1);
+txn.addToCollection("collection.doc-123", "doc-1", 1);
 
 await operationIndex.commit(txn);
 
 // Query operations for a collection
 const page = await operationIndex.find(
-  'collection.doc-123',
+  "collection.doc-123",
   -1,
-  { branch: 'main', scopes: ['document'] },
-  { cursor: '', limit: 100 },
+  { branch: "main", scopes: ["document"] },
+  { cursor: "", limit: 100 },
 );
 ```
 
 ### Links
 
-* [Schema](mdc:schema.md) - Database schema and table definitions
-* [Overview](mdc:operation-index.md) - Detailed architectural overview
+- [Schema](mdc:schema.md) - Database schema and table definitions
+- [Overview](mdc:operation-index.md) - Detailed architectural overview

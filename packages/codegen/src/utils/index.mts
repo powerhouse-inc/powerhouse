@@ -8,3 +8,4 @@ export * from "./syntax-getters.js";
 export * from "./ts-morph-project.js";
 export * from "./unsafe-utils.js";
 export * from "./validation.js";
+export * from "./graphql-type-prefixes.js";

@@ -7,7 +7,7 @@ import {
   driveCreateDocument,
   initialGlobalState,
   initialLocalState,
-} from "document-drive";
+} from "../../gen/utils.js";
 import { describe, expect, it } from "vitest";
 
 describe("Document Drive Document Model", () => {

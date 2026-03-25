@@ -3,11 +3,11 @@
 ## Basic Setup
 
 ```tsx
-import { 
+import {
   ReactorSubscriptionManager,
   DefaultSubscriptionErrorHandler,
-  createDefaultSubscriptionErrorHandler
-} from '@powerhousedao/reactor';
+  createDefaultSubscriptionErrorHandler,
+} from "@powerhousedao/reactor";
 
 // Option 1: Use the default error handler (re-throws errors)
 const errorHandler = createDefaultSubscriptionErrorHandler();
@@ -18,7 +18,7 @@ const customErrorHandler: ISubscriptionErrorHandler = {
   handleError(error: unknown, context: SubscriptionErrorContext) {
     console.error(`Subscription error in ${context.eventType}:`, error);
     // Send to monitoring service, etc.
-  }
+  },
 };
 const subscriptionManager = new ReactorSubscriptionManager(customErrorHandler);
 
@@ -28,7 +28,6 @@ const client = new ReactorClientBuilder()
   .withSigner(signer)
   // If no subscription manager provided, builder creates one with default error handler
   .build();
-
 ```
 
 ## Subscribing to Events
@@ -91,14 +90,17 @@ manager.onDocumentCreated((result) => {
 // Custom handler that logs but doesn't re-throw
 const recoveryHandler: ISubscriptionErrorHandler = {
   handleError(error: unknown, context: SubscriptionErrorContext) {
-    console.error(`Error in ${context.eventType} subscription ${context.subscriptionId}:`, error);
-    
+    console.error(
+      `Error in ${context.eventType} subscription ${context.subscriptionId}:`,
+      error,
+    );
+
     // Could implement recovery logic based on error type
-    if (context.eventType === 'created' && isRetryableError(error)) {
+    if (context.eventType === "created" && isRetryableError(error)) {
       // Schedule retry logic
       scheduleRetry(context);
     }
-  }
+  },
 };
 
 const manager = new ReactorSubscriptionManager(recoveryHandler);
@@ -112,18 +114,18 @@ const monitoringHandler: ISubscriptionErrorHandler = {
   handleError(error: unknown, context: SubscriptionErrorContext) {
     // Log locally
     console.error(`Subscription error:`, { error, context });
-    
+
     // Send to monitoring service
     sendToSentry(error, {
       tags: {
         eventType: context.eventType,
-        subscriptionId: context.subscriptionId
+        subscriptionId: context.subscriptionId,
       },
       extra: {
-        eventData: context.eventData
-      }
+        eventData: context.eventData,
+      },
     });
-  }
+  },
 };
 ```
 

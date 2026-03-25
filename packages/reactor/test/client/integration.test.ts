@@ -272,6 +272,102 @@ describe("ReactorClient Integration Tests", () => {
         expect(result.results.length).toBe(0);
       });
     });
+
+    describe("getOperations", () => {
+      it("should retrieve operations for a document", async () => {
+        const doc = createDocModelDocument({ id: "ops-test-1" });
+        await client.create(doc);
+
+        await client.execute("ops-test-1", "main", [
+          actions.setName("Name 1"),
+          actions.setName("Name 2"),
+        ]);
+
+        const result = await client.getOperations("ops-test-1");
+
+        expect(result.results.length).toBeGreaterThanOrEqual(2);
+      });
+
+      it("should support pagination with single scope", async () => {
+        const doc = createDocModelDocument({ id: "ops-paginate-single" });
+        await client.create(doc);
+
+        await client.execute("ops-paginate-single", "main", [
+          actions.setName("Name 1"),
+          actions.setName("Name 2"),
+          actions.setName("Name 3"),
+        ]);
+
+        const allGlobalOps = await client.getOperations("ops-paginate-single", {
+          scopes: ["global"],
+        });
+        const totalGlobal = allGlobalOps.results.length;
+        expect(totalGlobal).toBeGreaterThan(2);
+
+        const firstPage = await client.getOperations(
+          "ops-paginate-single",
+          { scopes: ["global"] },
+          undefined,
+          { cursor: "", limit: 2 },
+        );
+
+        // Global scope has 3 SET_NAME ops at indices 0, 1, 2
+        expect(firstPage.results.length).toBe(2);
+        expect(firstPage.results.map((op) => op.index)).toEqual([0, 1]);
+        expect(firstPage.nextCursor).toBeDefined();
+
+        const secondPage = await client.getOperations(
+          "ops-paginate-single",
+          { scopes: ["global"] },
+          undefined,
+          { cursor: firstPage.nextCursor!, limit: 2 },
+        );
+
+        expect(secondPage.results.length).toBe(1);
+        expect(secondPage.results.map((op) => op.index)).toEqual([2]);
+      });
+
+      it.todo("should support pagination with multiple scopes", async () => {
+        const doc = createDocModelDocument({ id: "ops-paginate-multi" });
+        await client.create(doc);
+
+        await client.execute("ops-paginate-multi", "main", [
+          actions.setName("Name 1"),
+          actions.setName("Name 2"),
+          actions.setName("Name 3"),
+        ]);
+
+        // document scope: CREATE_DOCUMENT (0), UPGRADE_DOCUMENT (1)
+        // global scope: SET_NAME (0), SET_NAME (1), SET_NAME (2)
+        // flattened and sorted by index: [0,0,1,1,2]
+        const allOps = await client.getOperations("ops-paginate-multi");
+        expect(allOps.results.length).toBe(5);
+        expect(allOps.results.map((op) => op.index)).toEqual([0, 0, 1, 1, 2]);
+
+        // With limit 2 per scope, first page returns 4 ops (2 per scope),
+        // but global scope still has index 2 remaining
+        const firstPage = await client.getOperations(
+          "ops-paginate-multi",
+          undefined,
+          undefined,
+          { cursor: "", limit: 2 },
+        );
+
+        expect(firstPage.results.length).toBe(4);
+        expect(firstPage.results.map((op) => op.index)).toEqual([0, 0, 1, 1]);
+        expect(firstPage.nextCursor).toBeDefined();
+
+        const secondPage = await client.getOperations(
+          "ops-paginate-multi",
+          undefined,
+          undefined,
+          { cursor: firstPage.nextCursor!, limit: 2 },
+        );
+
+        expect(secondPage.results.length).toBe(1);
+        expect(secondPage.results.map((op) => op.index)).toEqual([2]);
+      });
+    });
   });
 
   describe("Document Creation", () => {
