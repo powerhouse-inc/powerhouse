@@ -1,15 +1,14 @@
+import { generateProcessor } from "@powerhousedao/codegen";
 import type { ProcessorApps } from "@powerhousedao/shared/processors";
 import { $ } from "bun";
 import { describe, it } from "bun:test";
-import { cp } from "node:fs/promises";
 import path from "path";
-import { generateProcessor } from "@powerhousedao/codegen";
+import { DATA, TEST_OUTPUT } from "../constants.js";
+import { cpForce } from "../utils.js";
 
-const testOutputDir = path.join(process.cwd(), "test-output");
-const testsDataDir = path.join(process.cwd(), "data");
-const dataDirName = "test-project";
-const parentOutDirName = "generate-processors";
-const testOutputParentDir = path.join(testOutputDir, parentOutDirName);
+const outDir = path.join(process.cwd(), TEST_OUTPUT);
+const dataDir = path.join(process.cwd(), DATA);
+const testOutputParentDir = path.join(outDir, "generate-processors");
 type ProcessorTestsInput = {
   processorName: string;
   processorType: "analytics" | "relationalDb";
@@ -22,13 +21,9 @@ async function runProcessorTests(args: {
 }) {
   const { outDirName, inputs } = args;
 
-  const dataDir = path.join(testsDataDir, dataDirName);
   const outDir = path.join(testOutputParentDir, outDirName);
 
-  await cp(dataDir, outDir, {
-    recursive: true,
-    force: true,
-  });
+  await cpForce(dataDir, outDir);
 
   for (const input of inputs) {
     await generateProcessor({

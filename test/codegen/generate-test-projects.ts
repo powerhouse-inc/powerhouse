@@ -1,19 +1,32 @@
-import { createProject } from "@powerhousedao/codegen";
-import { cp, rm } from "fs/promises";
+import {
+  createProject,
+  generateDriveEditor,
+  generateEditor,
+} from "@powerhousedao/codegen";
 import { join } from "path";
 import { readPackage } from "read-pkg";
 import { writePackage } from "write-package";
-import { loadDocumentModelsInDir } from "./utils.js";
+import {
+  DATA,
+  DOCUMENT_MODELS,
+  SPEC_VERSION_1,
+  SPEC_VERSION_2,
+  TEST_PROJECT,
+  WITH_DOCUMENT_MODELS,
+  WITH_DOCUMENT_MODELS_SPEC_1,
+  WITH_DOCUMENT_MODELS_SPEC_2,
+  WITH_EDITORS,
+} from "./constants.js";
+import { cpForce, loadDocumentModelsInDir, rmForce } from "./utils.js";
 
-const dataDir = join(process.cwd(), "data");
-const testProject = "test-project";
+const dataDir = join(process.cwd(), DATA);
 
 process.chdir(dataDir);
 
-await rm(testProject, { recursive: true, force: true });
+await rmForce(TEST_PROJECT);
 
 await createProject({
-  name: testProject,
+  name: TEST_PROJECT,
   packageManager: "pnpm",
   skipGitInit: true,
   skipInstall: true,
@@ -26,60 +39,66 @@ packageJson.peerDependencies = {};
 packageJson.optionalDependencies = {};
 await writePackage(packageJson);
 
-const testProjectWithDocumentModels = "test-project-with-document-models";
+await rmForce(WITH_DOCUMENT_MODELS);
 
-await rm(testProjectWithDocumentModels, {
-  recursive: true,
-  force: true,
-});
-
-await cp(
-  join(dataDir, testProject),
-  join(dataDir, testProjectWithDocumentModels),
-  {
-    recursive: true,
-    force: true,
-  },
-);
+await cpForce(join(dataDir, TEST_PROJECT), join(dataDir, WITH_DOCUMENT_MODELS));
 
 await loadDocumentModelsInDir(
-  join(dataDir, "document-models"),
-  join(dataDir, testProjectWithDocumentModels),
+  join(dataDir, DOCUMENT_MODELS),
+  join(dataDir, WITH_DOCUMENT_MODELS),
   false,
 );
 
-const withDocumentModelsSpec1 = "with-document-models-at-spec-1";
+await rmForce(WITH_DOCUMENT_MODELS_SPEC_1);
 
-await rm(withDocumentModelsSpec1, {
-  recursive: true,
-  force: true,
-});
-
-await cp(join(dataDir, testProject), join(dataDir, withDocumentModelsSpec1), {
-  recursive: true,
-  force: true,
-});
+await cpForce(
+  join(dataDir, TEST_PROJECT),
+  join(dataDir, WITH_DOCUMENT_MODELS_SPEC_1),
+);
 
 await loadDocumentModelsInDir(
-  join(dataDir, "spec-version-1"),
-  join(dataDir, withDocumentModelsSpec1),
+  join(dataDir, SPEC_VERSION_1),
+  join(dataDir, WITH_DOCUMENT_MODELS_SPEC_1),
   true,
 );
 
-const withDocumentModelsSpec2 = "with-document-models-at-spec-2";
+await rmForce(WITH_DOCUMENT_MODELS_SPEC_2);
 
-await rm(withDocumentModelsSpec2, {
-  recursive: true,
-  force: true,
-});
-
-await cp(join(dataDir, testProject), join(dataDir, withDocumentModelsSpec2), {
-  recursive: true,
-  force: true,
-});
+await cpForce(
+  join(dataDir, TEST_PROJECT),
+  join(dataDir, WITH_DOCUMENT_MODELS_SPEC_2),
+);
 
 await loadDocumentModelsInDir(
-  join(dataDir, "spec-version-2"),
-  join(dataDir, withDocumentModelsSpec2),
+  join(dataDir, SPEC_VERSION_2),
+  join(dataDir, WITH_DOCUMENT_MODELS_SPEC_2),
   true,
 );
+
+await rmForce(WITH_EDITORS);
+
+await cpForce(join(dataDir, WITH_DOCUMENT_MODELS), join(dataDir, WITH_EDITORS));
+
+const cwd = process.cwd();
+
+process.chdir(join(dataDir, WITH_EDITORS));
+await generateEditor({
+  editorId: "existing-document-editor",
+  editorName: "ExistingDocumentEditor",
+  documentTypes: ["powerhouse/test-doc"],
+  useTsMorph: true,
+  skipFormat: false,
+  specifiedPackageName: undefined,
+  editorDirName: undefined,
+});
+await generateDriveEditor({
+  driveEditorId: "existing-drive-editor",
+  driveEditorName: "ExistingDriveEditor",
+  allowedDocumentTypes: ["powerhouse/test-doc"],
+  specifiedPackageName: undefined,
+  driveEditorDirName: undefined,
+  useTsMorph: true,
+  isDragAndDropEnabled: true,
+  skipFormat: false,
+});
+process.chdir(cwd);

@@ -15,7 +15,7 @@
   ],
   "sideEffects": false,
   "scripts": {
-    "regenerate-test-projects": "tsx ./regenerate-test-projects.ts",
+    "generate-test-projects": "tsx ./generate-test-projects.ts",
     "test:bun": "bun test --timeout 1000000",
     "test": "pnpm test:bun ./tests/*.test.ts"
   },
@@ -33,6 +33,7 @@
     "@powerhousedao/config": "workspace:*",
     "@powerhousedao/common": "workspace:*",
     "@powerhousedao/connect": "workspace:*",
+    "@powerhousedao/document-engineering": "catalog:",
     "document-model": "workspace:*",
     "@powerhousedao/analytics-engine-core": "workspace:*",
     "@powerhousedao/design-system": "workspace:*",

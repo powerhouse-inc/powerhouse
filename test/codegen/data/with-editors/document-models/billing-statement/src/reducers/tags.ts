@@ -1,0 +1,8 @@
+import type { BillingStatementTagsOperations } from "document-models/billing-statement";
+
+export const billingStatementTagsOperations: BillingStatementTagsOperations = {
+  editLineItemTagOperation(state, action) {
+    // TODO: implement editLineItemTagOperation reducer
+    throw new Error("Reducer for 'editLineItemTagOperation' not implemented.");
+  },
+};

@@ -5,15 +5,16 @@ import type {
 } from "@powerhousedao/config";
 import { fileExists } from "@powerhousedao/shared/clis";
 import { describe, expect, it } from "bun:test";
-import { cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
-import path from "node:path";
+import { readFile, writeFile } from "node:fs/promises";
+import { join } from "node:path";
+import { DATA, TEST_OUTPUT, TEST_PROJECT } from "../constants.js";
+import { cpForce, mkdirRecursive, rmForce } from "../utils.js";
 
-const testOutputDir = path.join(process.cwd(), "test-output");
-const testDataDir = path.join(process.cwd(), "data");
-const parentOutDirName = "generate-manifest";
-const testOutputParentDir = path.join(testOutputDir, parentOutDirName);
-await rm(testOutputParentDir, { recursive: true, force: true });
-await mkdir(testOutputParentDir, { recursive: true });
+const testOutputDir = join(process.cwd(), TEST_OUTPUT);
+const testDataDir = join(process.cwd(), DATA);
+const testOutputParentDir = join(testOutputDir, "generate-manifest");
+await rmForce(testOutputParentDir);
+await mkdirRecursive(testOutputParentDir);
 
 describe("generateManifest", () => {
   it("should generate a new manifest from scratch with partial data", async () => {
@@ -22,17 +23,12 @@ describe("generateManifest", () => {
       description: "Test package description",
     };
 
-    const testOutDirPath = path.join(
-      testOutputParentDir,
-      "manifest-from-scratch",
-    );
-    await mkdir(testOutDirPath, { recursive: true });
+    const testOutDirPath = join(testOutputParentDir, "manifest-from-scratch");
+    await mkdirRecursive(testOutDirPath);
     const manifestPath = generateManifest(manifestData, testOutDirPath);
 
     expect(await fileExists(manifestPath)).toBe(true);
-    expect(manifestPath).toBe(
-      path.join(testOutDirPath, "powerhouse.manifest.json"),
-    );
+    expect(manifestPath).toBe(join(testOutDirPath, "powerhouse.manifest.json"));
 
     const content = await readFile(manifestPath, "utf-8");
     const manifest = JSON.parse(content) as PowerhouseManifest;
@@ -53,13 +49,13 @@ describe("generateManifest", () => {
       name: "@updated/package",
       description: "Updated description",
     };
-    const testOutDirPath = path.join(
+    const testOutDirPath = join(
       testOutputParentDir,
       "update-existing-manifest",
     );
-    await cp(
-      path.join(testDataDir, "test-project", "powerhouse.manifest.json"),
-      path.join(testOutDirPath, "powerhouse.manifest.json"),
+    await cpForce(
+      join(testDataDir, TEST_PROJECT, "powerhouse.manifest.json"),
+      join(testOutDirPath, "powerhouse.manifest.json"),
     );
     const manifestPath = generateManifest(updateData, testOutDirPath);
     const content = await readFile(manifestPath, "utf-8");
@@ -82,13 +78,13 @@ describe("generateManifest", () => {
       },
     };
 
-    const testOutDirPath = path.join(
+    const testOutDirPath = join(
       testOutputParentDir,
       "update-publisher-partially",
     );
-    await cp(
-      path.join(testDataDir, "test-project", "powerhouse.manifest.json"),
-      path.join(testOutDirPath, "powerhouse.manifest.json"),
+    await cpForce(
+      join(testDataDir, TEST_PROJECT, "powerhouse.manifest.json"),
+      join(testOutDirPath, "powerhouse.manifest.json"),
     );
     const manifestPath = generateManifest(updateData, testOutDirPath);
 
@@ -102,12 +98,12 @@ describe("generateManifest", () => {
   });
 
   it("should handle malformed existing manifest gracefully", async () => {
-    const testOutDirPath = path.join(
+    const testOutDirPath = join(
       testOutputParentDir,
       "handle-malformed-existing-manifest",
     );
-    await mkdir(testOutDirPath);
-    const manifestPath = path.join(testOutDirPath, "powerhouse.manifest.json");
+    await mkdirRecursive(testOutDirPath);
+    const manifestPath = join(testOutDirPath, "powerhouse.manifest.json");
     await writeFile(manifestPath, "{ invalid json }");
 
     const updateData = {
@@ -167,13 +163,10 @@ describe("generateManifest", () => {
       ],
     };
 
-    const testOutDirPath = path.join(
-      testOutputParentDir,
-      "validate-json-structure",
-    );
-    await cp(
-      path.join(testDataDir, "test-project", "powerhouse.manifest.json"),
-      path.join(testOutDirPath, "powerhouse.manifest.json"),
+    const testOutDirPath = join(testOutputParentDir, "validate-json-structure");
+    await cpForce(
+      join(testDataDir, TEST_PROJECT, "powerhouse.manifest.json"),
+      join(testOutDirPath, "powerhouse.manifest.json"),
     );
     const manifestPath = generateManifest(manifestData, testOutDirPath);
     const content = await readFile(manifestPath, "utf-8");

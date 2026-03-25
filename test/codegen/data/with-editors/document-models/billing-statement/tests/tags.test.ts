@@ -1,0 +1,28 @@
+import { generateMock } from "document-model";
+import { describe, expect, it } from "vitest";
+import {
+  reducer,
+  utils,
+  isBillingStatementDocument,
+  editLineItemTag,
+  EditLineItemTagInputSchema,
+} from "document-models/billing-statement";
+
+describe("TagsOperations", () => {
+  it("should handle editLineItemTag operation", () => {
+    const document = utils.createDocument();
+    const input = generateMock(EditLineItemTagInputSchema());
+
+    const updatedDocument = reducer(document, editLineItemTag(input));
+
+    expect(isBillingStatementDocument(updatedDocument)).toBe(true);
+    expect(updatedDocument.operations.global).toHaveLength(1);
+    expect(updatedDocument.operations.global[0].action.type).toBe(
+      "EDIT_LINE_ITEM_TAG",
+    );
+    expect(updatedDocument.operations.global[0].action.input).toStrictEqual(
+      input,
+    );
+    expect(updatedDocument.operations.global[0].index).toEqual(0);
+  });
+});

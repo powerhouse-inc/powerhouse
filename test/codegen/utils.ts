@@ -2,7 +2,8 @@ import {
   generateDocumentModel,
   loadDocumentModel,
 } from "@powerhousedao/codegen";
-import { readdir } from "node:fs/promises";
+import type { PathLike } from "node:fs";
+import { cp, mkdir, readdir, rm } from "node:fs/promises";
 import path from "path";
 
 export function getDocumentModelJsonFilePath(
@@ -44,4 +45,22 @@ export async function loadDocumentModelsInDir(
       specifiedPackageName: "test-project",
     });
   }
+}
+
+export async function cpForce(source: string | URL, destination: string | URL) {
+  await cp(source, destination, {
+    recursive: true,
+    force: true,
+  });
+}
+
+export async function rmForce(path: PathLike) {
+  await rm(path, {
+    recursive: true,
+    force: true,
+  });
+}
+
+export async function mkdirRecursive(path: PathLike) {
+  await mkdir(path, { recursive: true });
 }

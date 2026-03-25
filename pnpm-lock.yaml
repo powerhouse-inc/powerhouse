@@ -2654,6 +2654,9 @@ importers:
       '@powerhousedao/design-system':
         specifier: workspace:*
         version: link:../../packages/design-system
+      '@powerhousedao/document-engineering':
+        specifier: 'catalog:'
+        version: 1.40.1(@types/express@5.0.6)(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(bufferutil@4.1.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(typescript@5.9.3)(utf-8-validate@6.0.6)
       '@powerhousedao/reactor-browser':
         specifier: workspace:*
         version: link:../../packages/reactor-browser
