@@ -2125,9 +2125,6 @@ importers:
       document-model:
         specifier: link:../document-model
         version: link:../document-model
-      express:
-        specifier: ^4.21.1
-        version: 4.22.1
       vite:
         specifier: 'catalog:'
         version: 8.0.2(@types/node@25.2.3)(esbuild@0.27.3)(jiti@2.6.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2)
@@ -2135,9 +2132,6 @@ importers:
         specifier: 'catalog:'
         version: 4.3.6
     devDependencies:
-      '@types/express':
-        specifier: ^4.17.25
-        version: 4.17.25
       '@types/node':
         specifier: 'catalog:'
         version: 25.2.3
