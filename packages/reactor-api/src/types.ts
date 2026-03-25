@@ -14,7 +14,7 @@ export type {
 } from "./packages/types.js";
 
 export type API = {
-  app: IHttpAdapter;
+  httpAdapter: IHttpAdapter;
   graphqlManager: GraphQLManager;
   packages: IPackageManager;
 };

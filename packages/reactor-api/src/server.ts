@@ -595,7 +595,7 @@ async function _setupAPI(
   }
 
   return {
-    app: httpAdapter,
+    httpAdapter,
     graphqlManager,
     packages,
   };
