@@ -1,5 +1,5 @@
-import type { DocumentModelVariableNames } from "@powerhousedao/codegen/file-builders";
 import { ts } from "@tmpl/core";
+import type { DocumentModelVariableNames } from "file-builders";
 
 export const documentModelUtilsTemplate = ({
   phStateName,

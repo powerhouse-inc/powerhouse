@@ -6,11 +6,11 @@ import {
   DeclarationManager,
   DirectoryManager,
   ImportManager,
+  ReducerGenerator,
 } from "@powerhousedao/codegen";
+import { beforeEach, describe, expect, it } from "bun:test";
 import { camelCase, kebabCase, pascalCase } from "change-case";
 import { Project } from "ts-morph";
-import { beforeEach, describe, expect, it } from "vitest";
-import { ReducerGenerator } from "../core/ReducerGenerator.js";
 
 function makeVariableAndTypeNamesFromContext(context: GenerationContext) {
   const typeImportPath = `${context.packageName}/document-models/${kebabCase(context.docModel.name)}`;

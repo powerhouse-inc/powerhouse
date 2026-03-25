@@ -1,7 +1,7 @@
 import { generateEditor } from "@powerhousedao/codegen";
 import { directoryExists, fileExists } from "@powerhousedao/shared/clis";
 import { $ } from "bun";
-import { describe, expect, it } from "bun:test";
+import { afterAll, describe, expect, it } from "bun:test";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import {
@@ -12,12 +12,16 @@ import {
 } from "../constants.js";
 import { cpForce } from "../utils.js";
 
-const parentOutDir = join(process.cwd(), TEST_OUTPUT);
-const dataDir = join(process.cwd(), DATA);
+const cwd = process.cwd();
+const parentOutDir = join(cwd, TEST_OUTPUT);
+const dataDir = join(cwd, DATA);
 
 type GenerateEditorOptions = Parameters<typeof generateEditor>[0];
 
 describe("generateEditor", () => {
+  afterAll(() => {
+    process.chdir(cwd);
+  });
   const editorName = "TestDocEditor";
   const documentTypes = ["powerhouse/test-doc"];
   const editorId = "test-document-model-editor";

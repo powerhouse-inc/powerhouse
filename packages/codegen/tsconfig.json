@@ -2,11 +2,18 @@
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
     "outDir": "./dist",
+    "emitDeclarationOnly": true,
     "lib": [
       "ESNext",
       "dom",
       "dom.iterable"
-    ]
+    ],
+    "paths": {
+      "templates": ["./src/templates/index.mts"],
+      "file-builders": ["./src/file-builders/index.mts"],
+      "name-builders": ["./src/name-builders/index.mts"],
+      "utils": ["./src/utils/index.mts"],
+    }
   },
   "include": [
     "**/*"

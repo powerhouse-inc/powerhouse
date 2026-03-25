@@ -1,24 +1,24 @@
 import type { CommonGenerateEditorArgs } from "@powerhousedao/codegen";
-import {
-  createDocumentFileTemplate,
-  driveEditorConfigFileTemplate,
-  driveEditorDriveContentsFileTemplate,
-  driveEditorEditorFileTemplate,
-  driveEditorFilesFileTemplate,
-  driveEditorFoldersFileTemplate,
-  driveExplorerFileTemplate,
-  driveExplorerNavigationBreadcrumbsFileTemplate,
-  emptyStateFileTemplate,
-  folderTreeFileTemplate,
-} from "@powerhousedao/codegen/templates";
-import {
-  buildTsMorphProject,
-  ensureDirectoriesExist,
-  formatSourceFileWithPrettier,
-  getOrCreateSourceFile,
-} from "@powerhousedao/codegen/utils";
 import path from "path";
+import {
+    createDocumentFileTemplate,
+    driveEditorConfigFileTemplate,
+    driveEditorDriveContentsFileTemplate,
+    driveEditorEditorFileTemplate,
+    driveEditorFilesFileTemplate,
+    driveEditorFoldersFileTemplate,
+    driveExplorerFileTemplate,
+    driveExplorerNavigationBreadcrumbsFileTemplate,
+    emptyStateFileTemplate,
+    folderTreeFileTemplate,
+} from "templates";
 import { type Project } from "ts-morph";
+import {
+    buildTsMorphProject,
+    ensureDirectoriesExist,
+    formatSourceFileWithPrettier,
+    getOrCreateSourceFile,
+} from "utils";
 import { makeEditorModuleFile } from "./editor-common.js";
 import { makeEditorsModulesFile } from "./module-files.js";
 

@@ -1160,6 +1160,9 @@ importers:
       '@tmpl/core':
         specifier: npm:@jsr/tmpl__core@^0.6.3
         version: '@jsr/tmpl__core@0.6.3'
+      '@types/node':
+        specifier: 'catalog:'
+        version: 25.2.3
       arg:
         specifier: ^5.0.2
         version: 5.0.2
@@ -1196,13 +1199,9 @@ importers:
       ts-morph:
         specifier: 'catalog:'
         version: 27.0.2
-    devDependencies:
-      '@types/node':
+      tsdown:
         specifier: 'catalog:'
-        version: 25.2.3
-      tsx:
-        specifier: 'catalog:'
-        version: 4.21.0
+        version: 0.21.0(oxc-resolver@11.19.0)(synckit@0.11.12)(typescript@5.9.3)
 
   packages/common:
     dependencies:
@@ -2630,6 +2629,9 @@ importers:
       '@vitejs/plugin-react':
         specifier: 'catalog:'
         version: 5.1.4(vite@7.3.1(@types/node@25.2.3)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2))
+      change-case:
+        specifier: 'catalog:'
+        version: 5.4.4
       document-drive:
         specifier: link:../../packages/document-drive
         version: link:../../packages/document-drive
@@ -2642,6 +2644,9 @@ importers:
       graphql-codegen-typescript-validation-schema:
         specifier: 'catalog:'
         version: 0.18.1(graphql@16.12.0)(zod@4.3.6)
+      package-json-validator:
+        specifier: 1.3.1
+        version: 1.3.1
       read-pkg:
         specifier: 'catalog:'
         version: 10.1.0
@@ -17271,6 +17276,10 @@ packages:
   package-json-from-dist@1.0.1:
     resolution: {integrity: sha512-UEZIS3/by4OC8vL3P2dTXRETpebLI2NiI5vIrjaD/5UtrkFX/tNbwjTSRAGC/+7CAo2pIcBaRgWmcBBHcsaCIw==}
 
+  package-json-validator@1.3.1:
+    resolution: {integrity: sha512-RfUMqyBoLa1qcPsKNAksnVDRuzDvLi//RqfMbf52RNMKsm+cWR/3Cfe6hvrTS/ATtEwvtm/57dPggXsau6++uA==}
+    engines: {node: ^20.19.0 || ^22.12.0 || >=24.0.0}
+
   package-json@8.1.1:
     resolution: {integrity: sha512-cbH9IAIJHNj9uXi196JVsRlt7cHKak6u/e6AkL/bkRelZ7rlL3X1YKxsZwa36xipOEKAsdtmaG6aAJoM1fx2zA==}
     engines: {node: '>=14.16'}
@@ -29685,7 +29694,7 @@ snapshots:
       debug: 4.4.3(supports-color@5.5.0)
       invariant: 2.2.4
       metro: 0.83.5(bufferutil@4.1.0)(utf-8-validate@6.0.6)
-      metro-config: 0.83.5(bufferutil@4.1.0)(utf-8-validate@6.0.6)
+      metro-config: 0.83.5(bufferutil@4.1.0)(utf-8-validate@5.0.10)
       metro-core: 0.83.5
       semver: 7.7.4
     transitivePeerDependencies:
@@ -40027,22 +40036,6 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  metro-config@0.83.5(bufferutil@4.1.0)(utf-8-validate@6.0.6):
-    dependencies:
-      connect: 3.7.0
-      flow-enums-runtime: 0.0.6
-      jest-validate: 29.7.0
-      metro: 0.83.5(bufferutil@4.1.0)(utf-8-validate@6.0.6)
-      metro-cache: 0.83.5
-      metro-core: 0.83.5
-      metro-runtime: 0.83.5
-      yaml: 2.8.2
-    transitivePeerDependencies:
-      - bufferutil
-      - supports-color
-      - utf-8-validate
-    optional: true
-
   metro-core@0.83.3:
     dependencies:
       flow-enums-runtime: 0.0.6
@@ -40365,7 +40358,7 @@ snapshots:
       metro-babel-transformer: 0.83.5
       metro-cache: 0.83.5
       metro-cache-key: 0.83.5
-      metro-config: 0.83.5(bufferutil@4.1.0)(utf-8-validate@6.0.6)
+      metro-config: 0.83.5(bufferutil@4.1.0)(utf-8-validate@5.0.10)
       metro-core: 0.83.5
       metro-file-map: 0.83.5
       metro-resolver: 0.83.5
@@ -41777,6 +41770,12 @@ snapshots:
       find-up-simple: 1.0.1
 
   package-json-from-dist@1.0.1: {}
+
+  package-json-validator@1.3.1:
+    dependencies:
+      semver: 7.7.4
+      validate-npm-package-license: 3.0.4
+      validate-npm-package-name: 7.0.2
 
   package-json@8.1.1:
     dependencies:

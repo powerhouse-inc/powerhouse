@@ -1,15 +1,15 @@
-import {
-  relationalDbFactoryTemplate,
-  relationalDbIndexTemplate,
-  relationalDbMigrationsTemplate,
-  relationalDbSchemaTemplate,
-} from "@powerhousedao/codegen/templates";
-import {
-  formatSourceFileWithPrettier,
-  getOrCreateSourceFile,
-} from "@powerhousedao/codegen/utils";
 import path from "path";
+import {
+    relationalDbFactoryTemplate,
+    relationalDbIndexTemplate,
+    relationalDbMigrationsTemplate,
+    relationalDbSchemaTemplate,
+} from "templates";
 import type { Project } from "ts-morph";
+import {
+    formatSourceFileWithPrettier,
+    getOrCreateSourceFile,
+} from "utils";
 import type { GenerateProcessorArgs } from "./types.js";
 
 export async function tsMorphGenerateRelationalDbProcessor(

@@ -1,6 +1,6 @@
 import { validate } from "package-json-validator";
 import { describe, expect, test } from "vitest";
-import { buildBoilerplatePackageJson } from "./package.json.js";
+import { buildBoilerplatePackageJson } from "@powerhousedao/codegen/file-builders";
 
 describe("Build boilerplate package.json file", () => {
   test("Should build a versioned boilerplate with version", async () => {

@@ -1,16 +1,16 @@
 import type { DocumentModelFileMakerArgs } from "@powerhousedao/codegen";
-import {
-  documentModelHooksFileTemplate,
-  documentModelIndexTemplate,
-  documentModelModuleFileTemplate,
-  documentModelRootActionsFileTemplate,
-  documentModelUtilsTemplate,
-} from "@powerhousedao/codegen/templates";
-import {
-  formatSourceFileWithPrettier,
-  getOrCreateSourceFile,
-} from "@powerhousedao/codegen/utils";
 import path from "path";
+import {
+    documentModelHooksFileTemplate,
+    documentModelIndexTemplate,
+    documentModelModuleFileTemplate,
+    documentModelRootActionsFileTemplate,
+    documentModelUtilsTemplate,
+} from "templates";
+import {
+    formatSourceFileWithPrettier,
+    getOrCreateSourceFile,
+} from "utils";
 
 export async function makeRootDirFiles(
   fileMakerArgs: DocumentModelFileMakerArgs,

@@ -1,17 +1,20 @@
 import { createProject } from "@powerhousedao/codegen";
 import { $ } from "bun";
-import { describe, test } from "bun:test";
+import { afterAll, describe, test } from "bun:test";
 import { join } from "path";
 import process from "process";
 import { TEST_OUTPUT } from "../constants.js";
 import { mkdirRecursive, rmForce } from "../utils.js";
 
-const testOutputDir = join(process.cwd(), TEST_OUTPUT);
+const cwd = process.cwd();
+const testOutputDir = join(cwd, TEST_OUTPUT);
 const outDir = join(testOutputDir, "generate-boilerplate");
 
 describe("generate boilerplate", () => {
+  afterAll(() => {
+    process.chdir(cwd);
+  });
   test("should generate correct boilerplate", async () => {
-    const originalDir = process.cwd();
     const name = "test-boilerplate-project";
     await rmForce(outDir);
     await mkdirRecursive(outDir);
@@ -23,7 +26,6 @@ describe("generate boilerplate", () => {
       skipGitInit: true,
       skipInstall: true,
     });
-    process.chdir(originalDir);
     const generatedProjectDir = join(outDir, name);
     await $`bun run --cwd ${generatedProjectDir} tsc --noEmit`;
   });

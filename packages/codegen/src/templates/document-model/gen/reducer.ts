@@ -1,10 +1,10 @@
-import type { DocumentModelTemplateInputs } from "@powerhousedao/codegen/file-builders";
+import type {
+    ModuleSpecification,
+    OperationSpecification,
+} from "@powerhousedao/shared";
 import { ts } from "@tmpl/core";
 import { camelCase, constantCase, kebabCase, pascalCase } from "change-case";
-import type {
-  ModuleSpecification,
-  OperationSpecification,
-} from "@powerhousedao/shared";
+import type { DocumentModelTemplateInputs } from "file-builders";
 
 function makePascalCaseOperationName(operation: OperationSpecification) {
   if (!operation.name) {

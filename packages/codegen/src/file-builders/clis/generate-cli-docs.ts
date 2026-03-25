@@ -1,7 +1,7 @@
 import type { CommandEntry, CommandHelpInfo } from "@powerhousedao/codegen";
-import { docsFromCliHelpTemplate } from "@powerhousedao/codegen/templates";
 import { writeFile } from "node:fs/promises";
 import { stripVTControlCharacters } from "node:util";
+import { docsFromCliHelpTemplate } from "templates";
 export function getCommandHelpInfo<TEntry extends CommandEntry>(
   entry: TEntry,
 ): CommandHelpInfo {

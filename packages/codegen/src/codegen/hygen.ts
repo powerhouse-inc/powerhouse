@@ -1,13 +1,13 @@
-import { makeEditorsModulesFile } from "@powerhousedao/codegen/file-builders";
-import { buildTsMorphProject } from "@powerhousedao/codegen/utils";
 import type { PowerhouseConfig } from "@powerhousedao/shared/clis";
-import { pascalCase } from "change-case";
 import type { DocumentModelGlobalState } from "@powerhousedao/shared/document-model";
+import { pascalCase } from "change-case";
+import { makeEditorsModulesFile } from "file-builders";
 import { Logger, runner } from "hygen";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { readPackage } from "read-pkg";
+import { buildTsMorphProject } from "utils";
 import type { CodegenOptions, DocumentTypesMap } from "./types.js";
 
 const require = createRequire(import.meta.url);

@@ -1,42 +1,41 @@
-import { buildBoilerplatePackageJson } from "@powerhousedao/codegen/file-builders";
-import {
-  agentsTemplate,
-  buildPowerhouseConfigTemplate,
-  claudeSettingsLocalTemplate,
-  claudeTemplate,
-  connectEntrypointTemplate,
-  cursorMcpTemplate,
-  dockerfileTemplate,
-  documentModelsIndexTemplate,
-  documentModelsTemplate,
-  editorsIndexTemplate,
-  editorsTemplate,
-  eslintConfigTemplate,
-  geminiSettingsTemplate,
-  gitIgnoreTemplate,
-  indexHtmlTemplate,
-  indexTsTemplate,
-  licenseTemplate,
-  mainTsxTemplate,
-  mcpTemplate,
-  nginxConfTemplate,
-  npmrcTemplate,
-  powerhouseManifestTemplate,
-  processorsFactoryTemplate,
-  processorsIndexTemplate,
-  readmeTemplate,
-  styleTemplate,
-  subgraphsIndexTemplate,
-  switchboardEntrypointTemplate,
-  syncAndPublishWorkflowTemplate,
-  tsConfigTemplate,
-  viteConfigTemplate,
-  vitestConfigTemplate,
-} from "@powerhousedao/codegen/templates";
-import { runPrettier } from "@powerhousedao/codegen/utils";
 import chalk from "chalk";
+import { buildBoilerplatePackageJson } from "file-builders";
 import fs from "node:fs";
 import path from "path";
+import {
+    agentsTemplate,
+    buildPowerhouseConfigTemplate,
+    claudeSettingsLocalTemplate,
+    claudeTemplate,
+    connectEntrypointTemplate,
+    cursorMcpTemplate,
+    dockerfileTemplate,
+    documentModelsIndexTemplate,
+    documentModelsTemplate,
+    editorsIndexTemplate,
+    editorsTemplate,
+    eslintConfigTemplate,
+    geminiSettingsTemplate,
+    gitIgnoreTemplate,
+    indexHtmlTemplate,
+    indexTsTemplate,
+    licenseTemplate,
+    mainTsxTemplate,
+    mcpTemplate,
+    nginxConfTemplate,
+    npmrcTemplate,
+    powerhouseManifestTemplate,
+    processorsFactoryTemplate,
+    processorsIndexTemplate,
+    readmeTemplate,
+    styleTemplate,
+    subgraphsIndexTemplate,
+    switchboardEntrypointTemplate,
+    syncAndPublishWorkflowTemplate,
+    tsConfigTemplate,
+    vitestConfigTemplate
+} from "templates";
+import { runPrettier } from "utils";
 import { upgradeManifestsTemplate } from "../templates/boilerplate/document-models/upgrade-manifests.js";
 import { runCmd, writeFileEnsuringDir } from "./utils.js";
 type CreateProjectArgs = {

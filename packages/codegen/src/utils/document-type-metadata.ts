@@ -1,4 +1,4 @@
-import type { DocumentModelDocumentTypeMetadata } from "@powerhousedao/codegen/file-builders";
+import type { DocumentModelDocumentTypeMetadata } from "file-builders";
 import path from "path";
 import type { Project, SourceFile } from "ts-morph";
 import { SyntaxKind } from "ts-morph";

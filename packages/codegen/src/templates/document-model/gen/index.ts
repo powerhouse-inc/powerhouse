@@ -1,7 +1,7 @@
-import type { DocumentModelTemplateInputs } from "@powerhousedao/codegen/file-builders";
+import type { ModuleSpecification } from "@powerhousedao/shared";
 import { ts } from "@tmpl/core";
 import { kebabCase } from "change-case";
-import type { ModuleSpecification } from "@powerhousedao/shared";
+import type { DocumentModelTemplateInputs } from "file-builders";
 
 function buildModuleOperationsExports(module: ModuleSpecification) {
   const moduleDirName = kebabCase(module.name);

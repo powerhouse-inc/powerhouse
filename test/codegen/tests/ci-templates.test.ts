@@ -1,9 +1,11 @@
+import {
+  connectEntrypointTemplate,
+  dockerfileTemplate,
+  nginxConfTemplate,
+  switchboardEntrypointTemplate,
+  syncAndPublishWorkflowTemplate,
+} from "@powerhousedao/codegen/templates";
 import { describe, expect, test } from "vitest";
-import { connectEntrypointTemplate } from "../../templates/boilerplate/docker/connect-entrypoint.sh.js";
-import { dockerfileTemplate } from "../../templates/boilerplate/docker/Dockerfile.js";
-import { nginxConfTemplate } from "../../templates/boilerplate/docker/nginx.conf.js";
-import { switchboardEntrypointTemplate } from "../../templates/boilerplate/docker/switchboard-entrypoint.sh.js";
-import { syncAndPublishWorkflowTemplate } from "../../templates/boilerplate/github/sync-and-publish.yml.js";
 
 describe("CI/CD Templates", () => {
   describe("sync-and-publish.yml", () => {

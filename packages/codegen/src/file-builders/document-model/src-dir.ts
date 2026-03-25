@@ -1,20 +1,20 @@
 import type { DocumentModelFileMakerArgs } from "@powerhousedao/codegen";
-import {
-  documentModelSrcIndexFileTemplate,
-  documentModelSrcUtilsTemplate,
-} from "@powerhousedao/codegen/templates";
-import {
-  formatSourceFileWithPrettier,
-  getObjectLiteral,
-  getOrCreateSourceFile,
-  getPreviousVersionSourceFile,
-} from "@powerhousedao/codegen/utils";
+import type { ModuleSpecification } from "@powerhousedao/shared/document-model";
 import { ts } from "@tmpl/core";
 import { camelCase, kebabCase, pascalCase } from "change-case";
-import type { ModuleSpecification } from "@powerhousedao/shared/document-model";
 import path from "path";
+import {
+    documentModelSrcIndexFileTemplate,
+    documentModelSrcUtilsTemplate,
+} from "templates";
 import type { SourceFile } from "ts-morph";
 import { VariableDeclarationKind } from "ts-morph";
+import {
+    formatSourceFileWithPrettier,
+    getObjectLiteral,
+    getOrCreateSourceFile,
+    getPreviousVersionSourceFile,
+} from "utils";
 
 export async function makeSrcDirFiles(
   fileMakerArgs: DocumentModelFileMakerArgs,

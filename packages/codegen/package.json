@@ -13,34 +13,31 @@
   },
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
     },
     "./templates": {
-      "types": "./dist/src/templates/index.d.ts",
-      "default": "./dist/src/templates/index.js"
+      "types": "./dist/src/templates/index.d.mts",
+      "import": "./dist/src/templates/index.mjs"
     },
     "./file-builders": {
-      "types": "./dist/src/file-builders/index.d.ts",
-      "default": "./dist/src/file-builders/index.js"
+      "types": "./dist/src/file-builders/index.d.mts",
+      "import": "./dist/src/file-builders/index.mjs"
     },
     "./name-builders": {
-      "types": "./dist/src/name-builders/index.d.ts",
-      "default": "./dist/src/name-builders/index.js"
+      "types": "./dist/src/name-builders/index.d.mts",
+      "import": "./dist/src/name-builders/index.mjs"
     },
     "./utils": {
-      "types": "./dist/src/utils/index.d.ts",
-      "default": "./dist/src/utils/index.js"
+      "types": "./dist/src/utils/index.d.mts",
+      "import": "./dist/src/utils/index.mjs"
     }
   },
   "scripts": {
     "tsc": "tsc",
     "lint": "eslint",
     "copy-hygen": "rm -rf dist/src/codegen/.hygen && cp -r src/codegen/.hygen dist/src/codegen/",
-    "build:misc": "pnpm copy-hygen",
-    "build:create-lib": "tsc --project src/create-lib/tsconfig.json",
-    "publish:create-lib": "npm publish --cwd ./src/create-lib/",
-    "start": "tsx src/cli.ts"
+    "build:bundle": "tsdown"
   },
   "dependencies": {
     "document-model": "workspace:",
@@ -60,10 +57,8 @@
     "hygen": "^6.2.11",
     "prettier": "catalog:",
     "semver": "catalog:",
-    "ts-morph": "catalog:"
-  },
-  "devDependencies": {
+    "ts-morph": "catalog:",
     "@types/node": "catalog:",
-    "tsx": "catalog:"
+    "tsdown": "catalog:"
   }
 }

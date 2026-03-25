@@ -1,33 +1,33 @@
-import type {
-  DocumentModelFileMakerArgs,
-  DocumentModelTemplateInputsWithModule,
-} from "@powerhousedao/codegen/file-builders";
-import { getDocumentModelOperationsModuleVariableNames } from "@powerhousedao/codegen/name-builders";
-import {
-  documentModelDocumentSchemaFileTemplate,
-  documentModelDocumentTypeTemplate,
-  documentModelGenActionsFileTemplate,
-  documentModelGenControllerFileTemplate,
-  documentModelGenCreatorsFileTemplate,
-  documentModelGenIndexFileTemplate,
-  documentModelGenReducerFileTemplate,
-  documentModelGenTypesTemplate,
-  documentModelGenUtilsTemplate,
-  documentModelOperationModuleActionsFileTemplate,
-  documentModelOperationsModuleCreatorsFileTemplate,
-  documentModelOperationsModuleErrorFileTemplate,
-  documentModelOperationsModuleOperationsFileTemplate,
-  documentModelPhFactoriesFileTemplate,
-  documentModelSchemaIndexTemplate,
-} from "@powerhousedao/codegen/templates";
-import {
-  buildObjectLiteral,
-  formatSourceFileWithPrettier,
-  getOrCreateSourceFile,
-} from "@powerhousedao/codegen/utils";
 import { kebabCase, pascalCase } from "change-case";
+import type {
+    DocumentModelFileMakerArgs,
+    DocumentModelTemplateInputsWithModule,
+} from "file-builders";
+import { getDocumentModelOperationsModuleVariableNames } from "name-builders";
 import path from "path";
+import {
+    documentModelDocumentSchemaFileTemplate,
+    documentModelDocumentTypeTemplate,
+    documentModelGenActionsFileTemplate,
+    documentModelGenControllerFileTemplate,
+    documentModelGenCreatorsFileTemplate,
+    documentModelGenIndexFileTemplate,
+    documentModelGenReducerFileTemplate,
+    documentModelGenTypesTemplate,
+    documentModelGenUtilsTemplate,
+    documentModelOperationModuleActionsFileTemplate,
+    documentModelOperationsModuleCreatorsFileTemplate,
+    documentModelOperationsModuleErrorFileTemplate,
+    documentModelOperationsModuleOperationsFileTemplate,
+    documentModelPhFactoriesFileTemplate,
+    documentModelSchemaIndexTemplate,
+} from "templates";
 import { VariableDeclarationKind } from "ts-morph";
+import {
+    buildObjectLiteral,
+    formatSourceFileWithPrettier,
+    getOrCreateSourceFile,
+} from "utils";
 
 export async function makeGenDirFiles(
   fileMakerArgs: DocumentModelFileMakerArgs,

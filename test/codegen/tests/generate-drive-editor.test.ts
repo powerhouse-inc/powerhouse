@@ -1,7 +1,7 @@
 import { generateDriveEditor } from "@powerhousedao/codegen";
 import { directoryExists, fileExists } from "@powerhousedao/shared/clis";
 import { $ } from "bun";
-import { describe, expect, it } from "bun:test";
+import { afterAll, describe, expect, it } from "bun:test";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import {
@@ -14,10 +14,14 @@ import { cpForce, rmForce } from "../utils.js";
 
 type GenerateDriveEditorOptions = Parameters<typeof generateDriveEditor>[0];
 
-const parentOutDir = join(process.cwd(), TEST_OUTPUT);
-const dataDir = join(process.cwd(), DATA);
+const cwd = process.cwd();
+const parentOutDir = join(cwd, TEST_OUTPUT);
+const dataDir = join(cwd, DATA);
 
 describe("generateDriveEditor", () => {
+  afterAll(() => {
+    process.chdir(cwd);
+  });
   const driveEditorName = "Atlas Drive Explorer";
   const driveEditorId = "AtlasDriveExplorer";
   const allowedDocumentTypes = ["powerhouse/test-doc"];

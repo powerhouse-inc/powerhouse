@@ -1,20 +1,20 @@
 import type { DocumentModelFileMakerArgs } from "@powerhousedao/codegen";
-import { getDocumentModelOperationsModuleVariableNames } from "@powerhousedao/codegen/name-builders";
-import {
-  documentModelTestFileTemplate,
-  makeActionImportNames,
-  makeTestCaseForAction,
-} from "@powerhousedao/codegen/templates";
-import {
-  formatSourceFileWithPrettier,
-  getOrCreateSourceFile,
-  getPreviousVersionSourceFile,
-} from "@powerhousedao/codegen/utils";
 import type { ModuleSpecification } from "@powerhousedao/shared/document-model";
 import { ts } from "@tmpl/core";
 import { camelCase, kebabCase, pascalCase } from "change-case";
+import { getDocumentModelOperationsModuleVariableNames } from "name-builders";
 import path from "path";
+import {
+    documentModelTestFileTemplate,
+    makeActionImportNames,
+    makeTestCaseForAction,
+} from "templates";
 import { SyntaxKind } from "ts-morph";
+import {
+    formatSourceFileWithPrettier,
+    getOrCreateSourceFile,
+    getPreviousVersionSourceFile,
+} from "utils";
 
 export async function makeTestsDirFiles(
   fileMakerArgs: DocumentModelFileMakerArgs,
