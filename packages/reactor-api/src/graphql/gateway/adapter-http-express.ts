@@ -45,9 +45,9 @@ export class ExpressHttpAdapter implements IHttpAdapter {
       body?: unknown,
     ) => void,
   ): void {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (this.#app as any)[method.toLowerCase()](path, (req: any, res: any) =>
-      handler(req, res, req.body),
+    const m = method.toLowerCase() as "delete" | "get" | "post";
+    this.#app[m](path, (req: express.Request, res: express.Response) =>
+      handler(req, res, req.body as unknown),
     );
   }
 
