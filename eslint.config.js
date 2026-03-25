@@ -26,6 +26,7 @@ const normalIgnoredFiles = [
   // test artifacts
   "**/.out/",
   "**/test-output/",
+  "**/.test-output/",
   "**/test-projects/",
   "**/flaky/",
   "apps/connect/lib/",
