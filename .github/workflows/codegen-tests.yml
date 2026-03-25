@@ -60,7 +60,7 @@ jobs:
 
       - name: Run tests
         run: pnpm test
-        working-directory: packages/codegen
+        working-directory: test/codegen
 
   notify-discord:
     if: failure() && github.event_name != 'pull_request'
