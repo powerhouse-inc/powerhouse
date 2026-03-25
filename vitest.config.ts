@@ -10,6 +10,7 @@ export default defineConfig({
       "packages/*/vitest.config.ts",
       "apps/*/vitest.config.ts",
       "clis/*/vitest.config.ts",
+      "test/*/vitest.config.ts",
     ],
   },
 });

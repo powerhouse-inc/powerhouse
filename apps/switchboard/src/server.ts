@@ -32,7 +32,7 @@ import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import { documentModels as vetraDocumentModels } from "@powerhousedao/vetra";
 import { processorFactory as vetraProcessorFactory } from "@powerhousedao/vetra/processors";
-import { type IRenown } from "@renown/sdk";
+import type { IRenown } from "@renown/sdk/node";
 import * as Sentry from "@sentry/node";
 import { childLogger, documentModelDocumentModelModule } from "document-model";
 import dotenv from "dotenv";
@@ -43,7 +43,7 @@ import { Pool } from "pg";
 import type { RedisClientType } from "redis";
 import { initRedis } from "./clients/redis.js";
 import { initFeatureFlags } from "./feature-flags.js";
-import { initRenown } from "./renown.js";
+import { getRenownSignerConfig, initRenown } from "./renown.js";
 import type { StartServerOptions, SwitchboardReactor } from "./types.js";
 import { addDefaultDrive, isPostgresUrl } from "./utils.js";
 
@@ -54,6 +54,8 @@ dotenv.config();
 // Feature flag constants
 const DOCUMENT_MODEL_SUBGRAPHS_ENABLED = "DOCUMENT_MODEL_SUBGRAPHS_ENABLED";
 const DOCUMENT_MODEL_SUBGRAPHS_ENABLED_DEFAULT = true;
+const REQUIRE_SIGNATURES = "REQUIRE_SIGNATURES";
+const REQUIRE_SIGNATURES_DEFAULT = false;
 
 if (process.env.SENTRY_DSN) {
   defaultLogger.info(
@@ -179,7 +181,11 @@ async function initServer(
     );
 
     if (renown) {
-      clientBuilder.withSigner(renown.signer);
+      const signerConfig = getRenownSignerConfig(
+        renown,
+        options.identity?.requireSignatures,
+      );
+      clientBuilder.withSigner(signerConfig);
     }
 
     const module = await clientBuilder.buildModule();
@@ -352,6 +358,14 @@ export const startSwitchboard = async (
 
   options.enableDocumentModelSubgraphs = enableDocumentModelSubgraphs;
 
+  const requireSignatures =
+    options.identity?.requireSignatures ??
+    (await featureFlags.getBooleanValue(
+      REQUIRE_SIGNATURES,
+      REQUIRE_SIGNATURES_DEFAULT,
+    ));
+  options.identity = { ...options.identity, requireSignatures };
+
   const logger = options.logger ?? defaultLogger;
 
   logger.info(
@@ -359,6 +373,7 @@ export const startSwitchboard = async (
     JSON.stringify(
       {
         DOCUMENT_MODEL_SUBGRAPHS_ENABLED: enableDocumentModelSubgraphs,
+        REQUIRE_SIGNATURES: requireSignatures,
       },
       null,
       2,
