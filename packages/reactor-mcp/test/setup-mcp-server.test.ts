@@ -1,5 +1,5 @@
 /**
- * Unit tests for setupMcpServer (packages/reactor-mcp/src/express.ts).
+ * Unit tests for setupMcpServer (packages/reactor-mcp/src/mcp-routes.ts).
  *
  * Verifies that:
  * - mountNodeRoute is called for POST, GET, and DELETE on /mcp
@@ -23,7 +23,7 @@ vi.mock("../src/server.js", () => ({
 }));
 
 // Import AFTER the mock is in place
-const { setupMcpServer } = await import("../src/express.js");
+const { setupMcpServer } = await import("../src/mcp-routes.js");
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
