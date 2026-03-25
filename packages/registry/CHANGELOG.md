@@ -1,3 +1,13 @@
+## 6.0.0-dev.111 (2026-03-25)
+
+### 🩹 Fixes
+
+- **registry:** add rootDir to Dockerfile tsconfig to fix TS5011 ([848c98a7b](https://github.com/powerhouse-inc/powerhouse/commit/848c98a7b))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 6.0.0-dev.110 (2026-03-25)
 
 This was a version bump only for @powerhousedao/registry to align it with other projects, there were no code changes.
