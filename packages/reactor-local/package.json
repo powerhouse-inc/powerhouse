@@ -29,8 +29,8 @@
     "document-drive": "workspace:*",
     "document-model": "workspace:*",
     "dotenv": "^16.4.5",
-    "@openfeature/env-var-provider": "^0.3.1",
-    "@openfeature/server-sdk": "^1.19.0"
+    "@openfeature/env-var-provider": "catalog:",
+    "@openfeature/server-sdk": "catalog:"
   },
   "devDependencies": {
     "@powerhousedao/config": "workspace:*",
