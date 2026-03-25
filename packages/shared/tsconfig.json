@@ -6,6 +6,8 @@
     "outDir": "./dist",
     "emitDeclarationOnly": true,
     "paths": {
+      "types": ["./types.ts"],
+      "constants": ["./constants.ts"],
       "analytics": [
         "./analytics/index.ts"
       ],

@@ -4,10 +4,11 @@ import type {
 } from "@powerhousedao/codegen";
 import type {
   DocumentModelGlobalState,
+  DocumentSpecification,
   ModuleSpecification,
   OperationErrorSpecification,
   OperationSpecification,
-} from "@powerhousedao/shared/document-model";
+} from "@powerhousedao/shared";
 import { camelCase, kebabCase, pascalCase } from "change-case";
 
 export function getEditorVariableNames({
@@ -45,7 +46,7 @@ export function getLatestDocumentModelSpec({
 export function getDocumentModelSpecByVersionNumber(
   { specifications }: DocumentModelGlobalState,
   version: number,
-) {
+): DocumentSpecification {
   const specificationByIndex = specifications[version];
   const specificationByNumber = specifications.find(
     (spec) => spec.version === version,

@@ -5,7 +5,7 @@ import type {
 import { getActionTypeName } from "@powerhousedao/codegen/name-builders";
 import { ts } from "@tmpl/core";
 import { camelCase, pascalCase } from "change-case";
-import type { ModuleSpecification } from "document-model";
+import type { ModuleSpecification } from "@powerhousedao/shared";
 
 function getActionTypeNames(actions: ActionFromOperation[]) {
   return actions.map(getActionTypeName);

@@ -1,6 +1,6 @@
 import { makeEditorsModulesFile } from "@powerhousedao/codegen/file-builders";
 import { buildTsMorphProject } from "@powerhousedao/codegen/utils";
-import type { PowerhouseConfig } from "@powerhousedao/config";
+import type { PowerhouseConfig } from "@powerhousedao/shared/clis";
 import { pascalCase } from "change-case";
 import type { DocumentModelGlobalState } from "@powerhousedao/shared/document-model";
 import { Logger, runner } from "hygen";

@@ -4,7 +4,7 @@ import type {
 } from "@powerhousedao/codegen/file-builders";
 import { ts } from "@tmpl/core";
 import { camelCase, constantCase, pascalCase } from "change-case";
-import type { ModuleSpecification } from "document-model";
+import type { ModuleSpecification } from "@powerhousedao/shared";
 
 function makeModuleOperationsTypeName(module: ModuleSpecification) {
   const pascalCaseModuleName = pascalCase(module.name);

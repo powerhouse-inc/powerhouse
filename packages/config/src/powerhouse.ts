@@ -12,50 +12,24 @@ export type LogLevel = keyof typeof LogLevels;
 export function isLogLevel(value: unknown): value is LogLevel {
   return typeof value === "string" && value in LogLevels;
 }
-import type { PowerhouseConfig } from "@powerhousedao/shared/clis";
+import type { PowerhouseConfig } from "@powerhousedao/shared";
 export type {
   PHPackageProvider,
   PowerhousePackage,
-} from "@powerhousedao/shared/clis";
+} from "@powerhousedao/shared";
 export type { PowerhouseConfig };
 
 export const DEFAULT_REGISTRY_URL = "https://registry.prod.vetra.io";
 
 export { DEFAULT_CONFIG } from "@powerhousedao/shared/clis";
 
-export type Module = {
-  id: string;
-  name: string;
-  documentTypes: string[];
-};
-
-export type DocumentModelModule = {
-  id: string;
-  name: string;
-};
-
-export type Publisher = {
-  name: string;
-  url: string;
-};
-
-export type PowerhouseManifest = {
-  name: string;
-  description: string;
-  category: string;
-  publisher: Publisher;
-  documentModels: DocumentModelModule[];
-  editors: Module[];
-  apps: Module[];
-  subgraphs: Module[];
-  importScripts: Module[];
-};
-
-export type PartialPowerhouseManifest = Partial<
-  Omit<PowerhouseManifest, "publisher">
-> & {
-  publisher?: Partial<Publisher>;
-};
+export type {
+  DocumentModelModule,
+  Module,
+  PartialPowerhouseManifest,
+  PowerhouseManifest,
+  Publisher,
+} from "@powerhousedao/shared";
 
 export type VetraProcessorConfigType = {
   interactive?: boolean;

@@ -4,7 +4,7 @@ import { camelCase, constantCase, kebabCase, pascalCase } from "change-case";
 import type {
   ModuleSpecification,
   OperationSpecification,
-} from "document-model";
+} from "@powerhousedao/shared";
 
 function makePascalCaseOperationName(operation: OperationSpecification) {
   if (!operation.name) {

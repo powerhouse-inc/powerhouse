@@ -4,7 +4,7 @@ import type {
 } from "@powerhousedao/codegen";
 import { ts } from "@tmpl/core";
 import { pascalCase } from "change-case";
-import type { OperationErrorSpecification } from "document-model";
+import type { OperationErrorSpecification } from "@powerhousedao/shared";
 
 function getErrorName(error: OperationErrorSpecification) {
   if (!error.name) return;
