@@ -4,14 +4,30 @@
     "outDir": "./dist",
     "resolveJsonModule": true,
     "paths": {
-      "test-package-vetra/document-models": ["./document-models/index.ts"],
-      "test-package-vetra/document-models/*": ["./document-models/*/index.ts"],
-      "test-package-vetra/editors": ["./editors/index.ts"],
-      "test-package-vetra/editors/*": ["./editors/*/index.ts"],
-      "test-package-vetra/processors": ["./processors/index.ts"],
-      "test-package-vetra/processors/*": ["./processors/*/index.ts"],
-      "test-package-vetra/subgraphs": ["./subgraphs/index.ts"],
-      "test-package-vetra/subgraphs/*": ["./subgraphs/*/index.ts"]
+      "test-package-vetra/document-models": [
+        "./document-models/index.ts"
+      ],
+      "test-package-vetra/document-models/*": [
+        "./document-models/*/index.ts"
+      ],
+      "test-package-vetra/editors": [
+        "./editors/index.ts"
+      ],
+      "test-package-vetra/editors/*": [
+        "./editors/*/index.ts"
+      ],
+      "test-package-vetra/processors": [
+        "./processors/index.ts"
+      ],
+      "test-package-vetra/processors/*": [
+        "./processors/*/index.ts"
+      ],
+      "test-package-vetra/subgraphs": [
+        "./subgraphs/index.ts"
+      ],
+      "test-package-vetra/subgraphs/*": [
+        "./subgraphs/*/index.ts"
+      ]
     }
   },
   "references": [
@@ -31,12 +47,22 @@
       "path": "../../packages/reactor-browser"
     },
     {
+      "path": "../../packages/registry"
+    },
+    {
       "path": "../e2e-utils"
     },
     {
       "path": "../versioned-documents"
     }
   ],
-  "include": ["**/*", "powerhouse.manifest.json"],
-  "exclude": ["dist", "node_modules", ".ph"]
+  "include": [
+    "**/*",
+    "powerhouse.manifest.json"
+  ],
+  "exclude": [
+    "dist",
+    "node_modules",
+    ".ph"
+  ]
 }
