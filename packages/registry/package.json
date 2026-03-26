@@ -11,7 +11,8 @@
     "ph-registry": "./dist/cli.mjs"
   },
   "files": [
-    "dist"
+    "dist",
+    "static"
   ],
   "sideEffects": false,
   "scripts": {
