@@ -193,9 +193,25 @@ function setupEventListeners(
   graphqlManager: GraphQLManager,
   reactorProcessorManager: IReactorProcessorManager,
   module: IProcessorHostModule,
+  documentModelRegistry?: IDocumentModelRegistry,
 ): void {
-  pkgManager.onDocumentModelsChange(async () => {
-    await graphqlManager.updateRouter();
+  pkgManager.onDocumentModelsChange((packagedModels) => {
+    if (documentModelRegistry) {
+      const newModules = Object.values(packagedModels).flat();
+      const registeredModules = documentModelRegistry.getAllModules();
+      const registeredTypes = new Set(
+        registeredModules.map((m) => m.documentModel.global.id),
+      );
+
+      for (const mod of newModules) {
+        const docType = mod.documentModel.global.id;
+        if (!registeredTypes.has(docType)) {
+          defaultLogger.info(`Registering new document model: ${docType}`);
+          documentModelRegistry.registerModules(mod);
+        }
+      }
+    }
+    void graphqlManager.regenerateDocumentModelSubgraphs();
   });
 
   pkgManager.onSubgraphsChange(async (packagedSubgraphs) => {
@@ -459,6 +475,7 @@ async function _setupAPI(
   },
   processorApp: ProcessorApp,
   authorizationService?: AuthorizationService,
+  documentModelRegistry?: IDocumentModelRegistry,
 ): Promise<API> {
   const module = {
     relationalDb,
@@ -574,6 +591,7 @@ async function _setupAPI(
     graphqlManager,
     reactorProcessorManager,
     module,
+    documentModelRegistry,
   );
 
   if (mcpServerEnabled) {
@@ -657,6 +675,14 @@ export async function initializeAndStartAPI(
     throw new Error("ProcessorManager not available from ReactorClientModule");
   }
 
+  const documentModelRegistry =
+    reactorClientModule.reactorModule?.documentModelRegistry;
+  if (!documentModelRegistry) {
+    throw new Error(
+      "DocumentModelRegistry not available from ReactorClientModule",
+    );
+  }
+
   const api = await _setupAPI(
     reactorClient,
     syncManager,
@@ -674,15 +700,8 @@ export async function initializeAndStartAPI(
     auth,
     processorApp,
     authorizationService,
+    documentModelRegistry,
   );
-
-  const documentModelRegistry =
-    reactorClientModule.reactorModule?.documentModelRegistry;
-  if (!documentModelRegistry) {
-    throw new Error(
-      "DocumentModelRegistry not available from ReactorClientModule",
-    );
-  }
 
   return {
     ...api,

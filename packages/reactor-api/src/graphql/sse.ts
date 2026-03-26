@@ -1,6 +1,5 @@
-import type { Request as ExpressRequest } from "express";
+import type { RequestHandler, Request as ExpressRequest } from "express";
 import type { GraphQLSchema } from "graphql";
-import type { Request as SSERequest } from "graphql-sse";
 import { createHandler } from "graphql-sse/lib/use/express";
 import type { Context } from "./types.js";
 
@@ -42,7 +41,9 @@ export interface SSEHandlerOptions {
  * `Accept: text/event-stream`). Single-connection mode is disabled
  * because it adds token-management complexity with no benefit here.
  */
-export function createGraphQLSSEHandler(options: SSEHandlerOptions) {
+export function createGraphQLSSEHandler(
+  options: SSEHandlerOptions,
+): RequestHandler {
   const { schema, contextFactory } = options;
 
   return createHandler<Context>({
@@ -51,8 +52,8 @@ export function createGraphQLSSEHandler(options: SSEHandlerOptions) {
     // "distinct connections mode" (one POST per subscription).
     // Auth is already handled by the Express middleware layer.
     authenticate: () => null,
-    context: (req: SSERequest<ExpressRequest>) => {
-      return contextFactory(req.raw);
+    context: (req) => {
+      return contextFactory(req.raw as unknown as ExpressRequest);
     },
-  });
+  }) as unknown as RequestHandler;
 }

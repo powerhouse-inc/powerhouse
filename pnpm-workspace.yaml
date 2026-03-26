@@ -22,20 +22,20 @@ catalog:
   "knex-pglite": 0.13.0
   "react": 19.2.4
   "react-dom": 19.2.4
-  "@tailwindcss/vite": 4.1.18
+  "@tailwindcss/vite": 4.2.2
   "@types/node": 25.2.3
   "@types/react": 19.2.14
   "@types/react-dom": 19.2.3
-  "@vitejs/plugin-react": 5.1.4
+  "@vitejs/plugin-react": 6.0.1
   "graphql": 16.12.0
   "graphql-request": 7.4.0
-  "vite": 7.3.1
+  "vite": 8.0.2
   "vite-plugin-html": 3.2.2
   "vite-plugin-node-polyfills": 0.25.0
   "vite-plugin-svgr": 4.5.0
-  "tailwindcss": 4.1.18
+  "tailwindcss": 4.2.2
   "tailwind-merge": 3.4.0
-  "@tailwindcss/cli": 4.1.18
+  "@tailwindcss/cli": 4.2.2
   "zod": 4.3.6
   "@sindresorhus/fnv1a": 3.1.0
   "mutative": 1.3.0
@@ -65,7 +65,7 @@ catalog:
   "enquirer": 2.4.1
   "package-manager-detector": 1.6.0
   "write-package": 7.2.0
-  "vitest": 3.2.4
+  "vitest": 4.1.1
   "npm-package-arg": 13.0.2
   "@types/npm-package-arg": 6.1.4
   "pg": 8.18.0
@@ -79,7 +79,7 @@ catalog:
   "zocker": 3.0.0
   "fast-deep-equal": 3.1.3
   "esbuild-plugins-node-modules-polyfill": 1.8.1
-  "@vitejs/plugin-basic-ssl": 2.1.4
+  "@vitejs/plugin-basic-ssl": 2.3.0
   "vite-envs": 4.6.2
   "luxon": 3.7.2
   "@types/luxon": 3.7.1
@@ -102,12 +102,14 @@ catalog:
   "tinybench": 6.0.0
   "@tsconfig/node-lts": 24.0.0
   "glob": 13.0.4
-  "@vitest/browser": 4.0.18
+  "@vitest/browser": 4.1.1
   "playwright": 1.58.2
   "date-fns": 4.1.0
   "events": 3.3.0
   "util": 0.12.5
-  "@vitest/browser-playwright": 4.0.18
+  "@vitest/browser-playwright": 4.1.1
+  "@vitest/coverage-v8": 4.1.1
+  "@preact/preset-vite": 2.10.5
   "tsdown": 0.21.0
 
 allowBuilds:
