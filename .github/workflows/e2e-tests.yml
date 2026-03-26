@@ -73,8 +73,8 @@ jobs:
           path: test/vetra-e2e/test-results/
           retention-days: 30
 
-  analytics-engine-e2e-tests:
-    name: Run Analytics Engine E2E Tests
+  analytics-engine-integration-tests:
+    name: Run Analytics Engine Integration Tests
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -110,14 +110,14 @@ jobs:
         run: pnpm exec playwright install
         working-directory: packages/analytics-engine/browser
 
-      - name: Run Playwright tests
-        run: pnpm test:e2e:analytics
+      - name: Run integration tests
+        run: pnpm test:integration:analytics
 
       - name: Upload Playwright Report
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: vetra-playwright-report
+          name: analytics-engine-playwright-report
           path: packages/analytics-engine/browser/playwright-report/
           retention-days: 30
 
