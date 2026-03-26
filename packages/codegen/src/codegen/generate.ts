@@ -232,7 +232,13 @@ function ensureTsconfigPaths(packageName: string, projectRoot?: string) {
   if (!fs.existsSync(tsconfigPath)) return;
 
   const raw = fs.readFileSync(tsconfigPath, "utf-8");
-  const tsconfig = JSON.parse(raw) as Record<string, unknown>;
+  // tsconfig.json may contain comments (JSONC), strip them before parsing
+  // Match strings first to preserve them, then strip line/block comments
+  const stripped = raw.replace(
+    /("(?:\\.|[^"\\])*")|\/\/.*$|\/\*[\s\S]*?\*\//gm,
+    (_match, str: string | undefined) => str ?? "",
+  );
+  const tsconfig = JSON.parse(stripped) as Record<string, unknown>;
   const compilerOptions = (tsconfig.compilerOptions ?? {}) as Record<
     string,
     unknown
