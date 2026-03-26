@@ -383,7 +383,7 @@ export type QueryDocumentParentsArgs = {
 
 export type QueryFindDocumentsArgs = {
   paging?: InputMaybe<PagingInput>;
-  search: SearchFilterInput;
+  search?: InputMaybe<SearchFilterInput>;
   view?: InputMaybe<ViewFilterInput>;
 };
 
@@ -484,7 +484,7 @@ export type Subscription = {
 };
 
 export type SubscriptionDocumentChangesArgs = {
-  search: SearchFilterInput;
+  search?: InputMaybe<SearchFilterInput>;
   view?: InputMaybe<ViewFilterInput>;
 };
 
@@ -741,7 +741,7 @@ export type GetDocumentParentsQuery = {
 };
 
 export type FindDocumentsQueryVariables = Exact<{
-  search: SearchFilterInput;
+  search?: InputMaybe<SearchFilterInput>;
   view?: InputMaybe<ViewFilterInput>;
   paging?: InputMaybe<PagingInput>;
 }>;
@@ -1041,7 +1041,7 @@ export type DeleteDocumentsMutationVariables = Exact<{
 export type DeleteDocumentsMutation = { readonly deleteDocuments: boolean };
 
 export type DocumentChangesSubscriptionVariables = Exact<{
-  search: SearchFilterInput;
+  search?: InputMaybe<SearchFilterInput>;
   view?: InputMaybe<ViewFilterInput>;
 }>;
 
@@ -1876,7 +1876,7 @@ export type QueryResolvers<
     ResolversTypes["PHDocumentResultPage"],
     ParentType,
     ContextType,
-    RequireFields<QueryFindDocumentsArgs, "search">
+    Partial<QueryFindDocumentsArgs>
   >;
   jobStatus?: Resolver<
     Maybe<ResolversTypes["JobInfo"]>,
@@ -2003,7 +2003,7 @@ export type SubscriptionResolvers<
     "documentChanges",
     ParentType,
     ContextType,
-    RequireFields<SubscriptionDocumentChangesArgs, "search">
+    Partial<SubscriptionDocumentChangesArgs>
   >;
   jobChanges?: SubscriptionResolver<
     ResolversTypes["JobChangeEvent"],
@@ -2458,7 +2458,7 @@ export const GetDocumentParentsDocument = gql`
 `;
 export const FindDocumentsDocument = gql`
   query FindDocuments(
-    $search: SearchFilterInput!
+    $search: SearchFilterInput
     $view: ViewFilterInput
     $paging: PagingInput
   ) {
@@ -2672,7 +2672,7 @@ export const DeleteDocumentsDocument = gql`
 `;
 export const DocumentChangesDocument = gql`
   subscription DocumentChanges(
-    $search: SearchFilterInput!
+    $search: SearchFilterInput
     $view: ViewFilterInput
   ) {
     documentChanges(search: $search, view: $view) {
@@ -2854,7 +2854,7 @@ export function getSdk<C>(requester: Requester<C>) {
       ) as Promise<GetDocumentParentsQuery>;
     },
     FindDocuments(
-      variables: FindDocumentsQueryVariables,
+      variables?: FindDocumentsQueryVariables,
       options?: C,
     ): Promise<FindDocumentsQuery> {
       return requester<FindDocumentsQuery, FindDocumentsQueryVariables>(
@@ -2996,7 +2996,7 @@ export function getSdk<C>(requester: Requester<C>) {
       ) as Promise<DeleteDocumentsMutation>;
     },
     DocumentChanges(
-      variables: DocumentChangesSubscriptionVariables,
+      variables?: DocumentChangesSubscriptionVariables,
       options?: C,
     ): AsyncIterable<DocumentChangesSubscription> {
       return requester<

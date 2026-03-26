@@ -39,7 +39,7 @@ Queries: ${v.pascalCaseDocumentType} Document
 
 type ${v.pascalCaseDocumentType}Queries {
     getDocument(docId: PHID!, driveId: PHID): ${v.pascalCaseDocumentType}
-    getDocuments(driveId: String!): [${v.pascalCaseDocumentType}!]
+    getDocuments(driveId: String): [${v.pascalCaseDocumentType}!]
 }
 
 type Query {

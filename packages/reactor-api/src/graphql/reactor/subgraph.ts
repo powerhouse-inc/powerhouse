@@ -166,10 +166,10 @@ export class ReactorSubgraph extends BaseSubgraph {
       findDocuments: async (_parent, args, ctx: Context) => {
         this.logger.debug("findDocuments(@args)", args);
         try {
-          const result = await resolvers.findDocuments(
-            this.reactorClient,
-            args,
-          );
+          const result = await resolvers.findDocuments(this.reactorClient, {
+            ...args,
+            search: args.search ?? {},
+          });
 
           // Filter results to only include documents the user can read
           if (
@@ -541,7 +541,10 @@ export class ReactorSubgraph extends BaseSubgraph {
           ((
             payload: DocumentChangesPayload | undefined,
             args: {
-              search: { type?: string | null; parentId?: string | null };
+              search?: {
+                type?: string | null;
+                parentId?: string | null;
+              } | null;
             },
           ) => {
             if (!payload) {
@@ -549,8 +552,8 @@ export class ReactorSubgraph extends BaseSubgraph {
             }
 
             const search = {
-              type: args.search.type ?? undefined,
-              parentId: args.search.parentId ?? undefined,
+              type: args.search?.type ?? undefined,
+              parentId: args.search?.parentId ?? undefined,
             };
 
             return matchesSearchFilter(payload.documentChanges, search);

@@ -136,7 +136,7 @@ query GetDocumentParents(
 }
 
 query FindDocuments(
-  $search: SearchFilterInput!
+  $search: SearchFilterInput
   $view: ViewFilterInput
   $paging: PagingInput
 ) {
@@ -331,7 +331,7 @@ mutation DeleteDocuments(
 
 # Subscription operations
 subscription DocumentChanges(
-  $search: SearchFilterInput!
+  $search: SearchFilterInput
   $view: ViewFilterInput
 ) {
   documentChanges(search: $search, view: $view) {

@@ -91,9 +91,9 @@ export const getResolvers = (subgraph: BaseSubgraph): Record<string, unknown> =>
               revision: doc.header?.revision?.global ?? 0,
             };
           },
-          getDocuments: async (args: { driveId: string }) => {
+          getDocuments: async (args: { driveId?: string }) => {
             const { driveId } = args;
-            const result = await reactorClient.find({ type: ${v.documentTypeVariableName}, parentId: driveId });
+            const result = await reactorClient.find({ type: ${v.documentTypeVariableName}, ...(driveId ? { parentId: driveId } : {}) });
             return result.results.map((_doc) => {
               const doc = _doc as ${v.phDocumentTypeName};
               return {
