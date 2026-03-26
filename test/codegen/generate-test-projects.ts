@@ -90,7 +90,7 @@ export async function generateTestProjects() {
   await rmForce(WITH_EDITORS);
 
   await cpForce(
-    join(testProjectsDir, WITH_DOCUMENT_MODELS),
+    join(testProjectsDir, WITH_DOCUMENT_MODELS_SPEC_2),
     join(testProjectsDir, WITH_EDITORS),
   );
 
