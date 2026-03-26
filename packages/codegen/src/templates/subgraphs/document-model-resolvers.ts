@@ -27,19 +27,16 @@ export const documentModelSubgraphResolversTemplate = (
         (op) =>
           `        ${v.pascalCaseDocumentType}_${camel(op.name)}: async (_: unknown, args: { docId: string, input: ${pascal(op.name)}Input}) => {
             const { docId, input } = args;
-            const doc = await reactor.getDocument<${v.pascalCaseDocumentType}Document>(docId);
+            const doc = await reactorClient.get<${v.pascalCaseDocumentType}Document>(docId);
             if(!doc) {
               throw new Error("Document not found");
             }
 
-            const result = await reactor.addAction(
+            await reactorClient.execute(
                 docId,
-                actions.${camel(op.name)}(input)
+                "main",
+                [actions.${camel(op.name)}(input)]
             );
-
-            if(result.status !== "SUCCESS") {
-              throw new Error(result.error?.message ?? "Failed to ${camel(op.name)}");
-            }
 
             return true;
         },
@@ -61,7 +58,7 @@ import type {
 } from "${v.documentModelDir}";
 
 export const getResolvers = (subgraph: BaseSubgraph): Record<string, unknown> => {
-  const reactor = subgraph.reactor;
+  const reactorClient = subgraph.reactorClient;
 
   return ({
     Query: {
@@ -75,13 +72,14 @@ export const getResolvers = (subgraph: BaseSubgraph): Record<string, unknown> =>
             }
 
             if(driveId) {
-              const docIds = await reactor.getDocuments(driveId);
-              if(!docIds.includes(docId)) {
+              const children = await reactorClient.getChildren(driveId);
+              const childIds = children.results.map(d => d.header.id);
+              if(!childIds.includes(docId)) {
                 throw new Error(\`Document with id \${docId} is not part of \${driveId}\`);
               }
             }
 
-            const doc = await reactor.getDocument<${v.phDocumentTypeName}>(docId);
+            const doc = await reactorClient.get<${v.phDocumentTypeName}>(docId);
             return {
               driveId: driveId,
               ...doc,
@@ -95,26 +93,20 @@ export const getResolvers = (subgraph: BaseSubgraph): Record<string, unknown> =>
           },
           getDocuments: async (args: { driveId: string }) => {
             const { driveId } = args;
-            const docsIds = await reactor.getDocuments(driveId);
-            const docs = await Promise.all(
-              docsIds.map(async (docId) => {
-                const doc = await reactor.getDocument<${v.phDocumentTypeName}>(docId);
-                return {
-                  driveId: driveId,
-                  ...doc,
-                  ...doc.header,
-                  created: doc.header.createdAtUtcIso,
-                  lastModified: doc.header.lastModifiedAtUtcIso,
-                  state: doc.state.global,
-                  stateJSON: doc.state.global,
-                  revision: doc.header?.revision?.global ?? 0,
-                };
-              }),
-            );
-
-            return docs.filter(
-              (doc) => doc.header.documentType === ${v.documentTypeVariableName},
-            );
+            const result = await reactorClient.find({ type: ${v.documentTypeVariableName}, parentId: driveId });
+            return result.results.map((_doc) => {
+              const doc = _doc as ${v.phDocumentTypeName};
+              return {
+                driveId: driveId,
+                ...doc,
+                ...doc.header,
+                created: doc.header.createdAtUtcIso,
+                lastModified: doc.header.lastModifiedAtUtcIso,
+                state: doc.state.global,
+                stateJSON: doc.state.global,
+                revision: doc.header?.revision?.global ?? 0,
+              };
+            });
           },
         };
       },
@@ -122,23 +114,25 @@ export const getResolvers = (subgraph: BaseSubgraph): Record<string, unknown> =>
     Mutation: {
       ${v.pascalCaseDocumentType}_createDocument: async (_: unknown, args: { name: string, driveId?: string }) => {
         const { driveId, name } = args;
-        const document = await reactor.addDocument(${v.documentTypeVariableName});
+        const document = await reactorClient.createEmpty(${v.documentTypeVariableName});
 
         if(driveId) {
-          await reactor.addAction(
+          await reactorClient.execute(
             driveId,
-            addFile({
+            "main",
+            [addFile({
               name,
               id: document.header.id,
               documentType: ${v.documentTypeVariableName},
-            }),
+            })],
           );
         }
 
         if(name) {
-          await reactor.addAction(
+          await reactorClient.execute(
             document.header.id,
-            setName(name),
+            "main",
+            [setName(name)],
           );
         }
 

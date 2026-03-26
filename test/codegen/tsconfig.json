@@ -37,6 +37,9 @@
       "path": "../../packages/reactor"
     },
     {
+      "path": "../../packages/reactor-api"
+    },
+    {
       "path": "../../packages/reactor-browser"
     },
     {
