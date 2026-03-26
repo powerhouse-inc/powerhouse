@@ -7,9 +7,9 @@ concurrency:
 on:
   workflow_dispatch:
   push:
-    branches: ["main", "release/*"]
+    branches: ["main", "release/**"]
   pull_request:
-    branches: ["main", "release/*"]
+    branches: ["main", "release/**"]
     types: [opened, reopened, synchronize]
 
 permissions:
