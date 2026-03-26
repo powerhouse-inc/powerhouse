@@ -30,14 +30,9 @@ const METHOD_NOT_ALLOWED = JSON.stringify({
 });
 
 /** @internal Injected in tests to avoid relying on constructor mock semantics. */
-type TransportFactory = (opts: { sessionIdGenerator: undefined }) => {
-  handleRequest(
-    req: IncomingMessage,
-    res: ServerResponse,
-    body?: unknown,
-  ): Promise<void>;
-  close(): Promise<void>;
-};
+type TransportFactory = (opts: {
+  sessionIdGenerator: undefined;
+}) => InstanceType<typeof StreamableHTTPServerTransport>;
 
 export async function setupMcpServer(
   options: SetupMcpServerOptions,
