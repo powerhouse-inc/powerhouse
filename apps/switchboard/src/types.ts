@@ -1,7 +1,7 @@
+import type { MeterProvider } from "@opentelemetry/api";
 import type { IReactorClient } from "@powerhousedao/reactor";
 import type { IRenown } from "@renown/sdk";
 import type { DriveInput, ILogger } from "document-drive";
-import type { MeterProvider } from "@opentelemetry/api";
 
 export type StorageOptions = {
   type: "filesystem" | "memory" | "postgres" | "browser";
@@ -20,6 +20,9 @@ export type IdentityOptions = {
 
   /** Base url of the Renown instance to use */
   baseUrl?: string;
+
+  /** If true, unsigned actions will be rejected */
+  requireSignatures?: boolean;
 };
 
 export type StartServerOptions = {

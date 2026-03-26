@@ -2,7 +2,7 @@ import type { IReactorClient, ISyncManager } from "@powerhousedao/reactor";
 import { driveCollectionId } from "@powerhousedao/reactor";
 import type { DocumentDriveDocument } from "document-drive";
 import type { Action, DocumentModelModule, PHDocument } from "document-model";
-import { generateId } from "document-model/core";
+import { createAction } from "document-model/core";
 import { z } from "zod";
 import type { ToolSchema, ToolWithCallback } from "./types.js";
 import { toolWithCallback, validateDocumentModelAction } from "./utils.js";
@@ -411,13 +411,13 @@ export async function createReactorMcpProvider(
         );
       }
       const actions: Action[] = params.actions.map((paramAction) => {
-        const action: Action = {
-          id: generateId(),
-          timestampUtcMs: new Date().toISOString(),
-          type: paramAction.type,
-          input: paramAction.input ?? {},
-          scope: paramAction.scope,
-        };
+        const action: Action = createAction(
+          paramAction.type,
+          paramAction.input ?? {},
+          undefined,
+          undefined,
+          paramAction.scope,
+        );
         const actionValidation = validateDocumentModelAction(
           documentModel,
           action,

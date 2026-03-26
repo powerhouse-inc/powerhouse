@@ -9,10 +9,13 @@
     "test:e2e": "vitest --run"
   },
   "devDependencies": {
+    "@modelcontextprotocol/sdk": "catalog:",
     "@powerhousedao/switchboard": "workspace:*",
+    "@powerhousedao/reactor": "workspace:*",
     "@powerhousedao/reactor-api": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",
     "@renown/sdk": "workspace:*",
+    "document-drive": "workspace:*",
     "document-model": "workspace:*",
     "graphql-ws": "catalog:",
     "graphql-sse": "catalog:",

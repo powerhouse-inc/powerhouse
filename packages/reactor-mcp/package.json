@@ -32,7 +32,7 @@
   "license": "AGPL-3.0-only",
   "dependencies": {
     "@ai-sdk/openai": "2.0.0",
-    "@modelcontextprotocol/sdk": "^1.27.1",
+    "@modelcontextprotocol/sdk": "catalog:",
     "@openfeature/core": "catalog:",
     "@openfeature/env-var-provider": "catalog:",
     "@openfeature/server-sdk": "catalog:",
