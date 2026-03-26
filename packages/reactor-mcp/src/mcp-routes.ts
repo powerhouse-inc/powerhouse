@@ -29,17 +29,23 @@ const METHOD_NOT_ALLOWED = JSON.stringify({
   id: null,
 });
 
-/** @internal Injected in tests to avoid relying on module-level mocking of the SDK. */
-type TransportCtor = new (opts: {
-  sessionIdGenerator: undefined;
-}) => InstanceType<typeof StreamableHTTPServerTransport>;
+/** @internal Injected in tests to avoid relying on constructor mock semantics. */
+type TransportFactory = (opts: { sessionIdGenerator: undefined }) => {
+  handleRequest(
+    req: IncomingMessage,
+    res: ServerResponse,
+    body?: unknown,
+  ): Promise<void>;
+  close(): Promise<void>;
+};
 
 export async function setupMcpServer(
   options: SetupMcpServerOptions,
   httpAdapter: NodeRouteAdapter,
-  // Allow tests to inject a mock transport constructor instead of using vi.mock()
-  // on the SDK deep-import path, which is unreliable across different environments.
-  TransportClass: TransportCtor = StreamableHTTPServerTransport,
+  // Allow tests to inject a factory function instead of relying on `new vi.fn()`
+  // constructor semantics, which differ between macOS and Linux environments.
+  createTransport: TransportFactory = (opts) =>
+    new StreamableHTTPServerTransport(opts),
 ): Promise<McpServer> {
   const server = await createServer(options);
 
@@ -51,7 +57,7 @@ export async function setupMcpServer(
       // request to ensure complete isolation. A single instance would cause request
       // ID collisions when multiple clients connect concurrently.
       try {
-        const transport = new TransportClass({
+        const transport = createTransport({
           sessionIdGenerator: undefined,
         });
         res.on("close", () => {

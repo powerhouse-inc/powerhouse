@@ -72,19 +72,20 @@ function makeMockResponse() {
   return { res, written };
 }
 
-/** Returns a fresh transport constructor mock for each POST-handler test. */
+/** Returns a fresh transport factory mock for each POST-handler test. */
 function makeTransportMock() {
   const handleRequest = vi.fn().mockResolvedValue(undefined);
   const close = vi.fn().mockResolvedValue(undefined);
-  // vi.fn() as constructor: returning an object makes `new Fn()` return that object.
-  const Transport = vi
-    .fn()
-    .mockImplementation(() => ({ handleRequest, close }));
+  // Use a plain factory function (not a constructor) to avoid `new vi.fn()`
+  // constructor semantics that differ between macOS and Linux/CI environments.
+  const createTransport = vi.fn().mockReturnValue({ handleRequest, close });
   return {
-    Transport: Transport as unknown as Parameters<typeof setupMcpServer>[2],
+    Transport: createTransport as unknown as Parameters<
+      typeof setupMcpServer
+    >[2],
     handleRequest,
     close,
-    instances: Transport.mock,
+    createTransport,
   };
 }
 
