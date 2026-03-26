@@ -31,6 +31,7 @@
   "sideEffects": false,
   "description": "The Powerhouse Common package contains the basic document model and drive UI (App) that is required to get started with Connect and visualize private & public apps.",
   "scripts": {
+    "build": "tsc",
     "tsc": "tsc",
     "lint": "eslint",
     "dev": "ph-cli dev --config-file ./powerhouse.config.json"

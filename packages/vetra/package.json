@@ -49,6 +49,7 @@
     "test:document-models": "vitest run document-models",
     "test:editors": "vitest run editors",
     "test:processors": "vitest run processors",
+    "build": "pnpm run build:bundle && pnpm run build:css",
     "build:bundle": "tsdown",
     "build:css": "pnpm exec tailwindcss -i ./style.css -o ./dist/style.css",
     "generate": "ph-cli generate",

@@ -17,6 +17,7 @@
   ],
   "sideEffects": false,
   "scripts": {
+    "build": "tsc",
     "tsc": "tsc",
     "lint": "eslint",
     "test": "vitest --run",

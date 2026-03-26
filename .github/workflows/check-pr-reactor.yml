@@ -40,11 +40,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install-ci
 
-      - name: Build typescript
-        run: pnpm build-tsc
-
-      - name: Build bundlers
-        run: pnpm build-bundle
+      - name: Build
+        run: pnpm build
 
       - name: Lint
         run: pnpm lint
@@ -79,16 +76,7 @@ jobs:
         run: pnpm install-ci
 
       - name: Build
-        run: pnpm build-tsc
-
-      - name: Run misc build scripts
-        run: pnpm build-misc
-
-      - name: Run bundle scripts
-        run: pnpm build-bundle
-
-      - name: Run css build scripts
-        run: pnpm build-css
+        run: pnpm build
 
       - name: Run sync integration test
         run: pnpm test:integration

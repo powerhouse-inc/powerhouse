@@ -31,7 +31,7 @@
     "tsc": "tsc",
     "test": "vitest run",
     "lint": "eslint",
-    "build:misc": "pnpm run install-packages",
+    "build": "pnpm run install-packages",
     "start": "node dist/src/index.js",
     "start:profile": "mkdir -p .prof && node --cpu-prof --cpu-prof-dir=.prof dist/src/index.js",
     "start:profile:bun": "mkdir -p .prof && bun --cpu-prof --cpu-prof-dir=.prof dist/src/index.js",

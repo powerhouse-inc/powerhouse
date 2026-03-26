@@ -23,7 +23,7 @@
   "scripts": {
     "tsc": "tsc",
     "lint": "eslint",
-    "build:bundle": "tsdown"
+    "build": "tsdown"
   },
   "dependencies": {
     "@powerhousedao/config": "workspace:*",

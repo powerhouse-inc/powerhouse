@@ -15,6 +15,7 @@
   ],
   "sideEffects": false,
   "scripts": {
+    "build": "tsc",
     "generate-test-projects": "tsx ./generate-test-projects-script.ts",
     "test": "bun test --timeout 1000000 --preload ./setup.ts ./tests/*.test.ts",
     "test:nogenerate": "bun test --timeout 1000000 ./tests/*.test.ts"

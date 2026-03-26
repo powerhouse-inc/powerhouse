@@ -17,7 +17,7 @@
     "dist"
   ],
   "scripts": {
-    "build:bundle": "tsdown",
+    "build": "tsdown",
     "test": "vitest run --coverage --printConsoleTrace=true --silent=false",
     "test:watch": "vitest --coverage",
     "lint": "eslint",

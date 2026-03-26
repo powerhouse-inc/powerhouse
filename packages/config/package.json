@@ -24,6 +24,7 @@
     "access": "public"
   },
   "scripts": {
+    "build": "tsc",
     "tsc": "tsc",
     "lint": "eslint"
   },

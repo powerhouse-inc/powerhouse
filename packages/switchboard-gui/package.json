@@ -13,7 +13,7 @@
     "tsc": "tsc",
     "lint": "eslint",
     "dev": "vite",
-    "build:vite": "vite build",
+    "build": "vite build",
     "preview": "vite preview"
   },
   "dependencies": {

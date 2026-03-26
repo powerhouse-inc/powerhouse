@@ -45,7 +45,7 @@
   "scripts": {
     "tsc": "tsc",
     "lint": "eslint",
-    "build:css": "pnpm exec tailwindcss -i ./editors/style.css -o ./dist/editors/style.css",
+    "build": "pnpm exec tailwindcss -i ./editors/style.css -o ./dist/editors/style.css",
     "test": "vitest --run",
     "test:watch": "vitest",
     "generate": "ph-cli generate",

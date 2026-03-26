@@ -13,7 +13,7 @@
     "url": "https://github.com/powerhouse-inc/powerhouse"
   },
   "scripts": {
-    "build:bundle": "tsx ./bundle.ts"
+    "build": "tsx ./bundle.ts"
   },
   "exports": {
     ".": {

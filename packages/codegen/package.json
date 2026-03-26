@@ -37,7 +37,7 @@
     "tsc": "tsc",
     "lint": "eslint",
     "copy-hygen": "rm -rf dist/src/codegen/.hygen && cp -r src/codegen/.hygen dist/src/codegen/",
-    "build:bundle": "tsdown"
+    "build": "tsdown"
   },
   "dependencies": {
     "document-model": "workspace:",
