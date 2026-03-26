@@ -157,7 +157,7 @@ async function updateIndexFile(v: {
   if (!exportNames.includes("processorFactory")) {
     sourceFile.addExportDeclaration({
       namedExports: ["processorFactory"],
-      moduleSpecifier: "./factory.ts",
+      moduleSpecifier: "./factory.js",
     });
   }
   await formatSourceFileWithPrettier(sourceFile);
