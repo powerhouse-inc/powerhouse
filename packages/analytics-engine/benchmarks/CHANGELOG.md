@@ -1,3 +1,13 @@
+## 6.0.0-dev.112 (2026-03-26)
+
+### 🚀 Features
+
+- **codegen:** e2e codegen processor tests ([08686abc6](https://github.com/powerhouse-inc/powerhouse/commit/08686abc6))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
 ## 6.0.0-dev.111 (2026-03-25)
 
 This was a version bump only for benchmarks to align it with other projects, there were no code changes.
