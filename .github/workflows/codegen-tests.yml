@@ -59,7 +59,7 @@ jobs:
         run: pnpm build-css
 
       - name: Run tests
-        run: pnpm test:codegen
+        run: pnpm test
         working-directory: test/codegen
 
   notify-discord:

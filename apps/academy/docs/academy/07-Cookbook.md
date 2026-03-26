@@ -1680,6 +1680,28 @@ This section covers managing the Powerhouse Reactor (the local service for proce
 
 > **Tip:** For development workflows, **Vetra Studio** (`ph vetra --watch`) is recommended as it includes reactor functionality along with automatic code generation and live preview.
 
+### Reactor Recipes
+
+The [Powerhouse Recipes](https://github.com/powerhouse-inc/recipes) repository contains standalone example projects that demonstrate common Reactor patterns and integrations. Each recipe is a self-contained project you can clone and run.
+
+| Recipe                                                                                                       | Description                                                                                                                                                                    |
+| ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [Audit Trail](https://github.com/powerhouse-inc/recipes/tree/main/audit-trail)                               | Reactor processor that builds an immutable audit log in PostgreSQL from `ActionSigner` context, with a GraphQL subgraph for querying entries by user, document, or time range. |
+| [Batch Progress](https://github.com/powerhouse-inc/recipes/tree/main/batch-progress)                         | Multi-document creation with dependency ordering using `executeBatch` and real-time progress tracking via the EventBus.                                                        |
+| [Cross-Document Reactor](https://github.com/powerhouse-inc/recipes/tree/main/cross-document-reactor)         | Event-driven cross-document automation using `ReactorClient` subscriptions to dispatch actions across related documents.                                                       |
+| [Custom Read Model](https://github.com/powerhouse-inc/recipes/tree/main/custom-read-model)                   | Custom `IReadModel` registered via `ReactorBuilder.withReadModel()` that maintains a document-count-per-type materialized view.                                                |
+| [Discord Webhook Processor](https://github.com/powerhouse-inc/recipes/tree/main/discord-webhook-processor)   | Reactor processor that posts document operations to a Discord channel as rich embeds with automatic batching and HMAC-SHA256 signatures.                                       |
+| [Document Snapshot Exporter](https://github.com/powerhouse-inc/recipes/tree/main/document-snapshot-exporter) | CLI tool for reliable read-after-write export of document state and operation history to JSON using Reactor consistency tokens.                                                |
+| [Full-Text Search](https://github.com/powerhouse-inc/recipes/tree/main/full-text-search)                     | Reactor processor that indexes document state into a PostgreSQL full-text search table for ranked keyword search across all documents.                                         |
+| [Rate Limiter](https://github.com/powerhouse-inc/recipes/tree/main/rate-limiter)                             | Reactor processor paired with an `AuthService` gate to throttle users by signer address using a sliding window.                                                                |
+| [Relational DB Subgraph](https://github.com/powerhouse-inc/recipes/tree/main/relational-db-subgraph)         | Complete relational DB processor with Kysely migrations, typed schema, and a GraphQL subgraph for a document catalog.                                                          |
+| [Saga](https://github.com/powerhouse-inc/recipes/tree/main/saga)                                             | Saga pattern via Reactor processor: operations on one document trigger operations on others, linked by a traceable saga context with re-entrancy guards.                       |
+| [Signed Operations Verifier](https://github.com/powerhouse-inc/recipes/tree/main/signed-operations-verifier) | Standalone script that builds document operations with cryptographic signatures and verifies each one, demonstrating tamper detection via `ISigner`.                           |
+| [Subscription CLI](https://github.com/powerhouse-inc/recipes/tree/main/subscription-cli)                     | CLI for monitoring Reactor GraphQL subscriptions over WebSocket in real time, printing timestamped events to stdout.                                                           |
+| [Sync Health Monitor](https://github.com/powerhouse-inc/recipes/tree/main/sync-health-monitor)               | EventBus-based sync health dashboard with two-reactor sync monitoring and a GraphQL subgraph for metrics.                                                                      |
+
+> See the [recipes repository](https://github.com/powerhouse-inc/recipes) for full source code, setup instructions, and prerequisites.
+
 ### Reactor Management
 
 <details id="starting-the-reactor">

@@ -16,7 +16,7 @@
   "sideEffects": false,
   "scripts": {
     "generate-test-projects": "tsx ./generate-test-projects-script.ts",
-    "test:codegen": "bun test --timeout 1000000 --preload ./setup.ts ./tests/*.test.ts",
+    "test": "bun test --timeout 1000000 --preload ./setup.ts ./tests/*.test.ts",
     "test:nogenerate": "bun test --timeout 1000000 ./tests/*.test.ts"
   },
   "dependencies": {
@@ -38,6 +38,7 @@
     "document-model": "workspace:*",
     "@powerhousedao/analytics-engine-core": "workspace:*",
     "@powerhousedao/design-system": "workspace:*",
+    "@powerhousedao/reactor": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",
     "@testing-library/jest-dom": "^6.9.1",
     "@types/node": "catalog:",
