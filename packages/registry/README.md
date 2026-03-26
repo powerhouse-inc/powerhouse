@@ -122,3 +122,53 @@ Options:
 | `--s3-secret-access-key` | `S3_SECRET_ACCESS_KEY` | —             | S3 secret key                                     |
 | `--s3-key-prefix`        | `S3_KEY_PREFIX`        | —             | S3 key prefix                                     |
 | `--s3-force-path-style`  | `S3_FORCE_PATH_STYLE`  | `true`        | Force S3 path-style URLs                          |
+
+## Deployment
+
+### Build
+
+```sh
+# Latest version
+docker build -t ph-registry .
+
+# Specific version
+docker build --build-arg TAG=6.0.0-dev.112 -t ph-registry .
+```
+
+The `TAG` build arg controls the npm version of `@powerhousedao/registry` to install (defaults to `latest`).
+
+### Run
+
+```sh
+docker run -p 4873:4873 -v ph-data:/data ph-registry
+```
+
+#### Environment variables
+
+Pass env variables with `-e`:
+
+```sh
+docker run -p 4873:4873 -v ph-data:/data \
+  -e REGISTRY_UPLINK=https://registry.npmjs.org \
+  -e S3_BUCKET=my-bucket \
+  -e S3_REGION=us-east-1 \
+  ph-registry
+```
+
+Or use an env file:
+
+```sh
+docker run -p 4873:4873 -v ph-data:/data --env-file .env ph-registry
+```
+
+See the [CLI](#cli) section for all supported environment variables.
+
+#### CLI arguments
+
+Since the image uses `ENTRYPOINT`, CLI args can be passed directly:
+
+```sh
+docker run -p 8080:8080 -v ph-data:/data ph-registry --port 8080 --uplink https://registry.npmjs.org
+```
+
+CLI arguments take precedence over environment variables.

@@ -29,8 +29,8 @@ export function buildVerdaccioConfig(config: RegistryConfig) {
     web: {
       enable: config.webEnabled !== false,
       title: "Powerhouse Registry",
-      logo: "/app/static/logo.svg",
-      favicon: "/app/static/favicon.ico",
+      logo: "https://raw.githubusercontent.com/powerhouse-inc/powerhouse/main/packages/registry/static/logo.svg",
+      favicon: "/-/static/favicon.ico",
       primary_color: "#38C780",
       darkMode: true,
     },
