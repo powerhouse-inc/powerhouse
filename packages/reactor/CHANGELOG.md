@@ -1,3 +1,14 @@
+## 6.0.2-staging.2 (2026-03-26)
+
+### 🩹 Fixes
+
+- **reactor-api:** deserialize signatures in pushSyncEnvelopes resolver ([41abda7b9](https://github.com/powerhouse-inc/powerhouse/commit/41abda7b9))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Claude Opus 4.6 (1M context)
+
 ## 6.0.2-staging.1 (2026-03-26)
 
 ### 🚀 Features
