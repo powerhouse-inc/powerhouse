@@ -6,6 +6,7 @@ import { register } from "node:module";
 register(httpsHooksPath, import.meta.url);
 
 import { PGlite } from "@electric-sql/pglite";
+import { metrics } from "@opentelemetry/api";
 import { ReactorInstrumentation } from "@powerhousedao/opentelemetry-instrumentation-reactor";
 import {
   ChannelScheme,
@@ -16,7 +17,6 @@ import {
   parseDriveUrl,
   type Database,
 } from "@powerhousedao/reactor";
-import { metrics } from "@opentelemetry/api";
 import {
   HttpPackageLoader,
   PackageManagementService,
@@ -27,7 +27,7 @@ import {
   initializeAndStartAPI,
   startViteServer,
 } from "@powerhousedao/reactor-api";
-import { type IRenown } from "@renown/sdk";
+import type { IRenown } from "@renown/sdk/node";
 import * as Sentry from "@sentry/node";
 import { childLogger, driveDocumentModelModule } from "document-drive";
 import type { DocumentModelModule } from "document-model";
@@ -41,7 +41,7 @@ import { Pool } from "pg";
 import type { RedisClientType } from "redis";
 import { initRedis } from "./clients/redis.js";
 import { initFeatureFlags } from "./feature-flags.js";
-import { initRenown } from "./renown.js";
+import { getRenownSignerConfig, initRenown } from "./renown.js";
 import type { StartServerOptions, SwitchboardReactor } from "./types.js";
 import { addDefaultDrive, isPostgresUrl } from "./utils.js";
 
@@ -52,6 +52,8 @@ dotenv.config();
 // Feature flag constants
 const DOCUMENT_MODEL_SUBGRAPHS_ENABLED = "DOCUMENT_MODEL_SUBGRAPHS_ENABLED";
 const DOCUMENT_MODEL_SUBGRAPHS_ENABLED_DEFAULT = true;
+const REQUIRE_SIGNATURES = "REQUIRE_SIGNATURES";
+const REQUIRE_SIGNATURES_DEFAULT = false;
 
 // Create a monolith express app for all subgraphs
 const app = express();
@@ -180,7 +182,11 @@ async function initServer(
     );
 
     if (renown) {
-      clientBuilder.withSigner(renown.signer);
+      const signerConfig = getRenownSignerConfig(
+        renown,
+        options.identity?.requireSignatures,
+      );
+      clientBuilder.withSigner(signerConfig);
     }
 
     const module = await clientBuilder.buildModule();
@@ -345,6 +351,14 @@ export const startSwitchboard = async (
 
   options.enableDocumentModelSubgraphs = enableDocumentModelSubgraphs;
 
+  const requireSignatures =
+    options.identity?.requireSignatures ??
+    (await featureFlags.getBooleanValue(
+      REQUIRE_SIGNATURES,
+      REQUIRE_SIGNATURES_DEFAULT,
+    ));
+  options.identity = { ...options.identity, requireSignatures };
+
   const logger = options.logger ?? defaultLogger;
 
   logger.info(
@@ -352,6 +366,7 @@ export const startSwitchboard = async (
     JSON.stringify(
       {
         DOCUMENT_MODEL_SUBGRAPHS_ENABLED: enableDocumentModelSubgraphs,
+        REQUIRE_SIGNATURES: requireSignatures,
       },
       null,
       2,

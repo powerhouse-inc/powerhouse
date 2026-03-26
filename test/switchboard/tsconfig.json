@@ -9,7 +9,13 @@
       "path": "../../apps/switchboard"
     },
     {
+      "path": "../../packages/document-drive"
+    },
+    {
       "path": "../../packages/document-model"
+    },
+    {
+      "path": "../../packages/reactor"
     },
     {
       "path": "../../packages/reactor-api"

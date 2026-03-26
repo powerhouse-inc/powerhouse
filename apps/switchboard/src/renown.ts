@@ -1,11 +1,13 @@
-import { childLogger } from "document-drive";
+import type { SignerConfig } from "@powerhousedao/reactor";
 import {
+  createSignatureVerifier,
   DEFAULT_RENOWN_URL,
   NodeKeyStorage,
   RenownBuilder,
   RenownCryptoBuilder,
   type IRenown,
 } from "@renown/sdk/node";
+import { childLogger } from "document-drive";
 
 const logger = childLogger(["switchboard", "renown"]);
 
@@ -62,4 +64,20 @@ export async function initRenown(
   logger.info("Switchboard identity initialized: @did", renownCrypto.did);
 
   return renown;
+}
+
+/**
+ * Get the signer config for the given renown instance.
+ *
+ * @param renown - The renown instance
+ * @param requireSignature - If true, unsigned actions are rejected
+ */
+export function getRenownSignerConfig(
+  renown: IRenown,
+  requireSignature?: boolean,
+): SignerConfig {
+  return {
+    signer: renown.signer,
+    verifier: createSignatureVerifier(requireSignature),
+  };
 }

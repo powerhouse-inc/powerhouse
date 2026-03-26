@@ -9,6 +9,7 @@ packages:
   - "!releases"
 
 catalog:
+  "@modelcontextprotocol/sdk": 1.27.1
   "@powerhousedao/document-engineering": 1.40.1
   "kysely": 0.28.11
   "kysely-pglite-dialect": 1.2.0
