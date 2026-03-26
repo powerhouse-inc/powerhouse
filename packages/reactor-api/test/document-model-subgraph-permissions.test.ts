@@ -377,7 +377,7 @@ describe("DocumentModelSubgraph Permission Checks", () => {
       ctx: Context,
       paging?: { limit?: number; offset?: number; cursor?: string },
     ) => {
-      const queryResolver = subgraph.queryResolvers.documents;
+      const queryResolver = subgraph.queryResolvers.findDocuments;
       const result = await queryResolver(null, { paging }, ctx);
       return result;
     };
