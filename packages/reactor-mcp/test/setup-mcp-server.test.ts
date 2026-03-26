@@ -11,21 +11,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { IReactorClient, ISyncManager } from "@powerhousedao/reactor";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { EventEmitter } from "node:events";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-
-// ── mock transport — hoisted so it's available before the top-level import ────
-
-const { mockHandleRequest, mockTransportClose, MockTransport } = vi.hoisted(
-  () => {
-    const mockHandleRequest = vi.fn().mockResolvedValue(undefined);
-    const mockTransportClose = vi.fn().mockResolvedValue(undefined);
-    const MockTransport = vi.fn().mockImplementation(() => ({
-      handleRequest: mockHandleRequest,
-      close: mockTransportClose,
-    }));
-    return { mockHandleRequest, mockTransportClose, MockTransport };
-  },
-);
+import { describe, expect, it, vi } from "vitest";
 
 // ── mock createServer so we don't spin up real MCP tool registrations ─────────
 
@@ -36,8 +22,8 @@ vi.mock("../src/server.js", () => ({
   } satisfies Partial<McpServer> as unknown as McpServer),
 }));
 
-// Import AFTER the mock is in place
-const { setupMcpServer } = await import("../src/mcp-routes.js");
+// Static import — vi.mock() is hoisted so the mock above is applied first.
+import { setupMcpServer } from "../src/mcp-routes.js";
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -86,16 +72,28 @@ function makeMockResponse() {
   return { res, written };
 }
 
+/** Returns a fresh transport constructor mock for each POST-handler test. */
+function makeTransportMock() {
+  const handleRequest = vi.fn().mockResolvedValue(undefined);
+  const close = vi.fn().mockResolvedValue(undefined);
+  // vi.fn() as constructor: returning an object makes `new Fn()` return that object.
+  const Transport = vi
+    .fn()
+    .mockImplementation(() => ({ handleRequest, close }));
+  return {
+    Transport: Transport as unknown as Parameters<typeof setupMcpServer>[2],
+    handleRequest,
+    close,
+    instances: Transport.mock,
+  };
+}
+
 const mockClient = {} as IReactorClient;
 const mockSyncManager = {} as ISyncManager;
 
 // ── tests ─────────────────────────────────────────────────────────────────────
 
 describe("setupMcpServer", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   it("registers routes for POST, GET, and DELETE on /mcp", async () => {
     const { adapter, routes } = makeMockAdapter();
     await setupMcpServer(
@@ -187,46 +185,50 @@ describe("setupMcpServer", () => {
     }
 
     it("calls transport.handleRequest with (req, res, body)", async () => {
+      const { Transport, handleRequest } = makeTransportMock();
       const { adapter, routes } = makeMockAdapter();
-      await setupMcpServer({ client: mockClient }, adapter, MockTransport);
+      await setupMcpServer({ client: mockClient }, adapter, Transport);
 
       const body = { jsonrpc: "2.0", method: "initialize", id: 1 };
       const { req, res } = await invokePost(routes, body);
 
-      expect(mockHandleRequest).toHaveBeenCalledOnce();
-      expect(mockHandleRequest).toHaveBeenCalledWith(req, res, body);
+      expect(handleRequest).toHaveBeenCalledOnce();
+      expect(handleRequest).toHaveBeenCalledWith(req, res, body);
     });
 
     it("creates a fresh transport per request for stateless isolation", async () => {
+      const { Transport, handleRequest } = makeTransportMock();
       const { adapter, routes } = makeMockAdapter();
-      await setupMcpServer({ client: mockClient }, adapter, MockTransport);
+      await setupMcpServer({ client: mockClient }, adapter, Transport);
 
       await invokePost(routes);
       await invokePost(routes);
 
-      expect(MockTransport).toHaveBeenCalledTimes(2);
-      expect(mockHandleRequest).toHaveBeenCalledTimes(2);
+      expect(Transport).toHaveBeenCalledTimes(2);
+      expect(handleRequest).toHaveBeenCalledTimes(2);
     });
 
     it("connects the server to the new transport before handling the request", async () => {
+      const { Transport } = makeTransportMock();
       const { adapter, routes } = makeMockAdapter();
       const server = await setupMcpServer(
         { client: mockClient },
         adapter,
-        MockTransport,
+        Transport,
       );
 
       await invokePost(routes);
 
-      const transport = MockTransport.mock.results[0]?.value as {
-        handleRequest: typeof mockHandleRequest;
-      };
-      expect(server.connect).toHaveBeenCalledWith(transport);
+      const rawTransport = (
+        Transport as unknown as { mock: { results: { value: unknown }[] } }
+      ).mock.results[0]?.value;
+      expect(server.connect).toHaveBeenCalledWith(rawTransport);
     });
 
     it("closes the transport when the response 'close' event fires", async () => {
+      const { Transport, close } = makeTransportMock();
       const { adapter, routes } = makeMockAdapter();
-      await setupMcpServer({ client: mockClient }, adapter, MockTransport);
+      await setupMcpServer({ client: mockClient }, adapter, Transport);
 
       const postRoute = routes.find((r) => r.method === "POST")!;
       const { res } = makeMockResponse();
@@ -236,7 +238,7 @@ describe("setupMcpServer", () => {
       res.emit("close");
       await new Promise((resolve) => setTimeout(resolve, 0));
 
-      expect(mockTransportClose).toHaveBeenCalled();
+      expect(close).toHaveBeenCalled();
     });
   });
 });
