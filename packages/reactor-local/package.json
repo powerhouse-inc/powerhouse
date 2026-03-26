@@ -11,7 +11,7 @@
     "access": "public"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc --build",
     "tsc": "tsc",
     "lint": "eslint",
     "start": "vite-node src/index.ts"

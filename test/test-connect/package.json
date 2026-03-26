@@ -11,7 +11,7 @@
   "exports": "./dist/src/index.js",
   "types": "./dist/src/index.d.ts",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc --build",
     "dev": "tsx src/cli.ts",
     "test": "vitest --run",
     "scenario:sync": "tsx src/orchestrator.ts",

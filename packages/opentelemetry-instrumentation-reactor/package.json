@@ -19,7 +19,7 @@
   ],
   "scripts": {
     "tsc": "tsc",
-    "build": "tsc",
+    "build": "tsc --build",
     "lint": "eslint"
   },
   "publishConfig": {

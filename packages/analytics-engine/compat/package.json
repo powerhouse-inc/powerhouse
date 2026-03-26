@@ -11,7 +11,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsc",
+    "build": "tsc --build",
     "test:pg": "PG_CONNECTION_STRING=postgresql://postgres:password@localhost:5555/analytics vitest --run ./**/*.test.ts"
   },
   "dependencies": {

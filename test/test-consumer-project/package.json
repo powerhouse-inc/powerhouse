@@ -23,7 +23,8 @@
     "./style.css": "./dist/style.css"
   },
   "scripts": {
-    "build": "ph-cli build",
+    "build": "pnpm run build:css",
+    "build:css": "pnpm exec tailwindcss -i ./style.css -o ./dist/style.css",
     "connect:build": "ph-cli connect build",
     "connect:preview": "ph-cli connect preview"
   },

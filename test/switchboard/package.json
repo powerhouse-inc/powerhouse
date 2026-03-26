@@ -6,7 +6,7 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "build": "tsc",
+    "build": "tsc --build",
     "test": "vitest --run"
   },
   "devDependencies": {
