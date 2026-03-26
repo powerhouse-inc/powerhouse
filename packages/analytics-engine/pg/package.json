@@ -20,7 +20,7 @@
     "dist"
   ],
   "scripts": {
-    "test:pg": "PG_CONNECTION_STRING=postgresql://postgres:password@localhost:5555/analytics vitest --run ./**/*.test.ts",
+    "test": "PG_CONNECTION_STRING=postgresql://postgres:password@localhost:5555/analytics vitest --run ./**/*.test.ts",
     "build:bundle": "tsdown"
   },
   "dependencies": {

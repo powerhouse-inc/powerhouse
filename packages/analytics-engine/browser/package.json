@@ -21,7 +21,7 @@
   ],
   "scripts": {
     "build:bundle": "tsdown",
-    "test:e2e": "vitest --run ./**/*.test.ts"
+    "test": "vitest --run ./**/*.test.ts"
   },
   "dependencies": {
     "@powerhousedao/analytics-engine-core": "workspace:*",

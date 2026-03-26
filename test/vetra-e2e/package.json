@@ -53,8 +53,8 @@
     "build": "ph-cli build",
     "service-startup": "bash ./node_modules/@powerhousedao/ph-cli/dist/scripts/service-startup.sh",
     "service-unstartup": "bash ./node_modules/@powerhousedao/ph-cli/dist/scripts/service-unstartup.sh",
-    "test:e2e": "rimraf .ph && playwright test",
-    "test:e2e:ui": "rimraf .ph && playwright test --ui"
+    "test": "rimraf .ph && playwright test",
+    "test:ui": "rimraf .ph && playwright test --ui"
   },
   "dependencies": {
     "document-model": "workspace:*",

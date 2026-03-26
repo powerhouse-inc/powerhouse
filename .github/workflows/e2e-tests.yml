@@ -71,8 +71,7 @@ jobs:
         working-directory: ./test/vetra-e2e
 
       - name: Run Playwright tests
-        run: pnpm test:e2e
-        working-directory: ./test/vetra-e2e
+        run: pnpm test:e2e:vetra
 
       - name: Upload Playwright Report
         uses: actions/upload-artifact@v4
@@ -143,8 +142,7 @@ jobs:
         working-directory: packages/analytics-engine/browser
 
       - name: Run Playwright tests
-        run: pnpm test:e2e
-        working-directory: packages/analytics-engine/browser
+        run: pnpm test:e2e:analytics
 
       - name: Upload Playwright Report
         uses: actions/upload-artifact@v4
