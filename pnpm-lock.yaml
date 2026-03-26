@@ -2723,6 +2723,9 @@ importers:
 
   test/versioned-documents:
     dependencies:
+      '@powerhousedao/analytics-engine-core':
+        specifier: 'workspace:'
+        version: link:../../packages/analytics-engine/core
       '@powerhousedao/connect':
         specifier: workspace:*
         version: link:../../apps/connect

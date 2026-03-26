@@ -1,9 +1,9 @@
 import type {
-  ProcessorRecord,
-  IProcessorHostModule,
+    IProcessorHostModule,
+    ProcessorApp,
+    ProcessorRecord,
 } from "@powerhousedao/reactor-browser";
 import { type PHDocumentHeader } from "document-model";
-import type { ProcessorApp } from "@powerhousedao/common";
 import { TestSwitchboardAnalyticsProcessorProcessor } from "./index.js";
 
 export const testSwitchboardAnalyticsProcessorProcessorFactory =

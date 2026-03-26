@@ -35,3 +35,4 @@ export type {
   SyncOperation,
   ValidationResult,
 } from "@powerhousedao/reactor";
+export type * from "@powerhousedao/shared/processors";

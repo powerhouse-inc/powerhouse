@@ -8,12 +8,12 @@ export const relationalDbFactoryTemplate = (v: {
 }) =>
   ts`
 import type { 
+  ProcessorApp,
   ProcessorRecord,
   IProcessorHostModule,
   ProcessorFilter
  } from "@powerhousedao/reactor-browser"
 import type { PHDocumentHeader } from "document-model";
-import type { ProcessorApp } from "@powerhousedao/common";
 import { ${v.pascalCaseName}Processor } from "./index.js";
 
 export const ${v.camelCaseName}ProcessorFactory = (module: IProcessorHostModule) => async (driveHeader: PHDocumentHeader, processorApp?: ProcessorApp): Promise<ProcessorRecord[]> => {

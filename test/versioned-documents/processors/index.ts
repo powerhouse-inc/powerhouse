@@ -1,1 +1,1 @@
-export { processorFactory } from "./factory.ts";
+export { processorFactory } from "./factory.js";

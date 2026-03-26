@@ -73,6 +73,7 @@
     "@powerhousedao/design-system": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",
     "@powerhousedao/connect": "workspace:*",
+    "@powerhousedao/analytics-engine-core": "workspace:",
     "react": "catalog:",
     "react-dom": "catalog:",
     "zod": "catalog:"

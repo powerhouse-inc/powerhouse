@@ -1,10 +1,10 @@
 import type {
-  ProcessorRecord,
-  IProcessorHostModule,
-  ProcessorFilter,
+    IProcessorHostModule,
+    ProcessorApp,
+    ProcessorFilter,
+    ProcessorRecord,
 } from "@powerhousedao/reactor-browser";
 import type { PHDocumentHeader } from "document-model";
-import type { ProcessorApp } from "@powerhousedao/common";
 import { TestIsomorphicRelationalDbProcessorProcessor } from "./index.js";
 
 export const testIsomorphicRelationalDbProcessorProcessorFactory =
