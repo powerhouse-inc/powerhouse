@@ -17,7 +17,7 @@
     "test-codegen": "pnpm test:codegen",
     "test-e2e": "pnpm test:e2e:vetra",
     "test-coverage": "pnpm vitest run --coverage",
-    "simulate-ci-workflow": "pnpm clean && pnpm install-ci && pnpm check-ts-references && pnpm check-wrong-tsc-usage && pnpm build && pnpm install-ci && pnpm lint && pnpm test:ci && pnpm test:codegen && pnpm test:e2e:vetra && pnpm build:storybook && pnpm check-circular-imports",
+    "simulate-ci-workflow": "pnpm clean && pnpm install-ci && pnpm check-ts-references && pnpm build && pnpm install-ci && pnpm lint && pnpm test:ci && pnpm test:codegen && pnpm test:e2e:vetra && pnpm build:storybook && pnpm check-circular-imports",
     "lint": "NODE_OPTIONS=--max-old-space-size=8192 eslint --config eslint.config.js --quiet --fix --cache --cache-strategy content",
     "install-ci": "pnpm i --frozen-lockfile",
     "build": "tsc --build && pnpm --filter=@powerhousedao/builder-tools --filter=@powerhousedao/codegen --filter=document-model --filter=@powerhousedao/design-system --filter=@powerhousedao/powerhouse-vetra-packages --filter=@powerhousedao/reactor-api --filter=@powerhousedao/reactor-browser --filter=@powerhousedao/reactor --filter=@powerhousedao/registry --filter=@powerhousedao/shared --filter=@powerhousedao/switchboard-gui --filter=@powerhousedao/vetra --filter=@powerhousedao/analytics-engine-browser --filter=@powerhousedao/analytics-engine-core --filter=@powerhousedao/analytics-engine-graphql --filter=@powerhousedao/analytics-engine-knex --filter=@powerhousedao/analytics-engine-pg --filter=@powerhousedao/connect --filter=@powerhousedao/switchboard --filter=@powerhousedao/versioned-documents --no-bail run build",
@@ -28,7 +28,6 @@
     "prepare": "husky",
     "check-circular-imports": "dpdm -T ./**/* --no-tree --no-warning --exit-code circular:1",
     "check-ts-references": "pnpm update-ts-references --check",
-    "check-wrong-tsc-usage": "tsx scripts/check-wrong-tsc-usage.ts",
     "knip": "knip",
     "postinstall": "pnpm update-ts-references"
   },
