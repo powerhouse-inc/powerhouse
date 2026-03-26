@@ -1,3 +1,13 @@
+## 6.0.2-staging.1 (2026-03-26)
+
+### 🚀 Features
+
+- verify signatures on switchboard an consider actions without an app key on signer as unsigned ([3f01a2d2e](https://github.com/powerhouse-inc/powerhouse/commit/3f01a2d2e))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+
 ## 6.0.2-staging.0 (2026-03-25)
 
 ### 🚀 Features
