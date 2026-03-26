@@ -27,10 +27,6 @@ const { mockHandleRequest, mockTransportClose, MockTransport } = vi.hoisted(
   },
 );
 
-vi.mock("@modelcontextprotocol/sdk/server/streamableHttp.js", () => ({
-  StreamableHTTPServerTransport: MockTransport,
-}));
-
 // ── mock createServer so we don't spin up real MCP tool registrations ─────────
 
 vi.mock("../src/server.js", () => ({
@@ -192,7 +188,7 @@ describe("setupMcpServer", () => {
 
     it("calls transport.handleRequest with (req, res, body)", async () => {
       const { adapter, routes } = makeMockAdapter();
-      await setupMcpServer({ client: mockClient }, adapter);
+      await setupMcpServer({ client: mockClient }, adapter, MockTransport);
 
       const body = { jsonrpc: "2.0", method: "initialize", id: 1 };
       const { req, res } = await invokePost(routes, body);
@@ -203,7 +199,7 @@ describe("setupMcpServer", () => {
 
     it("creates a fresh transport per request for stateless isolation", async () => {
       const { adapter, routes } = makeMockAdapter();
-      await setupMcpServer({ client: mockClient }, adapter);
+      await setupMcpServer({ client: mockClient }, adapter, MockTransport);
 
       await invokePost(routes);
       await invokePost(routes);
@@ -214,7 +210,11 @@ describe("setupMcpServer", () => {
 
     it("connects the server to the new transport before handling the request", async () => {
       const { adapter, routes } = makeMockAdapter();
-      const server = await setupMcpServer({ client: mockClient }, adapter);
+      const server = await setupMcpServer(
+        { client: mockClient },
+        adapter,
+        MockTransport,
+      );
 
       await invokePost(routes);
 
@@ -226,7 +226,7 @@ describe("setupMcpServer", () => {
 
     it("closes the transport when the response 'close' event fires", async () => {
       const { adapter, routes } = makeMockAdapter();
-      await setupMcpServer({ client: mockClient }, adapter);
+      await setupMcpServer({ client: mockClient }, adapter, MockTransport);
 
       const postRoute = routes.find((r) => r.method === "POST")!;
       const { res } = makeMockResponse();
