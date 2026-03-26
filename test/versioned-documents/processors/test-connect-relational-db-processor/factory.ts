@@ -1,8 +1,8 @@
 import type {
-    IProcessorHostModule,
-    ProcessorApp,
-    ProcessorFilter,
-    ProcessorRecord,
+  IProcessorHostModule,
+  ProcessorApp,
+  ProcessorFilter,
+  ProcessorRecord,
 } from "@powerhousedao/reactor-browser";
 import type { PHDocumentHeader } from "document-model";
 import { TestConnectRelationalDbProcessorProcessor } from "./index.js";

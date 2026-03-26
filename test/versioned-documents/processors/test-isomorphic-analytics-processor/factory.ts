@@ -1,8 +1,8 @@
 import type {
-    IProcessorHostModule,
-    ProcessorApp,
-    ProcessorRecord,
-} from "@powerhousedao/reactor-browser";
+  IProcessorHostModule,
+  ProcessorApp,
+  ProcessorRecord,
+} from "@powerhousedao/reactor";
 import { type PHDocumentHeader } from "document-model";
 import { TestIsomorphicAnalyticsProcessorProcessor } from "./index.js";
 

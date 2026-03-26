@@ -71,6 +71,7 @@
   "dependencies": {
     "document-model": "workspace:*",
     "@powerhousedao/design-system": "workspace:*",
+    "@powerhousedao/reactor": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",
     "@powerhousedao/connect": "workspace:*",
     "@powerhousedao/analytics-engine-core": "workspace:",

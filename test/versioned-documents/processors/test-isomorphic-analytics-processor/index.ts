@@ -1,12 +1,9 @@
 import type {
+  AnalyticsPath,
   AnalyticsSeriesInput,
   IAnalyticsStore,
 } from "@powerhousedao/analytics-engine-core";
-import { AnalyticsPath } from "@powerhousedao/analytics-engine-core";
-import type {
-  OperationWithContext,
-  IProcessor,
-} from "@powerhousedao/reactor-browser";
+import type { IProcessor, OperationWithContext } from "@powerhousedao/reactor";
 
 export class TestIsomorphicAnalyticsProcessorProcessor implements IProcessor {
   private readonly NAMESPACE = "TestIsomorphicAnalyticsProcessor";

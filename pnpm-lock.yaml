@@ -2732,6 +2732,9 @@ importers:
       '@powerhousedao/design-system':
         specifier: workspace:*
         version: link:../../packages/design-system
+      '@powerhousedao/reactor':
+        specifier: workspace:*
+        version: link:../../packages/reactor
       '@powerhousedao/reactor-browser':
         specifier: workspace:*
         version: link:../../packages/reactor-browser

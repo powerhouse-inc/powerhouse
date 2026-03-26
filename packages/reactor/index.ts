@@ -265,6 +265,7 @@ export type {
   IProcessorHostModule,
   IProcessorManager,
   IRelationalDb,
+  ProcessorApp,
   ProcessorFactory,
   ProcessorFilter,
   ProcessorRecord,

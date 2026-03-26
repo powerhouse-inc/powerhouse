@@ -25,6 +25,7 @@ export type {
   JwtHandler,
   KeyframeValidationIssue,
   OperationWithContext,
+  ProcessorApp,
   ProcessorFactory,
   ProcessorFilter,
   ProcessorRecord,
@@ -35,4 +36,3 @@ export type {
   SyncOperation,
   ValidationResult,
 } from "@powerhousedao/reactor";
-export type * from "@powerhousedao/shared/processors";

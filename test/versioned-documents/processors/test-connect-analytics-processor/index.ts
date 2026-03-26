@@ -1,11 +1,11 @@
 import type {
+  AnalyticsPath,
   AnalyticsSeriesInput,
   IAnalyticsStore,
 } from "@powerhousedao/analytics-engine-core";
-import { AnalyticsPath } from "@powerhousedao/analytics-engine-core";
 import type {
-  OperationWithContext,
   IProcessor,
+  OperationWithContext,
 } from "@powerhousedao/reactor-browser";
 
 export class TestConnectAnalyticsProcessorProcessor implements IProcessor {

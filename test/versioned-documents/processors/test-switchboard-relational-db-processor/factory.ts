@@ -1,9 +1,9 @@
 import type {
-    IProcessorHostModule,
-    ProcessorApp,
-    ProcessorFilter,
-    ProcessorRecord,
-} from "@powerhousedao/reactor-browser";
+  IProcessorHostModule,
+  ProcessorApp,
+  ProcessorFilter,
+  ProcessorRecord,
+} from "@powerhousedao/reactor";
 import type { PHDocumentHeader } from "document-model";
 import { TestSwitchboardRelationalDbProcessorProcessor } from "./index.js";
 

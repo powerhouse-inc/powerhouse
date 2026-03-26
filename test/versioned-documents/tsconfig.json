@@ -64,6 +64,9 @@
       "path": "../../packages/document-model"
     },
     {
+      "path": "../../packages/reactor"
+    },
+    {
       "path": "../../packages/reactor-browser"
     }
   ]
