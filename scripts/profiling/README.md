@@ -218,6 +218,12 @@ tsx docs-count.ts --type powerhouse/document-model
 tsx docs-count.ts --verbose
 ```
 
+| Flag         | Short | Description                                                 |
+| ------------ | ----- | ----------------------------------------------------------- |
+| `--endpoint` |       | GraphQL endpoint (default: `http://localhost:4001/graphql`) |
+| `--type`     |       | Filter by document type                                     |
+| `--verbose`  | `-v`  | Show per-type counts                                        |
+
 > **Note:** `totalCount` may be inaccurate. Use `docs-list.ts --count-only` for a reliable count.
 
 ### `docs-list.ts` — List/count documents (paginated)
@@ -260,9 +266,11 @@ The script runs in order:
 
 1. `pnpm --filter document-model run tsc --build`
 2. `pnpm --filter @powerhousedao/reactor run build` (declarations) + `build:bundle` (JS)
-3. `pnpm --filter @powerhousedao/opentelemetry-instrumentation-reactor run build`
-4. `DATABASE_URL=... pnpm --filter document-drive run migrate`
+3. `pnpm --filter @powerhousedao/opentelemetry-instrumentation-reactor run build` _(only if `--otel` is passed)_
+4. `DATABASE_URL=<db> pnpm --filter document-drive run migrate` _(only if `--db` is a PostgreSQL URL)_
 5. `tsx reactor-direct.ts [your args]`
+
+Migrations use the same `--db` URL passed to the script. They are skipped for in-memory or file-backed PGlite databases.
 
 All arguments are passed through to `reactor-direct.ts`. See the [`reactor-direct.ts`](#reactor-directts--direct-reactor-profiling) section for available flags.
 
@@ -279,12 +287,23 @@ Starts the switchboard with [Pyroscope](https://pyroscope.io/) continuous profil
 ./scripts/profiling/switchboard-pyroscope.sh --otel http://localhost:4318
 ```
 
-| Flag         | Short | Description                                                                                                                     |
-| ------------ | ----- | ------------------------------------------------------------------------------------------------------------------------------- |
-| `--runtime`  | `-r`  | Runtime: `node` (default) or `bun`                                                                                              |
-| `--mode`     | `-m`  | Storage mode: `v2` (default) or `legacy`                                                                                        |
-| `--postgres` | `-p`  | PostgreSQL database URL; sets `DATABASE_URL` — migrations run automatically before the server starts when `DATABASE_URL` is set |
-| `--otel`     |       | Enable OpenTelemetry metrics export (default: `http://localhost:4318`); sets `OTEL_EXPORTER_OTLP_ENDPOINT`                      |
+| Flag         | Short | Description                                                                                                                                                   |
+| ------------ | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--runtime`  | `-r`  | Runtime: `node` (default) or `bun`                                                                                                                            |
+| `--mode`     | `-m`  | Storage mode: `v2` (default) or `legacy`                                                                                                                      |
+| `--postgres` | `-p`  | PostgreSQL database URL; sets both `DATABASE_URL` and `PH_REACTOR_DATABASE_URL` — migrations run automatically before the server starts when this flag is set |
+| `--otel`     |       | Enable OpenTelemetry metrics export (default: `http://localhost:4318`); sets `OTEL_EXPORTER_OTLP_ENDPOINT`                                                    |
+
+The script builds all required packages before starting the server:
+
+1. `pnpm --filter document-model run tsc --build`
+2. `pnpm --filter @powerhousedao/reactor run build` (declarations) + `build:bundle` (JS)
+3. `pnpm --filter @powerhousedao/opentelemetry-instrumentation-reactor run build` (if `--otel`)
+4. `pnpm --filter @powerhousedao/vetra run tsc --build` + `build:bundle`
+5. `pnpm --filter @powerhousedao/switchboard run tsc --build`
+6. `pnpm --filter @powerhousedao/reactor-api run build:misc`
+
+> **Note:** Pyroscope continuous profiling is not available when `--runtime bun` is used (`@datadog/pprof` native addon is incompatible with Bun). The server will still start but without profiling.
 
 ## Infrastructure
 
