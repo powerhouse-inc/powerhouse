@@ -1,3 +1,24 @@
+## 6.0.0-dev.113 (2026-03-27)
+
+### 🚀 Features
+
+- expand codegen tests to cover new cases ([#2432](https://github.com/powerhouse-inc/powerhouse/pull/2432))
+
+### 🩹 Fixes
+
+- exclude node_modules and dist from test runs ([44b9cd745](https://github.com/powerhouse-inc/powerhouse/commit/44b9cd745))
+- **codegen:** e2e tests for doc model and subgraph generation -- and a fix for a bug they found ([1c58a34df](https://github.com/powerhouse-inc/powerhouse/commit/1c58a34df))
+- **codegen:** handle JSONC comments in ensureTsconfigPaths ([ae3cd38fe](https://github.com/powerhouse-inc/powerhouse/commit/ae3cd38fe))
+- **reactor-api:** register dynamic document models into registry on package change ([3611b08df](https://github.com/powerhouse-inc/powerhouse/commit/3611b08df))
+- **vetra:** move connect dependency to root and fix CSS import ([1e288a8a9](https://github.com/powerhouse-inc/powerhouse/commit/1e288a8a9))
+- **vetra:** add missing Connect boilerplate files for ph vetra ([bfe64f705](https://github.com/powerhouse-inc/powerhouse/commit/bfe64f705))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Guillermo Puente @gpuente
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.0.0-dev.112 (2026-03-26)
 
 ### 🚀 Features

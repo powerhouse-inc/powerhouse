@@ -1,4 +1,5 @@
 import type { OperationContext } from "@powerhousedao/shared/document-model";
+import type { Mock } from "vitest";
 import { vi } from "vitest";
 import type { IOperationIndex } from "../../../../src/cache/operation-index-types.js";
 import type { ISyncCursorStorage } from "../../../../src/storage/interfaces.js";
@@ -142,14 +143,14 @@ export function createMockFetch(
     ok: boolean;
     json: () => Promise<unknown>;
   },
-) {
+): Mock {
   return vi.fn().mockImplementation((_url: string, options: RequestInit) => {
     const body = JSON.parse(options.body as string) as { query: string };
     return Promise.resolve(handler(body));
   });
 }
 
-export function successFetch() {
+export function successFetch(): Mock {
   return createMockFetch((body) => {
     if (body.query.includes("touchChannel")) {
       return {

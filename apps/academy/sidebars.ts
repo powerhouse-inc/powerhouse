@@ -161,6 +161,8 @@ const sidebars = {
         "academy/APIReferences/ReactHooks",
         "academy/APIReferences/RelationalDatabase",
         "academy/APIReferences/PHDocumentMigrationGuide",
+        "academy/APIReferences/SubgraphMigrationGuide",
+        "academy/APIReferences/ProcessorMigrationGuide",
       ],
     },
 

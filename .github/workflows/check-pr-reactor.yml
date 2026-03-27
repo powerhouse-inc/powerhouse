@@ -51,8 +51,7 @@ jobs:
         working-directory: packages/reactor
 
       - name: Run tests
-        run: pnpm test
-        working-directory: packages/reactor
+        run: pnpm test:reactor
 
   integration-test:
     name: Sync Integration Test
@@ -93,4 +92,3 @@ jobs:
 
       - name: Run sync integration test
         run: pnpm test:integration
-        working-directory: test/test-connect

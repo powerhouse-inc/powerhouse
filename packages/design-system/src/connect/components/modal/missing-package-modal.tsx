@@ -1,4 +1,4 @@
-import { Modal } from "@powerhousedao/design-system";
+import { Modal, PackageAnimation } from "@powerhousedao/design-system";
 import type { RegistryPackage } from "@powerhousedao/shared/registry";
 import { useState, type ComponentPropsWithoutRef } from "react";
 import { twMerge } from "tailwind-merge";
@@ -71,30 +71,28 @@ export function MissingPackageModal(props: Props) {
                 <div className="mb-3 text-xs text-gray-500">
                   Required for document type "{documentType}"
                 </div>
-                <div className="flex justify-end gap-2">
-                  <button
-                    type="button"
-                    onClick={() => onDismiss(name)}
-                    disabled={isInstalling(name)}
-                    className={twMerge(
-                      "border border-slate-200 bg-white text-slate-800",
-                      isInstalling(name) && "cursor-not-allowed opacity-50",
-                    )}
-                  >
-                    Dismiss
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleInstall(name)}
-                    disabled={isInstalling(name)}
-                    className={twMerge(
-                      "bg-gray-800 text-gray-50",
-                      isInstalling(name) && "cursor-not-allowed opacity-50",
-                    )}
-                  >
-                    {isInstalling(name) ? "Installing..." : "Install"}
-                  </button>
-                </div>
+                {isInstalling(name) ? (
+                  <div className="flex justify-center">
+                    <PackageAnimation animate loop color="#6b7280" size={48} />
+                  </div>
+                ) : (
+                  <div className="flex justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => onDismiss(name)}
+                      className="border border-slate-200 bg-white text-slate-800"
+                    >
+                      Dismiss
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleInstall(name)}
+                      className="bg-gray-800 text-gray-50"
+                    >
+                      Install
+                    </button>
+                  </div>
+                )}
               </div>
             );
           })}

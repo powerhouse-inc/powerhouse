@@ -38,7 +38,8 @@ vi.mock("@powerhousedao/reactor-browser", async (importOriginal) => {
 });
 
 describe("AppModule Editor", () => {
-  let mockDispatch: ReturnType<typeof vi.fn>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let mockDispatch: (...args: any[]) => any;
 
   beforeEach(() => {
     window.ph = {};

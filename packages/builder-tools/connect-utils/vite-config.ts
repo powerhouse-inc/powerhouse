@@ -7,13 +7,13 @@ import react from "@vitejs/plugin-react";
 import { join } from "node:path";
 import {
   createLogger,
+  esmExternalRequirePlugin,
   loadEnv,
   type HtmlTagDescriptor,
   type InlineConfig,
   type PluginOption,
 } from "vite";
 import { createHtmlPlugin } from "vite-plugin-html";
-import tsconfigPaths from "vite-tsconfig-paths";
 import type { IConnectOptions } from "./types.js";
 
 const isLocalDev = true;
@@ -166,7 +166,6 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
   const uploadSentrySourcemaps = authToken && org && project;
 
   const plugins: PluginOption[] = [
-    tsconfigPaths(),
     tailwind(),
     react(),
     createHtmlPlugin({
@@ -233,9 +232,19 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
         },
       });
 
+  const reactExternal = [
+    "react",
+    "react-dom",
+    "react/jsx-runtime",
+    "react-dom/client",
+  ];
+
   const config: InlineConfig = {
     configFile: false,
     mode,
+    resolve: {
+      tsconfigPaths: true,
+    },
     define: {
       PH_PACKAGES: phPackages,
       PH_PACKAGE_REGISTRY_URL: `"${phPackageRegistryUrl}"`,
@@ -245,22 +254,21 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     optimizeDeps: {
       exclude: ["@electric-sql/pglite", "@electric-sql/pglite-tools"],
     },
-    build: {
-      rollupOptions: {
-        // Externalize React so both Connect and dynamically loaded registry
-        // packages share the same React instance via the import map in index.html.
-        // Without this, Vite bundles React into Connect's chunks while registry
-        // packages resolve React from the import map (esm.sh), creating two
-        // separate React instances that don't share context/state.
-        external: [
-          "react",
-          "react-dom",
-          "react/jsx-runtime",
-          "react-dom/client",
-        ],
-      },
-    },
-    plugins,
+    plugins: [
+      ...plugins,
+      // Externalize React so both Connect and dynamically loaded registry
+      // packages share the same React instance via the import map in index.html.
+      // Without this, Vite bundles React into Connect's chunks while registry
+      // packages resolve React from the import map (esm.sh), creating two
+      // separate React instances that don't share context/state.
+      //
+      // In Vite 8 (Rolldown), require() calls for external modules are preserved
+      // as-is, which fails in browsers. esmExternalRequirePlugin handles both
+      // externalization AND converting require() to import statements.
+      // NOTE: Do NOT also list these in build.rolldownOptions.external — overlapping
+      // entries prevent the plugin from transforming require() calls.
+      esmExternalRequirePlugin({ external: reactExternal }),
+    ],
     worker: {
       format: "es",
     },

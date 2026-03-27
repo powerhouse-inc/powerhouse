@@ -1,4 +1,5 @@
 import { generateId } from "@powerhousedao/shared/document-model";
+import type { Mock } from "vitest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { EventBus } from "../../src/events/event-bus.js";
 import type { IEventBus } from "../../src/events/interfaces.js";
@@ -25,7 +26,7 @@ import {
 describe("InMemoryQueue", () => {
   let queue: IQueue;
   let eventBus: IEventBus;
-  let mockEventBusEmit: ReturnType<typeof vi.fn>;
+  let mockEventBusEmit: Mock;
 
   beforeEach(() => {
     eventBus = new EventBus();

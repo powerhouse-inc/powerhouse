@@ -4,10 +4,20 @@
   "type": "module",
   "scripts": {
     "tsc": "tsc",
-    "test-ci": "CI=true && pnpm -r --no-bail --filter=!codegen --filter=!document-drive --filter=!reactor --filter=!atlas --filter=!load-test-client --filter=!scripts run test -- --silent passed-only related",
-    "test-codegen": "pnpm --filter=codegen run test -- --silent passed-only related",
+    "test:ci": "CI=true pnpm --filter=document-model --filter=@powerhousedao/registry --filter=@powerhousedao/reactor-api --filter=@powerhousedao/reactor-hypercore --filter=@powerhousedao/reactor-mcp --filter=@powerhousedao/vetra --filter=@powerhousedao/versioned-documents --filter=@powerhousedao/switchboard --filter=@powerhousedao/connect --filter=@powerhousedao/design-system --filter=@powerhousedao/analytics-engine-core --filter=@powerhousedao/analytics-engine-graphql --filter=@powerhousedao/analytics-engine-knex --filter=@powerhousedao/load-test-connect --filter=ph-cmd --no-bail run test",
+    "test:codegen": "pnpm --filter=test-codegen run test",
+    "test:e2e:vetra": "pnpm --filter=test-package-vetra run test",
+    "test:e2e:analytics": "pnpm --filter=@powerhousedao/analytics-engine-browser run test",
+    "test:e2e:switchboard": "pnpm --filter=@powerhousedao/test-switchboard run test",
+    "test:reactor": "pnpm --filter=@powerhousedao/reactor run test",
+    "test:integration": "pnpm --filter=@powerhousedao/load-test-connect run test:integration",
+    "test:browser": "pnpm --filter=@powerhousedao/reactor-browser run test",
+    "test:pg": "pnpm --filter=@powerhousedao/analytics-engine-pg run test",
+    "test-ci": "pnpm test:ci",
+    "test-codegen": "pnpm test:codegen",
+    "test-e2e": "pnpm test:e2e:vetra",
     "test-coverage": "pnpm vitest run --coverage",
-    "simulate-ci-workflow": "pnpm clean && pnpm install-ci && pnpm check-ts-references && pnpm check-wrong-tsc-usage && pnpm build-tsc && pnpm build-misc && pnpm build-bundle && pnpm build-css && pnpm build-vite && pnpm install-ci && pnpm lint && pnpm test-ci && pnpm test-codegen && pnpm test-e2e && pnpm build-storybook && pnpm check-circular-imports",
+    "simulate-ci-workflow": "pnpm clean && pnpm install-ci && pnpm check-ts-references && pnpm check-wrong-tsc-usage && pnpm build-tsc && pnpm build-misc && pnpm build-bundle && pnpm build-css && pnpm build-vite && pnpm install-ci && pnpm lint && pnpm test:ci && pnpm test:codegen && pnpm test:e2e:vetra && pnpm build-storybook && pnpm check-circular-imports",
     "lint": "NODE_OPTIONS=--max-old-space-size=8192 eslint --config eslint.config.js --quiet --fix --cache --cache-strategy content",
     "install-ci": "pnpm i --frozen-lockfile",
     "build-tsc": "tsc --build",
@@ -25,7 +35,6 @@
     "check-circular-imports": "dpdm -T ./**/* --no-tree --no-warning --exit-code circular:1",
     "check-ts-references": "pnpm update-ts-references --check",
     "check-wrong-tsc-usage": "tsx scripts/check-wrong-tsc-usage.ts",
-    "test-e2e": "pnpm --filter=test-package-vetra run test:e2e",
     "knip": "knip",
     "postinstall": "pnpm update-ts-references"
   },
@@ -66,6 +75,7 @@
     "yargs": "^18.0.0"
   },
   "dependencies": {
+    "@powerhousedao/connect": "workspace:*",
     "fast-glob": "^3.3.3"
   },
   "engines": {

@@ -375,7 +375,7 @@ type Query {
 
   # Find documents by search criteria
   findDocuments(
-    search: SearchFilterInput!
+    search: SearchFilterInput
     view: ViewFilterInput
     paging: PagingInput
   ): PHDocumentResultPage!
@@ -466,7 +466,7 @@ type Mutation {
 type Subscription {
   # Subscribe to document changes
   documentChanges(
-    search: SearchFilterInput!
+    search: SearchFilterInput
     view: ViewFilterInput
   ): DocumentChangeEvent!
 

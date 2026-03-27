@@ -1,16 +1,34 @@
 {
-  // extend our monorepo's base tsconfig
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
-    // output transpiled code in the dist file relative to this package's root
     "outDir": "./dist",
-    "types": ["@types/bun"]
+    "types": [
+      "@types/bun"
+    ],
+    "paths": {
+      "test-project/document-models": [
+        "./document-models/index.ts"
+      ],
+      "test-project/document-models/*": [
+        "./document-models/*/index.ts"
+      ],
+      "test-project/editors": [
+        "./editors/index.ts"
+      ],
+      "test-project/editors/*": [
+        "./editors/*/index.ts"
+      ]
+    }
   },
-  // include all files in this package's root
-  "include": ["**/*"],
-  "exclude": ["dist", "node_modules", "test-output", "test-projects"],
-  // add monorepo package paths here
-  // whenever you add "workspace:*" to this package's package.json, also add the path here
+  "include": [
+    "**/*"
+  ],
+  "exclude": [
+    "dist",
+    "node_modules",
+    "test-output",
+    "test-projects"
+  ],
   "references": [
     {
       "path": "../../apps/connect"
@@ -35,6 +53,9 @@
     },
     {
       "path": "../../packages/reactor"
+    },
+    {
+      "path": "../../packages/reactor-api"
     },
     {
       "path": "../../packages/reactor-browser"

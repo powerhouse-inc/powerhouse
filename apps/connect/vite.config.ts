@@ -2,9 +2,11 @@ import tailwind from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 import { analyzer } from "vite-bundle-analyzer";
-import tsconfigPaths from "vite-tsconfig-paths";
 
 export default defineConfig({
+  resolve: {
+    tsconfigPaths: true,
+  },
   define: {
     PH_PACKAGES: process.env.PH_PACKAGES
       ? JSON.stringify(process.env.PH_PACKAGES.split(",").filter(Boolean))
@@ -19,7 +21,6 @@ export default defineConfig({
   },
   plugins: [
     process.env.PH_DEBUG_BUILD === "true" ? analyzer() : undefined,
-    tsconfigPaths(),
     tailwind(),
     react(),
   ],

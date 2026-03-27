@@ -6,7 +6,7 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "test:e2e": "vitest --run"
+    "test": "vitest --run"
   },
   "devDependencies": {
     "@powerhousedao/switchboard": "workspace:*",

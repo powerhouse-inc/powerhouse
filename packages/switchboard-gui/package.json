@@ -1,7 +1,7 @@
 {
   "name": "@powerhousedao/switchboard-gui",
   "private": true,
-  "version": "6.0.0-dev.112",
+  "version": "6.0.0-dev.113",
   "type": "module",
   "repository": {
     "type": "git",
@@ -27,7 +27,7 @@
     "zustand": "5.0.0-rc.2"
   },
   "devDependencies": {
-    "@preact/preset-vite": "^2.9.3",
+    "@preact/preset-vite": "catalog:",
     "@tailwindcss/vite": "catalog:",
     "vite": "catalog:"
   }

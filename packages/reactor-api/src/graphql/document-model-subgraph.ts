@@ -328,7 +328,7 @@ export class DocumentModelSubgraph extends BaseSubgraph {
         findDocuments: async (
           _: unknown,
           args: {
-            search: { parentId?: string; identifiers?: string[] };
+            search?: { parentId?: string; identifiers?: string[] } | null;
             view?: { branch?: string; scopes?: string[] };
             paging?: { limit?: number; offset?: number; cursor?: string };
           },
@@ -339,7 +339,7 @@ export class DocumentModelSubgraph extends BaseSubgraph {
           const result = await findDocumentsResolver(this.reactorClient, {
             search: {
               type: documentType,
-              parentId: search.parentId,
+              parentId: search?.parentId,
             },
             view,
             paging,

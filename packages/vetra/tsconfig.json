@@ -17,7 +17,7 @@
     }
   },
   "include": ["**/*", "./powerhouse.manifest.json"],
-  "exclude": ["dist", "node_modules", ".ph"],
+  "exclude": ["dist", "node_modules", ".ph", "main.tsx", "index.html"],
   "references": [
     {
       "path": "../builder-tools"

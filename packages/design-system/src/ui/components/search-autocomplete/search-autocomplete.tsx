@@ -12,6 +12,7 @@ export const SearchAutocomplete: React.FC<SearchAutocompleteProps> = (
     fetchOptions,
     onSelect,
     selectLabel = "Select",
+    selectingContent,
     placeholder = "Search...",
     disabled = false,
     loading: externalLoading = false,
@@ -142,13 +143,19 @@ export const SearchAutocomplete: React.FC<SearchAutocompleteProps> = (
                   )}
                 </div>
               )}
-              <button
-                onClick={() => handleSelect(option.value)}
-                disabled={selectingValue === option.value}
-                className="shrink-0 rounded-md bg-gray-900 px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-gray-800 disabled:opacity-50"
-              >
-                {selectingValue === option.value ? "..." : selectLabel}
-              </button>
+              {selectingValue === option.value && selectingContent ? (
+                <div className="flex shrink-0 items-center justify-center">
+                  {selectingContent}
+                </div>
+              ) : (
+                <button
+                  onClick={() => handleSelect(option.value)}
+                  disabled={selectingValue === option.value}
+                  className="shrink-0 rounded-md bg-gray-900 px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-gray-800 disabled:opacity-50"
+                >
+                  {selectingValue === option.value ? "..." : selectLabel}
+                </button>
+              )}
             </div>
           ))}
         </PopoverContent>

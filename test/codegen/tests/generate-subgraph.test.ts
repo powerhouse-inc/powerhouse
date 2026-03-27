@@ -155,7 +155,7 @@ describe("generateSubgraph", () => {
     );
     expect(schemaContent).toContain("type TestDocQueries");
     expect(schemaContent).toContain("getDocument(docId: PHID!");
-    expect(schemaContent).toContain("getDocuments(driveId: String!)");
+    expect(schemaContent).toContain("getDocuments(driveId: String)");
     expect(schemaContent).toContain("TestDoc_createDocument(name:String!");
     expect(schemaContent).toContain("TestDoc_setTestId");
     expect(schemaContent).toContain("TestDoc_setTestName");

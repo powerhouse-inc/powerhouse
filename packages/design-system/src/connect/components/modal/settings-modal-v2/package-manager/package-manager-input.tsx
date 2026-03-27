@@ -1,3 +1,4 @@
+import { PackageAnimation } from "@powerhousedao/design-system";
 import type { SearchAutocompleteOption } from "@powerhousedao/design-system/ui";
 import { SearchAutocomplete } from "@powerhousedao/design-system/ui";
 import type { RegistryPackageList } from "@powerhousedao/shared/registry";
@@ -49,6 +50,9 @@ export const PackageManagerInput: React.FC<PackageManagerInputProps> = (
         fetchOptions={fetchOptions}
         onSelect={handleSelect}
         selectLabel="Install"
+        selectingContent={
+          <PackageAnimation animate loop color="#6b7280" size={48} />
+        }
         placeholder="Search packages..."
         disabled={disabled}
       />

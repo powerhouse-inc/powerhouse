@@ -1,7 +1,9 @@
-import tsconfigPaths from "vite-tsconfig-paths";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
+  resolve: {
+    tsconfigPaths: true,
+  },
   test: {
     include: ["test/**/*.test.ts"],
     globals: true,
@@ -30,11 +32,7 @@ export default defineConfig({
         "**/tsdown.config.ts",
       ],
     },
-    poolOptions: {
-      forks: {
-        maxForks: 6,
-      },
-    },
+    maxWorkers: 6,
   },
-  plugins: [tsconfigPaths()],
+  plugins: [],
 });

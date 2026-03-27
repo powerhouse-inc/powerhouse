@@ -1,3 +1,4 @@
+import type { Mock } from "vitest";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { EventBus } from "../../src/events/event-bus.js";
 import { ReactorEventTypes } from "../../src/events/types.js";
@@ -8,7 +9,7 @@ import { createEmptyConsistencyToken } from "../factories.js";
 describe("JobAwaiter", () => {
   let jobAwaiter: JobAwaiter;
   let eventBus: EventBus;
-  let getJobStatusMock: ReturnType<typeof vi.fn>;
+  let getJobStatusMock: Mock;
 
   beforeEach(() => {
     eventBus = new EventBus();

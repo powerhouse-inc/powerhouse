@@ -11,6 +11,7 @@ export interface SearchAutocompleteProps {
   fetchOptions?: (query: string) => Promise<SearchAutocompleteOption[]>;
   onSelect: (value: string) => void | Promise<void>;
   selectLabel?: string;
+  selectingContent?: ReactNode;
   placeholder?: string;
   disabled?: boolean;
   loading?: boolean;

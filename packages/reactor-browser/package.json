@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/reactor-browser",
-  "version": "6.0.0-dev.112",
+  "version": "6.0.0-dev.113",
   "license": "AGPL-3.0-only",
   "type": "module",
   "repository": {
@@ -24,7 +24,7 @@
     "tsc": "tsc",
     "lint": "eslint",
     "build:bundle": "tsdown",
-    "test:browser": "vitest --run",
+    "test": "vitest --run",
     "install:playwright": "playwright install",
     "codegen": "graphql-codegen --config codegen.ts && prettier --write src/graphql/gen/*.ts && eslint --fix src/graphql/gen/*.ts --no-warn-ignored"
   },
@@ -62,9 +62,10 @@
     "@types/slug": "^5.0.9",
     "@types/wicg-file-system-access": "^2020.9.8",
     "@vitejs/plugin-react": "catalog:",
-    "@vitest/browser": "^3.2.4",
+    "@vitest/browser": "catalog:",
+    "@vitest/browser-playwright": "catalog:",
     "fast-deep-equal": "catalog:",
-    "playwright": "^1.51.1",
+    "playwright": "catalog:",
     "tsdown": "catalog:",
     "vite": "catalog:",
     "vitest": "catalog:",
