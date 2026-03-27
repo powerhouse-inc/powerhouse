@@ -3,6 +3,7 @@ import cors from "cors";
 import type { CorsOptions } from "cors";
 import devcert from "devcert";
 import type express from "express";
+import type { Express } from "express";
 import { Router } from "express";
 import expressLib from "express";
 import type { IRouter } from "express";
@@ -14,14 +15,14 @@ import { match, type MatchFunction, type ParamData } from "path-to-regexp";
 import type { FetchHandler, IHttpAdapter, TlsOptions } from "./types.js";
 
 export class ExpressHttpAdapter implements IHttpAdapter {
-  readonly #app: ReturnType<typeof expressLib>;
+  readonly #app: Express;
   readonly #router: IRouter;
   readonly #handlers = new Map<
     string,
     { handler: FetchHandler; matcher: MatchFunction<ParamData> }
   >();
 
-  constructor(existingApp?: ReturnType<typeof expressLib>) {
+  constructor(existingApp?: Express) {
     this.#app = existingApp ?? expressLib();
     this.#router = Router();
     this.#app.use(this.#router);
@@ -29,7 +30,7 @@ export class ExpressHttpAdapter implements IHttpAdapter {
 
   setupSentryErrorHandler(sentry: object): void {
     const s = sentry as {
-      setupExpressErrorHandler(app: ReturnType<typeof expressLib>): void;
+      setupExpressErrorHandler(app: Express): void;
     };
     s.setupExpressErrorHandler(this.#app);
   }
@@ -219,8 +220,8 @@ export class ExpressHttpAdapter implements IHttpAdapter {
   }
 }
 
-export function createExpressHttpAdapter(
-  existingApp?: ReturnType<typeof expressLib>,
-): { adapter: IHttpAdapter } {
+export function createExpressHttpAdapter(existingApp?: Express): {
+  adapter: IHttpAdapter;
+} {
   return { adapter: new ExpressHttpAdapter(existingApp) };
 }
