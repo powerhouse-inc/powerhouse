@@ -61,7 +61,7 @@ export interface DocumentModelQueryResolvers<
   findDocuments: (
     parent: unknown,
     args: {
-      search: { parentId?: string; identifiers?: string[] };
+      search?: { parentId?: string; identifiers?: string[] } | null;
       view?: ViewArg;
       paging?: PagingArg;
     },
