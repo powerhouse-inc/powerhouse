@@ -59,7 +59,7 @@
     "test:document-models": "vitest run document-models",
     "test:editors": "vitest run editors",
     "test:processors": "vitest run processors",
-    "build": "ph-cli build",
+    "build": "tsdown && pnpm run build:css",
     "generate": "ph-cli generate",
     "connect": "ph-cli connect",
     "reactor": "ph-cli reactor",
@@ -79,6 +79,7 @@
   },
   "devDependencies": {
     "@powerhousedao/ph-cli": "workspace:*",
+    "tsdown": "catalog:",
     "@tailwindcss/cli": "catalog:",
     "tailwindcss": "catalog:",
     "@testing-library/jest-dom": "^6.9.1",
