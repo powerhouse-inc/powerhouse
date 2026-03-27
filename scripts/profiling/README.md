@@ -2,6 +2,30 @@
 
 Scripts for benchmarking and profiling the Powerhouse reactor and switchboard.
 
+## Table of Contents
+
+- [Quick Start](#quick-start)
+- [Prerequisites](#prerequisites)
+- [Scripts](#scripts)
+  - [`reactor-direct.ts`](#reactor-directts--direct-reactor-profiling)
+  - [`pyroscope-analyse.ts`](#pyroscope-analysetts--pyroscope-profile-analysis)
+  - [`docs-create.ts`](#docs-createts--create-documents-via-graphql)
+  - [`docs-count.ts`](#docs-countts--count-documents-fast)
+  - [`docs-list.ts`](#docs-listts--listcount-documents-paginated)
+  - [`docs-reset.ts`](#docs-resetts--delete-all-documents)
+  - [`run-reactor-direct.sh`](#run-reactor-directsh--build-and-run-reactor-direct)
+  - [`switchboard-pyroscope.sh`](#switchboard-pyroscopesh--run-switchboard-with-pyroscope)
+- [Infrastructure](#infrastructure)
+- [Typical Workflows](#typical-workflows)
+  - [Benchmark reactor in isolation](#benchmark-reactor-in-isolation)
+  - [Profile reactor with Pyroscope](#profile-reactor-with-pyroscope)
+  - [Profile reactor with OTel metrics](#profile-reactor-with-otel-metrics)
+  - [Prometheus metrics reference](#prometheus-metrics-reference)
+  - [Profile reactor with Pyroscope and OTel metrics](#profile-reactor-with-pyroscope-and-otel-metrics)
+  - [End-to-end switchboard benchmark](#end-to-end-switchboard-benchmark)
+  - [Profile switchboard end-to-end with Pyroscope](#profile-switchboard-end-to-end-with-pyroscope)
+  - [Profile switchboard with OTel metrics](#profile-switchboard-with-otel-metrics)
+
 ## Quick Start
 
 ```bash
