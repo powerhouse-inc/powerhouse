@@ -9,16 +9,8 @@
   },
   "exports": {
     ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
-    },
-    "./graphql": {
-      "import": "./dist/graphql/index.js",
-      "types": "./dist/graphql/index.d.ts"
-    },
-    "./graphql/*": {
-      "import": "./dist/graphql/*.js",
-      "types": "./dist/graphql/*.d.ts"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs"
     },
     "./test": {
       "import": "./test/index.ts"
@@ -31,7 +23,7 @@
   "sideEffects": false,
   "scripts": {
     "tsc": "tsc",
-    "build:misc": "copyfiles -u 0 \"src/**/*.graphql\" dist/",
+    "build": "tsdown",
     "lint": "eslint",
     "test": "vitest --run",
     "bench": "vitest bench",
@@ -109,7 +101,7 @@
     "@types/node": "catalog:",
     "@types/pg": "catalog:",
     "@types/ws": "^8.18.1",
-    "copyfiles": "catalog:",
+    "tsdown": "catalog:",
     "graphql-tag": "catalog:",
     "msw": "^2.7.3",
     "vite": "catalog:",

@@ -21,7 +21,7 @@
   ],
   "scripts": {
     "test": "vitest --run ./**/*.test.ts",
-    "build:bundle": "tsdown"
+    "build": "tsdown"
   },
   "dependencies": {
     "luxon": "catalog:",

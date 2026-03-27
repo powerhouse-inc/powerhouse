@@ -24,12 +24,7 @@ function getBranchName(): string {
 }
 
 function runBuild(workspaceVersion: string) {
-  const commands = [
-    ["pnpm", "build-misc"],
-    ["pnpm", "build-bundle"],
-    ["pnpm", "build-css"],
-    ["pnpm", "build-cli"],
-  ];
+  const commands = [["pnpm", "build"]];
   for (const command of commands) {
     try {
       const buildResult = runCommandWithBun(command, {

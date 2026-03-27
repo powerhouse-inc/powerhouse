@@ -18,7 +18,7 @@
   ],
   "scripts": {
     "prebuild": "pnpm run clean",
-    "build": "tsc",
+    "build": "tsc --build",
     "test": "vitest run --silent=false",
     "test:watch": "vitest",
     "lint": "eslint",

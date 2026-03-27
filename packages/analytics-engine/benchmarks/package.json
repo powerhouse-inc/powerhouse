@@ -11,6 +11,7 @@
     "dist"
   ],
   "scripts": {
+    "build": "tsc --build",
     "processCache": "node ./dist/src/processor.js",
     "ci": "node ./dist/src/wasm.js && node ./dist/src/hash-keys.js && PG_DISABLED=true node ./dist/src/query-list.js && PG_DISABLED=true node ./dist/src/series.js",
     "benchmark": "pnpm test-wasm && pnpm test-query-list && pnpm test-series && pnpm test-hash-keys",

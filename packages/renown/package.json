@@ -37,6 +37,7 @@
     "dist"
   ],
   "scripts": {
+    "build": "tsc --build",
     "tsc": "tsc",
     "lint": "eslint"
   },
