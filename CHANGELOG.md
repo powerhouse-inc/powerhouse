@@ -1,3 +1,30 @@
+## 6.0.0-dev.113 (2026-03-27)
+
+### 🚀 Features
+
+- expand codegen tests to cover new cases ([#2432](https://github.com/powerhouse-inc/powerhouse/pull/2432))
+- **codegen:** add functions to ensure package exports wildcards and tsconfig paths ([284cebd92](https://github.com/powerhouse-inc/powerhouse/commit/284cebd92))
+- **design-system:** add PackageAnimation component and use it for install indicators ([4104f7c46](https://github.com/powerhouse-inc/powerhouse/commit/4104f7c46))
+
+### 🩹 Fixes
+
+- exclude node_modules and dist from test runs ([44b9cd745](https://github.com/powerhouse-inc/powerhouse/commit/44b9cd745))
+- **builder-tools:** use official esmExternalRequirePlugin for React externals ([1dab2319b](https://github.com/powerhouse-inc/powerhouse/commit/1dab2319b))
+- **codegen:** handle JSONC comments in ensureTsconfigPaths ([ae3cd38fe](https://github.com/powerhouse-inc/powerhouse/commit/ae3cd38fe))
+- **codegen:** e2e tests for doc model and subgraph generation -- and a fix for a bug they found ([1c58a34df](https://github.com/powerhouse-inc/powerhouse/commit/1c58a34df))
+- **codegen:** tests were referencing the wrong thing ([db5ea60b3](https://github.com/powerhouse-inc/powerhouse/commit/db5ea60b3))
+- **codegen:** tsconfig updates on codegen e2e tests ([ffe18c602](https://github.com/powerhouse-inc/powerhouse/commit/ffe18c602))
+- **reactor-api:** register dynamic document models into registry on package change ([3611b08df](https://github.com/powerhouse-inc/powerhouse/commit/3611b08df))
+- **vetra:** add missing Connect boilerplate files for ph vetra ([bfe64f705](https://github.com/powerhouse-inc/powerhouse/commit/bfe64f705))
+- **vetra:** move connect dependency to root and fix CSS import ([1e288a8a9](https://github.com/powerhouse-inc/powerhouse/commit/1e288a8a9))
+- **vetra:** exclude connect entry points from tsc --build ([eb139f7b8](https://github.com/powerhouse-inc/powerhouse/commit/eb139f7b8))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Guillermo Puente @gpuente
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.0.0-dev.112 (2026-03-26)
 
 ### 🚀 Features
