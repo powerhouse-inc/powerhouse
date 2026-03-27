@@ -1,15 +1,10 @@
 import { ConsoleLogger } from "document-model";
-import fs from "fs";
 import { GraphQLError } from "graphql";
 import { gql } from "graphql-tag";
-import path from "path";
-import { fileURLToPath } from "url";
+import schemaSource from "./schema.graphql";
 import { BaseSubgraph } from "../base-subgraph.js";
 import type { SubgraphArgs } from "../types.js";
 import * as resolvers from "./resolvers.js";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 /**
  * Auth Subgraph - handles all document permission and authorization operations
@@ -32,10 +27,7 @@ export class AuthSubgraph extends BaseSubgraph {
   name = "auth";
   hasSubscriptions = false;
 
-  // Load schema from file
-  typeDefs = gql(
-    fs.readFileSync(path.join(__dirname, "schema.graphql"), "utf-8"),
-  );
+  typeDefs = gql(schemaSource);
 
   resolvers = {
     Query: {

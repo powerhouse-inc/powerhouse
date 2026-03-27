@@ -1,10 +1,8 @@
 import { ConsoleLogger } from "document-model";
-import fs from "fs";
 import { GraphQLError } from "graphql";
 import { withFilter } from "graphql-subscriptions";
 import { gql } from "graphql-tag";
-import path from "path";
-import { fileURLToPath } from "url";
+import schemaSource from "./schema.graphql";
 import { BaseSubgraph } from "../base-subgraph.js";
 import type { Context, SubgraphArgs } from "../types.js";
 import {
@@ -22,9 +20,6 @@ import {
   type JobChangesPayload,
 } from "./pubsub.js";
 import * as resolvers from "./resolvers.js";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 export class ReactorSubgraph extends BaseSubgraph {
   // temp
@@ -57,10 +52,7 @@ export class ReactorSubgraph extends BaseSubgraph {
     }
   }
 
-  // Load schema from file
-  typeDefs = gql(
-    fs.readFileSync(path.join(__dirname, "schema.graphql"), "utf-8"),
-  );
+  typeDefs = gql(schemaSource);
 
   resolvers: Resolvers = {
     // Field resolver for PHDocument.operations - fetches operations on demand

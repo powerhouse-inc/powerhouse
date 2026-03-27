@@ -45,7 +45,7 @@
   "scripts": {
     "tsc": "tsc",
     "lint": "eslint",
-    "build": "pnpm exec tailwindcss -i ./editors/style.css -o ./dist/editors/style.css",
+    "build": "tsdown && pnpm exec tailwindcss -i ./editors/style.css -o ./dist/editors/style.css",
     "test": "vitest --run",
     "test:watch": "vitest",
     "generate": "ph-cli generate",
@@ -91,6 +91,7 @@
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "@types/validator": "^13.12.2",
+    "tsdown": "catalog:",
     "tailwindcss": "catalog:",
     "@tailwindcss/cli": "catalog:",
     "react": "catalog:",

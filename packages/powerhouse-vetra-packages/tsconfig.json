@@ -1,6 +1,7 @@
 {
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
+    "emitDeclarationOnly": true,
     "outDir": "./dist",
     "paths": {
       "document-models": ["./document-models/index.ts"],

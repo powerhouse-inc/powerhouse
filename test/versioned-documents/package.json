@@ -59,7 +59,7 @@
     "test:document-models": "vitest run document-models",
     "test:editors": "vitest run editors",
     "test:processors": "vitest run processors",
-    "build": "pnpm run build:css",
+    "build": "ph-cli build",
     "generate": "ph-cli generate",
     "connect": "ph-cli connect",
     "reactor": "ph-cli reactor",

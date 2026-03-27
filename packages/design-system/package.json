@@ -61,7 +61,7 @@
     "tsc": "tsc",
     "lint": "eslint",
     "create-icon-components": "tsx scripts/create-icon-components.ts",
-    "build": "pnpm run build:css && pnpm run build:misc",
+    "build": "tsc --build && pnpm run build:css && pnpm run build:misc",
     "build:css": "pnpm exec tailwindcss -i style.css -o dist/style.css",
     "build:misc": "copyfiles assets/* assets/**/* dist",
     "storybook": "storybook dev -p 6006",
