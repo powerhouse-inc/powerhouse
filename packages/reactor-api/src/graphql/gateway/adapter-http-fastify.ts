@@ -9,7 +9,17 @@ import fs from "node:fs";
 import http from "node:http";
 import https from "node:https";
 import nodePath from "node:path";
+import { match, type MatchFunction, type ParamData } from "path-to-regexp";
 import type { FetchHandler, IHttpAdapter, TlsOptions } from "./types.js";
+
+/**
+ * Normalises a route path for path-to-regexp v8:
+ * - Collapses duplicate slashes (e.g. "//explorer" → "/explorer")
+ * - Converts legacy optional-param syntax ":param?" → "{/:param}?"
+ */
+function normalizePath(path: string): string {
+  return path.replace(/\/+/g, "/").replace(/:(\w+)\?/g, "{/:$1}");
+}
 
 /** Parses body-limit strings like "50mb" to bytes. */
 function parseBodyLimit(limit: string): number {
@@ -25,28 +35,42 @@ function parseBodyLimit(limit: string): number {
   return Math.round(n * (units[(m[2] ?? "b").toLowerCase()] ?? 1));
 }
 
-type PendingOp =
+type FetchEntry = {
+  handler: FetchHandler;
+  matcher: MatchFunction<ParamData>;
+  prefix: boolean;
+};
+
+type GetEntry = {
+  handler: (r: Request) => Response | Promise<Response>;
+  matcher: MatchFunction<ParamData>;
+};
+
+type NodeEntry = {
+  method: "DELETE" | "GET" | "POST";
+  handler: (
+    req: http.IncomingMessage,
+    res: http.ServerResponse,
+    body?: unknown,
+  ) => void;
+};
+
+// Pre-listen configuration ops (need the Fastify instance to apply).
+type SetupOp =
   | { kind: "cors"; options?: CorsOptions; bodyLimit: number }
-  | { kind: "mount"; path: string; handler: FetchHandler; exact: boolean }
-  | {
-      kind: "get";
-      path: string;
-      handler: (r: Request) => Response | Promise<Response>;
-    }
-  | {
-      kind: "node-route";
-      method: "DELETE" | "GET" | "POST";
-      path: string;
-      handler: (
-        req: http.IncomingMessage,
-        res: http.ServerResponse,
-        body?: unknown,
-      ) => void;
-    }
   | { kind: "middie"; middleware: unknown };
 
 export class FastifyHttpAdapter implements IHttpAdapter {
-  readonly #pending: PendingOp[] = [];
+  // Dispatch maps — populated at any time (before or after listen).
+  readonly #fetchRoutes: FetchEntry[] = [];
+  readonly #getRoutes: Map<string, GetEntry> = new Map();
+  // path → method → handler
+  readonly #nodeRoutes: Map<string, Map<string, NodeEntry["handler"]>> =
+    new Map();
+
+  // Ops that need the Fastify instance (CORS config, Connect middleware).
+  readonly #setupOps: SetupOp[] = [];
+
   #instance: FastifyInstance | undefined;
 
   get handle(): unknown {
@@ -60,7 +84,7 @@ export class FastifyHttpAdapter implements IHttpAdapter {
     corsOptions?: CorsOptions;
     bodyLimit?: string;
   }): void {
-    this.#pending.push({
+    this.#setupOps.push({
       kind: "cors",
       options: corsOptions,
       bodyLimit: parseBodyLimit(bodyLimit),
@@ -72,14 +96,19 @@ export class FastifyHttpAdapter implements IHttpAdapter {
     handler: FetchHandler,
     { exact = false }: { exact?: boolean } = {},
   ): void {
-    this.#pending.push({ kind: "mount", path, handler, exact });
+    this.#fetchRoutes.push({
+      handler,
+      // exact=false → exact path match; exact=true → prefix match.
+      matcher: match(normalizePath(path), { end: !exact }),
+      prefix: exact,
+    });
   }
 
   getRoute(
     path: string,
     handler: (request: Request) => Response | Promise<Response>,
   ): void {
-    this.#pending.push({ kind: "get", path, handler });
+    this.#getRoutes.set(path, { handler, matcher: match(normalizePath(path)) });
   }
 
   mountNodeRoute(
@@ -91,7 +120,10 @@ export class FastifyHttpAdapter implements IHttpAdapter {
       body?: unknown,
     ) => void,
   ): void {
-    this.#pending.push({ kind: "node-route", method, path, handler });
+    if (!this.#nodeRoutes.has(path)) {
+      this.#nodeRoutes.set(path, new Map());
+    }
+    this.#nodeRoutes.get(path)!.set(method, handler);
   }
 
   mountRawMiddleware(middleware: unknown): void {
@@ -103,7 +135,7 @@ export class FastifyHttpAdapter implements IHttpAdapter {
         }
       ).use(middleware);
     } else {
-      this.#pending.push({ kind: "middie", middleware });
+      this.#setupOps.push({ kind: "middie", middleware });
     }
   }
 
@@ -137,13 +169,11 @@ export class FastifyHttpAdapter implements IHttpAdapter {
       httpServer = http.createServer();
     }
 
-    // Extract body limit from the queued cors/middleware op (if any).
-    const corsOp = this.#pending.find(
-      (op): op is Extract<PendingOp, { kind: "cors" }> => op.kind === "cors",
+    const corsOp = this.#setupOps.find(
+      (op): op is Extract<SetupOp, { kind: "cors" }> => op.kind === "cors",
     );
     const bodyLimit = corsOp?.bodyLimit ?? 52_428_800;
 
-    // Inject the pre-built HTTP server so Fastify uses it as-is (supports TLS).
     const instance = Fastify({
       serverFactory: (handler) => {
         httpServer.on("request", handler);
@@ -155,14 +185,28 @@ export class FastifyHttpAdapter implements IHttpAdapter {
 
     this.#instance = instance;
 
-    // Always register middie so mountRawMiddleware works after listen() too.
+    // Always register middie first so .use() is available post-listen.
     await instance.register(fastifyMiddie);
-    // URL-encoded body support (mirrors Express body-parser urlencoded).
     await instance.register(fastifyFormbody);
 
-    for (const op of this.#pending) {
-      await applyOp(instance, op);
+    for (const op of this.#setupOps) {
+      if (op.kind === "cors") {
+        await instance.register(
+          fastifyCors,
+          op.options as Parameters<typeof fastifyCors>[1],
+        );
+      } else {
+        (
+          instance as FastifyInstance & {
+            use(middleware: unknown): FastifyInstance;
+          }
+        ).use(op.middleware);
+      }
     }
+
+    // Single catch-all route — all dispatching is done via the Maps above so
+    // that routes registered after listen() are picked up automatically.
+    instance.all("/*", (req, reply) => this.#dispatch(req, reply));
 
     await instance.ready();
 
@@ -174,70 +218,56 @@ export class FastifyHttpAdapter implements IHttpAdapter {
       });
     });
   }
-}
 
-async function applyOp(
-  instance: FastifyInstance,
-  op: PendingOp,
-): Promise<void> {
-  switch (op.kind) {
-    case "cors":
-      await instance.register(
-        fastifyCors,
-        // CorsOptions is structurally compatible with FastifyCorsOptions for
-        // the common subset (origin, methods, allowedHeaders, credentials, …).
-        op.options as Parameters<typeof fastifyCors>[1],
-      );
-      break;
+  #dispatch(req: FastifyRequest, reply: FastifyReply): void | Promise<void> {
+    const pathname = new URL(req.url, "http://localhost").pathname;
+    const method = req.method.toUpperCase() as "DELETE" | "GET" | "POST";
 
-    case "mount":
-      if (op.exact) {
-        // Prefix-match: route handles the path itself and all sub-paths.
-        instance.all(op.path, (req, reply) =>
-          serveFetchHandler(op.handler, req, reply),
-        );
-        instance.all(`${op.path}/*`, (req, reply) =>
-          serveFetchHandler(op.handler, req, reply),
-        );
-      } else {
-        // Exact-match.
-        instance.all(op.path, (req, reply) =>
-          serveFetchHandler(op.handler, req, reply),
-        );
+    // 1. Node routes — exact path + method, handler manages raw response.
+    const nodeHandlers = this.#nodeRoutes.get(pathname);
+    if (nodeHandlers) {
+      const handler = nodeHandlers.get(method);
+      if (handler) {
+        reply.hijack();
+        handler(req.raw, reply.raw, req.body);
+        return;
       }
-      break;
+    }
 
-    case "get":
-      instance.get(op.path, async (req, reply) => {
-        const url = buildUrl(req);
-        const headers = buildHeaders(req);
-        const fetchReq = new Request(url, { method: "GET", headers });
-        const response = await op.handler(fetchReq);
-        writeResponse(reply, response);
-        return reply.send(await response.text());
-      });
-      break;
-
-    case "node-route":
-      instance.route({
-        method: op.method,
-        url: op.path,
-        handler: (req, reply) => {
-          // Hijack the raw response so the handler manages it directly,
-          // bypassing Fastify's serialisation layer.
-          reply.hijack();
-          op.handler(req.raw, reply.raw, req.body);
-        },
-      });
-      break;
-
-    case "middie":
-      (
-        instance as FastifyInstance & {
-          use(middleware: unknown): FastifyInstance;
+    // 2. GET-specific routes (health, explorer, etc.).
+    if (method === "GET") {
+      for (const entry of this.#getRoutes.values()) {
+        if (entry.matcher(pathname)) {
+          return this.#serveGetEntry(entry, req, reply);
         }
-      ).use(op.middleware);
-      break;
+      }
+    }
+
+    // 3. Fetch routes (GraphQL handlers, SSE, etc.).
+    for (const entry of this.#fetchRoutes) {
+      if (entry.matcher(pathname)) {
+        return serveFetchHandler(entry.handler, req, reply);
+      }
+    }
+
+    void reply.status(404).send({
+      message: `Route ${req.method}:${pathname} not found`,
+      error: "Not Found",
+      statusCode: 404,
+    });
+  }
+
+  async #serveGetEntry(
+    entry: GetEntry,
+    req: FastifyRequest,
+    reply: FastifyReply,
+  ): Promise<void> {
+    const url = buildUrl(req);
+    const headers = buildHeaders(req);
+    const fetchReq = new Request(url, { method: "GET", headers });
+    const response = await entry.handler(fetchReq);
+    writeResponse(reply, response);
+    return reply.send(await response.text());
   }
 }
 
