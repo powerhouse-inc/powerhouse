@@ -8,4 +8,5 @@ export default defineConfig({
   dts: true,
   sourcemap: true,
   loader: { ".graphql": "text" },
+  external: [/^[^./]/],
 });
