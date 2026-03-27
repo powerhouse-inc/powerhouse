@@ -61,7 +61,6 @@
     "@types/npm-package-arg": "catalog:",
     "@types/wicg-file-system-access": "^2020.9.6",
     "document-model": "workspace:*",
-    "package-manager-detector": "catalog:",
     "vitest": "catalog:",
     "zod": "catalog:"
   }
