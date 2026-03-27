@@ -1,3 +1,22 @@
+## 6.0.0-dev.114 (2026-03-27)
+
+### 🚀 Features
+
+- **registry:** simplify Dockerfile to install from npm ([7e2c2fa91](https://github.com/powerhouse-inc/powerhouse/commit/7e2c2fa91))
+
+### 🩹 Fixes
+
+- **reactor-mcp:** fix TransportFactory return type to satisfy server.connect() ([361d41163](https://github.com/powerhouse-inc/powerhouse/commit/361d41163))
+- **reactor-mcp:** use factory function instead of mock constructor to fix CI test failures ([cc1bf8c58](https://github.com/powerhouse-inc/powerhouse/commit/cc1bf8c58))
+- **reactor-mcp:** use static import and per-test transport mocks for robustness ([7dbd84c8a](https://github.com/powerhouse-inc/powerhouse/commit/7dbd84c8a))
+- **reactor-mcp:** inject transport constructor to avoid fragile SDK module mocking ([1316d2d0a](https://github.com/powerhouse-inc/powerhouse/commit/1316d2d0a))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Claude Opus 4.6 (1M context)
+- Samuel Hawksby-Robinson @Samyoul
+
 ## 6.0.0-dev.113 (2026-03-27)
 
 ### 🚀 Features

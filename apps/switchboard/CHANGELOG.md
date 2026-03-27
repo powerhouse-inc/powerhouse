@@ -1,3 +1,19 @@
+## 6.0.0-dev.114 (2026-03-27)
+
+### 🚀 Features
+
+- **registry:** simplify Dockerfile to install from npm ([7e2c2fa91](https://github.com/powerhouse-inc/powerhouse/commit/7e2c2fa91))
+
+### 🩹 Fixes
+
+- **reactor-api:** resolve ESLint unsafe-any errors in mountNodeRoute and Sentry handler ([40777f429](https://github.com/powerhouse-inc/powerhouse/commit/40777f429))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Claude Opus 4.6 (1M context)
+- Samuel Hawksby-Robinson @Samyoul
+
 ## 6.0.0-dev.113 (2026-03-27)
 
 ### 🚀 Features

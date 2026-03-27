@@ -1,3 +1,24 @@
+## 6.0.0-dev.114 (2026-03-27)
+
+### 🚀 Features
+
+- **registry:** simplify Dockerfile to install from npm ([7e2c2fa91](https://github.com/powerhouse-inc/powerhouse/commit/7e2c2fa91))
+
+### 🩹 Fixes
+
+- **profiling:** remove document-drive build steps — package deleted from monorepo ([8aec81b67](https://github.com/powerhouse-inc/powerhouse/commit/8aec81b67))
+- **reactor-api:** resolve ESLint unsafe-any errors in mountNodeRoute and Sentry handler ([40777f429](https://github.com/powerhouse-inc/powerhouse/commit/40777f429))
+- **reactor-mcp:** inject transport constructor to avoid fragile SDK module mocking ([1316d2d0a](https://github.com/powerhouse-inc/powerhouse/commit/1316d2d0a))
+- **reactor-mcp:** use static import and per-test transport mocks for robustness ([7dbd84c8a](https://github.com/powerhouse-inc/powerhouse/commit/7dbd84c8a))
+- **reactor-mcp:** use factory function instead of mock constructor to fix CI test failures ([cc1bf8c58](https://github.com/powerhouse-inc/powerhouse/commit/cc1bf8c58))
+- **reactor-mcp:** fix TransportFactory return type to satisfy server.connect() ([361d41163](https://github.com/powerhouse-inc/powerhouse/commit/361d41163))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Claude Opus 4.6 (1M context)
+- Samuel Hawksby-Robinson @Samyoul
+
 ## 6.0.0-dev.113 (2026-03-27)
 
 ### 🚀 Features
