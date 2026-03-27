@@ -139,7 +139,7 @@
     "copyfiles": "catalog:",
     "date-fns": "^4.1.0",
     "date-fns-tz": "^3.2.0",
-    "diff": "^7.0.0",
+    "diff": "^8.0.3",
     "document-model": "workspace:*",
     "mathjs": "^13.1.1",
     "natural-orderby": "^4.0.0",
