@@ -5,16 +5,16 @@
   "main": "dist/src/index.js",
   "exports": {
     ".": {
-      "import": "./dist/index.mjs",
-      "types": "./dist/index.d.mts"
+      "types": "./dist/src/index.d.ts",
+      "import": "./dist/index.mjs"
     },
     "./server": {
-      "import": "./dist/server.mjs",
-      "types": "./dist/server.d.mts"
+      "types": "./dist/src/server.d.ts",
+      "import": "./dist/server.mjs"
     },
     "./utils": {
-      "import": "./dist/utils.mjs",
-      "types": "./dist/utils.d.mts"
+      "types": "./dist/src/utils.d.ts",
+      "import": "./dist/utils.mjs"
     }
   },
   "engines": {
