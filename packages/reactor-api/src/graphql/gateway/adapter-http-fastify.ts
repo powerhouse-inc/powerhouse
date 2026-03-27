@@ -206,7 +206,14 @@ export class FastifyHttpAdapter implements IHttpAdapter {
 
     // Single catch-all route — all dispatching is done via the Maps above so
     // that routes registered after listen() are picked up automatically.
-    instance.all("/*", (req, reply) => this.#dispatch(req, reply));
+    // OPTIONS is excluded because @fastify/cors registers its own OPTIONS /*
+    // handler for preflight; including it here would cause a duplicate-route
+    // conflict at startup.
+    instance.route({
+      method: ["DELETE", "GET", "HEAD", "PATCH", "POST", "PUT"],
+      url: "/*",
+      handler: (req, reply) => this.#dispatch(req, reply),
+    });
 
     await instance.ready();
 
@@ -244,7 +251,10 @@ export class FastifyHttpAdapter implements IHttpAdapter {
     }
 
     // 3. Fetch routes (GraphQL handlers, SSE, etc.).
-    for (const entry of this.#fetchRoutes) {
+    // Iterate in reverse so that the last-mounted handler wins when the same
+    // path is mounted more than once (e.g. supergraph remount after reload).
+    for (let i = this.#fetchRoutes.length - 1; i >= 0; i--) {
+      const entry = this.#fetchRoutes[i]!;
       if (entry.matcher(pathname)) {
         return serveFetchHandler(entry.handler, req, reply);
       }

@@ -169,6 +169,19 @@ async function buildMercuriusApp(
     schema,
     graphiql: false,
     context: makeContextFn(contextFactory, logger),
+    // Override _Service.sdl to rewrite "type Query/Mutation/Subscription {"
+    // as "extend type …  {" so that @mercuriusjs/gateway v5 (which follows the
+    // Federation v1 convention of using extensionTypeMap) correctly maps root
+    // operation fields to this service during query planning.
+    resolvers: {
+      _Service: {
+        sdl: (parent: { sdl?: string }) =>
+          (parent.sdl ?? "").replace(
+            /\btype\s+(Query|Mutation|Subscription)\s*\{/g,
+            "extend type $1 {",
+          ),
+      },
+    },
   } satisfies MercuriusOptions);
 
   await app.ready();
