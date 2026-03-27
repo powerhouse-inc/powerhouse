@@ -1,3 +1,15 @@
+## 6.0.0-dev.115 (2026-03-27)
+
+### 🚀 Features
+
+- **reactor-api:** add FastifyHttpAdapter implementing IHttpAdapter ([94d3d9b48](https://github.com/powerhouse-inc/powerhouse/commit/94d3d9b48))
+- **reactor-api:** add FastifyHttpAdapter with dispatch-map design ([969d56af3](https://github.com/powerhouse-inc/powerhouse/commit/969d56af3))
+- **reactor-api:** add MercuriusGatewayAdapter implementing IGatewayAdapter ([ea05779a3](https://github.com/powerhouse-inc/powerhouse/commit/ea05779a3))
+
+### ❤️ Thank You
+
+- Samuel Hawksby-Robinson @Samyoul
+
 ## 6.0.0-dev.114 (2026-03-27)
 
 ### 🚀 Features
