@@ -876,4 +876,68 @@ describe("Connect-Switchboard Sync", () => {
       expect(switchboardCountFinal).toBe(switchboardCountAfterSync);
     }, 30000);
   });
+
+  it("should preserve signature tuples through sync round-trip", async () => {
+    const setup = await setupConnectSwitchboard();
+    connectReactor = setup.connectReactor;
+    switchboardReactor = setup.switchboardReactor;
+    connectModule = setup.connectModule;
+    switchboardModule = setup.switchboardModule;
+    connectEventBus = setup.connectEventBus;
+    switchboardEventBus = setup.switchboardEventBus;
+    connectSyncManager = setup.connectSyncManager;
+    switchboardSyncManager = setup.switchboardSyncManager;
+    resolverBridge = setup.resolverBridge;
+
+    const document = driveDocumentModelModule.utils.createDocument();
+    const documentId = document.header.id;
+
+    await setupSyncForDrive(connectSyncManager, documentId, resolverBridge);
+
+    const createReady = waitForOperationsReady(switchboardEventBus, documentId);
+    const createJob = await connectReactor.create(document);
+    await waitForJobCompletion(connectReactor, createJob.id);
+    await createReady;
+
+    const signedAction = driveDocumentModelModule.actions.setDriveName({
+      name: "Signed Drive",
+    });
+    signedAction.context = {
+      signer: {
+        user: { address: "0xabc", networkId: "eip155", chainId: 1 },
+        app: { name: "test-app", key: "app-key-1" },
+        signatures: [["algo", "0xabc", "pubkey123", "sig456", "hash789"]],
+      },
+    };
+
+    const mutationReady = waitForOperationsReady(
+      switchboardEventBus,
+      documentId,
+    );
+    const mutateJob = await connectReactor.execute(documentId, "main", [
+      signedAction,
+    ]);
+    await waitForJobCompletion(connectReactor, mutateJob.id);
+    await mutationReady;
+
+    const switchboardOps = await switchboardReactor.getOperations(documentId, {
+      branch: "main",
+    });
+    const globalOps = switchboardOps["global"]?.results ?? [];
+    const signedOp = globalOps.find(
+      (op) => op.action.type === "SET_DRIVE_NAME",
+    );
+
+    expect(signedOp).toBeDefined();
+    const signatures = signedOp!.action.context?.signer?.signatures;
+    expect(signatures).toHaveLength(1);
+    expect(Array.isArray(signatures![0])).toBe(true);
+    expect(signatures![0]).toEqual([
+      "algo",
+      "0xabc",
+      "pubkey123",
+      "sig456",
+      "hash789",
+    ]);
+  }, 30000);
 });
