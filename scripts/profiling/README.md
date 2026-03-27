@@ -39,7 +39,9 @@ cd scripts/profiling
 pnpm install
 ```
 
-Build the packages that the profiling scripts depend on. Run these from the repository root:
+**`run-reactor-direct.sh` and `switchboard-pyroscope.sh` build all required packages automatically** before running — use them on a fresh branch or after dependency changes. If packages are already up to date, invoke `reactor-direct.ts` directly with `tsx` to skip the build step.
+
+If you need to build manually (e.g. for `docs-create.ts` or other tsx scripts), run these from the repository root:
 
 ```bash
 pnpm --filter document-model run tsc --build
