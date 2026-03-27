@@ -5,6 +5,7 @@ set -euo pipefail
 # Usage: ./scripts/profiling/switchboard-pyroscope.sh [--runtime node|bun] [--mode v2|legacy] [--postgres URL] [switchboard-options...]
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+PROFILING_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Defaults
 RUNTIME="node"
@@ -172,61 +173,9 @@ echo "Press Ctrl+C to stop"
 echo "=========================================="
 echo
 
-# Build all required packages
-TOTAL_STEPS=5
-[ -n "$OTEL_ENDPOINT" ] && TOTAL_STEPS=6
-STEP=0
-
-echo "Building packages..."
-
-STEP=$((STEP + 1)); echo "  [${STEP}/${TOTAL_STEPS}] document-model"
-if ! pnpm --filter document-model run tsc --build; then
-  echo "Error: document-model build failed — aborting"
-  exit 1
-fi
-
-STEP=$((STEP + 1)); echo "  [${STEP}/${TOTAL_STEPS}] @powerhousedao/reactor"
-if ! pnpm --filter @powerhousedao/reactor run build; then
-  echo "Error: reactor build failed — aborting"
-  exit 1
-fi
-if ! pnpm --filter @powerhousedao/reactor run build:bundle; then
-  echo "Error: reactor bundle build failed — aborting"
-  exit 1
-fi
-
-if [ -n "$OTEL_ENDPOINT" ]; then
-  STEP=$((STEP + 1)); echo "  [${STEP}/${TOTAL_STEPS}] @powerhousedao/opentelemetry-instrumentation-reactor"
-  if ! pnpm --filter @powerhousedao/opentelemetry-instrumentation-reactor run build; then
-    echo "Error: opentelemetry-instrumentation-reactor build failed — aborting"
-    exit 1
-  fi
-fi
-
-STEP=$((STEP + 1)); echo "  [${STEP}/${TOTAL_STEPS}] @powerhousedao/vetra"
-if ! pnpm --filter @powerhousedao/vetra run tsc --build; then
-  echo "Error: vetra tsc build failed — aborting"
-  exit 1
-fi
-if ! pnpm --filter @powerhousedao/vetra run build:bundle; then
-  echo "Error: vetra bundle build failed — aborting"
-  exit 1
-fi
-
-STEP=$((STEP + 1)); echo "  [${STEP}/${TOTAL_STEPS}] @powerhousedao/switchboard"
-if ! pnpm --filter @powerhousedao/switchboard run tsc --build; then
-  echo "Error: switchboard build failed — aborting"
-  exit 1
-fi
-
-STEP=$((STEP + 1)); echo "  [${STEP}/${TOTAL_STEPS}] @powerhousedao/reactor-api"
-if ! pnpm --filter @powerhousedao/reactor-api run build:misc; then
-  echo "Error: reactor-api build:misc failed — aborting"
-  exit 1
-fi
-
-echo "Build complete."
-echo
+BUILD_ARGS=(--with-switchboard)
+[ -n "$OTEL_ENDPOINT" ] && BUILD_ARGS+=(--otel)
+bash "${PROFILING_DIR}/build-packages.sh" "${BUILD_ARGS[@]}"
 
 # Resolve switchboard path
 SWITCHBOARD_PATH="${SCRIPT_DIR}/apps/switchboard/dist/src/index.js"
