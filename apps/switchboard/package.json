@@ -45,9 +45,9 @@
   "description": "",
   "dependencies": {
     "@electric-sql/pglite": "catalog:",
-    "@openfeature/core": "^1.9.1",
-    "@openfeature/env-var-provider": "^0.3.1",
-    "@openfeature/server-sdk": "^1.19.0",
+    "@openfeature/core": "catalog:",
+    "@openfeature/env-var-provider": "catalog:",
+    "@openfeature/server-sdk": "catalog:",
     "@powerhousedao/config": "workspace:*",
     "@opentelemetry/api": "^1.9.0",
     "@opentelemetry/exporter-metrics-otlp-http": "^0.57.2",

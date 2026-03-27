@@ -16,7 +16,6 @@
     "@powerhousedao/reactor-browser": "workspace:*",
     "@powerhousedao/shared": "workspace:*",
     "@renown/sdk": "workspace:*",
-    "document-drive": "workspace:*",
     "document-model": "workspace:*",
     "graphql-ws": "catalog:",
     "graphql-sse": "catalog:",

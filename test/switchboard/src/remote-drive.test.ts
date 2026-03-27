@@ -12,8 +12,14 @@ import {
   RemoteDocumentController,
 } from "@powerhousedao/reactor-browser";
 import { RenownBuilder } from "@renown/sdk/node";
-import { driveDocumentModelModule, setDriveName } from "document-drive";
-import type { DocumentModelDocument, PHDocument } from "document-model";
+import {
+  driveDocumentModelModule,
+  setDriveName,
+} from "@powerhousedao/shared/document-drive";
+import type {
+  DocumentModelDocument,
+  PHDocument,
+} from "@powerhousedao/shared/document-model";
 import {
   DocumentModelController,
   documentModelDocumentModelModule,
