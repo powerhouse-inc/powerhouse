@@ -379,6 +379,8 @@ docker compose -f scripts/profiling/docker-compose.yml up otel-collector prometh
 # http://localhost:9090/query?g0.expr=sum%28rate%28reactor_job_total_duration_milliseconds_sum%5B15s%5D%29%29+%2F+sum%28rate%28reactor_executor_operations_generated_total%5B15s%5D%29%29&g0.show_tree=0&g0.tab=graph&g0.range_input=1h&g0.res_type=auto&g0.res_density=high&g0.display_mode=lines&g0.show_exemplars=0&g1.expr=histogram_quantile%280.01%2C+rate%28reactor_job_total_duration_milliseconds_bucket%5B15s%5D%29%29&g1.show_tree=0&g1.tab=graph&g1.range_input=1h&g1.res_type=auto&g1.res_density=high&g1.display_mode=lines&g1.show_exemplars=0&g2.expr=histogram_quantile%280.99%2C+rate%28reactor_job_total_duration_milliseconds_bucket%5B15s%5D%29%29&g2.show_tree=0&g2.tab=graph&g2.range_input=1h&g2.res_type=auto&g2.res_density=high&g2.display_mode=lines&g2.show_exemplars=0
 ```
 
+![Prometheus latency dashboard](./assets/prometheus_metrics_example.png)
+
 ### Prometheus metrics reference
 
 #### Counters — use `rate(...[interval])` for per-second rates
