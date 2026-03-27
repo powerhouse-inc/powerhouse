@@ -96,6 +96,12 @@ export async function runRegistry(args: RegistryCommandArgs) {
   const webhookChannel = new WebhookChannel(config.storagePath, config.notify);
   const notifications = new NotificationManager([sseChannel, webhookChannel]);
 
+  // Serve static assets (logo, etc.)
+  const staticDir = await findUp("static", { type: "directory" });
+  if (staticDir) {
+    app.use("/-/static", express.static(staticDir));
+  }
+
   // Our routes take priority over Verdaccio
   app.use(createPowerhouseRouter(config, sseChannel, webhookChannel));
   app.use(createPublishHook(config, notifications));

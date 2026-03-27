@@ -47,5 +47,9 @@ export async function setup() {
 }
 
 export async function teardown() {
-  proc?.kill();
+  if (!proc) return;
+  await new Promise<void>((resolve) => {
+    proc!.on("close", resolve);
+    proc!.kill();
+  });
 }

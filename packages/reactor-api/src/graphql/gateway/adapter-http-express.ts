@@ -3,6 +3,7 @@ import cors from "cors";
 import type { CorsOptions } from "cors";
 import devcert from "devcert";
 import type express from "express";
+import type { Express } from "express";
 import { Router } from "express";
 import expressLib from "express";
 import type { IRouter } from "express";
@@ -14,17 +15,24 @@ import { match, type MatchFunction, type ParamData } from "path-to-regexp";
 import type { FetchHandler, IHttpAdapter, TlsOptions } from "./types.js";
 
 export class ExpressHttpAdapter implements IHttpAdapter {
-  readonly #app: ReturnType<typeof expressLib>;
+  readonly #app: Express;
   readonly #router: IRouter;
   readonly #handlers = new Map<
     string,
     { handler: FetchHandler; matcher: MatchFunction<ParamData> }
   >();
 
-  constructor(existingApp?: ReturnType<typeof expressLib>) {
+  constructor(existingApp?: Express) {
     this.#app = existingApp ?? expressLib();
     this.#router = Router();
     this.#app.use(this.#router);
+  }
+
+  setupSentryErrorHandler(sentry: object): void {
+    const s = sentry as {
+      setupExpressErrorHandler(app: Express): void;
+    };
+    s.setupExpressErrorHandler(this.#app);
   }
 
   get handle(): unknown {
@@ -34,6 +42,21 @@ export class ExpressHttpAdapter implements IHttpAdapter {
   mountRawMiddleware(middleware: unknown): void {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     this.#app.use(middleware as any);
+  }
+
+  mountNodeRoute(
+    method: "DELETE" | "GET" | "POST",
+    path: string,
+    handler: (
+      req: http.IncomingMessage,
+      res: http.ServerResponse,
+      body?: unknown,
+    ) => void,
+  ): void {
+    const m = method.toLowerCase() as "delete" | "get" | "post";
+    this.#app[m](path, (req: express.Request, res: express.Response) =>
+      handler(req, res, req.body as unknown),
+    );
   }
 
   setupMiddleware({
@@ -197,8 +220,8 @@ export class ExpressHttpAdapter implements IHttpAdapter {
   }
 }
 
-export function createExpressHttpAdapter(
-  existingApp?: ReturnType<typeof expressLib>,
-): { adapter: IHttpAdapter } {
+export function createExpressHttpAdapter(existingApp?: Express): {
+  adapter: IHttpAdapter;
+} {
   return { adapter: new ExpressHttpAdapter(existingApp) };
 }

@@ -32,11 +32,10 @@ import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import { documentModels as vetraDocumentModels } from "@powerhousedao/vetra";
 import { processorFactory as vetraProcessorFactory } from "@powerhousedao/vetra/processors";
-import { type IRenown } from "@renown/sdk";
+import type { IRenown } from "@renown/sdk/node";
 import * as Sentry from "@sentry/node";
 import { childLogger, documentModelDocumentModelModule } from "document-model";
 import dotenv from "dotenv";
-import express from "express";
 import { Kysely, PostgresDialect } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
 import path from "path";
@@ -44,7 +43,7 @@ import { Pool } from "pg";
 import type { RedisClientType } from "redis";
 import { initRedis } from "./clients/redis.js";
 import { initFeatureFlags } from "./feature-flags.js";
-import { initRenown } from "./renown.js";
+import { getRenownSignerConfig, initRenown } from "./renown.js";
 import type { StartServerOptions, SwitchboardReactor } from "./types.js";
 import { addDefaultDrive, isPostgresUrl } from "./utils.js";
 
@@ -55,9 +54,8 @@ dotenv.config();
 // Feature flag constants
 const DOCUMENT_MODEL_SUBGRAPHS_ENABLED = "DOCUMENT_MODEL_SUBGRAPHS_ENABLED";
 const DOCUMENT_MODEL_SUBGRAPHS_ENABLED_DEFAULT = true;
-
-// Create a monolith express app for all subgraphs
-const app = express();
+const REQUIRE_SIGNATURES = "REQUIRE_SIGNATURES";
+const REQUIRE_SIGNATURES_DEFAULT = false;
 
 if (process.env.SENTRY_DSN) {
   defaultLogger.info(
@@ -68,8 +66,6 @@ if (process.env.SENTRY_DSN) {
     dsn: process.env.SENTRY_DSN,
     environment: process.env.SENTRY_ENV,
   });
-
-  Sentry.setupExpressErrorHandler(app);
 }
 
 const DEFAULT_PORT = process.env.PORT ? Number(process.env.PORT) : 4001;
@@ -185,7 +181,11 @@ async function initServer(
     );
 
     if (renown) {
-      clientBuilder.withSigner(renown.signer);
+      const signerConfig = getRenownSignerConfig(
+        renown,
+        options.identity?.requireSignatures,
+      );
+      clientBuilder.withSigner(signerConfig);
     }
 
     const module = await clientBuilder.buildModule();
@@ -221,7 +221,6 @@ async function initServer(
   const api = await initializeAndStartAPI(
     initializeClient,
     {
-      express: app,
       port: serverPort,
       dbPath: readModelPath,
       https: options.https,
@@ -240,6 +239,12 @@ async function initServer(
     },
     "switchboard",
   );
+
+  if (process.env.SENTRY_DSN) {
+    // Register Sentry error handler after all routes are established.
+    // The adapter calls the framework-specific Sentry setup internally.
+    api.httpAdapter.setupSentryErrorHandler(Sentry);
+  }
 
   const { client, graphqlManager, documentModelRegistry } = api;
 
@@ -284,7 +289,7 @@ async function initServer(
 
   // add vite middleware after express app is initialized if applicable
   if (vite) {
-    api.app.mountRawMiddleware(vite.middlewares);
+    api.httpAdapter.mountRawMiddleware(vite.middlewares);
   }
 
   // Connect to remote drives AFTER packages are loaded
@@ -353,6 +358,14 @@ export const startSwitchboard = async (
 
   options.enableDocumentModelSubgraphs = enableDocumentModelSubgraphs;
 
+  const requireSignatures =
+    options.identity?.requireSignatures ??
+    (await featureFlags.getBooleanValue(
+      REQUIRE_SIGNATURES,
+      REQUIRE_SIGNATURES_DEFAULT,
+    ));
+  options.identity = { ...options.identity, requireSignatures };
+
   const logger = options.logger ?? defaultLogger;
 
   logger.info(
@@ -360,6 +373,7 @@ export const startSwitchboard = async (
     JSON.stringify(
       {
         DOCUMENT_MODEL_SUBGRAPHS_ENABLED: enableDocumentModelSubgraphs,
+        REQUIRE_SIGNATURES: requireSignatures,
       },
       null,
       2,

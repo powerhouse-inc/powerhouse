@@ -115,9 +115,10 @@ export const nodeReducer: DocumentDriveNodeOperations = {
             ...node,
             ...{
               name: handleTargetNameCollisions({
-                nodes: state.nodes,
+                nodes: state.nodes.filter((n) => n.id !== action.input.id),
                 srcName: action.input.name ?? node.name,
-                targetParentFolder: action.input.parentFolder || null,
+                targetParentFolder:
+                  action.input.parentFolder ?? node.parentFolder,
               }),
               documentType:
                 action.input.documentType ?? (node as FileNode).documentType,
@@ -142,9 +143,10 @@ export const nodeReducer: DocumentDriveNodeOperations = {
             ...node,
             ...{
               name: handleTargetNameCollisions({
-                nodes: state.nodes,
+                nodes: state.nodes.filter((n) => n.id !== action.input.id),
                 srcName: action.input.name ?? node.name,
-                targetParentFolder: action.input.parentFolder || null,
+                targetParentFolder:
+                  action.input.parentFolder ?? node.parentFolder,
               }),
               parentFolder:
                 action.input.parentFolder === null ? null : node.parentFolder,

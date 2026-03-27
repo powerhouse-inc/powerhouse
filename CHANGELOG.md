@@ -1,3 +1,63 @@
+## 6.0.0-dev.115 (2026-03-27)
+
+### 🚀 Features
+
+- **reactor-api:** add FastifyHttpAdapter implementing IHttpAdapter ([94d3d9b48](https://github.com/powerhouse-inc/powerhouse/commit/94d3d9b48))
+- **reactor-api:** add FastifyHttpAdapter with dispatch-map design ([969d56af3](https://github.com/powerhouse-inc/powerhouse/commit/969d56af3))
+- **reactor-api:** add MercuriusGatewayAdapter implementing IGatewayAdapter ([ea05779a3](https://github.com/powerhouse-inc/powerhouse/commit/ea05779a3))
+
+### ❤️ Thank You
+
+- Samuel Hawksby-Robinson @Samyoul
+
+## 6.0.0-dev.114 (2026-03-27)
+
+### 🚀 Features
+
+- **registry:** simplify Dockerfile to install from npm ([7e2c2fa91](https://github.com/powerhouse-inc/powerhouse/commit/7e2c2fa91))
+
+### 🩹 Fixes
+
+- **profiling:** remove document-drive build steps — package deleted from monorepo ([8aec81b67](https://github.com/powerhouse-inc/powerhouse/commit/8aec81b67))
+- **reactor-api:** resolve ESLint unsafe-any errors in mountNodeRoute and Sentry handler ([40777f429](https://github.com/powerhouse-inc/powerhouse/commit/40777f429))
+- **reactor-mcp:** inject transport constructor to avoid fragile SDK module mocking ([1316d2d0a](https://github.com/powerhouse-inc/powerhouse/commit/1316d2d0a))
+- **reactor-mcp:** use static import and per-test transport mocks for robustness ([7dbd84c8a](https://github.com/powerhouse-inc/powerhouse/commit/7dbd84c8a))
+- **reactor-mcp:** use factory function instead of mock constructor to fix CI test failures ([cc1bf8c58](https://github.com/powerhouse-inc/powerhouse/commit/cc1bf8c58))
+- **reactor-mcp:** fix TransportFactory return type to satisfy server.connect() ([361d41163](https://github.com/powerhouse-inc/powerhouse/commit/361d41163))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Claude Opus 4.6 (1M context)
+- Samuel Hawksby-Robinson @Samyoul
+
+## 6.0.0-dev.113 (2026-03-27)
+
+### 🚀 Features
+
+- expand codegen tests to cover new cases ([#2432](https://github.com/powerhouse-inc/powerhouse/pull/2432))
+- **codegen:** add functions to ensure package exports wildcards and tsconfig paths ([284cebd92](https://github.com/powerhouse-inc/powerhouse/commit/284cebd92))
+- **design-system:** add PackageAnimation component and use it for install indicators ([4104f7c46](https://github.com/powerhouse-inc/powerhouse/commit/4104f7c46))
+
+### 🩹 Fixes
+
+- exclude node_modules and dist from test runs ([44b9cd745](https://github.com/powerhouse-inc/powerhouse/commit/44b9cd745))
+- **builder-tools:** use official esmExternalRequirePlugin for React externals ([1dab2319b](https://github.com/powerhouse-inc/powerhouse/commit/1dab2319b))
+- **codegen:** handle JSONC comments in ensureTsconfigPaths ([ae3cd38fe](https://github.com/powerhouse-inc/powerhouse/commit/ae3cd38fe))
+- **codegen:** e2e tests for doc model and subgraph generation -- and a fix for a bug they found ([1c58a34df](https://github.com/powerhouse-inc/powerhouse/commit/1c58a34df))
+- **codegen:** tests were referencing the wrong thing ([db5ea60b3](https://github.com/powerhouse-inc/powerhouse/commit/db5ea60b3))
+- **codegen:** tsconfig updates on codegen e2e tests ([ffe18c602](https://github.com/powerhouse-inc/powerhouse/commit/ffe18c602))
+- **reactor-api:** register dynamic document models into registry on package change ([3611b08df](https://github.com/powerhouse-inc/powerhouse/commit/3611b08df))
+- **vetra:** add missing Connect boilerplate files for ph vetra ([bfe64f705](https://github.com/powerhouse-inc/powerhouse/commit/bfe64f705))
+- **vetra:** move connect dependency to root and fix CSS import ([1e288a8a9](https://github.com/powerhouse-inc/powerhouse/commit/1e288a8a9))
+- **vetra:** exclude connect entry points from tsc --build ([eb139f7b8](https://github.com/powerhouse-inc/powerhouse/commit/eb139f7b8))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Guillermo Puente @gpuente
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.0.0-dev.112 (2026-03-26)
 
 ### 🚀 Features

@@ -2,33 +2,27 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+PROFILING_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+# Extract flags relevant to the build step without consuming them from $@
+# (all args are still forwarded to reactor-direct.ts below).
 BUILD_OTEL=false
-for arg in "$@"; do [[ "$arg" == "--otel" ]] && BUILD_OTEL=true; done
+DB_URL=""
+prev_arg=""
+for arg in "$@"; do
+  [[ "$arg" == "--otel" ]] && BUILD_OTEL=true
+  if [[ "$prev_arg" == "--db" ]]; then DB_URL="$arg"; fi
+  case "$arg" in --db=*) DB_URL="${arg#*=}" ;; esac
+  prev_arg="$arg"
+done
 
-TOTAL_STEPS=3
-$BUILD_OTEL && TOTAL_STEPS=4
-STEP=0
+BUILD_ARGS=()
+$BUILD_OTEL && BUILD_ARGS+=(--otel)
+[[ "$DB_URL" == postgresql://* ]] && BUILD_ARGS+=(--migrate "$DB_URL")
 
-echo "Building packages..."
+bash "${PROFILING_DIR}/build-packages.sh" "${BUILD_ARGS[@]+"${BUILD_ARGS[@]}"}"
 
-STEP=$((STEP + 1)); echo "  [${STEP}/${TOTAL_STEPS}] document-model"
-pnpm --filter document-model run tsc --build
-
-STEP=$((STEP + 1)); echo "  [${STEP}/${TOTAL_STEPS}] @powerhousedao/reactor"
-pnpm --filter @powerhousedao/reactor run build
-pnpm --filter @powerhousedao/reactor run build:bundle
-
-if $BUILD_OTEL; then
-  STEP=$((STEP + 1)); echo "  [${STEP}/${TOTAL_STEPS}] @powerhousedao/opentelemetry-instrumentation-reactor"
-  pnpm --filter @powerhousedao/opentelemetry-instrumentation-reactor run build
-fi
-
-STEP=$((STEP + 1)); echo "  [${STEP}/${TOTAL_STEPS}] Running migrations"
-DATABASE_URL="postgresql://postgres:postgres@localhost:5432/postgres" \
-  pnpm --filter document-drive run migrate
-
-echo "Done. Starting reactor-direct..."
+echo "Starting reactor-direct..."
 echo ""
 
 exec tsx "${SCRIPT_DIR}/scripts/profiling/reactor-direct.ts" "$@"

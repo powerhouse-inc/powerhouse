@@ -678,20 +678,13 @@ export class GraphQLManager {
    */
   #setupSSEHandler(schema: GraphQLSchema, basePath: string) {
     const ssePath = basePath + "/stream";
-    const sseHandler = createGraphQLSSEHandler({
+    const rawHandler = createGraphQLSSEHandler({
       schema,
-      contextFactory: (req) => ({
-        headers: req.headers,
-        driveId: req.params?.drive ?? undefined,
-        db: this.relationalDb,
-        ...this.getAdditionalContextFields(),
-      }),
+      contextFactory: this.#makeContextFactory(),
     });
-
-    // SSE handler is Express-specific; mount directly on the underlying app.
-    // TODO: replace sse.ts with a Fetch API handler so this can use httpAdapter.mount()
-    (
-      this.httpAdapter.handle as { use: (path: string, h: unknown) => void }
-    ).use(ssePath, sseHandler);
+    const handler = this.#authMiddleware
+      ? this.#authMiddleware(rawHandler)
+      : rawHandler;
+    this.httpAdapter.mount(ssePath, handler, { exact: true });
   }
 }

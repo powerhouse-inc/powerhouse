@@ -42,6 +42,7 @@ jobs:
             echo "::error::No tags found — cannot build Docker image without a version tag"
             exit 1
           fi
+          echo "Using tag: ${{ env.GITHUB_TAG }}"
       - name: Set image paths
         run: |
           HARBOR_PROJECT="${GITHUB_REPOSITORY//\//-}"
@@ -90,7 +91,7 @@ jobs:
             ${{ env.ADDITIONAL_TAG != '' && format('{0}/{1}:{2}', env.HARBOR_REGISTRY, env.HARBOR_PATH, env.ADDITIONAL_TAG) || '' }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          build-args: ${{ matrix.image == 'academy' && format('TAG={0}', env.GITHUB_TAG) || '' }}
+          build-args: TAG=${{ env.GITHUB_TAG }}
 
   update-k8s-academy:
     name: Update Academy Image in K8s Hosting
