@@ -1,3 +1,13 @@
+## 6.0.0-dev.118 (2026-03-28)
+
+### 🚀 Features
+
+- **reactor-api:** add opt-in Prometheus metrics exporter ([82d2939b1](https://github.com/powerhouse-inc/powerhouse/commit/82d2939b1))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 6.0.0-dev.117 (2026-03-28)
 
 This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.

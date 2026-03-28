@@ -1,3 +1,7 @@
+## 6.0.0-dev.118 (2026-03-28)
+
+This was a version bump only for @powerhousedao/switchboard to align it with other projects, there were no code changes.
+
 ## 6.0.0-dev.117 (2026-03-28)
 
 This was a version bump only for @powerhousedao/switchboard to align it with other projects, there were no code changes.
