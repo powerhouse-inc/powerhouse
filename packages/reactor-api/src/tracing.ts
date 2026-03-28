@@ -3,6 +3,7 @@
 
 import { getNodeAutoInstrumentations } from "@opentelemetry/auto-instrumentations-node";
 import { OTLPMetricExporter } from "@opentelemetry/exporter-metrics-otlp-http";
+import { PrometheusExporter } from "@opentelemetry/exporter-prometheus";
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
 import { Resource } from "@opentelemetry/resources";
 import { PeriodicExportingMetricReader } from "@opentelemetry/sdk-metrics";
@@ -52,16 +53,20 @@ if (TRACING_ENABLED) {
     "deployment.environment": process.env.NODE_ENV || "development",
   });
 
-  // Configure metrics exporter if endpoint is provided
-  const metricReader = METRICS_ENDPOINT
-    ? new PeriodicExportingMetricReader({
-        exporter: new OTLPMetricExporter({ url: METRICS_ENDPOINT }),
-        exportIntervalMillis: METRICS_EXPORT_INTERVAL_MS,
-      })
-    : undefined;
+  // Prometheus pull exporter (opt-in: serves /metrics for Prometheus to scrape)
+  const PROMETHEUS_METRICS_PORT = process.env.PROMETHEUS_METRICS_PORT;
+  let metricReader: PrometheusExporter | PeriodicExportingMetricReader | undefined;
 
-  if (METRICS_ENDPOINT) {
-    console.log(`  Metrics endpoint: ${METRICS_ENDPOINT}`);
+  if (PROMETHEUS_METRICS_PORT) {
+    const port = parseInt(PROMETHEUS_METRICS_PORT, 10);
+    metricReader = new PrometheusExporter({ port, preventServerStart: false });
+    console.log(`  Prometheus /metrics on port ${port}`);
+  } else if (METRICS_ENDPOINT) {
+    metricReader = new PeriodicExportingMetricReader({
+      exporter: new OTLPMetricExporter({ url: METRICS_ENDPOINT }),
+      exportIntervalMillis: METRICS_EXPORT_INTERVAL_MS,
+    });
+    console.log(`  Metrics OTLP endpoint: ${METRICS_ENDPOINT}`);
     console.log(`  Metrics interval: ${METRICS_EXPORT_INTERVAL_MS}ms`);
   }
 
