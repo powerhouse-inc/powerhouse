@@ -1,3 +1,13 @@
+## 6.0.0-dev.120 (2026-03-29)
+
+### 🩹 Fixes
+
+- **codegen:** use valid semver 4.0.0 instead of 4.x in zod version check ([7c26bac23](https://github.com/powerhouse-inc/powerhouse/commit/7c26bac23))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 6.0.0-dev.119 (2026-03-29)
 
 This was a version bump only, there were no code changes.
