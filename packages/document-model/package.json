@@ -23,6 +23,10 @@
     "./node": {
       "node": "./dist/node.mjs",
       "types": "./dist/node.d.mts"
+    },
+    "./core": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
     }
   },
   "sideEffects": false,
