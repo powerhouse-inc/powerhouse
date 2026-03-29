@@ -1,3 +1,18 @@
+## 6.0.0-dev.122 (2026-03-29)
+
+### 🚀 Features
+
+- **reactor-api:** expose reactorClient to processors via IProcessorHostModule ([32d3dea71](https://github.com/powerhouse-inc/powerhouse/commit/32d3dea71))
+- **reactor-api:** expose reactorClient to processors via IProcessorHostModule ([31cb05627](https://github.com/powerhouse-inc/powerhouse/commit/31cb05627))
+
+### 🩹 Fixes
+
+- **reactor-api:** use typed variable instead of as-cast for module ([b7ad3f575](https://github.com/powerhouse-inc/powerhouse/commit/b7ad3f575))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 6.0.0-dev.121 (2026-03-29)
 
 This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
