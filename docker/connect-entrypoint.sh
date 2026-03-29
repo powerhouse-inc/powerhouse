@@ -1,7 +1,6 @@
 #!/bin/sh
 set -e
 
-# Substitute environment variables in nginx configuration
 envsubst '${PORT},${PH_CONNECT_BASE_PATH}' < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf
 
 echo "Testing nginx configuration..."
