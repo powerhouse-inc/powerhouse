@@ -1,3 +1,13 @@
+## 6.0.0-dev.121 (2026-03-29)
+
+### 🩹 Fixes
+
+- **document-model:** add ./core subpath export for backwards compat ([53b7fe0c9](https://github.com/powerhouse-inc/powerhouse/commit/53b7fe0c9))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 6.0.0-dev.120 (2026-03-29)
 
 ### 🩹 Fixes
