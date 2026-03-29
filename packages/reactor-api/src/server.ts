@@ -654,6 +654,9 @@ export async function initializeAndStartAPI(
 
   // Extract client and syncManager from the module
   const reactorClient = reactorClientModule.client;
+
+  // Make reactor client available to processors so they can dispatch actions
+  module.reactorClient = reactorClient;
   const syncManager =
     reactorClientModule.reactorModule?.syncModule?.syncManager;
   if (!syncManager) {
