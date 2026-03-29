@@ -1,3 +1,13 @@
+## 6.0.0-dev.123 (2026-03-29)
+
+### 🚀 Features
+
+- **docker:** redesign Docker strategy with runtime package loading ([08207df3d](https://github.com/powerhouse-inc/powerhouse/commit/08207df3d))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 6.0.0-dev.122 (2026-03-29)
 
 ### 🚀 Features
