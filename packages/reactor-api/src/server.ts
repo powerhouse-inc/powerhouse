@@ -472,12 +472,12 @@ async function _setupAPI(
   authorizationService?: AuthorizationService,
   documentModelRegistry?: IDocumentModelRegistry,
 ): Promise<API> {
-  const module = {
+  const module: IProcessorHostModule = {
     relationalDb,
     analyticsStore,
     processorApp,
     config: options.processorConfig,
-  } as IProcessorHostModule;
+  };
   const mcpServerEnabled = options.mcp ?? true;
 
   const logger = options.logger ?? defaultLogger;
