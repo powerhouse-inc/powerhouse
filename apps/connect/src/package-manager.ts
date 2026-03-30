@@ -36,6 +36,12 @@ type PackageWithMeta = PackageMeta & {
 
 const LOCAL_PACKAGE_NAME = "Local" as const;
 const COMMON_PACKAGE_NAME = "Common" as const;
+const VETRA_PACKAGE_NAME = "@powerhousedao/vetra" as const;
+const LOCAL_PACKAGES: string[] = [
+  LOCAL_PACKAGE_NAME,
+  COMMON_PACKAGE_NAME,
+  VETRA_PACKAGE_NAME,
+];
 
 export class BrowserPackageManager implements IPackageManager {
   registryUrl: string | null;
@@ -63,9 +69,6 @@ export class BrowserPackageManager implements IPackageManager {
   }
 
   async init(localPackage?: VetraPackage) {
-    for (const packageName of this.#storage.keys()) {
-      await this.addPackage(packageName);
-    }
     const commonPackageWithMeta = this.#loadCommonPackage();
     this.#registerPackage(commonPackageWithMeta);
     const vetraVetraPackageWithMeta = this.#loadVetraPackage();
@@ -79,6 +82,9 @@ export class BrowserPackageManager implements IPackageManager {
         loadedPackage: localPackage,
       });
     }
+    for (const packageName of this.#storage.keys()) {
+      await this.addPackage(packageName);
+    }
   }
 
   get packages() {
@@ -87,11 +93,9 @@ export class BrowserPackageManager implements IPackageManager {
 
   getPackageSource(packageName: string) {
     // check vs the constant name we use for common packages
-    if (
-      packageName === COMMON_PACKAGE_NAME ||
-      packageName === "@powerhousedao/vetra"
-    )
+    if (LOCAL_PACKAGES.includes(packageName)) {
       return "common";
+    }
     // check if the package has the same name as the local project
     if (packageName === this.#localPackage?.name) return "project";
     const packageMeta = this.#storage.get(packageName);
@@ -104,22 +108,28 @@ export class BrowserPackageManager implements IPackageManager {
     return "registry-install";
   }
 
-  async addPackage(packageName: string) {
-    const packageWithMeta = await this.#loadPackage(packageName);
-    if (!packageWithMeta)
+  async addPackage(packageName: string): Promise<PackageManagerInstallResult> {
+    const existingPackage = this.#packages.get(packageName);
+    if (existingPackage) {
       return {
-        type: "error" as const,
-        error: new Error(
-          "Failed to load package. See console debug for outputs.",
-        ),
+        type: "success",
+        package: existingPackage,
       };
+    }
+    try {
+      const packageWithMeta = await this.#loadPackage(packageName);
+      this.#registerPackage(packageWithMeta);
 
-    this.#registerPackage(packageWithMeta);
-
-    return {
-      type: "success" as const,
-      package: packageWithMeta.loadedPackage,
-    };
+      return {
+        type: "success",
+        package: packageWithMeta.loadedPackage,
+      };
+    } catch (error) {
+      return {
+        type: "error",
+        error: error instanceof Error ? error : new Error(String(error)),
+      };
+    }
   }
 
   async addPackages(packageNames: string[]) {
@@ -210,12 +220,7 @@ export class BrowserPackageManager implements IPackageManager {
     };
   }
 
-  async #loadPackageFromNodeModules(
-    name: string,
-  ): Promise<PackageWithMeta | undefined> {
-    if (import.meta.env.PROD) return;
-
-    if (name === COMMON_PACKAGE_NAME || name === LOCAL_PACKAGE_NAME) return;
+  async #loadPackageFromNodeModules(name: string): Promise<PackageWithMeta> {
     const importUrl = `/node_modules/${name}/index.js`;
     const stylesheetUrl = `/node_modules/${name}/style.css`;
 
@@ -228,12 +233,7 @@ export class BrowserPackageManager implements IPackageManager {
     return packageWithMeta;
   }
 
-  async #loadPackageFromRegistry(
-    name: string,
-  ): Promise<PackageWithMeta | undefined> {
-    if (this.registryUrl === null) return;
-    if (name === COMMON_PACKAGE_NAME || name === LOCAL_PACKAGE_NAME) return;
-
+  async #loadPackageFromRegistry(name: string): Promise<PackageWithMeta> {
     const importUrl = `${this.#cdnUrl}/${name}/index.js`;
     const stylesheetUrl = `${this.#cdnUrl}/${name}/style.css`;
     const packageWithMeta = await this.#importPackage({
@@ -247,49 +247,49 @@ export class BrowserPackageManager implements IPackageManager {
 
   async #importPackage(packageMeta: PackageMeta) {
     const { name, importUrl, stylesheetUrl } = packageMeta;
-    if (importUrl === null) return;
-
-    try {
-      const importedPackage = (await import(
-        /* @vite-ignore */ importUrl
-      )) as DocumentModelLib;
-      const loadedPackage = convertLegacyLibToVetraPackage(importedPackage);
-
-      return {
-        name,
-        loadedPackage,
-        importUrl,
-        stylesheetUrl,
-      };
-    } catch (error) {
-      console.debug(`Could not import package:`);
-      console.debug({
-        error,
-        name,
-        importUrl,
-        stylesheetUrl,
-      });
-      return undefined;
+    if (!importUrl) {
+      throw new Error(`Import url not defined for package "${name}".`);
     }
+
+    const importedPackage = (await import(
+      /* @vite-ignore */ importUrl
+    )) as DocumentModelLib;
+    const loadedPackage = convertLegacyLibToVetraPackage(importedPackage);
+
+    return {
+      name,
+      loadedPackage,
+      importUrl,
+      stylesheetUrl,
+    };
   }
 
-  async #loadPackage(packageName: string) {
-    let packageWithMeta: PackageWithMeta | undefined;
-
-    packageWithMeta = await this.#loadPackageFromNodeModules(packageName);
-
-    if (!packageWithMeta && this.registryUrl !== null) {
-      packageWithMeta = await this.#loadPackageFromRegistry(packageName);
-    }
-
-    if (!packageWithMeta) {
-      console.debug(
-        `Failed to load package "${packageName}" from node_modules and package registry with url "${this.registryUrl}".`,
+  async #loadPackage(packageName: string): Promise<PackageWithMeta> {
+    if (LOCAL_PACKAGES.includes(packageName)) {
+      throw new Error(
+        `Package "${packageName}" is a local package and cannot be loaded dynamically.`,
       );
-      return undefined;
     }
 
-    return packageWithMeta;
+    // only attemp to load from node_modules in dev mode
+    if (!import.meta.env.PROD) {
+      try {
+        const packageWithMeta =
+          await this.#loadPackageFromNodeModules(packageName);
+        return packageWithMeta;
+      } catch (error) {
+        console.warn(
+          `Failed to load package "${packageName}" from node_modules:`,
+          error,
+        );
+      }
+    }
+
+    if (!this.registryUrl) {
+      throw new Error("Registry url not defined.");
+    }
+
+    return await this.#loadPackageFromRegistry(packageName);
   }
 
   #registerPackage(packageWithMeta: PackageWithMeta) {
