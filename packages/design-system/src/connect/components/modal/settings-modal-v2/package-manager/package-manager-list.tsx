@@ -182,7 +182,7 @@ export const PackageManagerList = (props: {
           </h3>
           {hasLocallyInstalled || hasRegistryInstalled ? (
             <div>
-              <h4>Locally installed</h4>
+              <h4 className="mb-2 mt-4 font-semibold">Locally installed</h4>
               <ul className="flex flex-col items-stretch gap-4 pr-2">
                 {locallyInstalledPackages.map((pkg) => (
                   <PackageManagerListItem
@@ -193,7 +193,9 @@ export const PackageManagerList = (props: {
                   />
                 ))}
               </ul>
-              <h4>Installed from registry</h4>
+              <h4 className="mb-2 mt-4 font-semibold">
+                Installed from registry
+              </h4>
               <ul className="flex flex-col items-stretch gap-4 pr-2">
                 {registryInstalledPackages.map((pkg) => (
                   <PackageManagerListItem
@@ -209,7 +211,7 @@ export const PackageManagerList = (props: {
             <p>No packages installed.</p>
           )}
         </div>
-        <div className="mb-2">
+        <div className="mb-4">
           <h3 className="mb-4 font-semibold text-gray-900">
             Available Packages
           </h3>

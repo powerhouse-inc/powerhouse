@@ -1,3 +1,91 @@
+## 6.0.0-dev.129 (2026-03-30)
+
+This was a version bump only for compat to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.128 (2026-03-30)
+
+### 🩹 Fixes
+
+- **reactor-api,switchboard:** import vite loader from subexport ([1909d0c25](https://github.com/powerhouse-inc/powerhouse/commit/1909d0c25))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.127 (2026-03-30)
+
+### 🩹 Fixes
+
+- **connect,docker:** set connect registry url on build step ([cc96c4ad7](https://github.com/powerhouse-inc/powerhouse/commit/cc96c4ad7))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.126 (2026-03-30)
+
+### 🚀 Features
+
+- **connect,docker:** load PH_PACKAGES from runtime JSON instead of build-time define ([701eec6ac](https://github.com/powerhouse-inc/powerhouse/commit/701eec6ac))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.125 (2026-03-30)
+
+### 🚀 Features
+
+- **docker:** use switchboard bin directly in entrypoint ([6848e119b](https://github.com/powerhouse-inc/powerhouse/commit/6848e119b))
+- **docker:** install switchboard directly instead of ph-cmd ([66ab86bc1](https://github.com/powerhouse-inc/powerhouse/commit/66ab86bc1))
+
+### 🩹 Fixes
+
+- **connect,builder-tools,design-system:** multiple fixes to dynamic package loading in connect ([fb47de8b3](https://github.com/powerhouse-inc/powerhouse/commit/fb47de8b3))
+
+### ❤️ Thank You
+
+- acaldas
+- Frank
+
+## 6.0.0-dev.124 (2026-03-30)
+
+This was a version bump only for compat to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.123 (2026-03-29)
+
+### 🚀 Features
+
+- **docker:** redesign Docker strategy with runtime package loading ([08207df3d](https://github.com/powerhouse-inc/powerhouse/commit/08207df3d))
+
+### ❤️ Thank You
+
+- Frank
+
+## 6.0.0-dev.122 (2026-03-29)
+
+This was a version bump only for compat to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.121 (2026-03-29)
+
+This was a version bump only for compat to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.120 (2026-03-29)
+
+This was a version bump only for compat to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.119 (2026-03-29)
+
+This was a version bump only for compat to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.118 (2026-03-28)
+
+This was a version bump only for compat to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.117 (2026-03-28)
+
+This was a version bump only for compat to align it with other projects, there were no code changes.
+
 ## 6.0.0-dev.116 (2026-03-27)
 
 ### 🚀 Features

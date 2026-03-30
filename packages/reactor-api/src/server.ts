@@ -472,12 +472,13 @@ async function _setupAPI(
   authorizationService?: AuthorizationService,
   documentModelRegistry?: IDocumentModelRegistry,
 ): Promise<API> {
-  const module = {
+  const hostModule: IProcessorHostModule = {
     relationalDb,
     analyticsStore,
     processorApp,
     config: options.processorConfig,
-  } as IProcessorHostModule;
+    reactorClient,
+  };
   const mcpServerEnabled = options.mcp ?? true;
 
   const logger = options.logger ?? defaultLogger;
@@ -495,7 +496,7 @@ async function _setupAPI(
   for (const [packageName, fns] of processorEntries) {
     const factories = fns.map((fn) => {
       try {
-        return fn(module);
+        return fn(hostModule);
       } catch (e) {
         logger.error(
           `Error initializing processor factory for package ${packageName}:`,
@@ -585,7 +586,7 @@ async function _setupAPI(
     packages,
     graphqlManager,
     reactorProcessorManager,
-    module,
+    hostModule,
     documentModelRegistry,
   );
 
@@ -654,6 +655,7 @@ export async function initializeAndStartAPI(
 
   // Extract client and syncManager from the module
   const reactorClient = reactorClientModule.client;
+
   const syncManager =
     reactorClientModule.reactorModule?.syncModule?.syncManager;
   if (!syncManager) {

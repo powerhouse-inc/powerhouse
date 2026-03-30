@@ -209,9 +209,11 @@ export function createPublishHook(
                 console.log(
                   `[registry] Extracting ${packageName}@${version} to CDN cache`,
                 );
-                return cdn
-                  .extractTarball(packageName, version)
-                  .then(() => version);
+                return cdn.extractTarball(packageName, version).then(() => {
+                  // Remove any stale version directories left by racing CDN requests
+                  cdn.pruneOldVersions(packageName, version);
+                  return version;
+                });
               }
               return null;
             })

@@ -23,6 +23,16 @@ jobs:
             context: ./packages/registry
           - image: academy
             context: ./apps/academy
+          - image: connect
+            context: .
+            dockerfile: docker/Dockerfile
+            target: connect
+            harbor_only: true
+          - image: switchboard
+            context: .
+            dockerfile: docker/Dockerfile
+            target: switchboard
+            harbor_only: true
     outputs:
       tag: ${{ steps.get-tag.outputs.tag }}
     steps:
@@ -66,6 +76,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Log in to GHCR
+        if: ${{ matrix.harbor_only != true }}
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
@@ -83,11 +94,13 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile || format('{0}/Dockerfile', matrix.context) }}
+          target: ${{ matrix.target || '' }}
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ github.repository }}/${{ matrix.image }}:${{ env.GITHUB_TAG }}
-            ${{ env.HARBOR_REGISTRY }}/${{ env.HARBOR_PATH }}:${{ env.GITHUB_TAG }}
-            ${{ env.ADDITIONAL_TAG != '' && format('{0}/{1}/{2}:{3}', env.REGISTRY, github.repository, matrix.image, env.ADDITIONAL_TAG) || '' }}
+            ${{ matrix.harbor_only != true && format('{0}/{1}/{2}:{3}', env.REGISTRY, github.repository, matrix.image, env.GITHUB_TAG) || '' }}
+            ${{ format('{0}/{1}:{2}', env.HARBOR_REGISTRY, env.HARBOR_PATH, env.GITHUB_TAG) }}
+            ${{ matrix.harbor_only != true && env.ADDITIONAL_TAG != '' && format('{0}/{1}/{2}:{3}', env.REGISTRY, github.repository, matrix.image, env.ADDITIONAL_TAG) || '' }}
             ${{ env.ADDITIONAL_TAG != '' && format('{0}/{1}:{2}', env.HARBOR_REGISTRY, env.HARBOR_PATH, env.ADDITIONAL_TAG) || '' }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -139,6 +152,33 @@ jobs:
             echo "Push attempt $i failed, retrying..."
             sleep 5
           done
+
+  notify-auto-update:
+    name: Notify Cloud Auto-Update
+    needs: build
+    if: ${{ needs.build.outputs.tag != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notify cloud switchboard
+        env:
+          TAG: ${{ needs.build.outputs.tag }}
+          WEBHOOK_URL: ${{ secrets.CLOUD_AUTO_UPDATE_WEBHOOK_URL }}
+          WEBHOOK_SECRET: ${{ secrets.CLOUD_AUTO_UPDATE_WEBHOOK_SECRET }}
+        run: |
+          if [ -z "$WEBHOOK_URL" ]; then
+            echo "No webhook URL configured, skipping"
+            exit 0
+          fi
+          CHANNEL=""
+          if [[ "$TAG" == *"-dev."* ]]; then CHANNEL="dev"
+          elif [[ "$TAG" == *"-staging."* ]]; then CHANNEL="staging"
+          else CHANNEL="latest"; fi
+
+          echo "Notifying auto-update: tag=$TAG, channel=$CHANNEL"
+          curl -sf -X POST "$WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d "{\"query\":\"mutation { notifyNewImageRelease(input: { tag: \\\"${TAG}\\\", channel: \\\"${CHANNEL}\\\", images: [\\\"switchboard\\\", \\\"connect\\\"], secret: \\\"${WEBHOOK_SECRET}\\\" }) { updatedEnvironments } }\"}" \
+            || echo "Auto-update notification failed (non-fatal)"
 
   update-k8s-registry:
     name: Update Registry Image in K8s Hosting
