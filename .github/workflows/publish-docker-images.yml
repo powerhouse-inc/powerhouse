@@ -153,6 +153,48 @@ jobs:
             sleep 5
           done
 
+  update-k8s-switchboard:
+    name: Update Switchboard/Connect Image in K8s Hosting
+    needs: build
+    if: ${{ needs.build.outputs.tag != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check if dev release
+        id: env
+        env:
+          TAG: ${{ needs.build.outputs.tag }}
+        run: |
+          if [[ "$TAG" == *"-dev."* ]]; then
+            echo "should_update=true" >> $GITHUB_OUTPUT
+          else
+            echo "should_update=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Update switchboard and connect image tags in k8s-hosting
+        if: ${{ steps.env.outputs.should_update == 'true' }}
+        env:
+          TAG: ${{ needs.build.outputs.tag }}
+          K8S_REPO_PAT: ${{ secrets.K8S_REPO_PAT }}
+        run: |
+          git clone "https://x-access-token:${K8S_REPO_PAT}@github.com/powerhouse-inc/powerhouse-k8s-hosting.git"
+          cd powerhouse-k8s-hosting
+
+          git config user.name "Github Actions Bot"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          VALUES_FILE="tenants/eager-frog-55-0cb3c743/powerhouse-values.yaml"
+          sed -i '/repository: cr.vetra.io\/powerhouse-inc-powerhouse\/switchboard/{n;s/\(.*tag: \).*/\1'"${TAG}"'/}' "$VALUES_FILE"
+          sed -i '/repository: cr.vetra.io\/powerhouse-inc-powerhouse\/connect/{n;s/\(.*tag: \).*/\1'"${TAG}"'/}' "$VALUES_FILE"
+          git add "$VALUES_FILE"
+
+          git diff --cached --quiet && echo "No changes to commit" && exit 0
+          git commit -m "chore(eager-frog): update switchboard/connect image tag to ${TAG}"
+          for i in 1 2 3; do
+            git pull --rebase origin main && git push && break
+            echo "Push attempt $i failed, retrying..."
+            sleep 5
+          done
+
   update-k8s-registry:
     name: Update Registry Image in K8s Hosting
     needs: build
