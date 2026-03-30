@@ -1,3 +1,19 @@
+## 6.0.0-dev.125 (2026-03-30)
+
+### 🚀 Features
+
+- **docker:** use switchboard bin directly in entrypoint ([6848e119b](https://github.com/powerhouse-inc/powerhouse/commit/6848e119b))
+- **docker:** install switchboard directly instead of ph-cmd ([66ab86bc1](https://github.com/powerhouse-inc/powerhouse/commit/66ab86bc1))
+
+### 🩹 Fixes
+
+- **connect,builder-tools,design-system:** multiple fixes to dynamic package loading in connect ([fb47de8b3](https://github.com/powerhouse-inc/powerhouse/commit/fb47de8b3))
+
+### ❤️ Thank You
+
+- acaldas
+- Frank
+
 ## 6.0.0-dev.124 (2026-03-30)
 
 This was a version bump only for @powerhousedao/reactor-hypercore to align it with other projects, there were no code changes.
