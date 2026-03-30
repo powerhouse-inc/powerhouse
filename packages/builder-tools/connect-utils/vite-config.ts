@@ -15,6 +15,7 @@ import {
 } from "vite";
 import { createHtmlPlugin } from "vite-plugin-html";
 import type { IConnectOptions } from "./types.js";
+import { phPackagesPlugin } from "./vite-plugins/ph-packages.js";
 
 const isLocalDev = true;
 const esmShUrl = isLocalDev ? "http://localhost:8080" : "https://esm.sh";
@@ -262,7 +263,6 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
       tsconfigPaths: true,
     },
     define: {
-      PH_PACKAGES: phPackages,
       PH_PACKAGE_REGISTRY_URL: `"${phPackageRegistryUrl}"`,
     },
     customLogger,
@@ -284,6 +284,9 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
       // NOTE: Do NOT also list these in build.rolldownOptions.external — overlapping
       // entries prevent the plugin from transforming require() calls.
       esmExternalRequirePlugin({ external: reactExternal }),
+      phPackagesPlugin({
+        packages: phPackages,
+      }),
     ],
     worker: {
       format: "es",

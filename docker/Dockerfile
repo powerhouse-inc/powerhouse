@@ -47,6 +47,9 @@ RUN chmod +x /docker-entrypoint.sh
 
 ENV PORT=3001
 ENV PH_CONNECT_BASE_PATH="/"
+ENV PH_REGISTRY_PACKAGES=""
+ENV PH_REGISTRY_URL="https://registry.dev.vetra.io"
+ENV PH_PACKAGE_REGISTRY_URL=""
 
 EXPOSE ${PORT}
 
@@ -76,6 +79,9 @@ RUN chmod +x /app/entrypoint.sh
 
 ENV NODE_ENV=production
 ENV PORT=3000
+ENV PH_REGISTRY_PACKAGES=""
+ENV PH_REGISTRY_URL="https://registry.dev.vetra.io"
+ENV PH_PACKAGE_REGISTRY_URL=""
 
 EXPOSE ${PORT}
 
