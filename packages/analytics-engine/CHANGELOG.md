@@ -1,3 +1,13 @@
+## 6.0.0-dev.127 (2026-03-30)
+
+### 🩹 Fixes
+
+- **connect,docker:** set connect registry url on build step ([cc96c4ad7](https://github.com/powerhouse-inc/powerhouse/commit/cc96c4ad7))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.0.0-dev.126 (2026-03-30)
 
 ### 🚀 Features
