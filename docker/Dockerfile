@@ -56,26 +56,20 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
 ENTRYPOINT ["/docker-entrypoint.sh"]
 
 # ============================================================
-# Switchboard target: node running ph switchboard
+# Switchboard target: node running @powerhousedao/switchboard
 # ============================================================
 FROM node:24-alpine AS switchboard
 
 WORKDIR /app
 
-RUN apk add --no-cache curl
+RUN apk add --no-cache curl git
 
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
-RUN pnpm config set @jsr:registry https://npm.jsr.io
-
 ARG TAG=latest
-RUN pnpm add -g ph-cmd@$TAG
-
-COPY --from=base /app/project /app/project
-
-WORKDIR /app/project
+RUN pnpm init && pnpm add --shamefully-hoist @powerhousedao/switchboard@$TAG
 
 COPY docker/switchboard-entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
