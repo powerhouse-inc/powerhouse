@@ -1,45 +1,44 @@
 import { json } from "@tmpl/core";
 
-const exportsTemplate = json`
+export const exportsTemplate = json`
   ".": {
     "types": "./dist/index.d.ts",
-    "import": "./dist/index.js"
+    "browser": "./dist/browser/index.js",
+    "node": "./dist/node/index.js"
   },
   "./document-models": {
     "types": "./dist/document-models/index.d.ts",
-    "import": "./dist/document-models/index.js"
-  },
-  "./editors": {
-    "types": "./dist/editors/index.d.ts",
-    "import": "./dist/editors/index.js"
+    "browser": "./dist/browser/document-models/index.js",
+    "node": "./dist/node/document-models/index.js"
   },
   "./document-models/*": {
     "types": "./dist/document-models/*/index.d.ts",
-    "import": "./dist/document-models/*/index.js"
+    "browser": "./dist/browser/document-models/*/index.js",
+    "node": "./dist/node/document-models/*/index.js"
+  },
+  "./editors": {
+    "types": "./dist/editors/index.d.ts",
+    "browser": "./dist/browser/editors/index.js",
+    "node": "./dist/node/editors/index.js"
   },
   "./editors/*": {
     "types": "./dist/editors/*/index.d.ts",
-    "import": "./dist/editors/*/index.js"
+    "browser": "./dist/browser/editors/*/index.js",
+    "node": "./dist/node/editors/*/index.js"
   },
   "./subgraphs": {
     "types": "./dist/subgraphs/index.d.ts",
-    "import": "./dist/subgraphs/index.js"
+    "browser": "./dist/browser/subgraphs/index.js",
+    "node": "./dist/node/subgraphs/index.js"
   },
   "./processors": {
     "types": "./dist/processors/index.d.ts",
-    "import": "./dist/processors/index.js"
-  },
-  "./processors/connect": {
-    "types": "./dist/processors/connect.d.ts",
-    "import": "./dist/processors/connect.js"
-  },
-  "./processors/switchboard": {
-    "types": "./dist/processors/switchboard.d.ts",
-    "import": "./dist/processors/switchboard.js"
+    "browser": "./dist/browser/processors/index.js",
+    "node": "./dist/node/processors/index.js"
   },
   "./manifest": "./dist/powerhouse.manifest.json",
   "./style.css": "./dist/style.css"
-`;
+`.raw;
 
 const scriptsTemplate = json`
   "test": "vitest run",
@@ -57,9 +56,10 @@ const scriptsTemplate = json`
   "vetra": "ph-cli vetra",
   "service-startup": "bash ./node_modules/@powerhousedao/ph-cli/dist/scripts/service-startup.sh",
   "service-unstartup": "bash ./node_modules/@powerhousedao/ph-cli/dist/scripts/service-unstartup.sh"
-`;
+`.raw;
 
-const dependenciesTemplate = (versionedDependencies: string[]) => json`
+const dependenciesTemplate = (versionedDependencies: string[]) =>
+  json`
   ${versionedDependencies.join(",\n")},
   "@powerhousedao/document-engineering": "1.40.1",
   "graphql": "^16.10.0",
@@ -67,9 +67,10 @@ const dependenciesTemplate = (versionedDependencies: string[]) => json`
   "zod": "^4.3.5",
   "react": "^19.2.3",
   "react-dom": "^19.2.3"
-`;
+`.raw;
 
-const devDependenciesTemplate = (versionedDevDependencies: string[]) => json`
+const devDependenciesTemplate = (versionedDevDependencies: string[]) =>
+  json`
   ${versionedDevDependencies.join(",\n")},
   "@eslint/js": "^9.38.0",
   "@tailwindcss/cli": "^4.1.18",
@@ -87,7 +88,7 @@ const devDependenciesTemplate = (versionedDevDependencies: string[]) => json`
   "vitest": "4.1.1",
   "@vitejs/plugin-react": "6.0.1",
   "vite-tsconfig-paths": "6.1.1"
-`;
+`.raw;
 
 export const packageJsonTemplate = (
   projectName: string,

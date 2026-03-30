@@ -1,13 +1,15 @@
 import { generateProcessor } from "@powerhousedao/codegen";
-import { ReactorBuilder } from "@powerhousedao/reactor";
 import type { ReactorModule } from "@powerhousedao/reactor";
+import { ReactorBuilder } from "@powerhousedao/reactor";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import type {
   DocumentModelModule,
   OperationWithContext,
 } from "@powerhousedao/shared/document-model";
-import type { IProcessor } from "@powerhousedao/shared/processors";
-import type { ProcessorApps } from "@powerhousedao/shared/processors";
+import type {
+  IProcessor,
+  ProcessorApps,
+} from "@powerhousedao/shared/processors";
 import { $ } from "bun";
 import { afterEach, describe, expect, it } from "bun:test";
 import { join } from "path";
@@ -345,9 +347,7 @@ function instrumentProcessorWithLog(indexFilePath: string) {
   sourceFile.addStatements(`\nexport const log: any[] = [];`);
 
   // Find the processor class and its onOperations method, then inject log statement
-  const processorClass = sourceFile.getClassOrThrow(
-    "TestE2eProcessorProcessor",
-  );
+  const processorClass = sourceFile.getClassOrThrow("TestE2eProcessor");
   const onOperationsMethod = processorClass.getMethodOrThrow("onOperations");
 
   onOperationsMethod.insertStatements(0, "log.push(...operations);");
@@ -380,20 +380,20 @@ describe("processor e2e integration", () => {
     });
 
     // 2. Instrument the generated processor with ts-morph to add a log
-    const processorIndexPath = join(
+    const processorFilePath = join(
       outDir,
       "processors",
       "test-e2e-processor",
-      "index.ts",
+      "processor.ts",
     );
-    instrumentProcessorWithLog(processorIndexPath);
+    instrumentProcessorWithLog(processorFilePath);
 
     // 3. Dynamic import the instrumented processor (bun handles .ts natively)
-    const processorModule = (await import(processorIndexPath)) as {
-      TestE2eProcessorProcessor: new (analyticsStore: null) => IProcessor;
+    const processorModule = (await import(processorFilePath)) as {
+      TestE2eProcessor: new (analyticsStore: null) => IProcessor;
       log: OperationWithContext[];
     };
-    const { TestE2eProcessorProcessor: ProcessorClass, log } = processorModule;
+    const { TestE2eProcessor: ProcessorClass, log } = processorModule;
 
     expect(ProcessorClass).toBeDefined();
     expect(log).toBeInstanceOf(Array);

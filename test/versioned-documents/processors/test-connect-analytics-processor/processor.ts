@@ -3,10 +3,13 @@ import type {
   AnalyticsSeriesInput,
   IAnalyticsStore,
 } from "@powerhousedao/analytics-engine-core";
-import type { IProcessor, OperationWithContext } from "@powerhousedao/reactor";
+import type {
+  IProcessor,
+  OperationWithContext,
+} from "@powerhousedao/reactor-browser";
 
-export class TestIsomorphicAnalyticsProcessorProcessor implements IProcessor {
-  private readonly NAMESPACE = "TestIsomorphicAnalyticsProcessor";
+export class TestConnectAnalyticsProcessorProcessor implements IProcessor {
+  private readonly NAMESPACE = "TestConnectAnalyticsProcessor";
 
   private readonly inputs: AnalyticsSeriesInput[] = [];
 

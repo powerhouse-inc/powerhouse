@@ -56,12 +56,12 @@ export type ProcessorRecord = {
 export type ProcessorFactory = (
   driveHeader: PHDocumentHeader,
   processorApp?: ProcessorApp,
-) => ProcessorRecord[] | Promise<ProcessorRecord[]>;
+) => Promise<ProcessorRecord[]> | ProcessorRecord[];
 
 /** Takes a processor host module and builds processor factories using its context */
 export type ProcessorFactoryBuilder = (
   module: IProcessorHostModule,
-) => Promise<(driveHeader: PHDocumentHeader) => Promise<ProcessorRecord[]>>;
+) => Promise<ProcessorFactory> | ProcessorFactory;
 
 export type ProcessorStatus = "active" | "errored";
 

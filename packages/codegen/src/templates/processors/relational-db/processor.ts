@@ -1,9 +1,15 @@
-import { RelationalDbProcessor } from "@powerhousedao/reactor";
+import { ts } from "@tmpl/core";
+
+const defaultNamespaceComment =
+  '// Default namespace: `${this.name}_${driveId.replaceAll("-", "_")}`';
+export const relationalDbProcessorTemplate = (v: { pascalCaseName: string }) =>
+  ts`
+import { RelationalDbProcessor } from "@powerhousedao/reactor-browser";
 import type { OperationWithContext } from "document-model";
 import { up } from "./migrations.js";
 import type { DB } from "./schema.js";
 
-export class TestIsomorphicRelationalDbProcessorProcessor extends RelationalDbProcessor<DB> {
+export class ${v.pascalCaseName} extends RelationalDbProcessor<DB> {
   onOperations(operations: OperationWithContext[]): Promise<void> {
     return Promise.resolve();
   }
@@ -13,7 +19,7 @@ export class TestIsomorphicRelationalDbProcessorProcessor extends RelationalDbPr
   }
 
   static override getNamespace(driveId: string): string {
-    // Default namespace: `${this.name}_${driveId.replaceAll("-", "_")}`
+    ${defaultNamespaceComment}
     return super.getNamespace(driveId);
   }
 
@@ -21,3 +27,4 @@ export class TestIsomorphicRelationalDbProcessorProcessor extends RelationalDbPr
     await up(this.relationalDb);
   }
 }
+`.raw;

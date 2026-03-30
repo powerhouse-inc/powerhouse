@@ -13,11 +13,18 @@ import { fileExists, type PowerhouseConfig } from "@powerhousedao/shared/clis";
 import type { DocumentModelGlobalState } from "@powerhousedao/shared/document-model";
 import type { ProcessorApps } from "@powerhousedao/shared/processors";
 import { kebabCase } from "change-case";
+import { getTsconfig } from "get-tsconfig";
 import fs from "node:fs";
-import { readdir } from "node:fs/promises";
+import { readdir, writeFile } from "node:fs/promises";
 import path, { join } from "node:path";
 import { readPackage, type NormalizedPackageJson } from "read-pkg";
 import semver from "semver";
+import {
+  exportsTemplate,
+  tsconfigPathsTemplate,
+  tsConfigTemplate,
+} from "templates";
+import { writePackage } from "write-package";
 import { tsMorphGenerateProcessor } from "../file-builders/processors/processor.js";
 import { generateSchemas } from "./graphql.js";
 import type { CodegenOptions } from "./types.js";
@@ -171,100 +178,72 @@ export async function generateDocumentModel(args: GenerateDocumentModelArgs) {
     useVersioning,
     migrateLegacy,
   });
-  ensurePackageExportsWildcards();
-  ensureTsconfigPaths(packageName);
+  // await ensurePackageExportsWildcards();
+  // await ensureTsconfigPaths();
 }
-
-const requiredWildcardExports: Record<string, Record<string, string>> = {
-  "./document-models/*": {
-    types: "./dist/document-models/*/index.d.ts",
-    import: "./dist/document-models/*/index.js",
-  },
-  "./editors/*": {
-    types: "./dist/editors/*/index.d.ts",
-    import: "./dist/editors/*/index.js",
-  },
-};
 
 /**
  * Ensures that the project's package.json exports field contains the
  * wildcard subpath patterns required for deep imports like
- * "package-name/document-models/my-doc" to resolve correctly.
+ * "document-models/my-doc" to resolve correctly.
  */
-function ensurePackageExportsWildcards(projectRoot?: string) {
-  const rootDir = projectRoot || process.cwd();
-  const packageJsonPath = join(rootDir, "package.json");
+async function ensurePackageExportsWildcards() {
+  const requiredExports = JSON.parse(`{ ${exportsTemplate} }`) as Record<
+    string,
+    string
+  >;
 
-  if (!fs.existsSync(packageJsonPath)) return;
+  const packageJson = await readPackage();
 
-  const raw = fs.readFileSync(packageJsonPath, "utf-8");
-  const packageJson = JSON.parse(raw) as Record<string, unknown>;
-  const exports = packageJson.exports as Record<string, unknown> | undefined;
+  const existingExports =
+    !packageJson.exports ||
+    typeof packageJson.exports === "string" ||
+    Array.isArray(packageJson.exports)
+      ? {}
+      : packageJson.exports;
 
-  if (!exports) return;
+  packageJson.exports = {
+    ...existingExports,
+    ...requiredExports,
+  };
 
-  let modified = false;
-  for (const [key, value] of Object.entries(requiredWildcardExports)) {
-    if (!exports[key]) {
-      exports[key] = value;
-      modified = true;
-    }
-  }
-
-  if (modified) {
-    fs.writeFileSync(
-      packageJsonPath,
-      JSON.stringify(packageJson, null, 2) + "\n",
-    );
-  }
+  await writePackage(process.cwd(), packageJson);
 }
 
 /**
  * Ensures that the project's tsconfig.json has paths mappings for
- * self-referencing imports, which are needed by vite-tsconfig-paths
- * to resolve imports like "package-name/document-models/my-doc"
- * to source files during dev mode.
+ * the convenience export paths like "document-models/" etc.
  */
-function ensureTsconfigPaths(packageName: string, projectRoot?: string) {
-  const rootDir = projectRoot || process.cwd();
-  const tsconfigPath = join(rootDir, "tsconfig.json");
+async function ensureTsconfigPaths() {
+  const requiredTsConfigPaths = JSON.parse(
+    `{ ${tsconfigPathsTemplate} }`,
+  ) as Record<string, string[]>;
+  const tsConfigFilePath = join(process.cwd(), "tsconfig.json");
+  let tsConfig = getTsconfig();
 
-  if (!fs.existsSync(tsconfigPath)) return;
+  if (!tsConfig) {
+    await writeFile(tsConfigFilePath, tsConfigTemplate);
+    tsConfig = getTsconfig();
+  }
 
-  const raw = fs.readFileSync(tsconfigPath, "utf-8");
-  // tsconfig.json may contain comments (JSONC), strip them before parsing
-  // Match strings first to preserve them, then strip line/block comments
-  const stripped = raw.replace(
-    /("(?:\\.|[^"\\])*")|\/\/.*$|\/\*[\s\S]*?\*\//gm,
-    (_match, str: string | undefined) => str ?? "",
-  );
-  const tsconfig = JSON.parse(stripped) as Record<string, unknown>;
-  const compilerOptions = (tsconfig.compilerOptions ?? {}) as Record<
-    string,
-    unknown
-  >;
-  const paths = (compilerOptions.paths ?? {}) as Record<string, string[]>;
+  if (!tsConfig) {
+    throw new Error(
+      `Failed to get or create tsconfig.json at "${tsConfigFilePath}".`,
+    );
+  }
 
-  const requiredPaths: Record<string, string[]> = {
-    [`${packageName}/document-models`]: ["./document-models/index.ts"],
-    [`${packageName}/document-models/*`]: ["./document-models/*/index.ts"],
-    [`${packageName}/editors`]: ["./editors/index.ts"],
-    [`${packageName}/editors/*`]: ["./editors/*/index.ts"],
+  const existingCompilerOptions = tsConfig.config.compilerOptions ?? {};
+  const existingPaths = existingCompilerOptions.paths ?? {};
+
+  tsConfig.config.compilerOptions = {
+    ...existingCompilerOptions,
+    paths: {
+      ...existingPaths,
+      ...requiredTsConfigPaths,
+    },
   };
 
-  let modified = false;
-  for (const [key, value] of Object.entries(requiredPaths)) {
-    if (!paths[key]) {
-      paths[key] = value;
-      modified = true;
-    }
-  }
-
-  if (modified) {
-    compilerOptions.paths = paths;
-    tsconfig.compilerOptions = compilerOptions;
-    fs.writeFileSync(tsconfigPath, JSON.stringify(tsconfig, null, 2) + "\n");
-  }
+  await writeFile(tsConfigFilePath, JSON.stringify(tsConfig.config, null, 2));
 }
 
 function findZodDependencyInPackageJson(
@@ -330,8 +309,8 @@ export async function generateEditor(args: GenerateEditorArgs) {
     editorName,
     editorId,
   });
-  ensurePackageExportsWildcards();
-  ensureTsconfigPaths(packageName);
+  // await ensurePackageExportsWildcards();
+  // await ensureTsconfigPaths();
 }
 
 export async function generateDriveEditor(options: {
@@ -375,7 +354,6 @@ export async function generateSubgraphFromDocumentModel(
   name: string,
   documentModel: DocumentModelGlobalState,
   config: PowerhouseConfig,
-  _options: CodegenOptions = {},
 ) {
   const packageName = await readPackage().then((pkg) => pkg.name);
   await tsMorphGenerateSubgraph({
@@ -393,7 +371,6 @@ export async function generateSubgraph(
   name: string,
   file: string | null,
   config: PowerhouseConfig,
-  _options: CodegenOptions = {},
 ) {
   const documentModelState =
     file !== null ? await loadDocumentModel(file) : null;

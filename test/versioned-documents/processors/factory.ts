@@ -4,26 +4,22 @@
  */
 
 import type {
-  ProcessorRecord,
   IProcessorHostModule,
-  ProcessorFactory,
+  ProcessorRecord,
 } from "@powerhousedao/reactor-browser";
 import type { PHDocumentHeader } from "document-model";
 
 export const processorFactory = async (module: IProcessorHostModule) => {
-  const factories: ProcessorFactory[] = [];
+  const { processorFactoryBuilders } =
+    module.processorApp === "connect"
+      ? await import("./connect.js")
+      : await import("./switchboard.js");
 
-  if (module.processorApp === "connect") {
-    // dynamically import connect processors and add them
-    // to the factories array
-    await addConnectProcessorFactories(factories, module);
-  }
-
-  if (module.processorApp === "switchboard") {
-    // dynamically import switchboard processors and add them
-    // to the factories array
-    await addSwitchboardProcessorFactories(factories, module);
-  }
+  const factories = await Promise.all(
+    processorFactoryBuilders.map(
+      async (buildFactory) => await buildFactory(module),
+    ),
+  );
 
   // Return the inner function that will be called for each drive
   return async (driveHeader: PHDocumentHeader): Promise<ProcessorRecord[]> => {
@@ -38,45 +34,3 @@ export const processorFactory = async (module: IProcessorHostModule) => {
     return processors;
   };
 };
-
-async function addConnectProcessorFactories(
-  factories: ProcessorFactory[],
-  module: IProcessorHostModule,
-) {
-  const { testConnectRelationalDbProcessorProcessorFactory } =
-    await import("./test-connect-relational-db-processor/factory.js");
-  const { testConnectAnalyticsProcessorProcessorFactory } =
-    await import("./test-connect-analytics-processor/factory.js");
-  const connectProcessorFactories: ProcessorFactory[] = [
-    testConnectAnalyticsProcessorProcessorFactory(module),
-    testConnectRelationalDbProcessorProcessorFactory(module),
-  ];
-
-  for (const factory of connectProcessorFactories) {
-    factories.push(factory);
-  }
-}
-
-async function addSwitchboardProcessorFactories(
-  factories: ProcessorFactory[],
-  module: IProcessorHostModule,
-) {
-  const { testIsomorphicRelationalDbProcessorProcessorFactory } =
-    await import("./test-isomorphic-relational-db-processor/factory.js");
-  const { testSwitchboardRelationalDbProcessorProcessorFactory } =
-    await import("./test-switchboard-relational-db-processor/factory.js");
-  const { testIsomorphicAnalyticsProcessorProcessorFactory } =
-    await import("./test-isomorphic-analytics-processor/factory.js");
-  const { testSwitchboardAnalyticsProcessorProcessorFactory } =
-    await import("./test-switchboard-analytics-processor/factory.js");
-  const switchboardProcessorFactories: ProcessorFactory[] = [
-    testSwitchboardAnalyticsProcessorProcessorFactory(module),
-    testIsomorphicAnalyticsProcessorProcessorFactory(module),
-    testSwitchboardRelationalDbProcessorProcessorFactory(module),
-    testIsomorphicRelationalDbProcessorProcessorFactory(module),
-  ];
-
-  for (const factory of switchboardProcessorFactories) {
-    factories.push(factory);
-  }
-}

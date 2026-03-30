@@ -1,4 +1,6 @@
-export { TestConnectAnalyticsProcessorProcessor } from "./test-connect-analytics-processor/index.js";
-export { testConnectAnalyticsProcessorProcessorFactory } from "./test-connect-analytics-processor/factory.js";
-export { TestConnectRelationalDbProcessorProcessor } from "./test-connect-relational-db-processor/index.js";
-export { testConnectRelationalDbProcessorProcessorFactory } from "./test-connect-relational-db-processor/factory.js";
+import type { ProcessorFactoryBuilder } from "@powerhousedao/reactor-browser";
+import { testConnectAnalyticsProcessorProcessorFactory } from "processors/test-connect-analytics-processor";
+
+export const processorFactoryBuilders: ProcessorFactoryBuilder[] = [
+  testConnectAnalyticsProcessorProcessorFactory,
+];

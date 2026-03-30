@@ -267,6 +267,7 @@ export type {
   IRelationalDb,
   ProcessorApp,
   ProcessorFactory,
+  ProcessorFactoryBuilder,
   ProcessorFilter,
   ProcessorRecord,
   ProcessorStatus,

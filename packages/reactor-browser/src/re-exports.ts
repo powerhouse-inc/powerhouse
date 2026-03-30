@@ -27,6 +27,7 @@ export type {
   OperationWithContext,
   ProcessorApp,
   ProcessorFactory,
+  ProcessorFactoryBuilder,
   ProcessorFilter,
   ProcessorRecord,
   RebuildResult,

@@ -5,7 +5,7 @@ import type {
   ProcessorRecord,
 } from "@powerhousedao/reactor";
 import type { PHDocumentHeader } from "document-model";
-import { TestSwitchboardRelationalDbProcessorProcessor } from "./index.js";
+import { TestSwitchboardRelationalDbProcessorProcessor } from "./processor.js";
 
 export const testSwitchboardRelationalDbProcessorProcessorFactory =
   (module: IProcessorHostModule) =>

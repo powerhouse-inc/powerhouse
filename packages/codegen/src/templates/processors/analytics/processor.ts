@@ -1,12 +1,12 @@
-import type {
-  AnalyticsPath,
-  AnalyticsSeriesInput,
-  IAnalyticsStore,
-} from "@powerhousedao/analytics-engine-core";
-import type { IProcessor, OperationWithContext } from "@powerhousedao/reactor";
+import { ts } from "@tmpl/core";
 
-export class TestSwitchboardAnalyticsProcessorProcessor implements IProcessor {
-  private readonly NAMESPACE = "TestSwitchboardAnalyticsProcessor";
+export const analyticsProcessorTemplate = (v: { pascalCaseName: string }) =>
+  ts`
+import type { AnalyticsSeriesInput, AnalyticsPath, IAnalyticsStore } from "@powerhousedao/analytics-engine-core";
+import type { OperationWithContext, IProcessor } from "@powerhousedao/reactor-browser";
+
+export class ${v.pascalCaseName} implements IProcessor {
+  private readonly NAMESPACE = "${v.pascalCaseName}";
 
   private readonly inputs: AnalyticsSeriesInput[] = [];
 
@@ -30,3 +30,4 @@ export class TestSwitchboardAnalyticsProcessorProcessor implements IProcessor {
     }
   }
 }
+`.raw;

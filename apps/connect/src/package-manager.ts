@@ -216,7 +216,7 @@ export class BrowserPackageManager implements IPackageManager {
     if (import.meta.env.PROD) return;
 
     if (name === COMMON_PACKAGE_NAME || name === LOCAL_PACKAGE_NAME) return;
-    const importUrl = `/node_modules/${name}/index.js`;
+    const importUrl = `/node_modules/${name}/browser/index.js`;
     const stylesheetUrl = `/node_modules/${name}/style.css`;
 
     const packageWithMeta = await this.#importPackage({
@@ -234,7 +234,7 @@ export class BrowserPackageManager implements IPackageManager {
     if (this.registryUrl === null) return;
     if (name === COMMON_PACKAGE_NAME || name === LOCAL_PACKAGE_NAME) return;
 
-    const importUrl = `${this.#cdnUrl}/${name}/index.js`;
+    const importUrl = `${this.#cdnUrl}/${name}/browser/index.js`;
     const stylesheetUrl = `${this.#cdnUrl}/${name}/style.css`;
     const packageWithMeta = await this.#importPackage({
       name,

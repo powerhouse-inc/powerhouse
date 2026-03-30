@@ -11,6 +11,10 @@
       "dom",
       "dom.iterable"
     ],
+    "emitDeclarationOnly": true,
+    "customConditions": [
+      "source"
+    ],
     "paths": {
       "document-models": [
         "./document-models/index.ts"
@@ -23,9 +27,6 @@
       ],
       "editors/*": [
         "./editors/*/index.ts"
-      ],
-      "processors": [
-        "./processors/index.ts"
       ],
       "processors/*": [
         "./processors/*/index.ts"

@@ -1,9 +1,9 @@
-import { RelationalDbProcessor } from "@powerhousedao/reactor-browser";
+import { RelationalDbProcessor } from "@powerhousedao/reactor";
 import type { OperationWithContext } from "document-model";
 import { up } from "./migrations.js";
 import type { DB } from "./schema.js";
 
-export class TestConnectRelationalDbProcessorProcessor extends RelationalDbProcessor<DB> {
+export class TestSwitchboardRelationalDbProcessorProcessor extends RelationalDbProcessor<DB> {
   onOperations(operations: OperationWithContext[]): Promise<void> {
     return Promise.resolve();
   }

@@ -4,7 +4,6 @@
     // See also https://aka.ms/tsconfig_modules
     "module": "NodeNext",
     "target": "ESNext",
-
     // Other Outputs
     "sourceMap": true,
     "declaration": true,
