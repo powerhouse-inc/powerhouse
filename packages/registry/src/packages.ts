@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { compareSemver } from "./semver.js";
 import type { PackageInfo, PowerhouseManifest } from "./types.js";
 
 function readManifest(dir: string): PowerhouseManifest | null {
@@ -28,8 +29,7 @@ function getLatestVersionDir(pkgDir: string): string | null {
   }
   const versions = entries.filter((e) => e.isDirectory()).map((e) => e.name);
   if (versions.length === 0) return null;
-  // Simple sort — latest semver-ish version last
-  versions.sort();
+  versions.sort(compareSemver);
   return path.join(pkgDir, versions[versions.length - 1]);
 }
 

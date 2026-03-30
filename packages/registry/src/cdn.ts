@@ -3,6 +3,7 @@ import path from "node:path";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { extract } from "tar";
+import { compareSemver } from "./semver.js";
 
 export class CdnCache {
   #extractionLocks = new Map<string, Promise<void>>();
@@ -13,10 +14,11 @@ export class CdnCache {
   ) {}
 
   async getFile(packageName: string, filePath: string): Promise<string | null> {
-    // Try local CDN cache first (pre-populated or previously extracted)
+    // Always check Verdaccio for the authoritative latest version,
+    // falling back to the cached version if Verdaccio is unavailable.
     const version =
-      this.getLatestCachedVersion(packageName) ??
-      (await this.getLatestVersion(packageName));
+      (await this.getLatestVersion(packageName)) ??
+      this.getLatestCachedVersion(packageName);
     if (!version) return null;
 
     const versionDir = path.join(this.cdnCachePath, packageName, version);
@@ -69,7 +71,7 @@ export class CdnCache {
         .filter((e) => e.isDirectory())
         .map((e) => e.name);
       if (versions.length === 0) return null;
-      versions.sort();
+      versions.sort(compareSemver);
       return versions[versions.length - 1];
     } catch {
       return null;
@@ -126,6 +128,24 @@ export class CdnCache {
     const cacheDir = path.join(this.cdnCachePath, packageName);
     if (!this.isSafePath(cacheDir)) return;
     fs.rmSync(cacheDir, { recursive: true, force: true });
+  }
+
+  /** Remove all cached version directories except the specified one. */
+  pruneOldVersions(packageName: string, keepVersion: string): void {
+    const pkgDir = path.join(this.cdnCachePath, packageName);
+    try {
+      const entries = fs.readdirSync(pkgDir, { withFileTypes: true });
+      for (const entry of entries) {
+        if (entry.isDirectory() && entry.name !== keepVersion) {
+          const dir = path.join(pkgDir, entry.name);
+          if (this.isSafePath(dir)) {
+            fs.rmSync(dir, { recursive: true, force: true });
+          }
+        }
+      }
+    } catch {
+      // ignore — directory may not exist yet
+    }
   }
 
   private isSafePath(filePath: string): boolean {
