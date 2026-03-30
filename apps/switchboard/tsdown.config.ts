@@ -10,7 +10,7 @@ export default defineConfig({
   ],
   platform: "node",
   outDir: "dist",
-  clean: true,
-  dts: true,
+  clean: false,
+  dts: false,
   sourcemap: true,
 });
