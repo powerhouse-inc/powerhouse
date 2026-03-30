@@ -1,3 +1,13 @@
+## 6.0.0-dev.128 (2026-03-30)
+
+### 🩹 Fixes
+
+- **reactor-api,switchboard:** import vite loader from subexport ([1909d0c25](https://github.com/powerhouse-inc/powerhouse/commit/1909d0c25))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.0.0-dev.127 (2026-03-30)
 
 ### 🩹 Fixes
