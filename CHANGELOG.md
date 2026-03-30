@@ -1,3 +1,121 @@
+## 6.0.0-dev.124 (2026-03-30)
+
+This was a version bump only, there were no code changes.
+
+## 6.0.0-dev.123 (2026-03-29)
+
+### 🚀 Features
+
+- **docker:** redesign Docker strategy with runtime package loading ([08207df3d](https://github.com/powerhouse-inc/powerhouse/commit/08207df3d))
+
+### ❤️ Thank You
+
+- Frank
+
+## 6.0.0-dev.122 (2026-03-29)
+
+### 🚀 Features
+
+- **reactor-api:** expose reactorClient to processors via IProcessorHostModule ([31cb05627](https://github.com/powerhouse-inc/powerhouse/commit/31cb05627))
+- **reactor-api:** expose reactorClient to processors via IProcessorHostModule ([32d3dea71](https://github.com/powerhouse-inc/powerhouse/commit/32d3dea71))
+
+### 🩹 Fixes
+
+- **reactor-api:** use typed variable instead of as-cast for module ([b7ad3f575](https://github.com/powerhouse-inc/powerhouse/commit/b7ad3f575))
+
+### ❤️ Thank You
+
+- Frank
+
+## 6.0.0-dev.121 (2026-03-29)
+
+### 🩹 Fixes
+
+- **document-model:** add ./core subpath export for backwards compat ([53b7fe0c9](https://github.com/powerhouse-inc/powerhouse/commit/53b7fe0c9))
+
+### ❤️ Thank You
+
+- Frank
+
+## 6.0.0-dev.120 (2026-03-29)
+
+### 🩹 Fixes
+
+- **codegen:** use valid semver 4.0.0 instead of 4.x in zod version check ([7c26bac23](https://github.com/powerhouse-inc/powerhouse/commit/7c26bac23))
+
+### ❤️ Thank You
+
+- Frank
+
+## 6.0.0-dev.119 (2026-03-29)
+
+This was a version bump only, there were no code changes.
+
+## 6.0.0-dev.118 (2026-03-28)
+
+### 🚀 Features
+
+- **reactor-api:** add opt-in Prometheus metrics exporter ([82d2939b1](https://github.com/powerhouse-inc/powerhouse/commit/82d2939b1))
+
+### ❤️ Thank You
+
+- Frank
+
+## 6.0.0-dev.117 (2026-03-28)
+
+This was a version bump only, there were no code changes.
+
+## 6.0.0-dev.116 (2026-03-27)
+
+### 🚀 Features
+
+- verify signatures on switchboard an consider actions without an app key on signer as unsigned ([c9a45d2e7](https://github.com/powerhouse-inc/powerhouse/commit/c9a45d2e7))
+
+### 🩹 Fixes
+
+- dependency improvements ([a41a67741](https://github.com/powerhouse-inc/powerhouse/commit/a41a67741))
+- **document-drive:** exclude self from collision check when renaming nodes ([7dfc73268](https://github.com/powerhouse-inc/powerhouse/commit/7dfc73268))
+- **reactor-api:** updated findDocuments search type ([bed034b6a](https://github.com/powerhouse-inc/powerhouse/commit/bed034b6a))
+- **reactor-api:** deserialize signatures in pushSyncEnvelopes resolver ([ab5a33eb6](https://github.com/powerhouse-inc/powerhouse/commit/ab5a33eb6))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Guillermo Puente @gpuente
+
+## 6.0.0-dev.115 (2026-03-27)
+
+### 🚀 Features
+
+- **reactor-api:** add FastifyHttpAdapter implementing IHttpAdapter ([94d3d9b48](https://github.com/powerhouse-inc/powerhouse/commit/94d3d9b48))
+- **reactor-api:** add FastifyHttpAdapter with dispatch-map design ([969d56af3](https://github.com/powerhouse-inc/powerhouse/commit/969d56af3))
+- **reactor-api:** add MercuriusGatewayAdapter implementing IGatewayAdapter ([ea05779a3](https://github.com/powerhouse-inc/powerhouse/commit/ea05779a3))
+
+### ❤️ Thank You
+
+- Samuel Hawksby-Robinson @Samyoul
+
+## 6.0.0-dev.114 (2026-03-27)
+
+### 🚀 Features
+
+- **registry:** simplify Dockerfile to install from npm ([7e2c2fa91](https://github.com/powerhouse-inc/powerhouse/commit/7e2c2fa91))
+
+### 🩹 Fixes
+
+- **profiling:** remove document-drive build steps — package deleted from monorepo ([8aec81b67](https://github.com/powerhouse-inc/powerhouse/commit/8aec81b67))
+- **reactor-api:** resolve ESLint unsafe-any errors in mountNodeRoute and Sentry handler ([40777f429](https://github.com/powerhouse-inc/powerhouse/commit/40777f429))
+- **reactor-mcp:** inject transport constructor to avoid fragile SDK module mocking ([1316d2d0a](https://github.com/powerhouse-inc/powerhouse/commit/1316d2d0a))
+- **reactor-mcp:** use static import and per-test transport mocks for robustness ([7dbd84c8a](https://github.com/powerhouse-inc/powerhouse/commit/7dbd84c8a))
+- **reactor-mcp:** use factory function instead of mock constructor to fix CI test failures ([cc1bf8c58](https://github.com/powerhouse-inc/powerhouse/commit/cc1bf8c58))
+- **reactor-mcp:** fix TransportFactory return type to satisfy server.connect() ([361d41163](https://github.com/powerhouse-inc/powerhouse/commit/361d41163))
+
+### ❤️ Thank You
+
+- acaldas @acaldas
+- Claude Opus 4.6 (1M context)
+- Samuel Hawksby-Robinson @Samyoul
+
 ## 6.0.0-dev.113 (2026-03-27)
 
 ### 🚀 Features

@@ -1,7 +1,7 @@
 {
   "name": "@powerhousedao/reactor-local",
   "type": "module",
-  "version": "6.0.0-dev.113",
+  "version": "6.0.0-dev.124",
   "main": "dist/server.js",
   "repository": {
     "type": "git",
@@ -29,8 +29,8 @@
     "@powerhousedao/reactor-api": "workspace:*",
     "document-model": "workspace:*",
     "dotenv": "^16.4.5",
-    "@openfeature/env-var-provider": "^0.3.1",
-    "@openfeature/server-sdk": "^1.19.0"
+    "@openfeature/env-var-provider": "catalog:",
+    "@openfeature/server-sdk": "catalog:"
   },
   "devDependencies": {
     "@powerhousedao/config": "workspace:*",

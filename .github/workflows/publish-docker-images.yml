@@ -23,6 +23,16 @@ jobs:
             context: ./packages/registry
           - image: academy
             context: ./apps/academy
+          - image: connect
+            context: .
+            dockerfile: docker/Dockerfile
+            target: connect
+            harbor_only: true
+          - image: switchboard
+            context: .
+            dockerfile: docker/Dockerfile
+            target: switchboard
+            harbor_only: true
     outputs:
       tag: ${{ steps.get-tag.outputs.tag }}
     steps:
@@ -42,6 +52,7 @@ jobs:
             echo "::error::No tags found — cannot build Docker image without a version tag"
             exit 1
           fi
+          echo "Using tag: ${{ env.GITHUB_TAG }}"
       - name: Set image paths
         run: |
           HARBOR_PROJECT="${GITHUB_REPOSITORY//\//-}"
@@ -65,6 +76,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Log in to GHCR
+        if: ${{ matrix.harbor_only != true }}
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
@@ -82,15 +94,17 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile || format('{0}/Dockerfile', matrix.context) }}
+          target: ${{ matrix.target || '' }}
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ github.repository }}/${{ matrix.image }}:${{ env.GITHUB_TAG }}
-            ${{ env.HARBOR_REGISTRY }}/${{ env.HARBOR_PATH }}:${{ env.GITHUB_TAG }}
-            ${{ env.ADDITIONAL_TAG != '' && format('{0}/{1}/{2}:{3}', env.REGISTRY, github.repository, matrix.image, env.ADDITIONAL_TAG) || '' }}
+            ${{ matrix.harbor_only != true && format('{0}/{1}/{2}:{3}', env.REGISTRY, github.repository, matrix.image, env.GITHUB_TAG) || '' }}
+            ${{ format('{0}/{1}:{2}', env.HARBOR_REGISTRY, env.HARBOR_PATH, env.GITHUB_TAG) }}
+            ${{ matrix.harbor_only != true && env.ADDITIONAL_TAG != '' && format('{0}/{1}/{2}:{3}', env.REGISTRY, github.repository, matrix.image, env.ADDITIONAL_TAG) || '' }}
             ${{ env.ADDITIONAL_TAG != '' && format('{0}/{1}:{2}', env.HARBOR_REGISTRY, env.HARBOR_PATH, env.ADDITIONAL_TAG) || '' }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          build-args: ${{ matrix.image == 'academy' && format('TAG={0}', env.GITHUB_TAG) || '' }}
+          build-args: TAG=${{ env.GITHUB_TAG }}
 
   update-k8s-academy:
     name: Update Academy Image in K8s Hosting

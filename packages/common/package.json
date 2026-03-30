@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/common",
-  "version": "6.0.0-dev.113",
+  "version": "6.0.0-dev.124",
   "license": "AGPL-3.0-only",
   "type": "module",
   "files": [
@@ -61,7 +61,6 @@
     "@types/npm-package-arg": "catalog:",
     "@types/wicg-file-system-access": "^2020.9.6",
     "document-model": "workspace:*",
-    "package-manager-detector": "catalog:",
     "vitest": "catalog:",
     "zod": "catalog:"
   }

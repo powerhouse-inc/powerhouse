@@ -1,19 +1,18 @@
 import {
-  batchOperationsByDocument,
   consolidateSyncOperations,
+  envelopesToSyncOperations,
   sortEnvelopesByFirstOperationTimestamp,
-  SyncOperation,
   trimMailboxFromAckOrdinal,
   type IReactorClient,
   type ISyncManager,
   type JobInfo,
-  type OperationBatch,
   type OperationFilter,
   type PagedResults,
   type PagingOptions,
   type PropagationMode,
   type RemoteFilter,
   type SearchFilter,
+  type SyncOperation,
   type ViewFilter,
 } from "@powerhousedao/reactor";
 import type {
@@ -1116,41 +1115,15 @@ export function pushSyncEnvelopes(
       continue;
     }
 
-    const operations = envelope.operations.map((op) => ({
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      operation: op.operation,
-      context: {
-        documentId: op.context.documentId,
-        documentType: op.context.documentType,
-        scope: op.context.scope,
-        branch: op.context.branch,
-        ordinal: op.context.ordinal,
-      },
-    }));
+    const syncOps = envelopesToSyncOperations(
+      envelope as Parameters<typeof envelopesToSyncOperations>[0],
+      remote.name,
+    );
 
-    const batches: OperationBatch[] = batchOperationsByDocument(operations);
-
-    for (const batch of batches) {
-      const syncOpId = `syncop-${envelope.channelMeta.id}-${Date.now()}-${crypto.randomUUID()}`;
-      const jobId = envelope.key ?? "";
-      const jobDependencies = envelope.dependsOn ?? [];
-
-      const syncOp = new SyncOperation(
-        syncOpId,
-        jobId,
-        jobDependencies,
-        remote.name,
-        batch.documentId,
-        [batch.scope],
-        batch.branch,
-        batch.operations,
-      );
-
-      if (!remoteSyncOps.has(remote)) {
-        remoteSyncOps.set(remote, []);
-      }
-      remoteSyncOps.get(remote)!.push(syncOp);
+    if (!remoteSyncOps.has(remote)) {
+      remoteSyncOps.set(remote, []);
     }
+    remoteSyncOps.get(remote)!.push(...syncOps);
   }
 
   for (const [remote, syncOps] of remoteSyncOps) {

@@ -1,6 +1,6 @@
 {
   "name": "document-model",
-  "version": "6.0.0-dev.113",
+  "version": "6.0.0-dev.124",
   "license": "AGPL-3.0-only",
   "private": false,
   "files": [
@@ -23,6 +23,10 @@
     "./node": {
       "node": "./dist/node.mjs",
       "types": "./dist/node.d.mts"
+    },
+    "./core": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
     }
   },
   "sideEffects": false,

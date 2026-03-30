@@ -12,7 +12,6 @@ import type {
 } from "@powerhousedao/reactor";
 import { setupMcpServer } from "@powerhousedao/reactor-mcp";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
-import type { Express } from "express";
 import type { Kysely } from "kysely";
 import type http from "node:http";
 import path from "node:path";
@@ -64,7 +63,6 @@ import {
 const defaultLogger = childLogger(["reactor-api", "server"]);
 
 type Options = {
-  express?: Express;
   port?: number;
   dbPath: string | undefined;
   client?: PGlite | typeof Pool | undefined;
@@ -315,10 +313,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   }
 
   const port = options.port ?? DEFAULT_PORT;
-  const { adapter: httpAdapter } = createHttpAdapter(
-    "express",
-    options.express,
-  );
+  const { adapter: httpAdapter } = createHttpAdapter("express");
 
   // Setup auth configuration
   let admins: string[] = [];
@@ -477,12 +472,13 @@ async function _setupAPI(
   authorizationService?: AuthorizationService,
   documentModelRegistry?: IDocumentModelRegistry,
 ): Promise<API> {
-  const module = {
+  const hostModule: IProcessorHostModule = {
     relationalDb,
     analyticsStore,
     processorApp,
     config: options.processorConfig,
-  } as IProcessorHostModule;
+    reactorClient,
+  };
   const mcpServerEnabled = options.mcp ?? true;
 
   const logger = options.logger ?? defaultLogger;
@@ -500,7 +496,7 @@ async function _setupAPI(
   for (const [packageName, fns] of processorEntries) {
     const factories = fns.map((fn) => {
       try {
-        return fn(module);
+        return fn(hostModule);
       } catch (e) {
         logger.error(
           `Error initializing processor factory for package ${packageName}:`,
@@ -590,21 +586,17 @@ async function _setupAPI(
     packages,
     graphqlManager,
     reactorProcessorManager,
-    module,
+    hostModule,
     documentModelRegistry,
   );
 
   if (mcpServerEnabled) {
-    // TODO: decouple reactor-mcp from Express
-    await setupMcpServer(
-      { client: reactorClient, syncManager },
-      httpAdapter.handle as Express,
-    );
+    await setupMcpServer({ client: reactorClient, syncManager }, httpAdapter);
     logger.info(`MCP server available at http://localhost:${port}/mcp`);
   }
 
   return {
-    app: httpAdapter,
+    httpAdapter,
     graphqlManager,
     packages,
   };
@@ -663,6 +655,7 @@ export async function initializeAndStartAPI(
 
   // Extract client and syncManager from the module
   const reactorClient = reactorClientModule.client;
+
   const syncManager =
     reactorClientModule.reactorModule?.syncModule?.syncManager;
   if (!syncManager) {

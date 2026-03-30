@@ -258,6 +258,90 @@ describe("Node Operations", () => {
     expect(nodeNames[0]).toBe(existingNode1.name);
     expect(nodeNames[1]).toBe(input.name + " (copy) 1");
   });
+  it("should not add (copy) when renaming a node to its current name", () => {
+    const existingNode = generateMock(NodeSchema());
+    existingNode.name = "budget";
+    existingNode.parentFolder = null;
+    document.state.global.nodes = [existingNode];
+    const input = generateMock(UpdateNodeInputSchema());
+    input.id = existingNode.id;
+    input.name = "budget";
+    const updatedDocument = driveDocumentReducer(document, updateNode(input));
+
+    const node = updatedDocument.state.global.nodes.find(
+      (n) => n.id === existingNode.id,
+    );
+    expect(node?.name).toBe("budget");
+  });
+  it("should not add (copy) when renaming a copied node to a unique name", () => {
+    const original = generateMock(NodeSchema());
+    original.name = "budget";
+    original.parentFolder = null;
+    const copy = generateMock(NodeSchema());
+    copy.name = "budget (copy) 1";
+    copy.parentFolder = null;
+    document.state.global.nodes = [original, copy];
+
+    const input = generateMock(UpdateNodeInputSchema());
+    input.id = copy.id;
+    input.name = "my-budget";
+    const updatedDocument = driveDocumentReducer(document, updateNode(input));
+
+    const node = updatedDocument.state.global.nodes.find(
+      (n) => n.id === copy.id,
+    );
+    expect(node?.name).toBe("my-budget");
+  });
+  it("should not add (copy) when the same rename is applied twice (double dispatch)", () => {
+    const original = generateMock(NodeSchema());
+    original.name = "budget";
+    original.parentFolder = null;
+    const copy = generateMock(NodeSchema());
+    copy.name = "budget (copy) 1";
+    copy.parentFolder = null;
+    document.state.global.nodes = [original, copy];
+
+    const input = generateMock(UpdateNodeInputSchema());
+    input.id = copy.id;
+    input.name = "my-budget";
+
+    // First rename
+    const firstUpdate = driveDocumentReducer(document, updateNode(input));
+    // Second rename with same name (simulates double dispatch from UI)
+    const secondUpdate = driveDocumentReducer(firstUpdate, updateNode(input));
+
+    const node = secondUpdate.state.global.nodes.find((n) => n.id === copy.id);
+    expect(node?.name).toBe("my-budget");
+  });
+  it("should use node parentFolder for collision check when parentFolder not in action", () => {
+    const folderNode = generateMock(NodeSchema());
+    folderNode.id = "folder-1";
+    folderNode.kind = "folder";
+    folderNode.parentFolder = null;
+    folderNode.name = "reports";
+
+    const fileInFolder = generateMock(NodeSchema());
+    fileInFolder.name = "budget";
+    fileInFolder.parentFolder = "folder-1";
+
+    const rootFile = generateMock(NodeSchema());
+    rootFile.name = "my-doc";
+    rootFile.parentFolder = null;
+
+    document.state.global.nodes = [folderNode, fileInFolder, rootFile];
+
+    // Rename file in subfolder — should check siblings in subfolder, not root
+    const input = generateMock(UpdateNodeInputSchema());
+    input.id = fileInFolder.id;
+    input.name = "my-doc"; // Same name as root file, but in different folder
+
+    const updatedDocument = driveDocumentReducer(document, updateNode(input));
+    const node = updatedDocument.state.global.nodes.find(
+      (n) => n.id === fileInFolder.id,
+    );
+    // Should NOT collide because the file is in a subfolder, not at root
+    expect(node?.name).toBe("my-doc");
+  });
   it("should handle copyNode operation", () => {
     const input = generateMock(CopyNodeInputSchema());
     const document = createDocumentWithNodes([

@@ -50,6 +50,7 @@ export {
 export { ChannelError, PollingChannelError } from "./errors.js";
 
 export {
+  envelopesToSyncOperations,
   GqlRequestChannel,
   GqlRequestChannelFactory,
   GqlResponseChannel,

@@ -17,6 +17,7 @@
  *   });
  */
 
+import type { IncomingMessage, ServerResponse } from "node:http";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { IHttpAdapter } from "../../src/graphql/gateway/types.js";
 import type { FetchHandler } from "../../src/graphql/gateway/types.js";
@@ -308,6 +309,85 @@ export function runHttpAdapterContractTests(
         body: "{}",
       });
       expect(res.status).toBe(500);
+    });
+  });
+
+  // ── mountNodeRoute() ───────────────────────────────────────────────────────
+
+  describe(`IHttpAdapter contract (${adapterName}) – mountNodeRoute()`, () => {
+    let h: HttpAdapterHarness;
+
+    beforeEach(async () => {
+      h = await createHarness();
+    });
+    afterEach(async () => {
+      await h.close();
+    });
+
+    it("invokes the POST handler with req, res, and parsed body", async () => {
+      let capturedBody: unknown;
+
+      h.adapter.mountNodeRoute(
+        "POST",
+        "/mcp",
+        (_req: IncomingMessage, res: ServerResponse, body?: unknown) => {
+          capturedBody = body;
+          res.writeHead(200, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ ok: true }));
+        },
+      );
+
+      const res = await fetch(`${h.url}/mcp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jsonrpc: "2.0", method: "ping", id: 1 }),
+      });
+
+      expect(res.status).toBe(200);
+      expect(capturedBody).toEqual({ jsonrpc: "2.0", method: "ping", id: 1 });
+    });
+
+    it("invokes the GET handler with req and res", async () => {
+      h.adapter.mountNodeRoute(
+        "GET",
+        "/mcp",
+        (_req: IncomingMessage, res: ServerResponse) => {
+          res.writeHead(405, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: "Method Not Allowed" }));
+        },
+      );
+
+      const res = await fetch(`${h.url}/mcp`);
+      expect(res.status).toBe(405);
+    });
+
+    it("invokes the DELETE handler with req and res", async () => {
+      h.adapter.mountNodeRoute(
+        "DELETE",
+        "/mcp",
+        (_req: IncomingMessage, res: ServerResponse) => {
+          res.writeHead(405, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: "Method Not Allowed" }));
+        },
+      );
+
+      const res = await fetch(`${h.url}/mcp`, { method: "DELETE" });
+      expect(res.status).toBe(405);
+    });
+
+    it("POST mountNodeRoute does not match GET requests to the same path", async () => {
+      const postHandler = vi.fn(
+        (_req: IncomingMessage, res: ServerResponse) => {
+          res.writeHead(200).end("ok");
+        },
+      );
+
+      h.adapter.mountNodeRoute("POST", "/mcp-post-only", postHandler);
+
+      // A GET to this path should not invoke the POST handler
+      const res = await fetch(`${h.url}/mcp-post-only`);
+      expect(postHandler).not.toHaveBeenCalled();
+      expect(res.status).not.toBe(200);
     });
   });
 }

@@ -9,6 +9,8 @@ export interface IProcessorHostModule {
   relationalDb: IRelationalDb;
   processorApp: ProcessorApp;
   config?: Map<string, unknown>;
+  /** Reactor client for dispatching actions back to documents */
+  reactorClient?: unknown;
 }
 
 /**

@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/registry",
-  "version": "6.0.0-dev.113",
+  "version": "6.0.0-dev.124",
   "description": "",
   "type": "module",
   "repository": {
@@ -11,7 +11,8 @@
     "ph-registry": "./dist/cli.mjs"
   },
   "files": [
-    "dist"
+    "dist",
+    "static"
   ],
   "sideEffects": false,
   "scripts": {
@@ -29,7 +30,7 @@
     "cmd-ts": "catalog:",
     "express": "^5.2.1",
     "find-up": "^8.0.0",
-    "tar": "^7.4.3",
+    "tar": "^7.5.11",
     "verdaccio": "^6.1.1",
     "verdaccio-aws-s3-storage": "^10.4.0"
   },

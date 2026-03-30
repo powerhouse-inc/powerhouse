@@ -208,6 +208,7 @@ export {
   ChannelErrorSource,
   ChannelScheme,
   consolidateSyncOperations,
+  envelopesToSyncOperations,
   GqlRequestChannel,
   GqlRequestChannelFactory,
   GqlResponseChannel,

@@ -2,6 +2,30 @@
 
 Scripts for benchmarking and profiling the Powerhouse reactor and switchboard.
 
+## Table of Contents
+
+- [Quick Start](#quick-start)
+- [Prerequisites](#prerequisites)
+- [Scripts](#scripts)
+  - [`reactor-direct.ts`](#reactor-directts--direct-reactor-profiling)
+  - [`pyroscope-analyse.ts`](#pyroscope-analysetts--pyroscope-profile-analysis)
+  - [`docs-create.ts`](#docs-createts--create-documents-via-graphql)
+  - [`docs-count.ts`](#docs-countts--count-documents-fast)
+  - [`docs-list.ts`](#docs-listts--listcount-documents-paginated)
+  - [`docs-reset.ts`](#docs-resetts--delete-all-documents)
+  - [`run-reactor-direct.sh`](#run-reactor-directsh--build-and-run-reactor-direct)
+  - [`switchboard-pyroscope.sh`](#switchboard-pyroscopesh--run-switchboard-with-pyroscope)
+- [Infrastructure](#infrastructure)
+- [Typical Workflows](#typical-workflows)
+  - [Benchmark reactor in isolation](#benchmark-reactor-in-isolation)
+  - [Profile reactor with Pyroscope](#profile-reactor-with-pyroscope)
+  - [Profile reactor with OTel metrics](#profile-reactor-with-otel-metrics)
+  - [Prometheus metrics reference](#prometheus-metrics-reference)
+  - [Profile reactor with Pyroscope and OTel metrics](#profile-reactor-with-pyroscope-and-otel-metrics)
+  - [End-to-end switchboard benchmark](#end-to-end-switchboard-benchmark)
+  - [Profile switchboard end-to-end with Pyroscope](#profile-switchboard-end-to-end-with-pyroscope)
+  - [Profile switchboard with OTel metrics](#profile-switchboard-with-otel-metrics)
+
 ## Quick Start
 
 ```bash
@@ -39,7 +63,9 @@ cd scripts/profiling
 pnpm install
 ```
 
-Build the packages that the profiling scripts depend on. Run these from the repository root:
+**`run-reactor-direct.sh` and `switchboard-pyroscope.sh` build all required packages automatically** before running — use them on a fresh branch or after dependency changes. If packages are already up to date, invoke `reactor-direct.ts` directly with `tsx` to skip the build step.
+
+If you need to build manually (e.g. for `docs-create.ts` or other tsx scripts), run these from the repository root:
 
 ```bash
 pnpm --filter document-model run tsc --build
@@ -218,6 +244,12 @@ tsx docs-count.ts --type powerhouse/document-model
 tsx docs-count.ts --verbose
 ```
 
+| Flag         | Short | Description                                                 |
+| ------------ | ----- | ----------------------------------------------------------- |
+| `--endpoint` |       | GraphQL endpoint (default: `http://localhost:4001/graphql`) |
+| `--type`     |       | Filter by document type                                     |
+| `--verbose`  | `-v`  | Show per-type counts                                        |
+
 > **Note:** `totalCount` may be inaccurate. Use `docs-list.ts --count-only` for a reliable count.
 
 ### `docs-list.ts` — List/count documents (paginated)
@@ -260,9 +292,11 @@ The script runs in order:
 
 1. `pnpm --filter document-model run tsc --build`
 2. `pnpm --filter @powerhousedao/reactor run build` (declarations) + `build:bundle` (JS)
-3. `pnpm --filter @powerhousedao/opentelemetry-instrumentation-reactor run build`
-4. `DATABASE_URL=... pnpm --filter document-drive run migrate`
+3. `pnpm --filter @powerhousedao/opentelemetry-instrumentation-reactor run build` _(only if `--otel` is passed)_
+4. `DATABASE_URL=<db> pnpm --filter document-drive run migrate` _(only if `--db` is a PostgreSQL URL)_
 5. `tsx reactor-direct.ts [your args]`
+
+Migrations use the same `--db` URL passed to the script. They are skipped for in-memory or file-backed PGlite databases.
 
 All arguments are passed through to `reactor-direct.ts`. See the [`reactor-direct.ts`](#reactor-directts--direct-reactor-profiling) section for available flags.
 
@@ -279,12 +313,23 @@ Starts the switchboard with [Pyroscope](https://pyroscope.io/) continuous profil
 ./scripts/profiling/switchboard-pyroscope.sh --otel http://localhost:4318
 ```
 
-| Flag         | Short | Description                                                                                                                     |
-| ------------ | ----- | ------------------------------------------------------------------------------------------------------------------------------- |
-| `--runtime`  | `-r`  | Runtime: `node` (default) or `bun`                                                                                              |
-| `--mode`     | `-m`  | Storage mode: `v2` (default) or `legacy`                                                                                        |
-| `--postgres` | `-p`  | PostgreSQL database URL; sets `DATABASE_URL` — migrations run automatically before the server starts when `DATABASE_URL` is set |
-| `--otel`     |       | Enable OpenTelemetry metrics export (default: `http://localhost:4318`); sets `OTEL_EXPORTER_OTLP_ENDPOINT`                      |
+| Flag         | Short | Description                                                                                                                                                   |
+| ------------ | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--runtime`  | `-r`  | Runtime: `node` (default) or `bun`                                                                                                                            |
+| `--mode`     | `-m`  | Storage mode: `v2` (default) or `legacy`                                                                                                                      |
+| `--postgres` | `-p`  | PostgreSQL database URL; sets both `DATABASE_URL` and `PH_REACTOR_DATABASE_URL` — migrations run automatically before the server starts when this flag is set |
+| `--otel`     |       | Enable OpenTelemetry metrics export (default: `http://localhost:4318`); sets `OTEL_EXPORTER_OTLP_ENDPOINT`                                                    |
+
+The script builds all required packages before starting the server:
+
+1. `pnpm --filter document-model run tsc --build`
+2. `pnpm --filter @powerhousedao/reactor run build` (declarations) + `build:bundle` (JS)
+3. `pnpm --filter @powerhousedao/opentelemetry-instrumentation-reactor run build` (if `--otel`)
+4. `pnpm --filter @powerhousedao/vetra run tsc --build` + `build:bundle`
+5. `pnpm --filter @powerhousedao/switchboard run tsc --build`
+6. `pnpm --filter @powerhousedao/reactor-api run build:misc`
+
+> **Note:** Pyroscope continuous profiling is not available when `--runtime bun` is used (`@datadog/pprof` native addon is incompatible with Bun). The server will still start but without profiling.
 
 ## Infrastructure
 
@@ -356,8 +401,11 @@ docker compose -f scripts/profiling/docker-compose.yml up otel-collector prometh
   --db "postgresql://postgres:postgres@localhost:5432/postgres" \
   --otel
 
-# Open http://localhost:9090 to query metrics (use the Graph tab for time series)
+# Open Prometheus with a pre-built dashboard showing average ms/op, P1, and P99 latency:
+# http://localhost:9090/query?g0.expr=sum%28rate%28reactor_job_total_duration_milliseconds_sum%5B15s%5D%29%29+%2F+sum%28rate%28reactor_executor_operations_generated_total%5B15s%5D%29%29&g0.show_tree=0&g0.tab=graph&g0.range_input=1h&g0.res_type=auto&g0.res_density=high&g0.display_mode=lines&g0.show_exemplars=0&g1.expr=histogram_quantile%280.01%2C+rate%28reactor_job_total_duration_milliseconds_bucket%5B15s%5D%29%29&g1.show_tree=0&g1.tab=graph&g1.range_input=1h&g1.res_type=auto&g1.res_density=high&g1.display_mode=lines&g1.show_exemplars=0&g2.expr=histogram_quantile%280.99%2C+rate%28reactor_job_total_duration_milliseconds_bucket%5B15s%5D%29%29&g2.show_tree=0&g2.tab=graph&g2.range_input=1h&g2.res_type=auto&g2.res_density=high&g2.display_mode=lines&g2.show_exemplars=0
 ```
+
+![Prometheus latency dashboard](./assets/prometheus_metrics_example.png)
 
 ### Prometheus metrics reference
 

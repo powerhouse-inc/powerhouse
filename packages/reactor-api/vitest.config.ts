@@ -11,10 +11,7 @@ export default defineConfig({
     },
   },
   test: {
-    exclude: [
-      "**/node_modules/**",
-      "**/dist/test/fault-injection-sync.test.js",
-    ],
+    exclude: ["**/node_modules/**", "**/dist/**"],
     deps: {
       optimizer: {
         web: {
