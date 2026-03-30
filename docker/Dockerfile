@@ -29,6 +29,8 @@ RUN case "$TAG" in \
 FROM base AS connect-build
 
 ARG PH_CONNECT_BASE_PATH="/"
+ARG PH_CONNECT_PACKAGES_REGISTRY="https://registry.dev.vetra.io"
+ENV PH_CONNECT_PACKAGES_REGISTRY=${PH_CONNECT_PACKAGES_REGISTRY}
 
 WORKDIR /app/project
 RUN ph connect build --base ${PH_CONNECT_BASE_PATH}
