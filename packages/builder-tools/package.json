@@ -41,7 +41,6 @@
     "read-pkg": "catalog:",
     "resolve.exports": "^2.0.3",
     "vite": "catalog:",
-    "vite-envs": "catalog:",
     "vite-plugin-html": "catalog:",
     "vite-plugin-node-polyfills": "catalog:",
     "vite-plugin-svgr": "catalog:",

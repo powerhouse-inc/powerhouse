@@ -95,7 +95,10 @@ export async function createReactor(localPackage?: VetraPackage) {
   );
   setVetraPackageManager(packageManager);
   await packageManager.init(localPackage);
-  await packageManager.addPackages(PH_PACKAGES ?? []);
+  const packagesResult = await packageManager.addPackages(PH_PACKAGES ?? []);
+  packagesResult.map((r) => {
+    if (r.type === "error") console.error(r.error);
+  });
 
   // get document models to set in the reactor (all versions)
   const documentModelModules = packageManager.packages

@@ -19,15 +19,21 @@ import type { IConnectOptions } from "./types.js";
 const isLocalDev = true;
 const esmShUrl = isLocalDev ? "http://localhost:8080" : "https://esm.sh";
 
-export const connectClientConfig = {
-  meta: [
+export function getConnectHtmlTags(
+  options: {
+    registryUrl?: string | null;
+    injectTo?: HtmlTagDescriptor["injectTo"];
+  } = {},
+) {
+  const { registryUrl, injectTo = "head" } = options;
+  return [
     {
       tag: "meta",
       attrs: {
         "http-equiv": "Content-Security-Policy",
-        content:
-          "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://esm.sh http://localhost:8080; object-src 'none'; base-uri 'self';",
+        content: `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://esm.sh${registryUrl ? " " + registryUrl : ""}; object-src 'none'; base-uri 'self';`,
       },
+      injectTo,
     },
     {
       tag: "meta",
@@ -35,6 +41,7 @@ export const connectClientConfig = {
         property: "og:title",
         content: "Connect",
       },
+      injectTo,
     },
     {
       tag: "meta",
@@ -42,6 +49,7 @@ export const connectClientConfig = {
         property: "og:type",
         content: "website",
       },
+      injectTo,
     },
     {
       tag: "meta",
@@ -49,6 +57,7 @@ export const connectClientConfig = {
         property: "og:url",
         content: "https://apps.powerhouse.io/powerhouse/connect/",
       },
+      injectTo,
     },
     {
       tag: "meta",
@@ -57,6 +66,7 @@ export const connectClientConfig = {
         content:
           "Navigate your organisation’s toughest operational challenges and steer your contributors to success with Connect. A navigation, collaboration and reporting tool for decentralised and open organisation.",
       },
+      injectTo,
     },
     {
       tag: "meta",
@@ -65,6 +75,7 @@ export const connectClientConfig = {
         content:
           "https://cf-ipfs.com/ipfs/bafkreigrmclndf2jpbolaq22535q2sw5t44uad3az3dpvkzrnt4lpjt63e",
       },
+      injectTo,
     },
     {
       tag: "meta",
@@ -72,6 +83,7 @@ export const connectClientConfig = {
         name: "twitter:card",
         content: "summary_large_image",
       },
+      injectTo,
     },
     {
       tag: "meta",
@@ -80,6 +92,7 @@ export const connectClientConfig = {
         content:
           "https://cf-ipfs.com/ipfs/bafkreigrmclndf2jpbolaq22535q2sw5t44uad3az3dpvkzrnt4lpjt63e",
       },
+      injectTo,
     },
     {
       tag: "meta",
@@ -87,6 +100,7 @@ export const connectClientConfig = {
         name: "twitter:title",
         content: "Connect",
       },
+      injectTo,
     },
     {
       tag: "meta",
@@ -95,9 +109,10 @@ export const connectClientConfig = {
         content:
           "Navigate your organisation’s toughest operational challenges and steer your contributors to success with Connect. A navigation, collaboration and reporting tool for decentralised and open organisation.",
       },
+      injectTo,
     },
-  ],
-} as const;
+  ] as const satisfies HtmlTagDescriptor[];
+}
 
 function viteLogger({
   silence,
@@ -165,6 +180,10 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
   const release = env.PH_CONNECT_SENTRY_RELEASE || env.PH_CONNECT_VERSION;
   const uploadSentrySourcemaps = authToken && org && project;
 
+  const connectHtmlTags = getConnectHtmlTags({
+    registryUrl: phPackageRegistryUrl,
+  });
+
   const plugins: PluginOption[] = [
     tailwind(),
     react(),
@@ -172,10 +191,7 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
       minify: false,
       inject: {
         tags: [
-          ...(connectClientConfig.meta.map((meta) => ({
-            ...meta,
-            injectTo: "head",
-          })) as HtmlTagDescriptor[]),
+          ...connectHtmlTags,
           {
             tag: "script",
             attrs: { type: "importmap" },
@@ -271,6 +287,9 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     ],
     worker: {
       format: "es",
+    },
+    build: {
+      sourcemap: true,
     },
   };
   return config;
