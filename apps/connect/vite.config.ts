@@ -8,9 +8,6 @@ export default defineConfig({
     tsconfigPaths: true,
   },
   define: {
-    PH_PACKAGES: process.env.PH_PACKAGES
-      ? JSON.stringify(process.env.PH_PACKAGES.split(",").filter(Boolean))
-      : [],
     PH_PACKAGE_REGISTRY_URL: process.env.PH_CONNECT_PACKAGES_REGISTRY
       ? JSON.stringify(process.env.PH_CONNECT_PACKAGES_REGISTRY)
       : null,
