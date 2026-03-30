@@ -1,3 +1,23 @@
+## 6.0.0-dev.127 (2026-03-30)
+
+### 🩹 Fixes
+
+- **connect,docker:** set connect registry url on build step ([cc96c4ad7](https://github.com/powerhouse-inc/powerhouse/commit/cc96c4ad7))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.126 (2026-03-30)
+
+### 🚀 Features
+
+- **connect,docker:** load PH_PACKAGES from runtime JSON instead of build-time define ([701eec6ac](https://github.com/powerhouse-inc/powerhouse/commit/701eec6ac))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.0.0-dev.125 (2026-03-30)
 
 ### 🚀 Features

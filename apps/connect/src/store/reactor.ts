@@ -39,6 +39,7 @@ import {
 import { logger } from "document-model";
 import { initFeatureFlags } from "../feature-flags.js";
 import { BrowserPackageManager } from "../package-manager.js";
+import { loadPackagesConfig } from "../packages.config.js";
 import { createProcessorHostModule } from "./processor-host-module.js";
 
 export async function clearReactorStorage() {
@@ -88,6 +89,9 @@ export async function createReactor(localPackage?: VetraPackage) {
     .withCrypto(renownCrypto)
     .build();
 
+  // load packages list from ph-packages.json (replaceable post-build)
+  const packagesConfig = await loadPackagesConfig();
+
   // initialize package manager
   const packageManager = new BrowserPackageManager(
     phGlobalConfigFromEnv.routerBasename ?? "",
@@ -95,7 +99,9 @@ export async function createReactor(localPackage?: VetraPackage) {
   );
   setVetraPackageManager(packageManager);
   await packageManager.init(localPackage);
-  const packagesResult = await packageManager.addPackages(PH_PACKAGES ?? []);
+  const packagesResult = await packageManager.addPackages(
+    packagesConfig.packages,
+  );
   packagesResult.map((r) => {
     if (r.type === "error") console.error(r.error);
   });
