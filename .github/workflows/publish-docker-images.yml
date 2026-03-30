@@ -153,6 +153,33 @@ jobs:
             sleep 5
           done
 
+  notify-auto-update:
+    name: Notify Cloud Auto-Update
+    needs: build
+    if: ${{ needs.build.outputs.tag != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notify cloud switchboard
+        env:
+          TAG: ${{ needs.build.outputs.tag }}
+          WEBHOOK_URL: ${{ secrets.CLOUD_AUTO_UPDATE_WEBHOOK_URL }}
+          WEBHOOK_SECRET: ${{ secrets.CLOUD_AUTO_UPDATE_WEBHOOK_SECRET }}
+        run: |
+          if [ -z "$WEBHOOK_URL" ]; then
+            echo "No webhook URL configured, skipping"
+            exit 0
+          fi
+          CHANNEL=""
+          if [[ "$TAG" == *"-dev."* ]]; then CHANNEL="dev"
+          elif [[ "$TAG" == *"-staging."* ]]; then CHANNEL="staging"
+          else CHANNEL="latest"; fi
+
+          echo "Notifying auto-update: tag=$TAG, channel=$CHANNEL"
+          curl -sf -X POST "$WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d "{\"query\":\"mutation { notifyNewImageRelease(input: { tag: \\\"${TAG}\\\", channel: \\\"${CHANNEL}\\\", images: [\\\"switchboard\\\", \\\"connect\\\"], secret: \\\"${WEBHOOK_SECRET}\\\" }) { updatedEnvironments } }\"}" \
+            || echo "Auto-update notification failed (non-fatal)"
+
   update-k8s-registry:
     name: Update Registry Image in K8s Hosting
     needs: build
