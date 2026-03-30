@@ -4,37 +4,37 @@ export const exportsTemplate = json`
   ".": {
     "types": "./dist/index.d.ts",
     "browser": "./dist/browser/index.js",
-    "node": "./dist/node/index.js"
+    "node": "./dist/node/index.mjs"
   },
   "./document-models": {
     "types": "./dist/document-models/index.d.ts",
     "browser": "./dist/browser/document-models/index.js",
-    "node": "./dist/node/document-models/index.js"
+    "node": "./dist/node/document-models/index.mjs"
   },
   "./document-models/*": {
     "types": "./dist/document-models/*/index.d.ts",
     "browser": "./dist/browser/document-models/*/index.js",
-    "node": "./dist/node/document-models/*/index.js"
+    "node": "./dist/node/document-models/*/index.mjs"
   },
   "./editors": {
     "types": "./dist/editors/index.d.ts",
     "browser": "./dist/browser/editors/index.js",
-    "node": "./dist/node/editors/index.js"
+    "node": "./dist/node/editors/index.mjs"
   },
   "./editors/*": {
     "types": "./dist/editors/*/index.d.ts",
     "browser": "./dist/browser/editors/*/index.js",
-    "node": "./dist/node/editors/*/index.js"
+    "node": "./dist/node/editors/*/index.mjs"
   },
   "./subgraphs": {
     "types": "./dist/subgraphs/index.d.ts",
     "browser": "./dist/browser/subgraphs/index.js",
-    "node": "./dist/node/subgraphs/index.js"
+    "node": "./dist/node/subgraphs/index.mjs"
   },
   "./processors": {
     "types": "./dist/processors/index.d.ts",
     "browser": "./dist/browser/processors/index.js",
-    "node": "./dist/node/processors/index.js"
+    "node": "./dist/node/processors/index.mjs"
   },
   "./manifest": "./dist/powerhouse.manifest.json",
   "./style.css": "./dist/style.css"
