@@ -2,13 +2,18 @@ import { generateProcessor } from "@powerhousedao/codegen";
 import type { ReactorModule } from "@powerhousedao/reactor";
 import { ReactorBuilder } from "@powerhousedao/reactor";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
-import type {
-  DocumentModelModule,
-  OperationWithContext,
+
+import { createAnalyticsStore } from "@powerhousedao/reactor-browser";
+import {
+  type DocumentModelModule,
+  type OperationWithContext,
+  type PHDocumentHeader,
 } from "@powerhousedao/shared/document-model";
 import type {
   IProcessor,
+  IProcessorHostModule,
   ProcessorApps,
+  ProcessorRecord,
 } from "@powerhousedao/shared/processors";
 import { $ } from "bun";
 import { afterEach, describe, expect, it } from "bun:test";
@@ -16,6 +21,26 @@ import { join } from "path";
 import { Project } from "ts-morph";
 import { NEW_PROJECT, TEST_OUTPUT, TEST_PROJECTS } from "../constants.js";
 import { cpForce, mkdirRecursive, rmForce } from "../utils.js";
+
+import { PGlite } from "@electric-sql/pglite";
+import { live } from "@electric-sql/pglite/live";
+import { createRelationalDb } from "@powerhousedao/shared/processors";
+import { Kysely } from "kysely";
+import { PGliteDialect } from "kysely-pglite-dialect";
+
+async function getDb() {
+  const pgLite = await PGlite.create({
+    extensions: { live },
+  });
+
+  const kysely = new Kysely({
+    dialect: new PGliteDialect(pgLite),
+  });
+
+  const relationalDb = createRelationalDb(kysely);
+
+  return { pgLite, relationalDb };
+}
 
 const parentOutDir = join(process.cwd(), TEST_OUTPUT);
 const testProjectDir = join(process.cwd(), TEST_PROJECTS);
@@ -347,7 +372,7 @@ function instrumentProcessorWithLog(indexFilePath: string) {
   sourceFile.addStatements(`\nexport const log: any[] = [];`);
 
   // Find the processor class and its onOperations method, then inject log statement
-  const processorClass = sourceFile.getClassOrThrow("TestE2eProcessor");
+  const processorClass = sourceFile.getClassOrThrow("TestConnectAnalytics");
   const onOperationsMethod = processorClass.getMethodOrThrow("onOperations");
 
   onOperationsMethod.insertStatements(0, "log.push(...operations);");
@@ -372,10 +397,52 @@ describe("processor e2e integration", () => {
 
     // 1. Generate a processor via codegen
     await generateProcessor({
-      processorName: "test-e2e-processor",
+      processorName: "test-connect-analytics",
       processorType: "analytics",
       documentTypes: ["powerhouse/document-drive"],
       processorApps: ["connect"],
+      rootDir: outDir,
+    });
+
+    // 1. Generate a processor via codegen
+    await generateProcessor({
+      processorName: "test-switchboard-analytics",
+      processorType: "analytics",
+      documentTypes: ["powerhouse/document-drive"],
+      processorApps: ["switchboard"],
+      rootDir: outDir,
+    });
+
+    // 1. Generate a processor via codegen
+    await generateProcessor({
+      processorName: "test-isomorphic-analytics",
+      processorType: "analytics",
+      documentTypes: ["powerhouse/document-drive"],
+      processorApps: ["connect", "switchboard"],
+      rootDir: outDir,
+    });
+
+    await generateProcessor({
+      processorName: "test-connect-relational-db",
+      processorType: "relationalDb",
+      documentTypes: ["powerhouse/document-drive"],
+      processorApps: ["connect"],
+      rootDir: outDir,
+    });
+
+    await generateProcessor({
+      processorName: "test-switchboard-relational-db",
+      processorType: "relationalDb",
+      documentTypes: ["powerhouse/document-drive"],
+      processorApps: ["switchboard"],
+      rootDir: outDir,
+    });
+
+    await generateProcessor({
+      processorName: "test-isomorphic-relational-db",
+      processorType: "relationalDb",
+      documentTypes: ["powerhouse/document-drive"],
+      processorApps: ["connect", "switchboard"],
       rootDir: outDir,
     });
 
@@ -383,17 +450,17 @@ describe("processor e2e integration", () => {
     const processorFilePath = join(
       outDir,
       "processors",
-      "test-e2e-processor",
+      "test-connect-analytics",
       "processor.ts",
     );
     instrumentProcessorWithLog(processorFilePath);
 
     // 3. Dynamic import the instrumented processor (bun handles .ts natively)
     const processorModule = (await import(processorFilePath)) as {
-      TestE2eProcessor: new (analyticsStore: null) => IProcessor;
+      TestConnectAnalytics: new (analyticsStore: null) => IProcessor;
       log: OperationWithContext[];
     };
-    const { TestE2eProcessor: ProcessorClass, log } = processorModule;
+    const { TestConnectAnalytics: ProcessorClass, log } = processorModule;
 
     expect(ProcessorClass).toBeDefined();
     expect(log).toBeInstanceOf(Array);
@@ -429,5 +496,89 @@ describe("processor e2e integration", () => {
       (op) => op.context.documentType === "powerhouse/document-drive",
     );
     expect(driveOps.length).toBeGreaterThan(0);
+
+    const processorsIndexPath = join(outDir, "processors", "index.ts");
+    const { pgLite, relationalDb } = await getDb();
+    const { store } = await createAnalyticsStore({ pgLite });
+
+    const mockConnectHostModule: IProcessorHostModule = {
+      processorApp: "connect",
+      analyticsStore: store,
+      relationalDb,
+    };
+    const mockSwitchboardHostModule: IProcessorHostModule = {
+      processorApp: "switchboard",
+      analyticsStore: store,
+      relationalDb,
+    };
+    const mockDocumentHeader = {
+      id: "some-id",
+      slug: "vetra-dev",
+    } as PHDocumentHeader;
+    const { processorFactory } = (await import(processorsIndexPath)) as {
+      processorFactory: (
+        module: IProcessorHostModule,
+      ) => Promise<
+        (driveHeader: PHDocumentHeader) => Promise<ProcessorRecord[]>
+      >;
+    };
+    const connectProcessorRecordFactory = await processorFactory(
+      mockConnectHostModule,
+    );
+    const switchboardProcessorRecordFactory = await processorFactory(
+      mockSwitchboardHostModule,
+    );
+    const connectProcessorRecords =
+      await connectProcessorRecordFactory(mockDocumentHeader);
+    const connectProcessorNames = getProcessorNames(connectProcessorRecords);
+    expect(
+      connectProcessorNames.filter((n) =>
+        n.toLowerCase().includes("switchboard"),
+      ),
+    ).toHaveLength(0);
+
+    expect(
+      connectProcessorNames.filter((n) => n.toLowerCase().includes("connect")),
+    ).toHaveLength(2);
+
+    expect(
+      connectProcessorNames.filter((n) =>
+        n.toLowerCase().includes("isomorphic"),
+      ),
+    ).toHaveLength(2);
+
+    const switchboardProcessorRecords =
+      await switchboardProcessorRecordFactory(mockDocumentHeader);
+    const switchboardProcessorNames = getProcessorNames(
+      switchboardProcessorRecords,
+    );
+
+    expect(
+      switchboardProcessorNames.filter((n) =>
+        n.toLowerCase().includes("connect"),
+      ),
+    ).toHaveLength(0);
+
+    expect(
+      switchboardProcessorNames.filter((n) =>
+        n.toLowerCase().includes("switchboard"),
+      ),
+    ).toHaveLength(2);
+
+    expect(
+      switchboardProcessorNames.filter((n) =>
+        n.toLowerCase().includes("isomorphic"),
+      ),
+    ).toHaveLength(2);
   });
 });
+
+function getProcessorNames(processorRecords: ProcessorRecord[]): string[] {
+  /* eslint-disable */
+  return processorRecords.map(
+    ({ processor }) =>
+      // @ts-expect-error
+      processor._namespace ?? processor.NAMESPACE ?? processor.namespace,
+  );
+  /* eslint-enable */
+}
