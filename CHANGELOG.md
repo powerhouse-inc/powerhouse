@@ -1,3 +1,14 @@
+## 6.0.0-dev.129 (2026-03-30)
+
+### 🩹 Fixes
+
+- **registry:** resolve correct package version on CDN and /packages ([ff9dc1a8a](https://github.com/powerhouse-inc/powerhouse/commit/ff9dc1a8a))
+
+### ❤️ Thank You
+
+- acaldas
+- Claude Opus 4.6 (1M context)
+
 ## 6.0.0-dev.128 (2026-03-30)
 
 ### 🩹 Fixes
