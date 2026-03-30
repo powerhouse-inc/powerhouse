@@ -1203,7 +1203,7 @@ importers:
         version: 16.12.0
       graphql-codegen-typescript-validation-schema:
         specifier: 'catalog:'
-        version: 0.18.1(graphql@16.12.0)(zod@4.3.6)
+        version: 0.18.1(encoding@0.1.13)(graphql@16.12.0)(zod@4.3.6)
       hygen:
         specifier: ^6.2.11
         version: 6.2.11
@@ -2566,7 +2566,7 @@ importers:
         version: 16.12.0
       graphql-codegen-typescript-validation-schema:
         specifier: 'catalog:'
-        version: 0.18.1(graphql@16.12.0)(zod@4.3.6)
+        version: 0.18.1(encoding@0.1.13)(graphql@16.12.0)(zod@4.3.6)
       graphql-tag:
         specifier: 'catalog:'
         version: 2.12.6(graphql@16.12.0)
@@ -37502,7 +37502,7 @@ snapshots:
     dependencies:
       lodash: 4.17.23
 
-  graphql-codegen-typescript-validation-schema@0.18.1(graphql@16.12.0)(zod@4.3.6):
+  graphql-codegen-typescript-validation-schema@0.18.1(encoding@0.1.13)(graphql@16.12.0)(zod@4.3.6):
     dependencies:
       '@graphql-codegen/plugin-helpers': 6.1.0(graphql@16.12.0)
       '@graphql-codegen/schema-ast': 5.0.0(graphql@16.12.0)
