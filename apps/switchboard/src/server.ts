@@ -210,8 +210,7 @@ async function initServer(
     packages.push(basePath);
   }
 
-  // create loader — prefer HTTP loader when registry is configured, otherwise
-  // fall back to Vite (dev) or the default ImportPackageLoader
+  // create loader — HTTP loader for registry packages, Vite for dev
   const packageLoader = httpLoader
     ?? (vite ? VitePackageLoader.build(vite) : undefined);
 

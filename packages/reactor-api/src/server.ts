@@ -422,9 +422,12 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     logger.info("Authorization service initialized");
   }
 
-  // Initialize package manager
-  const packageLoader = options.packageLoader ?? new ImportPackageLoader();
-  const loaders: IPackageLoader[] = [packageLoader];
+  // Initialize package manager — always include ImportPackageLoader for local
+  // packages, plus any additional loader (e.g. HttpPackageLoader for registry)
+  const loaders: IPackageLoader[] = [new ImportPackageLoader()];
+  if (options.packageLoader) {
+    loaders.push(options.packageLoader);
+  }
 
   const packages = new PackageManager(loaders, {
     configFile: options.configFile,
