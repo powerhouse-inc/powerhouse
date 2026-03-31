@@ -1,3 +1,17 @@
+## 6.0.0-dev.140 (2026-03-31)
+
+### 🚀 Features
+
+- **registry:** enable npm proxy uplink in Verdaccio ([405733914](https://github.com/powerhouse-inc/powerhouse/commit/405733914))
+
+### 🩹 Fixes
+
+- **docker:** use .npmrc for scoped registry config ([8568e3a20](https://github.com/powerhouse-inc/powerhouse/commit/8568e3a20))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 6.0.0-dev.139 (2026-03-31)
 
 ### 🩹 Fixes
