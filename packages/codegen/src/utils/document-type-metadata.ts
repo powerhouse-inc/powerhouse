@@ -6,16 +6,14 @@ import { getObjectLiteral, getObjectProperty } from "./syntax-getters.js";
 
 type GetDocumentTypeMetadataArgs = {
   project: Project;
-  packageName: string;
   documentModelId: string;
   documentModelsDirPath: string;
 };
 /** Gets the document model metadata for the --document-type argument
- * passed to the `generate --editor` and `generate --drive-editor` commands.
+ * passed to the `generate --editor` and `generate --app` commands.
  */
 export function getDocumentTypeMetadata({
   project,
-  packageName,
   documentModelId,
   documentModelsDirPath,
 }: GetDocumentTypeMetadataArgs) {
@@ -52,7 +50,6 @@ export function getDocumentTypeMetadata({
   const documentModelDirName = documentModelDir.getBaseName();
 
   const documentModelImportPath = path.join(
-    packageName,
     "document-models",
     documentModelDirName,
   );

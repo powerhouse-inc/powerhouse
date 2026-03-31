@@ -59,12 +59,10 @@ export const VERSIONED_DEPENDENCIES = [
   "@powerhousedao/design-system",
   "@powerhousedao/reactor-browser",
   "@powerhousedao/connect",
-];
-
-export const VERSIONED_DEV_DEPENDENCIES = [
-  "@powerhousedao/ph-cli",
   "@powerhousedao/analytics-engine-core",
 ];
+
+export const VERSIONED_DEV_DEPENDENCIES = ["@powerhousedao/ph-cli"];
 
 const DEFAULT_DOCUMENT_MODELS_DIR = "./document-models";
 const DEFAULT_EDITORS_DIR = "./editors";

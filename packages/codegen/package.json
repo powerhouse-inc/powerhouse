@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/codegen",
-  "version": "6.0.0-dev.129",
+  "version": "6.0.0-dev.142",
   "license": "AGPL-3.0-only",
   "private": false,
   "type": "module",
@@ -13,23 +13,23 @@
   },
   "exports": {
     ".": {
-      "types": "./dist/index.d.mts",
+      "source": "./index.mts",
       "import": "./dist/index.mjs"
     },
     "./templates": {
-      "types": "./dist/src/templates/index.d.mts",
+      "source": "./src/templates/index.mts",
       "import": "./dist/src/templates/index.mjs"
     },
     "./file-builders": {
-      "types": "./dist/src/file-builders/index.d.mts",
+      "source": "./src/file-builders/index.mts",
       "import": "./dist/src/file-builders/index.mjs"
     },
     "./name-builders": {
-      "types": "./dist/src/name-builders/index.d.mts",
+      "source": "./src/name-builders/index.mts",
       "import": "./dist/src/name-builders/index.mjs"
     },
     "./utils": {
-      "types": "./dist/src/utils/index.d.mts",
+      "source": "./src/utils/index.mts",
       "import": "./dist/src/utils/index.mjs"
     }
   },
@@ -40,9 +40,12 @@
     "build": "tsdown"
   },
   "dependencies": {
-    "document-model": "workspace:",
+    "write-package": "catalog:",
+    "read-pkg": "catalog:",
+    "get-tsconfig": "catalog:",
+    "document-model": "workspace:*",
     "@powerhousedao/document-engineering": "catalog:",
-    "@graphql-codegen/add": "^6.0.0",
+    "@graphql-codegen/add": "catalog:",
     "@graphql-codegen/cli": "catalog:",
     "@graphql-codegen/typescript": "catalog:",
     "@powerhousedao/shared": "workspace:*",
@@ -54,7 +57,6 @@
     "execa": "^8.0.1",
     "graphql": "catalog:",
     "graphql-codegen-typescript-validation-schema": "catalog:",
-    "hygen": "^6.2.11",
     "prettier": "catalog:",
     "semver": "catalog:",
     "ts-morph": "catalog:",

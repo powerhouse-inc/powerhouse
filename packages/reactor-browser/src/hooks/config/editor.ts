@@ -1,8 +1,8 @@
 import type {
+  PHAppConfigHooks,
+  PHAppConfigSetters,
   PHDocumentEditorConfigHooks,
   PHDocumentEditorConfigSetters,
-  PHDriveEditorConfigHooks,
-  PHDriveEditorConfigSetters,
 } from "@powerhousedao/reactor-browser";
 import { makePHEventFunctions } from "../make-ph-event-functions.js";
 
@@ -26,11 +26,11 @@ const isDragAndDropEnabledEventFunctions = makePHEventFunctions(
   "isDragAndDropEnabled",
 );
 
-/** Sets whether drag and drop is enabled for a given drive editor. */
+/** Sets whether drag and drop is enabled for a given app. */
 export const setIsDragAndDropEnabled =
   isDragAndDropEnabledEventFunctions.setValue;
 
-/** Gets whether drag and drop is enabled for a given drive editor. */
+/** Gets whether drag and drop is enabled for a given app. */
 export const useIsDragAndDropEnabled =
   isDragAndDropEnabledEventFunctions.useValue;
 
@@ -42,7 +42,7 @@ const allowedDocumentTypesEventFunctions = makePHEventFunctions(
   "allowedDocumentTypes",
 );
 
-/** Sets the allowed document types for a given drive editor. */
+/** Sets the allowed document types for a given app. */
 export const setAllowedDocumentTypes =
   allowedDocumentTypesEventFunctions.setValue;
 
@@ -56,11 +56,11 @@ export function useAllowedDocumentTypes() {
   return definedAllowedDocumentTypes;
 }
 
-/** Adds an event handler for when the allowed document types for a given drive editor changes. */
+/** Adds an event handler for when the allowed document types for a given app changes. */
 export const addAllowedDocumentTypesEventHandler =
   allowedDocumentTypesEventFunctions.addEventHandler;
 
-export const phDriveEditorConfigSetters: PHDriveEditorConfigSetters = {
+export const phAppConfigSetters: PHAppConfigSetters = {
   allowedDocumentTypes: setAllowedDocumentTypes,
   isDragAndDropEnabled: setIsDragAndDropEnabled,
 };
@@ -69,7 +69,7 @@ export const phDocumentEditorConfigSetters: PHDocumentEditorConfigSetters = {
   isExternalControlsEnabled: setIsExternalControlsEnabled,
 };
 
-export const phDriveEditorConfigHooks: PHDriveEditorConfigHooks = {
+export const phAppConfigHooks: PHAppConfigHooks = {
   allowedDocumentTypes: useAllowedDocumentTypes,
   isDragAndDropEnabled: useIsDragAndDropEnabled,
 };

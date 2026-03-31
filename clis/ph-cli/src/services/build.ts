@@ -1,34 +1,30 @@
 import { execSync } from "node:child_process";
+import { join } from "node:path";
 import { detect, resolveCommand } from "package-manager-detector";
-import { build as tsdownBuild } from "tsdown";
+import { build as tsdownBuild, type InlineConfig } from "tsdown";
 import type { BuildArgs } from "../types.js";
 
-export async function runBuild(args: BuildArgs) {
-  const { outDir, clean, dts, sourcemap } = args;
-  await tsdownBuild({
+function withSharedConfig({
+  neverBundle = [],
+}: { neverBundle?: string[] } = {}): InlineConfig {
+  return {
     entry: [
       "index.ts",
       "document-models/index.ts",
       "document-models/*/index.ts",
+      "document-models/*/module.ts",
       "editors/index.ts",
       "editors/*/index.ts",
       "editors/*/module.ts",
-      "processors/index.ts",
-      "processors/*/index.ts",
       "subgraphs/index.ts",
       "subgraphs/*/index.ts",
+      "processors/index.ts",
+      "processors/*/index.ts",
     ],
-    platform: "browser",
-    outDir,
-    clean,
-    dts,
-    sourcemap,
-    minify: false,
-    copy: [{ from: "powerhouse.manifest.json", to: "dist" }],
-    config: true,
     deps: {
       alwaysBundle: ["**"],
       neverBundle: [
+        ...neverBundle,
         // we know that we don't want connect inside connect
         "@powerhousedao/connect",
         // published code would never need the cli
@@ -54,6 +50,29 @@ export async function runBuild(args: BuildArgs) {
         "@types/react-dom",
       ],
     },
+    config: false,
+    clean: true,
+    dts: true,
+    sourcemap: true,
+  };
+}
+
+export async function runBuild(args: BuildArgs) {
+  const { outDir } = args;
+
+  await tsdownBuild({
+    ...withSharedConfig({
+      neverBundle: ["@powerhousedao/reactor-api"],
+    }),
+    copy: [{ from: "powerhouse.manifest.json", to: "dist" }],
+    platform: "browser",
+    outDir: join(outDir, "browser"),
+  });
+
+  await tsdownBuild({
+    ...withSharedConfig(),
+    platform: "node",
+    outDir: join(outDir, "node"),
   });
 
   const detectResult = await detect();

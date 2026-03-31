@@ -1,6 +1,5 @@
-import { generateDriveEditor } from "@powerhousedao/codegen";
+import { generateApp } from "@powerhousedao/codegen";
 import { directoryExists, fileExists } from "@powerhousedao/shared/clis";
-import { $ } from "bun";
 import { afterAll, describe, expect, it } from "bun:test";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -10,40 +9,39 @@ import {
   WITH_DOCUMENT_MODELS,
   WITH_EDITORS,
 } from "../constants.js";
-import { cpForce, mkdirRecursive, rmForce } from "../utils.js";
+import { cpForce, mkdirRecursive, rmForce, runTsc } from "../utils.js";
 
-type GenerateDriveEditorOptions = Parameters<typeof generateDriveEditor>[0];
+type GenerateAppOptions = Parameters<typeof generateApp>[0];
 
 const cwd = process.cwd();
-const parentOutDir = join(cwd, TEST_OUTPUT, "generate-drive-editor");
+const parentOutDir = join(cwd, TEST_OUTPUT, "generate-app");
 const testProjectsDir = join(cwd, TEST_PROJECTS);
 await rmForce(parentOutDir);
 await mkdirRecursive(parentOutDir);
 
-describe("generateDriveEditor", () => {
+describe("generateApp", () => {
   afterAll(() => {
     process.chdir(cwd);
   });
-  const driveEditorName = "Atlas Drive Explorer";
-  const driveEditorId = "AtlasDriveExplorer";
+  const appName = "Atlas Drive Explorer";
+  const appId = "AtlasDriveExplorer";
   const allowedDocumentTypes = ["powerhouse/test-doc"];
 
-  const options: GenerateDriveEditorOptions = {
-    driveEditorId,
-    driveEditorName,
+  const options: GenerateAppOptions = {
+    appId,
+    appName,
     allowedDocumentTypes,
-    specifiedPackageName: undefined,
-    driveEditorDirName: undefined,
+    appDirName: undefined,
     isDragAndDropEnabled: true,
     skipFormat: false,
   };
 
-  it("should generate a drive editor with the correct files and content", async () => {
-    const outDir = join(parentOutDir, "generate-new-drive-editor");
+  it("should generate a app with the correct files and content", async () => {
+    const outDir = join(parentOutDir, "generate-new-app");
     await rmForce(outDir);
     await cpForce(join(testProjectsDir, WITH_DOCUMENT_MODELS), outDir);
     process.chdir(outDir);
-    await generateDriveEditor({
+    await generateApp({
       ...options,
     });
     const editorsDir = join(outDir, "editors");
@@ -73,9 +71,7 @@ describe("generateDriveEditor", () => {
     const configFilePath = join(editorDir, "config.ts");
     expect(await fileExists(configFilePath)).toBe(true);
     const configContent = await readFile(configFilePath, "utf-8");
-    expect(configContent).toContain(
-      `export const editorConfig: PHDriveEditorConfig`,
-    );
+    expect(configContent).toContain(`export const editorConfig: PHAppConfig`);
     expect(configContent).toContain(
       `allowedDocumentTypes: ["powerhouse/test-doc"]`,
     );
@@ -87,7 +83,7 @@ describe("generateDriveEditor", () => {
       `export default function Editor(props: EditorProps)`,
     );
     expect(editorContent).toContain(`<DriveExplorer {...props}`);
-    expect(editorContent).toContain(`useSetPHDriveEditorConfig(editorConfig)`);
+    expect(editorContent).toContain(`useSetPHAppConfig(editorConfig)`);
 
     const componentsDir = join(editorDir, "components");
     expect(await directoryExists(componentsDir)).toBe(true);
@@ -142,14 +138,14 @@ describe("generateDriveEditor", () => {
       `export function NavigationBreadcrumbs()`,
     );
 
-    await $`bun run --cwd ${outDir} tsc --noEmit`;
+    await runTsc(outDir);
   });
 
   it("should append new exports to existing editors.ts file", async () => {
     const outDir = join(parentOutDir, "append-exports-to-existing-editors");
     await cpForce(join(testProjectsDir, WITH_EDITORS), outDir);
     process.chdir(outDir);
-    await generateDriveEditor({
+    await generateApp({
       ...options,
     });
     const editorsDir = join(outDir, "editors");
@@ -158,8 +154,8 @@ describe("generateDriveEditor", () => {
     expect(editorsContent).toContain(`export const editors: EditorModule[]`);
     expect(editorsContent).toContain(`AtlasDriveExplorer`);
     expect(editorsContent).toContain(`ExistingDocumentEditor`);
-    expect(editorsContent).toContain(`ExistingDriveEditor`);
+    expect(editorsContent).toContain(`ExistingApp`);
 
-    await $`bun run --cwd ${outDir} tsc --noEmit`;
+    await runTsc(outDir);
   });
 });

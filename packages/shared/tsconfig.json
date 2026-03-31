@@ -4,45 +4,22 @@
   "compilerOptions": {
     // output transpiled code in the dist file relative to this package's root
     "outDir": "./dist",
+    "customConditions": ["source"],
     "paths": {
       "types": ["./types.ts"],
       "constants": ["./constants.ts"],
-      "analytics": [
-        "./analytics/index.ts"
-      ],
-      "analytics/*": [
-        "./analytics/*"
-      ],
-      "connect": [
-        "./connect/index.ts"
-      ],
-      "connect/*": [
-        "./connect/*"
-      ],
-      "document-drive": [
-        "./document-drive/index.ts"
-      ],
-      "document-drive/*": [
-        "./document-drive/*"
-      ],
-      "document-model": [
-        "./document-model/index.ts"
-      ],
-      "document-model/*": [
-        "./document-model/*"
-      ],
-      "processors": [
-        "./processors/index.ts"
-      ],
-      "processors/*": [
-        "./processors/*"
-      ],
-      "registry": [
-        "./registry/index.ts"
-      ],
-      "registry/*": [
-        "./registry/*"
-      ],
+      "analytics": ["./analytics/index.ts"],
+      "analytics/*": ["./analytics/*.ts"],
+      "connect": ["./connect/index.ts"],
+      "connect/*": ["./connect/*.ts"],
+      "document-drive": ["./document-drive/index.ts"],
+      "document-drive/*": ["./document-drive/*.ts"],
+      "document-model": ["./document-model/index.ts"],
+      "document-model/*": ["./document-model/*.ts"],
+      "processors": ["./processors/index.ts"],
+      "processors/*": ["./processors/*.ts"],
+      "registry": ["./registry/index.ts"],
+      "registry/*": ["./registry/*.ts"]
     }
   },
   // include all files in this package's root

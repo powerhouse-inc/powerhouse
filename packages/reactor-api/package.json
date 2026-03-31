@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/reactor-api",
-  "version": "6.0.0-dev.129",
+  "version": "6.0.0-dev.142",
   "description": "",
   "type": "module",
   "repository": {
@@ -87,7 +87,7 @@
     "knex-pglite": "catalog:",
     "kysely": "catalog:",
     "kysely-knex": "catalog:",
-    "path-to-regexp": "^8.3.0",
+    "path-to-regexp": "^8.4.0",
     "pg": "catalog:",
     "read-pkg": "catalog:",
     "ws": "^8.18.3",

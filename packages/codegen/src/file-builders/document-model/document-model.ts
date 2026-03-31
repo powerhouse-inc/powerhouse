@@ -44,7 +44,6 @@ import {
  */
 export async function tsMorphGenerateDocumentModel({
   projectDir,
-  packageName,
   documentModelState,
   useVersioning,
   migrateLegacy,
@@ -125,7 +124,6 @@ export async function tsMorphGenerateDocumentModel({
             project,
             version,
             useVersioning: true,
-            packageName,
             documentModelState,
             projectDir,
             documentModelsDirPath,
@@ -180,7 +178,6 @@ export async function tsMorphGenerateDocumentModel({
       project,
       useVersioning: false,
       version: latestVersion,
-      packageName,
       documentModelState,
       projectDir,
       documentModelsDirPath,
@@ -198,7 +195,6 @@ type GenerateDocumentModelFromSpecArgs = {
   project: Project;
   version: number;
   useVersioning: boolean;
-  packageName: string;
   documentModelState: DocumentModelGlobalState;
   projectDir: string;
   documentModelPackageImportPath: string;
@@ -210,7 +206,6 @@ type GenerateDocumentModelFromSpecArgs = {
 async function generateDocumentModelForSpec({
   project,
   projectDir,
-  packageName,
   documentModelState,
   documentModelPackageImportPath,
   documentModelsDirPath,
@@ -275,7 +270,6 @@ async function generateDocumentModelForSpec({
   const fileMakerArgs: DocumentModelFileMakerArgs = {
     project,
     projectDir,
-    packageName,
     version,
     useVersioning,
     documentTypeId,

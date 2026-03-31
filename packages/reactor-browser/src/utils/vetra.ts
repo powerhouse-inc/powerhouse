@@ -80,9 +80,9 @@ export function convertLegacyEditorModuleToVetraEditorModule(
   legacyEditorModule: EditorModule,
   manifest?: Manifest,
 ): VetraEditorModule {
-  // check for app using this drive editor and use its name
+  // check for app using this app and use its name
   const appName = manifest?.apps?.find(
-    (app) => app.driveEditor === legacyEditorModule.config.id,
+    (app) => app.app === legacyEditorModule.config.id,
   )?.name;
   const id = legacyEditorModule.config.id;
   // if no app found and editor has no name defined then build the name from the id

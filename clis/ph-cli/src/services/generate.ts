@@ -1,7 +1,7 @@
 import {
+  generateApp,
   generate as generateCode,
   generateDBSchema,
-  generateDriveEditor,
   generateEditor,
   generateFromFile,
   generateImportScript,
@@ -24,9 +24,9 @@ export async function startGenerate(options: GenerateArgs) {
     // [DEPRECATED] - should be removed asap
     documentTypes,
     editorDirName,
-    driveEditorName,
-    driveEditorId,
-    driveEditorDirName,
+    appName,
+    appId,
+    appDirName,
     allowedDocumentTypes,
     disableDragAndDrop,
     processorName,
@@ -47,7 +47,6 @@ export async function startGenerate(options: GenerateArgs) {
 
   const useVersioning = useVersioningFlag || migrateLegacy;
   const isDragAndDropEnabled = disableDragAndDrop !== true;
-  const specifiedPackageName = undefined;
   const filePath = Array.isArray(documentModelFile)
     ? documentModelFile.join(" ")
     : documentModelFile;
@@ -72,17 +71,15 @@ export async function startGenerate(options: GenerateArgs) {
       editorDirName,
       documentTypes: [documentTypeToUse],
       skipFormat,
-      specifiedPackageName,
     });
-  } else if (driveEditorName !== undefined) {
-    await generateDriveEditor({
-      driveEditorName,
-      driveEditorId,
-      driveEditorDirName,
+  } else if (appName !== undefined) {
+    await generateApp({
+      appName,
+      appId,
+      appDirName,
       allowedDocumentTypes,
       isDragAndDropEnabled,
       skipFormat,
-      specifiedPackageName,
     });
   } else if (processorName !== undefined) {
     await generateProcessor({
@@ -93,10 +90,7 @@ export async function startGenerate(options: GenerateArgs) {
       documentTypes: [documentTypeToUse].filter((t) => t !== undefined),
     });
   } else if (subgraphName !== undefined) {
-    await generateSubgraph(subgraphName, filePath || null, config, {
-      verbose,
-      force,
-    });
+    await generateSubgraph(subgraphName, filePath || null, config);
   } else if (importScriptName !== undefined) {
     await generateImportScript(importScriptName, config);
   } else if (migrationFile !== undefined) {

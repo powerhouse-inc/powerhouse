@@ -203,7 +203,7 @@ export function createPublishHook(
           cdn.invalidate(packageName);
           // Extract tarball immediately so /packages lists the package right away
           cdn
-            .getLatestVersion(packageName)
+            .resolveVersion(packageName)
             .then((version) => {
               if (version) {
                 console.log(

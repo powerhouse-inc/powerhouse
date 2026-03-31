@@ -260,11 +260,11 @@ processors, and other components based on your document model files.
 
 **Document Types** - [DEPRECATED] Comma separated list of document types for the generated document editor. [WARNING] Generated editor code is not set up to handle multiple document types. - Usage: `--document-types <str>`
 
-**Drive Editor** - Drive editor name. - Usage: `--drive-editor <str>`
+**App** - App name. - Usage: `--app <str>`
 
-**App Id** - Drive editor ID. - Usage: `--app-id <str>`
+**App Id** - App ID. - Usage: `--app-id <str>`
 
-**Drive Editor Dir Name** - Use a different directory name for the generated drive editor. Default is the drive editor name in kebab case. - Usage: `--drive-editor-dir-name <str>`
+**App Dir Name** - Use a different directory name for the generated app. Default is the app name in kebab case. - Usage: `--app-dir-name <str>`
 
 **Processor** - Processor name. - Usage: `--processor <str>`
 
@@ -278,7 +278,7 @@ processors, and other components based on your document model files.
 
 **Import Script** - Import script name. - Usage: `--import-script <str>`
 
-**Allowed Document Types** - Supported document types for a drive editor. - Usage: `--allowed-document-types <str>`
+**Allowed Document Types** - Supported document types for a app. - Usage: `--allowed-document-types <str>`
 
 **Migration File** - Path to the migration file. - Usage: `--migration-file <str>`
 
@@ -288,7 +288,7 @@ processors, and other components based on your document model files.
 
 
 ### Flags
-**Disable Drag And Drop** - Disable drag and drop in the generated drive editor. - Usage: `--disable-drag-and-drop`
+**Disable Drag And Drop** - Disable drag and drop in the generated app. - Usage: `--disable-drag-and-drop`
 
 **Force** - Overwrite operation reducers. - Usage: `--force, -f`
 

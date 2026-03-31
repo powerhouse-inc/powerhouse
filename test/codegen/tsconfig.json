@@ -5,20 +5,7 @@
     "types": [
       "@types/bun"
     ],
-    "paths": {
-      "test-project/document-models": [
-        "./document-models/index.ts"
-      ],
-      "test-project/document-models/*": [
-        "./document-models/*/index.ts"
-      ],
-      "test-project/editors": [
-        "./editors/index.ts"
-      ],
-      "test-project/editors/*": [
-        "./editors/*/index.ts"
-      ]
-    }
+    "customConditions": ["source"]
   },
   "include": [
     "**/*"

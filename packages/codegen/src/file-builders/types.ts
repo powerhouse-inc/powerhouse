@@ -17,7 +17,6 @@ export type CommonMakeEditorComponentArgs = {
 };
 
 export type CommonGenerateEditorArgs = {
-  packageName: string;
   projectDir: string;
   editorDir: string;
   editorName: string;
@@ -61,7 +60,6 @@ export type ActionFromOperation = {
 
 export type GenerateDocumentModelArgs = {
   projectDir: string;
-  packageName: string;
   documentModelState: DocumentModelGlobalState;
   useVersioning: boolean;
   migrateLegacy?: boolean;

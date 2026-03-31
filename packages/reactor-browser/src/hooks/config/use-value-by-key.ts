@@ -1,13 +1,10 @@
 import type {
+  PHAppConfigKey,
   PHDocumentEditorConfigKey,
-  PHDriveEditorConfigKey,
   PHGlobalConfigKey,
 } from "@powerhousedao/reactor-browser";
 import { phGlobalConfigHooks } from "./connect.js";
-import {
-  phDocumentEditorConfigHooks,
-  phDriveEditorConfigHooks,
-} from "./editor.js";
+import { phAppConfigHooks, phDocumentEditorConfigHooks } from "./editor.js";
 
 export function usePHGlobalConfigByKey<TKey extends PHGlobalConfigKey>(
   key: TKey,
@@ -20,10 +17,8 @@ export function usePHGlobalConfigByKey<TKey extends PHGlobalConfigKey>(
  *
  * Strongly typed, inferred from type definition for the key.
  */
-export function usePHDriveEditorConfigByKey<
-  TKey extends PHDriveEditorConfigKey,
->(key: TKey) {
-  const useValueHook = phDriveEditorConfigHooks[key];
+export function usePHAppConfigByKey<TKey extends PHAppConfigKey>(key: TKey) {
+  const useValueHook = phAppConfigHooks[key];
   return useValueHook();
 }
 

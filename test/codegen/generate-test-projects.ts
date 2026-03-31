@@ -1,6 +1,6 @@
 import {
   createProject,
-  generateDriveEditor,
+  generateApp,
   generateEditor,
 } from "@powerhousedao/codegen";
 import { join } from "path";
@@ -100,15 +100,13 @@ export async function generateTestProjects() {
     editorName: "ExistingDocumentEditor",
     documentTypes: ["powerhouse/test-doc"],
     skipFormat: false,
-    specifiedPackageName: undefined,
     editorDirName: undefined,
   });
-  await generateDriveEditor({
-    driveEditorId: "existing-drive-editor",
-    driveEditorName: "ExistingDriveEditor",
+  await generateApp({
+    appId: "existing-app",
+    appName: "ExistingApp",
     allowedDocumentTypes: ["powerhouse/test-doc"],
-    specifiedPackageName: undefined,
-    driveEditorDirName: undefined,
+    appDirName: undefined,
     isDragAndDropEnabled: true,
     skipFormat: false,
   });

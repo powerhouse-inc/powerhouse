@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/powerhouse-vetra-packages",
-  "version": "6.0.0-dev.129",
+  "version": "6.0.0-dev.142",
   "description": "",
   "keywords": [],
   "author": "",
@@ -70,7 +70,7 @@
     "@powerhousedao/design-system": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",
     "@powerhousedao/document-engineering": "catalog:",
-    "@powerhousedao/shared": "workspace:",
+    "@powerhousedao/shared": "workspace:*",
     "@radix-ui/react-label": "^2.1.4",
     "@radix-ui/react-slot": "^1.2.0",
     "@radix-ui/react-tabs": "^1.1.9",

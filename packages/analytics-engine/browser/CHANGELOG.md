@@ -1,3 +1,90 @@
+## 6.0.0-dev.142 (2026-03-31)
+
+### 🩹 Fixes
+
+- **docker:** use scoped registry for @powerhousedao instead of global override ([33d06b487](https://github.com/powerhouse-inc/powerhouse/commit/33d06b487))
+
+### ❤️ Thank You
+
+- Frank
+
+## 6.0.0-dev.141 (2026-03-31)
+
+This was a version bump only for @powerhousedao/analytics-engine-browser to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.140 (2026-03-31)
+
+### 🚀 Features
+
+- **registry:** enable npm proxy uplink in Verdaccio ([405733914](https://github.com/powerhouse-inc/powerhouse/commit/405733914))
+
+### 🩹 Fixes
+
+- **docker:** use .npmrc for scoped registry config ([8568e3a20](https://github.com/powerhouse-inc/powerhouse/commit/8568e3a20))
+
+### ❤️ Thank You
+
+- Frank
+
+## 6.0.0-dev.139 (2026-03-31)
+
+### 🩹 Fixes
+
+- **docker:** use scoped registry for @powerhousedao packages ([f7c8ff72c](https://github.com/powerhouse-inc/powerhouse/commit/f7c8ff72c))
+
+### ❤️ Thank You
+
+- Frank
+
+## 6.0.0-dev.138 (2026-03-31)
+
+### 🚀 Features
+
+- **docker:** install PH_PACKAGES at switchboard startup ([c510da354](https://github.com/powerhouse-inc/powerhouse/commit/c510da354))
+- **docker:** install PH_PACKAGES at switchboard startup ([fdf33e0aa](https://github.com/powerhouse-inc/powerhouse/commit/fdf33e0aa))
+
+### ❤️ Thank You
+
+- Frank
+
+## 6.0.0-dev.137 (2026-03-31)
+
+This was a version bump only for @powerhousedao/analytics-engine-browser to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.136 (2026-03-31)
+
+This was a version bump only for @powerhousedao/analytics-engine-browser to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.135 (2026-03-31)
+
+This was a version bump only for @powerhousedao/analytics-engine-browser to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.134 (2026-03-31)
+
+This was a version bump only for @powerhousedao/analytics-engine-browser to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.133 (2026-03-31)
+
+This was a version bump only for @powerhousedao/analytics-engine-browser to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.132 (2026-03-31)
+
+This was a version bump only for @powerhousedao/analytics-engine-browser to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.131 (2026-03-31)
+
+### 🚀 Features
+
+- add separate node and browser processor bundles ([#2451](https://github.com/powerhouse-inc/powerhouse/pull/2451))
+
+### ❤️ Thank You
+
+- Ryan Wolhuter @ryanwolhuter
+
+## 6.0.0-dev.130 (2026-03-31)
+
+This was a version bump only for @powerhousedao/analytics-engine-browser to align it with other projects, there were no code changes.
+
 ## 6.0.0-dev.129 (2026-03-30)
 
 This was a version bump only for @powerhousedao/analytics-engine-browser to align it with other projects, there were no code changes.

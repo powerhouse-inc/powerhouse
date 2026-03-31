@@ -1,4 +1,3 @@
-import { $ } from "bun";
 import { describe, expect, test } from "bun:test";
 import { join } from "node:path";
 import { Project, ts } from "ts-morph";
@@ -20,6 +19,7 @@ import {
   loadDocumentModelsInDir,
   mkdirRecursive,
   rmForce,
+  runTsc,
 } from "../utils.js";
 
 const parentOutDir = join(process.cwd(), TEST_OUTPUT, "generate-doc-model");
@@ -48,7 +48,7 @@ async function runDocumentModelTests(args: {
   await rmForce(outDir);
   await cpForce(testProjectDir, outDir);
   await loadDocumentModelsInDir(documentModelsInDir, outDir, useVersioning);
-  await $`bun run --cwd ${outDir} tsc --noEmit`;
+  await runTsc(outDir);
   return outDir;
 }
 

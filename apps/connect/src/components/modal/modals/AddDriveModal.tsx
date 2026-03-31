@@ -9,7 +9,7 @@ import {
   addRemoteDrive,
   closePHModal,
   setSelectedDrive,
-  useDriveEditorModules,
+  useAppModules,
   usePHModal,
   useRenown,
   useUser,
@@ -32,10 +32,10 @@ export function AddDriveModal() {
   const open = phModal?.type === "addDrive";
   const user = useUser();
   const renown = useRenown();
-  const driveEditorModules = useDriveEditorModules();
+  const appModules = useAppModules();
   const onAddLocalDrive = async (data: AddLocalDriveInput) => {
     try {
-      const app = driveEditorModules?.find((a) => a.id === data.appId);
+      const app = appModules?.find((a) => a.id === data.appId);
       const newDrive = await addDrive(
         {
           id: "",
@@ -91,7 +91,7 @@ export function AddDriveModal() {
     closePHModal();
   }
 
-  const ready = !!driveEditorModules?.length;
+  const ready = !!appModules?.length;
 
   return (
     <ConnectAddLocalDriveModal
@@ -119,10 +119,10 @@ export function AddDriveModal() {
         if (!status) return closePHModal();
       }}
       appOptions={
-        driveEditorModules?.map((pkg) => ({
+        appModules?.map((pkg) => ({
           id: pkg.id,
           name: pkg.name,
-          driveEditor: pkg.id,
+          app: pkg.id,
         })) || []
       }
     />

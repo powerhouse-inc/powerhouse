@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/shared",
-  "version": "6.0.0-dev.129",
+  "version": "6.0.0-dev.142",
   "type": "module",
   "publishConfig": {
     "access": "public"
@@ -17,63 +17,63 @@
   },
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
+      "source": "./index.ts",
       "import": "./dist/index.js"
     },
     "./processors": {
-      "types": "./dist/processors/index.d.ts",
+      "source": "./processors/index.ts",
       "import": "./dist/processors/index.js"
     },
     "./processors/*": {
-      "types": "./dist/processors/*.d.ts",
+      "source": "./processors/*.ts",
       "import": "./dist/processors/*.js"
     },
     "./document-model": {
-      "types": "./dist/document-model/index.d.ts",
+      "source": "./document-model/index.ts",
       "import": "./dist/document-model/index.js"
     },
     "./document-model/*": {
-      "types": "./dist/document-model/*.d.ts",
+      "source": "./document-model/*.ts",
       "import": "./dist/document-model/*.js"
     },
     "./document-drive": {
-      "types": "./dist/document-drive/index.d.ts",
+      "source": "./document-drive/index.ts",
       "import": "./dist/document-drive/index.js"
     },
     "./document-drive/*": {
-      "types": "./dist/document-drive/*.d.ts",
+      "source": "./document-drive/*.ts",
       "import": "./dist/document-drive/*.js"
     },
     "./connect": {
-      "types": "./dist/connect/index.d.ts",
+      "source": "./connect/index.ts",
       "import": "./dist/connect/index.js"
     },
     "./connect/*": {
-      "types": "./dist/connect/*.d.ts",
+      "source": "./connect/*.ts",
       "import": "./dist/connect/*.js"
     },
     "./analytics": {
-      "types": "./dist/analytics/index.d.ts",
+      "source": "./analytics/index.ts",
       "import": "./dist/analytics/index.js"
     },
     "./analytics/*": {
-      "types": "./dist/analytics/*.d.ts",
+      "source": "./analytics/*.ts",
       "import": "./dist/analytics/*.js"
     },
     "./registry": {
-      "types": "./dist/registry/index.d.ts",
+      "source": "./registry/index.ts",
       "import": "./dist/registry/index.js"
     },
     "./registry/*": {
-      "types": "./dist/registry/*.d.ts",
+      "source": "./registry/*.ts",
       "import": "./dist/registry/*.js"
     },
     "./constants": {
-      "types": "./dist/constants.d.ts",
+      "source": "./constants.ts",
       "import": "./dist/constants.js"
     },
     "./clis": {
-      "types": "./dist/clis/index.d.mts",
+      "source": "./clis/index.mts",
       "import": "./dist/clis/index.mjs"
     }
   },

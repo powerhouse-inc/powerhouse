@@ -1,6 +1,6 @@
 import { tsx } from "@tmpl/core";
 
-export const driveEditorFoldersFileTemplate = () =>
+export const appFoldersFileTemplate = () =>
   tsx`
 import { FolderItem } from "@powerhousedao/design-system/connect";
 import {

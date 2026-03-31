@@ -1,8 +1,8 @@
-import { GenericDriveExplorer } from "@powerhousedao/powerhouse-vetra-packages/editors";
 import { DropZoneWrapper } from "@powerhousedao/design-system/connect";
+import { GenericDriveExplorer } from "@powerhousedao/powerhouse-vetra-packages/editors";
 import {
-  useDefaultDriveEditorModule,
-  useDriveEditorModuleById,
+  useAppModuleById,
+  useDefaultAppModule,
   useSelectedDocumentId,
   useSelectedDrive,
 } from "@powerhousedao/reactor-browser";
@@ -11,34 +11,30 @@ import { DocumentEditorContainer } from "./document-editor-container.js";
 import { EditorLoader } from "./editor-loader.js";
 import { ErrorBoundary } from "./error-boundary.js";
 
-export function DriveEditorContainer() {
+export function AppContainer() {
   const [selectedDrive] = useSelectedDrive();
   const selectedDocumentId = useSelectedDocumentId();
 
-  const driveEditor = useDriveEditorModuleById(
-    selectedDrive.header.meta?.preferredEditor,
-  );
-  const defaultDriveEditor = useDefaultDriveEditorModule();
+  const app = useAppModuleById(selectedDrive.header.meta?.preferredEditor);
+  const defaultApp = useDefaultAppModule();
 
-  const DriveEditorComponent =
-    driveEditor?.Component ??
-    defaultDriveEditor?.Component ??
-    GenericDriveExplorer.Component;
+  const AppComponent =
+    app?.Component ?? defaultApp?.Component ?? GenericDriveExplorer.Component;
 
-  if (!DriveEditorComponent) {
-    throw new Error("No drive editor component found");
+  if (!AppComponent) {
+    throw new Error("No app component found");
   }
   return (
     <ErrorBoundary
       variant="detailed"
       resetKeys={[selectedDrive.header.id]}
-      loggerContext={["Connect", "DriveEditor"]}
+      loggerContext={["Connect", "App"]}
     >
       <Suspense fallback={<EditorLoader />}>
         <DropZoneWrapper className="flex h-full flex-col overflow-auto">
-          <DriveEditorComponent>
+          <AppComponent>
             {selectedDocumentId ? <DocumentEditorContainer /> : null}
-          </DriveEditorComponent>
+          </AppComponent>
         </DropZoneWrapper>
       </Suspense>
     </ErrorBoundary>

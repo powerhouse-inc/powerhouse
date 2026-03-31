@@ -1,3 +1,129 @@
+## 6.0.0-dev.142 (2026-03-31)
+
+### 🩹 Fixes
+
+- **docker:** use scoped registry for @powerhousedao instead of global override ([33d06b487](https://github.com/powerhouse-inc/powerhouse/commit/33d06b487))
+
+### ❤️ Thank You
+
+- Frank
+
+## 6.0.0-dev.141 (2026-03-31)
+
+### 🩹 Fixes
+
+- **registry:** proxy @powerhousedao packages to npm as fallback ([ea89f5337](https://github.com/powerhouse-inc/powerhouse/commit/ea89f5337))
+
+### ❤️ Thank You
+
+- Frank
+
+## 6.0.0-dev.140 (2026-03-31)
+
+### 🚀 Features
+
+- **registry:** enable npm proxy uplink in Verdaccio ([405733914](https://github.com/powerhouse-inc/powerhouse/commit/405733914))
+
+### 🩹 Fixes
+
+- **docker:** use .npmrc for scoped registry config ([8568e3a20](https://github.com/powerhouse-inc/powerhouse/commit/8568e3a20))
+
+### ❤️ Thank You
+
+- Frank
+
+## 6.0.0-dev.139 (2026-03-31)
+
+### 🩹 Fixes
+
+- **docker:** use scoped registry for @powerhousedao packages ([f7c8ff72c](https://github.com/powerhouse-inc/powerhouse/commit/f7c8ff72c))
+
+### ❤️ Thank You
+
+- Frank
+
+## 6.0.0-dev.138 (2026-03-31)
+
+### 🚀 Features
+
+- **docker:** install PH_PACKAGES at switchboard startup ([fdf33e0aa](https://github.com/powerhouse-inc/powerhouse/commit/fdf33e0aa))
+- **docker:** install PH_PACKAGES at switchboard startup ([c510da354](https://github.com/powerhouse-inc/powerhouse/commit/c510da354))
+
+### ❤️ Thank You
+
+- Frank
+
+## 6.0.0-dev.137 (2026-03-31)
+
+### 🩹 Fixes
+
+- **reactor-api:** always include ImportPackageLoader alongside custom loaders ([f33785d1a](https://github.com/powerhouse-inc/powerhouse/commit/f33785d1a))
+
+### ❤️ Thank You
+
+- Frank
+
+## 6.0.0-dev.136 (2026-03-31)
+
+### 🚀 Features
+
+- bulk rename everything with the name drive editor ([#2457](https://github.com/powerhouse-inc/powerhouse/pull/2457))
+- **reactor-api,switchboard:** load processors and subgraphs via HTTP registry ([6ebc6e069](https://github.com/powerhouse-inc/powerhouse/commit/6ebc6e069))
+
+### ❤️ Thank You
+
+- Frank
+- Ryan Wolhuter @ryanwolhuter
+
+## 6.0.0-dev.135 (2026-03-31)
+
+This was a version bump only, there were no code changes.
+
+## 6.0.0-dev.134 (2026-03-31)
+
+### 🚀 Features
+
+- remove usage of package name in codegen ([#2455](https://github.com/powerhouse-inc/powerhouse/pull/2455))
+- **reactor-api:** support version tags in HTTP package loader ([525c894e8](https://github.com/powerhouse-inc/powerhouse/commit/525c894e8))
+
+### 🩹 Fixes
+
+- **ph-cli:** exclude reactor-api on browser build ([0c50c9fbf](https://github.com/powerhouse-inc/powerhouse/commit/0c50c9fbf))
+
+### ❤️ Thank You
+
+- acaldas
+- Frank
+- Ryan Wolhuter @ryanwolhuter
+
+## 6.0.0-dev.133 (2026-03-31)
+
+This was a version bump only, there were no code changes.
+
+## 6.0.0-dev.132 (2026-03-31)
+
+### 🚀 Features
+
+- **registry:** support version tags in CDN resolver ([59405166b](https://github.com/powerhouse-inc/powerhouse/commit/59405166b))
+
+### ❤️ Thank You
+
+- Frank
+
+## 6.0.0-dev.131 (2026-03-31)
+
+### 🚀 Features
+
+- add separate node and browser processor bundles ([#2451](https://github.com/powerhouse-inc/powerhouse/pull/2451))
+
+### ❤️ Thank You
+
+- Ryan Wolhuter @ryanwolhuter
+
+## 6.0.0-dev.130 (2026-03-31)
+
+This was a version bump only, there were no code changes.
+
 ## 6.0.0-dev.129 (2026-03-30)
 
 ### 🩹 Fixes

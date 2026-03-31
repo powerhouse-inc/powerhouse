@@ -1,4 +1,4 @@
-# Powerhouse CLI Commands (6.0.0-dev.129)<br>
+# Powerhouse CLI Commands (6.0.0-dev.142)<br>
 This document provides detailed information about the available commands in the Powerhouse CLI.<br><br>
 The Powerhouse CLI (ph-cli) is a command-line interface tool that provides essential commands for managing Powerhouse projects. The tool and it's commands are fundamental for creating, building, and running Document Models as a builder in studio mode.<br>
 ## Table of Contents
@@ -59,17 +59,17 @@ Document type for the generated document editor.<br><br>
 [DEPRECATED] Comma separated list of document types for the generated document editor. [WARNING] Generated editor code is not set up to handle multiple document types.<br><br>
 **usage:** `--document-types <str>`<br>
 
-#### Drive Editor <br>
-Drive editor name.<br><br>
-**usage:** `--drive-editor <str>`<br>
+#### App <br>
+App name.<br><br>
+**usage:** `--app <str>`<br>
 
 #### App Id <br>
-Drive editor ID.<br><br>
+App ID.<br><br>
 **usage:** `--app-id <str>`<br>
 
-#### Drive Editor Dir Name <br>
-Use a different directory name for the generated drive editor. Default is the drive editor name in kebab case.<br><br>
-**usage:** `--drive-editor-dir-name <str>`<br>
+#### App Dir Name <br>
+Use a different directory name for the generated app. Default is the app name in kebab case.<br><br>
+**usage:** `--app-dir-name <str>`<br>
 
 #### Processor <br>
 Processor name.<br><br>
@@ -92,7 +92,7 @@ Import script name.<br><br>
 **usage:** `--import-script <str>`<br>
 
 #### Allowed Document Types <br>
-Supported document types for a drive editor.<br><br>
+Supported document types for a app.<br><br>
 **usage:** `--allowed-document-types <str>`<br>
 
 #### Migration File <br>
@@ -106,7 +106,7 @@ Path to the output file. Defaults to './schema.ts'<br><br>
 
 ### flags
 #### Disable Drag And Drop <br>
-Disable drag and drop in the generated drive editor.<br><br>
+Disable drag and drop in the generated app.<br><br>
 **usage:** `--disable-drag-and-drop`<br>
 
 #### Force <br>

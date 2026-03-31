@@ -15,6 +15,7 @@ import {
   editorsIndexTemplate,
   editorsTemplate,
   eslintConfigTemplate,
+  factoryBuildersTemplate,
   geminiSettingsTemplate,
   gitIgnoreTemplate,
   indexHtmlTemplate,
@@ -171,6 +172,11 @@ async function writeModuleFiles() {
     processorsFactoryTemplate,
   );
   await writeFileEnsuringDir("processors/index.ts", processorsIndexTemplate);
+  await writeFileEnsuringDir("processors/connect.ts", factoryBuildersTemplate);
+  await writeFileEnsuringDir(
+    "processors/switchboard.ts",
+    factoryBuildersTemplate,
+  );
   await writeFileEnsuringDir("subgraphs/index.ts", subgraphsIndexTemplate);
   await writeFileEnsuringDir("processors/index.ts", processorsIndexTemplate);
 }

@@ -6,7 +6,7 @@ vi.mock("@powerhousedao/reactor-browser", () => ({
   useSelectedDocument: vi.fn(() => [null, vi.fn()]),
   useSelectedDocumentSafe: vi.fn(() => [null, vi.fn()]),
   useSetPHDocumentEditorConfig: vi.fn(),
-  useSetPHDriveEditorConfig: vi.fn(),
+  useSetPHAppConfig: vi.fn(),
   useDocumentById: vi.fn(() => [null, vi.fn()]),
   useDocumentTimeline: vi.fn(() => []),
   useNodeParentFolderById: vi.fn(() => null),
@@ -45,6 +45,6 @@ vi.mock("@powerhousedao/reactor-browser", () => ({
 
   // Mock config setters
   setPHDocumentEditorConfig: vi.fn(),
-  setPHDriveEditorConfig: vi.fn(),
+  setPHAppConfig: vi.fn(),
   setPHGlobalConfig: vi.fn(),
 }));

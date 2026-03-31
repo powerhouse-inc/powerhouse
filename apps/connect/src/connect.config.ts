@@ -1,8 +1,8 @@
 import {
   setLogLevel,
   type FullPHGlobalConfig,
+  type PHAppConfig,
   type PHDocumentEditorConfig,
-  type PHDriveEditorConfig,
   type PHGlobalConfig,
 } from "@powerhousedao/reactor-browser";
 import {
@@ -94,7 +94,7 @@ export const defaultPHDocumentEditorConfig: PHDocumentEditorConfig = {
   isExternalControlsEnabled: phGlobalConfigFromEnv.isExternalControlsEnabled,
 };
 
-export const defaultPHDriveEditorConfig: PHDriveEditorConfig = {
+export const defaultPHAppConfig: PHAppConfig = {
   allowedDocumentTypes: phGlobalConfigFromEnv.allowedDocumentTypes,
   isDragAndDropEnabled: phGlobalConfigFromEnv.isDragAndDropEnabled,
 };

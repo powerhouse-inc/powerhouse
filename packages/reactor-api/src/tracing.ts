@@ -55,7 +55,10 @@ if (TRACING_ENABLED) {
 
   // Prometheus pull exporter (opt-in: serves /metrics for Prometheus to scrape)
   const PROMETHEUS_METRICS_PORT = process.env.PROMETHEUS_METRICS_PORT;
-  let metricReader: PrometheusExporter | PeriodicExportingMetricReader | undefined;
+  let metricReader:
+    | PrometheusExporter
+    | PeriodicExportingMetricReader
+    | undefined;
 
   if (PROMETHEUS_METRICS_PORT) {
     const port = parseInt(PROMETHEUS_METRICS_PORT, 10);

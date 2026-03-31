@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/reactor",
-  "version": "6.0.0-dev.129",
+  "version": "6.0.0-dev.142",
   "description": "",
   "repository": {
     "url": "https://github.com/powerhouse-inc/powerhouse",
@@ -41,7 +41,7 @@
     "kysely-pglite-dialect": "catalog:",
     "@electric-sql/pglite": "catalog:",
     "@sindresorhus/fnv1a": "catalog:",
-    "@powerhousedao/shared": "workspace:",
+    "@powerhousedao/shared": "workspace:*",
     "document-model": "workspace:*"
   },
   "devDependencies": {

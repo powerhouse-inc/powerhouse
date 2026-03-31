@@ -4,28 +4,28 @@
     "outDir": "./dist",
     "resolveJsonModule": true,
     "paths": {
-      "test-package-vetra/document-models": [
+      "document-models": [
         "./document-models/index.ts"
       ],
-      "test-package-vetra/document-models/*": [
+      "document-models/*": [
         "./document-models/*/index.ts"
       ],
-      "test-package-vetra/editors": [
+      "editors": [
         "./editors/index.ts"
       ],
-      "test-package-vetra/editors/*": [
+      "editors/*": [
         "./editors/*/index.ts"
       ],
-      "test-package-vetra/processors": [
+      "processors": [
         "./processors/index.ts"
       ],
-      "test-package-vetra/processors/*": [
+      "processors/*": [
         "./processors/*/index.ts"
       ],
-      "test-package-vetra/subgraphs": [
+      "subgraphs": [
         "./subgraphs/index.ts"
       ],
-      "test-package-vetra/subgraphs/*": [
+      "subgraphs/*": [
         "./subgraphs/*/index.ts"
       ]
     }

@@ -1,11 +1,8 @@
-import {
-  DriveEditorContainer,
-  DriveIcon,
-} from "@powerhousedao/connect/components";
+import { AppContainer, DriveIcon } from "@powerhousedao/connect/components";
 import {
   connectConfig,
+  defaultPHAppConfig,
   defaultPHDocumentEditorConfig,
-  defaultPHDriveEditorConfig,
 } from "@powerhousedao/connect/config";
 import {
   HomeScreen,
@@ -13,10 +10,10 @@ import {
   HomeScreenItem,
 } from "@powerhousedao/design-system/connect";
 import {
+  setPHAppConfig,
   setPHDocumentEditorConfig,
-  setPHDriveEditorConfig,
   setSelectedDrive,
-  useDriveEditorModuleById,
+  useAppModuleById,
   useDrives,
   useSelectedDocumentId,
   useSelectedDriveSafe,
@@ -38,7 +35,7 @@ export function Content() {
 
   useEffect(() => {
     if (!selectedDrive) {
-      setPHDriveEditorConfig(defaultPHDriveEditorConfig);
+      setPHAppConfig(defaultPHAppConfig);
     }
   }, [selectedDrive]);
 
@@ -46,7 +43,7 @@ export function Content() {
     !selectedDocumentId && !selectedDrive && !selectedFolder;
   return (
     <ContentContainer>
-      {showHomeScreen ? <HomeScreenContainer /> : <DriveEditorContainer />}
+      {showHomeScreen ? <HomeScreenContainer /> : <AppContainer />}
     </ContentContainer>
   );
 }
@@ -60,9 +57,7 @@ function ContentContainer({ children }: { children: React.ReactNode }) {
 }
 
 function DriveItem({ drive }: { drive: DocumentDriveDocument }) {
-  const editorModule = useDriveEditorModuleById(
-    drive.header.meta?.preferredEditor,
-  );
+  const editorModule = useAppModuleById(drive.header.meta?.preferredEditor);
   const description = editorModule?.name || "Drive Explorer App";
   return (
     <HomeScreenItem

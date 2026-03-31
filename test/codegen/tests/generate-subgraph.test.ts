@@ -1,10 +1,15 @@
+import { loadDocumentModel } from "@powerhousedao/codegen";
 import { tsMorphGenerateSubgraph } from "@powerhousedao/codegen/file-builders";
-import type { DocumentModelGlobalState } from "@powerhousedao/shared/document-model";
 import { describe, expect, it } from "bun:test";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
-import { NEW_PROJECT, TEST_OUTPUT, TEST_PROJECTS } from "../constants.js";
-import { cpForce, mkdirRecursive, rmForce } from "../utils.js";
+import {
+  NEW_PROJECT,
+  TEST_OUTPUT,
+  TEST_PROJECTS,
+  WITH_DOCUMENT_MODELS_SPEC_2,
+} from "../constants.js";
+import { cpForce, mkdirRecursive, rmForce, runTsc } from "../utils.js";
 
 const cwd = process.cwd();
 const parentOutDir = join(cwd, TEST_OUTPUT, "generate-subgraph");
@@ -12,80 +17,19 @@ const testProjectsDir = join(cwd, TEST_PROJECTS);
 await rmForce(parentOutDir);
 await mkdirRecursive(parentOutDir);
 
-const testDocModel: DocumentModelGlobalState = {
-  id: "powerhouse/test-doc",
-  name: "test-doc",
-  extension: ".phdm",
-  description: "test description",
-  author: {
-    name: "Powerhouse",
-    website: "https://powerhouse.inc",
-  },
-  specifications: [
-    {
-      version: 1,
-      changeLog: [],
-      state: {
-        global: {
-          schema:
-            "type TestDocState {\n  id: Int!\n  name: String!\n  description: String\n  value: String!\n}",
-          initialValue:
-            '{\n  "id": 0,\n  "name": "",\n  "description": null,\n  "value": ""\n}',
-          examples: [],
-        },
-        local: {
-          schema: "",
-          initialValue: "",
-          examples: [],
-        },
-      },
-      modules: [
-        {
-          id: "1eb3fcc2-deac-4932-9cf1-077a9c915b64",
-          name: "base_operations",
-          description: "",
-          operations: [
-            {
-              id: "c4b46f8b-0981-47f7-9bbc-86e998595c97",
-              name: "SET_TEST_ID",
-              description: "",
-              schema: "input SetTestIdInput {\n  id: Int!\n}",
-              template: "",
-              reducer: "",
-              errors: [],
-              examples: [],
-              scope: "global",
-            },
-            {
-              id: "def9d61b-c6d1-4d3b-89bd-65b22fc36bc6",
-              name: "SET_TEST_NAME",
-              description: "",
-              schema: "input SetTestNameInput {\n  name: String!\n}",
-              template: "",
-              reducer: "",
-              errors: [],
-              examples: [],
-              scope: "global",
-            },
-          ],
-        },
-      ],
-    },
-  ],
-};
-
 describe("generateSubgraph", () => {
   it("should generate a custom subgraph with correct files", async () => {
     const outDir = join(parentOutDir, "generate-custom-subgraph");
-    await cpForce(join(testProjectsDir, NEW_PROJECT), outDir);
+    await cpForce(join(testProjectsDir, WITH_DOCUMENT_MODELS_SPEC_2), outDir);
     const subgraphsDir = join(outDir, "subgraphs");
 
     await tsMorphGenerateSubgraph({
       subgraphsDir,
       subgraphName: "my-custom",
-      packageName: "test-pkg",
       documentModel: null,
     });
+
+    await runTsc(outDir);
 
     // index.ts — base subgraph class
     const indexContent = await readFile(
@@ -128,15 +72,20 @@ describe("generateSubgraph", () => {
 
   it("should generate a document-model subgraph with correct files", async () => {
     const outDir = join(parentOutDir, "generate-document-model-subgraph");
-    await cpForce(join(testProjectsDir, NEW_PROJECT), outDir);
+    await cpForce(join(testProjectsDir, WITH_DOCUMENT_MODELS_SPEC_2), outDir);
     const subgraphsDir = join(outDir, "subgraphs");
+    const documentModelsDir = join(outDir, "document-models");
+    const documentModel = await loadDocumentModel(
+      join(documentModelsDir, "test-doc", "test-doc.json"),
+    );
 
     await tsMorphGenerateSubgraph({
       subgraphsDir,
       subgraphName: "test-doc",
-      packageName: "test-pkg",
-      documentModel: testDocModel,
+      documentModel,
     });
+
+    await runTsc(outDir);
 
     // index.ts — base subgraph class
     const indexContent = await readFile(
@@ -176,9 +125,7 @@ describe("generateSubgraph", () => {
     expect(resolversContent).toContain(
       'import { setName } from "document-model"',
     );
-    expect(resolversContent).toContain(
-      'from "test-pkg/document-models/test-doc"',
-    );
+    expect(resolversContent).toContain('from "document-models/test-doc"');
     expect(resolversContent).toContain("testDocDocumentType");
     expect(resolversContent).toContain("TestDocDocument");
     expect(resolversContent).toContain("TestDoc_createDocument");
@@ -197,9 +144,10 @@ describe("generateSubgraph", () => {
     await tsMorphGenerateSubgraph({
       subgraphsDir,
       subgraphName: "idempotent-test",
-      packageName: "test-pkg",
       documentModel: null,
     });
+
+    await runTsc(outDir);
 
     // Read original content
     const originalIndex = await readFile(
@@ -211,7 +159,6 @@ describe("generateSubgraph", () => {
     await tsMorphGenerateSubgraph({
       subgraphsDir,
       subgraphName: "idempotent-test",
-      packageName: "test-pkg",
       documentModel: null,
     });
 
@@ -227,15 +174,18 @@ describe("generateSubgraph", () => {
       parentOutDir,
       "should-overwrite-schemas-and-resolvers-on-regneration",
     );
-    await cpForce(join(testProjectsDir, NEW_PROJECT), outDir);
+    await cpForce(join(testProjectsDir, WITH_DOCUMENT_MODELS_SPEC_2), outDir);
     const subgraphsDir = join(outDir, "subgraphs");
+    const documentModelsDir = join(outDir, "document-models");
+    const documentModel = await loadDocumentModel(
+      join(documentModelsDir, "test-doc", "test-doc.json"),
+    );
 
     // Generate with document model
     await tsMorphGenerateSubgraph({
       subgraphsDir,
       subgraphName: "force-test",
-      packageName: "test-pkg",
-      documentModel: testDocModel,
+      documentModel,
     });
 
     const schema1 = await readFile(
@@ -248,9 +198,10 @@ describe("generateSubgraph", () => {
     await tsMorphGenerateSubgraph({
       subgraphsDir,
       subgraphName: "force-test",
-      packageName: "different-pkg",
-      documentModel: testDocModel,
+      documentModel,
     });
+
+    await runTsc(outDir);
 
     const schema2 = await readFile(
       join(subgraphsDir, "force-test", "schema.ts"),
@@ -264,6 +215,6 @@ describe("generateSubgraph", () => {
       join(subgraphsDir, "force-test", "resolvers.ts"),
       "utf-8",
     );
-    expect(resolvers2).toContain("different-pkg/document-models/test-doc");
+    expect(resolvers2).toContain("document-models/test-doc");
   });
 });

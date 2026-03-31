@@ -59,7 +59,7 @@
     {
       "id": "vetra-drive-app",
       "name": "Vetra Drive App",
-      "driveEditor": "vetra-drive-app"
+      "app": "vetra-drive-app"
     }
   ],
   "subgraphs": [],
