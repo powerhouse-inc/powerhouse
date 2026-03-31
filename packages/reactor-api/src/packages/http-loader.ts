@@ -1,11 +1,6 @@
 import type { IDocumentModelLoader } from "@powerhousedao/reactor";
-import type {
-  ProcessorFactoryBuilder,
-  SubgraphClass,
-} from "@powerhousedao/reactor-api";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import { childLogger } from "document-model";
-import type { IPackageLoader } from "./types.js";
 
 export interface HttpPackageLoaderOptions {
   registryUrl: string;
@@ -16,12 +11,8 @@ export interface HttpPackageLoaderLogger {
   error: (msg: string, err: unknown) => void;
 }
 
-// Expected shape of the bundle exports
+// Expected shape of the document-models bundle export
 type DocumentModelsExport = Record<string, DocumentModelModule>;
-type SubgraphsExport = Record<string, Record<string, SubgraphClass>>;
-type ProcessorsExport = {
-  processorFactory?: ProcessorFactoryBuilder;
-};
 
 /**
  * Loads document models from an HTTP registry.
@@ -31,7 +22,7 @@ type ProcessorsExport = {
  *   import { register } from "node:module";
  *   register("@powerhousedao/reactor-api/https-hooks", import.meta.url);
  */
-export class HttpPackageLoader implements IDocumentModelLoader, IPackageLoader {
+export class HttpPackageLoader implements IDocumentModelLoader {
   private readonly registryUrl: string;
   private readonly logger = childLogger(["reactor-api", "http-loader"]);
 
@@ -160,73 +151,6 @@ export class HttpPackageLoader implements IDocumentModelLoader, IPackageLoader {
     }
 
     return allModels;
-  }
-
-  /**
-   * Load subgraphs from a package in the HTTP registry.
-   */
-  async loadSubgraphs(packageSpec: string): Promise<SubgraphClass[]> {
-    const { name: packageName } = this.parsePackageSpec(packageSpec);
-    if (!this.isValidPackageName(packageName)) {
-      throw new Error(`Invalid package name: ${packageName}`);
-    }
-
-    const url = `${this.registryUrl}-/cdn/${packageSpec}/subgraphs/index.js`;
-
-    try {
-      this.logger.verbose(`Importing subgraphs from: ${url}`);
-      const module = (await import(url)) as SubgraphsExport;
-
-      const subgraphs = Object.values(module)
-        .flatMap((subgraphGroup) => Object.values(subgraphGroup))
-        .filter(
-          (s): s is SubgraphClass =>
-            s !== null && typeof s === "function" && "prototype" in s,
-        );
-
-      this.logger.verbose(
-        `Loaded ${subgraphs.length} subgraphs from ${packageName}`,
-      );
-      return subgraphs;
-    } catch (error) {
-      this.logger.verbose(
-        `No subgraphs found in ${packageName}: ${error instanceof Error ? error.message : String(error)}`,
-      );
-      return [];
-    }
-  }
-
-  /**
-   * Load processor factory from a package in the HTTP registry.
-   */
-  async loadProcessors(
-    packageSpec: string,
-  ): Promise<ProcessorFactoryBuilder | null> {
-    const { name: packageName } = this.parsePackageSpec(packageSpec);
-    if (!this.isValidPackageName(packageName)) {
-      throw new Error(`Invalid package name: ${packageName}`);
-    }
-
-    const url = `${this.registryUrl}-/cdn/${packageSpec}/processors/index.js`;
-
-    try {
-      this.logger.verbose(`Importing processors from: ${url}`);
-      const module = (await import(url)) as ProcessorsExport;
-
-      const factory = module?.processorFactory;
-      if (factory && typeof factory === "function") {
-        this.logger.verbose(`Loaded processor factory from ${packageName}`);
-        return factory;
-      }
-
-      this.logger.verbose(`No processor factory found in ${packageName}`);
-      return null;
-    } catch (error) {
-      this.logger.verbose(
-        `No processors found in ${packageName}: ${error instanceof Error ? error.message : String(error)}`,
-      );
-      return null;
-    }
   }
 
   /**
