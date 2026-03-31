@@ -64,14 +64,37 @@ export class HttpPackageLoader implements IDocumentModelLoader {
    * Load document models from a package in the HTTP registry.
    * Imports directly from HTTP URL using Node.js loader hooks.
    */
+  /**
+   * Parse a package specifier like "@scope/pkg@tag" into name and optional tag.
+   */
+  private parsePackageSpec(spec: string): {
+    name: string;
+    tag: string | undefined;
+  } {
+    if (spec.startsWith("@")) {
+      const lastAt = spec.lastIndexOf("@");
+      if (lastAt > 0 && lastAt !== spec.indexOf("@")) {
+        return { name: spec.slice(0, lastAt), tag: spec.slice(lastAt + 1) };
+      }
+      return { name: spec, tag: undefined };
+    }
+    const atIndex = spec.indexOf("@");
+    if (atIndex > 0) {
+      return { name: spec.slice(0, atIndex), tag: spec.slice(atIndex + 1) };
+    }
+    return { name: spec, tag: undefined };
+  }
+
   async loadDocumentModels(
-    packageName: string,
+    packageSpec: string,
   ): Promise<DocumentModelModule[]> {
+    const { name: packageName } = this.parsePackageSpec(packageSpec);
     if (!this.isValidPackageName(packageName)) {
       throw new Error(`Invalid package name: ${packageName}`);
     }
 
-    const url = `${this.registryUrl}-/cdn/${packageName}/document-models/index.js`;
+    // Pass the full spec (with tag) to the CDN — the registry resolves it
+    const url = `${this.registryUrl}-/cdn/${packageSpec}/document-models/index.js`;
 
     try {
       this.logger.verbose(`Importing document-models from: ${url}`);
