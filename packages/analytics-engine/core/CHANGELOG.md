@@ -1,3 +1,13 @@
+## 6.0.0-dev.142 (2026-03-31)
+
+### 🩹 Fixes
+
+- **docker:** use scoped registry for @powerhousedao instead of global override ([33d06b487](https://github.com/powerhouse-inc/powerhouse/commit/33d06b487))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 6.0.0-dev.141 (2026-03-31)
 
 This was a version bump only for @powerhousedao/analytics-engine-core to align it with other projects, there were no code changes.
