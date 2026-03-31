@@ -60,7 +60,6 @@ export type ActionFromOperation = {
 
 export type GenerateDocumentModelArgs = {
   projectDir: string;
-  packageName: string;
   documentModelState: DocumentModelGlobalState;
   useVersioning: boolean;
   migrateLegacy?: boolean;
