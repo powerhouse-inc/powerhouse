@@ -109,7 +109,6 @@ async function initServer(
   const readModelPath = dbPath || ".ph/read-storage";
 
   // HTTP registry package loading
-  let httpDocumentModels: DocumentModelModule[] = [];
   const configPath =
     options.configFile ?? path.join(process.cwd(), "powerhouse.config.json");
   const config = getConfig(configPath);
@@ -121,13 +120,9 @@ async function initServer(
     httpLoader = new HttpPackageLoader({ registryUrl });
   }
 
-  if (httpLoader && registryPackages) {
-    const packageNames = registryPackages.split(",").map((p) => p.trim());
-    httpDocumentModels = await httpLoader.loadPackages(packageNames, logger);
-    logger.info(
-      `Loaded ${httpDocumentModels.length} HTTP document models from ${packageNames.length} packages`,
-    );
-  }
+  const registryPackageNames = registryPackages
+    ? registryPackages.split(",").map((p) => p.trim()).filter(Boolean)
+    : [];
 
   const reactorLogger = logger.child(["reactor"]);
   const initializeClient = async (documentModels: DocumentModelModule[]) => {
@@ -140,7 +135,6 @@ async function initServer(
           driveDocumentModelModule,
           ...vetraDocumentModels,
           ...documentModels,
-          ...httpDocumentModels,
         ]),
       )
       .withChannelScheme(ChannelScheme.SWITCHBOARD)
@@ -216,8 +210,10 @@ async function initServer(
     packages.push(basePath);
   }
 
-  // create loader
-  const packageLoader = vite ? VitePackageLoader.build(vite) : undefined;
+  // create loader — prefer HTTP loader when registry is configured, otherwise
+  // fall back to Vite (dev) or the default ImportPackageLoader
+  const packageLoader = httpLoader
+    ?? (vite ? VitePackageLoader.build(vite) : undefined);
 
   const apiLogger = logger.child(["reactor-api"]);
   const api = await initializeAndStartAPI(
@@ -227,7 +223,7 @@ async function initServer(
       dbPath: readModelPath,
       https: options.https,
       packageLoader,
-      packages: packages,
+      packages: [...packages, ...registryPackageNames],
       processorConfig: options.processorConfig,
       processors: {
         "@powerhousedao/vetra": [vetraProcessorFactory],
