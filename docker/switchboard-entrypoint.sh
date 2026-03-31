@@ -3,13 +3,13 @@ set -e
 
 # Install additional packages at startup if PH_PACKAGES is set
 if [ -n "$PH_PACKAGES" ]; then
-    # Use PH_REGISTRY_URL if set — the registry proxies non-powerhouse
-    # packages to npm so all deps resolve through a single endpoint
-    REGISTRY_FLAG=""
+    # Configure scoped registry for @powerhousedao packages if PH_REGISTRY_URL is set
+    # This avoids routing ALL packages through the custom registry (which may not proxy npm reliably)
     if [ -n "$PH_REGISTRY_URL" ]; then
-        REGISTRY_FLAG="--registry=$PH_REGISTRY_URL"
-        echo "[entrypoint] Using registry: $PH_REGISTRY_URL"
+        echo "[entrypoint] Using registry for @powerhousedao: $PH_REGISTRY_URL"
+        npm config set @powerhousedao:registry "$PH_REGISTRY_URL"
     fi
+    REGISTRY_FLAG=""
     echo "[entrypoint] Installing packages: $PH_PACKAGES"
     echo "$PH_PACKAGES" | tr ',' '\n' | while read -r pkg; do
         pkg=$(echo "$pkg" | xargs)
