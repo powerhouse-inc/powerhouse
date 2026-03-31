@@ -1,4 +1,3 @@
-import type { IProcessorHostModule } from "@powerhousedao/reactor";
 import type {
   ProcessorFactoryBuilder,
   SubgraphClass,
@@ -7,7 +6,6 @@ import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import { childLogger } from "document-model";
 import { execSync } from "node:child_process";
 import path from "node:path";
-import { cwd } from "node:process";
 import { resolveLinkedPackage } from "./import-resolver.js";
 
 // Define the expected module export structures
@@ -65,7 +63,7 @@ export async function loadProcessors(
 async function loadDependency<T = unknown>(
   packageName: string,
   subPath: string,
-): Promise<T | null> {
+): Promise<T> {
   const fullPath = `${packageName}/${subPath}`;
 
   // Try the standard import first
@@ -85,25 +83,8 @@ async function loadDependency<T = unknown>(
     ) {
       const result = await resolveLinkedPackage<T>(packageName, subPath);
       if (result) return result;
-
-      // Only log when ALL attempts have failed
-      logger.warn(
-        `Unable to load dependency ${fullPath}.${packageName === cwd() ? " Did you build your project?" : ""}`,
-      );
-      logger.debug("@error", e);
-    } else if (
-      e instanceof Error &&
-      "code" in e &&
-      ["ERR_PACKAGE_PATH_NOT_EXPORTED", "ERR_MODULE_NOT_FOUND"].includes(
-        e.code as string,
-      )
-    ) {
-      return null;
-    } else {
-      logger.error(`Unexpected error loading ${fullPath}:`, e);
     }
-
-    return null;
+    throw e;
   }
 }
 

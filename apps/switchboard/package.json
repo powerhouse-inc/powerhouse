@@ -1,7 +1,7 @@
 {
   "name": "@powerhousedao/switchboard",
   "type": "module",
-  "version": "6.0.0-dev.142",
+  "version": "6.0.0-dev.143",
   "main": "dist/index.mjs",
   "exports": {
     ".": {
@@ -67,7 +67,7 @@
     "kysely": "catalog:",
     "kysely-pglite-dialect": "catalog:",
     "pg": "catalog:",
-    "redis": "^4.7.0"
+    "react": "catalog:"
   },
   "devDependencies": {
     "@types/express": "^4.17.25",

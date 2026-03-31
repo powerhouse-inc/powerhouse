@@ -79,7 +79,7 @@ type Options = {
       }
     | boolean
     | undefined;
-  packageLoader?: IPackageLoader;
+  packageLoaders?: IPackageLoader[];
   processors?: Record<string, ProcessorInitializer[]>;
   mcp?: boolean;
   processorConfig?: Map<string, unknown>;
@@ -423,8 +423,9 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   }
 
   // Initialize package manager
-  const packageLoader = options.packageLoader ?? new ImportPackageLoader();
-  const loaders: IPackageLoader[] = [packageLoader];
+  const loaders: IPackageLoader[] = options.packageLoaders ?? [
+    new ImportPackageLoader(),
+  ];
 
   const packages = new PackageManager(loaders, {
     configFile: options.configFile,

@@ -1,7 +1,7 @@
 import express from "express";
 import { findUp } from "find-up";
-import type { EventEmitter } from "node:events";
 import { mkdir } from "node:fs/promises";
+import type { Server } from "node:http";
 import path from "node:path";
 import { runServer } from "verdaccio";
 import { createPowerhouseRouter, createPublishHook } from "./middleware.js";
@@ -84,8 +84,7 @@ export async function runRegistry(args: RegistryCommandArgs) {
   const verdaccioConfig = buildVerdaccioConfig(config);
 
   // verdaccio's runServer returns Promise<any> (upstream type limitation)
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-  const verdaccioServer: EventEmitter = await runServer(verdaccioConfig);
+  const verdaccioServer = (await runServer(verdaccioConfig)) as Server;
   const verdaccioHandler = verdaccioServer.listeners("request")[0] as (
     ...args: unknown[]
   ) => void;

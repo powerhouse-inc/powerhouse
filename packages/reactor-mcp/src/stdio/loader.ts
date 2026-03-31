@@ -36,6 +36,8 @@ export class VitePackageLoader implements IPackageLoader {
 
   private vite: ViteDevServer | undefined;
 
+  readonly name = "VitePackageLoader";
+
   constructor(root: string, documentModelsDir: string) {
     this.root = root;
     this.documentModelsDir = documentModelsDir;

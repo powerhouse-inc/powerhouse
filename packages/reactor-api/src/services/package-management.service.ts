@@ -110,10 +110,10 @@ export class PackageManagementService {
     this.loadedModulesCache.delete(name);
 
     if (this.httpLoader) {
-      this.httpLoader.removeFromCache(name);
+      this.httpLoader.documentModelLoader.removeFromCache(name);
     }
 
-    if (this.documentModelRegistry && existing) {
+    if (this.documentModelRegistry) {
       this.documentModelRegistry.unregisterModules(...existing.documentTypes);
     }
 

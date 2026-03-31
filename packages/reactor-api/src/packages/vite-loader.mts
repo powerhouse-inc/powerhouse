@@ -31,6 +31,8 @@ export class VitePackageLoader implements ISubscribablePackageLoader {
 
   private readonly vite: ViteDevServer;
 
+  readonly name = "VitePackageLoader";
+
   static build(vite: ViteDevServer) {
     return new VitePackageLoader(vite);
   }
