@@ -75,19 +75,19 @@ export const generateArgs = {
     description:
       "[DEPRECATED] Comma separated list of document types for the generated document editor. [WARNING] Generated editor code is not set up to handle multiple document types.",
   }),
-  driveEditorName: option({
+  appName: option({
     type: optional(string),
-    long: "drive-editor",
+    long: "app",
     description: "Drive editor name.",
   }),
-  driveEditorId: option({
+  appId: option({
     type: optional(string),
     long: "app-id",
     description: "Drive editor ID.",
   }),
-  driveEditorDirName: option({
+  appDirName: option({
     type: optional(string),
-    long: "drive-editor-dir-name",
+    long: "app-dir-name",
     description:
       "Use a different directory name for the generated drive editor. Default is the drive editor name in kebab case.",
   }),

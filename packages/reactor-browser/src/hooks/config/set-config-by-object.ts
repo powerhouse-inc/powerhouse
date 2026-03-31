@@ -1,8 +1,8 @@
 import type {
+  PHAppConfig,
+  PHAppConfigKey,
   PHDocumentEditorConfig,
   PHDocumentEditorConfigKey,
-  PHDriveEditorConfig,
-  PHDriveEditorConfigKey,
   PHGlobalConfig,
   PHGlobalConfigKey,
 } from "@powerhousedao/reactor-browser";
@@ -51,8 +51,8 @@ export function useSetPHGlobalConfig(config: Partial<PHGlobalConfig>) {
  *
  * Pass in a partial object of the global drive config to set.
  */
-export function setPHDriveEditorConfig(config: Partial<PHDriveEditorConfig>) {
-  for (const key of Object.keys(config) as PHDriveEditorConfigKey[]) {
+export function setPHAppConfig(config: Partial<PHAppConfig>) {
+  for (const key of Object.keys(config) as PHAppConfigKey[]) {
     callGlobalSetterForKey(key, config[key]);
   }
 }
@@ -75,14 +75,12 @@ export function setPHDocumentEditorConfig(
  *
  * Pass in a partial object of the global drive editor config to set.
  */
-export function useSetPHDriveEditorConfig(
-  config: Partial<PHDriveEditorConfig>,
-) {
+export function useSetPHAppConfig(config: Partial<PHAppConfig>) {
   const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
     if (isInitialized) return;
-    setPHDriveEditorConfig(config);
+    setPHAppConfig(config);
     setIsInitialized(true);
   }, [config, isInitialized]);
 }

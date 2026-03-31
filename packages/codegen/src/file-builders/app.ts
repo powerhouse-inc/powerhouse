@@ -1,12 +1,12 @@
 import type { CommonGenerateEditorArgs } from "@powerhousedao/codegen";
 import path from "path";
 import {
+  appConfigFileTemplate,
+  appDriveContentsFileTemplate,
+  appEditorFileTemplate,
+  appFilesFileTemplate,
+  appFoldersFileTemplate,
   createDocumentFileTemplate,
-  driveEditorConfigFileTemplate,
-  driveEditorDriveContentsFileTemplate,
-  driveEditorEditorFileTemplate,
-  driveEditorFilesFileTemplate,
-  driveEditorFoldersFileTemplate,
   driveExplorerFileTemplate,
   driveExplorerNavigationBreadcrumbsFileTemplate,
   emptyStateFileTemplate,
@@ -22,19 +22,19 @@ import {
 import { makeEditorModuleFile } from "./editor-common.js";
 import { makeEditorsModulesFile } from "./module-files.js";
 
-type GenerateDriveEditorArgs = CommonGenerateEditorArgs & {
+type GenerateAppArgs = CommonGenerateEditorArgs & {
   allowedDocumentModelIds: string[];
   isDragAndDropEnabled: boolean;
 };
 /** Generates a drive editor with the configs for `allowedDocumentModelIds` and `isDragAndDropEnabled` */
-export async function tsMorphGenerateDriveEditor({
+export async function tsMorphGenerateApp({
   projectDir,
   editorDir,
   editorName,
   editorId,
   allowedDocumentModelIds,
   isDragAndDropEnabled,
-}: GenerateDriveEditorArgs) {
+}: GenerateAppArgs) {
   const documentModelsDirPath = path.join(projectDir, "document-models");
   const documentModelsSourceFilesPath = path.join(
     documentModelsDirPath,
@@ -96,12 +96,12 @@ export async function tsMorphGenerateDriveEditor({
     editorComponentsDirPath,
   });
 
-  await makeDriveEditorComponent({
+  await makeAppComponent({
     project,
     editorDirPath,
   });
 
-  await makeDriveEditorConfigFile({
+  await makeAppConfigFile({
     project,
     allowedDocumentModelIds,
     isDragAndDropEnabled,
@@ -121,14 +121,14 @@ export async function tsMorphGenerateDriveEditor({
   await project.save();
 }
 
-type MakeDriveEditorComponentArgs = {
+type MakeAppComponentArgs = {
   project: Project;
   editorDirPath: string;
 };
-async function makeDriveEditorComponent({
+async function makeAppComponent({
   project,
   editorDirPath,
-}: MakeDriveEditorComponentArgs) {
+}: MakeAppComponentArgs) {
   const filePath = path.join(editorDirPath, "editor.tsx");
   const { alreadyExists, sourceFile } = getOrCreateSourceFile(
     project,
@@ -144,29 +144,29 @@ async function makeDriveEditorComponent({
       return;
     }
   }
-  const template = driveEditorEditorFileTemplate();
+  const template = appEditorFileTemplate();
   sourceFile.replaceWithText(template);
   await formatSourceFileWithPrettier(sourceFile);
 }
 
-type MakeDriveEditorConfigFileArgs = {
+type MakeAppConfigFileArgs = {
   project: Project;
   editorDirPath: string;
   allowedDocumentModelIds: string[];
   isDragAndDropEnabled: boolean;
 };
-async function makeDriveEditorConfigFile({
+async function makeAppConfigFile({
   project,
   editorDirPath,
   allowedDocumentModelIds,
   isDragAndDropEnabled,
-}: MakeDriveEditorConfigFileArgs) {
+}: MakeAppConfigFileArgs) {
   const filePath = path.join(editorDirPath, "config.ts");
   const { sourceFile } = getOrCreateSourceFile(project, filePath);
   const allowedDocumentTypesString = JSON.stringify(allowedDocumentModelIds);
   const isDragAndDropEnabledString = isDragAndDropEnabled ? "true" : "false";
 
-  const template = driveEditorConfigFileTemplate({
+  const template = appConfigFileTemplate({
     isDragAndDropEnabledString,
     allowedDocumentTypesString,
   });
@@ -190,7 +190,7 @@ async function makeDriveContentsFile({
 
   if (alreadyExists) return;
 
-  const template = driveEditorDriveContentsFileTemplate();
+  const template = appDriveContentsFileTemplate();
   sourceFile.replaceWithText(template);
   await formatSourceFileWithPrettier(sourceFile);
 }
@@ -235,7 +235,7 @@ async function makeFoldersFile({
 
   if (alreadyExists) return;
 
-  const template = driveEditorFoldersFileTemplate();
+  const template = appFoldersFileTemplate();
   sourceFile.replaceWithText(template);
   await formatSourceFileWithPrettier(sourceFile);
 }
@@ -256,7 +256,7 @@ async function makeFilesFile({
 
   if (alreadyExists) return;
 
-  const template = driveEditorFilesFileTemplate();
+  const template = appFilesFileTemplate();
   sourceFile.replaceWithText(template);
   await formatSourceFileWithPrettier(sourceFile);
 }

@@ -1,4 +1,4 @@
-import { generateDriveEditor, generateManifest } from "@powerhousedao/codegen";
+import { generateApp, generateManifest } from "@powerhousedao/codegen";
 import type {
   AppModuleGlobalState,
   AppModulePHState,
@@ -73,10 +73,10 @@ export class AppGenerator extends BaseDocumentGen {
         // Generate app ID using kebabCase
         const appId: string = kebabCase(state.name);
         // Generate the drive editor using the codegen function
-        await generateDriveEditor({
+        await generateApp({
           ...this.config.PH_CONFIG,
-          driveEditorName: state.name,
-          driveEditorId: appId,
+          appName: state.name,
+          appId: appId,
           allowedDocumentTypes: state.allowedDocumentTypes ?? [],
           isDragAndDropEnabled: state.isDragAndDropEnabled,
         });
@@ -97,7 +97,7 @@ export class AppGenerator extends BaseDocumentGen {
                 {
                   id: appId,
                   name: state.name,
-                  driveEditor: appId,
+                  app: appId,
                 } as any,
               ],
             },

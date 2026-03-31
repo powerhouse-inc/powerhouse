@@ -1,6 +1,6 @@
-import type { PHDriveEditorConfig } from "@powerhousedao/reactor-browser";
+import type { PHAppConfig } from "@powerhousedao/reactor-browser";
 
-export const editorConfig: PHDriveEditorConfig = {
+export const editorConfig: PHAppConfig = {
   allowedDocumentTypes: [
     "powerhouse/document-model",
     "powerhouse/app",

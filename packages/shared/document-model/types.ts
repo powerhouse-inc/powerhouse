@@ -1527,7 +1527,7 @@ export type EditorModule<TProps = any> = {
 export type App = {
   id: string;
   name: string;
-  driveEditor?: string;
+  app?: string;
 };
 
 export type Manifest = {

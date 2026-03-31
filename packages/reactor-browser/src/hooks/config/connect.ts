@@ -1,6 +1,6 @@
 import type {
+  PHAppConfigKey,
   PHDocumentEditorConfigKey,
-  PHDriveEditorConfigKey,
   PHGlobalConfigHooks,
   PHGlobalConfigHooksForKey,
   PHGlobalConfigKey,
@@ -9,10 +9,10 @@ import type {
 } from "@powerhousedao/reactor-browser";
 import { makePHEventFunctions } from "../make-ph-event-functions.js";
 import {
+  phAppConfigHooks,
+  phAppConfigSetters,
   phDocumentEditorConfigHooks,
   phDocumentEditorConfigSetters,
-  phDriveEditorConfigHooks,
-  phDriveEditorConfigSetters,
 } from "./editor.js";
 
 export const {
@@ -368,7 +368,7 @@ export const addAllowListEventHandler = allowListEventFunctions.addEventHandler;
 
 type NonUserConfigKey = Exclude<
   PHGlobalConfigKey,
-  PHDriveEditorConfigKey | PHDocumentEditorConfigKey
+  PHAppConfigKey | PHDocumentEditorConfigKey
 >;
 type NonUserConfigSetters = PHGlobalConfigSettersForKey<NonUserConfigKey>;
 type NonUserConfigHooks = PHGlobalConfigHooksForKey<NonUserConfigKey>;
@@ -425,7 +425,7 @@ const nonUserConfigSetters: NonUserConfigSetters = {
 };
 
 export const phGlobalConfigSetters: PHGlobalConfigSetters = {
-  ...phDriveEditorConfigSetters,
+  ...phAppConfigSetters,
   ...phDocumentEditorConfigSetters,
   ...nonUserConfigSetters,
 };
@@ -482,7 +482,7 @@ const nonUserConfigHooks: NonUserConfigHooks = {
 };
 
 export const phGlobalConfigHooks: PHGlobalConfigHooks = {
-  ...phDriveEditorConfigHooks,
+  ...phAppConfigHooks,
   ...phDocumentEditorConfigHooks,
   ...nonUserConfigHooks,
 };

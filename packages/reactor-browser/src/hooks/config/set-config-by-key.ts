@@ -1,16 +1,13 @@
 import type {
+  PHAppConfig,
+  PHAppConfigKey,
   PHDocumentEditorConfig,
   PHDocumentEditorConfigKey,
-  PHDriveEditorConfig,
-  PHDriveEditorConfigKey,
   PHGlobalConfig,
   PHGlobalConfigKey,
 } from "@powerhousedao/reactor-browser";
 import { phGlobalConfigSetters } from "./connect.js";
-import {
-  phDocumentEditorConfigSetters,
-  phDriveEditorConfigSetters,
-} from "./editor.js";
+import { phAppConfigSetters, phDocumentEditorConfigSetters } from "./editor.js";
 
 export function setPHGlobalConfigByKey<TKey extends PHGlobalConfigKey>(
   key: TKey,
@@ -20,10 +17,11 @@ export function setPHGlobalConfigByKey<TKey extends PHGlobalConfigKey>(
   setter(value);
 }
 
-export function setPHDriveEditorConfigByKey<
-  TKey extends PHDriveEditorConfigKey,
->(key: TKey, value: PHDriveEditorConfig[TKey] | undefined) {
-  const setter = phDriveEditorConfigSetters[key];
+export function setPHAppConfigByKey<TKey extends PHAppConfigKey>(
+  key: TKey,
+  value: PHAppConfig[TKey] | undefined,
+) {
+  const setter = phAppConfigSetters[key];
   setter(value);
 }
 

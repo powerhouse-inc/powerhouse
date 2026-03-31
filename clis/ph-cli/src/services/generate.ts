@@ -1,7 +1,7 @@
 import {
+  generateApp,
   generate as generateCode,
   generateDBSchema,
-  generateDriveEditor,
   generateEditor,
   generateFromFile,
   generateImportScript,
@@ -24,9 +24,9 @@ export async function startGenerate(options: GenerateArgs) {
     // [DEPRECATED] - should be removed asap
     documentTypes,
     editorDirName,
-    driveEditorName,
-    driveEditorId,
-    driveEditorDirName,
+    appName,
+    appId,
+    appDirName,
     allowedDocumentTypes,
     disableDragAndDrop,
     processorName,
@@ -72,11 +72,11 @@ export async function startGenerate(options: GenerateArgs) {
       documentTypes: [documentTypeToUse],
       skipFormat,
     });
-  } else if (driveEditorName !== undefined) {
-    await generateDriveEditor({
-      driveEditorName,
-      driveEditorId,
-      driveEditorDirName,
+  } else if (appName !== undefined) {
+    await generateApp({
+      appName,
+      appId,
+      appDirName,
       allowedDocumentTypes,
       isDragAndDropEnabled,
       skipFormat,

@@ -1,11 +1,11 @@
 import {
-  addDocument,
-  setSelectedNode,
-  showCreateDocumentModal,
-  showDeleteNodeModal,
-  useDocumentModelModules,
-  useSelectedDrive,
-  useSetPHDriveEditorConfig,
+    addDocument,
+    setSelectedNode,
+    showCreateDocumentModal,
+    showDeleteNodeModal,
+    useDocumentModelModules,
+    useSelectedDrive,
+    useSetPHAppConfig,
 } from "@powerhousedao/reactor-browser";
 import type { FileNode } from "@powerhousedao/shared/document-drive";
 import type { EditorProps } from "@powerhousedao/shared/document-model";
@@ -121,6 +121,6 @@ export function BaseEditor(props: EditorProps) {
 }
 
 export default function Editor(props: EditorProps) {
-  useSetPHDriveEditorConfig(editorConfig);
+  useSetPHAppConfig(editorConfig);
   return <BaseEditor {...props} />;
 }

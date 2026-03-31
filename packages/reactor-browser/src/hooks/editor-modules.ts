@@ -11,7 +11,7 @@ export function useEditorModules(): VetraEditorModule[] | undefined {
     );
 }
 
-export function useDriveEditorModules(): VetraEditorModule[] | undefined {
+export function useAppModules(): VetraEditorModule[] | undefined {
   const vetraPackages = useVetraPackages();
   return vetraPackages
     ?.flatMap((pkg) => pkg.modules.editorModules || [])
@@ -33,18 +33,16 @@ export function useFallbackEditorModule(
   return modulesForType?.[0];
 }
 
-export function useDriveEditorModuleById(
+export function useAppModuleById(
   id: string | null | undefined,
 ): VetraEditorModule | undefined {
-  const driveEditorModules = useDriveEditorModules();
-  return driveEditorModules?.find((module) => module.id === id);
+  const appModules = useAppModules();
+  return appModules?.find((module) => module.id === id);
 }
 
-export function useDefaultDriveEditorModule(): VetraEditorModule | undefined {
-  const defaultDriveEditorModule = useDriveEditorModuleById(
-    DEFAULT_DRIVE_EDITOR_ID,
-  );
-  return defaultDriveEditorModule;
+export function useDefaultAppModule(): VetraEditorModule | undefined {
+  const defaultAppModule = useAppModuleById(DEFAULT_DRIVE_EDITOR_ID);
+  return defaultAppModule;
 }
 
 export function useEditorModuleById(

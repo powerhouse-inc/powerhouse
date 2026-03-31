@@ -59,17 +59,17 @@ Document type for the generated document editor.<br><br>
 [DEPRECATED] Comma separated list of document types for the generated document editor. [WARNING] Generated editor code is not set up to handle multiple document types.<br><br>
 **usage:** `--document-types <str>`<br>
 
-#### Drive Editor <br>
+#### App <br>
 Drive editor name.<br><br>
-**usage:** `--drive-editor <str>`<br>
+**usage:** `--app <str>`<br>
 
 #### App Id <br>
 Drive editor ID.<br><br>
 **usage:** `--app-id <str>`<br>
 
-#### Drive Editor Dir Name <br>
+#### App Dir Name <br>
 Use a different directory name for the generated drive editor. Default is the drive editor name in kebab case.<br><br>
-**usage:** `--drive-editor-dir-name <str>`<br>
+**usage:** `--app-dir-name <str>`<br>
 
 #### Processor <br>
 Processor name.<br><br>

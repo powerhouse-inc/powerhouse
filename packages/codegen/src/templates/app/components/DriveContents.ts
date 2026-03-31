@@ -1,6 +1,6 @@
 import { tsx } from "@tmpl/core";
 
-export const driveEditorDriveContentsFileTemplate = () =>
+export const appDriveContentsFileTemplate = () =>
   tsx`
 import { CreateDocument } from "./CreateDocument.js";
 import { EmptyState } from "./EmptyState.js";
