@@ -2,7 +2,6 @@
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
     "outDir": "./dist",
-    "emitDeclarationOnly": true,
     "paths": {
       "@powerhousedao/connect/config": [
         "./src/connect.config.ts"

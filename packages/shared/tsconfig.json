@@ -4,7 +4,6 @@
   "compilerOptions": {
     // output transpiled code in the dist file relative to this package's root
     "outDir": "./dist",
-    "emitDeclarationOnly": true,
     "paths": {
       "types": ["./types.ts"],
       "constants": ["./constants.ts"],

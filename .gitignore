@@ -27,6 +27,7 @@ __screenshots__/
 __pycache__/
 hotseat.json
 .hotseat
+.mcp.json
 
 # Identity/auth credential files
 .renown.json

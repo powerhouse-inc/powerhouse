@@ -1,7 +1,6 @@
 {
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
-    "emitDeclarationOnly": true,
     "types": ["node", "vitest/globals", "@types/wicg-file-system-access"],
     "outDir": "./dist",
     "lib": ["ESNext", "dom", "dom.iterable"]
