@@ -1,3 +1,13 @@
+## 6.0.0-dev.134 (2026-03-31)
+
+### 🚀 Features
+
+- remove usage of package name in codegen ([#2455](https://github.com/powerhouse-inc/powerhouse/pull/2455))
+
+### ❤️ Thank You
+
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.0.0-dev.133 (2026-03-31)
 
 This was a version bump only for @powerhousedao/codegen to align it with other projects, there were no code changes.

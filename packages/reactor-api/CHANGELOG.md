@@ -1,3 +1,13 @@
+## 6.0.0-dev.134 (2026-03-31)
+
+### 🚀 Features
+
+- **reactor-api:** support version tags in HTTP package loader ([525c894e8](https://github.com/powerhouse-inc/powerhouse/commit/525c894e8))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 6.0.0-dev.133 (2026-03-31)
 
 This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
