@@ -1,4 +1,4 @@
-export { CdnCache } from "./cdn.js";
+export { CdnCache, parsePackageSpec } from "./cdn.js";
 export { createPowerhouseRouter, createPublishHook } from "./middleware.js";
 export {
   NotificationManager,
