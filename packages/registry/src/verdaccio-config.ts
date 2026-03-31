@@ -22,6 +22,7 @@ export function buildVerdaccioConfig(config: RegistryConfig) {
         access: "$all",
         publish: "$authenticated",
         unpublish: "$authenticated",
+        proxy: "npmjs",
       },
       "**": {
         access: "$all",
