@@ -5,6 +5,7 @@
     // output transpiled code in the dist file relative to this package's root
     "outDir": "./dist",
     "emitDeclarationOnly": true,
+    "customConditions": ["source"],
     "paths": {
       "types": ["./types.ts"],
       "constants": ["./constants.ts"],
@@ -12,37 +13,37 @@
         "./analytics/index.ts"
       ],
       "analytics/*": [
-        "./analytics/*"
+        "./analytics/*.ts"
       ],
       "connect": [
         "./connect/index.ts"
       ],
       "connect/*": [
-        "./connect/*"
+        "./connect/*.ts"
       ],
       "document-drive": [
         "./document-drive/index.ts"
       ],
       "document-drive/*": [
-        "./document-drive/*"
+        "./document-drive/*.ts"
       ],
       "document-model": [
         "./document-model/index.ts"
       ],
       "document-model/*": [
-        "./document-model/*"
+        "./document-model/*.ts"
       ],
       "processors": [
         "./processors/index.ts"
       ],
       "processors/*": [
-        "./processors/*"
+        "./processors/*.ts"
       ],
       "registry": [
         "./registry/index.ts"
       ],
       "registry/*": [
-        "./registry/*"
+        "./registry/*.ts"
       ],
     }
   },

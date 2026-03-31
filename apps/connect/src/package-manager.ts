@@ -221,7 +221,7 @@ export class BrowserPackageManager implements IPackageManager {
   }
 
   async #loadPackageFromNodeModules(name: string): Promise<PackageWithMeta> {
-    const importUrl = `/node_modules/${name}/index.js`;
+    const importUrl = `/node_modules/${name}/browser/index.js`;
     const stylesheetUrl = `/node_modules/${name}/style.css`;
 
     const packageWithMeta = await this.#importPackage({
@@ -234,7 +234,7 @@ export class BrowserPackageManager implements IPackageManager {
   }
 
   async #loadPackageFromRegistry(name: string): Promise<PackageWithMeta> {
-    const importUrl = `${this.#cdnUrl}/${name}/index.js`;
+    const importUrl = `${this.#cdnUrl}/${name}/browser/index.js`;
     const stylesheetUrl = `${this.#cdnUrl}/${name}/style.css`;
     const packageWithMeta = await this.#importPackage({
       name,

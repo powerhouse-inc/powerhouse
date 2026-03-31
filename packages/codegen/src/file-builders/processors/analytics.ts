@@ -1,5 +1,9 @@
 import path from "path";
-import { analyticsFactoryTemplate, analyticsIndexTemplate } from "templates";
+import {
+  analyticsFactoryTemplate,
+  analyticsIndexTemplate,
+  analyticsProcessorTemplate,
+} from "templates";
 import type { Project } from "ts-morph";
 import { formatSourceFileWithPrettier, getOrCreateSourceFile } from "utils";
 import type { GenerateProcessorArgs } from "./types.js";
@@ -11,6 +15,12 @@ export async function tsMorphGenerateAnalyticsProcessor(
     args;
 
   await makeIndexFile({
+    project,
+    pascalCaseName,
+    dirPath,
+  });
+
+  await makeProcessorFile({
     project,
     pascalCaseName,
     dirPath,
@@ -30,10 +40,25 @@ async function makeIndexFile(v: {
   pascalCaseName: string;
   dirPath: string;
 }) {
-  const template = analyticsIndexTemplate(v);
+  const template = analyticsIndexTemplate;
   const { alreadyExists, sourceFile } = getOrCreateSourceFile(
     v.project,
     path.join(v.dirPath, "index.ts"),
+  );
+  if (alreadyExists) return;
+  sourceFile.replaceWithText(template);
+  await formatSourceFileWithPrettier(sourceFile);
+}
+
+async function makeProcessorFile(v: {
+  project: Project;
+  pascalCaseName: string;
+  dirPath: string;
+}) {
+  const template = analyticsProcessorTemplate(v);
+  const { alreadyExists, sourceFile } = getOrCreateSourceFile(
+    v.project,
+    path.join(v.dirPath, "processor.ts"),
   );
   if (alreadyExists) return;
   sourceFile.replaceWithText(template);
