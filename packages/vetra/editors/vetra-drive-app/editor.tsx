@@ -1,11 +1,11 @@
 import {
-    addDocument,
-    setSelectedNode,
-    showCreateDocumentModal,
-    showDeleteNodeModal,
-    useDocumentModelModules,
-    useSelectedDrive,
-    useSetPHAppConfig,
+  addDocument,
+  setSelectedNode,
+  showCreateDocumentModal,
+  showDeleteNodeModal,
+  useDocumentModelModules,
+  useSelectedDrive,
+  useSetPHAppConfig,
 } from "@powerhousedao/reactor-browser";
 import type { FileNode } from "@powerhousedao/shared/document-drive";
 import type { EditorProps } from "@powerhousedao/shared/document-model";

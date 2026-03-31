@@ -1,10 +1,10 @@
 import { DropZoneWrapper } from "@powerhousedao/design-system/connect";
 import { GenericDriveExplorer } from "@powerhousedao/powerhouse-vetra-packages/editors";
 import {
-    useAppModuleById,
-    useDefaultAppModule,
-    useSelectedDocumentId,
-    useSelectedDrive,
+  useAppModuleById,
+  useDefaultAppModule,
+  useSelectedDocumentId,
+  useSelectedDrive,
 } from "@powerhousedao/reactor-browser";
 import { Suspense } from "react";
 import { DocumentEditorContainer } from "./document-editor-container.js";
@@ -15,15 +15,11 @@ export function AppContainer() {
   const [selectedDrive] = useSelectedDrive();
   const selectedDocumentId = useSelectedDocumentId();
 
-  const app = useAppModuleById(
-    selectedDrive.header.meta?.preferredEditor,
-  );
+  const app = useAppModuleById(selectedDrive.header.meta?.preferredEditor);
   const defaultApp = useDefaultAppModule();
 
   const AppComponent =
-    app?.Component ??
-    defaultApp?.Component ??
-    GenericDriveExplorer.Component;
+    app?.Component ?? defaultApp?.Component ?? GenericDriveExplorer.Component;
 
   if (!AppComponent) {
     throw new Error("No drive editor component found");
