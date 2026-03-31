@@ -1,3 +1,18 @@
+## 6.0.0-dev.134 (2026-03-31)
+
+### 🚀 Features
+
+- remove usage of package name in codegen ([#2455](https://github.com/powerhouse-inc/powerhouse/pull/2455))
+
+### 🩹 Fixes
+
+- **ph-cli:** exclude reactor-api on browser build ([0c50c9fbf](https://github.com/powerhouse-inc/powerhouse/commit/0c50c9fbf))
+
+### ❤️ Thank You
+
+- acaldas
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.0.0-dev.133 (2026-03-31)
 
 This was a version bump only for @powerhousedao/ph-cli to align it with other projects, there were no code changes.

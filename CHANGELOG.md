@@ -1,3 +1,20 @@
+## 6.0.0-dev.134 (2026-03-31)
+
+### 🚀 Features
+
+- remove usage of package name in codegen ([#2455](https://github.com/powerhouse-inc/powerhouse/pull/2455))
+- **reactor-api:** support version tags in HTTP package loader ([525c894e8](https://github.com/powerhouse-inc/powerhouse/commit/525c894e8))
+
+### 🩹 Fixes
+
+- **ph-cli:** exclude reactor-api on browser build ([0c50c9fbf](https://github.com/powerhouse-inc/powerhouse/commit/0c50c9fbf))
+
+### ❤️ Thank You
+
+- acaldas
+- Frank
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.0.0-dev.133 (2026-03-31)
 
 This was a version bump only, there were no code changes.
