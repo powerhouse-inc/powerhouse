@@ -1,3 +1,13 @@
+## 6.0.0-dev.143 (2026-03-31)
+
+### 🚀 Features
+
+- **switchboard,reactor-api:** implemented httpPackageLoader ([ba53e2298](https://github.com/powerhouse-inc/powerhouse/commit/ba53e2298))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.0.0-dev.142 (2026-03-31)
 
 ### 🩹 Fixes
