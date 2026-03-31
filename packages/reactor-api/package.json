@@ -95,7 +95,7 @@
     "knex-pglite": "catalog:",
     "kysely": "catalog:",
     "kysely-knex": "catalog:",
-    "path-to-regexp": "^8.3.0",
+    "path-to-regexp": "^8.4.0",
     "pg": "catalog:",
     "read-pkg": "catalog:",
     "ws": "^8.18.3",
