@@ -1,3 +1,15 @@
+## 6.0.0-dev.136 (2026-03-31)
+
+### 🚀 Features
+
+- bulk rename everything with the name drive editor ([#2457](https://github.com/powerhouse-inc/powerhouse/pull/2457))
+- **reactor-api,switchboard:** load processors and subgraphs via HTTP registry ([6ebc6e069](https://github.com/powerhouse-inc/powerhouse/commit/6ebc6e069))
+
+### ❤️ Thank You
+
+- Frank
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.0.0-dev.135 (2026-03-31)
 
 This was a version bump only, there were no code changes.

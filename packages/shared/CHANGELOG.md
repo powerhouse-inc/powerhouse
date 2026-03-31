@@ -1,3 +1,13 @@
+## 6.0.0-dev.136 (2026-03-31)
+
+### 🚀 Features
+
+- bulk rename everything with the name drive editor ([#2457](https://github.com/powerhouse-inc/powerhouse/pull/2457))
+
+### ❤️ Thank You
+
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.0.0-dev.135 (2026-03-31)
 
 This was a version bump only for @powerhousedao/shared to align it with other projects, there were no code changes.
