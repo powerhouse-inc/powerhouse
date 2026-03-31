@@ -1,7 +1,6 @@
 {
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
-    "rootDir": "src",
     "outDir": "./dist",
     "resolveJsonModule": true,
     "lib": ["esnext", "DOM", "DOM.Iterable"],
@@ -27,6 +26,6 @@
       "path": "../shared"
     }
   ],
-  "include": ["src/**/*"],
+  "include": ["**/*"],
   "exclude": ["node_modules", "dist", "storybook-static"]
 }

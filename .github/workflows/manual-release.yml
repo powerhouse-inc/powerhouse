@@ -69,6 +69,9 @@ jobs:
       - name: Run install again after generating binaries
         run: pnpm install-ci
 
+      - name: Build packages that depend on generated binaries
+        run: pnpm --filter=@powerhousedao/versioned-documents --no-bail run build
+
       - name: git config
         run: |
           git config user.name "Github Actions Bot"

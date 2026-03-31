@@ -50,6 +50,9 @@ jobs:
       - name: Run install again after generating binaries
         run: pnpm install-ci
 
+      - name: Build packages that depend on generated binaries
+        run: pnpm --filter=@powerhousedao/versioned-documents --no-bail run build
+
       - name: Install Playwright Browsers
         run: pnpm exec playwright install --with-deps chromium
         working-directory: ./test/vetra-e2e
@@ -105,6 +108,9 @@ jobs:
 
       - name: Run install again after generating binaries
         run: pnpm install-ci
+
+      - name: Build packages that depend on generated binaries
+        run: pnpm --filter=@powerhousedao/versioned-documents --no-bail run build
 
       - name: Install Playwright Browsers
         run: pnpm exec playwright install

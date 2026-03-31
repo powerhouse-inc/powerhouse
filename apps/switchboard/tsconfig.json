@@ -1,11 +1,10 @@
 {
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
-    "rootDir": "src",
     "outDir": "./dist",
     "lib": ["ESNext"]
   },
-  "include": ["src/**/*"],
+  "include": ["**/*"],
   "references": [
     {
       "path": "../../packages/config"

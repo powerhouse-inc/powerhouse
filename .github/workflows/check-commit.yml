@@ -69,6 +69,9 @@ jobs:
       - name: Run install again after generating binaries
         run: pnpm install-ci
 
+      - name: Build packages that depend on generated binaries
+        run: pnpm --filter=@powerhousedao/versioned-documents --no-bail run build
+
       - name: Run eslint
         if: ${{ steps.diff.outputs.files != '' }}
         run: NODE_OPTIONS=--max-old-space-size=8192 pnpm eslint --config eslint.config.js --quiet --no-error-on-unmatched-pattern ${{ steps.diff.outputs.files }}

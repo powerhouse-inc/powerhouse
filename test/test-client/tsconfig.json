@@ -1,15 +1,10 @@
 {
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
-    "types": [
-      "node"
-    ],
+    "types": ["node"],
     "outDir": "./dist"
   },
-  "include": [
-    "src/**/*",
-    "vitest.config.ts"
-  ],
+  "include": ["**/*"],
   "references": [
     {
       "path": "../../packages/document-model"

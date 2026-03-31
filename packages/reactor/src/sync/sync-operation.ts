@@ -33,7 +33,7 @@ export class SyncOperation {
   status: SyncOperationStatus;
   error?: ChannelError;
 
-  private callbacks: SyncOperationStatusCallback[] = [];
+  callbacks: SyncOperationStatusCallback[] = [];
 
   constructor(
     id: string,
@@ -77,7 +77,7 @@ export class SyncOperation {
     this.transition(SyncOperationStatus.Error);
   }
 
-  private transition(next: SyncOperationStatus): void {
+  transition(next: SyncOperationStatus): void {
     const prev = this.status;
     if (next <= prev) {
       return;

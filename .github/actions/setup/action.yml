@@ -25,3 +25,11 @@ runs:
     - name: Build
       shell: bash
       run: pnpm build
+
+    - name: Run install again after generating binaries
+      shell: bash
+      run: pnpm install --frozen-lockfile
+
+    - name: Build packages that depend on generated binaries
+      shell: bash
+      run: pnpm --filter=@powerhousedao/versioned-documents --no-bail run build
