@@ -7,7 +7,7 @@ if [ -n "$PH_PACKAGES" ]; then
     # keeping npm as the default for all other dependencies
     if [ -n "$PH_REGISTRY_URL" ]; then
         echo "[entrypoint] Configuring @powerhousedao registry: $PH_REGISTRY_URL"
-        pnpm config set @powerhousedao:registry "$PH_REGISTRY_URL"
+        echo "@powerhousedao:registry=$PH_REGISTRY_URL" >> /app/.npmrc
     fi
     echo "[entrypoint] Installing packages: $PH_PACKAGES"
     echo "$PH_PACKAGES" | tr ',' '\n' | while read -r pkg; do
