@@ -1,3 +1,13 @@
+## 6.0.0-dev.141 (2026-03-31)
+
+### 🩹 Fixes
+
+- **registry:** proxy @powerhousedao packages to npm as fallback ([ea89f5337](https://github.com/powerhouse-inc/powerhouse/commit/ea89f5337))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 6.0.0-dev.140 (2026-03-31)
 
 ### 🚀 Features
