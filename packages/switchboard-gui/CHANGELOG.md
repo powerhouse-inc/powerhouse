@@ -1,3 +1,13 @@
+## 6.0.0-dev.139 (2026-03-31)
+
+### 🩹 Fixes
+
+- **docker:** use scoped registry for @powerhousedao packages ([f7c8ff72c](https://github.com/powerhouse-inc/powerhouse/commit/f7c8ff72c))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 6.0.0-dev.138 (2026-03-31)
 
 ### 🚀 Features
