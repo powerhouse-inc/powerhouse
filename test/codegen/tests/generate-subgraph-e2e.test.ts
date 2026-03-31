@@ -1,14 +1,13 @@
+import { buildSubgraphSchema } from "@apollo/subgraph";
 import { loadDocumentModel } from "@powerhousedao/codegen";
 import { tsMorphGenerateSubgraph } from "@powerhousedao/codegen/file-builders";
-import { buildSubgraphSchema } from "@apollo/subgraph";
-import { $ } from "bun";
 import { describe, expect, it } from "bun:test";
-import { graphql, getIntrospectionQuery, Kind } from "graphql";
 import type {
   DocumentNode,
   IntrospectionObjectType,
   IntrospectionQuery,
 } from "graphql";
+import { getIntrospectionQuery, graphql, Kind } from "graphql";
 import { gql } from "graphql-tag";
 import { join } from "path";
 import {
@@ -24,6 +23,7 @@ import {
   loadDocumentModelsInDir,
   mkdirRecursive,
   rmForce,
+  runTsc,
 } from "../utils.js";
 
 const cwd = process.cwd();
@@ -51,14 +51,13 @@ async function generateSubgraphProject(outDirName: string) {
   await tsMorphGenerateSubgraph({
     subgraphsDir,
     subgraphName: "test-doc",
-    packageName: "new-project",
     documentModel: testDocState,
   });
 
   // Compile the generated project — this catches API mismatches in the
   // generated code (e.g. resolvers referencing non-existent properties
   // on BaseSubgraph or IReactorClient).
-  await $`bun run --cwd ${outDir} tsc --noEmit`;
+  await runTsc(outDir);
 
   return { outDir, subgraphsDir };
 }

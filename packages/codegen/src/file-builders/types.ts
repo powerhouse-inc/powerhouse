@@ -17,7 +17,6 @@ export type CommonMakeEditorComponentArgs = {
 };
 
 export type CommonGenerateEditorArgs = {
-  packageName: string;
   projectDir: string;
   editorDir: string;
   editorName: string;

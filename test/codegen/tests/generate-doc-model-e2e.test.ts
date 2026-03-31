@@ -1,11 +1,10 @@
-import { ReactorBuilder } from "@powerhousedao/reactor";
 import type { ReactorModule } from "@powerhousedao/reactor";
+import { ReactorBuilder } from "@powerhousedao/reactor";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import type {
   DocumentModelModule,
   PHDocument,
 } from "@powerhousedao/shared/document-model";
-import { $ } from "bun";
 import { afterEach, describe, expect, it } from "bun:test";
 import { join } from "path";
 import {
@@ -20,6 +19,7 @@ import {
   loadDocumentModelsInDir,
   mkdirRecursive,
   rmForce,
+  runTsc,
 } from "../utils.js";
 
 const parentOutDir = join(process.cwd(), TEST_OUTPUT, "generate-doc-model-e2e");
@@ -40,7 +40,7 @@ async function generateDocModelProject(outDirName: string) {
   await cpForce(join(testProjectDir, NEW_PROJECT), outDir);
   const documentModelsInDir = join(dataDir, DOCUMENT_MODELS);
   await loadDocumentModelsInDir(documentModelsInDir, outDir, false);
-  await $`bun run --cwd ${outDir} tsc --noEmit`;
+  await runTsc(outDir);
   return outDir;
 }
 

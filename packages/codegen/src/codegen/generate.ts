@@ -150,30 +150,20 @@ type GenerateDocumentModelArgs = {
   documentModelState: DocumentModelGlobalState;
   useVersioning: boolean;
   migrateLegacy?: boolean;
-  specifiedPackageName?: string;
   watch?: boolean;
   skipFormat?: boolean;
   verbose?: boolean;
   force?: boolean;
 };
 export async function generateDocumentModel(args: GenerateDocumentModelArgs) {
-  const {
-    dir,
-    documentModelState,
-    specifiedPackageName,
-    useVersioning,
-    migrateLegacy,
-  } = args;
+  const { dir, documentModelState, useVersioning, migrateLegacy } = args;
   const packageJson = await readPackage();
-  const packageNameFromPackageJson = packageJson.name;
-  const packageName = specifiedPackageName || packageNameFromPackageJson;
   const zodSemverString = findZodDependencyInPackageJson(packageJson);
   ensureZodVersionIsSufficient(zodSemverString);
 
   const projectDir = path.dirname(dir);
   await tsMorphGenerateDocumentModel({
     projectDir,
-    packageName,
     documentModelState,
     useVersioning,
     migrateLegacy,
@@ -275,21 +265,14 @@ type GenerateEditorArgs = {
   skipFormat?: boolean;
   editorId?: string;
   editorDirName?: string;
-  specifiedPackageName?: string;
 };
 export async function generateEditor(args: GenerateEditorArgs) {
   const {
     editorName,
     documentTypes,
     editorId: editorIdArg,
-    specifiedPackageName,
     editorDirName,
   } = args;
-
-  const packageNameFromPackageJson = await readPackage().then(
-    (pkg) => pkg.name,
-  );
-  const packageName = specifiedPackageName || packageNameFromPackageJson;
 
   const projectDir = path.dirname("editors");
 
@@ -302,7 +285,6 @@ export async function generateEditor(args: GenerateEditorArgs) {
   const editorDir = editorDirName || kebabCase(editorName);
 
   await tsMorphGenerateDocumentEditor({
-    packageName,
     projectDir,
     editorDir,
     documentModelId,
@@ -320,7 +302,6 @@ export async function generateDriveEditor(options: {
   allowedDocumentTypes?: string[];
   isDragAndDropEnabled?: boolean;
   driveEditorDirName?: string;
-  specifiedPackageName?: string;
 }) {
   const {
     driveEditorName,
@@ -328,14 +309,8 @@ export async function generateDriveEditor(options: {
     allowedDocumentTypes,
     isDragAndDropEnabled,
     driveEditorDirName,
-    specifiedPackageName,
   } = options;
   const dir = "editors";
-
-  const packageNameFromPackageJson = await readPackage().then(
-    (pkg) => pkg.name,
-  );
-  const packageName = specifiedPackageName || packageNameFromPackageJson;
 
   const projectDir = path.dirname(dir);
 
@@ -344,7 +319,6 @@ export async function generateDriveEditor(options: {
     editorDir: driveEditorDirName || kebabCase(driveEditorName),
     editorName: driveEditorName,
     editorId: driveEditorId ?? kebabCase(driveEditorName),
-    packageName,
     allowedDocumentModelIds: allowedDocumentTypes ?? [],
     isDragAndDropEnabled: isDragAndDropEnabled ?? true,
   });
@@ -355,11 +329,9 @@ export async function generateSubgraphFromDocumentModel(
   documentModel: DocumentModelGlobalState,
   config: PowerhouseConfig,
 ) {
-  const packageName = await readPackage().then((pkg) => pkg.name);
   await tsMorphGenerateSubgraph({
     subgraphsDir: config.subgraphsDir,
     subgraphName: name,
-    packageName,
     documentModel,
   });
   await makeSubgraphsIndexFile({
@@ -374,12 +346,10 @@ export async function generateSubgraph(
 ) {
   const documentModelState =
     file !== null ? await loadDocumentModel(file) : null;
-  const packageName = await readPackage().then((pkg) => pkg.name);
 
   await tsMorphGenerateSubgraph({
     subgraphsDir: config.subgraphsDir,
     subgraphName: name,
-    packageName,
     documentModel: documentModelState,
   });
   await makeSubgraphsIndexFile({

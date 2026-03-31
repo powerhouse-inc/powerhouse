@@ -1,6 +1,5 @@
 import { generateEditor } from "@powerhousedao/codegen";
 import { directoryExists, fileExists } from "@powerhousedao/shared/clis";
-import { $ } from "bun";
 import { afterAll, describe, expect, it } from "bun:test";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -10,7 +9,7 @@ import {
   WITH_DOCUMENT_MODELS,
   WITH_EDITORS,
 } from "../constants.js";
-import { cpForce, mkdirRecursive, rmForce } from "../utils.js";
+import { cpForce, mkdirRecursive, rmForce, runTsc } from "../utils.js";
 
 const cwd = process.cwd();
 const parentOutDir = join(cwd, TEST_OUTPUT, "generate-editor");
@@ -32,7 +31,6 @@ describe("generateEditor", () => {
     editorId,
     documentTypes,
     skipFormat: false,
-    specifiedPackageName: undefined,
     editorDirName: undefined,
   };
   it("should generate a Document Model editor", async () => {
@@ -72,7 +70,7 @@ describe("generateEditor", () => {
     expect(moduleContent).toContain(`id: "test-document-model-editor"`);
     expect(moduleContent).toContain(`name: "TestDocEditor"`);
 
-    await $`bun run --cwd ${outDir} tsc --noEmit`;
+    await runTsc(outDir);
   });
 
   it("should append new exports to existing editors.ts file", async () => {
@@ -89,6 +87,6 @@ describe("generateEditor", () => {
     expect(editorsContent).toContain(`ExistingDocumentEditor`);
     expect(editorsContent).toContain(`ExistingDriveEditor`);
     expect(editorsContent).toContain(`TestDocEditor`);
-    await $`bun run --cwd ${outDir} tsc --noEmit`;
+    await runTsc(outDir);
   });
 });

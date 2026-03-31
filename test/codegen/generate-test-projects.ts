@@ -100,14 +100,12 @@ export async function generateTestProjects() {
     editorName: "ExistingDocumentEditor",
     documentTypes: ["powerhouse/test-doc"],
     skipFormat: false,
-    specifiedPackageName: undefined,
     editorDirName: undefined,
   });
   await generateDriveEditor({
     driveEditorId: "existing-drive-editor",
     driveEditorName: "ExistingDriveEditor",
     allowedDocumentTypes: ["powerhouse/test-doc"],
-    specifiedPackageName: undefined,
     driveEditorDirName: undefined,
     isDragAndDropEnabled: true,
     skipFormat: false,

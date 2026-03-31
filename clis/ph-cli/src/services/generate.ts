@@ -47,7 +47,6 @@ export async function startGenerate(options: GenerateArgs) {
 
   const useVersioning = useVersioningFlag || migrateLegacy;
   const isDragAndDropEnabled = disableDragAndDrop !== true;
-  const specifiedPackageName = undefined;
   const filePath = Array.isArray(documentModelFile)
     ? documentModelFile.join(" ")
     : documentModelFile;
@@ -72,7 +71,6 @@ export async function startGenerate(options: GenerateArgs) {
       editorDirName,
       documentTypes: [documentTypeToUse],
       skipFormat,
-      specifiedPackageName,
     });
   } else if (driveEditorName !== undefined) {
     await generateDriveEditor({
@@ -82,7 +80,6 @@ export async function startGenerate(options: GenerateArgs) {
       allowedDocumentTypes,
       isDragAndDropEnabled,
       skipFormat,
-      specifiedPackageName,
     });
   } else if (processorName !== undefined) {
     await generateProcessor({
