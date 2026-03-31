@@ -1,3 +1,13 @@
+## 6.0.0-dev.132 (2026-03-31)
+
+### 🚀 Features
+
+- **registry:** support version tags in CDN resolver ([59405166b](https://github.com/powerhouse-inc/powerhouse/commit/59405166b))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 6.0.0-dev.131 (2026-03-31)
 
 ### 🚀 Features
