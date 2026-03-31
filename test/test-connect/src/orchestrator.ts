@@ -16,7 +16,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const CLI_PATH = path.resolve(__dirname, "cli.ts");
 const SWITCHBOARD_SERVER_PATH = path.resolve(
   __dirname,
-  "../../../apps/switchboard/src/server.ts",
+  "../../../apps/switchboard/src/server.mts",
 );
 
 interface OrchestratorOptions {
