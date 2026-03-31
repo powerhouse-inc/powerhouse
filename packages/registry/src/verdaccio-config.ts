@@ -12,11 +12,7 @@ export function buildVerdaccioConfig(config: RegistryConfig) {
         file: htpasswdPath,
       },
     },
-    uplinks: {
-      npmjs: {
-        url: "https://registry.npmjs.org/",
-      },
-    },
+    uplinks: undefined,
     packages: {
       "@powerhousedao/*": {
         access: "$all",
