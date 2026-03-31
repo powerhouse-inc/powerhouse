@@ -1,3 +1,28 @@
+## 6.0.0-dev.130 (2026-03-31)
+
+This was a version bump only for @powerhousedao/registry to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.129 (2026-03-30)
+
+### 🩹 Fixes
+
+- **registry:** resolve correct package version on CDN and /packages ([ff9dc1a8a](https://github.com/powerhouse-inc/powerhouse/commit/ff9dc1a8a))
+
+### ❤️ Thank You
+
+- acaldas
+- Claude Opus 4.6 (1M context)
+
+## 6.0.0-dev.128 (2026-03-30)
+
+### 🩹 Fixes
+
+- **reactor-api,switchboard:** import vite loader from subexport ([1909d0c25](https://github.com/powerhouse-inc/powerhouse/commit/1909d0c25))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.0.0-dev.127 (2026-03-30)
 
 ### 🩹 Fixes

@@ -1,3 +1,21 @@
+## 6.0.0-dev.130 (2026-03-31)
+
+This was a version bump only for document-model to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.129 (2026-03-30)
+
+This was a version bump only for document-model to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.128 (2026-03-30)
+
+### 🩹 Fixes
+
+- **reactor-api,switchboard:** import vite loader from subexport ([1909d0c25](https://github.com/powerhouse-inc/powerhouse/commit/1909d0c25))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.0.0-dev.127 (2026-03-30)
 
 ### 🩹 Fixes

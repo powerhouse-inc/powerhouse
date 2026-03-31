@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/reactor-api",
-  "version": "6.0.0-dev.127",
+  "version": "6.0.0-dev.130",
   "description": "",
   "type": "module",
   "repository": {
@@ -13,12 +13,16 @@
       "types": "./dist/index.d.ts"
     },
     "./graphql": {
-      "import": "./dist/graphql/index.js",
-      "types": "./dist/graphql/index.d.ts"
+      "import": "./dist/src/graphql/index.js",
+      "types": "./dist/src/graphql/index.d.ts"
     },
     "./graphql/*": {
-      "import": "./dist/graphql/*.js",
-      "types": "./dist/graphql/*.d.ts"
+      "import": "./dist/src/graphql/*.js",
+      "types": "./dist/src/graphql/*.d.ts"
+    },
+    "./vite": {
+      "import": "./dist/src/packages/vite-loader.js",
+      "types": "./dist/src/packages/vite-loader.d.ts"
     },
     "./test": {
       "import": "./test/index.ts"

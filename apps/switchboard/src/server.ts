@@ -22,12 +22,14 @@ import {
   HttpPackageLoader,
   PackageManagementService,
   PackagesSubgraph,
-  VitePackageLoader,
-  createViteLogger,
   getUniqueDocumentModels,
   initializeAndStartAPI,
-  startViteServer,
 } from "@powerhousedao/reactor-api";
+import {
+  VitePackageLoader,
+  createViteLogger,
+  startViteServer,
+} from "@powerhousedao/reactor-api/vite";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import { documentModels as vetraDocumentModels } from "@powerhousedao/vetra";

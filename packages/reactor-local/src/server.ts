@@ -6,11 +6,11 @@ import {
   driveCollectionId,
   parseDriveUrl,
 } from "@powerhousedao/reactor";
+import { initializeAndStartAPI } from "@powerhousedao/reactor-api";
 import {
   VitePackageLoader,
-  initializeAndStartAPI,
   startViteServer,
-} from "@powerhousedao/reactor-api";
+} from "@powerhousedao/reactor-api/vite";
 import {
   driveCreateDocument,
   driveCreateState,
