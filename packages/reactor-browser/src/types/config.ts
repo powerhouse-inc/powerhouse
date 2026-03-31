@@ -14,7 +14,7 @@ export type PHGlobalConfigSetters =
 export type PHGlobalConfigHooks = PHGlobalConfigHooksForKey<PHGlobalConfigKey>;
 
 /**
- * Editor configuration settings which are globally available to your custom drive editors.
+ * Editor configuration settings which are globally available to your custom apps.
  *
  * Setting these will override the defaults when your editor is mounted.
  */
@@ -23,7 +23,7 @@ export type PHAppConfig = {
    * An empty array means that any document type is allowed.
    */
   allowedDocumentTypes?: string[];
-  /** Whether drag and drop is enabled for the drive editor. */
+  /** Whether drag and drop is enabled for the app. */
   isDragAndDropEnabled?: boolean;
 };
 export type PHAppConfigKey = keyof PHAppConfig;

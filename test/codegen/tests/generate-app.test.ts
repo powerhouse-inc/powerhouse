@@ -36,7 +36,7 @@ describe("generateApp", () => {
     skipFormat: false,
   };
 
-  it("should generate a drive editor with the correct files and content", async () => {
+  it("should generate a app with the correct files and content", async () => {
     const outDir = join(parentOutDir, "generate-new-app");
     await rmForce(outDir);
     await cpForce(join(testProjectsDir, WITH_DOCUMENT_MODELS), outDir);

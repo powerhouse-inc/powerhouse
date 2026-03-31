@@ -69,11 +69,11 @@ export function setPHDocumentEditorConfig(
   }
 }
 
-/** Wrapper hook for setting the global drive editor config.
+/** Wrapper hook for setting the global app config.
  *
- * Automatically sets the global drive editor config when the component mounts.
+ * Automatically sets the global app config when the component mounts.
  *
- * Pass in a partial object of the global drive editor config to set.
+ * Pass in a partial object of the global app config to set.
  */
 export function useSetPHAppConfig(config: Partial<PHAppConfig>) {
   const [isInitialized, setIsInitialized] = useState(false);

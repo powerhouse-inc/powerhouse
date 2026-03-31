@@ -316,7 +316,7 @@ async function runGenerateOnAllEditors() {
   }
 }
 
-/** Extract the name, id, document types, and whether the editor is a drive editor from the editor module */
+/** Extract the name, id, document types, and whether the editor is a app from the editor module */
 function extractEditorModuleInfo(filePath: string) {
   const project = new Project({
     tsConfigFilePath: path.resolve("tsconfig.json"),
@@ -359,7 +359,7 @@ function extractEditorModuleInfo(filePath: string) {
   return { id, name, documentTypes, isApp };
 }
 
-/** Extract the allowed document types from the drive editor config */
+/** Extract the allowed document types from the app config */
 function extractAllowedDocumentTypes(filePath: string) {
   const project = new Project({
     tsConfigFilePath: path.resolve("tsconfig.json"),

@@ -68,11 +68,11 @@ export class AppGenerator extends BaseDocumentGen {
 
     // Check if we have a valid app name and it's confirmed
     if (state.name && state.status === "CONFIRMED") {
-      logger.info(`🔄 Starting drive editor generation for app: ${state.name}`);
+      logger.info(`🔄 Starting app generation for app: ${state.name}`);
       try {
         // Generate app ID using kebabCase
         const appId: string = kebabCase(state.name);
-        // Generate the drive editor using the codegen function
+        // Generate the app using the codegen function
         await generateApp({
           ...this.config.PH_CONFIG,
           appName: state.name,
@@ -82,7 +82,7 @@ export class AppGenerator extends BaseDocumentGen {
         });
 
         logger.info(
-          `✅ Drive editor generation completed successfully for app: ${state.name}`,
+          `✅ App generation completed successfully for app: ${state.name}`,
         );
 
         // Update the manifest with the new app
@@ -112,7 +112,7 @@ export class AppGenerator extends BaseDocumentGen {
             `⚠️ Failed to update manifest for app ${state.name}:`,
             manifestError,
           );
-          // Don't throw here - drive editor generation was successful
+          // Don't throw here - app generation was successful
         }
 
         // Backup the document
@@ -129,7 +129,7 @@ export class AppGenerator extends BaseDocumentGen {
         );
       } catch (error) {
         logger.error(
-          `❌ Error during drive editor generation for app ${state.name}:`,
+          `❌ Error during app generation for app ${state.name}:`,
           error,
         );
         if (error instanceof Error) {
@@ -138,13 +138,11 @@ export class AppGenerator extends BaseDocumentGen {
       }
     } else {
       if (!state.name) {
-        logger.error(
-          `❌ Skipping drive editor generation - missing name for app`,
-        );
+        logger.error(`❌ Skipping app generation - missing name for app`);
         return;
       } else if (state.status !== "CONFIRMED") {
         logger.error(
-          `❌ Skipping drive editor generation - app "${state.name}" is not confirmed (status: ${state.status})`,
+          `❌ Skipping app generation - app "${state.name}" is not confirmed (status: ${state.status})`,
         );
         return;
       }

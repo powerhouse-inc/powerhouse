@@ -78,18 +78,18 @@ export const generateArgs = {
   appName: option({
     type: optional(string),
     long: "app",
-    description: "Drive editor name.",
+    description: "App name.",
   }),
   appId: option({
     type: optional(string),
     long: "app-id",
-    description: "Drive editor ID.",
+    description: "App ID.",
   }),
   appDirName: option({
     type: optional(string),
     long: "app-dir-name",
     description:
-      "Use a different directory name for the generated drive editor. Default is the drive editor name in kebab case.",
+      "Use a different directory name for the generated app. Default is the app name in kebab case.",
   }),
   processorName: option({
     type: optional(string),
@@ -124,7 +124,7 @@ export const generateArgs = {
   allowedDocumentTypes: multioption({
     type: optional(array(string)),
     long: "allowed-document-types",
-    description: "Supported document types for a drive editor.",
+    description: "Supported document types for a app.",
   }),
   migrationFile: option({
     type: optional(string),
@@ -139,7 +139,7 @@ export const generateArgs = {
   disableDragAndDrop: flag({
     type: optional(boolean),
     long: "disable-drag-and-drop",
-    description: "Disable drag and drop in the generated drive editor.",
+    description: "Disable drag and drop in the generated app.",
   }),
   force: flag({
     type: optional(boolean),

@@ -174,7 +174,7 @@ Options:
   -w, --watch            Watch for changes in the document model and regenerate code
                         when changes are detected.
                         
-  -d, --app <name> Generate a drive editor with the specified name.
+  -d, --app <name> Generate an app with the specified name.
 
   --migration-file <path> Path to the migration file when running 'ph generate
     
@@ -187,7 +187,7 @@ Examples:
   $ ph generate --editor ToDoList --document-types powerhouse/todo  # Generate a ToDoList editor for todo documents
   $ ph generate -p MyProcessor --processor-type relationalDb        # Generate a specific processor
   $ ph generate --watch                                             # Generate and watch for changes
-  $ ph generate --app custom-drive-explorer                # Generate a custom drive editor
+  $ ph generate --app custom-drive-explorer                # Generate a custom app
   $ ph generate -s MySubgraph                                       # Generate with a specific subgraph
   $ ph generate --skip-format                                       # Generate without formatting
   $ ph generate --migration-file ./migrations.ts                    # Generate types for an RelationalDB Processor

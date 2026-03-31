@@ -26,11 +26,11 @@ const isDragAndDropEnabledEventFunctions = makePHEventFunctions(
   "isDragAndDropEnabled",
 );
 
-/** Sets whether drag and drop is enabled for a given drive editor. */
+/** Sets whether drag and drop is enabled for a given app. */
 export const setIsDragAndDropEnabled =
   isDragAndDropEnabledEventFunctions.setValue;
 
-/** Gets whether drag and drop is enabled for a given drive editor. */
+/** Gets whether drag and drop is enabled for a given app. */
 export const useIsDragAndDropEnabled =
   isDragAndDropEnabledEventFunctions.useValue;
 
@@ -42,7 +42,7 @@ const allowedDocumentTypesEventFunctions = makePHEventFunctions(
   "allowedDocumentTypes",
 );
 
-/** Sets the allowed document types for a given drive editor. */
+/** Sets the allowed document types for a given app. */
 export const setAllowedDocumentTypes =
   allowedDocumentTypesEventFunctions.setValue;
 
@@ -56,7 +56,7 @@ export function useAllowedDocumentTypes() {
   return definedAllowedDocumentTypes;
 }
 
-/** Adds an event handler for when the allowed document types for a given drive editor changes. */
+/** Adds an event handler for when the allowed document types for a given app changes. */
 export const addAllowedDocumentTypesEventHandler =
   allowedDocumentTypesEventFunctions.addEventHandler;
 

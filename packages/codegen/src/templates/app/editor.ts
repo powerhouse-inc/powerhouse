@@ -7,9 +7,9 @@ import type { EditorProps } from "document-model";
 import { DriveExplorer } from "./components/DriveExplorer.js";
 import { editorConfig } from "./config.js";
 
-/** Editor component for the drive editor */
+/** Editor component for the app */
 export default function Editor(props: EditorProps) {
-  // set the config for this drive editor
+  // set the config for this app
   // you can update these configs in \`./config.ts\`
   useSetPHAppConfig(editorConfig);
   return (

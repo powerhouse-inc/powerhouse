@@ -26,7 +26,7 @@ type GenerateAppArgs = CommonGenerateEditorArgs & {
   allowedDocumentModelIds: string[];
   isDragAndDropEnabled: boolean;
 };
-/** Generates a drive editor with the configs for `allowedDocumentModelIds` and `isDragAndDropEnabled` */
+/** Generates a app with the configs for `allowedDocumentModelIds` and `isDragAndDropEnabled` */
 export async function tsMorphGenerateApp({
   projectDir,
   editorDir,
