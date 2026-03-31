@@ -67,7 +67,7 @@ export class PackageManager implements IPackageManager {
   private async loadPackages(
     packages: string[],
   ): Promise<PackageManagerResult> {
-    this.logger.info(`Loading packages: ${packages.join(", ")}`);
+    this.logger.info("Loading packages: @packages", packages.join(", "));
 
     const documentModelsMap = await this.loadDocumentModels(packages);
     const subgraphsMap = await this.loadSubgraphs(packages);
@@ -119,12 +119,13 @@ export class PackageManager implements IPackageManager {
 
           allDocumentModels.push(...documentModels);
           this.logger.debug(
-            `Loaded document models from package ${pkg}`,
+            `[${loader.name}] Loaded document models from package ${pkg}`,
             documentModels.map((dm) => dm.documentModel.global.id),
           );
+          break;
         } catch (error) {
           this.logger.debug(
-            `Failed to load document models from package ${pkg}`,
+            `[${loader.name}] Failed to load document models from package ${pkg}`,
             error,
           );
         }
@@ -153,9 +154,10 @@ export class PackageManager implements IPackageManager {
           const subgraphs = await loader.loadSubgraphs(pkg);
 
           allSubgraphs.push(...subgraphs);
+          break;
         } catch (error) {
           this.logger.debug(
-            `Failed to load subgraphs from package ${pkg}`,
+            `[${loader.name}] Failed to load subgraphs from package ${pkg}`,
             error,
           );
         }
@@ -186,9 +188,10 @@ export class PackageManager implements IPackageManager {
           if (processors) {
             allProcessors.push(processors);
           }
+          break;
         } catch (error) {
           this.logger.debug(
-            `Failed to load processors from package ${pkg}`,
+            `[${loader.name}] Failed to load processors from package ${pkg}`,
             error,
           );
         }

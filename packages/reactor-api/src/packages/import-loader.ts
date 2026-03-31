@@ -14,6 +14,8 @@ import {
 export class ImportPackageLoader implements IPackageLoader {
   private readonly logger = childLogger(["reactor-api", "import-loader"]);
 
+  readonly name = "ImportPackageLoader";
+
   async loadDocumentModels(identifier: string): Promise<DocumentModelModule[]> {
     this.logger.verbose("Loading document models from package:", identifier);
 

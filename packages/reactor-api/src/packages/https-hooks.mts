@@ -77,7 +77,7 @@ export async function load(
     return {
       format: "module",
       shortCircuit: true,
-      source,
+      source: patchCreateRequire(source),
     };
   }
 
@@ -87,12 +87,23 @@ export async function load(
     return {
       format: "module",
       shortCircuit: true,
-      source,
+      source: patchCreateRequire(source),
     };
   }
 
   // Let Node.js handle all other URLs
   return nextLoad(url, context);
+}
+
+/**
+ * Rewrite `createRequire(import.meta.url)` in HTTP-loaded modules so that
+ * `createRequire` receives a local file URL instead of an HTTP URL it cannot handle.
+ */
+function patchCreateRequire(source: string): string {
+  return source.replace(
+    /createRequire\(import\.meta\.url\)/g,
+    `createRequire(new URL("file://" + process.cwd() + "/"))`,
+  );
 }
 
 function fetchModule(
