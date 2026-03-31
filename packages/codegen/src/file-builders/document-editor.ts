@@ -21,7 +21,6 @@ type GenerateEditorArgs = CommonGenerateEditorArgs & {
 };
 /** Generates a document editor for the given `documentModelId` (also called `documentType`) */
 export async function tsMorphGenerateDocumentEditor({
-  packageName,
   projectDir,
   editorDir,
   editorName,
@@ -51,7 +50,6 @@ export async function tsMorphGenerateDocumentEditor({
 
   const documentTypeMetadata = getDocumentTypeMetadata({
     project,
-    packageName,
     documentModelId,
     documentModelsDirPath,
   });

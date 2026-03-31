@@ -6,7 +6,6 @@ import { getObjectLiteral, getObjectProperty } from "./syntax-getters.js";
 
 type GetDocumentTypeMetadataArgs = {
   project: Project;
-  packageName: string;
   documentModelId: string;
   documentModelsDirPath: string;
 };
@@ -15,7 +14,6 @@ type GetDocumentTypeMetadataArgs = {
  */
 export function getDocumentTypeMetadata({
   project,
-  packageName,
   documentModelId,
   documentModelsDirPath,
 }: GetDocumentTypeMetadataArgs) {
@@ -52,7 +50,6 @@ export function getDocumentTypeMetadata({
   const documentModelDirName = documentModelDir.getBaseName();
 
   const documentModelImportPath = path.join(
-    packageName,
     "document-models",
     documentModelDirName,
   );

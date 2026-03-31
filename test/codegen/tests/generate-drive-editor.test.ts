@@ -1,6 +1,5 @@
 import { generateDriveEditor } from "@powerhousedao/codegen";
 import { directoryExists, fileExists } from "@powerhousedao/shared/clis";
-import { $ } from "bun";
 import { afterAll, describe, expect, it } from "bun:test";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -10,7 +9,7 @@ import {
   WITH_DOCUMENT_MODELS,
   WITH_EDITORS,
 } from "../constants.js";
-import { cpForce, mkdirRecursive, rmForce } from "../utils.js";
+import { cpForce, mkdirRecursive, rmForce, runTsc } from "../utils.js";
 
 type GenerateDriveEditorOptions = Parameters<typeof generateDriveEditor>[0];
 
@@ -32,7 +31,6 @@ describe("generateDriveEditor", () => {
     driveEditorId,
     driveEditorName,
     allowedDocumentTypes,
-    specifiedPackageName: undefined,
     driveEditorDirName: undefined,
     isDragAndDropEnabled: true,
     skipFormat: false,
@@ -142,7 +140,7 @@ describe("generateDriveEditor", () => {
       `export function NavigationBreadcrumbs()`,
     );
 
-    await $`bun run --cwd ${outDir} tsc --noEmit`;
+    await runTsc(outDir);
   });
 
   it("should append new exports to existing editors.ts file", async () => {
@@ -160,6 +158,6 @@ describe("generateDriveEditor", () => {
     expect(editorsContent).toContain(`ExistingDocumentEditor`);
     expect(editorsContent).toContain(`ExistingDriveEditor`);
 
-    await $`bun run --cwd ${outDir} tsc --noEmit`;
+    await runTsc(outDir);
   });
 });

@@ -2,6 +2,7 @@ import {
   generateDocumentModel,
   loadDocumentModel,
 } from "@powerhousedao/codegen";
+import { $ } from "bun";
 import type { PathLike } from "node:fs";
 import { cp, mkdir, readdir, rm } from "node:fs/promises";
 import path from "path";
@@ -41,7 +42,6 @@ export async function loadDocumentModelsInDir(
       documentModelState,
       dir: documentModelsOutDir,
       useVersioning,
-      specifiedPackageName: "test-project",
     });
   }
 }
@@ -62,4 +62,8 @@ export async function rmForce(path: PathLike) {
 
 export async function mkdirRecursive(path: PathLike) {
   await mkdir(path, { recursive: true });
+}
+
+export async function runTsc(cwd = process.cwd()) {
+  await $`bun run --cwd ${cwd} tsc --noEmit`;
 }

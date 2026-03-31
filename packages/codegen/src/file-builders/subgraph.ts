@@ -1,3 +1,7 @@
+import type { DocumentModelGlobalState } from "@powerhousedao/shared/document-model";
+import { camelCase, kebabCase, pascalCase } from "change-case";
+import { existsSync } from "fs";
+import path from "path";
 import {
   customSubgraphResolversTemplate,
   customSubgraphSchemaTemplate,
@@ -6,29 +10,24 @@ import {
   subgraphIndexFileTemplate,
   subgraphLibFileTemplate,
 } from "templates";
+import { Project } from "ts-morph";
 import {
   applyGraphQLTypePrefixes,
   extractTypeNames,
   formatSourceFileWithPrettier,
   getOrCreateSourceFile,
 } from "utils";
-import type { DocumentModelGlobalState } from "@powerhousedao/shared/document-model";
-import { camelCase, kebabCase, pascalCase } from "change-case";
-import { existsSync } from "fs";
-import path from "path";
-import { Project } from "ts-morph";
 
 type TsMorphGenerateSubgraphArgs = {
   subgraphsDir: string;
   subgraphName: string;
-  packageName: string;
   documentModel: DocumentModelGlobalState | null;
 };
 
 export async function tsMorphGenerateSubgraph(
   args: TsMorphGenerateSubgraphArgs,
 ): Promise<void> {
-  const { subgraphsDir, subgraphName, packageName, documentModel } = args;
+  const { subgraphsDir, subgraphName, documentModel } = args;
 
   const project = new Project({
     skipAddingFilesFromTsConfig: true,
@@ -60,10 +59,7 @@ export async function tsMorphGenerateSubgraph(
 
   if (documentModel !== null) {
     // Generate document-model-specific schema and resolvers (force overwrite)
-    await makeDocumentModelSubgraphFiles(project, subgraphDir, {
-      documentModel,
-      packageName,
-    });
+    await makeDocumentModelSubgraphFiles(project, subgraphDir, documentModel);
   } else {
     // Generate custom subgraph scaffolds (unless_exists)
     await makeCustomSubgraphFiles(project, subgraphDir, {
@@ -125,12 +121,8 @@ async function makeCustomSubgraphFiles(
 async function makeDocumentModelSubgraphFiles(
   project: Project,
   dirPath: string,
-  args: {
-    documentModel: DocumentModelGlobalState;
-    packageName: string;
-  },
+  documentModel: DocumentModelGlobalState,
 ) {
-  const { documentModel, packageName } = args;
   const latestSpec =
     documentModel.specifications[documentModel.specifications.length - 1];
   const documentType = documentModel.name;
@@ -139,7 +131,7 @@ async function makeDocumentModelSubgraphFiles(
   const phDocumentTypeName = `${pascalCaseDocumentType}Document`;
   const documentTypeVariableName = `${camelCaseDocumentType}DocumentType`;
   const kebabCaseDocumentType = kebabCase(documentType);
-  const documentModelDir = `${packageName}/document-models/${kebabCaseDocumentType}`;
+  const documentModelDir = `document-models/${kebabCaseDocumentType}`;
 
   const stateSchema = latestSpec.state.global.schema;
   const stateTypeNames = extractTypeNames(stateSchema);
