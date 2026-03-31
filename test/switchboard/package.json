@@ -6,7 +6,7 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "build": "tsc --build",
+    "build": "tsdown",
     "test": "vitest --run"
   },
   "devDependencies": {
@@ -22,6 +22,7 @@
     "graphql-sse": "catalog:",
     "ws": "catalog:",
     "@types/ws": "catalog:",
+    "tsdown": "catalog:",
     "vitest": "catalog:"
   }
 }
