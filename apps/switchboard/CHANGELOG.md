@@ -1,3 +1,13 @@
+## 6.0.0-dev.137 (2026-03-31)
+
+### 🩹 Fixes
+
+- **reactor-api:** always include ImportPackageLoader alongside custom loaders ([f33785d1a](https://github.com/powerhouse-inc/powerhouse/commit/f33785d1a))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 6.0.0-dev.136 (2026-03-31)
 
 ### 🚀 Features
