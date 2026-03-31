@@ -1,3 +1,14 @@
+## 6.0.0-dev.138 (2026-03-31)
+
+### 🚀 Features
+
+- **docker:** install PH_PACKAGES at switchboard startup ([c510da354](https://github.com/powerhouse-inc/powerhouse/commit/c510da354))
+- **docker:** install PH_PACKAGES at switchboard startup ([fdf33e0aa](https://github.com/powerhouse-inc/powerhouse/commit/fdf33e0aa))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 6.0.0-dev.137 (2026-03-31)
 
 This was a version bump only for @powerhousedao/analytics-engine-core to align it with other projects, there were no code changes.
