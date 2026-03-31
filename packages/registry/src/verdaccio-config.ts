@@ -47,6 +47,7 @@ export function buildVerdaccioConfig(config: RegistryConfig) {
       format: "pretty",
       level: "warn",
     },
+    max_body_size: "100mb",
   };
 
   if (config.s3) {
