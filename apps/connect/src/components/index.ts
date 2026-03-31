@@ -1,4 +1,5 @@
 export * from "./analytics.js";
+export * from "./app-container.js";
 export * from "./app-loader.js";
 export * from "./app-skeleton.js";
 export * from "./app.js";
@@ -6,7 +7,6 @@ export * from "./button.js";
 export * from "./cookie-banner.js";
 export * from "./document-editor-container.js";
 export * from "./dots-loader.js";
-export * from "./drive-editor-container.js";
 export * from "./drive-icon.js";
 export * from "./editor-loader.js";
 export * from "./editors.js";

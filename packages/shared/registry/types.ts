@@ -12,7 +12,7 @@ export interface PowerhouseManifestEditor {
 export interface PowerhouseManifestApp {
   id: string;
   name: string;
-  driveEditor?: string;
+  app?: string;
 }
 
 export interface PowerhouseManifest {

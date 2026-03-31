@@ -20,17 +20,17 @@ const Template: Story = {
       {
         id: "powerhouse/common",
         name: "Generic Drive Explorer",
-        driveEditor: "GenericDriveExplorer",
+        app: "GenericDriveExplorer",
       },
       {
         id: "powerhouse/invoice/contributor",
         name: "Contributor App",
-        driveEditor: "ContributorDrive",
+        app: "ContributorDrive",
       },
       {
         id: "powerhouse/invoice/administrator",
         name: "OH Administrator App",
-        driveEditor: "AdministratorDrive",
+        app: "AdministratorDrive",
       },
     ],
   },

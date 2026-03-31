@@ -12,7 +12,7 @@ type MakeEditorModuleFileArgs = {
   editorDirPath: string;
   legacyMultipleDocumentTypes?: string[];
 };
-/** Generates the `module.ts` file for a document editor or drive editor */
+/** Generates the `module.ts` file for a document editor or app */
 export function makeEditorModuleFile({
   project,
   editorDirPath,

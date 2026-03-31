@@ -260,11 +260,11 @@ processors, and other components based on your document model files.
 
 **Document Types** - [DEPRECATED] Comma separated list of document types for the generated document editor. [WARNING] Generated editor code is not set up to handle multiple document types. - Usage: `--document-types <str>`
 
-**Drive Editor** - Drive editor name. - Usage: `--drive-editor <str>`
+**App** - Drive editor name. - Usage: `--app <str>`
 
 **App Id** - Drive editor ID. - Usage: `--app-id <str>`
 
-**Drive Editor Dir Name** - Use a different directory name for the generated drive editor. Default is the drive editor name in kebab case. - Usage: `--drive-editor-dir-name <str>`
+**App Dir Name** - Use a different directory name for the generated drive editor. Default is the drive editor name in kebab case. - Usage: `--app-dir-name <str>`
 
 **Processor** - Processor name. - Usage: `--processor <str>`
 

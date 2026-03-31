@@ -1,8 +1,8 @@
 import {
   makeSubgraphsIndexFile,
+  tsMorphGenerateApp,
   tsMorphGenerateDocumentEditor,
   tsMorphGenerateDocumentModel,
-  tsMorphGenerateDriveEditor,
   tsMorphGenerateSubgraph,
 } from "@powerhousedao/codegen/file-builders";
 import type {
@@ -295,30 +295,30 @@ export async function generateEditor(args: GenerateEditorArgs) {
   // await ensureTsconfigPaths();
 }
 
-export async function generateDriveEditor(options: {
-  driveEditorName: string;
+export async function generateApp(options: {
+  appName: string;
   skipFormat?: boolean;
-  driveEditorId?: string;
+  appId?: string;
   allowedDocumentTypes?: string[];
   isDragAndDropEnabled?: boolean;
-  driveEditorDirName?: string;
+  appDirName?: string;
 }) {
   const {
-    driveEditorName,
-    driveEditorId,
+    appName,
+    appId,
     allowedDocumentTypes,
     isDragAndDropEnabled,
-    driveEditorDirName,
+    appDirName,
   } = options;
   const dir = "editors";
 
   const projectDir = path.dirname(dir);
 
-  await tsMorphGenerateDriveEditor({
+  await tsMorphGenerateApp({
     projectDir,
-    editorDir: driveEditorDirName || kebabCase(driveEditorName),
-    editorName: driveEditorName,
-    editorId: driveEditorId ?? kebabCase(driveEditorName),
+    editorDir: appDirName || kebabCase(appName),
+    editorName: appName,
+    editorId: appId ?? kebabCase(appName),
     allowedDocumentModelIds: allowedDocumentTypes ?? [],
     isDragAndDropEnabled: isDragAndDropEnabled ?? true,
   });

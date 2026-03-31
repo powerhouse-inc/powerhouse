@@ -85,7 +85,7 @@ describe("generateEditor", () => {
     const editorsContent = await readFile(editorsFilePath, "utf-8");
     expect(editorsContent).toContain(`export const editors: EditorModule[]`);
     expect(editorsContent).toContain(`ExistingDocumentEditor`);
-    expect(editorsContent).toContain(`ExistingDriveEditor`);
+    expect(editorsContent).toContain(`ExistingApp`);
     expect(editorsContent).toContain(`TestDocEditor`);
     await runTsc(outDir);
   });

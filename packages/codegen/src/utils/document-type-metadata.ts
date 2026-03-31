@@ -10,7 +10,7 @@ type GetDocumentTypeMetadataArgs = {
   documentModelsDirPath: string;
 };
 /** Gets the document model metadata for the --document-type argument
- * passed to the `generate --editor` and `generate --drive-editor` commands.
+ * passed to the `generate --editor` and `generate --app` commands.
  */
 export function getDocumentTypeMetadata({
   project,

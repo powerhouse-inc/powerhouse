@@ -282,7 +282,7 @@ async function runGenerateOnAllEditors() {
       continue;
     }
     const filePathToUse = hasModuleFile ? moduleFilePath : indexFilePath;
-    const { id, name, documentTypes, isDriveEditor } =
+    const { id, name, documentTypes, isApp } =
       extractEditorModuleInfo(filePathToUse);
 
     if (!name) {
@@ -291,16 +291,16 @@ async function runGenerateOnAllEditors() {
     if (!id) {
       throw new Error(`Editor ${dir} is missing id`);
     }
-    if (isDriveEditor) {
+    if (isApp) {
       const configFilePath = path.join(editorsPath, dir, "config.ts");
       const hasConfigFile = existsSync(configFilePath);
       const allowedDocumentTypes = hasConfigFile
         ? extractAllowedDocumentTypes(configFilePath)
         : undefined;
       const args = {
-        driveEditorName: name,
-        driveEditorId: id,
-        driveEditorDirName: dir,
+        appName: name,
+        appId: id,
+        appDirName: dir,
         allowedDocumentTypes,
       } as GenerateArgs;
       await startGenerate(args);
@@ -316,7 +316,7 @@ async function runGenerateOnAllEditors() {
   }
 }
 
-/** Extract the name, id, document types, and whether the editor is a drive editor from the editor module */
+/** Extract the name, id, document types, and whether the editor is a app from the editor module */
 function extractEditorModuleInfo(filePath: string) {
   const project = new Project({
     tsConfigFilePath: path.resolve("tsconfig.json"),
@@ -355,11 +355,11 @@ function extractEditorModuleInfo(filePath: string) {
   const name = getStringLiteralValue(
     getObjectProperty(configProperty, "name", SyntaxKind.StringLiteral),
   );
-  const isDriveEditor = documentTypes?.includes("powerhouse/document-drive");
-  return { id, name, documentTypes, isDriveEditor };
+  const isApp = documentTypes?.includes("powerhouse/document-drive");
+  return { id, name, documentTypes, isApp };
 }
 
-/** Extract the allowed document types from the drive editor config */
+/** Extract the allowed document types from the app config */
 function extractAllowedDocumentTypes(filePath: string) {
   const project = new Project({
     tsConfigFilePath: path.resolve("tsconfig.json"),
@@ -371,7 +371,7 @@ function extractAllowedDocumentTypes(filePath: string) {
   if (!sourceFile) return;
   const configVariableDeclaration = getVariableDeclarationByTypeName(
     sourceFile,
-    "PHDriveEditorConfig",
+    "PHAppConfig",
   );
   const configVariable = configVariableDeclaration?.getInitializerIfKind(
     SyntaxKind.ObjectLiteralExpression,
