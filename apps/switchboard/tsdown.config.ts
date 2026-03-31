@@ -2,15 +2,15 @@ import { defineConfig } from "tsdown";
 
 export default defineConfig({
   entry: [
-    "src/index.ts",
-    "src/server.ts",
-    "src/utils.ts",
-    "src/install-packages.ts",
-    "src/migrate.ts",
+    "src/index.mts",
+    "src/server.mts",
+    "src/utils.mts",
+    "src/install-packages.mts",
+    "src/migrate.mts",
   ],
   platform: "node",
   outDir: "dist",
-  clean: false,
-  dts: false,
+  clean: true,
+  dts: true,
   sourcemap: true,
 });

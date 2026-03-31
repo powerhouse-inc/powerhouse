@@ -1,10 +1,12 @@
 {
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
+    "emitDeclarationOnly": true,
+    "rootDir": "src",
     "lib": ["DOM", "ESNext"],
     "outDir": "./dist"
   },
-  "include": ["**/*"],
+  "include": ["src/**/*"],
   "references": [
     {
       "path": "../document-model"

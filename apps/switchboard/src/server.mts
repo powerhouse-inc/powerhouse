@@ -47,7 +47,7 @@ import { initRedis } from "./clients/redis.js";
 import { initFeatureFlags } from "./feature-flags.js";
 import { getRenownSignerConfig, initRenown } from "./renown.js";
 import type { StartServerOptions, SwitchboardReactor } from "./types.js";
-import { addDefaultDrive, isPostgresUrl } from "./utils.js";
+import { addDefaultDrive, isPostgresUrl } from "./utils.mjs";
 
 const defaultLogger = childLogger(["switchboard"]);
 

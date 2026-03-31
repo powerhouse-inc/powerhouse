@@ -4,7 +4,7 @@ import { childLogger } from "document-model";
 import { config } from "./config.js";
 import { createMeterProviderFromEnv } from "./metrics.js";
 import { initProfilerFromEnv } from "./profiler.js";
-import { startSwitchboard } from "./server.js";
+import { startSwitchboard } from "./server.mjs";
 
 const logger = childLogger(["switchboard"]);
 

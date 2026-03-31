@@ -1,12 +1,10 @@
 import { defineConfig } from "tsdown";
 
 export default defineConfig({
-  entry: ["index.mts", "src/packages/vite-loader.mts"],
-  platform: "node",
+  entry: ["index.ts", "drive-analytics.ts", "utils/index.ts"],
   outDir: "dist",
+  platform: "browser",
   clean: true,
   dts: true,
   sourcemap: true,
-  loader: { ".graphql": "text" },
-  external: [/^[^./]/],
 });

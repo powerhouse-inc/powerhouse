@@ -11,24 +11,27 @@
   },
   "exports": {
     ".": {
-      "import": "./dist/src/index.js",
-      "types": "./dist/src/index.d.ts"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
     },
     "./node": {
-      "import": "./dist/src/node.js",
-      "types": "./dist/src/node.d.ts"
+      "types": "./dist/node.d.ts",
+      "import": "./dist/node.js"
     }
   },
-  "types": "./dist/src/index.d.ts",
+  "types": "./dist/index.d.ts",
   "publishConfig": {
     "access": "public"
   },
   "scripts": {
-    "build": "tsc --build",
+    "build": "tsdown",
     "tsc": "tsc",
     "lint": "eslint"
   },
   "dependencies": {
     "@powerhousedao/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "tsdown": "catalog:"
   }
 }

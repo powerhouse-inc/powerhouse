@@ -1,9 +1,11 @@
 {
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
+    "emitDeclarationOnly": true,
+    "rootDir": "src",
     "outDir": "./dist"
   },
-  "include": ["**/*"],
+  "include": ["src/**/*"],
   "references": [
     {
       "path": "../shared"

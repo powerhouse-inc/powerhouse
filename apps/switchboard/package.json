@@ -5,15 +5,15 @@
   "main": "dist/index.mjs",
   "exports": {
     ".": {
-      "types": "./dist/src/index.d.ts",
+      "types": "./dist/index.d.mts",
       "import": "./dist/index.mjs"
     },
     "./server": {
-      "types": "./dist/src/server.d.ts",
+      "types": "./dist/server.d.mts",
       "import": "./dist/server.mjs"
     },
     "./utils": {
-      "types": "./dist/src/utils.d.ts",
+      "types": "./dist/utils.d.mts",
       "import": "./dist/utils.mjs"
     }
   },
