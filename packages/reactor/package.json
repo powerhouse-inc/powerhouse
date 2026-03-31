@@ -41,7 +41,7 @@
     "kysely-pglite-dialect": "catalog:",
     "@electric-sql/pglite": "catalog:",
     "@sindresorhus/fnv1a": "catalog:",
-    "@powerhousedao/shared": "workspace:",
+    "@powerhousedao/shared": "workspace:*",
     "document-model": "workspace:*"
   },
   "devDependencies": {

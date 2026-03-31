@@ -11,6 +11,10 @@
       "dom",
       "dom.iterable"
     ],
+    "emitDeclarationOnly": true,
+    "customConditions": [
+      "source"
+    ],
     "paths": {
       "document-models": [
         "./document-models/index.ts"
@@ -23,9 +27,6 @@
       ],
       "editors/*": [
         "./editors/*/index.ts"
-      ],
-      "processors": [
-        "./processors/index.ts"
       ],
       "processors/*": [
         "./processors/*/index.ts"
@@ -55,10 +56,16 @@
       "path": "../../clis/ph-cli"
     },
     {
+      "path": "../../packages/analytics-engine/core"
+    },
+    {
       "path": "../../packages/design-system"
     },
     {
       "path": "../../packages/document-model"
+    },
+    {
+      "path": "../../packages/reactor"
     },
     {
       "path": "../../packages/reactor-browser"

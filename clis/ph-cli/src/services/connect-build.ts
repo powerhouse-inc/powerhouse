@@ -12,9 +12,6 @@ export async function runConnectBuild(args: ConnectBuildArgs) {
   await runBuild({
     outDir: "dist",
     debug,
-    clean: true,
-    dts: true,
-    sourcemap: true,
   });
 
   const mode = "production";

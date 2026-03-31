@@ -3,6 +3,7 @@
   "compilerOptions": {
     "outDir": "./dist",
     "emitDeclarationOnly": true,
+    "customConditions": ["source"],
     "lib": [
       "ESNext",
       "dom",

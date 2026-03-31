@@ -3,6 +3,7 @@ import {
   relationalDbFactoryTemplate,
   relationalDbIndexTemplate,
   relationalDbMigrationsTemplate,
+  relationalDbProcessorTemplate,
   relationalDbSchemaTemplate,
 } from "templates";
 import type { Project } from "ts-morph";
@@ -16,6 +17,12 @@ export async function tsMorphGenerateRelationalDbProcessor(
     args;
 
   await makeIndexFile({
+    project,
+    pascalCaseName,
+    dirPath,
+  });
+
+  await makeProcessorFile({
     project,
     pascalCaseName,
     dirPath,
@@ -39,10 +46,25 @@ async function makeIndexFile(v: {
   pascalCaseName: string;
   dirPath: string;
 }) {
-  const template = relationalDbIndexTemplate(v);
+  const template = relationalDbIndexTemplate;
   const { alreadyExists, sourceFile } = getOrCreateSourceFile(
     v.project,
     path.join(v.dirPath, "index.ts"),
+  );
+  if (alreadyExists) return;
+  sourceFile.replaceWithText(template);
+  await formatSourceFileWithPrettier(sourceFile);
+}
+
+async function makeProcessorFile(v: {
+  project: Project;
+  pascalCaseName: string;
+  dirPath: string;
+}) {
+  const template = relationalDbProcessorTemplate(v);
+  const { alreadyExists, sourceFile } = getOrCreateSourceFile(
+    v.project,
+    path.join(v.dirPath, "processor.ts"),
   );
   if (alreadyExists) return;
   sourceFile.replaceWithText(template);

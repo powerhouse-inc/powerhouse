@@ -26,7 +26,7 @@
   "dependencies": {
     "date-fns": "catalog:",
     "luxon": "catalog:",
-    "@powerhousedao/shared": "workspace:"
+    "@powerhousedao/shared": "workspace:*"
   },
   "devDependencies": {
     "@types/luxon": "catalog:",

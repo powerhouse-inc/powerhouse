@@ -8,20 +8,21 @@ export const relationalDbFactoryTemplate = (v: {
 }) =>
   ts`
 import type { 
-  ProcessorRecord,
   IProcessorHostModule,
-  ProcessorFilter
+  ProcessorApp,
+  ProcessorFactoryBuilder,
+  ProcessorFilter,
+  ProcessorRecord,
  } from "@powerhousedao/reactor-browser"
 import type { PHDocumentHeader } from "document-model";
-import type { ProcessorApp } from "@powerhousedao/common";
-import { ${v.pascalCaseName}Processor } from "./index.js";
+import { ${v.pascalCaseName} } from "./processor.js";
 
-export const ${v.camelCaseName}ProcessorFactory = (module: IProcessorHostModule) => async (driveHeader: PHDocumentHeader, processorApp?: ProcessorApp): Promise<ProcessorRecord[]> => {
+export const ${v.camelCaseName}FactoryBuilder: ProcessorFactoryBuilder = (module: IProcessorHostModule) => async (driveHeader: PHDocumentHeader, processorApp?: ProcessorApp) => {
   // Create a namespace for the processor and the provided drive id
-  const namespace = ${v.pascalCaseName}Processor.getNamespace(driveHeader.id);
+  const namespace = ${v.pascalCaseName}.getNamespace(driveHeader.id);
 
   // Create a namespaced db for the processor
-  const store = await module.relationalDb.createNamespace<${v.pascalCaseName}Processor>(
+  const store = await module.relationalDb.createNamespace<${v.pascalCaseName}>(
     namespace,
   );
 
@@ -34,7 +35,7 @@ export const ${v.camelCaseName}ProcessorFactory = (module: IProcessorHostModule)
   };
 
   // Create the processor
-  const processor = new ${v.pascalCaseName}Processor(namespace, filter, store);
+  const processor = new ${v.pascalCaseName}(namespace, filter, store);
   return [
     {
       processor,

@@ -15,37 +15,41 @@
   ],
   "exports": {
     ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "source": "./index.ts",
+      "browser": "./dist/browser/index.js",
+      "node": "./dist/node/index.js"
     },
     "./document-models": {
-      "import": "./dist/document-models/index.js",
-      "types": "./dist/document-models/index.d.ts"
+      "source": "./document-models/index.ts",
+      "browser": "./dist/browser/document-models/index.js",
+      "node": "./dist/node/document-models/index.js"
     },
     "./document-models/*": {
-      "types": "./dist/document-models/*/index.d.ts",
-      "default": "./dist/document-models/*/index.js"
-    },
-    "./editors/*": {
-      "types": "./dist/editors/*/index.d.ts",
-      "default": "./dist/editors/*/index.js"
+      "source": "./document-models/*/index.ts",
+      "browser": "./dist/browser/document-models/*/index.js",
+      "node": "./dist/node/document-models/*/index.js"
     },
     "./editors": {
-      "import": "./dist/editors/index.js",
-      "types": "./dist/editors/index.d.ts"
+      "source": "./editors/index.ts",
+      "browser": "./dist/browser/editors/index.js",
+      "node": "./dist/node/editors/index.js"
+    },
+    "./editors/*": {
+      "source": "./editors/*/index.ts",
+      "browser": "./dist/browser/editors/*/index.js",
+      "node": "./dist/node/editors/*/index.js"
     },
     "./subgraphs": {
-      "import": "./dist/subgraphs/index.js",
-      "types": "./dist/subgraphs/index.d.ts"
+      "source": "./dist/subgraphs/index.ts",
+      "browser": "./dist/browser/subgraphs/index.js",
+      "node": "./dist/node/subgraphs/index.js"
     },
     "./processors": {
-      "import": "./dist/processors/index.js",
-      "types": "./dist/processors/index.d.ts"
+      "source": "./processors/index.ts",
+      "browser": "./dist/browser/processors/index.js",
+      "node": "./dist/node/processors/index.js"
     },
-    "./manifest": {
-      "import": "./dist/manifest.js",
-      "types": "./dist/manifest.d.ts"
-    },
+    "./manifest": "./dist/powerhouse.manifest.json",
     "./style.css": "./dist/style.css"
   },
   "sideEffects": false,
@@ -53,7 +57,6 @@
     "create:todo": "tsx scripts/create-versioned-todo.ts && ph-cli generate ./scripts/versioned-todo.zip --use-versioning",
     "tsc": "tsc",
     "lint": "eslint",
-    "build:css": "pnpm exec tailwindcss -i ./style.css -o ./dist/style.css",
     "test": "vitest --run",
     "test:watch": "vitest",
     "test:document-models": "vitest run document-models",
@@ -71,8 +74,10 @@
   "dependencies": {
     "document-model": "workspace:*",
     "@powerhousedao/design-system": "workspace:*",
+    "@powerhousedao/reactor": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",
     "@powerhousedao/connect": "workspace:*",
+    "@powerhousedao/analytics-engine-core": "workspace:*",
     "react": "catalog:",
     "react-dom": "catalog:",
     "zod": "catalog:"

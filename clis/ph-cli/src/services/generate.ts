@@ -93,10 +93,7 @@ export async function startGenerate(options: GenerateArgs) {
       documentTypes: [documentTypeToUse].filter((t) => t !== undefined),
     });
   } else if (subgraphName !== undefined) {
-    await generateSubgraph(subgraphName, filePath || null, config, {
-      verbose,
-      force,
-    });
+    await generateSubgraph(subgraphName, filePath || null, config);
   } else if (importScriptName !== undefined) {
     await generateImportScript(importScriptName, config);
   } else if (migrationFile !== undefined) {
