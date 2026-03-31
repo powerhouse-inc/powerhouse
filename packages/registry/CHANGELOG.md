@@ -1,3 +1,13 @@
+## 6.0.0-dev.131 (2026-03-31)
+
+### 🚀 Features
+
+- add separate node and browser processor bundles ([#2451](https://github.com/powerhouse-inc/powerhouse/pull/2451))
+
+### ❤️ Thank You
+
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.0.0-dev.130 (2026-03-31)
 
 This was a version bump only for @powerhousedao/registry to align it with other projects, there were no code changes.

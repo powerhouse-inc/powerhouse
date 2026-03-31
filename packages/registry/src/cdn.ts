@@ -5,6 +5,35 @@ import { pipeline } from "node:stream/promises";
 import { extract } from "tar";
 import { compareSemver } from "./semver.js";
 
+/**
+ * Parse a package specifier into name and version/tag.
+ * Supports:
+ *   "@scope/pkg"           -> { name: "@scope/pkg", tag: undefined }
+ *   "@scope/pkg@dev"       -> { name: "@scope/pkg", tag: "dev" }
+ *   "@scope/pkg@1.0.0"     -> { name: "@scope/pkg", tag: "1.0.0" }
+ *   "pkg@latest"           -> { name: "pkg", tag: "latest" }
+ */
+export function parsePackageSpec(spec: string): {
+  name: string;
+  tag: string | undefined;
+} {
+  // For scoped packages (@scope/name@tag), split on the last @
+  // For unscoped packages (name@tag), split on the first @
+  if (spec.startsWith("@")) {
+    // Scoped: find the @ after the scope/name portion
+    const lastAt = spec.lastIndexOf("@");
+    if (lastAt > 0 && lastAt !== spec.indexOf("@")) {
+      return { name: spec.slice(0, lastAt), tag: spec.slice(lastAt + 1) };
+    }
+    return { name: spec, tag: undefined };
+  }
+  const atIndex = spec.indexOf("@");
+  if (atIndex > 0) {
+    return { name: spec.slice(0, atIndex), tag: spec.slice(atIndex + 1) };
+  }
+  return { name: spec, tag: undefined };
+}
+
 export class CdnCache {
   #extractionLocks = new Map<string, Promise<void>>();
 
@@ -13,11 +42,13 @@ export class CdnCache {
     private cdnCachePath: string,
   ) {}
 
-  async getFile(packageName: string, filePath: string): Promise<string | null> {
-    // Always check Verdaccio for the authoritative latest version,
+  async getFile(packageSpec: string, filePath: string): Promise<string | null> {
+    const { name: packageName, tag } = parsePackageSpec(packageSpec);
+
+    // Always check Verdaccio for the authoritative version,
     // falling back to the cached version if Verdaccio is unavailable.
     const version =
-      (await this.getLatestVersion(packageName)) ??
+      (await this.resolveVersion(packageName, tag)) ??
       this.getLatestCachedVersion(packageName);
     if (!version) return null;
 
@@ -78,7 +109,16 @@ export class CdnCache {
     }
   }
 
-  async getLatestVersion(packageName: string): Promise<string | null> {
+  /**
+   * Resolve a version for a package. If tag is a semver version that exists
+   * in the registry, return it directly. If tag is a dist-tag name (e.g.
+   * "dev", "latest"), resolve it to the concrete version. If no tag is
+   * provided, prefer "latest", then fall back to any available dist-tag.
+   */
+  async resolveVersion(
+    packageName: string,
+    tag?: string,
+  ): Promise<string | null> {
     try {
       const url = `${this.registryUrl}/${encodeURIComponent(packageName)}`;
       const res = await fetch(url, {
@@ -89,12 +129,30 @@ export class CdnCache {
       const distTags = metadata["dist-tags"] as
         | Record<string, string>
         | undefined;
+      const versions = metadata["versions"] as
+        | Record<string, unknown>
+        | undefined;
+
+      if (tag) {
+        // If the tag matches an exact version in the registry, use it directly
+        if (versions && tag in versions) return tag;
+        // Otherwise treat it as a dist-tag name
+        if (distTags && tag in distTags) return distTags[tag];
+        // Tag not found
+        return null;
+      }
+
       if (!distTags) return null;
-      // Prefer "latest" tag, fall back to any available tag
+      // No tag specified: prefer "latest", fall back to any available tag
       return distTags.latest ?? Object.values(distTags)[0] ?? null;
     } catch {
       return null;
     }
+  }
+
+  /** @deprecated Use resolveVersion instead */
+  async getLatestVersion(packageName: string): Promise<string | null> {
+    return this.resolveVersion(packageName);
   }
 
   async extractTarball(packageName: string, version: string): Promise<void> {
