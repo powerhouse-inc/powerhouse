@@ -30,7 +30,10 @@ export async function getPhCliVersionInfo() {
   if (!projectPackageJsonExists) {
     return noProjectWarningMessage;
   }
-  const projectPackageJson = await readPackage({ cwd: projectPath });
+  const projectPackageJson = await readPackage({
+    cwd: projectPath,
+    normalize: false,
+  });
   const phCliVersion =
     projectPackageJson.dependencies?.["@powerhousedao/ph-cli"] ??
     projectPackageJson.devDependencies?.["@powerhousedao/ph-cli"];

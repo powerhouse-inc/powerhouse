@@ -6,6 +6,11 @@ import type { OperationWithContext } from "@powerhousedao/shared/document-model"
  */
 export interface IReadModel {
   /**
+   * Unique name identifying this read model, used for lookup via getReadModel.
+   */
+  readonly name: string;
+
+  /**
    * Indexes a list of operations into the read model.
    * This method is called asynchronously when operations are written to the operation store.
    *
@@ -19,6 +24,11 @@ export interface IReadModel {
  * Listens to operation events from the event bus and updates all registered read models.
  */
 export interface IReadModelCoordinator {
+  /**
+   * All registered read models (pre-ready and post-ready).
+   */
+  readonly readModels: IReadModel[];
+
   /**
    * Start listening for operation events and updating read models.
    */

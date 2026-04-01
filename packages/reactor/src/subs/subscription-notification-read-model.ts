@@ -12,6 +12,8 @@ import type { ReactorSubscriptionManager } from "./react-subscription-manager.js
  * is emitted, so that reactor.get() returns fresh data when callbacks fire.
  */
 export class SubscriptionNotificationReadModel implements IReadModel {
+  readonly name = "subscription-notification";
+
   constructor(
     private subscriptionManager: ReactorSubscriptionManager,
     private documentView?: IDocumentView,

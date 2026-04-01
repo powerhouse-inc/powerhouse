@@ -4,6 +4,7 @@ import { PostgresAnalyticsStore } from "@powerhousedao/analytics-engine-pg";
 import { getConfig } from "@powerhousedao/config/node";
 import type {
   IDocumentModelRegistry,
+  IReadModel,
   IReactorClient,
   IProcessorManager as IReactorProcessorManager,
   ISyncManager,
@@ -469,6 +470,7 @@ async function _setupAPI(
     admins: string[];
   },
   processorApp: ProcessorApp,
+  readModels: IReadModel[],
   authorizationService?: AuthorizationService,
   documentModelRegistry?: IDocumentModelRegistry,
 ): Promise<API> {
@@ -477,7 +479,24 @@ async function _setupAPI(
     analyticsStore,
     processorApp,
     config: options.processorConfig,
-    reactorClient,
+    dispatch: {
+      async execute(docId, branch, actions, signal) {
+        const jobInfo = await reactorClient.executeAsync(
+          docId,
+          branch,
+          actions,
+          signal,
+        );
+        return { id: jobInfo.id, status: jobInfo.status };
+      },
+    },
+    getReadModel<T>(name: string): T {
+      const model = readModels.find((m) => m.name === name);
+      if (!model) {
+        throw new Error(`Read model "${name}" not found`);
+      }
+      return model as unknown as T;
+    },
   };
   const mcpServerEnabled = options.mcp ?? true;
 
@@ -680,6 +699,10 @@ export async function initializeAndStartAPI(
     );
   }
 
+  const readModelCoordinator =
+    reactorClientModule.reactorModule?.readModelCoordinator;
+  const readModels = readModelCoordinator?.readModels ?? [];
+
   const api = await _setupAPI(
     reactorClient,
     syncManager,
@@ -696,6 +719,7 @@ export async function initializeAndStartAPI(
     options,
     auth,
     processorApp,
+    readModels,
     authorizationService,
     documentModelRegistry,
   );

@@ -1,10 +1,25 @@
+import type { Action } from "@powerhousedao/shared/document-model";
 import { createAnalyticsStore } from "@powerhousedao/reactor-browser";
 import { type IProcessorHostModule } from "@powerhousedao/shared/processors";
 import { getDb } from "../pglite.db.js";
 
-export async function createProcessorHostModule(): Promise<
-  IProcessorHostModule | undefined
-> {
+interface ReactorClientDispatch {
+  executeAsync(
+    documentIdentifier: string,
+    branch: string,
+    actions: Action[],
+    signal?: AbortSignal,
+  ): Promise<{ id: string; status: string }>;
+}
+
+interface ReadModel {
+  readonly name: string;
+}
+
+export async function createProcessorHostModule(
+  reactorClient: ReactorClientDispatch,
+  readModels: ReadModel[],
+): Promise<IProcessorHostModule | undefined> {
   try {
     const { pgLite, relationalDb } = await getDb();
     const { store: analyticsStore } = await createAnalyticsStore({
@@ -15,6 +30,24 @@ export async function createProcessorHostModule(): Promise<
       relationalDb,
       analyticsStore,
       processorApp,
+      dispatch: {
+        async execute(docId, branch, actions, signal) {
+          const jobInfo = await reactorClient.executeAsync(
+            docId,
+            branch,
+            actions,
+            signal,
+          );
+          return { id: jobInfo.id, status: jobInfo.status };
+        },
+      },
+      getReadModel<T>(name: string): T {
+        const model = readModels.find((m) => m.name === name);
+        if (!model) {
+          throw new Error(`Read model "${name}" not found`);
+        }
+        return model as unknown as T;
+      },
     };
   } catch (error) {
     console.error(`Failed to initialize processor host module:`);

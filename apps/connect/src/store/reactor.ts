@@ -230,7 +230,12 @@ export async function createReactor(localPackage?: DocumentModelLib) {
   );
 
   if (packagesWithProcessorFactories.length > 0) {
-    const processorHostModule = await createProcessorHostModule();
+    const readModels =
+      reactorClientModule.reactorModule?.readModelCoordinator?.readModels ?? [];
+    const processorHostModule = await createProcessorHostModule(
+      reactorClientModule.client,
+      readModels,
+    );
     if (processorHostModule !== undefined) {
       await Promise.all(
         packagesWithProcessorFactories.map(async (pkg) => {

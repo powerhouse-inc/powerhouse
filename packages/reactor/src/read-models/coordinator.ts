@@ -24,12 +24,14 @@ export class ReadModelCoordinator implements IReadModelCoordinator {
   private unsubscribe?: Unsubscribe;
   private isRunning = false;
 
+  readonly readModels: IReadModel[];
+
   constructor(
     private eventBus: IEventBus,
     public readonly preReady: IReadModel[],
     public readonly postReady: IReadModel[],
   ) {
-    //
+    this.readModels = [...preReady, ...postReady];
   }
 
   /**

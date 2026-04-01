@@ -23,13 +23,17 @@ export type BaseReadModelConfig = {
 export class BaseReadModel implements IReadModel {
   protected lastOrdinal: number = 0;
 
+  readonly name: string;
+
   constructor(
     protected db: Kysely<DocumentViewDatabase>,
     protected operationIndex: IOperationIndex,
     protected writeCache: IWriteCache,
     protected consistencyTracker: IConsistencyTracker,
     protected config: BaseReadModelConfig,
-  ) {}
+  ) {
+    this.name = config.readModelId;
+  }
 
   /**
    * Initializes the read model by loading state and catching up on missed operations.
