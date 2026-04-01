@@ -34,7 +34,10 @@ import {
   replayDocument,
 } from "@powerhousedao/shared/document-model";
 import { logger } from "document-model";
-import { UnsupportedDocumentTypeError } from "../errors.js";
+import {
+  DocumentModelNotFoundError,
+  UnsupportedDocumentTypeError,
+} from "../errors.js";
 import { isDocumentTypeSupported } from "../utils/documents.js";
 import { getUserPermissions } from "../utils/user.js";
 import { queueActions, queueOperations, uploadOperations } from "./queue.js";
@@ -216,9 +219,7 @@ export async function loadFile(path: string | File) {
       module.documentModel.global.id === baseDocument.header.documentType,
   );
   if (!documentModelModule) {
-    throw new Error(
-      `Document "${baseDocument.header.documentType}" is not supported`,
-    );
+    throw new DocumentModelNotFoundError(baseDocument.header.documentType);
   }
   return documentModelModule.utils.loadFromInput(path);
 }
@@ -369,23 +370,18 @@ export async function addFileWithProgress(
   // Loading stage (0-10%)
   try {
     onProgress?.({ stage: "loading", progress: 0 });
-
-    // Pre-read the document type before full load so we can attempt
-    // package discovery if the module is not installed.
-    const docType = await getDocumentTypeFromFile(file);
-
     let document: PHDocument;
     try {
       document = await loadFile(file);
     } catch (loadError) {
-      // Only attempt discovery if the failure is due to a missing document
-      // model module, not for other errors like corrupt files or hash failures.
+      // Only attempt discovery if the failure is specifically a missing
+      // document model module, not for other errors like corrupt files.
       const discoveryService = window.ph?.packageDiscoveryService;
-      if (discoveryService && docType && !(await hasDocumentModel(docType))) {
+      if (discoveryService && DocumentModelNotFoundError.isError(loadError)) {
         // Trigger discovery and retry without blocking the drop handler
         void retryAfterDiscovery(
           discoveryService,
-          docType,
+          loadError.documentType,
           file,
           driveId,
           name,
@@ -532,32 +528,6 @@ export async function addFileWithProgress(
       });
     }
     throw error;
-  }
-}
-
-async function hasDocumentModel(documentType: string): Promise<boolean> {
-  const reactorClient = window.ph?.reactorClient;
-  if (!reactorClient) return false;
-  try {
-    await reactorClient.getDocumentModelModule(documentType);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-async function getDocumentTypeFromFile(
-  file: string | File,
-): Promise<string | undefined> {
-  try {
-    const baseDocument = await baseLoadFromInput(
-      file,
-      (state: PHDocument) => state,
-      { checkHashes: false },
-    );
-    return baseDocument.header.documentType;
-  } catch {
-    return undefined;
   }
 }
 
