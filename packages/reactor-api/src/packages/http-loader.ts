@@ -1,11 +1,8 @@
 import type { IDocumentModelLoader } from "@powerhousedao/reactor";
-import type {
-  ProcessorFactoryBuilder,
-  SubgraphClass,
-} from "@powerhousedao/reactor-api";
+import type { SubgraphClass } from "@powerhousedao/reactor-api";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import { childLogger } from "document-model";
-import type { IPackageLoader } from "./types.js";
+import type { IPackageLoader, ProcessorFactoryBuilder } from "../types.js";
 
 export interface HttpPackageLoaderOptions {
   registryUrl: string;
@@ -16,57 +13,38 @@ export interface HttpPackageLoaderLogger {
   error: (msg: string, err: unknown) => void;
 }
 
-// Expected shape of the bundle exports
+// Expected shape of the document-models bundle export
 type DocumentModelsExport = Record<string, DocumentModelModule>;
-type SubgraphsExport = Record<string, Record<string, SubgraphClass>>;
+
+// Expected shape of the subgraphs bundle export
+type SubgraphsExport = Record<string, SubgraphClass>;
+
+// Expected shape of the processors bundle export
 type ProcessorsExport = {
   processorFactory?: ProcessorFactoryBuilder;
 };
 
 /**
- * Loads document models from an HTTP registry.
+ * Loads document models, subgraphs, and processors from an HTTP registry.
  * Uses Node.js module loader hooks to import directly from HTTP URLs.
  *
  * IMPORTANT: Requires https-hooks to be registered before use:
  *   import { register } from "node:module";
  *   register("@powerhousedao/reactor-api/https-hooks", import.meta.url);
  */
-export class HttpPackageLoader implements IDocumentModelLoader, IPackageLoader {
+export class HttpPackageLoader implements IPackageLoader {
   private readonly registryUrl: string;
   private readonly logger = childLogger(["reactor-api", "http-loader"]);
 
-  // Cache: documentType -> packageName
-  private readonly documentTypeCache = new Map<string, string>();
+  readonly name = "HttpPackageLoader";
 
-  // Cache: packageName -> DocumentModelModule[]
-  private readonly packageModulesCache = new Map<
-    string,
-    DocumentModelModule[]
-  >();
-
-  // Callback to notify when a model is dynamically loaded
-  private onModelLoaded?: (model: DocumentModelModule) => void;
+  readonly documentModelLoader: HttpDocumentModelLoader;
 
   constructor(options: HttpPackageLoaderOptions) {
     this.registryUrl = options.registryUrl.endsWith("/")
       ? options.registryUrl
       : `${options.registryUrl}/`;
-  }
-
-  /**
-   * Set a callback to be notified when a model is dynamically loaded.
-   * This is used to trigger subgraph generation for dynamically loaded models.
-   */
-  setOnModelLoaded(callback: (model: DocumentModelModule) => void): void {
-    this.onModelLoaded = callback;
-  }
-
-  /**
-   * Clear all caches. Useful for testing or when packages are updated.
-   */
-  clearCache(): void {
-    this.documentTypeCache.clear();
-    this.packageModulesCache.clear();
+    this.documentModelLoader = new HttpDocumentModelLoader(this);
   }
 
   /**
@@ -103,32 +81,72 @@ export class HttpPackageLoader implements IDocumentModelLoader, IPackageLoader {
     }
 
     // Pass the full spec (with tag) to the CDN — the registry resolves it
-    const url = `${this.registryUrl}-/cdn/${packageSpec}/document-models/index.js`;
+    const url = `${this.registryUrl}-/cdn/${packageSpec}/node/document-models/index.mjs`;
 
-    try {
-      this.logger.verbose(`Importing document-models from: ${url}`);
+    this.logger.verbose(`Importing document-models from: ${url}`);
 
-      // Direct import from HTTP URL - hooks handle the fetch
-      const module = (await import(url)) as DocumentModelsExport;
+    // Direct import from HTTP URL - hooks handle the fetch
+    const module = (await import(url)) as DocumentModelsExport;
 
-      const models = Object.values(module).filter(
-        (m): m is DocumentModelModule =>
-          m !== null &&
-          typeof m === "object" &&
-          "documentModel" in m &&
-          m.documentModel !== null,
-      );
+    const models = Object.values(module).filter(
+      (m: unknown): m is DocumentModelModule =>
+        m !== null &&
+        typeof m === "object" &&
+        "documentModel" in m &&
+        m.documentModel !== null,
+    );
 
-      this.logger.verbose(
-        `Loaded ${models.length} document models from ${packageName}`,
-      );
-      return models;
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      throw new Error(
-        `Failed to load document models from ${packageName}: ${message}`,
-      );
+    this.logger.verbose(
+      `Loaded ${models.length} document models from ${packageName}`,
+    );
+    return models;
+  }
+
+  async loadSubgraphs(packageSpec: string): Promise<SubgraphClass[]> {
+    const { name: packageName } = this.parsePackageSpec(packageSpec);
+    if (!this.isValidPackageName(packageName)) {
+      throw new Error(`Invalid package name: ${packageName}`);
     }
+
+    const url = `${this.registryUrl}-/cdn/${packageSpec}/node/subgraphs/index.mjs`;
+
+    this.logger.verbose(`Importing subgraphs from: ${url}`);
+    const module = (await import(url)) as Record<string, SubgraphsExport>;
+    const subgraphs = new Array<SubgraphClass>();
+    for (const [key, value] of Object.entries(module)) {
+      const subgraph = value[key];
+      if (subgraph && typeof subgraph === "function") {
+        subgraphs.push(subgraph);
+      }
+    }
+
+    this.logger.verbose(
+      `Loaded ${subgraphs.length} subgraphs from ${packageName}`,
+    );
+    return subgraphs;
+  }
+
+  async loadProcessors(
+    packageSpec: string,
+  ): Promise<ProcessorFactoryBuilder | null> {
+    const { name: packageName } = this.parsePackageSpec(packageSpec);
+    if (!this.isValidPackageName(packageName)) {
+      throw new Error(`Invalid package name: ${packageName}`);
+    }
+
+    const url = `${this.registryUrl}-/cdn/${packageSpec}/node/processors/index.mjs`;
+
+    this.logger.verbose(`Importing processors from: ${url}`);
+    const module = (await import(url)) as ProcessorsExport;
+
+    const factory = module.processorFactory;
+    if (factory && typeof factory === "function") {
+      this.logger.verbose(`Loaded processor factory from ${packageName}`);
+      return factory;
+    }
+
+    this.logger.verbose(`No processor factory found in ${packageName}`);
+    return null;
   }
 
   /**
@@ -162,93 +180,57 @@ export class HttpPackageLoader implements IDocumentModelLoader, IPackageLoader {
     return allModels;
   }
 
-  /**
-   * Load subgraphs from a package in the HTTP registry.
-   */
-  async loadSubgraphs(packageSpec: string): Promise<SubgraphClass[]> {
-    const { name: packageName } = this.parsePackageSpec(packageSpec);
-    if (!this.isValidPackageName(packageName)) {
-      throw new Error(`Invalid package name: ${packageName}`);
-    }
+  private isValidPackageName(name: string): boolean {
+    // npm package name pattern: optional scope + package name
+    const pattern = /^(@[a-z0-9][-a-z0-9._]*\/)?[a-z0-9][-a-z0-9._]*$/i;
+    return pattern.test(name) && !name.includes("..") && name.length <= 214;
+  }
+}
 
-    const url = `${this.registryUrl}-/cdn/${packageSpec}/subgraphs/index.js`;
+export class HttpDocumentModelLoader implements IDocumentModelLoader {
+  private readonly loader: HttpPackageLoader;
+  private readonly logger = childLogger([
+    "reactor-api",
+    "http-document-model-loader",
+  ]);
 
-    try {
-      this.logger.verbose(`Importing subgraphs from: ${url}`);
-      const module = (await import(url)) as SubgraphsExport;
+  // Cache: documentType -> packageName
+  private readonly documentTypeCache = new Map<string, string>();
 
-      const subgraphs = Object.values(module)
-        .flatMap((subgraphGroup) => Object.values(subgraphGroup))
-        .filter(
-          (s): s is SubgraphClass =>
-            s !== null && typeof s === "function" && "prototype" in s,
-        );
+  // Cache: packageName -> DocumentModelModule[]
+  private readonly packageModulesCache = new Map<
+    string,
+    DocumentModelModule[]
+  >();
 
-      this.logger.verbose(
-        `Loaded ${subgraphs.length} subgraphs from ${packageName}`,
-      );
-      return subgraphs;
-    } catch (error) {
-      this.logger.verbose(
-        `No subgraphs found in ${packageName}: ${error instanceof Error ? error.message : String(error)}`,
-      );
-      return [];
-    }
+  private onModelLoaded?: (model: DocumentModelModule) => void;
+
+  constructor(loader: HttpPackageLoader) {
+    this.loader = loader;
   }
 
-  /**
-   * Load processor factory from a package in the HTTP registry.
-   */
-  async loadProcessors(
-    packageSpec: string,
-  ): Promise<ProcessorFactoryBuilder | null> {
-    const { name: packageName } = this.parsePackageSpec(packageSpec);
-    if (!this.isValidPackageName(packageName)) {
-      throw new Error(`Invalid package name: ${packageName}`);
-    }
-
-    const url = `${this.registryUrl}-/cdn/${packageSpec}/processors/index.js`;
-
-    try {
-      this.logger.verbose(`Importing processors from: ${url}`);
-      const module = (await import(url)) as ProcessorsExport;
-
-      const factory = module?.processorFactory;
-      if (factory && typeof factory === "function") {
-        this.logger.verbose(`Loaded processor factory from ${packageName}`);
-        return factory;
-      }
-
-      this.logger.verbose(`No processor factory found in ${packageName}`);
-      return null;
-    } catch (error) {
-      this.logger.verbose(
-        `No processors found in ${packageName}: ${error instanceof Error ? error.message : String(error)}`,
-      );
-      return null;
-    }
+  setOnModelLoaded(callback: (model: DocumentModelModule) => void): void {
+    this.onModelLoaded = callback;
   }
 
-  /**
-   * Load a specific document model by document type.
-   * Implements IDocumentModelLoader interface.
-   */
+  clearCache(): void {
+    this.documentTypeCache.clear();
+    this.packageModulesCache.clear();
+  }
+
   async load(documentType: string): Promise<DocumentModelModule> {
-    // Step 1: Find which package contains this document type
     const packageName = await this.findPackageByDocumentType(documentType);
 
-    // Step 2: Load all document models from that package (uses cache if available)
     let models: DocumentModelModule[];
 
     const cachedModels = this.packageModulesCache.get(packageName);
     if (cachedModels) {
       models = cachedModels;
     } else {
-      models = await this.loadDocumentModels(packageName);
+      models = await this.loader.loadDocumentModels(packageName);
       this.packageModulesCache.set(packageName, models);
     }
 
-    // Step 3: Find the specific model matching the document type
     const model = models.find(
       (m) => m.documentModel.global.id === documentType,
     );
@@ -265,7 +247,6 @@ export class HttpPackageLoader implements IDocumentModelLoader, IPackageLoader {
       `Loaded document model "${documentType}" from package "${packageName}"`,
     );
 
-    // Notify listener about the dynamically loaded model
     if (this.onModelLoaded) {
       this.onModelLoaded(model);
     }
@@ -273,21 +254,16 @@ export class HttpPackageLoader implements IDocumentModelLoader, IPackageLoader {
     return model;
   }
 
-  /**
-   * Find the package that contains a specific document type.
-   * Queries the registry's /packages/by-document-type endpoint.
-   */
   private async findPackageByDocumentType(
     documentType: string,
   ): Promise<string> {
-    // Check cache first
     const cached = this.documentTypeCache.get(documentType);
     if (cached) {
       return cached;
     }
 
     const encodedType = encodeURIComponent(documentType);
-    const url = `${this.registryUrl}packages/by-document-type?type=${encodedType}`;
+    const url = `${this.loader["registryUrl"]}packages/by-document-type?type=${encodedType}`;
 
     const response = await fetch(url);
 
@@ -305,41 +281,22 @@ export class HttpPackageLoader implements IDocumentModelLoader, IPackageLoader {
       );
     }
 
-    // Return first match (sorted alphabetically for determinism)
     const packageName = packageNames.sort((a, b) => a.localeCompare(b))[0];
-
-    // Cache the result
     this.documentTypeCache.set(documentType, packageName);
 
     return packageName;
   }
 
-  private isValidPackageName(name: string): boolean {
-    // npm package name pattern: optional scope + package name
-    const pattern = /^(@[a-z0-9][-a-z0-9._]*\/)?[a-z0-9][-a-z0-9._]*$/i;
-    return pattern.test(name) && !name.includes("..") && name.length <= 214;
-  }
-
-  /**
-   * Get list of all loaded package names.
-   */
   getLoadedPackages(): string[] {
     return Array.from(this.packageModulesCache.keys());
   }
 
-  /**
-   * Get the document model modules for a specific package from cache.
-   */
   getPackageModules(packageName: string): DocumentModelModule[] | undefined {
     return this.packageModulesCache.get(packageName);
   }
 
-  /**
-   * Remove a package from all caches.
-   */
   removeFromCache(packageName: string): void {
     this.packageModulesCache.delete(packageName);
-    // Remove document type entries that point to this package
     for (const [docType, pkg] of this.documentTypeCache) {
       if (pkg === packageName) {
         this.documentTypeCache.delete(docType);

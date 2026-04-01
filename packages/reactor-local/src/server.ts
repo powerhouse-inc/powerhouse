@@ -83,8 +83,8 @@ const startServer = async (
     return new ReactorClientBuilder().withReactorBuilder(builder).buildModule();
   };
 
-  // create loader
-  const packageLoader = vite ? VitePackageLoader.build(vite) : undefined;
+  // create loaders
+  const packageLoaders = vite ? [VitePackageLoader.build(vite)] : undefined;
 
   // start api
   const api = await initializeAndStartAPI(
@@ -93,7 +93,7 @@ const startServer = async (
       port: serverPort,
       dbPath,
       https: options?.https,
-      packageLoader,
+      packageLoaders,
       configFile,
       packages,
       mcp,

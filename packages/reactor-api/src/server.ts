@@ -79,7 +79,7 @@ type Options = {
       }
     | boolean
     | undefined;
-  packageLoader?: IPackageLoader;
+  packageLoaders?: IPackageLoader[];
   processors?: Record<string, ProcessorInitializer[]>;
   mcp?: boolean;
   processorConfig?: Map<string, unknown>;
@@ -422,12 +422,10 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     logger.info("Authorization service initialized");
   }
 
-  // Initialize package manager — always include ImportPackageLoader for local
-  // packages, plus any additional loader (e.g. HttpPackageLoader for registry)
-  const loaders: IPackageLoader[] = [new ImportPackageLoader()];
-  if (options.packageLoader) {
-    loaders.push(options.packageLoader);
-  }
+  // Initialize package manager
+  const loaders: IPackageLoader[] = options.packageLoaders ?? [
+    new ImportPackageLoader(),
+  ];
 
   const packages = new PackageManager(loaders, {
     configFile: options.configFile,

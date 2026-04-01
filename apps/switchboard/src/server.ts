@@ -1,5 +1,8 @@
 #!/usr/bin/env node
-import { httpsHooksPath } from "@powerhousedao/reactor-api";
+import {
+  ImportPackageLoader,
+  httpsHooksPath,
+} from "@powerhousedao/reactor-api";
 import { register } from "node:module";
 
 // Register HTTP/HTTPS module loader hooks for dynamic package imports
@@ -24,6 +27,7 @@ import {
   PackagesSubgraph,
   getUniqueDocumentModels,
   initializeAndStartAPI,
+  type IPackageLoader,
 } from "@powerhousedao/reactor-api";
 import {
   VitePackageLoader,
@@ -42,8 +46,6 @@ import { Kysely, PostgresDialect } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
 import path from "path";
 import { Pool } from "pg";
-import type { RedisClientType } from "redis";
-import { initRedis } from "./clients/redis.js";
 import { initFeatureFlags } from "./feature-flags.js";
 import { getRenownSignerConfig, initRenown } from "./renown.js";
 import type { StartServerOptions, SwitchboardReactor } from "./types.js";
@@ -94,17 +96,6 @@ async function initServer(
 
   const dbPath = options.dbPath ?? process.env.DATABASE_URL;
 
-  // start redis if configured
-  const redisUrl = process.env.REDIS_TLS_URL ?? process.env.REDIS_URL;
-  let redis: RedisClientType | undefined;
-  if (redisUrl) {
-    try {
-      redis = await initRedis(redisUrl);
-    } catch (e) {
-      logger.error("@error", e);
-    }
-  }
-
   // use postgres url for read model storage if available, otherwise use local PGlite path
   const readModelPath = dbPath || ".ph/read-storage";
 
@@ -118,14 +109,13 @@ async function initServer(
 
   if (registryUrl) {
     httpLoader = new HttpPackageLoader({ registryUrl });
+    registryPackages?.split(",").forEach((p) => {
+      const name = p.trim();
+      if (!packages.includes(name)) {
+        packages.push(name);
+      }
+    });
   }
-
-  const registryPackageNames = registryPackages
-    ? registryPackages
-        .split(",")
-        .map((p) => p.trim())
-        .filter(Boolean)
-    : [];
 
   const reactorLogger = logger.child(["reactor"]);
   const initializeClient = async (documentModels: DocumentModelModule[]) => {
@@ -172,7 +162,7 @@ async function initServer(
     }
 
     if (httpLoader && options.dynamicModelLoading) {
-      builder.withDocumentModelLoader(httpLoader);
+      builder.withDocumentModelLoader(httpLoader.documentModelLoader);
     }
 
     const clientBuilder = new ReactorClientBuilder().withReactorBuilder(
@@ -213,9 +203,22 @@ async function initServer(
     packages.push(basePath);
   }
 
-  // create loader — HTTP loader for registry packages, Vite for dev
-  const packageLoader =
-    httpLoader ?? (vite ? VitePackageLoader.build(vite) : undefined);
+  // create loaders
+  const packageLoaders: IPackageLoader[] = [];
+  if (vite) {
+    packageLoaders.push(VitePackageLoader.build(vite));
+  } else {
+    packageLoaders.push(new ImportPackageLoader());
+  }
+  if (httpLoader) {
+    packageLoaders.push(httpLoader);
+    registryPackages?.split(",").forEach((p) => {
+      const name = p.trim();
+      if (!packages.includes(name)) {
+        packages.push(name);
+      }
+    });
+  }
 
   const apiLogger = logger.child(["reactor-api"]);
   const api = await initializeAndStartAPI(
@@ -224,8 +227,8 @@ async function initServer(
       port: serverPort,
       dbPath: readModelPath,
       https: options.https,
-      packageLoader,
-      packages: [...packages, ...registryPackageNames],
+      packageLoaders: packageLoaders.length > 0 ? packageLoaders : undefined,
+      packages: packages,
       processorConfig: options.processorConfig,
       processors: {
         "@powerhousedao/vetra": [vetraProcessorFactory],
@@ -256,8 +259,8 @@ async function initServer(
       documentModelRegistry,
     });
 
-    packageManagementService.setOnModelsChanged(async () => {
-      await graphqlManager.regenerateDocumentModelSubgraphs();
+    packageManagementService.setOnModelsChanged(() => {
+      graphqlManager.regenerateDocumentModelSubgraphs().catch(logger.error);
     });
 
     const packagesSubgraph = new PackagesSubgraph({

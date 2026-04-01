@@ -1,4 +1,3 @@
-import type { IProcessorHostModule } from "@powerhousedao/reactor";
 import type {
   ProcessorFactoryBuilder,
   SubgraphClass,
@@ -7,6 +6,7 @@ import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 
 export interface IPackageLoader {
+  name: string;
   loadDocumentModels(
     identifier: string,
     immediate?: boolean,
