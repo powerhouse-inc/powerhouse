@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { Readable } from "node:stream";
@@ -162,7 +163,10 @@ export class CdnCache {
     const destDir = path.join(this.cdnCachePath, packageName, version);
     fs.mkdirSync(destDir, { recursive: true });
 
-    const tmpFile = path.join(destDir, ".tmp-tarball.tgz");
+    const tmpFile = path.join(
+      destDir,
+      `.tmp-tarball-${crypto.randomUUID()}.tgz`,
+    );
     try {
       const fileStream = fs.createWriteStream(tmpFile);
       await pipeline(Readable.fromWeb(res.body as never), fileStream);
