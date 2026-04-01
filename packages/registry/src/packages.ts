@@ -37,9 +37,12 @@ function getLatestVersionDir(pkgDir: string): string | null {
 export function loadPackage(
   cdnCachePath: string,
   name: string,
+  version?: string,
 ): PackageInfo | null {
   const pkgDir = path.join(cdnCachePath, name);
-  const versionDir = getLatestVersionDir(pkgDir);
+  const versionDir = version
+    ? path.join(pkgDir, version)
+    : getLatestVersionDir(pkgDir);
   const manifestDir = versionDir ?? pkgDir;
   const manifest = readManifest(manifestDir);
 

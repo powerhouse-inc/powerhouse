@@ -1,3 +1,13 @@
+## 6.0.0-dev.145 (2026-04-01)
+
+### 🩹 Fixes
+
+- **registry:** cache and resolve different package versions ([773d021a2](https://github.com/powerhouse-inc/powerhouse/commit/773d021a2))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.0.0-dev.144 (2026-04-01)
 
 This was a version bump only for @powerhousedao/opentelemetry-instrumentation-reactor to align it with other projects, there were no code changes.

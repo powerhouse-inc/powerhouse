@@ -33,6 +33,7 @@ export interface RegistryConfig {
   webEnabled?: boolean;
   s3?: S3Config;
   notify?: NotifyConfig;
+  maxBodySize?: string;
 }
 
 export interface RegistryCommandArgs {
