@@ -1648,6 +1648,12 @@ importers:
       graphql:
         specifier: 'catalog:'
         version: 16.12.0
+      react:
+        specifier: 'catalog:'
+        version: 19.2.4
+      react-dom:
+        specifier: 'catalog:'
+        version: 19.2.4(react@19.2.4)
       react-hook-form:
         specifier: ^7.56.1
         version: 7.71.2(react@19.2.4)
@@ -1660,9 +1666,6 @@ importers:
       thememirror:
         specifier: ^2.0.1
         version: 2.0.1(@codemirror/language@6.11.0)(@codemirror/state@6.5.2)(@codemirror/view@6.36.7)
-      tsdown:
-        specifier: 'catalog:'
-        version: 0.21.0(oxc-resolver@11.19.0)(synckit@0.11.12)(typescript@5.9.3)
       validator:
         specifier: ^13.15.0
         version: 13.15.26
@@ -1682,15 +1685,15 @@ importers:
       '@types/validator':
         specifier: ^13.12.2
         version: 13.15.10
-      react:
-        specifier: 'catalog:'
-        version: 19.2.4
-      react-dom:
-        specifier: 'catalog:'
-        version: 19.2.4(react@19.2.4)
       tailwindcss:
         specifier: 'catalog:'
         version: 4.2.2
+      tsdown:
+        specifier: 'catalog:'
+        version: 0.21.0(oxc-resolver@11.19.0)(synckit@0.11.12)(typescript@5.9.3)
+      tsx:
+        specifier: 'catalog:'
+        version: 4.21.0
 
   packages/reactor:
     dependencies:
@@ -29805,7 +29808,7 @@ snapshots:
       debug: 4.4.3(supports-color@5.5.0)
       invariant: 2.2.4
       metro: 0.83.5(bufferutil@4.1.0)(utf-8-validate@6.0.6)
-      metro-config: 0.83.5(bufferutil@4.1.0)(utf-8-validate@6.0.6)
+      metro-config: 0.83.5(bufferutil@4.1.0)(utf-8-validate@5.0.10)
       metro-core: 0.83.5
       semver: 7.7.4
     transitivePeerDependencies:
@@ -40148,22 +40151,6 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  metro-config@0.83.5(bufferutil@4.1.0)(utf-8-validate@6.0.6):
-    dependencies:
-      connect: 3.7.0
-      flow-enums-runtime: 0.0.6
-      jest-validate: 29.7.0
-      metro: 0.83.5(bufferutil@4.1.0)(utf-8-validate@6.0.6)
-      metro-cache: 0.83.5
-      metro-core: 0.83.5
-      metro-runtime: 0.83.5
-      yaml: 2.8.3
-    transitivePeerDependencies:
-      - bufferutil
-      - supports-color
-      - utf-8-validate
-    optional: true
-
   metro-core@0.83.3:
     dependencies:
       flow-enums-runtime: 0.0.6
@@ -40486,7 +40473,7 @@ snapshots:
       metro-babel-transformer: 0.83.5
       metro-cache: 0.83.5
       metro-cache-key: 0.83.5
-      metro-config: 0.83.5(bufferutil@4.1.0)(utf-8-validate@6.0.6)
+      metro-config: 0.83.5(bufferutil@4.1.0)(utf-8-validate@5.0.10)
       metro-core: 0.83.5
       metro-file-map: 0.83.5
       metro-resolver: 0.83.5
