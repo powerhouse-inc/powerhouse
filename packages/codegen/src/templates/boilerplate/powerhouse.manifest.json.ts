@@ -1,6 +1,6 @@
 import { json } from "@tmpl/core";
 
-export const powerhouseManifestTemplate = (projectName: string) =>
+export const ManifestTemplate = (projectName: string) =>
   json`
 {
     "name": "${projectName}",

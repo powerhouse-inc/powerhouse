@@ -2,13 +2,7 @@ export interface RegistryOptions {
   packagesDir: string;
 }
 
-export type {
-  PackageInfo,
-  PowerhouseManifest,
-  PowerhouseManifestApp,
-  PowerhouseManifestDocumentModel,
-  PowerhouseManifestEditor,
-} from "@powerhousedao/shared/registry";
+export type { PackageInfo } from "@powerhousedao/shared/registry";
 
 export interface S3Config {
   bucket: string;

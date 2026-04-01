@@ -19,34 +19,51 @@
   "files": [
     "dist"
   ],
-  "exports": {
-    ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
-    },
-    "./document-models/*": {
-      "types": "./dist/document-models/*/index.d.ts",
-      "default": "./dist/document-models/*/index.js"
-    },
-    "./document-models": {
-      "import": "./dist/document-models/index.js",
-      "types": "./dist/document-models/index.d.ts"
-    },
-    "./editors/*": {
-      "types": "./dist/editors/*/index.d.ts",
-      "default": "./dist/editors/*/index.js"
-    },
-    "./editors": {
-      "import": "./dist/editors/index.js",
-      "types": "./dist/editors/index.d.ts"
-    },
-    "./editors/style.css": "./dist/editors/style.css"
+  "exports":   {
+  ".": {
+    "types": "./dist/index.d.ts",
+    "browser": "./dist/browser/index.js",
+    "node": "./dist/node/index.mjs"
   },
+  "./document-models": {
+    "types": "./dist/document-models/index.d.ts",
+    "browser": "./dist/browser/document-models/index.js",
+    "node": "./dist/node/document-models/index.mjs"
+  },
+  "./document-models/*": {
+    "types": "./dist/document-models/*/index.d.ts",
+    "browser": "./dist/browser/document-models/*/index.js",
+    "node": "./dist/node/document-models/*/index.mjs"
+  },
+  "./editors": {
+    "types": "./dist/editors/index.d.ts",
+    "browser": "./dist/browser/editors/index.js",
+    "node": "./dist/node/editors/index.mjs"
+  },
+  "./editors/*": {
+    "types": "./dist/editors/*/index.d.ts",
+    "browser": "./dist/browser/editors/*/index.js",
+    "node": "./dist/node/editors/*/index.mjs"
+  },
+  "./subgraphs": {
+    "types": "./dist/subgraphs/index.d.ts",
+    "browser": "./dist/browser/subgraphs/index.js",
+    "node": "./dist/node/subgraphs/index.mjs"
+  },
+  "./processors": {
+    "types": "./dist/processors/index.d.ts",
+    "browser": "./dist/browser/processors/index.js",
+    "node": "./dist/node/processors/index.mjs"
+  },
+  "./manifest": "./dist/powerhouse.manifest.json",
+  "./style.css": "./dist/style.css"
+},
   "scripts": {
     "tsc": "tsc",
     "lint": "eslint",
-    "build:css": "pnpm exec tailwindcss -i ./editors/style.css -o ./dist/editors/style.css",
+    "build:css": "pnpm exec tailwindcss -i ./style.css -o ./dist/style.css",
     "test": "vitest --run",
+    "build:bundle": "tsx ./build && pnpm build:css",
     "test:watch": "vitest",
     "generate": "ph-cli generate",
     "reactor": "ph-cli reactor",
@@ -85,7 +102,9 @@
     "thememirror": "^2.0.1",
     "validator": "^13.15.0",
     "@hookform/resolvers": "^5.0.1",
-    "zod": "catalog:"
+    "zod": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:"
   },
   "devDependencies": {
     "@types/react": "catalog:",
@@ -93,11 +112,7 @@
     "@types/validator": "^13.12.2",
     "tailwindcss": "catalog:",
     "@tailwindcss/cli": "catalog:",
-    "react": "catalog:",
-    "react-dom": "catalog:"
-  },
-  "peerDependencies": {
-    "react": ">=19.0.0",
-    "react-dom": ">=19.0.0"
+    "tsdown": "catalog:",
+    "tsx": "catalog:"
   }
 }

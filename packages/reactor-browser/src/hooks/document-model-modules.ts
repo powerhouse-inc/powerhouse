@@ -1,18 +1,16 @@
-import type { VetraDocumentModelModule } from "@powerhousedao/reactor-browser";
+import type { DocumentModelModule } from "document-model";
 import { useVetraPackages } from "./vetra-packages.js";
 
-export function useDocumentModelModules():
-  | VetraDocumentModelModule[]
-  | undefined {
+export function useDocumentModelModules(): DocumentModelModule[] | undefined {
   const vetraPackages = useVetraPackages();
-  return vetraPackages?.flatMap(
-    (pkg) => pkg.modules.documentModelModules || [],
-  );
+  return vetraPackages.flatMap((pkg) => pkg.documentModels);
 }
 
 export function useDocumentModelModuleById(
   id: string | null | undefined,
-): VetraDocumentModelModule | undefined {
+): DocumentModelModule | undefined {
   const documentModelModules = useDocumentModelModules();
-  return documentModelModules?.find((module) => module.id === id);
+  return documentModelModules?.find(
+    (module) => module.documentModel.global.id === id,
+  );
 }

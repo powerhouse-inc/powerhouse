@@ -24,17 +24,20 @@ export const Default: Story = {
       {
         id: "powerhouse/common",
         name: "Generic Drive Explorer",
-        app: "GenericDriveExplorer",
+        sharingType: "LOCAL",
+        availableOffline: false,
       },
       {
         id: "powerhouse/invoice/contributor",
         name: "Contributor App",
-        app: "ContributorDrive",
+        sharingType: "LOCAL",
+        availableOffline: false,
       },
       {
         id: "powerhouse/invoice/administrator",
         name: "OH Administrator App",
-        app: "AdministratorDrive",
+        sharingType: "LOCAL",
+        availableOffline: false,
       },
     ],
   },

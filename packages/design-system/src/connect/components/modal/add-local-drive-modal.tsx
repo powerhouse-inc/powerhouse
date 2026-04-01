@@ -1,22 +1,18 @@
-import type { DivProps } from "@powerhousedao/design-system";
+import type { AppOptions, DivProps } from "@powerhousedao/design-system";
 import { Icon, Modal } from "@powerhousedao/design-system";
-import type { App } from "@powerhousedao/shared/document-model";
 import type { ComponentPropsWithoutRef } from "react";
 import { twMerge } from "tailwind-merge";
 import { Divider } from "../divider/divider.js";
-import {
-  type AddLocalDriveInput,
-  AddLocalDriveForm,
-} from "../form/add-local-drive-form.js";
+import { AddLocalDriveForm } from "../form/add-local-drive-form.js";
 
 type ModalProps = ComponentPropsWithoutRef<typeof Modal>;
 export type AddLocalDriveModal = {
   readonly open: boolean;
   readonly onOpenChange: (open: boolean) => void;
-  readonly onSubmit: (data: AddLocalDriveInput) => void;
+  readonly onSubmit: (data: AppOptions) => void;
   readonly modalProps?: ModalProps;
   readonly containerProps?: DivProps;
-  readonly appOptions: App[];
+  readonly appOptions: AppOptions[];
 };
 export function AddLocalDriveModal(props: AddLocalDriveModal) {
   const {

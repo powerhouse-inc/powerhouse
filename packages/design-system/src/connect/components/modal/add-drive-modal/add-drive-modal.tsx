@@ -1,12 +1,8 @@
-import type { DivProps } from "@powerhousedao/design-system";
+import type { AppOptions, DivProps } from "@powerhousedao/design-system";
 import { Modal } from "@powerhousedao/design-system";
-import type { App } from "@powerhousedao/shared/document-model";
 import type { ComponentPropsWithoutRef } from "react";
 import { twMerge } from "tailwind-merge";
-import {
-  type AddLocalDriveInput,
-  AddLocalDriveForm,
-} from "../../form/add-local-drive-form.js";
+import { AddLocalDriveForm } from "../../form/add-local-drive-form.js";
 import {
   type AddRemoteDriveInput,
   AddRemoteDriveForm,
@@ -19,13 +15,13 @@ export type AddDriveModalProps = {
   readonly open: boolean;
   readonly onOpenChange: (open: boolean) => void;
   readonly onAddRemoteDrive: (data: AddRemoteDriveInput) => void;
-  readonly onAddLocalDrive: (data: AddLocalDriveInput) => void;
+  readonly onAddLocalDrive: (data: AppOptions) => void;
   readonly modalProps?: ModalProps;
   readonly containerProps?: DivProps;
   readonly requestPublicDrive: (
     url: string,
   ) => Promise<{ id: string; name: string }>;
-  readonly appOptions: App[];
+  readonly appOptions: AppOptions[];
 };
 export function AddDriveModal(props: AddDriveModalProps) {
   function handleCancel() {

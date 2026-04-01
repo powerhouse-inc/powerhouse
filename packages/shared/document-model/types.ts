@@ -78,6 +78,7 @@ export type DocumentModelGlobalState = {
 };
 
 export type DocumentModelLocalState = {};
+
 export type DocumentModelPHState = PHBaseState & {
   global: DocumentModelGlobalState;
   local: DocumentModelLocalState;
@@ -1414,13 +1415,6 @@ export type StateReducer<TState extends PHBaseState = PHBaseState> = (
   dispatch?: SignalDispatch,
 ) => TState | undefined;
 
-export type PHStateReducer<TState extends PHBaseState = PHBaseState> =
-  StateReducer<TState>;
-
-export type Meta = {
-  preferredEditor?: string;
-};
-
 /**
  * Object that indexes attachments of a Document.
  *
@@ -1508,13 +1502,6 @@ export type SubgraphModule = {
   endpoint: string;
 };
 
-export type ImportScriptModule = {
-  id: string;
-  name: string;
-  gql: string;
-  endpoint: string;
-};
-
 export type EditorModule<TProps = any> = {
   Component: FC<EditorProps & TProps>;
   documentTypes: string[];
@@ -1522,45 +1509,6 @@ export type EditorModule<TProps = any> = {
     id: string;
     name: string;
   };
-};
-
-export type App = {
-  id: string;
-  name: string;
-  app?: string;
-};
-
-export type Manifest = {
-  name: string;
-  description: string;
-  category: string;
-  publisher: {
-    name: string;
-    url: string;
-  };
-  documentModels?: {
-    id: string;
-    name: string;
-  }[];
-  editors?: {
-    id: string;
-    name: string;
-    documentTypes: string[];
-  }[];
-  processors?: {
-    id: string;
-    name: string;
-  }[];
-  subgraphs?: {
-    id: string;
-    name: string;
-  }[];
-  importScripts?: {
-    id: string;
-    name: string;
-    documentTypes: string[];
-  }[];
-  apps?: App[];
 };
 
 export type ValidationError = { message: string; details: object };
@@ -1718,11 +1666,32 @@ export type DocumentModelLib<TState extends PHBaseState = PHBaseState> = {
   manifest: Manifest;
   documentModels: DocumentModelModule<TState>[];
   editors: EditorModule[];
-  subgraphs: SubgraphModule[];
-  importScripts: ImportScriptModule[];
-  upgradeManifests: UpgradeManifest<readonly number[]>[] | undefined;
-  processorFactory: ProcessorFactoryBuilder;
+  subgraphs?: SubgraphModule[];
+  upgradeManifests?: UpgradeManifest<readonly number[]>[] | undefined;
+  processorFactory?: ProcessorFactoryBuilder;
 };
 
 export type DocumentModelDocumentModelModule =
   DocumentModelModule<DocumentModelPHState>;
+
+export type PowerhouseModule = {
+  id: string;
+  name: string;
+  documentTypes?: string[];
+};
+export type Publisher = {
+  name?: string;
+  url?: string;
+};
+
+export type Manifest = {
+  name: string;
+  description?: string;
+  category?: string;
+  publisher?: Publisher;
+  apps?: PowerhouseModule[];
+  documentModels?: PowerhouseModule[];
+  editors?: PowerhouseModule[];
+  processors?: PowerhouseModule[];
+  subgraphs?: PowerhouseModule[];
+};

@@ -21,7 +21,6 @@ export * from "./drives.js";
 export * from "./editor-modules.js";
 export * from "./features.js";
 export * from "./folder-by-id.js";
-export * from "./import-script-modules.js";
 export * from "./items-in-selected-drive.js";
 export * from "./items-in-selected-folder.js";
 export * from "./loading.js";

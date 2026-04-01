@@ -1,12 +1,10 @@
+import * as common from "@powerhousedao/powerhouse-vetra-packages";
 import type {
   IPackagesListener,
   PackageManagerInstallResult,
-  VetraPackage,
 } from "@powerhousedao/reactor-browser";
 import {
   BrowserLocalStorage,
-  COMMON_PACKAGE_ID,
-  convertLegacyLibToVetraPackage,
   type IPackageListerUnsubscribe,
   type IPackageManager,
 } from "@powerhousedao/reactor-browser";
@@ -14,15 +12,7 @@ import {
   type DocumentModelLib,
   type DocumentModelModule,
 } from "@powerhousedao/shared/document-model";
-import * as vetraVetraPackage from "@powerhousedao/vetra";
-import {
-  loadDocumentModelDocumentModelModule,
-  loadDriveDocumentModelModule,
-} from "./store/document-model.js";
-import {
-  loadDocumentModelEditor,
-  loadGenericDriveExplorerEditorModule,
-} from "./store/editor.js";
+import * as vetra from "@powerhousedao/vetra";
 
 type PackageMeta = {
   name: string;
@@ -31,7 +21,7 @@ type PackageMeta = {
 };
 
 type PackageWithMeta = PackageMeta & {
-  loadedPackage: VetraPackage;
+  loadedPackage: DocumentModelLib;
 };
 
 const LOCAL_PACKAGE_NAME = "Local" as const;
@@ -46,11 +36,11 @@ const LOCAL_PACKAGES: string[] = [
 export class BrowserPackageManager implements IPackageManager {
   registryUrl: string | null;
   #storage: BrowserLocalStorage<PackageMeta>;
-  #packages: Map<string, VetraPackage> = new Map();
+  #packages: Map<string, DocumentModelLib> = new Map();
   #subscribers = new Set<IPackagesListener>();
-  #packagesMemo: VetraPackage[] = [];
+  #packagesMemo: DocumentModelLib[] = [];
   #stylesheets: Map<string, HTMLLinkElement> = new Map();
-  #localPackage: VetraPackage | undefined;
+  #localPackage: DocumentModelLib | undefined;
 
   #cdnUrl: string | null;
 
@@ -68,11 +58,11 @@ export class BrowserPackageManager implements IPackageManager {
     return `${base}/-/cdn`;
   }
 
-  async init(localPackage?: VetraPackage) {
+  async init(localPackage?: DocumentModelLib) {
     const commonPackageWithMeta = this.#loadCommonPackage();
     this.#registerPackage(commonPackageWithMeta);
-    const vetraVetraPackageWithMeta = this.#loadVetraPackage();
-    this.#registerPackage(vetraVetraPackageWithMeta);
+    const vetraPackageWithMeta = this.#loadVetraPackage();
+    this.#registerPackage(vetraPackageWithMeta);
     if (localPackage) {
       this.#localPackage = localPackage;
       this.#registerPackage({
@@ -97,7 +87,7 @@ export class BrowserPackageManager implements IPackageManager {
       return "common";
     }
     // check if the package has the same name as the local project
-    if (packageName === this.#localPackage?.name) return "project";
+    if (packageName === this.#localPackage?.manifest.name) return "project";
     const packageMeta = this.#storage.get(packageName);
     // if meta does not exist the package is not installed
     if (!packageMeta) return null;
@@ -157,66 +147,28 @@ export class BrowserPackageManager implements IPackageManager {
 
   load(documentType: string): Promise<DocumentModelModule<any>> {
     const documentModelModule = Array.from(
-      this.#packages
-        .values()
-        .flatMap((p) => p.modules.documentModelModules ?? []),
-    ).find((m) => m.documentType === documentType);
+      this.#packages.values().flatMap((p) => p.documentModels),
+    ).find((m) => m.documentModel.global.id === documentType);
 
     if (documentModelModule) return Promise.resolve(documentModelModule);
     return Promise.reject(new Error("Model not available"));
   }
 
   #loadCommonPackage(): PackageWithMeta {
-    const documentModelDocumentModelModule =
-      loadDocumentModelDocumentModelModule();
-    const driveDocumentModelModule = loadDriveDocumentModelModule();
-    const documentModelEditorModule = loadDocumentModelEditor();
-    const genericDriveExplorerEditorModule =
-      loadGenericDriveExplorerEditorModule();
-    const name = COMMON_PACKAGE_NAME;
-    const importUrl = null;
-    const stylesheetUrl = null;
-    const loadedPackage: VetraPackage = {
-      id: COMMON_PACKAGE_ID,
-      name,
-      description: "Common",
-      category: "Common",
-      author: {
-        name: "Powerhouse",
-        website: "https://powerhousedao.com",
-      },
-      modules: {
-        documentModelModules: [
-          documentModelDocumentModelModule,
-          driveDocumentModelModule,
-        ],
-        editorModules: [
-          documentModelEditorModule,
-          genericDriveExplorerEditorModule,
-        ],
-      },
-      upgradeManifests: [],
-    };
     return {
-      name,
-      importUrl,
-      stylesheetUrl,
-      loadedPackage,
+      name: common.manifest.name,
+      importUrl: null,
+      stylesheetUrl: null,
+      loadedPackage: common,
     };
   }
 
   #loadVetraPackage(): PackageWithMeta {
-    const name = vetraVetraPackage.manifest.name;
-    const importUrl = null;
-    const stylesheetUrl = null;
-    const loadedPackage: VetraPackage = convertLegacyLibToVetraPackage(
-      vetraVetraPackage as DocumentModelLib,
-    );
     return {
-      name,
-      importUrl,
-      stylesheetUrl,
-      loadedPackage,
+      name: vetra.manifest.name,
+      importUrl: null,
+      stylesheetUrl: null,
+      loadedPackage: vetra,
     };
   }
 
@@ -251,10 +203,9 @@ export class BrowserPackageManager implements IPackageManager {
       throw new Error(`Import url not defined for package "${name}".`);
     }
 
-    const importedPackage = (await import(
+    const loadedPackage = (await import(
       /* @vite-ignore */ importUrl
     )) as DocumentModelLib;
-    const loadedPackage = convertLegacyLibToVetraPackage(importedPackage);
 
     return {
       name,

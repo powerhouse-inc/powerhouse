@@ -1,9 +1,10 @@
+import type { Manifest } from "@powerhousedao/shared";
 import fs from "node:fs";
 import path from "node:path";
 import { compareSemver } from "./semver.js";
-import type { PackageInfo, PowerhouseManifest } from "./types.js";
+import type { PackageInfo } from "./types.js";
 
-function readManifest(dir: string): PowerhouseManifest | null {
+function readManifest(dir: string): Manifest | null {
   const candidates = [
     path.join(dir, "powerhouse.manifest.json"),
     path.join(dir, "cdn", "powerhouse.manifest.json"),
@@ -12,7 +13,7 @@ function readManifest(dir: string): PowerhouseManifest | null {
   for (const manifestPath of candidates) {
     try {
       const raw = fs.readFileSync(manifestPath, "utf-8");
-      return JSON.parse(raw) as PowerhouseManifest;
+      return JSON.parse(raw) as Manifest;
     } catch {
       // try next candidate
     }
@@ -54,7 +55,30 @@ export function loadPackage(
     name: manifest?.name ?? name,
     path: `/-/cdn/${name}`,
     manifest,
+    documentTypes: getDocumentTypesFromManifest(manifest),
   };
+}
+
+function getDocumentTypesFromManifest(manifest: Manifest | undefined | null) {
+  if (!manifest) return [];
+
+  const documentTypes: string[] = [];
+  const { apps, documentModels, editors, subgraphs } = manifest;
+
+  if (apps?.length) {
+    documentTypes.push("powerhouse/document-drive");
+  }
+  documentTypes.push(
+    ...(documentModels ?? []).map((dm) => dm.id),
+    ...(editors ?? [])
+      .flatMap((e) => e.documentTypes)
+      .filter((dt) => dt !== undefined),
+    ...(subgraphs ?? [])
+      .flatMap((e) => e.documentTypes)
+      .filter((dt) => dt !== undefined),
+  );
+
+  return documentTypes;
 }
 
 export function scanPackages(cdnCachePath: string): PackageInfo[] {
@@ -92,6 +116,7 @@ export function scanPackages(cdnCachePath: string): PackageInfo[] {
           name,
           path: `/-/cdn/${dirName}`,
           manifest,
+          documentTypes: getDocumentTypesFromManifest(manifest),
         });
       }
     } else {
@@ -104,6 +129,7 @@ export function scanPackages(cdnCachePath: string): PackageInfo[] {
         name,
         path: `/-/cdn/${entry.name}`,
         manifest,
+        documentTypes: getDocumentTypesFromManifest(manifest),
       });
     }
   }
