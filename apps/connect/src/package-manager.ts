@@ -81,6 +81,10 @@ export class BrowserPackageManager implements IPackageManager {
     return this.#packagesMemo;
   }
 
+  get cdnUrl(): string | null {
+    return this.#cdnUrl;
+  }
+
   getPackageSource(packageName: string) {
     // check vs the constant name we use for common packages
     if (LOCAL_PACKAGES.includes(packageName)) {

@@ -107,6 +107,10 @@ function uploadsReducer(
           ...(action.payload.progress.duplicateType && {
             duplicateType: action.payload.progress.duplicateType,
           }),
+          // Update fileNode if provided (for deferred uploads after discovery)
+          ...(action.payload.progress.fileNode && {
+            fileNode: action.payload.progress.fileNode,
+          }),
         },
       };
     }

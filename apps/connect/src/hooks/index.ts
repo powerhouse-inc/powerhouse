@@ -1,4 +1,5 @@
 export * from "./useAcceptedCookies.js";
+export * from "./usePendingInstallations.js";
 export * from "./useCheckLatestVersion.js";
 export * from "./useClientErrorHandler.js";
 export * from "./useCookieBanner.js";
