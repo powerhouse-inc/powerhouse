@@ -1,3 +1,13 @@
+## 6.0.0-dev.150 (2026-04-01)
+
+### 🩹 Fixes
+
+- **registry:** use unique names when unpacking packages ([bf539ca55](https://github.com/powerhouse-inc/powerhouse/commit/bf539ca55))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.0.0-dev.149 (2026-04-01)
 
 This was a version bump only for @powerhousedao/registry to align it with other projects, there were no code changes.
