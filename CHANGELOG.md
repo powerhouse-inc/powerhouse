@@ -1,3 +1,13 @@
+## 6.0.0-dev.148 (2026-04-01)
+
+### 🩹 Fixes
+
+- **shared:** do not bundle reactor-api on browser ([b915fd353](https://github.com/powerhouse-inc/powerhouse/commit/b915fd353))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.0.0-dev.147 (2026-04-01)
 
 ### 🚀 Features
