@@ -378,8 +378,10 @@ export async function addFileWithProgress(
     try {
       document = await loadFile(file);
     } catch (loadError) {
+      // Only attempt discovery if the failure is due to a missing document
+      // model module, not for other errors like corrupt files or hash failures.
       const discoveryService = window.ph?.packageDiscoveryService;
-      if (discoveryService && docType) {
+      if (discoveryService && docType && !(await hasDocumentModel(docType))) {
         // Trigger discovery and retry without blocking the drop handler
         void retryAfterDiscovery(
           discoveryService,
@@ -515,7 +517,7 @@ export async function addFileWithProgress(
       },
     });
 
-    onProgress?.({ stage: "complete", progress: 100 });
+    onProgress?.({ stage: "complete", progress: 100, fileNode });
 
     return fileNode;
   } catch (error) {
@@ -530,6 +532,17 @@ export async function addFileWithProgress(
       });
     }
     throw error;
+  }
+}
+
+async function hasDocumentModel(documentType: string): Promise<boolean> {
+  const reactorClient = window.ph?.reactorClient;
+  if (!reactorClient) return false;
+  try {
+    await reactorClient.getDocumentModelModule(documentType);
+    return true;
+  } catch {
+    return false;
   }
 }
 
@@ -570,7 +583,7 @@ async function retryAfterDiscovery(
     });
     return;
   }
-  const fileNode = await addFileWithProgress(
+  await addFileWithProgress(
     file,
     driveId,
     name,
@@ -579,9 +592,6 @@ async function retryAfterDiscovery(
     documentTypes,
     resolveConflict,
   );
-  if (fileNode) {
-    onProgress?.({ stage: "complete", progress: 100, fileNode });
-  }
 }
 
 export async function updateFile(
