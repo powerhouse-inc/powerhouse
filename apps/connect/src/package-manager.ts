@@ -1,10 +1,10 @@
+import * as common from "@powerhousedao/powerhouse-vetra-packages";
 import type {
   IPackagesListener,
   PackageManagerInstallResult,
 } from "@powerhousedao/reactor-browser";
 import {
   BrowserLocalStorage,
-  COMMON_PACKAGE_ID,
   type IPackageListerUnsubscribe,
   type IPackageManager,
 } from "@powerhousedao/reactor-browser";
@@ -13,15 +13,6 @@ import {
   type DocumentModelModule,
 } from "@powerhousedao/shared/document-model";
 import * as vetra from "@powerhousedao/vetra";
-import * as common from "@powerhousedao/powerhouse-vetra-packages";
-import {
-  loadDocumentModelDocumentModelModule,
-  loadDriveDocumentModelModule,
-} from "./store/document-model.js";
-import {
-  loadDocumentModelEditor,
-  loadGenericDriveExplorerEditorModule,
-} from "./store/editor.js";
 
 type PackageMeta = {
   name: string;
