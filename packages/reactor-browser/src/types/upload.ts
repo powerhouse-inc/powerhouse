@@ -1,4 +1,4 @@
-import type { FileNode } from "@powerhousedao/shared/document-drive";
+import type { FileNode, Node } from "@powerhousedao/shared/document-drive";
 
 export type DocumentTypeIcon =
   | "analytics-processor"
@@ -28,6 +28,7 @@ export interface FileUploadProgress {
   error?: string;
   documentType?: DocumentTypeIcon;
   duplicateType?: "id" | "name";
+  fileNode?: Node;
 }
 
 export type FileUploadProgressCallback = (progress: FileUploadProgress) => void;

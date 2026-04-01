@@ -370,7 +370,32 @@ export async function addFileWithProgress(
   try {
     onProgress?.({ stage: "loading", progress: 0 });
 
-    const document = await loadFile(file);
+    // Pre-read the document type before full load so we can attempt
+    // package discovery if the module is not installed.
+    const docType = await getDocumentTypeFromFile(file);
+
+    let document: PHDocument;
+    try {
+      document = await loadFile(file);
+    } catch (loadError) {
+      const discoveryService = window.ph?.packageDiscoveryService;
+      if (discoveryService && docType) {
+        // Trigger discovery and retry without blocking the drop handler
+        void retryAfterDiscovery(
+          discoveryService,
+          docType,
+          file,
+          driveId,
+          name,
+          parentFolder,
+          onProgress,
+          documentTypes,
+          resolveConflict,
+        );
+        return;
+      }
+      throw loadError;
+    }
 
     // Check for duplicate in same location
     const duplicateCheck = await isDocumentInLocation(
@@ -505,6 +530,57 @@ export async function addFileWithProgress(
       });
     }
     throw error;
+  }
+}
+
+async function getDocumentTypeFromFile(
+  file: string | File,
+): Promise<string | undefined> {
+  try {
+    const baseDocument = await baseLoadFromInput(
+      file,
+      (state: PHDocument) => state,
+      { checkHashes: false },
+    );
+    return baseDocument.header.documentType;
+  } catch {
+    return undefined;
+  }
+}
+
+async function retryAfterDiscovery(
+  discoveryService: NonNullable<typeof window.ph>["packageDiscoveryService"],
+  documentType: string,
+  file: string | File,
+  driveId: string,
+  name?: string,
+  parentFolder?: string,
+  onProgress?: FileUploadProgressCallback,
+  documentTypes?: string[],
+  resolveConflict?: ConflictResolution,
+): Promise<void> {
+  if (!discoveryService) return;
+  try {
+    await discoveryService.load(documentType);
+  } catch {
+    onProgress?.({
+      stage: "unsupported-document-type",
+      progress: 100,
+      error: `Document type ${documentType} is not supported`,
+    });
+    return;
+  }
+  const fileNode = await addFileWithProgress(
+    file,
+    driveId,
+    name,
+    parentFolder,
+    onProgress,
+    documentTypes,
+    resolveConflict,
+  );
+  if (fileNode) {
+    onProgress?.({ stage: "complete", progress: 100, fileNode });
   }
 }
 

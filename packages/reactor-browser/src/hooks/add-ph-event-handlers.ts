@@ -55,6 +55,7 @@ import {
   addIsExternalControlsEnabledEventHandler,
 } from "./config/editor.js";
 import { addDocumentCacheEventHandler } from "./document-cache.js";
+import { addPackageDiscoveryServiceEventHandler } from "./package-discovery.js";
 import { addDrivesEventHandler } from "./drives.js";
 import { addLoadingEventHandler } from "./loading.js";
 import { addModalEventHandler } from "./modals.js";
@@ -97,6 +98,7 @@ const phGlobalEventHandlerRegisterFunctions: PHGlobalEventHandlerAdders = {
     addSetSelectedNodeOnPopStateEventHandler();
   },
   vetraPackageManager: addVetraPackageManagerEventHandler,
+  packageDiscoveryService: addPackageDiscoveryServiceEventHandler,
   selectedTimelineRevision: addSelectedTimelineRevisionEventHandler,
   revisionHistoryVisible: addRevisionHistoryVisibleEventHandler,
   selectedTimelineItem: addSelectedTimelineItemEventHandler,

@@ -10,6 +10,7 @@ import {
   WagmiContext,
 } from "@powerhousedao/design-system/connect";
 import { useEffect } from "react";
+import { PackageInstallPrompt } from "./package-install-prompt.js";
 export const App = () => {
   // refresh page on vite preload error due to outdated chunks
   useEffect(() => {
@@ -38,6 +39,7 @@ export const App = () => {
       <WagmiContext>
         <ToastContainer position="bottom-right" containerId="connect" />
         <Router />
+        <PackageInstallPrompt />
         <Analytics />
       </WagmiContext>
     </SentryProvider>

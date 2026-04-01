@@ -15,11 +15,13 @@ import {
   extractNodeSlugFromPath,
   getDrives,
   login,
+  RegistryClient,
   refreshReactorDataClient,
   setDefaultPHGlobalConfig,
   setDocumentCache,
   setDrives,
   setFeatures,
+  setPackageDiscoveryService,
   setPHToast,
   setReactorClient,
   setReactorClientModule,
@@ -36,6 +38,7 @@ import {
 } from "@renown/sdk";
 import { logger, type DocumentModelLib } from "document-model";
 import { initFeatureFlags } from "../feature-flags.js";
+import { PackageDiscoveryService } from "../package-discovery.js";
 import { BrowserPackageManager } from "../package-manager.js";
 import { loadPackagesConfig } from "../packages.config.js";
 import { createProcessorHostModule } from "./processor-host-module.js";
@@ -122,11 +125,29 @@ export async function createReactor(localPackage?: DocumentModelLib) {
     .flatMap((pkg) => pkg.upgradeManifests)
     .filter((u) => u !== undefined);
 
+  // initialize package discovery service for auto-installing unknown document types
+  const discoveryService =
+    packageManager.cdnUrl !== null
+      ? new PackageDiscoveryService(
+          packageManager,
+          new RegistryClient(packageManager.cdnUrl),
+          {
+            mode: "immediate",
+            storageKey: phGlobalConfigFromEnv.routerBasename ?? "",
+          },
+        )
+      : undefined;
+
+  if (discoveryService) {
+    setPackageDiscoveryService(discoveryService);
+  }
+
   // create reactor v2 with all versions and upgrade manifests
   const reactorClientModule = await createBrowserReactor(
     documentModelModules,
     upgradeManifests,
     renown,
+    discoveryService,
   );
 
   // get the drives from the reactor

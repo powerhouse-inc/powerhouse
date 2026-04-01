@@ -7,3 +7,4 @@ export type * from "./timeline.js";
 export type * from "./toast.js";
 export type * from "./upload.js";
 export type * from "./vetra.js";
+export type * from "./package-discovery.js";

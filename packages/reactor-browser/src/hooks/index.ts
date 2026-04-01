@@ -27,6 +27,7 @@ export * from "./loading.js";
 export * from "./make-ph-event-functions.js";
 export * from "./modals.js";
 export * from "./node-actions.js";
+export * from "./package-discovery.js";
 export * from "./node-by-id.js";
 export * from "./node-path.js";
 export * from "./parent-folder.js";

@@ -10,6 +10,7 @@ import type { IDocumentCache } from "./documents.js";
 import type { PHModal } from "./modals.js";
 import type { TimelineItem } from "./timeline.js";
 import type { PHToastFn } from "./toast.js";
+import type { IPackageDiscoveryService } from "./package-discovery.js";
 import type { IPackageManager } from "./vetra.js";
 
 export type BrowserReactorClientModule = ReactorClientModule & {
@@ -32,6 +33,7 @@ export type PHGlobal = PHGlobalConfig & {
   selectedTimelineRevision?: string | number | null;
   revisionHistoryVisible?: boolean;
   selectedTimelineItem?: TimelineItem | null;
+  packageDiscoveryService?: IPackageDiscoveryService;
   features?: Map<string, boolean>;
   toast?: PHToastFn;
 };

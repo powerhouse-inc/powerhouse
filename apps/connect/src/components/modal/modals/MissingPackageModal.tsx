@@ -1,5 +1,8 @@
 import { useRegistryPackages } from "@powerhousedao/connect/hooks";
-import { MissingPackageModal } from "@powerhousedao/design-system/connect/index";
+import {
+  PackageInstallModal,
+  type PendingPackageInstallation,
+} from "@powerhousedao/design-system/connect/index";
 import {
   closePHModal,
   usePHModal,
@@ -17,6 +20,13 @@ export function ConnectMissingPackageModal() {
 
   if (!packageManager || !documentType) return null;
 
+  const pendingInstallations: PendingPackageInstallation[] = registryPackageList
+    .filter((rp) => rp.documentTypes.includes(documentType))
+    .map((rp) => ({
+      documentType,
+      packageName: rp.name,
+    }));
+
   async function onInstall(packageName: string) {
     const result = await packageManager?.addPackage(packageName);
     if (result?.type === "success") {
@@ -28,15 +38,9 @@ export function ConnectMissingPackageModal() {
     updateRegistryPackageStatus(packageName, "dismissed");
   }
 
-  const requiredPackages = registryPackageList.filter((rp) =>
-    rp.documentTypes.includes(documentType),
-  );
-
   return (
-    <MissingPackageModal
-      documentType={documentType}
-      requiredPackages={requiredPackages}
-      open={open}
+    <PackageInstallModal
+      pendingInstallations={pendingInstallations}
       onInstall={onInstall}
       onDismiss={onDismiss}
       onOpenChange={(status: boolean) => {
