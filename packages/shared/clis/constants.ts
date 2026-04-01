@@ -62,7 +62,10 @@ export const VERSIONED_DEPENDENCIES = [
   "@powerhousedao/analytics-engine-core",
 ];
 
-export const VERSIONED_DEV_DEPENDENCIES = ["@powerhousedao/ph-cli"];
+export const VERSIONED_DEV_DEPENDENCIES = [
+  "@powerhousedao/ph-cli",
+  "@powerhousedao/reactor",
+];
 
 const DEFAULT_DOCUMENT_MODELS_DIR = "./document-models";
 const DEFAULT_EDITORS_DIR = "./editors";
