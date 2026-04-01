@@ -45,7 +45,7 @@ describe("SimpleJobExecutor", () => {
                   type: "CREATE_DOCUMENT",
                   id: "create-action",
                   scope: "document",
-                  timestampUtcMs: "1234567890",
+                  timestampUtcMs: "2024-01-01T00:00:00.000Z",
                   input: {
                     documentId: docId,
                     model: "powerhouse/document-model",
@@ -118,7 +118,7 @@ describe("SimpleJobExecutor", () => {
             id: "action-2",
             type: "SET_NAME",
             scope: "global",
-            timestampUtcMs: "123",
+            timestampUtcMs: "2024-01-01T00:00:00.000Z",
             input: { name: "Test" },
           },
         ],
@@ -151,7 +151,7 @@ describe("SimpleJobExecutor", () => {
                 type: "CREATE_DOCUMENT",
                 id: "create-action",
                 scope: "document",
-                timestampUtcMs: "1234567890",
+                timestampUtcMs: "2024-01-01T00:00:00.000Z",
                 input: {
                   documentId: "doc-1",
                   model: "unknown/type",
@@ -179,7 +179,7 @@ describe("SimpleJobExecutor", () => {
             id: "action-3",
             type: "SOME_ACTION",
             scope: "global",
-            timestampUtcMs: "123",
+            timestampUtcMs: "2024-01-01T00:00:00.000Z",
             input: {},
           },
         ],
@@ -215,7 +215,7 @@ describe("SimpleJobExecutor", () => {
             id: "action-4",
             type: "SET_NAME",
             scope: "global",
-            timestampUtcMs: "123",
+            timestampUtcMs: "2024-01-01T00:00:00.000Z",
             input: { name: "Test" },
           },
         ],
@@ -273,7 +273,7 @@ describe("SimpleJobExecutor", () => {
             id: "action-typed-error",
             type: "SET_NAME",
             scope: "global",
-            timestampUtcMs: "123",
+            timestampUtcMs: "2024-01-01T00:00:00.000Z",
             input: { name: "Test" },
           },
         ],
@@ -291,6 +291,132 @@ describe("SimpleJobExecutor", () => {
       expect((result.error as DocumentNotFoundError).documentId).toBe(
         "missing-doc",
       );
+    });
+  });
+
+  describe("timestamp validation", () => {
+    it("should reject action with non-ISO timestamp", async () => {
+      const job: Job = {
+        kind: "mutation",
+        id: "job-bad-ts",
+        documentId: "doc-1",
+        scope: "global",
+        branch: "main",
+        actions: [
+          {
+            id: "action-bad-ts",
+            type: "SET_NAME",
+            scope: "global",
+            timestampUtcMs: "not-a-date",
+            input: { name: "Test" },
+          },
+        ],
+        operations: [],
+        createdAt: new Date().toISOString(),
+        queueHint: [],
+        errorHistory: [],
+        meta: { batchId: "test", batchJobIds: ["job-bad-ts"] },
+      };
+
+      const result = await executor.executeJob(job);
+
+      expect(result.success).toBe(false);
+      expect(result.error?.message).toContain("Invalid timestamp");
+      expect(result.error?.message).toContain("not-a-date");
+    });
+
+    it("should reject action with numeric string timestamp", async () => {
+      const job: Job = {
+        kind: "mutation",
+        id: "job-numeric-ts",
+        documentId: "doc-1",
+        scope: "global",
+        branch: "main",
+        actions: [
+          {
+            id: "action-numeric-ts",
+            type: "SET_NAME",
+            scope: "global",
+            timestampUtcMs: "1234567890",
+            input: { name: "Test" },
+          },
+        ],
+        operations: [],
+        createdAt: new Date().toISOString(),
+        queueHint: [],
+        errorHistory: [],
+        meta: { batchId: "test", batchJobIds: ["job-numeric-ts"] },
+      };
+
+      const result = await executor.executeJob(job);
+
+      expect(result.success).toBe(false);
+      expect(result.error?.message).toContain("Invalid timestamp");
+    });
+
+    it("should accept action with valid ISO timestamp", async () => {
+      const job: Job = {
+        kind: "mutation",
+        id: "job-good-ts",
+        documentId: "doc-1",
+        scope: "global",
+        branch: "main",
+        actions: [
+          {
+            id: "action-good-ts",
+            type: "SET_NAME",
+            scope: "global",
+            timestampUtcMs: "2024-06-15T12:30:00.000Z",
+            input: { name: "Test" },
+          },
+        ],
+        operations: [],
+        createdAt: new Date().toISOString(),
+        queueHint: [],
+        errorHistory: [],
+        meta: { batchId: "test", batchJobIds: ["job-good-ts"] },
+      };
+
+      const result = await executor.executeJob(job);
+
+      expect(result.success).toBe(true);
+    });
+
+    it("should reject load job with non-ISO operation timestamp", async () => {
+      const job: Job = {
+        kind: "load",
+        id: "job-bad-load-ts",
+        documentId: "doc-1",
+        scope: "global",
+        branch: "main",
+        actions: [],
+        operations: [
+          {
+            id: "op-bad-ts",
+            index: 1,
+            skip: 0,
+            timestampUtcMs: "March 1, 2025",
+            hash: "",
+            action: {
+              id: "action-load-bad-ts",
+              type: "SET_NAME",
+              scope: "global",
+              timestampUtcMs: "March 1, 2025",
+              input: { name: "Test" },
+            },
+          },
+        ],
+        createdAt: new Date().toISOString(),
+        queueHint: [],
+        errorHistory: [],
+        meta: { batchId: "test", batchJobIds: ["job-bad-load-ts"] },
+      };
+
+      const result = await executor.executeJob(job);
+
+      expect(result.success).toBe(false);
+      expect(result.error?.message).toContain("Invalid timestamp");
+      expect(result.error?.message).toContain("March 1, 2025");
     });
   });
 
@@ -312,7 +438,7 @@ describe("SimpleJobExecutor", () => {
                 type: "CREATE_DOCUMENT",
                 id: "create-action",
                 scope: "document",
-                timestampUtcMs: "1234567890",
+                timestampUtcMs: "2024-01-01T00:00:00.000Z",
                 input: {
                   documentId,
                   model: "powerhouse/document-model",
@@ -343,7 +469,7 @@ describe("SimpleJobExecutor", () => {
             id: "delete-action-1",
             type: "DELETE_DOCUMENT",
             scope: "document",
-            timestampUtcMs: "1234567890",
+            timestampUtcMs: "2024-01-01T00:00:00.000Z",
             input: { documentId },
           },
         ],
@@ -378,7 +504,7 @@ describe("SimpleJobExecutor", () => {
                 type: "CREATE_DOCUMENT",
                 id: "create-action",
                 scope: "document",
-                timestampUtcMs: "1234567890",
+                timestampUtcMs: "2024-01-01T00:00:00.000Z",
                 input: {
                   documentId,
                   model: "powerhouse/document-model",
@@ -409,7 +535,7 @@ describe("SimpleJobExecutor", () => {
             id: "delete-action-2",
             type: "DELETE_DOCUMENT",
             scope: "document",
-            timestampUtcMs: "1234567890",
+            timestampUtcMs: "2024-01-01T00:00:00.000Z",
             input: { documentId },
           },
         ],
@@ -443,7 +569,7 @@ describe("SimpleJobExecutor", () => {
             id: "delete-action-3",
             type: "DELETE_DOCUMENT",
             scope: "document",
-            timestampUtcMs: "1234567890",
+            timestampUtcMs: "2024-01-01T00:00:00.000Z",
             input: {},
           },
         ],
@@ -479,7 +605,7 @@ describe("SimpleJobExecutor", () => {
               id: "create-action-1",
               type: "CREATE_DOCUMENT",
               scope: "document",
-              timestampUtcMs: "1234567890",
+              timestampUtcMs: "2024-01-01T00:00:00.000Z",
               input: {
                 documentId,
                 model: "powerhouse/document-model",
@@ -545,7 +671,7 @@ describe("SimpleJobExecutor", () => {
               id: "delete-action-index",
               type: "DELETE_DOCUMENT",
               scope: "document",
-              timestampUtcMs: "1234567890",
+              timestampUtcMs: "2024-01-01T00:00:00.000Z",
               input: { documentId },
             },
           ],
@@ -598,7 +724,7 @@ describe("SimpleJobExecutor", () => {
               id: "upgrade-action-index",
               type: "UPGRADE_DOCUMENT",
               scope: "document",
-              timestampUtcMs: "1234567890",
+              timestampUtcMs: "2024-01-01T00:00:00.000Z",
               input: {
                 documentId,
                 initialState: {
@@ -639,7 +765,7 @@ describe("SimpleJobExecutor", () => {
               id: "create-action",
               type: "CREATE_DOCUMENT",
               scope: "document",
-              timestampUtcMs: "1234567890",
+              timestampUtcMs: "2024-01-01T00:00:00.000Z",
               input: {
                 documentId,
                 model: "powerhouse/document-model",
@@ -651,7 +777,7 @@ describe("SimpleJobExecutor", () => {
               id: "upgrade-action",
               type: "UPGRADE_DOCUMENT",
               scope: "document",
-              timestampUtcMs: "1234567891",
+              timestampUtcMs: "2024-01-01T00:00:01.000Z",
               input: {
                 documentId,
                 initialState: {
@@ -685,7 +811,7 @@ describe("SimpleJobExecutor", () => {
                   type: "CREATE_DOCUMENT",
                   id: "create-action",
                   scope: "document",
-                  timestampUtcMs: "1234567890",
+                  timestampUtcMs: "2024-01-01T00:00:00.000Z",
                   input: {
                     documentId,
                     model: "powerhouse/document-model",
@@ -755,7 +881,7 @@ describe("SimpleJobExecutor", () => {
               id: "delete-action",
               type: "DELETE_DOCUMENT",
               scope: "document",
-              timestampUtcMs: "1234567890",
+              timestampUtcMs: "2024-01-01T00:00:00.000Z",
               input: { documentId },
             },
           ],
@@ -818,7 +944,7 @@ describe("SimpleJobExecutor", () => {
               id: "upgrade-action",
               type: "UPGRADE_DOCUMENT",
               scope: "document",
-              timestampUtcMs: "1234567890",
+              timestampUtcMs: "2024-01-01T00:00:00.000Z",
               input: {
                 documentId,
                 initialState: { global: {}, local: {} },
@@ -855,7 +981,7 @@ describe("SimpleJobExecutor", () => {
               id: "create-action",
               type: "CREATE_DOCUMENT",
               scope: "document",
-              timestampUtcMs: "1234567890",
+              timestampUtcMs: "2024-01-01T00:00:00.000Z",
               input: {
                 documentId,
                 model: "powerhouse/document-model",
@@ -867,7 +993,7 @@ describe("SimpleJobExecutor", () => {
               id: "upgrade-action",
               type: "UPGRADE_DOCUMENT",
               scope: "document",
-              timestampUtcMs: "1234567891",
+              timestampUtcMs: "2024-01-01T00:00:01.000Z",
               input: {
                 documentId,
                 initialState: {
@@ -901,7 +1027,7 @@ describe("SimpleJobExecutor", () => {
                   type: "CREATE_DOCUMENT",
                   id: "create-action",
                   scope: "document",
-                  timestampUtcMs: "1234567890",
+                  timestampUtcMs: "2024-01-01T00:00:00.000Z",
                   input: {
                     documentId,
                     model: "powerhouse/document-model",
@@ -949,7 +1075,7 @@ describe("SimpleJobExecutor", () => {
             id: "delete-action-fetch-fail",
             type: "DELETE_DOCUMENT",
             scope: "document",
-            timestampUtcMs: "1234567890",
+            timestampUtcMs: "2024-01-01T00:00:00.000Z",
             input: { documentId: "doc-1" },
           },
         ],
@@ -1000,7 +1126,7 @@ describe("SimpleJobExecutor", () => {
             id: "delete-action-already-deleted",
             type: "DELETE_DOCUMENT",
             scope: "document",
-            timestampUtcMs: "1234567890",
+            timestampUtcMs: "2024-01-01T00:00:00.000Z",
             input: { documentId: "doc-1" },
           },
         ],
@@ -1031,7 +1157,7 @@ describe("SimpleJobExecutor", () => {
             id: "upgrade-action-missing-id",
             type: "UPGRADE_DOCUMENT",
             scope: "document",
-            timestampUtcMs: "1234567890",
+            timestampUtcMs: "2024-01-01T00:00:00.000Z",
             input: {},
           },
         ],
@@ -1066,7 +1192,7 @@ describe("SimpleJobExecutor", () => {
             id: "upgrade-action-fetch-fail",
             type: "UPGRADE_DOCUMENT",
             scope: "document",
-            timestampUtcMs: "1234567890",
+            timestampUtcMs: "2024-01-01T00:00:00.000Z",
             input: {
               documentId: "doc-1",
               fromVersion: 1,
@@ -1121,7 +1247,7 @@ describe("SimpleJobExecutor", () => {
             id: "upgrade-action-deleted",
             type: "UPGRADE_DOCUMENT",
             scope: "document",
-            timestampUtcMs: "1234567890",
+            timestampUtcMs: "2024-01-01T00:00:00.000Z",
             input: {
               documentId: "doc-1",
               fromVersion: 1,
@@ -1170,7 +1296,7 @@ describe("SimpleJobExecutor", () => {
             id: "upgrade-action-same-version",
             type: "UPGRADE_DOCUMENT",
             scope: "document",
-            timestampUtcMs: "1234567890",
+            timestampUtcMs: "2024-01-01T00:00:00.000Z",
             input: {
               documentId: "doc-1",
               fromVersion: 2,
@@ -1205,7 +1331,7 @@ describe("SimpleJobExecutor", () => {
             id: "add-rel-action-wrong-scope",
             type: "ADD_RELATIONSHIP",
             scope: "global",
-            timestampUtcMs: "1234567890",
+            timestampUtcMs: "2024-01-01T00:00:00.000Z",
             input: {
               sourceId: "doc-1",
               targetId: "doc-2",
@@ -1240,7 +1366,7 @@ describe("SimpleJobExecutor", () => {
             id: "add-rel-action-missing-input",
             type: "ADD_RELATIONSHIP",
             scope: "document",
-            timestampUtcMs: "1234567890",
+            timestampUtcMs: "2024-01-01T00:00:00.000Z",
             input: { sourceId: "doc-1" },
           },
         ],
@@ -1271,7 +1397,7 @@ describe("SimpleJobExecutor", () => {
             id: "add-rel-action-self-ref",
             type: "ADD_RELATIONSHIP",
             scope: "document",
-            timestampUtcMs: "1234567890",
+            timestampUtcMs: "2024-01-01T00:00:00.000Z",
             input: {
               sourceId: "doc-1",
               targetId: "doc-1",
@@ -1308,7 +1434,7 @@ describe("SimpleJobExecutor", () => {
             id: "rm-rel-action-wrong-scope",
             type: "REMOVE_RELATIONSHIP",
             scope: "global",
-            timestampUtcMs: "1234567890",
+            timestampUtcMs: "2024-01-01T00:00:00.000Z",
             input: {
               sourceId: "doc-1",
               targetId: "doc-2",
@@ -1343,7 +1469,7 @@ describe("SimpleJobExecutor", () => {
             id: "rm-rel-action-missing-input",
             type: "REMOVE_RELATIONSHIP",
             scope: "document",
-            timestampUtcMs: "1234567890",
+            timestampUtcMs: "2024-01-01T00:00:00.000Z",
             input: { sourceId: "doc-1" },
           },
         ],
@@ -1378,7 +1504,7 @@ describe("SimpleJobExecutor", () => {
             id: "rm-rel-action-not-found",
             type: "REMOVE_RELATIONSHIP",
             scope: "document",
-            timestampUtcMs: "1234567890",
+            timestampUtcMs: "2024-01-01T00:00:00.000Z",
             input: {
               sourceId: "doc-1",
               targetId: "doc-2",
@@ -1447,7 +1573,7 @@ describe("SimpleJobExecutor", () => {
             id: "no-ops-action",
             type: "SET_NAME",
             scope: "global",
-            timestampUtcMs: "1234567890",
+            timestampUtcMs: "2024-01-01T00:00:00.000Z",
             input: { name: "Test" },
           },
         ],
@@ -1659,7 +1785,7 @@ describe("SimpleJobExecutor", () => {
             id: "create-action-emit-fail",
             type: "CREATE_DOCUMENT",
             scope: "document",
-            timestampUtcMs: "1234567890",
+            timestampUtcMs: "2024-01-01T00:00:00.000Z",
             input: {
               documentId,
               model: "powerhouse/document-model",
@@ -1721,7 +1847,7 @@ describe("SimpleJobExecutor", () => {
             id: "undo-action-1",
             type: "UNDO",
             scope: "global",
-            timestampUtcMs: "123",
+            timestampUtcMs: "2024-01-01T00:00:00.000Z",
             input: {},
           },
         ],
@@ -1774,7 +1900,7 @@ describe("SimpleJobExecutor", () => {
             id: "prune-action-1",
             type: "PRUNE",
             scope: "global",
-            timestampUtcMs: "123",
+            timestampUtcMs: "2024-01-01T00:00:00.000Z",
             input: { start: 0, end: 1 },
           },
         ],
@@ -1827,7 +1953,7 @@ describe("SimpleJobExecutor", () => {
             id: "redo-action-1",
             type: "REDO",
             scope: "global",
-            timestampUtcMs: "123",
+            timestampUtcMs: "2024-01-01T00:00:00.000Z",
             input: {},
           },
         ],
@@ -1983,7 +2109,7 @@ describe("SimpleJobExecutor", () => {
             id: "regular-action-1",
             type: "SET_NAME",
             scope: "global",
-            timestampUtcMs: "123",
+            timestampUtcMs: "2024-01-01T00:00:00.000Z",
             input: { name: "New Name" },
           },
         ],
@@ -2015,7 +2141,7 @@ describe("SimpleJobExecutor", () => {
               id: "create-action-wrong-scope",
               type: "CREATE_DOCUMENT",
               scope: "global",
-              timestampUtcMs: "1234567890",
+              timestampUtcMs: "2024-01-01T00:00:00.000Z",
               input: {
                 documentId,
                 model: "powerhouse/document-model",
@@ -2053,7 +2179,7 @@ describe("SimpleJobExecutor", () => {
               id: "create-action-correct-scope",
               type: "CREATE_DOCUMENT",
               scope: "document",
-              timestampUtcMs: "1234567890",
+              timestampUtcMs: "2024-01-01T00:00:00.000Z",
               input: {
                 documentId,
                 model: "powerhouse/document-model",
