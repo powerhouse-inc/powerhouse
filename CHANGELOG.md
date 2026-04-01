@@ -1,3 +1,17 @@
+## 6.0.0-dev.149 (2026-04-01)
+
+### 🚀 Features
+
+- auto-discover and install packages for unknown document types ([#2401](https://github.com/powerhouse-inc/powerhouse/issues/2401), [#2415](https://github.com/powerhouse-inc/powerhouse/issues/2415))
+
+### 🩹 Fixes
+
+- address PR review feedback ([1a303570b](https://github.com/powerhouse-inc/powerhouse/commit/1a303570b))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.0.0-dev.148 (2026-04-01)
 
 ### 🩹 Fixes

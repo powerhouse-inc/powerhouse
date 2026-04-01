@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/opentelemetry-instrumentation-reactor",
-  "version": "6.0.0-dev.148",
+  "version": "6.0.0-dev.149",
   "description": "OpenTelemetry instrumentation for @powerhousedao/reactor",
   "type": "module",
   "repository": {
