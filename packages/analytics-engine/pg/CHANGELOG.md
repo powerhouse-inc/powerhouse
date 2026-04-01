@@ -1,3 +1,13 @@
+## 6.0.0-dev.146 (2026-04-01)
+
+### 🩹 Fixes
+
+- **docker:** fix switchboard-entrypoint.sh ([18a4013d7](https://github.com/powerhouse-inc/powerhouse/commit/18a4013d7))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.0.0-dev.145 (2026-04-01)
 
 ### 🩹 Fixes
