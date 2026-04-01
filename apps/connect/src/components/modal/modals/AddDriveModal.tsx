@@ -1,7 +1,7 @@
 import { toast } from "@powerhousedao/connect/services";
 import type {
-  AddLocalDriveInput,
   AddRemoteDriveInput,
+  AppOptions,
 } from "@powerhousedao/design-system/connect";
 import { AddDriveModal as ConnectAddLocalDriveModal } from "@powerhousedao/design-system/connect";
 import {
@@ -33,9 +33,9 @@ export function AddDriveModal() {
   const user = useUser();
   const renown = useRenown();
   const appModules = useAppModules();
-  const onAddLocalDrive = async (data: AddLocalDriveInput) => {
+  const onAddLocalDrive = async (data: AppOptions) => {
     try {
-      const app = appModules?.find((a) => a.id === data.appId);
+      const app = appModules?.find((a) => a.config.id === data.id);
       const newDrive = await addDrive(
         {
           id: "",
@@ -51,7 +51,7 @@ export function AddDriveModal() {
             triggers: [],
           },
         },
-        app?.id,
+        app?.config.id,
       );
 
       toast(t("notifications.addDriveSuccess"), {
@@ -81,7 +81,7 @@ export function AddDriveModal() {
       console.error(e);
     }
   };
-  async function onAddLocalDriveSubmit(data: AddLocalDriveInput) {
+  async function onAddLocalDriveSubmit(data: AppOptions) {
     await onAddLocalDrive(data);
     closePHModal();
   }
@@ -120,9 +120,10 @@ export function AddDriveModal() {
       }}
       appOptions={
         appModules?.map((pkg) => ({
-          id: pkg.id,
-          name: pkg.name,
-          app: pkg.id,
+          id: pkg.config.id,
+          name: pkg.config.name,
+          sharingType: "LOCAL",
+          availableOffline: false,
         })) || []
       }
     />

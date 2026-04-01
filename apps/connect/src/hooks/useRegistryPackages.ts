@@ -1,7 +1,6 @@
 import {
   getPackages,
   useVetraPackageManager,
-  type VetraPackage,
 } from "@powerhousedao/reactor-browser";
 import type {
   PackageInfo,
@@ -11,6 +10,7 @@ import type {
   RegistryPackageSource,
   RegistryPackageStatus,
 } from "@powerhousedao/shared/registry";
+import type { DocumentModelLib } from "document-model";
 import { useEffect, useMemo } from "react";
 import { useLocalStorage } from "usehooks-ts";
 
@@ -66,22 +66,22 @@ export function useRegistryPackages() {
       for (const packageManagerPackage of packageManagerPackages) {
         setRegistryPackagesMap((existingRegistryPackages) => {
           const existingPackage =
-            existingRegistryPackages[packageManagerPackage.name];
+            existingRegistryPackages[packageManagerPackage.manifest.name];
           const newRegistryPackages = { ...existingRegistryPackages };
           if (existingPackage) {
-            newRegistryPackages[packageManagerPackage.name] = {
+            newRegistryPackages[packageManagerPackage.manifest.name] = {
               ...existingPackage,
             };
           } else {
             const packageSource = packageManager.getPackageSource(
-              packageManagerPackage.name,
+              packageManagerPackage.manifest.name,
             );
             const status = getPackageStatusFromPackageSource(packageSource);
-            const newRegistryPackage = makeRegistryPackageFromVetraPackage(
+            const newRegistryPackage = makeRegistryPackageFromDocumentModelLib(
               packageManagerPackage,
               status,
             );
-            newRegistryPackages[packageManagerPackage.name] =
+            newRegistryPackages[packageManagerPackage.manifest.name] =
               newRegistryPackage;
           }
           return newRegistryPackages;
@@ -119,26 +119,18 @@ export function useRegistryPackages() {
   };
 }
 
-function makeRegistryPackageFromVetraPackage(
-  vetraPackage: VetraPackage,
+function makeRegistryPackageFromDocumentModelLib(
+  documentModelLib: DocumentModelLib,
   status: RegistryPackageStatus,
 ): RegistryPackage {
   return {
-    name: vetraPackage.name,
+    name: documentModelLib.manifest.name,
     path: "stub-path",
-    documentTypes:
-      vetraPackage.modules.documentModelModules?.map((d) => d.id) ?? [],
+    documentTypes: documentModelLib.documentModels.map(
+      (d) => d.documentModel.global.id,
+    ),
     status,
-    manifest: {
-      name: vetraPackage.name,
-      category: vetraPackage.category,
-      description: vetraPackage.description,
-      publisher: {
-        name: vetraPackage.author.name,
-        url: vetraPackage.author.website ?? "",
-      },
-      ...vetraPackage.modules,
-    },
+    manifest: documentModelLib.manifest,
   };
 }
 

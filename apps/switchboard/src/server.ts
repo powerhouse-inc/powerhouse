@@ -121,7 +121,10 @@ async function initServer(
   }
 
   const registryPackageNames = registryPackages
-    ? registryPackages.split(",").map((p) => p.trim()).filter(Boolean)
+    ? registryPackages
+        .split(",")
+        .map((p) => p.trim())
+        .filter(Boolean)
     : [];
 
   const reactorLogger = logger.child(["reactor"]);
@@ -211,8 +214,8 @@ async function initServer(
   }
 
   // create loader — HTTP loader for registry packages, Vite for dev
-  const packageLoader = httpLoader
-    ?? (vite ? VitePackageLoader.build(vite) : undefined);
+  const packageLoader =
+    httpLoader ?? (vite ? VitePackageLoader.build(vite) : undefined);
 
   const apiLogger = logger.child(["reactor-api"]);
   const api = await initializeAndStartAPI(

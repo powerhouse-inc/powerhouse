@@ -2,6 +2,7 @@
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
     "outDir": "./dist",
+    "emitDeclarationOnly": true,
     "paths": {
       "document-models": ["./document-models/index.ts"],
       "document-models/*": ["./document-models/*/index.ts"],
@@ -13,7 +14,7 @@
       "subgraphs/*": ["./subgraphs/*/index.ts"]
     }
   },
-  "include": ["**/*"],
+  "include": ["**/*", "./powerhouse.manifest.json"],
   "references": [
     {
       "path": "../design-system"

@@ -1,6 +1,7 @@
-import { PowerhouseButton } from "@powerhousedao/design-system";
-import type { SharingType } from "@powerhousedao/shared/document-drive";
-import type { App } from "@powerhousedao/shared/document-model";
+import {
+  PowerhouseButton,
+  type AppOptions,
+} from "@powerhousedao/design-system";
 import type { SubmitHandler } from "react-hook-form";
 import { useForm } from "react-hook-form";
 import { FormInput } from "../form-input/form-input.js";
@@ -9,20 +10,13 @@ import { AvailableOfflineToggle } from "./inputs/available-offline-toggle.js";
 import { Label } from "./inputs/label.js";
 import { SharingTypeFormInput } from "./inputs/sharing-type-form-input.js";
 
-export type AddLocalDriveInput = {
-  name: string;
-  sharingType: SharingType;
-  availableOffline: boolean;
-  appId: string;
-};
-
 type AddLocalDriveFormProps = {
   readonly onSubmit: CreateDriveFormSubmitHandler;
   readonly onCancel: () => void;
-  readonly appOptions: App[];
+  readonly appOptions: AppOptions[];
 };
 
-type CreateDriveFormSubmitHandler = SubmitHandler<AddLocalDriveInput>;
+type CreateDriveFormSubmitHandler = SubmitHandler<AppOptions>;
 
 export function AddLocalDriveForm(props: AddLocalDriveFormProps) {
   const {
@@ -30,12 +24,12 @@ export function AddLocalDriveForm(props: AddLocalDriveFormProps) {
     handleSubmit,
     control,
     formState: { errors },
-  } = useForm<AddLocalDriveInput>({
+  } = useForm<AppOptions>({
     defaultValues: {
       name: "",
       sharingType: "LOCAL",
       availableOffline: false,
-      appId: props.appOptions[0].id,
+      id: props.appOptions[0].id,
     },
   });
 

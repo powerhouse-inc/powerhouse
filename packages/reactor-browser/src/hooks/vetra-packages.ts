@@ -1,6 +1,7 @@
 import { DuplicateModuleError } from "@powerhousedao/reactor";
+import type { DocumentModelLib } from "document-model";
 import { useSyncExternalStore } from "react";
-import type { IPackageManager, VetraPackage } from "../types/vetra.js";
+import type { IPackageManager } from "../types/vetra.js";
 import { makePHEventFunctions } from "./make-ph-event-functions.js";
 
 const vetraPackageManagerFunctions = makePHEventFunctions(
@@ -32,10 +33,8 @@ export function setVetraPackageManager(packageManager: IPackageManager) {
   });
 }
 
-function updateReactorClientDocumentModels(packages: VetraPackage[]) {
-  const documentModelModules = packages
-    .flatMap((pkg) => pkg.modules.documentModelModules)
-    .filter((module) => module !== undefined);
+function updateReactorClientDocumentModels(packages: DocumentModelLib[]) {
+  const documentModelModules = packages.flatMap((pkg) => pkg.documentModels);
 
   const registry =
     window.ph?.reactorClientModule?.reactorModule?.documentModelRegistry;

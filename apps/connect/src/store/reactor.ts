@@ -28,15 +28,13 @@ import {
   setSelectedNode,
   setVetraPackageManager,
   type PHToastFn,
-  type VetraPackage,
 } from "@powerhousedao/reactor-browser";
-import type { ProcessorFactoryBuilder } from "@powerhousedao/shared/processors";
 import {
   BrowserKeyStorage,
   RenownBuilder,
   RenownCryptoBuilder,
 } from "@renown/sdk";
-import { logger } from "document-model";
+import { logger, type DocumentModelLib } from "document-model";
 import { initFeatureFlags } from "../feature-flags.js";
 import { BrowserPackageManager } from "../package-manager.js";
 import { loadPackagesConfig } from "../packages.config.js";
@@ -53,7 +51,7 @@ export async function clearReactorStorage() {
   await pg.close();
 }
 
-export async function createReactor(localPackage?: VetraPackage) {
+export async function createReactor(localPackage?: DocumentModelLib) {
   if (!window.ph) {
     window.ph = {};
   }
@@ -108,18 +106,16 @@ export async function createReactor(localPackage?: VetraPackage) {
 
   // get document models to set in the reactor (all versions)
   const documentModelModules = packageManager.packages
-    .flatMap((pkg) => pkg.modules.documentModelModules)
+    .flatMap((pkg) => pkg.documentModels)
     .filter(
       (module, index, modules) =>
-        module !== undefined &&
         // deduplicate by documentType and version
         modules.findIndex(
           (m) =>
-            m?.documentType === module.documentType &&
+            m.documentModel.global.id === module.documentModel.global.id &&
             m.version === module.version,
         ) === index,
-    )
-    .filter((d) => d !== undefined);
+    );
 
   // get upgrade manifests from packages
   const upgradeManifests = packageManager.packages
@@ -209,10 +205,7 @@ export async function createReactor(localPackage?: VetraPackage) {
 
   // Setup processor factories for packages that have them
   const packagesWithProcessorFactories = packageManager.packages.filter(
-    (
-      pkg,
-    ): pkg is VetraPackage & { processorFactory: ProcessorFactoryBuilder } =>
-      pkg.processorFactory !== undefined,
+    (pkg) => pkg.processorFactory !== undefined,
   );
 
   if (packagesWithProcessorFactories.length > 0) {
@@ -220,10 +213,13 @@ export async function createReactor(localPackage?: VetraPackage) {
     if (processorHostModule !== undefined) {
       await Promise.all(
         packagesWithProcessorFactories.map(async (pkg) => {
-          const { id, name, processorFactory } = pkg;
+          const { manifest, processorFactory } = pkg;
+          const name = manifest.name;
+          const id = manifest.name;
           logger.info("Loading processor factory: @name", name);
           try {
-            const factory = await processorFactory(processorHostModule);
+            const factory = await processorFactory?.(processorHostModule);
+            if (!factory) return;
             await reactorClientModule.reactorModule?.processorManager.registerFactory(
               id,
               factory,

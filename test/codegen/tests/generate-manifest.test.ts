@@ -1,8 +1,5 @@
 import { generateManifest } from "@powerhousedao/codegen";
-import type {
-  PartialPowerhouseManifest,
-  PowerhouseManifest,
-} from "@powerhousedao/config";
+import type { Manifest } from "@powerhousedao/config";
 import { fileExists } from "@powerhousedao/shared/clis";
 import { describe, expect, it } from "bun:test";
 import { readFile, writeFile } from "node:fs/promises";
@@ -31,7 +28,7 @@ describe("generateManifest", () => {
     expect(manifestPath).toBe(join(testOutDirPath, "powerhouse.manifest.json"));
 
     const content = await readFile(manifestPath, "utf-8");
-    const manifest = JSON.parse(content) as PowerhouseManifest;
+    const manifest = JSON.parse(content) as Manifest;
 
     expect(manifest.name).toBe("@test/package");
     expect(manifest.description).toBe("Test package description");
@@ -41,7 +38,6 @@ describe("generateManifest", () => {
     expect(manifest.editors).toEqual([]);
     expect(manifest.apps).toEqual([]);
     expect(manifest.subgraphs).toEqual([]);
-    expect(manifest.importScripts).toEqual([]);
   });
 
   it("should update existing manifest preserving all existing fields", async () => {
@@ -60,7 +56,7 @@ describe("generateManifest", () => {
     const manifestPath = generateManifest(updateData, testOutDirPath);
     const content = await readFile(manifestPath, "utf-8");
 
-    const manifest = JSON.parse(content) as PowerhouseManifest;
+    const manifest = JSON.parse(content) as Manifest;
 
     expect(manifest.name).toBe("@updated/package");
     expect(manifest.description).toBe("Updated description");
@@ -72,11 +68,11 @@ describe("generateManifest", () => {
   });
 
   it("should update publisher fields partially", async () => {
-    const updateData: PartialPowerhouseManifest = {
+    const updateData = {
       publisher: {
         name: "@updated",
       },
-    };
+    } as Manifest;
 
     const testOutDirPath = join(
       testOutputParentDir,
@@ -89,7 +85,7 @@ describe("generateManifest", () => {
     const manifestPath = generateManifest(updateData, testOutDirPath);
 
     const content = await readFile(manifestPath, "utf-8");
-    const manifest = JSON.parse(content) as PowerhouseManifest;
+    const manifest = JSON.parse(content) as Manifest;
 
     expect(manifest.publisher).toEqual({
       name: "@updated",
@@ -116,7 +112,7 @@ describe("generateManifest", () => {
     expect(await fileExists(resultPath)).toBe(true);
 
     const content = await readFile(resultPath, "utf-8");
-    const manifest = JSON.parse(content) as PowerhouseManifest;
+    const manifest = JSON.parse(content) as Manifest;
 
     expect(manifest.name).toBe("@test/package");
     expect(manifest.description).toBe("Test description");
@@ -172,10 +168,10 @@ describe("generateManifest", () => {
     const content = await readFile(manifestPath, "utf-8");
 
     // Verify it's properly formatted JSON
-    expect(() => JSON.parse(content) as PowerhouseManifest).not.toThrow();
+    expect(() => JSON.parse(content) as Manifest).not.toThrow();
 
     // Verify structure
-    const manifest = JSON.parse(content) as PowerhouseManifest;
+    const manifest = JSON.parse(content) as Manifest;
     expect(manifest).toEqual(manifestData);
 
     // Verify formatting (4 spaces indentation)

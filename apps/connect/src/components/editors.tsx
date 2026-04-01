@@ -182,7 +182,7 @@ export const DocumentEditor: React.FC<Props> = (props) => {
     <div
       className="relative h-full"
       id="document-editor-context"
-      data-editor={editorModule.id}
+      data-editor={editorModule.config.id}
       data-document-type={documentType}
     >
       {revisionHistoryVisible ? (

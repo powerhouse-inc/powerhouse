@@ -54,5 +54,6 @@ export * from "./tabs/tabs.js";
 export * from "./toast/toast.js";
 export * from "./toggle/toggle.js";
 export * from "./tooltip/tooltip.js";
+export type * from "./types.js";
 export * from "./upload-file-item/upload-file-item.js";
 export * from "./upload-file-list/upload-file-list.js";

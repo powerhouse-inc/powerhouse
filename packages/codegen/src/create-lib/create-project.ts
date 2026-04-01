@@ -22,10 +22,10 @@ import {
   indexTsTemplate,
   licenseTemplate,
   mainTsxTemplate,
+  ManifestTemplate,
   mcpTemplate,
   nginxConfTemplate,
   npmrcTemplate,
-  powerhouseManifestTemplate,
   processorsFactoryTemplate,
   processorsIndexTemplate,
   readmeTemplate,
@@ -134,8 +134,8 @@ async function writeProjectRootFiles(args: {
     tag,
     version,
   });
-  const powerhouseManifest = powerhouseManifestTemplate(name);
-  await writeFileEnsuringDir("powerhouse.manifest.json", powerhouseManifest);
+  const Manifest = ManifestTemplate(name);
+  await writeFileEnsuringDir("powerhouse.manifest.json", Manifest);
   const powerhouseConfig = await buildPowerhouseConfigTemplate({
     tag,
     version,

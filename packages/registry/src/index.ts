@@ -17,10 +17,6 @@ export {
 export type {
   NotifyConfig,
   PackageInfo,
-  PowerhouseManifest,
-  PowerhouseManifestApp,
-  PowerhouseManifestDocumentModel,
-  PowerhouseManifestEditor,
   RegistryConfig,
   RegistryOptions,
   S3Config,
