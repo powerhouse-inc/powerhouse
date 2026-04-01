@@ -1,3 +1,18 @@
+## 6.0.0-dev.147 (2026-04-01)
+
+### 🚀 Features
+
+- unify package and manifest types ([#2458](https://github.com/powerhouse-inc/powerhouse/pull/2458))
+
+### 🩹 Fixes
+
+- format readme ([01011a461](https://github.com/powerhouse-inc/powerhouse/commit/01011a461))
+
+### ❤️ Thank You
+
+- acaldas
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.0.0-dev.146 (2026-04-01)
 
 ### 🩹 Fixes
