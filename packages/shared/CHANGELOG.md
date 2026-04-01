@@ -1,3 +1,13 @@
+## 6.0.0-dev.151 (2026-04-01)
+
+### 🩹 Fixes
+
+- added missing boilerplate dependencies ([4b2d17ef8](https://github.com/powerhouse-inc/powerhouse/commit/4b2d17ef8))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.0.0-dev.150 (2026-04-01)
 
 This was a version bump only for @powerhousedao/shared to align it with other projects, there were no code changes.
