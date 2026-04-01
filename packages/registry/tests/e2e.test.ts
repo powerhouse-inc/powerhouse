@@ -274,13 +274,18 @@ describe("registry e2e", () => {
     });
 
     it("serves published package via CDN", async () => {
-      const res = await fetch(
-        `${REGISTRY_URL}/-/cdn/${TEST_PKG_NAME}/package.json`,
+      await vi.waitFor(
+        async () => {
+          const res = await fetch(
+            `${REGISTRY_URL}/-/cdn/${TEST_PKG_NAME}/package.json`,
+          );
+          expect(res.ok).toBe(true);
+          const pkg = (await res.json()) as { name: string; version: string };
+          expect(pkg.name).toBe(TEST_PKG_NAME);
+          expect(pkg.version).toBe(TEST_PKG_VERSION);
+        },
+        { timeout: POLL_TIMEOUT, interval: POLL_INTERVAL },
       );
-      expect(res.ok).toBe(true);
-      const pkg = (await res.json()) as { name: string; version: string };
-      expect(pkg.name).toBe(TEST_PKG_NAME);
-      expect(pkg.version).toBe(TEST_PKG_VERSION);
     });
   });
 
