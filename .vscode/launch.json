@@ -43,6 +43,19 @@
     {
       "type": "node",
       "request": "launch",
+      "name": "Debug Registry",
+      "autoAttachChildProcesses": true,
+      "skipFiles": ["<node_internals>/**", "**/node_modules/**"],
+      "runtimeExecutable": "${workspaceRoot}/node_modules/.bin/tsx",
+      "program": "${workspaceRoot}/packages/registry/cli.ts",
+      "smartStep": true,
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+      "cwd": "${workspaceRoot}/packages/registry"
+    },
+    {
+      "type": "node",
+      "request": "launch",
       "name": "Debug Switchboard",
       "autoAttachChildProcesses": true,
       "skipFiles": ["<node_internals>/**", "**/node_modules/**"],

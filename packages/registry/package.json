@@ -16,7 +16,7 @@
   ],
   "sideEffects": false,
   "scripts": {
-    "start": "node ./dist/cli.js",
+    "start": "node ./dist/cli.mjs",
     "dev": "bun run ./cli.ts",
     "build:cli": "tsdown",
     "postbuild:cli": "bun run ./copy-dirs.ts",

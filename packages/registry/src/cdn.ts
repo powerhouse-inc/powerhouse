@@ -42,16 +42,11 @@ export class CdnCache {
     private cdnCachePath: string,
   ) {}
 
-  async getFile(packageSpec: string, filePath: string): Promise<string | null> {
-    const { name: packageName, tag } = parsePackageSpec(packageSpec);
-
-    // Always check Verdaccio for the authoritative version,
-    // falling back to the cached version if Verdaccio is unavailable.
-    const version =
-      (await this.resolveVersion(packageName, tag)) ??
-      this.getLatestCachedVersion(packageName);
-    if (!version) return null;
-
+  async getFileByVersion(
+    packageName: string,
+    version: string,
+    filePath: string,
+  ): Promise<string | null> {
     const versionDir = path.join(this.cdnCachePath, packageName, version);
 
     // Check all possible paths before attempting extraction
@@ -94,7 +89,7 @@ export class CdnCache {
     return promise;
   }
 
-  private getLatestCachedVersion(packageName: string): string | null {
+  getLatestCachedVersion(packageName: string): string | null {
     const pkgDir = path.join(this.cdnCachePath, packageName);
     try {
       const entries = fs.readdirSync(pkgDir, { withFileTypes: true });
@@ -148,11 +143,6 @@ export class CdnCache {
     } catch {
       return null;
     }
-  }
-
-  /** @deprecated Use resolveVersion instead */
-  async getLatestVersion(packageName: string): Promise<string | null> {
-    return this.resolveVersion(packageName);
   }
 
   async extractTarball(packageName: string, version: string): Promise<void> {
