@@ -40,7 +40,7 @@
       "import": "./dist/editors/index.js",
       "types": "./dist/editors/index.d.ts"
     },
-    "./editors/style.css": "./dist/editors/style.css"
+    "./style.css": "./dist/style.css"
   },
   "scripts": {
     "tsc": "tsc",
