@@ -45,6 +45,8 @@ export function PackageInstallModal(props: PackageInstallModalProps) {
     pendingInstallations,
     onInstall,
     onDismiss,
+    open,
+    onOpenChange,
     overlayProps,
     contentProps,
     ...restProps
@@ -73,7 +75,15 @@ export function PackageInstallModal(props: PackageInstallModalProps) {
 
   return (
     <Modal
-      open={grouped.length > 0}
+      open={open ?? grouped.length > 0}
+      onOpenChange={(isOpen) => {
+        if (!isOpen) {
+          for (const { packageName } of grouped) {
+            onDismiss(packageName);
+          }
+        }
+        onOpenChange?.(isOpen);
+      }}
       contentProps={{
         ...contentProps,
         className: twMerge("rounded-3xl", contentProps?.className),
