@@ -16,7 +16,7 @@ const entry = [
 
 const alwaysBundle = ["**"];
 
-const browserNeverBundle = [
+const nodeNeverBundle = [
   // we know that we don't want connect inside connect
   "@powerhousedao/connect",
   // published code would never need the cli
@@ -42,7 +42,7 @@ const browserNeverBundle = [
   "@types/react-dom",
 ];
 
-const nodeNeverBundle = [...browserNeverBundle, "@powerhousedao/reactor-api"];
+const browserNeverBundle = [...nodeNeverBundle, "@powerhousedao/reactor-api"];
 
 const copy = [{ from: "powerhouse.manifest.json", to: "dist" }];
 
