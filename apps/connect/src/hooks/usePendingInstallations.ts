@@ -1,7 +1,10 @@
-import { usePackageDiscoveryService } from "@powerhousedao/reactor-browser";
+import {
+  usePackageDiscoveryService,
+  type PendingInstallation,
+} from "@powerhousedao/reactor-browser";
 import { useSyncExternalStore } from "react";
 
-const emptyArray: [] = [];
+const emptyArray: PendingInstallation[] = [];
 
 export function usePendingInstallations() {
   const discoveryService = usePackageDiscoveryService();
