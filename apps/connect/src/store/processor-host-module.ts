@@ -1,9 +1,9 @@
-import type { Action } from "@powerhousedao/shared/document-model";
 import { createAnalyticsStore } from "@powerhousedao/reactor-browser";
+import type { Action } from "@powerhousedao/shared/document-model";
 import { type IProcessorHostModule } from "@powerhousedao/shared/processors";
 import { getDb } from "../pglite.db.js";
 
-interface ReactorClientDispatch {
+export interface IReactorDispatch {
   executeAsync(
     documentIdentifier: string,
     branch: string,
@@ -12,13 +12,13 @@ interface ReactorClientDispatch {
   ): Promise<{ id: string; status: string }>;
 }
 
-interface ReadModel {
+interface INamedReadModel {
   readonly name: string;
 }
 
 export async function createProcessorHostModule(
-  reactorClient: ReactorClientDispatch,
-  readModels: ReadModel[],
+  reactorClient: IReactorDispatch,
+  readModels: INamedReadModel[],
 ): Promise<IProcessorHostModule | undefined> {
   try {
     const { pgLite, relationalDb } = await getDb();
