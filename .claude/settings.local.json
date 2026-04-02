@@ -32,10 +32,9 @@
       "WebFetch(domain:*)",
       "Bash(git fetch:*)",
       "Bash(npx eslint:*)",
-      "Bash(for file:*)",
-      "Bash(do echo:*)",
-      "Read(//Users/benjaminjordan/projects/powerhouse/powerhouse/**)",
-      "Bash(done)"
+      "Bash(gh pr:*)",
+      "Bash(gh run:*)",
+      "Bash(git stash:*)"
     ],
     "deny": [],
     "ask": []

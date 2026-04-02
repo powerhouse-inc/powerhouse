@@ -1,7 +1,6 @@
 {
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
-    "emitDeclarationOnly": true,
     "outDir": "./dist",
     "types": ["node", "vitest/globals"],
     "lib": ["ESNext", "dom", "dom.iterable"],

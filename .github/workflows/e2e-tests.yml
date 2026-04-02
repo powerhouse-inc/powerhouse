@@ -44,27 +44,14 @@ jobs:
         with:
           bun-version: 1.3.8
 
-      - name: Build typescript project
-        run: pnpm tsc -b
-        working-directory: "./test/vetra-e2e"
-
-      - name: Run misc build scripts
-        run: pnpm build-misc
-
-      - name: Run bundle scripts
-        run: pnpm build-bundle
-
-      - name: Run css build scripts
-        run: pnpm build-css
-
-      - name: Run vite build scripts
-        run: pnpm build-vite
-
-      - name: Run build clis
-        run: pnpm build-cli
+      - name: Build
+        run: pnpm build
 
       - name: Run install again after generating binaries
         run: pnpm install-ci
+
+      - name: Build packages that depend on generated binaries
+        run: pnpm --filter=@powerhousedao/versioned-documents --no-bail run build
 
       - name: Install Playwright Browsers
         run: pnpm exec playwright install --with-deps chromium
@@ -89,8 +76,8 @@ jobs:
           path: test/vetra-e2e/test-results/
           retention-days: 30
 
-  analytics-engine-e2e-tests:
-    name: Run Analytics Engine E2E Tests
+  analytics-engine-integration-tests:
+    name: Run Analytics Engine Integration Tests
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -116,39 +103,27 @@ jobs:
         with:
           bun-version: 1.3.8
 
-      - name: Build typescript project
-        run: pnpm tsc -b
-
-      - name: Run misc build scripts
-        run: pnpm build-misc
-
-      - name: Run bundle scripts
-        run: pnpm build-bundle
-
-      - name: Run css build scripts
-        run: pnpm build-css
-
-      - name: Run vite build scripts
-        run: pnpm build-vite
-
-      - name: Run build clis
-        run: pnpm build-cli
+      - name: Build
+        run: pnpm build
 
       - name: Run install again after generating binaries
         run: pnpm install-ci
+
+      - name: Build packages that depend on generated binaries
+        run: pnpm --filter=@powerhousedao/versioned-documents --no-bail run build
 
       - name: Install Playwright Browsers
         run: pnpm exec playwright install
         working-directory: packages/analytics-engine/browser
 
-      - name: Run Playwright tests
-        run: pnpm test:e2e:analytics
+      - name: Run integration tests
+        run: pnpm test:integration:analytics
 
       - name: Upload Playwright Report
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: vetra-playwright-report
+          name: analytics-engine-playwright-report
           path: packages/analytics-engine/browser/playwright-report/
           retention-days: 30
 

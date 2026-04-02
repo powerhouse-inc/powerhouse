@@ -17,33 +17,29 @@
   "sideEffects": false,
   "exports": {
     ".": {
-      "import": "./dist/src/index.js",
-      "types": "./dist/src/index.d.ts"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
     },
     "./*": {
-      "import": "./dist/src/*.js",
-      "types": "./dist/src/*.d.ts"
+      "types": "./dist/*.d.ts",
+      "import": "./dist/*.js"
     },
     "./ui": {
-      "import": "./dist/src/ui/index.js",
-      "types": "./dist/src/ui/index.d.ts"
+      "types": "./dist/ui/index.d.ts",
+      "import": "./dist/ui/index.js"
     },
     "./ui/lib": {
-      "import": "./dist/src/ui/lib/index.js",
-      "types": "./dist/src/ui/lib/index.d.ts"
+      "types": "./dist/ui/lib/index.d.ts",
+      "import": "./dist/ui/lib/index.js"
     },
-    "./ui/*": "./dist/src/ui/*",
-    "./utils": {
-      "import": "./dist/src/utils/index.js",
-      "types": "./dist/src/utils/index.d.ts"
-    },
+    "./ui/*": "./dist/ui/*",
     "./connect": {
-      "import": "./dist/src/connect/index.js",
-      "types": "./dist/src/connect/index.d.ts"
+      "types": "./dist/connect/index.d.ts",
+      "import": "./dist/connect/index.js"
     },
     "./rwa": {
-      "import": "./dist/src/rwa/index.js",
-      "types": "./dist/src/rwa/index.d.ts"
+      "types": "./dist/rwa/index.d.ts",
+      "import": "./dist/rwa/index.js"
     },
     "./assets/*.mp4": "./dist/assets/*.mp4",
     "./assets/*.png": "./dist/assets/*.png",
@@ -55,14 +51,14 @@
     "./assets/*.avif": "./dist/assets/*.avif",
     "./style.css": "./dist/style.css",
     "./theme.css": "./theme.css",
-    "./testing": "./dist/src/ui/testing.js"
+    "./testing": "./dist/ui/components/testing.js"
   },
   "scripts": {
     "tsc": "tsc",
     "lint": "eslint",
     "create-icon-components": "tsx scripts/create-icon-components.ts",
+    "build": "tsdown && pnpm run build:css",
     "build:css": "pnpm exec tailwindcss -i style.css -o dist/style.css",
-    "build:misc": "copyfiles assets/* assets/**/* dist",
     "storybook": "storybook dev -p 6006",
     "build:storybook": "storybook build",
     "test": "vitest run --exclude \"src/scalars/**\"",
@@ -112,6 +108,7 @@
     "tailwind-scrollbar": "^4.0.1",
     "tailwindcss": "catalog:",
     "vite": "catalog:",
+    "tsdown": "catalog:",
     "vitest": "catalog:",
     "@powerhousedao/reactor-browser": "workspace:*"
   },
@@ -136,7 +133,6 @@
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "cmdk": "^1.0.4",
-    "copyfiles": "catalog:",
     "date-fns": "^4.1.0",
     "date-fns-tz": "^3.2.0",
     "diff": "^8.0.3",

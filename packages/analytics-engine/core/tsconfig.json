@@ -4,7 +4,6 @@
   "compilerOptions": {
     // output transpiled code in the dist file relative to this package's root
     "outDir": "./dist",
-    "emitDeclarationOnly": true
   },
   // include all files in this package's root
   "include": ["**/*"],

@@ -2,52 +2,22 @@
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
     "outDir": "./dist",
-    "types": [
-      "node",
-      "vitest/globals"
-    ],
-    "lib": [
-      "ESNext",
-      "dom",
-      "dom.iterable"
-    ],
-    "emitDeclarationOnly": true,
-    "customConditions": [
-      "source"
-    ],
+    "types": ["node", "vitest/globals"],
+    "lib": ["ESNext", "dom", "dom.iterable"],
+    "customConditions": ["source"],
     "paths": {
-      "document-models": [
-        "./document-models/index.ts"
-      ],
-      "document-models/*": [
-        "./document-models/*/index.ts"
-      ],
-      "editors": [
-        "./editors/index.ts"
-      ],
-      "editors/*": [
-        "./editors/*/index.ts"
-      ],
-      "processors/*": [
-        "./processors/*/index.ts"
-      ],
-      "subgraphs": [
-        "./subgraphs/index.ts"
-      ],
-      "subgraphs/*": [
-        "./subgraphs/*/index.ts"
-      ]
+      "document-models": ["./document-models/index.ts"],
+      "document-models/*": ["./document-models/*/index.ts"],
+      "editors": ["./editors/index.ts"],
+      "editors/*": ["./editors/*/index.ts"],
+      "processors": ["./processors/index.ts"],
+      "processors/*": ["./processors/*/index.ts"],
+      "subgraphs": ["./subgraphs/index.ts"],
+      "subgraphs/*": ["./subgraphs/*/index.ts"]
     }
   },
-  "include": [
-    "**/*",
-    "./powerhouse.manifest.json"
-  ],
-  "exclude": [
-    "dist",
-    "node_modules",
-    ".ph"
-  ],
+  "include": ["**/*", "./powerhouse.manifest.json"],
+  "exclude": ["dist", "node_modules", ".ph"],
   "references": [
     {
       "path": "../../apps/connect"

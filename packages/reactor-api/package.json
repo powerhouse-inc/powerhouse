@@ -9,33 +9,25 @@
   },
   "exports": {
     ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
-    },
-    "./graphql": {
-      "import": "./dist/src/graphql/index.js",
-      "types": "./dist/src/graphql/index.d.ts"
-    },
-    "./graphql/*": {
-      "import": "./dist/src/graphql/*.js",
-      "types": "./dist/src/graphql/*.d.ts"
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
     },
     "./vite": {
-      "import": "./dist/src/packages/vite-loader.js",
-      "types": "./dist/src/packages/vite-loader.d.ts"
+      "types": "./dist/vite-loader.d.mts",
+      "import": "./dist/src/packages/vite-loader.mjs"
     },
     "./test": {
       "import": "./test/index.ts"
     }
   },
-  "types": "./dist/index.d.ts",
+  "types": "./dist/index.d.mts",
   "files": [
     "dist"
   ],
   "sideEffects": false,
   "scripts": {
     "tsc": "tsc",
-    "build:misc": "copyfiles -u 0 \"src/**/*.graphql\" dist/",
+    "build": "tsdown",
     "lint": "eslint",
     "test": "vitest --run",
     "bench": "vitest bench",
@@ -114,7 +106,7 @@
     "@types/node": "catalog:",
     "@types/pg": "catalog:",
     "@types/ws": "^8.18.1",
-    "copyfiles": "catalog:",
+    "tsdown": "catalog:",
     "graphql-tag": "catalog:",
     "msw": "^2.7.3",
     "vite": "catalog:",

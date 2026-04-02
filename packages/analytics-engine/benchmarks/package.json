@@ -11,6 +11,7 @@
     "dist"
   ],
   "scripts": {
+    "build": "tsdown",
     "processCache": "node ./dist/src/processor.js",
     "ci": "node ./dist/src/wasm.js && node ./dist/src/hash-keys.js && PG_DISABLED=true node ./dist/src/query-list.js && PG_DISABLED=true node ./dist/src/series.js",
     "benchmark": "pnpm test-wasm && pnpm test-query-list && pnpm test-series && pnpm test-hash-keys",
@@ -34,6 +35,7 @@
   "devDependencies": {
     "@tsconfig/node-lts": "catalog:",
     "@types/luxon": "catalog:",
-    "@types/node": "catalog:"
+    "@types/node": "catalog:",
+    "tsdown": "catalog:"
   }
 }

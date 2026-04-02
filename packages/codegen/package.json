@@ -36,7 +36,8 @@
   "scripts": {
     "tsc": "tsc",
     "lint": "eslint",
-    "build:bundle": "tsdown"
+    "copy-hygen": "rm -rf dist/src/codegen/.hygen && cp -r src/codegen/.hygen dist/src/codegen/",
+    "build": "tsdown"
   },
   "dependencies": {
     "write-package": "catalog:",

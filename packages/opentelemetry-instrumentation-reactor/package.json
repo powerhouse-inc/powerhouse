@@ -10,16 +10,16 @@
   },
   "exports": {
     ".": {
-      "types": "./dist/src/index.d.ts",
-      "import": "./dist/src/index.js"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
     }
   },
   "files": [
-    "./dist/src"
+    "./dist"
   ],
   "scripts": {
     "tsc": "tsc",
-    "build": "tsc",
+    "build": "tsdown",
     "lint": "eslint"
   },
   "publishConfig": {
@@ -35,6 +35,9 @@
   "license": "AGPL-3.0-only",
   "dependencies": {
     "@opentelemetry/api": "^1.9.0"
+  },
+  "devDependencies": {
+    "tsdown": "catalog:"
   },
   "peerDependencies": {
     "@powerhousedao/reactor": "workspace:*"

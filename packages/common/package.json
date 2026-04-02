@@ -12,25 +12,22 @@
   },
   "exports": {
     ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
     },
     "./utils": {
-      "import": "./dist/utils/index.js",
-      "types": "./dist/utils/index.d.ts"
+      "types": "./dist/utils/index.d.ts",
+      "import": "./dist/utils/index.js"
     },
     "./analytics": {
-      "types": "./dist/src/analytics.d.ts",
-      "default": "./dist/src/analytics.js"
-    },
-    "./clis": {
-      "types": "./dist/clis/index.d.ts",
-      "default": "./dist/clis/index.js"
+      "types": "./dist/drive-analytics.d.ts",
+      "import": "./dist/drive-analytics.js"
     }
   },
   "sideEffects": false,
   "description": "The Powerhouse Common package contains the basic document model and drive UI (App) that is required to get started with Connect and visualize private & public apps.",
   "scripts": {
+    "build": "tsdown",
     "tsc": "tsc",
     "lint": "eslint",
     "dev": "ph-cli dev --config-file ./powerhouse.config.json"
@@ -61,6 +58,7 @@
     "@types/npm-package-arg": "catalog:",
     "@types/wicg-file-system-access": "^2020.9.6",
     "document-model": "workspace:*",
+    "tsdown": "catalog:",
     "vitest": "catalog:",
     "zod": "catalog:"
   }

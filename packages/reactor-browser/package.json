@@ -23,7 +23,7 @@
   "scripts": {
     "tsc": "tsc",
     "lint": "eslint",
-    "build:bundle": "tsdown",
+    "build": "tsdown",
     "test": "vitest --run",
     "install:playwright": "playwright install",
     "codegen": "graphql-codegen --config codegen.ts && prettier --write src/graphql/gen/*.ts && eslint --fix src/graphql/gen/*.ts --no-warn-ignored"

@@ -2,26 +2,26 @@
   "name": "@powerhousedao/switchboard",
   "type": "module",
   "version": "6.0.0-dev.153",
-  "main": "dist/src/index.js",
+  "main": "dist/index.mjs",
   "exports": {
     ".": {
-      "import": "./dist/src/index.js",
-      "types": "./dist/src/index.d.ts"
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
     },
     "./server": {
-      "import": "./dist/src/server.js",
-      "types": "./dist/src/server.d.ts"
+      "types": "./dist/server.d.mts",
+      "import": "./dist/server.mjs"
     },
     "./utils": {
-      "import": "./dist/src/utils.js",
-      "types": "./dist/src/utils.d.ts"
+      "types": "./dist/utils.d.mts",
+      "import": "./dist/utils.mjs"
     }
   },
   "engines": {
     "node": ">=24.0.0"
   },
   "bin": {
-    "switchboard": "dist/src/index.js"
+    "switchboard": "dist/index.mjs"
   },
   "repository": {
     "type": "git",
@@ -31,14 +31,14 @@
     "tsc": "tsc",
     "test": "vitest run",
     "lint": "eslint",
-    "build:misc": "pnpm run install-packages",
-    "start": "node dist/src/index.js",
-    "start:profile": "mkdir -p .prof && node --cpu-prof --cpu-prof-dir=.prof dist/src/index.js",
-    "start:profile:bun": "mkdir -p .prof && bun --cpu-prof --cpu-prof-dir=.prof dist/src/index.js",
-    "dev": "concurrently -P 'pnpm -w run tsc --watch' 'nodemon --trace-warnings --watch \"../..\" -e ts,tsx,js,json dist/src/index.js -- {@}' --",
-    "install-packages": "node dist/src/install-packages.js",
-    "migrate": "node dist/src/migrate.js",
-    "migrate:status": "node dist/src/migrate.js status"
+    "build": "tsdown && pnpm run install-packages",
+    "start": "node dist/index.mjs",
+    "start:profile": "mkdir -p .prof && node --cpu-prof --cpu-prof-dir=.prof dist/index.mjs",
+    "start:profile:bun": "mkdir -p .prof && bun --cpu-prof --cpu-prof-dir=.prof dist/index.mjs",
+    "dev": "concurrently -P 'pnpm -w run tsc --watch' 'nodemon --trace-warnings --watch \"../..\" -e ts,tsx,js,json dist/index.mjs -- {@}' --",
+    "install-packages": "node dist/install-packages.mjs",
+    "migrate": "node dist/migrate.mjs",
+    "migrate:status": "node dist/migrate.mjs status"
   },
   "author": "",
   "license": "ISC",
@@ -73,6 +73,7 @@
     "@types/express": "^4.17.25",
     "@types/node": "catalog:",
     "@types/pg": "catalog:",
+    "tsdown": "catalog:",
     "concurrently": "catalog:",
     "nodemon": "catalog:",
     "vitest": "catalog:"

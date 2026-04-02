@@ -7,27 +7,21 @@
   ],
   "exports": {
     ".": {
-      "development": "./src/index.ts",
-      "types": "./dist/src/index.d.ts",
-      "default": "./dist/src/index.js"
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
     },
     "./helpers": {
-      "development": "./src/helpers/index.ts",
-      "types": "./dist/src/helpers/index.d.ts",
-      "default": "./dist/src/helpers/index.js"
+      "types": "./dist/helpers/index.d.mts",
+      "import": "./dist/helpers/index.mjs"
     },
-    "./helpers/*": {
-      "development": "./src/helpers/*.ts",
-      "types": "./dist/src/helpers/*.d.ts",
-      "default": "./dist/src/helpers/*.js"
-    },
+    "./helpers/*": "./dist/helpers/*.mjs",
     "./types": {
-      "development": "./src/types/index.ts",
-      "types": "./dist/src/types/index.d.ts",
-      "default": "./dist/src/types/index.js"
+      "types": "./dist/types/index.d.mts",
+      "import": "./dist/types/index.mjs"
     }
   },
   "scripts": {
+    "build": "tsdown",
     "tsc": "tsc",
     "lint": "eslint"
   },
@@ -35,7 +29,8 @@
     "@playwright/test": "^1.41.2"
   },
   "devDependencies": {
-    "@playwright/test": "^1.41.2"
+    "@playwright/test": "^1.41.2",
+    "tsdown": "catalog:"
   },
   "dependencies": {}
 }

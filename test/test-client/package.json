@@ -6,11 +6,17 @@
   "type": "module",
   "private": true,
   "bin": {
-    "ph-load-test": "dist/src/cli.js"
+    "ph-load-test": "dist/cli.mjs"
   },
-  "exports": "./dist/src/index.js",
-  "types": "./dist/src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
+    }
+  },
+  "types": "./dist/index.d.mts",
   "scripts": {
+    "build": "tsdown",
     "dev": "tsx src/cli.ts",
     "scenario-1": "tsx src/cli.ts --url http://localhost:4001/graphql --duration 60000 --document-interval 10000 --mutation-interval 5000",
     "scenario-2": "tsx src/cli.ts --url http://localhost:4001/graphql --duration 120000 --document-interval 5000 --mutation-interval 2000",
@@ -30,6 +36,7 @@
   "devDependencies": {
     "@types/node": "catalog:",
     "tsx": "catalog:",
+    "tsdown": "catalog:",
     "vitest": "catalog:"
   }
 }

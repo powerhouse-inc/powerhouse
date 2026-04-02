@@ -14,22 +14,22 @@
   },
   "exports": {
     ".": {
-      "types": "./dist/src/index.d.ts",
-      "import": "./dist/src/index.js",
-      "default": "./dist/src/index.js"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
     },
     "./node": {
-      "types": "./dist/src/node.d.ts",
-      "import": "./dist/src/node.js",
-      "default": "./dist/src/node.js"
+      "types": "./dist/node.d.ts",
+      "import": "./dist/node.js",
+      "default": "./dist/node.js"
     }
   },
-  "types": "./dist/src/index.d.ts",
+  "types": "./dist/index.d.ts",
   "sideEffects": false,
   "typesVersions": {
     "*": {
       "node": [
-        "./dist/src/node.d.ts"
+        "./dist/node.d.ts"
       ]
     }
   },
@@ -37,11 +37,13 @@
     "dist"
   ],
   "scripts": {
+    "build": "tsdown",
     "tsc": "tsc",
     "lint": "eslint"
   },
   "devDependencies": {
     "document-model": "workspace:*",
+    "tsdown": "catalog:",
     "vitest": "catalog:"
   },
   "dependencies": {

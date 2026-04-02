@@ -24,8 +24,8 @@
     "tsc": "tsc",
     "lint": "eslint",
     "generate-docs": "bun run scripts/generate-commands-docs.ts",
-    "build:cli": "tsdown",
-    "postbuild:cli": "bun generate-docs && bun copy-scripts",
+    "build": "tsdown",
+    "postbuild": "bun generate-docs && bun copy-scripts",
     "copy-scripts": "copyfiles scripts/* dist/",
     "dev": "bun run ./src/cli.ts",
     "cli": "node ./dist/cli.mjs"

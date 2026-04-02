@@ -17,6 +17,14 @@ vi.mock("../hooks/useAvailableDocumentTypes.js", () => ({
   ]),
 }));
 
+vi.mock("@powerhousedao/design-system/connect", () => ({
+  DocumentToolbar: () => null,
+}));
+
+vi.mock("@powerhousedao/reactor-browser", () => ({
+  useSetPHDocumentEditorConfig: vi.fn(),
+}));
+
 describe("ProcessorModule Editor", () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let mockDispatch: (...args: any[]) => any;

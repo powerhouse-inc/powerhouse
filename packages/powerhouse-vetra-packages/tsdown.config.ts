@@ -13,4 +13,5 @@ export default defineConfig({
   clean: true,
   dts: true,
   sourcemap: true,
+  external: [/^[^./]/],
 });

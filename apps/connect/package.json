@@ -50,6 +50,7 @@
     "lint": "eslint",
     "test": "vitest --run",
     "dev": "vite dev",
+    "build": "pnpm run build:bundle && pnpm run build:css",
     "build:css": "pnpm exec tailwindcss -i ./style.css -o ./dist/style.css",
     "build:bundle": "tsdown",
     "build:debug": "PH_DEBUG_BUILD=true vite build",

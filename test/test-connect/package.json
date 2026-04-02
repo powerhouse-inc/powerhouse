@@ -6,11 +6,17 @@
   "type": "module",
   "private": true,
   "bin": {
-    "ph-load-test-connect": "dist/src/cli.js"
+    "ph-load-test-connect": "dist/cli.mjs"
   },
-  "exports": "./dist/src/index.js",
-  "types": "./dist/src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
+    }
+  },
+  "types": "./dist/index.d.mts",
   "scripts": {
+    "build": "tsdown",
     "dev": "tsx src/cli.ts",
     "test": "vitest --run",
     "scenario:sync": "tsx src/orchestrator.ts",
@@ -29,6 +35,7 @@
   "devDependencies": {
     "@types/node": "catalog:",
     "tsx": "catalog:",
+    "tsdown": "catalog:",
     "vitest": "catalog:"
   }
 }

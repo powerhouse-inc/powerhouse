@@ -18,8 +18,8 @@
   "scripts": {
     "start": "node ./dist/cli.mjs",
     "dev": "bun run ./cli.ts",
-    "build:cli": "tsdown",
-    "postbuild:cli": "bun run ./copy-dirs.ts",
+    "build": "tsdown",
+    "postbuild": "bun run ./copy-dirs.ts",
     "test": "vitest --run"
   },
   "keywords": [],

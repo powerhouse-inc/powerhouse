@@ -1,6 +1,10 @@
 import type { Size } from "@powerhousedao/design-system";
 
-export function getDimensions(size?: Size) {
+type Dimensions =
+  | { width?: undefined; height?: undefined }
+  | { width: string; height: string };
+
+export function getDimensions(size?: Size): Dimensions {
   if (!size) return {};
 
   if (typeof size === "number") {
@@ -11,7 +15,7 @@ export function getDimensions(size?: Size) {
   }
 
   return {
-    width: size,
-    height: size,
+    width: String(size),
+    height: String(size),
   };
 }

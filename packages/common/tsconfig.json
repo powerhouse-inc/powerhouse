@@ -1,5 +1,5 @@
 {
-  "extends": "../../tsconfig.json",
+  "extends": "../../tsconfig.options.json",
   "compilerOptions": {
     "types": ["node", "vitest/globals", "@types/wicg-file-system-access"],
     "outDir": "./dist",

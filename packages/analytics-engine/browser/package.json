@@ -20,7 +20,7 @@
     "dist"
   ],
   "scripts": {
-    "build:bundle": "tsdown",
+    "build": "tsdown",
     "test": "vitest --run ./**/*.test.ts"
   },
   "dependencies": {

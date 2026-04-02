@@ -22,14 +22,14 @@ runs:
       shell: bash
       run: pnpm install-ci
 
-    - name: Run typescript for the monorepo
+    - name: Build
       shell: bash
-      run: pnpm build-tsc
+      run: pnpm build
 
-    - name: Run bundle scripts
+    - name: Run install again after generating binaries
       shell: bash
-      run: pnpm build-bundle
+      run: pnpm install --frozen-lockfile
 
-    - name: Run css build scripts
+    - name: Build packages that depend on generated binaries
       shell: bash
-      run: pnpm build-css
+      run: pnpm --filter=@powerhousedao/versioned-documents --no-bail run build

@@ -21,7 +21,7 @@
   ],
   "scripts": {
     "test": "PG_CONNECTION_STRING=postgresql://postgres:password@localhost:5555/analytics vitest --run ./**/*.test.ts",
-    "build:bundle": "tsdown"
+    "build": "tsdown"
   },
   "dependencies": {
     "date-fns": "catalog:",

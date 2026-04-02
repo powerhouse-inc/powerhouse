@@ -35,7 +35,7 @@
     "lint": "eslint",
     "test": "vitest --run",
     "test:watch": "vitest watch",
-    "build:bundle": "tsx ./build.ts"
+    "build": "tsx ./build.ts"
   },
   "devDependencies": {
     "@types/jest": "^29.5.14",
