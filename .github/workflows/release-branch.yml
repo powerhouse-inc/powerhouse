@@ -157,6 +157,51 @@ jobs:
           echo "skip=false" >> $GITHUB_OUTPUT
           echo "Triggering downstream with channel=$CHANNEL version=$VERSION"
 
+  vetra-e2e-docker:
+    name: Vetra E2E Tests (Docker)
+    needs: [release, determine-downstream-params]
+    if: ${{ inputs.dry_run != true && needs.determine-downstream-params.outputs.skip != 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Build vetra-e2e Docker image
+        run: |
+          TAG="${{ needs.determine-downstream-params.outputs.version }}"
+          docker build \
+            -f test/vetra-e2e/Dockerfile \
+            --build-arg TAG="$TAG" \
+            -t vetra-e2e \
+            test/
+
+      - name: Run vetra-e2e tests
+        run: docker run --name vetra-e2e-run vetra-e2e
+
+      - name: Extract test artifacts
+        if: always()
+        run: |
+          docker cp vetra-e2e-run:/app/test-project/playwright-report ./vetra-docker-playwright-report || true
+          docker cp vetra-e2e-run:/app/test-project/test-results ./vetra-docker-test-results || true
+          docker rm vetra-e2e-run || true
+
+      - name: Upload Playwright Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: vetra-docker-playwright-report
+          path: vetra-docker-playwright-report/
+          retention-days: 30
+
+      - name: Upload Test Results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: vetra-docker-test-results
+          path: vetra-docker-test-results/
+          retention-days: 30
+
   trigger-downstream:
     name: Trigger Downstream Packages
     needs: determine-downstream-params

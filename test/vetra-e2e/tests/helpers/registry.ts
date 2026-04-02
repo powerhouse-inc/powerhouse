@@ -4,7 +4,8 @@ import fs from "fs";
 import path from "path";
 
 const REGISTRY_PORT = 8080;
-export const REGISTRY_URL = `http://localhost:${REGISTRY_PORT}`;
+export const REGISTRY_URL =
+  process.env.REGISTRY_URL || `http://localhost:${REGISTRY_PORT}`;
 
 /**
  * Start the registry as a child process using the ph-registry CLI binary.
@@ -88,8 +89,18 @@ export async function createTestUser(): Promise<string> {
 }
 
 export function writeNpmrc(testDir: string, token: string): void {
-  const npmrcContent = `//localhost:${REGISTRY_PORT}/:_authToken=${token}\n`;
-  fs.writeFileSync(path.join(testDir, ".npmrc"), npmrcContent, "utf8");
+  const registryHostPort = new URL(REGISTRY_URL).host;
+  const lines = [
+    `registry=${REGISTRY_URL}`,
+    `//${registryHostPort}/:_authToken=${token}`,
+  ];
+  // In Docker, ph-cli publish uses the socat IPv4 bridge on port 18080;
+  // add auth for that host too so npm authentication works
+  if (process.env.DOCKER_E2E) {
+    lines.push(`//localhost:18080/:_authToken=${token}`);
+  }
+  lines.push("");
+  fs.writeFileSync(path.join(testDir, ".npmrc"), lines.join("\n"), "utf8");
 }
 
 export function stopRegistry(child: ChildProcess): void {

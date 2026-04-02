@@ -1,7 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
-export const CONNECT_URL = "http://localhost:3001";
-export const REACTOR_URL = "http://localhost:4002";
+export const CONNECT_URL = process.env.CONNECT_URL || "http://localhost:3001";
+export const REACTOR_URL = process.env.REACTOR_URL || "http://localhost:4002";
 
 /**
  * Read environment variables from file.

@@ -5,29 +5,83 @@ import path from "path";
 
 const CONSUMER_PROJECT_NAME = "test-consumer-project";
 const CONSUMER_CONNECT_PORT = 5555;
-export const CONSUMER_CONNECT_URL = `http://localhost:${CONSUMER_CONNECT_PORT}`;
+const CONSUMER_CONNECT_HOST = process.env.CONSUMER_CONNECT_HOST || "localhost";
+export const CONSUMER_CONNECT_URL = `http://${CONSUMER_CONNECT_HOST}:${CONSUMER_CONNECT_PORT}`;
+
+const isDocker = !!process.env.DOCKER_E2E;
 
 /**
  * Returns the absolute path of the consumer project.
- * Lives as a sibling of vetra-e2e in test/test-consumer-project/.
+ * In Docker mode: /app/test-consumer-project (sibling of /app/test-project).
+ * In monorepo mode: test/test-consumer-project/ (sibling of vetra-e2e).
  */
 export function getConsumerProjectPath(): string {
+  if (isDocker) {
+    return "/app/test-consumer-project";
+  }
   const testDir = path.dirname(process.cwd());
   return path.join(testDir, CONSUMER_PROJECT_NAME);
 }
 
 /**
- * Install dependencies for the consumer project.
- * Uses pnpm from the monorepo root to resolve workspace packages.
+ * Ensure the consumer project exists.
+ * In Docker mode, scaffolds it via `ph init`.
+ * In monorepo mode, expects the project to already exist.
  */
-export function installConsumerDeps(): void {
-  const monorepoRoot = path.resolve(getConsumerProjectPath(), "../..");
-  console.log("Installing consumer project dependencies...");
-  execSync(`pnpm install --filter ${CONSUMER_PROJECT_NAME}`, {
-    cwd: monorepoRoot,
+export function ensureConsumerProject(): void {
+  const projectPath = getConsumerProjectPath();
+  if (fs.existsSync(path.join(projectPath, "package.json"))) {
+    return;
+  }
+
+  if (!isDocker) {
+    throw new Error(
+      `Consumer project not found at ${projectPath}. ` +
+        `In monorepo mode, test/test-consumer-project/ must exist.`,
+    );
+  }
+
+  console.log("Creating consumer project via ph init...");
+  const parentDir = path.dirname(projectPath);
+  execSync(`ph init ${CONSUMER_PROJECT_NAME} --dev --package-manager pnpm`, {
+    cwd: parentDir,
     stdio: "pipe",
     timeout: 120_000,
   });
+
+  // Configure the consumer project to use the local test registry
+  const configPath = path.join(projectPath, "powerhouse.config.json");
+  const config = JSON.parse(fs.readFileSync(configPath, "utf-8")) as Record<
+    string,
+    unknown
+  >;
+  config.packageRegistryUrl = "http://localhost:8080";
+  config.studio = { port: 5556 };
+  config.reactor = { port: 5557, storage: "memory" };
+  fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+}
+
+/**
+ * Install dependencies for the consumer project.
+ * In monorepo mode, uses pnpm --filter from the monorepo root.
+ * In Docker mode, runs pnpm install directly in the consumer project.
+ */
+export function installConsumerDeps(): void {
+  console.log("Installing consumer project dependencies...");
+  if (isDocker) {
+    execSync("pnpm install", {
+      cwd: getConsumerProjectPath(),
+      stdio: "pipe",
+      timeout: 120_000,
+    });
+  } else {
+    const monorepoRoot = path.resolve(getConsumerProjectPath(), "../..");
+    execSync(`pnpm install --filter ${CONSUMER_PROJECT_NAME}`, {
+      cwd: monorepoRoot,
+      stdio: "pipe",
+      timeout: 120_000,
+    });
+  }
 }
 
 /**

@@ -14,6 +14,7 @@ import {
   CONSUMER_CONNECT_URL,
   buildConsumerConnect,
   cleanupConsumerBuildArtifacts,
+  ensureConsumerProject,
   installConsumerDeps,
   startConsumerPreview,
   stopConsumerPreview,
@@ -209,6 +210,14 @@ test("Build and Publish to Registry", async () => {
   currentManifest.name = "test-package-vetra";
   fs.writeFileSync(manifestPath, JSON.stringify(currentManifest, null, 4));
 
+  // Also update package.json name so npm publish uses the correct name
+  const packageJsonPath = path.join(testDir, "package.json");
+  const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf-8")) as {
+    name: string;
+  };
+  packageJson.name = "test-package-vetra";
+  fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2));
+
   // Build the package with ph-cli build
   console.log("Building package with ph-cli build...");
   execSync("pnpm build", {
@@ -232,8 +241,14 @@ test("Build and Publish to Registry", async () => {
   expect(manifest.editors.length).toBeGreaterThan(0);
 
   // Publish to the local registry
-  console.log("Publishing package to local registry...");
-  execSync("pnpm exec ph-cli publish", {
+  // In Docker, ph-cli can't connect to [::1] URLs, so use the socat IPv4 bridge on port 18080
+  const publishRegistryUrl = process.env.DOCKER_E2E
+    ? "http://localhost:18080"
+    : REGISTRY_URL;
+  console.log(
+    `Publishing package to local registry (${publishRegistryUrl})...`,
+  );
+  execSync(`pnpm exec ph-cli publish --registry=${publishRegistryUrl}`, {
     cwd: testDir,
     stdio: "pipe",
     timeout: 60_000,
@@ -285,6 +300,9 @@ test("Build and Publish to Registry", async () => {
 
 test("Install Package in Consumer Project", async ({ browser }) => {
   test.setTimeout(10 * 60 * 1000); // 10 minutes for build + preview + UI
+
+  // Ensure consumer project exists (creates it via ph init in Docker mode)
+  ensureConsumerProject();
 
   // Step 1: Install dependencies for the consumer project
   installConsumerDeps();
