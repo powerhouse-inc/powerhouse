@@ -48,7 +48,6 @@
     "@graphql-codegen/cli": "catalog:",
     "@graphql-codegen/typescript": "catalog:",
     "@powerhousedao/shared": "workspace:*",
-    "@tmpl/core": "npm:@jsr/tmpl__core@^0.6.3",
     "arg": "^5.0.2",
     "chalk": "catalog:",
     "change-case": "catalog:",
@@ -61,5 +60,8 @@
     "ts-morph": "catalog:",
     "@types/node": "catalog:",
     "tsdown": "catalog:"
+  },
+  "devDependencies": {
+    "@tmpl/core": "npm:@jsr/tmpl__core@^0.6.3"
   }
 }
