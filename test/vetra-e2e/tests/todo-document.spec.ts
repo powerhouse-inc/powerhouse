@@ -156,7 +156,8 @@ test("Create ToDoDocument Editor", async ({ page }) => {
 
   // Poll for the generated editor files by waiting for editors/index.ts to be
   // updated with a real export (not just "export {};")
-  const editorsDir = path.join(process.cwd(), "editors");
+  const projectDir = process.env.PROJECT_DIR || process.cwd();
+  const editorsDir = path.join(projectDir, "editors");
   const editorsIndex = path.join(editorsDir, "index.ts");
   const pollStart = Date.now();
 
@@ -185,7 +186,7 @@ test("Create ToDoDocument Editor", async ({ page }) => {
 test("Build and Publish to Registry", async () => {
   test.setTimeout(180_000);
 
-  const testDir = process.cwd();
+  const testDir = process.env.PROJECT_DIR || process.cwd();
   const registryStoragePath = path.join(testDir, ".registry-storage");
   const registryCdnCachePath = path.join(testDir, ".registry-cdn-cache");
 
@@ -472,7 +473,8 @@ async function setupDocument(
   // We need to wait for the full code generation including index.ts update
   const maxWaitMs = 60000;
   const startTime = Date.now();
-  const documentModelsDir = path.join(process.cwd(), "document-models");
+  const projectDir = process.env.PROJECT_DIR || process.cwd();
+  const documentModelsDir = path.join(projectDir, "document-models");
   const todoDocModelDir = path.join(documentModelsDir, "to-do-document");
   const documentModelsIndex = path.join(documentModelsDir, "index.ts");
   const expectedExport =
