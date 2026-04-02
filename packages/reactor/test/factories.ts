@@ -547,6 +547,7 @@ export function createMockReadModelCoordinator(
   overrides: Partial<IReadModelCoordinator> = {},
 ): IReadModelCoordinator {
   return {
+    readModels: [],
     start: vi.fn(),
     stop: vi.fn(),
     ...overrides,
@@ -706,6 +707,7 @@ export function createMockReactorFeatures(
  */
 export function createMockDocumentView(): IDocumentView {
   return {
+    name: "document-view",
     init: vi.fn().mockResolvedValue(undefined),
     indexOperations: vi.fn().mockResolvedValue(undefined),
     waitForConsistency: vi.fn().mockResolvedValue(undefined),
@@ -730,6 +732,7 @@ export function createMockDocumentView(): IDocumentView {
  */
 export function createMockDocumentIndexer(): IDocumentIndexer {
   return {
+    name: "document-indexer",
     init: vi.fn().mockResolvedValue(undefined),
     indexOperations: vi.fn().mockResolvedValue(undefined),
     waitForConsistency: vi.fn().mockResolvedValue(undefined),

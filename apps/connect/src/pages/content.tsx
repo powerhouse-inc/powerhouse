@@ -58,7 +58,7 @@ function ContentContainer({ children }: { children: React.ReactNode }) {
 
 function DriveItem({ drive }: { drive: DocumentDriveDocument }) {
   const editorModule = useAppModuleById(drive.header.meta?.preferredEditor);
-  const description = editorModule?.name || "Drive Explorer App";
+  const description = editorModule?.config.name || "Drive Explorer App";
   return (
     <HomeScreenItem
       key={drive.header.id}

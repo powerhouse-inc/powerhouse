@@ -7,10 +7,8 @@
 This repository uses pnpm workspaces and Nx to manage a monorepo with multiple projects and packages.
 The latest documentation for developers on Powerhouse Vetra can be found on https://academy.vetra.io
 
-The Powerhouse monorepo has the following branching strategy:
-     - Ongoing development happens on the main branch with tag `dev`   
-     - A pre-release is branched off on Release/staging/v.x.x with tag `staging`
-     - Production is the latest release Release/production/v.x.x accessed with tag `latest`or `prod` 
+The Powerhouse monorepo has the following branching strategy: - Ongoing development happens on the main branch with tag `dev`  
+ - A pre-release is branched off on Release/staging/v.x.x with tag `staging` - Production is the latest release Release/production/v.x.x accessed with tag `latest`or `prod`
 
 ## Table of Contents
 
@@ -57,7 +55,7 @@ To link a dependency into a project, add it to your package.json and point the d
 
 Next, add a path reference to the `tsconfig.json` file.
 
-```json
+````json
 {
   "references": [
     {
@@ -105,41 +103,41 @@ Next, add a path reference to the `tsconfig.json` file.
          - "@pgph/pkg-c"
          - <add_your_new_package_name_here>
          - "packages/*"
-   ```
+````
 
-   If adding a new app or a package requiring a special workflow, set up a new release configuration:
+If adding a new app or a package requiring a special workflow, set up a new release configuration:
 
-   ```yml
+```yml
 
-   name: Your Custom Release
+name: Your Custom Release
 
-   on:
-   workflow_dispatch:
+on:
+workflow_dispatch:
 
 
-   jobs:
-   build:
-       name: ...
-       runs-on: ...
-       permissions:
-       contents: write
-       id-token: write
-       steps:
-       ...
-       - name: git config
-           shell: bash
-           run: |
-           git config user.name "Github Actions Bot"
-           git config user.email "-"
+jobs:
+build:
+    name: ...
+    runs-on: ...
+    permissions:
+    contents: write
+    id-token: write
+    steps:
+    ...
+    - name: git config
+        shell: bash
+        run: |
+        git config user.name "Github Actions Bot"
+        git config user.email "-"
 
-       - name: Update pkg version
-           run: npx nx release --projects=<your_new_package/app_name> --skip-publish
-           shell: bash
-           env:
-           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-       ...
+    - name: Update pkg version
+        run: npx nx release --projects=<your_new_package/app_name> --skip-publish
+        shell: bash
+        env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    ...
 
-   ```
+```
 
 9. Trigger future releases directly from GitHub Actions.
 

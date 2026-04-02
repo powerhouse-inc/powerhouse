@@ -1,18 +1,15 @@
+import type { Manifest } from "@powerhousedao/shared";
+import { fileExists, type PowerhouseConfig } from "@powerhousedao/shared/clis";
+import type { DocumentModelGlobalState } from "@powerhousedao/shared/document-model";
+import type { ProcessorApps } from "@powerhousedao/shared/processors";
+import { kebabCase } from "change-case";
 import {
   makeSubgraphsIndexFile,
   tsMorphGenerateApp,
   tsMorphGenerateDocumentEditor,
   tsMorphGenerateDocumentModel,
   tsMorphGenerateSubgraph,
-} from "@powerhousedao/codegen/file-builders";
-import type {
-  PartialPowerhouseManifest,
-  PowerhouseManifest,
-} from "@powerhousedao/shared";
-import { fileExists, type PowerhouseConfig } from "@powerhousedao/shared/clis";
-import type { DocumentModelGlobalState } from "@powerhousedao/shared/document-model";
-import type { ProcessorApps } from "@powerhousedao/shared/processors";
-import { kebabCase } from "change-case";
+} from "file-builders";
 import { getTsconfig } from "get-tsconfig";
 import fs from "node:fs";
 import { readdir, writeFile } from "node:fs/promises";
@@ -381,7 +378,7 @@ export async function generateImportScript(
   );
 }
 
-const defaultManifest: PowerhouseManifest = {
+const defaultManifest: Manifest = {
   name: "",
   description: "",
   category: "",
@@ -393,11 +390,11 @@ const defaultManifest: PowerhouseManifest = {
   editors: [],
   apps: [],
   subgraphs: [],
-  importScripts: [],
+  processors: [],
 };
 
 export function generateManifest(
-  manifestData: PartialPowerhouseManifest,
+  manifestData: Partial<Manifest>,
   projectRoot?: string,
 ) {
   const rootDir = projectRoot || process.cwd();
@@ -406,11 +403,11 @@ export function generateManifest(
   // Create default manifest structure
 
   // Read existing manifest if it exists
-  let existingManifest: PowerhouseManifest = defaultManifest;
+  let existingManifest: Manifest = defaultManifest;
   if (fs.existsSync(manifestPath)) {
     try {
       const existingData = fs.readFileSync(manifestPath, "utf-8");
-      existingManifest = JSON.parse(existingData) as PowerhouseManifest;
+      existingManifest = JSON.parse(existingData) as Manifest;
     } catch (error) {
       console.warn(`Failed to parse existing manifest: ${String(error)}`);
       existingManifest = defaultManifest;
@@ -441,7 +438,7 @@ export function generateManifest(
   };
 
   // Merge partial data with existing manifest
-  const updatedManifest: PowerhouseManifest = {
+  const updatedManifest: Manifest = {
     ...existingManifest,
     ...manifestData,
     publisher: {
@@ -449,18 +446,17 @@ export function generateManifest(
       ...(manifestData.publisher || {}),
     },
     documentModels: mergeArrayById(
-      existingManifest.documentModels,
+      existingManifest.documentModels ?? [],
       manifestData.documentModels,
     ),
-    editors: mergeArrayById(existingManifest.editors, manifestData.editors),
-    apps: mergeArrayById(existingManifest.apps, manifestData.apps),
-    subgraphs: mergeArrayById(
-      existingManifest.subgraphs,
-      manifestData.subgraphs,
+    editors: mergeArrayById(
+      existingManifest.editors ?? [],
+      manifestData.editors,
     ),
-    importScripts: mergeArrayById(
-      existingManifest.importScripts,
-      manifestData.importScripts,
+    apps: mergeArrayById(existingManifest.apps ?? [], manifestData.apps),
+    subgraphs: mergeArrayById(
+      existingManifest.subgraphs ?? [],
+      manifestData.subgraphs,
     ),
   };
 

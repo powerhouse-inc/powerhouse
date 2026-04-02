@@ -35,7 +35,7 @@ export type ProcessorDriveFactory = (
  */
 export type ProcessorFactoryBuilder = (
   module: IProcessorHostModule,
-) => ProcessorDriveFactory;
+) => ProcessorDriveFactory | Promise<ProcessorDriveFactory>;
 
 /** Multiple initializers per package name (e.g. Switchboard `processors` option). */
 export type Processor = ProcessorFactoryBuilder[];

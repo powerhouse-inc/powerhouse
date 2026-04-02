@@ -1,7 +1,7 @@
 import { tsx } from "@tmpl/core";
 
 export const createDocumentFileTemplate = tsx`
-import type { VetraDocumentModelModule } from "@powerhousedao/reactor-browser";
+import type { DocumentModelModule } from "document-model";
 import {
   showCreateDocumentModal,
   useAllowedDocumentModelModules,
@@ -36,7 +36,7 @@ export function CreateDocument() {
 }
 
 type Props = {
-  documentModelModule: VetraDocumentModelModule;
+  documentModelModule: DocumentModelModule;
 };
 function CreateDocumentButton({ documentModelModule }: Props) {
   const documentType = documentModelModule.documentModel.global.id;

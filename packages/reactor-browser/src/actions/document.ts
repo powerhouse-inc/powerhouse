@@ -34,7 +34,10 @@ import {
   replayDocument,
 } from "@powerhousedao/shared/document-model";
 import { logger } from "document-model";
-import { UnsupportedDocumentTypeError } from "../errors.js";
+import {
+  DocumentModelNotFoundError,
+  UnsupportedDocumentTypeError,
+} from "../errors.js";
 import { isDocumentTypeSupported } from "../utils/documents.js";
 import { getUserPermissions } from "../utils/user.js";
 import { queueActions, queueOperations, uploadOperations } from "./queue.js";
@@ -216,9 +219,7 @@ export async function loadFile(path: string | File) {
       module.documentModel.global.id === baseDocument.header.documentType,
   );
   if (!documentModelModule) {
-    throw new Error(
-      `Document "${baseDocument.header.documentType}" is not supported`,
-    );
+    throw new DocumentModelNotFoundError(baseDocument.header.documentType);
   }
   return documentModelModule.utils.loadFromInput(path);
 }
@@ -369,8 +370,30 @@ export async function addFileWithProgress(
   // Loading stage (0-10%)
   try {
     onProgress?.({ stage: "loading", progress: 0 });
-
-    const document = await loadFile(file);
+    let document: PHDocument;
+    try {
+      document = await loadFile(file);
+    } catch (loadError) {
+      // Only attempt discovery if the failure is specifically a missing
+      // document model module, not for other errors like corrupt files.
+      const discoveryService = window.ph?.packageDiscoveryService;
+      if (discoveryService && DocumentModelNotFoundError.isError(loadError)) {
+        // Trigger discovery and retry without blocking the drop handler
+        void retryAfterDiscovery(
+          discoveryService,
+          loadError.documentType,
+          file,
+          driveId,
+          name,
+          parentFolder,
+          onProgress,
+          documentTypes,
+          resolveConflict,
+        );
+        return;
+      }
+      throw loadError;
+    }
 
     // Check for duplicate in same location
     const duplicateCheck = await isDocumentInLocation(
@@ -490,7 +513,7 @@ export async function addFileWithProgress(
       },
     });
 
-    onProgress?.({ stage: "complete", progress: 100 });
+    onProgress?.({ stage: "complete", progress: 100, fileNode });
 
     return fileNode;
   } catch (error) {
@@ -506,6 +529,39 @@ export async function addFileWithProgress(
     }
     throw error;
   }
+}
+
+async function retryAfterDiscovery(
+  discoveryService: NonNullable<typeof window.ph>["packageDiscoveryService"],
+  documentType: string,
+  file: string | File,
+  driveId: string,
+  name?: string,
+  parentFolder?: string,
+  onProgress?: FileUploadProgressCallback,
+  documentTypes?: string[],
+  resolveConflict?: ConflictResolution,
+): Promise<void> {
+  if (!discoveryService) return;
+  try {
+    await discoveryService.load(documentType);
+  } catch {
+    onProgress?.({
+      stage: "unsupported-document-type",
+      progress: 100,
+      error: `Document type ${documentType} is not supported`,
+    });
+    return;
+  }
+  await addFileWithProgress(
+    file,
+    driveId,
+    name,
+    parentFolder,
+    onProgress,
+    documentTypes,
+    resolveConflict,
+  );
 }
 
 export async function updateFile(

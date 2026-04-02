@@ -1,12 +1,11 @@
-import { Icon } from "@powerhousedao/design-system";
-import type { App } from "@powerhousedao/shared/document-model";
+import { Icon, type AppOptions } from "@powerhousedao/design-system";
 import type { ComponentPropsWithRef } from "react";
 import type { Control, Path } from "react-hook-form";
 import { Controller } from "react-hook-form";
 import type { ConnectSelectItem } from "../../select/select.js";
 import { ConnectSelect } from "../../select/select.js";
 
-export function appToInputOption(app: App): ConnectSelectItem<string> {
+export function appToInputOption(app: AppOptions): ConnectSelectItem<string> {
   return {
     value: app.id,
     displayValue: app.name,
@@ -14,15 +13,15 @@ export function appToInputOption(app: App): ConnectSelectItem<string> {
     description: "Built by Powerhouse",
   };
 }
-type AppFormInputProps<T extends { appId: string }> = Omit<
+type AppFormInputProps<T extends AppOptions> = Omit<
   ComponentPropsWithRef<typeof ConnectSelect>,
   "id" | "items" | "value" | "onChange"
 > & {
   readonly control: Control<T>;
-  readonly appOptions: App[];
+  readonly appOptions: T[];
 };
 
-export function AppFormInput<T extends { appId: string }>(
+export function AppFormInput<T extends AppOptions>(
   props: AppFormInputProps<T>,
 ) {
   const { control, appOptions, ...delegatedProps } = props;
@@ -31,14 +30,9 @@ export function AppFormInput<T extends { appId: string }>(
   return (
     <Controller
       control={control}
-      name={"appId" as Path<T>}
+      name={"id" as Path<T>}
       render={({ field }) => (
-        <ConnectSelect
-          {...delegatedProps}
-          {...field}
-          id="appId"
-          items={items}
-        />
+        <ConnectSelect {...delegatedProps} {...field} id="id" items={items} />
       )}
     />
   );

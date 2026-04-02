@@ -26,6 +26,7 @@ function createMockDocumentView(
   getImpl?: (id: string) => Promise<PHDocument>,
 ): IDocumentView {
   return {
+    name: "document-view",
     init: vi.fn().mockResolvedValue(undefined),
     indexOperations: vi.fn().mockResolvedValue(undefined),
     waitForConsistency: vi.fn().mockResolvedValue(undefined),

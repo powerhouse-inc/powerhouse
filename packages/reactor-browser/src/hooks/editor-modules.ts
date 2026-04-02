@@ -1,20 +1,20 @@
+import type { EditorModule } from "document-model";
 import { DEFAULT_DRIVE_EDITOR_ID } from "../constants.js";
-import type { VetraEditorModule } from "../types/vetra.js";
 import { useVetraPackages } from "./vetra-packages.js";
 
-export function useEditorModules(): VetraEditorModule[] | undefined {
+export function useEditorModules(): EditorModule[] | undefined {
   const vetraPackages = useVetraPackages();
   return vetraPackages
-    ?.flatMap((pkg) => pkg.modules.editorModules || [])
+    .flatMap((pkg) => pkg.editors)
     .filter(
       (module) => !module.documentTypes.includes("powerhouse/document-drive"),
     );
 }
 
-export function useAppModules(): VetraEditorModule[] | undefined {
+export function useAppModules(): EditorModule[] | undefined {
   const vetraPackages = useVetraPackages();
   return vetraPackages
-    ?.flatMap((pkg) => pkg.modules.editorModules || [])
+    .flatMap((pkg) => pkg.editors)
     .filter((module) =>
       module.documentTypes.includes("powerhouse/document-drive"),
     );
@@ -22,7 +22,7 @@ export function useAppModules(): VetraEditorModule[] | undefined {
 
 export function useFallbackEditorModule(
   documentType: string | null | undefined,
-): VetraEditorModule | undefined {
+): EditorModule | undefined {
   const editorModules = useEditorModules();
   if (!documentType) return undefined;
   if (editorModules?.length === 0) return undefined;
@@ -35,21 +35,21 @@ export function useFallbackEditorModule(
 
 export function useAppModuleById(
   id: string | null | undefined,
-): VetraEditorModule | undefined {
+): EditorModule | undefined {
   const appModules = useAppModules();
-  return appModules?.find((module) => module.id === id);
+  return appModules?.find((module) => module.config.id === id);
 }
 
-export function useDefaultAppModule(): VetraEditorModule | undefined {
+export function useDefaultAppModule(): EditorModule | undefined {
   const defaultAppModule = useAppModuleById(DEFAULT_DRIVE_EDITOR_ID);
   return defaultAppModule;
 }
 
 export function useEditorModuleById(
   id: string | null | undefined,
-): VetraEditorModule | undefined {
+): EditorModule | undefined {
   const editorModules = useEditorModules();
-  return editorModules?.find((module) => module.id === id);
+  return editorModules?.find((module) => module.config.id === id);
 }
 
 export function useEditorModulesForDocumentType(

@@ -38,8 +38,9 @@ describe("ReadModelCoordinator", () => {
     ];
   };
 
-  const createMockReadModel = (): IReadModel => {
+  const createMockReadModel = (name = "mock-read-model"): IReadModel => {
     return {
+      name,
       indexOperations: vi.fn().mockResolvedValue(undefined),
     };
   };

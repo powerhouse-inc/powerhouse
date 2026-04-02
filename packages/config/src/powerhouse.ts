@@ -25,9 +25,8 @@ export { DEFAULT_CONFIG } from "@powerhousedao/shared/clis";
 
 export type {
   DocumentModelModule,
-  Module,
-  PartialPowerhouseManifest,
-  PowerhouseManifest,
+  Manifest,
+  PowerhouseModule,
   Publisher,
 } from "@powerhousedao/shared";
 

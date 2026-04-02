@@ -28,6 +28,7 @@ export interface FileUploadProgress {
   error?: string;
   documentType?: DocumentTypeIcon;
   duplicateType?: "id" | "name";
+  fileNode?: FileNode;
 }
 
 export type FileUploadProgressCallback = (progress: FileUploadProgress) => void;

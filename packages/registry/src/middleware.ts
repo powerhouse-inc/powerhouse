@@ -1,14 +1,14 @@
 import express, {
+  Router,
   type NextFunction,
   type Request,
   type Response,
 } from "express";
-import { Router } from "express";
 import fs from "node:fs";
 import path from "node:path";
-import { CdnCache } from "./cdn.js";
-import type { NotificationChannel } from "./notifications/types.js";
+import { CdnCache, parsePackageSpec } from "./cdn.js";
 import type { SSEChannel } from "./notifications/sse.js";
+import type { NotificationChannel } from "./notifications/types.js";
 import type { WebhookChannel } from "./notifications/webhook.js";
 import {
   findPackagesByDocumentType,
@@ -123,9 +123,12 @@ export function createPowerhouseRouter(
   });
 
   // Single package info
-  router.get("/packages/*name", (req: Request, res: Response) => {
-    const name = (req.params as Record<string, string[]>).name.join("/");
-    const pkg = loadPackage(config.cdnCachePath, name);
+  router.get("/packages/*name", async (req: Request, res: Response) => {
+    const raw = (req.params as Record<string, string[]>).name.join("/");
+    const { name, tag } = parsePackageSpec(raw);
+    const version =
+      (await cdn.resolveVersion(name, tag)) ?? cdn.getLatestCachedVersion(name);
+    const pkg = loadPackage(config.cdnCachePath, name, version ?? undefined);
     if (!pkg) {
       res.status(404).send("Package not found");
       return;
@@ -138,27 +141,36 @@ export function createPowerhouseRouter(
     const parts = (req.params as Record<string, string[]>).path;
     const fullPath = parts.join("/");
 
-    // Parse scoped or unscoped package name from the path
-    let packageName: string;
+    // Parse scoped or unscoped package specifier from the path
+    let packageSpec: string;
     let filePath: string;
 
     if (fullPath.startsWith("@")) {
-      // Scoped: @scope/pkg/file.js -> packageName = @scope/pkg, filePath = file.js
+      // Scoped: @scope/pkg@1.0.0/file.js -> packageSpec = @scope/pkg@1.0.0, filePath = file.js
       const segments = fullPath.split("/");
       if (segments.length < 2) {
         res.status(400).send("Invalid package path");
         return;
       }
-      packageName = `${segments[0]}/${segments[1]}`;
+      packageSpec = `${segments[0]}/${segments[1]}`;
       filePath = segments.slice(2).join("/") || "index.js";
     } else {
-      // Unscoped: pkg/file.js -> packageName = pkg, filePath = file.js
+      // Unscoped: pkg@1.0.0/file.js -> packageSpec = pkg@1.0.0, filePath = file.js
       const segments = fullPath.split("/");
-      packageName = segments[0];
+      packageSpec = segments[0];
       filePath = segments.slice(1).join("/") || "index.js";
     }
 
-    const resolved = await cdn.getFile(packageName, filePath);
+    const { name: packageName, tag } = parsePackageSpec(packageSpec);
+    const version =
+      (await cdn.resolveVersion(packageName, tag)) ??
+      cdn.getLatestCachedVersion(packageName);
+    if (!version) {
+      res.status(404).send("File not found");
+      return;
+    }
+
+    const resolved = await cdn.getFileByVersion(packageName, version, filePath);
     if (!resolved) {
       res.status(404).send("File not found");
       return;
@@ -195,39 +207,42 @@ export function createPublishHook(
       encoding?: unknown,
       cb?: () => void,
     ) {
-      if (res.statusCode >= 200 && res.statusCode < 300) {
-        const urlPath = req.path.replace(/^\//, "");
-        if (urlPath && !urlPath.startsWith("-/")) {
-          const packageName = decodeURIComponent(urlPath);
-          console.log(`[registry] Invalidating CDN cache for ${packageName}`);
-          cdn.invalidate(packageName);
-          // Extract tarball immediately so /packages lists the package right away
-          cdn
-            .resolveVersion(packageName)
-            .then((version) => {
-              if (version) {
-                console.log(
-                  `[registry] Extracting ${packageName}@${version} to CDN cache`,
-                );
-                return cdn.extractTarball(packageName, version).then(() => {
-                  // Remove any stale version directories left by racing CDN requests
-                  cdn.pruneOldVersions(packageName, version);
-                  return version;
-                });
-              }
-              return null;
-            })
-            .then((version) => {
-              notifications.notifyPublish({ packageName, version });
-            })
-            .catch((err) => {
-              console.error(
-                `[registry] Failed to extract ${packageName} to CDN cache:`,
-                err,
-              );
-            });
-        }
+      const urlPath = req.path.replace(/^\//, "");
+      if (
+        res.statusCode < 200 ||
+        res.statusCode >= 300 ||
+        !urlPath ||
+        urlPath.startsWith("-")
+      ) {
+        return originalEnd(chunk, encoding as BufferEncoding, cb);
       }
+      const packageName = decodeURIComponent(urlPath);
+      const versionsObj = (req.body as { versions: Record<string, unknown> })
+        .versions;
+      const versions = Object.keys(versionsObj);
+      const version = versions.at(0);
+      if (!version) {
+        console.error(`[registry] No version found for ${packageName}`);
+        return originalEnd(chunk, encoding as BufferEncoding, cb);
+      }
+      if (versions.length > 1) {
+        console.warn(
+          `[registry] Multiple versions published for ${packageName}: ${JSON.stringify(versions)}`,
+        );
+      }
+
+      cdn
+        .extractTarball(packageName, version)
+        .then(() => {
+          notifications.notifyPublish({ packageName, version });
+        })
+        .catch((err) => {
+          console.error(
+            `[registry] Failed to extract ${packageName} to CDN cache:`,
+            err,
+          );
+        });
+
       return originalEnd(chunk, encoding as BufferEncoding, cb);
     };
 

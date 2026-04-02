@@ -1,3 +1,84 @@
+## 6.0.0-dev.153 (2026-04-02)
+
+### 🩹 Fixes
+
+- **codegen:** moved tmpl/core to devDeps to avoid jsr install issues ([c322fbe60](https://github.com/powerhouse-inc/powerhouse/commit/c322fbe60))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.152 (2026-04-02)
+
+This was a version bump only for @powerhousedao/shared to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.151 (2026-04-01)
+
+### 🩹 Fixes
+
+- added missing boilerplate dependencies ([4b2d17ef8](https://github.com/powerhouse-inc/powerhouse/commit/4b2d17ef8))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.150 (2026-04-01)
+
+This was a version bump only for @powerhousedao/shared to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.149 (2026-04-01)
+
+This was a version bump only for @powerhousedao/shared to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.148 (2026-04-01)
+
+### 🩹 Fixes
+
+- **shared:** do not bundle reactor-api on browser ([b915fd353](https://github.com/powerhouse-inc/powerhouse/commit/b915fd353))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.147 (2026-04-01)
+
+### 🚀 Features
+
+- unify package and manifest types ([#2458](https://github.com/powerhouse-inc/powerhouse/pull/2458))
+
+### 🩹 Fixes
+
+- format readme ([01011a461](https://github.com/powerhouse-inc/powerhouse/commit/01011a461))
+
+### ❤️ Thank You
+
+- acaldas
+- Ryan Wolhuter @ryanwolhuter
+
+## 6.0.0-dev.146 (2026-04-01)
+
+### 🩹 Fixes
+
+- **docker:** fix switchboard-entrypoint.sh ([18a4013d7](https://github.com/powerhouse-inc/powerhouse/commit/18a4013d7))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.145 (2026-04-01)
+
+### 🩹 Fixes
+
+- **registry:** cache and resolve different package versions ([773d021a2](https://github.com/powerhouse-inc/powerhouse/commit/773d021a2))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.144 (2026-04-01)
+
+This was a version bump only for @powerhousedao/shared to align it with other projects, there were no code changes.
+
 ## 6.0.0-dev.143 (2026-03-31)
 
 ### 🚀 Features

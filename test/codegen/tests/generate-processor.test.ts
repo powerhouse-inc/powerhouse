@@ -501,15 +501,27 @@ describe("processor e2e integration", () => {
     const { pgLite, relationalDb } = await getDb();
     const { store } = await createAnalyticsStore({ pgLite });
 
+    const mockDispatch = {
+      async execute() {
+        return { id: "mock", status: "mock" };
+      },
+    };
+    const mockGetReadModel = <T>(): T => {
+      throw new Error("No read models in test");
+    };
     const mockConnectHostModule: IProcessorHostModule = {
       processorApp: "connect",
       analyticsStore: store,
       relationalDb,
+      dispatch: mockDispatch,
+      getReadModel: mockGetReadModel,
     };
     const mockSwitchboardHostModule: IProcessorHostModule = {
       processorApp: "switchboard",
       analyticsStore: store,
       relationalDb,
+      dispatch: mockDispatch,
+      getReadModel: mockGetReadModel,
     };
     const mockDocumentHeader = {
       id: "some-id",

@@ -3,6 +3,7 @@ import type {
   OperationWithContext,
   PHDocument,
 } from "@powerhousedao/shared/document-model";
+import type { IReadModel } from "../read-models/interfaces.js";
 import type {
   ConsistencyToken,
   PagedResults,
@@ -296,7 +297,7 @@ export interface OperationFilter {
  * updated by indexing operations (which must include `resultingState`) and
  * queried with optional consistency tokens for read-after-write guarantees.
  */
-export interface IDocumentView {
+export interface IDocumentView extends IReadModel {
   /**
    * Initializes the view.
    */
@@ -489,7 +490,7 @@ export interface IDocumentGraph {
  * Relationships are created and removed by indexing operations containing
  * ADD_RELATIONSHIP and REMOVE_RELATIONSHIP actions.
  */
-export interface IDocumentIndexer {
+export interface IDocumentIndexer extends IReadModel {
   /**
    * Initializes the indexer and catches up on any missed operations.
    */

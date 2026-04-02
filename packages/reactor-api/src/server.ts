@@ -4,6 +4,7 @@ import { PostgresAnalyticsStore } from "@powerhousedao/analytics-engine-pg";
 import { getConfig } from "@powerhousedao/config/node";
 import type {
   IDocumentModelRegistry,
+  IReadModel,
   IReactorClient,
   IProcessorManager as IReactorProcessorManager,
   ISyncManager,
@@ -14,7 +15,6 @@ import { setupMcpServer } from "@powerhousedao/reactor-mcp";
 import type { DocumentModelModule } from "@powerhousedao/shared/document-model";
 import type { Kysely } from "kysely";
 import type http from "node:http";
-import path from "node:path";
 import type { Pool } from "pg";
 import { WebSocketServer } from "ws";
 // Import tracing - initializes OpenTelemetry and provides stub functions for backwards compatibility
@@ -27,7 +27,6 @@ import {
 import { childLogger, type ILogger } from "document-model";
 import { config, DefaultCoreSubgraphs } from "./config.js";
 import { AuthSubgraph } from "./graphql/auth/subgraph.js";
-import { GraphQLManager } from "./graphql/graphql-manager.js";
 import {
   createAuthFetchMiddleware,
   type AuthFetchMiddleware,
@@ -37,6 +36,7 @@ import {
   createHttpAdapter,
 } from "./graphql/gateway/factory.js";
 import type { IHttpAdapter, TlsOptions } from "./graphql/gateway/types.js";
+import { GraphQLManager } from "./graphql/graphql-manager.js";
 import { renderGraphqlPlayground } from "./graphql/playground.js";
 import { ReactorSubgraph } from "./graphql/reactor/subgraph.js";
 import type { SubgraphClass } from "./graphql/types.js";
@@ -470,6 +470,7 @@ async function _setupAPI(
     admins: string[];
   },
   processorApp: ProcessorApp,
+  readModels: IReadModel[],
   authorizationService?: AuthorizationService,
   documentModelRegistry?: IDocumentModelRegistry,
 ): Promise<API> {
@@ -478,7 +479,24 @@ async function _setupAPI(
     analyticsStore,
     processorApp,
     config: options.processorConfig,
-    reactorClient,
+    dispatch: {
+      async execute(docId, branch, actions, signal) {
+        const jobInfo = await reactorClient.executeAsync(
+          docId,
+          branch,
+          actions,
+          signal,
+        );
+        return { id: jobInfo.id, status: jobInfo.status };
+      },
+    },
+    getReadModel<T>(name: string): T {
+      const model = readModels.find((m) => m.name === name);
+      if (!model) {
+        throw new Error(`Read model "${name}" not found`);
+      }
+      return model as unknown as T;
+    },
   };
   const mcpServerEnabled = options.mcp ?? true;
 
@@ -495,22 +513,26 @@ async function _setupAPI(
   ] as [string, ProcessorInitializer[]][];
 
   for (const [packageName, fns] of processorEntries) {
-    const factories = fns.map((fn) => {
-      try {
-        return fn(hostModule);
-      } catch (e) {
-        logger.error(
-          `Error initializing processor factory for package ${packageName}:`,
-          e,
-        );
+    const factories = await Promise.allSettled(
+      fns.map(async (fn) => {
+        try {
+          return fn(hostModule);
+        } catch (e) {
+          logger.error(
+            `Error initializing processor factory for package ${packageName}:`,
+            e,
+          );
 
-        return null;
-      }
-    });
+          return null;
+        }
+      }),
+    );
 
     const validFactories = factories.filter(
-      (factory): factory is ProcessorDriveFactory =>
-        factory !== null && typeof factory === "function",
+      (factory): factory is PromiseFulfilledResult<ProcessorDriveFactory> =>
+        factory.status === "fulfilled" &&
+        factory.value !== null &&
+        typeof factory.value === "function",
     );
 
     if (!validFactories.length) {
@@ -525,7 +547,7 @@ async function _setupAPI(
       async (driveHeader) =>
         (
           await Promise.all(
-            validFactories.map(async (driveFactory) => {
+            validFactories.map(async ({ value: driveFactory }) => {
               try {
                 const result = await driveFactory(driveHeader);
                 return result as unknown as ReactorProcessorRecord[];
@@ -677,6 +699,10 @@ export async function initializeAndStartAPI(
     );
   }
 
+  const readModelCoordinator =
+    reactorClientModule.reactorModule?.readModelCoordinator;
+  const readModels = readModelCoordinator?.readModels ?? [];
+
   const api = await _setupAPI(
     reactorClient,
     syncManager,
@@ -693,6 +719,7 @@ export async function initializeAndStartAPI(
     options,
     auth,
     processorApp,
+    readModels,
     authorizationService,
     documentModelRegistry,
   );

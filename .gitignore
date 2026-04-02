@@ -32,3 +32,4 @@ hotseat.json
 # Identity/auth credential files
 .renown.json
 .keypair.json
+.mcp.json

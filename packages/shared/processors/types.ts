@@ -1,16 +1,32 @@
 import type { OperationWithContext } from "@powerhousedao/shared/document-model";
+import type { Action } from "../document-model/actions.js";
 import type { IAnalyticsStore } from "../analytics/types.js";
 import type { PHDocumentHeader } from "../document-model/documents.js";
 import type { PROCESSOR_APPS } from "./constants.js";
 import type { IRelationalDb } from "./relational/types.js";
 
+export type ProcessorDispatchResult = {
+  id: string;
+  status: string;
+};
+
+export interface IProcessorDispatch {
+  execute(
+    docId: string,
+    branch: string,
+    actions: Action[],
+    signal?: AbortSignal,
+    meta?: Record<string, unknown>,
+  ): Promise<ProcessorDispatchResult>;
+}
+
 export interface IProcessorHostModule {
   analyticsStore: IAnalyticsStore;
   relationalDb: IRelationalDb;
   processorApp: ProcessorApp;
+  dispatch: IProcessorDispatch;
+  getReadModel<T>(name: string): T;
   config?: Map<string, unknown>;
-  /** Reactor client for dispatching actions back to documents */
-  reactorClient?: unknown;
 }
 
 /**

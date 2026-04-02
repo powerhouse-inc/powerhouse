@@ -6,7 +6,7 @@
     "outDir": "./dist",
     "customConditions": ["source"],
     "paths": {
-      "types": ["./types.ts"],
+      "types": ["./types/index.ts"],
       "constants": ["./constants.ts"],
       "analytics": ["./analytics/index.ts"],
       "analytics/*": ["./analytics/*.ts"],

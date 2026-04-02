@@ -1,3 +1,4 @@
+import type { Manifest } from "@powerhousedao/shared";
 import { execSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
 import { access, cp, mkdir, rm } from "node:fs/promises";
@@ -19,7 +20,7 @@ import {
 } from "../src/constants.js";
 import type { PublishEvent } from "../src/notifications/types.js";
 import { runRegistry } from "../src/run.js";
-import type { PowerhouseManifest, WebhookConfig } from "../src/types.js";
+import type { WebhookConfig } from "../src/types.js";
 
 const REGISTRY_URL = `http://localhost:${DEFAULT_PORT}`;
 const TEST_PKG_NAME = "test-pkg";
@@ -244,7 +245,7 @@ describe("registry e2e", () => {
         );
 
         expect(response.ok).toBe(true);
-        const manifest = (await response.json()) as PowerhouseManifest;
+        const manifest = (await response.json()) as Manifest;
         expect(manifest.name).toBe("@powerhousedao/vetra");
       },
     );
@@ -273,13 +274,18 @@ describe("registry e2e", () => {
     });
 
     it("serves published package via CDN", async () => {
-      const res = await fetch(
-        `${REGISTRY_URL}/-/cdn/${TEST_PKG_NAME}/package.json`,
+      await vi.waitFor(
+        async () => {
+          const res = await fetch(
+            `${REGISTRY_URL}/-/cdn/${TEST_PKG_NAME}/package.json`,
+          );
+          expect(res.ok).toBe(true);
+          const pkg = (await res.json()) as { name: string; version: string };
+          expect(pkg.name).toBe(TEST_PKG_NAME);
+          expect(pkg.version).toBe(TEST_PKG_VERSION);
+        },
+        { timeout: POLL_TIMEOUT, interval: POLL_INTERVAL },
       );
-      expect(res.ok).toBe(true);
-      const pkg = (await res.json()) as { name: string; version: string };
-      expect(pkg.name).toBe(TEST_PKG_NAME);
-      expect(pkg.version).toBe(TEST_PKG_VERSION);
     });
   });
 

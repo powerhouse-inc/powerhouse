@@ -12,17 +12,12 @@ export function buildVerdaccioConfig(config: RegistryConfig) {
         file: htpasswdPath,
       },
     },
-    uplinks: {
-      npmjs: {
-        url: "https://registry.npmjs.org/",
-      },
-    },
+    uplinks: undefined,
     packages: {
       "@powerhousedao/*": {
         access: "$all",
         publish: "$authenticated",
         unpublish: "$authenticated",
-        proxy: "npmjs",
       },
       "**": {
         access: "$all",
@@ -47,7 +42,7 @@ export function buildVerdaccioConfig(config: RegistryConfig) {
       format: "pretty",
       level: "warn",
     },
-    max_body_size: "100mb",
+    max_body_size: config.maxBodySize ?? "300mb",
   };
 
   if (config.s3) {

@@ -32,6 +32,15 @@ import { buildErrorResult } from "./util.js";
 
 const MAX_SKIP_THRESHOLD = 1000;
 
+const ISO_TIMESTAMP_REGEX = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/;
+
+function isValidISOTimestamp(value: string): boolean {
+  if (!ISO_TIMESTAMP_REGEX.test(value)) {
+    return false;
+  }
+  return !isNaN(new Date(value).getTime());
+}
+
 type ProcessActionsResult = {
   success: boolean;
   generatedOperations: Operation[];
@@ -271,6 +280,22 @@ export class SimpleJobExecutor implements IJobExecutor {
         operationsWithContext,
         error: error instanceof Error ? error : new Error(String(error)),
       };
+    }
+
+    for (const action of actions) {
+      if (
+        action.timestampUtcMs &&
+        !isValidISOTimestamp(action.timestampUtcMs)
+      ) {
+        return {
+          success: false,
+          generatedOperations,
+          operationsWithContext,
+          error: new Error(
+            `Invalid timestamp "${action.timestampUtcMs}" on action ${action.type} (id: ${action.id})`,
+          ),
+        };
+      }
     }
 
     for (let actionIndex = 0; actionIndex < actions.length; actionIndex++) {
@@ -587,6 +612,22 @@ export class SimpleJobExecutor implements IJobExecutor {
       latestRevision = revisions.revision[scope] ?? 0;
     } catch {
       latestRevision = 0;
+    }
+
+    for (const operation of job.operations) {
+      if (
+        operation.timestampUtcMs &&
+        !isValidISOTimestamp(operation.timestampUtcMs)
+      ) {
+        return {
+          job,
+          success: false,
+          error: new Error(
+            `Invalid timestamp "${operation.timestampUtcMs}" on operation (index: ${operation.index})`,
+          ),
+          duration: Date.now() - startTime,
+        };
+      }
     }
 
     let minIncomingIndex = Number.POSITIVE_INFINITY;

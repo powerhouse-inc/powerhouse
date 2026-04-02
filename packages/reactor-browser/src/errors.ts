@@ -18,8 +18,16 @@ export class DocumentNotFoundError extends Error {
 }
 
 export class DocumentModelNotFoundError extends Error {
+  readonly documentType: string;
+  readonly name = "DocumentModelNotFoundError";
+
   constructor(documentType: string) {
     super(`Document model module for type ${documentType} not found`);
+    this.documentType = documentType;
+  }
+
+  static isError(error: unknown): error is DocumentModelNotFoundError {
+    return Error.isError(error) && error.name === "DocumentModelNotFoundError";
   }
 }
 

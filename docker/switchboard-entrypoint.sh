@@ -3,21 +3,18 @@ set -e
 
 # Install additional packages at startup if PH_PACKAGES is set
 if [ -n "$PH_PACKAGES" ]; then
-    # Configure scoped registry for @powerhousedao packages if PH_REGISTRY_URL is set
-    # This avoids routing ALL packages through the custom registry (which may not proxy npm reliably)
-    if [ -n "$PH_REGISTRY_URL" ]; then
-        echo "[entrypoint] Using registry for @powerhousedao: $PH_REGISTRY_URL"
-        npm config set @powerhousedao:registry "$PH_REGISTRY_URL"
-    fi
-    REGISTRY_FLAG=""
     echo "[entrypoint] Installing packages: $PH_PACKAGES"
-    echo "$PH_PACKAGES" | tr ',' '\n' | while read -r pkg; do
-        pkg=$(echo "$pkg" | xargs)
+    OLD_IFS="$IFS"
+    IFS=','
+    for pkg in $PH_PACKAGES; do
+        IFS="$OLD_IFS"
+        pkg=$(echo "$pkg" | xargs) # trim whitespace
         if [ -n "$pkg" ]; then
             echo "[entrypoint] Installing $pkg..."
-            pnpm add "$pkg" --shamefully-hoist $REGISTRY_FLAG || echo "[entrypoint] Warning: failed to install $pkg"
+            pnpm add "$pkg" --shamefully-hoist || echo "[entrypoint] Warning: failed to install $pkg"
         fi
     done
+    IFS="$OLD_IFS"
 fi
 
 if [ -n "$PH_REACTOR_DATABASE_URL" ] && [ "$SKIP_DB_MIGRATIONS" != "true" ]; then
