@@ -1,15 +1,15 @@
+import type { Manifest } from "@powerhousedao/shared";
+import { fileExists, type PowerhouseConfig } from "@powerhousedao/shared/clis";
+import type { DocumentModelGlobalState } from "@powerhousedao/shared/document-model";
+import type { ProcessorApps } from "@powerhousedao/shared/processors";
+import { kebabCase } from "change-case";
 import {
   makeSubgraphsIndexFile,
   tsMorphGenerateApp,
   tsMorphGenerateDocumentEditor,
   tsMorphGenerateDocumentModel,
   tsMorphGenerateSubgraph,
-} from "@powerhousedao/codegen/file-builders";
-import type { Manifest } from "@powerhousedao/shared";
-import { fileExists, type PowerhouseConfig } from "@powerhousedao/shared/clis";
-import type { DocumentModelGlobalState } from "@powerhousedao/shared/document-model";
-import type { ProcessorApps } from "@powerhousedao/shared/processors";
-import { kebabCase } from "change-case";
+} from "file-builders";
 import { getTsconfig } from "get-tsconfig";
 import fs from "node:fs";
 import { readdir, writeFile } from "node:fs/promises";

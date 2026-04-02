@@ -1,3 +1,17 @@
+## 6.0.0-dev.153 (2026-04-02)
+
+### 🩹 Fixes
+
+- **codegen:** moved tmpl/core to devDeps to avoid jsr install issues ([c322fbe60](https://github.com/powerhouse-inc/powerhouse/commit/c322fbe60))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.152 (2026-04-02)
+
+This was a version bump only for @powerhousedao/reactor-local to align it with other projects, there were no code changes.
+
 ## 6.0.0-dev.151 (2026-04-01)
 
 This was a version bump only for @powerhousedao/reactor-local to align it with other projects, there were no code changes.
