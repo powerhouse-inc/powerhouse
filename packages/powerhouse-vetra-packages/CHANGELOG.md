@@ -1,3 +1,21 @@
+## 6.0.0-dev.154 (2026-04-03)
+
+### 🩹 Fixes
+
+- swap from build-bundle to build ([714f1bbff](https://github.com/powerhouse-inc/powerhouse/commit/714f1bbff))
+- versioned docs need build artifacts ([d20b4db62](https://github.com/powerhouse-inc/powerhouse/commit/d20b4db62))
+- add typecheck to simulate workflow ([76d4e606c](https://github.com/powerhouse-inc/powerhouse/commit/76d4e606c))
+- lots of feedback, and added tsdown configs for 4 packages ([d847d8748](https://github.com/powerhouse-inc/powerhouse/commit/d847d8748))
+- a couple build settings needed adjusted ([28750c38d](https://github.com/powerhouse-inc/powerhouse/commit/28750c38d))
+- switching versioned-documents test to tsdown ([f9ade0d54](https://github.com/powerhouse-inc/powerhouse/commit/f9ade0d54))
+- a few more build fixes ([b8b395f68](https://github.com/powerhouse-inc/powerhouse/commit/b8b395f68))
+- remove outdated script ([2f194d576](https://github.com/powerhouse-inc/powerhouse/commit/2f194d576))
+- a few fixes on the build workflow ([b6195242c](https://github.com/powerhouse-inc/powerhouse/commit/b6195242c))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
 ## 6.0.0-dev.153 (2026-04-02)
 
 ### 🩹 Fixes
