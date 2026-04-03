@@ -4,8 +4,14 @@
     "rootDir": ".",
     "module": "nodenext",
     "target": "esnext",
-    "types": ["node"],
-    "lib": ["ESNext", "dom", "dom.iterable"],
+    "types": [
+      "node"
+    ],
+    "lib": [
+      "ESNext",
+      "dom",
+      "dom.iterable"
+    ],
     "declaration": true,
     "declarationMap": true,
     "strict": true,
@@ -15,8 +21,15 @@
     "moduleDetection": "force",
     "skipLibCheck": true
   },
-  "include": ["**/*", "./powerhouse.manifest.json"],
-  "exclude": ["dist", "node_modules", ".ph"],
+  "include": [
+    "**/*",
+    "./powerhouse.manifest.json"
+  ],
+  "exclude": [
+    "dist",
+    "node_modules",
+    ".ph"
+  ],
   "references": [
     {
       "path": "../../apps/connect"
@@ -41,9 +54,6 @@
     },
     {
       "path": "../../packages/reactor-browser"
-    },
-    {
-      "path": "../../packages/reactor-local"
     },
     {
       "path": "../../packages/shared"

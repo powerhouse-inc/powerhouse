@@ -29,7 +29,7 @@ function isSubpath(parent: string, dir: string) {
 }
 
 export class VitePackageLoader implements IPackageLoader {
-  private readonly logger = childLogger(["reactor-local", "vite-loader"]);
+  private readonly logger = childLogger(["reactor-mcp", "vite-loader"]);
 
   private readonly root: string;
   private readonly documentModelsDir: string;
