@@ -1,6 +1,7 @@
 import { closeDocumentFromToolbar } from "@powerhousedao/e2e-utils";
 import { createDocument, navigateToVetraDrive } from "./helpers/document.js";
 import { expect, test } from "./helpers/fixtures.js";
+import { CONNECT_URL } from "../playwright.config.js";
 
 // Run these tests serially to avoid conflicts with other tests
 // that modify the shared Vetra drive
@@ -11,7 +12,7 @@ test.use({
     cookies: [],
     origins: [
       {
-        origin: "http://localhost:3001",
+        origin: CONNECT_URL,
         localStorage: [
           { name: "/:display-cookie-banner", value: "false" },
           {

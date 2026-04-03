@@ -27,6 +27,7 @@ import {
   verifyPublish,
   writeNpmrc,
 } from "./helpers/registry.js";
+import { CONNECT_URL } from "../playwright.config.js";
 
 // Run serially to avoid conflicts with other tests that modify the shared Vetra drive
 test.describe.configure({ mode: "serial", timeout: 180_000 });
@@ -73,7 +74,7 @@ test.use({
     cookies: [],
     origins: [
       {
-        origin: "http://localhost:3001",
+        origin: CONNECT_URL,
         localStorage: [
           { name: "/:display-cookie-banner", value: "false" },
           {
@@ -87,7 +88,7 @@ test.use({
 });
 
 // Module-level state shared across serial tests
-let registryProcess: ChildProcess | undefined;
+let registry: Awaited<ReturnType<typeof startRegistry>> | undefined;
 let consumerPreviewProcess: ChildProcess | undefined;
 
 test.afterAll(async () => {
@@ -95,9 +96,9 @@ test.afterAll(async () => {
     stopConsumerPreview(consumerPreviewProcess);
     consumerPreviewProcess = undefined;
   }
-  if (registryProcess) {
-    stopRegistry(registryProcess);
-    registryProcess = undefined;
+  if (registry) {
+    await stopRegistry(registry);
+    registry = undefined;
   }
   cleanupConsumerBuildArtifacts();
 });
@@ -191,10 +192,7 @@ test("Build and Publish to Registry", async () => {
   const registryCdnCachePath = path.join(testDir, ".registry-cdn-cache");
 
   // Start the registry (kept running for the next test)
-  registryProcess = await startRegistry(
-    registryStoragePath,
-    registryCdnCachePath,
-  );
+  registry = await startRegistry(registryStoragePath, registryCdnCachePath);
 
   // Create test user and write .npmrc for auth
   const token = await createTestUser();

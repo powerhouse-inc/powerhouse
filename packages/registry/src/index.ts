@@ -1,4 +1,6 @@
 export { CdnCache, parsePackageSpec } from "./cdn.js";
+export { runRegistry } from "./run.js";
+export type { RegistryInstance } from "./run.js";
 export { createPowerhouseRouter, createPublishHook } from "./middleware.js";
 export {
   NotificationManager,
@@ -17,6 +19,7 @@ export {
 export type {
   NotifyConfig,
   PackageInfo,
+  RegistryCommandArgs,
   RegistryConfig,
   RegistryOptions,
   S3Config,

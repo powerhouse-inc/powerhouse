@@ -55,7 +55,8 @@ export function ensureConsumerProject(): void {
     string,
     unknown
   >;
-  config.packageRegistryUrl = "http://localhost:8080";
+  config.packageRegistryUrl =
+    process.env.REGISTRY_URL || "http://localhost:8080";
   config.studio = { port: 5556 };
   config.reactor = { port: 5557, storage: "memory" };
   fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
