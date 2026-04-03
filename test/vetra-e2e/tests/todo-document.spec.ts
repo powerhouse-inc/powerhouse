@@ -29,7 +29,7 @@ import {
 } from "./helpers/registry.js";
 
 // Run serially to avoid conflicts with other tests that modify the shared Vetra drive
-test.describe.configure({ mode: "serial", timeout: 5 * 60 * 60 * 1000 });
+test.describe.configure({ mode: "serial", timeout: 180_000 });
 const DOCUMENT_NAME = "ToDoDocument";
 
 const TEST_DOCUMENT_DATA: DocumentBasicData = {
@@ -235,11 +235,14 @@ test("Build and Publish to Registry", async () => {
   expect(fs.existsSync(distManifest)).toBe(true);
 
   const manifest = JSON.parse(fs.readFileSync(distManifest, "utf-8")) as {
-    documentModels: unknown[];
-    editors: unknown[];
+    name: string;
+    documentModels: Array<{ name: string }>;
+    editors: Array<{ name: string }>;
   };
-  expect(manifest.documentModels.length).toBeGreaterThan(0);
-  expect(manifest.editors.length).toBeGreaterThan(0);
+  expect(manifest.name).toBe("test-package-vetra");
+  expect(manifest.documentModels).toHaveLength(1);
+  expect(manifest.documentModels[0].name).toBe("ToDoDocument");
+  expect(manifest.editors).toHaveLength(1);
 
   // Publish to the local registry
   // In Docker, ph-cli can't connect to [::1] URLs, so use the socat IPv4 bridge on port 18080
@@ -378,8 +381,8 @@ test("Install Package in Consumer Project", async ({ browser }) => {
     await expect(installButton).toBeVisible({ timeout: 5_000 });
     await installButton.click();
 
-    // Wait for installation to complete
-    await page.waitForTimeout(5000);
+    // Wait for installation to complete (Install button disappears or changes)
+    await expect(installButton).toBeHidden({ timeout: 30_000 });
 
     // Step 8: Close the settings modal
     const closeButton = settingsModal
@@ -410,16 +413,12 @@ test("Install Package in Consumer Project", async ({ browser }) => {
     await expect(createDriveSubmit).toBeEnabled({ timeout: 5_000 });
     await createDriveSubmit.click();
 
-    // Wait for drive to be created
-    await page.waitForLoadState("networkidle");
-    await page.waitForTimeout(2000);
-
-    // Step 10: Navigate into the drive by clicking on it
+    // Wait for drive to be created and appear on the page
     const driveCard = page.getByRole("heading", {
       name: "Test Drive",
       level: 3,
     });
-    await expect(driveCard).toBeVisible({ timeout: 10_000 });
+    await expect(driveCard).toBeVisible({ timeout: 30_000 });
     await driveCard.click();
     await page.waitForLoadState("networkidle");
 
