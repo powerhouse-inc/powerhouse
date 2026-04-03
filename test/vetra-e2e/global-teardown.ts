@@ -99,7 +99,7 @@ async function globalTeardown() {
 
   console.log("🧹 Running global teardown - cleaning up test artifacts...");
 
-  const vetraE2ERoot = __dirname;
+  const vetraE2ERoot = process.env.PROJECT_DIR || __dirname;
 
   try {
     // Clean up generated code directories (remove subdirs, recreate empty index.ts)

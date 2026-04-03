@@ -1,17 +1,18 @@
 import { closeDocumentFromToolbar } from "@powerhousedao/e2e-utils";
 import { createDocument, navigateToVetraDrive } from "./helpers/document.js";
 import { expect, test } from "./helpers/fixtures.js";
+import { CONNECT_URL } from "../playwright.config.js";
 
 // Run these tests serially to avoid conflicts with other tests
 // that modify the shared Vetra drive
-test.describe.configure({ mode: "serial", timeout: 5 * 60 * 60 * 1000 });
+test.describe.configure({ mode: "serial", timeout: 120_000 });
 
 test.use({
   storageState: {
     cookies: [],
     origins: [
       {
-        origin: "http://localhost:3001",
+        origin: CONNECT_URL,
         localStorage: [
           { name: "/:display-cookie-banner", value: "false" },
           {
@@ -72,7 +73,7 @@ test("should create document of each supported type in Vetra drive", async ({
       level: 3,
       exact: true,
     });
-    await expect(documentHeading).toBeVisible({ timeout: 5 * 60 * 60 * 1000 });
+    await expect(documentHeading).toBeVisible({ timeout: 30_000 });
   }
 });
 
@@ -89,9 +90,12 @@ test("should log console message when attempting to create powerhouse/codegen-pr
     name: "Add new specification powerhouse/codegen-processor",
   });
 
-  await expect(codegenButton).toBeVisible({ timeout: 2 * 60 * 60 * 1000 });
+  await expect(codegenButton).toBeVisible({ timeout: 30_000 });
   await codegenButton.click();
 
-  // Wait for any console messages to appear
+  // Wait for console messages to appear after click
   await page.waitForLoadState("networkidle");
+
+  // Verify that clicking the codegen-processor button produced a console message
+  expect(consoleMessages.length).toBeGreaterThan(0);
 });

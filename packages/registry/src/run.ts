@@ -4,12 +4,24 @@ import { mkdir } from "node:fs/promises";
 import type { Server } from "node:http";
 import path from "node:path";
 import { runServer } from "verdaccio";
+import {
+  DEFAULT_PORT,
+  DEFAULT_REGISTRY_CDN_CACHE_DIR_NAME,
+  DEFAULT_STORAGE_DIR_NAME,
+} from "./constants.js";
 import { createPowerhouseRouter, createPublishHook } from "./middleware.js";
 import { NotificationManager } from "./notifications/manager.js";
 import { SSEChannel } from "./notifications/sse.js";
 import { WebhookChannel } from "./notifications/webhook.js";
 import type { RegistryCommandArgs, RegistryConfig } from "./types.js";
 import { buildVerdaccioConfig } from "./verdaccio-config.js";
+
+export interface RegistryInstance {
+  server: Server;
+  port: number;
+  url: string;
+  shutdown: () => Promise<void>;
+}
 
 async function resolveDir(dir: string): Promise<string> {
   if (path.isAbsolute(dir)) {
@@ -24,22 +36,25 @@ async function resolveDir(dir: string): Promise<string> {
   return found;
 }
 
-export async function runRegistry(args: RegistryCommandArgs) {
+export async function runRegistry(
+  args?: Partial<RegistryCommandArgs>,
+): Promise<RegistryInstance> {
   const {
-    port,
-    storageDir,
-    cdnCacheDir,
+    port = DEFAULT_PORT,
+    storageDir = DEFAULT_STORAGE_DIR_NAME,
+    cdnCacheDir = DEFAULT_REGISTRY_CDN_CACHE_DIR_NAME,
     uplink,
-    webEnabled,
+    webEnabled = true,
     webhooks,
     s3AccessKeyId,
     s3Bucket,
     s3Endpoint,
-    s3ForcePathStyle,
+    s3ForcePathStyle = true,
     s3KeyPrefix,
     s3Region,
     s3SecretAccessKey,
-  } = args;
+  } = args ?? {};
+
   const storagePath = await resolveDir(storageDir);
   const cdnCachePath = await resolveDir(cdnCacheDir);
 
@@ -108,11 +123,13 @@ export async function runRegistry(args: RegistryCommandArgs) {
   // Verdaccio handles everything else (npm protocol, web UI, auth)
   app.use((req, res) => verdaccioHandler(req, res));
 
+  const url = `http://localhost:${port}`;
+
   const server = app.listen(port, () => {
-    console.log(`Powerhouse Registry running on http://localhost:${port}`);
-    console.log(`  CDN:      http://localhost:${port}/-/cdn/`);
-    console.log(`  Packages: http://localhost:${port}/packages`);
-    console.log(`  npm:      http://localhost:${port}/`);
+    console.log(`Powerhouse Registry running on ${url}`);
+    console.log(`  CDN:      ${url}/-/cdn/`);
+    console.log(`  Packages: ${url}/packages`);
+    console.log(`  npm:      ${url}/`);
     console.log(`  Storage:  ${storagePath}`);
     console.log(`  CDN cache: ${cdnCachePath}`);
     if (config.s3) {
@@ -120,5 +137,13 @@ export async function runRegistry(args: RegistryCommandArgs) {
     }
   });
 
-  return server;
+  return {
+    server,
+    port,
+    url,
+    shutdown: () =>
+      new Promise<void>((resolve, reject) => {
+        server.close((err) => (err ? reject(err) : resolve()));
+      }),
+  };
 }

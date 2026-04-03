@@ -28,23 +28,23 @@ export async function createDocument(
   const addButton = page.getByRole("button", {
     name: `Add new specification ${documentType}`,
   });
-  await expect(addButton).toBeVisible({ timeout: 2 * 60 * 60 * 1000 });
-  await addButton.isEnabled({ timeout: 2 * 60 * 60 * 1000 });
+  await expect(addButton).toBeVisible({ timeout: 30_000 });
+  await expect(addButton).toBeEnabled({ timeout: 30_000 });
   await addButton.click();
 
   // Wait for the create document dialog to be visible
   // Look for the dialog that contains "Create a new document" text
   const dialog = page.getByRole("dialog");
-  await expect(dialog).toBeVisible({ timeout: 2 * 60 * 60 * 1000 });
+  await expect(dialog).toBeVisible({ timeout: 30_000 });
 
   // Fill in the document name - find the input within the dialog
   const nameInput = dialog.getByPlaceholder("Document name");
-  await expect(nameInput).toBeVisible({ timeout: 2 * 60 * 60 * 1000 });
+  await expect(nameInput).toBeVisible({ timeout: 30_000 });
   await nameInput.fill(documentName);
 
   // Wait for Create button to be enabled (validation passes)
   const createButton = dialog.getByRole("button", { name: "Create" });
-  await expect(createButton).toBeEnabled({ timeout: 2 * 60 * 60 * 1000 });
+  await expect(createButton).toBeEnabled({ timeout: 30_000 });
   await createButton.click();
 
   // Wait for navigation to the new document
@@ -101,7 +101,7 @@ export async function navigateToVetraDrive(
   // Wait for Vetra drive card to appear (default drives load asynchronously)
   // Look for the h3 heading with "Vetra" which is the drive title
   const vetraDrive = page.getByRole("heading", { name: "Vetra", level: 3 });
-  await expect(vetraDrive).toBeVisible({ timeout: 2 * 60 * 60 * 1000 });
+  await expect(vetraDrive).toBeVisible({ timeout: 30_000 });
   await vetraDrive.click();
 
   // Wait for drive page to load
@@ -112,7 +112,7 @@ export async function navigateToVetraDrive(
     name: "Vetra Studio Drive",
     level: 1,
   });
-  await expect(driveHeading).toBeVisible({ timeout: 2 * 60 * 60 * 1000 });
+  await expect(driveHeading).toBeVisible({ timeout: 30_000 });
 }
 
 /**
@@ -133,7 +133,7 @@ export async function navigateBackToDrive(page: Page): Promise<void> {
     name: "Vetra Studio Drive",
     level: 1,
   });
-  await expect(driveHeading).toBeVisible({ timeout: 2 * 60 * 60 * 1000 });
+  await expect(driveHeading).toBeVisible({ timeout: 30_000 });
 }
 
 /**
@@ -169,7 +169,7 @@ export async function createDocumentAndFillBasicData(
   if (data.global) {
     // Focus the first CodeMirror editor (global state schema)
     const schemaEditor = page.locator(".cm-content").first();
-    await expect(schemaEditor).toBeVisible({ timeout: 2 * 60 * 60 * 1000 });
+    await expect(schemaEditor).toBeVisible({ timeout: 30_000 });
     await schemaEditor.click();
 
     // Select all and delete existing content
@@ -214,7 +214,7 @@ export async function createDocumentAndFillBasicData(
       const moduleInput = page
         .locator('textarea[placeholder="Add module"]')
         .last();
-      await expect(moduleInput).toBeVisible({ timeout: 2 * 60 * 60 * 1000 });
+      await expect(moduleInput).toBeVisible({ timeout: 30_000 });
       await moduleInput.fill(module.name);
       await page.keyboard.press("Enter");
 

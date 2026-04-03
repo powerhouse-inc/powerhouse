@@ -11,6 +11,16 @@ on:
         description: "Comma-separated list of packages to install (e.g., @powerhousedao/vetra@dev)"
         required: false
         default: ""
+  workflow_call:
+    inputs:
+      tag:
+        type: string
+        required: false
+        default: "dev"
+      packages:
+        type: string
+        required: false
+        default: ""
 
 jobs:
   test-package-managers:
@@ -145,6 +155,31 @@ jobs:
             fi
           done
 
+      - name: Run ph build
+        id: ph-build
+        if: steps.ph-init.outcome == 'success'
+        run: |
+          cd /tmp/ph-test-${{ matrix.package-manager }}/project
+          echo "Building package with ph build"
+          set -o pipefail
+          ph build 2>&1 | tee ph-build.log
+          BUILD_EXIT_CODE=${PIPESTATUS[0]}
+
+          if grep -q "Build failed\|✗ Build failed\|error Command failed" ph-build.log; then
+            echo "Build failed - errors detected in output"
+            exit 1
+          fi
+
+          exit $BUILD_EXIT_CODE
+
+      - name: Parse ph build warnings
+        if: always() && steps.ph-init.outcome == 'success'
+        run: |
+          cd /tmp/ph-test-${{ matrix.package-manager }}/project
+          grep -iE "(warn|warning|deprecated)" ph-build.log | while IFS= read -r line; do
+            echo "::warning title=[${{ matrix.package-manager }}] ph build::$line"
+          done || true
+
       - name: Run ph connect build
         id: connect-build
         if: steps.ph-init.outcome == 'success'
@@ -163,7 +198,7 @@ jobs:
 
           exit $BUILD_EXIT_CODE
 
-      - name: Parse build warnings
+      - name: Parse connect build warnings
         if: always() && steps.ph-init.outcome == 'success'
         run: |
           cd /tmp/ph-test-${{ matrix.package-manager }}/project
@@ -231,6 +266,17 @@ jobs:
                 fi
               fi
             done
+          fi
+
+          # ph build
+          if [ -f "project/ph-build.log" ]; then
+            STATUS="${{ steps.ph-build.outcome }}"
+            ICON="✅"; [ "$STATUS" != "success" ] && ICON="❌"
+            WARNINGS=$(grep -icE "(warn|warning|deprecated)" project/ph-build.log 2>/dev/null || echo "0")
+            echo "### $ICON ph build" >> $GITHUB_STEP_SUMMARY
+            echo "- **Status:** $STATUS" >> $GITHUB_STEP_SUMMARY
+            echo "- **Warnings:** $WARNINGS" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
           fi
 
           # Connect build
