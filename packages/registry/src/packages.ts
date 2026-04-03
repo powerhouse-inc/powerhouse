@@ -47,12 +47,10 @@ export function loadPackage(
   const manifest = readManifest(manifestDir);
 
   if (!manifest) {
-    console.error(
-      `Failed to find manifest for "${name}" in "${cdnCachePath}".`,
-    );
+    return null;
   }
   return {
-    name: manifest?.name ?? name,
+    name: manifest.name ?? name,
     path: `/-/cdn/${name}`,
     manifest,
     documentTypes: getDocumentTypesFromManifest(manifest),

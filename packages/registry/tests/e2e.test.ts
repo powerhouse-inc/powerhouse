@@ -184,6 +184,14 @@ describe("registry e2e", () => {
       expect(Array.isArray(packages)).toBe(true);
     });
 
+    it("returns 404 for non-existent package", async () => {
+      const response = await fetch(
+        `${REGISTRY_URL}/packages/non-existent-package`,
+      );
+
+      expect(response.status).toBe(404);
+    });
+
     it.skipIf(!hasVetraFixture)("includes vetra package", async () => {
       const response = await fetch(`${REGISTRY_URL}/packages`);
       const packages = (await response.json()) as Array<{ name: string }>;
