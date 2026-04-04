@@ -1,3 +1,13 @@
+## 6.0.0-dev.155 (2026-04-04)
+
+### 🩹 Fixes
+
+- **registry:** return 404 for non-existent packages ([a0508c6c7](https://github.com/powerhouse-inc/powerhouse/commit/a0508c6c7))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.0.0-dev.154 (2026-04-03)
 
 ### 🩹 Fixes
