@@ -1,6 +1,8 @@
+import type { IReactorClient } from "@powerhousedao/reactor";
 import type {
   DocumentOperations,
   Operation,
+  PHBaseState,
   PHDocument,
 } from "@powerhousedao/shared/document-model";
 import {
@@ -11,7 +13,6 @@ import {
   createZip,
   defaultBaseState,
 } from "@powerhousedao/shared/document-model";
-import type { PHBaseState } from "@powerhousedao/shared/document-model";
 import { describe, expect, it, vi } from "vitest";
 import { fetchDocumentOperations } from "../src/actions/document.js";
 
@@ -61,33 +62,71 @@ function createFakeDocument(
   } as unknown as PHDocument;
 }
 
+const COMPOSITE_PREFIX = "c:";
+
+function encodeCompositeCursor(scopeCursors: Record<string, string>): string {
+  return COMPOSITE_PREFIX + JSON.stringify(scopeCursors);
+}
+
+function decodeCompositeCursor(cursor: string): Record<string, string> {
+  return JSON.parse(cursor.slice(COMPOSITE_PREFIX.length)) as Record<
+    string,
+    string
+  >;
+}
+
 function createMockReactorClient(
   operationsByScope: Record<string, Operation[]>,
   pageSize = 100,
-) {
+): Pick<IReactorClient, "getOperations"> {
   return {
     getOperations: vi
       .fn()
       .mockImplementation(
-        async (
+        (
           _docId: string,
           view?: { scopes?: string[] },
           _filter?: unknown,
           paging?: { cursor: string; limit: number },
         ) => {
-          const scope = view?.scopes?.[0] ?? "global";
-          const allOps = operationsByScope[scope] ?? [];
+          const scopes = view?.scopes ?? ["global"];
           const limit = paging?.limit ?? pageSize;
-          const cursorIndex = paging?.cursor ? parseInt(paging.cursor, 10) : 0;
 
-          const results = allOps.slice(cursorIndex, cursorIndex + limit);
-          const nextIndex = cursorIndex + limit;
-          const hasMore = nextIndex < allOps.length;
+          const scopeCursors: Record<string, string> =
+            paging?.cursor && paging.cursor.startsWith(COMPOSITE_PREFIX)
+              ? decodeCompositeCursor(paging.cursor)
+              : Object.fromEntries(
+                  scopes.map((s) => [s, paging?.cursor ?? ""]),
+                );
+
+          const results: Operation[] = [];
+          const activeCursors: Record<string, string> = {};
+
+          for (const scope of scopes) {
+            const allOps = operationsByScope[scope] ?? [];
+            const cursorIndex = scopeCursors[scope]
+              ? parseInt(scopeCursors[scope], 10)
+              : 0;
+            const scopeResults = allOps.slice(cursorIndex, cursorIndex + limit);
+            results.push(...scopeResults);
+
+            const nextIndex = cursorIndex + limit;
+            if (nextIndex < allOps.length) {
+              activeCursors[scope] = String(nextIndex);
+            }
+          }
+
+          results.sort((a, b) => a.index - b.index);
+
+          const nextCursor =
+            Object.keys(activeCursors).length > 0
+              ? encodeCompositeCursor(activeCursors)
+              : undefined;
 
           return {
             results,
             options: { cursor: paging?.cursor ?? "", limit },
-            nextCursor: hasMore ? String(nextIndex) : undefined,
+            nextCursor,
           };
         },
       ),
@@ -100,23 +139,30 @@ describe("fetchDocumentOperations", () => {
     const client = createMockReactorClient({ global: ops, local: [] });
     const doc = createFakeDocument();
 
-    const result = await fetchDocumentOperations(client as any, doc);
+    const result = await fetchDocumentOperations(
+      client as unknown as IReactorClient,
+      doc,
+    );
 
     expect(result.global).toHaveLength(3);
     expect(result.local).toHaveLength(0);
-    expect(client.getOperations).toHaveBeenCalledTimes(2);
+    expect(client.getOperations).toHaveBeenCalledTimes(1);
   });
 
-  it("paginates across multiple pages per scope", async () => {
+  it("paginates across multiple pages", async () => {
     const ops = Array.from({ length: 7 }, (_, i) => createFakeOperation(i));
     const client = createMockReactorClient({ global: ops, local: [] });
     const doc = createFakeDocument();
 
-    const result = await fetchDocumentOperations(client as any, doc, 3);
+    const result = await fetchDocumentOperations(
+      client as unknown as IReactorClient,
+      doc,
+      3,
+    );
 
     expect(result.global).toHaveLength(7);
-    // 3 pages for global (3+3+1) + 1 page for local (empty)
-    expect(client.getOperations).toHaveBeenCalledTimes(4);
+    // 3 pages: (3+3+1), all scopes fetched together
+    expect(client.getOperations).toHaveBeenCalledTimes(3);
   });
 
   it("fetches operations for multiple scopes independently", async () => {
@@ -132,7 +178,10 @@ describe("fetchDocumentOperations", () => {
     });
     const doc = createFakeDocument();
 
-    const result = await fetchDocumentOperations(client as any, doc);
+    const result = await fetchDocumentOperations(
+      client as unknown as IReactorClient,
+      doc,
+    );
 
     expect(result.global).toHaveLength(5);
     expect(result.local).toHaveLength(2);
@@ -142,7 +191,10 @@ describe("fetchDocumentOperations", () => {
     const client = createMockReactorClient({ global: [], local: [] });
     const doc = createFakeDocument();
 
-    const result = await fetchDocumentOperations(client as any, doc);
+    const result = await fetchDocumentOperations(
+      client as unknown as IReactorClient,
+      doc,
+    );
 
     expect(result.global).toHaveLength(0);
     expect(result.local).toHaveLength(0);
@@ -159,7 +211,10 @@ describe("fetchDocumentOperations", () => {
     });
     const doc = createFakeDocument(["global", "local", "custom"]);
 
-    const result = await fetchDocumentOperations(client as any, doc);
+    const result = await fetchDocumentOperations(
+      client as unknown as IReactorClient,
+      doc,
+    );
 
     expect(result.custom).toHaveLength(2);
     expect(result).not.toHaveProperty("auth");
@@ -231,7 +286,10 @@ describe("export pipeline: fetchDocumentOperations -> createZip -> baseLoadFromI
     });
 
     // Step 1: fetchDocumentOperations (the fix) — fetches ops via paged API
-    const operations = await fetchDocumentOperations(client as any, reactorDoc);
+    const operations = await fetchDocumentOperations(
+      client as unknown as IReactorClient,
+      reactorDoc,
+    );
 
     // Step 2: enrich document with fetched operations (as exportFile does)
     const documentWithOps = { ...reactorDoc, operations };
@@ -269,7 +327,7 @@ describe("export pipeline: fetchDocumentOperations -> createZip -> baseLoadFromI
     );
 
     const operations = await fetchDocumentOperations(
-      client as any,
+      client as unknown as IReactorClient,
       reactorDoc,
       2,
     );

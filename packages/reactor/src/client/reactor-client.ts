@@ -40,6 +40,11 @@ import type {
 } from "../storage/interfaces.js";
 import type { IReactorSubscriptionManager } from "../subs/types.js";
 import {
+  decodeCompositeCursor,
+  encodeCompositeCursor,
+  isCompositeCursor,
+} from "./cursor.js";
+import {
   DocumentChangeType,
   type CreateDocumentOptions,
   type DocumentChangeEvent,
@@ -165,6 +170,16 @@ export class ReactorClient implements IReactorClient {
       signal,
     );
 
+    if (paging?.cursor && isCompositeCursor(paging.cursor)) {
+      return this.getOperationsWithCompositeCursor(
+        documentId,
+        view,
+        filter,
+        paging,
+        signal,
+      );
+    }
+
     const operationsByScope = await this.reactor.getOperations(
       documentId,
       view,
@@ -174,26 +189,79 @@ export class ReactorClient implements IReactorClient {
       signal,
     );
 
-    const scopeEntries = Object.values(operationsByScope);
+    const scopeEntries = Object.entries(operationsByScope);
+    const effectivePaging = paging || { cursor: "0", limit: 100 };
+
+    if (scopeEntries.length <= 1) {
+      const allOperations =
+        scopeEntries.length === 1 ? [...scopeEntries[0][1].results] : [];
+      allOperations.sort((a, b) => a.index - b.index);
+      const nextCursor =
+        scopeEntries.length === 1 ? scopeEntries[0][1].nextCursor : undefined;
+      return { results: allOperations, options: effectivePaging, nextCursor };
+    }
 
     const allOperations: Operation[] = [];
-    for (const scopeResults of scopeEntries) {
+    const activeCursors: Record<string, string> = {};
+
+    for (const [scopeName, scopeResults] of scopeEntries) {
       allOperations.push(...scopeResults.results);
+      if (scopeResults.nextCursor) {
+        activeCursors[scopeName] = scopeResults.nextCursor;
+      }
     }
 
     allOperations.sort((a, b) => a.index - b.index);
 
-    const effectivePaging = paging || { cursor: "0", limit: 100 };
-
-    // Cursor is only valid for single-scope results
     const nextCursor =
-      scopeEntries.length === 1 ? scopeEntries[0].nextCursor : undefined;
+      Object.keys(activeCursors).length > 0
+        ? encodeCompositeCursor(activeCursors)
+        : undefined;
 
-    return {
-      results: allOperations,
-      options: effectivePaging,
-      nextCursor,
-    };
+    return { results: allOperations, options: effectivePaging, nextCursor };
+  }
+
+  private async getOperationsWithCompositeCursor(
+    documentId: string,
+    view: ViewFilter | undefined,
+    filter: OperationFilter | undefined,
+    paging: PagingOptions,
+    signal: AbortSignal | undefined,
+  ): Promise<PagedResults<Operation>> {
+    const scopeCursors = decodeCompositeCursor(paging.cursor);
+    const allOperations: Operation[] = [];
+    const activeCursors: Record<string, string> = {};
+
+    for (const [scopeName, cursor] of Object.entries(scopeCursors)) {
+      const scopeView: ViewFilter = { ...view, scopes: [scopeName] };
+      const scopePaging: PagingOptions = { cursor, limit: paging.limit };
+
+      const operationsByScope = await this.reactor.getOperations(
+        documentId,
+        scopeView,
+        filter,
+        scopePaging,
+        undefined,
+        signal,
+      );
+
+      const scopeResult = operationsByScope[scopeName];
+      if (scopeResult) {
+        allOperations.push(...scopeResult.results);
+        if (scopeResult.nextCursor) {
+          activeCursors[scopeName] = scopeResult.nextCursor;
+        }
+      }
+    }
+
+    allOperations.sort((a, b) => a.index - b.index);
+
+    const nextCursor =
+      Object.keys(activeCursors).length > 0
+        ? encodeCompositeCursor(activeCursors)
+        : undefined;
+
+    return { results: allOperations, options: paging, nextCursor };
   }
 
   /**

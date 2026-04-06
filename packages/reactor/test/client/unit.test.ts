@@ -2,9 +2,11 @@ import type {
   Action,
   DocumentModelModule,
   ISigner,
+  Operation,
   PHDocument,
 } from "@powerhousedao/shared/document-model";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { encodeCompositeCursor } from "../../src/client/cursor.js";
 import { ReactorClient } from "../../src/client/reactor-client.js";
 import type { IReactorClient } from "../../src/client/types.js";
 import type { BatchExecutionResult, IReactor } from "../../src/core/types.js";
@@ -29,6 +31,17 @@ import {
   createMockSigner,
   createMockSubscriptionManager,
 } from "../factories.js";
+
+function mockOperation(index: number): Operation {
+  return {
+    id: `op-${index}`,
+    index,
+    skip: 0,
+    timestampUtcMs: Date.now().toString(),
+    hash: `hash-${index}`,
+    action: { type: "TEST", input: {} },
+  } as Operation;
+}
 
 function createMockPHDocument(id: string, documentType = "test"): PHDocument {
   return {
@@ -275,6 +288,133 @@ describe("ReactorClient Unit Tests", () => {
         view,
         undefined,
         signal,
+      );
+    });
+
+    it("should return composite cursor when multiple scopes have more data", async () => {
+      vi.mocked(mockDocumentView.resolveIdOrSlug).mockResolvedValue("doc-1");
+      vi.mocked(mockReactor.getOperations).mockResolvedValue({
+        document: {
+          results: [mockOperation(0), mockOperation(1)],
+          options: { cursor: "0", limit: 2 },
+          nextCursor: "1",
+        },
+        global: {
+          results: [mockOperation(0), mockOperation(1)],
+          options: { cursor: "0", limit: 2 },
+          nextCursor: "1",
+        },
+      });
+
+      const result = await client.getOperations("doc-1", undefined, undefined, {
+        cursor: "",
+        limit: 2,
+      });
+
+      expect(result.nextCursor).toBeDefined();
+      expect(result.nextCursor).toMatch(/^c:/);
+      expect(result.nextCursor).toContain('"document"');
+      expect(result.nextCursor).toContain('"global"');
+    });
+
+    it("should omit exhausted scopes from composite cursor", async () => {
+      vi.mocked(mockDocumentView.resolveIdOrSlug).mockResolvedValue("doc-1");
+      vi.mocked(mockReactor.getOperations).mockResolvedValue({
+        document: {
+          results: [mockOperation(0), mockOperation(1)],
+          options: { cursor: "0", limit: 2 },
+          nextCursor: undefined,
+        },
+        global: {
+          results: [mockOperation(0), mockOperation(1)],
+          options: { cursor: "0", limit: 2 },
+          nextCursor: "1",
+        },
+      });
+
+      const result = await client.getOperations("doc-1", undefined, undefined, {
+        cursor: "",
+        limit: 2,
+      });
+
+      expect(result.nextCursor).toBeDefined();
+      expect(result.nextCursor).toMatch(/^c:/);
+      expect(result.nextCursor).not.toContain('"document"');
+      expect(result.nextCursor).toContain('"global"');
+    });
+
+    it("should return undefined nextCursor when all scopes exhausted in multi-scope", async () => {
+      vi.mocked(mockDocumentView.resolveIdOrSlug).mockResolvedValue("doc-1");
+      vi.mocked(mockReactor.getOperations).mockResolvedValue({
+        document: {
+          results: [mockOperation(0)],
+          options: { cursor: "0", limit: 2 },
+          nextCursor: undefined,
+        },
+        global: {
+          results: [mockOperation(0)],
+          options: { cursor: "0", limit: 2 },
+          nextCursor: undefined,
+        },
+      });
+
+      const result = await client.getOperations("doc-1", undefined, undefined, {
+        cursor: "",
+        limit: 2,
+      });
+
+      expect(result.nextCursor).toBeUndefined();
+    });
+
+    it("should decode composite cursor and query each scope independently", async () => {
+      vi.mocked(mockDocumentView.resolveIdOrSlug).mockResolvedValue("doc-1");
+      vi.mocked(mockReactor.getOperations).mockResolvedValue({
+        global: {
+          results: [mockOperation(2)],
+          options: { cursor: "1", limit: 2 },
+          nextCursor: undefined,
+        },
+      });
+
+      const compositeCursor = encodeCompositeCursor({ global: "1" });
+      await client.getOperations("doc-1", undefined, undefined, {
+        cursor: compositeCursor,
+        limit: 2,
+      });
+
+      expect(mockReactor.getOperations).toHaveBeenCalledWith(
+        "doc-1",
+        { scopes: ["global"] },
+        undefined,
+        { cursor: "1", limit: 2 },
+        undefined,
+        undefined,
+      );
+    });
+
+    it("should preserve view.branch when using composite cursor", async () => {
+      vi.mocked(mockDocumentView.resolveIdOrSlug).mockResolvedValue("doc-1");
+      vi.mocked(mockReactor.getOperations).mockResolvedValue({
+        global: {
+          results: [mockOperation(2)],
+          options: { cursor: "1", limit: 2 },
+          nextCursor: undefined,
+        },
+      });
+
+      const compositeCursor = encodeCompositeCursor({ global: "1" });
+      await client.getOperations("doc-1", { branch: "draft" }, undefined, {
+        cursor: compositeCursor,
+        limit: 2,
+      });
+
+      expect(mockReactor.getOperations).toHaveBeenCalledWith(
+        "doc-1",
+        { branch: "draft", scopes: ["global"] },
+        undefined,
+        { cursor: "1", limit: 2 },
+        undefined,
+        undefined,
       );
     });
   });

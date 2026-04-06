@@ -327,7 +327,7 @@ describe("ReactorClient Integration Tests", () => {
         expect(secondPage.results.map((op) => op.index)).toEqual([2]);
       });
 
-      it.todo("should support pagination with multiple scopes", async () => {
+      it("should support pagination with multiple scopes", async () => {
         const doc = createDocModelDocument({ id: "ops-paginate-multi" });
         await client.create(doc);
 

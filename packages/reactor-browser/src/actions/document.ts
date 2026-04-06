@@ -176,39 +176,42 @@ async function getDocumentExtension(document: PHDocument): Promise<string> {
 const BASE_STATE_KEYS = new Set(["auth", "document"]);
 
 /**
- * Fetches all operations for a document using cursor-based pagination,
- * one scope at a time. This avoids loading the entire operation history
- * in a single query, which could be a significant memory burden for
- * documents with many operations.
+ * Fetches all operations for a document using cursor-based pagination.
+ * The reactor client handles multi-scope cursors transparently via
+ * composite cursors, so all scopes are fetched in a single paginated stream.
  */
 export async function fetchDocumentOperations(
   reactorClient: IReactorClient,
   document: PHDocument,
   pageSize = 100,
 ): Promise<DocumentOperations> {
-  const operations: DocumentOperations = {};
   const scopes = Object.keys(document.state).filter(
     (k) => !BASE_STATE_KEYS.has(k),
   );
-
+  const operations: DocumentOperations = {};
   for (const scope of scopes) {
-    const scopeOps: Operation[] = [];
-    let cursor = "";
-
-    do {
-      const page = await reactorClient.getOperations(
-        document.header.id,
-        { scopes: [scope] },
-        undefined,
-        { cursor, limit: pageSize },
-      );
-
-      scopeOps.push(...page.results);
-      cursor = page.nextCursor ?? "";
-    } while (cursor);
-
-    operations[scope] = scopeOps;
+    operations[scope] = [];
   }
+
+  let cursor = "";
+
+  do {
+    const page = await reactorClient.getOperations(
+      document.header.id,
+      { scopes },
+      undefined,
+      { cursor, limit: pageSize },
+    );
+
+    for (const op of page.results) {
+      const scope = op.action.scope ?? "global";
+      if (operations[scope]) {
+        operations[scope].push(op);
+      }
+    }
+
+    cursor = page.nextCursor ?? "";
+  } while (cursor);
 
   return operations;
 }
