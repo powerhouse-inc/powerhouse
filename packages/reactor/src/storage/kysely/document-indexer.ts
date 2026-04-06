@@ -197,6 +197,43 @@ export class KyselyDocumentIndexer
     };
   }
 
+  async getOrphanedChildren(
+    parentIds: string[],
+    types?: string[],
+    signal?: AbortSignal,
+  ): Promise<string[]> {
+    if (parentIds.length === 0) {
+      return [];
+    }
+    if (signal?.aborted) {
+      throw new Error("Operation aborted");
+    }
+
+    let query = this._db
+      .selectFrom("DocumentRelationship as r")
+      .select("r.targetId")
+      .distinct()
+      .where("r.sourceId", "in", parentIds)
+      .where((eb) =>
+        eb.not(
+          eb.exists(
+            eb
+              .selectFrom("DocumentRelationship as other")
+              .select("other.id")
+              .whereRef("other.targetId", "=", "r.targetId")
+              .where("other.sourceId", "not in", parentIds),
+          ),
+        ),
+      );
+
+    if (types && types.length > 0) {
+      query = query.where("r.relationshipType", "in", types);
+    }
+
+    const rows = await query.execute();
+    return rows.map((row) => row.targetId);
+  }
+
   async hasRelationship(
     sourceId: string,
     targetId: string,

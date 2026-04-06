@@ -742,6 +742,7 @@ export function createMockDocumentIndexer(): IDocumentIndexer {
     getIncoming: vi
       .fn()
       .mockResolvedValue({ results: [], options: { cursor: "0", limit: 100 } }),
+    getOrphanedChildren: vi.fn().mockResolvedValue([]),
     hasRelationship: vi.fn().mockResolvedValue(false),
     getUndirectedRelationships: vi.fn().mockResolvedValue([]),
     getDirectedRelationships: vi.fn().mockResolvedValue([]),

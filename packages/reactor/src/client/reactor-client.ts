@@ -905,40 +905,31 @@ export class ReactorClient implements IReactorClient {
     const jobs: JobInfo[] = [];
 
     if (propagate === PropagationMode.Cascade) {
-      const descendants: string[] = [];
-      const queue: string[] = [identifier];
-      const visited = new Set<string>();
+      const toDelete = new Set([identifier]);
+      let changed = true;
 
-      while (queue.length > 0) {
-        const currentId = queue.shift()!;
-
-        if (visited.has(currentId)) {
-          continue;
-        }
-
-        visited.add(currentId);
-
+      while (changed) {
         if (signal?.aborted) {
           throw new Error("Operation aborted");
         }
-
-        const relationships = await this.documentIndexer.getOutgoing(
-          currentId,
+        changed = false;
+        const orphans = await this.documentIndexer.getOrphanedChildren(
+          [...toDelete],
           ["child"],
-          undefined,
-          undefined,
           signal,
         );
-
-        for (const rel of relationships.results) {
-          if (!visited.has(rel.targetId)) {
-            descendants.push(rel.targetId);
-            queue.push(rel.targetId);
+        for (const id of orphans) {
+          if (!toDelete.has(id)) {
+            toDelete.add(id);
+            changed = true;
           }
         }
       }
 
-      for (const descendantId of descendants) {
+      for (const descendantId of toDelete) {
+        if (descendantId === identifier) {
+          continue;
+        }
         const removalJobs = await this.removeFromAllParents(
           descendantId,
           signal,
@@ -1107,75 +1098,82 @@ export class ReactorClient implements IReactorClient {
     );
 
     const jobs: JobInfo[] = [];
-
     for (const rel of incoming.results) {
-      const parentId = rel.sourceId;
+      const relJobs = await this.removeFromParent(documentId, rel, signal);
+      jobs.push(...relJobs);
+    }
+    return jobs;
+  }
 
-      let parentDoc: PHDocument;
-      try {
-        parentDoc = await this.reactor.get(
-          parentId,
-          undefined,
-          undefined,
-          signal,
-        );
-      } catch {
-        continue;
-      }
+  private async removeFromParent(
+    documentId: string,
+    rel: { sourceId: string; relationshipType: string },
+    signal?: AbortSignal,
+  ): Promise<JobInfo[]> {
+    const parentId = rel.sourceId;
 
-      const isDrive =
-        parentDoc.header.documentType === "powerhouse/document-drive";
+    let parentDoc: PHDocument;
+    try {
+      parentDoc = await this.reactor.get(
+        parentId,
+        undefined,
+        undefined,
+        signal,
+      );
+    } catch {
+      return [];
+    }
 
-      const relationshipActions: Action[] = await signActions(
-        [removeRelationshipAction(parentId, documentId, rel.relationshipType)],
+    const isDrive =
+      parentDoc.header.documentType === "powerhouse/document-drive";
+
+    const relationshipActions: Action[] = await signActions(
+      [removeRelationshipAction(parentId, documentId, rel.relationshipType)],
+      this.signer,
+      signal,
+    );
+
+    if (isDrive) {
+      const driveActions: Action[] = await signActions(
+        [deleteNode({ id: documentId })],
         this.signer,
         signal,
       );
 
-      if (isDrive) {
-        const driveActions: Action[] = await signActions(
-          [deleteNode({ id: documentId })],
-          this.signer,
-          signal,
-        );
+      const batchResult = await this.reactor.executeBatch(
+        {
+          jobs: [
+            {
+              key: "relationship",
+              documentId: parentId,
+              scope: getSharedActionScope(relationshipActions),
+              branch: "main",
+              actions: relationshipActions,
+              dependsOn: [],
+            },
+            {
+              key: "drive",
+              documentId: parentId,
+              scope: getSharedActionScope(driveActions),
+              branch: "main",
+              actions: driveActions,
+              dependsOn: ["relationship"],
+            },
+          ],
+        },
+        signal,
+      );
 
-        const batchResult = await this.reactor.executeBatch(
-          {
-            jobs: [
-              {
-                key: "relationship",
-                documentId: parentId,
-                scope: getSharedActionScope(relationshipActions),
-                branch: "main",
-                actions: relationshipActions,
-                dependsOn: [],
-              },
-              {
-                key: "drive",
-                documentId: parentId,
-                scope: getSharedActionScope(driveActions),
-                branch: "main",
-                actions: driveActions,
-                dependsOn: ["relationship"],
-              },
-            ],
-          },
-          signal,
-        );
-
-        jobs.push(...Object.values(batchResult.jobs));
-      } else {
-        const jobInfo = await this.reactor.removeChildren(
-          parentId,
-          [documentId],
-          "main",
-          this.signer,
-          signal,
-        );
-        jobs.push(jobInfo);
-      }
+      return [...Object.values(batchResult.jobs)];
     }
 
-    return jobs;
+    const jobInfo = await this.reactor.removeChildren(
+      parentId,
+      [documentId],
+      "main",
+      this.signer,
+      signal,
+    );
+    return [jobInfo];
   }
 }

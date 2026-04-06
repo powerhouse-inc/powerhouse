@@ -801,6 +801,55 @@ describe("ReactorClient Integration Tests", () => {
         );
       });
 
+      it("should not delete descendants with parents outside the subtree", async () => {
+        const a = createDocModelDocument({ id: "cascade-a" });
+        const b = createDocModelDocument({ id: "cascade-b" });
+        const c = createDocModelDocument({ id: "cascade-c" });
+
+        await client.create(a);
+        await client.create(b);
+        await client.create(c, "cascade-a");
+        await client.addChildren("cascade-b", ["cascade-c"]);
+
+        await client.deleteDocument("cascade-a", PropagationMode.Cascade);
+
+        await expect(client.get("cascade-a")).rejects.toThrow(
+          "Document not found",
+        );
+        const bDoc = await client.get("cascade-b");
+        expect(bDoc.header.id).toBe("cascade-b");
+        const cDoc = await client.get("cascade-c");
+        expect(cDoc.header.id).toBe("cascade-c");
+      });
+
+      it("should preserve transitive descendants when an ancestor survives", async () => {
+        const root = createDocModelDocument({ id: "trans-root" });
+        const a = createDocModelDocument({ id: "trans-a" });
+        const b = createDocModelDocument({ id: "trans-b" });
+        const c = createDocModelDocument({ id: "trans-c" });
+        const d = createDocModelDocument({ id: "trans-d" });
+
+        await client.create(root);
+        await client.create(a, "trans-root");
+        await client.create(b);
+        await client.create(c, "trans-a");
+        await client.addChildren("trans-b", ["trans-c"]);
+        await client.create(d, "trans-c");
+
+        await client.deleteDocument("trans-root", PropagationMode.Cascade);
+
+        await expect(client.get("trans-root")).rejects.toThrow(
+          "Document not found",
+        );
+        await expect(client.get("trans-a")).rejects.toThrow(
+          "Document not found",
+        );
+        const cDoc = await client.get("trans-c");
+        expect(cDoc.header.id).toBe("trans-c");
+        const dDoc = await client.get("trans-d");
+        expect(dDoc.header.id).toBe("trans-d");
+      });
+
       it("should remove document from all containing drives on delete", async () => {
         const drive1 = driveDocumentModelModule.utils.createDocument();
         const drive2 = driveDocumentModelModule.utils.createDocument();
@@ -842,7 +891,7 @@ describe("ReactorClient Integration Tests", () => {
         ).toBeUndefined();
       });
 
-      it("should remove descendants from all drives on cascade delete", async () => {
+      it("should preserve child in external drive on cascade delete", async () => {
         const drive1 = driveDocumentModelModule.utils.createDocument();
         const drive2 = driveDocumentModelModule.utils.createDocument();
         await client.create(drive1);
@@ -880,11 +929,15 @@ describe("ReactorClient Integration Tests", () => {
           drive1Nodes.find((n: any) => n.id === parent.header.id),
         ).toBeUndefined();
 
+        // Child survives because drive2 is still a parent
+        const childDoc = await client.get(child.header.id);
+        expect(childDoc.header.id).toBe(child.header.id);
+
         const drive2After = await client.get(drive2.header.id);
         const drive2Nodes = (drive2After.state as any).global.nodes || [];
         expect(
           drive2Nodes.find((n: any) => n.id === child.header.id),
-        ).toBeUndefined();
+        ).toBeDefined();
       });
     });
 

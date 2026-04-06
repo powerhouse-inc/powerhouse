@@ -637,6 +637,21 @@ export interface IDocumentIndexer extends IReadModel {
   ): Promise<IDocumentGraph>;
 
   /**
+   * Returns children of the given parents that have no parents outside
+   * the given set. Used by cascade delete to find documents that would
+   * be orphaned if all the given parents were deleted.
+   *
+   * @param parentIds - The set of parent document ids (the deletion set)
+   * @param types - Optional filter by relationship types
+   * @param signal - Optional abort signal to cancel the request
+   */
+  getOrphanedChildren(
+    parentIds: string[],
+    types?: string[],
+    signal?: AbortSignal,
+  ): Promise<string[]>;
+
+  /**
    * Returns all relationship types currently in the system.
    *
    * @param consistencyToken - Optional token for read-after-write consistency
