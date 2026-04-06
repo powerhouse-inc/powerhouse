@@ -22,6 +22,7 @@ import {
 import type {
   DocumentModelModule,
   DocumentOperations,
+  Operation,
   PHDocument,
 } from "@powerhousedao/shared/document-model";
 import {
@@ -172,26 +173,71 @@ async function getDocumentExtension(document: PHDocument): Promise<string> {
   return cleanExtension || "phdm";
 }
 
+const BASE_STATE_KEYS = new Set(["auth", "document"]);
+
+/**
+ * Fetches all operations for a document using cursor-based pagination,
+ * one scope at a time. This avoids loading the entire operation history
+ * in a single query, which could be a significant memory burden for
+ * documents with many operations.
+ */
+export async function fetchDocumentOperations(
+  reactorClient: IReactorClient,
+  document: PHDocument,
+  pageSize = 100,
+): Promise<DocumentOperations> {
+  const operations: DocumentOperations = {};
+  const scopes = Object.keys(document.state).filter(
+    (k) => !BASE_STATE_KEYS.has(k),
+  );
+
+  for (const scope of scopes) {
+    const scopeOps: Operation[] = [];
+    let cursor = "";
+
+    do {
+      const page = await reactorClient.getOperations(
+        document.header.id,
+        { scopes: [scope] },
+        undefined,
+        { cursor, limit: pageSize },
+      );
+
+      scopeOps.push(...page.results);
+      cursor = page.nextCursor ?? "";
+    } while (cursor);
+
+    operations[scope] = scopeOps;
+  }
+
+  return operations;
+}
+
 export async function exportFile(document: PHDocument, suggestedName?: string) {
-  if (!window.ph?.reactorClient) {
+  const reactorClient = window.ph?.reactorClient;
+  if (!reactorClient) {
     throw new Error("ReactorClient not initialized");
   }
 
-  // Get the extension from the document model module
-  const extension = await getDocumentExtension(document);
+  // Fetch operations page-by-page (document from reactor has operations: {})
+  const operations = await fetchDocumentOperations(reactorClient, document);
+  const documentWithOps = { ...document, operations };
 
-  const name = `${suggestedName || document.header.name || "Untitled"}.${extension}.phd`;
+  // Get the extension from the document model module
+  const extension = await getDocumentExtension(documentWithOps);
+
+  const name = `${suggestedName || documentWithOps.header.name || "Untitled"}.${extension}.phd`;
 
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   if (!window.showSaveFilePicker) {
-    return downloadFile(document, name);
+    return downloadFile(documentWithOps, name);
   }
   try {
     const fileHandle = await window.showSaveFilePicker({
       suggestedName: name,
     });
 
-    await baseSaveToFileHandle(document, fileHandle);
+    await baseSaveToFileHandle(documentWithOps, fileHandle);
     return fileHandle;
   } catch (e) {
     // ignores error if user cancelled the file picker
@@ -338,11 +384,7 @@ export async function addFile(
   );
 
   // then add all the operations in chunks
-  uploadOperations(documentId, document.operations, queueOperations).catch(
-    (error) => {
-      throw error;
-    },
-  );
+  await uploadOperations(documentId, document.operations, queueOperations);
 }
 
 export async function addFileWithProgress(
