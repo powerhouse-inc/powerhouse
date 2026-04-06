@@ -9,7 +9,6 @@ import {
   type OperationFilter,
   type PagedResults,
   type PagingOptions,
-  type PropagationMode,
   type RemoteFilter,
   type SearchFilter,
   type SyncOperation,
@@ -33,6 +32,7 @@ import {
   toMutableArray,
   toOperationResultPage,
   toPhDocumentResultPage,
+  toReactorPropagationMode,
   validateActions,
 } from "./adapters.js";
 import type {
@@ -849,9 +849,7 @@ export async function deleteDocument(
     propagate?: GqlPropagationMode | null;
   },
 ): Promise<boolean> {
-  const propagate = fromInputMaybe(args.propagate) as
-    | PropagationMode
-    | undefined;
+  const propagate = toReactorPropagationMode(args.propagate);
 
   try {
     await reactorClient.deleteDocument(args.identifier, propagate);
@@ -870,9 +868,7 @@ export async function deleteDocuments(
     propagate?: GqlPropagationMode | null;
   },
 ): Promise<boolean> {
-  const propagate = fromInputMaybe(args.propagate) as
-    | PropagationMode
-    | undefined;
+  const propagate = toReactorPropagationMode(args.propagate);
   const identifiers = [...args.identifiers];
 
   try {

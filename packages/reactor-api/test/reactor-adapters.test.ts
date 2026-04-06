@@ -1,3 +1,4 @@
+import { PropagationMode } from "@powerhousedao/reactor";
 import {
   type Action,
   type DocumentModelModule,
@@ -6,6 +7,7 @@ import {
 import { documentModelDocumentModelModule } from "document-model";
 import { describe, expect, it, vi } from "vitest";
 import * as adapters from "../src/graphql/reactor/adapters.js";
+import { PropagationMode as GqlPropagationMode } from "../src/graphql/reactor/gen/graphql.js";
 
 const createTestDocument = (): PHDocument => {
   return documentModelDocumentModelModule.utils.createDocument();
@@ -464,6 +466,30 @@ describe("Reactor Adapters", () => {
       expect(result).toHaveLength(1);
       expect(result[0].type).toBe("SET_NAME");
       expect(result[0].scope).toBe("global");
+    });
+  });
+
+  describe("toReactorPropagationMode", () => {
+    it("should map GQL CASCADE to reactor Cascade", () => {
+      const result = adapters.toReactorPropagationMode(
+        GqlPropagationMode.Cascade,
+      );
+      expect(result).toBe(PropagationMode.Cascade);
+    });
+
+    it("should map GQL ORPHAN to reactor None", () => {
+      const result = adapters.toReactorPropagationMode(
+        GqlPropagationMode.Orphan,
+      );
+      expect(result).toBe(PropagationMode.None);
+    });
+
+    it("should return undefined for null", () => {
+      expect(adapters.toReactorPropagationMode(null)).toBeUndefined();
+    });
+
+    it("should return undefined for undefined", () => {
+      expect(adapters.toReactorPropagationMode(undefined)).toBeUndefined();
     });
   });
 });

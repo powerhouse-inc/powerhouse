@@ -1,8 +1,9 @@
-import type {
-  JobInfo as ClientJobInfo,
-  DocumentChangeEvent,
-  IReactorClient,
-  PagedResults,
+import {
+  type JobInfo as ClientJobInfo,
+  type DocumentChangeEvent,
+  type IReactorClient,
+  type PagedResults,
+  PropagationMode,
 } from "@powerhousedao/reactor";
 import { camelCase } from "change-case";
 import type {
@@ -13,15 +14,16 @@ import type {
   PHDocument,
 } from "@powerhousedao/shared/document-model";
 import { GraphQLError } from "graphql";
-import type {
-  DocumentModelResultPage,
-  DocumentChangeEvent as GqlDocumentChangeEvent,
-  DocumentModelGlobalState as GqlDocumentModelGlobalState,
-  JobInfo as GqlJobInfo,
-  PhDocument,
-  PhDocumentResultPage,
-  ReactorOperation,
-  ReactorOperationResultPage,
+import {
+  type DocumentModelResultPage,
+  type DocumentChangeEvent as GqlDocumentChangeEvent,
+  type DocumentModelGlobalState as GqlDocumentModelGlobalState,
+  type JobInfo as GqlJobInfo,
+  type PhDocument,
+  type PhDocumentResultPage,
+  PropagationMode as GqlPropagationMode,
+  type ReactorOperation,
+  type ReactorOperationResultPage,
 } from "./gen/graphql.js";
 
 /**
@@ -126,6 +128,25 @@ export function toGqlJobInfo(job: ClientJobInfo): GqlJobInfo {
  */
 export function fromInputMaybe<T>(value: T | null | undefined): T | undefined {
   return value === null ? undefined : value;
+}
+
+/**
+ * Maps GraphQL PropagationMode enum to reactor PropagationMode enum.
+ * The GQL enum uses uppercase values ("CASCADE") while the reactor
+ * enum uses lowercase values ("cascade").
+ */
+export function toReactorPropagationMode(
+  gqlMode: GqlPropagationMode | null | undefined,
+): PropagationMode | undefined {
+  if (gqlMode == null) {
+    return undefined;
+  }
+  switch (gqlMode) {
+    case GqlPropagationMode.Cascade:
+      return PropagationMode.Cascade;
+    case GqlPropagationMode.Orphan:
+      return PropagationMode.None;
+  }
 }
 
 /**
