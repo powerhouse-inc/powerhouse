@@ -1,3 +1,13 @@
+## 6.0.0-dev.158 (2026-04-07)
+
+### 🩹 Fixes
+
+- **design-system:** tsdown changed where icons are ([31a89ff5d](https://github.com/powerhouse-inc/powerhouse/commit/31a89ff5d))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
 ## 6.0.0-dev.157 (2026-04-06)
 
 This was a version bump only for @powerhousedao/design-system to align it with other projects, there were no code changes.

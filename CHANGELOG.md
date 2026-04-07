@@ -1,3 +1,16 @@
+## 6.0.0-dev.158 (2026-04-07)
+
+### 🩹 Fixes
+
+- **design-system:** tsdown changed where icons are ([31a89ff5d](https://github.com/powerhouse-inc/powerhouse/commit/31a89ff5d))
+- **reactor:** fix issue where getOperations paging did not work across scopes ([dbe5bb51a](https://github.com/powerhouse-inc/powerhouse/commit/dbe5bb51a))
+- **reactor-api:** the gql propagation was not being parsed correctly ([48b6391a1](https://github.com/powerhouse-inc/powerhouse/commit/48b6391a1))
+- **reactor-browser:** fix export and import ([e8a9ea306](https://github.com/powerhouse-inc/powerhouse/commit/e8a9ea306))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
 ## 6.0.0-dev.157 (2026-04-06)
 
 This was a version bump only, there were no code changes.

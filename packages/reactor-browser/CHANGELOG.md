@@ -1,3 +1,14 @@
+## 6.0.0-dev.158 (2026-04-07)
+
+### 🩹 Fixes
+
+- **reactor:** fix issue where getOperations paging did not work across scopes ([dbe5bb51a](https://github.com/powerhouse-inc/powerhouse/commit/dbe5bb51a))
+- **reactor-browser:** fix export and import ([e8a9ea306](https://github.com/powerhouse-inc/powerhouse/commit/e8a9ea306))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
 ## 6.0.0-dev.157 (2026-04-06)
 
 This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.

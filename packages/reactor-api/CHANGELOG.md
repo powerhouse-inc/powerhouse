@@ -1,3 +1,13 @@
+## 6.0.0-dev.158 (2026-04-07)
+
+### 🩹 Fixes
+
+- **reactor-api:** the gql propagation was not being parsed correctly ([48b6391a1](https://github.com/powerhouse-inc/powerhouse/commit/48b6391a1))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
 ## 6.0.0-dev.157 (2026-04-06)
 
 This was a version bump only for @powerhousedao/reactor-api to align it with other projects, there were no code changes.
