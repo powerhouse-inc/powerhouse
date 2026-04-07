@@ -1,0 +1,11 @@
+**/node_modules
+**/dist
+**/.ph
+**/test-results
+**/playwright-report
+**/coverage
+**/.registry-storage
+**/.registry-cdn-cache
+vetra-e2e/backup-documents
+vetra-e2e/downloads
+test-consumer-project/

@@ -14,6 +14,7 @@ import {
   CONSUMER_CONNECT_URL,
   buildConsumerConnect,
   cleanupConsumerBuildArtifacts,
+  ensureConsumerProject,
   installConsumerDeps,
   startConsumerPreview,
   stopConsumerPreview,
@@ -26,9 +27,10 @@ import {
   verifyPublish,
   writeNpmrc,
 } from "./helpers/registry.js";
+import { CONNECT_URL } from "../playwright.config.js";
 
 // Run serially to avoid conflicts with other tests that modify the shared Vetra drive
-test.describe.configure({ mode: "serial", timeout: 5 * 60 * 60 * 1000 });
+test.describe.configure({ mode: "serial", timeout: 180_000 });
 const DOCUMENT_NAME = "ToDoDocument";
 
 const TEST_DOCUMENT_DATA: DocumentBasicData = {
@@ -72,7 +74,7 @@ test.use({
     cookies: [],
     origins: [
       {
-        origin: "http://localhost:3001",
+        origin: CONNECT_URL,
         localStorage: [
           { name: "/:display-cookie-banner", value: "false" },
           {
@@ -86,7 +88,7 @@ test.use({
 });
 
 // Module-level state shared across serial tests
-let registryProcess: ChildProcess | undefined;
+let registry: Awaited<ReturnType<typeof startRegistry>> | undefined;
 let consumerPreviewProcess: ChildProcess | undefined;
 
 test.afterAll(async () => {
@@ -94,9 +96,9 @@ test.afterAll(async () => {
     stopConsumerPreview(consumerPreviewProcess);
     consumerPreviewProcess = undefined;
   }
-  if (registryProcess) {
-    stopRegistry(registryProcess);
-    registryProcess = undefined;
+  if (registry) {
+    await stopRegistry(registry);
+    registry = undefined;
   }
   cleanupConsumerBuildArtifacts();
 });
@@ -155,7 +157,8 @@ test("Create ToDoDocument Editor", async ({ page }) => {
 
   // Poll for the generated editor files by waiting for editors/index.ts to be
   // updated with a real export (not just "export {};")
-  const editorsDir = path.join(process.cwd(), "editors");
+  const projectDir = process.env.PROJECT_DIR || process.cwd();
+  const editorsDir = path.join(projectDir, "editors");
   const editorsIndex = path.join(editorsDir, "index.ts");
   const pollStart = Date.now();
 
@@ -184,15 +187,12 @@ test("Create ToDoDocument Editor", async ({ page }) => {
 test("Build and Publish to Registry", async () => {
   test.setTimeout(180_000);
 
-  const testDir = process.cwd();
+  const testDir = process.env.PROJECT_DIR || process.cwd();
   const registryStoragePath = path.join(testDir, ".registry-storage");
   const registryCdnCachePath = path.join(testDir, ".registry-cdn-cache");
 
   // Start the registry (kept running for the next test)
-  registryProcess = await startRegistry(
-    registryStoragePath,
-    registryCdnCachePath,
-  );
+  registry = await startRegistry(registryStoragePath, registryCdnCachePath);
 
   // Create test user and write .npmrc for auth
   const token = await createTestUser();
@@ -208,6 +208,14 @@ test("Build and Publish to Registry", async () => {
   };
   currentManifest.name = "test-package-vetra";
   fs.writeFileSync(manifestPath, JSON.stringify(currentManifest, null, 4));
+
+  // Also update package.json name so npm publish uses the correct name
+  const packageJsonPath = path.join(testDir, "package.json");
+  const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf-8")) as {
+    name: string;
+  };
+  packageJson.name = "test-package-vetra";
+  fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2));
 
   // Build the package with ph-cli build
   console.log("Building package with ph-cli build...");
@@ -225,15 +233,24 @@ test("Build and Publish to Registry", async () => {
   expect(fs.existsSync(distManifest)).toBe(true);
 
   const manifest = JSON.parse(fs.readFileSync(distManifest, "utf-8")) as {
-    documentModels: unknown[];
-    editors: unknown[];
+    name: string;
+    documentModels: Array<{ name: string }>;
+    editors: Array<{ name: string }>;
   };
-  expect(manifest.documentModels.length).toBeGreaterThan(0);
-  expect(manifest.editors.length).toBeGreaterThan(0);
+  expect(manifest.name).toBe("test-package-vetra");
+  expect(manifest.documentModels).toHaveLength(1);
+  expect(manifest.documentModels[0].name).toBe("ToDoDocument");
+  expect(manifest.editors).toHaveLength(1);
 
   // Publish to the local registry
-  console.log("Publishing package to local registry...");
-  execSync("pnpm exec ph-cli publish", {
+  // In Docker, ph-cli can't connect to [::1] URLs, so use the socat IPv4 bridge on port 18080
+  const publishRegistryUrl = process.env.DOCKER_E2E
+    ? "http://localhost:18080"
+    : REGISTRY_URL;
+  console.log(
+    `Publishing package to local registry (${publishRegistryUrl})...`,
+  );
+  execSync(`pnpm exec ph-cli publish --registry=${publishRegistryUrl}`, {
     cwd: testDir,
     stdio: "pipe",
     timeout: 60_000,
@@ -285,6 +302,9 @@ test("Build and Publish to Registry", async () => {
 
 test("Install Package in Consumer Project", async ({ browser }) => {
   test.setTimeout(10 * 60 * 1000); // 10 minutes for build + preview + UI
+
+  // Ensure consumer project exists (creates it via ph init in Docker mode)
+  ensureConsumerProject();
 
   // Step 1: Install dependencies for the consumer project
   installConsumerDeps();
@@ -359,8 +379,8 @@ test("Install Package in Consumer Project", async ({ browser }) => {
     await expect(installButton).toBeVisible({ timeout: 5_000 });
     await installButton.click();
 
-    // Wait for installation to complete
-    await page.waitForTimeout(5000);
+    // Wait for installation to complete (Install button disappears or changes)
+    await expect(installButton).toBeHidden({ timeout: 30_000 });
 
     // Step 8: Close the settings modal
     const closeButton = settingsModal
@@ -391,16 +411,12 @@ test("Install Package in Consumer Project", async ({ browser }) => {
     await expect(createDriveSubmit).toBeEnabled({ timeout: 5_000 });
     await createDriveSubmit.click();
 
-    // Wait for drive to be created
-    await page.waitForLoadState("networkidle");
-    await page.waitForTimeout(2000);
-
-    // Step 10: Navigate into the drive by clicking on it
+    // Wait for drive to be created and appear on the page
     const driveCard = page.getByRole("heading", {
       name: "Test Drive",
       level: 3,
     });
-    await expect(driveCard).toBeVisible({ timeout: 10_000 });
+    await expect(driveCard).toBeVisible({ timeout: 30_000 });
     await driveCard.click();
     await page.waitForLoadState("networkidle");
 
@@ -454,7 +470,8 @@ async function setupDocument(
   // We need to wait for the full code generation including index.ts update
   const maxWaitMs = 60000;
   const startTime = Date.now();
-  const documentModelsDir = path.join(process.cwd(), "document-models");
+  const projectDir = process.env.PROJECT_DIR || process.cwd();
+  const documentModelsDir = path.join(projectDir, "document-models");
   const todoDocModelDir = path.join(documentModelsDir, "to-do-document");
   const documentModelsIndex = path.join(documentModelsDir, "index.ts");
   const expectedExport =

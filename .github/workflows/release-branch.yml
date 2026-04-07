@@ -157,6 +157,59 @@ jobs:
           echo "skip=false" >> $GITHUB_OUTPUT
           echo "Triggering downstream with channel=$CHANNEL version=$VERSION"
 
+  vetra-e2e-docker:
+    name: Vetra E2E Tests (Docker)
+    needs: [release, determine-downstream-params]
+    if: ${{ inputs.dry_run != true && needs.determine-downstream-params.outputs.skip != 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Build vetra-e2e Docker image
+        run: |
+          TAG="${{ needs.determine-downstream-params.outputs.version }}"
+          docker build \
+            -f test/vetra-e2e/Dockerfile \
+            --build-arg TAG="$TAG" \
+            -t vetra-e2e \
+            test/
+
+      - name: Run vetra-e2e tests
+        run: docker run --name vetra-e2e-run vetra-e2e
+
+      - name: Extract test artifacts
+        if: always()
+        run: |
+          docker cp vetra-e2e-run:/app/test-project/playwright-report ./vetra-docker-playwright-report || true
+          docker cp vetra-e2e-run:/app/test-project/test-results ./vetra-docker-test-results || true
+          docker rm vetra-e2e-run || true
+
+      - name: Upload Playwright Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: vetra-docker-playwright-report
+          path: vetra-docker-playwright-report/
+          retention-days: 30
+
+      - name: Upload Test Results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: vetra-docker-test-results
+          path: vetra-docker-test-results/
+          retention-days: 30
+
+  test-package-managers:
+    name: Test Package Managers
+    needs: [release, determine-downstream-params]
+    if: ${{ inputs.dry_run != true && needs.determine-downstream-params.outputs.skip != 'true' }}
+    uses: ./.github/workflows/test-package-managers.yml
+    with:
+      tag: ${{ needs.determine-downstream-params.outputs.channel }}
+
   trigger-downstream:
     name: Trigger Downstream Packages
     needs: determine-downstream-params
@@ -167,3 +220,48 @@ jobs:
       channel: ${{ needs.determine-downstream-params.outputs.channel }}
       dry-run: false
     secrets: inherit
+
+  notify-discord:
+    name: Notify Discord on Failure
+    if: >-
+      always() &&
+      inputs.dry_run != true &&
+      (needs.release.result == 'failure' ||
+       needs.publish-docker.result == 'failure' ||
+       needs.vetra-e2e-docker.result == 'failure' ||
+       needs.test-package-managers.result == 'failure' ||
+       needs.trigger-downstream.result == 'failure')
+    needs:
+      - release
+      - publish-docker
+      - vetra-e2e-docker
+      - test-package-managers
+      - trigger-downstream
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Discord notification
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_FAILURES }}
+          DISCORD_USER_MAPPING: ${{ secrets.DISCORD_USER_MAPPING }}
+        run: |
+          DISCORD_USER=$(echo "$DISCORD_USER_MAPPING" | jq -r --arg GH_USER "${{ github.actor }}" '.[$GH_USER] // ""')
+          MENTION_STRING=""
+          if [ ! -z "$DISCORD_USER" ]; then
+            MENTION_STRING="<@${DISCORD_USER}> "
+          fi
+
+          FAILED_JOBS=""
+          [ "${{ needs.release.result }}" = "failure" ] && FAILED_JOBS="${FAILED_JOBS}Release, "
+          [ "${{ needs.publish-docker.result }}" = "failure" ] && FAILED_JOBS="${FAILED_JOBS}Docker Publish, "
+          [ "${{ needs.vetra-e2e-docker.result }}" = "failure" ] && FAILED_JOBS="${FAILED_JOBS}Vetra E2E (Docker), "
+          [ "${{ needs.test-package-managers.result }}" = "failure" ] && FAILED_JOBS="${FAILED_JOBS}Package Managers, "
+          [ "${{ needs.trigger-downstream.result }}" = "failure" ] && FAILED_JOBS="${FAILED_JOBS}Trigger Downstream, "
+          FAILED_JOBS="${FAILED_JOBS%, }"
+
+          curl -H "Content-Type: application/json" -X POST "$DISCORD_WEBHOOK" -d '{
+            "embeds": [{
+              "title": "⚠️ Release Pipeline Failed",
+              "description": "**Author:** '"${MENTION_STRING}"'\n**Branch:** `${{ github.ref_name }}`\n**Failed jobs:** '"${FAILED_JOBS}"'\n**Workflow run:** [${{ github.run_id }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})",
+              "color": 16711680
+            }]
+          }'

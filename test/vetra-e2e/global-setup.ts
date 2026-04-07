@@ -11,19 +11,18 @@ interface GraphQLResponse {
 }
 
 async function waitForPort(
-  port: number,
+  url: string,
   maxWaitMs: number = 60000,
 ): Promise<void> {
   const startTime = Date.now();
-  const url = `http://localhost:${port}`;
 
-  console.log(`⏳ Waiting for port ${port} to be ready...`);
+  console.log(`⏳ Waiting for ${url} to be ready...`);
 
   while (Date.now() - startTime < maxWaitMs) {
     try {
       const response = await fetch(url);
       if (response.ok || response.status < 500) {
-        console.log(`✅ Port ${port} is ready!`);
+        console.log(`✅ ${url} is ready!`);
         return;
       }
     } catch (error) {
@@ -33,16 +32,16 @@ async function waitForPort(
     await new Promise((resolve) => setTimeout(resolve, 500));
   }
 
-  throw new Error(`Timeout waiting for port ${port} after ${maxWaitMs}ms`);
+  throw new Error(`Timeout waiting for ${url} after ${maxWaitMs}ms`);
 }
 
 async function waitForDrivesReady(
-  reactorPort: number,
+  reactorUrl: string,
   maxWaitMs: number = 60000,
 ): Promise<void> {
   const startTime = Date.now();
   // The reactor subgraph is at /graphql/r/:reactor - we use 'local' as the reactor name
-  const graphqlUrl = `http://localhost:${reactorPort}/graphql/r`;
+  const graphqlUrl = `${reactorUrl}/graphql/r`;
 
   console.log("⏳ Waiting for reactor drives to be ready...");
 
@@ -121,13 +120,16 @@ async function globalSetup() {
     const mcr = MCR(coverageOptions);
     mcr.cleanCache();
 
-    // Wait for both Connect (3001) and Reactor (4002) to be ready
+    const connectUrl = process.env.CONNECT_URL || "http://localhost:3001";
+    const reactorUrl = process.env.REACTOR_URL || "http://localhost:4002";
+
+    // Wait for both Connect and Reactor to be ready
     // Note: webServer starts vetra, but we need to wait for both services
-    await waitForPort(3001);
-    await waitForPort(4002);
+    await waitForPort(connectUrl);
+    await waitForPort(reactorUrl);
 
     // Wait for the reactor to have drives ready (the Vetra drive should be created)
-    await waitForDrivesReady(4002);
+    await waitForDrivesReady(reactorUrl);
 
     console.log(
       "🎯 Global setup completed successfully! Both Connect and Reactor are ready.",

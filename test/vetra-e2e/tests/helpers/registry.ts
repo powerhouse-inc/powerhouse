@@ -4,16 +4,22 @@ import fs from "fs";
 import path from "path";
 
 const REGISTRY_PORT = 8080;
-export const REGISTRY_URL = `http://localhost:${REGISTRY_PORT}`;
+export const REGISTRY_URL =
+  process.env.REGISTRY_URL || `http://localhost:${REGISTRY_PORT}`;
+
+export interface RegistryHandle {
+  process: ChildProcess;
+  shutdown: () => Promise<void>;
+}
 
 /**
  * Start the registry as a child process using the ph-registry CLI binary.
- * Returns the ChildProcess so it can be killed later.
+ * Returns a handle with a shutdown() method for clean teardown.
  */
 export async function startRegistry(
   storagePath: string,
   cdnCachePath: string,
-): Promise<ChildProcess> {
+): Promise<RegistryHandle> {
   // Clean up and recreate directories to ensure fresh state
   fs.rmSync(storagePath, { recursive: true, force: true });
   fs.rmSync(cdnCachePath, { recursive: true, force: true });
@@ -34,7 +40,7 @@ export async function startRegistry(
     ],
     {
       stdio: "pipe",
-      detached: false,
+      detached: true,
     },
   );
 
@@ -45,6 +51,28 @@ export async function startRegistry(
   child.stderr?.on("data", (data: Buffer) => {
     console.error(`[registry:err] ${data.toString().trim()}`);
   });
+
+  // Unref so the child doesn't keep the parent process alive
+  child.unref();
+
+  const shutdown = (): Promise<void> =>
+    new Promise<void>((resolve) => {
+      if (child.killed || child.exitCode !== null) {
+        resolve();
+        return;
+      }
+      child.on("exit", () => resolve());
+      // Kill the entire process group (pnpm + node child)
+      if (child.pid) {
+        try {
+          process.kill(-child.pid, "SIGTERM");
+        } catch {
+          child.kill("SIGTERM");
+        }
+      } else {
+        child.kill("SIGTERM");
+      }
+    });
 
   // Wait for the registry to be ready by polling a registry-specific endpoint
   const maxWaitMs = 30_000;
@@ -58,11 +86,10 @@ export async function startRegistry(
       );
     }
     try {
-      // Use /-/ping which is a Verdaccio-specific endpoint
       const res = await fetch(`${REGISTRY_URL}/-/ping`);
       if (res.ok) {
         console.log("Registry is ready on port", REGISTRY_PORT);
-        return child;
+        return { process: child, shutdown };
       }
     } catch {
       // Not ready yet
@@ -70,7 +97,7 @@ export async function startRegistry(
     await new Promise((r) => setTimeout(r, 500));
   }
 
-  child.kill();
+  await shutdown();
   throw new Error(`Registry did not start within ${maxWaitMs}ms`);
 }
 
@@ -88,18 +115,25 @@ export async function createTestUser(): Promise<string> {
 }
 
 export function writeNpmrc(testDir: string, token: string): void {
-  const npmrcContent = `//localhost:${REGISTRY_PORT}/:_authToken=${token}\n`;
-  fs.writeFileSync(path.join(testDir, ".npmrc"), npmrcContent, "utf8");
+  const registryHostPort = new URL(REGISTRY_URL).host;
+  const lines = [
+    `registry=${REGISTRY_URL}`,
+    `//${registryHostPort}/:_authToken=${token}`,
+  ];
+  // In Docker, ph-cli publish uses the socat IPv4 bridge on port 18080;
+  // add auth for that host too so npm authentication works
+  if (process.env.DOCKER_E2E) {
+    lines.push(`//localhost:18080/:_authToken=${token}`);
+  }
+  lines.push("");
+  fs.writeFileSync(path.join(testDir, ".npmrc"), lines.join("\n"), "utf8");
 }
 
-export function stopRegistry(child: ChildProcess): void {
-  if (child && !child.killed) {
-    child.kill("SIGTERM");
-  }
+export async function stopRegistry(handle: RegistryHandle): Promise<void> {
+  await handle.shutdown();
 }
 
 export async function verifyPublish(packageName: string): Promise<void> {
-  // Query Verdaccio's npm API directly to check if the package exists
   const res = await fetch(
     `${REGISTRY_URL}/${encodeURIComponent(packageName)}`,
     {

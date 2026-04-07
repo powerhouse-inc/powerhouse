@@ -1,7 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
-export const CONNECT_URL = "http://localhost:3001";
-export const REACTOR_URL = "http://localhost:4002";
+export const CONNECT_URL = process.env.CONNECT_URL || "http://localhost:3001";
+export const REACTOR_URL = process.env.REACTOR_URL || "http://localhost:4002";
 
 /**
  * Read environment variables from file.
@@ -33,7 +33,7 @@ export default defineConfig({
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
-    baseURL: "http://localhost:3001",
+    baseURL: CONNECT_URL,
 
     acceptDownloads: true,
 
@@ -74,6 +74,7 @@ export default defineConfig({
   /* Run your local dev server before starting the tests */
   webServer: {
     command: "pnpm vetra",
+    cwd: process.env.PROJECT_DIR || undefined,
     url: CONNECT_URL,
     stderr: "pipe",
     stdout: "pipe",

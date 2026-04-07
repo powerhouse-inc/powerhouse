@@ -34,7 +34,9 @@ const coverageOptions: CoverageReportOptions = {
       "packages/document-model/src/document-model/custom/reducers/header.ts",
   },
 
-  outputDir: "./coverage",
+  outputDir: process.env.PROJECT_DIR
+    ? `${process.env.PROJECT_DIR}/coverage`
+    : "./coverage",
 };
 
 export default coverageOptions;

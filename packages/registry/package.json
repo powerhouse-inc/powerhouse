@@ -7,6 +7,13 @@
     "type": "git",
     "url": "https://github.com/powerhouse-inc/powerhouse"
   },
+  "exports": {
+    ".": {
+      "development": "./src/index.ts",
+      "types": "./dist/src/index.d.mts",
+      "default": "./dist/src/index.mjs"
+    }
+  },
   "bin": {
     "ph-registry": "./dist/cli.mjs"
   },
