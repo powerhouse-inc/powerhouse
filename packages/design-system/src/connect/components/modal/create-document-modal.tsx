@@ -1,4 +1,4 @@
-import { Icon, Modal, PowerhouseButton } from "@powerhousedao/design-system";
+import { Icon, Modal, PowerhouseButton } from "#design-system";
 import { isValidName } from "@powerhousedao/shared/document-drive";
 import type { ComponentPropsWithoutRef } from "react";
 import { useCallback, useState } from "react";

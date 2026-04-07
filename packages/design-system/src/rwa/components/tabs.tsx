@@ -1,6 +1,6 @@
 import { Content, List, Root, Trigger } from "@radix-ui/react-tabs";
 import { useCallback } from "react";
-import { EditorActionButtons } from "@powerhousedao/design-system/connect";
+import { EditorActionButtons } from "#design-system/connect";
 import { useEditorContext } from "../context/editor-context.js";
 import { OtherTab } from "./other-tab.js";
 import { PortfolioTab } from "./portfolio-tab.js";

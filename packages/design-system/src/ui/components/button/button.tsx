@@ -1,4 +1,4 @@
-import { cn } from "@powerhousedao/design-system";
+import { cn } from "#design-system";
 import { Slot } from "@radix-ui/react-slot";
 import type { VariantProps } from "class-variance-authority";
 import { cva } from "class-variance-authority";

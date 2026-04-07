@@ -2,10 +2,7 @@ import type { ComponentPropsWithRef, ForwardedRef } from "react";
 import { forwardRef } from "react";
 import type { Control } from "react-hook-form";
 import { useWatch } from "react-hook-form";
-import {
-  ConnectTooltip,
-  ConnectTooltipProvider,
-} from "@powerhousedao/design-system/connect";
+import { ConnectTooltip, ConnectTooltipProvider } from "#design-system/connect";
 import type { GroupTransactionFormInputs } from "../types.js";
 import { RWATableTextInput } from "./text-input.js";
 import { getIsTransaction } from "../../services/viem.js";

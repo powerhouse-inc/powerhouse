@@ -3,7 +3,7 @@ import type {
   NodeOption,
   NormalNodeOption,
   OptionMetadata,
-} from "@powerhousedao/design-system";
+} from "#design-system";
 import { Icon } from "../../powerhouse/components/icon/icon.js";
 
 export const defaultDriveOptions = [

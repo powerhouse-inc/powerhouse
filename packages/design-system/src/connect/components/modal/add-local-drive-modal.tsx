@@ -1,5 +1,5 @@
-import type { AppOptions, DivProps } from "@powerhousedao/design-system";
-import { Icon, Modal } from "@powerhousedao/design-system";
+import type { AppOptions, DivProps } from "#design-system";
+import { Icon, Modal } from "#design-system";
 import type { ComponentPropsWithoutRef } from "react";
 import { twMerge } from "tailwind-merge";
 import { Divider } from "../divider/divider.js";

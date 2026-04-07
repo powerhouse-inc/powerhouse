@@ -1,4 +1,4 @@
-import { Icon } from "@powerhousedao/design-system";
+import { Icon } from "#design-system";
 import { useState } from "react";
 import { FormInput } from "../form-input/form-input.js";
 import type { ConfirmationModalProps } from "./confirmation-modal.js";

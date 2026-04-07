@@ -1,4 +1,4 @@
-import { cn } from "@powerhousedao/design-system";
+import { cn } from "#design-system";
 import React, { useId } from "react";
 import type { InputBaseProps } from "../../types.js";
 import { FormLabel } from "../form-label/form-label.js";

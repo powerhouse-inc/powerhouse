@@ -1,6 +1,6 @@
-import { PackageAnimation } from "@powerhousedao/design-system";
-import type { SearchAutocompleteOption } from "@powerhousedao/design-system/ui";
-import { SearchAutocomplete } from "@powerhousedao/design-system/ui";
+import { PackageAnimation } from "#design-system";
+import type { SearchAutocompleteOption } from "#design-system/ui";
+import { SearchAutocomplete } from "#design-system/ui";
 import type { RegistryPackageList } from "@powerhousedao/shared/registry";
 import { useCallback } from "react";
 

@@ -1,7 +1,9 @@
-import type { FolderNode, Node } from "@powerhousedao/shared/document-drive";
-import type { SharingType } from "@powerhousedao/shared/document-drive";
+import type {
+  FolderNode,
+  Node,
+  SharingType,
+} from "@powerhousedao/shared/document-drive";
 import type { ReactNode } from "react";
-import type { documentTypes } from "./constants/documents.js";
 import type {
   debugNodeOptions,
   nodeOptions,
@@ -11,10 +13,6 @@ import type { syncStatuses } from "./constants/syncing.js";
 
 export type * from "./components/types.js";
 
-export type DocumentTypes = typeof documentTypes;
-
-// this weird syntax means "do autocomplete if you're using a string from our `DocumentTypes` list, but also allow any string"
-export type TDocumentType = DocumentTypes[number] | (string & {});
 export type DriveLocation = "LOCAL" | "CLOUD" | "SWITCHBOARD";
 
 export type TNodeActions = {

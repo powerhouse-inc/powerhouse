@@ -1,4 +1,4 @@
-import type { IconComponentProps } from "@powerhousedao/design-system";
+import type { IconComponentProps } from "#design-system";
 export default function Ellipsis(props: IconComponentProps) {
   return (
     <svg {...props} viewBox="0 0 10 2" fill="currentcolor">

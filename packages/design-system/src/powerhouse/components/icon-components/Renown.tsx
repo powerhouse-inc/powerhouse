@@ -1,4 +1,4 @@
-import type { IconComponentProps } from "@powerhousedao/design-system";
+import type { IconComponentProps } from "#design-system";
 export default function Renown(props: IconComponentProps) {
   return (
     <svg {...props} viewBox="0 0 71 19" fill="currentcolor">

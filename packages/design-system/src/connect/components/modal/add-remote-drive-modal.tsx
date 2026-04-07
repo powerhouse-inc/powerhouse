@@ -1,5 +1,5 @@
-import type { DivProps } from "@powerhousedao/design-system";
-import { Icon, Modal } from "@powerhousedao/design-system";
+import type { DivProps } from "#design-system";
+import { Icon, Modal } from "#design-system";
 import type { SharingType } from "@powerhousedao/shared/document-drive";
 import type { ComponentPropsWithoutRef } from "react";
 import { twMerge } from "tailwind-merge";

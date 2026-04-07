@@ -1,4 +1,4 @@
-import type { IconComponentProps } from "@powerhousedao/design-system";
+import type { IconComponentProps } from "#design-system";
 export default function RedoArrow(props: IconComponentProps) {
   return (
     <svg {...props} viewBox="0 0 21 17" fill="currentcolor">

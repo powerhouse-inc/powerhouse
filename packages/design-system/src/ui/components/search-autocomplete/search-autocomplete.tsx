@@ -1,4 +1,4 @@
-import { cn } from "@powerhousedao/design-system";
+import { cn } from "#design-system";
 import React, { useCallback, useState } from "react";
 import { Input } from "../input/input.js";
 import { Popover, PopoverAnchor, PopoverContent } from "../popover/popover.js";

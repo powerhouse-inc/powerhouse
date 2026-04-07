@@ -1,4 +1,4 @@
-import { Icon } from "@powerhousedao/design-system";
+import { Icon } from "#design-system";
 import { twMerge } from "tailwind-merge";
 
 type HomeScreenItemProps = {

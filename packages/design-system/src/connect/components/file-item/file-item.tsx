@@ -1,5 +1,6 @@
-import type { NodeOption } from "@powerhousedao/design-system";
-import { Icon } from "@powerhousedao/design-system";
+import DefaultImg from "#assets/icons/template.png";
+import type { NodeOption } from "#design-system";
+import { Icon } from "#design-system";
 import {
   getSyncStatusSync,
   setSelectedNode,
@@ -13,6 +14,13 @@ import type {
   FileNode,
   SharingType,
 } from "@powerhousedao/shared/document-drive";
+import { useState } from "react";
+import { twMerge } from "tailwind-merge";
+import { defaultNodeOptions, nodeOptionsMap } from "../../constants/options.js";
+import { useDrag } from "../../hooks/use-drag.js";
+import { ConnectDropdownMenu } from "../dropdown-menu/dropdown-menu.js";
+import { NodeInput } from "../node-input/node-input.js";
+import { SyncStatusIcon } from "../status-icon/sync-status-icon.js";
 
 function getDriveSharingType(drive: DocumentDriveDocument): SharingType {
   if (typeof drive !== "object") return "LOCAL";
@@ -28,14 +36,6 @@ function getDriveSharingType(drive: DocumentDriveDocument): SharingType {
     ? "LOCAL"
     : (__sharingType as SharingType);
 }
-import { useState } from "react";
-import { twMerge } from "tailwind-merge";
-import { defaultNodeOptions, nodeOptionsMap } from "../../constants/options.js";
-import { useDrag } from "../../hooks/use-drag.js";
-import { getDocumentIconSrc } from "../../utils/get-document-icon-src.js";
-import { ConnectDropdownMenu } from "../dropdown-menu/dropdown-menu.js";
-import { NodeInput } from "../node-input/node-input.js";
-import { SyncStatusIcon } from "../status-icon/sync-status-icon.js";
 
 type Props = {
   fileNode: FileNode;
@@ -103,10 +103,7 @@ export function FileItem(props: Props) {
     setIsDropdownMenuOpen(false);
   }
 
-  const iconSrc = getDocumentIconSrc(
-    fileNode.documentType,
-    customDocumentIconSrc,
-  );
+  const iconSrc = customDocumentIconSrc || DefaultImg;
 
   const iconNode = (
     <div className="relative">

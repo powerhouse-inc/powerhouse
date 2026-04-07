@@ -1,4 +1,4 @@
-import { Icon } from "@powerhousedao/design-system";
+import { Icon } from "#design-system";
 import { showPHModal } from "@powerhousedao/reactor-browser";
 import { HomeScreenItem } from "./home-screen-item.js";
 type HomeScreenAddDriveItemProps = {

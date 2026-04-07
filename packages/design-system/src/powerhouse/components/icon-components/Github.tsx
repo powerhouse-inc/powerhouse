@@ -1,4 +1,4 @@
-import type { IconComponentProps } from "@powerhousedao/design-system";
+import type { IconComponentProps } from "#design-system";
 export default function Github(props: IconComponentProps) {
   return (
     <svg

@@ -1,4 +1,4 @@
-import { cn } from "@powerhousedao/design-system";
+import { cn } from "#design-system";
 
 export interface FormDescriptionProps extends React.PropsWithChildren {
   as?: React.ElementType;

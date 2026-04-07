@@ -1,5 +1,5 @@
-import type { AppOptions, DivProps } from "@powerhousedao/design-system";
-import { Modal } from "@powerhousedao/design-system";
+import type { AppOptions, DivProps } from "#design-system";
+import { Modal } from "#design-system";
 import type { ComponentPropsWithoutRef } from "react";
 import { twMerge } from "tailwind-merge";
 import { AddLocalDriveForm } from "../../form/add-local-drive-form.js";

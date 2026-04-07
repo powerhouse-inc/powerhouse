@@ -1,5 +1,5 @@
-import type { NodeOption } from "@powerhousedao/design-system";
-import { Icon } from "@powerhousedao/design-system";
+import type { NodeOption } from "#design-system";
+import { Icon } from "#design-system";
 import {
   setSelectedNode,
   showDeleteNodeModal,

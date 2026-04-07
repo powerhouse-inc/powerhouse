@@ -1,4 +1,4 @@
-import { PowerhouseButton } from "@powerhousedao/design-system";
+import { PowerhouseButton } from "#design-system";
 import type { SharingType } from "@powerhousedao/shared/document-drive";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";

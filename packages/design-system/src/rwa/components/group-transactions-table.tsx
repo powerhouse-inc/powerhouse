@@ -1,5 +1,5 @@
-import { Pagination, usePagination } from "@powerhousedao/design-system";
-import { Combobox } from "@powerhousedao/design-system/connect";
+import { Pagination, usePagination } from "#design-system";
+import { Combobox } from "#design-system/connect";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { tableNames } from "../constants/names.js";
 import {

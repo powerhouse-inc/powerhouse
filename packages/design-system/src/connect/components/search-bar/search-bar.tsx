@@ -5,7 +5,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   Icon,
-} from "@powerhousedao/design-system";
+} from "#design-system";
 import type { ChangeEvent } from "react";
 import { useMemo } from "react";
 import { twMerge } from "tailwind-merge";

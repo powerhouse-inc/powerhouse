@@ -1,4 +1,4 @@
-import type { IconComponentProps } from "@powerhousedao/design-system";
+import type { IconComponentProps } from "#design-system";
 export default function Npm(props: IconComponentProps) {
   return (
     <svg {...props} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">

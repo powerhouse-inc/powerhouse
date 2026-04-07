@@ -1,4 +1,4 @@
-import { SidebarHeader } from "@powerhousedao/design-system";
+import { SidebarHeader } from "#design-system";
 import type { ComponentProps } from "react";
 import { twMerge } from "tailwind-merge";
 

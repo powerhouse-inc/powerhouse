@@ -1,5 +1,5 @@
-import { Icon, Modal } from "@powerhousedao/design-system";
-import { JsonViewer } from "@powerhousedao/design-system/ui";
+import { Icon, Modal } from "#design-system";
+import { JsonViewer } from "#design-system/ui";
 
 /**
  * Converts an object to a JSON-serializable form by handling

@@ -1,4 +1,4 @@
-import type { IconComponentProps } from "@powerhousedao/design-system";
+import type { IconComponentProps } from "#design-system";
 export default function ArrowLeft(props: IconComponentProps) {
   return (
     <svg {...props} viewBox="0 0 16 16" fill="none" stroke="currentcolor">

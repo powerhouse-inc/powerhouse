@@ -1,4 +1,4 @@
-import { Icon, type AppOptions } from "@powerhousedao/design-system";
+import { Icon, type AppOptions } from "#design-system";
 import type { ComponentPropsWithRef } from "react";
 import type { Control, Path } from "react-hook-form";
 import { Controller } from "react-hook-form";

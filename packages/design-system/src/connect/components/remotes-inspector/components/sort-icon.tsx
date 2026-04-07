@@ -1,4 +1,4 @@
-import { Icon } from "@powerhousedao/design-system";
+import { Icon } from "#design-system";
 import { type SortDirection } from "../utils.js";
 
 export type SortIconProps = {

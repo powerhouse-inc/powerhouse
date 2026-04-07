@@ -1,4 +1,4 @@
-import type { IconComponentProps } from "@powerhousedao/design-system";
+import type { IconComponentProps } from "#design-system";
 import AnalyticsProcessorModule from "./AnalyticsProcessorModule.js";
 import AppModule from "./AppModule.js";
 import ArrowCouterclockwise from "./ArrowCouterclockwise.js";

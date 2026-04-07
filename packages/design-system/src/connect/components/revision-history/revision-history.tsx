@@ -1,4 +1,4 @@
-import { Pagination, usePagination } from "@powerhousedao/design-system";
+import { Pagination, usePagination } from "#design-system";
 import type { Operation } from "@powerhousedao/shared/document-model";
 import {
   garbageCollect,

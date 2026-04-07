@@ -1,4 +1,4 @@
-import { cn } from "@powerhousedao/design-system";
+import { cn } from "#design-system";
 
 interface InputDiffProps {
   children: React.ReactNode;

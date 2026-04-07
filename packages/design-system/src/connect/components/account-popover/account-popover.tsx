@@ -1,9 +1,5 @@
 import type { ReactNode } from "react";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@powerhousedao/design-system/ui";
+import { Popover, PopoverContent, PopoverTrigger } from "#design-system/ui";
 
 export interface AccountPopoverProps {
   children: ReactNode;

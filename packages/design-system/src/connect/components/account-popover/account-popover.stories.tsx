@@ -1,4 +1,4 @@
-import { Icon } from "@powerhousedao/design-system";
+import { Icon } from "#design-system";
 import type { Meta, StoryObj } from "@storybook/react";
 import { AccountPopoverLogin } from "./account-popover-login.js";
 import { AccountPopoverUser } from "./account-popover-user.js";

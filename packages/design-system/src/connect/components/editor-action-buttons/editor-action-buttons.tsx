@@ -1,4 +1,4 @@
-import { Icon } from "@powerhousedao/design-system";
+import { Icon } from "#design-system";
 
 export type EditorActionButtonsProps = {
   readonly onSwitchboardLinkClick?: (() => void) | undefined;

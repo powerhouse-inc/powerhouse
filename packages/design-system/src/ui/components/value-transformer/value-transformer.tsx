@@ -2,8 +2,8 @@ import type {
   TransformerTrigger,
   TransformerType,
   ValueTransformerProps,
-} from "@powerhousedao/design-system";
-import { deepEqual } from "@powerhousedao/design-system/ui/lib";
+} from "#design-system";
+import { deepEqual } from "#design-system/ui/lib";
 import React, { useEffect } from "react";
 import { useFormContext } from "react-hook-form";
 

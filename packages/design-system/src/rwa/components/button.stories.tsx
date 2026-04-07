@@ -1,4 +1,4 @@
-import { Icon } from "@powerhousedao/design-system";
+import { Icon } from "#design-system";
 import type { Meta, StoryObj } from "@storybook/react";
 import { RWAButton } from "./button.js";
 

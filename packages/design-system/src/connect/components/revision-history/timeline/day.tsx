@@ -1,4 +1,4 @@
-import { Icon } from "@powerhousedao/design-system";
+import { Icon } from "#design-system";
 import { format } from "date-fns";
 
 export function Day(props: { readonly timestampUtcMs: string }) {

@@ -1,4 +1,4 @@
-import { Icon, Modal } from "@powerhousedao/design-system";
+import { Icon, Modal } from "#design-system";
 import type { ComponentPropsWithoutRef } from "react";
 import { memo, useCallback } from "react";
 import { twMerge } from "tailwind-merge";

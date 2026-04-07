@@ -1,4 +1,4 @@
-import { JsonViewer } from "@powerhousedao/design-system/ui/components/json-viewer/json-viewer.js";
+import { JsonViewer } from "#design-system/ui/components/json-viewer/json-viewer.js";
 import { useMemo } from "react";
 import { twMerge } from "tailwind-merge";
 import { TabContent } from "../tabs/tab-content.js";

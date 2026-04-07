@@ -1,4 +1,4 @@
-import { cn, Icon } from "@powerhousedao/design-system";
+import { cn, Icon } from "#design-system";
 import { Command as CommandPrimitive } from "cmdk";
 import React from "react";
 
