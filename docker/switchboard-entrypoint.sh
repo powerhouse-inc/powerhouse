@@ -17,11 +17,22 @@ if [ -n "$PH_PACKAGES" ]; then
     IFS="$OLD_IFS"
 fi
 
+SB_DIST="node_modules/@powerhousedao/switchboard/dist"
+
+# Resolve entry points: new layout uses flat .mjs files, old uses src/*.js
+if [ -f "$SB_DIST/migrate.mjs" ]; then
+    MIGRATE="$SB_DIST/migrate.mjs"
+    ENTRY="$SB_DIST/index.mjs"
+else
+    MIGRATE="$SB_DIST/src/migrate.js"
+    ENTRY="$SB_DIST/src/index.js"
+fi
+
 if [ -n "$PH_REACTOR_DATABASE_URL" ] && [ "$SKIP_DB_MIGRATIONS" != "true" ]; then
     echo "[entrypoint] Running migrations..."
-    node node_modules/@powerhousedao/switchboard/dist/src/migrate.js
+    node "$MIGRATE"
 fi
 
 echo "[entrypoint] Starting switchboard on port ${PORT:-3000}..."
 export PH_SWITCHBOARD_PORT="${PORT:-3000}"
-exec node node_modules/@powerhousedao/switchboard/dist/src/index.js
+exec node "$ENTRY"
