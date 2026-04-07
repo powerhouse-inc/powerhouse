@@ -1,5 +1,5 @@
-import type { IconName, SyncStatus } from "@powerhousedao/design-system";
-import { Icon } from "@powerhousedao/design-system";
+import type { IconName, SyncStatus } from "#design-system";
+import { Icon } from "#design-system";
 import type { ComponentPropsWithoutRef } from "react";
 import { twMerge } from "tailwind-merge";
 import {

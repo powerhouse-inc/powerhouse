@@ -1,7 +1,7 @@
 import type { ComponentPropsWithoutRef } from "react";
 import { useState } from "react";
 
-import { Modal } from "@powerhousedao/design-system";
+import { Modal } from "#design-system";
 import { twMerge } from "tailwind-merge";
 
 const buttonStyles =

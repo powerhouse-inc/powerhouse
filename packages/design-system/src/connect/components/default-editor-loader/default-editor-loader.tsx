@@ -1,4 +1,4 @@
-import type { DivProps } from "@powerhousedao/design-system";
+import type { DivProps } from "#design-system";
 import { AnimatedLoader } from "../animated-loader/animated-loader.js";
 
 type DefaultEditorLoaderProps = DivProps & {

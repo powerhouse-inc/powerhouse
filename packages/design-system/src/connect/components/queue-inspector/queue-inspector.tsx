@@ -1,4 +1,4 @@
-import { Icon } from "@powerhousedao/design-system";
+import { Icon } from "#design-system";
 import type { Job } from "@powerhousedao/reactor-browser";
 import { useCallback, useEffect, useState } from "react";
 import { twMerge } from "tailwind-merge";

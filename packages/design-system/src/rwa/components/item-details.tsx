@@ -1,4 +1,4 @@
-import { Icon } from "@powerhousedao/design-system";
+import { Icon } from "#design-system";
 import { memo, useCallback } from "react";
 import { useDependentItemProps } from "../constants/dependent-items.js";
 import { tableLabels } from "../constants/names.js";

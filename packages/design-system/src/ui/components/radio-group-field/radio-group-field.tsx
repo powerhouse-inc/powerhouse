@@ -1,4 +1,4 @@
-import { cn } from "@powerhousedao/design-system";
+import { cn } from "#design-system";
 import type { HTMLAttributes, Ref } from "react";
 import { forwardRef, useId } from "react";
 import type { FieldErrorHandling, InputBaseProps } from "../../types.js";

@@ -15,6 +15,14 @@
     "access": "public"
   },
   "sideEffects": false,
+  "imports": {
+    "#design-system": "./src/index.ts",
+    "#design-system/ui": "./src/ui/index.ts",
+    "#design-system/ui/lib": "./src/ui/lib/index.ts",
+    "#design-system/ui/*": "./src/ui/*",
+    "#design-system/connect": "./src/connect/index.ts",
+    "#assets/*": "./assets/*"
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -41,17 +49,8 @@
       "types": "./dist/rwa/index.d.ts",
       "import": "./dist/rwa/index.js"
     },
-    "./assets/*.mp4": "./dist/assets/*.mp4",
-    "./assets/*.png": "./dist/assets/*.png",
-    "./assets/*.svg": "./dist/assets/*.svg",
-    "./assets/*.jpg": "./dist/assets/*.jpg",
-    "./assets/*.jpeg": "./dist/assets/*.jpeg",
-    "./assets/*.gif": "./dist/assets/*.gif",
-    "./assets/*.webp": "./dist/assets/*.webp",
-    "./assets/*.avif": "./dist/assets/*.avif",
     "./style.css": "./dist/style.css",
-    "./theme.css": "./theme.css",
-    "./testing": "./dist/ui/components/testing.js"
+    "./theme.css": "./theme.css"
   },
   "scripts": {
     "tsc": "tsc",
@@ -109,14 +108,14 @@
     "tailwindcss": "catalog:",
     "vite": "catalog:",
     "tsdown": "catalog:",
-    "vitest": "catalog:",
-    "@powerhousedao/reactor-browser": "workspace:*"
+    "vitest": "catalog:"
   },
   "peerDependencies": {
     "react": ">=19.0.0",
     "react-dom": ">=19.0.0"
   },
   "dependencies": {
+    "@powerhousedao/reactor-browser": "workspace:*",
     "@powerhousedao/shared": "workspace:*",
     "@radix-ui/react-checkbox": "^1.1.2",
     "@radix-ui/react-dialog": "^1.1.2",

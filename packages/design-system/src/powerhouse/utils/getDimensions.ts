@@ -1,4 +1,4 @@
-import type { Size } from "@powerhousedao/design-system";
+import type { Size } from "#design-system";
 
 type Dimensions =
   | { width?: undefined; height?: undefined }

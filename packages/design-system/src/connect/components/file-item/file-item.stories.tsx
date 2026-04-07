@@ -1,6 +1,5 @@
-import type { Meta, StoryObj } from "@storybook/react";
 import type { FileNode } from "@powerhousedao/shared/document-drive";
-import { documentTypes } from "../../constants/documents.js";
+import type { Meta, StoryObj } from "@storybook/react";
 import { FileItem } from "./file-item.js";
 
 const meta: Meta<typeof FileItem> = {
@@ -31,7 +30,7 @@ export const Default: Story = {
       documentType: "mock",
       parentFolder: "1",
     };
-    const fileNodes = [...documentTypes, "SOME RANDOM DOCUMENT TYPE"].map(
+    const fileNodes = ["DOCUMENT TYPE 1", "DOCUMENT TYPE 2"].map(
       (documentType, index) => ({
         ...node,
         documentType,

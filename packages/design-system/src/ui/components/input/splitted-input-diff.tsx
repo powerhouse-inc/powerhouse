@@ -1,4 +1,4 @@
-import { cn, Icon } from "@powerhousedao/design-system";
+import { cn, Icon } from "#design-system";
 import { useCallback, useState } from "react";
 import { useMediaQuery } from "usehooks-ts";
 import type { WithDifference } from "../../types.js";

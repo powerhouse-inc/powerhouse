@@ -1,4 +1,4 @@
-import { mergeClassNameProps } from "@powerhousedao/design-system";
+import { mergeClassNameProps } from "#design-system";
 
 export type FilterItemType = {
   id: string;

@@ -1,4 +1,4 @@
-import { Icon, SidebarFooter } from "@powerhousedao/design-system";
+import { Icon, SidebarFooter } from "#design-system";
 import type { ComponentProps } from "react";
 import { twMerge } from "tailwind-merge";
 import { SidebarLogin } from "./sidebar-login.js";

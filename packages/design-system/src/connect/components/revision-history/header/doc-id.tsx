@@ -1,4 +1,4 @@
-import { Icon } from "@powerhousedao/design-system";
+import { Icon } from "#design-system";
 import { useCopyToClipboard } from "usehooks-ts";
 
 type Props = {

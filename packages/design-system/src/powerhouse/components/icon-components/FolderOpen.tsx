@@ -1,4 +1,4 @@
-import type { IconComponentProps } from "@powerhousedao/design-system";
+import type { IconComponentProps } from "#design-system";
 export default function FolderOpen(props: IconComponentProps) {
   return (
     <svg {...props} viewBox="0 0 20 19" fill="currentcolor">

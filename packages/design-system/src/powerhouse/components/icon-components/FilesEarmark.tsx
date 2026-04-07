@@ -1,4 +1,4 @@
-import type { IconComponentProps } from "@powerhousedao/design-system";
+import type { IconComponentProps } from "#design-system";
 export default function FilesEarmark(props: IconComponentProps) {
   return (
     <svg {...props} viewBox="0 0 20 20" fill="currentcolor">

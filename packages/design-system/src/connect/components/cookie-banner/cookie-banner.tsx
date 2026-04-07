@@ -1,7 +1,4 @@
-import {
-  mergeClassNameProps,
-  PowerhouseButton,
-} from "@powerhousedao/design-system";
+import { mergeClassNameProps, PowerhouseButton } from "#design-system";
 import { useState } from "react";
 
 export type CookieInput = {

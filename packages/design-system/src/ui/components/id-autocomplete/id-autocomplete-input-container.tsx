@@ -1,6 +1,6 @@
-import type { TransformerType } from "@powerhousedao/design-system";
-import { cn, Icon } from "@powerhousedao/design-system";
-import { sharedValueTransformers } from "@powerhousedao/design-system/ui/lib";
+import type { TransformerType } from "#design-system";
+import { cn, Icon } from "#design-system";
+import { sharedValueTransformers } from "#design-system/ui/lib";
 import { Command as CommandPrimitive } from "cmdk";
 import React, { useMemo, useState } from "react";
 import { useMediaQuery } from "usehooks-ts";

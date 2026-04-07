@@ -1,4 +1,4 @@
-import { Icon } from "@powerhousedao/design-system";
+import { Icon } from "#design-system";
 import { useCallback, useRef } from "react";
 import { Fragment } from "react/jsx-runtime";
 import { columnsByTableName } from "../constants/columns.js";

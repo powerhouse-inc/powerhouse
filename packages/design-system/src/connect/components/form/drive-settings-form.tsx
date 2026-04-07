@@ -1,4 +1,4 @@
-import { Icon, PowerhouseButton } from "@powerhousedao/design-system";
+import { Icon, PowerhouseButton } from "#design-system";
 import type { DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
 import type { SharingType } from "@powerhousedao/shared/document-drive";
 import { useState } from "react";

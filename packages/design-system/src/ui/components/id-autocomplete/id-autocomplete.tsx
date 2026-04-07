@@ -1,6 +1,6 @@
-import type { TransformerType } from "@powerhousedao/design-system";
-import { cn } from "@powerhousedao/design-system";
-import { sharedValueTransformers } from "@powerhousedao/design-system/ui/lib";
+import type { TransformerType } from "#design-system";
+import { cn } from "#design-system";
+import { sharedValueTransformers } from "#design-system/ui/lib";
 import { Command } from "cmdk";
 import React, { useId, useMemo, useRef } from "react";
 import { FormDescription } from "../form-description/form-description.js";

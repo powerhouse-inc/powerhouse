@@ -1,4 +1,4 @@
-import { Icon } from "@powerhousedao/design-system";
+import { Icon } from "#design-system";
 import { useState } from "react";
 import { twMerge } from "tailwind-merge";
 import { FilterBar } from "./filter-bar.js";

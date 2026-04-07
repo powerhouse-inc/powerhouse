@@ -1,4 +1,4 @@
-import { Icon } from "@powerhousedao/design-system";
+import { Icon } from "#design-system";
 import { useCallback, useMemo, useState } from "react";
 import { twMerge } from "tailwind-merge";
 import { ConnectSelect } from "../../select/select.js";

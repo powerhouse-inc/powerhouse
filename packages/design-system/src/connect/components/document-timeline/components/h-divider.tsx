@@ -1,4 +1,4 @@
-import { Icon } from "@powerhousedao/design-system";
+import { Icon } from "#design-system";
 import { formatDistanceToNow } from "date-fns";
 import { useEffect, useState } from "react";
 import { twMerge } from "tailwind-merge";

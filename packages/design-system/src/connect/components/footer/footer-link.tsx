@@ -1,4 +1,4 @@
-import { mergeClassNameProps } from "@powerhousedao/design-system";
+import { mergeClassNameProps } from "#design-system";
 
 type FooterLinkProps<E extends React.ElementType> = {
   readonly as?: E;

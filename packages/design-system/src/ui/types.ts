@@ -38,7 +38,7 @@ export interface FieldErrorHandling {
   validators?: ValidatorHandler[] | ValidatorHandler;
 }
 
-import type { IconName } from "@powerhousedao/design-system";
+import type { IconName } from "#design-system";
 
 export interface Currency {
   ticker: string;

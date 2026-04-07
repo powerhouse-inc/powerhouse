@@ -1,4 +1,4 @@
-import { Icon } from "@powerhousedao/design-system";
+import { Icon } from "#design-system";
 import type { Control, FieldErrors, Path } from "react-hook-form";
 import { useFieldArray } from "react-hook-form";
 import { twMerge } from "tailwind-merge";

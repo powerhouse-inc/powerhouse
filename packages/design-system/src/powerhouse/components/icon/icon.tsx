@@ -1,9 +1,4 @@
-import type {
-  Color,
-  IconComponentProps,
-  IconName,
-  Size,
-} from "@powerhousedao/design-system";
+import type { Color, IconComponentProps, IconName, Size } from "#design-system";
 import { Suspense } from "react";
 import { getDimensions } from "../../utils/getDimensions.js";
 import { iconComponents } from "../icon-components/index.js";

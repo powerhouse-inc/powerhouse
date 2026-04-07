@@ -1,5 +1,5 @@
-import type { DivProps, DriveLocation } from "@powerhousedao/design-system";
-import { Icon } from "@powerhousedao/design-system";
+import type { DivProps, DriveLocation } from "#design-system";
+import { Icon } from "#design-system";
 import { twMerge } from "tailwind-merge";
 
 type DriveAppProps = DivProps & {

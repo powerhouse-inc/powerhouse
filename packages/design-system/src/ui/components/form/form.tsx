@@ -1,9 +1,5 @@
-import type { ValueCast } from "@powerhousedao/design-system/ui/lib";
-import {
-  castValue,
-  deepEqual,
-  isEmpty,
-} from "@powerhousedao/design-system/ui/lib";
+import type { ValueCast } from "#design-system/ui/lib";
+import { castValue, deepEqual, isEmpty } from "#design-system/ui/lib";
 import {
   forwardRef,
   useCallback,

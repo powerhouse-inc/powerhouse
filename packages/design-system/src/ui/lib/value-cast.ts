@@ -1,4 +1,4 @@
-import type { AmountValue } from "@powerhousedao/design-system";
+import type { AmountValue } from "#design-system";
 import { format, parse } from "date-fns";
 import { getDateFromValue } from "./date-picker.js";
 import {

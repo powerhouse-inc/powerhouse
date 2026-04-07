@@ -1,4 +1,4 @@
-import { cn, Icon } from "@powerhousedao/design-system";
+import { cn, Icon } from "#design-system";
 import { useCommandState } from "cmdk";
 import React, { useEffect } from "react";
 import {

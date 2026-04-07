@@ -1,4 +1,4 @@
-import { Icon } from "@powerhousedao/design-system";
+import { Icon } from "#design-system";
 import type { TimelineBarItem } from "@powerhousedao/reactor-browser";
 import { format, parseISO } from "date-fns";
 import { useState } from "react";

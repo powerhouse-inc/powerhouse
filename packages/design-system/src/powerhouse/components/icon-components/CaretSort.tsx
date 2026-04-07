@@ -1,4 +1,4 @@
-import type { IconComponentProps } from "@powerhousedao/design-system";
+import type { IconComponentProps } from "#design-system";
 export default function CaretSort(props: IconComponentProps) {
   return (
     <svg {...props} viewBox="0 0 15 16" fill="currentcolor">

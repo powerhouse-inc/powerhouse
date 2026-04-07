@@ -14,4 +14,14 @@ export default defineConfig({
       "react-dom/client",
     ],
   },
+  loader: {
+    ".png": "dataurl",
+    ".jpg": "dataurl",
+    ".jpeg": "dataurl",
+    ".gif": "dataurl",
+    ".webp": "dataurl",
+    ".avif": "dataurl",
+    ".svg": "dataurl",
+    ".mp4": "dataurl",
+  },
 });

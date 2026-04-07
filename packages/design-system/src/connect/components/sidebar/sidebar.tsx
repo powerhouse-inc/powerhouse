@@ -1,4 +1,4 @@
-import { Sidebar, SidebarPanel } from "@powerhousedao/design-system";
+import { Sidebar, SidebarPanel } from "#design-system";
 import type { HTMLAttributes } from "react";
 import type { ConnectSidebarFooterProps } from "./sidebar-footer.js";
 import { ConnectSidebarFooter } from "./sidebar-footer.js";

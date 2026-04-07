@@ -1,4 +1,4 @@
-import type { IconName } from "@powerhousedao/design-system";
+import type { IconName } from "#design-system";
 import type React from "react";
 import type { InputBaseProps } from "../../types.js";
 

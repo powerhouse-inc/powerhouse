@@ -1,7 +1,7 @@
 import type { ComponentPropsWithoutRef } from "react";
 
-import type { DivProps } from "@powerhousedao/design-system";
-import { mergeClassNameProps, Modal } from "@powerhousedao/design-system";
+import type { DivProps } from "#design-system";
+import { mergeClassNameProps, Modal } from "#design-system";
 import { useEffect, useRef, useState } from "react";
 import { twMerge } from "tailwind-merge";
 

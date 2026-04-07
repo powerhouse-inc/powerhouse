@@ -1,7 +1,4 @@
-import {
-  PowerhouseButton,
-  type AppOptions,
-} from "@powerhousedao/design-system";
+import { PowerhouseButton, type AppOptions } from "#design-system";
 import type { SubmitHandler } from "react-hook-form";
 import { useForm } from "react-hook-form";
 import { FormInput } from "../form-input/form-input.js";
