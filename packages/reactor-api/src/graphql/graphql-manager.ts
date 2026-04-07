@@ -134,6 +134,11 @@ export class GraphQLManager {
     if (this.authConfig) {
       this.authService = new AuthService(this.authConfig);
     }
+
+    // Each subscription-enabled subgraph adds listeners to the shared wsServer
+    // via graphql-ws's useServer(). The handler cache bounds the count, so
+    // unlimited is safe here.
+    this.wsServer.setMaxListeners(0);
   }
 
   async init(
@@ -529,6 +534,14 @@ export class GraphQLManager {
 
           if (subgraph.hasSubscriptions) {
             try {
+              const existingDisposer =
+                this.subgraphWsDisposers.get(subgraphPath);
+              if (existingDisposer) {
+                this.logger.warn(
+                  "Overwriting existing WebSocket disposer for subgraph at path @path",
+                  subgraphPath,
+                );
+              }
               const wsDisposer = this.gatewayAdapter.attachWebSocket(
                 this.wsServer,
                 schema,

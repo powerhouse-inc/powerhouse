@@ -138,6 +138,7 @@ function makeHarness(options: HarnessOptions = {}) {
   const httpServer = {} as http.Server;
   const wsServer = {
     close: vi.fn((cb?: () => void) => cb?.()),
+    setMaxListeners: vi.fn(),
   } as unknown as WebSocketServer;
 
   const manager = new GraphQLManager(
