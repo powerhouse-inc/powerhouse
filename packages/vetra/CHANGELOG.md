@@ -1,3 +1,13 @@
+## 6.0.0-dev.159 (2026-04-07)
+
+### 🩹 Fixes
+
+- support both old and new switchboard dist layout in entrypoint ([80bfba241](https://github.com/powerhouse-inc/powerhouse/commit/80bfba241))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 6.0.0-dev.158 (2026-04-07)
 
 This was a version bump only for @powerhousedao/vetra to align it with other projects, there were no code changes.
