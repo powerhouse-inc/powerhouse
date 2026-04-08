@@ -35,7 +35,7 @@ export function phPackagesPlugin(options: PhPackagesPluginOptions): Plugin {
             return true;
           }
           const importer = mod.importers.values().next();
-          return !importer.value?.file?.endsWith("style.css");
+          return !importer.value?.file?.endsWith(".css");
         });
       },
     },

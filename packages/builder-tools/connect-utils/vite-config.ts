@@ -15,10 +15,8 @@ import {
 } from "vite";
 import { createHtmlPlugin } from "vite-plugin-html";
 import type { IConnectOptions } from "./types.js";
+import { connectFaviconPlugin } from "./vite-plugins/favicon.js";
 import { phPackagesPlugin } from "./vite-plugins/ph-packages.js";
-
-const isLocalDev = true;
-const esmShUrl = isLocalDev ? "http://localhost:8080" : "https://esm.sh";
 
 export function getConnectHtmlTags(
   options: {
@@ -295,6 +293,7 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
       // NOTE: Do NOT also list these in build.rolldownOptions.external — overlapping
       // entries prevent the plugin from transforming require() calls.
       esmExternalRequirePlugin({ external: reactExternal }),
+      connectFaviconPlugin(),
     ],
     worker: {
       format: "es",
