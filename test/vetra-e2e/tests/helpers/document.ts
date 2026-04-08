@@ -100,7 +100,11 @@ export async function navigateToVetraDrive(
 
   // Wait for Vetra drive card to appear (default drives load asynchronously)
   // Look for the h3 heading with "Vetra" which is the drive title
-  const vetraDrive = page.getByRole("heading", { name: "Vetra", level: 3 });
+  const vetraDrive = page.getByRole("heading", {
+    name: "Vetra",
+    level: 3,
+    exact: true,
+  });
   await expect(vetraDrive).toBeVisible({ timeout: 2 * 60 * 60 * 1000 });
   await vetraDrive.click();
 

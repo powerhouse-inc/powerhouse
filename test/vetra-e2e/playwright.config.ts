@@ -73,7 +73,7 @@ export default defineConfig({
 
   /* Run your local dev server before starting the tests */
   webServer: {
-    command: "pnpm vetra",
+    command: "pnpm vetra --watch",
     url: CONNECT_URL,
     stderr: "pipe",
     stdout: "pipe",

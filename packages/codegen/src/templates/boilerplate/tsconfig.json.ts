@@ -36,7 +36,7 @@ export const tsConfigTemplate = json`
     "moduleDetection": "force",
     "target": "esnext",
     "jsx": "react-jsx",
-    "types": ["node", "vitest/globals"],
+    "types": ["node", "vite/client", "vitest/globals"],
     "lib": ["ESNext", "dom", "dom.iterable"],
     "declaration": true,
     "declarationMap": true,

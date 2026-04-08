@@ -2,7 +2,7 @@
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
     "outDir": "./dist",
-    "types": ["node", "vitest/globals"],
+    "types": ["node", "vite/client", "vitest/globals"],
     "lib": ["ESNext", "dom", "dom.iterable"],
     "paths": {
       "@powerhousedao/vetra/document-models": ["./document-models/index.ts"],
@@ -16,7 +16,7 @@
     }
   },
   "include": ["**/*", "./powerhouse.manifest.json"],
-  "exclude": ["dist", "node_modules", ".ph", "main.tsx", "index.html"],
+  "exclude": ["dist", "node_modules", ".ph", "index.html"],
   "references": [
     {
       "path": "../builder-tools"

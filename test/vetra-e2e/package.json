@@ -69,6 +69,7 @@
   "devDependencies": {
     "@powerhousedao/ph-cli": "workspace:*",
     "@powerhousedao/e2e-utils": "workspace:*",
+    "vite": "catalog:",
     "vitest": "catalog:",
     "tailwindcss": "catalog:",
     "@tailwindcss/cli": "catalog:",

@@ -25,6 +25,20 @@ export function phPackagesPlugin(options: PhPackagesPluginOptions): Plugin {
         next();
       });
     },
+    hotUpdate: {
+      order: "pre",
+      handler(ctx) {
+        // filter out modules only imported by "style.css"
+        // to avoid page reloads triggered by tailwind
+        return ctx.modules.filter((mod) => {
+          if (mod.importers.size > 1) {
+            return true;
+          }
+          const importer = mod.importers.values().next();
+          return !importer.value?.file?.endsWith("style.css");
+        });
+      },
+    },
     generateBundle() {
       this.emitFile({
         type: "asset",
