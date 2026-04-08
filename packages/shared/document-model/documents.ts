@@ -1,4 +1,4 @@
-import stringifyJson, { stringify } from "safe-stable-stringify";
+import { stringify } from "safe-stable-stringify";
 import type { Action } from "./actions.js";
 import { hashBrowser } from "./crypto.js";
 import { HashMismatchError } from "./errors.js";
@@ -194,7 +194,7 @@ export function hashDocumentStateForScope(
   },
   scope = "global",
 ) {
-  const stateString = stringifyJson(document.state[scope] || "");
+  const stateString = stringify(document.state[scope] || "");
   return hashBrowser(stateString);
 }
 

@@ -57,6 +57,7 @@ export const POWERHOUSE_GLOBAL_DIR = join(HOME_DIR, PH_GLOBAL_DIR_NAME);
 export const VERSIONED_DEPENDENCIES = [
   "document-model",
   "@powerhousedao/design-system",
+  "@powerhousedao/reactor-api",
   "@powerhousedao/reactor-browser",
   "@powerhousedao/connect",
   "@powerhousedao/analytics-engine-core",

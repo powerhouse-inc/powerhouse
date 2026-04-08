@@ -271,6 +271,13 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
     customLogger,
     envPrefix: ["PH_CONNECT_"],
     optimizeDeps: {
+      include: [
+        "document-model",
+        "zod",
+        "@powerhousedao/design-system/connect",
+        "@powerhousedao/reactor-browser",
+        "@powerhousedao/document-engineering",
+      ],
       exclude: ["@electric-sql/pglite", "@electric-sql/pglite-tools"],
     },
     plugins: [

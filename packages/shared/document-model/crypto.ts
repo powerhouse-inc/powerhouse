@@ -1,4 +1,4 @@
-import stringifyJson from "safe-stable-stringify";
+import { stringify as stringifyJson } from "safe-stable-stringify";
 import { createHash as createSha1Hash } from "sha1-uint8array";
 import type { ActionSignatureContext } from "./types.js";
 
