@@ -1,6 +1,6 @@
+import { initArgs } from "@powerhousedao/shared/clis";
 import { command } from "cmd-ts";
 import { createGlobalProject } from "../utils/create-global-project.js";
-import { initArgs } from "./init.js";
 
 export const setupGlobals = command({
   name: "setup-globals",

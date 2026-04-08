@@ -8,6 +8,7 @@ import type {
   studio,
 } from "./commands/connect.js";
 import type { generate } from "./commands/generate.js";
+import type { init } from "./commands/init.js";
 import type { inspect } from "./commands/inspect.js";
 import type { install } from "./commands/install.js";
 import type { list } from "./commands/list.js";
@@ -21,6 +22,7 @@ export type CommandActionType<Args extends any[], Return = void> = (
   ...args: Args
 ) => Return | Promise<Return>;
 
+export type InitArgs = ParsedCmdResult<typeof init>;
 export type GenerateArgs = ParsedCmdResult<typeof generate>;
 export type VetraArgs = ParsedCmdResult<typeof vetra>;
 export type MigrateArgs = ParsedCmdResult<typeof migrate>;

@@ -3,6 +3,7 @@ export * from "./args/common.js";
 export * from "./args/connect.js";
 export * from "./args/generate.js";
 export * from "./args/help.js";
+export * from "./args/init.js";
 export * from "./args/inspect.js";
 export * from "./args/install.js";
 export * from "./args/list.js";
