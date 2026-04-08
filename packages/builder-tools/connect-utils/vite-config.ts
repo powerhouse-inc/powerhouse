@@ -259,6 +259,11 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
   const config: InlineConfig = {
     configFile: false,
     mode,
+    server: {
+      watch: {
+        ignored: ["**/backup-documents/**", "**/.ph/**"],
+      },
+    },
     resolve: {
       tsconfigPaths: true,
     },
@@ -271,6 +276,12 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
       exclude: ["@electric-sql/pglite", "@electric-sql/pglite-tools"],
     },
     plugins: [
+      // phPackagesPlugin must be registered before tailwind so its hotUpdate
+      // hook runs first and can suppress HMR updates for codegen-generated
+      // files, preventing tailwind from triggering full page reloads.
+      phPackagesPlugin({
+        packages: phPackages,
+      }),
       ...plugins,
       // Externalize React so both Connect and dynamically loaded registry
       // packages share the same React instance via the import map in index.html.
@@ -284,9 +295,6 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
       // NOTE: Do NOT also list these in build.rolldownOptions.external — overlapping
       // entries prevent the plugin from transforming require() calls.
       esmExternalRequirePlugin({ external: reactExternal }),
-      phPackagesPlugin({
-        packages: phPackages,
-      }),
     ],
     worker: {
       format: "es",

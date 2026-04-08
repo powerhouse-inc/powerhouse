@@ -64,17 +64,22 @@ export class BrowserPackageManager implements IPackageManager {
     const vetraPackageWithMeta = this.#loadVetraPackage();
     this.#registerPackage(vetraPackageWithMeta);
     if (localPackage) {
-      this.#localPackage = localPackage;
-      this.#registerPackage({
-        name: LOCAL_PACKAGE_NAME,
-        stylesheetUrl: null,
-        importUrl: null,
-        loadedPackage: localPackage,
-      });
+      this.updateLocalPackage(localPackage);
     }
     for (const packageName of this.#storage.keys()) {
       await this.addPackage(packageName);
     }
+  }
+
+  updateLocalPackage(pkg: DocumentModelLib) {
+    console.debug("Updating local package:", pkg);
+    this.#localPackage = pkg;
+    this.#registerPackage({
+      name: LOCAL_PACKAGE_NAME,
+      stylesheetUrl: null,
+      importUrl: null,
+      loadedPackage: pkg,
+    });
   }
 
   get packages() {

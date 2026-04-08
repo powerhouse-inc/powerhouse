@@ -25,6 +25,7 @@ export interface IPackageManager extends IDocumentModelLoader {
     packageNames: string[],
   ): Promise<PackageManagerInstallResult[]> | PackageManagerInstallResult[];
   removePackage(name: string): void;
+  updateLocalPackage(pkg: DocumentModelLib): void;
   subscribe(handler: IPackagesListener): IPackageListerUnsubscribe;
   getPackageSource: (packageName: string) => RegistryPackageSource | null;
 }

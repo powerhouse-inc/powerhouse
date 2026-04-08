@@ -45,6 +45,9 @@ function updateReactorClientDocumentModels(packages: DocumentModelLib[]) {
       registry.registerModules(module);
     } catch (error) {
       if (DuplicateModuleError.isError(error)) {
+        const documentType = module.documentModel.global.id;
+        registry.unregisterModules(documentType);
+        registry.registerModules(module);
         continue;
       }
       throw error;

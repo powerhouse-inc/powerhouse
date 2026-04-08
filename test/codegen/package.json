@@ -56,6 +56,7 @@
     "ts-morph": "catalog:",
     "tsx": "catalog:",
     "vite-tsconfig-paths": "catalog:",
+    "vite": "catalog:",
     "vitest": "catalog:",
     "write-package": "catalog:",
     "zod": "catalog:"

@@ -89,6 +89,7 @@
     "@types/react-dom": "catalog:",
     "@vitejs/plugin-react": "catalog:",
     "tailwindcss": "catalog:",
+    "vite": "catalog:",
     "vitest": "catalog:",
     "tsdown": "catalog:"
   },

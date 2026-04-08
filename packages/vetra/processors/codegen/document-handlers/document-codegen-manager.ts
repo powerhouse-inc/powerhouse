@@ -4,7 +4,7 @@ import { logger } from "../logger.js";
 import type { BaseDocumentGen } from "./base-document-gen.js";
 import type { CodegenInput, Config } from "./types.js";
 
-const DEFAULT_DEBOUNCE_TIME = 3000; // 3 seconds
+const DEFAULT_DEBOUNCE_TIME = 1000; // wait 1 second between codegen calls
 
 /**
  * Manager class responsible for routing documents to the correct generator

@@ -3,6 +3,7 @@
   "compilerOptions": {
     "outDir": "./dist",
     "resolveJsonModule": true,
+    "types": ["node", "vite/client", "vitest/globals"],
     "paths": {
       "document-models": [
         "./document-models/index.ts"

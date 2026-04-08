@@ -87,6 +87,7 @@ const devDependenciesTemplate = (versionedDevDependencies: string[]) =>
   "tailwindcss": "^4.1.16",
   "typescript": "^5.9.3",
   "typescript-eslint": "^8.46.2",
+  "vite": "8.0.2",
   "vitest": "4.1.1",
   "@vitejs/plugin-react": "6.0.1",
   "vite-tsconfig-paths": "6.1.1"

@@ -5,7 +5,8 @@
     "module": "nodenext",
     "target": "esnext",
     "types": [
-      "node"
+      "node",
+      "vite/client"
     ],
     "lib": [
       "ESNext",
@@ -19,7 +20,34 @@
     "verbatimModuleSyntax": true,
     "isolatedModules": true,
     "moduleDetection": "force",
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "paths": {
+      "document-models": [
+        "./document-models/index.ts"
+      ],
+      "document-models/*": [
+        "./document-models/*/index.ts"
+      ],
+      "editors": [
+        "./editors/index.ts"
+      ],
+      "editors/*": [
+        "./editors/*/index.ts"
+      ],
+      "processors": [
+        "./processors/index.ts"
+      ],
+      "processors/*": [
+        "./processors/*/index.ts"
+      ],
+      "subgraphs": [
+        "./subgraphs/index.ts"
+      ],
+      "subgraphs/*": [
+        "./subgraphs/*/index.ts"
+      ]
+    }
   },
   "include": [
     "**/*",
