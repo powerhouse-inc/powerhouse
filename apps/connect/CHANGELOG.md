@@ -1,3 +1,13 @@
+## 6.0.0-dev.160 (2026-04-08)
+
+### 🩹 Fixes
+
+- **design-system:** fixed build and static assets ([fbcfd28d0](https://github.com/powerhouse-inc/powerhouse/commit/fbcfd28d0))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.0.0-dev.159 (2026-04-07)
 
 ### 🩹 Fixes
