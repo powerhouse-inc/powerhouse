@@ -1,3 +1,13 @@
+## 6.0.0-dev.161 (2026-04-08)
+
+### 🩹 Fixes
+
+- **connect:** prevent HMR page reloads and support hot module re-injection ([26c8c79b9](https://github.com/powerhouse-inc/powerhouse/commit/26c8c79b9))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.0.0-dev.160 (2026-04-08)
 
 ### 🩹 Fixes
