@@ -1,189 +1,74 @@
-import { createProject } from "@powerhousedao/codegen";
 import {
-  debugArgs,
   handleMutuallyExclusiveOptions,
-  packageManagerArgs,
+  initArgs,
   parsePackageManager,
   parseTag,
 } from "@powerhousedao/shared/clis";
-import chalk from "chalk";
-import { kebabCase } from "change-case";
-import {
-  boolean,
-  command,
-  flag,
-  oneOf,
-  option,
-  optional,
-  positional,
-  string,
-} from "cmd-ts";
-import enquirer from "enquirer";
-import { clean, valid } from "semver";
-import { setupRemoteDrive } from "../utils/validate-remote-drive.js";
+import { command } from "cmd-ts";
+import { execSync } from "node:child_process";
+import { resolveCommand } from "package-manager-detector";
 
-export const initArgs = {
-  namePositional: positional({
-    type: optional(string),
-    displayName: "name",
-    description:
-      "The name of your project. A new directory will be created in your current directory with this name.",
-  }),
-  nameOption: option({
-    type: optional(string),
-    long: "name",
-    short: "n",
-    description:
-      "The name of your project. A new directory will be created in your current directory with this name.",
-  }),
-  ...packageManagerArgs,
-  tag: option({
-    type: optional(oneOf(["latest", "staging", "dev"])),
-    long: "tag",
-    short: "t",
-    description: `Specify the release tag to use for your project. Can be one of: "latest", "staging", or "dev".`,
-  }),
-  version: option({
-    type: optional(string),
-    long: "version",
-    short: "v",
-    description:
-      "Specify the exact semver release version to use for your project.",
-  }),
-  dev: flag({
-    type: optional(boolean),
-    long: "dev",
-    short: "d",
-    description: "Use the `dev` release tag.",
-  }),
-  staging: flag({
-    type: optional(boolean),
-    long: "staging",
-    short: "s",
-    description: "Use the `staging` release tag.",
-  }),
-  remoteDrive: option({
-    type: optional(string),
-    long: "remote-drive",
-    short: "r",
-    description: "Remote drive identifier.",
-  }),
-  ...debugArgs,
-};
-
+/**
+ * Delegates `ph init` to the appropriate version of `@powerhousedao/ph-cli`.
+ * This ensures the init logic (boilerplate, codegen) always matches the
+ * ph-cli version being installed in the new project.
+ */
 export const init = command({
   name: "init",
   description: "Initialize a new project",
   args: initArgs,
-  handler: async (args) => {
-    const {
-      namePositional,
-      nameOption,
-      packageManager,
-      npm,
-      pnpm,
-      yarn,
-      bun,
-      tag,
-      version,
-      dev,
-      staging,
-      remoteDrive,
-      debug,
-    } = args;
-    if (debug) {
+  handler: (args) => {
+    if (args.debug) {
       console.log({ args });
-    }
-    let name = namePositional ?? nameOption;
-    if (!name) {
-      const { prompt } = enquirer;
-
-      const result = await prompt<{ name: string }>([
-        {
-          type: "input",
-          name: "name",
-          message: "What is the project name?",
-          required: true,
-          result: (value) => kebabCase(value),
-        },
-      ]);
-      name = result.name;
-    }
-    if (!name) {
-      throw new Error("You must provide a name for your project.");
-    }
-
-    if (version !== undefined && !valid(clean(version))) {
-      throw new Error(`Invalid version: ${version}`);
     }
 
     handleMutuallyExclusiveOptions(
       {
-        tag,
-        version,
-        dev,
-        staging,
+        tag: args.tag,
+        version: args.version,
+        dev: args.dev,
+        staging: args.staging,
       },
       "versioning strategy",
     );
 
     handleMutuallyExclusiveOptions(
       {
-        npm,
-        pnpm,
-        yarn,
-        bun,
-        packageManager,
+        npm: args.npm,
+        pnpm: args.pnpm,
+        yarn: args.yarn,
+        bun: args.bun,
+        packageManager: args.packageManager,
       },
       "package manager",
     );
 
-    const parsedPackageManager =
-      parsePackageManager({
-        npm,
-        pnpm,
-        yarn,
-        bun,
-        packageManager,
-      }) ?? "npm";
+    const phCliVersion = args.version ?? parseTag(args);
+    const pm = parsePackageManager(args) ?? "npm";
 
-    const parsedTag = parseTag({
-      tag,
-      dev,
-      staging,
-    });
+    // Forward original args as-is to ph-cli
+    const forwardedArgs = process.argv.slice(3);
+    const phCliPackage = `@powerhousedao/ph-cli@${phCliVersion}`;
+    const resolved = resolveCommand(pm, "execute", [
+      phCliPackage,
+      "init",
+      ...forwardedArgs,
+    ]);
 
-    try {
-      if (remoteDrive) {
-        console.log(chalk.blue("\n⏳ Setting up remote drive...\n"));
-        await setupRemoteDrive(remoteDrive);
-        console.log(chalk.green("\n✅ Remote drive set up."));
-      }
-
-      console.log(chalk.bold("\n🚀 Initializing a new project...\n"));
-      await createProject({
-        ...args,
-        name,
-        packageManager: parsedPackageManager,
-        tag: parsedTag,
-      });
-
-      if (remoteDrive) {
-        console.log();
-        console.log("To link your project to GitHub:");
-        console.log();
-        console.log("  1. Create a new repository on GitHub");
-        console.log(`  2. cd ${name}`);
-        console.log("  3. git add . && git commit -m 'Initial commit'");
-        console.log("  4. git remote add origin <your-github-url>");
-        console.log(`  5. git push -u origin main`);
-        console.log();
-      }
-    } catch (error) {
-      console.error("\n❌ Failed to initialize project: \n");
-      throw error;
+    if (!resolved) {
+      throw new Error(
+        `Could not resolve execute command for package manager "${pm}".`,
+      );
     }
 
+    const { command: cmd, args: cmdArgs } = resolved;
+    const fullCmd = `${cmd} ${cmdArgs.join(" ")}`;
+
+    if (args.debug) {
+      console.log(">>> Delegating to ph-cli:", fullCmd);
+    }
+
+    execSync(fullCmd, { stdio: "inherit" });
     process.exit(0);
   },
 });
