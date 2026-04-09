@@ -203,6 +203,43 @@ describe("KyselyAttachmentStore", () => {
     });
   });
 
+  describe("stat", () => {
+    it("returns header for available attachment", async () => {
+      await store.put(TEST_HASH, TEST_METADATA, streamFromString(TEST_CONTENT));
+      const header = await store.stat(TEST_HASH);
+      expect(header.hash).toBe(TEST_HASH);
+      expect(header.mimeType).toBe(TEST_METADATA.mimeType);
+      expect(header.fileName).toBe(TEST_METADATA.fileName);
+      expect(header.sizeBytes).toBe(TEST_METADATA.sizeBytes);
+      expect(header.status).toBe("available");
+    });
+
+    it("returns header for evicted attachment", async () => {
+      await store.put(TEST_HASH, TEST_METADATA, streamFromString(TEST_CONTENT));
+      await store.evict(TEST_HASH);
+      const header = await store.stat(TEST_HASH);
+      expect(header.hash).toBe(TEST_HASH);
+      expect(header.status).toBe("evicted");
+    });
+
+    it("does not update lastAccessedAtUtc", async () => {
+      await store.put(TEST_HASH, TEST_METADATA, streamFromString(TEST_CONTENT));
+      const before = await store.stat(TEST_HASH);
+
+      // Small delay to ensure timestamps would differ if updated
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      const after = await store.stat(TEST_HASH);
+      expect(after.lastAccessedAtUtc).toBe(before.lastAccessedAtUtc);
+    });
+
+    it("throws AttachmentNotFound for unknown hash", async () => {
+      await expect(store.stat("nonexistent")).rejects.toThrow(
+        AttachmentNotFound,
+      );
+    });
+  });
+
   describe("evict", () => {
     it("sets status to evicted and deletes bytes from disk", async () => {
       await store.put(TEST_HASH, TEST_METADATA, streamFromString(TEST_CONTENT));

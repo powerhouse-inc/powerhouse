@@ -13,10 +13,22 @@ export interface AttachmentTable {
   last_accessed_at_utc: string;
 }
 
+export interface AttachmentReservationTable {
+  reservation_id: string;
+  mime_type: string;
+  file_name: string;
+  extension: string | null;
+  created_at_utc: string;
+}
+
 export interface AttachmentDatabase {
   attachment: AttachmentTable;
+  attachment_reservation: AttachmentReservationTable;
 }
 
 export type AttachmentRow = Selectable<AttachmentTable>;
 export type InsertableAttachment = Insertable<AttachmentTable>;
 export type UpdateableAttachment = Updateable<AttachmentTable>;
+
+export type ReservationRow = Selectable<AttachmentReservationTable>;
+export type InsertableReservation = Insertable<AttachmentReservationTable>;

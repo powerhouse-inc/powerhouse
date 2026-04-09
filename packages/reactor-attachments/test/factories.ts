@@ -7,8 +7,14 @@ import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
 import { vi } from "vitest";
 import type { Mock } from "vitest";
-import type { IAttachmentTransport } from "../src/interfaces.js";
+import type {
+  IAttachmentStore,
+  IAttachmentTransport,
+  IAttachmentUploadFactory,
+  IReservationStore,
+} from "../src/interfaces.js";
 import { KyselyAttachmentStore } from "../src/storage/kysely/attachment-store.js";
+import { KyselyReservationStore } from "../src/storage/kysely/reservation-store.js";
 import type { AttachmentDatabase } from "../src/storage/kysely/types.js";
 import {
   runAttachmentMigrations,
@@ -32,14 +38,62 @@ export function createMockTransport(
   } as MockTransport;
 }
 
-export async function createTestAttachmentStore(
-  transportOverrides: Partial<IAttachmentTransport> = {},
-): Promise<{
+export type MockStore = IAttachmentStore & {
+  stat: Mock;
+  has: Mock;
+  get: Mock;
+  put: Mock;
+  evict: Mock;
+  storageUsed: Mock;
+};
+
+export function createMockStore(
+  overrides: Partial<IAttachmentStore> = {},
+): MockStore {
+  return {
+    stat: vi.fn(),
+    has: vi.fn().mockResolvedValue(false),
+    get: vi.fn(),
+    put: vi.fn().mockResolvedValue(undefined),
+    evict: vi.fn().mockResolvedValue(undefined),
+    storageUsed: vi.fn().mockResolvedValue(0),
+    ...overrides,
+  } as MockStore;
+}
+
+export type MockReservationStore = IReservationStore & {
+  create: Mock;
+  get: Mock;
+  delete: Mock;
+};
+
+export function createMockReservationStore(
+  overrides: Partial<IReservationStore> = {},
+): MockReservationStore {
+  return {
+    create: vi.fn(),
+    get: vi.fn(),
+    delete: vi.fn().mockResolvedValue(undefined),
+    ...overrides,
+  } as MockReservationStore;
+}
+
+export type MockUploadFactory = IAttachmentUploadFactory & {
+  createUpload: Mock;
+};
+
+export function createMockUploadFactory(): MockUploadFactory {
+  return {
+    createUpload: vi.fn().mockReturnValue({
+      reservationId: "mock-reservation-id",
+      send: vi.fn(),
+    }),
+  } as MockUploadFactory;
+}
+
+async function createTestDb(): Promise<{
+  baseDb: Kysely<AttachmentDatabase>;
   db: Kysely<AttachmentDatabase>;
-  store: KyselyAttachmentStore;
-  transport: MockTransport;
-  storagePath: string;
-  cleanup: () => Promise<void>;
 }> {
   const baseDb = new Kysely<AttachmentDatabase>({
     dialect: new PGliteDialect(new PGlite()),
@@ -51,16 +105,46 @@ export async function createTestAttachmentStore(
   }
 
   const db = baseDb.withSchema(ATTACHMENT_SCHEMA) as Kysely<AttachmentDatabase>;
+  return { baseDb, db };
+}
+
+export async function createTestAttachmentStore(
+  transportOverrides: Partial<IAttachmentTransport> = {},
+): Promise<{
+  db: Kysely<AttachmentDatabase>;
+  store: KyselyAttachmentStore;
+  reservationStore: KyselyReservationStore;
+  transport: MockTransport;
+  storagePath: string;
+  cleanup: () => Promise<void>;
+}> {
+  const { baseDb, db } = await createTestDb();
   const storagePath = await mkdtemp(join(tmpdir(), "attachment-test-"));
   const transport = createMockTransport(transportOverrides);
   const store = new KyselyAttachmentStore(db, transport, storagePath);
+  const reservationStore = new KyselyReservationStore(db);
 
   const cleanup = async () => {
     await baseDb.destroy();
     await rm(storagePath, { recursive: true, force: true });
   };
 
-  return { db, store, transport, storagePath, cleanup };
+  return { db, store, reservationStore, transport, storagePath, cleanup };
+}
+
+export async function createTestReservationStore(): Promise<{
+  db: Kysely<AttachmentDatabase>;
+  reservationStore: KyselyReservationStore;
+  cleanup: () => Promise<void>;
+}> {
+  const { baseDb, db } = await createTestDb();
+  const reservationStore = new KyselyReservationStore(db);
+
+  const cleanup = async () => {
+    await baseDb.destroy();
+  };
+
+  return { db, reservationStore, cleanup };
 }
 
 export function streamFromBytes(bytes: Uint8Array): ReadableStream<Uint8Array> {

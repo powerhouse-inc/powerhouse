@@ -79,6 +79,20 @@ export class KyselyAttachmentStore implements IAttachmentStore {
     private readonly basePath: string,
   ) {}
 
+  async stat(hash: AttachmentHash): Promise<AttachmentHeader> {
+    const row = await this.db
+      .selectFrom("attachment")
+      .selectAll()
+      .where("hash", "=", hash)
+      .executeTakeFirst();
+
+    if (!row) {
+      throw new AttachmentNotFound(hash);
+    }
+
+    return rowToHeader(row);
+  }
+
   async has(hash: AttachmentHash): Promise<boolean> {
     const row = await this.db
       .selectFrom("attachment")

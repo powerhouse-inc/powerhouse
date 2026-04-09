@@ -78,3 +78,15 @@ export type AttachmentTransportConfig = {
   type: string;
   parameters: Record<string, unknown>;
 };
+
+/**
+ * A reservation for an in-progress attachment upload.
+ * Created by reserve(), deleted when upload.send() completes.
+ */
+export type Reservation = {
+  reservationId: string;
+  mimeType: string;
+  fileName: string;
+  extension: string | null;
+  createdAtUtc: string;
+};

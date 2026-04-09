@@ -5,6 +5,7 @@ import type {
   AttachmentResponse,
   AttachmentTransportConfig,
   AttachmentUploadResult,
+  Reservation,
   ReserveAttachmentOptions,
   TransportResponse,
 } from "./types.js";
@@ -73,6 +74,15 @@ export interface IAttachmentUpload {
  * forming a bidirectional store-transport pair.
  */
 export interface IAttachmentStore {
+  /**
+   * Get attachment metadata without streaming body data.
+   * Does NOT update lastAccessedAtUtc -- this is a metadata check,
+   * not a data access.
+   *
+   * @throws AttachmentNotFound if the hash is unknown.
+   */
+  stat(hash: AttachmentHash): Promise<AttachmentHeader>;
+
   /**
    * Check whether attachment data is available locally.
    * Returns true if the bytes can be served from this reactor's store
@@ -191,4 +201,26 @@ export interface IAttachmentTransport {
  */
 export interface IAttachmentTransportFactory {
   instance(config: AttachmentTransportConfig): IAttachmentTransport;
+}
+
+/**
+ * Store for managing attachment reservations.
+ * Reservations are transient records tracking in-progress uploads.
+ */
+export interface IReservationStore {
+  create(options: ReserveAttachmentOptions): Promise<Reservation>;
+  get(reservationId: string): Promise<Reservation>;
+  delete(reservationId: string): Promise<void>;
+}
+
+/**
+ * Factory for creating transport-specific upload handles.
+ * The service calls this during reserve() to create a handle
+ * that knows how to stream bytes to the appropriate backend.
+ */
+export interface IAttachmentUploadFactory {
+  createUpload(
+    reservationId: string,
+    options: ReserveAttachmentOptions,
+  ): IAttachmentUpload;
 }
