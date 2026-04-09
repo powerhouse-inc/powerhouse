@@ -1,3 +1,15 @@
+## 6.0.0-dev.163 (2026-04-09)
+
+### 🩹 Fixes
+
+- **switchboard:** set log level from env var ([eddc863e8](https://github.com/powerhouse-inc/powerhouse/commit/eddc863e8))
+- **reactor-api,switchboard:** output https hooks on separate file ([9b05a45e9](https://github.com/powerhouse-inc/powerhouse/commit/9b05a45e9))
+- **renown:** removed unused didtools/key-did dependency ([7771007c0](https://github.com/powerhouse-inc/powerhouse/commit/7771007c0))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.0.0-dev.162 (2026-04-09)
 
 ### 🚀 Features
