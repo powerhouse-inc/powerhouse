@@ -4,7 +4,7 @@ The Powerhouse Academy provides a comprehensive, LLM-optimized documentation fil
 
 ## Download
 
-[**Download academy_LLM_docs.md**](pathname:///academy_LLM_docs.md) (1.1MB)
+[**Download academy_LLM_docs.md**](/academy_LLM_docs.md) (1.1MB)
 
 ## Overview
 
