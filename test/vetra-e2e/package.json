@@ -59,6 +59,7 @@
   "dependencies": {
     "document-model": "workspace:*",
     "@powerhousedao/connect": "workspace:*",
+    "@powerhousedao/document-engineering": "catalog:",
     "@powerhousedao/reactor-browser": "workspace:*",
     "@powerhousedao/design-system": "workspace:*",
     "@powerhousedao/versioned-documents": "workspace:*",
@@ -78,7 +79,9 @@
     "@types/react-dom": "catalog:",
     "monocart-coverage-reports": "^2.12.8",
     "@playwright/test": "^1.55.0",
-    "@powerhousedao/registry": "workspace:*"
+    "@powerhousedao/registry": "workspace:*",
+    "@electric-sql/pglite": "catalog:",
+    "@electric-sql/pglite-tools": "catalog:"
   },
   "description": ""
 }
