@@ -16,6 +16,10 @@
       "types": "./dist/vite-loader.d.mts",
       "import": "./dist/src/packages/vite-loader.mjs"
     },
+    "./https-hooks": {
+      "types": "./dist/https-hooks.d.mts",
+      "import": "./dist/src/packages/https-hooks.mjs"
+    },
     "./test": {
       "import": "./test/index.ts"
     }
@@ -92,7 +96,8 @@
     "read-pkg": "catalog:",
     "ws": "^8.18.3",
     "zod": "catalog:",
-    "@opentelemetry/exporter-prometheus": "^0.57.2"
+    "@opentelemetry/exporter-prometheus": "^0.57.2",
+    "graphql-tag": "catalog:"
   },
   "devDependencies": {
     "@graphql-codegen/cli": "catalog:",
@@ -107,10 +112,16 @@
     "@types/pg": "catalog:",
     "@types/ws": "^8.18.1",
     "tsdown": "catalog:",
-    "graphql-tag": "catalog:",
     "msw": "^2.7.3",
-    "vite": "catalog:",
     "vite-tsconfig-paths": "catalog:",
     "vitest": "catalog:"
+  },
+  "peerDependencies": {
+    "vite": "catalog:"
+  },
+  "peerDependenciesMeta": {
+    "vite": {
+      "optional": true
+    }
   }
 }

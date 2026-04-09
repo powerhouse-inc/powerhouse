@@ -1,8 +1,6 @@
 #!/usr/bin/env node
-import {
-  ImportPackageLoader,
-  httpsHooksPath,
-} from "@powerhousedao/reactor-api";
+import { ImportPackageLoader } from "@powerhousedao/reactor-api";
+import { httpsHooksPath } from "@powerhousedao/reactor-api/https-hooks";
 import { register } from "node:module";
 
 // Register HTTP/HTTPS module loader hooks for dynamic package imports

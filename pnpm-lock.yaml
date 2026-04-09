@@ -1887,6 +1887,9 @@ importers:
       graphql-subscriptions:
         specifier: ^3.0.0
         version: 3.0.0(graphql@16.12.0)
+      graphql-tag:
+        specifier: 'catalog:'
+        version: 2.12.6(graphql@16.12.0)
       graphql-type-json:
         specifier: ^0.3.2
         version: 0.3.2(graphql@16.12.0)
@@ -1917,6 +1920,9 @@ importers:
       read-pkg:
         specifier: 'catalog:'
         version: 10.1.0
+      vite:
+        specifier: 'catalog:'
+        version: 8.0.2(@types/node@25.2.3)(esbuild@0.27.3)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3)
       ws:
         specifier: ^8.18.3
         version: 8.19.0(bufferutil@4.1.0)(utf-8-validate@6.0.6)
@@ -1957,18 +1963,12 @@ importers:
       '@types/ws':
         specifier: ^8.18.1
         version: 8.18.1
-      graphql-tag:
-        specifier: 'catalog:'
-        version: 2.12.6(graphql@16.12.0)
       msw:
         specifier: ^2.7.3
         version: 2.12.10(@types/node@25.2.3)(typescript@5.9.3)
       tsdown:
         specifier: 'catalog:'
         version: 0.21.0(oxc-resolver@11.19.0)(synckit@0.11.12)(typescript@5.9.3)
-      vite:
-        specifier: 'catalog:'
-        version: 8.0.2(@types/node@25.2.3)(esbuild@0.27.3)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3)
       vite-tsconfig-paths:
         specifier: 'catalog:'
         version: 6.1.1(typescript@5.9.3)(vite@8.0.2(@types/node@25.2.3)(esbuild@0.27.3)(jiti@2.6.1)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
@@ -29675,7 +29675,7 @@ snapshots:
       debug: 4.4.3(supports-color@5.5.0)
       invariant: 2.2.4
       metro: 0.83.5(bufferutil@4.1.0)(utf-8-validate@6.0.6)
-      metro-config: 0.83.5(bufferutil@4.1.0)(utf-8-validate@6.0.6)
+      metro-config: 0.83.5(bufferutil@4.1.0)(utf-8-validate@5.0.10)
       metro-core: 0.83.5
       semver: 7.7.4
     transitivePeerDependencies:
@@ -39987,22 +39987,6 @@ snapshots:
       - supports-color
       - utf-8-validate
 
-  metro-config@0.83.5(bufferutil@4.1.0)(utf-8-validate@6.0.6):
-    dependencies:
-      connect: 3.7.0
-      flow-enums-runtime: 0.0.6
-      jest-validate: 29.7.0
-      metro: 0.83.5(bufferutil@4.1.0)(utf-8-validate@6.0.6)
-      metro-cache: 0.83.5
-      metro-core: 0.83.5
-      metro-runtime: 0.83.5
-      yaml: 2.8.3
-    transitivePeerDependencies:
-      - bufferutil
-      - supports-color
-      - utf-8-validate
-    optional: true
-
   metro-core@0.83.3:
     dependencies:
       flow-enums-runtime: 0.0.6
@@ -40325,7 +40309,7 @@ snapshots:
       metro-babel-transformer: 0.83.5
       metro-cache: 0.83.5
       metro-cache-key: 0.83.5
-      metro-config: 0.83.5(bufferutil@4.1.0)(utf-8-validate@6.0.6)
+      metro-config: 0.83.5(bufferutil@4.1.0)(utf-8-validate@5.0.10)
       metro-core: 0.83.5
       metro-file-map: 0.83.5
       metro-resolver: 0.83.5
