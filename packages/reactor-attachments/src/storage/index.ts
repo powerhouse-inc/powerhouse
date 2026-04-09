@@ -20,4 +20,5 @@ export {
   readAttachmentStream,
   deleteAttachmentBytes,
   attachmentBytesExist,
+  streamFromBuffer,
 } from "./fs/attachment-fs.js";

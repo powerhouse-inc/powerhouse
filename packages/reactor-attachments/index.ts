@@ -27,4 +27,8 @@ export {
   type Reservation,
   type ReserveAttachmentOptions,
   type TransportResponse,
+  DirectAttachmentUpload,
+  DirectAttachmentUploadFactory,
+  SwitchboardAttachmentTransport,
+  type SwitchboardTransportConfig,
 } from "./src/index.js";

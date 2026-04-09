@@ -20,6 +20,8 @@ import {
   runAttachmentMigrations,
   ATTACHMENT_SCHEMA,
 } from "../src/storage/migrations/migrator.js";
+import { DirectAttachmentUpload } from "../src/direct/direct-attachment-upload.js";
+import type { ReserveAttachmentOptions } from "../src/types.js";
 
 export type MockTransport = IAttachmentTransport & {
   fetch: Mock;
@@ -182,4 +184,51 @@ export async function streamToBytes(
 
 export function computeHash(data: Uint8Array): string {
   return createHash("sha256").update(data).digest("hex");
+}
+
+const DEFAULT_UPLOAD_OPTIONS: ReserveAttachmentOptions = {
+  mimeType: "text/plain",
+  fileName: "test",
+  extension: "txt",
+};
+
+export async function createTestDirectUpload(
+  options: ReserveAttachmentOptions = DEFAULT_UPLOAD_OPTIONS,
+): Promise<{
+  upload: DirectAttachmentUpload;
+  reservationId: string;
+  db: Kysely<AttachmentDatabase>;
+  storagePath: string;
+  reservationStore: KyselyReservationStore;
+  store: KyselyAttachmentStore;
+  cleanup: () => Promise<void>;
+}> {
+  const { baseDb, db } = await createTestDb();
+  const storagePath = await mkdtemp(join(tmpdir(), "upload-test-"));
+  const reservationStore = new KyselyReservationStore(db);
+  const transport = createMockTransport();
+  const store = new KyselyAttachmentStore(db, transport, storagePath);
+  const reservation = await reservationStore.create(options);
+  const upload = new DirectAttachmentUpload(
+    reservation.reservationId,
+    options,
+    db,
+    storagePath,
+    reservationStore,
+  );
+
+  const cleanup = async () => {
+    await baseDb.destroy();
+    await rm(storagePath, { recursive: true, force: true });
+  };
+
+  return {
+    upload,
+    reservationId: reservation.reservationId,
+    db,
+    storagePath,
+    reservationStore,
+    store,
+    cleanup,
+  };
 }

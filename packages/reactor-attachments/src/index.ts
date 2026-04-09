@@ -30,3 +30,11 @@ export { KyselyAttachmentStore } from "./storage/index.js";
 export { KyselyReservationStore } from "./storage/index.js";
 export { runAttachmentMigrations, ATTACHMENT_SCHEMA } from "./storage/index.js";
 export type { AttachmentDatabase } from "./storage/index.js";
+export {
+  DirectAttachmentUpload,
+  DirectAttachmentUploadFactory,
+} from "./direct/index.js";
+export {
+  SwitchboardAttachmentTransport,
+  type SwitchboardTransportConfig,
+} from "./switchboard/index.js";

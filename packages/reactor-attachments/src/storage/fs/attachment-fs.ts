@@ -81,3 +81,15 @@ export async function attachmentBytesExist(path: string): Promise<boolean> {
     return false;
   }
 }
+
+/**
+ * Create a ReadableStream from an in-memory buffer.
+ */
+export function streamFromBuffer(data: Uint8Array): ReadableStream<Uint8Array> {
+  return new ReadableStream({
+    start(controller) {
+      controller.enqueue(data);
+      controller.close();
+    },
+  });
+}
