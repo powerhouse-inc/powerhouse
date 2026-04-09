@@ -47,7 +47,7 @@ export const codegenProcessorFactory =
 
     // Check if this drive should use the Vetra processor
     if (!isDriveVetra(driveHeader, vetraConfig?.driveId)) {
-      logger.info(
+      logger.debug(
         `Drive ${driveHeader.slug} is not a Vetra drive, skipping codegen processor`,
       );
       return [];
