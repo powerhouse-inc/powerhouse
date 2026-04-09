@@ -67,7 +67,8 @@
     "kysely": "catalog:",
     "kysely-pglite-dialect": "catalog:",
     "pg": "catalog:",
-    "react": "catalog:"
+    "react": "catalog:",
+    "vite": "catalog:"
   },
   "devDependencies": {
     "@types/express": "^4.17.25",
