@@ -1,3 +1,17 @@
+## 6.0.0-dev.162 (2026-04-09)
+
+### 🚀 Features
+
+- **ph-cmd:** delegate init to versioned ph-cli ([875a4e6f4](https://github.com/powerhouse-inc/powerhouse/commit/875a4e6f4))
+
+### 🩹 Fixes
+
+- **builder-tools:** pre optimize common studio deps ([b98326c68](https://github.com/powerhouse-inc/powerhouse/commit/b98326c68))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.0.0-dev.161 (2026-04-08)
 
 ### 🩹 Fixes
