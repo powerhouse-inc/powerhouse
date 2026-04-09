@@ -16,6 +16,10 @@ export const documentModelGenIndexFileTemplate = (
   v: DocumentModelTemplateInputs,
 ) =>
   ts`
+/**
+ * WARNING: DO NOT EDIT
+ * This file is auto-generated and updated by codegen
+ */
 export * from './actions.js';
 export * from './document-model.js';
 export * from './types.js';

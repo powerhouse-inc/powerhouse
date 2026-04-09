@@ -47,6 +47,10 @@ export const documentModelOperationModuleActionsFileTemplate = (v: {
   pascalCaseModuleName: string;
 }) =>
   ts`
+/**
+ * WARNING: DO NOT EDIT
+ * This file is auto-generated and updated by codegen
+ */
 import type { ${getDocumentModelActionTypeImportNames(v.actions)} } from 'document-model';
 import type {
   ${getActionInputTypeNames(v.actions)}

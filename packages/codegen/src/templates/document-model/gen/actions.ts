@@ -62,6 +62,10 @@ export const documentModelGenActionsFileTemplate = (
   v: DocumentModelTemplateInputs,
 ) =>
   ts`
+/**
+ * WARNING: DO NOT EDIT
+ * This file is auto-generated and updated by codegen
+ */
 ${makeModuleActionsTypeImports(v.modules, v.pascalCaseDocumentType)}
 
 ${makeModuleActionsTypeExports(v.modules)}

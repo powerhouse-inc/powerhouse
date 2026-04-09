@@ -96,7 +96,10 @@ export const documentModelOperationsModuleCreatorsFileTemplate = (
   v: DocumentModelTemplateInputsWithModule,
 ) =>
   ts`
-
+/**
+ * WARNING: DO NOT EDIT
+ * This file is auto-generated and updated by codegen
+ */
 import { ${makeDocumentModelTypeImports(v.actions)} } from "document-model";
 import {
 ${makeActionInputSchemaImports(v.actions)}

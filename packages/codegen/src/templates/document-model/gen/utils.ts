@@ -3,6 +3,10 @@ import type { DocumentModelTemplateInputs } from "file-builders";
 
 export const documentModelGenUtilsTemplate = (v: DocumentModelTemplateInputs) =>
   ts`
+/**
+ * WARNING: DO NOT EDIT
+ * This file is auto-generated and updated by codegen
+ */
 import type {
     DocumentModelUtils,
 } from "document-model";

@@ -19,6 +19,10 @@ function buildLocalStateTypeImport(
 }
 export const documentModelGenTypesTemplate = (v: DocumentModelTemplateInputs) =>
   ts`
+/**
+ * WARNING: DO NOT EDIT
+ * This file is auto-generated and updated by codegen
+ */
 import type { PHDocument, PHBaseState } from 'document-model';
 import type { ${v.actionTypeName} } from './actions.js';
 import type {

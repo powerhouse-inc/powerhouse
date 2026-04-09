@@ -29,5 +29,9 @@ export const documentModelGenCreatorsFileTemplate = (
   v: DocumentModelTemplateInputs,
 ) =>
   ts`
+/**
+ * WARNING: DO NOT EDIT
+ * This file is auto-generated and updated by codegen
+ */
 ${buildCreatorsExports(v.modules, v.camelCaseDocumentType)}
 `.raw;

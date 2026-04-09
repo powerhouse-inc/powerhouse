@@ -92,6 +92,10 @@ export const documentModelOperationsModuleOperationsFileTemplate = (
   v: DocumentModelTemplateInputsWithModule,
 ) =>
   ts`
+/**
+ * WARNING: DO NOT EDIT
+ * This file is auto-generated and updated by codegen
+ */
 import { type SignalDispatch } from 'document-model';
 import type {
   ${getActionTypeImports(v.actions)}
