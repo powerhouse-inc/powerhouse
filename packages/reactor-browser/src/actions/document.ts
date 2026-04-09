@@ -22,7 +22,6 @@ import {
 import type {
   DocumentModelModule,
   DocumentOperations,
-  Operation,
   PHDocument,
 } from "@powerhousedao/shared/document-model";
 import {
@@ -297,10 +296,14 @@ export async function addDocument(
     await reactorClient.getDocumentModelModule(documentType);
 
   // create - use passed document's state if available
-  const newDocument = documentModelModule.utils.createDocument({
-    ...document?.state,
-  });
+  const newDocument = document ?? documentModelModule.utils.createDocument();
   newDocument.header.name = name;
+  if (preferredEditor) {
+    newDocument.header.meta = {
+      ...newDocument.header.meta,
+      preferredEditor,
+    };
+  }
 
   // Create document using ReactorClient
   let newDoc: PHDocument;
@@ -535,6 +538,8 @@ export async function addFileWithProgress(
 
     onProgress?.({ stage: "initializing", progress: 20 });
 
+    const doc = await reactor.get(documentId);
+    console.log("Document created, starting upload of operations");
     // Uploading stage (20-100%)
     await uploadOperations(documentId, document.operations, queueOperations, {
       onProgress: (uploadProgress) => {
