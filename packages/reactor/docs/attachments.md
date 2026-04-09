@@ -310,12 +310,12 @@ interface IAttachmentStore {
    * @throws AttachmentNotFound if the hash is unknown (no metadata
    *         record exists).
    */
-  get(hash: AttachmentHash): Promise<AttachmentResponse>;
+  get(hash: AttachmentHash, signal?: AbortSignal): Promise<AttachmentResponse>;
 
   /**
    * Store attachment data received from a remote (during sync or re-fetch).
-   * Used by IAttachmentTransport implementations to write data into
-   * the local store.
+   * Called by IAttachmentTransport implementations during sync, and
+   * internally by get() when restoring evicted data.
    *
    * Behavior depends on existing state:
    * - No existing row: INSERT with source='sync', status='available'.
@@ -375,7 +375,7 @@ Different transports serve different topologies:
 | Transport        | Topology      | How it works                                        |
 | ---------------- | ------------- | --------------------------------------------------- |
 | Switchboard HTTP | Client-server | Fetch from the remote's attachment service endpoint |
-| S3               | Client-server | Redirect to presigned GET URLs                      |
+| S3               | Client-server | Fetch from S3 via presigned GET URL, return stream  |
 
 ```ts
 /**
@@ -502,7 +502,7 @@ The client interacts with `IAttachmentService` for upload/download and dispatche
 
 2. **Use**: Client dispatches a domain action with the ref in its input (e.g., `ATTACH_INVOICE({ ref, vendorName, amount })`). The reducer stores the ref in document state.
 
-3. **Download**: Client calls `IAttachmentService.get(ref)` to retrieve attachment data. If the data is not local, the service fetches it via the transport layer transparently.
+3. **Download**: Client calls `IAttachmentService.get(ref)` to retrieve attachment data. If the data has been evicted, the store re-fetches it from the transport transparently.
 
 4. **Validation** (optional): If attachment readiness should be checked before accepting the action, this belongs at the API boundary (e.g., the GraphQL resolver calls `IAttachmentService.stat()` before forwarding to `reactor.execute()`). The executor and reducer remain pure.
 
@@ -583,7 +583,7 @@ A periodic task runs when storage exceeds a configurable threshold:
 1. Query attachments ordered by `last_accessed_at_utc` ascending (least recently used first).
 2. Evict data until storage drops below the target threshold.
 3. Evicted rows retain metadata (`hash`, `mime_type`, etc.) so the hash is still known.
-4. If evicted data is needed again, `IAttachmentService.get()` fetches it from a peer via the transport.
+4. If evicted data is needed again, the store re-fetches it from a peer via the transport when `get()` is called.
 
 For mutable backends (disk, S3), eviction removes the data files.
 
@@ -759,10 +759,12 @@ sequenceDiagram
     Handle->>Store: INSERT into attachment (or dedup), DELETE reservation
     Handle-->>Client: AttachmentUploadResult { ref }
 
-    Client->>Switchboard: attachmentService.get(ref)
-    Switchboard->>S3: GetObject (presigned GET)
-    S3-->>Switchboard: data stream
-    Switchboard-->>Client: AttachmentResponse (streamed)
+    Client->>Switchboard: attachmentService.stat(ref)
+    Switchboard->>Store: SELECT header
+    Switchboard-->>Client: AttachmentHeader
+
+    Client->>S3: GET (presigned URL)
+    S3-->>Client: data stream
 ```
 
 ### S3 Attachment Transport
