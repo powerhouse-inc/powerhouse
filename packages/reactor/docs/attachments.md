@@ -8,11 +8,11 @@ Attachments are binary files that accompany documents. The attachment system pro
 2. **Upload** -- The client streams binary data through the handle and receives an `AttachmentRef`.
 3. **Use** -- The client includes the ref in a domain action input (e.g., `ATTACH_INVOICE`).
 
-The upload handle (`IAttachmentUpload`) abstracts the transport. The caller does not know or care whether bytes flow via HTTP, S3 presigned URLs, IPFS, or any other mechanism. This is the key design constraint: the core interface never exposes URLs, headers, or any transport-specific detail.
+The upload handle (`IAttachmentUpload`) abstracts the transport. The caller does not know or care whether bytes flow via HTTP, S3 presigned URLs, or any other mechanism. This is the key design constraint: the core interface never exposes URLs, headers, or any transport-specific detail.
 
 Attachment refs are opaque strings that live inside domain action inputs, declared via the `Attachment` scalar in document model GraphQL schemas. There are no special core actions for attachments -- the ref is just a value that the reducer puts in state like any other field.
 
-The content-addressed design (hash-based identity) supports p2p transfer, deduplication, and verification.
+The content-addressed design (hash-based identity) supports deduplication and verification.
 
 ## Current State
 
@@ -42,9 +42,9 @@ type AttachmentInput = Attachment & {
 
 ### Principles
 
-1. **Content-addressed.** Every attachment is identified by the hash of its data. Two identical files produce the same hash and can be deduplicated. This is the foundation for p2p transfer -- any peer that has the bytes can serve them.
+1. **Content-addressed.** Every attachment is identified by the hash of its data. Two identical files produce the same hash and can be deduplicated.
 
-2. **Transport-agnostic.** The mechanism for moving bytes between reactors is pluggable (`IAttachmentTransport`), just as `IChannel`/`IChannelFactory` is pluggable for operation sync. Switchboard, S3, IPFS, BitTorrent, or a simple HTTP exchange are all valid transports.
+2. **Transport-agnostic.** The mechanism for moving bytes between reactors is pluggable (`IAttachmentTransport`), just as `IChannel`/`IChannelFactory` is pluggable for operation sync.
 
 3. **Refs are values.** An `AttachmentRef` is a plain string that travels inside domain action inputs. Document model schemas declare attachment fields using the `Attachment` scalar. The reducer stores the ref in state like any other field. There are no special core actions, no attachment set on the document, and no read model for reference tracking.
 
@@ -113,8 +113,8 @@ The lifecycle is simple because there is no reference counting. The store does n
 
 **Eviction is a data removal, not a logical delete.** The metadata record is always retained so the hash remains known. If the data is needed again, it is re-fetched through the transport layer. The behavior of eviction depends on the storage backend:
 
-- **Mutable backends** (local disk, S3/MinIO): The implementation removes the data files to reclaim space.
-- **Immutable backends** (IPFS, content-addressed stores): Eviction means unpinning / ceasing to serve, not erasure.
+- **Mutable backends** (local disk, S3): The implementation removes the data files to reclaim space.
+- **Immutable backends** (content-addressed stores): Eviction means unpinning / ceasing to serve, not erasure.
 
 ### Types
 
@@ -229,7 +229,7 @@ interface IAttachmentService {
    * Reserve a new attachment slot and return an upload handle.
    *
    * The handle abstracts the transport -- the caller streams data
-   * through it without knowing whether bytes flow via HTTP, S3, IPFS,
+   * through it without knowing whether bytes flow via HTTP, S3,
    * or any other mechanism.
    */
   reserve(options: ReserveAttachmentOptions): Promise<IAttachmentUpload>;
@@ -289,7 +289,6 @@ Each `IAttachmentService` implementation provides its own upload handle:
 | ----------------------------- | ------------------------------------------------------------------------------- |
 | `SwitchboardAttachmentUpload` | Streams to the switchboard's upload endpoint. Hash computed server-side inline. |
 | `S3AttachmentUpload`          | PUTs to a presigned S3 URL. Hash verified via `HeadObject` after upload.        |
-| `IpfsAttachmentUpload`        | Calls `ipfs.add()`. CID is the hash.                                            |
 | `DirectAttachmentUpload`      | Streams to the local store. Hash computed inline.                               |
 
 Hash verification is an internal concern of the upload handle implementation. The caller never sees signatures, verifiers, or transport-specific details.
@@ -339,8 +338,8 @@ interface IAttachmentStore {
    * metadata record is retained so the hash is still known. If the
    * data is needed again, the service fetches it via the transport.
    *
-   * On immutable backends (IPFS), this unpins/stops serving
-   * rather than deleting.
+   * On immutable backends, this unpins/stops serving rather
+   * than deleting.
    */
   evict(hash: AttachmentHash): Promise<void>;
 
@@ -370,13 +369,10 @@ This mirrors the role of `IChannel` for operation sync -- `IChannel` moves opera
 
 Different transports serve different topologies:
 
-| Transport        | Topology      | How it works                                             |
-| ---------------- | ------------- | -------------------------------------------------------- |
-| Switchboard HTTP | Client-server | Fetch from the remote's attachment service endpoint      |
-| S3               | Client-server | Redirect to presigned GET URLs                           |
-| IPFS             | P2P           | Resolve by content hash via IPFS gateway or local node   |
-| BitTorrent       | P2P           | Swarm around content hash (magnet link)                  |
-| Reactor Direct   | P2P           | Direct HTTP fetch from peer reactor's attachment service |
+| Transport        | Topology      | How it works                                        |
+| ---------------- | ------------- | --------------------------------------------------- |
+| Switchboard HTTP | Client-server | Fetch from the remote's attachment service endpoint |
+| S3               | Client-server | Redirect to presigned GET URLs                      |
 
 ```ts
 /**
@@ -391,7 +387,7 @@ interface IAttachmentTransport {
    * Fetch attachment data by hash from a remote source.
    *
    * The transport resolves the hash to a data source (server endpoint,
-   * S3 presigned URL, IPFS CID, peer reactor, etc.) and returns a stream.
+   * S3 presigned URL, etc.) and returns a stream.
    *
    * @param hash - Content hash of the attachment
    * @param signal - Abort signal for cancellation
@@ -408,8 +404,7 @@ interface IAttachmentTransport {
    * Announce that this reactor has attachment data available.
    *
    * For server-centric transports, this may be a no-op (the server
-   * already has the data after upload). For p2p transports, this
-   * registers the data in the network (e.g., IPFS pin, BitTorrent seed).
+   * already has the data after upload).
    */
   announce(hash: AttachmentHash): Promise<void>;
 
@@ -496,41 +491,15 @@ sequenceDiagram
     Note over ReactorB: Data already local -- no fetch needed
 ```
 
-#### P2P sync
-
-In a p2p topology, there is no central server. Reactors discover attachment data through the content hash:
-
-```mermaid
-sequenceDiagram
-    participant ReactorA as Reactor A
-    participant Network as P2P Network (IPFS / DHT)
-    participant ReactorB as Reactor B
-    participant ReactorC as Reactor C
-
-    ReactorA->>Network: announce("abc123") [pin/seed]
-
-    ReactorB->>ReactorB: attachmentService.get(ref) -> not local
-    ReactorB->>Network: fetch("abc123")
-    Network->>ReactorA: Resolve hash, fetch from peer
-    ReactorA-->>Network: data stream
-    Network-->>ReactorB: data stream
-    ReactorB->>ReactorB: store.put("abc123", metadata, body)
-
-    ReactorC->>Network: fetch("abc123")
-    Network->>ReactorB: (or ReactorA) data stream
-    ReactorB-->>Network: data stream
-    Network-->>ReactorC: data stream
-```
-
 ### Client Integration
 
 The client interacts with `IAttachmentService` for upload/download and dispatches normal domain actions that include attachment refs. The executor and reducer are pure -- they have no dependency on attachment interfaces.
 
-1. **Upload**: Client calls `reserve()` to get an upload handle, then calls `handle.send(stream)` to upload data. The handle manages the full lifecycle -- writing bytes, computing the hash, creating the attachment record, and cleaning up the reservation. Returns the ref. The store notifies the transport, which announces to peers.
+1. **Upload**: Client calls `reserve()` to get an upload handle, then calls `handle.send(stream)` to upload data. The handle manages the full lifecycle -- writing bytes, computing the hash, creating the attachment record, and cleaning up the reservation. Returns the ref.
 
 2. **Use**: Client dispatches a domain action with the ref in its input (e.g., `ATTACH_INVOICE({ ref, vendorName, amount })`). The reducer stores the ref in document state.
 
-3. **Download**: Client calls `IAttachmentService.get(ref)` to retrieve attachment data. If the data is not local, the service fetches it from a peer transparently.
+3. **Download**: Client calls `IAttachmentService.get(ref)` to retrieve attachment data. If the data is not local, the service fetches it via the transport layer transparently.
 
 4. **Validation** (optional): If attachment readiness should be checked before accepting the action, this belongs at the API boundary (e.g., the GraphQL resolver calls `IAttachmentService.stat()` before forwarding to `reactor.execute()`). The executor and reducer remain pure.
 
@@ -613,7 +582,7 @@ A periodic task runs when storage exceeds a configurable threshold:
 3. Evicted rows retain metadata (`hash`, `mime_type`, etc.) so the hash is still known.
 4. If evicted data is needed again, `IAttachmentService.get()` fetches it from a peer via the transport.
 
-For mutable backends (disk, S3/MinIO), eviction removes the data files. For immutable backends (IPFS), eviction unpins/stops serving.
+For mutable backends (disk, S3), eviction removes the data files.
 
 Reservations are not garbage-collected. They are removed only when `upload.send()` succeeds. Abandoned reservations are inert (no data, no storage cost beyond the row) and can be cleaned up manually if needed.
 
@@ -624,30 +593,27 @@ packages/
   reactor/
     src/
       attachments/
-        interfaces.ts        # IAttachmentService, IAttachmentStore, IAttachmentTransport
-        types.ts             # AttachmentStatus, AttachmentHeader, etc.
-        index.ts             # Re-exports
+        types.ts             # AttachmentRef, AttachmentHash
 
-  attachment-service/        # New package
+  reactor-attachments/       # New package, depends on reactor
     src/
+      interfaces.ts          # IAttachmentService, IAttachmentUpload, IAttachmentStore, IAttachmentTransport
+      types.ts               # AttachmentStatus, AttachmentHeader, AttachmentMetadata, etc.
       switchboard/           # Switchboard-backed implementation
         switchboard-attachment-service.ts
+        switchboard-attachment-upload.ts
         switchboard-attachment-transport.ts
-        upload-handler.ts
       s3/                    # S3-backed implementation
         s3-attachment-service.ts
+        s3-attachment-upload.ts
         s3-attachment-transport.ts
-        s3-event-handler.ts
-      p2p/                   # P2P transport implementations
-        ipfs-attachment-transport.ts
-        direct-attachment-transport.ts
       storage/
         interfaces.ts        # IAttachmentMetadataStore
         kysely/              # Postgres metadata storage
       index.ts
 ```
 
-The interface and types live in `reactor/` so they can be imported by the reactor core without depending on any implementation. The `attachment-service` package contains concrete implementations.
+`AttachmentRef` (and `AttachmentHash`) live in `reactor/` because they are value types used by document model schemas and the codegen `Attachment` scalar. Everything else -- interfaces, implementations, storage -- lives in the `reactor-attachments/` package, which depends on `reactor`.
 
 ## Implementation: Switchboard-Backed
 
@@ -832,209 +798,6 @@ S3 lifecycle rules can handle optional physical cleanup:
 - The metadata store GC marks `evicted` when storage exceeds threshold (LRU).
 - S3 lifecycle rules can optionally remove objects tagged `status=evicted` after a retention period.
 - Metadata records are always retained in Postgres. Physical removal of S3 objects is optional.
-
-## Implementation: Self-Hosted (MinIO + NGINX)
-
-For deployments that need S3-compatible storage without depending on AWS. This uses the same `S3AttachmentService` and `S3AttachmentTransport` implementations as the AWS S3 path -- MinIO is API-compatible, so no code changes are needed.
-
-### Architecture
-
-```mermaid
-flowchart LR
-    Client["Client"]
-    NGINX["NGINX"]
-    MinIO["MinIO"]
-
-    Client -- "GET (download)" --> NGINX
-    NGINX -- "cache miss" --> MinIO
-    NGINX -- "cache hit" --> Client
-    Client -- "PUT (presigned)" --> NGINX
-    NGINX -- "pass-through" --> MinIO
-```
-
-- **MinIO** (community fork: [pgsty/minio](https://github.com/pgsty/minio)) provides the S3-compatible API: presigned PUT/GET URLs, multipart upload, bucket lifecycle rules.
-- **NGINX** sits in front as a reverse proxy providing TLS termination, HTTP/2, and `proxy_cache` for download requests.
-
-### MinIO Configuration
-
-```yaml
-# docker-compose example
-services:
-  minio:
-    image: pgsty/minio:latest
-    command: server /data --console-address ":9001"
-    environment:
-      MINIO_ROOT_USER: admin
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
-      # Enable S3 event notifications via webhook
-      MINIO_NOTIFY_WEBHOOK_ENABLE_ATTACHMENTS: "on"
-      MINIO_NOTIFY_WEBHOOK_ENDPOINT_ATTACHMENTS: "http://switchboard:3000/webhooks/attachment-uploaded"
-    volumes:
-      - minio-data:/data
-    ports:
-      - "9000:9000" # S3 API
-      - "9001:9001" # Console
-```
-
-The `S3AttachmentService` configuration points to the MinIO endpoint instead of AWS:
-
-```ts
-const attachmentService = new S3AttachmentService({
-  bucket: "attachments",
-  region: "us-east-1", // required by S3 SDK but ignored by MinIO
-  endpoint: "http://minio:9000", // MinIO endpoint
-  forcePathStyle: true, // MinIO uses path-style URLs
-  keyPrefix: "attachments/",
-  uploadUrlTtlSeconds: 3600,
-  downloadUrlTtlSeconds: 900,
-  credentials: {
-    accessKeyId: process.env.MINIO_ACCESS_KEY,
-    secretAccessKey: process.env.MINIO_SECRET_KEY,
-  },
-});
-```
-
-### NGINX Cache Configuration
-
-NGINX caches GET responses from MinIO. The cache key strips the presigned URL signature parameters so that requests for the same attachment hit the cache regardless of who signed the URL.
-
-```nginx
-proxy_cache_path /var/cache/nginx/attachments
-  levels=1:2
-  keys_zone=attachments:10m
-  max_size=10g
-  inactive=7d
-  use_temp_path=off;
-
-server {
-  listen 443 ssl http2;
-  server_name attachments.example.com;
-
-  # Upload: pass through to MinIO (no caching)
-  location ~ ^/attachments/upload/ {
-    proxy_pass http://minio:9000;
-    proxy_request_buffering off;
-    client_max_body_size 500m;
-  }
-
-  # Download: cache aggressively
-  location ~ ^/attachments/ {
-    proxy_cache attachments;
-
-    # Strip signature params from cache key so different
-    # presigned URLs for the same object share cache entries.
-    proxy_cache_key "$uri";
-
-    proxy_cache_valid 200 7d;
-    proxy_cache_valid 404 1m;
-    proxy_cache_use_stale error timeout updating;
-
-    add_header X-Cache-Status $upstream_cache_status;
-
-    proxy_pass http://minio:9000;
-  }
-}
-```
-
-Because attachments are content-addressed (the hash is in the URL path), the cache key `$uri` is stable -- the same hash always produces the same path, regardless of the presigned query parameters.
-
-### Presigned URL Considerations
-
-Presigned URLs and CDN caching have an inherent tension: each URL includes unique signature query parameters, which can defeat cache hit rates. The self-hosted setup handles this:
-
-- **Uploads** (`PUT`): bypass the cache entirely (NGINX `proxy_request_buffering off`). Presigned uniqueness is not a problem.
-- **Downloads** (`GET`): NGINX strips query params from the cache key via `proxy_cache_key "$uri"`. Since the path contains the content hash (`/attachments/<hash>`), all requests for the same attachment share one cache entry.
-- **Alternative**: for public or internally-accessible attachments, skip presigned URLs for downloads entirely and serve directly through NGINX with simple auth, eliminating the tension.
-
-### When to Use This vs. AWS S3
-
-| Consideration                 | Self-hosted (MinIO + NGINX) | AWS S3 + CloudFront        |
-| ----------------------------- | --------------------------- | -------------------------- |
-| Operational control           | Full                        | Managed                    |
-| Cost at scale                 | Hardware/bandwidth only     | Per-request + egress       |
-| Geographic distribution       | Manual (multi-site MinIO)   | Built-in (CloudFront POPs) |
-| Compliance / data sovereignty | Data stays on your infra    | AWS regions                |
-| S3 event notifications        | Webhook to switchboard      | Lambda / EventBridge       |
-| Setup complexity              | Moderate                    | Low                        |
-
-### Deployment Variants
-
-**Single-node**: MinIO + NGINX on the same machine. Good for development, small teams, or single-site deployments.
-
-**Multi-node MinIO cluster**: MinIO supports distributed mode across multiple nodes with erasure coding. NGINX in front for load balancing and caching. Good for production single-site.
-
-**Multi-site**: MinIO site replication syncs buckets across geographic locations. Each site runs NGINX edge cache. Approximates a CDN without third-party services.
-
-## Implementation: P2P Transport
-
-For decentralized deployments where reactors communicate directly without a central server.
-
-### Content-Addressed Identity
-
-The `AttachmentRef` format `attachment://v<version>:<hash>` is content-addressed by design. This means:
-
-- Any reactor that has the bytes for a given hash can serve the attachment.
-- Deduplication is automatic -- identical files resolve to the same hash.
-- Verification is built in -- the receiver hashes the bytes and checks against the ref.
-
-### IPFS Transport
-
-```ts
-class IpfsAttachmentTransport implements IAttachmentTransport {
-  async fetch(hash: AttachmentHash, signal?: AbortSignal) {
-    // Map hash to IPFS CID and fetch via local IPFS node or gateway
-    const cid = this.hashToCid(hash);
-    const response = await this.ipfsClient.cat(cid, { signal });
-    // ...
-  }
-
-  async announce(hash: AttachmentHash) {
-    // Pin the content so this node serves it to the network
-    const cid = this.hashToCid(hash);
-    await this.ipfsClient.pin.add(cid);
-  }
-
-  async push(hash: AttachmentHash, remote: string, data: ReadableStream) {
-    // In IPFS, push is just announce -- peers pull on demand
-    await this.announce(hash);
-  }
-}
-```
-
-### Direct Reactor Transport
-
-For simple p2p setups where reactors know each other's addresses:
-
-```ts
-class DirectAttachmentTransport implements IAttachmentTransport {
-  private peers: Map<string, string>; // remoteName -> baseUrl
-
-  async fetch(hash: AttachmentHash, signal?: AbortSignal) {
-    // Try each known peer until one has the attachment
-    for (const [name, baseUrl] of this.peers) {
-      const response = await fetch(`${baseUrl}/attachments/${hash}`, {
-        signal,
-      });
-      if (response.ok) {
-        return toTransportResponse(response);
-      }
-    }
-    return null;
-  }
-
-  async announce(hash: AttachmentHash) {
-    // Could notify peers via a lightweight gossip protocol
-  }
-
-  async push(hash: AttachmentHash, remote: string, data: ReadableStream) {
-    const baseUrl = this.peers.get(remote);
-    await fetch(`${baseUrl}/attachments/${hash}`, {
-      method: "PUT",
-      body: data,
-    });
-  }
-}
-```
 
 ## Migration from Inline Attachments
 
