@@ -192,13 +192,6 @@ type AttachmentUploadResult = {
 };
 
 /**
- * Parameters for retrieving attachment data.
- */
-type GetAttachmentParams = {
-  range?: string;
-};
-
-/**
  * Response when retrieving attachment data from the local store.
  */
 type AttachmentResponse = {
@@ -236,21 +229,18 @@ interface IAttachmentService {
 
   /**
    * Get attachment metadata by ref.
+   *
+   * @throws AttachmentNotFound if the ref is unknown.
    */
   stat(ref: AttachmentRef): Promise<AttachmentHeader>;
 
   /**
    * Retrieve attachment data.
    *
-   * If the data is available locally, returns it immediately.
-   * If the data has been evicted, fetches it from a peer via
-   * the transport layer before returning.
+   * Always succeeds for any known ref. The underlying store handles
+   * re-fetching evicted data from the transport transparently.
    */
-  get(
-    ref: AttachmentRef,
-    params?: GetAttachmentParams,
-    signal?: AbortSignal,
-  ): Promise<AttachmentResponse>;
+  get(ref: AttachmentRef, signal?: AbortSignal): Promise<AttachmentResponse>;
 }
 ```
 
@@ -303,16 +293,24 @@ It is intentionally separate from `IAttachmentService` -- the client upload flow
 interface IAttachmentStore {
   /**
    * Check whether attachment data is available locally.
-   * Returns true if the bytes can be served from this reactor's store.
+   * Returns true if the bytes can be served from this reactor's store
+   * without a transport round-trip. Does not trigger a remote fetch.
    */
   has(hash: AttachmentHash): Promise<boolean>;
 
   /**
    * Retrieve attachment header and data stream by hash.
-   * Returns null if the attachment is not available locally (evicted
-   * or not yet synced). Updates lastAccessedAtUtc on access.
+   * Updates lastAccessedAtUtc on access.
+   *
+   * If the data has been evicted, re-fetches it from the transport,
+   * restores it locally via put(), and returns the data. This makes
+   * eviction transparent to callers -- get() always succeeds for
+   * any known hash.
+   *
+   * @throws AttachmentNotFound if the hash is unknown (no metadata
+   *         record exists).
    */
-  get(hash: AttachmentHash): Promise<AttachmentResponse | null>;
+  get(hash: AttachmentHash): Promise<AttachmentResponse>;
 
   /**
    * Store attachment data received from a remote (during sync or re-fetch).
@@ -337,6 +335,11 @@ interface IAttachmentStore {
    * Removes the local bytes and sets status to 'evicted'. The
    * metadata record is retained so the hash is still known. If the
    * data is needed again, the service fetches it via the transport.
+   *
+   * Eviction must not destroy data while a get() stream is in
+   * flight. Implementations must skip hashes with active readers
+   * (e.g. via a refcount or lease) and revisit them on the next
+   * GC pass.
    *
    * On immutable backends, this unpins/stops serving rather
    * than deleting.
@@ -461,13 +464,13 @@ sequenceDiagram
     Note over ReactorB: Later, when the attachment data is needed...
 
     ReactorB->>ReactorB: attachmentService.get("attachment://v1:abc123")
-    ReactorB->>ReactorB: store.has("abc123") -> false
-    ReactorB->>Transport: fetch("abc123")
+    ReactorB->>ReactorB: store.get("abc123") -- not available locally
+    ReactorB->>Transport: store re-fetches via transport.fetch("abc123")
     Transport->>ReactorA: GET /attachments/abc123
     ReactorA-->>Transport: { hash, metadata, body }
     Transport-->>ReactorB: TransportResponse
     ReactorB->>ReactorB: store.put("abc123", metadata, body)
-    ReactorB-->>ReactorB: AttachmentResponse (data now local)
+    ReactorB-->>ReactorB: AttachmentResponse
 ```
 
 #### Push-based sync (eager replication)
@@ -553,7 +556,7 @@ type AttachmentHeader {
   hash: String!
   mimeType: String!
   fileName: String!
-  sizeBytes: Int!
+  sizeBytes: BigInt!
   extension: String
   status: String!
   source: String!
@@ -565,7 +568,7 @@ type Query {
 }
 ```
 
-The GraphQL layer exposes upload as a multipart mutation or delegates to a REST upload endpoint -- the specific mechanism depends on the deployment. Attachment data retrieval uses a REST endpoint to support streaming and range requests:
+The GraphQL layer exposes upload as a multipart mutation or delegates to a REST upload endpoint -- the specific mechanism depends on the deployment. Attachment data retrieval uses a REST endpoint to support streaming:
 
 ```
 GET /attachments/:hash
@@ -608,7 +611,6 @@ packages/
         s3-attachment-upload.ts
         s3-attachment-transport.ts
       storage/
-        interfaces.ts        # IAttachmentMetadataStore
         kysely/              # Postgres metadata storage
       index.ts
 ```
@@ -719,9 +721,9 @@ CREATE INDEX idx_attachment_lru ON attachment(last_accessed_at_utc ASC)
 **How each path writes:**
 
 - **`reserve()`** inserts into `attachment_reservation`. No attachment row yet.
-- **`upload.send(data)`** streams bytes to storage, computes the content hash, reads the reservation, inserts into `attachment` (or returns existing ref on dedup), then deletes the reservation. All internal to the upload handle.
-- **`put(hash, metadata, data)`** inserts directly into `attachment` with status `available`. If the hash already exists and the row is `evicted`, restores the data and sets status to `available`. If the hash exists with status `available`, it is a no-op (dedup). No reservation involved.
-- **`get(hash)`** returns data and updates `last_accessed_at_utc`.
+- **`upload.send(data)`** streams bytes to storage, computes the content hash, reads the reservation, upserts into `attachment` (`INSERT ... ON CONFLICT (hash) DO NOTHING`), then deletes the reservation. If the hash already exists the insert is a no-op and the existing ref is returned. All internal to the upload handle.
+- **`put(hash, metadata, data)`** upserts into `attachment` (`INSERT ... ON CONFLICT (hash) DO UPDATE SET status = 'available'` when the existing row is `evicted`, `DO NOTHING` when `available`). Concurrent puts for the same hash are safe -- at most one restores the data, the rest are no-ops. No reservation involved.
+- **`get(hash)`** returns data and updates `last_accessed_at_utc`. If the data has been evicted, the store re-fetches it from the transport and restores it locally before returning.
 - **GC** evicts least-recently-accessed attachments when storage exceeds threshold.
 
 ### Limitations
@@ -757,9 +759,10 @@ sequenceDiagram
     Handle->>Store: INSERT into attachment (or dedup), DELETE reservation
     Handle-->>Client: AttachmentUploadResult { ref }
 
-    Client->>Switchboard: GET /attachments/:hash
-    Switchboard->>S3: Generate presigned GET URL
-    Switchboard-->>Client: 302 Redirect to presigned GET URL
+    Client->>Switchboard: attachmentService.get(ref)
+    Switchboard->>S3: GetObject (presigned GET)
+    S3-->>Switchboard: data stream
+    Switchboard-->>Client: AttachmentResponse (streamed)
 ```
 
 ### S3 Attachment Transport
