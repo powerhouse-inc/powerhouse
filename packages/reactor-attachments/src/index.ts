@@ -38,3 +38,6 @@ export {
   SwitchboardAttachmentTransport,
   type SwitchboardTransportConfig,
 } from "./switchboard/index.js";
+export { NullAttachmentTransport } from "./null-attachment-transport.js";
+export { AttachmentBuilder } from "./attachment-builder.js";
+export type { AttachmentBuildResult } from "./attachment-builder.js";

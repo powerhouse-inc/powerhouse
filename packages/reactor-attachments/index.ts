@@ -31,4 +31,7 @@ export {
   DirectAttachmentUploadFactory,
   SwitchboardAttachmentTransport,
   type SwitchboardTransportConfig,
+  NullAttachmentTransport,
+  AttachmentBuilder,
+  type AttachmentBuildResult,
 } from "./src/index.js";

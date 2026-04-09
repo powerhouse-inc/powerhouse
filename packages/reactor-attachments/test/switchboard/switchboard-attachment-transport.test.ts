@@ -29,11 +29,11 @@ function mockResponse(
 }
 
 describe("SwitchboardAttachmentTransport", () => {
-  let mockFetch: ReturnType<typeof vi.fn>;
+  let mockFetch: typeof fetch & ReturnType<typeof vi.fn>;
   let transport: SwitchboardAttachmentTransport;
 
   beforeEach(() => {
-    mockFetch = vi.fn();
+    mockFetch = vi.fn() as unknown as typeof fetch & ReturnType<typeof vi.fn>;
     transport = new SwitchboardAttachmentTransport({
       remoteUrl: REMOTE_URL,
       fetchFn: mockFetch,
