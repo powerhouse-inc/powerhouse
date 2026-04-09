@@ -2,13 +2,17 @@
 
 ## Summary
 
-Attachments are binary files that accompany documents. The attachment system provides a multi-phase upload flow that decouples attachment data from the action/operation pipeline:
+Attachments are binary files that accompany documents. The attachment system provides an upload flow that decouples binary data from the action/operation pipeline:
 
-1. **Reserve** -- The client requests an attachment slot and receives an upload URL.
-2. **Upload** -- The client uploads binary data directly to that URL.
-3. **Reference** -- The client dispatches an `ADD_ATTACHMENT` core action on the document.
+1. **Reserve** -- The client requests an attachment slot and receives an upload handle.
+2. **Upload** -- The client streams binary data through the handle and receives an `AttachmentRef`.
+3. **Use** -- The client includes the ref in a domain action input (e.g., `ATTACH_INVOICE`).
 
-This design allows the upload target to change without affecting the client protocol. The initial implementation proxies uploads through switchboard. A later implementation issues S3 presigned URLs so clients upload directly to object storage. The content-addressed design (hash-based identity) also supports p2p transfer mechanisms.
+The upload handle (`IAttachmentUpload`) abstracts the transport. The caller does not know or care whether bytes flow via HTTP, S3 presigned URLs, IPFS, or any other mechanism. This is the key design constraint: the core interface never exposes URLs, headers, or any transport-specific detail.
+
+Attachment refs are opaque strings that live inside domain action inputs, declared via the `Attachment` scalar in document model GraphQL schemas. There are no special core actions for attachments -- the ref is just a value that the reducer puts in state like any other field.
+
+The content-addressed design (hash-based identity) supports p2p transfer, deduplication, and verification.
 
 ## Current State
 
@@ -42,125 +46,75 @@ type AttachmentInput = Attachment & {
 
 2. **Transport-agnostic.** The mechanism for moving bytes between reactors is pluggable (`IAttachmentTransport`), just as `IChannel`/`IChannelFactory` is pluggable for operation sync. Switchboard, S3, IPFS, BitTorrent, or a simple HTTP exchange are all valid transports.
 
-3. **Two-layer sync.** Operation sync (existing channels) carries `ADD_ATTACHMENT`/`REMOVE_ATTACHMENT` core actions that declare _which_ attachments a document uses. Attachment data sync (`IAttachmentTransport`) moves the _bytes_. These are independent -- a reactor may receive the operation referencing an attachment before the data is available locally.
+3. **Refs are values.** An `AttachmentRef` is a plain string that travels inside domain action inputs. Document model schemas declare attachment fields using the `Attachment` scalar. The reducer stores the ref in state like any other field. There are no special core actions, no attachment set on the document, and no read model for reference tracking.
 
-4. **Core actions for relationships.** `ADD_ATTACHMENT` and `REMOVE_ATTACHMENT` are core actions on the base document-model reducer (alongside `SET_NAME`, `PRUNE`, and `LOAD_STATE` in `_baseReducer`; `UNDO` and `REDO` are handled separately by `processUndoRedo()` before the base reducer runs). They record the document-to-attachment mapping in the operation history and give sync channels the information needed to trigger data transfer.
+4. **Lazy data availability.** A reactor may have an `AttachmentRef` in document state before the binary data is available locally. This is expected. When the data is needed, the attachment service fetches it from a peer via the transport layer. The data and the ref are independent concerns.
+
+5. **LRU eviction.** Garbage collection is storage-pressure-driven, not reference-count-driven. The store evicts least-recently-accessed data when storage limits are reached. Evicted data retains its metadata and can be re-fetched from any peer that has the bytes.
+
+### The Attachment Scalar
+
+The `Attachment` scalar in a document model GraphQL schema declares that a field holds an `AttachmentRef`. The codegen pipeline already detects `": Attachment"` in operation schemas and generates appropriate types.
+
+```graphql
+# In a document model schema
+scalar Attachment
+
+input AttachInvoiceInput {
+  vendorName: String!
+  amount: Float!
+  scan: Attachment!
+}
+```
+
+The generated TypeScript type maps `Attachment` to `string` (specifically `AttachmentRef`). The reducer treats it as an opaque string:
+
+```ts
+attachInvoiceOperation(state, action) {
+  state.invoices.push({
+    vendorName: action.input.vendorName,
+    amount: action.input.amount,
+    scan: action.input.scan, // AttachmentRef string
+  });
+}
+```
+
+The `Attachment` scalar is the entire integration surface between document models and the attachment system. Document model authors do not interact with `IAttachmentService`, `IAttachmentStore`, or `IAttachmentTransport` -- they just declare `Attachment` fields and use the refs they receive from the upload flow.
 
 ### Attachment Lifecycle
 
-Reservations and attachments have separate lifecycles. A reservation lives in `attachment_reservation` and is transient. An attachment lives in `attachment` and is permanent (metadata is never deleted).
+Reservations and attachment data have separate lifecycles. A reservation is transient upload coordination. Attachment data is a content-addressed blob in the store.
 
 **Reservation lifecycle** (in `attachment_reservation`):
 
 ```mermaid
 stateDiagram-v2
     [*] --> RESERVED : reserve()
-    RESERVED --> [*] : confirm() (row deleted)
+    RESERVED --> [*] : upload.send() (row deleted)
 ```
 
-Reservations do not expire. Upload URL expiry (e.g. presigned URL TTL) is the upload target's concern. If a URL expires before the client finishes uploading, the client requests a new URL; the reservation itself remains valid. Reservations are only removed when `confirm()` succeeds (promoting the data to the `attachment` table).
+Reservations do not expire at the reservation level. Transport-specific expiry (e.g. presigned URL TTL) is the upload handle's concern -- if the underlying mechanism expires, the handle can refresh it transparently. Reservations are only removed when `upload.send()` succeeds (promoting the data to the `attachment` table).
 
-**Attachment lifecycle** (in `attachment`):
+**Attachment data lifecycle** (in `attachment`):
 
 ```mermaid
 stateDiagram-v2
-    [*] --> READY : confirm() or put()
-    READY --> REFERENCED : ref_count 0 -> 1
-    REFERENCED --> READY : ref_count -> 0
-    READY --> UNLOADED : GC evicts data (ref_count = 0)
-    UNLOADED --> REFERENCED : ref_count 0 -> 1 (triggers re-fetch)
-    UNLOADED --> READY : re-fetched with ref_count still 0
+    [*] --> AVAILABLE : upload.send() or put()
+    AVAILABLE --> EVICTED : LRU eviction under storage pressure
+    EVICTED --> AVAILABLE : re-fetched via transport
 ```
 
-| Status       | Meaning                                                      |
-| ------------ | ------------------------------------------------------------ |
-| `READY`      | Data is available locally. Can be served and referenced.     |
-| `REFERENCED` | ref_count > 0 and data is available locally.                 |
-| `UNLOADED`   | Data evicted. Metadata retained. Re-fetchable via transport. |
+| Status      | Meaning                                                      |
+| ----------- | ------------------------------------------------------------ |
+| `AVAILABLE` | Data is stored locally. Can be served immediately.           |
+| `EVICTED`   | Data removed to free space. Metadata retained. Re-fetchable. |
 
-`ref_count` and `status` are independent concerns. `ref_count` tracks how many documents reference the attachment. `status` tracks whether data is available locally. The valid combinations:
+The lifecycle is simple because there is no reference counting. The store does not track which documents use which attachments. It only knows: do I have the bytes, or not?
 
-| ref_count | status     | Meaning                                                        |
-| --------- | ---------- | -------------------------------------------------------------- |
-| 0         | READY      | Data available, no references. GC-eligible after grace period. |
-| > 0       | REFERENCED | Data available, actively referenced. Normal steady state.      |
-| 0         | UNLOADED   | Data evicted, no references. Inert.                            |
-| > 0       | UNLOADED   | Data needed but not yet available. Re-fetch in progress.       |
-
-Transitions:
-
-- `READY -> REFERENCED`: `ref_count` incremented above 0 by the attachment read model after `ADD_ATTACHMENT`.
-- `REFERENCED -> READY`: `ref_count` decremented to 0 after `REMOVE_ATTACHMENT`. Attachment is now GC-eligible.
-- `READY -> UNLOADED`: GC evicts data for attachments with `ref_count = 0` past the grace period. Metadata is retained.
-- `UNLOADED -> REFERENCED`: `markReferenced()` increments `ref_count` above 0 while data is evicted and triggers a re-fetch via the store-transport pair. When the transport delivers the data, `put()` restores it and sets status to `REFERENCED` (because `ref_count > 0`).
-- `UNLOADED -> READY`: `put()` restores data while `ref_count` is still 0 (e.g., speculative prefetch). Unlikely in practice.
-
-GC only acts on `ref_count = 0`. An `UNLOADED` attachment with `ref_count > 0` is never evicted -- it is awaiting re-fetch.
-
-**Unloading is a data eviction, not a logical delete.** The metadata record is always retained so the hash remains known. If the attachment is needed again, it is re-fetched through the transport layer -- the same mechanism used for pending attachments during sync. The behavior of eviction depends on the storage backend:
+**Eviction is a data removal, not a logical delete.** The metadata record is always retained so the hash remains known. If the data is needed again, it is re-fetched through the transport layer. The behavior of eviction depends on the storage backend:
 
 - **Mutable backends** (local disk, S3/MinIO): The implementation removes the data files to reclaim space.
-- **Immutable backends** (IPFS, content-addressed stores): Unloading means unpinning / ceasing to serve, not erasure.
-
-### Core Actions
-
-`ADD_ATTACHMENT` and `REMOVE_ATTACHMENT` are base document actions, handled by `_baseReducer` alongside `SET_NAME`, `PRUNE`, and `LOAD_STATE`. (`UNDO` and `REDO` are handled earlier by `processUndoRedo()` in `baseReducer`, before `_baseReducer` is called.)
-
-#### ADD_ATTACHMENT
-
-Records that a document uses a specific attachment. The reducer adds the ref to the document's attachment set. The document does not store attachment metadata -- that is the `IAttachmentService`'s responsibility. The document only tracks _which_ refs it uses.
-
-```ts
-type AddAttachmentInput = {
-  ref: AttachmentRef;
-};
-```
-
-#### REMOVE_ATTACHMENT
-
-Records that a document no longer uses a specific attachment.
-
-```ts
-type RemoveAttachmentInput = {
-  ref: AttachmentRef;
-};
-```
-
-#### Reducer
-
-The base reducer handles both actions by managing a simple set of refs on the document:
-
-```ts
-// In _baseReducer, alongside SET_NAME, PRUNE, LOAD_STATE:
-case "ADD_ATTACHMENT":
-  return addAttachmentOperation(document, parsedAction.input);
-
-case "REMOVE_ATTACHMENT":
-  return removeAttachmentOperation(document, parsedAction.input);
-```
-
-```ts
-type PHDocument<TState> = {
-  header: PHDocumentHeader;
-  state: TState;
-  operations: DocumentOperations;
-  // ...existing fields...
-  attachments: AttachmentRef[]; // set semantics -- no duplicates
-};
-```
-
-The reducer is pure -- it has no dependency on `IAttachmentService`. It enforces set semantics: `ADD_ATTACHMENT` is a no-op if the ref is already present, and `REMOVE_ATTACHMENT` removes the ref entirely (not just the first occurrence). Metadata (mimeType, size, hash, etc.) is retrieved at read time via `IAttachmentService.stat()` when the application needs it.
-
-`isDocumentAction()` (`documents.ts:162`) must also be updated to include `ADD_ATTACHMENT` and `REMOVE_ATTACHMENT`. Generated reducers use this guard to skip base document actions (returning state unchanged), so without the update, generated reducers would attempt to process these actions instead of deferring to `_baseReducer`.
-
-This keeps a clean separation:
-
-- **Document** knows _which_ attachments it uses (refs).
-- **IAttachmentService** knows _what_ each attachment is (metadata, retrieval, client upload flow).
-- **IAttachmentStore** manages local data and reference counts for the reactor.
-- **IAttachmentTransport** moves attachment bytes between reactors, paired with the store.
-
-Garbage collection uses the refs stored on documents to determine which attachments are still in use across the system.
+- **Immutable backends** (IPFS, content-addressed stores): Eviction means unpinning / ceasing to serve, not erasure.
 
 ### Types
 
@@ -185,13 +139,13 @@ type AttachmentHash = string;
 type AttachmentRef = `attachment://v${number}:${string}`;
 
 /**
- * Status of an attachment in its lifecycle.
+ * Status of attachment data in the local store.
  */
-type AttachmentStatus = "ready" | "referenced" | "unloaded";
+type AttachmentStatus = "available" | "evicted";
 
 /**
  * Metadata about an attachment. Only exists after data is stored
- * (via confirm for client uploads, or put for sync).
+ * (via upload.send for client uploads, or put for sync).
  */
 type AttachmentHeader = {
   hash: AttachmentHash;
@@ -202,12 +156,13 @@ type AttachmentHeader = {
   status: AttachmentStatus;
   source: "local" | "sync";
   createdAtUtc: string; // ISO 8601
+  lastAccessedAtUtc: string; // ISO 8601, for LRU eviction
 };
 
 /**
  * Metadata provided alongside attachment data during sync.
- * The remaining fields (hash, status, source, createdAtUtc) are
- * set by the store when it creates the attachment record.
+ * The remaining fields (hash, status, source, createdAtUtc, lastAccessedAtUtc)
+ * are set by the store when it creates the attachment record.
  */
 type AttachmentMetadata = {
   mimeType: string;
@@ -226,32 +181,12 @@ type ReserveAttachmentOptions = {
 };
 
 /**
- * Result of reserving an attachment slot.
+ * Result of uploading attachment data through a handle.
  */
-type ReserveAttachmentResult = {
-  /** Temporary ID used until the hash is known */
-  reservationId: string;
-  /** URL to upload the binary data to (PUT request) */
-  uploadUrl: string;
-  /** HTTP headers to include in the upload request */
-  uploadHeaders: Record<string, string>;
-  /** Timestamp after which the upload URL is no longer valid */
-  expiresAtUtc: string; // ISO 8601
-};
-
-/**
- * Opaque proof that data was uploaded. The service passes this
- * to its configured IHashVerifier to resolve a verified hash.
- */
-type UploadSignature = string;
-
-/**
- * Result of confirming an upload has completed.
- */
-type ConfirmAttachmentResult = {
+type AttachmentUploadResult = {
   /** The content hash, now known after upload */
   hash: AttachmentHash;
-  /** The ref to use in ADD_ATTACHMENT actions */
+  /** The ref to use in domain action inputs */
   ref: AttachmentRef;
   header: AttachmentHeader;
 };
@@ -265,8 +200,6 @@ type GetAttachmentParams = {
 
 /**
  * Response when retrieving attachment data from the local store.
- * Includes full AttachmentHeader with local reactor concerns
- * (status, source, ref_count-derived semantics).
  */
 type AttachmentResponse = {
   header: AttachmentHeader;
@@ -288,38 +221,18 @@ type TransportResponse = {
 
 ### IAttachmentService
 
-The client-facing interface for the multi-phase upload flow: reserve a slot, confirm the upload, query metadata, and retrieve data. This is what applications (editors, Connect, CLI tools) interact with.
+The client-facing interface for uploading, querying, and retrieving attachments. This is what applications (editors, Connect, CLI tools) interact with.
 
 ```ts
 interface IAttachmentService {
   /**
-   * Reserve a new attachment slot.
-   * Returns an upload URL. The caller uploads data to that URL.
+   * Reserve a new attachment slot and return an upload handle.
+   *
+   * The handle abstracts the transport -- the caller streams data
+   * through it without knowing whether bytes flow via HTTP, S3, IPFS,
+   * or any other mechanism.
    */
-  reserve(options: ReserveAttachmentOptions): Promise<ReserveAttachmentResult>;
-
-  /**
-   * Confirm that an upload has completed.
-   * Creates an attachment record (or returns existing on dedup).
-   * Returns the content hash and ref.
-   *
-   * The caller provides a signature -- an opaque proof that the
-   * data was uploaded. The service delegates validation to its
-   * configured IHashVerifier, which resolves the signature to
-   * a verified AttachmentHash. This avoids requiring the service
-   * to download and re-hash the data.
-   *
-   * Dedup: if an attachment with the verified hash already exists,
-   * confirm() returns the existing ref rather than rejecting.
-   * Content-addressed storage means identical uploads converge
-   * on the same hash -- the second upload is a no-op.
-   *
-   * Always client-initiated via the confirmAttachment mutation.
-   */
-  confirm(
-    reservationId: string,
-    signature: UploadSignature,
-  ): Promise<ConfirmAttachmentResult>;
+  reserve(options: ReserveAttachmentOptions): Promise<IAttachmentUpload>;
 
   /**
    * Get attachment metadata by ref.
@@ -328,7 +241,10 @@ interface IAttachmentService {
 
   /**
    * Retrieve attachment data.
-   * Only succeeds for attachments in READY or REFERENCED status.
+   *
+   * If the data is available locally, returns it immediately.
+   * If the data has been evicted, fetches it from a peer via
+   * the transport layer before returning.
    */
   get(
     ref: AttachmentRef,
@@ -338,35 +254,49 @@ interface IAttachmentService {
 }
 ```
 
-### IHashVerifier
+### IAttachmentUpload
 
-Resolves an `UploadSignature` to a verified `AttachmentHash`. The service delegates hash verification here so that `confirm()` never needs to download and re-hash the data. Each deployment configures the verifier that matches its upload target.
+The upload handle returned by `reserve()`. It encapsulates all transport-specific concerns (URLs, credentials, streaming protocols) behind a single `send()` method.
 
 ```ts
-interface IHashVerifier {
+interface IAttachmentUpload {
   /**
-   * Verify the signature and return the content hash and size.
-   * Throws if the signature is invalid or cannot be verified.
+   * Unique identifier for this reservation.
    */
-  verify(
-    reservationId: string,
-    signature: UploadSignature,
-  ): Promise<{ hash: AttachmentHash; sizeBytes: number }>;
+  reservationId: string;
+
+  /**
+   * Stream attachment data through this handle.
+   *
+   * The handle manages the full upload lifecycle internally:
+   * writing bytes to the backing store, computing or verifying
+   * the content hash, creating the attachment record, and
+   * cleaning up the reservation.
+   *
+   * Dedup: if an attachment with the same content hash already
+   * exists, send() returns the existing ref. Content-addressed
+   * storage means identical uploads converge on the same hash.
+   *
+   * @returns The content hash, ref, and header for the uploaded attachment.
+   */
+  send(data: ReadableStream<Uint8Array>): Promise<AttachmentUploadResult>;
 }
 ```
 
-Built-in implementations:
+Each `IAttachmentService` implementation provides its own upload handle:
 
-| Verifier             | How it works                                                                                                                                                                        | When to use                            |
-| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
-| `InlineHashVerifier` | The upload endpoint computes the hash and size while streaming bytes to disk. The signature encodes both (e.g. `hash:sizeBytes`), already trusted because the server computed them. | Switchboard-proxied uploads            |
-| `S3ChecksumVerifier` | Reads the `x-amz-checksum-sha256` and `Content-Length` from the S3 object (via `HeadObject`). The signature is the S3 object key.                                                   | S3/MinIO uploads with checksum enabled |
+| Implementation                | Handle behavior                                                                 |
+| ----------------------------- | ------------------------------------------------------------------------------- |
+| `SwitchboardAttachmentUpload` | Streams to the switchboard's upload endpoint. Hash computed server-side inline. |
+| `S3AttachmentUpload`          | PUTs to a presigned S3 URL. Hash verified via `HeadObject` after upload.        |
+| `IpfsAttachmentUpload`        | Calls `ipfs.add()`. CID is the hash.                                            |
+| `DirectAttachmentUpload`      | Streams to the local store. Hash computed inline.                               |
 
-Custom implementations can use any verification scheme (e.g., a signed token from a CDN edge, a notarized receipt from IPFS).
+Hash verification is an internal concern of the upload handle implementation. The caller never sees signatures, verifiers, or transport-specific details.
 
 ### IAttachmentStore
 
-The reactor-facing interface for managing local attachment data. The attachment read model calls `markReferenced`/`markUnreferenced` for reference tracking. The `IAttachmentTransport` calls `put` when it receives data from a remote. The store notifies its configured transport when new data arrives (via `put` or after a client upload is confirmed), forming a bidirectional store-transport pair.
+The reactor-facing interface for managing local attachment data. The `IAttachmentTransport` calls `put` when it receives data from a remote. The store notifies its configured transport when new data arrives (via `put` or after a client upload completes), forming a bidirectional store-transport pair.
 
 It is intentionally separate from `IAttachmentService` -- the client upload flow and the reactor's internal data management are different concerns, even when a single class implements both.
 
@@ -380,83 +310,45 @@ interface IAttachmentStore {
 
   /**
    * Retrieve attachment header and data stream by hash.
-   * Returns null if the attachment is not available locally
-   * (unloaded or not yet synced).
+   * Returns null if the attachment is not available locally (evicted
+   * or not yet synced). Updates lastAccessedAtUtc on access.
    */
   get(hash: AttachmentHash): Promise<AttachmentResponse | null>;
 
   /**
    * Store attachment data received from a remote (during sync or re-fetch).
-   * Used by IAttachmentTransport implementations to write
-   * data into the local store.
+   * Used by IAttachmentTransport implementations to write data into
+   * the local store.
    *
    * Behavior depends on existing state:
-   * - No existing row: INSERT with source='sync'. Derives ref_count
-   *   from the attachment_ref table (COUNT of matching refs). Sets
-   *   status based on derived ref_count (> 0 -> 'referenced',
-   *   0 -> 'ready').
-   * - Existing row with status='unloaded': restore data, set status
-   *   based on current ref_count (ref_count > 0 -> 'referenced',
-   *   ref_count = 0 -> 'ready').
-   * - Existing row with any other status: no-op (dedup).
+   * - No existing row: INSERT with source='sync', status='available'.
+   * - Existing row with status='evicted': restore data, set status
+   *   to 'available'.
+   * - Existing row with status='available': no-op (dedup).
    */
   put(
     hash: AttachmentHash,
-    header: AttachmentMetadata,
+    metadata: AttachmentMetadata,
     data: ReadableStream<Uint8Array>,
   ): Promise<void>;
 
   /**
-   * Increment the reference count for an attachment.
-   * Called by the attachment read model after an ADD_ATTACHMENT
-   * operation is committed.
+   * Evict attachment data to reclaim storage.
    *
-   * If no attachment row exists (sync path -- the operation arrived
-   * before the data), the store defers the increment. The ref is
-   * tracked in attachment_ref; when put() later creates the row,
-   * it derives ref_count from the attachment_ref table so the
-   * count is correct on arrival. listPending() uses a LEFT JOIN
-   * against attachment to find refs with no row or UNLOADED status.
-   *
-   * If the row exists and ref_count transitions from 0 to 1,
-   * the store updates status to 'referenced'. If the row is
-   * currently UNLOADED, the store also triggers a re-fetch via the
-   * transport (status transitions to REFERENCED when data arrives).
-   */
-  markReferenced(hash: AttachmentHash): Promise<void>;
-
-  /**
-   * Decrement the reference count for an attachment.
-   * Called by the attachment read model after a REMOVE_ATTACHMENT
-   * operation is committed. When ref_count reaches 0, the store
-   * updates status back to 'ready' (eligible for GC).
-   */
-  markUnreferenced(hash: AttachmentHash): Promise<void>;
-
-  /**
-   * Unload attachment data.
-   *
-   * Evicts the local bytes and sets status to 'unloaded'. The
+   * Removes the local bytes and sets status to 'evicted'. The
    * metadata record is retained so the hash is still known. If the
-   * attachment is referenced again (ref_count goes back above 0),
-   * the store-transport pair re-fetches the data from a peer --
-   * the same path used for pending attachments during sync.
+   * data is needed again, the service fetches it via the transport.
    *
    * On immutable backends (IPFS), this unpins/stops serving
    * rather than deleting.
    */
-  unload(hash: AttachmentHash): Promise<void>;
+  evict(hash: AttachmentHash): Promise<void>;
 
   /**
-   * List attachments referenced by local documents that are not
-   * yet available in the local store.
+   * Get the total storage used by locally available attachment data.
+   * Used by the GC policy to decide when to evict.
    */
-  listPending(): Promise<AttachmentHash[]>;
-
-  /**
-   * Register a callback for when a pending attachment becomes available.
-   */
-  onAvailable(callback: (event: AttachmentAvailableEvent) => void): () => void;
+  storageUsed(): Promise<number>;
 }
 ```
 
@@ -554,9 +446,11 @@ type AttachmentTransportConfig = {
 
 ### Attachment Sync Flow
 
-Attachment sync is triggered by operation sync. When a reactor receives operations containing `ADD_ATTACHMENT` actions, it needs to acquire the referenced attachment data.
+Attachment data sync is independent from operation sync. Operations carry `AttachmentRef` values in their inputs. The attachment service resolves refs to data on demand.
 
-#### Pull-based sync (default)
+#### Lazy sync (default)
+
+When a reactor receives operations containing attachment refs, it does not eagerly fetch the data. The data is fetched when someone actually needs it (e.g., the UI renders an image, an export needs the file).
 
 ```mermaid
 sequenceDiagram
@@ -565,24 +459,25 @@ sequenceDiagram
     participant ReactorB as Reactor B (destination)
     participant Transport as IAttachmentTransport
 
-    ReactorA->>SyncChannel: Outbox: ADD_ATTACHMENT(hash=abc123)
-    SyncChannel->>ReactorB: Inbox: ADD_ATTACHMENT(hash=abc123)
+    ReactorA->>SyncChannel: Outbox: ATTACH_INVOICE(ref=attachment://v1:abc123)
+    SyncChannel->>ReactorB: Inbox: ATTACH_INVOICE(ref=attachment://v1:abc123)
+    ReactorB->>ReactorB: Reducer stores ref in document state
 
-    ReactorB->>ReactorB: attachmentStore.has("abc123") -> false
+    Note over ReactorB: Later, when the attachment data is needed...
 
+    ReactorB->>ReactorB: attachmentService.get("attachment://v1:abc123")
+    ReactorB->>ReactorB: store.has("abc123") -> false
     ReactorB->>Transport: fetch("abc123")
-    Transport->>ReactorA: GET /attachments/abc123 (or IPFS, S3, etc.)
+    Transport->>ReactorA: GET /attachments/abc123
     ReactorA-->>Transport: { hash, metadata, body }
     Transport-->>ReactorB: TransportResponse
-
-    ReactorB->>ReactorB: attachmentStore.put("abc123", metadata, body)
-
-    ReactorB->>ReactorB: Reducer adds ref, read model marks referenced
+    ReactorB->>ReactorB: store.put("abc123", metadata, body)
+    ReactorB-->>ReactorB: AttachmentResponse (data now local)
 ```
 
 #### Push-based sync (eager replication)
 
-For scenarios where the source reactor wants to ensure data is available before the operation arrives (or where the destination cannot initiate connections):
+For scenarios where the source reactor wants to ensure data is available before the destination needs it:
 
 ```mermaid
 sequenceDiagram
@@ -593,13 +488,12 @@ sequenceDiagram
 
     ReactorA->>Transport: push("abc123", "reactorB", dataStream)
     Transport->>ReactorB: PUT attachment data
-    ReactorB->>ReactorB: attachmentStore.put("abc123", header, body)
+    ReactorB->>ReactorB: store.put("abc123", metadata, body)
 
-    ReactorA->>SyncChannel: Outbox: ADD_ATTACHMENT(hash=abc123)
-    SyncChannel->>ReactorB: Inbox: ADD_ATTACHMENT(hash=abc123)
-
-    ReactorB->>ReactorB: attachmentStore.has("abc123") -> true
-    ReactorB->>ReactorB: Reducer adds ref, read model marks referenced
+    ReactorA->>SyncChannel: Outbox: ATTACH_INVOICE(ref=attachment://v1:abc123)
+    SyncChannel->>ReactorB: Inbox: ATTACH_INVOICE(ref=attachment://v1:abc123)
+    ReactorB->>ReactorB: Reducer stores ref in state
+    Note over ReactorB: Data already local -- no fetch needed
 ```
 
 #### P2P sync
@@ -615,12 +509,12 @@ sequenceDiagram
 
     ReactorA->>Network: announce("abc123") [pin/seed]
 
-    ReactorB->>ReactorB: attachmentStore.has("abc123") -> false
+    ReactorB->>ReactorB: attachmentService.get(ref) -> not local
     ReactorB->>Network: fetch("abc123")
     Network->>ReactorA: Resolve hash, fetch from peer
     ReactorA-->>Network: data stream
     Network-->>ReactorB: data stream
-    ReactorB->>ReactorB: attachmentStore.put("abc123", header, body)
+    ReactorB->>ReactorB: store.put("abc123", metadata, body)
 
     ReactorC->>Network: fetch("abc123")
     Network->>ReactorB: (or ReactorA) data stream
@@ -628,127 +522,39 @@ sequenceDiagram
     Network-->>ReactorC: data stream
 ```
 
-### Pending Attachments and Availability
-
-A reactor may receive an `ADD_ATTACHMENT` operation before the attachment data is available locally. This is expected and must be handled gracefully:
-
-1. The `ADD_ATTACHMENT` action is committed to the document's operation history regardless of whether the data is local. The operation is valid -- it records the fact that the attachment exists.
-
-2. The reactor tracks "pending" attachments -- those referenced by committed operations but not yet available locally. This is an `IAttachmentStore` concern, not a document state concern. See `IAttachmentStore.listPending()` and `IAttachmentStore.onAvailable()`.
-
-3. The store-transport pair handles fetching pending attachment data in the background. The transport fetches and calls `IAttachmentStore.put()` to store it locally.
-
-4. When application code (e.g., an editor) tries to `get()` a pending attachment via `IAttachmentService`, the service can either block until available, return a "not yet available" error, or return a placeholder -- this is configurable per use case.
-
-5. `IAttachmentStore` emits events via `onAvailable()` when pending attachments become available, allowing the UI to update.
-
-### Attachment Read Model
-
-The attachment read model subscribes to `JOB_WRITE_READY` events and manages the attachment lifecycle in response to committed operations. This follows the same pattern as the sync read model (`ISyncManager`) and the document view read model (`IDocumentView`).
-
-The read model is registered with `IReadModelCoordinator` and implements `IReadModel`. It has no interaction with the executor or reducer -- it only reacts to committed operations after the fact.
-
-```mermaid
-flowchart TD
-    Client["Client / API"]
-    Service["IAttachmentService"]
-    Reactor["Reactor"]
-    ReadModel["AttachmentReadModel"]
-    Store["IAttachmentStore"]
-    Transport["IAttachmentTransport"]
-    Peers["Remote Reactors / Peers"]
-
-    Client -- "reserve / confirm / stat / get" --> Service
-    Client -- "ADD_ATTACHMENT action" --> Reactor
-    Reactor -- "JOB_WRITE_READY" --> ReadModel
-    ReadModel -- "markReferenced / markUnreferenced" --> Store
-    Store -- "new data available" --> Transport
-    Transport -- "announce / push" --> Peers
-    Peers -- "data" --> Transport
-    Transport -- "put" --> Store
-```
-
-The store and transport form a bidirectional pair -- similar to how a sync channel's inbox and outbox work together. When the store receives new attachment data (via client upload or `put`), it notifies the transport, which announces or pushes to peers. When the transport receives data from a peer, it writes to the store via `put`.
-
-Responsibilities of the attachment read model:
-
-1. **Reference counting**: The read model inspects the `action.type` of each committed operation:
-   - `ADD_ATTACHMENT`: call `markReferenced()` for the ref in the action input.
-   - `REMOVE_ATTACHMENT`: call `markUnreferenced()` for the ref in the action input.
-   - All other action types: ignored.
-
-   This is simple and sufficient for the normal path. The read model does not need access to `resultingState` or any document state -- it reacts purely to the operation stream.
-
-   **UNDO/REDO and ref_count drift**: UNDO produces a NOOP operation with a `skip` value; it does not produce an inverse `REMOVE_ATTACHMENT` or `ADD_ATTACHMENT`. This means the read model cannot adjust ref_count from the NOOP alone. As a result, ref_count may drift after undo/redo sequences involving attachment actions. The consequences are bounded:
-   - **ref_count too high** (e.g., UNDO of ADD not decremented): the attachment stays referenced longer than necessary, delaying GC. Not harmful -- just wasted storage.
-   - **ref_count too low** (e.g., UNDO of REMOVE not incremented): the attachment becomes GC-eligible while still logically referenced. The data may be unloaded, but unloaded attachments retain metadata and are re-fetchable via the transport.
-
-   A periodic **reconciliation pass** corrects drift by scanning all documents' `attachments` arrays and recomputing ref_count from the actual refs in use. This can run on a longer interval than GC (e.g., daily) since drift is uncommon and its effects are recoverable.
-
-2. **Garbage collection**: Periodically scans for attachments with `ref_count = 0` past their grace period and calls `IAttachmentStore.unload()` to evict their data.
-
-The read model does not interact with `IAttachmentTransport`. Data availability and replication are handled by the store-transport pair directly.
-
 ### Client Integration
 
-The client interacts only with `IAttachmentService`. The executor and reducer are pure -- they have no dependency on attachment interfaces.
+The client interacts with `IAttachmentService` for upload/download and dispatches normal domain actions that include attachment refs. The executor and reducer are pure -- they have no dependency on attachment interfaces.
 
-1. **Upload**: Client calls `reserve()`, uploads data to the URL, then calls `confirm()` with the signature from the upload response. The service verifies the signature, creates the attachment record, and returns the ref. The store notifies the transport, which announces to peers.
+1. **Upload**: Client calls `reserve()` to get an upload handle, then calls `handle.send(stream)` to upload data. The handle manages the full lifecycle -- writing bytes, computing the hash, creating the attachment record, and cleaning up the reservation. Returns the ref. The store notifies the transport, which announces to peers.
 
-2. **Attach**: Client dispatches `ADD_ATTACHMENT` core action. The reducer adds the ref to the document. The read model updates reference counts asynchronously.
+2. **Use**: Client dispatches a domain action with the ref in its input (e.g., `ATTACH_INVOICE({ ref, vendorName, amount })`). The reducer stores the ref in document state.
 
-3. **Download**: Client calls `IAttachmentService.get()` to retrieve attachment data.
+3. **Download**: Client calls `IAttachmentService.get(ref)` to retrieve attachment data. If the data is not local, the service fetches it from a peer transparently.
 
-4. **Remove**: Client dispatches `REMOVE_ATTACHMENT`. The reducer removes the ref. The read model updates reference counts; GC handles eventual cleanup.
-
-5. **Validation** (optional): If attachment readiness should be checked before accepting the action, this belongs at the API boundary (e.g., the GraphQL resolver calls `IAttachmentService.stat()` before forwarding to `reactor.execute()`). The executor and reducer remain pure.
+4. **Validation** (optional): If attachment readiness should be checked before accepting the action, this belongs at the API boundary (e.g., the GraphQL resolver calls `IAttachmentService.stat()` before forwarding to `reactor.execute()`). The executor and reducer remain pure.
 
 ### Usage
 
-#### Client: Upload and attach
+#### Client: Upload and use in a domain action
 
 ```ts
-// 1. Reserve a slot
-const reservation = await attachmentService.reserve({
-  mimeType: "image/png",
-  fileName: "diagram.png",
-  extension: "png",
+// 1. Reserve a slot -- returns an upload handle, not a URL.
+const upload = await attachmentService.reserve({
+  mimeType: "application/pdf",
+  fileName: "invoice",
+  extension: "pdf",
 });
 
-// 2. Upload data to the provided URL.
-//    The server computes the content hash and returns it in the response.
-const uploadResponse = await fetch(reservation.uploadUrl, {
-  method: "PUT",
-  headers: {
-    ...reservation.uploadHeaders,
-    "Content-Type": "image/png",
-  },
-  body: file,
-});
-const { signature } = await uploadResponse.json();
+// 2. Stream data through the handle. The handle manages transport,
+//    hash computation, and record creation internally.
+const { ref } = await upload.send(file.stream());
 
-// 3. Confirm and get the ref (may happen automatically depending on impl).
-//    The signature is an opaque proof of upload returned by the upload target.
-//    The service validates it via its configured IHashVerifier.
-const { ref, hash } = await attachmentService.confirm(
-  reservation.reservationId,
-  signature,
-);
-
-// 4. Dispatch ADD_ATTACHMENT core action
+// 3. Use the ref in a domain action -- one dispatch, no special actions.
 await reactor.execute(docId, "main", [
   {
-    type: "ADD_ATTACHMENT",
-    input: { ref },
-    scope: "global",
-  },
-]);
-
-// 5. Now use the ref in a domain action
-await reactor.execute(docId, "main", [
-  {
-    type: "SET_COVER_IMAGE",
-    input: { imageRef: ref },
+    type: "ATTACH_INVOICE",
+    input: { ref, vendorName: "Acme Corp", amount: 1500 },
     scope: "global",
   },
 ]);
@@ -757,22 +563,19 @@ await reactor.execute(docId, "main", [
 #### Client: Download an attachment
 
 ```ts
-const response = await attachmentService.get("attachment://abc123def");
-console.log(response.header.mimeType); // "image/png"
+// The service handles lazy fetching -- if data is evicted or not yet
+// synced, it fetches from a peer transparently.
+const response = await attachmentService.get("attachment://v1:abc123def");
+console.log(response.header.mimeType); // "application/pdf"
 await response.body.pipeTo(destination);
 ```
 
 #### GraphQL API
 
-```graphql
-type ReserveAttachmentResult {
-  reservationId: String!
-  uploadUrl: String!
-  uploadHeaders: JSONObject!
-  expiresAtUtc: String!
-}
+The GraphQL API is an adapter layer. Browser clients cannot use the streaming `IAttachmentUpload` interface directly, so the API decomposes the upload flow into HTTP-friendly steps. This is a presentation concern -- the core `IAttachmentService` interface remains transport-agnostic.
 
-type ConfirmAttachmentResult {
+```graphql
+type AttachmentUploadResult {
   hash: String!
   ref: String!
 }
@@ -788,29 +591,31 @@ type AttachmentHeader {
   createdAtUtc: String!
 }
 
-type Mutation {
-  reserveAttachment(
-    mimeType: String!
-    fileName: String!
-    extension: String
-  ): ReserveAttachmentResult!
-
-  confirmAttachment(
-    reservationId: String!
-    signature: String!
-  ): ConfirmAttachmentResult!
-}
-
 type Query {
   attachment(hash: String!): AttachmentHeader
 }
 ```
 
-Attachment data retrieval uses a REST endpoint to support streaming and range requests:
+The GraphQL layer exposes upload as a multipart mutation or delegates to a REST upload endpoint -- the specific mechanism depends on the deployment. Attachment data retrieval uses a REST endpoint to support streaming and range requests:
 
 ```
 GET /attachments/:hash
 ```
+
+### Garbage Collection
+
+GC is storage-pressure-driven using LRU eviction. There is no reference counting.
+
+A periodic task runs when storage exceeds a configurable threshold:
+
+1. Query attachments ordered by `last_accessed_at_utc` ascending (least recently used first).
+2. Evict data until storage drops below the target threshold.
+3. Evicted rows retain metadata (`hash`, `mime_type`, etc.) so the hash is still known.
+4. If evicted data is needed again, `IAttachmentService.get()` fetches it from a peer via the transport.
+
+For mutable backends (disk, S3/MinIO), eviction removes the data files. For immutable backends (IPFS), eviction unpins/stops serving.
+
+Reservations are not garbage-collected. They are removed only when `upload.send()` succeeds. Abandoned reservations are inert (no data, no storage cost beyond the row) and can be cleaned up manually if needed.
 
 ## Package Structure
 
@@ -822,12 +627,6 @@ packages/
         interfaces.ts        # IAttachmentService, IAttachmentStore, IAttachmentTransport
         types.ts             # AttachmentStatus, AttachmentHeader, etc.
         index.ts             # Re-exports
-
-  shared/
-    document-model/
-      actions.ts             # ADD_ATTACHMENT, REMOVE_ATTACHMENT action types
-      reducer.ts             # Core action handling in _baseReducer
-      documents.ts           # AttachmentRef[] on PHDocument
 
   attachment-service/        # New package
     src/
@@ -848,7 +647,7 @@ packages/
       index.ts
 ```
 
-The interface and types live in `reactor/` so they can be imported by the reactor core without depending on any implementation. The core action types and reducer logic live in `shared/document-model/` alongside the existing core actions. The `attachment-service` package contains concrete implementations.
+The interface and types live in `reactor/` so they can be imported by the reactor core without depending on any implementation. The `attachment-service` package contains concrete implementations.
 
 ## Implementation: Switchboard-Backed
 
@@ -859,43 +658,34 @@ The initial implementation where switchboard acts as both the reservation endpoi
 ```mermaid
 sequenceDiagram
     participant Client
+    participant Handle as SwitchboardAttachmentUpload
     participant Switchboard as Switchboard (reactor-api)
-    participant AttachmentService as SwitchboardAttachmentService
     participant Store as Metadata Store (Postgres)
     participant Disk as File Storage (local/NFS)
 
-    Client->>Switchboard: mutation reserveAttachment(...)
-    Switchboard->>AttachmentService: reserve(options)
-    AttachmentService->>Store: INSERT into attachment_reservation
-    AttachmentService-->>Switchboard: { reservationId, uploadUrl }
-    Switchboard-->>Client: ReserveAttachmentResult
+    Client->>Switchboard: attachmentService.reserve(options)
+    Switchboard->>Store: INSERT into attachment_reservation
+    Switchboard-->>Client: SwitchboardAttachmentUpload handle
 
-    Client->>Switchboard: PUT /attachments/upload/:reservationId
-    Switchboard->>Disk: Stream bytes to storage, compute hash inline
-    Switchboard-->>Client: { signature } (PUT response, signature = server-computed hash)
+    Client->>Handle: upload.send(fileStream)
+    Handle->>Switchboard: Stream bytes (internal transport)
+    Switchboard->>Disk: Write to storage, compute hash inline
+    Switchboard->>Store: INSERT into attachment (or dedup), DELETE reservation
+    Handle-->>Client: AttachmentUploadResult { ref }
 
-    Client->>Switchboard: mutation confirmAttachment(reservationId, signature)
-    Switchboard->>AttachmentService: confirm(reservationId, signature)
-    Note over AttachmentService: InlineHashVerifier trusts the signature (server computed it)
-    AttachmentService->>Store: INSERT into attachment (or dedup), DELETE reservation
-    Switchboard-->>Client: ConfirmAttachmentResult
-
-    Note over Client, Disk: Phase 3: ADD_ATTACHMENT action
-    Client->>Switchboard: mutateDocument(ADD_ATTACHMENT, { ref })
-    Switchboard->>Switchboard: Reducer adds ref to document
-    Switchboard->>Switchboard: JOB_WRITE_READY
-    Note over Switchboard, AttachmentService: Attachment read model
-    Switchboard->>AttachmentService: markReferenced(hash)
+    Note over Client: Client uses ref in a domain action
+    Client->>Switchboard: mutateDocument(ATTACH_INVOICE, { ref, ... })
+    Switchboard->>Switchboard: Reducer stores ref in document state
 
     Client->>Switchboard: GET /attachments/:hash
-    Switchboard->>Store: SELECT header
+    Switchboard->>Store: SELECT header, touch last_accessed_at_utc
     Switchboard->>Disk: Open read stream
     Switchboard-->>Client: 200 OK (streamed)
 ```
 
 ### Switchboard Attachment Transport
 
-When a switchboard instance receives synced operations with `ADD_ATTACHMENT`, it uses `SwitchboardAttachmentTransport` to fetch data from the source:
+When a switchboard instance needs attachment data that is not local (e.g., after syncing operations from another reactor), it uses `SwitchboardAttachmentTransport` to fetch data from the source:
 
 ```ts
 class SwitchboardAttachmentTransport implements IAttachmentTransport {
@@ -927,68 +717,46 @@ class SwitchboardAttachmentTransport implements IAttachmentTransport {
 
 Attachment metadata is stored in Postgres. Attachment data is stored on the local filesystem or a mounted volume.
 
-Reservations and attachments are separate tables. A reservation is transient
-upload coordination; an attachment is a permanent content-addressed record.
-This separation gives `put()` (sync path) a clean entry point that does not
-require a reservation.
+Reservations and attachments are separate tables. A reservation is transient upload coordination; an attachment is a permanent content-addressed record. This separation gives `put()` (sync path) a clean entry point that does not require a reservation.
 
 ```sql
 -- Transient: tracks in-progress client uploads.
--- Rows are created by reserve() and removed by confirm().
+-- Rows are created by reserve() and removed by upload.send().
 CREATE TABLE attachment_reservation (
   reservation_id  TEXT PRIMARY KEY,
   mime_type       TEXT NOT NULL,
   file_name       TEXT NOT NULL,
   extension       TEXT,
-  upload_url      TEXT NOT NULL,
   created_at_utc  TEXT NOT NULL   -- ISO 8601
 );
 
 -- Permanent: content-addressed attachment metadata.
--- Rows are created by confirm() (client upload) or put() (sync).
+-- Rows are created by upload.send() (client upload) or put() (sync).
 CREATE TABLE attachment (
-  hash              TEXT PRIMARY KEY,
-  mime_type         TEXT NOT NULL,
-  file_name         TEXT NOT NULL,
-  size_bytes        BIGINT NOT NULL,
-  extension         TEXT,
-  ref_count         INTEGER NOT NULL DEFAULT 0,
-  status            TEXT NOT NULL DEFAULT 'ready',
-  storage_path      TEXT NOT NULL,
-  source            TEXT NOT NULL DEFAULT 'local', -- 'local' | 'sync'
-  created_at_utc    TEXT NOT NULL,   -- ISO 8601
-  referenced_at_utc TEXT             -- ISO 8601
+  hash                TEXT PRIMARY KEY,
+  mime_type           TEXT NOT NULL,
+  file_name           TEXT NOT NULL,
+  size_bytes          BIGINT NOT NULL,
+  extension           TEXT,
+  status              TEXT NOT NULL DEFAULT 'available',
+  storage_path        TEXT NOT NULL,
+  source              TEXT NOT NULL DEFAULT 'local', -- 'local' | 'sync'
+  created_at_utc      TEXT NOT NULL,    -- ISO 8601
+  last_accessed_at_utc TEXT NOT NULL    -- ISO 8601, for LRU eviction
 );
 
 CREATE INDEX idx_attachment_status ON attachment(status);
-
--- Read model state: tracks which refs each (document, scope, branch)
--- currently holds. Used by the read model to track ADD/REMOVE operations
--- and by put() to derive ref_count when creating a new attachment row.
-CREATE TABLE attachment_ref (
-  document_id TEXT NOT NULL,
-  scope       TEXT NOT NULL,
-  branch      TEXT NOT NULL,
-  ref         TEXT NOT NULL,  -- AttachmentRef (e.g. "attachment://<hash>")
-  PRIMARY KEY (document_id, scope, branch, ref)
-);
+CREATE INDEX idx_attachment_lru ON attachment(last_accessed_at_utc ASC)
+  WHERE status = 'available';
 ```
 
 **How each path writes:**
 
 - **`reserve()`** inserts into `attachment_reservation`. No attachment row yet.
-- **`confirm(reservationId, signature)`** reads the reservation, delegates to `IHashVerifier` to resolve the signature to a verified hash, inserts into `attachment` (or returns existing ref on dedup), then deletes the reservation.
-- **`put(hash, header, data)`** inserts directly into `attachment`. Derives `ref_count` from `attachment_ref` (COUNT of matching refs) and sets status accordingly (`ref_count > 0` -> `referenced`, `0` -> `ready`). If the hash already exists and the row is `UNLOADED`, restores the data and updates status based on current `ref_count`. If the hash exists with any other status, it is a no-op (dedup). No reservation involved.
-- **GC** unloads unreferenced attachments past the grace period.
-
-### Garbage Collection
-
-A periodic task runs to:
-
-1. Unload `READY` attachments (ref_count = 0) past a configurable grace period (default: 24 hours) -- evicts data, retains metadata.
-2. For mutable backends: remove data files for `UNLOADED` attachments. For immutable backends: unpin/stop serving.
-
-Reservations are not garbage-collected. They are removed only by `confirm()`. Abandoned reservations are inert (no data, no storage cost beyond the row) and can be cleaned up manually if needed.
+- **`upload.send(data)`** streams bytes to storage, computes the content hash, reads the reservation, inserts into `attachment` (or returns existing ref on dedup), then deletes the reservation. All internal to the upload handle.
+- **`put(hash, metadata, data)`** inserts directly into `attachment` with status `available`. If the hash already exists and the row is `evicted`, restores the data and sets status to `available`. If the hash exists with status `available`, it is a no-op (dedup). No reservation involved.
+- **`get(hash)`** returns data and updates `last_accessed_at_utc`.
+- **GC** evicts least-recently-accessed attachments when storage exceeds threshold.
 
 ### Limitations
 
@@ -998,34 +766,30 @@ Reservations are not garbage-collected. They are removed only by `confirm()`. Ab
 
 ## Implementation: S3-Backed
 
-The production implementation where clients upload directly to S3 via presigned URLs. Switchboard handles reservation and metadata but never touches the attachment bytes.
+The production implementation where the upload handle streams data directly to S3 via presigned URLs. Switchboard handles reservation and metadata but never touches the attachment bytes.
 
 ### Flow
 
 ```mermaid
 sequenceDiagram
     participant Client
+    participant Handle as S3AttachmentUpload
     participant Switchboard as Switchboard (reactor-api)
-    participant AttachmentService as S3AttachmentService
     participant Store as Metadata Store (Postgres)
     participant S3
 
-    Client->>Switchboard: mutation reserveAttachment(...)
-    Switchboard->>AttachmentService: reserve(options)
-    AttachmentService->>Store: INSERT into attachment_reservation
-    AttachmentService->>S3: Generate presigned PUT URL (key: {keyPrefix}{reservationId})
-    AttachmentService-->>Switchboard: { reservationId, uploadUrl }
-    Switchboard-->>Client: ReserveAttachmentResult
+    Client->>Switchboard: attachmentService.reserve(options)
+    Switchboard->>Store: INSERT into attachment_reservation
+    Switchboard->>S3: Generate presigned PUT URL (key: {keyPrefix}{reservationId})
+    Switchboard-->>Client: S3AttachmentUpload handle
 
-    Client->>S3: PUT <presigned-url> (binary data)
-    S3-->>Client: 200 OK
-
-    Client->>Switchboard: mutation confirmAttachment(reservationId, s3ObjectKey)
-    Switchboard->>AttachmentService: confirm(reservationId, s3ObjectKey)
-    AttachmentService->>AttachmentService: IHashVerifier.verify(reservationId, s3ObjectKey)
-    Note over AttachmentService: S3ChecksumVerifier reads x-amz-checksum-sha256 via HeadObject
-    AttachmentService->>Store: INSERT into attachment (or dedup), DELETE reservation
-    Switchboard-->>Client: ConfirmAttachmentResult
+    Client->>Handle: upload.send(fileStream)
+    Handle->>S3: PUT <presigned-url> (streamed)
+    S3-->>Handle: 200 OK
+    Handle->>S3: HeadObject (read x-amz-checksum-sha256)
+    S3-->>Handle: { checksum, contentLength }
+    Handle->>Store: INSERT into attachment (or dedup), DELETE reservation
+    Handle-->>Client: AttachmentUploadResult { ref }
 
     Client->>Switchboard: GET /attachments/:hash
     Switchboard->>S3: Generate presigned GET URL
@@ -1055,18 +819,18 @@ class S3AttachmentTransport implements IAttachmentTransport {
 }
 ```
 
-### Confirmation
+### Hash Verification
 
-Confirmation is always client-initiated. After uploading to S3, the client calls `confirmAttachment` with the S3 object key as the `UploadSignature`. The service delegates to `S3ChecksumVerifier`, which reads `x-amz-checksum-sha256` from the object via `HeadObject` -- no download required.
+The `S3AttachmentUpload` handle verifies the content hash after upload by reading `x-amz-checksum-sha256` from the S3 object via `HeadObject` -- no download required. This is internal to the handle; the caller only sees the returned ref.
 
-The S3 object key for uploads is always `{keyPrefix}{reservationId}`. This convention allows the verifier to map from the signature back to the reservation record. S3 uploads must be configured with `x-amz-checksum-algorithm: SHA256` (included in `uploadHeaders` from `reserve()`) so that the checksum is available for verification.
+The S3 object key for uploads is always `{keyPrefix}{reservationId}`. S3 uploads are configured with `x-amz-checksum-algorithm: SHA256` (set internally by the handle) so that the checksum is available for verification.
 
 ### Garbage Collection
 
-S3 lifecycle rules can handle optional physical cleanup on this mutable backend:
+S3 lifecycle rules can handle optional physical cleanup:
 
-- The metadata store GC unloads unreferenced `READY` attachments.
-- S3 lifecycle rules can optionally remove objects tagged `status=unloaded` after a retention period.
+- The metadata store GC marks `evicted` when storage exceeds threshold (LRU).
+- S3 lifecycle rules can optionally remove objects tagged `status=evicted` after a retention period.
 - Metadata records are always retained in Postgres. Physical removal of S3 objects is optional.
 
 ## Implementation: Self-Hosted (MinIO + NGINX)
@@ -1207,7 +971,7 @@ For decentralized deployments where reactors communicate directly without a cent
 
 ### Content-Addressed Identity
 
-The `AttachmentRef` format `attachment://<hash>` is content-addressed by design. This means:
+The `AttachmentRef` format `attachment://v<version>:<hash>` is content-addressed by design. This means:
 
 - Any reactor that has the bytes for a given hash can serve the attachment.
 - Deduplication is automatic -- identical files resolve to the same hash.
@@ -1276,17 +1040,17 @@ class DirectAttachmentTransport implements IAttachmentTransport {
 
 The inline base64 attachment format will coexist with `AttachmentRef` during a transition period.
 
-### Phase 1: Add support for refs (non-breaking)
+### Phase 1: Add attachment service (non-breaking)
 
-- Add `ADD_ATTACHMENT` and `REMOVE_ATTACHMENT` core actions to the base reducer.
+- Deploy `IAttachmentService` and `IAttachmentStore` alongside the existing inline mechanism.
 - Actions can contain either inline `AttachmentInput[]` or `AttachmentRef` values in their input fields.
-- Inline attachments are processed as today. Refs are handled by the attachment read model post-commit.
-- New attachments should use the multi-phase flow.
+- Inline attachments are processed as today. Refs resolve through the attachment service.
+- New attachments should use the multi-phase upload flow. The codegen `Attachment` scalar resolves to `AttachmentRef` (string).
 
 ### Phase 2: Migrate sync to use refs
 
 - Sync channels stop transferring inline attachment data.
-- Instead, `ADD_ATTACHMENT` operations trigger the store-transport pair to move data between reactors.
+- Attachment data moves between reactors via `IAttachmentTransport` (lazy fetch or eager push).
 - The transport config becomes part of the remote/channel configuration.
 
 ### Phase 3: Remove inline support
