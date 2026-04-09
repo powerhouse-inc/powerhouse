@@ -1,3 +1,6 @@
+// Attachments
+export type { AttachmentHash, AttachmentRef } from "./src/attachments/index.js";
+
 // Action Creators
 export {
   addRelationshipAction,

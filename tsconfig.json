@@ -44,6 +44,9 @@
       "path": "packages/reactor-api"
     },
     {
+      "path": "packages/reactor-attachments"
+    },
+    {
       "path": "packages/reactor-browser"
     },
     {

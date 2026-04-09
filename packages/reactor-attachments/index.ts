@@ -1,0 +1,16 @@
+export {
+  AttachmentNotFound,
+  type AttachmentHeader,
+  type AttachmentMetadata,
+  type AttachmentResponse,
+  type AttachmentStatus,
+  type AttachmentTransportConfig,
+  type AttachmentUploadResult,
+  type IAttachmentService,
+  type IAttachmentStore,
+  type IAttachmentTransport,
+  type IAttachmentTransportFactory,
+  type IAttachmentUpload,
+  type ReserveAttachmentOptions,
+  type TransportResponse,
+} from "./src/index.js";
