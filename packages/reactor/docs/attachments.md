@@ -377,6 +377,8 @@ Different transports serve different topologies:
 | Switchboard HTTP | Client-server | Fetch from the remote's attachment service endpoint |
 | S3               | Client-server | Fetch from S3 via presigned GET URL, return stream  |
 
+The `announce` and `push` methods support future peer-to-peer topologies where reactors discover and replicate data directly. For the initial client-server transports (switchboard, S3), `announce` is a no-op and `push` is unused in the default flow.
+
 ```ts
 /**
  * Transport for moving attachment data between reactors.
@@ -756,6 +758,7 @@ sequenceDiagram
     S3-->>Handle: 200 OK
     Handle->>S3: HeadObject (read x-amz-checksum-sha256)
     S3-->>Handle: { checksum, contentLength }
+    Handle->>S3: CopyObject to {keyPrefix}{hash}, delete reservation key
     Handle->>Store: INSERT into attachment (or dedup), DELETE reservation
     Handle-->>Client: AttachmentUploadResult { ref }
 
@@ -790,11 +793,21 @@ class S3AttachmentTransport implements IAttachmentTransport {
 }
 ```
 
-### Hash Verification
+### Hash Verification and Key Promotion
 
 The `S3AttachmentUpload` handle verifies the content hash after upload by reading `x-amz-checksum-sha256` from the S3 object via `HeadObject` -- no download required. This is internal to the handle; the caller only sees the returned ref.
 
-The S3 object key for uploads is always `{keyPrefix}{reservationId}`. S3 uploads are configured with `x-amz-checksum-algorithm: SHA256` (set internally by the handle) so that the checksum is available for verification.
+The initial upload key is `{keyPrefix}{reservationId}` because the hash is not yet known. S3 uploads are configured with `x-amz-checksum-algorithm: SHA256` (set internally by the handle) so that the checksum is available for verification.
+
+After verification, the handle promotes the object to its permanent key:
+
+1. CopyObject from `{keyPrefix}{reservationId}` to `{keyPrefix}{hash}`.
+2. DeleteObject `{keyPrefix}{reservationId}`.
+3. Upsert into `attachment` table, delete reservation.
+
+On dedup (hash key already exists in S3), the handle skips the copy, deletes the reservation-keyed object, and returns the existing ref.
+
+This gives every attachment a deterministic, hash-based key that the transport and CDN can resolve from the hash alone without a metadata lookup.
 
 ### Garbage Collection
 
