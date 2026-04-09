@@ -2,9 +2,13 @@
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
     "outDir": "./dist",
-    "types": ["node"]
+    "types": [
+      "node"
+    ]
   },
-  "include": ["**/*"],
+  "include": [
+    "**/*"
+  ],
   "references": [
     {
       "path": "../analytics-engine/core"
@@ -23,6 +27,9 @@
     },
     {
       "path": "../reactor"
+    },
+    {
+      "path": "../reactor-attachments"
     },
     {
       "path": "../reactor-mcp"

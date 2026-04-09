@@ -66,6 +66,7 @@
     "@powerhousedao/config": "workspace:*",
     "@powerhousedao/document-engineering": "catalog:",
     "@powerhousedao/reactor": "workspace:*",
+    "@powerhousedao/reactor-attachments": "workspace:*",
     "@powerhousedao/reactor-mcp": "workspace:*",
     "@powerhousedao/shared": "workspace:*",
     "@renown/sdk": "workspace:*",

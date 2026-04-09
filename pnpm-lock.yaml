@@ -1848,6 +1848,9 @@ importers:
       '@powerhousedao/reactor':
         specifier: workspace:*
         version: link:../reactor
+      '@powerhousedao/reactor-attachments':
+        specifier: workspace:*
+        version: link:../reactor-attachments
       '@powerhousedao/reactor-mcp':
         specifier: workspace:*
         version: link:../reactor-mcp
