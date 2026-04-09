@@ -10,8 +10,10 @@ import {
   syncAndPublishWorkflowTemplate,
   tsConfigTemplate,
 } from "@powerhousedao/codegen/templates";
+import { fileExists } from "@powerhousedao/shared/clis";
+import console from "node:console";
 import { existsSync, readdirSync } from "node:fs";
-import { mkdir, readdir, stat, writeFile } from "node:fs/promises";
+import { mkdir, readdir, writeFile } from "node:fs/promises";
 import path from "path";
 import { readPackage } from "read-pkg";
 import type {
@@ -25,7 +27,11 @@ import { writePackage } from "write-package";
 import type { GenerateArgs, MigrateArgs } from "../types.js";
 import { startGenerate } from "./generate.js";
 
-export async function startMigrate(_args: MigrateArgs) {
+export async function startMigrate(args: MigrateArgs) {
+  const { debug } = args;
+  if (debug) {
+    console.log({ args });
+  }
   await migratePackageJson();
   await migrateTsConfig();
   await migrateIndexHtml();
@@ -80,16 +86,6 @@ async function migrateIndexHtml() {
 async function migrateTsConfig() {
   const tsConfigPath = path.join(process.cwd(), "tsconfig.json");
   await writeFile(tsConfigPath, tsConfigTemplate);
-}
-
-/** Check if a file exists */
-async function fileExists(filePath: string): Promise<boolean> {
-  try {
-    await stat(filePath);
-    return true;
-  } catch {
-    return false;
-  }
 }
 
 /** Write a file with optional warning if it already exists */
