@@ -1,3 +1,13 @@
+## 6.0.0-dev.164 (2026-04-09)
+
+### 🩹 Fixes
+
+- **reactor-browser:** fixed document import ([b8e6d0aad](https://github.com/powerhouse-inc/powerhouse/commit/b8e6d0aad))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.0.0-dev.163 (2026-04-09)
 
 ### 🩹 Fixes
