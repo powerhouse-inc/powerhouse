@@ -1,5 +1,3 @@
-import { getAuthenticatedDID } from "@didtools/key-did";
-import { EdDSASigner } from "did-jwt";
 import type {
   Issuer,
   JwtCredentialPayload,
@@ -135,13 +133,3 @@ export const getResolver = () => {
 
   return new Resolver(keyResolver);
 };
-
-export async function getIssuer(privateKey: Uint8Array): Promise<Issuer> {
-  const signer = EdDSASigner(privateKey);
-  const did = await getAuthenticatedDID(privateKey);
-  return {
-    did: did.id,
-    signer,
-    alg: "EdDSA",
-  };
-}
