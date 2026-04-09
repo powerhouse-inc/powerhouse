@@ -1,5 +1,9 @@
 export {
   AttachmentNotFound,
+  KyselyAttachmentStore,
+  runAttachmentMigrations,
+  ATTACHMENT_SCHEMA,
+  type AttachmentDatabase,
   type AttachmentHeader,
   type AttachmentMetadata,
   type AttachmentResponse,

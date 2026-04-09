@@ -16,3 +16,6 @@ export type {
   ReserveAttachmentOptions,
   TransportResponse,
 } from "./types.js";
+export { KyselyAttachmentStore } from "./storage/index.js";
+export { runAttachmentMigrations, ATTACHMENT_SCHEMA } from "./storage/index.js";
+export type { AttachmentDatabase } from "./storage/index.js";

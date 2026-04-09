@@ -27,9 +27,12 @@
     "test": "vitest --run"
   },
   "dependencies": {
-    "@powerhousedao/reactor": "workspace:*"
+    "@powerhousedao/reactor": "workspace:*",
+    "kysely": "catalog:"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "catalog:",
+    "kysely-pglite-dialect": "catalog:",
     "tsdown": "catalog:",
     "vitest": "catalog:"
   }
