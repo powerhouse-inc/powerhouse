@@ -1,10 +1,34 @@
 import type { ChildProcess } from "child_process";
-import { spawn } from "child_process";
+import { execSync, spawn } from "child_process";
 import fs from "fs";
 import path from "path";
 
 const REGISTRY_PORT = 8080;
 export const REGISTRY_URL = `http://localhost:${REGISTRY_PORT}`;
+
+/**
+ * Kill any process listening on the registry port.
+ * Prevents stale registry processes from interfering with a fresh start.
+ */
+function killExistingRegistry(): void {
+  try {
+    const pids = execSync(`lsof -ti tcp:${REGISTRY_PORT}`, {
+      encoding: "utf-8",
+      stdio: ["pipe", "pipe", "pipe"],
+    })
+      .trim()
+      .split("\n")
+      .filter(Boolean);
+    if (pids.length > 0) {
+      console.log(
+        `Killing stale registry process(es) on port ${REGISTRY_PORT}: PIDs ${pids.join(", ")}`,
+      );
+      execSync(`kill -9 ${pids.join(" ")}`, { stdio: "pipe" });
+    }
+  } catch {
+    // No process on the port — nothing to kill
+  }
+}
 
 /**
  * Start the registry as a child process using the ph-registry CLI binary.
@@ -14,6 +38,9 @@ export async function startRegistry(
   storagePath: string,
   cdnCachePath: string,
 ): Promise<ChildProcess> {
+  // Kill any stale registry from a previous run
+  killExistingRegistry();
+
   // Clean up and recreate directories to ensure fresh state
   fs.rmSync(storagePath, { recursive: true, force: true });
   fs.rmSync(cdnCachePath, { recursive: true, force: true });
