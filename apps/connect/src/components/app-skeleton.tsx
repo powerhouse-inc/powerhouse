@@ -4,7 +4,7 @@ import {
   ConnectSidebar,
   HomeScreen,
 } from "@powerhousedao/design-system/connect";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type PropsWithChildren } from "react";
 const LOADER_DELAY = 250;
 
 const Loader = ({ delay = LOADER_DELAY }: { delay?: number }) => {
@@ -44,11 +44,11 @@ const Loader = ({ delay = LOADER_DELAY }: { delay?: number }) => {
   );
 };
 
-export const AppSkeleton = () => {
+export const AppSkeleton: React.FC<PropsWithChildren> = (props) => {
   const isSSR = typeof window === "undefined";
   const isHomeScreen = !isSSR && window.location.pathname === getBasePath();
   return (
-    <div className="flex h-screen">
+    <div className="flex h-screen overflow-hidden">
       <ConnectSidebar
         className="animate-pulse"
         onLogin={undefined}
@@ -60,7 +60,7 @@ export const AppSkeleton = () => {
         containerClassName={
           isSSR || !isHomeScreen ? "hidden home-screen" : undefined
         }
-        children={null}
+        children={props.children ?? null}
       />
       {isSSR ? (
         <script
@@ -75,7 +75,7 @@ export const AppSkeleton = () => {
           }}
         />
       ) : null}
-      <Loader />
+      {!props.children ? <Loader /> : null}
     </div>
   );
 };
