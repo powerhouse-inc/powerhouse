@@ -1,6 +1,7 @@
 import { DuplicateModuleError } from "@powerhousedao/reactor";
 import type { DocumentModelLib } from "document-model";
 import { useSyncExternalStore } from "react";
+import { DuplicateManifestError } from "../../../reactor/src/registry/implementation.js";
 import type { IPackageManager } from "../types/vetra.js";
 import { makePHEventFunctions } from "./make-ph-event-functions.js";
 
@@ -28,8 +29,10 @@ export const addVetraPackageManagerEventHandler =
 export function setVetraPackageManager(packageManager: IPackageManager) {
   vetraPackageManagerFunctions.setValue(packageManager);
   updateReactorClientDocumentModels(packageManager.packages);
+  updateReactorClientUpgradeManifests(packageManager.packages);
   packageManager.subscribe(({ packages }) => {
     updateReactorClientDocumentModels(packages);
+    updateReactorClientUpgradeManifests(packages);
   });
 }
 
@@ -48,6 +51,31 @@ function updateReactorClientDocumentModels(packages: DocumentModelLib[]) {
         const documentType = module.documentModel.global.id;
         registry.unregisterModules(documentType);
         registry.registerModules(module);
+        continue;
+      }
+      throw error;
+    }
+  }
+}
+
+function updateReactorClientUpgradeManifests(packages: DocumentModelLib[]) {
+  const upgradeManifests = packages
+    .flatMap((pkg) => pkg.upgradeManifests)
+    .filter((u) => u !== undefined);
+
+  const registry =
+    window.ph?.reactorClientModule?.reactorModule?.documentModelRegistry;
+  if (!registry || upgradeManifests.length === 0) return;
+
+  for (const manifest of upgradeManifests) {
+    try {
+      registry.registerUpgradeManifests(manifest);
+    } catch (error) {
+      if (DuplicateManifestError.isError(error)) {
+        const documentType = manifest.documentType;
+        registry.getUpgradeManifest(documentType);
+        registry.unregisterUpgradeManifests(documentType);
+        registry.registerUpgradeManifests(manifest);
         continue;
       }
       throw error;

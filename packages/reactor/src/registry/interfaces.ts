@@ -89,6 +89,13 @@ export interface IDocumentModelRegistry {
   ): void;
 
   /**
+   * Unregister upgrade manifests for the specified document types.
+   * @param documentTypes The document types whose upgrade manifests should be unregistered
+   * @returns true if all modules were unregistered, false if any were not found
+   **/
+  unregisterUpgradeManifests(...documentTypes: string[]): boolean;
+
+  /**
    * Get the upgrade manifest for a document type.
    *
    * @param documentType The document type identifier
