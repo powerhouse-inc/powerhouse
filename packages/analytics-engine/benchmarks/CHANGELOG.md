@@ -1,3 +1,13 @@
+## 6.0.0-dev.166 (2026-04-10)
+
+### 🩹 Fixes
+
+- **design-system,connect:** cleanup dependencies ([97466944a](https://github.com/powerhouse-inc/powerhouse/commit/97466944a))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.0.0-dev.165 (2026-04-10)
 
 This was a version bump only for benchmarks to align it with other projects, there were no code changes.
