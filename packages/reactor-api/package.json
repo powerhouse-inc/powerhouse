@@ -113,7 +113,6 @@
     "@types/ws": "^8.18.1",
     "tsdown": "catalog:",
     "msw": "^2.7.3",
-    "vite-tsconfig-paths": "catalog:",
     "vitest": "catalog:"
   },
   "peerDependencies": {

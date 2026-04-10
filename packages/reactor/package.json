@@ -51,7 +51,6 @@
     "tsx": "catalog:",
     "vitest": "catalog:",
     "@types/bun": "catalog:",
-    "tsdown": "catalog:",
-    "vite-tsconfig-paths": "catalog:"
+    "tsdown": "catalog:"
   }
 }

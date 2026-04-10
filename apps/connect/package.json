@@ -101,8 +101,6 @@
     "tailwindcss": "catalog:",
     "tsdown": "catalog:",
     "vite": "catalog:",
-    "vite-bundle-analyzer": "^1.3.6",
-    "vite-plugin-svgr": "catalog:",
-    "vite-tsconfig-paths": "catalog:"
+    "vite-bundle-analyzer": "^1.3.6"
   }
 }
