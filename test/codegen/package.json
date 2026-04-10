@@ -16,7 +16,7 @@
   "sideEffects": false,
   "scripts": {
     "build": "tsdown",
-    "generate-test-projects": "tsx ./generate-test-projects-script.ts",
+    "generate-test-projects": "bun run ./generate-test-projects-script.ts",
     "test": "bun test --timeout 1000000 --preload ./setup.ts ./tests/*.test.ts",
     "test:nogenerate": "bun test --timeout 1000000 ./tests/*.test.ts"
   },
@@ -36,6 +36,7 @@
     "@powerhousedao/reactor-api": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",
     "@powerhousedao/shared": "workspace:*",
+    "@powerhousedao/ph-cli": "workspace:*",
     "@electric-sql/pglite": "catalog:",
     "kysely": "catalog:",
     "kysely-pglite-dialect": "catalog:",

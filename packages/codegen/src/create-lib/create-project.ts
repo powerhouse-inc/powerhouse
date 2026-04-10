@@ -1,5 +1,9 @@
+import { runCmd, writeFileEnsuringDir } from "@powerhousedao/shared/clis";
 import chalk from "chalk";
-import { buildBoilerplatePackageJson } from "file-builders";
+import {
+  buildBoilerplatePackageJson,
+  writeGeneratedProjectRootFiles,
+} from "file-builders";
 import fs from "node:fs";
 import path from "path";
 import {
@@ -14,14 +18,10 @@ import {
   documentModelsTemplate,
   editorsIndexTemplate,
   editorsTemplate,
-  eslintConfigTemplate,
   factoryBuildersTemplate,
   geminiSettingsTemplate,
   gitIgnoreTemplate,
-  indexHtmlTemplate,
-  indexTsTemplate,
   licenseTemplate,
-  mainTsxTemplate,
   ManifestTemplate,
   mcpTemplate,
   nginxConfTemplate,
@@ -29,16 +29,12 @@ import {
   processorsFactoryTemplate,
   processorsIndexTemplate,
   readmeTemplate,
-  styleTemplate,
   subgraphsIndexTemplate,
   switchboardEntrypointTemplate,
   syncAndPublishWorkflowTemplate,
-  tsConfigTemplate,
-  vitestConfigTemplate,
+  upgradeManifestsTemplate,
 } from "templates";
 import { runPrettier } from "utils";
-import { upgradeManifestsTemplate } from "../templates/boilerplate/document-models/upgrade-manifests.js";
-import { runCmd, writeFileEnsuringDir } from "./utils.js";
 type CreateProjectArgs = {
   name: string;
   packageManager: string;
@@ -143,13 +139,7 @@ async function writeProjectRootFiles(args: {
   });
   await writeFileEnsuringDir("powerhouse.config.json", powerhouseConfig);
   await writeFileEnsuringDir("package.json", packageJson);
-  await writeFileEnsuringDir("tsconfig.json", tsConfigTemplate);
-  await writeFileEnsuringDir("index.html", indexHtmlTemplate);
-  await writeFileEnsuringDir("main.tsx", mainTsxTemplate);
-  await writeFileEnsuringDir("eslint.config.js", eslintConfigTemplate);
-  await writeFileEnsuringDir("index.ts", indexTsTemplate);
-  await writeFileEnsuringDir("style.css", styleTemplate);
-  await writeFileEnsuringDir("vitest.config.ts", vitestConfigTemplate);
+  await writeGeneratedProjectRootFiles();
 }
 
 async function writeModuleFiles() {

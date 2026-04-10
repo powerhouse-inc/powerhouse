@@ -1,4 +1,5 @@
 export * from "./app.js";
+export * from "./boilerplate/generated-project-root-files.js";
 export * from "./boilerplate/package.json.js";
 export * from "./clis/generate-cli-docs.js";
 export * from "./document-editor.js";

@@ -1,3 +1,4 @@
+import { writeGeneratedProjectRootFiles } from "@powerhousedao/codegen/file-builders";
 import {
   connectEntrypointTemplate,
   dockerfileTemplate,
@@ -10,7 +11,11 @@ import {
   syncAndPublishWorkflowTemplate,
   tsConfigTemplate,
 } from "@powerhousedao/codegen/templates";
-import { fileExists } from "@powerhousedao/shared/clis";
+import { buildTsMorphProject } from "@powerhousedao/codegen/utils";
+import {
+  fileExists,
+  getPackageNameFromPackageJson,
+} from "@powerhousedao/shared/clis";
 import console from "node:console";
 import { existsSync, readdirSync } from "node:fs";
 import { mkdir, readdir, writeFile } from "node:fs/promises";
@@ -32,6 +37,32 @@ export async function startMigrate(args: MigrateArgs) {
   if (debug) {
     console.log({ args });
   }
+  const project = buildTsMorphProject(process.cwd());
+  await writeGeneratedProjectRootFiles();
+  await fixLegacyImportPaths(project);
+}
+
+async function fixLegacyImportPaths(project: Project) {
+  const packageName = await getPackageNameFromPackageJson();
+  project.addSourceFileAtPath(".");
+  const sourceFiles = project.getSourceFiles();
+  for (const sourceFile of sourceFiles) {
+    const importStatements = sourceFile.getImportDeclarations();
+    for (const importStatement of importStatements) {
+      const importStatementText = importStatement
+        .getModuleSpecifier()
+        .getText();
+      if (importStatementText.includes(packageName)) {
+        importStatement.setModuleSpecifier(
+          importStatementText.replace(`${packageName}/`, ""),
+        );
+      }
+    }
+  }
+  await project.save();
+}
+
+export async function _startMigrate(args: MigrateArgs) {
   await migratePackageJson();
   await migrateTsConfig();
   await migrateIndexHtml();
