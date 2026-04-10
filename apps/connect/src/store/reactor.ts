@@ -15,8 +15,8 @@ import {
   extractNodeSlugFromPath,
   getDrives,
   login,
-  RegistryClient,
   refreshReactorDataClient,
+  RegistryClient,
   setDefaultPHGlobalConfig,
   setDocumentCache,
   setDrives,
@@ -36,7 +36,11 @@ import {
   RenownBuilder,
   RenownCryptoBuilder,
 } from "@renown/sdk";
-import { logger, type DocumentModelLib } from "document-model";
+import {
+  logger,
+  type DocumentModelLib,
+  type UpgradeManifest,
+} from "document-model";
 import { initFeatureFlags } from "../feature-flags.js";
 import { PackageDiscoveryService } from "../package-discovery.js";
 import { BrowserPackageManager } from "../package-manager.js";
@@ -123,7 +127,14 @@ export async function createReactor(localPackage?: DocumentModelLib) {
   // get upgrade manifests from packages
   const upgradeManifests = packageManager.packages
     .flatMap((pkg) => pkg.upgradeManifests)
-    .filter((u) => u !== undefined);
+    .filter(
+      (manifest, index, manifests) =>
+        // deduplicate by documentType and version
+        manifest !== undefined &&
+        manifests.findIndex(
+          (m) => m && m.documentType === manifest.documentType,
+        ) === index,
+    ) as UpgradeManifest<readonly number[]>[];
 
   // initialize package discovery service for auto-installing unknown document types
   const discoveryService =

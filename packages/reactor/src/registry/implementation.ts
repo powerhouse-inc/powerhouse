@@ -251,6 +251,26 @@ export class DocumentModelRegistry implements IDocumentModelRegistry {
     }
   }
 
+  unregisterUpgradeManifests(...documentTypes: string[]): boolean {
+    let allFound = true;
+
+    for (const documentType of documentTypes) {
+      const hasManifest = this.manifests.some(
+        (m) => m.documentType === documentType,
+      );
+
+      if (!hasManifest) {
+        allFound = false;
+      }
+
+      this.manifests = this.manifests.filter(
+        (m) => m.documentType !== documentType,
+      );
+    }
+
+    return allFound;
+  }
+
   getUpgradeManifest(documentType: string): UpgradeManifest<readonly number[]> {
     for (let i = 0; i < this.manifests.length; i++) {
       if (this.manifests[i].documentType === documentType) {
