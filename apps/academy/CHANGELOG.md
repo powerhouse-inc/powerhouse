@@ -1,3 +1,13 @@
+## 6.0.0-dev.165 (2026-04-10)
+
+### 🩹 Fixes
+
+- broken link llm docs ([44efa9d3b](https://github.com/powerhouse-inc/powerhouse/commit/44efa9d3b))
+
+### ❤️ Thank You
+
+- CallmeT-ty @CallmeT-ty
+
 ## 6.0.0-dev.164 (2026-04-09)
 
 This was a version bump only for @powerhousedao/academy to align it with other projects, there were no code changes.
