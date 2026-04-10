@@ -50,7 +50,6 @@
     "@types/react-dom": "catalog:",
     "vite": "catalog:",
     "@vitejs/plugin-react": "catalog:",
-    "vite-plugin-node-polyfills": "catalog:",
     "vite-plugin-html": "catalog:",
     "vite-plugin-svgr": "catalog:",
     "typescript": "^5.9.3"
