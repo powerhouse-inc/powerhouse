@@ -104,6 +104,40 @@ jobs:
     uses: "./.github/workflows/publish-docker-images.yml"
     secrets: inherit
 
+  test-package-managers:
+    name: Test Package Managers
+    needs: release
+    if: ${{ inputs.dry_run != true && inputs.skip_publish != true }}
+    uses: "./.github/workflows/test-package-managers.yml"
+    with:
+      tag: ${{ github.ref_name == 'main' && 'dev' || startsWith(github.ref_name, 'release/staging') && 'staging' || startsWith(github.ref_name, 'release/production') && 'latest' || 'dev' }}
+    secrets: inherit
+
+  notify-discord-test-pm:
+    name: Notify Discord on Package Manager Test Failure
+    if: ${{ always() && needs.test-package-managers.result == 'failure' }}
+    needs: [test-package-managers]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Discord notification
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_FAILURES }}
+          DISCORD_USER_MAPPING: ${{ secrets.DISCORD_USER_MAPPING }}
+        run: |
+          DISCORD_USER=$(echo "$DISCORD_USER_MAPPING" | jq -r --arg GH_USER "${{ github.actor }}" '.[$GH_USER] // ""')
+          MENTION_STRING=""
+          if [ ! -z "$DISCORD_USER" ]; then
+            MENTION_STRING="<@${DISCORD_USER}> "
+          fi
+
+          curl -H "Content-Type: application/json" -X POST "$DISCORD_WEBHOOK" -d '{
+            "embeds": [{
+              "title": "⚠️ Package Manager Tests Failed",
+              "description": "**Author:** '"${MENTION_STRING}"'\n**Branch:** `${{ github.ref_name }}`\n**Failed job:** [`test-package-managers`](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})",
+              "color": 16711680
+            }]
+          }'
+
   determine-downstream-params:
     name: Determine Downstream Parameters
     needs: release
