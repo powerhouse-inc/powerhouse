@@ -3,7 +3,6 @@ import { ClearStorageSettingsRow } from "./clear-storage-row.js";
 import { DependencyVersions } from "./dependency-versions/dependency-versions.js";
 // @ts-expect-error - json file needs { with: "json" } but storybook doesn't support it
 import mockPackageJson from "./dependency-versions/mock-package-json.json";
-import { DocumentSelectSettingsRow } from "./document-select-row.js";
 import { SettingsModalOld } from "./settings-modal.js";
 
 const meta: Meta<typeof SettingsModalOld> = {
@@ -23,24 +22,6 @@ export const Primary: Story = {
     saveLabel: "Save",
     children: (
       <>
-        <DocumentSelectSettingsRow
-          description="Documents enabled"
-          onChange={() => {}}
-          options={[
-            { label: "Apple", value: "apple" },
-            { label: "Orange", value: "orange" },
-            { label: "Banana", value: "banana" },
-            { label: "Grape", value: "grape" },
-            { label: "Pear", value: "pear" },
-            { label: "Peach", value: "peach" },
-          ]}
-          selectProps={{
-            labelledBy: "Select",
-            className: "w-[200px]",
-          }}
-          selected={[]}
-          title="Document Models"
-        />
         <ClearStorageSettingsRow
           buttonLabel="Clear Storage"
           description="Delete previous session data"

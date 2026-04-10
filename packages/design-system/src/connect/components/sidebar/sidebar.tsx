@@ -23,6 +23,8 @@ export interface ConnectSidebarProps
 export const ConnectSidebar: React.FC<ConnectSidebarProps> = ({
   onClick,
   address,
+  ensName,
+  avatarUrl,
   headerContent,
   onClickSettings,
   onInspectorClick,
@@ -43,6 +45,8 @@ export const ConnectSidebar: React.FC<ConnectSidebarProps> = ({
       </SidebarPanel>
       <ConnectSidebarFooter
         address={address}
+        ensName={ensName}
+        avatarUrl={avatarUrl}
         onClickSettings={onClickSettings}
         onInspectorClick={onInspectorClick}
         onLogin={onLogin}
