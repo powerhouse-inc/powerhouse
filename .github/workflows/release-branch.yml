@@ -113,31 +113,6 @@ jobs:
       tag: ${{ github.ref_name == 'main' && 'dev' || startsWith(github.ref_name, 'release/staging') && 'staging' || startsWith(github.ref_name, 'release/production') && 'latest' || 'dev' }}
     secrets: inherit
 
-  notify-discord-test-pm:
-    name: Notify Discord on Package Manager Test Failure
-    if: ${{ always() && needs.test-package-managers.result == 'failure' }}
-    needs: [test-package-managers]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Send Discord notification
-        env:
-          DISCORD_WEBHOOK: ${{ secrets.DISCORD_FAILURES }}
-          DISCORD_USER_MAPPING: ${{ secrets.DISCORD_USER_MAPPING }}
-        run: |
-          DISCORD_USER=$(echo "$DISCORD_USER_MAPPING" | jq -r --arg GH_USER "${{ github.actor }}" '.[$GH_USER] // ""')
-          MENTION_STRING=""
-          if [ ! -z "$DISCORD_USER" ]; then
-            MENTION_STRING="<@${DISCORD_USER}> "
-          fi
-
-          curl -H "Content-Type: application/json" -X POST "$DISCORD_WEBHOOK" -d '{
-            "embeds": [{
-              "title": "⚠️ Package Manager Tests Failed",
-              "description": "**Author:** '"${MENTION_STRING}"'\n**Branch:** `${{ github.ref_name }}`\n**Failed job:** [`test-package-managers`](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})",
-              "color": 16711680
-            }]
-          }'
-
   determine-downstream-params:
     name: Determine Downstream Parameters
     needs: release
@@ -201,3 +176,54 @@ jobs:
       channel: ${{ needs.determine-downstream-params.outputs.channel }}
       dry-run: false
     secrets: inherit
+
+  notify-discord:
+    name: Notify Discord on Failure
+    if: ${{ always() && (needs.release.result == 'failure' || needs.publish-docker.result == 'failure' || needs.test-package-managers.result == 'failure' || needs.determine-downstream-params.result == 'failure' || needs.trigger-downstream.result == 'failure') }}
+    needs:
+      [
+        release,
+        publish-docker,
+        test-package-managers,
+        determine-downstream-params,
+        trigger-downstream,
+      ]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download test step results
+        if: ${{ needs.test-package-managers.result == 'failure' }}
+        uses: actions/download-artifact@v4
+        with:
+          pattern: step-results-*
+          path: /tmp/step-results
+          merge-multiple: true
+
+      - name: Send Discord notification
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_FAILURES }}
+        run: |
+          FAILURES=""
+          [ "${{ needs.release.result }}" = "failure" ] && FAILURES="${FAILURES}• release\n"
+          [ "${{ needs.publish-docker.result }}" = "failure" ] && FAILURES="${FAILURES}• publish-docker\n"
+          [ "${{ needs.determine-downstream-params.result }}" = "failure" ] && FAILURES="${FAILURES}• determine-downstream-params\n"
+          [ "${{ needs.trigger-downstream.result }}" = "failure" ] && FAILURES="${FAILURES}• trigger-downstream\n"
+
+          if [ "${{ needs.test-package-managers.result }}" = "failure" ]; then
+            FAILURES="${FAILURES}• test-package-managers\n"
+            if [ -d "/tmp/step-results" ]; then
+              for f in /tmp/step-results/*.txt; do
+                [ ! -f "$f" ] && continue
+                PM=$(basename "$f" .txt)
+                STEPS=$(cat "$f" | sed '/^$/d' | sed 's/^/    ◦ /')
+                FAILURES="${FAILURES}  **${PM}:**\n${STEPS}\n"
+              done
+            fi
+          fi
+
+          curl -H "Content-Type: application/json" -X POST "$DISCORD_WEBHOOK" -d '{
+            "embeds": [{
+              "title": "⚠️ Release Pipeline Failed",
+              "description": "**Branch:** `${{ github.ref_name }}`\n\n**Failed jobs:**\n'"${FAILURES}"'\n**Run:** [`release-branch`](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})",
+              "color": 16711680
+            }]
+          }'

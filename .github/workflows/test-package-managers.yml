@@ -254,6 +254,30 @@ jobs:
             echo "" >> $GITHUB_STEP_SUMMARY
           fi
 
+      - name: Record step outcomes
+        if: always()
+        run: |
+          FAILED_STEPS=""
+          [ "${{ steps.install-ph-cmd.outcome }}" = "failure" ] && FAILED_STEPS="${FAILED_STEPS}Install ph-cmd\n"
+          [ "${{ steps.ph-init.outcome }}" = "failure" ] && FAILED_STEPS="${FAILED_STEPS}ph init\n"
+          [ "${{ steps.install-deps.outcome }}" = "failure" ] && FAILED_STEPS="${FAILED_STEPS}Install dependencies\n"
+          [ "${{ steps.install-packages.outcome }}" = "failure" ] && FAILED_STEPS="${FAILED_STEPS}Install packages\n"
+          [ "${{ steps.connect-build.outcome }}" = "failure" ] && FAILED_STEPS="${FAILED_STEPS}Connect build\n"
+
+          mkdir -p /tmp/step-results
+          if [ -n "$FAILED_STEPS" ]; then
+            echo -e "$FAILED_STEPS" > /tmp/step-results/${{ matrix.package-manager }}.txt
+          fi
+
+      - name: Upload step results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: step-results-${{ matrix.package-manager }}
+          path: /tmp/step-results/${{ matrix.package-manager }}.txt
+          if-no-files-found: ignore
+          retention-days: 1
+
       - name: Upload logs as artifacts
         if: always()
         uses: actions/upload-artifact@v4
