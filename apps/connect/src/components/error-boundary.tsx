@@ -1,3 +1,4 @@
+import { Icon, PowerhouseButton } from "@powerhousedao/design-system";
 import { childLogger } from "document-model";
 import type { ReactNode } from "react";
 import {
@@ -80,16 +81,43 @@ function TextFallback({
 
 /**
  * Detailed fallback component showing full error information.
- * Displays error message and JSON representation of the error object.
+ * Displays error message with a collapsible details section.
  * Useful for development and debugging purposes.
  */
-function DetailedFallback({ error }: FallbackProps) {
+function DetailedFallback({ error, resetErrorBoundary }: FallbackProps) {
   const errorMessage = error instanceof Error ? error.message : String(error);
+  const errorDetails =
+    error instanceof Error
+      ? (error.stack ?? String(error.cause))
+      : JSON.stringify(error, null, 2);
+  const hasDetails = errorDetails !== "{}";
+
   return (
-    <div className="mx-auto flex max-w-[80%] flex-1 flex-col items-center justify-center">
-      <h1 className="mb-2 text-xl font-semibold">Error</h1>
-      <i>{errorMessage}</i>
-      <pre>{JSON.stringify(error, null, 2)}</pre>
+    <div className="z-10 mx-auto flex max-w-[80%] flex-1 items-center justify-center p-6">
+      <div className="w-full max-w-lg rounded-lg border border-gray-500 bg-white p-6 shadow-sm">
+        <div className="mb-3 flex items-center gap-2">
+          <Icon name="Error" className="size-5 shrink-0" />
+          <h1 className="text-lg font-semibold">Something went wrong</h1>
+        </div>
+        <p className="mb-4 text-sm text-gray-700">{errorMessage}</p>
+        {hasDetails && (
+          <details className="group">
+            <summary className="cursor-pointer select-none text-sm font-medium text-gray-700 underline hover:text-gray-700">
+              Show details
+            </summary>
+            <pre className="mt-2 max-h-48 overflow-auto rounded bg-gray-100 p-3 text-xs">
+              {errorDetails}
+            </pre>
+          </details>
+        )}
+        <PowerhouseButton
+          type="button"
+          onClick={resetErrorBoundary}
+          className="text-md mt-4 px-3 py-1.5 font-medium"
+        >
+          Try again
+        </PowerhouseButton>
+      </div>
     </div>
   );
 }
