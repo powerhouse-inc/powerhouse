@@ -1,3 +1,7 @@
+## 6.0.0-dev.167 (2026-04-11)
+
+This was a version bump only for compat to align it with other projects, there were no code changes.
+
 ## 6.0.0-dev.166 (2026-04-10)
 
 ### 🩹 Fixes
