@@ -4322,8 +4322,10 @@ describe("SyncManager - Unit Tests", () => {
         branch: "main",
       });
 
-      // outbox.add should be called twice (once per page)
-      expect(mockChannel.outbox.add).toHaveBeenCalledTimes(2);
+      // backfill runs asynchronously after add() returns
+      await vi.waitFor(() => {
+        expect(mockChannel.outbox.add).toHaveBeenCalledTimes(2);
+      });
 
       // All 3 operations should reach the outbox
       const allSyncOps = vi
@@ -4383,7 +4385,10 @@ describe("SyncManager - Unit Tests", () => {
         branch: "main",
       });
 
-      expect(addedSyncOps).toHaveLength(2);
+      // backfill runs asynchronously after add() returns
+      await vi.waitFor(() => {
+        expect(addedSyncOps).toHaveLength(2);
+      });
       // First page SyncOp has no dependencies
       expect(addedSyncOps[0].jobDependencies).toEqual([]);
       // Second page SyncOp (same doc) should depend on first page's jobId
@@ -4436,8 +4441,10 @@ describe("SyncManager - Unit Tests", () => {
         branch: "main",
       });
 
-      // advanceOrdinal should be called with max ordinal from page 2
-      expect(mockChannel.outbox.advanceOrdinal).toHaveBeenCalledWith(30);
+      // backfill runs asynchronously after add() returns
+      await vi.waitFor(() => {
+        expect(mockChannel.outbox.advanceOrdinal).toHaveBeenCalledWith(30);
+      });
     });
   });
 });

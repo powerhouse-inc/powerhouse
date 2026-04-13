@@ -324,8 +324,14 @@ export class SyncManager implements ISyncManager {
       throw error;
     }
 
-    // backfill
-    await this.updateOutbox(remote, 0);
+    // backfill asynchronously -- don't block channel registration
+    void this.updateOutbox(remote, 0).catch((error) => {
+      this.logger.error(
+        "Backfill failed for remote @RemoteName: @Error",
+        remote.name,
+        error instanceof Error ? error : new Error(String(error)),
+      );
+    });
 
     return remote;
   }
