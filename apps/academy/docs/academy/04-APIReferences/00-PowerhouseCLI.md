@@ -16,8 +16,8 @@ pnpm install -g ph-cmd
 
 :::
 
-<!-- AUTO-GENERATED-CLI-COMMANDS-START -->
-<!-- This content is automatically generated. Do not edit directly. -->
+{/* AUTO-GENERATED-CLI-COMMANDS-START */}
+{/* This content is automatically generated. Do not edit directly. */}
 ## Quick Reference
 
 | Command | Description | Example |
@@ -912,4 +912,4 @@ removal of packages, updates configuration files, and ensures proper cleanup.
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
 **Help** - show help - Usage: `--help, -h`
-<!-- AUTO-GENERATED-CLI-COMMANDS-END -->
+{/* AUTO-GENERATED-CLI-COMMANDS-END */}

@@ -155,8 +155,8 @@ async function generateCombinedCliDocs() {
     let targetDocContent = fs.readFileSync(targetDocFile, "utf8");
 
     // Replace the placeholder with the combined docs
-    const startPlaceholder = "<!-- AUTO-GENERATED-CLI-COMMANDS-START -->";
-    const endPlaceholder = "<!-- AUTO-GENERATED-CLI-COMMANDS-END -->";
+    const startPlaceholder = "{/* AUTO-GENERATED-CLI-COMMANDS-START */}";
+    const endPlaceholder = "{/* AUTO-GENERATED-CLI-COMMANDS-END */}";
     const startIndex = targetDocContent.indexOf(startPlaceholder);
     const endIndex = targetDocContent.indexOf(endPlaceholder);
 
@@ -169,7 +169,7 @@ async function generateCombinedCliDocs() {
 
     targetDocContent =
       targetDocContent.substring(0, startIndex + startPlaceholder.length) +
-      "\n<!-- This content is automatically generated. Do not edit directly. -->\n" +
+      "\n{/* This content is automatically generated. Do not edit directly. */}\n" +
       combinedDocs +
       "\n" +
       targetDocContent.substring(endIndex);
