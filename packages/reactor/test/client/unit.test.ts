@@ -1196,18 +1196,9 @@ describe("ReactorClient Unit Tests", () => {
         meta: { batchId: "test", batchJobIds: ["job-child"] },
       };
 
-      vi.mocked(mockDocumentIndexer.getOutgoing).mockResolvedValue({
-        results: [
-          {
-            sourceId: parentId,
-            targetId: childId,
-            relationshipType: "child",
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          },
-        ],
-        options: { cursor: "0", limit: 100 },
-      });
+      vi.mocked(mockDocumentIndexer.getOrphanedChildren).mockResolvedValue([
+        childId,
+      ]);
 
       vi.mocked(mockReactor.deleteDocument).mockResolvedValue(childJobInfo);
       vi.mocked(mockReactor.deleteDocument).mockResolvedValueOnce(childJobInfo);
@@ -1217,11 +1208,9 @@ describe("ReactorClient Unit Tests", () => {
 
       await client.deleteDocument(parentId, PropagationMode.Cascade, signal);
 
-      expect(mockDocumentIndexer.getOutgoing).toHaveBeenCalledWith(
-        parentId,
+      expect(mockDocumentIndexer.getOrphanedChildren).toHaveBeenCalledWith(
+        [parentId],
         ["child"],
-        undefined,
-        undefined,
         signal,
       );
       expect(mockReactor.deleteDocument).toHaveBeenCalledTimes(2);
