@@ -1,7 +1,4 @@
-import type {
-  Operation,
-  OperationWithContext,
-} from "@powerhousedao/shared/document-model";
+import type { Operation } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import type { IOperationIndex } from "../cache/operation-index-types.js";
 import type {
@@ -46,11 +43,27 @@ import type {
 import { ChannelErrorSource, SyncEventTypes } from "./types.js";
 import {
   batchOperationsByDocument,
+  chunkSyncOperations,
   createIdleHealth,
   filterOperations,
   toOperationWithContext,
   trimMailboxFromBatch,
 } from "./utils.js";
+
+export type SyncManagerConfig = {
+  maxDeadLettersPerRemote: number;
+  maxInboxBatchSize: number;
+};
+
+enum OutboxMode {
+  Backfill = "backfill",
+  BatchTriggered = "batch-triggered",
+}
+
+const defaultSyncManagerConfig: SyncManagerConfig = {
+  maxDeadLettersPerRemote: 100,
+  maxInboxBatchSize: 32,
+};
 
 export class SyncManager implements ISyncManager {
   private readonly logger: ILogger;
@@ -70,7 +83,7 @@ export class SyncManager implements ISyncManager {
   private failedEventUnsubscribe?: () => void;
   private readonly batchAggregator: BatchAggregator;
   private readonly syncStatusTracker: SyncStatusTracker;
-  private readonly maxDeadLettersPerRemote: number;
+  private readonly config: SyncManagerConfig;
   private readonly connectionStateUnsubscribes: Map<string, () => void> =
     new Map();
   private readonly quarantinedDocumentIds = new Set<string>();
@@ -84,7 +97,7 @@ export class SyncManager implements ISyncManager {
     operationIndex: IOperationIndex,
     reactor: IReactor,
     eventBus: IEventBus,
-    maxDeadLettersPerRemote: number = 100,
+    config: Partial<SyncManagerConfig> = {},
   ) {
     this.logger = logger;
     this.remoteStorage = remoteStorage;
@@ -94,7 +107,7 @@ export class SyncManager implements ISyncManager {
     this.operationIndex = operationIndex;
     this.reactor = reactor;
     this.eventBus = eventBus;
-    this.maxDeadLettersPerRemote = maxDeadLettersPerRemote;
+    this.config = { ...defaultSyncManagerConfig, ...config };
     this.remotes = new Map();
     this.awaiter = new JobAwaiter(eventBus, (jobId, signal) =>
       reactor.getJobStatus(jobId, signal),
@@ -422,8 +435,8 @@ export class SyncManager implements ISyncManager {
 
       // Evict oldest dead letters from mailbox if over capacity
       const items = remote.channel.deadLetter.items;
-      if (items.length > this.maxDeadLettersPerRemote) {
-        const excessCount = items.length - this.maxDeadLettersPerRemote;
+      if (items.length > this.config.maxDeadLettersPerRemote) {
+        const excessCount = items.length - this.config.maxDeadLettersPerRemote;
         const toEvict = items.slice(0, excessCount);
         remote.channel.deadLetter.remove(...toEvict);
       }
@@ -435,7 +448,7 @@ export class SyncManager implements ISyncManager {
     try {
       const page = await this.deadLetterStorage.list(remote.name, {
         cursor: "0",
-        limit: this.maxDeadLettersPerRemote,
+        limit: this.config.maxDeadLettersPerRemote,
       });
       records = page.results;
     } catch (error) {
@@ -519,7 +532,11 @@ export class SyncManager implements ISyncManager {
 
     // finally, work through the affected remotes and backfill based on the last operation in the outbox
     for (const remote of affectedRemotes) {
-      await this.updateOutbox(remote, remote.channel.outbox.latestOrdinal);
+      await this.updateOutbox(
+        remote,
+        remote.channel.outbox.latestOrdinal,
+        OutboxMode.BatchTriggered,
+      );
     }
   }
 
@@ -549,7 +566,21 @@ export class SyncManager implements ISyncManager {
     }
 
     if (keyed.length > 0) {
-      void this.applyInboxBatch(keyed.map((syncOp) => ({ remote, syncOp })));
+      const allItems = keyed.map((syncOp) => ({ remote, syncOp }));
+      const chunks = chunkSyncOperations(
+        allItems,
+        this.config.maxInboxBatchSize,
+      );
+      void this.processInboxChunks(chunks);
+    }
+  }
+
+  private async processInboxChunks(
+    chunks: Array<Array<{ remote: Remote; syncOp: SyncOperation }>>,
+  ): Promise<void> {
+    for (const chunk of chunks) {
+      if (this.isShutdown) return;
+      await this.applyInboxBatch(chunk);
     }
   }
 
@@ -636,13 +667,16 @@ export class SyncManager implements ISyncManager {
   ): Promise<void> {
     const sourceRemote = items[0].remote.name;
 
+    const chunkKeys = new Set(items.map(({ syncOp }) => syncOp.jobId));
     const jobs = items.map(({ syncOp }) => ({
       key: syncOp.jobId,
       documentId: syncOp.documentId,
       scope: syncOp.scopes[0],
       branch: syncOp.branch,
       operations: syncOp.operations.map((op) => op.operation),
-      dependsOn: syncOp.jobDependencies.filter(Boolean),
+      dependsOn: syncOp.jobDependencies.filter(
+        (dep) => dep && chunkKeys.has(dep),
+      ),
     }));
 
     const request: BatchLoadRequest = { jobs };
@@ -724,6 +758,7 @@ export class SyncManager implements ISyncManager {
   private async updateOutbox(
     remote: Remote,
     ackOrdinal: number,
+    mode: OutboxMode = OutboxMode.Backfill,
   ): Promise<void> {
     let maxOrdinal = ackOrdinal;
     const lastJobByDoc = new Map<string, string>();
@@ -771,13 +806,25 @@ export class SyncManager implements ISyncManager {
         const batches = batchOperationsByDocument(operations);
 
         const syncOps: SyncOperation[] = [];
+        let prevChainJobId: string | undefined;
         for (const batch of batches) {
           const jobId = crypto.randomUUID();
           const prevJobId = lastJobByDoc.get(batch.documentId);
+
+          const deps: string[] = [];
+          if (prevJobId) deps.push(prevJobId);
+          if (
+            mode === OutboxMode.BatchTriggered &&
+            prevChainJobId &&
+            prevChainJobId !== prevJobId
+          ) {
+            deps.push(prevChainJobId);
+          }
+
           const syncOp = new SyncOperation(
             crypto.randomUUID(),
             jobId,
-            prevJobId ? [prevJobId] : [],
+            deps,
             remote.name,
             batch.documentId,
             [batch.scope],
@@ -787,6 +834,7 @@ export class SyncManager implements ISyncManager {
 
           syncOps.push(syncOp);
           lastJobByDoc.set(batch.documentId, jobId);
+          if (mode === OutboxMode.BatchTriggered) prevChainJobId = jobId;
         }
 
         remote.channel.outbox.add(...syncOps);

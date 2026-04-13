@@ -63,7 +63,6 @@ describe("SyncManager Backfill", () => {
       operationIndex,
       mockReactor,
       eventBus,
-      100,
     );
   });
 

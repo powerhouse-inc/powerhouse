@@ -2366,10 +2366,11 @@ describe("SyncManager - Unit Tests", () => {
       await new Promise((resolve) => setTimeout(resolve, 20));
 
       expect(addedSyncOps).toHaveLength(2);
-      // Both SyncOps target different documents (doc1, doc2) so after
-      // sorting by documentId their dependency chains are independent
+      // First SyncOp has no dependencies
       expect(addedSyncOps[0].jobDependencies).toEqual([]);
-      expect(addedSyncOps[1].jobDependencies).toEqual([]);
+      // Second SyncOp depends on the first via batch dependency chain
+      // (linkBatchDependencies adds cross-document deps for batch integrity)
+      expect(addedSyncOps[1].jobDependencies).toEqual([addedSyncOps[0].jobId]);
     });
 
     it("should flush partial batch on JOB_FAILED", async () => {
@@ -3461,7 +3462,7 @@ describe("SyncManager - Unit Tests", () => {
         mockOperationIndex,
         mockReactor,
         mockEventBus,
-        maxLimit,
+        { maxDeadLettersPerRemote: maxLimit },
       );
 
       const ch = createTestChannel();
@@ -3523,7 +3524,7 @@ describe("SyncManager - Unit Tests", () => {
         mockOperationIndex,
         mockReactor,
         mockEventBus,
-        maxLimit,
+        { maxDeadLettersPerRemote: maxLimit },
       );
 
       const ch = createTestChannel();
@@ -3585,7 +3586,7 @@ describe("SyncManager - Unit Tests", () => {
         mockOperationIndex,
         mockReactor,
         mockEventBus,
-        maxLimit,
+        { maxDeadLettersPerRemote: maxLimit },
       );
 
       const ch = createTestChannel();
