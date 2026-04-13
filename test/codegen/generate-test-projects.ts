@@ -13,10 +13,10 @@ import {
   SPEC_VERSION_1,
   SPEC_VERSION_2,
   TEST_PROJECTS,
-  WITH_DOCUMENT_MODELS,
   WITH_DOCUMENT_MODELS_SPEC_1,
   WITH_DOCUMENT_MODELS_SPEC_2,
   WITH_EDITORS,
+  WITH_LEGACY_UNVERSIONED_DOCUMENT_MODELS,
 } from "./constants.js";
 import {
   cpForce,
@@ -48,16 +48,16 @@ export async function generateTestProjects() {
   packageJson.optionalDependencies = {};
   await writePackage(packageJson);
 
-  await rmForce(WITH_DOCUMENT_MODELS);
+  await rmForce(WITH_LEGACY_UNVERSIONED_DOCUMENT_MODELS);
 
   await cpForce(
     join(testProjectsDir, NEW_PROJECT),
-    join(testProjectsDir, WITH_DOCUMENT_MODELS),
+    join(testProjectsDir, WITH_LEGACY_UNVERSIONED_DOCUMENT_MODELS),
   );
 
   await loadDocumentModelsInDir(
-    join(dataDir, DOCUMENT_MODELS),
-    join(testProjectsDir, WITH_DOCUMENT_MODELS),
+    join(dataDir, SPEC_VERSION_1),
+    join(testProjectsDir, WITH_LEGACY_UNVERSIONED_DOCUMENT_MODELS),
     false,
   );
 

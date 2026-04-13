@@ -6,7 +6,7 @@ import { join } from "node:path";
 import {
   TEST_OUTPUT,
   TEST_PROJECTS,
-  WITH_DOCUMENT_MODELS,
+  WITH_DOCUMENT_MODELS_SPEC_2,
   WITH_EDITORS,
 } from "../constants.js";
 import { cpForce, mkdirRecursive, rmForce, runTsc } from "../utils.js";
@@ -39,7 +39,7 @@ describe("generateApp", () => {
   it("should generate a app with the correct files and content", async () => {
     const outDir = join(parentOutDir, "generate-new-app");
     await rmForce(outDir);
-    await cpForce(join(testProjectsDir, WITH_DOCUMENT_MODELS), outDir);
+    await cpForce(join(testProjectsDir, WITH_DOCUMENT_MODELS_SPEC_2), outDir);
     process.chdir(outDir);
     await generateApp({
       ...options,

@@ -56,6 +56,8 @@ export async function makeModulesFile({
     .getDescendantSourceFiles()
     .filter((file) => file.getBaseName().includes(moduleFileName));
 
+  console.log({ moduleFiles: moduleFiles.map((f) => f.getBaseName()) });
+
   // get the variable declaration for the module object exported by each module.ts file by the given type name
   const moduleDeclarations = moduleFiles
     .map((file) => getVariableDeclarationByTypeName(file, typeName))

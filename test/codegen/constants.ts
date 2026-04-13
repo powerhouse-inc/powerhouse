@@ -4,7 +4,8 @@ export const NEW_PROJECT = "new-project";
 
 export const DATA = "data";
 
-export const WITH_DOCUMENT_MODELS = "with-document-models";
+export const WITH_LEGACY_UNVERSIONED_DOCUMENT_MODELS =
+  "with-legacy-unversioned-document-models";
 
 export const DOCUMENT_MODELS = "document-models";
 

@@ -4,6 +4,7 @@ import type { SourceFile } from "ts-morph";
 
 /** Formats the text of a ts-morph source file with prettier before writing the text to memory */
 export async function formatSourceFileWithPrettier(sourceFile: SourceFile) {
+  sourceFile.organizeImports();
   const sourceText = sourceFile.getFullText();
   let formattedText = sourceText;
   try {

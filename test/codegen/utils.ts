@@ -67,3 +67,7 @@ export async function mkdirRecursive(path: PathLike) {
 export async function runTsc(cwd = process.cwd()) {
   await $`bun run --cwd ${cwd} tsc --noEmit`;
 }
+
+export async function runEslint(cwd = process.cwd()) {
+  await $`bun run --cwd ${cwd} eslint . --fix --quiet`;
+}

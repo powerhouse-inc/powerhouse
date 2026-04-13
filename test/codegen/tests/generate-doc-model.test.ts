@@ -10,7 +10,6 @@ import {
   SPEC_VERSION_3,
   TEST_OUTPUT,
   TEST_PROJECTS,
-  WITH_DOCUMENT_MODELS,
   WITH_DOCUMENT_MODELS_SPEC_1,
   WITH_DOCUMENT_MODELS_SPEC_2,
 } from "../constants.js";
@@ -135,7 +134,7 @@ describe("generate doc model", () => {
   });
   test("generate document models in existing project", async () => {
     const outDir = await runDocumentModelTests({
-      inDirName: WITH_DOCUMENT_MODELS,
+      inDirName: WITH_DOCUMENT_MODELS_SPEC_1,
       specDirName: DOCUMENT_MODELS,
       testOutputParentDir,
       testsDataDir: dataDir,

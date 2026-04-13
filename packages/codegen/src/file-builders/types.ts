@@ -62,7 +62,6 @@ export type GenerateDocumentModelArgs = {
   projectDir: string;
   documentModelState: DocumentModelGlobalState;
   useVersioning: boolean;
-  migrateLegacy?: boolean;
 };
 
 export type DocumentModelFileMakerArgs = DocumentModelVariableNames &

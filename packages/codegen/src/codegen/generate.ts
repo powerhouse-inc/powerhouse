@@ -10,18 +10,11 @@ import {
   tsMorphGenerateDocumentModel,
   tsMorphGenerateSubgraph,
 } from "file-builders";
-import { getTsconfig } from "get-tsconfig";
 import fs from "node:fs";
-import { readdir, writeFile } from "node:fs/promises";
+import { readdir } from "node:fs/promises";
 import path, { join } from "node:path";
 import { readPackage, type NormalizedPackageJson } from "read-pkg";
 import semver from "semver";
-import {
-  exportsTemplate,
-  tsconfigPathsTemplate,
-  tsConfigTemplate,
-} from "templates";
-import { writePackage } from "write-package";
 import { tsMorphGenerateProcessor } from "../file-builders/processors/processor.js";
 import { generateSchemas } from "./graphql.js";
 import type { CodegenOptions } from "./types.js";
@@ -30,7 +23,6 @@ import { loadDocumentModel } from "./utils.js";
 export async function generateAll(args: {
   dir: string;
   useVersioning: boolean;
-  migrateLegacy?: boolean;
   watch?: boolean;
   skipFormat?: boolean;
   verbose?: boolean;
@@ -39,7 +31,6 @@ export async function generateAll(args: {
   const {
     dir,
     useVersioning,
-    migrateLegacy = false,
     watch = false,
     skipFormat = false,
     verbose = true,
@@ -71,7 +62,6 @@ export async function generateAll(args: {
         verbose,
         force,
         useVersioning,
-        migrateLegacy,
       });
     } catch (error) {
       if (verbose) {
@@ -84,14 +74,12 @@ export async function generateAll(args: {
 export async function generate(
   config: PowerhouseConfig,
   useVersioning: boolean,
-  migrateLegacy = false,
 ) {
   const { skipFormat, watch } = config;
   await generateSchemas(config.documentModelsDir, { skipFormat, watch });
   await generateAll({
     dir: config.documentModelsDir,
     useVersioning,
-    migrateLegacy,
     skipFormat,
     watch,
   });
@@ -146,14 +134,13 @@ type GenerateDocumentModelArgs = {
   dir: string;
   documentModelState: DocumentModelGlobalState;
   useVersioning: boolean;
-  migrateLegacy?: boolean;
   watch?: boolean;
   skipFormat?: boolean;
   verbose?: boolean;
   force?: boolean;
 };
 export async function generateDocumentModel(args: GenerateDocumentModelArgs) {
-  const { dir, documentModelState, useVersioning, migrateLegacy } = args;
+  const { dir, documentModelState, useVersioning } = args;
   const packageJson = await readPackage();
   const zodSemverString = findZodDependencyInPackageJson(packageJson);
   ensureZodVersionIsSufficient(zodSemverString);
@@ -163,74 +150,7 @@ export async function generateDocumentModel(args: GenerateDocumentModelArgs) {
     projectDir,
     documentModelState,
     useVersioning,
-    migrateLegacy,
   });
-  // await ensurePackageExportsWildcards();
-  // await ensureTsconfigPaths();
-}
-
-/**
- * Ensures that the project's package.json exports field contains the
- * wildcard subpath patterns required for deep imports like
- * "document-models/my-doc" to resolve correctly.
- */
-async function ensurePackageExportsWildcards() {
-  const requiredExports = JSON.parse(`{ ${exportsTemplate} }`) as Record<
-    string,
-    string
-  >;
-
-  const packageJson = await readPackage();
-
-  const existingExports =
-    !packageJson.exports ||
-    typeof packageJson.exports === "string" ||
-    Array.isArray(packageJson.exports)
-      ? {}
-      : packageJson.exports;
-
-  packageJson.exports = {
-    ...existingExports,
-    ...requiredExports,
-  };
-
-  await writePackage(process.cwd(), packageJson);
-}
-
-/**
- * Ensures that the project's tsconfig.json has paths mappings for
- * the convenience export paths like "document-models/" etc.
- */
-async function ensureTsconfigPaths() {
-  const requiredTsConfigPaths = JSON.parse(
-    `{ ${tsconfigPathsTemplate} }`,
-  ) as Record<string, string[]>;
-  const tsConfigFilePath = join(process.cwd(), "tsconfig.json");
-  let tsConfig = getTsconfig();
-
-  if (!tsConfig) {
-    await writeFile(tsConfigFilePath, tsConfigTemplate);
-    tsConfig = getTsconfig();
-  }
-
-  if (!tsConfig) {
-    throw new Error(
-      `Failed to get or create tsconfig.json at "${tsConfigFilePath}".`,
-    );
-  }
-
-  const existingCompilerOptions = tsConfig.config.compilerOptions ?? {};
-  const existingPaths = existingCompilerOptions.paths ?? {};
-
-  tsConfig.config.compilerOptions = {
-    ...existingCompilerOptions,
-    paths: {
-      ...existingPaths,
-      ...requiredTsConfigPaths,
-    },
-  };
-
-  await writeFile(tsConfigFilePath, JSON.stringify(tsConfig.config, null, 2));
 }
 
 function findZodDependencyInPackageJson(
@@ -485,13 +405,7 @@ async function generateFromDocumentModel(args: {
   migrateLegacy?: boolean;
   options?: CodegenOptions;
 }) {
-  const {
-    documentModelState,
-    config,
-    useVersioning,
-    migrateLegacy,
-    options = {},
-  } = args;
+  const { documentModelState, config, useVersioning, options = {} } = args;
   const {
     verbose = config.logLevel === "verbose" ||
       config.logLevel === "debug" ||
@@ -515,6 +429,5 @@ async function generateFromDocumentModel(args: {
     verbose,
     force,
     useVersioning,
-    migrateLegacy,
   });
 }

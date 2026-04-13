@@ -6,7 +6,7 @@ import { join } from "node:path";
 import {
   TEST_OUTPUT,
   TEST_PROJECTS,
-  WITH_DOCUMENT_MODELS,
+  WITH_DOCUMENT_MODELS_SPEC_1,
   WITH_EDITORS,
 } from "../constants.js";
 import { cpForce, mkdirRecursive, rmForce, runTsc } from "../utils.js";
@@ -36,7 +36,7 @@ describe("generateEditor", () => {
   it("should generate a Document Model editor", async () => {
     const outDir = join(parentOutDir, "generate-editor");
 
-    await cpForce(join(testProjectsDir, WITH_DOCUMENT_MODELS), outDir);
+    await cpForce(join(testProjectsDir, WITH_DOCUMENT_MODELS_SPEC_1), outDir);
     process.chdir(outDir);
     await generateEditor({
       ...options,
