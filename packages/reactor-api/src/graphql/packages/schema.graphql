@@ -25,7 +25,7 @@ type InstallPackageResult {
   documentModelsLoaded: Int!
 }
 
-type Query {
+type PackagesQueries {
   # Get all installed packages
   installedPackages: [InstalledPackage!]!
 
@@ -33,7 +33,7 @@ type Query {
   installedPackage(name: String!): InstalledPackage
 }
 
-type Mutation {
+type PackagesMutations {
   # Install a package from the registry (requires admin access)
   installPackage(
     # Package name (e.g., "@powerhousedao/vetra")
@@ -47,4 +47,12 @@ type Mutation {
     # Package name to uninstall
     name: String!
   ): Boolean!
+}
+
+type Query {
+  Packages: PackagesQueries!
+}
+
+type Mutation {
+  Packages: PackagesMutations!
 }

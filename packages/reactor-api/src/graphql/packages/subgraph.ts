@@ -28,6 +28,10 @@ export class PackagesSubgraph extends BaseSubgraph {
 
   resolvers = {
     Query: {
+      packages: () => ({}),
+    },
+
+    PackagesQueries: {
       installedPackages: async () => {
         this.logger.debug("installedPackages");
         try {
@@ -55,6 +59,10 @@ export class PackagesSubgraph extends BaseSubgraph {
     },
 
     Mutation: {
+      packages: () => ({}),
+    },
+
+    PackagesMutations: {
       installPackage: async (
         _parent: unknown,
         args: { name: string; registryUrl?: string | null },
