@@ -100,6 +100,7 @@ export class GqlResponseChannel implements IChannel {
       lastFailureUtcMs: 0,
       pushBlocked: false,
       pushFailureCount: 0,
+      receivingPages: false,
     };
   }
 

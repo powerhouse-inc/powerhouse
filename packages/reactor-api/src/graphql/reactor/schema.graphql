@@ -122,6 +122,7 @@ type PollSyncEnvelopesResult {
   envelopes: [SyncEnvelope!]!
   ackOrdinal: Int!
   deadLetters: [DeadLetterInfo!]!
+  hasMore: Boolean!
 }
 
 type DocumentWithChildren {

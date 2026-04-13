@@ -88,6 +88,7 @@ export type ConnectionStateSnapshot = {
   lastFailureUtcMs: number;
   pushBlocked: boolean;
   pushFailureCount: number;
+  receivingPages: boolean;
 };
 
 export type ConnectionStateChangedEvent = {

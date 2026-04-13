@@ -46,6 +46,7 @@ function createMockChannel(): IChannel {
       lastFailureUtcMs: 0,
       pushBlocked: false,
       pushFailureCount: 0,
+      receivingPages: false,
     }),
     onConnectionStateChange: vi.fn().mockReturnValue(() => {}),
   };

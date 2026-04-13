@@ -94,6 +94,7 @@ describe("SyncManager - Unit Tests", () => {
         lastFailureUtcMs: 0,
         pushBlocked: false,
         pushFailureCount: 0,
+        receivingPages: false,
       }),
       onConnectionStateChange: vi.fn().mockReturnValue(() => {}),
     };
@@ -164,6 +165,7 @@ describe("SyncManager - Unit Tests", () => {
         lastFailureUtcMs: 0,
         pushBlocked: false,
         pushFailureCount: 0,
+        receivingPages: false,
       }),
       onConnectionStateChange: vi.fn().mockReturnValue(() => {}),
     } as any;

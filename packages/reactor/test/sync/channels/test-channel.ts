@@ -86,6 +86,7 @@ export class TestChannel implements IChannel {
       lastFailureUtcMs: 0,
       pushBlocked: false,
       pushFailureCount: 0,
+      receivingPages: false,
     };
   }
 

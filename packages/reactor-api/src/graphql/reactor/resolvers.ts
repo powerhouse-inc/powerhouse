@@ -22,6 +22,7 @@ import type {
 import { GraphQLError } from "graphql";
 
 const DRIVE_DOCUMENT_TYPE = "powerhouse/document-drive";
+const POLL_SYNC_ENVELOPES_MAX_LIMIT = 100;
 import type { GetParentIdsFn } from "../../services/document-permission.service.js";
 import {
   fromInputMaybe,
@@ -968,6 +969,7 @@ export function pollSyncEnvelopes(
     scopes: string[];
     operationCount: number;
   }>;
+  hasMore: boolean;
 } {
   let remote;
   try {
@@ -1013,11 +1015,24 @@ export function pollSyncEnvelopes(
       envelopes: [],
       ackOrdinal: remote.channel.inbox.ackOrdinal,
       deadLetters,
+      hasMore: false,
     };
   }
 
+  // Sort by first operation ordinal ascending. Dependencies always point
+  // backward in ordinal order, so a plain ordinal slice never delivers an
+  // operation before its dependency.
+  const sorted = [...operations].sort((a, b) => {
+    const aOrdinal = a.operations[0]?.context.ordinal ?? 0;
+    const bOrdinal = b.operations[0]?.context.ordinal ?? 0;
+    return aOrdinal - bOrdinal;
+  });
+
+  const hasMore = sorted.length > POLL_SYNC_ENVELOPES_MAX_LIMIT;
+  const pageOperations = sorted.slice(0, POLL_SYNC_ENVELOPES_MAX_LIMIT);
+
   let maxOrdinal = args.outboxLatest;
-  for (const syncOp of operations) {
+  for (const syncOp of pageOperations) {
     for (const op of syncOp.operations) {
       const opOrdinal = op.context.ordinal;
       if (opOrdinal > maxOrdinal) {
@@ -1026,7 +1041,7 @@ export function pollSyncEnvelopes(
     }
   }
 
-  const envelopes = operations.map((syncOp: SyncOperation) => ({
+  const envelopes = pageOperations.map((syncOp: SyncOperation) => ({
     type: "OPERATIONS",
     channelMeta: {
       id: args.channelId,
@@ -1051,6 +1066,7 @@ export function pollSyncEnvelopes(
     envelopes: sortEnvelopesByFirstOperationTimestamp(envelopes),
     ackOrdinal: remote.channel.inbox.ackOrdinal,
     deadLetters,
+    hasMore,
   };
 }
 

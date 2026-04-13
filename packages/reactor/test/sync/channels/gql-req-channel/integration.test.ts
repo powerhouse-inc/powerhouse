@@ -124,6 +124,7 @@ describe("GqlRequestChannel Integration", () => {
               pollSyncEnvelopes: {
                 envelopes: pollResponse.envelopes ?? [],
                 ackOrdinal: pollResponse.ackOrdinal ?? 0,
+                hasMore: false,
               },
             },
           }),
@@ -328,6 +329,7 @@ describe("GqlRequestChannel Integration", () => {
               pollSyncEnvelopes: {
                 envelopes: [],
                 ackOrdinal: 10,
+                hasMore: false,
               },
             },
           }),
