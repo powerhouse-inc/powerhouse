@@ -34,14 +34,21 @@ describe("DocumentModelRegistry - Versioning", () => {
       expect(registry.getAllModules()).toHaveLength(3);
     });
 
-    it("should throw DuplicateModuleError when registering same type+version", () => {
+    it("should return error result for duplicate type+version without breaking other registrations", () => {
       registry.registerModules(testDocV1Module);
-      expect(() => registry.registerModules(testDocV1Module)).toThrow(
-        DuplicateModuleError,
+      const results = registry.registerModules(
+        testDocV1Module,
+        testDocV2Module,
       );
-      expect(() => registry.registerModules(testDocV1Module)).toThrow(
-        `Document model module already registered for type: ${VERSIONED_DOC_TYPE} (version 1)`,
-      );
+      expect(results).toHaveLength(2);
+      expect(results[0].status).toBe("error");
+      expect(results[0].item).toBe(testDocV1Module);
+      expect(
+        (results[0] as { status: "error"; error: Error }).error,
+      ).toBeInstanceOf(DuplicateModuleError);
+      expect(results[1].status).toBe("success");
+      expect(results[1].item).toBe(testDocV2Module);
+      expect(registry.getAllModules()).toHaveLength(2);
     });
 
     it("should default version to 1 when module has no version field", () => {
@@ -126,11 +133,15 @@ describe("DocumentModelRegistry - Versioning", () => {
       );
     });
 
-    it("should throw DuplicateManifestError for duplicate", () => {
+    it("should return error result for duplicate manifest", () => {
       registry.registerUpgradeManifests(testDocUpgradeManifest);
-      expect(() =>
-        registry.registerUpgradeManifests(testDocUpgradeManifest),
-      ).toThrow(DuplicateManifestError);
+      const results = registry.registerUpgradeManifests(testDocUpgradeManifest);
+      expect(results).toHaveLength(1);
+      expect(results[0].status).toBe("error");
+      expect(results[0].item).toBe(testDocUpgradeManifest);
+      expect(
+        (results[0] as { status: "error"; error: Error }).error,
+      ).toBeInstanceOf(DuplicateManifestError);
     });
   });
 

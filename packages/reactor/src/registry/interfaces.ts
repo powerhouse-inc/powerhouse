@@ -5,6 +5,10 @@ import type {
   UpgradeTransition,
 } from "@powerhousedao/shared/document-model";
 
+export type RegistrationResult<T> =
+  | { status: "success"; item: T }
+  | { status: "error"; item: T; error: Error };
+
 /**
  * Loader that can asynchronously resolve and return a document model module
  * for a given document type. Used by the queue to gate CREATE_DOCUMENT jobs
@@ -23,11 +27,14 @@ export interface IDocumentModelRegistry {
   /**
    * Register multiple modules at once.
    * Modules without a version field default to version 1.
+   * Invalid or duplicate modules are skipped without breaking registration of the remaining modules.
    *
    * @param modules Document model modules to register
-   * @throws DuplicateModuleError if a module with the same document type and version is already registered
+   * @returns Array of results, one per module, indicating success or failure
    */
-  registerModules(...modules: DocumentModelModule<any>[]): void;
+  registerModules(
+    ...modules: DocumentModelModule<any>[]
+  ): RegistrationResult<DocumentModelModule<any>>[];
 
   /**
    * Unregister all versions of the specified document types.
@@ -80,13 +87,14 @@ export interface IDocumentModelRegistry {
 
   /**
    * Register upgrade manifests that define upgrade paths between versions.
+   * Invalid or duplicate manifests are skipped without breaking registration of the remaining manifests.
    *
    * @param manifests Upgrade manifests to register
-   * @throws DuplicateManifestError if a manifest for the same document type is already registered
+   * @returns Array of results, one per manifest, indicating success or failure
    */
   registerUpgradeManifests(
     ...manifests: UpgradeManifest<readonly number[]>[]
-  ): void;
+  ): RegistrationResult<UpgradeManifest<readonly number[]>>[];
 
   /**
    * Unregister upgrade manifests for the specified document types.

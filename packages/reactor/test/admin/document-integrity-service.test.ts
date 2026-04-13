@@ -80,6 +80,7 @@ describe("DocumentIntegrityService", () => {
       getSupportedVersions: vi.fn(),
       getLatestVersion: vi.fn(),
       registerUpgradeManifests: vi.fn(),
+      unregisterUpgradeManifests: vi.fn(),
       getUpgradeManifest: vi.fn(),
       computeUpgradePath: vi.fn(),
       getUpgradeReducer: vi.fn(),
