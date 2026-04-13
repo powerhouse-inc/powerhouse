@@ -4,7 +4,10 @@ import type {
   UpgradeReducer,
   UpgradeTransition,
 } from "@powerhousedao/shared/document-model";
-import type { IDocumentModelRegistry } from "./interfaces.js";
+import type {
+  IDocumentModelRegistry,
+  RegistrationResult,
+} from "./interfaces.js";
 
 /**
  * Error thrown when a document model module is not found in the registry.
@@ -63,6 +66,10 @@ export class DuplicateManifestError extends Error {
     super(`Upgrade manifest already registered for type: ${documentType}`);
     this.name = "DuplicateManifestError";
   }
+
+  static isError(error: unknown): error is DuplicateManifestError {
+    return Error.isError(error) && error.name === "DuplicateManifestError";
+  }
 }
 
 /**
@@ -119,23 +126,34 @@ export class DocumentModelRegistry implements IDocumentModelRegistry {
   private modules: DocumentModelModule<any>[] = [];
   private manifests: UpgradeManifest<readonly number[]>[] = [];
 
-  registerModules(...modules: DocumentModelModule<any>[]): void {
-    for (const module of modules) {
-      const documentType = module.documentModel.global.id;
-      const version = module.version ?? 1;
+  registerModules(
+    ...modules: DocumentModelModule<any>[]
+  ): RegistrationResult<DocumentModelModule<any>>[] {
+    return modules.map((module) => {
+      try {
+        const documentType = module.documentModel.global.id;
+        const version = module.version ?? 1;
 
-      for (let i = 0; i < this.modules.length; i++) {
-        const existing = this.modules[i];
-        const existingType = existing.documentModel.global.id;
-        const existingVersion = existing.version ?? 1;
+        for (let i = 0; i < this.modules.length; i++) {
+          const existing = this.modules[i];
+          const existingType = existing.documentModel.global.id;
+          const existingVersion = existing.version ?? 1;
 
-        if (existingType === documentType && existingVersion === version) {
-          throw new DuplicateModuleError(documentType, version);
+          if (existingType === documentType && existingVersion === version) {
+            throw new DuplicateModuleError(documentType, version);
+          }
         }
-      }
 
-      this.modules.push(module);
-    }
+        this.modules.push(module);
+        return { status: "success" as const, item: module };
+      } catch (error) {
+        return {
+          status: "error" as const,
+          item: module,
+          error: error instanceof Error ? error : new Error(String(error)),
+        };
+      }
+    });
   }
 
   unregisterModules(...documentTypes: string[]): boolean {
@@ -234,21 +252,31 @@ export class DocumentModelRegistry implements IDocumentModelRegistry {
 
   registerUpgradeManifests(
     ...manifestsToRegister: UpgradeManifest<readonly number[]>[]
-  ): void {
-    for (const manifestToRegister of manifestsToRegister) {
-      for (const registeredManifest of this.manifests) {
-        const registeredManifestDocumentType = registeredManifest.documentType;
-        const manifestToRegisterDocumentType = manifestToRegister.documentType;
-
-        if (!registeredManifestDocumentType || !manifestToRegisterDocumentType)
-          continue;
-
-        if (registeredManifestDocumentType === manifestToRegisterDocumentType) {
-          throw new DuplicateManifestError(manifestToRegisterDocumentType);
+  ): RegistrationResult<UpgradeManifest<readonly number[]>>[] {
+    return manifestsToRegister.map((manifestToRegister) => {
+      try {
+        if (!manifestToRegister.documentType) {
+          throw new Error("Upgrade manifest is missing a documentType");
         }
+
+        for (const registeredManifest of this.manifests) {
+          if (
+            registeredManifest.documentType === manifestToRegister.documentType
+          ) {
+            throw new DuplicateManifestError(manifestToRegister.documentType);
+          }
+        }
+
+        this.manifests.push(manifestToRegister);
+        return { status: "success" as const, item: manifestToRegister };
+      } catch (error) {
+        return {
+          status: "error" as const,
+          item: manifestToRegister,
+          error: error instanceof Error ? error : new Error(String(error)),
+        };
       }
-      this.manifests.push(manifestToRegister);
-    }
+    });
   }
 
   unregisterUpgradeManifests(...documentTypes: string[]): boolean {

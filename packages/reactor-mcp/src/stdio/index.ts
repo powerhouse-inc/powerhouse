@@ -67,9 +67,17 @@ export async function initStdioMcpServer(options?: IMcpOptions) {
   if (documentModelsLoader && rModule?.documentModelRegistry) {
     const unsubscribe = await documentModelsLoader.onDocumentModelsChange(
       (models) => {
-        rModule.documentModelRegistry.registerModules(
+        const results = rModule.documentModelRegistry.registerModules(
           ...baseDocumentModels.concat(models),
         );
+        for (const result of results) {
+          if (result.status === "error") {
+            logger.error(
+              "Failed to register document model: @error",
+              result.error,
+            );
+          }
+        }
       },
     );
 

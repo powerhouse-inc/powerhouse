@@ -201,11 +201,23 @@ function setupEventListeners(
         registeredModules.map((m) => m.documentModel.global.id),
       );
 
-      for (const mod of newModules) {
-        const docType = mod.documentModel.global.id;
-        if (!registeredTypes.has(docType)) {
-          defaultLogger.info(`Registering new document model: ${docType}`);
-          documentModelRegistry.registerModules(mod);
+      const modulesToRegister = newModules.filter(
+        (mod) => !registeredTypes.has(mod.documentModel.global.id),
+      );
+      if (modulesToRegister.length > 0) {
+        const results = documentModelRegistry.registerModules(
+          ...modulesToRegister,
+        );
+        for (const result of results) {
+          if (result.status === "success") {
+            defaultLogger.info(
+              `Registered new document model: ${result.item.documentModel.global.id}`,
+            );
+          } else {
+            defaultLogger.error(
+              `Failed to register document model: ${result.error.message}`,
+            );
+          }
         }
       }
     }
