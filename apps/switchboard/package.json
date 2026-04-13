@@ -67,7 +67,6 @@
     "kysely": "catalog:",
     "kysely-pglite-dialect": "catalog:",
     "pg": "catalog:",
-    "react": "catalog:",
     "vite": "catalog:"
   },
   "devDependencies": {
@@ -77,6 +76,10 @@
     "tsdown": "catalog:",
     "concurrently": "catalog:",
     "nodemon": "catalog:",
+    "react": "catalog:",
     "vitest": "catalog:"
+  },
+  "peerDependencies": {
+    "react": ">=19.0.0"
   }
 }

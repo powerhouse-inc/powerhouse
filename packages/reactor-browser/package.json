@@ -46,8 +46,6 @@
     "lodash.isequal": "^4.5.0",
     "luxon": "^3.6.1",
     "lz-string": "^1.5.0",
-    "react": "catalog:",
-    "react-dom": "catalog:",
     "slug": "^11.0.0"
   },
   "devDependencies": {
@@ -66,9 +64,15 @@
     "@vitest/browser-playwright": "catalog:",
     "fast-deep-equal": "catalog:",
     "playwright": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
     "tsdown": "catalog:",
     "vite": "catalog:",
     "vitest": "catalog:",
     "vitest-browser-react": "^1.0.1"
+  },
+  "peerDependencies": {
+    "react": ">=19.0.0",
+    "react-dom": ">=19.0.0"
   }
 }
