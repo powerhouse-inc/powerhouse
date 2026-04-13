@@ -12,7 +12,7 @@ catalog:
   "vite-tsconfig-paths": 6.1.1
   "@modelcontextprotocol/sdk": 1.27.1
   "@powerhousedao/document-engineering": 1.40.1
-  "kysely": 0.28.11
+  "kysely": 0.28.14
   "kysely-pglite-dialect": 1.2.0
   "kysely-pglite": 0.6.1
   "kysely-knex": 0.2.0
@@ -34,7 +34,7 @@ catalog:
   "@vitejs/plugin-react": 6.0.1
   "graphql": 16.12.0
   "graphql-request": 7.4.0
-  "vite": 8.0.2
+  "vite": 8.0.5
   "vite-plugin-html": 3.2.2
   "tailwindcss": 4.2.2
   "tailwind-merge": 3.4.0
