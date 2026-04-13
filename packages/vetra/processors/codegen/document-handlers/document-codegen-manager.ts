@@ -182,7 +182,7 @@ export class DocumentCodegenManager {
           // Don't throw - let codegen continue with other documents
         } finally {
           // Clean up the timer reference
-          this.debounceTimers.delete(documentType);
+          this.debounceTimers.delete(timerKey);
         }
       }, DEFAULT_DEBOUNCE_TIME);
 
