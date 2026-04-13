@@ -263,6 +263,7 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
       },
     },
     resolve: {
+      dedupe: ["react", "react-dom"],
       tsconfigPaths: true,
     },
     define: {
