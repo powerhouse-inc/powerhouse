@@ -1,3 +1,7 @@
+## 6.0.0-dev.169 (2026-04-13)
+
+This was a version bump only for @powerhousedao/vetra to align it with other projects, there were no code changes.
+
 ## 6.0.0-dev.168 (2026-04-12)
 
 This was a version bump only for @powerhousedao/vetra to align it with other projects, there were no code changes.
