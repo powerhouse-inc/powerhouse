@@ -10,7 +10,6 @@ import {
   addRemoteDrive,
   DocumentCache,
   DocumentChangeType,
-  dropAllReactorStorage,
   extractDriveSlugFromPath,
   extractNodeSlugFromPath,
   getDrives,
@@ -48,14 +47,26 @@ import { loadPackagesConfig } from "../packages.config.js";
 import { createProcessorHostModule } from "./processor-host-module.js";
 
 export async function clearReactorStorage() {
-  const pg = window.ph?.reactorClientModule?.pg;
-  if (!pg) {
-    throw new Error("PGlite not found");
-  }
+  await window.ph?.reactorClientModule?.pg?.close();
 
-  await dropAllReactorStorage(pg);
+  // Dropping tables inside an existing PGlite instance is unreliable with
+  // `relaxedDurability: true` followed by an immediate page reload — pending
+  // IDB writes can be lost. Deleting the underlying database outright sidesteps
+  // flush-timing; the next startup re-creates and re-migrates from scratch.
+  const dbs = await indexedDB.databases();
+  const targets = dbs
+    .map((d) => d.name)
+    .filter((n): n is string => !!n && /pglite|reactor/i.test(n));
 
-  await pg.close();
+  await Promise.all(
+    targets.map(
+      (name) =>
+        new Promise<void>((resolve) => {
+          const req = indexedDB.deleteDatabase(name);
+          req.onsuccess = req.onerror = req.onblocked = () => resolve();
+        }),
+    ),
+  );
 }
 
 export async function createReactor(localPackage?: DocumentModelLib) {
