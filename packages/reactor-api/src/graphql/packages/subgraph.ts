@@ -1,11 +1,10 @@
 import { ConsoleLogger } from "document-model";
 import { gql } from "graphql-tag";
-import schemaSource from "./schema.graphql";
 import type { PackageManagementService } from "../../services/package-management.service.js";
 import { BaseSubgraph } from "../base-subgraph.js";
-import type { SubgraphArgs } from "../types.js";
-import type { PackageResolverContext } from "./resolvers.js";
+import type { Context, SubgraphArgs } from "../types.js";
 import * as resolvers from "./resolvers.js";
+import schemaSource from "./schema.graphql";
 
 export interface PackagesSubgraphArgs extends SubgraphArgs {
   packageManagementService: PackageManagementService;
@@ -28,9 +27,8 @@ export class PackagesSubgraph extends BaseSubgraph {
 
   resolvers = {
     Query: {
-      packages: () => ({}),
+      Packages: () => ({}),
     },
-
     PackagesQueries: {
       installedPackages: async () => {
         this.logger.debug("installedPackages");
@@ -59,14 +57,14 @@ export class PackagesSubgraph extends BaseSubgraph {
     },
 
     Mutation: {
-      packages: () => ({}),
+      Packages: () => ({}),
     },
 
     PackagesMutations: {
       installPackage: async (
         _parent: unknown,
         args: { name: string; registryUrl?: string | null },
-        ctx: PackageResolverContext,
+        ctx: Context,
       ) => {
         this.logger.debug("installPackage", args);
         try {
@@ -84,7 +82,7 @@ export class PackagesSubgraph extends BaseSubgraph {
       uninstallPackage: async (
         _parent: unknown,
         args: { name: string },
-        ctx: PackageResolverContext,
+        ctx: Context,
       ) => {
         this.logger.debug("uninstallPackage", args);
         try {

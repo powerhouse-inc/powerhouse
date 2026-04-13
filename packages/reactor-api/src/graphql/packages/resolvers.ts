@@ -1,13 +1,9 @@
 import { GraphQLError } from "graphql";
 import type { PackageManagementService } from "../../services/package-management.service.js";
 import type { InstalledPackageInfo } from "../../services/package-storage.js";
+import type { Context } from "../types.js";
 
-export interface PackageResolverContext {
-  user?: { address: string };
-  isAdmin?: (address: string) => boolean;
-}
-
-function requireAdmin(ctx: PackageResolverContext): void {
+function requireAdmin(ctx: Context): void {
   const isAdmin = ctx.isAdmin?.(ctx.user?.address ?? "") ?? false;
   if (!isAdmin) {
     throw new GraphQLError("Admin access required");
@@ -42,7 +38,7 @@ export async function installedPackage(
 export async function installPackage(
   service: PackageManagementService,
   args: { name: string; registryUrl?: string | null },
-  ctx: PackageResolverContext,
+  ctx: Context,
 ): Promise<{
   package: ReturnType<typeof formatPackageInfo>;
   documentModelsLoaded: number;
@@ -63,7 +59,7 @@ export async function installPackage(
 export async function uninstallPackage(
   service: PackageManagementService,
   args: { name: string },
-  ctx: PackageResolverContext,
+  ctx: Context,
 ): Promise<boolean> {
   requireAdmin(ctx);
 
