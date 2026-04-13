@@ -87,6 +87,10 @@ export class SyncManager implements ISyncManager {
   private readonly connectionStateUnsubscribes: Map<string, () => void> =
     new Map();
   private readonly quarantinedDocumentIds = new Set<string>();
+  private readonly backfillAbortControllers = new Map<
+    string,
+    AbortController
+  >();
 
   constructor(
     logger: ILogger,
@@ -176,10 +180,28 @@ export class SyncManager implements ISyncManager {
         continue;
       }
 
-      // backfill channels
+      // backfill channels asynchronously -- don't block startup
       const outboxAckOrdinal = remote.channel.outbox.ackOrdinal;
       if (outboxAckOrdinal > 0) {
-        await this.updateOutbox(remote, outboxAckOrdinal);
+        const backfillController = new AbortController();
+        this.backfillAbortControllers.set(record.name, backfillController);
+        void this.updateOutbox(
+          remote,
+          outboxAckOrdinal,
+          OutboxMode.Backfill,
+          backfillController.signal,
+        )
+          .catch((error) => {
+            if (backfillController.signal.aborted) return;
+            this.logger.error(
+              "Backfill failed for remote @RemoteName: @Error",
+              remote.name,
+              error instanceof Error ? error : new Error(String(error)),
+            );
+          })
+          .finally(() => {
+            this.backfillAbortControllers.delete(record.name);
+          });
       }
     }
 
@@ -197,6 +219,10 @@ export class SyncManager implements ISyncManager {
   shutdown(): ShutdownStatus {
     this.isShutdown = true;
     this.abortController.abort();
+    for (const controller of this.backfillAbortControllers.values()) {
+      controller.abort();
+    }
+    this.backfillAbortControllers.clear();
     this.batchAggregator.clear();
 
     if (this.eventUnsubscribe) {
@@ -325,13 +351,25 @@ export class SyncManager implements ISyncManager {
     }
 
     // backfill asynchronously -- don't block channel registration
-    void this.updateOutbox(remote, 0).catch((error) => {
-      this.logger.error(
-        "Backfill failed for remote @RemoteName: @Error",
-        remote.name,
-        error instanceof Error ? error : new Error(String(error)),
-      );
-    });
+    const backfillController = new AbortController();
+    this.backfillAbortControllers.set(name, backfillController);
+    void this.updateOutbox(
+      remote,
+      0,
+      OutboxMode.Backfill,
+      backfillController.signal,
+    )
+      .catch((error) => {
+        if (backfillController.signal.aborted) return;
+        this.logger.error(
+          "Backfill failed for remote @RemoteName: @Error",
+          remote.name,
+          error instanceof Error ? error : new Error(String(error)),
+        );
+      })
+      .finally(() => {
+        this.backfillAbortControllers.delete(name);
+      });
 
     return remote;
   }
@@ -340,6 +378,13 @@ export class SyncManager implements ISyncManager {
     const remote = this.remotes.get(name);
     if (!remote) {
       throw new Error(`Remote with name '${name}' does not exist`);
+    }
+
+    // cancel any in-flight backfill for this remote
+    const backfillController = this.backfillAbortControllers.get(name);
+    if (backfillController) {
+      backfillController.abort();
+      this.backfillAbortControllers.delete(name);
     }
 
     // shutdown the channel
@@ -765,7 +810,12 @@ export class SyncManager implements ISyncManager {
     remote: Remote,
     ackOrdinal: number,
     mode: OutboxMode = OutboxMode.Backfill,
+    signal?: AbortSignal,
   ): Promise<void> {
+    const composedSignal = signal
+      ? AbortSignal.any([signal, this.abortController.signal])
+      : this.abortController.signal;
+
     let maxOrdinal = ackOrdinal;
     const lastJobByDoc = new Map<string, string>();
     const sinceTimestamp = remote.options.sinceTimestampUtcMs;
@@ -775,11 +825,14 @@ export class SyncManager implements ISyncManager {
       ackOrdinal,
       { excludeSourceRemote: remote.name },
       undefined,
-      this.abortController.signal,
+      composedSignal,
     );
 
     let hasMore: boolean;
     do {
+      if (composedSignal.aborted) {
+        return;
+      }
       for (const entry of page.results) {
         maxOrdinal = Math.max(maxOrdinal, entry.ordinal ?? 0);
       }

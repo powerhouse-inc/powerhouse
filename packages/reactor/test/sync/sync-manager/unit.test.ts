@@ -448,6 +448,10 @@ describe("SyncManager - Unit Tests", () => {
 
       await syncManager.startup();
 
+      // backfill runs asynchronously after startup returns
+      await vi.waitFor(() => {
+        expect(startupChannel.outbox.add).toHaveBeenCalled();
+      });
       expect(mockOperationIndex.find).toHaveBeenCalledWith(
         "collection1",
         5,
@@ -455,7 +459,45 @@ describe("SyncManager - Unit Tests", () => {
         undefined,
         expect.any(AbortSignal),
       );
-      expect(startupChannel.outbox.add).toHaveBeenCalled();
+    });
+
+    it("should not block startup on backfill", async () => {
+      const startupChannel = createTestChannel();
+      startupChannel.outbox.init(5);
+      vi.mocked(mockChannelFactory.instance).mockReturnValue(
+        startupChannel as any,
+      );
+
+      let resolveFind!: (value: any) => void;
+      const findPromise = new Promise((resolve) => {
+        resolveFind = resolve;
+      });
+      vi.mocked(mockOperationIndex.find).mockReturnValue(findPromise as any);
+
+      const remoteRecord: RemoteRecord = {
+        id: "channel1",
+        name: "remote1",
+        collectionId: "collection1",
+        channelConfig: { type: "internal", parameters: {} },
+        filter: { documentId: [], scope: [], branch: "main" },
+        options: { sinceTimestampUtcMs: "0" },
+        status: {
+          push: { state: "idle", failureCount: 0 },
+          pull: { state: "idle", failureCount: 0 },
+        },
+      };
+
+      vi.mocked(mockRemoteStorage.list).mockResolvedValue([remoteRecord]);
+
+      await syncManager.startup();
+
+      expect(mockEventBus.subscribe).toHaveBeenCalledWith(
+        ReactorEventTypes.JOB_WRITE_READY,
+        expect.any(Function),
+      );
+
+      resolveFind(createFindResult([]));
+      await new Promise((r) => setTimeout(r, 10));
     });
   });
 
@@ -631,6 +673,41 @@ describe("SyncManager - Unit Tests", () => {
       await expect(syncManager.remove("nonexistent")).rejects.toThrow(
         "Remote with name 'nonexistent' does not exist",
       );
+    });
+
+    it("should cancel in-flight backfill when removing a remote", async () => {
+      await syncManager.startup();
+
+      let resolveFind!: (value: any) => void;
+      const findPromise = new Promise((resolve) => {
+        resolveFind = resolve;
+      });
+      vi.mocked(mockOperationIndex.find).mockReturnValue(findPromise as any);
+
+      const channelConfig: ChannelConfig = {
+        type: "internal",
+        parameters: {},
+      };
+
+      await syncManager.add("remote1", "collection1", channelConfig);
+
+      await syncManager.remove("remote1");
+
+      resolveFind(
+        createFindResult([
+          {
+            id: "op1",
+            documentId: "doc1",
+            scope: "global",
+            branch: "main",
+            ordinal: 1,
+          },
+        ]),
+      );
+
+      await new Promise((r) => setTimeout(r, 20));
+
+      expect(mockChannel.outbox.add).not.toHaveBeenCalled();
     });
   });
 
