@@ -55,17 +55,17 @@ function sleep(ms: number): Promise<void> {
  * Open a URL in the default browser (cross-platform).
  */
 export async function openBrowser(url: string): Promise<void> {
-  const { exec } = await import("node:child_process");
+  const { execFile } = await import("node:child_process");
   const { promisify } = await import("node:util");
-  const execAsync = promisify(exec);
+  const execFileAsync = promisify(execFile);
   const platform = process.platform;
 
   if (platform === "darwin") {
-    await execAsync(`open "${url}"`);
+    await execFileAsync("open", [url]);
   } else if (platform === "win32") {
-    await execAsync(`start "" "${url}"`);
+    await execFileAsync("cmd", ["/c", "start", "", url]);
   } else {
-    await execAsync(`xdg-open "${url}"`);
+    await execFileAsync("xdg-open", [url]);
   }
 }
 
@@ -198,39 +198,35 @@ export async function generateAccessToken(
 /**
  * Parse a human-readable expiry string to seconds.
  * Supports formats: "7d" (days), "24h" (hours), "3600" (seconds), "3600s" (seconds).
+ * Only accepts positive integers — decimals like "1.5h" are rejected.
  */
 export function parseExpiry(expiry: string): number {
   const trimmed = expiry.trim().toLowerCase();
+  const match = trimmed.match(/^(\d+)(d|h|s)?$/);
 
-  if (trimmed.endsWith("d")) {
-    const days = parseInt(trimmed.slice(0, -1), 10);
-    if (isNaN(days) || days <= 0) {
-      throw new Error(
-        `Invalid expiry format: ${expiry}. Days must be a positive number.`,
-      );
-    }
-    return days * SECONDS_IN_DAY;
-  }
-
-  if (trimmed.endsWith("h")) {
-    const hours = parseInt(trimmed.slice(0, -1), 10);
-    if (isNaN(hours) || hours <= 0) {
-      throw new Error(
-        `Invalid expiry format: ${expiry}. Hours must be a positive number.`,
-      );
-    }
-    return hours * 60 * 60;
-  }
-
-  const numericValue = trimmed.endsWith("s") ? trimmed.slice(0, -1) : trimmed;
-  const seconds = parseInt(numericValue, 10);
-  if (isNaN(seconds) || seconds <= 0) {
+  if (!match) {
     throw new Error(
-      `Invalid expiry format: ${expiry}. Expected a positive number or format like "7d", "24h", "3600s".`,
+      `Invalid expiry format: ${expiry}. Expected a positive integer with optional suffix: "7d", "24h", "3600s", or "3600".`,
     );
   }
 
-  return seconds;
+  const value = Number(match[1]);
+  const unit = match[2];
+
+  if (value <= 0) {
+    throw new Error(
+      `Invalid expiry format: ${expiry}. Value must be a positive integer.`,
+    );
+  }
+
+  switch (unit) {
+    case "d":
+      return value * SECONDS_IN_DAY;
+    case "h":
+      return value * 60 * 60;
+    default:
+      return value;
+  }
 }
 
 /**

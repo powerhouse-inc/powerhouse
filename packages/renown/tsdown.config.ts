@@ -8,6 +8,6 @@ export default defineConfig({
   dts: true,
   sourcemap: true,
   deps: {
-    neverBundle: [/^node:*/],
+    neverBundle: [/^node:/],
   },
 });
