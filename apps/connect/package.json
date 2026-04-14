@@ -33,6 +33,7 @@
   "sideEffects": [
     "./dist/main.js",
     "./dist/start-connect.js",
+    "./dist/i18n-*.js",
     "./dist/style.css"
   ],
   "license": "AGPL-3.0-only",
