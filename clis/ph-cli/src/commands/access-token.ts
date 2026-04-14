@@ -1,7 +1,6 @@
 import {
   accessTokenArgs,
   DEFAULT_EXPIRY_SECONDS,
-  SECONDS_IN_DAY,
 } from "@powerhousedao/shared/clis";
 import { command } from "cmd-ts";
 
@@ -60,98 +59,27 @@ Notes:
       console.log(args);
     }
 
+    const { generateAccessToken, parseExpiry, formatExpiry } =
+      await import("@renown/sdk/node");
     const { getRenown } = await import("../services/auth.js");
     const renown = await getRenown();
-    const did = renown.did;
-    const user = renown.user;
 
-    // Require Renown authentication - user must have done 'ph login'
-    if (!user || !user.credential) {
-      throw new Error(
-        "Not authenticated. Run 'ph login' first to authenticate with Renown. A Renown credential is required to generate valid bearer tokens.",
-      );
-    }
-
-    const address = user.address;
-
-    // Parse expiry
     let expiresIn = DEFAULT_EXPIRY_SECONDS;
     if (args.expiry) expiresIn = parseExpiry(args.expiry);
 
-    // Generate the bearer token;
-    const token = await renown.getBearerToken(
-      {
-        expiresIn,
-        aud: args.audience,
-      },
-      true,
-    );
-
-    // Calculate human-readable expiry
-    const expiryDays = Math.floor(expiresIn / SECONDS_IN_DAY);
-    const expiryHours = Math.floor((expiresIn % SECONDS_IN_DAY) / 3600);
-    let expiryStr: string;
-    if (expiryDays > 0) {
-      expiryStr =
-        expiryHours > 0
-          ? `${expiryDays} day${expiryDays > 1 ? "s" : ""} and ${expiryHours} hour${expiryHours > 1 ? "s" : ""}`
-          : `${expiryDays} day${expiryDays > 1 ? "s" : ""}`;
-    } else if (expiryHours > 0) {
-      expiryStr = `${expiryHours} hour${expiryHours > 1 ? "s" : ""}`;
-    } else {
-      expiryStr = `${expiresIn} seconds`;
-    }
+    const result = await generateAccessToken(renown, {
+      expiresIn,
+      aud: args.audience,
+      refresh: true,
+    });
 
     // Output token info to stderr, token itself to stdout for piping
-    console.error(`CLI DID: ${did}`);
-    console.error(`ETH Address: ${address}`);
-    console.error(`Token expires in: ${expiryStr}`);
+    console.error(`CLI DID: ${result.did}`);
+    console.error(`ETH Address: ${result.address}`);
+    console.error(`Token expires in: ${formatExpiry(expiresIn)}`);
     console.error("");
 
-    // Output just the token to stdout (for easy piping/copying)
-    console.log(token);
+    console.log(result.token);
     process.exit(0);
   },
 });
-
-/**
- * Parse expiry string to seconds
- * Supports formats: "7d" (days), "24h" (hours), "3600" (seconds), "3600s" (seconds)
- */
-function parseExpiry(expiry: string): number {
-  const trimmed = expiry.trim().toLowerCase();
-
-  // Check for day format (e.g., "7d")
-  if (trimmed.endsWith("d")) {
-    const days = parseInt(trimmed.slice(0, -1), 10);
-    if (isNaN(days) || days <= 0) {
-      throw new Error(
-        `Invalid expiry format: ${expiry}. Days must be a positive number.`,
-      );
-    }
-    return days * SECONDS_IN_DAY;
-  }
-
-  // Check for hour format (e.g., "24h")
-  if (trimmed.endsWith("h")) {
-    const hours = parseInt(trimmed.slice(0, -1), 10);
-    if (isNaN(hours) || hours <= 0) {
-      throw new Error(
-        `Invalid expiry format: ${expiry}. Hours must be a positive number.`,
-      );
-    }
-    return hours * 60 * 60;
-  }
-
-  // Check for seconds format (e.g., "3600s" or just "3600")
-  const numericValue = trimmed.endsWith("s") ? trimmed.slice(0, -1) : trimmed;
-
-  const seconds = parseInt(numericValue, 10);
-  if (isNaN(seconds) || seconds <= 0) {
-    throw new Error(
-      `Invalid expiry format: ${expiry}. Expected a positive number or format like "7d", "24h", "3600s".`,
-    );
-  }
-
-  return seconds;
-}
