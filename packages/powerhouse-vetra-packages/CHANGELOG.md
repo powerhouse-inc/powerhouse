@@ -1,3 +1,14 @@
+## 6.0.0-dev.171 (2026-04-14)
+
+### 🩹 Fixes
+
+- **powerhouse-vetra-packages:** resolve duplicate graphql module causing false state validation errors ([38ac1daf5](https://github.com/powerhouse-inc/powerhouse/commit/38ac1daf5))
+- **vetra:** generate manifest from global state in package generator ([f5de73f05](https://github.com/powerhouse-inc/powerhouse/commit/f5de73f05))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 6.0.0-dev.170 (2026-04-13)
 
 ### 🩹 Fixes

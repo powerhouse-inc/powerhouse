@@ -1,3 +1,21 @@
+## 6.0.0-dev.171 (2026-04-14)
+
+### 🚀 Features
+
+- sync paging ([6d90fe1a4](https://github.com/powerhouse-inc/powerhouse/commit/6d90fe1a4))
+
+### 🩹 Fixes
+
+- **vetra:** generate manifest from global state in package generator ([f5de73f05](https://github.com/powerhouse-inc/powerhouse/commit/f5de73f05))
+- **reactor-api:** uppercase packages namespace and type improvement ([f455ced56](https://github.com/powerhouse-inc/powerhouse/commit/f455ced56))
+- **reactor-api:** namespace package subgraph ([cc82e0943](https://github.com/powerhouse-inc/powerhouse/commit/cc82e0943))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Guillermo Puente @gpuente
+
 ## 6.0.0-dev.170 (2026-04-13)
 
 ### 🩹 Fixes

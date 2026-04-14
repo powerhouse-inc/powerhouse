@@ -1,3 +1,13 @@
+## 6.0.0-dev.171 (2026-04-14)
+
+### 🩹 Fixes
+
+- **vetra:** generate manifest from global state in package generator ([f5de73f05](https://github.com/powerhouse-inc/powerhouse/commit/f5de73f05))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 6.0.0-dev.170 (2026-04-13)
 
 ### 🩹 Fixes

@@ -1,3 +1,21 @@
+## 6.0.0-dev.171 (2026-04-14)
+
+### 🚀 Features
+
+- sync paging ([6d90fe1a4](https://github.com/powerhouse-inc/powerhouse/commit/6d90fe1a4))
+- added yield utility method, and yield with timer in job executor ([d751d2472](https://github.com/powerhouse-inc/powerhouse/commit/d751d2472))
+
+### 🩹 Fixes
+
+- backfill should be async on start too, but we need to make sure to track it and kill on remove ([f994cb8bc](https://github.com/powerhouse-inc/powerhouse/commit/f994cb8bc))
+- backfill in touchchannel should be async so as not to kill switchboard ([a1e8ed3e3](https://github.com/powerhouse-inc/powerhouse/commit/a1e8ed3e3))
+- **vetra:** generate manifest from global state in package generator ([f5de73f05](https://github.com/powerhouse-inc/powerhouse/commit/f5de73f05))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Guillermo Puente @gpuente
+
 ## 6.0.0-dev.170 (2026-04-13)
 
 ### 🩹 Fixes

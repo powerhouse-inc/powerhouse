@@ -1,7 +1,7 @@
 {
   "name": "compat",
   "private": true,
-  "version": "6.0.0-dev.170",
+  "version": "6.0.0-dev.171",
   "publishConfig": {
     "access": "restricted"
   },

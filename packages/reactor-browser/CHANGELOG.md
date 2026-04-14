@@ -1,3 +1,19 @@
+## 6.0.0-dev.171 (2026-04-14)
+
+### 🚀 Features
+
+- sync paging ([6d90fe1a4](https://github.com/powerhouse-inc/powerhouse/commit/6d90fe1a4))
+
+### 🩹 Fixes
+
+- **reactor-browser:** export documents as .phd when no extension is set ([494ac0a3a](https://github.com/powerhouse-inc/powerhouse/commit/494ac0a3a))
+- **vetra:** generate manifest from global state in package generator ([f5de73f05](https://github.com/powerhouse-inc/powerhouse/commit/f5de73f05))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Guillermo Puente @gpuente
+
 ## 6.0.0-dev.170 (2026-04-13)
 
 ### 🩹 Fixes

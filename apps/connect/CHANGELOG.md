@@ -1,3 +1,14 @@
+## 6.0.0-dev.171 (2026-04-14)
+
+### 🩹 Fixes
+
+- **connect:** delete pglite idb on clear storage to avoid flush race ([c3a731835](https://github.com/powerhouse-inc/powerhouse/commit/c3a731835))
+- **vetra:** generate manifest from global state in package generator ([f5de73f05](https://github.com/powerhouse-inc/powerhouse/commit/f5de73f05))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 6.0.0-dev.170 (2026-04-13)
 
 ### 🚀 Features
