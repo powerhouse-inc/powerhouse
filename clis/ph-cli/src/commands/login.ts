@@ -20,7 +20,7 @@ This command:
     }
 
     const { getRenown } = await import("../services/auth.js");
-    const renown = await getRenown();
+    const renown = await getRenown(args.renownUrl);
 
     if (args.showDid) {
       console.log(renown.did);
@@ -63,9 +63,10 @@ This command:
       const result = await browserLogin(renown, {
         renownUrl: args.renownUrl,
         timeoutMs,
-        onLoginUrl: (_url, sessionId) => {
+        onLoginUrl: (url, sessionId) => {
           console.log("Opening browser for authentication...");
           console.log(`Session ID: ${sessionId.slice(0, 8)}...`);
+          console.log(`Login URL: ${url}`);
           console.log();
           console.log("Waiting for authentication in browser");
           console.log(`(timeout in ${(timeoutMs ?? 300_000) / 1000} seconds)`);
