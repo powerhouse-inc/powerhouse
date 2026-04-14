@@ -14,7 +14,11 @@ import {
   defaultBaseState,
 } from "@powerhousedao/shared/document-model";
 import { describe, expect, it, vi } from "vitest";
-import { fetchDocumentOperations } from "../src/actions/document.js";
+import {
+  extractInitialState,
+  fetchDocumentOperations,
+  filterDomainOperations,
+} from "../src/actions/document.js";
 
 function createFakeOperation(index: number, scope = "global"): Operation {
   return {
@@ -200,14 +204,18 @@ describe("fetchDocumentOperations", () => {
     expect(result.local).toHaveLength(0);
   });
 
-  it("derives scopes from document state keys, excluding base state keys", async () => {
+  it("derives scopes from document state keys, excluding auth", async () => {
     const customOps = Array.from({ length: 2 }, (_, i) =>
       createFakeOperation(i, "custom"),
+    );
+    const documentOps = Array.from({ length: 1 }, (_, i) =>
+      createFakeOperation(i, "document"),
     );
     const client = createMockReactorClient({
       global: [],
       local: [],
       custom: customOps,
+      document: documentOps,
     });
     const doc = createFakeDocument(["global", "local", "custom"]);
 
@@ -217,8 +225,8 @@ describe("fetchDocumentOperations", () => {
     );
 
     expect(result.custom).toHaveLength(2);
+    expect(result.document).toHaveLength(1);
     expect(result).not.toHaveProperty("auth");
-    expect(result).not.toHaveProperty("document");
   });
 });
 
@@ -339,5 +347,249 @@ describe("export pipeline: fetchDocumentOperations -> createZip -> baseLoadFromI
 
     expect(imported.state.global.count).toBe(5);
     expect(imported.operations.global).toHaveLength(5);
+  });
+});
+
+function createUpgradeDocumentOperation(
+  initialState: CountState,
+  index = 1,
+): Operation {
+  return {
+    id: `op-document-${index}`,
+    index,
+    skip: 0,
+    hash: `hash-upgrade-${index}`,
+    timestampUtcMs: new Date().toISOString(),
+    action: {
+      id: `action-document-${index}`,
+      type: "UPGRADE_DOCUMENT",
+      input: {
+        model: "test/counter",
+        fromVersion: 0,
+        toVersion: 1,
+        documentId: "doc-1",
+        initialState,
+      },
+      scope: "document",
+      timestampUtcMs: new Date().toISOString(),
+    },
+  } as Operation;
+}
+
+function createCreateDocumentOperation(): Operation {
+  return {
+    id: "op-document-0",
+    index: 0,
+    skip: 0,
+    hash: "hash-create-0",
+    timestampUtcMs: new Date().toISOString(),
+    action: {
+      id: "action-document-0",
+      type: "CREATE_DOCUMENT",
+      input: {
+        model: "test/counter",
+        version: 0,
+        documentId: "doc-1",
+      },
+      scope: "document",
+      timestampUtcMs: new Date().toISOString(),
+    },
+  } as Operation;
+}
+
+describe("extractInitialState", () => {
+  it("extracts initialState from the UPGRADE_DOCUMENT operation", () => {
+    const initialState: CountState = {
+      ...defaultBaseState(),
+      global: { count: 0 },
+      local: { name: "" },
+    };
+    const ops = [
+      createCreateDocumentOperation(),
+      createUpgradeDocumentOperation(initialState),
+    ];
+
+    const result = extractInitialState(ops);
+
+    expect(result).toEqual(initialState);
+  });
+
+  it("falls back to action.input.state if initialState is not present", () => {
+    const initialState: CountState = {
+      ...defaultBaseState(),
+      global: { count: 0 },
+      local: { name: "" },
+    };
+    const upgradeOp = createUpgradeDocumentOperation(initialState);
+    const input = upgradeOp.action.input as Record<string, unknown>;
+    input.state = input.initialState;
+    delete input.initialState;
+    const ops = [createCreateDocumentOperation(), upgradeOp];
+
+    const result = extractInitialState(ops);
+
+    expect(result).toEqual(initialState);
+  });
+
+  it("throws when no UPGRADE_DOCUMENT operation exists", () => {
+    const ops = [createCreateDocumentOperation()];
+
+    expect(() => extractInitialState(ops)).toThrow(
+      "No UPGRADE_DOCUMENT operation found",
+    );
+  });
+
+  it("throws when UPGRADE_DOCUMENT has no initialState", () => {
+    const upgradeOp = createUpgradeDocumentOperation(
+      {} as unknown as CountState,
+    );
+    (upgradeOp.action.input as Record<string, unknown>).initialState =
+      undefined;
+    const ops = [createCreateDocumentOperation(), upgradeOp];
+
+    expect(() => extractInitialState(ops)).toThrow(
+      "UPGRADE_DOCUMENT operation has no initialState",
+    );
+  });
+
+  it("uses the first UPGRADE_DOCUMENT when multiple exist", () => {
+    const firstState: CountState = {
+      ...defaultBaseState(),
+      global: { count: 0 },
+      local: { name: "" },
+    };
+    const secondState: CountState = {
+      ...defaultBaseState(),
+      global: { count: 99 },
+      local: { name: "upgraded" },
+    };
+    const ops = [
+      createCreateDocumentOperation(),
+      createUpgradeDocumentOperation(firstState, 1),
+      createUpgradeDocumentOperation(secondState, 2),
+    ];
+
+    const result = extractInitialState(ops);
+
+    expect(result).toEqual(firstState);
+  });
+});
+
+describe("filterDomainOperations", () => {
+  it("removes document and auth scopes", () => {
+    const ops: DocumentOperations = {
+      global: [createFakeOperation(0, "global")],
+      local: [createFakeOperation(0, "local")],
+      document: [createCreateDocumentOperation()],
+      auth: [],
+    };
+
+    const result = filterDomainOperations(ops);
+
+    expect(result).toHaveProperty("global");
+    expect(result).toHaveProperty("local");
+    expect(result).not.toHaveProperty("document");
+    expect(result).not.toHaveProperty("auth");
+  });
+});
+
+describe("export pipeline with document-scope operations", () => {
+  it("exported document has correct initialState from UPGRADE_DOCUMENT", async () => {
+    let realDoc = createCountDocument();
+    realDoc = countReducer(
+      realDoc,
+      createAction("INCREMENT", {}, undefined, undefined, "global"),
+    );
+    realDoc = countReducer(
+      realDoc,
+      createAction("INCREMENT", {}, undefined, undefined, "global"),
+    );
+    realDoc = countReducer(
+      realDoc,
+      createAction("INCREMENT", {}, undefined, undefined, "global"),
+    );
+    expect(realDoc.state.global.count).toBe(3);
+
+    const trueInitialState = realDoc.initialState as CountState;
+
+    const documentOps = [
+      createCreateDocumentOperation(),
+      createUpgradeDocumentOperation(trueInitialState),
+    ];
+
+    const reactorDoc = { ...realDoc, operations: {} as DocumentOperations };
+
+    const client = createMockReactorClient({
+      global: realDoc.operations.global!,
+      local: realDoc.operations.local!,
+      document: documentOps,
+    });
+
+    const operations = await fetchDocumentOperations(
+      client as unknown as IReactorClient,
+      reactorDoc,
+    );
+
+    const initialState = extractInitialState(operations["document"] ?? []);
+    const documentWithOps = { ...reactorDoc, operations, initialState };
+
+    const zip = createZip(documentWithOps);
+    const buffer = await zip.generateAsync({ type: "arraybuffer" });
+    const imported = await baseLoadFromInput(buffer, countReducer);
+
+    expect(imported.state.global.count).toBe(3);
+    expect(imported.operations.global).toHaveLength(3);
+    expect(imported.operations.document).toHaveLength(2);
+    expect(imported.initialState).toEqual(trueInitialState);
+  });
+
+  it("loadFromZip filters document-scope ops before replay but preserves them", async () => {
+    const initialState: CountState = {
+      ...defaultBaseState(),
+      global: { count: 0 },
+      local: { name: "" },
+    };
+
+    const domainOps = Array.from({ length: 3 }, (_, i) => {
+      const op = createFakeOperation(i, "global");
+      op.action.type = "INCREMENT";
+      return op;
+    });
+
+    const documentOps = [
+      createCreateDocumentOperation(),
+      createUpgradeDocumentOperation(initialState),
+    ];
+
+    const allOps: DocumentOperations = {
+      global: domainOps,
+      document: documentOps,
+    };
+
+    const doc: PHDocument = {
+      header: {
+        id: "doc-1",
+        documentType: "test/counter",
+        name: "Test",
+        sig: { publicKey: {}, nonce: "" },
+        createdAtUtcIso: new Date().toISOString(),
+        lastModifiedAtUtcIso: new Date().toISOString(),
+        slug: "test",
+        branch: "main",
+        revision: {},
+      },
+      state: initialState,
+      initialState,
+      operations: allOps,
+      clipboard: [],
+    } as unknown as PHDocument;
+
+    const zip = createZip(doc);
+    const buffer = await zip.generateAsync({ type: "arraybuffer" });
+    const imported = await baseLoadFromInput(buffer, countReducer);
+
+    expect(imported.state.global.count).toBe(3);
+    expect(imported.operations.document).toHaveLength(2);
+    expect(imported.operations.global).toHaveLength(3);
   });
 });

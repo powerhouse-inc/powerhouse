@@ -20,6 +20,8 @@ import type {
 } from "./types.js";
 import { validateOperations } from "./validation.js";
 
+const NON_DOMAIN_SCOPES = new Set(["auth", "document"]);
+
 export function createZip(document: PHDocument) {
   // create zip file
   const zip = new JSZip();
@@ -115,9 +117,15 @@ async function loadFromZip<TState extends PHBaseState>(
     throw new Error(errorMessages.join("\n"));
   }
 
+  const domainOperations = Object.fromEntries(
+    Object.entries(clearedOperations).filter(
+      ([scope]) => !NON_DOMAIN_SCOPES.has(scope),
+    ),
+  ) as DocumentOperations;
+
   const result = replayDocument(
     initialState,
-    clearedOperations,
+    domainOperations,
     reducer,
     header,
     undefined,
@@ -125,7 +133,7 @@ async function loadFromZip<TState extends PHBaseState>(
     options,
   );
 
-  return result;
+  return { ...result, operations: clearedOperations };
 }
 
 export async function baseLoadFromInput<TState extends PHBaseState>(
