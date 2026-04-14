@@ -17,7 +17,7 @@ export class ImportPackageLoader implements IPackageLoader {
   readonly name = "ImportPackageLoader";
 
   async loadDocumentModels(identifier: string): Promise<DocumentModelModule[]> {
-    this.logger.verbose("Loading document models from package:", identifier);
+    this.logger.verbose(`Loading document models from package: ${identifier}`);
 
     const pkgModule = await loadDocumentModelsUtil(identifier);
 
@@ -34,7 +34,7 @@ export class ImportPackageLoader implements IPackageLoader {
   }
 
   async loadSubgraphs(identifier: string): Promise<SubgraphClass[]> {
-    this.logger.verbose("Loading subgraphs from package:", identifier);
+    this.logger.verbose(`Loading subgraphs from package: ${identifier}`);
 
     const pkgModule = await loadSubgraphsUtil(identifier);
 
@@ -56,7 +56,7 @@ export class ImportPackageLoader implements IPackageLoader {
   async loadProcessors(
     identifier: string,
   ): Promise<ProcessorFactoryBuilder | null> {
-    this.logger.verbose("Loading processors from package:", identifier);
+    this.logger.verbose(`Loading processors from package: ${identifier}`);
 
     const pkgModule = await loadProcessorsUtil(identifier);
 
