@@ -2,6 +2,7 @@ export * from "./common.js";
 export * from "./crypto/node.js";
 export * from "./event/event.node.js";
 export * from "./init.node.js";
+export * from "./login.node.js";
 export * from "./profile.js";
 export * from "./renown-builder.js";
 export * from "./storage/storage.node.js";
