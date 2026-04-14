@@ -1,3 +1,75 @@
+## 6.0.0-dev.171 (2026-04-14)
+
+### 🚀 Features
+
+- sync paging ([6d90fe1a4](https://github.com/powerhouse-inc/powerhouse/commit/6d90fe1a4))
+- added yield utility method, and yield with timer in job executor ([d751d2472](https://github.com/powerhouse-inc/powerhouse/commit/d751d2472))
+
+### 🩹 Fixes
+
+- backfill should be async on start too, but we need to make sure to track it and kill on remove ([f994cb8bc](https://github.com/powerhouse-inc/powerhouse/commit/f994cb8bc))
+- backfill in touchchannel should be async so as not to kill switchboard ([a1e8ed3e3](https://github.com/powerhouse-inc/powerhouse/commit/a1e8ed3e3))
+- **vetra:** generate manifest from global state in package generator ([f5de73f05](https://github.com/powerhouse-inc/powerhouse/commit/f5de73f05))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Guillermo Puente @gpuente
+
+## 6.0.0-dev.170 (2026-04-13)
+
+### 🩹 Fixes
+
+- declare react as peerDependency and dedupe on vite ([3444dab52](https://github.com/powerhouse-inc/powerhouse/commit/3444dab52))
+- **reactor:** make registerModules and registerUpgradeManifests resilient to invalid items ([20b4dd6c6](https://github.com/powerhouse-inc/powerhouse/commit/20b4dd6c6))
+- dedupe upgrade manifest and subscribe to package installs ([1adeba37d](https://github.com/powerhouse-inc/powerhouse/commit/1adeba37d))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.169 (2026-04-13)
+
+This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.168 (2026-04-12)
+
+This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.167 (2026-04-11)
+
+This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.166 (2026-04-10)
+
+### 🩹 Fixes
+
+- **design-system,connect:** cleanup dependencies ([97466944a](https://github.com/powerhouse-inc/powerhouse/commit/97466944a))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.165 (2026-04-10)
+
+This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.164 (2026-04-09)
+
+This was a version bump only for @powerhousedao/reactor to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.163 (2026-04-09)
+
+### 🩹 Fixes
+
+- **switchboard:** set log level from env var ([eddc863e8](https://github.com/powerhouse-inc/powerhouse/commit/eddc863e8))
+- **reactor-api,switchboard:** output https hooks on separate file ([9b05a45e9](https://github.com/powerhouse-inc/powerhouse/commit/9b05a45e9))
+- **renown:** removed unused didtools/key-did dependency ([7771007c0](https://github.com/powerhouse-inc/powerhouse/commit/7771007c0))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.0.0-dev.162 (2026-04-09)
 
 ### 🚀 Features

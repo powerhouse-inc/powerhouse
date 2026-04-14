@@ -61,7 +61,7 @@ export {
 } from "./channels/index.js";
 
 export { SyncBuilder } from "./sync-builder.js";
-export { SyncManager } from "./sync-manager.js";
+export { SyncManager, type SyncManagerConfig } from "./sync-manager.js";
 export { SyncStatus, SyncStatusTracker } from "./sync-status-tracker.js";
 export type {
   ISyncStatusTracker,
@@ -70,6 +70,7 @@ export type {
 
 export {
   batchOperationsByDocument,
+  chunkSyncOperations,
   consolidateSyncOperations,
   createIdleHealth,
   filterOperations,

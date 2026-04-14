@@ -1,8 +1,6 @@
 #!/usr/bin/env node
-import {
-  ImportPackageLoader,
-  httpsHooksPath,
-} from "@powerhousedao/reactor-api";
+import { ImportPackageLoader } from "@powerhousedao/reactor-api";
+import { httpsHooksPath } from "@powerhousedao/reactor-api/https-hooks";
 import { register } from "node:module";
 
 // Register HTTP/HTTPS module loader hooks for dynamic package imports
@@ -40,7 +38,12 @@ import { documentModels as vetraDocumentModels } from "@powerhousedao/vetra";
 import { processorFactory as vetraProcessorFactory } from "@powerhousedao/vetra/processors";
 import type { IRenown } from "@renown/sdk/node";
 import * as Sentry from "@sentry/node";
-import { childLogger, documentModelDocumentModelModule } from "document-model";
+import {
+  childLogger,
+  documentModelDocumentModelModule,
+  setLogLevel,
+  type ILogger,
+} from "document-model";
 import dotenv from "dotenv";
 import { Kysely, PostgresDialect } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
@@ -52,6 +55,9 @@ import type { StartServerOptions, SwitchboardReactor } from "./types.js";
 import { addDefaultDrive, isPostgresUrl } from "./utils.mjs";
 
 const defaultLogger = childLogger(["switchboard"]);
+
+const LogLevel = (process.env.LOG_LEVEL as ILogger["level"] | "") || "info";
+setLogLevel(LogLevel);
 
 dotenv.config();
 
@@ -93,7 +99,7 @@ async function initServer(
     remoteDrives = [],
     logger = defaultLogger,
   } = options;
-
+  logger.level = LogLevel;
   const dbPath = options.dbPath ?? process.env.DATABASE_URL;
 
   // use postgres url for read model storage if available, otherwise use local PGlite path

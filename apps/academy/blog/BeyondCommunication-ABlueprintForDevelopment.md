@@ -16,7 +16,7 @@ hide_table_of_contents: false
 
 GraphQL Schema’s as a common language for software design, bridging the gaps between all stakeholders with the help of a single source of truth document model.
 
-<!-- truncate -->
+{/* truncate */}
 
 #### In software development, all to common, communication barriers between designers, developers, and non-technical stakeholders are a common cause of inefficiency. Misunderstandings lead to wasted effort, missed deadlines, and ultimately, a product that fails to meet its intended purpose. These "lost in translation" moments plague projects of all sizes, creating a gap between what stakeholders envision and what gets built.
 

@@ -118,14 +118,16 @@ export class PackageManager implements IPackageManager {
           const documentModels = await loader.loadDocumentModels(pkg);
 
           allDocumentModels.push(...documentModels);
-          this.logger.debug(
-            `[${loader.name}] Loaded document models from package ${pkg}`,
+          this.logger.info(
+            `[${loader.name}] Loaded document models from package @pkg: @documentModels`,
+            pkg,
             documentModels.map((dm) => dm.documentModel.global.id),
           );
           break;
         } catch (error) {
           this.logger.debug(
-            `[${loader.name}] Failed to load document models from package ${pkg}`,
+            `[${loader.name}] Failed to load document models from package @pkg: @error`,
+            pkg,
             error,
           );
         }

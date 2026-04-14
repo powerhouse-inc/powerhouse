@@ -31,13 +31,13 @@
     "postinstall": "pnpm update-ts-references"
   },
   "devDependencies": {
-    "@powerhousedao/ph-cli": "workspace:*",
     "@commitlint/cli": "^19.8.1",
     "@commitlint/config-conventional": "^19.8.1",
     "@eslint/js": "^9.36.0",
     "@nx/devkit": "20.4.6",
     "@nx/js": "20.4.6",
     "@nx/plugin": "^20.4.6",
+    "@powerhousedao/ph-cli": "workspace:*",
     "@swc-node/register": "~1.10.9",
     "@swc/core": "~1.11.1",
     "@types/node": "catalog:",
@@ -74,9 +74,7 @@
     "node": ">=24"
   },
   "pnpm": {
-    "overrides": {
-      "document-model": "link:./packages/document-model"
-    }
+    "overrides": {}
   },
   "commitlint": {
     "rules": {

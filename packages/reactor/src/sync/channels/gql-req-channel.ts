@@ -74,6 +74,7 @@ export class GqlRequestChannel implements IChannel {
   private pushBlocked: boolean = false;
   private isPushing: boolean = false;
   private pendingDrain: boolean = false;
+  private receivingPages: boolean = false;
   private connectionState: ConnectionState = "connecting";
   private readonly connectionStateCallbacks: Set<ConnectionStateChangeCallback> =
     new Set();
@@ -127,6 +128,10 @@ export class GqlRequestChannel implements IChannel {
         return;
       }
       if (this.pushBlocked) return; // ops stay in outbox, included in next retry
+      if (this.receivingPages) {
+        this.pendingDrain = true;
+        return;
+      }
       this.attemptPush(syncOps);
     });
 
@@ -203,6 +208,7 @@ export class GqlRequestChannel implements IChannel {
       lastFailureUtcMs: this.lastFailureUtcMs ?? 0,
       pushBlocked: this.pushBlocked,
       pushFailureCount: this.pushFailureCount,
+      receivingPages: this.receivingPages,
     };
   }
 
@@ -276,7 +282,7 @@ export class GqlRequestChannel implements IChannel {
       return;
     }
 
-    const { envelopes, ackOrdinal, deadLetters } = response;
+    const { envelopes, ackOrdinal, deadLetters, hasMore } = response;
 
     // first: trim outbox
     if (ackOrdinal > 0) {
@@ -312,6 +318,13 @@ export class GqlRequestChannel implements IChannel {
     // handle dead letters from the remote
     if (deadLetters.length > 0) {
       this.handleRemoteDeadLetters(deadLetters);
+    }
+
+    if (hasMore) {
+      this.receivingPages = true;
+    } else if (this.receivingPages) {
+      this.receivingPages = false;
+      this.drainOutbox();
     }
 
     this.lastSuccessUtcMs = Date.now();
@@ -483,6 +496,7 @@ export class GqlRequestChannel implements IChannel {
       scopes: string[];
       operationCount: number;
     }>;
+    hasMore: boolean;
   }> {
     const query = `
       query PollSyncEnvelopes($channelId: String!, $outboxAck: Int!, $outboxLatest: Int!) {
@@ -554,6 +568,7 @@ export class GqlRequestChannel implements IChannel {
             scopes
             operationCount
           }
+          hasMore
         }
       }
     `;
@@ -576,6 +591,7 @@ export class GqlRequestChannel implements IChannel {
           scopes: string[];
           operationCount: number;
         }>;
+        hasMore: boolean;
       };
     }>(query, variables);
 
@@ -583,6 +599,7 @@ export class GqlRequestChannel implements IChannel {
       envelopes: response.pollSyncEnvelopes.envelopes,
       ackOrdinal: response.pollSyncEnvelopes.ackOrdinal,
       deadLetters: response.pollSyncEnvelopes.deadLetters ?? [],
+      hasMore: response.pollSyncEnvelopes.hasMore,
     };
   }
 

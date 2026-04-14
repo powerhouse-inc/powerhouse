@@ -7,6 +7,11 @@ const config: Config = {
   tagline: "Get started with the Powerhouse ecosystem",
   favicon: "img/ph-icon-light.svg",
 
+  future: {
+    v4: true,
+    faster: true,
+  },
+
   // Set the production url of your site here
   url: "https://powerhouse.academy",
   // Set the /<baseUrl>/ pathname under which your site is served

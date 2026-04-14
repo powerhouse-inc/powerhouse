@@ -13,14 +13,14 @@ import { KyselySyncDeadLetterStorage } from "../storage/kysely/sync-dead-letter-
 import { KyselySyncRemoteStorage } from "../storage/kysely/sync-remote-storage.js";
 import type { Database } from "../storage/kysely/types.js";
 import type { IChannelFactory, ISyncManager } from "./interfaces.js";
-import { SyncManager } from "./sync-manager.js";
+import { SyncManager, type SyncManagerConfig } from "./sync-manager.js";
 
 export class SyncBuilder {
   private channelFactory?: IChannelFactory;
   private remoteStorage?: ISyncRemoteStorage;
   private cursorStorage?: ISyncCursorStorage;
   private deadLetterStorage?: ISyncDeadLetterStorage;
-  private maxDeadLettersPerRemote: number = 100;
+  private config: Partial<SyncManagerConfig> = {};
 
   withChannelFactory(factory: IChannelFactory): this {
     this.channelFactory = factory;
@@ -43,7 +43,12 @@ export class SyncBuilder {
   }
 
   withMaxDeadLettersPerRemote(limit: number): this {
-    this.maxDeadLettersPerRemote = limit;
+    this.config.maxDeadLettersPerRemote = limit;
+    return this;
+  }
+
+  withMaxInboxBatchSize(limit: number): this {
+    this.config.maxInboxBatchSize = limit;
     return this;
   }
 
@@ -89,7 +94,7 @@ export class SyncBuilder {
       operationIndex,
       reactor,
       eventBus,
-      this.maxDeadLettersPerRemote,
+      this.config,
     );
 
     return {

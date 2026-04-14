@@ -176,6 +176,7 @@ export function successFetch(): Mock {
               envelopes: [],
               ackOrdinal: 0,
               deadLetters: [],
+              hasMore: false,
             },
           },
         }),

@@ -197,10 +197,30 @@ export class ReactorBuilder {
 
     const documentModelRegistry = new DocumentModelRegistry();
     if (this.upgradeManifests.length > 0) {
-      documentModelRegistry.registerUpgradeManifests(...this.upgradeManifests);
+      const results = documentModelRegistry.registerUpgradeManifests(
+        ...this.upgradeManifests,
+      );
+      for (const result of results) {
+        if (result.status === "error") {
+          this.logger.error(
+            "Failed to register upgrade manifest: @error",
+            result.error.message,
+          );
+        }
+      }
     }
     if (this.documentModels.length > 0) {
-      documentModelRegistry.registerModules(...this.documentModels);
+      const results = documentModelRegistry.registerModules(
+        ...this.documentModels,
+      );
+      for (const result of results) {
+        if (result.status === "error") {
+          this.logger.error(
+            "Failed to register document model: @error",
+            result.error.message,
+          );
+        }
+      }
     }
 
     const baseDatabase =

@@ -52,6 +52,10 @@ export type JobExecutorConfig = {
 
   /** Maximum delay in milliseconds for exponential backoff retries */
   retryMaxDelayMs?: number;
+
+  /** Maximum elapsed milliseconds before yielding to the main thread between actions.
+   *  Keeps the UI responsive when processing large batches. */
+  yieldDeadlineMs?: number;
 };
 
 /**

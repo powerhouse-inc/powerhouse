@@ -56,6 +56,7 @@ const createMockFetch = (
               envelopes: response.pollSyncEnvelopes ?? [],
               ackOrdinal: response.ackOrdinal ?? 0,
               deadLetters: response.deadLetters ?? [],
+              hasMore: false,
             },
           },
         }),
@@ -711,6 +712,7 @@ describe("GqlRequestChannel", () => {
                     envelopes: [],
                     ackOrdinal: 0,
                     deadLetters: [],
+                    hasMore: false,
                   },
                 },
               }),
@@ -860,7 +862,11 @@ describe("GqlRequestChannel", () => {
           json: () =>
             Promise.resolve({
               data: {
-                pollSyncEnvelopes: { envelopes: [], ackOrdinal: 0 },
+                pollSyncEnvelopes: {
+                  envelopes: [],
+                  ackOrdinal: 0,
+                  hasMore: false,
+                },
               },
             }),
         });
@@ -1011,7 +1017,11 @@ describe("GqlRequestChannel", () => {
           json: () =>
             Promise.resolve({
               data: {
-                pollSyncEnvelopes: { envelopes: [], ackOrdinal: 0 },
+                pollSyncEnvelopes: {
+                  envelopes: [],
+                  ackOrdinal: 0,
+                  hasMore: false,
+                },
               },
             }),
         });
@@ -1079,7 +1089,11 @@ describe("GqlRequestChannel", () => {
           json: () =>
             Promise.resolve({
               data: {
-                pollSyncEnvelopes: { envelopes: [], ackOrdinal: 0 },
+                pollSyncEnvelopes: {
+                  envelopes: [],
+                  ackOrdinal: 0,
+                  hasMore: false,
+                },
               },
             }),
         });
@@ -1206,6 +1220,7 @@ describe("GqlRequestChannel", () => {
                   envelopes: [],
                   ackOrdinal: 0,
                   deadLetters: [],
+                  hasMore: false,
                 },
               },
             }),
@@ -1481,7 +1496,11 @@ describe("GqlRequestChannel", () => {
             json: () =>
               Promise.resolve({
                 data: {
-                  pollSyncEnvelopes: { envelopes: [], ackOrdinal: 0 },
+                  pollSyncEnvelopes: {
+                    envelopes: [],
+                    ackOrdinal: 0,
+                    hasMore: false,
+                  },
                 },
               }),
           });
@@ -1912,6 +1931,7 @@ describe("GqlRequestChannel", () => {
                     callCount === 1
                       ? [{ documentId: "doc-x", error: "gap error" }]
                       : [],
+                  hasMore: false,
                 },
               },
             }),
@@ -2043,7 +2063,11 @@ describe("GqlRequestChannel", () => {
           json: () =>
             Promise.resolve({
               data: {
-                pollSyncEnvelopes: { envelopes: [], ackOrdinal: 0 },
+                pollSyncEnvelopes: {
+                  envelopes: [],
+                  ackOrdinal: 0,
+                  hasMore: false,
+                },
               },
             }),
         });

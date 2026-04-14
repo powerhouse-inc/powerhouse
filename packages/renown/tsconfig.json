@@ -7,9 +7,6 @@
   "include": ["**/*"],
   "references": [
     {
-      "path": "../document-model"
-    },
-    {
       "path": "../shared"
     }
   ]

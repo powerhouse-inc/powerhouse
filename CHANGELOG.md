@@ -1,3 +1,97 @@
+## 6.0.0-dev.171 (2026-04-14)
+
+### 🚀 Features
+
+- added yield utility method, and yield with timer in job executor ([d751d2472](https://github.com/powerhouse-inc/powerhouse/commit/d751d2472))
+- sync paging ([6d90fe1a4](https://github.com/powerhouse-inc/powerhouse/commit/6d90fe1a4))
+
+### 🩹 Fixes
+
+- backfill in touchchannel should be async so as not to kill switchboard ([a1e8ed3e3](https://github.com/powerhouse-inc/powerhouse/commit/a1e8ed3e3))
+- backfill should be async on start too, but we need to make sure to track it and kill on remove ([f994cb8bc](https://github.com/powerhouse-inc/powerhouse/commit/f994cb8bc))
+- **connect:** delete pglite idb on clear storage to avoid flush race ([c3a731835](https://github.com/powerhouse-inc/powerhouse/commit/c3a731835))
+- **powerhouse-vetra-packages:** resolve duplicate graphql module causing false state validation errors ([38ac1daf5](https://github.com/powerhouse-inc/powerhouse/commit/38ac1daf5))
+- **reactor-api:** namespace package subgraph ([cc82e0943](https://github.com/powerhouse-inc/powerhouse/commit/cc82e0943))
+- **reactor-api:** uppercase packages namespace and type improvement ([f455ced56](https://github.com/powerhouse-inc/powerhouse/commit/f455ced56))
+- **reactor-browser:** export documents as .phd when no extension is set ([494ac0a3a](https://github.com/powerhouse-inc/powerhouse/commit/494ac0a3a))
+- **vetra:** generate manifest from global state in package generator ([f5de73f05](https://github.com/powerhouse-inc/powerhouse/commit/f5de73f05))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Guillermo Puente @gpuente
+
+## 6.0.0-dev.170 (2026-04-13)
+
+### 🚀 Features
+
+- **connect:** display error message on load error ([5b9b62068](https://github.com/powerhouse-inc/powerhouse/commit/5b9b62068))
+
+### 🩹 Fixes
+
+- dedupe upgrade manifest and subscribe to package installs ([1adeba37d](https://github.com/powerhouse-inc/powerhouse/commit/1adeba37d))
+- declare react as peerDependency and dedupe on vite ([3444dab52](https://github.com/powerhouse-inc/powerhouse/commit/3444dab52))
+- **reactor:** make registerModules and registerUpgradeManifests resilient to invalid items ([20b4dd6c6](https://github.com/powerhouse-inc/powerhouse/commit/20b4dd6c6))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.169 (2026-04-13)
+
+This was a version bump only, there were no code changes.
+
+## 6.0.0-dev.168 (2026-04-12)
+
+This was a version bump only, there were no code changes.
+
+## 6.0.0-dev.167 (2026-04-11)
+
+This was a version bump only, there were no code changes.
+
+## 6.0.0-dev.166 (2026-04-10)
+
+### 🩹 Fixes
+
+- **design-system,connect:** cleanup dependencies ([97466944a](https://github.com/powerhouse-inc/powerhouse/commit/97466944a))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.165 (2026-04-10)
+
+### 🩹 Fixes
+
+- broken link llm docs ([44efa9d3b](https://github.com/powerhouse-inc/powerhouse/commit/44efa9d3b))
+
+### ❤️ Thank You
+
+- CallmeT-ty @CallmeT-ty
+
+## 6.0.0-dev.164 (2026-04-09)
+
+### 🩹 Fixes
+
+- **reactor-browser:** fixed document import ([b8e6d0aad](https://github.com/powerhouse-inc/powerhouse/commit/b8e6d0aad))
+
+### ❤️ Thank You
+
+- acaldas
+
+## 6.0.0-dev.163 (2026-04-09)
+
+### 🩹 Fixes
+
+- **reactor-api,switchboard:** output https hooks on separate file ([9b05a45e9](https://github.com/powerhouse-inc/powerhouse/commit/9b05a45e9))
+- **renown:** removed unused didtools/key-did dependency ([7771007c0](https://github.com/powerhouse-inc/powerhouse/commit/7771007c0))
+- **switchboard:** set log level from env var ([eddc863e8](https://github.com/powerhouse-inc/powerhouse/commit/eddc863e8))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.0.0-dev.162 (2026-04-09)
 
 ### 🚀 Features

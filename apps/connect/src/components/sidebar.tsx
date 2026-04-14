@@ -5,6 +5,7 @@ import {
   ConnectTooltipProvider,
   SidebarAddDriveItem,
   SidebarItem,
+  useEns,
 } from "@powerhousedao/design-system/connect";
 
 import {
@@ -25,6 +26,12 @@ export function Sidebar() {
   const [selectedDrive] = useSelectedDriveSafe();
   const inspectorEnabled = useInspectorEnabled();
   const connectDebug = localStorage.getItem("CONNECT_DEBUG") === "true";
+
+  const ensName = user?.ens?.name || user?.profile?.username || undefined;
+  const avatarUrl =
+    user?.ens?.avatarUrl || user?.profile?.userImage || undefined;
+
+  const ensInfo = useEns(!avatarUrl ? user?.address : undefined);
 
   const onClickSettings = () => {
     showPHModal({ type: "settings" });
@@ -52,6 +59,13 @@ export function Sidebar() {
         address={user?.address}
         onLogin={openRenown}
         onDisconnect={logout}
+        ensName={ensName || ensInfo.data?.ens}
+        avatarUrl={
+          avatarUrl ||
+          ensInfo.data?.avatar_small ||
+          ensInfo.data?.avatar_url ||
+          undefined
+        }
         etherscanUrl={etherscanUrl}
         showDebug={connectDebug}
         onDebugClick={() => showPHModal({ type: "debugSettings" })}

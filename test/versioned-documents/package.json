@@ -74,6 +74,7 @@
   "dependencies": {
     "document-model": "workspace:*",
     "@powerhousedao/design-system": "workspace:*",
+    "@powerhousedao/document-engineering": "catalog:",
     "@powerhousedao/reactor": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",
     "@powerhousedao/connect": "workspace:*",
@@ -94,7 +95,8 @@
     "@vitejs/plugin-react": "catalog:",
     "vite": "catalog:",
     "vitest": "catalog:",
-    "vite-tsconfig-paths": "catalog:"
+    "@electric-sql/pglite": "catalog:",
+    "@electric-sql/pglite-tools": "catalog:"
   },
   "description": ""
 }

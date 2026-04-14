@@ -22,7 +22,6 @@ import {
 import type {
   DocumentModelModule,
   DocumentOperations,
-  Operation,
   PHDocument,
 } from "@powerhousedao/shared/document-model";
 import {
@@ -151,26 +150,25 @@ export function downloadFile(document: PHDocument, fileName: string) {
 async function getDocumentExtension(document: PHDocument): Promise<string> {
   const documentType = document.header.documentType;
 
-  // DocumentModel definitions always use "phdm"
-  if (documentType === documentModelDocumentType) {
-    return "phdm";
-  }
-
   let rawExtension: string | undefined;
 
-  const reactorClient = window.ph?.reactorClient;
-  if (reactorClient) {
-    const { results: documentModelModules } =
-      await reactorClient.getDocumentModelModules();
-    const module = documentModelModules.find(
-      (m: DocumentModelModule) => m.documentModel.global.id === documentType,
-    );
-    rawExtension = module?.utils.fileExtension;
+  if (documentType === documentModelDocumentType) {
+    const globalState = (document.state as { global?: { extension?: string } })
+      .global;
+    rawExtension = globalState?.extension;
+  } else {
+    const reactorClient = window.ph?.reactorClient;
+    if (reactorClient) {
+      const { results: documentModelModules } =
+        await reactorClient.getDocumentModelModules();
+      const module = documentModelModules.find(
+        (m: DocumentModelModule) => m.documentModel.global.id === documentType,
+      );
+      rawExtension = module?.utils.fileExtension;
+    }
   }
 
-  // Clean the extension (remove leading/trailing dots) and fallback to "phdm"
-  const cleanExtension = (rawExtension ?? "phdm").replace(/^\.+|\.+$/g, "");
-  return cleanExtension || "phdm";
+  return (rawExtension ?? "").replace(/^\.+|\.+$/g, "");
 }
 
 const BASE_STATE_KEYS = new Set(["auth", "document"]);
@@ -229,7 +227,8 @@ export async function exportFile(document: PHDocument, suggestedName?: string) {
   // Get the extension from the document model module
   const extension = await getDocumentExtension(documentWithOps);
 
-  const name = `${suggestedName || documentWithOps.header.name || "Untitled"}.${extension}.phd`;
+  const baseName = suggestedName || documentWithOps.header.name || "Untitled";
+  const name = extension ? `${baseName}.${extension}.phd` : `${baseName}.phd`;
 
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   if (!window.showSaveFilePicker) {
@@ -297,10 +296,14 @@ export async function addDocument(
     await reactorClient.getDocumentModelModule(documentType);
 
   // create - use passed document's state if available
-  const newDocument = documentModelModule.utils.createDocument({
-    ...document?.state,
-  });
+  const newDocument = document ?? documentModelModule.utils.createDocument();
   newDocument.header.name = name;
+  if (preferredEditor) {
+    newDocument.header.meta = {
+      ...newDocument.header.meta,
+      preferredEditor,
+    };
+  }
 
   // Create document using ReactorClient
   let newDoc: PHDocument;
@@ -535,6 +538,8 @@ export async function addFileWithProgress(
 
     onProgress?.({ stage: "initializing", progress: 20 });
 
+    const doc = await reactor.get(documentId);
+    console.log("Document created, starting upload of operations");
     // Uploading stage (20-100%)
     await uploadOperations(documentId, document.operations, queueOperations, {
       onProgress: (uploadProgress) => {

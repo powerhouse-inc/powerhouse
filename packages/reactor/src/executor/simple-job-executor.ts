@@ -19,6 +19,7 @@ import { ReactorEventTypes, type JobWriteReadyEvent } from "../events/types.js";
 import type { Job } from "../queue/types.js";
 import type { IDocumentModelRegistry } from "../registry/interfaces.js";
 import { DocumentDeletedError } from "../shared/errors.js";
+import { yieldToMain } from "../shared/utils.js";
 import type { SignatureVerificationHandler } from "../signer/types.js";
 import type { IOperationStore } from "../storage/interfaces.js";
 import { reshuffleByTimestamp } from "../utils/reshuffle.js";
@@ -84,6 +85,7 @@ export class SimpleJobExecutor implements IJobExecutor {
       jobTimeoutMs: config.jobTimeoutMs ?? 30000,
       retryBaseDelayMs: config.retryBaseDelayMs ?? 100,
       retryMaxDelayMs: config.retryMaxDelayMs ?? 5000,
+      yieldDeadlineMs: config.yieldDeadlineMs ?? 50,
     };
     this.signatureVerifierModule = new SignatureVerifier(signatureVerifier);
     this.documentActionHandler = new DocumentActionHandler(registry, logger);
@@ -298,6 +300,8 @@ export class SimpleJobExecutor implements IJobExecutor {
       }
     }
 
+    let lastYield = performance.now();
+
     for (let actionIndex = 0; actionIndex < actions.length; actionIndex++) {
       const action = actions[actionIndex];
       const skip = skipValues?.[actionIndex] ?? 0;
@@ -339,6 +343,20 @@ export class SimpleJobExecutor implements IJobExecutor {
           operationsWithContext,
           error: error.error,
         };
+      }
+
+      if (performance.now() - lastYield > this.config.yieldDeadlineMs) {
+        await yieldToMain();
+        lastYield = performance.now();
+
+        if (signal?.aborted) {
+          return {
+            success: false,
+            generatedOperations,
+            operationsWithContext,
+            error: new Error("Aborted"),
+          };
+        }
       }
     }
 

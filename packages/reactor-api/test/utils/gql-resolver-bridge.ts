@@ -104,6 +104,7 @@ export function createResolverBridge(
         pollSyncEnvelopes: {
           envelopes: normalizedEnvelopes,
           ackOrdinal: result.ackOrdinal,
+          hasMore: result.hasMore,
         },
       });
     }

@@ -8,6 +8,8 @@ export interface ConnectSidebarFooterProps extends ComponentProps<
   typeof SidebarFooter
 > {
   address: `0x${string}` | undefined;
+  ensName?: string;
+  avatarUrl?: string;
   onClickSettings: (() => void) | undefined;
   onInspectorClick?: () => void;
   onLogin: (() => void) | undefined;
@@ -20,6 +22,8 @@ export interface ConnectSidebarFooterProps extends ComponentProps<
 
 export const ConnectSidebarFooter: React.FC<ConnectSidebarFooterProps> = ({
   address,
+  ensName,
+  avatarUrl,
   className,
   onLogin,
   onClickSettings,
@@ -64,6 +68,8 @@ export const ConnectSidebarFooter: React.FC<ConnectSidebarFooterProps> = ({
         {address ? (
           <SidebarUser
             address={address}
+            ensName={ensName}
+            avatarUrl={avatarUrl}
             onDisconnect={onDisconnect}
             etherscanUrl={etherscanUrl}
           />
