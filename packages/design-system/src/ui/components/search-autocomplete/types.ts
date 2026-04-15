@@ -5,6 +5,8 @@ export interface SearchAutocompleteOption {
   label: string;
   description?: string;
   meta?: string;
+  disabled?: boolean;
+  disabledLabel?: string;
 }
 
 export interface SearchAutocompleteProps {

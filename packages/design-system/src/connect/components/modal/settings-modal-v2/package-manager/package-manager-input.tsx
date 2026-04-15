@@ -28,12 +28,18 @@ export const PackageManagerInput: React.FC<PackageManagerInputProps> = (
               ?.toLowerCase()
               .includes(query.toLowerCase()),
         )
-        .map((pkg) => ({
-          value: pkg.name,
-          label: pkg.name,
-          description: pkg.manifest?.description,
-          meta: pkg.manifest?.publisher?.name,
-        })),
+        .map((pkg) => {
+          const isInstalled =
+            pkg.status === "local-install" || pkg.status === "registry-install";
+          return {
+            value: pkg.name,
+            label: pkg.name,
+            description: pkg.manifest?.description,
+            meta: pkg.manifest?.publisher?.name,
+            disabled: isInstalled,
+            disabledLabel: isInstalled ? "Installed" : undefined,
+          };
+        }),
     );
 
   const handleSelect = useCallback(

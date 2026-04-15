@@ -147,6 +147,10 @@ export const SearchAutocomplete: React.FC<SearchAutocompleteProps> = (
                 <div className="flex shrink-0 items-center justify-center">
                   {selectingContent}
                 </div>
+              ) : option.disabled ? (
+                <span className="shrink-0 rounded-md bg-gray-100 px-3 py-1 text-xs font-medium text-gray-500">
+                  {option.disabledLabel ?? "Unavailable"}
+                </span>
               ) : (
                 <button
                   onClick={() => handleSelect(option.value)}
