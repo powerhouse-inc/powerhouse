@@ -239,13 +239,15 @@ describe("browserLogin", () => {
 
   beforeEach(() => {
     originalFetch = globalThis.fetch;
-    originalRandomUUID = crypto.randomUUID;
+    originalRandomUUID = crypto.randomUUID.bind(crypto);
     crypto.randomUUID = vi.fn().mockReturnValue("test-session-id");
+    openBrowserShouldFail = true;
   });
 
   afterEach(() => {
     globalThis.fetch = originalFetch;
     crypto.randomUUID = originalRandomUUID;
+    openBrowserShouldFail = false;
   });
 
   it("throws when already authenticated", async () => {
@@ -298,6 +300,7 @@ describe("browserLogin", () => {
       expect.stringContaining("https://renown.test/console"),
       "test-session-id",
     );
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
     const url = new URL(onLoginUrl.mock.calls[0][0]);
     expect(url.searchParams.get("session")).toBe("test-session-id");
     expect(url.searchParams.get("connect")).toBe("did:key:test123");
@@ -456,20 +459,15 @@ describe("browserLogin", () => {
         }),
     });
 
-    openBrowserShouldFail = true;
-    try {
-      const result = await browserLogin(renown, {
-        renownUrl: "https://renown.test",
-        onBrowserOpenFailed,
-      });
+    const result = await browserLogin(renown, {
+      renownUrl: "https://renown.test",
+      onBrowserOpenFailed,
+    });
 
-      expect(onBrowserOpenFailed).toHaveBeenCalledWith(
-        expect.stringContaining("https://renown.test/console"),
-      );
-      expect(result.user.address).toBe("0xabc");
-    } finally {
-      openBrowserShouldFail = false;
-    }
+    expect(onBrowserOpenFailed).toHaveBeenCalledWith(
+      expect.stringContaining("https://renown.test/console"),
+    );
+    expect(result.user.address).toBe("0xabc");
   });
 
   it("normalizes trailing slashes in renownUrl", async () => {
@@ -502,11 +500,12 @@ describe("browserLogin", () => {
       onLoginUrl,
     });
 
-    const url = onLoginUrl.mock.calls[0][0];
+    const url = onLoginUrl.mock.calls[0][0] as string;
     expect(url).not.toContain("//console");
     // Session polling URL should also not have double slashes
-    const fetchUrl = (globalThis.fetch as ReturnType<typeof vi.fn>).mock
-      .calls[0][0];
+    const fetchUrl = (
+      globalThis.fetch as ReturnType<typeof vi.fn<typeof fetch>>
+    ).mock.calls[0][0];
     expect(fetchUrl).not.toContain("//api");
   });
 });
