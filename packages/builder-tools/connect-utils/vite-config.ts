@@ -15,8 +15,24 @@ import {
 } from "vite";
 import { createHtmlPlugin } from "vite-plugin-html";
 import type { IConnectOptions } from "./types.js";
+import { devReactImportmapPlugin } from "./vite-plugins/dev-external-react.js";
 import { connectFaviconPlugin } from "./vite-plugins/favicon.js";
 import { phPackagesPlugin } from "./vite-plugins/ph-packages.js";
+
+const REACT_VERSION = "19.2.0";
+
+// Importmap injected into Connect's HTML in production builds. The build
+// pipeline externalizes react/react-dom via Rolldown's
+// `esmExternalRequirePlugin` (see below), so the browser resolves bare
+// `react` imports through this map → CDN editor packages and Connect share
+// the same React instance via esm.sh. In dev, `devReactImportmapPlugin`
+// rewrites this map to point at Vite's pre-bundled React instead.
+const REACT_IMPORTMAP_IMPORTS: Record<string, string> = {
+  react: `https://esm.sh/react@${REACT_VERSION}`,
+  "react/": `https://esm.sh/react@${REACT_VERSION}/`,
+  "react-dom": `https://esm.sh/react-dom@${REACT_VERSION}`,
+  "react-dom/": `https://esm.sh/react-dom@${REACT_VERSION}/`,
+};
 
 export function getConnectHtmlTags(
   options: {
@@ -195,14 +211,7 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
             tag: "script",
             attrs: { type: "importmap" },
             children: JSON.stringify(
-              {
-                imports: {
-                  react: "https://esm.sh/react@19.2.0",
-                  "react/": "https://esm.sh/react@19.2.0/",
-                  "react-dom": "https://esm.sh/react-dom@19.2.0",
-                  "react-dom/": "https://esm.sh/react-dom@19.2.0/",
-                },
-              },
+              { imports: REACT_IMPORTMAP_IMPORTS },
               null,
               2,
             ),
@@ -288,6 +297,12 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
       phPackagesPlugin({
         packages: phPackages,
       }),
+      // Dev-only: rewrite the importmap so it points at Vite's pre-bundled
+      // React (the same URL Connect's own modules resolve to). Without this,
+      // CDN editors load React from esm.sh while Connect uses Vite's local
+      // copy → two React instances → useSyncExternalStore crash. The build
+      // path stays untouched; `esmExternalRequirePlugin` below still owns it.
+      devReactImportmapPlugin(),
       ...plugins,
       // Externalize React so both Connect and dynamically loaded registry
       // packages share the same React instance via the import map in index.html.
