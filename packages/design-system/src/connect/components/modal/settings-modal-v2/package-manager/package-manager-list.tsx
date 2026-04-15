@@ -64,41 +64,39 @@ export const PackageManagerListItem = (props: {
       )}
     >
       <h3 className="font-semibold text-gray-900">{registryPackage.name}</h3>
-      {registryPackage.manifest !== null && (
-        <>
-          <PackageDetail
-            label="Description"
-            value={registryPackage.manifest.description}
-          />
-          <PackageDetail
-            label="Category"
-            value={registryPackage.manifest.category}
-          />
-          {registryPackage.manifest.publisher?.name !== undefined && (
+      {registryPackage.manifest !== null &&
+        (() => {
+          const { description, category, publisher } = registryPackage.manifest;
+          const hasAnyField =
+            description != null ||
+            category != null ||
+            publisher?.name != null ||
+            publisher?.url != null;
+          if (!hasAnyField) return null;
+          return (
             <>
-              <PackageDetail
-                label="Publisher"
-                value={registryPackage.manifest.publisher.name}
-              />
+              {description != null && (
+                <PackageDetail label="Description" value={description} />
+              )}
+              {category != null && (
+                <PackageDetail label="Category" value={category} />
+              )}
+              {publisher?.name != null && (
+                <PackageDetail label="Publisher" value={publisher.name} />
+              )}
+              {publisher?.url != null && (
+                <PackageDetail
+                  label="Publisher URL"
+                  value={
+                    <a className="underline" href={publisher.url}>
+                      {publisher.url}
+                    </a>
+                  }
+                />
+              )}
             </>
-          )}
-          {registryPackage.manifest.publisher?.url !== undefined && (
-            <>
-              <PackageDetail
-                label="Publisher URL"
-                value={
-                  <a
-                    className="underline"
-                    href={registryPackage.manifest.publisher.url}
-                  >
-                    {registryPackage.manifest.publisher.url}
-                  </a>
-                }
-              />
-            </>
-          )}
-        </>
-      )}
+          );
+        })()}
       <ConnectDropdownMenu
         items={dropdownItems}
         onItemClick={(id) => {
