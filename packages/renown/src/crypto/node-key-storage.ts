@@ -9,8 +9,8 @@ import { dirname, join } from "node:path";
 import type { ILogger } from "../utils.js";
 import type { JsonWebKeyPairStorage, JwkKeyPair } from "./types.js";
 
-const ENV_KEY_NAME = "PH_RENOWN_PRIVATE_KEY";
-const DEFAULT_KEYPAIR_PATH = join(process.cwd(), ".ph/.keypair.json");
+export const RENOWN_PRIVATE_KEY_ENV = "PH_RENOWN_PRIVATE_KEY";
+export const DEFAULT_KEYPAIR_PATH = ".ph/.keypair.json";
 
 /**
  * Key storage that supports:
@@ -24,14 +24,14 @@ export class NodeKeyStorage implements JsonWebKeyPairStorage {
   #logger?: ILogger;
 
   static readonly DEFAULT_KEYPAIR_PATH = DEFAULT_KEYPAIR_PATH;
-  static readonly ENV_KEY_NAME = ENV_KEY_NAME;
+  static readonly RENOWN_PRIVATE_KEY_ENV = RENOWN_PRIVATE_KEY_ENV;
 
   constructor(
     filePath?: string,
     options: { envKeyName?: string; logger?: ILogger } = {},
   ) {
-    this.#filePath = filePath || DEFAULT_KEYPAIR_PATH;
-    this.#envKeyName = options.envKeyName || ENV_KEY_NAME;
+    this.#filePath = filePath || join(process.cwd(), DEFAULT_KEYPAIR_PATH);
+    this.#envKeyName = options.envKeyName || RENOWN_PRIVATE_KEY_ENV;
     this.#logger = options.logger;
 
     // Ensure directory exists

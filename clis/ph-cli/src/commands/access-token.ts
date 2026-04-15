@@ -70,7 +70,6 @@ Notes:
     const result = await generateAccessToken(renown, {
       expiresIn,
       aud: args.audience,
-      refresh: true,
     });
 
     // Output token info to stderr, token itself to stdout for piping

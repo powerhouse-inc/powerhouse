@@ -13,6 +13,10 @@ export interface BrowserLoginOptions {
   onLoginUrl?: (url: string, sessionId: string) => void;
   /** Called on each poll tick while waiting for authentication */
   onPollTick?: () => void;
+  /** Called when the browser failed to open automatically */
+  onBrowserOpenFailed?: (url: string) => void;
+  /** AbortSignal to cancel the login flow */
+  signal?: AbortSignal;
 }
 
 export interface BrowserLoginResult {
@@ -47,8 +51,34 @@ interface ReadySessionResponse {
 
 type SessionResponse = PendingSessionResponse | ReadySessionResponse;
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+function sleep(ms: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(
+        signal.reason
+          ? signal.reason instanceof Error
+            ? signal.reason
+            : new Error(String(signal.reason))
+          : new DOMException("Aborted", "AbortError"),
+      );
+      return;
+    }
+    const timer = setTimeout(resolve, ms);
+    signal?.addEventListener(
+      "abort",
+      () => {
+        clearTimeout(timer);
+        reject(
+          signal.reason
+            ? signal.reason instanceof Error
+              ? signal.reason
+              : new Error(String(signal.reason))
+            : new DOMException("Aborted", "AbortError"),
+        );
+      },
+      { once: true },
+    );
+  });
 }
 
 /**
@@ -74,24 +104,31 @@ async function pollSession(
   sessionId: string,
   timeoutMs: number,
   onPollTick?: () => void,
+  signal?: AbortSignal,
 ): Promise<ReadySessionResponse | null> {
   const startTime = Date.now();
-  const sessionUrl = `${renownUrl}/api/console/session/${sessionId}`;
+  const sessionUrl = new URL(
+    `/api/console/session/${sessionId}`,
+    renownUrl,
+  ).toString();
 
   while (Date.now() - startTime < timeoutMs) {
+    signal?.throwIfAborted();
     try {
-      const response = await fetch(sessionUrl);
+      const response = await fetch(sessionUrl, { signal });
       if (response.ok) {
         const data = (await response.json()) as SessionResponse;
         if (data.status === "ready") {
           return data;
         }
       }
-    } catch {
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError")
+        throw error;
       // Network error, will retry
     }
     onPollTick?.();
-    await sleep(POLL_INTERVAL_MS);
+    await sleep(POLL_INTERVAL_MS, signal);
   }
 
   return null;
@@ -101,19 +138,23 @@ async function pollSession(
  * Perform a browser-based login flow with Renown.
  * Opens the user's browser to authenticate, then polls for completion.
  * Throws if already authenticated or if the flow times out.
+ * If the browser fails to open, the flow continues polling — callers
+ * can use onBrowserOpenFailed to show the URL as a fallback.
  */
 export async function browserLogin(
   renown: IRenown,
   options: BrowserLoginOptions,
 ): Promise<BrowserLoginResult> {
   if (renown.user) {
-    throw new Error(`Already authenticated as ${renown.user.address}`);
+    throw new Error(
+      `Already authenticated as ${renown.user.address}. Logout first.`,
+    );
   }
 
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const sessionId = crypto.randomUUID();
 
-  const loginUrl = new URL(`${options.renownUrl}/console`);
+  const loginUrl = new URL("/console", options.renownUrl);
   loginUrl.searchParams.set("session", sessionId);
   loginUrl.searchParams.set("connect", renown.did);
   loginUrl.searchParams.set("app", renown.did);
@@ -121,13 +162,18 @@ export async function browserLogin(
   const url = loginUrl.toString();
   options.onLoginUrl?.(url, sessionId);
 
-  await openBrowser(url);
+  try {
+    await openBrowser(url);
+  } catch {
+    options.onBrowserOpenFailed?.(url);
+  }
 
   const result = await pollSession(
     options.renownUrl,
     sessionId,
     timeoutMs,
     options.onPollTick,
+    options.signal,
   );
 
   if (!result) {
@@ -156,11 +202,6 @@ export function getAuthStatus(renown: IRenown): AuthStatusResult {
   };
 }
 
-export interface AccessTokenOptions extends CreateBearerTokenOptions {
-  /** Force refresh the token even if a cached one exists */
-  refresh?: boolean;
-}
-
 export interface AccessTokenResult {
   token: string;
   did: string;
@@ -175,7 +216,7 @@ export interface AccessTokenResult {
  */
 export async function generateAccessToken(
   renown: IRenown,
-  options?: AccessTokenOptions,
+  options?: CreateBearerTokenOptions,
 ): Promise<AccessTokenResult> {
   const user = renown.user;
   if (!user?.credential) {
@@ -184,14 +225,13 @@ export async function generateAccessToken(
     );
   }
 
-  const { refresh, ...tokenOptions } = options ?? {};
-  const token = await renown.getBearerToken(tokenOptions, refresh);
+  const token = await renown.getBearerToken(options ?? {});
 
   return {
     token,
     did: renown.did,
     address: user.address,
-    expiresIn: tokenOptions.expiresIn ?? 0,
+    expiresIn: options?.expiresIn ?? 0,
   };
 }
 
@@ -237,16 +277,16 @@ export function formatExpiry(expiresIn: number): string {
   const hours = Math.floor((expiresIn % SECONDS_IN_DAY) / 3600);
 
   if (days > 0) {
-    const dayStr = `${days} day${days > 1 ? "s" : ""}`;
+    const dayStr = `${days} day${days !== 1 ? "s" : ""}`;
     if (hours > 0) {
-      return `${dayStr} and ${hours} hour${hours > 1 ? "s" : ""}`;
+      return `${dayStr} and ${hours} hour${hours !== 1 ? "s" : ""}`;
     }
     return dayStr;
   }
 
   if (hours > 0) {
-    return `${hours} hour${hours > 1 ? "s" : ""}`;
+    return `${hours} hour${hours !== 1 ? "s" : ""}`;
   }
 
-  return `${expiresIn} seconds`;
+  return `${expiresIn} second${expiresIn !== 1 ? "s" : ""}`;
 }

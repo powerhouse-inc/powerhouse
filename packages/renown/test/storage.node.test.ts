@@ -86,7 +86,9 @@ describe("Node key storage", () => {
   it("should load key pair from default env var if no file path is provided", async () => {
     const keyPair = await generateKeyPair();
 
-    process.env[NodeKeyStorage.ENV_KEY_NAME] = JSON.stringify({ keyPair });
+    process.env[NodeKeyStorage.RENOWN_PRIVATE_KEY_ENV] = JSON.stringify({
+      keyPair,
+    });
 
     const keyStorage = new NodeKeyStorage();
 
