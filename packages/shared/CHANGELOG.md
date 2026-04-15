@@ -1,3 +1,18 @@
+## 6.0.0-dev.174 (2026-04-15)
+
+### 🚀 Features
+
+- **shared,ph-cli:** extract registry helpers, refactor publish/install commands ([f00289f6b](https://github.com/powerhouse-inc/powerhouse/commit/f00289f6b))
+
+### 🩹 Fixes
+
+- **deps:** resolve all critical and high security vulnerabilities ([6a8531af3](https://github.com/powerhouse-inc/powerhouse/commit/6a8531af3))
+- **shared,ph-cli:** switch publish to execFileSync, use POWERHOUSE_CONFIG_FILE constant ([eb0d4865c](https://github.com/powerhouse-inc/powerhouse/commit/eb0d4865c))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.0.0-dev.173 (2026-04-15)
 
 ### 🩹 Fixes

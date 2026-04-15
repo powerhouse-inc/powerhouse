@@ -1,3 +1,13 @@
+## 6.0.0-dev.174 (2026-04-15)
+
+### 🩹 Fixes
+
+- **deps:** resolve all critical and high security vulnerabilities ([6a8531af3](https://github.com/powerhouse-inc/powerhouse/commit/6a8531af3))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.0.0-dev.173 (2026-04-15)
 
 ### 🚀 Features
