@@ -55,7 +55,9 @@ describe("publish", () => {
     forwardedArgs?: string[];
   }) {
     const { publish } = await import("../src/commands/publish.js");
-    const handler = publish.handler;
+    const handler = (
+      publish as unknown as { handler: (_args: typeof args) => void }
+    ).handler;
 
     return handler({ forwardedArgs: [], ...args });
   }
