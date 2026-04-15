@@ -1,3 +1,13 @@
+## 6.0.0-dev.172 (2026-04-15)
+
+### 🩹 Fixes
+
+- **switchboard:** support setting dynamic model loading with env var and only enabled https node hooks when needed ([cbb96b940](https://github.com/powerhouse-inc/powerhouse/commit/cbb96b940))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.0.0-dev.171 (2026-04-14)
 
 ### 🩹 Fixes

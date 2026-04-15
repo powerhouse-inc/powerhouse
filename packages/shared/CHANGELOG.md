@@ -1,3 +1,15 @@
+## 6.0.0-dev.172 (2026-04-15)
+
+### 🩹 Fixes
+
+- since we have to derive document operations on import, we were discarding the initial state on export ([db8ab6733](https://github.com/powerhouse-inc/powerhouse/commit/db8ab6733))
+- **shared:** added logout command ([3a428fff9](https://github.com/powerhouse-inc/powerhouse/commit/3a428fff9))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+
 ## 6.0.0-dev.171 (2026-04-14)
 
 ### 🩹 Fixes

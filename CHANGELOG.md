@@ -1,3 +1,20 @@
+## 6.0.0-dev.172 (2026-04-15)
+
+### 🩹 Fixes
+
+- since we have to derive document operations on import, we were discarding the initial state on export ([db8ab6733](https://github.com/powerhouse-inc/powerhouse/commit/db8ab6733))
+- **connect:** mark i18n chunk as side-effectful so init() isn't tree-shaken ([98dc33786](https://github.com/powerhouse-inc/powerhouse/commit/98dc33786))
+- **design-system:** stretch Operation tooltip bg and add copy button ([13b9afe3e](https://github.com/powerhouse-inc/powerhouse/commit/13b9afe3e))
+- **design-system:** render ConnectTooltip above z-10 stacking contexts ([361cb8b60](https://github.com/powerhouse-inc/powerhouse/commit/361cb8b60))
+- **shared:** added logout command ([3a428fff9](https://github.com/powerhouse-inc/powerhouse/commit/3a428fff9))
+- **switchboard:** support setting dynamic model loading with env var and only enabled https node hooks when needed ([cbb96b940](https://github.com/powerhouse-inc/powerhouse/commit/cbb96b940))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Guillermo Puente @gpuente
+
 ## 6.0.0-dev.171 (2026-04-14)
 
 ### 🚀 Features

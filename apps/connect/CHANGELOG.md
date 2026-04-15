@@ -1,3 +1,13 @@
+## 6.0.0-dev.172 (2026-04-15)
+
+### 🩹 Fixes
+
+- **connect:** mark i18n chunk as side-effectful so init() isn't tree-shaken ([98dc33786](https://github.com/powerhouse-inc/powerhouse/commit/98dc33786))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 6.0.0-dev.171 (2026-04-14)
 
 ### 🩹 Fixes

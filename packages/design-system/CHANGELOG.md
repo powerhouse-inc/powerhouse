@@ -1,3 +1,14 @@
+## 6.0.0-dev.172 (2026-04-15)
+
+### 🩹 Fixes
+
+- **design-system:** render ConnectTooltip above z-10 stacking contexts ([361cb8b60](https://github.com/powerhouse-inc/powerhouse/commit/361cb8b60))
+- **design-system:** stretch Operation tooltip bg and add copy button ([13b9afe3e](https://github.com/powerhouse-inc/powerhouse/commit/13b9afe3e))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 6.0.0-dev.171 (2026-04-14)
 
 ### 🩹 Fixes

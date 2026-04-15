@@ -1,3 +1,13 @@
+## 6.0.0-dev.172 (2026-04-15)
+
+### 🩹 Fixes
+
+- since we have to derive document operations on import, we were discarding the initial state on export ([db8ab6733](https://github.com/powerhouse-inc/powerhouse/commit/db8ab6733))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
 ## 6.0.0-dev.171 (2026-04-14)
 
 ### 🚀 Features
