@@ -21,7 +21,7 @@
     "test:nogenerate": "bun test --timeout 1000000 ./tests/*.test.ts"
   },
   "dependencies": {
-    "@apollo/subgraph": "^2.11.3",
+    "@apollo/subgraph": "^2.13.2",
     "@graphql-codegen/add": "catalog:",
     "@graphql-codegen/cli": "catalog:",
     "@graphql-codegen/typescript": "catalog:",
