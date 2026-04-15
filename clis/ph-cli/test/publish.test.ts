@@ -1,8 +1,6 @@
-import { DEFAULT_REGISTRY_URL } from "@powerhousedao/config";
+import { DEFAULT_REGISTRY_URL } from "@powerhousedao/shared/clis";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("child_process");
-vi.mock("@powerhousedao/config/node");
 vi.mock("@powerhousedao/shared/clis", async (importOriginal) => {
   const actual: Record<string, unknown> = await importOriginal();
   return {
@@ -10,23 +8,29 @@ vi.mock("@powerhousedao/shared/clis", async (importOriginal) => {
     getPowerhouseProjectInfo: vi.fn(),
   };
 });
+vi.mock("@powerhousedao/shared/registry", () => ({
+  resolveRegistryUrl: vi.fn(),
+  checkNpmAuth: vi.fn(),
+  npmPublish: vi.fn(),
+}));
 
-import { getConfig } from "@powerhousedao/config/node";
 import { getPowerhouseProjectInfo } from "@powerhousedao/shared/clis";
-import { execSync } from "child_process";
+import {
+  checkNpmAuth,
+  npmPublish,
+  resolveRegistryUrl,
+} from "@powerhousedao/shared/registry";
 
-const mockGetConfig = vi.mocked(getConfig);
-const mockExecSync = vi.mocked(execSync);
 const mockGetProjectInfo = vi.mocked(getPowerhouseProjectInfo);
+const mockResolveRegistryUrl = vi.mocked(resolveRegistryUrl);
+const mockCheckNpmAuth = vi.mocked(checkNpmAuth);
+const mockNpmPublish = vi.mocked(npmPublish);
 
 describe("publish", () => {
   const originalArgv = process.argv;
-  const originalEnv = { ...process.env };
 
   beforeEach(() => {
     vi.clearAllMocks();
-    process.env = { ...originalEnv };
-    delete process.env.PH_REGISTRY_URL;
 
     mockGetProjectInfo.mockResolvedValue({
       projectPath: "/test/project",
@@ -36,215 +40,120 @@ describe("publish", () => {
       isGlobal: false,
     });
 
-    mockGetConfig.mockReturnValue({
-      logLevel: "info",
-      documentModelsDir: "./document-models",
-      editorsDir: "./editors",
-      processorsDir: "./processors",
-      subgraphsDir: "./subgraphs",
-      importScriptsDir: "./scripts",
-      skipFormat: false,
-    });
-
-    // Default: npm whoami succeeds
-    mockExecSync.mockReturnValue(Buffer.from("testuser"));
+    mockResolveRegistryUrl.mockReturnValue(DEFAULT_REGISTRY_URL);
+    mockCheckNpmAuth.mockResolvedValue("testuser");
+    mockNpmPublish.mockResolvedValue({ stdout: "published" });
   });
 
   afterEach(() => {
     process.argv = originalArgv;
-    process.env = originalEnv;
   });
 
-  describe("handler", () => {
-    // We import the handler dynamically to test it after mocks are set up
-    async function runPublishHandler(args: {
-      registry?: string;
-      debug?: boolean;
-      forwardedArgs?: string[];
-    }) {
-      const { publish } = await import("../src/commands/publish.js");
+  async function runPublishHandler(args: {
+    registry?: string;
+    debug?: boolean;
+    forwardedArgs?: string[];
+  }) {
+    const { publish } = await import("../src/commands/publish.js");
+    const handler = publish.handler;
 
-      // Access the handler from the command object
-      const handler = (
-        publish as unknown as { handler: (_args: typeof args) => void }
-      ).handler;
+    return handler({ forwardedArgs: [], ...args });
+  }
 
-      return handler({ forwardedArgs: [], ...args });
-    }
+  it("should pass registry flag to resolveRegistryUrl", async () => {
+    const exitSpy = vi
+      .spyOn(process, "exit")
+      .mockImplementation(() => undefined as never);
 
-    it("should use registry URL from args when provided", async () => {
-      const exitSpy = vi
-        .spyOn(process, "exit")
-        .mockImplementation(() => undefined as never);
+    mockResolveRegistryUrl.mockReturnValue("http://custom-registry.io");
 
-      await runPublishHandler({
-        registry: "http://custom-registry.io",
-      });
-
-      // First call is whoami check, second is npm publish
-      expect(mockExecSync).toHaveBeenCalledWith(
-        "npm whoami --registry http://custom-registry.io",
-        { stdio: "pipe" },
-      );
-      expect(mockExecSync).toHaveBeenCalledWith(
-        expect.stringContaining(
-          "npm publish --registry http://custom-registry.io",
-        ),
-        expect.objectContaining({ stdio: "inherit", cwd: "/test/project" }),
-      );
-
-      exitSpy.mockRestore();
+    await runPublishHandler({
+      registry: "http://custom-registry.io",
     });
 
-    it("should use registry URL from config when no flag provided", async () => {
-      const exitSpy = vi
-        .spyOn(process, "exit")
-        .mockImplementation(() => undefined as never);
-
-      mockGetConfig.mockReturnValue({
-        logLevel: "info",
-        documentModelsDir: "./document-models",
-        editorsDir: "./editors",
-        processorsDir: "./processors",
-        subgraphsDir: "./subgraphs",
-        importScriptsDir: "./scripts",
-        skipFormat: false,
-        packageRegistryUrl: "https://config-registry.io",
-      });
-
-      await runPublishHandler({});
-
-      expect(mockExecSync).toHaveBeenCalledWith(
-        "npm whoami --registry https://config-registry.io",
-        { stdio: "pipe" },
-      );
-
-      exitSpy.mockRestore();
+    expect(mockResolveRegistryUrl).toHaveBeenCalledWith({
+      registry: "http://custom-registry.io",
+      projectPath: "/test/project",
+    });
+    expect(mockCheckNpmAuth).toHaveBeenCalledWith("http://custom-registry.io");
+    expect(mockNpmPublish).toHaveBeenCalledWith({
+      registryUrl: "http://custom-registry.io",
+      cwd: "/test/project",
+      args: [],
     });
 
-    it("should use PH_REGISTRY_URL env var when no flag or config", async () => {
-      const exitSpy = vi
-        .spyOn(process, "exit")
-        .mockImplementation(() => undefined as never);
+    exitSpy.mockRestore();
+  });
 
-      process.env.PH_REGISTRY_URL = "https://env-registry.io";
+  it("should use default registry when no flag provided", async () => {
+    const exitSpy = vi
+      .spyOn(process, "exit")
+      .mockImplementation(() => undefined as never);
 
-      await runPublishHandler({});
+    await runPublishHandler({});
 
-      expect(mockExecSync).toHaveBeenCalledWith(
-        "npm whoami --registry https://env-registry.io",
-        { stdio: "pipe" },
-      );
+    expect(mockResolveRegistryUrl).toHaveBeenCalledWith({
+      registry: undefined,
+      projectPath: "/test/project",
+    });
+    expect(mockCheckNpmAuth).toHaveBeenCalledWith(DEFAULT_REGISTRY_URL);
 
-      exitSpy.mockRestore();
+    exitSpy.mockRestore();
+  });
+
+  it("should exit with error when not authenticated", async () => {
+    const exitError = new Error("process.exit");
+    const exitSpy = vi.spyOn(process, "exit").mockImplementation(() => {
+      throw exitError;
+    });
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    mockCheckNpmAuth.mockRejectedValue(new Error("ENEEDAUTH"));
+
+    await expect(runPublishHandler({})).rejects.toThrow("process.exit");
+
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.stringContaining("Not authenticated with registry"),
+    );
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.stringContaining("npm adduser --registry"),
+    );
+    expect(exitSpy).toHaveBeenCalledWith(1);
+    expect(mockNpmPublish).not.toHaveBeenCalled();
+
+    exitSpy.mockRestore();
+    errorSpy.mockRestore();
+  });
+
+  it("should throw when project path is not found", async () => {
+    mockGetProjectInfo.mockResolvedValue({
+      projectPath: undefined,
+      localProjectPath: undefined,
+      globalProjectPath: undefined,
+      packageManager: "npm",
+      isGlobal: false,
     });
 
-    it("should fall back to DEFAULT_REGISTRY_URL when nothing else is set", async () => {
-      const exitSpy = vi
-        .spyOn(process, "exit")
-        .mockImplementation(() => undefined as never);
+    await expect(runPublishHandler({})).rejects.toThrow(
+      "Could not find project path",
+    );
+  });
 
-      await runPublishHandler({});
+  it("should forward extra args to npmPublish", async () => {
+    const exitSpy = vi
+      .spyOn(process, "exit")
+      .mockImplementation(() => undefined as never);
 
-      expect(mockExecSync).toHaveBeenCalledWith(
-        `npm whoami --registry ${DEFAULT_REGISTRY_URL}`,
-        { stdio: "pipe" },
-      );
-
-      exitSpy.mockRestore();
+    await runPublishHandler({
+      forwardedArgs: ["--tag", "dev"],
     });
 
-    it("should exit with error when not authenticated", async () => {
-      const exitError = new Error("process.exit");
-      const exitSpy = vi.spyOn(process, "exit").mockImplementation(() => {
-        throw exitError;
-      });
-      const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-
-      // Make npm whoami fail
-      mockExecSync.mockImplementation((cmd) => {
-        if (typeof cmd === "string" && cmd.includes("npm whoami")) {
-          throw new Error("ENEEDAUTH");
-        }
-        return Buffer.from("");
-      });
-
-      await expect(runPublishHandler({})).rejects.toThrow("process.exit");
-
-      expect(errorSpy).toHaveBeenCalledWith(
-        expect.stringContaining("Not authenticated with registry"),
-      );
-      expect(errorSpy).toHaveBeenCalledWith(
-        expect.stringContaining("npm adduser --registry"),
-      );
-      expect(exitSpy).toHaveBeenCalledWith(1);
-
-      // npm publish should NOT have been called
-      expect(mockExecSync).not.toHaveBeenCalledWith(
-        expect.stringContaining("npm publish"),
-        expect.anything(),
-      );
-
-      exitSpy.mockRestore();
-      errorSpy.mockRestore();
+    expect(mockNpmPublish).toHaveBeenCalledWith({
+      registryUrl: DEFAULT_REGISTRY_URL,
+      cwd: "/test/project",
+      args: ["--tag", "dev"],
     });
 
-    it("should throw when project path is not found", async () => {
-      mockGetProjectInfo.mockResolvedValue({
-        projectPath: undefined,
-        localProjectPath: undefined,
-        globalProjectPath: undefined,
-        packageManager: "npm",
-        isGlobal: false,
-      });
-
-      await expect(runPublishHandler({})).rejects.toThrow(
-        "Could not find project path",
-      );
-    });
-
-    it("should run npm publish with correct cwd", async () => {
-      const exitSpy = vi
-        .spyOn(process, "exit")
-        .mockImplementation(() => undefined as never);
-
-      await runPublishHandler({});
-
-      expect(mockExecSync).toHaveBeenCalledWith(
-        expect.stringContaining("npm publish"),
-        expect.objectContaining({ cwd: "/test/project" }),
-      );
-
-      exitSpy.mockRestore();
-    });
-
-    it("should prioritize registry flag over config and env", async () => {
-      const exitSpy = vi
-        .spyOn(process, "exit")
-        .mockImplementation(() => undefined as never);
-
-      process.env.PH_REGISTRY_URL = "https://env-registry.io";
-      mockGetConfig.mockReturnValue({
-        logLevel: "info",
-        documentModelsDir: "./document-models",
-        editorsDir: "./editors",
-        processorsDir: "./processors",
-        subgraphsDir: "./subgraphs",
-        importScriptsDir: "./scripts",
-        skipFormat: false,
-        packageRegistryUrl: "https://config-registry.io",
-      });
-
-      await runPublishHandler({
-        registry: "https://flag-registry.io",
-      });
-
-      expect(mockExecSync).toHaveBeenCalledWith(
-        "npm whoami --registry https://flag-registry.io",
-        { stdio: "pipe" },
-      );
-
-      exitSpy.mockRestore();
-    });
+    exitSpy.mockRestore();
   });
 });
