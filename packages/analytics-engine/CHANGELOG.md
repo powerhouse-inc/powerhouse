@@ -1,3 +1,13 @@
+## 6.0.0-dev.173 (2026-04-15)
+
+### 🩹 Fixes
+
+- **renown:** fix sleep listener leak, fix pre-existing test failures, add test script ([606e9f82e](https://github.com/powerhouse-inc/powerhouse/commit/606e9f82e))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.0.0-dev.172 (2026-04-15)
 
 This was a version bump only for analytics-engine to align it with other projects, there were no code changes.

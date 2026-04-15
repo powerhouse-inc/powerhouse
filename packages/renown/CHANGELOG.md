@@ -1,3 +1,19 @@
+## 6.0.0-dev.173 (2026-04-15)
+
+### 🚀 Features
+
+- **renown,ph-cli:** moved cli login to renown sdk ([09ac65eff](https://github.com/powerhouse-inc/powerhouse/commit/09ac65eff))
+
+### 🩹 Fixes
+
+- **renown:** fix sleep listener leak, fix pre-existing test failures, add test script ([606e9f82e](https://github.com/powerhouse-inc/powerhouse/commit/606e9f82e))
+- **renown,ph-cli:** address second round of PR review feedback ([d03005eee](https://github.com/powerhouse-inc/powerhouse/commit/d03005eee))
+- **renown,ph-cli:** address PR review feedback for login refactor ([d2a0227de](https://github.com/powerhouse-inc/powerhouse/commit/d2a0227de))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.0.0-dev.172 (2026-04-15)
 
 This was a version bump only for @renown/sdk to align it with other projects, there were no code changes.
