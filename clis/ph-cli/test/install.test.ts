@@ -1,7 +1,8 @@
-import { DEFAULT_REGISTRY_URL } from "@powerhousedao/shared/clis";
+import { DEFAULT_REGISTRY_URL } from "@powerhousedao/config";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("child_process");
+vi.mock("@powerhousedao/config/node");
 vi.mock("@powerhousedao/shared/clis", async (importOriginal) => {
   const actual: Record<string, unknown> = await importOriginal();
   return {
@@ -10,9 +11,6 @@ vi.mock("@powerhousedao/shared/clis", async (importOriginal) => {
     makeDependenciesWithVersions: vi.fn(),
   };
 });
-vi.mock("@powerhousedao/shared/registry", () => ({
-  resolveRegistryUrl: vi.fn(),
-}));
 vi.mock("../src/utils.js", async (importOriginal) => {
   const actual: Record<string, unknown> = await importOriginal();
   return {
@@ -26,14 +24,14 @@ import {
   getPowerhouseProjectInfo,
   makeDependenciesWithVersions,
 } from "@powerhousedao/shared/clis";
-import { resolveRegistryUrl } from "@powerhousedao/shared/registry";
+import { getConfig } from "@powerhousedao/config/node";
 import { execSync } from "child_process";
 import type { InstallArgs } from "../src/types.js";
 
+const mockGetConfig = vi.mocked(getConfig);
 const mockExecSync = vi.mocked(execSync);
 const mockGetProjectInfo = vi.mocked(getPowerhouseProjectInfo);
 const mockMakeDeps = vi.mocked(makeDependenciesWithVersions);
-const mockResolveRegistryUrl = vi.mocked(resolveRegistryUrl);
 
 describe("install", () => {
   const originalEnv = { ...process.env };
@@ -51,7 +49,15 @@ describe("install", () => {
       isGlobal: false,
     });
 
-    mockResolveRegistryUrl.mockReturnValue(DEFAULT_REGISTRY_URL);
+    mockGetConfig.mockReturnValue({
+      logLevel: "info",
+      documentModelsDir: "./document-models",
+      editorsDir: "./editors",
+      processorsDir: "./processors",
+      subgraphsDir: "./subgraphs",
+      importScriptsDir: "./scripts",
+      skipFormat: false,
+    });
 
     mockMakeDeps.mockResolvedValue([
       { name: "@powerhousedao/test-pkg", version: "1.0.0" },
@@ -84,20 +90,61 @@ describe("install", () => {
   }
 
   describe("registry resolution", () => {
-    it("should pass --registry flag to resolveRegistryUrl", async () => {
-      mockResolveRegistryUrl.mockReturnValue("https://flag-registry.io");
+    it("should use --registry flag over config and env", async () => {
+      process.env.PH_REGISTRY_URL = "https://env-registry.io";
+      mockGetConfig.mockReturnValue({
+        logLevel: "info",
+        documentModelsDir: "./document-models",
+        editorsDir: "./editors",
+        processorsDir: "./processors",
+        subgraphsDir: "./subgraphs",
+        importScriptsDir: "./scripts",
+        skipFormat: false,
+        packageRegistryUrl: "https://config-registry.io",
+      });
 
       await runInstallHandler({
         dependencies: ["@powerhousedao/test-pkg"],
         registry: "https://flag-registry.io",
       });
 
-      expect(mockResolveRegistryUrl).toHaveBeenCalledWith({
-        registry: "https://flag-registry.io",
-        projectPath: "/test/project",
-      });
       expect(mockExecSync).toHaveBeenCalledWith(
         expect.stringContaining("--registry https://flag-registry.io"),
+        expect.anything(),
+      );
+    });
+
+    it("should use config packageRegistryUrl when no flag provided", async () => {
+      mockGetConfig.mockReturnValue({
+        logLevel: "info",
+        documentModelsDir: "./document-models",
+        editorsDir: "./editors",
+        processorsDir: "./processors",
+        subgraphsDir: "./subgraphs",
+        importScriptsDir: "./scripts",
+        skipFormat: false,
+        packageRegistryUrl: "https://config-registry.io",
+      });
+
+      await runInstallHandler({
+        dependencies: ["@powerhousedao/test-pkg"],
+      });
+
+      expect(mockExecSync).toHaveBeenCalledWith(
+        expect.stringContaining("--registry https://config-registry.io"),
+        expect.anything(),
+      );
+    });
+
+    it("should use PH_REGISTRY_URL env var when no flag or config", async () => {
+      process.env.PH_REGISTRY_URL = "https://env-registry.io";
+
+      await runInstallHandler({
+        dependencies: ["@powerhousedao/test-pkg"],
+      });
+
+      expect(mockExecSync).toHaveBeenCalledWith(
+        expect.stringContaining("--registry https://env-registry.io"),
         expect.anything(),
       );
     });
@@ -107,10 +154,6 @@ describe("install", () => {
         dependencies: ["@powerhousedao/test-pkg"],
       });
 
-      expect(mockResolveRegistryUrl).toHaveBeenCalledWith({
-        registry: undefined,
-        projectPath: "/test/project",
-      });
       expect(mockExecSync).toHaveBeenCalledWith(
         expect.stringContaining(`--registry ${DEFAULT_REGISTRY_URL}`),
         expect.anything(),
@@ -120,8 +163,6 @@ describe("install", () => {
 
   describe("registry URL forwarding", () => {
     it("should pass registry URL to makeDependenciesWithVersions", async () => {
-      mockResolveRegistryUrl.mockReturnValue("https://custom-registry.io");
-
       await runInstallHandler({
         dependencies: ["@powerhousedao/test-pkg"],
         registry: "https://custom-registry.io",
@@ -134,8 +175,6 @@ describe("install", () => {
     });
 
     it("should pass --registry to the package manager install command", async () => {
-      mockResolveRegistryUrl.mockReturnValue("https://custom-registry.io");
-
       await runInstallHandler({
         dependencies: ["@powerhousedao/test-pkg"],
         registry: "https://custom-registry.io",

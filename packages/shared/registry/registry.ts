@@ -1,5 +1,8 @@
 import { join } from "node:path";
-import { DEFAULT_REGISTRY_URL } from "../clis/constants.js";
+import {
+  DEFAULT_REGISTRY_URL,
+  POWERHOUSE_CONFIG_FILE,
+} from "../clis/constants.js";
 import { getConfig } from "../clis/file-system/get-config.js";
 import { spawnAsync } from "../clis/file-system/spawn-async.js";
 
@@ -17,7 +20,7 @@ export interface ResolveRegistryUrlOptions {
  */
 export function resolveRegistryUrl(options: ResolveRegistryUrlOptions): string {
   const { registry, projectPath, env = process.env } = options;
-  const configPath = join(projectPath, "powerhouse.config.json");
+  const configPath = join(projectPath, POWERHOUSE_CONFIG_FILE);
   const config = getConfig(configPath);
 
   return (

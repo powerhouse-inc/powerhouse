@@ -1,6 +1,6 @@
 import { DEFAULT_REGISTRY_URL } from "@powerhousedao/shared/clis";
 import { resolveRegistryUrl } from "@powerhousedao/shared/registry";
-import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -9,8 +9,7 @@ describe("resolveRegistryUrl", () => {
   let tempDir: string;
 
   beforeEach(() => {
-    tempDir = join(tmpdir(), `registry-test-${Date.now()}`);
-    mkdirSync(tempDir, { recursive: true });
+    tempDir = mkdtempSync(join(tmpdir(), "registry-test-"));
   });
 
   afterEach(() => {
