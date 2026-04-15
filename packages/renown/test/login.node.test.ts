@@ -1,11 +1,32 @@
-import { describe, expect, it, vi } from "vitest";
-import {
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { IRenown } from "../src/types.js";
+
+let openBrowserShouldFail = false;
+
+vi.mock("node:child_process", async (importOriginal) => {
+  const actual: Record<string, unknown> = await importOriginal();
+  return {
+    ...actual,
+    execFile: (...args: unknown[]) => {
+      if (openBrowserShouldFail) {
+        const cb = args[args.length - 1];
+        if (typeof cb === "function") {
+          (cb as (err: Error) => void)(new Error("spawn ENOENT"));
+        }
+        return {};
+      }
+      return (actual.execFile as (...a: unknown[]) => unknown)(...args);
+    },
+  };
+});
+
+const {
+  browserLogin,
   formatExpiry,
   generateAccessToken,
   getAuthStatus,
   parseExpiry,
-} from "../src/login.node.js";
-import type { IRenown } from "../src/types.js";
+} = await import("../src/login.node.js");
 
 describe("parseExpiry", () => {
   it("parses days", () => {
@@ -85,7 +106,7 @@ describe("formatExpiry", () => {
 
   it("formats seconds", () => {
     expect(formatExpiry(120)).toBe("120 seconds");
-    expect(formatExpiry(1)).toBe("1 seconds");
+    expect(formatExpiry(1)).toBe("1 second");
   });
 });
 
@@ -105,6 +126,16 @@ function mockRenown(overrides: Partial<IRenown> = {}): IRenown {
     on: vi.fn().mockReturnValue(() => {}),
     ...overrides,
   };
+}
+
+function mockCredential() {
+  return {
+    issuanceDate: "2025-01-01T00:00:00Z",
+  } as IRenown["user"] extends infer U
+    ? U extends { credential: infer C }
+      ? NonNullable<C>
+      : never
+    : never;
 }
 
 describe("getAuthStatus", () => {
@@ -138,13 +169,7 @@ describe("getAuthStatus", () => {
         chainId: 1,
         networkId: "eip155",
         did: "did:pkh:eip155:1:0xabc",
-        credential: {
-          issuanceDate: "2025-01-01T00:00:00Z",
-        } as IRenown["user"] extends infer U
-          ? U extends { credential: infer C }
-            ? NonNullable<C>
-            : never
-          : never,
+        credential: mockCredential(),
       },
     });
     const status = getAuthStatus(renown);
@@ -187,13 +212,7 @@ describe("generateAccessToken", () => {
         chainId: 1,
         networkId: "eip155",
         did: "did:pkh:eip155:1:0xabc",
-        credential: {
-          issuanceDate: "2025-01-01T00:00:00Z",
-        } as IRenown["user"] extends infer U
-          ? U extends { credential: infer C }
-            ? NonNullable<C>
-            : never
-          : never,
+        credential: mockCredential(),
       },
       getBearerToken,
     });
@@ -201,16 +220,293 @@ describe("generateAccessToken", () => {
     const result = await generateAccessToken(renown, {
       expiresIn: 3600,
       aud: "https://api.example.com",
-      refresh: true,
     });
 
     expect(result.token).toBe("jwt-token-123");
     expect(result.did).toBe("did:key:test123");
     expect(result.address).toBe("0xabc");
     expect(result.expiresIn).toBe(3600);
-    expect(getBearerToken).toHaveBeenCalledWith(
-      { expiresIn: 3600, aud: "https://api.example.com" },
-      true,
+    expect(getBearerToken).toHaveBeenCalledWith({
+      expiresIn: 3600,
+      aud: "https://api.example.com",
+    });
+  });
+});
+
+describe("browserLogin", () => {
+  let originalFetch: typeof globalThis.fetch;
+  let originalRandomUUID: typeof crypto.randomUUID;
+
+  beforeEach(() => {
+    originalFetch = globalThis.fetch;
+    originalRandomUUID = crypto.randomUUID;
+    crypto.randomUUID = vi.fn().mockReturnValue("test-session-id");
+  });
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+    crypto.randomUUID = originalRandomUUID;
+  });
+
+  it("throws when already authenticated", async () => {
+    const renown = mockRenown({
+      user: {
+        address: "0xabc" as `0x${string}`,
+        chainId: 1,
+        networkId: "eip155",
+        did: "did:pkh:eip155:1:0xabc",
+        credential: mockCredential(),
+      },
+    });
+
+    await expect(
+      browserLogin(renown, { renownUrl: "https://renown.test" }),
+    ).rejects.toThrow("Already authenticated");
+  });
+
+  it("calls onLoginUrl with the constructed URL", async () => {
+    const onLoginUrl = vi.fn();
+    const login = vi.fn().mockResolvedValue({
+      address: "0xabc" as `0x${string}`,
+      chainId: 1,
+      networkId: "eip155",
+      did: "did:pkh:eip155:1:0xabc",
+      credential: mockCredential(),
+    });
+    const renown = mockRenown({ login });
+
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          sessionId: "test-session-id",
+          status: "ready",
+          did: "did:pkh:eip155:1:0xabc",
+          address: "0xabc",
+          chainId: 1,
+          credentialId: "cred-1",
+          userDocumentId: "doc-1",
+        }),
+    });
+
+    await browserLogin(renown, {
+      renownUrl: "https://renown.test",
+      onLoginUrl,
+    });
+
+    expect(onLoginUrl).toHaveBeenCalledWith(
+      expect.stringContaining("https://renown.test/console"),
+      "test-session-id",
     );
+    const url = new URL(onLoginUrl.mock.calls[0][0]);
+    expect(url.searchParams.get("session")).toBe("test-session-id");
+    expect(url.searchParams.get("connect")).toBe("did:key:test123");
+    expect(url.searchParams.get("app")).toBe("did:key:test123");
+  });
+
+  it("polls until session is ready", async () => {
+    const login = vi.fn().mockResolvedValue({
+      address: "0xabc" as `0x${string}`,
+      chainId: 1,
+      networkId: "eip155",
+      did: "did:pkh:eip155:1:0xabc",
+      credential: mockCredential(),
+    });
+    const onPollTick = vi.fn();
+    const renown = mockRenown({ login });
+
+    let callCount = 0;
+    globalThis.fetch = vi.fn().mockImplementation(() => {
+      callCount++;
+      if (callCount < 3) {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              sessionId: "test-session-id",
+              status: "pending",
+            }),
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            sessionId: "test-session-id",
+            status: "ready",
+            did: "did:pkh:eip155:1:0xabc",
+            address: "0xabc",
+            chainId: 1,
+            credentialId: "cred-1",
+            userDocumentId: "doc-1",
+          }),
+      });
+    });
+
+    const result = await browserLogin(renown, {
+      renownUrl: "https://renown.test",
+      onPollTick,
+    });
+
+    expect(result.user.address).toBe("0xabc");
+    expect(result.cliDid).toBe("did:key:test123");
+    expect(login).toHaveBeenCalledWith("did:pkh:eip155:1:0xabc");
+    expect(onPollTick).toHaveBeenCalled();
+  });
+
+  it("throws on timeout", async () => {
+    const renown = mockRenown();
+
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({ sessionId: "test-session-id", status: "pending" }),
+    });
+
+    await expect(
+      browserLogin(renown, {
+        renownUrl: "https://renown.test",
+        timeoutMs: 100,
+      }),
+    ).rejects.toThrow("Authentication timed out");
+  });
+
+  it("retries on network errors", async () => {
+    const login = vi.fn().mockResolvedValue({
+      address: "0xabc" as `0x${string}`,
+      chainId: 1,
+      networkId: "eip155",
+      did: "did:pkh:eip155:1:0xabc",
+      credential: mockCredential(),
+    });
+    const renown = mockRenown({ login });
+
+    let callCount = 0;
+    globalThis.fetch = vi.fn().mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) {
+        return Promise.reject(new Error("Network error"));
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            sessionId: "test-session-id",
+            status: "ready",
+            did: "did:pkh:eip155:1:0xabc",
+            address: "0xabc",
+            chainId: 1,
+            credentialId: "cred-1",
+            userDocumentId: "doc-1",
+          }),
+      });
+    });
+
+    const result = await browserLogin(renown, {
+      renownUrl: "https://renown.test",
+    });
+
+    expect(result.user.address).toBe("0xabc");
+    expect(globalThis.fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it("aborts when signal is triggered", async () => {
+    const renown = mockRenown();
+    const controller = new AbortController();
+
+    globalThis.fetch = vi.fn().mockImplementation(() => {
+      controller.abort();
+      return Promise.resolve({
+        ok: true,
+        json: () =>
+          Promise.resolve({ sessionId: "test-session-id", status: "pending" }),
+      });
+    });
+
+    await expect(
+      browserLogin(renown, {
+        renownUrl: "https://renown.test",
+        signal: controller.signal,
+      }),
+    ).rejects.toThrow();
+  });
+
+  it("calls onBrowserOpenFailed when browser open fails", async () => {
+    const onBrowserOpenFailed = vi.fn();
+    const login = vi.fn().mockResolvedValue({
+      address: "0xabc" as `0x${string}`,
+      chainId: 1,
+      networkId: "eip155",
+      did: "did:pkh:eip155:1:0xabc",
+      credential: mockCredential(),
+    });
+    const renown = mockRenown({ login });
+
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          sessionId: "test-session-id",
+          status: "ready",
+          did: "did:pkh:eip155:1:0xabc",
+          address: "0xabc",
+          chainId: 1,
+          credentialId: "cred-1",
+          userDocumentId: "doc-1",
+        }),
+    });
+
+    openBrowserShouldFail = true;
+    try {
+      const result = await browserLogin(renown, {
+        renownUrl: "https://renown.test",
+        onBrowserOpenFailed,
+      });
+
+      expect(onBrowserOpenFailed).toHaveBeenCalledWith(
+        expect.stringContaining("https://renown.test/console"),
+      );
+      expect(result.user.address).toBe("0xabc");
+    } finally {
+      openBrowserShouldFail = false;
+    }
+  });
+
+  it("normalizes trailing slashes in renownUrl", async () => {
+    const login = vi.fn().mockResolvedValue({
+      address: "0xabc" as `0x${string}`,
+      chainId: 1,
+      networkId: "eip155",
+      did: "did:pkh:eip155:1:0xabc",
+      credential: mockCredential(),
+    });
+    const onLoginUrl = vi.fn();
+    const renown = mockRenown({ login });
+
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          sessionId: "test-session-id",
+          status: "ready",
+          did: "did:pkh:eip155:1:0xabc",
+          address: "0xabc",
+          chainId: 1,
+          credentialId: "cred-1",
+          userDocumentId: "doc-1",
+        }),
+    });
+
+    await browserLogin(renown, {
+      renownUrl: "https://renown.test/",
+      onLoginUrl,
+    });
+
+    const url = onLoginUrl.mock.calls[0][0];
+    expect(url).not.toContain("//console");
+    // Session polling URL should also not have double slashes
+    const fetchUrl = (globalThis.fetch as ReturnType<typeof vi.fn>).mock
+      .calls[0][0];
+    expect(fetchUrl).not.toContain("//api");
   });
 });

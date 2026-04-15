@@ -78,6 +78,10 @@ This command:
           process.stdout.write("Waiting");
         },
         onPollTick: () => process.stdout.write("."),
+        onBrowserOpenFailed: (url) => {
+          console.error("Failed to open browser automatically.");
+          console.log(`Please open this URL manually: ${url}`);
+        },
       });
 
       console.log(); // New line after dots
@@ -90,9 +94,6 @@ This command:
       console.log("The CLI can now act on behalf of your Ethereum identity.");
     } catch (error) {
       console.log(); // New line after dots
-      if (error instanceof Error) {
-        throw new Error(`\n${error.message}\nPlease try again with: ph login`);
-      }
       throw error;
     }
 
