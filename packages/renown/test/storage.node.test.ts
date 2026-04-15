@@ -28,6 +28,8 @@ describe("Node key storage", () => {
 
   afterEach(() => {
     rmSync(keyPairPath, { recursive: true, force: true });
+    delete process.env[NodeKeyStorage.RENOWN_PRIVATE_KEY_ENV];
+    delete process.env["PH_RENOWN_PRIVATE_KEY_TEST"];
   });
 
   it("should load key pair from the provided filepath", async () => {

@@ -51,33 +51,27 @@ interface ReadySessionResponse {
 
 type SessionResponse = PendingSessionResponse | ReadySessionResponse;
 
+function abortReason(signal: AbortSignal): Error {
+  if (signal.reason instanceof Error) return signal.reason;
+  if (signal.reason) return new Error(String(signal.reason));
+  return new DOMException("Aborted", "AbortError");
+}
+
 function sleep(ms: number, signal?: AbortSignal): Promise<void> {
   return new Promise((resolve, reject) => {
     if (signal?.aborted) {
-      reject(
-        signal.reason
-          ? signal.reason instanceof Error
-            ? signal.reason
-            : new Error(String(signal.reason))
-          : new DOMException("Aborted", "AbortError"),
-      );
+      reject(abortReason(signal));
       return;
     }
-    const timer = setTimeout(resolve, ms);
-    signal?.addEventListener(
-      "abort",
-      () => {
-        clearTimeout(timer);
-        reject(
-          signal.reason
-            ? signal.reason instanceof Error
-              ? signal.reason
-              : new Error(String(signal.reason))
-            : new DOMException("Aborted", "AbortError"),
-        );
-      },
-      { once: true },
-    );
+    const onAbort = () => {
+      clearTimeout(timer);
+      reject(abortReason(signal!));
+    };
+    const timer = setTimeout(() => {
+      signal?.removeEventListener("abort", onAbort);
+      resolve();
+    }, ms);
+    signal?.addEventListener("abort", onAbort, { once: true });
   });
 }
 
@@ -145,7 +139,7 @@ export async function browserLogin(
   renown: IRenown,
   options: BrowserLoginOptions,
 ): Promise<BrowserLoginResult> {
-  if (renown.user) {
+  if (renown.user?.credential) {
     throw new Error(
       `Already authenticated as ${renown.user.address}. Logout first.`,
     );
