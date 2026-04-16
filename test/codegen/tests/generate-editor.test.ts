@@ -30,7 +30,6 @@ describe("generateEditor", () => {
     editorName,
     editorId,
     documentTypes,
-    skipFormat: false,
     editorDirName: undefined,
   };
   it("should generate a Document Model editor", async () => {

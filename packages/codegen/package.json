@@ -57,6 +57,7 @@
     "get-tsconfig": "catalog:",
     "graphql": "catalog:",
     "graphql-codegen-typescript-validation-schema": "catalog:",
+    "load-json-file": "^7.0.1",
     "npm-registry-fetch": "^19.1.1",
     "prettier": "catalog:",
     "read-pkg": "catalog:",
@@ -64,6 +65,7 @@
     "semver": "catalog:",
     "ts-morph": "catalog:",
     "tsdown": "catalog:",
+    "write-json-file": "^7.0.0",
     "write-package": "catalog:"
   },
   "devDependencies": {

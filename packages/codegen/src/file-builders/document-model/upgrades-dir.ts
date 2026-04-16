@@ -62,19 +62,14 @@ export async function createOrUpdateUpgradeManifestFile(args: {
   } = args;
   const filePath = path.join(upgradesDirPath, "upgrade-manifest.ts");
 
-  const { sourceFile, alreadyExists } = getOrCreateSourceFile(
-    project,
-    filePath,
-  );
+  const { sourceFile } = getOrCreateSourceFile(project, filePath);
 
   const template = upgradeManifestTemplate({
     documentModelId,
     upgradeManifestName,
   });
 
-  if (!alreadyExists) {
-    sourceFile.replaceWithText(template);
-  }
+  sourceFile.replaceWithText(template);
 
   const upgradeTransitionImports = buildUpgradeTransitionImports(specVersions);
 

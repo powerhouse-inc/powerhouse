@@ -5,7 +5,7 @@ import type {
 import { getEditorVariableNames } from "name-builders";
 import path from "path";
 import { documentEditorEditorFileTemplate } from "templates";
-import type { Project } from "ts-morph";
+import { type Project } from "ts-morph";
 import {
   buildTsMorphProject,
   ensureDirectoriesExist,
@@ -13,8 +13,7 @@ import {
   getDocumentTypeMetadata,
   getOrCreateSourceFile,
 } from "utils";
-import { makeEditorModuleFile } from "./editor-common.js";
-import { makeEditorsModulesFile } from "./module-files.js";
+import { makeEditorModuleFile, makeEditorsFile } from "./editor-common.js";
 
 type GenerateEditorArgs = CommonGenerateEditorArgs & {
   documentModelId: string;
@@ -71,7 +70,7 @@ export async function tsMorphGenerateDocumentEditor({
     editorDirPath,
   });
 
-  await makeEditorsModulesFile(project, projectDir);
+  await makeEditorsFile({ project, editorsDirPath });
 
   await project.save();
 }

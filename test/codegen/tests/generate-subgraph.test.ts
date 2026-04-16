@@ -23,11 +23,13 @@ describe("generateSubgraph", () => {
     await cpForce(join(testProjectsDir, WITH_DOCUMENT_MODELS_SPEC_2), outDir);
     const subgraphsDir = join(outDir, "subgraphs");
 
-    await tsMorphGenerateSubgraph({
-      subgraphsDir,
-      subgraphName: "my-custom",
-      documentModel: null,
-    });
+    await tsMorphGenerateSubgraph(
+      {
+        subgraphName: "my-custom",
+        documentModel: null,
+      },
+      outDir,
+    );
 
     await runTsc(outDir);
 
@@ -79,11 +81,13 @@ describe("generateSubgraph", () => {
       join(documentModelsDir, "test-doc", "test-doc.json"),
     );
 
-    await tsMorphGenerateSubgraph({
-      subgraphsDir,
-      subgraphName: "test-doc",
-      documentModel,
-    });
+    await tsMorphGenerateSubgraph(
+      {
+        subgraphName: "test-doc",
+        documentModel,
+      },
+      outDir,
+    );
 
     await runTsc(outDir);
 
@@ -141,11 +145,13 @@ describe("generateSubgraph", () => {
     const subgraphsDir = join(outDir, "subgraphs");
 
     // Generate once
-    await tsMorphGenerateSubgraph({
-      subgraphsDir,
-      subgraphName: "idempotent-test",
-      documentModel: null,
-    });
+    await tsMorphGenerateSubgraph(
+      {
+        subgraphName: "idempotent-test",
+        documentModel: null,
+      },
+      outDir,
+    );
 
     await runTsc(outDir);
 
@@ -156,11 +162,13 @@ describe("generateSubgraph", () => {
     );
 
     // Generate again — should not overwrite
-    await tsMorphGenerateSubgraph({
-      subgraphsDir,
-      subgraphName: "idempotent-test",
-      documentModel: null,
-    });
+    await tsMorphGenerateSubgraph(
+      {
+        subgraphName: "idempotent-test",
+        documentModel: null,
+      },
+      outDir,
+    );
 
     const secondIndex = await readFile(
       join(subgraphsDir, "idempotent-test", "index.ts"),
@@ -182,11 +190,13 @@ describe("generateSubgraph", () => {
     );
 
     // Generate with document model
-    await tsMorphGenerateSubgraph({
-      subgraphsDir,
-      subgraphName: "force-test",
-      documentModel,
-    });
+    await tsMorphGenerateSubgraph(
+      {
+        subgraphName: "force-test",
+        documentModel,
+      },
+      outDir,
+    );
 
     const schema1 = await readFile(
       join(subgraphsDir, "force-test", "schema.ts"),
@@ -195,11 +205,13 @@ describe("generateSubgraph", () => {
     expect(schema1).toContain("TestDoc");
 
     // Regenerate — schema and resolvers should be overwritten (force behavior)
-    await tsMorphGenerateSubgraph({
-      subgraphsDir,
-      subgraphName: "force-test",
-      documentModel,
-    });
+    await tsMorphGenerateSubgraph(
+      {
+        subgraphName: "force-test",
+        documentModel,
+      },
+      outDir,
+    );
 
     await runTsc(outDir);
 

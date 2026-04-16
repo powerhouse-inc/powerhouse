@@ -177,12 +177,7 @@ async function makeOperationModuleTestFile(
 }
 
 async function makeDocumentModelTestFile(args: DocumentModelFileMakerArgs) {
-  const {
-    documentModelPackageImportPath,
-    versionedDocumentModelPackageImportPath,
-    project,
-    testsDirPath,
-  } = args;
+  const { project, testsDirPath } = args;
   const template = documentModelTestFileTemplate(args);
 
   const filePath = path.join(testsDirPath, "document-model.test.ts");
@@ -192,20 +187,8 @@ async function makeDocumentModelTestFile(args: DocumentModelFileMakerArgs) {
     filePath,
   );
 
-  if (alreadyExists) {
-    const importStatements = sourceFile.getImportDeclarations();
-    for (const importStatement of importStatements) {
-      const moduleSpecifier = importStatement.getModuleSpecifier();
-      const moduleSpecifierText = moduleSpecifier.getText();
-      if (moduleSpecifierText.includes(documentModelPackageImportPath)) {
-        moduleSpecifier.replaceWithText(
-          `"${versionedDocumentModelPackageImportPath}"`,
-        );
-      }
-    }
-  } else {
-    sourceFile.replaceWithText(template);
-  }
+  if (alreadyExists) return;
 
+  sourceFile.replaceWithText(template);
   await formatSourceFileWithPrettier(sourceFile);
 }

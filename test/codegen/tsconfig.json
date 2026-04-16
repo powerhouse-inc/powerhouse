@@ -56,7 +56,9 @@
     "dist",
     "node_modules",
     ".ph",
-    "vitest.config.ts"
+    "vitest.config.ts",
+    "test-projects",
+    "test-output"
   ],
   "references": [
     {

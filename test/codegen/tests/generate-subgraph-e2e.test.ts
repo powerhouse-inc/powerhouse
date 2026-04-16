@@ -39,7 +39,7 @@ async function generateSubgraphProject(outDirName: string) {
 
   // Generate the document model
   const documentModelsInDir = join(dataDir, DOCUMENT_MODELS);
-  await loadDocumentModelsInDir(documentModelsInDir, outDir, false);
+  await loadDocumentModelsInDir(documentModelsInDir, outDir);
 
   // Load the test-doc model state for subgraph generation
   const testDocState = await loadDocumentModel(
@@ -48,11 +48,13 @@ async function generateSubgraphProject(outDirName: string) {
 
   // Generate a subgraph for the test-doc model
   const subgraphsDir = join(outDir, "subgraphs");
-  await tsMorphGenerateSubgraph({
-    subgraphsDir,
-    subgraphName: "test-doc",
-    documentModel: testDocState,
-  });
+  await tsMorphGenerateSubgraph(
+    {
+      subgraphName: "test-doc",
+      documentModel: testDocState,
+    },
+    outDir,
+  );
 
   // Compile the generated project — this catches API mismatches in the
   // generated code (e.g. resolvers referencing non-existent properties

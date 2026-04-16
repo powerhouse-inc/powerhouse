@@ -7,5 +7,5 @@ export const documentModelsTemplate = ts`
  */
 import type { DocumentModelModule } from "document-model";
 
-export const documentModels: DocumentModelModule[] = [];
+export const documentModels: DocumentModelModule<any>[] = [];
 `.raw;

@@ -1,4 +1,5 @@
 import {
+  directoryExists,
   VERSIONED_DEPENDENCIES,
   VERSIONED_DEV_DEPENDENCIES,
 } from "@powerhousedao/shared/clis";
@@ -27,8 +28,9 @@ import {
   prop,
 } from "remeda";
 import { Project } from "ts-morph";
+import { formatSourceFileWithPrettier } from "utils";
 import { updatePackage } from "write-package";
-import { generateAll } from "./generate.js";
+import { generateAllDocumentModels } from "./generate.js";
 
 export async function getFullyQualifiedWorkspacePackageVersion(
   versionOrTag: string,
@@ -58,7 +60,7 @@ export async function fixLegacyImportPaths(
     const importStatements = sourceFile.getImportDeclarations();
     for (const importStatement of importStatements) {
       const moduleSpecifier = importStatement.getModuleSpecifier();
-      const moduleSpecifierText = moduleSpecifier.getText();
+      const moduleSpecifierText = moduleSpecifier.getLiteralText();
       if (moduleSpecifierText.includes(packageName)) {
         moduleSpecifier.replaceWithText(
           moduleSpecifierText.replace(`${packageName}/`, ""),
@@ -69,13 +71,11 @@ export async function fixLegacyImportPaths(
   await project.save();
 }
 
-export async function migrate(args: { version: string }) {
-  const { version } = args;
-
+export async function migrate(version: string, projectDir = process.cwd()) {
   const fullyQualifiedVersion =
     await getFullyQualifiedWorkspacePackageVersion(version);
 
-  const packageJson = await readPackage();
+  const packageJson = await readPackage({ cwd: projectDir });
   const exports = makePackageJsonExports();
   const scripts = merge(packageJson.scripts, packageScripts);
   const workspacePackageNames = filter(
@@ -117,30 +117,30 @@ export async function migrate(args: { version: string }) {
     ),
   );
   console.log("Updating package.json...");
-  await updatePackage({
+  await updatePackage(projectDir, {
     exports,
     scripts,
     dependencies,
     devDependencies,
   });
   console.log("Overwriting project root files...");
-  await writeGeneratedProjectRootFiles();
-  console.log("Moving unversioned document models...");
-  await moveLegacyDocumentModels();
+  await writeGeneratedProjectRootFiles(projectDir);
   const project = new Project({
-    tsConfigFilePath: path.join(process.cwd(), "tsconfig.json"),
+    tsConfigFilePath: path.join(projectDir, "tsconfig.json"),
   });
   console.log("Fixing legacy import paths...");
   await fixLegacyImportPaths(project, packageJson.name);
+  console.log("Moving unversioned document models...");
+  const documentModelsDir = join(projectDir, "document-models");
+  await moveLegacyDocumentModels(project, documentModelsDir);
   console.log("Re-generating document models with versioning if needed...");
-  await generateAll({
-    dir: process.cwd(),
-    useVersioning: true,
-  });
+  await generateAllDocumentModels(projectDir);
 }
 
-async function moveLegacyDocumentModels() {
-  const documentModelsDir = join(process.cwd(), "document-models");
+async function moveLegacyDocumentModels(
+  project: Project,
+  documentModelsDir: string,
+) {
   const documentModelDirNames = map(
     filter(
       await readdir(documentModelsDir, { withFileTypes: true }),
@@ -151,12 +151,10 @@ async function moveLegacyDocumentModels() {
   for (const documentModelDirName of documentModelDirNames) {
     const documentModelDir = join(documentModelsDir, documentModelDirName);
     const versionDir = join(documentModelDir, "v1");
-    const toIgnore = [
-      /^v\d+$/,
-      /upgrades/,
-      /index.ts/,
-      new RegExp(`${documentModelDirName}.json`),
-    ];
+    if (await directoryExists(versionDir)) {
+      continue;
+    }
+    const toIgnore = [/^v\d+$/, new RegExp(`${documentModelDirName}.json`)];
     const dirContents = await readdir(documentModelDir);
     const toCopy = filter(
       dirContents,
@@ -172,6 +170,21 @@ async function moveLegacyDocumentModels() {
         recursive: true,
         force: true,
       });
+    }
+    const projectVersionDir = project.addDirectoryAtPath(versionDir);
+    project.addSourceFilesAtPaths(join(versionDir, "**/*.ts"));
+    const versionDirSourceFiles = projectVersionDir.getDescendantSourceFiles();
+    for (const sourceFile of versionDirSourceFiles) {
+      const importStatements = sourceFile.getImportDeclarations();
+      for (const importStatement of importStatements) {
+        const moduleSpecifier = importStatement.getModuleSpecifier();
+        const moduleSpecifierText = moduleSpecifier.getLiteralText();
+
+        if (/^document-models\/.+/.test(moduleSpecifierText)) {
+          moduleSpecifier.setLiteralValue(join(moduleSpecifierText, "v1"));
+        }
+      }
+      await formatSourceFileWithPrettier(sourceFile);
     }
   }
 }

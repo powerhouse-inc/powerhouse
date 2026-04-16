@@ -1,6 +1,5 @@
 import { describe, expect, test } from "bun:test";
 import { join } from "node:path";
-import { Project, ts } from "ts-morph";
 import {
   DATA,
   DOCUMENT_MODELS,
@@ -30,119 +29,19 @@ await mkdirRecursive(parentOutDir);
 async function runDocumentModelTests(args: {
   testsDataDir: string;
   testOutputParentDir: string;
-  useVersioning?: boolean;
   inDirName: string;
   specDirName: string;
 }) {
-  const {
-    inDirName,
-    specDirName,
-    testsDataDir,
-    testOutputParentDir,
-    useVersioning = true,
-  } = args;
+  const { inDirName, specDirName, testsDataDir, testOutputParentDir } = args;
   const testProjectDir = join(testProjectsDir, inDirName);
   const documentModelsInDir = join(testsDataDir, specDirName);
   const outDir = join(testOutputParentDir, `${inDirName}-${specDirName}`);
   await rmForce(outDir);
   await cpForce(testProjectDir, outDir);
-  await loadDocumentModelsInDir(documentModelsInDir, outDir, useVersioning);
+  await loadDocumentModelsInDir(documentModelsInDir, outDir);
   await runTsc(outDir);
   return outDir;
 }
-
-async function checkFileContents(outDir: string) {
-  const project = new Project({
-    tsConfigFilePath: join(outDir, "tsconfig.json"),
-    skipAddingFilesFromTsConfig: true,
-    skipFileDependencyResolution: true,
-    skipLoadingLibFiles: true,
-  });
-  project.addSourceFilesAtPaths(join(outDir, "document-models/**/*"));
-
-  const documentModelsFile = project.getSourceFileOrThrow("document-models.ts");
-  const documentModelsArray = documentModelsFile
-    .getVariableStatementOrThrow("documentModels")
-    .getDescendantsOfKind(ts.SyntaxKind.ArrayLiteralExpression)
-    .at(0);
-
-  const elements = documentModelsArray!
-    .getElements()
-    .map((e) => e.getText())
-    .join(" ");
-  expect(elements).toContain("BillingStatement");
-  expect(elements).toContain("TestDoc");
-
-  const billingStatementErrorFile = await Bun.file(
-    join(
-      outDir,
-      "document-models",
-      "billing-statement",
-      "gen",
-      "general",
-      "error.ts",
-    ),
-  ).text();
-  expect(billingStatementErrorFile).toContain("export type ErrorCode");
-  expect(billingStatementErrorFile).toContain(`"InvalidStatusTransition"`);
-  expect(billingStatementErrorFile).toContain(
-    "export class InvalidStatusTransition extends Error implements ReducerError",
-  );
-  expect(billingStatementErrorFile).toContain(
-    `errorCode = "InvalidStatusTransition" as ErrorCode`,
-  );
-
-  const lineItemsErrorFile = await Bun.file(
-    join(
-      outDir,
-      "document-models",
-      "billing-statement",
-      "gen",
-      "line-items",
-      "error.ts",
-    ),
-  ).text();
-
-  expect(lineItemsErrorFile).toContain("export type ErrorCode =");
-  expect(lineItemsErrorFile).toContain(`"DuplicateLineItem"`);
-  expect(lineItemsErrorFile).toContain(`"InvalidStatusTransition"`);
-  expect(lineItemsErrorFile).toContain(
-    "export class DuplicateLineItem extends Error implements ReducerError",
-  );
-  expect(lineItemsErrorFile).toContain(
-    "export class InvalidStatusTransition extends Error implements ReducerError",
-  );
-
-  const errorCodeMatches = lineItemsErrorFile.match(
-    /"InvalidStatusTransition"/g,
-  );
-  expect(errorCodeMatches?.length).toBe(3);
-}
-
-describe("generate doc model", () => {
-  const testOutputParentDir = join(parentOutDir, "generate-doc-model");
-  const useVersioning = false;
-  test("generate document models", async () => {
-    const outDir = await runDocumentModelTests({
-      inDirName: NEW_PROJECT,
-      specDirName: DOCUMENT_MODELS,
-      testOutputParentDir,
-      testsDataDir: dataDir,
-      useVersioning,
-    });
-    await checkFileContents(outDir);
-  });
-  test("generate document models in existing project", async () => {
-    const outDir = await runDocumentModelTests({
-      inDirName: WITH_DOCUMENT_MODELS_SPEC_1,
-      specDirName: DOCUMENT_MODELS,
-      testOutputParentDir,
-      testsDataDir: dataDir,
-      useVersioning,
-    });
-    await checkFileContents(outDir);
-  });
-});
 
 describe("versioned document models", () => {
   const testOutputParentDir = join(parentOutDir, "versioned-document-models");

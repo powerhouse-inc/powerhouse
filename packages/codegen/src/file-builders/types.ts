@@ -61,7 +61,6 @@ export type ActionFromOperation = {
 export type GenerateDocumentModelArgs = {
   projectDir: string;
   documentModelState: DocumentModelGlobalState;
-  useVersioning: boolean;
 };
 
 export type DocumentModelFileMakerArgs = DocumentModelVariableNames &

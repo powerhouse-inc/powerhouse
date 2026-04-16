@@ -1,20 +1,15 @@
 import {
   generateApp,
-  generate as generateCode,
   generateDBSchema,
   generateEditor,
   generateFromFile,
-  generateImportScript,
   generateProcessor,
   generateSubgraph,
 } from "@powerhousedao/codegen";
-import { getConfig } from "@powerhousedao/config/node";
 import path from "path";
 import type { GenerateArgs } from "../types.js";
 
 export async function startGenerate(options: GenerateArgs) {
-  const config = getConfig();
-  const { skipFormat } = config;
   const {
     documentModelFilePositional,
     documentModelFileOption,
@@ -35,17 +30,12 @@ export async function startGenerate(options: GenerateArgs) {
     importScriptName,
     migrationFile,
     schemaFile,
-    verbose,
-    force,
-    useVersioning: useVersioningFlag,
     subgraphName,
-    migrateLegacy,
   } = options;
 
   const documentModelFile =
     documentModelFilePositional ?? documentModelFileOption;
 
-  const useVersioning = useVersioningFlag || migrateLegacy;
   const isDragAndDropEnabled = disableDragAndDrop !== true;
   const filePath = Array.isArray(documentModelFile)
     ? documentModelFile.join(" ")
@@ -70,7 +60,6 @@ export async function startGenerate(options: GenerateArgs) {
       editorId,
       editorDirName,
       documentTypes: [documentTypeToUse],
-      skipFormat,
     });
   } else if (appName !== undefined) {
     await generateApp({
@@ -79,34 +68,22 @@ export async function startGenerate(options: GenerateArgs) {
       appDirName,
       allowedDocumentTypes,
       isDragAndDropEnabled,
-      skipFormat,
     });
   } else if (processorName !== undefined) {
     await generateProcessor({
       processorName,
       processorType,
-      skipFormat,
       processorApps,
       documentTypes: [documentTypeToUse].filter((t) => t !== undefined),
     });
   } else if (subgraphName !== undefined) {
-    await generateSubgraph(subgraphName, filePath || null, config);
-  } else if (importScriptName !== undefined) {
-    await generateImportScript(importScriptName, config);
+    await generateSubgraph(subgraphName, filePath || null);
   } else if (migrationFile !== undefined) {
     await generateDBSchema({
       migrationFile: path.join(process.cwd(), migrationFile),
       schemaFile: schemaFile ? path.join(process.cwd(), schemaFile) : undefined,
     });
   } else if (filePath !== undefined) {
-    await generateFromFile({
-      path: filePath,
-      config,
-      options,
-      useVersioning,
-      migrateLegacy,
-    });
-  } else {
-    await generateCode(config, useVersioning, migrateLegacy);
+    await generateFromFile(filePath, process.cwd());
   }
 }

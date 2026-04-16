@@ -1,3 +1,5 @@
+import type { Manifest } from "@powerhousedao/shared";
+
 export const exportPaths = [
   "document-models",
   "editors",
@@ -63,3 +65,18 @@ export const externalDevDependencies = {
   "@vitejs/plugin-react": "6.0.1",
   "vite-tsconfig-paths": "6.1.1",
 } as const;
+
+export const defaultManifest: Manifest = {
+  name: "",
+  description: "",
+  category: "",
+  publisher: {
+    name: "",
+    url: "",
+  },
+  documentModels: [],
+  editors: [],
+  apps: [],
+  subgraphs: [],
+  processors: [],
+};

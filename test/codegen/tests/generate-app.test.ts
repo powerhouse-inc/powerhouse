@@ -33,7 +33,6 @@ describe("generateApp", () => {
     allowedDocumentTypes,
     appDirName: undefined,
     isDragAndDropEnabled: true,
-    skipFormat: false,
   };
 
   it("should generate a app with the correct files and content", async () => {

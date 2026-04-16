@@ -1,4 +1,4 @@
-import { generateApp, generateManifest } from "@powerhousedao/codegen";
+import { generateApp } from "@powerhousedao/codegen";
 import type {
   AppModuleGlobalState,
   AppModulePHState,
@@ -84,36 +84,6 @@ export class AppGenerator extends BaseDocumentGen {
         logger.info(
           `✅ App generation completed successfully for app: ${state.name}`,
         );
-
-        // Update the manifest with the new app
-        try {
-          logger.debug(
-            `🔄 Updating manifest with app: ${state.name} (ID: ${appId})`,
-          );
-
-          generateManifest(
-            {
-              apps: [
-                {
-                  id: appId,
-                  name: state.name,
-                  app: appId,
-                } as any,
-              ],
-            },
-            this.config.CURRENT_WORKING_DIR,
-          );
-
-          logger.debug(
-            `✅ Manifest updated successfully for app: ${state.name}`,
-          );
-        } catch (manifestError) {
-          logger.error(
-            `⚠️ Failed to update manifest for app ${state.name}:`,
-            manifestError,
-          );
-          // Don't throw here - app generation was successful
-        }
 
         // Backup the document
         const fullState = input.state as AppModulePHState;

@@ -16,10 +16,8 @@ export function getDocumentModelJsonFilePath(
 
 export async function loadDocumentModelsInDir(
   documentModelsInDir: string,
-  testOutDir: string,
-  useVersioning = true,
+  projectDir: string,
 ) {
-  const documentModelsOutDir = path.join(testOutDir, "document-models");
   const documentModelDirs = (
     await readdir(documentModelsInDir, {
       withFileTypes: true,
@@ -38,11 +36,7 @@ export async function loadDocumentModelsInDir(
   );
 
   for (const documentModelState of documentModelStates) {
-    await generateDocumentModel({
-      documentModelState,
-      dir: documentModelsOutDir,
-      useVersioning,
-    });
+    await generateDocumentModel(documentModelState, projectDir);
   }
 }
 

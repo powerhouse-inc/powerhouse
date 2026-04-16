@@ -123,7 +123,6 @@ export class ProcessorGenerator extends BaseDocumentGen {
           processorName: state.name,
           processorType,
           documentTypes,
-          skipFormat: this.config.PH_CONFIG.skipFormat,
           processorApps,
         });
 

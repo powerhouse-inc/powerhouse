@@ -1,7 +1,6 @@
 import type {
   DocumentModelFileMakerArgs,
   DocumentModelVariableNames,
-  GenerateDocumentModelArgs,
 } from "@powerhousedao/codegen";
 import { directoryExists, fileExists } from "@powerhousedao/shared/clis";
 import type { DocumentModelGlobalState } from "@powerhousedao/shared/document-model";
@@ -12,19 +11,28 @@ import {
 } from "name-builders";
 import { copyFile, mkdir, readdir, writeFile } from "node:fs/promises";
 import path from "path";
-import { type Project } from "ts-morph";
+import {
+  capitalize,
+  filter,
+  forEach,
+  isTruthy,
+  map,
+  pipe,
+  prop,
+  tap,
+  uniqueBy,
+} from "remeda";
+import { documentModelsTemplate, upgradeManifestsTemplate } from "templates";
+import { SyntaxKind, type Project } from "ts-morph";
 import {
   buildTsMorphProject,
   ensureDirectoriesExist,
   formatSourceFileWithPrettier,
   getInitialStates,
   getOrCreateSourceFile,
+  getVariableDeclarationByTypeName,
 } from "utils";
 import { generateDocumentModelZodSchemas } from "../../codegen/graphql.js";
-import {
-  makeDocumentModelModulesFile,
-  makeUpgradeManifestsFile,
-} from "../module-files.js";
 import { makeGenDirFiles } from "./gen-dir.js";
 import { makeRootDirFiles } from "./root-dir.js";
 import { makeSrcDirFiles } from "./src-dir.js";
@@ -35,17 +43,17 @@ import {
   makeUpgradeFile,
   makeUpgradesIndexFile,
 } from "./upgrades-dir.js";
+import { version } from "node:os";
 
 /** Generates a document model from the given `documentModelState`
  *
  * If `useVersioning` is set to true, it will generate versioned document model code
  * for each `specification` in the `documentModelState`
  */
-export async function tsMorphGenerateDocumentModel({
-  projectDir,
-  documentModelState,
-  useVersioning,
-}: GenerateDocumentModelArgs) {
+export async function tsMorphGenerateDocumentModel(
+  documentModelState: DocumentModelGlobalState,
+  projectDir: string,
+) {
   const project = buildTsMorphProject(projectDir);
   const documentModelsSourceFilesPath = path.join(
     projectDir,
@@ -66,9 +74,7 @@ export async function tsMorphGenerateDocumentModel({
     documentModelsDirPath,
     documentModelDirPath,
   );
-  if (useVersioning) {
-    await ensureDirectoriesExist(project, upgradesDirPath);
-  }
+  await ensureDirectoriesExist(project, upgradesDirPath);
   project.addSourceFilesAtPaths(documentModelsSourceFilesPath);
 
   const documentModelPackageImportPath = path.join(
@@ -105,34 +111,32 @@ export async function tsMorphGenerateDocumentModel({
     documentModelDirPath,
   });
 
-  if (useVersioning) {
-    await Promise.all(
-      specVersions.map(
-        async (version) =>
-          await generateDocumentModelForSpec({
-            project,
-            version,
-            useVersioning: true,
-            documentModelState,
-            projectDir,
-            documentModelsDirPath,
-            documentModelDirName,
-            documentModelDirPath,
-            documentModelPackageImportPath,
-            ...documentModelVariableNames,
-          }),
-      ),
-    );
+  await Promise.all(
+    specVersions.map(
+      async (version) =>
+        await generateDocumentModelForSpec({
+          project,
+          version,
+          useVersioning: true,
+          documentModelState,
+          projectDir,
+          documentModelsDirPath,
+          documentModelDirName,
+          documentModelDirPath,
+          documentModelPackageImportPath,
+          ...documentModelVariableNames,
+        }),
+    ),
+  );
 
-    for (const version of specVersions) {
-      await makeUpgradeFile({
-        version,
-        upgradesDirPath,
-        project,
-        documentModelPackageImportPath,
-        ...documentModelVariableNames,
-      });
-    }
+  for (const version of specVersions) {
+    await makeUpgradeFile({
+      version,
+      upgradesDirPath,
+      project,
+      documentModelPackageImportPath,
+      ...documentModelVariableNames,
+    });
 
     await makeDocumentModelIndexFile({
       project,
@@ -162,22 +166,66 @@ export async function tsMorphGenerateDocumentModel({
       specVersions,
       ...documentModelVariableNames,
     });
-  } else {
-    await generateDocumentModelForSpec({
-      project,
-      useVersioning: false,
-      version: latestVersion,
-      documentModelState,
-      projectDir,
-      documentModelsDirPath,
-      documentModelDirName,
-      documentModelDirPath,
-      documentModelPackageImportPath,
-      ...documentModelVariableNames,
-    });
   }
 
+  await makeDocumentModelsFile({ project, documentModelsDirPath });
+  await makeUpgradeManifestsFile({ project, documentModelsDirPath });
   await project.save();
+}
+
+async function makeUpgradeManifestsFile(args: {
+  project: Project;
+  documentModelsDirPath: string;
+}) {
+  const { project, documentModelsDirPath } = args;
+  const sourceFile = project.createSourceFile(
+    path.join(documentModelsDirPath, "upgrade-manifests.ts"),
+    upgradeManifestsTemplate,
+    { overwrite: true },
+  );
+
+  const upgradeManifestsArray = sourceFile
+    .getVariableDeclarationOrThrow("upgradeManifests")
+    .getFirstDescendantByKindOrThrow(SyntaxKind.ArrayLiteralExpression);
+
+  pipe(
+    project.getSourceFiles(),
+    // find the upgrade manifest files for each document model
+    filter((sourceFile) => sourceFile.getBaseName() === "upgrade-manifest.ts"),
+    // get the upgrade manifest objects
+    map((sourceFile) =>
+      getVariableDeclarationByTypeName(sourceFile, "UpgradeManifest"),
+    ),
+    filter(isTruthy),
+    // get name and dir for adding to upgradeManifests array and making import specifier
+    map((variableDeclaration) => ({
+      name: variableDeclaration.getName(),
+      // the upgrade-manifest.ts file lives in `document-models/{document-model-dir}/upgrades`
+      documentModelDir: variableDeclaration
+        .getSourceFile()
+        .getDirectory()
+        .getParentOrThrow()
+        .getBaseName(),
+    })),
+    uniqueBy(prop("name")),
+    // make named imports and module specifier to add for each upgrade manifest
+    map(({ name, documentModelDir }) => ({
+      name,
+      namedImports: [name],
+      moduleSpecifier: path.join(
+        "document-models",
+        documentModelDir,
+        "upgrades",
+      ),
+    })),
+    // add import of each upgrade manifest and add it to the upgradeManifests array
+    forEach(({ name, namedImports, moduleSpecifier }) => {
+      sourceFile.addImportDeclaration({ namedImports, moduleSpecifier });
+      upgradeManifestsArray.addElement(name);
+    }),
+  );
+
+  await formatSourceFileWithPrettier(sourceFile);
 }
 
 type GenerateDocumentModelFromSpecArgs = {
@@ -200,7 +248,6 @@ async function generateDocumentModelForSpec({
   documentModelsDirPath,
   documentModelDirName,
   documentModelDirPath,
-  useVersioning,
   version,
   ...documentModelVariableNames
 }: GenerateDocumentModelFromSpecArgs) {
@@ -214,7 +261,7 @@ async function generateDocumentModelForSpec({
     );
   }
 
-  const versionDirName = useVersioning ? `v${version}` : "";
+  const versionDirName = `v${version}`;
 
   const documentModelVersionDirName = path.join(
     documentModelDirName,
@@ -260,7 +307,6 @@ async function generateDocumentModelForSpec({
     project,
     projectDir,
     version,
-    useVersioning,
     documentTypeId,
     documentModelState,
     initialGlobalState,
@@ -292,26 +338,66 @@ async function generateDocumentModelForSpec({
   await makeGenDirFiles(fileMakerArgs);
   await makeSrcDirFiles(fileMakerArgs);
   await makeTestsDirFiles(fileMakerArgs);
-  await makeDocumentModelModulesFile(fileMakerArgs);
 
-  if (!useVersioning) return;
-
-  await makeUpgradeManifestsFile({
-    project,
-    projectDir,
-  });
-
-  const previousVersionDirPath = getPreviousVersionDirPath(
-    documentModelDirPath,
-    version,
-  );
-
-  if (!previousVersionDirPath) return;
+  const previousVersionDirPath =
+    getPreviousVersionDirPath(documentModelDirPath, version) ??
+    path.join(documentModelDirPath, "v1");
 
   await persistCustomFilesFromPreviousVersion({
     currentVersionDirPath: documentModelVersionDirPath,
     previousVersionDirPath,
   });
+}
+
+async function makeDocumentModelsFile(args: {
+  project: Project;
+  documentModelsDirPath: string;
+}) {
+  const { project, documentModelsDirPath } = args;
+  const sourceFile = project.createSourceFile(
+    path.join(documentModelsDirPath, "document-models.ts"),
+    documentModelsTemplate,
+    { overwrite: true },
+  );
+
+  const documentModelsArray = sourceFile
+    .getVariableDeclarationOrThrow("documentModels")
+    .getFirstDescendantByKindOrThrow(SyntaxKind.ArrayLiteralExpression);
+
+  pipe(
+    project
+      .getDirectoryOrThrow(documentModelsDirPath)
+      .getDescendantSourceFiles(),
+    filter((sourceFile) => sourceFile.getBaseName() === "module.ts"),
+    uniqueBy((sourceFile) => sourceFile.getFilePath()),
+    map((sourceFile) =>
+      getVariableDeclarationByTypeName(sourceFile, "DocumentModel"),
+    ),
+    filter(isTruthy),
+    map((variableDeclaration) => ({
+      name: variableDeclaration.getName(),
+      directory: variableDeclaration.getSourceFile().getDirectory(),
+    })),
+    map(({ name, directory }) => ({
+      name,
+      version: directory.getBaseName(),
+      documentModelDir: directory.getParentOrThrow().getBaseName(),
+    })),
+    filter(({ version }) => /^v\d+$/.test(version)),
+    map(({ name, version, documentModelDir }) => ({
+      name: `${name}${capitalize(version)}`,
+      namedImports: [`${name} as ${name}${capitalize(version)}`],
+      moduleSpecifier: path.join("document-models", documentModelDir, version),
+    })),
+    forEach(({ name, namedImports, moduleSpecifier }) => {
+      sourceFile.addImportDeclaration({
+        namedImports,
+        moduleSpecifier,
+      });
+      documentModelsArray.addElement(name);
+    }),
+  );
+  await formatSourceFileWithPrettier(sourceFile);
 }
 
 /** Writes a json file derived from a `documentModelState` */

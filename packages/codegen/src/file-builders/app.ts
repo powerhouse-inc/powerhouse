@@ -19,8 +19,7 @@ import {
   formatSourceFileWithPrettier,
   getOrCreateSourceFile,
 } from "utils";
-import { makeEditorModuleFile } from "./editor-common.js";
-import { makeEditorsModulesFile } from "./module-files.js";
+import { makeEditorModuleFile, makeEditorsFile } from "./editor-common.js";
 
 type GenerateAppArgs = CommonGenerateEditorArgs & {
   allowedDocumentModelIds: string[];
@@ -116,7 +115,7 @@ export async function tsMorphGenerateApp({
     documentModelId: "powerhouse/document-drive",
   });
 
-  await makeEditorsModulesFile(project, projectDir);
+  await makeEditorsFile({ project, editorsDirPath });
 
   await project.save();
 }

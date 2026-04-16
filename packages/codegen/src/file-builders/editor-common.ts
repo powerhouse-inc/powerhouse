@@ -1,8 +1,13 @@
 import { pascalCase } from "change-case";
 import path from "path";
-import { documentEditorModuleFileTemplate } from "templates";
-import type { Project } from "ts-morph";
-import { getOrCreateSourceFile } from "utils";
+import { filter, forEach, isTruthy, map, pipe, uniqueBy } from "remeda";
+import { documentEditorModuleFileTemplate, editorsTemplate } from "templates";
+import { SyntaxKind, type Project } from "ts-morph";
+import {
+  formatSourceFileWithPrettier,
+  getOrCreateSourceFile,
+  getVariableDeclarationByTypeName,
+} from "utils";
 
 type MakeEditorModuleFileArgs = {
   project: Project;
@@ -43,4 +48,51 @@ export function makeEditorModuleFile({
     documentTypes,
   });
   sourceFile.replaceWithText(template);
+}
+
+export async function makeEditorsFile(args: {
+  project: Project;
+  editorsDirPath: string;
+}) {
+  const { project, editorsDirPath } = args;
+  const sourceFile = project.createSourceFile(
+    path.join(editorsDirPath, "editors.ts"),
+    editorsTemplate,
+    { overwrite: true },
+  );
+
+  const editorsArray = sourceFile
+    .getVariableDeclarationOrThrow("editors")
+    .getFirstDescendantByKindOrThrow(SyntaxKind.ArrayLiteralExpression);
+
+  pipe(
+    project.getDirectoryOrThrow(editorsDirPath).getDescendantSourceFiles(),
+    filter((sourceFile) => sourceFile.getBaseName() === "module.ts"),
+    uniqueBy((sourceFile) => sourceFile.getFilePath()),
+    map((sourceFile) =>
+      getVariableDeclarationByTypeName(sourceFile, "EditorModule"),
+    ),
+    filter(isTruthy),
+    map((variableDeclaration) => ({
+      name: variableDeclaration.getName(),
+      editorDir: variableDeclaration
+        .getSourceFile()
+        .getDirectory()
+        .getBaseName(),
+    })),
+    map(({ name, editorDir }) => ({
+      name,
+      namedImports: [name],
+      moduleSpecifier: `./${path.join(editorDir, "module.js")}`,
+    })),
+    forEach(({ name, namedImports, moduleSpecifier }) => {
+      sourceFile.addImportDeclaration({
+        namedImports,
+        moduleSpecifier,
+      });
+      editorsArray.addElement(name);
+    }),
+  );
+
+  await formatSourceFileWithPrettier(sourceFile);
 }

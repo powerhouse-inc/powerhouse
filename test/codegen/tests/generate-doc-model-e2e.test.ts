@@ -39,7 +39,7 @@ async function generateDocModelProject(outDirName: string) {
   const outDir = join(parentOutDir, outDirName);
   await cpForce(join(testProjectDir, NEW_PROJECT), outDir);
   const documentModelsInDir = join(dataDir, DOCUMENT_MODELS);
-  await loadDocumentModelsInDir(documentModelsInDir, outDir, false);
+  await loadDocumentModelsInDir(documentModelsInDir, outDir);
   await runTsc(outDir);
   return outDir;
 }
@@ -81,6 +81,7 @@ describe("document model e2e integration", () => {
       outDir,
       "document-models",
       "billing-statement",
+      "v1",
       "module.ts",
     );
     const docModelModule = (await import(modulePath)) as {
@@ -134,6 +135,7 @@ describe("document model e2e integration", () => {
       outDir,
       "document-models",
       "billing-statement",
+      "v1",
       "module.ts",
     );
     const docModelModule = (await import(modulePath)) as {

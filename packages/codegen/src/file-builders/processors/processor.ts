@@ -17,26 +17,26 @@ import { tsMorphGenerateAnalyticsProcessor } from "./analytics.js";
 import { tsMorphGenerateRelationalDbProcessor } from "./relational-db.js";
 
 export async function tsMorphGenerateProcessor(args: {
+  projectDir: string;
   processorName: string;
   documentTypes: string[];
-  rootDir: string;
   processorType: "relationalDb" | "analytics";
   processorApps: ProcessorApps;
 }) {
   const {
+    projectDir,
     processorName,
     documentTypes,
-    rootDir,
     processorType,
     processorApps,
   } = args;
   const kebabCaseName = kebabCase(processorName);
   const camelCaseName = camelCase(processorName);
   const pascalCaseName = pascalCase(processorName);
-  const processorsDirPath = path.join(rootDir, "processors");
+  const processorsDirPath = path.join(projectDir, "processors");
   const dirPath = path.join(processorsDirPath, kebabCaseName);
   const sourceFilesPath = path.join(processorsDirPath, "**/*");
-  const project = buildTsMorphProject(rootDir);
+  const project = buildTsMorphProject(projectDir);
   await ensureDirectoriesExist(project, processorsDirPath, dirPath);
   project.addSourceFilesAtPaths(sourceFilesPath);
 
@@ -44,7 +44,6 @@ export async function tsMorphGenerateProcessor(args: {
     await tsMorphGenerateAnalyticsProcessor({
       processorName,
       documentTypes,
-      rootDir,
       camelCaseName,
       dirPath,
       kebabCaseName,
@@ -56,7 +55,6 @@ export async function tsMorphGenerateProcessor(args: {
     await tsMorphGenerateRelationalDbProcessor({
       processorName,
       documentTypes,
-      rootDir,
       camelCaseName,
       dirPath,
       kebabCaseName,
