@@ -1,3 +1,18 @@
+## 6.0.0-dev.175 (2026-04-16)
+
+### 🚀 Features
+
+- **design-system:** collapsible sections in package manager list ([32b60cefa](https://github.com/powerhouse-inc/powerhouse/commit/32b60cefa))
+
+### 🩹 Fixes
+
+- **design-system:** hide empty manifest fields in package list item ([557fd79e1](https://github.com/powerhouse-inc/powerhouse/commit/557fd79e1))
+- **design-system:** show "Installed" in package search for installed packages ([8637db2d2](https://github.com/powerhouse-inc/powerhouse/commit/8637db2d2))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 6.0.0-dev.174 (2026-04-15)
 
 ### 🩹 Fixes

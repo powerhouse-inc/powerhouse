@@ -1,3 +1,13 @@
+## 6.0.0-dev.175 (2026-04-16)
+
+### 🩹 Fixes
+
+- **builder-tools:** share React with CDN editors in dev ([8d4e23351](https://github.com/powerhouse-inc/powerhouse/commit/8d4e23351))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 6.0.0-dev.174 (2026-04-15)
 
 ### 🩹 Fixes

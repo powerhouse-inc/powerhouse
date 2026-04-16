@@ -1,3 +1,7 @@
+## 6.0.0-dev.175 (2026-04-16)
+
+This was a version bump only for @powerhousedao/common to align it with other projects, there were no code changes.
+
 ## 6.0.0-dev.174 (2026-04-15)
 
 ### 🩹 Fixes

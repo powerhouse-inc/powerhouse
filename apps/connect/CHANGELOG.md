@@ -1,3 +1,13 @@
+## 6.0.0-dev.175 (2026-04-16)
+
+### 🚀 Features
+
+- **connect:** retry default drives with backoff on startup race ([5c1cfd50f](https://github.com/powerhouse-inc/powerhouse/commit/5c1cfd50f))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 6.0.0-dev.174 (2026-04-15)
 
 ### 🩹 Fixes
