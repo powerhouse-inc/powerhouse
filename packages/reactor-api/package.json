@@ -116,7 +116,7 @@
     "vitest": "catalog:"
   },
   "peerDependencies": {
-    "vite": "catalog:"
+    "vite": "^8.0.0"
   },
   "peerDependenciesMeta": {
     "vite": {
