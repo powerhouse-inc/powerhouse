@@ -29,4 +29,9 @@ export interface IPackageManager extends IDocumentModelLoader {
   subscribe(handler: IPackagesListener): IPackageListerUnsubscribe;
   getPackageSource: (packageName: string) => RegistryPackageSource | null;
   getPackageVersion: (packageName: string) => string | undefined;
+  addLocalPackage: (
+    name: string,
+    loadedPackage: DocumentModelLib,
+    version?: string,
+  ) => void;
 }
