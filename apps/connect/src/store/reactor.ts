@@ -115,6 +115,11 @@ export async function createReactor(localPackage?: DocumentModelLib) {
   );
   setVetraPackageManager(packageManager);
   await packageManager.init(localPackage, packagesConfig.localPackage?.version);
+  // Register any packages marked as provider: "local" in powerhouse.config.json
+  // that the vite plugin bundled into this build. No-op when none were bundled.
+  const { default: registerBundledPackages } =
+    await import("virtual:ph-bundled-packages");
+  registerBundledPackages(packageManager);
   const packagesResult = await packageManager.addPackages(
     packagesConfig.packages,
   );
