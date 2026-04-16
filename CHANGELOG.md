@@ -1,3 +1,14 @@
+## 6.0.0-dev.176 (2026-04-16)
+
+### 🩹 Fixes
+
+- update lockfile ([728604c16](https://github.com/powerhouse-inc/powerhouse/commit/728604c16))
+- **reactor-api:** make vite dependency more permissive ([273f1586c](https://github.com/powerhouse-inc/powerhouse/commit/273f1586c))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.0.0-dev.175 (2026-04-16)
 
 ### 🚀 Features

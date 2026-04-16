@@ -1,3 +1,13 @@
+## 6.0.0-dev.176 (2026-04-16)
+
+### 🩹 Fixes
+
+- update lockfile ([728604c16](https://github.com/powerhouse-inc/powerhouse/commit/728604c16))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.0.0-dev.175 (2026-04-16)
 
 This was a version bump only for @powerhousedao/registry to align it with other projects, there were no code changes.
