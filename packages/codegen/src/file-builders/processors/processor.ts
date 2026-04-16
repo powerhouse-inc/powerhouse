@@ -3,6 +3,7 @@ import type {
   ProcessorApps,
 } from "@powerhousedao/shared/processors";
 import { camelCase, kebabCase, pascalCase } from "change-case";
+import { createOrUpdateManifest } from "file-builders";
 import path from "path";
 import { factoryBuildersTemplate } from "templates";
 import type { SourceFile } from "ts-morph";
@@ -74,6 +75,12 @@ export async function tsMorphGenerateProcessor(args: {
     });
   }
   await project.save();
+  await createOrUpdateManifest(
+    {
+      processors: [{ name: processorName, id: kebabCaseName }],
+    },
+    projectDir,
+  );
 }
 
 async function updateFactoryBuildersFile(v: {

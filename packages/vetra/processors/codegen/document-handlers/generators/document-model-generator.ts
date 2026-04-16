@@ -79,7 +79,7 @@ export class DocumentModelGenerator extends BaseDocumentGen {
       `🔄 Starting code generation for document model: ${globalState.name}`,
     );
     try {
-      await generateDocumentModel(globalState, process.cwd());
+      await generateDocumentModel(globalState, this.config.CURRENT_WORKING_DIR);
       logger.info(
         `✅ Code generation completed successfully for: ${globalState.name}`,
       );

@@ -1,5 +1,4 @@
 import { generateSubgraph } from "@powerhousedao/codegen";
-import { kebabCase } from "change-case";
 import type {
   SubgraphModulePHState,
   SubgraphModuleState,
@@ -70,10 +69,11 @@ export class SubgraphGenerator extends BaseDocumentGen {
     if (state.name && state.status === "CONFIRMED") {
       logger.info(`🔄 Starting subgraph generation for: ${state.name}`);
       try {
-        // Generate subgraph ID using kebabCase
-        const subgraphId: string = kebabCase(state.name);
-
-        await generateSubgraph(state.name, null);
+        await generateSubgraph(
+          state.name,
+          null,
+          this.config.CURRENT_WORKING_DIR,
+        );
         logger.info(
           `✅ Subgraph generation completed successfully for: ${state.name}`,
         );

@@ -73,13 +73,16 @@ export class AppGenerator extends BaseDocumentGen {
         // Generate app ID using kebabCase
         const appId: string = kebabCase(state.name);
         // Generate the app using the codegen function
-        await generateApp({
-          ...this.config.PH_CONFIG,
-          appName: state.name,
-          appId: appId,
-          allowedDocumentTypes: state.allowedDocumentTypes ?? [],
-          isDragAndDropEnabled: state.isDragAndDropEnabled,
-        });
+        await generateApp(
+          {
+            ...this.config.PH_CONFIG,
+            appName: state.name,
+            appId: appId,
+            allowedDocumentTypes: state.allowedDocumentTypes ?? [],
+            isDragAndDropEnabled: state.isDragAndDropEnabled,
+          },
+          this.config.CURRENT_WORKING_DIR,
+        );
 
         logger.info(
           `✅ App generation completed successfully for app: ${state.name}`,

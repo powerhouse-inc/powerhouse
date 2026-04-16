@@ -1,5 +1,6 @@
 import type { DocumentModelGlobalState } from "@powerhousedao/shared/document-model";
 import { camelCase, kebabCase, pascalCase } from "change-case";
+import { createOrUpdateManifest } from "file-builders";
 import path from "path";
 import { filter, isTruthy, map, pipe, uniqueBy } from "remeda";
 import {
@@ -60,6 +61,12 @@ export async function tsMorphGenerateSubgraph(
 
   await makeSubgraphsIndexFile({ project, subgraphsDir });
   await project.save();
+  await createOrUpdateManifest(
+    {
+      subgraphs: [{ name: subgraphName, id: kebabCaseName }],
+    },
+    projectDir,
+  );
 }
 
 async function makeBaseSubgraphIndexFile(

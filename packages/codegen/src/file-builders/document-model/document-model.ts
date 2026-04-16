@@ -5,6 +5,7 @@ import type {
 import { directoryExists, fileExists } from "@powerhousedao/shared/clis";
 import type { DocumentModelGlobalState } from "@powerhousedao/shared/document-model";
 import { kebabCase } from "change-case";
+import { createOrUpdateManifest } from "file-builders";
 import {
   getDocumentModelDirName,
   getDocumentModelVariableNames,
@@ -19,7 +20,6 @@ import {
   map,
   pipe,
   prop,
-  tap,
   uniqueBy,
 } from "remeda";
 import { documentModelsTemplate, upgradeManifestsTemplate } from "templates";
@@ -43,7 +43,6 @@ import {
   makeUpgradeFile,
   makeUpgradesIndexFile,
 } from "./upgrades-dir.js";
-import { version } from "node:os";
 
 /** Generates a document model from the given `documentModelState`
  *
@@ -171,6 +170,17 @@ export async function tsMorphGenerateDocumentModel(
   await makeDocumentModelsFile({ project, documentModelsDirPath });
   await makeUpgradeManifestsFile({ project, documentModelsDirPath });
   await project.save();
+  await createOrUpdateManifest(
+    {
+      documentModels: [
+        {
+          name: documentModelState.name,
+          id: documentModelState.id,
+        },
+      ],
+    },
+    projectDir,
+  );
 }
 
 async function makeUpgradeManifestsFile(args: {

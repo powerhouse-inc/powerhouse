@@ -1,4 +1,5 @@
 import type { CommonGenerateEditorArgs } from "@powerhousedao/codegen";
+import { createOrUpdateManifest } from "file-builders";
 import path from "path";
 import {
   appConfigFileTemplate,
@@ -116,8 +117,19 @@ export async function tsMorphGenerateApp({
   });
 
   await makeEditorsFile({ project, editorsDirPath });
-
   await project.save();
+  await createOrUpdateManifest(
+    {
+      apps: [
+        {
+          name: editorName,
+          id: editorId,
+          documentTypes: ["powerhousedao/document-drive"],
+        },
+      ],
+    },
+    projectDir,
+  );
 }
 
 type MakeAppComponentArgs = {

@@ -83,12 +83,15 @@ export class DocumentEditorGenerator extends BaseDocumentGen {
       const editorId: string = kebabCase(state.name);
 
       // Generate the editor using the codegen function
-      await generateEditor({
-        ...this.config.PH_CONFIG,
-        editorName: state.name,
-        documentTypes: documentTypes,
-        editorId: editorId,
-      });
+      await generateEditor(
+        {
+          ...this.config.PH_CONFIG,
+          editorName: state.name,
+          documentTypes: documentTypes,
+          editorId: editorId,
+        },
+        this.config.CURRENT_WORKING_DIR,
+      );
 
       logger.info(
         `✅ Editor generation completed successfully for: ${state.name}`,

@@ -2,6 +2,7 @@ import type {
   CommonGenerateEditorArgs,
   EditorVariableNames,
 } from "@powerhousedao/codegen";
+import { createOrUpdateManifest } from "file-builders";
 import { getEditorVariableNames } from "name-builders";
 import path from "path";
 import { documentEditorEditorFileTemplate } from "templates";
@@ -71,8 +72,19 @@ export async function tsMorphGenerateDocumentEditor({
   });
 
   await makeEditorsFile({ project, editorsDirPath });
-
   await project.save();
+  await createOrUpdateManifest(
+    {
+      editors: [
+        {
+          name: editorName,
+          id: editorId,
+          documentTypes: [documentTypeMetadata.documentModelId],
+        },
+      ],
+    },
+    projectDir,
+  );
 }
 
 type MakeEditorComponentArgs = EditorVariableNames & {
