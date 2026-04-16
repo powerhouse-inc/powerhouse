@@ -59,7 +59,7 @@ export const SearchAutocomplete: React.FC<SearchAutocompleteProps> = (
 
   const handleSubmit = useCallback(() => {
     if (query.trim()) {
-      handleSelect(query.trim());
+      void handleSelect(query.trim());
     }
   }, [query, handleSelect]);
 
@@ -131,6 +131,11 @@ export const SearchAutocomplete: React.FC<SearchAutocompleteProps> = (
                   <p className="truncate text-sm font-medium text-gray-900">
                     {option.label}
                   </p>
+                  {option.version && (
+                    <p className="truncate text-xs text-gray-500">
+                      v{option.version}
+                    </p>
+                  )}
                   {option.description && (
                     <p className="truncate text-xs text-gray-500">
                       {option.description}
@@ -153,7 +158,7 @@ export const SearchAutocomplete: React.FC<SearchAutocompleteProps> = (
                 </span>
               ) : (
                 <button
-                  onClick={() => handleSelect(option.value)}
+                  onClick={() => void handleSelect(option.value)}
                   disabled={selectingValue === option.value}
                   className="shrink-0 rounded-md bg-gray-900 px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-gray-800 disabled:opacity-50"
                 >

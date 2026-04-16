@@ -39,7 +39,8 @@
       "import": "./dist/processors/index.js"
     },
     "./manifest": "./dist/powerhouse.manifest.json",
-    "./style.css": "./dist/style.css"
+    "./style.css": "./dist/style.css",
+    "./package.json": "./package.json"
   },
   "scripts": {
     "tsc": "tsc",

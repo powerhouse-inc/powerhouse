@@ -63,7 +63,14 @@ export const PackageManagerListItem = (props: {
         className,
       )}
     >
-      <h3 className="font-semibold text-gray-900">{registryPackage.name}</h3>
+      <h3 className="font-semibold text-gray-900">
+        {registryPackage.name}
+        {registryPackage.version ? (
+          <span className="ml-2 text-xs font-normal text-gray-500">
+            v{registryPackage.version}
+          </span>
+        ) : null}
+      </h3>
       {registryPackage.manifest !== null &&
         (() => {
           const { description, category, publisher } = registryPackage.manifest;

@@ -34,6 +34,7 @@ export const PackageManagerInput: React.FC<PackageManagerInputProps> = (
           return {
             value: pkg.name,
             label: pkg.name,
+            version: pkg.version,
             description: pkg.manifest?.description,
             meta: pkg.manifest?.publisher?.name,
             disabled: isInstalled,

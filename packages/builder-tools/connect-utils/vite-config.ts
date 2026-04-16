@@ -296,6 +296,7 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
       // files, preventing tailwind from triggering full page reloads.
       phPackagesPlugin({
         packages: phPackages,
+        projectRoot: options.dirname,
       }),
       // Dev-only: rewrite the importmap so it points at Vite's pre-bundled
       // React (the same URL Connect's own modules resolve to). Without this,

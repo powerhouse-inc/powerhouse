@@ -4,6 +4,7 @@ export interface PackageInfo {
   path: string;
   manifest: Manifest | null;
   documentTypes: string[];
+  version?: string;
 }
 
 export type RegistryPackageStatus =

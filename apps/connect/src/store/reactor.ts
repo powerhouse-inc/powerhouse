@@ -114,7 +114,7 @@ export async function createReactor(localPackage?: DocumentModelLib) {
     PH_PACKAGE_REGISTRY_URL,
   );
   setVetraPackageManager(packageManager);
-  await packageManager.init(localPackage);
+  await packageManager.init(localPackage, packagesConfig.localPackage?.version);
   const packagesResult = await packageManager.addPackages(
     packagesConfig.packages,
   );
