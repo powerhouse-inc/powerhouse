@@ -30,7 +30,10 @@ import {
 import { Project } from "ts-morph";
 import { formatSourceFileWithPrettier } from "utils";
 import { updatePackage } from "write-package";
-import { generateAllDocumentModels } from "./generate.js";
+import {
+  generateAllDocumentModels,
+  generateAllEditorsAndApps,
+} from "./generate.js";
 
 export async function getFullyQualifiedWorkspacePackageVersion(
   versionOrTag: string,
@@ -135,6 +138,7 @@ export async function migrate(version: string, projectDir = process.cwd()) {
   await moveLegacyDocumentModels(project, documentModelsDir);
   console.log("Re-generating document models with versioning if needed...");
   await generateAllDocumentModels(projectDir);
+  await generateAllEditorsAndApps(projectDir);
 }
 
 async function moveLegacyDocumentModels(
