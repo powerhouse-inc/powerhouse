@@ -19,6 +19,7 @@ import {
   find,
   flatMap,
   isDefined,
+  isEmpty,
   isIncludedIn,
   isString,
   isTruthy,
@@ -29,12 +30,7 @@ import {
   when,
 } from "remeda";
 import { SyntaxKind } from "ts-morph";
-import {
-  buildTsMorphProject,
-  getObjectLiteral,
-  getObjectProperty,
-  getVariableDeclarationByTypeName,
-} from "utils";
+import { buildTsMorphProject, getObjectProperty } from "utils";
 import { tsMorphGenerateProcessor } from "../file-builders/processors/processor.js";
 import { loadDocumentModel } from "./utils.js";
 
@@ -437,6 +433,10 @@ export async function generateAllProcessors(projectDir = process.cwd()) {
         when(
           () => isIncludedIn(processorName, switchboardProcessorNames),
           (processorApps) => [...processorApps, "switchboard"],
+        ),
+        when(
+          (processorApps) => isEmpty(processorApps),
+          () => ["connect", "switchboard"],
         ),
       ),
       processorType: pipe(

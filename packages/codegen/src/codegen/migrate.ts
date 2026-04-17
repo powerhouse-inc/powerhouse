@@ -133,7 +133,7 @@ export async function migrate(version: string, projectDir = process.cwd()) {
   console.log("Moving unversioned document models...");
   const documentModelsDir = join(projectDir, "document-models");
   await moveLegacyDocumentModels(project, documentModelsDir);
-  console.log("Re-generating document models with versioning if needed...");
+  console.log("Re-generating code...");
   await generateAll(projectDir);
 }
 
