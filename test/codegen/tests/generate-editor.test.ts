@@ -1,4 +1,4 @@
-import { generateEditor } from "@powerhousedao/codegen";
+import { generateAllEditors, generateEditor } from "@powerhousedao/codegen";
 import { directoryExists, fileExists } from "@powerhousedao/shared/clis";
 import { afterAll, describe, expect, it } from "bun:test";
 import { readFile } from "node:fs/promises";
@@ -79,6 +79,7 @@ describe("generateEditor", () => {
     await generateEditor({
       ...options,
     });
+    await generateAllEditors(outDir);
     const editorsDir = join(outDir, "editors");
     const editorsFilePath = join(editorsDir, "editors.ts");
     const editorsContent = await readFile(editorsFilePath, "utf-8");

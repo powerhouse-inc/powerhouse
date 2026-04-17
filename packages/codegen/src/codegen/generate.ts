@@ -112,14 +112,75 @@ export async function generateEditor(
   });
 }
 
+export async function generateAllEditors(projectDir = process.cwd()) {
+  const project = buildTsMorphProject(projectDir);
+  const editorsDirPath = path.join(projectDir, "editors");
+  project.addSourceFilesAtPaths(path.join(editorsDirPath, "**/*"));
+
+  const editorDirs =
+    project.getDirectory(editorsDirPath)?.getDirectories() ?? [];
+
+  const editorsToAdd = pipe(
+    editorDirs,
+    map((dir) => dir.getSourceFile("module.ts")),
+    filter(isTruthy),
+    map((sourceFile) =>
+      sourceFile.getDescendantsOfKind(SyntaxKind.PropertyAssignment),
+    ),
+    map((propertyAssignments) => ({
+      id: find(
+        propertyAssignments,
+        (propertyAssignment) => propertyAssignment.getName() === "id",
+      ),
+      name: find(
+        propertyAssignments,
+        (propertyAssignment) => propertyAssignment.getName() === "name",
+      ),
+      documentTypes: find(
+        propertyAssignments,
+        (propertyAssignment) =>
+          propertyAssignment.getName() === "documentTypes",
+      ),
+    })),
+    map(({ id, name, documentTypes }) => ({
+      editorDirName: id?.getSourceFile().getDirectory().getBaseName(),
+      editorId: id
+        ?.getFirstDescendantByKind(SyntaxKind.StringLiteral)
+        ?.getLiteralValue(),
+      editorName: name
+        ?.getFirstDescendantByKind(SyntaxKind.StringLiteral)
+        ?.getLiteralValue(),
+      documentTypes: pipe(
+        documentTypes
+          ?.getFirstDescendantByKind(SyntaxKind.ArrayLiteralExpression)
+          ?.getElements() ?? [],
+        map((element) =>
+          element.asKind(SyntaxKind.StringLiteral)?.getLiteralValue(),
+        ),
+        filter(isString),
+      ),
+    })),
+    filter(
+      ({ documentTypes }) =>
+        !documentTypes.includes("powerhouse/document-drive"),
+    ),
+  );
+
+  for (const editorToAdd of editorsToAdd) {
+    if (editorToAdd.editorDirName === undefined) return;
+    await generateEditor(editorToAdd as GenerateEditorArgs, projectDir);
+  }
+}
+
+type GenerateAppArgs = {
+  appName: string;
+  appId?: string;
+  allowedDocumentTypes?: string[];
+  isDragAndDropEnabled?: boolean;
+  appDirName?: string;
+};
 export async function generateApp(
-  options: {
-    appName: string;
-    appId?: string;
-    allowedDocumentTypes?: string[];
-    isDragAndDropEnabled?: boolean;
-    appDirName?: string;
-  },
+  args: GenerateAppArgs,
   projectDir = process.cwd(),
 ) {
   const {
@@ -128,7 +189,7 @@ export async function generateApp(
     allowedDocumentTypes,
     isDragAndDropEnabled,
     appDirName,
-  } = options;
+  } = args;
 
   await tsMorphGenerateApp({
     projectDir,
@@ -140,111 +201,107 @@ export async function generateApp(
   });
 }
 
-export async function generateAllEditorsAndApps(projectDir: string) {
+export async function generateAllApps(projectDir = process.cwd()) {
   const project = buildTsMorphProject(projectDir);
-  const editorsDir = path.join(projectDir, "editors");
-  project.addSourceFilesAtPaths(path.join(editorsDir, "**/*"));
-  const editorDirs = pipe(
-    await readdir(editorsDir, { withFileTypes: true }),
-    filter((fileOrDir) => fileOrDir.isDirectory()),
-    map((dir) => dir.name),
-  );
-  const editorConfigs = pipe(
+  const editorsDirPath = path.join(projectDir, "editors");
+  project.addSourceFilesAtPaths(path.join(editorsDirPath, "**/*"));
+
+  const editorDirs =
+    project.getDirectory(editorsDirPath)?.getDirectories() ?? [];
+
+  const appsToAdd = pipe(
     editorDirs,
-    map((editorDir) =>
-      project.getSourceFile(path.join(editorsDir, editorDir, "module.ts")),
-    ),
+    map((dir) => dir.getSourceFile("module.ts")),
     filter(isTruthy),
     map((sourceFile) =>
-      sourceFile.getVariableStatement(
-        getVariableDeclarationByTypeName(
-          sourceFile,
-          "EditorModule",
-        )?.getName() ?? "",
-      ),
+      sourceFile.getDescendantsOfKind(SyntaxKind.PropertyAssignment),
     ),
-    map(getObjectLiteral),
-    filter(isTruthy),
-    map((literal) => ({
-      config: getObjectProperty(
-        literal,
-        "config",
-        SyntaxKind.ObjectLiteralExpression,
+    map((propertyAssignments) => ({
+      id: find(
+        propertyAssignments,
+        (propertyAssignment) => propertyAssignment.getName() === "id",
       ),
-      documentTypes: getObjectProperty(
-        literal,
-        "documentTypes",
-        SyntaxKind.ArrayLiteralExpression,
+      name: find(
+        propertyAssignments,
+        (propertyAssignment) => propertyAssignment.getName() === "name",
+      ),
+      documentTypes: find(
+        propertyAssignments,
+        (propertyAssignment) =>
+          propertyAssignment.getName() === "documentTypes",
       ),
     })),
-    map(({ config, documentTypes }) => ({
-      sourceFile: config?.getSourceFile(),
-      id: getObjectProperty(
-        config,
-        "id",
-        SyntaxKind.StringLiteral,
-      )?.getLiteralValue(),
-      name: getObjectProperty(
-        config,
-        "name",
-        SyntaxKind.StringLiteral,
-      )?.getLiteralValue(),
+    map(({ id, name, documentTypes }) => ({
+      appDir: id?.getSourceFile().getDirectory(),
+      appId: id
+        ?.getFirstDescendantByKind(SyntaxKind.StringLiteral)
+        ?.getLiteralValue(),
+      appName: name
+        ?.getFirstDescendantByKind(SyntaxKind.StringLiteral)
+        ?.getLiteralValue(),
       documentTypes: pipe(
-        documentTypes?.getElements() ?? [],
-        map((item) => item.asKind(SyntaxKind.StringLiteral)),
-        filter(isTruthy),
-        map((item) => item.getLiteralValue()),
+        documentTypes
+          ?.getFirstDescendantByKind(SyntaxKind.ArrayLiteralExpression)
+          ?.getElements() ?? [],
+        map((element) =>
+          element.asKind(SyntaxKind.StringLiteral)?.getLiteralValue(),
+        ),
+        filter(isString),
       ),
     })),
-  );
-  const apps = filter(editorConfigs, ({ documentTypes }) =>
-    documentTypes.includes("powerhouse/document-drive"),
-  );
-  const documentEditors = filter(
-    editorConfigs,
-    ({ documentTypes }) => !documentTypes.includes("powerhouse/document-drive"),
+    filter(({ documentTypes }) =>
+      documentTypes.includes("powerhouse/document-drive"),
+    ),
+    map(({ appDir, ...rest }) => ({
+      appDirName: appDir?.getBaseName(),
+      configFilePropertyAssignments:
+        appDir
+          ?.getSourceFile("config.ts")
+          ?.getDescendantsOfKind(SyntaxKind.PropertyAssignment) ?? [],
+      ...rest,
+    })),
+    map(({ configFilePropertyAssignments, ...rest }) => ({
+      isDragAndDropEnabled: find(
+        configFilePropertyAssignments,
+        (propertyAssignment) =>
+          propertyAssignment.getName() === "isDragAndDropEnabled",
+      ),
+      allowedDocumentTypes: find(
+        configFilePropertyAssignments,
+        (propertyAssignment) =>
+          propertyAssignment.getName() === "allowedDocumentTypes",
+      ),
+      ...rest,
+    })),
+    map(({ isDragAndDropEnabled, allowedDocumentTypes, ...rest }) => ({
+      isDragAndDropEnabled: when(
+        isDragAndDropEnabled?.getDescendants() ?? [],
+        (descendants) =>
+          isDefined(
+            find(descendants, (d) => d.getKind() === SyntaxKind.TrueKeyword),
+          ),
+        {
+          onTrue: () => true,
+          onFalse: () => false,
+        },
+      ),
+      allowedDocumentTypes: pipe(
+        allowedDocumentTypes
+          ?.getFirstDescendantByKind(SyntaxKind.ArrayLiteralExpression)
+          ?.getElements() ?? [],
+        map((element) =>
+          element.asKind(SyntaxKind.StringLiteral)?.getLiteralValue(),
+        ),
+        filter(isString),
+      ),
+      ...rest,
+    })),
   );
 
-  for (const { name, id, documentTypes, sourceFile } of documentEditors) {
-    if (!name || !id || !documentTypes.length || !sourceFile) return;
-    await generateEditor(
-      {
-        editorName: name,
-        editorId: id,
-        documentTypes,
-        editorDirName: sourceFile.getDirectory().getBaseName(),
-      },
-      projectDir,
-    ).catch(console.error);
-  }
+  for (const appToAdd of appsToAdd) {
+    if (appToAdd.appName === undefined) return;
 
-  for (const { name, id, documentTypes, sourceFile } of apps) {
-    if (!name || !id || !documentTypes.length || !sourceFile) return;
-    const directory = sourceFile.getDirectory();
-    const configFile = directory.getSourceFile("config.ts");
-    if (!configFile) return;
-    const configObject = getObjectLiteral(
-      configFile.getVariableStatement("editorConfig"),
-    );
-    const allowedDocumentTypes = pipe(
-      getObjectProperty(
-        configObject,
-        "allowedDocumentTypes",
-        SyntaxKind.ArrayLiteralExpression,
-      )?.getElements() ?? [],
-      map((item) => item.asKind(SyntaxKind.StringLiteral)),
-      filter(isTruthy),
-      map((item) => item.getLiteralValue()),
-    );
-    await generateApp(
-      {
-        appName: name,
-        appId: id,
-        appDirName: directory.getBaseName(),
-        allowedDocumentTypes,
-      },
-      projectDir,
-    ).catch(console.error);
+    await generateApp(appToAdd as GenerateAppArgs, projectDir);
   }
 }
 export async function generateSubgraph(
@@ -445,4 +502,12 @@ export async function generateAllProcessors(projectDir = process.cwd()) {
       projectDir,
     );
   }
+}
+
+export async function generateAll(projectDir = process.cwd()) {
+  await generateAllDocumentModels(projectDir);
+  await generateAllEditors(projectDir);
+  await generateAllApps(projectDir);
+  await generateAllSubgraphs(projectDir);
+  await generateAllProcessors(projectDir);
 }

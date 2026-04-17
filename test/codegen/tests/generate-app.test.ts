@@ -1,4 +1,4 @@
-import { generateApp } from "@powerhousedao/codegen";
+import { generateAllApps, generateApp } from "@powerhousedao/codegen";
 import { directoryExists, fileExists } from "@powerhousedao/shared/clis";
 import { afterAll, describe, expect, it } from "bun:test";
 import { readFile } from "node:fs/promises";
@@ -155,6 +155,7 @@ describe("generateApp", () => {
     expect(editorsContent).toContain(`ExistingDocumentEditor`);
     expect(editorsContent).toContain(`ExistingApp`);
 
+    await generateAllApps(outDir);
     await runTsc(outDir);
   });
 });
