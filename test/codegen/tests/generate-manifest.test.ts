@@ -157,6 +157,13 @@ describe("generateManifest", () => {
           documentTypes: ["test/doc"],
         },
       ],
+      config: [
+        {
+          name: "TEST_SECRET",
+          type: "secret" as const,
+          required: true,
+        },
+      ],
     };
 
     const testOutDirPath = join(testOutputParentDir, "validate-json-structure");
