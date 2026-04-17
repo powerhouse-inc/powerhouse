@@ -1,4 +1,7 @@
-import { generateProcessor } from "@powerhousedao/codegen";
+import {
+  generateAllProcessors,
+  generateProcessor,
+} from "@powerhousedao/codegen";
 import type { ReactorModule } from "@powerhousedao/reactor";
 import { ReactorBuilder } from "@powerhousedao/reactor";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
@@ -72,6 +75,8 @@ async function runProcessorTests(args: {
     );
   }
   await $`bun run --cwd ${outDir} tsc`;
+  await generateAllProcessors(outDir);
+
   return outDir;
 }
 
@@ -596,6 +601,8 @@ describe("processor e2e integration", () => {
         n.toLowerCase().includes("isomorphic"),
       ),
     ).toHaveLength(2);
+
+    await generateAllProcessors(outDir);
   });
 });
 

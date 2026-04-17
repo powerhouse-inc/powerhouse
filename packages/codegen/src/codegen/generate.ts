@@ -1,6 +1,9 @@
 import { fileExists } from "@powerhousedao/shared/clis";
 import { type DocumentModelGlobalState } from "@powerhousedao/shared/document-model";
-import type { ProcessorApps } from "@powerhousedao/shared/processors";
+import type {
+  ProcessorApp,
+  ProcessorApps,
+} from "@powerhousedao/shared/processors";
 import { kebabCase } from "change-case";
 import {
   tsMorphGenerateApp,
@@ -11,9 +14,12 @@ import {
 import { readdir } from "node:fs/promises";
 import path, { join } from "node:path";
 import {
+  conditional,
   filter,
   find,
   flatMap,
+  isDefined,
+  isIncludedIn,
   isString,
   isTruthy,
   map,
@@ -327,4 +333,116 @@ export async function generateProcessor(
     projectDir,
     ...args,
   });
+}
+
+export async function generateAllProcessors(projectDir = process.cwd()) {
+  const project = buildTsMorphProject(projectDir);
+  const processorsDirPath = path.join(projectDir, "processors");
+  project.addSourceFilesAtPaths(path.join(processorsDirPath, "**/*"));
+  const processorsDir = project.getDirectory(processorsDirPath);
+  if (!processorsDir) return;
+  const connectProcessorNames = pipe(
+    processorsDir.getSourceFile("connect.ts"),
+    (sourceFile) => sourceFile?.getImportDeclarations() ?? [],
+    flatMap((importDeclaration) =>
+      importDeclaration.getModuleSpecifier().getLiteralValue(),
+    ),
+    filter(startsWith("processors/")),
+    map(split("/")),
+    map((s) => s.at(1)),
+    filter(isString),
+  );
+  const switchboardProcessorNames = pipe(
+    processorsDir.getSourceFile("switchboard.ts"),
+    (sourceFile) => sourceFile?.getImportDeclarations() ?? [],
+    flatMap((importDeclaration) =>
+      importDeclaration.getModuleSpecifier().getLiteralValue(),
+    ),
+    filter(startsWith("processors/")),
+    map(split("/")),
+    map((s) => s.at(1)),
+    filter(isString),
+  );
+  const processorsToGenerate = pipe(
+    processorsDir.getDirectories(),
+    map((dir) => ({
+      dir,
+      processorName: dir.getBaseName(),
+    })),
+    map(({ dir, processorName }) => ({
+      processorName,
+      processorApps: pipe(
+        [],
+        when(
+          () => isIncludedIn(processorName, connectProcessorNames),
+          (processorApps) => [...processorApps, "connect"],
+        ),
+        when(
+          () => isIncludedIn(processorName, switchboardProcessorNames),
+          (processorApps) => [...processorApps, "switchboard"],
+        ),
+      ),
+      processorType: pipe(
+        dir.getSourceFile("processor.ts") ?? dir.getSourceFile("index.ts"),
+        (sourceFile) => sourceFile?.getImportDeclarations() ?? [],
+        flatMap((importDeclaration) => importDeclaration.getNamedImports()),
+        map((importSpecifier) => importSpecifier.getText()),
+        conditional(
+          [
+            (specifiers) =>
+              isDefined(
+                find(specifiers, (specifier) =>
+                  specifier.includes("RelationalDbProcessor"),
+                ),
+              ),
+            () => "relationalDb",
+          ],
+          [
+            (specifiers) =>
+              isDefined(
+                find(specifiers, (specifier) =>
+                  specifier.includes("IAnalyticsStore"),
+                ),
+              ),
+            () => "analytics",
+          ],
+        ),
+      ),
+      documentTypes: pipe(
+        dir.getSourceFile("factory.ts"),
+        (sourceFile) =>
+          sourceFile?.getDescendantsOfKind(
+            SyntaxKind.ObjectLiteralExpression,
+          ) ?? [],
+        map((objectLiteralExpression) =>
+          getObjectProperty(
+            objectLiteralExpression,
+            "documentType",
+            SyntaxKind.ArrayLiteralExpression,
+          ),
+        ),
+        flatMap((o) => o?.getElements()),
+        map((e) => e?.asKind(SyntaxKind.StringLiteral)),
+        filter(isTruthy),
+        map((e) => e.getLiteralValue()),
+      ),
+    })),
+  );
+
+  for (const {
+    processorName,
+    processorApps,
+    processorType,
+    documentTypes,
+  } of processorsToGenerate) {
+    await generateProcessor(
+      {
+        processorName,
+        processorApps: processorApps as ProcessorApp[],
+        processorType: processorType as "analytics" | "relationalDb",
+        documentTypes,
+      },
+      projectDir,
+    );
+  }
 }
