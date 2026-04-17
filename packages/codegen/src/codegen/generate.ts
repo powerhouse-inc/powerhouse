@@ -437,6 +437,30 @@ export function generateManifest(
     return result;
   };
 
+  // Helper function to merge config entries by name (config entries are keyed
+  // by name, not id).
+  const mergeConfigByName = <T extends { name: string }>(
+    existingArray: T[],
+    newArray?: T[],
+  ): T[] => {
+    if (!newArray) return existingArray;
+
+    const result = [...existingArray];
+
+    newArray.forEach((newItem) => {
+      const existingIndex = result.findIndex(
+        (item) => item.name === newItem.name,
+      );
+      if (existingIndex !== -1) {
+        result[existingIndex] = newItem;
+      } else {
+        result.push(newItem);
+      }
+    });
+
+    return result;
+  };
+
   // Merge partial data with existing manifest
   const updatedManifest: Manifest = {
     ...existingManifest,
@@ -457,6 +481,10 @@ export function generateManifest(
     subgraphs: mergeArrayById(
       existingManifest.subgraphs ?? [],
       manifestData.subgraphs,
+    ),
+    config: mergeConfigByName(
+      existingManifest.config ?? [],
+      manifestData.config,
     ),
   };
 
