@@ -1,3 +1,13 @@
+## 6.0.0-dev.178 (2026-04-17)
+
+### 🚀 Features
+
+- **codegen:** include config section in manifest template and merge ([5658e6ef7](https://github.com/powerhouse-inc/powerhouse/commit/5658e6ef7))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 6.0.0-dev.177 (2026-04-17)
 
 This was a version bump only for @powerhousedao/codegen to align it with other projects, there were no code changes.

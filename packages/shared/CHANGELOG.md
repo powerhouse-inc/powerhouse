@@ -1,3 +1,13 @@
+## 6.0.0-dev.178 (2026-04-17)
+
+### 🚀 Features
+
+- **shared:** add config field to package manifest ([f1b3e7ee8](https://github.com/powerhouse-inc/powerhouse/commit/f1b3e7ee8))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 6.0.0-dev.177 (2026-04-17)
 
 ### 🚀 Features
