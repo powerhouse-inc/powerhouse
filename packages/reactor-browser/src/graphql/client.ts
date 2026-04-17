@@ -34,6 +34,18 @@ export function createClient(
     typeof urlOrGQLClient === "string"
       ? new GraphQLClient(urlOrGQLClient)
       : urlOrGQLClient;
+
+  // The hand-written batch methods below call `client.request` directly,
+  // bypassing the middleware that `getSdk` applies. Wrap them in the same
+  // shape so auth/logging/tracing middleware runs for batch calls too.
+  const runWithMiddleware = async <T>(
+    operationName: string,
+    run: (requestHeaders?: Record<string, string>) => Promise<T>,
+  ): Promise<T> => {
+    if (!middleware) return run();
+    return middleware(run, operationName, "query");
+  };
+
   return {
     ...getSdk(client, middleware),
 
@@ -47,9 +59,14 @@ export function createClient(
       pagings: (PagingInput | undefined | null)[],
     ): Promise<DocumentOperationsPage[]> {
       const { query, variables } = buildBatchOperationsQuery(filters, pagings);
-      const data = await client.request<Record<string, DocumentOperationsPage>>(
-        query,
-        variables,
+      const data = await runWithMiddleware(
+        "BatchGetDocumentOperations",
+        (requestHeaders) =>
+          client.request<Record<string, DocumentOperationsPage>>(
+            query,
+            variables,
+            requestHeaders,
+          ),
       );
       return filters.map((_, i) => data[`scope_${i}`]);
     },
@@ -73,9 +90,13 @@ export function createClient(
         filters,
         pagings,
       );
-      const data = await client.request<
-        Record<string, unknown> & { document?: DocumentResult }
-      >(query, variables);
+      const data = await runWithMiddleware(
+        "BatchGetDocumentWithOperations",
+        (requestHeaders) =>
+          client.request<
+            Record<string, unknown> & { document?: DocumentResult }
+          >(query, variables, requestHeaders),
+      );
       return {
         document: data.document ?? null,
         operations: filters.map(
