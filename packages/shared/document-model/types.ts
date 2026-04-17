@@ -1684,6 +1684,16 @@ export type Publisher = {
   url?: string;
 };
 
+export type ConfigEntryType = "var" | "secret";
+
+export type ConfigEntry = {
+  name: string;
+  type: ConfigEntryType;
+  description?: string;
+  required?: boolean;
+  default?: string;
+};
+
 export type Manifest = {
   name: string;
   description?: string;
@@ -1694,4 +1704,5 @@ export type Manifest = {
   editors?: PowerhouseModule[];
   processors?: PowerhouseModule[];
   subgraphs?: PowerhouseModule[];
+  config?: ConfigEntry[];
 };
