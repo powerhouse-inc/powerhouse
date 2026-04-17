@@ -1,3 +1,13 @@
+## 6.0.0-dev.179 (2026-04-17)
+
+### 🩹 Fixes
+
+- **reactor-browser:** run auth middleware on batch GraphQL calls ([23acffb0b](https://github.com/powerhouse-inc/powerhouse/commit/23acffb0b))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 6.0.0-dev.178 (2026-04-17)
 
 This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.

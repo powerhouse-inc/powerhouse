@@ -1,7 +1,7 @@
 {
   "name": "@powerhousedao/switchboard",
   "type": "module",
-  "version": "6.0.0-dev.178",
+  "version": "6.0.0-dev.179",
   "main": "dist/index.mjs",
   "exports": {
     ".": {
