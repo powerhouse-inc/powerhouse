@@ -159,9 +159,15 @@ export class BrowserPackageManager implements IPackageManager {
         package: packageWithMeta.loadedPackage,
       };
     } catch (error) {
+      const normalized =
+        error instanceof Error ? error : new Error(String(error));
+      console.error(
+        `[Connect][PackageManager] Failed to install package "${packageName}": ${normalized.message}`,
+        normalized,
+      );
       return {
         type: "error",
-        error: error instanceof Error ? error : new Error(String(error)),
+        error: normalized,
       };
     }
   }
