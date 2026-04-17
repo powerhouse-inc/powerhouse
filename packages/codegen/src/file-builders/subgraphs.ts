@@ -63,7 +63,13 @@ export async function tsMorphGenerateSubgraph(
   await project.save();
   await createOrUpdateManifest(
     {
-      subgraphs: [{ name: subgraphName, id: kebabCaseName }],
+      subgraphs: [
+        {
+          name: subgraphName,
+          id: kebabCaseName,
+          documentTypes: documentModel?.id ? [documentModel.id] : [],
+        },
+      ],
     },
     projectDir,
   );

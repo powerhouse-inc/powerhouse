@@ -9,8 +9,19 @@ import {
   tsMorphGenerateSubgraph,
 } from "file-builders";
 import { readdir } from "node:fs/promises";
-import path from "node:path";
-import { filter, isTruthy, map, pipe, tap } from "remeda";
+import path, { join } from "node:path";
+import {
+  filter,
+  find,
+  flatMap,
+  isString,
+  isTruthy,
+  map,
+  pipe,
+  split,
+  startsWith,
+  when,
+} from "remeda";
 import { SyntaxKind } from "ts-morph";
 import {
   buildTsMorphProject,
@@ -239,7 +250,6 @@ export async function generateSubgraph(
     documentModelFilePath !== null
       ? await loadDocumentModel(documentModelFilePath)
       : null;
-
   await tsMorphGenerateSubgraph(
     {
       subgraphName,
@@ -247,6 +257,61 @@ export async function generateSubgraph(
     },
     projectDir,
   );
+}
+
+export async function generateAllSubgraphs(projectDir: string) {
+  const project = buildTsMorphProject(projectDir);
+  const subgraphsDirPath = path.join(projectDir, "subgraphs");
+  project.addSourceFilesAtPaths(path.join(subgraphsDirPath, "**/*"));
+  const subgraphsDir = project.getDirectory(subgraphsDirPath);
+  if (!subgraphsDir) return;
+  const subgraphDirs = subgraphsDir.getDirectories();
+  const subgraphInputs = pipe(
+    subgraphDirs,
+    map((dir) => ({
+      resolversFile: dir.getSourceFile("resolvers.ts"),
+      indexFile: dir.getSourceFile("index.ts"),
+    })),
+    map(({ resolversFile, indexFile }) => ({
+      documentModelFilePath: pipe(
+        resolversFile?.getImportDeclarations() ?? [],
+        flatMap((importDeclarations) =>
+          importDeclarations.getModuleSpecifier().getLiteralValue(),
+        ),
+        find((moduleSpecierLiteral) =>
+          startsWith(moduleSpecierLiteral, "document-models/"),
+        ),
+        when(isString, (value) => split(value, "/").at(1)),
+        when(isString, (value) =>
+          join(projectDir, "document-models", value, `${value}.json`),
+        ),
+      ),
+      subgraphName: pipe(
+        indexFile?.getClasses() ?? [],
+        find(
+          (classDeclaration) =>
+            classDeclaration
+              .getBaseClass()
+              ?.getText()
+              .includes("BaseSubgraph") ?? false,
+        ),
+        (classDeclaration) =>
+          classDeclaration
+            ?.getInstanceProperty("name")
+            ?.asKind(SyntaxKind.PropertyDeclaration)
+            ?.getInitializerIfKind(SyntaxKind.StringLiteral)
+            ?.getLiteralValue(),
+      ),
+    })),
+  );
+  for (const { subgraphName, documentModelFilePath } of subgraphInputs) {
+    if (!subgraphName) continue;
+    await generateSubgraph(
+      subgraphName,
+      documentModelFilePath ?? null,
+      projectDir,
+    );
+  }
 }
 
 export async function generateProcessor(

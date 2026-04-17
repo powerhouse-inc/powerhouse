@@ -33,6 +33,7 @@ import { updatePackage } from "write-package";
 import {
   generateAllDocumentModels,
   generateAllEditorsAndApps,
+  generateAllSubgraphs,
 } from "./generate.js";
 
 export async function getFullyQualifiedWorkspacePackageVersion(
@@ -139,6 +140,7 @@ export async function migrate(version: string, projectDir = process.cwd()) {
   console.log("Re-generating document models with versioning if needed...");
   await generateAllDocumentModels(projectDir);
   await generateAllEditorsAndApps(projectDir);
+  await generateAllSubgraphs(projectDir);
 }
 
 async function moveLegacyDocumentModels(

@@ -1,4 +1,7 @@
-import { loadDocumentModel } from "@powerhousedao/codegen";
+import {
+  generateAllSubgraphs,
+  loadDocumentModel,
+} from "@powerhousedao/codegen";
 import { tsMorphGenerateSubgraph } from "@powerhousedao/codegen/file-builders";
 import { describe, expect, it } from "bun:test";
 import { readFile } from "node:fs/promises";
@@ -81,10 +84,22 @@ describe("generateSubgraph", () => {
       join(documentModelsDir, "test-doc", "test-doc.json"),
     );
 
+    const billingStatementDocumentModel = await loadDocumentModel(
+      join(documentModelsDir, "billing-statement", "billing-statement.json"),
+    );
+
     await tsMorphGenerateSubgraph(
       {
         subgraphName: "test-doc",
         documentModel,
+      },
+      outDir,
+    );
+
+    await tsMorphGenerateSubgraph(
+      {
+        subgraphName: "billing-statement-test",
+        documentModel: billingStatementDocumentModel,
       },
       outDir,
     );
@@ -137,6 +152,7 @@ describe("generateSubgraph", () => {
     expect(resolversContent).toContain("actions.setTestName");
     expect(resolversContent).toContain("SetTestIdInput");
     expect(resolversContent).toContain("SetTestNameInput");
+    await generateAllSubgraphs(outDir);
   });
 
   it("should not overwrite existing custom subgraph files", async () => {
@@ -175,6 +191,7 @@ describe("generateSubgraph", () => {
       "utf-8",
     );
     expect(secondIndex).toBe(originalIndex);
+    await generateAllSubgraphs(outDir);
   });
 
   it("should overwrite document-model schema and resolvers on regeneration", async () => {
@@ -228,5 +245,6 @@ describe("generateSubgraph", () => {
       "utf-8",
     );
     expect(resolvers2).toContain("document-models/test-doc");
+    await generateAllSubgraphs(outDir);
   });
 });
