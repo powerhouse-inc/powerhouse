@@ -1,3 +1,17 @@
+## 6.0.0-dev.177 (2026-04-17)
+
+### 🚀 Features
+
+- **connect:** show package version in settings package manager ([1886fc2fd](https://github.com/powerhouse-inc/powerhouse/commit/1886fc2fd))
+
+### 🩹 Fixes
+
+- **design-system:** give dropdown menu real border and shadow ([6964335ff](https://github.com/powerhouse-inc/powerhouse/commit/6964335ff))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 6.0.0-dev.176 (2026-04-16)
 
 ### 🩹 Fixes

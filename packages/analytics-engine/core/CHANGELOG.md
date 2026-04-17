@@ -1,3 +1,7 @@
+## 6.0.0-dev.177 (2026-04-17)
+
+This was a version bump only for @powerhousedao/analytics-engine-core to align it with other projects, there were no code changes.
+
 ## 6.0.0-dev.176 (2026-04-16)
 
 ### 🩹 Fixes
