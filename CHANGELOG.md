@@ -1,3 +1,13 @@
+## 6.0.0-dev.180 (2026-04-18)
+
+### 🩹 Fixes
+
+- **connect:** surface package install errors instead of reloading ([1aa72df91](https://github.com/powerhouse-inc/powerhouse/commit/1aa72df91))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 6.0.0-dev.179 (2026-04-17)
 
 ### 🩹 Fixes
