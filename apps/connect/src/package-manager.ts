@@ -41,13 +41,6 @@ async function fetchPackageJsonVersion(
 }
 
 const LOCAL_PACKAGE_NAME = "Local" as const;
-const COMMON_PACKAGE_NAME = "Common" as const;
-const VETRA_PACKAGE_NAME = "@powerhousedao/vetra" as const;
-const LOCAL_PACKAGES: string[] = [
-  LOCAL_PACKAGE_NAME,
-  COMMON_PACKAGE_NAME,
-  VETRA_PACKAGE_NAME,
-];
 
 export class BrowserPackageManager implements IPackageManager {
   registryUrl: string | null;
@@ -60,6 +53,7 @@ export class BrowserPackageManager implements IPackageManager {
 
   #cdnUrl: string | null;
   #localPackageVersion: string | undefined;
+  #localPackageNames: Set<string> = new Set([LOCAL_PACKAGE_NAME]);
 
   constructor(namespace: string, registryUrl: string | null) {
     this.#storage = new BrowserLocalStorage<PackageMeta>(
@@ -76,16 +70,29 @@ export class BrowserPackageManager implements IPackageManager {
   }
 
   async init(localPackage?: DocumentModelLib, localPackageVersion?: string) {
-    const commonPackageWithMeta = this.#loadCommonPackage();
-    this.#registerPackage(commonPackageWithMeta);
-    const vetraPackageWithMeta = this.#loadVetraPackage();
-    this.#registerPackage(vetraPackageWithMeta);
+    this.addLocalPackage(common.manifest.name, common, commonPkg.version);
+    this.addLocalPackage(vetra.manifest.name, vetra, vetraPkg.version);
     if (localPackage) {
       this.updateLocalPackage(localPackage, localPackageVersion);
     }
     for (const packageName of this.#storage.keys()) {
       await this.addPackage(packageName);
     }
+  }
+
+  addLocalPackage(
+    name: string,
+    loadedPackage: DocumentModelLib,
+    version?: string,
+  ) {
+    this.#localPackageNames.add(name);
+    this.#registerPackage({
+      name,
+      importUrl: null,
+      stylesheetUrl: null,
+      loadedPackage,
+      version,
+    });
   }
 
   updateLocalPackage(pkg: DocumentModelLib, version?: string) {
@@ -119,8 +126,8 @@ export class BrowserPackageManager implements IPackageManager {
   }
 
   getPackageSource(packageName: string) {
-    // check vs the constant name we use for common packages
-    if (LOCAL_PACKAGES.includes(packageName)) {
+    // check vs packages registered as local (Common, Vetra, bundled packages...)
+    if (this.#localPackageNames.has(packageName)) {
       return "common";
     }
     // check if the package has the same name as the local project
@@ -204,26 +211,6 @@ export class BrowserPackageManager implements IPackageManager {
     return Promise.reject(new Error("Model not available"));
   }
 
-  #loadCommonPackage(): PackageWithMeta {
-    return {
-      name: common.manifest.name,
-      importUrl: null,
-      stylesheetUrl: null,
-      loadedPackage: common,
-      version: commonPkg.version,
-    };
-  }
-
-  #loadVetraPackage(): PackageWithMeta {
-    return {
-      name: vetra.manifest.name,
-      importUrl: null,
-      stylesheetUrl: null,
-      loadedPackage: vetra,
-      version: vetraPkg.version,
-    };
-  }
-
   async #loadPackageFromNodeModules(name: string): Promise<PackageWithMeta> {
     const importUrl = `/node_modules/${name}/browser/index.js`;
     const stylesheetUrl = `/node_modules/${name}/style.css`;
@@ -255,7 +242,7 @@ export class BrowserPackageManager implements IPackageManager {
     return packageWithMeta;
   }
 
-  async #importPackage(packageMeta: PackageMeta) {
+  async #importPackage(packageMeta: PackageMeta): Promise<PackageWithMeta> {
     const { name, importUrl, stylesheetUrl } = packageMeta;
     if (!importUrl) {
       throw new Error(`Import url not defined for package "${name}".`);
@@ -274,7 +261,7 @@ export class BrowserPackageManager implements IPackageManager {
   }
 
   async #loadPackage(packageName: string): Promise<PackageWithMeta> {
-    if (LOCAL_PACKAGES.includes(packageName)) {
+    if (this.#localPackageNames.has(packageName)) {
       throw new Error(
         `Package "${packageName}" is a local package and cannot be loaded dynamically.`,
       );

@@ -767,14 +767,17 @@ show help<br><br>
 
 ## Install
 
-The install command adds Powerhouse dependencies to your project. It installs packages
-from the Powerhouse registry by default and updates configuration files.
+The install command adds Powerhouse dependencies to your project.
 
-This command:
-1. Resolves the registry URL (--registry flag > powerhouse.config.json > PH_REGISTRY_URL env > default)
-2. Installs the package using your package manager with the resolved registry
-3. Updates powerhouse.config.json to include the new dependencies
-4. Updates style.css with CSS imports if applicable
+By default it only registers the package in powerhouse.config.json with
+provider "registry" — Connect will load it from the registry CDN at runtime.
+
+With --local, the package is also installed into node_modules and marked
+as provider "local" — it will be bundled into ph connect build so the
+preview works without the registry being reachable.
+
+Resolution order for the registry URL:
+  --registry flag > powerhouse.config.json > PH_REGISTRY_URL env > default
   
 ### arguments
 #### Dependencies *[required]*<br>
@@ -793,6 +796,10 @@ Specify the package manager to use for your project. Can be one of: `npm`, `pnpm
 
 
 ### flags
+#### Local <br>
+Also install packages into node_modules (marks them as provider: "local" so they get bundled into ph connect build)<br><br>
+**usage:** `--local`<br>
+
 #### Npm <br>
 Use 'npm' as package manager<br><br>
 **usage:** `--npm`<br>

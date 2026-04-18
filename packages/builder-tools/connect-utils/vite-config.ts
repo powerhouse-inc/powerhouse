@@ -17,6 +17,7 @@ import { createHtmlPlugin } from "vite-plugin-html";
 import type { IConnectOptions } from "./types.js";
 import { devReactImportmapPlugin } from "./vite-plugins/dev-external-react.js";
 import { connectFaviconPlugin } from "./vite-plugins/favicon.js";
+import { phBundledPackagesPlugin } from "./vite-plugins/ph-bundled-packages.js";
 import { phPackagesPlugin } from "./vite-plugins/ph-packages.js";
 
 const REACT_VERSION = "19.2.0";
@@ -160,6 +161,15 @@ function getPackageNamesFromPowerhouseConfig({ packages }: PowerhouseConfig) {
   return packages.map((p) => p.packageName);
 }
 
+function getLocalPackageNamesFromPowerhouseConfig({
+  packages,
+}: PowerhouseConfig) {
+  if (!packages) return [];
+  return packages
+    .filter((p) => p.provider === "local")
+    .map((p) => p.packageName);
+}
+
 export function getConnectBaseViteConfig(options: IConnectOptions) {
   const mode = options.mode;
   const envDir = options.envDir ?? options.dirname;
@@ -181,6 +191,8 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
   const phConfig = options.powerhouseConfig ?? getConfig(phConfigPath);
 
   const packagesFromConfig = getPackageNamesFromPowerhouseConfig(phConfig);
+  const localPackagesFromConfig =
+    getLocalPackageNamesFromPowerhouseConfig(phConfig);
   const phPackagesStr = env.PH_PACKAGES;
   const envPhPackages = phPackagesStr?.split(",");
 
@@ -296,6 +308,10 @@ export function getConnectBaseViteConfig(options: IConnectOptions) {
       // files, preventing tailwind from triggering full page reloads.
       phPackagesPlugin({
         packages: phPackages,
+        projectRoot: options.dirname,
+      }),
+      phBundledPackagesPlugin({
+        packages: localPackagesFromConfig,
         projectRoot: options.dirname,
       }),
       // Dev-only: rewrite the importmap so it points at Vite's pre-bundled

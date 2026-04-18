@@ -140,12 +140,13 @@ export function updatePackagesArray(
   currentPackages: PowerhouseConfig["packages"] = [],
   dependencies: { name: string; version: string | undefined }[],
   task: "install" | "uninstall" = "install",
+  provider: "registry" | "local" = "registry",
 ): PowerhouseConfig["packages"] {
   const isInstall = task === "install";
   const mappedPackages = dependencies.map((dep) => ({
     packageName: dep.name,
     version: dep.version,
-    provider: "registry" as const,
+    provider,
   }));
 
   if (isInstall) {
@@ -166,6 +167,7 @@ export function updateConfigFile(
   dependencies: { name: string; version: string | undefined }[],
   projectPath: string,
   task: "install" | "uninstall" = "install",
+  provider: "registry" | "local" = "registry",
 ) {
   const configPath = path.join(projectPath, POWERHOUSE_CONFIG_FILE);
 
@@ -181,7 +183,12 @@ export function updateConfigFile(
 
   const updatedConfig: PowerhouseConfig = {
     ...config,
-    packages: updatePackagesArray(config.packages, dependencies, task),
+    packages: updatePackagesArray(
+      config.packages,
+      dependencies,
+      task,
+      provider,
+    ),
   };
 
   fs.writeFileSync(configPath, JSON.stringify(updatedConfig, null, 2));
