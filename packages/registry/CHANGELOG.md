@@ -1,3 +1,7 @@
+## 6.0.0-dev.181 (2026-04-19)
+
+This was a version bump only for @powerhousedao/registry to align it with other projects, there were no code changes.
+
 ## 6.0.0-dev.180 (2026-04-18)
 
 This was a version bump only for @powerhousedao/registry to align it with other projects, there were no code changes.
