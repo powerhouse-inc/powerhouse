@@ -1,0 +1,5 @@
+describe("test harness", function()
+    it("runs busted specs inside the lb container", function()
+        assert.equals(1, 1)
+    end)
+end)

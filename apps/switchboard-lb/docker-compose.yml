@@ -1,0 +1,47 @@
+# Local dev stack for switchboard-lb.
+#
+# Host port 8080 (LB) is free relative to the repo-root docker-compose.yml,
+# which binds 3000/4000/5444. If you run both compose projects at once, only
+# overlapping host binds collide — service names are scoped per project.
+
+name: switchboard-lb
+
+services:
+  lb:
+    build:
+      context: .
+      target: dev
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - ./conf:/usr/local/openresty/nginx/conf:ro
+      - ./lua:/usr/local/openresty/nginx/lua:ro
+      - ./test:/usr/local/openresty/nginx/test:ro
+    depends_on:
+      - sb-1
+      - sb-2
+      - sb-3
+
+  sb-1:
+    image: openresty/openresty:1.27.1.1-alpine
+    volumes:
+      - ./test/fixtures/stub-1.conf:/usr/local/openresty/nginx/conf/nginx.conf:ro
+
+  sb-2:
+    image: openresty/openresty:1.27.1.1-alpine
+    volumes:
+      - ./test/fixtures/stub-2.conf:/usr/local/openresty/nginx/conf/nginx.conf:ro
+
+  sb-3:
+    image: openresty/openresty:1.27.1.1-alpine
+    volumes:
+      - ./test/fixtures/stub-3.conf:/usr/local/openresty/nginx/conf/nginx.conf:ro
+
+  loadtest:
+    image: grafana/k6:0.55.0
+    profiles: ["loadtest"]
+    depends_on:
+      - lb
+    volumes:
+      - ./test/integration/baseline.js:/baseline.js:ro
+    command: ["run", "/baseline.js"]
