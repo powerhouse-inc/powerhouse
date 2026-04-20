@@ -112,8 +112,8 @@ catalog:
   "@vitest/browser-playwright": 4.1.1
   "@vitest/coverage-v8": 4.1.1
   "@preact/preset-vite": 2.10.5
-  "tsdown": 0.21.0
-  "rolldown": 1.0.0-rc.7
+  "tsdown": 0.21.1
+  "rolldown": 1.0.0-rc.8
 
 allowBuilds:
   vite: true

@@ -77,6 +77,9 @@ export const browserBuildConfig: InlineConfig = {
   dts,
   sourcemap,
   plugins: esmExternalRequirePlugin({ external: reactExternals }),
+  inputOptions: {
+    experimental: { resolveNewUrlToAsset: true },
+  },
 };
 
 export const nodeBuildConfig: InlineConfig = {
