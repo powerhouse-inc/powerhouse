@@ -36,16 +36,24 @@ WORKDIR /app/project
 RUN ph connect build --base ${PH_CONNECT_BASE_PATH}
 
 # ============================================================
-# Connect target: nginx serving static files
+# Connect target: nginx serving static files (runs as non-root)
 # ============================================================
 FROM nginx:alpine AS connect
 
-RUN apk add --no-cache gettext
+# Install envsubst for config templating, and chown the nginx runtime
+# directories so the built-in `nginx` user (UID 101) can write the
+# rendered config, the pid file, and runtime caches. Pod can then run
+# with runAsNonRoot: true, runAsUser: 101.
+RUN apk add --no-cache gettext && \
+    chown -R nginx:nginx /etc/nginx /var/cache/nginx /var/log/nginx && \
+    touch /var/run/nginx.pid && chown nginx:nginx /var/run/nginx.pid
 
-COPY docker/nginx.conf.template /etc/nginx/nginx.conf.template
-COPY --from=connect-build /app/project/.ph/connect-build/dist /var/www/html/project
-COPY docker/connect-entrypoint.sh /docker-entrypoint.sh
+COPY --chown=nginx:nginx docker/nginx.conf.template /etc/nginx/nginx.conf.template
+COPY --chown=nginx:nginx --from=connect-build /app/project/.ph/connect-build/dist /var/www/html/project
+COPY --chown=nginx:nginx docker/connect-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh
+
+USER nginx
 
 ENV PORT=3001
 ENV PH_CONNECT_BASE_PATH="/"

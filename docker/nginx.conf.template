@@ -1,4 +1,6 @@
-user nginx;
+# `user` directive intentionally omitted: the master process already runs as
+# the `nginx` user (set via USER in the Dockerfile's connect stage). Leaving
+# `user nginx;` in place would be a no-op when non-root and emits a warning.
 worker_processes auto;
 error_log /var/log/nginx/error.log warn;
 pid /var/run/nginx.pid;
