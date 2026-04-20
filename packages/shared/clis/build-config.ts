@@ -1,3 +1,4 @@
+import { esmExternalRequirePlugin } from "rolldown/plugins";
 import type { InlineConfig } from "tsdown";
 
 const entry = [
@@ -15,6 +16,15 @@ const entry = [
 ];
 
 const alwaysBundle = ["**"];
+
+// esmExternalRequirePlugin converts CJS require() calls for these to ESM imports.
+// They must NOT be in rolldown's external list — the plugin owns them entirely.
+const reactExternals = [
+  "react",
+  "react-dom",
+  "react/jsx-runtime",
+  "react-dom/client",
+];
 
 const nodeNeverBundle = [
   // we know that we don't want connect inside connect
@@ -42,7 +52,10 @@ const nodeNeverBundle = [
   "@types/react-dom",
 ];
 
-const browserNeverBundle = [...nodeNeverBundle, "@powerhousedao/reactor-api"];
+const browserNeverBundle = [
+  ...nodeNeverBundle.filter((m) => !reactExternals.includes(m)),
+  "@powerhousedao/reactor-api",
+];
 
 const copy = [{ from: "powerhouse.manifest.json", to: "dist" }];
 
@@ -63,6 +76,7 @@ export const browserBuildConfig: InlineConfig = {
   clean,
   dts,
   sourcemap,
+  plugins: esmExternalRequirePlugin({ external: reactExternals }),
 };
 
 export const nodeBuildConfig: InlineConfig = {

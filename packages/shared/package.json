@@ -87,6 +87,7 @@
     "kysely": "catalog:",
     "luxon": "catalog:",
     "mutative": "catalog:",
+    "rolldown": "catalog:",
     "npm-package-arg": "catalog:",
     "package-directory": "^8.1.0",
     "package-manager-detector": "catalog:",

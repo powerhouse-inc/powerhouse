@@ -6,6 +6,8 @@ import {
 import { getConfig } from "../clis/file-system/get-config.js";
 import { spawnAsync } from "../clis/file-system/spawn-async.js";
 
+export { DEFAULT_REGISTRY_URL } from "../clis/constants.js";
+
 export interface ResolveRegistryUrlOptions {
   /** Explicit registry URL (e.g. from --registry flag). Highest priority. */
   registry?: string;
