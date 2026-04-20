@@ -255,7 +255,7 @@ export class BrowserPackageManager implements IPackageManager {
     return packageWithMeta;
   }
 
-  async #importPackage(packageMeta: PackageMeta) {
+  async #importPackage(packageMeta: PackageMeta): Promise<PackageWithMeta> {
     const { name, importUrl, stylesheetUrl } = packageMeta;
     if (!importUrl) {
       throw new Error(`Import url not defined for package "${name}".`);

@@ -1,6 +1,9 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { SearchAutocomplete } from "./search-autocomplete.js";
-import type { SearchAutocompleteOption } from "./types.js";
+import type {
+  SearchAutocompleteOption,
+  SearchAutocompleteProps,
+} from "./types.js";
 
 const SAMPLE_PACKAGES: SearchAutocompleteOption[] = [
   {
@@ -65,7 +68,7 @@ export const PackageSearch: Story = {
   },
   render: (args) => (
     <div className="w-[480px] p-6">
-      <SearchAutocomplete {...args} />
+      <SearchAutocomplete {...(args as SearchAutocompleteProps)} />
       <p className="mt-3 text-xs text-gray-500">
         Try typing &quot;p&quot; or &quot;design&quot; to see the results.
       </p>
@@ -83,7 +86,7 @@ export const NoFetchOptions: Story = {
   },
   render: (args) => (
     <div className="w-[480px] p-6">
-      <SearchAutocomplete {...args} />
+      <SearchAutocomplete {...(args as SearchAutocompleteProps)} />
     </div>
   ),
 };
