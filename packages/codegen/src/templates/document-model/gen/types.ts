@@ -1,5 +1,5 @@
 import { ts } from "@tmpl/core";
-import type { DocumentModelTemplateInputs } from "file-builders";
+import type { DocumentModelFileMakerArgs } from "file-builders";
 
 function buildEmptyLocalStateType(
   hasLocalSchema: boolean,
@@ -17,7 +17,7 @@ function buildLocalStateTypeImport(
   if (!hasLocalSchema) return "";
   return localStateName;
 }
-export const documentModelGenTypesTemplate = (v: DocumentModelTemplateInputs) =>
+export const documentModelGenTypesTemplate = (v: DocumentModelFileMakerArgs) =>
   ts`
 /**
  * WARNING: DO NOT EDIT

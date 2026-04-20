@@ -140,7 +140,7 @@ async function makeDocumentModelSubgraphFiles(
   const stateSchema = latestSpec.state.global.schema;
   const stateTypeNames = extractTypeNames(stateSchema);
 
-  const modules = latestSpec.modules
+  const modulesWithSchemaTypePrefixes = latestSpec.modules
     .filter((m): m is typeof m & { name: string } => m.name !== null)
     .map((m) => ({
       name: kebabCase(m.name),
@@ -162,7 +162,7 @@ async function makeDocumentModelSubgraphFiles(
   schema.sourceFile.replaceWithText(
     documentModelSubgraphSchemaTemplate({
       pascalCaseDocumentType,
-      modules,
+      modulesWithSchemaTypePrefixes,
     }),
   );
 
@@ -176,7 +176,7 @@ async function makeDocumentModelSubgraphFiles(
       phDocumentTypeName,
       documentTypeVariableName,
       documentModelDir,
-      modules,
+      modulesWithSchemaTypePrefixes,
     }),
   );
 }

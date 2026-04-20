@@ -1,9 +1,9 @@
 import { migrate } from "@powerhousedao/codegen";
 import { describe, test } from "bun:test";
 import { join } from "path";
+import { updatePackage } from "write-package";
 import { TEST_OUTPUT, TEST_PROJECTS, WITH_EDITORS } from "../constants.js";
 import { cpForce, mkdirRecursive, rmForce, runTsc } from "../utils.js";
-
 const cwd = process.cwd();
 const parentOutDir = join(cwd, TEST_OUTPUT, "migrate");
 const testProjectsDir = join(cwd, TEST_PROJECTS);
@@ -22,6 +22,9 @@ describe("migrate", () => {
     );
     const version = "dev";
     await migrate(version, legacyDocumentModelsDir);
+    await updatePackage(legacyDocumentModelsDir, {
+      exports: null,
+    });
     await runTsc(legacyDocumentModelsDir);
   });
 });

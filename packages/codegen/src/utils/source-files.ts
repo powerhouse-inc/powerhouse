@@ -1,9 +1,14 @@
+import path from "path";
 import type { Project } from "ts-morph";
 
 /** Gets a SourceFile by name in a ts-morph Project, or creates a new one
  * if none with that path exists.
  */
 export function getOrCreateSourceFile(project: Project, filePath: string) {
+  const dirName = path.dirname(filePath);
+  if (!project.getDirectory(dirName)) {
+    project.createDirectory(dirName);
+  }
   const sourceFile = project.getSourceFile(filePath);
   if (!sourceFile) {
     const newSourceFile = project.createSourceFile(filePath, "");

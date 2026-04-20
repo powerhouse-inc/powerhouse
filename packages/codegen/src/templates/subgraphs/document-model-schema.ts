@@ -1,29 +1,31 @@
-export type DocumentModelSubgraphSchemaParams = {
-  pascalCaseDocumentType: string;
-  modules: Array<{
+import { camelCase, pascalCase } from "change-case";
+import { filter, flatMap, isTruthy, join, map, pipe, prop } from "remeda";
+
+export const documentModelSubgraphSchemaTemplate = (v: {
+  modulesWithSchemaTypePrefixes: {
     name: string;
-    operations: Array<{
+    operations: {
       name: string;
       schema: string;
-    }>;
-  }>;
-};
+    }[];
+  }[];
+  pascalCaseDocumentType: string;
+}) => {
+  const mutationFields = pipe(
+    v.modulesWithSchemaTypePrefixes,
+    flatMap(prop("operations")),
+    flatMap(prop("name")),
+    filter(isTruthy),
+    map(
+      (name) =>
+        `    ${v.pascalCaseDocumentType}_${camelCase(name)}(driveId:String, docId:PHID, input:${v.pascalCaseDocumentType}_${pascalCase(name)}Input): Int`,
+    ),
+    join("\n"),
+  );
 
-export const documentModelSubgraphSchemaTemplate = (
-  v: DocumentModelSubgraphSchemaParams,
-) => {
-  const mutationFields = v.modules
-    .flatMap((module) =>
-      module.operations.map(
-        (op) =>
-          `    ${v.pascalCaseDocumentType}_${camel(op.name)}(driveId:String, docId:PHID, input:${v.pascalCaseDocumentType}_${pascal(op.name)}Input): Int`,
-      ),
-    )
-    .join("\n");
-
-  const moduleSchemas = v.modules
+  const moduleSchemas = v.modulesWithSchemaTypePrefixes
     .map((module) => {
-      const header = `\n"""\nModule: ${pascal(module.name)}\n"""`;
+      const header = `\n"""\nModule: ${pascalCase(module.name)}\n"""`;
       const opSchemas = module.operations.map((op) => op.schema).join("\n");
       return `${header}\n${opSchemas}`;
     })
@@ -61,15 +63,3 @@ ${moduleSchemas}
 `;
   return body;
 };
-
-function pascal(name: string): string {
-  return name
-    .split(/[-_\s]+/)
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-    .join("");
-}
-
-function camel(name: string): string {
-  const p = pascal(name);
-  return p.charAt(0).toLowerCase() + p.slice(1);
-}

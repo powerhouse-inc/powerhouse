@@ -1,9 +1,7 @@
 import { ts } from "@tmpl/core";
-import type { DocumentModelTemplateInputs } from "file-builders";
+import type { DocumentModelFileMakerArgs } from "file-builders";
 
-export const documentModelHooksFileTemplate = (
-  v: DocumentModelTemplateInputs,
-) =>
+export const documentModelHooksFileTemplate = (v: DocumentModelFileMakerArgs) =>
   ts`
 /**
  * WARNING: DO NOT EDIT
@@ -19,7 +17,7 @@ import {
 import type {
   ${v.actionTypeName},
   ${v.phDocumentTypeName},
-} from "${v.versionedDocumentModelPackageImportPath}";
+} from "${v.versionImportPath}";
 import { 
   ${v.assertIsPhDocumentOfTypeFunctionName},
   ${v.isPhDocumentOfTypeFunctionName} 

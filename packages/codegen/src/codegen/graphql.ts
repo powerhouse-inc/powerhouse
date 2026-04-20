@@ -9,6 +9,7 @@ import type {
   DocumentSpecification,
   ModuleSpecification,
 } from "@powerhousedao/shared/document-model";
+import type { DocumentModelFileMakerArgs } from "file-builders";
 import type { ValidationSchemaPluginConfig } from "graphql-codegen-typescript-validation-schema";
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -98,13 +99,13 @@ async function formatContentWithPrettier(path: string, content: string) {
 }
 
 type GenerateTypesAndZodSchemasFromGraphqlArgs = {
-  documentModelDirPath: string;
+  schemaDirPath: string;
   schema: string;
 };
 export async function generateTypesAndZodSchemasFromGraphql(
   args: GenerateTypesAndZodSchemasFromGraphqlArgs,
 ) {
-  const { documentModelDirPath, schema } = args;
+  const { schemaDirPath, schema } = args;
 
   const config: CodegenConfig = {
     overwrite: true,
@@ -113,7 +114,7 @@ export async function generateTypesAndZodSchemasFromGraphql(
       beforeOneFileWrite: formatContentWithPrettier,
     },
     generates: {
-      [`${documentModelDirPath}/gen/schema/types.ts`]: {
+      [`${schemaDirPath}/types.ts`]: {
         schema,
         config: typescriptConfig,
         plugins: [
@@ -122,7 +123,7 @@ export async function generateTypesAndZodSchemasFromGraphql(
           },
         ],
       },
-      [`${documentModelDirPath}/gen/schema/zod.ts`]: {
+      [`${schemaDirPath}/zod.ts`]: {
         schema,
         config: validationSchemaConfig,
         plugins: [
@@ -144,19 +145,19 @@ export async function generateTypesAndZodSchemasFromGraphql(
   await generate(config, true);
 }
 
-export async function generateDocumentModelZodSchemas(args: {
-  documentModelDirPath: string;
-  specification: DocumentSpecification;
-}) {
-  const { documentModelDirPath, specification } = args;
+export async function generateDocumentModelZodSchemas(
+  args: DocumentModelFileMakerArgs,
+) {
+  const { specification, schemaDirPath, versionDirPath } = args;
+
   const schema = buildGraphqlDocumentStringForSpecification(specification)
     .filter(Boolean)
     .join("\n\n");
 
   await generateTypesAndZodSchemasFromGraphql({
-    documentModelDirPath,
+    schemaDirPath,
     schema,
   });
 
-  await fs.writeFile(path.join(documentModelDirPath, "schema.graphql"), schema);
+  await fs.writeFile(path.join(versionDirPath, "schema.graphql"), schema);
 }

@@ -4,24 +4,25 @@ export type DocumentModelSubgraphResolversParams = {
   phDocumentTypeName: string;
   documentTypeVariableName: string;
   documentModelDir: string;
-  modules: Array<{
+  modulesWithSchemaTypePrefixes: {
     name: string;
-    operations: Array<{
+    operations: {
       name: string;
-    }>;
-  }>;
+      schema: string;
+    }[];
+  }[];
 };
 
 export const documentModelSubgraphResolversTemplate = (
   v: DocumentModelSubgraphResolversParams,
 ): string => {
-  const inputTypes = v.modules.flatMap((m) =>
+  const inputTypes = v.modulesWithSchemaTypePrefixes.flatMap((m) =>
     m.operations.map((o) => `${pascal(o.name)}Input`),
   );
 
   const inputTypeImports = inputTypes.join(",\n  ");
 
-  const operationMutations = v.modules
+  const operationMutations = v.modulesWithSchemaTypePrefixes
     .flatMap((module) =>
       module.operations.map(
         (op) =>

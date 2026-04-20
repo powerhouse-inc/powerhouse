@@ -1,13 +1,15 @@
-import type { DocumentModelFileMakerArgs } from "@powerhousedao/codegen";
-import type { ModuleSpecification } from "@powerhousedao/shared/document-model";
+import type {
+  DocumentModelFileMakerArgs,
+  DocumentModelModuleFileMakerArgs,
+} from "@powerhousedao/codegen";
 import { ts } from "@tmpl/core";
 import { camelCase, kebabCase, pascalCase } from "change-case";
-import { getDocumentModelOperationsModuleVariableNames } from "name-builders";
 import path from "path";
+import { filter, isIncludedIn, map, pipe } from "remeda";
 import {
   documentModelTestFileTemplate,
-  makeActionImportNames,
-  makeTestCaseForAction,
+  makeOperationImportNames,
+  makeTestCaseForOperation,
 } from "templates";
 import { SyntaxKind } from "ts-morph";
 import {
@@ -16,32 +18,25 @@ import {
   getPreviousVersionSourceFile,
 } from "utils";
 
-export async function makeTestsDirFiles(
+export async function makeDocumentModelModulesOperationTestFiles(
   fileMakerArgs: DocumentModelFileMakerArgs,
 ) {
-  await makeDocumentModelTestFile(fileMakerArgs);
-  const modules = fileMakerArgs.modules;
-
-  for (const module of modules) {
+  for (const module of fileMakerArgs.specification.modules) {
     await makeOperationModuleTestFile({ ...fileMakerArgs, module });
   }
 }
 
-async function makeOperationModuleTestFile(
-  args: DocumentModelFileMakerArgs & { module: ModuleSpecification },
+export async function makeOperationModuleTestFile(
+  args: DocumentModelModuleFileMakerArgs,
 ) {
   const {
     project,
     module,
     version,
+    versionImportPath,
     testsDirPath,
-    documentModelPackageImportPath,
-    versionedDocumentModelPackageImportPath,
     isPhDocumentOfTypeFunctionName,
   } = args;
-  const moduleVariableNames =
-    getDocumentModelOperationsModuleVariableNames(module);
-  const { actions } = moduleVariableNames;
   const kebabCaseModuleName = kebabCase(module.name);
   const pascalCaseModuleName = pascalCase(module.name);
   const moduleOperationsTypeName = `${pascalCaseModuleName}Operations`;
@@ -75,11 +70,7 @@ async function makeOperationModuleTestFile(
     }
   }
 
-  const importNames = makeActionImportNames({
-    ...args,
-    ...moduleVariableNames,
-  });
-
+  const importNames = makeOperationImportNames(args);
   const namedImports = importNames.map((name) => ({ name }));
 
   let actionsImportDeclaration = sourceFile
@@ -89,18 +80,16 @@ async function makeOperationModuleTestFile(
       importDeclaration
         .getModuleSpecifier()
         .getText()
-        .includes(documentModelPackageImportPath),
+        .includes(versionImportPath),
     );
 
   if (!actionsImportDeclaration) {
     actionsImportDeclaration = sourceFile.addImportDeclaration({
       namedImports,
-      moduleSpecifier: versionedDocumentModelPackageImportPath,
+      moduleSpecifier: versionImportPath,
     });
   } else {
-    actionsImportDeclaration.setModuleSpecifier(
-      versionedDocumentModelPackageImportPath,
-    );
+    actionsImportDeclaration.setModuleSpecifier(versionImportPath);
     const existingNamedImports = actionsImportDeclaration
       .getNamedImports()
       .map((value) => value.getName());
@@ -143,13 +132,10 @@ async function makeOperationModuleTestFile(
     })
     .map((c) => c.getArguments()[0].getText());
 
-  const actionsWithoutExistingTestCases = actions.filter((action) => {
-    const camelCaseActionName = camelCase(action.name);
-    return !testCaseNames.some((c) => c.includes(camelCaseActionName));
-  });
-
-  const testCasesToAdd = actionsWithoutExistingTestCases.map((action) =>
-    makeTestCaseForAction(action, isPhDocumentOfTypeFunctionName),
+  const testCasesToAdd = pipe(
+    module.operations,
+    filter((o) => !isIncludedIn(camelCase(o.name ?? ""), testCaseNames)),
+    map((o) => makeTestCaseForOperation(o, isPhDocumentOfTypeFunctionName)),
   );
 
   describeCallBody.addStatements(testCasesToAdd);
@@ -176,7 +162,9 @@ async function makeOperationModuleTestFile(
   await formatSourceFileWithPrettier(sourceFile);
 }
 
-async function makeDocumentModelTestFile(args: DocumentModelFileMakerArgs) {
+export async function makeDocumentModelTestFile(
+  args: DocumentModelFileMakerArgs,
+) {
   const { project, testsDirPath } = args;
   const template = documentModelTestFileTemplate(args);
 

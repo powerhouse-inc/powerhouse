@@ -1,7 +1,7 @@
 import type { ModuleSpecification } from "@powerhousedao/shared";
 import { ts } from "@tmpl/core";
 import { camelCase } from "change-case";
-import type { DocumentModelTemplateInputs } from "file-builders";
+import type { DocumentModelFileMakerArgs } from "file-builders";
 
 function buildModuleActionsName(
   module: ModuleSpecification,
@@ -43,7 +43,7 @@ function buildModuleActionsSpreadExport(
 export const actions = { ...baseActions, ${spreadActionNames} }`;
 }
 export const documentModelRootActionsFileTemplate = (
-  v: DocumentModelTemplateInputs,
+  v: DocumentModelFileMakerArgs,
 ) =>
   ts`
 /**
@@ -51,8 +51,8 @@ export const documentModelRootActionsFileTemplate = (
  * This file is auto-generated and updated by codegen
  */
 import { baseActions } from "document-model";
-${buildModuleActionsImports(v.modules, v.camelCaseDocumentType)}
+${buildModuleActionsImports(v.specification.modules, v.camelCaseDocumentType)}
 
 /** Actions for the ${v.pascalCaseDocumentType} document model */
-${buildModuleActionsSpreadExport(v.modules, v.camelCaseDocumentType)}
+${buildModuleActionsSpreadExport(v.specification.modules, v.camelCaseDocumentType)}
 `.raw;

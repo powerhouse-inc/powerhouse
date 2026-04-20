@@ -1,7 +1,7 @@
 import type { ModuleSpecification } from "@powerhousedao/shared";
 import { ts } from "@tmpl/core";
 import { kebabCase } from "change-case";
-import type { DocumentModelTemplateInputs } from "file-builders";
+import type { DocumentModelFileMakerArgs } from "file-builders";
 
 function buildModuleOperationsExports(module: ModuleSpecification) {
   const moduleDirName = kebabCase(module.name);
@@ -13,7 +13,7 @@ function buildModulesOperationsExports(modules: ModuleSpecification[]) {
 }
 
 export const documentModelGenIndexFileTemplate = (
-  v: DocumentModelTemplateInputs,
+  v: DocumentModelFileMakerArgs,
 ) =>
   ts`
 /**
@@ -37,5 +37,5 @@ export * from "./controller.js";
 export * from "./schema/index.js";
 export * from "./document-type.js";
 export * from "./document-schema.js";
-${buildModulesOperationsExports(v.modules)}
+${buildModulesOperationsExports(v.specification.modules)}
 `.raw;

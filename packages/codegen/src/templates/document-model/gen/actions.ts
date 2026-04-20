@@ -1,7 +1,7 @@
 import type { ModuleSpecification } from "@powerhousedao/shared";
 import { ts } from "@tmpl/core";
 import { kebabCase, pascalCase } from "change-case";
-import type { DocumentModelTemplateInputs } from "file-builders";
+import type { DocumentModelFileMakerArgs } from "file-builders";
 
 function makeModuleActionsTypeImport(
   module: ModuleSpecification,
@@ -59,16 +59,16 @@ function makeDocumentActionType(
   return `export type ${pascalCaseDocumentType}Action = ${actionTypeUnion};`;
 }
 export const documentModelGenActionsFileTemplate = (
-  v: DocumentModelTemplateInputs,
+  v: DocumentModelFileMakerArgs,
 ) =>
   ts`
 /**
  * WARNING: DO NOT EDIT
  * This file is auto-generated and updated by codegen
  */
-${makeModuleActionsTypeImports(v.modules, v.pascalCaseDocumentType)}
+${makeModuleActionsTypeImports(v.specification.modules, v.pascalCaseDocumentType)}
 
-${makeModuleActionsTypeExports(v.modules)}
+${makeModuleActionsTypeExports(v.specification.modules)}
 
-${makeDocumentActionType(v.modules, v.pascalCaseDocumentType)}
+${makeDocumentActionType(v.specification.modules, v.pascalCaseDocumentType)}
 `.raw;

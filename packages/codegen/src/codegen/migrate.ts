@@ -1,5 +1,4 @@
 import {
-  directoryExists,
   VERSIONED_DEPENDENCIES,
   VERSIONED_DEV_DEPENDENCIES,
 } from "@powerhousedao/shared/clis";
@@ -9,7 +8,7 @@ import {
   externalDevDependencies,
   makePackageJsonExports,
   packageScripts,
-  writeGeneratedProjectRootFiles,
+  writeAllGeneratedProjectFiles,
 } from "file-builders";
 import { cp, readdir, rm } from "fs/promises";
 import npmFetch from "npm-registry-fetch";
@@ -21,7 +20,7 @@ import {
   isTruthy,
   keys,
   map,
-  mapKeys,
+  mapValues,
   merge,
   omit,
   pipe,
@@ -59,12 +58,19 @@ export async function fixLegacyImportPaths(
   for (const sourceFile of sourceFiles) {
     const importStatements = sourceFile.getImportDeclarations();
     for (const importStatement of importStatements) {
+      const namedImports = map(
+        importStatement.getNamedImports(),
+        (importSpecifier) => importSpecifier.getText(),
+      );
       const moduleSpecifier = importStatement.getModuleSpecifier();
       const moduleSpecifierText = moduleSpecifier.getLiteralText();
       if (moduleSpecifierText.includes(packageName)) {
-        moduleSpecifier.replaceWithText(
+        moduleSpecifier.setLiteralValue(
           moduleSpecifierText.replace(`${packageName}/`, ""),
         );
+      }
+      if (namedImports.includes("generateMock")) {
+        moduleSpecifier.setLiteralValue("document-model");
       }
     }
   }
@@ -101,7 +107,7 @@ export async function migrate(version: string, projectDir = process.cwd()) {
       ...externalDependencies,
     }),
     // use the fully qualified version for other workspace deps the user may have added
-    mapKeys((key, value) =>
+    mapValues((value, key) =>
       workspacePackageNames.includes(key) ? fullyQualifiedVersion : value,
     ),
   );
@@ -112,7 +118,7 @@ export async function migrate(version: string, projectDir = process.cwd()) {
       ...fromKeys(VERSIONED_DEV_DEPENDENCIES, () => fullyQualifiedVersion),
       ...externalDevDependencies,
     }),
-    mapKeys((key, value) =>
+    mapValues((value, key) =>
       workspacePackageNames.includes(key) ? fullyQualifiedVersion : value,
     ),
   );
@@ -124,7 +130,7 @@ export async function migrate(version: string, projectDir = process.cwd()) {
     devDependencies,
   });
   console.log("Overwriting project root files...");
-  await writeGeneratedProjectRootFiles(projectDir);
+  await writeAllGeneratedProjectFiles(projectDir);
   const project = new Project({
     tsConfigFilePath: path.join(projectDir, "tsconfig.json"),
   });
@@ -151,10 +157,12 @@ async function moveLegacyDocumentModels(
   for (const documentModelDirName of documentModelDirNames) {
     const documentModelDir = join(documentModelsDir, documentModelDirName);
     const versionDir = join(documentModelDir, "v1");
-    if (await directoryExists(versionDir)) {
-      continue;
-    }
-    const toIgnore = [/^v\d+$/, new RegExp(`${documentModelDirName}.json`)];
+    const toIgnore = [
+      /^v\d+$/,
+      new RegExp(`${documentModelDirName}.json`),
+      /index.ts/,
+      /upgrades/,
+    ];
     const dirContents = await readdir(documentModelDir);
     const toCopy = filter(
       dirContents,

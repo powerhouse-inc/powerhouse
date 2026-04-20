@@ -60,6 +60,7 @@ export const VERSIONED_DEPENDENCIES = [
   "@powerhousedao/reactor-api",
   "@powerhousedao/reactor-browser",
   "@powerhousedao/connect",
+  "@powerhousedao/shared",
   "@powerhousedao/analytics-engine-core",
 ];
 

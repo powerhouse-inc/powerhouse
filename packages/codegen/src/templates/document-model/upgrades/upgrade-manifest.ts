@@ -1,9 +1,7 @@
 import { ts } from "@tmpl/core";
+import type { DocumentModelFileMakerArgs } from "file-builders";
 
-export const upgradeManifestTemplate = (v: {
-  documentModelId: string;
-  upgradeManifestName: string;
-}) =>
+export const upgradeManifestTemplate = (v: DocumentModelFileMakerArgs) =>
   ts`
 /**
  * WARNING: DO NOT EDIT
@@ -13,7 +11,7 @@ export const upgradeManifestTemplate = (v: {
   import { latestVersion, supportedVersions } from "./versions.js";
 
   export const ${v.upgradeManifestName}: UpgradeManifest<typeof supportedVersions> = {
-    documentType: "${v.documentModelId}",
+    documentType: "${v.documentModelState.id}",
     latestVersion,
     supportedVersions,
     upgrades: {},

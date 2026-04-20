@@ -9,6 +9,7 @@ import {
   tsMorphGenerateApp,
   tsMorphGenerateDocumentEditor,
   tsMorphGenerateDocumentModel,
+  tsMorphGenerateProcessor,
   tsMorphGenerateSubgraph,
 } from "file-builders";
 import { readdir } from "node:fs/promises";
@@ -31,7 +32,6 @@ import {
 } from "remeda";
 import { SyntaxKind } from "ts-morph";
 import { buildTsMorphProject, getObjectProperty } from "utils";
-import { tsMorphGenerateProcessor } from "../file-builders/processors/processor.js";
 import { loadDocumentModel } from "./utils.js";
 
 export async function generateDocumentModel(
@@ -42,7 +42,6 @@ export async function generateDocumentModel(
 }
 export async function generateAllDocumentModels(projectDir: string) {
   const files = await readdir(projectDir, { withFileTypes: true });
-  const documentModelStates: DocumentModelGlobalState[] = [];
 
   for (const directory of files.filter((f) => f.isDirectory())) {
     const documentModelPath = path.join(
@@ -55,12 +54,8 @@ export async function generateAllDocumentModels(projectDir: string) {
     if (!pathExists) {
       continue;
     }
-
     try {
-      const documentModelState = await loadDocumentModel(documentModelPath);
-      documentModelStates.push(documentModelState);
-
-      await generateDocumentModel(documentModelState, projectDir);
+      await generateFromFile(documentModelPath, projectDir);
     } catch (error) {
       console.error(directory.name, error);
     }

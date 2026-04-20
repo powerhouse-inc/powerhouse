@@ -1,13 +1,13 @@
 import { ts } from "@tmpl/core";
-import type { DocumentModelTemplateInputs } from "file-builders";
+import type { DocumentModelFileMakerArgs } from "file-builders";
 
 export const documentModelDocumentTypeTemplate = (
-  v: DocumentModelTemplateInputs,
+  v: DocumentModelFileMakerArgs,
 ) =>
   ts`
 /**
  * WARNING: DO NOT EDIT
  * This file is auto-generated and updated by codegen
  */
-export const ${v.documentTypeVariableName} = "${v.documentTypeId}";
+export const ${v.documentTypeVariableName} = "${v.documentModelState.id}";
 `.raw;
