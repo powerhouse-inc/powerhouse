@@ -1,6 +1,6 @@
 # switchboard-lb — Architecture
 
-This document is the design spec. `CLAUDE.md` covers *how we work*; this covers *what we're building and why*.
+This document is the design spec. `CLAUDE.md` covers _how we work_; this covers _what we're building and why_.
 
 **Implementation target: OpenResty** (nginx + Lua). See §2 for why.
 
@@ -27,17 +27,17 @@ This document is the design spec. `CLAUDE.md` covers *how we work*; this covers 
 
 We evaluated four implementation strategies:
 
-| Approach | Verdict |
-| --- | --- |
-| Custom C daemon | Rejected for MVP. Large surface area, long timeline, and the interesting problems (pinning invariant, migration story) are independent of language. Revisit only if we outgrow OpenResty. |
-| Plain nginx | Rejected. `hash $var consistent` can hash on URL params or headers, but cannot read a JSON request body. The path-scoped route would work; the `POST /graphql` route would not. |
-| HAProxy + Lua | Viable. `http-buffer-request` + a Lua converter can set a variable, then `balance hash <var> consistent` routes. Slightly less mature Lua ecosystem than OpenResty for this specific shape. |
+| Approach                    | Verdict                                                                                                                                                                                         |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Custom C daemon             | Rejected for MVP. Large surface area, long timeline, and the interesting problems (pinning invariant, migration story) are independent of language. Revisit only if we outgrow OpenResty.       |
+| Plain nginx                 | Rejected. `hash $var consistent` can hash on URL params or headers, but cannot read a JSON request body. The path-scoped route would work; the `POST /graphql` route would not.                 |
+| HAProxy + Lua               | Viable. `http-buffer-request` + a Lua converter can set a variable, then `balance hash <var> consistent` routes. Slightly less mature Lua ecosystem than OpenResty for this specific shape.     |
 | **OpenResty (nginx + Lua)** | **Chosen.** First-class body access via `ngx.req.read_body()`, mature `cjson`, native `hash $var consistent` in the upstream block, rich `lua-resty-*` ecosystem for health checks and metrics. |
 
 What OpenResty buys us concretely:
 
 - **nginx** handles accept loop, HTTP parsing, keep-alive, upstream pooling, graceful reload, worker supervision.
-- **`rewrite_by_lua` / `access_by_lua`** is the exact phase we need to inspect the body and set a routing variable *before* the upstream is chosen.
+- **`rewrite_by_lua` / `access_by_lua`** is the exact phase we need to inspect the body and set a routing variable _before_ the upstream is chosen.
 - **`hash $doc_id consistent`** in the upstream block does rendezvous-style consistent hashing natively.
 - **`lua-resty-upstream-healthcheck`** handles active probing with well-understood semantics.
 - **`nginx-lua-prometheus`** gives us Prometheus-format metrics without a sidecar.
@@ -86,12 +86,12 @@ The Lua block runs in the nginx **rewrite phase** — after headers are parsed, 
 
 ### 4.1 Route classes
 
-| Class                        | Example                                                       | Where `$doc_id` comes from                                                                                  |
-| ---------------------------- | ------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| **Subgraph (document-scoped)** | `POST /graphql`, `POST /graphql/r`, `POST /graphql/<model>` | Lua reads body, parses JSON, pulls the owning identifier from `variables`. Key set documented in §4.3.      |
-| **Drive metadata**           | `GET /d/:drive`                                               | REST; returns the same payload from any backend. Routed to any healthy backend.                             |
-| **Global**                   | `GET /health`, introspection queries                          | handled by the LB directly or routed to any backend.                                                        |
-| **Subscription**             | `WS /graphql/subscriptions`                                   | upgrade forwarded to the pool; sticky for the connection's lifetime.                                        |
+| Class                          | Example                                                     | Where `$doc_id` comes from                                                                             |
+| ------------------------------ | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| **Subgraph (document-scoped)** | `POST /graphql`, `POST /graphql/r`, `POST /graphql/<model>` | Lua reads body, parses JSON, pulls the owning identifier from `variables`. Key set documented in §4.3. |
+| **Drive metadata**             | `GET /d/:drive`                                             | REST; returns the same payload from any backend. Routed to any healthy backend.                        |
+| **Global**                     | `GET /health`, introspection queries                        | handled by the LB directly or routed to any backend.                                                   |
+| **Subscription**               | `WS /graphql/subscriptions`                                 | upgrade forwarded to the pool; sticky for the connection's lifetime.                                   |
 
 Every document-touching request pays a body read + JSON decode. There is no path-only fast path — the real switchboard GraphQL surface (see `packages/reactor-api/src/graphql/reactor/subgraph.ts` and `document-model-subgraph.ts`) never encodes the owning document in the URL. The body-parse cost dominates the LB's per-request overhead; see §2 for the tradeoff we accepted in picking OpenResty.
 
@@ -210,18 +210,18 @@ This is illustrative, not final — it handles only the single-top-level-key cas
 3. Parse with `cjson.safe` — never the raising variant.
 4. Look for the owning identifier in `variables`. The documented key set, derived from the real subgraph resolvers:
 
-    | Key | Operations |
-    | --- | --- |
-    | `identifier` | `document`, `deleteDocument`, all `<Model>.document` queries |
-    | `identifiers` *(array)* | `deleteDocuments` — see §4.4 |
-    | `documentIdentifier` | `mutateDocument`, `mutateDocumentAsync`, `renameDocument` |
-    | `parentIdentifier` | `createDocument(parentIdentifier?)`, `createEmptyDocument(parentIdentifier?)`, `addChildren`, `removeChildren`, `documentChildren` |
-    | `childIdentifier` | `documentParents` |
-    | `sourceParentIdentifier`, `targetParentIdentifier` | `moveChildren` — both present — see §4.4 |
-    | `docId` | every per-operation mutation generated for a document model (sync + async) |
-    | `filter.documentId` (nested) | `documentOperations` query |
-    | `input.filter.documentId` (nested, list variant) | `touchChannel` |
-    | `envelopes[].operations[].context.documentId` (nested + list) | `pushSyncEnvelopes` — see §4.4 |
+   | Key                                                           | Operations                                                                                                                         |
+   | ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+   | `identifier`                                                  | `document`, `deleteDocument`, all `<Model>.document` queries                                                                       |
+   | `identifiers` _(array)_                                       | `deleteDocuments` — see §4.4                                                                                                       |
+   | `documentIdentifier`                                          | `mutateDocument`, `mutateDocumentAsync`, `renameDocument`                                                                          |
+   | `parentIdentifier`                                            | `createDocument(parentIdentifier?)`, `createEmptyDocument(parentIdentifier?)`, `addChildren`, `removeChildren`, `documentChildren` |
+   | `childIdentifier`                                             | `documentParents`                                                                                                                  |
+   | `sourceParentIdentifier`, `targetParentIdentifier`            | `moveChildren` — both present — see §4.4                                                                                           |
+   | `docId`                                                       | every per-operation mutation generated for a document model (sync + async)                                                         |
+   | `filter.documentId` (nested)                                  | `documentOperations` query                                                                                                         |
+   | `input.filter.documentId` (nested, list variant)              | `touchChannel`                                                                                                                     |
+   | `envelopes[].operations[].context.documentId` (nested + list) | `pushSyncEnvelopes` — see §4.4                                                                                                     |
 
 5. If no identifier is found, return `409` with a message pointing at the documented key set. We **do not guess**.
 
@@ -316,12 +316,12 @@ We do not write our own event loop; we do not manage our own thread pool. This i
 
 Thin vertical slices, each end-to-end runnable.
 
-- **M0 — Skeleton.** `Dockerfile`, `docker-compose.yml` with LB + 3 stub upstreams, `nginx.conf` serving `/health`. `busted` wired up. Load-test baseline to measure nginx-alone overhead before Lua enters the path. *(≈2 days)*
-- **M1 — Proxy plumbing.** `POST /graphql` and `POST /graphql/*` proxied to the upstream pool with an interim non-pinning balancer (`least_conn`); `GET /d/:drive` and `WS /graphql/subscriptions` likewise. `/health` still served locally. `proxy_next_upstream off` throughout. Integration tests assert path preservation, `X-Request-Id` passthrough, and that the subscription upgrade reaches the pool. No consistent hashing yet — the real API never encodes the owning document in the URL, so path-based pinning is impossible. *(≈2 days)*
-- **M2 — Body-based routing.** `lua/route.lua` reads the body, extracts the owning identifier from `variables` per the §4.3 key set, sets `$doc_id`, and `upstreams.conf` switches from `least_conn` back to `hash $doc_id consistent`. Unit tests cover every documented key and every error path. Integration tests prove pinning per identifier. Multi-identifier operations (`deleteDocuments`, `moveChildren`, `pushSyncEnvelopes`) and nested-path identifiers (`filter.documentId`, `envelopes[].operations[].context.documentId`) depend on resolving §9 Q7/Q8 first. *(sized open — pending §9 Q7)*
-- **M3 — Health checks + error policy.** `lua-resty-upstream-healthcheck` configured. `proxy_next_upstream off`. Explicit 409 for multi-doc requests and missing doc ids. *(≈2 days)*
-- **M4 — Observability.** `nginx-lua-prometheus` wired up, custom `log_format`, `/metrics` on a separate listener. *(≈2 days)*
-- **M5 — Production hardening.** Fuzz the body parser, run ASAN on the openresty image (the one upstream provides is fine), document the reload runbook, document the "backend list is immutable" operational rule. *(open-ended)*
+- **M0 — Skeleton.** `Dockerfile`, `docker-compose.yml` with LB + 3 stub upstreams, `nginx.conf` serving `/health`. `busted` wired up. Load-test baseline to measure nginx-alone overhead before Lua enters the path. _(≈2 days)_
+- **M1 — Proxy plumbing.** `POST /graphql` and `POST /graphql/*` proxied to the upstream pool with an interim non-pinning balancer (`least_conn`); `GET /d/:drive` and `WS /graphql/subscriptions` likewise. `/health` still served locally. `proxy_next_upstream off` throughout. Integration tests assert path preservation, `X-Request-Id` passthrough, and that the subscription upgrade reaches the pool. No consistent hashing yet — the real API never encodes the owning document in the URL, so path-based pinning is impossible. _(≈2 days)_
+- **M2 — Body-based routing.** `lua/route.lua` reads the body, extracts the owning identifier from `variables` per the §4.3 key set, sets `$doc_id`, and `upstreams.conf` switches from `least_conn` back to `hash $doc_id consistent`. Unit tests cover every documented key and every error path. Integration tests prove pinning per identifier. Multi-identifier operations (`deleteDocuments`, `moveChildren`, `pushSyncEnvelopes`) and nested-path identifiers (`filter.documentId`, `envelopes[].operations[].context.documentId`) depend on resolving §9 Q7/Q8 first. _(sized open — pending §9 Q7)_
+- **M3 — Health checks + error policy.** `lua-resty-upstream-healthcheck` configured. `proxy_next_upstream off`. Explicit 409 for multi-doc requests and missing doc ids. _(≈2 days)_
+- **M4 — Observability.** `nginx-lua-prometheus` wired up, custom `log_format`, `/metrics` on a separate listener. _(≈2 days)_
+- **M5 — Production hardening.** Fuzz the body parser, run ASAN on the openresty image (the one upstream provides is fine), document the reload runbook, document the "backend list is immutable" operational rule. _(open-ended)_
 
 After M5 we reassess: directory-based pinning? TLS termination moved into the LB? HTTP/2 upstream?
 
@@ -331,15 +331,15 @@ End-to-end this is **~2–3 weeks of calendar time**, not months.
 
 Unresolved. Decide before the relevant milestone and record the decision here.
 
-1. **Do we need a `balancer_by_lua_block` instead of `hash $doc_id consistent`?** The native `hash` directive is simpler and faster, but it doesn't give us per-request control (e.g., to consult an external directory). MVP answer: `hash`. Revisit when/if we introduce a directory. *Decide before M1.*
-2. **Read vs write routing.** MVP routes both with the same function. Is there a case for fanning reads to any healthy backend? Only if reads tolerate stale data, and Reactor semantics suggest they don't. *Defer until after M5.*
-3. **Subscription stickiness across reloads.** A long-lived WS/SSE connection stays on the same worker's upstream connection across a reload because old workers drain gracefully. We need an integration test that actually proves this. *Owner: M3.*
-4. **How do operators migrate a document between backends?** Cross-cutting design touching `switchboard` and `reactor`. Until it exists, the backend list is immutable in prod. *Decide before we operate this at any meaningful scale.*
+1. **Do we need a `balancer_by_lua_block` instead of `hash $doc_id consistent`?** The native `hash` directive is simpler and faster, but it doesn't give us per-request control (e.g., to consult an external directory). MVP answer: `hash`. Revisit when/if we introduce a directory. _Decide before M1._
+2. **Read vs write routing.** MVP routes both with the same function. Is there a case for fanning reads to any healthy backend? Only if reads tolerate stale data, and Reactor semantics suggest they don't. _Defer until after M5._
+3. **Subscription stickiness across reloads.** A long-lived WS/SSE connection stays on the same worker's upstream connection across a reload because old workers drain gracefully. We need an integration test that actually proves this. _Owner: M3._
+4. **How do operators migrate a document between backends?** Cross-cutting design touching `switchboard` and `reactor`. Until it exists, the backend list is immutable in prod. _Decide before we operate this at any meaningful scale._
 5. **`POST /graphql` with no extractable doc id.** MVP rejects with `409`. Revisit if real traffic demands a "broadcast" or "default backend" escape hatch — but the default should be "reject loudly," not "guess."
-6. **Where does TLS terminate?** MVP assumes a TLS-terminating edge in front. If that's not available in a given deploy, we enable `listen 443 ssl;` in this LB. *Decide per environment, not globally.*
-7. **Multi-identifier operations.** `deleteDocuments(identifiers: [ID!]!)`, `moveChildren(sourceParentIdentifier, targetParentIdentifier, …)`, and `pushSyncEnvelopes(envelopes: [...])` carry several identifiers that may pin to different backends. Options: (a) server-side split-and-fan-out with response merge — complex, transparent to clients; (b) require clients to pre-group by owning backend — pushes complexity to every client; (c) route all multi-identifier requests to a designated coordinator backend — simple, but introduces a hotspot; (d) forward to any backend and require `switchboard` to handle cross-backend coordination internally — turns the LB into a correctness-only gate and makes `switchboard` federation-aware. *Decide before M2 starts. Blocks M2.*
-8. **Nested identifier paths.** `documentOperations(filter: {documentId})`, `touchChannel(input: {filter: {documentId: [...]}} )`, and `pushSyncEnvelopes(envelopes: [{operations: [{context: {documentId}}]}])` place the owning id inside nested (and sometimes array) structures. The Lua body walk needs to know these shapes, which couples the LB to the subgraph schemas more tightly than we'd like. Options: (a) hard-code the paths in `lua/route.lua`; (b) generate the path list from the GraphQL schema at build time; (c) require a client-supplied header carrying the owning id so the LB doesn't walk the body at all for these cases. *Decide alongside Q7.*
-9. **Supergraph vs. subgraph routing.** Today `POST /graphql` (supergraph), `POST /graphql/r` (reactor), and `POST /graphql/<model>` are all served by the same switchboard per request, so the LB treats them identically. If the supergraph ever federates across multiple switchboards — or if model-specific subgraphs move to dedicated processes — path-based routing re-enters the picture. *Not a blocker for M2; revisit when real traffic or deployment topology forces the question.*
+6. **Where does TLS terminate?** MVP assumes a TLS-terminating edge in front. If that's not available in a given deploy, we enable `listen 443 ssl;` in this LB. _Decide per environment, not globally._
+7. **Multi-identifier operations.** `deleteDocuments(identifiers: [ID!]!)`, `moveChildren(sourceParentIdentifier, targetParentIdentifier, …)`, and `pushSyncEnvelopes(envelopes: [...])` carry several identifiers that may pin to different backends. Options: (a) server-side split-and-fan-out with response merge — complex, transparent to clients; (b) require clients to pre-group by owning backend — pushes complexity to every client; (c) route all multi-identifier requests to a designated coordinator backend — simple, but introduces a hotspot; (d) forward to any backend and require `switchboard` to handle cross-backend coordination internally — turns the LB into a correctness-only gate and makes `switchboard` federation-aware. _Decide before M2 starts. Blocks M2._
+8. **Nested identifier paths.** `documentOperations(filter: {documentId})`, `touchChannel(input: {filter: {documentId: [...]}} )`, and `pushSyncEnvelopes(envelopes: [{operations: [{context: {documentId}}]}])` place the owning id inside nested (and sometimes array) structures. The Lua body walk needs to know these shapes, which couples the LB to the subgraph schemas more tightly than we'd like. Options: (a) hard-code the paths in `lua/route.lua`; (b) generate the path list from the GraphQL schema at build time; (c) require a client-supplied header carrying the owning id so the LB doesn't walk the body at all for these cases. _Decide alongside Q7._
+9. **Supergraph vs. subgraph routing.** Today `POST /graphql` (supergraph), `POST /graphql/r` (reactor), and `POST /graphql/<model>` are all served by the same switchboard per request, so the LB treats them identically. If the supergraph ever federates across multiple switchboards — or if model-specific subgraphs move to dedicated processes — path-based routing re-enters the picture. _Not a blocker for M2; revisit when real traffic or deployment topology forces the question._
 
 ## 10. Appendix — references
 
