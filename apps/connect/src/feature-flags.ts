@@ -6,7 +6,6 @@ import {
   type ResolutionDetails,
 } from "@openfeature/web-sdk";
 import { logger, setLogLevel, type ILogger } from "document-model";
-import { connectConfig } from "./connect.config.js";
 
 /**
  * QueryParamProvider reads feature flags from URL query parameters.
@@ -158,17 +157,6 @@ export async function initFeatureFlags(
   await OpenFeature.setProviderAndWait(provider);
 
   const features = new Map<string, boolean>();
-  const client = OpenFeature.getClient();
-
-  // Query param overrides env var for inspector
-  const inspectorFromParam = params.has(FEATURE_INSPECTOR_ENABLED);
-  const inspectorEnabled = inspectorFromParam
-    ? client.getBooleanValue(
-        FEATURE_INSPECTOR_ENABLED,
-        FEATURE_INSPECTOR_ENABLED_DEFAULT,
-      )
-    : connectConfig.content.inspectorEnabled;
-  features.set(FEATURE_INSPECTOR_ENABLED, inspectorEnabled);
 
   // Handle LOG_LEVEL query param override
   const logLevelParam = params.get("LOG_LEVEL");
@@ -190,21 +178,4 @@ export async function initFeatureFlags(
   }
 
   return features;
-}
-
-const FEATURE_INSPECTOR_ENABLED = "FEATURE_INSPECTOR_ENABLED";
-const FEATURE_INSPECTOR_ENABLED_DEFAULT = false;
-
-/**
- * If true, shows the inspector button in the sidebar.
- * Defaults to false (hidden).
- */
-export async function isInspectorEnabled(): Promise<boolean> {
-  const client = OpenFeature.getClient();
-  return Promise.resolve(
-    client.getBooleanValue(
-      FEATURE_INSPECTOR_ENABLED,
-      FEATURE_INSPECTOR_ENABLED_DEFAULT,
-    ),
-  );
 }

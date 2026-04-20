@@ -14,7 +14,6 @@ import {
   setSelectedDrive,
   showPHModal,
   useDrives,
-  useInspectorEnabled,
   useSelectedDriveSafe,
   useUser,
 } from "@powerhousedao/reactor-browser";
@@ -24,7 +23,6 @@ export function Sidebar() {
   const user = useUser();
   const drives = useDrives();
   const [selectedDrive] = useSelectedDriveSafe();
-  const inspectorEnabled = useInspectorEnabled();
   const connectDebug = localStorage.getItem("CONNECT_DEBUG") === "true";
 
   const ensName = user?.ens?.name || user?.profile?.username || undefined;
@@ -41,10 +39,6 @@ export function Sidebar() {
     showPHModal({ type: "addDrive" });
   };
 
-  const onInspectorClick = () => {
-    showPHModal({ type: "inspector" });
-  };
-
   const etherscanUrl = user?.address
     ? `https://etherscan.io/address/${user.address}`
     : "";
@@ -55,7 +49,6 @@ export function Sidebar() {
         id="sidebar"
         onClick={() => setSelectedDrive(undefined)}
         onClickSettings={onClickSettings}
-        onInspectorClick={inspectorEnabled ? onInspectorClick : undefined}
         address={user?.address}
         onLogin={openRenown}
         onDisconnect={logout}

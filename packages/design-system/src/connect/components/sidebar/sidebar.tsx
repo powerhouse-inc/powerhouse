@@ -27,7 +27,6 @@ export const ConnectSidebar: React.FC<ConnectSidebarProps> = ({
   avatarUrl,
   headerContent,
   onClickSettings,
-  onInspectorClick,
   maxWidth = "304px",
   minWidth = "58px",
   onLogin,
@@ -48,7 +47,6 @@ export const ConnectSidebar: React.FC<ConnectSidebarProps> = ({
         ensName={ensName}
         avatarUrl={avatarUrl}
         onClickSettings={onClickSettings}
-        onInspectorClick={onInspectorClick}
         onLogin={onLogin}
         onDisconnect={onDisconnect}
         etherscanUrl={etherscanUrl}
