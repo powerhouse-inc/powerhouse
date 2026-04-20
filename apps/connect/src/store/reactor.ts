@@ -118,7 +118,7 @@ export async function createReactor(localPackage?: DocumentModelLib) {
   // Register any packages marked as provider: "local" in powerhouse.config.json
   // that the vite plugin bundled into this build. No-op when none were bundled.
   const { default: registerBundledPackages } =
-    await import("virtual:ph-bundled-packages");
+    await import("ph-bundled-packages-virtual");
   registerBundledPackages(packageManager);
   const packagesResult = await packageManager.addPackages(
     packagesConfig.packages,

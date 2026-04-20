@@ -13,8 +13,8 @@ export type PhBundledPackagesPluginOptions = {
   projectRoot?: string;
 };
 
-const VIRTUAL_ID = "virtual:ph-bundled-packages";
-const RESOLVED_VIRTUAL_ID = "\0" + VIRTUAL_ID;
+const VIRTUAL_ID = "ph-bundled-packages-virtual";
+const RESOLVED_VIRTUAL_ID = "\0virtual:" + VIRTUAL_ID;
 
 function readBundledPackageVersion(
   projectRoot: string,
@@ -53,7 +53,7 @@ function makeRegisterModule(packages: string[], projectRoot: string): string {
 }
 
 /**
- * Emits a virtual module `virtual:ph-bundled-packages` whose default export
+ * Emits a virtual module `ph-bundled-packages-virtual` whose default export
  * is a `register(packageManager)` function. When called at runtime (from
  * Connect's bootstrap), it registers each bundled package with the package
  * manager the same way Common/Vetra are registered — meaning they work
