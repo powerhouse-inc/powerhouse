@@ -1,14 +1,12 @@
-import { DEFAULT_REGISTRY_URL } from "@powerhousedao/config";
 import {
-  getConfig,
   getPowerhouseProjectInfo,
   installArgs,
   makeDependenciesWithVersions,
 } from "@powerhousedao/shared/clis";
+import { resolveRegistryUrl } from "@powerhousedao/shared/registry";
 import { execSync } from "child_process";
 import { command } from "cmd-ts";
 import { resolveCommand } from "package-manager-detector";
-import { join } from "path";
 import { updateConfigFile, updateStylesFile } from "../utils.js";
 
 export const install = command({
@@ -25,7 +23,7 @@ as provider "local" — it will be bundled into ph connect build so the
 preview works without the registry being reachable.
 
 Resolution order for the registry URL:
-  --registry flag > powerhouse.config.json > PH_REGISTRY_URL env > default
+  --registry flag > PH_REGISTRY_URL env > powerhouse.config.json > default
   `,
   args: installArgs,
   handler: async (args) => {
@@ -45,14 +43,10 @@ Resolution order for the registry URL:
       throw new Error(`Could not find project path to install from.`);
     }
 
-    // Resolve registry URL: flag > config > env > default
-    const configPath = join(projectPath, "powerhouse.config.json");
-    const config = getConfig(configPath);
-    const registryUrl =
-      args.registry ??
-      config.packageRegistryUrl ??
-      process.env.PH_REGISTRY_URL ??
-      DEFAULT_REGISTRY_URL;
+    const registryUrl = resolveRegistryUrl({
+      registry: args.registry,
+      projectPath,
+    });
 
     if (args.debug) {
       console.log(">>> registryUrl", registryUrl);
