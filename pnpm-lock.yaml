@@ -528,6 +528,12 @@ importers:
       kysely-pglite-dialect:
         specifier: 'catalog:'
         version: 1.2.0(@electric-sql/pglite@0.3.15)(kysely@0.28.16)
+      pglite-legacy-02:
+        specifier: npm:@electric-sql/pglite@0.2.17
+        version: '@electric-sql/pglite@0.2.17'
+      pglite-tools-legacy-02:
+        specifier: npm:@electric-sql/pglite-tools@0.2.4
+        version: '@electric-sql/pglite-tools@0.2.4'
       react-error-boundary:
         specifier: ^4.0.11
         version: 4.1.2(react@19.2.4)
@@ -4661,6 +4667,12 @@ packages:
     resolution: {integrity: sha512-BK50ZnYa3IG7ztXhtgYf0Q7zijV32Iw1cYS8C+ThdQlwx12V5VZ9KRJ42y82Hyb4PkTxZQklVQA9JHyUlex33A==}
     peerDependencies:
       '@electric-sql/pglite': 0.3.15
+
+  '@electric-sql/pglite-tools@0.2.4':
+    resolution: {integrity: sha512-RI961WSzss/RLpsI0Zu8wqZmfkoFcfmqFGvn0UAHAZnVylJFWu054kyWB5bKTlICzAYTlNuuDYiHFmb6Ucezhg==}
+
+  '@electric-sql/pglite@0.2.17':
+    resolution: {integrity: sha512-qEpKRT2oUaWDH6tjRxLHjdzMqRUGYDnGZlKrnL4dJ77JVMcP2Hpo3NYnOSPKdZdeec57B6QPprCUFg0picx5Pw==}
 
   '@electric-sql/pglite@0.3.15':
     resolution: {integrity: sha512-Cj++n1Mekf9ETfdc16TlDi+cDDQF0W7EcbyRHYOAeZdsAe8M/FJg18itDTSwyHfar2WIezawM9o0EKaRGVKygQ==}
@@ -22466,6 +22478,10 @@ snapshots:
   '@electric-sql/pglite-tools@0.2.20(@electric-sql/pglite@0.3.15)':
     dependencies:
       '@electric-sql/pglite': 0.3.15
+
+  '@electric-sql/pglite-tools@0.2.4': {}
+
+  '@electric-sql/pglite@0.2.17': {}
 
   '@electric-sql/pglite@0.3.15': {}
 

@@ -14,7 +14,12 @@ export default defineConfig({
   },
   envPrefix: ["PH_CONNECT_"],
   optimizeDeps: {
-    exclude: ["@electric-sql/pglite", "@electric-sql/pglite-tools"],
+    exclude: [
+      "@electric-sql/pglite",
+      "@electric-sql/pglite-tools",
+      "pglite-legacy-02",
+      "pglite-tools-legacy-02",
+    ],
   },
   plugins: [
     process.env.PH_DEBUG_BUILD === "true" ? analyzer() : undefined,

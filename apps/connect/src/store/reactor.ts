@@ -56,7 +56,10 @@ export async function clearReactorStorage() {
   const dbs = await indexedDB.databases();
   const targets = dbs
     .map((d) => d.name)
-    .filter((n): n is string => !!n && /pglite|reactor/i.test(n));
+    .filter(
+      (n): n is string =>
+        !!n && !n.startsWith("ph-pglite-backup::") && /pglite|reactor/i.test(n),
+    );
 
   await Promise.all(
     targets.map(
