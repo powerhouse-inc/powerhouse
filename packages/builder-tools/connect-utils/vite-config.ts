@@ -158,7 +158,17 @@ function viteLogger({
 
 function getPackageNamesFromPowerhouseConfig({ packages }: PowerhouseConfig) {
   if (!packages) return [];
-  return packages.map((p) => p.packageName);
+  // Preserve the version/tag from powerhouse.config.json so Connect's runtime
+  // resolver sees it when building the registry CDN URL. Without this the
+  // registry falls back to its `latest` dist-tag, which may point to a
+  // different release stream than what the project asked for (e.g. latest
+  // vs. dev). Local packages resolve from node_modules and don't need a
+  // version here.
+  return packages.map((p) =>
+    p.version && p.provider !== "local"
+      ? `${p.packageName}@${p.version}`
+      : p.packageName,
+  );
 }
 
 function getLocalPackageNamesFromPowerhouseConfig({
