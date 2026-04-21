@@ -2,6 +2,7 @@ import { useState } from "react";
 
 export type DebugInspectorProps = {
   readonly supportedPgVersions: readonly number[];
+  readonly currentPgVersion: number | null;
   readonly onResetToPgVersion: (major: number) => Promise<void>;
 };
 
@@ -9,6 +10,7 @@ type Status = "idle" | "running" | "error";
 
 export function DebugInspector({
   supportedPgVersions,
+  currentPgVersion,
   onResetToPgVersion,
 }: DebugInspectorProps) {
   const [status, setStatus] = useState<Status>("idle");
@@ -41,6 +43,14 @@ export function DebugInspector({
           Postgres cluster at the chosen major version, then reload. Useful for
           testing version-detection and migration flows.
         </p>
+        <div className="mt-2 inline-flex items-center gap-2 rounded bg-gray-100 px-3 py-1 text-sm">
+          <span className="text-gray-600">Current version:</span>
+          <span className="font-semibold text-gray-900">
+            {currentPgVersion === null
+              ? "None (no data dir)"
+              : `Postgres ${currentPgVersion}`}
+          </span>
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-2">

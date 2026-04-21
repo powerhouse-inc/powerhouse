@@ -20,7 +20,8 @@ export const InspectorModal: React.FC = () => {
   const queueInspectorProps = useQueueInspector();
   const processorsInspectorProps = useProcessorsInspector();
   const integrityInspectorProps = useIntegrityInspector();
-  const debugInspectorProps = useDebugInspector();
+  const { currentPgVersion, supportedPgVersions, onResetToPgVersion } =
+    useDebugInspector();
 
   return (
     <ConnectInspectorModal
@@ -37,6 +38,11 @@ export const InspectorModal: React.FC = () => {
         pageSize: DEFAULT_PAGE_SIZE,
         onExportDb,
         onImportDb,
+        pgVersionControl: {
+          currentPgVersion,
+          supportedPgVersions,
+          onResetToPgVersion,
+        },
       }}
       remotesInspectorProps={{
         getRemotes,
@@ -46,7 +52,6 @@ export const InspectorModal: React.FC = () => {
       queueInspectorProps={queueInspectorProps}
       processorsInspectorProps={processorsInspectorProps}
       integrityInspectorProps={integrityInspectorProps}
-      debugInspectorProps={debugInspectorProps}
     />
   );
 };

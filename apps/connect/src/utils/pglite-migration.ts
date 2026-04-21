@@ -241,13 +241,85 @@ async function migrateIdbIfNeeded(idbName: string): Promise<void> {
     const pg = new PGlite(`idb://${stripped}`, { relaxedDurability: false });
     try {
       await pg.waitReady;
-      await pg.exec(sql);
+      // PGlite 0.2.x pg_dump emits SQL literals with doubled backslashes
+      // (escape-string form) but does not always emit the matching
+      // `SET standard_conforming_strings = off`. PG17 defaults that GUC to on,
+      // so '\\"' in the dump is parsed as a literal backslash + end-of-string
+      // and JSONB re-parsing fails. Force off at the session level before
+      // running the dump so doubled backslashes collapse as intended.
+      console.info(
+        `[pglite-migration] Dump preamble (first 500 chars):\n${sql.slice(0, 500)}`,
+      );
+      try {
+        await pg.exec("SET standard_conforming_strings = off;");
+      } catch (gucErr) {
+        console.warn(
+          "[pglite-migration] Could not force standard_conforming_strings=off",
+          gucErr,
+        );
+      }
+      try {
+        await pg.exec(sql);
+      } catch (execErr) {
+        logRestoreFailure(idbName, sql, execErr);
+        throw execErr;
+      }
     } finally {
       await pg.close();
     }
   } catch (err) {
     await rollbackFromBackup(idbName, backupName, err);
     throw err;
+  }
+}
+
+function logRestoreFailure(idbName: string, sql: string, err: unknown): void {
+  const errObj = err as {
+    message?: string;
+    position?: string | number;
+    severity?: string;
+    code?: string;
+    detail?: string;
+    where?: string;
+    internalQuery?: string;
+  };
+  const position =
+    typeof errObj.position === "string"
+      ? parseInt(errObj.position, 10)
+      : typeof errObj.position === "number"
+        ? errObj.position
+        : NaN;
+
+  console.error(`[pglite-migration] Restore failed for ${idbName}`, {
+    message: errObj.message,
+    code: errObj.code,
+    severity: errObj.severity,
+    detail: errObj.detail,
+    where: errObj.where,
+    position: errObj.position,
+    sqlLength: sql.length,
+  });
+
+  if (Number.isFinite(position) && position > 0) {
+    const zeroBased = position - 1;
+    const start = Math.max(0, zeroBased - 200);
+    const end = Math.min(sql.length, zeroBased + 200);
+    const before = sql.slice(start, zeroBased);
+    const at = sql.slice(zeroBased, zeroBased + 1);
+    const after = sql.slice(zeroBased + 1, end);
+    console.error(
+      `[pglite-migration] SQL context around position ${position}:\n${before}»${at}«${after}`,
+    );
+    const lineStart = sql.lastIndexOf("\n", zeroBased) + 1;
+    const lineEnd = sql.indexOf("\n", zeroBased);
+    const line = sql.slice(lineStart, lineEnd === -1 ? sql.length : lineEnd);
+    console.error(
+      `[pglite-migration] Failing line (truncated to 500 chars):\n${line.slice(0, 500)}`,
+    );
+  } else {
+    console.error(
+      `[pglite-migration] No position info. First 2000 chars of dump:\n${sql.slice(0, 2000)}`,
+    );
   }
 }
 

@@ -1,10 +1,20 @@
 import { clearReactorStorage } from "@powerhousedao/connect/store";
-import { PENDING_PG_SEED_KEY } from "@powerhousedao/connect/utils";
-import { useCallback } from "react";
+import {
+  getCachedReactorPgMajor,
+  PENDING_PG_SEED_KEY,
+  subscribeReactorPgMajor,
+} from "@powerhousedao/connect/utils";
+import { useCallback, useSyncExternalStore } from "react";
 
 const SUPPORTED_PG_VERSIONS = [16, 17] as const;
 
 export function useDebugInspector() {
+  const currentPgVersion = useSyncExternalStore(
+    subscribeReactorPgMajor,
+    getCachedReactorPgMajor,
+    () => undefined,
+  );
+
   const onResetToPgVersion = useCallback(async (major: number) => {
     console.info(`[debug-inspector] Reset requested: PG${major}`);
     try {
@@ -22,6 +32,7 @@ export function useDebugInspector() {
 
   return {
     supportedPgVersions: SUPPORTED_PG_VERSIONS,
+    currentPgVersion: currentPgVersion ?? null,
     onResetToPgVersion,
   };
 }
