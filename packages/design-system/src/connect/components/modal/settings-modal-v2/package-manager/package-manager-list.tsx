@@ -7,12 +7,6 @@ import type { ReactNode } from "react";
 import { useCallback, useEffect, useLayoutEffect, useState } from "react";
 import { twMerge } from "tailwind-merge";
 import { ConnectDropdownMenu } from "../../../dropdown-menu/dropdown-menu.js";
-import {
-  EMPTY_FILTERS,
-  PackageManagerFilters,
-  type PackageManagerFilterState,
-  applyPackageFilters,
-} from "./package-manager-filters.js";
 
 const PackageDetail: React.FC<{ label: string; value: ReactNode }> = ({
   label,
@@ -147,8 +141,6 @@ export const PackageManagerList = (props: {
 }) => {
   const { className, registryPackageList, onInstall, onUninstall } = props;
   const [maxHeight, setMaxHeight] = useState<number | undefined>();
-  const [filters, setFilters] =
-    useState<PackageManagerFilterState>(EMPTY_FILTERS);
 
   const locallyInstalledPackages = registryPackageList.filter(
     (p) => p.status === "local-install",
@@ -156,12 +148,9 @@ export const PackageManagerList = (props: {
   const registryInstalledPackages = registryPackageList.filter(
     (p) => p.status === "registry-install",
   );
-  const allAvailablePackages = registryPackageList.filter(
+  const availablePackages = registryPackageList.filter(
     (p) => p.status === "available",
   );
-  // Filters apply only to the Available section — installed/dismissed
-  // states aren't something the user is shopping for.
-  const availablePackages = applyPackageFilters(allAvailablePackages, filters);
   const dismissedPackages = registryPackageList.filter(
     (p) => p.status === "dismissed",
   );
@@ -233,20 +222,9 @@ export const PackageManagerList = (props: {
           sectionId="available"
           title="Available Packages"
           count={availablePackages.length}
-          totalCount={allAvailablePackages.length}
           isEmpty={!hasAvailable}
-          emptyText={
-            allAvailablePackages.length === 0
-              ? "No packages available to install."
-              : "No packages match the current filters."
-          }
+          emptyText="No packages available to install."
         >
-          <PackageManagerFilters
-            className="mb-4"
-            registryPackageList={allAvailablePackages}
-            value={filters}
-            onChange={setFilters}
-          />
           <PackageList
             packages={availablePackages}
             onInstall={onInstall}
@@ -308,26 +286,12 @@ const PackageSection: React.FC<{
   sectionId: string;
   title: string;
   count: number;
-  /** Pre-filter total, when filters can narrow `count`. Displays "count / total". */
-  totalCount?: number;
   isEmpty?: boolean;
   emptyText?: string;
   children?: ReactNode;
-}> = ({
-  sectionId,
-  title,
-  count,
-  totalCount,
-  isEmpty,
-  emptyText,
-  children,
-}) => {
+}> = ({ sectionId, title, count, isEmpty, emptyText, children }) => {
   const [collapsed, toggle] = useCollapsedSection(sectionId);
   const contentId = `package-section-${sectionId}`;
-  const countLabel =
-    totalCount !== undefined && totalCount !== count
-      ? `${count} / ${totalCount}`
-      : `${count}`;
 
   return (
     <section className="mb-6">
@@ -348,9 +312,7 @@ const PackageSection: React.FC<{
             )}
           />
           <span>{title}</span>
-          <span className="text-xs font-medium text-gray-500">
-            {countLabel}
-          </span>
+          <span className="text-xs font-medium text-gray-500">{count}</span>
         </button>
       </h3>
       {!collapsed && (

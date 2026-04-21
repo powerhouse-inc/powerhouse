@@ -22,9 +22,8 @@ const onlyLocallyInstalledPackages: RegistryPackage[] = mockPackages
   .slice(0, 3)
   .map((pkg) => ({ ...pkg, status: "local-install" }));
 
-// Packages with dist-tag + version metadata so the filter bar has something
-// meaningful to display. A mix of "latest"/"staging"/"dev" across different
-// version ranges exercises every filter control.
+// Packages with dist-tag + version metadata so the `name@tag` search path
+// has something meaningful to resolve against.
 const taggedPackages: RegistryPackage[] = [
   {
     ...mockPackages[0],
@@ -172,13 +171,11 @@ export const Empty: Story = PackageManagerStoryWrapper({
 });
 
 /**
- * Available packages with dist-tags + version metadata so the filter bar
- * shows tag chips and the version-range inputs narrow results. Try:
- *  - clicking the `dev` chip to see only packages with a `dev` dist-tag
- *  - typing `1.0.0` in the min field to hide < 1.0.0 releases
- *  - searching for `@uniswap/lp-tools@staging` in the install input
+ * Available packages carrying dist-tags + version metadata. The search
+ * input is the only way to narrow results — try `@uniswap/lp-tools@staging`
+ * or `my-pkg@1.2.3` to target a specific tag or version.
  */
-export const WithFiltersAndTags: Story = {
+export const WithTaggedPackages: Story = {
   ...PackageManagerStoryWrapper({
     registryPackageList: taggedPackages,
   }),
