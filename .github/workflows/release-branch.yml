@@ -97,6 +97,12 @@ jobs:
           --skip-push="${{ inputs.skip_push == true }}" \
           --skip-git-tag="${{ inputs.skip_git_tag == true }}"
 
+      # Install sentry-cli globally so the subsequent steps can invoke it
+      # reliably (npx-based invocation had resolution issues).
+      - name: Install sentry-cli
+        if: ${{ inputs.dry_run != true && inputs.skip_publish != true }}
+        run: curl -sL https://sentry.io/get-cli/ | SENTRY_CLI_VERSION=2.58.5 bash
+
       # Upload source maps to self-hosted Sentry so production stack traces
       # map back to original TypeScript source in this repo.
       - name: Upload source maps to Sentry
@@ -115,14 +121,14 @@ jobs:
           echo "Sentry release: $VERSION"
 
           for proj in powerhouse ph-cli; do
-            npx --yes --package=@sentry/cli@^2 -- sentry-cli releases new -p "$proj" "$VERSION" || true
+            sentry-cli releases new -p "$proj" "$VERSION" || true
           done
-          npx --yes --package=@sentry/cli@^2 -- sentry-cli releases set-commits "$VERSION" --auto -p powerhouse || true
+          sentry-cli releases set-commits "$VERSION" --auto -p powerhouse || true
 
           for dir in apps/connect/dist apps/switchboard/dist apps/academy/dist \
                      packages/reactor-api/dist packages/switchboard/dist; do
             [ -d "$dir" ] || continue
-            npx --yes --package=@sentry/cli@^2 -- sentry-cli sourcemaps upload \
+            sentry-cli sourcemaps upload \
               --release "$VERSION" \
               --project powerhouse \
               "$dir" || true
@@ -130,14 +136,14 @@ jobs:
 
           for dir in clis/ph-cli/dist clis/ph-cmd/dist; do
             [ -d "$dir" ] || continue
-            npx --yes --package=@sentry/cli@^2 -- sentry-cli sourcemaps upload \
+            sentry-cli sourcemaps upload \
               --release "$VERSION" \
               --project ph-cli \
               "$dir" || true
           done
 
           for proj in powerhouse ph-cli; do
-            npx --yes --package=@sentry/cli@^2 -- sentry-cli releases finalize -p "$proj" "$VERSION" || true
+            sentry-cli releases finalize -p "$proj" "$VERSION" || true
           done
 
   publish-docker:
