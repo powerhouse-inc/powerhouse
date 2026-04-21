@@ -115,14 +115,14 @@ jobs:
           echo "Sentry release: $VERSION"
 
           for proj in powerhouse ph-cli; do
-            npx --yes @sentry/cli@^2 releases new -p "$proj" "$VERSION" || true
+            npx --yes --package=@sentry/cli@^2 -- sentry-cli releases new -p "$proj" "$VERSION" || true
           done
-          npx --yes @sentry/cli@^2 releases set-commits "$VERSION" --auto -p powerhouse || true
+          npx --yes --package=@sentry/cli@^2 -- sentry-cli releases set-commits "$VERSION" --auto -p powerhouse || true
 
           for dir in apps/connect/dist apps/switchboard/dist apps/academy/dist \
                      packages/reactor-api/dist packages/switchboard/dist; do
             [ -d "$dir" ] || continue
-            npx --yes @sentry/cli@^2 sourcemaps upload \
+            npx --yes --package=@sentry/cli@^2 -- sentry-cli sourcemaps upload \
               --release "$VERSION" \
               --project powerhouse \
               "$dir" || true
@@ -130,14 +130,14 @@ jobs:
 
           for dir in clis/ph-cli/dist clis/ph-cmd/dist; do
             [ -d "$dir" ] || continue
-            npx --yes @sentry/cli@^2 sourcemaps upload \
+            npx --yes --package=@sentry/cli@^2 -- sentry-cli sourcemaps upload \
               --release "$VERSION" \
               --project ph-cli \
               "$dir" || true
           done
 
           for proj in powerhouse ph-cli; do
-            npx --yes @sentry/cli@^2 releases finalize -p "$proj" "$VERSION" || true
+            npx --yes --package=@sentry/cli@^2 -- sentry-cli releases finalize -p "$proj" "$VERSION" || true
           done
 
   publish-docker:
