@@ -7,9 +7,15 @@ import {
   REACTOR_SCHEMA,
   useDatabase,
   usePGlite,
+  useReactorClientModule,
+  type IQueue,
 } from "@powerhousedao/reactor-browser";
 import { sql } from "kysely";
 import { useCallback } from "react";
+
+async function quiesceQueue(queue: IQueue): Promise<void> {
+  await new Promise<void>((resolve) => queue.block(() => resolve()));
+}
 
 type ColumnInfo = {
   readonly name: string;
@@ -55,6 +61,9 @@ const PRIORITY_COLUMNS = [
 export function useDbExplorer() {
   const database = useDatabase();
   const pglite = usePGlite();
+  const reactorClientModule = useReactorClientModule();
+  const reactor = reactorClientModule?.reactorModule?.reactor;
+  const queue = reactorClientModule?.reactorModule?.queue;
 
   const getTables = useCallback(async (): Promise<TableInfo[]> => {
     if (!database) return [];
@@ -249,21 +258,34 @@ export function useDbExplorer() {
   const onExportDb = useCallback(async () => {
     if (!pglite) return;
 
-    const dump = await pgDump({ pg: pglite });
-    const sqlContent = await dump.text();
+    if (queue) await quiesceQueue(queue);
 
-    const blob = new Blob([sqlContent], { type: "text/sql" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `database-export-${Date.now()}.sql`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }, [pglite]);
+    try {
+      const dump = await pgDump({ pg: pglite });
+      const sqlContent = await dump.text();
+
+      const blob = new Blob([sqlContent], { type: "text/sql" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `database-export-${Date.now()}.sql`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      queue?.unblock();
+    }
+  }, [pglite, queue]);
 
   const onImportDb = useCallback(
     async (sqlContent: string) => {
       if (!pglite) return;
+
+      if (queue) await quiesceQueue(queue);
+
+      if (reactor) {
+        const status = reactor.kill();
+        await status.completed;
+      }
 
       // Use explicit transaction to ensure writable transaction context
       await pglite.transaction(async (tx) => {
@@ -272,8 +294,10 @@ export function useDbExplorer() {
         await tx.exec(sqlContent);
         await tx.exec(`SET search_path TO ${REACTOR_SCHEMA}`);
       });
+
+      window.location.reload();
     },
-    [pglite],
+    [pglite, queue, reactor],
   );
 
   const getDefaultSort = useCallback(
