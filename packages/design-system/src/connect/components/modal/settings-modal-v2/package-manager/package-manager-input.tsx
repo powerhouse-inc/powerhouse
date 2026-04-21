@@ -12,6 +12,17 @@ export type PackageManagerInputProps = {
   className?: string;
 };
 
+// Minimum viable package name: an npm-style identifier (scoped or unscoped).
+// Used to gate the npm-fallback option so we don't show an "Install from
+// npm" card for whitespace-only queries or while the user is still typing
+// a single character.
+const NPM_NAME_RE =
+  /^@[a-z0-9][a-z0-9._-]*\/[a-z0-9][a-z0-9._-]*$|^[a-z0-9][a-z0-9._-]*$/i;
+
+function isPlausiblePackageName(name: string): boolean {
+  return name.length >= 2 && NPM_NAME_RE.test(name);
+}
+
 export const PackageManagerInput: React.FC<PackageManagerInputProps> = (
   props,
 ) => {
@@ -27,30 +38,58 @@ export const PackageManagerInput: React.FC<PackageManagerInputProps> = (
     const { name: namePart, tag } = parsePackageSpec(query);
     const needle = namePart.toLowerCase();
 
-    return Promise.resolve(
-      registryPackageList
-        .filter(
-          (pkg) =>
-            pkg.name.toLowerCase().includes(needle) ||
-            pkg.manifest?.description?.toLowerCase().includes(needle),
-        )
-        .map((pkg) => {
-          const isInstalled =
-            pkg.status === "local-install" || pkg.status === "registry-install";
-          const installSpec = buildPackageSpec(pkg.name, tag);
-          const label = tag ? `${pkg.name} @ ${tag}` : pkg.name;
-          const displayVersion = tag ?? pkg.version;
-          return {
-            value: installSpec,
-            label,
-            version: displayVersion,
-            description: pkg.manifest?.description,
-            meta: pkg.manifest?.publisher?.name,
-            disabled: isInstalled,
-            disabledLabel: isInstalled ? "Installed" : undefined,
-          };
-        }),
+    const localOptions: SearchAutocompleteOption[] = registryPackageList
+      .filter(
+        (pkg) =>
+          pkg.name.toLowerCase().includes(needle) ||
+          pkg.manifest?.description?.toLowerCase().includes(needle),
+      )
+      .map((pkg) => {
+        const isInstalled =
+          pkg.status === "local-install" || pkg.status === "registry-install";
+        const installSpec = buildPackageSpec(pkg.name, tag);
+        const label = tag ? `${pkg.name} @ ${tag}` : pkg.name;
+        const displayVersion = tag ?? pkg.version;
+        return {
+          value: installSpec,
+          label,
+          version: displayVersion,
+          description: pkg.manifest?.description,
+          meta: pkg.manifest?.publisher?.name,
+          disabled: isInstalled,
+          disabledLabel: isInstalled ? "Installed" : undefined,
+        };
+      });
+
+    // The custom registry's /packages endpoint only returns locally-published
+    // packages, so anything that exists only on npmjs.org won't appear in the
+    // local list. When the user's query looks like a real package name, we
+    // append a single synthetic "install from npm" option at the bottom. The
+    // registry's uplink handles the actual fetch when the user picks this —
+    // if the name doesn't exist on npm either, the install call errors and
+    // the consumer's toast surfaces the failure.
+    if (!isPlausiblePackageName(namePart)) {
+      return Promise.resolve(localOptions);
+    }
+
+    const npmAlreadyInLocal = localOptions.some(
+      (opt) => opt.label === namePart || opt.label === `${namePart} @ ${tag}`,
     );
+    if (npmAlreadyInLocal) {
+      return Promise.resolve(localOptions);
+    }
+
+    const fallbackSpec = buildPackageSpec(namePart, tag);
+    const fallbackLabel = tag ? `${namePart} @ ${tag}` : namePart;
+    const fallbackOption: SearchAutocompleteOption = {
+      value: fallbackSpec,
+      label: fallbackLabel,
+      version: tag,
+      description:
+        "Not published to this registry. Install via the npmjs.org uplink.",
+      meta: "npm fallback",
+    };
+    return Promise.resolve([...localOptions, fallbackOption]);
   };
 
   const handleSelect = useCallback(

@@ -5,33 +5,50 @@ import { compareSemver } from "./semver.js";
 import type { PackageInfo } from "./types.js";
 
 /**
- * Read dist-tags and the full version list for a package from verdaccio's
- * on-disk storage (`{storagePath}/{name}/package.json`). Returns `undefined`
- * for a field if it's missing or the file can't be read — callers should
- * treat these as best-effort enrichment.
+ * Read dist-tags, the full version list, and the local-publish flag for a
+ * package from verdaccio's on-disk storage (`{storagePath}/{name}/package.json`).
+ *
+ * `locallyPublished` distinguishes packages that were `npm publish`-ed directly
+ * at this registry (verdaccio stores the tarball as an `_attachments` entry)
+ * from packages that were merely pulled through the uplink from npmjs.org
+ * (no `_attachments`, but verdaccio may still have cached metadata). The
+ * /packages listing only surfaces locally-published packages — npm passthroughs
+ * remain installable via the "fetch from npm" fallback in the UI, but don't
+ * pollute the default list.
+ *
+ * Returns `undefined` fields / `locallyPublished: false` if the file is
+ * missing or can't be read — callers should treat these as best-effort.
  */
 function readPackageMetadata(
   storagePath: string | undefined,
   packageName: string,
-): { distTags?: Record<string, string>; versions?: string[] } {
-  if (!storagePath) return {};
+): {
+  distTags?: Record<string, string>;
+  versions?: string[];
+  locallyPublished: boolean;
+} {
+  if (!storagePath) return { locallyPublished: false };
   try {
     const metadataPath = path.join(storagePath, packageName, "package.json");
     const raw = fs.readFileSync(metadataPath, "utf-8");
     const parsed = JSON.parse(raw) as {
       "dist-tags"?: Record<string, string>;
       versions?: Record<string, unknown>;
+      _attachments?: Record<string, unknown>;
     };
     const distTags = parsed["dist-tags"];
     const rawVersions = parsed.versions ? Object.keys(parsed.versions) : [];
     const versions = rawVersions.slice().sort(compareSemver);
+    const locallyPublished =
+      !!parsed._attachments && Object.keys(parsed._attachments).length > 0;
     return {
       distTags:
         distTags && Object.keys(distTags).length > 0 ? distTags : undefined,
       versions: versions.length > 0 ? versions : undefined,
+      locallyPublished,
     };
   } catch {
-    return {};
+    return { locallyPublished: false };
   }
 }
 
@@ -155,7 +172,14 @@ export function scanPackages(
         const manifestDir = versionDir ?? pkgDir;
         const manifest = readManifest(manifestDir);
         const name = manifest?.name ?? dirName;
-        const { distTags, versions } = readPackageMetadata(storagePath, name);
+        const { distTags, versions, locallyPublished } = readPackageMetadata(
+          storagePath,
+          name,
+        );
+        // Only surface packages that were `npm publish`-ed at THIS registry.
+        // When storagePath is not wired through, we can't tell — fall back
+        // to including the entry (preserves pre-filter behaviour).
+        if (storagePath && !locallyPublished) continue;
         packages.push({
           name,
           path: `/-/cdn/${dirName}`,
@@ -172,7 +196,11 @@ export function scanPackages(
       const manifestDir = versionDir ?? pkgDir;
       const manifest = readManifest(manifestDir);
       const name = manifest?.name ?? entry.name;
-      const { distTags, versions } = readPackageMetadata(storagePath, name);
+      const { distTags, versions, locallyPublished } = readPackageMetadata(
+        storagePath,
+        name,
+      );
+      if (storagePath && !locallyPublished) continue;
       packages.push({
         name,
         path: `/-/cdn/${entry.name}`,

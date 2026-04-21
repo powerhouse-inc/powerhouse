@@ -38,9 +38,17 @@ export const ConnectPackageManager: React.FC = () => {
       });
     } else {
       const message = result.error.message;
-      toast(`Failed to install "${packageSpec}": ${message}`, {
-        type: "error",
-      });
+      // `BrowserPackageManager` raises a generic "Failed to fetch dynamically
+      // imported module" when the registry CDN returns an error. That covers
+      // both "the name exists nowhere (not on this registry AND not on the
+      // npmjs uplink)" and "the tarball is there but doesn't look like a
+      // Powerhouse package". Tell the user in plain terms before dumping the
+      // raw error so the "install from npm" fallback case is self-explanatory.
+      const isLikelyNotFound = /failed to fetch|404|not found/i.test(message);
+      const userMessage = isLikelyNotFound
+        ? `Could not install "${packageSpec}". The package isn't available on this registry, and the npmjs.org fallback could not resolve it either.`
+        : `Failed to install "${packageSpec}": ${message}`;
+      toast(userMessage, { type: "error" });
     }
   }
 

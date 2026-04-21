@@ -83,7 +83,8 @@ const baseArgs: Partial<Props> = {
 };
 
 export function PackageManagerWrapper(args: Partial<Props> = {}) {
-  const initial = args.registryPackageList ?? baseArgs.registryPackageList ?? [];
+  const initial =
+    args.registryPackageList ?? baseArgs.registryPackageList ?? [];
   const [registryPackageList, setPackages] = useState(initial);
   return (
     <PackageManager
@@ -184,6 +185,28 @@ export const WithFiltersAndTags: Story = {
   decorators: [
     (Story) => (
       <div className="h-[700px]">
+        <Story />
+      </div>
+    ),
+  ],
+};
+
+/**
+ * The search input always shows an "Install from npm" fallback card when
+ * the typed query is a plausible package name that doesn't match anything
+ * already listed in the custom registry. Covers the case where the user
+ * wants to pull an npm-only package through the registry's uplink.
+ *
+ * Try typing `react-markdown` or `lodash` — the fallback card appears at
+ * the bottom of the results (the mock list doesn't contain those names).
+ */
+export const WithNpmFallback: Story = {
+  ...PackageManagerStoryWrapper({
+    registryPackageList: taggedPackages,
+  }),
+  decorators: [
+    (Story) => (
+      <div className="h-[500px]">
         <Story />
       </div>
     ),
