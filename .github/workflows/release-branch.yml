@@ -97,6 +97,49 @@ jobs:
           --skip-push="${{ inputs.skip_push == true }}" \
           --skip-git-tag="${{ inputs.skip_git_tag == true }}"
 
+      # Upload source maps to self-hosted Sentry so production stack traces
+      # map back to original TypeScript source in this repo.
+      - name: Upload source maps to Sentry
+        if: ${{ inputs.dry_run != true && inputs.skip_publish != true }}
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_URL: ${{ secrets.SENTRY_URL }}
+          SENTRY_ORG: ${{ vars.SENTRY_ORG }}
+        run: |
+          set -euo pipefail
+          VERSION=$(git tag --sort=-v:refname --points-at HEAD | head -1)
+          if [ -z "$VERSION" ]; then
+            echo "No new tag at HEAD, skipping Sentry upload"
+            exit 0
+          fi
+          echo "Sentry release: $VERSION"
+
+          for proj in powerhouse ph-cli; do
+            npx --yes @sentry/cli@^2 releases new -p "$proj" "$VERSION" || true
+          done
+          npx --yes @sentry/cli@^2 releases set-commits "$VERSION" --auto -p powerhouse || true
+
+          for dir in apps/connect/dist apps/switchboard/dist apps/academy/dist \
+                     packages/reactor-api/dist packages/switchboard/dist; do
+            [ -d "$dir" ] || continue
+            npx --yes @sentry/cli@^2 sourcemaps upload \
+              --release "$VERSION" \
+              --project powerhouse \
+              "$dir" || true
+          done
+
+          for dir in clis/ph-cli/dist clis/ph-cmd/dist; do
+            [ -d "$dir" ] || continue
+            npx --yes @sentry/cli@^2 sourcemaps upload \
+              --release "$VERSION" \
+              --project ph-cli \
+              "$dir" || true
+          done
+
+          for proj in powerhouse ph-cli; do
+            npx --yes @sentry/cli@^2 releases finalize -p "$proj" "$VERSION" || true
+          done
+
   publish-docker:
     name: Build and Publish Docker Images
     needs: release

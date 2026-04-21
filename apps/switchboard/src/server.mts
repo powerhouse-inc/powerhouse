@@ -71,6 +71,13 @@ if (process.env.SENTRY_DSN) {
   Sentry.init({
     dsn: process.env.SENTRY_DSN,
     environment: process.env.SENTRY_ENV,
+    // Match the version tag uploaded by release-branch.yml so source maps
+    // resolve. Populated by the CI (WORKSPACE_VERSION) or npm at runtime.
+    release:
+      process.env.SENTRY_RELEASE ||
+      (process.env.npm_package_version
+        ? `v${process.env.npm_package_version}`
+        : undefined),
   });
 }
 
