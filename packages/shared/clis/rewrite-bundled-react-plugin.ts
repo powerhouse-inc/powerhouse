@@ -42,7 +42,8 @@ const CHUNK_RULES: Array<{ file: RegExp; spec: string; marker: RegExp }> = [
   {
     file: /(?:^|\/)react-dom-client-[A-Za-z0-9_-]+\.js$/,
     spec: "react-dom/client",
-    marker: /#region\s+node_modules\/react-dom\/(?:cjs\/react-dom-client|client)/,
+    marker:
+      /#region\s+node_modules\/react-dom\/(?:cjs\/react-dom-client|client)/,
   },
 ];
 
@@ -159,7 +160,9 @@ export function rewriteBundledReactToExternalPlugin(): Plugin {
             const local = nameMatch[1];
             changed = true;
             const ns = `__ext${extIdx++}`;
-            prepend.push(`import * as ${ns} from ${JSON.stringify(rule.spec)};`);
+            prepend.push(
+              `import * as ${ns} from ${JSON.stringify(rule.spec)};`,
+            );
             prepend.push(`var ${local} = () => ${ns};`);
             return "";
           });
