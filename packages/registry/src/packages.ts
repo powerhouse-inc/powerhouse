@@ -4,6 +4,37 @@ import path from "node:path";
 import { compareSemver } from "./semver.js";
 import type { PackageInfo } from "./types.js";
 
+/**
+ * Read dist-tags and the full version list for a package from verdaccio's
+ * on-disk storage (`{storagePath}/{name}/package.json`). Returns `undefined`
+ * for a field if it's missing or the file can't be read — callers should
+ * treat these as best-effort enrichment.
+ */
+function readPackageMetadata(
+  storagePath: string | undefined,
+  packageName: string,
+): { distTags?: Record<string, string>; versions?: string[] } {
+  if (!storagePath) return {};
+  try {
+    const metadataPath = path.join(storagePath, packageName, "package.json");
+    const raw = fs.readFileSync(metadataPath, "utf-8");
+    const parsed = JSON.parse(raw) as {
+      "dist-tags"?: Record<string, string>;
+      versions?: Record<string, unknown>;
+    };
+    const distTags = parsed["dist-tags"];
+    const rawVersions = parsed.versions ? Object.keys(parsed.versions) : [];
+    const versions = rawVersions.slice().sort(compareSemver);
+    return {
+      distTags:
+        distTags && Object.keys(distTags).length > 0 ? distTags : undefined,
+      versions: versions.length > 0 ? versions : undefined,
+    };
+  } catch {
+    return {};
+  }
+}
+
 function readManifest(dir: string): Manifest | null {
   const candidates = [
     path.join(dir, "powerhouse.manifest.json"),
@@ -90,7 +121,10 @@ function getDocumentTypesFromManifest(manifest: Manifest | undefined | null) {
   return documentTypes;
 }
 
-export function scanPackages(cdnCachePath: string): PackageInfo[] {
+export function scanPackages(
+  cdnCachePath: string,
+  storagePath?: string,
+): PackageInfo[] {
   const absDir = path.resolve(cdnCachePath);
   const packages: PackageInfo[] = [];
 
@@ -121,12 +155,15 @@ export function scanPackages(cdnCachePath: string): PackageInfo[] {
         const manifestDir = versionDir ?? pkgDir;
         const manifest = readManifest(manifestDir);
         const name = manifest?.name ?? dirName;
+        const { distTags, versions } = readPackageMetadata(storagePath, name);
         packages.push({
           name,
           path: `/-/cdn/${dirName}`,
           manifest,
           documentTypes: getDocumentTypesFromManifest(manifest),
           version: readPackageJsonVersion(manifestDir),
+          distTags,
+          versions,
         });
       }
     } else {
@@ -135,12 +172,15 @@ export function scanPackages(cdnCachePath: string): PackageInfo[] {
       const manifestDir = versionDir ?? pkgDir;
       const manifest = readManifest(manifestDir);
       const name = manifest?.name ?? entry.name;
+      const { distTags, versions } = readPackageMetadata(storagePath, name);
       packages.push({
         name,
         path: `/-/cdn/${entry.name}`,
         manifest,
         documentTypes: getDocumentTypesFromManifest(manifest),
         version: readPackageJsonVersion(manifestDir),
+        distTags,
+        versions,
       });
     }
   }

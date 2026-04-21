@@ -49,13 +49,19 @@ export function useRegistryPackages() {
             const status = getPackageStatusFromPackageSource(packageSource);
             newRegistryPackages[packageInfo.name] =
               makeRegistryPackageFromPackageInfo(packageInfo, status);
-          } else if (
-            packageInfo.version &&
-            existingPackage.version !== packageInfo.version
-          ) {
+          } else {
+            // Keep the cached entry's status, but refresh anything the
+            // registry sent. This includes version, distTags, and the
+            // versions list the Package Manager UI filters on.
             newRegistryPackages[packageInfo.name] = {
               ...existingPackage,
-              version: packageInfo.version,
+              manifest: packageInfo.manifest ?? existingPackage.manifest,
+              version: packageInfo.version ?? existingPackage.version,
+              distTags: packageInfo.distTags ?? existingPackage.distTags,
+              versions: packageInfo.versions ?? existingPackage.versions,
+              documentTypes: packageInfo.documentTypes.length
+                ? packageInfo.documentTypes
+                : existingPackage.documentTypes,
             };
           }
         }
