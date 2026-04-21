@@ -5,7 +5,9 @@ import {
   initCliTelemetry,
   phCliCommandNames,
 } from "@powerhousedao/shared/clis";
-import { version } from "./version.js";
+
+// Injected at build time by tsdown (see tsdown.config.ts `define`).
+declare const CLI_VERSION: string;
 
 /**
  * ph-cli and ph-cmd are loaded lazily so that the node version is checked before
@@ -25,7 +27,7 @@ async function main() {
   assertNodeVersion();
   // Opt-out telemetry; asked once on first interactive run. No-op under
   // PH_NO_TELEMETRY / DO_NOT_TRACK / CI.
-  await initCliTelemetry({ cliName: "ph-cmd", release: version });
+  await initCliTelemetry({ cliName: "ph-cmd", release: CLI_VERSION });
   const args = process.argv.slice(2);
   const command = args[0];
 

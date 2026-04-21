@@ -7,13 +7,13 @@ import {
 import { run } from "cmd-ts";
 import { phCliHelp } from "./commands/ph-cli-help.js";
 import { phCli } from "./commands/ph-cli.js";
-import { version } from "./version.js";
+import { getVersion } from "./get-version.js";
 
 async function main() {
   assertNodeVersion();
   // Initializes Sentry only if user consented (opt-out by default, asked
   // once on first interactive run). Respects PH_NO_TELEMETRY/DO_NOT_TRACK.
-  await initCliTelemetry({ cliName: "ph-cli", release: version });
+  await initCliTelemetry({ cliName: "ph-cli", release: getVersion() });
   const args = process.argv.slice(2);
   const hasNoArgs = args.length === 0;
   const isHelp = args.some((arg) => arg === "--help" || arg === "-h");
