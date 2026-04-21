@@ -124,17 +124,42 @@ function scrubString(input: string): string {
   return out;
 }
 
-function scrubEvent(event: any): any {
+type ScrubbableFrame = {
+  filename?: string;
+  abs_path?: string;
+  pre_context?: unknown;
+  context_line?: unknown;
+  post_context?: unknown;
+  vars?: unknown;
+};
+
+type ScrubbableException = {
+  value?: string;
+  stacktrace?: { frames?: ScrubbableFrame[] };
+};
+
+type ScrubbableEvent = {
+  message?: string;
+  logentry?: { message?: string };
+  exception?: { values?: ScrubbableException[] };
+  server_name?: string;
+  extra?: Record<string, unknown>;
+};
+
+function scrubEvent<T>(event: T): T {
+  const e = event as ScrubbableEvent;
   try {
-    if (event.message) event.message = scrubString(event.message);
-    if (event.logentry?.message) {
-      event.logentry.message = scrubString(event.logentry.message);
+    if (e.message) e.message = scrubString(e.message);
+    if (e.logentry?.message) {
+      e.logentry.message = scrubString(e.logentry.message);
     }
-    if (Array.isArray(event.exception?.values)) {
-      for (const ex of event.exception.values) {
+    const values = e.exception?.values;
+    if (Array.isArray(values)) {
+      for (const ex of values) {
         if (ex.value) ex.value = scrubString(ex.value);
-        if (Array.isArray(ex.stacktrace?.frames)) {
-          for (const f of ex.stacktrace.frames) {
+        const frames = ex.stacktrace?.frames;
+        if (Array.isArray(frames)) {
+          for (const f of frames) {
             if (f.filename) f.filename = scrubString(f.filename);
             if (f.abs_path) f.abs_path = scrubString(f.abs_path);
             // Drop captured source context from user machines — privacy.
@@ -147,11 +172,11 @@ function scrubEvent(event: any): any {
       }
     }
     // Server name can leak the user's machine hostname; drop it.
-    delete event.server_name;
+    delete e.server_name;
     // Strip raw argv from extra context.
-    if (event.extra) {
-      delete event.extra.argv;
-      delete event.extra.env;
+    if (e.extra) {
+      delete e.extra.argv;
+      delete e.extra.env;
     }
   } catch {
     // Never let scrubbing throw — worst case we drop the event below.

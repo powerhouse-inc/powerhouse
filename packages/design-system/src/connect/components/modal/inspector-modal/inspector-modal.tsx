@@ -4,6 +4,10 @@ import type { ComponentPropsWithoutRef } from "react";
 import { twMerge } from "tailwind-merge";
 import { DBExplorer, type DBExplorerProps } from "../../db-explorer/index.js";
 import {
+  DebugInspector,
+  type DebugInspectorProps,
+} from "../../debug-inspector/index.js";
+import {
   IntegrityInspector,
   type IntegrityInspectorProps,
 } from "../../integrity-inspector/index.js";
@@ -34,12 +38,14 @@ export type InspectorModalProps = {
   readonly queueInspectorProps?: QueueInspectorProps;
   readonly processorsInspectorProps?: ProcessorsInspectorProps;
   readonly integrityInspectorProps?: IntegrityInspectorProps;
+  readonly debugInspectorProps?: DebugInspectorProps;
   readonly defaultTab?:
     | "Database"
     | "Remotes"
     | "Queue"
     | "Processors"
-    | "Integrity";
+    | "Integrity"
+    | "Debug";
 };
 
 export function InspectorModal({
@@ -52,6 +58,7 @@ export function InspectorModal({
   queueInspectorProps,
   processorsInspectorProps,
   integrityInspectorProps,
+  debugInspectorProps,
   defaultTab = "Database",
 }: InspectorModalProps) {
   return (
@@ -111,6 +118,13 @@ export function InspectorModal({
               <TabContent description="Integrity inspector" label="Integrity">
                 <div className="h-full">
                   <IntegrityInspector {...integrityInspectorProps} />
+                </div>
+              </TabContent>
+            )}
+            {debugInspectorProps && (
+              <TabContent description="Debug tools" label="Debug">
+                <div className="h-full">
+                  <DebugInspector {...debugInspectorProps} />
                 </div>
               </TabContent>
             )}

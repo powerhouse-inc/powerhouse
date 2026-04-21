@@ -1,4 +1,3 @@
-import { PGlite } from "@electric-sql/pglite";
 import {
   addRemoteDrive,
   ChannelScheme,
@@ -18,6 +17,11 @@ import { createSignatureVerifier, type IRenown } from "@renown/sdk";
 import { ConsoleLogger } from "document-model";
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
+import {
+  detectReactorPgMajor,
+  loadPGliteModule,
+  resolvePgMajorForRuntime,
+} from "./pglite-runtime.js";
 
 /**
  * Creates a Reactor that plugs into legacy storage but syncs through the new
@@ -41,6 +45,14 @@ export async function createBrowserReactor(
     return renown.getBearerToken({ expiresIn: 10, aud: url });
   };
 
+  const detected = await detectReactorPgMajor();
+  const major = resolvePgMajorForRuntime(detected);
+  if (major !== 17) {
+    console.warn(
+      `[reactor] Running against legacy PGlite data dir (Postgres ${major}). Migrate to PG17 from the banner or the Inspector → Debug tab.`,
+    );
+  }
+  const { PGlite } = await loadPGliteModule(major);
   const pg = new PGlite("idb://reactor", {
     relaxedDurability: true,
   });

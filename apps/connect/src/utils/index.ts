@@ -7,6 +7,7 @@ export * from "./openUrl.js";
 export * from "./package-json.js";
 export * from "./path.js";
 export * from "./pglite-migration.js";
+export * from "./pglite-runtime.js";
 export * from "./reactor.js";
 export * from "./registerServiceWorker.js";
 export * from "./slug.js";

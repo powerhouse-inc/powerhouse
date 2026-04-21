@@ -4,6 +4,7 @@ export * from "./breadcrumbs/breadcrumbs.js";
 export * from "./combobox/combobox.js";
 export * from "./cookie-banner/cookie-banner.js";
 export * from "./db-explorer/index.js";
+export * from "./debug-inspector/index.js";
 export * from "./default-editor-loader/default-editor-loader.js";
 export * from "./disclosure/disclosure.js";
 export * from "./divider/divider.js";

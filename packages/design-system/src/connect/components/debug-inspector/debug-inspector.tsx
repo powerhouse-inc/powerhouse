@@ -1,0 +1,93 @@
+import { useState } from "react";
+
+export type DebugInspectorProps = {
+  readonly supportedPgVersions: readonly number[];
+  readonly onResetToPgVersion: (major: number) => Promise<void>;
+};
+
+type Status = "idle" | "running" | "error";
+
+export function DebugInspector({
+  supportedPgVersions,
+  onResetToPgVersion,
+}: DebugInspectorProps) {
+  const [status, setStatus] = useState<Status>("idle");
+  const [pendingMajor, setPendingMajor] = useState<number | null>(null);
+  const [confirmMajor, setConfirmMajor] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleReset = async (major: number) => {
+    setError(null);
+    setConfirmMajor(null);
+    setPendingMajor(major);
+    setStatus("running");
+    try {
+      await onResetToPgVersion(major);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+      setStatus("error");
+      setPendingMajor(null);
+    }
+  };
+
+  const running = status === "running";
+
+  return (
+    <div className="flex h-full flex-col gap-4 overflow-auto p-4">
+      <div>
+        <h2 className="text-lg font-semibold text-gray-900">PGlite data dir</h2>
+        <p className="mt-1 text-sm text-gray-600">
+          Kill the reactor, delete the local IndexedDB, initialize a fresh
+          Postgres cluster at the chosen major version, then reload. Useful for
+          testing version-detection and migration flows.
+        </p>
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        {supportedPgVersions.map((major) => {
+          const isPending = pendingMajor === major && running;
+          return (
+            <button
+              key={major}
+              type="button"
+              disabled={running}
+              onClick={() => setConfirmMajor(major)}
+              className="flex items-center gap-1 rounded border border-red-300 bg-red-50 px-3 py-1.5 text-sm text-red-700 hover:bg-red-100 disabled:opacity-50"
+            >
+              {isPending ? `Resetting to PG${major}…` : `Reset to PG${major}`}
+            </button>
+          );
+        })}
+      </div>
+
+      {confirmMajor !== null && (
+        <div className="flex shrink-0 items-center gap-3 rounded border border-yellow-400 bg-yellow-50 px-3 py-2">
+          <span className="text-sm text-yellow-900">
+            This will permanently delete all local reactor data and recreate an
+            empty database under Postgres {confirmMajor}. The page will reload.
+          </span>
+          <button
+            type="button"
+            onClick={() => handleReset(confirmMajor)}
+            className="rounded bg-yellow-600 px-3 py-1 text-sm text-white hover:bg-yellow-700"
+          >
+            Confirm reset to PG{confirmMajor}
+          </button>
+          <button
+            type="button"
+            onClick={() => setConfirmMajor(null)}
+            className="rounded border border-gray-300 bg-white px-3 py-1 text-sm text-gray-600 hover:bg-gray-50"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
+
+      {error && (
+        <div className="rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800">
+          {error}
+        </div>
+      )}
+    </div>
+  );
+}

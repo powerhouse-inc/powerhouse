@@ -1,22 +1,22 @@
 import { PGlite } from "@electric-sql/pglite";
-import { DEFAULT_RELATIONAL_PROCESSOR_DB_NAME } from "@powerhousedao/shared/processors";
 import {
   setMigrationStatus,
   type MigrationPhase,
 } from "../components/migration-status.js";
+import {
+  createFileDataStore,
+  IDB_DB_VERSION,
+  IDB_STORE_NAME,
+  idbError,
+  openIdb,
+  PRIMARY_IDB_NAMES,
+  readPgVersionFile,
+} from "./pglite-idb.js";
+import { CURRENT_PG_MAJOR } from "./pglite-runtime.js";
 
-export const CURRENT_PG_MAJOR = 17;
-
-const IDB_STORE_NAME = "FILE_DATA";
-const IDB_DB_VERSION = 21;
 const BACKUP_PREFIX = "ph-pglite-backup::";
 const BACKUP_INDEX_KEY = "ph:pglite-backups";
 const BACKUP_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
-
-const PRIMARY_IDB_NAMES = [
-  `/pglite/reactor`,
-  `/pglite/${DEFAULT_RELATIONAL_PROCESSOR_DB_NAME}`,
-] as const;
 
 type FileDataValue = {
   contents: Uint8Array | number[];
@@ -25,11 +25,6 @@ type FileDataValue = {
 };
 
 type LegacyDumper = (idbName: string) => Promise<string>;
-
-function idbError(req: IDBRequest | IDBTransaction, context: string): Error {
-  const cause = req.error ?? new Error("unknown IDB error");
-  return new Error(`${context}: ${cause.message}`, { cause });
-}
 
 const LEGACY_DUMPERS: Partial<Record<number, () => Promise<LegacyDumper>>> = {
   16: async () => {
@@ -50,30 +45,6 @@ const LEGACY_DUMPERS: Partial<Record<number, () => Promise<LegacyDumper>>> = {
     };
   },
 };
-
-function indexedDbExists(name: string): Promise<boolean> {
-  if (typeof indexedDB.databases === "function") {
-    return indexedDB
-      .databases()
-      .then((dbs) => dbs.some((d) => d.name === name))
-      .catch(() => true);
-  }
-  return Promise.resolve(true);
-}
-
-function openIdb(
-  name: string,
-  version: number,
-  upgrade?: (db: IDBDatabase) => void,
-): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open(name, version);
-    req.onerror = () => reject(idbError(req, `IDB open failed for ${name}`));
-    req.onblocked = () => reject(new Error(`IDB open blocked for ${name}`));
-    req.onupgradeneeded = () => upgrade?.(req.result);
-    req.onsuccess = () => resolve(req.result);
-  });
-}
 
 // Emscripten IDBFS holds the IDB connection open past pglite's pg.close(),
 // so deleteDatabase can be blocked indefinitely. Callers on the hot path
@@ -108,53 +79,6 @@ function deleteIdb(name: string, timeoutMs = 15_000): Promise<void> {
         reject(idbError(req, `IDB delete failed for ${name}`));
       });
   });
-}
-
-function createFileDataStore(db: IDBDatabase): void {
-  if (!db.objectStoreNames.contains(IDB_STORE_NAME)) {
-    const store = db.createObjectStore(IDB_STORE_NAME);
-    store.createIndex("timestamp", "timestamp", { unique: false });
-  }
-}
-
-async function readPgVersionFile(idbName: string): Promise<number | null> {
-  if (!(await indexedDbExists(idbName))) return null;
-  let db: IDBDatabase;
-  try {
-    db = await openIdb(idbName, IDB_DB_VERSION, createFileDataStore);
-  } catch {
-    return null;
-  }
-  try {
-    if (!db.objectStoreNames.contains(IDB_STORE_NAME)) return null;
-    const tx = db.transaction(IDB_STORE_NAME, "readonly");
-    const store = tx.objectStore(IDB_STORE_NAME);
-    const value = await new Promise<FileDataValue | null>((resolve, reject) => {
-      const req = store.openCursor();
-      req.onerror = () =>
-        reject(idbError(req, `FILE_DATA cursor failed for ${idbName}`));
-      req.onsuccess = () => {
-        const cursor = req.result;
-        if (!cursor) return resolve(null);
-        const key = typeof cursor.key === "string" ? cursor.key : "";
-        if (key.endsWith("/PG_VERSION")) {
-          resolve(cursor.value as FileDataValue);
-        } else {
-          cursor.continue();
-        }
-      };
-    });
-    if (!value) return null;
-    const bytes =
-      value.contents instanceof Uint8Array
-        ? value.contents
-        : new Uint8Array(value.contents);
-    const text = new TextDecoder().decode(bytes).trim();
-    const major = parseInt(text, 10);
-    return Number.isFinite(major) ? major : null;
-  } finally {
-    db.close();
-  }
 }
 
 async function clearFileData(name: string): Promise<void> {
