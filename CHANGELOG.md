@@ -1,3 +1,19 @@
+## 6.0.0-dev.184 (2026-04-21)
+
+### 🚀 Features
+
+- **cli:** opt-out Sentry error reporting for ph-cli and ph-cmd ([1f9c3be35](https://github.com/powerhouse-inc/powerhouse/commit/1f9c3be35))
+
+### 🩹 Fixes
+
+- **cli:** use injected CLI_VERSION / getVersion() (src/version.ts is gitignored) ([331aa34a1](https://github.com/powerhouse-inc/powerhouse/commit/331aa34a1))
+- **renown:** use appId on credential api fetch ([dfd0cb4c0](https://github.com/powerhouse-inc/powerhouse/commit/dfd0cb4c0))
+
+### ❤️ Thank You
+
+- acaldas
+- Frank
+
 ## 6.0.0-dev.183 (2026-04-21)
 
 ### 🚀 Features

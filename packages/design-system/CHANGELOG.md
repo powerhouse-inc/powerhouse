@@ -1,3 +1,13 @@
+## 6.0.0-dev.184 (2026-04-21)
+
+### 🚀 Features
+
+- **cli:** opt-out Sentry error reporting for ph-cli and ph-cmd ([1f9c3be35](https://github.com/powerhouse-inc/powerhouse/commit/1f9c3be35))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 6.0.0-dev.183 (2026-04-21)
 
 ### 🚀 Features
