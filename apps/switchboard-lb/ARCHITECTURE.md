@@ -337,7 +337,9 @@ Unresolved. Decide before the relevant milestone and record the decision here.
 
    **Revisit trigger:** introduction of an external pinning directory (§5.4), or a per-request decision that is not a pure function of `$doc_id`.
 
-   **M1 config reconciliation.** `conf/upstreams.conf` currently declares `hash $doc_id consistent` even though nothing populates `$doc_id` — every request would hash to the same backend. The M1 commit reverts the upstream to `least_conn` per §8 and removes the scaffolding `map "" $doc_id { default ""; }` from `conf/nginx.conf`. Both are restored in the M2 commit that introduces `lua/route.lua`, so the swap and the Lua that populates `$doc_id` land atomically — never a window where the config hashes on an empty key.
+   **M1 config reconciliation.** `conf/upstreams.conf` currently declares `hash $doc_id consistent` even though nothing populates `$doc_id` — every request would hash to the same backend. The M1 commit reverts the upstream to `least_conn` per §8; M2 restores `hash $doc_id consistent` in the same commit that introduces `lua/route.lua`, so the swap and the Lua that populates `$doc_id` land atomically — never a window where the config hashes on an empty key.
+
+   _Amendment (2026-04-21):_ the `map "" $doc_id { default ""; }` block in `conf/nginx.conf` stays across every milestone. `conf/log_format.conf` references `$doc_id` directly, and nginx fails config parse with `unknown variable "$doc_id"` if the map is absent. Only the upstream directive changes between M1 and M2.
 
 2. **Read vs write routing.** MVP routes both with the same function. Is there a case for fanning reads to any healthy backend? Only if reads tolerate stale data, and Reactor semantics suggest they don't. _Defer until after M5._
 3. **Subscription stickiness across reloads.** A long-lived WS/SSE connection stays on the same worker's upstream connection across a reload because old workers drain gracefully. We need an integration test that actually proves this. _Owner: M3._

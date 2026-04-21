@@ -1,0 +1,105 @@
+#!/usr/bin/env sh
+# M1 integration assertions: proxy plumbing.
+#
+# Asserts the LB forwards every upstream-bound route to the pool with the
+# path preserved, passes X-Request-Id through untouched, and sends WS
+# upgrade headers to the subscription backend.
+#
+# Requires `docker compose up -d` (or --build) to already be running.
+
+set -eu
+
+LB="${LB_URL:-http://127.0.0.1:8080}"
+PASS=0
+FAIL=0
+
+check() {
+    label="$1"
+    expected="$2"
+    actual="$3"
+    if [ "$actual" = "$expected" ]; then
+        echo "PASS  $label"
+        PASS=$((PASS + 1))
+    else
+        echo "FAIL  $label"
+        echo "        expected: '$expected'"
+        echo "        got:      '$actual'"
+        FAIL=$((FAIL + 1))
+    fi
+}
+
+header_value() {
+    # Extract a header value from a `curl -D -` dump. Case-insensitive.
+    dump="$1"
+    name="$2"
+    printf '%s' "$dump" | awk -v IGNORECASE=1 -v h="$name:" '
+        tolower($1) == tolower(h) {
+            sub(/^[^:]+:[[:space:]]*/, "")
+            sub(/[[:space:]]+$/, "")
+            print
+            exit
+        }
+    '
+}
+
+status_code() {
+    dump="$1"
+    printf '%s' "$dump" | awk 'NR==1 {print $2; exit}'
+}
+
+# 1. /health served locally — no X-Upstream-Id from any stub.
+resp=$(curl -sS -D - -o /dev/null "$LB/health")
+check "health 200"              "200" "$(status_code "$resp")"
+check "health no upstream id"   ""    "$(header_value "$resp" X-Upstream-Id)"
+
+# 2. POST /graphql — prefix match, path preserved.
+resp=$(curl -sS -D - -o /dev/null -X POST \
+    -H "Content-Type: application/json" \
+    --data '{"query":"{ __typename }"}' \
+    "$LB/graphql")
+check "graphql POST 200"            "200"      "$(status_code "$resp")"
+check "graphql path preserved"      "/graphql" "$(header_value "$resp" X-Upstream-Path)"
+check "graphql method preserved"    "POST"     "$(header_value "$resp" X-Upstream-Method)"
+
+# 3. POST /graphql/reactor — prefix match, path preserved.
+resp=$(curl -sS -D - -o /dev/null -X POST \
+    -H "Content-Type: application/json" \
+    --data '{"query":"{ __typename }"}' \
+    "$LB/graphql/reactor")
+check "graphql/reactor POST 200"         "200"              "$(status_code "$resp")"
+check "graphql/reactor path preserved"   "/graphql/reactor" "$(header_value "$resp" X-Upstream-Path)"
+
+# 4. GET /d/:drive — regex match.
+resp=$(curl -sS -D - -o /dev/null "$LB/d/my-drive")
+check "d/:drive GET 200"            "200"         "$(status_code "$resp")"
+check "d/:drive path preserved"     "/d/my-drive" "$(header_value "$resp" X-Upstream-Path)"
+
+# 5. /d/:drive trailing slash — regex must reject (proves pattern precision).
+status=$(curl -sS -o /dev/null -w "%{http_code}" "$LB/d/my-drive/")
+check "d/:drive trailing slash rejected" "404" "$status"
+
+# 6. X-Request-Id passthrough — stub echoes whatever the client sent.
+REQ_ID="m1-test-rid-abc123"
+resp=$(curl -sS -D - -o /dev/null -X POST \
+    -H "Content-Type: application/json" \
+    -H "X-Request-Id: $REQ_ID" \
+    --data '{"query":"{ __typename }"}' \
+    "$LB/graphql")
+check "X-Request-Id passthrough" "$REQ_ID" "$(header_value "$resp" X-Request-Id)"
+
+# 7. WS upgrade headers reach the pool — proves the subscription location
+# (not the /graphql prefix) handled the request, because only that block
+# sets Connection "upgrade" on the upstream request.
+resp=$(curl -sS -D - -o /dev/null --max-time 5 \
+    -H "Connection: Upgrade" \
+    -H "Upgrade: websocket" \
+    -H "Sec-WebSocket-Version: 13" \
+    -H "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==" \
+    "$LB/graphql/subscriptions")
+check "subscriptions forwarded"            "200"       "$(status_code "$resp")"
+check "subscriptions Upgrade reached pool" "websocket" "$(header_value "$resp" X-Upgrade)"
+check "subscriptions Connection is upgrade" "upgrade"  "$(header_value "$resp" X-Connection)"
+
+echo ""
+echo "Results: $PASS passed, $FAIL failed"
+[ "$FAIL" -eq 0 ]
