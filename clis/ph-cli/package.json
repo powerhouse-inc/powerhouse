@@ -34,6 +34,7 @@
   "author": "",
   "dependencies": {
     "tsdown": "catalog:",
+    "@tsdown/css": "catalog:",
     "vite": "catalog:",
     "@powerhousedao/codegen": "workspace:*",
     "document-model": "workspace:*",
