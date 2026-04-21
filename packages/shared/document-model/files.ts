@@ -1,5 +1,5 @@
 import { FileSystemError } from "./errors.js";
-import JSZip from "jszip";
+import type JSZip from "jszip";
 import type { PHDocument, PHDocumentHeader } from "./documents.js";
 import {
   filterDocumentOperationsResultingState,
@@ -22,8 +22,13 @@ import { validateOperations } from "./validation.js";
 
 const NON_DOMAIN_SCOPES = new Set(["auth", "document"]);
 
-export function createZip(document: PHDocument) {
-  // create zip file
+async function loadJSZip() {
+  const { default: JSZip } = await import("jszip");
+  return JSZip;
+}
+
+export async function createZip(document: PHDocument) {
+  const JSZip = await loadJSZip();
   const zip = new JSZip();
 
   const header = document.header;
@@ -47,7 +52,8 @@ export function createZip(document: PHDocument) {
  * Used when the full document is not available (e.g., in onOperations handler).
  * Creates a ZIP with minimal header and empty operations.
  */
-export function createMinimalZip(data: MinimalBackupData) {
+export async function createMinimalZip(data: MinimalBackupData) {
+  const JSZip = await loadJSZip();
   const now = new Date().toISOString();
   const header: PHDocumentHeader = {
     id: data.documentId,
@@ -66,7 +72,6 @@ export function createMinimalZip(data: MinimalBackupData) {
   zip.file("state.json", JSON.stringify(data.state, null, 2));
   zip.file("current-state.json", JSON.stringify(data.state, null, 2));
   zip.file("operations.json", JSON.stringify({}, null, 2));
-
   return zip;
 }
 
@@ -141,6 +146,7 @@ export async function baseLoadFromInput<TState extends PHBaseState>(
   reducer: Reducer<TState>,
   options?: ReplayDocumentOptions,
 ): Promise<PHDocument<TState>> {
+  const JSZip = await loadJSZip();
   const zip = new JSZip();
   await zip.loadAsync(input);
   return loadFromZip(zip, reducer, options);
