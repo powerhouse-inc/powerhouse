@@ -1,3 +1,13 @@
+## 6.0.0-dev.187 (2026-04-21)
+
+### 🩹 Fixes
+
+- **ci:** install sentry-cli via official installer ([52a3b3fbd](https://github.com/powerhouse-inc/powerhouse/commit/52a3b3fbd))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 6.0.0-dev.186 (2026-04-21)
 
 ### 🩹 Fixes
