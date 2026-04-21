@@ -1,3 +1,13 @@
+## 6.0.0-dev.186 (2026-04-21)
+
+### 🩹 Fixes
+
+- **ci:** invoke sentry-cli via --package so npx resolves the binary ([21cf95abb](https://github.com/powerhouse-inc/powerhouse/commit/21cf95abb))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 6.0.0-dev.185 (2026-04-21)
 
 ### 🚀 Features
