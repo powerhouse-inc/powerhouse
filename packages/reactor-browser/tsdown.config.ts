@@ -1,7 +1,13 @@
 import { defineConfig } from "tsdown";
 
 export default defineConfig({
-  entry: ["./index.ts"],
+  entry: [
+    "./index.ts",
+    "./src/analytics/index.ts",
+    "./src/graphql/client.ts",
+    "./src/relational/index.ts",
+    "./src/renown/index.ts",
+  ],
   platform: "browser",
   clean: true,
   dts: true,
