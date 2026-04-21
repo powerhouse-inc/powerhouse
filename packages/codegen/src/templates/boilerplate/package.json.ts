@@ -107,6 +107,7 @@ export const packageJsonTemplate = (
   "files": [
     "/dist"
   ],
+  "sideEffects": false,
   "exports": {
     ${exportsTemplate}
   },
