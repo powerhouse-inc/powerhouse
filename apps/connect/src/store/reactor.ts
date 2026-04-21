@@ -28,6 +28,7 @@ import {
   setSelectedDrive,
   setSelectedNode,
   setVetraPackageManager,
+  type IPackageManager,
   type PHToastFn,
 } from "@powerhousedao/reactor-browser";
 import {
@@ -119,10 +120,21 @@ export async function createReactor(localPackage?: DocumentModelLib) {
   setVetraPackageManager(packageManager);
   await packageManager.init(localPackage, packagesConfig.localPackage?.version);
   // Register any packages marked as provider: "local" in powerhouse.config.json
-  // that the vite plugin bundled into this build. No-op when none were bundled.
-  const { default: registerBundledPackages } =
-    await import("ph-bundled-packages-virtual");
-  registerBundledPackages(packageManager);
+  // that the vite plugin bundled into this build. The virtual module is only
+  // emitted when `phBundledPackagesPlugin` is registered (ph-cli's Connect
+  // flow); running `vite dev` against apps/connect's own config has no
+  // bundled packages, so a resolution failure here is expected. The
+  // indirection + @vite-ignore also keeps Vite's dep scanner from treating
+  // the specifier as a real npm package to pre-bundle.
+  try {
+    const bundledPackagesModule = "ph-bundled-packages-virtual";
+    const { default: registerBundledPackages } = (await import(
+      /* @vite-ignore */ bundledPackagesModule
+    )) as { default: (pm: IPackageManager) => void };
+    registerBundledPackages(packageManager);
+  } catch {
+    // no bundled packages in this build
+  }
   const packagesResult = await packageManager.addPackages(
     packagesConfig.packages,
   );
