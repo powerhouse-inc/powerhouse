@@ -79,10 +79,12 @@
   },
   "dependencies": {
     "write-package": "catalog:",
+    "@sentry/node": "^9.47.1",
     "@sindresorhus/fnv1a": "catalog:",
     "chalk": "catalog:",
     "change-case": "catalog:",
     "cmd-ts": "catalog:",
+    "enquirer": "catalog:",
     "jszip": "^3.10.1",
     "kysely": "catalog:",
     "luxon": "catalog:",
