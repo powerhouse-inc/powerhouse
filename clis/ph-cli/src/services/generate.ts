@@ -6,10 +6,14 @@ import {
   generateProcessor,
   generateSubgraph,
 } from "@powerhousedao/codegen";
+import { buildTsMorphProject } from "@powerhousedao/codegen/utils";
 import path from "path";
 import type { GenerateArgs } from "../types.js";
 
-export async function startGenerate(options: GenerateArgs) {
+export async function startGenerate(
+  options: GenerateArgs,
+  projectDir = process.cwd(),
+) {
   const {
     documentModelFilePositional,
     documentModelFileOption,
@@ -27,11 +31,11 @@ export async function startGenerate(options: GenerateArgs) {
     processorName,
     processorType,
     processorApps,
-    importScriptName,
     migrationFile,
     schemaFile,
     subgraphName,
   } = options;
+  const project = buildTsMorphProject(projectDir);
 
   const documentModelFile =
     documentModelFilePositional ?? documentModelFileOption;
@@ -55,35 +59,44 @@ export async function startGenerate(options: GenerateArgs) {
         "Please specify a document type for the generated editor.",
       );
     }
-    await generateEditor({
-      editorName,
-      editorId,
-      editorDirName,
-      documentTypes: [documentTypeToUse],
-    });
+    await generateEditor(
+      {
+        editorName,
+        editorId,
+        editorDirName,
+        documentTypes: [documentTypeToUse],
+      },
+      project,
+    );
   } else if (appName !== undefined) {
-    await generateApp({
-      appName,
-      appId,
-      appDirName,
-      allowedDocumentTypes,
-      isDragAndDropEnabled,
-    });
+    await generateApp(
+      {
+        appName,
+        appId,
+        appDirName,
+        allowedDocumentTypes,
+        isDragAndDropEnabled,
+      },
+      project,
+    );
   } else if (processorName !== undefined) {
-    await generateProcessor({
-      processorName,
-      processorType,
-      processorApps,
-      documentTypes: [documentTypeToUse].filter((t) => t !== undefined),
-    });
+    await generateProcessor(
+      {
+        processorName,
+        processorType,
+        processorApps,
+        documentTypes: [documentTypeToUse].filter((t) => t !== undefined),
+      },
+      project,
+    );
   } else if (subgraphName !== undefined) {
-    await generateSubgraph(subgraphName, filePath || null);
+    await generateSubgraph(subgraphName, filePath || null, project);
   } else if (migrationFile !== undefined) {
     await generateDBSchema({
       migrationFile: path.join(process.cwd(), migrationFile),
       schemaFile: schemaFile ? path.join(process.cwd(), schemaFile) : undefined,
     });
   } else if (filePath !== undefined) {
-    await generateFromFile(filePath, process.cwd());
+    await generateFromFile(filePath, project);
   }
 }

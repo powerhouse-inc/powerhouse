@@ -1,6 +1,7 @@
 import { buildSubgraphSchema } from "@apollo/subgraph";
 import { loadDocumentModel } from "@powerhousedao/codegen";
 import { tsMorphGenerateSubgraph } from "@powerhousedao/codegen/file-builders";
+import { buildTsMorphProject } from "@powerhousedao/codegen/utils";
 import { describe, expect, it } from "bun:test";
 import type {
   DocumentNode,
@@ -36,7 +37,7 @@ await mkdirRecursive(parentOutDir);
 async function generateSubgraphProject(outDirName: string) {
   const outDir = join(parentOutDir, outDirName);
   await cpForce(join(testProjectsDir, NEW_PROJECT), outDir);
-
+  const project = buildTsMorphProject(outDir);
   // Generate the document model
   const documentModelsInDir = join(dataDir, DOCUMENT_MODELS);
   await loadDocumentModelsInDir(documentModelsInDir, outDir);
@@ -53,7 +54,7 @@ async function generateSubgraphProject(outDirName: string) {
       subgraphName: "test-doc",
       documentModel: testDocState,
     },
-    outDir,
+    project,
   );
 
   // Compile the generated project — this catches API mismatches in the

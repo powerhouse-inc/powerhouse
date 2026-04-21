@@ -1,8 +1,6 @@
-import {
-  generateAllSubgraphs,
-  loadDocumentModel,
-} from "@powerhousedao/codegen";
+import { loadDocumentModel } from "@powerhousedao/codegen";
 import { tsMorphGenerateSubgraph } from "@powerhousedao/codegen/file-builders";
+import { buildTsMorphProject } from "@powerhousedao/codegen/utils";
 import { describe, expect, it } from "bun:test";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -25,13 +23,14 @@ describe("generateSubgraph", () => {
     const outDir = join(parentOutDir, "generate-custom-subgraph");
     await cpForce(join(testProjectsDir, WITH_DOCUMENT_MODELS_SPEC_2), outDir);
     const subgraphsDir = join(outDir, "subgraphs");
+    const project = buildTsMorphProject(outDir);
 
     await tsMorphGenerateSubgraph(
       {
         subgraphName: "my-custom",
         documentModel: null,
       },
-      outDir,
+      project,
     );
 
     await runTsc(outDir);
@@ -78,6 +77,7 @@ describe("generateSubgraph", () => {
   it("should generate a document-model subgraph with correct files", async () => {
     const outDir = join(parentOutDir, "generate-document-model-subgraph");
     await cpForce(join(testProjectsDir, WITH_DOCUMENT_MODELS_SPEC_2), outDir);
+    const project = buildTsMorphProject(outDir);
     const subgraphsDir = join(outDir, "subgraphs");
     const documentModelsDir = join(outDir, "document-models");
     const documentModel = await loadDocumentModel(
@@ -93,7 +93,7 @@ describe("generateSubgraph", () => {
         subgraphName: "test-doc",
         documentModel,
       },
-      outDir,
+      project,
     );
 
     await tsMorphGenerateSubgraph(
@@ -101,7 +101,7 @@ describe("generateSubgraph", () => {
         subgraphName: "billing-statement-test",
         documentModel: billingStatementDocumentModel,
       },
-      outDir,
+      project,
     );
 
     await runTsc(outDir);
@@ -152,12 +152,12 @@ describe("generateSubgraph", () => {
     expect(resolversContent).toContain("actions.setTestName");
     expect(resolversContent).toContain("SetTestIdInput");
     expect(resolversContent).toContain("SetTestNameInput");
-    await generateAllSubgraphs(outDir);
   });
 
   it("should not overwrite existing custom subgraph files", async () => {
     const outDir = join(parentOutDir, "do-not-overwrite-other-subgraphs");
     await cpForce(join(testProjectsDir, NEW_PROJECT), outDir);
+    const project = buildTsMorphProject(outDir);
     const subgraphsDir = join(outDir, "subgraphs");
 
     // Generate once
@@ -166,7 +166,7 @@ describe("generateSubgraph", () => {
         subgraphName: "idempotent-test",
         documentModel: null,
       },
-      outDir,
+      project,
     );
 
     await runTsc(outDir);
@@ -183,7 +183,7 @@ describe("generateSubgraph", () => {
         subgraphName: "idempotent-test",
         documentModel: null,
       },
-      outDir,
+      project,
     );
 
     const secondIndex = await readFile(
@@ -191,7 +191,6 @@ describe("generateSubgraph", () => {
       "utf-8",
     );
     expect(secondIndex).toBe(originalIndex);
-    await generateAllSubgraphs(outDir);
   });
 
   it("should overwrite document-model schema and resolvers on regeneration", async () => {
@@ -200,6 +199,7 @@ describe("generateSubgraph", () => {
       "should-overwrite-schemas-and-resolvers-on-regneration",
     );
     await cpForce(join(testProjectsDir, WITH_DOCUMENT_MODELS_SPEC_2), outDir);
+    const project = buildTsMorphProject(outDir);
     const subgraphsDir = join(outDir, "subgraphs");
     const documentModelsDir = join(outDir, "document-models");
     const documentModel = await loadDocumentModel(
@@ -212,7 +212,7 @@ describe("generateSubgraph", () => {
         subgraphName: "force-test",
         documentModel,
       },
-      outDir,
+      project,
     );
 
     const schema1 = await readFile(
@@ -227,7 +227,7 @@ describe("generateSubgraph", () => {
         subgraphName: "force-test",
         documentModel,
       },
-      outDir,
+      project,
     );
 
     await runTsc(outDir);
@@ -245,6 +245,5 @@ describe("generateSubgraph", () => {
       "utf-8",
     );
     expect(resolvers2).toContain("document-models/test-doc");
-    await generateAllSubgraphs(outDir);
   });
 });

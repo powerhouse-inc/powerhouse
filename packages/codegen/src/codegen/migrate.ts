@@ -12,7 +12,7 @@ import {
 } from "file-builders";
 import { cp, readdir, rm } from "fs/promises";
 import npmFetch from "npm-registry-fetch";
-import path, { join } from "path";
+import { join } from "path";
 import { readPackage } from "read-pkg";
 import {
   filter,
@@ -26,8 +26,8 @@ import {
   pipe,
   prop,
 } from "remeda";
-import { Project } from "ts-morph";
-import { formatSourceFileWithPrettier } from "utils";
+import type { Project } from "ts-morph";
+import { buildTsMorphProject, formatSourceFileWithPrettier } from "utils";
 import { updatePackage } from "write-package";
 import { generateAll } from "./generate.js";
 
@@ -129,18 +129,20 @@ export async function migrate(version: string, projectDir = process.cwd()) {
     dependencies,
     devDependencies,
   });
+  // console.log("Moving unversioned document models...");
+  // const documentModelsDir = join(projectDir, "document-models");
+  // await moveLegacyDocumentModels(project, documentModelsDir);
+  // await project.save();
   console.log("Overwriting project root files...");
   await writeAllGeneratedProjectFiles(projectDir);
-  const project = new Project({
-    tsConfigFilePath: path.join(projectDir, "tsconfig.json"),
-  });
-  console.log("Fixing legacy import paths...");
-  await fixLegacyImportPaths(project, packageJson.name);
-  console.log("Moving unversioned document models...");
-  const documentModelsDir = join(projectDir, "document-models");
-  await moveLegacyDocumentModels(project, documentModelsDir);
+  // await project.save();
+  // console.log("Fixing legacy import paths...");
+  // await fixLegacyImportPaths(project, packageJson.name);
+  // await project.save();
+  const project = buildTsMorphProject(projectDir);
   console.log("Re-generating code...");
-  await generateAll(projectDir);
+  await generateAll(project);
+  await project.save();
 }
 
 async function moveLegacyDocumentModels(
@@ -160,7 +162,6 @@ async function moveLegacyDocumentModels(
     const toIgnore = [
       /^v\d+$/,
       new RegExp(`${documentModelDirName}.json`),
-      /index.ts/,
       /upgrades/,
     ];
     const dirContents = await readdir(documentModelDir);

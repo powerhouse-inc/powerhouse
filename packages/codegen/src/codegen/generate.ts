@@ -1,4 +1,3 @@
-import { fileExists } from "@powerhousedao/shared/clis";
 import { type DocumentModelGlobalState } from "@powerhousedao/shared/document-model";
 import type {
   ProcessorApp,
@@ -12,8 +11,8 @@ import {
   tsMorphGenerateProcessor,
   tsMorphGenerateSubgraph,
 } from "file-builders";
-import { readdir } from "node:fs/promises";
-import path, { join } from "node:path";
+import { statSync } from "node:fs";
+import { join } from "node:path";
 import {
   conditional,
   filter,
@@ -30,43 +29,42 @@ import {
   startsWith,
   when,
 } from "remeda";
+import type { Project } from "ts-morph";
 import { SyntaxKind } from "ts-morph";
-import { buildTsMorphProject, getObjectProperty } from "utils";
+import { getObjectProperty, getOrCreateDirectory } from "utils";
 import { loadDocumentModel } from "./utils.js";
 
 export async function generateDocumentModel(
   documentModelState: DocumentModelGlobalState,
-  projectDir: string,
+  project: Project,
 ) {
-  await tsMorphGenerateDocumentModel(documentModelState, projectDir);
+  await tsMorphGenerateDocumentModel(documentModelState, project);
 }
-export async function generateAllDocumentModels(projectDir: string) {
-  const files = await readdir(projectDir, { withFileTypes: true });
+export async function generateAllDocumentModels(project: Project) {
+  const { directory: documentModelsDir } = getOrCreateDirectory(
+    project,
+    "document-models",
+  );
+  const documentModelDirs = documentModelsDir.getDirectories();
+  const documentModels = pipe(
+    documentModelDirs,
+    map((dir) => join(dir.getPath(), `${dir.getBaseName()}.json`)),
+    filter((path) => statSync(path).isFile()),
+    map(async (path) => await loadDocumentModel(path)),
+    map(
+      async (documentModelState) =>
+        await generateDocumentModel(await documentModelState, project),
+    ),
+  );
 
-  for (const directory of files.filter((f) => f.isDirectory())) {
-    const documentModelPath = path.join(
-      projectDir,
-      "document-models",
-      directory.name,
-      `${directory.name}.json`,
-    );
-    const pathExists = await fileExists(documentModelPath);
-    if (!pathExists) {
-      continue;
-    }
-    try {
-      await generateFromFile(documentModelPath, projectDir);
-    } catch (error) {
-      console.error(directory.name, error);
-    }
-  }
+  await Promise.all(documentModels).catch(console.error);
 }
-export async function generateFromFile(filePath: string, projectDir: string) {
+export async function generateFromFile(filePath: string, project: Project) {
   // load document model spec from file
   const documentModelState = await loadDocumentModel(filePath);
 
   // delegate to shared generation function
-  await generateDocumentModel(documentModelState, projectDir);
+  await generateDocumentModel(documentModelState, project);
 }
 
 type GenerateEditorArgs = {
@@ -77,7 +75,7 @@ type GenerateEditorArgs = {
 };
 export async function generateEditor(
   args: GenerateEditorArgs,
-  projectDir = process.cwd(),
+  project: Project,
 ) {
   const {
     editorName,
@@ -95,7 +93,7 @@ export async function generateEditor(
   const editorDir = editorDirName || kebabCase(editorName);
 
   await tsMorphGenerateDocumentEditor({
-    projectDir,
+    project,
     editorDir,
     documentModelId,
     editorName,
@@ -103,13 +101,9 @@ export async function generateEditor(
   });
 }
 
-export async function generateAllEditors(projectDir = process.cwd()) {
-  const project = buildTsMorphProject(projectDir);
-  const editorsDirPath = path.join(projectDir, "editors");
-  project.addSourceFilesAtPaths(path.join(editorsDirPath, "**/*"));
-
-  const editorDirs =
-    project.getDirectory(editorsDirPath)?.getDirectories() ?? [];
+export async function generateAllEditors(project: Project) {
+  const { directory: editorsDir } = getOrCreateDirectory(project, "editors");
+  const editorDirs = editorsDir.getDirectories();
 
   const editorsToAdd = pipe(
     editorDirs,
@@ -159,7 +153,7 @@ export async function generateAllEditors(projectDir = process.cwd()) {
 
   for (const editorToAdd of editorsToAdd) {
     if (editorToAdd.editorDirName === undefined) return;
-    await generateEditor(editorToAdd as GenerateEditorArgs, projectDir);
+    await generateEditor(editorToAdd as GenerateEditorArgs, project);
   }
 }
 
@@ -170,10 +164,7 @@ type GenerateAppArgs = {
   isDragAndDropEnabled?: boolean;
   appDirName?: string;
 };
-export async function generateApp(
-  args: GenerateAppArgs,
-  projectDir = process.cwd(),
-) {
+export async function generateApp(args: GenerateAppArgs, project: Project) {
   const {
     appName,
     appId,
@@ -183,7 +174,7 @@ export async function generateApp(
   } = args;
 
   await tsMorphGenerateApp({
-    projectDir,
+    project,
     editorDir: appDirName || kebabCase(appName),
     editorName: appName,
     editorId: appId ?? kebabCase(appName),
@@ -192,13 +183,9 @@ export async function generateApp(
   });
 }
 
-export async function generateAllApps(projectDir = process.cwd()) {
-  const project = buildTsMorphProject(projectDir);
-  const editorsDirPath = path.join(projectDir, "editors");
-  project.addSourceFilesAtPaths(path.join(editorsDirPath, "**/*"));
-
-  const editorDirs =
-    project.getDirectory(editorsDirPath)?.getDirectories() ?? [];
+export async function generateAllApps(project: Project) {
+  const { directory: editorsDir } = getOrCreateDirectory(project, "editors");
+  const editorDirs = editorsDir.getDirectories();
 
   const appsToAdd = pipe(
     editorDirs,
@@ -292,13 +279,13 @@ export async function generateAllApps(projectDir = process.cwd()) {
   for (const appToAdd of appsToAdd) {
     if (appToAdd.appName === undefined) return;
 
-    await generateApp(appToAdd as GenerateAppArgs, projectDir);
+    await generateApp(appToAdd as GenerateAppArgs, project);
   }
 }
 export async function generateSubgraph(
   subgraphName: string,
   documentModelFilePath: string | null,
-  projectDir = process.cwd(),
+  project: Project,
 ) {
   const documentModelState =
     documentModelFilePath !== null
@@ -309,16 +296,20 @@ export async function generateSubgraph(
       subgraphName,
       documentModel: documentModelState,
     },
-    projectDir,
+    project,
   );
 }
 
-export async function generateAllSubgraphs(projectDir: string) {
-  const project = buildTsMorphProject(projectDir);
-  const subgraphsDirPath = path.join(projectDir, "subgraphs");
-  project.addSourceFilesAtPaths(path.join(subgraphsDirPath, "**/*"));
-  const subgraphsDir = project.getDirectory(subgraphsDirPath);
-  if (!subgraphsDir) return;
+export async function generateAllSubgraphs(project: Project) {
+  const { directory: subgraphsDir } = getOrCreateDirectory(
+    project,
+    "subgraphs",
+  );
+  const { directory: documentModelsDir } = getOrCreateDirectory(
+    project,
+    "document-models",
+  );
+  const documentModelsDirPath = documentModelsDir.getPath();
   const subgraphDirs = subgraphsDir.getDirectories();
   const subgraphInputs = pipe(
     subgraphDirs,
@@ -337,7 +328,7 @@ export async function generateAllSubgraphs(projectDir: string) {
         ),
         when(isString, (value) => split(value, "/").at(1)),
         when(isString, (value) =>
-          join(projectDir, "document-models", value, `${value}.json`),
+          join(documentModelsDirPath, value, `${value}.json`),
         ),
       ),
       subgraphName: pipe(
@@ -363,7 +354,7 @@ export async function generateAllSubgraphs(projectDir: string) {
     await generateSubgraph(
       subgraphName,
       documentModelFilePath ?? null,
-      projectDir,
+      project,
     );
   }
 }
@@ -375,20 +366,19 @@ export async function generateProcessor(
     processorApps: ProcessorApps;
     documentTypes: string[];
   },
-  projectDir = process.cwd(),
+  project: Project,
 ) {
   return await tsMorphGenerateProcessor({
-    projectDir,
+    project,
     ...args,
   });
 }
 
-export async function generateAllProcessors(projectDir = process.cwd()) {
-  const project = buildTsMorphProject(projectDir);
-  const processorsDirPath = path.join(projectDir, "processors");
-  project.addSourceFilesAtPaths(path.join(processorsDirPath, "**/*"));
-  const processorsDir = project.getDirectory(processorsDirPath);
-  if (!processorsDir) return;
+export async function generateAllProcessors(project: Project) {
+  const { directory: processorsDir } = getOrCreateDirectory(
+    project,
+    "processors",
+  );
   const connectProcessorNames = pipe(
     processorsDir.getSourceFile("connect.ts"),
     (sourceFile) => sourceFile?.getImportDeclarations() ?? [],
@@ -494,15 +484,15 @@ export async function generateAllProcessors(projectDir = process.cwd()) {
         processorType: processorType as "analytics" | "relationalDb",
         documentTypes,
       },
-      projectDir,
+      project,
     );
   }
 }
 
-export async function generateAll(projectDir = process.cwd()) {
-  await generateAllDocumentModels(projectDir);
-  await generateAllEditors(projectDir);
-  await generateAllApps(projectDir);
-  await generateAllSubgraphs(projectDir);
-  await generateAllProcessors(projectDir);
+export async function generateAll(project: Project) {
+  await generateAllDocumentModels(project);
+  await generateAllEditors(project);
+  await generateAllApps(project);
+  await generateAllSubgraphs(project);
+  await generateAllProcessors(project);
 }

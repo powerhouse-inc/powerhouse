@@ -9,23 +9,23 @@ import { factoryBuildersTemplate } from "templates";
 import type { SourceFile } from "ts-morph";
 import { ts, type Project } from "ts-morph";
 import {
-  buildTsMorphProject,
   ensureDirectoriesExist,
   formatSourceFileWithPrettier,
+  getOrCreateDirectory,
   getOrCreateSourceFile,
 } from "utils";
 import { tsMorphGenerateAnalyticsProcessor } from "./analytics.js";
 import { tsMorphGenerateRelationalDbProcessor } from "./relational-db.js";
 
 export async function tsMorphGenerateProcessor(args: {
-  projectDir: string;
+  project: Project;
   processorName: string;
   documentTypes: string[];
   processorType: "relationalDb" | "analytics";
   processorApps: ProcessorApps;
 }) {
   const {
-    projectDir,
+    project,
     processorName,
     documentTypes,
     processorType,
@@ -34,12 +34,14 @@ export async function tsMorphGenerateProcessor(args: {
   const kebabCaseName = kebabCase(processorName);
   const camelCaseName = camelCase(processorName);
   const pascalCaseName = pascalCase(processorName);
-  const processorsDirPath = path.join(projectDir, "processors");
+  const { directory: processorsDir } = getOrCreateDirectory(
+    project,
+    "processors",
+  );
+  const projectDir = processorsDir.getParentOrThrow().getPath();
+  const processorsDirPath = processorsDir.getPath();
   const dirPath = path.join(processorsDirPath, kebabCaseName);
-  const sourceFilesPath = path.join(processorsDirPath, "**/*");
-  const project = buildTsMorphProject(projectDir);
   await ensureDirectoriesExist(project, processorsDirPath, dirPath);
-  project.addSourceFilesAtPaths(sourceFilesPath);
 
   if (processorType === "analytics") {
     await tsMorphGenerateAnalyticsProcessor({

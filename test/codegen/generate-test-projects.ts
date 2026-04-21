@@ -3,6 +3,7 @@ import {
   generateApp,
   generateEditor,
 } from "@powerhousedao/codegen";
+import { buildTsMorphProject } from "@powerhousedao/codegen/utils";
 import { $ } from "bun";
 import { join } from "path";
 import {
@@ -14,13 +15,13 @@ import {
   WITH_DOCUMENT_MODELS_SPEC_1,
   WITH_DOCUMENT_MODELS_SPEC_2,
   WITH_EDITORS,
-  WITH_LEGACY_UNVERSIONED_DOCUMENT_MODELS,
 } from "./constants.js";
 import {
   cpForce,
   loadDocumentModelsInDir,
   mkdirRecursive,
   rmForce,
+  runTsc,
 } from "./utils.js";
 
 const dataDir = join(process.cwd(), DATA);
@@ -29,24 +30,15 @@ const cwd = process.cwd();
 export async function generateTestProjects() {
   await rmForce(testProjectsDir);
   await mkdirRecursive(testProjectsDir);
-  process.chdir(testProjectsDir);
 
+  process.chdir(testProjectsDir);
   await createProject({
     name: NEW_PROJECT,
     packageManager: "pnpm",
     skipGitInit: true,
     skipInstall: true,
   });
-
-  await cpForce(
-    join(testProjectsDir, NEW_PROJECT),
-    join(testProjectsDir, WITH_LEGACY_UNVERSIONED_DOCUMENT_MODELS),
-  );
-
-  await loadDocumentModelsInDir(
-    join(dataDir, SPEC_VERSION_1),
-    join(testProjectsDir, WITH_LEGACY_UNVERSIONED_DOCUMENT_MODELS),
-  );
+  await runTsc(join(testProjectsDir, NEW_PROJECT));
 
   await cpForce(
     join(testProjectsDir, NEW_PROJECT),
@@ -57,6 +49,7 @@ export async function generateTestProjects() {
     join(dataDir, SPEC_VERSION_1),
     join(testProjectsDir, WITH_DOCUMENT_MODELS_SPEC_1),
   );
+  await runTsc(join(testProjectsDir, WITH_DOCUMENT_MODELS_SPEC_1));
 
   await cpForce(
     join(testProjectsDir, NEW_PROJECT),
@@ -68,10 +61,15 @@ export async function generateTestProjects() {
     join(testProjectsDir, WITH_DOCUMENT_MODELS_SPEC_2),
   );
 
+  await runTsc(join(testProjectsDir, WITH_DOCUMENT_MODELS_SPEC_2));
+
   await cpForce(
     join(testProjectsDir, WITH_DOCUMENT_MODELS_SPEC_2),
     join(testProjectsDir, WITH_EDITORS),
   );
+
+  process.chdir(join(testProjectsDir, WITH_EDITORS));
+  const project = buildTsMorphProject(join(testProjectsDir, WITH_EDITORS));
 
   await generateEditor(
     {
@@ -80,7 +78,7 @@ export async function generateTestProjects() {
       documentTypes: ["powerhouse/test-doc"],
       editorDirName: undefined,
     },
-    join(testProjectsDir, WITH_EDITORS),
+    project,
   );
   await generateApp(
     {
@@ -90,8 +88,10 @@ export async function generateTestProjects() {
       appDirName: undefined,
       isDragAndDropEnabled: true,
     },
-    join(testProjectsDir, WITH_EDITORS),
+    project,
   );
+
   process.chdir(cwd);
+  await runTsc(join(testProjectsDir, WITH_EDITORS));
   await $`prettier ./test-projects --write`;
 }

@@ -27,6 +27,7 @@ import { cpForce, mkdirRecursive, rmForce } from "../utils.js";
 
 import { PGlite } from "@electric-sql/pglite";
 import { live } from "@electric-sql/pglite/live";
+import { buildTsMorphProject } from "@powerhousedao/codegen/utils";
 import { createRelationalDb } from "@powerhousedao/shared/processors";
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
@@ -65,17 +66,18 @@ async function runProcessorTests(args: {
   const outDir = join(parentOutDir, outDirName);
 
   await cpForce(join(testProjectDir, NEW_PROJECT), outDir);
+  const project = buildTsMorphProject(outDir);
 
   for (const input of inputs) {
     await generateProcessor(
       {
         ...input,
       },
-      outDir,
+      project,
     );
   }
   await $`bun run --cwd ${outDir} tsc`;
-  await generateAllProcessors(outDir);
+  await generateAllProcessors(project);
 
   return outDir;
 }
@@ -401,7 +403,7 @@ describe("processor e2e integration", () => {
   it("should generate a processor, instrument it, plug into a reactor, and observe operations", async () => {
     const outDir = join(parentOutDir, "e2e-processor");
     await cpForce(join(testProjectDir, NEW_PROJECT), outDir);
-
+    const project = buildTsMorphProject(outDir);
     // 1. Generate a processor via codegen
     await generateProcessor(
       {
@@ -410,7 +412,7 @@ describe("processor e2e integration", () => {
         documentTypes: ["powerhouse/document-drive"],
         processorApps: ["connect"],
       },
-      outDir,
+      project,
     );
 
     // 1. Generate a processor via codegen
@@ -421,7 +423,7 @@ describe("processor e2e integration", () => {
         documentTypes: ["powerhouse/document-drive"],
         processorApps: ["switchboard"],
       },
-      outDir,
+      project,
     );
 
     // 1. Generate a processor via codegen
@@ -432,7 +434,7 @@ describe("processor e2e integration", () => {
         documentTypes: ["powerhouse/document-drive"],
         processorApps: ["connect", "switchboard"],
       },
-      outDir,
+      project,
     );
 
     await generateProcessor(
@@ -442,7 +444,7 @@ describe("processor e2e integration", () => {
         documentTypes: ["powerhouse/document-drive"],
         processorApps: ["connect"],
       },
-      outDir,
+      project,
     );
 
     await generateProcessor(
@@ -452,7 +454,7 @@ describe("processor e2e integration", () => {
         documentTypes: ["powerhouse/document-drive"],
         processorApps: ["switchboard"],
       },
-      outDir,
+      project,
     );
 
     await generateProcessor(
@@ -462,7 +464,7 @@ describe("processor e2e integration", () => {
         documentTypes: ["powerhouse/document-drive"],
         processorApps: ["connect", "switchboard"],
       },
-      outDir,
+      project,
     );
 
     // 2. Instrument the generated processor with ts-morph to add a log
@@ -602,7 +604,7 @@ describe("processor e2e integration", () => {
       ),
     ).toHaveLength(2);
 
-    await generateAllProcessors(outDir);
+    await generateAllProcessors(project);
   });
 });
 

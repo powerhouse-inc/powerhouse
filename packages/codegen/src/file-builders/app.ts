@@ -15,9 +15,9 @@ import {
 } from "templates";
 import { type Project } from "ts-morph";
 import {
-  buildTsMorphProject,
   ensureDirectoriesExist,
   formatSourceFileWithPrettier,
+  getOrCreateDirectory,
   getOrCreateSourceFile,
 } from "utils";
 import { makeEditorModuleFile, makeEditorsFile } from "./editor-common.js";
@@ -28,24 +28,24 @@ type GenerateAppArgs = CommonGenerateEditorArgs & {
 };
 /** Generates a app with the configs for `allowedDocumentModelIds` and `isDragAndDropEnabled` */
 export async function tsMorphGenerateApp({
-  projectDir,
+  project,
   editorDir,
   editorName,
   editorId,
   allowedDocumentModelIds,
   isDragAndDropEnabled,
 }: GenerateAppArgs) {
-  const documentModelsDirPath = path.join(projectDir, "document-models");
-  const documentModelsSourceFilesPath = path.join(
-    documentModelsDirPath,
-    "/**/*",
+  const { directory: editorsDir } = getOrCreateDirectory(project, "editors");
+  const editorsDirPath = editorsDir.getPath();
+  const { directory: documentModelsDir } = getOrCreateDirectory(
+    project,
+    "document-models",
   );
-  const editorsDirPath = path.join(projectDir, "editors");
-  const editorSourceFilesPath = path.join(editorsDirPath, "/**/*");
+  const documentModelsDirPath = documentModelsDir.getPath();
   const editorDirPath = path.join(editorsDirPath, editorDir);
+  const projectDir = editorsDir.getParentOrThrow().getPath();
   const editorComponentsDirPath = path.join(editorDirPath, "components");
 
-  const project = buildTsMorphProject(projectDir);
   await ensureDirectoriesExist(
     project,
     documentModelsDirPath,
@@ -53,8 +53,6 @@ export async function tsMorphGenerateApp({
     editorDirPath,
     editorComponentsDirPath,
   );
-  project.addSourceFilesAtPaths(documentModelsSourceFilesPath);
-  project.addSourceFilesAtPaths(editorSourceFilesPath);
 
   await makeNavigationBreadcrumbsFile({
     project,

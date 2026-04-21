@@ -14,10 +14,10 @@ import {
 import type { Project } from "ts-morph";
 import {
   applyGraphQLTypePrefixes,
-  buildTsMorphProject,
   ensureDirectoriesExist,
   extractTypeNames,
   formatSourceFileWithPrettier,
+  getOrCreateDirectory,
   getOrCreateSourceFile,
 } from "utils";
 
@@ -28,18 +28,20 @@ type TsMorphGenerateSubgraphArgs = {
 
 export async function tsMorphGenerateSubgraph(
   args: TsMorphGenerateSubgraphArgs,
-  projectDir: string,
+  project: Project,
 ): Promise<void> {
   const { subgraphName, documentModel } = args;
   const kebabCaseName = kebabCase(subgraphName);
   const pascalCaseName = pascalCase(subgraphName);
   const camelCaseName = camelCase(subgraphName);
-
-  const project = buildTsMorphProject(projectDir);
-  const subgraphsDir = path.join(projectDir, "subgraphs");
-  const subgraphDir = path.join(subgraphsDir, kebabCaseName);
-  await ensureDirectoriesExist(project, subgraphsDir, subgraphDir);
-  project.addSourceFilesAtPaths(`${subgraphsDir}/**/*`);
+  const { directory: subgraphsDir } = getOrCreateDirectory(
+    project,
+    "subgraphs",
+  );
+  const subgraphsDirPath = subgraphsDir.getPath();
+  const projectDir = subgraphsDir.getParentOrThrow().getPath();
+  const subgraphDir = path.join(subgraphsDirPath, kebabCaseName);
+  await ensureDirectoriesExist(project, subgraphsDirPath, subgraphDir);
 
   // Always generate base subgraph files (unless_exists)
   await makeBaseSubgraphIndexFile(project, subgraphDir, {
@@ -59,7 +61,7 @@ export async function tsMorphGenerateSubgraph(
     });
   }
 
-  await makeSubgraphsIndexFile({ project, subgraphsDir });
+  await makeSubgraphsIndexFile({ project, subgraphsDir: subgraphsDirPath });
   await project.save();
   await createOrUpdateManifest(
     {

@@ -23,10 +23,10 @@ import {
 import { documentModelsTemplate, upgradeManifestsTemplate } from "templates";
 import { SyntaxKind, type Project } from "ts-morph";
 import {
-  buildTsMorphProject,
   ensureDirectoriesExist,
   formatSourceFileWithPrettier,
   getInitialStates,
+  getOrCreateDirectory,
   getOrCreateSourceFile,
   getVariableDeclarationByTypeName,
 } from "utils";
@@ -71,20 +71,19 @@ import {
 
 /** Generates a document model from the given `documentModelState`
  *
- * If `useVersioning` is set to true, it will generate versioned document model code
  * for each `specification` in the `documentModelState`
  */
 export async function tsMorphGenerateDocumentModel(
   documentModelState: DocumentModelGlobalState,
-  projectDir: string,
+  project: Project,
 ) {
   const { name, id, specifications } = documentModelState;
-  const project = buildTsMorphProject(projectDir);
-  const documentModelsSourceFilesPath = join(
-    projectDir,
-    "document-models/**/*",
+  const { directory: documentModelsDir } = getOrCreateDirectory(
+    project,
+    "document-models",
   );
-  const documentModelsDirPath = join(projectDir, "document-models");
+  const documentModelsDirPath = documentModelsDir.getPath();
+  const projectDir = documentModelsDir.getParentOrThrow().getPath();
   const documentModelDirName = kebabCase(name);
   const documentModelDirPath = join(
     documentModelsDirPath,
@@ -99,7 +98,7 @@ export async function tsMorphGenerateDocumentModel(
     documentModelDirPath,
     upgradesDirPath,
   );
-  project.addSourceFilesAtPaths(documentModelsSourceFilesPath);
+  // project.addSourceFilesAtPaths(documentModelsSourceFilesPath);
 
   const versions = pipe(
     specifications,
@@ -207,29 +206,30 @@ export async function tsMorphGenerateDocumentModel(
 
     // /{document-model-dir}/upgrades/upgrade-manifest.ts
     await createOrUpdateUpgradeManifestFile(fileMakerArgs);
+    // /upgrades/versions.ts
+    await createOrUpdateVersionConstantsFile({
+      project,
+      versions,
+      latestVersion,
+      upgradesDirPath,
+    });
+
+    // /{document-model-dir}/upgrades/index.ts
+    await makeUpgradesIndexFile({
+      ...documentModelVariableNames,
+      project,
+      versions,
+      upgradesDirPath,
+    });
+    // /document-models/{document-model-dir}/index.ts
+    await makeDocumentModelIndexFile({
+      project,
+      documentModelDirPath,
+      latestVersion,
+    });
+    await project.save();
   }
 
-  // /upgrades/versions.ts
-  await createOrUpdateVersionConstantsFile({
-    project,
-    versions,
-    latestVersion,
-    upgradesDirPath,
-  });
-
-  // /{document-model-dir}/upgrades/index.ts
-  await makeUpgradesIndexFile({
-    ...documentModelVariableNames,
-    project,
-    versions,
-    upgradesDirPath,
-  });
-  // /document-models/{document-model-dir}/index.ts
-  await makeDocumentModelIndexFile({
-    project,
-    documentModelDirPath,
-    latestVersion,
-  });
   // /document-models/document-models.ts
   await makeDocumentModelsFile({ project, documentModelsDirPath });
   // /document-models/upgrade-manifests.ts

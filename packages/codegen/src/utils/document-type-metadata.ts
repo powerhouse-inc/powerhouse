@@ -1,13 +1,28 @@
+import {
+  DocumentModelGlobalStateSchema,
+  type DocumentModelGlobalState,
+} from "@powerhousedao/shared/document-model";
 import type { DocumentModelDocumentTypeMetadata } from "file-builders";
-import path from "path";
-import type { Project, SourceFile } from "ts-morph";
-import { SyntaxKind } from "ts-morph";
-import { getObjectLiteral, getObjectProperty } from "./syntax-getters.js";
+import { loadJsonFileSync } from "load-json-file";
+import { getDocumentModelVariableNames } from "name-builders";
+import { join } from "path";
+import {
+  filter,
+  find,
+  flatMap,
+  isString,
+  isTruthy,
+  map,
+  pipe,
+  prop,
+  when,
+} from "remeda";
+import type { Project } from "ts-morph";
+import { getOrCreateDirectory } from "utils";
 
 type GetDocumentTypeMetadataArgs = {
   project: Project;
   documentModelId: string;
-  documentModelsDirPath: string;
 };
 /** Gets the document model metadata for the --document-type argument
  * passed to the `generate --editor` and `generate --app` commands.
@@ -15,110 +30,42 @@ type GetDocumentTypeMetadataArgs = {
 export function getDocumentTypeMetadata({
   project,
   documentModelId,
-  documentModelsDirPath,
 }: GetDocumentTypeMetadataArgs) {
-  const sourceFiles = project.getSourceFiles().filter((file) => {
-    return file.getBaseName() === "document-model.ts";
-  });
-
-  const sourceFile = sourceFiles.find((file) =>
-    getDocumentModelFileByDocumentId(file, documentModelId),
-  );
-
-  if (!sourceFile) {
-    throw new Error(`No document-model.ts file exists for ${documentModelId}`);
-  }
-
-  const documentModelsDir = project.getDirectory(documentModelsDirPath);
-
-  if (!documentModelsDir) {
-    throw new Error(`No document-models dir exists for ${documentModelId}`);
-  }
-
-  const documentModelDir = project
-    .getDirectories()
-    .find(
-      (dir) =>
-        sourceFile.getDirectory().isDescendantOf(dir) &&
-        dir.isDescendantOf(documentModelsDir),
-    );
-
-  if (!documentModelDir) {
-    throw new Error(`No document model dir exists for ${documentModelId}`);
-  }
-
-  const documentModelDirName = documentModelDir.getBaseName();
-
-  const documentModelImportPath = path.join(
+  const { directory: documentModelsDir } = getOrCreateDirectory(
+    project,
     "document-models",
-    documentModelDirName,
   );
 
-  // types.ts lives in the same gen/ directory as document-model.ts
-  // For non-versioned: <model>/gen/types.ts
-  // For versioned: <model>/v1/gen/types.ts
-  const sourceFileDir = sourceFile.getDirectoryPath();
-  const documentModelGenTypesFilePath = path.join(sourceFileDir, "types.ts");
-
-  const documentModelGenTypesFile = project.getSourceFile(
-    documentModelGenTypesFilePath,
+  const documentModelVariableNames = pipe(
+    documentModelsDir.getDirectories(),
+    flatMap((dir) => dir.getSourceFile(`${dir.getBaseName()}.json`)),
+    filter(isTruthy),
+    map((file) => file.getFilePath()),
+    map((path) => loadJsonFileSync(path)),
+    filter(
+      (file): file is DocumentModelGlobalState =>
+        DocumentModelGlobalStateSchema().safeParse(file).success === true,
+    ),
+    find((state) => state.id === documentModelId),
+    prop("name"),
+    when(isString, (name) => getDocumentModelVariableNames(name)),
   );
 
-  if (!documentModelGenTypesFile) {
-    throw new Error(`No generated types file exists for ${documentModelId}`);
-  }
-
-  const documentModelDocumentTypeName = getPHDocumentTypeNameFromSourceFile(
-    documentModelGenTypesFile,
-  );
-
-  if (!documentModelDocumentTypeName) {
+  if (!documentModelVariableNames) {
     throw new Error(
-      `Generated type file is missing PHDocument type declaration for ${documentModelId}`,
+      `Failed to get document type metadata for document type: ${documentModelId}.`,
     );
   }
+
+  const { kebabCaseDocumentType, phDocumentTypeName } =
+    documentModelVariableNames;
+
   const documentTypeMetadata: DocumentModelDocumentTypeMetadata = {
-    documentModelDirName,
-    documentModelDocumentTypeName,
     documentModelId,
-    documentModelImportPath,
+    documentModelDocumentTypeName: phDocumentTypeName,
+    documentModelDirName: kebabCaseDocumentType,
+    documentModelImportPath: join("document-models", kebabCaseDocumentType),
   };
 
   return documentTypeMetadata;
-}
-
-function getDocumentModelFileByDocumentId(
-  sourceFile: SourceFile,
-  documentModelId: string,
-) {
-  const documentModelStatement =
-    sourceFile.getVariableStatement("documentModel");
-
-  if (!documentModelStatement) {
-    return false;
-  }
-
-  const documentModelObject = getObjectLiteral(documentModelStatement);
-
-  if (!documentModelObject) {
-    return false;
-  }
-
-  const documentModelIdProperty = getObjectProperty(
-    documentModelObject,
-    "id",
-    SyntaxKind.StringLiteral,
-  );
-
-  return documentModelIdProperty?.getLiteralValue() === documentModelId;
-}
-
-export function getPHDocumentTypeNameFromSourceFile(sourceFile: SourceFile) {
-  return sourceFile
-    .getTypeAliases()
-    .find((alias) => {
-      const typeNodeText = alias.getTypeNode()?.getText();
-      return typeNodeText?.includes("PHDocument");
-    })
-    ?.getName();
 }

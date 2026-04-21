@@ -1,4 +1,5 @@
 import { generateAllEditors, generateEditor } from "@powerhousedao/codegen";
+import { buildTsMorphProject } from "@powerhousedao/codegen/utils";
 import { directoryExists, fileExists } from "@powerhousedao/shared/clis";
 import { afterAll, describe, expect, it } from "bun:test";
 import { readFile } from "node:fs/promises";
@@ -34,12 +35,15 @@ describe("generateEditor", () => {
   };
   it("should generate a Document Model editor", async () => {
     const outDir = join(parentOutDir, "generate-editor");
-
     await cpForce(join(testProjectsDir, WITH_DOCUMENT_MODELS_SPEC_1), outDir);
+    const project = buildTsMorphProject(outDir);
     process.chdir(outDir);
-    await generateEditor({
-      ...options,
-    });
+    await generateEditor(
+      {
+        ...options,
+      },
+      project,
+    );
     const editorsDir = join(outDir, "editors");
     const editorsFilePath = join(editorsDir, "editors.ts");
     expect(await fileExists(editorsFilePath)).toBe(true);
@@ -75,11 +79,14 @@ describe("generateEditor", () => {
   it("should append new exports to existing editors.ts file", async () => {
     const outDir = join(parentOutDir, "append-to-existing-editors");
     await cpForce(join(testProjectsDir, WITH_EDITORS), outDir);
+    const project = buildTsMorphProject(outDir);
     process.chdir(outDir);
-    await generateEditor({
-      ...options,
-    });
-    await generateAllEditors(outDir);
+    await generateEditor(
+      {
+        ...options,
+      },
+      project,
+    );
     const editorsDir = join(outDir, "editors");
     const editorsFilePath = join(editorsDir, "editors.ts");
     const editorsContent = await readFile(editorsFilePath, "utf-8");

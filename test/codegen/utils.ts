@@ -2,6 +2,7 @@ import {
   generateDocumentModel,
   loadDocumentModel,
 } from "@powerhousedao/codegen";
+import { buildTsMorphProject } from "@powerhousedao/codegen/utils";
 import { $ } from "bun";
 import type { PathLike } from "node:fs";
 import { cp, mkdir, readdir, rm } from "node:fs/promises";
@@ -14,12 +15,9 @@ export function getDocumentModelJsonFilePath(
   return path.join(basePath, dirName, `${dirName}.json`);
 }
 
-export async function loadDocumentModelsInDir(
-  documentModelsInDir: string,
-  projectDir: string,
-) {
+export async function loadDocumentModelsInDir(inDir: string, outDir: string) {
   const documentModelDirs = (
-    await readdir(documentModelsInDir, {
+    await readdir(inDir, {
       withFileTypes: true,
     })
   )
@@ -29,15 +27,18 @@ export async function loadDocumentModelsInDir(
   const documentModelStates = await Promise.all(
     documentModelDirs.map(
       async (dirName) =>
-        await loadDocumentModel(
-          getDocumentModelJsonFilePath(documentModelsInDir, dirName),
-        ),
+        await loadDocumentModel(getDocumentModelJsonFilePath(inDir, dirName)),
     ),
   );
 
+  const cwd = process.cwd();
+  process.chdir(outDir);
+  const project = buildTsMorphProject(outDir);
+
   for (const documentModelState of documentModelStates) {
-    await generateDocumentModel(documentModelState, projectDir);
+    await generateDocumentModel(documentModelState, project);
   }
+  process.chdir(cwd);
 }
 
 export async function cpForce(source: string | URL, destination: string | URL) {

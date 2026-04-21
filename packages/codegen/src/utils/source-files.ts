@@ -11,7 +11,9 @@ export function getOrCreateSourceFile(project: Project, filePath: string) {
   }
   const sourceFile = project.getSourceFile(filePath);
   if (!sourceFile) {
-    const newSourceFile = project.createSourceFile(filePath, "");
+    const newSourceFile = project.createSourceFile(filePath, "", {
+      overwrite: true,
+    });
     return {
       alreadyExists: false,
       sourceFile: newSourceFile,
