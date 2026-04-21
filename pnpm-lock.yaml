@@ -1941,9 +1941,6 @@ importers:
 
   packages/reactor-browser:
     dependencies:
-      '@electric-sql/pglite':
-        specifier: 'catalog:'
-        version: 0.3.15
       '@powerhousedao/analytics-engine-browser':
         specifier: workspace:*
         version: link:../analytics-engine/browser
@@ -1996,6 +1993,9 @@ importers:
         specifier: ^11.0.0
         version: 11.0.1
     devDependencies:
+      '@electric-sql/pglite':
+        specifier: 'catalog:'
+        version: 0.3.15
       '@graphql-codegen/cli':
         specifier: 'catalog:'
         version: 6.1.1(@fastify/websocket@11.2.0(bufferutil@4.1.0)(utf-8-validate@6.0.6))(@parcel/watcher@2.5.6)(@types/node@25.5.0)(bufferutil@4.1.0)(crossws@0.3.5)(encoding@0.1.13)(graphql@16.12.0)(typescript@5.9.3)(utf-8-validate@6.0.6)
