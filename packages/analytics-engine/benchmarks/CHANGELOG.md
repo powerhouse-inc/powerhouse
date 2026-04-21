@@ -1,3 +1,13 @@
+## 6.0.0-dev.185 (2026-04-21)
+
+### 🚀 Features
+
+- **sentry:** upload source maps + tag releases in CI ([46461b97e](https://github.com/powerhouse-inc/powerhouse/commit/46461b97e))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 6.0.0-dev.184 (2026-04-21)
 
 ### 🚀 Features
