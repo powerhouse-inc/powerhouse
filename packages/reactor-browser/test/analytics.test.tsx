@@ -14,13 +14,15 @@ import {
 } from "@powerhousedao/analytics-engine-core";
 import {
   AnalyticsProvider,
-  clearGlobal,
-  getGlobal,
-  setGlobal,
   useAddSeriesValue,
   useAnalyticsQuery,
   useAnalyticsSeries,
   useGetDimensions,
+} from "@powerhousedao/reactor-browser/analytics";
+import {
+  clearGlobal,
+  getGlobal,
+  setGlobal,
 } from "@powerhousedao/reactor-browser";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { DateTime } from "luxon";

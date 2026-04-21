@@ -16,11 +16,11 @@ import type {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import {
-  getAnalyticsStore,
   useAnalyticsEngineAsync,
   useAnalyticsStoreAsync,
   useAnalyticsStoreOptions,
 } from "../context.js";
+import { getAnalyticsStore } from "../store.js";
 
 function useAnalyticsQueryWrapper<TQueryFnData = unknown, TData = TQueryFnData>(
   options: Omit<UseQueryOptions<TQueryFnData, Error, TData>, "queryFn"> & {
