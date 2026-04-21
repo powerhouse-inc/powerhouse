@@ -92,18 +92,29 @@ export async function makeDependenciesWithVersions(
 ) {
   const dependenciesWithVersions = await Promise.all(
     dependencies.map(async (dependency) => {
-      const { name } = npa(dependency);
+      const parsed = npa(dependency);
+      const { name } = parsed;
       if (!name) {
         throw new Error(`Package name for ${dependency} is invalid.`);
+      }
+      // Dist-tag specs (e.g. `name@dev`, `name@staging`) are preserved
+      // verbatim in powerhouse.config.json so Connect re-resolves them
+      // against the registry at load time — which matches the user's
+      // intent when they typed a tag ("follow this stream") rather than a
+      // version ("pin this build"). Semver versions/ranges and bare names
+      // still resolve to a concrete value via `npm view` so builds stay
+      // reproducible.
+      if (parsed.type === "tag") {
+        const tag = parsed.fetchSpec ?? parsed.rawSpec;
+        if (tag) {
+          return { name, version: tag };
+        }
       }
       const version = await fetchPackageVersionFromNpmRegistry(
         dependency,
         registryUrl,
       );
-      return {
-        name,
-        version,
-      };
+      return { name, version };
     }),
   );
   return dependenciesWithVersions;
