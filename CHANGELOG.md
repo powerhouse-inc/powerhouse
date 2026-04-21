@@ -1,3 +1,31 @@
+## 6.0.0-dev.183 (2026-04-21)
+
+### 🚀 Features
+
+- emit editor assets as hashed files via resolveNewUrlToAsset ([27f0ea69c](https://github.com/powerhouse-inc/powerhouse/commit/27f0ea69c))
+- bundle local packages into connect for offline preview ([caa4c85a8](https://github.com/powerhouse-inc/powerhouse/commit/caa4c85a8))
+- step 1 of a switchboard load balancer ([618c32bfc](https://github.com/powerhouse-inc/powerhouse/commit/618c32bfc))
+- reactor now attempts to migrate dbs from old versions ([92b2fdde9](https://github.com/powerhouse-inc/powerhouse/commit/92b2fdde9))
+- add offline preview for installed packages ([#2476](https://github.com/powerhouse-inc/powerhouse/pull/2476))
+- **docker:** run connect nginx as non-root (H3) ([3120ba1c4](https://github.com/powerhouse-inc/powerhouse/commit/3120ba1c4))
+- **registry:** wire npm uplink for transparent CDN fallback ([74181971f](https://github.com/powerhouse-inc/powerhouse/commit/74181971f))
+
+### 🩹 Fixes
+
+- tsc issues ([c21c84d8e](https://github.com/powerhouse-inc/powerhouse/commit/c21c84d8e))
+- resolve virtual bundled-packages module under NodeNext ([a4a0ae5e2](https://github.com/powerhouse-inc/powerhouse/commit/a4a0ae5e2))
+- **ph-cli:** prioritize PH_REGISTRY_URL env over config in install ([8463ff18d](https://github.com/powerhouse-inc/powerhouse/commit/8463ff18d))
+- **shared:** handle react imports in cjs deps ([78941ed7c](https://github.com/powerhouse-inc/powerhouse/commit/78941ed7c))
+- **switchboard:** since each subgraph adds its own listeners, we need to update the maxlisteners ([b14c031de](https://github.com/powerhouse-inc/powerhouse/commit/b14c031de))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Frank
+- Guillermo Puente @gpuente
+- Guillermo Puente Sandoval @gpuente
+
 ## 6.0.0-dev.182 (2026-04-20)
 
 This was a version bump only, there were no code changes.

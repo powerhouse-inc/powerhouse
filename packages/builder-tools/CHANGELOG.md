@@ -1,3 +1,25 @@
+## 6.0.0-dev.183 (2026-04-21)
+
+### 🚀 Features
+
+- reactor now attempts to migrate dbs from old versions ([92b2fdde9](https://github.com/powerhouse-inc/powerhouse/commit/92b2fdde9))
+- step 1 of a switchboard load balancer ([618c32bfc](https://github.com/powerhouse-inc/powerhouse/commit/618c32bfc))
+- **docker:** run connect nginx as non-root (H3) ([3120ba1c4](https://github.com/powerhouse-inc/powerhouse/commit/3120ba1c4))
+- bundle local packages into connect for offline preview ([caa4c85a8](https://github.com/powerhouse-inc/powerhouse/commit/caa4c85a8))
+- emit editor assets as hashed files via resolveNewUrlToAsset ([27f0ea69c](https://github.com/powerhouse-inc/powerhouse/commit/27f0ea69c))
+
+### 🩹 Fixes
+
+- resolve virtual bundled-packages module under NodeNext ([a4a0ae5e2](https://github.com/powerhouse-inc/powerhouse/commit/a4a0ae5e2))
+- **shared:** handle react imports in cjs deps ([78941ed7c](https://github.com/powerhouse-inc/powerhouse/commit/78941ed7c))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Frank
+- Guillermo Puente @gpuente
+
 ## 6.0.0-dev.182 (2026-04-20)
 
 This was a version bump only for @powerhousedao/builder-tools to align it with other projects, there were no code changes.
