@@ -21,6 +21,23 @@ async function quiesceQueue(queue: IQueue): Promise<void> {
   await new Promise<void>((resolve) => queue.block(() => resolve()));
 }
 
+// The reactor runs with `relaxedDurability: true`, which makes PGlite's
+// `syncToFs()` fire the IDBFS→IndexedDB write and return without awaiting
+// Emscripten's syncfs callback. `close()` also doesn't flush. Calling
+// `FS.syncfs(false, cb)` directly gives us a callback that fires from the
+// IDBFS transaction's `oncomplete` — i.e. after IDB has actually committed.
+async function syncPgliteToIdb(pglite: {
+  readonly Module: {
+    readonly FS: {
+      syncfs(populate: boolean, cb: (err: Error | null) => void): void;
+    };
+  };
+}): Promise<void> {
+  await new Promise<void>((resolve, reject) => {
+    pglite.Module.FS.syncfs(false, (err) => (err ? reject(err) : resolve()));
+  });
+}
+
 type ColumnInfo = {
   readonly name: string;
   readonly dataType: string;
@@ -293,15 +310,42 @@ export function useDbExplorer() {
         await status.completed;
       }
 
-      // Use explicit transaction to ensure writable transaction context
+      // Drop every user-created schema before restoring. Processors may own
+      // schemas beyond `reactor`, so dropping only that one leaves orphans
+      // whose tables collide with whatever the dump recreates. The dump
+      // itself emits `CREATE SCHEMA ...;` statements, so we don't pre-create.
+      // `standard_conforming_strings=off` matches pg_dump's escape-string
+      // literals so doubled backslashes in JSONB collapse correctly.
       await pglite.transaction(async (tx) => {
-        await tx.exec(`DROP SCHEMA ${REACTOR_SCHEMA} CASCADE`);
-        await tx.exec(`CREATE SCHEMA ${REACTOR_SCHEMA}`);
+        const schemas = await tx.query<{ nspname: string }>(
+          `SELECT nspname FROM pg_namespace
+           WHERE nspname NOT IN ('pg_catalog', 'pg_toast', 'information_schema', 'public')
+             AND nspname NOT LIKE 'pg_temp_%'
+             AND nspname NOT LIKE 'pg_toast_temp_%'`,
+        );
+        for (const { nspname } of schemas.rows) {
+          await tx.exec(`DROP SCHEMA IF EXISTS "${nspname}" CASCADE`);
+        }
+        try {
+          await tx.exec("SET standard_conforming_strings = off;");
+        } catch {
+          // PG17 still accepts this but log if it ever fails.
+        }
         await tx.exec(sqlContent);
         await tx.exec(`SET search_path TO ${REACTOR_SCHEMA}`);
       });
 
+      // Flush IDBFS → IndexedDB synchronously. PGlite's own syncToFs is
+      // fire-and-forget under relaxedDurability, and close() doesn't run
+      // a final sync, so we drive Emscripten's syncfs directly — its
+      // callback fires from the IDB transaction's oncomplete, guaranteeing
+      // the writes have committed before we reload.
+      await syncPgliteToIdb(pglite);
+
       window.location.reload();
+      // reload() is asynchronous; without blocking here the DBExplorer caller
+      // would continue and call loadTables() against an in-flight shutdown.
+      await new Promise(() => {});
     },
     [pglite, queue, reactor],
   );
