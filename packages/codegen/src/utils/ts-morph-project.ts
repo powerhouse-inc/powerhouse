@@ -24,9 +24,9 @@ export function getDefaultProjectOptions(tsConfigFilePath: string) {
 
 /** Instantiates a ts-morph Project using the default typescript config and nearest tsconfig.json file */
 export function buildTsMorphProject(projectDir: string) {
+  process.chdir(projectDir);
   const tsConfigFilePath = path.join(projectDir, "tsconfig.json");
   const project = new Project(getDefaultProjectOptions(tsConfigFilePath));
   project.addSourceFilesAtPaths(join(projectDir, "**/*"));
-  // project.resolveSourceFileDependencies();
   return project;
 }

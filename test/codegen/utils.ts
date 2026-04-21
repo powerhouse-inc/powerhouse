@@ -31,14 +31,11 @@ export async function loadDocumentModelsInDir(inDir: string, outDir: string) {
     ),
   );
 
-  const cwd = process.cwd();
-  process.chdir(outDir);
   const project = buildTsMorphProject(outDir);
 
   for (const documentModelState of documentModelStates) {
     await generateDocumentModel(documentModelState, project);
   }
-  process.chdir(cwd);
 }
 
 export async function cpForce(source: string | URL, destination: string | URL) {

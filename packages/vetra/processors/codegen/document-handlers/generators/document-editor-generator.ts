@@ -90,7 +90,7 @@ export class DocumentEditorGenerator extends BaseDocumentGen {
           documentTypes: documentTypes,
           editorId: editorId,
         },
-        this.config.CURRENT_WORKING_DIR,
+        this.project,
       );
 
       logger.info(

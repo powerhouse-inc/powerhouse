@@ -1,6 +1,5 @@
 import { buildSubgraphSchema } from "@apollo/subgraph";
-import { loadDocumentModel } from "@powerhousedao/codegen";
-import { tsMorphGenerateSubgraph } from "@powerhousedao/codegen/file-builders";
+import { generateSubgraph } from "@powerhousedao/codegen";
 import { buildTsMorphProject } from "@powerhousedao/codegen/utils";
 import { describe, expect, it } from "bun:test";
 import type {
@@ -11,13 +10,7 @@ import type {
 import { getIntrospectionQuery, graphql, Kind } from "graphql";
 import { gql } from "graphql-tag";
 import { join } from "path";
-import {
-  DATA,
-  DOCUMENT_MODELS,
-  NEW_PROJECT,
-  TEST_OUTPUT,
-  TEST_PROJECTS,
-} from "../constants.js";
+import { DOCUMENT_MODELS, NEW_PROJECT, TEST_OUTPUT } from "../constants.js";
 import {
   cpForce,
   getDocumentModelJsonFilePath,
@@ -27,33 +20,23 @@ import {
   runTsc,
 } from "../utils.js";
 
-const cwd = process.cwd();
-const parentOutDir = join(cwd, TEST_OUTPUT, "generate-subgraph-e2e");
-const testProjectsDir = join(cwd, TEST_PROJECTS);
-const dataDir = join(cwd, DATA);
+const parentOutDir = join(TEST_OUTPUT, "generate-subgraph-e2e");
 await rmForce(parentOutDir);
 await mkdirRecursive(parentOutDir);
 
 async function generateSubgraphProject(outDirName: string) {
   const outDir = join(parentOutDir, outDirName);
-  await cpForce(join(testProjectsDir, NEW_PROJECT), outDir);
-  const project = buildTsMorphProject(outDir);
+  await cpForce(NEW_PROJECT, outDir);
   // Generate the document model
-  const documentModelsInDir = join(dataDir, DOCUMENT_MODELS);
-  await loadDocumentModelsInDir(documentModelsInDir, outDir);
-
-  // Load the test-doc model state for subgraph generation
-  const testDocState = await loadDocumentModel(
-    getDocumentModelJsonFilePath(join(dataDir, DOCUMENT_MODELS), "test-doc"),
-  );
+  await loadDocumentModelsInDir(DOCUMENT_MODELS, outDir);
 
   // Generate a subgraph for the test-doc model
   const subgraphsDir = join(outDir, "subgraphs");
-  await tsMorphGenerateSubgraph(
-    {
-      subgraphName: "test-doc",
-      documentModel: testDocState,
-    },
+  const project = buildTsMorphProject(outDir);
+
+  await generateSubgraph(
+    "test-doc",
+    getDocumentModelJsonFilePath(DOCUMENT_MODELS, "test-doc"),
     project,
   );
 

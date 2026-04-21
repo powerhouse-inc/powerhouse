@@ -2,13 +2,11 @@ import { describe, expect, test } from "bun:test";
 import { join } from "node:path";
 import {
   DATA,
-  DOCUMENT_MODELS,
   NEW_PROJECT,
   SPEC_VERSION_1,
   SPEC_VERSION_2,
   SPEC_VERSION_3,
   TEST_OUTPUT,
-  TEST_PROJECTS,
   WITH_DOCUMENT_MODELS_SPEC_1,
   WITH_DOCUMENT_MODELS_SPEC_2,
 } from "../constants.js";
@@ -20,25 +18,20 @@ import {
   runTsc,
 } from "../utils.js";
 
-const parentOutDir = join(process.cwd(), TEST_OUTPUT, "generate-doc-model");
-const testProjectsDir = join(process.cwd(), TEST_PROJECTS);
-const dataDir = join(process.cwd(), DATA);
+const parentOutDir = join(TEST_OUTPUT, "generate-doc-model");
 await rmForce(parentOutDir);
 await mkdirRecursive(parentOutDir);
 
 async function runDocumentModelTests(args: {
-  testsDataDir: string;
   testOutputParentDir: string;
   inDirName: string;
   specDirName: string;
 }) {
-  const { inDirName, specDirName, testsDataDir, testOutputParentDir } = args;
-  const testProjectDir = join(testProjectsDir, inDirName);
-  const documentModelsInDir = join(testsDataDir, specDirName);
+  const { inDirName, specDirName, testOutputParentDir } = args;
   const outDir = join(testOutputParentDir, `${inDirName}-${specDirName}`);
   await rmForce(outDir);
-  await cpForce(testProjectDir, outDir);
-  await loadDocumentModelsInDir(documentModelsInDir, outDir);
+  await cpForce(inDirName, outDir);
+  await loadDocumentModelsInDir(specDirName, outDir);
   await runTsc(outDir);
   return outDir;
 }
@@ -51,15 +44,13 @@ describe("versioned document models", () => {
         inDirName: NEW_PROJECT,
         specDirName: SPEC_VERSION_1,
         testOutputParentDir,
-        testsDataDir: dataDir,
       });
     });
     test("should persist existing reducers, tests, utils, and custom files when generating for the same spec version", async () => {
       await runDocumentModelTests({
         inDirName: WITH_DOCUMENT_MODELS_SPEC_1,
-        specDirName: "spec-version-1-with-more-operations",
+        specDirName: join(DATA, "spec-version-1-with-more-operations"),
         testOutputParentDir,
-        testsDataDir: dataDir,
       });
     });
   });
@@ -69,7 +60,6 @@ describe("versioned document models", () => {
         inDirName: NEW_PROJECT,
         specDirName: SPEC_VERSION_2,
         testOutputParentDir,
-        testsDataDir: dataDir,
       });
 
       const v1ModulePath = join(
@@ -98,7 +88,6 @@ describe("versioned document models", () => {
         inDirName: WITH_DOCUMENT_MODELS_SPEC_1,
         specDirName: SPEC_VERSION_2,
         testOutputParentDir,
-        testsDataDir: dataDir,
       });
     });
 
@@ -107,9 +96,8 @@ describe("versioned document models", () => {
         async () =>
           await runDocumentModelTests({
             inDirName: WITH_DOCUMENT_MODELS_SPEC_1,
-            specDirName: "spec-version-2-with-state-changes",
+            specDirName: join(DATA, "spec-version-2-with-state-changes"),
             testOutputParentDir,
-            testsDataDir: dataDir,
           }),
       ).toThrow();
     });
@@ -121,7 +109,6 @@ describe("versioned document models", () => {
         inDirName: NEW_PROJECT,
         specDirName: SPEC_VERSION_3,
         testOutputParentDir,
-        testsDataDir: dataDir,
       });
     });
 
@@ -130,7 +117,6 @@ describe("versioned document models", () => {
         inDirName: WITH_DOCUMENT_MODELS_SPEC_2,
         specDirName: SPEC_VERSION_3,
         testOutputParentDir,
-        testsDataDir: dataDir,
       });
     });
 
@@ -139,9 +125,8 @@ describe("versioned document models", () => {
         async () =>
           await runDocumentModelTests({
             inDirName: WITH_DOCUMENT_MODELS_SPEC_2,
-            specDirName: "spec-version-3-with-state-changes",
+            specDirName: join(DATA, "spec-version-3-with-state-changes"),
             testOutputParentDir,
-            testsDataDir: dataDir,
           }),
       ).toThrow();
     });

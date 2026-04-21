@@ -69,11 +69,7 @@ export class SubgraphGenerator extends BaseDocumentGen {
     if (state.name && state.status === "CONFIRMED") {
       logger.info(`🔄 Starting subgraph generation for: ${state.name}`);
       try {
-        await generateSubgraph(
-          state.name,
-          null,
-          this.config.CURRENT_WORKING_DIR,
-        );
+        await generateSubgraph(state.name, null, this.project);
         logger.info(
           `✅ Subgraph generation completed successfully for: ${state.name}`,
         );

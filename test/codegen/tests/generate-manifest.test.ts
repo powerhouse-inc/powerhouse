@@ -4,12 +4,10 @@ import { fileExists } from "@powerhousedao/shared/clis";
 import { describe, expect, it } from "bun:test";
 import { readFile } from "node:fs/promises";
 import path, { join } from "node:path";
-import { NEW_PROJECT, TEST_OUTPUT, TEST_PROJECTS } from "../constants.js";
+import { NEW_PROJECT, TEST_OUTPUT } from "../constants.js";
 import { cpForce, mkdirRecursive, rmForce } from "../utils.js";
 
-const parentOutDir = join(process.cwd(), TEST_OUTPUT);
-const testProjectsDir = join(process.cwd(), TEST_PROJECTS);
-const testOutputParentDir = join(parentOutDir, "generate-manifest");
+const testOutputParentDir = join(TEST_OUTPUT, "generate-manifest");
 await rmForce(testOutputParentDir);
 await mkdirRecursive(testOutputParentDir);
 
@@ -50,7 +48,7 @@ describe("generateManifest", () => {
       "update-existing-manifest",
     );
     await cpForce(
-      join(testProjectsDir, NEW_PROJECT, "powerhouse.manifest.json"),
+      join(NEW_PROJECT, "powerhouse.manifest.json"),
       join(testOutDirPath, "powerhouse.manifest.json"),
     );
     await createOrUpdateManifest(updateData, testOutDirPath);
@@ -82,7 +80,7 @@ describe("generateManifest", () => {
       "update-publisher-partially",
     );
     await cpForce(
-      join(testProjectsDir, NEW_PROJECT, "powerhouse.manifest.json"),
+      join(NEW_PROJECT, "powerhouse.manifest.json"),
       join(testOutDirPath, "powerhouse.manifest.json"),
     );
     await createOrUpdateManifest(updateData, testOutDirPath);
@@ -117,7 +115,7 @@ describe("generateManifest", () => {
       "update-publisher-partially",
     );
     await cpForce(
-      join(testProjectsDir, NEW_PROJECT, "powerhouse.manifest.json"),
+      join(NEW_PROJECT, "powerhouse.manifest.json"),
       join(testOutDirPath, "powerhouse.manifest.json"),
     );
     await createOrUpdateManifest(updateData, testOutDirPath);

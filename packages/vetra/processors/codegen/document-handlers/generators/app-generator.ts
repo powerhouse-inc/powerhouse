@@ -81,7 +81,7 @@ export class AppGenerator extends BaseDocumentGen {
             allowedDocumentTypes: state.allowedDocumentTypes ?? [],
             isDragAndDropEnabled: state.isDragAndDropEnabled,
           },
-          this.config.CURRENT_WORKING_DIR,
+          this.project,
         );
 
         logger.info(

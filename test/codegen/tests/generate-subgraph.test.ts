@@ -7,21 +7,18 @@ import { join } from "node:path";
 import {
   NEW_PROJECT,
   TEST_OUTPUT,
-  TEST_PROJECTS,
   WITH_DOCUMENT_MODELS_SPEC_2,
 } from "../constants.js";
 import { cpForce, mkdirRecursive, rmForce, runTsc } from "../utils.js";
 
-const cwd = process.cwd();
-const parentOutDir = join(cwd, TEST_OUTPUT, "generate-subgraph");
-const testProjectsDir = join(cwd, TEST_PROJECTS);
+const parentOutDir = join(TEST_OUTPUT, "generate-subgraph");
 await rmForce(parentOutDir);
 await mkdirRecursive(parentOutDir);
 
 describe("generateSubgraph", () => {
   it("should generate a custom subgraph with correct files", async () => {
     const outDir = join(parentOutDir, "generate-custom-subgraph");
-    await cpForce(join(testProjectsDir, WITH_DOCUMENT_MODELS_SPEC_2), outDir);
+    await cpForce(WITH_DOCUMENT_MODELS_SPEC_2, outDir);
     const subgraphsDir = join(outDir, "subgraphs");
     const project = buildTsMorphProject(outDir);
 
@@ -76,7 +73,7 @@ describe("generateSubgraph", () => {
 
   it("should generate a document-model subgraph with correct files", async () => {
     const outDir = join(parentOutDir, "generate-document-model-subgraph");
-    await cpForce(join(testProjectsDir, WITH_DOCUMENT_MODELS_SPEC_2), outDir);
+    await cpForce(WITH_DOCUMENT_MODELS_SPEC_2, outDir);
     const project = buildTsMorphProject(outDir);
     const subgraphsDir = join(outDir, "subgraphs");
     const documentModelsDir = join(outDir, "document-models");
@@ -156,7 +153,7 @@ describe("generateSubgraph", () => {
 
   it("should not overwrite existing custom subgraph files", async () => {
     const outDir = join(parentOutDir, "do-not-overwrite-other-subgraphs");
-    await cpForce(join(testProjectsDir, NEW_PROJECT), outDir);
+    await cpForce(NEW_PROJECT, outDir);
     const project = buildTsMorphProject(outDir);
     const subgraphsDir = join(outDir, "subgraphs");
 
@@ -198,7 +195,7 @@ describe("generateSubgraph", () => {
       parentOutDir,
       "should-overwrite-schemas-and-resolvers-on-regneration",
     );
-    await cpForce(join(testProjectsDir, WITH_DOCUMENT_MODELS_SPEC_2), outDir);
+    await cpForce(WITH_DOCUMENT_MODELS_SPEC_2, outDir);
     const project = buildTsMorphProject(outDir);
     const subgraphsDir = join(outDir, "subgraphs");
     const documentModelsDir = join(outDir, "document-models");

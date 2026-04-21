@@ -1,7 +1,4 @@
-import {
-  generateAllProcessors,
-  generateProcessor,
-} from "@powerhousedao/codegen";
+import { generateProcessor } from "@powerhousedao/codegen";
 import type { ReactorModule } from "@powerhousedao/reactor";
 import { ReactorBuilder } from "@powerhousedao/reactor";
 import { driveDocumentModelModule } from "@powerhousedao/shared/document-drive";
@@ -22,7 +19,7 @@ import { $ } from "bun";
 import { afterEach, describe, expect, it } from "bun:test";
 import { join } from "path";
 import { Project } from "ts-morph";
-import { NEW_PROJECT, TEST_OUTPUT, TEST_PROJECTS } from "../constants.js";
+import { NEW_PROJECT, TEST_OUTPUT } from "../constants.js";
 import { cpForce, mkdirRecursive, rmForce } from "../utils.js";
 
 import { PGlite } from "@electric-sql/pglite";
@@ -46,8 +43,7 @@ async function getDb() {
   return { pgLite, relationalDb };
 }
 
-const parentOutDir = join(process.cwd(), TEST_OUTPUT);
-const testProjectDir = join(process.cwd(), TEST_PROJECTS);
+const parentOutDir = join(TEST_OUTPUT, "generate-processor");
 await rmForce(parentOutDir);
 await mkdirRecursive(parentOutDir);
 
@@ -65,7 +61,7 @@ async function runProcessorTests(args: {
 
   const outDir = join(parentOutDir, outDirName);
 
-  await cpForce(join(testProjectDir, NEW_PROJECT), outDir);
+  await cpForce(NEW_PROJECT, outDir);
   const project = buildTsMorphProject(outDir);
 
   for (const input of inputs) {
@@ -77,7 +73,6 @@ async function runProcessorTests(args: {
     );
   }
   await $`bun run --cwd ${outDir} tsc`;
-  await generateAllProcessors(project);
 
   return outDir;
 }
@@ -402,7 +397,7 @@ describe("processor e2e integration", () => {
 
   it("should generate a processor, instrument it, plug into a reactor, and observe operations", async () => {
     const outDir = join(parentOutDir, "e2e-processor");
-    await cpForce(join(testProjectDir, NEW_PROJECT), outDir);
+    await cpForce(NEW_PROJECT, outDir);
     const project = buildTsMorphProject(outDir);
     // 1. Generate a processor via codegen
     await generateProcessor(
@@ -603,8 +598,6 @@ describe("processor e2e integration", () => {
         n.toLowerCase().includes("isomorphic"),
       ),
     ).toHaveLength(2);
-
-    await generateAllProcessors(project);
   });
 });
 

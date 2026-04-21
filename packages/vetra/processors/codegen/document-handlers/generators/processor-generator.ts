@@ -126,7 +126,7 @@ export class ProcessorGenerator extends BaseDocumentGen {
             documentTypes,
             processorApps,
           },
-          this.config.CURRENT_WORKING_DIR,
+          this.project,
         );
 
         logger.info(
