@@ -1,5 +1,6 @@
 import { esmExternalRequirePlugin } from "rolldown/plugins";
 import type { InlineConfig } from "tsdown";
+import { rewriteBundledReactToExternalPlugin } from "./rewrite-bundled-react-plugin.js";
 
 const entry = [
   "index.ts",
@@ -76,7 +77,10 @@ export const browserBuildConfig: InlineConfig = {
   clean,
   dts,
   sourcemap,
-  plugins: esmExternalRequirePlugin({ external: reactExternals }),
+  plugins: [
+    esmExternalRequirePlugin({ external: reactExternals }),
+    rewriteBundledReactToExternalPlugin(),
+  ],
   inputOptions: {
     experimental: { resolveNewUrlToAsset: true },
   },
