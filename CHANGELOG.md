@@ -1,3 +1,14 @@
+## 6.0.0-dev.188 (2026-04-21)
+
+### 🩹 Fixes
+
+- **connect:** guard bundled-packages import so vite dep scan doesn't fail without the plugin ([89e08e8d4](https://github.com/powerhouse-inc/powerhouse/commit/89e08e8d4))
+- **ph-cli:** pin @tsdown/css to match tsdown version ([961675548](https://github.com/powerhouse-inc/powerhouse/commit/961675548))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 6.0.0-dev.187 (2026-04-21)
 
 ### 🩹 Fixes

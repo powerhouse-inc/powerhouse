@@ -1,3 +1,13 @@
+## 6.0.0-dev.188 (2026-04-21)
+
+### 🩹 Fixes
+
+- **ph-cli:** pin @tsdown/css to match tsdown version ([961675548](https://github.com/powerhouse-inc/powerhouse/commit/961675548))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 6.0.0-dev.187 (2026-04-21)
 
 ### 🩹 Fixes
