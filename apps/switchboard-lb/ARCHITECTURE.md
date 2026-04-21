@@ -210,18 +210,18 @@ This is illustrative, not final — it handles only the single-top-level-key cas
 3. Parse with `cjson.safe` — never the raising variant.
 4. Look for the owning identifier in `variables`. The documented key set, derived from the real subgraph resolvers:
 
-   | Key                                                           | Operations                                                                                                                         |
-   | ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-   | `identifier`                                                  | `document`, `deleteDocument`, all `<Model>.document` queries                                                                       |
-   | `identifiers` _(array)_                                       | `deleteDocuments` — see §4.4                                                                                                       |
-   | `documentIdentifier`                                          | `mutateDocument`, `mutateDocumentAsync`, `renameDocument`                                                                          |
-   | `parentIdentifier`                                            | `createDocument(parentIdentifier?)`, `createEmptyDocument(parentIdentifier?)`, `addChildren`, `removeChildren`, `documentChildren` |
-   | `childIdentifier`                                             | `documentParents`                                                                                                                  |
-   | `sourceParentIdentifier`, `targetParentIdentifier`            | `moveChildren` — both present — see §4.4                                                                                           |
-   | `docId`                                                       | every per-operation mutation generated for a document model (sync + async)                                                         |
-   | `filter.documentId` (nested)                                  | `documentOperations` query                                                                                                         |
-   | `input.filter.documentId` (nested, list variant)              | `touchChannel`                                                                                                                     |
-   | `envelopes[].operations[].context.documentId` (nested + list) | `pushSyncEnvelopes` — see §4.4                                                                                                     |
+   | Key                                                | Operations                                                                                                                         |
+   | -------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+   | `identifier`                                       | `document`, `deleteDocument`, all `<Model>.document` queries                                                                       |
+   | `identifiers` _(array)_                            | `deleteDocuments` — see §4.4                                                                                                       |
+   | `documentIdentifier`                               | `mutateDocument`, `mutateDocumentAsync`, `renameDocument`                                                                          |
+   | `parentIdentifier`                                 | `createDocument(parentIdentifier?)`, `createEmptyDocument(parentIdentifier?)`, `addChildren`, `removeChildren`, `documentChildren` |
+   | `childIdentifier`                                  | `documentParents`                                                                                                                  |
+   | `sourceParentIdentifier`, `targetParentIdentifier` | `moveChildren` — both present — see §4.4                                                                                           |
+   | `docId`                                            | every per-operation mutation generated for a document model (sync + async)                                                         |
+   | `filter.documentId` (nested)                       | `documentOperations` query                                                                                                         |
+   | `input.filter.documentId` (nested, list variant)   | `touchChannel`                                                                                                                     |
+   | `envelopes[0].channelMeta.id` (nested)             | `pushSyncEnvelopes` — route on this; supersedes the old operations-walk. See §4.4 and §9 Q7.                                       |
 
 5. If no identifier is found, return `409` with a message pointing at the documented key set. We **do not guess**.
 
@@ -229,13 +229,15 @@ We explicitly do **not** run a GraphQL operation parser. The contract with clien
 
 ### 4.4 Multi-document requests
 
-Several real mutations carry more than one document identifier by design:
+Several real mutations carry more than one document identifier. MVP policy is **reject with 409** whenever the correct single backend cannot be determined. Forwarding multi-id requests to any healthy backend is never acceptable — it silently violates the pinning invariant.
 
-- `deleteDocuments(identifiers: [ID!]!)` — arbitrary batch.
-- `moveChildren(sourceParentIdentifier, targetParentIdentifier, …)` — two parents, potentially on different backends.
-- `pushSyncEnvelopes(envelopes: [...])` — each envelope's operations can target a different `documentId`.
+- `deleteDocuments` — `variables.identifiers[]` array present → 409.
+- `moveChildren` — both parents present and equal → route on that value; both present and different → 409.
+- `pushSyncEnvelopes` — route on `envelopes[0].channelMeta.id`; envelopes spanning multiple channels → 409.
+- `touchChannel` — `variables.input.filter.documentId` single element → route; list > 1 → 409.
+- Any request with no identifier after all rules run → 409.
 
-Rejecting these with `409` would break legitimate traffic. Forwarding them blindly to a single backend is correct only when every referenced document happens to pin there. The resolution is an open design decision (§9 Q7) and blocks the final M2 implementation. Until it's resolved, the LB forwards multi-identifier requests to any healthy backend; the correctness gap for those specific operations is explicit and tracked.
+See §9 Q7 for rationale and the historical options that were ruled out.
 
 ### 4.5 Failure modes
 
@@ -344,7 +346,10 @@ Unresolved. Decide before the relevant milestone and record the decision here.
 2. **Read vs write routing.** MVP routes both with the same function. Is there a case for fanning reads to any healthy backend? Only if reads tolerate stale data, and Reactor semantics suggest they don't. _Defer until after M5._
 3. **Subscription stickiness across reloads.** A long-lived WS/SSE connection stays on the same worker's upstream connection across a reload because old workers drain gracefully. We need an integration test that actually proves this. _Owner: M3._
 4. **How do operators migrate a document between backends?** Cross-cutting design touching `switchboard` and `reactor`. Until it exists, the backend list is immutable in prod. _Decide before we operate this at any meaningful scale._
-5. **`POST /graphql` with no extractable doc id.** MVP rejects with `409`. Revisit if real traffic demands a "broadcast" or "default backend" escape hatch — but the default should be "reject loudly," not "guess."
+5. **`POST /graphql` with no extractable doc id.**
+
+   **Decided (2026-04-21):** reject with `409 Conflict`. The LB does not guess and does not forward to a default backend. If real traffic ever demands a broadcast escape hatch, that decision is revisited explicitly. Rule: fail loudly, never silently incorrect.
+
 6. **Where does TLS terminate?** MVP assumes a TLS-terminating edge in front. If that's not available in a given deploy, we enable `listen 443 ssl;` in this LB.
 
    **Decided (2026-04-21, M1 scope):**
@@ -356,8 +361,24 @@ Unresolved. Decide before the relevant milestone and record the decision here.
 
    **Revisit trigger:** a specific deploy where no upstream TLS terminator is available, or a client that requires direct mTLS to the LB.
 
-7. **Multi-identifier operations.** `deleteDocuments(identifiers: [ID!]!)`, `moveChildren(sourceParentIdentifier, targetParentIdentifier, …)`, and `pushSyncEnvelopes(envelopes: [...])` carry several identifiers that may pin to different backends. Options: (a) server-side split-and-fan-out with response merge — complex, transparent to clients; (b) require clients to pre-group by owning backend — pushes complexity to every client; (c) route all multi-identifier requests to a designated coordinator backend — simple, but introduces a hotspot; (d) forward to any backend and require `switchboard` to handle cross-backend coordination internally — turns the LB into a correctness-only gate and makes `switchboard` federation-aware. _Decide before M2 starts. Blocks M2._
-8. **Nested identifier paths.** `documentOperations(filter: {documentId})`, `touchChannel(input: {filter: {documentId: [...]}} )`, and `pushSyncEnvelopes(envelopes: [{operations: [{context: {documentId}}]}])` place the owning id inside nested (and sometimes array) structures. The Lua body walk needs to know these shapes, which couples the LB to the subgraph schemas more tightly than we'd like. Options: (a) hard-code the paths in `lua/route.lua`; (b) generate the path list from the GraphQL schema at build time; (c) require a client-supplied header carrying the owning id so the LB doesn't walk the body at all for these cases. _Decide alongside Q7._
+7. **Multi-identifier operations.**
+
+   **Decided (2026-04-21):** MVP policy is reject-with-409 whenever the correct single backend cannot be determined.
+   - `deleteDocuments(identifiers: [ID!]!)` — non-empty `variables.identifiers` array → 409. Split-and-fan-out deferred.
+   - `moveChildren(sourceParentIdentifier, targetParentIdentifier, …)` — both parents present and equal → route on that value; both present and different → 409; only one present → route on it.
+   - `pushSyncEnvelopes(envelopes: [...])` — reactor-to-reactor sync protocol. Route on `variables.envelopes[0].channelMeta.id`; if any envelope has a different `channelMeta.id`, return 409. Schema-verified 2026-04-21: `SyncEnvelopeInput.channelMeta: ChannelMetaInput!` and `ChannelMetaInput.id: String!` are both non-null (`packages/reactor-api/src/graphql/reactor/schema.graphql:325-332`), and every batch is produced by a single `GqlRequestChannel` stamping its own `channelId` on every envelope (`gql-req-channel.ts:785-843`) — all envelopes in one call share one `channelMeta.id` by construction.
+
+   **Historical options considered** (none viable for MVP): (a) server-side split-and-merge — complex, deferred; (b) client pre-grouping — pushes complexity to every caller; (c) coordinator backend — hotspot; (d) federation-aware switchboard — no cross-Reactor coordinator exists today, so this option is impossible rather than undesirable.
+
+8. **Nested identifier paths.**
+
+   **Decided (2026-04-21):** hard-code the paths in `lua/route.lua` (option a). The schema shapes are stable internal protocol; generating from the schema (option b) adds build-time complexity; a client-supplied header (option c) pushes work to every caller.
+   - `documentOperations` → `variables.filter.documentId` (string).
+   - `touchChannel` → `variables.input.filter.documentId` (list). Accept single-element list; reject multi-element with 409.
+   - `pushSyncEnvelopes` → `variables.envelopes[0].channelMeta.id`. This **supersedes** the nested `envelopes[].operations[].context.documentId` path listed in §4.3; `channelMeta.id` is the first-class routing key — always present, same for every envelope in a push.
+
+   **Historical options considered**: (a) hard-code — chosen; (b) generate from schema — deferred; (c) client-supplied header — rejected (breaks the "no client changes" property).
+
 9. **Supergraph vs. subgraph routing.** Today `POST /graphql` (supergraph), `POST /graphql/r` (reactor), and `POST /graphql/<model>` are all served by the same switchboard per request, so the LB treats them identically. If the supergraph ever federates across multiple switchboards — or if model-specific subgraphs move to dedicated processes — path-based routing re-enters the picture. _Not a blocker for M2; revisit when real traffic or deployment topology forces the question._
 
 ## 10. Appendix — references
