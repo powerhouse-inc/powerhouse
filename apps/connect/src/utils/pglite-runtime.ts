@@ -92,3 +92,28 @@ export async function loadPGliteModule(
   if (major === 17) return import("@electric-sql/pglite");
   throw new Error(`Unsupported PGlite major: ${String(major)}`);
 }
+
+type PgDumpFn = (options: {
+  pg: unknown;
+}) => Promise<{ text(): Promise<string> }>;
+
+/**
+ * Loads the pg_dump tool for the given PGlite major. pg_dump's VFS layout is
+ * version-specific, so using the wrong major against a live PGlite instance
+ * fails with Emscripten ENOENT (errno 44).
+ */
+export async function loadPgDump(major: SupportedPgMajor): Promise<PgDumpFn> {
+  if (major === 16) {
+    const mod = (await import("pglite-tools-legacy-02/pg_dump")) as {
+      pgDump: PgDumpFn;
+    };
+    return mod.pgDump;
+  }
+  if (major === 17) {
+    const mod = (await import("@electric-sql/pglite-tools/pg_dump")) as {
+      pgDump: PgDumpFn;
+    };
+    return mod.pgDump;
+  }
+  throw new Error(`Unsupported PGlite major: ${String(major)}`);
+}

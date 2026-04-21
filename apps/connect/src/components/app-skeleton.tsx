@@ -15,7 +15,6 @@ import {
   subscribeMigrationStatus,
   type MigrationPhase,
 } from "./migration-status.js";
-import { MigrationBanner } from "./migration-banner.js";
 const LOADER_DELAY = 250;
 
 const PHASE_LABEL: Record<MigrationPhase, string> = {
@@ -110,7 +109,6 @@ export const AppSkeleton: React.FC<PropsWithChildren> = (props) => {
         />
       ) : null}
       {!props.children ? <Loader /> : null}
-      <MigrationBanner />
       <MigrationOverlay />
     </div>
   );

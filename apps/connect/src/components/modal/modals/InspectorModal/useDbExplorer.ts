@@ -1,4 +1,8 @@
-import { pgDump } from "@electric-sql/pglite-tools/pg_dump";
+import {
+  getCachedReactorPgMajor,
+  loadPgDump,
+  resolvePgMajorForRuntime,
+} from "@powerhousedao/connect/utils";
 import type {
   FilterGroup,
   SortOptions,
@@ -261,6 +265,8 @@ export function useDbExplorer() {
     if (queue) await quiesceQueue(queue);
 
     try {
+      const major = resolvePgMajorForRuntime(getCachedReactorPgMajor() ?? null);
+      const pgDump = await loadPgDump(major);
       const dump = await pgDump({ pg: pglite });
       const sqlContent = await dump.text();
 

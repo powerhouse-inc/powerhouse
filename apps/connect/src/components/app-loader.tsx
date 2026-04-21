@@ -4,6 +4,7 @@ import { lazy, StrictMode, Suspense } from "react";
 import AppSkeleton from "./app-skeleton.js";
 import { DetailedFallback, ErrorBoundary } from "./error-boundary.js";
 import { App, CookieBanner } from "./index.js";
+import { MigrationBanner } from "./migration-banner.js";
 import { ModalsContainer } from "./modal/modals-container.js";
 
 export const AppLoader = (props: { localPackage?: DocumentModelLib }) => {
@@ -30,6 +31,7 @@ export const AppLoader = (props: { localPackage?: DocumentModelLib }) => {
         <Suspense name="ModalsContainer">
           <ModalsContainer />
         </Suspense>
+        <MigrationBanner />
       </ErrorBoundary>
     </StrictMode>
   );
