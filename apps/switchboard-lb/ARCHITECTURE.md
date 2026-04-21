@@ -331,12 +331,29 @@ End-to-end this is **~2–3 weeks of calendar time**, not months.
 
 Unresolved. Decide before the relevant milestone and record the decision here.
 
-1. **Do we need a `balancer_by_lua_block` instead of `hash $doc_id consistent`?** The native `hash` directive is simpler and faster, but it doesn't give us per-request control (e.g., to consult an external directory). MVP answer: `hash`. Revisit when/if we introduce a directory. _Decide before M1._
+1. **Do we need a `balancer_by_lua_block` instead of `hash $doc_id consistent`?**
+
+   **Decided (2026-04-21):** use the native `hash $doc_id consistent` directive. The MVP routing function is a pure function of `$doc_id`, which the built-in directive handles in C with Ketama-style consistent hashing and free integration with `server ... max_fails/fail_timeout` and active health checks. `balancer_by_lua_block` is the right tool only when the routing decision depends on state the directive cannot express (external directory, per-request migration hint, load-aware override) — none of which are MVP requirements. Adopting Lua on the balancer phase would add per-request overhead on top of the M2 body parse, duplicate `server`-directive behavior, and enlarge what we have to reason about under reload.
+
+   **Revisit trigger:** introduction of an external pinning directory (§5.4), or a per-request decision that is not a pure function of `$doc_id`.
+
+   **M1 config reconciliation.** `conf/upstreams.conf` currently declares `hash $doc_id consistent` even though nothing populates `$doc_id` — every request would hash to the same backend. The M1 commit reverts the upstream to `least_conn` per §8 and removes the scaffolding `map "" $doc_id { default ""; }` from `conf/nginx.conf`. Both are restored in the M2 commit that introduces `lua/route.lua`, so the swap and the Lua that populates `$doc_id` land atomically — never a window where the config hashes on an empty key.
+
 2. **Read vs write routing.** MVP routes both with the same function. Is there a case for fanning reads to any healthy backend? Only if reads tolerate stale data, and Reactor semantics suggest they don't. _Defer until after M5._
 3. **Subscription stickiness across reloads.** A long-lived WS/SSE connection stays on the same worker's upstream connection across a reload because old workers drain gracefully. We need an integration test that actually proves this. _Owner: M3._
 4. **How do operators migrate a document between backends?** Cross-cutting design touching `switchboard` and `reactor`. Until it exists, the backend list is immutable in prod. _Decide before we operate this at any meaningful scale._
 5. **`POST /graphql` with no extractable doc id.** MVP rejects with `409`. Revisit if real traffic demands a "broadcast" or "default backend" escape hatch — but the default should be "reject loudly," not "guess."
-6. **Where does TLS terminate?** MVP assumes a TLS-terminating edge in front. If that's not available in a given deploy, we enable `listen 443 ssl;` in this LB. _Decide per environment, not globally._
+6. **Where does TLS terminate?** MVP assumes a TLS-terminating edge in front. If that's not available in a given deploy, we enable `listen 443 ssl;` in this LB.
+
+   **Decided (2026-04-21, M1 scope):**
+   - **Dev / CI:** plain HTTP on `:8080` (unchanged).
+   - **Prod:** LB stays plain HTTP on `:8080` behind a separate TLS-terminating edge (cloud LB, ALB, or upstream nginx) that forwards plain HTTP to the LB's internal interface. This matches §1's non-goal and keeps the MVP out of cert-rotation / cipher-policy territory.
+   - **In-LB TLS (`listen 443 ssl;`):** not built in M1. Add only when a specific deploy demands it — no speculative scaffolding.
+
+   **Operational requirements this creates** (to be captured in a future `DEPLOY.md`; not a blocker for M1 code): the LB listener MUST NOT be exposed to the public internet directly; the TLS edge is responsible for `X-Forwarded-For` / `X-Forwarded-Proto`, which the LB will honor via `set_real_ip_from <edge CIDR>; real_ip_header X-Forwarded-For;` once we add that config (deferrable to M3/M4).
+
+   **Revisit trigger:** a specific deploy where no upstream TLS terminator is available, or a client that requires direct mTLS to the LB.
+
 7. **Multi-identifier operations.** `deleteDocuments(identifiers: [ID!]!)`, `moveChildren(sourceParentIdentifier, targetParentIdentifier, …)`, and `pushSyncEnvelopes(envelopes: [...])` carry several identifiers that may pin to different backends. Options: (a) server-side split-and-fan-out with response merge — complex, transparent to clients; (b) require clients to pre-group by owning backend — pushes complexity to every client; (c) route all multi-identifier requests to a designated coordinator backend — simple, but introduces a hotspot; (d) forward to any backend and require `switchboard` to handle cross-backend coordination internally — turns the LB into a correctness-only gate and makes `switchboard` federation-aware. _Decide before M2 starts. Blocks M2._
 8. **Nested identifier paths.** `documentOperations(filter: {documentId})`, `touchChannel(input: {filter: {documentId: [...]}} )`, and `pushSyncEnvelopes(envelopes: [{operations: [{context: {documentId}}]}])` place the owning id inside nested (and sometimes array) structures. The Lua body walk needs to know these shapes, which couples the LB to the subgraph schemas more tightly than we'd like. Options: (a) hard-code the paths in `lua/route.lua`; (b) generate the path list from the GraphQL schema at build time; (c) require a client-supplied header carrying the owning id so the LB doesn't walk the body at all for these cases. _Decide alongside Q7._
 9. **Supergraph vs. subgraph routing.** Today `POST /graphql` (supergraph), `POST /graphql/r` (reactor), and `POST /graphql/<model>` are all served by the same switchboard per request, so the LB treats them identically. If the supergraph ever federates across multiple switchboards — or if model-specific subgraphs move to dedicated processes — path-based routing re-enters the picture. _Not a blocker for M2; revisit when real traffic or deployment topology forces the question._
