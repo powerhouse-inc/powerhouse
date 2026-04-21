@@ -1,12 +1,11 @@
-import { PGlite } from "@electric-sql/pglite";
 import type {
   DocumentModelModule,
   UpgradeManifest,
 } from "@powerhousedao/shared/document-model";
 import type { ILogger } from "document-model";
 import { ConsoleLogger } from "document-model";
-import { Kysely } from "kysely";
-import { PGliteDialect } from "kysely-pglite-dialect";
+import type { Kysely } from "kysely";
+import { createDefaultDatabase } from "./create-default-database.js";
 import { CollectionMembershipCache } from "../cache/collection-membership-cache.js";
 import { DocumentMetaCache } from "../cache/document-meta-cache.js";
 import { KyselyOperationIndex } from "../cache/kysely-operation-index.js";
@@ -223,11 +222,7 @@ export class ReactorBuilder {
       }
     }
 
-    const baseDatabase =
-      this.kyselyInstance ??
-      new Kysely<Database>({
-        dialect: new PGliteDialect(new PGlite()),
-      });
+    const baseDatabase = this.kyselyInstance ?? (await createDefaultDatabase());
 
     if (this.migrationStrategy === "auto") {
       const result = await runMigrations(baseDatabase, REACTOR_SCHEMA);

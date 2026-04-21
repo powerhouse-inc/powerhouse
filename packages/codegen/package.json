@@ -4,6 +4,7 @@
   "license": "AGPL-3.0-only",
   "private": false,
   "type": "module",
+  "sideEffects": false,
   "files": [
     "dist"
   ],

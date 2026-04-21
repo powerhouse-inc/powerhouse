@@ -3,6 +3,7 @@
   "version": "6.0.0-dev.188",
   "license": "AGPL-3.0-only",
   "type": "module",
+  "sideEffects": false,
   "repository": {
     "type": "git",
     "url": "https://github.com/powerhouse-inc/powerhouse"
