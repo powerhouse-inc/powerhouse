@@ -179,7 +179,6 @@ export async function initCliTelemetry(opts: {
     release: opts.release,
     environment: process.env.NODE_ENV || "production",
     sendDefaultPii: false,
-    autoSessionTracking: false,
     defaultIntegrations: false,
     integrations: [
       // Only the bare minimum — no automatic HTTP/FS instrumentation.
