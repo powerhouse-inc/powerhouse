@@ -338,8 +338,11 @@ test("Install Package in Consumer Project", async ({ browser }) => {
     const installHeading = page.getByText("Install Package");
     await expect(installHeading).toBeVisible({ timeout: 10_000 });
 
-    // Step 7: Install the package using the search autocomplete
-    const searchInput = page.locator('input[placeholder="Search packages..."]');
+    // Step 7: Install the package using the search autocomplete.
+    // Match the placeholder by prefix so the test keeps passing when the
+    // hint text is extended (e.g. to document name@tag / name@version
+    // support).
+    const searchInput = page.locator('input[placeholder^="Search packages"]');
     await expect(searchInput).toBeVisible({ timeout: 10_000 });
 
     // Type slowly to trigger the debounced search
