@@ -1,3 +1,18 @@
+## 6.0.0-dev.192 (2026-04-22)
+
+### 🚀 Features
+
+- update migrate command ([#2492](https://github.com/powerhouse-inc/powerhouse/pull/2492))
+
+### 🩹 Fixes
+
+- **reactor-browser:** added hidden methods on graphql client type ([6af8b7f12](https://github.com/powerhouse-inc/powerhouse/commit/6af8b7f12))
+
+### ❤️ Thank You
+
+- acaldas
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.0.0-dev.191 (2026-04-22)
 
 This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.

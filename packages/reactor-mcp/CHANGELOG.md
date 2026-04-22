@@ -1,3 +1,13 @@
+## 6.0.0-dev.192 (2026-04-22)
+
+### 🚀 Features
+
+- update migrate command ([#2492](https://github.com/powerhouse-inc/powerhouse/pull/2492))
+
+### ❤️ Thank You
+
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.0.0-dev.191 (2026-04-22)
 
 This was a version bump only for @powerhousedao/reactor-mcp to align it with other projects, there were no code changes.
