@@ -5673,7 +5673,8 @@ You have several options for styling your editor components:
     color: navy;
     font-size: 1.8rem;
     }
-    ```
+
+    ````
 
         _Import and use it in your `editor.tsx`:_
 
@@ -5691,6 +5692,7 @@ You have several options for styling your editor components:
             );
         }
         ```
+    ````
 
 Choose the method or combination of methods that best suits your project needs and team preferences. Vetra Studio (`ph vetra --watch`) or Connect (`ph connect`) will allow you to see your styles applied in real-time.
 
@@ -10476,7 +10478,8 @@ You'll notice "reactor-api" in the terminal output. A **Reactor** is the Powerho
 
 // bash code example:
 ph vetra --watch
-```
+
+````
 
 The host application for Vetra Studio will start and you will see the following output:
 
@@ -10525,23 +10528,22 @@ Create a new document model by clicking the Document Models 'Add new specificati
 note
 The `ph connect` command is a legacy feature. We recommend using `ph vetra --watch` for all new development, as it provides better tooling and automatic code generation.
 
-
 Once in the project directory, run the `ph connect` command to start a local instance of the Connect application. This allows you to start your document model specification document.
 Run the following command to start the Connect application:
 
-   ```bash
+```bash
 // bash code example:
-   ph connect
-   ```
+ph connect
+```
 
 The Connect application will start and you will see the following output:
 
-   ```bash
+```bash
 // bash code example:
-     ➜  Local:   http://localhost:3000/
-     ➜  Network: http://192.168.5.110:3000/
-     ➜  press h + enter to show help
-   ```
+  ➜  Local:   http://localhost:3000/
+  ➜  Network: http://192.168.5.110:3000/
+  ➜  press h + enter to show help
+```
 
 A new browser window will open and you will see the Connect application. If it doesn't open automatically, you can open it manually by navigating to `http://localhost:3000/` in your browser. You will see your local drive and a button to create a new drive.
 
@@ -10549,9 +10551,8 @@ A new browser window will open and you will see the Connect application. If it d
 If you local drive is not present navigate into Settings in the bottom left corner. Settings > Danger Zone > Clear Storage.
 Clear the storage of your localhost application as it might has an old session cached.
 
-
 4. Move into your local drive.
-  Create a new document model by clicking the `DocumentModel` button, found in the 'New Document' section at the bottom of the page. Name your document `TodoList` (PascalCase, no spaces or hyphens).
+   Create a new document model by clicking the `DocumentModel` button, found in the 'New Document' section at the bottom of the page. Name your document `TodoList` (PascalCase, no spaces or hyphens).
 
 If you've followed the steps correctly, you'll have an empty `TodoList` document where you can define the **'Document Specifications'**.
 
@@ -10580,7 +10581,7 @@ git ls-tree -r --name-only tutorial/step-1-initialize-with-ph-init
 
 # View a specific config file from step-1
 git show tutorial/step-1-initialize-with-ph-init:package.json
-````
+```
 
 ## Up next
 
@@ -11261,9 +11262,12 @@ To share your package with others or deploy it to different environments, publis
 
     // bash code example:
     npm login
+
     ```
 
         Follow the prompts in your terminal or browser.
+
+    ```
 
 2.  **Publish the package:**
     `bash
@@ -14411,9 +14415,9 @@ Let's walk through the typical workflow for using a component from the document-
     `
     This line instructs the build process to locate the `Form` and `BooleanField` components within the installed `@powerhousedao/document-engineering/scalars` package and make them available for use.
 
-        :::info Form Wrapper Required
-        Scalar components like `BooleanField` must be wrapped in a `Form` component from the same package. This provides built-in validation and form state management.
-        :::
+            :::info Form Wrapper Required
+            Scalar components like `BooleanField` must be wrapped in a `Form` component from the same package. This provides built-in validation and form state management.
+            :::
 
 4.  **Use and Configure the Component:** Place the component tag in your JSX where needed. Use the information from Storybook (usage snippet and props table) as a guide, but adapt the props to your specific requirements:
 
@@ -17182,51 +17186,14 @@ The Inspector Modal has two tabs:
 - **Database** - Explore tables and data in the local PGlite database
 - **Remotes** - View sync remotes and their channel states (inbox, outbox, dead letter)
 
-## Enabling the Inspector
-
-**ℹ️ INFO:** **Prerequisites**
-
-- Access to a running Connect instance
-- Feature flags configured (see below)
-  :::
-
-### Required Feature Flags
-
-To use the full Inspector Modal functionality, you need to configure these feature flags:
-
-| Feature Flag                | Value  | Purpose                    |
-| --------------------------- | ------ | -------------------------- |
-| `FEATURE_INSPECTOR_ENABLED` | `true` | Shows the Inspector button |
-
-### Enabling via URL Parameters (Recommended)
-
-The easiest way to enable the Inspector is by adding query parameters to your Connect URL:
-
-```
-https://connect-url.xyz/?FEATURE_INSPECTOR_ENABLED=true
-```
-
-### Enabling via Environment Variable
-
-For local development, you can set the environment variable before starting Connect:
-
-```bash
-// bash code example:
-PH_CONNECT_INSPECTOR_ENABLED=true npm run dev
-```
-
 ## Accessing the Inspector Modal
 
-Once the feature flags are enabled:
+The Inspector is available to every Connect user through the Settings menu:
 
-1. Look for the **Inspector button** (ℹ️ icon) in the Connect sidebar footer
-2. Click the button to open the Inspector Modal
-3. The modal opens with two tabs: **Database** and **Remotes**
-
-<figure className="image-container">
-  <img src={require("./images/inspector-button.png").default} alt="Inspector button in sidebar" />
-  <figcaption>The Inspector button location in the Connect sidebar footer.</figcaption>
-</figure>
+1. Click the **Settings** (⚙️) button in the Connect sidebar footer
+2. Select the **About** tab
+3. Click the **Open Inspector** button
+4. The Inspector Modal opens with two tabs: **Database** and **Remotes**
 
 ## Database Explorer
 
@@ -25413,6 +25380,9 @@ The `install` script provides a streamlined way to install the Powerhouse CLI to
 
     // bash code example:
     curl -fsSL https://apps.powerhouse.io/install | bash # for macOS, Linux, and WSL
+
+    ```
+
     ```
 
 2.  After installation, source your shell configuration:
@@ -25421,6 +25391,9 @@ The `install` script provides a streamlined way to install the Powerhouse CLI to
 
     // bash code example:
     source ~/.bashrc # or source ~/.zshrc if using zsh
+
+    ```
+
     ```
 
 3.  Verify that the Powerhouse CLI is ready to be installed in the next step:
@@ -25429,9 +25402,12 @@ The `install` script provides a streamlined way to install the Powerhouse CLI to
 
     // bash code example:
     ph --version
+
     ```
 
         You will see that `ph-cli` is not yet installed. This is expected, as it will be installed by the service setup command.
+
+    ```
 
 4.  Create a project with `ph-init <projectname>`.
 
@@ -26425,11 +26401,14 @@ Assuming you have already defined the state schema for the `TodoList` as covered
     input AddTodoItemInput {
     text: String!
     }
+
     ```
 
         :::info
         Notice we don't include `id` in the input — the reducer will generate it automatically using `generateId()` from `document-model/core`.
         :::
+
+    ```
 
 3.  **Add the `UPDATE_TODO_ITEM` Operation:** - In the `Add operation` field again, type `UPDATE_TODO_ITEM` and press Enter. - Paste the corresponding `input` definition into its editor:
 
@@ -26441,6 +26420,9 @@ Assuming you have already defined the state schema for the `TodoList` as covered
     text: String
     checked: Boolean
     }
+
+    ```
+
     ```
 
 4.  **Add the `DELETE_TODO_ITEM` Operation:** - Finally, type `DELETE_TODO_ITEM` in the `Add operation` field and press Enter. - Paste its `input` definition:
@@ -26451,6 +26433,9 @@ Assuming you have already defined the state schema for the `TodoList` as covered
     input DeleteTodoItemInput {
     id: OID!
     }
+
+    ```
+
     ```
 
 5.  **Review:**
@@ -26478,11 +26463,14 @@ Assuming you have already defined the state schema for the `TodoList` as covered
     input AddTodoItemInput {
     text: String!
     }
+
     ```
 
         :::info
         Notice we don't include `id` in the input — the reducer will generate it automatically using `generateId()` from `document-model/core`.
         :::
+
+    ```
 
 3.  **Add the `UPDATE_TODO_ITEM` Operation:** - In the `Add operation` field again, type `UPDATE_TODO_ITEM` and press Enter. - Paste the corresponding `input` definition into its editor:
 
@@ -26494,6 +26482,9 @@ Assuming you have already defined the state schema for the `TodoList` as covered
     text: String
     checked: Boolean
     }
+
+    ```
+
     ```
 
 4.  **Add the `DELETE_TODO_ITEM` Operation:** - Finally, type `DELETE_TODO_ITEM` in the `Add operation` field and press Enter. - Paste its `input` definition:
@@ -26504,6 +26495,9 @@ Assuming you have already defined the state schema for the `TodoList` as covered
     input DeleteTodoItemInput {
     id: OID!
     }
+
+    ```
+
     ```
 
 5.  **Review and Export:**
@@ -26815,7 +26809,8 @@ Run the following command to start the Connect application:
 
 // bash code example:
 pnpm connect
-```
+
+````
 
 The Connect application will start and you will see the following output:
 
@@ -26825,7 +26820,7 @@ The Connect application will start and you will see the following output:
 ➜ Local: http://localhost:3000/
 ➜ Network: http://192.168.5.110:3000/
 ➜ press h + enter to show help
-```
+````
 
 A new browser window will open and you will see the Connect application. If it doesn't open automatically, you can open it manually by navigating to `http://localhost:3000/` in your browser. You will see your local drive and a button to create a new drive.
 
@@ -33153,6 +33148,9 @@ input DeleteTodoItemInput {
     input AddTodoItemInput {
     text: String!
     }
+
+    ```
+
     ```
 
 8.  Repeat the process from step 7 for the other input operations: `UPDATE_TODO_ITEM` and `DELETE_TODO_ITEM`. You may have noticed that you only need to add the name of the operation (e.g., `UPDATE_TODO_ITEM`, `DELETE_TODO_ITEM`) without the `Input` suffix. It will then be generated once you press enter.

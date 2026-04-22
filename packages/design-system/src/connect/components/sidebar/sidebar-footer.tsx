@@ -11,7 +11,6 @@ export interface ConnectSidebarFooterProps extends ComponentProps<
   ensName?: string;
   avatarUrl?: string;
   onClickSettings: (() => void) | undefined;
-  onInspectorClick?: () => void;
   onLogin: (() => void) | undefined;
   etherscanUrl?: string;
   onDisconnect: (() => void) | undefined;
@@ -27,7 +26,6 @@ export const ConnectSidebarFooter: React.FC<ConnectSidebarFooterProps> = ({
   className,
   onLogin,
   onClickSettings,
-  onInspectorClick,
   onDisconnect,
   onHomeClick,
   showDebug,
@@ -77,16 +75,6 @@ export const ConnectSidebarFooter: React.FC<ConnectSidebarFooterProps> = ({
           <SidebarLogin onLogin={onLogin} />
         )}
       </div>
-      {onInspectorClick && (
-        <button
-          aria-label="Inspector"
-          type="button"
-          className="mt-3 flex w-full cursor-pointer items-center justify-center outline-none"
-          onClick={onInspectorClick}
-        >
-          <Icon className="text-gray-600" name="CircleInfo" />
-        </button>
-      )}
       <button
         aria-label="Settings"
         type="button"

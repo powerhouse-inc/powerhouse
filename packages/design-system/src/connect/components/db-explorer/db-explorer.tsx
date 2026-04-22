@@ -43,6 +43,12 @@ export interface DbClient {
   getTableRows(table: string, options: GetTableRowsOptions): Promise<TablePage>;
 }
 
+export type PgVersionControl = {
+  readonly currentPgVersion: number | null;
+  readonly supportedPgVersions: readonly number[];
+  readonly onResetToPgVersion: (major: number) => void | Promise<void>;
+};
+
 /** Props for the main DBExplorer component */
 export type DBExplorerProps = {
   readonly schema: string;
@@ -55,6 +61,7 @@ export type DBExplorerProps = {
   readonly pageSize?: number;
   readonly onImportDb?: (sqlContent: string) => void | Promise<void>;
   readonly onExportDb?: () => void | Promise<void>;
+  readonly pgVersionControl?: PgVersionControl;
 };
 
 const DEFAULT_PAGE_SIZE = 50;
@@ -67,6 +74,7 @@ export function DBExplorer({
   pageSize = DEFAULT_PAGE_SIZE,
   onImportDb,
   onExportDb,
+  pgVersionControl,
 }: DBExplorerProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [tables, setTables] = useState<TableInfo[]>([]);
@@ -82,6 +90,10 @@ export function DBExplorer({
   const [filters, setFilters] = useState<FilterGroup | undefined>();
   const [loading, setLoading] = useState(false);
   const [pendingImport, setPendingImport] = useState<string | null>(null);
+  const [pendingResetMajor, setPendingResetMajor] = useState<number | null>(
+    null,
+  );
+  const [resetting, setResetting] = useState(false);
 
   const columns = tables.find((t) => t.name === selectedTable)?.columns ?? [];
 
@@ -222,6 +234,23 @@ export function DBExplorer({
     void onExportDb?.();
   };
 
+  const resetTargetMajor = pgVersionControl
+    ? (pgVersionControl.supportedPgVersions.find(
+        (m) => m !== pgVersionControl.currentPgVersion,
+      ) ?? null)
+    : null;
+
+  const handleResetConfirm = async () => {
+    if (pendingResetMajor === null || !pgVersionControl) return;
+    setResetting(true);
+    try {
+      await pgVersionControl.onResetToPgVersion(pendingResetMajor);
+    } finally {
+      setResetting(false);
+      setPendingResetMajor(null);
+    }
+  };
+
   return (
     <div className="flex h-full">
       <input
@@ -246,6 +275,20 @@ export function DBExplorer({
         }}
       />
 
+      <ConnectConfirmationModal
+        open={pendingResetMajor !== null}
+        onOpenChange={(open) => !open && setPendingResetMajor(null)}
+        header={`Reset to Postgres ${pendingResetMajor ?? ""}?`}
+        body={`This will permanently delete all local reactor data and recreate an empty database under Postgres ${pendingResetMajor ?? ""}. The page will reload.`}
+        cancelLabel="Cancel"
+        continueLabel={`Reset to PG${pendingResetMajor ?? ""}`}
+        onCancel={() => setPendingResetMajor(null)}
+        onContinue={() => void handleResetConfirm()}
+        continueButtonProps={{
+          className: "bg-red-900 text-white hover:bg-red-800",
+        }}
+      />
+
       <div className="flex w-64 shrink-0 flex-col border-r border-gray-200">
         <div className="flex-1 overflow-auto">
           <SchemaTreeSidebar
@@ -258,7 +301,7 @@ export function DBExplorer({
           />
         </div>
 
-        {(onImportDb || onExportDb) && (
+        {(onImportDb || onExportDb || pgVersionControl) && (
           <div className="flex shrink-0 flex-col gap-2 border-t border-gray-200 p-2">
             {onImportDb && (
               <button
@@ -277,6 +320,30 @@ export function DBExplorer({
               >
                 Export DB
               </button>
+            )}
+            {pgVersionControl && (
+              <div className="flex flex-col gap-1 border-t border-gray-200 pt-2">
+                <div className="flex items-center justify-between text-xs text-gray-600">
+                  <span>Postgres version</span>
+                  <span className="font-semibold text-gray-900">
+                    {pgVersionControl.currentPgVersion === null
+                      ? "—"
+                      : `PG${pgVersionControl.currentPgVersion}`}
+                  </span>
+                </div>
+                {resetTargetMajor !== null && (
+                  <button
+                    className="rounded border border-red-300 bg-red-50 px-3 py-1.5 text-sm text-red-700 hover:bg-red-100 disabled:opacity-50"
+                    onClick={() => setPendingResetMajor(resetTargetMajor)}
+                    disabled={resetting}
+                    type="button"
+                  >
+                    {resetting
+                      ? `Resetting to PG${resetTargetMajor}…`
+                      : `Reset to PG${resetTargetMajor}`}
+                  </button>
+                )}
+              </div>
             )}
           </div>
         )}

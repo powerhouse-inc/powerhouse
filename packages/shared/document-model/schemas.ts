@@ -761,6 +761,19 @@ export const PublisherSchema = z.object({
   url: z.string().optional(),
 });
 
+export const ConfigEntryTypeSchema = z.union([
+  z.literal("var"),
+  z.literal("secret"),
+]);
+
+export const ConfigEntrySchema = z.object({
+  name: z.string(),
+  type: ConfigEntryTypeSchema,
+  description: z.string().optional(),
+  required: z.boolean().optional(),
+  default: z.boolean().optional(),
+});
+
 export const ManifestSchema = z.object({
   name: z.string(),
   description: z.string().optional(),
@@ -771,4 +784,5 @@ export const ManifestSchema = z.object({
   editors: PowerhouseModulesSchema,
   processors: PowerhouseModulesSchema,
   subgraphs: PowerhouseModulesSchema,
+  config: z.array(ConfigEntrySchema).optional(),
 });

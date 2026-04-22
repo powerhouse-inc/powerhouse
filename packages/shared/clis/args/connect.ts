@@ -1,4 +1,4 @@
-import { number, option, optional, string } from "cmd-ts";
+import { number, option, string } from "cmd-ts";
 import {
   DEFAULT_CONNECT_OUTDIR,
   DEFAULT_CONNECT_PREVIEW_PORT,

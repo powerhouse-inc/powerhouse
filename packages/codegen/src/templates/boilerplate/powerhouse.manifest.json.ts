@@ -14,7 +14,8 @@ export const ManifestTemplate = (projectName: string) =>
     "editors": [],
     "apps": [],
     "subgraphs": [],
-    "importScripts": []
+    "importScripts": [],
+    "config": []
 }
 
 `.raw;

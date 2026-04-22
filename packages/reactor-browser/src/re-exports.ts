@@ -20,6 +20,7 @@ export type {
   IDocumentModelLoader,
   IProcessor,
   IProcessorHostModule,
+  IQueue,
   IRelationalDb,
   Job,
   JwtHandler,

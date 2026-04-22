@@ -4,6 +4,8 @@ import type { RegistryConfig } from "./types.js";
 export function buildVerdaccioConfig(config: RegistryConfig) {
   const htpasswdPath = path.join(config.storagePath, "htpasswd");
 
+  const uplinkUrl = config.uplink ?? "https://registry.npmjs.org/";
+
   const base: Record<string, unknown> = {
     storage: config.storagePath,
     self_path: "./",
@@ -12,12 +14,20 @@ export function buildVerdaccioConfig(config: RegistryConfig) {
         file: htpasswdPath,
       },
     },
-    uplinks: undefined,
+    uplinks: {
+      npmjs: {
+        url: uplinkUrl,
+        maxage: "15m",
+        timeout: "30s",
+        cache: true,
+      },
+    },
     packages: {
       "@powerhousedao/*": {
         access: "$all",
         publish: "$authenticated",
         unpublish: "$authenticated",
+        proxy: "npmjs",
       },
       "**": {
         access: "$all",

@@ -1,4 +1,3 @@
-import { PGlite } from "@electric-sql/pglite";
 import {
   addRemoteDrive,
   ChannelScheme,
@@ -18,6 +17,11 @@ import { createSignatureVerifier, type IRenown } from "@renown/sdk";
 import { ConsoleLogger } from "document-model";
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
+import {
+  detectReactorPgMajor,
+  loadPGliteModule,
+  resolvePgMajorForRuntime,
+} from "./pglite-runtime.js";
 
 /**
  * Creates a Reactor that plugs into legacy storage but syncs through the new
@@ -41,6 +45,14 @@ export async function createBrowserReactor(
     return renown.getBearerToken({ expiresIn: 10, aud: url });
   };
 
+  const detected = await detectReactorPgMajor();
+  const major = resolvePgMajorForRuntime(detected);
+  if (major !== 17) {
+    console.warn(
+      `[reactor] Running against legacy PGlite data dir (Postgres ${major}). Migrate to PG17 from the banner or the Inspector → Debug tab.`,
+    );
+  }
+  const { PGlite } = await loadPGliteModule(major);
   const pg = new PGlite("idb://reactor", {
     relaxedDurability: true,
   });
@@ -86,16 +98,37 @@ export function getDefaultDrivesFromEnv(): string[] {
 
 /**
  * Add default drives for the new reactor via sync manager.
+ *
+ * Retries with linear backoff to handle the common race where Connect's
+ * dev server is ready before the switchboard has finished binding its port.
+ *
  * @param defaultDriveUrls - Array of drive REST endpoint URLs (e.g., "https://example.com/d/powerhouse")
  */
 export async function addDefaultDrivesForNewReactor(
   defaultDriveUrls: string[],
 ): Promise<void> {
+  const MAX_ATTEMPTS = 3;
+  const BACKOFF_MS = 2000;
+
   for (const url of defaultDriveUrls) {
-    try {
-      await addRemoteDrive(url);
-    } catch (error) {
-      console.error(`Failed to add default drive ${url}:`, error);
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      try {
+        await addRemoteDrive(url);
+        break;
+      } catch (error) {
+        if (attempt === MAX_ATTEMPTS) {
+          console.error(
+            `Failed to add default drive ${url} after ${MAX_ATTEMPTS} attempts:`,
+            error,
+          );
+        } else {
+          const delay = BACKOFF_MS * attempt;
+          console.warn(
+            `Default drive ${url} not reachable (attempt ${attempt}/${MAX_ATTEMPTS}), retrying in ${delay}ms...`,
+          );
+          await new Promise((resolve) => setTimeout(resolve, delay));
+        }
+      }
     }
   }
 }

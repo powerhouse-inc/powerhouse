@@ -28,6 +28,8 @@ describe("Node key storage", () => {
 
   afterEach(() => {
     rmSync(keyPairPath, { recursive: true, force: true });
+    delete process.env[NodeKeyStorage.RENOWN_PRIVATE_KEY_ENV];
+    delete process.env["PH_RENOWN_PRIVATE_KEY_TEST"];
   });
 
   it("should load key pair from the provided filepath", async () => {
@@ -86,7 +88,9 @@ describe("Node key storage", () => {
   it("should load key pair from default env var if no file path is provided", async () => {
     const keyPair = await generateKeyPair();
 
-    process.env[NodeKeyStorage.ENV_KEY_NAME] = JSON.stringify({ keyPair });
+    process.env[NodeKeyStorage.RENOWN_PRIVATE_KEY_ENV] = JSON.stringify({
+      keyPair,
+    });
 
     const keyStorage = new NodeKeyStorage();
 

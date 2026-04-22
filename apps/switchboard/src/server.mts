@@ -1,11 +1,4 @@
 #!/usr/bin/env node
-import { ImportPackageLoader } from "@powerhousedao/reactor-api";
-import { httpsHooksPath } from "@powerhousedao/reactor-api/https-hooks";
-import { register } from "node:module";
-
-// Register HTTP/HTTPS module loader hooks for dynamic package imports
-register(httpsHooksPath, import.meta.url);
-
 import { PGlite } from "@electric-sql/pglite";
 import { metrics } from "@opentelemetry/api";
 import { getConfig } from "@powerhousedao/config/node";
@@ -21,12 +14,14 @@ import {
 } from "@powerhousedao/reactor";
 import {
   HttpPackageLoader,
+  ImportPackageLoader,
   PackageManagementService,
   PackagesSubgraph,
   getUniqueDocumentModels,
   initializeAndStartAPI,
   type IPackageLoader,
 } from "@powerhousedao/reactor-api";
+import { httpsHooksPath } from "@powerhousedao/reactor-api/https-hooks";
 import {
   VitePackageLoader,
   createViteLogger,
@@ -47,6 +42,7 @@ import {
 import dotenv from "dotenv";
 import { Kysely, PostgresDialect } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
+import { register } from "node:module";
 import path from "path";
 import { Pool } from "pg";
 import { initFeatureFlags } from "./feature-flags.js";
@@ -75,6 +71,13 @@ if (process.env.SENTRY_DSN) {
   Sentry.init({
     dsn: process.env.SENTRY_DSN,
     environment: process.env.SENTRY_ENV,
+    // Match the version tag uploaded by release-branch.yml so source maps
+    // resolve. Populated by the CI (WORKSPACE_VERSION) or npm at runtime.
+    release:
+      process.env.SENTRY_RELEASE ||
+      (process.env.npm_package_version
+        ? `v${process.env.npm_package_version}`
+        : undefined),
   });
 }
 
@@ -111,9 +114,13 @@ async function initServer(
   const config = getConfig(configPath);
   const registryUrl = process.env.PH_REGISTRY_URL ?? config.packageRegistryUrl;
   const registryPackages = process.env.PH_REGISTRY_PACKAGES;
+  const dynamicModelLoading =
+    options.dynamicModelLoading ?? process.env.DYNAMIC_MODEL_LOADING === "true";
   let httpLoader: HttpPackageLoader | undefined;
 
   if (registryUrl) {
+    // Register HTTP/HTTPS module loader hooks for dynamic package imports
+    register(httpsHooksPath, import.meta.url);
     httpLoader = new HttpPackageLoader({ registryUrl });
     registryPackages?.split(",").forEach((p) => {
       const name = p.trim();
@@ -167,7 +174,7 @@ async function initServer(
       logger.info("Using PGlite for reactor storage");
     }
 
-    if (httpLoader && options.dynamicModelLoading) {
+    if (httpLoader && dynamicModelLoading) {
       builder.withDocumentModelLoader(httpLoader.documentModelLoader);
     }
 

@@ -6,6 +6,8 @@ import type { Action, Attachment, AttachmentRef } from "./actions.js";
 import type { PHDocument } from "./documents.js";
 import type { Operation } from "./operations.js";
 import type {
+  ConfigEntrySchema,
+  ConfigEntryTypeSchema,
   ManifestSchema,
   PowerhouseModuleSchema,
   PublisherSchema,
@@ -1678,6 +1680,10 @@ export type DocumentModelLib<TState extends PHBaseState = PHBaseState> = {
 
 export type DocumentModelDocumentModelModule =
   DocumentModelModule<DocumentModelPHState>;
+
+export type ConfigEntryType = z.infer<typeof ConfigEntryTypeSchema>;
+
+export type ConfigEntry = z.infer<typeof ConfigEntrySchema>;
 
 export type PowerhouseModule = z.infer<typeof PowerhouseModuleSchema>;
 export type Publisher = z.infer<typeof PublisherSchema>;

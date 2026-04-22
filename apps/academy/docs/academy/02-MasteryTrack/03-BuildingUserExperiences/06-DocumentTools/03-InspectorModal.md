@@ -7,50 +7,14 @@ The Inspector Modal has two tabs:
 - **Database** - Explore tables and data in the local PGlite database
 - **Remotes** - View sync remotes and their channel states (inbox, outbox, dead letter)
 
-## Enabling the Inspector
-
-:::info **Prerequisites**
-
-- Access to a running Connect instance
-- Feature flags configured (see below)
-  :::
-
-### Required Feature Flags
-
-To use the full Inspector Modal functionality, you need to configure these feature flags:
-
-| Feature Flag                | Value  | Purpose                    |
-| --------------------------- | ------ | -------------------------- |
-| `FEATURE_INSPECTOR_ENABLED` | `true` | Shows the Inspector button |
-
-### Enabling via URL Parameters (Recommended)
-
-The easiest way to enable the Inspector is by adding query parameters to your Connect URL:
-
-```
-https://connect-url.xyz/?FEATURE_INSPECTOR_ENABLED=true
-```
-
-### Enabling via Environment Variable
-
-For local development, you can set the environment variable before starting Connect:
-
-```bash
-PH_CONNECT_INSPECTOR_ENABLED=true npm run dev
-```
-
 ## Accessing the Inspector Modal
 
-Once the feature flags are enabled:
+The Inspector is available to every Connect user through the Settings menu:
 
-1. Look for the **Inspector button** (ℹ️ icon) in the Connect sidebar footer
-2. Click the button to open the Inspector Modal
-3. The modal opens with two tabs: **Database** and **Remotes**
-
-<figure className="image-container">
-  <img src={require("./images/inspector-button.png").default} alt="Inspector button in sidebar" />
-  <figcaption>The Inspector button location in the Connect sidebar footer.</figcaption>
-</figure>
+1. Click the **Settings** (⚙️) button in the Connect sidebar footer
+2. Select the **About** tab
+3. Click the **Open Inspector** button
+4. The Inspector Modal opens with two tabs: **Database** and **Remotes**
 
 ## Database Explorer
 

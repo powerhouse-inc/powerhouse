@@ -49,6 +49,14 @@ export function useRegistryPackages() {
             const status = getPackageStatusFromPackageSource(packageSource);
             newRegistryPackages[packageInfo.name] =
               makeRegistryPackageFromPackageInfo(packageInfo, status);
+          } else if (
+            packageInfo.version &&
+            existingPackage.version !== packageInfo.version
+          ) {
+            newRegistryPackages[packageInfo.name] = {
+              ...existingPackage,
+              version: packageInfo.version,
+            };
           }
         }
 
@@ -65,24 +73,24 @@ export function useRegistryPackages() {
     if (packageManagerPackages?.length) {
       for (const packageManagerPackage of packageManagerPackages) {
         setRegistryPackagesMap((existingRegistryPackages) => {
-          const existingPackage =
-            existingRegistryPackages[packageManagerPackage.manifest.name];
+          const packageName = packageManagerPackage.manifest.name;
+          const existingPackage = existingRegistryPackages[packageName];
           const newRegistryPackages = { ...existingRegistryPackages };
+          const version = packageManager.getPackageVersion(packageName);
           if (existingPackage) {
-            newRegistryPackages[packageManagerPackage.manifest.name] = {
+            newRegistryPackages[packageName] = {
               ...existingPackage,
+              version: version ?? existingPackage.version,
             };
           } else {
-            const packageSource = packageManager.getPackageSource(
-              packageManagerPackage.manifest.name,
-            );
+            const packageSource = packageManager.getPackageSource(packageName);
             const status = getPackageStatusFromPackageSource(packageSource);
             const newRegistryPackage = makeRegistryPackageFromDocumentModelLib(
               packageManagerPackage,
               status,
+              version,
             );
-            newRegistryPackages[packageManagerPackage.manifest.name] =
-              newRegistryPackage;
+            newRegistryPackages[packageName] = newRegistryPackage;
           }
           return newRegistryPackages;
         });
@@ -122,6 +130,7 @@ export function useRegistryPackages() {
 function makeRegistryPackageFromDocumentModelLib(
   documentModelLib: DocumentModelLib,
   status: RegistryPackageStatus,
+  version?: string,
 ): RegistryPackage {
   return {
     name: documentModelLib.manifest.name,
@@ -131,6 +140,7 @@ function makeRegistryPackageFromDocumentModelLib(
     ),
     status,
     manifest: documentModelLib.manifest,
+    version,
   };
 }
 

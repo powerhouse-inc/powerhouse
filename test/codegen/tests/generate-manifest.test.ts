@@ -138,6 +138,13 @@ describe("generateManifest", () => {
           id: "something else",
         },
       ],
+      config: [
+        {
+          name: "TEST_SECRET",
+          type: "secret" as const,
+          required: true,
+        },
+      ],
     } as Manifest;
 
     await createOrUpdateManifest(updateDataWithDuplicate, testOutDirPath);

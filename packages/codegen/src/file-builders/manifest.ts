@@ -53,6 +53,7 @@ export async function createOrUpdateManifest(
       existingManifest.subgraphs,
       manifestData.subgraphs,
     ),
+    config: merge(existingManifest.config, manifestData.config),
   };
   await writeJsonFile(manifestPath, updatedManifest);
   return updatedManifest;

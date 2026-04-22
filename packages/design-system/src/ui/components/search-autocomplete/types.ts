@@ -3,8 +3,11 @@ import type { ReactNode } from "react";
 export interface SearchAutocompleteOption {
   value: string;
   label: string;
+  version?: string;
   description?: string;
   meta?: string;
+  disabled?: boolean;
+  disabledLabel?: string;
 }
 
 export interface SearchAutocompleteProps {

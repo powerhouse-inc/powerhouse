@@ -1,4 +1,5 @@
 import * as common from "@powerhousedao/powerhouse-vetra-packages";
+import commonPkg from "@powerhousedao/powerhouse-vetra-packages/package.json" with { type: "json" };
 import type {
   IPackagesListener,
   PackageManagerInstallResult,
@@ -13,25 +14,33 @@ import {
   type DocumentModelModule,
 } from "@powerhousedao/shared/document-model";
 import * as vetra from "@powerhousedao/vetra";
+import vetraPkg from "@powerhousedao/vetra/package.json" with { type: "json" };
 
 type PackageMeta = {
   name: string;
   importUrl: string | null;
   stylesheetUrl: string | null;
+  version?: string;
 };
 
 type PackageWithMeta = PackageMeta & {
   loadedPackage: DocumentModelLib;
 };
 
+async function fetchPackageJsonVersion(
+  baseUrl: string,
+): Promise<string | undefined> {
+  try {
+    const res = await fetch(baseUrl);
+    if (!res.ok) return undefined;
+    const pkg = (await res.json()) as { version?: unknown };
+    return typeof pkg.version === "string" ? pkg.version : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 const LOCAL_PACKAGE_NAME = "Local" as const;
-const COMMON_PACKAGE_NAME = "Common" as const;
-const VETRA_PACKAGE_NAME = "@powerhousedao/vetra" as const;
-const LOCAL_PACKAGES: string[] = [
-  LOCAL_PACKAGE_NAME,
-  COMMON_PACKAGE_NAME,
-  VETRA_PACKAGE_NAME,
-];
 
 export class BrowserPackageManager implements IPackageManager {
   registryUrl: string | null;
@@ -43,6 +52,8 @@ export class BrowserPackageManager implements IPackageManager {
   #localPackage: DocumentModelLib | undefined;
 
   #cdnUrl: string | null;
+  #localPackageVersion: string | undefined;
+  #localPackageNames: Set<string> = new Set([LOCAL_PACKAGE_NAME]);
 
   constructor(namespace: string, registryUrl: string | null) {
     this.#storage = new BrowserLocalStorage<PackageMeta>(
@@ -58,20 +69,33 @@ export class BrowserPackageManager implements IPackageManager {
     return `${base}/-/cdn`;
   }
 
-  async init(localPackage?: DocumentModelLib) {
-    const commonPackageWithMeta = this.#loadCommonPackage();
-    this.#registerPackage(commonPackageWithMeta);
-    const vetraPackageWithMeta = this.#loadVetraPackage();
-    this.#registerPackage(vetraPackageWithMeta);
+  async init(localPackage?: DocumentModelLib, localPackageVersion?: string) {
+    this.addLocalPackage(common.manifest.name, common, commonPkg.version);
+    this.addLocalPackage(vetra.manifest.name, vetra, vetraPkg.version);
     if (localPackage) {
-      this.updateLocalPackage(localPackage);
+      this.updateLocalPackage(localPackage, localPackageVersion);
     }
     for (const packageName of this.#storage.keys()) {
       await this.addPackage(packageName);
     }
   }
 
-  updateLocalPackage(pkg: DocumentModelLib) {
+  addLocalPackage(
+    name: string,
+    loadedPackage: DocumentModelLib,
+    version?: string,
+  ) {
+    this.#localPackageNames.add(name);
+    this.#registerPackage({
+      name,
+      importUrl: null,
+      stylesheetUrl: null,
+      loadedPackage,
+      version,
+    });
+  }
+
+  updateLocalPackage(pkg: DocumentModelLib, version?: string) {
     console.debug("Updating local package:", pkg);
     this.#localPackage = pkg;
     this.#registerPackage({
@@ -80,6 +104,17 @@ export class BrowserPackageManager implements IPackageManager {
       importUrl: null,
       loadedPackage: pkg,
     });
+    if (version) {
+      this.#localPackageVersion = version;
+      this.#notifyPackagesChanged();
+      return;
+    }
+    fetchPackageJsonVersion("/package.json")
+      .then((fetchedVersion) => {
+        this.#localPackageVersion = fetchedVersion;
+        if (fetchedVersion) this.#notifyPackagesChanged();
+      })
+      .catch(() => {});
   }
 
   get packages() {
@@ -91,8 +126,8 @@ export class BrowserPackageManager implements IPackageManager {
   }
 
   getPackageSource(packageName: string) {
-    // check vs the constant name we use for common packages
-    if (LOCAL_PACKAGES.includes(packageName)) {
+    // check vs packages registered as local (Common, Vetra, bundled packages...)
+    if (this.#localPackageNames.has(packageName)) {
       return "common";
     }
     // check if the package has the same name as the local project
@@ -105,6 +140,13 @@ export class BrowserPackageManager implements IPackageManager {
       return "local-install";
     // all other import urls point to a registry
     return "registry-install";
+  }
+
+  getPackageVersion(packageName: string): string | undefined {
+    if (packageName === this.#localPackage?.manifest.name) {
+      return this.#localPackageVersion;
+    }
+    return this.#storage.get(packageName)?.version;
   }
 
   async addPackage(packageName: string): Promise<PackageManagerInstallResult> {
@@ -124,9 +166,15 @@ export class BrowserPackageManager implements IPackageManager {
         package: packageWithMeta.loadedPackage,
       };
     } catch (error) {
+      const normalized =
+        error instanceof Error ? error : new Error(String(error));
+      console.error(
+        `[Connect][PackageManager] Failed to install package "${packageName}": ${normalized.message}`,
+        normalized,
+      );
       return {
         type: "error",
-        error: error instanceof Error ? error : new Error(String(error)),
+        error: normalized,
       };
     }
   }
@@ -163,24 +211,6 @@ export class BrowserPackageManager implements IPackageManager {
     return Promise.reject(new Error("Model not available"));
   }
 
-  #loadCommonPackage(): PackageWithMeta {
-    return {
-      name: common.manifest.name,
-      importUrl: null,
-      stylesheetUrl: null,
-      loadedPackage: common,
-    };
-  }
-
-  #loadVetraPackage(): PackageWithMeta {
-    return {
-      name: vetra.manifest.name,
-      importUrl: null,
-      stylesheetUrl: null,
-      loadedPackage: vetra,
-    };
-  }
-
   async #loadPackageFromNodeModules(name: string): Promise<PackageWithMeta> {
     const importUrl = `/node_modules/${name}/browser/index.js`;
     const stylesheetUrl = `/node_modules/${name}/style.css`;
@@ -190,6 +220,9 @@ export class BrowserPackageManager implements IPackageManager {
       importUrl,
       stylesheetUrl,
     });
+    packageWithMeta.version = await fetchPackageJsonVersion(
+      `/node_modules/${name}/package.json`,
+    );
 
     return packageWithMeta;
   }
@@ -202,11 +235,14 @@ export class BrowserPackageManager implements IPackageManager {
       importUrl,
       stylesheetUrl,
     });
+    packageWithMeta.version = await fetchPackageJsonVersion(
+      `${this.#cdnUrl}/${name}/package.json`,
+    );
 
     return packageWithMeta;
   }
 
-  async #importPackage(packageMeta: PackageMeta) {
+  async #importPackage(packageMeta: PackageMeta): Promise<PackageWithMeta> {
     const { name, importUrl, stylesheetUrl } = packageMeta;
     if (!importUrl) {
       throw new Error(`Import url not defined for package "${name}".`);
@@ -225,7 +261,7 @@ export class BrowserPackageManager implements IPackageManager {
   }
 
   async #loadPackage(packageName: string): Promise<PackageWithMeta> {
-    if (LOCAL_PACKAGES.includes(packageName)) {
+    if (this.#localPackageNames.has(packageName)) {
       throw new Error(
         `Package "${packageName}" is a local package and cannot be loaded dynamically.`,
       );
@@ -253,7 +289,8 @@ export class BrowserPackageManager implements IPackageManager {
   }
 
   #registerPackage(packageWithMeta: PackageWithMeta) {
-    const { name, loadedPackage, importUrl, stylesheetUrl } = packageWithMeta;
+    const { name, loadedPackage, importUrl, stylesheetUrl, version } =
+      packageWithMeta;
 
     if (stylesheetUrl !== null) {
       this.#mountStylesheet(name, stylesheetUrl);
@@ -263,6 +300,7 @@ export class BrowserPackageManager implements IPackageManager {
       name,
       importUrl,
       stylesheetUrl,
+      version,
     });
 
     this.#notifyPackagesChanged();

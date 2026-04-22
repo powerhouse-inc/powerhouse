@@ -19,9 +19,10 @@ export type {
 } from "@powerhousedao/shared";
 export type { PowerhouseConfig };
 
-export const DEFAULT_REGISTRY_URL = "https://registry.prod.vetra.io";
-
-export { DEFAULT_CONFIG } from "@powerhousedao/shared/clis";
+export {
+  DEFAULT_CONFIG,
+  DEFAULT_REGISTRY_URL,
+} from "@powerhousedao/shared/clis";
 
 export type {
   DocumentModelModule,

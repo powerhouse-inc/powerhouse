@@ -1,9 +1,26 @@
 import type { Meta, StoryObj } from "@storybook/react";
 
+import type { RegistryPackage } from "@powerhousedao/shared/registry";
 import type { ComponentPropsWithoutRef } from "react";
 import { useState } from "react";
 import { mockPackages } from "../mocks.js";
 import { PackageManager } from "./package-manager.js";
+
+const mixedStatusPackages: RegistryPackage[] = mockPackages.map((pkg, i) => {
+  if (i === 0) return { ...pkg, status: "local-install" };
+  if (i === 1 || i === 2) return { ...pkg, status: "registry-install" };
+  if (i === 3) return { ...pkg, status: "dismissed" };
+  return pkg;
+});
+
+const onlyAvailablePackages: RegistryPackage[] = mockPackages.map((pkg) => ({
+  ...pkg,
+  status: "available",
+}));
+
+const onlyLocallyInstalledPackages: RegistryPackage[] = mockPackages
+  .slice(0, 3)
+  .map((pkg) => ({ ...pkg, status: "local-install" }));
 
 const meta: Meta<typeof PackageManager> = {
   title: "Connect/Components/PackageManager",
@@ -79,3 +96,26 @@ export const WithManyPackages: Story = {
     ),
   ],
 };
+
+export const MixedStatuses: Story = {
+  ...PackageManagerStoryWrapper({ registryPackageList: mixedStatusPackages }),
+  decorators: [
+    (Story) => (
+      <div className="h-[700px]">
+        <Story />
+      </div>
+    ),
+  ],
+};
+
+export const OnlyAvailable: Story = PackageManagerStoryWrapper({
+  registryPackageList: onlyAvailablePackages,
+});
+
+export const OnlyLocallyInstalled: Story = PackageManagerStoryWrapper({
+  registryPackageList: onlyLocallyInstalledPackages,
+});
+
+export const Empty: Story = PackageManagerStoryWrapper({
+  registryPackageList: [],
+});

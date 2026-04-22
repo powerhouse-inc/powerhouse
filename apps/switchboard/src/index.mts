@@ -24,6 +24,10 @@ function ensureNodeVersion(minVersion = "24") {
 // Ensure minimum Node.js version
 ensureNodeVersion("24");
 
+// Each subgraph registers its own SIGINT/SIGTERM listeners, and the count
+// scales with dynamically-loaded document models beyond the default cap of 10.
+process.setMaxListeners(0);
+
 const meterProvider = createMeterProviderFromEnv({
   OTEL_EXPORTER_OTLP_ENDPOINT: process.env.OTEL_EXPORTER_OTLP_ENDPOINT,
   OTEL_METRIC_EXPORT_INTERVAL: process.env.OTEL_METRIC_EXPORT_INTERVAL,

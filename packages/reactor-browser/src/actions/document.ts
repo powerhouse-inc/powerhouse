@@ -22,6 +22,8 @@ import {
 import type {
   DocumentModelModule,
   DocumentOperations,
+  Operation,
+  PHBaseState,
   PHDocument,
 } from "@powerhousedao/shared/document-model";
 import {
@@ -41,6 +43,9 @@ import {
 import { isDocumentTypeSupported } from "../utils/documents.js";
 import { getUserPermissions } from "../utils/user.js";
 import { queueActions, queueOperations, uploadOperations } from "./queue.js";
+
+const BASE_STATE_KEYS = new Set(["auth"]);
+const NON_DOMAIN_SCOPES = new Set(["auth", "document"]);
 
 async function isDocumentInLocation(
   document: PHDocument,
@@ -171,8 +176,6 @@ async function getDocumentExtension(document: PHDocument): Promise<string> {
   return (rawExtension ?? "").replace(/^\.+|\.+$/g, "");
 }
 
-const BASE_STATE_KEYS = new Set(["auth", "document"]);
-
 /**
  * Fetches all operations for a document using cursor-based pagination.
  * The reactor client handles multi-scope cursors transparently via
@@ -214,6 +217,40 @@ export async function fetchDocumentOperations(
   return operations;
 }
 
+export function extractInitialState(
+  documentScopeOps: Operation[],
+): PHBaseState {
+  const upgradeOp = documentScopeOps.find(
+    (op) => op.action.type === "UPGRADE_DOCUMENT",
+  );
+  if (!upgradeOp) {
+    throw new Error(
+      "No UPGRADE_DOCUMENT operation found — document is invalid",
+    );
+  }
+  const input = upgradeOp.action.input as {
+    initialState?: PHBaseState;
+    state?: PHBaseState;
+  };
+  const initialState = input.initialState ?? input.state;
+  if (!initialState) {
+    throw new Error(
+      "UPGRADE_DOCUMENT operation has no initialState — document is invalid",
+    );
+  }
+  return initialState;
+}
+
+export function filterDomainOperations(
+  operations: DocumentOperations,
+): DocumentOperations {
+  return Object.fromEntries(
+    Object.entries(operations).filter(
+      ([scope]) => !NON_DOMAIN_SCOPES.has(scope),
+    ),
+  );
+}
+
 export async function exportFile(document: PHDocument, suggestedName?: string) {
   const reactorClient = window.ph?.reactorClient;
   if (!reactorClient) {
@@ -222,7 +259,8 @@ export async function exportFile(document: PHDocument, suggestedName?: string) {
 
   // Fetch operations page-by-page (document from reactor has operations: {})
   const operations = await fetchDocumentOperations(reactorClient, document);
-  const documentWithOps = { ...document, operations };
+  const initialState = extractInitialState(operations["document"] ?? []);
+  const documentWithOps = { ...document, operations, initialState };
 
   // Get the extension from the document model module
   const extension = await getDocumentExtension(documentWithOps);
@@ -389,8 +427,13 @@ export async function addFile(
     document.header.meta?.preferredEditor,
   );
 
-  // then add all the operations in chunks
-  await uploadOperations(documentId, document.operations, queueOperations);
+  // then add all the operations in chunks (exclude document-scope ops —
+  // the reactor already generated CREATE_DOCUMENT + UPGRADE_DOCUMENT above)
+  await uploadOperations(
+    documentId,
+    filterDomainOperations(document.operations),
+    queueOperations,
+  );
 }
 
 export async function addFileWithProgress(
@@ -541,27 +584,32 @@ export async function addFileWithProgress(
     const doc = await reactor.get(documentId);
     console.log("Document created, starting upload of operations");
     // Uploading stage (20-100%)
-    await uploadOperations(documentId, document.operations, queueOperations, {
-      onProgress: (uploadProgress) => {
-        if (
-          uploadProgress.totalOperations &&
-          uploadProgress.uploadedOperations !== undefined
-        ) {
-          const uploadPercent =
-            uploadProgress.totalOperations > 0
-              ? uploadProgress.uploadedOperations /
-                uploadProgress.totalOperations
-              : 0;
-          const overallProgress = 20 + Math.round(uploadPercent * 80);
-          onProgress?.({
-            stage: "uploading",
-            progress: overallProgress,
-            totalOperations: uploadProgress.totalOperations,
-            uploadedOperations: uploadProgress.uploadedOperations,
-          });
-        }
+    await uploadOperations(
+      documentId,
+      filterDomainOperations(document.operations),
+      queueOperations,
+      {
+        onProgress: (uploadProgress) => {
+          if (
+            uploadProgress.totalOperations &&
+            uploadProgress.uploadedOperations !== undefined
+          ) {
+            const uploadPercent =
+              uploadProgress.totalOperations > 0
+                ? uploadProgress.uploadedOperations /
+                  uploadProgress.totalOperations
+                : 0;
+            const overallProgress = 20 + Math.round(uploadPercent * 80);
+            onProgress?.({
+              stage: "uploading",
+              progress: overallProgress,
+              totalOperations: uploadProgress.totalOperations,
+              uploadedOperations: uploadProgress.uploadedOperations,
+            });
+          }
+        },
       },
-    });
+    );
 
     onProgress?.({ stage: "complete", progress: 100, fileNode });
 

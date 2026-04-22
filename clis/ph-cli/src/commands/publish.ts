@@ -1,12 +1,13 @@
-import { DEFAULT_REGISTRY_URL } from "@powerhousedao/config";
-import { getConfig } from "@powerhousedao/config/node";
 import {
   getPowerhouseProjectInfo,
   publishArgs,
 } from "@powerhousedao/shared/clis";
-import { execSync } from "child_process";
+import {
+  checkNpmAuth,
+  npmPublish,
+  resolveRegistryUrl,
+} from "@powerhousedao/shared/registry";
 import { command } from "cmd-ts";
-import { join } from "path";
 
 export const publish = command({
   name: "publish",
@@ -15,7 +16,7 @@ Publish a package to the Powerhouse registry. This is a thin wrapper around npm 
 that automatically sets the registry URL.
 
 This command:
-1. Resolves the registry URL (--registry flag > powerhouse.config.json > PH_REGISTRY_URL env > default)
+1. Resolves the registry URL (--registry flag > PH_REGISTRY_URL env > powerhouse.config.json > default)
 2. Checks authentication with the registry via npm whoami
 3. Forwards all additional arguments to npm publish
   `,
@@ -31,39 +32,39 @@ This command:
       throw new Error("Could not find project path.");
     }
 
-    // Resolve registry URL: flag > config > env > default
-    const configPath = join(projectPath, "powerhouse.config.json");
-    const config = getConfig(configPath);
-    const registryUrl =
-      args.registry ??
-      process.env.PH_REGISTRY_URL ??
-      config.packageRegistryUrl ??
-      DEFAULT_REGISTRY_URL;
+    const registryUrl = resolveRegistryUrl({
+      registry: args.registry,
+      projectPath,
+    });
 
     if (args.debug) {
       console.log(">>> registryUrl", registryUrl);
     }
 
-    // Check authentication
     try {
-      execSync(`npm whoami --registry ${registryUrl}`, { stdio: "pipe" });
+      await checkNpmAuth(registryUrl);
     } catch {
       console.error(`Not authenticated with registry: ${registryUrl}`);
       console.error(`Run: npm adduser --registry ${registryUrl}`);
       process.exit(1);
     }
 
-    // Forward remaining args to npm publish
-    const forwardedArgs = args.forwardedArgs;
-    const cmd =
-      `npm publish --registry ${registryUrl} ${forwardedArgs.join(" ")}`.trim();
-
     if (args.debug) {
-      console.log(">>> command", cmd);
+      console.log(
+        ">>> command",
+        `npm publish --registry ${registryUrl} ${args.forwardedArgs.join(" ")}`,
+      );
     }
 
     console.log(`Publishing to ${registryUrl}...`);
-    execSync(cmd, { stdio: "inherit", cwd: projectPath });
+    const result = await npmPublish({
+      registryUrl,
+      cwd: projectPath,
+      args: args.forwardedArgs,
+    });
+    if (result.stdout) {
+      console.log(result.stdout);
+    }
 
     process.exit(0);
   },

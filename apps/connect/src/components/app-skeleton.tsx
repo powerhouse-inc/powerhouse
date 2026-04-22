@@ -4,8 +4,41 @@ import {
   ConnectSidebar,
   HomeScreen,
 } from "@powerhousedao/design-system/connect";
-import { useEffect, useState, type PropsWithChildren } from "react";
+import {
+  useEffect,
+  useState,
+  useSyncExternalStore,
+  type PropsWithChildren,
+} from "react";
+import {
+  getMigrationStatus,
+  subscribeMigrationStatus,
+  type MigrationPhase,
+} from "./migration-status.js";
 const LOADER_DELAY = 250;
+
+const PHASE_LABEL: Record<MigrationPhase, string> = {
+  clone: "Backing up local database…",
+  dump: "Exporting data from previous version…",
+  restore: "Restoring data into the new database…",
+};
+
+const MigrationOverlay = () => {
+  const status = useSyncExternalStore(
+    subscribeMigrationStatus,
+    getMigrationStatus,
+    () => null,
+  );
+  if (!status) return null;
+  return (
+    <div className="absolute inset-0 z-20 flex items-center justify-center">
+      <div className="rounded-lg bg-white/90 px-6 py-4 text-sm text-gray-900 shadow-lg">
+        <div className="font-medium">Upgrading local database…</div>
+        <div className="text-gray-600">{PHASE_LABEL[status.phase]}</div>
+      </div>
+    </div>
+  );
+};
 
 const Loader = ({ delay = LOADER_DELAY }: { delay?: number }) => {
   const isSSR = typeof window === "undefined";
@@ -76,6 +109,7 @@ export const AppSkeleton: React.FC<PropsWithChildren> = (props) => {
         />
       ) : null}
       {!props.children ? <Loader /> : null}
+      <MigrationOverlay />
     </div>
   );
 };

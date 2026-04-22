@@ -21,6 +21,16 @@ function readManifest(dir: string): Manifest | null {
   return null;
 }
 
+function readPackageJsonVersion(dir: string): string | undefined {
+  try {
+    const raw = fs.readFileSync(path.join(dir, "package.json"), "utf-8");
+    const pkg = JSON.parse(raw) as { version?: unknown };
+    return typeof pkg.version === "string" ? pkg.version : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 function getLatestVersionDir(pkgDir: string): string | null {
   let entries: fs.Dirent[];
   try {
@@ -54,6 +64,7 @@ export function loadPackage(
     path: `/-/cdn/${name}`,
     manifest,
     documentTypes: getDocumentTypesFromManifest(manifest),
+    version: readPackageJsonVersion(manifestDir),
   };
 }
 
@@ -115,6 +126,7 @@ export function scanPackages(cdnCachePath: string): PackageInfo[] {
           path: `/-/cdn/${dirName}`,
           manifest,
           documentTypes: getDocumentTypesFromManifest(manifest),
+          version: readPackageJsonVersion(manifestDir),
         });
       }
     } else {
@@ -128,6 +140,7 @@ export function scanPackages(cdnCachePath: string): PackageInfo[] {
         path: `/-/cdn/${entry.name}`,
         manifest,
         documentTypes: getDocumentTypesFromManifest(manifest),
+        version: readPackageJsonVersion(manifestDir),
       });
     }
   }

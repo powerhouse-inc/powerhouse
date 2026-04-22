@@ -84,6 +84,12 @@ export const phCliHelpCommands = {
     description: "Authenticate with Renown using your Ethereum wallet",
     handler: () => {},
   }),
+  logout: command({
+    name: "logout",
+    args: loginArgs,
+    description: "Deletes an existing session created with 'ph login'",
+    handler: () => {},
+  }),
   install: command({
     name: "install",
     aliases: ["add", "i"],
