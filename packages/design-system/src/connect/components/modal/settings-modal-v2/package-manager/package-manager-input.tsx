@@ -63,19 +63,17 @@ export const PackageManagerInput: React.FC<PackageManagerInputProps> = (
 
     // The custom registry's /packages endpoint only returns locally-published
     // packages, so anything that exists only on npmjs.org won't appear in the
-    // local list. When the user's query looks like a real package name, we
-    // append a single synthetic "install from npm" option at the bottom. The
-    // registry's uplink handles the actual fetch when the user picks this —
-    // if the name doesn't exist on npm either, the install call errors and
-    // the consumer's toast surfaces the failure.
-    if (!isPlausiblePackageName(namePart)) {
-      return Promise.resolve(localOptions);
-    }
-
-    const npmAlreadyInLocal = localOptions.some(
-      (opt) => opt.label === namePart || opt.label === `${namePart} @ ${tag}`,
-    );
-    if (npmAlreadyInLocal) {
+    // local list. When the user's query is a plausible package name AND the
+    // local list has nothing matching it, append a synthetic "install from
+    // npm" option. The registry's uplink handles the actual fetch when the
+    // user picks it — if the name doesn't exist on npm either, the install
+    // call errors and the consumer's toast surfaces the failure.
+    //
+    // Partial-name queries (e.g. "foo" while a local "foo-extras" exists)
+    // skip the fallback on purpose: the user almost certainly means the
+    // local candidate, and an extra fallback card just clutters the list
+    // (and in e2e tests causes duplicate Install buttons).
+    if (!isPlausiblePackageName(namePart) || localOptions.length > 0) {
       return Promise.resolve(localOptions);
     }
 
@@ -89,7 +87,7 @@ export const PackageManagerInput: React.FC<PackageManagerInputProps> = (
         "Not published to this registry. Install via the npmjs.org uplink.",
       meta: "npm fallback",
     };
-    return Promise.resolve([...localOptions, fallbackOption]);
+    return Promise.resolve([fallbackOption]);
   };
 
   const handleSelect = useCallback(
