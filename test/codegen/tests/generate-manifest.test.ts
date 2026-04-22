@@ -97,6 +97,56 @@ describe("generateManifest", () => {
     });
   });
 
+  it("should update config entries unique by name", async () => {
+    const testOutDirPath = join(testOutputParentDir, "update-config");
+    await cpForce(
+      join(NEW_PROJECT, "powerhouse.manifest.json"),
+      join(testOutDirPath, "powerhouse.manifest.json"),
+    );
+    await createOrUpdateManifest(
+      {
+        config: [
+          {
+            name: "TEST_SECRET",
+            type: "secret" as const,
+            required: true,
+          },
+        ],
+      },
+      testOutDirPath,
+    );
+
+    await createOrUpdateManifest(
+      {
+        config: [
+          {
+            name: "TEST_SECRET",
+            type: "var",
+            required: false,
+          },
+          { name: "TEST_SECRET_2", type: "secret", required: true },
+        ],
+      },
+      testOutDirPath,
+    );
+
+    const content = await readFile(
+      join(testOutDirPath, "powerhouse.manifest.json"),
+      "utf-8",
+    );
+
+    const manifest = JSON.parse(content) as Manifest;
+
+    expect(manifest.config).toEqual([
+      {
+        name: "TEST_SECRET",
+        type: "var",
+        required: false,
+      },
+      { name: "TEST_SECRET_2", type: "secret", required: true },
+    ]);
+  });
+
   it("should handle duplicates in modules", async () => {
     const updateData = {
       publisher: {
@@ -110,10 +160,7 @@ describe("generateManifest", () => {
       ],
     } as Manifest;
 
-    const testOutDirPath = join(
-      testOutputParentDir,
-      "update-publisher-partially",
-    );
+    const testOutDirPath = join(testOutputParentDir, "handle-duplicates");
     await cpForce(
       join(NEW_PROJECT, "powerhouse.manifest.json"),
       join(testOutDirPath, "powerhouse.manifest.json"),
@@ -145,7 +192,7 @@ describe("generateManifest", () => {
           required: true,
         },
       ],
-    } as Manifest;
+    };
 
     await createOrUpdateManifest(updateDataWithDuplicate, testOutDirPath);
 

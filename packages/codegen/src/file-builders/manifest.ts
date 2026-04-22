@@ -1,10 +1,23 @@
-import type { Manifest, PowerhouseModule } from "@powerhousedao/shared";
+import type {
+  ConfigEntry,
+  Manifest,
+  PowerhouseModule,
+} from "@powerhousedao/shared";
 import { fileExists } from "@powerhousedao/shared/clis";
 import { ManifestSchema } from "@powerhousedao/shared/document-model";
 import { defaultManifest } from "file-builders";
 import { loadJsonFile } from "load-json-file";
 import { join } from "path";
-import { concat, merge, pipe, prop, uniqueBy } from "remeda";
+import {
+  concat,
+  filter,
+  isIncludedIn,
+  map,
+  merge,
+  pipe,
+  prop,
+  uniqueBy,
+} from "remeda";
 import { writeJsonFile } from "write-json-file";
 
 export async function getOrCreateManifestFile(
@@ -23,6 +36,18 @@ function makeUpdatedModulesList(
   newModules: PowerhouseModule[] = [],
 ): PowerhouseModule[] {
   return pipe(concat(oldModules, newModules), uniqueBy(prop("id")));
+}
+
+function makeUpdatedConfig(
+  oldConfig: ConfigEntry[] = [],
+  newConfig: ConfigEntry[] = [],
+) {
+  return pipe(
+    oldConfig,
+    filter(({ name }) => !isIncludedIn(name, map(newConfig, prop("name")))),
+    concat(newConfig),
+    uniqueBy(prop("name")),
+  );
 }
 
 export async function createOrUpdateManifest(
@@ -53,7 +78,7 @@ export async function createOrUpdateManifest(
       existingManifest.subgraphs,
       manifestData.subgraphs,
     ),
-    config: merge(existingManifest.config, manifestData.config),
+    config: makeUpdatedConfig(existingManifest.config, manifestData.config),
   };
   await writeJsonFile(manifestPath, updatedManifest);
   return updatedManifest;
