@@ -53,7 +53,8 @@ export async function ensureDirectoriesExist(
   for (const dirPath of pathsToEnsure) {
     const dir = project.getDirectory(dirPath);
     if (!dir) {
-      project.createDirectory(dirPath);
+      const newDir = project.createDirectory(dirPath);
+      await newDir.save();
     }
   }
 }

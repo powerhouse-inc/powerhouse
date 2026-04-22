@@ -14,7 +14,11 @@ import {
   getOrCreateDirectory,
   getOrCreateSourceFile,
 } from "utils";
-import { makeEditorModuleFile, makeEditorsFile } from "./editor-common.js";
+import {
+  makeEditorModuleFile,
+  makeEditorsFile,
+  makeEditorsIndexFile,
+} from "./editor-common.js";
 
 type GenerateEditorArgs = CommonGenerateEditorArgs & {
   documentModelId: string;
@@ -68,6 +72,7 @@ export async function tsMorphGenerateDocumentEditor({
   });
 
   await makeEditorsFile({ project, editorsDirPath });
+  await makeEditorsIndexFile({ project, editorsDirPath });
   await createOrUpdateManifest(
     {
       editors: [

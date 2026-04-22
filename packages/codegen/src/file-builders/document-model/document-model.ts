@@ -98,7 +98,6 @@ export async function tsMorphGenerateDocumentModel(
     documentModelDirPath,
     upgradesDirPath,
   );
-  // project.addSourceFilesAtPaths(documentModelsSourceFilesPath);
 
   const versions = pipe(
     specifications,
@@ -166,7 +165,7 @@ export async function tsMorphGenerateDocumentModel(
       upgradesDirPath,
     };
 
-    // /{document-model-dir}//v{version}/
+    // /{document-model-dir}/v{version}/
     await generateDocumentModelZodSchemas(fileMakerArgs);
     await makeDocumentModelVersionIndexFile(fileMakerArgs);
     await makeDocumentModelRootActionsFile(fileMakerArgs);
@@ -174,7 +173,7 @@ export async function tsMorphGenerateDocumentModel(
     await makeDocumentModelHooksFile(fileMakerArgs);
     await makeDocumentModelModuleFile(fileMakerArgs);
 
-    // /{document-model-dir}//v{version}/gen/
+    // /{document-model-dir}/v{version}/gen/
     await makeDocumentModelSchemaIndexFile(fileMakerArgs);
     await makeDocumentModelGenUtilsFile(fileMakerArgs);
     await makeDocumentModelGenTypesFile(fileMakerArgs);
@@ -189,16 +188,16 @@ export async function tsMorphGenerateDocumentModel(
     await makeDocumentModelGenControllerFile(fileMakerArgs);
     await makeDocumentModelGenDirOperationModulesFiles(fileMakerArgs);
 
-    // /{document-model-dir}//v{version}/src/
+    // /{document-model-dir}/v{version}/src/
     await makeDocumentModelSrcIndexFile(fileMakerArgs);
     await makeDocumentModelSrcUtilsFile(fileMakerArgs);
     await makeReducerOperationHandlersForModules(fileMakerArgs);
 
-    // /{document-model-dir}//v{version}/tests
+    // /{document-model-dir}/v{version}/tests
     await makeDocumentModelTestFile(fileMakerArgs);
     await makeDocumentModelModulesOperationTestFiles(fileMakerArgs);
 
-    // /{document-model-dir}//v{version}/*
+    // /{document-model-dir}/v{version}/*
     await persistCustomFilesFromPreviousVersion(fileMakerArgs);
 
     // /{document-model-dir}/upgrades/v{version}.ts
@@ -231,6 +230,8 @@ export async function tsMorphGenerateDocumentModel(
   });
   // /document-models/document-models.ts
   await makeDocumentModelsFile({ project, documentModelsDirPath });
+  // /document-models/index.ts
+  await makeDocumentModelsIndexFile({ project, documentModelsDirPath });
   // /document-models/upgrade-manifests.ts
   await makeUpgradeManifestsFile({ project, documentModelsDirPath });
   await createOrUpdateManifest(
@@ -348,6 +349,49 @@ async function makeDocumentModelsFile(args: {
   await formatSourceFileWithPrettier(sourceFile);
 }
 
+async function makeDocumentModelsIndexFile(args: {
+  project: Project;
+  documentModelsDirPath: string;
+}) {
+  const { project, documentModelsDirPath } = args;
+  const sourceFile = project.createSourceFile(
+    join(documentModelsDirPath, "index.ts"),
+    "",
+    { overwrite: true },
+  );
+  pipe(
+    project
+      .getDirectoryOrThrow(documentModelsDirPath)
+      .getDescendantSourceFiles(),
+    filter((sourceFile) => sourceFile.getBaseName() === "module.ts"),
+    uniqueBy((sourceFile) => sourceFile.getFilePath()),
+    map((sourceFile) =>
+      getVariableDeclarationByTypeName(sourceFile, "DocumentModel"),
+    ),
+    filter(isTruthy),
+    map((variableDeclaration) => ({
+      name: variableDeclaration.getName(),
+      directory: variableDeclaration.getSourceFile().getDirectory(),
+    })),
+    map(({ name, directory }) => ({
+      name,
+      version: directory.getBaseName(),
+      documentModelDir: directory.getParentOrThrow().getBaseName(),
+    })),
+    filter(({ version }) => /^v\d+$/.test(version)),
+    map(({ name, version, documentModelDir }) => ({
+      namedExports: [`${name} as ${name}${capitalize(version)}`],
+      moduleSpecifier: `./${documentModelDir}/${version}/module.js`,
+    })),
+    forEach(({ namedExports, moduleSpecifier }) => {
+      sourceFile.addExportDeclaration({
+        namedExports,
+        moduleSpecifier,
+      });
+    }),
+  );
+}
+
 /** Writes a json file derived from a `documentModelState` */
 async function writeDocumentModelStateJsonFile({
   documentModelState,
@@ -361,18 +405,6 @@ async function writeDocumentModelStateJsonFile({
   const filePath = join(documentModelDirPath, `${documentModelDirName}.json`);
   const documentModelStateJson = JSON.stringify(documentModelState, null, 2);
   await writeFile(filePath, documentModelStateJson);
-}
-
-function getPreviousVersionDirPath(
-  documentModelDirPath: string,
-  version: number,
-) {
-  const previousVersion = version - 1;
-  if (previousVersion < 1) return;
-
-  const previousVersionDirName = `v${previousVersion}`;
-
-  return join(documentModelDirPath, previousVersionDirName);
 }
 
 async function makeDocumentModelIndexFile(args: {

@@ -96,3 +96,44 @@ export async function makeEditorsFile(args: {
 
   await formatSourceFileWithPrettier(sourceFile);
 }
+
+export async function makeEditorsIndexFile(args: {
+  project: Project;
+  editorsDirPath: string;
+}) {
+  const { project, editorsDirPath } = args;
+  const sourceFile = project.createSourceFile(
+    path.join(editorsDirPath, "index.ts"),
+    "",
+    { overwrite: true },
+  );
+
+  pipe(
+    project.getDirectoryOrThrow(editorsDirPath).getDescendantSourceFiles(),
+    filter((sourceFile) => sourceFile.getBaseName() === "module.ts"),
+    uniqueBy((sourceFile) => sourceFile.getFilePath()),
+    map((sourceFile) =>
+      getVariableDeclarationByTypeName(sourceFile, "EditorModule"),
+    ),
+    filter(isTruthy),
+    map((variableDeclaration) => ({
+      name: variableDeclaration.getName(),
+      editorDir: variableDeclaration
+        .getSourceFile()
+        .getDirectory()
+        .getBaseName(),
+    })),
+    map(({ name, editorDir }) => ({
+      namedExports: [name],
+      moduleSpecifier: `./${path.join(editorDir, "module.js")}`,
+    })),
+    forEach(({ namedExports, moduleSpecifier }) => {
+      sourceFile.addExportDeclaration({
+        namedExports,
+        moduleSpecifier,
+      });
+    }),
+  );
+
+  await formatSourceFileWithPrettier(sourceFile);
+}
