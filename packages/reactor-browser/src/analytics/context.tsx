@@ -20,7 +20,7 @@ const defaultQueryClient = new QueryClient();
 
 export const analyticsOptionsKey = ["analytics", "options"] as const;
 export const analyticsStoreKey = ["analytics", "store"] as const;
-export const analyticsEngineKey = ["analytics", "store"] as const;
+export const analyticsEngineKey = ["analytics", "engine"] as const;
 
 export function useAnalyticsStoreOptions() {
   return useQuery<CreateStoreOptions | undefined>({
