@@ -99,5 +99,7 @@ export async function startGenerate(
   } else if (filePath !== undefined) {
     await generateFromFile(filePath, project);
   }
+  // calling save once at the end is much faster than saving as we go
+  // the ts-morph project already has the updated data for manipulation without saving
   await project.save();
 }

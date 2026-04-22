@@ -37,7 +37,7 @@ function makeUpdatedModulesList(
 ): PowerhouseModule[] {
   return pipe(concat(oldModules, newModules), uniqueBy(prop("id")));
 }
-
+/* Updates the config field of powerhouse.manifest.json assuming unique `name` fields in the `ConfigEntry` objects */
 function makeUpdatedConfig(
   oldConfig: ConfigEntry[] = [],
   newConfig: ConfigEntry[] = [],
@@ -50,6 +50,7 @@ function makeUpdatedConfig(
   );
 }
 
+/* Creates a powerhouse.manifest.json file, or updates an existing one with the data provided */
 export async function createOrUpdateManifest(
   manifestData: Partial<Manifest>,
   projectDir: string,

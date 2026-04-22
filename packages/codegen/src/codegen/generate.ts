@@ -44,6 +44,8 @@ export async function generateDocumentModel(
 ) {
   await tsMorphGenerateDocumentModel(documentModelState, project);
 }
+
+/* Runs generate for each document model json file found in the project's `document-models` directory  */
 export async function generateAllDocumentModels(project: Project) {
   const { directory: documentModelsDir } = getOrCreateDirectory(
     project,
@@ -111,10 +113,15 @@ export async function generateEditor(
   });
 }
 
+/* Runs generate for all editors found in the project's `editors` directory.
+ * Note: we intentionally filter out editors with the document type "powerhouse/document-drive".
+ * These are handled separately by the `generateAllApps` function.
+ */
 export async function generateAllEditors(project: Project) {
   const { directory: editorsDir } = getOrCreateDirectory(project, "editors");
   const editorDirs = editorsDir.getDirectories();
 
+  /* An editor's `id`, `name`, and `documentTypes` args can be found in the `module.ts` file */
   const editorsToAdd = pipe(
     editorDirs,
     map((dir) => dir.getSourceFile("module.ts")),
@@ -193,10 +200,15 @@ export async function generateApp(args: GenerateAppArgs, project: Project) {
   });
 }
 
+/* Runs generate for all apps found in the project's `editors` directory.
+ * Note: we intentionally filter out editors which do not have the document type "powerhouse/document-drive".
+ * These are handled separately by the `generateAllEditors` function.
+ */
 export async function generateAllApps(project: Project) {
   const { directory: editorsDir } = getOrCreateDirectory(project, "editors");
   const editorDirs = editorsDir.getDirectories();
 
+  /* An editor's `id`, `name`, and `documentTypes` args can be found in the `module.ts` file */
   const appsToAdd = pipe(
     editorDirs,
     map((dir) => dir.getSourceFile("module.ts")),
@@ -240,6 +252,7 @@ export async function generateAllApps(project: Project) {
     filter(({ documentTypes }) =>
       documentTypes.includes("powerhouse/document-drive"),
     ),
+    /* The `allowedDocumentTypes` and `isDragAndDropEnabled` args can only be found in the `config.ts` file */
     map(({ appDir, ...rest }) => ({
       appDirName: appDir?.getBaseName(),
       configFilePropertyAssignments:
@@ -310,6 +323,7 @@ export async function generateSubgraph(
   );
 }
 
+/* Runs generate for each directory found in the project's `subgraphs` directory  */
 export async function generateAllSubgraphs(project: Project) {
   const { directory: subgraphsDir } = getOrCreateDirectory(
     project,
@@ -321,6 +335,8 @@ export async function generateAllSubgraphs(project: Project) {
   );
   const documentModelsDirPath = documentModelsDir.getPath();
   const subgraphDirs = subgraphsDir.getDirectories();
+  /* The subgraph's name is found in the `index.ts` file */
+  /* The only reliable way to get the subgraph's `documentTypes` is by looking at what is imported by `resolvers.ts` */
   const subgraphInputs = pipe(
     subgraphDirs,
     map((dir) => ({
@@ -384,6 +400,7 @@ export async function generateProcessor(
   });
 }
 
+/* Runs generate for each directory found in the project's `processors` directory  */
 export async function generateAllProcessors(project: Project) {
   const { directory: processorsDir } = getOrCreateDirectory(
     project,
@@ -419,6 +436,8 @@ export async function generateAllProcessors(project: Project) {
     })),
     map(({ dir, processorName }) => ({
       processorName,
+      /* We can try to determine which processors are for `connect` and for `switchboard`.
+       * If we cannot, we fallback to including them in both. */
       processorApps: pipe(
         [],
         when(
@@ -435,10 +454,12 @@ export async function generateAllProcessors(project: Project) {
         ),
       ),
       processorType: pipe(
+        // handle the old `index.ts` file name if `processor.ts` has not been generated
         dir.getSourceFile("processor.ts") ?? dir.getSourceFile("index.ts"),
         (sourceFile) => sourceFile?.getImportDeclarations() ?? [],
         flatMap((importDeclaration) => importDeclaration.getNamedImports()),
         map((importSpecifier) => importSpecifier.getText()),
+        // we have to check what type is imported to determine whether the processor is `relationalDb` or `analytics`
         conditional(
           [
             (specifiers) =>
@@ -499,6 +520,7 @@ export async function generateAllProcessors(project: Project) {
   }
 }
 
+/* Runs each module type's generateAll{moduleType} function for the current project */
 export async function generateAll(project: Project) {
   await generateAllDocumentModels(project);
   await generateAllEditors(project);

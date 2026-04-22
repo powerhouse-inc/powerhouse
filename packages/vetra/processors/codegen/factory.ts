@@ -43,6 +43,7 @@ export const codegenProcessorFactory =
   (driveHeader: PHDocumentHeader): ProcessorRecord[] => {
     const config = getConfig();
     const cwd = process.cwd();
+    /* Use one instance of ts-morph project, which handles race conditions */
     const project = buildTsMorphProject(cwd);
     // Create the processor
     const processorsConfig = module.config ?? new Map<string, unknown>();

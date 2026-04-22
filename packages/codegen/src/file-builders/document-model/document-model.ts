@@ -335,6 +335,7 @@ async function makeDocumentModelsFile(args: {
     filter(({ version }) => /^v\d+$/.test(version)),
     map(({ name, version, documentModelDir }) => ({
       name: `${name}${capitalize(version)}`,
+      // imports the document model with the version appended to the name
       namedImports: [`${name} as ${name}${capitalize(version)}`],
       moduleSpecifier: join("document-models", documentModelDir, version),
     })),
@@ -380,6 +381,7 @@ async function makeDocumentModelsIndexFile(args: {
     })),
     filter(({ version }) => /^v\d+$/.test(version)),
     map(({ name, version, documentModelDir }) => ({
+      // exports the document model with the version appended to the name
       namedExports: [`${name} as ${name}${capitalize(version)}`],
       moduleSpecifier: `./${documentModelDir}/${version}/module.js`,
     })),
@@ -390,6 +392,7 @@ async function makeDocumentModelsIndexFile(args: {
       });
     }),
   );
+  await formatSourceFileWithPrettier(sourceFile);
 }
 
 /** Writes a json file derived from a `documentModelState` */
