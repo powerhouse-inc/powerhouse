@@ -722,12 +722,6 @@ Run migrations
 
 
 ### Flags
-**Dry Run** - Run the migration without writing any files. - Usage: `--dry-run`
-
-**Safe** - Run the migration and only update generated files. Does not make changes to non-generated files. - Usage: `--safe`
-
-**Force** - Run the migration even if your git working tree is not clean. - Usage: `--force`
-
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 
 **Help** - show help - Usage: `--help, -h`

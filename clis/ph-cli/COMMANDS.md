@@ -623,18 +623,6 @@ The version to migrate to. Accepts a valid semver version or `staging`, `dev`, `
 **default**: `latest`
 
 ### flags
-#### Dry Run <br>
-Run the migration without writing any files.<br><br>
-**usage:** `--dry-run`<br>
-
-#### Safe <br>
-Run the migration and only update generated files. Does not make changes to non-generated files.<br><br>
-**usage:** `--safe`<br>
-
-#### Force <br>
-Run the migration even if your git working tree is not clean.<br><br>
-**usage:** `--force`<br>
-
 #### Debug <br>
 Log arguments passed to this command<br><br>
 **usage:** `--debug`<br>
