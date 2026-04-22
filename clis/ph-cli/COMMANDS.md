@@ -616,6 +616,12 @@ show help<br><br>
 
 ## Migrate
 Run migrations
+### options
+#### Version <br>
+The version to migrate to. Accepts a valid semver version or `staging`, `dev`, `latest`.<br><br>
+**usage:** `--version, -v <str>`<br>
+**default**: `latest`
+
 ### flags
 #### Debug <br>
 Log arguments passed to this command<br><br>

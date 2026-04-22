@@ -1,4 +1,4 @@
-import { generateEditor, generateManifest } from "@powerhousedao/codegen";
+import { generateEditor } from "@powerhousedao/codegen";
 import { kebabCase } from "change-case";
 import type {
   DocumentEditorPHState,
@@ -83,46 +83,20 @@ export class DocumentEditorGenerator extends BaseDocumentGen {
       const editorId: string = kebabCase(state.name);
 
       // Generate the editor using the codegen function
-      await generateEditor({
-        ...this.config.PH_CONFIG,
-        editorName: state.name,
-        documentTypes: documentTypes,
-        editorId: editorId,
-      });
+      await generateEditor(
+        {
+          ...this.config.PH_CONFIG,
+          editorName: state.name,
+          documentTypes: documentTypes,
+          editorId: editorId,
+        },
+        this.project,
+      );
+      await this.project.save();
 
       logger.info(
         `✅ Editor generation completed successfully for: ${state.name}`,
       );
-
-      // Update the manifest with the new editor
-      try {
-        logger.debug(
-          `🔄 Updating manifest with editor: ${state.name} (ID: ${editorId})`,
-        );
-
-        generateManifest(
-          {
-            editors: [
-              {
-                id: editorId,
-                name: state.name,
-                documentTypes: documentTypes,
-              },
-            ],
-          },
-          this.config.CURRENT_WORKING_DIR,
-        );
-
-        logger.debug(
-          `✅ Manifest updated successfully for editor: ${state.name}`,
-        );
-      } catch (manifestError) {
-        logger.error(
-          `⚠️ Failed to update manifest for editor ${state.name}:`,
-          manifestError,
-        );
-        // Don't throw here - editor generation was successful
-      }
 
       // Backup the document
       const fullState = input.state as DocumentEditorPHState;

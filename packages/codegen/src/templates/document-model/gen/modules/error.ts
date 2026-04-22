@@ -1,10 +1,11 @@
+import type { DocumentModelModuleFileMakerArgs } from "@powerhousedao/codegen";
 import type {
-  ActionFromOperation,
-  DocumentModelTemplateInputsWithModule,
-} from "@powerhousedao/codegen";
+  OperationErrorSpecification,
+  OperationSpecification,
+} from "@powerhousedao/shared";
 import { ts } from "@tmpl/core";
 import { pascalCase } from "change-case";
-import type { OperationErrorSpecification } from "@powerhousedao/shared";
+import { flatMap, prop } from "remeda";
 
 function getErrorName(error: OperationErrorSpecification) {
   if (!error.name) return;
@@ -44,7 +45,8 @@ function getErrorClassImplementations(errors: OperationErrorSpecification[]) {
     .join("\n\n");
 }
 
-function getErrorsImplementations(errors: OperationErrorSpecification[]) {
+function getErrorsImplementations(args: DocumentModelModuleFileMakerArgs) {
+  const errors = flatMap(args.module.operations, (o) => prop(o, "errors"));
   if (!errors.length) return "";
 
   const deduplicatedErrors = errors.reduce((acc, error) => {
@@ -65,18 +67,19 @@ function getErrorsImplementations(errors: OperationErrorSpecification[]) {
   `.raw;
 }
 
-function getActionErrorsExport(action: ActionFromOperation) {
-  const errors = action.errors;
+function getActionErrorsExport(operation: OperationSpecification) {
+  if (!operation.name) return;
+  const errors = operation.errors;
   if (errors.length === 0) return;
-  const pascalCaseActionName = pascalCase(action.name);
+  const pascalCaseActionName = pascalCase(operation.name);
   const errorNames = getErrorNames(errors).filter(Boolean).join(",\n");
   return ts`
     ${pascalCaseActionName}: { ${errorNames} }
   `.raw;
 }
 
-function getErrorsExport(actions: ActionFromOperation[]) {
-  const errorsForEachAction = actions
+function getErrorsExport(args: DocumentModelModuleFileMakerArgs) {
+  const errorsForEachAction = args.module.operations
     .map(getActionErrorsExport)
     .filter(Boolean)
     .join(",\n");
@@ -87,9 +90,9 @@ function getErrorsExport(actions: ActionFromOperation[]) {
 }
 
 export const documentModelOperationsModuleErrorFileTemplate = (
-  v: DocumentModelTemplateInputsWithModule,
+  v: DocumentModelModuleFileMakerArgs,
 ) =>
   ts`
-  ${getErrorsImplementations(v.errors)}
-  ${getErrorsExport(v.actions)}
+  ${getErrorsImplementations(v)}
+  ${getErrorsExport(v)}
 `.raw;

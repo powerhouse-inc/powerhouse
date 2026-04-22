@@ -745,3 +745,44 @@ export function UpdateStateExampleInputSchema(): z.ZodObject<
     newExample: z.string(),
   });
 }
+
+export const PowerhouseModuleSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  documentTypes: z.array(z.string()).optional(),
+});
+
+export const PowerhouseModulesSchema = z
+  .array(PowerhouseModuleSchema)
+  .optional();
+
+export const PublisherSchema = z.object({
+  name: z.string().optional(),
+  url: z.string().optional(),
+});
+
+export const ConfigEntryTypeSchema = z.union([
+  z.literal("var"),
+  z.literal("secret"),
+]);
+
+export const ConfigEntrySchema = z.object({
+  name: z.string(),
+  type: ConfigEntryTypeSchema,
+  description: z.string().optional(),
+  required: z.boolean().optional(),
+  default: z.boolean().optional(),
+});
+
+export const ManifestSchema = z.object({
+  name: z.string(),
+  description: z.string().optional(),
+  category: z.string().optional(),
+  publisher: PublisherSchema.optional(),
+  documentModels: PowerhouseModulesSchema,
+  apps: PowerhouseModulesSchema,
+  editors: PowerhouseModulesSchema,
+  processors: PowerhouseModulesSchema,
+  subgraphs: PowerhouseModulesSchema,
+  config: z.array(ConfigEntrySchema).optional(),
+});

@@ -1,3 +1,4 @@
+import type { Project } from "ts-morph";
 import type { BaseDocumentGen } from "./base-document-gen.js";
 import { DocumentCodegenManager } from "./document-codegen-manager.js";
 import {
@@ -20,9 +21,14 @@ export class DocumentCodegenFactory {
    */
   static createManager(
     config: Config,
+    project: Project,
     interactiveMode: boolean = false,
   ): DocumentCodegenManager {
-    const manager = new DocumentCodegenManager(config, interactiveMode);
+    const manager = new DocumentCodegenManager(
+      config,
+      project,
+      interactiveMode,
+    );
 
     // Register all the standard generators
     manager.registerGenerator(
@@ -47,9 +53,14 @@ export class DocumentCodegenFactory {
   static createManagerWithGenerators(
     config: Config,
     generators: Array<new (config: Config) => any>,
+    project: Project,
     interactiveMode: boolean = false,
   ): DocumentCodegenManager {
-    const manager = new DocumentCodegenManager(config, interactiveMode);
+    const manager = new DocumentCodegenManager(
+      config,
+      project,
+      interactiveMode,
+    );
 
     for (const generatorClass of generators) {
       const generator = new generatorClass(config) as BaseDocumentGen;

@@ -1,4 +1,9 @@
+import { findWorkspaceDir } from "@pnpm/find-workspace-dir";
+import { findWorkspacePackages } from "@pnpm/find-workspace-packages";
 import { defineConfig } from "tsdown";
+
+const workspaceDir = await findWorkspaceDir(process.cwd());
+const workspacePackages = await findWorkspacePackages(workspaceDir!);
 
 export default defineConfig({
   entry: [
@@ -13,4 +18,16 @@ export default defineConfig({
   dts: true,
   clean: true,
   sourcemap: true,
+  define: {
+    /* Make the list of packages in this monorepo globally available
+     * Useful for codegen processes which need to reference internal package names and versions */
+    WORKSPACE_PACKAGES: JSON.stringify(
+      workspacePackages
+        .filter(({ manifest }) => manifest.name !== "root" && !manifest.private)
+        .map(({ dir, manifest }) => ({
+          dir,
+          manifest,
+        })),
+    ),
+  },
 });

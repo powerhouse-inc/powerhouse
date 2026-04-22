@@ -1,20 +1,19 @@
 import {
   generateApp,
-  generate as generateCode,
   generateDBSchema,
   generateEditor,
   generateFromFile,
-  generateImportScript,
   generateProcessor,
   generateSubgraph,
 } from "@powerhousedao/codegen";
-import { getConfig } from "@powerhousedao/config/node";
+import { buildTsMorphProject } from "@powerhousedao/codegen/utils";
 import path from "path";
 import type { GenerateArgs } from "../types.js";
 
-export async function startGenerate(options: GenerateArgs) {
-  const config = getConfig();
-  const { skipFormat } = config;
+export async function startGenerate(
+  options: GenerateArgs,
+  projectDir = process.cwd(),
+) {
   const {
     documentModelFilePositional,
     documentModelFileOption,
@@ -32,20 +31,15 @@ export async function startGenerate(options: GenerateArgs) {
     processorName,
     processorType,
     processorApps,
-    importScriptName,
     migrationFile,
     schemaFile,
-    verbose,
-    force,
-    useVersioning: useVersioningFlag,
     subgraphName,
-    migrateLegacy,
   } = options;
+  const project = buildTsMorphProject(projectDir);
 
   const documentModelFile =
     documentModelFilePositional ?? documentModelFileOption;
 
-  const useVersioning = useVersioningFlag || migrateLegacy;
   const isDragAndDropEnabled = disableDragAndDrop !== true;
   const filePath = Array.isArray(documentModelFile)
     ? documentModelFile.join(" ")
@@ -65,48 +59,47 @@ export async function startGenerate(options: GenerateArgs) {
         "Please specify a document type for the generated editor.",
       );
     }
-    await generateEditor({
-      editorName,
-      editorId,
-      editorDirName,
-      documentTypes: [documentTypeToUse],
-      skipFormat,
-    });
+    await generateEditor(
+      {
+        editorName,
+        editorId,
+        editorDirName,
+        documentTypes: [documentTypeToUse],
+      },
+      project,
+    );
   } else if (appName !== undefined) {
-    await generateApp({
-      appName,
-      appId,
-      appDirName,
-      allowedDocumentTypes,
-      isDragAndDropEnabled,
-      skipFormat,
-    });
+    await generateApp(
+      {
+        appName,
+        appId,
+        appDirName,
+        allowedDocumentTypes,
+        isDragAndDropEnabled,
+      },
+      project,
+    );
   } else if (processorName !== undefined) {
-    await generateProcessor({
-      processorName,
-      processorType,
-      skipFormat,
-      processorApps,
-      documentTypes: [documentTypeToUse].filter((t) => t !== undefined),
-    });
+    await generateProcessor(
+      {
+        processorName,
+        processorType,
+        processorApps,
+        documentTypes: [documentTypeToUse].filter((t) => t !== undefined),
+      },
+      project,
+    );
   } else if (subgraphName !== undefined) {
-    await generateSubgraph(subgraphName, filePath || null, config);
-  } else if (importScriptName !== undefined) {
-    await generateImportScript(importScriptName, config);
+    await generateSubgraph(subgraphName, project);
   } else if (migrationFile !== undefined) {
     await generateDBSchema({
       migrationFile: path.join(process.cwd(), migrationFile),
       schemaFile: schemaFile ? path.join(process.cwd(), schemaFile) : undefined,
     });
   } else if (filePath !== undefined) {
-    await generateFromFile({
-      path: filePath,
-      config,
-      options,
-      useVersioning,
-      migrateLegacy,
-    });
-  } else {
-    await generateCode(config, useVersioning, migrateLegacy);
+    await generateFromFile(filePath, project);
   }
+  // calling save once at the end is much faster than saving as we go
+  // the ts-morph project already has the updated data for manipulation without saving
+  await project.save();
 }

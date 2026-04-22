@@ -1,15 +1,10 @@
-import { pascalCase } from "change-case";
 import type {
   DocumentModelDocument,
   DocumentModelGlobalState,
 } from "@powerhousedao/shared/document-model";
 import { documentModelReducer } from "@powerhousedao/shared/document-model";
 import { baseLoadFromFile } from "document-model/node";
-import fs from "node:fs";
 import { readFile } from "node:fs/promises";
-import { join, resolve } from "node:path";
-import { format } from "prettier";
-import type { DocumentTypesMap } from "./types.js";
 
 export async function loadDocumentModel(
   path: string,
@@ -38,55 +33,4 @@ export async function loadDocumentModel(
       ? new Error(`Document model not found.`)
       : error;
   }
-}
-
-export async function formatWithPrettierBeforeWrite(
-  outputFile: string,
-  content: string,
-) {
-  const modifiedContent = await format(content, {
-    parser: "typescript",
-  });
-  return modifiedContent;
-}
-
-/** returns map of document model id to document model name in pascal case and import path */
-export function getDocumentTypesMap(
-  dir: string,
-  pathOrigin = "../../",
-): DocumentTypesMap {
-  const documentTypesMap: DocumentTypesMap = {
-    "powerhouse/document-model": {
-      name: "DocumentModel",
-      importPath: `document-model`,
-    },
-  };
-
-  // add document types from provided dir
-  if (fs.existsSync(dir)) {
-    fs.readdirSync(dir, { withFileTypes: true })
-      .filter((dirent) => dirent.isDirectory())
-      .map((dirent) => dirent.name)
-      .forEach((name) => {
-        const specPath = resolve(dir, name, `${name}.json`);
-        if (!fs.existsSync(specPath)) {
-          return;
-        }
-
-        const specRaw = fs.readFileSync(specPath, "utf-8");
-        try {
-          const spec = JSON.parse(specRaw) as DocumentModelGlobalState;
-          if (spec.id) {
-            documentTypesMap[spec.id] = {
-              name: pascalCase(name),
-              importPath: join(pathOrigin, dir, name, "index.js"),
-            };
-          }
-        } catch {
-          console.error(`Failed to parse ${specPath}`);
-        }
-      });
-  }
-
-  return documentTypesMap;
 }

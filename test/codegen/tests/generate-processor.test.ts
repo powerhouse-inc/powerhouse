@@ -15,15 +15,15 @@ import type {
   ProcessorApps,
   ProcessorRecord,
 } from "@powerhousedao/shared/processors";
-import { $ } from "bun";
 import { afterEach, describe, expect, it } from "bun:test";
 import { join } from "path";
 import { Project } from "ts-morph";
-import { NEW_PROJECT, TEST_OUTPUT, TEST_PROJECTS } from "../constants.js";
-import { cpForce, mkdirRecursive, rmForce } from "../utils.js";
+import { NEW_PROJECT, TEST_OUTPUT } from "../constants.js";
+import { cpForce, mkdirRecursive, rmForce, runTsc } from "../utils.js";
 
 import { PGlite } from "@electric-sql/pglite";
 import { live } from "@electric-sql/pglite/live";
+import { buildTsMorphProject } from "@powerhousedao/codegen/utils";
 import { createRelationalDb } from "@powerhousedao/shared/processors";
 import { Kysely } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
@@ -42,8 +42,7 @@ async function getDb() {
   return { pgLite, relationalDb };
 }
 
-const parentOutDir = join(process.cwd(), TEST_OUTPUT);
-const testProjectDir = join(process.cwd(), TEST_PROJECTS);
+const parentOutDir = join(TEST_OUTPUT, "generate-processor");
 await rmForce(parentOutDir);
 await mkdirRecursive(parentOutDir);
 
@@ -61,15 +60,20 @@ async function runProcessorTests(args: {
 
   const outDir = join(parentOutDir, outDirName);
 
-  await cpForce(join(testProjectDir, NEW_PROJECT), outDir);
+  await cpForce(NEW_PROJECT, outDir);
+  const project = buildTsMorphProject(outDir);
 
   for (const input of inputs) {
-    await generateProcessor({
-      ...input,
-      rootDir: outDir,
-    });
+    await generateProcessor(
+      {
+        ...input,
+      },
+      project,
+    );
   }
-  await $`bun run --cwd ${outDir} tsc`;
+  await project.save();
+  await runTsc(outDir);
+
   return outDir;
 }
 
@@ -393,58 +397,72 @@ describe("processor e2e integration", () => {
 
   it("should generate a processor, instrument it, plug into a reactor, and observe operations", async () => {
     const outDir = join(parentOutDir, "e2e-processor");
-    await cpForce(join(testProjectDir, NEW_PROJECT), outDir);
+    await cpForce(NEW_PROJECT, outDir);
+    const project = buildTsMorphProject(outDir);
+    // 1. Generate a processor via codegen
+    await generateProcessor(
+      {
+        processorName: "test-connect-analytics",
+        processorType: "analytics",
+        documentTypes: ["powerhouse/document-drive"],
+        processorApps: ["connect"],
+      },
+      project,
+    );
 
     // 1. Generate a processor via codegen
-    await generateProcessor({
-      processorName: "test-connect-analytics",
-      processorType: "analytics",
-      documentTypes: ["powerhouse/document-drive"],
-      processorApps: ["connect"],
-      rootDir: outDir,
-    });
+    await generateProcessor(
+      {
+        processorName: "test-switchboard-analytics",
+        processorType: "analytics",
+        documentTypes: ["powerhouse/document-drive"],
+        processorApps: ["switchboard"],
+      },
+      project,
+    );
 
     // 1. Generate a processor via codegen
-    await generateProcessor({
-      processorName: "test-switchboard-analytics",
-      processorType: "analytics",
-      documentTypes: ["powerhouse/document-drive"],
-      processorApps: ["switchboard"],
-      rootDir: outDir,
-    });
+    await generateProcessor(
+      {
+        processorName: "test-isomorphic-analytics",
+        processorType: "analytics",
+        documentTypes: ["powerhouse/document-drive"],
+        processorApps: ["connect", "switchboard"],
+      },
+      project,
+    );
 
-    // 1. Generate a processor via codegen
-    await generateProcessor({
-      processorName: "test-isomorphic-analytics",
-      processorType: "analytics",
-      documentTypes: ["powerhouse/document-drive"],
-      processorApps: ["connect", "switchboard"],
-      rootDir: outDir,
-    });
+    await generateProcessor(
+      {
+        processorName: "test-connect-relational-db",
+        processorType: "relationalDb",
+        documentTypes: ["powerhouse/document-drive"],
+        processorApps: ["connect"],
+      },
+      project,
+    );
 
-    await generateProcessor({
-      processorName: "test-connect-relational-db",
-      processorType: "relationalDb",
-      documentTypes: ["powerhouse/document-drive"],
-      processorApps: ["connect"],
-      rootDir: outDir,
-    });
+    await generateProcessor(
+      {
+        processorName: "test-switchboard-relational-db",
+        processorType: "relationalDb",
+        documentTypes: ["powerhouse/document-drive"],
+        processorApps: ["switchboard"],
+      },
+      project,
+    );
 
-    await generateProcessor({
-      processorName: "test-switchboard-relational-db",
-      processorType: "relationalDb",
-      documentTypes: ["powerhouse/document-drive"],
-      processorApps: ["switchboard"],
-      rootDir: outDir,
-    });
+    await generateProcessor(
+      {
+        processorName: "test-isomorphic-relational-db",
+        processorType: "relationalDb",
+        documentTypes: ["powerhouse/document-drive"],
+        processorApps: ["connect", "switchboard"],
+      },
+      project,
+    );
 
-    await generateProcessor({
-      processorName: "test-isomorphic-relational-db",
-      processorType: "relationalDb",
-      documentTypes: ["powerhouse/document-drive"],
-      processorApps: ["connect", "switchboard"],
-      rootDir: outDir,
-    });
+    await project.save();
 
     // 2. Instrument the generated processor with ts-morph to add a log
     const processorFilePath = join(

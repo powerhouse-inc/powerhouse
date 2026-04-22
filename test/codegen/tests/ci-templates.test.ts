@@ -5,7 +5,7 @@ import {
   switchboardEntrypointTemplate,
   syncAndPublishWorkflowTemplate,
 } from "@powerhousedao/codegen/templates";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "bun:test";
 
 describe("CI/CD Templates", () => {
   describe("sync-and-publish.yml", () => {

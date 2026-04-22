@@ -1,15 +1,13 @@
-import { generateManifest } from "@powerhousedao/codegen";
+import { createOrUpdateManifest } from "@powerhousedao/codegen/file-builders";
 import type { Manifest } from "@powerhousedao/config";
 import { fileExists } from "@powerhousedao/shared/clis";
 import { describe, expect, it } from "bun:test";
-import { readFile, writeFile } from "node:fs/promises";
-import { join } from "node:path";
-import { NEW_PROJECT, TEST_OUTPUT, TEST_PROJECTS } from "../constants.js";
+import { readFile } from "node:fs/promises";
+import path, { join } from "node:path";
+import { NEW_PROJECT, TEST_OUTPUT } from "../constants.js";
 import { cpForce, mkdirRecursive, rmForce } from "../utils.js";
 
-const parentOutDir = join(process.cwd(), TEST_OUTPUT);
-const testProjectsDir = join(process.cwd(), TEST_PROJECTS);
-const testOutputParentDir = join(parentOutDir, "generate-manifest");
+const testOutputParentDir = join(TEST_OUTPUT, "generate-manifest");
 await rmForce(testOutputParentDir);
 await mkdirRecursive(testOutputParentDir);
 
@@ -22,8 +20,8 @@ describe("generateManifest", () => {
 
     const testOutDirPath = join(testOutputParentDir, "manifest-from-scratch");
     await mkdirRecursive(testOutDirPath);
-    const manifestPath = generateManifest(manifestData, testOutDirPath);
-
+    await createOrUpdateManifest(manifestData, testOutDirPath);
+    const manifestPath = path.join(testOutDirPath, "powerhouse.manifest.json");
     expect(await fileExists(manifestPath)).toBe(true);
     expect(manifestPath).toBe(join(testOutDirPath, "powerhouse.manifest.json"));
 
@@ -50,11 +48,14 @@ describe("generateManifest", () => {
       "update-existing-manifest",
     );
     await cpForce(
-      join(testProjectsDir, NEW_PROJECT, "powerhouse.manifest.json"),
+      join(NEW_PROJECT, "powerhouse.manifest.json"),
       join(testOutDirPath, "powerhouse.manifest.json"),
     );
-    const manifestPath = generateManifest(updateData, testOutDirPath);
-    const content = await readFile(manifestPath, "utf-8");
+    await createOrUpdateManifest(updateData, testOutDirPath);
+    const content = await readFile(
+      join(testOutDirPath, "powerhouse.manifest.json"),
+      "utf-8",
+    );
 
     const manifest = JSON.parse(content) as Manifest;
 
@@ -79,12 +80,15 @@ describe("generateManifest", () => {
       "update-publisher-partially",
     );
     await cpForce(
-      join(testProjectsDir, NEW_PROJECT, "powerhouse.manifest.json"),
+      join(NEW_PROJECT, "powerhouse.manifest.json"),
       join(testOutDirPath, "powerhouse.manifest.json"),
     );
-    const manifestPath = generateManifest(updateData, testOutDirPath);
+    await createOrUpdateManifest(updateData, testOutDirPath);
 
-    const content = await readFile(manifestPath, "utf-8");
+    const content = await readFile(
+      join(testOutDirPath, "powerhouse.manifest.json"),
+      "utf-8",
+    );
     const manifest = JSON.parse(content) as Manifest;
 
     expect(manifest.publisher).toEqual({
@@ -93,68 +97,92 @@ describe("generateManifest", () => {
     });
   });
 
-  it("should handle malformed existing manifest gracefully", async () => {
-    const testOutDirPath = join(
-      testOutputParentDir,
-      "handle-malformed-existing-manifest",
+  it("should update config entries unique by name", async () => {
+    const testOutDirPath = join(testOutputParentDir, "update-config");
+    await cpForce(
+      join(NEW_PROJECT, "powerhouse.manifest.json"),
+      join(testOutDirPath, "powerhouse.manifest.json"),
     );
-    await mkdirRecursive(testOutDirPath);
-    const manifestPath = join(testOutDirPath, "powerhouse.manifest.json");
-    await writeFile(manifestPath, "{ invalid json }");
+    await createOrUpdateManifest(
+      {
+        config: [
+          {
+            name: "TEST_SECRET",
+            type: "secret" as const,
+            required: true,
+          },
+        ],
+      },
+      testOutDirPath,
+    );
 
-    const updateData = {
-      name: "@test/package",
-      description: "Test description",
-    };
+    await createOrUpdateManifest(
+      {
+        config: [
+          {
+            name: "TEST_SECRET",
+            type: "var",
+            required: false,
+          },
+          { name: "TEST_SECRET_2", type: "secret", required: true },
+        ],
+      },
+      testOutDirPath,
+    );
 
-    const resultPath = generateManifest(updateData, testOutDirPath);
+    const content = await readFile(
+      join(testOutDirPath, "powerhouse.manifest.json"),
+      "utf-8",
+    );
 
-    expect(await fileExists(resultPath)).toBe(true);
-
-    const content = await readFile(resultPath, "utf-8");
     const manifest = JSON.parse(content) as Manifest;
 
-    expect(manifest.name).toBe("@test/package");
-    expect(manifest.description).toBe("Test description");
-    expect(manifest.category).toBe("");
+    expect(manifest.config).toEqual([
+      {
+        name: "TEST_SECRET",
+        type: "var",
+        required: false,
+      },
+      { name: "TEST_SECRET_2", type: "secret", required: true },
+    ]);
   });
 
-  it("should validate JSON structure matches expected format", async () => {
-    const manifestData = {
-      name: "@test/package",
-      description: "Test package",
-      category: "testing",
+  it("should handle duplicates in modules", async () => {
+    const updateData = {
       publisher: {
-        name: "@test",
-        url: "https://test.com",
+        name: "@updated",
       },
-      documentModels: [{ id: "test/doc", name: "Test Doc" }],
-      editors: [
+      documentModels: [
         {
-          id: "test-editor",
-          name: "Test Editor",
-          documentTypes: ["test/doc"],
+          name: "name",
+          id: "something",
         },
       ],
-      apps: [
+    } as Manifest;
+
+    const testOutDirPath = join(testOutputParentDir, "handle-duplicates");
+    await cpForce(
+      join(NEW_PROJECT, "powerhouse.manifest.json"),
+      join(testOutDirPath, "powerhouse.manifest.json"),
+    );
+    await createOrUpdateManifest(updateData, testOutDirPath);
+
+    const updateDataWithDuplicate = {
+      publisher: {
+        name: "@updated",
+      },
+      documentModels: [
         {
-          id: "test-app",
-          name: "Test App",
-          documentTypes: ["test/doc"],
+          name: "name",
+          id: "something",
         },
-      ],
-      subgraphs: [
         {
-          id: "test-subgraph",
-          name: "Test Subgraph",
-          documentTypes: ["test/doc"],
+          name: "name",
+          id: "something",
         },
-      ],
-      importScripts: [
         {
-          id: "test-script",
-          name: "Test Script",
-          documentTypes: ["test/doc"],
+          name: "other name",
+          id: "something else",
         },
       ],
       config: [
@@ -166,23 +194,23 @@ describe("generateManifest", () => {
       ],
     };
 
-    const testOutDirPath = join(testOutputParentDir, "validate-json-structure");
-    await cpForce(
-      join(testProjectsDir, NEW_PROJECT, "powerhouse.manifest.json"),
+    await createOrUpdateManifest(updateDataWithDuplicate, testOutDirPath);
+
+    const content = await readFile(
       join(testOutDirPath, "powerhouse.manifest.json"),
+      "utf-8",
     );
-    const manifestPath = generateManifest(manifestData, testOutDirPath);
-    const content = await readFile(manifestPath, "utf-8");
-
-    // Verify it's properly formatted JSON
-    expect(() => JSON.parse(content) as Manifest).not.toThrow();
-
-    // Verify structure
     const manifest = JSON.parse(content) as Manifest;
-    expect(manifest).toEqual(manifestData);
 
-    // Verify formatting (4 spaces indentation)
-    expect(content).toContain('    "name":');
-    expect(content).toContain('        "id":');
+    expect(manifest.documentModels).toEqual([
+      {
+        name: "name",
+        id: "something",
+      },
+      {
+        name: "other name",
+        id: "something else",
+      },
+    ]);
   });
 });

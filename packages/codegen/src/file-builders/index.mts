@@ -1,12 +1,15 @@
 export * from "./app.js";
+export * from "./boilerplate/generated-project-files.js";
 export * from "./boilerplate/package.json.js";
 export * from "./clis/generate-cli-docs.js";
+export * from "./constants.js";
 export * from "./document-editor.js";
 export * from "./document-model/document-model.js";
+export * from "./document-model/utils.js";
 export * from "./editor-common.js";
 export * from "./index-files.js";
-export * from "./module-files.js";
+export * from "./manifest.js";
+export * from "./package-json.js";
 export * from "./processors/processor.js";
-export * from "./subgraph.js";
 export * from "./subgraphs.js";
 export type * from "./types.js";

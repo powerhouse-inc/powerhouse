@@ -4,7 +4,7 @@ import type {
 } from "@powerhousedao/shared";
 import { ts } from "@tmpl/core";
 import { camelCase, constantCase, kebabCase, pascalCase } from "change-case";
-import type { DocumentModelTemplateInputs } from "file-builders";
+import type { DocumentModelFileMakerArgs } from "file-builders";
 
 function makePascalCaseOperationName(operation: OperationSpecification) {
   if (!operation.name) {
@@ -127,18 +127,18 @@ function makeModuleOperationsCaseStatements(
 }
 
 export const documentModelGenReducerFileTemplate = (
-  v: DocumentModelTemplateInputs,
+  v: DocumentModelFileMakerArgs,
 ) =>
   ts`
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 import type { Reducer, StateReducer } from "document-model";
 import { isDocumentAction, createReducer } from "document-model";
-import type { ${v.phStateName} } from "${v.versionedDocumentModelPackageImportPath}";
+import type { ${v.phStateName} } from "${v.versionImportPath}";
 
-${makeModulesOperationsImports(v.modules, v.camelCaseDocumentType)}
+${makeModulesOperationsImports(v.specification.modules, v.camelCaseDocumentType)}
 
-${makeOperationInputSchemaImports(v.modules)}
+${makeOperationInputSchemaImports(v.specification.modules)}
 
 const stateReducer: StateReducer<${v.phStateName}> =
     (state, action, dispatch) => {
@@ -146,7 +146,7 @@ const stateReducer: StateReducer<${v.phStateName}> =
             return state;
         }
         switch (action.type) {
-       ${makeModuleOperationsCaseStatements(v.modules, v.camelCaseDocumentType)}
+       ${makeModuleOperationsCaseStatements(v.specification.modules, v.camelCaseDocumentType)}
             default:
                 return state;
         }

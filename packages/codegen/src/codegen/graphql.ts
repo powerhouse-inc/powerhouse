@@ -6,19 +6,14 @@ import {
   validationSchema,
 } from "@powerhousedao/document-engineering/graphql";
 import type {
-  DocumentModelGlobalState,
   DocumentSpecification,
   ModuleSpecification,
 } from "@powerhousedao/shared/document-model";
+import type { DocumentModelFileMakerArgs } from "file-builders";
 import type { ValidationSchemaPluginConfig } from "graphql-codegen-typescript-validation-schema";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { format } from "prettier";
-
-const getDirectories = async (source: string) => {
-  const dir = await fs.readdir(source, { withFileTypes: true });
-  return dir.filter((dirent) => dirent.isDirectory()).map((dirent) => dirent);
-};
 
 export const scalars = {
   Unknown: "unknown",
@@ -104,26 +99,22 @@ async function formatContentWithPrettier(path: string, content: string) {
 }
 
 type GenerateTypesAndZodSchemasFromGraphqlArgs = {
-  dirName: string;
+  schemaDirPath: string;
   schema: string;
-  skipFormat?: boolean;
-  writeFile?: boolean;
-  watch?: boolean;
 };
 export async function generateTypesAndZodSchemasFromGraphql(
   args: GenerateTypesAndZodSchemasFromGraphqlArgs,
 ) {
-  const { dirName, schema, skipFormat, writeFile, watch } = args;
-  const beforeOneFileWrite = skipFormat ? undefined : formatContentWithPrettier;
+  const { schemaDirPath, schema } = args;
 
   const config: CodegenConfig = {
     overwrite: true,
-    watch,
+    watch: false,
     hooks: {
-      beforeOneFileWrite,
+      beforeOneFileWrite: formatContentWithPrettier,
     },
     generates: {
-      [`${dirName}/gen/schema/types.ts`]: {
+      [`${schemaDirPath}/types.ts`]: {
         schema,
         config: typescriptConfig,
         plugins: [
@@ -132,7 +123,7 @@ export async function generateTypesAndZodSchemasFromGraphql(
           },
         ],
       },
-      [`${dirName}/gen/schema/zod.ts`]: {
+      [`${schemaDirPath}/zod.ts`]: {
         schema,
         config: validationSchemaConfig,
         plugins: [
@@ -151,75 +142,22 @@ export async function generateTypesAndZodSchemasFromGraphql(
     },
   };
 
-  await generate(config, writeFile);
+  await generate(config, true);
 }
 
-export async function generateDocumentModelZodSchemas(args: {
-  documentModelDirPath: string;
-  specification: DocumentSpecification;
-  writeFile?: boolean;
-  skipFormat?: boolean;
-  watch?: boolean;
-}) {
-  const {
-    documentModelDirPath,
-    specification,
-    writeFile = true,
-    skipFormat = false,
-    watch = false,
-  } = args;
+export async function generateDocumentModelZodSchemas(
+  args: DocumentModelFileMakerArgs,
+) {
+  const { specification, schemaDirPath, versionDirPath } = args;
+
   const schema = buildGraphqlDocumentStringForSpecification(specification)
     .filter(Boolean)
     .join("\n\n");
 
   await generateTypesAndZodSchemasFromGraphql({
-    dirName: documentModelDirPath,
+    schemaDirPath,
     schema,
-    writeFile,
-    skipFormat,
-    watch,
   });
 
-  await fs.writeFile(path.join(documentModelDirPath, "schema.graphql"), schema);
+  await fs.writeFile(path.join(versionDirPath, "schema.graphql"), schema);
 }
-
-export const generateSchemas = async (
-  inDir: string,
-  { watch = false, skipFormat = false, writeFile = true, outDir = inDir } = {},
-) => {
-  const dirs = await getDirectories(inDir);
-  const inputs = await Promise.all(
-    dirs.map(async (dir) => {
-      const documentModelJsonFile = await fs.readFile(
-        path.join(dir.parentPath, dir.name, `${dir.name}.json`),
-        "utf-8",
-      );
-      const parsedJson = JSON.parse(
-        documentModelJsonFile,
-      ) as DocumentModelGlobalState;
-
-      const latestSpecification =
-        parsedJson.specifications[parsedJson.specifications.length - 1];
-
-      const schema = buildGraphqlDocumentStringForSpecification(
-        latestSpecification,
-      )
-        .filter(Boolean)
-        .join("\n\n");
-
-      return { dirName: path.join(outDir, dir.name), schema };
-    }),
-  );
-
-  await Promise.all(
-    inputs.map(async ({ schema, dirName }) => {
-      await generateTypesAndZodSchemasFromGraphql({
-        schema,
-        dirName,
-        writeFile,
-        skipFormat,
-        watch,
-      });
-    }),
-  );
-};

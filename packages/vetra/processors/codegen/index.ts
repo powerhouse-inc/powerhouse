@@ -1,25 +1,29 @@
-import { getConfig } from "@powerhousedao/config/node";
 import type {
   IProcessor,
   OperationWithContext,
 } from "@powerhousedao/reactor-browser";
+import type { PowerhouseConfig } from "@powerhousedao/shared";
+import type { Project } from "ts-morph";
 import type { DocumentCodegenManager } from "./document-handlers/document-codegen-manager.js";
 import { DocumentCodegenFactory } from "./document-handlers/index.js";
 import type { CodegenInput } from "./document-handlers/types.js";
 import { logger } from "./logger.js";
 
-const PH_CONFIG = getConfig();
-const CURRENT_WORKING_DIR = process.cwd();
-
 export class CodegenProcessor implements IProcessor {
   private manager: DocumentCodegenManager;
 
-  constructor(interactiveMode = false) {
+  constructor(
+    project: Project,
+    config: PowerhouseConfig,
+    cwd: string,
+    interactiveMode = false,
+  ) {
     this.manager = DocumentCodegenFactory.createManager(
       {
-        PH_CONFIG,
-        CURRENT_WORKING_DIR,
+        PH_CONFIG: config,
+        CURRENT_WORKING_DIR: cwd,
       },
+      project,
       interactiveMode,
     );
 
