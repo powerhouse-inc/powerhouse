@@ -99,4 +99,5 @@ export async function startGenerate(
   } else if (filePath !== undefined) {
     await generateFromFile(filePath, project);
   }
+  await project.save();
 }
