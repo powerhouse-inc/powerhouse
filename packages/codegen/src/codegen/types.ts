@@ -11,6 +11,9 @@ export type DocumentTypesMap = Record<
 >;
 
 declare global {
+  /* Define the directories and package.json contents of the packages in the monorepo.
+   * Useful for knowing the names and versions of our packages in cli tools.
+   */
   const WORKSPACE_PACKAGES: {
     dir: string;
     manifest: Project["manifest"];

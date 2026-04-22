@@ -92,6 +92,7 @@ export class DocumentEditorGenerator extends BaseDocumentGen {
         },
         this.project,
       );
+      await this.project.save();
 
       logger.info(
         `✅ Editor generation completed successfully for: ${state.name}`,

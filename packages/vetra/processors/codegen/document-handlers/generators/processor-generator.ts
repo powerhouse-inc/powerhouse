@@ -128,6 +128,7 @@ export class ProcessorGenerator extends BaseDocumentGen {
           },
           this.project,
         );
+        await this.project.save();
 
         logger.info(
           `✅ Processor generation completed successfully for: ${state.name}`,

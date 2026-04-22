@@ -70,6 +70,7 @@ export class SubgraphGenerator extends BaseDocumentGen {
       logger.info(`🔄 Starting subgraph generation for: ${state.name}`);
       try {
         await generateSubgraph(state.name, null, this.project);
+        await this.project.save();
         logger.info(
           `✅ Subgraph generation completed successfully for: ${state.name}`,
         );

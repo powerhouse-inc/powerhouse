@@ -80,6 +80,7 @@ export class DocumentModelGenerator extends BaseDocumentGen {
     );
     try {
       await generateDocumentModel(globalState, this.project);
+      await this.project.save();
       logger.info(
         `✅ Code generation completed successfully for: ${globalState.name}`,
       );

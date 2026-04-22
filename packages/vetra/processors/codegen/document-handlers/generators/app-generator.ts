@@ -83,6 +83,7 @@ export class AppGenerator extends BaseDocumentGen {
           },
           this.project,
         );
+        await this.project.save();
 
         logger.info(
           `✅ App generation completed successfully for app: ${state.name}`,
