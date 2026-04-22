@@ -8,16 +8,15 @@ import type { PackageInfo } from "./types.js";
  * Read dist-tags, the full version list, and the local-publish flag for a
  * package from verdaccio's on-disk storage (`{storagePath}/{name}/package.json`).
  *
- * `locallyPublished` distinguishes packages that were `npm publish`-ed directly
- * at this registry (verdaccio stores the tarball as an `_attachments` entry)
- * from packages that were merely pulled through the uplink from npmjs.org
- * (no `_attachments`, but verdaccio may still have cached metadata). The
- * /packages listing only surfaces locally-published packages — npm passthroughs
- * remain installable via the "fetch from npm" fallback in the UI, but don't
- * pollute the default list.
- *
- * Returns `undefined` fields / `locallyPublished: false` if the file is
- * missing or can't be read — callers should treat these as best-effort.
+ * `locallyPublished` is tri-state:
+ *   - `true`  → storage metadata has `_attachments` (tarball uploaded here).
+ *   - `false` → storage metadata exists but `_attachments` is empty (proxy
+ *               from the npm uplink only; no local publish at this registry).
+ *   - `undefined` → metadata file wasn't readable. Happens with non-filesystem
+ *               backends (S3, etc.) or if verdaccio stores metadata elsewhere.
+ *               Callers should treat this as "unknown" and default to including
+ *               the package, to avoid filtering the whole /packages list to an
+ *               empty array on deployments where we can't observe _attachments.
  */
 function readPackageMetadata(
   storagePath: string | undefined,
@@ -25,9 +24,9 @@ function readPackageMetadata(
 ): {
   distTags?: Record<string, string>;
   versions?: string[];
-  locallyPublished: boolean;
+  locallyPublished: boolean | undefined;
 } {
-  if (!storagePath) return { locallyPublished: false };
+  if (!storagePath) return { locallyPublished: undefined };
   try {
     const metadataPath = path.join(storagePath, packageName, "package.json");
     const raw = fs.readFileSync(metadataPath, "utf-8");
@@ -48,7 +47,7 @@ function readPackageMetadata(
       locallyPublished,
     };
   } catch {
-    return { locallyPublished: false };
+    return { locallyPublished: undefined };
   }
 }
 
@@ -176,10 +175,13 @@ export function scanPackages(
           storagePath,
           name,
         );
-        // Only surface packages that were `npm publish`-ed at THIS registry.
-        // When storagePath is not wired through, we can't tell — fall back
-        // to including the entry (preserves pre-filter behaviour).
-        if (storagePath && !locallyPublished) continue;
+        // Drop npm-uplink passthroughs from the default listing. Only
+        // skip when we can affirmatively tell the package is a proxy
+        // (no `_attachments` in filesystem-backed storage). When the flag
+        // is `undefined` (no storagePath, or non-filesystem backend where
+        // we can't read verdaccio's metadata) we include the entry — the
+        // alternative would be filtering everything to `[]` on S3 deploys.
+        if (locallyPublished === false) continue;
         packages.push({
           name,
           path: `/-/cdn/${dirName}`,
@@ -200,7 +202,7 @@ export function scanPackages(
         storagePath,
         name,
       );
-      if (storagePath && !locallyPublished) continue;
+      if (locallyPublished === false) continue;
       packages.push({
         name,
         path: `/-/cdn/${entry.name}`,

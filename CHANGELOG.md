@@ -1,3 +1,15 @@
+## 6.0.0-dev.191 (2026-04-22)
+
+### 🩹 Fixes
+
+- **registry:** don't filter /packages to empty when storage metadata can't be read ([e3dd952de](https://github.com/powerhouse-inc/powerhouse/commit/e3dd952de))
+- **registry:** don't filter /packages to empty when storage metadata can't be read ([#2493](https://github.com/powerhouse-inc/powerhouse/pull/2493))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+- Guillermo Puente Sandoval @gpuente
+
 ## 6.0.0-dev.190 (2026-04-22)
 
 ### 🚀 Features
