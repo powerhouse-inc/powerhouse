@@ -1,3 +1,22 @@
+## 6.0.0-dev.189 (2026-04-22)
+
+### 🚀 Features
+
+- **lb:** the load balancer now pins through milestone 2 ([b928cfe04](https://github.com/powerhouse-inc/powerhouse/commit/b928cfe04))
+- **connect:** pg migration banner ([8a8662e2f](https://github.com/powerhouse-inc/powerhouse/commit/8a8662e2f))
+- **lb:** wip on m1 features ([096384d5c](https://github.com/powerhouse-inc/powerhouse/commit/096384d5c))
+- **switchboard-lb:** proxy upstream routes via least_conn (M1) ([5e3343b21](https://github.com/powerhouse-inc/powerhouse/commit/5e3343b21))
+
+### 🩹 Fixes
+
+- import now works -- lots of gotchas ([df8594200](https://github.com/powerhouse-inc/powerhouse/commit/df8594200))
+- **connect:** dump and import block and quiesce queue before working with the db ([dd0d99cf3](https://github.com/powerhouse-inc/powerhouse/commit/dd0d99cf3))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 4.7
+
 ## 6.0.0-dev.188 (2026-04-21)
 
 ### 🩹 Fixes
