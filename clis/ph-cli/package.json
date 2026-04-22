@@ -61,7 +61,6 @@
   "devDependencies": {
     "@types/node": "catalog:",
     "@types/npm-registry-fetch": "^8.0.9",
-    "@types/npmcli__package-json": "^4.0.4",
     "@types/pg": "catalog:",
     "copyfiles": "catalog:"
   }

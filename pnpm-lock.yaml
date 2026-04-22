@@ -783,9 +783,6 @@ importers:
       '@types/npm-registry-fetch':
         specifier: ^8.0.9
         version: 8.0.9
-      '@types/npmcli__package-json':
-        specifier: ^4.0.4
-        version: 4.0.4
       '@types/pg':
         specifier: 'catalog:'
         version: 8.16.0
@@ -9946,9 +9943,6 @@ packages:
 
   '@types/npm-registry-fetch@8.0.9':
     resolution: {integrity: sha512-7NxvodR5Yrop3pb6+n8jhJNyzwOX0+6F+iagNEoi9u1CGxruYAwZD8pvGc9prIkL0+FdX5Xp0p80J9QPrGUp/g==}
-
-  '@types/npmcli__package-json@4.0.4':
-    resolution: {integrity: sha512-6QjlFUSHBmZJWuC08bz1ZCx6tm4t+7+OJXAdvM6tL2pI7n6Bh5SIp/YxQvnOLFf8MzCXs2ijyFgrzaiu1UFBGA==}
 
   '@types/npmlog@7.0.0':
     resolution: {integrity: sha512-hJWbrKFvxKyWwSUXjZMYTINsSOY6IclhvGOZ97M8ac2tmR9hMwmTnYaMdpGhvju9ctWLTPhCS+eLfQNluiEjQQ==}
@@ -29606,8 +29600,6 @@ snapshots:
       '@types/npm-package-arg': 6.1.4
       '@types/npmlog': 7.0.0
       '@types/ssri': 7.1.5
-
-  '@types/npmcli__package-json@4.0.4': {}
 
   '@types/npmlog@7.0.0':
     dependencies:
