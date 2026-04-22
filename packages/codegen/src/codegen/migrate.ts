@@ -31,6 +31,7 @@ import { buildTsMorphProject } from "utils";
 import { updatePackage } from "write-package";
 import { generateAll } from "./generate.js";
 
+/* Uses the npm cli's fetch function to get the version for a specified tag */
 export async function getFullyQualifiedWorkspacePackageVersion(
   versionOrTag: string,
 ) {
@@ -64,14 +65,18 @@ export function fixLegacyImportPaths(
       );
       const moduleSpecifier = importStatement.getModuleSpecifier();
       const moduleSpecifierText = moduleSpecifier.getLiteralText();
+      // remove usage of the old `package-name/` style paths
       if (moduleSpecifierText.includes(packageName)) {
         moduleSpecifier.setLiteralValue(
           moduleSpecifierText.replace(`${packageName}/`, ""),
         );
       }
+      // I saw this invalid import enough that it seemed worthwhile to fix it here
       if (namedImports.includes("generateMock")) {
         moduleSpecifier.setLiteralValue("document-model");
       }
+      // attempt to fix absolute import paths for document models like `../../../document-models/model/something/something.js`
+      // these don't work anymore with the versioned document models, since the absolute file paths are different
       const match = moduleSpecifierText.match(
         /^(\.\.\/)+document-models\/([^/]+)(?!\/v\d+(?:\/|$))(?:\/.*)?$/,
       );
