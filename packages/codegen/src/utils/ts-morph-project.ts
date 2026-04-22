@@ -24,10 +24,13 @@ export function getDefaultProjectOptions(tsConfigFilePath: string) {
 
 /** Instantiates a ts-morph Project using the default typescript config and nearest tsconfig.json file */
 export function buildTsMorphProject(projectDir: string) {
+  /* In general ts-morph struggles when its instance is running in a different directory to the tsconfig.json file it's using */
   process.chdir(projectDir);
   const tsConfigFilePath = path.join(projectDir, "tsconfig.json");
   const project = new Project({
     tsConfigFilePath,
+    /* This avoids adding many files that are referenced by a given tsconfig in a monorepo
+     * Probably only relevant for internal testing in this monorepo */
     skipFileDependencyResolution: true,
   });
   return project;

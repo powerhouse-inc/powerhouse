@@ -19,6 +19,8 @@ export default defineConfig({
   clean: true,
   sourcemap: true,
   define: {
+    /* Make the list of packages in this monorepo globally available
+     * Useful for codegen processes which need to reference internal package names and versions */
     WORKSPACE_PACKAGES: JSON.stringify(
       workspacePackages
         .filter(({ manifest }) => manifest.name !== "root" && !manifest.private)
