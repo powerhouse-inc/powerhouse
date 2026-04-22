@@ -90,7 +90,7 @@ export async function startGenerate(
       project,
     );
   } else if (subgraphName !== undefined) {
-    await generateSubgraph(subgraphName, filePath || null, project);
+    await generateSubgraph(subgraphName, project);
   } else if (migrationFile !== undefined) {
     await generateDBSchema({
       migrationFile: path.join(process.cwd(), migrationFile),

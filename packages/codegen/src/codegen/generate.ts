@@ -31,6 +31,7 @@ import {
   pipe,
   split,
   startsWith,
+  unique,
   when,
 } from "remeda";
 import type { Project } from "ts-morph";
@@ -305,22 +306,8 @@ export async function generateAllApps(project: Project) {
     await generateApp(appToAdd as GenerateAppArgs, project);
   }
 }
-export async function generateSubgraph(
-  subgraphName: string,
-  documentModelFilePath: string | null,
-  project: Project,
-) {
-  const documentModelState =
-    documentModelFilePath !== null
-      ? await loadDocumentModel(documentModelFilePath)
-      : null;
-  await tsMorphGenerateSubgraph(
-    {
-      subgraphName,
-      documentModel: documentModelState,
-    },
-    project,
-  );
+export async function generateSubgraph(subgraphName: string, project: Project) {
+  await tsMorphGenerateSubgraph({ subgraphName, project });
 }
 
 /* Runs generate for each directory found in the project's `subgraphs` directory  */
@@ -329,59 +316,28 @@ export async function generateAllSubgraphs(project: Project) {
     project,
     "subgraphs",
   );
-  const { directory: documentModelsDir } = getOrCreateDirectory(
-    project,
-    "document-models",
-  );
-  const documentModelsDirPath = documentModelsDir.getPath();
-  const subgraphDirs = subgraphsDir.getDirectories();
   /* The subgraph's name is found in the `index.ts` file */
-  /* The only reliable way to get the subgraph's `documentTypes` is by looking at what is imported by `resolvers.ts` */
-  const subgraphInputs = pipe(
-    subgraphDirs,
-    map((dir) => ({
-      resolversFile: dir.getSourceFile("resolvers.ts"),
-      indexFile: dir.getSourceFile("index.ts"),
-    })),
-    map(({ resolversFile, indexFile }) => ({
-      documentModelFilePath: pipe(
-        resolversFile?.getImportDeclarations() ?? [],
-        flatMap((importDeclarations) =>
-          importDeclarations.getModuleSpecifier().getLiteralValue(),
-        ),
-        find((moduleSpecierLiteral) =>
-          startsWith(moduleSpecierLiteral, "document-models/"),
-        ),
-        when(isString, (value) => split(value, "/").at(1)),
-        when(isString, (value) =>
-          join(documentModelsDirPath, value, `${value}.json`),
-        ),
-      ),
-      subgraphName: pipe(
-        indexFile?.getClasses() ?? [],
-        find(
-          (classDeclaration) =>
-            classDeclaration
-              .getBaseClass()
-              ?.getText()
-              .includes("BaseSubgraph") ?? false,
-        ),
-        (classDeclaration) =>
-          classDeclaration
-            ?.getInstanceProperty("name")
-            ?.asKind(SyntaxKind.PropertyDeclaration)
-            ?.getInitializerIfKind(SyntaxKind.StringLiteral)
-            ?.getLiteralValue(),
-      ),
-    })),
+  const subgraphNames = pipe(
+    subgraphsDir.getDirectories(),
+    map((dir) => dir.getSourceFile("index.ts")),
+    flatMap((indexFile) => indexFile?.getClasses() ?? []),
+    filter(
+      (classDeclaration) =>
+        classDeclaration.getBaseClass()?.getText().includes("BaseSubgraph") ??
+        false,
+    ),
+    map((classDeclaration) =>
+      classDeclaration
+        .getInstanceProperty("name")
+        ?.asKind(SyntaxKind.PropertyDeclaration)
+        ?.getInitializerIfKind(SyntaxKind.StringLiteral)
+        ?.getLiteralValue(),
+    ),
+    filter(isString),
+    unique(),
   );
-  for (const { subgraphName, documentModelFilePath } of subgraphInputs) {
-    if (!subgraphName) continue;
-    await generateSubgraph(
-      subgraphName,
-      documentModelFilePath ?? null,
-      project,
-    );
+  for (const subgraphName of subgraphNames) {
+    await generateSubgraph(subgraphName, project);
   }
 }
 

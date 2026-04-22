@@ -1,4 +1,3 @@
-import type { DocumentModelGlobalState } from "@powerhousedao/shared/document-model";
 import { camelCase, kebabCase, pascalCase } from "change-case";
 import { createOrUpdateManifest } from "file-builders";
 import path from "path";
@@ -6,31 +5,22 @@ import { filter, isTruthy, map, pipe, uniqueBy } from "remeda";
 import {
   customSubgraphResolversTemplate,
   customSubgraphSchemaTemplate,
-  documentModelSubgraphResolversTemplate,
-  documentModelSubgraphSchemaTemplate,
   subgraphIndexFileTemplate,
   subgraphLibFileTemplate,
 } from "templates";
 import type { Project } from "ts-morph";
 import {
-  applyGraphQLTypePrefixes,
   ensureDirectoriesExist,
-  extractTypeNames,
   formatSourceFileWithPrettier,
   getOrCreateDirectory,
   getOrCreateSourceFile,
 } from "utils";
 
-type TsMorphGenerateSubgraphArgs = {
+export async function tsMorphGenerateSubgraph(args: {
   subgraphName: string;
-  documentModel: DocumentModelGlobalState | null;
-};
-
-export async function tsMorphGenerateSubgraph(
-  args: TsMorphGenerateSubgraphArgs,
-  project: Project,
-): Promise<void> {
-  const { subgraphName, documentModel } = args;
+  project: Project;
+}): Promise<void> {
+  const { subgraphName, project } = args;
   const kebabCaseName = kebabCase(subgraphName);
   const pascalCaseName = pascalCase(subgraphName);
   const camelCaseName = camelCase(subgraphName);
@@ -50,16 +40,11 @@ export async function tsMorphGenerateSubgraph(
   });
   await makeBaseSubgraphLibFile(project, subgraphDir);
 
-  if (documentModel !== null) {
-    // Generate document-model-specific schema and resolvers (force overwrite)
-    await makeDocumentModelSubgraphFiles(project, subgraphDir, documentModel);
-  } else {
-    // Generate custom subgraph scaffolds (unless_exists)
-    await makeCustomSubgraphFiles(project, subgraphDir, {
-      pascalCaseName,
-      camelCaseName,
-    });
-  }
+  // Generate custom subgraph scaffolds (unless_exists)
+  await makeCustomSubgraphFiles(project, subgraphDir, {
+    pascalCaseName,
+    camelCaseName,
+  });
 
   await makeSubgraphsIndexFile({ project, subgraphsDir: subgraphsDirPath });
   await createOrUpdateManifest(
@@ -68,7 +53,6 @@ export async function tsMorphGenerateSubgraph(
         {
           name: subgraphName,
           id: kebabCaseName,
-          documentTypes: documentModel?.id ? [documentModel.id] : [],
         },
       ],
     },
@@ -123,65 +107,6 @@ async function makeCustomSubgraphFiles(
   }
 }
 
-async function makeDocumentModelSubgraphFiles(
-  project: Project,
-  dirPath: string,
-  documentModel: DocumentModelGlobalState,
-) {
-  const latestSpec =
-    documentModel.specifications[documentModel.specifications.length - 1];
-  const documentType = documentModel.name;
-  const pascalCaseDocumentType = pascalCase(documentType);
-  const camelCaseDocumentType = camelCase(documentType);
-  const phDocumentTypeName = `${pascalCaseDocumentType}Document`;
-  const documentTypeVariableName = `${camelCaseDocumentType}DocumentType`;
-  const kebabCaseDocumentType = kebabCase(documentType);
-  const documentModelDir = `document-models/${kebabCaseDocumentType}`;
-
-  const stateSchema = latestSpec.state.global.schema;
-  const stateTypeNames = extractTypeNames(stateSchema);
-
-  const modulesWithSchemaTypePrefixes = latestSpec.modules
-    .filter((m): m is typeof m & { name: string } => m.name !== null)
-    .map((m) => ({
-      name: kebabCase(m.name),
-      operations: m.operations
-        .filter((op): op is typeof op & { name: string } => op.name !== null)
-        .map((op) => ({
-          name: op.name,
-          schema: applyGraphQLTypePrefixes(
-            op.schema ?? "",
-            pascalCaseDocumentType,
-            stateTypeNames,
-          ),
-        })),
-    }));
-
-  // Schema (force overwrite) — skip prettier, contains gql tagged template literal
-  const schemaPath = path.join(dirPath, "schema.ts");
-  const schema = getOrCreateSourceFile(project, schemaPath);
-  schema.sourceFile.replaceWithText(
-    documentModelSubgraphSchemaTemplate({
-      pascalCaseDocumentType,
-      modulesWithSchemaTypePrefixes,
-    }),
-  );
-
-  // Resolvers (force overwrite) — skip prettier, contains template literals that confuse parser
-  const resolversPath = path.join(dirPath, "resolvers.ts");
-  const resolvers = getOrCreateSourceFile(project, resolversPath);
-  resolvers.sourceFile.replaceWithText(
-    documentModelSubgraphResolversTemplate({
-      pascalCaseDocumentType,
-      camelCaseDocumentType,
-      phDocumentTypeName,
-      documentTypeVariableName,
-      documentModelDir,
-      modulesWithSchemaTypePrefixes,
-    }),
-  );
-}
-
 export async function makeSubgraphsIndexFile(args: {
   project: Project;
   subgraphsDir: string;
@@ -223,4 +148,5 @@ export async function makeSubgraphsIndexFile(args: {
     })),
   );
   sourceFile.addExportDeclarations(exportDeclarations);
+  await formatSourceFileWithPrettier(sourceFile);
 }
