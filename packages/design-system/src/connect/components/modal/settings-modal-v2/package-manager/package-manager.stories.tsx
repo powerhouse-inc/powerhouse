@@ -171,9 +171,10 @@ export const Empty: Story = PackageManagerStoryWrapper({
 });
 
 /**
- * Available packages carrying dist-tags + version metadata. The search
- * input is the only way to narrow results — try `@uniswap/lp-tools@staging`
- * or `my-pkg@1.2.3` to target a specific tag or version.
+ * Available packages carrying dist-tags + version metadata. Each result card
+ * exposes a version picker (defaulting to `latest`) so users can pick a tag
+ * or a specific version without editing the search query. Typing
+ * `my-pkg@dev` inline still pre-selects the matching tag in the card.
  */
 export const WithTaggedPackages: Story = {
   ...PackageManagerStoryWrapper({

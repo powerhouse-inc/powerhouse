@@ -21,10 +21,29 @@ type PackageMeta = {
   importUrl: string | null;
   stylesheetUrl: string | null;
   version?: string;
+  /**
+   * Full spec the user asked for (e.g. `@scope/pkg@2.0.0-beta.2`). Kept so a
+   * reload re-installs exactly the tag/version originally picked rather than
+   * sliding to `latest`. Absent for legacy entries and local packages.
+   */
+  spec?: string;
 };
+
+/**
+ * Strip any `@tag` / `@version` suffix from a package spec, returning the bare
+ * package name. Mirrors `parsePackageSpec` on the UI side.
+ */
+function parseBareName(spec: string): string {
+  const trimmed = spec.trim();
+  const at = trimmed.startsWith("@")
+    ? trimmed.lastIndexOf("@")
+    : trimmed.indexOf("@");
+  return at > 0 ? trimmed.slice(0, at) : trimmed;
+}
 
 type PackageWithMeta = PackageMeta & {
   loadedPackage: DocumentModelLib;
+  spec?: string;
 };
 
 async function fetchPackageJsonVersion(
@@ -76,7 +95,15 @@ export class BrowserPackageManager implements IPackageManager {
       this.updateLocalPackage(localPackage, localPackageVersion);
     }
     for (const packageName of this.#storage.keys()) {
-      const result = await this.addPackage(packageName);
+      // Re-hydrate with the originally-requested spec so a tag/version pick
+      // sticks across reloads. Fall back to the bare key for legacy entries
+      // (pre-spec) and for entries that never had a tag.
+      const existingMeta = this.#storage.get(packageName);
+      const specForReload = existingMeta?.spec ?? packageName;
+      console.debug(
+        `[Connect][PackageManager] Rehydrating "${packageName}" via spec "${specForReload}"`,
+      );
+      const result = await this.addPackage(specForReload);
       // Previously-installed package that no longer resolves (version
       // withdrawn from npm, registry moved, etc.) would otherwise
       // 404-toast on every boot forever. Drop it from persistent storage
@@ -156,16 +183,38 @@ export class BrowserPackageManager implements IPackageManager {
     return this.#storage.get(packageName)?.version;
   }
 
-  async addPackage(packageName: string): Promise<PackageManagerInstallResult> {
-    const existingPackage = this.#packages.get(packageName);
+  async addPackage(packageSpec: string): Promise<PackageManagerInstallResult> {
+    // `packageSpec` may include a `@tag` / `@version` suffix (e.g. user picked
+    // a specific version in the package manager UI, or re-hydrated on reload
+    // from the persisted spec). We always register/look up by the bare name so
+    // status tracking, version lookups, and uninstall all go through a single
+    // canonical key. The spec itself is kept on the meta so reloads re-fetch
+    // the same tag.
+    const bareName = parseBareName(packageSpec);
+    const hasTagOrVersion = bareName !== packageSpec;
+    console.debug(
+      `[Connect][PackageManager] addPackage spec="${packageSpec}" bareName="${bareName}"`,
+    );
+
+    const existingPackage = this.#packages.get(bareName);
     if (existingPackage) {
+      console.debug(
+        `[Connect][PackageManager] "${bareName}" already loaded; skipping re-fetch`,
+      );
       return {
         type: "success",
         package: existingPackage,
       };
     }
     try {
-      const packageWithMeta = await this.#loadPackage(packageName);
+      const packageWithMeta = await this.#loadPackage(packageSpec);
+      // `#loadPackage*` set `name` to whatever spec it built the URL from.
+      // Canonicalize to the bare name for the map/storage keys, and stash the
+      // original spec separately so reloads re-use it.
+      packageWithMeta.name = bareName;
+      if (hasTagOrVersion) {
+        packageWithMeta.spec = packageSpec;
+      }
       this.#registerPackage(packageWithMeta);
 
       return {
@@ -176,7 +225,7 @@ export class BrowserPackageManager implements IPackageManager {
       const normalized =
         error instanceof Error ? error : new Error(String(error));
       console.error(
-        `[Connect][PackageManager] Failed to install package "${packageName}": ${normalized.message}`,
+        `[Connect][PackageManager] Failed to install package "${packageSpec}": ${normalized.message}`,
         normalized,
       );
       return {
@@ -296,7 +345,7 @@ export class BrowserPackageManager implements IPackageManager {
   }
 
   #registerPackage(packageWithMeta: PackageWithMeta) {
-    const { name, loadedPackage, importUrl, stylesheetUrl, version } =
+    const { name, loadedPackage, importUrl, stylesheetUrl, version, spec } =
       packageWithMeta;
 
     if (stylesheetUrl !== null) {
@@ -308,7 +357,11 @@ export class BrowserPackageManager implements IPackageManager {
       importUrl,
       stylesheetUrl,
       version,
+      ...(spec ? { spec } : {}),
     });
+    console.debug(
+      `[Connect][PackageManager] Registered "${name}" (version=${version ?? "?"}, spec=${spec ?? "—"})`,
+    );
 
     this.#notifyPackagesChanged();
   }

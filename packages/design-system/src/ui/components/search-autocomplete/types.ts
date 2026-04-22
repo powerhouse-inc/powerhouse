@@ -8,6 +8,15 @@ export interface SearchAutocompleteOption {
   meta?: string;
   disabled?: boolean;
   disabledLabel?: string;
+  distTags?: Record<string, string>;
+  versions?: string[];
+}
+
+export interface SearchAutocompleteRowContext {
+  selectingValue: string | null;
+  selectLabel: string;
+  selectingContent?: ReactNode;
+  handleSelect: (value: string) => void;
 }
 
 export interface SearchAutocompleteProps {
@@ -20,5 +29,10 @@ export interface SearchAutocompleteProps {
   loading?: boolean;
   className?: string;
   renderOption?: (option: SearchAutocompleteOption) => ReactNode;
+  renderRow?: (
+    option: SearchAutocompleteOption,
+    ctx: SearchAutocompleteRowContext,
+  ) => ReactNode;
+  keepOpenSelector?: string;
   debounceMs?: number;
 }
