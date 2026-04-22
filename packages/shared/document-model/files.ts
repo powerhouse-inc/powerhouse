@@ -1,4 +1,3 @@
-import { FileSystemError } from "./errors.js";
 import type JSZip from "jszip";
 import type { PHDocument, PHDocumentHeader } from "./documents.js";
 import {
@@ -6,6 +5,7 @@ import {
   garbageCollectDocumentOperations,
   replayDocument,
 } from "./documents.js";
+import { FileSystemError } from "./errors.js";
 import type { DocumentOperations } from "./operations.js";
 import { documentModelReducer } from "./reducers.js";
 import type { PHBaseState } from "./state.js";
@@ -79,7 +79,7 @@ export async function baseSaveToFileHandle(
   document: PHDocument,
   input: FileSystemFileHandle,
 ) {
-  const zip = createZip(document);
+  const zip = await createZip(document);
   const blob = await zip.generateAsync({ type: "blob" });
   const writable = await input.createWritable();
   await writable.write(blob);
