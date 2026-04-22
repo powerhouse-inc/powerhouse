@@ -1,3 +1,13 @@
+## 6.0.0-dev.190 (2026-04-22)
+
+### 🩹 Fixes
+
+- **builder-tools:** preserve version from powerhouse.config.json ([74c717d27](https://github.com/powerhouse-inc/powerhouse/commit/74c717d27))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 6.0.0-dev.189 (2026-04-22)
 
 ### 🚀 Features

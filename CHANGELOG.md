@@ -1,3 +1,22 @@
+## 6.0.0-dev.190 (2026-04-22)
+
+### 🚀 Features
+
+- preserve dist-tags end-to-end and streamline package manager UX ([#2490](https://github.com/powerhouse-inc/powerhouse/pull/2490))
+- **connect:** filter available packages and accept name@tag in search ([34e34335c](https://github.com/powerhouse-inc/powerhouse/commit/34e34335c))
+- **connect:** scope package listing to the custom registry + npm fallback ([faf4d6e88](https://github.com/powerhouse-inc/powerhouse/commit/faf4d6e88))
+
+### 🩹 Fixes
+
+- **builder-tools:** preserve version from powerhouse.config.json ([74c717d27](https://github.com/powerhouse-inc/powerhouse/commit/74c717d27))
+- **connect:** only surface npm fallback when no local matches ([fe717d65d](https://github.com/powerhouse-inc/powerhouse/commit/fe717d65d))
+- **shared:** preserve dist-tag in powerhouse.config.json from ph install ([8a32d4ce8](https://github.com/powerhouse-inc/powerhouse/commit/8a32d4ce8))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+- Guillermo Puente Sandoval @gpuente
+
 ## 6.0.0-dev.189 (2026-04-22)
 
 ### 🚀 Features

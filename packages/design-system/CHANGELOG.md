@@ -1,3 +1,18 @@
+## 6.0.0-dev.190 (2026-04-22)
+
+### 🚀 Features
+
+- **connect:** scope package listing to the custom registry + npm fallback ([faf4d6e88](https://github.com/powerhouse-inc/powerhouse/commit/faf4d6e88))
+- **connect:** filter available packages and accept name@tag in search ([34e34335c](https://github.com/powerhouse-inc/powerhouse/commit/34e34335c))
+
+### 🩹 Fixes
+
+- **connect:** only surface npm fallback when no local matches ([fe717d65d](https://github.com/powerhouse-inc/powerhouse/commit/fe717d65d))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 6.0.0-dev.189 (2026-04-22)
 
 ### 🚀 Features

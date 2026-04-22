@@ -1,3 +1,17 @@
+## 6.0.0-dev.190 (2026-04-22)
+
+### 🚀 Features
+
+- **connect:** filter available packages and accept name@tag in search ([34e34335c](https://github.com/powerhouse-inc/powerhouse/commit/34e34335c))
+
+### 🩹 Fixes
+
+- **shared:** preserve dist-tag in powerhouse.config.json from ph install ([8a32d4ce8](https://github.com/powerhouse-inc/powerhouse/commit/8a32d4ce8))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 6.0.0-dev.189 (2026-04-22)
 
 ### 🚀 Features
