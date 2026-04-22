@@ -76,7 +76,14 @@ export class BrowserPackageManager implements IPackageManager {
       this.updateLocalPackage(localPackage, localPackageVersion);
     }
     for (const packageName of this.#storage.keys()) {
-      await this.addPackage(packageName);
+      const result = await this.addPackage(packageName);
+      // Previously-installed package that no longer resolves (version
+      // withdrawn from npm, registry moved, etc.) would otherwise
+      // 404-toast on every boot forever. Drop it from persistent storage
+      // so the failure is one-shot instead of sticky.
+      if (result.type === "error") {
+        this.#storage.delete(packageName);
+      }
     }
   }
 
