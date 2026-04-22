@@ -22,6 +22,49 @@ const onlyLocallyInstalledPackages: RegistryPackage[] = mockPackages
   .slice(0, 3)
   .map((pkg) => ({ ...pkg, status: "local-install" }));
 
+// Packages with dist-tag + version metadata so the `name@tag` search path
+// has something meaningful to resolve against.
+const taggedPackages: RegistryPackage[] = [
+  {
+    ...mockPackages[0],
+    status: "available",
+    version: "2.4.1",
+    distTags: { latest: "2.4.1", staging: "2.5.0-staging.1" },
+    versions: ["1.0.0", "2.0.0", "2.4.1", "2.5.0-staging.1"],
+  },
+  {
+    ...mockPackages[1],
+    status: "available",
+    version: "1.2.3",
+    distTags: { latest: "1.2.3" },
+    versions: ["1.0.0", "1.2.3"],
+  },
+  {
+    ...mockPackages[2],
+    status: "available",
+    version: "0.9.0",
+    distTags: { latest: "0.9.0", dev: "1.0.0-dev.4" },
+    versions: ["0.5.0", "0.9.0", "1.0.0-dev.4"],
+  },
+  {
+    ...mockPackages[3],
+    status: "available",
+    version: "3.0.0",
+    distTags: {
+      latest: "3.0.0",
+      dev: "3.1.0-dev.2",
+      staging: "3.1.0-staging.1",
+    },
+    versions: ["2.0.0", "3.0.0", "3.1.0-dev.2", "3.1.0-staging.1"],
+  },
+  {
+    ...mockPackages[4],
+    status: "available",
+    version: "0.1.0",
+    // No dist-tags — covers the "package without metadata" path.
+  },
+];
+
 const meta: Meta<typeof PackageManager> = {
   title: "Connect/Components/PackageManager",
   component: PackageManager,
@@ -38,20 +81,27 @@ const baseArgs: Partial<Props> = {
   mutable: true,
 };
 
-export function PackageManagerWrapper() {
-  const [registryPackageList, setPackages] = useState(
-    baseArgs.registryPackageList ?? [],
-  );
+export function PackageManagerWrapper(args: Partial<Props> = {}) {
+  const initial =
+    args.registryPackageList ?? baseArgs.registryPackageList ?? [];
+  const [registryPackageList, setPackages] = useState(initial);
   return (
     <PackageManager
-      onInstall={(packageName) => {
-        console.log("Installed:", packageName);
-        return Promise.resolve();
-      }}
-      onUninstall={(name) => {
-        setPackages((prev) => prev.filter((p) => p.name !== name));
-      }}
-      mutable={true}
+      {...args}
+      onInstall={
+        args.onInstall ??
+        ((packageName) => {
+          console.log("Installed:", packageName);
+          return Promise.resolve();
+        })
+      }
+      onUninstall={
+        args.onUninstall ??
+        ((name) => {
+          setPackages((prev) => prev.filter((p) => p.name !== name));
+        })
+      }
+      mutable={args.mutable ?? true}
       registryPackageList={registryPackageList}
     />
   );
@@ -63,7 +113,7 @@ function PackageManagerStoryWrapper(storyArgs: Partial<Props> = {}): Story {
     ...storyArgs,
   } as Props;
   return {
-    render: PackageManagerWrapper,
+    render: (args) => <PackageManagerWrapper {...args} />,
     args: defaultArgs,
   };
 }
@@ -119,3 +169,43 @@ export const OnlyLocallyInstalled: Story = PackageManagerStoryWrapper({
 export const Empty: Story = PackageManagerStoryWrapper({
   registryPackageList: [],
 });
+
+/**
+ * Available packages carrying dist-tags + version metadata. The search
+ * input is the only way to narrow results — try `@uniswap/lp-tools@staging`
+ * or `my-pkg@1.2.3` to target a specific tag or version.
+ */
+export const WithTaggedPackages: Story = {
+  ...PackageManagerStoryWrapper({
+    registryPackageList: taggedPackages,
+  }),
+  decorators: [
+    (Story) => (
+      <div className="h-[700px]">
+        <Story />
+      </div>
+    ),
+  ],
+};
+
+/**
+ * The search input always shows an "Install from npm" fallback card when
+ * the typed query is a plausible package name that doesn't match anything
+ * already listed in the custom registry. Covers the case where the user
+ * wants to pull an npm-only package through the registry's uplink.
+ *
+ * Try typing `react-markdown` or `lodash` — the fallback card appears at
+ * the bottom of the results (the mock list doesn't contain those names).
+ */
+export const WithNpmFallback: Story = {
+  ...PackageManagerStoryWrapper({
+    registryPackageList: taggedPackages,
+  }),
+  decorators: [
+    (Story) => (
+      <div className="h-[500px]">
+        <Story />
+      </div>
+    ),
+  ],
+};

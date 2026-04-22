@@ -22,7 +22,7 @@ const PackageDetail: React.FC<{ label: string; value: ReactNode }> = ({
 
 export const PackageManagerListItem = (props: {
   registryPackage: RegistryPackage;
-  onInstall: (packageName: string) => Promise<void>;
+  onInstall: (packageSpec: string) => Promise<void>;
   onUninstall: (packageName: string) => void;
   className?: string;
 }) => {
@@ -135,12 +135,13 @@ export const PackageManagerListItem = (props: {
 
 export const PackageManagerList = (props: {
   registryPackageList: RegistryPackageList;
-  onInstall: (packageName: string) => Promise<void>;
+  onInstall: (packageSpec: string) => Promise<void>;
   onUninstall: (packageName: string) => void;
   className?: string;
 }) => {
   const { className, registryPackageList, onInstall, onUninstall } = props;
   const [maxHeight, setMaxHeight] = useState<number | undefined>();
+
   const locallyInstalledPackages = registryPackageList.filter(
     (p) => p.status === "local-install",
   );
@@ -347,7 +348,7 @@ const PackageSubSection: React.FC<{
 
 const PackageList: React.FC<{
   packages: RegistryPackageList;
-  onInstall: (packageName: string) => Promise<void>;
+  onInstall: (packageSpec: string) => Promise<void>;
   onUninstall: (packageName: string) => void;
 }> = ({ packages, onInstall, onUninstall }) => {
   return (
