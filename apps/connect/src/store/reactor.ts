@@ -284,7 +284,9 @@ export async function createReactor(localPackage?: DocumentModelLib) {
           const { manifest, processorFactory } = pkg;
           const name = manifest.name;
           const id = manifest.name;
-          logger.info("Loading processor factory: @name", name);
+          const version = packageManager.getPackageVersion(name);
+          const label = version ? `${name}@${version}` : name;
+          logger.info("Loading processor factory: @label", label);
           try {
             const factory = await processorFactory?.(processorHostModule);
             if (!factory) return;
@@ -293,7 +295,7 @@ export async function createReactor(localPackage?: DocumentModelLib) {
               factory,
             );
           } catch (error) {
-            logger.error(`Error registering processor: @name`, name);
+            logger.error(`Error registering processor: @label`, label);
             logger.error("@error", error);
           }
         }),

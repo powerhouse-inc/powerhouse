@@ -59,12 +59,24 @@ export function useRegistryPackages() {
               makeRegistryPackageFromPackageInfo(packageInfo, status);
           } else {
             // Keep the cached entry's status, but refresh anything the
-            // registry sent. This includes version, distTags, and the
-            // versions list the Package Manager UI filters on.
+            // registry sent. This includes distTags and the versions list
+            // the Package Manager UI filters on.
+            //
+            // For `version`, prefer the actually-installed version from the
+            // package manager (set by the rehydration effect). `packageInfo.version`
+            // is the registry's newest-published version, which for installed
+            // packages would incorrectly overwrite the user's picked version
+            // on the next /packages refresh.
+            const installedVersion = packageManager.getPackageVersion(
+              packageInfo.name,
+            );
             newRegistryPackages[packageInfo.name] = {
               ...existingPackage,
               manifest: packageInfo.manifest ?? existingPackage.manifest,
-              version: packageInfo.version ?? existingPackage.version,
+              version:
+                installedVersion ??
+                packageInfo.version ??
+                existingPackage.version,
               distTags: packageInfo.distTags ?? existingPackage.distTags,
               versions: packageInfo.versions ?? existingPackage.versions,
               documentTypes: packageInfo.documentTypes.length
