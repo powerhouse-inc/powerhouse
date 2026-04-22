@@ -41,6 +41,7 @@ describe("generateApp", () => {
       },
       project,
     );
+    await project.save();
     const editorsDir = join(outDir, "editors");
     expect(await directoryExists(editorsDir)).toBe(true);
 
@@ -148,6 +149,7 @@ describe("generateApp", () => {
       },
       project,
     );
+    await project.save();
     const editorsDir = join(outDir, "editors");
     const editorsFilePath = join(editorsDir, "editors.ts");
     const editorsContent = await readFile(editorsFilePath, "utf-8");

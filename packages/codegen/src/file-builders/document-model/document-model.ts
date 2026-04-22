@@ -206,35 +206,33 @@ export async function tsMorphGenerateDocumentModel(
 
     // /{document-model-dir}/upgrades/upgrade-manifest.ts
     await createOrUpdateUpgradeManifestFile(fileMakerArgs);
-    // /upgrades/versions.ts
-    await createOrUpdateVersionConstantsFile({
-      project,
-      versions,
-      latestVersion,
-      upgradesDirPath,
-    });
-
-    // /{document-model-dir}/upgrades/index.ts
-    await makeUpgradesIndexFile({
-      ...documentModelVariableNames,
-      project,
-      versions,
-      upgradesDirPath,
-    });
-    // /document-models/{document-model-dir}/index.ts
-    await makeDocumentModelIndexFile({
-      project,
-      documentModelDirPath,
-      latestVersion,
-    });
-    await project.save();
   }
 
+  // /upgrades/versions.ts
+  await createOrUpdateVersionConstantsFile({
+    project,
+    versions,
+    latestVersion,
+    upgradesDirPath,
+  });
+
+  // /{document-model-dir}/upgrades/index.ts
+  await makeUpgradesIndexFile({
+    ...documentModelVariableNames,
+    project,
+    versions,
+    upgradesDirPath,
+  });
+  // /document-models/{document-model-dir}/index.ts
+  await makeDocumentModelIndexFile({
+    project,
+    documentModelDirPath,
+    latestVersion,
+  });
   // /document-models/document-models.ts
   await makeDocumentModelsFile({ project, documentModelsDirPath });
   // /document-models/upgrade-manifests.ts
   await makeUpgradeManifestsFile({ project, documentModelsDirPath });
-  await project.save();
   await createOrUpdateManifest(
     {
       documentModels: [

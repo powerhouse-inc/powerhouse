@@ -22,7 +22,6 @@ import {
 } from "./utils.js";
 
 export async function generateTestProjects() {
-  console.log({ TEST_PROJECTS, NEW_PROJECT });
   await rmForce(TEST_PROJECTS);
   await mkdirRecursive(TEST_PROJECTS);
 
@@ -34,9 +33,7 @@ export async function generateTestProjects() {
     skipInstall: true,
   });
   await runTsc(NEW_PROJECT);
-
   await cpForce(NEW_PROJECT, WITH_DOCUMENT_MODELS_SPEC_1);
-
   await loadDocumentModelsInDir(SPEC_VERSION_1, WITH_DOCUMENT_MODELS_SPEC_1);
   await runTsc(WITH_DOCUMENT_MODELS_SPEC_1);
 
@@ -48,8 +45,8 @@ export async function generateTestProjects() {
 
   await cpForce(WITH_DOCUMENT_MODELS_SPEC_2, WITH_EDITORS);
 
+  process.chdir(WITH_EDITORS);
   const project = buildTsMorphProject(WITH_EDITORS);
-
   await generateEditor(
     {
       editorId: "existing-document-editor",
@@ -70,5 +67,6 @@ export async function generateTestProjects() {
     project,
   );
 
+  await project.save();
   await runTsc(WITH_EDITORS);
 }

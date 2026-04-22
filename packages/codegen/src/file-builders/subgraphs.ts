@@ -62,7 +62,6 @@ export async function tsMorphGenerateSubgraph(
   }
 
   await makeSubgraphsIndexFile({ project, subgraphsDir: subgraphsDirPath });
-  await project.save();
   await createOrUpdateManifest(
     {
       subgraphs: [
@@ -224,5 +223,4 @@ export async function makeSubgraphsIndexFile(args: {
     })),
   );
   sourceFile.addExportDeclarations(exportDeclarations);
-  await project.save();
 }

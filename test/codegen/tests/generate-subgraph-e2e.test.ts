@@ -39,6 +39,7 @@ async function generateSubgraphProject(outDirName: string) {
     getDocumentModelJsonFilePath(DOCUMENT_MODELS, "test-doc"),
     project,
   );
+  await project.save();
 
   // Compile the generated project — this catches API mismatches in the
   // generated code (e.g. resolvers referencing non-existent properties

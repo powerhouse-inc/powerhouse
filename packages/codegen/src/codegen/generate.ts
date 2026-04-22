@@ -1,4 +1,7 @@
-import { type DocumentModelGlobalState } from "@powerhousedao/shared/document-model";
+import {
+  DocumentModelGlobalStateSchema,
+  type DocumentModelGlobalState,
+} from "@powerhousedao/shared/document-model";
 import type {
   ProcessorApp,
   ProcessorApps,
@@ -11,7 +14,8 @@ import {
   tsMorphGenerateProcessor,
   tsMorphGenerateSubgraph,
 } from "file-builders";
-import { statSync } from "node:fs";
+import { loadJsonFileSync } from "load-json-file";
+import { readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import {
   conditional,
@@ -45,19 +49,25 @@ export async function generateAllDocumentModels(project: Project) {
     project,
     "document-models",
   );
-  const documentModelDirs = documentModelsDir.getDirectories();
-  const documentModels = pipe(
-    documentModelDirs,
-    map((dir) => join(dir.getPath(), `${dir.getBaseName()}.json`)),
-    filter((path) => statSync(path).isFile()),
-    map(async (path) => await loadDocumentModel(path)),
-    map(
-      async (documentModelState) =>
-        await generateDocumentModel(await documentModelState, project),
+  const documentModelsDirPath = documentModelsDir.getPath();
+  const documentModelStateFiles = pipe(
+    readdirSync(documentModelsDirPath, { withFileTypes: true }),
+    filter((dirent) => dirent.isDirectory()),
+    map((dir) => join(dir.parentPath, `${dir.name}/${dir.name}.json`)),
+    filter(
+      (srcPath) =>
+        statSync(srcPath, { throwIfNoEntry: false })?.isFile() ?? false,
+    ),
+    map((srcPath) => loadJsonFileSync(srcPath)),
+    filter(
+      (stateFile): stateFile is DocumentModelGlobalState =>
+        DocumentModelGlobalStateSchema().safeParse(stateFile).success === true,
     ),
   );
 
-  await Promise.all(documentModels).catch(console.error);
+  for (const documentModelState of documentModelStateFiles) {
+    await generateDocumentModel(documentModelState, project);
+  }
 }
 export async function generateFromFile(filePath: string, project: Project) {
   // load document model spec from file

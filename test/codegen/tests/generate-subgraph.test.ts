@@ -1,4 +1,4 @@
-import { loadDocumentModel } from "@powerhousedao/codegen";
+import { generateSubgraph, loadDocumentModel } from "@powerhousedao/codegen";
 import { tsMorphGenerateSubgraph } from "@powerhousedao/codegen/file-builders";
 import { buildTsMorphProject } from "@powerhousedao/codegen/utils";
 import { describe, expect, it } from "bun:test";
@@ -22,13 +22,8 @@ describe("generateSubgraph", () => {
     const subgraphsDir = join(outDir, "subgraphs");
     const project = buildTsMorphProject(outDir);
 
-    await tsMorphGenerateSubgraph(
-      {
-        subgraphName: "my-custom",
-        documentModel: null,
-      },
-      project,
-    );
+    await generateSubgraph("my-custom", null, project);
+    await project.save();
 
     await runTsc(outDir);
 
@@ -100,7 +95,7 @@ describe("generateSubgraph", () => {
       },
       project,
     );
-
+    await project.save();
     await runTsc(outDir);
 
     // index.ts — base subgraph class
@@ -166,6 +161,7 @@ describe("generateSubgraph", () => {
       project,
     );
 
+    await project.save();
     await runTsc(outDir);
 
     // Read original content
@@ -182,6 +178,7 @@ describe("generateSubgraph", () => {
       },
       project,
     );
+    await project.save();
 
     const secondIndex = await readFile(
       join(subgraphsDir, "idempotent-test", "index.ts"),
@@ -211,6 +208,7 @@ describe("generateSubgraph", () => {
       },
       project,
     );
+    await project.save();
 
     const schema1 = await readFile(
       join(subgraphsDir, "force-test", "schema.ts"),
@@ -226,6 +224,7 @@ describe("generateSubgraph", () => {
       },
       project,
     );
+    await project.save();
 
     await runTsc(outDir);
 

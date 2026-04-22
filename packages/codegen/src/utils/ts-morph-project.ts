@@ -1,4 +1,4 @@
-import path, { join } from "path";
+import path from "path";
 import { IndentationText, Project } from "ts-morph";
 
 export const DEFAULT_PROJECT_OPTIONS = {
@@ -26,7 +26,9 @@ export function getDefaultProjectOptions(tsConfigFilePath: string) {
 export function buildTsMorphProject(projectDir: string) {
   process.chdir(projectDir);
   const tsConfigFilePath = path.join(projectDir, "tsconfig.json");
-  const project = new Project(getDefaultProjectOptions(tsConfigFilePath));
-  project.addSourceFilesAtPaths(join(projectDir, "**/*"));
+  const project = new Project({
+    tsConfigFilePath,
+    skipFileDependencyResolution: true,
+  });
   return project;
 }

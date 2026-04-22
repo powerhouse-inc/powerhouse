@@ -56,7 +56,6 @@ export async function ensureDirectoriesExist(
       project.createDirectory(dirPath);
     }
   }
-  await project.save();
 }
 
 export function getPreviousVersionSourceFile(args: {

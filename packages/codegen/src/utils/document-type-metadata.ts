@@ -3,20 +3,11 @@ import {
   type DocumentModelGlobalState,
 } from "@powerhousedao/shared/document-model";
 import type { DocumentModelDocumentTypeMetadata } from "file-builders";
+import { readdirSync, statSync } from "fs";
 import { loadJsonFileSync } from "load-json-file";
 import { getDocumentModelVariableNames } from "name-builders";
 import { join } from "path";
-import {
-  filter,
-  find,
-  flatMap,
-  isString,
-  isTruthy,
-  map,
-  pipe,
-  prop,
-  when,
-} from "remeda";
+import { filter, find, isString, map, pipe, prop, when } from "remeda";
 import type { Project } from "ts-morph";
 import { getOrCreateDirectory } from "utils";
 
@@ -35,16 +26,20 @@ export function getDocumentTypeMetadata({
     project,
     "document-models",
   );
+  const documentModelsDirPath = documentModelsDir.getPath();
 
   const documentModelVariableNames = pipe(
-    documentModelsDir.getDirectories(),
-    flatMap((dir) => dir.getSourceFile(`${dir.getBaseName()}.json`)),
-    filter(isTruthy),
-    map((file) => file.getFilePath()),
-    map((path) => loadJsonFileSync(path)),
+    readdirSync(documentModelsDirPath, { withFileTypes: true }),
+    filter((dirent) => dirent.isDirectory()),
+    map((dir) => join(dir.parentPath, `${dir.name}/${dir.name}.json`)),
     filter(
-      (file): file is DocumentModelGlobalState =>
-        DocumentModelGlobalStateSchema().safeParse(file).success === true,
+      (srcPath) =>
+        statSync(srcPath, { throwIfNoEntry: false })?.isFile() ?? false,
+    ),
+    map((srcPath) => loadJsonFileSync(srcPath)),
+    filter(
+      (stateFile): stateFile is DocumentModelGlobalState =>
+        DocumentModelGlobalStateSchema().safeParse(stateFile).success === true,
     ),
     find((state) => state.id === documentModelId),
     prop("name"),

@@ -37,6 +37,7 @@ describe("generateEditor", () => {
       },
       project,
     );
+    await project.save();
     const editorsDir = join(outDir, "editors");
     const editorsFilePath = join(editorsDir, "editors.ts");
     expect(await fileExists(editorsFilePath)).toBe(true);
@@ -79,6 +80,7 @@ describe("generateEditor", () => {
       },
       project,
     );
+    await project.save();
     const editorsDir = join(outDir, "editors");
     const editorsFilePath = join(editorsDir, "editors.ts");
     const editorsContent = await readFile(editorsFilePath, "utf-8");

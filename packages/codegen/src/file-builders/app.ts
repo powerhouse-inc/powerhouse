@@ -115,7 +115,6 @@ export async function tsMorphGenerateApp({
   });
 
   await makeEditorsFile({ project, editorsDirPath });
-  await project.save();
   await createOrUpdateManifest(
     {
       apps: [

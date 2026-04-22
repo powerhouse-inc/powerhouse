@@ -68,7 +68,6 @@ export async function tsMorphGenerateDocumentEditor({
   });
 
   await makeEditorsFile({ project, editorsDirPath });
-  await project.save();
   await createOrUpdateManifest(
     {
       editors: [

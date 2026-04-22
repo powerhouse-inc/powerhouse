@@ -10,7 +10,7 @@ import {
   packageScripts,
   writeAllGeneratedProjectFiles,
 } from "file-builders";
-import { cp, readdir, rm } from "fs/promises";
+import { cpSync, mkdirSync, readdirSync, rmSync, statSync } from "fs";
 import npmFetch from "npm-registry-fetch";
 import { join } from "path";
 import { readPackage } from "read-pkg";
@@ -27,7 +27,7 @@ import {
   prop,
 } from "remeda";
 import type { Project } from "ts-morph";
-import { buildTsMorphProject, formatSourceFileWithPrettier } from "utils";
+import { buildTsMorphProject } from "utils";
 import { updatePackage } from "write-package";
 import { generateAll } from "./generate.js";
 
@@ -46,7 +46,7 @@ export async function getFullyQualifiedWorkspacePackageVersion(
   return result["dist-tags"][versionOrTag];
 }
 
-export async function fixLegacyImportPaths(
+export function fixLegacyImportPaths(
   project: Project,
   packageName: string | undefined,
 ) {
@@ -72,9 +72,15 @@ export async function fixLegacyImportPaths(
       if (namedImports.includes("generateMock")) {
         moduleSpecifier.setLiteralValue("document-model");
       }
+      const match = moduleSpecifierText.match(
+        /^(\.\.\/)+document-models\/([^/]+)(?!\/v\d+(?:\/|$))(?:\/.*)?$/,
+      );
+
+      if (match) {
+        moduleSpecifier.setLiteralValue(`document-models/${match[2]}`);
+      }
     }
   }
-  await project.save();
 }
 
 export async function migrate(version: string, projectDir = process.cwd()) {
@@ -129,71 +135,68 @@ export async function migrate(version: string, projectDir = process.cwd()) {
     dependencies,
     devDependencies,
   });
-  // console.log("Moving unversioned document models...");
-  // const documentModelsDir = join(projectDir, "document-models");
-  // await moveLegacyDocumentModels(project, documentModelsDir);
-  // await project.save();
+
   console.log("Overwriting project root files...");
   await writeAllGeneratedProjectFiles(projectDir);
-  // await project.save();
-  // console.log("Fixing legacy import paths...");
-  // await fixLegacyImportPaths(project, packageJson.name);
-  // await project.save();
+  console.log("Moving unversioned document models...");
+  moveLegacyDocumentModels(projectDir);
   const project = buildTsMorphProject(projectDir);
+  console.log("Fixing legacy import paths...");
+  fixLegacyImportPaths(project, packageJson.name);
   console.log("Re-generating code...");
   await generateAll(project);
   await project.save();
 }
 
-async function moveLegacyDocumentModels(
-  project: Project,
-  documentModelsDir: string,
-) {
-  const documentModelDirNames = map(
+function moveLegacyDocumentModels(projectDir: string) {
+  const fileNamesToDelete = [
+    "actions.ts",
+    "hooks.ts",
+    "module.ts",
+    "index.ts",
+    "utils.ts",
+    "schema.graphql",
+  ];
+  const dirNamesToCopy = ["src", "gen"];
+  const dirs = pipe(
+    readdirSync(join(projectDir, "document-models"), { withFileTypes: true }),
+    filter((entry) => entry.isDirectory()),
     filter(
-      await readdir(documentModelsDir, { withFileTypes: true }),
-      (dirent) => dirent.isDirectory(),
+      (dir) =>
+        statSync(join(dir.parentPath, dir.name, `${dir.name}.json`), {
+          throwIfNoEntry: false,
+        })?.isFile() ?? false,
     ),
-    (dir) => dir.name,
+    map((dir) => join(dir.parentPath, dir.name)),
   );
-  for (const documentModelDirName of documentModelDirNames) {
-    const documentModelDir = join(documentModelsDir, documentModelDirName);
-    const versionDir = join(documentModelDir, "v1");
-    const toIgnore = [
-      /^v\d+$/,
-      new RegExp(`${documentModelDirName}.json`),
-      /upgrades/,
-    ];
-    const dirContents = await readdir(documentModelDir);
-    const toCopy = filter(
-      dirContents,
-      (v) => !toIgnore.some((regex) => regex.test(v)),
-    );
-    for (const item of toCopy) {
-      const itemSrc = join(documentModelDir, item);
-      const itemDest = join(versionDir, item);
-      await cp(itemSrc, itemDest, {
-        recursive: true,
-      });
-      await rm(itemSrc, {
-        recursive: true,
-        force: true,
-      });
-    }
-    const projectVersionDir = project.addDirectoryAtPath(versionDir);
-    project.addSourceFilesAtPaths(join(versionDir, "**/*.ts"));
-    const versionDirSourceFiles = projectVersionDir.getDescendantSourceFiles();
-    for (const sourceFile of versionDirSourceFiles) {
-      const importStatements = sourceFile.getImportDeclarations();
-      for (const importStatement of importStatements) {
-        const moduleSpecifier = importStatement.getModuleSpecifier();
-        const moduleSpecifierText = moduleSpecifier.getLiteralText();
 
-        if (/^document-models\/.+/.test(moduleSpecifierText)) {
-          moduleSpecifier.setLiteralValue(join(moduleSpecifierText, "v1"));
-        }
-      }
-      await formatSourceFileWithPrettier(sourceFile);
+  for (const dirPath of dirs) {
+    for (const name of fileNamesToDelete) {
+      const filePath = join(dirPath, name);
+      rmSync(filePath, { force: true });
+    }
+    const versionDirPath = join(dirPath, "v1");
+    const versionDirExists =
+      statSync(versionDirPath, { throwIfNoEntry: false })?.isDirectory() ??
+      false;
+    if (!versionDirExists) {
+      mkdirSync(versionDirPath);
+    }
+    for (const dirName of dirNamesToCopy) {
+      const srcDirPath = join(dirPath, dirName);
+      const srcDirExists =
+        statSync(srcDirPath, { throwIfNoEntry: false })?.isDirectory() ?? false;
+      if (!srcDirExists) continue;
+      const destDirPath = join(versionDirPath, dirName);
+      cpSync(srcDirPath, destDirPath, {
+        recursive: true,
+        force: false,
+        errorOnExist: false,
+      });
+      rmSync(srcDirPath, {
+        force: true,
+        recursive: true,
+      });
     }
   }
 }

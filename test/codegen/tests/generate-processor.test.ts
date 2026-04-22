@@ -15,12 +15,11 @@ import type {
   ProcessorApps,
   ProcessorRecord,
 } from "@powerhousedao/shared/processors";
-import { $ } from "bun";
 import { afterEach, describe, expect, it } from "bun:test";
 import { join } from "path";
 import { Project } from "ts-morph";
 import { NEW_PROJECT, TEST_OUTPUT } from "../constants.js";
-import { cpForce, mkdirRecursive, rmForce } from "../utils.js";
+import { cpForce, mkdirRecursive, rmForce, runTsc } from "../utils.js";
 
 import { PGlite } from "@electric-sql/pglite";
 import { live } from "@electric-sql/pglite/live";
@@ -72,7 +71,8 @@ async function runProcessorTests(args: {
       project,
     );
   }
-  await $`bun run --cwd ${outDir} tsc`;
+  await project.save();
+  await runTsc(outDir);
 
   return outDir;
 }
@@ -461,6 +461,8 @@ describe("processor e2e integration", () => {
       },
       project,
     );
+
+    await project.save();
 
     // 2. Instrument the generated processor with ts-morph to add a log
     const processorFilePath = join(

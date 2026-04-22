@@ -76,7 +76,6 @@ export async function tsMorphGenerateProcessor(args: {
       kebabCaseName,
     });
   }
-  await project.save();
   await createOrUpdateManifest(
     {
       processors: [{ name: processorName, id: kebabCaseName }],
