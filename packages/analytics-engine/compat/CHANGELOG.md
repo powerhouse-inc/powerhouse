@@ -1,3 +1,7 @@
+## 6.0.0-dev.191 (2026-04-22)
+
+This was a version bump only for compat to align it with other projects, there were no code changes.
+
 ## 6.0.0-dev.190 (2026-04-22)
 
 This was a version bump only for compat to align it with other projects, there were no code changes.
