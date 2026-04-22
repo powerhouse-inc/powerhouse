@@ -14,8 +14,16 @@ import type { DocumentModelLib } from "document-model";
 import { useEffect, useMemo } from "react";
 import { useLocalStorage } from "usehooks-ts";
 
-const REGISTRY_PACKAGES_KEY =
-  `REGISTRY_PACKAGES:${PH_PACKAGE_REGISTRY_URL}` as const;
+// Normalize the registry URL before using it as the localStorage key.
+// Otherwise `http://host` and `http://host/` produce two separate maps and
+// the install/status flow reads from one while the registry fetch writes to
+// the other.
+const REGISTRY_PACKAGES_KEY = `REGISTRY_PACKAGES:${
+  typeof PH_PACKAGE_REGISTRY_URL === "string" &&
+  PH_PACKAGE_REGISTRY_URL.endsWith("/")
+    ? PH_PACKAGE_REGISTRY_URL.slice(0, -1)
+    : PH_PACKAGE_REGISTRY_URL
+}` as const;
 
 export function useRegistryPackages() {
   const packageManager = useVetraPackageManager();
@@ -126,10 +134,42 @@ export function useRegistryPackages() {
     });
   }
 
+  /**
+   * Register a freshly-installed package that came in via the npm-uplink
+   * fallback — the user typed a bare name, our local `/packages` didn't know
+   * it, but the install succeeded because verdaccio proxy-fetched the tarball.
+   *
+   * This is the one legitimate case where the status update runs against a
+   * name that wasn't in the registry map. We treat it as an insert rather
+   * than logging the "does not exist" error. Data is pulled from the loaded
+   * module so the UI card shows the real manifest immediately; the next
+   * `/packages` refresh will add `versions`/`distTags`.
+   */
+  function registerFallbackRegistryPackage(
+    packageName: string,
+    loadedPackage: DocumentModelLib,
+    version: string | undefined,
+    status: RegistryPackageStatus,
+  ) {
+    setRegistryPackagesMap((oldRegistryPackages) => {
+      const newRegistryPackages = { ...oldRegistryPackages };
+      newRegistryPackages[packageName] = {
+        ...makeRegistryPackageFromDocumentModelLib(
+          loadedPackage,
+          status,
+          version,
+        ),
+        name: packageName,
+      };
+      return newRegistryPackages;
+    });
+  }
+
   return {
     registryPackagesMap,
     registryPackageList,
     updateRegistryPackageStatus,
+    registerFallbackRegistryPackage,
   };
 }
 

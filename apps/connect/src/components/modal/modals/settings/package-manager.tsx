@@ -19,8 +19,11 @@ function parseBareName(spec: string): string {
 
 export const ConnectPackageManager: React.FC = () => {
   const packageManager = useVetraPackageManager();
-  const { registryPackageList, updateRegistryPackageStatus } =
-    useRegistryPackages();
+  const {
+    registryPackageList,
+    updateRegistryPackageStatus,
+    registerFallbackRegistryPackage,
+  } = useRegistryPackages();
 
   async function handleInstall(packageSpec: string) {
     if (!packageManager) return;
@@ -29,10 +32,29 @@ export const ConnectPackageManager: React.FC = () => {
     // search input. Pass it through to the package manager as-is (the CDN
     // route already handles `name@tag` specs), but track status under the
     // bare name so the Settings list doesn't fragment.
-    const result = await packageManager.addPackage(packageSpec);
     const bareName = parseBareName(packageSpec);
+    // Packages that were in `/packages` when the user clicked Install go
+    // through `updateRegistryPackageStatus` and hit an existing entry.
+    // Packages that landed via the npm-uplink fallback weren't in the list,
+    // so we register them explicitly rather than silently upserting a
+    // placeholder — keeping the "does not exist" error as a signal for any
+    // other code path that reaches update without a matching entry.
+    const wasKnownToRegistry = registryPackageList.some(
+      (p) => p.name === bareName,
+    );
+    const result = await packageManager.addPackage(packageSpec);
     if (result.type === "success") {
-      updateRegistryPackageStatus(bareName, "registry-install");
+      if (wasKnownToRegistry) {
+        updateRegistryPackageStatus(bareName, "registry-install");
+      } else {
+        registerFallbackRegistryPackage(
+          bareName,
+          result.package,
+          packageManager.getPackageVersion(bareName) ??
+            packageManager.getPackageVersion(packageSpec),
+          "registry-install",
+        );
+      }
       toast(`Package "${packageSpec}" installed successfully`, {
         type: "connect-success",
       });
