@@ -4,7 +4,7 @@ import type {
   GetOperationsResult,
   IRemoteClient,
   PropagationMode,
-  ReactorGraphQLClient,
+  RemoteControllerGraphQLClient,
   RemoteDocumentData,
   RemoteOperation,
   RemoteOperationResultPage,
@@ -19,7 +19,7 @@ export class RemoteClient implements IRemoteClient {
   private readonly pageSize: number;
 
   constructor(
-    private readonly client: ReactorGraphQLClient,
+    private readonly client: RemoteControllerGraphQLClient,
     pageSize?: number,
   ) {
     this.pageSize = pageSize ?? DEFAULT_PAGE_SIZE;
@@ -260,10 +260,10 @@ export class RemoteClient implements IRemoteClient {
    */
   private async fetchOperationPages(
     filters: Parameters<
-      ReactorGraphQLClient["GetDocumentOperations"]
+      RemoteControllerGraphQLClient["GetDocumentOperations"]
     >[0]["filter"][],
     pagings: Parameters<
-      ReactorGraphQLClient["GetDocumentOperations"]
+      RemoteControllerGraphQLClient["GetDocumentOperations"]
     >[0]["paging"][],
   ): Promise<RemoteOperationResultPage[]> {
     if (this.client.BatchGetDocumentOperations) {
