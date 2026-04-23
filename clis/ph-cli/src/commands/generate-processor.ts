@@ -11,7 +11,7 @@ import {
   optional,
   string,
 } from "cmd-ts";
-import { Directory } from "cmd-ts/batteries/fs";
+import { Directory } from "cmd-ts/dist/esm/batteries/fs.js";
 
 const ProcessorAppType: Type<string[], ("connect" | "switchboard")[]> = {
   from(processorApps) {
