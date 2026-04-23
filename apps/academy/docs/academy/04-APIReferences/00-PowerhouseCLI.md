@@ -208,6 +208,13 @@ Use your local `powerhouse` monorepo dependencies the current project.
 ### ph-cli Commands
 
 - [Generate](#generate)
+- [All](#all)
+- [Document Model](#document-model)
+- [Editor](#editor)
+- [App](#app)
+- [Processor](#processor)
+- [Subgraph](#subgraph)
+- [Migration File](#migration-file)
 - [Vetra](#vetra)
 - [Connect](#connect)
 - [Connect Studio](#connect-studio)
@@ -233,6 +240,155 @@ processors, and other components based on your document model files.
 - 2. Generates code for specified components (editors, processors, etc.)
 - 3. Supports customization of output and generation options
 - 4. Can watch files for changes and regenerate code automatically
+
+
+## All
+Re-generate all modules in the current project
+
+
+
+### Flags
+**Help** - show help - Usage: `--help, -h`
+
+
+## Document Model
+Generate a document model
+
+
+
+### Options
+**File** - Path to the file to generate the document model from - Usage: `--file, -f <file>`
+
+**Dir** - Name of the directory of an existing document model to re-generate - Usage: `--dir, -d <dir>`
+
+
+
+
+### Flags
+**All** - Re-generate all existing document models in the current project - Usage: `--all, -a`
+
+**Debug** - Log arguments passed to this command - Usage: `--debug`
+
+**Help** - show help - Usage: `--help, -h`
+
+
+## Editor
+Generate a document editor
+
+
+
+### Options
+**Name** - The name of the document editor to generate - Usage: `--name, -n <str>`
+
+**Document Type** - The document type for the new editor - Usage: `--document-type, -t <str>`
+
+**Dir** - Name of the directory of an existing editor to re-generate - Usage: `--dir, -d <dir>`
+
+
+
+
+### Flags
+**All** - Re-generate all existing editors in the current project - Usage: `--all, -a`
+
+**Debug** - Log arguments passed to this command - Usage: `--debug`
+
+**Help** - show help - Usage: `--help, -h`
+
+
+## App
+Generate a drive app
+
+
+
+### Options
+**Name** - The name of the drive app to generate - Usage: `--name, -n <str>`
+
+**Document Types** - The document types allowed by the new app - Usage: `--document-types <str>, -t=<str>`
+
+**Dir** - Name of the directory of an existing app to re-generate - Usage: `--dir, -d <dir>`
+
+
+
+
+### Flags
+**Disable Drag And Drop** - Do not allow drag and drop in this drive app. - Usage: `--disable-drag-and-drop`
+
+**Default:** `true`
+**All** - Re-generate all existing apps in the current project - Usage: `--all, -a`
+
+**Debug** - Log arguments passed to this command - Usage: `--debug`
+
+**Help** - show help - Usage: `--help, -h`
+
+
+## Processor
+Generate a processor
+
+
+
+### Options
+**Name** - The name of the processor to generate - Usage: `--name, -n <str>`
+
+**Type** - The type of processor to generate - Usage: `--type <value>`
+
+**Default:** `analytics`
+**Document Types** - The document types the processor will run on - Usage: `--document-types <str>, -t=<str>`
+
+**Default:** ``
+**Apps** - Whether the processor will run in switchboard (nodejs), connect (browser), or both - Usage: `--apps <value>`
+
+**Default:** `switchboard,connect`
+**Dir** - Name of the directory of an existing processor to re-generate - Usage: `--dir, -d <dir>`
+
+
+
+
+### Flags
+**All** - Re-generate all existing processors in the current project - Usage: `--all, -a`
+
+**Debug** - Log arguments passed to this command - Usage: `--debug`
+
+**Help** - show help - Usage: `--help, -h`
+
+
+## Subgraph
+Generate a subgraph
+
+
+
+### Options
+**Name** - The name of the subgraph to generate - Usage: `--name, -n <str>`
+
+**Dir** - Name of the directory of an existing subgraph to re-generate - Usage: `--dir, -d <dir>`
+
+
+
+
+### Flags
+**All** - Re-generate all existing subgraphs in the current project - Usage: `--all, -a`
+
+**Debug** - Log arguments passed to this command - Usage: `--debug`
+
+**Help** - show help - Usage: `--help, -h`
+
+
+## Migration File
+Generate a a migration file
+
+
+
+### Options
+**Path *[required]*** - Path to the migration file - Usage: `--path, -p <str>`
+
+**Schema File** - Path to the output file. Defaults to './schema.ts' - Usage: `--schema-file <str>`
+
+
+
+
+### Flags
+**Debug** - Log arguments passed to this command - Usage: `--debug`
+
+**Help** - show help - Usage: `--help, -h`
 
 
 ## Vetra

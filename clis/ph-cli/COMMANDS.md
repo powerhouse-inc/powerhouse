@@ -3,6 +3,13 @@ This document provides detailed information about the available commands in the 
 The Powerhouse CLI (ph-cli) is a command-line interface tool that provides essential commands for managing Powerhouse projects. The tool and it's commands are fundamental for creating, building, and running Document Models as a builder in studio mode.<br>
 ## Table of Contents
 - [Generate](#generate)
+- [All](#all)
+- [Document Model](#document-model)
+- [Editor](#editor)
+- [App](#app)
+- [Processor](#processor)
+- [Subgraph](#subgraph)
+- [Migration File](#migration-file)
 - [Vetra](#vetra)
 - [Connect](#connect)
 - [Connect Studio](#connect-studio)
@@ -27,6 +34,190 @@ This command:
 2. Generates code for specified components (editors, processors, etc.)
 3. Supports customization of output and generation options
 4. Can watch files for changes and regenerate code automatically
+
+## All
+Re-generate all modules in the current project
+### flags
+#### Help <br>
+show help<br><br>
+**usage:** `--help, -h`<br>
+
+
+## Document Model
+Generate a document model
+### options
+#### File <br>
+Path to the file to generate the document model from<br><br>
+**usage:** `--file, -f <file>`<br>
+
+#### Dir <br>
+Name of the directory of an existing document model to re-generate<br><br>
+**usage:** `--dir, -d <dir>`<br>
+
+
+### flags
+#### All <br>
+Re-generate all existing document models in the current project<br><br>
+**usage:** `--all, -a`<br>
+
+#### Debug <br>
+Log arguments passed to this command<br><br>
+**usage:** `--debug`<br>
+
+#### Help <br>
+show help<br><br>
+**usage:** `--help, -h`<br>
+
+
+## Editor
+Generate a document editor
+### options
+#### Name <br>
+The name of the document editor to generate<br><br>
+**usage:** `--name, -n <str>`<br>
+
+#### Document Type <br>
+The document type for the new editor<br><br>
+**usage:** `--document-type, -t <str>`<br>
+
+#### Dir <br>
+Name of the directory of an existing editor to re-generate<br><br>
+**usage:** `--dir, -d <dir>`<br>
+
+
+### flags
+#### All <br>
+Re-generate all existing editors in the current project<br><br>
+**usage:** `--all, -a`<br>
+
+#### Debug <br>
+Log arguments passed to this command<br><br>
+**usage:** `--debug`<br>
+
+#### Help <br>
+show help<br><br>
+**usage:** `--help, -h`<br>
+
+
+## App
+Generate a drive app
+### options
+#### Name <br>
+The name of the drive app to generate<br><br>
+**usage:** `--name, -n <str>`<br>
+
+#### Document Types <br>
+The document types allowed by the new app<br><br>
+**usage:** `--document-types <str>, -t=<str>`<br>
+
+#### Dir <br>
+Name of the directory of an existing app to re-generate<br><br>
+**usage:** `--dir, -d <dir>`<br>
+
+
+### flags
+#### Disable Drag And Drop <br>
+Do not allow drag and drop in this drive app.<br><br>
+**usage:** `--disable-drag-and-drop`<br>
+**default**: `true`
+#### All <br>
+Re-generate all existing apps in the current project<br><br>
+**usage:** `--all, -a`<br>
+
+#### Debug <br>
+Log arguments passed to this command<br><br>
+**usage:** `--debug`<br>
+
+#### Help <br>
+show help<br><br>
+**usage:** `--help, -h`<br>
+
+
+## Processor
+Generate a processor
+### options
+#### Name <br>
+The name of the processor to generate<br><br>
+**usage:** `--name, -n <str>`<br>
+
+#### Type <br>
+The type of processor to generate<br><br>
+**usage:** `--type <value>`<br>
+**default**: `analytics`
+#### Document Types <br>
+The document types the processor will run on<br><br>
+**usage:** `--document-types <str>, -t=<str>`<br>
+**default**: ``
+#### Apps <br>
+Whether the processor will run in switchboard (nodejs), connect (browser), or both<br><br>
+**usage:** `--apps <value>`<br>
+**default**: `switchboard,connect`
+#### Dir <br>
+Name of the directory of an existing processor to re-generate<br><br>
+**usage:** `--dir, -d <dir>`<br>
+
+
+### flags
+#### All <br>
+Re-generate all existing processors in the current project<br><br>
+**usage:** `--all, -a`<br>
+
+#### Debug <br>
+Log arguments passed to this command<br><br>
+**usage:** `--debug`<br>
+
+#### Help <br>
+show help<br><br>
+**usage:** `--help, -h`<br>
+
+
+## Subgraph
+Generate a subgraph
+### options
+#### Name <br>
+The name of the subgraph to generate<br><br>
+**usage:** `--name, -n <str>`<br>
+
+#### Dir <br>
+Name of the directory of an existing subgraph to re-generate<br><br>
+**usage:** `--dir, -d <dir>`<br>
+
+
+### flags
+#### All <br>
+Re-generate all existing subgraphs in the current project<br><br>
+**usage:** `--all, -a`<br>
+
+#### Debug <br>
+Log arguments passed to this command<br><br>
+**usage:** `--debug`<br>
+
+#### Help <br>
+show help<br><br>
+**usage:** `--help, -h`<br>
+
+
+## Migration File
+Generate a a migration file
+### options
+#### Path *[required]*<br>
+Path to the migration file<br><br>
+**usage:** `--path, -p <str>`<br>
+
+#### Schema File <br>
+Path to the output file. Defaults to './schema.ts'<br><br>
+**usage:** `--schema-file <str>`<br>
+
+
+### flags
+#### Debug <br>
+Log arguments passed to this command<br><br>
+**usage:** `--debug`<br>
+
+#### Help <br>
+show help<br><br>
+**usage:** `--help, -h`<br>
+
 
 ## Vetra
 
