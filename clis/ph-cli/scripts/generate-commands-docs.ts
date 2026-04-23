@@ -1,6 +1,13 @@
 import { writeCliDocsMarkdownFile } from "@powerhousedao/codegen/file-builders";
 import { accessToken } from "../src/commands/access-token.js";
 import { build, connect, preview, studio } from "../src/commands/connect.js";
+import { generateAllCmd } from "../src/commands/generate-all.js";
+import { generateAppCmd } from "../src/commands/generate-app.js";
+import { generateDocumentModelCmd } from "../src/commands/generate-document-model.js";
+import { generateEditorCmd } from "../src/commands/generate-editor.js";
+import { generateMigrationFileCmd } from "../src/commands/generate-migration-file.js";
+import { generateProcessorCmd } from "../src/commands/generate-processor.js";
+import { generateSubgraphCmd } from "../src/commands/generate-subgraph.js";
 import { generate } from "../src/commands/generate.js";
 import { inspect } from "../src/commands/inspect.js";
 import { install } from "../src/commands/install.js";
@@ -14,6 +21,13 @@ import { vetra } from "../src/commands/vetra.js";
 
 const commands = [
   { name: "generate", command: generate },
+  { name: "all", command: generateAllCmd },
+  { name: "document-model", command: generateDocumentModelCmd },
+  { name: "editor", command: generateEditorCmd },
+  { name: "app", command: generateAppCmd },
+  { name: "processor", command: generateProcessorCmd },
+  { name: "subgraph", command: generateSubgraphCmd },
+  { name: "migration-file", command: generateMigrationFileCmd },
   { name: "vetra", command: vetra },
   { name: "connect", command: connect },
   { name: "connect studio", command: studio },
