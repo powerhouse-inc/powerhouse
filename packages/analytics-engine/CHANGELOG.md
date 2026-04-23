@@ -1,3 +1,13 @@
+## 6.0.0-dev.194 (2026-04-23)
+
+### 🩹 Fixes
+
+- **codegen:** updated dependencies list ([b4545f389](https://github.com/powerhouse-inc/powerhouse/commit/b4545f389))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.0.0-dev.193 (2026-04-23)
 
 This was a version bump only for analytics-engine to align it with other projects, there were no code changes.
