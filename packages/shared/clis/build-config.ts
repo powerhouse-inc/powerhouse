@@ -17,8 +17,11 @@ const entry = [
 
 const alwaysBundle = ["**"];
 
-// esmExternalRequirePlugin converts CJS require() calls for these to ESM imports.
-// They must NOT be in rolldown's external list — the plugin owns them entirely.
+// React must be external in rolldown (via neverBundle) so ESM `import ... from "react"`
+// stays as a bare import and resolves to the host's React at runtime — otherwise
+// rolldown bundles react.production.js into a chunk and we get two React instances.
+// esmExternalRequirePlugin additionally rewrites any CJS `require("react")` in bundled
+// deps to an ESM import so they hit the same external.
 const reactExternals = [
   "react",
   "react-dom",
@@ -52,10 +55,7 @@ const nodeNeverBundle = [
   "@types/react-dom",
 ];
 
-const browserNeverBundle = [
-  ...nodeNeverBundle.filter((m) => !reactExternals.includes(m)),
-  "@powerhousedao/reactor-api",
-];
+const browserNeverBundle = [...nodeNeverBundle, "@powerhousedao/reactor-api"];
 
 const copy = [{ from: "powerhouse.manifest.json", to: "dist" }];
 
