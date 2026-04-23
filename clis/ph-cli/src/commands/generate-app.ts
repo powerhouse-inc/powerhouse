@@ -9,7 +9,7 @@ import {
   optional,
   string,
 } from "cmd-ts";
-import { Directory } from "cmd-ts/dist/esm/batteries/fs.js";
+import { Directory } from "cmd-ts/dist/cjs/batteries/fs.js";
 
 export const generateAppCmd = command({
   name: "app",
