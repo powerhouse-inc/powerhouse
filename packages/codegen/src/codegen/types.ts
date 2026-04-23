@@ -1,4 +1,4 @@
-import { type Project } from "@pnpm/find-workspace-packages";
+import type { PackageJson } from "read-pkg";
 
 export type CodegenOptions = {
   verbose?: boolean;
@@ -16,6 +16,6 @@ declare global {
    */
   const WORKSPACE_PACKAGES: {
     dir: string;
-    manifest: Project["manifest"];
+    manifest: PackageJson;
   }[];
 }

@@ -134,8 +134,8 @@ function getDocumentTypeIcon(
   }
 }
 
-export function downloadFile(document: PHDocument, fileName: string) {
-  const zip = createZip(document);
+export async function downloadFile(document: PHDocument, fileName: string) {
+  const zip = await createZip(document);
   zip
     .generateAsync({ type: "blob" })
     .then((blob) => {
@@ -270,7 +270,7 @@ export async function exportFile(document: PHDocument, suggestedName?: string) {
 
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   if (!window.showSaveFilePicker) {
-    return downloadFile(documentWithOps, name);
+    return await downloadFile(documentWithOps, name);
   }
   try {
     const fileHandle = await window.showSaveFilePicker({

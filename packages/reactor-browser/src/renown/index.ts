@@ -1,4 +1,5 @@
 export * from "./components/index.js";
+export * from "./crypto.js";
 export * from "./constants.js";
 export { Renown, type RenownProps } from "./renown-init.js";
 export {

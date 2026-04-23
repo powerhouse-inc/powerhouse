@@ -1,6 +1,5 @@
 import type { IReactorClient } from "@powerhousedao/reactor";
 import { type DocumentDriveDocument } from "@powerhousedao/shared/document-drive";
-import { BrowserKeyStorage, RenownCryptoBuilder } from "@renown/sdk";
 import { setDrives } from "./hooks/drives.js";
 import { getDrives } from "./utils/drives.js";
 
@@ -96,22 +95,3 @@ function createDebouncedRefreshReactorDataClient(
 export const refreshReactorData = createDebouncedRefreshReactorData();
 export const refreshReactorDataClient =
   createDebouncedRefreshReactorDataClient();
-
-/**
- * @deprecated Use {@link initRenownCrypto} instead
- *
- * Initialize ConnectCrypto
- * @returns ConnectCrypto instance
- */
-export async function initConnectCrypto() {
-  return initRenownCrypto();
-}
-
-/**
- * Initialize RenownCrypto
- * @returns RenownCrypto instance
- */
-export async function initRenownCrypto() {
-  const keyStorage = await BrowserKeyStorage.create();
-  return await new RenownCryptoBuilder().withKeyPairStorage(keyStorage).build();
-}
