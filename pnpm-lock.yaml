@@ -1233,6 +1233,9 @@ importers:
       write-package:
         specifier: 'catalog:'
         version: 7.2.0
+      zod:
+        specifier: 'catalog:'
+        version: 4.3.6
     devDependencies:
       '@tmpl/core':
         specifier: npm:@jsr/tmpl__core@^0.6.3

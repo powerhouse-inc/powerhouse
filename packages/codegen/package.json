@@ -66,7 +66,8 @@
     "ts-morph": "catalog:",
     "tsdown": "catalog:",
     "write-json-file": "^7.0.0",
-    "write-package": "catalog:"
+    "write-package": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@tmpl/core": "npm:@jsr/tmpl__core@^0.6.3",
