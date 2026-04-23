@@ -7,13 +7,11 @@ import type {
   preview,
   studio,
 } from "./commands/connect.js";
-import type {
-  generateAppCmd,
-  generateDocumentModelCmd,
-  generateEditorCmd,
-  generateProcessorCmd,
-  generateSubgraphCmd,
-} from "./commands/generate-new.js";
+import type { generateAppCmd } from "./commands/generate-app.js";
+import type { generateDocumentModelCmd } from "./commands/generate-document-model.js";
+import type { generateEditorCmd } from "./commands/generate-editor.js";
+import type { generateProcessorCmd } from "./commands/generate-processor.js";
+import type { generateSubgraphCmd } from "./commands/generate-subgraph.js";
 import type { generate } from "./commands/generate.js";
 import type { init } from "./commands/init.js";
 import type { inspect } from "./commands/inspect.js";
