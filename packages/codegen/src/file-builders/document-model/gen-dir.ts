@@ -1,9 +1,8 @@
-import { kebabCase, pascalCase } from "change-case";
+import { kebabCase } from "change-case";
 import type {
   DocumentModelFileMakerArgs,
-  DocumentModelTemplateInputsWithModule,
+  DocumentModelModuleFileMakerArgs,
 } from "file-builders";
-import { getDocumentModelOperationsModuleVariableNames } from "name-builders";
 import path from "path";
 import {
   documentModelDocumentSchemaFileTemplate,
@@ -29,37 +28,19 @@ import {
   getOrCreateSourceFile,
 } from "utils";
 
-export async function makeGenDirFiles(
+export async function makeDocumentModelGenDirOperationModulesFiles(
   fileMakerArgs: DocumentModelFileMakerArgs,
 ) {
-  await makeDocumentModelSchemaIndexFile(fileMakerArgs);
-  await makeDocumentModelGenUtilsFile(fileMakerArgs);
-  await makeDocumentModelGenTypesFile(fileMakerArgs);
-  await makeDocumentModelGenCreatorsFile(fileMakerArgs);
-  await makeDocumentModelGenActionsFile(fileMakerArgs);
-  await makeDocumentModelGenDocumentSchemaFile(fileMakerArgs);
-  await makeDocumentModelGenReducerFile(fileMakerArgs);
-  await makeDocumentModelDocumentTypeFile(fileMakerArgs);
-  await makeDocumentModelGenIndexFile(fileMakerArgs);
-  await makeDocumentModelGenDocumentModelFile(fileMakerArgs);
-  await makeDocumentModelGenPhFactoriesFile(fileMakerArgs);
-  await makeDocumentModelGenControllerFile(fileMakerArgs);
-
-  const modules = fileMakerArgs.modules;
-
-  for (const module of modules) {
-    const operationsModuleVariableNames =
-      getDocumentModelOperationsModuleVariableNames(module);
+  for (const module of fileMakerArgs.specification.modules) {
     await makeGenDirOperationModuleFiles({
-      module,
       ...fileMakerArgs,
-      ...operationsModuleVariableNames,
+      module,
     });
   }
 }
 
-async function makeGenDirOperationModuleFiles(
-  fileMakerArgs: DocumentModelTemplateInputsWithModule,
+export async function makeGenDirOperationModuleFiles(
+  fileMakerArgs: DocumentModelModuleFileMakerArgs,
 ) {
   await makeOperationModuleGenActionsFile(fileMakerArgs);
   await makeOperationModuleGenCreatorsFile(fileMakerArgs);
@@ -67,7 +48,9 @@ async function makeGenDirOperationModuleFiles(
   await makeOperationModuleGenErrorFile(fileMakerArgs);
 }
 
-async function makeDocumentModelGenUtilsFile(args: DocumentModelFileMakerArgs) {
+export async function makeDocumentModelGenUtilsFile(
+  args: DocumentModelFileMakerArgs,
+) {
   const template = documentModelGenUtilsTemplate(args);
   const { project, genDirPath } = args;
   const utilsFilePath = path.join(genDirPath, "utils.ts");
@@ -76,7 +59,7 @@ async function makeDocumentModelGenUtilsFile(args: DocumentModelFileMakerArgs) {
   await formatSourceFileWithPrettier(sourceFile);
 }
 
-async function makeDocumentModelDocumentTypeFile(
+export async function makeDocumentModelDocumentTypeFile(
   args: DocumentModelFileMakerArgs,
 ) {
   const template = documentModelDocumentTypeTemplate(args);
@@ -90,7 +73,7 @@ async function makeDocumentModelDocumentTypeFile(
   await formatSourceFileWithPrettier(sourceFile);
 }
 
-async function makeDocumentModelSchemaIndexFile(
+export async function makeDocumentModelSchemaIndexFile(
   args: DocumentModelFileMakerArgs,
 ) {
   const template = documentModelSchemaIndexTemplate;
@@ -102,7 +85,9 @@ async function makeDocumentModelSchemaIndexFile(
   await formatSourceFileWithPrettier(sourceFile);
 }
 
-async function makeDocumentModelGenTypesFile(args: DocumentModelFileMakerArgs) {
+export async function makeDocumentModelGenTypesFile(
+  args: DocumentModelFileMakerArgs,
+) {
   const template = documentModelGenTypesTemplate(args);
   const { project, genDirPath } = args;
 
@@ -114,7 +99,7 @@ async function makeDocumentModelGenTypesFile(args: DocumentModelFileMakerArgs) {
   await formatSourceFileWithPrettier(sourceFile);
 }
 
-async function makeDocumentModelGenDocumentModelFile(
+export async function makeDocumentModelGenDocumentModelFile(
   args: DocumentModelFileMakerArgs,
 ) {
   const { project, genDirPath, documentModelState } = args;
@@ -150,7 +135,7 @@ async function makeDocumentModelGenDocumentModelFile(
   await formatSourceFileWithPrettier(sourceFile);
 }
 
-async function makeDocumentModelGenDocumentSchemaFile(
+export async function makeDocumentModelGenDocumentSchemaFile(
   args: DocumentModelFileMakerArgs,
 ) {
   const template = documentModelDocumentSchemaFileTemplate(args);
@@ -164,7 +149,7 @@ async function makeDocumentModelGenDocumentSchemaFile(
   await formatSourceFileWithPrettier(sourceFile);
 }
 
-async function makeDocumentModelGenCreatorsFile(
+export async function makeDocumentModelGenCreatorsFile(
   args: DocumentModelFileMakerArgs,
 ) {
   const template = documentModelGenCreatorsFileTemplate(args);
@@ -178,7 +163,7 @@ async function makeDocumentModelGenCreatorsFile(
   await formatSourceFileWithPrettier(sourceFile);
 }
 
-async function makeDocumentModelGenPhFactoriesFile(
+export async function makeDocumentModelGenPhFactoriesFile(
   args: DocumentModelFileMakerArgs,
 ) {
   const template = documentModelPhFactoriesFileTemplate(args);
@@ -192,7 +177,7 @@ async function makeDocumentModelGenPhFactoriesFile(
   await formatSourceFileWithPrettier(sourceFile);
 }
 
-async function makeDocumentModelGenControllerFile(
+export async function makeDocumentModelGenControllerFile(
   args: DocumentModelFileMakerArgs,
 ) {
   const template = documentModelGenControllerFileTemplate(args);
@@ -206,7 +191,9 @@ async function makeDocumentModelGenControllerFile(
   await formatSourceFileWithPrettier(sourceFile);
 }
 
-async function makeDocumentModelGenIndexFile(args: DocumentModelFileMakerArgs) {
+export async function makeDocumentModelGenIndexFile(
+  args: DocumentModelFileMakerArgs,
+) {
   const template = documentModelGenIndexFileTemplate(args);
   const { project, genDirPath } = args;
 
@@ -218,7 +205,7 @@ async function makeDocumentModelGenIndexFile(args: DocumentModelFileMakerArgs) {
   await formatSourceFileWithPrettier(sourceFile);
 }
 
-async function makeDocumentModelGenActionsFile(
+export async function makeDocumentModelGenActionsFile(
   args: DocumentModelFileMakerArgs,
 ) {
   const template = documentModelGenActionsFileTemplate(args);
@@ -232,7 +219,7 @@ async function makeDocumentModelGenActionsFile(
   await formatSourceFileWithPrettier(sourceFile);
 }
 
-async function makeDocumentModelGenReducerFile(
+export async function makeDocumentModelGenReducerFile(
   args: DocumentModelFileMakerArgs,
 ) {
   const template = documentModelGenReducerFileTemplate(args);
@@ -246,18 +233,12 @@ async function makeDocumentModelGenReducerFile(
   await formatSourceFileWithPrettier(sourceFile);
 }
 
-async function makeOperationModuleGenActionsFile(
-  args: DocumentModelTemplateInputsWithModule,
+export async function makeOperationModuleGenActionsFile(
+  args: DocumentModelModuleFileMakerArgs,
 ) {
   const { module } = args;
-  const { actions } = getDocumentModelOperationsModuleVariableNames(module);
-  const pascalCaseModuleName = pascalCase(module.name);
   const kebabCaseModuleName = kebabCase(module.name);
-  const template = documentModelOperationModuleActionsFileTemplate({
-    ...args,
-    actions,
-    pascalCaseModuleName,
-  });
+  const template = documentModelOperationModuleActionsFileTemplate(args);
   const { project, genDirPath } = args;
 
   const dirPath = path.join(genDirPath, kebabCaseModuleName);
@@ -269,17 +250,12 @@ async function makeOperationModuleGenActionsFile(
   await formatSourceFileWithPrettier(sourceFile);
 }
 
-async function makeOperationModuleGenCreatorsFile(
-  args: DocumentModelTemplateInputsWithModule,
+export async function makeOperationModuleGenCreatorsFile(
+  args: DocumentModelModuleFileMakerArgs,
 ) {
   const { module } = args;
-  const moduleVariableNames =
-    getDocumentModelOperationsModuleVariableNames(module);
   const kebabCaseModuleName = kebabCase(module.name);
-  const template = documentModelOperationsModuleCreatorsFileTemplate({
-    ...args,
-    ...moduleVariableNames,
-  });
+  const template = documentModelOperationsModuleCreatorsFileTemplate(args);
   const { project, genDirPath } = args;
 
   const dirPath = path.join(genDirPath, kebabCaseModuleName);
@@ -291,17 +267,12 @@ async function makeOperationModuleGenCreatorsFile(
   await formatSourceFileWithPrettier(sourceFile);
 }
 
-async function makeOperationModuleGenOperationsFile(
-  args: DocumentModelTemplateInputsWithModule,
+export async function makeOperationModuleGenOperationsFile(
+  args: DocumentModelModuleFileMakerArgs,
 ) {
   const { module } = args;
-  const moduleVariableNames =
-    getDocumentModelOperationsModuleVariableNames(module);
   const kebabCaseModuleName = kebabCase(module.name);
-  const template = documentModelOperationsModuleOperationsFileTemplate({
-    ...args,
-    ...moduleVariableNames,
-  });
+  const template = documentModelOperationsModuleOperationsFileTemplate(args);
   const { project, genDirPath } = args;
 
   const dirPath = path.join(genDirPath, kebabCaseModuleName);
@@ -313,17 +284,12 @@ async function makeOperationModuleGenOperationsFile(
   await formatSourceFileWithPrettier(sourceFile);
 }
 
-async function makeOperationModuleGenErrorFile(
-  args: DocumentModelTemplateInputsWithModule,
+export async function makeOperationModuleGenErrorFile(
+  args: DocumentModelModuleFileMakerArgs,
 ) {
   const { module } = args;
-  const moduleVariableNames =
-    getDocumentModelOperationsModuleVariableNames(module);
   const kebabCaseModuleName = kebabCase(module.name);
-  const template = documentModelOperationsModuleErrorFileTemplate({
-    ...args,
-    ...moduleVariableNames,
-  });
+  const template = documentModelOperationsModuleErrorFileTemplate(args);
   const { project, genDirPath } = args;
 
   const dirPath = path.join(genDirPath, kebabCaseModuleName);

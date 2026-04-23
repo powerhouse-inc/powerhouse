@@ -72,8 +72,6 @@ const dependenciesTemplate = (versionedDependencies: string[]) =>
 const devDependenciesTemplate = (versionedDevDependencies: string[]) =>
   json`
   ${versionedDevDependencies.join(",\n")},
-  "@electric-sql/pglite": "0.3.15",
-  "@electric-sql/pglite-tools": "0.2.20",
   "@eslint/js": "^9.38.0",
   "@tailwindcss/cli": "^4.1.18",
   "@types/node": "^24.9.2",
@@ -87,7 +85,6 @@ const devDependenciesTemplate = (versionedDevDependencies: string[]) =>
   "tailwindcss": "^4.1.16",
   "typescript": "^5.9.3",
   "typescript-eslint": "^8.46.2",
-  "vite": "8.0.2",
   "vitest": "4.1.1",
   "@vitejs/plugin-react": "6.0.1",
   "vite-tsconfig-paths": "6.1.1"

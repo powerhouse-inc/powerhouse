@@ -1,277 +1,101 @@
-import type { Manifest } from "@powerhousedao/shared";
-import { fileExists, type PowerhouseConfig } from "@powerhousedao/shared/clis";
-import type { DocumentModelGlobalState } from "@powerhousedao/shared/document-model";
-import type { ProcessorApps } from "@powerhousedao/shared/processors";
+import {
+  DocumentModelGlobalStateSchema,
+  type DocumentModelGlobalState,
+} from "@powerhousedao/shared/document-model";
+import type {
+  ProcessorApp,
+  ProcessorApps,
+} from "@powerhousedao/shared/processors";
 import { kebabCase } from "change-case";
 import {
-  makeSubgraphsIndexFile,
   tsMorphGenerateApp,
   tsMorphGenerateDocumentEditor,
   tsMorphGenerateDocumentModel,
+  tsMorphGenerateProcessor,
   tsMorphGenerateSubgraph,
 } from "file-builders";
-import { getTsconfig } from "get-tsconfig";
-import fs from "node:fs";
-import { readdir, writeFile } from "node:fs/promises";
-import path, { join } from "node:path";
-import { readPackage, type NormalizedPackageJson } from "read-pkg";
-import semver from "semver";
+import { loadJsonFileSync } from "load-json-file";
+import { readdirSync, statSync } from "node:fs";
+import { join } from "node:path";
 import {
-  exportsTemplate,
-  tsconfigPathsTemplate,
-  tsConfigTemplate,
-} from "templates";
-import { writePackage } from "write-package";
-import { tsMorphGenerateProcessor } from "../file-builders/processors/processor.js";
-import { generateSchemas } from "./graphql.js";
-import type { CodegenOptions } from "./types.js";
+  conditional,
+  filter,
+  find,
+  flatMap,
+  isDefined,
+  isEmpty,
+  isIncludedIn,
+  isString,
+  isTruthy,
+  map,
+  pipe,
+  split,
+  startsWith,
+  unique,
+  when,
+} from "remeda";
+import type { Project } from "ts-morph";
+import { SyntaxKind } from "ts-morph";
+import { getObjectProperty, getOrCreateDirectory } from "utils";
 import { loadDocumentModel } from "./utils.js";
 
-export async function generateAll(args: {
-  dir: string;
-  useVersioning: boolean;
-  migrateLegacy?: boolean;
-  watch?: boolean;
-  skipFormat?: boolean;
-  verbose?: boolean;
-  force?: boolean;
-}) {
-  const {
-    dir,
-    useVersioning,
-    migrateLegacy = false,
-    watch = false,
-    skipFormat = false,
-    verbose = true,
-    force = true,
-  } = args;
-  const files = await readdir(dir, { withFileTypes: true });
-  const documentModelStates: DocumentModelGlobalState[] = [];
-
-  for (const directory of files.filter((f) => f.isDirectory())) {
-    const documentModelPath = path.join(
-      dir,
-      directory.name,
-      `${directory.name}.json`,
-    );
-    const pathExists = await fileExists(documentModelPath);
-    if (!pathExists) {
-      continue;
-    }
-
-    try {
-      const documentModelState = await loadDocumentModel(documentModelPath);
-      documentModelStates.push(documentModelState);
-
-      await generateDocumentModel({
-        dir,
-        documentModelState,
-        watch,
-        skipFormat,
-        verbose,
-        force,
-        useVersioning,
-        migrateLegacy,
-      });
-    } catch (error) {
-      if (verbose) {
-        console.error(directory.name, error);
-      }
-    }
-  }
-}
-
-export async function generate(
-  config: PowerhouseConfig,
-  useVersioning: boolean,
-  migrateLegacy = false,
+export async function generateDocumentModel(
+  documentModelState: DocumentModelGlobalState,
+  project: Project,
 ) {
-  const { skipFormat, watch } = config;
-  await generateSchemas(config.documentModelsDir, { skipFormat, watch });
-  await generateAll({
-    dir: config.documentModelsDir,
-    useVersioning,
-    migrateLegacy,
-    skipFormat,
-    watch,
-  });
+  await tsMorphGenerateDocumentModel(documentModelState, project);
 }
 
-export async function generateFromFile(args: {
-  path: string;
-  config: PowerhouseConfig;
-  useVersioning: boolean;
-  migrateLegacy?: boolean;
-  options?: CodegenOptions;
-}) {
-  const { path, config, useVersioning, migrateLegacy, options } = args;
+/* Runs generate for each document model json file found in the project's `document-models` directory  */
+export async function generateAllDocumentModels(project: Project) {
+  const { directory: documentModelsDir } = getOrCreateDirectory(
+    project,
+    "document-models",
+  );
+  const documentModelsDirPath = documentModelsDir.getPath();
+  const documentModelStateFiles = pipe(
+    readdirSync(documentModelsDirPath, { withFileTypes: true }),
+    filter((dirent) => dirent.isDirectory()),
+    map((dir) => join(dir.parentPath, `${dir.name}/${dir.name}.json`)),
+    filter(
+      (srcPath) =>
+        statSync(srcPath, { throwIfNoEntry: false })?.isFile() ?? false,
+    ),
+    map((srcPath) => loadJsonFileSync(srcPath)),
+    filter(
+      (stateFile): stateFile is DocumentModelGlobalState =>
+        DocumentModelGlobalStateSchema().safeParse(stateFile).success === true,
+    ),
+  );
+
+  for (const documentModelState of documentModelStateFiles) {
+    await generateDocumentModel(documentModelState, project);
+  }
+}
+export async function generateFromFile(filePath: string, project: Project) {
   // load document model spec from file
-  const documentModelState = await loadDocumentModel(path);
+  const documentModelState = await loadDocumentModel(filePath);
 
   // delegate to shared generation function
-  await generateFromDocumentModel({
-    documentModelState,
-    config,
-    useVersioning,
-    migrateLegacy,
-    options,
-  });
-}
-
-/**
- * Generates code from a DocumentModelGlobalState object directly.
- *
- * @remarks
- * This function performs the same code generation as generateFromFile but takes
- * a DocumentModelGlobalState object directly instead of loading from a file. This allows for
- * programmatic code generation without file I/O.
- *
- * @param documentModelDocument - The DocumentModelGlobalState object containing the document model
- * @param config - The PowerhouseConfig configuration object
- * @param options - Optional configuration for generation behavior (verbose logging, etc.)
- * @returns A promise that resolves when code generation is complete
- */
-export async function generateFromDocument(args: {
-  documentModelState: DocumentModelGlobalState;
-  config: PowerhouseConfig;
-  useVersioning: boolean;
-  migrateLegacy?: boolean;
-  options?: CodegenOptions;
-}) {
-  // delegate to shared generation function
-  await generateFromDocumentModel(args);
-}
-
-type GenerateDocumentModelArgs = {
-  dir: string;
-  documentModelState: DocumentModelGlobalState;
-  useVersioning: boolean;
-  migrateLegacy?: boolean;
-  watch?: boolean;
-  skipFormat?: boolean;
-  verbose?: boolean;
-  force?: boolean;
-};
-export async function generateDocumentModel(args: GenerateDocumentModelArgs) {
-  const { dir, documentModelState, useVersioning, migrateLegacy } = args;
-  const packageJson = await readPackage();
-  const zodSemverString = findZodDependencyInPackageJson(packageJson);
-  ensureZodVersionIsSufficient(zodSemverString);
-
-  const projectDir = path.dirname(dir);
-  await tsMorphGenerateDocumentModel({
-    projectDir,
-    documentModelState,
-    useVersioning,
-    migrateLegacy,
-  });
-  // await ensurePackageExportsWildcards();
-  // await ensureTsconfigPaths();
-}
-
-/**
- * Ensures that the project's package.json exports field contains the
- * wildcard subpath patterns required for deep imports like
- * "document-models/my-doc" to resolve correctly.
- */
-async function ensurePackageExportsWildcards() {
-  const requiredExports = JSON.parse(`{ ${exportsTemplate} }`) as Record<
-    string,
-    string
-  >;
-
-  const packageJson = await readPackage();
-
-  const existingExports =
-    !packageJson.exports ||
-    typeof packageJson.exports === "string" ||
-    Array.isArray(packageJson.exports)
-      ? {}
-      : packageJson.exports;
-
-  packageJson.exports = {
-    ...existingExports,
-    ...requiredExports,
-  };
-
-  await writePackage(process.cwd(), packageJson);
-}
-
-/**
- * Ensures that the project's tsconfig.json has paths mappings for
- * the convenience export paths like "document-models/" etc.
- */
-async function ensureTsconfigPaths() {
-  const requiredTsConfigPaths = JSON.parse(
-    `{ ${tsconfigPathsTemplate} }`,
-  ) as Record<string, string[]>;
-  const tsConfigFilePath = join(process.cwd(), "tsconfig.json");
-  let tsConfig = getTsconfig();
-
-  if (!tsConfig) {
-    await writeFile(tsConfigFilePath, tsConfigTemplate);
-    tsConfig = getTsconfig();
-  }
-
-  if (!tsConfig) {
-    throw new Error(
-      `Failed to get or create tsconfig.json at "${tsConfigFilePath}".`,
-    );
-  }
-
-  const existingCompilerOptions = tsConfig.config.compilerOptions ?? {};
-  const existingPaths = existingCompilerOptions.paths ?? {};
-
-  tsConfig.config.compilerOptions = {
-    ...existingCompilerOptions,
-    paths: {
-      ...existingPaths,
-      ...requiredTsConfigPaths,
-    },
-  };
-
-  await writeFile(tsConfigFilePath, JSON.stringify(tsConfig.config, null, 2));
-}
-
-function findZodDependencyInPackageJson(
-  packageJson: NormalizedPackageJson,
-): string | undefined {
-  const dependencies = {
-    ...packageJson.dependencies,
-    ...packageJson.devDependencies,
-  };
-  const zodDependency = dependencies["zod"];
-  return zodDependency;
-}
-
-function ensureZodVersionIsSufficient(zodSemverString: string | undefined) {
-  if (!zodSemverString) return;
-  const cleaned = semver.clean(zodSemverString);
-  if (!cleaned) return;
-  const isSufficient = semver.gte(cleaned, "4.0.0");
-  if (!isSufficient) {
-    throw new Error(
-      `Your version of zod "${zodSemverString}" is out of date. Please install zod version 4.x to continue.`,
-    );
-  }
+  await generateDocumentModel(documentModelState, project);
 }
 
 type GenerateEditorArgs = {
   editorName: string;
   documentTypes: string[];
-  skipFormat?: boolean;
   editorId?: string;
   editorDirName?: string;
 };
-export async function generateEditor(args: GenerateEditorArgs) {
+export async function generateEditor(
+  args: GenerateEditorArgs,
+  project: Project,
+) {
   const {
     editorName,
     documentTypes,
     editorId: editorIdArg,
     editorDirName,
   } = args;
-
-  const projectDir = path.dirname("editors");
 
   if (documentTypes.length > 1) {
     throw new Error("Multiple document types are not supported yet");
@@ -282,37 +106,93 @@ export async function generateEditor(args: GenerateEditorArgs) {
   const editorDir = editorDirName || kebabCase(editorName);
 
   await tsMorphGenerateDocumentEditor({
-    projectDir,
+    project,
     editorDir,
     documentModelId,
     editorName,
     editorId,
   });
-  // await ensurePackageExportsWildcards();
-  // await ensureTsconfigPaths();
 }
 
-export async function generateApp(options: {
+/* Runs generate for all editors found in the project's `editors` directory.
+ * Note: we intentionally filter out editors with the document type "powerhouse/document-drive".
+ * These are handled separately by the `generateAllApps` function.
+ */
+export async function generateAllEditors(project: Project) {
+  const { directory: editorsDir } = getOrCreateDirectory(project, "editors");
+  const editorDirs = editorsDir.getDirectories();
+
+  /* An editor's `id`, `name`, and `documentTypes` args can be found in the `module.ts` file */
+  const editorsToAdd = pipe(
+    editorDirs,
+    map((dir) => dir.getSourceFile("module.ts")),
+    filter(isTruthy),
+    map((sourceFile) =>
+      sourceFile.getDescendantsOfKind(SyntaxKind.PropertyAssignment),
+    ),
+    map((propertyAssignments) => ({
+      id: find(
+        propertyAssignments,
+        (propertyAssignment) => propertyAssignment.getName() === "id",
+      ),
+      name: find(
+        propertyAssignments,
+        (propertyAssignment) => propertyAssignment.getName() === "name",
+      ),
+      documentTypes: find(
+        propertyAssignments,
+        (propertyAssignment) =>
+          propertyAssignment.getName() === "documentTypes",
+      ),
+    })),
+    map(({ id, name, documentTypes }) => ({
+      editorDirName: id?.getSourceFile().getDirectory().getBaseName(),
+      editorId: id
+        ?.getFirstDescendantByKind(SyntaxKind.StringLiteral)
+        ?.getLiteralValue(),
+      editorName: name
+        ?.getFirstDescendantByKind(SyntaxKind.StringLiteral)
+        ?.getLiteralValue(),
+      documentTypes: pipe(
+        documentTypes
+          ?.getFirstDescendantByKind(SyntaxKind.ArrayLiteralExpression)
+          ?.getElements() ?? [],
+        map((element) =>
+          element.asKind(SyntaxKind.StringLiteral)?.getLiteralValue(),
+        ),
+        filter(isString),
+      ),
+    })),
+    filter(
+      ({ documentTypes }) =>
+        !documentTypes.includes("powerhouse/document-drive"),
+    ),
+  );
+
+  for (const editorToAdd of editorsToAdd) {
+    if (editorToAdd.editorDirName === undefined) return;
+    await generateEditor(editorToAdd as GenerateEditorArgs, project);
+  }
+}
+
+type GenerateAppArgs = {
   appName: string;
-  skipFormat?: boolean;
   appId?: string;
   allowedDocumentTypes?: string[];
   isDragAndDropEnabled?: boolean;
   appDirName?: string;
-}) {
+};
+export async function generateApp(args: GenerateAppArgs, project: Project) {
   const {
     appName,
     appId,
     allowedDocumentTypes,
     isDragAndDropEnabled,
     appDirName,
-  } = options;
-  const dir = "editors";
-
-  const projectDir = path.dirname(dir);
+  } = args;
 
   await tsMorphGenerateApp({
-    projectDir,
+    project,
     editorDir: appDirName || kebabCase(appName),
     editorName: appName,
     editorId: appId ?? kebabCase(appName),
@@ -321,228 +201,286 @@ export async function generateApp(options: {
   });
 }
 
-export async function generateSubgraphFromDocumentModel(
-  name: string,
-  documentModel: DocumentModelGlobalState,
-  config: PowerhouseConfig,
-) {
-  await tsMorphGenerateSubgraph({
-    subgraphsDir: config.subgraphsDir,
-    subgraphName: name,
-    documentModel,
-  });
-  await makeSubgraphsIndexFile({
-    projectDir: path.dirname(config.subgraphsDir),
-  });
+/* Runs generate for all apps found in the project's `editors` directory.
+ * Note: we intentionally filter out editors which do not have the document type "powerhouse/document-drive".
+ * These are handled separately by the `generateAllEditors` function.
+ */
+export async function generateAllApps(project: Project) {
+  const { directory: editorsDir } = getOrCreateDirectory(project, "editors");
+  const editorDirs = editorsDir.getDirectories();
+
+  /* An editor's `id`, `name`, and `documentTypes` args can be found in the `module.ts` file */
+  const appsToAdd = pipe(
+    editorDirs,
+    map((dir) => dir.getSourceFile("module.ts")),
+    filter(isTruthy),
+    map((sourceFile) =>
+      sourceFile.getDescendantsOfKind(SyntaxKind.PropertyAssignment),
+    ),
+    map((propertyAssignments) => ({
+      id: find(
+        propertyAssignments,
+        (propertyAssignment) => propertyAssignment.getName() === "id",
+      ),
+      name: find(
+        propertyAssignments,
+        (propertyAssignment) => propertyAssignment.getName() === "name",
+      ),
+      documentTypes: find(
+        propertyAssignments,
+        (propertyAssignment) =>
+          propertyAssignment.getName() === "documentTypes",
+      ),
+    })),
+    map(({ id, name, documentTypes }) => ({
+      appDir: id?.getSourceFile().getDirectory(),
+      appId: id
+        ?.getFirstDescendantByKind(SyntaxKind.StringLiteral)
+        ?.getLiteralValue(),
+      appName: name
+        ?.getFirstDescendantByKind(SyntaxKind.StringLiteral)
+        ?.getLiteralValue(),
+      documentTypes: pipe(
+        documentTypes
+          ?.getFirstDescendantByKind(SyntaxKind.ArrayLiteralExpression)
+          ?.getElements() ?? [],
+        map((element) =>
+          element.asKind(SyntaxKind.StringLiteral)?.getLiteralValue(),
+        ),
+        filter(isString),
+      ),
+    })),
+    filter(({ documentTypes }) =>
+      documentTypes.includes("powerhouse/document-drive"),
+    ),
+    /* The `allowedDocumentTypes` and `isDragAndDropEnabled` args can only be found in the `config.ts` file */
+    map(({ appDir, ...rest }) => ({
+      appDirName: appDir?.getBaseName(),
+      configFilePropertyAssignments:
+        appDir
+          ?.getSourceFile("config.ts")
+          ?.getDescendantsOfKind(SyntaxKind.PropertyAssignment) ?? [],
+      ...rest,
+    })),
+    map(({ configFilePropertyAssignments, ...rest }) => ({
+      isDragAndDropEnabled: find(
+        configFilePropertyAssignments,
+        (propertyAssignment) =>
+          propertyAssignment.getName() === "isDragAndDropEnabled",
+      ),
+      allowedDocumentTypes: find(
+        configFilePropertyAssignments,
+        (propertyAssignment) =>
+          propertyAssignment.getName() === "allowedDocumentTypes",
+      ),
+      ...rest,
+    })),
+    map(({ isDragAndDropEnabled, allowedDocumentTypes, ...rest }) => ({
+      isDragAndDropEnabled: when(
+        isDragAndDropEnabled?.getDescendants() ?? [],
+        (descendants) =>
+          isDefined(
+            find(descendants, (d) => d.getKind() === SyntaxKind.TrueKeyword),
+          ),
+        {
+          onTrue: () => true,
+          onFalse: () => false,
+        },
+      ),
+      allowedDocumentTypes: pipe(
+        allowedDocumentTypes
+          ?.getFirstDescendantByKind(SyntaxKind.ArrayLiteralExpression)
+          ?.getElements() ?? [],
+        map((element) =>
+          element.asKind(SyntaxKind.StringLiteral)?.getLiteralValue(),
+        ),
+        filter(isString),
+      ),
+      ...rest,
+    })),
+  );
+
+  for (const appToAdd of appsToAdd) {
+    if (appToAdd.appName === undefined) return;
+
+    await generateApp(appToAdd as GenerateAppArgs, project);
+  }
+}
+export async function generateSubgraph(subgraphName: string, project: Project) {
+  await tsMorphGenerateSubgraph({ subgraphName, project });
 }
 
-export async function generateSubgraph(
-  name: string,
-  file: string | null,
-  config: PowerhouseConfig,
-) {
-  const documentModelState =
-    file !== null ? await loadDocumentModel(file) : null;
-
-  await tsMorphGenerateSubgraph({
-    subgraphsDir: config.subgraphsDir,
-    subgraphName: name,
-    documentModel: documentModelState,
-  });
-  await makeSubgraphsIndexFile({
-    projectDir: path.dirname(config.subgraphsDir),
-  });
+/* Runs generate for each directory found in the project's `subgraphs` directory  */
+export async function generateAllSubgraphs(project: Project) {
+  const { directory: subgraphsDir } = getOrCreateDirectory(
+    project,
+    "subgraphs",
+  );
+  /* The subgraph's name is found in the `index.ts` file */
+  const subgraphNames = pipe(
+    subgraphsDir.getDirectories(),
+    map((dir) => dir.getSourceFile("index.ts")),
+    flatMap((indexFile) => indexFile?.getClasses() ?? []),
+    filter(
+      (classDeclaration) =>
+        classDeclaration.getBaseClass()?.getText().includes("BaseSubgraph") ??
+        false,
+    ),
+    map((classDeclaration) =>
+      classDeclaration
+        .getInstanceProperty("name")
+        ?.asKind(SyntaxKind.PropertyDeclaration)
+        ?.getInitializerIfKind(SyntaxKind.StringLiteral)
+        ?.getLiteralValue(),
+    ),
+    filter(isString),
+    unique(),
+  );
+  for (const subgraphName of subgraphNames) {
+    await generateSubgraph(subgraphName, project);
+  }
 }
 
-export async function generateProcessor(args: {
-  processorName: string;
-  processorType: "analytics" | "relationalDb";
-  processorApps: ProcessorApps;
-  documentTypes: string[];
-  skipFormat?: boolean;
-  rootDir?: string;
-}) {
-  const { rootDir = process.cwd() } = args;
+export async function generateProcessor(
+  args: {
+    processorName: string;
+    processorType: "analytics" | "relationalDb";
+    processorApps: ProcessorApps;
+    documentTypes: string[];
+  },
+  project: Project,
+) {
   return await tsMorphGenerateProcessor({
-    rootDir,
+    project,
     ...args,
   });
 }
 
-export async function generateImportScript(
-  _name: string,
-  _config: PowerhouseConfig,
-) {
-  throw new Error(
-    "Import script generation has been removed. The document-drive server APIs it depended on have been deprecated.",
+/* Runs generate for each directory found in the project's `processors` directory  */
+export async function generateAllProcessors(project: Project) {
+  const { directory: processorsDir } = getOrCreateDirectory(
+    project,
+    "processors",
   );
-}
+  const connectProcessorNames = pipe(
+    processorsDir.getSourceFile("connect.ts"),
+    (sourceFile) => sourceFile?.getImportDeclarations() ?? [],
+    flatMap((importDeclaration) =>
+      importDeclaration.getModuleSpecifier().getLiteralValue(),
+    ),
+    filter(startsWith("processors/")),
+    map(split("/")),
+    map((s) => s.at(1)),
+    filter(isString),
+  );
+  const switchboardProcessorNames = pipe(
+    processorsDir.getSourceFile("switchboard.ts"),
+    (sourceFile) => sourceFile?.getImportDeclarations() ?? [],
+    flatMap((importDeclaration) =>
+      importDeclaration.getModuleSpecifier().getLiteralValue(),
+    ),
+    filter(startsWith("processors/")),
+    map(split("/")),
+    map((s) => s.at(1)),
+    filter(isString),
+  );
+  const processorsToGenerate = pipe(
+    processorsDir.getDirectories(),
+    map((dir) => ({
+      dir,
+      processorName: dir.getBaseName(),
+    })),
+    map(({ dir, processorName }) => ({
+      processorName,
+      /* We can try to determine which processors are for `connect` and for `switchboard`.
+       * If we cannot, we fallback to including them in both. */
+      processorApps: pipe(
+        [],
+        when(
+          () => isIncludedIn(processorName, connectProcessorNames),
+          (processorApps) => [...processorApps, "connect"],
+        ),
+        when(
+          () => isIncludedIn(processorName, switchboardProcessorNames),
+          (processorApps) => [...processorApps, "switchboard"],
+        ),
+        when(
+          (processorApps) => isEmpty(processorApps),
+          () => ["connect", "switchboard"],
+        ),
+      ),
+      processorType: pipe(
+        // handle the old `index.ts` file name if `processor.ts` has not been generated
+        dir.getSourceFile("processor.ts") ?? dir.getSourceFile("index.ts"),
+        (sourceFile) => sourceFile?.getImportDeclarations() ?? [],
+        flatMap((importDeclaration) => importDeclaration.getNamedImports()),
+        map((importSpecifier) => importSpecifier.getText()),
+        // we have to check what type is imported to determine whether the processor is `relationalDb` or `analytics`
+        conditional(
+          [
+            (specifiers) =>
+              isDefined(
+                find(specifiers, (specifier) =>
+                  specifier.includes("RelationalDbProcessor"),
+                ),
+              ),
+            () => "relationalDb",
+          ],
+          [
+            (specifiers) =>
+              isDefined(
+                find(specifiers, (specifier) =>
+                  specifier.includes("IAnalyticsStore"),
+                ),
+              ),
+            () => "analytics",
+          ],
+        ),
+      ),
+      documentTypes: pipe(
+        dir.getSourceFile("factory.ts"),
+        (sourceFile) =>
+          sourceFile?.getDescendantsOfKind(
+            SyntaxKind.ObjectLiteralExpression,
+          ) ?? [],
+        map((objectLiteralExpression) =>
+          getObjectProperty(
+            objectLiteralExpression,
+            "documentType",
+            SyntaxKind.ArrayLiteralExpression,
+          ),
+        ),
+        flatMap((o) => o?.getElements()),
+        map((e) => e?.asKind(SyntaxKind.StringLiteral)),
+        filter(isTruthy),
+        map((e) => e.getLiteralValue()),
+      ),
+    })),
+  );
 
-const defaultManifest: Manifest = {
-  name: "",
-  description: "",
-  category: "",
-  publisher: {
-    name: "",
-    url: "",
-  },
-  documentModels: [],
-  editors: [],
-  apps: [],
-  subgraphs: [],
-  processors: [],
-};
-
-export function generateManifest(
-  manifestData: Partial<Manifest>,
-  projectRoot?: string,
-) {
-  const rootDir = projectRoot || process.cwd();
-  const manifestPath = join(rootDir, "powerhouse.manifest.json");
-
-  // Create default manifest structure
-
-  // Read existing manifest if it exists
-  let existingManifest: Manifest = defaultManifest;
-  if (fs.existsSync(manifestPath)) {
-    try {
-      const existingData = fs.readFileSync(manifestPath, "utf-8");
-      existingManifest = JSON.parse(existingData) as Manifest;
-    } catch (error) {
-      console.warn(`Failed to parse existing manifest: ${String(error)}`);
-      existingManifest = defaultManifest;
-    }
+  for (const {
+    processorName,
+    processorApps,
+    processorType,
+    documentTypes,
+  } of processorsToGenerate) {
+    await generateProcessor(
+      {
+        processorName,
+        processorApps: processorApps as ProcessorApp[],
+        processorType: processorType as "analytics" | "relationalDb",
+        documentTypes,
+      },
+      project,
+    );
   }
-
-  // Helper function to merge arrays by ID
-  const mergeArrayById = <T extends { id: string }>(
-    existingArray: T[],
-    newArray?: T[],
-  ): T[] => {
-    if (!newArray) return existingArray;
-
-    const result = [...existingArray];
-
-    newArray.forEach((newItem) => {
-      const existingIndex = result.findIndex((item) => item.id === newItem.id);
-      if (existingIndex !== -1) {
-        // Replace existing item
-        result[existingIndex] = newItem;
-      } else {
-        // Add new item
-        result.push(newItem);
-      }
-    });
-
-    return result;
-  };
-
-  // Helper function to merge config entries by name (config entries are keyed
-  // by name, not id).
-  const mergeConfigByName = <T extends { name: string }>(
-    existingArray: T[],
-    newArray?: T[],
-  ): T[] => {
-    if (!newArray) return existingArray;
-
-    const result = [...existingArray];
-
-    newArray.forEach((newItem) => {
-      const existingIndex = result.findIndex(
-        (item) => item.name === newItem.name,
-      );
-      if (existingIndex !== -1) {
-        result[existingIndex] = newItem;
-      } else {
-        result.push(newItem);
-      }
-    });
-
-    return result;
-  };
-
-  // Merge partial data with existing manifest
-  const updatedManifest: Manifest = {
-    ...existingManifest,
-    ...manifestData,
-    publisher: {
-      ...existingManifest.publisher,
-      ...(manifestData.publisher || {}),
-    },
-    documentModels: mergeArrayById(
-      existingManifest.documentModels ?? [],
-      manifestData.documentModels,
-    ),
-    editors: mergeArrayById(
-      existingManifest.editors ?? [],
-      manifestData.editors,
-    ),
-    apps: mergeArrayById(existingManifest.apps ?? [], manifestData.apps),
-    subgraphs: mergeArrayById(
-      existingManifest.subgraphs ?? [],
-      manifestData.subgraphs,
-    ),
-    config: mergeConfigByName(
-      existingManifest.config ?? [],
-      manifestData.config,
-    ),
-  };
-
-  // Write updated manifest to file
-  fs.writeFileSync(manifestPath, JSON.stringify(updatedManifest, null, 4));
-
-  return manifestPath;
 }
 
-/**
- * Generates code from a DocumentModelGlobalState.
- *
- * @remarks
- * This is the core generation function that both generateFromFile and generateFromDocument
- * use internally. It handles the actual code generation from a DocumentModelGlobalState object.
- *
- * @param documentModel - The DocumentModelGlobalState containing the document model specification
- * @param config - The PowerhouseConfig configuration object
- * @param options - Optional configuration for generation behavior
- * @returns A promise that resolves when code generation is complete
- */
-async function generateFromDocumentModel(args: {
-  documentModelState: DocumentModelGlobalState;
-  config: PowerhouseConfig;
-  useVersioning: boolean;
-  migrateLegacy?: boolean;
-  options?: CodegenOptions;
-}) {
-  const {
-    documentModelState,
-    config,
-    useVersioning,
-    migrateLegacy,
-    options = {},
-  } = args;
-  const {
-    verbose = config.logLevel === "verbose" ||
-      config.logLevel === "debug" ||
-      config.logLevel === "info",
-    force = false,
-  } = options;
-  const name = kebabCase(documentModelState.name);
-  const documentModelDir = join(config.documentModelsDir, name);
-  // create document model folder and spec as json
-  fs.mkdirSync(documentModelDir, { recursive: true });
-  fs.writeFileSync(
-    join(documentModelDir, `${name}.json`),
-    JSON.stringify(documentModelState, null, 2),
-  );
-
-  await generateDocumentModel({
-    dir: config.documentModelsDir,
-    documentModelState,
-    watch: config.watch,
-    skipFormat: config.skipFormat,
-    verbose,
-    force,
-    useVersioning,
-    migrateLegacy,
-  });
+/* Runs each module type's generateAll{moduleType} function for the current project */
+export async function generateAll(project: Project) {
+  await generateAllDocumentModels(project);
+  await generateAllEditors(project);
+  await generateAllApps(project);
+  await generateAllSubgraphs(project);
+  await generateAllProcessors(project);
 }

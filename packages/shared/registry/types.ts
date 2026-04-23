@@ -5,6 +5,10 @@ export interface PackageInfo {
   manifest: Manifest | null;
   documentTypes: string[];
   version?: string;
+  /** Mapping of dist-tag → version (e.g. {latest: "1.0.0", dev: "1.1.0-dev.3"}). */
+  distTags?: Record<string, string>;
+  /** All published versions of the package, sorted ascending by semver. */
+  versions?: string[];
 }
 
 export type RegistryPackageStatus =

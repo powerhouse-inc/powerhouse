@@ -7,6 +7,12 @@ import type { ReactNode } from "react";
 import { useCallback, useEffect, useLayoutEffect, useState } from "react";
 import { twMerge } from "tailwind-merge";
 import { ConnectDropdownMenu } from "../../../dropdown-menu/dropdown-menu.js";
+import { buildPackageSpec } from "./parse-package-spec.js";
+import type { VersionSelection } from "./version-picker.js";
+import {
+  resolveDefaultVersionSelection,
+  VersionPicker,
+} from "./version-picker.js";
 
 const PackageDetail: React.FC<{ label: string; value: ReactNode }> = ({
   label,
@@ -22,12 +28,28 @@ const PackageDetail: React.FC<{ label: string; value: ReactNode }> = ({
 
 export const PackageManagerListItem = (props: {
   registryPackage: RegistryPackage;
-  onInstall: (packageName: string) => Promise<void>;
+  onInstall: (packageSpec: string) => Promise<void>;
   onUninstall: (packageName: string) => void;
   className?: string;
 }) => {
   const { registryPackage, onInstall, onUninstall, className } = props;
   const [isDropdownMenuOpen, setIsDropdownMenuOpen] = useState(false);
+
+  const canPickVersion =
+    registryPackage.status === "available" ||
+    registryPackage.status === "dismissed";
+  const hasVersionMetadata =
+    (registryPackage.distTags &&
+      Object.keys(registryPackage.distTags).length > 0) ||
+    (registryPackage.versions?.length ?? 0) > 0;
+
+  const [selected, setSelected] = useState<VersionSelection>(() =>
+    resolveDefaultVersionSelection({
+      distTags: registryPackage.distTags,
+      versions: registryPackage.versions,
+      version: registryPackage.version,
+    }),
+  );
 
   const installDropdownItem = {
     id: "install",
@@ -45,10 +67,7 @@ export const PackageManagerListItem = (props: {
 
   function getDropdownItems() {
     return [
-      registryPackage.status === "available" ||
-      registryPackage.status === "dismissed"
-        ? installDropdownItem
-        : undefined,
+      canPickVersion ? installDropdownItem : undefined,
       registryPackage.status === "registry-install"
         ? uninstallDropdownItem
         : undefined,
@@ -63,14 +82,21 @@ export const PackageManagerListItem = (props: {
         className,
       )}
     >
-      <h3 className="font-semibold text-gray-900">
-        {registryPackage.name}
-        {registryPackage.version ? (
-          <span className="ml-2 text-xs font-normal text-gray-500">
+      <div className="flex flex-wrap items-center gap-2 pr-8">
+        <h3 className="font-semibold text-gray-900">{registryPackage.name}</h3>
+        {canPickVersion && hasVersionMetadata ? (
+          <VersionPicker
+            distTags={registryPackage.distTags}
+            versions={registryPackage.versions}
+            selected={selected}
+            onChange={setSelected}
+          />
+        ) : registryPackage.version ? (
+          <span className="text-xs font-normal text-gray-500">
             v{registryPackage.version}
           </span>
         ) : null}
-      </h3>
+      </div>
       {registryPackage.manifest !== null &&
         (() => {
           const { description, category, publisher } = registryPackage.manifest;
@@ -108,7 +134,11 @@ export const PackageManagerListItem = (props: {
         items={dropdownItems}
         onItemClick={(id) => {
           if (id === "install") {
-            onInstall(registryPackage.name).catch(console.error);
+            const spec =
+              canPickVersion && hasVersionMetadata
+                ? buildPackageSpec(registryPackage.name, selected.value)
+                : registryPackage.name;
+            onInstall(spec).catch(console.error);
             return;
           }
           onUninstall(registryPackage.name);
@@ -135,12 +165,13 @@ export const PackageManagerListItem = (props: {
 
 export const PackageManagerList = (props: {
   registryPackageList: RegistryPackageList;
-  onInstall: (packageName: string) => Promise<void>;
+  onInstall: (packageSpec: string) => Promise<void>;
   onUninstall: (packageName: string) => void;
   className?: string;
 }) => {
   const { className, registryPackageList, onInstall, onUninstall } = props;
   const [maxHeight, setMaxHeight] = useState<number | undefined>();
+
   const locallyInstalledPackages = registryPackageList.filter(
     (p) => p.status === "local-install",
   );
@@ -347,7 +378,7 @@ const PackageSubSection: React.FC<{
 
 const PackageList: React.FC<{
   packages: RegistryPackageList;
-  onInstall: (packageName: string) => Promise<void>;
+  onInstall: (packageSpec: string) => Promise<void>;
   onUninstall: (packageName: string) => void;
 }> = ({ packages, onInstall, onUninstall }) => {
   return (

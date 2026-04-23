@@ -1,3 +1,4 @@
+import type { DocumentModelFileMakerArgs } from "file-builders";
 import path from "path";
 import { upgradeManifestTemplate, upgradeTransitionTemplate } from "templates";
 import { VariableDeclarationKind, type Project } from "ts-morph";
@@ -8,21 +9,8 @@ import {
   getVariableDeclarationByTypeName,
 } from "utils";
 
-type MakeUpgradeFileArgs = {
-  project: Project;
-  version: number;
-  upgradesDirPath: string;
-  documentModelPackageImportPath: string;
-  phStateName: string;
-};
-export async function makeUpgradeFile(args: MakeUpgradeFileArgs) {
-  const {
-    project,
-    version,
-    upgradesDirPath,
-    documentModelPackageImportPath,
-    phStateName,
-  } = args;
+export async function makeUpgradeFile(args: DocumentModelFileMakerArgs) {
+  const { project, version, upgradesDirPath } = args;
   if (version < 2) return;
 
   const filePath = path.join(upgradesDirPath, `v${version}.ts`);
@@ -33,45 +21,25 @@ export async function makeUpgradeFile(args: MakeUpgradeFileArgs) {
 
   if (alreadyExists) return;
 
-  const previousVersion = version - 1;
-  const template = upgradeTransitionTemplate({
-    version,
-    previousVersion,
-    documentModelPackageImportPath,
-    phStateName,
-  });
+  const template = upgradeTransitionTemplate(args);
 
   sourceFile.replaceWithText(template);
   await formatSourceFileWithPrettier(sourceFile);
 }
 
-export async function createOrUpdateUpgradeManifestFile(args: {
-  project: Project;
-  specVersions: number[];
-  latestVersion: number;
-  upgradesDirPath: string;
-  documentModelId: string;
-  upgradeManifestName: string;
-}) {
-  const {
-    project,
-    specVersions,
-    upgradesDirPath,
-    documentModelId,
-    upgradeManifestName,
-  } = args;
+export async function createOrUpdateUpgradeManifestFile(
+  args: DocumentModelFileMakerArgs,
+) {
+  const { project, versions, upgradesDirPath } = args;
   const filePath = path.join(upgradesDirPath, "upgrade-manifest.ts");
 
   const { sourceFile } = getOrCreateSourceFile(project, filePath);
 
-  const template = upgradeManifestTemplate({
-    documentModelId,
-    upgradeManifestName,
-  });
+  const template = upgradeManifestTemplate(args);
 
   sourceFile.replaceWithText(template);
 
-  const upgradeTransitionImports = buildUpgradeTransitionImports(specVersions);
+  const upgradeTransitionImports = buildUpgradeTransitionImports(versions);
 
   sourceFile.addImportDeclarations(upgradeTransitionImports);
 
@@ -81,7 +49,7 @@ export async function createOrUpdateUpgradeManifestFile(args: {
   )?.getVariableStatementOrThrow();
   const objectLiteral = getObjectLiteral(upgradeManifestStatement);
   const upgradesProperty = objectLiteral?.getProperty("upgrades");
-  const upgrades = buildUpgrades(specVersions);
+  const upgrades = buildUpgrades(versions);
   upgradesProperty?.replaceWithText(upgrades);
   await formatSourceFileWithPrettier(sourceFile);
 }
@@ -119,11 +87,11 @@ function buildUpgradeTransitionImports(specVersions: number[]) {
 type MakeVersionConstantsFileArgs = {
   project: Project;
   upgradesDirPath: string;
-  specVersions: number[];
+  versions: number[];
   latestVersion: number;
 };
 export async function createOrUpdateVersionConstantsFile({
-  specVersions,
+  versions,
   latestVersion,
   project,
   upgradesDirPath,
@@ -134,8 +102,8 @@ export async function createOrUpdateVersionConstantsFile({
   const { sourceFile } = getOrCreateSourceFile(project, filePath);
   sourceFile.replaceWithText("");
 
-  const latestVersionIndex = specVersions.indexOf(latestVersion);
-  const versionInitializer = `[${specVersions.join(", ")}] as const;`;
+  const latestVersionIndex = versions.indexOf(latestVersion);
+  const versionInitializer = `[${versions.join(", ")}] as const;`;
   const latestInitializer = `${SUPPORTED_VERSIONS}[${latestVersionIndex}];`;
 
   sourceFile.addVariableStatement({
@@ -167,19 +135,19 @@ type MakeUpgradesIndexFileArgs = {
   project: Project;
   upgradesDirPath: string;
   upgradeManifestName: string;
-  specVersions: number[];
+  versions: number[];
 };
 export async function makeUpgradesIndexFile({
   project,
   upgradesDirPath,
-  specVersions,
+  versions,
   upgradeManifestName,
 }: MakeUpgradesIndexFileArgs) {
   const filePath = path.join(upgradesDirPath, "index.ts");
   const { sourceFile } = getOrCreateSourceFile(project, filePath);
   sourceFile.replaceWithText("");
 
-  const upgradeReducerExports = makeUpgradeReducerExports(specVersions);
+  const upgradeReducerExports = makeUpgradeReducerExports(versions);
 
   sourceFile.addExportDeclarations([
     {

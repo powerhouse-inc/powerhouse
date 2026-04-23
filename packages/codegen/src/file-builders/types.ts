@@ -1,10 +1,9 @@
 import type {
   DocumentModelGlobalState,
+  DocumentSpecification,
   ModuleSpecification,
-  OperationErrorSpecification,
 } from "@powerhousedao/shared/document-model";
 import type {
-  getDocumentModelOperationsModuleVariableNames,
   getDocumentModelVariableNames,
   getEditorVariableNames,
 } from "name-builders";
@@ -17,7 +16,7 @@ export type CommonMakeEditorComponentArgs = {
 };
 
 export type CommonGenerateEditorArgs = {
-  projectDir: string;
+  project: Project;
   editorDir: string;
   editorName: string;
   editorId: string;
@@ -36,58 +35,39 @@ export type DocumentModelVariableNames = ReturnType<
   typeof getDocumentModelVariableNames
 >;
 
-export type DocumentModelOperationsModuleVariableNames = ReturnType<
-  typeof getDocumentModelOperationsModuleVariableNames
->;
-
-export type DocumentModelTemplateInputs = DocumentModelFileMakerArgs &
-  DocumentModelVariableNames;
-
-export type DocumentModelTemplateInputsWithModule = {
-  module: ModuleSpecification;
-} & DocumentModelTemplateInputs &
-  DocumentModelOperationsModuleVariableNames;
-
-export type ActionFromOperation = {
-  name: string;
-  hasInput: boolean;
-  isEmptyInput: boolean;
-  hasAttachment: boolean;
-  scope: string;
-  state: string;
-  errors: OperationErrorSpecification[];
-};
-
 export type GenerateDocumentModelArgs = {
   projectDir: string;
   documentModelState: DocumentModelGlobalState;
-  useVersioning: boolean;
-  migrateLegacy?: boolean;
 };
 
-export type DocumentModelFileMakerArgs = DocumentModelVariableNames &
-  GenerateDocumentModelArgs & {
-    project: Project;
-    version: number;
-    documentTypeId: string;
-    modules: ModuleSpecification[];
-    initialGlobalState: string;
-    initialLocalState: string;
-    hasLocalSchema: boolean;
-    documentModelsDirPath: string;
-    documentModelDirName: string;
-    documentModelDirPath: string;
-    documentModelVersionDirName: string;
-    documentModelVersionDirPath: string;
-    documentModelPackageImportPath: string;
-    versionedDocumentModelPackageImportPath: string;
-    srcDirPath: string;
-    genDirPath: string;
-    testsDirPath: string;
-    schemaDirPath: string;
-    reducersDirPath: string;
-    fileExtension: string;
-  };
+export type DocumentModelFileMakerArgs = DocumentModelVariableNames & {
+  project: Project;
+  documentModelState: DocumentModelGlobalState;
+  version: number;
+  latestVersion: number;
+  versions: number[];
+  specification: DocumentSpecification;
+  initialGlobalState: string;
+  initialLocalState: string;
+  hasLocalSchema: boolean;
+  projectDir: string;
+  documentModelsDirPath: string;
+  documentModelDirName: string;
+  documentModelDirPath: string;
+  documentModelImportPath: string;
+  versionDirName: string;
+  versionDirPath: string;
+  versionImportPath: string;
+  genDirPath: string;
+  schemaDirPath: string;
+  srcDirPath: string;
+  testsDirPath: string;
+  upgradesDirPath: string;
+};
+
+export type DocumentModelModuleFileMakerArgs = DocumentModelFileMakerArgs & {
+  module: ModuleSpecification;
+};
 
 export type CommandEntry = {
   name: string;

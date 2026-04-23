@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/codegen",
-  "version": "6.0.0-dev.188",
+  "version": "6.0.0-dev.193",
   "license": "AGPL-3.0-only",
   "private": false,
   "type": "module",
@@ -41,29 +41,36 @@
     "build": "tsdown"
   },
   "dependencies": {
-    "write-package": "catalog:",
-    "read-pkg": "catalog:",
-    "get-tsconfig": "catalog:",
-    "document-model": "workspace:*",
-    "@powerhousedao/document-engineering": "catalog:",
     "@graphql-codegen/add": "catalog:",
     "@graphql-codegen/cli": "catalog:",
     "@graphql-codegen/typescript": "catalog:",
+    "@pnpm/find-workspace-dir": "^1000.1.5",
+    "@pnpm/find-workspace-packages": "^6.0.9",
+    "@powerhousedao/document-engineering": "catalog:",
     "@powerhousedao/shared": "workspace:*",
+    "@types/node": "catalog:",
     "arg": "^5.0.2",
     "chalk": "catalog:",
     "change-case": "catalog:",
+    "document-model": "workspace:*",
     "enquirer": "catalog:",
     "execa": "^8.0.1",
+    "get-tsconfig": "catalog:",
     "graphql": "catalog:",
     "graphql-codegen-typescript-validation-schema": "catalog:",
+    "load-json-file": "^7.0.1",
+    "npm-registry-fetch": "^19.1.1",
     "prettier": "catalog:",
+    "read-pkg": "catalog:",
+    "remeda": "^2.33.7",
     "semver": "catalog:",
     "ts-morph": "catalog:",
-    "@types/node": "catalog:",
-    "tsdown": "catalog:"
+    "tsdown": "catalog:",
+    "write-json-file": "^7.0.0",
+    "write-package": "catalog:"
   },
   "devDependencies": {
-    "@tmpl/core": "npm:@jsr/tmpl__core@^0.6.3"
+    "@tmpl/core": "npm:@jsr/tmpl__core@^0.6.3",
+    "@types/npm-registry-fetch": "^8.0.9"
   }
 }

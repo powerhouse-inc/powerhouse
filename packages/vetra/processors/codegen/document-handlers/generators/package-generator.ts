@@ -1,4 +1,4 @@
-import { generateManifest } from "@powerhousedao/codegen";
+import { createOrUpdateManifest } from "@powerhousedao/codegen/file-builders";
 import type {
   VetraPackageGlobalState,
   VetraPackagePHState,
@@ -35,8 +35,7 @@ export class PackageGenerator extends BaseDocumentGen {
     const fullState = input.state as VetraPackagePHState;
     const state = fullState.global as VetraPackageGlobalState;
 
-    logger.info("🔄 Generating manifest for package");
-    generateManifest(
+    await createOrUpdateManifest(
       {
         name: state.name ?? "",
         category: state.category ?? "",
@@ -48,7 +47,6 @@ export class PackageGenerator extends BaseDocumentGen {
       },
       this.config.CURRENT_WORKING_DIR,
     );
-    logger.info("✅ Manifest generated successfully");
 
     // Backup the document
     await minimalBackupDocument(

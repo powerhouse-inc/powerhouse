@@ -1,69 +1,152 @@
+import { camelCase, kebabCase, pascalCase } from "change-case";
+import { createOrUpdateManifest } from "file-builders";
 import path from "path";
-import { IndentationText, Project } from "ts-morph";
+import { filter, isTruthy, map, pipe, uniqueBy } from "remeda";
+import {
+  customSubgraphResolversTemplate,
+  customSubgraphSchemaTemplate,
+  subgraphIndexFileTemplate,
+  subgraphLibFileTemplate,
+} from "templates";
+import type { Project } from "ts-morph";
+import {
+  ensureDirectoriesExist,
+  formatSourceFileWithPrettier,
+  getOrCreateDirectory,
+  getOrCreateSourceFile,
+} from "utils";
 
-type MakeSubgraphsIndexFileArgs = { projectDir: string };
-export async function makeSubgraphsIndexFile({
-  projectDir,
-}: MakeSubgraphsIndexFileArgs) {
-  // use the local tsconfig.json file for a given project
-  const tsConfigFilePath = path.join(projectDir, "tsconfig.json");
+export async function tsMorphGenerateSubgraph(args: {
+  subgraphName: string;
+  project: Project;
+}): Promise<void> {
+  const { subgraphName, project } = args;
+  const kebabCaseName = kebabCase(subgraphName);
+  const pascalCaseName = pascalCase(subgraphName);
+  const camelCaseName = camelCase(subgraphName);
+  const { directory: subgraphsDir } = getOrCreateDirectory(
+    project,
+    "subgraphs",
+  );
+  const subgraphsDirPath = subgraphsDir.getPath();
+  const projectDir = subgraphsDir.getParentOrThrow().getPath();
+  const subgraphDir = path.join(subgraphsDirPath, kebabCaseName);
+  await ensureDirectoriesExist(project, subgraphsDirPath, subgraphDir);
 
-  const project = new Project({
-    tsConfigFilePath,
-    // don't add files from the tsconfig.json file, only use the ones we need
-    skipAddingFilesFromTsConfig: true,
-    // don't load library files, we only need the files we're adding
-    skipLoadingLibFiles: true,
-    // use formatting rules which match prettier
-    manipulationSettings: {
-      useTrailingCommas: true,
-      indentationText: IndentationText.TwoSpaces,
-    },
+  // Always generate base subgraph files (unless_exists)
+  await makeBaseSubgraphIndexFile(project, subgraphDir, {
+    pascalCaseName,
+    kebabCaseName,
+  });
+  await makeBaseSubgraphLibFile(project, subgraphDir);
+
+  // Generate custom subgraph scaffolds (unless_exists)
+  await makeCustomSubgraphFiles(project, subgraphDir, {
+    pascalCaseName,
+    camelCaseName,
   });
 
-  project.addSourceFilesAtPaths(`${projectDir}/subgraphs/**/*`);
-
-  const subgraphsDir = project.getDirectory(path.join(projectDir, "subgraphs"));
-  const subgraphsSubdirs = subgraphsDir?.getDirectories() ?? [];
-
-  let subgraphsIndexSourceFile = project.getSourceFile(
-    path.join(projectDir, "subgraphs/index.ts"),
+  await makeSubgraphsIndexFile({ project, subgraphsDir: subgraphsDirPath });
+  await createOrUpdateManifest(
+    {
+      subgraphs: [
+        {
+          name: subgraphName,
+          id: kebabCaseName,
+        },
+      ],
+    },
+    projectDir,
   );
-  if (!subgraphsIndexSourceFile) {
-    subgraphsIndexSourceFile = project.createSourceFile(
-      path.join(projectDir, "subgraphs/index.js"),
-      "",
-    );
+}
+
+async function makeBaseSubgraphIndexFile(
+  project: Project,
+  dirPath: string,
+  v: { pascalCaseName: string; kebabCaseName: string },
+) {
+  const filePath = path.join(dirPath, "index.ts");
+  const { alreadyExists, sourceFile } = getOrCreateSourceFile(
+    project,
+    filePath,
+  );
+  if (alreadyExists) return;
+  sourceFile.replaceWithText(subgraphIndexFileTemplate(v));
+  await formatSourceFileWithPrettier(sourceFile);
+}
+
+async function makeBaseSubgraphLibFile(project: Project, dirPath: string) {
+  const filePath = path.join(dirPath, "lib.ts");
+  const { alreadyExists, sourceFile } = getOrCreateSourceFile(
+    project,
+    filePath,
+  );
+  if (alreadyExists) return;
+  sourceFile.replaceWithText(subgraphLibFileTemplate());
+  await formatSourceFileWithPrettier(sourceFile);
+}
+
+async function makeCustomSubgraphFiles(
+  project: Project,
+  dirPath: string,
+  v: { pascalCaseName: string; camelCaseName: string },
+) {
+  // Schema — skip prettier, contains gql tagged template literal
+  const schemaPath = path.join(dirPath, "schema.ts");
+  const schema = getOrCreateSourceFile(project, schemaPath);
+  if (!schema.alreadyExists) {
+    schema.sourceFile.replaceWithText(customSubgraphSchemaTemplate(v));
   }
 
-  for (const subgraphSubdir of subgraphsSubdirs) {
-    const subgraphIndexSourceFilePath = `${subgraphSubdir.getPath()}/index.ts`;
-    const subgraphIndexSourceFile = project.getSourceFile(
-      subgraphIndexSourceFilePath,
-    );
-    if (!subgraphIndexSourceFile) {
-      continue;
-    }
-    const subgraphClassExport = subgraphIndexSourceFile
-      .getClasses()
-      .find((c) => c.getBaseClass()?.getText().includes("BaseSubgraph"));
-    const subgraphClassName = subgraphClassExport?.getName();
-    if (!subgraphClassName) {
-      continue;
-    }
-    const indexFileExports = subgraphsIndexSourceFile
-      .getExportDeclarations()
-      .map((e) => e.getNamespaceExport()?.getText())
-      .filter((e) => e !== undefined)
-      .join();
-    if (indexFileExports.includes(subgraphClassName)) {
-      continue;
-    }
-    subgraphsIndexSourceFile.addExportDeclaration({
-      namespaceExport: subgraphClassName,
-      moduleSpecifier: `./${subgraphSubdir.getBaseName()}/index.js`,
-    });
+  // Resolvers
+  const resolversPath = path.join(dirPath, "resolvers.ts");
+  const resolvers = getOrCreateSourceFile(project, resolversPath);
+  if (!resolvers.alreadyExists) {
+    resolvers.sourceFile.replaceWithText(customSubgraphResolversTemplate(v));
+    await formatSourceFileWithPrettier(resolvers.sourceFile);
   }
+}
 
-  await project.save();
+export async function makeSubgraphsIndexFile(args: {
+  project: Project;
+  subgraphsDir: string;
+}) {
+  const { project, subgraphsDir } = args;
+  const { sourceFile } = getOrCreateSourceFile(
+    project,
+    path.join(subgraphsDir, "index.ts"),
+  );
+  const existingExportNames = pipe(
+    sourceFile.getExportDeclarations(),
+    map((exportDeclaration) =>
+      exportDeclaration.getNamespaceExport()?.getName(),
+    ),
+    filter(isTruthy),
+  );
+
+  const exportDeclarations = pipe(
+    project.getDirectoryOrThrow(subgraphsDir).getDescendantSourceFiles(),
+    filter((sourceFile) => sourceFile.getBaseName() === "index.ts"),
+    uniqueBy((sourceFile) => sourceFile.getFilePath()),
+    map((sourceFile) =>
+      sourceFile
+        .getClasses()
+        .find((c) => c.getBaseClass()?.getText().includes("BaseSubgraph")),
+    ),
+    filter(isTruthy),
+    map((classDeclaration) => ({
+      name: classDeclaration.getNameOrThrow(),
+      subgraphDir: classDeclaration
+        .getSourceFile()
+        .getDirectory()
+        .getBaseName(),
+    })),
+    filter(({ name }) => !existingExportNames.includes(name)),
+    map(({ name, subgraphDir }) => ({
+      namespaceExport: name,
+      moduleSpecifier: `./${subgraphDir}/index.js`,
+    })),
+  );
+  sourceFile.addExportDeclarations(exportDeclarations);
+  await formatSourceFileWithPrettier(sourceFile);
 }

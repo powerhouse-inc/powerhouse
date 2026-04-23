@@ -1,5 +1,5 @@
 import { ts } from "@tmpl/core";
-import type { DocumentModelTemplateInputs } from "file-builders";
+import type { DocumentModelFileMakerArgs } from "file-builders";
 
 function buildEmptyLocalStateType(
   hasLocalSchema: boolean,
@@ -17,8 +17,12 @@ function buildLocalStateTypeImport(
   if (!hasLocalSchema) return "";
   return localStateName;
 }
-export const documentModelGenTypesTemplate = (v: DocumentModelTemplateInputs) =>
+export const documentModelGenTypesTemplate = (v: DocumentModelFileMakerArgs) =>
   ts`
+/**
+ * WARNING: DO NOT EDIT
+ * This file is auto-generated and updated by codegen
+ */
 import type { PHDocument, PHBaseState } from 'document-model';
 import type { ${v.actionTypeName} } from './actions.js';
 import type {

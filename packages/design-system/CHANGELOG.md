@@ -1,3 +1,55 @@
+## 6.0.0-dev.193 (2026-04-23)
+
+### 🚀 Features
+
+- version picker for install, preserve picked version across reloads ([3cf54c3a3](https://github.com/powerhouse-inc/powerhouse/commit/3cf54c3a3))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
+## 6.0.0-dev.192 (2026-04-22)
+
+### 🚀 Features
+
+- update migrate command ([#2492](https://github.com/powerhouse-inc/powerhouse/pull/2492))
+
+### ❤️ Thank You
+
+- Ryan Wolhuter @ryanwolhuter
+
+## 6.0.0-dev.191 (2026-04-22)
+
+This was a version bump only for @powerhousedao/design-system to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.190 (2026-04-22)
+
+### 🚀 Features
+
+- **connect:** scope package listing to the custom registry + npm fallback ([faf4d6e88](https://github.com/powerhouse-inc/powerhouse/commit/faf4d6e88))
+- **connect:** filter available packages and accept name@tag in search ([34e34335c](https://github.com/powerhouse-inc/powerhouse/commit/34e34335c))
+
+### 🩹 Fixes
+
+- **connect:** only surface npm fallback when no local matches ([fe717d65d](https://github.com/powerhouse-inc/powerhouse/commit/fe717d65d))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
+## 6.0.0-dev.189 (2026-04-22)
+
+### 🚀 Features
+
+- **lb:** the load balancer now pins through milestone 2 ([b928cfe04](https://github.com/powerhouse-inc/powerhouse/commit/b928cfe04))
+- **lb:** wip on m1 features ([096384d5c](https://github.com/powerhouse-inc/powerhouse/commit/096384d5c))
+- **switchboard-lb:** proxy upstream routes via least_conn (M1) ([5e3343b21](https://github.com/powerhouse-inc/powerhouse/commit/5e3343b21))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 4.7
+
 ## 6.0.0-dev.188 (2026-04-21)
 
 ### 🩹 Fixes

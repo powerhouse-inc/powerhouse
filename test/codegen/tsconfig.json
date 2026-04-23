@@ -21,6 +21,9 @@
       "path": "../../apps/connect"
     },
     {
+      "path": "../../clis/ph-cli"
+    },
+    {
       "path": "../../packages/analytics-engine/core"
     },
     {

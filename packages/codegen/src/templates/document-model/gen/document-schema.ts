@@ -1,10 +1,14 @@
 import { ts } from "@tmpl/core";
-import type { DocumentModelTemplateInputs } from "file-builders";
+import type { DocumentModelFileMakerArgs } from "file-builders";
 
 export const documentModelDocumentSchemaFileTemplate = (
-  v: DocumentModelTemplateInputs,
+  v: DocumentModelFileMakerArgs,
 ) =>
   ts`
+/**
+ * WARNING: DO NOT EDIT
+ * This file is auto-generated and updated by codegen
+ */
 import {
   BaseDocumentHeaderSchema,
   BaseDocumentStateSchema,

@@ -11,16 +11,7 @@ type DocumentOperationsPage = GetDocumentOperationsQuery["documentOperations"];
 
 type DocumentResult = NonNullable<GetDocumentQuery["document"]>;
 
-export type ReactorGraphQLClient = Pick<
-  Sdk,
-  | "GetDocument"
-  | "GetDocumentWithOperations"
-  | "GetDocumentOperations"
-  | "MutateDocument"
-  | "CreateDocument"
-  | "CreateEmptyDocument"
-  | "DeleteDocument"
-> & {
+export type ReactorGraphQLClient = Sdk & {
   /** Fetch multiple documentOperations in a single request via aliases. */
   BatchGetDocumentOperations?: (
     filters: OperationsFilterInput[],

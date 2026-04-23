@@ -5,6 +5,7 @@ export {
   type RemoteDocumentControllerWith,
 } from "./remote-controller.js";
 export { PropagationMode } from "./types.js";
+
 export type {
   ConflictInfo,
   ConflictStrategy,
@@ -17,7 +18,7 @@ export type {
   IRemoteController,
   MergeHandler,
   PushResult,
-  ReactorGraphQLClient,
+  RemoteControllerGraphQLClient,
   RemoteControllerOptions,
   RemoteDocumentData,
   RemoteOperation,

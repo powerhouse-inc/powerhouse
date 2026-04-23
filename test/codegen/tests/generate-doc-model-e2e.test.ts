@@ -7,13 +7,7 @@ import type {
 } from "@powerhousedao/shared/document-model";
 import { afterEach, describe, expect, it } from "bun:test";
 import { join } from "path";
-import {
-  DATA,
-  DOCUMENT_MODELS,
-  NEW_PROJECT,
-  TEST_OUTPUT,
-  TEST_PROJECTS,
-} from "../constants.js";
+import { DOCUMENT_MODELS, NEW_PROJECT, TEST_OUTPUT } from "../constants.js";
 import {
   cpForce,
   loadDocumentModelsInDir,
@@ -22,9 +16,7 @@ import {
   runTsc,
 } from "../utils.js";
 
-const parentOutDir = join(process.cwd(), TEST_OUTPUT, "generate-doc-model-e2e");
-const testProjectDir = join(process.cwd(), TEST_PROJECTS);
-const dataDir = join(process.cwd(), DATA);
+const parentOutDir = join(TEST_OUTPUT, "generate-doc-model-e2e");
 await rmForce(parentOutDir);
 await mkdirRecursive(parentOutDir);
 
@@ -37,9 +29,8 @@ function scopeState(doc: PHDocument, scope: string): Record<string, unknown> {
 
 async function generateDocModelProject(outDirName: string) {
   const outDir = join(parentOutDir, outDirName);
-  await cpForce(join(testProjectDir, NEW_PROJECT), outDir);
-  const documentModelsInDir = join(dataDir, DOCUMENT_MODELS);
-  await loadDocumentModelsInDir(documentModelsInDir, outDir, false);
+  await cpForce(NEW_PROJECT, outDir);
+  await loadDocumentModelsInDir(DOCUMENT_MODELS, outDir);
   await runTsc(outDir);
   return outDir;
 }
@@ -81,6 +72,7 @@ describe("document model e2e integration", () => {
       outDir,
       "document-models",
       "billing-statement",
+      "v1",
       "module.ts",
     );
     const docModelModule = (await import(modulePath)) as {
@@ -134,6 +126,7 @@ describe("document model e2e integration", () => {
       outDir,
       "document-models",
       "billing-statement",
+      "v1",
       "module.ts",
     );
     const docModelModule = (await import(modulePath)) as {

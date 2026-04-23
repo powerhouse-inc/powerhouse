@@ -1,5 +1,8 @@
-import type { ActionFromOperation } from "@powerhousedao/codegen";
+import type { DocumentModelModuleFileMakerArgs } from "@powerhousedao/codegen";
+import type { OperationSpecification } from "@powerhousedao/shared";
 import { ts } from "@tmpl/core";
+import { pascalCase } from "change-case";
+import { operationHasAttachment } from "file-builders";
 import {
   getActionInputName,
   getActionInputTypeNames,
@@ -7,56 +10,55 @@ import {
   getActionTypeName,
 } from "name-builders";
 
-function getActionTypeExport(action: ActionFromOperation) {
-  const baseActionTypeName = action.hasAttachment
+function getActionTypeExport(operation: OperationSpecification) {
+  const baseActionTypeName = operationHasAttachment(operation)
     ? "ActionWithAttachment"
     : "Action";
-  const actionTypeName = getActionTypeName(action);
-  const actionInputName = getActionInputName(action) ?? `"{}"`;
-  const actionType = getActionType(action);
+  const actionTypeName = getActionTypeName(operation);
+  const actionInputName = getActionInputName(operation) ?? `"{}"`;
+  const actionType = getActionType(operation);
 
   return ts`export type ${actionTypeName} = ${baseActionTypeName} & { type: "${actionType}"; input: ${actionInputName} };`
     .raw;
 }
 
-function getActionTypeExports(actions: ActionFromOperation[]) {
-  return actions.map(getActionTypeExport).join("\n");
+function getActionTypeExports(args: DocumentModelModuleFileMakerArgs) {
+  return args.module.operations.map(getActionTypeExport).join("\n");
 }
 
-export function getModuleExportType(
-  actions: ActionFromOperation[],
-  pascalCaseDocumentName: string,
-  pascalCaseModuleName: string,
-) {
-  const actionTypeNames = actions.map(getActionTypeName).join(" |\n");
-  return ts`export type ${pascalCaseDocumentName}${pascalCaseModuleName}Action = ${actionTypeNames};`
+export function getModuleExportType(args: DocumentModelModuleFileMakerArgs) {
+  const { pascalCaseDocumentType, module } = args;
+  const actionTypeNames = module.operations.map(getActionTypeName).join(" |\n");
+  return ts`export type ${pascalCaseDocumentType}${pascalCase(module.name)}Action = ${actionTypeNames};`
     .raw;
 }
 
-function getDocumentModelActionTypeImportNames(actions: ActionFromOperation[]) {
+function getDocumentModelActionTypeImportNames(
+  args: DocumentModelModuleFileMakerArgs,
+) {
   const actionTypeImports = ["Action"];
-  const anyActionHasAttachment = actions.some((a) => a.hasAttachment);
+  const anyActionHasAttachment = args.module.operations.some((a) =>
+    operationHasAttachment(a),
+  );
   if (anyActionHasAttachment) {
     actionTypeImports.push("ActionWithAttachment");
   }
   return actionTypeImports.join(",\n");
 }
-export const documentModelOperationModuleActionsFileTemplate = (v: {
-  actions: ActionFromOperation[];
-  pascalCaseDocumentType: string;
-  pascalCaseModuleName: string;
-}) =>
+export const documentModelOperationModuleActionsFileTemplate = (
+  v: DocumentModelModuleFileMakerArgs,
+) =>
   ts`
-import type { ${getDocumentModelActionTypeImportNames(v.actions)} } from 'document-model';
+/**
+ * WARNING: DO NOT EDIT
+ * This file is auto-generated and updated by codegen
+ */
+import type { ${getDocumentModelActionTypeImportNames(v)} } from 'document-model';
 import type {
-  ${getActionInputTypeNames(v.actions)}
+  ${getActionInputTypeNames(v)}
 } from '../types.js';
 
-${getActionTypeExports(v.actions)}
+${getActionTypeExports(v)}
 
-${getModuleExportType(
-  v.actions,
-  v.pascalCaseDocumentType,
-  v.pascalCaseModuleName,
-)}
+${getModuleExportType(v)}
 `.raw;

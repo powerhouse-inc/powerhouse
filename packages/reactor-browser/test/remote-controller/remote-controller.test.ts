@@ -8,7 +8,7 @@ import type {
 } from "../../src/graphql/gen/schema.js";
 import { RemoteDocumentController } from "../../src/remote-controller/remote-controller.js";
 import type {
-  ReactorGraphQLClient,
+  RemoteControllerGraphQLClient,
   RemoteOperation,
 } from "../../src/remote-controller/types.js";
 import { ConflictError } from "../../src/remote-controller/utils.js";
@@ -72,8 +72,8 @@ function makeDocWithOpsResponse(
  * default doc data is used.
  */
 function createMockClient(
-  overrides: Partial<ReactorGraphQLClient> = {},
-): ReactorGraphQLClient {
+  overrides: Partial<RemoteControllerGraphQLClient> = {},
+): RemoteControllerGraphQLClient {
   const defaultDoc = makeDocData();
 
   // Build GetDocumentWithOperations from GetDocument if not explicitly set
@@ -153,7 +153,7 @@ function createMockClient(
     BatchGetDocumentOperations: overrides.BatchGetDocumentOperations,
     BatchGetDocumentWithOperations: batchGetDocWithOps,
     ...overrides,
-  };
+  } as unknown as RemoteControllerGraphQLClient;
 }
 
 describe("RemoteDocumentController", () => {
@@ -881,7 +881,7 @@ describe("RemoteDocumentController", () => {
     it("merges new operations with existing ones on incremental pull", async () => {
       // GetDocumentOperations returns ops filtered by sinceRevision
       const getDocOps = vi
-        .fn<ReactorGraphQLClient["GetDocumentOperations"]>()
+        .fn<RemoteControllerGraphQLClient["GetDocumentOperations"]>()
         .mockImplementation((args) => {
           const since = args.filter?.sinceRevision ?? 0;
           const allOps = [makeOp(0), makeOp(1), makeOp(2)];
@@ -941,7 +941,7 @@ describe("RemoteDocumentController", () => {
     it("falls back to full fetch when incremental merge produces count mismatch", async () => {
       let getDocOpsCallCount = 0;
       const getDocOps = vi
-        .fn<ReactorGraphQLClient["GetDocumentOperations"]>()
+        .fn<RemoteControllerGraphQLClient["GetDocumentOperations"]>()
         .mockImplementation(() => {
           getDocOpsCallCount++;
           if (getDocOpsCallCount === 1) {

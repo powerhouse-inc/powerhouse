@@ -1,9 +1,17 @@
 import type { Draft } from "mutative";
 import type { ProcessorFactoryBuilder } from "processors";
 import type { FC, ReactNode } from "react";
+import type { z } from "zod";
 import type { Action, Attachment, AttachmentRef } from "./actions.js";
 import type { PHDocument } from "./documents.js";
 import type { Operation } from "./operations.js";
+import type {
+  ConfigEntrySchema,
+  ConfigEntryTypeSchema,
+  ManifestSchema,
+  PowerhouseModuleSchema,
+  PublisherSchema,
+} from "./schemas.js";
 import type {
   ActionSigner,
   AppActionSigner,
@@ -12,7 +20,6 @@ import type {
 } from "./signatures.js";
 import type { PHBaseState } from "./state.js";
 import type { UpgradeManifest } from "./upgrades.js";
-
 export type State = {
   examples: CodeExample[];
   initialValue: string;
@@ -1674,35 +1681,11 @@ export type DocumentModelLib<TState extends PHBaseState = PHBaseState> = {
 export type DocumentModelDocumentModelModule =
   DocumentModelModule<DocumentModelPHState>;
 
-export type PowerhouseModule = {
-  id: string;
-  name: string;
-  documentTypes?: string[];
-};
-export type Publisher = {
-  name?: string;
-  url?: string;
-};
+export type ConfigEntryType = z.infer<typeof ConfigEntryTypeSchema>;
 
-export type ConfigEntryType = "var" | "secret";
+export type ConfigEntry = z.infer<typeof ConfigEntrySchema>;
 
-export type ConfigEntry = {
-  name: string;
-  type: ConfigEntryType;
-  description?: string;
-  required?: boolean;
-  default?: string;
-};
+export type PowerhouseModule = z.infer<typeof PowerhouseModuleSchema>;
+export type Publisher = z.infer<typeof PublisherSchema>;
 
-export type Manifest = {
-  name: string;
-  description?: string;
-  category?: string;
-  publisher?: Publisher;
-  apps?: PowerhouseModule[];
-  documentModels?: PowerhouseModule[];
-  editors?: PowerhouseModule[];
-  processors?: PowerhouseModule[];
-  subgraphs?: PowerhouseModule[];
-  config?: ConfigEntry[];
-};
+export type Manifest = z.infer<typeof ManifestSchema>;

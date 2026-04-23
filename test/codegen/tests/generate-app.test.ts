@@ -1,28 +1,23 @@
 import { generateApp } from "@powerhousedao/codegen";
+import { buildTsMorphProject } from "@powerhousedao/codegen/utils";
 import { directoryExists, fileExists } from "@powerhousedao/shared/clis";
-import { afterAll, describe, expect, it } from "bun:test";
+import { describe, expect, it } from "bun:test";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import {
   TEST_OUTPUT,
-  TEST_PROJECTS,
-  WITH_DOCUMENT_MODELS,
+  WITH_DOCUMENT_MODELS_SPEC_2,
   WITH_EDITORS,
 } from "../constants.js";
 import { cpForce, mkdirRecursive, rmForce, runTsc } from "../utils.js";
 
 type GenerateAppOptions = Parameters<typeof generateApp>[0];
 
-const cwd = process.cwd();
-const parentOutDir = join(cwd, TEST_OUTPUT, "generate-app");
-const testProjectsDir = join(cwd, TEST_PROJECTS);
+const parentOutDir = join(TEST_OUTPUT, "generate-app");
 await rmForce(parentOutDir);
 await mkdirRecursive(parentOutDir);
 
 describe("generateApp", () => {
-  afterAll(() => {
-    process.chdir(cwd);
-  });
   const appName = "Atlas Drive Explorer";
   const appId = "AtlasDriveExplorer";
   const allowedDocumentTypes = ["powerhouse/test-doc"];
@@ -33,17 +28,20 @@ describe("generateApp", () => {
     allowedDocumentTypes,
     appDirName: undefined,
     isDragAndDropEnabled: true,
-    skipFormat: false,
   };
 
   it("should generate a app with the correct files and content", async () => {
     const outDir = join(parentOutDir, "generate-new-app");
     await rmForce(outDir);
-    await cpForce(join(testProjectsDir, WITH_DOCUMENT_MODELS), outDir);
-    process.chdir(outDir);
-    await generateApp({
-      ...options,
-    });
+    await cpForce(WITH_DOCUMENT_MODELS_SPEC_2, outDir);
+    const project = buildTsMorphProject(outDir);
+    await generateApp(
+      {
+        ...options,
+      },
+      project,
+    );
+    await project.save();
     const editorsDir = join(outDir, "editors");
     expect(await directoryExists(editorsDir)).toBe(true);
 
@@ -143,11 +141,15 @@ describe("generateApp", () => {
 
   it("should append new exports to existing editors.ts file", async () => {
     const outDir = join(parentOutDir, "append-exports-to-existing-editors");
-    await cpForce(join(testProjectsDir, WITH_EDITORS), outDir);
-    process.chdir(outDir);
-    await generateApp({
-      ...options,
-    });
+    await cpForce(WITH_EDITORS, outDir);
+    const project = buildTsMorphProject(outDir);
+    await generateApp(
+      {
+        ...options,
+      },
+      project,
+    );
+    await project.save();
     const editorsDir = join(outDir, "editors");
     const editorsFilePath = join(editorsDir, "editors.ts");
     const editorsContent = await readFile(editorsFilePath, "utf-8");

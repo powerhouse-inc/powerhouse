@@ -3,17 +3,12 @@ import {
   generateApp,
   generateEditor,
 } from "@powerhousedao/codegen";
-import { join } from "path";
-import { readPackage } from "read-pkg";
-import { writePackage } from "write-package";
+import { buildTsMorphProject } from "@powerhousedao/codegen/utils";
 import {
-  DATA,
-  DOCUMENT_MODELS,
   NEW_PROJECT,
   SPEC_VERSION_1,
   SPEC_VERSION_2,
   TEST_PROJECTS,
-  WITH_DOCUMENT_MODELS,
   WITH_DOCUMENT_MODELS_SPEC_1,
   WITH_DOCUMENT_MODELS_SPEC_2,
   WITH_EDITORS,
@@ -23,92 +18,55 @@ import {
   loadDocumentModelsInDir,
   mkdirRecursive,
   rmForce,
+  runTsc,
 } from "./utils.js";
 
-const dataDir = join(process.cwd(), DATA);
-const testProjectsDir = join(process.cwd(), TEST_PROJECTS);
-const cwd = process.cwd();
-
 export async function generateTestProjects() {
-  await rmForce(testProjectsDir);
-  await mkdirRecursive(testProjectsDir);
-  process.chdir(testProjectsDir);
+  await rmForce(TEST_PROJECTS);
+  await mkdirRecursive(TEST_PROJECTS);
 
+  process.chdir(TEST_PROJECTS);
   await createProject({
-    name: NEW_PROJECT,
+    name: "new-project",
     packageManager: "pnpm",
     skipGitInit: true,
     skipInstall: true,
   });
+  await runTsc(NEW_PROJECT);
+  await cpForce(NEW_PROJECT, WITH_DOCUMENT_MODELS_SPEC_1);
+  await loadDocumentModelsInDir(SPEC_VERSION_1, WITH_DOCUMENT_MODELS_SPEC_1);
+  await runTsc(WITH_DOCUMENT_MODELS_SPEC_1);
 
-  const packageJson = await readPackage();
-  packageJson.dependencies = {};
-  packageJson.devDependencies = {};
-  packageJson.peerDependencies = {};
-  packageJson.optionalDependencies = {};
-  await writePackage(packageJson);
+  await cpForce(NEW_PROJECT, WITH_DOCUMENT_MODELS_SPEC_2);
 
-  await rmForce(WITH_DOCUMENT_MODELS);
+  await loadDocumentModelsInDir(SPEC_VERSION_2, WITH_DOCUMENT_MODELS_SPEC_2);
 
-  await cpForce(
-    join(testProjectsDir, NEW_PROJECT),
-    join(testProjectsDir, WITH_DOCUMENT_MODELS),
+  await runTsc(WITH_DOCUMENT_MODELS_SPEC_2);
+
+  await cpForce(WITH_DOCUMENT_MODELS_SPEC_2, WITH_EDITORS);
+
+  process.chdir(WITH_EDITORS);
+  const project = buildTsMorphProject(WITH_EDITORS);
+  await generateEditor(
+    {
+      editorId: "existing-document-editor",
+      editorName: "ExistingDocumentEditor",
+      documentTypes: ["powerhouse/test-doc"],
+      editorDirName: undefined,
+    },
+    project,
+  );
+  await generateApp(
+    {
+      appId: "existing-app",
+      appName: "ExistingApp",
+      allowedDocumentTypes: ["powerhouse/test-doc"],
+      appDirName: undefined,
+      isDragAndDropEnabled: true,
+    },
+    project,
   );
 
-  await loadDocumentModelsInDir(
-    join(dataDir, DOCUMENT_MODELS),
-    join(testProjectsDir, WITH_DOCUMENT_MODELS),
-    false,
-  );
-
-  await rmForce(WITH_DOCUMENT_MODELS_SPEC_1);
-
-  await cpForce(
-    join(testProjectsDir, NEW_PROJECT),
-    join(testProjectsDir, WITH_DOCUMENT_MODELS_SPEC_1),
-  );
-
-  await loadDocumentModelsInDir(
-    join(dataDir, SPEC_VERSION_1),
-    join(testProjectsDir, WITH_DOCUMENT_MODELS_SPEC_1),
-    true,
-  );
-
-  await rmForce(WITH_DOCUMENT_MODELS_SPEC_2);
-
-  await cpForce(
-    join(testProjectsDir, NEW_PROJECT),
-    join(testProjectsDir, WITH_DOCUMENT_MODELS_SPEC_2),
-  );
-
-  await loadDocumentModelsInDir(
-    join(dataDir, SPEC_VERSION_2),
-    join(testProjectsDir, WITH_DOCUMENT_MODELS_SPEC_2),
-    true,
-  );
-
-  await rmForce(WITH_EDITORS);
-
-  await cpForce(
-    join(testProjectsDir, WITH_DOCUMENT_MODELS_SPEC_2),
-    join(testProjectsDir, WITH_EDITORS),
-  );
-
-  process.chdir(join(testProjectsDir, WITH_EDITORS));
-  await generateEditor({
-    editorId: "existing-document-editor",
-    editorName: "ExistingDocumentEditor",
-    documentTypes: ["powerhouse/test-doc"],
-    skipFormat: false,
-    editorDirName: undefined,
-  });
-  await generateApp({
-    appId: "existing-app",
-    appName: "ExistingApp",
-    allowedDocumentTypes: ["powerhouse/test-doc"],
-    appDirName: undefined,
-    isDragAndDropEnabled: true,
-    skipFormat: false,
-  });
-  process.chdir(cwd);
+  await project.save();
+  await runTsc(WITH_EDITORS);
 }

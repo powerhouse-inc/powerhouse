@@ -93,7 +93,7 @@ export function createPowerhouseRouter(
 
   // Package listing API
   router.get("/packages", (req: Request, res: Response) => {
-    const packages = scanPackages(config.cdnCachePath);
+    const packages = scanPackages(config.cdnCachePath, config.storagePath);
     const documentType = req.query.documentType as string | undefined;
     if (documentType) {
       const filtered = packages.filter((pkg) =>

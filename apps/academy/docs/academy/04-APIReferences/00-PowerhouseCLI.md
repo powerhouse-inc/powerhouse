@@ -713,6 +713,14 @@ Run migrations
 
 
 
+### Options
+**Version** - The version to migrate to. Accepts a valid semver version or `staging`, `dev`, `latest`. - Usage: `--version, -v <str>`
+
+**Default:** `latest`
+
+
+
+
 ### Flags
 **Debug** - Log arguments passed to this command - Usage: `--debug`
 

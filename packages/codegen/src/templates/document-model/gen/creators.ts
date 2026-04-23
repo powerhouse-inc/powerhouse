@@ -1,7 +1,7 @@
 import type { ModuleSpecification } from "@powerhousedao/shared";
 import { ts } from "@tmpl/core";
 import { camelCase, kebabCase } from "change-case";
-import type { DocumentModelTemplateInputs } from "file-builders";
+import type { DocumentModelFileMakerArgs } from "file-builders";
 
 function buildModuleCreatorsExport(
   module: ModuleSpecification,
@@ -26,8 +26,12 @@ function buildCreatorsExports(
     .join("\n");
 }
 export const documentModelGenCreatorsFileTemplate = (
-  v: DocumentModelTemplateInputs,
+  v: DocumentModelFileMakerArgs,
 ) =>
   ts`
-${buildCreatorsExports(v.modules, v.camelCaseDocumentType)}
+/**
+ * WARNING: DO NOT EDIT
+ * This file is auto-generated and updated by codegen
+ */
+${buildCreatorsExports(v.specification.modules, v.camelCaseDocumentType)}
 `.raw;

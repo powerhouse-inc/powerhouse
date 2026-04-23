@@ -1,3 +1,53 @@
+## 6.0.0-dev.193 (2026-04-23)
+
+### 🩹 Fixes
+
+- **connect:** trim trailing slash, upsert npm-fallback, prune stale boot entries ([2e9c8d119](https://github.com/powerhouse-inc/powerhouse/commit/2e9c8d119))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
+## 6.0.0-dev.192 (2026-04-22)
+
+### 🚀 Features
+
+- update migrate command ([#2492](https://github.com/powerhouse-inc/powerhouse/pull/2492))
+
+### 🩹 Fixes
+
+- **reactor-browser:** added hidden methods on graphql client type ([6af8b7f12](https://github.com/powerhouse-inc/powerhouse/commit/6af8b7f12))
+
+### ❤️ Thank You
+
+- acaldas
+- Ryan Wolhuter @ryanwolhuter
+
+## 6.0.0-dev.191 (2026-04-22)
+
+This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.190 (2026-04-22)
+
+This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.
+
+## 6.0.0-dev.189 (2026-04-22)
+
+### 🚀 Features
+
+- **lb:** the load balancer now pins through milestone 2 ([b928cfe04](https://github.com/powerhouse-inc/powerhouse/commit/b928cfe04))
+- **lb:** wip on m1 features ([096384d5c](https://github.com/powerhouse-inc/powerhouse/commit/096384d5c))
+- **switchboard-lb:** proxy upstream routes via least_conn (M1) ([5e3343b21](https://github.com/powerhouse-inc/powerhouse/commit/5e3343b21))
+
+### 🩹 Fixes
+
+- **connect:** dump and import block and quiesce queue before working with the db ([dd0d99cf3](https://github.com/powerhouse-inc/powerhouse/commit/dd0d99cf3))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+- Claude Opus 4.7
+
 ## 6.0.0-dev.188 (2026-04-21)
 
 ### 🩹 Fixes

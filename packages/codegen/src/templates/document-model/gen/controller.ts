@@ -1,10 +1,14 @@
 import { ts } from "@tmpl/core";
-import type { DocumentModelTemplateInputs } from "file-builders";
+import type { DocumentModelFileMakerArgs } from "file-builders";
 
 export const documentModelGenControllerFileTemplate = (
-  v: DocumentModelTemplateInputs,
+  v: DocumentModelFileMakerArgs,
 ) =>
   ts`
+/**
+ * WARNING: DO NOT EDIT
+ * This file is auto-generated and updated by codegen
+ */
 import { PHDocumentController } from "document-model";
 import { ${v.pascalCaseDocumentType} } from "../module.js";
 import type { ${v.actionTypeName}, ${v.phStateName} } from "./types.js";

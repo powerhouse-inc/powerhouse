@@ -6,7 +6,12 @@ import { PackageManagerList } from "./package-manager-list.js";
 type Props = {
   registryPackageList: RegistryPackageList;
   mutable: boolean;
-  onInstall: (packageName: string) => Promise<void>;
+  /**
+   * Install handler. The argument is the full spec the user chose — either
+   * the bare package name, or `name@tag` / `name@version` when they typed
+   * a suffix in the search input or picked one via the filter UI.
+   */
+  onInstall: (packageSpec: string) => Promise<void>;
   onUninstall: (packageName: string) => void;
   disabled?: boolean;
   className?: string;

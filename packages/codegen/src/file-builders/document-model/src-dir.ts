@@ -1,4 +1,7 @@
-import type { DocumentModelFileMakerArgs } from "@powerhousedao/codegen";
+import type {
+  DocumentModelFileMakerArgs,
+  DocumentModelModuleFileMakerArgs,
+} from "@powerhousedao/codegen";
 import type { ModuleSpecification } from "@powerhousedao/shared/document-model";
 import { ts } from "@tmpl/core";
 import { camelCase, kebabCase, pascalCase } from "change-case";
@@ -16,19 +19,11 @@ import {
   getPreviousVersionSourceFile,
 } from "utils";
 
-export async function makeSrcDirFiles(
+export async function makeReducerOperationHandlersForModules(
   fileMakerArgs: DocumentModelFileMakerArgs,
 ) {
-  await makeDocumentModelSrcIndexFile(fileMakerArgs);
-  await makeDocumentModelSrcUtilsFile(fileMakerArgs);
-  await makeReducerOperationHandlersForModules(fileMakerArgs);
-}
-
-async function makeReducerOperationHandlersForModules(
-  fileMakerArgs: DocumentModelFileMakerArgs,
-) {
-  const { modules } = fileMakerArgs;
-  for (const module of modules) {
+  const { specification } = fileMakerArgs;
+  for (const module of specification.modules) {
     await makeReducerOperationHandlerForModule({
       ...fileMakerArgs,
       module,
@@ -36,18 +31,22 @@ async function makeReducerOperationHandlersForModules(
   }
 }
 
-async function makeReducerOperationHandlerForModule({
+export async function makeReducerOperationHandlerForModule({
   project,
   module,
   version,
-  reducersDirPath,
+  srcDirPath,
+  versionImportPath,
   pascalCaseDocumentType,
   camelCaseDocumentType,
-  versionedDocumentModelPackageImportPath,
-}: DocumentModelFileMakerArgs & { module: ModuleSpecification }) {
+}: DocumentModelModuleFileMakerArgs) {
   const kebabCaseModuleName = kebabCase(module.name);
   const pascalCaseModuleName = pascalCase(module.name);
-  const filePath = path.join(reducersDirPath, `${kebabCaseModuleName}.ts`);
+  const filePath = path.join(
+    srcDirPath,
+    "reducers",
+    `${kebabCaseModuleName}.ts`,
+  );
   const { alreadyExists, sourceFile } = getOrCreateSourceFile(
     project,
     filePath,
@@ -80,7 +79,7 @@ async function makeReducerOperationHandlerForModule({
 
   const operationsInterfaceTypeImport = sourceFile.addImportDeclaration({
     namedImports: [operationsInterfaceTypeName],
-    moduleSpecifier: versionedDocumentModelPackageImportPath,
+    moduleSpecifier: versionImportPath,
     isTypeOnly: true,
   });
 
@@ -158,7 +157,7 @@ async function makeReducerOperationHandlerForModule({
   await formatSourceFileWithPrettier(sourceFile);
 }
 
-async function makeDocumentModelSrcIndexFile({
+export async function makeDocumentModelSrcIndexFile({
   project,
   ...variableNames
 }: DocumentModelFileMakerArgs) {
@@ -173,7 +172,7 @@ async function makeDocumentModelSrcIndexFile({
   await formatSourceFileWithPrettier(sourceFile);
 }
 
-async function makeDocumentModelSrcUtilsFile({
+export async function makeDocumentModelSrcUtilsFile({
   project,
   srcDirPath,
   version,
