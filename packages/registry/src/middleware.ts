@@ -123,8 +123,8 @@ export function createPowerhouseRouter(
   });
 
   // Single package info
-  router.get("/packages/*name", async (req: Request, res: Response) => {
-    const raw = (req.params as Record<string, string[]>).name.join("/");
+  router.get("/packages/*", async (req: Request, res: Response) => {
+    const raw = (req.params as Record<string, string>)[0];
     const { name, tag } = parsePackageSpec(raw);
     const version =
       (await cdn.resolveVersion(name, tag)) ?? cdn.getLatestCachedVersion(name);
@@ -137,9 +137,8 @@ export function createPowerhouseRouter(
   });
 
   // CDN file serving
-  router.get("/-/cdn/*path", async (req: Request, res: Response) => {
-    const parts = (req.params as Record<string, string[]>).path;
-    const fullPath = parts.join("/");
+  router.get("/-/cdn/*", async (req: Request, res: Response) => {
+    const fullPath = (req.params as Record<string, string>)[0];
 
     // Parse scoped or unscoped package specifier from the path
     let packageSpec: string;
