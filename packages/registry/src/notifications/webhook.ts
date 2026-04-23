@@ -1,7 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
 import type { NotifyConfig, WebhookConfig } from "../types.js";
-import type { NotificationChannel, PublishEvent } from "./types.js";
+import type {
+  NotificationChannel,
+  PublishEvent,
+  UnpublishEvent,
+} from "./types.js";
 
 const WEBHOOKS_FILE = "webhooks.json";
 
@@ -38,6 +42,14 @@ export class WebhookChannel implements NotificationChannel {
   }
 
   notifyPublish(event: PublishEvent): void {
+    this.#post({ type: "publish", ...event });
+  }
+
+  notifyUnpublish(event: UnpublishEvent): void {
+    this.#post({ type: "unpublish", ...event });
+  }
+
+  #post(body: Record<string, unknown>): void {
     for (const webhook of this.getWebhooks()) {
       const headers: Record<string, string> = {
         "Content-Type": "application/json",
@@ -47,7 +59,7 @@ export class WebhookChannel implements NotificationChannel {
       fetch(webhook.endpoint, {
         method: "POST",
         headers,
-        body: JSON.stringify(event),
+        body: JSON.stringify(body),
       }).catch((err: unknown) => {
         console.error(`[registry] Webhook to ${webhook.endpoint} failed:`, err);
       });

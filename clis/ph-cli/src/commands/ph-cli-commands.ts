@@ -12,6 +12,7 @@ import { migrate } from "./migrate.js";
 import { publish } from "./publish.js";
 import { switchboard } from "./switchboard.js";
 import { uninstall } from "./uninstall.js";
+import { unpublish } from "./unpublish.js";
 import { vetra } from "./vetra.js";
 
 export const phCliCommands = {
@@ -21,6 +22,7 @@ export const phCliCommands = {
   connect,
   build,
   publish,
+  unpublish,
   "access-token": accessToken,
   inspect,
   list,

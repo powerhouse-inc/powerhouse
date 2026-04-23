@@ -184,6 +184,94 @@ export function createPowerhouseRouter(
   return router;
 }
 
+/**
+ * Parse verdaccio's unpublish URL shape:
+ *   DELETE /<pkg>/-rev/<rev>                           → full package
+ *   DELETE /<pkg>/-/<tarball-name>/-rev/<rev>          → single version
+ * where <pkg> may be scoped (@scope%2Fname, encoded) or unscoped, and the
+ * tarball name is `<short-name>-<version>.tgz`.
+ */
+export function parseUnpublishRequest(
+  reqPath: string,
+): { packageName: string; version: string | null } | null {
+  const revIdx = reqPath.indexOf("/-rev/");
+  if (revIdx <= 0) return null;
+  const beforeRev = reqPath.slice(1, revIdx); // strip leading slash
+
+  const tarballMarker = "/-/";
+  const tarballIdx = beforeRev.indexOf(tarballMarker);
+  if (tarballIdx === -1) {
+    // Full package: beforeRev is the package name (possibly URL-encoded scope)
+    const packageName = decodeURIComponent(beforeRev);
+    return { packageName, version: null };
+  }
+
+  const packageName = decodeURIComponent(beforeRev.slice(0, tarballIdx));
+  const tarballName = beforeRev.slice(tarballIdx + tarballMarker.length);
+  if (!tarballName.endsWith(".tgz")) return null;
+  const shortName = packageName.startsWith("@")
+    ? packageName.split("/")[1]
+    : packageName;
+  const prefix = `${shortName}-`;
+  if (!tarballName.startsWith(prefix)) return null;
+  const version = tarballName.slice(prefix.length, -".tgz".length);
+  if (!version) return null;
+  return { packageName, version };
+}
+
+export function createUnpublishHook(
+  config: RegistryConfig,
+  notifications: NotificationChannel,
+) {
+  const cdn = new CdnCache(
+    `http://localhost:${config.port}`,
+    config.cdnCachePath,
+  );
+
+  return (req: Request, res: Response, next: NextFunction) => {
+    if (req.method !== "DELETE") {
+      next();
+      return;
+    }
+
+    const parsed = parseUnpublishRequest(req.path);
+    if (!parsed) {
+      next();
+      return;
+    }
+
+    const originalEnd = res.end.bind(res);
+    res.end = function (
+      this: Response,
+      chunk?: unknown,
+      encoding?: unknown,
+      cb?: () => void,
+    ) {
+      if (res.statusCode >= 200 && res.statusCode < 300) {
+        try {
+          if (parsed.version) {
+            cdn.invalidateVersion(parsed.packageName, parsed.version);
+          } else {
+            cdn.invalidate(parsed.packageName);
+          }
+          notifications.notifyUnpublish({
+            packageName: parsed.packageName,
+            version: parsed.version,
+          });
+        } catch (err) {
+          console.error(
+            `[registry] CDN purge failed for ${parsed.packageName}${parsed.version ? `@${parsed.version}` : ""}:`,
+            err,
+          );
+        }
+      }
+      return originalEnd(chunk, encoding as BufferEncoding, cb);
+    };
+
+    next();
+  };
+}
+
 export function createPublishHook(
   config: RegistryConfig,
   notifications: NotificationChannel,
@@ -194,8 +282,10 @@ export function createPublishHook(
   );
 
   return (req: Request, res: Response, next: NextFunction) => {
-    // Only intercept PUT requests to npm publish endpoints
-    if (req.method !== "PUT") {
+    // Only intercept PUT requests to npm publish endpoints.
+    // Skip PUTs to `/<pkg>/-rev/<rev>` — those are npm's manifest-rewrite
+    // step during single-version unpublish, not a new publish.
+    if (req.method !== "PUT" || req.path.includes("/-rev/")) {
       next();
       return;
     }
