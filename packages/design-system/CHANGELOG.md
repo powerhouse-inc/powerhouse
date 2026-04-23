@@ -1,3 +1,13 @@
+## 6.0.0-dev.193 (2026-04-23)
+
+### 🚀 Features
+
+- version picker for install, preserve picked version across reloads ([3cf54c3a3](https://github.com/powerhouse-inc/powerhouse/commit/3cf54c3a3))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 6.0.0-dev.192 (2026-04-22)
 
 ### 🚀 Features

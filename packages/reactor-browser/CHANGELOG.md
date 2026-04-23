@@ -1,3 +1,13 @@
+## 6.0.0-dev.193 (2026-04-23)
+
+### 🩹 Fixes
+
+- **connect:** trim trailing slash, upsert npm-fallback, prune stale boot entries ([2e9c8d119](https://github.com/powerhouse-inc/powerhouse/commit/2e9c8d119))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 6.0.0-dev.192 (2026-04-22)
 
 ### 🚀 Features

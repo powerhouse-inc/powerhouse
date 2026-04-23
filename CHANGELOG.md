@@ -1,3 +1,20 @@
+## 6.0.0-dev.193 (2026-04-23)
+
+### 🚀 Features
+
+- version picker for install, preserve picked version across reloads ([3cf54c3a3](https://github.com/powerhouse-inc/powerhouse/commit/3cf54c3a3))
+- version picker for install, preserve picked version across reloads ([#2496](https://github.com/powerhouse-inc/powerhouse/pull/2496))
+
+### 🩹 Fixes
+
+- **connect:** trim trailing slash, upsert npm-fallback, prune stale boot entries ([2e9c8d119](https://github.com/powerhouse-inc/powerhouse/commit/2e9c8d119))
+- **connect:** trim trailing slash, upsert npm-fallback, prune stale boot entries ([#2494](https://github.com/powerhouse-inc/powerhouse/pull/2494))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+- Guillermo Puente Sandoval @gpuente
+
 ## 6.0.0-dev.192 (2026-04-22)
 
 ### 🚀 Features
