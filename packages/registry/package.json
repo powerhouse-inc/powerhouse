@@ -28,7 +28,7 @@
   "dependencies": {
     "@powerhousedao/shared": "workspace:*",
     "cmd-ts": "catalog:",
-    "express": "^5.2.1",
+    "express": "^4.22.1",
     "find-up": "^8.0.0",
     "tar": "^7.5.11",
     "verdaccio": "^6.5.0",
@@ -36,7 +36,7 @@
   },
   "devDependencies": {
     "tsdown": "catalog:",
-    "@types/express": "^5.0.6",
+    "@types/express": "^4.17.21",
     "@types/node": "catalog:",
     "@types/supertest": "^6.0.2",
     "supertest": "^7.1.0",
