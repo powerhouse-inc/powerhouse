@@ -5,7 +5,7 @@ import path from "path";
 
 export const generateMigrationFileCmd = command({
   name: "migration-file",
-  description: "Generate a a migration file",
+  description: "Generate a migration file",
   args: {
     migrationFile: option({
       type: string,
