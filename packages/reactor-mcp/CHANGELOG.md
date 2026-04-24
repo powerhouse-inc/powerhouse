@@ -1,3 +1,13 @@
+## 6.0.0-dev.196 (2026-04-24)
+
+### 🚀 Features
+
+- separate generate commands ([#2505](https://github.com/powerhouse-inc/powerhouse/pull/2505))
+
+### ❤️ Thank You
+
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.0.0-dev.195 (2026-04-24)
 
 ### 🚀 Features
