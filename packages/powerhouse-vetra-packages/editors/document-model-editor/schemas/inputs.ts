@@ -1,6 +1,8 @@
 import { z } from "zod/v3";
-import validator from "validator";
 import { snakeCase, constantCase } from "change-case";
+
+const isUppercase = (value: string) => !/\p{Ll}/u.test(value);
+const isLowercase = (value: string) => !/\p{Lu}/u.test(value);
 
 const whitespaceRegex = /\s+/g;
 
@@ -57,7 +59,7 @@ export function createNameSchema(options: SchemaOptions = {}) {
 export function createConstantCaseSchema(options: SchemaOptions = {}) {
   return createNameSchema(options)
     .transform((value) => (value ? value.toUpperCase() : value))
-    .refine((value) => !value || validator.isUppercase(value), {
+    .refine((value) => !value || isUppercase(value), {
       message: "Must be uppercase",
     });
 }
@@ -65,7 +67,7 @@ export function createConstantCaseSchema(options: SchemaOptions = {}) {
 export function createLowercaseSnakeCaseSchema(options: SchemaOptions = {}) {
   return createNameSchema(options)
     .transform((value) => (value ? value.toLowerCase() : value))
-    .refine((value) => !value || validator.isLowercase(value), {
+    .refine((value) => !value || isLowercase(value), {
       message: "Must be lowercase",
     });
 }
