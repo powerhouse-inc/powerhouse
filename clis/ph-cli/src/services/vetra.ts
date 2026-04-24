@@ -12,6 +12,7 @@ import {
   configureVetraGithubUrl,
   sleep,
 } from "../utils/configure-vetra-github-url.js";
+import { resolveSwitchboardPort } from "../utils/resolve-switchboard-port.js";
 import { runConnectStudio } from "./connect-studio.js";
 import { startSwitchboard } from "./switchboard.js";
 
@@ -105,13 +106,25 @@ async function startLocalVetraSwitchboard(args: VetraArgs, logger?: ILogger) {
 
   const vetraDriveId = generateProjectDriveId(VETRA_DRIVE_NAME);
 
+  // When the user didn't opt into strict-port semantics, check for a port
+  // conflict up front and ask for confirmation before binding a fallback.
+  // Doing this in the CLI layer keeps the interactive prompt out of the
+  // switchboard server package and aligns with the existing prerelease-tag
+  // confirmation flow in `ph publish`.
+  const resolvedSwitchboardPort = args.strictPort
+    ? switchboardPort
+    : await resolveSwitchboardPort(switchboardPort);
+
   try {
     const switchboard = await startSwitchboard(
       {
         ...args,
         useVetraDrive: true, // Use Vetra drive instead of Powerhouse drive
         mcp: true,
-        port: switchboardPort,
+        port: resolvedSwitchboardPort,
+        // We've already probed and (when interactive) confirmed the port with
+        // the user, so keep the server from running its own fallback on top.
+        strictPort: true,
         dev,
         packages,
         remoteDrives,
@@ -131,13 +144,15 @@ async function startLocalVetraSwitchboard(args: VetraArgs, logger?: ILogger) {
       logger,
     );
 
+    const actualSwitchboardPort = switchboard.port;
+
     // Add preview drive (only in watch mode)
     let previewDriveUrl: string | null = null;
     if (watch) {
       try {
         previewDriveUrl = await startVetraPreviewDrive(
           switchboard.reactor,
-          switchboardPort,
+          actualSwitchboardPort,
           verbose,
         );
       } catch (error) {
@@ -155,7 +170,9 @@ async function startLocalVetraSwitchboard(args: VetraArgs, logger?: ILogger) {
     } else {
       console.log();
       console.log(
-        blue(`Vetra Switchboard: http://localhost:${switchboardPort}/graphql`),
+        blue(
+          `Vetra Switchboard: http://localhost:${actualSwitchboardPort}/graphql`,
+        ),
       );
       console.log(blue(`   ➜ Drive URL: ${switchboard.defaultDriveUrl}`));
       if (previewDriveUrl) {
@@ -165,6 +182,7 @@ async function startLocalVetraSwitchboard(args: VetraArgs, logger?: ILogger) {
     return {
       driveUrl: switchboard.defaultDriveUrl || "",
       previewDriveUrl: previewDriveUrl,
+      switchboardPort: actualSwitchboardPort,
     };
   } catch (error) {
     console.error(
@@ -178,7 +196,6 @@ async function startLocalVetraSwitchboard(args: VetraArgs, logger?: ILogger) {
 
 export async function startVetra(args: VetraArgs) {
   const {
-    switchboardPort,
     connectPort,
     verbose,
     remoteDrive,
@@ -226,13 +243,18 @@ export async function startVetra(args: VetraArgs) {
     );
     const driveUrl: string = switchboardResult.driveUrl || remoteDrive || "";
     const previewDriveUrl = switchboardResult.previewDriveUrl;
+    const actualSwitchboardPort = switchboardResult.switchboardPort;
 
     // Configure GitHub URL if remote drive is set
     if (remoteDrive) {
       // give some time for the drive to process initial strands
       await sleep(3000);
 
-      await configureVetraGithubUrl(switchboardPort, remoteDrive, verbose);
+      await configureVetraGithubUrl(
+        actualSwitchboardPort,
+        remoteDrive,
+        verbose,
+      );
 
       // give some time for the user to read log messages
       await sleep(2000);

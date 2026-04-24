@@ -42,6 +42,7 @@ import {
 import dotenv from "dotenv";
 import { Kysely, PostgresDialect } from "kysely";
 import { PGliteDialect } from "kysely-pglite-dialect";
+import net from "node:net";
 import { register } from "node:module";
 import path from "path";
 import { Pool } from "pg";
@@ -82,6 +83,55 @@ if (process.env.SENTRY_DSN) {
 }
 
 const DEFAULT_PORT = process.env.PORT ? Number(process.env.PORT) : 4001;
+
+// How many ports forward from the requested one we will try before giving up.
+const PORT_FALLBACK_ATTEMPTS = 20;
+
+/**
+ * Attempt to bind a throwaway TCP server to the given port. Resolves true if
+ * the port is free, false if the OS reports it in use. Any other error is
+ * surfaced so we don't silently mask real issues (permissions, bad host, …).
+ */
+export function isPortAvailable(port: number): Promise<boolean> {
+  return new Promise((resolve, reject) => {
+    const tester = net.createServer();
+    tester.once("error", (err: NodeJS.ErrnoException) => {
+      if (err.code === "EADDRINUSE" || err.code === "EACCES") {
+        resolve(false);
+      } else {
+        reject(err);
+      }
+    });
+    tester.once("listening", () => {
+      tester.close(() => resolve(true));
+    });
+    // Bind on the unspecified IPv6 address so we detect collisions with both
+    // IPv6 and IPv4 listeners (Node maps `::` to dual-stack on most systems).
+    tester.listen({ port, host: "::" });
+  });
+}
+
+async function resolveServerPort(
+  requested: number,
+  strictPort: boolean,
+  logger: ILogger,
+): Promise<number> {
+  if (strictPort) return requested;
+  for (let i = 0; i < PORT_FALLBACK_ATTEMPTS; i++) {
+    const candidate = requested + i;
+    if (await isPortAvailable(candidate)) {
+      if (candidate !== requested) {
+        logger.info(
+          `Port ${requested} is in use. Falling back to port ${candidate}.`,
+        );
+      }
+      return candidate;
+    }
+  }
+  // Couldn't find a free port in the window; let the caller surface the
+  // original EADDRINUSE when the real bind attempts runs.
+  return requested;
+}
 
 async function initServer(
   serverPort: number,
@@ -355,13 +405,20 @@ async function initServer(
     api,
     reactor: client,
     renown,
+    port: serverPort,
   };
 }
 
 export const startSwitchboard = async (
   options: StartServerOptions = {},
 ): Promise<SwitchboardReactor> => {
-  const serverPort = options.port ?? DEFAULT_PORT;
+  const requestedPort = options.port ?? DEFAULT_PORT;
+  const logger = options.logger ?? defaultLogger;
+  const serverPort = await resolveServerPort(
+    requestedPort,
+    options.strictPort ?? false,
+    logger,
+  );
 
   // Initialize feature flags
   const featureFlags = await initFeatureFlags();
@@ -381,8 +438,6 @@ export const startSwitchboard = async (
       REQUIRE_SIGNATURES_DEFAULT,
     ));
   options.identity = { ...options.identity, requireSignatures };
-
-  const logger = options.logger ?? defaultLogger;
 
   logger.info(
     "Feature flags: @flags",
