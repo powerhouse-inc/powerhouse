@@ -304,7 +304,7 @@ Generate a drive app
 ### Flags
 **Disable Drag And Drop** - Do not allow drag and drop in this drive app. - Usage: `--disable-drag-and-drop`
 
-**Default:** `true`
+**Default:** `false`
 **All** - Re-generate all existing apps in the current project - Usage: `--all, -a`
 
 **Debug** - Log arguments passed to this command - Usage: `--debug`

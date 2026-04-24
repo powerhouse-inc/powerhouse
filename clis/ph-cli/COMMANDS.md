@@ -110,7 +110,7 @@ Name of the directory of an existing app to re-generate<br><br>
 #### Disable Drag And Drop <br>
 Do not allow drag and drop in this drive app.<br><br>
 **usage:** `--disable-drag-and-drop`<br>
-**default**: `true`
+**default**: `false`
 #### All <br>
 Re-generate all existing apps in the current project<br><br>
 **usage:** `--all, -a`<br>
