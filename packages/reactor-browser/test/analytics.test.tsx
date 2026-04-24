@@ -1,8 +1,6 @@
 import { PGlite } from "@electric-sql/pglite";
-import {
-  BrowserAnalyticsStore,
-  createFsPglite,
-} from "@powerhousedao/analytics-engine-browser";
+import { BrowserAnalyticsStore } from "@powerhousedao/analytics-engine-browser";
+import { createFsPglite } from "@powerhousedao/analytics-engine-browser/test-utils";
 import type {
   AnalyticsDimension,
   AnalyticsQuery,

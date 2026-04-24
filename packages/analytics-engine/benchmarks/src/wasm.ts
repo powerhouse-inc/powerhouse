@@ -1,7 +1,5 @@
-import {
-  BrowserAnalyticsStore,
-  createFsPglite,
-} from "@powerhousedao/analytics-engine-browser";
+import { BrowserAnalyticsStore } from "@powerhousedao/analytics-engine-browser";
+import { createFsPglite } from "@powerhousedao/analytics-engine-browser/test-utils";
 import fs from "fs";
 import { Bench } from "tinybench";
 import { logs } from "./util.js";
