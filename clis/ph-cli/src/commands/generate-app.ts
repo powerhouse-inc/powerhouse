@@ -37,7 +37,7 @@ export const generateAppCmd = command({
       type: boolean,
       long: "disable-drag-and-drop",
       description: "Do not allow drag and drop in this drive app.",
-      defaultValue: () => true as const,
+      defaultValue: () => false as const,
       defaultValueIsSerializable: true,
     }),
     all: flag({
