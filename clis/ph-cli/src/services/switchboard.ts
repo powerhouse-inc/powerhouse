@@ -52,7 +52,7 @@ function getDefaultVetraSwitchboardOptions(
 }
 
 export async function startSwitchboard(
-  options: SwitchboardArgs,
+  options: SwitchboardArgs & { strictPort?: boolean },
   logger?: ILogger,
 ) {
   const {

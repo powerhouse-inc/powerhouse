@@ -29,6 +29,12 @@ export type IdentityOptions = {
 export type StartServerOptions = {
   configFile?: string;
   port?: number;
+  /**
+   * If true, fail immediately when the requested port is in use instead of
+   * falling back to the next free port. Matches the semantics of Vite's
+   * `--strictPort` flag that flows through the `ph vetra` command.
+   */
+  strictPort?: boolean;
   dev?: boolean;
   dbPath?: string;
   drive?: DriveInput;
@@ -78,4 +84,9 @@ export type SwitchboardReactor = {
   reactor: IReactorClient;
   /** The Renown instance if identity was initialized */
   renown: IRenown | null;
+  /**
+   * Port the HTTP server actually bound to. May differ from the requested
+   * port when the requested port was in use and fallback kicked in.
+   */
+  port: number;
 };
