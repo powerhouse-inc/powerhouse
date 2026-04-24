@@ -231,16 +231,7 @@ Use your local `powerhouse` monorepo dependencies the current project.
 
 
 ## Generate
-
-The generate command creates code from document models. It helps you build editors, 
-processors, and other components based on your document model files.
-
-**What it does:**
-- 1. Reads document model definitions
-- 2. Generates code for specified components (editors, processors, etc.)
-- 3. Supports customization of output and generation options
-- 4. Can watch files for changes and regenerate code automatically
-
+The generate command creates code from document models. It helps you build editors, processors, and other components based on your document model files.
 
 ## All
 Re-generate all modules in the current project
@@ -373,7 +364,7 @@ Generate a subgraph
 
 
 ## Migration File
-Generate a a migration file
+Generate a migration file
 
 
 
