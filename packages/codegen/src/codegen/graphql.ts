@@ -134,6 +134,11 @@ export async function generateTypesAndZodSchemasFromGraphql(
             },
           },
           {
+            add: {
+              content: "/* eslint-disable @typescript-eslint/no-unused-vars */",
+            },
+          },
+          {
             "graphql-codegen-typescript-validation-schema":
               validationSchemaConfig,
           },
