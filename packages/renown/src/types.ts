@@ -9,38 +9,203 @@ import type { IStorage } from "./storage/common.js";
 
 export type { ISigner };
 
-// Local mirrors of the did-jwt-vc shapes that would otherwise leak across
-// renown's public .d.ts surface. Re-declaring them keeps consumers from
-// having to resolve did-jwt-vc / did-jwt / multibase types transitively.
+// Local mirrors of the did-jwt-vc / did-jwt / did-resolver shapes that would
+// otherwise leak across renown's public .d.ts surface. Re-declaring them keeps
+// consumers from having to resolve did-jwt-vc / did-jwt / multibase types
+// transitively. Each shape below matches its upstream definition exactly so
+// the public API is unchanged — including unions like
+// `"known-literal" | string` that are wider than `string` but document the
+// recognised values.
+/* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 
-/** Signs bytes/string payloads, returning a base64url-encoded signature. */
-export type Signer = (data: string | Uint8Array) => Promise<string>;
+// --- did-jwt shapes -------------------------------------------------------
 
-/** A DID with an attached signer, used to issue verifiable credentials. */
+export interface EcdsaSignature {
+  r: string;
+  s: string;
+  recoveryParam?: number;
+}
+
+export type Signer = (
+  data: string | Uint8Array,
+) => Promise<EcdsaSignature | string>;
+
+export interface JWTPayload {
+  iss?: string;
+  sub?: string;
+  aud?: string | string[];
+  iat?: number;
+  nbf?: number;
+  exp?: number;
+  rexp?: number;
+  [x: string]: any;
+}
+
+export interface JWTVerifyPolicies {
+  now?: number;
+  nbf?: boolean;
+  iat?: boolean;
+  exp?: boolean;
+  aud?: boolean;
+}
+
+export interface JWTVerified {
+  verified: true;
+  payload: Partial<JWTPayload>;
+  didResolutionResult: DIDResolutionResult;
+  issuer: string;
+  signer: VerificationMethod;
+  jwt: string;
+  policies?: JWTVerifyPolicies;
+}
+
+// --- did-resolver shapes --------------------------------------------------
+
+export interface DIDResolutionResult {
+  "@context"?: "https://w3id.org/did-resolution/v1" | string | string[];
+  didResolutionMetadata: DIDResolutionMetadata;
+  didDocument: DIDDocument | null;
+  didDocumentMetadata: DIDDocumentMetadata;
+}
+
+export interface DIDResolutionMetadata {
+  contentType?: string;
+  error?:
+    | "invalidDid"
+    | "notFound"
+    | "representationNotSupported"
+    | "unsupportedDidMethod"
+    | string;
+  [x: string]: any;
+}
+
+export interface DIDDocumentMetadata {
+  created?: string;
+  updated?: string;
+  deactivated?: boolean;
+  versionId?: string;
+  nextUpdate?: string;
+  nextVersionId?: string;
+  equivalentId?: string;
+  canonicalId?: string;
+  [x: string]: any;
+}
+
+export type KeyCapabilitySection =
+  | "authentication"
+  | "assertionMethod"
+  | "keyAgreement"
+  | "capabilityInvocation"
+  | "capabilityDelegation";
+
+export type DIDDocument = {
+  "@context"?: "https://www.w3.org/ns/did/v1" | string | string[];
+  id: string;
+  alsoKnownAs?: string[];
+  controller?: string | string[];
+  verificationMethod?: VerificationMethod[];
+  service?: Service[];
+  /** @deprecated */
+  publicKey?: VerificationMethod[];
+} & {
+  [x in KeyCapabilitySection]?: (string | VerificationMethod)[];
+};
+
+export interface Service {
+  id: string;
+  type: string;
+  serviceEndpoint: ServiceEndpoint | ServiceEndpoint[];
+  [x: string]: any;
+}
+
+export type ServiceEndpoint = string | Record<string, any>;
+
+export interface JsonWebKey {
+  alg?: string;
+  crv?: string;
+  e?: string;
+  ext?: boolean;
+  key_ops?: string[];
+  kid?: string;
+  kty: string;
+  n?: string;
+  use?: string;
+  x?: string;
+  y?: string;
+  [x: string]: any;
+}
+
+export interface VerificationMethod {
+  id: string;
+  type: string;
+  controller: string;
+  publicKeyBase58?: string;
+  publicKeyBase64?: string;
+  publicKeyJwk?: JsonWebKey;
+  publicKeyHex?: string;
+  publicKeyMultibase?: string;
+  blockchainAccountId?: string;
+  ethereumAddress?: string;
+  conditionOr?: VerificationMethod[];
+  conditionAnd?: VerificationMethod[];
+  threshold?: number;
+  conditionThreshold?: VerificationMethod[];
+  conditionWeightedThreshold?: ConditionWeightedThreshold[];
+  conditionDelegated?: string;
+  relationshipParent?: string[];
+  relationshipChild?: string[];
+  relationshipSibling?: string[];
+}
+
+export interface ConditionWeightedThreshold {
+  condition: VerificationMethod;
+  weight: number;
+}
+
+// --- did-jwt-vc shapes ----------------------------------------------------
+
 export interface Issuer {
   did: string;
   signer: Signer;
   alg?: string;
 }
 
-/** Credential proof block. */
 export interface Proof {
   type?: string;
-  [x: string]: unknown;
+  [x: string]: any;
 }
 
-/** Readonly verifiable object carrying a {@link Proof}. */
 export type Verifiable<T> = Readonly<T> & {
   readonly proof: Proof;
 };
 
-/** Result of a successful credential verification. */
-export interface VerifiedCredential {
-  readonly payload: { readonly exp?: number };
-  readonly verifiableCredential: {
-    readonly credentialSubject: { readonly [x: string]: unknown };
-  };
+export interface CredentialStatus {
+  id: string;
+  type: string;
 }
+
+export type W3CCredential = {
+  "@context": string[];
+  id?: string;
+  type: string[];
+  issuer: { id: string; [x: string]: any };
+  issuanceDate: string;
+  expirationDate?: string;
+  credentialSubject: {
+    id?: string;
+    [x: string]: any;
+  };
+  credentialStatus?: CredentialStatus;
+  evidence?: any;
+  termsOfUse?: any;
+  [x: string]: any;
+};
+
+export type VerifiedJWT = JWTVerified;
+
+export type VerifiedCredential = VerifiedJWT & {
+  verifiableCredential: Verifiable<W3CCredential>;
+};
 
 export type RenownProfile = {
   documentId: string;
@@ -115,11 +280,6 @@ type IssuerType<T> = {
 type CredentialSubjecType<T> = {
   id?: string;
 } & T;
-
-interface CredentialStatus {
-  id: string;
-  type: string;
-}
 
 interface CredentialSchema {
   id: string;

@@ -79,7 +79,12 @@ export const browserBuildConfig: InlineConfig = {
   clean,
   dts,
   sourcemap,
-  plugins: [esmExternalRequirePlugin({ external: reactExternals })],
+  plugins: [
+    esmExternalRequirePlugin({
+      external: reactExternals,
+      skipDuplicateCheck: true,
+    }),
+  ],
   inputOptions: {
     experimental: { resolveNewUrlToAsset: true },
   },
