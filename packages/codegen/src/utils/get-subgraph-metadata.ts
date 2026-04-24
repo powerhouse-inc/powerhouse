@@ -1,5 +1,5 @@
 import { join } from "path";
-import { find, isDefined, pipe, when } from "remeda";
+import { find, pipe } from "remeda";
 import { SyntaxKind, type Project } from "ts-morph";
 import { getOrCreateDirectory } from "utils";
 
@@ -16,18 +16,12 @@ export function getSubgraphMetadata(project: Project, dirName: string) {
         classDeclaration.getBaseClass()?.getText().includes("BaseSubgraph") ??
         false,
     ),
-    when(
-      (classDeclaration) => isDefined(classDeclaration),
-      (classDeclaration) =>
-        classDeclaration
-          .getInstanceProperty("name")
-          ?.asKind(SyntaxKind.PropertyDeclaration)
-          ?.getInitializerIfKind(SyntaxKind.StringLiteral)
-          ?.getLiteralValue(),
-    ),
-    when(
-      (subgraphName) => isDefined(subgraphName),
-      (subgraphName) => ({ subgraphName }),
-    ),
+    (classDeclaration) =>
+      classDeclaration
+        ?.getInstanceProperty("name")
+        ?.asKind(SyntaxKind.PropertyDeclaration)
+        ?.getInitializerIfKind(SyntaxKind.StringLiteral)
+        ?.getLiteralValue(),
+    (subgraphName) => ({ subgraphName }),
   );
 }

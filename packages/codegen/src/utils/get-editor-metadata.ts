@@ -1,18 +1,12 @@
 import { join } from "path";
+import { isIncludedIn, merge, pipe } from "remeda";
+import { type Project } from "ts-morph";
 import {
-  filter,
-  find,
-  isDefined,
-  isIncludedIn,
-  isString,
-  isTruthy,
-  map,
-  merge,
-  pipe,
-  when,
-} from "remeda";
-import { SyntaxKind, type Project } from "ts-morph";
-import { getOrCreateDirectory } from "utils";
+  getBooleanPropertyValue,
+  getOrCreateDirectory,
+  getStringArrayPropertyElements,
+  getStringPropertyValue,
+} from "utils";
 import { z } from "zod";
 
 const EditorMetadataSchema = z.object({
@@ -30,46 +24,15 @@ export function getEditorMetadata(project: Project, dirName: string) {
   const parsedMetadata = pipe(
     editorDir,
     (dir) => dir.getSourceFile("module.ts"),
-    when(
-      (sourceFile) => isTruthy(sourceFile),
-      (sourceFile) => ({
+    (sourceFile) => ({
+      dirName: sourceFile?.getDirectory().getBaseName(),
+      id: getStringPropertyValue(sourceFile, "id"),
+      name: getStringPropertyValue(sourceFile, "name"),
+      documentTypes: getStringArrayPropertyElements(
         sourceFile,
-        propertyAssignments: sourceFile.getDescendantsOfKind(
-          SyntaxKind.PropertyAssignment,
-        ),
-      }),
-    ),
-    when(
-      (data) => isTruthy(data),
-      ({ sourceFile, propertyAssignments }) => ({
-        dirName: sourceFile.getDirectory().getBaseName(),
-        id: find(
-          propertyAssignments,
-          (propertyAssignment) => propertyAssignment.getName() === "id",
-        )
-          ?.getFirstDescendantByKind(SyntaxKind.StringLiteral)
-          ?.getLiteralValue(),
-        name: find(
-          propertyAssignments,
-          (propertyAssignment) => propertyAssignment.getName() === "name",
-        )
-          ?.getFirstDescendantByKind(SyntaxKind.StringLiteral)
-          ?.getLiteralValue(),
-        documentTypes: pipe(
-          find(
-            propertyAssignments,
-            (propertyAssignment) =>
-              propertyAssignment.getName() === "documentTypes",
-          )
-            ?.getFirstDescendantByKind(SyntaxKind.ArrayLiteralExpression)
-            ?.getElements() ?? [],
-          map((element) =>
-            element.asKind(SyntaxKind.StringLiteral)?.getLiteralValue(),
-          ),
-          filter(isString),
-        ),
-      }),
-    ),
+        "documentTypes",
+      ),
+    }),
     (data) => EditorMetadataSchema.safeParse(data),
   );
 
@@ -86,39 +49,16 @@ export function getAppMetadata(project: Project, dirName: string) {
     return undefined;
 
   const appMetadata = pipe(
-    project
-      .getSourceFile(join("editors", dirName, "config.ts"))
-      ?.getDescendantsOfKind(SyntaxKind.PropertyAssignment) ?? [],
-    (propertyAssignments) => ({
-      isDragAndDropEnabled: pipe(
-        find(
-          propertyAssignments,
-          (propertyAssignment) =>
-            propertyAssignment.getName() === "isDragAndDropEnabled",
-        )?.getDescendants() ?? [],
-        when(
-          (descendants) =>
-            isDefined(
-              find(descendants, (d) => d.getKind() === SyntaxKind.TrueKeyword),
-            ),
-          {
-            onTrue: () => true,
-            onFalse: () => false,
-          },
-        ),
+    project.getSourceFile(join("editors", dirName, "config.ts")),
+    (sourceFile) => ({
+      isDragAndDropEnabled: getBooleanPropertyValue(
+        sourceFile,
+        "isDragAndDropEnabled",
+        true,
       ),
-      allowedDocumentTypes: pipe(
-        find(
-          propertyAssignments,
-          (propertyAssignment) =>
-            propertyAssignment.getName() === "allowedDocumentTypes",
-        )
-          ?.getFirstDescendantByKind(SyntaxKind.ArrayLiteralExpression)
-          ?.getElements() ?? [],
-        map((element) =>
-          element.asKind(SyntaxKind.StringLiteral)?.getLiteralValue(),
-        ),
-        filter(isString),
+      allowedDocumentTypes: getStringArrayPropertyElements(
+        sourceFile,
+        "allowedDocumentTypes",
       ),
     }),
   );

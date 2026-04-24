@@ -1,3 +1,25 @@
+import {
+  DocumentModelGlobalStateSchema,
+  type DocumentModelGlobalState,
+} from "@powerhousedao/shared/document-model";
+import { statSync, type Dirent } from "fs";
+import { loadJsonFileSync } from "load-json-file";
+import path from "path";
+import {
+  conditional,
+  constant,
+  filter,
+  find,
+  flatMap,
+  identity,
+  isDefined,
+  isIncludedIn,
+  isStrictEqual,
+  isString,
+  map,
+  pipe,
+  prop,
+} from "remeda";
 import type {
   ObjectLiteralExpression,
   SourceFile,
@@ -42,4 +64,108 @@ export function getVariableDeclarationByTypeName(
     return declaration.getType().getText().includes(typeName);
   });
   return declaration;
+}
+
+export function getProperyAssignmentByName(
+  sourceFile: SourceFile | undefined,
+  propertyName: string,
+) {
+  if (!isDefined(sourceFile)) return undefined;
+
+  return find(
+    sourceFile.getDescendantsOfKind(SyntaxKind.PropertyAssignment),
+    (assignment) => isStrictEqual(assignment.getName(), propertyName),
+  );
+}
+
+export function getStringPropertyValue(
+  sourceFile: SourceFile | undefined,
+  propertyName: string,
+) {
+  return getProperyAssignmentByName(sourceFile, propertyName)
+    ?.getFirstDescendantByKind(SyntaxKind.StringLiteral)
+    ?.getLiteralValue();
+}
+
+export function getStringArrayPropertyElements(
+  sourceFile: SourceFile | undefined,
+  propertyName: string,
+) {
+  return pipe(
+    getProperyAssignmentByName(sourceFile, propertyName)
+      ?.getFirstDescendantByKind(SyntaxKind.ArrayLiteralExpression)
+      ?.getElements() ?? [],
+    map((element) =>
+      element.asKind(SyntaxKind.StringLiteral)?.getLiteralValue(),
+    ),
+    filter(isString),
+  );
+}
+
+export function getBooleanPropertyValue(
+  sourceFile: SourceFile | undefined,
+  propertyName: string,
+  fallback?: boolean,
+) {
+  return pipe(
+    getProperyAssignmentByName(sourceFile, propertyName)?.getDescendants() ??
+      [],
+    map((descendant) => descendant.getKind()),
+    conditional(
+      [(kinds) => isIncludedIn(SyntaxKind.TrueKeyword, kinds), constant(true)],
+      [
+        (kinds) => isIncludedIn(SyntaxKind.FalseKeyword, kinds),
+        constant(false),
+      ],
+      constant(fallback),
+    ),
+  );
+}
+
+export function loadDocumentModelInDir(
+  dirent: Dirent<string>,
+): DocumentModelGlobalState | undefined {
+  return pipe(
+    dirent,
+    conditional(
+      [
+        (dirent) => dirent.isDirectory(),
+        (dir) => path.join(dir.parentPath, `${dir.name}/${dir.name}.json`),
+      ],
+      constant(undefined),
+    ),
+    conditional([isString, identity()]),
+    conditional(
+      [
+        (srcPath) =>
+          isStrictEqual(
+            statSync(srcPath, { throwIfNoEntry: false })?.isFile(),
+            true,
+          ),
+        (srcPath) => loadJsonFileSync(srcPath),
+      ],
+      constant(undefined),
+    ),
+    (stateFile) => DocumentModelGlobalStateSchema().safeParse(stateFile),
+    conditional([({ success }) => isStrictEqual(success, true), prop("data")]),
+  );
+}
+
+export function getAllImportNames(sourceFile: SourceFile | undefined) {
+  return pipe(
+    sourceFile?.getImportDeclarations() ?? [],
+    flatMap((importDeclaration) => importDeclaration.getNamedImports()),
+    map((importSpecifier) => importSpecifier.getText()),
+  );
+}
+
+export function getAllImportModuleSpecifiers(
+  sourceFile: SourceFile | undefined,
+) {
+  return pipe(
+    sourceFile?.getImportDeclarations() ?? [],
+    flatMap((importDeclaration) =>
+      importDeclaration.getModuleSpecifier().getLiteralValue(),
+    ),
+  );
 }

@@ -9,7 +9,7 @@ import { generateSubgraphCmd } from "./generate-subgraph.js";
 
 export const generate = subcommands({
   name: "generate",
-  description: `The generate command creates code from document models. It helps you build editors, processors, and other components based on your document model files.`,
+  description: `The generate command creates code for Powerhouse modules. It helps you create new code from scratch, or to re-generate existing code in your project.`,
   cmds: {
     all: generateAllCmd,
     "document-model": generateDocumentModelCmd,

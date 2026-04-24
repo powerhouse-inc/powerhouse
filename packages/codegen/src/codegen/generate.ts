@@ -1,7 +1,4 @@
-import {
-  DocumentModelGlobalStateSchema,
-  type DocumentModelGlobalState,
-} from "@powerhousedao/shared/document-model";
+import { type DocumentModelGlobalState } from "@powerhousedao/shared/document-model";
 import type { ProcessorApps } from "@powerhousedao/shared/processors";
 import { kebabCase } from "change-case";
 import {
@@ -11,9 +8,7 @@ import {
   tsMorphGenerateProcessor,
   tsMorphGenerateSubgraph,
 } from "file-builders";
-import { loadJsonFileSync } from "load-json-file";
-import { readdirSync, statSync } from "node:fs";
-import { join } from "node:path";
+import { readdirSync } from "node:fs";
 import {
   filter,
   isDefined,
@@ -21,6 +16,7 @@ import {
   isTruthy,
   map,
   pipe,
+  prop,
   unique,
 } from "remeda";
 import type { Project } from "ts-morph";
@@ -30,6 +26,7 @@ import {
   getOrCreateDirectory,
   getProcessorMetadata,
   getSubgraphMetadata,
+  loadDocumentModelInDir,
 } from "utils";
 import { loadDocumentModel } from "./utils.js";
 
@@ -49,17 +46,8 @@ export async function generateAllDocumentModels(project: Project) {
   const documentModelsDirPath = documentModelsDir.getPath();
   const documentModelStateFiles = pipe(
     readdirSync(documentModelsDirPath, { withFileTypes: true }),
-    filter((dirent) => dirent.isDirectory()),
-    map((dir) => join(dir.parentPath, `${dir.name}/${dir.name}.json`)),
-    filter(
-      (srcPath) =>
-        statSync(srcPath, { throwIfNoEntry: false })?.isFile() ?? false,
-    ),
-    map((srcPath) => loadJsonFileSync(srcPath)),
-    filter(
-      (stateFile): stateFile is DocumentModelGlobalState =>
-        DocumentModelGlobalStateSchema().safeParse(stateFile).success === true,
-    ),
+    map(loadDocumentModelInDir),
+    filter(isDefined),
   );
 
   for (const documentModelState of documentModelStateFiles) {
@@ -223,10 +211,11 @@ export async function generateAllSubgraphs(project: Project) {
     subgraphsDir.getDirectories(),
     map((dir) => dir.getBaseName()),
     map((dirName) => getSubgraphMetadata(project, dirName)),
+    map(prop("subgraphName")),
     filter(isDefined),
     unique(),
   );
-  for (const { subgraphName } of subgraphNames) {
+  for (const subgraphName of subgraphNames) {
     await generateSubgraph(subgraphName, project);
   }
 }

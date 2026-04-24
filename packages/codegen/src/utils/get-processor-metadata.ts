@@ -3,20 +3,21 @@ import {
   conditional,
   constant,
   filter,
-  find,
-  flatMap,
-  isDefined,
   isIncludedIn,
+  isNot,
   isString,
-  isTruthy,
   map,
   pipe,
   split,
   startsWith,
-  when,
 } from "remeda";
-import { SyntaxKind, type Project, type SourceFile } from "ts-morph";
-import { getObjectProperty, getOrCreateDirectory } from "utils";
+import { type Project, type SourceFile } from "ts-morph";
+import {
+  getAllImportModuleSpecifiers,
+  getAllImportNames,
+  getOrCreateDirectory,
+  getStringArrayPropertyElements,
+} from "utils";
 
 export function getProcessorMetadata(project: Project, dirName: string) {
   const { directory: processorsDir } = getOrCreateDirectory(
@@ -40,63 +41,33 @@ export function getProcessorMetadata(project: Project, dirName: string) {
     processorName: dirName,
     /* We can try to determine which processors are for `connect` and for `switchboard`.
      * If we cannot, we fallback to including them in both. */
-    processorApps: pipe(
-      ["switchboard" as const, "connect" as const],
-      when(
-        () => !isIncludedIn(dirName, connectProcessorNames),
-        () => ["switchboard" as const],
-      ),
-      when(
-        () => !isIncludedIn(dirName, switchboardProcessorNames),
-        () => ["connect" as const],
-      ),
+    processorApps: conditional(
+      dirName,
+      [isNot(isIncludedIn(connectProcessorNames)), constant(["switchboard"])],
+      [isNot(isIncludedIn(switchboardProcessorNames)), constant(["connect"])],
+      constant(["switchboard", "connect"]),
     ),
     processorType: pipe(
       // handle the old `index.ts` file name if `processor.ts` has not been generated
       processorDir.getSourceFile("processor.ts") ??
         processorDir.getSourceFile("index.ts"),
-      (sourceFile) => sourceFile?.getImportDeclarations() ?? [],
-      flatMap((importDeclaration) => importDeclaration.getNamedImports()),
-      map((importSpecifier) => importSpecifier.getText()),
+      getAllImportNames,
       // we have to check what type is imported to determine whether the processor is `relationalDb` or `analytics`
       conditional(
         [
-          (specifiers) =>
-            isDefined(
-              find(specifiers, (specifier) =>
-                specifier.includes("RelationalDbProcessor"),
-              ),
-            ),
-          () => "relationalDb" as const,
+          (specifiers) => isIncludedIn("RelationalDbProcessor", specifiers),
+          constant("relationalDb"),
         ],
         [
-          (specifiers) =>
-            isDefined(
-              find(specifiers, (specifier) =>
-                specifier.includes("IAnalyticsStore"),
-              ),
-            ),
-          () => "analytics" as const,
+          (specifiers) => isIncludedIn("IAnalyticsStore", specifiers),
+          constant("analytics"),
         ],
         constant("analytics"),
       ),
     ),
-    documentTypes: pipe(
+    documentTypes: getStringArrayPropertyElements(
       processorDir.getSourceFile("factory.ts"),
-      (sourceFile) =>
-        sourceFile?.getDescendantsOfKind(SyntaxKind.ObjectLiteralExpression) ??
-        [],
-      map((objectLiteralExpression) =>
-        getObjectProperty(
-          objectLiteralExpression,
-          "documentType",
-          SyntaxKind.ArrayLiteralExpression,
-        ),
-      ),
-      flatMap((o) => o?.getElements()),
-      map((e) => e?.asKind(SyntaxKind.StringLiteral)),
-      filter(isTruthy),
-      map((e) => e.getLiteralValue()),
+      "documentTypes",
     ),
   }));
 }
@@ -104,10 +75,7 @@ export function getProcessorMetadata(project: Project, dirName: string) {
 const getProcessorNames = (sourceFile: SourceFile | undefined) =>
   pipe(
     sourceFile,
-    (sourceFile) => sourceFile?.getImportDeclarations() ?? [],
-    flatMap((importDeclaration) =>
-      importDeclaration.getModuleSpecifier().getLiteralValue(),
-    ),
+    getAllImportModuleSpecifiers,
     filter(startsWith("processors/")),
     map(split("/")),
     map((s) => s.at(1)),
