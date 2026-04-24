@@ -1,8 +1,7 @@
 import { Icon } from "#design-system";
-import {
-  GqlRequestChannel,
+import type {
+  IChannel,
   IntervalPollTimer,
-  type IChannel,
 } from "@powerhousedao/reactor-browser";
 import { useCallback, useState } from "react";
 import type { ConnectionStateSummary } from "../remotes-inspector.js";
@@ -67,14 +66,7 @@ export function ChannelInspector({
   };
 
   const getPollerControls = useCallback(() => {
-    if (!(channel instanceof GqlRequestChannel)) {
-      return null;
-    }
-    const poller = channel.poller;
-    if (!(poller instanceof IntervalPollTimer)) {
-      return null;
-    }
-    return poller;
+    return "poller" in channel ? (channel.poller as IntervalPollTimer) : null;
   }, [channel]);
 
   const pollerControls = getPollerControls();

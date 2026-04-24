@@ -110,7 +110,6 @@
     "@tailwindcss/cli": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
-    "sonda": "^0.11.1",
     "tailwindcss": "catalog:",
     "tsdown": "catalog:",
     "tsx": "catalog:"

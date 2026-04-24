@@ -5,7 +5,6 @@ import type {
 import type { ILogger } from "document-model";
 import { ConsoleLogger } from "document-model";
 import type { Kysely } from "kysely";
-import { createDefaultDatabase } from "./create-default-database.js";
 import { CollectionMembershipCache } from "../cache/collection-membership-cache.js";
 import { DocumentMetaCache } from "../cache/document-meta-cache.js";
 import { KyselyOperationIndex } from "../cache/kysely-operation-index.js";
@@ -59,6 +58,7 @@ import { GqlResponseChannelFactory } from "../sync/channels/gql-response-channel
 import { SyncBuilder } from "../sync/sync-builder.js";
 import type { JwtHandler } from "../sync/types.js";
 import { ChannelScheme } from "../sync/types.js";
+import { createDefaultDatabase } from "./create-default-database.js";
 import { Reactor } from "./reactor.js";
 import type {
   Database,
