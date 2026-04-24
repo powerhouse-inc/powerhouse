@@ -1,4 +1,5 @@
 import { Icon } from "#design-system";
+import type { FC } from "react";
 import type {
   ToastContainerProps,
   ToastContent,
@@ -85,6 +86,6 @@ const CloseButton: ToastContainerProps["closeButton"] = ({ closeToast }) => (
   </button>
 );
 
-export const ToastContainer: React.FC<ToastContainerProps> = (props) => (
+export const ToastContainer: FC<ToastContainerProps> = (props) => (
   <RToastContainer closeButton={CloseButton} {...props} />
 );
