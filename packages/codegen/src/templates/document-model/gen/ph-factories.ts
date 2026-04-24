@@ -49,7 +49,7 @@ export function createGlobalState(
   return {
     ...defaultGlobalState(),
     ...(state || {}),
-  } as ${v.globalStateName};
+  };
 }
 
 export function createLocalState(
