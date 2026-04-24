@@ -11,11 +11,22 @@ import {
 } from "@powerhousedao/reactor-browser";
 import type { Node } from "@powerhousedao/shared/document-drive";
 import type { PHDocument } from "@powerhousedao/shared/document-model";
-import { useEffect, useState, type ComponentPropsWithoutRef } from "react";
+import {
+  Suspense,
+  lazy,
+  useEffect,
+  useState,
+  type ComponentPropsWithoutRef,
+} from "react";
 import { twMerge } from "tailwind-merge";
-import { DocumentTimeline } from "../document-timeline/document-timeline.js";
 import { NodeInput } from "../node-input/node-input.js";
 import { useDocumentUndoRedo } from "./utils/use-document-undo-redo.js";
+
+const DocumentTimeline = lazy(() =>
+  import("../document-timeline/document-timeline.js").then((m) => ({
+    default: m.DocumentTimeline,
+  })),
+);
 
 // TODO: Remove this when timeline analytics is available
 // import { useDocumentTimeline } from "@powerhousedao/reactor-browser";
@@ -341,10 +352,12 @@ export const DocumentToolbar: React.FC<DocumentToolbarProps> = (props) => {
 
       {showTimeline && (
         <div className="mt-2 w-full">
-          <DocumentTimeline
-            timeline={timelineItemsData}
-            onItemClick={setSelectedTimelineItem}
-          />
+          <Suspense fallback={null}>
+            <DocumentTimeline
+              timeline={timelineItemsData}
+              onItemClick={setSelectedTimelineItem}
+            />
+          </Suspense>
         </div>
       )}
       {children}
