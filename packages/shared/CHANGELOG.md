@@ -1,3 +1,25 @@
+## 6.0.0-dev.195 (2026-04-24)
+
+### 🚀 Features
+
+- **codegen:** add sideEffects:false to generated package boilerplate ([844449485](https://github.com/powerhouse-inc/powerhouse/commit/844449485))
+- **shared:** isolate generateMock into its own module ([862fcc58b](https://github.com/powerhouse-inc/powerhouse/commit/862fcc58b))
+- **tree-shaking:** add sideEffects:false and lazy-load pglite ([92f8e988e](https://github.com/powerhouse-inc/powerhouse/commit/92f8e988e))
+
+### 🩹 Fixes
+
+- **registry:** downgrade express to v4 to fix package details page 404 ([40cd8a5d8](https://github.com/powerhouse-inc/powerhouse/commit/40cd8a5d8))
+- outdated pnpm lock ([4a1f21903](https://github.com/powerhouse-inc/powerhouse/commit/4a1f21903))
+- **common:** cleanup deps ([8602d77ba](https://github.com/powerhouse-inc/powerhouse/commit/8602d77ba))
+- **shared,document-model:** make zip utils async ([72a6447e4](https://github.com/powerhouse-inc/powerhouse/commit/72a6447e4))
+- **shared:** lazy-load jszip to remove it from the eager document model bundle ([fc920a3e9](https://github.com/powerhouse-inc/powerhouse/commit/fc920a3e9))
+- **shared:** keep react in browser neverBundle to avoid duplicate instances ([1dd206a09](https://github.com/powerhouse-inc/powerhouse/commit/1dd206a09))
+
+### ❤️ Thank You
+
+- acaldas
+- Guillermo Puente @gpuente
+
 ## 6.0.0-dev.194 (2026-04-23)
 
 ### 🩹 Fixes

@@ -1,3 +1,21 @@
+## 6.0.0-dev.195 (2026-04-24)
+
+### 🚀 Features
+
+- **codegen:** add sideEffects:false to generated package boilerplate ([844449485](https://github.com/powerhouse-inc/powerhouse/commit/844449485))
+- **tree-shaking:** add sideEffects:false and lazy-load pglite ([92f8e988e](https://github.com/powerhouse-inc/powerhouse/commit/92f8e988e))
+
+### 🩹 Fixes
+
+- **registry:** downgrade express to v4 to fix package details page 404 ([40cd8a5d8](https://github.com/powerhouse-inc/powerhouse/commit/40cd8a5d8))
+- outdated pnpm lock ([4a1f21903](https://github.com/powerhouse-inc/powerhouse/commit/4a1f21903))
+- **common:** cleanup deps ([8602d77ba](https://github.com/powerhouse-inc/powerhouse/commit/8602d77ba))
+
+### ❤️ Thank You
+
+- acaldas
+- Guillermo Puente @gpuente
+
 ## 6.0.0-dev.194 (2026-04-23)
 
 ### 🩹 Fixes
