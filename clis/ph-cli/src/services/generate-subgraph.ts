@@ -20,11 +20,10 @@ export async function startGenerateSubgraph(
   } else if (name) {
     await generateSubgraph(name, project);
   } else if (dir) {
-    const subgraphArgs = getSubgraphMetadata(project, dirname(dir));
-    if (!subgraphArgs) {
+    const { subgraphName } = getSubgraphMetadata(project, dirname(dir));
+    if (!subgraphName) {
       throw new Error(`Failed to get data for subgraph in dir "${dir}"`);
     }
-    const { subgraphName } = subgraphArgs;
     await generateSubgraph(subgraphName, project);
   } else {
     console.log("Please specify either `name`, `dir`, or `all`.");
