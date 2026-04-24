@@ -1,4 +1,7 @@
-import { driveCollectionId, GqlRequestChannel } from "@powerhousedao/reactor";
+import {
+  driveCollectionId,
+  type GqlRequestChannel,
+} from "@powerhousedao/reactor";
 import type { PHDocument } from "@powerhousedao/shared/document-model";
 import { useMemo } from "react";
 import { buildDocumentSubgraphUrl } from "../utils/index.js";
@@ -29,16 +32,23 @@ export function useGetSwitchboardLink(
     );
   }, [remotes, drive]);
   const remoteUrl = useMemo(() => {
-    const remote = remotes.find(
-      (remote) =>
-        remote.collectionId === driveCollectionId("main", drive.header.id),
-    );
+    try {
+      const remote = remotes.find(
+        (remote) =>
+          remote.collectionId === driveCollectionId("main", drive.header.id),
+      );
 
-    if (remote?.channel instanceof GqlRequestChannel) {
-      return (remote.channel as GqlRequestChannel).config.url;
+      const channelUrl = (remote?.channel as GqlRequestChannel | undefined)
+        ?.config.url;
+      if (typeof channelUrl === "string") {
+        return channelUrl;
+      }
+
+      return null;
+    } catch (error) {
+      console.error("Error determining remote URL:", error);
+      return null;
     }
-
-    return null;
   }, [remotes, drive]);
   const renown = useRenown();
   const user = useUser();
