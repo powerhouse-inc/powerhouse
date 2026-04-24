@@ -6,6 +6,7 @@
     "access": "restricted"
   },
   "type": "module",
+  "sideEffects": false,
   "license": "AGPL-3.0-only",
   "files": [
     "dist"

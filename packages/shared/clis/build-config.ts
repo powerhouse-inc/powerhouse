@@ -53,6 +53,9 @@ const nodeNeverBundle = [
   "@types/node",
   "@types/react",
   "@types/react-dom",
+  // exclude pglite wasm/data chunks
+  "@electric-sql/pglite",
+  "@electric-sql/pglite-tools",
 ];
 
 const browserNeverBundle = [...nodeNeverBundle, "@powerhousedao/reactor-api"];
@@ -76,7 +79,7 @@ export const browserBuildConfig: InlineConfig = {
   clean,
   dts,
   sourcemap,
-  plugins: esmExternalRequirePlugin({ external: reactExternals }),
+  plugins: [esmExternalRequirePlugin({ external: reactExternals })],
   inputOptions: {
     experimental: { resolveNewUrlToAsset: true },
   },
