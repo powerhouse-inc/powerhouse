@@ -1,5 +1,4 @@
-import type { Issuer } from "did-jwt-vc";
-import type { CreateBearerTokenOptions } from "../types.js";
+import type { CreateBearerTokenOptions, Issuer } from "../types.js";
 
 export type JwkKeyPair = {
   publicKey: JsonWebKey;
