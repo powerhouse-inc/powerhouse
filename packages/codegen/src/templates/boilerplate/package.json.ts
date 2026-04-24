@@ -22,9 +22,9 @@ export const exportsTemplate = json`
     "node": "./dist/node/editors/index.mjs"
   },
   "./editors/*": {
-    "types": "./dist/editors/*/index.d.ts",
-    "browser": "./dist/browser/editors/*/index.js",
-    "node": "./dist/node/editors/*/index.mjs"
+    "types": "./dist/editors/*/editor.d.ts",
+    "browser": "./dist/browser/editors/*/editor.js",
+    "node": "./dist/node/editors/*/editor.mjs"
   },
   "./subgraphs": {
     "types": "./dist/subgraphs/index.d.ts",
