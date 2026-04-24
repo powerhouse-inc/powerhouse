@@ -182,6 +182,22 @@ export class CdnCache {
     fs.rmSync(cacheDir, { recursive: true, force: true });
   }
 
+  invalidateVersion(packageName: string, version: string): void {
+    const versionDir = path.join(this.cdnCachePath, packageName, version);
+    if (!this.isSafePath(versionDir)) return;
+    fs.rmSync(versionDir, { recursive: true, force: true });
+    // If the package dir is now empty, remove it too so the scanner doesn't
+    // keep returning a ghost entry with no versions.
+    const pkgDir = path.join(this.cdnCachePath, packageName);
+    try {
+      if (fs.readdirSync(pkgDir).length === 0) {
+        fs.rmdirSync(pkgDir);
+      }
+    } catch {
+      // ignore — dir may not exist
+    }
+  }
+
   /** Remove all cached version directories except the specified one. */
   pruneOldVersions(packageName: string, keepVersion: string): void {
     const pkgDir = path.join(this.cdnCachePath, packageName);

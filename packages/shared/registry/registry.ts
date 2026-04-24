@@ -67,3 +67,40 @@ export async function npmPublish(
   const stdout = await spawnAsync("npm", npmArgs, { cwd });
   return { stdout };
 }
+
+export interface NpmUnpublishOptions {
+  /** Registry URL to unpublish from. */
+  registryUrl: string;
+  /** Working directory (project root). */
+  cwd: string;
+  /** Package spec: `<name>` (whole package) or `<name>@<version>` (single version). */
+  spec: string;
+  /** Additional arguments forwarded to npm unpublish. */
+  args?: string[];
+}
+
+export interface NpmUnpublishResult {
+  /** stdout from npm unpublish. */
+  stdout: string;
+}
+
+/**
+ * Run `npm unpublish` against the given registry.
+ * Always passes `--force` because npm otherwise refuses to unpublish packages
+ * older than 72h (a public-npmjs safeguard that doesn't apply to private registries).
+ */
+export async function npmUnpublish(
+  options: NpmUnpublishOptions,
+): Promise<NpmUnpublishResult> {
+  const { registryUrl, cwd, spec, args = [] } = options;
+  const npmArgs = [
+    "unpublish",
+    spec,
+    "--registry",
+    registryUrl,
+    "--force",
+    ...args,
+  ];
+  const stdout = await spawnAsync("npm", npmArgs, { cwd });
+  return { stdout };
+}

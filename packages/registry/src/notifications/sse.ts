@@ -1,5 +1,9 @@
 import type { Response } from "express";
-import type { NotificationChannel, PublishEvent } from "./types.js";
+import type {
+  NotificationChannel,
+  PublishEvent,
+  UnpublishEvent,
+} from "./types.js";
 
 export class SSEChannel implements NotificationChannel {
   #clients = new Set<Response>();
@@ -20,7 +24,15 @@ export class SSEChannel implements NotificationChannel {
   }
 
   notifyPublish(event: PublishEvent): void {
-    const payload = `event: publish\ndata: ${JSON.stringify(event)}\n\n`;
+    this.#broadcast("publish", event);
+  }
+
+  notifyUnpublish(event: UnpublishEvent): void {
+    this.#broadcast("unpublish", event);
+  }
+
+  #broadcast(eventName: string, event: PublishEvent | UnpublishEvent): void {
+    const payload = `event: ${eventName}\ndata: ${JSON.stringify(event)}\n\n`;
     for (const client of this.#clients) {
       try {
         client.write(payload);

@@ -20,5 +20,6 @@ export * from "./service.js";
 export * from "./switchboard.js";
 // export * from "./uninstall.old.js";
 export * from "./uninstall.js";
+export * from "./unpublish.js";
 // export * from "./vetra.old.js";
 export * from "./vetra.js";

@@ -13,6 +13,7 @@ export * from "./args/publish.js";
 export * from "./args/service.js";
 export * from "./args/switchboard.js";
 export * from "./args/uninstall.js";
+export * from "./args/unpublish.js";
 export * from "./args/vetra.js";
 export * from "./build-config.js";
 export * from "./constants.js";
