@@ -1,7 +1,5 @@
-import {
-  BrowserAnalyticsStore,
-  createFsPglite,
-} from "@powerhousedao/analytics-engine-browser";
+import { BrowserAnalyticsStore } from "@powerhousedao/analytics-engine-browser";
+import { createFsPglite } from "@powerhousedao/analytics-engine-browser/test-utils";
 import { AnalyticsPath } from "@powerhousedao/analytics-engine-core";
 import { PostgresAnalyticsStore } from "@powerhousedao/analytics-engine-pg";
 import fs from "fs";
