@@ -79,7 +79,6 @@
     }
   },
   "dependencies": {
-    "write-package": "catalog:",
     "@sentry/node": "^9.47.1",
     "@sindresorhus/fnv1a": "catalog:",
     "chalk": "catalog:",
@@ -90,22 +89,24 @@
     "kysely": "catalog:",
     "luxon": "catalog:",
     "mutative": "catalog:",
-    "rolldown": "catalog:",
     "npm-package-arg": "catalog:",
     "package-directory": "^8.1.0",
     "package-manager-detector": "catalog:",
+    "remeda": "^2.33.7",
+    "rolldown": "catalog:",
     "safe-stable-stringify": "^2.4.3",
     "sha1-uint8array": "^0.10.7",
+    "write-package": "catalog:",
     "zocker": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
     "@types/bun": "catalog:",
     "@types/luxon": "catalog:",
+    "@types/npm-package-arg": "catalog:",
     "@types/react": "catalog:",
     "react": "catalog:",
     "tsdown": "catalog:",
-    "tsx": "catalog:",
-    "@types/npm-package-arg": "catalog:"
+    "tsx": "catalog:"
   }
 }

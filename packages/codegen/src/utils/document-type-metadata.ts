@@ -1,15 +1,20 @@
-import {
-  DocumentModelGlobalStateSchema,
-  type DocumentModelGlobalState,
-} from "@powerhousedao/shared/document-model";
 import type { DocumentModelDocumentTypeMetadata } from "file-builders";
-import { readdirSync, statSync } from "fs";
-import { loadJsonFileSync } from "load-json-file";
+import { readdirSync } from "fs";
 import { getDocumentModelVariableNames } from "name-builders";
 import { join } from "path";
-import { filter, find, isString, map, pipe, prop, when } from "remeda";
+import {
+  filter,
+  first,
+  isDefined,
+  isStrictEqual,
+  isString,
+  map,
+  pipe,
+  prop,
+  when,
+} from "remeda";
 import type { Project } from "ts-morph";
-import { getOrCreateDirectory } from "utils";
+import { getOrCreateDirectory, loadDocumentModelInDir } from "utils";
 
 type GetDocumentTypeMetadataArgs = {
   project: Project;
@@ -30,20 +35,12 @@ export function getDocumentTypeMetadata({
 
   const documentModelVariableNames = pipe(
     readdirSync(documentModelsDirPath, { withFileTypes: true }),
-    filter((dirent) => dirent.isDirectory()),
-    map((dir) => join(dir.parentPath, `${dir.name}/${dir.name}.json`)),
-    filter(
-      (srcPath) =>
-        statSync(srcPath, { throwIfNoEntry: false })?.isFile() ?? false,
-    ),
-    map((srcPath) => loadJsonFileSync(srcPath)),
-    filter(
-      (stateFile): stateFile is DocumentModelGlobalState =>
-        DocumentModelGlobalStateSchema().safeParse(stateFile).success === true,
-    ),
-    find((state) => state.id === documentModelId),
+    map(loadDocumentModelInDir),
+    filter(isDefined),
+    filter((state) => isStrictEqual(state.id, documentModelId)),
+    first(),
     prop("name"),
-    when(isString, (name) => getDocumentModelVariableNames(name)),
+    when(isString, getDocumentModelVariableNames),
   );
 
   if (!documentModelVariableNames) {

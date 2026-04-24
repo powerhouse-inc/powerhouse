@@ -59,7 +59,8 @@
     "remeda": "^2.33.7",
     "ts-morph": "catalog:",
     "write-json-file": "^7.0.0",
-    "write-package": "catalog:"
+    "write-package": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@pnpm/find-workspace-dir": "^1000.1.5",

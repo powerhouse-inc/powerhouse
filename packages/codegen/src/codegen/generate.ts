@@ -1,11 +1,5 @@
-import {
-  DocumentModelGlobalStateSchema,
-  type DocumentModelGlobalState,
-} from "@powerhousedao/shared/document-model";
-import type {
-  ProcessorApp,
-  ProcessorApps,
-} from "@powerhousedao/shared/processors";
+import { type DocumentModelGlobalState } from "@powerhousedao/shared/document-model";
+import type { ProcessorApps } from "@powerhousedao/shared/processors";
 import { kebabCase } from "change-case";
 import {
   tsMorphGenerateApp,
@@ -14,29 +8,26 @@ import {
   tsMorphGenerateProcessor,
   tsMorphGenerateSubgraph,
 } from "file-builders";
-import { loadJsonFileSync } from "load-json-file";
-import { readdirSync, statSync } from "node:fs";
-import { join } from "node:path";
+import { readdirSync } from "node:fs";
 import {
-  conditional,
   filter,
-  find,
-  flatMap,
   isDefined,
-  isEmpty,
   isIncludedIn,
-  isString,
   isTruthy,
   map,
   pipe,
-  split,
-  startsWith,
+  prop,
   unique,
-  when,
 } from "remeda";
 import type { Project } from "ts-morph";
-import { SyntaxKind } from "ts-morph";
-import { getObjectProperty, getOrCreateDirectory } from "utils";
+import {
+  getAppMetadata,
+  getEditorMetadata,
+  getOrCreateDirectory,
+  getProcessorMetadata,
+  getSubgraphMetadata,
+  loadDocumentModelInDir,
+} from "utils";
 import { loadDocumentModel } from "./utils.js";
 
 export async function generateDocumentModel(
@@ -55,17 +46,8 @@ export async function generateAllDocumentModels(project: Project) {
   const documentModelsDirPath = documentModelsDir.getPath();
   const documentModelStateFiles = pipe(
     readdirSync(documentModelsDirPath, { withFileTypes: true }),
-    filter((dirent) => dirent.isDirectory()),
-    map((dir) => join(dir.parentPath, `${dir.name}/${dir.name}.json`)),
-    filter(
-      (srcPath) =>
-        statSync(srcPath, { throwIfNoEntry: false })?.isFile() ?? false,
-    ),
-    map((srcPath) => loadJsonFileSync(srcPath)),
-    filter(
-      (stateFile): stateFile is DocumentModelGlobalState =>
-        DocumentModelGlobalStateSchema().safeParse(stateFile).success === true,
-    ),
+    map(loadDocumentModelInDir),
+    filter(isDefined),
   );
 
   for (const documentModelState of documentModelStateFiles) {
@@ -120,58 +102,36 @@ export async function generateEditor(
  */
 export async function generateAllEditors(project: Project) {
   const { directory: editorsDir } = getOrCreateDirectory(project, "editors");
-  const editorDirs = editorsDir.getDirectories();
 
   /* An editor's `id`, `name`, and `documentTypes` args can be found in the `module.ts` file */
   const editorsToAdd = pipe(
-    editorDirs,
-    map((dir) => dir.getSourceFile("module.ts")),
+    editorsDir.getDirectories(),
+    map((dir) => dir.getBaseName()),
+    map((dirName) => getEditorMetadata(project, dirName)),
     filter(isTruthy),
-    map((sourceFile) =>
-      sourceFile.getDescendantsOfKind(SyntaxKind.PropertyAssignment),
-    ),
-    map((propertyAssignments) => ({
-      id: find(
-        propertyAssignments,
-        (propertyAssignment) => propertyAssignment.getName() === "id",
-      ),
-      name: find(
-        propertyAssignments,
-        (propertyAssignment) => propertyAssignment.getName() === "name",
-      ),
-      documentTypes: find(
-        propertyAssignments,
-        (propertyAssignment) =>
-          propertyAssignment.getName() === "documentTypes",
-      ),
-    })),
-    map(({ id, name, documentTypes }) => ({
-      editorDirName: id?.getSourceFile().getDirectory().getBaseName(),
-      editorId: id
-        ?.getFirstDescendantByKind(SyntaxKind.StringLiteral)
-        ?.getLiteralValue(),
-      editorName: name
-        ?.getFirstDescendantByKind(SyntaxKind.StringLiteral)
-        ?.getLiteralValue(),
-      documentTypes: pipe(
-        documentTypes
-          ?.getFirstDescendantByKind(SyntaxKind.ArrayLiteralExpression)
-          ?.getElements() ?? [],
-        map((element) =>
-          element.asKind(SyntaxKind.StringLiteral)?.getLiteralValue(),
-        ),
-        filter(isString),
-      ),
-    })),
     filter(
       ({ documentTypes }) =>
-        !documentTypes.includes("powerhouse/document-drive"),
+        !isIncludedIn("powerhouse/document-drive", documentTypes),
     ),
   );
 
   for (const editorToAdd of editorsToAdd) {
-    if (editorToAdd.editorDirName === undefined) return;
-    await generateEditor(editorToAdd as GenerateEditorArgs, project);
+    const {
+      name: editorName,
+      id: editorId,
+      dirName: editorDirName,
+      documentTypes,
+    } = editorToAdd;
+
+    await generateEditor(
+      {
+        editorName,
+        editorId,
+        editorDirName,
+        documentTypes,
+      },
+      project,
+    );
   }
 }
 
@@ -207,103 +167,33 @@ export async function generateApp(args: GenerateAppArgs, project: Project) {
  */
 export async function generateAllApps(project: Project) {
   const { directory: editorsDir } = getOrCreateDirectory(project, "editors");
-  const editorDirs = editorsDir.getDirectories();
 
   /* An editor's `id`, `name`, and `documentTypes` args can be found in the `module.ts` file */
   const appsToAdd = pipe(
-    editorDirs,
-    map((dir) => dir.getSourceFile("module.ts")),
+    editorsDir.getDirectories(),
+    map((dir) => dir.getBaseName()),
+    map((dirName) => getAppMetadata(project, dirName)),
     filter(isTruthy),
-    map((sourceFile) =>
-      sourceFile.getDescendantsOfKind(SyntaxKind.PropertyAssignment),
-    ),
-    map((propertyAssignments) => ({
-      id: find(
-        propertyAssignments,
-        (propertyAssignment) => propertyAssignment.getName() === "id",
-      ),
-      name: find(
-        propertyAssignments,
-        (propertyAssignment) => propertyAssignment.getName() === "name",
-      ),
-      documentTypes: find(
-        propertyAssignments,
-        (propertyAssignment) =>
-          propertyAssignment.getName() === "documentTypes",
-      ),
-    })),
-    map(({ id, name, documentTypes }) => ({
-      appDir: id?.getSourceFile().getDirectory(),
-      appId: id
-        ?.getFirstDescendantByKind(SyntaxKind.StringLiteral)
-        ?.getLiteralValue(),
-      appName: name
-        ?.getFirstDescendantByKind(SyntaxKind.StringLiteral)
-        ?.getLiteralValue(),
-      documentTypes: pipe(
-        documentTypes
-          ?.getFirstDescendantByKind(SyntaxKind.ArrayLiteralExpression)
-          ?.getElements() ?? [],
-        map((element) =>
-          element.asKind(SyntaxKind.StringLiteral)?.getLiteralValue(),
-        ),
-        filter(isString),
-      ),
-    })),
-    filter(({ documentTypes }) =>
-      documentTypes.includes("powerhouse/document-drive"),
-    ),
-    /* The `allowedDocumentTypes` and `isDragAndDropEnabled` args can only be found in the `config.ts` file */
-    map(({ appDir, ...rest }) => ({
-      appDirName: appDir?.getBaseName(),
-      configFilePropertyAssignments:
-        appDir
-          ?.getSourceFile("config.ts")
-          ?.getDescendantsOfKind(SyntaxKind.PropertyAssignment) ?? [],
-      ...rest,
-    })),
-    map(({ configFilePropertyAssignments, ...rest }) => ({
-      isDragAndDropEnabled: find(
-        configFilePropertyAssignments,
-        (propertyAssignment) =>
-          propertyAssignment.getName() === "isDragAndDropEnabled",
-      ),
-      allowedDocumentTypes: find(
-        configFilePropertyAssignments,
-        (propertyAssignment) =>
-          propertyAssignment.getName() === "allowedDocumentTypes",
-      ),
-      ...rest,
-    })),
-    map(({ isDragAndDropEnabled, allowedDocumentTypes, ...rest }) => ({
-      isDragAndDropEnabled: when(
-        isDragAndDropEnabled?.getDescendants() ?? [],
-        (descendants) =>
-          isDefined(
-            find(descendants, (d) => d.getKind() === SyntaxKind.TrueKeyword),
-          ),
-        {
-          onTrue: () => true,
-          onFalse: () => false,
-        },
-      ),
-      allowedDocumentTypes: pipe(
-        allowedDocumentTypes
-          ?.getFirstDescendantByKind(SyntaxKind.ArrayLiteralExpression)
-          ?.getElements() ?? [],
-        map((element) =>
-          element.asKind(SyntaxKind.StringLiteral)?.getLiteralValue(),
-        ),
-        filter(isString),
-      ),
-      ...rest,
-    })),
   );
 
   for (const appToAdd of appsToAdd) {
-    if (appToAdd.appName === undefined) return;
-
-    await generateApp(appToAdd as GenerateAppArgs, project);
+    const {
+      name: appName,
+      id: appId,
+      dirName: appDirName,
+      allowedDocumentTypes,
+      isDragAndDropEnabled,
+    } = appToAdd;
+    await generateApp(
+      {
+        appName,
+        appDirName,
+        appId,
+        allowedDocumentTypes,
+        isDragAndDropEnabled,
+      },
+      project,
+    );
   }
 }
 export async function generateSubgraph(subgraphName: string, project: Project) {
@@ -319,21 +209,10 @@ export async function generateAllSubgraphs(project: Project) {
   /* The subgraph's name is found in the `index.ts` file */
   const subgraphNames = pipe(
     subgraphsDir.getDirectories(),
-    map((dir) => dir.getSourceFile("index.ts")),
-    flatMap((indexFile) => indexFile?.getClasses() ?? []),
-    filter(
-      (classDeclaration) =>
-        classDeclaration.getBaseClass()?.getText().includes("BaseSubgraph") ??
-        false,
-    ),
-    map((classDeclaration) =>
-      classDeclaration
-        .getInstanceProperty("name")
-        ?.asKind(SyntaxKind.PropertyDeclaration)
-        ?.getInitializerIfKind(SyntaxKind.StringLiteral)
-        ?.getLiteralValue(),
-    ),
-    filter(isString),
+    map((dir) => dir.getBaseName()),
+    map((dirName) => getSubgraphMetadata(project, dirName)),
+    map(prop("subgraphName")),
+    filter(isDefined),
     unique(),
   );
   for (const subgraphName of subgraphNames) {
@@ -362,117 +241,14 @@ export async function generateAllProcessors(project: Project) {
     project,
     "processors",
   );
-  const connectProcessorNames = pipe(
-    processorsDir.getSourceFile("connect.ts"),
-    (sourceFile) => sourceFile?.getImportDeclarations() ?? [],
-    flatMap((importDeclaration) =>
-      importDeclaration.getModuleSpecifier().getLiteralValue(),
-    ),
-    filter(startsWith("processors/")),
-    map(split("/")),
-    map((s) => s.at(1)),
-    filter(isString),
-  );
-  const switchboardProcessorNames = pipe(
-    processorsDir.getSourceFile("switchboard.ts"),
-    (sourceFile) => sourceFile?.getImportDeclarations() ?? [],
-    flatMap((importDeclaration) =>
-      importDeclaration.getModuleSpecifier().getLiteralValue(),
-    ),
-    filter(startsWith("processors/")),
-    map(split("/")),
-    map((s) => s.at(1)),
-    filter(isString),
-  );
   const processorsToGenerate = pipe(
     processorsDir.getDirectories(),
-    map((dir) => ({
-      dir,
-      processorName: dir.getBaseName(),
-    })),
-    map(({ dir, processorName }) => ({
-      processorName,
-      /* We can try to determine which processors are for `connect` and for `switchboard`.
-       * If we cannot, we fallback to including them in both. */
-      processorApps: pipe(
-        [],
-        when(
-          () => isIncludedIn(processorName, connectProcessorNames),
-          (processorApps) => [...processorApps, "connect"],
-        ),
-        when(
-          () => isIncludedIn(processorName, switchboardProcessorNames),
-          (processorApps) => [...processorApps, "switchboard"],
-        ),
-        when(
-          (processorApps) => isEmpty(processorApps),
-          () => ["connect", "switchboard"],
-        ),
-      ),
-      processorType: pipe(
-        // handle the old `index.ts` file name if `processor.ts` has not been generated
-        dir.getSourceFile("processor.ts") ?? dir.getSourceFile("index.ts"),
-        (sourceFile) => sourceFile?.getImportDeclarations() ?? [],
-        flatMap((importDeclaration) => importDeclaration.getNamedImports()),
-        map((importSpecifier) => importSpecifier.getText()),
-        // we have to check what type is imported to determine whether the processor is `relationalDb` or `analytics`
-        conditional(
-          [
-            (specifiers) =>
-              isDefined(
-                find(specifiers, (specifier) =>
-                  specifier.includes("RelationalDbProcessor"),
-                ),
-              ),
-            () => "relationalDb",
-          ],
-          [
-            (specifiers) =>
-              isDefined(
-                find(specifiers, (specifier) =>
-                  specifier.includes("IAnalyticsStore"),
-                ),
-              ),
-            () => "analytics",
-          ],
-        ),
-      ),
-      documentTypes: pipe(
-        dir.getSourceFile("factory.ts"),
-        (sourceFile) =>
-          sourceFile?.getDescendantsOfKind(
-            SyntaxKind.ObjectLiteralExpression,
-          ) ?? [],
-        map((objectLiteralExpression) =>
-          getObjectProperty(
-            objectLiteralExpression,
-            "documentType",
-            SyntaxKind.ArrayLiteralExpression,
-          ),
-        ),
-        flatMap((o) => o?.getElements()),
-        map((e) => e?.asKind(SyntaxKind.StringLiteral)),
-        filter(isTruthy),
-        map((e) => e.getLiteralValue()),
-      ),
-    })),
+    map((dir) => dir.getBaseName()),
+    map((dirName) => getProcessorMetadata(project, dirName)),
   );
 
-  for (const {
-    processorName,
-    processorApps,
-    processorType,
-    documentTypes,
-  } of processorsToGenerate) {
-    await generateProcessor(
-      {
-        processorName,
-        processorApps: processorApps as ProcessorApp[],
-        processorType: processorType as "analytics" | "relationalDb",
-        documentTypes,
-      },
-      project,
-    );
+  for (const processorArgs of processorsToGenerate) {
+    await generateProcessor(processorArgs, project);
   }
 }
 

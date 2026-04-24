@@ -7,6 +7,11 @@ import type {
   preview,
   studio,
 } from "./commands/connect.js";
+import type { generateAppCmd } from "./commands/generate-app.js";
+import type { generateDocumentModelCmd } from "./commands/generate-document-model.js";
+import type { generateEditorCmd } from "./commands/generate-editor.js";
+import type { generateProcessorCmd } from "./commands/generate-processor.js";
+import type { generateSubgraphCmd } from "./commands/generate-subgraph.js";
 import type { generate } from "./commands/generate.js";
 import type { init } from "./commands/init.js";
 import type { inspect } from "./commands/inspect.js";
@@ -24,6 +29,15 @@ export type CommandActionType<Args extends any[], Return = void> = (
 
 export type InitArgs = ParsedCmdResult<typeof init>;
 export type GenerateArgs = ParsedCmdResult<typeof generate>;
+export type GenerateDocumentModelArgs = ParsedCmdResult<
+  typeof generateDocumentModelCmd
+>;
+export type GenerateEditorArgs = ParsedCmdResult<typeof generateEditorCmd>;
+export type GenerateAppArgs = ParsedCmdResult<typeof generateAppCmd>;
+export type GenerateProcessorArgs = ParsedCmdResult<
+  typeof generateProcessorCmd
+>;
+export type GenerateSubgraphArgs = ParsedCmdResult<typeof generateSubgraphCmd>;
 export type VetraArgs = ParsedCmdResult<typeof vetra>;
 export type MigrateArgs = ParsedCmdResult<typeof migrate>;
 export type BuildArgs = ParsedCmdResult<typeof build>;
