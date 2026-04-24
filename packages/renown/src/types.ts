@@ -1,4 +1,3 @@
-import type { Verifiable, VerifiedCredential } from "did-jwt-vc";
 import type {
   User as EditorUser,
   ISigner,
@@ -9,6 +8,39 @@ import type { IEventEmitter } from "./event/types.js";
 import type { IStorage } from "./storage/common.js";
 
 export type { ISigner };
+
+// Local mirrors of the did-jwt-vc shapes that would otherwise leak across
+// renown's public .d.ts surface. Re-declaring them keeps consumers from
+// having to resolve did-jwt-vc / did-jwt / multibase types transitively.
+
+/** Signs bytes/string payloads, returning a base64url-encoded signature. */
+export type Signer = (data: string | Uint8Array) => Promise<string>;
+
+/** A DID with an attached signer, used to issue verifiable credentials. */
+export interface Issuer {
+  did: string;
+  signer: Signer;
+  alg?: string;
+}
+
+/** Credential proof block. */
+export interface Proof {
+  type?: string;
+  [x: string]: unknown;
+}
+
+/** Readonly verifiable object carrying a {@link Proof}. */
+export type Verifiable<T> = Readonly<T> & {
+  readonly proof: Proof;
+};
+
+/** Result of a successful credential verification. */
+export interface VerifiedCredential {
+  readonly payload: { readonly exp?: number };
+  readonly verifiableCredential: {
+    readonly credentialSubject: { readonly [x: string]: unknown };
+  };
+}
 
 export type RenownProfile = {
   documentId: string;

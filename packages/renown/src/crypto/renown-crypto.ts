@@ -1,7 +1,6 @@
 import { bytesToBase64url } from "did-jwt";
-import type { Issuer } from "did-jwt-vc";
 import { fromString } from "uint8arrays";
-import type { CreateBearerTokenOptions } from "../types.js";
+import type { CreateBearerTokenOptions, Issuer } from "../types.js";
 import { createAuthBearerToken } from "../utils.js";
 import type { DID, IRenownCrypto, JsonWebKeyPairStorage } from "./types.js";
 import { ECDSA_ALGORITHM, ECDSA_SIGN_ALGORITHM } from "./utils.js";
