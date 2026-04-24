@@ -1,3 +1,22 @@
+## 6.0.0-dev.195 (2026-04-24)
+
+### 🚀 Features
+
+- **codegen:** add sideEffects:false to generated package boilerplate ([844449485](https://github.com/powerhouse-inc/powerhouse/commit/844449485))
+
+### 🩹 Fixes
+
+- **registry:** downgrade express to v4 to fix package details page 404 ([40cd8a5d8](https://github.com/powerhouse-inc/powerhouse/commit/40cd8a5d8))
+- **commong:** update tsconfig ([2c3037dcf](https://github.com/powerhouse-inc/powerhouse/commit/2c3037dcf))
+- outdated pnpm lock ([4a1f21903](https://github.com/powerhouse-inc/powerhouse/commit/4a1f21903))
+- **common:** cleanup deps ([8602d77ba](https://github.com/powerhouse-inc/powerhouse/commit/8602d77ba))
+- **drive-analytics:** import from reactor-browser/analytics subpath ([f438e09c5](https://github.com/powerhouse-inc/powerhouse/commit/f438e09c5))
+
+### ❤️ Thank You
+
+- acaldas
+- Guillermo Puente @gpuente
+
 ## 6.0.0-dev.194 (2026-04-23)
 
 ### 🩹 Fixes

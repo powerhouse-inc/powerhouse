@@ -1,3 +1,25 @@
+## 6.0.0-dev.195 (2026-04-24)
+
+### 🚀 Features
+
+- **codegen:** add sideEffects:false to generated package boilerplate ([844449485](https://github.com/powerhouse-inc/powerhouse/commit/844449485))
+- **reactor-browser:** split analytics into store and react hooks ([071f62c45](https://github.com/powerhouse-inc/powerhouse/commit/071f62c45))
+- **tree-shaking:** add sideEffects:false and lazy-load pglite ([92f8e988e](https://github.com/powerhouse-inc/powerhouse/commit/92f8e988e))
+- **reactor-browser:** add code splitting and move renown crypto out of reactor ([647c5b282](https://github.com/powerhouse-inc/powerhouse/commit/647c5b282))
+
+### 🩹 Fixes
+
+- **registry:** downgrade express to v4 to fix package details page 404 ([40cd8a5d8](https://github.com/powerhouse-inc/powerhouse/commit/40cd8a5d8))
+- outdated pnpm lock ([4a1f21903](https://github.com/powerhouse-inc/powerhouse/commit/4a1f21903))
+- **common:** cleanup deps ([8602d77ba](https://github.com/powerhouse-inc/powerhouse/commit/8602d77ba))
+- **shared,document-model:** make zip utils async ([72a6447e4](https://github.com/powerhouse-inc/powerhouse/commit/72a6447e4))
+- **reactor-browser:** duplicated query key on analytics engine ([2594471ce](https://github.com/powerhouse-inc/powerhouse/commit/2594471ce))
+
+### ❤️ Thank You
+
+- acaldas
+- Guillermo Puente @gpuente
+
 ## 6.0.0-dev.194 (2026-04-23)
 
 ### 🩹 Fixes

@@ -1,3 +1,35 @@
+## 6.0.0-dev.195 (2026-04-24)
+
+### 🚀 Features
+
+- **codegen:** add sideEffects:false to generated package boilerplate ([844449485](https://github.com/powerhouse-inc/powerhouse/commit/844449485))
+- **reactor-browser:** add code splitting and move renown crypto out of reactor ([647c5b282](https://github.com/powerhouse-inc/powerhouse/commit/647c5b282))
+- **reactor-browser:** split analytics into store and react hooks ([071f62c45](https://github.com/powerhouse-inc/powerhouse/commit/071f62c45))
+- **shared:** isolate generateMock into its own module ([862fcc58b](https://github.com/powerhouse-inc/powerhouse/commit/862fcc58b))
+- **tree-shaking:** add sideEffects:false and lazy-load pglite ([92f8e988e](https://github.com/powerhouse-inc/powerhouse/commit/92f8e988e))
+
+### 🩹 Fixes
+
+- outdated pnpm lock ([4a1f21903](https://github.com/powerhouse-inc/powerhouse/commit/4a1f21903))
+- **analytics-engine:** lazy-load pglite in browser analytics store ([9ba35e149](https://github.com/powerhouse-inc/powerhouse/commit/9ba35e149))
+- **common:** cleanup deps ([8602d77ba](https://github.com/powerhouse-inc/powerhouse/commit/8602d77ba))
+- **commong:** update tsconfig ([2c3037dcf](https://github.com/powerhouse-inc/powerhouse/commit/2c3037dcf))
+- **design-system:** exclude test and storybook-only files from bundle ([dd9a92c10](https://github.com/powerhouse-inc/powerhouse/commit/dd9a92c10))
+- **drive-analytics:** import from reactor-browser/analytics subpath ([f438e09c5](https://github.com/powerhouse-inc/powerhouse/commit/f438e09c5))
+- **reactor-browser:** duplicated query key on analytics engine ([2594471ce](https://github.com/powerhouse-inc/powerhouse/commit/2594471ce))
+- **registry:** downgrade express to v4 to fix package details page 404 ([40cd8a5d8](https://github.com/powerhouse-inc/powerhouse/commit/40cd8a5d8))
+- **registry:** downgrade express to v4 to fix package details page 404 ([#2507](https://github.com/powerhouse-inc/powerhouse/pull/2507))
+- **shared:** keep react in browser neverBundle to avoid duplicate instances ([1dd206a09](https://github.com/powerhouse-inc/powerhouse/commit/1dd206a09))
+- **shared:** lazy-load jszip to remove it from the eager document model bundle ([fc920a3e9](https://github.com/powerhouse-inc/powerhouse/commit/fc920a3e9))
+- **shared:** keep react in browser neverBundle to avoid duplicate instances ([#2495](https://github.com/powerhouse-inc/powerhouse/pull/2495))
+- **shared,document-model:** make zip utils async ([72a6447e4](https://github.com/powerhouse-inc/powerhouse/commit/72a6447e4))
+
+### ❤️ Thank You
+
+- acaldas
+- Guillermo Puente @gpuente
+- Guillermo Puente Sandoval @gpuente
+
 ## 6.0.0-dev.194 (2026-04-23)
 
 ### 🩹 Fixes
