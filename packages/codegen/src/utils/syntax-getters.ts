@@ -1,8 +1,9 @@
+import { fileExistsSync, isDirectory } from "@powerhousedao/shared/clis";
 import {
   DocumentModelGlobalStateSchema,
   type DocumentModelGlobalState,
 } from "@powerhousedao/shared/document-model";
-import { statSync, type Dirent } from "fs";
+import { type Dirent } from "fs";
 import { loadJsonFileSync } from "load-json-file";
 import path from "path";
 import {
@@ -11,14 +12,13 @@ import {
   filter,
   find,
   flatMap,
-  identity,
   isDefined,
   isIncludedIn,
   isStrictEqual,
   isString,
   map,
   pipe,
-  prop,
+  when,
 } from "remeda";
 import type {
   ObjectLiteralExpression,
@@ -123,32 +123,23 @@ export function getBooleanPropertyValue(
 }
 
 export function loadDocumentModelInDir(
-  dirent: Dirent<string>,
+  dirent: Dirent | undefined,
 ): DocumentModelGlobalState | undefined {
-  return pipe(
+  if (!isDirectory(dirent)) return undefined;
+
+  const parseResult = pipe(
     dirent,
-    conditional(
-      [
-        (dirent) => dirent.isDirectory(),
-        (dir) => path.join(dir.parentPath, `${dir.name}/${dir.name}.json`),
-      ],
-      constant(undefined),
-    ),
-    conditional([isString, identity()]),
-    conditional(
-      [
-        (srcPath) =>
-          isStrictEqual(
-            statSync(srcPath, { throwIfNoEntry: false })?.isFile(),
-            true,
-          ),
-        (srcPath) => loadJsonFileSync(srcPath),
-      ],
-      constant(undefined),
-    ),
+    (dir) => path.join(dir.parentPath, `${dir.name}/${dir.name}.json`),
+    when(fileExistsSync, loadJsonFileSync),
     (stateFile) => DocumentModelGlobalStateSchema().safeParse(stateFile),
-    conditional([({ success }) => isStrictEqual(success, true), prop("data")]),
   );
+
+  if (!parseResult.success) {
+    console.error(parseResult.error);
+    return undefined;
+  }
+
+  return parseResult.data;
 }
 
 export function getAllImportNames(sourceFile: SourceFile | undefined) {

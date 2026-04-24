@@ -25,7 +25,7 @@ The Powerhouse CLI (ph-cli) is a command-line interface tool that provides essen
 - [Uninstall](#uninstall)
 <br>
 ## Generate
-The generate command creates code from document models. It helps you build editors, processors, and other components based on your document model files.
+The generate command creates code for Powerhouse modules. It helps you create new code from scratch, or to re-generate existing code in your project.
 ## All
 Re-generate all modules in the current project
 ### flags
