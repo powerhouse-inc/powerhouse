@@ -19,7 +19,7 @@ await build({
   dts: true,
   sourcemap: true,
   deps: {
-    neverBundle: [/^node:*/],
+    neverBundle: [/^node:.*/],
   },
 });
 
