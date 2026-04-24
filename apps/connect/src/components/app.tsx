@@ -5,9 +5,10 @@ import {
   DocumentEditorDebugTools,
   serviceWorkerManager,
 } from "@powerhousedao/connect/utils";
-import { ToastContainer } from "@powerhousedao/design-system/connect";
 import { useEffect } from "react";
+import { ToastContainer } from "../services/toast.js";
 import { PackageInstallPrompt } from "./package-install-prompt.js";
+
 export const App = () => {
   // refresh page on vite preload error due to outdated chunks — but only when
   // the failing dynamic import is one of Connect's own chunks. External
@@ -49,7 +50,7 @@ export const App = () => {
 
   return (
     <SentryProvider>
-      <ToastContainer position="bottom-right" containerId="connect" />
+      <ToastContainer position="bottom-right" />
       <Router />
       <PackageInstallPrompt />
       <Analytics />
