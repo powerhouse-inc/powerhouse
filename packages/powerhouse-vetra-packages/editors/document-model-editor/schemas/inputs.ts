@@ -1,4 +1,4 @@
-import { z } from "zod/v3";
+import { z } from "zod";
 import { snakeCase, constantCase } from "change-case";
 
 const isUppercase = (value: string) => !/\p{Ll}/u.test(value);
@@ -98,7 +98,7 @@ export const AuthorSchema = z
   .object({
     name: createNameSchema({ allowEmpty: true }),
     website: z
-      .union([z.string().url(), z.literal("")])
+      .union([z.url(), z.literal("")])
       .optional()
       .default(""),
   })

@@ -1,4 +1,4 @@
-import { z } from "zod/v3";
+import { z } from "zod";
 
 /**
  * Coerces string values to boolean.
@@ -352,8 +352,8 @@ const processorsBaseConfigSchema = z.object({
 });
 
 const processorsConfigSchema = processorsBaseConfigSchema
-  .merge(analyticsProcessorsConfigSchema)
-  .merge(relationalProcessorsConfigSchema);
+  .extend(analyticsProcessorsConfigSchema.shape)
+  .extend(relationalProcessorsConfigSchema.shape);
 
 // ============================================================================
 // Sentry Configuration
@@ -422,16 +422,16 @@ const renownConfigSchema = z.object({
  * Complete runtime environment schema (all PH_CONNECT_* vars)
  */
 export const runtimeEnvSchema = appConfigSchema
-  .merge(featureFlagsSchema)
-  .merge(drivesConfigSchema)
-  .merge(processorsConfigSchema)
-  .merge(sentryConfigSchema)
-  .merge(renownConfigSchema);
+  .extend(featureFlagsSchema.shape)
+  .extend(drivesConfigSchema.shape)
+  .extend(processorsConfigSchema.shape)
+  .extend(sentryConfigSchema.shape)
+  .extend(renownConfigSchema.shape);
 
 /**
  * Complete environment schema (build + runtime)
  */
-export const connectEnvSchema = buildEnvSchema.merge(runtimeEnvSchema);
+export const connectEnvSchema = buildEnvSchema.extend(runtimeEnvSchema.shape);
 
 /**
  * Inferred TypeScript types from schemas
@@ -465,7 +465,7 @@ export interface LoadEnvOptions {
 function mergeEnvSources(
   options: LoadEnvOptions,
   keys: Set<string>,
-  schema: z.ZodObject<z.ZodRawShape>,
+  schema: z.ZodObject<Record<string, z.ZodTypeAny>>,
 ): Record<string, unknown> {
   const { processEnv = {}, fileEnv = {} } = options;
   const merged: Record<string, unknown> = {};
