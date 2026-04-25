@@ -1,3 +1,36 @@
+## 6.0.0-dev.197 (2026-04-25)
+
+### 🚀 Features
+
+- **ph-cli,registry,shared:** add unpublish command with registry-side cdn purge ([8816644f1](https://github.com/powerhouse-inc/powerhouse/commit/8816644f1))
+- **ph-cli,registry,shared:** add unpublish command with registry-side cdn purge ([#2508](https://github.com/powerhouse-inc/powerhouse/pull/2508))
+
+### 🩹 Fixes
+
+- exclude pglite wasm and data files on ph build ([96eee628c](https://github.com/powerhouse-inc/powerhouse/commit/96eee628c))
+- **codegen:** fix lint issues on generated code ([1a63ff533](https://github.com/powerhouse-inc/powerhouse/commit/1a63ff533))
+- **codegen:** fix editors subexport ([9b7153ba1](https://github.com/powerhouse-inc/powerhouse/commit/9b7153ba1))
+- **design-system:** import FC type explicitly in toast.tsx ([d8a64780f](https://github.com/powerhouse-inc/powerhouse/commit/d8a64780f))
+- **ph-cli:** prompt for dist-tag when publishing prerelease versions ([99ceb6c29](https://github.com/powerhouse-inc/powerhouse/commit/99ceb6c29))
+- **ph-cli:** prompt for dist-tag when publishing prerelease versions ([#2510](https://github.com/powerhouse-inc/powerhouse/pull/2510))
+- **shared:** ignore duplicate react external ([48ef681db](https://github.com/powerhouse-inc/powerhouse/commit/48ef681db))
+- **switchboard:** fall back to free port on EADDRINUSE and propagate to vetra ([182118e02](https://github.com/powerhouse-inc/powerhouse/commit/182118e02))
+- **switchboard:** fall back to free port on EADDRINUSE and propagate to vetra ([#2511](https://github.com/powerhouse-inc/powerhouse/pull/2511))
+
+### 🔥 Performance
+
+- **analytics-engine-browser:** move createFsPglite to test-utils subpath ([d9a66201a](https://github.com/powerhouse-inc/powerhouse/commit/d9a66201a))
+- **design-system:** improve DocumentToolbar tree-shaking ([6d3bf98ad](https://github.com/powerhouse-inc/powerhouse/commit/6d3bf98ad))
+- **reactor-browser:** drop GqlRequestChannel runtime reference in useGetSwitchboardLink ([85a3c3940](https://github.com/powerhouse-inc/powerhouse/commit/85a3c3940))
+- **vetra-packages:** drop validator dependency ([86a78223c](https://github.com/powerhouse-inc/powerhouse/commit/86a78223c))
+
+### ❤️ Thank You
+
+- acaldas
+- Copilot
+- Guillermo Puente @gpuente
+- Guillermo Puente Sandoval @gpuente
+
 ## 6.0.0-dev.196 (2026-04-24)
 
 ### 🚀 Features

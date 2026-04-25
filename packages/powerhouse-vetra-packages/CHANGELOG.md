@@ -1,3 +1,19 @@
+## 6.0.0-dev.197 (2026-04-25)
+
+### 🩹 Fixes
+
+- exclude pglite wasm and data files on ph build ([96eee628c](https://github.com/powerhouse-inc/powerhouse/commit/96eee628c))
+
+### 🔥 Performance
+
+- **design-system:** improve DocumentToolbar tree-shaking ([6d3bf98ad](https://github.com/powerhouse-inc/powerhouse/commit/6d3bf98ad))
+- **vetra-packages:** drop validator dependency ([86a78223c](https://github.com/powerhouse-inc/powerhouse/commit/86a78223c))
+
+### ❤️ Thank You
+
+- acaldas
+- Copilot
+
 ## 6.0.0-dev.196 (2026-04-24)
 
 ### 🚀 Features

@@ -1,3 +1,20 @@
+## 6.0.0-dev.197 (2026-04-25)
+
+### 🩹 Fixes
+
+- **codegen:** fix editors subexport ([9b7153ba1](https://github.com/powerhouse-inc/powerhouse/commit/9b7153ba1))
+- exclude pglite wasm and data files on ph build ([96eee628c](https://github.com/powerhouse-inc/powerhouse/commit/96eee628c))
+- **codegen:** fix lint issues on generated code ([1a63ff533](https://github.com/powerhouse-inc/powerhouse/commit/1a63ff533))
+
+### 🔥 Performance
+
+- **design-system:** improve DocumentToolbar tree-shaking ([6d3bf98ad](https://github.com/powerhouse-inc/powerhouse/commit/6d3bf98ad))
+
+### ❤️ Thank You
+
+- acaldas
+- Copilot
+
 ## 6.0.0-dev.196 (2026-04-24)
 
 ### 🚀 Features

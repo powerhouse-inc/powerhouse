@@ -1,3 +1,19 @@
+## 6.0.0-dev.197 (2026-04-25)
+
+### 🩹 Fixes
+
+- **design-system:** import FC type explicitly in toast.tsx ([d8a64780f](https://github.com/powerhouse-inc/powerhouse/commit/d8a64780f))
+- exclude pglite wasm and data files on ph build ([96eee628c](https://github.com/powerhouse-inc/powerhouse/commit/96eee628c))
+
+### 🔥 Performance
+
+- **design-system:** improve DocumentToolbar tree-shaking ([6d3bf98ad](https://github.com/powerhouse-inc/powerhouse/commit/6d3bf98ad))
+
+### ❤️ Thank You
+
+- acaldas
+- Copilot
+
 ## 6.0.0-dev.196 (2026-04-24)
 
 ### 🚀 Features

@@ -1,3 +1,20 @@
+## 6.0.0-dev.197 (2026-04-25)
+
+### 🩹 Fixes
+
+- **switchboard:** fall back to free port on EADDRINUSE and propagate to vetra ([182118e02](https://github.com/powerhouse-inc/powerhouse/commit/182118e02))
+- exclude pglite wasm and data files on ph build ([96eee628c](https://github.com/powerhouse-inc/powerhouse/commit/96eee628c))
+
+### 🔥 Performance
+
+- **design-system:** improve DocumentToolbar tree-shaking ([6d3bf98ad](https://github.com/powerhouse-inc/powerhouse/commit/6d3bf98ad))
+
+### ❤️ Thank You
+
+- acaldas
+- Copilot
+- Guillermo Puente @gpuente
+
 ## 6.0.0-dev.196 (2026-04-24)
 
 ### 🚀 Features
