@@ -1,4 +1,5 @@
 export * from "./args/access-token.js";
+export * from "./args/code.js";
 export * from "./args/common.js";
 export * from "./args/connect.js";
 export * from "./args/generate.js";
