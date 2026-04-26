@@ -1,4 +1,4 @@
-import { z } from "zod";
+import type { z } from "zod";
 import { defineCommand } from "@powerhousedao/ph-clint";
 import type { Command } from "@powerhousedao/ph-clint";
 
@@ -26,6 +26,7 @@ export function adaptCmdTs<TSchema extends z.ZodType>(
       const buf: string[] = [];
       const origLog = console.log;
       const origErr = console.error;
+      // eslint-disable-next-line @typescript-eslint/unbound-method -- intercepting process.exit on purpose
       const origExit = process.exit;
       const origNonInteractive = process.env.PH_NONINTERACTIVE;
 

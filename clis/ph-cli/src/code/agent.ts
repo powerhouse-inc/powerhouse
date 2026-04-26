@@ -13,13 +13,13 @@ Style:
 export async function createNimbyStyleAgent(
   ctx: AgentSetupContext,
 ): Promise<AgentProvider> {
-  const { createMastraHelpers } = await import(
-    "@powerhousedao/ph-clint/mastra"
-  );
+  const { createMastraHelpers } =
+    await import("@powerhousedao/ph-clint/mastra");
   const { Agent } = await import("@mastra/core/agent");
 
   const m = createMastraHelpers(ctx);
   const tools = await m.getTools();
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- ph-clint's Memory return type is `any`
   const memory = await m.createMemory();
 
   const cfg = ctx.config as { model?: string; modelUrl?: string };
@@ -32,9 +32,9 @@ export async function createNimbyStyleAgent(
   }
   // Cast through `unknown`: Mastra's MastraModelConfig types don't yet model
   // the `{ id, url }` form, but the runtime accepts it (see rupert-mastra).
-  const model = (
-    cfg.modelUrl ? { id: modelId, url: cfg.modelUrl } : modelId
-  ) as unknown as string;
+  const model = (cfg.modelUrl
+    ? { id: modelId, url: cfg.modelUrl }
+    : modelId) as unknown as string;
 
   const agent = new Agent({
     id: "ph-code",
@@ -42,6 +42,7 @@ export async function createNimbyStyleAgent(
     instructions: SYSTEM_INSTRUCTIONS,
     model,
     tools,
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- forwarded from ph-clint's Memory helper
     memory,
   });
 
