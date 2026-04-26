@@ -43,8 +43,7 @@ export const phCliHelpCommands = {
   code: command({
     name: "code",
     args: codeArgs,
-    description:
-      "Open the Powerhouse coding agent (REPL backed by Mastra)",
+    description: "Open the Powerhouse coding agent (REPL backed by Mastra)",
     handler: () => {},
   }),
   publish: command({
