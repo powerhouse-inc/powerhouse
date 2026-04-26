@@ -25,9 +25,7 @@ const secretsSchema = z.object({
   anthropicApiKey: z
     .string()
     .optional()
-    .describe(
-      "Anthropic API key. Reads from ANTHROPIC_API_KEY by default.",
-    ),
+    .describe("Anthropic API key. Reads from ANTHROPIC_API_KEY by default."),
 });
 
 export function buildPhCodeCli() {
