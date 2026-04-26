@@ -1,3 +1,13 @@
+## 6.0.0-dev.199 (2026-04-26)
+
+### 🚀 Features
+
+- **ph-cli:** add ph-clint and mastra dependencies ([a389b5bdd](https://github.com/powerhouse-inc/powerhouse/commit/a389b5bdd))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 6.0.0-dev.198 (2026-04-26)
 
 This was a version bump only for @powerhousedao/switchboard-gui to align it with other projects, there were no code changes.

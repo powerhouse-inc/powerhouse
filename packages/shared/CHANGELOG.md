@@ -1,3 +1,18 @@
+## 6.0.0-dev.199 (2026-04-26)
+
+### 🚀 Features
+
+- **shared/clis:** add code subcommand definition ([faa77ba04](https://github.com/powerhouse-inc/powerhouse/commit/faa77ba04))
+- **ph-cli:** add ph-clint and mastra dependencies ([a389b5bdd](https://github.com/powerhouse-inc/powerhouse/commit/a389b5bdd))
+
+### 🩹 Fixes
+
+- **shared/clis:** collapse code description to a single line for prettier ([ac5bd403d](https://github.com/powerhouse-inc/powerhouse/commit/ac5bd403d))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 6.0.0-dev.198 (2026-04-26)
 
 This was a version bump only for @powerhousedao/shared to align it with other projects, there were no code changes.

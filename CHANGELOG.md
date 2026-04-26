@@ -1,3 +1,21 @@
+## 6.0.0-dev.199 (2026-04-26)
+
+### 🚀 Features
+
+- **ph-cli:** add ph-clint and mastra dependencies ([a389b5bdd](https://github.com/powerhouse-inc/powerhouse/commit/a389b5bdd))
+- **ph-cli:** add cmd-ts to defineCommand adapter and agent harness ([79ca8fa02](https://github.com/powerhouse-inc/powerhouse/commit/79ca8fa02))
+- **ph-cli:** wire ph code subcommand ([b05da96be](https://github.com/powerhouse-inc/powerhouse/commit/b05da96be))
+- **shared/clis:** add code subcommand definition ([faa77ba04](https://github.com/powerhouse-inc/powerhouse/commit/faa77ba04))
+
+### 🩹 Fixes
+
+- **ph-cli:** satisfy lint rules in ph code harness ([e5bc6f7cd](https://github.com/powerhouse-inc/powerhouse/commit/e5bc6f7cd))
+- **shared/clis:** collapse code description to a single line for prettier ([ac5bd403d](https://github.com/powerhouse-inc/powerhouse/commit/ac5bd403d))
+
+### ❤️ Thank You
+
+- Frank
+
 ## 6.0.0-dev.198 (2026-04-26)
 
 This was a version bump only, there were no code changes.
