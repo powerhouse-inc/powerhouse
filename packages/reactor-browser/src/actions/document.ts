@@ -15,6 +15,7 @@ import {
   moveNode as baseMoveNode,
   updateFile as baseUpdateFile,
   generateNodesCopy,
+  getDescendants,
   handleTargetNameCollisions,
   isFileNode,
   isFolderNode,
@@ -750,12 +751,24 @@ export async function deleteNode(driveId: string, nodeId: string) {
     throw new Error("ReactorClient not initialized");
   }
 
-  // delete the node in the drive document
-  await reactorClient.execute(driveId, "main", [
-    baseDeleteNode({ id: nodeId }),
-  ]);
+  const drive = await reactorClient.get<DocumentDriveDocument>(driveId);
+  const node = drive.state.global.nodes.find((n) => n.id === nodeId);
+  if (!node) {
+    throw new Error(`Node ${nodeId} not found in drive ${driveId}`);
+  }
 
-  // now delete the document
+  if (isFolderNode(node)) {
+    const descendants = getDescendants(node, drive.state.global.nodes);
+    const fileDescendants = descendants.filter(isFileNode);
+    for (const file of fileDescendants) {
+      await reactorClient.deleteDocument(file.id);
+    }
+    await reactorClient.execute(driveId, "main", [
+      baseDeleteNode({ id: nodeId }),
+    ]);
+    return;
+  }
+
   await reactorClient.deleteDocument(nodeId);
 }
 
@@ -903,6 +916,7 @@ export async function copyNode(
       const resolvedName = handleTargetNameCollisions({
         nodes: drive.state.global.nodes,
         srcName: copyNodeInput.targetName || node.name,
+        srcKind: isFileNode(node) ? "file" : "folder",
         targetParentFolder: copyNodeInput.targetParentFolder || null,
       });
       resolvedNamesMap.set(copyNodeInput.targetId, resolvedName);
