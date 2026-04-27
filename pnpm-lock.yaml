@@ -2614,12 +2614,24 @@ importers:
 
   test/graphql-client-document-cache:
     dependencies:
+      '@powerhousedao/design-system':
+        specifier: workspace:*
+        version: link:../../packages/design-system
+      '@powerhousedao/reactor-browser':
+        specifier: workspace:*
+        version: link:../../packages/reactor-browser
+      document-model:
+        specifier: workspace:*
+        version: link:../../packages/document-model
       react:
         specifier: 'catalog:'
         version: 19.2.4
       react-dom:
         specifier: 'catalog:'
         version: 19.2.4(react@19.2.4)
+      zod:
+        specifier: 'catalog:'
+        version: 4.3.6
     devDependencies:
       '@types/node':
         specifier: 'catalog:'

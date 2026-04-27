@@ -2,13 +2,49 @@
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
     "outDir": "./dist",
-    "customConditions": ["source"],
+    "customConditions": [
+      "source"
+    ],
+    "paths": {
+      "document-models": [
+        "./document-models/index.ts"
+      ],
+      "document-models/*": [
+        "./document-models/*/index.ts"
+      ],
+      "editors": [
+        "./editors/index.ts"
+      ],
+      "editors/*": [
+        "./editors/*/index.ts"
+      ],
+      "processors/*": [
+        "./processors/*/index.ts"
+      ],
+      "subgraphs": [
+        "./subgraphs/index.ts"
+      ],
+      "subgraphs/*": [
+        "./subgraphs/*/index.ts"
+      ]
+    }
   },
   "include": [
     "**/*"
   ],
   "exclude": [
     "dist",
-    "node_modules",
+    "node_modules"
   ],
+  "references": [
+    {
+      "path": "../../packages/design-system"
+    },
+    {
+      "path": "../../packages/document-model"
+    },
+    {
+      "path": "../../packages/reactor-browser"
+    }
+  ]
 }
