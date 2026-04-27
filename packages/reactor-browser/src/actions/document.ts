@@ -12,6 +12,7 @@ import {
   addFolder as baseAddFolder,
   copyNode as baseCopyNode,
   deleteNode as baseDeleteNode,
+  moveNode as baseMoveNode,
   updateFile as baseUpdateFile,
   generateNodesCopy,
   handleTargetNameCollisions,
@@ -823,12 +824,12 @@ export async function moveNode(
   if (!reactorClient) {
     throw new Error("ReactorClient not initialized");
   }
-
-  // Get current parent folder from source node
-  const sourceParent = src.parentFolder ?? driveId;
-  const targetParent = target?.id ?? driveId;
-
-  return await reactorClient.moveChildren(sourceParent, targetParent, [src.id]);
+  return await reactorClient.execute(driveId, "main", [
+    baseMoveNode({
+      srcFolder: src.id,
+      targetParentFolder: target?.id,
+    }),
+  ]);
 }
 
 async function _duplicateDocument(
