@@ -34,6 +34,7 @@ import {
   documentModelDocumentType,
   generateId,
   replayDocument,
+  setName,
 } from "@powerhousedao/shared/document-model";
 import { logger } from "document-model";
 import {
@@ -772,6 +773,14 @@ export async function renameNode(
     throw new Error("ReactorClient not initialized");
   }
 
+  const renameNodeResult = await reactorClient.execute(nodeId, "main", [
+    setName({ name }),
+  ]);
+
+  if (renameNodeResult.header.name !== name) {
+    throw new Error("There was an error renaming the node");
+  }
+
   // Rename the node in the drive document using updateNode action
   const drive = await reactorClient.execute<DocumentDriveDocument>(
     driveId,
@@ -781,7 +790,7 @@ export async function renameNode(
 
   const node = drive.state.global.nodes.find((n) => n.id === nodeId);
   if (!node) {
-    throw new Error("There was an error renaming node");
+    throw new Error("There was an error renaming node in the drive");
   }
   return node;
 }
@@ -799,6 +808,14 @@ export async function renameDriveNode(
   const reactorClient = window.ph?.reactorClient;
   if (!reactorClient) {
     throw new Error("ReactorClient not initialized");
+  }
+
+  const renameNodeResult = await reactorClient.execute(nodeId, "main", [
+    setName({ name }),
+  ]);
+
+  if (renameNodeResult.header.name !== name) {
+    throw new Error("There was an error renaming the node");
   }
 
   await reactorClient.execute(driveId, "main", [
