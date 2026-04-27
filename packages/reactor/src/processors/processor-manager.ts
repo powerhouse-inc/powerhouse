@@ -333,10 +333,14 @@ export class ProcessorManager
         }
       }
 
-      const maxOrdinal = Math.max(
-        ...page.results.map((op) => op.context.ordinal),
+      // Using reduce instead of Math.max(...arr) to avoid a stack overflow:
+      // backfill pages can hold the entire op log on first run (tens of
+      // thousands of entries), and the variadic spread pushes every element
+      // onto the JS argument stack.
+      tracked.lastOrdinal = page.results.reduce(
+        (m, op) => (op.context.ordinal > m ? op.context.ordinal : m),
+        tracked.lastOrdinal,
       );
-      tracked.lastOrdinal = maxOrdinal;
       await this.safeSaveProcessorCursor(tracked);
 
       if (!page.next) break;
@@ -381,7 +385,12 @@ export class ProcessorManager
   private async routeOperationsToProcessors(
     operations: OperationWithContext[],
   ): Promise<void> {
-    const maxOrdinal = Math.max(...operations.map((op) => op.context.ordinal));
+    // See backfillProcessor for rationale: avoid Math.max(...arr) on
+    // potentially-large arrays.
+    const maxOrdinal = operations.reduce(
+      (m, op) => (op.context.ordinal > m ? op.context.ordinal : m),
+      Number.NEGATIVE_INFINITY,
+    );
     const allTracked = Array.from(this.allTrackedProcessors());
 
     await Promise.all(

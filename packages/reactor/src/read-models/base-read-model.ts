@@ -169,7 +169,13 @@ export class BaseReadModel implements IReadModel {
     trx: Transaction<DocumentViewDatabase>,
     items: OperationWithContext[],
   ): Promise<void> {
-    const maxOrdinal = Math.max(...items.map((item) => item.context.ordinal));
+    // Using reduce instead of Math.max(...arr) to avoid a stack overflow when
+    // items has tens of thousands of entries (variadic spread pushes every
+    // element onto the JS argument stack).
+    const maxOrdinal = items.reduce(
+      (m, item) => (item.context.ordinal > m ? item.context.ordinal : m),
+      Number.NEGATIVE_INFINITY,
+    );
     this.lastOrdinal = maxOrdinal;
 
     await trx

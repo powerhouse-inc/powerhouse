@@ -676,8 +676,11 @@ export class SimpleJobExecutor implements IJobExecutor {
 
     let allOpsFromMinConflictingIndex: Operation[] = conflictingOps;
     if (conflictingOps.length > 0) {
-      const minConflictingIndex = Math.min(
-        ...conflictingOps.map((op) => op.index),
+      // Using reduce instead of Math.min(...arr) to keep this stack-safe even
+      // if a conflicting-ops query returns a very large result.
+      const minConflictingIndex = conflictingOps.reduce(
+        (m, op) => (op.index < m ? op.index : m),
+        Number.POSITIVE_INFINITY,
       );
       try {
         const allOpsResult = await stores.operationStore.getSince(
