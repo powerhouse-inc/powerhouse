@@ -124,8 +124,9 @@ export function handleTargetNameCollisions(params: {
   nodes: Node[];
   targetParentFolder: string | null;
   srcName: string;
+  srcKind: "file" | "folder";
 }) {
-  const { nodes, targetParentFolder, srcName } = params;
+  const { nodes, targetParentFolder, srcName, srcKind } = params;
 
   const targetNodeChildrenNames = nodes
     .filter((node) =>
@@ -133,6 +134,7 @@ export function handleTargetNameCollisions(params: {
         ? node.parentFolder === null
         : node.parentFolder === targetParentFolder,
     )
+    .filter((node) => node.kind === srcKind)
     .map((node) => node.name);
 
   const targetHasNodesWithSameName = targetNodeChildrenNames.includes(srcName);
