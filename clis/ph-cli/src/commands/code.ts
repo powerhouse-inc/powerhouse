@@ -1,6 +1,5 @@
-import { command } from "cmd-ts";
 import { codeArgs } from "@powerhousedao/shared/clis";
-import { buildPhCodeCli } from "../code/cli.js";
+import { command } from "cmd-ts";
 
 export const code = command({
   name: "code",
@@ -14,6 +13,7 @@ Examples:
 `,
   args: codeArgs,
   handler: async (args) => {
+    const { buildPhCodeCli } = await import("../code/cli.js");
     const cli = buildPhCodeCli();
     // ph-clint's cli.run consumes a full argv array (it slices off the first
     // two entries internally). Reconstruct that shape from the forwarded rest.
