@@ -1,4 +1,3 @@
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import type { IReactorClient, ISyncManager } from "@powerhousedao/reactor";
 import type { IncomingMessage, ServerResponse } from "node:http";
@@ -12,7 +11,7 @@ interface NodeRouteAdapter {
       req: IncomingMessage,
       res: ServerResponse,
       body?: unknown,
-    ) => void,
+    ) => void | Promise<void>,
   ): void;
 }
 import { logger } from "./logger.js";
@@ -29,6 +28,12 @@ const METHOD_NOT_ALLOWED = JSON.stringify({
   id: null,
 });
 
+const INTERNAL_SERVER_ERROR = JSON.stringify({
+  jsonrpc: "2.0",
+  error: { code: -32603, message: "Internal server error" },
+  id: null,
+});
+
 /** @internal Injected in tests to avoid relying on constructor mock semantics. */
 type TransportFactory = (opts: {
   sessionIdGenerator: undefined;
@@ -41,36 +46,29 @@ export async function setupMcpServer(
   // constructor semantics, which differ between macOS and Linux environments.
   createTransport: TransportFactory = (opts) =>
     new StreamableHTTPServerTransport(opts),
-): Promise<McpServer> {
-  const server = await createServer(options);
-
+): Promise<void> {
   httpAdapter.mountNodeRoute(
     "POST",
     "/mcp",
-    (req: IncomingMessage, res: ServerResponse, body?: unknown) => {
-      // In stateless mode, create a new instance of transport and server for each
-      // request to ensure complete isolation. A single instance would cause request
-      // ID collisions when multiple clients connect concurrently.
+    async (req: IncomingMessage, res: ServerResponse, body?: unknown) => {
+      // Stateless mode: every request owns its McpServer + transport so
+      // concurrent or slow handlers cannot collide on a shared Protocol
+      // instance (which throws "Already connected to a transport").
       try {
-        const transport = createTransport({
-          sessionIdGenerator: undefined,
-        });
+        const server = await createServer(options);
+        const transport = createTransport({ sessionIdGenerator: undefined });
         res.on("close", () => {
           void transport.close();
           void server.close();
         });
-        void server.connect(transport);
-        void transport.handleRequest(req, res, body);
+        await server.connect(transport);
+        await transport.handleRequest(req, res, body);
       } catch (error) {
         logger.error("Error handling MCP request:", error);
         if (!res.headersSent) {
-          res.writeHead(500, { "Content-Type": "application/json" }).end(
-            JSON.stringify({
-              jsonrpc: "2.0",
-              error: { code: -32603, message: "Internal server error" },
-              id: null,
-            }),
-          );
+          res
+            .writeHead(500, { "Content-Type": "application/json" })
+            .end(INTERNAL_SERVER_ERROR);
         }
       }
     },
@@ -93,6 +91,4 @@ export async function setupMcpServer(
       res.writeHead(405).end(METHOD_NOT_ALLOWED);
     },
   );
-
-  return server;
 }
