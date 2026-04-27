@@ -39,7 +39,7 @@ What OpenResty buys us concretely:
 - **nginx** handles accept loop, HTTP parsing, keep-alive, upstream pooling, graceful reload, worker supervision.
 - **`rewrite_by_lua` / `access_by_lua`** is the exact phase we need to inspect the body and set a routing variable _before_ the upstream is chosen.
 - **`hash $doc_id consistent`** in the upstream block does rendezvous-style consistent hashing natively.
-- **`lua-resty-upstream-healthcheck`** handles active probing with well-understood semantics.
+- **`ngx.timer.every` + cosocket + `lua_shared_dict`** are enough to run our own active probe loop without taking the off-the-shelf `lua-resty-upstream-healthcheck` library — see §5.2 for why pinning forced custom probing.
 - **`nginx-lua-prometheus`** gives us Prometheus-format metrics without a sidecar.
 
 The tradeoff we accept: Lua on the hot path. For GQL-sized payloads (sub-MB), `cjson.decode` is a few tens of microseconds — dominated by the network round trip. We gate this assumption with load tests (see §8 M0).
@@ -105,9 +105,11 @@ The upstream block below is shown for production hostnames and switchboard's def
 # upstreams.conf
 upstream switchboards {
     hash $doc_id consistent;
-    server sb-1.internal:4001 max_fails=3 fail_timeout=10s;
-    server sb-2.internal:4001 max_fails=3 fail_timeout=10s;
-    server sb-3.internal:4001 max_fails=3 fail_timeout=10s;
+    # max_fails=0 disables passive mark-down so the hash module never
+    # skips a peer at selection time — see §5.2 "Pinning under failure".
+    server sb-1.internal:4001 max_fails=0;
+    server sb-2.internal:4001 max_fails=0;
+    server sb-3.internal:4001 max_fails=0;
     keepalive 64;
 }
 
@@ -239,10 +241,12 @@ See §9 Q7 for rationale and the historical options that were ruled out.
 
 ### 4.5 Failure modes
 
-- **Upstream refuses connection** → nginx marks it failed per `max_fails` / `fail_timeout`. The request fails with `502`. **We set `proxy_next_upstream off`** — retrying on another backend would violate the pinning invariant.
-- **Upstream times out mid-request** → `504`, same rule: no retry.
-- **Upstream returns 5xx** → pass through unchanged.
-- **Backend marked unhealthy by active checks** → removed from the consistent hash ring for that worker. Documents pinned to it become unroutable and return `503` until the backend recovers or an operator intervenes.
+- **Upstream refuses connection** → `proxy_pass` fails at TCP. We set `proxy_next_upstream off` (no retry across backends) **and** `max_fails=0` per `server` entry (no passive mark-down — see §5.2 for why). The request surfaces as `503` (translation note below); pinning is preserved — subsequent requests for the same doc keep targeting the same dead backend until it recovers.
+- **Upstream times out mid-request** → same rule: no retry, `503` to the client.
+- **Upstream returns 5xx** → pass through unchanged. The backend made a decision; the LB doesn't second-guess it.
+- **Backend marked unhealthy by active checks** → reported on `/__hc/status` for observability. **No effect on peer selection**: the peer stays in the consistent-hash ring so pinned docs continue to fail closed (`503` via the TCP-refused path above) rather than silently re-routing to another backend. See §5.2.
+
+**Status translation.** All of "no live upstream", "connection refused", and "upstream timed out" surface to clients as `503` via `proxy_intercept_errors on; error_page 502 504 = @no_backend;` in `routes.conf`. nginx's raw distinctions (`502` for connect failure / no live upstream, `504` for read timeout) are preserved in access logs via `$upstream_status`, but the wire response is uniformly `503` because the LB's contract is "this document is currently unavailable, retry later" — the cause distinction is for operators reading logs, not clients deciding retry policy. The over-translation is intentional; revisit only if a real client need to differentiate appears.
 
 ## 5. Pinning and routing
 
@@ -255,6 +259,8 @@ This is the heart of the system. Getting it wrong means data corruption.
 ### 5.2 Mechanism
 
 nginx's `hash $var consistent` implements [Ketama](https://en.wikipedia.org/wiki/Consistent_hashing)-style consistent hashing across the `server` entries in the upstream block. Weight of each server is configurable. Adding or removing a server remaps ~1/N of keys — the same fundamental tradeoff any stateless scheme has.
+
+**Pinning under failure.** Standard nginx behavior is to skip peers marked `down` — whether by passive `max_fails` tracking or by an active healthcheck calling `set_peer_down` — and pick the next slot in the ring. That's catastrophic under §5.1's invariant: a doc pinned to a dead backend would silently re-route to a different one and split-brain its write log. We disable both paths. `upstreams.conf` sets `max_fails=0` so passive checks never mark peers down. `lua/healthcheck.lua` runs its own probe loop, tracking state in `lua_shared_dict healthcheck` for `/__hc/status` to read; it never calls `set_peer_down`. Net effect: peers always look "up" to the upstream module, the hash module always picks the originally-hashed peer, and a dead pin fails at TCP → 502 → §4.5's `@no_backend` → 503. The healthcheck's job is observability, not routing.
 
 ### 5.3 Caching
 
@@ -319,12 +325,15 @@ Thin vertical slices, each end-to-end runnable.
 - **M0 — Skeleton.** _Done._ `Dockerfile` (dev + runtime), `docker-compose.yml` with LB + 3 stub upstreams, `nginx.conf` serving `/health`, `busted` wired up, k6 baseline measuring nginx-alone overhead — see `test/integration/BASELINE.md` for the reference numbers we regression-check against.
 - **M1 — Proxy plumbing.** _Done._ `POST /graphql` / `POST /graphql/*` / `GET /d/:drive` / `WS /graphql/subscriptions` proxied to the pool, `/health` served locally, `proxy_next_upstream off` throughout. `m1.sh` asserts path preservation, `X-Request-Id` passthrough, and that the WS upgrade reaches the pool.
 - **M2 — Body-based routing.** _Done._ `lua/route.lua` reads the body, extracts the owning identifier per §4.3 / §4.4, and sets `$doc_id`; `upstreams.conf` is on `hash $doc_id consistent`. Multi-identifier operations 409 per §4.4; `pushSyncEnvelopes` routes on `envelopes[0].channelMeta.id`. `m2.sh` covers pinning, every 409/400/413 branch, and the no-Lua-on-non-`/graphql` invariant. The three-stage rollout (docs → Lua-but-`least_conn` → consistent-hash flip) all landed.
-- **M3 — Health checks + reload-survival.** _Next up._ Wire `lua-resty-upstream-healthcheck` so unhealthy backends drop out of the consistent-hash ring per §4.5. Concretely:
-  - Declare `lua_shared_dict healthcheck 1m;` in `nginx.conf` (shared state across workers per §7).
-  - Add `init_worker_by_lua_block` registering `hc.spawn_checker` against the `switchboards` upstream — HTTP probe with sane defaults: `interval=2000ms, fall=3, rise=2, timeout=1000ms`, `http_req = "GET /readyz HTTP/1.0\r\nHost: switchboard\r\n\r\n"`. Backends must expose `/readyz`; coordinate with `apps/switchboard` if absent.
-  - Keep `proxy_next_upstream off` (no retry across backends — pinning invariant).
-  - `m3.sh`: kill one stub container, assert that requests pinned to it return 5xx (not silently re-routed) and that other pins keep working; restart it, assert recovery.
-  - **Q3 reload-survival test.** `/graphql/subscriptions` connections must survive `nginx -s reload`. This needs a real WS client in CI (add `websocat` to the dev Dockerfile or a small Node script under `test/integration/`); a one-shot upgrade like `m1.sh` doesn't exercise the lifetime guarantee. _(≈2 days, including the WS test infra.)_
+- **M3 — Health checks + reload-survival.** _Done._ Active probing for observability + a pinning-preserving 503 on dead backends per §4.5, plus integration coverage of WS reload-survival per §9 Q3. Concretely:
+  - `lua_shared_dict healthcheck 1m;` and `init_worker_by_lua_block { require("healthcheck").run() }` in `nginx.conf` — shared state across workers per §7.
+  - `lua/healthcheck.lua` runs a per-worker cosocket probe loop against every peer in the `switchboards` upstream every 2s (timeout 1s, fall=3, rise=2) hitting `GET /health`. State (`up`/`down`) is written to `lua_shared_dict healthcheck`; the loop **does not** call `set_peer_down` — see §5.2 for the pinning rationale. Switchboard's `/health` is liveness-only (registered before auth middleware in `packages/reactor-api/src/server.ts:379`); a true `/readyz` that 503s during init/drain is a switchboard-side follow-up.
+  - `upstreams.conf` sets `max_fails=0` per server to disable nginx's passive mark-down. Combined with the healthcheck not calling `set_peer_down`, this is the load-bearing piece of "pinning under failure": the hash module always picks the same peer for a given `$doc_id`, even when that peer is dead — see §5.2.
+  - `routes.conf` translates the resulting 502/504 (TCP refused, upstream timeout) into 503 via `proxy_intercept_errors on; error_page 502 504 = @no_backend;`. Underlying nginx status survives in access logs as `$upstream_status`. See §4.5.
+  - `proxy_next_upstream off` stays — even before status translation, no backend swap is attempted on a transport error.
+  - `/__hc/status` (localhost-only) renders peer state from the `lua_shared_dict`. `m3.sh` resolves docker-compose service names → IPs via `docker inspect` (peers in the status page are reported by `IP:port` — that's what `ngx.upstream.get_primary_peers` returns) and polls for transitions instead of time-waiting. Will move to the M4 metrics listener.
+  - `m3.sh` covers eject, other-pin-survival, recovery, and the strict-pinning property: 5/5 requests pinned to a stopped backend get 503, never 200 from a different one. `m3_ws_reload.sh` (Q3) opens a real WS via `websocat` (added to the dev Dockerfile alongside `curl`), reloads nginx mid-flight, and asserts both the connection and frame round-trip survive.
+  - Stubs in `test/fixtures/` now speak real WebSocket via `lua-resty-websocket-server`; `m1.sh`'s upgrade-check was updated from `200` to `101` accordingly.
 - **M4 — Observability.** Wire `nginx-lua-prometheus`, custom `log_format` (already in `conf/log_format.conf`), and a `/metrics` listener. Concretely:
   - Each `location` block sets `set $route_class "graphql|drive|health|subscription";` so `lb_requests_total{class,backend,status}` is meaningful — nothing currently sets this var.
   - `lb_request_duration_seconds` histogram bucket boundaries must cover the LB's actual latency band (M0 baseline median is 84µs, p95 ~172µs); default Prometheus buckets are useless here. Suggested: `0.0001, 0.0005, 0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1`.
@@ -342,7 +351,9 @@ Unresolved. Decide before the relevant milestone and record the decision here.
 
 1. **Do we need a `balancer_by_lua_block` instead of `hash $doc_id consistent`?**
 
-   **Decided (2026-04-21):** use the native `hash $doc_id consistent` directive. The MVP routing function is a pure function of `$doc_id`, which the built-in directive handles in C with Ketama-style consistent hashing and free integration with `server ... max_fails/fail_timeout` and active health checks. `balancer_by_lua_block` is the right tool only when the routing decision depends on state the directive cannot express (external directory, per-request migration hint, load-aware override) — none of which are MVP requirements. Adopting Lua on the balancer phase would add per-request overhead on top of the M2 body parse, duplicate `server`-directive behavior, and enlarge what we have to reason about under reload.
+   **Decided (2026-04-21):** use the native `hash $doc_id consistent` directive. The MVP routing function is a pure function of `$doc_id`, which the built-in directive handles in C with Ketama-style consistent hashing. `balancer_by_lua_block` is the right tool only when the routing decision depends on state the directive cannot express (external directory, per-request migration hint, load-aware override) — none of which are MVP requirements. Adopting Lua on the balancer phase would add per-request overhead on top of the M2 body parse, duplicate `server`-directive behavior, and enlarge what we have to reason about under reload.
+
+   **M3 footnote (2026-04-27).** The directive's built-in mark-down/skip behavior — both passive (`max_fails`) and active (via libraries that call `set_peer_down`) — is the _opposite_ of what §5.1's pinning invariant wants: skipping a down peer silently re-routes a pinned doc. M3 considered switching to `balancer_by_lua_block` to enforce strict pinning explicitly, but it was unnecessary. Setting `max_fails=0` and writing the active healthcheck to track state in a `lua_shared_dict` without calling `set_peer_down` (see §5.2) keeps every peer "up" from nginx's view, so the directive's selection math always picks the originally-hashed peer. Dead pin → TCP refused → 503 via `@no_backend`. The decision above stands.
 
    **Revisit trigger:** introduction of an external pinning directory (§5.4), or a per-request decision that is not a pure function of `$doc_id`.
 
@@ -396,7 +407,7 @@ Unresolved. Decide before the relevant milestone and record the decision here.
 
 - nginx `ngx_http_upstream_hash_module` — the `hash $var consistent` directive we rely on.
 - OpenResty `ngx.req.read_body` docs — the primitive that makes body inspection possible.
-- `lua-resty-upstream-healthcheck` — active health probes.
+- OpenResty `ngx.timer` and cosocket APIs — the primitives our custom probe loop in `lua/healthcheck.lua` is built on. (We considered `lua-resty-upstream-healthcheck` for this; §5.2 has the rejection rationale.)
 - `nginx-lua-prometheus` — metrics exporter.
 - Jump consistent hash (Lamping & Veach) and rendezvous hashing (Thaler & Ravishankar) — background on the scheme nginx implements.
 - HAProxy's `balance hash <var> consistent` — the closest drop-in alternative if we ever move off OpenResty.

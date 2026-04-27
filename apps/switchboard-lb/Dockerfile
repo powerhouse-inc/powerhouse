@@ -16,7 +16,13 @@ FROM openresty/openresty:${OPENRESTY_VERSION} AS dev
 # Alpine packages busted for Lua 5.1, matching the Lua API version OpenResty's
 # LuaJIT exposes. We avoid luarocks on LuaJIT here because the current
 # manifest exceeds LuaJIT's 65K-constants-per-function limit.
-RUN apk add --no-cache lua5.1-busted \
+#
+# websocat is the WS client used by test/integration/m3_ws_reload.sh — a
+# single static Rust binary in Alpine 3.21+ community. curl is used by
+# test/integration/m3.sh via `docker exec` to poll /__hc/status, which is
+# bound to 127.0.0.1 and only reachable from inside the container. Both
+# stay in the dev stage only; runtime image doesn't ship test tooling.
+RUN apk add --no-cache lua5.1-busted websocat curl \
     && ln -s /usr/bin/busted-5.1 /usr/local/bin/busted
 
 EXPOSE 8080
