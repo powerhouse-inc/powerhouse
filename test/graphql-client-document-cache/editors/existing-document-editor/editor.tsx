@@ -1,84 +1,10 @@
-import {
-  DocumentStateViewer,
-  DocumentToolbar,
-} from "@powerhousedao/design-system/connect";
-import { actions, useSelectedTestDocDocument } from "document-models/test-doc";
+import { useSelectedDocumentId } from "@powerhousedao/reactor-browser";
+import { isString } from "remeda";
+import { CreateTestDocument } from "./components/create-test-document.js";
+import { EditorTestDocument } from "./components/edit-test-document.js";
 
 export default function Editor() {
-  const [document, dispatch] = useSelectedTestDocDocument();
-
-  const handleSetName = (name: string) => {
-    // 'actions' contains all available actions for this document type
-    dispatch(actions.setName(name));
-  };
-
-  return (
-    <div className="mx-auto max-w-4xl bg-gray-50 p-6">
-      <DocumentToolbar />
-
-      {/* "ph-default-styles" sets default styles for basic UI elements */}
-      <div className="ph-default-styles">
-        {/* Edit document name */}
-        <label className="my-6">
-          <h3>Document Name</h3>
-          <input
-            type="text"
-            defaultValue={document.header.name}
-            placeholder="Enter document name..."
-            title="Edit document name and click outside to save."
-            autoFocus
-            onBlur={(e) => handleSetName(e.target.value.trim())}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.currentTarget.blur();
-              }
-            }}
-            className="font-semibold"
-          />
-        </label>
-        <hr />
-
-        {/* Document header info */}
-        <div className="mb-6 grid grid-cols-2 gap-x-8">
-          <label>
-            <h3 className="text-base">ID</h3>
-            <input
-              type="text"
-              value={document.header.id}
-              readOnly
-              className="font-mono"
-            />
-          </label>
-          <label>
-            <h3 className="text-base">Created</h3>
-            <input
-              type="text"
-              value={new Date(document.header.createdAtUtcIso).toLocaleString()}
-              readOnly
-            />
-          </label>
-          <label>
-            <h3 className="text-base">Type</h3>
-            <input type="text" value={document.header.documentType} readOnly />
-          </label>
-          <label>
-            <h3 className="text-base">Last Modified</h3>
-            <input
-              type="text"
-              value={new Date(
-                document.header.lastModifiedAtUtcIso,
-              ).toLocaleString()}
-              readOnly
-            />
-          </label>
-        </div>
-
-        {/* Document state */}
-        <div className="mt-6">
-          <h3 className="text-base">Document State</h3>
-          <DocumentStateViewer state={document.state} />
-        </div>
-      </div>
-    </div>
-  );
+  const selectedDocumentId = useSelectedDocumentId();
+  if (isString(selectedDocumentId)) return <EditorTestDocument />;
+  return <CreateTestDocument />;
 }

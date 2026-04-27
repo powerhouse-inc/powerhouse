@@ -50,6 +50,7 @@
     "document-model": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",
     "zod": "catalog:",
+    "remeda": "catalog:",
     "@powerhousedao/design-system": "workspace:*"
   },
   "devDependencies": {
