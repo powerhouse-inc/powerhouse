@@ -92,7 +92,7 @@
     "npm-package-arg": "catalog:",
     "package-directory": "^8.1.0",
     "package-manager-detector": "catalog:",
-    "remeda": "^2.33.7",
+    "remeda": "catalog:",
     "rolldown": "catalog:",
     "safe-stable-stringify": "^2.4.3",
     "sha1-uint8array": "^0.10.7",
