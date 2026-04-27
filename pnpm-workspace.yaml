@@ -115,6 +115,7 @@ catalog:
   "tsdown": 0.21.1
   "@tsdown/css": 0.21.1
   "rolldown": 1.0.0-rc.8
+  "remeda": 2.33.7
 
 allowBuilds:
   vite: true
