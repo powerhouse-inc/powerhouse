@@ -72,9 +72,9 @@ peer_ip_for() {
         "${COMPOSE_PROJECT}-$1-1" 2>/dev/null
 }
 
-# Poll /__hc/status (localhost-only) until the named peer reaches the
-# desired state (UP|DOWN). Times out after ~12s — slightly more than
-# interval*fall (6s) and interval*rise (4s) plus headroom.
+# Poll /__hc/status (loopback-only on :9090, moved off :8080 in M4) until
+# the named peer reaches the desired state (UP|DOWN). Times out after ~12s
+# — slightly more than interval*fall (6s) and interval*rise (4s) plus headroom.
 hc_wait_for() {
     peer="$1"
     state="$2"
@@ -84,7 +84,7 @@ hc_wait_for() {
         #     172.24.0.3:8080 UP
         # Match the peer line and check the state token.
         actual=$(docker exec "$LB_CONTAINER" \
-            curl -s "http://127.0.0.1:8080/__hc/status" 2>/dev/null \
+            curl -s "http://127.0.0.1:9090/__hc/status" 2>/dev/null \
             | awk -v p="$peer" '$1 == p { print $2; exit }')
         if [ "$actual" = "$state" ]; then
             return 0
@@ -95,10 +95,10 @@ hc_wait_for() {
 }
 
 # 0. Sanity: make sure the LB actually started with M3 wiring. /__hc/status
-#    returns 404 if the route block isn't loaded, 200 with text otherwise.
+#    returns 404 if the metrics listener isn't loaded, 200 with text otherwise.
 hc_status=$(docker exec "$LB_CONTAINER" \
     curl -s -o /dev/null -w '%{http_code}' \
-    "http://127.0.0.1:8080/__hc/status" 2>/dev/null || echo "000")
+    "http://127.0.0.1:9090/__hc/status" 2>/dev/null || echo "000")
 check "hc status endpoint reachable" "200" "$hc_status"
 
 if [ "$hc_status" != "200" ]; then
