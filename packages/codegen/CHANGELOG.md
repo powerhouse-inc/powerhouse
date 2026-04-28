@@ -1,3 +1,13 @@
+## 6.0.0-dev.204 (2026-04-28)
+
+### 🩹 Fixes
+
+- **codegen:** pin graphql to 16.12.0 in project boilerplate ([ba3b15a9b](https://github.com/powerhouse-inc/powerhouse/commit/ba3b15a9b))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 6.0.0-dev.203 (2026-04-28)
 
 This was a version bump only for @powerhousedao/codegen to align it with other projects, there were no code changes.

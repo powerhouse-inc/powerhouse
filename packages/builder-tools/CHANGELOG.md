@@ -1,3 +1,7 @@
+## 6.0.0-dev.204 (2026-04-28)
+
+This was a version bump only for @powerhousedao/builder-tools to align it with other projects, there were no code changes.
+
 ## 6.0.0-dev.203 (2026-04-28)
 
 This was a version bump only for @powerhousedao/builder-tools to align it with other projects, there were no code changes.
