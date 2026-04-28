@@ -1,3 +1,13 @@
+## 6.0.0-dev.206 (2026-04-28)
+
+### 🚀 Features
+
+- add support for custom registry URL in config update during installation ([b5acf164b](https://github.com/powerhouse-inc/powerhouse/commit/b5acf164b))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 6.0.0-dev.205 (2026-04-28)
 
 ### 🩹 Fixes

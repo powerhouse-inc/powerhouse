@@ -1,3 +1,7 @@
+## 6.0.0-dev.206 (2026-04-28)
+
+This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.
+
 ## 6.0.0-dev.205 (2026-04-28)
 
 This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.
