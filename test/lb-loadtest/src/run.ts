@@ -1,35 +1,13 @@
-// Real-backend pinning harness for switchboard-lb.
-//
-// Drives K synthetic document keys × M repeats through the LB and asserts:
-//   1. Pinning      — every request for a given documentIdentifier lands on
-//                     the same backend (X-LB-Upstream observed).
-//   2. Distribution — across K keys, more than one backend is hit (otherwise
-//                     the hash is collapsing or only one peer is up).
-//
-// What it does NOT do, and why: full document-state consistency (write +
-// read-back equal) is intentionally out of scope here. The published
-// switchboard image (`@powerhousedao/switchboard@latest`, baked into
-// docker/Dockerfile --target switchboard) lags the in-repo schema and does
-// not export `mutateDocument` / `createEmptyDocument` / `document(identifier:)`,
-// so end-to-end document round-trips through that image fail at the
-// switchboard's GraphQL layer, not at the LB. The LB-level invariant we care
-// about — same documentIdentifier ⇒ same backend, distinct identifiers ⇒
-// load distributes — is observable purely from the response header. When the
-// switchboard image catches up, extending this script to write + read back
-// is straightforward (LoadBalancerClient already has the helpers wired).
-//
-// Pre-req: the real-backend stack is up. From apps/switchboard-lb:
-//   docker compose -f docker-compose.yml -f docker-compose.real.yml up -d --build
-//
-// Run:    pnpm --filter @powerhousedao/lb-loadtest verify
-//         (override defaults: --url ... --docs N --mutations M)
+import { documentModelDocumentModelModule } from "document-model";
+import { randomUUID } from "node:crypto";
 
 interface Args {
   url: string;
   healthUrl: string;
   docs: number;
-  mutations: number;
+  actions: number;
   timeoutMs: number;
+  skipSchemaPreflight: boolean;
 }
 
 function parseArgs(argv: string[]): Args {
@@ -37,8 +15,9 @@ function parseArgs(argv: string[]): Args {
     url: "http://localhost:8080/graphql",
     healthUrl: "http://localhost:8080/health",
     docs: 20,
-    mutations: 10,
+    actions: 1,
     timeoutMs: 60_000,
+    skipSchemaPreflight: false,
   };
   for (let i = 2; i < argv.length; i++) {
     const a = argv[i];
@@ -53,15 +32,18 @@ function parseArgs(argv: string[]): Args {
     } else if (a === "--docs" && next) {
       out.docs = Number(next);
       i++;
-    } else if (a === "--mutations" && next) {
-      out.mutations = Number(next);
+    } else if ((a === "--actions" || a === "--mutations") && next) {
+      out.actions = Number(next);
       i++;
     } else if (a === "--timeout-ms" && next) {
       out.timeoutMs = Number(next);
       i++;
+    } else if (a === "--skip-schema-preflight") {
+      out.skipSchemaPreflight = true;
     } else if (a === "-h" || a === "--help") {
       console.log(
-        "Usage: tsx src/run.ts [--url URL] [--health-url URL] [--docs K] [--mutations M] [--timeout-ms N]",
+        "Usage: tsx src/run.ts [--url URL] [--health-url URL] [--docs K] " +
+          "[--actions M] [--timeout-ms N] [--skip-schema-preflight]",
       );
       process.exit(0);
     }
@@ -69,30 +51,77 @@ function parseArgs(argv: string[]): Args {
   return out;
 }
 
-class LoadBalancerClient {
+const SCHEMA_PREFLIGHT_QUERY = `
+  query SchemaCheck {
+    __schema {
+      mutationType { fields { name } }
+      queryType    { fields { name } }
+    }
+  }
+`;
+
+const CREATE_DOCUMENT_MUTATION = `
+  mutation CreateDocument($document: JSONObject!) {
+    createDocument(document: $document) {
+      id
+      documentType
+    }
+  }
+`;
+
+const MUTATE_DOCUMENT_MUTATION = `
+  mutation MutateDocument($documentIdentifier: String!, $actions: [JSONObject!]!) {
+    mutateDocument(documentIdentifier: $documentIdentifier, actions: $actions) {
+      id
+      state
+      revisionsList { scope revision }
+    }
+  }
+`;
+
+const READ_DOCUMENT_QUERY = `
+  query ReadDocument($identifier: String!) {
+    document(identifier: $identifier) {
+      document {
+        id
+        state
+        revisionsList { scope revision }
+      }
+    }
+  }
+`;
+
+interface GqlResponse {
+  data: unknown;
+  errors?: Array<{ message: string }>;
+  backend: string | null;
+  status: number;
+}
+
+class LbClient {
   constructor(private url: string) {}
 
-  // Fires the request and returns the X-LB-Upstream the LB stamped on the
-  // response. Tolerates non-2xx and GraphQL errors — what we measure is
-  // *which backend the LB chose*, not whether the backend's response is
-  // semantically valid.
-  async probe(documentIdentifier: string): Promise<{
-    backend: string | null;
-    httpStatus: number;
-  }> {
-    const response = await fetch(this.url, {
+  async post(
+    query: string,
+    variables: Record<string, unknown>,
+  ): Promise<GqlResponse> {
+    const r = await fetch(this.url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        query: `query Probe($documentIdentifier: String!) { __typename }`,
-        variables: { documentIdentifier },
-      }),
+      body: JSON.stringify({ query, variables }),
     });
-    // Drain the body so the connection can be reused (keepalive).
-    await response.text();
+    const text = await r.text();
+    let parsed: { data?: unknown; errors?: Array<{ message: string }> };
+    try {
+      parsed = JSON.parse(text) as typeof parsed;
+    } catch {
+      parsed = {};
+    }
     return {
-      backend: response.headers.get("x-lb-upstream"),
-      httpStatus: response.status,
+      data: parsed.data,
+      errors: parsed.errors,
+      backend: r.headers.get("x-lb-upstream"),
+      status: r.status,
     };
   }
 }
@@ -131,13 +160,69 @@ function fail(msg: string): never {
   process.exit(1);
 }
 
+function iterFail(i: number, k: string, step: string, detail: string): never {
+  fail(`iter=${i} id=${k} step=${step}: ${detail}`);
+}
+
+function buildSetModelNameAction(name: string): Record<string, unknown> {
+  return {
+    id: randomUUID(),
+    type: "SET_MODEL_NAME",
+    scope: "global",
+    timestampUtcMs: new Date().toISOString(),
+    input: { name },
+  };
+}
+
+async function schemaPreflight(lb: LbClient): Promise<void> {
+  const { data, errors, status } = await lb.post(SCHEMA_PREFLIGHT_QUERY, {
+    documentIdentifier: "schema-preflight",
+  });
+  if (status !== 200 || errors?.length) {
+    fail(
+      `schema preflight failed (status=${status}): ${
+        errors?.map((e) => e.message).join("; ") ?? "no body"
+      }`,
+    );
+  }
+  const schema = (
+    data as {
+      __schema?: {
+        mutationType?: { fields?: Array<{ name: string }> };
+        queryType?: { fields?: Array<{ name: string }> };
+      };
+    }
+  )?.__schema;
+  const mutationNames = new Set(
+    schema?.mutationType?.fields?.map((f) => f.name) ?? [],
+  );
+  const queryNames = new Set(
+    schema?.queryType?.fields?.map((f) => f.name) ?? [],
+  );
+  const missingMutations = ["createDocument", "mutateDocument"].filter(
+    (n) => !mutationNames.has(n),
+  );
+  const missingQueries = ["document"].filter((n) => !queryNames.has(n));
+  if (missingMutations.length || missingQueries.length) {
+    fail(
+      `switchboard image stale; expected 6.0.0-dev.202+; missing ` +
+        `mutations=[${missingMutations.join(",")}] queries=[${missingQueries.join(",")}]`,
+    );
+  }
+}
+
+interface DocState {
+  id: string;
+  state: { global?: { name?: string } };
+  revisionsList: Array<{ scope: string; revision: number }>;
+}
+
 async function main(): Promise<void> {
   const args = parseArgs(process.argv);
   console.log(
-    `[harness] url=${args.url} docs=${args.docs} mutations=${args.mutations}`,
+    `[harness] url=${args.url} docs=${args.docs} actions=${args.actions}`,
   );
 
-  // 1. Wait until the LB itself is responding.
   await retryUntilOk(
     async () => {
       const r = await fetch(args.healthUrl);
@@ -145,81 +230,138 @@ async function main(): Promise<void> {
     },
     { timeoutMs: args.timeoutMs, label: "switchboard-lb /health" },
   );
-  console.log(`[ready] LB health 200`);
 
-  // 2. K synthetic document identifiers — the harness owns these strings;
-  // their values are irrelevant to the LB beyond being the input to the
-  // consistent-hash function. Mixed prefix + index so the hash buckets
-  // them across the ring rather than clustering.
-  const lb = new LoadBalancerClient(args.url);
-  const keys: string[] = [];
-  for (let i = 0; i < args.docs; i++) {
-    keys.push(`harness-doc-${i.toString().padStart(4, "0")}-${process.pid}`);
+  const lb = new LbClient(args.url);
+
+  if (!args.skipSchemaPreflight) {
+    await schemaPreflight(lb);
   }
 
-  // 3. For each key, send M probes; capture X-LB-Upstream per response.
-  const observations = new Map<string, Set<string>>();
-  let missingHeader = 0;
-  for (const key of keys) {
-    observations.set(key, new Set());
-    for (let j = 0; j < args.mutations; j++) {
-      const { backend, httpStatus } = await lb.probe(key);
-      if (!backend || backend === "" || backend === "-") {
-        // Empty $upstream_addr → request never reached an upstream (e.g.
-        // 503 from @no_backend, or a Lua-rejected 400/409). The harness's
-        // request shape passes route.lua, so this would be a regression.
-        missingHeader++;
-        if (missingHeader <= 5) {
-          console.error(
-            `  key=${key} iter=${j}: missing X-LB-Upstream (status=${httpStatus})`,
-          );
-        }
-        continue;
-      }
-      observations.get(key)!.add(backend);
-    }
-  }
-  if (missingHeader > 0) {
-    fail(
-      `${missingHeader}/${keys.length * args.mutations} probes returned no X-LB-Upstream — LB image stale or routes.conf regressed`,
-    );
-  }
-  console.log(
-    `[load] ${keys.length} keys × ${args.mutations} probes = ${
-      keys.length * args.mutations
-    } observations`,
-  );
-
-  // 4. Pinning: every key must have observed exactly 1 backend.
-  const violations = [...observations].filter(([, set]) => set.size !== 1);
-  if (violations.length > 0) {
-    for (const [k, set] of violations) {
-      console.error(`  key=${k} hit ${[...set].join(", ")}`);
-    }
-    fail(`pinning violated for ${violations.length}/${keys.length} keys`);
-  }
-
-  // 5. Distribution: across keys, > 1 backend.
-  const allBackends = new Set(
-    [...observations.values()].flatMap((s) => [...s]),
-  );
-  if (allBackends.size < 2) {
-    fail(
-      `distribution failed — all ${keys.length} keys hashed to a single backend (${[...allBackends][0] ?? "none"})`,
-    );
-  }
-
-  // 6. Per-backend tally for the operator-visible summary.
   const tally = new Map<string, number>();
-  for (const set of observations.values()) {
-    for (const b of set) tally.set(b, (tally.get(b) ?? 0) + 1);
+  const backends: string[] = [];
+
+  for (let i = 0; i < args.docs; i++) {
+    const K = randomUUID();
+
+    const doc = documentModelDocumentModelModule.utils.createDocument();
+    doc.header.id = K;
+
+    const createResp = await lb.post(CREATE_DOCUMENT_MUTATION, {
+      document: doc,
+      documentIdentifier: K,
+    });
+    if (createResp.status !== 200 || createResp.errors?.length) {
+      iterFail(
+        i,
+        K,
+        "create",
+        `status=${createResp.status} errors=${
+          createResp.errors?.map((e) => e.message).join("; ") ?? "none"
+        }`,
+      );
+    }
+    const createdId = (createResp.data as { createDocument?: { id?: string } })
+      ?.createDocument?.id;
+    if (createdId !== K) {
+      iterFail(i, K, "create", `returned id=${createdId ?? "<null>"}`);
+    }
+    const backendCreate = createResp.backend;
+    if (!backendCreate) {
+      iterFail(i, K, "create", `no X-LB-Upstream`);
+    }
+
+    const namePrefix = `harness-${K.slice(0, 8)}`;
+    const expectedName = `${namePrefix}-${args.actions - 1}`;
+    const actions: Array<Record<string, unknown>> = [];
+    for (let m = 0; m < args.actions; m++) {
+      actions.push(buildSetModelNameAction(`${namePrefix}-${m}`));
+    }
+    const mutateResp = await lb.post(MUTATE_DOCUMENT_MUTATION, {
+      documentIdentifier: K,
+      actions,
+    });
+    if (mutateResp.status !== 200 || mutateResp.errors?.length) {
+      iterFail(
+        i,
+        K,
+        "mutate",
+        `status=${mutateResp.status} errors=${
+          mutateResp.errors?.map((e) => e.message).join("; ") ?? "none"
+        }`,
+      );
+    }
+    const mutated = (mutateResp.data as { mutateDocument?: DocState })
+      ?.mutateDocument;
+    if (mutateResp.backend !== backendCreate) {
+      iterFail(
+        i,
+        K,
+        "mutate",
+        `backend=${mutateResp.backend} != create backend=${backendCreate}`,
+      );
+    }
+    if (mutated?.state?.global?.name !== expectedName) {
+      iterFail(
+        i,
+        K,
+        "mutate",
+        `state.global.name=${mutated?.state?.global?.name ?? "<null>"} expected=${expectedName}`,
+      );
+    }
+
+    const readResp = await lb.post(READ_DOCUMENT_QUERY, { identifier: K });
+    if (readResp.status !== 200 || readResp.errors?.length) {
+      iterFail(
+        i,
+        K,
+        "read",
+        `status=${readResp.status} errors=${
+          readResp.errors?.map((e) => e.message).join("; ") ?? "none"
+        }`,
+      );
+    }
+    const read = (readResp.data as { document?: { document?: DocState } })
+      ?.document?.document;
+    if (readResp.backend !== backendCreate) {
+      iterFail(
+        i,
+        K,
+        "read",
+        `backend=${readResp.backend} != create backend=${backendCreate}`,
+      );
+    }
+    if (read?.id !== K) {
+      iterFail(i, K, "read", `id=${read?.id ?? "<null>"}`);
+    }
+    if (read?.state?.global?.name !== expectedName) {
+      iterFail(
+        i,
+        K,
+        "read",
+        `state.global.name=${read?.state?.global?.name ?? "<null>"} expected=${expectedName}`,
+      );
+    }
+
+    backends.push(backendCreate!);
+    tally.set(backendCreate!, (tally.get(backendCreate!) ?? 0) + 1);
+    console.log(
+      `[iter ${i + 1}/${args.docs}] id=${K} backend=${backendCreate} ok`,
+    );
   }
+
+  const distinct = new Set(backends);
+  if (distinct.size < 2) {
+    fail(
+      `distribution failed — all ${args.docs} docs hashed to one backend (${
+        [...distinct][0] ?? "none"
+      })`,
+    );
+  }
+
   const tallyStr = [...tally.entries()].map(([b, n]) => `${b}=${n}`).join(", ");
+  console.log(`[dist] ${distinct.size} backends observed (${tallyStr})`);
   console.log(
-    `[pin]  every key pinned; ${allBackends.size} backends used (${tallyStr})`,
-  );
-  console.log(
-    `PASS  ${keys.length} keys × ${args.mutations} probes; pinning + distribution OK`,
+    `PASS  ${args.docs} docs × (create+mutate+read); pinning + round-trip + distribution OK`,
   );
 }
 

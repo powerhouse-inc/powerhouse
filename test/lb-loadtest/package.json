@@ -9,7 +9,8 @@
     "verify": "tsx src/run.ts"
   },
   "dependencies": {
-    "@powerhousedao/load-test-client": "workspace:*"
+    "@powerhousedao/load-test-client": "workspace:*",
+    "document-model": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "catalog:",

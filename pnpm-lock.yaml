@@ -2617,6 +2617,9 @@ importers:
       '@powerhousedao/load-test-client':
         specifier: workspace:*
         version: link:../test-client
+      document-model:
+        specifier: workspace:*
+        version: link:../../packages/document-model
     devDependencies:
       '@types/node':
         specifier: 'catalog:'

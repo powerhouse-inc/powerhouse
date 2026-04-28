@@ -1,11 +1,18 @@
 {
   "extends": "../../tsconfig.options.json",
   "compilerOptions": {
-    "types": ["node"],
+    "types": [
+      "node"
+    ],
     "outDir": "./dist"
   },
-  "include": ["**/*"],
+  "include": [
+    "**/*"
+  ],
   "references": [
+    {
+      "path": "../../packages/document-model"
+    },
     {
       "path": "../test-client"
     }
