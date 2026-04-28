@@ -5,52 +5,78 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "build": "ph-cli build",
+    "preview": "vite preview",
+    "generate": "ph-cli generate",
+    "connect": "ph-cli connect",
+    "reactor": "ph-cli reactor",
+    "service": "ph-cli service",
+    "vetra": "ph-cli vetra",
+    "service-startup": "bash ./node_modules/@powerhousedao/ph-cli/dist/scripts/service-startup.sh",
+    "service-unstartup": "bash ./node_modules/@powerhousedao/ph-cli/dist/scripts/service-unstartup.sh"
   },
-  ".": {
-    "types": "./dist/index.d.ts",
-    "browser": "./dist/browser/index.js",
-    "node": "./dist/node/index.mjs"
-  },
-  "./document-models": {
-    "types": "./dist/document-models/index.d.ts",
-    "browser": "./dist/browser/document-models/index.js",
-    "node": "./dist/node/document-models/index.mjs"
-  },
-  "./document-models/*": {
-    "types": "./dist/document-models/*/index.d.ts",
-    "browser": "./dist/browser/document-models/*/index.js",
-    "node": "./dist/node/document-models/*/index.mjs"
-  },
-  "./editors": {
-    "types": "./dist/editors/index.d.ts",
-    "browser": "./dist/browser/editors/index.js",
-    "node": "./dist/node/editors/index.mjs"
-  },
-  "./editors/*": {
-    "types": "./dist/editors/*/editor.d.ts",
-    "browser": "./dist/browser/editors/*/editor.js",
-    "node": "./dist/node/editors/*/editor.mjs"
-  },
-  "./subgraphs": {
-    "types": "./dist/subgraphs/index.d.ts",
-    "browser": "./dist/browser/subgraphs/index.js",
-    "node": "./dist/node/subgraphs/index.mjs"
-  },
-  "./processors": {
-    "types": "./dist/processors/index.d.ts",
-    "browser": "./dist/browser/processors/index.js",
-    "node": "./dist/node/processors/index.mjs"
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "browser": "./dist/browser/index.js",
+      "node": "./dist/node/index.mjs"
+    },
+    "./document-models": {
+      "types": "./document-models/dist/index.d.ts",
+      "browser": "./document-models/dist/browser/index.js",
+      "node": "./document-models/dist/node/index.mjs"
+    },
+    "./document-models/*": {
+      "types": "./document-models/dist/*/index.d.ts",
+      "browser": "./document-models/dist/browser/*/index.js",
+      "node": "./document-models/dist/node/*/index.mjs"
+    },
+    "./editors": {
+      "types": "./editors/dist/index.d.ts",
+      "browser": "./editors/dist/browser/index.js",
+      "node": "./editors/dist/node/index.mjs"
+    },
+    "./editors/*": {
+      "types": "./editors/dist/*/index.d.ts",
+      "browser": "./editors/dist/browser/*/index.js",
+      "node": "./editors/dist/node/*/index.mjs"
+    },
+    "./subgraphs": {
+      "types": "./subgraphs/dist/index.d.ts",
+      "browser": "./subgraphs/dist/browser/index.js",
+      "node": "./subgraphs/dist/node/index.mjs"
+    },
+    "./subgraphs/*": {
+      "types": "./subgraphs/dist/*/index.d.ts",
+      "browser": "./subgraphs/dist/browser/*/index.js",
+      "node": "./subgraphs/dist/node/*/index.mjs"
+    },
+    "./processors": {
+      "types": "./processors/dist/index.d.ts",
+      "browser": "./processors/dist/browser/index.js",
+      "node": "./processors/dist/node/index.mjs"
+    },
+    "./processors/*": {
+      "types": "./processors/dist/*/index.d.ts",
+      "browser": "./processors/dist/browser/*/index.js",
+      "node": "./processors/dist/node/*/index.mjs"
+    },
+    "./manifest": "./dist/powerhouse.manifest.json",
+    "./style.css": "./dist/style.css"
   },
   "dependencies": {
     "react": "catalog:",
     "react-dom": "catalog:",
     "document-model": "workspace:*",
     "@powerhousedao/reactor-browser": "workspace:*",
+    "@powerhousedao/reactor": "workspace:*",
+    "@powerhousedao/shared": "workspace:*",
+    "@powerhousedao/connect": "workspace:*",
+    "@powerhousedao/document-engineering": "catalog:",
     "zod": "catalog:",
     "remeda": "catalog:",
+    "vite-tsconfig-paths": "catalog:",
     "@powerhousedao/design-system": "workspace:*"
   },
   "devDependencies": {
@@ -58,6 +84,10 @@
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "@vitejs/plugin-react": "catalog:",
-    "vite": "catalog:"
+    "vite": "catalog:",
+    "vitest": "catalog:",
+    "@powerhousedao/ph-cli": "workspace:*",
+    "tailwindcss": "catalog:",
+    "@tailwindcss/cli": "catalog:"
   }
 }

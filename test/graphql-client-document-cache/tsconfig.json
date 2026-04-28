@@ -30,13 +30,21 @@
     }
   },
   "include": [
-    "**/*"
+    "**/*",
+    "./powerhouse.manifest.json"
   ],
   "exclude": [
+    ".ph",
     "dist",
     "node_modules"
   ],
   "references": [
+    {
+      "path": "../../apps/connect"
+    },
+    {
+      "path": "../../clis/ph-cli"
+    },
     {
       "path": "../../packages/design-system"
     },
@@ -44,7 +52,13 @@
       "path": "../../packages/document-model"
     },
     {
+      "path": "../../packages/reactor"
+    },
+    {
       "path": "../../packages/reactor-browser"
+    },
+    {
+      "path": "../../packages/shared"
     }
   ]
 }

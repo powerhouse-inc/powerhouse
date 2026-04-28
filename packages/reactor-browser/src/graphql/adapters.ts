@@ -6,12 +6,7 @@ import type {
 } from "document-model";
 import { isDefined } from "remeda";
 import type { z } from "zod";
-import { createClient } from "./client.js";
 import type { GetDocumentWithOperationsQuery } from "./gen/schema.js";
-const SWITCHBOARD_URL =
-  process.env.PH_SWITCHBOARD_URL || "http://localhost:4001/graphql";
-
-const client = createClient(SWITCHBOARD_URL);
 
 type QueryDocumentResult = NonNullable<
   GetDocumentWithOperationsQuery["document"]
