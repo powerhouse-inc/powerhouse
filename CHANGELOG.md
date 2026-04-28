@@ -1,3 +1,13 @@
+## 6.0.0-dev.202 (2026-04-28)
+
+### 🩹 Fixes
+
+- **codegen:** use .raw on vitestConfigTemplate ([dbea9094a](https://github.com/powerhouse-inc/powerhouse/commit/dbea9094a))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.0.0-dev.201 (2026-04-28)
 
 ### 🚀 Features
