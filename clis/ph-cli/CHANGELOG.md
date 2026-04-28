@@ -1,3 +1,14 @@
+## 6.0.0-dev.201 (2026-04-28)
+
+### 🩹 Fixes
+
+- **ph-cli:** lazy load ph code ([3e1f51d29](https://github.com/powerhouse-inc/powerhouse/commit/3e1f51d29))
+
+### ❤️ Thank You
+
+- acaldas
+- Copilot
+
 ## 6.0.0-dev.200 (2026-04-27)
 
 This was a version bump only for @powerhousedao/ph-cli to align it with other projects, there were no code changes.

@@ -1,3 +1,28 @@
+## 6.0.0-dev.201 (2026-04-28)
+
+### 🚀 Features
+
+- dispatch set name operation on document when renaming node in drive ([#2513](https://github.com/powerhouse-inc/powerhouse/pull/2513))
+- **design-system:** add back to home button in Breadcrumbs component ([1c50e026c](https://github.com/powerhouse-inc/powerhouse/commit/1c50e026c))
+
+### 🩹 Fixes
+
+- fix some delete issues ([0147000ca](https://github.com/powerhouse-inc/powerhouse/commit/0147000ca))
+- **codegen:** fix types exports on package ([50b2b2383](https://github.com/powerhouse-inc/powerhouse/commit/50b2b2383))
+- **design-system:** show ENS avatar in revision history operations ([cab95c8de](https://github.com/powerhouse-inc/powerhouse/commit/cab95c8de))
+- **document-drive:** allow name collision when kinds are different ([1cb1ccbed](https://github.com/powerhouse-inc/powerhouse/commit/1cb1ccbed))
+- **ph-cli:** lazy load ph code ([3e1f51d29](https://github.com/powerhouse-inc/powerhouse/commit/3e1f51d29))
+- **reactor-browser:** fixes #2504 mode nove ([#2504](https://github.com/powerhouse-inc/powerhouse/issues/2504))
+- **reactor-mcp:** create McpServer per /mcp request to fix concurrent transport collision ([3cfeb5b3f](https://github.com/powerhouse-inc/powerhouse/commit/3cfeb5b3f))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Copilot
+- Guillermo Puente @gpuente
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.0.0-dev.200 (2026-04-27)
 
 This was a version bump only, there were no code changes.

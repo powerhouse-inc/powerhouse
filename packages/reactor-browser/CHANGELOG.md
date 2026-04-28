@@ -1,3 +1,21 @@
+## 6.0.0-dev.201 (2026-04-28)
+
+### 🚀 Features
+
+- dispatch set name operation on document when renaming node in drive ([#2513](https://github.com/powerhouse-inc/powerhouse/pull/2513))
+
+### 🩹 Fixes
+
+- fix some delete issues ([0147000ca](https://github.com/powerhouse-inc/powerhouse/commit/0147000ca))
+- **reactor-browser:** fixes #2504 mode nove ([#2504](https://github.com/powerhouse-inc/powerhouse/issues/2504))
+
+### ❤️ Thank You
+
+- acaldas
+- Benjamin Jordan
+- Copilot
+- Ryan Wolhuter @ryanwolhuter
+
 ## 6.0.0-dev.200 (2026-04-27)
 
 This was a version bump only for @powerhousedao/reactor-browser to align it with other projects, there were no code changes.

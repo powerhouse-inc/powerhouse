@@ -1,3 +1,13 @@
+## 6.0.0-dev.201 (2026-04-28)
+
+### 🩹 Fixes
+
+- **document-drive:** allow name collision when kinds are different ([1cb1ccbed](https://github.com/powerhouse-inc/powerhouse/commit/1cb1ccbed))
+
+### ❤️ Thank You
+
+- Benjamin Jordan
+
 ## 6.0.0-dev.200 (2026-04-27)
 
 This was a version bump only for @powerhousedao/shared to align it with other projects, there were no code changes.

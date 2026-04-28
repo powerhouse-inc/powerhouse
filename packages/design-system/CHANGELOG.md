@@ -1,3 +1,17 @@
+## 6.0.0-dev.201 (2026-04-28)
+
+### 🚀 Features
+
+- **design-system:** add back to home button in Breadcrumbs component ([1c50e026c](https://github.com/powerhouse-inc/powerhouse/commit/1c50e026c))
+
+### 🩹 Fixes
+
+- **design-system:** show ENS avatar in revision history operations ([cab95c8de](https://github.com/powerhouse-inc/powerhouse/commit/cab95c8de))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 6.0.0-dev.200 (2026-04-27)
 
 This was a version bump only for @powerhousedao/design-system to align it with other projects, there were no code changes.

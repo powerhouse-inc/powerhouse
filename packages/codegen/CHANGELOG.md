@@ -1,3 +1,13 @@
+## 6.0.0-dev.201 (2026-04-28)
+
+### 🩹 Fixes
+
+- **codegen:** fix types exports on package ([50b2b2383](https://github.com/powerhouse-inc/powerhouse/commit/50b2b2383))
+
+### ❤️ Thank You
+
+- acaldas
+
 ## 6.0.0-dev.200 (2026-04-27)
 
 This was a version bump only for @powerhousedao/codegen to align it with other projects, there were no code changes.

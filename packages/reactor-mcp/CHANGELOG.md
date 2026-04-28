@@ -1,3 +1,13 @@
+## 6.0.0-dev.201 (2026-04-28)
+
+### 🩹 Fixes
+
+- **reactor-mcp:** create McpServer per /mcp request to fix concurrent transport collision ([3cfeb5b3f](https://github.com/powerhouse-inc/powerhouse/commit/3cfeb5b3f))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 6.0.0-dev.200 (2026-04-27)
 
 This was a version bump only for @powerhousedao/reactor-mcp to align it with other projects, there were no code changes.
