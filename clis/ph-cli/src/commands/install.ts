@@ -130,6 +130,7 @@ Resolution order for the registry URL:
         projectPath,
         "install",
         args.local ? "local" : "registry",
+        registryUrl,
       );
       console.log("Config file updated successfully 🎉");
     } catch (error) {
