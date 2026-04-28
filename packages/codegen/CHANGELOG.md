@@ -1,3 +1,13 @@
+## 6.0.0-dev.205 (2026-04-28)
+
+### 🩹 Fixes
+
+- **codegen:** restore pglite deps in project boilerplate ([9d102c61c](https://github.com/powerhouse-inc/powerhouse/commit/9d102c61c))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 6.0.0-dev.204 (2026-04-28)
 
 ### 🩹 Fixes
