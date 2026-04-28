@@ -1,3 +1,13 @@
+## 6.0.0-dev.203 (2026-04-28)
+
+### 🩹 Fixes
+
+- **ph-cli:** forward processorConfig to switchboard for vetra interactive ([7f8dc486f](https://github.com/powerhouse-inc/powerhouse/commit/7f8dc486f))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 6.0.0-dev.202 (2026-04-28)
 
 This was a version bump only for @powerhousedao/ph-cli to align it with other projects, there were no code changes.

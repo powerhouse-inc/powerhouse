@@ -1,3 +1,14 @@
+## 6.0.0-dev.203 (2026-04-28)
+
+### 🩹 Fixes
+
+- **ph-cli:** forward processorConfig to switchboard for vetra interactive ([7f8dc486f](https://github.com/powerhouse-inc/powerhouse/commit/7f8dc486f))
+- **shared:** include operation example creators in documentModelActions ([71aa740fa](https://github.com/powerhouse-inc/powerhouse/commit/71aa740fa))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 6.0.0-dev.202 (2026-04-28)
 
 ### 🩹 Fixes

@@ -1,3 +1,13 @@
+## 6.0.0-dev.203 (2026-04-28)
+
+### 🩹 Fixes
+
+- **shared:** include operation example creators in documentModelActions ([71aa740fa](https://github.com/powerhouse-inc/powerhouse/commit/71aa740fa))
+
+### ❤️ Thank You
+
+- Guillermo Puente @gpuente
+
 ## 6.0.0-dev.202 (2026-04-28)
 
 This was a version bump only for @powerhousedao/shared to align it with other projects, there were no code changes.
