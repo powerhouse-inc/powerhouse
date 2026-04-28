@@ -72,6 +72,8 @@ const dependenciesTemplate = (versionedDependencies: string[]) =>
 const devDependenciesTemplate = (versionedDevDependencies: string[]) =>
   json`
   ${versionedDevDependencies.join(",\n")},
+  "@electric-sql/pglite": "0.3.15",
+  "@electric-sql/pglite-tools": "0.2.20",
   "@eslint/js": "^9.38.0",
   "@tailwindcss/cli": "^4.1.18",
   "@types/node": "^24.9.2",
