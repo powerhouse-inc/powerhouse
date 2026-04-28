@@ -1,0 +1,65 @@
+# Override that swaps the three openresty stub backends for real switchboard
+# containers. Use alongside the base file:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.real.yml up -d --build
+#
+# The base file's `sb-N` services use openresty stubs (test/fixtures/stub-N.conf)
+# that return canned responses — fine for unit-testing the LB's parsing,
+# routing, and metrics paths, but they don't speak GraphQL or persist documents.
+# This override re-declares each `sb-N` to run the real switchboard image
+# (docker/Dockerfile --target switchboard) backed by PGlite in a per-container
+# named volume. With this stack up, the test/lb-loadtest harness can drive
+# real GraphQL traffic through the LB and assert pinning + consistency.
+#
+# `!reset null` clears the stub's `image:` so the override's `build:` is used.
+# `!override` on `volumes:` replaces the stub's bind-mount of the stub conf
+# (otherwise compose merges and the conf gets mounted into the real container).
+#
+# Storage: no DATABASE_URL is set, so switchboard falls back to PGlite under
+# /app/.ph — fully isolated per container thanks to the named volumes. No
+# postgres dependency, no schema migrations to run.
+
+services:
+  sb-1:
+    image: !reset null
+    build:
+      context: ../..
+      dockerfile: docker/Dockerfile
+      target: switchboard
+    environment:
+      PORT: "8080"
+      LOG_LEVEL: "warn"
+      SKIP_DB_MIGRATIONS: "true"
+    volumes: !override
+      - sb-1-data:/app/.ph
+
+  sb-2:
+    image: !reset null
+    build:
+      context: ../..
+      dockerfile: docker/Dockerfile
+      target: switchboard
+    environment:
+      PORT: "8080"
+      LOG_LEVEL: "warn"
+      SKIP_DB_MIGRATIONS: "true"
+    volumes: !override
+      - sb-2-data:/app/.ph
+
+  sb-3:
+    image: !reset null
+    build:
+      context: ../..
+      dockerfile: docker/Dockerfile
+      target: switchboard
+    environment:
+      PORT: "8080"
+      LOG_LEVEL: "warn"
+      SKIP_DB_MIGRATIONS: "true"
+    volumes: !override
+      - sb-3-data:/app/.ph
+
+volumes:
+  sb-1-data: {}
+  sb-2-data: {}
+  sb-3-data: {}
