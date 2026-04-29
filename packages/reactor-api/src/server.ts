@@ -328,6 +328,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
   port: number;
   httpAdapter: IHttpAdapter;
   authFetchMiddleware: AuthFetchMiddleware | undefined;
+  authService: AuthService | undefined;
   auth: {
     enabled: boolean;
     admins: string[];
@@ -413,9 +414,10 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
 
   // Create auth fetch middleware if auth is enabled
   let authFetchMiddleware: AuthFetchMiddleware | undefined;
+  let authService: AuthService | undefined;
   if (authEnabled) {
     logger.info("Setting up Auth middleware");
-    const authService = new AuthService({
+    authService = new AuthService({
       enabled: authEnabled,
       admins,
       skipCredentialVerification,
@@ -478,6 +480,7 @@ async function _setupCommonInfrastructure(options: Options): Promise<{
     port,
     httpAdapter,
     authFetchMiddleware,
+    authService,
     auth: {
       enabled: authEnabled,
       admins,
@@ -500,6 +503,7 @@ async function _setupAPI(
   reactorProcessorManager: IReactorProcessorManager,
   httpAdapter: IHttpAdapter,
   authFetchMiddleware: AuthFetchMiddleware | undefined,
+  authService: AuthService | undefined,
   port: number,
   packages: PackageManager,
   relationalDb: IRelationalDb,
@@ -514,6 +518,7 @@ async function _setupAPI(
   },
   processorApp: ProcessorApp,
   readModels: IReadModel[],
+  attachments: AttachmentBuildResult,
   authorizationService?: AuthorizationService,
   documentModelRegistry?: IDocumentModelRegistry,
 ): Promise<API> {
@@ -665,6 +670,8 @@ async function _setupAPI(
     httpAdapter,
     graphqlManager,
     packages,
+    attachments,
+    authService,
   };
 }
 
@@ -695,11 +702,13 @@ export async function initializeAndStartAPI(
     port,
     httpAdapter,
     authFetchMiddleware,
+    authService,
     auth,
     relationalDb,
     analyticsStore,
     documentPermissionService,
     authorizationService,
+    attachments,
     packages,
   } = await trace(
     "reactor-api.setup.infrastructure",
@@ -752,6 +761,7 @@ export async function initializeAndStartAPI(
     reactorProcessorManager,
     httpAdapter,
     authFetchMiddleware,
+    authService,
     port,
     packages,
     relationalDb,
@@ -763,6 +773,7 @@ export async function initializeAndStartAPI(
     auth,
     processorApp,
     readModels,
+    attachments,
     authorizationService,
     documentModelRegistry,
   );

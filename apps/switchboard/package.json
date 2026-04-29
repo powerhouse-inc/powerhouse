@@ -58,6 +58,7 @@
     "@powerhousedao/shared": "workspace:*",
     "@powerhousedao/vetra": "workspace:*",
     "@powerhousedao/reactor-api": "workspace:*",
+    "@powerhousedao/reactor-attachments": "workspace:*",
     "@renown/sdk": "workspace:*",
     "@pyroscope/nodejs": "^0.4.5",
     "@sentry/node": "^9.6.1",

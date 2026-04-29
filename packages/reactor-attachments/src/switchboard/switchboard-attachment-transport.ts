@@ -2,6 +2,7 @@ import type { AttachmentHash } from "@powerhousedao/reactor";
 import type { JwtHandler } from "@powerhousedao/reactor";
 import type { IAttachmentTransport } from "../interfaces.js";
 import type { AttachmentMetadata, TransportResponse } from "../types.js";
+import { buildAuthHeaders } from "./build-auth-headers.js";
 
 export type SwitchboardTransportConfig = {
   remoteUrl: string;
@@ -25,7 +26,7 @@ export class SwitchboardAttachmentTransport implements IAttachmentTransport {
     signal?: AbortSignal,
   ): Promise<TransportResponse | null> {
     const url = `${this.remoteUrl}/attachments/${hash}`;
-    const headers = await this.buildHeaders(url);
+    const headers = await buildAuthHeaders(url, this.jwtHandler);
 
     const response = await this.fetchFn(url, { signal, headers });
 
@@ -59,7 +60,7 @@ export class SwitchboardAttachmentTransport implements IAttachmentTransport {
     data: ReadableStream<Uint8Array>,
   ): Promise<void> {
     const url = `${remote}/attachments/${hash}`;
-    const headers = await this.buildHeaders(url);
+    const headers = await buildAuthHeaders(url, this.jwtHandler);
 
     const response = await this.fetchFn(url, {
       method: "PUT",
@@ -74,17 +75,6 @@ export class SwitchboardAttachmentTransport implements IAttachmentTransport {
         `Attachment push failed: ${response.status} ${response.statusText}`,
       );
     }
-  }
-
-  private async buildHeaders(url: string): Promise<Record<string, string>> {
-    const headers: Record<string, string> = {};
-    if (this.jwtHandler) {
-      const token = await this.jwtHandler(url);
-      if (token) {
-        headers["Authorization"] = `Bearer ${token}`;
-      }
-    }
-    return headers;
   }
 
   private parseMetadataHeaders(response: Response): AttachmentMetadata {

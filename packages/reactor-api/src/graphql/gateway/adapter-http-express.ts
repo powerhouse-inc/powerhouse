@@ -45,7 +45,7 @@ export class ExpressHttpAdapter implements IHttpAdapter {
   }
 
   mountNodeRoute(
-    method: "DELETE" | "GET" | "POST",
+    method: "DELETE" | "GET" | "POST" | "PUT",
     path: string,
     handler: (
       req: http.IncomingMessage,
@@ -53,7 +53,7 @@ export class ExpressHttpAdapter implements IHttpAdapter {
       body?: unknown,
     ) => void,
   ): void {
-    const m = method.toLowerCase() as "delete" | "get" | "post";
+    const m = method.toLowerCase() as "delete" | "get" | "post" | "put";
     this.#app[m](path, (req: express.Request, res: express.Response) =>
       handler(req, res, req.body as unknown),
     );
