@@ -37,6 +37,12 @@ export {
 export {
   SwitchboardAttachmentTransport,
   type SwitchboardTransportConfig,
+  RemoteReservationStore,
+  RemoteAttachmentUpload,
+  RemoteAttachmentUploadFactory,
+  RemoteAttachmentStore,
+  createRemoteAttachmentService,
+  type SwitchboardClientConfig,
 } from "./switchboard/index.js";
 export { NullAttachmentTransport } from "./null-attachment-transport.js";
 export { AttachmentBuilder } from "./attachment-builder.js";
