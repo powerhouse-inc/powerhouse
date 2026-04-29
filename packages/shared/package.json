@@ -1,6 +1,6 @@
 {
   "name": "@powerhousedao/shared",
-  "version": "6.0.0-dev.206",
+  "version": "6.0.0-dev.207",
   "type": "module",
   "sideEffects": false,
   "publishConfig": {
