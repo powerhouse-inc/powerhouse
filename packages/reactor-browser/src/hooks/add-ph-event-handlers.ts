@@ -49,16 +49,17 @@ import {
 } from "./config/connect.js";
 import { addFeaturesEventHandler } from "./features.js";
 
+import { forEachObj } from "remeda";
 import {
   addAllowedDocumentTypesEventHandler,
   addIsDragAndDropEnabledEventHandler,
   addIsExternalControlsEnabledEventHandler,
 } from "./config/editor.js";
 import { addDocumentCacheEventHandler } from "./document-cache.js";
-import { addPackageDiscoveryServiceEventHandler } from "./package-discovery.js";
 import { addDrivesEventHandler } from "./drives.js";
 import { addLoadingEventHandler } from "./loading.js";
 import { addModalEventHandler } from "./modals.js";
+import { addPackageDiscoveryServiceEventHandler } from "./package-discovery.js";
 import {
   addReactorClientEventHandler,
   addReactorClientModuleEventHandler,
@@ -79,15 +80,9 @@ import { addSelectedTimelineRevisionEventHandler } from "./timeline-revision.js"
 import { addToastEventHandler } from "./toast.js";
 import { addVetraPackageManagerEventHandler } from "./vetra-packages.js";
 
-const phGlobalEventHandlerRegisterFunctions: PHGlobalEventHandlerAdders = {
+export const commonGlobalEventHandlerFunctions = {
   loading: addLoadingEventHandler,
-  reactorClientModule: addReactorClientModuleEventHandler,
-  reactorClient: addReactorClientEventHandler,
-  features: addFeaturesEventHandler,
-  modal: addModalEventHandler,
-  renown: addRenownEventHandler,
   drives: addDrivesEventHandler,
-  documentCache: addDocumentCacheEventHandler,
   selectedDriveId: () => {
     addSelectedDriveIdEventHandler();
     addSetSelectedDriveOnPopStateEventHandler();
@@ -97,6 +92,16 @@ const phGlobalEventHandlerRegisterFunctions: PHGlobalEventHandlerAdders = {
     addSelectedNodeIdEventHandler();
     addSetSelectedNodeOnPopStateEventHandler();
   },
+};
+
+const phGlobalEventHandlerRegisterFunctions: PHGlobalEventHandlerAdders = {
+  ...commonGlobalEventHandlerFunctions,
+  reactorClientModule: addReactorClientModuleEventHandler,
+  reactorClient: addReactorClientEventHandler,
+  features: addFeaturesEventHandler,
+  modal: addModalEventHandler,
+  renown: addRenownEventHandler,
+  documentCache: addDocumentCacheEventHandler,
   vetraPackageManager: addVetraPackageManagerEventHandler,
   packageDiscoveryService: addPackageDiscoveryServiceEventHandler,
   selectedTimelineRevision: addSelectedTimelineRevisionEventHandler,
@@ -158,7 +163,11 @@ const phGlobalEventHandlerRegisterFunctions: PHGlobalEventHandlerAdders = {
   toast: addToastEventHandler,
 };
 export function addPHEventHandlers() {
-  for (const fn of Object.values(phGlobalEventHandlerRegisterFunctions)) {
-    fn();
-  }
+  callEventHandlerRegisterFunctions(phGlobalEventHandlerRegisterFunctions);
+}
+
+export function callEventHandlerRegisterFunctions(
+  registerFunctions: Record<string, () => void>,
+) {
+  forEachObj(registerFunctions, (fn) => fn());
 }

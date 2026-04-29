@@ -1,10 +1,22 @@
-import { useSelectedDocumentId } from "@powerhousedao/reactor-browser";
-import { isString } from "remeda";
+import { setSelectedNode, useDrives } from "@powerhousedao/reactor-browser";
 import { CreateTestDocument } from "./components/create-test-document.js";
-import { EditorTestDocument } from "./components/edit-test-document.js";
 
 export default function Editor() {
-  const selectedDocumentId = useSelectedDocumentId();
-  if (isString(selectedDocumentId)) return <EditorTestDocument />;
-  return <CreateTestDocument />;
+  const drives = useDrives();
+  return (
+    <>
+      <CreateTestDocument />
+      <h1>Drives:</h1>
+      {drives?.map((drive) => (
+        <button
+          key={drive.header.id}
+          onClick={() => {
+            setSelectedNode(drive.header.id);
+          }}
+        >
+          {drive.header.name}
+        </button>
+      ))}
+    </>
+  );
 }

@@ -18,7 +18,7 @@ const selectedDriveIdEventFunctions = makePHEventFunctions("selectedDriveId");
 export const useSelectedDriveId = selectedDriveIdEventFunctions.useValue;
 
 /** Sets the selected drive id */
-const setSelectedDriveId = selectedDriveIdEventFunctions.setValue;
+export const setSelectedDriveId = selectedDriveIdEventFunctions.setValue;
 
 /** Adds an event handler for the selected drive id */
 export const addSelectedDriveIdEventHandler =

@@ -11,6 +11,7 @@
     "generate": "ph-cli generate",
     "connect": "ph-cli connect",
     "reactor": "ph-cli reactor",
+    "switchboard": "ph-cli switchboard",
     "service": "ph-cli service",
     "vetra": "ph-cli vetra",
     "service-startup": "bash ./node_modules/@powerhousedao/ph-cli/dist/scripts/service-startup.sh",

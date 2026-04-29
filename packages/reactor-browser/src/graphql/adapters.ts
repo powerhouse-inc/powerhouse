@@ -1,41 +1,51 @@
+import type { DocumentOperations } from "document-model";
+import { map, pipe } from "remeda";
+import { type z } from "zod";
 import type {
-  DocumentOperations,
-  PHBaseState,
-  PHDocument,
-  PHDocumentHeader,
-} from "document-model";
-import { isDefined } from "remeda";
-import type { z } from "zod";
-import type { GetDocumentWithOperationsQuery } from "./gen/schema.js";
+  FindDocumentsQuery,
+  GetDocumentWithOperationsQuery,
+} from "./gen/schema.js";
 
 type QueryDocumentResult = NonNullable<
   GetDocumentWithOperationsQuery["document"]
 >["document"];
 
-export function phDocumentFromGetDocumentWithOperationsQuery<
-  TDocumentSchema extends z.ZodObject,
->(
-  getDocumentQuery: GetDocumentWithOperationsQuery,
-  documentSchema?: TDocumentSchema,
-) {
-  const document = getDocumentQuery.document?.document;
-  if (!isDefined(document)) return undefined;
-  const phDocument: PHDocument = {
-    header: phDocumentHeaderFromGetDocumentWithOperationsQuery(document),
-    state: phDocumentStateFromGetDocumentWithOperationsQuery(document),
-    initialState:
-      phDocumentInitialStateFromGetDocumentWithOperationsQuery(document),
+type FindDocumentsItems = NonNullable<
+  FindDocumentsQuery["findDocuments"]
+>["items"];
+
+type DocumentSchemaZodObject = z.ZodObject<{
+  header: z.ZodObject;
+  state: z.ZodObject;
+}>;
+
+export function phDocumentFromQuery<
+  TDocumentSchema extends DocumentSchemaZodObject,
+>(document: QueryDocumentResult, documentSchema: TDocumentSchema) {
+  const phDocument = {
+    header: phDocumentHeaderFromQuery(document, documentSchema),
+    state: phDocumentStateFromQuery(document, documentSchema),
+    initialState: phDocumentStateFromQuery(document, documentSchema),
     operations:
       phDocumentOperationsFromGetDocumentWithOperationsQuery(document),
     clipboard: [],
   };
-  if (isDefined(documentSchema)) return documentSchema.parse(phDocument);
-  return phDocument;
+  return documentSchema.parse(phDocument);
 }
 
-function phDocumentHeaderFromGetDocumentWithOperationsQuery(
-  queryDocument: QueryDocumentResult,
-): PHDocumentHeader {
+export function phDocumentFromFindDocumentsQueryItems<
+  TDocumentSchema extends DocumentSchemaZodObject,
+>(items: FindDocumentsItems, documentSchema: TDocumentSchema) {
+  const documents = pipe(
+    items,
+    map((document) => phDocumentFromQuery(document, documentSchema)),
+  );
+  return documents;
+}
+
+function phDocumentHeaderFromQuery<
+  TDocumentSchema extends DocumentSchemaZodObject,
+>(queryDocument: QueryDocumentResult, documentSchema: TDocumentSchema) {
   const phDocumentHeader = {
     branch: "main",
     id: queryDocument.id,
@@ -50,24 +60,19 @@ function phDocumentHeaderFromGetDocumentWithOperationsQuery(
         ? queryDocument.lastModifiedAtUtcIso.toUTCString()
         : queryDocument.lastModifiedAtUtcIso,
     slug: queryDocument.slug ?? "",
-  } as PHDocumentHeader;
-  return phDocumentHeader;
+  };
+  return documentSchema.shape.header.parse(phDocumentHeader);
 }
 
-function phDocumentStateFromGetDocumentWithOperationsQuery(
-  queryDocument: QueryDocumentResult,
-): PHBaseState {
-  return queryDocument.state as PHBaseState;
-}
-function phDocumentInitialStateFromGetDocumentWithOperationsQuery(
-  queryDocument: QueryDocumentResult,
-): PHBaseState {
-  return queryDocument.state as PHBaseState;
+function phDocumentStateFromQuery<
+  TDocumentSchema extends DocumentSchemaZodObject,
+>(queryDocument: QueryDocumentResult, documentSchema: TDocumentSchema) {
+  return documentSchema.shape.state.parse(queryDocument.state);
 }
 
 function phDocumentOperationsFromGetDocumentWithOperationsQuery(
   queryDocument: QueryDocumentResult,
-): DocumentOperations {
+) {
   if (
     queryDocument.operations === null ||
     queryDocument.operations === undefined
@@ -76,8 +81,8 @@ function phDocumentOperationsFromGetDocumentWithOperationsQuery(
       global: [],
     };
 
-  const documentOperations: DocumentOperations = {
+  const documentOperations = {
     global: [...queryDocument.operations.items],
-  } as DocumentOperations;
-  return documentOperations;
+  };
+  return documentOperations as DocumentOperations;
 }
