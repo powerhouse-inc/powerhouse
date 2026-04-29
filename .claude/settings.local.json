@@ -34,7 +34,8 @@
       "Bash(npx eslint:*)",
       "Bash(gh pr:*)",
       "Bash(gh run:*)",
-      "Bash(git stash:*)"
+      "Bash(git stash:*)",
+      "mcp__hotseat"
     ],
     "deny": [],
     "ask": []
