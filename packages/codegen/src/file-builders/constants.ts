@@ -1,21 +1,41 @@
 import type { Manifest } from "@powerhousedao/shared";
 
-export const exportPaths = [
-  "document-models",
-  "editors",
-  "subgraphs",
-  "processors",
-] as const;
-
-export const rootExportPaths = {
+export const packageJsonExports = {
   ".": {
-    types: "./dist/index.d.ts",
+    types: "./dist/browser/index.d.ts",
     browser: "./dist/browser/index.js",
     node: "./dist/node/index.mjs",
   },
-} as const;
-
-export const nonStandardExportPaths = {
+  "./document-models": {
+    types: "./dist/browser/document-models/index.d.ts",
+    browser: "./dist/browser/document-models/index.js",
+    node: "./dist/node/document-models/index.mjs",
+  },
+  "./document-models/*": {
+    types: "./dist/browser/document-models/*/index.d.ts",
+    browser: "./dist/browser/document-models/*/index.js",
+    node: "./dist/node/document-models/*/index.mjs",
+  },
+  "./editors": {
+    types: "./dist/browser/editors/index.d.ts",
+    browser: "./dist/browser/editors/index.js",
+    node: "./dist/node/editors/index.mjs",
+  },
+  "./editors/*": {
+    types: "./dist/browser/editors/*/editor.d.ts",
+    browser: "./dist/browser/editors/*/editor.js",
+    node: "./dist/node/editors/*/editor.mjs",
+  },
+  "./subgraphs": {
+    types: "./dist/browser/subgraphs/index.d.ts",
+    browser: "./dist/browser/subgraphs/index.js",
+    node: "./dist/node/subgraphs/index.mjs",
+  },
+  "./processors": {
+    types: "./dist/browser/processors/index.d.ts",
+    browser: "./dist/browser/processors/index.js",
+    node: "./dist/node/processors/index.mjs",
+  },
   "./manifest": "./dist/powerhouse.manifest.json",
   "./style.css": "./dist/style.css",
 } as const;
@@ -40,7 +60,7 @@ export const packageScripts = {
 
 export const externalDependencies = {
   "@powerhousedao/document-engineering": "1.40.1",
-  graphql: "^16.10.0",
+  graphql: "16.12.0",
   "graphql-tag": "^2.12.6",
   zod: "^4.3.5",
   react: "^19.2.3",
@@ -48,22 +68,25 @@ export const externalDependencies = {
 } as const;
 
 export const externalDevDependencies = {
+  "@electric-sql/pglite": "0.3.15",
+  "@electric-sql/pglite-tools": "0.2.20",
   "@eslint/js": "^9.38.0",
   "@tailwindcss/cli": "^4.1.18",
   "@types/node": "^24.9.2",
   "@types/react": "^19.2.3",
+  "@vitejs/plugin-react": "6.0.1",
   eslint: "^9.38.0",
-  "eslint-plugin-react": "^7.37.5",
-  "eslint-plugin-react-hooks": "^7.0.1",
   "eslint-config-prettier": "^10.1.8",
   "eslint-plugin-prettier": "^5.5.4",
+  "eslint-plugin-react": "^7.37.5",
+  "eslint-plugin-react-hooks": "^7.0.1",
   globals: "^16.4.0",
   tailwindcss: "^4.1.16",
   typescript: "^5.9.3",
   "typescript-eslint": "^8.46.2",
-  vitest: "4.1.1",
-  "@vitejs/plugin-react": "6.0.1",
+  vite: "8.0.8",
   "vite-tsconfig-paths": "6.1.1",
+  vitest: "4.1.1",
 } as const;
 
 export const defaultManifest: Manifest = {

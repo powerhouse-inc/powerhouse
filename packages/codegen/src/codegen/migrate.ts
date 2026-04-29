@@ -6,14 +6,14 @@ import console from "console";
 import {
   externalDependencies,
   externalDevDependencies,
-  makePackageJsonExports,
+  packageJsonExports,
   packageScripts,
   writeAllGeneratedProjectFiles,
 } from "file-builders";
 import { cpSync, mkdirSync, readdirSync, rmSync, statSync } from "fs";
 import npmFetch from "npm-registry-fetch";
 import { join } from "path";
-import { readPackage } from "read-pkg";
+import { type PackageJson, readPackage } from "read-pkg";
 import {
   filter,
   fromKeys,
@@ -28,7 +28,7 @@ import {
 } from "remeda";
 import type { Project } from "ts-morph";
 import { buildTsMorphProject } from "utils";
-import { updatePackage } from "write-package";
+import { writePackage } from "write-package";
 import { generateAll } from "./generate.js";
 
 /* Uses the npm cli's fetch function to get the version for a specified tag */
@@ -92,8 +92,11 @@ export async function migrate(version: string, projectDir = process.cwd()) {
   const fullyQualifiedVersion =
     await getFullyQualifiedWorkspacePackageVersion(version);
 
-  const packageJson = await readPackage({ cwd: projectDir });
-  const exports = makePackageJsonExports();
+  const packageJson = await readPackage({
+    cwd: projectDir,
+    normalize: false,
+  });
+  const exports = packageJsonExports;
   const scripts = merge(packageJson.scripts, packageScripts);
   const workspacePackageNames = filter(
     map(WORKSPACE_PACKAGES, prop("manifest", "name")),
@@ -134,12 +137,17 @@ export async function migrate(version: string, projectDir = process.cwd()) {
     ),
   );
   console.log("Updating package.json...");
-  await updatePackage(projectDir, {
+  const updatedPackageJson: PackageJson = {
+    ...packageJson,
+    type: packageJson.type ?? "module",
+    sideEffects: packageJson.sideEffects ?? false,
+    files: packageJson.files ?? ["/dist"],
     exports,
     scripts,
     dependencies,
     devDependencies,
-  });
+  } as PackageJson;
+  await writePackage(projectDir, updatedPackageJson);
 
   console.log("Overwriting project root files...");
   await writeAllGeneratedProjectFiles(projectDir);
