@@ -57,7 +57,7 @@ export function Breadcrumbs() {
             <Icon name="ArrowLeft" size={14} />
           </button>
           <Breadcrumb
-            name={selectedDrive.state.global.name}
+            name={selectedDrive.state.global.name || selectedDrive.header.name}
             onClick={() => setSelectedDrive(selectedDrive)}
           />
           <span>/</span>
