@@ -90,18 +90,26 @@ resp=$(curl -sS -D - -o /dev/null -X POST \
     "$LB/graphql")
 check "X-Request-Id passthrough" "$REQ_ID" "$(header_value "$resp" X-Request-Id)"
 
-# 7. WS upgrade headers reach the pool — proves the subscription location
-# (not the /graphql prefix) handled the request, because only that block
-# sets Connection "upgrade" on the upstream request.
+# 7. WS upgrade reaches the pool and the stub completes the handshake.
+# Stubs (M3) speak real WebSocket via lua-resty-websocket-server, so a
+# proper upgrade returns 101 with Sec-WebSocket-Accept set. We close the
+# connection immediately after the handshake — frame echo is exercised
+# in m3_ws_reload.sh, not here.
 resp=$(curl -sS -D - -o /dev/null --max-time 5 \
     -H "Connection: Upgrade" \
     -H "Upgrade: websocket" \
     -H "Sec-WebSocket-Version: 13" \
     -H "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==" \
-    "$LB/graphql/subscriptions")
-check "subscriptions forwarded"            "200"       "$(status_code "$resp")"
-check "subscriptions Upgrade reached pool" "websocket" "$(header_value "$resp" X-Upgrade)"
-check "subscriptions Connection is upgrade" "upgrade"  "$(header_value "$resp" X-Connection)"
+    "$LB/graphql/subscriptions" || true)
+check "subscriptions handshake completes"  "101" "$(status_code "$resp")"
+sec_accept=$(header_value "$resp" Sec-WebSocket-Accept)
+if [ -n "$sec_accept" ]; then
+    echo "PASS  subscriptions Sec-WebSocket-Accept present"
+    PASS=$((PASS + 1))
+else
+    echo "FAIL  subscriptions Sec-WebSocket-Accept missing"
+    FAIL=$((FAIL + 1))
+fi
 
 echo ""
 echo "Results: $PASS passed, $FAIL failed"
