@@ -9,7 +9,6 @@ const config: Config = {
 
   future: {
     v4: true,
-    faster: true,
   },
 
   // Set the production url of your site here

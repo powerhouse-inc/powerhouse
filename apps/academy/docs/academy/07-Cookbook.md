@@ -730,19 +730,36 @@ First, ensure Vetra Studio is running in your project directory:
 ph vetra --interactive --watch
 ```
 
-### Step 2: Open a New Terminal and Navigate to Your Project
+### Step 2: Configure the MCP Server (one-time setup)
+
+Add the Reactor MCP server to your Claude configuration. For Claude Code, add it to `~/.claude/mcp.json`; for Claude Desktop, add it under MCP Servers in settings:
+
+```json
+{
+  "mcpServers": {
+    "reactor-mcp": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "http://localhost:4001/mcp"]
+    }
+  }
+}
+```
+
+This tells Claude how to reach the Reactor MCP endpoint. You only need to do this once per machine.
+
+### Step 3: Open a New Terminal and Navigate to Your Project
 
 ```bash
 cd <yourprojectname>
 ```
 
-### Step 3: Start Claude CLI
+### Step 4: Start Claude CLI
 
 ```bash
 claude
 ```
 
-### Step 4: Connect to Reactor MCP
+### Step 5: Connect to Reactor MCP
 
 In the Claude CLI, request connection to the reactor:
 
@@ -750,7 +767,7 @@ In the Claude CLI, request connection to the reactor:
 connect to the reactor mcp
 ```
 
-### Step 5: Verify the Connection
+### Step 6: Verify the Connection
 
 You should see a confirmation message like:
 
